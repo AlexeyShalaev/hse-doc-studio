@@ -84,7 +84,7 @@ async def test__run__timeout__kills_whole_process_group(tmp_path: Path) -> None:
         await runner.run(_sleeper_script(pid_file), env=_ENV, cwd=tmp_path, timeout_s=0.5)
 
     parent = runner.processes[0]
-    grandchild = int(pid_file.read_text())
+    grandchild = int(pid_file.read_text(encoding="utf-8"))
     assert parent.returncode is not None
     assert await _gone(grandchild)
 
@@ -94,7 +94,7 @@ async def test__run__cancel__kills_whole_process_group_and_reraises(tmp_path: Pa
     pid_file = tmp_path / "grandchild.pid"
     task = asyncio.create_task(runner.run(_sleeper_script(pid_file), env=_ENV, cwd=tmp_path, timeout_s=60))
     for _ in range(100):
-        if pid_file.exists() and pid_file.read_text().strip():
+        if pid_file.exists() and pid_file.read_text(encoding="utf-8").strip():
             break
         await asyncio.sleep(0.05)
 
@@ -103,7 +103,7 @@ async def test__run__cancel__kills_whole_process_group_and_reraises(tmp_path: Pa
         await task
 
     assert runner.processes[0].returncode is not None
-    assert await _gone(int(pid_file.read_text()))
+    assert await _gone(int(pid_file.read_text(encoding="utf-8")))
 
 
 async def test__run__child_ignoring_sigterm__is_killed_after_grace(tmp_path: Path) -> None:

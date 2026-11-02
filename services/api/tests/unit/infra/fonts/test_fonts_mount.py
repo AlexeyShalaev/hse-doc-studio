@@ -33,7 +33,7 @@ def empty_fonts_dir(tmp_path: Path) -> Path:
 def fonts_dir_without_font_files(tmp_path: Path) -> Path:
     fonts = tmp_path / "fonts"
     fonts.mkdir()
-    (fonts / "readme.txt").write_text("x", encoding="utf-8")
+    (fonts / "readme.txt").write_text("x", encoding="utf-8", newline="\n")
     return fonts
 
 

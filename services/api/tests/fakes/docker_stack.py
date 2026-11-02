@@ -187,7 +187,7 @@ class FakeHost:
                 return Result(1, "", "pg_dump failed")
             out = a[a.index("--out") + 1].replace("/snap/", str(self.data_dir) + "/")
             Path(out).parent.mkdir(parents=True, exist_ok=True)
-            Path(out).write_text("dump", encoding="utf-8")
+            Path(out).write_text("dump", encoding="utf-8", newline="\n")
             self.snapshot_rev = self.db_rev
             return Result(0)
         if tail[:2] == ["db", "restore-snapshot"]:

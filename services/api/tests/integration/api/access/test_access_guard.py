@@ -37,7 +37,7 @@ def _make_read_only(project: dict[str, Any]) -> None:
     project_json = Path(project["folder"]) / ".hse-studio" / "project.json"
     data = json.loads(project_json.read_text(encoding="utf-8"))
     data["schema"] = {"version": 7, "read_compat": 1, "write_compat": 7, "written_by": "9.0.0"}
-    project_json.write_text(json.dumps(data), encoding="utf-8")
+    project_json.write_text(json.dumps(data), encoding="utf-8", newline="\n")
 
 
 def _stub_server(monkeypatch: pytest.MonkeyPatch, actor: Actor, grants: dict[str, Grant] | None = None) -> None:

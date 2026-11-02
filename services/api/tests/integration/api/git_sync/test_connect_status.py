@@ -533,7 +533,7 @@ async def test__status__damaged_store__answers_instead_of_failing(
 ) -> None:
     _publish(project, remote)
     await _connect(client, project, remote)
-    (_store(project) / "HEAD").write_text("garbage\n", encoding="utf-8")
+    (_store(project) / "HEAD").write_text("garbage\n", encoding="utf-8", newline="\n")
 
     resp = await client.get(f"/api/v1/projects/{project['id']}/git")
 
@@ -575,7 +575,7 @@ async def test__status__blocked_read_only(client: AsyncClient, project: dict[str
     path = Path(project["folder"]) / ".hse-studio" / "project.json"
     data = json.loads(path.read_text(encoding="utf-8"))
     data["schema"] = {"version": 9, "read_compat": 1, "write_compat": 9, "written_by": "9.0.0"}
-    path.write_text(json.dumps(data), encoding="utf-8")
+    path.write_text(json.dumps(data), encoding="utf-8", newline="\n")
 
     status = await _status(client, project)
 
@@ -591,7 +591,7 @@ async def test__read_only_project__status_is_readable_but_connect_and_settings_a
     path = Path(project["folder"]) / ".hse-studio" / "project.json"
     data = json.loads(path.read_text(encoding="utf-8"))
     data["schema"] = {"version": 9, "read_compat": 1, "write_compat": 9, "written_by": "9.0.0"}
-    path.write_text(json.dumps(data), encoding="utf-8")
+    path.write_text(json.dumps(data), encoding="utf-8", newline="\n")
     base = f"/api/v1/projects/{project['id']}/git"
 
     assert (await client.get(base)).status_code == 200

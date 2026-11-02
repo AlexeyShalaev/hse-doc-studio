@@ -37,6 +37,7 @@ def _git(folder: Path, args: list[str], env: dict[str, str] | None = None) -> st
         ["git", "--git-dir", str(store_git_dir(folder)), *args],  # noqa: S607
         capture_output=True,
         text=True,
+        encoding="utf-8",
         check=True,
         env=env,
     ).stdout.strip()
@@ -230,7 +231,7 @@ def test__log__combined_filters_all_apply(svc: GitVcsService, project: Project, 
 def test__log__doc_pathspec_still_combines_with_filters(svc: GitVcsService, project: Project, tmp_path: Path) -> None:
     folder = tmp_path / "proj"
     (folder / "thesis").mkdir()
-    (folder / "thesis" / "t.tex").write_text("x\n", encoding="utf-8")
+    (folder / "thesis" / "t.tex").write_text("x\n", encoding="utf-8", newline="\n")
     svc.commit(project, message="doc", kind=VcsCommitKind.edit)
     _snap(svc, project, "elsewhere", VcsCommitKind.edit)
 
@@ -321,6 +322,7 @@ class _Remote:
             check=True,
             capture_output=True,
             text=True,
+            encoding="utf-8",
         ).stdout.strip()
 
 

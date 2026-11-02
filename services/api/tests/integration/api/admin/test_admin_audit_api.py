@@ -312,7 +312,7 @@ def test__audit__every_mutating_admin_route_is_in_the_matrix() -> None:
 
 
 def test__audit__elsewhere_actions_exist_in_code() -> None:
-    source = "".join(p.read_text() for p in _USE_CASES.rglob("*.py"))
+    source = "".join(p.read_text(encoding="utf-8") for p in _USE_CASES.rglob("*.py"))
 
     missing = [a for a in _AUDITED_ELSEWHERE.values() if f'"{a}"' not in source]
 

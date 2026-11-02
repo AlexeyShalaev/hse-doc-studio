@@ -31,7 +31,7 @@ def test__parse_min_version__major_minor() -> None:
 
 def _fake_git(tmp_path: Path, banner: str) -> str:
     script = tmp_path / "fake-git"
-    script.write_text(f"#!/bin/sh\necho '{banner}'\n", encoding="utf-8")
+    script.write_text(f"#!/bin/sh\necho '{banner}'\n", encoding="utf-8", newline="\n")
     script.chmod(script.stat().st_mode | stat.S_IXUSR)
     return str(script)
 

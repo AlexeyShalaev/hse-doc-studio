@@ -91,6 +91,7 @@ def git(folder: Path, *args: str) -> str:
         check=True,
         capture_output=True,
         text=True,
+        encoding="utf-8",
         env=env,
     )
     return done.stdout
@@ -102,13 +103,13 @@ async def make_local_project(world: World, *, with_chat: bool = False) -> tuple[
     folder.mkdir(parents=True)
     project = make_project(folder=folder, name="Локальная курсовая")
     JsonProjectRepository().save(project)
-    (folder / "main.tex").write_text("one", encoding="utf-8")
+    (folder / "main.tex").write_text("one", encoding="utf-8", newline="\n")
     (folder / "chapters").mkdir()
-    (folder / "chapters" / "intro.tex").write_text("intro", encoding="utf-8")
+    (folder / "chapters" / "intro.tex").write_text("intro", encoding="utf-8", newline="\n")
     git(folder, "init", "-q")
     git(folder, "add", "-A")
     git(folder, "commit", "-q", "-m", "первый")
-    (folder / "main.tex").write_text("two", encoding="utf-8")
+    (folder / "main.tex").write_text("two", encoding="utf-8", newline="\n")
     git(folder, "add", "-A")
     git(folder, "commit", "-q", "-m", "второй")
     if with_chat:
@@ -256,7 +257,7 @@ async def test__import_project__remote_and_records__reported_as_warnings(world: 
     folder, _ = await make_local_project(world)
     git(folder, "remote", "add", "origin", "https://example.test/r.git")
     (folder / ".hse-studio" / "compiles").mkdir()
-    (folder / ".hse-studio" / "compiles" / "a.json").write_text("{}", encoding="utf-8")
+    (folder / ".hse-studio" / "compiles" / "a.json").write_text("{}", encoding="utf-8", newline="\n")
 
     report = await do_import(world, zip_of(folder, tmp_path / "p.zip"))
 
@@ -297,7 +298,9 @@ def local_data_dir(tmp_path: Path, *, providers: list[AIProvider] | None = None)
     data = tmp_path / "local-data"
     data.mkdir()
     (data / "config.json").write_text(
-        json.dumps({"interface_language": "en", "unknown_key": 1, "ollama_base_url": "x"}), encoding="utf-8"
+        json.dumps({"interface_language": "en", "unknown_key": 1, "ollama_base_url": "x"}),
+        encoding="utf-8",
+        newline="\n",
     )
     items = [
         {
@@ -311,9 +314,9 @@ def local_data_dir(tmp_path: Path, *, providers: list[AIProvider] | None = None)
         }
         for p in providers or []
     ]
-    (data / "ai_providers.json").write_text(json.dumps(items), encoding="utf-8")
+    (data / "ai_providers.json").write_text(json.dumps(items), encoding="utf-8", newline="\n")
     (data / "git").mkdir()
-    (data / "git" / "credentials.json").write_text(json.dumps([{"id": "x"}]), encoding="utf-8")
+    (data / "git" / "credentials.json").write_text(json.dumps([{"id": "x"}]), encoding="utf-8", newline="\n")
     return data
 
 

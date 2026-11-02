@@ -58,5 +58,5 @@ def test__project_index_repository__multiple_folders__all_listed(tmp_path: Path)
 @pytest.mark.unit
 def test__project_index_repository__corrupted_file__returns_empty(tmp_path: Path) -> None:
     repo = JsonProjectIndexRepository(tmp_path)
-    (tmp_path / "projects.json").write_text("not valid json{{", encoding="utf-8")
+    (tmp_path / "projects.json").write_text("not valid json{{", encoding="utf-8", newline="\n")
     assert repo.list_known() == []

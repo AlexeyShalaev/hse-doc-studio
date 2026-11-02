@@ -315,7 +315,7 @@ async def test__reconcile__stale_copy__refreshed_from_project_json(world: World)
 async def test__reconcile__broken_project_json__does_not_stop_others(world: World) -> None:
     broken = await world.add("Broken")
     fine = await world.add("Fine")
-    (broken.folder / "project.json").write_text("{not json")
+    (broken.folder / "project.json").write_text("{not json", encoding="utf-8", newline="\n")
     world.repo.save(replace(fine, name="Fine 2"))
 
     report = await ProjectCatalogReconciler(world.sessions, world.volume, world.repo).reconcile()

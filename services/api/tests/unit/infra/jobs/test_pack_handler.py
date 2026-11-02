@@ -6,6 +6,7 @@ import asyncio
 import hashlib
 import io
 import shutil
+import sys
 import threading
 import zipfile
 from pathlib import Path
@@ -106,7 +107,7 @@ async def test__pack_handler__hermetic_manifest_copy__builds_archive(tmp_path: P
     pdf, notes = _pdf(), "заметки".encode()
     project = tmp_path / "project"
     _write_project(project, pdf, notes)
-    (project / "unrelated.txt").write_text("не из манифеста", encoding="utf-8")
+    (project / "unrelated.txt").write_text("не из манифеста", encoding="utf-8", newline="\n")
     payload = _payload(*_entries(pdf, notes), verify_manifest=True)
     # Раннер видит только входы из манифеста: в пустую папку копируем лишь их.
     workspace = tmp_path / "runner"
@@ -274,7 +275,18 @@ async def test__pack_handler__caller_cancelled__artifacts_removed_after_thread_s
 
 
 @pytest.mark.unit
-@pytest.mark.parametrize("name", ["a\x00b.txt", "a\ud800b.txt"])
+@pytest.mark.parametrize(
+    "name",
+    [
+        "a\x00b.txt",
+        pytest.param(
+            "a\ud800b.txt",
+            marks=pytest.mark.skipif(
+                sys.platform == "win32", reason="Windows кодирует непарный суррогат в '?' и пишет файл"
+            ),
+        ),
+    ],
+)
 def test__pack_handler__unwritable_entry_name__invalid_input_failure_and_no_leftover_folder(
     tmp_path: Path, name: str
 ) -> None:

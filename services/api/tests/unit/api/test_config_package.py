@@ -68,7 +68,9 @@ def test__local_app__without_server_extra__imports_and_builds() -> None:
         """
     )
 
-    result = subprocess.run([sys.executable, "-c", script], capture_output=True, text=True, check=False, timeout=25)
+    result = subprocess.run(
+        [sys.executable, "-c", script], capture_output=True, text=True, encoding="utf-8", check=False, timeout=25
+    )
 
     assert result.returncode == 0, result.stderr
 
@@ -81,7 +83,7 @@ def test__oidc_env_config__needs_issuer_client_and_secret() -> None:
 
 def test__oidc_env_config__reads_the_secret_from_a_file(tmp_path: Path) -> None:
     secret_file = tmp_path / "secret"
-    secret_file.write_text("from-file\n", encoding="utf-8")
+    secret_file.write_text("from-file\n", encoding="utf-8", newline="\n")
 
     config = OidcEnvConfig(issuer="https://idp", client_id="c", client_secret_file=secret_file)
 

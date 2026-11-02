@@ -83,7 +83,7 @@ def test__agent_persona_repo__delete_missing__returns_false(tmp_path: Path) -> N
 
 @pytest.mark.unit
 def test__agent_persona_repo__corrupted_file__returns_empty(tmp_path: Path) -> None:
-    (tmp_path / "agent_personas.json").write_text("not json{{", encoding="utf-8")
+    (tmp_path / "agent_personas.json").write_text("not json{{", encoding="utf-8", newline="\n")
     assert JsonAgentPersonaRepository(tmp_path).list_all() == []
 
 

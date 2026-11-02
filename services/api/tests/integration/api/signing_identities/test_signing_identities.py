@@ -201,7 +201,7 @@ async def test__api__cadesplugin_loader__404_until_installed_then_served(test_ap
 
     target = settings.data_dir / "cadesplugin"
     target.mkdir(parents=True, exist_ok=True)
-    (target / "cadesplugin_api.js").write_text("window.cadesplugin = 1;")
+    (target / "cadesplugin_api.js").write_text("window.cadesplugin = 1;", encoding="utf-8", newline="\n")
     resp = await test_app.get("/api/v1/crypto/cadesplugin_api.js")
 
     assert resp.status_code == 200

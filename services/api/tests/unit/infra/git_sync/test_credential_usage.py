@@ -11,7 +11,7 @@ _ID = UUID("9a8b7c6d-1e2f-4a3b-8c4d-5e6f7a8b9c0d")
 
 def _config(tmp_path: Path, text: str) -> Path:
     path = tmp_path / "config"
-    path.write_text(text, encoding="utf-8")
+    path.write_text(text, encoding="utf-8", newline="\n")
     return path
 
 
@@ -78,7 +78,7 @@ def _store(folder: Path, credential: UUID | None) -> None:
     body = "[core]\n\tbare = false\n"
     if credential is not None:
         body += f"[hse]\n\tcredential = {credential}\n"
-    (git_dir / "config").write_text(body, encoding="utf-8")
+    (git_dir / "config").write_text(body, encoding="utf-8", newline="\n")
 
 
 async def test__by_credential__groups_projects_and_skips_unbound_and_broken(tmp_path: Path) -> None:

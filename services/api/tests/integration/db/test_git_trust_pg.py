@@ -126,7 +126,7 @@ async def test__materialize__file_matches_the_database_and_is_private(world: Wor
 
     path = world.settings.trust_file(_HOST, 8443)
     assert path is not None
-    assert path.read_text() == "CA-PEM\nPIN-PEM\n"
+    assert path.read_text(encoding="utf-8") == "CA-PEM\nPIN-PEM\n"
     assert stat.S_IMODE(os.stat(path).st_mode) == 0o600
     assert stat.S_IMODE(os.stat(path.parent).st_mode) == 0o700
 
@@ -154,11 +154,11 @@ async def test__materialize__changed_and_removed_records__reach_the_file_before_
 
         await world.settings.save(GitHostSettings(_HOST, 8443, ca_pem="NEW\n"))
         await world.settings.materialize()
-        assert path.read_text() == "NEW\n"
+        assert path.read_text(encoding="utf-8") == "NEW\n"
 
-        path.write_text("tampered")
+        path.write_text("tampered", encoding="utf-8", newline="\n")
         await world.settings.materialize()
-        assert path.read_text() == "NEW\n"
+        assert path.read_text(encoding="utf-8") == "NEW\n"
 
         await world.settings.save(GitHostSettings(_HOST, 8443))
         await world.settings.materialize()
@@ -211,18 +211,18 @@ async def test__known_hosts_file__matches_the_database_and_follows_removals(worl
         await world.hosts.trust("git.other", 2222, [_key(_OTHER_KEY)])
         await world.hosts.materialize()
         path = world.hosts.file_path()
-        lines = path.read_text().splitlines()
+        lines = path.read_text(encoding="utf-8").splitlines()
         assert [line.split()[0] for line in lines] == ["[git.other]:2222", _HOST]
         assert lines[1].split()[1:3] == ["ssh-ed25519", GITHUB_ED25519]
         assert stat.S_IMODE(os.stat(path).st_mode) == 0o600
 
         await world.hosts.forget(_HOST, None)
-        assert _HOST in path.read_text()
+        assert _HOST in path.read_text(encoding="utf-8")
         await world.hosts.materialize()
-    assert _HOST not in path.read_text().replace("git.other", "")
-    assert len(path.read_text().splitlines()) == 1
+    assert _HOST not in path.read_text(encoding="utf-8").replace("git.other", "")
+    assert len(path.read_text(encoding="utf-8").splitlines()) == 1
 
 
 async def test__known_hosts_file__empty_store__empty_file(world: World) -> None:
     await world.hosts.materialize()
-    assert world.hosts.file_path().read_text() == ""
+    assert world.hosts.file_path().read_text(encoding="utf-8") == ""

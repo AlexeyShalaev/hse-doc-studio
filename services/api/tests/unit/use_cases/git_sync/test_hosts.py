@@ -121,7 +121,7 @@ async def test__trust__already_trusted_key_is_idempotent(store: FileKnownHostsSt
 
     await _trust(store, scanner).execute(TrustHostInput("github.com", 22, GITHUB_FINGERPRINT))
 
-    assert len(store.file_path().read_text().splitlines()) == 1
+    assert len(store.file_path().read_text(encoding="utf-8").splitlines()) == 1
 
 
 @pytest.mark.parametrize("fingerprint", ["", "SHA256:short", "MD5:aa:bb:cc", GITHUB_FINGERPRINT[:-1]])

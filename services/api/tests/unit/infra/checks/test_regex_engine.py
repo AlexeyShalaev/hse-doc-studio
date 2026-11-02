@@ -18,7 +18,7 @@ engine = RegexCheckEngine()
 
 @pytest.mark.unit
 def test__regex_engine__negate__pattern_found_in_file__returns_result_with_line(tmp_path: Path) -> None:
-    (tmp_path / "main.tex").write_text(r"\todo{fix this}", encoding="utf-8")
+    (tmp_path / "main.tex").write_text(r"\todo{fix this}", encoding="utf-8", newline="\n")
     rule = make_check_rule(
         rule_id="r1",
         engine=CheckEngine.regex,
@@ -40,7 +40,7 @@ def test__regex_engine__negate__pattern_found_in_file__returns_result_with_line(
 
 @pytest.mark.unit
 def test__regex_engine__negate__pattern_not_found__no_results(tmp_path: Path) -> None:
-    (tmp_path / "main.tex").write_text(r"\section{Clean}", encoding="utf-8")
+    (tmp_path / "main.tex").write_text(r"\section{Clean}", encoding="utf-8", newline="\n")
     rule = make_check_rule(
         rule_id="r1",
         engine=CheckEngine.regex,
@@ -52,7 +52,7 @@ def test__regex_engine__negate__pattern_not_found__no_results(tmp_path: Path) ->
 @pytest.mark.unit
 def test__regex_engine__negate__multiple_matches_in_file__returns_all(tmp_path: Path) -> None:
     content = r"\todo{a}" + "\n" + r"\todo{b}" + "\n" + r"\done{c}"
-    (tmp_path / "main.tex").write_text(content, encoding="utf-8")
+    (tmp_path / "main.tex").write_text(content, encoding="utf-8", newline="\n")
     rule = make_check_rule(
         rule_id="r1",
         engine=CheckEngine.regex,
@@ -66,9 +66,9 @@ def test__regex_engine__negate__multiple_matches_in_file__returns_all(tmp_path: 
 
 @pytest.mark.unit
 def test__regex_engine__negate__multiple_files__searches_all(tmp_path: Path) -> None:
-    (tmp_path / "a.tex").write_text(r"\todo{in a}", encoding="utf-8")
-    (tmp_path / "b.tex").write_text(r"\todo{in b}", encoding="utf-8")
-    (tmp_path / "c.tex").write_text(r"\section{clean}", encoding="utf-8")
+    (tmp_path / "a.tex").write_text(r"\todo{in a}", encoding="utf-8", newline="\n")
+    (tmp_path / "b.tex").write_text(r"\todo{in b}", encoding="utf-8", newline="\n")
+    (tmp_path / "c.tex").write_text(r"\section{clean}", encoding="utf-8", newline="\n")
     rule = make_check_rule(
         rule_id="r1",
         engine=CheckEngine.regex,
@@ -80,7 +80,7 @@ def test__regex_engine__negate__multiple_files__searches_all(tmp_path: Path) -> 
 
 @pytest.mark.unit
 def test__regex_engine__negate__relative_path_in_location(tmp_path: Path) -> None:
-    (tmp_path / "main.tex").write_text(r"\todo{fix}", encoding="utf-8")
+    (tmp_path / "main.tex").write_text(r"\todo{fix}", encoding="utf-8", newline="\n")
     rule = make_check_rule(
         rule_id="r1",
         engine=CheckEngine.regex,
@@ -99,7 +99,7 @@ def test__regex_engine__negate__relative_path_in_location(tmp_path: Path) -> Non
 
 @pytest.mark.unit
 def test__regex_engine__required__pattern_present__no_results(tmp_path: Path) -> None:
-    (tmp_path / "main.tex").write_text(r"\section{Введение}", encoding="utf-8")
+    (tmp_path / "main.tex").write_text(r"\section{Введение}", encoding="utf-8", newline="\n")
     rule = make_check_rule(
         rule_id="r-intro",
         engine=CheckEngine.regex,
@@ -114,7 +114,7 @@ def test__regex_engine__required__pattern_present__no_results(tmp_path: Path) ->
 
 @pytest.mark.unit
 def test__regex_engine__required__pattern_missing__fires_with_yaml_message(tmp_path: Path) -> None:
-    (tmp_path / "main.tex").write_text(r"\section{Заключение}", encoding="utf-8")
+    (tmp_path / "main.tex").write_text(r"\section{Заключение}", encoding="utf-8", newline="\n")
     rule = make_check_rule(
         rule_id="r-intro",
         engine=CheckEngine.regex,
@@ -132,7 +132,7 @@ def test__regex_engine__required__pattern_missing__fires_with_yaml_message(tmp_p
 
 @pytest.mark.unit
 def test__regex_engine__required__localized_message_picks_ru(tmp_path: Path) -> None:
-    (tmp_path / "main.tex").write_text("nothing", encoding="utf-8")
+    (tmp_path / "main.tex").write_text("nothing", encoding="utf-8", newline="\n")
     rule = make_check_rule(
         rule_id="r-loc",
         engine=CheckEngine.regex,
@@ -166,7 +166,7 @@ def test__regex_engine__required__no_files__falls_back_to_source_file(tmp_path: 
 
 @pytest.mark.unit
 def test__regex_engine__no_pattern_in_rule__no_results(tmp_path: Path) -> None:
-    (tmp_path / "main.tex").write_text(r"\todo{fix}", encoding="utf-8")
+    (tmp_path / "main.tex").write_text(r"\todo{fix}", encoding="utf-8", newline="\n")
     rule = make_check_rule(
         rule_id="r1",
         engine=CheckEngine.regex,
@@ -177,7 +177,7 @@ def test__regex_engine__no_pattern_in_rule__no_results(tmp_path: Path) -> None:
 
 @pytest.mark.unit
 def test__regex_engine__invalid_regex_pattern__no_results(tmp_path: Path) -> None:
-    (tmp_path / "main.tex").write_text(r"\todo{fix}", encoding="utf-8")
+    (tmp_path / "main.tex").write_text(r"\todo{fix}", encoding="utf-8", newline="\n")
     rule = make_check_rule(
         rule_id="r1",
         engine=CheckEngine.regex,
@@ -193,7 +193,7 @@ def test__regex_engine__invalid_regex_pattern__no_results(tmp_path: Path) -> Non
 
 @pytest.mark.unit
 def test__regex_engine__no_flag__case_sensitive_by_default(tmp_path: Path) -> None:
-    (tmp_path / "main.tex").write_text(r"\TODO{fix}", encoding="utf-8")
+    (tmp_path / "main.tex").write_text(r"\TODO{fix}", encoding="utf-8", newline="\n")
     rule = make_check_rule(
         rule_id="r1",
         engine=CheckEngine.regex,
@@ -204,7 +204,7 @@ def test__regex_engine__no_flag__case_sensitive_by_default(tmp_path: Path) -> No
 
 @pytest.mark.unit
 def test__regex_engine__ignorecase_flag__matches_other_case(tmp_path: Path) -> None:
-    (tmp_path / "main.tex").write_text(r"\TODO{fix}", encoding="utf-8")
+    (tmp_path / "main.tex").write_text(r"\TODO{fix}", encoding="utf-8", newline="\n")
     rule = make_check_rule(
         rule_id="r1",
         engine=CheckEngine.regex,
@@ -216,7 +216,7 @@ def test__regex_engine__ignorecase_flag__matches_other_case(tmp_path: Path) -> N
 
 @pytest.mark.unit
 def test__regex_engine__multiline_flag__anchors_match_each_line(tmp_path: Path) -> None:
-    (tmp_path / "main.tex").write_text("intro\n\\section{Body}", encoding="utf-8")
+    (tmp_path / "main.tex").write_text("intro\n\\section{Body}", encoding="utf-8", newline="\n")
     rule = make_check_rule(
         rule_id="r-sec",
         engine=CheckEngine.regex,
@@ -228,7 +228,7 @@ def test__regex_engine__multiline_flag__anchors_match_each_line(tmp_path: Path) 
 
 @pytest.mark.unit
 def test__regex_engine__flags_as_single_string__accepted(tmp_path: Path) -> None:
-    (tmp_path / "main.tex").write_text(r"\Section{X}", encoding="utf-8")
+    (tmp_path / "main.tex").write_text(r"\Section{X}", encoding="utf-8", newline="\n")
     rule = make_check_rule(
         rule_id="r1",
         engine=CheckEngine.regex,
@@ -240,7 +240,7 @@ def test__regex_engine__flags_as_single_string__accepted(tmp_path: Path) -> None
 
 @pytest.mark.unit
 def test__regex_engine__unknown_flag__ignored_not_fatal(tmp_path: Path) -> None:
-    (tmp_path / "main.tex").write_text(r"\todo{fix}", encoding="utf-8")
+    (tmp_path / "main.tex").write_text(r"\todo{fix}", encoding="utf-8", newline="\n")
     rule = make_check_rule(
         rule_id="r1",
         engine=CheckEngine.regex,

@@ -178,7 +178,7 @@ def test__journal_roundtrip_survives_garbage_and_orders_the_outbox(tmp_path: Any
     assert again.run is not None
     again.pop_event()
     assert [i["event"]["seq"] for i in Journal(path).outbox] == [2]
-    path.write_text("{broken", encoding="utf-8")
+    path.write_text("{broken", encoding="utf-8", newline="\n")
     assert Journal(path).run is None
 
 

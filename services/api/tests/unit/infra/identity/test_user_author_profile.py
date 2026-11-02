@@ -59,7 +59,7 @@ def test_no_actor_local_actor_or_unusable_identity_means_no_profile() -> None:
 @pytest.mark.skipif(shutil.which("git") is None, reason="git binary not available")
 def test_two_users_commit_into_one_project_with_different_authors(tmp_path: Path) -> None:
     project: Project = make_project(folder=tmp_path)
-    (tmp_path / "a.tex").write_text("v1\n", encoding="utf-8")
+    (tmp_path / "a.tex").write_text("v1\n", encoding="utf-8", newline="\n")
     svc = GitVcsService(
         author_name=_BOT.name,
         author_email=_BOT.email,
@@ -72,7 +72,7 @@ def test_two_users_commit_into_one_project_with_different_authors(tmp_path: Path
         ("v3\n", Actor.user("u2", "Bob Petrov", "bob@home.example")),
     ):
         set_current_actor(actor)
-        (tmp_path / "a.tex").write_text(text, encoding="utf-8")
+        (tmp_path / "a.tex").write_text(text, encoding="utf-8", newline="\n")
         assert svc.commit(project, message="snap", kind=VcsCommitKind.manual) is not None
 
     log = subprocess.run(  # noqa: S603

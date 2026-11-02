@@ -114,6 +114,7 @@ def _head_identity(project: dict[str, Any]) -> str:
         ["git", "--git-dir", str(git_dir), "log", "-1", "--format=%an,%ae,%cn,%ce"],  # noqa: S607
         capture_output=True,
         text=True,
+        encoding="utf-8",
         check=True,
     )
     return out.stdout.strip()

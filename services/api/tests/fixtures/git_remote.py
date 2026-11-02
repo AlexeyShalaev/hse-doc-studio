@@ -39,6 +39,7 @@ from hse_doc_studio.infra.vcs.git_env import base_git_env
 from hse_doc_studio.infra.vcs.git_vcs_service import GitVcsService
 
 from tests.factories import make_project
+from tests.fixtures.loopback_http import LoopbackThreadingHTTPServer
 from tests.fixtures.tls import TlsMaterial
 
 _IDENTITY = {
@@ -109,6 +110,7 @@ def run_git(
         env=git_env(),
         capture_output=True,
         text=True,
+        encoding="utf-8",
         check=False,
         timeout=_BACKEND_TIMEOUT_S,
     )
@@ -289,7 +291,7 @@ class GitHttpServer:
         class Handler(_GitHandler):
             server_state = owner
 
-        self._server = ThreadingHTTPServer(("127.0.0.1", 0), Handler)
+        self._server = LoopbackThreadingHTTPServer(("127.0.0.1", 0), Handler)
         if self.tls is not None:
             self._server.socket = self.tls.server_context().wrap_socket(self._server.socket, server_side=True)
         self._server.daemon_threads = True
@@ -483,11 +485,11 @@ class FakeSsh:
     path: Path
 
     def mode(self, name: str) -> None:
-        (self.path.parent / "mode").write_text(name)
+        (self.path.parent / "mode").write_text(name, encoding="utf-8", newline="\n")
 
     def calls(self) -> list[dict[str, Any]]:
         log = self.path.parent / "calls.jsonl"
-        return [json.loads(line) for line in log.read_text().splitlines()] if log.exists() else []
+        return [json.loads(line) for line in log.read_text(encoding="utf-8").splitlines()] if log.exists() else []
 
     def wait_for_call(self, timeout_s: float = 10.0) -> dict[str, Any]:
         deadline = time.monotonic() + timeout_s
@@ -504,7 +506,7 @@ def fake_ssh(tmp_path: Path) -> FakeSsh:
     directory = tmp_path / "fake-ssh"
     directory.mkdir()
     script = directory / "ssh"
-    script.write_text(_FAKE_SSH_SCRIPT.format(python=sys.executable))
+    script.write_text(_FAKE_SSH_SCRIPT.format(python=sys.executable), encoding="utf-8", newline="\n")
     script.chmod(0o755)
     fake = FakeSsh(script)
     fake.mode("auth_failed")

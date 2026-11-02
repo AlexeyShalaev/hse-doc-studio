@@ -57,19 +57,19 @@ async def test_incremental_sync_removes_stale_keeps_build(tmp_path: Path) -> Non
     _, spaces = _make(tmp_path, store)
     async with spaces.open("p", (_entry("a.tex", b"a"), _entry("d/b.tex", b"b"))) as ws:
         (ws.root / ".build").mkdir()
-        (ws.root / ".build" / "aux").write_text("x")
-        (ws.root / "junk.txt").write_text("j")
+        (ws.root / ".build" / "aux").write_text("x", encoding="utf-8", newline="\n")
+        (ws.root / "junk.txt").write_text("j", encoding="utf-8", newline="\n")
     async with spaces.open("p", (_entry("a.tex", b"a"), _entry("c.tex", b"c"))) as ws:
         assert not (ws.root / "d").exists()
         assert not (ws.root / "junk.txt").exists()
         assert (ws.root / "c.tex").read_bytes() == b"c"
-        assert (ws.root / ".build" / "aux").read_text() == "x"
+        assert (ws.root / ".build" / "aux").read_text(encoding="utf-8") == "x"
     assert len(store.fetched) == 3
 
 
 async def test_symlink_in_workspace_is_replaced(tmp_path: Path) -> None:
     outside = tmp_path / "secret.txt"
-    outside.write_text("secret")
+    outside.write_text("secret", encoding="utf-8", newline="\n")
     store = _Store({"a": b"a"})
     _, spaces = _make(tmp_path, store)
     manifest = (_entry("sub/a.tex", b"a"),)
@@ -80,7 +80,7 @@ async def test_symlink_in_workspace_is_replaced(tmp_path: Path) -> None:
         target = ws.root / "sub" / "a.tex"
         assert not target.is_symlink()
         assert target.read_bytes() == b"a"
-    assert outside.read_text() == "secret"
+    assert outside.read_text(encoding="utf-8") == "secret"
     async with spaces.open("p", manifest) as ws:
         (ws.root / "sub").rename(ws.root / "sub_old")
         (ws.root / "sub").symlink_to(tmp_path)
@@ -157,7 +157,7 @@ def test_collector_skips_symlinks_unchanged_and_unlisted(tmp_path: Path) -> None
     (root / "out").mkdir(parents=True)
     (root / "main.pdf").write_bytes(b"pdf")
     (root / "same.pdf").write_bytes(b"same")
-    (root / "notes.txt").write_text("x")
+    (root / "notes.txt").write_text("x", encoding="utf-8", newline="\n")
     (root / "link.pdf").symlink_to(secret)
     (root / "evil").symlink_to(tmp_path)
     os.link(secret, root / "hard.pdf")
@@ -204,6 +204,6 @@ async def test_directory_in_place_of_file_is_replaced(tmp_path: Path) -> None:
     async with spaces.open("p", manifest) as ws:
         (ws.root / "a.tex").unlink()
         (ws.root / "a.tex").mkdir()
-        (ws.root / "a.tex" / "x").write_text("x")
+        (ws.root / "a.tex" / "x").write_text("x", encoding="utf-8", newline="\n")
     async with spaces.open("p", manifest) as ws:
         assert (ws.root / "a.tex").read_bytes() == b"alpha"

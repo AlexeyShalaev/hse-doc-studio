@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import stat
+import sys
 import zipfile
 from pathlib import Path
 from uuid import uuid4
@@ -94,7 +95,12 @@ def test__inspect__junk_and_records__counted_not_kept(archive_path: Path) -> Non
         "a/../../evil.tex",
         "/etc/passwd",
         "C:/Windows/evil.tex",
-        "a\\b.tex",
+        pytest.param(
+            "a\\b.tex",
+            marks=pytest.mark.skipif(
+                sys.platform == "win32", reason="zipfile на Windows сам заменяет обратную косую на / при чтении имени"
+            ),
+        ),
         "a//b.tex",
         "./x.tex",
     ],
@@ -251,7 +257,7 @@ def test__extract__writes_files_skips_hooks_records_and_junk(tmp_path: Path, arc
     written = sorted(p.relative_to(folder).as_posix() for p in folder.rglob("*") if p.is_file())
     assert written == [".hse-studio/project.json", "chapters/one.tex", "main.tex"]
     assert result.files == 3
-    assert (folder / "chapters" / "one.tex").read_text() == "one"
+    assert (folder / "chapters" / "one.tex").read_text(encoding="utf-8") == "one"
 
 
 def test__extract__target_has_symlinked_dir__refused(tmp_path: Path, archive_path: Path) -> None:

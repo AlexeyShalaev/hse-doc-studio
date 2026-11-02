@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import os
 import stat
+import sys
 import time
 from pathlib import Path
 
@@ -11,6 +12,9 @@ import pytest
 from hse_doc_studio.infra.signatures.key_session import KEY_SESSION_PREFIX, key_directory, sweep_stale_key_sessions
 
 
+@pytest.mark.skipif(
+    sys.platform == "win32", reason="права доступа POSIX (0o600/0o700) на NTFS не выражаются: stat отдаёт 0o666/0o777"
+)
 def test__key_directory__has_private_mode_and_both_files_and_is_gone_after(tmp_path: Path) -> None:
     with key_directory(b"KEY", b"CERT", root=tmp_path) as directory:
         assert stat.S_IMODE(directory.stat().st_mode) == 0o700

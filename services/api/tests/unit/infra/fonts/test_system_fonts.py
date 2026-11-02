@@ -17,7 +17,7 @@ def fake_system_dir(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     sub.mkdir(parents=True)
     (sub / "times.ttf").write_bytes(b"TIMES")
     (sysdir / "arial.otf").write_bytes(b"ARIAL")
-    (sysdir / "notes.txt").write_text("not a font", encoding="utf-8")
+    (sysdir / "notes.txt").write_text("not a font", encoding="utf-8", newline="\n")
     monkeypatch.setattr(system_fonts, "_candidate_dirs", lambda: [sysdir])
     return sysdir
 

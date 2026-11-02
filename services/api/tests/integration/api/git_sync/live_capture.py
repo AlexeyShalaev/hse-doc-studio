@@ -118,7 +118,7 @@ def write_snapshots(repo: Path, items: dict[tuple[str, str], Any]) -> None:
     for (schema_name, name), body in items.items():
         target = base / schema_name / f"{name}.json"
         target.parent.mkdir(parents=True, exist_ok=True)
-        target.write_text(json.dumps(body, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+        target.write_text(json.dumps(body, ensure_ascii=False, indent=2) + "\n", encoding="utf-8", newline="\n")
 
 
 def compare_snapshots(repo: Path, items: dict[tuple[str, str], Any]) -> list[str]:

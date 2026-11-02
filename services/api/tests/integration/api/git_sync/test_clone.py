@@ -114,7 +114,7 @@ def _edit_project_json(project: dict[str, Any], change: Callable[[dict[str, Any]
     path = Path(project["folder"]) / ".hse-studio" / "project.json"
     data = json.loads(path.read_text(encoding="utf-8"))
     change(data)
-    path.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
+    path.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8", newline="\n")
 
 
 async def _start(studio: Studio, remote: BareRemote, folder: Path, **body: Any) -> Any:
@@ -290,7 +290,7 @@ async def test__clone__not_a_studio_project__keeps_what_was_in_the_folder(
     seed_remote(remote, {"README.md": "just a repo"})
     folder = tmp_path / "clones" / "repo"
     folder.mkdir(parents=True)
-    (folder / ".keep").write_text("mine", encoding="utf-8")
+    (folder / ".keep").write_text("mine", encoding="utf-8", newline="\n")
 
     operation = await _clone(target, remote, folder)
 
@@ -488,7 +488,9 @@ async def test__clone__remote_with_symlink__is_refused_before_touching_the_folde
 async def test__clone__remote_tracks_the_private_store__is_refused(
     target: Studio, remote: BareRemote, published: dict[str, Any], tmp_path: Path
 ) -> None:
-    (_store(published) / "config").write_text("[core]\n\tfsmonitor = touch /tmp/pwned\n", encoding="utf-8")
+    (_store(published) / "config").write_text(
+        "[core]\n\tfsmonitor = touch /tmp/pwned\n", encoding="utf-8", newline="\n"
+    )
     _commit(published, remote, "hostile store", force=True)
     folder = tmp_path / "clones" / "thesis"
 
@@ -554,7 +556,7 @@ async def test__clone__folder_not_empty__409_and_nothing_is_touched(
 ) -> None:
     folder = tmp_path / "clones" / "busy"
     folder.mkdir(parents=True)
-    (folder / "notes.txt").write_text("mine", encoding="utf-8")
+    (folder / "notes.txt").write_text("mine", encoding="utf-8", newline="\n")
 
     resp = await _start(target, remote, folder)
 
@@ -683,7 +685,7 @@ async def test__clone__cancel_in_preexisting_folder__keeps_hidden_files_and_remo
     monkeypatch.setattr(GitTransport, "fetch", hang)
     folder = tmp_path / "clones" / "thesis"
     folder.mkdir(parents=True)
-    (folder / ".keep").write_text("mine", encoding="utf-8")
+    (folder / ".keep").write_text("mine", encoding="utf-8", newline="\n")
     resp = await _start(target, remote, folder)
     operation_id = resp.json()["operation_id"]
     async with asyncio.timeout(_WAIT_S):

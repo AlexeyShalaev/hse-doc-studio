@@ -47,7 +47,7 @@ def _write_office_editor_secret(tmp_path: Path, secret: str = _SECRET) -> None:
     """
     secret_path = tmp_path / "data" / "office-editor-jwt.secret"
     secret_path.parent.mkdir(parents=True, exist_ok=True)
-    secret_path.write_text(secret, encoding="utf-8")
+    secret_path.write_text(secret, encoding="utf-8", newline="\n")
 
 
 class _FakeDockerProc:
@@ -298,7 +298,7 @@ def _select_convert_image(tmp_path: Path, image: str = _ACTIVE_IMAGE) -> None:
     """Выбор образа в Settings: config.json в data_dir (`test_app` смотрит туда же)."""
     config = tmp_path / "data" / "config.json"
     config.parent.mkdir(parents=True, exist_ok=True)
-    config.write_text(json.dumps({"office_convert_image": image}), encoding="utf-8")
+    config.write_text(json.dumps({"office_convert_image": image}), encoding="utf-8", newline="\n")
 
 
 async def _post_save_callback(client: AsyncClient, project_id: str, doc_id: str, status: int) -> Any:

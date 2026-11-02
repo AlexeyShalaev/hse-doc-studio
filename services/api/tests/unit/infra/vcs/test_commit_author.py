@@ -45,14 +45,14 @@ def _service() -> GitVcsService:
 
 def _setup(tmp_path: Path) -> tuple[GitVcsService, Project]:
     project = make_project(folder=tmp_path)
-    (tmp_path / "a.tex").write_text("v1\n", encoding="utf-8")
+    (tmp_path / "a.tex").write_text("v1\n", encoding="utf-8", newline="\n")
     svc = _service()
     svc.init(project, list(DEFAULT_VCS_EXCLUDE))
     return svc, project
 
 
 def _snapshot(svc: GitVcsService, project: Project, tmp_path: Path, text: str) -> None:
-    (tmp_path / "a.tex").write_text(text, encoding="utf-8")
+    (tmp_path / "a.tex").write_text(text, encoding="utf-8", newline="\n")
     assert svc.commit(project, message="snap", kind=VcsCommitKind.manual) is not None
 
 
@@ -61,6 +61,7 @@ def _git(project: Project, *args: str) -> str:
         ["git", "--git-dir", str(project.folder / ".hse-studio" / "git"), *args],  # noqa: S607
         capture_output=True,
         text=True,
+        encoding="utf-8",
         check=True,
     )
     return out.stdout.strip()
@@ -195,7 +196,7 @@ def _subcommand(cmd: list[str]) -> str:
 
 def test__commit__without_provider__author_is_bot_even_with_actor(tmp_path: Path) -> None:
     project = make_project(folder=tmp_path)
-    (tmp_path / "a.tex").write_text("v1\n", encoding="utf-8")
+    (tmp_path / "a.tex").write_text("v1\n", encoding="utf-8", newline="\n")
     svc = GitVcsService(author_name=_BOT.name, author_email=_BOT.email)
     svc.init(project, list(DEFAULT_VCS_EXCLUDE))
     set_current_actor(_ALICE)
@@ -227,7 +228,7 @@ def _service_with_profile(profile: AuthorProfile | None) -> GitVcsService:
 
 def _setup_with_profile(tmp_path: Path, profile: AuthorProfile | None) -> tuple[GitVcsService, Project]:
     project = make_project(folder=tmp_path)
-    (tmp_path / "a.tex").write_text("v1\n", encoding="utf-8")
+    (tmp_path / "a.tex").write_text("v1\n", encoding="utf-8", newline="\n")
     svc = _service_with_profile(profile)
     svc.init(project, list(DEFAULT_VCS_EXCLUDE))
     return svc, project
@@ -272,7 +273,7 @@ def test__commit__invalid_user_actor_with_profile__falls_back_to_bot_not_profile
 def test__commit__profile_changes_between_calls__author_follows_profile(tmp_path: Path) -> None:
     source = _Profile(_PROFILE)
     project = make_project(folder=tmp_path)
-    (tmp_path / "a.tex").write_text("v1\n", encoding="utf-8")
+    (tmp_path / "a.tex").write_text("v1\n", encoding="utf-8", newline="\n")
     svc = GitVcsService(
         author_name=_BOT.name,
         author_email=_BOT.email,

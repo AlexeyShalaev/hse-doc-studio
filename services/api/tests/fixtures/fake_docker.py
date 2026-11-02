@@ -162,6 +162,7 @@ def install_fake_docker(
             pages=pages,
         ),
         encoding="utf-8",
+        newline="\n",
     )
     script.chmod(script.stat().st_mode | stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH)
 

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import sys
 
 import pytest
 from hse_doc_studio.core.enums import VcsCommitKind
@@ -66,6 +67,9 @@ def test__commit_merge__without_changes_keeps_the_tree_of_ours(repo: Repo) -> No
     assert tree == repo.git.text(repo.folder, ["rev-parse", f"{ours}^{{tree}}"])
 
 
+@pytest.mark.skipif(
+    sys.platform == "win32", reason="обратная косая в имени файла в Windows недопустима: git там не создаёт такой путь"
+)
 def test__commit_merge__keeps_theirs_added_entry_that_the_planner_skipped_as_unsafe(repo: Repo) -> None:
     # Пропущенный как небезопасный чужой файл не должен исчезнуть из дерева слияния: отправка удалила бы его у всех.
     base = repo.head()
@@ -125,7 +129,7 @@ def test__commit_merge__uses_the_author_from_the_provider(repo: Repo) -> None:
 
 def test__commit_merge__does_not_move_the_branch_or_touch_the_work_tree(repo: Repo) -> None:
     _, ours, theirs = _fork(repo)
-    (repo.folder / "dirty.txt").write_text("untracked\n", encoding="utf-8")
+    (repo.folder / "dirty.txt").write_text("untracked\n", encoding="utf-8", newline="\n")
     before = repo.git.text(repo.folder, ["status", "--porcelain"])
     _committer(repo).commit_merge(
         repo.folder, ours=ours, theirs=theirs, changes={"side/file": b"x\n"}, message="m", trailers={}
@@ -138,7 +142,7 @@ def test__commit_merge__does_not_move_the_branch_or_touch_the_work_tree(repo: Re
 @_posix_only
 def test__commit_merge__keeps_the_executable_bit_of_existing_files(repo: Repo) -> None:
     script = repo.folder / "run.sh"
-    script.write_text("#!/bin/sh\n", encoding="utf-8")
+    script.write_text("#!/bin/sh\n", encoding="utf-8", newline="\n")
     script.chmod(0o755)
     repo.snap("script")
     base = repo.head()
@@ -216,7 +220,7 @@ def test__advance_branch__head_moved_meanwhile__returns_false_and_changes_nothin
 
 def test__advance_branch__other_branch__leaves_the_index_alone(repo: Repo) -> None:
     _, ours, theirs = _fork(repo)
-    (repo.folder / "dirty.txt").write_text("x\n", encoding="utf-8")
+    (repo.folder / "dirty.txt").write_text("x\n", encoding="utf-8", newline="\n")
     repo.git.run(repo.folder, ["add", "dirty.txt"])
     committer = _committer(repo)
     assert committer.advance_branch(repo.folder, "side", expected=theirs, new=ours) is True

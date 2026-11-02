@@ -258,7 +258,7 @@ async def test__issuer_is_untrusted__self_signed_server__is_true(tls_server: Git
 async def test__issuer_is_untrusted__server_of_a_trusted_ca__is_false(tmp_path: Path) -> None:
     material = make_ca_signed(tmp_path / "tls")
     ca_file = tmp_path / "ca.pem"
-    ca_file.write_text(material.ca_pem, encoding="ascii")
+    ca_file.write_text(material.ca_pem, encoding="ascii", newline="\n")
     server = GitHttpServer(root=tmp_path / "root", token=None, tls=material)
     server.start()
     try:

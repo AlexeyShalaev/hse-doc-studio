@@ -268,7 +268,7 @@ async def test__detect__self_signed_server_without_trust__is_none_and_with_trust
     server = server_factory({"/api/v4/version": _constant(200, _GITLAB_VERSION)}, tls=True)
     assert server.tls is not None
     ca_file = tmp_path / "trust.pem"
-    ca_file.write_text(server.tls.cert_pem, encoding="ascii")
+    ca_file.write_text(server.tls.cert_pem, encoding="ascii", newline="\n")
 
     untrusted = await HttpProviderDetector(3.0).detect(_request(server))
     trusted = await HttpProviderDetector(3.0).detect(
@@ -556,9 +556,9 @@ async def test__introspection__nobody_listens__raises_offline() -> None:
     request = IntrospectionRequest(GitProvider.gitlab, "http://127.0.0.1:1/api/v4", Secret(_TOKEN))
 
     with pytest.raises(GitSyncError) as error:
-        await HttpTokenIntrospector(1.0, allow_insecure_http=True).introspect(request)
+        await HttpTokenIntrospector(8.0, allow_insecure_http=True).introspect(request)
 
-    assert error.value.code is GitErrorCode.offline
+    assert error.value.code is GitErrorCode.offline  # Windows отказывает в соединении с loopback не сразу, а через ~2 с
 
 
 async def test__introspection__self_signed_server__raises_untrusted_with_the_certificate_and_works_once_trusted(
@@ -571,7 +571,7 @@ async def test__introspection__self_signed_server__raises_untrusted_with_the_cer
     with pytest.raises(GitSyncError) as error:
         await introspector.introspect(_introspect(server, GitProvider.gitlab, "/api/v4"))
     ca_file = tmp_path / "trust.pem"
-    ca_file.write_text(server.tls.cert_pem, encoding="ascii")
+    ca_file.write_text(server.tls.cert_pem, encoding="ascii", newline="\n")
     trusted = await introspector.introspect(_introspect(server, GitProvider.gitlab, "/api/v4", ca_file=ca_file))
 
     assert error.value.code is GitErrorCode.tls_untrusted_ca
@@ -591,7 +591,7 @@ async def test__introspection__certificate_issued_by_an_unknown_ca__is_untrusted
     server.start()
     try:
         ca_file = tmp_path / "ca.pem"
-        ca_file.write_text(material.ca_pem or "", encoding="ascii")
+        ca_file.write_text(material.ca_pem or "", encoding="ascii", newline="\n")
         introspector = HttpTokenIntrospector(3.0, TlsCertificateService(3.0))
 
         with pytest.raises(GitSyncError) as error:

@@ -22,7 +22,7 @@ async def test__real_template__fresh_project_matches_its_recorded_base(
     folder.mkdir()
     # Скрытый файл пользователя, лежавший в папке до создания, — не часть шаблона.
     (folder / ".vscode").mkdir()
-    (folder / ".vscode" / "settings.json").write_text("{}", encoding="utf-8")
+    (folder / ".vscode" / "settings.json").write_text("{}", encoding="utf-8", newline="\n")
     payload = {**project_api_payload(str(folder)), "template_id": template_id, "lang": lang}
     project = (await test_app.post("/api/v1/projects", json=payload)).json()
 
@@ -37,6 +37,7 @@ async def test__real_template__fresh_project_matches_its_recorded_base(
         ["git", "--git-dir", str(git_dir), "ls-tree", "-r", "--name-only", "refs/hse/template/2026.1"],
         capture_output=True,
         text=True,
+        encoding="utf-8",
         check=True,
     ).stdout.split()
     assert base_files
@@ -47,6 +48,7 @@ async def test__real_template__fresh_project_matches_its_recorded_base(
         ["git", "--git-dir", str(git_dir), "log", "-1", "--format=%B", "refs/hse/template/2026.1"],
         capture_output=True,
         text=True,
+        encoding="utf-8",
         check=True,
     ).stdout
     assert "Hse-Base-Approximate" not in message

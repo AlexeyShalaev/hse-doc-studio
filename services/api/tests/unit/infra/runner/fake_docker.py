@@ -24,7 +24,7 @@ elif argv[:2] == ["image", "inspect"]:
     print(json.dumps([{{"Id": "sha256:1", "Size": 10, "Created": "2026-01-01"}}]))
 elif argv[:1] == ["run"] and "latexmk" in argv:
     mount = next(a for a in argv if a.endswith(":/work:z"))
-    host = Path(mount.split(":")[0])
+    host = Path(mount.removesuffix(":/work:z"))
     workdir = argv[argv.index("-w") + 1]
     outdir = next(a for a in argv if a.startswith("-output-directory=")).split("=", 1)[1]
     stem = Path(argv[-1]).stem
@@ -38,7 +38,8 @@ elif argv[:1] == ["run"] and "latexmk" in argv:
         sys.exit(12)
     base.mkdir(parents=True, exist_ok=True)
     (base / (stem + ".pdf")).write_bytes(b"%PDF-1.5 built")
-    (base / (stem + ".log")).write_text("Output written on x.pdf (3 pages, 100 bytes).\\n")
+    log_text = "Output written on x.pdf (3 pages, 100 bytes).\\n"
+    (base / (stem + ".log")).write_text(log_text, encoding="utf-8", newline="\\n")
     print("latexmk ok")
 elif argv[:1] == ["run"]:
     print("5+1+0 (1/0/0/0) Total")
@@ -48,8 +49,15 @@ elif argv[:1] == ["run"]:
 
 
 def install_fake_docker(directory: Path) -> Path:
+    body = _SCRIPT.format(python=sys.executable)
+    if sys.platform == "win32":
+        # Windows не исполняет файл по шебангу: питоновский скрипт запускает обёртка .cmd
+        (directory / "docker_fake.py").write_text(body.split("\n", 1)[1], encoding="utf-8", newline="\n")
+        wrapper = directory / "docker.cmd"
+        wrapper.write_text(f'@"{sys.executable}" "%~dp0docker_fake.py" %*\r\n', encoding="utf-8", newline="")
+        return wrapper
     path = directory / "docker"
-    path.write_text(_SCRIPT.format(python=sys.executable))
+    path.write_text(body, encoding="utf-8", newline="\n")
     path.chmod(path.stat().st_mode | stat.S_IEXEC)
     return path
 
@@ -57,4 +65,4 @@ def install_fake_docker(directory: Path) -> Path:
 def recorded_calls(log: Path) -> list[list[str]]:
     if not log.exists():
         return []
-    return [json.loads(line) for line in log.read_text().splitlines()]
+    return [json.loads(line) for line in log.read_text(encoding="utf-8").splitlines()]

@@ -197,7 +197,7 @@ async def _text_conflict(stack: Stack, project: dict[str, Any], remote: BareRemo
     peer = await _connect(stack, project, remote)
     path = _file(project, TRACKED_FILE)
     original = path.read_text(encoding="utf-8")
-    path.write_text(_edited(original, f"{_MINE} first", f"{_MINE} last"), encoding="utf-8")
+    path.write_text(_edited(original, f"{_MINE} first", f"{_MINE} last"), encoding="utf-8", newline="\n")
     _commit(project, "mine")
     peer.write(TRACKED_FILE, _edited(original, f"{_THEIRS} first", f"{_THEIRS} last"))
     peer.commit_push("theirs")
@@ -716,7 +716,7 @@ async def test__resolve__edit_of_the_conflicted_file_itself__is_409_plan_outdate
     await _text_conflict(stack, project, remote)
     old = await _session(stack, project)
     path = _file(project, TRACKED_FILE)
-    path.write_text(path.read_text(encoding="utf-8") + "% typed after the conflict\n", encoding="utf-8")
+    path.write_text(path.read_text(encoding="utf-8") + "% typed after the conflict\n", encoding="utf-8", newline="\n")
 
     resp = await _resolve(stack, project, old, {TRACKED_FILE: {"kind": "file", "choice": "mine"}})
 
@@ -732,12 +732,14 @@ async def test__resolve__unrelated_edit_and_compile__do_not_invalidate_the_sessi
 ) -> None:
     peer = await _text_conflict(stack, project, remote)
     session = await _session(stack, project)
-    _file(project, "notes-unrelated.txt").write_text("unrelated edit\n", encoding="utf-8")
+    _file(project, "notes-unrelated.txt").write_text("unrelated edit\n", encoding="utf-8", newline="\n")
     state = json.loads(_file(project, _PROJECT_FILE).read_text(encoding="utf-8"))
     state["documents"][0]["last_compile_id"] = "11111111-1111-4111-8111-111111111111"
-    _file(project, _PROJECT_FILE).write_text(json.dumps(state, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    _file(project, _PROJECT_FILE).write_text(
+        json.dumps(state, ensure_ascii=False, indent=2) + "\n", encoding="utf-8", newline="\n"
+    )
     _commit(project, "compile")
-    _file(project, "notes-unsaved.txt").write_text("not even saved\n", encoding="utf-8")
+    _file(project, "notes-unsaved.txt").write_text("not even saved\n", encoding="utf-8", newline="\n")
 
     assert (await _session(stack, project)).fingerprint == session.fingerprint
     await _resolve_ok(stack, project, session, {TRACKED_FILE: {"kind": "file", "choice": "theirs"}})
@@ -804,7 +806,9 @@ async def _rename_both(stack: Stack, project: dict[str, Any], remote: BareRemote
     mine = json.loads(_file(project, _PROJECT_FILE).read_text(encoding="utf-8"))
     theirs = json.loads(peer.read(_PROJECT_FILE))
     mine["name"], theirs["name"] = "Название: у меня", "Название: у них"
-    _file(project, _PROJECT_FILE).write_text(json.dumps(mine, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    _file(project, _PROJECT_FILE).write_text(
+        json.dumps(mine, ensure_ascii=False, indent=2) + "\n", encoding="utf-8", newline="\n"
+    )
     _commit(project, "rename mine")
     peer.write(_PROJECT_FILE, json.dumps(theirs, ensure_ascii=False, indent=2) + "\n")
     peer.commit_push("rename theirs")
@@ -865,12 +869,12 @@ async def _binary_and_delete_conflicts(stack: Stack, project: dict[str, Any], re
     _file(project, "figures").mkdir(exist_ok=True)
     _file(project, "figures/chart.png").write_bytes(b"\x89PNG\r\n\x00base")
     _file(project, "notes").mkdir(exist_ok=True)
-    _file(project, "notes/draft.tex").write_text("base draft\n", encoding="utf-8")
+    _file(project, "notes/draft.tex").write_text("base draft\n", encoding="utf-8", newline="\n")
     _commit(project, "chart and draft")
     assert (await _sync(stack, project)).status == "succeeded"
     peer.pull()
     _file(project, "figures/chart.png").write_bytes(b"\x89PNG\r\n\x00mine")
-    _file(project, "notes/draft.tex").write_text("base draft\nmy line\n", encoding="utf-8")
+    _file(project, "notes/draft.tex").write_text("base draft\nmy line\n", encoding="utf-8", newline="\n")
     _commit(project, "mine")
     peer.write("figures/chart.png", b"\x89PNG\r\n\x00theirs")
     (peer.path / "notes/draft.tex").unlink()
@@ -976,13 +980,13 @@ async def test__signature_group__follows_one_side_as_a_whole(
     sig = ".hse-studio/signatures.json"
     _file(project, ".hse-studio/frozen").mkdir(parents=True, exist_ok=True)
     _file(project, pdf).write_bytes(b"%PDF-1.4 base")
-    _file(project, sig).write_text(_signatures("0" * 64, pdf, "0"), encoding="utf-8")
+    _file(project, sig).write_text(_signatures("0" * 64, pdf, "0"), encoding="utf-8", newline="\n")
     _git(project, "add", "-f", "--", pdf, sig)
     _commit(project, "frozen base")
     assert (await _sync(stack, project)).status == "succeeded"
     peer.pull()
     _file(project, pdf).write_bytes(b"%PDF-1.4 mine!")
-    _file(project, sig).write_text(_signatures("1" * 64, pdf, "1"), encoding="utf-8")
+    _file(project, sig).write_text(_signatures("1" * 64, pdf, "1"), encoding="utf-8", newline="\n")
     _git(project, "add", "-f", "--", pdf, sig)
     _commit(project, "frozen mine")
     peer.write(pdf, b"%PDF-1.4 theirs")

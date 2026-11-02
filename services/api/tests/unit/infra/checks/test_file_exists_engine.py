@@ -54,7 +54,7 @@ def run(engine: FileExistsCheckEngine, rule: CheckRule, project: Path, doc_id: s
 def test__file_exists__solo_project_with_the_file__passes(
     engine: FileExistsCheckEngine, rule: CheckRule, tmp_path: Path, forms_dir: Path
 ) -> None:
-    (forms_dir / "ai_declaration.json").write_text("{}", encoding="utf-8")
+    (forms_dir / "ai_declaration.json").write_text("{}", encoding="utf-8", newline="\n")
 
     assert run(engine, rule, tmp_path, "thesis") == []
 
@@ -68,7 +68,7 @@ def test__file_exists__solo_project_without_the_file__reports(
 def test__file_exists__team_document_with_its_authors_file__passes(
     engine: FileExistsCheckEngine, rule: CheckRule, tmp_path: Path, forms_dir: Path
 ) -> None:
-    (forms_dir / "ai_declaration--shalaev.json").write_text("{}", encoding="utf-8")
+    (forms_dir / "ai_declaration--shalaev.json").write_text("{}", encoding="utf-8", newline="\n")
 
     assert run(engine, rule, tmp_path, "thesis--shalaev") == []
 
@@ -77,7 +77,7 @@ def test__file_exists__team_document_when_only_the_other_author_filled_it__repor
     engine: FileExistsCheckEngine, rule: CheckRule, tmp_path: Path, forms_dir: Path
 ) -> None:
     # Заполненная форма соавтора не закрывает требование к этому автору.
-    (forms_dir / "ai_declaration--ivanov.json").write_text("{}", encoding="utf-8")
+    (forms_dir / "ai_declaration--ivanov.json").write_text("{}", encoding="utf-8", newline="\n")
 
     assert len(run(engine, rule, tmp_path, "thesis--shalaev")) == 1
 
@@ -86,6 +86,6 @@ def test__file_exists__team_document_with_a_shared_file__passes(
     engine: FileExistsCheckEngine, rule: CheckRule, tmp_path: Path, forms_dir: Path
 ) -> None:
     # Общий файл означает «заполнено на всех» — тоже засчитывается.
-    (forms_dir / "ai_declaration.json").write_text("{}", encoding="utf-8")
+    (forms_dir / "ai_declaration.json").write_text("{}", encoding="utf-8", newline="\n")
 
     assert run(engine, rule, tmp_path, "thesis--shalaev") == []

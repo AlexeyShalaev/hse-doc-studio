@@ -35,7 +35,7 @@ print(json.dumps(sorted(sys.modules)))
 
 def test_runner_container_imports_no_repositories_or_server_stack() -> None:
     out = subprocess.run(  # noqa: S603
-        [sys.executable, "-c", _PROBE], capture_output=True, text=True, check=True, timeout=60
+        [sys.executable, "-c", _PROBE], capture_output=True, text=True, encoding="utf-8", check=True, timeout=60
     )
     loaded = json.loads(out.stdout.splitlines()[-1])
 

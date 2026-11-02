@@ -189,6 +189,7 @@ def test__journal__old_format_without_kind_is_a_template_journal_and_recovers(tm
             }
         ),
         encoding="utf-8",
+        newline="\n",
     )
     journals.backup(tmp_path, ["doc/a.tex"])
     (tmp_path / "doc" / "a.tex").write_text("half\n", encoding="utf-8", newline="\n")

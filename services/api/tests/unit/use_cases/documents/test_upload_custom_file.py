@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import sys
 from unittest.mock import MagicMock
 
 import pytest
@@ -155,6 +156,9 @@ async def test__upload_custom_file__pdf_or_non_office_ext__no_job(tmp_path, file
     assert h.dispatcher.run_specs == []
 
 
+@pytest.mark.skipif(
+    sys.platform == "win32", reason="Path.name на Windows отрезает каталог по обратной косой: имя становится ТЗ.docx"
+)
 async def test__upload_custom_file__backslash_in_name__upload_ok_without_preview(tmp_path) -> None:
     h = Harness(tmp_path)
 

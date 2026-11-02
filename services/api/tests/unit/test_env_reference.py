@@ -59,7 +59,7 @@ def test_check_fails_on_stale_file(tmp_path: Path, monkeypatch: pytest.MonkeyPat
     assert gen.main(["--check", "--out", str(out)]) == 1
     assert gen.main(["--out", str(out)]) == 0
     assert gen.main(["--check", "--out", str(out)]) == 0
-    out.write_text(out.read_text(encoding="utf-8") + "stale\n", encoding="utf-8")
+    out.write_text(out.read_text(encoding="utf-8") + "stale\n", encoding="utf-8", newline="\n")
     assert gen.main(["--check", "--out", str(out)]) == 1
 
 

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import sys
 import time
 from collections.abc import Iterator
 
@@ -53,6 +54,7 @@ def test__configure_logging__output_has_no_ansi_codes_when_stdout_is_not_a_termi
     assert "\x1b" not in out
 
 
+@pytest.mark.skipif(sys.platform == "win32", reason="time.tzset есть только на POSIX")
 def test__configure_logging__timestamp_is_local_time_as_before(
     restored_structlog: None, capsys: pytest.CaptureFixture[str], monkeypatch: pytest.MonkeyPatch
 ) -> None:

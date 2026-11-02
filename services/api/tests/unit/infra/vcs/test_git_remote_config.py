@@ -24,6 +24,7 @@ def _git(args: list[str], folder: Path) -> str:
         ["git", "--git-dir", str(store_git_dir(folder)), *args],  # noqa: S607
         capture_output=True,
         text=True,
+        encoding="utf-8",
         check=True,
     ).stdout
 
@@ -49,7 +50,7 @@ def test__init_bare_store__creates_a_store_without_commits(tmp_path: Path) -> No
 def test__init_bare_store__is_idempotent_and_keeps_existing_history(tmp_path: Path) -> None:
     svc = GitVcsService()
     project = make_project(folder=tmp_path)
-    (tmp_path / "a.tex").write_text("a\n", encoding="utf-8")
+    (tmp_path / "a.tex").write_text("a\n", encoding="utf-8", newline="\n")
     svc.init(project, list(DEFAULT_VCS_EXCLUDE))
     head = _git(["rev-parse", "HEAD"], tmp_path)
 

@@ -28,7 +28,7 @@ def docker_log(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Iterator[Path
 async def _compile(limits: ExecutorLimits | None, tmp_path: Path) -> list[str]:
     project = tmp_path / "project"
     (project / "tz").mkdir(parents=True)
-    (project / "tz" / "main.tex").write_text("x")
+    (project / "tz" / "main.tex").write_text("x", encoding="utf-8", newline="\n")
     executor = DockerCompileExecutor(HostPathResolver(), limits=limits)
     lines = await executor.run(project, "tz/main.tex", "xelatex", 3, "tz", uuid4())
     return [line async for line in lines]

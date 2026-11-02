@@ -34,7 +34,7 @@ async def test__collab_state__removes_only_stale_files_and_empty_folders(tmp_pat
     fresh = _state(tmp_path, "p2", "b", 1)
     _state(tmp_path, "p3", "c", 300)
     foreign = tmp_path / "p1" / "keep.txt"
-    foreign.write_text("не состояние")
+    foreign.write_text("не состояние", encoding="utf-8", newline="\n")
     source = CollabStateSource(tmp_path)
 
     result = await source.purge(_ctx(datetime.now(UTC) - timedelta(days=90)))

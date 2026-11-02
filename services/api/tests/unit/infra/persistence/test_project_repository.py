@@ -47,7 +47,7 @@ def test__project_repository__save_with_documents_and_get(tmp_path: Path) -> Non
 def test__project_repository__corrupted_json__returns_none(tmp_path: Path) -> None:
     studio = tmp_path / ".hse-studio"
     studio.mkdir()
-    (studio / "project.json").write_text("not valid json{{{", encoding="utf-8")
+    (studio / "project.json").write_text("not valid json{{{", encoding="utf-8", newline="\n")
     assert repo.get(tmp_path) is None
 
 

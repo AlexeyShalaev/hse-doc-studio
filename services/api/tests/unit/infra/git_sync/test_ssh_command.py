@@ -88,7 +88,7 @@ def test__temporary_key_file__is_private_ends_with_newline_and_is_removed() -> N
         assert stat.S_IMODE(path.stat().st_mode) == 0o600
         assert stat.S_IMODE(path.parent.stat().st_mode) == 0o700
         assert path.parent.name.startswith(KEY_DIR_PREFIX)
-        assert path.read_text().endswith("PRIVATE KEY-----\n")
+        assert path.read_text(encoding="utf-8").endswith("PRIVATE KEY-----\n")
         directory = path.parent
 
     assert not directory.exists()
@@ -115,7 +115,7 @@ def test__sweep_stale_key_dirs__removes_only_old_hse_ssh_dirs(tmp_path: Path) ->
     other = tmp_path / "unrelated"
     for directory in (old, fresh, other):
         directory.mkdir()
-        (directory / "id").write_text("k")
+        (directory / "id").write_text("k", encoding="utf-8", newline="\n")
     stale = time.time() - 7200
     os.utime(old, (stale, stale))
     os.utime(other, (stale, stale))

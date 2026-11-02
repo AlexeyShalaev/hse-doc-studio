@@ -39,7 +39,7 @@ def _inject_quote_issue(project_folder: Path) -> None:
         "\\end{document}",
         'Это слово "важное" здесь.\n\n\\end{document}',
     )
-    thesis_path.write_text(content, encoding="utf-8")
+    thesis_path.write_text(content, encoding="utf-8", newline="\n")
 
 
 # --- run checks --------------------------------------------------------------

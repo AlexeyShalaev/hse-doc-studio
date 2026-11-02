@@ -117,12 +117,12 @@ async def _until(condition: Callable[[], bool]) -> None:
 def rig(tmp_path: Path) -> Rig:
     folder = tmp_path / "project"
     (folder / "tz").mkdir(parents=True)
-    (folder / "tz" / "main.tex").write_text("x")
+    (folder / "tz" / "main.tex").write_text("x", encoding="utf-8", newline="\n")
     (folder / "common").mkdir()
-    (folder / "common" / "meta.tex").write_text("y")
+    (folder / "common" / "meta.tex").write_text("y", encoding="utf-8", newline="\n")
     for junk in (".git", ".build", ".hse-studio", "submissions"):
         (folder / junk).mkdir()
-        (folder / junk / "f").write_text("z")
+        (folder / junk / "f").write_text("z", encoding="utf-8", newline="\n")
     os.symlink("/etc/hosts", folder / "link.txt")
     queue = InMemoryJobQueue()
     runners = InMemoryRunnerRepository()

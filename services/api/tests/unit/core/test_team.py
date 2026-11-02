@@ -171,21 +171,23 @@ def _missing_parts_env(tmp_path: Path) -> tuple[Project, MagicMock]:
     второго (pmi_shared) и содержит правки студента."""
     files_dir = tmp_path / "packs" / "p" / "templates" / "t" / "versions" / "1" / "files"
     (files_dir / "tz_shared").mkdir(parents=True)
-    (files_dir / "tz_shared" / "tz_shared.tex").write_text("pack tz", encoding="utf-8")
+    (files_dir / "tz_shared" / "tz_shared.tex").write_text("pack tz", encoding="utf-8", newline="\n")
     (files_dir / "pmi_shared").mkdir()
-    (files_dir / "pmi_shared" / "pmi_shared.tex").write_text("pack pmi {{ project.name }}", encoding="utf-8")
+    (files_dir / "pmi_shared" / "pmi_shared.tex").write_text(
+        "pack pmi {{ project.name }}", encoding="utf-8", newline="\n"
+    )
     (files_dir / "common").mkdir()
-    (files_dir / "common" / "preamble.tex").write_text("pack preamble", encoding="utf-8")
-    (files_dir / ".latexmkrc").write_text("pack rc", encoding="utf-8")
+    (files_dir / "common" / "preamble.tex").write_text("pack preamble", encoding="utf-8", newline="\n")
+    (files_dir / ".latexmkrc").write_text("pack rc", encoding="utf-8", newline="\n")
 
     project = _team_project()
     project.folder = tmp_path / "project"
     shared = project.folder / "shared"
     (shared / "tz_shared").mkdir(parents=True)
-    (shared / "tz_shared" / "tz_shared.tex").write_text("edited by student", encoding="utf-8")
+    (shared / "tz_shared" / "tz_shared.tex").write_text("edited by student", encoding="utf-8", newline="\n")
     (shared / "common").mkdir()
-    (shared / "common" / "preamble.tex").write_text("edited preamble", encoding="utf-8")
-    (shared / ".latexmkrc").write_text("edited rc", encoding="utf-8")
+    (shared / "common" / "preamble.tex").write_text("edited preamble", encoding="utf-8", newline="\n")
+    (shared / ".latexmkrc").write_text("edited rc", encoding="utf-8", newline="\n")
 
     template_repo = MagicMock()
     template_repo._packs_dir = str(tmp_path / "packs")

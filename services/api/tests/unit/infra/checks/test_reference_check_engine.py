@@ -14,7 +14,7 @@ engine = ReferenceCheckEngine()
 def _write(folder: Path, name: str, content: str) -> None:
     target = folder / name
     target.parent.mkdir(parents=True, exist_ok=True)
-    target.write_text(content, encoding="utf-8")
+    target.write_text(content, encoding="utf-8", newline="\n")
 
 
 # ──────────────────────────────────────────────────────────────────────────

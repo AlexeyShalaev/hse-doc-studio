@@ -10,8 +10,8 @@ from hse_doc_studio.infra.jobs.fs_file_probe import FsProjectFileProbe, FsProjec
 def _project(tmp_path: Path) -> Path:
     (tmp_path / "tz/_custom").mkdir(parents=True)
     (tmp_path / "tz/_custom/ТЗ.docx").write_bytes(b"docx")
-    (tmp_path / "tz/note.txt").write_text("заметка", encoding="utf-8")
-    (tmp_path / "top.txt").write_text("top", encoding="utf-8")
+    (tmp_path / "tz/note.txt").write_text("заметка", encoding="utf-8", newline="\n")
+    (tmp_path / "top.txt").write_text("top", encoding="utf-8", newline="\n")
     return tmp_path
 
 
@@ -59,12 +59,12 @@ def test__fs_file_probe_factory__binds_probe_to_root(tmp_path) -> None:
 def _with_outside_links(tmp_path) -> tuple[Path, Path]:
     outside = tmp_path / "outside"
     outside.mkdir()
-    (outside / "secret.txt").write_text("SECRET", encoding="utf-8")
+    (outside / "secret.txt").write_text("SECRET", encoding="utf-8", newline="\n")
     project = tmp_path / "project"
     project.mkdir()
     (project / "link.txt").symlink_to(outside / "secret.txt")
     (project / "dirlink").symlink_to(outside, target_is_directory=True)
-    (project / "inner.txt").write_text("ok", encoding="utf-8")
+    (project / "inner.txt").write_text("ok", encoding="utf-8", newline="\n")
     (project / "inner-link.txt").symlink_to(project / "inner.txt")
     return project, outside
 

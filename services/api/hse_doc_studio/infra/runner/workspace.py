@@ -40,6 +40,17 @@ class WorkspaceStuckError(Exception):
     """В рабочей папке остался каталог, который не удалить (чужой владелец): папку нужно создать заново."""
 
 
+def _rmtree(path: Path) -> None:
+    """Удаляет дерево, включая read-only файлы (объекты git, блобы 0444): на Windows их сперва открывают на запись."""
+
+    def _force(func: Callable[[str], object], target: str, _exc: BaseException) -> None:
+        with contextlib.suppress(OSError):
+            os.chmod(target, 0o700)
+            func(target)
+
+    shutil.rmtree(path, onexc=_force)
+
+
 def _tree_size(path: Path) -> int:
     total = 0
     for current, _, files in os.walk(path, followlinks=False):
@@ -141,6 +152,7 @@ class BlobCache:
             if name in keep:
                 continue
             with contextlib.suppress(OSError):
+                path.chmod(0o600)  # блоб 0444: на Windows read-only файл не удаляется
                 path.unlink()
                 total -= size
                 removed += 1
@@ -214,7 +226,7 @@ class RunnerWorkspaces:
             lock = self._locks.get(path.name)
             if path.name in keep or (lock is not None and lock.locked()):
                 continue
-            shutil.rmtree(path, ignore_errors=True)
+            _rmtree(path)
             if path.exists():
                 continue
             total -= size
@@ -223,7 +235,7 @@ class RunnerWorkspaces:
 
     @staticmethod
     def _reset(root: Path) -> None:
-        shutil.rmtree(root, ignore_errors=True)
+        _rmtree(root)
         if root.exists():
             raise WorkspaceStuckError(root.name)
         root.mkdir(parents=True, exist_ok=True)
@@ -264,7 +276,7 @@ class RunnerWorkspaces:
             _ensure_real_dir(root / parent)
         target = root / rel
         if target.is_dir() and not target.is_symlink():
-            shutil.rmtree(target, ignore_errors=True)
+            _rmtree(target)
             if target.exists():
                 raise WorkspaceStuckError(rel)
         tmp = target.with_name(f".tmp-{uuid.uuid4().hex[:12]}")

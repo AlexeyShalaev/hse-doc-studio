@@ -20,7 +20,7 @@ def _rule(check: str) -> object:
 
 
 def _run(tmp_path: Path, check: str, content: str) -> list:
-    (tmp_path / "main.tex").write_text(content, encoding="utf-8")
+    (tmp_path / "main.tex").write_text(content, encoding="utf-8", newline="\n")
     return engine.run(_rule(check), CheckSeverity.info, tmp_path, "doc1", "main.tex", None)
 
 

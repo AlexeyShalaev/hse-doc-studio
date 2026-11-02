@@ -57,15 +57,15 @@ def _build_pack_dir(base: Path) -> None:
     """Create the minimal test-pack directory tree under base."""
     pack_dir = base / "test-pack"
     (pack_dir).mkdir(parents=True)
-    (pack_dir / "pack.yaml").write_text(_PACK_YAML, encoding="utf-8")
+    (pack_dir / "pack.yaml").write_text(_PACK_YAML, encoding="utf-8", newline="\n")
 
     tmpl_dir = pack_dir / "templates" / "test-tmpl"
     tmpl_dir.mkdir(parents=True)
-    (tmpl_dir / "template.yaml").write_text(_TEMPLATE_YAML, encoding="utf-8")
+    (tmpl_dir / "template.yaml").write_text(_TEMPLATE_YAML, encoding="utf-8", newline="\n")
 
     ver_dir = tmpl_dir / "versions" / "1.0"
     ver_dir.mkdir(parents=True)
-    (ver_dir / "version.yaml").write_text(_VERSION_YAML, encoding="utf-8")
+    (ver_dir / "version.yaml").write_text(_VERSION_YAML, encoding="utf-8", newline="\n")
     (ver_dir / "checks").mkdir()
 
 
@@ -174,7 +174,7 @@ pack_submission:
 def test__load__meta_field_yaml__parses_default_auto_and_required_at(tmp_path: Path) -> None:
     _build_pack_dir(tmp_path)
     ver_dir = tmp_path / "test-pack" / "templates" / "test-tmpl" / "versions" / "1.0"
-    (ver_dir / "version.yaml").write_text(_META_VERSION_YAML, encoding="utf-8")
+    (ver_dir / "version.yaml").write_text(_META_VERSION_YAML, encoding="utf-8", newline="\n")
 
     repo = YamlTemplateRepository(tmp_path)
     version = repo.get_version("test-pack", "test-tmpl", "1.0")
@@ -220,7 +220,7 @@ pack_submission:
 def test__load__meta_group_yaml__reads_section_and_defaults_to_meta(tmp_path: Path) -> None:
     _build_pack_dir(tmp_path)
     ver_dir = tmp_path / "test-pack" / "templates" / "test-tmpl" / "versions" / "1.0"
-    (ver_dir / "version.yaml").write_text(_META_GROUPS_VERSION_YAML, encoding="utf-8")
+    (ver_dir / "version.yaml").write_text(_META_GROUPS_VERSION_YAML, encoding="utf-8", newline="\n")
 
     repo = YamlTemplateRepository(tmp_path)
     version = repo.get_version("test-pack", "test-tmpl", "1.0")
@@ -239,7 +239,7 @@ def test__load__check_rule_yaml__honours_default_severity_key(tmp_path: Path) ->
     # loads as `warn`. Rules without a severity default to `warn`.
     _build_pack_dir(tmp_path)
     checks_dir = tmp_path / "test-pack" / "templates" / "test-tmpl" / "versions" / "1.0" / "checks"
-    (checks_dir / "rules.yaml").write_text(_CHECKS_YAML, encoding="utf-8")
+    (checks_dir / "rules.yaml").write_text(_CHECKS_YAML, encoding="utf-8", newline="\n")
 
     repo = YamlTemplateRepository(tmp_path)
     version = repo.get_version("test-pack", "test-tmpl", "1.0")
@@ -298,7 +298,7 @@ rules:
 
 def _write_checks(tmp_path: Path, filename: str, body: str) -> None:
     checks_dir = tmp_path / "test-pack" / "templates" / "test-tmpl" / "versions" / "1.0" / "checks"
-    (checks_dir / filename).write_text(body, encoding="utf-8")
+    (checks_dir / filename).write_text(body, encoding="utf-8", newline="\n")
 
 
 def test__load__checks_file_header__exposes_pack_declared_label_ref_and_url(tmp_path: Path) -> None:
@@ -361,7 +361,7 @@ def test__load__checks_file_with_no_rules__yields_no_source(tmp_path: Path) -> N
 def _write_version(tmp_path: Path, extra: str) -> Path:
     _build_pack_dir(tmp_path)
     ver_dir = tmp_path / "test-pack" / "templates" / "test-tmpl" / "versions" / "1.0"
-    (ver_dir / "version.yaml").write_text(_VERSION_YAML + extra, encoding="utf-8")
+    (ver_dir / "version.yaml").write_text(_VERSION_YAML + extra, encoding="utf-8", newline="\n")
     return ver_dir
 
 
@@ -399,7 +399,7 @@ def test__unknown_item_types__skip_only_that_item(tmp_path: Path) -> None:
         "meta_fields: {}",
         "meta_fields:\n  ok: {type: string, label: {ru: Ок}}\n  future: {type: hologram, label: {ru: Будущее}}",
     )
-    (ver_dir / "version.yaml").write_text(text, encoding="utf-8")
+    (ver_dir / "version.yaml").write_text(text, encoding="utf-8", newline="\n")
 
     version = YamlTemplateRepository(tmp_path).get_version("test-pack", "test-tmpl", "1.0")
 

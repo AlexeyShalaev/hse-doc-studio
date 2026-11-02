@@ -140,7 +140,7 @@ async def test__run_ssh__key_file_is_private_while_running_and_removed_after_suc
         seen["path"] = key
         seen["mode"] = stat.S_IMODE(key.stat().st_mode)
         seen["dir_mode"] = stat.S_IMODE(key.parent.stat().st_mode)
-        seen["text"] = key.read_text()
+        seen["text"] = key.read_text(encoding="utf-8")
 
     setup = await _Setup.create(tmp_path, _Process(during=during))
     await setup.run(setup.add_key())

@@ -117,7 +117,7 @@ def _commit(project: dict[str, Any], message: str) -> str:
 def _write(project: dict[str, Any], rel: str, content: str) -> None:
     path = _file(project, rel)
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(content, encoding="utf-8")
+    path.write_text(content, encoding="utf-8", newline="\n")
 
 
 def _state(project: dict[str, Any]) -> dict[str, Any]:
@@ -261,7 +261,7 @@ async def test__export__sends_a_named_file_with_the_branch_only(anna: Studio, pr
 async def test__export__unsaved_edit__is_snapshotted_into_the_file(
     anna: Studio, boris: Studio, project: dict[str, Any], tmp_path: Path
 ) -> None:
-    _file(project).write_text(_text(project) + "\n% typed but never saved\n", encoding="utf-8")
+    _file(project).write_text(_text(project) + "\n% typed but never saved\n", encoding="utf-8", newline="\n")
 
     cloned = await _cloned(boris, await _bundle(anna, project), tmp_path / "copy")
 
@@ -337,7 +337,9 @@ async def test__export__off_branch__409(anna: Studio, project: dict[str, Any]) -
     _write(project, "notes/o.txt", "x\n")
     _commit(project, "elsewhere")
     state = _store(project) / "hse-sync.json"
-    state.write_text(json.dumps({"version": 1, "local_branch": "master", "remote_branch": "main"}), encoding="utf-8")
+    state.write_text(
+        json.dumps({"version": 1, "local_branch": "master", "remote_branch": "main"}), encoding="utf-8", newline="\n"
+    )
 
     resp = await _export(anna, project)
 

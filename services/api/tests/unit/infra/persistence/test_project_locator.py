@@ -16,7 +16,7 @@ async def test__locate__unreadable_project_before_target__is_skipped(tmp_path: P
     index = JsonProjectIndexRepository(tmp_path / "data")
     broken = tmp_path / "broken"
     (broken / ".hse-studio").mkdir(parents=True)
-    (broken / ".hse-studio" / "project.json").write_text("{not json", encoding="utf-8")
+    (broken / ".hse-studio" / "project.json").write_text("{not json", encoding="utf-8", newline="\n")
     good = tmp_path / "good"
     good.mkdir()
     project = make_project(folder=good)

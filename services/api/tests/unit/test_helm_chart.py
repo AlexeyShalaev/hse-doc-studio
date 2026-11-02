@@ -20,7 +20,7 @@ pytestmark = pytest.mark.skipif(shutil.which("helm") is None, reason="helm не 
 
 
 def _helm(*args: str) -> subprocess.CompletedProcess[str]:
-    return subprocess.run(["helm", *args], capture_output=True, text=True, check=False)  # noqa: S603, S607
+    return subprocess.run(["helm", *args], capture_output=True, text=True, encoding="utf-8", check=False)  # noqa: S603, S607
 
 
 def _render(*extra: str) -> list[dict[str, Any]]:
@@ -57,7 +57,7 @@ def test_template_matches_golden() -> None:
     result = _helm("template", "rel", str(_CHART), "-f", str(_VALUES))
     assert result.returncode == 0, result.stderr
     if os.environ.get("UPDATE_GOLDEN"):
-        _GOLDEN.write_text(result.stdout, encoding="utf-8")
+        _GOLDEN.write_text(result.stdout, encoding="utf-8", newline="\n")
     # Пустые строки между документами и в конце зависят от версии helm (4.x их оставляет, 3.x нет).
     golden = _GOLDEN.read_text(encoding="utf-8")
     assert _squeeze(result.stdout) == _squeeze(golden), "обновите: UPDATE_GOLDEN=1 pytest"

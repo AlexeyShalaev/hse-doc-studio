@@ -158,7 +158,13 @@ class Studio:
         base = ["git", "--git-dir", str(self.store), "--work-tree", str(self.folder)]
         for tail in (["add", "-A"], ["commit", "--quiet", "-m", message]):
             done = subprocess.run(  # noqa: S603 — аргументы собирает тест
-                [*base, *tail], env=env, capture_output=True, text=True, check=False, timeout=_GIT_SECONDS
+                [*base, *tail],
+                env=env,
+                capture_output=True,
+                text=True,
+                encoding="utf-8",
+                check=False,
+                timeout=_GIT_SECONDS,
             )
             assert done.returncode == 0, done.stderr
         return self.head()

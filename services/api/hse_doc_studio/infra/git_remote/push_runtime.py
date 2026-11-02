@@ -31,7 +31,8 @@ def _cached_hooks_dir() -> Path:
     source = resources.files("hse_doc_studio.infra.git_remote") / "hooks"
     for name in HOOK_NAMES:
         path = target / name
-        path.write_bytes((source / name).read_bytes())
+        # шебанг с CRLF (checkout с autocrlf на Windows) не исполнится, поэтому перевод строк нормализуется
+        path.write_bytes((source / name).read_bytes().replace(b"\r\n", b"\n"))
         path.chmod(stat.S_IRWXU)
     return target
 
@@ -71,7 +72,7 @@ def receive_config(hooks: Path, max_input_bytes: int) -> tuple[str, ...]:
         "receive.fsckObjects=true",
         f"receive.maxInputSize={max_input_bytes}",
         "receive.advertisePushOptions=false",
-        f"core.hooksPath={hooks}",
+        f"core.hooksPath={hooks.as_posix()}",
     )
     return tuple(arg for pair in pairs for arg in ("-c", pair))
 
@@ -88,9 +89,9 @@ class GitPushRuntime:
             "HSE_PUSH_POLICY": raw,
             "HSE_PUSH_ACTOR": actor_id,
             "HSE_PUSH_LANG": lang,
-            "HSE_PYTHON": sys.executable,
+            "HSE_PYTHON": Path(sys.executable).as_posix(),
             # Хук запускает python с -I (без PYTHONPATH): корень пакета передаётся явно.
-            "HSE_PYTHON_ROOT": str(package_root()),
+            "HSE_PYTHON_ROOT": package_root().as_posix(),
             "HSE_GIT_DIR": str(git_dir),
             "HSE_WORK_TREE": str(work_tree),
         }

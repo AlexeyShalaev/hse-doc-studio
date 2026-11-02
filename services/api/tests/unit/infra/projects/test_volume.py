@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import sys
 from pathlib import Path
 from uuid import uuid4
 
@@ -98,7 +99,7 @@ def test__allocate__twice__fails(volume: LocalDiskProjectVolume) -> None:
 def test__remove__folder__deleted_with_content(volume: LocalDiskProjectVolume) -> None:
     project_id = uuid4()
     folder = volume.allocate(project_id)
-    (folder / "a.tex").write_text("x")
+    (folder / "a.tex").write_text("x", encoding="utf-8", newline="\n")
     volume.remove(project_id)
     assert not volume.exists(project_id)
 
@@ -106,13 +107,13 @@ def test__remove__folder__deleted_with_content(volume: LocalDiskProjectVolume) -
 def test__remove__symlink_inside__target_untouched(volume: LocalDiskProjectVolume, tmp_path: Path) -> None:
     outside = tmp_path / "outside"
     outside.mkdir()
-    (outside / "keep.txt").write_text("keep")
+    (outside / "keep.txt").write_text("keep", encoding="utf-8", newline="\n")
     folder = volume.allocate(uuid4())
     (folder / "link").symlink_to(outside)
 
     volume.remove(volume.id_of(folder))
 
-    assert (outside / "keep.txt").read_text() == "keep"
+    assert (outside / "keep.txt").read_text(encoding="utf-8") == "keep"
 
 
 def test__safe_open__write_then_read__roundtrip(volume: LocalDiskProjectVolume) -> None:
@@ -143,7 +144,7 @@ def test__safe_open__symlinked_file__rejected_and_target_untouched(
     volume: LocalDiskProjectVolume, tmp_path: Path
 ) -> None:
     secret = tmp_path / "secret.txt"
-    secret.write_text("secret")
+    secret.write_text("secret", encoding="utf-8", newline="\n")
     folder = volume.allocate(uuid4())
     (folder / "doc.pdf").symlink_to(secret)
 
@@ -151,7 +152,7 @@ def test__safe_open__symlinked_file__rejected_and_target_untouched(
         volume.safe_open(folder, "doc.pdf")
     with pytest.raises(UnsafePathError):
         volume.safe_open(folder, "doc.pdf", "wb")
-    assert secret.read_text() == "secret"
+    assert secret.read_text(encoding="utf-8") == "secret"
 
 
 def test__safe_open__symlinked_parent_dir__rejected(volume: LocalDiskProjectVolume, tmp_path: Path) -> None:
@@ -189,6 +190,7 @@ def test__safe_open__directory_as_file__rejected(volume: LocalDiskProjectVolume)
         volume.safe_open(folder, "d")
 
 
+@pytest.mark.skipif(sys.platform == "win32", reason="os.mkfifo есть только на POSIX")
 def test__safe_open__fifo__rejected(volume: LocalDiskProjectVolume) -> None:
     folder = volume.allocate(uuid4())
     os.mkfifo(folder / "pipe")

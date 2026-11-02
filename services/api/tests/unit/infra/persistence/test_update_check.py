@@ -63,13 +63,13 @@ def test__save__missing_data_dir__creates_it(tmp_path: Path) -> None:
 def test__get__corrupted_file__degrades_to_none_instead_of_raising(tmp_path: Path) -> None:
     # Кэш проверки обновлений читается на каждом открытии «О программе»: битый
     # файл (обрыв записи, ручная правка) не должен ронять экран.
-    (tmp_path / "update-check.json").write_text("{ not json", encoding="utf-8")
+    (tmp_path / "update-check.json").write_text("{ not json", encoding="utf-8", newline="\n")
 
     assert JsonUpdateCheckRepository(tmp_path).get() is None
 
 
 def test__get__file_without_a_timestamp__degrades_to_none(tmp_path: Path) -> None:
-    (tmp_path / "update-check.json").write_text('{"releases": []}', encoding="utf-8")
+    (tmp_path / "update-check.json").write_text('{"releases": []}', encoding="utf-8", newline="\n")
 
     assert JsonUpdateCheckRepository(tmp_path).get() is None
 
@@ -80,6 +80,7 @@ def test__get__file_written_by_an_older_version__keeps_the_version_it_knew(tmp_p
     (tmp_path / "update-check.json").write_text(
         '{"latest": "1.2.3", "checked_at": "2026-07-26T12:30:00+00:00", "date": "2026-07-26", "notes": ["Заметка"]}',
         encoding="utf-8",
+        newline="\n",
     )
 
     restored = JsonUpdateCheckRepository(tmp_path).get()

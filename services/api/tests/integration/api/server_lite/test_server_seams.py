@@ -198,7 +198,9 @@ def test__remote_registry_sees_server_projects_and_credential_usage_ignores_the_
         config = folder / ".hse-studio" / "git" / "config"
         config.parent.mkdir(parents=True, exist_ok=True)
         config.write_text(
-            f'[remote "origin"]\n\turl = file:///srv/x.git\n[hse]\n\tcredential = {credential}\n', encoding="utf-8"
+            f'[remote "origin"]\n\turl = file:///srv/x.git\n[hse]\n\tcredential = {credential}\n',
+            encoding="utf-8",
+            newline="\n",
         )
         assert store_has_remote(folder)
 

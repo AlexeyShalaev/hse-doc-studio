@@ -93,7 +93,7 @@ def test__log_parse_engine__no_log_file__returns_empty(tmp_path: Path) -> None:
 @pytest.mark.unit
 def test__log_parse_engine__log_file_exists__reads_it(tmp_path: Path) -> None:
     log_file = tmp_path / "main.log"
-    log_file.write_text(_LATEX_ERROR_LOG, encoding="utf-8")
+    log_file.write_text(_LATEX_ERROR_LOG, encoding="utf-8", newline="\n")
     rule = _rule("errors")
     results = engine.run(rule, CheckSeverity.err, tmp_path, "doc1", "main.tex", None)
     assert len(results) == 1
@@ -103,7 +103,7 @@ def test__log_parse_engine__log_file_exists__reads_it(tmp_path: Path) -> None:
 @pytest.mark.unit
 def test__log_parse_engine__log_content_provided__skips_file(tmp_path: Path) -> None:
     log_file = tmp_path / "main.log"
-    log_file.write_text(_LATEX_ERROR_LOG, encoding="utf-8")
+    log_file.write_text(_LATEX_ERROR_LOG, encoding="utf-8", newline="\n")
     rule = _rule("errors")
     results = engine.run(rule, CheckSeverity.err, tmp_path, "doc1", "main.tex", _CLEAN_LOG)
     assert results == []

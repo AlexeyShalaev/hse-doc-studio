@@ -78,7 +78,7 @@ class Rig:
             stable_s=4,
             min_free_bytes=0,
         )
-        (tmp / ".env").write_text("TAG=0.3.1\nOTHER=1\n", encoding="utf-8")
+        (tmp / ".env").write_text("TAG=0.3.1\nOTHER=1\n", encoding="utf-8", newline="\n")
         self.config = config
         self.journal = Journal(config.data_dir / "journal.json")
         self.engine = self._engine()
@@ -154,7 +154,7 @@ async def test__success__migrates_swaps_images_and_reports_revisions(tmp_path: P
     assert host.db_rev == "r2"
     # прежний образ сохранён под тегом отката, TAG в .env продвинут, остальные строки целы
     assert host.refs[f"{REPO}:rollback-prev"] == "sha256:old"
-    assert (tmp_path / ".env").read_text() == "TAG=0.4.0\nOTHER=1\n"
+    assert (tmp_path / ".env").read_text(encoding="utf-8") == "TAG=0.4.0\nOTHER=1\n"
     assert rig.journal.run is None
     assert rig.journal.data["last_ok"]["snapshot"]
     phases = [e["phase"] for e in rig.api.events]
@@ -178,7 +178,7 @@ async def test__unhealthy_new_version_with_schema_change_restores_snapshot_and_r
     assert host.db_rev == "r1", "схема возвращена из снимка: старый образ не запустится на r2 (db-ahead)"
     assert host.versions() == {"api": "sha256:old", "runner": "sha256:old"}
     assert host.stack_healthy
-    assert (tmp_path / ".env").read_text().startswith("TAG=0.3.1")
+    assert (tmp_path / ".env").read_text(encoding="utf-8").startswith("TAG=0.3.1")
     assert any(p.outcome == "update_rolled_back" for _u, _k, p, _d in rig.env.notifier.sent)  # type: ignore[attr-defined]
     assert rig.journal.run is None
 
@@ -390,7 +390,7 @@ async def test__manual_rollback_after_success_restores_previous_images_and_snaps
     assert done.status is RunStatus.succeeded
     assert host.db_rev == "r1"
     assert host.versions() == {"api": "sha256:old", "runner": "sha256:old"}
-    assert (tmp_path / ".env").read_text().startswith("TAG=0.3.1")
+    assert (tmp_path / ".env").read_text(encoding="utf-8").startswith("TAG=0.3.1")
     assert rig.journal.data["last_ok"] is None
 
 

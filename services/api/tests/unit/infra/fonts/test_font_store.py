@@ -38,7 +38,7 @@ def test__local_font_store__save_font_path_traversal__strips_to_basename(tmp_pat
 def test__local_font_store__list_fonts__ignores_non_font_files(tmp_path: Path) -> None:
     fonts = tmp_path / "fonts"
     fonts.mkdir()
-    (fonts / "readme.txt").write_text("nope", encoding="utf-8")
+    (fonts / "readme.txt").write_text("nope", encoding="utf-8", newline="\n")
     (fonts / "arial.otf").write_bytes(b"x")
     assert [f.name for f in LocalFontStore(fonts).list_fonts()] == ["arial.otf"]
 

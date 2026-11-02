@@ -176,6 +176,7 @@ def git(*args: str, cwd: Path | None = None, check: bool = True) -> subprocess.C
         env=env,
         capture_output=True,
         text=True,
+        encoding="utf-8",
         timeout=120,
         check=False,
     )

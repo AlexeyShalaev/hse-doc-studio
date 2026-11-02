@@ -36,7 +36,7 @@ def _rule(**params: Any):
 
 @pytest.mark.unit
 def test__external_engine__no_base_url__returns_empty_and_makes_no_request(tmp_path: Path) -> None:
-    (tmp_path / "main.tex").write_text("текст", encoding="utf-8")
+    (tmp_path / "main.tex").write_text("текст", encoding="utf-8", newline="\n")
     called = {"n": 0}
 
     def handler(_request: httpx.Request) -> httpx.Response:
@@ -55,7 +55,7 @@ def test__external_engine__no_base_url__returns_empty_and_makes_no_request(tmp_p
 @pytest.mark.unit
 def test__external_engine__maps_matches_to_results(tmp_path: Path) -> None:
     content = "Первая строка.\nВторая строка с ашибкой здесь.\nТретья."
-    (tmp_path / "main.tex").write_text(content, encoding="utf-8")
+    (tmp_path / "main.tex").write_text(content, encoding="utf-8", newline="\n")
     offset = content.index("ашибкой")
 
     def handler(_request: httpx.Request) -> httpx.Response:
@@ -89,7 +89,7 @@ def test__external_engine__maps_matches_to_results(tmp_path: Path) -> None:
 
 @pytest.mark.unit
 def test__external_engine__unknown_rule_id__falls_back_to_unknown(tmp_path: Path) -> None:
-    (tmp_path / "main.tex").write_text("текст", encoding="utf-8")
+    (tmp_path / "main.tex").write_text("текст", encoding="utf-8", newline="\n")
 
     def handler(_request: httpx.Request) -> httpx.Response:
         return httpx.Response(200, json={"matches": [{"message": "x", "offset": 0}]})
@@ -108,7 +108,7 @@ def test__external_engine__unknown_rule_id__falls_back_to_unknown(tmp_path: Path
 @pytest.mark.unit
 @pytest.mark.parametrize("base_url", ["http://127.0.0.1:49160", "http://127.0.0.1:49160/"])
 def test__external_engine__posts_to_v2_check(tmp_path: Path, base_url: str) -> None:
-    (tmp_path / "main.tex").write_text("текст", encoding="utf-8")
+    (tmp_path / "main.tex").write_text("текст", encoding="utf-8", newline="\n")
     captured: dict[str, str] = {}
 
     def handler(request: httpx.Request) -> httpx.Response:
@@ -126,7 +126,7 @@ def test__external_engine__posts_to_v2_check(tmp_path: Path, base_url: str) -> N
 
 @pytest.mark.unit
 def test__external_engine__auto_language__preferred_variants_sent(tmp_path: Path) -> None:
-    (tmp_path / "main.tex").write_text("text", encoding="utf-8")
+    (tmp_path / "main.tex").write_text("text", encoding="utf-8", newline="\n")
     captured: dict[str, str] = {}
 
     def handler(request: httpx.Request) -> httpx.Response:
@@ -143,7 +143,7 @@ def test__external_engine__auto_language__preferred_variants_sent(tmp_path: Path
 def test__external_engine__explicit_language__preferred_variants_omitted(tmp_path: Path) -> None:
     # LanguageTool отвечает 400 на пару «явный язык + preferredVariants»,
     # поэтому вариант уезжает только вместе с автоопределением.
-    (tmp_path / "main.tex").write_text("text", encoding="utf-8")
+    (tmp_path / "main.tex").write_text("text", encoding="utf-8", newline="\n")
     captured: dict[str, str] = {}
 
     def handler(request: httpx.Request) -> httpx.Response:
@@ -170,7 +170,7 @@ def _connect_error(_request: httpx.Request) -> httpx.Response:
 @pytest.mark.unit
 @pytest.mark.parametrize("handler", [_http_500, _connect_error])
 def test__external_engine__request_fails__returns_empty(tmp_path: Path, handler: Any) -> None:
-    (tmp_path / "main.tex").write_text("текст", encoding="utf-8")
+    (tmp_path / "main.tex").write_text("текст", encoding="utf-8", newline="\n")
 
     results = _engine("http://127.0.0.1:8010", handler).run(
         _rule(), CheckSeverity.warn, tmp_path, "doc1", "main.tex", None
@@ -193,7 +193,7 @@ def test__external_engine__source_file_missing__returns_empty(tmp_path: Path) ->
 @pytest.mark.unit
 def test__external_engine__resolves_source_in_doc_subdir(tmp_path: Path) -> None:
     (tmp_path / "vkr").mkdir()
-    (tmp_path / "vkr" / "vkr.tex").write_text("слово\nс ашибкой", encoding="utf-8")
+    (tmp_path / "vkr" / "vkr.tex").write_text("слово\nс ашибкой", encoding="utf-8", newline="\n")
 
     def handler(_request: httpx.Request) -> httpx.Response:
         return httpx.Response(200, json={"matches": [{"message": "m", "offset": 6, "rule": {"id": "R"}}]})
@@ -217,7 +217,7 @@ class _TokenManager(_FakeManager):
 
 @pytest.mark.unit
 def test__external_engine__sends_manager_auth_headers(tmp_path: Path) -> None:
-    (tmp_path / "main.tex").write_text("текст", encoding="utf-8")
+    (tmp_path / "main.tex").write_text("текст", encoding="utf-8", newline="\n")
     seen: dict[str, str] = {}
 
     def handler(request: httpx.Request) -> httpx.Response:
@@ -233,7 +233,7 @@ def test__external_engine__sends_manager_auth_headers(tmp_path: Path) -> None:
 @pytest.mark.unit
 @pytest.mark.parametrize("status", [429, 503])
 def test__external_engine__shared_service_busy_degrades_to_warning(tmp_path: Path, status: int) -> None:
-    (tmp_path / "main.tex").write_text("текст", encoding="utf-8")
+    (tmp_path / "main.tex").write_text("текст", encoding="utf-8", newline="\n")
     engine = _engine("http://lt", lambda _r: httpx.Response(status, headers={"Retry-After": "3"}))
     results = engine.run(_rule(), CheckSeverity.err, tmp_path, "main", "main.tex", None)
     assert [(r.rule_id, r.severity) for r in results] == [("lt:UNAVAILABLE", CheckSeverity.warn)]

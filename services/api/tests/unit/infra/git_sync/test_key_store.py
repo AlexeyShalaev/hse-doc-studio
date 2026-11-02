@@ -92,7 +92,7 @@ def test__status__file_with_open_permissions__reports_not_enforced(key_path: Pat
 
 def test__ensure_primary__corrupt_file__is_set_aside_not_overwritten(key_path: Path) -> None:
     key_path.parent.mkdir(parents=True)
-    key_path.write_text("{ not json", encoding="utf-8")
+    key_path.write_text("{ not json", encoding="utf-8", newline="\n")
     store = KeyFileStore(key_path)
 
     assert store.load() is None
@@ -180,7 +180,7 @@ def test__ensure_primary__file_not_utf8__is_corrupt_and_set_aside(key_path: Path
 )
 def test__load__invalid_structure__is_treated_as_corrupt(key_path: Path, payload: object) -> None:
     key_path.parent.mkdir(parents=True)
-    key_path.write_text(json.dumps(payload), encoding="utf-8")
+    key_path.write_text(json.dumps(payload), encoding="utf-8", newline="\n")
     store = KeyFileStore(key_path)
 
     assert store.load() is None
@@ -199,6 +199,7 @@ def test__load__several_keys__reads_all_and_primary(key_path: Path) -> None:
             }
         ),
         encoding="utf-8",
+        newline="\n",
     )
 
     ring = KeyFileStore(key_path).load()

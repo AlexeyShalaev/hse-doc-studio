@@ -25,7 +25,7 @@ garbage
 
 def _script(tmp_path: Path, body: str) -> str:
     script = tmp_path / "ssh-keyscan"
-    script.write_text(f"#!{sys.executable}\nimport sys, time\n{body}\n")
+    script.write_text(f"#!{sys.executable}\nimport sys, time\n{body}\n", encoding="utf-8", newline="\n")
     script.chmod(0o755)
     return str(script)
 
@@ -46,7 +46,7 @@ async def test__scan__passes_a_safe_argv_and_returns_the_keys(tmp_path: Path) ->
     keys = await scanner.scan("ssh.github.com", 443)
 
     assert [k.fingerprint_sha256 for k in keys] == [GITHUB_FINGERPRINT]
-    argv = argv_file.read_text().split()
+    argv = argv_file.read_text(encoding="utf-8").split()
     assert argv[-2:] == ["--", "ssh.github.com"]
     assert argv[argv.index("-p") + 1] == "443"
 

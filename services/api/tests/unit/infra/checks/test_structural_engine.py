@@ -12,7 +12,7 @@ engine = StructuralCheckEngine()
 
 
 def _tex(folder: Path, filename: str, content: str) -> None:
-    (folder / filename).write_text(content, encoding="utf-8")
+    (folder / filename).write_text(content, encoding="utf-8", newline="\n")
 
 
 @pytest.mark.unit

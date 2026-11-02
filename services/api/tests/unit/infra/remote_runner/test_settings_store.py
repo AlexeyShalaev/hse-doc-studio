@@ -2,8 +2,10 @@ from __future__ import annotations
 
 import json
 import stat
+import sys
 from pathlib import Path
 
+import pytest
 from hse_doc_studio.core.remote_runner import RemoteAiEndpointChoice, RemoteRunnerSettings
 from hse_doc_studio.infra.remote_runner.settings_store import SETTINGS_FILE, JsonRemoteRunnerSettingsStore
 
@@ -28,6 +30,9 @@ async def test__save_then_load__round_trips_all_fields(tmp_path: Path) -> None:
     assert await store.load() == settings
 
 
+@pytest.mark.skipif(
+    sys.platform == "win32", reason="права доступа POSIX (0o600/0o700) на NTFS не выражаются: stat отдаёт 0o666/0o777"
+)
 async def test__save__file_is_private(tmp_path: Path) -> None:
     await JsonRemoteRunnerSettingsStore(tmp_path).save(RemoteRunnerSettings(enabled=True))
 
@@ -36,13 +41,15 @@ async def test__save__file_is_private(tmp_path: Path) -> None:
 
 
 async def test__load__broken_file__returns_defaults(tmp_path: Path) -> None:
-    (tmp_path / SETTINGS_FILE).write_text("{not json", encoding="utf-8")
+    (tmp_path / SETTINGS_FILE).write_text("{not json", encoding="utf-8", newline="\n")
 
     assert await JsonRemoteRunnerSettingsStore(tmp_path).load() == RemoteRunnerSettings()
 
 
 async def test__load__hand_edited_concurrency__is_clamped(tmp_path: Path) -> None:
-    (tmp_path / SETTINGS_FILE).write_text(json.dumps({"enabled": True, "concurrency": 40}), encoding="utf-8")
+    (tmp_path / SETTINGS_FILE).write_text(
+        json.dumps({"enabled": True, "concurrency": 40}), encoding="utf-8", newline="\n"
+    )
 
     settings = await JsonRemoteRunnerSettingsStore(tmp_path).load()
 

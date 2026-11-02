@@ -12,7 +12,7 @@ import json
 import threading
 from collections.abc import Iterator
 from contextlib import contextmanager
-from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from http.server import BaseHTTPRequestHandler
 from pathlib import Path
 from typing import Any
 
@@ -25,6 +25,7 @@ from hse_doc_studio.infra.git_sync.fernet_cipher import FernetSecretCipher
 from hse_doc_studio.infra.git_sync.key_store import KeyFileStore
 from hse_doc_studio.use_cases.git_sync.studio_servers import LoginState, StudioServerLogins, StudioServersService
 
+from tests.fixtures.loopback_http import LoopbackThreadingHTTPServer
 from tests.integration.api.git_remote.conftest import Live, git
 
 pytestmark = [pytest.mark.pg, pytest.mark.timeout(240)]
@@ -146,7 +147,7 @@ def _foreign_server() -> Iterator[str]:
         def log_message(self, *_args: object) -> None:
             return
 
-    server = ThreadingHTTPServer(("127.0.0.1", 0), Handler)
+    server = LoopbackThreadingHTTPServer(("127.0.0.1", 0), Handler)
     thread = threading.Thread(target=server.serve_forever, daemon=True)
     thread.start()
     try:

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import io
+import sys
 import tarfile
 import zipfile
 from pathlib import Path
@@ -59,7 +60,7 @@ def _text_stamp() -> StampSpec:
 def test__pack_executor__applies_all_entry_kinds(tmp_path: Path) -> None:
     (tmp_path / "tz").mkdir()
     (tmp_path / "tz/tz.pdf").write_bytes(_pdf())
-    (tmp_path / "tz/notes.txt").write_text("заметки", encoding="utf-8")
+    (tmp_path / "tz/notes.txt").write_text("заметки", encoding="utf-8", newline="\n")
     payload = _payload(
         PackEntry(PackEntryKind.copy, "Заметки/Заметки.txt", source=ManifestFile("tz/notes.txt")),
         PackEntry(PackEntryKind.stamp_pdf, "ТЗ.pdf", source=ManifestFile("tz/tz.pdf"), stamps=(_text_stamp(),)),
@@ -114,7 +115,7 @@ def test__pack_executor__escaping_arcname_skipped(tmp_path: Path) -> None:
 
 @pytest.mark.unit
 def test__pack_executor__oserror_per_file_recorded_in_skipped(tmp_path: Path) -> None:
-    (tmp_path / "a.txt").write_text("a", encoding="utf-8")
+    (tmp_path / "a.txt").write_text("a", encoding="utf-8", newline="\n")
     payload = _payload(
         PackEntry(PackEntryKind.copy, "missing.txt", source=ManifestFile("gone.txt")),
         PackEntry(PackEntryKind.copy, "a.txt", source=ManifestFile("a.txt")),
@@ -173,8 +174,8 @@ def test__stamp_from_spec__png_resolved_under_workspace(tmp_path: Path) -> None:
 def test__pack_executor__create_archive__zip_and_targz_contain_folder_contents(tmp_path: Path) -> None:
     src = tmp_path / "src"
     (src / "sub").mkdir(parents=True)
-    (src / "a.txt").write_text("a", encoding="utf-8")
-    (src / "sub/b.txt").write_text("b", encoding="utf-8")
+    (src / "a.txt").write_text("a", encoding="utf-8", newline="\n")
+    (src / "sub/b.txt").write_text("b", encoding="utf-8", newline="\n")
     executor = PackExecutor()
 
     zip_path = executor.create_archive(src, tmp_path / "out" / "final", "zip")
@@ -225,7 +226,7 @@ def test__pack_executor__archive_catalog__ids_exts_and_native_available() -> Non
 @pytest.mark.unit
 def test__pack_executor__symlink_source_outside_workspace__skipped_not_copied(tmp_path: Path) -> None:
     outside = tmp_path / "outside.txt"
-    outside.write_text("SECRET", encoding="utf-8")
+    outside.write_text("SECRET", encoding="utf-8", newline="\n")
     workspace = tmp_path / "ws"
     workspace.mkdir()
     (workspace / "e.txt").symlink_to(outside)
@@ -255,6 +256,9 @@ def test__pack_executor__symlink_stamp_png_outside_workspace__skipped(tmp_path: 
 
 
 @pytest.mark.unit
+@pytest.mark.skipif(
+    sys.platform == "win32", reason="нечитаемость файла моделируется chmod 000, на Windows он не действует"
+)
 def test__pack_executor__critical_entry_unreadable__raises_instead_of_skipping(tmp_path: Path) -> None:
     (tmp_path / "doc.pdf.sig").write_bytes(b"sig")
     (tmp_path / "doc.pdf.sig").chmod(0)
@@ -267,6 +271,9 @@ def test__pack_executor__critical_entry_unreadable__raises_instead_of_skipping(t
 
 
 @pytest.mark.unit
+@pytest.mark.skipif(
+    sys.platform == "win32", reason="нечитаемость файла моделируется chmod 000, на Windows он не действует"
+)
 def test__pack_executor__noncritical_entry_unreadable__skipped_as_before(tmp_path: Path) -> None:
     (tmp_path / "a.txt").write_bytes(b"a")
     (tmp_path / "a.txt").chmod(0)

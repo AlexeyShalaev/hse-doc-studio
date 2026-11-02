@@ -21,7 +21,7 @@ class _Index:
 def _store_config(folder: Path, text: str) -> Path:
     config = folder / ".hse-studio" / "git" / "config"
     config.parent.mkdir(parents=True, exist_ok=True)
-    config.write_text(text, encoding="utf-8")
+    config.write_text(text, encoding="utf-8", newline="\n")
     return folder
 
 
