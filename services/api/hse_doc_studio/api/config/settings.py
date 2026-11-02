@@ -12,17 +12,21 @@ from hse_doc_studio.api.config.ai_gateway import AiGatewayConfig
 from hse_doc_studio.api.config.artifacts import ArtifactsConfig
 from hse_doc_studio.api.config.auth import AuthConfig, SecretsConfig
 from hse_doc_studio.api.config.autoscale import AutoscaleConfig
+from hse_doc_studio.api.config.backups import BackupsConfig
 from hse_doc_studio.api.config.build import CompileConfig, FontsConfig
 from hse_doc_studio.api.config.collab import CollabConfig
 from hse_doc_studio.api.config.db import DbConfig
+from hse_doc_studio.api.config.diagnostics import DiagnosticsConfig
 from hse_doc_studio.api.config.egress import EgressConfig
 from hse_doc_studio.api.config.git import GitConfig, VCSConfig
 from hse_doc_studio.api.config.git_remote import GitRemoteConfig
 from hse_doc_studio.api.config.jobs import JobsConfig
+from hse_doc_studio.api.config.lifecycle import LifecycleConfig
 from hse_doc_studio.api.config.mail import MailConfig
 from hse_doc_studio.api.config.observability import ObservabilityConfig
 from hse_doc_studio.api.config.rate_limit import RateLimitConfig
 from hse_doc_studio.api.config.runtime import CorsConfig, HttpServerConfig, LoggingConfig
+from hse_doc_studio.api.config.server_update import ServerUpdateConfig
 from hse_doc_studio.api.config.services import (
     AgentConfig,
     HsePersonsConfig,
@@ -91,6 +95,10 @@ class Settings(BaseSettings):
     jobs: JobsConfig = Field(default_factory=JobsConfig)
     ai_gateway: AiGatewayConfig = Field(default_factory=AiGatewayConfig)
     autoscale: AutoscaleConfig = Field(default_factory=AutoscaleConfig)
+    backups: BackupsConfig = Field(default_factory=BackupsConfig)
+    server_update: ServerUpdateConfig = Field(default_factory=ServerUpdateConfig)
+    lifecycle: LifecycleConfig = Field(default_factory=LifecycleConfig)
+    diagnostics: DiagnosticsConfig = Field(default_factory=DiagnosticsConfig)
     auth: AuthConfig = Field(default_factory=AuthConfig)
     mail: MailConfig = Field(default_factory=MailConfig)
     db: DbConfig = Field(default_factory=DbConfig)

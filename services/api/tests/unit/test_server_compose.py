@@ -29,11 +29,24 @@ def _paths(model: type[BaseModel], prefix: str = "") -> set[str]:
     return names
 
 
-def test_docker_socket_only_on_runner(compose: dict[str, Any]) -> None:
+def test_docker_socket_only_on_runner_and_opt_in_updater(compose: dict[str, Any]) -> None:
     holders = {
         name for name, svc in compose["services"].items() if any(_SOCKET in str(v) for v in svc.get("volumes", []))
     }
-    assert holders == {"runner"}
+    # У api сокета нет. Апдейтеру он нужен для пересоздания контейнеров, но сервис включается только профилем updater.
+    assert holders == {"runner", "updater"}
+    assert compose["services"]["updater"]["profiles"] == ["updater"]
+    assert "runner" not in compose["services"]["updater"].get("depends_on", {})
+
+
+def test_updater_env_names_exist_in_config(compose: dict[str, Any]) -> None:
+    from hse_doc_studio.infra.update.server_updater.config import UpdaterConfig  # noqa: PLC0415
+
+    env = {k: str(v) for k, v in compose["services"]["updater"]["environment"].items()}
+    env["HSE_UPDATER__TOKEN"] = "t"
+    cfg = UpdaterConfig.from_env(env)
+    assert cfg.services == ("api", "runner")
+    assert cfg.env_file is not None
 
 
 def test_profiles(compose: dict[str, Any]) -> None:
@@ -87,3 +100,23 @@ def test_env_example_covers_required_variables() -> None:
     for var in ("POSTGRES_PASSWORD", "SECRETS_KEY", "S3_ACCESS_KEY", "S3_SECRET_KEY", "RUNNER_BOOTSTRAP_TOKEN"):
         assert var in defined
         assert var in text
+
+
+def test_every_service_rotates_container_logs(compose: dict[str, Any]) -> None:
+    """Без ограничений json-file растёт бесконечно: у каждого сервиса есть max-size и max-file."""
+    missing = []
+    for name, svc in compose["services"].items():
+        logging = svc.get("logging") or {}
+        options = logging.get("options") or {}
+        if logging.get("driver") != "json-file" or "max-size" not in options or "max-file" not in options:
+            missing.append(name)
+    assert missing == []
+
+
+def test_log_rotation_limits_are_overridable_from_env() -> None:
+    text = (_DEPLOY / "docker-compose.yml").read_text(encoding="utf-8")
+    assert "${LOG_MAX_SIZE:-10m}" in text
+    assert "${LOG_MAX_FILE:-5}" in text
+    example = (_DEPLOY / ".env.example").read_text(encoding="utf-8")
+    assert "LOG_MAX_SIZE=" in example
+    assert "LOG_MAX_FILE=" in example

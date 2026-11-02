@@ -1,0 +1,61 @@
+{
+  "settings": {
+    "policy": "auto",
+    "channel": "stable",
+    "max_bump": "minor",
+    "window_days": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6
+    ],
+    "window_start_min": 120,
+    "window_minutes": 180,
+    "backup_first": true,
+    "verify": "digest",
+    "notify_admins": true
+  },
+  "current_version": "0.3.1",
+  "executor": "none",
+  "updater_online": false,
+  "updater_seen_at": null,
+  "updater_version": null,
+  "available": {
+    "version": "0.4.0",
+    "date": "2026-11-02",
+    "notes": [
+      "Автообновление сервера"
+    ],
+    "has_digest": true
+  },
+  "auto_target": null,
+  "releases": [
+    {
+      "version": "0.4.0",
+      "date": "2026-11-02",
+      "notes": [
+        "Автообновление сервера"
+      ],
+      "has_digest": true
+    },
+    {
+      "version": "0.3.1",
+      "date": "",
+      "notes": [],
+      "has_digest": false
+    }
+  ],
+  "checked_at": "2026-11-03T02:00:00Z",
+  "check_error": null,
+  "in_window": false,
+  "next_window_at": "2026-11-04T02:00:00Z",
+  "backup_destination_configured": true,
+  "active_run": null,
+  "last_run": null,
+  "rollback_version": null,
+  "rollback_needs_restore": false,
+  "manual_command": "helm upgrade hse-doc-studio deploy/helm/hse-doc-studio --reuse-values --set image.tag=0.4.0 --atomic --wait"
+}

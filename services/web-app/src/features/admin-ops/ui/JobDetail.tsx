@@ -28,7 +28,7 @@ export const JobDetail = ({
   now: number;
   onClose: () => void;
 }) => {
-  const { t, i18n } = useTranslation("adminOps");
+  const { t, i18n } = useTranslation("adminRunners");
   const person = job
     ? personRef(job.user_id, job.user_name, job.user_email)
     : null;

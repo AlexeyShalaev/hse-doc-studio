@@ -6,3 +6,8 @@ services:
   api:
     ports: !override
       - "127.0.0.1:${PORT:-17240}:8000"
+    environment:
+      # Смоук самодиагностики читает публичный лёгкий эндпоинт (e2e/tests/full.spec.ts).
+      HSE_STUDIO__DIAGNOSTICS__PUBLIC_ENDPOINT: "true"
+      # Плановый проход чаще, чтобы страница в смоуке не ждала пять минут.
+      HSE_STUDIO__DIAGNOSTICS__INTERVAL_S: "30"

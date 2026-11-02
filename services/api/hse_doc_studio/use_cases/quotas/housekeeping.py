@@ -12,9 +12,15 @@ from hse_doc_studio.core.quotas.protocols import IUsageCounters
 
 class QuotaHousekeeping:
     def __init__(
-        self, counters: IUsageCounters, usage: IAiUsageLog, *, usage_retention_days: int, clock: Clock = utc_now
+        self,
+        counters: IUsageCounters,
+        usage: IAiUsageLog | None = None,
+        *,
+        usage_retention_days: int = 0,
+        clock: Clock = utc_now,
     ) -> None:
         self._counters = counters
+        # Без журнала вызовов (сервер): его партиции и срок хранения ведёт движок жизненного цикла данных.
         self._usage = usage
         self._usage_retention = timedelta(days=usage_retention_days)
         self._clock = clock
@@ -23,5 +29,5 @@ class QuotaHousekeeping:
         """(стёртых строк счётчиков, стёртых записей журнала)."""
         now = self._clock()
         counters = await self._counters.prune((now - timedelta(days=COUNTER_RETENTION_DAYS)).date())
-        calls = await self._usage.prune(now - self._usage_retention)
+        calls = await self._usage.prune(now - self._usage_retention) if self._usage is not None else 0
         return counters, calls

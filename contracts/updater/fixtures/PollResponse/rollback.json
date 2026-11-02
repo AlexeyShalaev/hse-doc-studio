@@ -1,0 +1,11 @@
+{
+  "run": {
+    "run_id": "9a8b7c6d-5e4f-4a3b-8c2d-1e0f9a8b7c6d",
+    "kind": "rollback",
+    "from_version": "0.4.0",
+    "to_version": "0.3.1",
+    "verify": "none",
+    "digests_url": "",
+    "restore_db": true
+  }
+}

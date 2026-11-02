@@ -51,6 +51,49 @@ s3:
   accessKey: ""
   secretKey: ""
 
+# Бэкапы (см. docs/ru/deploy/backups.md). При enabled=false чарт ничего не добавляет: приложение работает с
+# умолчаниями, назначения и расписание админ задаёт сам в админке.
+# При enabled=true чарт на первом старте создаёт назначение по умолчанию и расписание (только если назначений ещё нет:
+# правки в админке рестарты переживают) и, при local.enabled, отдельный том под локальные бэкапы.
+backups:
+  enabled: false
+  # Локальное назначение: отдельный PVC `<release>-backups`, монтируется в /backups (HSE_STUDIO__BACKUPS__LOCAL_ROOT).
+  # Бэкап на том же томе, что и данные, не защищает от потери тома: берите другой класс хранения или внешний S3.
+  local:
+    enabled: false
+    persistence:
+      existingClaim: ""
+      storageClassName: ""
+      accessModes: [ReadWriteOnce]
+      size: 50Gi
+      annotations: {}
+  destination:
+    # local (подкаталог тома бэкапов) или s3
+    kind: local
+    name: default
+    # kind=local: подкаталог корня /backups
+    path: main
+    # kind=s3: bucket обязателен, ключи ниже (или в Secret: backup-access-key, backup-secret-key)
+    endpoint: ""
+    region: us-east-1
+    bucket: ""
+    prefix: ""
+    pathStyle: true
+    accessKey: ""
+    secretKey: ""
+  schedule:
+    enabled: true
+    # interval (каждые intervalHours часов) или cron (пять полей, UTC)
+    kind: interval
+    intervalHours: 24
+    cron: "0 3 * * *"
+    keepLast: 7
+    keepDays: 30
+  # installation (ключ из SECRETS_KEY) или passphrase (парольная фраза от 12 символов в passphrase или в Secret: backup-passphrase)
+  encryptionMode: installation
+  passphrase: ""
+  notifyAdmins: true
+
 mail:
   host: ""
   port: 587
@@ -60,7 +103,8 @@ mail:
 
 # Секреты. Либо существующий Secret с ключами из списка ниже, либо чарт создаст свой из значений.
 # Ключи: dsn, secrets-key, s3-access-key, s3-secret-key, runner-bootstrap-token,
-# а также необязательные smtp-password, health-token, metrics-token, office-jwt-secret.
+# а также необязательные smtp-password, health-token, metrics-token, office-jwt-secret,
+# backup-access-key, backup-secret-key, backup-passphrase.
 secrets:
   existingSecret: ""
   # Ключ шифрования секретов в базе (Fernet). Потеря делает сохранённые секреты нечитаемыми.

@@ -55,7 +55,11 @@ nav = [
         { "Приглашения и запросы доступа" = "deploy/invitations.md" },
         { "Раннеры" = "deploy/runners.md" },
         { "Безопасность и ПДн" = "deploy/security.md" },
-        { "Бэкап и обновление" = "deploy/operations.md" },
+        { "Бэкапы сервера" = "deploy/backups.md" },
+        { "Самодиагностика сервера" = "deploy/diagnostics.md" },
+        { "Автообновление сервера" = "deploy/auto-update.md" },
+        { "Обновление и потеря ключа" = "deploy/operations.md" },
+        { "Автономная работа и хранение данных" = "deploy/autonomy.md" },
     ] },
     { "Справочник" = [
         { "Карта справочника" = "reference/index.md" },

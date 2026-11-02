@@ -128,7 +128,7 @@ export const QueueView = ({
   onCancel,
   onRetry,
 }: QueueViewProps) => {
-  const { t } = useTranslation("adminOps");
+  const { t } = useTranslation("adminRunners");
   const units = useDurationUnits();
   const dur = useCallback(
     (s: number | null) => (s === null ? null : formatDuration(s, units)),

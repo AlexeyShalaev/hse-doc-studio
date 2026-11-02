@@ -106,7 +106,9 @@ proxy_set_header Connection $connection_upgrade;`) и не рвать молча
 
 ## Обновление и бэкап
 
-Обновление: смените `TAG`, затем `docker compose pull && docker compose up -d`. Миграции базы выполняет
+Автоматически: профиль `updater` (`UPDATER_TOKEN` в `.env`, затем `docker compose --profile updater up -d`) проверяет релизы и ставит их в окно обслуживания со снимком базы, проверкой образа и автоматическим откатом; политика, окно и история в админке, раздел «Обновления» (`docs/ru/deploy/auto-update.md`). Сервису нужен сокет docker: это root на хосте.
+
+Вручную: смените `TAG`, затем `docker compose pull && docker compose up -d`. Миграции базы выполняет
 api на старте под advisory-локом, совместимость версий api и раннера проверяется при регистрации.
 
 Бэкап:

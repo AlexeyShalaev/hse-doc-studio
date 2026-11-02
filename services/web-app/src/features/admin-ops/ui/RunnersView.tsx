@@ -160,7 +160,7 @@ export const RunnersView = ({
   onRevokeToken,
   onOpenQueue,
 }: RunnersViewProps) => {
-  const { t } = useTranslation("adminOps");
+  const { t } = useTranslation("adminRunners");
   const units = useDurationUnits();
   const num = (value: number) => value.toLocaleString(localeTag());
   const { state } = list;
@@ -423,7 +423,7 @@ export const RunnersView = ({
       ? [
           {
             id: "q",
-            label: t("filters.search"),
+            label: t("adminOps:filters.search"),
             value: state.q,
             onRemove: () => {
               state.setQ("");
@@ -761,7 +761,7 @@ const TokensSection = ({
   now: number;
   onRevokeToken: (token: AdminRunnerToken) => void;
 }) => {
-  const { t } = useTranslation("adminOps");
+  const { t } = useTranslation("adminRunners");
   const { state } = tokens;
   const order =
     Object.entries(TOKEN_ORDER).find(
@@ -918,7 +918,7 @@ const TokenRow = ({
   now: number;
   onRevoke: (token: AdminRunnerToken) => void;
 }) => {
-  const { t } = useTranslation("adminOps");
+  const { t } = useTranslation("adminRunners");
   const st = tokenStatus(token, now);
   const active = st === "active";
   const label = token.label === "" ? t("tokens.noLabel") : token.label;
