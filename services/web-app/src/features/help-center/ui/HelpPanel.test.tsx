@@ -81,7 +81,7 @@ describe("панель справки", () => {
     vi.stubGlobal("fetch", fetchMock);
     fetchMock.mockClear();
     await i18n.changeLanguage("ru");
-    useThemeStore.setState({ lang: "ru" });
+    useThemeStore.setState({ lang: "ru", theme: "light" });
     document.documentElement.setAttribute("data-theme", "light");
   });
   afterEach(() => {

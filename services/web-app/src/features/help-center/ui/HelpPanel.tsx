@@ -14,18 +14,16 @@ import { Spinner } from "@shared/ui";
 import { renderInline } from "../lib/inlineMarkdown";
 import { useCurrentHelpKeys } from "../lib/useCurrentHelp";
 
-/** Кадры сняты в светлой и тёмной теме; «blueprint» Студии ближе к тёмной. */
+/** Кадры сняты в светлой и тёмной теме; «blueprint» Студии ближе к тёмной, «system» как у ОС. */
 const useShotTheme = (): "light" | "dark" => {
   const theme = useThemeStore((s) => s.theme);
-  const [resolved, setResolved] = useState<"light" | "dark">("dark");
-  useEffect(() => {
-    setResolved(
-      document.documentElement.getAttribute("data-theme") === "light"
-        ? "light"
-        : "dark",
-    );
-  }, [theme]);
-  return resolved;
+  if (theme === "light") return "light";
+  if (theme === "system") {
+    return window.matchMedia("(prefers-color-scheme: dark)").matches
+      ? "dark"
+      : "light";
+  }
+  return "dark";
 };
 
 const ArticleBody = ({
