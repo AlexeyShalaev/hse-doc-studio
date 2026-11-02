@@ -1,0 +1,52 @@
+---
+title: 'Getting started'
+description: 'What Studio is, how the local and the server Studio differ, how to sign in, find a project and open help.'
+sidebar:
+  order: 1
+access: user
+help:
+  routes: ['/login', '/']
+  summary: 'Studio builds the documents of your work from your programme’s template. The local Studio runs on your computer, the server one opens in a browser after you sign in. All projects are on the **Projects** screen.'
+  steps:
+    - text: 'Open Studio: the local one on your computer or the server one at the address your administrator gave you.'
+      hint: 'In the local Studio projects live in folders on disk and builds run in Docker. On a server the server stores the files, so there is no folder to pick.'
+    - text: 'On a server enter your **Email** and **Password** and click **Sign in** (or **Sign in with …** if external sign-in is set up).'
+      hint: 'No account yet: click **Create an account** if the sign-in screen shows it. Otherwise ask the administrator for an invitation.'
+      shot: start/first-steps/step-02
+    - text: 'On the **Projects** screen find your project with the search and open its card.'
+      hint: 'No project yet: click **New project**, see [Create a project from a template](/help/en/runbooks/create-project/). In the local Studio **Open folder…** connects an existing folder.'
+      shot: start/first-steps/step-03
+    - text: 'In the project pick a document in the **Documents** panel on the left. The same bar holds **Issues**, **Submission**, **Files**, **Settings** and **History**.'
+      shot: start/first-steps/step-04
+    - text: 'To get back to the list, click **Projects** in the window header.'
+    - text: 'Need a hint about the current screen: click the help button in the header, press `?` or use ⌘K → “Help for this screen”.'
+      hint: 'Help opens at the side and shows the article about exactly the screen you are on.'
+verified:
+  at: 2026-11-03
+  app_version: '0.3.0'
+  sources:
+    - services/web-app/src/pages/WelcomePage
+    - services/web-app/src/features/sign-in
+    - services/web-app/src/widgets/AppTitlebar
+    - services/web-app/src/widgets/ActivityBar
+---
+
+import Steps from '~/components/Steps.astro'
+
+HSE Studio helps you format the documents of a thesis, coursework or Project Proposal to your
+programme’s requirements: the template already has title pages, required sections and GOST checks,
+and Studio builds a finished PDF from the sources. Start by signing in and the **Projects** screen;
+everything else opens from a project.
+
+<Steps />
+
+## If something goes wrong
+
+- **“Wrong email or password.”**: check the keyboard layout and case. If you forgot the password,
+  click **Forgot your password?** on the sign-in screen.
+- **“Your account is awaiting administrator approval.”**: sign-in works once it is approved; you
+  will get an email.
+- **“Could not load projects”**: the server did not answer. Check your connection and click
+  **Try again**; your projects are safe.
+- **“Docker unavailable”** in the local Studio: start Docker Desktop, documents do not build
+  without it. **Open settings** leads to the compiler settings.

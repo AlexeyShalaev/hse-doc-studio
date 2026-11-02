@@ -1,0 +1,47 @@
+---
+title: Справка HSE Studio
+description: 'Как пользоваться HSE Doc Studio — пошаговые инструкции со скриншотами и короткими роликами.'
+access: user
+template: splash
+hero:
+  tagline: 'Пошаговые инструкции по каждому экрану Студии. Справка открывается и из самого приложения — кнопкой «?» в шапке, клавишей ? или через ⌘K → «Справка по этому экрану».'
+  actions:
+    - text: Начать работу
+      link: /help/ru/start/first-steps/
+      icon: right-arrow
+    - text: В Студию
+      link: /
+      variant: minimal
+---
+
+import {CardGrid, LinkCard} from '@astrojs/starlight/components'
+import Audience from '~/components/Audience.astro'
+
+## Пишу работу
+
+<CardGrid>
+  <LinkCard title="Первые шаги" href="/help/ru/start/first-steps/" description="Что такое Студия и с чего начать." />
+  <LinkCard title="Создать проект из шаблона" href="/help/ru/runbooks/create-project/" description="ВКР, курсовая, Project Proposal: мастер проекта." />
+  <LinkCard title="Редактор и превью" href="/help/ru/runbooks/editor-preview/" description="Писать текст и сразу видеть PDF." />
+  <LinkCard title="Сборка PDF" href="/help/ru/runbooks/build/" description="Облачная и локальная сборка, если что-то не собирается." />
+  <LinkCard title="Замечания и проверки" href="/help/ru/runbooks/checks/" description="ГОСТ, типографика, требования программы." />
+  <LinkCard title="ИИ-агент" href="/help/ru/runbooks/ai-agent/" description="Попросить агента поправить текст или найти ошибку." />
+  <LinkCard title="Ревью и совместная работа" href="/help/ru/runbooks/review-collaboration/" description="Пригласить научного руководителя, обсуждать правки." />
+  <LinkCard title="Git-синхронизация" href="/help/ru/runbooks/git-sync/" description="GitHub, GitLab или git сервера Студии." />
+  <LinkCard title="Сдача и подписи" href="/help/ru/runbooks/submit-sign/" description="Собрать комплект на сдачу и подписать документы." />
+  <LinkCard title="Локальная версия" href="/help/ru/runbooks/local-version/" description="Студия на своём компьютере и связь с облаком." />
+</CardGrid>
+
+<Audience>
+
+## Администрирую сервер
+
+<CardGrid>
+  <LinkCard title="Раннеры сборки" href="/help/ru/admin/runners/" description="Кто собирает PDF: подключить и проверить раннер." />
+  <LinkCard title="Приглашения" href="/help/ru/admin/invitations/" description="Пригласить людей на сервер без почты и с почтой." />
+  <LinkCard title="Бэкапы" href="/help/ru/admin/backups/" description="Снимки, расписание, восстановление." />
+  <LinkCard title="Самодиагностика" href="/help/ru/admin/diagnostics/" description="Что сломано и что с этим делать." />
+  <LinkCard title="Обновления" href="/help/ru/admin/updates/" description="Обновить сервер до новой версии." />
+</CardGrid>
+
+</Audience>

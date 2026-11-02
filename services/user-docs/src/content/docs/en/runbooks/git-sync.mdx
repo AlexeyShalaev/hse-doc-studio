@@ -1,0 +1,64 @@
+---
+title: 'Sync with git'
+description: 'Connect a project to a GitHub, GitLab or Studio server repository, sync versions, resolve conflicts and clone the project to another computer.'
+sidebar:
+  order: 7
+access: user
+help:
+  routes:
+    - '/projects/:projectId/sync/conflicts'
+    - '/projects/:projectId/project-settings/sync'
+    - '/wizard?mode=clone'
+  summary: 'A project is connected to a repository once: address, access, check. After that the sync button in the project title bar shows the state and exchanges versions, and conflicts are resolved on a separate screen.'
+  steps:
+    - text: 'Open the project, click the sync button in the title bar and choose **Connect a repository**.'
+      hint: 'The same button is in **Settings** → **Sync** → **Repository**. If Studio asks who you are, enter your name and e-mail and click **Save and continue**: they sign your versions.'
+    - text: 'On the **Repository** step paste the **Repository address** and, if needed, the **Branch in the repository**, then click **Next**.'
+      hint: 'Copy the address from the repository page: the Code button on GitHub, Clone on GitLab. An empty branch means the repository’s main branch.'
+    - text: 'On the **Access** step give a **Token** or an **SSH key** and click **Next**.'
+      hint: 'The token needs write permission: Contents: Read and write on GitHub, write_repository on GitLab.'
+    - text: 'On the **Check** step wait for the result and click **Connect and sync**.'
+      shot: runbooks/git-sync/step-04
+    - text: 'From now on watch the sync button: **In sync**, **Not sent**, **New changes**. Open it and click **Sync now**.'
+      hint: 'Projects from a Studio server sync automatically: the project goes to the server on its own after a pause in editing. The **Sync automatically** switch is in the sync settings.'
+      shot: runbooks/git-sync/step-05
+    - text: 'If the state is **Conflicts**, click **Resolve conflicts**. For each place choose **Take mine**, **Take theirs** or **Both: mine first**, then click **Finish and send**.'
+      hint: 'Until the conflicts are resolved, sending is blocked while the project works as usual. Changed your mind: **Cancel the merge**.'
+      shot: runbooks/git-sync/step-06
+    - text: 'To get the project on another computer, on the **Projects** screen click **Clone from git**, enter the **Repository address**, click **Check the repository**, pick a folder and click **Clone**.'
+      hint: 'For projects on a Studio server choose the **HSE Doc Studio server** source: sign-in by code, no tokens. See [Local version](/help/en/runbooks/local-version/).'
+  video:
+    src: runbooks/git-sync/clip
+verified:
+  at: 2026-11-03
+  app_version: '0.3.0'
+  sources:
+    - services/web-app/src/features/git-sync
+    - services/web-app/src/features/git-remote
+    - services/web-app/src/features/git-conflicts
+    - services/web-app/src/widgets/SyncCluster
+    - services/web-app/src/pages/WorkspacePage/panels/project-settings
+---
+
+import Steps from '~/components/Steps.astro'
+import Video from '~/components/Video.astro'
+
+Sync keeps the project’s versions in a git repository as well: on GitHub, GitLab, your own server
+or a Studio server. That lets two people work on one project, or one person on several computers:
+your versions go to the repository and your colleagues’ changes come to you. Studio merges edits
+that do not overlap on its own and asks you only about real conflicts.
+
+<Video />
+
+<Steps />
+
+## If something goes wrong
+
+- **“The repository did not accept the access”**: the token is wrong, revoked or expired. Click
+  **Update access** and paste a new token.
+- **“The access has no write permission”**: you can read the repository but not send versions. Give
+  the token write permission and check again.
+- **“The repository holds a different project”**: it cannot be merged with this one. Pick another
+  repository or click **Clone into a new folder**.
+- **“Set your author name and e-mail first”**: click **Set the author**, fill in the name and e-mail
+  and sync again.

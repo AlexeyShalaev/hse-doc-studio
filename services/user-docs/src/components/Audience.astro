@@ -1,0 +1,8 @@
+---
+// Блок только для сборки администратора: общая страница (главная) не должна ссылаться на статьи,
+// которых в сборке пользователя нет. `astro dev` и одиночный `astro build` видят всё.
+const audience = process.env.DOCS_AUDIENCE ?? 'admin'
+const shown = audience === 'admin'
+---
+
+{shown && <slot />}

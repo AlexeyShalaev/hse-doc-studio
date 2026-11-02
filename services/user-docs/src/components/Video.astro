@@ -1,0 +1,24 @@
+---
+/**
+ * Короткий ролик статьи (`help.video`). Без звука и без подписей в кадре: слова живут в шагах,
+ * правка формулировки не требует перекодирования. preload="none": до нажатия грузится только постер.
+ * WebM (VP9) первым, MP4 (H.264) для Safari постарше.
+ */
+import {articleLang, videoVariants} from '../lib/help'
+
+const entry = Astro.locals.starlightRoute.entry
+const video = entry.data.help?.video
+if (!video) throw new Error(`<Video /> в "${entry.id}", а у статьи нет help.video`)
+const variants = videoVariants(video.src, articleLang(entry.id))
+---
+
+<figure class="runbook-video">
+  {
+    (['light', 'dark'] as const).map((theme) => (
+      <video class={`only-${theme}`} controls muted playsinline preload="none" poster={variants[theme].poster} width="1280" height="800">
+        <source src={variants[theme].webm} type="video/webm" />
+        <source src={variants[theme].mp4} type="video/mp4" />
+      </video>
+    ))
+  }
+</figure>

@@ -1,0 +1,47 @@
+---
+title: 'HSE Studio Help'
+description: 'How to use HSE Doc Studio: step-by-step guides with screenshots and short clips.'
+access: user
+template: splash
+hero:
+  tagline: 'Step-by-step guides for every screen of Studio. Help also opens from inside the app: the “?” button in the header, the ? key, or ⌘K → “Help for this screen”.'
+  actions:
+    - text: 'Get started'
+      link: /help/en/start/first-steps/
+      icon: right-arrow
+    - text: 'Open Studio'
+      link: /
+      variant: minimal
+---
+
+import {CardGrid, LinkCard} from '@astrojs/starlight/components'
+import Audience from '~/components/Audience.astro'
+
+## Writing my work
+
+<CardGrid>
+  <LinkCard title="Getting started" href="/help/en/start/first-steps/" description="What Studio is and where to begin." />
+  <LinkCard title="Create a project from a template" href="/help/en/runbooks/create-project/" description="Thesis, coursework, Project Proposal: the project wizard." />
+  <LinkCard title="Editor and preview" href="/help/en/runbooks/editor-preview/" description="Write and see the PDF right away." />
+  <LinkCard title="Building the PDF" href="/help/en/runbooks/build/" description="Cloud and local builds, and what to do when a build fails." />
+  <LinkCard title="Findings and checks" href="/help/en/runbooks/checks/" description="GOST, typography, programme requirements." />
+  <LinkCard title="AI agent" href="/help/en/runbooks/ai-agent/" description="Ask the agent to fix the text or find a mistake." />
+  <LinkCard title="Review and collaboration" href="/help/en/runbooks/review-collaboration/" description="Invite your supervisor and discuss changes." />
+  <LinkCard title="Git sync" href="/help/en/runbooks/git-sync/" description="GitHub, GitLab or the Studio server git." />
+  <LinkCard title="Submission and signatures" href="/help/en/runbooks/submit-sign/" description="Assemble the submission set and sign documents." />
+  <LinkCard title="Local version" href="/help/en/runbooks/local-version/" description="Studio on your own computer and its link to the cloud." />
+</CardGrid>
+
+<Audience>
+
+## Running the server
+
+<CardGrid>
+  <LinkCard title="Build runners" href="/help/en/admin/runners/" description="Who builds PDFs: connect and check a runner." />
+  <LinkCard title="Invitations" href="/help/en/admin/invitations/" description="Invite people with or without email." />
+  <LinkCard title="Backups" href="/help/en/admin/backups/" description="Snapshots, schedule, restore." />
+  <LinkCard title="Self-diagnostics" href="/help/en/admin/diagnostics/" description="What is broken and how to fix it." />
+  <LinkCard title="Updates" href="/help/en/admin/updates/" description="Update the server to a new version." />
+</CardGrid>
+
+</Audience>
