@@ -62,6 +62,7 @@ env -u PYTHONPATH \
   HSE_STUDIO__SERVER__PORT="$PORT" \
   HSE_STUDIO__UPDATE_FEED_URL=off \
   HSE_STUDIO__COMPILE__PREFETCH_IMAGE=false \
+  HSE_STUDIO__COMPILE__IDLE_TIMEOUT_S=900 \
   HSE_STUDIO__LOGGING__LEVEL=WARNING \
   nohup uv run --extra api python -m hse_doc_studio.api.entrypoint >"$LOG" 2>&1 &
 echo $! >"$PIDFILE"

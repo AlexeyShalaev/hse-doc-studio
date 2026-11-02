@@ -12,7 +12,7 @@ export default {
     },
     async (d) => {
       await waitPdf(d)
-      await d.point('canvas.pdf-page-canvas')
+      await d.pointIf('canvas.pdf-page-canvas')
     },
     async (d) => d.click('#document-tab-editor', {settle: 1800}),
     async (d) => d.pause(1200),

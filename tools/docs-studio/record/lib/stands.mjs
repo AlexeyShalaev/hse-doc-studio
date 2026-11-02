@@ -87,7 +87,8 @@ async function ensureCompiled(projectId, doc) {
     return (Array.isArray(list) ? list : list.items ?? [])[0] ?? null
   }
   const done = (record) => record && !['running', 'pending', 'queued'].includes(record.status)
-  if (done(await latest())) return
+  // Первая сборка на свежем образе TeX Live строит кэш шрифтов; упавшая сборка пересобирается.
+  if ((await latest())?.status === 'success') return
   console.log(`  собираю ${doc} (${projectId}), первый раз это несколько минут`)
   const started = await fetch(`${url}/compile`, {method: 'POST'})
   if (!started.ok) {
@@ -97,7 +98,11 @@ async function ensureCompiled(projectId, doc) {
   }
   for (let i = 0; i < 300; i++) {
     await new Promise((r) => setTimeout(r, 2000))
-    if (done(await latest())) return
+    const record = await latest()
+    if (done(record)) {
+      if (record.status !== 'success') console.warn(`  сборка ${doc}: ${record.status}, кадры будут без PDF`)
+      return
+    }
   }
   throw new Error(`сборка ${doc} не закончилась за 10 минут`)
 }
