@@ -17,6 +17,8 @@ from hse_doc_studio.api.observability.request_id import RequestIdMiddleware
 from hse_doc_studio.core.background import BackgroundTaskRunner, PeriodicTask
 
 if TYPE_CHECKING:
+    from collections.abc import Awaitable, Callable
+
     from dishka import AsyncContainer
 
 logger = structlog.get_logger()
@@ -187,6 +189,140 @@ def install_autoscale(app: FastAPI, container: AsyncContainer, cfg: Settings, me
     async def _autoscale_metrics() -> None:
         service = await container.get(AutoscaleService)
         metrics.add_collector(autoscale_collector(lambda: service.last_seen))
+
+
+def _install_backup_provision(app: FastAPI, container: AsyncContainer, cfg: Settings) -> None:
+    """Начальная настройка бэкапов из окружения (Helm, compose): один раз на пустой установке, под лидерским локом."""
+    if cfg.backups.provision.destination_kind == "none":
+        return
+
+    async def _provision() -> None:
+        from hse_doc_studio.use_cases.backup.provision import ProvisionBackupUC, build_plan  # noqa: PLC0415
+
+        p = cfg.backups.provision
+
+        def reveal(value: object) -> str | None:
+            return value.get_secret_value() if value is not None else None  # type: ignore[attr-defined]
+
+        plan = build_plan(
+            kind=p.destination_kind,
+            name=p.name,
+            local_path=p.local_path,
+            endpoint=p.endpoint,
+            region=p.region,
+            bucket=p.bucket,
+            prefix=p.prefix,
+            path_style=p.path_style,
+            access_key=reveal(p.access_key),
+            secret_key=reveal(p.secret_key),
+            schedule_enabled=p.schedule_enabled,
+            schedule_kind=p.schedule_kind,
+            interval_hours=p.interval_hours,
+            cron=p.cron,
+            keep_last=p.keep_last,
+            keep_days=p.keep_days,
+            encryption_mode=p.encryption_mode,
+            passphrase=reveal(p.passphrase),
+            notify_admins=p.notify_admins,
+        )
+        await (await container.get(ProvisionBackupUC)).execute(plan)
+
+    app.state.background.register(
+        PeriodicTask(name="backup_provision", interval_s=365 * 86400.0, run=_provision, run_on_start=True)
+    )
+
+
+def _install_maintenance(app: FastAPI, container: AsyncContainer) -> None:
+    """Режим обслуживания для восстановления из админки: ответ 503 на `/api` и подхват метки прерванной записи."""
+    from hse_doc_studio.api.maintenance import MaintenanceMiddleware  # noqa: PLC0415
+    from hse_doc_studio.core.backup.protocols import IMaintenanceMode  # noqa: PLC0415
+    from hse_doc_studio.infra.backup.maintenance import MaintenanceController  # noqa: PLC0415
+
+    app.add_middleware(MaintenanceMiddleware)
+
+    @app.on_event("startup")
+    async def _maintenance_startup() -> None:
+        controller = await container.get(IMaintenanceMode)
+        assert isinstance(controller, MaintenanceController)  # noqa: S101
+        controller.bind(app.state.background)
+        await controller.adopt_marker()
+        app.state.maintenance = controller
+
+
+def _backup_metrics_refresh(
+    container: AsyncContainer, metrics: MetricsRegistry | None
+) -> Callable[[], Awaitable[None]]:
+    """Снимок метрик бэкапов и его обновление из таблицы запусков."""
+    from hse_doc_studio.api.observability.backup_metrics import backup_collector  # noqa: PLC0415
+    from hse_doc_studio.use_cases.backup.metrics import BackupMetricsRefresher, BackupMetricsState  # noqa: PLC0415
+
+    state = BackupMetricsState()
+    if metrics is not None:
+        metrics.add_collector(backup_collector(state))
+
+    async def _refresh() -> None:
+        from hse_doc_studio.core.backup.protocols import IBackupRunRepository  # noqa: PLC0415
+        from hse_doc_studio.core.identity.protocols import IInstanceSettingsRepository  # noqa: PLC0415
+
+        refresher = BackupMetricsRefresher(
+            state, await container.get(IBackupRunRepository), await container.get(IInstanceSettingsRepository)
+        )
+        try:
+            await refresher.refresh()
+        except Exception:
+            logger.warning("backup metrics refresh failed", exc_info=True)
+
+    return _refresh
+
+
+def install_backups(
+    app: FastAPI, container: AsyncContainer, cfg: Settings, metrics: MetricsRegistry | None = None
+) -> None:
+    """Планировщик бэкапов под лидерским локом; прерванные запуски прошлого процесса закрываются на старте."""
+    if not cfg.backups.enabled:
+        return
+    from hse_doc_studio.use_cases.backup.runs import ScheduledBackupTick  # noqa: PLC0415
+    from hse_doc_studio.use_cases.backup.service import BackupService  # noqa: PLC0415
+
+    refresh_metrics = _backup_metrics_refresh(container, metrics)
+
+    async def _tick() -> None:
+        await (await container.get(ScheduledBackupTick)).run_once()
+        await refresh_metrics()
+
+    app.state.background.register(PeriodicTask(name="backup_schedule", interval_s=cfg.backups.tick_s, run=_tick))
+
+    @app.on_event("startup")
+    async def _recover_backup_runs() -> None:
+        recovered = await (await container.get(BackupService)).recover_stale()
+        if recovered:
+            logger.warning("backup runs interrupted by a restart", count=recovered)
+        await refresh_metrics()
+
+    _install_backup_provision(app, container, cfg)
+    _install_maintenance(app, container)
+
+    @app.on_event("shutdown")
+    async def _stop_backups() -> None:
+        await (await container.get(BackupService)).cancel_all()
+
+
+def install_server_updates(app: FastAPI, container: AsyncContainer, cfg: Settings, metrics: MetricsRegistry) -> None:
+    """Планировщик автообновления под лидерским локом и метрики `hse_update_*`."""
+    if not cfg.server_update.enabled:
+        return
+    from hse_doc_studio.api.observability.update_metrics import update_collector  # noqa: PLC0415
+    from hse_doc_studio.use_cases.server_update.service import UpdateService  # noqa: PLC0415
+
+    async def _tick() -> None:
+        await (await container.get(UpdateService)).tick()
+
+    app.state.background.register(PeriodicTask(name="server_update", interval_s=cfg.server_update.tick_s, run=_tick))
+
+    @app.on_event("startup")
+    async def _update_metrics() -> None:
+        service = await container.get(UpdateService)
+        metrics.add_collector(update_collector(lambda: service.snapshot))
 
 
 def install_bucket_cors(app: FastAPI, container: AsyncContainer, cfg: Settings) -> None:

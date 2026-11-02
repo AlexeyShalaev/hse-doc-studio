@@ -4,6 +4,12 @@ services:
     # CI-смоуком publish.yml, чтобы поднять локально собранный образ вместо :latest.
     image: ghcr.io/alexeyshalaev/hse-doc-studio:${TAG:-latest}
     restart: unless-stopped
+    # Без лимитов json-file растёт бесконечно: до 5 файлов по 10 МБ (LOG_MAX_SIZE, LOG_MAX_FILE в .env).
+    logging:
+      driver: json-file
+      options:
+        max-size: ${LOG_MAX_SIZE:-10m}
+        max-file: "${LOG_MAX_FILE:-5}"
     ports:
       - "${PORT:-17240}:8000"
     # Процесс в контейнере работает под непривилегированным `app`, а сокет ниже

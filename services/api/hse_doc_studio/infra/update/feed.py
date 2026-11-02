@@ -55,6 +55,21 @@ def _release_date(release: dict[str, Any]) -> str:
         return ""
 
 
+DIGESTS_ASSET = "image-digest.json"
+
+
+def _digests_url(release: dict[str, Any]) -> str:
+    """Адрес вложения `image-digest.json` релиза GitHub; только https, чужие схемы не принимаются."""
+    assets = release.get("assets")
+    for asset in assets if isinstance(assets, list) else []:
+        if isinstance(asset, dict) and asset.get("name") == DIGESTS_ASSET:
+            url = asset.get("browser_download_url") or asset.get("url") or ""
+            if isinstance(url, str) and url.startswith("https://"):
+                return url
+    direct = release.get("digests_url")
+    return direct if isinstance(direct, str) and direct.startswith("https://") else ""
+
+
 def _release_notes(release: dict[str, Any], limit: int = 20) -> tuple[str, ...]:
     """Тело релиза (markdown) → пункты для UI; наш простой формат — готовый список.
 
@@ -107,6 +122,7 @@ def releases_from_feed(data: dict[str, Any] | list[Any]) -> tuple[ReleaseEntry, 
                 version=version,
                 date=_release_date(item),
                 notes=_release_notes(item),
+                digests_url=_digests_url(item),
             )
 
     # Фид может сам назвать свежую версию, которой нет среди записей (наш простой

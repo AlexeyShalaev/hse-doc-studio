@@ -71,6 +71,34 @@ Per-service notes:
 - [services/api/CONTRIBUTING.md](services/api/CONTRIBUTING.md) — Python FastAPI backend
 - [services/web-app/CONTRIBUTING.md](services/web-app/CONTRIBUTING.md) — React TypeScript frontend
 
+## Admin pages: dictionaries and size budgets
+
+Admin texts live in `services/web-app/src/shared/lib/i18n/locales/<lng>/admin/<name>.json`
+(namespace `admin<Name>`, e.g. `users.json` -> `adminUsers`). Every file is its own lazy
+chunk `assets/locale-admin-<name>-<lng>-*.js`; a page loads only its own dictionaries on first
+open, and the shell dictionary (`shell.json`) is the shared part loaded with the admin root.
+
+To add a dictionary for a new admin page:
+
+1. Create `admin/<name>.json` in **both** `ru` and `en` with the same keys (parity is tested).
+   Texts shared by several pages of one section go to a common file (like `ops.json`); read
+   them from another page's file with a namespace prefix: `t("adminOps:failure.unknown")`.
+2. Add `<name>` to `ADMIN_NAMESPACES` in `shared/lib/i18n/adminNamespaces.ts`
+   (`locales.test.ts` fails if the list and the files diverge).
+3. Declare the dictionaries in the route in `pages/AdminPage/AdminApp.tsx`:
+   `<Page ns={["ops", "<name>"]}>`. `Page` shows a spinner until they are loaded, so keys never
+   flash, and an error with a retry button if loading fails. If a component of another page is
+   embedded in yours, list its dictionary too.
+4. For tests and the developer gallery, expose `ensureAdmin<Feature>Locales` in the feature's
+   `lib/locales.ts` (it calls `loadAdminNamespaces([...])`) and `await` it in `beforeAll`.
+5. Add a budget to `services/web-app/.size-limit.json`: path
+   `dist/assets/locale-admin-<name>-*.js` (ru and en are summed), limit = measured gzip size
+   plus 15-20%. Get the size from `pnpm build && pnpm bundlesize`. `pnpm verify:admin-chunk`
+   fails if a dictionary has no chunk or no budget, or a budget has no dictionary.
+
+Checks: `pnpm lint:i18n` (every static `t("key")` resolves in the ru dictionary),
+`pnpm verify:admin-chunk`, `pnpm bundlesize`.
+
 ## Template packs: versions are immutable
 
 Projects read a template version's manifest live (checks, submission profiles,

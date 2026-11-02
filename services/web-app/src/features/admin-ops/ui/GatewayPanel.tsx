@@ -12,7 +12,7 @@ const BREAKER_VARIANT = {
 
 /** ИИ-шлюз: общие провайдеры, вызовы и ошибки за сутки, состояние автомата отказов. */
 export const GatewayPanel = () => {
-  const { t, i18n } = useTranslation("adminOps");
+  const { t, i18n } = useTranslation("adminRunners");
   const gateway = useGatewayStatus();
   const num = (value: number) => value.toLocaleString(i18n.language);
   const columns = useMemo<ColumnDef<AdminGatewayProvider>[]>(

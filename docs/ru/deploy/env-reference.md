@@ -230,6 +230,57 @@ tags:
 | `HSE_STUDIO__AUTOSCALE__COMPOSE_FILE` | str | не задано | оба | Файл compose для режима compose (`-f`). |
 | `HSE_STUDIO__AUTOSCALE__COMPOSE_SERVICE` | str | `runner` | оба | Сервис раннеров в compose, который масштабируется. |
 | `HSE_STUDIO__AUTOSCALE__COMPOSE_TIMEOUT_S` | float | `120.0` | оба | Таймаут команды docker compose. |
+| `HSE_STUDIO__BACKUPS__ENABLED` | bool | `true` | оба | Включает планировщик бэкапов и раздел админки; false убирает фоновый цикл целиком. |
+| `HSE_STUDIO__BACKUPS__TICK_S` | float | `30.0` | оба | Как часто планировщик проверяет, не пора ли запустить бэкап по расписанию. |
+| `HSE_STUDIO__BACKUPS__LOCAL_ROOT` | Path | не задано | оба | Корень локальных назначений: каталог бэкапа это подкаталог корня. Пусто значит data_dir/backups. Для защиты от потери диска смонтируйте сюда отдельный том. |
+| `HSE_STUDIO__BACKUPS__TMP_DIR` | Path | не задано | оба | Где собираются зашифрованные части до загрузки (нужно места на самую большую часть). Пусто значит data_dir/tmp/backup. |
+| `HSE_STUDIO__BACKUPS__RESTORE_FROM_ADMIN` | bool | `true` | оба | Разрешает восстановление из админки (режим обслуживания). false оставляет только предпросмотр. |
+| `HSE_STUDIO__BACKUPS__RESTART_AFTER_RESTORE` | bool | `true` | оба | После восстановления из админки процесс api завершается, и супервизор (compose, Kubernetes) поднимает его заново. false оставляет api в режиме обслуживания до ручного перезапуска. |
+| `HSE_STUDIO__BACKUPS__MAX_OBJECT_BYTES` | int | `274877906944` | оба | Предел размера одной части бэкапа в назначении. |
+| `HSE_STUDIO__BACKUPS__MULTIPART_THRESHOLD_BYTES` | int | `67108864` | оба | С какого размера часть уходит в S3 кусками. |
+| `HSE_STUDIO__BACKUPS__PG_DUMP_BINARY` | str | `pg_dump` | оба | Исполняемый файл pg_dump (версия не ниже сервера Postgres). |
+| `HSE_STUDIO__BACKUPS__PG_RESTORE_BINARY` | str | `pg_restore` | оба | Исполняемый файл pg_restore. |
+| `HSE_STUDIO__BACKUPS__DUMP_TIMEOUT_S` | float | `21600.0` | оба | Сколько ждать завершения pg_dump и pg_restore. |
+| `HSE_STUDIO__BACKUPS__PROVISION__DESTINATION_KIND` | none / local / s3 | `none` | оба | Тип назначения по умолчанию; none отключает провижининг. |
+| `HSE_STUDIO__BACKUPS__PROVISION__NAME` | str | `default` | оба | Имя назначения. |
+| `HSE_STUDIO__BACKUPS__PROVISION__LOCAL_PATH` | str | `main` | оба | Подкаталог корня локальных назначений (kind=local). |
+| `HSE_STUDIO__BACKUPS__PROVISION__ENDPOINT` | str | не задано | оба | Адрес S3 (пусто значит AWS). |
+| `HSE_STUDIO__BACKUPS__PROVISION__REGION` | str | `us-east-1` | оба | Регион S3. |
+| `HSE_STUDIO__BACKUPS__PROVISION__BUCKET` | str | не задано | оба | Бакет S3. |
+| `HSE_STUDIO__BACKUPS__PROVISION__PREFIX` | str | пусто | оба | Префикс бэкапов в бакете. |
+| `HSE_STUDIO__BACKUPS__PROVISION__PATH_STYLE` | bool | `true` | оба | Адресация bucket в пути (MinIO, Ceph). |
+| `HSE_STUDIO__BACKUPS__PROVISION__ACCESS_KEY` 🔒 | str | секрет, не печатается | оба | Ключ доступа S3. |
+| `HSE_STUDIO__BACKUPS__PROVISION__SECRET_KEY` 🔒 | str | секрет, не печатается | оба | Секретный ключ S3. |
+| `HSE_STUDIO__BACKUPS__PROVISION__SCHEDULE_ENABLED` | bool | `true` | оба | Включить расписание. |
+| `HSE_STUDIO__BACKUPS__PROVISION__SCHEDULE_KIND` | interval / cron | `interval` | оба | Вид расписания. |
+| `HSE_STUDIO__BACKUPS__PROVISION__INTERVAL_HOURS` | int | `24` | оба | Интервал в часах (schedule_kind=interval). |
+| `HSE_STUDIO__BACKUPS__PROVISION__CRON` | str | `0 3 * * *` | оба | Cron из пяти полей, UTC (schedule_kind=cron). |
+| `HSE_STUDIO__BACKUPS__PROVISION__KEEP_LAST` | int | `7` | оба | Хранить последних N бэкапов (0 отключает правило). |
+| `HSE_STUDIO__BACKUPS__PROVISION__KEEP_DAYS` | int | `30` | оба | Хранить дней (0 отключает правило). |
+| `HSE_STUDIO__BACKUPS__PROVISION__ENCRYPTION_MODE` | installation / passphrase | `installation` | оба | Ключ шифрования: ключ установки или парольная фраза. |
+| `HSE_STUDIO__BACKUPS__PROVISION__PASSPHRASE` 🔒 | str | секрет, не печатается | оба | Парольная фраза (от 12 символов). |
+| `HSE_STUDIO__BACKUPS__PROVISION__NOTIFY_ADMINS` | bool | `true` | оба | Уведомлять администраторов о сбое бэкапа. |
+| `HSE_STUDIO__SERVER_UPDATE__ENABLED` | bool | `true` | оба | Включает проверку релизов, планировщик и раздел админки. |
+| `HSE_STUDIO__SERVER_UPDATE__EXECUTOR` | compose / none | `none` | оба | Кто ставит обновление. compose: сервис-апдейтер рядом с api (docker compose). none: только проверка и уведомления, ставит оператор (helm upgrade --atomic, свой CI). |
+| `HSE_STUDIO__SERVER_UPDATE__UPDATER_TOKEN` 🔒 | str | секрет, не печатается | оба | Общий секрет апдейтера (Bearer). Пусто: протокол апдейтера выключен и запуски не выдаются. |
+| `HSE_STUDIO__SERVER_UPDATE__TICK_S` | float | `60.0` | оба | Период планировщика обновлений. |
+| `HSE_STUDIO__SERVER_UPDATE__CHECK_INTERVAL_S` | float | `21600.0` | оба | Как часто спрашивать фид релизов. |
+| `HSE_STUDIO__SERVER_UPDATE__UPDATER_STALE_S` | float | `90.0` | оба | Сколько апдейтер может молчать и считаться живым. |
+| `HSE_STUDIO__SERVER_UPDATE__RUN_LOST_S` | float | `900.0` | оба | Сколько апдейтер молчит посреди запуска, прежде чем запуск потерян. |
+| `HSE_STUDIO__LIFECYCLE__ENABLED` | bool | `true` | оба | Включить фоновую очистку по реестру политик хранения. |
+| `HSE_STUDIO__LIFECYCLE__INTERVAL_S` | float | `3600.0` | оба | Как часто сервер очищает источники роста по срокам. |
+| `HSE_STUDIO__LIFECYCLE__BATCH_SIZE` | int | `2000` | оба | Строк в одной пачке удаления. |
+| `HSE_STUDIO__LIFECYCLE__RUN_BUDGET_S` | float | `120.0` | оба | Сколько секунд один источник может чиститься за прогон; остаток на следующем. |
+| `HSE_STUDIO__LIFECYCLE__BATCH_PAUSE_S` | float | `0.05` | оба | Пауза между пачками удаления: ограничивает нагрузку на базу. |
+| `HSE_STUDIO__LIFECYCLE__PARTITION_MONTHS_AHEAD` | int | `3` | оба | На сколько месяцев вперёд заранее создаются партиции журналов. |
+| `HSE_STUDIO__LIFECYCLE__PROBE_ENABLED` | bool | `true` | оба | Следить за местом на томах и размером базы. |
+| `HSE_STUDIO__LIFECYCLE__PROBE_INTERVAL_S` | float | `300.0` | оба | Как часто проверяется место на томах и в базе. |
+| `HSE_STUDIO__LIFECYCLE__DB_SIZE_LIMIT_BYTES` | int | `0` | оба | Сколько места отведено базе Postgres (диск базы api не видит); 0 значит предел неизвестен и доля занятости базы не считается. |
+| `HSE_STUDIO__LIFECYCLE__SAFE_MODE_ENABLED` | bool | `true` | оба | При критической нехватке места отказывать в крупных загрузках вместо падения. |
+| `HSE_STUDIO__DIAGNOSTICS__ENABLED` | bool | `true` | оба | Периодически проверять систему под лидерским локом. |
+| `HSE_STUDIO__DIAGNOSTICS__INTERVAL_S` | float | `300.0` | оба | Как часто идёт плановая проверка. |
+| `HSE_STUDIO__DIAGNOSTICS__CHECK_TIMEOUT_S` | float | `20.0` | оба | Предел времени одной проверки. |
+| `HSE_STUDIO__DIAGNOSTICS__PUBLIC_ENDPOINT` | bool | `false` | оба | Открыть без входа GET /health/diagnostics с общим итогом и статусами проверок (без причин и значений) для внешнего мониторинга. |
 | `HSE_STUDIO__AUTH__PUBLIC_URL` | str | не задано | server | Внешний адрес Студии (https://studio.example.org). По схеме выбирается Secure у cookie и HSTS, адрес входит в список допустимых Origin для небезопасных запросов. |
 | `HSE_STUDIO__AUTH__FRAME_ANCESTORS` | `list[str]` | пусто | server | Дополнительные источники, которым разрешено встраивать страницы Студии (frame-ancestors). |
 | `HSE_STUDIO__AUTH__TRUSTED_PROXIES` | `list[str]` | пусто | server | IP и CIDR обратных прокси, чьему X-Forwarded-For верим при определении адреса клиента. |

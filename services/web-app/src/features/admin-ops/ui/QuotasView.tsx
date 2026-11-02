@@ -75,7 +75,7 @@ const UnitField = ({
   label: string;
   onChange: (value: string) => void;
 }) => {
-  const { t } = useTranslation("adminOps");
+  const { t } = useTranslation("adminQuotas");
   return (
     <div className="flex flex-col" style={{ gap: 4, alignItems: "flex-end" }}>
       <span className="ops-unit-field">
@@ -122,7 +122,7 @@ const LimitsForm = ({
   failure: Failure | null;
   onSave: (body: UpdateAdminQuotasRequest) => void;
 }) => {
-  const { t } = useTranslation("adminOps");
+  const { t } = useTranslation("adminQuotas");
   const [user, setUser] = useState(text(quotas.user_concurrent));
   const [org, setOrg] = useState(text(quotas.org_concurrent));
   const [minutes, setMinutes] = useState(minutesText(quotas.max_duration_s));
@@ -220,7 +220,7 @@ const LimitsForm = ({
             id="quota-duration"
             label={t("quotas.duration.label")}
             value={minutes}
-            unit={t("units.min")}
+            unit={t("adminOps:units.min")}
             step="any"
             min={0.5}
             max={1440}
@@ -258,7 +258,7 @@ const LimitsForm = ({
 
 /** Что происходит, когда предел исчерпан: короткие пункты без жаргона. */
 const Explainer = () => {
-  const { t } = useTranslation("adminOps");
+  const { t } = useTranslation("adminQuotas");
   const items = [
     { icon: ListOrdered, key: "queue" },
     { icon: Hourglass, key: "timeout" },
@@ -291,7 +291,7 @@ export const QuotasView = ({
   onRetry,
   onSave,
 }: QuotasViewProps) => {
-  const { t } = useTranslation("adminOps");
+  const { t } = useTranslation("adminQuotas");
   return (
     <div className="ops-stack" data-testid="quotas-view">
       <PageHeader title={t("quotas.title")} description={t("quotas.lead")} />

@@ -124,6 +124,8 @@ _RULES: tuple[_Rule, ...] = (
     _rule(
         GitErrorCode.tls_untrusted_ca,
         r"unable to get (?:local )?issuer certificate|unable to verify the first certificate"
+        # libcurl-gnutls 8.14+ (Ubuntu 26.04, Debian 14) называет причину после двоеточия.
+        r"|certificate signer not trusted"
         r"|self[- ]signed certificate|certificate is not trusted|unknown certificate authority"
         # schannel (Git for Windows) называет причину кодом; текст рядом зависит от языка системы.
         r"|SEC_E_UNTRUSTED_ROOT|CERT_E_UNTRUSTEDROOT",
@@ -131,7 +133,7 @@ _RULES: tuple[_Rule, ...] = (
     ),
     _rule(
         GitErrorCode.tls_error,
-        r"SSL certificate problem|certificate verify failed|server certificate verification failed"
+        r"SSL certificate problem|certificate verify failed|(?:server|SSL) certificate verification failed"
         r"|gnutls_handshake\(\) failed|no alternative certificate subject name"
         r"|certificate subject name .* does not match",
         transports=_HTTP,
@@ -166,7 +168,8 @@ _RULES: tuple[_Rule, ...] = (
 # Причина, которую git назвал сам. У libcurl-gnutls (образ Студии на Debian) для любого сбоя проверки сертификата
 # одна строка «server certificate verification failed»: чем он плох (чужой центр, срок, имя), по ней не видно.
 _SPECIFIC_TLS_REASON = re.compile(
-    r"SSL certificate problem|certificate verify failed|no alternative certificate subject name"
+    r"SSL certificate problem|certificate verify failed|SSL certificate verification failed:"
+    r"|no alternative certificate subject name"
     r"|certificate subject name .* does not match|SEC_E_|CERT_E_",
     re.IGNORECASE,
 )

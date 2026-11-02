@@ -35,12 +35,17 @@
       "services_few": "{{count}} сервиса с перебоями",
       "services_many": "{{count}} сервисов с перебоями",
       "services_other": "{{count}} сервиса с перебоями",
-      "storage": "Заканчивается место"
+      "storage": "Заканчивается место",
+      "data": "Мало места"
     },
     "back": "Вернуться в Студию",
     "version": "Версия {{version}}",
     "role": "Администратор установки",
-    "instanceFallback": "HSE Doc Studio"
+    "instanceFallback": "HSE Doc Studio",
+    "backups": "Бэкапы",
+    "updates": "Обновления",
+    "data": "Хранение данных",
+    "diagnostics": "Самодиагностика"
   },
   "overview": {
     "title": "Обзор установки",

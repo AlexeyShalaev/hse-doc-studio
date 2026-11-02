@@ -1,0 +1,1 @@
+fatal: unable to access 'https://git.corp.example/team/repo.git/': SSL certificate verification failed: certificate signer not trusted. (CAfile: /etc/ssl/certs/ca-certificates.crt CRLfile: none)

@@ -88,7 +88,7 @@ GIT_ERROR_STATUS: Mapping[GitErrorCode, int] = {
 # Запросы Git-синхронизации: в теле лежит секрет (токен, пароль пакета) или адрес, в который вставили токен
 # (`https://user:TOKEN@host/...`). Эхо входных данных в ответе проверки (`input`) вернуло бы его вызывающему.
 # Токен регистрации раннера в облачных сборках локальной Студии такой же секрет.
-SECRET_BODY_PATHS = re.compile(r"^/api/v1/(?:git/|projects/[^/]+/git/|remote-runner/token$)")
+SECRET_BODY_PATHS = re.compile(r"^/api/v1/(?:git/|projects/[^/]+/git/|remote-runner/token$)|^/api/admin/backups/")
 
 
 def git_error_body(exc: GitSyncError) -> dict[str, object]:

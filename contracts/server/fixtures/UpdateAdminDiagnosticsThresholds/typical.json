@@ -1,0 +1,19 @@
+{
+  "values": {
+    "db_latency_warn_ms": 300,
+    "db_latency_fail_ms": 2000,
+    "store_latency_warn_ms": 2000,
+    "store_latency_fail_ms": 15000,
+    "queue_wait_warn_s": 600,
+    "queue_wait_fail_s": 3600,
+    "stuck_job_warn_s": 300,
+    "stuck_job_fail_s": 1800,
+    "tls_warn_days": 21,
+    "tls_fail_days": 7,
+    "backup_warn_hours": 36,
+    "backup_fail_hours": 96,
+    "confirm_runs": 2,
+    "repeat_hours": 24
+  },
+  "notify": false
+}

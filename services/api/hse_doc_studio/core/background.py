@@ -105,6 +105,9 @@ class BackgroundTaskRunner:
     def stats(self) -> dict[str, TaskStats]:
         return dict(self._state.stats)
 
+    def tasks(self) -> dict[str, PeriodicTask]:
+        return dict(self._tasks)
+
     def start(self) -> None:
         if self.running:
             return

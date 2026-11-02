@@ -46,10 +46,16 @@ spec:
             capabilities: {drop: [ALL]}
           env:
             {{- include "hds.env" . | nindent 12 }}
+            {{- if .Values.backups.enabled }}
+            {{- include "hds.backupsEnv" . | nindent 12 }}
+            {{- end }}
             # Первая установка: схему ведёт сам api под advisory-локом. Дальше её обновляет Job pre-upgrade.
             - {name: HSE_STUDIO__DB__AUTO_MIGRATE, value: {{ or .Release.IsInstall (not .Values.migrations.enabled) | quote }}}
           volumeMounts:
             - {name: data, mountPath: /data}
+            {{- if and .Values.backups.enabled .Values.backups.local.enabled }}
+            - {name: backups, mountPath: /backups}
+            {{- end }}
           startupProbe:
             httpGet: {path: /health, port: http}
             periodSeconds: 5
@@ -71,6 +77,11 @@ spec:
           {{- else }}
           emptyDir: {}
           {{- end }}
+        {{- if and .Values.backups.enabled .Values.backups.local.enabled }}
+        - name: backups
+          persistentVolumeClaim:
+            claimName: {{ include "hds.backupsPvcName" . }}
+        {{- end }}
       {{- with .Values.api.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}

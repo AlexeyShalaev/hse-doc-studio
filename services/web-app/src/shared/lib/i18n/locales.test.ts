@@ -1,6 +1,7 @@
 import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
+import { ADMIN_NAMESPACES } from "./adminNamespaces";
 
 // ru и en обязаны совпадать по набору ключей: иначе на втором языке покажется
 // сам ключ. Множественные формы у языков разные (ru: one/few/many/other, en:
@@ -65,6 +66,11 @@ describe("admin locale parity", () => {
   it("ships the same admin files in both languages", () => {
     expect(adminFiles("en")).toEqual(adminFiles("ru"));
     expect(adminFiles("ru").length).toBeGreaterThan(0);
+  });
+
+  it("lists every admin dictionary in ADMIN_NAMESPACES", () => {
+    const files = adminFiles("ru").map((f) => f.replace(/\.json$/, ""));
+    expect([...ADMIN_NAMESPACES].sort()).toEqual(files);
   });
 
   it.each(adminFiles("ru"))("admin/%s has the same keys in ru and en", (f) => {

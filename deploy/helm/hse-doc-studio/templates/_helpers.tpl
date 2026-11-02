@@ -34,6 +34,42 @@ app.kubernetes.io/instance: {{ .Release.Name }}
 {{- default (printf "%s-data" (include "hds.fullname" .)) .Values.persistence.existingClaim -}}
 {{- end -}}
 
+{{- define "hds.backupsPvcName" -}}
+{{- default (printf "%s-backups" (include "hds.fullname" .)) .Values.backups.local.persistence.existingClaim -}}
+{{- end -}}
+
+{{/* Окружение бэкапов (только api): корень локальных назначений и начальная настройка. */}}
+{{- define "hds.backupsEnv" -}}
+{{- $b := .Values.backups }}
+{{- $secret := include "hds.secretName" . }}
+{{- if $b.local.enabled }}
+- {name: HSE_STUDIO__BACKUPS__LOCAL_ROOT, value: /backups}
+{{- end }}
+- {name: HSE_STUDIO__BACKUPS__PROVISION__DESTINATION_KIND, value: {{ $b.destination.kind | quote }}}
+- {name: HSE_STUDIO__BACKUPS__PROVISION__NAME, value: {{ $b.destination.name | quote }}}
+- {name: HSE_STUDIO__BACKUPS__PROVISION__LOCAL_PATH, value: {{ $b.destination.path | quote }}}
+{{- if eq $b.destination.kind "s3" }}
+- {name: HSE_STUDIO__BACKUPS__PROVISION__ENDPOINT, value: {{ $b.destination.endpoint | quote }}}
+- {name: HSE_STUDIO__BACKUPS__PROVISION__REGION, value: {{ $b.destination.region | quote }}}
+- {name: HSE_STUDIO__BACKUPS__PROVISION__BUCKET, value: {{ required "backups.destination.bucket обязателен для kind=s3" $b.destination.bucket | quote }}}
+- {name: HSE_STUDIO__BACKUPS__PROVISION__PREFIX, value: {{ $b.destination.prefix | quote }}}
+- {name: HSE_STUDIO__BACKUPS__PROVISION__PATH_STYLE, value: {{ $b.destination.pathStyle | quote }}}
+- {name: HSE_STUDIO__BACKUPS__PROVISION__ACCESS_KEY, valueFrom: {secretKeyRef: {name: {{ $secret }}, key: backup-access-key, optional: true}}}
+- {name: HSE_STUDIO__BACKUPS__PROVISION__SECRET_KEY, valueFrom: {secretKeyRef: {name: {{ $secret }}, key: backup-secret-key, optional: true}}}
+{{- end }}
+- {name: HSE_STUDIO__BACKUPS__PROVISION__SCHEDULE_ENABLED, value: {{ $b.schedule.enabled | quote }}}
+- {name: HSE_STUDIO__BACKUPS__PROVISION__SCHEDULE_KIND, value: {{ $b.schedule.kind | quote }}}
+- {name: HSE_STUDIO__BACKUPS__PROVISION__INTERVAL_HOURS, value: {{ $b.schedule.intervalHours | quote }}}
+- {name: HSE_STUDIO__BACKUPS__PROVISION__CRON, value: {{ $b.schedule.cron | quote }}}
+- {name: HSE_STUDIO__BACKUPS__PROVISION__KEEP_LAST, value: {{ $b.schedule.keepLast | quote }}}
+- {name: HSE_STUDIO__BACKUPS__PROVISION__KEEP_DAYS, value: {{ $b.schedule.keepDays | quote }}}
+- {name: HSE_STUDIO__BACKUPS__PROVISION__ENCRYPTION_MODE, value: {{ $b.encryptionMode | quote }}}
+- {name: HSE_STUDIO__BACKUPS__PROVISION__NOTIFY_ADMINS, value: {{ $b.notifyAdmins | quote }}}
+{{- if eq $b.encryptionMode "passphrase" }}
+- {name: HSE_STUDIO__BACKUPS__PROVISION__PASSPHRASE, valueFrom: {secretKeyRef: {name: {{ $secret }}, key: backup-passphrase, optional: true}}}
+{{- end }}
+{{- end -}}
+
 {{/* Общее окружение api и Job миграций. Секреты берутся из Secret, не из values. */}}
 {{- define "hds.env" -}}
 - {name: HSE_STUDIO__MODE, value: server}

@@ -129,8 +129,8 @@ export default defineConfig(({ mode }) => {
           // node_modules → имя чанка по таблице ниже, остальное — по умолчанию.
           manualChunks: (id: string) => chunkFor(id),
           // Админка уходит в динамический чанк assets/admin-*.js (по имени его
-          // узнаёт scripts/verify-admin-chunk.mjs), её словари в отдельные
-          // locale-admin-*: так ни то ни другое не входит в entry.
+          // узнаёт scripts/verify-admin-chunk.mjs), словари разделов в
+          // отдельные locale-admin-<имя>-<язык>-*: так ни то ни другое не входит в entry.
           chunkFileNames: (chunk: {
             name: string;
             facadeModuleId?: string | null;
@@ -139,8 +139,12 @@ export default defineConfig(({ mode }) => {
             if (id.endsWith("/src/pages/AdminPage/index.ts")) {
               return "assets/admin-[hash].js";
             }
-            if (/\/locales\/[a-z]{2}\/admin\//.test(id)) {
-              return "assets/locale-admin-[hash].js";
+            // locale-admin-<имя>-<язык>: по имени словаря бюджеты size-limit
+            // (.size-limit.json) держат каждый раздел отдельно.
+            const locale =
+              /\/locales\/([a-z]{2})\/admin\/([A-Za-z]+)\.json$/.exec(id);
+            if (locale) {
+              return `assets/locale-admin-${locale[2]}-${locale[1]}-[hash].js`;
             }
             // Общие куски разделов админки (features/admin-ops и т.п.) сборщик
             // называет по папке; без префикса они совпали бы с маской admin-*.js

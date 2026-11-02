@@ -1,0 +1,12 @@
+{
+  "seq": 9,
+  "at": "2026-11-03T02:07:41Z",
+  "phase": "finish",
+  "level": "warn",
+  "message": "rolled back",
+  "status": "rolled_back",
+  "from_revision": "bk_01_backups",
+  "to_revision": "up_01_server_updates",
+  "db_restored": true,
+  "error_code": "health_timeout"
+}
