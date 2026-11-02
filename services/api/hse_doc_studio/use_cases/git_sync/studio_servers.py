@@ -30,6 +30,7 @@ from hse_doc_studio.core.git_remote.client import (
     StudioServerErrorCode,
     StudioServerTarget,
 )
+from hse_doc_studio.core.git_remote.local_studio import StudioCompat, studio_compat
 from hse_doc_studio.core.git_sync.credentials import token_family
 from hse_doc_studio.core.git_sync.entities import CredentialStatus, GitCredential, GitCredentialKind
 from hse_doc_studio.core.git_sync.errors import GitErrorCode, GitSyncError
@@ -63,6 +64,19 @@ class StudioServerLogin:
     expires_at: datetime | None = None
     credential_id: UUID | None = None
     code: str | None = None
+
+
+@dataclass(frozen=True)
+class StudioServerCheck:
+    """Сервер перед подключением: его версия против нашей и уже сохранённый вход на него (если есть)."""
+
+    server_url: str
+    server_version: str
+    local_version: str
+    compat: StudioCompat
+    credential_id: UUID | None = None
+    account_name: str | None = None
+    state: str | None = None
 
 
 @dataclass(frozen=True)
@@ -146,6 +160,7 @@ class StudioServersService:
         logins: StudioServerLogins,
         *,
         allow_insecure_http: bool = False,
+        local_version: str = "",
         sleep: Callable[[float], Awaitable[None]] = asyncio.sleep,
     ) -> None:
         self._client = client
@@ -153,6 +168,7 @@ class StudioServersService:
         self._hosts = host_settings
         self._logins = logins
         self._allow_insecure_http = allow_insecure_http
+        self._local_version = local_version
         self._sleep = sleep
 
     async def _target(self, base_url: str, host: str, port: int | None) -> StudioServerTarget:
@@ -161,6 +177,25 @@ class StudioServersService:
             await self._hosts.materialize()
             return StudioServerTarget(base_url, self._hosts.trust_file(host, port))
         return StudioServerTarget(base_url)
+
+    async def check(self, server_url: str) -> StudioServerCheck:
+        """Сервер отвечает как Студия; его версия и совместимость с нашей, плюс рабочий вход на него, если он есть."""
+        base, host, port = normalize_server_url(server_url, allow_insecure_http=self._allow_insecure_http)
+        version = await self._client.info(await self._target(base, host, port))
+        found = StudioServerCheck(
+            server_url=base,
+            server_version=version,
+            local_version=self._local_version,
+            compat=studio_compat(self._local_version, version),
+        )
+        devices = [
+            c for c in await self._credentials.list() if c.origin == DEVICE_ORIGIN and c.host == host and c.port == port
+        ]
+        if not devices:
+            return found
+        items = list(await asyncio.gather(*(self._server_item(c) for c in devices)))
+        best = next((item for item in items if item.state == "ok"), items[0])
+        return replace(found, credential_id=best.credential_id, account_name=best.account_name, state=best.state)
 
     async def start_login(self, server_url: str, client_name: str) -> StudioServerLogin:
         base, host, port = normalize_server_url(server_url, allow_insecure_http=self._allow_insecure_http)

@@ -473,9 +473,12 @@ ROUTE_SCOPES: Mapping[RouteKey, RouteScope] = {
     ("GET", "/git/servers/login/{login_id}"): _LOCAL,
     ("DELETE", "/git/servers/login/{login_id}"): _LOCAL,
     ("GET", "/git/servers"): _LOCAL,
+    ("GET", "/git/servers/check"): _LOCAL,
     ("GET", "/git/servers/{credential_id}/projects"): _LOCAL,
     ("DELETE", "/git/servers/{credential_id}"): _LOCAL,
     ("POST", "/auth/device/code"): _P,
+    # local-from-cloud: экран «Локальная версия» облачной Студии
+    ("GET", "/local-studio"): _A,
     ("POST", "/auth/device/token"): _P,
     ("GET", "/account/device/{user_code}"): _A,
     ("POST", "/account/device/{user_code}"): _A,

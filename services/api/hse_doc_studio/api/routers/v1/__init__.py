@@ -29,6 +29,7 @@ from hse_doc_studio.api.routers.v1 import (
     hse_persons,
     images,
     languagetool,
+    local_studio,
     office_editor,
     office_services,
     oidc,
@@ -82,6 +83,7 @@ api_router.include_router(project_build_runners.router, tags=["projects"])
 api_router.include_router(project_git_remote.router, tags=["projects"])
 api_router.include_router(project_artifacts.router, tags=["projects"])
 api_router.include_router(device_flow.router, tags=["device-flow"])
+api_router.include_router(local_studio.router, tags=["local-studio"])
 api_router.include_router(project_import.router, tags=["projects"])
 api_router.include_router(projects.router, tags=["projects"])
 api_router.include_router(documents.router, tags=["documents"])

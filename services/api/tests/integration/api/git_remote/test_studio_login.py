@@ -85,6 +85,9 @@ def test__studio_login__device_flow_lists_projects_and_clones(live: Live) -> Non
 
         (server,) = await service.list_servers()
         assert (server.state, server.account_name, server.scopes) == ("ok", "anna", ("git:read", "git:write"))
+        checked = await service.check(live.base)
+        assert (checked.credential_id, checked.state, checked.account_name) == (current.credential_id, "ok", "anna")
+        assert checked.server_version
         page = await service.list_projects(current.credential_id, q=None, limit=50, offset=0)
         assert [p.id for p in page.items] == [project]
         assert page.items[0].can_push is True

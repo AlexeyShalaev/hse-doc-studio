@@ -58,6 +58,66 @@ class _Hosts:
         return None
 
 
+class _StoredCredentials(_Credentials):
+    async def get_secret(self, credential_id: UUID) -> Secret:
+        return self.items[credential_id][1]
+
+
+def _device(host: str, port: int | None = None, *, expired: bool = False) -> GitCredential:
+    return GitCredential(
+        uuid4(),
+        GitCredentialKind.pat,
+        "l",
+        host,
+        "hse",
+        CredentialStatus.ok,
+        datetime.now(UTC),
+        port=port,
+        origin="device",
+        expires_at=datetime(2000, 1, 1, tzinfo=UTC) if expired else None,
+    )
+
+
+def _checker(credentials: _Credentials, local_version: str = "0.3.2") -> StudioServersService:
+    return StudioServersService(
+        _Client([]),  # type: ignore[arg-type]
+        credentials,  # type: ignore[arg-type]
+        _Hosts(),  # type: ignore[arg-type]
+        StudioServerLogins(),
+        local_version=local_version,
+    )
+
+
+async def test__check__new_server__version_and_compat_without_credential() -> None:
+    found = await _checker(_StoredCredentials()).check("https://Studio.example.org/projects")
+
+    assert (found.server_url, found.server_version, found.local_version) == (
+        "https://studio.example.org",
+        "0.3.0",
+        "0.3.2",
+    )
+    assert found.compat.value == "compatible"
+    assert (found.credential_id, found.state) == (None, None)
+
+
+async def test__check__connected_server__returns_working_credential() -> None:
+    credentials = _StoredCredentials()
+    stale, working = _device("studio.example.org", expired=True), _device("studio.example.org")
+    other = _device("studio.example.org", 8443)
+    for item in (stale, working, other):
+        await credentials.add(item, Secret("hsd_pat_" + "b" * 32))
+
+    found = await _checker(credentials, local_version="0.2.0").check("https://studio.example.org")
+
+    assert (found.credential_id, found.account_name, found.state) == (working.id, "Анна", "ok")
+    assert found.compat.value == "local_older"
+
+
+async def test__check__not_a_url__url_invalid() -> None:
+    with pytest.raises(StudioServerError):
+        await _checker(_StoredCredentials()).check("ftp://studio")
+
+
 async def _run(replies: list[DeviceTokenReply]) -> tuple[Any, list[float], _Credentials]:
     waits: list[float] = []
 
