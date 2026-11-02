@@ -51,6 +51,62 @@
         "annotations": {"type": "object"}
       }
     },
+    "backups": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {"type": "boolean"},
+        "local": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {"type": "boolean"},
+            "persistence": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "existingClaim": {"type": "string"},
+                "storageClassName": {"type": "string"},
+                "accessModes": {"type": "array", "items": {"enum": ["ReadWriteOnce", "ReadWriteOncePod", "ReadWriteMany"]}, "minItems": 1},
+                "size": {"type": "string", "pattern": "^[0-9]+(Mi|Gi|Ti)$"},
+                "annotations": {"type": "object"}
+              }
+            }
+          }
+        },
+        "destination": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "kind": {"enum": ["local", "s3"]},
+            "name": {"type": "string", "minLength": 1},
+            "path": {"type": "string"},
+            "endpoint": {"type": "string"},
+            "region": {"type": "string"},
+            "bucket": {"type": "string"},
+            "prefix": {"type": "string"},
+            "pathStyle": {"type": "boolean"},
+            "accessKey": {"type": "string"},
+            "secretKey": {"type": "string"}
+          }
+        },
+        "schedule": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {"type": "boolean"},
+            "kind": {"enum": ["interval", "cron"]},
+            "intervalHours": {"type": "integer", "minimum": 1, "maximum": 2160},
+            "cron": {"type": "string", "minLength": 9},
+            "keepLast": {"type": "integer", "minimum": 0},
+            "keepDays": {"type": "integer", "minimum": 0}
+          }
+        },
+        "encryptionMode": {"enum": ["installation", "passphrase"]},
+        "passphrase": {"type": "string"},
+        "notifyAdmins": {"type": "boolean"}
+      }
+    },
     "database": {
       "type": "object",
       "properties": {"dsn": {"type": "string", "pattern": "^$|^postgres(ql)?(\\+[a-z0-9]+)?://.+"}},

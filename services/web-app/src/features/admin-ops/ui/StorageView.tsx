@@ -59,7 +59,7 @@ const DiskUsage = ({
   storage: AdminStorage;
   tone: KpiTone;
 }) => {
-  const { t } = useTranslation("adminOps");
+  const { t } = useTranslation("adminStorage");
   const total = storage.volume_total_bytes;
   const free = storage.free_bytes;
   if (total === null || free === null || total <= 0) {
@@ -128,7 +128,7 @@ export const StorageView = ({
   now,
   onRetry,
 }: StorageViewProps) => {
-  const { t } = useTranslation("adminOps");
+  const { t } = useTranslation("adminStorage");
   const { state } = owners;
 
   const low = storage ? isLowSpace(storage) : false;

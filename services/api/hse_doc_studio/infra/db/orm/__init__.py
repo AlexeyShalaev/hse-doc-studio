@@ -12,10 +12,12 @@ from hse_doc_studio.infra.db.orm.auth import (
     RegistrationInviteRow,
     SessionRow,
 )
+from hse_doc_studio.infra.db.orm.backup import BackupDestinationRow, BackupRunRow
 from hse_doc_studio.infra.db.orm.blobs import BlobRow, FileHashCacheRow
 from hse_doc_studio.infra.db.orm.chat import AgentRunRow, ChatMessageRow, ChatSessionRow, ChatSummaryRow
 from hse_doc_studio.infra.db.orm.compile import CompileRecordRow
 from hse_doc_studio.infra.db.orm.device_auth import DeviceAuthorizationRow
+from hse_doc_studio.infra.db.orm.diagnostics import DiagCheckRow
 from hse_doc_studio.infra.db.orm.git_credentials import GitCredentialRow, GitRemoteBindingRow
 from hse_doc_studio.infra.db.orm.git_trust import GitHostSettingsRow, GitKnownHostRow
 from hse_doc_studio.infra.db.orm.identity import (
@@ -42,11 +44,13 @@ from hse_doc_studio.infra.db.orm.jobs import (
     RunnerRegistrationTokenRow,
     RunnerRow,
 )
+from hse_doc_studio.infra.db.orm.lifecycle import LifecycleRunRow
 from hse_doc_studio.infra.db.orm.orgs import GroupMemberRow, GroupRow, OrgMemberRow, OrgRow
 from hse_doc_studio.infra.db.orm.project_usage import ProjectUsageRow
 from hse_doc_studio.infra.db.orm.projects import ProjectMemberRow, ProjectRow
 from hse_doc_studio.infra.db.orm.quotas import AiUsageRow, UsageCounterRow
 from hse_doc_studio.infra.db.orm.review import ReviewCommentRow, ReviewThreadRow
+from hse_doc_studio.infra.db.orm.server_update import UpdateRunRow
 from hse_doc_studio.infra.db.orm.sharing import (
     GuestSessionLinkRow,
     GuestSessionRow,
@@ -65,12 +69,15 @@ __all__ = [
     "ApiTokenRow",
     "AuditLogRow",
     "AuthTokenRow",
+    "BackupDestinationRow",
+    "BackupRunRow",
     "BlobRow",
     "ChatMessageRow",
     "ChatSessionRow",
     "ChatSummaryRow",
     "CompileRecordRow",
     "DeviceAuthorizationRow",
+    "DiagCheckRow",
     "FairShareRow",
     "FileHashCacheRow",
     "GitCredentialRow",
@@ -86,6 +93,7 @@ __all__ = [
     "JobQueueStateRow",
     "JobRow",
     "JobRunnerPollRow",
+    "LifecycleRunRow",
     "LoginAttemptRow",
     "MailOutboxRow",
     "NotificationRow",
@@ -112,6 +120,7 @@ __all__ = [
     "ShareLinkVisitRow",
     "SigningIdentityRow",
     "SubmissionRow",
+    "UpdateRunRow",
     "UsageCounterRow",
     "UserIdentityRow",
     "UserRow",

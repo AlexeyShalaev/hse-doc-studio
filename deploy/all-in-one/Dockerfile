@@ -58,6 +58,16 @@ RUN apt-get update && apt-get upgrade -y && apt-get install -y --no-install-reco
     ca-certificates curl git gnupg openssh-client \
   && rm -rf /var/lib/apt/lists/*
 
+# Клиенты PostgreSQL 16 и 17 (pg_dump, pg_restore) для бэкапов сервера. Берутся из репозитория PGDG, а не из Debian
+# (там 15): pg_dump не снимает дамп с сервера новее себя, а клиент новее сервера пишет в дамп настройки, которых
+# сервер не знает. Студия выбирает клиент той же мажорной версии, что и сервер (compose держит Postgres 16).
+RUN install -d /usr/share/postgresql-common/pgdg \
+  && curl -fsSL -o /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc https://www.postgresql.org/media/keys/ACCC4CF8.asc \
+  && echo "deb [signed-by=/usr/share/postgresql-common/pgdg/apt.postgresql.org.asc] https://apt.postgresql.org/pub/repos/apt bookworm-pgdg main" \
+     > /etc/apt/sources.list.d/pgdg.list \
+  && apt-get update && apt-get install -y --no-install-recommends postgresql-client-16 postgresql-client-17 \
+  && rm -rf /var/lib/apt/lists/*
+
 # Docker CLI (client only — NOT the daemon). The backend shells out to `docker`
 # against the HOST daemon via the bind-mounted /var/run/docker.sock to spawn
 # sibling containers: the LaTeX/LanguageTool runners AND the detached "updater"
@@ -88,7 +98,7 @@ RUN addgroup --system --gid 10001 app && adduser --system --uid 10001 --ingroup 
 
 # Каталог данных принадлежит app: именованный том (стенд server-lite) наследует владельца при создании.
 # Привязанная папка хоста (deploy/all-in-one) закрывает его своим владельцем, как и раньше.
-RUN mkdir -p /data && chown app:app /data
+RUN mkdir -p /data /var/lib/hse-updater && chown app:app /data /var/lib/hse-updater
 
 COPY --from=backend-builder /usr/local /usr/local
 COPY --from=backend-builder /app /app

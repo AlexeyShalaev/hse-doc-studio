@@ -166,3 +166,67 @@ def test_non_root_pods_have_numeric_uid_matching_fsgroup() -> None:
         assert isinstance(sec["runAsGroup"], int)
     api = next(p for p in pods if p["containers"][0]["name"] == "api")
     assert api["securityContext"]["fsGroup"] == api["securityContext"]["runAsGroup"]
+
+
+def _api(docs: list[dict[str, Any]]) -> dict[str, Any]:
+    return next(d for d in _by_kind(docs, "Deployment") if d["metadata"]["name"].endswith("-api"))
+
+
+def _api_env(docs: list[dict[str, Any]]) -> dict[str, dict[str, Any]]:
+    return {e["name"]: e for e in _api(docs)["spec"]["template"]["spec"]["containers"][0]["env"]}
+
+
+def test_backups_absent_by_default() -> None:
+    docs = _render("--set", "backups.enabled=false")
+    assert not any(d["metadata"]["name"].endswith("-backups") for d in _by_kind(docs, "PersistentVolumeClaim"))
+    assert [n for n in _api_env(docs) if "BACKUPS" in n] == []
+    assert "backups" not in str(_api(docs)["spec"]["template"]["spec"]["volumes"])
+    secret = _by_kind(docs, "Secret")[0]["stringData"]
+    assert not [k for k in secret if k.startswith("backup-")]
+
+
+def test_backups_enabled_renders_volume_env_and_secrets() -> None:
+    docs = _render()
+    (pvc,) = [d for d in _by_kind(docs, "PersistentVolumeClaim") if d["metadata"]["name"].endswith("-backups")]
+    assert pvc["metadata"]["annotations"]["helm.sh/resource-policy"] == "keep"
+    assert pvc["spec"]["storageClassName"] == "slow"
+    spec = _api(docs)["spec"]["template"]["spec"]
+    assert {"name": "backups", "mountPath": "/backups"} in spec["containers"][0]["volumeMounts"]
+    assert any(v["name"] == "backups" for v in spec["volumes"])
+    env = _api_env(docs)
+    assert env["HSE_STUDIO__BACKUPS__LOCAL_ROOT"]["value"] == "/backups"
+    assert env["HSE_STUDIO__BACKUPS__PROVISION__DESTINATION_KIND"]["value"] == "s3"
+    assert env["HSE_STUDIO__BACKUPS__PROVISION__CRON"]["value"] == "30 2 * * *"
+    for name in ("ACCESS_KEY", "SECRET_KEY"):
+        assert "valueFrom" in env[f"HSE_STUDIO__BACKUPS__PROVISION__{name}"]
+    secret = _by_kind(docs, "Secret")[0]["stringData"]
+    assert secret["backup-access-key"] == "AKIABACKUP"
+    assert "backup-passphrase" in secret
+
+
+def test_backups_not_in_migration_job() -> None:
+    (job,) = _by_kind(_render(), "Job")
+    assert [e["name"] for e in job["spec"]["template"]["spec"]["containers"][0]["env"] if "BACKUPS" in e["name"]] == []
+
+
+def test_backups_existing_claim_and_no_local_volume() -> None:
+    docs = _render("--set", "backups.local.persistence.existingClaim=mine")
+    assert not [d for d in _by_kind(docs, "PersistentVolumeClaim") if d["metadata"]["name"].endswith("-backups")]
+    assert any(
+        v.get("persistentVolumeClaim", {}).get("claimName") == "mine"
+        for v in _api(docs)["spec"]["template"]["spec"]["volumes"]
+    )
+    docs = _render("--set", "backups.local.enabled=false")
+    assert "HSE_STUDIO__BACKUPS__LOCAL_ROOT" not in _api_env(docs)
+
+
+def test_backups_passphrase_mode_wires_secret() -> None:
+    env = _api_env(_render("--set", "backups.encryptionMode=passphrase"))
+    assert env["HSE_STUDIO__BACKUPS__PROVISION__PASSPHRASE"]["valueFrom"]["secretKeyRef"]["key"] == "backup-passphrase"
+
+
+def test_backups_s3_requires_bucket() -> None:
+    assert (
+        _helm("template", "rel", str(_CHART), "-f", str(_VALUES), "--set", "backups.destination.bucket=").returncode
+        != 0
+    )

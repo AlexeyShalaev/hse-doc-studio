@@ -12,10 +12,9 @@ import {
   vi,
 } from "vitest";
 import { adminClient } from "@shared/api";
-import { i18n } from "@shared/lib";
+import { i18n, loadAdminNamespaces } from "@shared/lib";
 import { installServerDemo } from "@/app/demo";
 import { activateServerScenario } from "@/app/demo/server";
-import { loadAdminLocales } from "./adminLocales";
 import { AdminLayout } from "./AdminLayout";
 import { AdminOverview } from "./AdminSections";
 
@@ -47,7 +46,7 @@ const mount = () =>
 describe("оболочка и сводка админки", () => {
   beforeAll(async () => {
     installServerDemo();
-    await loadAdminLocales();
+    await loadAdminNamespaces(["shell", "audit"]);
   });
   beforeEach(async () => {
     await i18n.changeLanguage("ru");

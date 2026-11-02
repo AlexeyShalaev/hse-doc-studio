@@ -1,0 +1,73 @@
+{
+  "sources": [
+    {
+      "key": "audit_log",
+      "group": "database",
+      "strategy": "partition_drop",
+      "growth": "high",
+      "days": 365,
+      "days_source": "default",
+      "min_days": 90,
+      "max_days": 3650,
+      "default_days": 365,
+      "editable": true,
+      "run_now": false,
+      "protected": true,
+      "env": "HSE_STUDIO__SERVER__AUDIT_RETENTION_DAYS",
+      "bytes": 8192,
+      "rows": 120,
+      "partitions": 5,
+      "last_run": {
+        "at": "2026-11-10T12:00:00Z",
+        "duration_ms": 12,
+        "removed": 0,
+        "error": null,
+        "runs": 4,
+        "total_removed": 0
+      }
+    },
+    {
+      "key": "container_logs",
+      "group": "logs",
+      "strategy": "infra",
+      "growth": "high",
+      "days": null,
+      "days_source": "fixed",
+      "min_days": null,
+      "max_days": null,
+      "default_days": null,
+      "editable": false,
+      "run_now": false,
+      "protected": false,
+      "env": null,
+      "bytes": null,
+      "rows": null,
+      "partitions": null,
+      "last_run": null
+    }
+  ],
+  "volumes": [
+    {
+      "name": "data+projects",
+      "used_bytes": 850,
+      "total_bytes": 1000,
+      "free_bytes": 150,
+      "used_ratio": 0.85,
+      "level": "warning"
+    },
+    {
+      "name": "database",
+      "used_bytes": 5,
+      "total_bytes": null,
+      "free_bytes": null,
+      "used_ratio": null,
+      "level": "ok"
+    }
+  ],
+  "thresholds": {
+    "warn_percent": 80,
+    "critical_percent": 90
+  },
+  "level": "warning",
+  "safe_mode": false
+}

@@ -25,6 +25,16 @@ helm install studio deploy/helm/hse-doc-studio -f my-values.yaml
 автомиграции. Job берёт Secret предыдущей версии выпуска: меняя секреты, обновляйте их отдельно от версии образа
 или используйте `secrets.existingSecret`. Отключить: `migrations.enabled=false` (тогда мигрирует api).
 
+## Обновление версии
+
+Встроенного исполнителя в Kubernetes нет (`HSE_STUDIO__SERVER_UPDATE__EXECUTOR=none`): Студия проверяет релизы и уведомляет админов, страница «Обновления» показывает команду. Ставьте так, откат при неуспехе делает Helm:
+
+```bash
+helm upgrade hse-doc-studio deploy/helm/hse-doc-studio --reuse-values --set image.tag=<версия> --atomic --wait
+```
+
+Проверку и уведомления выключает `api.extraEnv.HSE_STUDIO__SERVER_UPDATE__ENABLED=false`. Подробно: `docs/design/auto-update.md`.
+
 ## Ingress и долгий опрос
 
 Раннер держит запрос опроса до 25 секунд. Аннотации по умолчанию рассчитаны на ingress-nginx
@@ -40,6 +50,20 @@ helm install studio deploy/helm/hse-doc-studio -f my-values.yaml
 `runner.enabled=true` запускает раннер с `hostPath` на `docker.sock` узла. Сокет эквивалентен root
 на узле: используйте выделенные узлы (`runner.nodeSelector`, `runner.tolerations`). Раннер-под на задачу
 относится к следующим этапам.
+
+## Бэкапы
+
+`backups.enabled=true` включает начальную настройку бэкапов: на первом старте api создаёт назначение по умолчанию
+(`backups.destination`) и расписание (`backups.schedule`), но только если назначений в базе ещё нет, поэтому правки в админке
+рестарты не затирают. Остальное (новые назначения, смена расписания) делается в админке.
+
+- `backups.local.enabled=true` добавляет отдельный PVC `<release>-backups` (политика `keep`), монтирует его в `/backups` и задаёт
+  `HSE_STUDIO__BACKUPS__LOCAL_ROOT`. `backups.local.persistence.existingClaim` берёт готовый том. Том должен быть не там же, где `/data`.
+- `backups.destination.kind=s3`: обязателен `bucket`; ключи в `accessKey` и `secretKey` или в Secret (`backup-access-key`, `backup-secret-key`).
+- `backups.encryptionMode=passphrase`: фраза от 12 символов в `backups.passphrase` или в Secret (`backup-passphrase`).
+- При `backups.enabled=false` чарт ничего не добавляет, приложение работает с умолчаниями.
+
+Восстановление в Kubernetes: см. раздел «Kubernetes (Helm)» в `docs/ru/deploy/backups.md`.
 
 ## Проверка
 

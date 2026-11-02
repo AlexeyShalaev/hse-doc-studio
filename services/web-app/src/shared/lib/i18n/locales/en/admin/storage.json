@@ -1,0 +1,60 @@
+{
+  "storage": {
+    "title": "Storage",
+    "lead": "How much space is used, how much is left and who has the most projects.",
+    "loadFailed": "Could not load storage information.",
+    "unknown": "Unknown",
+    "lowTitle": "Free space is running low: {{free}}",
+    "lowBody": "Free up space or extend the disk, otherwise saving files will stop working.",
+    "stats": {
+      "projects": "Projects",
+      "projectsHint_one": "{{n}} more deleted, awaiting erasure",
+      "projectsHint_other": "{{n}} more deleted, awaiting erasure",
+      "noDeleted": "None deleted",
+      "objects": "Builds and attachments",
+      "objectsHint_one": "{{n}} file in object storage",
+      "objectsHint_other": "{{n}} files in object storage",
+      "diskUnknown": "Disk size unknown",
+      "free": "Free",
+      "freeLow": "Time to free up space",
+      "freeOf": "Of {{total}} on the project disk"
+    },
+    "disk": {
+      "title": "Project disk",
+      "lead": "The volume holding the working copies of projects.",
+      "unknown": "Disk size unknown",
+      "unknownBody": "The server could not read the project volume details.",
+      "usedOf": "{{used}} of {{total}} used",
+      "aria": "{{used}} used, {{free}} free of {{total}}",
+      "usedTip": "Used {{value}} ({{pct}})",
+      "freeTip": "Free {{value}} ({{pct}})",
+      "used": "Used",
+      "free": "Free"
+    },
+    "owners": {
+      "title": "Project owners",
+      "lead": "People and organizations by project count and space used.",
+      "rank": "No.",
+      "who": "Owner",
+      "projectsCol": "Projects",
+      "shareCol": "Share of projects",
+      "share": "Share of projects: {{name}}",
+      "search": "Find an owner",
+      "searchPlaceholder": "Name or email",
+      "kind": "Owner",
+      "kinds": {
+        "user": "People",
+        "org": "Organizations"
+      },
+      "org": "Organization",
+      "bytesCol": "Size",
+      "loadFailed": "Could not load owners."
+    },
+    "empty": {
+      "title": "No projects yet",
+      "body": "Data appears when people start creating projects."
+    },
+    "note": "Counted from database records, without scanning the storage. Updated {{when}}.",
+    "noteNever": "Counted from database records, without scanning the storage. Not counted yet."
+  }
+}

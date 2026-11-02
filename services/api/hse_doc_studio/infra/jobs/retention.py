@@ -30,6 +30,7 @@ _ARTIFACTS = "artifacts/"
 _ANNOUNCE = "announce/"
 _TERMINAL = tuple(s.value for s in JobState if s.is_terminal)
 BATCH_SIZE = 500
+_UNSET = object()
 
 
 @dataclass
@@ -71,12 +72,16 @@ class JobRetention:
         self._output_min_age = output_min_age
         self._retention = retention
 
-    async def run(self, now: datetime | None = None) -> JobRetentionReport:
+    async def run(
+        self, now: datetime | None = None, *, retention: timedelta | None | object = _UNSET
+    ) -> JobRetentionReport:
+        """`retention` из админки перекрывает срок из окружения; `None` выключает стирание строк."""
         moment = now or datetime.now(tz=timezone.utc)
+        keep = self._retention if retention is _UNSET else retention
         report = JobRetentionReport()
         await self._sweep_outputs(moment - self._output_min_age, report)
-        if self._retention is not None:
-            await self._sweep_rows(moment - self._retention, report)
+        if isinstance(keep, timedelta):
+            await self._sweep_rows(moment - keep, report)
         if report.output_prefixes or report.rows:
             logger.info("job retention", output_prefixes=len(report.output_prefixes), rows=report.rows)
         return report

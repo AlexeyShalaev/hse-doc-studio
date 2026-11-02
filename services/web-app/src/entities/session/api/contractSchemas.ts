@@ -17,6 +17,7 @@ import {
   ReviewThreadListSchema,
   ReviewThreadSchema,
 } from "@entities/review/model/review.schema";
+import * as upd from "@features/admin-updates/api/schemas";
 import * as ops from "./opsSchemas";
 import * as s from "./schemas";
 import * as sh from "@entities/share-link/model/shareLink.schema";
@@ -136,6 +137,17 @@ export const CONTRACT_SCHEMAS: Record<string, ZodType> = {
   ProjectAccessCandidateList: s.ProjectAccessCandidateListSchema,
   ProjectTransferCandidateList: s.PickerListSchema,
   AdminRunnerList: ops.AdminRunnerPageSchema,
+  AdminDiagnostics: ops.AdminDiagnosticsSchema,
+  UpdateAdminDiagnosticsThresholds:
+    ops.UpdateDiagnosticsThresholdsRequestSchema,
+  RunAdminDiagnosticsRequest: ops.RunDiagnosticsRequestSchema,
+  AdminDataLifecycle: ops.AdminDataLifecycleSchema,
+  AdminUpdateStatus: upd.UpdateStatusSchema,
+  AdminUpdateRun: upd.UpdateRunSchema,
+  AdminUpdateSettings: upd.UpdateSettingsSchema,
+  UpdateAdminRetentionRequest: ops.UpdateLifecycleRetentionRequestSchema,
+  AdminStorageThresholds: ops.StorageThresholdsSchema,
+  AdminLifecycleRun: ops.LifecycleRunSchema,
   AdminRunnerSummary: ops.AdminRunnerSummarySchema,
   AdminRunnerTokenList: ops.AdminRunnerTokenPageSchema,
   CreateAdminRunnerTokenRequest: ops.CreateAdminRunnerTokenRequestSchema,

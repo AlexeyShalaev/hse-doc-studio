@@ -61,7 +61,7 @@ const isBad = (s: AdminService): boolean =>
   s.status === "down" || s.status === "degraded";
 
 const ServiceCard = ({ service }: { service: AdminService }) => {
-  const { t } = useTranslation("adminOps");
+  const { t } = useTranslation("adminServices");
   const Icon = ICON[service.kind];
   const health = serviceHealth(service);
   const shown = {
@@ -177,7 +177,7 @@ export const ServicesView = ({
   onRetry,
   onRefresh,
 }: ServicesViewProps) => {
-  const { t } = useTranslation("adminOps");
+  const { t } = useTranslation("adminServices");
 
   const health = summarizeHealth(services);
   const { off, down } = health;

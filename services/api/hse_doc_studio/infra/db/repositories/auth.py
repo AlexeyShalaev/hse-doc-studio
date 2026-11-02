@@ -641,10 +641,15 @@ class SqlAuditLog:
     async def estimate_total(self) -> int | None:
         async with self._sessions.use() as db:
             found = (
-                await db.execute(text("SELECT reltuples::bigint FROM pg_class WHERE oid = 'audit_log'::regclass"))
+                await db.execute(
+                    text(
+                        "SELECT sum(c.reltuples)::bigint FROM pg_inherits i JOIN pg_class c ON c.oid = i.inhrelid "
+                        "WHERE i.inhparent = 'audit_log'::regclass AND c.reltuples >= 0"
+                    )
+                )
             ).scalar_one_or_none()
-        # -1: таблицу ещё не анализировали, оценки нет.
-        return int(found) if found is not None and found >= 0 else None
+        # Журнал партиционирован: оценка это сумма по партициям. NULL: ни одну ещё не анализировали, оценки нет.
+        return int(found) if found is not None else None
 
     async def list(
         self, *, limit: int = 100, action: str | None = None, actor_id: str | None = None
