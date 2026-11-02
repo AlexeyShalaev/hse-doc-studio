@@ -33,6 +33,15 @@ export default defineConfig({
       },
     },
     {
+      // «Локальная версия» облачной Студии на том же стенде server-lite.
+      name: "local-studio",
+      testMatch: /local-studio\.spec\.ts/,
+      use: {
+        ...devices["Desktop Chrome"],
+        channel: process.env.E2E_CHANNEL || undefined,
+      },
+    },
+    {
       // Полный смоук на стенде deploy/server (make server-stack-up, make e2e-full).
       name: "full",
       testMatch: /full\.spec\.ts/,

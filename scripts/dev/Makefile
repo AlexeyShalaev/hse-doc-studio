@@ -154,7 +154,7 @@ e2e-install:
 e2e-m1: $(SERVER_LITE_ENV)
 	@. $(SERVER_LITE_ENV); cd e2e && \
 	  E2E_BASE_URL=http://localhost:$${SERVER_LITE_PORT:-8100} E2E_SEED_PASSWORD=$$SERVER_LITE_SEED_PASSWORD \
-	  pnpm exec playwright test --project=m1
+	  pnpm exec playwright test --project=m1 --project=local-studio
 
 # ---- Полный смоук на стенде deploy/server (api, раннер, Postgres, MinIO) ----
 # Образ с extra server собирает make server-stack-build (тег ci), затем server-stack-up и e2e-full.

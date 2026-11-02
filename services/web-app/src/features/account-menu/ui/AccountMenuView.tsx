@@ -1,4 +1,10 @@
-import { LogOut, Settings, ShieldAlert, ShieldCheck } from "lucide-react";
+import {
+  Laptop,
+  LogOut,
+  Settings,
+  ShieldAlert,
+  ShieldCheck,
+} from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { Badge } from "@shared/ui/Badge";
 import { Popover, PopoverContent, PopoverTrigger } from "@shared/ui/Popover";
@@ -13,6 +19,8 @@ export type AccountMenuViewProps = {
   onOpenSettings: () => void;
   /** Есть только при capabilities.admin: ссылка не показывается тому, кому админка ответит 404. */
   onOpenAdmin?: () => void;
+  /** «Локальная версия»: установка Студии на компьютер и подключение к этому серверу. */
+  onOpenLocalStudio?: () => void;
   onLogout: () => void;
 };
 
@@ -50,9 +58,11 @@ export const AccountMenuView = ({
   defaultOpen,
   onOpenSettings,
   onOpenAdmin,
+  onOpenLocalStudio,
   onLogout,
 }: AccountMenuViewProps) => {
   const { t } = useTranslation("appChrome");
+  const { t: tLocal } = useTranslation("localStudio");
   return (
     <Popover {...(defaultOpen === undefined ? {} : { defaultOpen })}>
       <PopoverTrigger asChild>
@@ -156,6 +166,18 @@ export const AccountMenuView = ({
             <Settings size={14} />
             {t("accountMenu.settings")}
           </button>
+          {onOpenLocalStudio && (
+            <button
+              type="button"
+              className="row-btn"
+              style={itemStyle}
+              onClick={onOpenLocalStudio}
+              data-testid="account-menu-local-studio"
+            >
+              <Laptop size={14} />
+              {tLocal("menu.label")}
+            </button>
+          )}
           {onOpenAdmin && (
             <button
               type="button"
