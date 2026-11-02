@@ -3,3 +3,5 @@ export { i18n } from "./init";
 export { useApplyLanguage } from "./useApplyLanguage";
 export { pickLocalized } from "./pickLocalized";
 export { localeTag } from "./localeTag";
+export { loadAdminNamespaces, ADMIN_NAMESPACES } from "./adminNamespaces";
+export type { AdminNamespace } from "./adminNamespaces";

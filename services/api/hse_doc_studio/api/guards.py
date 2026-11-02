@@ -19,6 +19,7 @@ from starlette.requests import HTTPConnection
 from hse_doc_studio.api.actor import resolve_actor
 from hse_doc_studio.api.ai_relay_errors import install_ai_relay_error_handlers
 from hse_doc_studio.api.auth_cookie import credentials_from_request
+from hse_doc_studio.api.backup_errors import install_backup_error_handlers
 from hse_doc_studio.api.config import settings
 from hse_doc_studio.api.git_errors import install_git_error_handlers
 from hse_doc_studio.api.identity_errors import install_identity_error_handlers
@@ -35,6 +36,7 @@ from hse_doc_studio.api.route_scopes import (
     scope_for_request,
 )
 from hse_doc_studio.api.runner_errors import install_runner_error_handlers
+from hse_doc_studio.api.server_update_errors import install_update_error_handlers
 from hse_doc_studio.api.validation_errors import install_validation_error_handler
 from hse_doc_studio.core.access.actions import RouteExemption
 from hse_doc_studio.core.access.checker import ProjectForbiddenError
@@ -325,6 +327,8 @@ def install_exception_handlers(app: FastAPI) -> None:
     app.add_exception_handler(ProjectReadOnlyError, _read_only_handler)
     app.add_exception_handler(ProjectForbiddenError, _forbidden_handler)
     install_git_error_handlers(app)
+    install_backup_error_handlers(app)
+    install_update_error_handlers(app)
     install_identity_error_handlers(app)
     install_quota_error_handlers(app)
     install_review_error_handlers(app)

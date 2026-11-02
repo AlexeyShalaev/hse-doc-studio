@@ -96,7 +96,7 @@ export const AutoscaleView = ({
   failure = null,
   onSave,
 }: AutoscaleViewProps) => {
-  const { t, i18n } = useTranslation("adminOps");
+  const { t, i18n } = useTranslation("adminRunners");
   const initial = draftOf(status.policy);
   const [draft, setDraft] = useState<Draft>(initial);
   const [tried, setTried] = useState(false);
@@ -123,7 +123,7 @@ export const AutoscaleView = ({
             }}
             data-testid="autoscale-save"
           >
-            {t("resources.save")}
+            {t("adminOps:resources.save")}
           </Button>
           {tried && !body && (
             <span
@@ -266,7 +266,7 @@ export const AutoscaleView = ({
 };
 
 export const AutoscalePanel = () => {
-  const { t } = useTranslation("adminOps");
+  const { t } = useTranslation("adminRunners");
   const autoscale = useAutoscale();
   const save = useSaveAutoscale();
   const [failure, setFailure] = useState<Failure | null>(null);

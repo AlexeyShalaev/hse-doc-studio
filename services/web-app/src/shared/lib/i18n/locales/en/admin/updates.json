@@ -1,0 +1,202 @@
+{
+  "close": "Close",
+  "cancel": "Cancel",
+  "units": {
+    "h": "h"
+  },
+  "page": {
+    "title": "Updates",
+    "lead": "Installed version, new release checks and a safe update: backup, images, migrations, health check and automatic rollback.",
+    "check": "Check now",
+    "updateNow": "Update now"
+  },
+  "status": {
+    "loadFailed": "Could not load the update state."
+  },
+  "banner": {
+    "running": "{{kind}} {{from}} → {{to}} in progress",
+    "cancel": "Cancel",
+    "last": {
+      "failed": "The update to {{to}} ({{at}}) failed and the rollback did not finish. Manual action is needed.",
+      "rolled_back": "The update to {{to}} ({{at}}) failed. The system went back to the previous version."
+    },
+    "manual": "The update executor is not connected",
+    "manualBody": "The Studio checks releases and notifies you, the operator installs with the command below: that is how Helm works (rollback with `--atomic`); for compose enable the updater service: `docker compose --profile updater up -d` with UPDATER_TOKEN in .env.",
+    "updaterOffline": "The updater service does not answer",
+    "updaterOfflineBody": "Automatic installs and the update buttons do not work until it runs: `docker compose up -d updater`. Release checks and notifications still work.",
+    "noBackup": "No backup destination configured",
+    "noBackupBody": "Before an update the updater takes only a database snapshot. A full backup (files and objects) is possible once the Backups section has a destination.",
+    "checkFailed": "Could not ask for the release list"
+  },
+  "version": {
+    "title": "Version",
+    "lead": "What is installed, what is out and when the system installs it by itself.",
+    "current": "Installed",
+    "available": "Available",
+    "none": "nothing new",
+    "checked": "Checked",
+    "updater": "Updater",
+    "updaterNone": "not used",
+    "updaterOnline": "running, version {{version}}",
+    "updaterOffline": "not answering",
+    "window": "Maintenance window",
+    "inWindow": "inside the window now",
+    "noDigest": "This release publishes no image digest: a verified update will not pass. Turn image verification off in the policy or wait for the next release.",
+    "manualCommand": "Update command",
+    "rollback": "Roll back to {{version}}"
+  },
+  "policy": {
+    "title": "Policy and window",
+    "lead": "How the system learns about releases and whether it installs them. Window times are UTC. The window applies to automatic installs.",
+    "save": "Save",
+    "mode": {
+      "label": "Mode",
+      "hint": {
+        "off": "Releases are not checked, no notifications.",
+        "notify": "We check the stable channel and notify admins; you install with the button.",
+        "auto": "We install by ourselves in the maintenance window, with a backup and automatic rollback."
+      },
+      "options": {
+        "off": "Off",
+        "notify": "Notify",
+        "auto": "Install automatically"
+      }
+    },
+    "bump": {
+      "label": "Largest step without a human",
+      "hint": "Anything bigger (for example a new major version) is notify-only.",
+      "options": {
+        "patch": "Patches only (0.3.1 → 0.3.2)",
+        "minor": "Patches and minors (0.3 → 0.4)"
+      }
+    },
+    "days": {
+      "label": "Window days",
+      "hint": "At least one day.",
+      "short": {
+        "0": "Mon",
+        "1": "Tue",
+        "2": "Wed",
+        "3": "Thu",
+        "4": "Fri",
+        "5": "Sat",
+        "6": "Sun"
+      }
+    },
+    "start": {
+      "label": "Window start (UTC)",
+      "hint": "Hours and minutes, for example 02:00."
+    },
+    "length": {
+      "label": "Window length",
+      "hint": "From 15 minutes to 24 hours."
+    },
+    "backup": {
+      "label": "Full backup before updating",
+      "hint": "When Backups has a destination, the update waits for its successful backup. The updater always takes a database snapshot."
+    },
+    "verify": {
+      "label": "Image verification",
+      "options": {
+        "digest": "Digest",
+        "cosign": "Digest and signature",
+        "none": "None"
+      },
+      "hint": {
+        "digest": "The pulled image digest must equal the one published with the release.",
+        "cosign": "Also checks the cosign signature (GitHub OIDC) of the publish workflow.",
+        "none": "Only for closed mirrors and forks: a swapped image goes unnoticed."
+      }
+    },
+    "notify": {
+      "label": "Notify administrators",
+      "hint": "New version, update result, rollback."
+    },
+    "invalid": {
+      "window_days": "Pick at least one day.",
+      "window_start_min": "A time like 02:00.",
+      "window_minutes": "From 15 minutes to 24 hours."
+    }
+  },
+  "history": {
+    "title": "History",
+    "lead": "Updates and rollbacks with their outcome. The step-by-step log opens with the Log button.",
+    "details": "Log",
+    "loadFailed": "Could not load the history.",
+    "empty": "No updates yet",
+    "emptyHint": "Runs will appear here.",
+    "cols": {
+      "created": "When",
+      "kind": "What",
+      "versions": "Versions",
+      "status": "Outcome",
+      "result": "Details"
+    },
+    "kind": {
+      "update": "Update",
+      "rollback": "Rollback"
+    },
+    "trigger": {
+      "auto": "automatic",
+      "manual": "manual"
+    },
+    "status": {
+      "waiting_backup": "Waiting for backup",
+      "queued": "Queued",
+      "running": "Running",
+      "succeeded": "Succeeded",
+      "rolled_back": "Rolled back",
+      "failed": "Needs hands",
+      "cancelled": "Cancelled"
+    },
+    "dbRestored": "database restored from the snapshot"
+  },
+  "phase": {
+    "request": "request",
+    "backup": "backup",
+    "preflight": "checks",
+    "snapshot": "database snapshot",
+    "pull": "images",
+    "verify": "image check",
+    "stop": "stop",
+    "migrate": "migrations",
+    "restart": "start",
+    "health": "health",
+    "rollback": "rollback",
+    "restore": "restore",
+    "finish": "result"
+  },
+  "confirmUpdate": {
+    "title": "Update to {{version}}?",
+    "body": "The updater takes a database snapshot, pulls and verifies the image, applies migrations and restarts the services. If the new version does not come up, the system goes back by itself.",
+    "downtime": "The Studio is unavailable during migrations and restart, usually 1-3 minutes. Running builds are interrupted.",
+    "ok": "Update"
+  },
+  "confirmRollback": {
+    "title": "Roll back to {{version}}?",
+    "body": "We bring back the images of the previous version.",
+    "dataLoss": "The update changed the database schema, so the rollback restores the snapshot taken before it. Everything written after the update is lost.",
+    "noDataLoss": "The database schema did not change: data stays as is.",
+    "ok": "Roll back"
+  },
+  "events": {
+    "title": "Log: {{from}} → {{to}}",
+    "revisions": "Database revision: {{from}} → {{to}}"
+  },
+  "failure": {
+    "invalid_input": "A setting value is invalid.",
+    "not_found": "Run not found.",
+    "executor_unavailable": "The built-in executor is off: update with the operator command.",
+    "updater_offline": "The updater does not answer: start the updater service.",
+    "already_running": "Another update is already running.",
+    "nothing_to_update": "Already on the latest version.",
+    "unknown_version": "This version is not in the release list.",
+    "no_previous_version": "Nothing to roll back.",
+    "not_cancellable": "The updater has already taken the run.",
+    "forbidden": "Not enough permissions.",
+    "rate_limited": "Too many requests, try again later.",
+    "csrf_failed": "Session expired: reload the page.",
+    "network": "No connection to the server.",
+    "unknown": "Something went wrong. Try again later."
+  }
+}

@@ -9,6 +9,7 @@ from hse_doc_studio.api.config.admin import AdminConfig
 from hse_doc_studio.api.config.ai_gateway import AiGatewayConfig
 from hse_doc_studio.api.config.auth import AuthConfig, SecretsConfig
 from hse_doc_studio.api.config.autoscale import AutoscaleConfig
+from hse_doc_studio.api.config.backups import BackupsConfig
 from hse_doc_studio.api.config.build import (
     CompileConfig,
     FontCatalogEntryConfig,
@@ -16,14 +17,17 @@ from hse_doc_studio.api.config.build import (
     FontsConfig,
 )
 from hse_doc_studio.api.config.db import DbConfig
+from hse_doc_studio.api.config.diagnostics import DiagnosticsConfig
 from hse_doc_studio.api.config.egress import EgressConfig
 from hse_doc_studio.api.config.git import GitConfig, VCSConfig
 from hse_doc_studio.api.config.jobs import JobsConfig
+from hse_doc_studio.api.config.lifecycle import LifecycleConfig
 from hse_doc_studio.api.config.mail import MailConfig
 from hse_doc_studio.api.config.observability import ObservabilityConfig
 from hse_doc_studio.api.config.rate_limit import RateLimitConfig
 from hse_doc_studio.api.config.runtime import CorsConfig, HttpServerConfig, LoggingConfig
 from hse_doc_studio.api.config.server import ServerCapabilities, ServerConfig
+from hse_doc_studio.api.config.server_update import ServerUpdateConfig
 from hse_doc_studio.api.config.services import (
     AgentConfig,
     HsePersonsConfig,
@@ -42,9 +46,11 @@ __all__ = [
     "AiGatewayConfig",
     "AuthConfig",
     "AutoscaleConfig",
+    "BackupsConfig",
     "CompileConfig",
     "CorsConfig",
     "DbConfig",
+    "DiagnosticsConfig",
     "EgressConfig",
     "FontCatalogEntryConfig",
     "FontCatalogFileConfig",
@@ -54,6 +60,7 @@ __all__ = [
     "HttpServerConfig",
     "JobsConfig",
     "LanguageToolConfig",
+    "LifecycleConfig",
     "LoggingConfig",
     "MailConfig",
     "ObservabilityConfig",
@@ -65,6 +72,7 @@ __all__ = [
     "SecretsConfig",
     "ServerCapabilities",
     "ServerConfig",
+    "ServerUpdateConfig",
     "Settings",
     "StorageConfig",
     "VCSConfig",

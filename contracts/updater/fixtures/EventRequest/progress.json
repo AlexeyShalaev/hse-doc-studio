@@ -1,0 +1,12 @@
+{
+  "seq": 2,
+  "at": "2026-11-03T02:01:00Z",
+  "phase": "pull",
+  "level": "info",
+  "message": "pulling ghcr.io/alexeyshalaev/hse-doc-studio:0.4.0",
+  "status": null,
+  "from_revision": null,
+  "to_revision": null,
+  "db_restored": null,
+  "error_code": null
+}

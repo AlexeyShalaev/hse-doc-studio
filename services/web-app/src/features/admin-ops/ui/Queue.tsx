@@ -29,7 +29,7 @@ const jobId = (job: AdminJob) => job.id;
  * её сверху; отмена с подтверждением, подробности задачи.
  */
 export const Queue = () => {
-  const { t } = useTranslation("adminOps");
+  const { t } = useTranslation("adminRunners");
   const state = useQueueListState();
   const jobs = useCursorList({
     state,

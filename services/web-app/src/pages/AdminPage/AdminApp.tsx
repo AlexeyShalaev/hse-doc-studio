@@ -6,8 +6,8 @@ import {
   useParams,
   useSearchParams,
 } from "react-router";
+import { loadAdminNamespaces, type AdminNamespace } from "@shared/lib";
 import { PageContainer, type PageWidth } from "@shared/ui";
-import { loadAdminLocales } from "./adminLocales";
 import { AdminChunkError } from "./AdminChunkError";
 import { AdminChunkLoading } from "./AdminChunkLoading";
 import { AdminLayout } from "./AdminLayout";
@@ -42,6 +42,23 @@ const AdminInstallPage = lazy(() =>
   import("./AdminInstallPage").then((m) => ({ default: m.AdminInstallPage })),
 );
 
+// Бэкапы сервера: назначения, расписание, история.
+const AdminBackupsPage = lazy(() =>
+  import("@features/admin-backups").then((m) => ({ default: m.BackupsPage })),
+);
+
+// Самодиагностика: проверки состояния, подсказки и пороги.
+const AdminDiagnosticsPage = lazy(() =>
+  import("@features/admin-diagnostics").then((m) => ({
+    default: m.DiagnosticsPage,
+  })),
+);
+
+// Автообновление сервера: версия, политика и окно, история, откат.
+const AdminUpdatesPage = lazy(() =>
+  import("@features/admin-updates").then((m) => ({ default: m.UpdatesPage })),
+);
+
 // Ширина содержимого по разделу: формы настроек узкие, таблицы и сводки широкие.
 const INSTALL_PARTS = [
   ["instance", "narrow"],
@@ -59,6 +76,7 @@ const OPS_PARTS = [
   ["quotas", "narrow"],
   ["services", "wide"],
   ["storage", "wide"],
+  ["data", "wide"],
 ] as const;
 
 // Метка для verify:admin-chunk: этой строки не должно быть ни в entry, ни в
@@ -81,16 +99,61 @@ const Loading = () => (
   </div>
 );
 
+/**
+ * Показывает раздел, когда подключены его словари. Пока они грузятся, на месте
+ * раздела крутилка, поэтому ключи не мигают; провал загрузки даёт ошибку с
+ * повтором. Повторное открытие раздела идёт мгновенно (общий кэш загрузчика).
+ */
+const WithLocales = ({
+  ns,
+  children,
+}: {
+  ns: readonly AdminNamespace[];
+  children: ReactNode;
+}) => {
+  const key = ns.join(",");
+  const [attempt, setAttempt] = useState(0);
+  const [done, setDone] = useState<{
+    token: string;
+    ok: boolean;
+  } | null>(null);
+  const token = `${key}#${attempt}`;
+  useEffect(() => {
+    let live = true;
+    loadAdminNamespaces(key.split(",") as AdminNamespace[]).then(
+      () => {
+        if (live) setDone({ token, ok: true });
+      },
+      () => {
+        if (live) setDone({ token, ok: false });
+      },
+    );
+    return () => {
+      live = false;
+    };
+  }, [key, token]);
+  if (done?.token !== token) return <Loading />;
+  if (!done.ok) {
+    return <AdminChunkError onRetry={() => setAttempt((n) => n + 1)} />;
+  }
+  return <>{children}</>;
+};
+
 /** Раздел в общих полях страницы; пока чанк грузится, на его месте крутилка. */
 const Page = ({
   width = "wide",
+  ns,
   children,
 }: {
   width?: PageWidth;
+  /** Словари раздела (admin/<name>.json): грузятся при первом открытии. */
+  ns: readonly AdminNamespace[];
   children: ReactNode;
 }) => (
   <PageContainer width={width}>
-    <Suspense fallback={<Loading />}>{children}</Suspense>
+    <Suspense fallback={<Loading />}>
+      <WithLocales ns={ns}>{children}</WithLocales>
+    </Suspense>
   </PageContainer>
 );
 
@@ -121,7 +184,8 @@ const OpsRoute = ({ part }: { part: (typeof OPS_PARTS)[number][0] }) => {
 
 /**
  * Корень админки (маршрут /admin/*). Единственная точка входа lazy-чанка:
- * подключает словари admin/ и рисует разделы. Права проверяет охранник
+ * подключает словарь оболочки (admin/shell.json) и рисует разделы; словари
+ * разделов грузит Page при первом открытии. Права проверяет охранник
  * снаружи, чанк запрашивается только после него.
  */
 export const AdminApp = () => {
@@ -131,7 +195,7 @@ export const AdminApp = () => {
 
   useEffect(() => {
     let live = true;
-    loadAdminLocales().then(
+    loadAdminNamespaces(["shell"]).then(
       () => {
         if (live) setReady(true);
       },
@@ -164,14 +228,16 @@ export const AdminApp = () => {
           index
           element={
             <Suspense fallback={<Loading />}>
-              <AdminOverview />
+              <WithLocales ns={["audit"]}>
+                <AdminOverview />
+              </WithLocales>
             </Suspense>
           }
         />
         <Route
           path="settings"
           element={
-            <Page width="narrow">
+            <Page width="narrow" ns={["settings"]}>
               <AdminSettingsPage />
             </Page>
           }
@@ -179,7 +245,7 @@ export const AdminApp = () => {
         <Route
           path="orgs/*"
           element={
-            <Page>
+            <Page ns={["orgs"]}>
               <AdminOrgsPage />
             </Page>
           }
@@ -189,7 +255,7 @@ export const AdminApp = () => {
             key={part}
             path={part}
             element={
-              <Page width={width}>
+              <Page width={width} ns={["ops", part]}>
                 <OpsRoute part={part} />
               </Page>
             }
@@ -200,7 +266,10 @@ export const AdminApp = () => {
             key={part}
             path={part}
             element={
-              <Page width={width}>
+              <Page
+                width={width}
+                ns={part === "users" ? ["users", "orgs"] : ["audit"]}
+              >
                 <PeopleRoute part={part} />
               </Page>
             }
@@ -211,12 +280,36 @@ export const AdminApp = () => {
             key={part}
             path={part}
             element={
-              <Page width={width}>
+              <Page width={width} ns={["install"]}>
                 <AdminInstallPage part={part} />
               </Page>
             }
           />
         ))}
+        <Route
+          path="backups"
+          element={
+            <Page width="wide" ns={["backups"]}>
+              <AdminBackupsPage />
+            </Page>
+          }
+        />
+        <Route
+          path="updates"
+          element={
+            <Page width="wide" ns={["updates"]}>
+              <AdminUpdatesPage />
+            </Page>
+          }
+        />
+        <Route
+          path="diagnostics"
+          element={
+            <Page width="wide" ns={["diagnostics"]}>
+              <AdminDiagnosticsPage />
+            </Page>
+          }
+        />
         <Route path="org/:slug" element={<OrgRedirect />} />
         <Route path="*" element={<Navigate to="/admin" replace />} />
       </Route>

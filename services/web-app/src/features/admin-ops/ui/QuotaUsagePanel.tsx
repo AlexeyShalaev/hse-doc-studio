@@ -27,7 +27,7 @@ const COUNTED: readonly QuotaKind[] = [
 
 /** Итоги установки за период и просмотр использования любого человека или организации со сбросом счётчика. */
 export const QuotaUsagePanel = () => {
-  const { t, i18n } = useTranslation("adminOps");
+  const { t, i18n } = useTranslation("adminQuotas");
   const quota = useTranslation("quota");
   const summary = useUsageSummary();
   const reset = useResetUsage();

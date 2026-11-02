@@ -1,0 +1,31 @@
+# Правила оповещений Prometheus по бэкапам сервера. Метрики отдаёт /metrics api (см. docs/ru/deploy/backups.md).
+groups:
+  - name: hse-doc-studio-backups
+    rules:
+      - alert: HseBackupTooOld
+        # Расписание включено, а успешного бэкапа нет дольше 26 часов (порог подберите под своё расписание).
+        expr: hse_backup_enabled == 1 and hse_backup_last_success_age_seconds > 26 * 3600
+        for: 15m
+        labels: {severity: critical}
+        annotations:
+          summary: "Нет успешного бэкапа HSE Doc Studio более 26 часов"
+          description: "С последнего успеха прошло {{ $value | humanizeDuration }} (если успехов не было совсем, значение огромно)."
+      - alert: HseBackupLastRunFailed
+        expr: hse_backup_last_run_ok == 0
+        for: 5m
+        labels: {severity: warning}
+        annotations:
+          summary: "Последний запуск бэкапа HSE Doc Studio завершился неудачей"
+          description: "Откройте админку, раздел «Бэкапы», историю запусков."
+      - alert: HseBackupFailuresGrowing
+        expr: increase(hse_backup_failures_total[1d]) > 0
+        labels: {severity: warning}
+        annotations:
+          summary: "За сутки были неудачные бэкапы HSE Doc Studio"
+      - alert: HseBackupSizeDropped
+        # Размер упал вдвое по сравнению с сутками ранее: часть данных могла не попасть в бэкап.
+        expr: hse_backup_last_size_bytes < 0.5 * (hse_backup_last_size_bytes offset 1d) and (hse_backup_last_size_bytes offset 1d) > 0
+        for: 30m
+        labels: {severity: warning}
+        annotations:
+          summary: "Бэкап HSE Doc Studio стал вдвое меньше, чем сутки назад"

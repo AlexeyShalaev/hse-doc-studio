@@ -20,6 +20,31 @@ stringData:
   health-token: ""
   metrics-token: ""
   office-jwt-secret: ""
+  backup-access-key: "AKIABACKUP"
+  backup-secret-key: "backup-test-secret"
+  backup-passphrase: ""
+
+---
+# Source: hse-doc-studio/templates/backups-pvc.yaml
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: rel-hse-doc-studio-backups
+  labels:
+    app.kubernetes.io/name: hse-doc-studio
+    app.kubernetes.io/instance: rel
+    app.kubernetes.io/managed-by: Helm
+    helm.sh/chart: hse-doc-studio-0.1.0
+    app.kubernetes.io/component: backups
+  annotations:
+    helm.sh/resource-policy: keep
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: "slow"
+  resources:
+    requests:
+      storage: 100Gi
 
 ---
 # Source: hse-doc-studio/templates/pvc.yaml
@@ -90,7 +115,7 @@ spec:
         app.kubernetes.io/instance: rel
         app.kubernetes.io/component: api
       annotations:
-        checksum/secret: 722c37bc0a56dfd9694eb023e4d8ceddf564839691f38233cef8f9f74243d6f4
+        checksum/secret: 3d4af20705b72dc5a7dd296489f57e02b20395a134958a3730b60e804bee7f94
     spec:
       securityContext:
         runAsNonRoot: true
@@ -134,10 +159,31 @@ spec:
             - {name: HSE_STUDIO__OBSERVABILITY__HEALTH_TOKEN, valueFrom: {secretKeyRef: {name: rel-hse-doc-studio-secrets, key: health-token, optional: true}}}
             - {name: HSE_STUDIO__OBSERVABILITY__METRICS_TOKEN, valueFrom: {secretKeyRef: {name: rel-hse-doc-studio-secrets, key: metrics-token, optional: true}}}
             - {name: HSE_STUDIO__OFFICE_EDITOR__JWT_SECRET, valueFrom: {secretKeyRef: {name: rel-hse-doc-studio-secrets, key: office-jwt-secret, optional: true}}}
+            
+            - {name: HSE_STUDIO__BACKUPS__LOCAL_ROOT, value: /backups}
+            - {name: HSE_STUDIO__BACKUPS__PROVISION__DESTINATION_KIND, value: "s3"}
+            - {name: HSE_STUDIO__BACKUPS__PROVISION__NAME, value: "offsite"}
+            - {name: HSE_STUDIO__BACKUPS__PROVISION__LOCAL_PATH, value: "main"}
+            - {name: HSE_STUDIO__BACKUPS__PROVISION__ENDPOINT, value: "https://backup.example.org"}
+            - {name: HSE_STUDIO__BACKUPS__PROVISION__REGION, value: "us-east-1"}
+            - {name: HSE_STUDIO__BACKUPS__PROVISION__BUCKET, value: "studio-backups"}
+            - {name: HSE_STUDIO__BACKUPS__PROVISION__PREFIX, value: "studio"}
+            - {name: HSE_STUDIO__BACKUPS__PROVISION__PATH_STYLE, value: "true"}
+            - {name: HSE_STUDIO__BACKUPS__PROVISION__ACCESS_KEY, valueFrom: {secretKeyRef: {name: rel-hse-doc-studio-secrets, key: backup-access-key, optional: true}}}
+            - {name: HSE_STUDIO__BACKUPS__PROVISION__SECRET_KEY, valueFrom: {secretKeyRef: {name: rel-hse-doc-studio-secrets, key: backup-secret-key, optional: true}}}
+            - {name: HSE_STUDIO__BACKUPS__PROVISION__SCHEDULE_ENABLED, value: "true"}
+            - {name: HSE_STUDIO__BACKUPS__PROVISION__SCHEDULE_KIND, value: "cron"}
+            - {name: HSE_STUDIO__BACKUPS__PROVISION__INTERVAL_HOURS, value: "24"}
+            - {name: HSE_STUDIO__BACKUPS__PROVISION__CRON, value: "30 2 * * *"}
+            - {name: HSE_STUDIO__BACKUPS__PROVISION__KEEP_LAST, value: "14"}
+            - {name: HSE_STUDIO__BACKUPS__PROVISION__KEEP_DAYS, value: "60"}
+            - {name: HSE_STUDIO__BACKUPS__PROVISION__ENCRYPTION_MODE, value: "installation"}
+            - {name: HSE_STUDIO__BACKUPS__PROVISION__NOTIFY_ADMINS, value: "true"}
             # Первая установка: схему ведёт сам api под advisory-локом. Дальше её обновляет Job pre-upgrade.
             - {name: HSE_STUDIO__DB__AUTO_MIGRATE, value: "true"}
           volumeMounts:
             - {name: data, mountPath: /data}
+            - {name: backups, mountPath: /backups}
           startupProbe:
             httpGet: {path: /health, port: http}
             periodSeconds: 5
@@ -159,6 +205,9 @@ spec:
         - name: data
           persistentVolumeClaim:
             claimName: rel-hse-doc-studio-data
+        - name: backups
+          persistentVolumeClaim:
+            claimName: rel-hse-doc-studio-backups
 
 ---
 # Source: hse-doc-studio/templates/runner.yaml

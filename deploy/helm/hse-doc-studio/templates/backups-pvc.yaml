@@ -1,0 +1,23 @@
+{{- if and .Values.backups.enabled .Values.backups.local.enabled (not .Values.backups.local.persistence.existingClaim) }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "hds.backupsPvcName" . }}
+  labels:
+    {{- include "hds.labels" . | nindent 4 }}
+    app.kubernetes.io/component: backups
+  annotations:
+    helm.sh/resource-policy: keep
+    {{- with .Values.backups.local.persistence.annotations }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+spec:
+  accessModes:
+    {{- toYaml .Values.backups.local.persistence.accessModes | nindent 4 }}
+  {{- if .Values.backups.local.persistence.storageClassName }}
+  storageClassName: {{ .Values.backups.local.persistence.storageClassName | quote }}
+  {{- end }}
+  resources:
+    requests:
+      storage: {{ .Values.backups.local.persistence.size }}
+{{- end }}

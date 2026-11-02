@@ -1,0 +1,61 @@
+# Оверлей: собственное S3-хранилище для бэкапов Студии (MinIO), отдельное от основного.
+#   docker compose -f docker-compose.yml -f compose.backup-s3.yml up -d      # рядом с установкой
+#   docker compose -p hse-backup-s3 -f compose.backup-s3.yml --env-file .env up -d   # отдельно, на другом хосте
+# Ключи и имя бакета в .env (образец: backup-s3.env.example). Значения для формы назначения в админке:
+#   endpoint http://backup-minio:9000, регион us-east-1, бакет $BACKUP_S3_BUCKET, path-style включён,
+#   ключи BACKUP_S3_ACCESS_KEY и BACKUP_S3_SECRET_KEY. Подробности: docs/ru/deploy/backups.md.
+#
+# Это защита от порчи данных и ошибок, но не от потери хоста: том backup-minio-data лежит на том же диске, что и
+# основной. Для настоящего бэкапа запускайте оверлей отдельно на другой машине (вторая команда выше) и ходите к нему
+# по TLS, либо подключайте внешнее S3.
+#
+# Хранилище не публичное: анонимный доступ выключен, у бакета свои ключи с правами только на него (не ключи основного
+# бакета и не корневые ключи MinIO), порт S3 на хосте открыт только на loopback, консоль тоже.
+services:
+  backup-minio:
+    image: pgsty/minio:RELEASE.2026-08-04T00-00-00Z
+    command: ["server", "/data", "--console-address", ":9001"]
+    environment:
+      MINIO_ROOT_USER: ${BACKUP_S3_ROOT_USER:?задайте BACKUP_S3_ROOT_USER в .env}
+      MINIO_ROOT_PASSWORD: ${BACKUP_S3_ROOT_PASSWORD:?задайте BACKUP_S3_ROOT_PASSWORD в .env}
+    ports:
+      - "${BACKUP_S3_BIND:-127.0.0.1}:${BACKUP_S3_PORT:-19002}:9000"
+      - "${BACKUP_S3_BIND:-127.0.0.1}:${BACKUP_S3_CONSOLE_PORT:-19003}:9001"
+    volumes:
+      - backup-minio-data:/data
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    restart: unless-stopped
+
+  # Одноразово: закрытый бакет и пользователь, который видит только его. Повторный запуск безопасен.
+  backup-minio-init:
+    image: pgsty/minio:RELEASE.2026-08-04T00-00-00Z
+    depends_on:
+      backup-minio:
+        condition: service_healthy
+    environment:
+      ROOT_USER: ${BACKUP_S3_ROOT_USER}
+      ROOT_PASSWORD: ${BACKUP_S3_ROOT_PASSWORD}
+      ACCESS_KEY: ${BACKUP_S3_ACCESS_KEY:?задайте BACKUP_S3_ACCESS_KEY в .env}
+      SECRET_KEY: ${BACKUP_S3_SECRET_KEY:?задайте BACKUP_S3_SECRET_KEY в .env}
+      BUCKET: ${BACKUP_S3_BUCKET:-hse-backups}
+    entrypoint:
+      - /bin/bash
+      - -c
+      - >-
+        set -e;
+        mc alias set local http://backup-minio:9000 "$$ROOT_USER" "$$ROOT_PASSWORD";
+        mc mb --ignore-existing "local/$$BUCKET";
+        mc anonymous set none "local/$$BUCKET";
+        printf '{"Version":"2012-10-17","Statement":[{"Effect":"Allow","Action":["s3:*"],"Resource":["arn:aws:s3:::%s","arn:aws:s3:::%s/*"]}]}' "$$BUCKET" "$$BUCKET" > /tmp/policy.json;
+        mc admin policy create local backup-rw /tmp/policy.json;
+        mc admin user add local "$$ACCESS_KEY" "$$SECRET_KEY" || true;
+        mc admin policy attach local backup-rw --user "$$ACCESS_KEY" || true;
+        echo "готово: бакет $$BUCKET, пользователь $$ACCESS_KEY"
+    restart: "no"
+
+volumes:
+  backup-minio-data:

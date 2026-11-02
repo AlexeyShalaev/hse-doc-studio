@@ -100,7 +100,7 @@ export const PersonalRunnersView = ({
   onTogglePause,
   onRevoke,
 }: PersonalRunnersViewProps) => {
-  const { t } = useTranslation("adminOps");
+  const { t } = useTranslation("adminRunners");
   const [q, setQ] = useState("");
   const [state, setState] = useState("");
 

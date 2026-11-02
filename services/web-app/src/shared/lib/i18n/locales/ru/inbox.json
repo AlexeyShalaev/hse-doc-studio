@@ -64,6 +64,31 @@
     "review_mention": "{{actor}} упомянул вас в «{{path}}»: {{excerpt}}",
     "review_resolved": "Тред в «{{path}}» закрыт: {{excerpt}}",
     "review_resolved_resolved": "{{actor}} закрыл ваш тред в «{{path}}»: {{excerpt}}",
-    "review_resolved_reopened": "{{actor}} снова открыл ваш тред в «{{path}}»: {{excerpt}}"
+    "review_resolved_reopened": "{{actor}} снова открыл ваш тред в «{{path}}»: {{excerpt}}",
+    "backup_failed": "Бэкап в «{{path}}» не удался: {{excerpt}}",
+    "system_alert": "Сообщение установки",
+    "system_alert_storage_warning": "Место на томе «{{volume}}» заканчивается: занято {{excerpt}}%",
+    "system_alert_storage_critical": "Критически мало места на томе «{{volume}}»: занято {{excerpt}}%. Крупные загрузки отключены",
+    "system_alert_update_available": "Доступна версия {{path}} для установки",
+    "system_alert_update_succeeded": "Установка обновлена до версии {{path}}",
+    "system_alert_update_rolled_back": "Обновление до {{path}} не удалось, система возвращена на прежнюю версию: {{excerpt}}",
+    "system_alert_update_failed": "Обновление до {{path}} не удалось и откат не завершён, нужны ваши руки: {{excerpt}}",
+    "system_alert_update_cancelled": "Обновление до {{path}} отменено до начала работ: {{excerpt}}",
+    "system_alert_diag_fail": "Самодиагностика: проверка «{{check}}» в состоянии «сбой»",
+    "system_alert_diag_warn": "Самодиагностика: проверка «{{check}}» требует внимания",
+    "system_alert_diag_recovered": "Самодиагностика: проверка «{{check}}» снова в порядке"
+  },
+  "diagCheck": {
+    "database": "База данных",
+    "migrations": "Миграции базы",
+    "object_storage": "Объектное хранилище",
+    "disk": "Диск и хранение данных",
+    "runners": "Раннеры",
+    "jobs": "Очередь и зависшие задачи",
+    "scheduler": "Фоновые задачи",
+    "tls_public": "Сертификат публичного адреса",
+    "tls_s3": "Сертификат S3",
+    "backups": "Бэкапы",
+    "smtp": "Почта (SMTP)"
   }
 }

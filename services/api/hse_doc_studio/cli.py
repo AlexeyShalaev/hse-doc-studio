@@ -123,12 +123,21 @@ def _parser() -> argparse.ArgumentParser:
     db_sub.add_parser("upgrade", help="довести схему до последней ревизии")
     db_sub.add_parser("current", help="показать ревизию базы и head")
     db_sub.add_parser("check", help="проверить, что база на head и без дрейфа (код 1, если нет)")
+    snap = db_sub.add_parser("snapshot", help="снять снимок базы (pg_dump -Fc) для апдейтера")
+    snap.add_argument("--out", required=True, type=Path, help="файл снимка")
+    restore_cmd = db_sub.add_parser(
+        "restore-snapshot", help="восстановить базу из снимка одной транзакцией (api и раннеры остановлены)"
+    )
+    restore_cmd.add_argument("--file", required=True, type=Path, help="файл снимка")
     secrets_cmd = sub.add_parser("secrets", help="секреты серверного режима")
     secrets_sub = secrets_cmd.add_subparsers(dest="secrets_command", required=True)
     reencrypt = secrets_sub.add_parser(
         "reencrypt", help="перешифровать секреты в базе первичным ключом (после смены ключа, прежний в RETIRED_KEYS)"
     )
     reencrypt.add_argument("--dry-run", action="store_true", help="только посчитать, ничего не записывать")
+    from hse_doc_studio.cli_backup import add_backup_parser  # noqa: PLC0415
+
+    add_backup_parser(sub)
     server = sub.add_parser("server", help="перенос из локальной Студии на сервер (запускает оператор)")
     server_sub = server.add_subparsers(dest="server_command", required=True)
     data = server_sub.add_parser(
@@ -228,6 +237,17 @@ async def _reencrypt(*, dry_run: bool) -> int:
     return _EXIT_OK if report.ok else _EXIT_BUILD_FAILED
 
 
+async def _db_snapshot(args: argparse.Namespace) -> int:
+    from hse_doc_studio import cli_snapshot  # noqa: PLC0415
+
+    if args.db_command == "snapshot":
+        code, line = await cli_snapshot.snapshot(args.out.expanduser().resolve())
+    else:
+        code, line = await cli_snapshot.restore(args.file.expanduser().resolve())
+    _write(line, stream=sys.stderr if code else None)
+    return code
+
+
 async def _db(command: str) -> int:
     # extra server необязателен: local-режим не должен тянуть SQLAlchemy при импорте CLI
     from hse_doc_studio.infra.db import migrator  # noqa: PLC0415
@@ -255,8 +275,10 @@ async def _db(command: str) -> int:
         await engine.dispose()
 
 
-def _run_db(command: str) -> int:
+def _run_db(command: str, args: argparse.Namespace | None = None) -> int:
     try:
+        if command in {"snapshot", "restore-snapshot"} and args is not None:
+            return asyncio.run(_db_snapshot(args))
         return asyncio.run(_db(command))
     except ImportError:
         _write("error: нужен extra server (uv sync --extra server)", stream=sys.stderr)
@@ -313,12 +335,20 @@ def _run_server(args: argparse.Namespace) -> int:
         return _EXIT_USAGE
 
 
-def main(argv: Sequence[str] | None = None) -> int:
-    args = _parser().parse_args(argv)
+def _run_operator_command(args: argparse.Namespace) -> int:
     if args.command == "db":
-        return _run_db(args.db_command)
+        return _run_db(args.db_command, args)
     if args.command == "server":
         return _run_server(args)
+    from hse_doc_studio.cli_backup import run_backup  # noqa: PLC0415
+
+    return run_backup(args)
+
+
+def main(argv: Sequence[str] | None = None) -> int:
+    args = _parser().parse_args(argv)
+    if args.command in {"db", "server", "backup"}:
+        return _run_operator_command(args)
     if args.command == "runner":
         return asyncio.run(_runner())
     if args.command == "secrets":

@@ -27,7 +27,10 @@ def async_dsn(dsn: str | None) -> str:
     return url.set(drivername=_ASYNC_DRIVER).render_as_string(hide_password=False)
 
 
-def connect_args(cfg: DbConfig) -> dict[str, Any]:
+APP_NAME = "hse-doc-studio-api"
+
+
+def connect_args(cfg: DbConfig, application_name: str = APP_NAME) -> dict[str, Any]:
     """Таймауты asyncpg и сервера: без них зависшая или отрезанная база держит запросы и пул бесконечно.
 
     ``idle_in_transaction_session_timeout`` не ставим: лидерский advisory-лок живёт на соединении с открытой
@@ -36,6 +39,8 @@ def connect_args(cfg: DbConfig) -> dict[str, Any]:
     server_settings = {
         "statement_timeout": str(int(cfg.statement_timeout_s * 1000)),
         "lock_timeout": str(int(cfg.lock_timeout_s * 1000)),
+        # Видно в pg_stat_activity; по нему восстановление из админки отличает соединения самого api от чужих.
+        "application_name": application_name,
     }
     return {
         "timeout": cfg.connect_timeout_s,
@@ -44,14 +49,14 @@ def connect_args(cfg: DbConfig) -> dict[str, Any]:
     }
 
 
-def create_engine(cfg: DbConfig) -> AsyncEngine:
+def create_engine(cfg: DbConfig, *, application_name: str = APP_NAME) -> AsyncEngine:
     return create_async_engine(
         async_dsn(cfg.dsn),
         pool_size=cfg.pool_size,
         max_overflow=cfg.max_overflow,
         pool_timeout=cfg.pool_timeout_s,
         pool_pre_ping=True,
-        connect_args=connect_args(cfg),
+        connect_args=connect_args(cfg, application_name),
         echo=cfg.echo,
         # Значения параметров (e-mail в ключах входа, хеши) не должны попадать в текст ошибок и логи.
         hide_parameters=True,

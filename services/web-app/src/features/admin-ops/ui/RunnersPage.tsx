@@ -25,7 +25,7 @@ export const RunnersPage = ({
   initialTab?: Tab;
   initialCreateToken?: boolean;
 }) => {
-  const { t } = useTranslation("adminOps");
+  const { t } = useTranslation("adminRunners");
   const [params, setParams] = useSearchParams();
   const fromUrl = params.get("tab");
   const tab: Tab =
