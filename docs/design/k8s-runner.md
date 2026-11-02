@@ -23,7 +23,7 @@ Docker нужен раннеру только для TeX: остальное у�
 1. **Создание.** `POST pods` в namespace исполнителя. Имя `hds-build-<8 символов id задачи>-<случайные 8>`, метки `app.kubernetes.io/managed-by=hse-doc-studio-runner`, `hse-doc-studio/component=build`, `hse-doc-studio/runner=<экземпляр раннера>`, `hse-doc-studio/job=<id задачи>`.
 2. **Ожидание запуска.** Опрос `GET pod` до фазы `Running` не дольше `pod_start_timeout_s` (по умолчанию 300 с: первый pull образа TeX Live занимает минуты). `ErrImagePull`, `ImagePullBackOff`, `InvalidImageName` дают сбой `image_missing` (тот же код, что у docker); `Unschedulable`, `CreateContainerConfigError`, фаза `Failed` и таймаут дают `build_backend_unavailable`.
 3. **Вход.** Рабочая папка задачи уходит tar-потоком через `pods/exec` (раздел 3).
-4. **Сборка и лог.** Контейнер ждёт метку готовности входа, запускает latexmk, затем texcount. Раннер читает `pods/log?follow=true&timestamps=true` и передаёт строки в журнал задачи тем же путём, что строки `docker run` (`JobContext.log`, далее api и SSE). Конец сборки и код возврата приходят строкой-маркером с одноразовым nonce пода, слова и символы texcount так же. Пользовательский документ не угадает nonce, поэтому подделать маркер из `\typeout` нельзя.
+4. **Сборка и лог.** Контейнер ждёт метку готовности входа, запускает latexmk, затем texcount. Раннер читает `pods/log?follow=true&timestamps=true` и передаёт строки в журнал задачи тем же путём, что строки `docker run` (`JobContext.log`, далее api и SSE). Конец сборки и код возврата приходят строкой-маркером с одноразовым nonce пода, слова и символы texcount так же. Случайная строка в логе документа (`\typeout`) за маркер не сойдёт. Документ, который нарочно прочитает nonce из окружения (Lua), подделает только итог своей же сборки: проверки и PDF всё равно берутся из выхода пода.
 5. **Выход.** `pods/exec` с `tar c` каталога `.build/<doc_id>` документа; раннер распаковывает его в свою рабочую папку (с фильтром `data`: без абсолютных путей, `..`, ссылок и устройств, с пределом размера). Дальше всё как у docker: при неуспехе сбрасывается `.fdb_latexmk`, при успехе PDF перекладывается к исходнику, страницы берутся из `.log`.
 6. **Удаление.** Под удаляется (`gracePeriodSeconds=0`) в `finally`, при успехе, ошибке и отмене. Удаление идёт под `asyncio.shield`, чтобы повторная отмена посреди него не оставила под жить.
 
@@ -108,6 +108,27 @@ RBAC: Role в namespace подов сборки:
 - **Юнит** (`tests/unit/infra/compile/k8s/`): исполнитель на фейковом `IKubeApi`, который держит «файловую систему пода» во временном каталоге, распаковывает вход, исполняет сценарий сборки и отдаёт выход. Проверяются спецификация пода (restricted, ресурсы, размещение, владелец), успех с PDF и счётчиками, неуспех, отсутствие образа, тишина, отмена с удалением пода, обрыв лога, уборка сирот, предел выхода. Клиент API проверяется на `httpx.MockTransport` и разборе кадров exec.
 - **Интеграция на kind** (`tests/integration/k8s/`, маркер `k8s`, пропускается без `HSE_TEST_K8S_*`): отдельная необязательная джоба CI поднимает kind, применяет RBAC и NetworkPolicy из чарта, собирает маленький образ с поддельными `latexmk`/`texcount` на busybox и гоняет исполнитель с токеном ServiceAccount раннера, то есть с ровно теми правами, что даёт чарт. Настоящий TeX Live в kind не тянется: образ на гигабайты, а проверяется механика пода, не TeX.
 - **Чарт**: golden-рендер, restricted у подов раннера в режиме kubernetes, отсутствие `hostPath` и `docker.sock`, права Role.
+
+Вручную на своей машине (нужны docker и kind; kubeconfig всегда явным путём):
+
+```bash
+kind create cluster --name hds --kubeconfig /tmp/hds.kubeconfig
+docker build -t hds-fake-tex:ci services/api/tests/integration/k8s/fake-tex
+kind load docker-image hds-fake-tex:ci --name hds
+kubectl --kubeconfig /tmp/hds.kubeconfig create namespace studio
+kubectl --kubeconfig /tmp/hds.kubeconfig create namespace hds-builds
+kubectl --kubeconfig /tmp/hds.kubeconfig label namespace hds-builds pod-security.kubernetes.io/enforce=restricted
+helm template rel deploy/helm/hse-doc-studio --namespace studio -f deploy/helm/hse-doc-studio/ci/values-test.yaml \
+  -f deploy/helm/hse-doc-studio/ci/values-kubernetes.yaml --show-only templates/runner-kubernetes.yaml > /tmp/runner.yaml
+(cd services/api && uv run python ../../scripts/ci/k8s_runner_rbac.py /tmp/runner.yaml studio) \
+  | kubectl --kubeconfig /tmp/hds.kubeconfig apply -f -
+kubectl --kubeconfig /tmp/hds.kubeconfig create token rel-hse-doc-studio-runner -n studio > /tmp/hds.token
+kubectl --kubeconfig /tmp/hds.kubeconfig config view --minify --raw \
+  -o jsonpath='{.clusters[0].cluster.certificate-authority-data}' | base64 -d > /tmp/hds.ca
+cd services/api && HSE_TEST_K8S_API_URL=$(kubectl --kubeconfig /tmp/hds.kubeconfig config view --minify \
+  -o jsonpath='{.clusters[0].cluster.server}') HSE_TEST_K8S_TOKEN_FILE=/tmp/hds.token HSE_TEST_K8S_CA_FILE=/tmp/hds.ca \
+  HSE_TEST_K8S_NAMESPACE=hds-builds HSE_TEST_K8S_IMAGE=hds-fake-tex:ci uv run pytest tests/integration/k8s -m k8s --no-cov
+```
 
 ## 10. Что не входит
 
