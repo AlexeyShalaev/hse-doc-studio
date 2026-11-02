@@ -33,6 +33,53 @@ if (adminChunks.length !== 1) {
   problems.push(`в ${adminChunks[0]} нет метки ${MARKERS[0]}`);
 }
 
+// Словари админки: каждый admin/<name>.json в каждом языке уходит в свой чанк
+// locale-admin-<name>-<lng>-*.js, а у каждого такого словаря есть жёсткий
+// бюджет в .size-limit.json (без бюджета размер словаря никто не сторожит).
+const localesDir = path.resolve(
+  import.meta.dirname,
+  "..",
+  "src/shared/lib/i18n/locales",
+);
+const names = fs
+  .readdirSync(path.join(localesDir, "ru", "admin"))
+  .filter((f) => f.endsWith(".json"))
+  .map((f) => f.slice(0, -".json".length));
+for (const name of names) {
+  for (const lng of ["ru", "en"]) {
+    const re = new RegExp(`^locale-admin-${name}-${lng}-[^.]+\\.js$`);
+    if (files.filter((f) => re.test(f)).length !== 1) {
+      problems.push(`нет ровно одного чанка словаря admin/${name} (${lng})`);
+    }
+  }
+}
+const budgets = JSON.parse(
+  fs.readFileSync(
+    path.resolve(import.meta.dirname, "..", ".size-limit.json"),
+    "utf8",
+  ),
+).map((entry) => entry.path);
+for (const name of names) {
+  if (!budgets.includes(`dist/assets/locale-admin-${name}-*.js`)) {
+    problems.push(`у словаря admin/${name} нет бюджета в .size-limit.json`);
+  }
+}
+for (const budget of budgets) {
+  const m = /locale-admin-([A-Za-z]+)-\*\.js$/.exec(budget);
+  if (m?.[1] && !names.includes(m[1])) {
+    problems.push(`бюджет ${budget} без словаря admin/${m[1]}.json`);
+  }
+}
+if (
+  files.some(
+    (f) =>
+      /^locale-admin-[^-]+-[a-z]{2}-/.test(f) === false &&
+      f.startsWith("locale-admin-"),
+  )
+) {
+  problems.push("чанк словаря админки с неожиданным именем");
+}
+
 const html = fs.readFileSync(path.join(DIST, "index.html"), "utf8");
 const entries = [...html.matchAll(/<script[^>]+src="\/?assets\/([^"]+\.js)"/g)]
   .map((m) => m[1])

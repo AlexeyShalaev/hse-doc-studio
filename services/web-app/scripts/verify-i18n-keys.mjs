@@ -56,7 +56,7 @@ const files = walk(ROOT).filter(
     /\.(tsx|ts)$/.test(f) &&
     !/\.test\./.test(f) &&
     !/\.stories\./.test(f) &&
-    !f.includes("i18n"),
+    !path.relative(ROOT, f).includes("i18n"),
 );
 let misses = 0,
   checked = 0;

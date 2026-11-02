@@ -88,7 +88,7 @@ export const QuotaPolicyView = ({
   failure = null,
   onSave,
 }: QuotaPolicyViewProps) => {
-  const { t } = useTranslation("adminOps");
+  const { t } = useTranslation("adminQuotas");
   const initial = draftOf(policy);
   const [draft, setDraft] = useState<Draft>(initial);
   const [tried, setTried] = useState(false);
@@ -108,26 +108,26 @@ export const QuotaPolicyView = ({
   return (
     <>
       <Section
-        title={t("resources.title")}
-        description={t("resources.lead")}
+        title={t("adminOps:resources.title")}
+        description={t("adminOps:resources.lead")}
         testId="quota-policy"
       >
         <div
           className="ops-resources"
           role="table"
-          aria-label={t("resources.title")}
+          aria-label={t("adminOps:resources.title")}
         >
           <div className="ops-resources-row ops-resources-head" role="row">
-            <span role="columnheader">{t("resources.kind")}</span>
-            <span role="columnheader">{t("resources.perUser")}</span>
-            <span role="columnheader">{t("resources.perOrg")}</span>
+            <span role="columnheader">{t("adminOps:resources.kind")}</span>
+            <span role="columnheader">{t("adminOps:resources.perUser")}</span>
+            <span role="columnheader">{t("adminOps:resources.perOrg")}</span>
           </div>
           {KIND_ORDER.map((kind) => (
             <div className="ops-resources-row" role="row" key={kind}>
               <span role="rowheader">
-                <strong>{t(`resources.kinds.${kind}.label`)}</strong>
+                <strong>{t(`adminOps:resources.kinds.${kind}.label`)}</strong>
                 <span className="ops-resources-hint">
-                  {t(`resources.kinds.${kind}.hint`)}
+                  {t(`adminOps:resources.kinds.${kind}.hint`)}
                 </span>
               </span>
               {(["user", "org"] as const).map((scope) => (
@@ -139,7 +139,7 @@ export const QuotaPolicyView = ({
                     step="any"
                     value={draft.values[kind][scope]}
                     placeholder={t("quotas.unlimited")}
-                    aria-label={`${t(`resources.kinds.${kind}.label`)}: ${t(scope === "user" ? "resources.perUser" : "resources.perOrg")}`}
+                    aria-label={`${t(`adminOps:resources.kinds.${kind}.label`)}: ${t(scope === "user" ? "resources.perUser" : "resources.perOrg")}`}
                     aria-invalid={
                       tried &&
                       fromField(kind, draft.values[kind][scope]) === "bad"
@@ -152,7 +152,7 @@ export const QuotaPolicyView = ({
                     data-testid={`policy-${kind}-${scope}`}
                   />
                   <span className="ops-unit">
-                    {t(`resources.kinds.${kind}.unit`)}
+                    {t(`adminOps:resources.kinds.${kind}.unit`)}
                   </span>
                 </span>
               ))}
@@ -162,8 +162,8 @@ export const QuotaPolicyView = ({
       </Section>
 
       <Section
-        title={t("resources.behavior.title")}
-        description={t("resources.behavior.lead")}
+        title={t("adminOps:resources.behavior.title")}
+        description={t("adminOps:resources.behavior.lead")}
         testId="quota-behavior"
         footer={
           <div className="flex items-center" style={{ gap: 12 }}>
@@ -176,7 +176,7 @@ export const QuotaPolicyView = ({
               }}
               data-testid="quota-policy-save"
             >
-              {t("resources.save")}
+              {t("adminOps:resources.save")}
             </Button>
             {changed && (
               <Button
@@ -187,7 +187,7 @@ export const QuotaPolicyView = ({
                   setTried(false);
                 }}
               >
-                {t("cancel")}
+                {t("adminOps:cancel")}
               </Button>
             )}
             {tried && !body && (
@@ -195,7 +195,7 @@ export const QuotaPolicyView = ({
                 role="alert"
                 style={{ color: "var(--c-err)", fontSize: 12.5 }}
               >
-                {t("resources.invalid")}
+                {t("adminOps:resources.invalid")}
               </span>
             )}
             {failure && (
@@ -221,26 +221,26 @@ export const QuotaPolicyView = ({
         }
       >
         <SettingRow
-          label={t("resources.onExceed.label")}
-          hint={t(`resources.onExceed.hint.${draft.onExceed}`)}
+          label={t("adminOps:resources.onExceed.label")}
+          hint={t(`adminOps:resources.onExceed.hint.${draft.onExceed}`)}
           htmlFor="quota-on-exceed"
         >
           <Select
             id="quota-on-exceed"
-            ariaLabel={t("resources.onExceed.label")}
+            ariaLabel={t("adminOps:resources.onExceed.label")}
             value={draft.onExceed}
             onValueChange={(value) => {
               setDraft({ ...draft, onExceed: value as OnExceed });
             }}
             options={ON_EXCEED.map((value) => ({
               value,
-              label: t(`resources.onExceed.options.${value}`),
+              label: t(`adminOps:resources.onExceed.options.${value}`),
             }))}
           />
         </SettingRow>
         <SettingRow
-          label={t("resources.warn.label")}
-          hint={t("resources.warn.hint")}
+          label={t("adminOps:resources.warn.label")}
+          hint={t("adminOps:resources.warn.hint")}
           htmlFor="quota-warn"
         >
           <span className="ops-unit-field">
@@ -250,7 +250,7 @@ export const QuotaPolicyView = ({
               min={1}
               max={100}
               value={draft.warn}
-              aria-label={t("resources.warn.label")}
+              aria-label={t("adminOps:resources.warn.label")}
               onChange={(event) => {
                 setDraft({ ...draft, warn: event.target.value });
               }}
@@ -266,7 +266,7 @@ export const QuotaPolicyView = ({
 
 /** Данные и сохранение умолчаний по видам ресурсов. */
 export const QuotaPolicyPanel = () => {
-  const { t } = useTranslation("adminOps");
+  const { t } = useTranslation("adminQuotas");
   const policy = useQuotaPolicy();
   const save = useSaveQuotaPolicy();
   const [saved, setSaved] = useState(false);
@@ -280,7 +280,7 @@ export const QuotaPolicyPanel = () => {
     <>
       <ViewState
         status={status}
-        errorText={t("resources.loadFailed")}
+        errorText={t("adminOps:resources.loadFailed")}
         onRetry={() => void policy.refetch()}
         testId="quota-policy-state"
       />

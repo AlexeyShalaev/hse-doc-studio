@@ -1,0 +1,96 @@
+{
+  "quotas": {
+    "title": "Quotas",
+    "lead": "How many jobs can run at once and how long a single job may take.",
+    "loadFailed": "Could not load quotas.",
+    "unlimited": "No limit",
+    "tasks_one": "job",
+    "tasks_other": "jobs",
+    "saved": "Saved",
+    "concurrentInvalid": "A whole number from 1 to 1000, or empty.",
+    "concurrent": {
+      "title": "Concurrent jobs",
+      "lead": "Builds and checks running at the same time. An empty field removes the limit."
+    },
+    "userConcurrent": {
+      "label": "Per person",
+      "hint": "The rest of the person's jobs wait in the queue."
+    },
+    "orgConcurrent": {
+      "label": "Per organization",
+      "hint": "A shared limit for all members of one organization."
+    },
+    "duration": {
+      "title": "Run time",
+      "lead": "Protects runners from stuck jobs.",
+      "label": "Any job time limit",
+      "hint": "From 0.5 to 1440 minutes; an empty field removes the limit. PDF builds also have their own limit in Installation: the smaller of the two applies.",
+      "invalid": "Minutes from 0.5 to 1440, or empty.",
+      "toInstance": "Open Installation"
+    },
+    "explain": {
+      "title": "What happens when a limit is reached",
+      "queue": {
+        "title": "The job waits instead of being rejected",
+        "body": "A new job joins the queue and starts as soon as the person or organization has a free slot."
+      },
+      "timeout": {
+        "title": "A long job is stopped",
+        "body": "A job running past the limit is interrupted with the \"Timed out\" state. The person can start it again."
+      },
+      "scope": {
+        "title": "Limits for people and organizations",
+        "body": "Defaults apply to everyone. A limit for a single person or organization is set below, under overrides."
+      }
+    }
+  },
+  "overrides": {
+    "title": "Overrides",
+    "lead": "A limit set for a person or an organization beats the default. A person gets the organization's value when they have none of their own.",
+    "owner": "Owner",
+    "ownerPlaceholder": "Find a person or an organization",
+    "ownerKind": {
+      "label": "For",
+      "user": "Person",
+      "org": "Organization"
+    },
+    "columns": {
+      "owner": "Owner",
+      "resource": "Resource",
+      "value": "Limit"
+    },
+    "add": "Set limit",
+    "remove": "Remove the override: {{name}}",
+    "empty": "No overrides",
+    "loadFailed": "Could not load the overrides.",
+    "seconds_one": "{{count}} second",
+    "seconds_other": "{{count}} seconds",
+    "unit": {
+      "gb": "GB",
+      "s": "s"
+    },
+    "resources": {
+      "jobs_concurrent_user": "Concurrent tasks (per person)",
+      "jobs_concurrent_org": "Concurrent tasks (per organization)",
+      "jobs_max_duration_s": "Task time limit",
+      "storage_bytes_user": "Storage (per person)",
+      "storage_bytes_org": "Storage (per organization)",
+      "builds_month_user": "Builds per month (per person)",
+      "builds_month_org": "Builds per month (per organization)",
+      "ai_tokens_day_user": "AI tokens per day (per person)",
+      "ai_tokens_day_org": "AI tokens per day (per organization)",
+      "ai_tokens_month_user": "AI tokens per month (per person)",
+      "ai_tokens_month_org": "AI tokens per month (per organization)",
+      "members_project_user": "Project members (a person's projects)",
+      "members_project_org": "Project members (an organization's projects)"
+    }
+  },
+  "usageAdmin": {
+    "title": "Usage",
+    "lead": "Installation totals for the current period (since {{date}}) and the use of a chosen person or organization.",
+    "owner": "Owner",
+    "ownerPlaceholder": "Pick whose usage to view",
+    "loadFailed": "Could not load the owner's usage.",
+    "reset": "Reset: {{kind}}"
+  }
+}

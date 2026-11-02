@@ -62,7 +62,15 @@ export { useUIStore } from "./ui";
 export { useToastStore, toast } from "./toast";
 export type { Toast, ToastKind } from "./toast";
 
-export { i18n, useApplyLanguage, pickLocalized, localeTag } from "./i18n";
+export {
+  i18n,
+  useApplyLanguage,
+  pickLocalized,
+  localeTag,
+  loadAdminNamespaces,
+  ADMIN_NAMESPACES,
+} from "./i18n";
+export type { AdminNamespace } from "./i18n";
 
 export {
   academicYearEnd,

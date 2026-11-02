@@ -1,8 +1,8 @@
 import { readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import en from "@shared/lib/i18n/locales/en/admin/users.json";
-import ru from "@shared/lib/i18n/locales/ru/admin/users.json";
+import en from "@shared/lib/i18n/locales/en/admin/audit.json";
+import ru from "@shared/lib/i18n/locales/ru/admin/audit.json";
 import { createDemoAdminPeople } from "./adminPeople";
 import { DEMO_AUDIT_ACTIONS } from "./scaleWorld";
 
