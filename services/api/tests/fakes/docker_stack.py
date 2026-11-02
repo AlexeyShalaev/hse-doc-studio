@@ -125,7 +125,8 @@ class FakeHost:
                 return Result(0, json.dumps([self.container(found[0])]))
             image_id = self._resolve(ref)
             if image_id:
-                return Result(0, json.dumps([self.images[image_id]]))
+                tags = [r for r, i in self.refs.items() if i == image_id and "@" not in r]
+                return Result(0, json.dumps([{**self.images[image_id], "RepoTags": tags}]))
             return Result(1, "", "no such object")
         if cmd == "stop":
             found = self._by_name(a[-1])
@@ -162,7 +163,8 @@ class FakeHost:
         image_id = self._resolve(image_ref)
         if image_id is None:
             return Result(1, "", "no such image")
-        svc.update(image_id=image_id, image_ref=image_ref if not image_ref.startswith("sha256:") else svc["image_ref"])
+        # как настоящий docker: контейнер, созданный из идентификатора, несёт в Config.Image сам идентификатор
+        svc.update(image_id=image_id, image_ref=image_ref)
         svc["running"] = True
         svc.pop("removed", None)
         aliases = [a[i + 1] for i, x in enumerate(a) if x == "--network-alias"]

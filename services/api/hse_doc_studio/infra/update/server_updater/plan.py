@@ -165,7 +165,11 @@ def _network_alias_args(container: Mapping[str, Any]) -> list[str]:
 def _health_args(config: Mapping[str, Any]) -> list[str]:
     health = config.get("Healthcheck") or {}
     test = health.get("Test") or []
-    if not test or test[0] == "NONE":
+    if test and test[0] == "NONE":
+        # Проверка отключена явно (`healthcheck: disable: true` у раннера и апдейтера): без флага `docker run`
+        # вернул бы проверку образа (curl :8000), и у сервиса без HTTP она вечно «unhealthy».
+        return ["--no-healthcheck"]
+    if not test:
         return []
     cmd = shlex.join(test[1:]) if test[0] == "CMD" else " ".join(test[1:])
     args = ["--health-cmd", cmd]

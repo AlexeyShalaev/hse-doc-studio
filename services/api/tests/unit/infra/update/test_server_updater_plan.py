@@ -1,10 +1,12 @@
 from __future__ import annotations
 
 import json
+import urllib.error
 from typing import Any
 
 import pytest
 from hse_doc_studio.infra.update.server_updater import plan
+from hse_doc_studio.infra.update.server_updater.client import ApiUnavailableError, HttpApi
 from hse_doc_studio.infra.update.server_updater.config import UpdaterConfig
 from hse_doc_studio.infra.update.server_updater.journal import Journal
 
@@ -105,6 +107,15 @@ def test__recreate_command_keeps_everything_that_compose_set() -> None:
     assert cmd[-3:] == ["ghcr.io/a/b:0.4.0", "hse-doc-studio", "runner"]
 
 
+def test__recreate_keeps_a_disabled_healthcheck_disabled() -> None:
+    # раннер и апдейтер без HTTP: проверка образа (curl :8000) у них вечно unhealthy, compose её отключает
+    c = container()
+    c["Config"]["Healthcheck"] = {"Test": ["NONE"]}
+    cmd = plan.recreate_command(c, {"Config": {}}, "ghcr.io/a/b:0.4.0")
+    assert "--no-healthcheck" in cmd
+    assert "--health-cmd" not in cmd
+
+
 def test__unsupported_options_are_listed_and_defaults_ignored() -> None:
     assert plan.unsupported_options(container()) == []
     assert plan.unsupported_options(container(Privileged=True, CapAdd=["NET_ADMIN"], ShmSize=67108864)) == [
@@ -169,3 +180,22 @@ def test__journal_roundtrip_survives_garbage_and_orders_the_outbox(tmp_path: Any
     assert [i["event"]["seq"] for i in Journal(path).outbox] == [2]
     path.write_text("{broken", encoding="utf-8")
     assert Journal(path).run is None
+
+
+def test__http_api_drops_events_of_a_run_the_api_does_not_know(monkeypatch: pytest.MonkeyPatch) -> None:
+    # найдено на живом docker: после восстановления базы из снимка записи самого отката в ней нет, 404 на его события
+    # не должен вечно держать очередь журнала
+    api = HttpApi("http://api:8000", "t", "0.1.0")
+
+    def not_found(*_a: Any, **_k: Any) -> Any:
+        raise urllib.error.HTTPError("u", 404, "Not Found", None, None)  # type: ignore[arg-type]
+
+    monkeypatch.setattr("urllib.request.urlopen", not_found)
+    api.post_event("run", {"seq": 1})  # не бросает: событию некуда доставляться
+
+    def unavailable(*_a: Any, **_k: Any) -> Any:
+        raise urllib.error.HTTPError("u", 503, "Unavailable", None, None)  # type: ignore[arg-type]
+
+    monkeypatch.setattr("urllib.request.urlopen", unavailable)
+    with pytest.raises(ApiUnavailableError):
+        api.post_event("run", {"seq": 1})
