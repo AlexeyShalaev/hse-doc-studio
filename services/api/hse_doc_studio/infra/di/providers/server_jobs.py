@@ -18,6 +18,7 @@ from hse_doc_studio.core.identity.instance_settings import InstanceEnvOverrides,
 from hse_doc_studio.core.identity.protocols import IAuditLog, IInstanceSettingsRepository, IUserRepository
 from hse_doc_studio.core.jobs.applier import IJobApplyLedger, IJobHooksFactory, IJobResultApplier
 from hse_doc_studio.core.jobs.artifacts import IArtifactStore
+from hse_doc_studio.core.jobs.availability import IBuildAvailability
 from hse_doc_studio.core.jobs.protocols import IJobDispatcher
 from hse_doc_studio.core.jobs.queue import IJobQueue
 from hse_doc_studio.core.jobs.quotas import IProjectOrgReader, IQuotaOverrideRepository
@@ -56,6 +57,7 @@ from hse_doc_studio.infra.db.repositories.project_route_policy import SqlProject
 from hse_doc_studio.infra.db.repositories.runner_pairings import SqlRunnerPairingRepository
 from hse_doc_studio.infra.db.repositories.runners import SqlRegistrationTokenRepository, SqlRunnerRepository
 from hse_doc_studio.infra.db.session import SessionProvider
+from hse_doc_studio.infra.jobs.availability import RunnerBuildAvailability
 from hse_doc_studio.infra.jobs.compile_wait import QueueCompileWaitReader
 from hse_doc_studio.infra.jobs.live_blobs import QueueLiveBlobs
 from hse_doc_studio.infra.jobs.object_storage import AnnouncedJobOutputIngest, ObjectJobBlobStore
@@ -310,6 +312,12 @@ class ServerJobsProvider(Provider):
         return CompileJobHooksFactory(
             compile_repo, project_repo, changelog_repo, template_repo, vcs_service, vcs_locks, artifacts
         )
+
+    @provide(override=True)
+    def get_build_availability(
+        self, runners: IRunnerRepository, router: IJobRouter, payer: IBuildPayerResolver
+    ) -> IBuildAvailability:
+        return RunnerBuildAvailability(runners, router=router, payer=payer.payer_for)
 
     @provide(override=True)
     def get_job_dispatcher(  # noqa: PLR0913

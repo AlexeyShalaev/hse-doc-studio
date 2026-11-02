@@ -1,5 +1,6 @@
 import { apiClient, parseResp } from "@shared/api";
 import {
+  BuildAvailabilitySchema,
   CompilePlacementSchema,
   MyRunnerListSchema,
   MyRunnerRotatedSchema,
@@ -9,6 +10,7 @@ import {
   ProjectBuildRunnersSchema,
   RemoteRunnerStatusSchema,
   RunnerPairingInfoSchema,
+  type BuildAvailability,
   type BuildRunnersPolicy,
   type CompilePlacement,
   type CreateMyRunnerTokenRequest,
@@ -87,6 +89,14 @@ export const projectBuildRunnersApi = {
     apiClient
       .put(`/projects/${enc(projectId)}/build-runners`, { policy }, quiet)
       .then(parseResp(ProjectBuildRunnersSchema)),
+};
+
+/** Есть ли кому собирать: опрос молча, кнопки сами показывают, почему сборка недоступна. */
+export const buildAvailabilityApi = {
+  get: (projectId: string): Promise<BuildAvailability> =>
+    apiClient
+      .get(`/projects/${enc(projectId)}/build-availability`, quiet)
+      .then(parseResp(BuildAvailabilitySchema)),
 };
 
 /** Разобрать тело события `placement` потока сборки; непонятное тело даёт null. */

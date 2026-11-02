@@ -68,6 +68,7 @@ export const CompilePane = ({ projectId, doc }: CompilePaneProps) => {
     start: handleRebuild,
     isRunning: isStarting,
     slot,
+    block: buildBlock,
   } = useStartCompile(projectId, doc.id);
   const { cancel: handleCancel, isCancelling } = useCancelDocCompile(
     projectId,
@@ -304,7 +305,12 @@ export const CompilePane = ({ projectId, doc }: CompilePaneProps) => {
               {t("compile.cancel")}
             </button>
           ) : (
-            <button type="button" className="btn xs" onClick={handleRebuild}>
+            <button
+              type="button"
+              className="btn xs"
+              onClick={handleRebuild}
+              disabled={buildBlock !== null}
+            >
               <RefreshCw size={11} />
               {t("compile.rebuild")}
             </button>
@@ -348,7 +354,7 @@ export const CompilePane = ({ projectId, doc }: CompilePaneProps) => {
           wait={wait}
           finished={!isRunning}
           onRetry={handleRebuild}
-          retryDisabled={isStarting}
+          retryDisabled={isStarting || buildBlock !== null}
         />
       )}
 
@@ -408,7 +414,7 @@ export const CompilePane = ({ projectId, doc }: CompilePaneProps) => {
               type="button"
               className="btn primary"
               onClick={handleRebuild}
-              disabled={isRunning}
+              disabled={isRunning || buildBlock !== null}
             >
               <Play size={11} />
               {t("compile.runXelatex")}

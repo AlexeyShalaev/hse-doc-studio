@@ -144,6 +144,23 @@ async def test__preflight__without_live_runner__raises_no_runner(rig: Rig) -> No
         await rig.dispatcher.preflight(rig.spec())
 
 
+async def test__preflight__without_any_runner__code_is_no_runners(rig: Rig) -> None:
+    with pytest.raises(NoRunnerAvailableError) as caught:
+        await rig.dispatcher.preflight(rig.spec())
+
+    assert caught.value.code == "no_runners"
+    assert caught.value.tags == frozenset({"tex"})
+
+
+async def test__preflight__live_runner_without_tag__code_is_no_runner_for_tags(rig: Rig) -> None:
+    await rig.add_runner("office")
+
+    with pytest.raises(NoRunnerAvailableError) as caught:
+        await rig.dispatcher.preflight(rig.spec())
+
+    assert caught.value.code == "no_runner_for_tags"
+
+
 async def test__preflight__runner_with_tags__passes(rig: Rig) -> None:
     await rig.add_runner("tex")
 

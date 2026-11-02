@@ -55,8 +55,8 @@ from hse_doc_studio.core.jobs.protocols import IJobHooks, IJobObserver
 from hse_doc_studio.core.jobs.queue import EnqueueOutcome, EnqueueRequest, IJobQueue, QueuedJob
 from hse_doc_studio.core.jobs.quotas import IProjectOrgReader, IQuotaResolver
 from hse_doc_studio.core.jobs.registry import job_kind_spec
-from hse_doc_studio.core.jobs.routing import IJobRouter, JobRoute, RouteDecision, RunnerScope
-from hse_doc_studio.core.jobs.runners import IRunnerRepository, Runner
+from hse_doc_studio.core.jobs.routing import IJobRouter, JobRoute, RouteDecision
+from hse_doc_studio.core.jobs.runners import IRunnerRepository
 from hse_doc_studio.core.jobs.verify import VerifyDetachedPayload
 from hse_doc_studio.core.jobs.wire import JobEnvelope
 from hse_doc_studio.core.projects.volume import IProjectVolume
@@ -66,6 +66,7 @@ from hse_doc_studio.core.quotas.messages import describe_quota_exceeded
 from hse_doc_studio.core.quotas.protocols import IQuotaGate
 from hse_doc_studio.core.repositories import ISettingsRepository
 from hse_doc_studio.core.storage.manifest import IBlobUploader, ManifestError, ManifestLimits
+from hse_doc_studio.infra.jobs.availability import is_live_shared
 from hse_doc_studio.use_cases.jobs.wakeup import JobWakeup
 
 logger = structlog.get_logger()
@@ -167,24 +168,16 @@ class QueueJobDispatcher:
     async def preflight(self, spec: JobSpec) -> None:
         """Нужен живой общий раннер с нужными тегами или личный раннер владельца; иначе `NoRunnerAvailableError`."""
         now = self._clock()
-        for runner in await self._runners.list():
-            if self._serves(runner, spec.tags, now):
-                return
+        live = [r for r in await self._runners.list() if is_live_shared(r, now, self._live_window)]
+        if any(spec.tags <= runner.tags for runner in live):
+            return
         if self._router is not None and spec.actor.id is not None:
             decision = await self._router.decide(
                 kind=spec.kind, tags=spec.tags, project_id=spec.project_id, user_id=await self._payer_of(spec)
             )
             if decision.route is JobRoute.personal_first:
                 return
-        raise NoRunnerAvailableError(spec.tags)
-
-    def _serves(self, runner: Runner, tags: frozenset[str], now: datetime) -> bool:
-        # Чужой личный раннер сборку не возьмёт: о нём здесь не спрашиваем, свой раннер решает маршрут.
-        if runner.scope is not RunnerScope.shared:
-            return False
-        if runner.revoked_at is not None or runner.paused or runner.last_seen_at is None:
-            return False
-        return now - runner.last_seen_at <= self._live_window and tags <= runner.tags
+        raise NoRunnerAvailableError(spec.tags, any_runner=bool(live))
 
     # --- compile ---
 

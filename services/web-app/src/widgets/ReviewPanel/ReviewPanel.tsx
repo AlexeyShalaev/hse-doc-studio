@@ -139,7 +139,11 @@ export const ReviewPanel = ({
   const [tab, setTab] = useState<ReviewTab>("errors");
   const { data: project } = useProject(projectId);
   const { data: documents, isLoading } = useDocuments(projectId);
-  const { startAll, isRunning: isCompiling } = useStartCompileAll(projectId);
+  const {
+    startAll,
+    isRunning: isCompiling,
+    block: buildBlock,
+  } = useStartCompileAll(projectId);
   const { cancelAll } = useCancelProjectCompiles(projectId);
   const isStalled = useIsProjectStalled(projectId);
   const compileStreams = useCompileStreamStore((s) => s.streams);
@@ -279,9 +283,13 @@ export const ReviewPanel = ({
             <button
               type="button"
               className="icon-btn sm tt"
-              data-tt={t("panel.buildAll")}
+              data-tt={
+                buildBlock !== null
+                  ? t("documents:compile.unavailable.title")
+                  : t("panel.buildAll")
+              }
               onClick={handleBuildAll}
-              disabled={docs.length === 0}
+              disabled={docs.length === 0 || buildBlock !== null}
             >
               <Play size={12} />
             </button>

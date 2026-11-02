@@ -61,6 +61,7 @@ from hse_doc_studio.core.git_sync.protocols import (
 from hse_doc_studio.core.git_sync.status import RefStatusMemo
 from hse_doc_studio.core.hse_persons.repositories import IHsePersonsGateway
 from hse_doc_studio.core.jobs.artifacts import IArtifactStore
+from hse_doc_studio.core.jobs.availability import IBuildAvailability
 from hse_doc_studio.core.jobs.files import IProjectFileProbeFactory
 from hse_doc_studio.core.jobs.protocols import IJobDispatcher
 from hse_doc_studio.core.language_check import ILanguageCheckService
@@ -237,6 +238,7 @@ from hse_doc_studio.use_cases.checks.run_checks import RunChecksUC
 from hse_doc_studio.use_cases.compile.build_project import BuildProjectUC
 from hse_doc_studio.use_cases.compile.cancel_compile import CancelCompileUC
 from hse_doc_studio.use_cases.compile.get_archived_pdf import GetArchivedPdfUC
+from hse_doc_studio.use_cases.compile.get_build_availability import GetBuildAvailabilityUC
 from hse_doc_studio.use_cases.compile.get_compile import GetCompileUC
 from hse_doc_studio.use_cases.compile.get_compile_stream import GetCompileStreamUC
 from hse_doc_studio.use_cases.compile.get_docker_status import GetDockerStatusUC
@@ -2370,6 +2372,10 @@ class UseCaseProvider(Provider):
             vcs_locks=vcs_locks,
             pdf_observer=pdf_observer,
         )
+
+    @provide
+    def get_build_availability_uc(self, availability: IBuildAvailability) -> GetBuildAvailabilityUC:
+        return GetBuildAvailabilityUC(availability)
 
     @provide
     def get_build_project_uc(

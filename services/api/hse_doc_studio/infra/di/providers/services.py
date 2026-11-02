@@ -65,6 +65,7 @@ from hse_doc_studio.core.git_sync.protocols import (
 from hse_doc_studio.core.git_sync.status import RefStatusMemo
 from hse_doc_studio.core.hse_persons.repositories import IHsePersonsGateway
 from hse_doc_studio.core.jobs.artifacts import IArtifactStore
+from hse_doc_studio.core.jobs.availability import IBuildAvailability
 from hse_doc_studio.core.jobs.enums import JobKind
 from hse_doc_studio.core.jobs.files import IProjectFileProbeFactory
 from hse_doc_studio.core.jobs.outputs import IJobOutputs
@@ -165,6 +166,7 @@ from hse_doc_studio.infra.git_sync.sync_state import JsonGitSyncStateRepository
 from hse_doc_studio.infra.git_sync.tls_certificates import TlsCertificateService
 from hse_doc_studio.infra.hse_persons.client import HseHttpPersonsGateway
 from hse_doc_studio.infra.jobs.artifact_store import LocalDiskArtifactStore
+from hse_doc_studio.infra.jobs.availability import LocalBuildAvailability
 from hse_doc_studio.infra.jobs.embedded_runner import EmbeddedCompileRunner
 from hse_doc_studio.infra.jobs.fs_file_probe import FsProjectFileProbeFactory
 from hse_doc_studio.infra.jobs.handler_registry import JobHandlerRegistry
@@ -733,6 +735,10 @@ class DomainServiceProvider(Provider):
             outputs=outputs,
             round_trip=settings.jobs.round_trip_payloads,
         )
+
+    @provide
+    def get_build_availability(self) -> IBuildAvailability:
+        return LocalBuildAvailability()
 
     @provide
     def get_pdf_stamper(self) -> PdfStamper:
