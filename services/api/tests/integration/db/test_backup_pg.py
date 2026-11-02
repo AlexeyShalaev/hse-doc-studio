@@ -215,13 +215,18 @@ async def test__restore_database__into_migrated_database_with_partitioned_logs(
     import subprocess
     from pathlib import Path
 
+    from hse_doc_studio.infra.backup.pgtools import resolve_binary, server_major
     from hse_doc_studio.infra.backup.producers import pg_env
     from hse_doc_studio.infra.backup.restore_target import RestoreTarget
 
-    pg_dump, pg_restore = shutil.which("pg_dump"), shutil.which("pg_restore")
-    if not (pg_dump and pg_restore):
-        pytest.skip("нужны pg_dump и pg_restore")
     source, target = await pg_db_factory(), await pg_db_factory()
+    # Как в продакшене: клиент той же версии, что сервер. pg_dump новее сервера пишет в дамп `transaction_timeout`,
+    # которого сервер не знает (на ubuntu-latest с Postgres 18 в PATH и сервисе postgres:16 тест краснел).
+    major = await server_major(source)
+    pg_dump = resolve_binary("pg_dump", major, lib=Path("/usr/lib/postgresql"))
+    pg_restore = resolve_binary("pg_restore", major, lib=Path("/usr/lib/postgresql"))
+    if not (shutil.which(pg_dump) and shutil.which(pg_restore)):
+        pytest.skip("нужны pg_dump и pg_restore")
     async with source.begin() as conn:
         await conn.execute(text("INSERT INTO audit_log (action) VALUES ('x')"))
     dsn = source.url.render_as_string(hide_password=False)
