@@ -375,6 +375,7 @@ tags:
 | `HSE_STUDIO__HOST_DATA_DIR` | str | не задано | оба | Host path of data_dir for sibling-container mounts; None when backend runs natively. |
 | `HSE_STUDIO__PACKS_DIR` | Path | каталог `packs` монорепы, в образе `/app/packs` | оба | Directory with template packs (auto-detected from monorepo root locally; /app/packs in docker) |
 | `HSE_STUDIO__STATIC_DIR` | Path | не задано | оба | Serve built frontend from this directory (all-in-one mode) |
+| `HSE_STUDIO__HELP_DIR` | Path | `services/user-docs/dist` монорепы, в образе `/app/help` | оба | Built user help (services/user-docs: user/, admin/, media/) served at /help/; no dir, no help |
 | `HSE_STUDIO__DOCKER_BINARY` | str | не задано | оба | Explicit path to the docker CLI; empty means auto-discovery (PATH, then known locations). |
 | `HSE_STUDIO__GITHUB_REPO` | str | `AlexeyShalaev/hse-doc-studio` | оба | owner/repo on GitHub — source of release/changelog info and the canonical source link. |
 | `HSE_STUDIO__IMAGE_BASE` | str | `ghcr.io/alexeyshalaev/hse-doc-studio` | оба | GHCR image base for the published images (owner must be lowercase for GHCR). |
