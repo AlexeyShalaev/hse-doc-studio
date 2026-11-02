@@ -65,7 +65,7 @@ jobs:
       #   tests/.../test_font_names.py       skipif снимается только на Windows
       matrix:
         include: >-
-          ${{ github.event_name == 'pull_request'
+          ${{ github.event_name == 'pull_request' && github.head_ref != 'fix/unit-macos-windows'
               && fromJSON('[
                    {"os":"ubuntu-latest","python":"3.14"},
                    {"os":"ubuntu-latest","python":"3.12"}]')
