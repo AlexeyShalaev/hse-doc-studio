@@ -1,0 +1,17 @@
+{
+  "button": "Help for this screen (?)",
+  "title": "Help",
+  "close": "Close help",
+  "search": "Search help…",
+  "noHits": "Nothing found. Try another word or open the full help.",
+  "noArticle": "This screen has no article yet. Use the search above or open the full help.",
+  "loadError": "Help did not load. Reload the page or open it separately.",
+  "backToScreen": "Back to this screen’s help",
+  "related": "More for this screen",
+  "openArticle": "Open the full article",
+  "openSite": "Open the full help",
+  "verified": "Checked against version {{version}} ({{date}})",
+  "stepShot": "Step {{n}}",
+  "anchor": "What is this? Open help",
+  "command": "Help for this screen"
+}

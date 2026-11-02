@@ -4,6 +4,7 @@ import { Bot, ChevronRight, GraduationCap, Lock, Settings } from "lucide-react";
 import { clsx } from "clsx";
 import { AccountMenu } from "@features/account-menu";
 import { GuestBadge, useGuest } from "@features/guest-session";
+import { HelpButton } from "@features/help-center";
 import { InboxBell } from "@features/inbox";
 import { useSystemInfo } from "@entities/system";
 import { useWorkspaceStore } from "@shared/lib";
@@ -201,6 +202,7 @@ export const AppTitlebar = ({
             {projectActions}
           </div>
         )}
+        <HelpButton />
         {!isGuest && (
           <button
             type="button"

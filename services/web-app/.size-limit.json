@@ -12,6 +12,12 @@
     "limit": "16 kB"
   },
   {
+    "name": "Панель справки (lazy, features/help-center)",
+    "path": "dist/assets/HelpPanel-*.js",
+    "gzip": true,
+    "limit": "3 kB"
+  },
+  {
     "name": "Словарь админки: shell (общий кусок оболочки)",
     "path": "dist/assets/locale-admin-shell-*.js",
     "gzip": true,
