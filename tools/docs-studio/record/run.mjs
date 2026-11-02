@@ -100,7 +100,7 @@ for (const key of keys) {
         if (scenario.prepare) await scenario.prepare(world)
         await d.goto(typeof scenario.start === 'function' ? scenario.start(world) : scenario.start)
         const video = article.help.video && !NO_VIDEO ? article.help.video.src : null
-        const capture = video ? await startCapture(page, join(BUILD, 'frames'), {...VIEWPORT, scale: 1}) : null
+        const capture = video ? await startCapture(page, join(BUILD, `frames-${process.pid}`), {...VIEWPORT, scale: 1}) : null
         if (capture) await d.pause(600)
         for (let i = 0; i < scenario.steps.length; i++) {
           d.stepIndex = i
@@ -116,7 +116,7 @@ for (const key of keys) {
           const out = join(MEDIA, `${video}.${lang}.${theme}`)
           await mkdir(dirname(out), {recursive: true})
           const result = await stopCapture(capture, {base: out, width: VIEWPORT.width})
-          const png = join(BUILD, 'poster.png')
+          const png = join(BUILD, `poster-${process.pid}.png`)
           await posterPng(`${out}.mp4`, png, Math.min(1.0, result.seconds / 2))
           await saveShot(readFileSync(png), `${out}.webp`)
           await rm(png, {force: true})

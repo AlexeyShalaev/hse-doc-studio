@@ -14,7 +14,9 @@ export default {
     },
     async (d) => {
       await d.click(d.page.getByRole('dialog').getByRole('button', {name: d.ui('admin/runners', 'Создать'), exact: true}), {shot: false, settle: 1500})
-      await d.pointIf(d.text(d.ui('admin/runners', 'Команда запуска')).first())
+      const command = d.text(d.ui('admin/runners', 'Команда запуска')).first()
+      await command.waitFor({timeout: 15000}).catch(() => {})
+      await d.pointIf(command)
     },
     async (d) => {
       await d.press('Escape')

@@ -119,7 +119,7 @@ export class Director {
 
   async _box(target) {
     const loc = this.locator(target)
-    await loc.waitFor({state: 'visible', timeout: 15000})
+    await loc.waitFor({state: 'visible', timeout: 30000})
     await loc.scrollIntoViewIfNeeded().catch(() => {})
     const box = await loc.boundingBox()
     if (!box) throw new Error(`элемент не виден: ${String(target)}`)
@@ -190,7 +190,7 @@ export class Director {
   /** Прокрутить к элементу так, чтобы его блок встал вверху кадра. */
   async scrollTo(target) {
     const loc = this.locator(target)
-    await loc.waitFor({state: 'visible', timeout: 15000})
+    await loc.waitFor({state: 'visible', timeout: 30000})
     await loc.evaluate((el) => el.scrollIntoView({block: 'start'}))
     await this.page.waitForTimeout(600)
   }

@@ -11,7 +11,8 @@ export default {
       await d.type(d.page.getByLabel(d.ui('auth', 'Пароль')).first(), who.password, {delay: 10})
       await d.click(d.role('button', d.ui('auth', 'Войти'), {exact: true}), {settle: 2500})
     },
-    async (d) => d.click(d.page.locator('a[href^="/projects/"], button.card, [data-testid^="project-card"]').first(), {settle: 2500}),
+    // Проект из сида server-lite (scripts/dev/server-lite/seed.py): у Анны русский, у Виктора английский.
+    async (d) => d.click(d.text(d.t('Курсовая: анализ CI/CD', 'Coursework: static analysis'), {exact: true}).first(), {settle: 2500}),
     async (d) => d.point(d.page.locator('nav.activity-bar').first()),
     async (d) => d.click(d.role('button', d.s('appChrome', 'titlebar.projects')), {settle: 1500}),
     async (d) => d.click('[data-testid="help-button"]', {settle: 1500}),
