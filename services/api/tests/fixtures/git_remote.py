@@ -39,6 +39,7 @@ from hse_doc_studio.infra.vcs.git_env import base_git_env
 from hse_doc_studio.infra.vcs.git_vcs_service import GitVcsService
 
 from tests.factories import make_project
+from tests.fixtures.loopback_http import LoopbackThreadingHTTPServer
 from tests.fixtures.tls import TlsMaterial
 
 _IDENTITY = {
@@ -289,7 +290,7 @@ class GitHttpServer:
         class Handler(_GitHandler):
             server_state = owner
 
-        self._server = ThreadingHTTPServer(("127.0.0.1", 0), Handler)
+        self._server = LoopbackThreadingHTTPServer(("127.0.0.1", 0), Handler)
         if self.tls is not None:
             self._server.socket = self.tls.server_context().wrap_socket(self._server.socket, server_side=True)
         self._server.daemon_threads = True

@@ -3,13 +3,15 @@ from __future__ import annotations
 import asyncio
 import threading
 from collections.abc import Iterator
-from http.server import BaseHTTPRequestHandler, HTTPServer
+from http.server import BaseHTTPRequestHandler
 
 import httpcore
 import pytest
 from hse_doc_studio.core.egress import EgressBlockedError
 from hse_doc_studio.infra.egress.http import PinningBackend, egress_client
 from hse_doc_studio.infra.egress.policy import ResolvingEgressPolicy
+
+from tests.fixtures.loopback_http import LoopbackHTTPServer
 
 
 class _Handler(BaseHTTPRequestHandler):
@@ -36,7 +38,7 @@ class _Handler(BaseHTTPRequestHandler):
 
 @pytest.fixture
 def local_server() -> Iterator[int]:
-    server = HTTPServer(("127.0.0.1", 0), _Handler)
+    server = LoopbackHTTPServer(("127.0.0.1", 0), _Handler)
     thread = threading.Thread(target=server.serve_forever, daemon=True)
     thread.start()
     yield server.server_address[1]

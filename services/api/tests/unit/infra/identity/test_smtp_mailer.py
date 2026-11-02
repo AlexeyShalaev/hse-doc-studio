@@ -10,6 +10,10 @@ from aiosmtpd.controller import Controller
 from aiosmtpd.smtp import AuthResult, LoginPassword
 from hse_doc_studio.infra.identity.smtp_mailer import SmtpMailSender, SmtpSettings
 
+# aiosmtpd по умолчанию зовёт socket.getfqdn() (обратный DNS, на раннерах macOS висит), поэтому
+# имя сервера задано явно; запас на старт потока нужен медленным раннерам.
+_READY_S = 30.0
+
 
 class _Inbox:
     def __init__(self) -> None:
@@ -35,7 +39,9 @@ def _free_port() -> int:
 def inbox() -> Iterator[tuple[_Inbox, int]]:
     handler = _Inbox()
     port = _free_port()
-    controller = Controller(handler, hostname="127.0.0.1", port=port)
+    controller = Controller(
+        handler, hostname="127.0.0.1", port=port, server_hostname="localhost", ready_timeout=_READY_S
+    )
     controller.start()
     yield handler, port
     controller.stop()
@@ -49,6 +55,8 @@ def auth_inbox() -> Iterator[tuple[_Inbox, int]]:
         handler,
         hostname="127.0.0.1",
         port=port,
+        server_hostname="localhost",
+        ready_timeout=_READY_S,
         authenticator=_authenticator,
         auth_required=True,
         auth_require_tls=False,

@@ -20,6 +20,7 @@ class SmtpSettings:
     from_address: str = "no-reply@localhost"
     from_name: str = "HSE Doc Studio"
     timeout_s: float = 10.0
+    local_hostname: str | None = None
 
 
 class SmtpMailSender:
@@ -50,4 +51,6 @@ class SmtpMailSender:
             username=cfg.username or None,
             password=cfg.password or None,
             timeout=cfg.timeout_s,
+            # без этого aiosmtplib зовёт socket.getfqdn() (обратный DNS), который может висеть дольше timeout
+            local_hostname=cfg.local_hostname or cfg.from_address.rpartition("@")[2] or "localhost",
         )
