@@ -56,6 +56,8 @@ if importlib.util.find_spec("sqlalchemy") is None:
         "integration/api/invites/*",
         "integration/api/personal",
         "integration/api/personal/*",
+        "integration/api/mcp/server",
+        "integration/api/mcp/server/*",
         "unit/core/jobs/test_admin_listing.py",
         "unit/use_cases/chat/test_chat_relay.py",
     ]
