@@ -11,7 +11,8 @@
       "group": "Groups",
       "settings": "Settings",
       "runner": "Runners",
-      "project": "Projects"
+      "project": "Projects",
+      "mcp": "MCP"
     },
     "caption": "Event log",
     "loadFailed": "Could not load the log",
@@ -101,6 +102,7 @@
       "settings_ai_provider_update": "Shared AI provider changed",
       "settings_auth_update": "Sign-in settings changed",
       "settings_quotas_update": "Quotas changed",
+      "settings_mcp_update": "MCP server settings changed",
       "settings_quota_policy_update": "Resource quota defaults changed",
       "settings_autoscale_update": "Autoscaling policy changed",
       "quota_override_set": "Quota override set",
@@ -171,7 +173,8 @@
       "settings_storage_thresholds_update": "Disk space thresholds changed",
       "lifecycle_run_now": "Data source cleanup started",
       "diagnostics_run": "Self-diagnostics run",
-      "settings_diagnostics_update": "Self-diagnostics thresholds changed"
+      "settings_diagnostics_update": "Self-diagnostics thresholds changed",
+      "mcp_call": "MCP tool call"
     },
     "search": "Search the log",
     "searchPlaceholder": "Person, action code or object",
