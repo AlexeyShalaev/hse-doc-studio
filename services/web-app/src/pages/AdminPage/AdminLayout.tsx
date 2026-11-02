@@ -9,12 +9,16 @@ import {
 import {
   Activity,
   ArrowLeft,
+  ArrowUpCircle,
   Bot,
   Building2,
   ClipboardList,
+  DatabaseBackup,
+  DatabaseZap,
   Gauge,
   Globe,
   HardDrive,
+  HeartPulse,
   KeyRound,
   LayoutDashboard,
   Server,
@@ -45,6 +49,10 @@ export type AdminSection =
   | "quotas"
   | "services"
   | "storage"
+  | "backups"
+  | "diagnostics"
+  | "updates"
+  | "data"
   | "instance"
   | "settings"
   | "signing"
@@ -81,6 +89,10 @@ const ADMIN_NAV: readonly NavGroup[] = [
     items: [
       { id: "services", to: "/admin/services", icon: Activity },
       { id: "storage", to: "/admin/storage", icon: HardDrive },
+      { id: "backups", to: "/admin/backups", icon: DatabaseBackup },
+      { id: "updates", to: "/admin/updates", icon: ArrowUpCircle },
+      { id: "data", to: "/admin/data", icon: DatabaseZap },
+      { id: "diagnostics", to: "/admin/diagnostics", icon: HeartPulse },
     ],
   },
   {
@@ -123,6 +135,7 @@ const COUNTER_KEY: Record<string, string> = {
   runners: "nav.count.runners",
   services: "nav.count.services",
   storage: "nav.count.storage",
+  data: "nav.count.data",
 };
 
 const WithTip = ({

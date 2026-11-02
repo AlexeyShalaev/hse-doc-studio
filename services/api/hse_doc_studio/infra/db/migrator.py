@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
+import re
 import time
 from collections.abc import AsyncIterator
 from pathlib import Path
@@ -53,6 +54,10 @@ def head_revision() -> str:
     return heads[0]
 
 
+def known_revisions() -> set[str]:
+    return {script.revision for script in ScriptDirectory.from_config(_config()).walk_revisions()}
+
+
 def _raise_if_ahead(current: str | None, head: str) -> None:
     """Ревизия, которой нет в цепочке этого образа, значит базу мигрировал более новый код: апгрейдить нечего."""
     if current is None:
@@ -70,7 +75,15 @@ def _current(connection: Connection) -> str | None:
 _OPTIONAL_INDEX_PREFIX = "ix_trgm_"
 
 
+# Партиции журналов (миграция lc_02) в моделях не описываются: ORM знает родителя, а месячные таблицы заводит очистка.
+_PARTITION_TABLE = re.compile(r"^(audit_log|ai_usage)_(legacy|default|p\d{6})$")
+
+
 def _tracked(obj: object, name: str | None, type_: str, reflected: bool, compare_to: object) -> bool:
+    if type_ == "table" and _PARTITION_TABLE.match(name or ""):
+        return False
+    if type_ == "index" and _PARTITION_TABLE.match(getattr(getattr(obj, "table", None), "name", "") or ""):
+        return False
     return not (
         type_ == "index" and reflected and compare_to is None and (name or "").startswith(_OPTIONAL_INDEX_PREFIX)
     )
@@ -99,7 +112,12 @@ async def _without_timeouts(connection: AsyncConnection) -> None:
 async def _migration_connection(engine: AsyncEngine) -> AsyncIterator[AsyncConnection]:
     """Отдельное соединение без клиентского `command_timeout` asyncpg: `SET LOCAL` его не снимает, а долгая
     миграция (индекс, бэкфилл) оборвалась бы на клиенте."""
-    own = create_async_engine(engine.url, poolclass=NullPool, connect_args={"command_timeout": None})
+    # Таймауты снимаются ещё в стартовом пакете: служебные запросы нового движка идут до `SET LOCAL`.
+    own = create_async_engine(
+        engine.url,
+        poolclass=NullPool,
+        connect_args={"command_timeout": None, "server_settings": {"statement_timeout": "0", "lock_timeout": "0"}},
+    )
     try:
         async with own.begin() as connection:
             await _without_timeouts(connection)

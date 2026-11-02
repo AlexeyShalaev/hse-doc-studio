@@ -371,6 +371,12 @@ export const InboxView = ({
                   project: n.payload.project_name ?? "",
                   path: n.payload.path ?? "",
                   excerpt: n.payload.excerpt ?? "",
+                  volume: n.payload.ref_id ?? "",
+                  check: n.payload.outcome?.startsWith("diag_")
+                    ? t(`diagCheck.${n.payload.ref_id ?? ""}`, {
+                        defaultValue: n.payload.ref_id ?? "",
+                      })
+                    : "",
                   role: n.payload.role
                     ? roleLabel(n.payload.role as "reader")
                     : "",

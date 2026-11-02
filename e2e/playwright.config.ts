@@ -75,6 +75,17 @@ export default defineConfig({
       },
     },
     {
+      // Бэкапы сервера: назначение, запуск, verify, восстановление; идёт на стенде deploy/server после полного смоука.
+      name: "backups",
+      testMatch: /backups\.spec\.ts/,
+      timeout: 15 * 60_000,
+      use: {
+        ...devices["Desktop Chrome"],
+        actionTimeout: 30_000,
+        channel: process.env.E2E_CHANNEL || undefined,
+      },
+    },
+    {
       // Доделка видения: ссылка-доступ, приглашения и запросы доступа, передача, git-remote для локальной Студии.
       name: "collab-finish",
       testMatch: /collab-finish\.spec\.ts/,
@@ -82,6 +93,17 @@ export default defineConfig({
       use: {
         ...devices["Desktop Chrome"],
         actionTimeout: 30_000,
+        channel: process.env.E2E_CHANNEL || undefined,
+      },
+    },
+    {
+      // Страница «Обновления» и закрытый протокол апдейтера; идёт после полного смоука на том же стенде.
+      name: "updates",
+      testMatch: /updates\.spec\.ts/,
+      timeout: 3 * 60_000,
+      use: {
+        ...devices["Desktop Chrome"],
+        actionTimeout: 15_000,
         channel: process.env.E2E_CHANNEL || undefined,
       },
     },

@@ -5,6 +5,7 @@ import {
   quietRunners,
   summarizeHealth,
   useRunnerSummary,
+  useLifecycle,
   useServices,
   useStorage,
 } from "@features/admin-ops";
@@ -17,7 +18,7 @@ import { useApprovalCount } from "@features/admin-users";
 export type NavCounterTone = "accent" | "warning" | "danger";
 export type NavCounters = Partial<
   Record<
-    "users" | "runners" | "services" | "storage",
+    "users" | "runners" | "services" | "storage" | "data",
     /** count 0: только точка, без числа (место на диске). */
     { count: number; tone: NavCounterTone }
   >
@@ -55,6 +56,7 @@ export const NavStatusProbe = ({
   const degraded = health.warn.length;
   const storage = useStorage().data;
   const diskCritical = storage ? diskTone(storage) === "danger" : false;
+  const dataLevel = useLifecycle().data?.level ?? "ok";
   const name = instance?.name.trim() ?? "";
   const host = instance ? hostOf(instance.public_url) : null;
 
@@ -69,12 +71,28 @@ export const NavStatusProbe = ({
       };
     }
     if (diskCritical) counters.storage = { count: 0, tone: "danger" };
+    if (dataLevel !== "ok") {
+      counters.data = {
+        count: 0,
+        tone: dataLevel === "critical" ? "danger" : "warning",
+      };
+    }
     onChange({
       counters,
       instanceName: name !== "" ? name : null,
       instanceHost: host,
     });
-  }, [approvals, quiet, down, degraded, diskCritical, name, host, onChange]);
+  }, [
+    approvals,
+    quiet,
+    down,
+    degraded,
+    diskCritical,
+    dataLevel,
+    name,
+    host,
+    onChange,
+  ]);
 
   return null;
 };

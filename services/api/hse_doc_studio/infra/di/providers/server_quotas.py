@@ -5,7 +5,6 @@ from __future__ import annotations
 from dishka import AnyOf, Provider, Scope, provide
 
 from hse_doc_studio.api.config import settings
-from hse_doc_studio.core.ai_gateway.usage import IAiUsageLog
 from hse_doc_studio.core.egress import EgressPurpose, IEgressPolicy
 from hse_doc_studio.core.identity.protocols import IAuditLog, IInstanceSettingsRepository, IUserRepository
 from hse_doc_studio.core.jobs.autoscale import IQueueMetricsReader
@@ -118,8 +117,9 @@ class ServerQuotasProvider(Provider):
         return ResetUsageUC(gate, users, orgs, audit, uow)
 
     @provide
-    def get_quota_housekeeping(self, counters: IUsageCounters, usage: IAiUsageLog) -> QuotaHousekeeping:
-        return QuotaHousekeeping(counters, usage, usage_retention_days=settings.ai_gateway.usage_retention_days)
+    def get_quota_housekeeping(self, counters: IUsageCounters) -> QuotaHousekeeping:
+        # Журнал вызовов ИИ чистит движок жизненного цикла данных (партиции, срок из админки).
+        return QuotaHousekeeping(counters)
 
     @provide
     def get_queue_metrics_reader(self, sessions: SessionProvider) -> IQueueMetricsReader:

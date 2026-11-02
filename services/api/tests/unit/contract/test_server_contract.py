@@ -16,13 +16,16 @@ from hse_doc_studio.api.schemas import admin_install as inst
 from hse_doc_studio.api.schemas import admin_ops as ops
 from hse_doc_studio.api.schemas import ai_providers as aip
 from hse_doc_studio.api.schemas import artifacts as art
+from hse_doc_studio.api.schemas import diagnostics as dg
 from hse_doc_studio.api.schemas import git_remote as gr
 from hse_doc_studio.api.schemas import invitations as inv
+from hse_doc_studio.api.schemas import lifecycle as lc
 from hse_doc_studio.api.schemas import personal_runners as pr
 from hse_doc_studio.api.schemas import quotas as qt
 from hse_doc_studio.api.schemas import remote_runner as rr
 from hse_doc_studio.api.schemas import review
 from hse_doc_studio.api.schemas import runner_admin as ra
+from hse_doc_studio.api.schemas import server_update as upd
 from hse_doc_studio.api.schemas import session as s
 from hse_doc_studio.api.schemas import sharing as sh
 from pydantic import TypeAdapter, ValidationError
@@ -35,6 +38,16 @@ _LOCALES = _REPO / "services" / "web-app" / "src" / "shared" / "lib" / "i18n" / 
 # Каталог эталонов -> модель, которой он обязан соответствовать.
 _SCHEMAS: dict[str, Any] = {
     "Bootstrap": s.BootstrapResponse,
+    "AdminDiagnostics": dg.DiagOverviewBody,
+    "UpdateAdminDiagnosticsThresholds": dg.DiagThresholdsRequest,
+    "RunAdminDiagnosticsRequest": dg.DiagRunRequest,
+    "AdminDataLifecycle": lc.LifecycleOverviewBody,
+    "AdminUpdateStatus": upd.UpdateStatusOut,
+    "AdminUpdateRun": upd.RunOut,
+    "AdminUpdateSettings": upd.UpdateSettingsBody,
+    "UpdateAdminRetentionRequest": lc.UpdateRetentionRequest,
+    "AdminStorageThresholds": lc.StorageThresholdsBody,
+    "AdminLifecycleRun": lc.LifecycleRunBody,
     "SessionUser": s.SessionUser,
     "LoginRequest": s.LoginRequest,
     "LoginResponse": s.LoginResponse,

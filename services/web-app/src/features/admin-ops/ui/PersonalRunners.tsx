@@ -17,7 +17,7 @@ import { PersonalRunnersView } from "./PersonalRunnersView";
 
 /** Личные раннеры людей: список, пауза и отзыв (смена токена только у хозяина). */
 export const PersonalRunners = () => {
-  const { t } = useTranslation("adminOps");
+  const { t } = useTranslation("adminRunners");
   const runners = usePersonalRunners();
   const enabled = usePersonalRunnersEnabled();
   const pause = useSetPaused();

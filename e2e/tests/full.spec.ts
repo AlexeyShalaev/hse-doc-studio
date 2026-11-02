@@ -519,6 +519,66 @@ test.describe("Полный смоук сервера", () => {
       await p.context().close();
     }
   });
+  test("самодиагностика: страница, ручной прогон, публичный эндпоинт", async ({
+    browser,
+  }) => {
+    // Ручной прогон через API: проверки выполнены, у каждой статус и код причины, секретов нет.
+    const run = await admin.json<{
+      overall: string;
+      checks: {
+        id: string;
+        status: string | null;
+        reason: string | null;
+        hint: string | null;
+      }[];
+    }>(await admin.post("/api/admin/diagnostics/run", { check: null }), 200);
+    const byId = Object.fromEntries(run.checks.map((c) => [c.id, c]));
+    expect(run.checks.length).toBeGreaterThanOrEqual(10);
+    expect(byId.database?.status).toBe("ok");
+    expect(byId.migrations?.status).toBe("ok");
+    expect(byId.object_storage?.status).toBe("ok");
+    // Без SMTP и адреса сертификатов подсистемы «не настроены», а не сбойные.
+    expect(byId.smtp?.reason).toBe("not_configured");
+    expect(byId.tls_public?.reason).toMatch(/not_configured|no_tls/);
+    expect(run.checks.every((c) => c.status !== null)).toBe(true);
+    expect(JSON.stringify(run)).not.toMatch(/password|secret/i);
+
+    // Публичный эндпоинт: только статусы, без причин.
+    const pub = await (await newClient()).get("/health/diagnostics");
+    expect([200, 503]).toContain(pub.status());
+    const body = (await pub.json()) as {
+      status: string;
+      checks: Record<string, string>;
+    };
+    expect(["ok", "warn", "fail"]).toContain(body.status);
+    expect(body.checks.database).toBe("ok");
+    expect(JSON.stringify(body)).not.toContain("reason");
+
+    for (const lang of LANGS) {
+      const p = await page(browser, lang);
+      await p.goto("/login");
+      await p.locator("input[type=email]").fill(ADMIN.email);
+      await p.locator("input[type=password]").fill(stackPassword());
+      await p.getByTestId("login-form").locator("button[type=submit]").click();
+      await expect(p.getByTestId("account-menu-trigger")).toBeVisible();
+      await p.goto("/admin/diagnostics");
+      await expect(p.getByTestId("diagnostics-page")).toBeVisible();
+      await expect(p.getByTestId("diag-check-database")).toBeVisible();
+      await expect(p.getByTestId("diag-status-database")).toHaveAttribute(
+        "data-status",
+        "ok",
+      );
+      await expect(p.getByTestId("diag-status-smtp")).toHaveAttribute(
+        "data-applicable",
+        "false",
+      );
+      await p.getByTestId("diag-run-all").click();
+      await expect(p.getByTestId("diag-summary-status")).toBeVisible();
+      await p.waitForLoadState("networkidle");
+      await shot(p, lang, "full-16-admin-diagnostics");
+      await p.context().close();
+    }
+  });
   test("люди в админке: приглашение по ссылке и журнал", async ({
     browser,
   }) => {

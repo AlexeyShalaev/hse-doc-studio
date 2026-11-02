@@ -8,6 +8,9 @@ tags:
 
 # Backup, updates, key loss
 
+!!! tip "Automatic backups"
+    Scheduling, encryption, your own S3 and restoring with the CLI are described in [Server backups](backups.md). Below is the manual procedure: it is needed for volumes the backup does not cover (ONLYOFFICE), and as a fallback.
+
 ## What to back up
 
 | What | How |
@@ -21,6 +24,9 @@ tags:
 Back up the database and the projects volume consistently: stop writes or snapshot both. Test a restore on an empty machine from time to time.
 
 ## Updating
+
+!!! tip "Auto-update"
+    Release checks, installing in a maintenance window with a backup, image verification and automatic rollback are done by the Studio itself: [Auto-update](auto-update.md). Below is the manual procedure.
 
 compose: change `TAG`, then `docker compose pull && docker compose up -d`. The api runs database migrations at startup under an advisory lock.
 

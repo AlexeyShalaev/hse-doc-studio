@@ -50,7 +50,7 @@ export const Runners = ({
   onCreatingChange: (open: boolean) => void;
   onOpenQueue?: () => void;
 }) => {
-  const { t } = useTranslation("adminOps");
+  const { t } = useTranslation("adminRunners");
   const runnerState = useRunnerListState();
   const tokenState = useTokenListState();
   // Раннеры, токены и счётчики читаются с сервера страницей: поиск, фильтры

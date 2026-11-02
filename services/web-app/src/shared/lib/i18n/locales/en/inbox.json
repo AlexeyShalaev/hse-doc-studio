@@ -63,6 +63,31 @@
     "review_mention": "{{actor}} mentioned you in “{{path}}”: {{excerpt}}",
     "review_resolved": "A thread in “{{path}}” was closed: {{excerpt}}",
     "review_resolved_resolved": "{{actor}} resolved your thread in “{{path}}”: {{excerpt}}",
-    "review_resolved_reopened": "{{actor}} reopened your thread in “{{path}}”: {{excerpt}}"
+    "review_resolved_reopened": "{{actor}} reopened your thread in “{{path}}”: {{excerpt}}",
+    "backup_failed": "Backup to “{{path}}” failed: {{excerpt}}",
+    "system_alert": "Installation notice",
+    "system_alert_storage_warning": "Volume “{{volume}}” is running out of space: {{excerpt}}% used",
+    "system_alert_storage_critical": "Volume “{{volume}}” is critically low: {{excerpt}}% used. Large uploads are disabled",
+    "system_alert_update_available": "Version {{path}} is available for this installation",
+    "system_alert_update_succeeded": "The installation was updated to version {{path}}",
+    "system_alert_update_rolled_back": "Updating to {{path}} failed and the system went back to the previous version: {{excerpt}}",
+    "system_alert_update_failed": "Updating to {{path}} failed and the rollback did not finish, manual action needed: {{excerpt}}",
+    "system_alert_update_cancelled": "Updating to {{path}} was cancelled before any change: {{excerpt}}",
+    "system_alert_diag_fail": "Self-diagnostics: check “{{check}}” has failed",
+    "system_alert_diag_warn": "Self-diagnostics: check “{{check}}” needs attention",
+    "system_alert_diag_recovered": "Self-diagnostics: check “{{check}}” is back to normal"
+  },
+  "diagCheck": {
+    "database": "Database",
+    "migrations": "Database migrations",
+    "object_storage": "Object storage",
+    "disk": "Disk and data retention",
+    "runners": "Runners",
+    "jobs": "Queue and stuck jobs",
+    "scheduler": "Background jobs",
+    "tls_public": "Public address certificate",
+    "tls_s3": "S3 certificate",
+    "backups": "Backups",
+    "smtp": "Mail (SMTP)"
   }
 }

@@ -2,6 +2,8 @@ export { RunnersPage } from "./ui/RunnersPage";
 export { Quotas as QuotasPage } from "./ui/Quotas";
 export { Services as ServicesPage } from "./ui/Services";
 export { Storage as StoragePage } from "./ui/Storage";
+export { DataLifecycle as DataLifecyclePage } from "./ui/DataLifecycle";
+export { useLifecycle } from "./api/lifecycleQueries";
 export { getAdminOpsGallery } from "./ui/opsGallery";
 export { opsKeys } from "./api/opsQueries";
 // Для сводки и счётчиков оболочки админки: те же запросы, что у разделов.

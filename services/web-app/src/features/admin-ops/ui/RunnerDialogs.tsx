@@ -41,7 +41,7 @@ export const ConfirmDialog = ({
   onClose: () => void;
   testId?: string;
 }) => {
-  const { t } = useTranslation("adminOps");
+  const { t } = useTranslation("adminRunners");
   return (
     <Modal
       isOpen={isOpen}
@@ -57,7 +57,7 @@ export const ConfirmDialog = ({
             onClick={onClose}
             disabled={pending}
           >
-            {t("cancel")}
+            {t("adminOps:cancel")}
           </Button>
           <button
             type="button"
@@ -96,7 +96,7 @@ export const SecretWithCommand = ({
   command: string;
   onClose: () => void;
 }) => {
-  const { t } = useTranslation("adminOps");
+  const { t } = useTranslation("adminRunners");
   // Команда тоже содержит секрет и нужна один раз: она внутри той же панели,
   // а «Готово» стоит последним, под ней.
   return (
@@ -147,7 +147,7 @@ export const CreateTokenForm = ({
   onCancel,
   onSubmit,
 }: CreateTokenFormProps) => {
-  const { t } = useTranslation("adminOps");
+  const { t } = useTranslation("adminRunners");
   const [label, setLabel] = useState("");
   const [ttl, setTtl] = useState("24");
   const [uses, setUses] = useState("1");
@@ -224,7 +224,7 @@ export const CreateTokenForm = ({
           onClick={onCancel}
           disabled={pending}
         >
-          {t("cancel")}
+          {t("adminOps:cancel")}
         </Button>
         <Button
           type="submit"
@@ -255,7 +255,7 @@ export const CreateTokenDialog = ({
   onSubmit: (body: CreateAdminRunnerTokenRequest) => void;
   onClose: () => void;
 }) => {
-  const { t } = useTranslation("adminOps");
+  const { t } = useTranslation("adminRunners");
   return (
     <Modal
       isOpen={isOpen}
@@ -292,7 +292,7 @@ export const RotatedDialog = ({
   rotated: AdminRunnerRotated | null;
   onClose: () => void;
 }) => {
-  const { t } = useTranslation("adminOps");
+  const { t } = useTranslation("adminRunners");
   return (
     <Modal
       isOpen={rotated !== null}
