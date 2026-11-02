@@ -89,7 +89,12 @@ async function ensureCompiled(projectId, doc) {
   const done = (record) => record && !['running', 'pending', 'queued'].includes(record.status)
   if (done(await latest())) return
   console.log(`  собираю ${doc} (${projectId}), первый раз это несколько минут`)
-  await fetch(`${url}/compile`, {method: 'POST'})
+  const started = await fetch(`${url}/compile`, {method: 'POST'})
+  if (!started.ok) {
+    // Нет образа TeX Live или Docker: кадры снимутся без PDF, но дубль не встанет.
+    console.warn(`  сборка не запустилась: HTTP ${started.status} ${(await started.text()).slice(0, 160)}`)
+    return
+  }
   for (let i = 0; i < 300; i++) {
     await new Promise((r) => setTimeout(r, 2000))
     if (done(await latest())) return

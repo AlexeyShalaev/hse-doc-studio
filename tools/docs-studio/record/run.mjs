@@ -82,7 +82,12 @@ for (const key of keys) {
         [theme, lang],
       )
       const world = {key, lang, theme, baseUrl: base, local, personas: scenario.stand === 'server' ? serverPersonas() : null}
-      if (scenario.stand === 'server' && scenario.persona) await signIn(context, world.personas[scenario.persona])
+      if (scenario.stand === 'server' && scenario.persona) {
+        await signIn(context, world.personas[scenario.persona])
+        // Проекты персоны: id в адресах экранов знает только стенд.
+        const listed = await (await context.request.get(`${SERVER_BASE}/api/v1/projects?limit=100`)).json()
+        world.projects = Array.isArray(listed) ? listed : listed.items ?? []
+      }
       const page = await context.newPage()
       const d = new Director(page, world, {
         onShot: async (index) => {

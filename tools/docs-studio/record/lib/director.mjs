@@ -17,16 +17,37 @@ const LOCALES = resolve(import.meta.dirname, '../../../../services/web-app/src/s
 const dictionaries = new Map()
 
 /** Строка интерфейса из словаря приложения: s('projectCreate', 'wizard.next'), админка: s('admin/backups', …). */
-export function uiString(lang, ns, key, vars = {}) {
+export function uiString(lang, ns, key, vars = {}, loadOnly = false) {
   const id = `${lang}/${ns}`
   if (!dictionaries.has(id)) {
     const file = join(LOCALES, lang, `${ns}.json`)
     if (!existsSync(file)) throw new Error(`нет словаря ${id}`)
     dictionaries.set(id, JSON.parse(readFileSync(file, 'utf-8')))
   }
+  if (loadOnly) return 
   const value = key.split('.').reduce((node, part) => node?.[part], dictionaries.get(id))
   if (typeof value !== 'string') throw new Error(`нет строки ${id}:${key}`)
   return value.replace(/\{\{(\w+)\}\}/g, (_m, name) => String(vars[name] ?? ''))
+}
+
+const flatten = (node, prefix = '', out = {}) => {
+  for (const [k, v] of Object.entries(node)) {
+    if (typeof v === 'string') out[`${prefix}${k}`] = v
+    else if (v && typeof v === 'object') flatten(v, `${prefix}${k}.`, out)
+  }
+  return out
+}
+
+/**
+ * Та же строка на языке дубля по русскому тексту: ui('admin/backups', 'Добавить') → 'Add' в en.
+ * Сценарий пишется русскими строками интерфейса, а английский дубль берёт перевод из словаря.
+ */
+export function uiByRu(lang, ns, ruText) {
+  uiString('ru', ns, '__probe__', {}, true)
+  const ru = flatten(dictionaries.get(`ru/${ns}`))
+  const key = Object.keys(ru).find((k) => ru[k] === ruText)
+  if (!key) throw new Error(`нет строки «${ruText}» в ru/${ns}`)
+  return lang === 'ru' ? ruText : uiString(lang, ns, key)
 }
 
 export class Director {
@@ -48,6 +69,11 @@ export class Director {
   /** Строка интерфейса на языке дубля из словарей приложения. */
   s(ns, key, vars) {
     return uiString(this.world.lang, ns, key, vars)
+  }
+
+  /** Строка интерфейса по русскому тексту: d.ui('admin/backups', 'Добавить'). */
+  ui(ns, ruText) {
+    return uiByRu(this.world.lang, ns, ruText)
   }
 
   async mount() {
@@ -153,6 +179,20 @@ export class Director {
     await this.moveTo(target)
     await this.highlight(target)
     if (shot) await this.shot()
+  }
+
+  /** Обвести, если элемент есть: необязательная часть экрана не роняет дубль. */
+  async pointIf(target, opts) {
+    const loc = this.locator(target)
+    if (await loc.isVisible().catch(() => false)) await this.point(loc, opts)
+  }
+
+  /** Прокрутить к элементу так, чтобы его блок встал вверху кадра. */
+  async scrollTo(target) {
+    const loc = this.locator(target)
+    await loc.waitFor({state: 'visible', timeout: 15000})
+    await loc.evaluate((el) => el.scrollIntoView({block: 'start'}))
+    await this.page.waitForTimeout(600)
   }
 
   async type(target, text, {delay = 30} = {}) {

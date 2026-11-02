@@ -13,18 +13,17 @@ help:
   steps:
     - text: 'Open the project, click the sync button in the title bar and choose **Connect a repository**.'
       hint: 'The same button is in **Settings** → **Sync** → **Repository**. If Studio asks who you are, enter your name and e-mail and click **Save and continue**: they sign your versions.'
+      shot: runbooks/git-sync/step-01
     - text: 'On the **Repository** step paste the **Repository address** and, if needed, the **Branch in the repository**, then click **Next**.'
       hint: 'Copy the address from the repository page: the Code button on GitHub, Clone on GitLab. An empty branch means the repository’s main branch.'
+      shot: runbooks/git-sync/step-02
     - text: 'On the **Access** step give a **Token** or an **SSH key** and click **Next**.'
       hint: 'The token needs write permission: Contents: Read and write on GitHub, write_repository on GitLab.'
     - text: 'On the **Check** step wait for the result and click **Connect and sync**.'
-      shot: runbooks/git-sync/step-04
     - text: 'From now on watch the sync button: **In sync**, **Not sent**, **New changes**. Open it and click **Sync now**.'
       hint: 'Projects from a Studio server sync automatically: the project goes to the server on its own after a pause in editing. The **Sync automatically** switch is in the sync settings.'
-      shot: runbooks/git-sync/step-05
     - text: 'If the state is **Conflicts**, click **Resolve conflicts**. For each place choose **Take mine**, **Take theirs** or **Both: mine first**, then click **Finish and send**.'
       hint: 'Until the conflicts are resolved, sending is blocked while the project works as usual. Changed your mind: **Cancel the merge**.'
-      shot: runbooks/git-sync/step-06
     - text: 'To get the project on another computer, on the **Projects** screen click **Clone from git**, enter the **Repository address**, click **Check the repository**, pick a folder and click **Clone**.'
       hint: 'For projects on a Studio server choose the **HSE Doc Studio server** source: sign-in by code, no tokens. See [Local version](/help/en/runbooks/local-version/).'
   video:
