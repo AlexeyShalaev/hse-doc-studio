@@ -12,6 +12,7 @@ defaults:
     shell: bash
 
 env:
+  # Имя репозитория содержит заглавные буквы, а ссылка на образ в реестре только строчные (cosign иначе не разбирает её).
   IMAGE: ghcr.io/${{ github.repository }}
   CI_TAG: ci
 
@@ -142,7 +143,7 @@ jobs:
       - uses: sigstore/cosign-installer@6f9f17788090df1f26f669e9d70d6ae9567deba6 # v4.1.2
 
       - name: Sign the image (cosign keyless)
-        run: cosign sign --yes "${IMAGE}@${{ steps.push.outputs.digest }}"
+        run: cosign sign --yes "${IMAGE,,}@${{ steps.push.outputs.digest }}"
 
       - name: Attach image-digest.json to the release
         env:
@@ -151,7 +152,7 @@ jobs:
         run: |
           set -euo pipefail
           version="${GITHUB_REF_NAME#v}"
-          printf '{"image":"%s","version":"%s","digest":"%s"}\n' "$IMAGE" "$version" "$DIGEST" > image-digest.json
+          printf '{"image":"%s","version":"%s","digest":"%s"}\n' "${IMAGE,,}" "$version" "$DIGEST" > image-digest.json
           cat image-digest.json
           # Релиз создаёт release-please; если его ещё нет, пара повторов покрывает гонку с созданием тега.
           for attempt in 1 2 3 4 5; do
