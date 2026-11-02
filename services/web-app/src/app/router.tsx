@@ -19,6 +19,7 @@ import { VerifyPage } from "@pages/VerifyPage";
 import { WelcomePage } from "@pages/WelcomePage";
 import { WizardPage } from "@pages/WizardPage";
 import { WorkspacePage } from "@pages/WorkspacePage";
+import { CONNECT_SERVER_PATH, LOCAL_STUDIO_PATH } from "@entities/local-studio";
 import { AuthLayout } from "@widgets/AuthLayout";
 import { AdminGate } from "./AdminGate";
 import { ProjectAccessGate } from "./ProjectAccessGate";
@@ -162,6 +163,21 @@ export const router = createBrowserRouter([
       {
         path: "/device",
         element: <DevicePage />,
+      },
+      // Облако → локальная Студия (docs/design/local-from-cloud.md). Адреса
+      // стабильные: на них ссылаются справка, онбординг и подсказки сборки.
+      {
+        path: LOCAL_STUDIO_PATH,
+        lazy: async () => ({
+          Component: (await import("@pages/LocalStudioPage")).LocalStudioPage,
+        }),
+      },
+      {
+        path: CONNECT_SERVER_PATH,
+        lazy: async () => ({
+          Component: (await import("@pages/ConnectServerPage"))
+            .ConnectServerPage,
+        }),
       },
       {
         path: "/settings/:section",

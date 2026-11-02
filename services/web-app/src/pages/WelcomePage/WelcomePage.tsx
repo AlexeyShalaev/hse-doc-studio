@@ -13,11 +13,13 @@ import {
   History,
   Plus,
   Search,
+  Server,
   Upload,
 } from "lucide-react";
 import { clsx } from "clsx";
 import type { z } from "zod";
 import { CLONE_PATH } from "@entities/git-sync";
+import { CONNECT_SERVER_PATH, LOCAL_STUDIO_PATH } from "@entities/local-studio";
 import { useBootstrap, useCapabilities } from "@entities/session";
 import type { ProjectResponseSchema } from "@entities/project";
 import {
@@ -138,6 +140,7 @@ export const WelcomePage = () => {
   const navigate = useNavigate();
   const { t: tAccess } = useTranslation("projectAccess");
   const { t: tImport } = useTranslation("projectImport");
+  const { t: tLocal } = useTranslation("localStudio");
   const {
     data: projects,
     isLoading,
@@ -145,7 +148,7 @@ export const WelcomePage = () => {
     refetch,
     isFetching,
   } = useProjects();
-  const { lacks } = useCapabilities();
+  const { lacks, has } = useCapabilities();
   const user = useBootstrap().data?.user ?? null;
   // Папок на диске нет там, где bootstrap так сказал: проекты лежат на сервере.
   const isServerList = lacks("fs_browse");
@@ -282,6 +285,18 @@ export const WelcomePage = () => {
     void navigate(CLONE_PATH);
   };
 
+  // Облако ведёт на «Локальную версию», локальная Студия на «Подключиться к серверу».
+  const canConnectServer = has("git_server_login");
+  const handleLocalStudio = isServerList
+    ? () => {
+        void navigate(LOCAL_STUDIO_PATH);
+      }
+    : canConnectServer
+      ? () => {
+          void navigate(CONNECT_SERVER_PATH);
+        }
+      : undefined;
+
   const handleImportArchive = () => {
     setImportOpen(true);
   };
@@ -406,6 +421,19 @@ export const WelcomePage = () => {
                   >
                     <GitBranch size={13} />
                     {t("header.cloneFromGit")}
+                  </button>
+                )}
+                {!isServerList && canConnectServer && (
+                  <button
+                    type="button"
+                    className="btn"
+                    onClick={() => {
+                      void navigate(CONNECT_SERVER_PATH);
+                    }}
+                    data-testid="welcome-connect-server"
+                  >
+                    <Server size={13} />
+                    {tLocal("welcome.connect")}
                   </button>
                 )}
                 <button
@@ -586,6 +614,7 @@ export const WelcomePage = () => {
                 onResetScope={() => {
                   setScope("all");
                 }}
+                onLocalStudio={handleLocalStudio}
               />
             ) : (
               <div

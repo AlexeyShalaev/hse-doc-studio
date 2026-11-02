@@ -2,8 +2,10 @@ import {
   FileArchive,
   GitBranch,
   GraduationCap,
+  Laptop,
   Plus,
   SearchX,
+  Server,
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
@@ -21,6 +23,8 @@ export type EmptyStateProps = {
   /** Выбран раздел «Мои» или «Организации», и в нём пусто. */
   scopeFiltered?: boolean | undefined;
   onResetScope?: (() => void) | undefined;
+  /** server: «Локальная версия»; local: «Подключиться к серверу». */
+  onLocalStudio?: (() => void) | undefined;
 };
 
 export const EmptyState = ({
@@ -32,8 +36,10 @@ export const EmptyState = ({
   variant = "local",
   scopeFiltered = false,
   onResetScope,
+  onLocalStudio,
 }: EmptyStateProps) => {
   const { t } = useTranslation("welcome");
+  const { t: tLocal } = useTranslation("localStudio");
   const { t: tAccess } = useTranslation("projectAccess");
   const { t: tImport } = useTranslation("projectImport");
   const isServer = variant === "server";
@@ -107,7 +113,26 @@ export const EmptyState = ({
               {t("empty.clone")}
             </button>
           )}
+          {onLocalStudio && (
+            <button
+              type="button"
+              className="btn"
+              onClick={onLocalStudio}
+              data-testid="welcome-empty-local-studio"
+            >
+              {isServer ? <Laptop size={13} /> : <Server size={13} />}
+              {isServer ? tLocal("link.label") : tLocal("welcome.connect")}
+            </button>
+          )}
         </div>
+      )}
+      {!isSearchMiss && !scopeFiltered && !isServer && onLocalStudio && (
+        <p
+          className="dim"
+          style={{ margin: "14px auto 0", maxWidth: 440, fontSize: 12.5 }}
+        >
+          {tLocal("welcome.emptyLocal")}
+        </p>
       )}
     </div>
   );
