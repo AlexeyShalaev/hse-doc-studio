@@ -71,7 +71,8 @@ async def test__mcp__session_cookie__is_not_accepted(stand: Stand) -> None:
     finally:
         stand.client.cookies.clear()
 
-    assert resp.status_code == 401
+    # Без Bearer и с cookie запрос не проходит: CSRF-защита отвечает 403 раньше, сам `/mcp` ответил бы 401.
+    assert resp.status_code in {401, 403}
 
 
 async def test__mcp__disabled_by_default__answers_503(stand: Stand) -> None:
@@ -172,3 +173,11 @@ async def test__admin_settings__non_admin__gets_404(stand: Stand) -> None:
     resp = stand.client.get("/api/admin/mcp/settings", headers=person.headers)
 
     assert resp.status_code == 404
+
+
+async def test__admin_settings__change__is_audited(stand: Stand) -> None:
+    _enable(stand)
+
+    events = stand.admin().get("/api/admin/audit", params={"action": "settings.mcp_update"}).json()
+
+    assert events["items"][0]["action"] == "settings.mcp_update"

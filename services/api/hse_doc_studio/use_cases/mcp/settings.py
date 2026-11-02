@@ -14,6 +14,9 @@ from hse_doc_studio.core.mcp.entities import McpSettings, McpToolGroup
 from hse_doc_studio.core.mcp.protocols import IMcpSettingsStore
 from hse_doc_studio.use_cases.mcp.catalog import McpCatalog
 
+# Событие аудита облака при смене настроек; пишет его серверное хранилище (infra/mcp/server.py).
+SETTINGS_AUDIT_ACTION = "settings.mcp_update"
+
 
 @dataclass(frozen=True)
 class McpToolView:
