@@ -6,6 +6,37 @@ Generated from `release-notes.json` via `make changelog` — do not edit by hand
 Release notes are hand-written and bilingual (RU/EN); the app shows them in the
 selected interface language.
 
+## [0.5.0](https://github.com/AlexeyShalaev/hse-doc-studio/compare/v0.4.0...v0.5.0) (2026-11-03)
+
+
+### Features
+
+* **admin:** предпросмотр писем в разделе почты и контракт ответа ([0b11f3b](https://github.com/AlexeyShalaev/hse-doc-studio/commit/0b11f3b39ca16c7044c92e7ce71eb1cb26422f25))
+* **git-sync:** список проектов облака в локальной Студии и открытие одним шагом ([48c4743](https://github.com/AlexeyShalaev/hse-doc-studio/commit/48c47433aebfe4c3956ddf67475344c4dfb32769))
+* **helm:** флаг updater.enabled с ServiceAccount и Role на свой namespace ([64ba9b8](https://github.com/AlexeyShalaev/hse-doc-studio/commit/64ba9b85a1ac0ec554f46caff880167e23d974fe))
+* **mail:** HTML-письма на языке получателя, предпросмотр в админке ([becfa08](https://github.com/AlexeyShalaev/hse-doc-studio/commit/becfa085854d1a5a67be176df0816200b2c7a90a))
+* **mail:** единый HTML-шаблон писем, словари ru/en и скрипт выгрузки для просмотра ([37d4c9d](https://github.com/AlexeyShalaev/hse-doc-studio/commit/37d4c9dae94535ce526687e10a4835fcc9567093))
+* **mail:** письма уходят multipart/alternative на языке получателя, предпросмотр писем для админа ([9baf8ce](https://github.com/AlexeyShalaev/hse-doc-studio/commit/9baf8ce315b848f44dd2ed85249803a978736a01))
+* **settings:** папка для проектов из облака ([4fb95bd](https://github.com/AlexeyShalaev/hse-doc-studio/commit/4fb95bdd45c712f3ac7ce4347fec08b38c4c1d19))
+* **update:** исполнитель kubernetes для автообновления сервера ([f2dc1c0](https://github.com/AlexeyShalaev/hse-doc-studio/commit/f2dc1c01ab9f95039a1275ad924ede662503559f))
+* **update:** исполнитель kubernetes для автообновления сервера ([e732456](https://github.com/AlexeyShalaev/hse-doc-studio/commit/e732456b7e0e91af56f2234577e3eeb5fc0d302a))
+* **web:** настройка папки для проектов из облака ([e66046a](https://github.com/AlexeyShalaev/hse-doc-studio/commit/e66046a7caea3ae16e6e0593efee8ffbfd5891f4))
+* **web:** подсказка в панели сборки для проекта, не подключённого к облаку ([7d9059b](https://github.com/AlexeyShalaev/hse-doc-studio/commit/7d9059bee49d782c97cb2ef1913d4ce71257dedf))
+* **web:** проекты облака в списке локальной Студии, открытие одним нажатием без мастера клонирования ([dc0b07c](https://github.com/AlexeyShalaev/hse-doc-studio/commit/dc0b07c3796ad3a0b7d746e3782675f86d14d6b0))
+* **web:** страница обновлений для исполнителя kubernetes ([d625db5](https://github.com/AlexeyShalaev/hse-doc-studio/commit/d625db564b3a631e84bd60ed080f483837e67323))
+* проекты облака в списке локальной Студии, открытие одним нажатием ([88098f2](https://github.com/AlexeyShalaev/hse-doc-studio/commit/88098f215ab170819be70494f804a8b9ad4d4f69))
+
+
+### Bug Fixes
+
+* **api:** сервер не синхронизирует локальную Ollama при старте ([d499e35](https://github.com/AlexeyShalaev/hse-doc-studio/commit/d499e35c143f6057336cd5d820b1b9f72c3797e4))
+* **api:** сервер не синхронизирует локальную Ollama при старте ([4afa7e4](https://github.com/AlexeyShalaev/hse-doc-studio/commit/4afa7e489276194bbb48055ba1fe05efc9e5abce))
+* **git-sync:** параметр маршрута открытия облачного проекта не называется project_id ([67ebd9b](https://github.com/AlexeyShalaev/hse-doc-studio/commit/67ebd9bb34ce8d247ea93da30485ff57b5d5d1a7))
+* **onboarding:** текст вариантов анкеты не терялся в тёмной теме ([aa04e8d](https://github.com/AlexeyShalaev/hse-doc-studio/commit/aa04e8d9e22aa5f2d518b0ddf72d089b5c06f596))
+* **onboarding:** текст вариантов анкеты не терялся в тёмной теме ([fc5b4fb](https://github.com/AlexeyShalaev/hse-doc-studio/commit/fc5b4fb08b9b02e89e980c3f09b47a2abbf531f7))
+* **settings:** боковое меню настроек прокручивается, MCP в группе ИИ ([628418d](https://github.com/AlexeyShalaev/hse-doc-studio/commit/628418d8f55a6cf42aea3b3f9b5308364ada3380))
+* **settings:** боковое меню настроек прокручивается, MCP в группе ИИ ([27563c3](https://github.com/AlexeyShalaev/hse-doc-studio/commit/27563c353d87ab2a29ac80cbada9d3c3c583f200))
+
 ## [0.4.0](https://github.com/AlexeyShalaev/hse-doc-studio/compare/v0.3.0...v0.4.0) - 2026-11-03
 
 - Passkey sign-in: sign in with a fingerprint, Face ID or a hardware key instead of a password. Keys are added and removed in the profile, sensitive actions ask you to confirm your identity again, and an admin can reset a person's keys. An invitation to a specific address lets the person create an account with a key right away, with no password; an e-mail is sent when a key is added or reset. The admin people list shows the number of keys
