@@ -80,6 +80,14 @@ describe("SettingsPage: author profile section", () => {
     expect(groups[0]).toBe("Общие");
   });
 
+  it("lists every group heading once", () => {
+    mount();
+    const groups = [...document.querySelectorAll(".settings-modal-group")].map(
+      (el) => el.textContent,
+    );
+    expect(new Set(groups).size).toBe(groups.length);
+  });
+
   it("is found by search and the result opens the section", async () => {
     const user = userEvent.setup();
     mount("/settings/appearance");

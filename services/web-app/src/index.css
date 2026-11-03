@@ -2506,6 +2506,8 @@
     min-height: 520px;
     display: grid;
     grid-template-columns: 192px minmax(0, 1fr);
+    /* Без явной строки сетка растёт под содержимое меню, overflow:hidden срезает хвост, и nav не прокручивается. */
+    grid-template-rows: minmax(0, 1fr);
     overflow: hidden;
     border: 1px solid var(--border-strong);
     border-radius: var(--r-3);
@@ -2694,6 +2696,7 @@
       height: calc(100vh - 24px);
       min-height: 0;
       grid-template-columns: 1fr;
+      grid-template-rows: auto minmax(0, 1fr);
     }
     .settings-modal-sidebar {
       border-right: 0;
