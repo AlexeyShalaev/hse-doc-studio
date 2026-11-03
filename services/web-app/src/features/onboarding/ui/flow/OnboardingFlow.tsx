@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useReducer } from "react";
 import { useLocation, useNavigate } from "react-router";
 import { useTranslation } from "react-i18next";
+import { LocalStudioLink } from "@entities/local-studio";
+import { useGeneralBuildAvailability } from "@entities/runner";
 import { useBootstrap } from "@entities/session";
 import { usePacks } from "@entities/template-catalog";
 import { Modal } from "@shared/ui/Modal";
@@ -131,7 +133,9 @@ const FinishDialog = () => {
   const packs = usePacks();
   const role = roleOf(answers);
   const template = suggestTemplate(packs.data ?? [], answers, i18n.language);
-  const build = resolveBuildAvailability(bootstrap?.mode ?? "local");
+  const mode = bootstrap?.mode ?? "local";
+  const runners = useGeneralBuildAvailability(mode === "server");
+  const build = resolveBuildAvailability(mode, runners.data);
 
   useEffect(() => {
     save({ step: "finish" });
@@ -199,6 +203,16 @@ const FinishDialog = () => {
         >
           {t(`finish.build.${build}`)}
         </p>
+        {build === "unavailable" && (
+          // Переход на «Локальную версию» закрывает итог как пройденный тур.
+          <span
+            style={{ alignSelf: "flex-start" }}
+            onClick={complete}
+            data-testid="onboarding-local-version"
+          >
+            <LocalStudioLink variant="button" className="sm" />
+          </span>
+        )}
       </div>
     </Modal>
   );

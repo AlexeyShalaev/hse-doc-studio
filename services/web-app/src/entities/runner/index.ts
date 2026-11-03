@@ -11,6 +11,7 @@ export {
   CONNECT_POLL_MS,
   runnerKeys,
   useBuildAvailability,
+  useGeneralBuildAvailability,
   useCancelRemotePairing,
   useCreateMyRunnerToken,
   useDecideRunnerPairing,

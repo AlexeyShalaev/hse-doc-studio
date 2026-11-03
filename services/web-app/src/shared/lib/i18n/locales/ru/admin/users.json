@@ -73,7 +73,8 @@
       "enable": "Человек снова сможет входить",
       "disable": "Вход закрыт, проекты и данные сохранятся",
       "remove": "Личные данные будут стёрты без возврата"
-    }
+    },
+    "passkeys": "Passkey"
   },
   "confirm": {
     "disable": {
@@ -243,5 +244,22 @@
     "name": "По имени",
     "email": "По почте",
     "lastLogin": "Недавно входили"
+  },
+  "passkeys": {
+    "loadFailed": "Не удалось загрузить passkey.",
+    "count_zero": "Passkey нет.",
+    "count_one": "{{count}} passkey",
+    "count_few": "{{count}} passkey",
+    "count_many": "{{count}} passkey",
+    "count_other": "{{count}} passkey",
+    "lastUsed": "вход",
+    "reset": "Сбросить passkey",
+    "cancel": "Отмена",
+    "confirm": "Удалить все passkey человека? Войти ими будет нельзя. Открытые сессии не закроются. Если у человека нет пароля и единого входа, выдайте ему ссылку сброса пароля.",
+    "resetFailed": "Не удалось сбросить passkey.",
+    "resetDone_one": "Удалён {{count}} passkey",
+    "resetDone_few": "Удалено {{count}} passkey",
+    "resetDone_many": "Удалено {{count}} passkey",
+    "resetDone_other": "Удалено {{count}} passkey"
   }
 }

@@ -171,7 +171,15 @@
       "settings_storage_thresholds_update": "Изменены пороги места на диске",
       "lifecycle_run_now": "Запущена очистка источника данных",
       "diagnostics_run": "Запущена самодиагностика",
-      "settings_diagnostics_update": "Изменены пороги самодиагностики"
+      "settings_diagnostics_update": "Изменены пороги самодиагностики",
+      "auth_passkey_added": "Добавлен passkey",
+      "auth_passkey_add_failed": "Не удалось добавить passkey",
+      "auth_passkey_renamed": "Passkey переименован",
+      "auth_passkey_removed": "Passkey удалён",
+      "auth_passkey_login_failed": "Неудачный вход по passkey",
+      "auth_reauth": "Личность подтверждена",
+      "auth_reauth_failed": "Неудачное подтверждение личности",
+      "admin_passkeys_reset": "Сброшены passkey человека"
     },
     "search": "Поиск по журналу",
     "searchPlaceholder": "Человек, код действия, объект",

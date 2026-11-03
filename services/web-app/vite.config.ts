@@ -33,6 +33,8 @@ const VENDOR_CHUNKS: Record<string, string[]> = {
   "chart-vendor": ["recharts"],
   "icons-vendor": ["lucide-react"],
   "command-palette": ["cmdk"],
+  // Церемонии passkey: грузится лениво из shared/lib/webauthn, только когда вход или регистрация ключа начинаются.
+  "webauthn-vendor": ["@simplewebauthn/browser"],
   "editor-vendor": [
     "@codemirror/state",
     "@codemirror/view",

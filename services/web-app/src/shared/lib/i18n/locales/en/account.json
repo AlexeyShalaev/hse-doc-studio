@@ -112,7 +112,13 @@
     "forbidden": "You do not have permission for this action.",
     "network": "No connection to the server. Check your network and try again.",
     "unknown": "Something went wrong. Try again later.",
-    "last_login_method": "This is your only sign-in method."
+    "last_login_method": "This is your only sign-in method.",
+    "not_found": "Key not found. Reload the page.",
+    "passkey_invalid": "The passkey didn't work. Try again.",
+    "passkey_limit": "The passkey limit for the account is reached.",
+    "passkeys_disabled": "Passkey sign-in is turned off on this server.",
+    "passkey_failed": "The browser couldn't create or use the passkey. Try again.",
+    "passkey_already_registered": "This device's key is already on the account."
   },
   "tokens": {
     "title": "Access tokens",
@@ -203,5 +209,44 @@
     "addTitle": "Add a sign-in method",
     "link": "Link {{name}}",
     "linkHint": "You will go to the provider and come back here with the link in place."
+  },
+  "passkeys": {
+    "title": "Passkeys",
+    "sub": "Sign in without a password: fingerprint, face or device PIN. The private key never leaves the device.",
+    "loading": "Loading passkeys…",
+    "loadFailed": "Couldn't load passkeys.",
+    "retry": "Retry",
+    "empty": "No passkeys yet. Add this device's key to sign in without a password.",
+    "synced": "synced",
+    "otherDomain": "bound to {{domain}}, doesn't work at this address",
+    "created": "Added {{when}}",
+    "lastUsed": "used {{when}}",
+    "neverUsed": "not used yet",
+    "renameAria": "Rename {{name}}",
+    "deleteAria": "Remove {{name}}",
+    "delete": "Remove",
+    "nameLabel": "Passkey name",
+    "save": "Save",
+    "cancel": "Cancel",
+    "confirmDelete": "Remove “{{name}}”? You won't be able to sign in with this key.",
+    "add": "Add a passkey",
+    "disabledHint": "The administrator turned passkey sign-in off, or the Studio address doesn't support it.",
+    "unsupportedHint": "This browser doesn't support passkeys, or the page isn't served over HTTPS.",
+    "limitHint": "At most {{count}} passkeys per account. Remove one to add another.",
+    "domainHint": "The key will be bound to {{domain}}. If the server address changes, you'll need to add it again.",
+    "hint": "A key is bound to the server address.",
+    "toastAdded": "Passkey added",
+    "toastRemoved": "Passkey removed"
+  },
+  "reauth": {
+    "title": "Confirm it's you",
+    "body": "You can add and remove passkeys only right after confirming your identity.",
+    "ssoBody": "This account has no password or passkey. Sign in again with your provider, then repeat the action.",
+    "passkey": "Confirm with a passkey",
+    "password": "Password",
+    "submit": "Confirm with password",
+    "sso": "Sign in with {{name}}",
+    "signInAgain": "Sign out and sign in again, then repeat the action.",
+    "cancel": "Cancel"
   }
 }

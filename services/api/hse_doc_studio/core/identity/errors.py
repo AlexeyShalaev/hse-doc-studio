@@ -112,6 +112,11 @@ class IdentityErrorCode(StrEnum):
     git_server_url_invalid = "git_server_url_invalid"
     git_server_not_studio = "git_server_not_studio"
     git_server_unreachable = "git_server_unreachable"
+    # Вход по passkey и повторное подтверждение личности.
+    passkeys_disabled = "passkeys_disabled"
+    passkey_invalid = "passkey_invalid"
+    passkey_limit = "passkey_limit"
+    reauth_required = "reauth_required"
 
 
 MESSAGES: dict[IdentityErrorCode, tuple[str, str]] = {
@@ -434,6 +439,22 @@ MESSAGES: dict[IdentityErrorCode, tuple[str, str]] = {
     IdentityErrorCode.git_server_unreachable: (
         "Сервер не отвечает. Проверьте адрес и сеть.",
         "The server isn't responding. Check the address and the network.",
+    ),
+    IdentityErrorCode.passkeys_disabled: (
+        "Вход по passkey на этом сервере недоступен.",
+        "Passkey sign-in is not available on this server.",
+    ),
+    IdentityErrorCode.passkey_invalid: (
+        "Passkey не подошёл. Попробуйте ещё раз или войдите другим способом.",
+        "The passkey didn't work. Try again or use another way to sign in.",
+    ),
+    IdentityErrorCode.passkey_limit: (
+        "У аккаунта может быть не больше 20 passkey. Удалите ненужный.",
+        "An account can have at most 20 passkeys. Remove one you no longer use.",
+    ),
+    IdentityErrorCode.reauth_required: (
+        "Подтвердите, что это вы: введите пароль или используйте passkey.",
+        "Confirm it's you: enter your password or use a passkey.",
     ),
 }
 

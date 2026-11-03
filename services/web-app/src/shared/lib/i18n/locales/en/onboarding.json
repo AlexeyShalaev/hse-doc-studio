@@ -200,7 +200,7 @@
     "build": {
       "local": "Builds run on your computer in Docker.",
       "available": "Cloud builds are available on this server.",
-      "unavailable": "Cloud builds are not available on this server right now: no runners are connected. You can already write, work with comments and git; the administrator will enable builds.",
+      "unavailable": "Cloud builds are not available on this server right now: no runners are connected. You can already write, work with comments and git; build the PDF in the local Studio on your computer, and the administrator will enable cloud builds.",
       "unknown": "If the PDF build does not start, the server has no runners yet: tell your administrator. Text, comments and git work without it."
     },
     "admin": "As an administrator, start in the admin area: connect a build runner and an AI provider, then invite people.",

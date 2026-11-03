@@ -1,6 +1,6 @@
 import { useId, useState, type FormEvent } from "react";
 import { Link } from "react-router";
-import { KeyRound, LogIn } from "lucide-react";
+import { FingerprintPattern, KeyRound, LogIn } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { Button, Input, Spinner } from "@shared/ui";
 import { ResultFrame } from "@shared/ui/ResultFrame";
@@ -22,6 +22,8 @@ export type LoginCardProps = {
   ssoHref: (providerId: string) => string;
   onSubmit: (email: string, password: string) => void;
   initialEmail?: string;
+  /** Вход по passkey: кнопка и подсказки автозаполнения в поле почты. */
+  passkey?: { available: boolean; pending: boolean; onStart: () => void };
 };
 
 /**
@@ -36,6 +38,7 @@ export const LoginCard = ({
   ssoHref,
   onSubmit,
   initialEmail = "",
+  passkey,
 }: LoginCardProps) => {
   const { t } = useTranslation("auth");
   const uid = useId();
@@ -46,6 +49,7 @@ export const LoginCard = ({
   const showFailure =
     failure !== null && !(failure.code === "rate_limited" && left <= 0);
   const hasSso = auth.oidc_providers.length > 0;
+  const hasPasskey = passkey?.available === true;
   // Ссылка только там, где форма регистрации откроется: при «по приглашению»
   // и без пароля она вела бы на экран-тупик.
   const canRegister =
@@ -134,7 +138,7 @@ export const LoginCard = ({
             label={t("login.email")}
             type="email"
             name="email"
-            autoComplete="username"
+            autoComplete={hasPasskey ? "username webauthn" : "username"}
             autoFocus
             required
             value={email}
@@ -180,9 +184,49 @@ export const LoginCard = ({
         </form>
       )}
 
+      {hasPasskey && (
+        <div data-testid="login-passkey-block">
+          {auth.password_enabled && (
+            <div
+              className="flex items-center"
+              style={{
+                gap: 10,
+                margin: "18px 0",
+                color: "var(--fg-3)",
+                fontSize: 12,
+              }}
+              role="separator"
+              aria-label={t("login.or")}
+            >
+              <span style={{ flex: 1, height: 1, background: "var(--line)" }} />
+              {t("login.or")}
+              <span style={{ flex: 1, height: 1, background: "var(--line)" }} />
+            </div>
+          )}
+          <Button
+            type="button"
+            variant="secondary"
+            data-testid="login-passkey"
+            aria-disabled={passkey.pending}
+            disabled={waiting}
+            onClick={() => {
+              if (!passkey.pending) passkey.onStart();
+            }}
+            style={{ justifyContent: "center", gap: 8, width: "100%" }}
+          >
+            {passkey.pending ? (
+              <Spinner size="sm" />
+            ) : (
+              <FingerprintPattern size={15} aria-hidden="true" />
+            )}
+            {passkey.pending ? t("login.passkeyPending") : t("login.passkey")}
+          </Button>
+        </div>
+      )}
+
       {hasSso && (
         <div data-testid="login-sso">
-          {auth.password_enabled && (
+          {(auth.password_enabled || hasPasskey) && (
             <div
               className="flex items-center"
               style={{
@@ -219,7 +263,7 @@ export const LoginCard = ({
         </div>
       )}
 
-      {!auth.password_enabled && !hasSso && (
+      {!auth.password_enabled && !hasSso && !hasPasskey && (
         <p
           data-testid="login-no-methods"
           style={{ color: "var(--fg-2)", fontSize: 13 }}

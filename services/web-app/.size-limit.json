@@ -18,6 +18,12 @@
     "limit": "3 kB"
   },
   {
+    "name": "Церемонии passkey (lazy, @simplewebauthn/browser)",
+    "path": "dist/assets/webauthn-vendor-*.js",
+    "gzip": true,
+    "limit": "4.5 kB"
+  },
+  {
     "name": "Словарь админки: shell (общий кусок оболочки)",
     "path": "dist/assets/locale-admin-shell-*.js",
     "gzip": true,

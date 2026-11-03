@@ -45,3 +45,7 @@ class IBuildAvailability(Protocol):
     async def of(self, project_id: UUID, actor: Actor) -> BuildAvailability:
         """Доступность сборки проекта для этого актора (свои личные раннеры владельца тоже в счёт)."""
         ...
+
+    async def general(self) -> BuildAvailability:
+        """Без проекта (онбординг, главная): есть ли на установке живые общие раннеры."""
+        ...

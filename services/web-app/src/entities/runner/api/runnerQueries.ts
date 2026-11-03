@@ -24,6 +24,8 @@ export const runnerKeys = {
   remote: () => [...runnerKeys.all, "remote"] as const,
   availability: (projectId: string) =>
     [...runnerKeys.all, "availability", projectId] as const,
+  generalAvailability: () =>
+    [...runnerKeys.all, "availability", "general"] as const,
 };
 
 // Пока открыт диалог подключения, список опрашивается чаще: новый раннер
@@ -153,6 +155,16 @@ export const useBuildAvailability = (projectId: string, enabled: boolean) =>
       const full = data?.any_runner === true && data.tags.length >= 2;
       return full ? AVAILABILITY_POLL_MS : AVAILABILITY_POLL_BLOCKED_MS;
     },
+  });
+
+/** Доступность сборки без проекта (итог онбординга): один запрос, без опроса. */
+export const useGeneralBuildAvailability = (enabled: boolean) =>
+  useQuery({
+    queryKey: runnerKeys.generalAvailability(),
+    queryFn: () => buildAvailabilityApi.general(),
+    enabled,
+    staleTime: 30_000,
+    retry: false,
   });
 
 export const useUpdateProjectBuildRunners = (projectId: string) => {

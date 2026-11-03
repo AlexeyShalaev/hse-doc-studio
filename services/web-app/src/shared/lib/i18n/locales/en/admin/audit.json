@@ -171,7 +171,15 @@
       "settings_storage_thresholds_update": "Disk space thresholds changed",
       "lifecycle_run_now": "Data source cleanup started",
       "diagnostics_run": "Self-diagnostics run",
-      "settings_diagnostics_update": "Self-diagnostics thresholds changed"
+      "settings_diagnostics_update": "Self-diagnostics thresholds changed",
+      "auth_passkey_added": "Passkey added",
+      "auth_passkey_add_failed": "Passkey not added",
+      "auth_passkey_renamed": "Passkey renamed",
+      "auth_passkey_removed": "Passkey removed",
+      "auth_passkey_login_failed": "Failed passkey sign-in",
+      "auth_reauth": "Identity confirmed",
+      "auth_reauth_failed": "Failed identity confirmation",
+      "admin_passkeys_reset": "Person's passkeys reset"
     },
     "search": "Search the log",
     "searchPlaceholder": "Person, action code or object",

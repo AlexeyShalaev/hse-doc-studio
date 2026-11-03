@@ -1,5 +1,10 @@
 import { ApiError, apiClient, parseResp } from "@shared/api";
-import { LoginResponseSchema, type LoginResponse } from "@entities/session";
+import {
+  LoginResponseSchema,
+  PasskeyOptionsSchema,
+  type LoginResponse,
+  type PasskeyOptions,
+} from "@entities/session";
 import { DEFAULT_RETRY_AFTER, type LoginFailure } from "../lib/loginErrors";
 
 export const signInApi = {
@@ -7,6 +12,16 @@ export const signInApi = {
   login: (email: string, password: string): Promise<LoginResponse> =>
     apiClient
       .post("/auth/login", { email, password }, { silentError: true })
+      .then(parseResp(LoginResponseSchema)),
+
+  passkeyOptions: (): Promise<PasskeyOptions> =>
+    apiClient
+      .post("/auth/passkey/options", {}, { silentError: true })
+      .then(parseResp(PasskeyOptionsSchema)),
+
+  passkeyLogin: (credential: Record<string, unknown>): Promise<LoginResponse> =>
+    apiClient
+      .post("/auth/passkey/login", { credential }, { silentError: true })
       .then(parseResp(LoginResponseSchema)),
 };
 

@@ -290,6 +290,8 @@ tags:
 | `HSE_STUDIO__AUTH__REGISTRATION_DOMAINS` | `list[str]` | не задано | server | Разрешённые домены почты для режима domains; заданный список блокирует правку в админке. |
 | `HSE_STUDIO__AUTH__REQUIRE_APPROVAL` | bool | не задано | server | Новые аккаунты ждут одобрения админа; заданное значение блокирует правку в админке. |
 | `HSE_STUDIO__AUTH__PASSWORD_ENABLED` | bool | не задано | server | Вход по паролю; заданное значение блокирует правку в админке. |
+| `HSE_STUDIO__AUTH__PASSKEYS_ENABLED` | bool | не задано | server | Вход по passkey (WebAuthn); заданное значение блокирует правку в админке. |
+| `HSE_STUDIO__AUTH__PASSKEY_RP_ID` | str | не задано | server | Домен ключей passkey (RP ID). По умолчанию хост public_url; можно указать родительский домен (example.org для studio.example.org), чтобы ключи пережили переезд между поддоменами. |
 | `HSE_STUDIO__AUTH__PROJECT_INVITES_ALLOW_SIGNUP` | bool | не задано | server | Приглашение в проект даёт право зарегистрироваться в режиме invite (по умолчанию да); заданное значение блокирует правку в админке. |
 | `HSE_STUDIO__AUTH__OIDC__ID` | str | `sso` | server | Идентификатор в адресах входа. |
 | `HSE_STUDIO__AUTH__OIDC__LABEL` | str | `SSO` | server | Название на кнопке входа. |

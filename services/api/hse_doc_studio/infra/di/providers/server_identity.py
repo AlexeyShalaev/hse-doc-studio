@@ -19,6 +19,7 @@ from hse_doc_studio.core.identity.auth_settings import AuthEnvOverrides
 from hse_doc_studio.core.identity.commit_identity import noreply_domain
 from hse_doc_studio.core.identity.lifecycle import IUserLifecycle, RetentionPolicy
 from hse_doc_studio.core.identity.oidc import IOidcClient, IOidcProviderCatalog, IOidcStateCodec, OidcProviderConfig
+from hse_doc_studio.core.identity.passkeys import IPasskeyRepository
 from hse_doc_studio.core.identity.protocols import (
     IActorResolver,
     IApiTokenRepository,
@@ -407,8 +408,9 @@ class ServerIdentityProvider(Provider):
         settings: AuthSettingsService,
         audit: IAuditLog,
         uow: IUnitOfWork,
+        passkeys: IPasskeyRepository,
     ) -> UnlinkOidcIdentityUC:
-        return UnlinkOidcIdentityUC(users, credentials, settings, audit, uow)
+        return UnlinkOidcIdentityUC(users, credentials, settings, audit, uow, passkeys)
 
     @provide
     def get_logout_uc(self, sessions: ISessionRepository, audit: IAuditLog, uow: IUnitOfWork) -> LogoutUC:
@@ -522,8 +524,10 @@ class ServerIdentityProvider(Provider):
         return SendTestMailUC(sender, users, audit)
 
     @provide
-    def get_auth_group_uc(self, service: AuthSettingsService, oidc: IOidcProviderRepository) -> GetAuthGroupUC:
-        return GetAuthGroupUC(service, oidc)
+    def get_auth_group_uc(
+        self, service: AuthSettingsService, oidc: IOidcProviderRepository, passkeys: IPasskeyRepository
+    ) -> GetAuthGroupUC:
+        return GetAuthGroupUC(service, oidc, passkeys)
 
     @provide
     def get_update_registration_uc(self, update: UpdateAuthSettingsUC, group: GetAuthGroupUC) -> UpdateRegistrationUC:
@@ -582,6 +586,7 @@ class ServerIdentityProvider(Provider):
             registration_domains=tuple(cfg.registration_domains) if cfg.registration_domains is not None else None,
             require_approval=cfg.require_approval,
             password_enabled=cfg.password_enabled,
+            passkeys_enabled=cfg.passkeys_enabled,
         )
 
     @provide

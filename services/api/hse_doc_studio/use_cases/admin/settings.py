@@ -8,6 +8,7 @@ from dataclasses import dataclass
 from hse_doc_studio.core.access.entities import Actor
 from hse_doc_studio.core.i18n import localized_error
 from hse_doc_studio.core.identity.auth_settings import (
+    KEY_PASSKEYS_ENABLED,
     KEY_PASSWORD_ENABLED,
     KEY_REGISTRATION_DOMAINS,
     KEY_REGISTRATION_MODE,
@@ -16,13 +17,14 @@ from hse_doc_studio.core.identity.auth_settings import (
 )
 from hse_doc_studio.core.identity.entities import AuthSettings, OidcProvider, RegistrationMode
 from hse_doc_studio.core.identity.errors import IdentityError, IdentityErrorCode
+from hse_doc_studio.core.identity.passkeys import IPasskeyRepository
 from hse_doc_studio.core.identity.protocols import IOidcProviderRepository
 from hse_doc_studio.core.identity.setting_source import SettingDescription
 from hse_doc_studio.use_cases.admin.users import require_admin
 from hse_doc_studio.use_cases.identity.auth_settings import AuthSettingsPatch, AuthSettingsService, UpdateAuthSettingsUC
 
 REGISTRATION_KEYS = (KEY_REGISTRATION_MODE, KEY_REGISTRATION_DOMAINS, KEY_REQUIRE_APPROVAL)
-AUTH_KEYS = (KEY_PASSWORD_ENABLED,)
+AUTH_KEYS = (KEY_PASSWORD_ENABLED, KEY_PASSKEYS_ENABLED)
 
 
 @dataclass(frozen=True)
@@ -31,6 +33,8 @@ class SettingsGroupView:
     descriptions: dict[str, SettingDescription]
     # Включённые провайдеры единого входа: для экрана «Способы входа».
     enabled_providers: int = 0
+    # Ключи passkey установки по доменам, к которым они привязаны: предупреждение о смене адреса.
+    passkey_domains: dict[str, int] | None = None
 
 
 async def ensure_login_method_remains(
@@ -43,9 +47,12 @@ async def ensure_login_method_remains(
 
 
 class GetAuthGroupUC:
-    def __init__(self, service: AuthSettingsService, oidc: IOidcProviderRepository) -> None:
+    def __init__(
+        self, service: AuthSettingsService, oidc: IOidcProviderRepository, passkeys: IPasskeyRepository | None = None
+    ) -> None:
         self._service = service
         self._oidc = oidc
+        self._passkeys = passkeys
 
     async def registration(self, actor: Actor) -> SettingsGroupView:
         require_admin(actor)
@@ -53,7 +60,15 @@ class GetAuthGroupUC:
 
     async def methods(self, actor: Actor) -> SettingsGroupView:
         require_admin(actor)
-        return await self._group(AUTH_KEYS)
+        view = await self._group(AUTH_KEYS)
+        if self._passkeys is None:
+            return view
+        return SettingsGroupView(
+            settings=view.settings,
+            descriptions=view.descriptions,
+            enabled_providers=view.enabled_providers,
+            passkey_domains=await self._passkeys.count_by_rp_id(),
+        )
 
     async def _group(self, keys: Sequence[str]) -> SettingsGroupView:
         view = await self._service.view()
@@ -109,11 +124,16 @@ class UpdateAuthMethodsUC:
         self._oidc = oidc
         self._group = group
 
-    async def execute(self, actor: Actor, *, password_enabled: bool | None) -> SettingsGroupView:
+    async def execute(
+        self, actor: Actor, *, password_enabled: bool | None, passkeys_enabled: bool | None = None
+    ) -> SettingsGroupView:
+        """Passkey не считается способом входа установки: новый человек не может завести ключ, не войдя иначе."""
         admin_id = require_admin(actor)
         if password_enabled is False and not (await self._service.describe(KEY_PASSWORD_ENABLED)).locked:
             await ensure_login_method_remains(
                 self._service, await self._oidc.list(only_enabled=True), password_enabled=False
             )
-        await self._update.execute(admin_id, AuthSettingsPatch(password_enabled=password_enabled))
+        await self._update.execute(
+            admin_id, AuthSettingsPatch(password_enabled=password_enabled, passkeys_enabled=passkeys_enabled)
+        )
         return await self._group.methods(actor)

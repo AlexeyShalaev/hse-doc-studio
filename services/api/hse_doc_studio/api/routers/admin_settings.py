@@ -9,6 +9,7 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, Request, Response, status
 
+from hse_doc_studio.api.passkey_party import relying_party_resolution
 from hse_doc_studio.api.schemas.admin import PageParams, page_params, search_param, sort_param
 from hse_doc_studio.api.schemas.session import (
     AdminAuthSettings,
@@ -20,6 +21,7 @@ from hse_doc_studio.api.schemas.session import (
     AdminSmtpTestRequest,
     AdminSmtpTestResult,
     CreateAdminOidcProviderRequest,
+    PasskeyDomainCount,
     SettingState,
     UpdateAdminAuthRequest,
     UpdateAdminOidcProviderRequest,
@@ -93,11 +95,17 @@ def _registration(view: SettingsGroupView) -> AdminRegistrationSettings:
     )
 
 
-def _auth(view: SettingsGroupView) -> AdminAuthSettings:
+def _auth(view: SettingsGroupView, request: Request) -> AdminAuthSettings:
+    party = relying_party_resolution(request)
+    domains = sorted((view.passkey_domains or {}).items(), key=lambda kv: (-kv[1], kv[0]))
     return AdminAuthSettings(
         password_enabled=view.settings.password_enabled,
         oidc_enabled_count=view.enabled_providers,
         fields=_fields(view.descriptions),
+        passkeys_enabled=view.settings.passkeys_enabled,
+        passkey_domain=party.party.id if party.party else None,
+        passkey_issue=party.issue.value if party.issue else None,
+        passkey_domains=[PasskeyDomainCount(domain=d, count=n) for d, n in domains],
     )
 
 
@@ -164,14 +172,16 @@ async def put_registration(
 @router.get("/settings/auth", response_model=AdminAuthSettings)
 async def get_auth(request: Request, response: Response) -> AdminAuthSettings:
     response.headers.update(_NO_STORE)
-    return _auth(await (await _uc(request, GetAuthGroupUC)).methods(_actor()))
+    return _auth(await (await _uc(request, GetAuthGroupUC)).methods(_actor()), request)
 
 
 @router.put("/settings/auth", response_model=AdminAuthSettings)
 async def put_auth(body: UpdateAdminAuthRequest, request: Request, response: Response) -> AdminAuthSettings:
     response.headers.update(_NO_STORE)
-    view = await (await _uc(request, UpdateAuthMethodsUC)).execute(_actor(), password_enabled=body.password_enabled)
-    return _auth(view)
+    view = await (await _uc(request, UpdateAuthMethodsUC)).execute(
+        _actor(), password_enabled=body.password_enabled, passkeys_enabled=body.passkeys_enabled
+    )
+    return _auth(view, request)
 
 
 @router.get("/settings/smtp", response_model=AdminSmtpSettings)

@@ -239,7 +239,10 @@ from hse_doc_studio.use_cases.checks.run_checks import RunChecksUC
 from hse_doc_studio.use_cases.compile.build_project import BuildProjectUC
 from hse_doc_studio.use_cases.compile.cancel_compile import CancelCompileUC
 from hse_doc_studio.use_cases.compile.get_archived_pdf import GetArchivedPdfUC
-from hse_doc_studio.use_cases.compile.get_build_availability import GetBuildAvailabilityUC
+from hse_doc_studio.use_cases.compile.get_build_availability import (
+    GetBuildAvailabilityUC,
+    GetGeneralBuildAvailabilityUC,
+)
 from hse_doc_studio.use_cases.compile.get_compile import GetCompileUC
 from hse_doc_studio.use_cases.compile.get_compile_stream import GetCompileStreamUC
 from hse_doc_studio.use_cases.compile.get_docker_status import GetDockerStatusUC
@@ -2392,6 +2395,10 @@ class UseCaseProvider(Provider):
     @provide
     def get_build_availability_uc(self, availability: IBuildAvailability) -> GetBuildAvailabilityUC:
         return GetBuildAvailabilityUC(availability)
+
+    @provide
+    def get_general_build_availability_uc(self, availability: IBuildAvailability) -> GetGeneralBuildAvailabilityUC:
+        return GetGeneralBuildAvailabilityUC(availability)
 
     @provide
     def get_build_project_uc(

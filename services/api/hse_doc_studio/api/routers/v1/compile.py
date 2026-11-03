@@ -45,6 +45,7 @@ from hse_doc_studio.use_cases.compile.get_archived_pdf import (
 from hse_doc_studio.use_cases.compile.get_build_availability import (
     GetBuildAvailabilityInput,
     GetBuildAvailabilityUC,
+    GetGeneralBuildAvailabilityUC,
 )
 from hse_doc_studio.use_cases.compile.get_compile import GetCompileInput, GetCompileUC
 from hse_doc_studio.use_cases.compile.get_compile_stream import (
@@ -92,6 +93,17 @@ async def get_build_availability(
     """Для каких тегов сборки сейчас есть живой раннер; интерфейс опрашивает и гасит «Собрать» без исполнителя."""
     response.headers["Cache-Control"] = "no-store"
     result = await uc.execute(GetBuildAvailabilityInput(project_id=project_id))
+    return BuildAvailabilityResponse(cloud=result.cloud, any_runner=result.any_runner, tags=sorted(result.tags))
+
+
+@router.get("/build-availability", response_model=BuildAvailabilityResponse)
+async def get_general_build_availability(
+    response: Response,
+    uc: FromDishka[GetGeneralBuildAvailabilityUC],
+) -> BuildAvailabilityResponse:
+    """Без проекта: есть ли на установке живые общие раннеры (локально сборка всегда доступна)."""
+    response.headers["Cache-Control"] = "no-store"
+    result = await uc.execute()
     return BuildAvailabilityResponse(cloud=result.cloud, any_runner=result.any_runner, tags=sorted(result.tags))
 
 

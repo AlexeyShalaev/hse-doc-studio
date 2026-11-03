@@ -1,4 +1,5 @@
 import type {
+  AccountPasskeyList,
   AccountProfile,
   AccountSession,
   ApiToken,
@@ -10,6 +11,8 @@ import { PasswordCard } from "./PasswordCard";
 import { ProfileCard } from "./ProfileCard";
 import type { IdentityRow } from "../lib/identityRows";
 import { IdentitiesCard } from "./IdentitiesCard";
+import { PasskeysCard } from "./PasskeysCard";
+import { ReauthDialog } from "./ReauthDialog";
 import { SessionsCard } from "./SessionsCard";
 import { TokensCard } from "./TokensCard";
 
@@ -155,6 +158,58 @@ const identities = (
     providers={PROVIDERS}
     onLink={noop}
     onUnlink={noop}
+    {...extra}
+  />
+);
+
+const PASSKEYS: AccountPasskeyList = {
+  items: [
+    {
+      id: "pk_mac",
+      name: "Chrome · macOS",
+      created_at: "2026-10-20T08:14:03Z",
+      last_used_at: "2026-11-02T09:30:00Z",
+      synced: true,
+      domain: "studio.example.org",
+      domain_matches: true,
+    },
+    {
+      id: "pk_yubi",
+      name: "YubiKey 5",
+      created_at: "2026-09-01T10:00:00Z",
+      last_used_at: null,
+      synced: false,
+      domain: "old-studio.example.org",
+      domain_matches: false,
+    },
+  ],
+  enabled: true,
+  domain: "studio.example.org",
+  has_password: true,
+  limit: 20,
+};
+
+const passkeys = (extra: Partial<Parameters<typeof PasskeysCard>[0]> = {}) => (
+  <PasskeysCard
+    status="ready"
+    data={PASSKEYS}
+    browserSupported
+    onAdd={noop}
+    onRename={noop}
+    onDelete={noop}
+    {...extra}
+  />
+);
+
+const reauth = (extra: Partial<Parameters<typeof ReauthDialog>[0]> = {}) => (
+  <ReauthDialog
+    open
+    hasPassword
+    hasPasskey
+    providers={PROVIDERS}
+    onPassword={noop}
+    onPasskey={noop}
+    onCancel={noop}
     {...extra}
   />
 );
@@ -396,6 +451,41 @@ export const getAccountSettingsGallery = (): GalleryGroup[] => [
       ),
       entry("account_identities_error", "Не загрузились", () =>
         identities({ status: "error", identities: [], onRetry: noop }),
+      ),
+    ],
+  },
+  {
+    id: "account-passkeys",
+    title: "Аккаунт: passkey",
+    description:
+      "Ключи для входа без пароля. Добавить и удалить ключ можно только после подтверждения личности.",
+    entries: [
+      entry("account_passkeys", "Два ключа, один с другого адреса", () =>
+        passkeys(),
+      ),
+      entry("account_passkeys_empty", "Ключей нет", () =>
+        passkeys({ data: { ...PASSKEYS, items: [] } }),
+      ),
+      entry("account_passkeys_disabled", "Выключено админом", () =>
+        passkeys({ data: { ...PASSKEYS, enabled: false, domain: null } }),
+      ),
+      entry("account_passkeys_unsupported", "Браузер не умеет", () =>
+        passkeys({ browserSupported: false }),
+      ),
+      entry("account_passkeys_adding", "Идёт добавление", () =>
+        passkeys({ busy: { kind: "add" } }),
+      ),
+      entry("account_passkeys_last", "Последний способ входа", () =>
+        passkeys({ failure: { code: "last_login_method" } }),
+      ),
+      entry("account_reauth", "Подтверждение: пароль и passkey", () =>
+        reauth(),
+      ),
+      entry("account_reauth_sso", "Подтверждение: только SSO", () =>
+        reauth({ hasPassword: false, hasPasskey: false }),
+      ),
+      entry("account_reauth_failed", "Подтверждение: неверный пароль", () =>
+        reauth({ hasPasskey: false, failure: { code: "invalid_credentials" } }),
       ),
     ],
   },

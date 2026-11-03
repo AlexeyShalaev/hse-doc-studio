@@ -8,6 +8,12 @@ export const KNOWN_FAILURES = [
   "forbidden",
   "last_login_method",
   "network",
+  "not_found",
+  "passkey_invalid",
+  "passkey_limit",
+  "passkeys_disabled",
+  "passkey_failed",
+  "passkey_already_registered",
 ] as const;
 
 export const failureKey = (code: string): string =>

@@ -9,6 +9,7 @@ from hse_doc_studio.api.auth_cookie import credentials_from_request
 from hse_doc_studio.api.config import ServerConfig, settings
 from hse_doc_studio.api.git_remote_capabilities import git_remote_capabilities
 from hse_doc_studio.api.invitation_views import inbox_badge
+from hse_doc_studio.api.passkey_party import relying_party
 from hse_doc_studio.api.routers.v1.share_link_public import guest_bootstrap
 from hse_doc_studio.api.schemas.session import (
     AuthOptions,
@@ -94,6 +95,7 @@ async def bootstrap(request: Request, response: Response) -> BootstrapResponse:
             oidc_providers=[OidcProviderOption(id=pid, label=label) for pid, label in result.oidc_providers],
             smtp_enabled=result.smtp_enabled,
             password_min_length=result.password_min_length,
+            passkeys_enabled=result.auth.passkeys_enabled and relying_party(request) is not None,
         ),
         user=session_user(result.user) if result.user else None,
         capabilities=Capabilities(

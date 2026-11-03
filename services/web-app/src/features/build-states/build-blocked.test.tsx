@@ -21,6 +21,8 @@ const SERVER = JSON.parse(
   ),
 ) as Bootstrap;
 
+const PROJECT = "6f1c2a3b-4d5e-4f60-8a7b-9c0d1e2f3a4b";
+
 const mount = (block: BuildBlock, admin: boolean) => {
   const client = new QueryClient();
   client.setQueryData(sessionKeys.bootstrap(), {
@@ -31,7 +33,7 @@ const mount = (block: BuildBlock, admin: boolean) => {
     <QueryClientProvider client={client}>
       <I18nextProvider i18n={i18n}>
         <MemoryRouter>
-          <BuildBlockedNotice block={block} />
+          <BuildBlockedNotice block={block} projectId={PROJECT} />
         </MemoryRouter>
       </I18nextProvider>
     </QueryClientProvider>,
@@ -54,6 +56,13 @@ describe("BuildBlockedNotice", () => {
     expect(
       screen.queryByTestId("build-blocked-runners-link"),
     ).not.toBeInTheDocument();
+  });
+
+  it("offers to build locally in the desktop Studio for this project", () => {
+    mount({ reason: "no_runners", tags: ["tex"] }, false);
+    const link = screen.getByTestId("local-studio-link");
+    expect(link).toHaveTextContent("Собрать локально");
+    expect(link).toHaveAttribute("href", `/local-studio?project=${PROJECT}`);
   });
 
   it("missing office runner: names the kind of documents", () => {

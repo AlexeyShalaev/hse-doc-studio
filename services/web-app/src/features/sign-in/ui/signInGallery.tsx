@@ -12,6 +12,7 @@ const PASSWORD: AuthOptions = {
   oidc_providers: [],
   smtp_enabled: true,
   password_min_length: 10,
+  passkeys_enabled: false,
 };
 const WITH_SSO: AuthOptions = {
   ...PASSWORD,
@@ -31,6 +32,7 @@ const card = (
   failure: LoginFailure | null = null,
   pending = false,
   initialEmail = "",
+  passkey = false,
 ) => (
   <LoginCard
     auth={auth}
@@ -39,6 +41,15 @@ const card = (
     initialEmail={initialEmail}
     ssoHref={(id) => `#sso-${id}`}
     onSubmit={() => undefined}
+    {...(passkey
+      ? {
+          passkey: {
+            available: true,
+            pending: false,
+            onStart: () => undefined,
+          },
+        }
+      : {})}
   />
 );
 
@@ -82,6 +93,15 @@ export const getSignInGallery = (): GalleryGroup[] => [
         frame: "window",
         width: 460,
         render: () => card(SSO_ONLY),
+      },
+      {
+        id: "login_passkey",
+        title: "Пароль, passkey и SSO",
+        note: "Кнопка passkey; в поле почты браузер предлагает ключи сам.",
+        frame: "window",
+        width: 460,
+        render: () =>
+          card({ ...WITH_SSO, passkeys_enabled: true }, null, false, "", true),
       },
       {
         id: "login_no_methods",
