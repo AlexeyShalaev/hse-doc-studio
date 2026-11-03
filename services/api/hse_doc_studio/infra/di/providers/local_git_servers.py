@@ -11,6 +11,7 @@ from hse_doc_studio.core.git_sync.policy import GitSyncPolicy
 from hse_doc_studio.core.git_sync.protocols import (
     IGitCredentialRepository,
     IGitHostSettingsRepository,
+    IGitOperationRegistry,
     IGitRepoReader,
     IGitStoreRemotes,
     IGitSyncStateRepository,
@@ -19,10 +20,13 @@ from hse_doc_studio.core.repositories import IProjectIndexRepository, IProjectRe
 from hse_doc_studio.core.vcs.protocols import IVcsFolderLocks
 from hse_doc_studio.infra.git_remote_client.studio_client import HttpStudioServerClient
 from hse_doc_studio.use_cases.documents.get_document import GetDocumentUC
+from hse_doc_studio.use_cases.git_sync.clone_project import CloneProjectUC, GetCloneDefaultsUC
+from hse_doc_studio.use_cases.git_sync.cloud_projects import CloudOpens, ListCloudProjectsUC, OpenCloudProjectUC
 from hse_doc_studio.use_cases.git_sync.pdf_scheduler import PdfPublishScheduler
 from hse_doc_studio.use_cases.git_sync.publish_pdf import PublishPdfUC
 from hse_doc_studio.use_cases.git_sync.studio_servers import StudioServerLogins, StudioServersService
 from hse_doc_studio.use_cases.projects.get_project import GetProjectUC
+from hse_doc_studio.use_cases.projects.list_projects import ListProjectsUC
 
 
 class LocalGitServersProvider(Provider):
@@ -78,6 +82,28 @@ class LocalGitServersProvider(Provider):
             locks=locks,
             policy=policy,
         )
+
+    @provide
+    def get_cloud_opens(self) -> CloudOpens:
+        return CloudOpens()
+
+    @provide(scope=Scope.REQUEST)
+    def get_list_cloud_projects_uc(
+        self, servers: StudioServersService, list_projects: ListProjectsUC
+    ) -> ListCloudProjectsUC:
+        return ListCloudProjectsUC(servers, list_projects)
+
+    @provide(scope=Scope.REQUEST)
+    def get_open_cloud_project_uc(  # noqa: PLR0913 — порты одного сценария
+        self,
+        servers: StudioServersService,
+        list_projects: ListProjectsUC,
+        clone: CloneProjectUC,
+        defaults: GetCloneDefaultsUC,
+        operations: IGitOperationRegistry,
+        opens: CloudOpens,
+    ) -> OpenCloudProjectUC:
+        return OpenCloudProjectUC(servers, list_projects, clone, defaults, operations, opens)
 
     @provide
     def get_pdf_scheduler(self, publish: PublishPdfUC) -> PdfPublishScheduler:

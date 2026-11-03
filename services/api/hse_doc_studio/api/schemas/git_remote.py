@@ -58,6 +58,38 @@ class GitProjectPage(StrictModel):
     offset: int
 
 
+class CloudProject(StrictModel):
+    id: str
+    name: str
+    owner_name: str
+    role: ProjectRoleName
+    can_push: bool
+    updated_at: datetime | None
+    # Проект уже открыт на этом компьютере (тот же идентификатор среди локальных проектов).
+    is_local: bool
+
+
+class CloudServer(StrictModel):
+    credential_id: str
+    server_url: str
+    host: str
+    # ok | expired | revoked | unreachable
+    state: str
+    projects: list[CloudProject]
+    # Сколько проектов у человека на сервере; больше числа в `projects`, если список обрезан.
+    total: int
+
+
+class CloudProjectList(StrictModel):
+    servers: list[CloudServer]
+
+
+class CloudProjectOpened(StrictModel):
+    project_id: str
+    # null: проект уже открыт на компьютере, скачивать нечего.
+    operation_id: str | None
+
+
 class DeviceCodeRequest(StrictModel):
     client_name: str = Field(min_length=1, max_length=128)
     client_kind: DeviceClientKind

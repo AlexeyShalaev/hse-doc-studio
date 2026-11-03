@@ -11,6 +11,10 @@ from uuid import UUID
 from fastapi import APIRouter, Query, Request, Response, status
 
 from hse_doc_studio.api.schemas.git_remote import (
+    CloudProject,
+    CloudProjectList,
+    CloudProjectOpened,
+    CloudServer,
     GitProject,
     GitProjectPage,
     GitServerCheck,
@@ -24,6 +28,7 @@ from hse_doc_studio.core.git_remote.client import StudioServerError, StudioServe
 from hse_doc_studio.core.git_sync.errors import GitErrorCode, GitSyncError
 from hse_doc_studio.core.identity.errors import IdentityError, IdentityErrorCode
 from hse_doc_studio.core.listing import DEFAULT_LIMIT, MAX_LIMIT
+from hse_doc_studio.use_cases.git_sync.cloud_projects import ListCloudProjectsUC, OpenCloudProjectUC
 from hse_doc_studio.use_cases.git_sync.studio_servers import StudioServerLogin, StudioServersService
 
 router = APIRouter()
@@ -151,6 +156,59 @@ async def list_git_server_projects(
         total=page.total,
         limit=page.limit,
         offset=page.offset,
+    )
+
+
+@router.get("/git/cloud/projects", response_model=CloudProjectList)
+async def list_cloud_projects(request: Request) -> CloudProjectList:
+    """Проекты человека на всех серверах Студии, куда он вошёл, с пометкой «открыт на этом компьютере».
+
+    Недоступный сервер и отказ по токену приходят состоянием сервера в ответе, а не ошибкой запроса: список
+    остальных серверов от этого не пропадает.
+    """
+    uc: ListCloudProjectsUC = await request.state.dishka_container.get(ListCloudProjectsUC)
+    return CloudProjectList(
+        servers=[
+            CloudServer(
+                credential_id=str(server.credential_id),
+                server_url=server.server_url,
+                host=server.host,
+                state=server.state,
+                projects=[
+                    CloudProject(
+                        id=p.id,
+                        name=p.name,
+                        owner_name=p.owner_name,
+                        role=p.role,
+                        can_push=p.can_push,
+                        updated_at=p.updated_at,
+                        is_local=p.is_local,
+                    )
+                    for p in server.projects
+                ],
+                total=server.total,
+            )
+            for server in await uc.execute()
+        ]
+    )
+
+
+@router.post(
+    "/git/servers/{credential_id}/projects/{project_id}/open",
+    response_model=CloudProjectOpened,
+    status_code=status.HTTP_202_ACCEPTED,
+)
+async def open_cloud_project(credential_id: UUID, project_id: UUID, request: Request) -> CloudProjectOpened:
+    """Открыть проект сервера на компьютере: уже открыт, значит ответ без операции, иначе клон в фоне."""
+    uc: OpenCloudProjectUC = await request.state.dishka_container.get(OpenCloudProjectUC)
+    try:
+        opened = await uc.execute(credential_id, project_id)
+    except NotFoundError:
+        raise IdentityError(IdentityErrorCode.not_found) from None
+    except StudioServerError as exc:
+        raise _mapped(exc) from None
+    return CloudProjectOpened(
+        project_id=str(opened.project_id), operation_id=opened.operation.id if opened.operation else None
     )
 
 
