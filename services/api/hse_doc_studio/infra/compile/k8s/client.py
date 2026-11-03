@@ -161,12 +161,48 @@ class KubernetesApiClient:
         return {"Authorization": f"Bearer {token}"} if token else {}
 
     async def _request(
-        self, method: str, path: str, *, params: Mapping[str, str] | None = None, body: object = None
+        self,
+        method: str,
+        path: str,
+        *,
+        params: Mapping[str, str] | None = None,
+        body: object = None,
+        content_type: str | None = None,
     ) -> httpx.Response:
+        headers = self._headers()
         try:
-            return await self._http.request(method, path, params=params, json=body, headers=self._headers())
+            if content_type is None:
+                return await self._http.request(method, path, params=params, json=body, headers=headers)
+            headers["Content-Type"] = content_type
+            return await self._http.request(
+                method, path, params=params, content=json.dumps(body).encode(), headers=headers
+            )
         except httpx.HTTPError as exc:
             raise KubeApiError(f"{method} {path}: {exc}") from exc
+
+    async def request_json(
+        self,
+        method: str,
+        path: str,
+        *,
+        params: Mapping[str, str] | None = None,
+        body: object = None,
+        content_type: str | None = None,
+    ) -> dict[str, object]:
+        """Произвольный вызов REST (Deployment, Job и т. п.): тело ответа как объект; ошибка API это `KubeApiError`
+        с `status` (404 тоже: вызывающий сам решает, отсутствие ресурса это норма или сбой)."""
+        response = await self._request(method, path, params=params, body=body, content_type=content_type)
+        _raise_for(response)
+        try:
+            return _obj(response.json())
+        except ValueError:
+            return {}
+
+    async def read_text(self, path: str, *, params: Mapping[str, str] | None = None) -> str:
+        """Текстовый ответ (лог пода без `follow`)."""
+        response = await self._request("GET", path, params=params)
+        _raise_for(response)
+        return response.text
 
     async def create_pod(self, namespace: str, manifest: PodManifest) -> None:
         response = await self._request("POST", f"/api/v1/namespaces/{quote(namespace)}/pods", body=dict(manifest))

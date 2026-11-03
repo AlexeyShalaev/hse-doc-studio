@@ -76,7 +76,7 @@ class RunPageOut(StrictModel):
 class UpdateStatusOut(StrictModel):
     settings: UpdateSettingsBody
     current_version: str
-    executor: Literal["compose", "none"]
+    executor: Literal["compose", "kubernetes", "none"]
     updater_online: bool
     updater_seen_at: AwareDatetime | None
     updater_version: str | None
@@ -92,11 +92,16 @@ class UpdateStatusOut(StrictModel):
     last_run: RunOut | None
     rollback_version: str | None
     rollback_needs_restore: bool
+    rollback_blocked: bool
+    risk_confirmation_required: bool
     manual_command: str
 
 
 class StartUpdateBody(StrictModel):
     version: str | None = Field(default=None, max_length=64)
+    accept_risk: bool = Field(
+        default=False, description="kubernetes: подтверждение, что полного бэкапа не будет, а базу откатить нельзя."
+    )
 
 
 class RollbackBody(StrictModel):

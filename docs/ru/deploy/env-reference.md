@@ -261,7 +261,7 @@ tags:
 | `HSE_STUDIO__BACKUPS__PROVISION__PASSPHRASE` 🔒 | str | секрет, не печатается | оба | Парольная фраза (от 12 символов). |
 | `HSE_STUDIO__BACKUPS__PROVISION__NOTIFY_ADMINS` | bool | `true` | оба | Уведомлять администраторов о сбое бэкапа. |
 | `HSE_STUDIO__SERVER_UPDATE__ENABLED` | bool | `true` | оба | Включает проверку релизов, планировщик и раздел админки. |
-| `HSE_STUDIO__SERVER_UPDATE__EXECUTOR` | compose / none | `none` | оба | Кто ставит обновление. compose: сервис-апдейтер рядом с api (docker compose). none: только проверка и уведомления, ставит оператор (helm upgrade --atomic, свой CI). |
+| `HSE_STUDIO__SERVER_UPDATE__EXECUTOR` | compose / kubernetes / none | `none` | оба | Кто ставит обновление. compose: сервис-апдейтер рядом с api (docker compose). kubernetes: сервис-апдейтер в кластере меняет образ Deployment api и гоняет миграции Job-ом (включается чартом: updater.enabled). none: только проверка и уведомления, ставит оператор (helm upgrade --atomic, свой CI). |
 | `HSE_STUDIO__SERVER_UPDATE__UPDATER_TOKEN` 🔒 | str | секрет, не печатается | оба | Общий секрет апдейтера (Bearer). Пусто: протокол апдейтера выключен и запуски не выдаются. |
 | `HSE_STUDIO__SERVER_UPDATE__TICK_S` | float | `60.0` | оба | Период планировщика обновлений. |
 | `HSE_STUDIO__SERVER_UPDATE__CHECK_INTERVAL_S` | float | `21600.0` | оба | Как часто спрашивать фид релизов. |

@@ -89,7 +89,7 @@ def _status(st: UpdateStatus) -> UpdateStatusOut:
     return UpdateStatusOut(
         settings=_settings_out(st.settings),
         current_version=st.current_version,
-        executor="compose" if st.executor_enabled else "none",
+        executor=st.executor if st.executor_enabled else "none",
         updater_online=st.updater_online,
         updater_seen_at=st.updater_seen_at,
         updater_version=st.updater_version,
@@ -105,6 +105,8 @@ def _status(st: UpdateStatus) -> UpdateStatusOut:
         last_run=_run(st.last_run) if st.last_run else None,
         rollback_version=st.rollback_version,
         rollback_needs_restore=st.rollback_needs_restore,
+        rollback_blocked=st.rollback_blocked,
+        risk_confirmation_required=st.risk_confirmation_required,
         manual_command=manual_command(settings.server_update.executor, st.available.version if st.available else None),
     )
 
@@ -145,7 +147,7 @@ async def check(request: Request, response: Response) -> UpdateStatusOut:
 async def start_run(body: StartUpdateBody, request: Request, response: Response) -> RunOut:
     response.headers.update(_NO_STORE)
     uc = await request.state.dishka_container.get(UpdateAdmin)
-    return _run(await uc.start(require_actor(), body.version))
+    return _run(await uc.start(require_actor(), body.version, accept_risk=body.accept_risk))
 
 
 @router.post("/rollback", response_model=RunOut, status_code=status.HTTP_202_ACCEPTED)

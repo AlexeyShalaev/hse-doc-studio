@@ -57,5 +57,7 @@
   "last_run": null,
   "rollback_version": null,
   "rollback_needs_restore": false,
+  "rollback_blocked": false,
+  "risk_confirmation_required": false,
   "manual_command": "helm upgrade hse-doc-studio deploy/helm/hse-doc-studio --reuse-values --set image.tag=0.4.0 --atomic --wait"
 }

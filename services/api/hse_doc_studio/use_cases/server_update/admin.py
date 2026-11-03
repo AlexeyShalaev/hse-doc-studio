@@ -25,8 +25,8 @@ class UpdateAdmin:
     async def check(self, actor: Actor) -> UpdateStatus:
         return await self._service.check_now(require_admin(actor))
 
-    async def start(self, actor: Actor, version: str | None) -> UpdateRun:
-        return await self._service.request_update(require_admin(actor), version)
+    async def start(self, actor: Actor, version: str | None, *, accept_risk: bool = False) -> UpdateRun:
+        return await self._service.request_update(require_admin(actor), version, accept_risk=accept_risk)
 
     async def rollback(self, actor: Actor, *, restore_db: bool) -> UpdateRun:
         return await self._service.request_rollback(require_admin(actor), restore_db=restore_db)

@@ -244,3 +244,77 @@ async def test__settings__invalid_window_is_a_422_with_the_field(stack: _Stack) 
     boss = await stack.users.add("boss", admin=True)
     r = await stack.client.put("/api/admin/updates/settings", json={**_BODY, "window_minutes": 5}, headers=boss)
     assert r.status_code == 422
+
+
+async def test__kubernetes__risk_gate_run_and_needs_manual_action_over_http(stack: _Stack) -> None:
+    stack.service._options = UpdateOptions(  # noqa: SLF001
+        current_version="0.4.0", executor_enabled=True, executor="kubernetes"
+    )
+    boss = await stack.users.add("boss", admin=True)
+    c = stack.client
+    updater = {"Authorization": f"Bearer {TOKEN}"}
+    await c.put("/api/admin/updates/settings", json={**_BODY, "backup_first": True}, headers=boss)
+    await c.post("/api/admin/updates/check", headers=boss)
+    await c.post("/api/updater/v1/poll", json={"busy": True}, headers=updater)
+
+    status = (await c.get("/api/admin/updates/status", headers=boss)).json()
+    assert (status["executor"], status["risk_confirmation_required"]) == ("kubernetes", True)
+    refused = await c.post("/api/admin/updates/runs", json={}, headers=boss)
+    assert (refused.status_code, refused.json()["code"], refused.json()["field"]) == (
+        422,
+        "risk_not_confirmed",
+        "accept_risk",
+    )
+
+    started = await c.post("/api/admin/updates/runs", json={"accept_risk": True}, headers=boss)
+    assert started.status_code == 202
+    run_id = started.json()["id"]
+    await c.post("/api/updater/v1/poll", json={}, headers=updater)
+    stuck = {
+        "seq": 1,
+        "at": "2026-11-03T03:05:00+00:00",
+        "phase": "finish",
+        "level": "error",
+        "status": "failed",
+        "error_code": "needs_manual_action",
+        "message": "Manual action is needed",
+        "from_revision": "r1",
+        "to_revision": "r2",
+    }
+    await c.post(f"/api/updater/v1/runs/{run_id}/events", json=stuck, headers=updater)
+
+    detail = (await c.get(f"/api/admin/updates/runs/{run_id}", headers=boss)).json()
+    assert (detail["status"], detail["error_code"], detail["db_restored"]) == ("failed", "needs_manual_action", False)
+    audit = [e for e in await stack.users.audit.list() if e.action == "update.run_request"]
+    assert audit[0].details["risk_accepted"] is True
+
+
+async def test__kubernetes__rollback_after_schema_change_is_refused_with_409(stack: _Stack) -> None:
+    boss = await stack.users.add("boss", admin=True)
+    c = stack.client
+    updater = {"Authorization": f"Bearer {TOKEN}"}
+    stack.service._options = UpdateOptions(  # noqa: SLF001
+        current_version="0.4.0", executor_enabled=True, executor="kubernetes"
+    )
+    await c.put("/api/admin/updates/settings", json=_BODY, headers=boss)
+    await c.post("/api/admin/updates/check", headers=boss)
+    await c.post("/api/updater/v1/poll", json={"busy": True}, headers=updater)
+    run_id = (await c.post("/api/admin/updates/runs", json={"accept_risk": True}, headers=boss)).json()["id"]
+    await c.post("/api/updater/v1/poll", json={}, headers=updater)
+    done = {
+        "seq": 1,
+        "at": "2026-11-03T03:05:00+00:00",
+        "phase": "finish",
+        "status": "succeeded",
+        "from_revision": "r1",
+        "to_revision": "r2",
+    }
+    await c.post(f"/api/updater/v1/runs/{run_id}/events", json=done, headers=updater)
+    stack.service._options = UpdateOptions(  # noqa: SLF001
+        current_version="0.5.0", executor_enabled=True, executor="kubernetes"
+    )
+
+    status = (await c.get("/api/admin/updates/status", headers=boss)).json()
+    assert (status["rollback_version"], status["rollback_blocked"]) == (None, True)
+    refused = await c.post("/api/admin/updates/rollback", json={"restore_db": True}, headers=boss)
+    assert (refused.status_code, refused.json()["code"]) == (409, "rollback_unsafe")

@@ -24,6 +24,7 @@ class Reason(StrEnum):
     notify_only = "notify_only"
     bump_too_large = "bump_too_large"
     no_executor = "no_executor"
+    backup_required = "backup_required"
     run_active = "run_active"
     previously_failed = "previously_failed"
     updater_offline = "updater_offline"
@@ -42,6 +43,7 @@ class DecisionInput:
     run_active: bool
     failed_versions: frozenset[str] = frozenset()  # версии, на которых обновление уже откатывалось или падало
     notified_version: str | None = None
+    backup_unavailable: bool = False  # kubernetes: бэкап не пройдёт, а снимка базы нет: сам не ставим без человека
 
 
 @dataclass(frozen=True)
@@ -72,6 +74,8 @@ def decide(data: DecisionInput) -> Decision:  # noqa: C901, PLR0911 — кажд
         return tell(Reason.bump_too_large)
     if not data.executor_ready:
         return tell(Reason.no_executor)
+    if data.backup_unavailable:
+        return tell(Reason.backup_required)
     if data.run_active:
         return Decision(Action.none, Reason.run_active, target)
     if target.version in data.failed_versions:

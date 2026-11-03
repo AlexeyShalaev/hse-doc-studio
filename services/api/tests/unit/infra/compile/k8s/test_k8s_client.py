@@ -241,3 +241,48 @@ async def test__exec__http_rejected__api_error_with_status(tmp_path: Path) -> No
         await client.aclose()
 
     assert caught.value.status == 403
+
+
+async def test__request_json__patch_sends_the_given_content_type_and_a_json_body(tmp_path: Path) -> None:
+    seen: list[httpx.Request] = []
+
+    def handle(request: httpx.Request) -> httpx.Response:
+        seen.append(request)
+        return httpx.Response(200, json={"spec": {"replicas": 0}})
+
+    client = _client(tmp_path, httpx.MockTransport(handle))
+
+    reply = await client.request_json(
+        "PATCH",
+        "/apis/apps/v1/namespaces/ns/deployments/api",
+        body={"spec": {"replicas": 0}},
+        content_type="application/strategic-merge-patch+json",
+        params={"fieldManager": "m"},
+    )
+
+    assert reply == {"spec": {"replicas": 0}}
+    assert seen[0].headers["content-type"] == "application/strategic-merge-patch+json"
+    assert json.loads(seen[0].content) == {"spec": {"replicas": 0}}
+    assert seen[0].url.params["fieldManager"] == "m"
+    assert seen[0].headers["authorization"] == "Bearer sa-token"
+    await client.aclose()
+
+
+async def test__request_json__error_keeps_the_status_for_the_caller(tmp_path: Path) -> None:
+    client = _client(tmp_path, httpx.MockTransport(lambda _r: httpx.Response(404, json={"message": "gone"})))
+
+    with pytest.raises(KubeApiError) as caught:
+        await client.request_json("GET", "/apis/batch/v1/namespaces/ns/jobs/x")
+
+    assert (caught.value.status, str(caught.value)) == (404, "gone")
+    await client.aclose()
+
+
+async def test__read_text__returns_the_plain_body(tmp_path: Path) -> None:
+    client = _client(tmp_path, httpx.MockTransport(lambda _r: httpx.Response(200, text="current: r1\nhead: r2\n")))
+
+    assert (
+        await client.read_text("/api/v1/namespaces/ns/pods/p/log", params={"tailLines": "10"})
+        == "current: r1\nhead: r2\n"
+    )
+    await client.aclose()

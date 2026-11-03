@@ -182,6 +182,10 @@ class UpdateService:
             and last_ok.to_version == self._cur
             and last_ok.from_version != self._cur
         )
+        schema_changed = bool(last_ok and last_ok.to_revision and last_ok.from_revision != last_ok.to_revision)
+        has_destination = await self._destinations.get_default() is not None
+        snapshotless = self._options.snapshotless
+        unsafe_rollback = bool(last_ok and snapshotless and (schema_changed or not last_ok.to_revision))
         return UpdateStatus(
             settings=settings,
             current_version=self._cur,
@@ -198,13 +202,16 @@ class UpdateService:
             next_window_at=next_window_start(
                 now, settings.window_days, settings.window_start_min, settings.window_minutes
             ),
-            backup_destination_configured=await self._destinations.get_default() is not None,
+            backup_destination_configured=has_destination,
             active_run=await self._runs.active(),
             last_run=await self._runs.last_finished(),
-            rollback_version=last_ok.from_version if can_rollback and last_ok else None,
-            rollback_needs_restore=bool(
-                can_rollback and last_ok and last_ok.to_revision and last_ok.from_revision != last_ok.to_revision
-            ),
+            rollback_version=last_ok.from_version if can_rollback and last_ok and not unsafe_rollback else None,
+            rollback_needs_restore=bool(can_rollback and schema_changed and not snapshotless),
+            executor=self._options.executor if self._options.executor_enabled else "none",
+            rollback_blocked=can_rollback and unsafe_rollback,
+            risk_confirmation_required=self._options.executor_enabled
+            and snapshotless
+            and not (settings.backup_first and has_destination),
         )
 
     # ---- настройки ----
@@ -279,6 +286,7 @@ class UpdateService:
                 run_active=await self._runs.active() is not None,
                 failed_versions=await self._runs.failed_targets(),
                 notified_version=str(values.get(KEY_NOTIFIED) or "") or None,
+                backup_unavailable=await self._risk_unconfirmed(settings),
             )
         )
         target = decision.target
@@ -295,7 +303,13 @@ class UpdateService:
 
     # ---- запуски ----
 
-    async def request_update(self, actor_id: str, version: str | None) -> UpdateRun:
+    async def _risk_unconfirmed(self, settings: UpdateSettings) -> bool:
+        """kubernetes: снимка базы нет, поэтому без полного бэкапа обновление идёт только с подтверждением риска."""
+        if not self._options.snapshotless:
+            return False
+        return not (settings.backup_first and await self._destinations.get_default() is not None)
+
+    async def request_update(self, actor_id: str, version: str | None, *, accept_risk: bool = False) -> UpdateRun:
         values = await self._repo.get_all()
         settings = settings_from(values)
         self._require_executor(values)
@@ -310,8 +324,22 @@ class UpdateService:
             target = newest_release(self._cur, releases)
         if target is None or not is_newer(target.version, self._cur):
             raise UpdateError(UpdateErrorCode.nothing_to_update, "already on the latest version")
+        risky = await self._risk_unconfirmed(settings)
+        if risky and not accept_risk:
+            raise UpdateError(
+                UpdateErrorCode.risk_not_confirmed,
+                "there is no full backup before this update and the database cannot be rolled back: configure a "
+                "backup destination or confirm the risk",
+                field="accept_risk",
+            )
         return await self._create_run(
-            RunKind.update, RunTrigger.manual, target.version, target.digests_url, settings, actor_id=actor_id
+            RunKind.update,
+            RunTrigger.manual,
+            target.version,
+            target.digests_url,
+            settings,
+            actor_id=actor_id,
+            risk_accepted=risky,
         )
 
     async def request_rollback(self, actor_id: str, *, restore_db: bool) -> UpdateRun:
@@ -322,7 +350,15 @@ class UpdateService:
         if last is None or last.to_version != self._cur or last.from_version == self._cur:
             raise UpdateError(UpdateErrorCode.no_previous_version, "there is no update to roll back")
         needs_restore = bool(last.to_revision and last.from_revision != last.to_revision)
-        if needs_restore and not restore_db:
+        if self._options.snapshotless:
+            if needs_restore or not last.to_revision:
+                raise UpdateError(
+                    UpdateErrorCode.rollback_unsafe,
+                    "the update changed the database schema (or its revision is unknown) and there is no snapshot: "
+                    "the previous version cannot start on it; restore a backup by hand",
+                )
+            restore_db = False
+        elif needs_restore and not restore_db:
             raise UpdateError(
                 UpdateErrorCode.invalid_input,
                 "the update changed the database schema: rolling back restores the pre-update snapshot "
@@ -368,6 +404,7 @@ class UpdateService:
         actor_id: str | None,
         restore_db: bool = False,
         verify: Verify | None = None,
+        risk_accepted: bool = False,
     ) -> UpdateRun:
         now = self._clock()
         want_backup = settings.backup_first and await self._destinations.get_default() is not None
@@ -385,6 +422,11 @@ class UpdateService:
             verify=verify or settings.verify,
             events=(RunEvent(0, now, "request", "info", f"requested {kind.value} to {to_version} ({trigger.value})"),),
         )
+        if risk_accepted:
+            run = append_events(
+                run,
+                [RunEvent(0, now, "backup", "warn", "no full backup and no schema rollback: the risk is accepted")],
+            )
         if not await self._runs.add(run):
             raise UpdateError(UpdateErrorCode.already_running, "another update is already in progress")
         await self._audit.record(
@@ -397,6 +439,7 @@ class UpdateService:
                 "to": to_version,
                 "backup_first": want_backup,
                 "restore_db": restore_db,
+                "risk_accepted": risk_accepted,
             },
         )
         if want_backup:
