@@ -1,0 +1,54 @@
+---
+title: 'AI agent'
+description: 'How to connect a model, open the agent chat in a project and ask it to edit text or fix a build.'
+sidebar:
+  order: 5
+access: user
+help:
+  routes: ['/settings/providers', '/settings/local-models']
+  summary: 'The project agent reads and edits the sources, builds documents and works through issues. It needs a provider with a model, connected in **Tool settings** → **Providers**.'
+  steps:
+    - text: 'Open **Tool settings** → **Providers** and click **Add provider** if the list is empty.'
+      hint: 'For models on your own computer there is the **Local models** section. On a server the administrator may have set up a provider: it is marked **shared**.'
+      shot: runbooks/ai-agent/step-01
+    - text: 'In a project click **Agent** on the left bar: the **Project agent** chat opens on the right.'
+      hint: 'The button with the **Project AI agent** tooltip in the window header opens the same chat.'
+      shot: runbooks/ai-agent/step-02
+    - text: 'Click **New chat** and pick a model in the **Model** list under the input field.'
+    - text: 'Choose a mode: **Ask** to confirm every action, or **Auto** to let the agent apply edits by itself.'
+    - text: 'Describe the task in **Message the agent…**, e.g. “Fix the typos in the Introduction”, and press Enter.'
+      hint: 'You can also call the agent in place: **Ask AI** on selected text in the PDF, **Fix with AI** on the **Build** and **Issues** tabs.'
+      shot: runbooks/ai-agent/step-05
+    - text: 'In **Ask** mode review the proposed action and click **Apply** or **Reject**.'
+  video:
+    src: runbooks/ai-agent/clip
+verified:
+  at: 2026-11-03
+  app_version: '0.3.0'
+  sources:
+    - services/web-app/src/features/agent-chat
+    - services/web-app/src/widgets/ChatDock
+    - services/web-app/src/features/manage-ai-provider
+---
+
+import Steps from '~/components/Steps.astro'
+import Video from '~/components/Video.astro'
+
+The agent works directly with the project files: it edits text on request, fixes build errors,
+works through GOST issues and rebuilds the document. You see every action it takes and decide what
+to keep.
+
+<Video />
+
+<Steps />
+
+## If something goes wrong
+
+- **The input field says “Select a provider and model…”**: no provider is connected or no model is
+  selected. Add a provider in **Tool settings** → **Providers** and pick a **Model**.
+- **“The runner didn’t respond. Start it or pick another model.”**: the model runs through your
+  runner and it is offline. Start it or click **Pick a model**.
+- **“Too many requests to the runner at once, try again in a minute.”**: wait and send the message
+  again.
+- **The reply stopped with “connection lost”**: send the message again. If that does not help,
+  start a **New chat**.

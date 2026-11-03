@@ -57,6 +57,8 @@ class AuthTokenKind(StrEnum):
     passkey_register = "passkey_register"
     passkey_login = "passkey_login"
     passkey_reauth = "passkey_reauth"
+    # Регистрация по приглашению сразу с passkey: в `payload` id приглашения и заранее выбранный id аккаунта.
+    passkey_signup = "passkey_signup"
 
 
 @dataclass(frozen=True)
@@ -88,6 +90,7 @@ class UserListing:
 
     user: User
     project_count: int
+    passkey_count: int = 0
 
 
 USER_SORTS = ("name", "email", "created_at", "last_login_at", "status")
@@ -263,6 +266,9 @@ class MailKind(StrEnum):
     email_change = "email_change"
     # Уведомление без ссылки: админ выдал ссылку для сброса пароля.
     reset_notice = "reset_notice"
+    # Уведомления без ссылки о passkey: добавлен ключ, админ сбросил все ключи.
+    passkey_added = "passkey_added"
+    passkey_reset = "passkey_reset"
 
 
 @dataclass(frozen=True)

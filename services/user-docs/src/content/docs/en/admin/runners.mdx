@@ -1,0 +1,57 @@
+---
+title: 'Connect build runners'
+description: 'Registration tokens, starting a runner, its status and the job queue in the Runners and queue section.'
+sidebar:
+  order: 1
+access: admin
+help:
+  routes: ['/admin/runners', '/admin']
+  summary: 'Runners run builds and checks. Create a registration token, start a runner with it on any machine and watch the table to see it online.'
+  steps:
+    - text: 'In the admin menu open **Runners and queue**, tab **Runners**.'
+      shot: admin/runners/step-01
+    - text: 'In the **Registration tokens** block click **Create token**, set the **Name**, **Valid for** and **How many runners can connect**, then click **Create**.'
+      hint: 'The name helps you recognise the token later, e.g. “server in room 305”. One token can connect from 1 to 100 runners.'
+      shot: admin/runners/step-02
+    - text: 'In the **Token created** window copy the **Start command** and run it on the runner machine.'
+      hint: 'The secret is shown once. The Studio address and the secret are already in the command; after the first start the runner stores its own token.'
+      shot: admin/runners/step-03
+    - text: 'Within seconds the runner appears in the table as **Online**. Check the **Load** and **Version** columns.'
+      hint: '**No signal** and **Offline** mean the runner stopped answering. The “Newer available” label suggests updating the runner.'
+    - text: 'To take a runner out of work for a while choose **Pause** in its actions menu; to cut its access choose **Revoke runner**.'
+      hint: 'Jobs of a revoked runner are handed to another one. **Issue a new token** replaces the runner token if the old one may have leaked.'
+    - text: 'On the **Queue** tab make sure jobs do not pile up or wait too long.'
+      hint: 'While no runner is online, people see “No runners available” when building. Jobs wait in the queue and start by themselves once a runner connects.'
+  video:
+    src: admin/runners/clip
+verified:
+  at: 2026-11-03
+  app_version: '0.3.0'
+  sources:
+    - services/web-app/src/features/admin-ops
+    - services/web-app/src/pages/AdminPage/AdminOpsPage.tsx
+    - services/api/hse_doc_studio/api/routers/admin_runners.py
+---
+
+import Steps from '~/components/Steps.astro'
+import Video from '~/components/Video.astro'
+
+A runner is a machine that builds PDFs and runs checks. The server does not build documents
+itself: without at least one runner online, people’s builds wait in the queue. A runner connects
+with a one-time registration token and then works with its own token.
+
+<Video />
+
+<Steps />
+
+## If something goes wrong
+
+- **“No runner is online”**: builds and checks wait in the queue. Check that the runner machines
+  are up and can reach the server address, then restart the runner.
+- **A token shows “Expired” or “Used up”**: it no longer connects runners. Create a new token;
+  runners already connected keep working.
+- **A job failed with “The runner disappeared mid-job”**: the runner lost its connection during a
+  build. Studio retries the job on another runner; if it keeps happening, check the network and the
+  resources of the runner machine.
+- **“No suitable runner”**: no online runner can take the job, for example all suitable ones are
+  paused. **Resume** a runner or connect another one.

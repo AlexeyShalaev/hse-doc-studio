@@ -258,6 +258,7 @@ export const allUsers = (): AdminUser[] => [
     created_at: ago(120),
     last_login_at: ago(0),
     project_count: 4,
+    passkey_count: 1,
   },
   {
     id: "u_01hx7k2c1d",
@@ -268,6 +269,7 @@ export const allUsers = (): AdminUser[] => [
     created_at: ago(90),
     last_login_at: ago(2),
     project_count: 3,
+    passkey_count: 0,
   },
   {
     id: "u_01hx7k3e2f",
@@ -278,6 +280,7 @@ export const allUsers = (): AdminUser[] => [
     created_at: ago(60),
     last_login_at: null,
     project_count: 0,
+    passkey_count: 2,
   },
   {
     id: "u_01hx7k4g3h",
@@ -288,6 +291,7 @@ export const allUsers = (): AdminUser[] => [
     created_at: ago(1),
     last_login_at: null,
     project_count: 0,
+    passkey_count: 1,
   },
   {
     id: "u_01hx7k5i4j",
@@ -298,6 +302,7 @@ export const allUsers = (): AdminUser[] => [
     created_at: ago(2),
     last_login_at: null,
     project_count: 0,
+    passkey_count: 0,
   },
   {
     id: "u_01hx7k6k5l",
@@ -308,6 +313,7 @@ export const allUsers = (): AdminUser[] => [
     created_at: ago(200),
     last_login_at: ago(40),
     project_count: 0,
+    passkey_count: 2,
   },
   // Участники организаций (МСПИН 2025, Лаборатория ИИ): те же люди, что в
   // разделе «Организации».
@@ -320,6 +326,7 @@ export const allUsers = (): AdminUser[] => [
     created_at: ago(100),
     last_login_at: ago(0.3),
     project_count: 3,
+    passkey_count: 1,
   },
   {
     id: "u_01hx7k2m9c",
@@ -330,6 +337,7 @@ export const allUsers = (): AdminUser[] => [
     created_at: ago(46),
     last_login_at: ago(1),
     project_count: 2,
+    passkey_count: 0,
   },
   {
     id: "u_01hx7k5q7h",
@@ -340,6 +348,7 @@ export const allUsers = (): AdminUser[] => [
     created_at: ago(45),
     last_login_at: ago(3),
     project_count: 1,
+    passkey_count: 2,
   },
   {
     id: "u_01hx7k6r8j",
@@ -350,6 +359,7 @@ export const allUsers = (): AdminUser[] => [
     created_at: ago(42),
     last_login_at: ago(8),
     project_count: 1,
+    passkey_count: 1,
   },
   // Живая установка: преподаватели и студенты с разной давностью входа,
   // ещё две заявки в очереди одобрений.
@@ -362,6 +372,7 @@ export const allUsers = (): AdminUser[] => [
     created_at: ago(110),
     last_login_at: ago(0.08),
     project_count: 6,
+    passkey_count: 0,
   },
   {
     id: "u_01hx7k8p7q",
@@ -372,6 +383,7 @@ export const allUsers = (): AdminUser[] => [
     created_at: ago(75),
     last_login_at: ago(5),
     project_count: 2,
+    passkey_count: 2,
   },
   {
     id: "u_01hx7k9r8s",
@@ -382,6 +394,7 @@ export const allUsers = (): AdminUser[] => [
     created_at: ago(64),
     last_login_at: ago(1),
     project_count: 5,
+    passkey_count: 1,
   },
   {
     id: "u_01hx7kat9u",
@@ -392,6 +405,7 @@ export const allUsers = (): AdminUser[] => [
     created_at: ago(48),
     last_login_at: ago(14),
     project_count: 1,
+    passkey_count: 0,
   },
   {
     id: "u_01hx7kdw2x",
@@ -402,6 +416,7 @@ export const allUsers = (): AdminUser[] => [
     created_at: ago(33),
     last_login_at: ago(31),
     project_count: 0,
+    passkey_count: 2,
   },
   {
     id: "u_01hx7kbu0v",
@@ -412,6 +427,7 @@ export const allUsers = (): AdminUser[] => [
     created_at: ago(0.2),
     last_login_at: null,
     project_count: 0,
+    passkey_count: 1,
   },
   {
     id: "u_01hx7kcv1w",
@@ -422,6 +438,7 @@ export const allUsers = (): AdminUser[] => [
     created_at: ago(3),
     last_login_at: null,
     project_count: 0,
+    passkey_count: 0,
   },
 ];
 

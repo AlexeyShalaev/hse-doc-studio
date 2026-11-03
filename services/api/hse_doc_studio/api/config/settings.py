@@ -60,6 +60,13 @@ _DEFAULT_RELEASE_NOTES_FILE = (
     else Path("/app") / _RELEASE_NOTES_NAME
 )
 
+# Пользовательская справка (services/user-docs): в монорепе её сборка лежит в dist сервиса, в образе — /app/help.
+_DEFAULT_HELP_DIR = (
+    _MONOREPO_ROOT / "services" / "user-docs" / "dist"
+    if _MONOREPO_ROOT is not None and (_MONOREPO_ROOT / "services" / "user-docs").is_dir()
+    else Path("/app/help")
+)
+
 
 class Settings(BaseSettings):
     """Main application settings."""
@@ -141,6 +148,10 @@ class Settings(BaseSettings):
     static_dir: Path | None = Field(
         default=None,
         description="Serve built frontend from this directory (all-in-one mode)",
+    )
+    help_dir: Path = Field(
+        default=_DEFAULT_HELP_DIR,
+        description="Built user help (services/user-docs: user/, admin/, media/) served at /help/; no dir, no help",
     )
     # Аварийный переключатель для установок, где докер стоит нестандартно
     # (Colima, Rancher, урезанный PATH у службы). По умолчанию бэкенд ищет CLI

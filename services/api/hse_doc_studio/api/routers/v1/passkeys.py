@@ -17,6 +17,8 @@ from hse_doc_studio.api.schemas.passkeys import (
     CreatePasskeyRequest,
     PasskeyLoginRequest,
     PasskeyOptions,
+    PasskeySignupOptionsRequest,
+    PasskeySignupRequest,
     ReauthRequest,
     ReauthResponse,
     RenamePasskeyRequest,
@@ -29,6 +31,7 @@ from hse_doc_studio.core.identity.normalize import hash_token
 from hse_doc_studio.core.identity.passkeys import PASSKEY_LIMIT, Passkey, RelyingParty
 from hse_doc_studio.core.rate_limit import AUTH_IP, PASSKEY_IP
 from hse_doc_studio.use_cases.identity.passkey_login import FinishPasskeyLoginUC, StartPasskeyLoginUC
+from hse_doc_studio.use_cases.identity.passkey_signup import FinishPasskeySignupUC, StartPasskeySignupUC
 from hse_doc_studio.use_cases.identity.passkeys import (
     DeletePasskeyUC,
     FinishPasskeyRegistrationUC,
@@ -92,6 +95,43 @@ async def passkey_login(body: PasskeyLoginRequest, request: Request, response: R
         ip=client_ip(request),
         user_agent=request.headers.get("user-agent", ""),
         previous_secret=credentials_from_request(request).session_secret,
+    )
+    set_session_cookie(
+        response,
+        result.secret,
+        secure=is_secure_public_url(settings.auth.public_url),
+        max_age_s=settings.auth.session_absolute_days * _DAY_S,
+    )
+    response.headers.update(_NO_STORE)
+    return LoginResponse(user=session_user(result.user), csrf_token=result.session.csrf_token)
+
+
+@router.post("/auth/register/passkey/options", response_model=PasskeyOptions)
+async def passkey_signup_options(
+    body: PasskeySignupOptionsRequest, request: Request, response: Response
+) -> PasskeyOptions:
+    """Регистрация по приглашению на адрес сразу с passkey: параметры ключа для будущего аккаунта."""
+    await enforce_ip(request, PASSKEY_IP)
+    options = await (await _uc(request, StartPasskeySignupUC)).execute(
+        relying_party(request), body.invitation_token, body.name
+    )
+    response.headers.update(_NO_STORE)
+    return PasskeyOptions(options=options)
+
+
+@router.post("/auth/register/passkey", response_model=LoginResponse)
+async def passkey_signup(body: PasskeySignupRequest, request: Request, response: Response) -> LoginResponse:
+    """Аккаунт без пароля: ключ, погашенное приглашение и сессия одним ответом (как вход)."""
+    await enforce_ip(request, AUTH_IP)
+    result = await (await _uc(request, FinishPasskeySignupUC)).execute(
+        relying_party(request),
+        body.invitation_token,
+        body.name,
+        body.credential,
+        passkey_name=body.passkey_name,
+        locale=request.headers.get("x-interface-language"),
+        ip=client_ip(request),
+        user_agent=request.headers.get("user-agent", ""),
     )
     set_session_cookie(
         response,

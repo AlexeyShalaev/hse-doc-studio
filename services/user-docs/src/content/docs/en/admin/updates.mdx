@@ -1,0 +1,57 @@
+---
+title: 'Update the server'
+description: 'A new version and its notes, one-click update, automatic and manual rollback.'
+sidebar:
+  order: 5
+access: admin
+help:
+  routes: ['/admin/updates']
+  summary: 'Studio learns about releases by itself. An update takes a database snapshot, installs the new image, applies migrations and checks health; if the version does not come up, the system goes back by itself.'
+  steps:
+    - text: 'Open the **Updates** section. The **Version** block shows what is **Installed**, what is **Available**, when it was **Checked** and whether the **Updater** runs.'
+      shot: admin/updates/step-01
+    - text: 'Click **Check now** to skip the wait for the scheduled release check. Notes for the new version are listed under **Available**.'
+      hint: 'Studio checks the stable channel by itself every few hours.'
+    - text: 'Click **Update now** and confirm with **Update**.'
+      hint: 'The Studio is unavailable during migrations and restart, usually 1-3 minutes, and running builds are interrupted. Before updating, the updater takes a database snapshot and, if Backups has a destination, a full backup.'
+      shot: admin/updates/step-03
+    - text: 'Follow the progress in the banner at the top and in the **History** block: the **Log** button shows the run phases.'
+      hint: 'Until the updater takes the run, you can **Cancel** it.'
+    - text: 'Check the outcome: **Succeeded** or **Rolled back**. “Rolled back” means the new version did not come up and the system went back to the previous one.'
+      hint: 'If the update changed the database schema, the rollback restored the database from the snapshot; the history marks it “database restored from the snapshot”.'
+    - text: 'To go back to the previous version by hand, click **Roll back to** with the version number and confirm with **Roll back**.'
+      hint: 'If the update changed the database schema, everything written after the update is lost. The confirmation window warns you about it.'
+    - text: 'In the **Policy and window** block choose the **Mode** (**Off**, **Notify** or **Install automatically**), set the window days and time in UTC and click **Save**.'
+      hint: '**Largest step without a human** limits automatic installs to patches or minor versions; a new major version is only offered.'
+      shot: admin/updates/step-07
+verified:
+  at: 2026-11-03
+  app_version: '0.3.0'
+  sources:
+    - services/web-app/src/features/admin-updates
+    - services/api/hse_doc_studio/core/server_update
+    - services/api/hse_doc_studio/api/routers/admin_updates.py
+    - services/api/hse_doc_studio/infra/update/server_updater
+    - docs/design/auto-update.md
+---
+
+import Steps from '~/components/Steps.astro'
+
+Server updates need no manual commands: a separate updater service takes a database snapshot,
+pulls and verifies the image, applies migrations, restarts the services and waits for the new
+version to answer. If something does not come up, it brings back the previous images and, when
+needed, the database.
+
+<Steps />
+
+## If something goes wrong
+
+- **“The updater service does not answer”**: the update buttons do not work until it runs. Run
+  `docker compose up -d updater` on the server. Release checks and notifications still work.
+- **“The update executor is not connected”**: this is the case with Helm and with compose without
+  the updater profile. Install with the command from the **Version** block or enable the service:
+  `docker compose --profile updater up -d` with UPDATER_TOKEN in .env.
+- **Outcome “Needs hands”**: the update failed and the rollback did not finish. Open **Log**: it
+  shows where the database snapshot is and the command to bring the services back.
+- **“This release publishes no image digest”**: a verified update will not pass. Wait for the next
+  release or pick **None** in **Image verification** if you trust the source.

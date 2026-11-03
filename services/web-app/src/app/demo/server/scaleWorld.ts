@@ -332,6 +332,8 @@ const generatePeople = (r: Rand, now: number): Person[] => {
           : new Date(
               now - r() * Math.min(createdDays, 120) * DAY,
             ).toISOString(),
+      // Без вызова генератора: иначе сдвинулись бы все следующие значения мира.
+      passkey_count: status === "active" && i % 4 === 0 ? 1 : 0,
       project_count:
         status === "active"
           ? weighted(r, [

@@ -1,0 +1,75 @@
+---
+import {Icon} from '@astrojs/starlight/components'
+---
+
+{/*
+  Тема общая с приложением. Справка и Студия на одном origin, значит и localStorage один: читаем
+  ключ приложения `hse-studio-theme` (zustand persist, shared/lib/theme/themeStore.ts) и пишем
+  обратно выбор, сделанный в справке. «blueprint» приложения у справки тёмная.
+  Встроено в страницу, как оригинал Starlight: первая отрисовка сразу в нужной теме.
+*/}
+<script is:inline>
+  window.StarlightThemeProvider = (() => {
+    const APP_KEY = 'hse-studio-theme'
+    const SL_KEY = 'starlight-theme'
+    const readApp = () => {
+      try {
+        const raw = localStorage.getItem(APP_KEY)
+        if (!raw) return null
+        const value = JSON.parse(raw)?.state?.theme
+        if (value === 'dark' || value === 'blueprint') return 'dark'
+        if (value === 'light') return 'light'
+        return value === 'system' ? 'auto' : null
+      } catch {
+        return null
+      }
+    }
+    const writeApp = (theme) => {
+      try {
+        const raw = localStorage.getItem(APP_KEY)
+        const parsed = raw ? JSON.parse(raw) : {state: {}, version: 0}
+        parsed.state = {...(parsed.state || {}), theme: theme === 'auto' ? 'system' : theme}
+        localStorage.setItem(APP_KEY, JSON.stringify(parsed))
+      } catch {}
+    }
+    const resolve = (theme) =>
+      theme === 'auto' ? (window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark') : theme
+    const stored = (() => {
+      try {
+        return localStorage.getItem(SL_KEY)
+      } catch {
+        return null
+      }
+    })()
+    const preference = readApp() ?? (stored === 'light' || stored === 'dark' ? stored : 'auto')
+    document.documentElement.dataset.theme = resolve(preference)
+    try {
+      localStorage.setItem(SL_KEY, preference === 'auto' ? '' : preference)
+    } catch {}
+    document.addEventListener('change', (event) => {
+      const select = event.target
+      if (!select || !select.closest || !select.closest('starlight-theme-select')) return
+      writeApp(select.value === 'light' || select.value === 'dark' ? select.value : 'auto')
+    })
+    return {
+      updatePickers(theme = preference) {
+        document.querySelectorAll('starlight-theme-select').forEach((picker) => {
+          const select = picker.querySelector('select')
+          if (select) select.value = theme
+          const tmpl = document.querySelector('#theme-icons')
+          const newIcon = tmpl && tmpl.content.querySelector('.' + theme)
+          if (newIcon) {
+            const oldIcon = picker.querySelector('svg.label-icon')
+            if (oldIcon) oldIcon.replaceChildren(...newIcon.cloneNode(true).childNodes)
+          }
+        })
+      },
+    }
+  })()
+</script>
+
+<template id="theme-icons">
+  <Icon name="sun" class="light" />
+  <Icon name="moon" class="dark" />
+  <Icon name="laptop" class="auto" />
+</template>

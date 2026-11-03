@@ -177,6 +177,7 @@
       "mcp_call": "Вызов инструмента MCP",
       "auth_passkey_added": "Добавлен passkey",
       "auth_passkey_add_failed": "Не удалось добавить passkey",
+      "auth_passkey_signup_failed": "Регистрация с passkey: ключ отклонён",
       "auth_passkey_renamed": "Passkey переименован",
       "auth_passkey_removed": "Passkey удалён",
       "auth_passkey_login_failed": "Неудачный вход по passkey",

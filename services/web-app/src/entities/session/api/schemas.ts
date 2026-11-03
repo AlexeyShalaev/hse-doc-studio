@@ -376,6 +376,8 @@ export const AdminUserSchema = z.strictObject({
   created_at: iso,
   last_login_at: iso.nullable(),
   project_count: z.number().int(),
+  // Сколько passkey у человека (колонка таблицы людей).
+  passkey_count: z.number().int().default(0),
 });
 export const AdminUserPageSchema = pageOf(AdminUserSchema);
 // Счётчики на чипах списка людей под тем же поиском (GET /api/admin/users/facets).

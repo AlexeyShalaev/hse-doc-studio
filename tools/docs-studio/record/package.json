@@ -1,0 +1,15 @@
+{
+  "name": "hse-doc-studio-docs-studio",
+  "private": true,
+  "type": "module",
+  "description": "Съёмка скриншотов и роликов пользовательской справки (services/user-docs) со стенда",
+  "scripts": {
+    "record": "node run.mjs"
+  },
+  "dependencies": {
+    "playwright": "1.62.0",
+    "sharp": "^0.34.4",
+    "yaml": "^2.8.1"
+  },
+  "packageManager": "pnpm@9.15.4"
+}
