@@ -9,6 +9,9 @@ services:
     environment:
       # Смоук самодиагностики читает публичный лёгкий эндпоинт (e2e/tests/full.spec.ts).
       HSE_STUDIO__DIAGNOSTICS__PUBLIC_ENDPOINT: "true"
+      # Подключённые Студии (e2e/tests/devices.spec.ts): «не в сети» наступает через полминуты после остановки Студии.
+      HSE_STUDIO__DEVICES__INTERVAL_S: "10"
+      HSE_STUDIO__DEVICES__ONLINE_WINDOW_S: "30"
       # Плановый проход чаще, чтобы страница в смоуке не ждала пять минут.
       HSE_STUDIO__DIAGNOSTICS__INTERVAL_S: "30"
       # Страница «Обновления» (e2e/tests/updates.spec.ts): исполнителя «kubernetes» играет сам тест через протокол

@@ -51,6 +51,16 @@ export default defineConfig({
       },
     },
     {
+      // Подключённые Студии: локальная Студия и сервер с короткими интервалами присутствия (devices.spec.ts).
+      name: "devices",
+      testMatch: /devices\.spec\.ts/,
+      timeout: 5 * 60_000,
+      use: {
+        ...devices["Desktop Chrome"],
+        channel: process.env.E2E_CHANNEL || undefined,
+      },
+    },
+    {
       // Passkey на server-lite: виртуальный аутентификатор Chrome через CDP (WebAuthn.addVirtualAuthenticator).
       name: "passkeys",
       testMatch: /passkeys\.spec\.ts/,
