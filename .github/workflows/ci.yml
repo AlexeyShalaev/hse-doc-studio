@@ -162,6 +162,69 @@ jobs:
       - name: Pytest (without server extra)
         run: uv run pytest -m "not pg and not s3" --no-cov
 
+  # Исполнитель kubernetes раннера на настоящем кластере (kind): RBAC и NetworkPolicy из чарта, namespace подов
+  # сборки с Pod Security restricted, поддельный образ TeX. Не входит в all-checks-passed (не обязательна).
+  k8s-runner-kind:
+    name: Runner · Kubernetes executor on kind
+    needs: backend-lint
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      KUBECONFIG: ${{ github.workspace }}/.kind/kubeconfig
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v7
+        with:
+          python-version: "3.14"
+      - name: Sync
+        working-directory: services/api
+        run: uv sync --frozen --extra api --extra kubernetes --extra test
+      - name: Create kind cluster
+        run: |
+          mkdir -p .kind
+          kind create cluster --name hds --kubeconfig "$KUBECONFIG" --wait 120s
+      - name: Fake TeX image
+        run: |
+          docker build -t hds-fake-tex:ci services/api/tests/integration/k8s/fake-tex
+          kind load docker-image hds-fake-tex:ci --name hds
+      - name: Namespaces and RBAC from the chart
+        run: |
+          kubectl --kubeconfig "$KUBECONFIG" create namespace studio
+          kubectl --kubeconfig "$KUBECONFIG" create namespace hds-builds
+          kubectl --kubeconfig "$KUBECONFIG" label namespace hds-builds \
+            pod-security.kubernetes.io/enforce=restricted pod-security.kubernetes.io/enforce-version=latest
+          helm template rel deploy/helm/hse-doc-studio --namespace studio \
+            -f deploy/helm/hse-doc-studio/ci/values-test.yaml -f deploy/helm/hse-doc-studio/ci/values-kubernetes.yaml \
+            --show-only templates/runner-kubernetes.yaml > .kind/runner.yaml
+          (cd services/api && uv run python ../../scripts/ci/k8s_runner_rbac.py ../../.kind/runner.yaml studio) > .kind/rbac.yaml
+          kubectl --kubeconfig "$KUBECONFIG" apply -f .kind/rbac.yaml
+      - name: Service account token and API address
+        run: |
+          kubectl --kubeconfig "$KUBECONFIG" create token rel-hse-doc-studio-runner -n studio --duration=1h > .kind/token
+          kubectl --kubeconfig "$KUBECONFIG" config view --minify --raw \
+            -o jsonpath='{.clusters[0].cluster.certificate-authority-data}' | base64 -d > .kind/ca.crt
+          echo "HSE_TEST_K8S_API_URL=$(kubectl --kubeconfig "$KUBECONFIG" config view --minify -o jsonpath='{.clusters[0].cluster.server}')" >> "$GITHUB_ENV"
+      - name: Role is minimal
+        run: |
+          as=system:serviceaccount:studio:rel-hse-doc-studio-runner
+          test "$(kubectl --kubeconfig "$KUBECONFIG" auth can-i create pods -n hds-builds --as=$as)" = yes
+          test "$(kubectl --kubeconfig "$KUBECONFIG" auth can-i create pods/exec -n hds-builds --as=$as)" = yes
+          test "$(kubectl --kubeconfig "$KUBECONFIG" auth can-i get secrets -n hds-builds --as=$as || true)" = no
+          test "$(kubectl --kubeconfig "$KUBECONFIG" auth can-i create pods -n studio --as=$as || true)" = no
+      - name: Pytest (kind)
+        working-directory: services/api
+        env:
+          HSE_TEST_K8S_TOKEN_FILE: ${{ github.workspace }}/.kind/token
+          HSE_TEST_K8S_CA_FILE: ${{ github.workspace }}/.kind/ca.crt
+          HSE_TEST_K8S_NAMESPACE: hds-builds
+          HSE_TEST_K8S_IMAGE: hds-fake-tex:ci
+        run: uv run pytest tests/integration/k8s -m k8s --no-cov
+      - name: Cluster state on failure
+        if: failure()
+        run: |
+          kubectl --kubeconfig "$KUBECONFIG" get pods -A -o wide || true
+          kubectl --kubeconfig "$KUBECONFIG" get events -n hds-builds --sort-by=.lastTimestamp || true
+
   # ── Frontend ─────────────────────────────────────────────────────────────
   # Один джоб, а не два: `pnpm install --frozen-lockfile` на этом дереве
   # зависимостей — самая дорогая операция, и разделение гоняло её дважды.

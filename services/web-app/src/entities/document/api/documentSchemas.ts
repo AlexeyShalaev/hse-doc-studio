@@ -47,6 +47,9 @@ export const DocumentResponseSchema = z.object({
   // Visual nav block from the pack (espd/pdp/pres/…) — the nav draws a thin
   // divider between neighbouring docs of different groups.
   group: z.string().nullish(),
+  // Теги раннера, нужные сборке ("tex", "office"; пусто: раннер не нужен).
+  // Сервер сверяет их с доступностью сборки и гасит «Собрать» без раннера.
+  build_tags: z.array(z.string()).optional(),
   // PDF preview of a non-PDF artifact (pptx → sibling .pdf produced by the
   // managed Gotenberg container on build and after office-editor saves).
   // null → no preview, download card.

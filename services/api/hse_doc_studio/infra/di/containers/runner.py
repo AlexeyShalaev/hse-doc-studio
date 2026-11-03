@@ -20,10 +20,15 @@ from hse_doc_studio.core.jobs.runners import DeclaredAiEndpoint
 from hse_doc_studio.core.language_check import ILanguageCheckService
 from hse_doc_studio.core.office import IOfficeConvertService
 from hse_doc_studio.infra.checks.runner import CheckRunner
+from hse_doc_studio.infra.compile.backend import BuildBackend
 from hse_doc_studio.infra.compile.concurrency import CompileConcurrencyLimiter
-from hse_doc_studio.infra.compile.docker_compile_executor import DockerCompileExecutor
+from hse_doc_studio.infra.compile.docker_compile_executor import DockerCompileExecutor, sweep_build_containers
 from hse_doc_studio.infra.compile.docker_image_manager import DockerImageManager
 from hse_doc_studio.infra.compile.host_path_resolver import HostPathResolver
+from hse_doc_studio.infra.compile.k8s.api import IKubeApi, KubeApiError
+from hse_doc_studio.infra.compile.k8s.client import KubernetesApiClient, TokenSource
+from hse_doc_studio.infra.compile.k8s.config import instance_label
+from hse_doc_studio.infra.compile.k8s.executor import KubernetesBuildEnvironment, KubernetesTexExecutor
 from hse_doc_studio.infra.docker.cli import docker_binary
 from hse_doc_studio.infra.jobs.embedded_runner import EmbeddedCompileRunner
 from hse_doc_studio.infra.jobs.handler_registry import JobHandlerRegistry
@@ -33,7 +38,7 @@ from hse_doc_studio.infra.jobs.pack_handler import PackHandler
 from hse_doc_studio.infra.runner.capabilities import detect_tags
 from hse_doc_studio.infra.runner.client import RunnerClient
 from hse_doc_studio.infra.runner.compile_executor import CompileJobExecutor, RoutingJobExecutor
-from hse_doc_studio.infra.runner.config import RunnerConfig
+from hse_doc_studio.infra.runner.config import BuildExecutorKind, RunnerConfig
 from hse_doc_studio.infra.runner.handler_executor import HandlerJobExecutor, JobBlobFetcher
 from hse_doc_studio.infra.runner.identity import RunnerIdentityStore
 from hse_doc_studio.infra.runner.language_check import NoLanguageCheck
@@ -65,8 +70,10 @@ class RunnerProvider(Provider):
         observer: IRunnerLoopObserver | None = None,
         gate: Callable[[], bool] | None = None,
         ai_transport: httpx.AsyncBaseTransport | None = None,
+        kube_api: IKubeApi | None = None,
     ) -> None:
         super().__init__()
+        self._kube_api = kube_api
         self._config = config
         self._transport = transport
         self._office_transport = office_transport
@@ -159,11 +166,54 @@ class RunnerProvider(Provider):
         return GotenbergConverter(config.office_url, config.office_timeout_s, self._office_transport)
 
     @provide
+    async def get_build_backend(self, config: RunnerConfig) -> AsyncIterator[BuildBackend]:
+        if config.executor is BuildExecutorKind.docker:
+            yield BuildBackend(
+                executor=DockerCompileExecutor(
+                    self._host_paths or HostPathResolver(),
+                    image=config.tex_image,
+                    cache_volume_name=config.tex_cache_volume,
+                    idle_timeout_s=config.tex_idle_timeout_s,
+                    limits=config.executor_limits(),
+                ),
+                environment=DockerImageManager(),
+                sweep=sweep_build_containers,
+                tex_available=shutil.which(docker_binary()) is not None,
+                name="docker",
+            )
+            return
+        api = self._kube_api
+        if api is None:
+            try:
+                api = KubernetesApiClient(
+                    config.k8s.resolved_api_url(), TokenSource(config.k8s.token_file), config.k8s.ca_file
+                )
+            except KubeApiError as exc:
+                raise RunnerConfigError(str(exc)) from exc
+        executor = KubernetesTexExecutor(
+            api,
+            config.k8s,
+            image=config.tex_image,
+            instance=instance_label(config.k8s.owner_pod_uid, config.name),
+            idle_timeout_s=config.tex_idle_timeout_s,
+        )
+        logger.info("build executor: kubernetes, namespace %s", executor.namespace)
+        yield BuildBackend(
+            executor=executor,
+            environment=KubernetesBuildEnvironment(),
+            sweep=executor.sweep,
+            tex_available=True,
+            name="kubernetes",
+        )
+        await api.aclose()
+
+    @provide
     def get_compile_runner(  # noqa: PLR0913
         self,
         config: RunnerConfig,
         office_convert: IOfficeConvertService,
         outputs: IJobOutputs,
+        backend: BuildBackend,
     ) -> EmbeddedCompileRunner:
         # Те же исполнитель и тело сборки, что у встроенного раннера; отличаются настройки, изоляция и слоты.
         async def image() -> str:
@@ -171,14 +221,8 @@ class RunnerProvider(Provider):
 
         lt_manager: ILanguageCheckService = NoLanguageCheck()
         return EmbeddedCompileRunner(
-            executor=DockerCompileExecutor(
-                self._host_paths or HostPathResolver(),
-                image=config.tex_image,
-                cache_volume_name=config.tex_cache_volume,
-                idle_timeout_s=config.tex_idle_timeout_s,
-                limits=config.executor_limits(),
-            ),
-            image_manager=DockerImageManager(),
+            executor=backend.executor,
+            image_manager=backend.environment,
             office_convert=office_convert,
             check_runner=CheckRunner(lt_manager=lt_manager, lt_client=httpx.Client()),
             lt_manager=lt_manager,
@@ -219,13 +263,14 @@ class RunnerProvider(Provider):
         executor: HandlerJobExecutor,
         compile_executor: CompileJobExecutor,
         relay: AiRelayExecutor,
+        backend: BuildBackend,
     ) -> RunnerLoop:
         endpoints = self._ai_endpoints if self._ai_endpoints is not None else endpoints_of(config)
         declared = tuple(DeclaredAiEndpoint(endpoint.name, endpoint.flavor) for endpoint in endpoints)
         relay_on = bool(declared) and config.ai_concurrency > 0
         tags = config.explicit_tags() or detect_tags(
             office_url=config.office_url,
-            tex_available=shutil.which(docker_binary()) is not None,
+            tex_available=backend.tex_available,
             ai_relay=relay_on,
         )
         if declared:
@@ -290,12 +335,14 @@ def create_runner_container(  # noqa: PLR0913
     observer: IRunnerLoopObserver | None = None,
     gate: Callable[[], bool] | None = None,
     ai_transport: httpx.AsyncBaseTransport | None = None,
+    kube_api: IKubeApi | None = None,
 ) -> AsyncContainer:
     """Транспорты подменяют сеть в тестах: api раннера, Gotenberg и модели.
 
     Локальная Студия передаёт свои ИИ-адреса (`ai_endpoints`, `None` значит из окружения раннера),
     наблюдатель состояния и шлюз «уступать локальным сборкам». `host_paths` нужен раннеру внутри
     контейнера Студии: docker монтирует папку сборки по пути хоста, а не по пути внутри контейнера.
+    `kube_api` подменяет Kubernetes API исполнителя kubernetes в тестах.
     """
     return make_async_container(
         RunnerProvider(
@@ -307,5 +354,6 @@ def create_runner_container(  # noqa: PLR0913
             observer=observer,
             gate=gate,
             ai_transport=ai_transport,
+            kube_api=kube_api,
         )
     )

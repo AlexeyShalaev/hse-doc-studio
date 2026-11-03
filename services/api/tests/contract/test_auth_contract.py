@@ -166,6 +166,18 @@ async def test__session__add_get_touch_delete(repos: Repos, user: str) -> None:
     assert await repos.sessions.get("s1") is None
 
 
+async def test__session__mark_reauthenticated__moves_authenticated_at(repos: Repos, user: str) -> None:
+    await repos.sessions.add(make_session("s1"))
+    later = NOW + timedelta(minutes=30)
+
+    await repos.sessions.mark_reauthenticated("s1", later)
+
+    stored = await repos.sessions.get("s1")
+    assert stored is not None
+    assert stored.reauth_at == later
+    assert stored.authenticated_at == later
+
+
 async def test__session__list_and_delete_for_user__keeps_excepted_and_other_users(repos: Repos, user: str) -> None:
     await repos.sessions.add(make_session("s1", created=NOW))
     await repos.sessions.add(make_session("s2", created=NOW + timedelta(seconds=1)))

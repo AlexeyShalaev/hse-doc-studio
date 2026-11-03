@@ -12,6 +12,7 @@ const OPEN: AuthOptions = {
   oidc_providers: [],
   smtp_enabled: true,
   password_min_length: 10,
+  passkeys_enabled: false,
 };
 const DOMAINS: AuthOptions = { ...OPEN, registration_mode: "domains" };
 const INVITE: AuthOptions = { ...OPEN, registration_mode: "invite" };

@@ -111,6 +111,57 @@ for (const lang of LANGS) {
       await logout(page);
     });
 
+    test("без раннеров сборка заблокирована и есть подсказка", async ({
+      page,
+    }) => {
+      // На стенде server-lite раннеров нет: облачная сборка недоступна, и интерфейс говорит об этом честно.
+      expect(createdId).not.toBe("");
+      await login(page, USERS.anna.email);
+      const availability = await page.request.get(
+        `/api/v1/projects/${createdId}/build-availability`,
+      );
+      expect(availability.status()).toBe(200);
+      expect(await availability.json()).toMatchObject({
+        cloud: true,
+        any_runner: false,
+        tags: [],
+      });
+
+      const documents = (await (
+        await page.request.get(`/api/v1/projects/${createdId}/documents`)
+      ).json()) as { id: string; build_tags: string[] }[];
+      const tex = documents.find((doc) => doc.build_tags.includes("tex"));
+      expect(tex).toBeDefined();
+
+      await page.goto(`/projects/${createdId}/documents/${tex?.id ?? ""}`);
+      await expect(page.getByTestId("document-build-button")).toBeDisabled();
+      const notice = page.getByTestId("build-blocked-notice").first();
+      await expect(notice).toBeVisible();
+      await expect(notice).toHaveAttribute("data-reason", "no_runners");
+      await expect(notice).toContainText(
+        lang === "ru" ? "Студии на компьютере" : "desktop Studio",
+      );
+      await shot(page, lang, "07b-build-blocked");
+
+      // Гонка с опросом: сервер отвечает типизированным отказом, а не 503 с английским текстом.
+      const csrf = await page.evaluate(async () => {
+        const r = await fetch("/api/v1/session/bootstrap", {
+          credentials: "include",
+        });
+        return ((await r.json()) as { csrf_token: string | null }).csrf_token;
+      });
+      const refused = await page.request.post(
+        `/api/v1/projects/${createdId}/documents/${tex?.id ?? ""}/compile`,
+        { headers: csrf ? { "X-CSRF-Token": csrf } : {} },
+      );
+      expect(refused.status()).toBe(409);
+      expect(await refused.json()).toMatchObject({
+        code: "no_runners",
+        tags: ["tex"],
+      });
+      await logout(page);
+    });
+
     test("второй пользователь не видит чужие проекты", async ({ page }) => {
       expect(createdId).not.toBe("");
       await login(page, USERS.boris.email);

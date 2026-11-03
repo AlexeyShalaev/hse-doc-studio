@@ -150,16 +150,21 @@ service:
   type: ClusterIP
   port: 8000
 
-# Раннер задач. Запускает TeX и проверки в соседних контейнерах через docker.sock узла:
-# сокет эквивалентен root на узле, включайте только на выделенных узлах (nodeSelector).
+# Раннер задач. Исполнитель сборки TeX (runner.executor):
+# - docker (по умолчанию): соседние контейнеры через docker.sock узла (hostPath). Сокет эквивалентен root на узле,
+#   включайте только на выделенных узлах (nodeSelector); под раннера не проходит Pod Security restricted.
+# - kubernetes: под на задачу в своём namespace через Kubernetes API (ServiceAccount, Role только на поды),
+#   без docker.sock и hostPath; под раннера и поды сборки проходят restricted. См. docs/design/k8s-runner.md.
 runner:
   enabled: false
-  # Не больше 1: все поды узла делят hostPath и одноразовый токен регистрации.
+  executor: docker
+  # Не больше 1: токен регистрации одноразовый, а в режиме docker поды узла ещё и делят hostPath.
   replicas: 1
   concurrency: 1
   tags: ""
   officeUrl: ""
-  # Каталог данных раннера. Соседние контейнеры видят пути узла, поэтому hostPath монтируется по тому же пути.
+  # Каталог данных раннера. В режиме docker соседние контейнеры видят пути узла, поэтому hostPath монтируется
+  # по тому же пути; в режиме kubernetes это точка монтирования тома runner.persistence.
   dataDir: /var/lib/hse-runner
   dockerSocket: /var/run/docker.sock
   dockerGid: 0
@@ -169,3 +174,47 @@ runner:
   nodeSelector: {}
   tolerations: []
   affinity: {}
+  # Только executor=kubernetes: сколько ждать доработки текущих сборок при остановке пода раннера.
+  terminationGracePeriodSeconds: 600
+  # Только executor=kubernetes: том данных раннера (identity.json с выданным токеном, кэш блобов, рабочие папки).
+  # enabled=false даёт emptyDir: тогда положите постоянный токен раннера в Secret (ключ runner-token).
+  persistence:
+    enabled: true
+    existingClaim: ""
+    storageClassName: ""
+    accessModes: [ReadWriteOnce]
+    size: 10Gi
+  # Только executor=kubernetes: поды сборки.
+  kubernetes:
+    # Namespace подов сборки; пусто значит namespace релиза. Свой namespace должен существовать; пометьте его
+    # pod-security.kubernetes.io/enforce=restricted.
+    namespace: ""
+    # Образ TeX подов; пусто значит образ раннера по умолчанию (texlive/texlive:TL2024-historic).
+    image: ""
+    imagePullPolicy: IfNotPresent
+    # Имена Secret для pull образа TeX в namespace подов сборки.
+    imagePullSecrets: []
+    resources:
+      requests: {cpu: 500m, memory: 1Gi}
+      limits: {cpu: "2", memory: 4Gi}
+    # emptyDir /work (исходники и .build) и /tmp (форматы TeX).
+    workSizeLimit: 2Gi
+    tmpSizeLimit: 1Gi
+    # Страховка на случай смерти раннера; обычный предел времени задачи держит api.
+    activeDeadlineSeconds: 1800
+    # Первый pull многогигабайтного образа TeX на узле занимает минуты.
+    podStartTimeoutSeconds: 300
+    runAsUser: 1000
+    runAsGroup: 1000
+    fsGroup: 1000
+    nodeSelector: {}
+    tolerations: []
+    priorityClassName: ""
+    # gvisor или kata для общих установок, если RuntimeClass есть в кластере.
+    runtimeClassName: ""
+    # Необязательный PVC с кэшем шрифтов TeX (/cache). Нужен ReadWriteMany либо один узел.
+    texCache:
+      existingClaim: ""
+    # Запрет всей сети подам сборки (нужен CNI с поддержкой NetworkPolicy).
+    networkPolicy:
+      enabled: true

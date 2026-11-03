@@ -73,6 +73,8 @@ export const AuthOptionsSchema = z.strictObject({
   ),
   smtp_enabled: z.boolean(),
   password_min_length: z.number().int(),
+  // Вход по passkey включён админом и адрес Студии годится для WebAuthn.
+  passkeys_enabled: z.boolean(),
 });
 export type AuthOptions = z.infer<typeof AuthOptionsSchema>;
 
@@ -667,13 +669,27 @@ export const UpdateAdminRegistrationRequestSchema = z.strictObject({
   registration_domains: z.array(z.string()).nullable(),
   require_approval: z.boolean().nullable(),
 });
+export const PASSKEY_ISSUES = [
+  "no_address",
+  "insecure_origin",
+  "ip_address",
+  "rp_id_mismatch",
+] as const;
+export type PasskeyIssue = (typeof PASSKEY_ISSUES)[number];
 export const AdminAuthSettingsSchema = z.strictObject({
   password_enabled: z.boolean(),
   oidc_enabled_count: z.number().int(),
   fields: settingFields,
+  passkeys_enabled: z.boolean(),
+  passkey_domain: z.string().nullable(),
+  passkey_issue: z.enum(PASSKEY_ISSUES).nullable(),
+  passkey_domains: z.array(
+    z.strictObject({ domain: z.string(), count: z.number().int() }),
+  ),
 });
 export const UpdateAdminAuthRequestSchema = z.strictObject({
   password_enabled: z.boolean().nullable(),
+  passkeys_enabled: z.boolean().nullable(),
 });
 export const AdminSmtpSettingsSchema = z.strictObject({
   enabled: z.boolean(),
@@ -904,6 +920,9 @@ export type UpdateAdminRegistrationRequest = z.infer<
   typeof UpdateAdminRegistrationRequestSchema
 >;
 export type AdminAuthSettings = z.infer<typeof AdminAuthSettingsSchema>;
+export type UpdateAdminAuthRequest = z.infer<
+  typeof UpdateAdminAuthRequestSchema
+>;
 export type AdminSmtpSettings = z.infer<typeof AdminSmtpSettingsSchema>;
 export type UpdateAdminSmtpRequest = z.infer<
   typeof UpdateAdminSmtpRequestSchema

@@ -138,5 +138,33 @@ class GitServerItem(StrictModel):
     state: Literal["ok", "expired", "revoked", "unreachable"]
 
 
+StudioCompatName = Literal["same", "compatible", "local_older", "local_newer", "unknown"]
+
+
+class GitServerCheck(StrictModel):
+    """Локальная Студия перед подключением к серверу: версия сервера, совместимость и уже сохранённый вход."""
+
+    server_url: str
+    server_version: str
+    local_version: str
+    compat: StudioCompatName
+    credential_id: str | None
+    account_name: str | None
+    state: Literal["ok", "expired", "revoked", "unreachable"] | None
+
+
+class LocalStudioInfoResponse(StrictModel):
+    """Облачная Студия: что нужно экрану «Локальная версия» (адрес и версия сервера, откуда ставить)."""
+
+    server_url: str
+    server_version: str
+    git_remote_enabled: bool
+    recommended_tag: str | None
+    image: str
+    install_base_url: str
+    releases_url: str
+    default_port: int
+
+
 class GitServerList(StrictModel):
     items: list[GitServerItem]

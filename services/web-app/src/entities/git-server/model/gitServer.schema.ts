@@ -168,3 +168,23 @@ export const GitServerListSchema = z.strictObject({
   items: z.array(GitServerItemSchema),
 });
 export type GitServerList = z.infer<typeof GitServerListSchema>;
+
+/** Совместимость версий локальной Студии и сервера (docs/design/local-from-cloud.md). */
+export const STUDIO_COMPAT = [
+  "same",
+  "compatible",
+  "local_older",
+  "local_newer",
+  "unknown",
+] as const;
+export type StudioCompat = (typeof STUDIO_COMPAT)[number];
+export const GitServerCheckSchema = z.strictObject({
+  server_url: z.string(),
+  server_version: z.string(),
+  local_version: z.string(),
+  compat: z.enum(STUDIO_COMPAT),
+  credential_id: z.string().nullable(),
+  account_name: z.string().nullable(),
+  state: z.enum(GIT_SERVER_STATES).nullable(),
+});
+export type GitServerCheck = z.infer<typeof GitServerCheckSchema>;

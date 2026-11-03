@@ -5,8 +5,22 @@ from typing import Any
 
 from pydantic import BaseModel, ConfigDict
 
+from hse_doc_studio.api.schemas.common import StrictModel
 from hse_doc_studio.api.schemas.personal_runners import CompilePlacement
 from hse_doc_studio.api.schemas.session import CompileWait
+
+
+class BuildAvailabilityResponse(StrictModel):
+    """Есть ли сейчас кому собирать документы проекта.
+
+    `cloud`: сборку берут раннеры сервера (локально false, ограничений нет); `any_runner`: подключён хотя бы
+    один живой раннер; `tags`: теги сборки (`tex`, `office`), для которых исполнитель есть сейчас.
+    Документ собирается, если его `build_tags` входят в `tags`.
+    """
+
+    cloud: bool
+    any_runner: bool
+    tags: list[str]
 
 
 class TriggerCompileResponse(BaseModel):

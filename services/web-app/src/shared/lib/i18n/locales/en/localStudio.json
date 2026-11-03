@@ -1,0 +1,118 @@
+{
+  "link": {
+    "label": "Local version",
+    "buildLocally": "Build locally"
+  },
+  "title": "Local version of the Studio",
+  "lead": "The same Studio on your computer. Projects sync with this server and the PDF is built on your machine.",
+  "loading": "Loading the server address and version…",
+  "loadFailed": "Could not load the server address and version. Refresh the page.",
+  "docs": "Step-by-step guide in the documentation",
+  "why": {
+    "title": "Why",
+    "build": {
+      "title": "Build on your computer",
+      "text": "TeX and checks run on your machine, no cloud runners or quotas needed."
+    },
+    "offline": {
+      "title": "Work offline",
+      "text": "Edit and build on the go, changes reach the server once you are back online."
+    },
+    "speed": {
+      "title": "Speed",
+      "text": "No build queue and no network lag, the editor responds instantly."
+    },
+    "sync": "Once connected, the local Studio pushes your edits to this server and pulls others' on its own, and uploads the built PDF to the project so co-authors and reviewers see the latest version."
+  },
+  "requirements": {
+    "title": "What you need",
+    "docker": "Docker: Docker Desktop on macOS (Intel and Apple Silicon) and Windows 10/11 with WSL 2, Docker Engine on Linux (amd64 or arm64).",
+    "disk": "Disk: about 9 GB for the TeX Live image (downloaded once on the first build) plus a few hundred megabytes for the Studio.",
+    "memory": "Memory: 2 GB of RAM and 2 cores per build.",
+    "browser": "Browser: any modern one, the Studio opens at http://localhost."
+  },
+  "install": {
+    "title": "Installation",
+    "lead": "One command in a terminal. This server's address is already filled in: the connect screen opens after installation.",
+    "osLabel": "Operating system",
+    "os": {
+      "macos": "macOS",
+      "windows": "Windows",
+      "linux": "Linux"
+    },
+    "docker": {
+      "macos": "Install and start Docker Desktop.",
+      "windows": "Install Docker Desktop with WSL 2 and start it.",
+      "linux": "Install Docker Engine and make sure docker info answers without errors."
+    },
+    "dockerLink": "How to install Docker",
+    "terminal": {
+      "macos": "Open Terminal and run:",
+      "windows": "Open PowerShell and run:",
+      "linux": "Open a terminal and run:"
+    },
+    "command": "Install command",
+    "after": "The script pulls the image, starts the Studio and opens it in your browser. On first launch it asks for a projects folder and restarts itself, keep the tab open.",
+    "port": "Port on this computer",
+    "portHint": "If port 17240 is taken, the script picks the next free one and prints it. Enter it here so the buttons below lead to your Studio.",
+    "pin": "Install the same version as the server ({{tag}})",
+    "manual": "Without the script: one docker run command",
+    "manualCommand": "docker run command",
+    "manualAfter": "Then open http://localhost:{{port}} and follow the first-run wizard.",
+    "releases": "All versions and what's new"
+  },
+  "connect": {
+    "title": "Connect to this server",
+    "lead": "Device code sign-in: no password is typed into the local Studio.",
+    "disabled": "The administrator turned off git on this server, so the local Studio cannot connect. You can still install it to work without the server.",
+    "step1": "Open the local Studio with the button below (or paste the server address on its \"Connect to a server\" screen).",
+    "step2": "Click \"Connect\": the local Studio shows a code and opens the confirmation page on this server.",
+    "step3": "Check the code and click \"Allow\". Done: you can open the server's projects.",
+    "buttonHint": "opens http://localhost:{{port}}",
+    "serverUrl": "Server address",
+    "manual": "The button did not open the Studio? Make sure it is running, check the port above or paste this address by hand.",
+    "version": "Server version {{version}}. The local Studio compares its version when connecting and warns if they differ."
+  },
+  "project": {
+    "title": "This project",
+    "lead": "The local Studio clones the project from this server and turns sync on. If you already have it, it simply opens.",
+    "cloneUrl": "Project address for git",
+    "settings": "Project sync settings"
+  },
+  "open": {
+    "connect": "Connect the local Studio",
+    "project": "Open in the local Studio"
+  },
+  "menu": {
+    "label": "Local version"
+  },
+  "welcome": {
+    "connect": "Connect to a server",
+    "emptyLocal": "Working in a cloud Studio? Connect to it and the server's projects open here."
+  },
+  "connectLocal": {
+    "title": "Connect to a Studio server",
+    "lead": "The server's projects open here, edits stay in sync and the PDF goes to the server after each build.",
+    "url": "Server address",
+    "urlHint": "The one open in your browser, for example https://studio.example.org",
+    "next": "Continue",
+    "checking": "Checking {{host}}…",
+    "checkFailed": "Could not connect to {{url}}.",
+    "edit": "Change address",
+    "versions": "Server version {{server}} · this Studio {{local}}",
+    "signedIn": "You are already signed in as {{name}}",
+    "continue": "Continue",
+    "connect": "Connect to {{host}}",
+    "connectHint": "Click to get a code. Confirm it on the server while signed in to your account.",
+    "compat": {
+      "local_older": "This Studio ({{local}}) is older than the server ({{server}}). Update it in About: projects of the newer version may open read-only.",
+      "local_newer": "This Studio ({{local}}) is newer than the server ({{server}}). You can connect, but the older server may reject changes it does not understand. Ask the administrator to update the server.",
+      "unknown": "Could not compare versions ({{local}} and {{server}}). If something goes wrong, install the same version as the server."
+    },
+    "opening": "Opening the project…",
+    "done": "Connected to {{host}}",
+    "doneHint": "Open a server project: the Studio clones it and keeps it in sync on its own.",
+    "home": "Home",
+    "clone": "Open a project from the server"
+  }
+}

@@ -11,6 +11,7 @@ export const gitServerKeys = {
   projectRemote: (projectId: string) =>
     ["git-server", "project-remote", projectId] as const,
   servers: () => ["git-server", "servers"] as const,
+  check: (url: string) => ["git-server", "check", url] as const,
   login: (loginId: string) => ["git-server", "login", loginId] as const,
   projects: (credentialId: string, q: string) =>
     ["git-server", "projects", credentialId, q] as const,
@@ -60,6 +61,16 @@ export const useGitServers = (enabled = true) =>
     staleTime: 15_000,
   });
 
+/** Проверка сервера перед подключением; повторяется вместе со списком серверов после входа. */
+export const useGitServerCheck = (url: string | null) =>
+  useQuery({
+    queryKey: gitServerKeys.check(url ?? ""),
+    queryFn: () => gitServersApi.check(url ?? ""),
+    enabled: url !== null && url !== "",
+    retry: false,
+    staleTime: 15_000,
+  });
+
 export const useStartGitServerLogin = () =>
   useMutation({ mutationFn: gitServersApi.login });
 
@@ -71,6 +82,9 @@ export const useGitServerLogin = (loginId: string | null) => {
       const login = await gitServersApi.loginState(loginId ?? "");
       if (login.state === "approved") {
         void client.invalidateQueries({ queryKey: gitServerKeys.servers() });
+        void client.invalidateQueries({
+          queryKey: [...gitServerKeys.all, "check"],
+        });
       }
       return login;
     },
