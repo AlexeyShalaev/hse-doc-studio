@@ -77,7 +77,11 @@ const REG_ALL_ENV: AdminRegistrationSettings = {
 const AUTH: AuthSettings = {
   password_enabled: true,
   oidc_enabled_count: 0,
-  fields: { "auth.password_enabled": free },
+  fields: { "auth.password_enabled": free, "auth.passkeys_enabled": free },
+  passkeys_enabled: true,
+  passkey_domain: "studio.example.org",
+  passkey_issue: null,
+  passkey_domains: [{ domain: "studio.example.org", count: 12 }],
 };
 
 const SMTP_KEYS = [
@@ -257,6 +261,26 @@ export const getAdminAuthSettingsGallery = (): GalleryGroup[] => [
       entry("admin_signin_off", "Пароль выключен", () =>
         form({
           auth: { ...AUTH, password_enabled: false, oidc_enabled_count: 1 },
+        }),
+      ),
+      entry("admin_signin_passkey_moved", "Адрес сервера сменился", () =>
+        form({
+          auth: {
+            ...AUTH,
+            passkey_domains: [
+              { domain: "studio.example.org", count: 4 },
+              { domain: "old-studio.example.org", count: 9 },
+            ],
+          },
+        }),
+      ),
+      entry("admin_signin_passkey_http", "Passkey: адрес по HTTP", () =>
+        form({
+          auth: {
+            ...AUTH,
+            passkey_domain: null,
+            passkey_issue: "insecure_origin",
+          },
         }),
       ),
       entry("admin_signin_locked", "Задано окружением", () =>

@@ -280,6 +280,22 @@ export const createAccountRoutes = (
   },
   {
     method: "GET",
+    pattern: "/account/passkeys",
+    handler: () => {
+      const world = getWorld();
+      if (!accountOf(world)) return unauth();
+      // В демо passkey не регистрируются: браузерной церемонии здесь не с кем проходить.
+      return demoJson({
+        items: [],
+        enabled: world.bootstrap.auth.passkeys_enabled,
+        domain: null,
+        has_password: true,
+        limit: 20,
+      });
+    },
+  },
+  {
+    method: "GET",
     pattern: "/account/identities/:provider/link",
     handler: (req) => {
       const world = getWorld();

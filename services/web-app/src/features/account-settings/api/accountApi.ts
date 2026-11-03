@@ -1,6 +1,10 @@
 import { z } from "zod";
 import { ApiError, apiClient, parseResp, startRedirectFlow } from "@shared/api";
 import {
+  AccountPasskeyListSchema,
+  AccountPasskeySchema,
+  PasskeyOptionsSchema,
+  ReauthResponseSchema,
   AccountIdentitySchema,
   AccountProfileSchema,
   AccountSessionSchema,
@@ -8,6 +12,11 @@ import {
   ChangeEmailResponseSchema,
   CreateApiTokenResponseSchema,
   type AccountIdentity,
+  type AccountPasskey,
+  type AccountPasskeyList,
+  type PasskeyOptions,
+  type ReauthRequest,
+  type ReauthResponse,
   type AccountProfile,
   type AccountSession,
   type ApiToken,
@@ -128,6 +137,47 @@ export const accountApi = {
       quiet,
     );
   },
+
+  passkeys: (): Promise<AccountPasskeyList> =>
+    apiClient
+      .get("/account/passkeys")
+      .then(parseResp(AccountPasskeyListSchema)),
+
+  /** 403 reauth_required: сначала подтвердить личность (`reauth`), затем повторить. */
+  passkeyOptions: (): Promise<PasskeyOptions> =>
+    apiClient
+      .post("/account/passkeys/options", {}, quiet)
+      .then(parseResp(PasskeyOptionsSchema)),
+
+  createPasskey: (body: {
+    name: string | null;
+    credential: Record<string, unknown>;
+  }): Promise<AccountPasskey> =>
+    apiClient
+      .post("/account/passkeys", body, quiet)
+      .then(parseResp(AccountPasskeySchema)),
+
+  renamePasskey: (id: string, name: string): Promise<AccountPasskey> =>
+    apiClient
+      .patch(`/account/passkeys/${encodeURIComponent(id)}`, { name }, quiet)
+      .then(parseResp(AccountPasskeySchema)),
+
+  deletePasskey: async (id: string): Promise<void> => {
+    await apiClient.delete(
+      `/account/passkeys/${encodeURIComponent(id)}`,
+      quiet,
+    );
+  },
+
+  reauthOptions: (): Promise<PasskeyOptions> =>
+    apiClient
+      .post("/account/reauth/options", {}, quiet)
+      .then(parseResp(PasskeyOptionsSchema)),
+
+  reauth: (body: ReauthRequest): Promise<ReauthResponse> =>
+    apiClient
+      .post("/account/reauth", body, quiet)
+      .then(parseResp(ReauthResponseSchema)),
 
   /** Привязка идёт переходом в браузере: сервер ведёт на страницу провайдера и возвращает в ту же сессию. */
   startLink: (providerId: string): Promise<{ redirect_url: string }> =>

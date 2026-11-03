@@ -16,6 +16,7 @@ export const LOCAL_BOOTSTRAP: Bootstrap = {
     oidc_providers: [],
     smtp_enabled: false,
     password_min_length: 10,
+    passkeys_enabled: false,
   },
   user: null,
   capabilities: {

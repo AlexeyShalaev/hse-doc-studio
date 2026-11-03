@@ -177,6 +177,10 @@
     "git_server_not_studio": "There is no HSE Doc Studio server at this address.",
     "git_server_unreachable": "The server did not respond. Check the address and your connection.",
     "no_runners": "No runner is connected to the server, so the document cannot be built here right now. Build it locally in the desktop Studio or ask the administrator to connect a runner.",
-    "no_runner_for_tags": "No runner can build documents of this kind. Build the document locally in the desktop Studio or ask the administrator to connect a suitable runner."
+    "no_runner_for_tags": "No runner can build documents of this kind. Build the document locally in the desktop Studio or ask the administrator to connect a suitable runner.",
+    "passkeys_disabled": "Passkey sign-in is not available on this server.",
+    "passkey_invalid": "The passkey didn't work. Try again or use another way to sign in.",
+    "passkey_limit": "An account can have at most 20 passkeys. Remove one you no longer use.",
+    "reauth_required": "Confirm it's you: enter your password or use a passkey."
   }
 }

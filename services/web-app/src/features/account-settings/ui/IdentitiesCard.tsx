@@ -20,6 +20,8 @@ export type IdentitiesCardProps = {
   /** Привязка, которую отвязывают сейчас. */
   unlinkingId?: string | null;
   failure?: Failure | null;
+  /** У аккаунта есть другой способ войти вне этого списка (passkey). */
+  otherMethods?: boolean;
   onRetry?: () => void;
   onLink: (providerId: string) => void;
   onUnlink: (id: string) => void;
@@ -33,6 +35,7 @@ export const IdentitiesCard = ({
   linkingId = null,
   unlinkingId = null,
   failure = null,
+  otherMethods = false,
   onRetry,
   onLink,
   onUnlink,
@@ -41,7 +44,7 @@ export const IdentitiesCard = ({
   const [confirmId, setConfirmId] = useState<string | null>(null);
   const linked = new Set(identities.map((i) => i.provider_id));
   const free = providers.filter((p) => !linked.has(p.id));
-  const sole = identities.length === 1;
+  const sole = identities.length === 1 && !otherMethods;
 
   return (
     <AccountCard

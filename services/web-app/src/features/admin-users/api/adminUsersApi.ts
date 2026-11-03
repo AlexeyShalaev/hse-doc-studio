@@ -1,7 +1,9 @@
 import { adminClient, parseResp } from "@shared/api";
 import type { ListRequestParams } from "@shared/lib";
 import {
+  AdminPasskeysResetSchema,
   AdminUserFacetsSchema,
+  AdminUserPasskeyListSchema,
   AdminInvitationCreatedSchema,
   AdminInvitationPageSchema,
   AdminResetLinkSchema,
@@ -14,6 +16,7 @@ import {
   type AdminUser,
   type AdminUserFacets,
   type AdminUserPage,
+  type AdminUserPasskey,
 } from "@entities/session";
 
 // Ошибки действий показывают сами экраны: тост не нужен.
@@ -78,6 +81,16 @@ export const adminUsersApi = {
     adminClient
       .post(`/users/${enc(id)}/reset-link`, { confirm: true }, quiet)
       .then(parseResp(AdminResetLinkSchema)),
+  passkeys: (id: string, signal: AbortSignal): Promise<AdminUserPasskey[]> =>
+    adminClient
+      .get(`/users/${enc(id)}/passkeys`, { ...quiet, signal })
+      .then(parseResp(AdminUserPasskeyListSchema))
+      .then((r) => r.items),
+  resetPasskeys: (id: string): Promise<number> =>
+    adminClient
+      .delete(`/users/${enc(id)}/passkeys`, quiet)
+      .then(parseResp(AdminPasskeysResetSchema))
+      .then((r) => r.removed),
   revokeSessions: (id: string): Promise<number> =>
     adminClient
       .post(`/users/${enc(id)}/sessions/revoke`, undefined, quiet)
