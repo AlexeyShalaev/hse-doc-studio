@@ -39,7 +39,8 @@
     "backups": "Backups",
     "updates": "Updates",
     "data": "Data retention",
-    "diagnostics": "Self-diagnostics"
+    "diagnostics": "Self-diagnostics",
+    "mcp": "MCP server"
   },
   "overview": {
     "title": "Installation overview",

@@ -146,6 +146,14 @@
       "gitWrite": {
         "title": "Git: write",
         "hint": "Push changes over git."
+      },
+      "mcp": {
+        "title": "MCP",
+        "hint": "AI clients (Claude, Cursor and others) work in the Studio on your behalf."
+      },
+      "mcpAdmin": {
+        "title": "MCP: administration",
+        "hint": "Admin MCP tools; for the instance administrator only."
       }
     },
     "expiryLabel": "Expires",

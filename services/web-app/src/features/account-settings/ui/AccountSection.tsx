@@ -335,6 +335,7 @@ export const AccountSection = () => {
 
         <TokensCard
           preset={tokenPreset}
+          instanceAdmin={bootstrap?.user?.is_instance_admin === true}
           status={
             tokens.isError && !tokens.data
               ? "error"

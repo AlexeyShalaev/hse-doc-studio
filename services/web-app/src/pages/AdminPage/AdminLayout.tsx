@@ -21,6 +21,7 @@ import {
   HeartPulse,
   KeyRound,
   LayoutDashboard,
+  Plug,
   Server,
   ShieldCheck,
   SlidersHorizontal,
@@ -57,6 +58,7 @@ export type AdminSection =
   | "settings"
   | "signing"
   | "aiProviders"
+  | "mcp"
   | "audit";
 
 type NavItem = { id: AdminSection; to: string; icon: LucideIcon };
@@ -102,6 +104,7 @@ const ADMIN_NAV: readonly NavGroup[] = [
       { id: "settings", to: "/admin/settings", icon: SlidersHorizontal },
       { id: "signing", to: "/admin/signing", icon: KeyRound },
       { id: "aiProviders", to: "/admin/ai-providers", icon: Bot },
+      { id: "mcp", to: "/admin/mcp", icon: Plug },
     ],
   },
   {
