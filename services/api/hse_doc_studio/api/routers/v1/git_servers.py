@@ -194,15 +194,15 @@ async def list_cloud_projects(request: Request) -> CloudProjectList:
 
 
 @router.post(
-    "/git/servers/{credential_id}/projects/{project_id}/open",
+    "/git/servers/{credential_id}/projects/{server_project_id}/open",
     response_model=CloudProjectOpened,
     status_code=status.HTTP_202_ACCEPTED,
 )
-async def open_cloud_project(credential_id: UUID, project_id: UUID, request: Request) -> CloudProjectOpened:
+async def open_cloud_project(credential_id: UUID, server_project_id: UUID, request: Request) -> CloudProjectOpened:
     """Открыть проект сервера на компьютере: уже открыт, значит ответ без операции, иначе клон в фоне."""
     uc: OpenCloudProjectUC = await request.state.dishka_container.get(OpenCloudProjectUC)
     try:
-        opened = await uc.execute(credential_id, project_id)
+        opened = await uc.execute(credential_id, server_project_id)
     except NotFoundError:
         raise IdentityError(IdentityErrorCode.not_found) from None
     except StudioServerError as exc:

@@ -503,7 +503,7 @@ ROUTE_SCOPES: Mapping[RouteKey, RouteScope] = {
     ("GET", "/git/servers"): _LOCAL,
     ("GET", "/git/servers/check"): _LOCAL,
     ("GET", "/git/servers/{credential_id}/projects"): _LOCAL,
-    ("POST", "/git/servers/{credential_id}/projects/{project_id}/open"): _LOCAL,
+    ("POST", "/git/servers/{credential_id}/projects/{server_project_id}/open"): _LOCAL,
     ("GET", "/git/cloud/projects"): _LOCAL,
     ("DELETE", "/git/servers/{credential_id}"): _LOCAL,
     ("POST", "/auth/device/code"): _P,
