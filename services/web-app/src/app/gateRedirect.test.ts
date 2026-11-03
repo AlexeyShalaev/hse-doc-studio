@@ -2,7 +2,11 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { BootstrapSchema, LOCAL_BOOTSTRAP } from "@entities/session";
-import { isPublicPath, resolveGateRedirect } from "./gateRedirect";
+import {
+  isPublicPath,
+  resolveGateRedirect,
+  showsLanding,
+} from "./gateRedirect";
 
 const fixture = (name: string) =>
   BootstrapSchema.parse(
@@ -36,8 +40,59 @@ describe("resolveGateRedirect", () => {
     );
   });
 
-  it("uses a bare /login for the home page", () => {
-    expect(resolveGateRedirect(anon, at("/"))).toBe("/login");
+  const landingOff = { ...anon, landing: { enabled: false, name: "HSE" } };
+
+  it("uses a bare /login for the home page when the landing is switched off", () => {
+    expect(resolveGateRedirect(landingOff, at("/"))).toBe("/login");
+    expect(resolveGateRedirect({ ...anon, landing: null }, at("/"))).toBe(
+      "/login",
+    );
+    expect(resolveGateRedirect({ ...anon, landing: undefined }, at("/"))).toBe(
+      "/login",
+    );
+  });
+
+  it("keeps an anonymous visitor on the home page when the landing is on", () => {
+    expect(resolveGateRedirect(anon, at("/"))).toBeNull();
+    expect(
+      resolveGateRedirect(anon, at("/", "?next=%2Fprojects%2Fa")),
+    ).toBeNull();
+    expect(showsLanding(anon, "/")).toBe(true);
+  });
+
+  it("shows the landing only on the root of a ready server installation for an anonymous visitor", () => {
+    expect(showsLanding(anon, "/projects/x")).toBe(false);
+    expect(showsLanding(anon, "/login")).toBe(false);
+    expect(showsLanding(landingOff, "/")).toBe(false);
+    expect(showsLanding(fixture("server_user"), "/")).toBe(false);
+    expect(showsLanding(fixture("server_admin"), "/")).toBe(false);
+    expect(showsLanding(fixture("guest"), "/")).toBe(false);
+    expect(showsLanding(fixture("server_needs_admin"), "/")).toBe(false);
+    expect(showsLanding(LOCAL_BOOTSTRAP, "/")).toBe(false);
+    expect(showsLanding(fixture("local"), "/")).toBe(false);
+  });
+
+  it("keeps every other link of an anonymous visitor as before when the landing is on", () => {
+    expect(
+      resolveGateRedirect(anon, at("/login", "?next=%2Fprojects%2Fa")),
+    ).toBeNull();
+    expect(resolveGateRedirect(anon, at("/invite/abc"))).toBeNull();
+    expect(resolveGateRedirect(anon, at("/reset/t"))).toBeNull();
+    expect(resolveGateRedirect(anon, at("/verify/t"))).toBeNull();
+    expect(resolveGateRedirect(anon, at("/s/token"))).toBeNull();
+    expect(resolveGateRedirect(anon, at("/project-invite/t"))).toBeNull();
+    expect(
+      resolveGateRedirect(anon, at("/settings/runners/pair", "?code=ABCD")),
+    ).toBe(
+      `/login?next=${encodeURIComponent("/settings/runners/pair?code=ABCD")}`,
+    );
+    expect(resolveGateRedirect(anon, at("/local-studio"))).toBe(
+      `/login?next=${encodeURIComponent("/local-studio")}`,
+    );
+  });
+
+  it("does not change the home page of a signed-in user", () => {
+    expect(resolveGateRedirect(fixture("server_user"), at("/"))).toBeNull();
   });
 
   it("lets an anonymous visitor open public screens", () => {

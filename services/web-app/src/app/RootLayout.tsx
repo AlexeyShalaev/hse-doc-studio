@@ -16,7 +16,11 @@ import { StartupChecks } from "@widgets/StartupChecks";
 import { useWorkspaceStore } from "@shared/lib";
 import { Spinner } from "@shared/ui";
 import { Toaster } from "@shared/ui/Toaster";
-import { isPublicPath, resolveGateRedirect } from "./gateRedirect";
+import {
+  isPublicPath,
+  resolveGateRedirect,
+  showsLanding,
+} from "./gateRedirect";
 
 // Переключатель демо-сценариев: только в сборке с VITE_GIT_DEMO=1. Условие
 // вычисляется при сборке, и в обычном бандле этого кода и его чанка нет.
@@ -89,6 +93,16 @@ export const RootLayout = () => {
   const redirect = resolveGateRedirect(session, location);
   if (redirect !== null) {
     return <Navigate to={redirect} replace />;
+  }
+
+  // Лендинг на корне: так же без титлбара, баннера Docker, проверок запуска и агента.
+  if (showsLanding(session, location.pathname)) {
+    return (
+      <div className="flex flex-col h-screen">
+        <Outlet />
+        <Toaster />
+      </div>
+    );
   }
 
   // Экраны без сессии (вход, регистрация, мастер): без титлбара, баннера Docker,

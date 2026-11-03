@@ -1,0 +1,134 @@
+{
+  "meta": {
+    "title": "{{name}}: HSE theses and coursework to GOST in the cloud"
+  },
+  "skip": "Skip to content",
+  "nav": {
+    "label": "Page sections",
+    "features": "Features",
+    "cloud": "Cloud",
+    "start": "Getting started",
+    "security": "Security"
+  },
+  "login": "Sign in",
+  "loginTitle": "Sign in",
+  "register": "Create account",
+  "closeLogin": "Close",
+  "hero": {
+    "eyebrow": "Cloud version",
+    "title": "Theses and coursework to GOST without manual typesetting",
+    "lead": "{{name}} helps you prepare theses, coursework and other HSE documents: it checks formatting, builds the PDF and lets you work on the text together with your supervisor. The cloud version opens in a browser, nothing to install.",
+    "more": "What is inside",
+    "inviteOnly": "Registration on this installation is by invitation: ask the administrator for a link.",
+    "formTitle": "Sign in to {{name}}"
+  },
+  "audience": {
+    "title": "Who it is for",
+    "student": {
+      "title": "Students",
+      "text": "Write your thesis or coursework from your programme's template. Formatting remarks show up right away, the PDF builds with one button, and signatures and the submission package are prepared in the same place."
+    },
+    "supervisor": {
+      "title": "Supervisors",
+      "text": "Open a student's work from a link or an invitation, read the finished PDF and leave remarks. You do not need to build the project yourself."
+    },
+    "admin": {
+      "title": "Administrators",
+      "text": "Your own installation for a department or programme: people and invitations, single sign-on, quotas, build runners, backups and updates right in the admin area."
+    }
+  },
+  "features": {
+    "title": "What Studio can do",
+    "lead": "Everything from the first page to submission, in one place.",
+    "checks": {
+      "title": "Formatting checks",
+      "text": "After every build Studio compares the document with GOST, ESPD and your programme's guidelines: margins, fonts, figure captions, references. Each remark leads to a line of the source, and you can fix it by hand or with AI.",
+      "alt": "Remarks tab: compliance percentage and remark cards for a document"
+    },
+    "editor": {
+      "title": "Editor and PDF build",
+      "text": "Write in the editor and see the PDF next to it. Templates cover theses, coursework, ESPD documents and slides: title pages, the table of contents and the bibliography build themselves.",
+      "alt": "Preview of a built PDF with a thesis title page"
+    },
+    "ai": {
+      "title": "AI assistant and MCP",
+      "text": "The project agent edits the text on request and shows the changes before applying them. You can connect your own AI client to Studio over MCP and work with the project from a tool you already use.",
+      "alt": "Project agent panel with a role picker and a prompt field"
+    },
+    "collab": {
+      "title": "Teamwork",
+      "text": "A project has members with roles. An access link opens the work to people without an account as a reader, reviewer or editor. You can revoke a link at any moment.",
+      "alt": "Project settings: members and link access"
+    },
+    "git": {
+      "title": "Git sync",
+      "text": "Connect a repository on GitHub, GitLab or a Studio server: versions live in git, and the local and cloud versions work on the same project.",
+      "alt": "Dialog connecting a repository to a project"
+    },
+    "sign": {
+      "title": "Submission and e-signatures",
+      "text": "Build a package by checkpoints, add the student's and supervisor's signatures (as an image or an electronic signature) and pack everything into one archive.",
+      "alt": "Signatures screen: the author and the supervisor"
+    }
+  },
+  "cloud": {
+    "title": "Why the cloud version",
+    "lead": "You can install Studio on your own computer, but the cloud adds a few things.",
+    "team": {
+      "title": "The team in one place",
+      "text": "The project, its history and members' roles live on the server. Nobody mails archives around."
+    },
+    "links": {
+      "title": "Access links",
+      "text": "Send a link with the role you need, and the person sees the work without registering."
+    },
+    "build": {
+      "title": "A result without building",
+      "text": "The PDF is built on the server. A supervisor opens the finished result and sets nothing up."
+    },
+    "anywhere": {
+      "title": "From any device",
+      "text": "A browser is enough. If you like, the local Studio can connect to the cloud and work with the same projects."
+    }
+  },
+  "start": {
+    "title": "Getting started",
+    "step1": {
+      "title": "Sign in or create an account",
+      "text": "The sign-in form is at the top right of this page. If registration is open, press \"Create account\"."
+    },
+    "step1Mobile": {
+      "title": "Sign in or create an account",
+      "text": "Press \"Sign in\". If registration is open, \"Create account\" sits next to it."
+    },
+    "step2": {
+      "title": "Create a project",
+      "text": "Pick the type of work and your programme's template. Studio prepares the documents, and you can start writing."
+    },
+    "step3": {
+      "title": "Install the local version",
+      "text": "Optional: the local Studio connects to the cloud and works with the same projects.",
+      "guide": "How to install the local version",
+      "page": "The \"Local version\" page after signing in"
+    },
+    "help": "Studio help"
+  },
+  "security": {
+    "title": "Security and data",
+    "projects": "Only a project's members and people given a link can see it. Someone else's project answers as if it did not exist.",
+    "admin": "The installation administrator manages people and settings but gets no implicit access to project contents.",
+    "tracking": "No analytics, no counters, no telemetry on this page or in the app.",
+    "ai": "Text goes to an AI provider only when you ask the agent yourself, and only to the provider the installation connected.",
+    "login": "Sign in with a password, a passkey or an external provider, if the installation enabled them."
+  },
+  "cta": {
+    "title": "Start from the first page",
+    "text": "Sign in and your project will be ready in a couple of minutes."
+  },
+  "footer": {
+    "poweredBy": "Powered by the open-source HSE Doc Studio",
+    "help": "Help",
+    "local": "Local version",
+    "login": "Sign in"
+  }
+}

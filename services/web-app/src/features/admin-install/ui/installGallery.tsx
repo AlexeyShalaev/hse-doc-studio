@@ -31,10 +31,12 @@ const INSTANCE: AdminInstanceSettings = {
   name: "HSE Doc Studio",
   public_url: "https://studio.example.org",
   docs_url: null,
+  landing_enabled: true,
   fields: {
     "instance.name": free,
     "instance.public_url": free,
     "instance.docs_url": free,
+    "instance.landing_enabled": free,
   },
 };
 const INSTANCE_ENV: AdminInstanceSettings = {
@@ -48,6 +50,7 @@ const INSTANCE_ALL_ENV: AdminInstanceSettings = {
     "instance.name": env,
     "instance.public_url": env,
     "instance.docs_url": env,
+    "instance.landing_enabled": env,
   },
 };
 

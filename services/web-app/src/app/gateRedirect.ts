@@ -37,6 +37,19 @@ export const isPublicPath = (pathname: string): boolean => {
 const isDevPath = (pathname: string): boolean =>
   import.meta.env.DEV && pathname.toLowerCase().startsWith("/dev/");
 
+/**
+ * Корень видят как лендинг только не вошедшие без ссылки доступа, на настроенной
+ * серверной установке с включённым лендингом. Локальная Студия и вошедшие
+ * корень не меняют; выключенный лендинг возвращает прежний путь на вход.
+ */
+export const showsLanding = (bootstrap: Bootstrap, pathname: string): boolean =>
+  bootstrap.mode === "server" &&
+  bootstrap.setup_state === "ready" &&
+  bootstrap.user === null &&
+  !bootstrap.guest &&
+  bootstrap.landing?.enabled === true &&
+  trimSlash(pathname) === "/";
+
 export type GateLocation = { pathname: string; search: string; hash: string };
 
 /**
@@ -45,6 +58,7 @@ export type GateLocation = { pathname: string; search: string; hash: string };
  * Чистая функция: все решения шлюза читаются и проверяются в одном месте.
  *
  * - мастер первого запуска не пройден: на /first-run с любого адреса;
+ * - гость на корне при включённом лендинге: остаётся (см. showsLanding);
  * - гость на закрытом адресе: на /login, с ?next= на то, куда он шёл;
  * - вошедший на экране для гостей: на next (проверенный) или на главную;
  * - вошедший на /first-run после настройки: на главную.
@@ -67,6 +81,7 @@ export const resolveGateRedirect = (
 
   if (bootstrap.user === null) {
     if (isPublicPath(path) && path !== "/first-run") return null;
+    if (showsLanding(bootstrap, location.pathname)) return null;
     if (bootstrap.guest) {
       return path === "/" ||
         GUEST_ALLOWED_PREFIXES.some((prefix) => path.startsWith(prefix))

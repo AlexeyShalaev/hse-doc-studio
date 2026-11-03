@@ -78,10 +78,12 @@ export const createDemoAdminInstall = (
         name: "Studio ВШЭ",
         public_url: "https://studio.hse.example",
         docs_url: "https://docs.hse.example/studio",
+        landing_enabled: true,
         fields: {
           "instance.name": state("admin"),
           "instance.public_url": state("env"),
           "instance.docs_url": state("admin"),
+          "instance.landing_enabled": state(),
         },
       },
       build: {
@@ -108,10 +110,12 @@ export const createDemoAdminInstall = (
         name: "HSE Doc Studio",
         public_url: "http://localhost:8080",
         docs_url: null,
+        landing_enabled: true,
         fields: {
           "instance.name": state(),
           "instance.public_url": state(),
           "instance.docs_url": state(),
+          "instance.landing_enabled": state(),
         },
       },
       build: {
@@ -137,10 +141,12 @@ export const createDemoAdminInstall = (
       name: "HSE Doc Studio",
       public_url: "https://studio.example.org",
       docs_url: null,
+      landing_enabled: true,
       fields: {
         "instance.name": state(),
         "instance.public_url": state("admin"),
         "instance.docs_url": state(),
+        "instance.landing_enabled": state(),
       },
     },
     build: {

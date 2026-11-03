@@ -154,6 +154,12 @@ export default defineConfig(({ mode }) => {
             if (locale) {
               return `assets/locale-admin-${locale[2]}-${locale[1]}-[hash].js`;
             }
+            // Словарь лендинга: свой чанк на язык, его грузит только гость на корне.
+            const landing =
+              /\/locales\/([a-z]{2})\/landing\/landing\.json$/.exec(id);
+            if (landing) {
+              return `assets/locale-landing-${landing[1]}-[hash].js`;
+            }
             // Общие куски разделов админки (features/admin-ops и т.п.) сборщик
             // называет по папке; без префикса они совпали бы с маской admin-*.js
             // единственного чанка оболочки.
