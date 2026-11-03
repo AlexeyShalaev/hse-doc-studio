@@ -22,6 +22,7 @@ The text of your work, metadata, change history, form answers, signature PNGs, b
 | Update checks | the GitHub releases feed | a version is requested; nothing about you is sent | `HSE_STUDIO__UPDATE_FEED_URL=off` — fully offline; auto-update toggles off in About |
 | **A cloud AI provider** (if configured) | the Anthropic / OpenAI / your compatible API | **the text fragments you send to the agent**, and files it reads with its tools | configure no provider — or use local Ollama: the text never leaves the machine |
 | The font catalogue | Google Fonts | catalogue search queries; downloading a chosen font | use system fonts or device upload |
+| **Studio server** (if you signed in to it with a device code) | your HSE Doc Studio server | a short presence signal once a minute: the computer name, the Studio version, what it is doing, the runner state, the names of the models opened to the cloud, and for cloud projects a sync code and the numbers ahead and behind. **No** disk paths, document contents, model addresses or keys | sign out of the server ("Settings", "Repository access") or revoke the sign-in on the site; the computer name is changed in "Link with the cloud" |
 | “HSE staff” lookup | hse.ru | a name query against the public directory | fill the supervisor in by hand |
 
 ## What does not exist at all

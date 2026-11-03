@@ -77,6 +77,53 @@ A folder of your own for a single project, and projects from other git servers, 
 
 If you created a project in the local Studio instead of opening it from the cloud, it stays on this computer only: neither the edits nor the built PDF reach the server. When the Studio is signed in to a server, the "Build" tab of such a project shows the hint "This project is not connected to the cloud, the PDF will stay on this computer". There is no one-step way to move such a project to the server yet: create the project in the cloud and open it from there.
 
+## What your Studio is doing: the badge in a project
+
+In the project header, before the sync button, there is a badge: a coloured dot and a label. Click it for details. The same data is visible from both sides.
+
+**In the cloud** the badge names your local Studios: "Studio online: Alex's MacBook" or "Studio offline". The panel shows for every Studio:
+
+- the device name (set in the local Studio), the version, online or "was online 5 minutes ago", and what the Studio is doing now (idle, syncing, building);
+- the sync of this project: the last sync, how many changes are ahead and behind, whether auto-sync is on, the last PDF upload and when;
+- the personal runner of this Studio: online or not, tags, busy or free;
+- AI through this Studio: whether Ollama is visible, which models, and if the cloud cannot use them, the reason and what to do.
+
+Other project members see only "Working locally: Boris", and only while Boris's Studio is online. They do not see the name of his computer, the version, the runner or the models, and an instance administrator sees exactly as much as any member. The list of all your Studios with a "Forget device" button is in "Settings, My runners, My Studios".
+
+**In the local Studio** the same badge shows the link to the cloud: "Cloud online", "Cloud cannot see the Studio", "No connection to the server", "Server sign-in expired" or "revoked". The panel shows the server and who you are signed in as, whether the cloud sees this Studio and when the last signal was sent, the runner and the models opened to the cloud with their state on the cloud side, the last sync and PDF upload, and which other project members are working locally right now.
+
+### Computer name
+
+The cloud shows the Studio under the computer's name. If it is not named (inside a container the host name is a random string), it is "Local Studio". Change it in "Settings, Cloud builds, Link with the cloud": an empty field returns the default name.
+
+### What goes to the server
+
+Once a minute the Studio sends the server a short signal: the device name, the version, what it is doing, the runner state and the model names, and for every cloud project a sync code and the numbers ahead and behind. There are no disk paths, document contents, model addresses or keys in the signal. It goes over the same sign-in as the sync, without a permanent connection; if you revoke the sign-in on the site, the Studio stops being "online" after three minutes. More: [What goes over the network](../reference/privacy.md).
+
+## AI through your Studio
+
+In the local Studio open "Settings, Cloud builds, Models for the cloud" and click "Open for the cloud" next to the model (for example, Ollama on this computer). This only announces the model to the server. For the cloud to start using it, **add a "Through my runner" provider in the cloud once**: "Settings, AI providers, Add", pick your Studio and the model. It is simpler to click "Add in the cloud" in the Studio panel or in the banner above the provider list, which appears when a model is opened but there is no provider. After that the model shows up in the chat model picker.
+
+If the model does not work, the Studio panel names the reason:
+
+| State | What to do |
+|---|---|
+| The provider is not added in the cloud | click "Add in the cloud" |
+| Nothing is opened to the cloud | "Open for the cloud" in the local Studio |
+| The Studio is not connected as a runner | "Cloud builds", "Connect" |
+| The Studio or the runner is offline | start the local Studio |
+| The runner is paused, revoked or personal runners are off | unpause, reconnect or ask the administrator |
+| The Studio is online but the model does not answer | start Ollama |
+| No models | pull a model |
+
+Two common causes of errors in the model itself. Ollama accepts at most 4096 tokens by default, while an agent request in a project needs about 5000: the chat says the request "does not fit the model window", so raise the context (`num_ctx`, for example 16384) or take a model with a larger window. If the Studio is online but Ollama is stopped, the chat says the model on that computer does not answer.
+
+## Builds in the cloud and on your side
+
+For each document, in the list and in the "Build" panel, you can see where and when it was last built (cloud, this Studio, another Studio), from which version of the project and whether the PDF is fresh: "matches the cloud", "outdated: the project changed", "in the cloud 5 min, you have none". "Fresh" means the PDF was built from the current version of the project; a PDF with no recorded version is never called fresh.
+
+If a document is built in the cloud and you do not have it, click "Get the build" in the local Studio: the ready PDF is downloaded over the same sign-in and the document opens without a rebuild. The Studio does not download what you already have (compared by the file fingerprint), does not replace a newer local build (use "Replace anyway") and does not download a file over the size limit. When auto-sync is on for the project, the Studio gets the cloud PDF by itself after a sync, but only the build of the version you have, and not on a mobile network or in data-saver mode. The other direction has long worked: after a build the local PDF goes to the server and shows in the project overview.
+
 ## Troubleshooting
 
 - **The button opened nothing.** Make sure the Studio is running (`docker ps`) and the port on the cloud screen matches the one the script printed.
