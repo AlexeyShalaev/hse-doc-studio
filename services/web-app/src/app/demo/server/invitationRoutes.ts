@@ -497,7 +497,14 @@ export const createInvitationRoutes = (
     {
       method: "GET",
       pattern: "/account/notifications",
-      handler: signedIn((_req, _w, state) => page(state.notifications)),
+      handler: signedIn((req, _w, state) => {
+        const limit = Number(req.query.limit);
+        return page(
+          Number.isInteger(limit) && limit > 0
+            ? state.notifications.slice(0, limit)
+            : state.notifications,
+        );
+      }),
     },
     {
       method: "POST",

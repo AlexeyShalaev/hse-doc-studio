@@ -26,6 +26,8 @@ export const invitationKeys = {
   inbox: ["inbox"] as const,
   summary: () => [...invitationKeys.inbox, "summary"] as const,
   notifications: () => [...invitationKeys.inbox, "notifications"] as const,
+  recent: (limit: number) =>
+    [...invitationKeys.notifications(), "recent", limit] as const,
   mine: () => [...invitationKeys.inbox, "invitations"] as const,
   transfers: () => [...invitationKeys.inbox, "transfers"] as const,
   myRequests: () => [...invitationKeys.inbox, "requests"] as const,
@@ -175,6 +177,16 @@ export const useNotifications = () =>
     queryKey: invitationKeys.notifications(),
     queryFn: () => inboxApi.notifications(),
     staleTime: 10_000,
+  });
+
+/** Последние уведомления для окошка колокольчика: читаем, пока оно открыто, и обновляем вместе со сводкой. */
+export const useRecentNotifications = (limit: number, enabled: boolean) =>
+  useQuery({
+    queryKey: invitationKeys.recent(limit),
+    queryFn: () => inboxApi.notifications(limit),
+    enabled,
+    staleTime: 5_000,
+    refetchInterval: enabled ? INBOX_POLL_MS : false,
   });
 
 export const useMyInvitations = () =>

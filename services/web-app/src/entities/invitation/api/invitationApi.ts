@@ -154,9 +154,9 @@ export const inboxApi = {
     apiClient
       .get("/account/inbox/summary", quiet)
       .then(parseResp(InboxSummarySchema)),
-  notifications: (): Promise<NotificationPage> =>
+  notifications: (limit = 100): Promise<NotificationPage> =>
     apiClient
-      .get("/account/notifications", { ...quiet, params: { limit: 100 } })
+      .get("/account/notifications", { ...quiet, params: { limit } })
       .then(parseResp(NotificationPageSchema)),
   markRead: async (ids: string[] | null): Promise<void> => {
     await apiClient.post("/account/notifications/read", { ids }, quiet);

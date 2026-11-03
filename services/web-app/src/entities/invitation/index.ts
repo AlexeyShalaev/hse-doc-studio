@@ -24,6 +24,7 @@ export {
   useProjectAccessRequests,
   useProjectInvitations,
   useProjectTransfer,
+  useRecentNotifications,
   useRequestAccess,
   useResendInvitation,
   useRevokeInvitation,

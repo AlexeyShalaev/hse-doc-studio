@@ -3,6 +3,7 @@ import { Inbox } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { Badge, Button, EmptyState } from "@shared/ui";
 import { useProjectRoleLabel } from "@entities/project";
+import { useNotificationText } from "../lib/useNotificationText";
 import type {
   MyAccessRequest,
   MyInvitation,
@@ -65,6 +66,7 @@ export const InboxView = ({
 }: InboxViewProps) => {
   const { t } = useTranslation("inbox");
   const roleLabel = useProjectRoleLabel();
+  const notificationText = useNotificationText();
   const [now] = useState(() => Date.now());
   const requestCards = notifications.filter(
     (n) => n.kind === "access_request" && n.read_at === null,
@@ -365,24 +367,7 @@ export const InboxView = ({
                   }}
                 />
               )}
-              <span style={{ flex: 1 }}>
-                {t(`kind.${n.kind}`, {
-                  actor: n.payload.actor_name ?? "",
-                  project: n.payload.project_name ?? "",
-                  path: n.payload.path ?? "",
-                  excerpt: n.payload.excerpt ?? "",
-                  volume: n.payload.ref_id ?? "",
-                  check: n.payload.outcome?.startsWith("diag_")
-                    ? t(`diagCheck.${n.payload.ref_id ?? ""}`, {
-                        defaultValue: n.payload.ref_id ?? "",
-                      })
-                    : "",
-                  role: n.payload.role
-                    ? roleLabel(n.payload.role as "reader")
-                    : "",
-                  ...(n.payload.outcome ? { context: n.payload.outcome } : {}),
-                })}
-              </span>
+              <span style={{ flex: 1 }}>{notificationText(n)}</span>
               <span className="dim" style={{ fontSize: 11 }}>
                 {date(n.created_at, lang)}
               </span>
