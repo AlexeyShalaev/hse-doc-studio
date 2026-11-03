@@ -1,16 +1,31 @@
 /**
- * Точка расширения: признак доступности облачной сборки (раннеров) приходит в
- * параллельной ветке. Пока его нет, на сервере ответ «неизвестно», и итоговый экран
- * честно предупреждает, что сборка может быть недоступна, без обещаний.
+ * Что сказать в итоге онбординга про сборку. Локально собирает сама Студия; на
+ * сервере ответ дают живые общие раннеры (`GET /api/v1/build-availability`).
+ * Пока ответа нет или запрос упал, честно говорим «неизвестно».
  */
 export type BuildAvailability =
   "local" | "available" | "unavailable" | "unknown";
 
+export type RunnerAvailability = {
+  cloud: boolean;
+  any_runner: boolean;
+  tags: readonly string[];
+};
+
 export const resolveBuildAvailability = (
   mode: "local" | "server",
-  runnersAvailable?: boolean,
+  runners?: RunnerAvailability,
 ): BuildAvailability => {
-  if (mode === "local") return "local";
-  if (runnersAvailable === undefined) return "unknown";
-  return runnersAvailable ? "available" : "unavailable";
+  if (mode === "local" || runners?.cloud === false) return "local";
+  if (runners === undefined) return "unknown";
+  return runners.any_runner && runners.tags.includes("tex")
+    ? "available"
+    : "unavailable";
 };
+
+/**
+ * Экран «Локальная версия» (ветка feat/local-from-cloud). Пока его нет, итог
+ * только объясняет текстом; когда появится, впишите сюда его маршрут, и в итоге
+ * появится кнопка.
+ */
+export const LOCAL_VERSION_PATH: string | null = null;

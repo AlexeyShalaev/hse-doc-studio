@@ -27,6 +27,9 @@ const STATE: OnboardingState = {
   updated_at: null,
 };
 
+// Сохранения идут очередью промисов: под нагрузкой CI секунды по умолчанию мало.
+const WAIT = { timeout: 4000 };
+
 const Where = () => <span data-testid="where">{useLocation().pathname}</span>;
 
 const mount = (state: OnboardingState) => {
@@ -74,7 +77,7 @@ describe("OnboardingHost", () => {
     const user = userEvent.setup();
     const { patch } = mount(STATE);
 
-    await user.click(await screen.findByTestId("onboarding-skip"));
+    await user.click(await screen.findByTestId("onboarding-skip", {}, WAIT));
 
     await waitFor(() => {
       expect(patch).toHaveBeenCalledWith(
@@ -82,7 +85,7 @@ describe("OnboardingHost", () => {
         expect.objectContaining({ status: "skipped", step: "" }),
         expect.anything(),
       );
-    });
+    }, WAIT);
     expect(useOnboardingStore.getState().phase).toBe("idle");
   });
 
@@ -103,7 +106,7 @@ describe("OnboardingHost", () => {
         }),
         expect.anything(),
       );
-    });
+    }, WAIT);
     expect(useOnboardingStore.getState().phase).toBe("interface");
     expect(await screen.findByTestId("tour-overlay")).toHaveAttribute(
       "data-tour-step",

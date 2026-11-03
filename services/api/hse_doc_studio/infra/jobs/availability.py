@@ -42,6 +42,9 @@ class LocalBuildAvailability:
     async def of(self, project_id: UUID, actor: Actor) -> BuildAvailability:  # noqa: ARG002
         return BuildAvailability.local()
 
+    async def general(self) -> BuildAvailability:
+        return BuildAvailability.local()
+
 
 class RunnerBuildAvailability:
     """Теги общих живых раннеров плюс теги личных раннеров владельца, если маршрут их допускает.
@@ -64,14 +67,22 @@ class RunnerBuildAvailability:
         self._live_window = timedelta(seconds=runner_live_window_s)
         self._clock = clock
 
-    async def of(self, project_id: UUID, actor: Actor) -> BuildAvailability:
+    async def _shared(self) -> tuple[bool, set[str]]:
         now = self._clock()
         live = [r for r in await self._runners.list() if is_live_shared(r, now, self._live_window)]
         tags: set[str] = set()
         for runner in live:
             tags |= runner.tags & BUILD_TAGS
+        return bool(live), tags
+
+    async def general(self) -> BuildAvailability:
+        any_live, tags = await self._shared()
+        return BuildAvailability(cloud=True, any_runner=any_live, tags=frozenset(tags))
+
+    async def of(self, project_id: UUID, actor: Actor) -> BuildAvailability:
+        any_live, tags = await self._shared()
         personal = await self._personal_tags(project_id, actor, BUILD_TAGS - tags)
-        return BuildAvailability(cloud=True, any_runner=bool(live) or bool(personal), tags=frozenset(tags | personal))
+        return BuildAvailability(cloud=True, any_runner=any_live or bool(personal), tags=frozenset(tags | personal))
 
     async def _personal_tags(self, project_id: UUID, actor: Actor, missing: frozenset[str]) -> frozenset[str]:
         if self._router is None or not missing:
