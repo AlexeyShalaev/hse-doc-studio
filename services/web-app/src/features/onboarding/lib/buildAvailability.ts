@@ -22,10 +22,3 @@ export const resolveBuildAvailability = (
     ? "available"
     : "unavailable";
 };
-
-/**
- * Экран «Локальная версия» (ветка feat/local-from-cloud). Пока его нет, итог
- * только объясняет текстом; когда появится, впишите сюда его маршрут, и в итоге
- * появится кнопка.
- */
-export const LOCAL_VERSION_PATH: string | null = null;

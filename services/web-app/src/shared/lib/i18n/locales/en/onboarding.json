@@ -204,7 +204,6 @@
       "unknown": "If the PDF build does not start, the server has no runners yet: tell your administrator. Text, comments and git work without it."
     },
     "admin": "As an administrator, start in the admin area: connect a build runner and an AI provider, then invite people.",
-    "supervisor": "Students will invite you to their projects, invitations appear in your Inbox.",
-    "localVersion": "Local version"
+    "supervisor": "Students will invite you to their projects, invitations appear in your Inbox."
   }
 }
