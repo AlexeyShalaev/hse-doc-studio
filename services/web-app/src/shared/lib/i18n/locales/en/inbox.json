@@ -1,7 +1,19 @@
 {
   "bell_one": "Inbox: {{count}} new",
   "bell_other": "Inbox: {{count}} new",
+  "bellNone": "Inbox",
   "title": "Inbox",
+  "popover": {
+    "title": "Notifications",
+    "list": "Recent notifications",
+    "empty": "No new notifications",
+    "loading": "Loading notifications",
+    "error": "Could not load notifications",
+    "retry": "Retry",
+    "showAll": "Show all",
+    "unread": "New",
+    "decision": "needs your decision"
+  },
   "markAll": "Mark all as read",
   "tabs": {
     "all": "All",

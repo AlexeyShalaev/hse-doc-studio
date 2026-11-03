@@ -31,7 +31,7 @@ Pending invitations are listed under **Pending**, where you can resend them (at 
 
 ## Accept an invitation
 
-- Invitations arrive in the **Inbox** (the bell in the header). **Accept** opens the project.
+- Invitations arrive in the **Inbox**. The bell in the header shows the number of unread notifications and pending invitations; clicking it opens a popover under the icon with the 10 latest notifications (clicking one marks it read and opens the place it is about, **Mark all as read** clears them all). The full list, invitations and transfers with **Accept** and **Decline** buttons live on the **Inbox** page: open it with **Show all** in the popover or at `/inbox`. **Accept** opens the project.
 - The email link opens without signing in. Only an account with the confirmed address the invitation was sent to can accept it, so a forwarded link does not work for someone else.
 - In the “invite only” registration mode the email link lets the person sign up (unless the administrator turned this off); with registration closed, a person without an account cannot be invited.
 

@@ -7,7 +7,7 @@ import {
   within,
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { MemoryRouter, Route, Routes } from "react-router";
+import { MemoryRouter, Route, Routes, useLocation } from "react-router";
 import { I18nextProvider } from "react-i18next";
 import {
   afterEach,
@@ -20,7 +20,8 @@ import {
 } from "vitest";
 import { i18n, useToastStore } from "@shared/lib";
 import { ProjectAccessPanel } from "@features/project-access";
-import { InboxPanel } from "@features/inbox";
+import { InboxBell, InboxPanel } from "@features/inbox";
+import { inboxApi } from "@entities/invitation";
 import { TransferSection } from "@features/project-transfer";
 import { ProjectInvitePage } from "@pages/ProjectInvitePage";
 import { ProjectUnavailablePage } from "@pages/ProjectUnavailablePage";
@@ -294,5 +295,118 @@ describe("демо invites: страницы", () => {
     await user.type(screen.getByTestId("request-access-message"), "Я соавтор");
     await user.click(screen.getByTestId("request-access-submit"));
     expect(await screen.findByTestId("request-access-sent")).toBeTruthy();
+  });
+});
+
+describe("демо invites: колокольчик", () => {
+  const Where = () => (
+    <output data-testid="where">{useLocation().pathname}</output>
+  );
+
+  it("считает непрочитанное и ожидающее, открывает окошко без перехода", async () => {
+    const user = userEvent.setup();
+    mountWith(
+      <>
+        <InboxBell />
+        <Where />
+      </>,
+    );
+    const bell = await screen.findByTestId("inbox-bell");
+    await waitFor(() => {
+      expect(Number(bell.getAttribute("data-count"))).toBeGreaterThan(1);
+    });
+    await user.click(bell);
+    const list = await screen.findByTestId("inbox-popover-list");
+    expect(
+      within(list).getByTestId("inbox-popover-item-ntf_demo_accepted"),
+    ).toHaveTextContent("Дмитрий Кузнецов принял приглашение");
+    expect(screen.getByTestId("where")).toHaveTextContent("/");
+  });
+
+  it("клик по уведомлению отмечает его прочитанным, ведёт в проект и закрывает окошко", async () => {
+    const user = userEvent.setup();
+    mountWith(
+      <Routes>
+        <Route
+          path="*"
+          element={
+            <>
+              <InboxBell />
+              <Where />
+            </>
+          }
+        />
+      </Routes>,
+    );
+    await user.click(await screen.findByTestId("inbox-bell"));
+    await user.click(
+      await screen.findByTestId("inbox-popover-item-ntf_demo_accepted"),
+    );
+    expect(screen.queryByTestId("inbox-popover")).toBeNull();
+    expect(screen.getByTestId("where")).toHaveTextContent(
+      "/projects/p_01hxa1c4de",
+    );
+    await waitFor(() => {
+      expect(
+        invitesOf(getServerWorld()).notifications.find(
+          (n) => n.id === "ntf_demo_accepted",
+        )?.read_at,
+      ).not.toBeNull();
+    });
+  });
+
+  it("непрочитанный запрос доступа ведёт на «Входящие» и остаётся непрочитанным", async () => {
+    const user = userEvent.setup();
+    mountWith(
+      <>
+        <InboxBell />
+        <Where />
+      </>,
+    );
+    await user.click(await screen.findByTestId("inbox-bell"));
+    await user.click(
+      await screen.findByTestId("inbox-popover-item-ntf_demo_request"),
+    );
+    expect(screen.getByTestId("where")).toHaveTextContent("/inbox");
+    expect(
+      invitesOf(getServerWorld()).notifications.find(
+        (n) => n.id === "ntf_demo_request",
+      )?.read_at,
+    ).toBeNull();
+  });
+
+  it("«Отметить всё прочитанным» гасит точки, окошко остаётся открытым", async () => {
+    const user = userEvent.setup();
+    mountWith(<InboxBell />);
+    await user.click(await screen.findByTestId("inbox-bell"));
+    await user.click(await screen.findByTestId("inbox-popover-mark-all"));
+    await waitFor(() => {
+      expect(screen.queryByTestId("inbox-popover-unread-dot")).toBeNull();
+    });
+    expect(screen.getByTestId("inbox-popover")).toBeInTheDocument();
+    expect(screen.queryByTestId("inbox-popover-mark-all")).toBeNull();
+  });
+
+  it("ошибка загрузки показывает «Повторить», повтор находит список", async () => {
+    const user = userEvent.setup();
+    const spy = vi
+      .spyOn(inboxApi, "notifications")
+      .mockRejectedValueOnce(new Error("boom"));
+    mountWith(<InboxBell />);
+    await user.click(await screen.findByTestId("inbox-bell"));
+    expect(await screen.findByTestId("inbox-popover-error")).toBeVisible();
+    await user.click(screen.getByTestId("inbox-popover-retry"));
+    expect(await screen.findByTestId("inbox-popover-list")).toBeVisible();
+    spy.mockRestore();
+  });
+
+  it("просит у бэкенда только десять последних", async () => {
+    const user = userEvent.setup();
+    const spy = vi.spyOn(inboxApi, "notifications");
+    mountWith(<InboxBell />);
+    await user.click(await screen.findByTestId("inbox-bell"));
+    await screen.findByTestId("inbox-popover-list");
+    expect(spy).toHaveBeenCalledWith(10);
+    spy.mockRestore();
   });
 });

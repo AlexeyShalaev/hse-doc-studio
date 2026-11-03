@@ -398,7 +398,9 @@ test.describe("доделка видения: ссылки, приглашени
     await b.goto("/");
     await expect(b.getByTestId("inbox-bell")).toBeVisible();
     await b.getByTestId("inbox-bell").click();
-    if (!/\/inbox/.test(b.url())) await b.goto("/inbox");
+    await expect(b.getByTestId("inbox-popover")).toBeVisible();
+    await b.getByTestId("inbox-popover-all").click();
+    await expect(b).toHaveURL(/\/inbox$/);
     const mine = await boris.client.json<{ items: Json[] }>(await boris.client.get("/api/v1/account/invitations"), 200);
     const inv = mine.items.find((i) => (i.project as Json | undefined)?.id === invitedProject.id || i.project_id === invitedProject.id)!;
     expect(inv, JSON.stringify(mine)).toBeTruthy();
