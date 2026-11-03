@@ -8,7 +8,7 @@ from datetime import timedelta
 import pytest
 from hse_doc_studio.core.access.entities import Actor, ActorKind, ActorSource
 from hse_doc_studio.core.identity.auth_settings import KEY_PASSKEYS_ENABLED, KEY_PASSWORD_ENABLED
-from hse_doc_studio.core.identity.entities import AuditEntry, UserIdentity, UserStatus
+from hse_doc_studio.core.identity.entities import AuditEntry, RegistrationInvite, UserIdentity, UserStatus
 from hse_doc_studio.core.identity.errors import IdentityError, IdentityErrorCode
 from hse_doc_studio.core.identity.normalize import hash_token
 from hse_doc_studio.core.identity.passkeys import PASSKEY_LIMIT, RelyingParty
@@ -16,7 +16,7 @@ from hse_doc_studio.use_cases.identity.oidc_identities import UnlinkOidcIdentity
 
 from tests.fakes.authenticator import SoftAuthenticator, b64url
 
-from .conftest import World
+from .conftest import FakeSender, World
 from .passkey_kit import PARTY, PasskeyKit
 
 PASSWORD = "correct horse battery"
@@ -499,3 +499,134 @@ async def test__admin_reset__not_admin__not_found(kit: PasskeyKit, world: World)
 
     assert await _code(kit.reset_admin_uc().execute(member, user.id)) is IdentityErrorCode.not_found
     assert await _code(kit.list_admin_uc().execute(member, user.id)) is IdentityErrorCode.not_found
+
+
+async def _invite(world: World, token: str = "inv-token", email: str | None = "new@example.org") -> str:
+    await world.invites.add(
+        RegistrationInvite(
+            token_hash=hash_token(token),
+            email=email,
+            created_by="adm",
+            expires_at=world.clock.now + timedelta(days=3),
+            id=f"inv-{token}",
+        )
+    )
+    return token
+
+
+async def test__signup_by_invite__account_without_password_key_and_session(kit: PasskeyKit, world: World) -> None:
+    token = await _invite(world)
+
+    options = await kit.start_signup().execute(PARTY, token, "Новый Человек")
+    result = await kit.finish_signup().execute(
+        PARTY, token, "Новый Человек", kit.phone.create(options), passkey_name="Chrome · macOS", ip="1.2.3.4"
+    )
+
+    user = result.user
+    assert options["user"]["name"] == "new@example.org"  # type: ignore[index]
+    assert kit.phone.credentials[0].user_handle == user.id.encode()
+    assert (user.email, user.status, user.email_verified, user.name) == (
+        "new@example.org",
+        UserStatus.active,
+        True,
+        "Новый Человек",
+    )
+    assert await world.creds.get_hash(user.id) is None
+    assert [p.name for p in await kit.passkeys.list_for_user(user.id)] == ["Chrome · macOS"]
+    assert await world.sessions.get(result.session.id_hash) == result.session
+    assert (await world.invites.get(hash_token(token))).used_at == world.clock.now  # type: ignore[union-attr]
+    actions = [e.action for e in await _entries(world)]
+    assert actions == ["auth.register", "auth.passkey_added", "auth.login"]
+
+    # Тем же ключом человек входит дальше без пароля.
+    login = await kit.finish_login().execute(PARTY, await kit.login_response())
+    assert login.user.id == user.id
+
+
+async def test__signup__invite_without_address__refused(kit: PasskeyKit, world: World) -> None:
+    token = await _invite(world, email=None)
+
+    assert await _code(kit.start_signup().execute(PARTY, token, "X")) is IdentityErrorCode.invitation_invalid
+
+
+async def test__signup__address_already_has_account__email_taken(kit: PasskeyKit, world: World) -> None:
+    await world.add_user("new@example.org")
+    token = await _invite(world)
+
+    assert await _code(kit.start_signup().execute(PARTY, token, "X")) is IdentityErrorCode.email_taken
+
+
+async def test__signup__used_or_unknown_invite__refused(kit: PasskeyKit, world: World) -> None:
+    token = await _invite(world)
+    options = await kit.start_signup().execute(PARTY, token, "X")
+    await kit.finish_signup().execute(PARTY, token, "X", kit.phone.create(options))
+
+    assert await _code(kit.start_signup().execute(PARTY, token, "X")) in {
+        IdentityErrorCode.invitation_invalid,
+        IdentityErrorCode.email_taken,
+    }
+    assert await _code(kit.start_signup().execute(PARTY, "nope", "X")) is IdentityErrorCode.invitation_invalid
+
+
+async def test__signup__challenge_of_another_invite__rejected(kit: PasskeyKit, world: World) -> None:
+    first = await _invite(world, "first", "a@example.org")
+    second = await _invite(world, "second", "b@example.org")
+    options = await kit.start_signup().execute(PARTY, first, "A")
+
+    code = await _code(kit.finish_signup().execute(PARTY, second, "B", kit.phone.create(options)))
+
+    assert code is IdentityErrorCode.passkey_invalid
+    assert await world.users.get_by_email("b@example.org") is None
+    assert await _reasons(world, "auth.passkey_signup_failed") == ["challenge"]
+
+
+async def test__signup__without_user_verification__rejected_and_invite_kept(kit: PasskeyKit, world: World) -> None:
+    token = await _invite(world)
+    options = await kit.start_signup().execute(PARTY, token, "X")
+
+    code = await _code(kit.finish_signup().execute(PARTY, token, "X", kit.phone.create(options, uv=False)))
+
+    assert code is IdentityErrorCode.passkey_invalid
+    assert (await world.invites.get(hash_token(token))).used_at is None  # type: ignore[union-attr]
+
+
+async def test__signup__passkeys_disabled__refused(kit: PasskeyKit, world: World) -> None:
+    token = await _invite(world)
+    await world.settings.set(KEY_PASSKEYS_ENABLED, False, source="admin")
+
+    assert await _code(kit.start_signup().execute(PARTY, token, "X")) is IdentityErrorCode.passkeys_disabled
+
+
+async def test__register_key__mail_to_owner_when_smtp(kit: PasskeyKit, world: World) -> None:
+    world.sender = FakeSender(enabled=True)
+    user = await world.add_user()
+
+    await kit.register(user, name="Телефон")
+
+    assert [(to, subject) for to, subject, _ in world.sender.sent] == [(user.email, "Добавлен passkey")]
+    assert "«Телефон»" in world.sender.sent[0][2]
+
+
+async def test__register_key__no_smtp__no_mail_but_audit(kit: PasskeyKit, world: World) -> None:
+    user = await world.add_user()
+
+    await kit.register(user)
+
+    assert world.sender.sent == []
+    assert "auth.passkey_added" in [e.action for e in await _entries(world)]
+
+
+async def test__admin_reset__mail_with_count_only_when_keys_removed(kit: PasskeyKit, world: World) -> None:
+    world.sender = FakeSender(enabled=True)
+    user = await world.add_user()
+    await kit.register(user)
+    await kit.register(user, phone=SoftAuthenticator())
+    world.sender.sent.clear()
+
+    await kit.reset_admin_uc().execute(_admin(), user.id)
+    await kit.reset_admin_uc().execute(_admin(), user.id)
+
+    assert len(world.sender.sent) == 1
+    to, subject, body = world.sender.sent[0]
+    assert (to, subject) == (user.email, "Администратор сбросил ваши passkey")
+    assert "ключей: 2" in body

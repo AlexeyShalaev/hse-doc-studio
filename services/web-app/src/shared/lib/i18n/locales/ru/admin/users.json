@@ -25,7 +25,8 @@
       "role": "Роль",
       "projects": "Проекты",
       "lastLogin": "Последний вход",
-      "actions": "Действия"
+      "actions": "Действия",
+      "passkeys": "Passkey"
     },
     "you": "вы",
     "admin": "Администратор",
@@ -53,7 +54,12 @@
       "revokeSessions": "Завершить все входы",
       "remove": "Удалить навсегда",
       "selfHint": "С собственным аккаунтом так нельзя."
-    }
+    },
+    "passkeyCount_one": "{{count}} passkey",
+    "passkeyCount_few": "{{count}} passkey",
+    "passkeyCount_many": "{{count}} passkey",
+    "passkeyCount_other": "{{count}} passkey",
+    "noPasskeys": "Passkey нет"
   },
   "forbidden": {
     "title": "Раздел только для администраторов установки",

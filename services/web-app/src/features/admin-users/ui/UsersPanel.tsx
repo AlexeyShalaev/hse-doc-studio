@@ -55,6 +55,7 @@ const COLUMN_WIDTHS = {
   status: 190,
   role: 160,
   projects: 92,
+  passkeys: 92,
   last_login_at: 160,
   actions: 52,
 };
@@ -248,6 +249,28 @@ export const UsersPanel = ({
             {row.original.project_count}
           </span>
         ),
+      },
+      {
+        id: "passkeys",
+        header: () => (
+          <span className="ppl-num">{t("users.columns.passkeys")}</span>
+        ),
+        cell: ({ row }) => {
+          const count = row.original.passkey_count;
+          return (
+            <span
+              className={count === 0 ? "ppl-num ppl-faint" : "ppl-num"}
+              data-testid={`user-passkeys-${row.original.id}`}
+              aria-label={
+                count === 0
+                  ? t("users.noPasskeys")
+                  : t("users.passkeyCount", { count })
+              }
+            >
+              {count === 0 ? "—" : count}
+            </span>
+          );
+        },
       },
       {
         id: "last_login_at",

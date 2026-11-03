@@ -224,6 +224,7 @@ async def test__users__list_search_status_and_page_shape(env: _Env) -> None:
     await env.add("anna")
     await env.add("maria", status=UserStatus.pending_approval)
     env.directory.project_counts["anna"] = 2
+    env.directory.passkey_counts["anna"] = 3
     client = env.make()
 
     everyone = (await client.get("/api/admin/users?limit=2", headers=boss)).json()
@@ -231,7 +232,7 @@ async def test__users__list_search_status_and_page_shape(env: _Env) -> None:
     waiting = (await client.get("/api/admin/users?status=pending_approval", headers=boss)).json()
 
     assert (everyone["total"], everyone["limit"], everyone["offset"], len(everyone["items"])) == (3, 2, 0, 2)
-    assert [(u["id"], u["project_count"]) for u in found["items"]] == [("anna", 2)]
+    assert [(u["id"], u["project_count"], u["passkey_count"]) for u in found["items"]] == [("anna", 2, 3)]
     assert [u["id"] for u in waiting["items"]] == ["maria"]
     assert (await client.get("/api/admin/users?status=nonsense", headers=boss)).status_code == 422
 

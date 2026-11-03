@@ -291,3 +291,30 @@ _SMALL = ("org_members", "group_members", "orgs ", "lower(name) LIKE")
 )
 async def test__explain__list_queries_use_their_index(world: World, sql: str, index: str) -> None:
     assert index in await world.explain(sql, force=any(table in sql for table in _SMALL))
+
+
+async def test__users__passkey_count_per_row(world: World) -> None:
+    from hse_doc_studio.core.identity.passkeys import Passkey
+    from hse_doc_studio.infra.db.repositories.passkeys import SqlPasskeyRepository
+
+    keys = SqlPasskeyRepository(world.sessions)
+    for n in range(2):
+        await keys.add(
+            Passkey(
+                id=f"pk{n}",
+                user_id="u01000",
+                credential_id=f"cred{n}",
+                public_key=b"k",
+                sign_count=0,
+                rp_id="studio.test",
+                name="Ключ",
+                created_at=datetime.now(UTC),
+            )
+        )
+
+    admins = await world.directory.search(UserQuery(is_admin=True))
+    one = await world.directory.get("u01000")
+
+    assert [(x.user.id, x.passkey_count) for x in admins.items] == [("u01000", 2), ("u02000", 0), ("u00000", 0)]
+    assert one is not None
+    assert one.passkey_count == 2
