@@ -72,6 +72,9 @@ ROUTE_SCOPES: Mapping[RouteKey, RouteScope] = {
     # Единый вход: страницы провайдера открывает браузер, личность подтверждает состояние в подписанной cookie
     ("GET", "/auth/oidc/{provider_id}/start"): _P,
     ("GET", "/auth/oidc/{provider_id}/callback"): _P,
+    # Вход по passkey: личность подтверждает подпись ключа на одноразовый вызов
+    ("POST", "/auth/passkey/options"): _P,
+    ("POST", "/auth/passkey/login"): _P,
     # Письма: подтверждение почты и сброс пароля; личность подтверждает одноразовый токен
     ("POST", "/auth/verify"): _P,
     ("POST", "/auth/verify/resend"): _P,
@@ -100,6 +103,13 @@ ROUTE_SCOPES: Mapping[RouteKey, RouteScope] = {
     ("GET", "/account/identities"): _A,
     ("GET", "/account/identities/{provider_id}/link"): _A,
     ("DELETE", "/account/identities/{provider_id}"): _A,
+    ("GET", "/account/passkeys"): _A,
+    ("POST", "/account/passkeys"): _A,
+    ("POST", "/account/passkeys/options"): _A,
+    ("PATCH", "/account/passkeys/{passkey_id}"): _A,
+    ("DELETE", "/account/passkeys/{passkey_id}"): _A,
+    ("POST", "/account/reauth"): _A,
+    ("POST", "/account/reauth/options"): _A,
     ("GET", "/account/orgs"): _A,
     ("DELETE", "/account/orgs/{slug}/membership"): _A,
     ("GET", "/account/tokens"): _A,
@@ -345,6 +355,8 @@ ROUTE_SCOPES: Mapping[RouteKey, RouteScope] = {
     ("POST", "/api/admin/users/{user_id}/enable"): _ADM,
     ("POST", "/api/admin/users/{user_id}/reset-link"): _ADM,
     ("POST", "/api/admin/users/{user_id}/sessions/revoke"): _ADM,
+    ("GET", "/api/admin/users/{user_id}/passkeys"): _ADM,
+    ("DELETE", "/api/admin/users/{user_id}/passkeys"): _ADM,
     ("PUT", "/api/admin/settings/auth"): _ADM,
     ("PUT", "/api/admin/settings/registration"): _ADM,
     ("PUT", "/api/admin/settings/smtp"): _ADM,

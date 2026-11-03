@@ -59,7 +59,20 @@
     "disableWarning": "After saving, password sign-in stops working for everyone, including you. Make sure single sign-on is set up and you can use it.",
     "sso_zero": "No single sign-on providers yet.",
     "sso_one": "{{count}} single sign-on provider is enabled.",
-    "sso_other": "{{count}} single sign-on providers are enabled."
+    "sso_other": "{{count}} single sign-on providers are enabled.",
+    "passkeys": "Passkey sign-in",
+    "passkeysHint": "People add passkeys in their profile and sign in without a password. Password and single sign-on keep working.",
+    "passkeyDomain": "Keys are bound to the domain {{domain}}.",
+    "passkeyNoDomain": "Passkeys don't work at this address.",
+    "passkeyIssue": {
+      "no_address": "The Studio external address is not set. Set HSE_STUDIO__AUTH__PUBLIC_URL, otherwise passkeys are unavailable.",
+      "insecure_origin": "Passkeys work only over HTTPS or on localhost. Serve the Studio over HTTPS.",
+      "ip_address": "Passkeys don't work on an IP address. Open the Studio by its domain name.",
+      "rp_id_mismatch": "HSE_STUDIO__AUTH__PASSKEY_RP_ID must equal the public_url host or be its parent domain."
+    },
+    "passkeyStale_one": "{{count}} key is bound to {{domain}}: it stopped working after the address change, people need to add new ones.",
+    "passkeyStale_other": "{{count}} keys are bound to {{domain}}: they stopped working after the address change, people need to add new ones.",
+    "passkeyAddressHint": "A key is bound to the server domain. If you change the Studio address (public_url), all added passkeys stop working."
   },
   "oidc": {
     "title": "Single sign-on (OIDC)",

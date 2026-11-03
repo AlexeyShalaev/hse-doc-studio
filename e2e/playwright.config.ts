@@ -42,6 +42,15 @@ export default defineConfig({
       },
     },
     {
+      // Passkey на server-lite: виртуальный аутентификатор Chrome через CDP (WebAuthn.addVirtualAuthenticator).
+      name: "passkeys",
+      testMatch: /passkeys\.spec\.ts/,
+      use: {
+        ...devices["Desktop Chrome"],
+        channel: process.env.E2E_CHANNEL || undefined,
+      },
+    },
+    {
       // Полный смоук на стенде deploy/server (make server-stack-up, make e2e-full).
       name: "full",
       testMatch: /full\.spec\.ts/,

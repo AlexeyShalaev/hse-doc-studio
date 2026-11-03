@@ -5,11 +5,13 @@ import { failureCode } from "@shared/api";
 import { toast } from "@shared/lib";
 import { Spinner } from "@shared/ui";
 import { Notice } from "@shared/ui/ConflictKit";
+import { supportsPasskeys } from "@shared/lib/webauthn";
 import { useBootstrap, type ChangeEmailResponse } from "@entities/session";
 import { AccountValidationFailed } from "../api/accountApi";
 import {
   useAccount,
   useAccountIdentities,
+  useAccountPasskeys,
   useAccountSessions,
   useAccountTokens,
   useChangeEmail,
@@ -24,8 +26,11 @@ import {
 } from "../api/accountQueries";
 import type { Failure } from "../lib/failure";
 import { identityRows } from "../lib/identityRows";
+import { usePasskeys } from "../model/usePasskeys";
 import { isSafeRedirect } from "../lib/tokens";
 import { IdentitiesCard } from "./IdentitiesCard";
+import { PasskeysCard } from "./PasskeysCard";
+import { ReauthDialog } from "./ReauthDialog";
 import { CommitIdentityCard } from "./CommitIdentityCard";
 import { PasswordCard } from "./PasswordCard";
 import { ProfileCard } from "./ProfileCard";
@@ -75,10 +80,18 @@ export const AccountSection = () => {
   const startLink = useStartLink();
   const [identityFailure, setIdentityFailure] = useState<Failure | null>(null);
   const providers = bootstrap?.auth.oidc_providers ?? [];
+  const passkeys = useAccountPasskeys();
+  const passkeyActions = usePasskeys();
+  const browserPasskeys = supportsPasskeys();
+  // Ключ, подходящий к этому адресу, тоже способ войти: отвязка последнего провайдера разрешена.
+  const usablePasskeys =
+    passkeys.data?.enabled === true &&
+    passkeys.data.items.some((p) => p.domain_matches);
   const identityList = identityRows(
     identities.data ?? [],
     bootstrap?.auth.password_enabled ?? true,
     account.data?.email ?? null,
+    usablePasskeys,
   );
 
   const profile = account.data;
@@ -242,6 +255,7 @@ export const AccountSection = () => {
             linkingId={startLink.isPending ? startLink.variables : null}
             unlinkingId={unlink.isPending ? `idn_${unlink.variables}` : null}
             failure={identityFailure}
+            otherMethods={usablePasskeys}
             onRetry={() => {
               void identities.refetch();
             }}
@@ -277,6 +291,47 @@ export const AccountSection = () => {
             }}
           />
         )}
+
+        <PasskeysCard
+          status={
+            passkeys.isError && !passkeys.data
+              ? "error"
+              : passkeys.data
+                ? "ready"
+                : "loading"
+          }
+          data={passkeys.data}
+          browserSupported={browserPasskeys}
+          busy={passkeyActions.busy}
+          failure={passkeyActions.failure}
+          onRetry={() => {
+            void passkeys.refetch();
+          }}
+          onAdd={() => {
+            void passkeyActions.add();
+          }}
+          onRename={(id, name) => {
+            void passkeyActions.rename(id, name);
+          }}
+          onDelete={(id) => {
+            void passkeyActions.remove(id);
+          }}
+        />
+        <ReauthDialog
+          open={passkeyActions.reauth.open}
+          hasPassword={passkeys.data?.has_password ?? false}
+          hasPasskey={usablePasskeys && browserPasskeys}
+          providers={providers}
+          pending={passkeyActions.reauth.pending}
+          failure={passkeyActions.reauth.failure}
+          onPassword={(password) => {
+            void passkeyActions.reauth.withPassword(password);
+          }}
+          onPasskey={() => {
+            void passkeyActions.reauth.withPasskey();
+          }}
+          onCancel={passkeyActions.reauth.cancel}
+        />
 
         <TokensCard
           preset={tokenPreset}

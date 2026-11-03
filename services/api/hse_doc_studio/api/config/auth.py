@@ -99,6 +99,16 @@ class AuthConfig(BaseModel):
     password_enabled: bool | None = Field(
         default=None, description="Вход по паролю; заданное значение блокирует правку в админке."
     )
+    passkeys_enabled: bool | None = Field(
+        default=None, description="Вход по passkey (WebAuthn); заданное значение блокирует правку в админке."
+    )
+    passkey_rp_id: str | None = Field(
+        default=None,
+        description=(
+            "Домен ключей passkey (RP ID). По умолчанию хост public_url; можно указать родительский домен "
+            "(example.org для studio.example.org), чтобы ключи пережили переезд между поддоменами."
+        ),
+    )
     project_invites_allow_signup: bool | None = Field(
         default=None,
         description=(

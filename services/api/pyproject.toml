@@ -57,6 +57,7 @@ server = [
     "argon2-cffi>=23.1",
     "aiosmtplib>=3.0",
     "joserfc>=1.0",
+    "webauthn==3.0.1",
 ]
 
 test = [

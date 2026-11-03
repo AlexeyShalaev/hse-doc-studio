@@ -22,8 +22,10 @@ export const identityRows = (
   linked: AccountIdentity[],
   passwordEnabled: boolean,
   accountEmail: string | null,
+  /** Есть рабочий passkey: он тоже остаётся способом войти. */
+  hasPasskeys = false,
 ): IdentityRow[] => {
-  const canUnlink = passwordEnabled || linked.length > 1;
+  const canUnlink = passwordEnabled || hasPasskeys || linked.length > 1;
   const rows: IdentityRow[] = [];
   if (passwordEnabled) {
     rows.push({

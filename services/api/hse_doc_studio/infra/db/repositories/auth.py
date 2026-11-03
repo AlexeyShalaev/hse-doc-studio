@@ -60,6 +60,7 @@ def _session(row: SessionRow) -> Session:
         expires_at=row.expires_at,
         ip=row.ip,
         user_agent=row.user_agent,
+        reauth_at=row.reauth_at,
     )
 
 
@@ -79,6 +80,7 @@ class SqlSessionRepository:
                     expires_at=session.expires_at,
                     ip=session.ip,
                     user_agent=session.user_agent,
+                    reauth_at=session.reauth_at,
                 )
             )
             await db.flush()
@@ -93,6 +95,10 @@ class SqlSessionRepository:
             await db.execute(
                 update(SessionRow).where(SessionRow.id_hash == id_hash).values(last_seen_at=now, expires_at=expires_at)
             )
+
+    async def mark_reauthenticated(self, id_hash: str, now: datetime) -> None:
+        async with self._sessions.use() as db:
+            await db.execute(update(SessionRow).where(SessionRow.id_hash == id_hash).values(reauth_at=now))
 
     async def delete(self, id_hash: str) -> None:
         async with self._sessions.use() as db:
