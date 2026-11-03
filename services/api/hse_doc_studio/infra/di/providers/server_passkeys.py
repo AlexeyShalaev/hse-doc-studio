@@ -11,18 +11,22 @@ from hse_doc_studio.core.identity.protocols import (
     ICredentialRepository,
     ILoginAttemptRepository,
     IPasswordHasher,
+    IRegistrationInviteRepository,
     ISessionRepository,
     IUserRepository,
 )
 from hse_doc_studio.core.identity.session_policy import SessionPolicy
+from hse_doc_studio.core.invitations.protocols import IEmailVerifiedHook
 from hse_doc_studio.core.uow import IUnitOfWork
 from hse_doc_studio.infra.db.repositories.passkeys import SqlPasskeyRepository
 from hse_doc_studio.infra.db.session import SessionProvider
 from hse_doc_studio.infra.identity.webauthn import PyWebAuthn
 from hse_doc_studio.use_cases.admin.passkeys import ListUserPasskeysUC, ResetUserPasskeysUC
 from hse_doc_studio.use_cases.identity.auth_settings import AuthSettingsService
+from hse_doc_studio.use_cases.identity.mail import LinkDelivery
 from hse_doc_studio.use_cases.identity.passkey_ceremony import PasskeyChallenges, PasskeyPolicy
 from hse_doc_studio.use_cases.identity.passkey_login import AssertionChecker, FinishPasskeyLoginUC, StartPasskeyLoginUC
+from hse_doc_studio.use_cases.identity.passkey_signup import FinishPasskeySignupUC, StartPasskeySignupUC
 from hse_doc_studio.use_cases.identity.passkeys import (
     DeletePasskeyUC,
     FinishPasskeyRegistrationUC,
@@ -95,8 +99,9 @@ class ServerPasskeyProvider(Provider):
         webauthn: IWebAuthn,
         audit: IAuditLog,
         uow: IUnitOfWork,
+        delivery: LinkDelivery,
     ) -> FinishPasskeyRegistrationUC:
-        return FinishPasskeyRegistrationUC(users, passkeys, challenges, policy, webauthn, audit, uow)
+        return FinishPasskeyRegistrationUC(users, passkeys, challenges, policy, webauthn, audit, uow, delivery=delivery)
 
     @provide
     def get_rename_uc(self, passkeys: IPasskeyRepository, audit: IAuditLog) -> RenamePasskeyUC:
@@ -135,6 +140,37 @@ class ServerPasskeyProvider(Provider):
         return FinishPasskeyLoginUC(users, passkeys, sessions, checker, policy, audit, uow, session_policy)
 
     @provide
+    def get_start_signup_uc(
+        self,
+        invites: IRegistrationInviteRepository,
+        users: IUserRepository,
+        challenges: PasskeyChallenges,
+        policy: PasskeyPolicy,
+        webauthn: IWebAuthn,
+    ) -> StartPasskeySignupUC:
+        return StartPasskeySignupUC(invites, users, challenges, policy, webauthn)
+
+    @provide
+    def get_finish_signup_uc(
+        self,
+        invites: IRegistrationInviteRepository,
+        users: IUserRepository,
+        passkeys: IPasskeyRepository,
+        sessions: ISessionRepository,
+        challenges: PasskeyChallenges,
+        policy: PasskeyPolicy,
+        webauthn: IWebAuthn,
+        audit: IAuditLog,
+        uow: IUnitOfWork,
+        session_policy: SessionPolicy,
+        hook: IEmailVerifiedHook,
+    ) -> FinishPasskeySignupUC:
+        return FinishPasskeySignupUC(
+            invites, users, passkeys, sessions, challenges, policy, webauthn, audit, uow, session_policy,
+            email_hook=hook,
+        )  # fmt: skip
+
+    @provide
     def get_start_reauth_uc(
         self, passkeys: IPasskeyRepository, challenges: PasskeyChallenges, policy: PasskeyPolicy, webauthn: IWebAuthn
     ) -> StartReauthUC:
@@ -162,6 +198,11 @@ class ServerPasskeyProvider(Provider):
 
     @provide
     def get_reset_user_passkeys_uc(
-        self, users: IUserRepository, passkeys: IPasskeyRepository, audit: IAuditLog, uow: IUnitOfWork
+        self,
+        users: IUserRepository,
+        passkeys: IPasskeyRepository,
+        audit: IAuditLog,
+        uow: IUnitOfWork,
+        delivery: LinkDelivery,
     ) -> ResetUserPasskeysUC:
-        return ResetUserPasskeysUC(users, passkeys, audit, uow)
+        return ResetUserPasskeysUC(users, passkeys, audit, uow, delivery=delivery)

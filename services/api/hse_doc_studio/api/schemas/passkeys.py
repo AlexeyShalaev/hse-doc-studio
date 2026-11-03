@@ -14,7 +14,7 @@ from typing import Any
 from pydantic import Field, field_validator, model_validator
 
 from hse_doc_studio.api.schemas.common import StrictModel
-from hse_doc_studio.api.schemas.session import PASSWORD_MAX
+from hse_doc_studio.api.schemas.session import NAME_MAX, PASSWORD_MAX, TOKEN_MAX
 from hse_doc_studio.core.identity.passkeys import CREDENTIAL_JSON_MAX, PASSKEY_NAME_MAX
 
 
@@ -101,6 +101,26 @@ class ReauthRequest(StrictModel):
 class ReauthResponse(StrictModel):
     # До какого момента можно добавлять и удалять ключи без нового подтверждения.
     reauth_until: datetime
+
+
+class PasskeySignupOptionsRequest(StrictModel):
+    """Регистрация по приглашению сразу с passkey, без пароля: только приглашение на конкретный адрес."""
+
+    invitation_token: str = Field(min_length=1, max_length=TOKEN_MAX)
+    name: str = Field(max_length=NAME_MAX)
+
+
+class PasskeySignupRequest(StrictModel):
+    invitation_token: str = Field(min_length=1, max_length=TOKEN_MAX)
+    name: str = Field(max_length=NAME_MAX)
+    # Имя ключа; пусто: по умолчанию.
+    passkey_name: str | None = Field(default=None, max_length=PASSKEY_NAME_MAX)
+    credential: dict[str, Any]
+
+    @field_validator("credential")
+    @classmethod
+    def _credential_size(cls, value: dict[str, Any]) -> dict[str, Any]:
+        return _bounded(value)
 
 
 class AdminUserPasskey(StrictModel):

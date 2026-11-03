@@ -75,6 +75,9 @@ ROUTE_SCOPES: Mapping[RouteKey, RouteScope] = {
     # Вход по passkey: личность подтверждает подпись ключа на одноразовый вызов
     ("POST", "/auth/passkey/options"): _P,
     ("POST", "/auth/passkey/login"): _P,
+    # Регистрация по приглашению сразу с passkey: личность подтверждает токен приглашения из письма
+    ("POST", "/auth/register/passkey/options"): _P,
+    ("POST", "/auth/register/passkey"): _P,
     # Письма: подтверждение почты и сброс пароля; личность подтверждает одноразовый токен
     ("POST", "/auth/verify"): _P,
     ("POST", "/auth/verify/resend"): _P,
