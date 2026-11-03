@@ -15,11 +15,14 @@
     "imageMissingTitle": "Image not installed",
     "imageMissing": "Image {{image}} is not installed — open Settings → Images and click «Install».",
     "dockerUnavailableTitle": "Docker unavailable",
-    "notStartedTitle": "Build not started"
+    "notStartedTitle": "Build not started",
+    "noRunnersTitle": "Cloud build unavailable",
+    "openRunners": "Runners"
   },
   "code": {
     "docker_unavailable": "Docker is unavailable — start Docker Desktop.",
     "image_missing": "The Docker image is not installed.",
+    "build_backend_unavailable": "The build executor is unavailable: the runner could not start a build pod. Tell the administrator.",
     "compile_setup_error": "The build environment is not ready.",
     "not_self_updatable": "This build does not support self-update.",
     "self_update_failed": "Could not start the update.",
@@ -172,6 +175,8 @@
     "device_code_used": "This code has already been approved or denied.",
     "git_server_url_invalid": "An https address is required. http works only for localhost.",
     "git_server_not_studio": "There is no HSE Doc Studio server at this address.",
-    "git_server_unreachable": "The server did not respond. Check the address and your connection."
+    "git_server_unreachable": "The server did not respond. Check the address and your connection.",
+    "no_runners": "No runner is connected to the server, so the document cannot be built here right now. Build it locally in the desktop Studio or ask the administrator to connect a runner.",
+    "no_runner_for_tags": "No runner can build documents of this kind. Build the document locally in the desktop Studio or ask the administrator to connect a suitable runner."
   }
 }

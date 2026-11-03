@@ -6,15 +6,17 @@ sidebar:
 access: user
 help:
   routes:
+    - '/local-studio'
+    - '/connect'
     - '/device'
     - '/settings/git-access'
   summary: 'The local Studio runs in Docker on your computer and needs no internet. The link to the cloud Studio is set up once by signing in with a code; after that the project syncs on its own and built PDFs go to the server.'
   steps:
-    - text: 'Install and start Docker, then run the install command: on macOS and Linux `curl -fsSL https://raw.githubusercontent.com/AlexeyShalaev/hse-doc-studio/master/deploy/install.sh | sh`, on Windows in PowerShell `irm https://raw.githubusercontent.com/AlexeyShalaev/hse-doc-studio/master/deploy/install.ps1 | iex`.'
-      hint: 'The **Local version** screen in the cloud Studio shows the ready command for your system with the server address filled in. The script opens the browser by itself.'
+    - text: 'In the cloud Studio open **Local version** in the account menu, choose the **Operating system**, install Docker and run the **Install command** in a terminal.'
+      hint: 'The command already has the server address in it. Without the cloud Studio: on macOS and Linux `curl -fsSL https://raw.githubusercontent.com/AlexeyShalaev/hse-doc-studio/master/deploy/install.sh | sh`, on Windows in PowerShell `irm https://raw.githubusercontent.com/AlexeyShalaev/hse-doc-studio/master/deploy/install.ps1 | iex`.'
     - text: 'On the **Where to keep your work** screen pick a folder on your computer and confirm.'
       hint: 'Projects, settings and fonts live in this folder. From here on Studio works offline.'
-    - text: 'To link Studio to the cloud one, on the **Projects** screen click **Clone from git**, choose **HSE Doc Studio server** and click **Sign in to a server**.'
+    - text: 'To link Studio to the cloud one, on the **Projects** screen click **Connect to a server** (or **Connect the local Studio** on the cloud **Local version** screen): the connection screen with the **Server address** opens.'
       shot: runbooks/local-version/step-03
     - text: 'Enter the **Server address** and click **Sign in**. Then click **Open the confirmation page**, check that the code matches and click **Allow** on the website.'
       hint: 'A code is valid for 10 minutes. The device gets access to every project whose sources you can see, for 90 days.'
@@ -28,6 +30,9 @@ verified:
   sources:
     - deploy/install.sh
     - deploy/install.ps1
+    - services/web-app/src/pages/LocalStudioPage
+    - services/web-app/src/pages/ConnectServerPage
+    - services/web-app/src/features/local-studio-guide
     - services/web-app/src/pages/DevicePage
     - services/web-app/src/features/git-server
     - services/web-app/src/entities/git-server

@@ -1,4 +1,4 @@
-// «Локальная версия»: клонирование с сервера Студии и настройки синхронизации проекта.
+// «Локальная версия»: подключение к серверу (экран /connect) и настройки синхронизации проекта.
 export default {
   stand: 'local',
   start: '/',
@@ -6,8 +6,8 @@ export default {
     async (d) => d.pause(800),
     async (d) => d.pause(600),
     async (d) => {
-      await d.click(d.role('button', d.ui('welcome', 'Клонировать из git')).first(), {shot: false, settle: 1500})
-      await d.pointIf(d.text(d.ui('gitRemote', 'Сервер HSE Doc Studio')).first())
+      await d.click(d.role('button', d.ui('localStudio', 'Подключиться к серверу')).first(), {shot: false, settle: 1500})
+      await d.pointIf(d.page.getByLabel(d.ui('localStudio', 'Адрес сервера')).first())
     },
     async (d) => d.pause(400),
     async (d) => d.pause(400),

@@ -1,6 +1,6 @@
 # Helm-чарт HSE Doc Studio
 
-Серверный режим в Kubernetes: api (одна реплика, стратегия `Recreate`), по желанию раннер задач.
+Серверный режим в Kubernetes: api (одна реплика, стратегия `Recreate`), по желанию раннер задач (исполнитель docker или kubernetes).
 Postgres и S3-совместимое хранилище внешние, в чарт они не входят. Том исходников проектов
 (`/data`) это PVC `ReadWriteOnce`: поэтому реплика одна и rolling-обновления нет.
 
@@ -43,13 +43,61 @@ helm upgrade hse-doc-studio deploy/helm/hse-doc-studio --reuse-values --set imag
 
 ## Раннер
 
-Все поды работают от числового uid/gid из `podSecurityContext` (10001, как пользователь `app` в образе). Каталог `runner.dataDir` на узле создаётся от root, поэтому initContainer `fix-data-dir` выдаёт его этому пользователю.
+`runner.enabled=true` добавляет раннер задач. Исполнитель сборки TeX выбирает `runner.executor`:
 
-Раннер всегда в одной реплике (`runner.replicas` не больше 1): hostPath и токен регистрации одноразовые общие. Из-за `docker.sock` и `chown` в initContainer его под не проходит Pod Security Standard restricted, api и migrate проходят.
+- `docker` (по умолчанию, как раньше): соседние контейнеры через `docker.sock` узла;
+- `kubernetes`: под на каждую сборку в своём namespace через Kubernetes API, без сокета и `hostPath`.
 
-`runner.enabled=true` запускает раннер с `hostPath` на `docker.sock` узла. Сокет эквивалентен root
-на узле: используйте выделенные узлы (`runner.nodeSelector`, `runner.tolerations`). Раннер-под на задачу
-относится к следующим этапам.
+Раннер всегда в одной реплике (`runner.replicas` не больше 1): токен регистрации одноразовый.
+
+### executor=docker
+
+Все поды работают от числового uid/gid из `podSecurityContext` (10001, как пользователь `app` в образе). Каталог `runner.dataDir` на узле создаётся от root, поэтому initContainer `fix-data-dir` выдаёт его этому пользователю. Из-за `docker.sock` и `chown` в initContainer под раннера не проходит Pod Security Standard restricted, api и migrate проходят.
+
+Сокет эквивалентен root на узле, а на узлах с containerd Docker нет вовсе: используйте выделенные узлы (`runner.nodeSelector`, `runner.tolerations`) или исполнитель `kubernetes`.
+
+### executor=kubernetes
+
+Чарт создаёт:
+
+- ServiceAccount раннера и Role с RoleBinding в namespace подов сборки (`runner.kubernetes.namespace`, пусто значит namespace релиза): только `pods` (create, get, list, delete), `pods/log` (get) и `pods/exec` (create, get). Ни `secrets`, ни `jobs`, ни ClusterRole;
+- NetworkPolicy, которая запрещает подам сборки весь вход и выход (`runner.kubernetes.networkPolicy.enabled`; без CNI с поддержкой политик она ничего не делает);
+- PVC данных раннера `<release>-runner-data` (`runner.persistence`): там `identity.json` с выданным раннеру токеном, кэш блобов и рабочие папки. RWO, `local-path` подходит. Без тома (`runner.persistence.enabled=false`) положите постоянный токен раннера в Secret под ключом `runner-token`, иначе рестарт пода оставит раннер без личности;
+- Deployment раннера со стратегией `Recreate`, проходящий Pod Security restricted: `runAsNonRoot`, `seccompProfile: RuntimeDefault`, `drop: [ALL]`, корень только для чтения.
+
+Поды сборки тоже restricted, без токена ServiceAccount и без сети; исходники уходят в под и результат возвращается через `exec`, общий том не нужен. Под удаляется после сборки, при отмене задачи и по `activeDeadlineSeconds`; поды, пережившие процесс раннера, убирает сборщик мусора (владелец это под раннера) и уборка на старте.
+
+Отдельный namespace под сборки рекомендуется:
+
+```bash
+kubectl create namespace hds-builds
+kubectl label namespace hds-builds pod-security.kubernetes.io/enforce=restricted
+```
+
+```yaml
+runner:
+  enabled: true
+  executor: kubernetes
+  concurrency: 2
+  persistence:
+    storageClassName: local-path
+    size: 10Gi
+  kubernetes:
+    namespace: hds-builds
+    # image: ""                       # по умолчанию texlive/texlive:TL2024-historic
+    resources:
+      requests: {cpu: 500m, memory: 1Gi}
+      limits: {cpu: "2", memory: 4Gi}
+    activeDeadlineSeconds: 1800
+    nodeSelector: {}
+    tolerations: []
+    # runtimeClassName: gvisor        # для общих установок, если RuntimeClass есть
+    # texCache: {existingClaim: tex-cache}
+```
+
+Образ TeX Live весит несколько гигабайт: первая сборка на узле ждёт его pull (`podStartTimeoutSeconds`, по умолчанию 300). Заранее подтянуть можно DaemonSet-ом с этим образом и командой `sleep`. Кэш TeX по умолчанию не нужен (формат собирается во временном каталоге пода); `texCache.existingClaim` монтирует PVC с кэшем шрифтов, нужен `ReadWriteMany` или один узел.
+
+Проверка в кластере после установки: собрать документ, в журнале задачи видна строка `pod=hds-builds/hds-build-…`, а `kubectl -n hds-builds get pods -w` показывает появление и удаление пода. Устройство и развилки: `docs/design/k8s-runner.md`.
 
 ## Бэкапы
 
@@ -69,5 +117,5 @@ helm upgrade hse-doc-studio deploy/helm/hse-doc-studio --reuse-values --set imag
 
 ```bash
 helm lint deploy/helm/hse-doc-studio -f deploy/helm/hse-doc-studio/ci/values-test.yaml --strict
-cd services/api && uv run pytest tests/unit/test_helm_chart.py   # UPDATE_GOLDEN=1 обновляет эталон рендера
+cd services/api && uv run pytest tests/unit/test_helm_chart.py   # UPDATE_GOLDEN=1 обновляет эталоны рендера (docker и kubernetes)
 ```

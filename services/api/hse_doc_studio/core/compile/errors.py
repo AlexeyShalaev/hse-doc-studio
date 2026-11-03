@@ -47,3 +47,9 @@ class ImageMissingError(CompileSetupError):
 
     def to_dict(self) -> dict[str, object]:
         return {"code": self.code, "detail": str(self), "image": self.image}
+
+
+class BuildBackendUnavailableError(CompileSetupError):
+    """Исполнитель сборки вне процесса (Kubernetes API) отказал: нет прав, квоты, узла или пода."""
+
+    code = "build_backend_unavailable"

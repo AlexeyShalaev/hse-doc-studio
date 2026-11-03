@@ -13,6 +13,7 @@ from fastapi import APIRouter, Query, Request, Response, status
 from hse_doc_studio.api.schemas.git_remote import (
     GitProject,
     GitProjectPage,
+    GitServerCheck,
     GitServerItem,
     GitServerList,
     GitServerLogin,
@@ -55,6 +56,26 @@ def _login(login: StudioServerLogin) -> GitServerLogin:
         expires_at=login.expires_at,
         credential_id=str(login.credential_id) if login.credential_id else None,
         code=login.code,
+    )
+
+
+@router.get("/git/servers/check", response_model=GitServerCheck)
+async def check_git_server(
+    request: Request, url: Annotated[str, Query(min_length=1, max_length=2048)]
+) -> GitServerCheck:
+    """Перед подключением: сервер это Студия, его версия против нашей и уже сохранённый вход на него."""
+    try:
+        found = await (await _service(request)).check(url)
+    except StudioServerError as exc:
+        raise _mapped(exc) from None
+    return GitServerCheck(
+        server_url=found.server_url,
+        server_version=found.server_version,
+        local_version=found.local_version,
+        compat=found.compat.value,
+        credential_id=str(found.credential_id) if found.credential_id else None,
+        account_name=found.account_name,
+        state=found.state,
     )
 
 

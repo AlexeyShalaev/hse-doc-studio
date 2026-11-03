@@ -10,3 +10,6 @@ export type { PlacementPerspective } from "./lib/placementView";
 export { ProjectBuildsCard } from "./ui/ProjectBuildsCard";
 export { ProjectBuildsView } from "./ui/ProjectBuildsView";
 export type { ProjectBuildsViewProps } from "./ui/ProjectBuildsView";
+export { BuildBlockedNotice } from "./ui/BuildBlockedNotice";
+export type { BuildBlockedNoticeProps } from "./ui/BuildBlockedNotice";
+export { useBuildBlockText } from "./lib/blockText";

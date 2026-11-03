@@ -61,11 +61,13 @@ from hse_doc_studio.core.git_sync.protocols import (
 from hse_doc_studio.core.git_sync.status import RefStatusMemo
 from hse_doc_studio.core.hse_persons.repositories import IHsePersonsGateway
 from hse_doc_studio.core.jobs.artifacts import IArtifactStore
+from hse_doc_studio.core.jobs.availability import IBuildAvailability
 from hse_doc_studio.core.jobs.files import IProjectFileProbeFactory
 from hse_doc_studio.core.jobs.protocols import IJobDispatcher
 from hse_doc_studio.core.language_check import ILanguageCheckService
 from hse_doc_studio.core.mode import StudioMode
 from hse_doc_studio.core.office import IBackendReachability, IOfficeEditorService
+from hse_doc_studio.core.onboarding.protocols import IExistingUserProbe, IOnboardingRepository
 from hse_doc_studio.core.paths import PathMapping
 from hse_doc_studio.core.projects.locator import IProjectLocator
 from hse_doc_studio.core.projects.usage import IProjectQuota
@@ -237,6 +239,7 @@ from hse_doc_studio.use_cases.checks.run_checks import RunChecksUC
 from hse_doc_studio.use_cases.compile.build_project import BuildProjectUC
 from hse_doc_studio.use_cases.compile.cancel_compile import CancelCompileUC
 from hse_doc_studio.use_cases.compile.get_archived_pdf import GetArchivedPdfUC
+from hse_doc_studio.use_cases.compile.get_build_availability import GetBuildAvailabilityUC
 from hse_doc_studio.use_cases.compile.get_compile import GetCompileUC
 from hse_doc_studio.use_cases.compile.get_compile_stream import GetCompileStreamUC
 from hse_doc_studio.use_cases.compile.get_docker_status import GetDockerStatusUC
@@ -363,6 +366,7 @@ from hse_doc_studio.use_cases.office_services.list_office_service_remote_tags im
 from hse_doc_studio.use_cases.office_services.set_active_office_service_image import (
     SetActiveOfficeServiceImageUC,
 )
+from hse_doc_studio.use_cases.onboarding.state import GetOnboardingUC, ResetOnboardingUC, UpdateOnboardingUC
 from hse_doc_studio.use_cases.profile.clear_profile import ClearProfileUC
 from hse_doc_studio.use_cases.profile.get_profile import GetProfileUC
 from hse_doc_studio.use_cases.profile.update_profile import UpdateProfileUC
@@ -1499,6 +1503,20 @@ class UseCaseProvider(Provider):
     ) -> UpdateSettingsUC:
         return UpdateSettingsUC(settings_repo=settings_repo, capacity_probe=capacity_probe)
 
+    # ------------------------------------------------------------------ Онбординг
+
+    @provide
+    def get_get_onboarding_uc(self, repo: IOnboardingRepository, probe: IExistingUserProbe) -> GetOnboardingUC:
+        return GetOnboardingUC(repo, probe)
+
+    @provide
+    def get_update_onboarding_uc(self, repo: IOnboardingRepository, probe: IExistingUserProbe) -> UpdateOnboardingUC:
+        return UpdateOnboardingUC(repo, probe)
+
+    @provide
+    def get_reset_onboarding_uc(self, repo: IOnboardingRepository, probe: IExistingUserProbe) -> ResetOnboardingUC:
+        return ResetOnboardingUC(repo, probe)
+
     # ------------------------------------------------------------------ Профиль автора
 
     @provide
@@ -2370,6 +2388,10 @@ class UseCaseProvider(Provider):
             vcs_locks=vcs_locks,
             pdf_observer=pdf_observer,
         )
+
+    @provide
+    def get_build_availability_uc(self, availability: IBuildAvailability) -> GetBuildAvailabilityUC:
+        return GetBuildAvailabilityUC(availability)
 
     @provide
     def get_build_project_uc(

@@ -20,7 +20,7 @@ on:
       - "e2e/**"
       - ".github/workflows/e2e-server-lite.yml"
   pull_request:
-    branches: [master]
+    branches: [master, next]
     paths: *paths
   workflow_dispatch:
 

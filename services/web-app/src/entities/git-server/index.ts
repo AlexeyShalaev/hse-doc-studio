@@ -11,6 +11,7 @@ export {
   useDecideDevice,
   useDeviceAuthorization,
   useForgetGitServer,
+  useGitServerCheck,
   useGitServerLogin,
   useGitServerProjects,
   useGitServers,

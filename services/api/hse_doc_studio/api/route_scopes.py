@@ -251,6 +251,10 @@ ROUTE_SCOPES: Mapping[RouteKey, RouteScope] = {
     ("GET", "/profile"): _A,
     ("PUT", "/profile"): _A,
     ("DELETE", "/profile"): _A,
+    # Онбординг у каждого свой: строка пользователя на сервере, файл в data_dir локально.
+    ("GET", "/onboarding"): _A,
+    ("PATCH", "/onboarding"): _A,
+    ("POST", "/onboarding/reset"): _A,
     # Git: доступы, хосты, клонирование
     ("GET", "/git/credentials"): _A,
     ("POST", "/git/credentials"): _A,
@@ -473,9 +477,12 @@ ROUTE_SCOPES: Mapping[RouteKey, RouteScope] = {
     ("GET", "/git/servers/login/{login_id}"): _LOCAL,
     ("DELETE", "/git/servers/login/{login_id}"): _LOCAL,
     ("GET", "/git/servers"): _LOCAL,
+    ("GET", "/git/servers/check"): _LOCAL,
     ("GET", "/git/servers/{credential_id}/projects"): _LOCAL,
     ("DELETE", "/git/servers/{credential_id}"): _LOCAL,
     ("POST", "/auth/device/code"): _P,
+    # local-from-cloud: экран «Локальная версия» облачной Студии
+    ("GET", "/local-studio"): _A,
     ("POST", "/auth/device/token"): _P,
     ("GET", "/account/device/{user_code}"): _A,
     ("POST", "/account/device/{user_code}"): _A,

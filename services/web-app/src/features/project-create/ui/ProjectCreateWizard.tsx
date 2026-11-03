@@ -2252,6 +2252,18 @@ export const ProjectCreateWizard = () => {
   const stepDefs = folderless ? SERVER_STEPS : STEPS;
   const totalSteps = stepDefs.length;
 
+  // Шаблон из ?pack=&template= (онбординг предлагает его в конце). Только для
+  // пустого мастера: начатое человеком не перетираем.
+  useEffect(() => {
+    const pack = searchParams.get("pack");
+    const template = searchParams.get("template");
+    if (pack && template && packId === null && templateId === null) {
+      setField("packId", pack);
+      setField("templateId", template);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams]);
+
   // Prefill folder from ?folder= when arriving from connect → "Create here".
   useEffect(() => {
     const prefill = searchParams.get("folder");

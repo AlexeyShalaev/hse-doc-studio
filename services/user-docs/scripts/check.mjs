@@ -29,7 +29,14 @@ const frontmatter = (file) => parse(readFileSync(file, 'utf-8').split(/^---$/m)[
 /** Шаблоны путей приложения: router.tsx плюс /admin/<раздел>. */
 const appPatterns = (() => {
   const router = readFileSync(join(REPO, 'services/web-app/src/app/router.tsx'), 'utf-8')
-  const patterns = [...router.matchAll(/path:\s*"([^"]+)"/g)].map((m) => m[1]).filter((p) => p.startsWith('/') && !p.includes('*'))
+  // Пути-константы (path: LOCAL_STUDIO_PATH) раскрываются по их объявлению в исходниках приложения.
+  const constants = new Map()
+  for (const file of walk(join(REPO, 'services/web-app/src')).filter((f) => /\.tsx?$/.test(f))) {
+    for (const m of readFileSync(file, 'utf-8').matchAll(/export const ([A-Z_]+_PATH)\s*=\s*"([^"]+)"/g)) constants.set(m[1], m[2])
+  }
+  const literal = [...router.matchAll(/path:\s*"([^"]+)"/g)].map((m) => m[1])
+  const named = [...router.matchAll(/path:\s*([A-Z_]+_PATH)\b/g)].map((m) => constants.get(m[1])).filter(Boolean)
+  const patterns = [...literal, ...named].filter((p) => p.startsWith('/') && !p.includes('*'))
   const admin = readFileSync(join(REPO, 'services/web-app/src/pages/AdminPage/AdminApp.tsx'), 'utf-8')
   const parts = new Set([...admin.matchAll(/["']([a-z][a-z-]+)["']/g)].map((m) => m[1]))
   return {patterns, adminParts: parts}

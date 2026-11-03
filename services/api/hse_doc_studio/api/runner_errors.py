@@ -7,6 +7,7 @@ from collections.abc import Awaitable, Callable, Mapping
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 
+from hse_doc_studio.core.identity.errors import IdentityErrorCode, message_for
 from hse_doc_studio.core.jobs.enums import RunnerErrorCode
 from hse_doc_studio.core.jobs.errors import (
     ArtifactInvalidError,
@@ -46,6 +47,20 @@ async def _stale_attempt_handler(_request: Request, exc: Exception) -> JSONRespo
     return JSONResponse(status_code=409, content={"detail": str(exc), "code": RunnerErrorCode.stale_attempt.value})
 
 
+async def _no_runner_handler(_request: Request, exc: Exception) -> JSONResponse:
+    # 409, как у прочих «окружение сборки не готово» (`image_missing`, `docker_unavailable`): клиент
+    # показывает свой текст по коду, а не общий тост 5xx. Коды из каталога `contracts/server/error_codes.json`.
+    assert isinstance(exc, NoRunnerAvailableError)  # noqa: S101 — обработчик зарегистрирован только на этот тип
+    return JSONResponse(
+        status_code=409,
+        content={
+            "detail": message_for(IdentityErrorCode(exc.code)),
+            "code": exc.code,
+            "tags": sorted(exc.tags),
+        },
+    )
+
+
 async def _job_not_found_handler(_request: Request, exc: Exception) -> JSONResponse:
     return JSONResponse(status_code=404, content={"detail": str(exc), "code": RunnerErrorCode.job_not_found.value})
 
@@ -62,7 +77,7 @@ def install_runner_error_handlers(app: FastAPI) -> None:
     app.add_exception_handler(StaleAttemptError, _stale_attempt_handler)
     app.add_exception_handler(QueuedJobNotFoundError, _job_not_found_handler)
     app.add_exception_handler(JobNotRunningError, _coded_handler(409, RunnerErrorCode.job_not_running))
-    app.add_exception_handler(NoRunnerAvailableError, _coded_handler(503, RunnerErrorCode.no_runner))
+    app.add_exception_handler(NoRunnerAvailableError, _no_runner_handler)
     app.add_exception_handler(BlobForbiddenError, _coded_handler(403, RunnerErrorCode.blob_forbidden))
     app.add_exception_handler(BlobMissingError, _coded_handler(404, RunnerErrorCode.blob_missing))
     app.add_exception_handler(ArtifactInvalidError, _coded_handler(422, RunnerErrorCode.artifact_invalid))

@@ -33,6 +33,15 @@ export default defineConfig({
       },
     },
     {
+      // «Локальная версия» облачной Студии на том же стенде server-lite.
+      name: "local-studio",
+      testMatch: /local-studio\.spec\.ts/,
+      use: {
+        ...devices["Desktop Chrome"],
+        channel: process.env.E2E_CHANNEL || undefined,
+      },
+    },
+    {
       // Полный смоук на стенде deploy/server (make server-stack-up, make e2e-full).
       name: "full",
       testMatch: /full\.spec\.ts/,
@@ -93,6 +102,17 @@ export default defineConfig({
       use: {
         ...devices["Desktop Chrome"],
         actionTimeout: 30_000,
+        channel: process.env.E2E_CHANNEL || undefined,
+      },
+    },
+    {
+      // Онбординг: анкета, экскурсия, демо-проект в песочнице, пропуск; идёт после полного смоука на том же стенде.
+      name: "onboarding",
+      testMatch: /onboarding\.spec\.ts/,
+      timeout: 5 * 60_000,
+      use: {
+        ...devices["Desktop Chrome"],
+        actionTimeout: 20_000,
         channel: process.env.E2E_CHANNEL || undefined,
       },
     },

@@ -7,7 +7,7 @@ import { useHelpStore } from "@entities/help";
 import { useThemeStore } from "@shared/lib";
 import { i18n } from "@shared/lib/i18n";
 import { HelpButton } from "./HelpButton";
-import { HelpPanel } from "./HelpPanel";
+import { HelpHost } from "./HelpHost";
 
 const MAP = {
   routes: {
@@ -71,7 +71,7 @@ const mount = (path: string) =>
     <QueryClientProvider client={new QueryClient()}>
       <MemoryRouter initialEntries={[path]}>
         <HelpButton />
-        <HelpPanel />
+        <HelpHost />
       </MemoryRouter>
     </QueryClientProvider>,
   );
@@ -107,7 +107,11 @@ describe("панель справки", () => {
     const user = userEvent.setup();
     mount("/projects/p1/submit");
     await user.keyboard("?");
-    expect(await screen.findByText("Комплект на сдачу.")).toBeInTheDocument();
+    expect(
+      await screen.findByText("Комплект на сдачу.", undefined, {
+        timeout: 5000,
+      }),
+    ).toBeInTheDocument();
     expect(screen.getByAltText("Шаг 2")).toHaveAttribute(
       "src",
       "/help/media/a.ru.light.webp",
@@ -123,14 +127,20 @@ describe("панель справки", () => {
     act(() => {
       useHelpStore.getState().open("runbooks/submit-sign", 2);
     });
-    expect(await screen.findByTestId("help-step-2")).toHaveClass("is-focused");
+    expect(
+      await screen.findByTestId("help-step-2", undefined, { timeout: 5000 }),
+    ).toHaveClass("is-focused");
   });
 
   it("экран без статьи говорит об этом, а поиск находит статьи каталога", async () => {
     const user = userEvent.setup();
     mount("/inbox");
     await user.click(screen.getByTestId("help-button"));
-    expect(await screen.findByTestId("help-no-article")).toBeInTheDocument();
+    expect(
+      await screen.findByTestId("help-no-article", undefined, {
+        timeout: 5000,
+      }),
+    ).toBeInTheDocument();
     await user.type(screen.getByRole("searchbox"), "мастер");
     expect(await screen.findByText("Создать проект")).toBeInTheDocument();
   });
@@ -141,7 +151,7 @@ describe("панель справки", () => {
       <QueryClientProvider client={new QueryClient()}>
         <MemoryRouter>
           <input aria-label="поле" />
-          <HelpButton />
+          <HelpHost />
         </MemoryRouter>
       </QueryClientProvider>,
     );

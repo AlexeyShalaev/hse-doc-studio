@@ -15,6 +15,9 @@ export default {
     async (d) => d.click(d.text(d.t('Курсовая: анализ CI/CD', 'Coursework: static analysis'), {exact: true}).first(), {settle: 2500}),
     async (d) => d.point(d.page.locator('nav.activity-bar').first()),
     async (d) => d.click(d.role('button', d.s('appChrome', 'titlebar.projects')), {settle: 1500}),
-    async (d) => d.click('[data-testid="help-button"]', {settle: 1500}),
+    async (d) => {
+      await d.click('[data-testid="help-menu-trigger"]', {settle: 700})
+      await d.click('[data-testid="help-menu-screen"]', {settle: 1500})
+    },
   ],
 }

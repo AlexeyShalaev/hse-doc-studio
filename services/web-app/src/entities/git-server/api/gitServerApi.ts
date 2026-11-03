@@ -1,12 +1,14 @@
 import { apiClient, parseResp } from "@shared/api";
 import {
   DeviceAuthorizationInfoSchema,
+  GitServerCheckSchema,
   GitProjectPageSchema,
   GitServerListSchema,
   GitServerLoginSchema,
   ProjectGitRemoteSchema,
   type DeviceAuthorizationInfo,
   type DeviceDecisionRequest,
+  type GitServerCheck,
   type GitProjectPage,
   type GitServerList,
   type GitServerLogin,
@@ -46,6 +48,11 @@ export const projectGitRemoteApi = {
 export const gitServersApi = {
   list: (): Promise<GitServerList> =>
     apiClient.get("/git/servers", quiet).then(parseResp(GitServerListSchema)),
+  /** Сервер перед подключением: его версия против нашей и уже сохранённый вход. */
+  check: (url: string): Promise<GitServerCheck> =>
+    apiClient
+      .get("/git/servers/check", { ...quiet, params: { url } })
+      .then(parseResp(GitServerCheckSchema)),
   login: (body: GitServerLoginRequest): Promise<GitServerLogin> =>
     apiClient
       .post("/git/servers/login", body, quiet)

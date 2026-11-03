@@ -6,15 +6,17 @@ sidebar:
 access: user
 help:
   routes:
+    - '/local-studio'
+    - '/connect'
     - '/device'
     - '/settings/git-access'
   summary: 'Локальная Студия работает в Docker на вашем компьютере и не требует интернета. Связь с облачной Студией настраивается один раз входом по коду, дальше проект сам синхронизируется, а собранные PDF уходят на сервер.'
   steps:
-    - text: 'Установите и запустите Docker, затем выполните команду установки: на macOS и Linux `curl -fsSL https://raw.githubusercontent.com/AlexeyShalaev/hse-doc-studio/master/deploy/install.sh | sh`, на Windows в PowerShell `irm https://raw.githubusercontent.com/AlexeyShalaev/hse-doc-studio/master/deploy/install.ps1 | iex`.'
-      hint: 'Готовую команду для вашей системы с уже подставленным адресом сервера показывает экран **Локальная версия** в облачной Студии. Скрипт сам откроет браузер.'
+    - text: 'В облачной Студии откройте **Локальная версия** в меню аккаунта, выберите **Операционная система**, установите Docker и выполните в терминале **Команда установки**.'
+      hint: 'В команде уже подставлен адрес сервера. Без облачной Студии: на macOS и Linux `curl -fsSL https://raw.githubusercontent.com/AlexeyShalaev/hse-doc-studio/master/deploy/install.sh | sh`, на Windows в PowerShell `irm https://raw.githubusercontent.com/AlexeyShalaev/hse-doc-studio/master/deploy/install.ps1 | iex`.'
     - text: 'На экране **Где хранить ваши работы** выберите папку на компьютере и подтвердите выбор.'
       hint: 'В этой папке лягут проекты, настройки и шрифты. Дальше Студия работает без интернета.'
-    - text: 'Чтобы связать Студию с облачной, на экране **Проекты** нажмите **Клонировать из git**, выберите **Сервер HSE Doc Studio** и нажмите **Войти на сервер**.'
+    - text: 'Чтобы связать Студию с облачной, на экране **Проекты** нажмите **Подключиться к серверу** (или **Подключить локальную Студию** на экране **Локальная версия** в облаке): откроется экран подключения с **Адрес сервера**.'
       shot: runbooks/local-version/step-03
     - text: 'Введите **Адрес сервера** и нажмите **Войти**. Затем нажмите **Открыть страницу подтверждения**, проверьте, что код совпадает, и нажмите **Разрешить** на сайте.'
       hint: 'Код действует 10 минут. Устройство получает доступ ко всем проектам, где вы видите исходники, на 90 дней.'
@@ -28,6 +30,9 @@ verified:
   sources:
     - deploy/install.sh
     - deploy/install.ps1
+    - services/web-app/src/pages/LocalStudioPage
+    - services/web-app/src/pages/ConnectServerPage
+    - services/web-app/src/features/local-studio-guide
     - services/web-app/src/pages/DevicePage
     - services/web-app/src/features/git-server
     - services/web-app/src/entities/git-server

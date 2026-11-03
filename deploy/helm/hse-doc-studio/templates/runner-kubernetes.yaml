@@ -1,0 +1,217 @@
+{{- if and .Values.runner.enabled (eq .Values.runner.executor "kubernetes") }}
+{{- $r := .Values.runner }}
+{{- $k := .Values.runner.kubernetes }}
+{{- $name := printf "%s-runner" (include "hds.fullname" .) }}
+{{- $buildNs := include "hds.runnerBuildNamespace" . }}
+{{- $dataClaim := default (printf "%s-data" $name) $r.persistence.existingClaim }}
+# Раннер с исполнителем kubernetes: сборка TeX идёт подом на задачу в {{ $buildNs }} (docs/design/k8s-runner.md).
+# Без docker.sock и hostPath: под раннера и поды сборки проходят Pod Security Standard restricted.
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: {{ $name }}
+  labels:
+    {{- include "hds.labels" . | nindent 4 }}
+    app.kubernetes.io/component: runner
+---
+# Только поды сборки в своём namespace: создать, ждать, читать лог, exec для входа и выхода, удалить.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: {{ $name }}-builds
+  namespace: {{ $buildNs }}
+  labels:
+    {{- include "hds.labels" . | nindent 4 }}
+    app.kubernetes.io/component: runner
+rules:
+  - apiGroups: [""]
+    resources: [pods]
+    verbs: [create, get, list, delete]
+  - apiGroups: [""]
+    resources: [pods/log]
+    verbs: [get]
+  # websocket-exec авторизуется как get в старых версиях Kubernetes и как create в новых.
+  - apiGroups: [""]
+    resources: [pods/exec]
+    verbs: [create, get]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: {{ $name }}-builds
+  namespace: {{ $buildNs }}
+  labels:
+    {{- include "hds.labels" . | nindent 4 }}
+    app.kubernetes.io/component: runner
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: {{ $name }}-builds
+subjects:
+  - kind: ServiceAccount
+    name: {{ $name }}
+    namespace: {{ .Release.Namespace }}
+{{- if $k.networkPolicy.enabled }}
+---
+# Подам сборки сеть не нужна: вход и выход идут через exec Kubernetes API.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ $name }}-builds-deny-all
+  namespace: {{ $buildNs }}
+  labels:
+    {{- include "hds.labels" . | nindent 4 }}
+    app.kubernetes.io/component: runner
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/managed-by: hse-doc-studio-runner
+      hse-doc-studio/component: build
+  policyTypes: [Ingress, Egress]
+{{- end }}
+{{- if and $r.persistence.enabled (not $r.persistence.existingClaim) }}
+---
+# Данные раннера: выданный ему токен (identity.json), кэш блобов и рабочие папки. Токен регистрации одноразовый,
+# поэтому без тома рестарт пода оставил бы раннер без личности.
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ $dataClaim }}
+  labels:
+    {{- include "hds.labels" . | nindent 4 }}
+    app.kubernetes.io/component: runner
+  annotations:
+    helm.sh/resource-policy: keep
+spec:
+  accessModes:
+    {{- toYaml $r.persistence.accessModes | nindent 4 }}
+  {{- if $r.persistence.storageClassName }}
+  storageClassName: {{ $r.persistence.storageClassName | quote }}
+  {{- end }}
+  resources:
+    requests:
+      storage: {{ $r.persistence.size }}
+{{- end }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ $name }}
+  labels:
+    {{- include "hds.labels" . | nindent 4 }}
+    app.kubernetes.io/component: runner
+spec:
+  replicas: {{ $r.replicas }}
+  # Том данных ReadWriteOnce: старый под отпускает его до старта нового.
+  strategy: {type: Recreate}
+  selector:
+    matchLabels:
+      {{- include "hds.selector" . | nindent 6 }}
+      app.kubernetes.io/component: runner
+  template:
+    metadata:
+      labels:
+        {{- include "hds.selector" . | nindent 8 }}
+        app.kubernetes.io/component: runner
+    spec:
+      serviceAccountName: {{ $name }}
+      # На SIGTERM раннер перестаёт брать задачи и дорабатывает текущие сборки.
+      terminationGracePeriodSeconds: {{ $r.terminationGracePeriodSeconds }}
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: {{ .Values.podSecurityContext.runAsUser }}
+        runAsGroup: {{ .Values.podSecurityContext.runAsGroup }}
+        fsGroup: {{ .Values.podSecurityContext.fsGroup }}
+        seccompProfile: {type: RuntimeDefault}
+      containers:
+        - name: runner
+          image: {{ include "hds.image" . }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          command: ["hse-doc-studio", "runner"]
+          env:
+            - {name: HSE_RUNNER__API_URL, value: "http://{{ include "hds.fullname" . }}:{{ .Values.service.port }}"}
+            - {name: HSE_RUNNER__DATA_DIR, value: {{ $r.dataDir | quote }}}
+            - {name: HSE_RUNNER__CONCURRENCY, value: {{ $r.concurrency | quote }}}
+            {{- if $r.tags }}
+            - {name: HSE_RUNNER__TAGS, value: {{ $r.tags | quote }}}
+            {{- end }}
+            {{- if $r.officeUrl }}
+            - {name: HSE_RUNNER__OFFICE_URL, value: {{ $r.officeUrl | quote }}}
+            {{- end }}
+            # Нужен один раз: выданный раннеру токен сохраняется на его томе данных.
+            - {name: HSE_RUNNER__TOKEN, valueFrom: {secretKeyRef: {name: {{ include "hds.secretName" . }}, key: runner-bootstrap-token}}}
+            # Постоянный токен раннера (hsrn_…), если он в Secret: тогда том данных не обязателен.
+            - {name: HSE_RUNNER__RUNNER_TOKEN, valueFrom: {secretKeyRef: {name: {{ include "hds.secretName" . }}, key: runner-token, optional: true}}}
+            - {name: HSE_RUNNER__EXECUTOR, value: kubernetes}
+            - {name: HSE_RUNNER__K8S__NAMESPACE, value: {{ $buildNs | quote }}}
+            - {name: HSE_RUNNER__K8S__OWNER_POD_NAME, valueFrom: {fieldRef: {fieldPath: metadata.name}}}
+            - {name: HSE_RUNNER__K8S__OWNER_POD_UID, valueFrom: {fieldRef: {fieldPath: metadata.uid}}}
+            {{- if $k.image }}
+            - {name: HSE_RUNNER__K8S__IMAGE, value: {{ $k.image | quote }}}
+            {{- end }}
+            - {name: HSE_RUNNER__K8S__IMAGE_PULL_POLICY, value: {{ $k.imagePullPolicy | quote }}}
+            {{- with $k.imagePullSecrets }}
+            - {name: HSE_RUNNER__K8S__IMAGE_PULL_SECRETS, value: {{ toJson . | quote }}}
+            {{- end }}
+            - {name: HSE_RUNNER__K8S__CPU_REQUEST, value: {{ $k.resources.requests.cpu | quote }}}
+            - {name: HSE_RUNNER__K8S__MEMORY_REQUEST, value: {{ $k.resources.requests.memory | quote }}}
+            - {name: HSE_RUNNER__K8S__CPU_LIMIT, value: {{ $k.resources.limits.cpu | quote }}}
+            - {name: HSE_RUNNER__K8S__MEMORY_LIMIT, value: {{ $k.resources.limits.memory | quote }}}
+            - {name: HSE_RUNNER__K8S__WORK_SIZE_LIMIT, value: {{ $k.workSizeLimit | quote }}}
+            - {name: HSE_RUNNER__K8S__TMP_SIZE_LIMIT, value: {{ $k.tmpSizeLimit | quote }}}
+            - {name: HSE_RUNNER__K8S__ACTIVE_DEADLINE_S, value: {{ $k.activeDeadlineSeconds | quote }}}
+            - {name: HSE_RUNNER__K8S__POD_START_TIMEOUT_S, value: {{ $k.podStartTimeoutSeconds | quote }}}
+            - {name: HSE_RUNNER__K8S__RUN_AS_USER, value: {{ $k.runAsUser | quote }}}
+            - {name: HSE_RUNNER__K8S__RUN_AS_GROUP, value: {{ $k.runAsGroup | quote }}}
+            - {name: HSE_RUNNER__K8S__FS_GROUP, value: {{ $k.fsGroup | quote }}}
+            {{- with $k.nodeSelector }}
+            - {name: HSE_RUNNER__K8S__NODE_SELECTOR, value: {{ toJson . | quote }}}
+            {{- end }}
+            {{- with $k.tolerations }}
+            - {name: HSE_RUNNER__K8S__TOLERATIONS, value: {{ toJson . | quote }}}
+            {{- end }}
+            {{- if $k.priorityClassName }}
+            - {name: HSE_RUNNER__K8S__PRIORITY_CLASS_NAME, value: {{ $k.priorityClassName | quote }}}
+            {{- end }}
+            {{- if $k.runtimeClassName }}
+            - {name: HSE_RUNNER__K8S__RUNTIME_CLASS_NAME, value: {{ $k.runtimeClassName | quote }}}
+            {{- end }}
+            {{- if $k.texCache.existingClaim }}
+            - {name: HSE_RUNNER__K8S__TEX_CACHE_CLAIM, value: {{ $k.texCache.existingClaim | quote }}}
+            {{- end }}
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities: {drop: [ALL]}
+          volumeMounts:
+            - {name: runner-data, mountPath: {{ $r.dataDir | quote }}}
+            - {name: tmp, mountPath: /tmp}
+          resources:
+            {{- toYaml $r.resources | nindent 12 }}
+      volumes:
+        {{- if $r.persistence.enabled }}
+        - name: runner-data
+          persistentVolumeClaim: {claimName: {{ $dataClaim }}}
+        {{- else }}
+        - name: runner-data
+          emptyDir: {}
+        {{- end }}
+        - name: tmp
+          emptyDir: {}
+      {{- with $r.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with $r.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with $r.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+{{- end }}

@@ -1,4 +1,4 @@
-{{- if .Values.runner.enabled }}
+{{- if and .Values.runner.enabled (eq .Values.runner.executor "docker") }}
 apiVersion: apps/v1
 kind: Deployment
 metadata:

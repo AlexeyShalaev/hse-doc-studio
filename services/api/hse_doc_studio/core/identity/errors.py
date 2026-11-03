@@ -70,6 +70,9 @@ class IdentityErrorCode(StrEnum):
     owner_storage_exceeded = "owner_storage_exceeded"
     ai_model_not_allowed = "ai_model_not_allowed"
     ai_provider_unavailable = "ai_provider_unavailable"
+    # Сборка без исполнителя: тело несёт теги без раннера, см. api/runner_errors.py.
+    no_runners = "no_runners"
+    no_runner_for_tags = "no_runner_for_tags"
     # Ссылки доступа и гости.
     links_disabled = "links_disabled"
     link_limit = "link_limit"
@@ -259,6 +262,26 @@ MESSAGES: dict[IdentityErrorCode, tuple[str, str]] = {
     IdentityErrorCode.ai_provider_unavailable: (
         "Провайдер ИИ временно недоступен. Попробуйте позже или выберите другой.",
         "The AI provider is temporarily unavailable. Try later or pick another one.",
+    ),
+    IdentityErrorCode.no_runners: (
+        (
+            "К серверу не подключён ни один раннер, собрать документ здесь сейчас нельзя. Соберите его локально "
+            "в Студии на компьютере или попросите администратора подключить раннер."
+        ),
+        (
+            "No runner is connected to the server, so the document cannot be built here right now. Build it locally "
+            "in the desktop Studio or ask the administrator to connect a runner."
+        ),
+    ),
+    IdentityErrorCode.no_runner_for_tags: (
+        (
+            "Нет раннера, который собирает такие документы. Соберите документ локально в Студии на компьютере "
+            "или попросите администратора подключить подходящий раннер."
+        ),
+        (
+            "No runner can build documents of this kind. Build the document locally in the desktop Studio "
+            "or ask the administrator to connect a suitable runner."
+        ),
     ),
     IdentityErrorCode.ai_provider_runner_invalid: (
         "Выберите свой раннер и объявленный им ИИ-адрес.",

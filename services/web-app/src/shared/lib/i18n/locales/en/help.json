@@ -13,5 +13,7 @@
   "verified": "Checked against version {{version}} ({{date}})",
   "stepShot": "Step {{n}}",
   "anchor": "What is this? Open help",
-  "command": "Help for this screen"
+  "command": "Help for this screen",
+  "menuScreenHint": "Steps and screenshots, the ? key",
+  "menuSiteHint": "Every guide, opens in a new tab"
 }
