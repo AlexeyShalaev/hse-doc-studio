@@ -15,6 +15,7 @@ from hse_doc_studio.api.schemas.session import (
     AuthOptions,
     BootstrapResponse,
     Capabilities,
+    LandingInfo,
     OidcProviderOption,
     SessionUser,
 )
@@ -116,6 +117,7 @@ async def bootstrap(request: Request, response: Response) -> BootstrapResponse:
         guest=guest,
         # invites: счётчик «Входящих» для шапки.
         inbox=await inbox_badge(request, result.user.id if result.user else None),
+        landing=LandingInfo(enabled=result.landing_enabled, name=result.instance_name),
     )
     if guest is not None:
         # Гостю недоступно ничего из возможностей установки.

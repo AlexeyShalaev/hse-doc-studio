@@ -17,6 +17,8 @@ class AdminInstanceSettings(StrictModel):
     name: str
     public_url: str
     docs_url: str | None
+    # Лендинг на корневом адресе для не вошедшего человека.
+    landing_enabled: bool = True
     fields: dict[str, SettingState]
 
 
@@ -26,6 +28,7 @@ class UpdateAdminInstanceRequest(StrictModel):
     name: str | None = Field(default=None, max_length=120)
     public_url: str | None = Field(default=None, max_length=2048)
     docs_url: str | None = Field(default=None, max_length=2048)
+    landing_enabled: bool | None = None
 
 
 class AdminBuildSettings(StrictModel):

@@ -18,6 +18,7 @@ from hse_doc_studio.api.db_errors import install_db_error_handlers
 from hse_doc_studio.api.guards import install_exception_handlers
 from hse_doc_studio.api.help_site import install_help_site
 from hse_doc_studio.api.interface_language import InterfaceLanguageMiddleware
+from hse_doc_studio.api.landing_page import install_landing_root
 from hse_doc_studio.api.logging_setup import configure_logging
 from hse_doc_studio.api.mcp_server import install_mcp
 from hse_doc_studio.api.observability.install import (
@@ -676,6 +677,8 @@ def _mount_spa(app: FastAPI, settings: Settings) -> None:
     index_html = static_dir / "index.html"
 
     app.mount("/assets", StaticFiles(directory=static_dir / "assets"), name="assets")
+    # Корень с тегами для предпросмотра ссылок и картинка предпросмотра: до SPA-фолбэка.
+    install_landing_root(app, mode=settings.mode, static_dir=static_dir)
 
     # In all-in-one mode the frontend is served by this same server, so the
     # API base URL must be relative ("") — the browser resolves /api/v1/...

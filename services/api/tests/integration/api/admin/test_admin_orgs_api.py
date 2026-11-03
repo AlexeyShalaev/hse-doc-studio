@@ -282,6 +282,33 @@ async def test__instance_settings__defaults_update_clear_and_validate(stack: _St
     assert [e.action for e in await stack.users.audit.list()] == ["settings.instance_update"] * 2
 
 
+async def test__instance_settings__landing_is_on_by_default_and_admin_can_turn_it_off(stack: _Stack) -> None:
+    boss = await stack.users.add("boss", admin=True)
+    c = stack.client
+
+    first = (await c.get("/api/admin/settings/instance", headers=boss)).json()
+    off = await c.put("/api/admin/settings/instance", json={"landing_enabled": False}, headers=boss)
+    on = await c.put("/api/admin/settings/instance", json={"landing_enabled": True}, headers=boss)
+
+    assert first["landing_enabled"] is True
+    assert first["fields"]["instance.landing_enabled"] == {"source": "default", "locked": False}
+    assert off.json()["landing_enabled"] is False
+    assert off.json()["fields"]["instance.landing_enabled"] == {"source": "admin", "locked": False}
+    assert on.json()["landing_enabled"] is True
+
+
+async def test__instance_settings__landing_from_env_is_locked(monkeypatch: pytest.MonkeyPatch) -> None:
+    async for s in _stack(monkeypatch, InstanceEnvOverrides(landing_enabled=False)):
+        boss = await s.users.add("boss", admin=True)
+
+        instance = (await s.client.get("/api/admin/settings/instance", headers=boss)).json()
+        refused = await s.client.put("/api/admin/settings/instance", json={"landing_enabled": True}, headers=boss)
+
+        assert instance["landing_enabled"] is False
+        assert instance["fields"]["instance.landing_enabled"] == {"source": "env", "locked": True}
+        assert (refused.status_code, refused.json()["code"]) == (409, "setting_locked")
+
+
 async def test__instance_settings__localhost_http_is_allowed(stack: _Stack) -> None:
     boss = await stack.users.add("boss", admin=True)
 

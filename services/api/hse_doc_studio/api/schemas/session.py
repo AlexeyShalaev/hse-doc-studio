@@ -97,6 +97,12 @@ class GuestInfo(StrictModel):
     links: list[GuestLinkInfo]
 
 
+class LandingInfo(StrictModel):
+    # Лендинг на корневом адресе для не вошедшего человека: включён ли и под каким названием установки.
+    enabled: bool
+    name: str
+
+
 class BootstrapResponse(StrictModel):
     mode: StudioModeName
     version: str
@@ -110,6 +116,8 @@ class BootstrapResponse(StrictModel):
     guest: GuestInfo | None = None
     # invites: счётчик «Входящих» для шапки вошедшего; без входа и в локальном режиме null.
     inbox: InboxBadge | None = None
+    # Лендинг установки; в локальном режиме null: там входа и лендинга нет.
+    landing: LandingInfo | None = None
 
 
 class AuthErrorBody(StrictModel):

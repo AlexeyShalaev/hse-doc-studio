@@ -53,6 +53,7 @@ def _instance(view: InstanceView) -> AdminInstanceSettings:
         name=view.settings.name,
         public_url=view.settings.public_url,
         docs_url=view.settings.docs_url,
+        landing_enabled=view.settings.landing_enabled,
         fields=_fields(view.descriptions),
     )
 
