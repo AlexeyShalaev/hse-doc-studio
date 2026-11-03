@@ -184,6 +184,8 @@ _SCHEMAS: dict[str, Any] = {
     "ReauthResponse": pk.ReauthResponse,
     "AdminUserPasskeyList": pk.AdminUserPasskeyList,
     "AdminPasskeysReset": pk.AdminPasskeysReset,
+    "PasskeySignupOptionsRequest": pk.PasskeySignupOptionsRequest,
+    "PasskeySignupRequest": pk.PasskeySignupRequest,
     "AdminSmtpSettings": s.AdminSmtpSettings,
     "AdminInstanceSettings": inst.AdminInstanceSettings,
     "UpdateAdminInstanceRequest": inst.UpdateAdminInstanceRequest,

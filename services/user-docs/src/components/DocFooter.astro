@@ -1,0 +1,26 @@
+---
+/**
+ * Подвал Starlight плюс строка «когда инструкцию сверяли с приложением». Статья, которую никто
+ * не проходил после смены экрана, учит клику, которого уже нет; читатель должен это видеть.
+ */
+import Default from '@astrojs/starlight/components/Footer.astro'
+
+const entry = Astro.locals.starlightRoute.entry
+const verified = entry.data.verified
+const en = entry.id.startsWith('en/')
+const formatted = verified
+  ? new Intl.DateTimeFormat(en ? 'en-GB' : 'ru-RU', {day: 'numeric', month: 'long', year: 'numeric'}).format(verified.at)
+  : undefined
+---
+
+{
+  entry.id.endsWith('index') ? null : verified ? (
+    <p class="doc-verified">
+      {en ? `Checked on ${formatted} against Studio ${verified.app_version}.` : `Проверено ${formatted} на версии Студии ${verified.app_version}.`}
+    </p>
+  ) : (
+    <p class="doc-verified doc-verified--missing">{en ? 'Not yet checked against the app.' : 'Инструкция ещё не сверялась с приложением.'}</p>
+  )
+}
+
+<Default {...Astro.props}><slot /></Default>

@@ -1,0 +1,67 @@
+---
+title: 'Submission and signatures'
+description: 'Checkpoints, forms, signatures and packaging: how to put together a submission and get the final PDFs with the right names.'
+sidebar:
+  order: 8
+access: user
+help:
+  routes:
+    - '/projects/:projectId/submit'
+    - '/projects/:projectId/submit/cp/:profileId'
+    - '/projects/:projectId/submit/signatures'
+    - '/projects/:projectId/submit/requirements'
+    - '/projects/:projectId/submit/form/:formId'
+    - '/projects/:projectId/documents/:docId?tab=signatures'
+  summary: 'The Submission mode shows what each checkpoint needs: documents, forms, signatures. When everything is ready, Studio packs an archive where the PDFs are named the way the committee expects.'
+  steps:
+    - text: 'Open **Submission** on the left rail. In the **Checkpoints** list pick the one you need and click **Open checkpoint**.'
+      hint: '**Pin checkpoint**: the readiness ring across the project will then track this one.'
+      shot: runbooks/submit-sign/step-01
+    - text: 'Go through the checkpoint items: for a document that is not built click **Open document** and build it, for a form click **Fill in**.'
+      hint: 'The **N of M ready** counter shows what is left. For the specification open **Requirements traceability**: it shows requirements that are mentioned nowhere.'
+    - text: 'Open the **Signature library** and click **Add signature** on the slot you need. Paste or drop an image, click **Remove background** if needed, then **Save**.'
+      hint: 'One image per slot (author, supervisor) is reused by every document of the project.'
+      shot: runbooks/submit-sign/step-03
+    - text: 'In each document open the **Signatures** tab, turn the slot on and drag the signature to its place on the page.'
+      hint: 'You can add a signing date next to it. For an electronic signature switch the slot type to **Detached e-signature**.'
+    - text: 'Go back to the checkpoint. When it says **Everything is ready to package**, choose the **Archive format** and click **Pack**.'
+      hint: 'In a team project first choose **Whose package to build**: shared documents go into every author’s package.'
+      shot: runbooks/submit-sign/step-05
+    - text: 'In the **Past builds** list click **Download**. The signed PDFs in the archive carry human-readable names, such as “Technical specification.pdf”.'
+      hint: 'A single signed document can be downloaded without packaging: the **With signatures** button in the document preview.'
+  video:
+    src: runbooks/submit-sign/clip
+verified:
+  at: 2026-11-03
+  app_version: '0.3.0'
+  sources:
+    - services/web-app/src/widgets/SubmitPanel
+    - services/web-app/src/pages/WorkspacePage/panels/checkpoint
+    - services/web-app/src/pages/WorkspacePage/panels/CheckpointView.tsx
+    - services/web-app/src/pages/WorkspacePage/panels/SignaturesView.tsx
+    - services/web-app/src/features/signature-stamper
+    - services/web-app/src/features/form-fill
+---
+
+import Steps from '~/components/Steps.astro'
+import Video from '~/components/Video.astro'
+
+The template of your work describes checkpoints: what to hand in for the pre-defence, the defence
+and so on. The **Submission** mode gathers it all in one place: which documents are built, which
+forms are filled in, where a signature is missing. The last step, packaging, stamps the signatures
+into the PDFs and gives you an archive with the right file names.
+
+<Video />
+
+<Steps />
+
+## If something goes wrong
+
+- **“This template declares no checkpoints”**: the template does not define a submission set.
+  Download the built PDFs from the document previews.
+- **“Fill in metadata: …”**: fields are missing before packaging. Fill them in the project
+  **Settings** and pack again.
+- **“The document is not compiled yet”** on the **Signatures** tab: signatures go onto a built PDF.
+  Build the document and come back.
+- **“NDA: signatures required”**: the project is under NDA, so the package needs signatures. Add
+  them to every slot the checkpoint requires.

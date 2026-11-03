@@ -1,18 +1,15 @@
 import { Navigate, useSearchParams } from "react-router";
 import { LocalStudioGuide } from "@features/local-studio-guide";
+import { HELP_BASE } from "@entities/help";
 import { CONNECT_SERVER_PATH, isProjectId } from "@entities/local-studio";
 import { useBootstrap } from "@entities/session";
 import { i18n } from "@shared/lib";
 import { AppStatusBar } from "@widgets/AppStatusBar";
 import { AppTitlebar } from "@widgets/AppTitlebar";
 
-const DOCS_BASE = "https://alexeyshalaev.github.io/hse-doc-studio";
-
-/** Справка о локальной версии на языке интерфейса. */
+/** Рантбук о локальной версии в справке этой же Студии (/help/), на языке интерфейса. */
 const docsUrl = (lang: string): string =>
-  lang.startsWith("en")
-    ? `${DOCS_BASE}/en/start/local-from-cloud/`
-    : `${DOCS_BASE}/start/local-from-cloud/`;
+  `${HELP_BASE}/${lang.startsWith("en") ? "en" : "ru"}/runbooks/local-version/`;
 
 /**
  * /local-studio: «Локальная версия» облачной Студии. В самой локальной Студии

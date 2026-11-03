@@ -96,14 +96,16 @@ class InMemoryUserDirectory:
         project_counts: Mapping[str, int] | None = None,
         org_members: Mapping[str, set[str]] | None = None,
         group_members: Mapping[str, set[str]] | None = None,
+        passkey_counts: Mapping[str, int] | None = None,
     ) -> None:
         self._store = store
         self.project_counts: dict[str, int] = dict(project_counts or {})
+        self.passkey_counts: dict[str, int] = dict(passkey_counts or {})
         self.org_members: dict[str, set[str]] = dict(org_members or {})
         self.group_members: dict[str, set[str]] = dict(group_members or {})
 
     def _listing(self, user: User) -> UserListing:
-        return UserListing(user, self.project_counts.get(user.id, 0))
+        return UserListing(user, self.project_counts.get(user.id, 0), self.passkey_counts.get(user.id, 0))
 
     async def get(self, user_id: str) -> UserListing | None:
         user = self._store.users.get(user_id)

@@ -1,0 +1,21 @@
+{
+  "name": "@hse-doc-studio/user-docs",
+  "private": true,
+  "version": "0.3.0",
+  "type": "module",
+  "description": "HSE Doc Studio user help: runbooks with screenshots and short clips (ru/en), served by the app at /help/",
+  "scripts": {
+    "dev": "astro dev",
+    "build": "node scripts/build-audiences.mjs",
+    "build:one": "astro build",
+    "check": "node scripts/check.mjs",
+    "check:links": "node scripts/check-links.mjs"
+  },
+  "dependencies": {
+    "@astrojs/starlight": "^0.42.8",
+    "astro": "^7.4.5",
+    "sharp": "^0.34.4",
+    "yaml": "^2.8.1"
+  },
+  "packageManager": "pnpm@9.15.4"
+}

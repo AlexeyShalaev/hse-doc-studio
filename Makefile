@@ -9,6 +9,7 @@ export PYTHONPATH :=
 
 # Include scripts Makefile
 include scripts/Makefile
+include tools/docs-studio/Makefile
 
 .PHONY: help docs-serve docs-build
 
@@ -47,6 +48,12 @@ help:
 	@echo   make docs-serve-en         - Serve the English site locally
 	@echo   make docs-build            - Build both language sites to site/ (ru) + site/en/
 	@echo   make docs-lint             - Lint docs content (classes, dates, pack numbers)
+	@echo.
+	@echo ==========================================
+	@echo   User help (services/user-docs) and its media
+	@echo ==========================================
+	@echo.
+	@$(MAKE) -s user-docs-help
 	@echo.
 	@echo ==========================================
 	@echo   Demo media (docs screenshots and reel)

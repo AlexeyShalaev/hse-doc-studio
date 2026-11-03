@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Archive, HardDrive, Play, Plus, TriangleAlert } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import { HelpAnchor } from "@entities/help";
 import { localeTag } from "@shared/lib";
 import {
   Badge,
@@ -157,7 +158,12 @@ const BackupsContent = () => {
       )}
 
       <Section
-        title={t("destinations.title")}
+        title={
+          <>
+            {t("destinations.title")}
+            <HelpAnchor article="admin/backups" step={1} />
+          </>
+        }
         description={t("destinations.lead")}
         testId="backup-destinations"
         actions={

@@ -6,6 +6,7 @@ import {
   type Page,
 } from "@playwright/test";
 import { LANGS, USERS, login, logout, shot, type Lang } from "./helpers";
+import { Client } from "./stack";
 
 /**
  * Passkey на стенде server-lite с виртуальным аутентификатором Chrome (CDP WebAuthn): человек добавляет ключ
@@ -196,6 +197,57 @@ for (const lang of LANGS) {
       await shot(page, lang, "passkeys-04-removed");
     }
 
+    await page.context().close();
+  });
+}
+
+for (const lang of LANGS) {
+  test(`passkey: регистрация по приглашению без пароля (${lang})`, async ({
+    browser,
+    baseURL,
+  }) => {
+    // Админ приглашает новый адрес; без SMTP ссылка приглашения приходит в ответе.
+    const origin = new URL(baseURL ?? "http://localhost:8100").origin;
+    const adminContext = await browser.newContext();
+    const admin = new Client(adminContext.request, origin);
+    await admin.login(ADMIN_EMAIL, adminPassword());
+    const email = `passkey-${lang}-${String(Date.now())}@example.org`;
+    const invitation = await admin.json<{ link: string | null }>(
+      await admin.post("/api/admin/invitations", { email, ttl_days: null }),
+      201,
+    );
+    const link = invitation.link ?? "";
+    expect(link).toMatch(/\/invite\/\S+$/);
+    await adminContext.close();
+
+    const page = await newPage(browser, lang);
+    const key = await attachAuthenticator(page);
+    await page.goto(new URL(link).pathname);
+    await expect(page.getByTestId("register-passkey")).toBeVisible();
+    await expect(page.locator("input[type=email]")).toHaveValue(email);
+    await page.locator("input[name=name]").fill("Пётр Приглашённый");
+    await shot(page, lang, "passkeys-10-invite");
+    await page.getByTestId("register-passkey").click();
+    await expect(page.getByTestId("account-menu-trigger")).toBeVisible();
+    expect(await storedKeys(key)).toHaveLength(1);
+
+    // Аккаунт без пароля: ключ в «Аккаунте», вход снова только им.
+    await openPasskeys(page);
+    await expect(keyRows(page)).toHaveCount(1);
+    await shot(page, lang, "passkeys-11-invite-account");
+    await closeSettings(page);
+    await logout(page);
+    await signInWithPasskey(page);
+
+    // Повторно по той же ссылке аккаунт не создаётся.
+    const again = await page.request.post(
+      "/api/v1/auth/register/passkey/options",
+      {
+        data: { invitation_token: link.split("/invite/")[1], name: "x" },
+        headers: { Origin: origin },
+      },
+    );
+    expect([403, 409]).toContain(again.status());
     await page.context().close();
   });
 }

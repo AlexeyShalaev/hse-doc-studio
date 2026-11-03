@@ -1,0 +1,71 @@
+---
+title: 'Server self-diagnostics'
+description: 'What the server checks, what each warning and failure means and how to fix it.'
+sidebar:
+  order: 4
+access: admin
+help:
+  routes: ['/admin/diagnostics']
+  summary: 'The server checks its own database, storage, runners, disk, certificates, backups and background jobs. Every check has a status, a reason and a hint on what to do.'
+  steps:
+    - text: 'Open the **Self-diagnostics** section. The overall result is at the top: **All good**, **There are warnings** or **There are failures**.'
+      shot: admin/diagnostics/step-01
+    - text: 'Click **Check now** so you do not wait for the scheduled pass.'
+      hint: 'The scheduled pass runs every few minutes. A manual check updates the results but sends no notifications.'
+    - text: 'Find the rows marked **Warning** or **Failure**: under the check name are the reason and the **What to do:** hint.'
+      hint: 'A “not configured” row (for example mail without SMTP) does not count towards the overall result.'
+      shot: admin/diagnostics/step-03
+    - text: 'Fix the cause as the hint says and click **Check** in that check’s row.'
+    - text: 'In the **Thresholds and notifications** block set when latency, queue, certificate expiry and backup age count as a warning or a failure, then click **Save**.'
+      hint: 'Disk space thresholds are edited on the “Data retention” page. **Reset to defaults** restores the original values.'
+      shot: admin/diagnostics/step-05
+    - text: 'Keep **Notify admins** on: an inbox message arrives when a check turns into a warning or failure, and when it recovers.'
+      hint: '**Status confirmation** sets how many passes in a row a status must hold before a notification: a single failure bothers nobody.'
+verified:
+  at: 2026-11-03
+  app_version: '0.3.0'
+  sources:
+    - services/web-app/src/features/admin-diagnostics
+    - services/api/hse_doc_studio/core/diagnostics
+    - services/api/hse_doc_studio/api/routers/admin_diagnostics.py
+    - docs/design/self-diagnostics.md
+---
+
+import Steps from '~/components/Steps.astro'
+
+Self-diagnostics lets an installation run without a dedicated DevOps engineer: the server checks
+itself regularly, shows what is wrong and calls an administrator only when a problem persists.
+Checks are grouped: **Data**, **Builds and background jobs**, **Certificates**, **Operations**.
+
+<Steps />
+
+## What common problems mean
+
+- **Database**, “The database is unreachable”: check that the Postgres container is running and
+  that HSE_STUDIO__DB__* is correct.
+- **Database migrations**, “The database lags behind the code”: restart api, it applies migrations
+  by itself. “The database was migrated by a newer version” means an image older than the schema is
+  running: run a version no older than the one that migrated the database.
+- **Object storage**, “The storage is unreachable”: check the address, keys and bucket in
+  HSE_STUDIO__S3__* and that MinIO or S3 is reachable from the api container.
+- **Disk and data retention**, “critically low”: free space in “Data retention” or grow the volume;
+  large uploads are rejected meanwhile.
+- **Runners**, “No runner is online”: start the runners and check their token and the network to
+  api. See [Connect build runners](/help/en/admin/runners/).
+- **Public address certificate**, “The certificate of … expires in … days”: renew the certificate
+  or check auto-renewal in the proxy.
+- **Backups**, “There has been no successful backup yet” or “The last backup attempt failed”: open
+  [Backups](/help/en/admin/backups/) and look at the run history.
+- **Background jobs**, “No background-job leader found”: restart api; if that does not help, check
+  the database connection.
+
+## If something goes wrong
+
+- **“No checks have run yet”**: the server runs the first scheduled pass on its own within
+  minutes. Click **Check now** to skip the wait.
+- **“Scheduled checks are off (HSE_STUDIO__DIAGNOSTICS__ENABLED)”**: the environment turned
+  scheduled checks off. Manual checks still work; set the variable and restart api.
+- **“The check did not finish in … s”**: the service answers too slowly. Check the network to it
+  and the host load, then run the check again.
+- **“Could not check the certificate of …”**: the address did not open from the api container. If
+  your proxy is not reachable from inside, this is not an error; otherwise check DNS and the port.

@@ -5,7 +5,7 @@ from __future__ import annotations
 import uuid
 from dataclasses import dataclass
 
-from hse_doc_studio.core.identity.entities import AuthTokenKind
+from hse_doc_studio.core.identity.entities import AuthTokenKind, MailKind
 from hse_doc_studio.core.identity.errors import IdentityError, IdentityErrorCode
 from hse_doc_studio.core.identity.passkeys import (
     PASSKEY_LIMIT,
@@ -29,6 +29,7 @@ from hse_doc_studio.core.identity.protocols import (
 from hse_doc_studio.core.identity.session_policy import Clock, utc_now
 from hse_doc_studio.core.uow import IUnitOfWork
 from hse_doc_studio.use_cases.identity.auth_settings import AuthSettingsService
+from hse_doc_studio.use_cases.identity.mail import LinkDelivery
 from hse_doc_studio.use_cases.identity.passkey_ceremony import PasskeyChallenges, PasskeyPolicy, require_recent_auth
 
 DEFAULT_PASSKEY_NAME = "Passkey"
@@ -147,6 +148,8 @@ class FinishPasskeyRegistrationUC:
         audit: IAuditLog,
         uow: IUnitOfWork,
         clock: Clock = utc_now,
+        *,
+        delivery: LinkDelivery | None = None,
     ) -> None:
         self._users = users
         self._passkeys = passkeys
@@ -156,6 +159,7 @@ class FinishPasskeyRegistrationUC:
         self._audit = audit
         self._uow = uow
         self._clock = clock
+        self._delivery = delivery
 
     async def execute(
         self,
@@ -194,7 +198,8 @@ class FinishPasskeyRegistrationUC:
         )
         async with self._uow.begin():
             # Блокировка строки человека: две параллельные регистрации не обойдут предел.
-            if await self._users.get_for_update(user_id) is None:
+            owner = await self._users.get_for_update(user_id)
+            if owner is None:
                 raise IdentityError(IdentityErrorCode.auth_required)
             if await self._passkeys.count_for_user(user_id) >= PASSKEY_LIMIT:
                 raise IdentityError(IdentityErrorCode.passkey_limit)
@@ -207,6 +212,11 @@ class FinishPasskeyRegistrationUC:
                 actor_id=user_id,
                 target=passkey.id,
                 details={"name": passkey.name, "synced": passkey.backup_eligible, "rp_id": passkey.rp_id},
+            )
+        # Письмо после записи: если ключ добавил не владелец (украденная сессия), он узнает об этом сразу.
+        if self._delivery is not None:
+            await self._delivery.notify(
+                MailKind.passkey_added, owner.email, locale=owner.locale, params={"name": passkey.name}
             )
         return passkey
 

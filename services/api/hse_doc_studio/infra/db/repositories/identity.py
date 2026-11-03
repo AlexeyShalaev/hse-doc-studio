@@ -31,6 +31,7 @@ from hse_doc_studio.infra.db.orm.identity import (
     UserRow,
 )
 from hse_doc_studio.infra.db.orm.orgs import GroupMemberRow, OrgMemberRow, OrgRow
+from hse_doc_studio.infra.db.orm.passkeys import PasskeyRow
 from hse_doc_studio.infra.db.orm.projects import ProjectRow
 from hse_doc_studio.infra.db.session import SessionProvider
 
@@ -227,6 +228,15 @@ async def _project_counts(session: AsyncSession, user_ids: list[str]) -> dict[st
     return {owner: n for owner, n in found.all() if owner is not None}
 
 
+async def _passkey_counts(session: AsyncSession, user_ids: list[str]) -> dict[str, int]:
+    if not user_ids:
+        return {}
+    found = await session.execute(
+        select(PasskeyRow.user_id, func.count()).where(PasskeyRow.user_id.in_(user_ids)).group_by(PasskeyRow.user_id)
+    )
+    return dict(found.tuples().all())
+
+
 # Поля сортировки списка людей; имя без учёта регистра, как его ищут.
 _USER_SORT: dict[str, Expr] = {
     "name": func.lower(UserRow.name),
@@ -271,7 +281,8 @@ class SqlUserDirectory:
             if row is None:
                 return None
             counts = await _project_counts(session, [row.id])
-            return UserListing(_user(row), counts.get(row.id, 0))
+            keys = await _passkey_counts(session, [row.id])
+            return UserListing(_user(row), counts.get(row.id, 0), keys.get(row.id, 0))
 
     async def search(self, query: UserQuery) -> Found[UserListing]:
         stmt = select(UserRow).where(*_user_conditions(query)).order_by(*ordering(query.sort, _USER_SORT, UserRow.id))
@@ -280,7 +291,8 @@ class SqlUserDirectory:
             rows = [row for (row,) in found]
             # Число проектов только для строк страницы, а не для всей установки.
             counts = await _project_counts(session, [r.id for r in rows])
-            return Found([UserListing(_user(r), counts.get(r.id, 0)) for r in rows], total)
+            keys = await _passkey_counts(session, [r.id for r in rows])
+            return Found([UserListing(_user(r), counts.get(r.id, 0), keys.get(r.id, 0)) for r in rows], total)
 
     async def facets(self, query: UserQuery) -> UserFacets:
         # Одна группировка по статусу и роли (не больше восьми строк) под общими условиями: поиск и организация.
