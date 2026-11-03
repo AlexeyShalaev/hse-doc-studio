@@ -170,6 +170,8 @@ export const CONTRACT_SCHEMAS: Record<string, ZodType> = {
   ReauthResponse: pk.ReauthResponseSchema,
   AdminUserPasskeyList: pk.AdminUserPasskeyListSchema,
   AdminPasskeysReset: pk.AdminPasskeysResetSchema,
+  PasskeySignupOptionsRequest: pk.PasskeySignupOptionsRequestSchema,
+  PasskeySignupRequest: pk.PasskeySignupRequestSchema,
   AdminSmtpSettings: s.AdminSmtpSettingsSchema,
   UpdateAdminSmtpRequest: s.UpdateAdminSmtpRequestSchema,
   AdminSmtpTestRequest: s.AdminSmtpTestRequestSchema,

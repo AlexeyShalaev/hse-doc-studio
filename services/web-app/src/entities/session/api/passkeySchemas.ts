@@ -77,3 +77,20 @@ export const AdminPasskeysResetSchema = z.strictObject({
   removed: z.number().int(),
 });
 export type AdminPasskeysReset = z.infer<typeof AdminPasskeysResetSchema>;
+
+// Регистрация по приглашению сразу с passkey, без пароля (только приглашение на конкретный адрес).
+export const PasskeySignupOptionsRequestSchema = z.strictObject({
+  invitation_token: z.string().min(1),
+  name: z.string(),
+});
+export type PasskeySignupOptionsRequest = z.infer<
+  typeof PasskeySignupOptionsRequestSchema
+>;
+
+export const PasskeySignupRequestSchema = z.strictObject({
+  invitation_token: z.string().min(1),
+  name: z.string(),
+  passkey_name: z.string().max(64).nullable(),
+  credential: opaque,
+});
+export type PasskeySignupRequest = z.infer<typeof PasskeySignupRequestSchema>;
