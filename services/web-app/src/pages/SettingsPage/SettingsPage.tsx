@@ -222,6 +222,13 @@ const SECTIONS: readonly SectionDef[] = [
     icon: Drama,
   },
   {
+    id: "mcp",
+    group: "ai",
+    scope: "user",
+    labelKey: "settingsPage.sections.mcp",
+    icon: Plug,
+  },
+  {
     id: "disk",
     group: "system",
     scope: "local-only",
@@ -253,13 +260,6 @@ const SECTIONS: readonly SectionDef[] = [
     requires: "remote_runner",
     labelKey: "settingsPage.sections.remoteRunner",
     icon: CloudCog,
-  },
-  {
-    id: "mcp",
-    group: "ai",
-    scope: "user",
-    labelKey: "settingsPage.sections.mcp",
-    icon: Plug,
   },
   {
     id: "git-access",
