@@ -339,6 +339,11 @@ def create_app() -> FastAPI:  # noqa: C901, PLR0915 — app-wiring factory: rout
         # фоновый синк на старте закрывает ровно этот случай: use case сам
         # ничего не создаёт, если Ollama не отвечает. Только в настроенной
         # установке — до мастера data_dir не смонтирован и писать провайдера некуда.
+        # На сервере провайдеры личные, а при старте нет актора: запись упиралась в
+        # ActorRequired и сыпала трейсбек в лог. Локальная Ollama бывает у человека, не у сервера.
+        if settings.mode is StudioMode.server:
+            return
+
         async def _sync() -> None:
             try:
                 async with container() as request_container:
