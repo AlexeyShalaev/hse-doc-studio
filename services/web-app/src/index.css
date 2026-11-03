@@ -2501,11 +2501,11 @@
     backdrop-filter: blur(3px);
   }
   .settings-modal {
-    width: min(980px, calc(100vw - 64px));
-    height: min(720px, calc(100vh - 96px));
+    width: min(1240px, calc(100vw - 64px));
+    height: min(900px, calc(100vh - 64px));
     min-height: 520px;
     display: grid;
-    grid-template-columns: 192px minmax(0, 1fr);
+    grid-template-columns: 240px minmax(0, 1fr);
     /* Без явной строки сетка растёт под содержимое меню, overflow:hidden срезает хвост, и nav не прокручивается. */
     grid-template-rows: minmax(0, 1fr);
     overflow: hidden;
