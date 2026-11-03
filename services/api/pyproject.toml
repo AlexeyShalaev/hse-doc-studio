@@ -26,6 +26,7 @@ dependencies = [
     "anthropic>=0.40",
     "psutil>=6.0",
     "pycrdt>=0.12",
+    "mcp>=2.3,<2.4",
 ]
 
 [project.scripts]

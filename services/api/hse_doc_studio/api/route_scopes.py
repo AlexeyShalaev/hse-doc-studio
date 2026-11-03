@@ -184,6 +184,10 @@ ROUTE_SCOPES: Mapping[RouteKey, RouteScope] = {
     ("GET", "/hse/persons/search"): _A,
     ("GET", "/hse/persons/{person_id}"): _A,
     # Настройки
+    ("GET", "/mcp/info"): _A,
+    ("GET", "/mcp/settings"): _LOCAL,
+    ("PUT", "/mcp/settings"): _LOCAL,
+    ("GET", "/mcp/calls"): _LOCAL,
     ("GET", "/settings"): _A,
     ("PUT", "/settings"): _A,
     # Система, обновление и первый запуск локальной установки
@@ -376,6 +380,9 @@ ROUTE_SCOPES: Mapping[RouteKey, RouteScope] = {
     ("GET", "/api/admin/queue"): _ADM,
     ("GET", "/api/admin/queue/summary"): _ADM,
     ("POST", "/api/admin/queue/{job_id}/cancel"): _ADM,
+    ("GET", "/api/admin/mcp/settings"): _ADM,
+    ("PUT", "/api/admin/mcp/settings"): _ADM,
+    ("GET", "/api/admin/mcp/calls"): _ADM,
     ("GET", "/api/admin/quotas"): _ADM,
     ("PUT", "/api/admin/quotas"): _ADM,
     ("GET", "/api/admin/quota-policy"): _ADM,

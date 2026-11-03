@@ -62,6 +62,7 @@ from hse_doc_studio.core.update.repositories import (
     IUpdateFeedGateway,
 )
 from hse_doc_studio.infra.di.providers.local_remote_runner import LocalRemoteRunnerProvider
+from hse_doc_studio.infra.di.providers.mcp import McpProvider
 from hse_doc_studio.infra.di.providers.services import DomainServiceProvider
 from hse_doc_studio.infra.di.providers.use_cases import UseCaseProvider
 from hse_doc_studio.infra.identity.project_access import LocalProjectAccessChecker
@@ -408,6 +409,7 @@ def create_test_container(  # noqa: C901 — one @provide per repo; flat by desi
         TestRepositoryProvider(data_dir),
         DomainServiceProvider(),
         UseCaseProvider(),
+        McpProvider(),
         LocalRemoteRunnerProvider(),
         FastapiProvider(),
     ]

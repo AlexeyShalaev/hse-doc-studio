@@ -30,6 +30,7 @@ from hse_doc_studio.api.routers.v1 import (
     images,
     languagetool,
     local_studio,
+    mcp,
     office_editor,
     office_services,
     oidc,
@@ -78,6 +79,7 @@ api_router.include_router(oidc.router, tags=["auth"])
 api_router.include_router(passkeys.router, tags=["auth"])
 api_router.include_router(server_setup.router, tags=["server-setup"])
 api_router.include_router(account.router, tags=["account"])
+api_router.include_router(mcp.router, tags=["mcp"])
 api_router.include_router(account_runners.router, tags=["account"])
 api_router.include_router(orgs.router, tags=["orgs"])
 api_router.include_router(catalog.router, tags=["catalog"])

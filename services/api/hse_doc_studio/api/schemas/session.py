@@ -27,7 +27,7 @@ SetupState = Literal["needs_admin", "ready"]
 RegistrationMode = Literal["open", "domains", "invite", "closed"]
 OrgRoleName = Literal["owner", "admin", "member"]
 AccountStatus = Literal["active", "pending_verification", "pending_approval", "disabled"]
-TokenScope = Literal["api", "git:read", "git:write"]
+TokenScope = Literal["api", "git:read", "git:write", "mcp", "mcp:admin"]
 ProjectRoleName = Literal["reader", "reviewer", "editor", "owner"]
 
 
@@ -325,7 +325,7 @@ class ApiToken(StrictModel):
 
 class CreateApiTokenRequest(StrictModel):
     name: str = Field(min_length=1, max_length=80)
-    scopes: list[TokenScope] = Field(min_length=1, max_length=3)
+    scopes: list[TokenScope] = Field(min_length=1, max_length=5)
     expires_in_days: int | None = Field(ge=1, le=365)
 
 

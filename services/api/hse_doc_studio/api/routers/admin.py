@@ -15,6 +15,7 @@ from hse_doc_studio.api.routers import (
     admin_diagnostics,
     admin_install,
     admin_lifecycle,
+    admin_mcp,
     admin_ops,
     admin_orgs,
     admin_pickers,
@@ -59,4 +60,5 @@ def make_admin_router() -> APIRouter:
     router.include_router(admin_orgs.router)
     router.include_router(admin_install.router)
     router.include_router(admin_pickers.router)
+    router.include_router(admin_mcp.router)
     return router

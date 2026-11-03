@@ -34,6 +34,9 @@ class TokenScope(StrEnum):
     api = "api"
     git_read = "git:read"
     git_write = "git:write"
+    # MCP-сервер (docs/design/mcp.md, M5 и M7): тулы пользователя и, отдельно, админские тулы.
+    mcp = "mcp"
+    mcp_admin = "mcp:admin"
 
 
 class ApiTokenOrigin(StrEnum):
