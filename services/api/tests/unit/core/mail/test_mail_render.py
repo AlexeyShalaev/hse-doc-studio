@@ -78,7 +78,7 @@ def test__every_mail__html_has_title_context_and_footer(template: MailTemplate, 
     mail = sample_mail(template, lang)
 
     assert "<h1" in mail.html
-    assert "studio.example.org" in mail.html
+    assert re.search(r">studio\.example\.org</a>", mail.html)
     assert SAMPLE_RECIPIENT in mail.html
     assert "HSE Doc Studio" in mail.html
 

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import re
 from collections.abc import AsyncIterator, Callable
 from dataclasses import replace
 from datetime import UTC, datetime, timedelta
@@ -353,7 +354,7 @@ async def test__smtp_test__is_a_multipart_letter_in_the_language_of_the_admin_ac
     [(to, subject, body)] = env.sender.sent
     assert (to, subject) == ("boss@example.org", "HSE Doc Studio: mail check")
     assert "mail sending works" in body
-    assert "https://studio.example.org" in body
+    assert re.search(r"^Server: https://studio\.example\.org$", body, re.MULTILINE)
     assert "Mail is set up" in (env.sender.html[0] or "")
 
 
@@ -375,7 +376,7 @@ async def test__mail_preview__renders_every_template_in_both_languages(env: _Env
             assert body["subject"]
             assert "<html" in body["html"]
             assert body["text"]
-            assert "https://studio.example.org" in body["html"]
+            assert "https://studio.example.org" in re.findall(r'href="([^"]+)"', body["html"])
     assert env.sender.sent == []
 
 
