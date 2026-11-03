@@ -133,6 +133,7 @@ from hse_doc_studio.use_cases.identity.housekeeping import AuthCleanupService
 from hse_doc_studio.use_cases.identity.invites import CreateInviteUC, InvitationInfoUC, ListInvitesUC, RevokeInviteUC
 from hse_doc_studio.use_cases.identity.login import LoginUC
 from hse_doc_studio.use_cases.identity.mail import LinkDelivery
+from hse_doc_studio.use_cases.identity.mail_preview import PreviewMailUC
 from hse_doc_studio.use_cases.identity.oidc_identities import ListOidcIdentitiesUC, UnlinkOidcIdentityUC
 from hse_doc_studio.use_cases.identity.oidc_login import CompleteOidcLoginUC, StartOidcLoginUC
 from hse_doc_studio.use_cases.identity.recovery import (
@@ -521,7 +522,11 @@ class ServerIdentityProvider(Provider):
 
     @provide
     def get_send_test_mail_uc(self, sender: IMailSender, users: IUserRepository, audit: IAuditLog) -> SendTestMailUC:
-        return SendTestMailUC(sender, users, audit)
+        return SendTestMailUC(sender, users, audit, settings.auth.public_url)
+
+    @provide
+    def get_mail_preview_uc(self) -> PreviewMailUC:
+        return PreviewMailUC(settings.auth.public_url)
 
     @provide
     def get_auth_group_uc(
@@ -576,7 +581,7 @@ class ServerIdentityProvider(Provider):
 
     @provide
     def get_link_delivery(self, sender: IMailSender, outbox: IMailOutboxRepository) -> LinkDelivery:
-        return LinkDelivery(sender, outbox, background=True)
+        return LinkDelivery(sender, outbox, background=True, public_url=settings.auth.public_url)
 
     @provide
     def get_auth_env_overrides(self) -> AuthEnvOverrides:

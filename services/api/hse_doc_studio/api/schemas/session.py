@@ -872,6 +872,18 @@ class AdminSmtpTestResult(StrictModel):
     error: str | None
 
 
+class AdminMailPreview(StrictModel):
+    """Образец письма: тема, текстовая часть и HTML. Ничего не отправляется."""
+
+    template: str
+    lang: str
+    subject: str
+    text: str
+    html: str
+    # Все виды писем: из них клиент собирает список для выбора.
+    templates: list[str]
+
+
 class AdminOidcProvider(StrictModel):
     """Секрет клиента не возвращается никогда: только признак `client_secret_set`."""
 

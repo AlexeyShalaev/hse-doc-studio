@@ -1,4 +1,4 @@
-"""Почтовик по SMTP (aiosmtplib): подтверждение адреса и сброс пароля."""
+"""Почтовик по SMTP (aiosmtplib): письма Студии, текстом или multipart/alternative с HTML."""
 
 from __future__ import annotations
 
@@ -33,15 +33,18 @@ class SmtpMailSender:
     def enabled(self) -> bool:
         return True
 
-    async def send(self, to: str, subject: str, body: str) -> None:
+    async def send(self, to: str, subject: str, body: str, *, html: str | None = None) -> None:
         cfg = self._cfg
         message = EmailMessage()
         message["From"] = formataddr((cfg.from_name, cfg.from_address))
         message["To"] = to
-        message["Subject"] = subject
+        # Перевод строки в теме дал бы подмену заголовков: письма Студии его не содержат, но не полагаемся на это.
+        message["Subject"] = " ".join(subject.split())
         message["Message-ID"] = make_msgid(domain=cfg.from_address.rpartition("@")[2] or None)
         message["Auto-Submitted"] = "auto-generated"
         message.set_content(body)
+        if html is not None:
+            message.add_alternative(html, subtype="html")
         await aiosmtplib.send(
             message,
             hostname=cfg.host,

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 from collections.abc import AsyncIterator, Callable
+from dataclasses import replace
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
@@ -21,6 +22,7 @@ from hse_doc_studio.core.identity.entities import RegistrationMode, Session, Use
 from hse_doc_studio.core.identity.normalize import hash_token, normalize_email
 from hse_doc_studio.core.identity.protocols import IActorResolver
 from hse_doc_studio.core.identity.smtp_settings import SmtpEnv, SmtpParams
+from hse_doc_studio.core.mail import MailTemplate
 from hse_doc_studio.core.mode import StudioMode
 from hse_doc_studio.infra.identity.resolvers import ChainActorResolver, SessionCookieResolver
 from hse_doc_studio.infra.secrets.fernet_cipher import FernetSecretCipher
@@ -34,6 +36,7 @@ from hse_doc_studio.use_cases.admin.oidc import (
 )
 from hse_doc_studio.use_cases.admin.settings import GetAuthGroupUC, UpdateAuthMethodsUC, UpdateRegistrationUC
 from hse_doc_studio.use_cases.identity.auth_settings import AuthSettingsService, UpdateAuthSettingsUC
+from hse_doc_studio.use_cases.identity.mail_preview import PreviewMailUC
 from hse_doc_studio.use_cases.identity.sessions import SessionService
 from hse_doc_studio.use_cases.identity.smtp_settings import (
     GetSmtpSettingsUC,
@@ -110,7 +113,8 @@ class _Provider(Provider):
             UpdateAuthMethodsUC: UpdateAuthMethodsUC(update, self.auth, env.oidc, group),
             GetSmtpSettingsUC: GetSmtpSettingsUC(smtp),
             UpdateSmtpSettingsUC: UpdateSmtpSettingsUC(smtp, env.settings, env.audit, uow),
-            SendTestMailUC: SendTestMailUC(env.sender, env.users, env.audit),
+            SendTestMailUC: SendTestMailUC(env.sender, env.users, env.audit, "https://studio.example.org"),
+            PreviewMailUC: PreviewMailUC("https://studio.example.org/"),
             ListOidcProvidersUC: ListOidcProvidersUC(env.oidc),
             GetOidcProviderUC: GetOidcProviderUC(env.oidc),
             CreateOidcProviderUC: CreateOidcProviderUC(env.oidc, env.cipher, env.audit, uow),
@@ -169,6 +173,7 @@ async def test__access__student_gets_404_and_anonymous_401(env: _Env) -> None:
         ("PUT", "/api/admin/settings/auth"),
         ("GET", "/api/admin/settings/smtp"),
         ("POST", "/api/admin/settings/smtp/test"),
+        ("GET", "/api/admin/settings/smtp/preview"),
         ("GET", "/api/admin/oidc-providers"),
         ("POST", "/api/admin/oidc-providers"),
     ):
@@ -335,6 +340,52 @@ async def test__smtp_test__sends_to_the_admin_or_to_the_given_address(env: _Env)
     assert other.json()["ok"] is True
     assert [to for to, _, _ in env.sender.sent] == ["boss@example.org", "dean@example.org"]
     assert [e.action for e in await env.audit.list()] == ["settings.smtp_test", "settings.smtp_test"]
+
+
+async def test__smtp_test__is_a_multipart_letter_in_the_language_of_the_admin_account(env: _Env) -> None:
+    client, boss = await _boss(env)
+    admin = await env.users.get("boss")
+    assert admin is not None
+    await env.users.update(replace(admin, locale="en"))
+
+    await client.post("/api/admin/settings/smtp/test", json={}, headers=boss)
+
+    [(to, subject, body)] = env.sender.sent
+    assert (to, subject) == ("boss@example.org", "HSE Doc Studio: mail check")
+    assert "mail sending works" in body
+    assert "https://studio.example.org" in body
+    assert "Mail is set up" in (env.sender.html[0] or "")
+
+
+async def test__mail_preview__renders_every_template_in_both_languages(env: _Env) -> None:
+    client, boss = await _boss(env)
+
+    first = (await client.get("/api/admin/settings/smtp/preview", headers=boss)).json()
+    assert first["templates"] == [t.value for t in MailTemplate]
+    assert first["template"] == first["templates"][0]
+    for template in first["templates"]:
+        for lang in ("ru", "en"):
+            response = await client.get(
+                f"/api/admin/settings/smtp/preview?template={template}&lang={lang}", headers=boss
+            )
+            body = response.json()
+            assert response.status_code == 200, (template, lang, response.text)
+            assert response.headers["cache-control"] == "no-store"
+            assert (body["template"], body["lang"]) == (template, lang)
+            assert body["subject"]
+            assert "<html" in body["html"]
+            assert body["text"]
+            assert "https://studio.example.org" in body["html"]
+    assert env.sender.sent == []
+
+
+async def test__mail_preview__unknown_template_or_language_is_refused(env: _Env) -> None:
+    client, boss = await _boss(env)
+
+    bad_template = await client.get("/api/admin/settings/smtp/preview?template=nope", headers=boss)
+    bad_lang = await client.get("/api/admin/settings/smtp/preview?lang=de", headers=boss)
+
+    assert (bad_template.status_code, bad_lang.status_code) == (422, 422)
 
 
 async def test__smtp_test__failure_is_a_result_not_a_server_error(env: _Env) -> None:

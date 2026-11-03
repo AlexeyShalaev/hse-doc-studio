@@ -1,4 +1,6 @@
-"""Доставка ссылок из писем: почтой, если настроен SMTP, иначе ссылка возвращается вызывающему."""
+"""Доставка ссылок из писем: почтой, если настроен SMTP, иначе ссылка возвращается вызывающему.
+
+Письмо собирает `core.mail`: тема, текст и HTML на языке получателя."""
 
 from __future__ import annotations
 
@@ -8,129 +10,17 @@ import uuid
 from collections.abc import Mapping
 from datetime import datetime, timedelta
 
-from hse_doc_studio.core.enums import Lang
-from hse_doc_studio.core.i18n import current_interface_language
 from hse_doc_studio.core.identity.entities import MailKind, MailOutboxEntry
 from hse_doc_studio.core.identity.protocols import IMailOutboxRepository, IMailSender
+from hse_doc_studio.core.mail import MailTemplate, RenderedMail, compose, resolve_lang
 
 _log = logging.getLogger(__name__)
-
-# (тема, текст) для ru и en; {link} подставляется ссылкой.
-_TEXTS: dict[MailKind, tuple[tuple[str, str], tuple[str, str]]] = {
-    MailKind.verify_email: (
-        (
-            "Подтвердите e-mail",
-            (
-                "Чтобы подтвердить адрес, откройте ссылку:\n{link}\n\n"
-                "Если вы не регистрировались, просто проигнорируйте письмо."
-            ),
-        ),
-        (
-            "Confirm your email",
-            "Open this link to confirm your address:\n{link}\n\nIf you did not sign up, just ignore this message.",
-        ),
-    ),
-    MailKind.reset_password: (
-        (
-            "Сброс пароля",
-            (
-                "Чтобы задать новый пароль, откройте ссылку:\n{link}\n\n"
-                "Если вы не просили сброс, проигнорируйте письмо: пароль останется прежним."
-            ),
-        ),
-        (
-            "Password reset",
-            (
-                "Open this link to set a new password:\n{link}\n\n"
-                "If you did not ask for a reset, ignore this message: your password stays the same."
-            ),
-        ),
-    ),
-    MailKind.invite: (
-        ("Приглашение в Студию", "Вас пригласили в Студию. Чтобы зарегистрироваться, откройте ссылку:\n{link}"),
-        ("Invitation to the Studio", "You are invited to the Studio. Open this link to sign up:\n{link}"),
-    ),
-    MailKind.email_change: (
-        (
-            "Подтвердите новый e-mail",
-            (
-                "Чтобы привязать этот адрес к учётной записи, откройте ссылку:\n{link}\n\n"
-                "Если вы не меняли адрес, проигнорируйте письмо."
-            ),
-        ),
-        (
-            "Confirm your new email",
-            (
-                "Open this link to attach this address to your account:\n{link}\n\n"
-                "If you did not change your address, ignore this message."
-            ),
-        ),
-    ),
-}
-
-# Уведомления без ссылки; {name} и {count} подставляются из `params`.
-_NOTICES: dict[MailKind, tuple[tuple[str, str], tuple[str, str]]] = {
-    MailKind.reset_notice: (
-        (
-            "Администратор выдал ссылку для сброса пароля",
-            (
-                "Администратор Студии создал ссылку для сброса пароля вашей учётной записи. "
-                "Если вы об этом не просили, свяжитесь с администратором."
-            ),
-        ),
-        (
-            "An administrator issued a password reset link",
-            (
-                "A Studio administrator created a password reset link for your account. "
-                "If you did not ask for it, contact the administrator."
-            ),
-        ),
-    ),
-    MailKind.passkey_added: (
-        (
-            "Добавлен passkey",
-            (
-                "К вашей учётной записи в Студии добавлен passkey «{name}». "
-                "Если это были не вы, удалите его в настройках аккаунта (раздел «Passkey») и смените пароль."
-            ),
-        ),
-        (
-            "A passkey was added",
-            (
-                'A passkey "{name}" was added to your Studio account. '
-                "If it wasn't you, remove it in your account settings (Passkeys) and change your password."
-            ),
-        ),
-    ),
-    MailKind.passkey_reset: (
-        (
-            "Администратор сбросил ваши passkey",
-            (
-                "Администратор Студии удалил все passkey вашей учётной записи (ключей: {count}). "
-                "Войти можно паролем или единым входом, новый passkey добавляется в настройках аккаунта. "
-                "Если вы об этом не просили, свяжитесь с администратором."
-            ),
-        ),
-        (
-            "An administrator reset your passkeys",
-            (
-                "A Studio administrator removed all passkeys of your account (keys: {count}). "
-                "You can sign in with your password or single sign-on and add a new passkey in your account "
-                "settings. If you did not ask for it, contact the administrator."
-            ),
-        ),
-    ),
-}
 
 
 def auth_link(public_url: str | None, path: str, token: str) -> str:
     """Ссылка на страницу клиента: `<public_url>/<path>/<token>`."""
     base = (public_url or "").rstrip("/")
     return f"{base}{path}/{token}"
-
-
-def _lang(locale: str | None) -> Lang:
-    return Lang(locale) if locale in ("ru", "en") else current_interface_language()
 
 
 class LinkDelivery:
@@ -149,11 +39,13 @@ class LinkDelivery:
         ttl: timedelta = timedelta(days=7),
         *,
         background: bool = False,
+        public_url: str | None = None,
     ) -> None:
         self._sender = sender
         self._outbox = outbox
         self._ttl = ttl
         self._background = background
+        self._public_url = public_url
         # Ссылки на задачи: цикл событий держит задачи слабо, и незавершённая отправка могла бы пропасть.
         self._pending: set[asyncio.Task[None]] = set()
 
@@ -167,23 +59,30 @@ class LinkDelivery:
         return self._sender.enabled
 
     async def deliver(
-        self, kind: MailKind, to_email: str, link: str, now: datetime, *, locale: str | None = None
+        self,
+        kind: MailKind,
+        to_email: str,
+        link: str,
+        now: datetime,
+        *,
+        locale: str | None = None,
+        ttl: timedelta | None = None,
+        params: Mapping[str, object] | None = None,
     ) -> str | None:
         """Ссылка для показа человеку (copyable) либо None, если письмо ушло.
 
-        Язык письма: язык получателя, если он известен, иначе язык интерфейса запроса.
+        Язык письма: язык получателя, если он известен, иначе язык интерфейса запроса. `ttl` попадает в письмо
+        как срок действия ссылки.
         """
         if self._sender.enabled:
-            ru, en = _TEXTS[kind]
-            subject, body = en if _lang(locale) is Lang.en else ru
-            text = body.format(link=link)
+            mail = self._render(kind, to_email, locale, link=link, ttl=ttl, params=params)
             if self._background:
-                task = asyncio.create_task(self._send_in_background(kind, to_email, now, subject, text))
+                task = asyncio.create_task(self._send_in_background(kind, to_email, now, mail))
                 self._pending.add(task)
                 task.add_done_callback(self._pending.discard)
                 return None
             try:
-                await self._sender.send(to_email, subject, text)
+                await self._sender.send(to_email, mail.subject, mail.text, html=mail.html)
             except Exception:
                 # Сбой почты не должен ломать регистрацию: человек получит ссылку другим путём.
                 _log.warning("mail delivery failed, outbox entry kept", extra={"kind": kind.value})
@@ -192,9 +91,29 @@ class LinkDelivery:
         await self._keep_in_outbox(kind, to_email, now)
         return link
 
-    async def _send_in_background(self, kind: MailKind, to_email: str, now: datetime, subject: str, text: str) -> None:
+    def _render(
+        self,
+        kind: MailKind,
+        to_email: str,
+        locale: str | None,
+        *,
+        link: str | None = None,
+        ttl: timedelta | None = None,
+        params: Mapping[str, object] | None = None,
+    ) -> RenderedMail:
+        return compose(
+            MailTemplate(kind.value),
+            resolve_lang(locale),
+            to=to_email,
+            server_url=self._public_url,
+            link=link,
+            ttl=ttl,
+            values=params,
+        )
+
+    async def _send_in_background(self, kind: MailKind, to_email: str, now: datetime, mail: RenderedMail) -> None:
         try:
-            await self._sender.send(to_email, subject, text)
+            await self._sender.send(to_email, mail.subject, mail.text, html=mail.html)
         except Exception:
             _log.warning("mail delivery failed, outbox entry kept", extra={"kind": kind.value})
             try:
@@ -229,12 +148,9 @@ class LinkDelivery:
         """
         if not self._sender.enabled:
             return False
-        ru, en = _NOTICES[kind]
-        subject, body = en if _lang(locale) is Lang.en else ru
-        if params:
-            body = body.format(**params)
+        mail = self._render(kind, to_email, locale, params=params)
         try:
-            await self._sender.send(to_email, subject, body)
+            await self._sender.send(to_email, mail.subject, mail.text, html=mail.html)
         except Exception:
             _log.warning("mail notice failed", extra={"kind": kind.value})
             return False

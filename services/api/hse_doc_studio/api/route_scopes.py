@@ -344,6 +344,7 @@ ROUTE_SCOPES: Mapping[RouteKey, RouteScope] = {
     ("GET", "/api/admin/settings/registration"): _ADM,
     ("GET", "/api/admin/settings/retention"): _ADM,
     ("GET", "/api/admin/settings/smtp"): _ADM,
+    ("GET", "/api/admin/settings/smtp/preview"): _ADM,
     ("GET", "/api/admin/users"): _ADM,
     ("GET", "/api/admin/users/{user_id}"): _ADM,
     ("GET", "/api/admin/users/facets"): _ADM,

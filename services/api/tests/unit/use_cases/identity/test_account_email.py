@@ -5,7 +5,7 @@ from hse_doc_studio.core.identity.entities import MailKind
 from hse_doc_studio.core.identity.errors import IdentityError, IdentityErrorCode
 from hse_doc_studio.use_cases.identity.account_email import CHANGE_TTL
 
-from .conftest import T0, FakeSender, World
+from .conftest import T0, FakeSender, World, token_from_mail
 
 PASSWORD = "correct horse battery"
 
@@ -26,7 +26,7 @@ async def test_link_goes_to_the_new_address_and_confirms_the_change(world: World
     user = await world.users.get("u1")
     assert user is not None
     assert user.email == "ann@example.org"
-    token = body.splitlines()[1].rpartition("/")[2]
+    token = token_from_mail(body)
 
     await world.confirm_email_change_uc().execute(token)
 

@@ -96,7 +96,7 @@ class _TokenIssuer:
             await self._auth_tokens.invalidate_for_user(user.id, kind, now)
             await self._auth_tokens.add(AuthToken(hash_token(secret), kind, user.id, now + ttl))
         return await self._delivery.deliver(
-            mail, user.email, auth_link(self._public_url, path, secret), now, locale=user.locale
+            mail, user.email, auth_link(self._public_url, path, secret), now, locale=user.locale, ttl=ttl
         )
 
 

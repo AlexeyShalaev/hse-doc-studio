@@ -173,6 +173,7 @@ class INotificationMailer(Protocol):
         link: str,
         message: str | None,
         locale: str | None,
+        expires_at: datetime | None = None,
     ) -> bool: ...
 
 

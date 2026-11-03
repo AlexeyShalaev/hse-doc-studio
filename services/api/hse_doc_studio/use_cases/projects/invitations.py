@@ -190,6 +190,13 @@ class _Base:
         user = await self._users.get(user_id)
         return user.name if user else None
 
+    async def _locale(self, user_id: str | None) -> str | None:
+        """Язык аккаунта получателя; без аккаунта письмо идёт на языке приглашающего (язык запроса)."""
+        if user_id is None:
+            return None
+        user = await self._users.get(user_id)
+        return user.locale if user else None
+
     async def _view(self, invitation: ProjectInvitation) -> InvitationView:
         return InvitationView(
             invitation, await self._name(invitation.invitee_user_id), await self._name(invitation.invited_by)
@@ -334,7 +341,8 @@ class CreateInvitationUC(_Base):
             role=new.terms.role.value,
             link=link,
             message=new.message,
-            locale=None,
+            locale=bound.locale if bound else None,
+            expires_at=invitation.expires_at,
         )
         # Ответ одинаков с аккаунтом и без (T11): решает только то, ушло ли письмо.
         return InvitationCreated(await self._view(invitation), "email" if sent else "manual", None if sent else link)
@@ -482,7 +490,8 @@ class ResendInvitationUC(_Base):
             role=updated.terms.role.value,
             link=link,
             message=updated.message,
-            locale=None,
+            locale=await self._locale(updated.invitee_user_id),
+            expires_at=updated.expires_at,
         )
         return InvitationCreated(await self._view(updated), "email" if sent else "manual", None if sent else link)
 
