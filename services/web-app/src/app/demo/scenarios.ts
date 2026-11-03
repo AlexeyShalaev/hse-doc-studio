@@ -548,6 +548,7 @@ export const createWorld = (scenarioId: string): DemoWorld => {
     profile: { name: ME.name, email: ME.email },
     dataDirShared: null,
     defaultFetchIntervalS: 300,
+    projectsDir: null,
     newProject: () => emptyProjectGit(),
   };
   scenario.configureWorld?.(world);

@@ -105,6 +105,8 @@ export type DemoWorld = {
   dataDirShared: { provider: string; root: string } | null;
   // Личная настройка приложения «как часто проверять репозитории», секунды.
   defaultFetchIntervalS: number;
+  /** Папка проектов, скачанных из облака; null: стандартная. */
+  projectsDir: string | null;
   newProject: () => DemoProjectGit;
 };
 

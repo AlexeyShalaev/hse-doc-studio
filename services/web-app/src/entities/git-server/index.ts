@@ -1,4 +1,6 @@
 export * from "./model/gitServer.schema";
+export { buildCloudList } from "./model/cloudList";
+export type { CloudEntry, CloudListView } from "./model/cloudList";
 export {
   deviceApi,
   gitServersApi,
@@ -8,6 +10,7 @@ export {
   LOGIN_POLL_MS,
   gitServerKeys,
   useCancelGitServerLogin,
+  useCloudProjects,
   useDecideDevice,
   useDeviceAuthorization,
   useForgetGitServer,
@@ -15,8 +18,11 @@ export {
   useGitServerLogin,
   useGitServerProjects,
   useGitServers,
+  useOpenCloudProject,
   useProjectGitRemote,
   useStartGitServerLogin,
 } from "./api/gitServerQueries";
 export { GitServerLoginFlow } from "./ui/GitServerLoginFlow";
 export type { GitServerLoginFlowProps } from "./ui/GitServerLoginFlow";
+export { CloudProjectOpener } from "./ui/CloudProjectOpener";
+export type { CloudProjectOpenerProps } from "./ui/CloudProjectOpener";

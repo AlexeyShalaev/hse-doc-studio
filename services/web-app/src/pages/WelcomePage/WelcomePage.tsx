@@ -18,8 +18,17 @@ import {
 } from "lucide-react";
 import { clsx } from "clsx";
 import type { z } from "zod";
+import {
+  buildCloudList,
+  useCloudProjects,
+  type CloudEntry,
+} from "@entities/git-server";
 import { CLONE_PATH } from "@entities/git-sync";
-import { CONNECT_SERVER_PATH, LOCAL_STUDIO_PATH } from "@entities/local-studio";
+import {
+  CONNECT_SERVER_PATH,
+  LOCAL_STUDIO_PATH,
+  connectServerPath,
+} from "@entities/local-studio";
 import { useBootstrap, useCapabilities } from "@entities/session";
 import type { ProjectResponseSchema } from "@entities/project";
 import {
@@ -33,6 +42,9 @@ import { Spinner } from "@shared/ui/Spinner";
 import { AppTitlebar } from "@widgets/AppTitlebar";
 import { AppStatusBar } from "@widgets/AppStatusBar";
 import { ChatDock } from "@widgets/ChatDock";
+import { CloudNotices } from "./CloudNotices";
+import { CloudOpenDialog } from "./CloudOpenDialog";
+import { CloudProjectCard } from "./CloudProjectCard";
 import { EmptyState } from "./EmptyState";
 import { LoadError } from "./LoadError";
 import { NewProjectCard } from "./NewProjectCard";
@@ -153,6 +165,9 @@ export const WelcomePage = () => {
   // Папок на диске нет там, где bootstrap так сказал: проекты лежат на сервере.
   const isServerList = lacks("fs_browse");
   const canConnectFolder = !lacks("connect_folder");
+  // Облачные проекты видны только в локальной Студии, которая умеет входить на сервер.
+  const showCloud = !isServerList && has("git_server_login");
+  const cloud = useCloudProjects(showCloud);
   const { mutate: updateProject } = useUpdateProject();
   const recentIds = useRecentProjectIds();
   // The one unified agent, docked between the title and status bars (same
@@ -165,6 +180,7 @@ export const WelcomePage = () => {
   const [scope, setScope] = useState<ScopeType>("all");
   const [sort, setSort] = useState<SortMode>(readStoredSortMode);
   const [importOpen, setImportOpen] = useState(false);
+  const [opening, setOpening] = useState<CloudEntry | null>(null);
 
   const searchRef = useRef<HTMLInputElement>(null);
   const gridRef = useRef<HTMLDivElement>(null);
@@ -234,6 +250,31 @@ export const WelcomePage = () => {
       return rankA === rankB ? byName(a, b) : rankA - rankB;
     });
   }, [projects, filter, scope, query, sort, collator, recentRank]);
+
+  const cloudView = useMemo(
+    () =>
+      buildCloudList(
+        cloud.data?.servers ?? [],
+        new Set((projects ?? []).map((p) => p.id.toLowerCase())),
+      ),
+    [cloud.data, projects],
+  );
+
+  // Облачные проекты, которых нет на компьютере, идут в общем списке после локальных; поиск и вкладка
+  // «Архив» действуют и на них (архива в облаке нет, там они не показываются).
+  const cloudVisible = useMemo(() => {
+    if (!showCloud || filter === "archived") return [];
+    const ql = query.trim().toLowerCase();
+    return cloudView.remote
+      .filter(
+        ({ project, server }) =>
+          ql === "" ||
+          project.name.toLowerCase().includes(ql) ||
+          project.owner_name.toLowerCase().includes(ql) ||
+          server.host.toLowerCase().includes(ql),
+      )
+      .sort((a, b) => collator.compare(a.project.name, b.project.name));
+  }, [showCloud, filter, query, cloudView, collator]);
 
   // Переключатель «Мои / Организации» нужен, только когда есть что разделять:
   // человек состоит в организации или ему уже открыли проект организации.
@@ -593,6 +634,20 @@ export const WelcomePage = () => {
               </div>
             )}
 
+            {showCloud && (
+              <CloudNotices
+                view={cloudView}
+                failed={cloud.isError}
+                retrying={cloud.isFetching}
+                onRetry={() => {
+                  void cloud.refetch();
+                }}
+                onReconnect={(server) => {
+                  void navigate(connectServerPath({ server, projectId: null }));
+                }}
+              />
+            )}
+
             {isLoading ? (
               <div className="flex justify-center py-16">
                 <Spinner />
@@ -604,7 +659,7 @@ export const WelcomePage = () => {
                   void refetch();
                 }}
               />
-            ) : filtered.length === 0 ? (
+            ) : filtered.length === 0 && cloudVisible.length === 0 ? (
               <EmptyState
                 onCreate={handleCreateProject}
                 onClone={isServerList ? undefined : handleCloneFromGit}
@@ -642,6 +697,18 @@ export const WelcomePage = () => {
                     onToggleArchive={() => {
                       handleToggleArchive(project);
                     }}
+                    cloudHost={
+                      cloudView.linked.get(project.id.toLowerCase())?.host
+                    }
+                  />
+                ))}
+                {cloudVisible.map((entry) => (
+                  <CloudProjectCard
+                    key={`${entry.server.credential_id}:${entry.project.id}`}
+                    entry={entry}
+                    onOpen={() => {
+                      setOpening(entry);
+                    }}
                   />
                 ))}
                 <NewProjectCard onClick={handleCreateProject} />
@@ -657,6 +724,22 @@ export const WelcomePage = () => {
       </div>
 
       <AppStatusBar />
+      {showCloud && (
+        <CloudOpenDialog
+          entry={opening}
+          onClose={() => {
+            setOpening(null);
+          }}
+          onOpened={(id) => {
+            setOpening(null);
+            void navigate(`/projects/${id}`);
+          }}
+          onReconnect={(server) => {
+            setOpening(null);
+            void navigate(connectServerPath({ server, projectId: null }));
+          }}
+        />
+      )}
       {isServerList && (
         <ProjectImportDialog
           isOpen={importOpen}

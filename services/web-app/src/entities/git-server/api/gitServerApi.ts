@@ -1,11 +1,15 @@
 import { apiClient, parseResp } from "@shared/api";
 import {
   DeviceAuthorizationInfoSchema,
+  CloudProjectListSchema,
+  CloudProjectOpenedSchema,
   GitServerCheckSchema,
   GitProjectPageSchema,
   GitServerListSchema,
   GitServerLoginSchema,
   ProjectGitRemoteSchema,
+  type CloudProjectList,
+  type CloudProjectOpened,
   type DeviceAuthorizationInfo,
   type DeviceDecisionRequest,
   type GitServerCheck,
@@ -75,6 +79,23 @@ export const gitServersApi = {
         params,
       })
       .then(parseResp(GitProjectPageSchema)),
+  /** Проекты человека на всех серверах, куда вошла эта Студия, с пометкой «открыт здесь». */
+  cloudProjects: (): Promise<CloudProjectList> =>
+    apiClient
+      .get("/git/cloud/projects", quiet)
+      .then(parseResp(CloudProjectListSchema)),
+  /** Открыть проект сервера на компьютере: уже открыт или скачивается в стандартную папку. */
+  openProject: (
+    credentialId: string,
+    projectId: string,
+  ): Promise<CloudProjectOpened> =>
+    apiClient
+      .post(
+        `/git/servers/${enc(credentialId)}/projects/${enc(projectId)}/open`,
+        undefined,
+        quiet,
+      )
+      .then(parseResp(CloudProjectOpenedSchema)),
   forget: (credentialId: string): Promise<void> =>
     apiClient
       .delete(`/git/servers/${enc(credentialId)}`, quiet)

@@ -188,3 +188,47 @@ export const GitServerCheckSchema = z.strictObject({
   state: z.enum(GIT_SERVER_STATES).nullable(),
 });
 export type GitServerCheck = z.infer<typeof GitServerCheckSchema>;
+
+/** Состояние входа на сервер в списке облачных проектов (docs/design/local-from-cloud.md, раздел «Облако»). */
+export const CLOUD_SERVER_STATES = [
+  "ok",
+  "expired",
+  "revoked",
+  "unreachable",
+] as const;
+export type CloudServerState = (typeof CLOUD_SERVER_STATES)[number];
+
+export const CloudProjectSchema = z.strictObject({
+  id: z.string(),
+  name: z.string(),
+  owner_name: z.string(),
+  role: ProjectRoleSchema,
+  can_push: z.boolean(),
+  updated_at: iso.nullable(),
+  /** Проект уже открыт на этом компьютере (тот же идентификатор среди локальных). */
+  is_local: z.boolean(),
+});
+export type CloudProject = z.infer<typeof CloudProjectSchema>;
+
+export const CloudServerSchema = z.strictObject({
+  credential_id: z.string(),
+  server_url: z.string(),
+  host: z.string(),
+  state: z.enum(CLOUD_SERVER_STATES),
+  projects: z.array(CloudProjectSchema),
+  /** Сколько проектов у человека на сервере; больше `projects.length`, если список обрезан. */
+  total: z.number().int(),
+});
+export type CloudServer = z.infer<typeof CloudServerSchema>;
+
+export const CloudProjectListSchema = z.strictObject({
+  servers: z.array(CloudServerSchema),
+});
+export type CloudProjectList = z.infer<typeof CloudProjectListSchema>;
+
+export const CloudProjectOpenedSchema = z.strictObject({
+  project_id: z.string(),
+  /** null: проект уже открыт на компьютере, скачивать нечего. */
+  operation_id: z.string().nullable(),
+});
+export type CloudProjectOpened = z.infer<typeof CloudProjectOpenedSchema>;

@@ -1,4 +1,5 @@
 import {
+  Cloud,
   Link2,
   Archive,
   Briefcase,
@@ -31,6 +32,8 @@ export type ProjectCardProps = {
   onOpen: () => void;
   onTogglePin: () => void;
   onToggleArchive: () => void;
+  /** Сервер, на котором у человека есть этот же проект: карточка получает пометку «Облако». */
+  cloudHost?: string | undefined;
 };
 
 const ROLE_ICONS: Record<ProjectRole, LucideIcon> = {
@@ -72,8 +75,10 @@ export const ProjectCard = ({
   onOpen,
   onTogglePin,
   onToggleArchive,
+  cloudHost,
 }: ProjectCardProps) => {
   const { t } = useTranslation("welcome");
+  const { t: tCloud } = useTranslation("localStudio");
   const { t: tAccess } = useTranslation("projectAccess");
   const { t: tGuest } = useTranslation("guest");
   const roleLabel = useProjectRoleLabel();
@@ -284,6 +289,17 @@ export const ProjectCard = ({
             >
               <RoleIcon size={8} />
               {roleLabel(role)}
+            </span>
+          )}
+          {cloudHost !== undefined && (
+            <span
+              className="chip shrink-0"
+              data-testid="cloud-badge"
+              title={tCloud("cloud.badgeTitle", { host: cloudHost })}
+              style={{ fontSize: 9.5, height: 16, padding: "1px 6px" }}
+            >
+              <Cloud size={8} />
+              {tCloud("cloud.badge")}
             </span>
           )}
           {project.via_link === true && (
