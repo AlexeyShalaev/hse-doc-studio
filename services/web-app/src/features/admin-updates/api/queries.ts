@@ -64,7 +64,8 @@ export const useCheckUpdates = () => {
 export const useStartUpdate = () => {
   const refresh = useRefresh();
   return useMutation({
-    mutationFn: (version: string | null) => updatesApi.start(version),
+    mutationFn: (arg: { version: string | null; acceptRisk: boolean }) =>
+      updatesApi.start(arg.version, arg.acceptRisk),
     onSuccess: refresh,
   });
 };

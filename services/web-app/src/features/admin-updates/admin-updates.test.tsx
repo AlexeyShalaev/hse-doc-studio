@@ -91,6 +91,8 @@ const status = (patch: Partial<UpdateStatus> = {}): UpdateStatus => ({
   last_run: null,
   rollback_version: null,
   rollback_needs_restore: false,
+  rollback_blocked: false,
+  risk_confirmation_required: false,
   manual_command: "docker compose pull && docker compose up -d",
   ...patch,
 });
@@ -196,7 +198,7 @@ describe("раздел «Обновления»", () => {
     expect(start).not.toHaveBeenCalled();
     await userEvent.click(await screen.findByTestId("update-confirm"));
     await waitFor(() => {
-      expect(start).toHaveBeenCalledWith("0.3.2");
+      expect(start).toHaveBeenCalledWith("0.3.2", false);
     });
   });
 
@@ -281,6 +283,98 @@ describe("раздел «Обновления»", () => {
     render(wrap(<UpdatesPage />));
     const banner = await screen.findByTestId("update-banner-last");
     expect(banner.textContent).toContain("restore_failed");
+  });
+
+  it("Kubernetes: апдейтер работает, кнопки включены, подтверждение предупреждает о простое", async () => {
+    vi.spyOn(updatesApi, "status").mockResolvedValue(
+      status({
+        executor: "kubernetes",
+        updater_version: "0.3.1",
+        manual_command: "helm upgrade hse-doc-studio --atomic",
+      }),
+    );
+    const start = vi
+      .spyOn(updatesApi, "start")
+      .mockResolvedValue(run({ status: "queued" }));
+    render(wrap(<UpdatesPage />));
+    expect((await screen.findByTestId("update-updater")).textContent).toContain(
+      "работает",
+    );
+    expect(screen.queryByTestId("update-banner-manual")).toBeNull();
+    expect(screen.queryByTestId("update-banner-offline")).toBeNull();
+    // запасная команда helm показана только там, где исполнитель выключен
+    expect(screen.queryByDisplayValue(/helm upgrade/)).toBeNull();
+    const button = screen.getByTestId("update-now");
+    await waitFor(() => expect(button).toBeEnabled());
+    await userEvent.click(button);
+    expect(document.body.textContent).toContain("Студия недоступна");
+    expect(screen.getByTestId("update-kube-schema")).toBeInTheDocument();
+    expect(screen.queryByTestId("update-accept-risk")).toBeNull();
+    await userEvent.click(await screen.findByTestId("update-confirm"));
+    await waitFor(() => {
+      expect(start).toHaveBeenCalledWith("0.3.2", false);
+    });
+  });
+
+  it("Kubernetes без бэкапа: обновление включается только после подтверждения риска", async () => {
+    vi.spyOn(updatesApi, "status").mockResolvedValue(
+      status({
+        executor: "kubernetes",
+        backup_destination_configured: false,
+        risk_confirmation_required: true,
+      }),
+    );
+    const start = vi
+      .spyOn(updatesApi, "start")
+      .mockResolvedValue(run({ status: "queued" }));
+    render(wrap(<UpdatesPage />));
+    expect(
+      await screen.findByTestId("update-banner-nobackup-kube"),
+    ).toBeInTheDocument();
+    const button = screen.getByTestId("update-now");
+    await waitFor(() => expect(button).toBeEnabled());
+    await userEvent.click(button);
+    const confirm = await screen.findByTestId("update-confirm");
+    expect(confirm).toBeDisabled();
+    await userEvent.click(screen.getByTestId("update-accept-risk"));
+    expect(confirm).toBeEnabled();
+    await userEvent.click(confirm);
+    await waitFor(() => {
+      expect(start).toHaveBeenCalledWith("0.3.2", true);
+    });
+  });
+
+  it("Kubernetes: апдейтер не отвечает, кнопка заблокирована, подсказка про под", async () => {
+    vi.spyOn(updatesApi, "status").mockResolvedValue(
+      status({ executor: "kubernetes", updater_online: false }),
+    );
+    render(wrap(<UpdatesPage />));
+    expect(
+      (await screen.findByTestId("update-banner-offline")).textContent,
+    ).toContain("kubectl");
+    expect(screen.getByTestId("update-now")).toBeDisabled();
+  });
+
+  it("Kubernetes: «Нужны руки» после смены схемы и откат образа недоступен", async () => {
+    vi.spyOn(updatesApi, "status").mockResolvedValue(
+      status({
+        executor: "kubernetes",
+        current_version: "0.3.2",
+        available: null,
+        rollback_blocked: true,
+        last_run: run({
+          status: "failed",
+          error_code: "needs_manual_action",
+          error: "Manual action is needed",
+        }),
+      }),
+    );
+    render(wrap(<UpdatesPage />));
+    const banner = await screen.findByTestId("update-banner-last");
+    expect(banner.textContent).toContain("Образ не откачен");
+    expect(banner.textContent).toContain("Manual action is needed");
+    expect(screen.getByTestId("update-rollback-blocked")).toBeInTheDocument();
+    expect(screen.queryByTestId("update-rollback")).toBeNull();
   });
 
   it("сохранение политики отправляет окно в минутах UTC", async () => {

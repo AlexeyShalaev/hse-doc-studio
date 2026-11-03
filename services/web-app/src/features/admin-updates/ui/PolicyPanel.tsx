@@ -15,7 +15,7 @@ const DAYS = [0, 1, 2, 3, 4, 5, 6] as const;
 
 export type PolicyPanelProps = {
   settings: UpdateSettings;
-  executor: "compose" | "none";
+  executor: "compose" | "kubernetes" | "none";
   saving: boolean;
   failure: UpdateFailure | null;
   onSave: (body: UpdateSettings) => void;

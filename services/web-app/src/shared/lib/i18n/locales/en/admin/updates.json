@@ -18,15 +18,19 @@
     "cancel": "Cancel",
     "last": {
       "failed": "The update to {{to}} ({{at}}) failed and the rollback did not finish. Manual action is needed.",
-      "rolled_back": "The update to {{to}} ({{at}}) failed. The system went back to the previous version."
+      "rolled_back": "The update to {{to}} ({{at}}) failed. The system went back to the previous version.",
+      "needs_hands": "Update to {{to}} ({{at}}): the migrations changed the database schema and the new version did not start. The image was not rolled back, manual action is needed: step-by-step instructions are in the run events."
     },
     "manual": "The update executor is not connected",
-    "manualBody": "The Studio checks releases and notifies you, the operator installs with the command below: that is how Helm works (rollback with `--atomic`); for compose enable the updater service: `docker compose --profile updater up -d` with UPDATER_TOKEN in .env.",
+    "manualBody": "Studio checks releases and reports them, and the operator installs the version with the command below (Helm rolls back on `--atomic`). To make the buttons work, turn the executor on: `updater.enabled=true` in the chart values for Kubernetes, the updater service for compose (`docker compose --profile updater up -d` with UPDATER_TOKEN in .env).",
     "updaterOffline": "The updater service does not answer",
     "updaterOfflineBody": "Automatic installs and the update buttons do not work until it runs: `docker compose up -d updater`. Release checks and notifications still work.",
     "noBackup": "No backup destination configured",
     "noBackupBody": "Before an update the updater takes only a database snapshot. A full backup (files and objects) is possible once the Backups section has a destination.",
-    "checkFailed": "Could not ask for the release list"
+    "checkFailed": "Could not ask for the release list",
+    "updaterOfflineKube": "Auto-install and the update buttons do not work until it runs: check the updater pod with `kubectl get pods -l app.kubernetes.io/component=updater` and its log. Release checks and notifications still work.",
+    "noBackupKube": "No backup will be taken before the update, and the database cannot be rolled back",
+    "noBackupKubeBody": "There is no database snapshot in Kubernetes. Set up a destination in Backups (and keep the full backup enabled in the policy): then a backup runs before the update. Without it a manual update needs the risk confirmed, and auto-install does not start."
   },
   "version": {
     "title": "Version",
@@ -43,7 +47,8 @@
     "inWindow": "inside the window now",
     "noDigest": "This release publishes no image digest: a verified update will not pass. Turn image verification off in the policy or wait for the next release.",
     "manualCommand": "Update command",
-    "rollback": "Roll back to {{version}}"
+    "rollback": "Roll back to {{version}}",
+    "rollbackBlocked": "The image rollback is unavailable: the update changed the database schema and the previous version does not start on the new one. Restore the database from a backup by hand."
   },
   "policy": {
     "title": "Policy and window",
@@ -170,7 +175,10 @@
     "title": "Update to {{version}}?",
     "body": "The updater takes a database snapshot, pulls and verifies the image, applies migrations and restarts the services. If the new version does not come up, the system goes back by itself.",
     "downtime": "The Studio is unavailable during migrations and restart, usually 1-3 minutes. Running builds are interrupted.",
-    "ok": "Update"
+    "ok": "Update",
+    "bodyKube": "The updater checks the image, stops the api, applies the migrations in a Job and starts the new version. If it does not come up while the schema is unchanged, the previous image is put back.",
+    "schemaKube": "If the migrations managed to change the database schema, the image is not rolled back (the previous one does not start on the new schema): the run ends as \"Needs hands\" with instructions.",
+    "acceptRisk": "I understand: there will be no full backup and the database cannot be rolled back"
   },
   "confirmRollback": {
     "title": "Roll back to {{version}}?",
@@ -197,6 +205,8 @@
     "rate_limited": "Too many requests, try again later.",
     "csrf_failed": "Session expired: reload the page.",
     "network": "No connection to the server.",
-    "unknown": "Something went wrong. Try again later."
+    "unknown": "Something went wrong. Try again later.",
+    "risk_not_confirmed": "Confirm the risk: there will be no backup before the update.",
+    "rollback_unsafe": "Rollback is impossible: the update changed the database schema and the previous version cannot run on it."
   }
 }
