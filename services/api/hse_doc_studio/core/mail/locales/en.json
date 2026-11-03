@@ -1,0 +1,281 @@
+{
+  "layout": {
+    "tagline": "Academic documents studio",
+    "fallback": "If the button does not open, copy this link into your browser's address bar:",
+    "context_title": "Why you received this email",
+    "security_title": "Security",
+    "note_title": "Message with the invitation",
+    "link_valid_for": "The link is valid for {duration}.",
+    "link_valid_until": "The link is valid until {date}.",
+    "code_valid_for": "The code is valid for {duration}.",
+    "date_format": "%Y-%m-%d %H:%M UTC",
+    "footer_server": "Server",
+    "footer_recipient": "This email was sent to {email}.",
+    "footer_auto": "This is an automated message, please do not reply.",
+    "duration": {
+      "minute": {
+        "one": "{n} minute",
+        "other": "{n} minutes"
+      },
+      "hour": {
+        "one": "{n} hour",
+        "other": "{n} hours"
+      },
+      "day": {
+        "one": "{n} day",
+        "other": "{n} days"
+      }
+    },
+    "unknown_person": "A Studio user",
+    "unnamed_project": "an untitled project"
+  },
+  "roles": {
+    "reader": "Reader",
+    "reviewer": "Reviewer",
+    "editor": "Editor",
+    "owner": "Owner"
+  },
+  "mails": {
+    "verify_email": {
+      "subject": "Confirm your email",
+      "preheader": "Confirm your address to finish signing up for the Studio.",
+      "title": "Confirm your email address",
+      "lead": "One step left: confirm that this address is yours and your Studio account will be ready.",
+      "action": "Confirm address",
+      "context": [
+        "The address {email} was used to sign up on the server {server}."
+      ],
+      "security": [
+        "If you did not sign up, just ignore this message: without confirmation the account will not become active."
+      ]
+    },
+    "reset_password": {
+      "subject": "Password reset",
+      "preheader": "A link to set a new password in the Studio.",
+      "title": "Password reset",
+      "lead": "We received a request to change your password. Press the button to set a new one.",
+      "action": "Set a new password",
+      "details": [
+        [
+          "Account",
+          "{email}"
+        ]
+      ],
+      "context": [
+        "A password reset for {email} was requested on the server {server}."
+      ],
+      "security": [
+        "If you did not ask for a reset, ignore this message: your password stays the same.",
+        "Do not forward this email: the link in it can change your password."
+      ]
+    },
+    "invite": {
+      "subject": "Invitation to the Studio",
+      "preheader": "You are invited to sign up for the Studio.",
+      "title": "You are invited to the Studio",
+      "lead": "You are invited to the Studio. Press the button to sign up.",
+      "lead_by": "{inviter} invites you to the Studio. Press the button to sign up.",
+      "action": "Sign up",
+      "details": [
+        [
+          "Invited by",
+          "{inviter}"
+        ],
+        [
+          "Address",
+          "{email}"
+        ]
+      ],
+      "context": [
+        "The invitation was sent to {email}: use this address to sign up on the server {server}."
+      ],
+      "security": [
+        "If you did not expect this invitation, just ignore this message."
+      ]
+    },
+    "email_change": {
+      "subject": "Confirm your new email",
+      "preheader": "Confirm that this address can be attached to your account.",
+      "title": "Confirm your new address",
+      "lead": "You asked to attach this address to your Studio account. Press the button to confirm the change.",
+      "action": "Confirm new address",
+      "details": [
+        [
+          "New address",
+          "{email}"
+        ]
+      ],
+      "context": [
+        "The address change was requested in an account on the server {server}."
+      ],
+      "security": [
+        "If you did not change your address, ignore this message: the account stays on its previous address. If the message is unexpected, change your password."
+      ]
+    },
+    "reset_notice": {
+      "subject": "An administrator issued a password reset link",
+      "preheader": "A password reset link was created for your account.",
+      "title": "A password reset link was issued",
+      "lead": "A Studio administrator created a password reset link for your account.",
+      "context": [
+        "The link went to the administrator, not to you: they will pass it on themselves. This email was sent to {email}, server {server}."
+      ],
+      "security": [
+        "If you did not ask for it, contact the administrator."
+      ]
+    },
+    "passkey_added": {
+      "subject": "A passkey was added",
+      "preheader": "A new sign-in key was added to your account.",
+      "title": "A new passkey was added",
+      "lead": "A passkey “{name}” was added to your Studio account.",
+      "action": "Open account settings",
+      "details": [
+        [
+          "Key name",
+          "{name}"
+        ]
+      ],
+      "context": [
+        "We report every new sign-in key so that you can spot one you did not add. Account: {email}, server {server}."
+      ],
+      "security": [
+        "If it wasn't you, remove the key in your account settings (Passkeys) and change your password."
+      ]
+    },
+    "passkey_reset": {
+      "subject": "An administrator reset your passkeys",
+      "preheader": "All passkeys of your account were removed.",
+      "title": "Passkeys were reset",
+      "lead": "A Studio administrator removed all passkeys of your account.",
+      "action": "Open account settings",
+      "details": [
+        [
+          "Keys removed",
+          "{count}"
+        ]
+      ],
+      "context": [
+        "You can sign in with your password or single sign-on and add a new passkey in your account settings. Account: {email}, server {server}."
+      ],
+      "security": [
+        "If you did not ask for it, contact the administrator."
+      ]
+    },
+    "project_invitation": {
+      "subject": "{actor} invites you to “{project}”",
+      "preheader": "Accept or decline the invitation in your Inbox.",
+      "title": "Project invitation",
+      "lead": "{actor} invites you to the project “{project}” as {role}.",
+      "action": "Open Inbox",
+      "details": [
+        [
+          "Project",
+          "{project}"
+        ],
+        [
+          "Role",
+          "{role}"
+        ],
+        [
+          "Invited by",
+          "{actor}"
+        ]
+      ],
+      "context": [
+        "The invitation came to {email}, which is attached to your account on the server {server}."
+      ],
+      "security": [
+        "If you did not expect this invitation, just ignore this message or decline it in your Inbox."
+      ]
+    },
+    "project_invitation_link": {
+      "subject": "{actor} invites you to “{project}”",
+      "preheader": "Open the link to accept the project invitation.",
+      "title": "Project invitation",
+      "lead": "{actor} invites you to the project “{project}” in the Studio as {role}.",
+      "action": "Accept invitation",
+      "details": [
+        [
+          "Project",
+          "{project}"
+        ],
+        [
+          "Role",
+          "{role}"
+        ],
+        [
+          "Invited by",
+          "{actor}"
+        ]
+      ],
+      "context": [
+        "Open the link and sign in or sign up with {email}: the invitation is bound to this address. Server {server}."
+      ],
+      "security": [
+        "If you did not expect this invitation, just ignore this message."
+      ]
+    },
+    "access_request": {
+      "subject": "{actor} requests access to “{project}”",
+      "preheader": "Approve or deny the request in your Inbox.",
+      "title": "Project access request",
+      "lead": "{actor} requests access to the project “{project}”.",
+      "action": "Open Inbox",
+      "details": [
+        [
+          "Project",
+          "{project}"
+        ],
+        [
+          "Requested by",
+          "{actor}"
+        ]
+      ],
+      "context": [
+        "You received this email because you can manage access to the project on the server {server}."
+      ],
+      "security": [
+        "If you do not know this person, deny the request in your Inbox: access will not open without your decision."
+      ]
+    },
+    "transfer_request": {
+      "subject": "{actor} is transferring “{project}” to you",
+      "preheader": "Accept or decline the transfer in your Inbox.",
+      "title": "Project transfer",
+      "lead": "{actor} is transferring the project “{project}” to you. Once you accept, you become its owner.",
+      "action": "Open Inbox",
+      "details": [
+        [
+          "Project",
+          "{project}"
+        ],
+        [
+          "Transferred by",
+          "{actor}"
+        ]
+      ],
+      "context": [
+        "The transfer is addressed to your account on the server {server}."
+      ],
+      "security": [
+        "If you did not expect the transfer, decline it in your Inbox: until you accept, the current owner stays the owner."
+      ]
+    },
+    "smtp_test": {
+      "subject": "HSE Doc Studio: mail check",
+      "preheader": "This is a test message: mail sending is set up correctly.",
+      "title": "Mail is set up",
+      "lead": "This is a test message from the Studio. If you can read it, mail sending works.",
+      "details": [
+        [
+          "Server",
+          "{server}"
+        ]
+      ],
+      "context": [
+        "An administrator sent this test message from the Mail section on the server {server}."
+      ]
+    }
+  }
+}
