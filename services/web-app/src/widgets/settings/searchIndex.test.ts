@@ -53,6 +53,7 @@ describe("settings search index: repository access", () => {
       "git-access-hosts",
       "git-access-encryption",
       "git-access-fetch",
+      "git-access-projects-dir",
     ]);
   });
 

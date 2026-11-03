@@ -289,6 +289,17 @@
       "off": "Off",
       "saved": "Interval saved",
       "failed": "Could not save the interval."
+    },
+    "projectsDir": {
+      "title": "Folder for cloud projects",
+      "text": "Studio downloads cloud projects here by itself when you open them from the project list, so you never pick a folder. Projects already downloaded stay where they are.",
+      "label": "Folder",
+      "placeholder": "Standard projects folder",
+      "hint": "A full path on this computer. An empty field brings back the standard folder.",
+      "save": "Save",
+      "reset": "Use the standard folder",
+      "saved": "Folder saved",
+      "failed": "Could not save the folder. It must be a full path inside the folders Studio can access."
     }
   },
   "none": {

@@ -663,6 +663,8 @@ export type SettingsResponse = {
   disk_usage_warn_gb: number;
   // Период фоновой проверки удалённого репозитория, секунды; 0 = выключена.
   git_fetch_interval_s?: number;
+  // Папка для проектов из облака (путь на компьютере); null: стандартная.
+  projects_dir?: string | null;
 };
 
 export type UpdateSettingsRequest = Partial<SettingsResponse>;
