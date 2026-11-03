@@ -6725,3 +6725,219 @@ a.adm-row:hover .adm-row-chevron {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+
+/* ── Справка: панель справа и значки «?» у полей (features/help-center, entities/help) ── */
+.help-panel {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 60;
+  width: min(420px, 100vw);
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-1);
+  color: var(--fg-1);
+  border-left: 1px solid var(--border);
+  box-shadow: -8px 0 24px rgba(0, 0, 0, 0.25);
+  font-size: 13px;
+}
+.help-panel-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 10px 10px 14px;
+  border-bottom: 1px solid var(--border);
+  color: var(--fg-0);
+}
+.help-panel-head-title {
+  flex: 1;
+  min-width: 0;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.help-panel-search {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 10px 14px 0;
+  padding: 6px 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-2);
+  background: var(--bg-0);
+  color: var(--fg-2);
+}
+.help-panel-search input {
+  flex: 1;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: var(--fg-0);
+  font: inherit;
+}
+.help-panel-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 12px 14px 16px;
+}
+.help-panel-summary {
+  color: var(--fg-1);
+  margin: 0 0 12px;
+}
+.help-panel-muted {
+  color: var(--fg-2);
+  padding: 8px 0;
+}
+.help-panel-video {
+  width: 100%;
+  border-radius: var(--r-2);
+  border: 1px solid var(--border);
+  margin-bottom: 12px;
+  background: var(--bg-0);
+}
+.help-panel-steps {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.help-panel-steps > li {
+  display: flex;
+  gap: 10px;
+  border-radius: var(--r-2);
+}
+.help-panel-steps > li.is-focused {
+  background: var(--accent-soft);
+  box-shadow: 0 0 0 1px var(--accent-line);
+  margin: -6px;
+  padding: 6px;
+}
+.help-panel-step-no {
+  flex: none;
+  width: 22px;
+  height: 22px;
+  border-radius: var(--r-pill);
+  display: grid;
+  place-items: center;
+  font-size: 11px;
+  font-weight: 700;
+  background: var(--accent);
+  color: var(--accent-ink);
+}
+.help-panel-step-body {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.help-panel-step-body p {
+  margin: 0;
+}
+.help-panel-step-body strong {
+  color: var(--fg-0);
+}
+.help-panel-step-body code {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 12px;
+  padding: 0 3px;
+  border-radius: var(--r-1);
+  background: var(--bg-3);
+}
+.help-panel-step-body a,
+.help-panel-foot a {
+  color: var(--accent);
+}
+.help-panel-hint {
+  color: var(--fg-2);
+  font-size: 12px;
+}
+.help-panel-step-body img {
+  width: 100%;
+  border-radius: var(--r-2);
+  border: 1px solid var(--border);
+}
+.help-panel-verified {
+  color: var(--fg-3);
+  font-size: 11px;
+  margin-top: 14px;
+}
+.help-panel-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--accent);
+  background: none;
+  border: 0;
+  padding: 0;
+  margin-bottom: 10px;
+  cursor: pointer;
+}
+.help-panel-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.help-panel-list button {
+  width: 100%;
+  text-align: left;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px;
+  border: 0;
+  border-radius: var(--r-2);
+  background: transparent;
+  color: var(--fg-1);
+  cursor: pointer;
+}
+.help-panel-list button:hover {
+  background: var(--bg-hover);
+}
+.help-panel-list strong {
+  color: var(--fg-0);
+}
+.help-panel-related {
+  margin-top: 18px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+}
+.help-panel-related-title {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--fg-3);
+  margin-bottom: 4px;
+}
+.help-panel-foot {
+  padding: 10px 14px;
+  border-top: 1px solid var(--border);
+}
+.help-panel-foot a {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.help-anchor {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  padding: 0;
+  margin-left: 4px;
+  border: 0;
+  background: transparent;
+  color: var(--fg-3);
+  vertical-align: middle;
+  cursor: pointer;
+}
+.help-anchor:hover {
+  color: var(--accent);
+}

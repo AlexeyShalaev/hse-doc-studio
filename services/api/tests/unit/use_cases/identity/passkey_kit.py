@@ -12,6 +12,7 @@ from hse_doc_studio.infra.identity.webauthn import PyWebAuthn
 from hse_doc_studio.use_cases.admin.passkeys import ListUserPasskeysUC, ResetUserPasskeysUC
 from hse_doc_studio.use_cases.identity.passkey_ceremony import PasskeyChallenges, PasskeyPolicy
 from hse_doc_studio.use_cases.identity.passkey_login import AssertionChecker, FinishPasskeyLoginUC, StartPasskeyLoginUC
+from hse_doc_studio.use_cases.identity.passkey_signup import FinishPasskeySignupUC, StartPasskeySignupUC
 from hse_doc_studio.use_cases.identity.passkeys import (
     DeletePasskeyUC,
     FinishPasskeyRegistrationUC,
@@ -63,8 +64,20 @@ class PasskeyKit:
     def finish_registration(self) -> FinishPasskeyRegistrationUC:
         w = self.world
         return FinishPasskeyRegistrationUC(
-            w.users, self.passkeys, self.challenges, self.policy, self.webauthn, w.audit, w.uow, w.clock
-        )
+            w.users, self.passkeys, self.challenges, self.policy, self.webauthn, w.audit, w.uow, w.clock,
+            delivery=w.delivery(),
+        )  # fmt: skip
+
+    def start_signup(self) -> StartPasskeySignupUC:
+        w = self.world
+        return StartPasskeySignupUC(w.invites, w.users, self.challenges, self.policy, self.webauthn, w.clock)
+
+    def finish_signup(self) -> FinishPasskeySignupUC:
+        w = self.world
+        return FinishPasskeySignupUC(
+            w.invites, w.users, self.passkeys, w.sessions, self.challenges, self.policy, self.webauthn,
+            w.audit, w.uow, w.policy, w.clock,
+        )  # fmt: skip
 
     def list_uc(self) -> ListPasskeysUC:
         return ListPasskeysUC(self.passkeys, self.methods, self.policy)
@@ -99,7 +112,8 @@ class PasskeyKit:
         return ListUserPasskeysUC(self.world.users, self.passkeys)
 
     def reset_admin_uc(self) -> ResetUserPasskeysUC:
-        return ResetUserPasskeysUC(self.world.users, self.passkeys, self.world.audit, self.world.uow)
+        w = self.world
+        return ResetUserPasskeysUC(w.users, self.passkeys, w.audit, w.uow, delivery=w.delivery())
 
     async def session(self, user: User, *, minutes_ago: int = 0) -> str:
         """Сессия человека, открытая `minutes_ago` минут назад; возвращает хеш её id."""

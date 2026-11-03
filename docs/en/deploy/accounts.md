@@ -63,6 +63,10 @@ A passkey is a sign-in key kept on a device (Touch ID, Face ID, Windows Hello, a
 3. On the sign-in screen: press "Sign in with a passkey" or pick the key in the suggestions of the email field. No address or password needed.
 4. A key is removed from the same card (also after confirming it's you). The last way to sign in cannot be removed: set a password or link single sign-on first.
 
+A person invited to their own address can create the account with a passkey right away, without a password: the invitation page has a "Create account with a passkey" button. A password can be set later with "Forgot your password?". An invitation without an address still uses sign-up with a password.
+
+The Studio mails the person when a passkey is added and when an administrator resets their keys (if SMTP is configured; without it the event is only in the audit log).
+
 A key marked "does not work at this address" was created for a previous server address: remove it and add a new one.
 
 ### What the administrator configures
@@ -72,6 +76,7 @@ A key marked "does not work at this address" was created for a previous server a
 | Admin → Sign-in → Passkey sign-in | allow or forbid; `HSE_STUDIO__AUTH__PASSKEYS_ENABLED` sets the value from the environment and locks editing |
 | `HSE_STUDIO__AUTH__PUBLIC_URL` | the Studio address: the key domain comes from it. HTTPS is required (or `http://localhost` for a test stand) and a domain name, not an IP address |
 | `HSE_STUDIO__AUTH__PASSKEY_RP_ID` | optional: a parent key domain (`example.org` for `studio.example.org`) so that keys survive a move between subdomains |
+| Admin → People | the Passkeys column: how many keys the person has |
 | Admin → People → person card | how many keys the person has and when they were used; "Reset passkeys" removes all of the person's keys (sessions stay open) |
 
 !!! warning "Keys are bound to the domain"

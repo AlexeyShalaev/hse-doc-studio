@@ -1,6 +1,6 @@
 import { useId, useState, type FormEvent } from "react";
 import { Link } from "react-router";
-import { UserPlus } from "lucide-react";
+import { FingerprintPattern, UserPlus } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { Button, Input, Spinner } from "@shared/ui";
 import { ResultFrame } from "@shared/ui/ResultFrame";
@@ -18,6 +18,12 @@ export type RegisterCardProps = {
   pending?: boolean;
   failure?: { code: string } | null;
   onSubmit: (input: { name: string; email: string; password: string }) => void;
+  /** Регистрация по приглашению сразу с passkey: кнопка над полями пароля, имя берётся из формы. */
+  passkey?: {
+    available: boolean;
+    pending: boolean;
+    onStart: (name: string) => void;
+  };
   initialName?: string;
   initialEmail?: string;
 };
@@ -33,6 +39,7 @@ export const RegisterCard = ({
   pending = false,
   failure = null,
   onSubmit,
+  passkey,
   initialName = "",
   initialEmail = "",
 }: RegisterCardProps) => {
@@ -53,17 +60,24 @@ export const RegisterCard = ({
     password.length >= min &&
     confirm === password;
 
+  const hasPasskey = passkey?.available === true;
+  // Без входа по паролю (только SSO) аккаунт по приглашению создаётся только с passkey.
+  const withPassword = auth.password_enabled;
+  const busy = pending || (passkey?.pending ?? false);
+
   const field = failure ? fieldOfFailure(failure.code) : null;
   const showFrame = failure !== null && field === null;
   const errorId = `${uid}-error`;
 
   const hint = invitation
-    ? invitation.org_name
-      ? t("register.hint.invitedOrg", {
-          who: invitation.invited_by,
-          org: invitation.org_name,
-        })
-      : t("register.hint.invited", { who: invitation.invited_by })
+    ? hasPasskey && !withPassword
+      ? t("register.hint.invitedPasskey", { who: invitation.invited_by })
+      : invitation.org_name
+        ? t("register.hint.invitedOrg", {
+            who: invitation.invited_by,
+            org: invitation.org_name,
+          })
+        : t("register.hint.invited", { who: invitation.invited_by })
     : auth.registration_mode === "domains"
       ? t("register.hint.domains")
       : t("pages.register.body");
@@ -71,7 +85,7 @@ export const RegisterCard = ({
   const submit = (event: FormEvent) => {
     event.preventDefault();
     setTouched(true);
-    if (pending || !valid) return;
+    if (busy || !valid) return;
     onSubmit({ name: name.trim(), email: email.trim(), password });
   };
 
@@ -150,53 +164,107 @@ export const RegisterCard = ({
               : undefined,
           )}
         />
-        <Input
-          id={`${uid}-password`}
-          label={t("register.password")}
-          type="password"
-          name="password"
-          autoComplete="new-password"
-          required
-          value={password}
-          onChange={(e) => {
-            setPassword(e.target.value);
-          }}
-          readOnly={pending}
-          hint={t("register.passwordHint", { count: min })}
-          {...errorProp(
-            field === "password"
-              ? t(registerErrorKey(failure?.code ?? ""))
-              : touched && tooShort
-                ? t("register.passwordShort", { count: min })
-                : undefined,
-          )}
-        />
-        <Input
-          id={`${uid}-confirm`}
-          label={t("register.confirm")}
-          type="password"
-          name="confirm"
-          autoComplete="new-password"
-          required
-          value={confirm}
-          onChange={(e) => {
-            setConfirm(e.target.value);
-          }}
-          readOnly={pending}
-          {...errorProp(mismatch ? t("register.mismatch") : undefined)}
-        />
-        <Button
-          type="submit"
-          aria-disabled={pending}
-          style={{ justifyContent: "center", gap: 8 }}
-        >
-          {pending ? (
-            <Spinner size="sm" />
-          ) : (
-            <UserPlus size={15} aria-hidden="true" />
-          )}
-          {pending ? t("register.submitting") : t("register.submit")}
-        </Button>
+        {hasPasskey && (
+          <div data-testid="register-passkey-block">
+            <Button
+              type="button"
+              variant={withPassword ? "secondary" : "primary"}
+              data-testid="register-passkey"
+              disabled={name.trim() === "" || email.trim() === ""}
+              aria-disabled={busy}
+              onClick={() => {
+                if (!busy) passkey.onStart(name.trim());
+              }}
+              style={{ justifyContent: "center", gap: 8, width: "100%" }}
+            >
+              {passkey.pending ? (
+                <Spinner size="sm" />
+              ) : (
+                <FingerprintPattern size={15} aria-hidden="true" />
+              )}
+              {passkey.pending
+                ? t("register.passkeyPending")
+                : t("register.passkey")}
+            </Button>
+            <p
+              style={{ margin: "6px 0 0", fontSize: 12, color: "var(--fg-3)" }}
+            >
+              {t("register.passkeyHint")}
+            </p>
+            {withPassword && (
+              <div
+                className="flex items-center"
+                style={{
+                  gap: 10,
+                  margin: "14px 0 0",
+                  color: "var(--fg-3)",
+                  fontSize: 12,
+                }}
+                role="separator"
+                aria-label={t("register.orPassword")}
+              >
+                <span
+                  style={{ flex: 1, height: 1, background: "var(--line)" }}
+                />
+                {t("register.orPassword")}
+                <span
+                  style={{ flex: 1, height: 1, background: "var(--line)" }}
+                />
+              </div>
+            )}
+          </div>
+        )}
+        {withPassword && (
+          <>
+            <Input
+              id={`${uid}-password`}
+              label={t("register.password")}
+              type="password"
+              name="password"
+              autoComplete="new-password"
+              required
+              value={password}
+              onChange={(e) => {
+                setPassword(e.target.value);
+              }}
+              readOnly={pending}
+              hint={t("register.passwordHint", { count: min })}
+              {...errorProp(
+                field === "password"
+                  ? t(registerErrorKey(failure?.code ?? ""))
+                  : touched && tooShort
+                    ? t("register.passwordShort", { count: min })
+                    : undefined,
+              )}
+            />
+            <Input
+              id={`${uid}-confirm`}
+              label={t("register.confirm")}
+              type="password"
+              name="confirm"
+              autoComplete="new-password"
+              required
+              value={confirm}
+              onChange={(e) => {
+                setConfirm(e.target.value);
+              }}
+              readOnly={pending}
+              {...errorProp(mismatch ? t("register.mismatch") : undefined)}
+            />
+            <Button
+              type="submit"
+              aria-disabled={pending}
+              style={{ justifyContent: "center", gap: 8 }}
+            >
+              {pending ? (
+                <Spinner size="sm" />
+              ) : (
+                <UserPlus size={15} aria-hidden="true" />
+              )}
+              {pending ? t("register.submitting") : t("register.submit")}
+            </Button>
+          </>
+        )}
       </form>
 
       <p style={{ margin: "20px 0 0", fontSize: 13, color: "var(--fg-2)" }}>

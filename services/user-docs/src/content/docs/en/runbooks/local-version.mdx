@@ -1,0 +1,61 @@
+---
+title: 'Local Studio and the server'
+description: 'Install Studio on your own computer, work offline and link it to the cloud Studio: sign-in by code, auto-sync and PDF upload.'
+sidebar:
+  order: 9
+access: user
+help:
+  routes:
+    - '/local-studio'
+    - '/connect'
+    - '/device'
+    - '/settings/git-access'
+  summary: 'The local Studio runs in Docker on your computer and needs no internet. The link to the cloud Studio is set up once by signing in with a code; after that the project syncs on its own and built PDFs go to the server.'
+  steps:
+    - text: 'In the cloud Studio open **Local version** in the account menu, choose the **Operating system**, install Docker and run the **Install command** in a terminal.'
+      hint: 'The command already has the server address in it. Without the cloud Studio: on macOS and Linux `curl -fsSL https://raw.githubusercontent.com/AlexeyShalaev/hse-doc-studio/master/deploy/install.sh | sh`, on Windows in PowerShell `irm https://raw.githubusercontent.com/AlexeyShalaev/hse-doc-studio/master/deploy/install.ps1 | iex`.'
+    - text: 'On the **Where to keep your work** screen pick a folder on your computer and confirm.'
+      hint: 'Projects, settings and fonts live in this folder. From here on Studio works offline.'
+    - text: 'To link Studio to the cloud one, on the **Projects** screen click **Connect to a server** (or **Connect the local Studio** on the cloud **Local version** screen): the connection screen with the **Server address** opens.'
+      shot: runbooks/local-version/step-03
+    - text: 'Enter the **Server address** and click **Sign in**. Then click **Open the confirmation page**, check that the code matches and click **Allow** on the website.'
+      hint: 'A code is valid for 10 minutes. The device gets access to every project whose sources you can see, for 90 days.'
+    - text: 'Back in the local Studio, in **Projects on the server** click **Clone** next to the project, pick a folder and click **Open project**.'
+    - text: 'Work as usual: edits go to the server on their own after a pause, and built PDFs are uploaded to the website. You control this in **Settings** → **Sync**: **Sync automatically** and **Upload the PDF to the server after a build**.'
+      hint: 'Without a network Studio waits for the connection and carries on by itself. More on sync and conflicts in [Sync with git](/help/en/runbooks/git-sync/).'
+      shot: runbooks/local-version/step-06
+verified:
+  at: 2026-11-03
+  app_version: '0.3.0'
+  sources:
+    - deploy/install.sh
+    - deploy/install.ps1
+    - services/web-app/src/pages/LocalStudioPage
+    - services/web-app/src/pages/ConnectServerPage
+    - services/web-app/src/features/local-studio-guide
+    - services/web-app/src/pages/DevicePage
+    - services/web-app/src/features/git-server
+    - services/web-app/src/entities/git-server
+    - services/web-app/src/features/git-remote
+    - services/web-app/src/features/git-sync
+---
+
+import Steps from '~/components/Steps.astro'
+
+The local Studio installs on your computer as a single Docker container: builds, checks and the
+editor work offline, and the files live in a folder you choose. If you also use the cloud Studio,
+link the two: the project from the server is downloaded to your computer, your edits flow back to
+the server on their own, and built PDFs become visible on the website to your supervisor and
+co-authors.
+
+<Steps />
+
+## If something goes wrong
+
+- **“Docker is not running”**: open Docker Desktop, wait until it starts and run the install again.
+- **“Docker cannot reach this drive”**: pick a folder in your home directory or allow Docker access to
+  the drive in its settings.
+- **“The code expired. Start again.”**: click **Sign in to a server** once more and confirm the new
+  code within 10 minutes.
+- **“Access to the server expired or was revoked. Sign in again.”**: in **Settings** → **Repository
+  access** click **Sign in again** next to that server.

@@ -1,0 +1,53 @@
+---
+title: 'Issues and checks'
+description: 'Formatting checks against GOST and programme guidelines, the list of a document’s issues and TZ requirements traceability.'
+sidebar:
+  order: 4
+access: user
+help:
+  routes: ['/projects/:projectId/documents/:docId?tab=checks', '/projects/:projectId/submit/requirements']
+  summary: 'After every build Studio checks the document against the GOST and guideline rules for its type. Issues are on the **Issues** tab: each one leads to a source line and can be fixed by hand or with AI.'
+  steps:
+    - text: 'Build the document with **Build**: the checks run together with the build.'
+      hint: 'The rule set is picked automatically by the document type (TZ, thesis and others). There is nothing to configure.'
+    - text: 'Open the document’s **Issues** tab. At the top is **Compliance** in percent, below are the issue cards with a severity filter.'
+      hint: 'For a summary across all project documents use **Issues** on the left bar, with the **Errors**, **Warnings** and **Builds** tabs.'
+      shot: runbooks/checks/step-02
+    - text: 'Click the line number on a card (for example **:42**): the editor opens at that line. Fix the text and rebuild the document.'
+      shot: runbooks/checks/step-03
+    - text: 'To hand the fix to the agent, click the **Fix with AI** button on a card or above the list.'
+      hint: 'The agent shows what it wants to change. See [AI agent](/help/en/runbooks/ai-agent/).'
+    - text: 'If an issue is wrong, turn it off with a card button: **Ignore this remark (% hse-noqa)** or **Ignore the rule in the document**.'
+      hint: 'Disabled rules are listed on the **Rules** tab, where you can turn them back on.'
+    - text: 'For a document set with a TZ open **Submission** → **Requirements traceability**: it shows which requirements are mentioned in the other documents.'
+      shot: runbooks/checks/step-06
+verified:
+  at: 2026-11-03
+  app_version: '0.3.0'
+  sources:
+    - services/web-app/src/widgets/DocumentTabs/panes/ChecksPane
+    - services/web-app/src/widgets/ReviewPanel
+    - services/web-app/src/widgets/SubmitPanel
+    - services/web-app/src/pages/WorkspacePage/panels
+---
+
+import Steps from '~/components/Steps.astro'
+
+Issues show where the document departs from GOST, ESPD and your programme’s guidelines: margins,
+fonts, figure captions, references, typography. Work through them before submission and the
+reviewer will not send the work back over formatting.
+
+<Steps />
+
+## If something goes wrong
+
+- **“No issues”** right after opening a project: the checks have not run yet. Build the documents
+  to see errors and warnings.
+- **“This is a custom document. Some GOST/ESPD checks were skipped”**: the document was uploaded as
+  your own file rather than built from the template. Checks tied to the template structure do not
+  apply to it.
+- **A rule was disabled by mistake**: open the **Rules** tab and click **Enable the rule again** on
+  that rule.
+- **A requirement is “not mentioned” or “undefined”**: in the first case no other document
+  references it with `\reqref`; in the second there is a reference but no `\req` definition in the
+  TZ.

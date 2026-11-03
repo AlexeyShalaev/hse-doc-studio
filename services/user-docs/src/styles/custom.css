@@ -1,0 +1,91 @@
+/*
+ * Скин справки = скин Студии: значения взяты из services/web-app/src/index.css (тёмная тема по
+ * умолчанию, светлая под [data-theme='light']). Справка открывается из приложения, и два почти
+ * одинаковых синих рядом читаются как ошибка.
+ */
+:root {
+  --sl-color-accent-low: #1b2340;
+  --sl-color-accent: oklch(70% 0.17 230);
+  --sl-color-accent-high: oklch(85% 0.1 230);
+  --sl-color-white: #f0f0f0;
+  --sl-color-gray-1: #e0e0e0;
+  --sl-color-gray-2: #b8b8b8;
+  --sl-color-gray-3: #828282;
+  --sl-color-gray-4: #525252;
+  --sl-color-gray-5: #242424;
+  --sl-color-gray-6: #131313;
+  --sl-color-black: #0a0a0a;
+  --sl-font: 'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+}
+
+:root[data-theme='light'] {
+  --sl-color-accent-low: #dfe5fb;
+  --sl-color-accent: oklch(48% 0.19 230);
+  --sl-color-accent-high: oklch(32% 0.15 230);
+  --sl-color-white: #0b1024;
+  --sl-color-gray-1: #1a2040;
+  --sl-color-gray-2: #2e3553;
+  --sl-color-gray-3: #5b6485;
+  --sl-color-gray-4: #9099b8;
+  --sl-color-gray-5: #e3e8f3;
+  --sl-color-gray-6: #eef1f8;
+  --sl-color-gray-7: #f3f5fb;
+  --sl-color-black: #ffffff;
+}
+
+:root[data-theme='light'] .only-dark,
+:root:not([data-theme='light']) .only-light {
+  display: none !important;
+}
+
+.runbook-steps {
+  counter-reset: step;
+  list-style: none;
+  padding-inline-start: 0;
+}
+.runbook-steps > li {
+  counter-increment: step;
+  position: relative;
+  padding-inline-start: 2.5rem;
+  margin-block: 1.25rem;
+}
+.runbook-steps > li::before {
+  content: counter(step);
+  position: absolute;
+  inset-inline-start: 0;
+  top: 0.05rem;
+  width: 1.7rem;
+  height: 1.7rem;
+  border-radius: 999px;
+  display: grid;
+  place-items: center;
+  font-size: var(--sl-text-xs);
+  font-weight: 700;
+  background: var(--sl-color-accent);
+  color: var(--sl-color-black);
+}
+.runbook-steps > li:target {
+  outline: 2px solid var(--sl-color-accent);
+  outline-offset: 6px;
+  border-radius: 6px;
+}
+.runbook-step-hint {
+  color: var(--sl-color-gray-3);
+  font-size: var(--sl-text-sm);
+}
+.runbook-shot img,
+.runbook-video video {
+  width: 100%;
+  height: auto;
+  border: 1px solid var(--sl-color-gray-5);
+  border-radius: 8px;
+  margin-block-start: 0.5rem;
+}
+.doc-verified {
+  color: var(--sl-color-gray-3);
+  font-size: var(--sl-text-xs);
+  margin-block-end: 1rem;
+}
+.doc-verified--missing {
+  color: var(--sl-color-orange);
+}

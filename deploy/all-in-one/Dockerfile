@@ -19,6 +19,20 @@ ENV VITE_APP_ENV=${VITE_APP_ENV}
 RUN pnpm build
 
 ############################
+# Stage 1b: user help (services/user-docs)
+############################
+# Справка «как пользоваться»: Astro собирает её дважды (user/admin) плюс общие медиа.
+# Раздаёт её сам бэкенд по /help/ (api/help_site.py), поэтому в локальной версии она
+# работает без сети: всё уже в образе.
+FROM node:24-alpine AS help-builder
+WORKDIR /app
+RUN corepack enable && corepack prepare pnpm@9.15.4 --activate
+COPY services/user-docs/package.json services/user-docs/pnpm-lock.yaml ./
+RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install --frozen-lockfile
+COPY services/user-docs/ .
+RUN pnpm build && node scripts/check-links.mjs
+
+############################
 # Stage 2: build backend deps
 ############################
 FROM python:3.14-slim-bookworm AS backend-builder
@@ -114,6 +128,9 @@ RUN printf '#!/bin/sh\nexec python -m hse_doc_studio.cli "$@"\n' > /usr/local/bi
 # Frontend built assets served as static files by FastAPI
 COPY --from=frontend-builder --chown=app:app /app/dist /app/static
 
+# Пользовательская справка: user/ и admin/ сборки и общие media/ (settings.help_dir).
+COPY --from=help-builder --chown=app:app /app/dist /app/help
+
 # Пак шаблонов документов — то, из чего создаётся проект. Вне монорепы settings.packs_dir
 # падает на дефолт /app/packs (см. api/config.py), поэтому кладём пак именно туда.
 COPY --chown=app:app packs /app/packs
@@ -142,6 +159,7 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     HSE_STUDIO__SERVER__PORT=8000 \
     HSE_STUDIO__STATIC_DIR=/app/static \
     HSE_STUDIO__PACKS_DIR=/app/packs \
+    HSE_STUDIO__HELP_DIR=/app/help \
     HSE_STUDIO__BUILT=${HSE_STUDIO_BUILT}
 
 USER app

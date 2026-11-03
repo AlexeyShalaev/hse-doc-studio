@@ -12,6 +12,12 @@
     "limit": "16 kB"
   },
   {
+    "name": "Панель справки (lazy, features/help-center)",
+    "path": "dist/assets/HelpPanel-*.js",
+    "gzip": true,
+    "limit": "3 kB"
+  },
+  {
     "name": "Церемонии passkey (lazy, @simplewebauthn/browser)",
     "path": "dist/assets/webauthn-vendor-*.js",
     "gzip": true,

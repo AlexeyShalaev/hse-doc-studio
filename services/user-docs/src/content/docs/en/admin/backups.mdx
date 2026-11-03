@@ -1,0 +1,62 @@
+---
+title: 'Set up backups and restore'
+description: 'Where backups go, schedule and retention, encryption and restoring the server from a backup.'
+sidebar:
+  order: 3
+access: admin
+help:
+  routes: ['/admin/backups']
+  summary: 'A backup holds the database, project files, object storage and settings. Add a destination on separate storage, turn on the schedule and check that runs succeed.'
+  steps:
+    - text: 'Open the **Backups** section and in the **Destinations** block click **Add**.'
+    - text: 'Pick the **Type**: **S3** or **Server directory**. For S3 fill in **Endpoint**, **Bucket**, **Access key** and **Secret key**, click **Test connection**, then **Save**.'
+      hint: 'For MinIO from compose expand “How to connect your own S3 (MinIO from compose)” and click **Fill in the values**. Backup storage must be physically separate from the primary one.'
+      shot: admin/backups/step-02
+    - text: 'In the **Schedule and retention** block turn on **Scheduled backups**, pick **Interval** or **Cron** and set **Keep latest** and **Keep days**.'
+      hint: 'Schedule times are UTC. For example, 0 3 * * * is every day at 03:00 UTC. The latest successful backup is never deleted.'
+      shot: admin/backups/step-03
+    - text: 'Choose the **Encryption** (**Installation key** or **Passphrase**) and click **Save**.'
+      hint: 'With the installation key, keep SECRETS_KEY away from the server. A passphrase has at least 12 characters; lose it and the backups cannot be opened.'
+    - text: 'Click **Back up now** and make sure the run in **Run history** shows “done”.'
+    - text: 'To restore the server, click **Backups** on the destination, find the backup and click **Restore**. Studio first verifies it without writing anything.'
+      hint: 'The check reads the manifest, the key, the schema revision and every part. If you do not want to restore, close the window.'
+      shot: admin/backups/step-06
+    - text: 'If the check passed, type the backup id, tick **Overwrite existing data** if the installation is not empty, and click **Restore**.'
+      hint: 'The write runs in maintenance mode: the app is unavailable, then api restarts itself. After that click **Sign in again**.'
+  video:
+    src: admin/backups/clip
+verified:
+  at: 2026-11-03
+  app_version: '0.3.0'
+  sources:
+    - services/web-app/src/features/admin-backups
+    - services/api/hse_doc_studio/core/backup
+    - services/api/hse_doc_studio/api/routers/admin_backups.py
+    - docs/design/backups.md
+---
+
+import Steps from '~/components/Steps.astro'
+import Video from '~/components/Video.astro'
+
+A backup captures the whole installation: the database, project files, object storage and
+settings. The parts are encrypted on the server and stored in the destination you choose, S3 or a
+directory. A copy on the same disk as the data does not survive losing that disk, so keep the
+destination on another volume, host or provider.
+
+<Video />
+
+<Steps />
+
+## If something goes wrong
+
+- **“The last backup (…) failed”**: open **Run history**, the **Result** column shows the reason.
+  Fix it and click **Back up now**: failed runs are not retried automatically.
+- **Warning “This is the same storage or volume as the primary one…”**: losing it takes both the
+  data and the backups. Add a destination on separate storage.
+- **“Saved keys cannot be decrypted (SECRETS_KEY does not match) or the passphrase is not set”**:
+  the server runs with a different SECRETS_KEY, or the passphrase is empty in **Passphrase** mode.
+  Put the previous key back into the environment or enter the passphrase in **Schedule and
+  retention**.
+- **“The write stopped midway”**: the database is restored in one transaction, but files and
+  objects may be incomplete. Click **Retry the write**; if the app restarted during the write,
+  finish the restore with the CLI command shown for the backup.

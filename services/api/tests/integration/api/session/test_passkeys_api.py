@@ -19,7 +19,7 @@ from hse_doc_studio.api.guards import install_exception_handlers
 from hse_doc_studio.api.routers.admin import make_admin_router
 from hse_doc_studio.api.routers.v1 import api_router
 from hse_doc_studio.core.identity.auth_settings import KEY_PASSKEYS_ENABLED
-from hse_doc_studio.core.identity.entities import Session, User, UserStatus
+from hse_doc_studio.core.identity.entities import RegistrationInvite, Session, User, UserStatus
 from hse_doc_studio.core.identity.normalize import hash_token, normalize_email
 from hse_doc_studio.core.identity.protocols import IActorResolver
 from hse_doc_studio.core.mode import StudioMode
@@ -30,6 +30,7 @@ from hse_doc_studio.use_cases.admin.settings import GetAuthGroupUC, UpdateAuthMe
 from hse_doc_studio.use_cases.identity.auth_settings import AuthSettingsService, UpdateAuthSettingsUC
 from hse_doc_studio.use_cases.identity.passkey_ceremony import PasskeyChallenges, PasskeyPolicy
 from hse_doc_studio.use_cases.identity.passkey_login import AssertionChecker, FinishPasskeyLoginUC, StartPasskeyLoginUC
+from hse_doc_studio.use_cases.identity.passkey_signup import FinishPasskeySignupUC, StartPasskeySignupUC
 from hse_doc_studio.use_cases.identity.passkeys import (
     DeletePasskeyUC,
     FinishPasskeyRegistrationUC,
@@ -47,6 +48,7 @@ from tests.fakes.auth import (
     InMemoryAuthTokenRepository,
     InMemoryLoginAttemptRepository,
     InMemoryOidcProviderRepository,
+    InMemoryRegistrationInviteRepository,
     InMemorySessionRepository,
     empty_bearer_resolver,
 )
@@ -91,6 +93,7 @@ class _World:
         self.audit = InMemoryAuditLog()
         self.settings = InMemoryInstanceSettingsRepository()
         self.passkeys = InMemoryPasskeyRepository()
+        self.invites = InMemoryRegistrationInviteRepository()
         self.phone = SoftAuthenticator(origin=ORIGIN)
 
     async def add_user(self, uid: str = "ann", *, password: bool = True, admin: bool = False) -> User:
@@ -154,6 +157,10 @@ class _Provider(Provider):
             ),
             ListUserPasskeysUC: ListUserPasskeysUC(w.users, w.passkeys),
             ResetUserPasskeysUC: ResetUserPasskeysUC(w.users, w.passkeys, w.audit, uow),
+            StartPasskeySignupUC: StartPasskeySignupUC(w.invites, w.users, challenges, policy, webauthn),
+            FinishPasskeySignupUC: FinishPasskeySignupUC(
+                w.invites, w.users, w.passkeys, w.sessions, challenges, policy, webauthn, w.audit, uow
+            ),
             GetAuthGroupUC: group,
             UpdateAuthMethodsUC: UpdateAuthMethodsUC(update, auth, oidc, group),
         }
@@ -397,3 +404,48 @@ async def test__admin_auth_settings__domain_counts_and_toggle(env: tuple[AsyncCl
     assert shown["fields"]["auth.passkeys_enabled"] == {"source": "default", "locked": False}
     assert off.json()["passkeys_enabled"] is False
     assert off.json()["fields"]["auth.passkeys_enabled"] == {"source": "admin", "locked": False}
+
+
+async def _invite(world: _World, token: str, email: str | None) -> None:
+    await world.invites.add(
+        RegistrationInvite(
+            token_hash=hash_token(token),
+            email=email,
+            created_by="boss",
+            expires_at=datetime.now(UTC) + timedelta(days=1),
+            id=f"inv-{token}",
+        )
+    )
+
+
+async def test__signup_by_invite_with_passkey__session_and_contract(env: tuple[AsyncClient, _World]) -> None:
+    client, world = env
+    await _invite(world, "tok", "new@example.org")
+    body = _fixture("PasskeySignupOptionsRequest", "invite")
+    body["invitation_token"] = "tok"
+
+    options = await client.post("/api/v1/auth/register/passkey/options", json=body)
+    request = _fixture("PasskeySignupRequest", "invite")
+    request.update(invitation_token="tok", credential=world.phone.create(options.json()["options"]))
+    created = await client.post("/api/v1/auth/register/passkey", json=request)
+
+    assert options.status_code == 200, options.text
+    assert created.status_code == 200, created.text
+    assert created.json()["user"]["email"] == "new@example.org"
+    secret = created.cookies.get(SESSION_COOKIE)
+    listed = await client.get("/api/v1/account/passkeys", headers={"Cookie": f"{SESSION_COOKIE}={secret}"})
+    assert [(k["name"], k["domain_matches"]) for k in listed.json()["items"]] == [("Chrome · macOS", True)]
+    assert listed.json()["has_password"] is False
+
+
+async def test__signup__invite_without_address_403_and_taken_address_409(env: tuple[AsyncClient, _World]) -> None:
+    client, world = env
+    await _invite(world, "any", None)
+    await world.add_user("taken")
+    await _invite(world, "taken", "taken@example.org")
+
+    anyone = await client.post("/api/v1/auth/register/passkey/options", json={"invitation_token": "any", "name": "A"})
+    taken = await client.post("/api/v1/auth/register/passkey/options", json={"invitation_token": "taken", "name": "T"})
+
+    assert (anyone.status_code, anyone.json()["code"]) == (403, "invitation_invalid")
+    assert (taken.status_code, taken.json()["code"]) == (409, "email_taken")

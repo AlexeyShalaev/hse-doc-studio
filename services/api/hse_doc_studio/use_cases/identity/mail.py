@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import uuid
+from collections.abc import Mapping
 from datetime import datetime, timedelta
 
 from hse_doc_studio.core.enums import Lang
@@ -67,7 +68,7 @@ _TEXTS: dict[MailKind, tuple[tuple[str, str], tuple[str, str]]] = {
     ),
 }
 
-# Уведомления без ссылки.
+# Уведомления без ссылки; {name} и {count} подставляются из `params`.
 _NOTICES: dict[MailKind, tuple[tuple[str, str], tuple[str, str]]] = {
     MailKind.reset_notice: (
         (
@@ -82,6 +83,40 @@ _NOTICES: dict[MailKind, tuple[tuple[str, str], tuple[str, str]]] = {
             (
                 "A Studio administrator created a password reset link for your account. "
                 "If you did not ask for it, contact the administrator."
+            ),
+        ),
+    ),
+    MailKind.passkey_added: (
+        (
+            "Добавлен passkey",
+            (
+                "К вашей учётной записи в Студии добавлен passkey «{name}». "
+                "Если это были не вы, удалите его в настройках аккаунта (раздел «Passkey») и смените пароль."
+            ),
+        ),
+        (
+            "A passkey was added",
+            (
+                'A passkey "{name}" was added to your Studio account. '
+                "If it wasn't you, remove it in your account settings (Passkeys) and change your password."
+            ),
+        ),
+    ),
+    MailKind.passkey_reset: (
+        (
+            "Администратор сбросил ваши passkey",
+            (
+                "Администратор Студии удалил все passkey вашей учётной записи (ключей: {count}). "
+                "Войти можно паролем или единым входом, новый passkey добавляется в настройках аккаунта. "
+                "Если вы об этом не просили, свяжитесь с администратором."
+            ),
+        ),
+        (
+            "An administrator reset your passkeys",
+            (
+                "A Studio administrator removed all passkeys of your account (keys: {count}). "
+                "You can sign in with your password or single sign-on and add a new passkey in your account "
+                "settings. If you did not ask for it, contact the administrator."
             ),
         ),
     ),
@@ -180,12 +215,24 @@ class LinkDelivery:
             )
         )
 
-    async def notify(self, kind: MailKind, to_email: str, *, locale: str | None = None) -> bool:
-        """Уведомление без ссылки; уходит только по SMTP, сбой не мешает действию, о котором уведомляют."""
+    async def notify(
+        self,
+        kind: MailKind,
+        to_email: str,
+        *,
+        locale: str | None = None,
+        params: Mapping[str, object] | None = None,
+    ) -> bool:
+        """Уведомление без ссылки; уходит только по SMTP, сбой не мешает действию, о котором уведомляют.
+
+        Без SMTP молча пропускается: событие остаётся в журнале аудита.
+        """
         if not self._sender.enabled:
             return False
         ru, en = _NOTICES[kind]
         subject, body = en if _lang(locale) is Lang.en else ru
+        if params:
+            body = body.format(**params)
         try:
             await self._sender.send(to_email, subject, body)
         except Exception:

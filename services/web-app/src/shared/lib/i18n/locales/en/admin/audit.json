@@ -177,6 +177,7 @@
       "mcp_call": "MCP tool call",
       "auth_passkey_added": "Passkey added",
       "auth_passkey_add_failed": "Passkey not added",
+      "auth_passkey_signup_failed": "Passkey sign-up: key rejected",
       "auth_passkey_renamed": "Passkey renamed",
       "auth_passkey_removed": "Passkey removed",
       "auth_passkey_login_failed": "Failed passkey sign-in",

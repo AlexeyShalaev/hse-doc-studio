@@ -1,0 +1,35 @@
+---
+/**
+ * Шаги статьи из frontmatter (`help.steps`): сайт и панель справки в приложении не могут разойтись.
+ * У шага с кадром два файла под тему, CSS показывает нужный (`.only-light`/`.only-dark`);
+ * скрытая картинка с loading=lazy браузером не грузится.
+ */
+import {articleLang, shotVariants, BASE} from '../lib/help'
+import {renderInlineMarkdown} from '../lib/inline-markdown'
+
+const entry = Astro.locals.starlightRoute.entry
+const help = entry.data.help
+if (!help) throw new Error(`<Steps /> в "${entry.id}", а у статьи нет help.steps`)
+const lang = articleLang(entry.id)
+const label = lang === 'en' ? 'Step' : 'Шаг'
+---
+
+<ol class="runbook-steps">
+  {
+    help.steps.map((step, index) => {
+      const shot = step.shot ? shotVariants(step.shot, lang) : undefined
+      return (
+        <li id={`step-${index + 1}`}>
+          <p set:html={renderInlineMarkdown(step.text, BASE)} />
+          {step.hint && <p class="runbook-step-hint" set:html={renderInlineMarkdown(step.hint, BASE)} />}
+          {shot && (
+            <figure class="runbook-shot">
+              <img class="only-light" src={shot.light} alt={`${label} ${index + 1}`} loading="lazy" decoding="async" width="1600" height="1000" />
+              <img class="only-dark" src={shot.dark} alt={`${label} ${index + 1}`} loading="lazy" decoding="async" width="1600" height="1000" />
+            </figure>
+          )}
+        </li>
+      )
+    })
+  }
+</ol>

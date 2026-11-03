@@ -277,13 +277,47 @@ jobs:
       - name: Bundle size
         run: pnpm bundlesize
 
+  # ── Пользовательская справка (services/user-docs) ──────────────────────
+  # Сверка с приложением (маршруты help.routes, verified.sources, пары ru/en), сборка по
+  # аудиториям и битые ссылки. Медиа здесь не снимаются: это ручная джоба user-docs-media.yml.
+
+  user-docs:
+    name: User help · Check, build & links
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: services/user-docs
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+        with:
+          package_json_file: services/user-docs/package.json
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: services/user-docs/pnpm-lock.yaml
+      - name: Install
+        run: pnpm install --frozen-lockfile
+      - name: Check against the app
+        run: node scripts/check.mjs
+      - name: Build (user + admin)
+        run: pnpm build
+      - name: Broken links
+        run: node scripts/check-links.mjs
+      - name: No admin article in the user build
+        run: |
+          if grep -rl 'admin/runners' dist/user --include='*.json' --include='*.html'; then
+            echo "Статья администратора попала в сборку пользователя"; exit 1
+          fi
+
   # ── Sentinel — единственный required-статус в branch protection. ──────────
   # Список джобов правится здесь, а не в настройках репозитория.
 
   all-checks-passed:
     name: All checks passed
     if: always()
-    needs: [backend-lint, backend-test-unit, backend-test-no-server, backend-coverage, frontend]
+    needs: [backend-lint, backend-test-unit, backend-test-no-server, backend-coverage, frontend, user-docs]
     runs-on: ubuntu-latest
     steps:
       - name: Verify
