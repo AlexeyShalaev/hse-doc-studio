@@ -108,13 +108,13 @@ def install_landing_root(app: FastAPI, *, mode: StudioMode, static_dir: Path) ->
     index_html = static_dir / "index.html"
     image = static_dir / OG_IMAGE_PATH.lstrip("/")
 
-    @app.get(OG_IMAGE_PATH, include_in_schema=False)
+    @app.api_route(OG_IMAGE_PATH, methods=["GET", "HEAD"], include_in_schema=False)
     async def landing_image() -> Response:
         if not image.is_file():
             return Response(status_code=404)
         return FileResponse(image, headers={"Cache-Control": _OG_IMAGE_CACHE})
 
-    @app.get("/", include_in_schema=False)
+    @app.api_route("/", methods=["GET", "HEAD"], include_in_schema=False)
     async def root(request: Request) -> Response:
         plain = FileResponse(index_html)
         if mode is not StudioMode.server:

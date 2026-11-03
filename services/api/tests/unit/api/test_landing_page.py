@@ -154,3 +154,10 @@ def test__image__is_served_with_a_cache_header_and_404_when_missing(tmp_path: Pa
     assert ok.content == b"\x89PNG-fake"
     assert "max-age" in ok.headers["cache-control"]
     assert client.get(OG_IMAGE_PATH).status_code == 404
+
+
+def test__root_and_image__answer_head_requests_for_link_preview_bots(tmp_path: Path) -> None:
+    client = _client(tmp_path, _Repo())
+
+    assert client.head("/").status_code == 200
+    assert client.head(OG_IMAGE_PATH).status_code == 200
