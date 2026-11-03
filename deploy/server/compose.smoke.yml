@@ -11,3 +11,10 @@ services:
       HSE_STUDIO__DIAGNOSTICS__PUBLIC_ENDPOINT: "true"
       # Плановый проход чаще, чтобы страница в смоуке не ждала пять минут.
       HSE_STUDIO__DIAGNOSTICS__INTERVAL_S: "30"
+      # Страница «Обновления» (e2e/tests/updates.spec.ts): исполнителя «kubernetes» играет сам тест через протокол
+      # апдейтера (токен из этой строки), а фид релизов тест отдаёт со своей стороны (E2E_FEED_PORT, порт хоста).
+      HSE_STUDIO__SERVER_UPDATE__EXECUTOR: kubernetes
+      HSE_STUDIO__SERVER_UPDATE__UPDATER_TOKEN: e2e-updater-token
+      HSE_STUDIO__UPDATE_FEED_URL: http://host.docker.internal:${E2E_FEED_PORT:-17299}/releases.json
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
