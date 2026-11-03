@@ -132,6 +132,29 @@ migrations:
   activeDeadlineSeconds: 600
   resources: {}
 
+# Обновление версии из админки в Kubernetes (docs/design/auto-update.md, раздел 5a). По умолчанию выключено:
+# тогда версию ставит оператор (helm upgrade --atomic или GitOps), страница «Обновления» показывает команду.
+# enabled=true добавляет сервис updater со своим ServiceAccount. Его Role строго на namespace релиза: get и patch одного
+# Deployment api по имени, Job (create, get, list, watch, delete), pods и pods/log только на чтение. Секреты, ClusterRole
+# и чужие namespace недоступны. Снимка базы нет: перед обновлением идёт полный бэкап (раздел «Бэкапы») или нужно
+# подтвердить риск; откат образа возможен, пока миграции не менялись, иначе статус «Нужны руки».
+updater:
+  enabled: false
+  # Общий секрет api и апдейтера (Bearer). Или ключ updater-token в secrets.existingSecret.
+  token: ""
+  resources:
+    requests: {cpu: 50m, memory: 128Mi}
+    limits: {memory: 512Mi}
+  nodeSelector: {}
+  tolerations: []
+  affinity: {}
+  podAnnotations: {}
+  # Сколько ждать: остановку api, миграции (Job), здоровье новой версии, старт пода Job (pull образа).
+  stopTimeoutSeconds: 180
+  migrateTimeoutSeconds: 3600
+  healthTimeoutSeconds: 300
+  podStartTimeoutSeconds: 300
+
 ingress:
   enabled: false
   className: ""

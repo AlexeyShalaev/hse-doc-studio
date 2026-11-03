@@ -17,6 +17,8 @@ _VALUES = _CHART / "ci" / "values-test.yaml"
 _GOLDEN = _CHART / "ci" / "rendered.golden.yaml"
 _K8S_VALUES = _CHART / "ci" / "values-kubernetes.yaml"
 _K8S_GOLDEN = _CHART / "ci" / "rendered-kubernetes.golden.yaml"
+_UPDATER_VALUES = _CHART / "ci" / "values-updater.yaml"
+_UPDATER_GOLDEN = _CHART / "ci" / "rendered-updater.golden.yaml"
 
 pytestmark = pytest.mark.skipif(shutil.which("helm") is None, reason="helm не установлен")
 
@@ -57,8 +59,12 @@ def test_lint() -> None:
 
 @pytest.mark.parametrize(
     ("values", "golden_path"),
-    [((_VALUES,), _GOLDEN), ((_VALUES, _K8S_VALUES), _K8S_GOLDEN)],
-    ids=["docker", "kubernetes"],
+    [
+        ((_VALUES,), _GOLDEN),
+        ((_VALUES, _K8S_VALUES), _K8S_GOLDEN),
+        ((_VALUES, _UPDATER_VALUES), _UPDATER_GOLDEN),
+    ],
+    ids=["docker", "kubernetes", "updater"],
 )
 def test_template_matches_golden(values: tuple[Path, ...], golden_path: Path) -> None:
     args = [arg for path in values for arg in ("-f", str(path))]
@@ -350,3 +356,101 @@ def test_kubernetes_runner_default_build_namespace_is_release_namespace() -> Non
 def test_unknown_executor_rejected_by_schema() -> None:
     result = _helm("template", "rel", str(_CHART), "-f", str(_VALUES), "--set", "runner.executor=podman")
     assert result.returncode != 0
+
+
+# ---- исполнитель обновлений kubernetes (updater.enabled) ----
+
+_UPDATER_CONFIG = (
+    Path(__file__).resolve().parents[2] / "hse_doc_studio" / "infra" / "update" / "server_updater" / "config.py"
+)
+
+
+def _updater(*extra: str) -> tuple[list[dict[str, Any]], dict[str, Any]]:
+    docs = _render("-f", str(_UPDATER_VALUES), *extra)
+    updater = next(d for d in _by_kind(docs, "Deployment") if d["metadata"]["name"].endswith("-updater"))
+    return docs, updater
+
+
+def test_updater_absent_by_default() -> None:
+    docs = _render()
+    assert not [d for d in docs if d["metadata"]["name"].endswith("-updater")]
+    assert _by_kind(docs, "Role") == []
+    env = _api_env(docs)
+    assert "HSE_STUDIO__SERVER_UPDATE__EXECUTOR" not in env
+    assert "HSE_STUDIO__SERVER_UPDATE__UPDATER_TOKEN" not in env
+    assert "updater-token" not in _by_kind(docs, "Secret")[0]["stringData"]
+
+
+def test_updater_enabled_switches_the_api_to_the_kubernetes_executor() -> None:
+    docs, _ = _updater()
+    env = _api_env(docs)
+    assert env["HSE_STUDIO__SERVER_UPDATE__EXECUTOR"]["value"] == "kubernetes"
+    token = env["HSE_STUDIO__SERVER_UPDATE__UPDATER_TOKEN"]["valueFrom"]["secretKeyRef"]
+    assert token["key"] == "updater-token"
+    assert _by_kind(docs, "Secret")[0]["stringData"]["updater-token"] == "test-updater-token"
+    known = _paths(Settings)
+    assert [k for k in env if k.startswith("HSE_STUDIO__") and k.removeprefix("HSE_STUDIO__") not in known] == []
+    job_env = {e["name"] for e in _by_kind(docs, "Job")[0]["spec"]["template"]["spec"]["containers"][0]["env"]}
+    assert not [n for n in job_env if "SERVER_UPDATE" in n]
+
+
+def test_updater_role_is_namespaced_and_grants_nothing_wider_than_the_design() -> None:
+    docs, _ = _updater("--namespace", "studio")
+
+    (role,) = _by_kind(docs, "Role")
+    assert role["metadata"]["namespace"] == "studio"
+    assert role["rules"] == [
+        {
+            "apiGroups": ["apps"],
+            "resources": ["deployments"],
+            "resourceNames": ["rel-hse-doc-studio-api"],
+            "verbs": ["get", "patch"],
+        },
+        {"apiGroups": ["batch"], "resources": ["jobs"], "verbs": ["create", "get", "list", "watch", "delete"]},
+        {"apiGroups": [""], "resources": ["pods"], "verbs": ["get", "list"]},
+        {"apiGroups": [""], "resources": ["pods/log"], "verbs": ["get"]},
+    ]
+    (binding,) = _by_kind(docs, "RoleBinding")
+    assert binding["subjects"] == [
+        {"kind": "ServiceAccount", "name": "rel-hse-doc-studio-updater", "namespace": "studio"}
+    ]
+    assert binding["roleRef"]["name"] == role["metadata"]["name"]
+    assert _by_kind(docs, "ClusterRole") == []
+    assert _by_kind(docs, "ClusterRoleBinding") == []
+
+
+def test_updater_pod_passes_restricted_and_keeps_to_one_copy() -> None:
+    _, updater = _updater()
+    pod = updater["spec"]["template"]["spec"]
+
+    assert updater["spec"]["replicas"] == 1
+    assert updater["spec"]["strategy"] == {"type": "Recreate"}
+    assert pod["serviceAccountName"] == "rel-hse-doc-studio-updater"
+    assert pod["securityContext"]["runAsNonRoot"] is True
+    assert pod["securityContext"]["seccompProfile"] == {"type": "RuntimeDefault"}
+    assert pod["containers"][0]["securityContext"] == {
+        "allowPrivilegeEscalation": False,
+        "readOnlyRootFilesystem": True,
+        "capabilities": {"drop": ["ALL"]},
+    }
+    assert "hostPath" not in str(pod["volumes"])
+    assert pod["containers"][0]["command"] == ["python", "-m", "hse_doc_studio.infra.update.server_updater"]
+
+
+def test_updater_env_points_at_the_api_deployment_and_names_exist_in_its_config() -> None:
+    _, updater = _updater()
+    env = {e["name"]: e for e in updater["spec"]["template"]["spec"]["containers"][0]["env"]}
+
+    assert env["HSE_UPDATER__EXECUTOR"]["value"] == "kubernetes"
+    assert env["HSE_UPDATER__KUBE__DEPLOYMENT"]["value"] == "rel-hse-doc-studio-api"
+    assert env["HSE_UPDATER__API_URL"]["value"] == "http://rel-hse-doc-studio:8000"
+    assert env["HSE_UPDATER__KUBE__POD_START_TIMEOUT_S"]["value"] == "120"
+    assert env["HSE_UPDATER__TOKEN"]["valueFrom"]["secretKeyRef"]["key"] == "updater-token"
+    source = _UPDATER_CONFIG.read_text(encoding="utf-8")
+    assert [n for n in env if f'"{n}"' not in source] == []
+
+
+def test_updater_requires_a_token_unless_the_secret_is_external() -> None:
+    base = ("template", "rel", str(_CHART), "-f", str(_VALUES), "--set", "updater.enabled=true")
+    assert _helm(*base).returncode != 0
+    assert _helm(*base, "--set", "secrets.existingSecret=mine").returncode == 0

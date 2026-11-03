@@ -1,0 +1,142 @@
+{{- if .Values.updater.enabled }}
+{{- $u := .Values.updater }}
+{{- $name := printf "%s-updater" (include "hds.fullname" .) }}
+{{- $api := printf "%s-api" (include "hds.fullname" .) }}
+# Исполнитель обновлений kubernetes (docs/design/auto-update.md, раздел 5a): меняет образ Deployment api, гоняет миграции
+# Job-ом и ждёт здоровья. Опирается на Deployment и Job, а не на запись релиза Helm.
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: {{ $name }}
+  labels:
+    {{- include "hds.labels" . | nindent 4 }}
+    app.kubernetes.io/component: updater
+---
+# Строго свой namespace: один Deployment по имени (get, patch), Job обновления, чтение подов и их логов для диагностики.
+# Ни secrets, ни configmaps, ни create/delete у Deployment, ни ClusterRole.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: {{ $name }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "hds.labels" . | nindent 4 }}
+    app.kubernetes.io/component: updater
+rules:
+  - apiGroups: [apps]
+    resources: [deployments]
+    resourceNames: [{{ $api }}]
+    verbs: [get, patch]
+  - apiGroups: [batch]
+    resources: [jobs]
+    verbs: [create, get, list, watch, delete]
+  - apiGroups: [""]
+    resources: [pods]
+    verbs: [get, list]
+  - apiGroups: [""]
+    resources: [pods/log]
+    verbs: [get]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: {{ $name }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "hds.labels" . | nindent 4 }}
+    app.kubernetes.io/component: updater
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: {{ $name }}
+subjects:
+  - kind: ServiceAccount
+    name: {{ $name }}
+    namespace: {{ .Release.Namespace }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ $name }}
+  labels:
+    {{- include "hds.labels" . | nindent 4 }}
+    app.kubernetes.io/component: updater
+spec:
+  # Одна копия: две параллельно вели бы один запуск дважды.
+  replicas: 1
+  strategy: {type: Recreate}
+  selector:
+    matchLabels:
+      {{- include "hds.selector" . | nindent 6 }}
+      app.kubernetes.io/component: updater
+  template:
+    metadata:
+      labels:
+        {{- include "hds.selector" . | nindent 8 }}
+        app.kubernetes.io/component: updater
+      annotations:
+        {{- with $u.podAnnotations }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+        checksum/secret: {{ include (print $.Template.BasePath "/secret.yaml") . | sha256sum }}
+    spec:
+      serviceAccountName: {{ $name }}
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: {{ .Values.podSecurityContext.runAsUser }}
+        runAsGroup: {{ .Values.podSecurityContext.runAsGroup }}
+        fsGroup: {{ .Values.podSecurityContext.fsGroup }}
+        seccompProfile: {type: RuntimeDefault}
+      containers:
+        - name: updater
+          image: {{ include "hds.image" . }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          command: ["python", "-m", "hse_doc_studio.infra.update.server_updater"]
+          env:
+            - {name: HSE_UPDATER__EXECUTOR, value: kubernetes}
+            - {name: HSE_UPDATER__API_URL, value: "http://{{ include "hds.fullname" . }}:{{ .Values.service.port }}"}
+            - {name: HSE_UPDATER__TOKEN, valueFrom: {secretKeyRef: {name: {{ include "hds.secretName" . }}, key: updater-token}}}
+            - {name: HSE_UPDATER__HEALTH_TOKEN, valueFrom: {secretKeyRef: {name: {{ include "hds.secretName" . }}, key: health-token, optional: true}}}
+            - {name: HSE_UPDATER__DATA_DIR, value: /var/lib/hse-updater}
+            - {name: HSE_UPDATER__HEALTH_TIMEOUT_S, value: {{ default 300 $u.healthTimeoutSeconds | quote }}}
+            - {name: HSE_UPDATER__KUBE__DEPLOYMENT, value: {{ $api | quote }}}
+            - {name: HSE_UPDATER__KUBE__CONTAINER, value: api}
+            - {name: HSE_UPDATER__KUBE__NAMESPACE, valueFrom: {fieldRef: {fieldPath: metadata.namespace}}}
+            - {name: HSE_UPDATER__KUBE__STOP_TIMEOUT_S, value: {{ default 180 $u.stopTimeoutSeconds | quote }}}
+            - {name: HSE_UPDATER__KUBE__MIGRATE_TIMEOUT_S, value: {{ default 3600 $u.migrateTimeoutSeconds | quote }}}
+            - {name: HSE_UPDATER__KUBE__POD_START_TIMEOUT_S, value: {{ default 300 $u.podStartTimeoutSeconds | quote }}}
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities: {drop: [ALL]}
+          volumeMounts:
+            - {name: data, mountPath: /var/lib/hse-updater}
+            - {name: tmp, mountPath: /tmp}
+          {{- with $u.resources }}
+          resources:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+      volumes:
+        # Очередь событий для api (он гаснет на время обновления). Состояние запуска дублируется в аннотациях Deployment api,
+        # поэтому потеря тома при пересоздании пода не страшна.
+        - name: data
+          emptyDir: {}
+        - name: tmp
+          emptyDir: {}
+      {{- with $u.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with $u.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with $u.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+{{- end }}

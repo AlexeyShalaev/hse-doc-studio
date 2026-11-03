@@ -1,0 +1,5 @@
+# Поверх values-test.yaml: обновление из админки в Kubernetes (golden-рендер rendered-updater.golden.yaml).
+updater:
+  enabled: true
+  token: test-updater-token
+  podStartTimeoutSeconds: 120

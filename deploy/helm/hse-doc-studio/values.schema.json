@@ -166,6 +166,23 @@
       },
       "additionalProperties": false
     },
+    "updater": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {"type": "boolean"},
+        "token": {"type": "string"},
+        "resources": {"type": "object"},
+        "nodeSelector": {"type": "object"},
+        "tolerations": {"type": "array"},
+        "affinity": {"type": "object"},
+        "podAnnotations": {"type": "object"},
+        "stopTimeoutSeconds": {"type": "integer", "minimum": 30},
+        "migrateTimeoutSeconds": {"type": "integer", "minimum": 60},
+        "healthTimeoutSeconds": {"type": "integer", "minimum": 60},
+        "podStartTimeoutSeconds": {"type": "integer", "minimum": 30}
+      }
+    },
     "ingress": {
       "type": "object",
       "properties": {
