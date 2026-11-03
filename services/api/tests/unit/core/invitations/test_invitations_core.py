@@ -7,7 +7,6 @@ from uuid import uuid4
 
 import pytest
 from hse_doc_studio.core.access.entities import Grant, Role
-from hse_doc_studio.core.enums import Lang
 from hse_doc_studio.core.identity.entities import User, UserStatus
 from hse_doc_studio.core.identity.errors import IdentityError, IdentityErrorCode
 from hse_doc_studio.core.invitations.entities import (
@@ -21,7 +20,7 @@ from hse_doc_studio.core.invitations.entities import (
     stronger,
 )
 from hse_doc_studio.core.invitations.policy import email_allowed_for_org, external_invites_allowed
-from hse_doc_studio.infra.notifications.mailer import render_invitation, render_notification
+from hse_doc_studio.infra.notifications.mailer import SmtpNotificationMailer
 from hse_doc_studio.use_cases.notifications.notifier import Notifier
 from hse_doc_studio.use_cases.projects.invitations import check_persona, check_terms_within
 
@@ -109,23 +108,24 @@ async def test__check_persona() -> None:
     assert exc.value.code is IdentityErrorCode.persona_unknown
 
 
+class _NoSender:
+    enabled = True
+
+    async def send(self, to: str, subject: str, body: str, *, html: str | None = None) -> None: ...
+
+
 def test__mail_texts__ru_and_en_name_the_project_and_link_to_inbox() -> None:
+    mailer = SmtpNotificationMailer(_NoSender(), "https://s.ru/")
     payload = NotificationPayload(project_name="ВКР", actor_name="Анна", role="reviewer")
-    subject, body = render_notification(NotificationKind.project_invitation, payload, Lang.ru, "https://s.ru/")  # type: ignore[misc]
-    assert "Анна" in subject
-    assert "«Рецензент»" in body
-    assert "https://s.ru/inbox" in body
-    en = render_notification(NotificationKind.transfer_request, payload, Lang.en, "https://s.ru")
+    ru = mailer.render_notification("a@x.ru", NotificationKind.project_invitation, payload, locale="ru")
+    assert ru is not None
+    assert "Анна" in ru.subject
+    assert "«Рецензент»" in ru.text
+    assert "https://s.ru/inbox" in ru.text
+    en = mailer.render_notification("a@x.ru", NotificationKind.transfer_request, payload, locale="en")
     assert en is not None
-    assert "transferring" in en[0]
-    assert render_notification(NotificationKind.member_removed, payload, Lang.ru, None) is None
-    subject, body = render_invitation(
-        project_name="ВКР", inviter_name="Анна", role="editor", link="https://x/project-invite/t", message="Привет",
-        lang=Lang.ru,
-    )  # fmt: skip
-    assert "https://x/project-invite/t" in body
-    assert "«Привет»" in body
-    assert "Редактор" in body
+    assert "transferring" in en.subject
+    assert mailer.render_notification("a@x.ru", NotificationKind.member_removed, payload, locale="ru") is None
 
 
 class _Repo:

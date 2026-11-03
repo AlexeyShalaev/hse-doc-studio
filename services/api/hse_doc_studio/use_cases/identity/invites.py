@@ -95,7 +95,13 @@ class CreateInviteUC:
         link = auth_link(self._public_url, INVITE_PATH, token)
         # Приглашение на адрес уходит письмом после коммита; без SMTP и для приглашения «на любого» ссылку
         # пересылает сам админ.
-        shown = await self._delivery.deliver(MailKind.invite, invite.email, link, now) if invite.email else link
+        shown = (
+            await self._delivery.deliver(
+                MailKind.invite, invite.email, link, now, ttl=ttl, params={"inviter": actor.name}
+            )
+            if invite.email
+            else link
+        )
         return CreatedInvite(invite=invite, token=token, link=shown)
 
 

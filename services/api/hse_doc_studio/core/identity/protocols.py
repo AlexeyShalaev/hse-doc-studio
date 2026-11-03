@@ -253,7 +253,9 @@ class IRateLimiter(Protocol):
 class IMailSender(Protocol):
     @property
     def enabled(self) -> bool: ...
-    async def send(self, to: str, subject: str, body: str) -> None: ...
+    async def send(self, to: str, subject: str, body: str, *, html: str | None = None) -> None:
+        """Письмо уходит текстом, а с `html` как multipart/alternative: текстовая часть и HTML."""
+        ...
 
 
 class IActorResolver(Protocol):

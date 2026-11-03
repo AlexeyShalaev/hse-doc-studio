@@ -29,7 +29,7 @@ The administrator enters an address and the Studio sends a mail with a link. An 
 
 ## Mail (SMTP)
 
-The Mail section in the admin area, or `HSE_STUDIO__MAIL__*`. The SMTP password is accepted on write and never returned. The test mail button sends a message to the administrator's account address. Mail goes through an outbox queue, so an SMTP failure does not lose a message.
+The Mail section in the admin area, or `HSE_STUDIO__MAIL__*`. The SMTP password is accepted on write and never returned. The test mail button sends a message to the administrator's account address. Mail goes through an outbox queue, so an SMTP failure does not lose a message. Which emails are sent, in which language and how they look: [Server emails](mail.md).
 
 Mail is needed for invitations, address confirmation and password reset.
 

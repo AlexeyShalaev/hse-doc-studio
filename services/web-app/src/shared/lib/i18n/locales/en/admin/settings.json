@@ -193,5 +193,30 @@
   "save": "Save",
   "saving": "Saving…",
   "savedToast": "Settings saved",
-  "fixFields": "Fix the highlighted fields"
+  "fixFields": "Fix the highlighted fields",
+  "mailPreview": {
+    "title": "How emails look",
+    "sub": "Sample Studio emails with made-up data. Nothing is sent: an email goes out in the language of the recipient's account.",
+    "template": "Email type",
+    "language": "Email language",
+    "subject": "Subject",
+    "frame": "Email preview",
+    "failed": "Could not load the sample email.",
+    "showText": "Show the text part",
+    "hideText": "Hide the text part",
+    "names": {
+      "verify_email": "Email confirmation",
+      "reset_password": "Password reset",
+      "invite": "Invitation to the Studio",
+      "email_change": "Email change",
+      "reset_notice": "Password reset link issued",
+      "passkey_added": "Passkey added",
+      "passkey_reset": "Passkeys reset",
+      "project_invitation": "Project invitation (to the Inbox)",
+      "project_invitation_link": "Project invitation (by link)",
+      "access_request": "Project access request",
+      "transfer_request": "Project transfer",
+      "smtp_test": "Test email"
+    }
+  }
 }

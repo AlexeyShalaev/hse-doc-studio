@@ -720,6 +720,14 @@ export const AdminSmtpTestResultSchema = z.strictObject({
   ok: z.boolean(),
   error: z.string().nullable(),
 });
+export const AdminMailPreviewSchema = z.strictObject({
+  template: z.string(),
+  lang: z.string(),
+  subject: z.string(),
+  text: z.string(),
+  html: z.string(),
+  templates: z.array(z.string()),
+});
 export const AdminOidcProviderSchema = z.strictObject({
   id: z.string(),
   label: z.string(),
@@ -930,6 +938,7 @@ export type UpdateAdminSmtpRequest = z.infer<
   typeof UpdateAdminSmtpRequestSchema
 >;
 export type AdminSmtpTestResult = z.infer<typeof AdminSmtpTestResultSchema>;
+export type AdminMailPreview = z.infer<typeof AdminMailPreviewSchema>;
 export type AdminOidcProvider = z.infer<typeof AdminOidcProviderSchema>;
 export type CreateAdminOidcProviderRequest = z.infer<
   typeof CreateAdminOidcProviderRequestSchema

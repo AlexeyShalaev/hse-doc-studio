@@ -84,15 +84,23 @@ class FakeSender:
         self._enabled = enabled
         self.fail = fail
         self.sent: list[tuple[str, str, str]] = []
+        self.html: list[str | None] = []
 
     @property
     def enabled(self) -> bool:
         return self._enabled
 
-    async def send(self, to: str, subject: str, body: str) -> None:
+    async def send(self, to: str, subject: str, body: str, *, html: str | None = None) -> None:
         if self.fail:
             raise OSError("smtp down")
         self.sent.append((to, subject, body))
+        self.html.append(html)
+
+
+def token_from_mail(body: str) -> str:
+    """Токен из ссылки в тексте письма: ссылка стоит в отдельной строке."""
+    link = next(line for line in body.splitlines() if line.startswith("https://studio.test/"))
+    return link.rpartition("/")[2]
 
 
 class Clock:
@@ -151,7 +159,7 @@ class World:
         return AuthSettingsService(self.settings, self.env)
 
     def delivery(self) -> LinkDelivery:
-        return RecordingDelivery(self.sender, self.outbox, links=self.links)
+        return RecordingDelivery(self.sender, self.outbox, links=self.links, public_url="https://studio.test")
 
     def register_uc(self) -> RegisterUC:
         return RegisterUC(

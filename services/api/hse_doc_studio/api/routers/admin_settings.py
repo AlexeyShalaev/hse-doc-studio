@@ -13,6 +13,7 @@ from hse_doc_studio.api.passkey_party import relying_party_resolution
 from hse_doc_studio.api.schemas.admin import PageParams, page_params, search_param, sort_param
 from hse_doc_studio.api.schemas.session import (
     AdminAuthSettings,
+    AdminMailPreview,
     AdminOidcProvider,
     AdminOidcProviderPage,
     AdminRegistrationSettings,
@@ -52,6 +53,7 @@ from hse_doc_studio.use_cases.admin.settings import (
     UpdateAuthMethodsUC,
     UpdateRegistrationUC,
 )
+from hse_doc_studio.use_cases.identity.mail_preview import PreviewMailUC
 from hse_doc_studio.use_cases.identity.smtp_settings import (
     GetSmtpSettingsUC,
     SendTestMailUC,
@@ -202,6 +204,22 @@ async def post_smtp_test(body: AdminSmtpTestRequest, request: Request, response:
     response.headers.update(_NO_STORE)
     result = await (await _uc(request, SendTestMailUC)).execute(_actor(), body.to)
     return AdminSmtpTestResult(ok=result.ok, error=result.error)
+
+
+@router.get("/settings/smtp/preview", response_model=AdminMailPreview)
+async def get_mail_preview(
+    request: Request, response: Response, template: str | None = None, lang: str = "ru"
+) -> AdminMailPreview:
+    response.headers.update(_NO_STORE)
+    preview = (await _uc(request, PreviewMailUC)).execute(_actor(), template, lang)
+    return AdminMailPreview(
+        template=preview.template.value,
+        lang=preview.lang.value,
+        subject=preview.subject,
+        text=preview.text,
+        html=preview.html,
+        templates=[t.value for t in preview.templates],
+    )
 
 
 _oidc_sort = sort_param(allowed=OIDC_SORTS, default="created_at")

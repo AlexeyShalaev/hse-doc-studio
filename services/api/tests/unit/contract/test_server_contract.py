@@ -194,6 +194,7 @@ _SCHEMAS: dict[str, Any] = {
     "UpdateAdminSmtpRequest": s.UpdateAdminSmtpRequest,
     "AdminSmtpTestRequest": s.AdminSmtpTestRequest,
     "AdminSmtpTestResult": s.AdminSmtpTestResult,
+    "AdminMailPreview": s.AdminMailPreview,
     "AdminOidcProvider": s.AdminOidcProvider,
     "AdminOidcProviderList": s.AdminOidcProviderPage,
     "CreateAdminOidcProviderRequest": s.CreateAdminOidcProviderRequest,

@@ -42,9 +42,9 @@ class ConfiguredMailSender:
         self._sender = SmtpMailSender(_as_settings(params)) if params is not None else None
         self._loaded_at = time.monotonic()
 
-    async def send(self, to: str, subject: str, body: str) -> None:
+    async def send(self, to: str, subject: str, body: str, *, html: str | None = None) -> None:
         if time.monotonic() - self._loaded_at > _REFRESH_AFTER_S:
             await self.refresh()
         if self._sender is None:
             raise RuntimeError("SMTP is not configured")
-        await self._sender.send(to, subject, body)
+        await self._sender.send(to, subject, body, html=html)

@@ -41,6 +41,8 @@ export type AuthSettingsFormProps = {
   smtp: AdminSmtpSettings;
   /** Провайдеры единого входа: свой раздел, правки в нём применяются сразу. */
   oidc: ReactNode;
+  /** Предпросмотр писем: свой раздел, ничего не сохраняет. */
+  mailPreview?: ReactNode;
   /** Отказ сервера приходит отклонённым промисом. */
   saveRegistration: (patch: UpdateAdminRegistrationRequest) => Promise<unknown>;
   saveAuth: (patch: UpdateAdminAuthRequest) => Promise<unknown>;
@@ -58,6 +60,7 @@ export const AuthSettingsForm = ({
   auth,
   smtp,
   oidc,
+  mailPreview = null,
   saveRegistration,
   saveAuth,
   saveSmtp,
@@ -204,6 +207,7 @@ export const AuthSettingsForm = ({
         issues={shownSmtp}
         test={test}
       />
+      {mailPreview}
       <StickySaveBar
         dirtyCount={dirtyCount}
         busy={busy}

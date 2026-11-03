@@ -32,6 +32,7 @@ from hse_doc_studio.core.identity.smtp_settings import (
     smtp_config_from,
     smtp_config_of,
 )
+from hse_doc_studio.core.mail import MailTemplate, compose, resolve_lang
 from hse_doc_studio.core.secrets import column_aad
 from hse_doc_studio.core.uow import IUnitOfWork
 from hse_doc_studio.use_cases.admin.users import require_admin
@@ -212,28 +213,33 @@ class SmtpTestResult:
 
 
 class SendTestMailUC:
-    def __init__(self, sender: IMailSender, users: IUserRepository, audit: IAuditLog) -> None:
+    def __init__(
+        self, sender: IMailSender, users: IUserRepository, audit: IAuditLog, public_url: str | None = None
+    ) -> None:
         self._sender = sender
         self._users = users
         self._audit = audit
+        self._public_url = public_url
 
     async def execute(self, actor: Actor, to: str | None) -> SmtpTestResult:
         """Письмо уходит по сохранённым настройкам; сбой возвращается как результат, а не как ошибка запроса."""
         admin_id = require_admin(actor)
         # Актор несёт подпись коммитов, а не почту аккаунта: по умолчанию пишем на адрес самого админа из аккаунта.
-        account = None if to else await self._users.get(admin_id)
+        account = await self._users.get(admin_id)
         recipient = (to or (account.email if account else "")).strip()
         if not is_valid_email(recipient):
             raise _invalid("Укажите адрес получателя.", "Enter a recipient address.")
         if not self._sender.enabled:
             raise _invalid("SMTP не настроен.", "SMTP is not configured.")
+        # Язык письма: язык аккаунта администратора, иначе язык интерфейса его запроса.
+        mail = compose(
+            MailTemplate.smtp_test,
+            resolve_lang(account.locale if account else None),
+            to=recipient,
+            server_url=self._public_url,
+        )
         try:
-            await self._sender.send(
-                recipient,
-                "HSE Doc Studio: проверка почты / mail check",
-                "Это тестовое письмо Студии. Если вы его читаете, отправка настроена верно.\n\n"
-                "This is a test message from the Studio. If you can read it, mail sending works.",
-            )
+            await self._sender.send(recipient, mail.subject, mail.text, html=mail.html)
         except Exception as exc:
             await self._audit.record("settings.smtp_test", actor_id=admin_id, details={"ok": False})
             return SmtpTestResult(False, f"{type(exc).__name__}: {str(exc)[:200]}")

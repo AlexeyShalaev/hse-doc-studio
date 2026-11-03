@@ -81,6 +81,7 @@ class RequestEmailChangeUC:
             auth_link(self._public_url, CONFIRM_EMAIL_PATH, secret),
             now,
             locale=user.locale,
+            ttl=CHANGE_TTL,
         )
         return EmailChangeResult(link)
 

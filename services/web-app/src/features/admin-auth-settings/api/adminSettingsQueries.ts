@@ -14,6 +14,8 @@ export const adminSettingsKeys = {
   registration: () => [...adminSettingsKeys.all, "registration"] as const,
   auth: () => [...adminSettingsKeys.all, "auth"] as const,
   smtp: () => [...adminSettingsKeys.all, "smtp"] as const,
+  mailPreview: (template: string | null, lang: string) =>
+    [...adminSettingsKeys.all, "mail-preview", template, lang] as const,
   providers: () => [...adminSettingsKeys.all, "oidc-providers"] as const,
 };
 
@@ -80,6 +82,15 @@ export const useUpdateSmtp = () => {
     },
   });
 };
+
+/** Образец письма с данными-выдумкой: меняется только с версией сервера, поэтому кэшируется. */
+export const useMailPreview = (template: string | null, lang: string) =>
+  useQuery({
+    queryKey: adminSettingsKeys.mailPreview(template, lang),
+    queryFn: () => adminSettingsApi.mailPreview(template, lang),
+    staleTime: 5 * 60_000,
+    placeholderData: (previous) => previous,
+  });
 
 export const useTestSmtp = () =>
   useMutation({

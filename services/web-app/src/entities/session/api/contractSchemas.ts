@@ -176,6 +176,7 @@ export const CONTRACT_SCHEMAS: Record<string, ZodType> = {
   UpdateAdminSmtpRequest: s.UpdateAdminSmtpRequestSchema,
   AdminSmtpTestRequest: s.AdminSmtpTestRequestSchema,
   AdminSmtpTestResult: s.AdminSmtpTestResultSchema,
+  AdminMailPreview: s.AdminMailPreviewSchema,
   AdminOidcProvider: s.AdminOidcProviderSchema,
   AdminOidcProviderList: s.AdminOidcProviderPageSchema,
   CreateAdminOidcProviderRequest: s.CreateAdminOidcProviderRequestSchema,

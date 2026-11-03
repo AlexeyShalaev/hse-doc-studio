@@ -8,5 +8,5 @@ class LinkOnlyMailSender:
     def enabled(self) -> bool:
         return False
 
-    async def send(self, to: str, subject: str, body: str) -> None:
+    async def send(self, to: str, subject: str, body: str, *, html: str | None = None) -> None:
         raise RuntimeError("SMTP is not configured")

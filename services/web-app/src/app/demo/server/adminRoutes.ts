@@ -6,7 +6,7 @@ import type {
   AdminSettingState,
   RegistrationMode,
 } from "@entities/session";
-import { boolParam, invalidQuery, offsetList } from "./demoList";
+import { boolParam, invalidQuery, offsetList, queryOne } from "./demoList";
 import { createInstallRoutes } from "./installRoutes";
 import { createPickerRoutes } from "./pickerRoutes";
 import { createOpsRoutes } from "./opsRoutes";
@@ -29,6 +29,21 @@ const MODES: readonly RegistrationMode[] = [
   "domains",
   "open",
   "closed",
+];
+
+const DEMO_MAIL_TEMPLATES = [
+  "verify_email",
+  "reset_password",
+  "invite",
+  "email_change",
+  "reset_notice",
+  "passkey_added",
+  "passkey_reset",
+  "project_invitation",
+  "project_invitation_link",
+  "access_request",
+  "transfer_request",
+  "smtp_test",
 ];
 
 const str = (value: unknown): string =>
@@ -311,6 +326,30 @@ export const createAdminRoutes = (
           });
         }
         return demoJson({ ok: true, error: null });
+      }),
+    },
+    {
+      method: "GET",
+      pattern: "/settings/smtp/preview",
+      handler: guarded((req) => {
+        const template =
+          queryOne(req, "template") ?? DEMO_MAIL_TEMPLATES[0] ?? "";
+        const lang = queryOne(req, "lang") ?? "ru";
+        if (
+          !DEMO_MAIL_TEMPLATES.includes(template) ||
+          !["ru", "en"].includes(lang)
+        ) {
+          return invalid();
+        }
+        const subject = `${template} (${lang})`;
+        return demoJson({
+          template,
+          lang,
+          subject,
+          text: `${subject}\n\nDemo sample: the real server renders the full letter.`,
+          html: `<!DOCTYPE html><html lang="${lang}"><body style="font-family:sans-serif;padding:24px"><h1>${subject}</h1><p>Demo sample: the real server renders the full letter.</p></body></html>`,
+          templates: DEMO_MAIL_TEMPLATES,
+        });
       }),
     },
     {

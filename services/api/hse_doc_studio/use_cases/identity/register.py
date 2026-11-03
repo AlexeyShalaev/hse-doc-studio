@@ -123,6 +123,7 @@ class RegisterUC:
                 auth_link(self._public_url, VERIFY_PATH, secret),
                 now,
                 locale=user.locale,
+                ttl=VERIFY_TTL,
             )
         return RegisterResult(decision.outcome, link)
 

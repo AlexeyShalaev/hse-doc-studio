@@ -3,12 +3,20 @@ from __future__ import annotations
 import asyncio
 import socket
 from collections.abc import Iterator
+from datetime import UTC, datetime, timedelta
+from email import policy
+from email.message import EmailMessage
+from email.parser import BytesParser
 
 import aiosmtplib
 import pytest
 from aiosmtpd.controller import Controller
 from aiosmtpd.smtp import AuthResult, LoginPassword
+from hse_doc_studio.core.identity.entities import MailKind
 from hse_doc_studio.infra.identity.smtp_mailer import SmtpMailSender, SmtpSettings
+from hse_doc_studio.use_cases.identity.mail import LinkDelivery
+
+from tests.fakes.auth import InMemoryMailOutboxRepository
 
 # aiosmtpd по умолчанию зовёт socket.getfqdn() (обратный DNS, на раннерах macOS висит), поэтому
 # имя сервера задано явно; запас на старт потока нужен медленным раннерам.
@@ -130,3 +138,82 @@ async def test_silent_server_times_out() -> None:
 async def test_refused_connection_raises() -> None:
     with pytest.raises((aiosmtplib.SMTPException, OSError)):
         await SmtpMailSender(_settings(_free_port(), timeout_s=1)).send("anna@example.org", "Тема", "Текст")
+
+
+def _parse(raw: bytes) -> EmailMessage:
+    message = BytesParser(policy=policy.default).parsebytes(raw)
+    assert isinstance(message, EmailMessage)
+    return message
+
+
+async def test_html_makes_a_multipart_alternative_with_text_first(inbox: tuple[_Inbox, int]) -> None:
+    handler, port = inbox
+    sender = SmtpMailSender(_settings(port, from_address="studio@example.org", from_name="Студия"))
+
+    await sender.send(
+        "anna@example.org", "Сброс пароля", "Текст письма\nhttps://studio.test/reset/abc", html="<p>HTML</p>"
+    )
+
+    message = _parse(handler.messages[0].content)
+    assert message.get_content_type() == "multipart/alternative"
+    assert [part.get_content_type() for part in message.iter_parts()] == ["text/plain", "text/html"]
+    text, html = message.iter_parts()
+    assert "https://studio.test/reset/abc" in text.get_content()
+    assert html.get_content().strip() == "<p>HTML</p>"
+    assert text.get_content_charset() == "utf-8"
+    assert html.get_content_charset() == "utf-8"
+    assert message["Subject"] == "Сброс пароля"
+    assert message["Auto-Submitted"] == "auto-generated"
+
+
+async def test_without_html_the_message_stays_plain_text(inbox: tuple[_Inbox, int]) -> None:
+    handler, port = inbox
+
+    await SmtpMailSender(_settings(port)).send("anna@example.org", "Тема", "Текст")
+
+    message = _parse(handler.messages[0].content)
+    assert message.get_content_type() == "text/plain"
+    assert not message.is_multipart()
+
+
+async def test_line_breaks_in_the_subject_do_not_add_headers(inbox: tuple[_Inbox, int]) -> None:
+    handler, port = inbox
+
+    await SmtpMailSender(_settings(port)).send("anna@example.org", "Тема\r\nBcc: evil@example.org", "Текст")
+
+    message = _parse(handler.messages[0].content)
+    assert message["Bcc"] is None
+    assert message["Subject"] == "Тема Bcc: evil@example.org"
+
+
+@pytest.mark.parametrize(
+    ("locale", "subject", "needle"),
+    [("en", "Password reset", "Set a new password"), ("ru", "Сброс пароля", "Задать новый пароль")],
+)
+async def test_delivery_over_smtp_sends_a_localized_multipart_letter(
+    inbox: tuple[_Inbox, int], locale: str, subject: str, needle: str
+) -> None:
+    handler, port = inbox
+    delivery = LinkDelivery(
+        SmtpMailSender(_settings(port, from_address="studio@example.org")),
+        InMemoryMailOutboxRepository(),
+        public_url="https://studio.example.org",
+    )
+
+    shown = await delivery.deliver(
+        MailKind.reset_password,
+        "anna@example.org",
+        "https://studio.example.org/reset/tok123",
+        datetime(2026, 11, 3, tzinfo=UTC),
+        locale=locale,
+        ttl=timedelta(hours=1),
+    )
+
+    assert shown is None
+    message = _parse(handler.messages[0].content)
+    assert message["Subject"] == subject
+    assert message["To"] == "anna@example.org"
+    text, html = message.iter_parts()
+    assert "https://studio.example.org/reset/tok123" in text.get_content()
+    assert needle in html.get_content()
+    assert 'href="https://studio.example.org/reset/tok123"' in html.get_content()

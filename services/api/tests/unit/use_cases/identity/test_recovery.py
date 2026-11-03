@@ -9,14 +9,14 @@ from hse_doc_studio.core.identity.errors import IdentityError, IdentityErrorCode
 from hse_doc_studio.core.identity.normalize import hash_token
 from hse_doc_studio.use_cases.identity.recovery import ADMIN_RESET_TTL, RESET_TTL, VERIFY_TTL
 
-from .conftest import T0, FakeSender, World
+from .conftest import T0, FakeSender, World, token_from_mail
 
 NEW_PASSWORD = "a much longer new passphrase"
 ADMIN = Actor.user("admin", is_instance_admin=True)
 
 
 def _token(body: str) -> str:
-    return body.strip().splitlines()[1].rpartition("/")[2]
+    return token_from_mail(body)
 
 
 async def _unverified(world: World, status: UserStatus = UserStatus.active) -> str:
