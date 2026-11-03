@@ -503,7 +503,9 @@ export const DocumentTabs = ({ projectId, docId }: DocumentTabsProps) => {
         </div>
       </div>
 
-      {buildBlock !== null && <BuildBlockedNotice block={buildBlock} />}
+      {buildBlock !== null && (
+        <BuildBlockedNotice block={buildBlock} projectId={projectId} />
+      )}
 
       <div
         className="tabs"

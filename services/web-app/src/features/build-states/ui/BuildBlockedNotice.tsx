@@ -2,6 +2,7 @@ import { ServerOff } from "lucide-react";
 import { Link } from "react-router";
 import { useTranslation } from "react-i18next";
 import type { BuildBlock } from "@entities/compile";
+import { LocalStudioLink } from "@entities/local-studio";
 import { useCapabilities } from "@entities/session";
 import { useBuildBlockText } from "../lib/blockText";
 
@@ -9,6 +10,8 @@ export type BuildBlockedNoticeProps = {
   block: BuildBlock;
   /** compact: узкая панель (подвал списка документов), без отступов плашки. */
   compact?: boolean;
+  /** Проект, который предложить открыть в локальной Студии («Собрать локально»). */
+  projectId?: string | null;
 };
 
 /**
@@ -18,8 +21,10 @@ export type BuildBlockedNoticeProps = {
 export const BuildBlockedNotice = ({
   block,
   compact = false,
+  projectId = null,
 }: BuildBlockedNoticeProps) => {
   const { t } = useTranslation("documents");
+  const { t: tLocal } = useTranslation("localStudio");
   const { has } = useCapabilities();
   const isAdmin = has("admin");
   const { title, reason } = useBuildBlockText(block);
@@ -66,15 +71,27 @@ export const BuildBlockedNotice = ({
             ? t("compile.unavailable.adminSelf")
             : t("compile.unavailable.admin")}
         </span>
-        {isAdmin && (
-          <Link
-            to="/admin/runners"
-            data-testid="build-blocked-runners-link"
-            style={{ fontSize: compact ? 10.5 : 12 }}
+        <div
+          className="flex items-center flex-wrap"
+          style={{ gap: compact ? 8 : 12, marginTop: compact ? 2 : 4 }}
+        >
+          <LocalStudioLink
+            projectId={projectId}
+            variant={compact ? "link" : "button"}
+            className={compact ? undefined : "xs"}
           >
-            {t("compile.unavailable.openRunners")}
-          </Link>
-        )}
+            {tLocal("link.buildLocally")}
+          </LocalStudioLink>
+          {isAdmin && (
+            <Link
+              to="/admin/runners"
+              data-testid="build-blocked-runners-link"
+              style={{ fontSize: compact ? 10.5 : 12 }}
+            >
+              {t("compile.unavailable.openRunners")}
+            </Link>
+          )}
+        </div>
       </div>
     </div>
   );

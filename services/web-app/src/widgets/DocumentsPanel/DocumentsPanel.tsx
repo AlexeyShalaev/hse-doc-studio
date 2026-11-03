@@ -545,7 +545,11 @@ export const DocumentsPanel = ({
           действия заголовка) значило бы экономить пиксели на главном. */}
       <div className="panel-foot">
         {!isCompiling && buildBlock !== null && (
-          <BuildBlockedNotice block={buildBlock} compact />
+          <BuildBlockedNotice
+            block={buildBlock}
+            projectId={projectId}
+            compact
+          />
         )}
         {isCompiling ? (
           <button
