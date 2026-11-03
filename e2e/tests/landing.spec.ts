@@ -95,7 +95,12 @@ for (const lang of LANGS) {
         .click();
       await expect(page.getByTestId("account-menu-trigger")).toBeVisible();
       await expect(page.getByTestId("landing-page")).toHaveCount(0);
-      expect(await visibleProjectNames(page)).toEqual([...USERS.anna.projects]);
+      // Сценарии M1 идут раньше и добавляют проекты Анны: свои демо-проекты на месте, чужих нет.
+      const names = await visibleProjectNames(page);
+      expect(names).toEqual(expect.arrayContaining([...USERS.anna.projects]));
+      for (const other of [...USERS.boris.projects, ...USERS.victor.projects]) {
+        expect(names).not.toContain(other);
+      }
       await shot(page, lang, "landing-02-projects");
 
       // Вошедший корень не меняет: снова на «/», и это проекты, а не лендинг.
