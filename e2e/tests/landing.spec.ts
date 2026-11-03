@@ -96,6 +96,9 @@ for (const lang of LANGS) {
       await expect(page.getByTestId("account-menu-trigger")).toBeVisible();
       await expect(page.getByTestId("landing-page")).toHaveCount(0);
       // Сценарии M1 идут раньше и добавляют проекты Анны: свои демо-проекты на месте, чужих нет.
+      await expect(page.locator("[data-project-card]").first()).toBeVisible({
+        timeout: 30_000,
+      });
       const names = await visibleProjectNames(page);
       expect(names).toEqual(expect.arrayContaining([...USERS.anna.projects]));
       for (const other of [...USERS.boris.projects, ...USERS.victor.projects]) {
