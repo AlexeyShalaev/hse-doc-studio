@@ -30,7 +30,7 @@ Back up the database and the projects volume consistently: stop writes or snapsh
 
 compose: change `TAG`, then `docker compose pull && docker compose up -d`. The api runs database migrations at startup under an advisory lock.
 
-Helm: `helm upgrade`; the migrations Job runs before the upgrade. Set `secrets.existingSecret` so the Job sees current secrets.
+Helm: `helm upgrade`; the migrations Job runs before the upgrade. Set `secrets.existingSecret` so the Job sees current secrets. The "Update now" and "Roll back" buttons in Kubernetes are enabled by `updater.enabled=true` (see [Auto-update](auto-update.md#kubernetes)).
 
 Take a backup first. Update runners together with the api: an incompatible version is rejected at registration. Schema check: `hse-doc-studio db current` and `hse-doc-studio db check`.
 
