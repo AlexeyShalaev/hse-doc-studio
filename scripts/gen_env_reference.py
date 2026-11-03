@@ -38,6 +38,7 @@ EXTRA_SECRETS = frozenset({"DB__DSN", "OFFICE_EDITOR__JWT_SECRET"})
 DEFAULT_OVERRIDES = {
     "DATA_DIR": "`~/.config/hse-studio`",
     "PACKS_DIR": "каталог `packs` монорепы, в образе `/app/packs`",
+    "HELP_DIR": "`services/user-docs/dist` монорепы, в образе `/app/help`",
     "RELEASE_NOTES_FILE": "`release-notes.json` монорепы, в образе `/app/release-notes.json`",
 }
 PREFIX = "HSE_STUDIO__"

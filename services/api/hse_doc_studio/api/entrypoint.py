@@ -16,6 +16,7 @@ from hse_doc_studio.api.admin_access import install_admin_access
 from hse_doc_studio.api.config import Settings, settings
 from hse_doc_studio.api.db_errors import install_db_error_handlers
 from hse_doc_studio.api.guards import install_exception_handlers
+from hse_doc_studio.api.help_site import install_help_site
 from hse_doc_studio.api.interface_language import InterfaceLanguageMiddleware
 from hse_doc_studio.api.logging_setup import configure_logging
 from hse_doc_studio.api.observability.install import (
@@ -650,6 +651,8 @@ def create_app() -> FastAPI:  # noqa: C901, PLR0915 — app-wiring factory: rout
             except Exception:
                 logger.exception("remote runner shutdown failed")
 
+    # Справка раньше SPA: иначе запасной маршрут интерфейса забрал бы /help/.
+    install_help_site(app, settings)
     if settings.static_dir is not None:
         _mount_spa(app, settings)
 

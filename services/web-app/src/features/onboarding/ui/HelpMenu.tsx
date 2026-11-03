@@ -1,7 +1,15 @@
 import { useState } from "react";
 import { useNavigate } from "react-router";
 import { useTranslation } from "react-i18next";
-import { CircleHelp, Compass, FlaskConical } from "lucide-react";
+import {
+  BookOpen,
+  CircleHelp,
+  Compass,
+  ExternalLink,
+  FlaskConical,
+} from "lucide-react";
+import { helpApi, openHelp } from "@entities/help";
+import { useThemeStore } from "@shared/lib";
 import { Popover, PopoverContent, PopoverTrigger } from "@shared/ui/Popover";
 import { useOnboardingStore } from "../model/onboardingStore";
 import { DEMO_PATH } from "../lib/paths";
@@ -21,6 +29,8 @@ export const HelpMenu = () => {
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
   const start = useOnboardingStore((s) => s.start);
+  const { t: tHelp } = useTranslation("help");
+  const lang = useThemeStore((s) => s.lang);
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -39,6 +49,44 @@ export const HelpMenu = () => {
       </PopoverTrigger>
       <PopoverContent width={280} aria-label={t("help.title")}>
         <div className="flex flex-col" style={{ padding: 6 }}>
+          {/* Пользовательская справка (features/help-center): статья текущего экрана и весь сайт. */}
+          <button
+            type="button"
+            className="row-btn"
+            style={itemStyle}
+            data-testid="help-menu-screen"
+            onClick={() => {
+              setOpen(false);
+              openHelp();
+            }}
+          >
+            <BookOpen size={15} style={{ marginTop: 2, flexShrink: 0 }} />
+            <span className="flex flex-col" style={{ gap: 2 }}>
+              <span style={{ color: "var(--fg-0)" }}>{tHelp("command")}</span>
+              <span className="dim" style={{ fontSize: 11.5 }}>
+                {tHelp("menuScreenHint")}
+              </span>
+            </span>
+          </button>
+          <a
+            className="row-btn"
+            style={itemStyle}
+            href={helpApi.siteUrl(lang)}
+            target="_blank"
+            rel="noreferrer"
+            data-testid="help-menu-site"
+            onClick={() => {
+              setOpen(false);
+            }}
+          >
+            <ExternalLink size={15} style={{ marginTop: 2, flexShrink: 0 }} />
+            <span className="flex flex-col" style={{ gap: 2 }}>
+              <span style={{ color: "var(--fg-0)" }}>{tHelp("openSite")}</span>
+              <span className="dim" style={{ fontSize: 11.5 }}>
+                {tHelp("menuSiteHint")}
+              </span>
+            </span>
+          </a>
           <button
             type="button"
             className="row-btn"
