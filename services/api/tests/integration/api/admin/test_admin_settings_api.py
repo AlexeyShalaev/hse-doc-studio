@@ -8,6 +8,7 @@ from collections.abc import AsyncIterator, Callable
 from dataclasses import replace
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
+from urllib.parse import urlsplit
 
 import pytest
 import pytest_asyncio
@@ -376,7 +377,8 @@ async def test__mail_preview__renders_every_template_in_both_languages(env: _Env
             assert body["subject"]
             assert "<html" in body["html"]
             assert body["text"]
-            assert "https://studio.example.org" in re.findall(r'href="([^"]+)"', body["html"])
+            hosts = {urlsplit(href).hostname for href in re.findall(r'href="([^"]+)"', body["html"])}
+            assert hosts == {"studio.example.org"}
     assert env.sender.sent == []
 
 
