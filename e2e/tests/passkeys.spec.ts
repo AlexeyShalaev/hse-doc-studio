@@ -72,18 +72,31 @@ const openPasskeys = async (page: Page): Promise<void> => {
   await expect(page.getByTestId("passkeys-loading")).toHaveCount(0);
 };
 
+/** Настройки открыты окном поверх приложения: меню аккаунта за ним, поэтому окно закрываем. */
+const closeSettings = async (page: Page): Promise<void> => {
+  await page.locator(".settings-modal-close").click();
+  await expect(page.getByTestId("account-passkeys")).toHaveCount(0);
+};
+
 const keyRows = (page: Page) =>
   page.getByTestId("account-passkeys").locator("[data-testid^=passkey-item-]");
 
-/** Вход по ключу: автозаполнение могло уже войти само, иначе жмём кнопку. */
+/**
+ * Вход по ключу. Виртуальный аутентификатор сам отвечает на ожидающий запрос автозаполнения поля логина
+ * (conditional UI), поэтому вход нередко случается без кнопки; иначе жмём «Войти с passkey».
+ */
 const signInWithPasskey = async (page: Page): Promise<void> => {
-  await page.goto("/login");
   const menu = page.getByTestId("account-menu-trigger");
   const button = page.getByTestId("login-passkey");
   await expect(menu.or(button)).toBeVisible();
-  if (await button.isVisible()) await button.click();
+  // Кнопка может исчезнуть посреди щелчка, если автозаполнение успело раньше.
+  if (await button.isVisible())
+    await button.click({ timeout: 5_000 }).catch(() => undefined);
   await expect(menu).toBeVisible();
+  await expect(page.locator("input[type=password]")).toHaveCount(0);
 };
+
+test.describe.configure({ timeout: 120_000 });
 
 for (const lang of LANGS) {
   test(`passkey: добавить, войти без пароля и убрать (${lang})`, async ({
@@ -112,6 +125,7 @@ for (const lang of LANGS) {
     await expect(keyRows(page)).toHaveCount(before + 1);
     expect(await storedKeys(key)).toHaveLength(1);
 
+    await closeSettings(page);
     await logout(page);
     await expect(page.locator("input[type=email]")).toHaveAttribute(
       "autocomplete",
@@ -156,12 +170,19 @@ for (const lang of LANGS) {
       await shot(admin, lang, "passkeys-04-admin-person");
       await admin.getByTestId("person-passkeys-reset").click();
       await admin.getByTestId("person-passkeys-reset-confirm").click();
-      await expect(admin.getByTestId("person-passkeys-count")).toContainText(
-        "0",
+      await expect(
+        admin.locator(
+          '[data-testid^="person-passkey-"]:not([data-testid^="person-passkeys"])',
+        ),
+      ).toHaveCount(0);
+      const after = await admin.request.get(
+        `/api/admin/users/${person?.id ?? ""}/passkeys`,
       );
+      expect(await after.json()).toEqual({ items: [] });
       await admin.context().close();
 
       // Ключ остался в аутентификаторе, но сервер его больше не знает: вход отклоняется.
+      await closeSettings(page);
       await logout(page);
       await page.getByTestId("login-passkey").click();
       await expect(page.getByTestId("login-error")).toBeVisible();

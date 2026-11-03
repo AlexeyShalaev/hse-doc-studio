@@ -27,7 +27,7 @@ from hse_doc_studio.core.access.entities import ActorSource
 from hse_doc_studio.core.identity.errors import IdentityError, IdentityErrorCode
 from hse_doc_studio.core.identity.normalize import hash_token
 from hse_doc_studio.core.identity.passkeys import PASSKEY_LIMIT, Passkey, RelyingParty
-from hse_doc_studio.core.rate_limit import AUTH_IP
+from hse_doc_studio.core.rate_limit import AUTH_IP, PASSKEY_IP
 from hse_doc_studio.use_cases.identity.passkey_login import FinishPasskeyLoginUC, StartPasskeyLoginUC
 from hse_doc_studio.use_cases.identity.passkeys import (
     DeletePasskeyUC,
@@ -78,14 +78,14 @@ async def _uc[T](request: Request, kind: type[T]) -> T:
 @router.post("/auth/passkey/options", response_model=PasskeyOptions)
 async def passkey_login_options(request: Request, response: Response) -> PasskeyOptions:
     """Вызов для входа без e-mail: браузер покажет ключи этого сайта (кнопкой или в автозаполнении поля логина)."""
-    await enforce_ip(request, AUTH_IP)
+    await enforce_ip(request, PASSKEY_IP)
     response.headers.update(_NO_STORE)
     return PasskeyOptions(options=await (await _uc(request, StartPasskeyLoginUC)).execute(relying_party(request)))
 
 
 @router.post("/auth/passkey/login", response_model=LoginResponse)
 async def passkey_login(body: PasskeyLoginRequest, request: Request, response: Response) -> LoginResponse:
-    await enforce_ip(request, AUTH_IP)
+    await enforce_ip(request, PASSKEY_IP)
     result = await (await _uc(request, FinishPasskeyLoginUC)).execute(
         relying_party(request),
         body.credential,

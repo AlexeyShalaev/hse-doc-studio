@@ -37,6 +37,9 @@ class IRateLimiter(Protocol):
 # Каталог: вход и регистрация считаются по IP, письма по e-mail, дорогие операции по пользователю.
 AUTH_IP = RateRule("auth_ip", limit=30, window_s=60)
 AUTH_EMAIL = RateRule("auth_email", limit=5, window_s=3600)
+# Passkey по IP отдельно от пароля: форма входа сама просит вызов при каждом показе (автозаполнение),
+# а перебирать подписи ключа бессмысленно. Общий счётчик с паролем запирал бы вход паролем.
+PASSKEY_IP = RateRule("passkey_ip", limit=60, window_s=60)
 COMPILE = RateRule("compile", limit=20, window_s=60)
 UPLOAD = RateRule("upload", limit=120, window_s=60)
 AGENT = RateRule("agent", limit=30, window_s=60)
@@ -62,6 +65,7 @@ RULES: dict[str, RateRule] = {
     for rule in (
         AUTH_IP,
         AUTH_EMAIL,
+        PASSKEY_IP,
         COMPILE,
         UPLOAD,
         AGENT,

@@ -153,10 +153,7 @@ describe("вход по passkey", () => {
     await act(async () => {
       await result.current.start();
     });
-    expect(webauthn.getPasskey).toHaveBeenCalledWith(
-      { challenge: "c" },
-      { autofill: false },
-    );
+    expect(webauthn.getPasskey).toHaveBeenCalledWith({ challenge: "c" });
     expect(api.passkeyLogin).toHaveBeenCalledWith({ id: "cred" });
     expect(session.refresh).toHaveBeenCalled();
     expect(result.current.failure).toBeNull();
@@ -195,6 +192,31 @@ describe("вход по passkey", () => {
     });
     unmount();
     expect(webauthn.cancelPasskeyCeremony).toHaveBeenCalled();
+  });
+
+  it("автозаполнение без вызова (лимит) не повторяет запрос", async () => {
+    webauthn.supportsAutofill.mockResolvedValue(true);
+    api.passkeyOptions.mockRejectedValue(new Error("rate limited"));
+    const { result } = renderHook(() => usePasskeySignIn(true), { wrapper });
+    await waitFor(() => {
+      expect(api.passkeyOptions).toHaveBeenCalledTimes(1);
+    });
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    expect(api.passkeyOptions).toHaveBeenCalledTimes(1);
+    expect(webauthn.getPasskey).not.toHaveBeenCalled();
+    expect(result.current.failure).toBeNull();
+  });
+
+  it("неудачи автозаполнения перезапускают его не больше трёх раз", async () => {
+    webauthn.supportsAutofill.mockResolvedValue(true);
+    api.passkeyOptions.mockResolvedValue({ options: { challenge: "a" } });
+    webauthn.getPasskey.mockRejectedValue(new Error("boom"));
+    renderHook(() => usePasskeySignIn(true), { wrapper });
+    await waitFor(() => {
+      expect(webauthn.getPasskey).toHaveBeenCalledTimes(4);
+    });
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    expect(webauthn.getPasskey).toHaveBeenCalledTimes(4);
   });
 
   it("выключенный passkey ничего не запускает", () => {

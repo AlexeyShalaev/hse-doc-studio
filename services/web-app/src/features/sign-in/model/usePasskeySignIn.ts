@@ -12,6 +12,8 @@ import { clearUserScopedCache, useRefreshSession } from "@entities/session";
 import { signInApi, toLoginFailure } from "../api/signInApi";
 import type { LoginFailure } from "../lib/loginErrors";
 
+const MAX_AUTOFILL_RESTARTS = 3;
+
 const toFailure = (error: unknown): LoginFailure | null => {
   if (error instanceof PasskeyCeremonyError) {
     // Человек закрыл окно выбора ключа: это не ошибка.
@@ -32,6 +34,15 @@ export const usePasskeySignIn = (enabled: boolean) => {
   const [failure, setFailure] = useState<LoginFailure | null>(null);
   const [round, setRound] = useState(0);
   const started = useRef(false);
+  const restarts = useRef(0);
+  // После неудачи автозаполнение запускается заново, но не бесконечно: иначе сломанный ответ сервера
+  // превращался бы в поток запросов вызова.
+  const restart = useCallback(() => {
+    if (restarts.current < MAX_AUTOFILL_RESTARTS) {
+      restarts.current += 1;
+      setRound((n) => n + 1);
+    }
+  }, []);
 
   const finish = useCallback(
     async (credential: Record<string, unknown>) => {
@@ -44,15 +55,11 @@ export const usePasskeySignIn = (enabled: boolean) => {
     [client, refresh],
   );
 
-  const ceremony = useCallback(
-    async (autofill: boolean) => {
-      const { options } = await signInApi.passkeyOptions();
-      started.current = true;
-      const credential = await getPasskey(options, { autofill });
-      await finish(credential);
-    },
-    [finish],
-  );
+  const ceremony = useCallback(async () => {
+    const { options } = await signInApi.passkeyOptions();
+    started.current = true;
+    await finish(await getPasskey(options));
+  }, [finish]);
 
   useEffect(() => {
     if (!available) return;
@@ -60,8 +67,17 @@ export const usePasskeySignIn = (enabled: boolean) => {
     const isAlive = () => alive;
     void (async () => {
       if (!(await supportsAutofill()) || !isAlive()) return;
+      let options: Record<string, unknown>;
       try {
-        await ceremony(true);
+        ({ options } = await signInApi.passkeyOptions());
+      } catch {
+        // Вызов не выдан (лимит, passkey выключен): автозаполнение просто не включается, кнопка остаётся.
+        return;
+      }
+      if (!isAlive()) return;
+      started.current = true;
+      try {
+        await finish(await getPasskey(options, { autofill: true }));
       } catch (error) {
         if (!isAlive()) return;
         const next = toFailure(error);
@@ -69,7 +85,7 @@ export const usePasskeySignIn = (enabled: boolean) => {
         if (next) {
           setFailure(next);
           setPending(false);
-          setRound((n) => n + 1);
+          restart();
         }
       }
     })();
@@ -77,20 +93,20 @@ export const usePasskeySignIn = (enabled: boolean) => {
       alive = false;
       if (started.current) void cancelPasskeyCeremony();
     };
-  }, [available, ceremony, round]);
+  }, [available, finish, restart, round]);
 
   const start = useCallback(async () => {
     setFailure(null);
     setPending(true);
     try {
-      await ceremony(false);
+      await ceremony();
     } catch (error) {
       setFailure(toFailure(error));
-      setRound((n) => n + 1);
+      restart();
     } finally {
       setPending(false);
     }
-  }, [ceremony]);
+  }, [ceremony, restart]);
 
   return { available, start, pending, failure };
 };
