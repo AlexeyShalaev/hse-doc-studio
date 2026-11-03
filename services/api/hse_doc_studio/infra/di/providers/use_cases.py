@@ -2126,8 +2126,12 @@ class UseCaseProvider(Provider):
         )
 
     @provide
-    def get_git_clone_defaults_uc(self, locator: IProjectLocator) -> GetCloneDefaultsUC:
-        return GetCloneDefaultsUC(settings.data_dir.expanduser() / "projects", locator)
+    def get_git_clone_defaults_uc(
+        self, locator: IProjectLocator, settings_repo: ISettingsRepository, paths: PathMapping
+    ) -> GetCloneDefaultsUC:
+        return GetCloneDefaultsUC(
+            settings.data_dir.expanduser() / "projects", locator, settings_repo=settings_repo, paths=paths
+        )
 
     @provide
     def get_git_operation_uc(self, operations: IGitOperationRegistry) -> GetOperationUC:

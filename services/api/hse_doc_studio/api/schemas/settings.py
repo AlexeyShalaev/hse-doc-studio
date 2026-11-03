@@ -27,6 +27,8 @@ class SettingsResponse(BaseModel):
     disk_usage_warn_gb: int
     # Период фоновой проверки git-репозитория, секунды; 0 = выключена.
     git_fetch_interval_s: int
+    # Куда Студия сама кладёт проекты, скачанные с сервера Студии; null: стандартная папка проектов.
+    projects_dir: str | None
 
 
 class UpdateSettingsRequest(BaseModel):
@@ -46,3 +48,4 @@ class UpdateSettingsRequest(BaseModel):
     auto_update: bool | None = None
     disk_usage_warn_gb: int | None = None
     git_fetch_interval_s: int | None = None
+    projects_dir: str | None = None

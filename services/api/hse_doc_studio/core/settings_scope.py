@@ -34,6 +34,7 @@ SETTING_SCOPES: dict[str, SettingScope] = {
     "default_agent_persona": SettingScope.user,
     "default_agent_persona_instructions": SettingScope.user,
     "git_fetch_interval_s": SettingScope.user,
+    "projects_dir": SettingScope.user,
     # Профиль автора на сервере берётся из users; ключи остаются машинными, локальными.
     PROFILE_NAME_KEY: SettingScope.user,
     PROFILE_EMAIL_KEY: SettingScope.user,

@@ -7,12 +7,13 @@ from fastapi import APIRouter, HTTPException
 
 from hse_doc_studio.api.dishka_route import SafeDishkaRoute
 from hse_doc_studio.api.schemas.settings import SettingsResponse, UpdateSettingsRequest
+from hse_doc_studio.core.paths import PathMapping
 from hse_doc_studio.use_cases.settings.get_settings import GetSettingsUC
 from hse_doc_studio.use_cases.settings.update_settings import (
     UpdateSettingsInput,
     UpdateSettingsUC,
 )
-from hse_doc_studio.use_cases.settings.value_rules import disk_usage_warn_gb, git_fetch_interval_s
+from hse_doc_studio.use_cases.settings.value_rules import disk_usage_warn_gb, git_fetch_interval_s, projects_dir
 
 router = APIRouter(route_class=SafeDishkaRoute)
 
@@ -21,6 +22,12 @@ def _int_setting(settings: dict[str, Any], key: str, default: int) -> int:
     """Число из config.json: испорченное значение (чужой файл, правка вручную) не должно ронять весь GET /settings."""
     value = settings.get(key, default)
     return value if isinstance(value, int) and not isinstance(value, bool) else default
+
+
+def _text_setting(settings: dict[str, Any], key: str) -> str | None:
+    """Строка из config.json или None: испорченное значение читается как «не задано»."""
+    value = settings.get(key)
+    return value if isinstance(value, str) and value else None
 
 
 def _map_settings(settings: dict[str, Any]) -> SettingsResponse:
@@ -41,7 +48,18 @@ def _map_settings(settings: dict[str, Any]) -> SettingsResponse:
         auto_update=bool(settings.get("auto_update", True)),
         disk_usage_warn_gb=_int_setting(settings, "disk_usage_warn_gb", 10),
         git_fetch_interval_s=_int_setting(settings, "git_fetch_interval_s", 300),
+        projects_dir=_text_setting(settings, "projects_dir"),
     )
+
+
+def _checked_projects_dir(raw: str | None, paths: PathMapping) -> str | None:
+    """Папка проектов из облака: пустая строка возвращает стандартную, иначе нужен путь в доступных папках."""
+    folder = projects_dir(raw)
+    if folder is None and (raw or "").strip():
+        raise HTTPException(status_code=400, detail="projects_dir must be an absolute path")
+    if folder is not None and paths.to_container(folder) is None:
+        raise HTTPException(status_code=400, detail="projects_dir must be inside a folder the Studio has access to")
+    return folder
 
 
 @router.get("/settings", response_model=SettingsResponse)
@@ -56,6 +74,7 @@ async def get_settings(
 async def update_settings(  # noqa: C901, PLR0912 — flat per-field patch mapping with explicit-null handling
     body: UpdateSettingsRequest,
     uc: FromDishka[UpdateSettingsUC],
+    paths: FromDishka[PathMapping],
 ) -> SettingsResponse:
     # Use `model_fields_set` to distinguish "field omitted from request" from
     # "field present with null value" — clients clear nullable settings
@@ -124,6 +143,8 @@ async def update_settings(  # noqa: C901, PLR0912 — flat per-field patch mappi
             )
         # 0 выключает проверку; всё, что меньше минуты, поднимается до минуты.
         patch["git_fetch_interval_s"] = interval
+    if "projects_dir" in fields_set:
+        patch["projects_dir"] = _checked_projects_dir(body.projects_dir, paths)
 
     try:
         result = await uc.execute(UpdateSettingsInput(patch=patch))
