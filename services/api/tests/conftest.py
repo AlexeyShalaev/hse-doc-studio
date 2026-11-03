@@ -6,6 +6,8 @@ from collections.abc import Iterator
 
 import pytest
 from hse_doc_studio.infra.docker.cli import configure_docker_binary
+from hypothesis import given
+from hypothesis import strategies as st
 
 from tests.fixtures.pg import PG_DSN_ENV
 
@@ -18,6 +20,21 @@ pytest_plugins = [
     "tests.fixtures.s3",
     "tests.fixtures.server_app",
 ]
+
+
+def pytest_sessionstart(session: pytest.Session) -> None:
+    """Прогревает hypothesis до первого теста.
+
+    Первый `@given` в процессе регистрирует глобальный Random: `gc.collect()` и `gc.get_referrers()` по всей куче.
+    К сорока процентам полного прогона куча огромная, под покрытием это занимало больше 30 секунд, и pytest-timeout
+    валил случайный property-тест (FlakyFailure). В начале сессии куча маленькая, а лимита по времени еще нет.
+    """
+
+    @given(st.none())
+    def _warm_up(_: None) -> None:
+        return None
+
+    _warm_up()
 
 
 def pytest_collection_modifyitems(items: list[pytest.Item]) -> None:
@@ -82,16 +99,3 @@ if importlib.util.find_spec("boto3") is None or importlib.util.find_spec("moto")
         "contract/test_object_store_s3_contract.py",
         "integration/storage/*",
     ]
-
-
-@pytest.fixture(autouse=True)
-def _reset_docker_binary() -> object:
-    """Путь к докеру глобален в процессе: create_app фиксирует его из настроек, которые тест подменил.
-
-    Без сброса тест с `docker_binary = .../no-docker` оставлял путь следующим, и те видели чужой
-    исполняемый файл в зависимости от порядка прогона.
-    """
-    yield
-    from hse_doc_studio.infra.docker.cli import configure_docker_binary  # noqa: PLC0415
-
-    configure_docker_binary(None)
