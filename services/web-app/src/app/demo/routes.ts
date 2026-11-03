@@ -44,7 +44,11 @@ import {
   hostSettingsView,
   tokenModeOf,
 } from "./providers";
-import { gitServerDemoRoutes } from "./gitServers";
+import {
+  demoCloudProjects,
+  demoServerProject,
+  gitServerDemoRoutes,
+} from "./gitServers";
 import { createWorld, projectOf } from "./scenarios";
 import { isServerDemoActive } from "./server/routes";
 import { useDemoScenarioStore } from "./scenarioStore";
@@ -981,6 +985,7 @@ const appSettings = async (
   return {
     ...lastAppSettings,
     git_fetch_interval_s: world.defaultFetchIntervalS,
+    projects_dir: world.projectsDir,
   };
 };
 
@@ -1377,6 +1382,38 @@ const globalRoutes: DemoRoute[] = [
     },
   },
   {
+    method: "GET",
+    pattern: "/git/cloud/projects",
+    handler: () => demoJson(demoCloudProjects(new Set(world.projects.keys()))),
+  },
+  {
+    method: "POST",
+    pattern: "/git/servers/:credentialId/projects/:projectId/open",
+    handler: (req) => {
+      const projectId = req.params.projectId ?? "";
+      const found = demoServerProject(req.params.credentialId ?? "", projectId);
+      if (!found) return demoError(404, "not_found", "Проект не найден.");
+      if (world.projects.has(projectId)) {
+        return demoJson({ project_id: projectId, operation_id: null }, 202);
+      }
+      const op = startOperation(world, {
+        kind: "clone",
+        projectId: null,
+        steps: CLONE_STEPS,
+        error: null,
+        result: () => ({
+          project_id: projectId,
+          folder: `~/HSE Doc Studio/${found.name}`,
+          access: "full",
+          required_studio: null,
+          warnings: [],
+        }),
+        apply: () => undefined,
+      });
+      return demoJson({ project_id: projectId, operation_id: op.id }, 202);
+    },
+  },
+  {
     method: "POST",
     pattern: "/git/clone/bundle",
     handler: (req) => {
@@ -1520,8 +1557,18 @@ const globalRoutes: DemoRoute[] = [
     method: "PUT",
     pattern: "/settings",
     handler: async (req) => {
-      const { git_fetch_interval_s: interval, ...rest } = recordBody(req);
+      const {
+        git_fetch_interval_s: interval,
+        projects_dir: projectsDir,
+        ...rest
+      } = recordBody(req);
       if (typeof interval === "number") world.defaultFetchIntervalS = interval;
+      if (projectsDir !== undefined) {
+        world.projectsDir =
+          typeof projectsDir === "string" && projectsDir.trim() !== ""
+            ? projectsDir.trim()
+            : null;
+      }
       // Остальные настройки принадлежат настоящему бэкенду, если он есть.
       return demoJson(await appSettings(req, Object.keys(rest).length > 0));
     },

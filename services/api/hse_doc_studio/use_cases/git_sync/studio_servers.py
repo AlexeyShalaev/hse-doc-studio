@@ -25,6 +25,7 @@ from hse_doc_studio.core.git_remote.client import (
     IStudioServerClient,
     PdfUpload,
     PdfUploadReply,
+    StudioProject,
     StudioProjectPage,
     StudioServerError,
     StudioServerErrorCode,
@@ -44,6 +45,9 @@ STUDIO_USERNAME = "hse"
 _KEEP_S = 15 * 60
 _SLOW_DOWN_S = 5
 _LOOPBACK = frozenset({"localhost", "127.0.0.1", "::1"})
+_PROJECTS_PAGE = 100
+# Сколько проектов одного сервера собирается в список; серверный перебор сам ограничен 2000.
+_FIND_SCAN_LIMIT = 2000
 
 
 class LoginState:
@@ -77,6 +81,27 @@ class StudioServerCheck:
     credential_id: UUID | None = None
     account_name: str | None = None
     state: str | None = None
+
+
+@dataclass(frozen=True)
+class CloudServerProjects:
+    """Проекты человека на одном сервере Студии или причина, по которой список не получен."""
+
+    credential_id: UUID
+    server_url: str
+    host: str
+    # ok, expired (срок доступа вышел), revoked (сервер отказал) или unreachable (нет связи).
+    state: str
+    projects: tuple[StudioProject, ...] = ()
+    total: int = 0
+
+
+@dataclass(frozen=True)
+class ServerProjectRef:
+    """Проект на сервере и корень сервера, под которым он найден."""
+
+    server_url: str
+    project: StudioProject
 
 
 @dataclass(frozen=True)
@@ -334,6 +359,75 @@ class StudioServersService:
                     await self._credentials.mark(credential_id, CredentialStatus.auth_failed)
                 raise GitSyncError(GitErrorCode.auth_failed) from None
             raise
+
+    async def cloud_projects(self, *, max_items: int) -> list[CloudServerProjects]:
+        """Проекты человека на каждом сервере Студии, куда он вошёл; сбой одного сервера не мешает остальным.
+
+        Входы на один адрес (после повторного входа старый остаётся) сворачиваются в один сервер: берётся
+        самый новый рабочий, а если рабочего нет, виден отказ самого нового.
+        """
+        devices = sorted(
+            (c for c in await self._credentials.list() if c.origin == DEVICE_ORIGIN),
+            key=lambda c: c.created_at,
+            reverse=True,
+        )
+        groups: dict[tuple[str, int | None], list[GitCredential]] = {}
+        for credential in devices:
+            groups.setdefault((credential.host, credential.port), []).append(credential)
+        return list(await asyncio.gather(*(self._cloud_server(group, max_items) for group in groups.values())))
+
+    async def _cloud_server(self, group: list[GitCredential], max_items: int) -> CloudServerProjects:
+        first: CloudServerProjects | None = None
+        for credential in group:
+            found = await self._cloud_projects_of(credential, max_items)
+            if found.state in {"ok", "unreachable"}:
+                return found
+            first = first or found
+        assert first is not None  # noqa: S101 — группа не пуста по построению
+        return first
+
+    async def _cloud_projects_of(self, credential: GitCredential, max_items: int) -> CloudServerProjects:
+        base = server_url_of(credential)
+        empty = CloudServerProjects(credential.id, base, credential.host, "ok")
+        if credential.expires_at is not None and credential.expires_at <= datetime.now(timezone.utc):
+            return replace(empty, state="expired")
+        items: list[StudioProject] = []
+        total = 0
+        try:
+            secret = await self._credentials.get_secret(credential.id)
+            target = await self._target(base, credential.host, credential.port)
+            while len(items) < max_items:
+                page = await self._client.projects(target, secret, q=None, limit=_PROJECTS_PAGE, offset=len(items))
+                items.extend(page.items)
+                total = page.total
+                if not page.items or len(items) >= page.total:
+                    break
+        except StudioServerError as exc:
+            if exc.code != StudioServerErrorCode.unauthorized:
+                return replace(empty, state="unreachable")
+            with contextlib.suppress(Exception):
+                await self._credentials.mark(credential.id, CredentialStatus.auth_failed)
+            return replace(empty, state="revoked")
+        except GitSyncError:
+            return replace(empty, state="unreachable")
+        return replace(empty, projects=tuple(items[:max_items]), total=total)
+
+    async def find_project(self, credential_id: UUID, project_id: UUID) -> ServerProjectRef:
+        """Проект среди тех, что сервер отдаёт этому входу; чужого или несуществующего там нет: `NotFoundError`."""
+        credential = await self._credentials.get(credential_id)
+        if credential is None or credential.origin != DEVICE_ORIGIN:
+            raise NotFoundError(localized_error("Сервер не найден", "Server not found"))
+        wanted = str(project_id)
+        offset = 0
+        while offset < _FIND_SCAN_LIMIT:
+            page = await self.list_projects(credential_id, q=None, limit=_PROJECTS_PAGE, offset=offset)
+            for project in page.items:
+                if project.id.lower() == wanted:
+                    return ServerProjectRef(server_url_of(credential), project)
+            offset += len(page.items)
+            if not page.items or offset >= page.total:
+                break
+        raise NotFoundError(localized_error("Проекта нет на сервере", "The project is not on the server"))
 
     async def upload_pdf(self, credential_id: UUID, upload: PdfUpload) -> PdfUploadReply:
         """Выгружает PDF на сервер входом из `credential_id`; отказ входа помечает доступ и бросает `auth_failed`."""

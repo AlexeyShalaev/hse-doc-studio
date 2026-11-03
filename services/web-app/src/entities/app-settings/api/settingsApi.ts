@@ -28,6 +28,8 @@ export const SettingsResponseSchema = z.object({
   // Как часто фоново проверять удалённый репозиторий, секунды; 0 — выключено,
   // не меньше 60 (сервер проверяет). Optional for old backends.
   git_fetch_interval_s: z.number().int().min(0).optional(),
+  // Папка, куда Студия кладёт проекты, скачанные из облака; null: стандартная.
+  projects_dir: z.string().nullable().optional(),
 });
 
 export type SettingsData = z.infer<typeof SettingsResponseSchema>;

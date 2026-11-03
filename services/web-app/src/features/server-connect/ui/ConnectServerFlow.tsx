@@ -5,20 +5,19 @@ import { failureCode } from "@shared/api";
 import { Button, Input, Spinner } from "@shared/ui";
 import { Notice } from "@shared/ui/ConflictKit";
 import {
+  CloudProjectOpener,
   GitServerLoginFlow,
   useGitServerCheck,
   type GitServerCheck,
 } from "@entities/git-server";
-import { gitClonePath } from "@entities/git-sync";
-import { studioCloneUrl, type ConnectTarget } from "@entities/local-studio";
-import { useProjects } from "@entities/project";
+import { connectServerPath, type ConnectTarget } from "@entities/local-studio";
 
 export type ConnectServerFlowProps = {
   /** Адрес сервера и проект из ссылки облака; без адреса экран спросит его сам. */
   target: ConnectTarget;
   /** Имя этой Студии в «Токенах» сервера. */
   clientName: string;
-  /** Перейти по адресу приложения (проект, мастер клонирования, главная). */
+  /** Перейти по адресу приложения (проект или список проектов). */
   onNavigate: (path: string) => void;
 };
 
@@ -39,7 +38,8 @@ const hostOf = (url: string): string => {
 /**
  * Экран «Подключиться к серверу» локальной Студии (docs/design/local-from-cloud.md):
  * адрес → проверка версии и прежнего входа → вход кодом устройства → проект
- * (открыть, если уже есть, иначе мастер клонирования с готовым адресом и доступом).
+ * (открыть, а если его ещё нет на компьютере, Студия сама скачает его в папку проектов)
+ * или, без проекта в ссылке, список проектов, где облачные уже видны.
  */
 export const ConnectServerFlow = ({
   target,
@@ -323,72 +323,51 @@ const Done = ({
   onNavigate: (path: string) => void;
 }) => {
   const { t } = useTranslation("localStudio");
-  const projects = useProjects();
-  const known = projectId
-    ? projects.data?.some((project) => project.id === projectId)
-    : undefined;
 
+  // Без проекта в ссылке человек сразу попадает в список: облачные проекты уже видны в нём.
   useEffect(() => {
-    if (!projectId || known === undefined) return;
-    onNavigate(
-      known
-        ? `/projects/${projectId}/documents`
-        : gitClonePath({
-            url: studioCloneUrl(check.server_url, projectId),
-            credentialId,
-          }),
-    );
-  }, [projectId, known, check.server_url, credentialId, onNavigate]);
+    if (!projectId) onNavigate("/");
+  }, [projectId, onNavigate]);
 
   if (projectId) {
     return (
-      <span
-        className="flex items-center dim"
-        style={{ gap: 8 }}
-        data-testid="connect-server-opening"
-      >
-        <Spinner size="sm" />
-        {t("connectLocal.opening")}
-      </span>
+      <div className="flex flex-col" style={{ gap: 10 }}>
+        <span
+          className="flex items-center"
+          style={{ gap: 8, fontSize: 13.5, color: "var(--c-ok)" }}
+          role="status"
+        >
+          <CheckCircle2 size={16} aria-hidden="true" />
+          {t("connectLocal.done", { host: hostOf(check.server_url) })}
+        </span>
+        <div data-testid="connect-server-opening">
+          <CloudProjectOpener
+            credentialId={credentialId}
+            projectId={projectId}
+            onOpened={(id) => {
+              onNavigate(`/projects/${id}/documents`);
+            }}
+            onExit={() => {
+              onNavigate("/");
+            }}
+            onReconnect={() => {
+              onNavigate(
+                connectServerPath({ server: check.server_url, projectId }),
+              );
+            }}
+          />
+        </div>
+      </div>
     );
   }
   return (
-    <div
-      className="flex flex-col"
-      style={{ gap: 12 }}
+    <span
+      className="flex items-center dim"
+      style={{ gap: 8 }}
       data-testid="connect-server-done"
     >
-      <span
-        className="flex items-center"
-        style={{ gap: 8, fontSize: 13.5, color: "var(--c-ok)" }}
-        role="status"
-      >
-        <CheckCircle2 size={16} aria-hidden="true" />
-        {t("connectLocal.done", { host: hostOf(check.server_url) })}
-      </span>
-      <span className="dim" style={{ fontSize: 12.5 }}>
-        {t("connectLocal.doneHint")}
-      </span>
-      <div className="flex" style={{ gap: 8, justifyContent: "flex-end" }}>
-        <Button
-          type="button"
-          variant="ghost"
-          onClick={() => {
-            onNavigate("/");
-          }}
-        >
-          {t("connectLocal.home")}
-        </Button>
-        <Button
-          type="button"
-          onClick={() => {
-            onNavigate(gitClonePath());
-          }}
-          data-testid="connect-server-clone"
-        >
-          {t("connectLocal.clone")}
-        </Button>
-      </div>
-    </div>
+      <Spinner size="sm" />
+      {t("connectLocal.toList")}
+    </span>
   );
 };

@@ -16,6 +16,7 @@ import { CredentialCard } from "./CredentialCard";
 import { EncryptionCard } from "./EncryptionCard";
 import { FetchDefaultCard } from "./FetchDefaultCard";
 import { KnownHostsTable } from "./KnownHostsTable";
+import { ProjectsFolderCard } from "./ProjectsFolderCard";
 import { ServersCard } from "./ServersCard";
 
 type QueryBodyProps = {
@@ -201,6 +202,8 @@ export const GitAccessSection = () => {
         </QueryBody>
 
         <FetchDefaultCard />
+
+        <ProjectsFolderCard />
       </div>
     </>
   );

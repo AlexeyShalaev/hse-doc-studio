@@ -4,15 +4,9 @@ import userEvent from "@testing-library/user-event";
 import { I18nextProvider } from "react-i18next";
 import { MemoryRouter } from "react-router";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { apiClient } from "@shared/api";
+import { ApiError, apiClient } from "@shared/api";
 import { i18n } from "@shared/lib";
 import { ConnectServerFlow } from "./index";
-
-// Список локальных проектов: есть ли уже этот проект у человека.
-const local = vi.hoisted(() => ({ projects: [] as { id: string }[] }));
-vi.mock("@entities/project", () => ({
-  useProjects: () => ({ data: local.projects }),
-}));
 
 const ID = "6f1c2a3b-4d5e-4f60-8a7b-9c0d1e2f3a4b";
 const SERVER = "https://studio.example.org";
@@ -36,7 +30,28 @@ const LOGIN = {
   code: null,
 };
 
-type Routes = { check?: object; loginState?: object };
+type Routes = {
+  check?: object;
+  loginState?: object;
+  /** Ответ `POST /git/servers/<вход>/projects/<id>/open`. */
+  open?: object | Error;
+  operation?: object;
+};
+
+const OPERATION = {
+  id: "op1",
+  kind: "clone",
+  project_id: null,
+  status: "running",
+  phase: "download",
+  percent: 40,
+  message: null,
+  cancellable: true,
+  started_at: "2026-11-03T10:00:00Z",
+  finished_at: null,
+  result: null,
+  error: null,
+};
 
 const mount = (
   target: { server: string | null; projectId: string | null },
@@ -47,9 +62,23 @@ const mount = (
       return Promise.resolve({ data: routes.check ?? CHECK });
     if (url.startsWith("/git/servers/login/"))
       return Promise.resolve({ data: routes.loginState ?? LOGIN });
+    if (url === "/git/operations/op1")
+      return Promise.resolve({ data: routes.operation ?? OPERATION });
+    if (url === "/profile")
+      return Promise.resolve({
+        data: { name: "", email: "", is_default: true },
+      });
     return Promise.reject(new Error(`unexpected ${url}`));
   });
-  const post = vi.spyOn(apiClient, "post").mockResolvedValue({ data: LOGIN });
+  const post = vi.spyOn(apiClient, "post").mockImplementation((url: string) => {
+    if (url.endsWith("/open")) {
+      const reply = routes.open ?? { project_id: ID, operation_id: "op1" };
+      return reply instanceof Error
+        ? Promise.reject(reply)
+        : Promise.resolve({ data: reply });
+    }
+    return Promise.resolve({ data: LOGIN });
+  });
   const onNavigate = vi.fn();
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false } },
@@ -73,7 +102,6 @@ const mount = (
 describe("ConnectServerFlow", () => {
   beforeEach(async () => {
     await i18n.changeLanguage("ru");
-    local.projects = [];
   });
   afterEach(() => {
     vi.restoreAllMocks();
@@ -120,40 +148,137 @@ describe("ConnectServerFlow", () => {
     ).toHaveTextContent(text);
   });
 
-  it("clones the project with the saved access when already signed in", async () => {
+  const SIGNED_IN = {
+    check: {
+      ...CHECK,
+      credential_id: "cred-1",
+      account_name: "Анна",
+      state: "ok",
+    },
+  };
+
+  it("downloads the project into the projects folder in one click, no wizard and no git words", async () => {
+    const user = userEvent.setup();
+    const { onNavigate, post } = mount(
+      { server: SERVER, projectId: ID },
+      SIGNED_IN,
+    );
+    expect(await screen.findByText("Вы уже вошли как Анна")).toBeVisible();
+    await user.click(screen.getByTestId("connect-server-continue"));
+    expect(await screen.findByTestId("cloud-open-progress")).toHaveAttribute(
+      "data-step",
+      "download",
+    );
+    expect(screen.getByTestId("connect-server")).not.toHaveTextContent(/git/i);
+    expect(post).toHaveBeenCalledWith(
+      `/git/servers/cred-1/projects/${ID}/open`,
+      undefined,
+      expect.anything(),
+    );
+    expect(onNavigate).not.toHaveBeenCalled();
+  });
+
+  it("opens the project when the download finishes", async () => {
     const user = userEvent.setup();
     const { onNavigate } = mount(
       { server: SERVER, projectId: ID },
       {
-        check: {
-          ...CHECK,
-          credential_id: "cred-1",
-          account_name: "Анна",
-          state: "ok",
+        ...SIGNED_IN,
+        operation: {
+          ...OPERATION,
+          status: "succeeded",
+          phase: "register",
+          finished_at: "2026-11-03T10:00:09Z",
+          result: {
+            project_id: ID,
+            folder: "/data/projects/x",
+            access: "full",
+            warnings: [],
+          },
         },
       },
-    );
-    expect(await screen.findByText("Вы уже вошли как Анна")).toBeVisible();
-    await user.click(screen.getByTestId("connect-server-continue"));
-    await waitFor(() => {
-      expect(onNavigate).toHaveBeenCalledTimes(1);
-    });
-    const path = new URL(String(onNavigate.mock.calls[0]?.[0]), "http://x");
-    expect(path.pathname).toBe("/wizard");
-    expect(path.searchParams.get("url")).toBe(`${SERVER}/git/${ID}.git`);
-    expect(path.searchParams.get("credential")).toBe("cred-1");
-  });
-
-  it("opens the project when it is already here", async () => {
-    const user = userEvent.setup();
-    local.projects = [{ id: ID }];
-    const { onNavigate } = mount(
-      { server: SERVER, projectId: ID },
-      { check: { ...CHECK, credential_id: "cred-1", state: "ok" } },
     );
     await user.click(await screen.findByTestId("connect-server-continue"));
     await waitFor(() => {
       expect(onNavigate).toHaveBeenCalledWith(`/projects/${ID}/documents`);
     });
+  });
+
+  it("opens the project at once when it is already on this computer", async () => {
+    const user = userEvent.setup();
+    const { onNavigate, get } = mount(
+      { server: SERVER, projectId: ID },
+      { ...SIGNED_IN, open: { project_id: ID, operation_id: null } },
+    );
+    await user.click(await screen.findByTestId("connect-server-continue"));
+    await waitFor(() => {
+      expect(onNavigate).toHaveBeenCalledWith(`/projects/${ID}/documents`);
+    });
+    expect(get).not.toHaveBeenCalledWith(
+      "/git/operations/op1",
+      expect.anything(),
+    );
+  });
+
+  it("without a project goes to the project list, where cloud projects are already shown", async () => {
+    const user = userEvent.setup();
+    const { onNavigate, post } = mount(
+      { server: SERVER, projectId: null },
+      SIGNED_IN,
+    );
+    await user.click(await screen.findByTestId("connect-server-continue"));
+    await waitFor(() => {
+      expect(onNavigate).toHaveBeenCalledWith("/");
+    });
+    expect(post).not.toHaveBeenCalled();
+  });
+
+  it("explains a failed download and offers the list or a retry", async () => {
+    const user = userEvent.setup();
+    const { onNavigate } = mount(
+      { server: SERVER, projectId: ID },
+      {
+        ...SIGNED_IN,
+        operation: {
+          ...OPERATION,
+          status: "failed",
+          error: { code: "folder_not_empty", detail: "" },
+        },
+      },
+    );
+    await user.click(await screen.findByTestId("connect-server-continue"));
+    expect(await screen.findByTestId("cloud-open-failed")).toHaveAttribute(
+      "data-code",
+      "folder_not_empty",
+    );
+    expect(screen.getByTestId("cloud-open-retry")).toBeVisible();
+    await user.click(screen.getByTestId("cloud-open-exit"));
+    expect(onNavigate).toHaveBeenCalledWith("/");
+  });
+
+  it("says so when the project is not on the server or not the person's", async () => {
+    const user = userEvent.setup();
+    mount(
+      { server: SERVER, projectId: ID },
+      { ...SIGNED_IN, open: new ApiError("Не найдено", "not_found", 404) },
+    );
+    await user.click(await screen.findByTestId("connect-server-continue"));
+    expect(await screen.findByTestId("cloud-open-failed")).toHaveTextContent(
+      "нет на сервере",
+    );
+    expect(screen.queryByTestId("cloud-open-retry")).toBeNull();
+  });
+
+  it("asks who the author is when the profile is missing, then retries", async () => {
+    const user = userEvent.setup();
+    mount(
+      { server: SERVER, projectId: ID },
+      {
+        ...SIGNED_IN,
+        open: new ApiError("Нужен профиль", "profile_required", 409),
+      },
+    );
+    await user.click(await screen.findByTestId("connect-server-continue"));
+    expect(await screen.findByTestId("cloud-open-profile")).toBeVisible();
   });
 });

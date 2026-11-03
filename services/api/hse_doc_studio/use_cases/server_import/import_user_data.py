@@ -20,12 +20,12 @@ from hse_doc_studio.core.export_import.local_data import ILocalDataReader
 from hse_doc_studio.core.repositories import IAIProviderRepository, ISettingsRepository
 from hse_doc_studio.core.settings_scope import SETTING_SCOPES, SettingScope
 from hse_doc_studio.use_cases.ai_providers.base_url import authorize_base_url
-from hse_doc_studio.use_cases.settings.get_settings import _DEFAULTS, MACHINE_LOCAL_SETTING_KEYS
+from hse_doc_studio.use_cases.settings.get_settings import _DEFAULTS, NOT_TRANSFERABLE_SETTING_KEYS
 from hse_doc_studio.use_cases.settings.value_rules import SETTING_VALUE_RULES
 
 logger = structlog.get_logger()
 
-_TRANSFERABLE_KEYS = frozenset(_DEFAULTS.keys()) - MACHINE_LOCAL_SETTING_KEYS
+_TRANSFERABLE_KEYS = frozenset(_DEFAULTS.keys()) - NOT_TRANSFERABLE_SETTING_KEYS
 
 
 class ImportNoteCode(StrEnum):

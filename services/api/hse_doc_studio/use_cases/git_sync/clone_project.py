@@ -64,8 +64,9 @@ from hse_doc_studio.core.git_sync.remote_project import (
 )
 from hse_doc_studio.core.git_sync.url import RemoteKind, RemoteUrl, parse_remote_url
 from hse_doc_studio.core.i18n import localized_error
+from hse_doc_studio.core.paths import PathMapping
 from hse_doc_studio.core.projects.locator import IProjectLocator
-from hse_doc_studio.core.repositories import IProjectRepository, ITemplateRepository
+from hse_doc_studio.core.repositories import IProjectRepository, ISettingsRepository, ITemplateRepository
 from hse_doc_studio.core.vcs.constants import vcs_exclude_for
 from hse_doc_studio.use_cases.git_sync.blocking import finish_before_cancel
 from hse_doc_studio.use_cases.git_sync.probe_remote import (
@@ -75,6 +76,7 @@ from hse_doc_studio.use_cases.git_sync.probe_remote import (
     valid_branch,
 )
 from hse_doc_studio.use_cases.git_sync.status import TRACKING_PREFIX
+from hse_doc_studio.use_cases.settings.get_settings import PROJECTS_DIR_KEY
 from hse_doc_studio.use_cases.template_update.base_service import TemplateBaseService
 
 logger = structlog.get_logger()
@@ -573,28 +575,51 @@ _MAX_NAME_CHARS = 60
 class GetCloneDefaultsUC:
     """Папка по умолчанию для клона: свободное имя рядом с остальными проектами.
 
-    На сервере папку выбирает сервер: это свободный `<uuid>` под корнем томов проектов, а не имя по названию.
+    Корень берётся из настройки `projects_dir`, если человек её задал и путь лежит в доступных Студии папках,
+    иначе это стандартная папка проектов. На сервере папку выбирает сервер: это свободный `<uuid>` под корнем
+    томов проектов, а не имя по названию.
     """
 
-    def __init__(self, default_projects_dir: Path, locator: IProjectLocator, *, uuid_names: bool = False) -> None:
+    def __init__(  # noqa: PLR0913 — порты одного сценария
+        self,
+        default_projects_dir: Path,
+        locator: IProjectLocator,
+        *,
+        uuid_names: bool = False,
+        settings_repo: ISettingsRepository | None = None,
+        paths: PathMapping | None = None,
+    ) -> None:
         self._root = default_projects_dir
         self._locator = locator
         self._uuid_names = uuid_names
+        self._settings = settings_repo
+        self._paths = paths if paths is not None else PathMapping()
+
+    async def root(self) -> Path:
+        """Папка, под которой появляются новые клоны."""
+        if self._settings is None:
+            return self._root
+        configured = (await self._settings.get()).get(PROJECTS_DIR_KEY)
+        if not isinstance(configured, str) or not configured.strip():
+            return self._root
+        mapped = self._paths.to_container(configured.strip())
+        return Path(mapped) if mapped is not None else self._root
 
     async def execute(self, name: str | None) -> Path:
         taken = {known.resolve() for known in await self._locator.list_all()}
-        return await asyncio.to_thread(self._free_folder, name, taken)
+        root = await self.root()
+        return await asyncio.to_thread(self._free_folder, root, name, taken)
 
-    def _free_folder(self, name: str | None, taken: set[Path]) -> Path:
+    def _free_folder(self, root: Path, name: str | None, taken: set[Path]) -> Path:
         if self._uuid_names:
             while True:
-                candidate = self._root / str(uuid4())
+                candidate = root / str(uuid4())
                 if not candidate.exists() and candidate.resolve() not in taken:
                     return candidate
         slug = _UNSAFE_NAME.sub("-", (name or "").strip()).strip("-.")[:_MAX_NAME_CHARS] or "project"
-        candidate = self._root / slug
+        candidate = root / slug
         suffix = 2
         while candidate.exists() or candidate.resolve() in taken:
-            candidate = self._root / f"{slug}-{suffix}"
+            candidate = root / f"{slug}-{suffix}"
             suffix += 1
         return candidate

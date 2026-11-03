@@ -1,3 +1,5 @@
+export { CloudBuildHint } from "./ui/CloudBuildHint";
+export type { CloudBuildHintProps } from "./ui/CloudBuildHint";
 export { GitServerSource } from "./ui/GitServerSource";
 export type { GitServerSourceProps } from "./ui/GitServerSource";
 

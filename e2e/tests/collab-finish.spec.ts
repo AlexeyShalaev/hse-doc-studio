@@ -35,6 +35,10 @@ import {
  *    проект с сервера, правит файл и синхронизирует; вторая Студия (другой человек) видит правку, отвечает своей,
  *    первая её получает; правка видна и в браузере сервера.
  *
+ * 4. Облако в списке локальной Студии (E2E_LOCAL_STUDIO_URL): после входа кодом проекты человека сразу в списке с
+ *    пометкой «Облако», чужих нет, одно нажатие скачивает проект в папку проектов (автосинк и выгрузка PDF включены
+ *    сами), повторное открытие и ссылка /connect?…&project=… ведут прямо в проект.
+ *
  * Скриншоты: screenshots/ru/cf-*.png.
  */
 const baseURL = process.env.E2E_BASE_URL ?? "http://localhost:17251";
@@ -721,5 +725,63 @@ test.describe("доделка видения: ссылки, приглашени
     expect(refused).not.toBe("");
     await studioA.dispose();
     await studioB.dispose();
+  });
+
+  // --- 4. облако в списке проектов локальной Студии (docs/design/local-from-cloud.md, раздел 7) ------------------
+
+  test("4. облачные проекты в списке локальной Студии: видны сразу, открываются одним нажатием без мастера", async ({ browser }) => {
+    test.skip(!LOCAL_A, "нужен E2E_LOCAL_STUDIO_URL");
+    const project = await createProject(anna.client, `cloud-list ${RUN}`);
+    const foreign = await createProject(boris.client, `чужой cloud-list ${RUN}`);
+    const studio = await local(LOCAL_A);
+    const profile = await studio.put("/api/v1/profile", { data: { name: ANNA.name, email: ANNA.email } });
+    expect(profile.status(), await profile.text()).toBe(200);
+    const cloudList = async (): Promise<{ servers: Json[] }> =>
+      (await (await studio.get("/api/v1/git/cloud/projects")).json()) as { servers: Json[] };
+
+    const credential = await studioLogin(browser, studio, ANNA, "облако");
+    const listed = (await cloudList()).servers.find((s) => s.credential_id === credential);
+    expect(listed?.state, JSON.stringify(listed)).toBe("ok");
+    const rows = listed?.projects as Json[];
+    expect(rows.find((p) => p.id === project.id)?.is_local).toBe(false);
+    // Чужой проект в списке не появляется ни по какому пути.
+    expect(rows.some((p) => p.id === foreign.id)).toBe(false);
+    const stranger = await studio.post(`/api/v1/git/servers/${credential}/projects/${foreign.id}/open`);
+    expect(stranger.status()).toBe(404);
+
+    // Человек видит свой проект на экране «Проекты» и открывает его одним нажатием: ни мастера, ни слова git.
+    const ctx = await browser.newContext({ baseURL: LOCAL_A, locale: "ru-RU", viewport: { width: 1440, height: 900 } });
+    const page = withErrors(await ctx.newPage());
+    await page.goto("/");
+    const card = page.locator(`[data-testid="cloud-project-card"][data-project-card="${project.id}"]`);
+    await expect(card).toBeVisible({ timeout: 30_000 });
+    await expect(card.getByTestId("cloud-badge")).toHaveText("Облако");
+    await expect(page.locator(`[data-project-card="${foreign.id}"]`)).toHaveCount(0);
+    await shot(page, "ru", "cf-cloud-01-list");
+    await card.getByTestId("cloud-open").click();
+    await expect(page).toHaveURL(new RegExp(`/projects/${project.id}`), { timeout: 120_000 });
+    expect(page.url()).not.toContain("/wizard");
+    await shot(page, "ru", "cf-cloud-02-opened");
+
+    // После скачивания проект один: в списке отмечен «открыт здесь», автосинк и выгрузка PDF включены сами.
+    const after = (await cloudList()).servers.find((s) => s.credential_id === credential);
+    expect((after?.projects as Json[]).find((p) => p.id === project.id)?.is_local).toBe(true);
+    const status = (await (await studio.get(`/api/v1/projects/${project.id}/git`)).json()) as Json;
+    expect((status.auto_sync as Json).enabled).toBe(true);
+    expect((status.pdf_upload as Json).available).toBe(true);
+    const again = await studio.post(`/api/v1/git/servers/${credential}/projects/${project.id}/open`);
+    expect(again.status()).toBe(202);
+    expect(((await again.json()) as Json).operation_id).toBeNull();
+    await page.goto("/");
+    await expect(page.locator(`[data-project-card="${project.id}"]`)).toHaveCount(1);
+    await expect(page.locator(`[data-testid="cloud-project-card"][data-project-card="${project.id}"]`)).toHaveCount(0);
+
+    // Ссылка из облака ведёт прямо в проект, без мастера.
+    await page.goto(`/connect?server=${encodeURIComponent(baseURL)}&project=${project.id}`);
+    await page.getByTestId("connect-server-continue").click();
+    await expect(page).toHaveURL(new RegExp(`/projects/${project.id}/documents`), { timeout: 60_000 });
+    expect(page.errors).toEqual([]);
+    await ctx.close();
+    await studio.dispose();
   });
 });

@@ -13,7 +13,7 @@ from hse_doc_studio.core.repositories import (
     ISettingsRepository,
 )
 from hse_doc_studio.core.system_capacity import ISystemCapacityProbe
-from hse_doc_studio.use_cases.settings.get_settings import MACHINE_LOCAL_SETTING_KEYS, GetSettingsUC
+from hse_doc_studio.use_cases.settings.get_settings import NOT_TRANSFERABLE_SETTING_KEYS, GetSettingsUC
 
 # Bumped only on a breaking change to the bundle shape; import tolerates any value.
 EXPORT_FORMAT_VERSION = "1.0"
@@ -72,7 +72,7 @@ class ExportDataUC:
             settings = {
                 key: value
                 for key, value in (await self._get_settings.execute()).settings.items()
-                if key not in MACHINE_LOCAL_SETTING_KEYS
+                if key not in NOT_TRANSFERABLE_SETTING_KEYS
             }
 
         providers: list[dict[str, Any]] = []

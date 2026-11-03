@@ -16,6 +16,8 @@ from hse_doc_studio.core.vcs.author import PROFILE_EMAIL_KEY, PROFILE_NAME_KEY
 
 logger = structlog.get_logger()
 
+PROJECTS_DIR_KEY = "projects_dir"
+
 _DEFAULTS: dict[str, Any] = {
     # "system" follows the OS colour scheme; the web app resolves it to a
     # concrete dark/light theme at paint time. Mirrors the frontend default.
@@ -68,11 +70,18 @@ _DEFAULTS: dict[str, Any] = {
     # настройки: меняется через /profile, не выгружается и не загружается из файла переноса.
     PROFILE_NAME_KEY: None,
     PROFILE_EMAIL_KEY: None,
+    # Папка, куда Студия сама кладёт проекты, скачанные с сервера Студии («Облако»), в виде пути на компьютере
+    # человека. None: стандартная папка `<данные>/projects`.
+    PROJECTS_DIR_KEY: None,
 }
 
 # Ключи config.json, которые принадлежат этой машине и не ходят ни через PUT /settings,
 # ни через выгрузку и загрузку настроек: чужой файл не должен переподписывать наши коммиты.
 MACHINE_LOCAL_SETTING_KEYS = frozenset({PROFILE_NAME_KEY, PROFILE_EMAIL_KEY})
+
+# Ключи, которые остаются на этой машине при выгрузке и загрузке настроек: путь с одного компьютера на другом
+# указывал бы в никуда. Правятся обычным PUT /settings, в отличие от MACHINE_LOCAL_SETTING_KEYS.
+NOT_TRANSFERABLE_SETTING_KEYS = MACHINE_LOCAL_SETTING_KEYS | {PROJECTS_DIR_KEY}
 
 
 @dataclass

@@ -15,6 +15,7 @@ export const gitServerKeys = {
   login: (loginId: string) => ["git-server", "login", loginId] as const,
   projects: (credentialId: string, q: string) =>
     ["git-server", "projects", credentialId, q] as const,
+  cloud: () => ["git-server", "cloud-projects"] as const,
 };
 
 /** Опрос входа на сервер: пока ждём подтверждения, раз в 2 секунды. */
@@ -82,6 +83,7 @@ export const useGitServerLogin = (loginId: string | null) => {
       const login = await gitServersApi.loginState(loginId ?? "");
       if (login.state === "approved") {
         void client.invalidateQueries({ queryKey: gitServerKeys.servers() });
+        void client.invalidateQueries({ queryKey: gitServerKeys.cloud() });
         void client.invalidateQueries({
           queryKey: [...gitServerKeys.all, "check"],
         });
@@ -117,3 +119,28 @@ export const useForgetGitServer = () => {
     },
   });
 };
+
+/**
+ * Облачные проекты человека на серверах, куда вошла эта Студия. Сбой одного сервера приходит его состоянием,
+ * а не ошибкой запроса; ошибка запроса означает, что не отвечает сама локальная Студия.
+ */
+export const useCloudProjects = (enabled = true) =>
+  useQuery({
+    queryKey: gitServerKeys.cloud(),
+    queryFn: gitServersApi.cloudProjects,
+    enabled,
+    staleTime: 30_000,
+    retry: false,
+    refetchOnWindowFocus: true,
+  });
+
+export const useOpenCloudProject = () =>
+  useMutation({
+    mutationFn: ({
+      credentialId,
+      projectId,
+    }: {
+      credentialId: string;
+      projectId: string;
+    }) => gitServersApi.openProject(credentialId, projectId),
+  });

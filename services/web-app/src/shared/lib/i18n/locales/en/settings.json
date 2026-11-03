@@ -494,6 +494,7 @@
     "runners": "My runners: build on your own machine",
     "remoteRunner": "Cloud builds on this machine",
     "mcp": "AI clients (MCP): Claude, Cursor and others",
-    "accountPasskeys": "Passkeys"
+    "accountPasskeys": "Passkeys",
+    "gitAccessProjectsDir": "Folder for cloud projects"
   }
 }

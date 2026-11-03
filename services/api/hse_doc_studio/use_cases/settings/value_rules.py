@@ -6,8 +6,10 @@ from collections.abc import Callable
 from typing import Any
 
 from hse_doc_studio.core.git_sync.policy import MIN_FETCH_INTERVAL_S
+from hse_doc_studio.core.paths import looks_absolute
 
 MAX_DISK_USAGE_WARN_GB = 500
+MAX_PROJECTS_DIR_CHARS = 1024
 
 
 def git_fetch_interval_s(value: object) -> int | None:
@@ -22,6 +24,16 @@ def disk_usage_warn_gb(value: object) -> int | None:
     if isinstance(value, bool) or not isinstance(value, int) or not 0 <= value <= MAX_DISK_USAGE_WARN_GB:
         return None
     return value
+
+
+def projects_dir(value: object) -> str | None:
+    """Абсолютный путь к папке проектов без лишних пробелов; пустое или негодное значение даёт None."""
+    if not isinstance(value, str):
+        return None
+    path = value.strip()
+    if not path or len(path) > MAX_PROJECTS_DIR_CHARS or not looks_absolute(path):
+        return None
+    return path
 
 
 # Настройки с правилами. Остальные принимают любое значение, как и раньше.

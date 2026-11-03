@@ -14,15 +14,19 @@ from collections.abc import Iterator
 from contextlib import contextmanager
 from http.server import BaseHTTPRequestHandler
 from pathlib import Path
+from types import SimpleNamespace
 from typing import Any
+from uuid import UUID
 
 import pytest
+from hse_doc_studio.core.errors import NotFoundError
 from hse_doc_studio.core.git_remote.client import StudioServerError
 from hse_doc_studio.core.git_sync.errors import GitSyncError
 from hse_doc_studio.infra.git_remote_client.studio_client import HttpStudioServerClient
 from hse_doc_studio.infra.git_sync.credential_repository import JsonGitCredentialRepository
 from hse_doc_studio.infra.git_sync.fernet_cipher import FernetSecretCipher
 from hse_doc_studio.infra.git_sync.key_store import KeyFileStore
+from hse_doc_studio.use_cases.git_sync.cloud_projects import ListCloudProjectsUC
 from hse_doc_studio.use_cases.git_sync.studio_servers import LoginState, StudioServerLogins, StudioServersService
 
 from tests.fixtures.loopback_http import LoopbackThreadingHTTPServer
@@ -168,3 +172,56 @@ def _revoke(live: Live, person: Any, token_id: str) -> None:
     with live.client() as client:
         response = client.delete(f"/api/v1/account/tokens/{token_id}", headers=person.session, cookies=person.cookies)
     assert response.status_code == 204, response.text
+
+
+class _LocalProjects:
+    """Локальные проекты человека: только идентификаторы нужны сопоставлению."""
+
+    def __init__(self, *ids: str) -> None:
+        self.ids = ids
+
+    async def execute(self) -> Any:
+        return SimpleNamespace(projects=[SimpleNamespace(id=UUID(i)) for i in self.ids])
+
+
+async def _sign_in(live: Live, person: Any, service: StudioServersService) -> UUID:
+    login = await service.start_login(live.base, "Студия на MacBook")
+    await asyncio.to_thread(_approve, live, person, str(login.user_code))
+    for _ in range(60):
+        current = service.get_login(login.login_id)
+        if current.state != LoginState.pending:
+            break
+        await asyncio.sleep(0.5)
+    assert current.state == LoginState.approved, current
+    assert current.credential_id is not None
+    return current.credential_id
+
+
+def test__cloud_projects__own_projects_only_marked_local_and_revoked_token_is_reported(live: Live) -> None:
+    anna, boris = live.person("anna"), live.person("boris")
+    first = live.create_project(anna, "ВКР: Анализ требований")
+    second = live.create_project(anna, "Курсовая")
+    foreign = live.create_project(boris, "Чужой проект")
+    service, _ = _service(live.tmp)
+    listing = ListCloudProjectsUC(service, _LocalProjects(first))  # type: ignore[arg-type]
+
+    async def scenario() -> None:
+        assert await listing.execute() == []
+        credential_id = await _sign_in(live, anna, service)
+
+        (server,) = await listing.execute()
+        assert (server.credential_id, server.state, server.total) == (credential_id, "ok", 2)
+        assert {p.id: p.is_local for p in server.projects} == {first: True, second: False}
+        assert foreign not in {p.id for p in server.projects}
+
+        found = await service.find_project(credential_id, UUID(second))
+        assert found.server_url == live.base
+        with pytest.raises(NotFoundError):
+            await service.find_project(credential_id, UUID(foreign))
+
+        (token,) = [t for t in _tokens(live, anna) if t["origin"] == "device"]
+        await asyncio.to_thread(_revoke, live, anna, token["id"])
+        (revoked,) = await listing.execute()
+        assert (revoked.state, revoked.projects) == ("revoked", ())
+
+    asyncio.run(scenario())

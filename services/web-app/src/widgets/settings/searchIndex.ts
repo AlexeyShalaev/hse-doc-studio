@@ -721,6 +721,19 @@ export const SETTINGS_SEARCH_INDEX: readonly SettingSearchEntry[] = [
       "обновления репозитория",
     ],
   },
+  {
+    sectionId: "git-access",
+    anchorId: "git-access-projects-dir",
+    labelKey: "search.gitAccessProjectsDir",
+    keywords: [
+      "папка проектов",
+      "projects folder",
+      "облако",
+      "cloud",
+      "куда скачивать",
+      "download location",
+    ],
+  },
 
   // ── О программе ──────────────────────────────────────────────
   {

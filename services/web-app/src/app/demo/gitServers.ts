@@ -6,6 +6,8 @@ import {
 } from "@shared/api/demo";
 import type { DemoRoute } from "@shared/api/demo";
 import type {
+  CloudProjectList,
+  GitProject,
   GitProjectPage,
   GitServerItem,
   GitServerLogin,
@@ -67,6 +69,42 @@ const PROJECTS: GitProjectPage = {
   total: 2,
   limit: 50,
   offset: 0,
+};
+
+/** Проекты человека на серверах демо в виде облачного списка локальной Студии. */
+export const demoCloudProjects = (
+  localIds: ReadonlySet<string>,
+): CloudProjectList => ({
+  servers: servers.map((server) => {
+    const ok = server.state === "ok";
+    const items = ok ? PROJECTS.items : [];
+    return {
+      credential_id: server.credential_id,
+      server_url: server.server_url,
+      host: server.host,
+      state: ok ? "ok" : "revoked",
+      total: items.length,
+      projects: items.map((p) => ({
+        id: p.id,
+        name: p.name,
+        owner_name: p.owner_name,
+        role: p.role,
+        can_push: p.can_push,
+        updated_at: p.updated_at,
+        is_local: localIds.has(p.id),
+      })),
+    };
+  }),
+});
+
+/** Проект среди тех, что демо-сервер отдаёт этому входу. */
+export const demoServerProject = (
+  credentialId: string,
+  projectId: string,
+): GitProject | null => {
+  const server = servers.find((s) => s.credential_id === credentialId);
+  if (server?.state !== "ok") return null;
+  return PROJECTS.items.find((p) => p.id === projectId) ?? null;
 };
 
 let servers = seedServers();

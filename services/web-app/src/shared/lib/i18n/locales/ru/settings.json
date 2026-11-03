@@ -496,6 +496,7 @@
     "runners": "Мои раннеры: сборка на своём компьютере",
     "remoteRunner": "Облачные сборки на этой машине",
     "mcp": "ИИ-клиенты (MCP): Claude, Cursor и другие",
-    "accountPasskeys": "Passkey"
+    "accountPasskeys": "Passkey",
+    "gitAccessProjectsDir": "Папка для проектов из облака"
   }
 }

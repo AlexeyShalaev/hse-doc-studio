@@ -111,8 +111,48 @@
     },
     "opening": "Opening the project…",
     "done": "Connected to {{host}}",
-    "doneHint": "Open a server project: the Studio clones it and keeps it in sync on its own.",
-    "home": "Home",
-    "clone": "Open a project from the server"
+    "toList": "Opening the project list…"
+  },
+  "cloud": {
+    "badge": "Cloud",
+    "badgeTitle": "Project on {{host}}",
+    "here": "Open on this computer",
+    "notHere": "Not open on this computer",
+    "openButton": "Open",
+    "reconnect": "Sign in again",
+    "retry": "Retry",
+    "ownerSelf": "Your project",
+    "ownerUser": "Owner: {{name}}",
+    "notice": {
+      "expired": "Your access to {{host}} has expired. Sign in again to see the cloud projects.",
+      "revoked": "The server {{host}} revoked this Studio's access. Sign in again to see the cloud projects.",
+      "unreachable": "The server {{host}} is unreachable right now. Showing the projects on this computer.",
+      "failed": "Could not load the cloud projects. Showing the projects on this computer.",
+      "truncated": "Showing the first {{shown}} of {{total}} cloud projects on {{host}}.",
+      "empty": "You have no projects in the {{host}} cloud yet."
+    },
+    "dialog": {
+      "title": "Opening “{{name}}”"
+    },
+    "open": {
+      "step": {
+        "connect": "Connecting to the server…",
+        "download": "Downloading the project…",
+        "verify": "Checking the project…",
+        "register": "Opening the project…"
+      },
+      "hint": "The project goes to this Studio's projects folder. Your edits will go to the server on their own.",
+      "failed": "Could not open the project.",
+      "cancelled": "The download was cancelled.",
+      "notFound": "This project is not on the server, or you have no access to it.",
+      "retry": "Retry",
+      "toList": "To the project list",
+      "profile": "Before your first project, say how to sign you in the edit history.",
+      "profileContinue": "Continue"
+    },
+    "build": {
+      "notConnected": "This project is not connected to the cloud, the PDF will stay on this computer.",
+      "docs": "How cloud projects work"
+    }
   }
 }
