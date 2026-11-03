@@ -188,6 +188,75 @@ for (const lang of LANGS) {
       await logout(page);
     });
 
+    test("колокольчик открывает окошко с уведомлением и ведёт во «Входящие»", async ({
+      page,
+    }) => {
+      expect(createdId).not.toBe("");
+      // Борис просит доступ к проекту Анны: владельцу приходит уведомление «просит доступ».
+      await login(page, USERS.boris.email);
+      const csrf = await page.evaluate(async () => {
+        const r = await fetch("/api/v1/session/bootstrap", {
+          credentials: "include",
+        });
+        return ((await r.json()) as { csrf_token: string | null }).csrf_token;
+      });
+      const requested = await page.request.post("/api/v1/access-requests", {
+        data: { project_id: createdId, message: "E2E" },
+        headers: csrf ? { "X-CSRF-Token": csrf } : {},
+      });
+      expect(requested.status()).toBe(202);
+      await logout(page);
+
+      await login(page, USERS.anna.email);
+      const bell = page.getByTestId("inbox-bell");
+      await expect(bell).toBeVisible();
+      await expect(bell).toHaveAttribute("data-count", /^[1-9]\d*$/);
+      await expect(bell).toHaveAttribute("aria-haspopup", "dialog");
+
+      // Нажатие открывает окошко под значком, страница не меняется.
+      await bell.click();
+      const popover = page.getByTestId("inbox-popover");
+      await expect(popover).toBeVisible();
+      await expect(page).not.toHaveURL(/\/inbox/);
+      const item = page
+        .getByTestId("inbox-popover-list")
+        .getByRole("button")
+        .filter({ hasText: createdName })
+        .first();
+      await expect(item).toBeVisible();
+      await expect(item).toHaveAttribute("data-unread", "true");
+      await shot(page, lang, "09b-bell-popover");
+
+      // Esc закрывает окошко, фокус возвращается на колокольчик.
+      await page.keyboard.press("Escape");
+      await expect(popover).toHaveCount(0);
+      await expect(bell).toBeFocused();
+
+      // Клик по уведомлению ведёт на «Входящие» к карточке запроса и закрывает окошко.
+      await bell.click();
+      await item.click();
+      await expect(page).toHaveURL(/\/inbox$/);
+      await expect(page.getByTestId("inbox-page")).toBeVisible();
+      await expect(popover).toHaveCount(0);
+      await expect(
+        page
+          .locator('[data-testid^="inbox-access-request-"]')
+          .filter({ hasText: createdName })
+          .first(),
+      ).toBeVisible();
+      await shot(page, lang, "09c-bell-to-inbox");
+
+      // «Показать все» из окошка и прямой адрес /inbox работают одинаково.
+      await page.goto("/");
+      await bell.click();
+      await page.getByTestId("inbox-popover-all").click();
+      await expect(page).toHaveURL(/\/inbox$/);
+      await expect(page.getByTestId("inbox-page")).toBeVisible();
+      await page.goto("/inbox");
+      await expect(page.getByTestId("inbox-page")).toBeVisible();
+      await logout(page);
+    });
+
     test("выход закрывает сессию", async ({ page }) => {
       await login(page, USERS.victor.email);
       expect(await visibleProjectNames(page)).toEqual([
