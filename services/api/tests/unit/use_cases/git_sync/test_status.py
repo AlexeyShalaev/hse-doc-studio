@@ -19,6 +19,14 @@ pytestmark = pytest.mark.unit
         ("git@github.com:hse-team/course-paper.git", "https://github.com/hse-team/course-paper"),
         ("ssh://git@git.hse.ru:2222/hse-team/course-paper.git", "https://git.hse.ru/hse-team/course-paper"),
         ("https://user:ghp_secret@github.com/a/b.git", "https://github.com/a/b"),
+        (
+            "https://studio.example.org/git/1dfc2e05-f1a8-440a-bf71-0175d22d2d5f.git",
+            "https://studio.example.org/projects/1dfc2e05-f1a8-440a-bf71-0175d22d2d5f",
+        ),
+        (
+            "https://example.org/studio/git/1dfc2e05-f1a8-440a-bf71-0175d22d2d5f",
+            "https://example.org/studio/projects/1dfc2e05-f1a8-440a-bf71-0175d22d2d5f",
+        ),
     ],
 )
 def test__web_url_of__builds_the_page_of_the_repository(raw: str, expected: str) -> None:

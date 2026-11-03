@@ -8,6 +8,7 @@
 from __future__ import annotations
 
 import asyncio
+import re
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from pathlib import Path
@@ -174,12 +175,20 @@ class _Comparison:
     data: RefComparison = field(default_factory=lambda: RefComparison(0, 0, 0, (), (), 0))
 
 
+_STUDIO_GIT_PATH_RE = re.compile(r"^(?P<prefix>.*)/git/(?P<id>[0-9a-fA-F-]{36})$")
+
+
 def web_url_of(url: RemoteUrl) -> str | None:
     """Адрес страницы репозитория в браузере; у локальных адресов её нет."""
     if url.kind is RemoteKind.file or url.host is None or url.repo is None:
         return None
     if url.kind in (RemoteKind.https, RemoteKind.http):
         base = url.display_url.removesuffix("/").removesuffix(".git")
+        # `<сервер>/git/<id>` у сервера Студии это git-протокол, а не страница: в браузере там 404.
+        # Страница проекта живёт по `<сервер>/projects/<id>`.
+        studio = _STUDIO_GIT_PATH_RE.match(base)
+        if studio is not None:
+            return f"{studio.group('prefix')}/projects/{studio.group('id')}"
         return base
     if url.owner is None:
         return None
