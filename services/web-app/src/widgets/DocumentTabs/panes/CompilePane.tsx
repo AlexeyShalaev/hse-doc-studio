@@ -15,6 +15,7 @@ import { documentApi, getDocMeta } from "@entities/document";
 import { useCancelDocCompile, useStartCompile } from "@entities/compile";
 import type { DocumentResponseSchema } from "@entities/document";
 import { BuildPlacementChip, CompileWaitNotice } from "@features/build-states";
+import { DocBuildNote } from "@features/cloud-builds";
 import { CloudBuildHint } from "@features/git-server";
 import { useProject } from "@entities/project";
 import type { CompilePlacement } from "@entities/runner";
@@ -349,6 +350,7 @@ export const CompilePane = ({ projectId, doc }: CompilePaneProps) => {
           </a>
         </div>
       </div>
+      <DocBuildNote projectId={projectId} docId={doc.id} />
 
       <CloudBuildHint projectId={projectId} />
 

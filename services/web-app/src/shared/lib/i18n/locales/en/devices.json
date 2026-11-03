@@ -1,0 +1,237 @@
+{
+  "presence": {
+    "online": "online",
+    "offlineAgo": "was online {{when}}",
+    "never": "has not reported yet"
+  },
+  "activity": {
+    "idle": "idle",
+    "syncing": "syncing",
+    "building": "building"
+  },
+  "os": {
+    "macos": "macOS",
+    "windows": "Windows",
+    "linux": "Linux",
+    "other": "computer"
+  },
+  "version": "version {{version}}",
+  "badge": {
+    "title": "Connected Studios",
+    "cloudOnline": "Studio online: {{name}}",
+    "cloudOffline": "Studio offline: {{name}}",
+    "cloudOnlineMany": "Studios online: {{count}}",
+    "cloudOfflineMany": "Studios offline: {{count}}",
+    "othersLocal": "Working locally: {{names}}",
+    "othersLocalMany": "Working locally: {{count}}",
+    "localOnline": "Cloud online",
+    "localSeen": "Cloud does not see this Studio",
+    "localUnreachable": "No connection to the server",
+    "localExpired": "Server sign-in expired",
+    "localRevoked": "Server sign-in revoked",
+    "aria": "Connected Studios: {{summary}}. Show details"
+  },
+  "panel": {
+    "mine": "Your Studios",
+    "others": "Other project members",
+    "othersNote": "You only see that a person is working locally right now: the computer name, version and Studio state are hidden.",
+    "workingLocally": "{{name}} is working locally",
+    "noDevices": "No Studio is connected to this project.",
+    "howTo": "How to connect a local Studio",
+    "loadFailed": "Could not load the Studio state. It will retry automatically."
+  },
+  "card": {
+    "project": "Project on this Studio",
+    "lastSync": "last sync {{when}}",
+    "neverSynced": "no sync yet",
+    "commits_one": "{{count}} commit",
+    "commits_other": "{{count}} commits",
+    "ahead": "{{commits}} ahead",
+    "behind": "{{commits}} behind",
+    "autoOn": "auto-sync is on",
+    "autoOff": "auto-sync is off",
+    "pdfOk": "PDF uploaded: {{doc}}, {{when}}",
+    "pdfFailed": "PDF upload failed ({{doc}}, {{when}})",
+    "pdfNone": "no PDF uploaded yet",
+    "sync": {
+      "synced": "in sync",
+      "syncing": "syncing",
+      "ahead": "has unsent changes",
+      "behind": "has incoming changes",
+      "diverged": "changes on both sides",
+      "conflicts": "merge conflict",
+      "offline": "no connection to the server",
+      "auth_failed": "server sign-in needed again",
+      "blocked": "sync is paused",
+      "error": "sync error",
+      "unfetched": "not checked against the server yet"
+    },
+    "runner": "Runner",
+    "runnerNone": "The Studio is not connected as a runner: cloud builds do not run on this machine.",
+    "runnerState": {
+      "online": "online",
+      "stale": "has not answered for a while",
+      "offline": "offline",
+      "paused": "paused",
+      "revoked": "revoked",
+      "disabled": "turned off by the administrator"
+    },
+    "runnerBusy": "busy: {{running}} of {{total}}",
+    "runnerFree": "free",
+    "runnerTags": "tags: {{tags}}"
+  },
+  "ai": {
+    "title": "AI through this Studio",
+    "state": {
+      "ready": "available to the cloud",
+      "not_opened": "not opened to the cloud",
+      "runner_unpaired": "Studio is not connected as a runner",
+      "runner_offline": "runner is offline",
+      "runner_paused": "runner is paused",
+      "runner_revoked": "runner is revoked",
+      "disabled": "personal runners are turned off",
+      "endpoint_unreachable": "the model on the computer does not answer",
+      "no_models": "no models loaded on the computer",
+      "no_provider": "no provider in the cloud",
+      "studio_offline": "Studio is offline",
+      "unknown": "unknown"
+    },
+    "advice": {
+      "not_opened": "In the local Studio open a model for the cloud: Settings, Cloud builds, \"Models for the cloud\".",
+      "runner_unpaired": "In the local Studio turn on \"Build my cloud projects on this machine\" and connect to the server: without it the cloud cannot reach your model.",
+      "runner_offline": "Start the local Studio on this computer and check the network.",
+      "runner_paused": "The runner is paused: resume it in \"My runners\".",
+      "runner_revoked": "The runner is revoked: connect the Studio again in \"My runners\".",
+      "disabled": "The administrator turned personal runners off: the model through this Studio is unavailable.",
+      "endpoint_unreachable": "Start Ollama or another model server on this computer.",
+      "no_models": "Pull a model in Ollama (for example, ollama pull qwen3) and wait a minute.",
+      "no_provider": "The cloud knows about the model but does not use it: add a \"through my runner\" provider in the cloud.",
+      "studio_offline": "Open the local Studio: the model is unavailable while it is offline."
+    },
+    "endpoint": "{{name}} ({{flavor}})",
+    "reachable": "answers",
+    "unreachable": "does not answer",
+    "unchecked": "not checked",
+    "models": "models: {{models}}",
+    "noModels": "no models",
+    "providerYes": "in the cloud: {{name}}",
+    "providerNo": "no provider in the cloud",
+    "addInCloud": "Add in the cloud",
+    "adding": "Adding…",
+    "added": "Provider \"{{name}}\" added, models loaded: {{count}}",
+    "addedNoModels": "Provider \"{{name}}\" added. The model list will load when the Studio answers.",
+    "addFailed": "Could not add the provider. Open \"Settings, AI providers\" and add it by hand.",
+    "moreModels": "{{models}} and {{count}} more"
+  },
+  "local": {
+    "title": "Link to the cloud",
+    "server": "Server {{host}}",
+    "account": "Signed in as {{name}}",
+    "state": {
+      "ok": "sign-in is valid",
+      "expired": "sign-in expired",
+      "revoked": "sign-in revoked",
+      "unreachable": "server does not answer"
+    },
+    "relogin": "Sign in to the server again: Settings, \"Repository access\".",
+    "cloudSees": "The cloud sees this Studio: {{state}}",
+    "cloudSeesOnline": "online",
+    "cloudSeesWaiting": "no signal yet",
+    "cloudSeesOffline": "offline",
+    "lastSent": "last signal sent {{when}}",
+    "lastFailed": "the signal did not arrive ({{code}})",
+    "noSignal": "no signal sent yet",
+    "cloudError": "The cloud did not answer ({{code}}). How it sees this Studio is unknown.",
+    "othersTitle": "Working locally now",
+    "othersEmpty": "Nobody else is in this project right now.",
+    "allowed": "What is open to the cloud",
+    "allowedNone": "Nothing is open to the cloud: neither builds nor models.",
+    "allowedRunner": "Cloud builds on this machine: {{state}}",
+    "allowedModels": "Models: {{names}}",
+    "notConnected": "The project is not connected to the cloud: its state is not shown here.",
+    "signIn": "Sign in to the server"
+  },
+  "builds": {
+    "none": "not built",
+    "running": "building in the cloud",
+    "cloudOnly": "built in the cloud {{when}}, not in a Studio",
+    "studioOnly": "built in a Studio {{when}}, not in the cloud",
+    "both": "cloud {{cloud}}, Studio {{studio}}",
+    "fresh": "up to date",
+    "stale": "out of date: the project changed",
+    "unknownVersion": "version unknown",
+    "commit": "from {{commit}}",
+    "failedAt": "the last cloud build failed {{when}}",
+    "local": {
+      "cloudOnly": "Built in the cloud {{when}}, you do not have this build",
+      "localOnly": "Built here {{when}}, not in the cloud",
+      "same": "Matches the cloud build",
+      "cloudNewer": "The cloud has a newer build ({{when}})",
+      "localNewer": "Your build is newer than the cloud one ({{when}})",
+      "none": "Not built here or in the cloud",
+      "from": "fetched from the cloud"
+    },
+    "fetch": "Get the build",
+    "fetching": "Fetching…",
+    "fetchAll": "Get cloud builds",
+    "forceFetch": "Replace anyway",
+    "result": {
+      "downloaded": "Build received: the document opens without rebuilding.",
+      "unchanged": "You already have the same build.",
+      "kept_local": "Your local build is newer than the cloud one, so it was not replaced.",
+      "skipped_stale": "The cloud build was made from another version of the project, so it was not taken.",
+      "too_large": "The PDF is larger than the server accepts.",
+      "no_cloud_build": "This document has no cloud build.",
+      "failed": "Could not get the build. Check the connection to the server."
+    },
+    "unavailable": "Cloud build status is unavailable: {{code}}",
+    "fetchableCount_one": "The cloud has {{count}} build you do not have",
+    "fetchableCount_other": "The cloud has {{count}} builds you do not have",
+    "short": {
+      "none": "not built",
+      "running": "building in the cloud",
+      "cloudOnly": "cloud {{when}}",
+      "studioOnly": "Studio {{when}}, not in the cloud",
+      "both": "cloud {{cloud}}, Studio {{studio}}",
+      "local": {
+        "cloudOnly": "cloud {{when}}, you do not have it",
+        "localOnly": "here {{when}}, not in the cloud",
+        "same": "matches the cloud",
+        "cloudNewer": "cloud is newer: {{when}}",
+        "localNewer": "yours is newer: {{when}}",
+        "none": "not built anywhere"
+      }
+    }
+  },
+  "name": {
+    "title": "Name of this computer",
+    "hint": "This is how the cloud lists your Studio among connected ones. By default it is the machine name.",
+    "placeholder": "For example, Anna's MacBook",
+    "save": "Save",
+    "reset": "Reset to \"{{name}}\"",
+    "saved": "Name saved",
+    "tooLong": "At most 64 characters."
+  },
+  "account": {
+    "title": "My Studios",
+    "lead": "Local Studios signed in to your account: whether they are online, what they are doing and what is open to the cloud.",
+    "empty": "No connected Studios yet. Install the local Studio and sign in to this server.",
+    "projects": "projects: {{count}}",
+    "forget": "Forget device",
+    "forgetTitle": "Forget the device \"{{name}}\"?",
+    "forgetBody": "It disappears from the list. If the Studio reports again, it comes back.",
+    "forgotten": "Device forgotten",
+    "cancel": "Cancel"
+  },
+  "providerBanner": {
+    "title": "Studio \"{{device}}\" opens models to the cloud, but there is no provider for them",
+    "body": "Models: {{models}}. For the cloud chat to use them, add a \"through my runner\" provider.",
+    "bodyNoModels": "For the cloud chat to use them, add a \"through my runner\" provider."
+  },
+  "time": {
+    "now": "just now",
+    "min": "{{count}} min",
+    "hour": "{{count}} h",
+    "day": "{{count}} d"
+  }
+}

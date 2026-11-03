@@ -49,6 +49,7 @@ import {
   demoServerProject,
   gitServerDemoRoutes,
 } from "./gitServers";
+import { localDeviceDemoRoutes } from "./deviceRoutes";
 import { createWorld, projectOf } from "./scenarios";
 import { isServerDemoActive } from "./server/routes";
 import { useDemoScenarioStore } from "./scenarioStore";
@@ -1893,6 +1894,7 @@ const historyRoutes: DemoRoute[] = [
 
 export const gitDemoRoutes: DemoRoute[] = [
   ...gitServerDemoRoutes,
+  ...localDeviceDemoRoutes,
   ...projectRoutes,
   ...globalRoutes,
   ...historyRoutes,

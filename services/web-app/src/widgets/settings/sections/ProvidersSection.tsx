@@ -14,6 +14,7 @@ import {
 import { useOllamaRuntimeStatus, useSyncProvider } from "@entities/ai-runtime";
 import { useAppSettings, useUpdateAppSettings } from "@entities/app-settings";
 import { useBootstrap, useCapabilities } from "@entities/session";
+import { StudioProviderBanner } from "@features/connected-devices";
 import { AIProviderEditorModal } from "@features/manage-ai-provider";
 import { Combobox } from "@shared/ui/Combobox";
 import { StatusDot, type StatusDotStatus } from "@shared/ui/StatusDot";
@@ -289,6 +290,7 @@ export const ProvidersSection = () => {
       />
 
       <div className="flex flex-col" style={{ gap: 12, paddingBottom: 14 }}>
+        <StudioProviderBanner />
         {showOllamaHint && (
           <div
             className="flex items-center justify-between"

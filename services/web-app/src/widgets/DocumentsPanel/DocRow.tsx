@@ -1,10 +1,11 @@
-import { type FocusEvent, type ReactNode, useState } from "react";
+import { type FocusEvent, type ReactNode, useEffect, useState } from "react";
 import { Download, MoreVertical, RefreshCw, Upload } from "lucide-react";
 import { clsx } from "clsx";
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 import { useTranslation } from "react-i18next";
 import { useCustomFileActions } from "@entities/document";
 import type { DocStatus, getDocMeta } from "@entities/document";
+import { DocBuildSubline } from "@features/cloud-builds";
 import { UploadCustomFileModal } from "@features/custom-document";
 import { env } from "@shared/config";
 import { Modal } from "@shared/ui";
@@ -51,6 +52,19 @@ const renderHighlighted = (text: string, query: string): ReactNode => {
   return parts;
 };
 
+const useMinuteNow = (): number => {
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const id = window.setInterval(() => {
+      setNow(Date.now());
+    }, 30_000);
+    return () => {
+      window.clearInterval(id);
+    };
+  }, []);
+  return now;
+};
+
 export type DocRowProps = {
   projectId: string;
   doc: DocumentItem;
@@ -80,6 +94,7 @@ export const DocRow = ({
   const [isHovered, setIsHovered] = useState(false);
   const [isFocusWithin, setIsFocusWithin] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const now = useMinuteNow();
   const { remove, isRemoving } = useCustomFileActions(projectId, doc.id);
   const isCustom = doc.custom_file != null;
   const sev = isBuilding ? "building" : STATUS_TO_DOT[doc.status];
@@ -147,10 +162,11 @@ export const DocRow = ({
           {renderHighlighted(meta.code, query)}
         </span>
         <span
-          className="flex-1 min-w-0"
-          style={{ fontSize: 12, lineHeight: 1.35, minWidth: 0 }}
+          className="flex flex-col flex-1 min-w-0"
+          style={{ fontSize: 12, lineHeight: 1.35, minWidth: 0, gap: 1 }}
         >
-          {renderHighlighted(meta.name, query)}
+          <span>{renderHighlighted(meta.name, query)}</span>
+          <DocBuildSubline projectId={projectId} docId={doc.id} now={now} />
         </span>
         {isCustom && (
           <span
