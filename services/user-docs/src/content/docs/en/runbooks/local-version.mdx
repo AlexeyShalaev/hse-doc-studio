@@ -20,7 +20,8 @@ help:
       shot: runbooks/local-version/step-03
     - text: 'Enter the **Server address** and click **Sign in**. Then click **Open the confirmation page**, check that the code matches and click **Allow** on the website.'
       hint: 'A code is valid for 10 minutes. The device gets access to every project whose sources you can see, for 90 days.'
-    - text: 'Back in the local Studio, in **Projects on the server** click **Clone** next to the project, pick a folder and click **Open project**.'
+    - text: 'Back in the local Studio, your cloud projects are already in the **Projects** list with a **Cloud** mark. Click **Open** next to the one you need, and Studio downloads it into the projects folder and opens it on its own.'
+      hint: 'You do not pick a folder. If the project is already on your computer it simply opens. To use another folder for cloud projects, go to **Settings** → **Repository access** → **Folder for cloud projects**.'
     - text: 'Work as usual: edits go to the server on their own after a pause, and built PDFs are uploaded to the website. You control this in **Settings** → **Sync**: **Sync automatically** and **Upload the PDF to the server after a build**.'
       hint: 'Without a network Studio waits for the connection and carries on by itself. More on sync and conflicts in [Sync with git](/help/en/runbooks/git-sync/).'
       shot: runbooks/local-version/step-06
@@ -32,6 +33,7 @@ verified:
     - deploy/install.ps1
     - services/web-app/src/pages/LocalStudioPage
     - services/web-app/src/pages/ConnectServerPage
+    - services/web-app/src/pages/WelcomePage
     - services/web-app/src/features/local-studio-guide
     - services/web-app/src/pages/DevicePage
     - services/web-app/src/features/git-server
@@ -57,5 +59,7 @@ co-authors.
   the drive in its settings.
 - **“The code expired. Start again.”**: click **Sign in to a server** once more and confirm the new
   code within 10 minutes.
+- **No cloud projects in the list**: check the cloud line above the list. If access expired click **Sign in again**, if the server is unreachable click **Retry**. An empty list means you have no projects on the server yet.
+- **“This project is not connected to the cloud, the PDF will stay on this computer”** on the **Build** tab: the project was created in the local Studio and will not reach the server. Create the project in the cloud and open it from there.
 - **“Access to the server expired or was revoked. Sign in again.”**: in **Settings** → **Repository
   access** click **Sign in again** next to that server.
