@@ -6,6 +6,7 @@ export {
   isProjectId,
   isValidPort,
   localConnectUrl,
+  localFromCloudDocsUrl,
   localStudioPath,
   readConnectTarget,
   studioCloneUrl,

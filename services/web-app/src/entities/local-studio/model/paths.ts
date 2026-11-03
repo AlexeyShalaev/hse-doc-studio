@@ -9,6 +9,10 @@ export const CONNECT_SERVER_PATH = "/connect";
 /** Порт локальной Студии по умолчанию (deploy/install.sh). */
 export const DEFAULT_LOCAL_PORT = 17240;
 
+/** Страница документации «Локальная версия из облака» (адрес закреплён в docs/design/local-from-cloud.md). */
+export const localFromCloudDocsUrl = (language: string): string =>
+  `https://alexeyshalaev.github.io/hse-doc-studio/${language.startsWith("en") ? "en/" : ""}start/local-from-cloud/`;
+
 const UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
