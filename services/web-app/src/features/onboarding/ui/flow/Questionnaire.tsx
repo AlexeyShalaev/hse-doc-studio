@@ -155,6 +155,8 @@ export const Questionnaire = ({
                 padding: "10px 12px",
                 textAlign: "left",
                 fontSize: 13.5,
+                // кнопка не наследует цвет: в тёмной теме UA даёт чёрный текст на тёмной карточке
+                color: "var(--fg-0)",
                 borderColor: selected ? "var(--accent)" : undefined,
               }}
               onClick={() => {

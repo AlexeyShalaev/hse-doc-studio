@@ -116,6 +116,18 @@ describe("OnboardingHost", () => {
     expect(useOnboardingStore.getState().phase).toBe("idle");
   });
 
+  it("анкета: текст варианта задан цветом темы, а не цветом кнопки браузера", async () => {
+    const user = userEvent.setup();
+    mount(STATE);
+
+    await user.click(await screen.findByTestId("onboarding-start"));
+
+    // <button> не наследует color: без явного цвета в тёмной теме текст чёрный на тёмном
+    expect(
+      screen.getByTestId("onboarding-answer-role-student").style.color,
+    ).toBe("var(--fg-0)");
+  });
+
   it("анкета: ответы сохраняются, после неё экскурсия по главной", async () => {
     const user = userEvent.setup();
     const { patch } = mount(STATE);
