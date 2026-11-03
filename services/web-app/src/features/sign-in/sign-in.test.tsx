@@ -22,6 +22,7 @@ const AUTH: AuthOptions = {
   oidc_providers: [{ id: "hse", label: "HSE ID" }],
   smtp_enabled: true,
   password_min_length: 10,
+  passkeys_enabled: false,
 };
 
 const renderCard = (

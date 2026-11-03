@@ -1,0 +1,57 @@
+---
+title: 'Collaboration and review'
+description: 'How to open a project on a Studio server to co-authors and your supervisor: roles, invitations, links, comments on the text and the Inbox.'
+sidebar:
+  order: 6
+access: user
+help:
+  routes:
+    - '/projects/:projectId/project-settings/people'
+    - '/inbox'
+    - '/projects/:projectId/documents/:docId?tab=source'
+  summary: 'The owner adds people to the project as Reader, Reviewer or Editor, or creates a link. A reviewer leaves comments on pieces of text; replies and invitations arrive in the Inbox.'
+  steps:
+    - text: 'In the project open **Settings** on the left rail and pick the **People** group: the **Access** card is there.'
+      hint: 'The card exists only for projects on a Studio server. Only the project owner can change access.'
+      shot: runbooks/review-collaboration/step-01
+    - text: 'In the **Add** block type a name, e-mail or group name, choose the **Role** and click **Invite** next to the person found. In the **Invite to the project** window click **Invite** again.'
+      hint: 'A *Reader* only views, a *Reviewer* can also comment, an *Editor* changes the documents. The person joins once they click **Accept**. A group is added at once. If they are not on the server yet, click **Invite by email**.'
+      shot: runbooks/review-collaboration/step-02
+    - text: 'To open the project without registration, in the **Link sharing** card click **Create link**, set the **Role**, **Expiry** and optionally a **Password**, then click **Create**.'
+      hint: 'You can **Revoke** a link at any moment: everyone who opened it loses access at once.'
+    - text: 'The invited person opens the **Inbox** (the bell in the title bar) and clicks **Accept** on the invitation.'
+    - text: 'To comment on the text, open the document on the **Editor** tab, select a piece of text and click **Comment** on the editor toolbar. Write your note and click **Send**.'
+      hint: 'Type @ to mention a member: they get a notification in the Inbox.'
+      shot: runbooks/review-collaboration/step-05
+    - text: 'Open the **Comments** panel to **Reply** or close a thread with **Resolve**.'
+      hint: 'The **Open** / **All** switch also shows resolved threads. A resolved thread can be reopened.'
+verified:
+  at: 2026-11-03
+  app_version: '0.3.0'
+  sources:
+    - services/web-app/src/features/project-access
+    - services/web-app/src/features/project-invitations
+    - services/web-app/src/features/share-links
+    - services/web-app/src/features/source-edit/review
+    - services/web-app/src/features/inbox
+    - services/web-app/src/pages/InboxPage
+---
+
+import Steps from '~/components/Steps.astro'
+
+On a Studio server a project is visible only to the people it was opened to. The owner decides who
+works with the documents and in which role: a co-author edits, a supervisor reads and leaves notes
+right on pieces of the text. Invitations, access requests and replies to comments are collected
+in the **Inbox**.
+
+<Steps />
+
+## If something goes wrong
+
+- **“No one found”**: the person must be a user of the server. Invite them with **Invite by email**.
+- **“Email is not configured: send the link yourself”**: the server does not send e-mail. Copy the
+  **Invitation link** and pass it on any way you like.
+- **“The invitation has expired”**: ask the owner for a new one. In the **Pending** card they have a
+  **Resend** button.
+- **“The fragment was already changed: select it again”**: the text changed while you were writing.
+  Select the place once more.

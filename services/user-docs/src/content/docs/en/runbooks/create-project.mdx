@@ -1,0 +1,56 @@
+---
+title: Create a project from a template
+description: 'The new project wizard, from picking a template (thesis, coursework, Project Proposal) to a ready folder of documents.'
+sidebar:
+  order: 1
+access: user
+help:
+  routes: ['/wizard', '/']
+  summary: 'The wizard walks you through the pack, template, version, name, language, authors and supervisor. At the end Studio creates every document of the set.'
+  steps:
+    - text: 'On the **Projects** screen click **New project** (or ⌘K → “New project”, or ⌘N).'
+      shot: runbooks/create-project/step-01
+    - text: 'Pick your programme’s **Pack** and the **Template** of your work, then click **Next**.'
+      hint: 'A pack is the set of templates of one study programme, e.g. `hse-cs-se` for the Software Engineering bachelor’s.'
+      shot: runbooks/create-project/step-02
+    - text: 'On the **Version** step keep the recommended (stable) one and click **Next**.'
+      hint: 'The template version is pinned to the project. You can update it later in the project settings.'
+    - text: 'Enter the **Project name** and, in the local Studio, a **Local folder** that is empty or does not exist yet.'
+      hint: 'On a server you do not pick a folder: Studio stores the files.'
+      shot: runbooks/create-project/step-04
+    - text: 'Choose the **Language**, then fill in **Authors** (full name and group) and **Supervisor**.'
+      hint: 'You may leave the supervisor empty and add them later, unless the template requires one.'
+    - text: 'On the **Review** step check the list of documents and click **Create project**.'
+      shot: runbooks/create-project/step-06
+  video:
+    src: runbooks/create-project/clip
+verified:
+  at: 2026-11-03
+  app_version: '0.3.0'
+  sources:
+    - services/web-app/src/pages/WizardPage
+    - services/web-app/src/features/project-create
+---
+
+import Steps from '~/components/Steps.astro'
+import Video from '~/components/Video.astro'
+
+A project is a folder with the sources of every document of your work (the report, the
+specification, the slides and others) plus the project passport. The wizard creates it from your
+programme’s template, so formatting, title pages and required sections are already in place: all
+that is left is writing.
+
+<Video />
+
+<Steps />
+
+## If something goes wrong
+
+- **“The folder must be empty”**: pick a new folder or clear it. Studio does not mix its files with
+  anything else.
+- **The template you need is missing**: check that the right **Pack** is selected; templates depend
+  on the pack.
+- **“A supervisor is required for this template”**: enter at least the full name; the title can be
+  refined later in the project settings.
+- **You already have a project folder**: do not create a new one, click **Open folder…** on the
+  **Projects** screen.

@@ -3,6 +3,7 @@ import { useNavigate, useParams } from "react-router";
 import { useTranslation } from "react-i18next";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import {
+  BookOpen,
   Bot,
   CloudDownload,
   CloudUpload,
@@ -28,6 +29,7 @@ import {
   useSyncStatus,
   useSyncUiStore,
 } from "@entities/git-sync";
+import { openHelp } from "@entities/help";
 import { useProjects } from "@entities/project";
 import { useThemeStore, useUIStore, useWorkspaceStore } from "@shared/lib";
 
@@ -41,6 +43,7 @@ type Command = {
 
 export const CommandPalette = () => {
   const { t } = useTranslation("appChrome");
+  const { t: tHelp } = useTranslation("help");
   const navigate = useNavigate();
   const params = useParams<{ projectId?: string; docId?: string }>();
   const isOpen = useUIStore((s) => s.paletteOpen);
@@ -105,6 +108,16 @@ export const CommandPalette = () => {
 
   const commands: Command[] = useMemo(() => {
     const base: Command[] = [
+      {
+        id: "help",
+        label: tHelp("command"),
+        icon: BookOpen,
+        shortcut: "?",
+        run: () => {
+          setOpen(false);
+          openHelp();
+        },
+      },
       {
         id: "new",
         label: t("commandPalette.newProject"),
@@ -298,6 +311,7 @@ export const CommandPalette = () => {
     setSystemChatOpen,
     syncStatus,
     t,
+    tHelp,
   ]);
 
   const filtered = useMemo(() => {

@@ -14,6 +14,7 @@ import {
   Info,
   KeyRound,
   ListChecks,
+  Plug,
   Presentation,
   Server,
   Search,
@@ -50,8 +51,10 @@ import { ExportImportSection } from "@features/export-import";
 import { GitAccessSection } from "@features/git-remote";
 import { MyOrganizationsSection } from "@features/my-organizations";
 import { MyRunnersSection } from "@features/my-runners";
+import { OnboardingRestartCard } from "@features/onboarding";
 import { UsageSection } from "@features/usage";
 import { RemoteRunnerSection } from "@features/remote-runner";
+import { McpSection } from "@features/mcp-server";
 import {
   LOCAL_BOOTSTRAP,
   useBootstrap,
@@ -252,6 +255,13 @@ const SECTIONS: readonly SectionDef[] = [
     icon: CloudCog,
   },
   {
+    id: "mcp",
+    group: "ai",
+    scope: "user",
+    labelKey: "settingsPage.sections.mcp",
+    icon: Plug,
+  },
+  {
     id: "git-access",
     group: "system",
     scope: "user",
@@ -281,13 +291,23 @@ const renderSection = (id: SettingsSectionId) => {
     case "appearance":
       return <AppearanceSection />;
     case "account":
-      return <AccountSection />;
+      return (
+        <>
+          <AccountSection />
+          <OnboardingRestartCard />
+        </>
+      );
     case "organizations":
       return <MyOrganizationsSection />;
     case "usage":
       return <UsageSection />;
     case "profile":
-      return <AuthorProfileSection />;
+      return (
+        <>
+          <AuthorProfileSection />
+          <OnboardingRestartCard />
+        </>
+      );
     case "compiler":
       return (
         <>
@@ -317,6 +337,8 @@ const renderSection = (id: SettingsSectionId) => {
       return <GitAccessSection />;
     case "runners":
       return <MyRunnersSection />;
+    case "mcp":
+      return <McpSection />;
     case "remote-runner":
       return <RemoteRunnerSection />;
     case "about":

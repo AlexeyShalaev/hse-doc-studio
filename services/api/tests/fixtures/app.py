@@ -16,6 +16,7 @@ from hse_doc_studio.core.ai_runtime import IHardwareProbe, IOllamaRegistry, IOll
 from hse_doc_studio.core.compile.docker_diagnosis import DockerUnavailableReason
 from hse_doc_studio.core.git_sync.protocols import IHostKeyScanner
 from hse_doc_studio.core.i18n import set_interface_language
+from hse_doc_studio.core.onboarding.protocols import IExistingUserProbe, IOnboardingRepository
 from hse_doc_studio.core.projects.locator import IProjectLocator
 from hse_doc_studio.core.projects.usage import IProjectQuota, NoopProjectQuota
 from hse_doc_studio.core.remote_runner import IRemoteRunnerSupervisor
@@ -61,6 +62,7 @@ from hse_doc_studio.core.update.repositories import (
     IUpdateFeedGateway,
 )
 from hse_doc_studio.infra.di.providers.local_remote_runner import LocalRemoteRunnerProvider
+from hse_doc_studio.infra.di.providers.mcp import McpProvider
 from hse_doc_studio.infra.di.providers.services import DomainServiceProvider
 from hse_doc_studio.infra.di.providers.use_cases import UseCaseProvider
 from hse_doc_studio.infra.identity.project_access import LocalProjectAccessChecker
@@ -72,6 +74,7 @@ from hse_doc_studio.infra.persistence.compile import JsonCompileRepository
 from hse_doc_studio.infra.persistence.files import LocalFileRepository
 from hse_doc_studio.infra.persistence.filesystem_browser import LocalFilesystemBrowser
 from hse_doc_studio.infra.persistence.forms import JsonFormStateRepository
+from hse_doc_studio.infra.persistence.onboarding import JsonOnboardingRepository, LocalExistingUserProbe
 from hse_doc_studio.infra.persistence.project import JsonProjectRepository
 from hse_doc_studio.infra.persistence.project_index import JsonProjectIndexRepository
 from hse_doc_studio.infra.persistence.project_locator import LocalProjectLocator
@@ -339,6 +342,14 @@ def create_test_container(  # noqa: C901 — one @provide per repo; flat by desi
             return JsonAIProviderRepository(self._data_dir)
 
         @provide
+        def get_onboarding_repo(self) -> IOnboardingRepository:
+            return JsonOnboardingRepository(self._data_dir)
+
+        @provide
+        def get_existing_user_probe(self, project_index: IProjectIndexRepository) -> IExistingUserProbe:
+            return LocalExistingUserProbe(project_index)
+
+        @provide
         def get_agent_persona_repo(self) -> IAgentPersonaRepository:
             return JsonAgentPersonaRepository(self._data_dir)
 
@@ -398,6 +409,7 @@ def create_test_container(  # noqa: C901 — one @provide per repo; flat by desi
         TestRepositoryProvider(data_dir),
         DomainServiceProvider(),
         UseCaseProvider(),
+        McpProvider(),
         LocalRemoteRunnerProvider(),
         FastapiProvider(),
     ]

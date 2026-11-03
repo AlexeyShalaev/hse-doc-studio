@@ -27,7 +27,7 @@ SetupState = Literal["needs_admin", "ready"]
 RegistrationMode = Literal["open", "domains", "invite", "closed"]
 OrgRoleName = Literal["owner", "admin", "member"]
 AccountStatus = Literal["active", "pending_verification", "pending_approval", "disabled"]
-TokenScope = Literal["api", "git:read", "git:write"]
+TokenScope = Literal["api", "git:read", "git:write", "mcp", "mcp:admin"]
 ProjectRoleName = Literal["reader", "reviewer", "editor", "owner"]
 
 
@@ -63,6 +63,8 @@ class AuthOptions(StrictModel):
     oidc_providers: list[OidcProviderOption]
     smtp_enabled: bool
     password_min_length: int
+    # Вход по passkey: включён админом и адрес Студии годится для WebAuthn (HTTPS или localhost).
+    passkeys_enabled: bool = False
 
 
 class OrgRole(StrictModel):
@@ -323,7 +325,7 @@ class ApiToken(StrictModel):
 
 class CreateApiTokenRequest(StrictModel):
     name: str = Field(min_length=1, max_length=80)
-    scopes: list[TokenScope] = Field(min_length=1, max_length=3)
+    scopes: list[TokenScope] = Field(min_length=1, max_length=5)
     expires_in_days: int | None = Field(ge=1, le=365)
 
 
@@ -404,6 +406,8 @@ class AdminUser(StrictModel):
     created_at: datetime
     last_login_at: datetime | None
     project_count: int
+    # Сколько passkey у человека (колонка таблицы людей); сами ключи в GET /users/{id}/passkeys.
+    passkey_count: int = 0
 
 
 class AdminUserPage(StrictModel):
@@ -805,15 +809,30 @@ class UpdateAdminRegistrationRequest(StrictModel):
     require_approval: bool | None = None
 
 
+PasskeyIssue = Literal["no_address", "insecure_origin", "ip_address", "rp_id_mismatch"]
+
+
+class PasskeyDomainCount(StrictModel):
+    domain: str
+    count: int
+
+
 class AdminAuthSettings(StrictModel):
     password_enabled: bool
     # Сколько провайдеров единого входа включено: отключить пароль можно, только если есть куда войти иначе.
     oidc_enabled_count: int
     fields: dict[str, SettingState]
+    passkeys_enabled: bool = True
+    # Домен новых ключей по текущему адресу Студии; null вместе с `passkey_issue`, если адрес не годится.
+    passkey_domain: str | None = None
+    passkey_issue: PasskeyIssue | None = None
+    # Сколько ключей установки привязано к каждому домену: ключи чужого домена после смены адреса не работают.
+    passkey_domains: list[PasskeyDomainCount] = Field(default_factory=list)
 
 
 class UpdateAdminAuthRequest(StrictModel):
     password_enabled: bool | None = None
+    passkeys_enabled: bool | None = None
 
 
 class AdminSmtpSettings(StrictModel):

@@ -59,6 +59,11 @@ const AdminUpdatesPage = lazy(() =>
   import("@features/admin-updates").then((m) => ({ default: m.UpdatesPage })),
 );
 
+// MCP-сервер установки: включение, инструменты, журнал вызовов.
+const AdminMcpPage = lazy(() =>
+  import("@features/mcp-server").then((m) => ({ default: m.AdminMcpPage })),
+);
+
 // Ширина содержимого по разделу: формы настроек узкие, таблицы и сводки широкие.
 const INSTALL_PARTS = [
   ["instance", "narrow"],
@@ -307,6 +312,14 @@ export const AdminApp = () => {
           element={
             <Page width="wide" ns={["diagnostics"]}>
               <AdminDiagnosticsPage />
+            </Page>
+          }
+        />
+        <Route
+          path="mcp"
+          element={
+            <Page width="narrow" ns={["mcp"]}>
+              <AdminMcpPage />
             </Page>
           }
         />

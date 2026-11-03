@@ -1,0 +1,91 @@
+{
+  "title": "AI clients (MCP)",
+  "lead": "Claude, Cursor and other AI clients work in the Studio with its tools on your behalf over the Model Context Protocol.",
+  "serverOff": "The MCP server is turned off on this installation. An administrator turns it on.",
+  "enable": {
+    "label": "Enable the MCP server",
+    "hint": "Clients connect at the address below. A disabled server answers 503."
+  },
+  "badge": {
+    "readOnly": "read-only",
+    "dangerous": "dangerous",
+    "admin": "admin"
+  },
+  "groupToggle": "Group “{{group}}”",
+  "group": {
+    "account": {
+      "title": "Account",
+      "hint": "Who is connected."
+    },
+    "projects": {
+      "title": "Projects",
+      "hint": "List, card, create, metadata, delete."
+    },
+    "files": {
+      "title": "Documents and files",
+      "hint": "Read, search, edit, write, move and delete files."
+    },
+    "build": {
+      "title": "Build",
+      "hint": "Run a build, history, log, cancel."
+    },
+    "checks": {
+      "title": "Checks",
+      "hint": "Findings, rules, normcontrol report, requirements."
+    },
+    "review": {
+      "title": "Review",
+      "hint": "Review comments on text fragments."
+    },
+    "history": {
+      "title": "History and git",
+      "hint": "Versions, snapshots, rewind, git remote exchange."
+    },
+    "submission": {
+      "title": "Submission",
+      "hint": "Submission profiles and packages, signature status."
+    },
+    "admin": {
+      "title": "Administration",
+      "hint": "Users, queue, runners, audit. Only for an instance administrator with an MCP: administration token."
+    }
+  },
+  "tools": {
+    "lead": "A client does not see a disabled tool. Dangerous ones (delete, rewind, git sync) are enabled by name.",
+    "available_one": "{{count}} tool is available to you",
+    "available_other": "{{count}} tools are available to you",
+    "tokenHint": "To connect, issue a token with the MCP permission: Settings → Account → Tokens."
+  },
+  "connect": {
+    "title": "Connecting",
+    "hintLocal": "No token needed: the server only answers programs on this computer.",
+    "hintServer": "Put your token with the MCP permission in place of hsd_pat_...",
+    "url": "MCP server address",
+    "clients": {
+      "claudeCode": "Claude Code",
+      "cursor": "Cursor (mcp.json)",
+      "vscode": "VS Code (mcp.json)",
+      "stdio": "Claude Desktop and other clients that launch a process (stdio)"
+    }
+  },
+  "journal": {
+    "title": "Call log",
+    "hint": "Recent calls: tool, who, outcome and time. Arguments are not stored.",
+    "off": "MCP is off: no calls.",
+    "empty": "No calls yet",
+    "at": "When",
+    "tool": "Tool",
+    "who": "Who",
+    "outcome": "Outcome",
+    "duration": "Time",
+    "ms": "{{value}} ms",
+    "outcomes": {
+      "ok": "ok",
+      "error": "error",
+      "denied": "denied"
+    }
+  },
+  "failure": {
+    "unknown": "The request failed. Try again later."
+  }
+}

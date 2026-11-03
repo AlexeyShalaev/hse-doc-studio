@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { HelpAnchor } from "@entities/help";
 import { useNavigate, useSearchParams } from "react-router";
 import {
   AlertTriangle,
@@ -83,6 +84,22 @@ const getCreateMetaFields = (
 const isSupervisorRequired = (
   metaFields: Record<string, MetaFieldDef>,
 ): boolean => metaFields.supervisor?.required_at === "create";
+
+// Шаг мастера → шаг статьи справки runbooks/create-project (значок «?» у заголовка шага).
+const WIZARD_HELP_STEP: Partial<Record<string, number>> = {
+  pack: 2,
+  template: 2,
+  version: 3,
+  kind: 4,
+  folder: 4,
+  name: 4,
+  lang: 5,
+  presentation: 5,
+  authors: 5,
+  supervisor: 5,
+  meta: 5,
+  review: 6,
+};
 
 // Step titles/subtitles live in the `projectCreate` locale under `steps.<id>`;
 // resolved at render time via t() so they follow the interface language.
@@ -2235,6 +2252,18 @@ export const ProjectCreateWizard = () => {
   const stepDefs = folderless ? SERVER_STEPS : STEPS;
   const totalSteps = stepDefs.length;
 
+  // Шаблон из ?pack=&template= (онбординг предлагает его в конце). Только для
+  // пустого мастера: начатое человеком не перетираем.
+  useEffect(() => {
+    const pack = searchParams.get("pack");
+    const template = searchParams.get("template");
+    if (pack && template && packId === null && templateId === null) {
+      setField("packId", pack);
+      setField("templateId", template);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams]);
+
   // Prefill folder from ?folder= when arriving from connect → "Create here".
   useEffect(() => {
     const prefill = searchParams.get("folder");
@@ -2595,6 +2624,10 @@ export const ProjectCreateWizard = () => {
             }}
           >
             {t(`steps.${cur.id}.title`)}
+            <HelpAnchor
+              article="runbooks/create-project"
+              step={WIZARD_HELP_STEP[cur.id] ?? 1}
+            />
           </h2>
           <p
             className="dim"

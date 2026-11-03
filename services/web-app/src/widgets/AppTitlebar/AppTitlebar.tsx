@@ -4,7 +4,9 @@ import { Bot, ChevronRight, GraduationCap, Lock, Settings } from "lucide-react";
 import { clsx } from "clsx";
 import { AccountMenu } from "@features/account-menu";
 import { GuestBadge, useGuest } from "@features/guest-session";
+import { HelpButton } from "@features/help-center";
 import { InboxBell } from "@features/inbox";
+import { HelpMenu } from "@features/onboarding";
 import { useSystemInfo } from "@entities/system";
 import { useWorkspaceStore } from "@shared/lib";
 
@@ -206,6 +208,7 @@ export const AppTitlebar = ({
             type="button"
             className={clsx("icon-btn tt", systemChatOpen && "active")}
             data-tt={agentTooltip}
+            data-tour="titlebar-agent"
             onClick={toggleSystemChat}
             style={
               systemChatOpen
@@ -222,6 +225,7 @@ export const AppTitlebar = ({
             type="button"
             className={clsx("icon-btn tt", settingsActive && "active")}
             data-tt={t("titlebar.settings")}
+            data-tour="titlebar-settings"
             onClick={handleOpenSettings}
             style={
               settingsActive
@@ -233,7 +237,10 @@ export const AppTitlebar = ({
           </button>
         )}
         {!isGuest && <InboxBell />}
-        <AccountMenu />
+        {isGuest ? <HelpButton /> : <HelpMenu />}
+        <span data-tour="titlebar-account" className="flex items-center">
+          <AccountMenu />
+        </span>
         <GuestBadge />
       </div>
     </div>

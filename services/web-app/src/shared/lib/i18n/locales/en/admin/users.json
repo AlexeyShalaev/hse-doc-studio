@@ -25,7 +25,8 @@
       "role": "Role",
       "projects": "Projects",
       "lastLogin": "Last sign-in",
-      "actions": "Actions"
+      "actions": "Actions",
+      "passkeys": "Passkeys"
     },
     "you": "you",
     "admin": "Administrator",
@@ -53,7 +54,10 @@
       "revokeSessions": "End all sign-ins",
       "remove": "Delete permanently",
       "selfHint": "You cannot do this to your own account."
-    }
+    },
+    "passkeyCount_one": "{{count}} passkey",
+    "passkeyCount_other": "{{count}} passkeys",
+    "noPasskeys": "No passkeys"
   },
   "forbidden": {
     "title": "Only installation administrators can open this section",
@@ -73,7 +77,8 @@
       "enable": "The person can sign in again",
       "disable": "Sign-in is blocked, projects and data are kept",
       "remove": "Personal data is erased for good"
-    }
+    },
+    "passkeys": "Passkeys"
   },
   "confirm": {
     "disable": {
@@ -231,5 +236,18 @@
     "name": "By name",
     "email": "By email",
     "lastLogin": "Recently signed in"
+  },
+  "passkeys": {
+    "loadFailed": "Couldn't load passkeys.",
+    "count_zero": "No passkeys.",
+    "count_one": "{{count}} passkey",
+    "count_other": "{{count}} passkeys",
+    "lastUsed": "used",
+    "reset": "Reset passkeys",
+    "cancel": "Cancel",
+    "confirm": "Remove all of this person's passkeys? They won't be able to sign in with them. Open sessions stay. If the person has no password or single sign-on, issue a password reset link.",
+    "resetFailed": "Couldn't reset passkeys.",
+    "resetDone_one": "{{count}} passkey removed",
+    "resetDone_other": "{{count}} passkeys removed"
   }
 }

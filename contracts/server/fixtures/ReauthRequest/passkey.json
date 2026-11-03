@@ -1,0 +1,16 @@
+{
+  "password": null,
+  "credential": {
+    "id": "AQIDBAUGBwgJCgsMDQ4PEA",
+    "rawId": "AQIDBAUGBwgJCgsMDQ4PEA",
+    "type": "public-key",
+    "authenticatorAttachment": "platform",
+    "clientExtensionResults": {},
+    "response": {
+      "clientDataJSON": "eyJ0eXBlIjoid2ViYXV0aG4uZ2V0In0",
+      "authenticatorData": "SZYN5YgOjGh0NBcPZHZgW4_krrmihjLHmVzzuoMdl2MFAAAAAQ",
+      "signature": "MEUCIQ",
+      "userHandle": "MGY4ZTJjMWE5YjdkNGU2ZjhhMWIyYzNkNGU1ZjZhN2I"
+    }
+  }
+}

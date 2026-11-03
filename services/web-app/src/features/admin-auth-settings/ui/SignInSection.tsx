@@ -7,7 +7,7 @@ import { Switch } from "@shared/ui/Switch";
 import type { AdminAuthSettings } from "@entities/session";
 import { isLocked } from "../lib/locked";
 
-export type SignInDraft = { password: boolean };
+export type SignInDraft = { password: boolean; passkeys: boolean };
 
 export type SignInSectionProps = {
   settings: AdminAuthSettings;
@@ -23,6 +23,10 @@ export const SignInSection = ({ settings, draft }: SignInSectionProps) => {
   const onlyMethod =
     settings.oidc_enabled_count === 0 && settings.password_enabled;
   const password = draft.value.password;
+  const passkeysLocked = isLocked(settings.fields, "auth.passkeys_enabled");
+  const stale = settings.passkey_domains.filter(
+    (d) => d.domain !== settings.passkey_domain,
+  );
   const toggle = (
     <Switch
       id={`${uid}-password`}
@@ -60,6 +64,68 @@ export const SignInSection = ({ settings, draft }: SignInSectionProps) => {
         >
           {toggle}
         </SettingRow>
+        <SettingRow
+          label={t("signin.passkeys")}
+          hint={
+            <>
+              {t("signin.passkeysHint")}{" "}
+              <span data-testid="auth-passkey-domain">
+                {settings.passkey_domain
+                  ? t("signin.passkeyDomain", {
+                      domain: settings.passkey_domain,
+                    })
+                  : t("signin.passkeyNoDomain")}
+              </span>
+            </>
+          }
+          htmlFor={`${uid}-passkeys`}
+          locked={passkeysLocked}
+          testId="signin-passkeys-row"
+        >
+          <Switch
+            id={`${uid}-passkeys`}
+            checked={draft.value.passkeys}
+            disabled={passkeysLocked}
+            onChange={(next) => {
+              draft.set({ passkeys: next });
+            }}
+            testId="auth-passkeys-toggle"
+          />
+        </SettingRow>
+        <div
+          className="adm-setting-extra flex flex-col"
+          style={{ paddingTop: 12, gap: 8 }}
+        >
+          {settings.passkey_issue && (
+            <div data-testid="auth-passkey-issue">
+              <Notice
+                tone="warn"
+                text={t(`signin.passkeyIssue.${settings.passkey_issue}`)}
+              />
+            </div>
+          )}
+          {stale.length > 0 && (
+            <div data-testid="auth-passkey-stale">
+              <Notice
+                tone="warn"
+                text={stale
+                  .map((d) =>
+                    t("signin.passkeyStale", {
+                      count: d.count,
+                      domain: d.domain,
+                    }),
+                  )
+                  .join(" ")}
+              />
+            </div>
+          )}
+          <p
+            style={{ margin: 0, fontSize: 11.5, color: "var(--fg-2)" }}
+            data-testid="auth-passkey-address-hint"
+          >
+            {t("signin.passkeyAddressHint")}
+          </p>
+        </div>
         {((onlyMethod && !locked) || draft.isChanged("password")) && (
           <div className="adm-setting-extra" style={{ paddingTop: 12 }}>
             {onlyMethod && !locked && (

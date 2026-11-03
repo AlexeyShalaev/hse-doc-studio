@@ -34,6 +34,9 @@ class TokenScope(StrEnum):
     api = "api"
     git_read = "git:read"
     git_write = "git:write"
+    # MCP-сервер (docs/design/mcp.md, M5 и M7): тулы пользователя и, отдельно, админские тулы.
+    mcp = "mcp"
+    mcp_admin = "mcp:admin"
 
 
 class ApiTokenOrigin(StrEnum):
@@ -50,6 +53,12 @@ class AuthTokenKind(StrEnum):
     reset_password = "reset_password"  # noqa: S105 — вид токена, не пароль
     setup = "setup"
     change_email = "change_email"
+    # Одноразовые вызовы (challenge) церемоний passkey: регистрация ключа, вход и повторное подтверждение.
+    passkey_register = "passkey_register"
+    passkey_login = "passkey_login"
+    passkey_reauth = "passkey_reauth"
+    # Регистрация по приглашению сразу с passkey: в `payload` id приглашения и заранее выбранный id аккаунта.
+    passkey_signup = "passkey_signup"
 
 
 @dataclass(frozen=True)
@@ -81,6 +90,7 @@ class UserListing:
 
     user: User
     project_count: int
+    passkey_count: int = 0
 
 
 USER_SORTS = ("name", "email", "created_at", "last_login_at", "status")
@@ -156,6 +166,13 @@ class Session:
     expires_at: datetime
     ip: str | None = None
     user_agent: str = ""
+    # Когда человек последний раз подтвердил личность в этой сессии (пароль или passkey) после входа.
+    reauth_at: datetime | None = None
+
+    @property
+    def authenticated_at(self) -> datetime:
+        """Последнее предъявление учётных данных: вход или повторное подтверждение."""
+        return max(self.created_at, self.reauth_at) if self.reauth_at else self.created_at
 
 
 @dataclass(frozen=True)
@@ -249,6 +266,9 @@ class MailKind(StrEnum):
     email_change = "email_change"
     # Уведомление без ссылки: админ выдал ссылку для сброса пароля.
     reset_notice = "reset_notice"
+    # Уведомления без ссылки о passkey: добавлен ключ, админ сбросил все ключи.
+    passkey_added = "passkey_added"
+    passkey_reset = "passkey_reset"
 
 
 @dataclass(frozen=True)
@@ -385,3 +405,4 @@ class AuthSettings:
     registration_domains: tuple[str, ...] = field(default_factory=tuple)
     require_approval: bool = False
     password_enabled: bool = True
+    passkeys_enabled: bool = True

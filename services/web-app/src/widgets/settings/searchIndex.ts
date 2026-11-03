@@ -32,6 +32,7 @@ export type SettingsSectionId =
   | "git-access"
   | "runners"
   | "remote-runner"
+  | "mcp"
   | "about";
 
 export type SettingSearchEntry = {
@@ -174,6 +175,20 @@ export const SETTINGS_SEARCH_INDEX: readonly SettingSearchEntry[] = [
       "signature",
       "приватность",
       "privacy",
+    ],
+  },
+  {
+    sectionId: "account",
+    anchorId: "account-passkeys",
+    labelKey: "search.accountPasskeys",
+    keywords: [
+      "passkey",
+      "ключ доступа",
+      "вход без пароля",
+      "webauthn",
+      "отпечаток",
+      "fingerprint",
+      "security key",
     ],
   },
   {
@@ -547,6 +562,22 @@ export const SETTINGS_SEARCH_INDEX: readonly SettingSearchEntry[] = [
   },
 
   // ── Доступ к репозиториям ────────────────────────────────────
+  // ── ИИ-клиенты (MCP) ─────────────────────────────────────────
+  {
+    sectionId: "mcp",
+    anchorId: "mcp",
+    labelKey: "search.mcp",
+    keywords: [
+      "mcp",
+      "model context protocol",
+      "claude",
+      "cursor",
+      "ии-клиент",
+      "ai client",
+      "токен",
+      "token",
+    ],
+  },
   // ── Облачные сборки (локальная Студия) ───────────────────────
   {
     sectionId: "remote-runner",

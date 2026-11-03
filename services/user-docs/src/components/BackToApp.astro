@@ -1,0 +1,22 @@
+---
+// Правый слот шапки: возврат в Студию. Справка живёт на том же хосте, поэтому «/» и есть приложение.
+const en = Astro.locals.starlightRoute.locale === 'en'
+---
+
+<a class="back-to-app" href="/">{en ? 'Open Studio' : 'В Студию'}</a>
+
+<style>
+  .back-to-app {
+    font-size: var(--sl-text-sm);
+    font-weight: 600;
+    color: var(--sl-color-text-accent);
+    text-decoration: none;
+    padding: 0.25rem 0.75rem;
+    border: 1px solid var(--sl-color-gray-5);
+    border-radius: 6px;
+    white-space: nowrap;
+  }
+  .back-to-app:hover {
+    border-color: var(--sl-color-text-accent);
+  }
+</style>

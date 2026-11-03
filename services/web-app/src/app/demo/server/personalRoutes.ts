@@ -604,6 +604,14 @@ export const createPersonalRoutes = (
       }),
     },
     {
+      // Демо-мир собирает на своих раннерах: облачная сборка всегда доступна.
+      method: "GET",
+      pattern: "/projects/:projectId/build-availability",
+      handler: signedIn(() =>
+        demoJson({ cloud: true, any_runner: true, tags: ["office", "tex"] }),
+      ),
+    },
+    {
       method: "PUT",
       pattern: "/projects/:projectId/build-runners",
       handler: signedIn((owner, req) => {

@@ -8,6 +8,7 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response, status
 
 from hse_doc_studio.api.schemas.admin import PageParams, page_params, search_param, sort_param
+from hse_doc_studio.api.schemas.passkeys import AdminPasskeysReset, AdminUserPasskey, AdminUserPasskeyList
 from hse_doc_studio.api.schemas.session import (
     AccountStatus,
     AdminInvitation,
@@ -46,6 +47,7 @@ from hse_doc_studio.core.listing import Found, SortKey
 from hse_doc_studio.core.orgs.entities import USER_ORG_SORTS, OrgRole, UserOrgQuery
 from hse_doc_studio.use_cases.admin.invitations import ResendInviteUC
 from hse_doc_studio.use_cases.admin.lifecycle import DeleteUserUC
+from hse_doc_studio.use_cases.admin.passkeys import ListUserPasskeysUC, ResetUserPasskeysUC
 from hse_doc_studio.use_cases.admin.users import (
     ApproveUserUC,
     DisableUserUC,
@@ -92,6 +94,7 @@ def _user(listing: UserListing) -> AdminUser:
         created_at=user.created_at,
         last_login_at=user.last_login_at,
         project_count=listing.project_count,
+        passkey_count=listing.passkey_count,
     )
 
 
@@ -243,6 +246,32 @@ async def issue_reset_link(
 async def revoke_sessions(user_id: str, request: Request) -> AdminSessionsRevoked:
     revoked = await (await _uc(request, RevokeUserSessionsUC)).execute(_actor(), user_id)
     return AdminSessionsRevoked(revoked=revoked)
+
+
+@router.get("/users/{user_id}/passkeys", response_model=AdminUserPasskeyList)
+async def list_user_passkeys(user_id: str, request: Request, response: Response) -> AdminUserPasskeyList:
+    """Сколько ключей у человека и какие (имя, даты, домен); сами ключи наружу не отдаются."""
+    response.headers.update(_NO_STORE)
+    items = await (await _uc(request, ListUserPasskeysUC)).execute(_actor(), user_id)
+    return AdminUserPasskeyList(
+        items=[
+            AdminUserPasskey(
+                id=p.id,
+                name=p.name,
+                created_at=p.created_at,
+                last_used_at=p.last_used_at,
+                synced=p.backup_eligible,
+                domain=p.rp_id,
+            )
+            for p in items
+        ]
+    )
+
+
+@router.delete("/users/{user_id}/passkeys", response_model=AdminPasskeysReset)
+async def reset_user_passkeys(user_id: str, request: Request) -> AdminPasskeysReset:
+    removed = await (await _uc(request, ResetUserPasskeysUC)).execute(_actor(), user_id)
+    return AdminPasskeysReset(removed=removed)
 
 
 @router.get("/approvals", response_model=AdminUserPage)

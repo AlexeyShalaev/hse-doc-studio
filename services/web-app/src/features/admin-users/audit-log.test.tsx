@@ -88,11 +88,16 @@ describe("журнал аудита", () => {
     await ensureAdminUsersLocales();
   });
   beforeEach(async () => {
+    // Демо-события лежат «минуты назад»: без закреплённого «сейчас» сразу после
+    // полуночи они уезжали во «вчера». Подменяем только Date, таймеры остаются
+    // настоящими (паузы поиска и userEvent).
+    vi.useFakeTimers({ toFake: ["Date"], now: new Date(2026, 9, 30, 15) });
     await i18n.changeLanguage("ru");
     activateServerScenario("admin_ready");
   });
   afterEach(() => {
     cleanup();
+    vi.useRealTimers();
     vi.restoreAllMocks();
   });
 

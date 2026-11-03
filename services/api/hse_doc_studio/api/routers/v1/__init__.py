@@ -29,10 +29,14 @@ from hse_doc_studio.api.routers.v1 import (
     hse_persons,
     images,
     languagetool,
+    local_studio,
+    mcp,
     office_editor,
     office_services,
     oidc,
+    onboarding,
     orgs,
+    passkeys,
     profile,
     project_artifacts,
     project_build_runners,
@@ -72,8 +76,10 @@ api_router = APIRouter(
 api_router.include_router(session.router, tags=["session"])
 api_router.include_router(auth.router, tags=["auth"])
 api_router.include_router(oidc.router, tags=["auth"])
+api_router.include_router(passkeys.router, tags=["auth"])
 api_router.include_router(server_setup.router, tags=["server-setup"])
 api_router.include_router(account.router, tags=["account"])
+api_router.include_router(mcp.router, tags=["mcp"])
 api_router.include_router(account_runners.router, tags=["account"])
 api_router.include_router(orgs.router, tags=["orgs"])
 api_router.include_router(catalog.router, tags=["catalog"])
@@ -82,6 +88,7 @@ api_router.include_router(project_build_runners.router, tags=["projects"])
 api_router.include_router(project_git_remote.router, tags=["projects"])
 api_router.include_router(project_artifacts.router, tags=["projects"])
 api_router.include_router(device_flow.router, tags=["device-flow"])
+api_router.include_router(local_studio.router, tags=["local-studio"])
 api_router.include_router(project_import.router, tags=["projects"])
 api_router.include_router(projects.router, tags=["projects"])
 api_router.include_router(documents.router, tags=["documents"])
@@ -115,6 +122,7 @@ api_router.include_router(chat.router, tags=["chat"])
 api_router.include_router(export_import.router, tags=["data"])
 api_router.include_router(signing_identities.router, tags=["signing-identities"])
 api_router.include_router(profile.router, tags=["profile"])
+api_router.include_router(onboarding.router, tags=["onboarding"])
 api_router.include_router(git_servers.router, tags=["git-sync"])
 api_router.include_router(git_global.router, tags=["git-sync"])
 api_router.include_router(remote_runner.router, tags=["remote-runner"])

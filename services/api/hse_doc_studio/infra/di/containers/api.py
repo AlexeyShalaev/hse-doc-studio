@@ -8,6 +8,7 @@ from dishka.integrations.fastapi import FastapiProvider
 from hse_doc_studio.core.mode import StudioMode
 from hse_doc_studio.infra.di.providers.local_git_servers import LocalGitServersProvider
 from hse_doc_studio.infra.di.providers.local_remote_runner import LocalRemoteRunnerProvider
+from hse_doc_studio.infra.di.providers.mcp import McpProvider
 from hse_doc_studio.infra.di.providers.repositories import LocalPersistenceProvider
 from hse_doc_studio.infra.di.providers.services import DomainServiceProvider
 from hse_doc_studio.infra.di.providers.use_cases import UseCaseProvider
@@ -18,6 +19,7 @@ if TYPE_CHECKING:
 
 def _server_providers(engine: AsyncEngine | None) -> list[Provider]:
     # Лениво: серверные модули тянут sqlalchemy, а локальная сборка живёт без extra server.
+    from hse_doc_studio.infra.di.providers.mcp import ServerMcpProvider  # noqa: PLC0415
     from hse_doc_studio.infra.di.providers.server_admin_ops import ServerAdminOpsProvider  # noqa: PLC0415
     from hse_doc_studio.infra.di.providers.server_ai_gateway import ServerAiGatewayProvider  # noqa: PLC0415
     from hse_doc_studio.infra.di.providers.server_ai_relay import ServerAiRelayProvider  # noqa: PLC0415
@@ -30,6 +32,7 @@ def _server_providers(engine: AsyncEngine | None) -> list[Provider]:
     from hse_doc_studio.infra.di.providers.server_invitations import ServerInvitationsProvider  # noqa: PLC0415
     from hse_doc_studio.infra.di.providers.server_jobs import ServerJobsProvider  # noqa: PLC0415
     from hse_doc_studio.infra.di.providers.server_lifecycle import ServerLifecycleProvider  # noqa: PLC0415
+    from hse_doc_studio.infra.di.providers.server_passkeys import ServerPasskeyProvider  # noqa: PLC0415
     from hse_doc_studio.infra.di.providers.server_persistence import ServerPersistenceProvider  # noqa: PLC0415
     from hse_doc_studio.infra.di.providers.server_quotas import ServerQuotasProvider  # noqa: PLC0415
     from hse_doc_studio.infra.di.providers.server_services import ServerServicesProvider  # noqa: PLC0415
@@ -39,6 +42,7 @@ def _server_providers(engine: AsyncEngine | None) -> list[Provider]:
     return [
         ServerPersistenceProvider(engine),
         ServerIdentityProvider(),
+        ServerPasskeyProvider(),
         ServerJobsProvider(),
         ServerAdminOpsProvider(),
         ServerQuotasProvider(),
@@ -52,6 +56,7 @@ def _server_providers(engine: AsyncEngine | None) -> list[Provider]:
         ServerBackupsProvider(),
         ServerDiagnosticsProvider(),
         ServerUpdatesProvider(),
+        ServerMcpProvider(),
         # invites: идёт последним, перекрывает сценарии участников и подтверждения почты.
         ServerInvitationsProvider(),
         # stage 5: ревью и совместная правка; подменяет замок папки, поэтому последним.
@@ -61,7 +66,7 @@ def _server_providers(engine: AsyncEngine | None) -> list[Provider]:
 
 def create_container(mode: StudioMode = StudioMode.local, *, engine: AsyncEngine | None = None) -> AsyncContainer:
     """Контейнер под режим. Серверные провайдеры идут после локальных и перекрывают их; ``engine`` для тестов."""
-    providers: list[Provider] = [LocalPersistenceProvider(), DomainServiceProvider(), UseCaseProvider()]
+    providers: list[Provider] = [LocalPersistenceProvider(), DomainServiceProvider(), UseCaseProvider(), McpProvider()]
     if mode is StudioMode.server:
         providers.extend(_server_providers(engine))
     else:

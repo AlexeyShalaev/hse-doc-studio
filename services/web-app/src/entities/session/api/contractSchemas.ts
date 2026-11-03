@@ -19,6 +19,7 @@ import {
 } from "@entities/review/model/review.schema";
 import * as upd from "@features/admin-updates/api/schemas";
 import * as ops from "./opsSchemas";
+import * as pk from "./passkeySchemas";
 import * as s from "./schemas";
 import * as sh from "@entities/share-link/model/shareLink.schema";
 
@@ -159,6 +160,18 @@ export const CONTRACT_SCHEMAS: Record<string, ZodType> = {
   UpdateAdminRegistrationRequest: s.UpdateAdminRegistrationRequestSchema,
   AdminAuthSettings: s.AdminAuthSettingsSchema,
   UpdateAdminAuthRequest: s.UpdateAdminAuthRequestSchema,
+  PasskeyOptions: pk.PasskeyOptionsSchema,
+  PasskeyLoginRequest: pk.PasskeyLoginRequestSchema,
+  AccountPasskey: pk.AccountPasskeySchema,
+  AccountPasskeyList: pk.AccountPasskeyListSchema,
+  CreatePasskeyRequest: pk.CreatePasskeyRequestSchema,
+  RenamePasskeyRequest: pk.RenamePasskeyRequestSchema,
+  ReauthRequest: pk.ReauthRequestSchema,
+  ReauthResponse: pk.ReauthResponseSchema,
+  AdminUserPasskeyList: pk.AdminUserPasskeyListSchema,
+  AdminPasskeysReset: pk.AdminPasskeysResetSchema,
+  PasskeySignupOptionsRequest: pk.PasskeySignupOptionsRequestSchema,
+  PasskeySignupRequest: pk.PasskeySignupRequestSchema,
   AdminSmtpSettings: s.AdminSmtpSettingsSchema,
   UpdateAdminSmtpRequest: s.UpdateAdminSmtpRequestSchema,
   AdminSmtpTestRequest: s.AdminSmtpTestRequestSchema,
@@ -183,6 +196,7 @@ export const CONTRACT_SCHEMAS: Record<string, ZodType> = {
   RunnerPairingInfo: rn.RunnerPairingInfoSchema,
   RunnerPairingDecisionRequest: rn.RunnerPairingDecisionRequestSchema,
   ProjectBuildRunners: rn.ProjectBuildRunnersSchema,
+  BuildAvailability: rn.BuildAvailabilitySchema,
   UpdateProjectBuildRunnersRequest: rn.UpdateProjectBuildRunnersRequestSchema,
   CompilePlacement: rn.CompilePlacementSchema,
   RemoteRunnerStatus: rn.RemoteRunnerStatusSchema,

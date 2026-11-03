@@ -37,6 +37,9 @@ class IRateLimiter(Protocol):
 # Каталог: вход и регистрация считаются по IP, письма по e-mail, дорогие операции по пользователю.
 AUTH_IP = RateRule("auth_ip", limit=30, window_s=60)
 AUTH_EMAIL = RateRule("auth_email", limit=5, window_s=3600)
+# Passkey по IP отдельно от пароля: форма входа сама просит вызов при каждом показе (автозаполнение),
+# а перебирать подписи ключа бессмысленно. Общий счётчик с паролем запирал бы вход паролем.
+PASSKEY_IP = RateRule("passkey_ip", limit=60, window_s=60)
 COMPILE = RateRule("compile", limit=20, window_s=60)
 UPLOAD = RateRule("upload", limit=120, window_s=60)
 AGENT = RateRule("agent", limit=30, window_s=60)
@@ -56,12 +59,15 @@ GIT_AUTH_FAIL = RateRule("git_auth_fail", limit=30, window_s=60)
 GIT_HTTP = RateRule("git_http", limit=120, window_s=60)
 # Поиск кода устройства на странице /device: неверные коды тоже считаются (по человеку и по IP).
 DEVICE_CODE_LOOKUP = RateRule("device_code_lookup", limit=10, window_s=60)
+# Вызовы тулов MCP по человеку (docs/design/mcp.md, M11); дорогие тулы ещё и под правилами своих маршрутов.
+MCP_CALL = RateRule("mcp_call", limit=120, window_s=60)
 
 RULES: dict[str, RateRule] = {
     rule.name: rule
     for rule in (
         AUTH_IP,
         AUTH_EMAIL,
+        PASSKEY_IP,
         COMPILE,
         UPLOAD,
         AGENT,
@@ -75,5 +81,6 @@ RULES: dict[str, RateRule] = {
         GIT_AUTH_FAIL,
         GIT_HTTP,
         DEVICE_CODE_LOOKUP,
+        MCP_CALL,
     )
 }

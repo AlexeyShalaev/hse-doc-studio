@@ -28,7 +28,7 @@ The runner drives sibling containers through `/var/run/docker.sock`. That equals
 - treat the runner host as trusted infrastructure, separate from the api and database;
 - prefer rootless Docker, sysbox or a dedicated virtual machine;
 - the api has no Docker access and must not get any;
-- on Kubernetes the runner currently uses hostPath; a pod per job with gVisor or Kata is planned for later stages.
+- on Kubernetes use the `kubernetes` executor (a pod per job, no socket or hostPath, Pod Security restricted, no network); for shared installations add a gVisor or Kata RuntimeClass (`runner.kubernetes.runtimeClassName`). See "Runners" and `docs/design/k8s-runner.md`.
 
 ## Trust boundaries
 
@@ -39,6 +39,7 @@ The runner drives sibling containers through `/var/run/docker.sock`. That equals
 - **User files** are served with `nosniff`, a type allowlist and a CSP sandbox.
 - **Secrets in the database** (git tokens, SMTP password, OIDC secret, AI keys) are encrypted and bound to their record; without `SECRETS_KEY` they cannot be read.
 - **The admin area** can be restricted by host name and network.
+- **The MCP server** (`/mcp`, [AI clients](../workbench/mcp.md)) is off by default and accepts only a personal token with the `mcp` permission; browser cookies are not accepted. A client acts with the token owner's rights and quotas; dangerous and admin tools are enabled explicitly, and every call is written to the audit log (`mcp.call`).
 - **The OpenPGP keyring is shared.** Secret keys and uploaded public keys live in one server keyring (`data_dir/gnupg`), not per person: key records are tied to their owner in the database, but the keyring itself is common and signature checks see everyone's keys. If you need separation, do not allow secret keys on the server (`settings/signing`). Agent personas, by contrast, are separate: `data_dir/users/<id hash>/`.
 
 ## Personal data

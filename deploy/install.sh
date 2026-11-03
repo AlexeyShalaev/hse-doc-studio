@@ -34,6 +34,10 @@ case "${HSE_STUDIO_LANG:-en}" in
     *) LANG_RU=0 ;;
 esac
 
+# Адрес облачной Студии, к которой подключить эту (экран «Локальная версия» облака
+# подставляет его сам): после запуска откроется экран подключения, а не главная.
+CONNECT_SERVER="${HSE_STUDIO_CONNECT:-}"
+
 OS="$(uname -s)"
 HTTP_TOOL=""
 
@@ -173,8 +177,24 @@ open_browser() {
     return 1
 }
 
+# Адрес экрана подключения к серверу; пусто, если адрес не задан или подозрителен.
+# Пропускаем только https://host[:port] (http только для localhost): строка идёт
+# в браузер как есть, без кодирования, поэтому лишних символов в ней быть не должно.
+connect_path() {
+    case "$CONNECT_SERVER" in
+        "") return 0 ;;
+        *[!A-Za-z0-9.:/-]*) ;;
+        https://?* | http://localhost* | http://127.0.0.1*)
+            printf '/connect?server=%s' "${CONNECT_SERVER%/}"
+            return 0
+            ;;
+    esac
+    say "$(loc "HSE_STUDIO_CONNECT пропущен: нужен адрес вида https://studio.example.org" \
+        "HSE_STUDIO_CONNECT ignored: expected an address like https://studio.example.org")" >&2
+}
+
 finish() {
-    _url="http://localhost:$1"
+    _url="http://localhost:$1$(connect_path)"
     if [ -z "$HTTP_TOOL" ]; then
         say "$(loc 'ни curl, ни wget не найдены — проверить готовность нечем, открываю адрес как есть.' \
             'neither curl nor wget found — cannot check readiness, opening the address as is.')"

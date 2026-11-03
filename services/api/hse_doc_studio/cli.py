@@ -153,6 +153,10 @@ def _parser() -> argparse.ArgumentParser:
     project.add_argument("source", type=Path, help="папка проекта или zip-архив")
     project.add_argument("--user", required=True, metavar="EMAIL", help="почта пользователя, который станет владельцем")
     project.add_argument("--dry-run", action="store_true", help="только проверить архив, ничего не записывать")
+    mcp = sub.add_parser("mcp", help="MCP-сервер Студии по stdio: мост к работающей Студии (docs/design/mcp.md)")
+    mcp.add_argument("--url", default=None, help="адрес Студии или её /mcp; по умолчанию локальная Студия")
+    mcp.add_argument("--token", default=None, help="токен доступа с правом mcp (или переменная HSE_STUDIO_TOKEN)")
+    mcp.add_argument("--lang", choices=("ru", "en"), default=None, help="язык ответов и ошибок")
     sub.add_parser(
         "runner",
         help="раннер задач серверного режима (verify, pack, office); настройки в HSE_RUNNER__*",
@@ -171,7 +175,7 @@ async def _runner() -> int:
     import contextlib  # noqa: PLC0415
     import signal  # noqa: PLC0415
 
-    from hse_doc_studio.infra.compile.docker_compile_executor import sweep_build_containers  # noqa: PLC0415
+    from hse_doc_studio.infra.compile.backend import BuildBackend  # noqa: PLC0415
     from hse_doc_studio.infra.di.containers.runner import RunnerConfigError, create_runner_container  # noqa: PLC0415
     from hse_doc_studio.infra.runner.config import RunnerConfig  # noqa: PLC0415
     from hse_doc_studio.infra.runner.loop import RunnerFatalError, RunnerLoop  # noqa: PLC0415
@@ -185,10 +189,11 @@ async def _runner() -> int:
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
     container = create_runner_container(config)
     try:
-        # Контейнеры сборки прошлого запуска, пережившие раннер, держат ядра и память впустую.
-        if (swept := await sweep_build_containers()) > 0:
-            logging.getLogger(__name__).warning("removed %d leftover build containers", swept)
         try:
+            backend = await container.get(BuildBackend)
+            # Контейнеры и поды сборки прошлого запуска, пережившие раннер, держат ядра и память впустую.
+            if (swept := await backend.sweep()) > 0:
+                logging.getLogger(__name__).warning("removed %d leftover %s builds", swept, backend.name)
             loop = await container.get(RunnerLoop)
         except RunnerConfigError as exc:
             _write(f"error: {exc}", stream=sys.stderr)
@@ -351,6 +356,10 @@ def main(argv: Sequence[str] | None = None) -> int:
         return _run_operator_command(args)
     if args.command == "runner":
         return asyncio.run(_runner())
+    if args.command == "mcp":
+        from hse_doc_studio.cli_mcp import run_cli  # noqa: PLC0415
+
+        return run_cli(args.url, args.token, args.lang)
     if args.command == "secrets":
         return _run_secrets(dry_run=args.dry_run)
     folder = args.project_dir.expanduser().resolve()

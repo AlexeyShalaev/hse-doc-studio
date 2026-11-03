@@ -37,6 +37,8 @@ class SessionRow(Base):
     expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     ip: Mapped[str | None] = mapped_column(String(64))
     user_agent: Mapped[str] = mapped_column(String(512), nullable=False, server_default="")
+    # Повторное подтверждение личности (пароль или passkey) в этой сессии: открывает окно чувствительных действий.
+    reauth_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
 
 class ApiTokenRow(Base):

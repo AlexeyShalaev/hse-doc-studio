@@ -533,4 +533,21 @@ describe("токены для git", () => {
     expect(screen.getByTestId("token-scope-api")).not.toBeChecked();
     expect(screen.getByTestId("token-scope-gitWrite")).toBeChecked();
   });
+
+  it("право «MCP: администрирование» видит только админ установки", () => {
+    const props = {
+      status: "ready" as const,
+      startOpen: true,
+      onCreate: vi.fn(),
+      onRevoke: vi.fn(),
+    };
+    const { rerender } = render(<TokensCard {...props} />);
+    expect(screen.getByTestId("token-scope-mcp")).toBeInTheDocument();
+    expect(
+      screen.queryByTestId("token-scope-mcpAdmin"),
+    ).not.toBeInTheDocument();
+
+    rerender(<TokensCard {...props} instanceAdmin />);
+    expect(screen.getByTestId("token-scope-mcpAdmin")).toBeInTheDocument();
+  });
 });

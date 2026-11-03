@@ -1,0 +1,54 @@
+---
+title: 'Editor and PDF preview'
+description: 'How to edit a document’s source visually or as code and see the result in the PDF right next to it.'
+sidebar:
+  order: 2
+access: user
+help:
+  routes: ['/projects/:projectId/documents/:docId', '/projects/:projectId/documents/:docId?tab=source']
+  summary: 'A document has three views: **Preview** (the built PDF), **Editor** (the source) and **Side by side** (both at once). Ctrl/⌘+click jumps between a source line and its place in the PDF.'
+  steps:
+    - text: 'In the **Documents** panel pick a document: it opens on the **Preview** tab.'
+      hint: 'Preview shows the last built PDF. New edits get into it after **Build**, see [Building the PDF](/help/en/runbooks/build/).'
+    - text: 'Read the PDF in **Preview**: zoom, **Fit width**, **GOST margins** and **Ruler** are on the bar above the page.'
+      shot: runbooks/editor-preview/step-02
+    - text: 'Click **Editor** and pick a mode: **Visual** for formatted text or **Code** for the LaTeX source.'
+      hint: 'The visual mode exists only for the document’s text .tex files. Style and service files open as code.'
+      shot: runbooks/editor-preview/step-03
+    - text: 'Edit the text: Studio saves by itself, the **Saved** status is on the right of the editor bar. To save right away click **Save** (⌘S).'
+    - text: 'Click **Side by side** to see the preview and the editor at the same time.'
+      hint: 'In a narrow window the mode is unavailable: widen the window or hide the side panel.'
+      shot: runbooks/editor-preview/step-05
+    - text: 'Ctrl/⌘+click a line in the editor to show that spot in the PDF; Ctrl/⌘+click the PDF to open the matching source line.'
+      hint: 'Select text in the PDF to find it with **In source** or ask the agent with **Ask AI**.'
+  video:
+    src: runbooks/editor-preview/clip
+verified:
+  at: 2026-11-03
+  app_version: '0.3.0'
+  sources:
+    - services/web-app/src/widgets/DocumentTabs
+    - services/web-app/src/features/source-edit
+---
+
+import Steps from '~/components/Steps.astro'
+import Video from '~/components/Video.astro'
+
+The document source and the finished PDF live on one screen. Write in the visual mode without
+thinking about LaTeX commands, or in code when you need a precise edit, and check the layout in
+the preview: margins, numbering and formatting look exactly as the reviewer will see them.
+
+<Video />
+
+<Steps />
+
+## If something goes wrong
+
+- **“SyncTeX unavailable…”**: jumping between the PDF and the source works only after a build.
+  Click **Rebuild** and Ctrl/⌘+click again.
+- **The preview says “not built”**: the document has not been compiled yet. Click **Build** in
+  the document header.
+- **“The file changed outside the app while you have unsaved edits”**: the file was changed in
+  another editor. Click **Compare**, then **Take from disk** or **Keep mine**.
+- **“Failed to load the PDF. Rebuild the document.”**: click **Rebuild**. If the build fails, open
+  the **Build** tab and read the log.

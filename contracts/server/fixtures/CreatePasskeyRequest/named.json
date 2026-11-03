@@ -1,0 +1,22 @@
+{
+  "name": "MacBook Анны",
+  "credential": {
+    "id": "AQIDBAUGBwgJCgsMDQ4PEA",
+    "rawId": "AQIDBAUGBwgJCgsMDQ4PEA",
+    "type": "public-key",
+    "authenticatorAttachment": "platform",
+    "clientExtensionResults": {
+      "credProps": {
+        "rk": true
+      }
+    },
+    "response": {
+      "clientDataJSON": "eyJ0eXBlIjoid2ViYXV0aG4uY3JlYXRlIn0",
+      "attestationObject": "o2NmbXRkbm9uZWdhdHRTdG10oGhhdXRoRGF0YVg",
+      "transports": [
+        "internal",
+        "hybrid"
+      ]
+    }
+  }
+}

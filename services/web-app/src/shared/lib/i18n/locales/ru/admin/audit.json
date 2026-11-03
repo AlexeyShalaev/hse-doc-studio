@@ -11,7 +11,8 @@
       "group": "Группы",
       "settings": "Настройки",
       "runner": "Раннеры",
-      "project": "Проекты"
+      "project": "Проекты",
+      "mcp": "MCP"
     },
     "caption": "Журнал событий",
     "loadFailed": "Не удалось загрузить журнал",
@@ -101,6 +102,7 @@
       "settings_ai_provider_update": "Общий ИИ-провайдер изменён",
       "settings_auth_update": "Изменены настройки входа",
       "settings_quotas_update": "Изменены квоты",
+      "settings_mcp_update": "Изменены настройки MCP-сервера",
       "settings_quota_policy_update": "Изменены умолчания квот по ресурсам",
       "settings_autoscale_update": "Изменена политика автомасштабирования",
       "quota_override_set": "Задан индивидуальный предел квоты",
@@ -171,7 +173,17 @@
       "settings_storage_thresholds_update": "Изменены пороги места на диске",
       "lifecycle_run_now": "Запущена очистка источника данных",
       "diagnostics_run": "Запущена самодиагностика",
-      "settings_diagnostics_update": "Изменены пороги самодиагностики"
+      "settings_diagnostics_update": "Изменены пороги самодиагностики",
+      "mcp_call": "Вызов инструмента MCP",
+      "auth_passkey_added": "Добавлен passkey",
+      "auth_passkey_add_failed": "Не удалось добавить passkey",
+      "auth_passkey_signup_failed": "Регистрация с passkey: ключ отклонён",
+      "auth_passkey_renamed": "Passkey переименован",
+      "auth_passkey_removed": "Passkey удалён",
+      "auth_passkey_login_failed": "Неудачный вход по passkey",
+      "auth_reauth": "Личность подтверждена",
+      "auth_reauth_failed": "Неудачное подтверждение личности",
+      "admin_passkeys_reset": "Сброшены passkey человека"
     },
     "search": "Поиск по журналу",
     "searchPlaceholder": "Человек, код действия, объект",

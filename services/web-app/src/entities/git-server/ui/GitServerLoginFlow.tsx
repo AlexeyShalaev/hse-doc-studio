@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import { ExternalLink } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { failureCode } from "@shared/api";
@@ -19,6 +19,8 @@ import type { GitServerLogin } from "../model/gitServer.schema";
 export type GitServerLoginFlowProps = {
   /** Адрес, с которого начать (повторный вход на известный сервер). */
   initialUrl?: string;
+  /** Начать вход сразу с `initialUrl`, без формы адреса (человек уже нажал «Подключиться»). */
+  autoStart?: boolean;
   /** Имя этого устройства в «Токенах» сервера. */
   clientName: string;
   onApproved: (credentialId: string) => void;
@@ -32,6 +34,7 @@ export type GitServerLoginFlowProps = {
  */
 export const GitServerLoginFlow = ({
   initialUrl = "",
+  autoStart = false,
   clientName,
   onApproved,
   onCancel,
@@ -54,8 +57,7 @@ export const GitServerLoginFlow = ({
     onApproved(current.credential_id);
   }
 
-  const submit = (event: FormEvent) => {
-    event.preventDefault();
+  const begin = () => {
     if (url.trim() === "" || start.isPending) return;
     start.mutate(
       { server_url: url.trim(), client_name: clientName },
@@ -66,6 +68,20 @@ export const GitServerLoginFlow = ({
       },
     );
   };
+
+  const submit = (event: FormEvent) => {
+    event.preventDefault();
+    begin();
+  };
+
+  const autoStarted = useRef(false);
+  useEffect(() => {
+    if (!autoStart || autoStarted.current || initialUrl.trim() === "") return;
+    autoStarted.current = true;
+    begin();
+    // Только при монтировании: повторный вход начинает человек.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const restart = () => {
     if (loginId) cancel.mutate(loginId);

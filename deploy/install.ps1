@@ -31,6 +31,10 @@ if ([string]::IsNullOrWhiteSpace($Name)) { $Name = 'hse-doc-studio' }
 $FirstPort = 17240
 if (-not [string]::IsNullOrWhiteSpace($env:PORT)) { $FirstPort = [int]$env:PORT }
 
+# Адрес облачной Студии, к которой подключить эту (экран «Локальная версия» облака
+# подставляет его сам): после запуска откроется экран подключения, а не главная.
+$ConnectServer = "$env:HSE_STUDIO_CONNECT".Trim()
+
 # Сколько соседних портов пробовать, если наш занят.
 $PortAttempts = 10
 # Первый старт дольше обычного: приложение раскладывает пак шаблонов и
@@ -168,6 +172,16 @@ function Complete-Install {
     param([int]$HostPort)
 
     $url = "http://localhost:$HostPort"
+    # Только https://host[:port] (http для localhost): строка идёт в браузер как есть.
+    if ($ConnectServer -ne '') {
+        if ($ConnectServer -match '^(https://[A-Za-z0-9.:-]+|http://(localhost|127\.0\.0\.1)(:[0-9]+)?)/?$') {
+            $url = "$url/connect?server=$($ConnectServer.TrimEnd('/'))"
+        }
+        else {
+            Say (Loc 'HSE_STUDIO_CONNECT пропущен: нужен адрес вида https://studio.example.org' `
+                'HSE_STUDIO_CONNECT ignored: expected an address like https://studio.example.org')
+        }
+    }
     if (Wait-Healthy -HostPort $HostPort) {
         Say (Loc 'приложение отвечает.' 'the app is responding.')
     }

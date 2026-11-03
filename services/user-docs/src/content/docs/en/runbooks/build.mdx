@@ -1,0 +1,52 @@
+---
+title: 'Building the PDF'
+description: 'How to build a document’s PDF on the server or on your own computer, read the build log and handle errors.'
+sidebar:
+  order: 3
+access: user
+help:
+  routes: ['/projects/:projectId/documents/:docId?tab=compile']
+  summary: 'The **Build** button turns the sources into a PDF. On a server runners do the build; in the local Studio it is Docker with TeX Live on your computer. The log and errors are on the **Build** tab.'
+  steps:
+    - text: 'Open the document and click **Build** in its header. If the document was built before, the button is called **Rebuild**.'
+      hint: 'The local Studio needs Docker Desktop running and a TeX Live image: **Tool settings** → **Compiler** → **Docker and images**.'
+    - text: 'Open the **Build** tab: the log streams line by line while the build runs.'
+      shot: runbooks/build/step-02
+    - text: 'On a server a build may wait: with **Queued** or **Waiting for a personal runner** there is nothing to do, it starts by itself.'
+      hint: 'You can close the page: the result will appear in the document. To build on your own computer, see **Tool settings** → **My runners**.'
+    - text: 'When the status turns **done**, open **Preview**: it has the new PDF and the page count.'
+      shot: runbooks/build/step-04
+    - text: 'With the **error** status click **Explain** to have the agent read the log, or **Fix with AI** to have it fix the source.'
+      hint: '**Download .log** saves the whole log. You can attach it to a question to your supervisor or administrator.'
+  video:
+    src: runbooks/build/clip
+verified:
+  at: 2026-11-03
+  app_version: '0.3.0'
+  sources:
+    - services/web-app/src/widgets/DocumentTabs
+    - services/web-app/src/features/build-states
+    - services/web-app/src/widgets/DockerStatusBanner
+    - services/web-app/src/features/remote-runner
+---
+
+import Steps from '~/components/Steps.astro'
+import Video from '~/components/Video.astro'
+
+A build runs LaTeX over the document sources and produces a PDF with the table of contents,
+references and numbering, and it also runs the formatting checks. Build after noticeable edits so
+the preview and the list of issues stay up to date.
+
+<Video />
+
+<Steps />
+
+## If something goes wrong
+
+- **“No runners available”**: no build runner is connected to the server right now. Contact the
+  server administrator; the build starts by itself once a runner appears.
+- **“Docker unavailable”** in the local Studio: start Docker Desktop and click **Rebuild**.
+- **“The build has been silent for over 90 seconds”**: the process is most likely stuck. Click
+  **Cancel**, then **Rebuild**.
+- **“Build replaced by a newer one”**: you started another build while this one was waiting. See
+  the result of the newer build or click **Build again**.

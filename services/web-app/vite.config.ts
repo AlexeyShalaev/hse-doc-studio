@@ -33,6 +33,8 @@ const VENDOR_CHUNKS: Record<string, string[]> = {
   "chart-vendor": ["recharts"],
   "icons-vendor": ["lucide-react"],
   "command-palette": ["cmdk"],
+  // Церемонии passkey: грузится лениво из shared/lib/webauthn, только когда вход или регистрация ключа начинаются.
+  "webauthn-vendor": ["@simplewebauthn/browser"],
   "editor-vendor": [
     "@codemirror/state",
     "@codemirror/view",
@@ -102,6 +104,12 @@ export default defineConfig(({ mode }) => {
                 changeOrigin: true,
                 // Сокет совместной правки (/api/collab/…) идёт тем же префиксом.
                 ws: true,
+                secure: devProxyTarget.startsWith("https:"),
+              },
+              // Справка (services/user-docs) отдаётся бэкендом по /help/: после `pnpm build` в её каталоге.
+              "/help": {
+                target: devProxyTarget,
+                changeOrigin: true,
                 secure: devProxyTarget.startsWith("https:"),
               },
             }

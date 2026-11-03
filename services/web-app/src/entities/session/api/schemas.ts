@@ -30,7 +30,13 @@ export const AccountStatusSchema = z.enum([
   "pending_approval",
   "disabled",
 ]);
-export const TokenScopeSchema = z.enum(["api", "git:read", "git:write"]);
+export const TokenScopeSchema = z.enum([
+  "api",
+  "git:read",
+  "git:write",
+  "mcp",
+  "mcp:admin",
+]);
 export const ProjectRoleSchema = z.enum([
   "reader",
   "reviewer",
@@ -67,6 +73,8 @@ export const AuthOptionsSchema = z.strictObject({
   ),
   smtp_enabled: z.boolean(),
   password_min_length: z.number().int(),
+  // Вход по passkey включён админом и адрес Студии годится для WebAuthn.
+  passkeys_enabled: z.boolean(),
 });
 export type AuthOptions = z.infer<typeof AuthOptionsSchema>;
 
@@ -374,6 +382,8 @@ export const AdminUserSchema = z.strictObject({
   created_at: iso,
   last_login_at: iso.nullable(),
   project_count: z.number().int(),
+  // Сколько passkey у человека (колонка таблицы людей).
+  passkey_count: z.number().int().default(0),
 });
 export const AdminUserPageSchema = pageOf(AdminUserSchema);
 // Счётчики на чипах списка людей под тем же поиском (GET /api/admin/users/facets).
@@ -661,13 +671,27 @@ export const UpdateAdminRegistrationRequestSchema = z.strictObject({
   registration_domains: z.array(z.string()).nullable(),
   require_approval: z.boolean().nullable(),
 });
+export const PASSKEY_ISSUES = [
+  "no_address",
+  "insecure_origin",
+  "ip_address",
+  "rp_id_mismatch",
+] as const;
+export type PasskeyIssue = (typeof PASSKEY_ISSUES)[number];
 export const AdminAuthSettingsSchema = z.strictObject({
   password_enabled: z.boolean(),
   oidc_enabled_count: z.number().int(),
   fields: settingFields,
+  passkeys_enabled: z.boolean(),
+  passkey_domain: z.string().nullable(),
+  passkey_issue: z.enum(PASSKEY_ISSUES).nullable(),
+  passkey_domains: z.array(
+    z.strictObject({ domain: z.string(), count: z.number().int() }),
+  ),
 });
 export const UpdateAdminAuthRequestSchema = z.strictObject({
   password_enabled: z.boolean().nullable(),
+  passkeys_enabled: z.boolean().nullable(),
 });
 export const AdminSmtpSettingsSchema = z.strictObject({
   enabled: z.boolean(),
@@ -898,6 +922,9 @@ export type UpdateAdminRegistrationRequest = z.infer<
   typeof UpdateAdminRegistrationRequestSchema
 >;
 export type AdminAuthSettings = z.infer<typeof AdminAuthSettingsSchema>;
+export type UpdateAdminAuthRequest = z.infer<
+  typeof UpdateAdminAuthRequestSchema
+>;
 export type AdminSmtpSettings = z.infer<typeof AdminSmtpSettingsSchema>;
 export type UpdateAdminSmtpRequest = z.infer<
   typeof UpdateAdminSmtpRequestSchema

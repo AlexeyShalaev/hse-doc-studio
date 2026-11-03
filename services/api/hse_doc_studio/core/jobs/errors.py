@@ -3,6 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from hse_doc_studio.core.errors import NotFoundError
+from hse_doc_studio.core.jobs.availability import no_runner_code
 from hse_doc_studio.core.jobs.enums import JobErrorCategory, RunnerErrorCode
 
 
@@ -51,12 +52,21 @@ class JobFailure(Exception):  # noqa: N818
 
 
 class NoRunnerAvailableError(Exception):
-    """Нет живого раннера с нужными тегами: задача встала бы в очередь без исполнителя (503 `no_runner`)."""
+    """Нет живого раннера с нужными тегами: задача встала бы в очередь без исполнителя.
 
-    def __init__(self, tags: frozenset[str] = frozenset()) -> None:
+    `any_runner`: раннеры вообще есть, но ни один не берёт эти теги (409 `no_runner_for_tags`);
+    иначе раннеров нет совсем (409 `no_runners`).
+    """
+
+    def __init__(self, tags: frozenset[str] = frozenset(), *, any_runner: bool = False) -> None:
         needed = ", ".join(sorted(tags)) or "any"
         super().__init__(f"no live runner for tags: {needed}")
         self.tags = tags
+        self.any_runner = any_runner
+
+    @property
+    def code(self) -> str:
+        return no_runner_code(any_runner=self.any_runner)
 
 
 class StaleAttemptError(Exception):

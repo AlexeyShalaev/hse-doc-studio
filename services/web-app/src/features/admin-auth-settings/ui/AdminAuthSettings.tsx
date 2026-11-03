@@ -350,7 +350,7 @@ export const AdminAuthSettings = ({
           smtp={smtp.data}
           oidc={oidc}
           saveRegistration={(patch) => saveRegistration.mutateAsync(patch)}
-          saveAuth={(passwordEnabled) => saveAuth.mutateAsync(passwordEnabled)}
+          saveAuth={(patch) => saveAuth.mutateAsync(patch)}
           saveSmtp={(patch) => {
             testSmtp.reset();
             return saveSmtp.mutateAsync(patch);

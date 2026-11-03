@@ -1,0 +1,7 @@
+{
+  "cloud": true,
+  "any_runner": true,
+  "tags": [
+    "tex"
+  ]
+}

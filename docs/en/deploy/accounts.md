@@ -1,6 +1,6 @@
 ---
 title: People and sign-in
-description: Registration modes, approval, invitations, mail, single sign-on via OIDC, password reset and sessions.
+description: Registration modes, approval, invitations, mail, single sign-on via OIDC, passkey sign-in, password reset and sessions.
 tags:
   - Deployment
   - Administration
@@ -52,6 +52,44 @@ Password sign-in can be turned off (`password_enabled`) only when at least one p
 
 If the provider lives on an internal network, add its host to `HSE_STUDIO__EGRESS__ALLOWLIST`: outgoing requests to private addresses are blocked by default.
 
+## Passkey sign-in
+
+A passkey is a sign-in key kept on a device (Touch ID, Face ID, Windows Hello, a phone, a hardware key) or in a password manager. The private part of the key never leaves the device, the server only stores the public part. Passkeys are added next to the password and single sign-on, they do not replace them.
+
+### How a person uses it
+
+1. Settings → Account → the Passkeys card → Add a passkey. If you signed in more than 10 minutes ago, the Studio asks you to confirm it's you: with your password, a passkey you already added, or a new single sign-on.
+2. The browser offers to save the key. The key name comes from the device (for example "Chrome · macOS"), you can change it.
+3. On the sign-in screen: press "Sign in with a passkey" or pick the key in the suggestions of the email field. No address or password needed.
+4. A key is removed from the same card (also after confirming it's you). The last way to sign in cannot be removed: set a password or link single sign-on first.
+
+A person invited to their own address can create the account with a passkey right away, without a password: the invitation page has a "Create account with a passkey" button. A password can be set later with "Forgot your password?". An invitation without an address still uses sign-up with a password.
+
+The Studio mails the person when a passkey is added and when an administrator resets their keys (if SMTP is configured; without it the event is only in the audit log).
+
+A key marked "does not work at this address" was created for a previous server address: remove it and add a new one.
+
+### What the administrator configures
+
+| Where | What |
+|---|---|
+| Admin → Sign-in → Passkey sign-in | allow or forbid; `HSE_STUDIO__AUTH__PASSKEYS_ENABLED` sets the value from the environment and locks editing |
+| `HSE_STUDIO__AUTH__PUBLIC_URL` | the Studio address: the key domain comes from it. HTTPS is required (or `http://localhost` for a test stand) and a domain name, not an IP address |
+| `HSE_STUDIO__AUTH__PASSKEY_RP_ID` | optional: a parent key domain (`example.org` for `studio.example.org`) so that keys survive a move between subdomains |
+| Admin → People | the Passkeys column: how many keys the person has |
+| Admin → People → person card | how many keys the person has and when they were used; "Reset passkeys" removes all of the person's keys (sessions stay open) |
+
+!!! warning "Keys are bound to the domain"
+    A browser uses a key only on the domain it was created for. If you change the server address (`public_url`), existing keys stop working and people have to add new ones. The admin area shows how many keys are bound to each domain and warns about keys of another domain. To keep keys working across subdomains, set `PASSKEY_RP_ID` to the common parent domain in advance.
+
+Behind a reverse proxy the domain and origin come from `public_url`, not from request headers: make sure it is set. If the address does not fit (no `public_url`, plain HTTP outside localhost, an IP address), passkeys are unavailable and the admin area names the reason.
+
+Passkey sign-in requires user verification on the device (biometrics or a PIN): a key without a PIN does not open an account. The Studio does not ask for authenticator model details (attestation `none`). If a key reports a signature counter lower than before (a sign of a cloned key), the sign-in is refused and written to the audit log.
+
+A person lost a device: reset their passkeys in the person card and end their sessions if needed. If no other way to sign in is left, issue a password reset link.
+
+The local Studio has no sign-in, so passkeys are not used there.
+
 ## Users
 
 In the People section: search, disable and enable, and end all of a user's sessions.
@@ -64,7 +102,7 @@ Users reset their own password by mail. If mail is unavailable, the administrato
 
 ## Audit
 
-The Audit section keeps sign-in events, permission changes, reset links, runner actions and settings changes. Retention: `HSE_STUDIO__SERVER__AUDIT_RETENTION_DAYS` (365 by default, 0 means forever).
+The Audit section keeps sign-in events (including passkey sign-ins with the refusal reason), passkey additions, removals and resets, permission changes, reset links, runner actions and settings changes. Retention: `HSE_STUDIO__SERVER__AUDIT_RETENTION_DAYS` (365 by default, 0 means forever).
 
 ## Access tokens
 

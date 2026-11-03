@@ -31,7 +31,7 @@ on:
       - ".hadolint.yaml"
       - ".github/workflows/deploy-smoke.yml"
   pull_request:
-    branches: [master]
+    branches: [master, next]
     paths: *paths
   workflow_dispatch:
 
@@ -262,6 +262,13 @@ jobs:
         run: |
           eval "$(../scripts/dev/server-stack/stack.sh env)"
           pnpm exec playwright test --project=updates
+        working-directory: e2e
+
+      # Онбординг на том же стенде: тур и демо-проект без раннеров и ИИ.
+      - name: Run onboarding e2e
+        run: |
+          eval "$(../scripts/dev/server-stack/stack.sh env)"
+          pnpm exec playwright test --project=onboarding
         working-directory: e2e
 
       - name: Stand logs on failure

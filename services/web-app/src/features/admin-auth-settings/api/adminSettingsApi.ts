@@ -8,6 +8,7 @@ import {
   AdminSmtpSettingsSchema,
   AdminSmtpTestResultSchema,
   type AdminAuthSettings,
+  type UpdateAdminAuthRequest,
   type AdminOidcProvider,
   type AdminRegistrationSettings,
   type AdminSmtpSettings,
@@ -37,9 +38,9 @@ export const adminSettingsApi = {
     adminClient
       .get("/settings/auth", quiet)
       .then(parseResp(AdminAuthSettingsSchema)),
-  updateAuth: (passwordEnabled: boolean): Promise<AdminAuthSettings> =>
+  updateAuth: (patch: UpdateAdminAuthRequest): Promise<AdminAuthSettings> =>
     adminClient
-      .put("/settings/auth", { password_enabled: passwordEnabled }, quiet)
+      .put("/settings/auth", patch, quiet)
       .then(parseResp(AdminAuthSettingsSchema)),
 
   smtp: (): Promise<AdminSmtpSettings> =>

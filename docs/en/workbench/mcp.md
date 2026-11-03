@@ -1,0 +1,93 @@
+---
+title: AI clients (MCP)
+description: Connect Claude, Cursor and other AI clients to the Studio over the Model Context Protocol, locally and in the cloud.
+tags:
+  - Workbench
+  - AI agent
+---
+
+# AI clients (MCP)
+
+<p class="hds-lede">The Studio can act as a Model Context Protocol server. An external AI client (Claude Desktop, Claude Code, Cursor, VS Code, Zed) sees your projects and works in them with the Studio's tools: it reads and edits files, builds PDFs, goes through findings and saves snapshots. It acts on your behalf and can do no more than you can.</p>
+
+## Turn it on
+
+=== "Local Studio"
+
+    **Settings → AI clients (MCP) → “Enable the MCP server”**. The server address is `http://127.0.0.1:17240/mcp`, the Studio's own port. No token is needed: the server only answers programs on this computer and rejects requests whose `Host` or `Origin` names another site.
+
+=== "Cloud Studio"
+
+    An administrator turns MCP on: **Admin → MCP server → “Enable the MCP server”**. Then everyone issues a token: **Settings → Account → Tokens → New token**, permission **MCP**. The server address is `https://<Studio address>/mcp`; the token goes in the `Authorization: Bearer <token>` header.
+
+## Connect a client
+
+Ready-made configs with your address are in the Studio: **Settings → AI clients (MCP)**.
+
+=== "Claude Code"
+
+    ```bash
+    # local
+    claude mcp add --transport http hse-doc-studio http://127.0.0.1:17240/mcp
+    # cloud
+    claude mcp add --transport http hse-doc-studio https://studio.example.org/mcp \
+      --header "Authorization: Bearer hsd_pat_..."
+    ```
+
+=== "Cursor, VS Code"
+
+    ```json
+    {
+      "mcpServers": {
+        "hse-doc-studio": {
+          "url": "https://studio.example.org/mcp",
+          "headers": { "Authorization": "Bearer hsd_pat_..." }
+        }
+      }
+    }
+    ```
+
+    VS Code uses the top-level key `servers` and `"type": "http"`. A local Studio needs no `headers`.
+
+=== "Claude Desktop and others (stdio)"
+
+    Clients that launch the server as a process use the `hse-doc-studio mcp` bridge, which forwards requests to a running Studio.
+
+    ```json
+    {
+      "mcpServers": {
+        "hse-doc-studio": {
+          "command": "hse-doc-studio",
+          "args": ["mcp", "--url", "https://studio.example.org"],
+          "env": { "HSE_STUDIO_TOKEN": "hsd_pat_..." }
+        }
+      }
+    }
+    ```
+
+    Without `--url` the bridge connects to the local Studio, which must be running.
+
+## What is available
+
+- **Tools.** Projects (list, card, create, metadata), files (tree, read, search, edit, write, move), builds (run and wait for the result, history, log, cancel), checks and the normcontrol report, requirements, review comments (cloud), history and git sync, submission profiles and packages, signature status. Project tools take `project_id`; start with `list_projects`.
+- **Resources.** `studio://projects`, the project card `studio://projects/<id>`, files `studio://projects/<id>/files/<path>` and build PDFs.
+- **Prompts.** `fix_build`, `normcontrol` (go through findings), `review_changes` (describe changes before a snapshot).
+
+Dangerous tools (deleting a project or a file, rewinding history, syncing with a git remote) are off by default: the administrator (cloud) or you (local) turns them on one by one. Signing documents with an electronic signature is not available over MCP.
+
+## Security
+
+- The client acts as the token owner: the same project roles, quotas and limits as in the interface. Other people's projects do not exist for it.
+- An MCP token needs only the **MCP** permission and gives no access to the regular API. Revoke it where it was issued; it stops working at once.
+- Browser cookies are not accepted on `/mcp`.
+- Every call is logged: tool, project, outcome and time, without argument values. In the cloud the log is on **Admin → MCP server** and in the general audit log; locally it is in the MCP settings.
+- Calls are rate limited (120 a minute per person by default); builds, file writes and git also count against their own limits.
+
+## For administrators
+
+On **Admin → MCP server**:
+
+- the MCP server master switch;
+- tool groups and single tools with switches; dangerous ones are enabled by name;
+- the **Administration** group (users, queue, runners, audit) is off by default; even when on it is only available to an instance administrator whose token has the **MCP: administration** permission;
+- the call log.

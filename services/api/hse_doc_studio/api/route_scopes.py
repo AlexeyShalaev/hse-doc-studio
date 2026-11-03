@@ -72,6 +72,12 @@ ROUTE_SCOPES: Mapping[RouteKey, RouteScope] = {
     # Единый вход: страницы провайдера открывает браузер, личность подтверждает состояние в подписанной cookie
     ("GET", "/auth/oidc/{provider_id}/start"): _P,
     ("GET", "/auth/oidc/{provider_id}/callback"): _P,
+    # Вход по passkey: личность подтверждает подпись ключа на одноразовый вызов
+    ("POST", "/auth/passkey/options"): _P,
+    ("POST", "/auth/passkey/login"): _P,
+    # Регистрация по приглашению сразу с passkey: личность подтверждает токен приглашения из письма
+    ("POST", "/auth/register/passkey/options"): _P,
+    ("POST", "/auth/register/passkey"): _P,
     # Письма: подтверждение почты и сброс пароля; личность подтверждает одноразовый токен
     ("POST", "/auth/verify"): _P,
     ("POST", "/auth/verify/resend"): _P,
@@ -100,6 +106,13 @@ ROUTE_SCOPES: Mapping[RouteKey, RouteScope] = {
     ("GET", "/account/identities"): _A,
     ("GET", "/account/identities/{provider_id}/link"): _A,
     ("DELETE", "/account/identities/{provider_id}"): _A,
+    ("GET", "/account/passkeys"): _A,
+    ("POST", "/account/passkeys"): _A,
+    ("POST", "/account/passkeys/options"): _A,
+    ("PATCH", "/account/passkeys/{passkey_id}"): _A,
+    ("DELETE", "/account/passkeys/{passkey_id}"): _A,
+    ("POST", "/account/reauth"): _A,
+    ("POST", "/account/reauth/options"): _A,
     ("GET", "/account/orgs"): _A,
     ("DELETE", "/account/orgs/{slug}/membership"): _A,
     ("GET", "/account/tokens"): _A,
@@ -171,6 +184,10 @@ ROUTE_SCOPES: Mapping[RouteKey, RouteScope] = {
     ("GET", "/hse/persons/search"): _A,
     ("GET", "/hse/persons/{person_id}"): _A,
     # Настройки
+    ("GET", "/mcp/info"): _A,
+    ("GET", "/mcp/settings"): _LOCAL,
+    ("PUT", "/mcp/settings"): _LOCAL,
+    ("GET", "/mcp/calls"): _LOCAL,
     ("GET", "/settings"): _A,
     ("PUT", "/settings"): _A,
     # Система, обновление и первый запуск локальной установки
@@ -251,6 +268,12 @@ ROUTE_SCOPES: Mapping[RouteKey, RouteScope] = {
     ("GET", "/profile"): _A,
     ("PUT", "/profile"): _A,
     ("DELETE", "/profile"): _A,
+    # Онбординг у каждого свой: строка пользователя на сервере, файл в data_dir локально.
+    ("GET", "/onboarding"): _A,
+    # Без проекта: живы ли общие раннеры (итог онбординга честно говорит, доступна ли облачная сборка).
+    ("GET", "/build-availability"): _A,
+    ("PATCH", "/onboarding"): _A,
+    ("POST", "/onboarding/reset"): _A,
     # Git: доступы, хосты, клонирование
     ("GET", "/git/credentials"): _A,
     ("POST", "/git/credentials"): _A,
@@ -339,6 +362,8 @@ ROUTE_SCOPES: Mapping[RouteKey, RouteScope] = {
     ("POST", "/api/admin/users/{user_id}/enable"): _ADM,
     ("POST", "/api/admin/users/{user_id}/reset-link"): _ADM,
     ("POST", "/api/admin/users/{user_id}/sessions/revoke"): _ADM,
+    ("GET", "/api/admin/users/{user_id}/passkeys"): _ADM,
+    ("DELETE", "/api/admin/users/{user_id}/passkeys"): _ADM,
     ("PUT", "/api/admin/settings/auth"): _ADM,
     ("PUT", "/api/admin/settings/registration"): _ADM,
     ("PUT", "/api/admin/settings/smtp"): _ADM,
@@ -355,6 +380,9 @@ ROUTE_SCOPES: Mapping[RouteKey, RouteScope] = {
     ("GET", "/api/admin/queue"): _ADM,
     ("GET", "/api/admin/queue/summary"): _ADM,
     ("POST", "/api/admin/queue/{job_id}/cancel"): _ADM,
+    ("GET", "/api/admin/mcp/settings"): _ADM,
+    ("PUT", "/api/admin/mcp/settings"): _ADM,
+    ("GET", "/api/admin/mcp/calls"): _ADM,
     ("GET", "/api/admin/quotas"): _ADM,
     ("PUT", "/api/admin/quotas"): _ADM,
     ("GET", "/api/admin/quota-policy"): _ADM,
@@ -473,9 +501,12 @@ ROUTE_SCOPES: Mapping[RouteKey, RouteScope] = {
     ("GET", "/git/servers/login/{login_id}"): _LOCAL,
     ("DELETE", "/git/servers/login/{login_id}"): _LOCAL,
     ("GET", "/git/servers"): _LOCAL,
+    ("GET", "/git/servers/check"): _LOCAL,
     ("GET", "/git/servers/{credential_id}/projects"): _LOCAL,
     ("DELETE", "/git/servers/{credential_id}"): _LOCAL,
     ("POST", "/auth/device/code"): _P,
+    # local-from-cloud: экран «Локальная версия» облачной Студии
+    ("GET", "/local-studio"): _A,
     ("POST", "/auth/device/token"): _P,
     ("GET", "/account/device/{user_code}"): _A,
     ("POST", "/account/device/{user_code}"): _A,

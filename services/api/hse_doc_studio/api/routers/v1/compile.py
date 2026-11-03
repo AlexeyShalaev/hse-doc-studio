@@ -17,6 +17,7 @@ from hse_doc_studio.api.schemas.checks import (
     map_check_result as _map_check_result,
 )
 from hse_doc_studio.api.schemas.compile import (
+    BuildAvailabilityResponse,
     CancelCompileResponse,
     CompileDetailResponse,
     CompileListItemResponse,
@@ -40,6 +41,11 @@ from hse_doc_studio.use_cases.compile.cancel_compile import (
 from hse_doc_studio.use_cases.compile.get_archived_pdf import (
     GetArchivedPdfInput,
     GetArchivedPdfUC,
+)
+from hse_doc_studio.use_cases.compile.get_build_availability import (
+    GetBuildAvailabilityInput,
+    GetBuildAvailabilityUC,
+    GetGeneralBuildAvailabilityUC,
 )
 from hse_doc_studio.use_cases.compile.get_compile import GetCompileInput, GetCompileUC
 from hse_doc_studio.use_cases.compile.get_compile_stream import (
@@ -73,6 +79,32 @@ def _to_list_item(record: CompileRecord) -> CompileListItemResponse:
         warnings=warnings,
         errors=errors,
     )
+
+
+@router.get(
+    "/projects/{project_id}/build-availability",
+    response_model=BuildAvailabilityResponse,
+)
+async def get_build_availability(
+    project_id: UUID,
+    response: Response,
+    uc: FromDishka[GetBuildAvailabilityUC],
+) -> BuildAvailabilityResponse:
+    """Для каких тегов сборки сейчас есть живой раннер; интерфейс опрашивает и гасит «Собрать» без исполнителя."""
+    response.headers["Cache-Control"] = "no-store"
+    result = await uc.execute(GetBuildAvailabilityInput(project_id=project_id))
+    return BuildAvailabilityResponse(cloud=result.cloud, any_runner=result.any_runner, tags=sorted(result.tags))
+
+
+@router.get("/build-availability", response_model=BuildAvailabilityResponse)
+async def get_general_build_availability(
+    response: Response,
+    uc: FromDishka[GetGeneralBuildAvailabilityUC],
+) -> BuildAvailabilityResponse:
+    """Без проекта: есть ли на установке живые общие раннеры (локально сборка всегда доступна)."""
+    response.headers["Cache-Control"] = "no-store"
+    result = await uc.execute()
+    return BuildAvailabilityResponse(cloud=result.cloud, any_runner=result.any_runner, tags=sorted(result.tags))
 
 
 @router.post(

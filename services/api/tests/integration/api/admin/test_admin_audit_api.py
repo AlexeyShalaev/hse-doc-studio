@@ -228,6 +228,8 @@ async def test__audit__refused_mutations_write_nothing(env: _Env) -> None:
 # Ручки, события которых проверяют соседние файлы (ops и orgs). Действие здесь обязано существовать в коде.
 _AUDITED_ELSEWHERE: dict[tuple[str, str], str] = {
     ("DELETE", "/api/admin/users/{id}"): "admin.user_deleted",
+    # passkeys: сброс ключей человека проверяет tests/integration/api/session/test_passkeys_api.py
+    ("DELETE", "/api/admin/users/{id}/passkeys"): "admin.passkeys_reset",
     ("PUT", "/api/admin/settings/instance"): "settings.instance_update",
     ("PUT", "/api/admin/settings/build"): "settings.build_update",
     # links: раздел «Общий доступ» проверяет tests/integration/api/sharing
@@ -240,6 +242,8 @@ _AUDITED_ELSEWHERE: dict[tuple[str, str], str] = {
     ("DELETE", "/api/admin/quota-overrides"): "quota.override_delete",
     ("POST", "/api/admin/usage/reset"): "usage.reset",
     ("PUT", "/api/admin/autoscale"): "settings.autoscale_update",
+    # MCP: проверяет tests/integration/api/mcp/server
+    ("PUT", "/api/admin/mcp/settings"): "settings.mcp_update",
     # backups: проверяют test_admin_backups_api и unit-тесты use_cases/backup
     ("POST", "/api/admin/backups/destinations"): "backup.destination_create",
     ("POST", "/api/admin/backups/destinations/test"): "backup.destination_test",

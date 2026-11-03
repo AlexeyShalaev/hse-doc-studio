@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { sessionKeys } from "@entities/session";
 import type {
   CreateAdminOidcProviderRequest,
+  UpdateAdminAuthRequest,
   UpdateAdminOidcProviderRequest,
   UpdateAdminRegistrationRequest,
   UpdateAdminSmtpRequest,
@@ -58,8 +59,8 @@ export const useUpdateAuth = () => {
   const client = useQueryClient();
   const refresh = useRefreshBootstrap();
   return useMutation({
-    mutationFn: (passwordEnabled: boolean) =>
-      adminSettingsApi.updateAuth(passwordEnabled),
+    mutationFn: (patch: UpdateAdminAuthRequest) =>
+      adminSettingsApi.updateAuth(patch),
     onSuccess: (data) => {
       client.setQueryData(adminSettingsKeys.auth(), data);
       void refresh();

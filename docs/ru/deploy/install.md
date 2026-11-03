@@ -63,7 +63,7 @@ docker compose --profile services up -d   # добавить LanguageTool и ONL
 
 ## Kubernetes
 
-Чарт лежит в `deploy/helm/hse-doc-studio`: api (одна реплика, стратегия Recreate), Job миграций перед обновлением, раннер, ingress, Secret, PVC. Postgres и S3 подключаются внешние. Секреты лучше держать в своём Secret (`secrets.existingSecret`), а не в values. Подробности и ограничения: README чарта.
+Чарт лежит в `deploy/helm/hse-doc-studio`: api (одна реплика, стратегия Recreate), Job миграций перед обновлением, раннер, ingress, Secret, PVC. Postgres и S3 подключаются внешние. Секреты лучше держать в своём Secret (`secrets.existingSecret`), а не в values. Подробности и ограничения: README чарта. Раннер в кластере собирает TeX подом на задачу (`runner.executor: kubernetes`), без `docker.sock`: см. «Раннеры».
 
 ## Первый запуск
 
