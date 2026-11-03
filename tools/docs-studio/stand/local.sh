@@ -45,10 +45,10 @@ mkdir -p "$DATA" "$DOCS_PROJECTS_HOME"
 touch "$MARKER"
 
 if [ ! -f "$ROOT/services/web-app/dist/index.html" ] || [ "${FRONT_BUILD:-0}" = "1" ]; then
-  echo "→ собираю интерфейс"; (cd "$ROOT/services/web-app" && pnpm install --frozen-lockfile >/dev/null && pnpm build >/dev/null)
+  echo "→ собираю интерфейс"; (cd "$ROOT/services/web-app" && NODE_ENV=development pnpm install --frozen-lockfile >/dev/null && NODE_ENV=production pnpm build >/dev/null)
 fi
 if [ ! -d "$ROOT/services/user-docs/dist/user" ] || [ "${HELP_BUILD:-0}" = "1" ]; then
-  echo "→ собираю справку"; (cd "$ROOT/services/user-docs" && pnpm install --frozen-lockfile >/dev/null && pnpm build >/dev/null)
+  echo "→ собираю справку"; (cd "$ROOT/services/user-docs" && NODE_ENV=development pnpm install --frozen-lockfile >/dev/null && pnpm build >/dev/null)
 fi
 
 echo "→ бэкенд на http://127.0.0.1:$PORT (журнал $LOG)"
