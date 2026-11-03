@@ -349,6 +349,9 @@ def serialize_compile_record(record: CompileRecord) -> dict[str, Any]:
         "pages": record.pages,
         "words": record.words,
         "chars": record.chars,
+        "source_commit": record.source_commit,
+        "output_sha256": record.output_sha256,
+        "output_size": record.output_size,
     }
 
 
@@ -370,6 +373,9 @@ def deserialize_compile_record(data: dict[str, Any], project_folder: Path) -> Co
         pages=data.get("pages"),
         words=data.get("words"),
         chars=data.get("chars"),
+        source_commit=data.get("source_commit"),
+        output_sha256=data.get("output_sha256"),
+        output_size=data.get("output_size"),
     )
 
 

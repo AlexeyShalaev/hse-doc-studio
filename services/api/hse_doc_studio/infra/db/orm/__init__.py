@@ -17,6 +17,7 @@ from hse_doc_studio.infra.db.orm.blobs import BlobRow, FileHashCacheRow
 from hse_doc_studio.infra.db.orm.chat import AgentRunRow, ChatMessageRow, ChatSessionRow, ChatSummaryRow
 from hse_doc_studio.infra.db.orm.compile import CompileRecordRow
 from hse_doc_studio.infra.db.orm.device_auth import DeviceAuthorizationRow
+from hse_doc_studio.infra.db.orm.devices import ConnectedDeviceRow
 from hse_doc_studio.infra.db.orm.diagnostics import DiagCheckRow
 from hse_doc_studio.infra.db.orm.git_credentials import GitCredentialRow, GitRemoteBindingRow
 from hse_doc_studio.infra.db.orm.git_trust import GitHostSettingsRow, GitKnownHostRow
@@ -78,6 +79,7 @@ __all__ = [
     "ChatSessionRow",
     "ChatSummaryRow",
     "CompileRecordRow",
+    "ConnectedDeviceRow",
     "DeviceAuthorizationRow",
     "DiagCheckRow",
     "FairShareRow",

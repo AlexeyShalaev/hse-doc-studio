@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections.abc import Sequence
 from pathlib import Path
 
 import pytest_asyncio
@@ -245,6 +246,7 @@ def create_test_container(  # noqa: C901 — one @provide per repo; flat by desi
     packs_dir: Path | None = None,
     host_key_scanner: IHostKeyScanner | None = None,
     remote_runner: IRemoteRunnerSupervisor | None = None,
+    extra_providers: Sequence[Provider] = (),
 ) -> AsyncContainer:
     # A handful of providers (font store, office-editor JWT secret, compile host
     # mounts, the agent loop's rules file) read the module-level `settings.data_dir`
@@ -487,6 +489,7 @@ def create_test_container(  # noqa: C901 — one @provide per repo; flat by desi
                 return remote_runner
 
         providers.append(_RemoteRunnerOverride())
+    providers.extend(extra_providers)
 
     return make_async_container(*providers)
 

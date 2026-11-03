@@ -89,6 +89,10 @@ class GitConfig(BaseModel):
     fetch_startup_delay_s: float = Field(
         default=60.0, description="Delay before the first background fetch after the server starts."
     )
+    presence_startup_delay_s: float = Field(
+        default=20.0,
+        description="Delay before the first presence signal of a connected local Studio after it starts.",
+    )
     fetch_concurrency: int = Field(default=2, ge=1, description="Projects fetched in the background at the same time.")
     large_file_warn_bytes: int = Field(
         default=95_000_000,

@@ -61,6 +61,7 @@ from hse_doc_studio.core.readiness import (
 )
 from hse_doc_studio.core.remote_runner import IRemoteRunnerSupervisor
 from hse_doc_studio.core.repositories import ISettingsRepository
+from hse_doc_studio.infra.devices.presence_scheduler import PresenceScheduler
 from hse_doc_studio.infra.di.containers.api import create_container
 from hse_doc_studio.infra.docker.cli import configure_docker_binary, image_present, run_docker
 from hse_doc_studio.infra.git_sync.fetch_scheduler import GitFetchScheduler
@@ -75,6 +76,7 @@ from hse_doc_studio.use_cases.ai_runtime.sync_local_provider import SyncLocalOll
 from hse_doc_studio.use_cases.chat.recover_stale_chat_runs import RecoverStaleChatRunsUC
 from hse_doc_studio.use_cases.compile.list_images import resolve_active_image
 from hse_doc_studio.use_cases.compile.recover_stale_compiles import RecoverStaleCompilesUC
+from hse_doc_studio.use_cases.devices.local_presence import LocalPresenceService, PresenceTick
 from hse_doc_studio.use_cases.fonts.adopt_host_fonts import AdoptHostFontsUC
 from hse_doc_studio.use_cases.git_sync.fetch_all_remotes import FetchAllGitRemotesUC, FetchTickResult
 from hse_doc_studio.use_cases.setup.inspect_setup import InspectSetupUC
@@ -520,6 +522,30 @@ def create_app() -> FastAPI:  # noqa: C901, PLR0915 — app-wiring factory: rout
     @app.on_event("shutdown")
     async def _git_fetch_shutdown() -> None:
         task = getattr(app.state, "git_fetch_task", None)
+        if task is not None:
+            task.cancel()
+
+    @app.on_event("startup")
+    async def _presence_startup() -> None:
+        # Сигналы присутствия подключённой Студии серверу: только локальная установка и только при входе на сервер
+        # (иначе тик ничего не делает и цикл спит). Вход на сервер будит цикл: первый сигнал не ждёт сна.
+        if settings.mode is not StudioMode.local or not settings.git.enabled:
+            return
+
+        async def _tick() -> PresenceTick:
+            async with container() as request_container:
+                return await (await request_container.get(LocalPresenceService)).tick()
+
+        try:
+            scheduler = PresenceScheduler(_tick, startup_delay_s=settings.git.presence_startup_delay_s)
+            app.state.presence_scheduler = scheduler
+            app.state.presence_task = asyncio.create_task(scheduler.loop())
+        except Exception:
+            logger.exception("presence startup failed")
+
+    @app.on_event("shutdown")
+    async def _presence_shutdown() -> None:
+        task = getattr(app.state, "presence_task", None)
         if task is not None:
             task.cancel()
 

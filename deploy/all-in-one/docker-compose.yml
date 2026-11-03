@@ -37,6 +37,9 @@ services:
       # Пусто → официальные GitHub Releases продукта; `off` полностью выключает
       # проверку обновлений (закрытый контур). См. .env.example.
       HSE_STUDIO__UPDATE_FEED_URL: "${UPDATE_FEED_URL:-}"
+      # Как облако называет этот компьютер в списке подключённых Студий (пусто: имя Студии по умолчанию).
+      HSE_STUDIO__DEVICE_NAME: "${DEVICE_NAME:-}"
+      HSE_STUDIO__DEVICE_OS: "${DEVICE_OS:-}"
     volumes:
       - ${DATA_DIR:-./data}:/data
       # Lets the backend spawn a sibling "updater" container for one-click

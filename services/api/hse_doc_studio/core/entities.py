@@ -113,6 +113,11 @@ class CompileRecord:
     # texcount unavailable). Count what renders as text, headings included.
     words: int | None = None
     chars: int | None = None
+    # Коммит проекта, с которого собран PDF, и отпечаток итогового файла: по ним видно, свежая ли сборка и
+    # совпадает ли PDF у облака и Студии (docs/design/connected-devices.md, раздел 9).
+    source_commit: str | None = None
+    output_sha256: str | None = None
+    output_size: int | None = None
 
 
 @dataclass

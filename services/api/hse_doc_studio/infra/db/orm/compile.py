@@ -6,7 +6,7 @@ from datetime import datetime
 from typing import Any
 from uuid import UUID
 
-from sqlalchemy import DateTime, ForeignKey, Index, Integer, String, Text, Uuid, desc, text
+from sqlalchemy import BigInteger, DateTime, ForeignKey, Index, Integer, String, Text, Uuid, desc, text
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -41,3 +41,7 @@ class CompileRecordRow(Base):
     log: Mapped[str] = mapped_column(Text, nullable=False, server_default="")
     # Путь к PDF относительно папки проекта; абсолютные пути томов в БД не попадают.
     output_path: Mapped[str | None] = mapped_column(Text)
+    # Коммит проекта, с которого собран PDF, и отпечаток итогового файла (docs/design/connected-devices.md, раздел 9).
+    source_commit: Mapped[str | None] = mapped_column(String(64))
+    output_sha256: Mapped[str | None] = mapped_column(String(64))
+    output_size: Mapped[int | None] = mapped_column(BigInteger)

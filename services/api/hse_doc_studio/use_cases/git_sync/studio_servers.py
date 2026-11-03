@@ -14,6 +14,7 @@ import uuid
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, replace
 from datetime import datetime, timedelta, timezone
+from pathlib import Path
 from urllib.parse import urlsplit
 from uuid import UUID
 
@@ -22,9 +23,12 @@ import structlog
 from hse_doc_studio.core.errors import NotFoundError
 from hse_doc_studio.core.git_remote.client import (
     DEVICE_ORIGIN,
+    CloudPdfReply,
     IStudioServerClient,
+    JsonObject,
     PdfUpload,
     PdfUploadReply,
+    PresenceReply,
     StudioProject,
     StudioProjectPage,
     StudioServerError,
@@ -446,6 +450,73 @@ class StudioServersService:
                     await self._credentials.mark(credential_id, CredentialStatus.auth_failed)
                 raise GitSyncError(GitErrorCode.auth_failed) from None
             raise
+
+    async def device_credentials(self) -> list[GitCredential]:
+        """По одному рабочему входу на каждый сервер Студии: самый новый из входов на один адрес."""
+        devices = sorted(
+            (c for c in await self._credentials.list() if c.origin == DEVICE_ORIGIN),
+            key=lambda c: c.created_at,
+            reverse=True,
+        )
+        newest: dict[tuple[str, int | None], GitCredential] = {}
+        for credential in devices:
+            if credential.status is CredentialStatus.auth_failed:
+                continue
+            if credential.expires_at is not None and credential.expires_at <= datetime.now(timezone.utc):
+                continue
+            newest.setdefault((credential.host, credential.port), credential)
+        return list(newest.values())
+
+    async def _authorized(self, credential_id: UUID) -> tuple[StudioServerTarget, Secret]:
+        credential = await self._credentials.get(credential_id)
+        if credential is None or credential.origin != DEVICE_ORIGIN:
+            raise NotFoundError(localized_error("Сервер не найден", "Server not found"))
+        secret = await self._credentials.get_secret(credential_id)
+        target = await self._target(server_url_of(credential), credential.host, credential.port)
+        return target, secret
+
+    async def _marking_denied[T](self, credential_id: UUID, call: Awaitable[T]) -> T:
+        """Отказ входа (401) помечает доступ как отказавший: остальным сценариям и человеку это видно сразу."""
+        try:
+            return await call
+        except StudioServerError as exc:
+            if exc.code == StudioServerErrorCode.unauthorized:
+                with contextlib.suppress(Exception):
+                    await self._credentials.mark(credential_id, CredentialStatus.auth_failed)
+                raise GitSyncError(GitErrorCode.auth_failed) from None
+            raise
+
+    async def send_presence(self, credential_id: UUID, report: JsonObject) -> PresenceReply:
+        target, secret = await self._authorized(credential_id)
+        return await self._marking_denied(credential_id, self._client.send_presence(target, secret, report))
+
+    async def presence_overview(self, credential_id: UUID, device_id: str, project_id: UUID | None) -> JsonObject:
+        target, secret = await self._authorized(credential_id)
+        return await self._marking_denied(
+            credential_id, self._client.presence_overview(target, secret, device_id, project_id)
+        )
+
+    async def project_builds(self, credential_id: UUID, project_id: UUID) -> JsonObject:
+        target, secret = await self._authorized(credential_id)
+        return await self._marking_denied(credential_id, self._client.project_builds(target, secret, project_id))
+
+    async def download_cloud_pdf(  # noqa: PLR0913 — параметры одной загрузки
+        self,
+        credential_id: UUID,
+        project_id: UUID,
+        doc_id: str,
+        dest: Path,
+        *,
+        known_sha256: str | None,
+        max_bytes: int,
+    ) -> CloudPdfReply:
+        target, secret = await self._authorized(credential_id)
+        return await self._marking_denied(
+            credential_id,
+            self._client.download_cloud_pdf(
+                target, secret, project_id, doc_id, dest, known_sha256=known_sha256, max_bytes=max_bytes
+            ),
+        )
 
     async def forget(self, credential_id: UUID) -> None:
         credential = await self._credentials.get(credential_id)

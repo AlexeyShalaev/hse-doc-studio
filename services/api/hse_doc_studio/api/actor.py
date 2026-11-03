@@ -33,3 +33,9 @@ def require_server_mode() -> None:
     """Вход, выход и сессии существуют только на сервере: у локальной установки один актор и нет cookie."""
     if settings.mode is StudioMode.local:
         raise HTTPException(status_code=404, detail="Not Found")
+
+
+def require_local_mode() -> None:
+    """Связь локальной Студии с сервером существует только в локальной установке: на сервере маршрутов нет."""
+    if settings.mode is not StudioMode.local:
+        raise HTTPException(status_code=404, detail="Not Found")

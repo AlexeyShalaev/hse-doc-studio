@@ -1,11 +1,12 @@
 from __future__ import annotations
 
 import asyncio
+import hashlib
 import shutil
 from pathlib import Path
 from uuid import UUID
 
-from hse_doc_studio.core.jobs.artifacts import PublishPdfOutcome, PublishPdfRequest
+from hse_doc_studio.core.jobs.artifacts import PdfFingerprint, PublishPdfOutcome, PublishPdfRequest
 from hse_doc_studio.core.storage.models import PresignedUrl
 from hse_doc_studio.infra.compile.pdf_archive import (
     archive_compiled_pdf,
@@ -54,3 +55,24 @@ class LocalDiskArtifactStore:
 
     async def archived_pdf_link(self, project_id: UUID, doc_id: str, job_id: UUID) -> PresignedUrl | None:
         return None
+
+    async def fingerprint_pdf(self, workspace: Path, doc_id: str, source_file: str) -> PdfFingerprint | None:
+        built = built_pdf_path(workspace, doc_id, source_file)
+        path = built if built.is_file() else final_pdf_path(workspace, source_file)
+        return await asyncio.to_thread(_fingerprint, path)
+
+
+_HASH_CHUNK = 1 << 20
+
+
+def _fingerprint(path: Path) -> PdfFingerprint | None:
+    digest = hashlib.sha256()
+    size = 0
+    try:
+        with path.open("rb") as handle:
+            while chunk := handle.read(_HASH_CHUNK):
+                digest.update(chunk)
+                size += len(chunk)
+    except OSError:
+        return None
+    return PdfFingerprint(size=size, sha256=digest.hexdigest())
