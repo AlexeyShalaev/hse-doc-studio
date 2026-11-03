@@ -1,0 +1,52 @@
+---
+title: 'Invite people to the server'
+description: 'Invitations by link and by email, the registration mode without SMTP and the approval queue.'
+sidebar:
+  order: 2
+access: admin
+help:
+  routes: ['/admin/users?tab=invitations', '/admin/users?tab=approvals', '/admin/users', '/admin/settings']
+  summary: 'An invitation is a link a person signs up with, no approval needed. With mail configured Studio sends the email itself; without it you pass the link on.'
+  steps:
+    - text: 'Open the **Users** section and click **Invite**: the **Invitations** tab opens.'
+      shot: admin/invitations/step-01
+    - text: 'In the **New invitation** block fill in **Email (optional)**, pick **Valid for** and click **Create invitation**.'
+      hint: 'With an email set, only that address can use the link. Without one, anyone you pass the link to can sign up with it.'
+      shot: admin/invitations/step-02
+    - text: 'If mail (SMTP) is configured and an address is set, Studio sends the email itself. Otherwise copy the **Invitation link** and pass it to the person.'
+      hint: 'The link is shown once: after closing you cannot see it again.'
+      shot: admin/invitations/step-03
+    - text: 'Watch the status in the table: **Awaiting reply**, **Accepted** or **Expired**. The row menu has **Issue a new link** and **Revoke**.'
+    - text: 'Choose the registration mode in the **Sign-in and registration** section: **By invitation** is recommended.'
+      hint: 'Without mail, self-registration in the **Open** mode is closed: the person sees “Registration by invitation” and asks you for an invitation. In the **For email domains** mode without mail, new accounts wait for approval.'
+    - text: 'Requests that need your decision are on the **Approvals** tab: click **Approve** or **Reject**.'
+      hint: 'Until a request is approved, the person cannot sign in. A rejected account is disabled. **Approve all** approves several requests at once.'
+verified:
+  at: 2026-11-03
+  app_version: '0.3.0'
+  sources:
+    - services/web-app/src/features/admin-users
+    - services/web-app/src/features/admin-auth-settings
+    - services/api/hse_doc_studio/core/identity/registration.py
+    - services/api/hse_doc_studio/api/routers/admin_users.py
+---
+
+import Steps from '~/components/Steps.astro'
+
+New people get onto the server through an administrator invitation, through self-registration
+(if the mode allows it) or through single sign-on. An invitation is the most reliable way: it
+works with and without mail, and a person who comes by the link does not wait for approval.
+
+<Steps />
+
+## If something goes wrong
+
+- **The window was closed before the link was copied, or the link got lost**: find the invitation
+  in the table and choose **Issue a new link**. The previous link stops working.
+- **“The invitation is no longer valid”**: it expired or was revoked. Issue a new link or create
+  the invitation again.
+- **The person sees “This installation has no mail configured…”**: self-registration without SMTP
+  is closed. Send them an invitation, or configure **Mail (SMTP)** in **Sign-in and registration**
+  and check it with **Send** in the **Test email** block.
+- **The person registered but cannot sign in**: their request waits on the **Approvals** tab.
+  Approve it and sign-in opens.

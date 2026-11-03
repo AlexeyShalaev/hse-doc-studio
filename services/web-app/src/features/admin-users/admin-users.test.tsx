@@ -137,6 +137,18 @@ describe("люди в админке: экраны", () => {
     ).toBeVisible();
   }, 15_000);
 
+  it("колонка passkey: число ключей человека, прочерк без ключей", async () => {
+    render(wrap(<AdminUsers />));
+    expect(await screen.findByText("Мария Келлер")).toBeVisible();
+    expect(screen.getByRole("columnheader", { name: "Passkey" })).toBeVisible();
+    const cells = screen.getAllByTestId(/^user-passkeys-/);
+    const texts = cells.map((c) => c.textContent);
+    expect(texts).toContain("—");
+    expect(texts.some((t) => /^[1-9]\d*$/.test(t))).toBe(true);
+    const counted = cells.find((c) => c.textContent === "2");
+    expect(counted?.getAttribute("aria-label")).toBe("2 passkey");
+  });
+
   it("отключение требует подтверждения, ссылка сброса показывается на экране", async () => {
     const user = userEvent.setup();
     render(wrap(<AdminUsers />));

@@ -94,6 +94,7 @@ def _user(listing: UserListing) -> AdminUser:
         created_at=user.created_at,
         last_login_at=user.last_login_at,
         project_count=listing.project_count,
+        passkey_count=listing.passkey_count,
     )
 
 

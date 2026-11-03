@@ -1,0 +1,52 @@
+name: User help media
+
+# Съёмка скриншотов и роликов справки со стендов (tools/docs-studio): вручную или раз в неделю.
+# Не required: съёмка долгая и зависит от Docker и TeX Live. Результат уходит артефактом;
+# чтобы обновить медиа в репозитории, его распаковывают в services/user-docs/public/media
+# и коммитят (или переснимают локально: make docs-media).
+
+on:
+  workflow_dispatch:
+    inputs:
+      scenario:
+        description: "Ключи статей через пробел (пусто: все)"
+        required: false
+        default: ""
+  schedule:
+    - cron: "0 3 * * 1"
+
+concurrency:
+  group: user-docs-media
+  cancel-in-progress: true
+
+jobs:
+  record:
+    name: Record screenshots and clips
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v7
+      - uses: pnpm/action-setup@v6
+        with:
+          package_json_file: services/web-app/package.json
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+      - name: ffmpeg
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends ffmpeg
+      - name: TeX Live image for local builds
+        run: docker pull texlive/texlive:latest
+      - name: Record
+        run: make docs-media SCENARIO="${{ inputs.scenario }}"
+      - name: Check media is complete
+        if: inputs.scenario == ''
+        run: CHECK_MEDIA=1 node services/user-docs/scripts/check.mjs
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: user-docs-media
+          path: |
+            services/user-docs/public/media
+            tools/docs-studio/.build/record/*.png
+          if-no-files-found: warn

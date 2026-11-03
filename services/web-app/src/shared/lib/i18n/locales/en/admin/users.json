@@ -25,7 +25,8 @@
       "role": "Role",
       "projects": "Projects",
       "lastLogin": "Last sign-in",
-      "actions": "Actions"
+      "actions": "Actions",
+      "passkeys": "Passkeys"
     },
     "you": "you",
     "admin": "Administrator",
@@ -53,7 +54,10 @@
       "revokeSessions": "End all sign-ins",
       "remove": "Delete permanently",
       "selfHint": "You cannot do this to your own account."
-    }
+    },
+    "passkeyCount_one": "{{count}} passkey",
+    "passkeyCount_other": "{{count}} passkeys",
+    "noPasskeys": "No passkeys"
   },
   "forbidden": {
     "title": "Only installation administrators can open this section",

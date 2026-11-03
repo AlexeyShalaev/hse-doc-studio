@@ -106,6 +106,12 @@ export default defineConfig(({ mode }) => {
                 ws: true,
                 secure: devProxyTarget.startsWith("https:"),
               },
+              // Справка (services/user-docs) отдаётся бэкендом по /help/: после `pnpm build` в её каталоге.
+              "/help": {
+                target: devProxyTarget,
+                changeOrigin: true,
+                secure: devProxyTarget.startsWith("https:"),
+              },
             }
           : {},
     },

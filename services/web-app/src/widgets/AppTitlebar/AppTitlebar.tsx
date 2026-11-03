@@ -4,6 +4,7 @@ import { Bot, ChevronRight, GraduationCap, Lock, Settings } from "lucide-react";
 import { clsx } from "clsx";
 import { AccountMenu } from "@features/account-menu";
 import { GuestBadge, useGuest } from "@features/guest-session";
+import { HelpButton } from "@features/help-center";
 import { InboxBell } from "@features/inbox";
 import { HelpMenu } from "@features/onboarding";
 import { useSystemInfo } from "@entities/system";
@@ -236,7 +237,7 @@ export const AppTitlebar = ({
           </button>
         )}
         {!isGuest && <InboxBell />}
-        {!isGuest && <HelpMenu />}
+        {isGuest ? <HelpButton /> : <HelpMenu />}
         <span data-tour="titlebar-account" className="flex items-center">
           <AccountMenu />
         </span>

@@ -29,7 +29,7 @@ class PasskeyChallenges:
         self._tokens = tokens
         self._clock = clock
 
-    async def issue(self, kind: AuthTokenKind, user_id: str | None) -> bytes:
+    async def issue(self, kind: AuthTokenKind, user_id: str | None, *, payload: str | None = None) -> bytes:
         challenge = secrets.token_bytes(CHALLENGE_BYTES)
         await self._tokens.add(
             AuthToken(
@@ -37,6 +37,7 @@ class PasskeyChallenges:
                 kind=kind,
                 user_id=user_id,
                 expires_at=self._clock() + CHALLENGE_TTL,
+                payload=payload,
             )
         )
         return challenge

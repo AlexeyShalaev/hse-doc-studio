@@ -406,6 +406,8 @@ class AdminUser(StrictModel):
     created_at: datetime
     last_login_at: datetime | None
     project_count: int
+    # Сколько passkey у человека (колонка таблицы людей); сами ключи в GET /users/{id}/passkeys.
+    passkey_count: int = 0
 
 
 class AdminUserPage(StrictModel):
