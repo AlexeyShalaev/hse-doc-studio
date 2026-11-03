@@ -199,7 +199,8 @@ test("kubernetes: апдейтер работает, риск подтвержд
           spec = await poll(false);
           return spec !== null;
         },
-        { timeout: 150_000, intervals: [2_000] },
+        // ручки протокола считаются тем же счётчиком по IP, что вход (30 в минуту): опрос не чаще нескольких раз в минуту
+        { timeout: 150_000, intervals: [6_000] },
       )
       .toBe(true);
     const runId = String((spec as unknown as Json).run_id);
