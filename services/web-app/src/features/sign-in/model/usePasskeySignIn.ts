@@ -76,17 +76,23 @@ export const usePasskeySignIn = (enabled: boolean) => {
       }
       if (!isAlive()) return;
       started.current = true;
+      let credential: Record<string, unknown>;
       try {
-        await finish(await getPasskey(options, { autofill: true }));
+        credential = await getPasskey(options, { autofill: true });
+      } catch {
+        // Ожидание в подсказках прервали (кнопка, уход со страницы) или браузер его не умеет:
+        // человек ничего не выбирал, показывать нечего, кнопка остаётся.
+        return;
+      }
+      if (!isAlive()) return;
+      try {
+        await finish(credential);
       } catch (error) {
         if (!isAlive()) return;
-        const next = toFailure(error);
-        // Отменённую автозаполнением церемонию прервала кнопка или уход со страницы.
-        if (next) {
-          setFailure(next);
-          setPending(false);
-          restart();
-        }
+        // Ключ выбран, но сервер его не принял: показываем отказ и снова ждём выбора.
+        setFailure(toFailure(error));
+        setPending(false);
+        restart();
       }
     })();
     return () => {

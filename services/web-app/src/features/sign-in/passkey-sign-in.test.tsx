@@ -207,16 +207,33 @@ describe("вход по passkey", () => {
     expect(result.current.failure).toBeNull();
   });
 
-  it("неудачи автозаполнения перезапускают его не больше трёх раз", async () => {
+  it("браузер без поддержки автозаполнения: ни ошибки, ни повторов", async () => {
     webauthn.supportsAutofill.mockResolvedValue(true);
     api.passkeyOptions.mockResolvedValue({ options: { challenge: "a" } });
-    webauthn.getPasskey.mockRejectedValue(new Error("boom"));
-    renderHook(() => usePasskeySignIn(true), { wrapper });
+    webauthn.getPasskey.mockRejectedValue(
+      new PasskeyCeremonyError("unsupported"),
+    );
+    const { result } = renderHook(() => usePasskeySignIn(true), { wrapper });
     await waitFor(() => {
-      expect(webauthn.getPasskey).toHaveBeenCalledTimes(4);
+      expect(webauthn.getPasskey).toHaveBeenCalledTimes(1);
     });
     await new Promise((resolve) => setTimeout(resolve, 50));
-    expect(webauthn.getPasskey).toHaveBeenCalledTimes(4);
+    expect(api.passkeyOptions).toHaveBeenCalledTimes(1);
+    expect(result.current.failure).toBeNull();
+  });
+
+  it("отказ сервера после выбора ключа: ожидание снова, но не больше трёх раз", async () => {
+    webauthn.supportsAutofill.mockResolvedValue(true);
+    api.passkeyOptions.mockResolvedValue({ options: { challenge: "a" } });
+    webauthn.getPasskey.mockResolvedValue({ id: "cred" });
+    api.passkeyLogin.mockRejectedValue(new Error("boom"));
+    const { result } = renderHook(() => usePasskeySignIn(true), { wrapper });
+    await waitFor(() => {
+      expect(api.passkeyLogin).toHaveBeenCalledTimes(4);
+    });
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    expect(api.passkeyLogin).toHaveBeenCalledTimes(4);
+    expect(result.current.failure).not.toBeNull();
   });
 
   it("выключенный passkey ничего не запускает", () => {
