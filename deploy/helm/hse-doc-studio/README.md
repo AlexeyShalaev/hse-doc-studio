@@ -27,13 +27,26 @@ helm install studio deploy/helm/hse-doc-studio -f my-values.yaml
 
 ## Обновление версии
 
-Встроенного исполнителя в Kubernetes нет (`HSE_STUDIO__SERVER_UPDATE__EXECUTOR=none`): Студия проверяет релизы и уведомляет админов, страница «Обновления» показывает команду. Ставьте так, откат при неуспехе делает Helm:
+Два пути, выбирайте один.
+
+**Оператор (по умолчанию).** Исполнитель выключен (`HSE_STUDIO__SERVER_UPDATE__EXECUTOR=none`): Студия проверяет релизы и уведомляет админов, страница «Обновления» показывает команду. Ставьте так, откат при неуспехе делает Helm:
 
 ```bash
 helm upgrade hse-doc-studio deploy/helm/hse-doc-studio --reuse-values --set image.tag=<версия> --atomic --wait
 ```
 
-Проверку и уведомления выключает `api.extraEnv.HSE_STUDIO__SERVER_UPDATE__ENABLED=false`. Подробно: `docs/design/auto-update.md`.
+**Кнопки в админке: `updater.enabled=true`.** Чарт добавляет под `updater` (исполнитель `kubernetes`), его ServiceAccount и Role и переключает api на этот исполнитель:
+
+```bash
+helm upgrade hse-doc-studio deploy/helm/hse-doc-studio --reset-then-reuse-values \
+  --set updater.enabled=true --set updater.token=$(openssl rand -hex 32)
+```
+
+Токен (общий секрет api и апдейтера) можно завести ключом `updater-token` в `secrets.existingSecret`. Role строго на namespace релиза: `get` и `patch` одного Deployment `<релиз>-api` по имени (`resourceNames`), Job (`create`, `get`, `list`, `watch`, `delete`), `pods` (`get`, `list`) и `pods/log` (`get`). Секретов, других namespace и `ClusterRole` нет; под апдейтера проходит Pod Security restricted, сети он не ограничивает и NetworkPolicy чарта не меняет.
+
+Исполнитель проверяет образ (дайджест релиза записывается в Deployment, подпись cosign при желании проверяет Job), `db current` Job’ом на новом образе, останавливает api, применяет миграции Job’ом, меняет образ и ждёт здоровья. Снимка базы нет: перед обновлением идёт полный бэкап (если настроено назначение) либо нужно подтвердить риск; образ откатывается сам, только пока миграции не меняли схему, иначе статус «Нужны руки» с инструкцией. Опирается на Deployment и Job, поэтому работает и без записи релиза Helm. Дрейф: после обновления из админки зафиксируйте версию в values (`image.tag`), иначе следующий `helm upgrade` вернёт образ из values. Раннер и сам апдейтер обновляются `helm upgrade`. Подробно: `docs/design/auto-update.md`, раздел 5а.
+
+Проверку и уведомления выключает `api.extraEnv.HSE_STUDIO__SERVER_UPDATE__ENABLED=false`.
 
 ## Ingress и долгий опрос
 

@@ -25,9 +25,9 @@ export const updatesApi = {
     adminClient
       .post("/updates/check", {}, quiet)
       .then(parseResp(UpdateStatusSchema)),
-  start: (version: string | null): Promise<UpdateRun> =>
+  start: (version: string | null, acceptRisk: boolean): Promise<UpdateRun> =>
     adminClient
-      .post("/updates/runs", { version }, quiet)
+      .post("/updates/runs", { version, accept_risk: acceptRisk }, quiet)
       .then(parseResp(UpdateRunSchema)),
   rollback: (restoreDb: boolean): Promise<UpdateRun> =>
     adminClient

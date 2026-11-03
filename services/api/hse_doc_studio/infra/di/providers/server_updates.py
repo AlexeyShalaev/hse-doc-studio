@@ -42,7 +42,10 @@ class ServerUpdatesProvider(Provider):
         cfg = settings.server_update
         return UpdateOptions(
             current_version=settings.get_app_version(),
-            executor_enabled=cfg.enabled and cfg.executor == "compose" and bool(cfg.updater_token.get_secret_value()),
+            executor_enabled=cfg.enabled
+            and cfg.executor in {"compose", "kubernetes"}
+            and bool(cfg.updater_token.get_secret_value()),
+            executor=cfg.executor,
             check_interval_s=cfg.check_interval_s,
             updater_stale_s=cfg.updater_stale_s,
             run_lost_s=cfg.run_lost_s,

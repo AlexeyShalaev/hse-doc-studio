@@ -30,7 +30,7 @@ tags:
 
 compose: смените `TAG`, затем `docker compose pull && docker compose up -d`. Миграции базы выполняет api на старте под advisory-блокировкой.
 
-Helm: `helm upgrade`; Job миграций запускается перед обновлением. Задавайте `secrets.existingSecret`, чтобы Job видел актуальные секреты.
+Helm: `helm upgrade`; Job миграций запускается перед обновлением. Задавайте `secrets.existingSecret`, чтобы Job видел актуальные секреты. Кнопки «Обновить сейчас» и «Откатить» в Kubernetes включает `updater.enabled=true` (см. [Автообновление](auto-update.md#kubernetes)).
 
 Перед обновлением снимите бэкап. Раннеры обновляйте вместе с api: несовместимая версия отклоняется при регистрации. Проверка схемы: `hse-doc-studio db current` и `hse-doc-studio db check`.
 

@@ -30,6 +30,10 @@ The runner drives sibling containers through `/var/run/docker.sock`. That equals
 - the api has no Docker access and must not get any;
 - on Kubernetes use the `kubernetes` executor (a pod per job, no socket or hostPath, Pod Security restricted, no network); for shared installations add a gVisor or Kata RuntimeClass (`runner.kubernetes.runtimeClassName`). See "Runners" and `docs/design/k8s-runner.md`.
 
+### Updating from the admin in Kubernetes
+
+The `kubernetes` executor (`updater.enabled=true`, off by default) gets a ServiceAccount token with a role strictly on the release namespace: `get` and `patch` on one api Deployment by name, Jobs, reading pods and their logs; no secrets and no `ClusterRole`. The api has none of these rights: it only creates a "update to version X" record, and the updater takes the image from the Deployment's own repository and checks it against the release digest. Still, the updater token can replace the api image, so grant it nothing more, keep `updater.token` in a Secret, and for locked-down installs leave the executor off (update with `helm upgrade`). See [Auto-update](auto-update.md#kubernetes).
+
 ## Trust boundaries
 
 - **Project members** see only their projects. Someone else's project answers as non-existent (404); a missing role gives 403.

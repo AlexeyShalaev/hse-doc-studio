@@ -22,10 +22,11 @@ from pathlib import Path
 from typing import Any
 
 from hse_doc_studio.infra.update.server_updater import plan
-from hse_doc_studio.infra.update.server_updater.client import ApiUnavailableError, IApi
+from hse_doc_studio.infra.update.server_updater.client import IApi
 from hse_doc_studio.infra.update.server_updater.config import UpdaterConfig
 from hse_doc_studio.infra.update.server_updater.docker import IDocker, Result, inspect
 from hse_doc_studio.infra.update.server_updater.journal import Journal
+from hse_doc_studio.infra.update.server_updater.reporter import Reporter
 
 HttpGet = Callable[[str, dict[str, str], float], tuple[int, str]]
 SNAP_DIR = "snapshots"
@@ -50,6 +51,23 @@ class _StepError(Exception):
         self.message = message
 
 
+def published_digest(http_get: HttpGet, spec: dict[str, Any]) -> str:
+    """Дайджест образа из `image-digest.json` релиза; нет файла или он чужой версии: запуск отменяется."""
+    url = str(spec.get("digests_url") or "")
+    if not url.startswith("https://"):
+        raise AbortError(
+            "digest_missing", "the release publishes no image digest; set verification to off to install anyway"
+        )
+    try:
+        code, body = http_get(url, {}, 20.0)
+    except OSError as exc:
+        raise AbortError("digest_unreachable", f"cannot fetch the release digest: {exc}") from exc
+    digest = plan.parse_digest_doc(body, version=spec["to_version"]) if code == 200 else None  # noqa: PLR2004
+    if digest is None:
+        raise AbortError("digest_missing", "the release digest file is unreadable or for another version")
+    return digest
+
+
 @dataclass
 class _Svc:
     service: str
@@ -59,7 +77,7 @@ class _Svc:
     image_ref: str
 
 
-class Engine:
+class Engine(Reporter):
     def __init__(
         self,
         config: UpdaterConfig,
@@ -72,44 +90,12 @@ class Engine:
         now: Callable[[], datetime] = lambda: datetime.now(UTC),
         monotonic: Callable[[], float] = time.monotonic,
     ) -> None:
+        super().__init__(api, journal, now=now)
         self._c = config
         self._d = docker
-        self._api = api
-        self._j = journal
         self._get = http_get
         self._sleep = sleep
-        self._now = now
         self._mono = monotonic
-
-    # ---- события ----
-
-    def emit(self, phase: str, message: str, *, level: str = "info", status: str | None = None, **extra: Any) -> None:
-        run = self._j.run
-        if run is None:
-            return
-        event: dict[str, Any] = {
-            "seq": self._j.next_seq(),
-            "at": self._now().isoformat(),
-            "phase": phase,
-            "level": level,
-            "message": message[:1900],
-        }
-        if status:
-            event["status"] = status
-        event.update({k: v for k, v in extra.items() if v is not None})
-        self._j.update_run(phase=phase)
-        self._j.push_event(run["id"], event)
-        self.flush()
-
-    def flush(self) -> None:
-        """Доставляет накопленные события по порядку; на первой ошибке останавливается и повторит позже."""
-        while self._j.outbox:
-            item = self._j.outbox[0]
-            try:
-                self._api.post_event(item["run_id"], item["event"])
-            except ApiUnavailableError:
-                return
-            self._j.pop_event()
 
     # ---- docker ----
 
@@ -323,19 +309,7 @@ class Engine:
         self.emit("verify", f"image digest {digest[:19]} verified")
 
     def _published_digest(self, spec: dict[str, Any]) -> str:
-        url = str(spec.get("digests_url") or "")
-        if not url.startswith("https://"):
-            raise AbortError(
-                "digest_missing", "the release publishes no image digest; set verification to off to install anyway"
-            )
-        try:
-            code, body = self._get(url, {}, 20.0)
-        except OSError as exc:
-            raise AbortError("digest_unreachable", f"cannot fetch the release digest: {exc}") from exc
-        digest = plan.parse_digest_doc(body, version=spec["to_version"]) if code == 200 else None  # noqa: PLR2004
-        if digest is None:
-            raise AbortError("digest_missing", "the release digest file is unreadable or for another version")
-        return digest
+        return published_digest(self._get, spec)
 
     def _swap(self, spec: dict[str, Any], svcs: dict[str, _Svc], api: _Svc, env_file: Path, target: str) -> None:
         """Точка невозврата: с остановки любой отказ откатывается."""

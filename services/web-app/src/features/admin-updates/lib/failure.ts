@@ -12,6 +12,8 @@ const KNOWN = [
   "unknown_version",
   "no_previous_version",
   "not_cancellable",
+  "risk_not_confirmed",
+  "rollback_unsafe",
   "forbidden",
   "rate_limited",
   "csrf_failed",

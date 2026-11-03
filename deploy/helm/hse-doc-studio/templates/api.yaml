@@ -49,6 +49,11 @@ spec:
             {{- if .Values.backups.enabled }}
             {{- include "hds.backupsEnv" . | nindent 12 }}
             {{- end }}
+            {{- if .Values.updater.enabled }}
+            # Обновление из админки: версию ставит сервис updater (updater-kubernetes.yaml), api только решает и учитывает.
+            - {name: HSE_STUDIO__SERVER_UPDATE__EXECUTOR, value: kubernetes}
+            - {name: HSE_STUDIO__SERVER_UPDATE__UPDATER_TOKEN, valueFrom: {secretKeyRef: {name: {{ include "hds.secretName" . }}, key: updater-token}}}
+            {{- end }}
             # Первая установка: схему ведёт сам api под advisory-локом. Дальше её обновляет Job pre-upgrade.
             - {name: HSE_STUDIO__DB__AUTO_MIGRATE, value: {{ or .Release.IsInstall (not .Values.migrations.enabled) | quote }}}
           volumeMounts:

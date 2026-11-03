@@ -15,6 +15,8 @@ class UpdateErrorCode(StrEnum):
     not_cancellable = "not_cancellable"
     unauthorized = "unauthorized"
     unsafe_version_jump = "unsafe_version_jump"
+    risk_not_confirmed = "risk_not_confirmed"  # kubernetes без бэкапа: обновление только с явным подтверждением риска
+    rollback_unsafe = "rollback_unsafe"  # kubernetes: обновление меняло схему, образ без отката базы не поднимется
 
 
 class UpdateError(Exception):

@@ -81,7 +81,7 @@ export type UpdateRunPage = z.infer<typeof UpdateRunPageSchema>;
 export const UpdateStatusSchema = z.strictObject({
   settings: UpdateSettingsSchema,
   current_version: z.string(),
-  executor: z.enum(["compose", "none"]),
+  executor: z.enum(["compose", "kubernetes", "none"]),
   updater_online: z.boolean(),
   updater_seen_at: z.string().nullable(),
   updater_version: z.string().nullable(),
@@ -97,6 +97,8 @@ export const UpdateStatusSchema = z.strictObject({
   last_run: UpdateRunSchema.nullable(),
   rollback_version: z.string().nullable(),
   rollback_needs_restore: z.boolean(),
+  rollback_blocked: z.boolean(),
+  risk_confirmation_required: z.boolean(),
   manual_command: z.string(),
 });
 export type UpdateStatus = z.infer<typeof UpdateStatusSchema>;

@@ -26,3 +26,6 @@ class UpdateStatus:
     last_run: UpdateRun | None
     rollback_version: str | None  # версия, на которую можно вернуться кнопкой
     rollback_needs_restore: bool  # возврат потребует восстановить базу из снимка (данные после обновления теряются)
+    executor: str = "none"  # compose, kubernetes или none
+    rollback_blocked: bool = False  # kubernetes: обновление меняло схему, откат образа без отката базы невозможен
+    risk_confirmation_required: bool = False  # kubernetes: бэкап не пройдёт, ручной запуск требует accept_risk

@@ -12,6 +12,7 @@ import {
   TableSkeleton,
 } from "@shared/ui";
 import { Notice } from "@shared/ui/ConflictKit";
+import { Switch } from "@shared/ui/Switch";
 import { Banner, ViewState } from "@features/admin-ops/ui/parts";
 import {
   useCancelUpdate,
@@ -54,6 +55,7 @@ const UpdatesContent = () => {
   const [failure, setFailure] = useState<UpdateFailure | null>(null);
   const [saveFailure, setSaveFailure] = useState<UpdateFailure | null>(null);
   const [confirmUpdate, setConfirmUpdate] = useState(false);
+  const [acceptRisk, setAcceptRisk] = useState(false);
   const [confirmRollback, setConfirmRollback] = useState(false);
   const [opened, setOpened] = useState<UpdateRun | null>(null);
   const onOpen = useCallback((run: UpdateRun) => {
@@ -77,8 +79,10 @@ const UpdatesContent = () => {
     );
   }
 
+  const kube = data.executor === "kubernetes";
+  const needRisk = kube && data.risk_confirmation_required;
   const canStart =
-    data.executor === "compose" &&
+    data.executor !== "none" &&
     data.updater_online &&
     !busy &&
     data.available !== null;
@@ -117,6 +121,7 @@ const UpdatesContent = () => {
               data-testid="update-now"
               onClick={() => {
                 setFailure(null);
+                setAcceptRisk(false);
                 setConfirmUpdate(true);
               }}
             >
@@ -168,10 +173,12 @@ const UpdatesContent = () => {
         (last.status === "failed" || last.status === "rolled_back") && (
           <Banner
             tone={last.status === "failed" ? "danger" : "warning"}
-            title={t(`banner.last.${last.status}`, {
-              to: last.to_version,
-              at: when(last.created_at),
-            })}
+            title={t(
+              last.error_code === "needs_manual_action"
+                ? "banner.last.needs_hands"
+                : `banner.last.${last.status}`,
+              { to: last.to_version, at: when(last.created_at) },
+            )}
             testId="update-banner-last"
           >
             {last.error}
@@ -186,24 +193,35 @@ const UpdatesContent = () => {
           {t("banner.manualBody")}
         </Banner>
       )}
-      {data.executor === "compose" && !data.updater_online && (
+      {data.executor !== "none" && !data.updater_online && (
         <Banner
           tone="warning"
           title={t("banner.updaterOffline")}
           testId="update-banner-offline"
         >
-          {t("banner.updaterOfflineBody")}
+          {t(kube ? "banner.updaterOfflineKube" : "banner.updaterOfflineBody")}
         </Banner>
       )}
-      {data.settings.backup_first && !data.backup_destination_configured && (
+      {needRisk && (
         <Banner
           tone="warning"
-          title={t("banner.noBackup")}
-          testId="update-banner-nobackup"
+          title={t("banner.noBackupKube")}
+          testId="update-banner-nobackup-kube"
         >
-          {t("banner.noBackupBody")}
+          {t("banner.noBackupKubeBody")}
         </Banner>
       )}
+      {!kube &&
+        data.settings.backup_first &&
+        !data.backup_destination_configured && (
+          <Banner
+            tone="warning"
+            title={t("banner.noBackup")}
+            testId="update-banner-nobackup"
+          >
+            {t("banner.noBackupBody")}
+          </Banner>
+        )}
       {data.check_error && (
         <Banner
           tone="warning"
@@ -285,6 +303,11 @@ const UpdatesContent = () => {
             />
           </div>
         )}
+        {data.rollback_blocked && (
+          <p className="form-hint" data-testid="update-rollback-blocked">
+            {t("version.rollbackBlocked")}
+          </p>
+        )}
         {data.rollback_version && (
           <div style={{ marginTop: 12 }}>
             <Button
@@ -337,7 +360,9 @@ const UpdatesContent = () => {
             setConfirmUpdate(false);
           }}
           title={t("confirmUpdate.title", { version: data.available.version })}
-          description={t("confirmUpdate.body")}
+          description={t(
+            kube ? "confirmUpdate.bodyKube" : "confirmUpdate.body",
+          )}
           footer={
             <>
               <Button
@@ -350,17 +375,23 @@ const UpdatesContent = () => {
               </Button>
               <Button
                 data-testid="update-confirm"
-                disabled={start.isPending}
+                disabled={start.isPending || (needRisk && !acceptRisk)}
                 onClick={() => {
-                  start.mutate(data.available?.version ?? null, {
-                    onSuccess: () => {
-                      setConfirmUpdate(false);
+                  start.mutate(
+                    {
+                      version: data.available?.version ?? null,
+                      acceptRisk: needRisk && acceptRisk,
                     },
-                    onError: (e) => {
-                      setConfirmUpdate(false);
-                      fail(e);
+                    {
+                      onSuccess: () => {
+                        setConfirmUpdate(false);
+                      },
+                      onError: (e) => {
+                        setConfirmUpdate(false);
+                        fail(e);
+                      },
                     },
-                  });
+                  );
                 }}
               >
                 {t("confirmUpdate.ok")}
@@ -369,6 +400,28 @@ const UpdatesContent = () => {
           }
         >
           <Notice tone="info" text={t("confirmUpdate.downtime")} />
+          {kube && (
+            <p className="form-hint" data-testid="update-kube-schema">
+              {t("confirmUpdate.schemaKube")}
+            </p>
+          )}
+          {needRisk && (
+            <div
+              className="flex"
+              style={{ gap: 8, alignItems: "center", marginTop: 12 }}
+            >
+              <Switch
+                id="update-accept-risk"
+                checked={acceptRisk}
+                onChange={setAcceptRisk}
+                label={t("confirmUpdate.acceptRisk")}
+                testId="update-accept-risk"
+              />
+              <label htmlFor="update-accept-risk">
+                {t("confirmUpdate.acceptRisk")}
+              </label>
+            </div>
+          )}
         </Modal>
       )}
 

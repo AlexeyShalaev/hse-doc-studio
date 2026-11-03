@@ -53,7 +53,9 @@ class Env:
     notifier: RecordingNotifier
 
 
-def make(*, current: str = "0.3.1", executor: bool = True, releases: tuple[ReleaseInfo, ...] = ()) -> Env:
+def make(
+    *, current: str = "0.3.1", executor: bool = True, releases: tuple[ReleaseInfo, ...] = (), kind: str = "compose"
+) -> Env:
     clock = Clock()
     runs, settings, backup_runs = InMemoryUpdateRuns(), InMemoryInstanceSettingsRepository(), InMemoryRuns()
     destinations, audit, notifier = InMemoryDestinations(), InMemoryAuditLog(), RecordingNotifier()
@@ -70,7 +72,7 @@ def make(*, current: str = "0.3.1", executor: bool = True, releases: tuple[Relea
         notifier,  # type: ignore[arg-type]
         Admins("boss"),
         NoopUow(),  # type: ignore[arg-type]
-        UpdateOptions(current_version=current, executor_enabled=executor),
+        UpdateOptions(current_version=current, executor_enabled=executor, executor=kind),
         clock,
     )
     return Env(clock, service, runs, settings, source, backup, backup_runs, destinations, audit, notifier)
@@ -402,3 +404,132 @@ async def test__snapshot_feeds_metrics() -> None:
     assert snap.updater_online
     assert snap.active
     assert snap.executor_enabled
+
+
+# ---- kubernetes: снимка базы нет ----
+
+
+async def test__kubernetes__manual_update_without_backup_needs_the_risk_confirmed() -> None:
+    env = make(releases=REL, kind="kubernetes")
+    await configure(env, backup_first=True)
+    await env.service.check_now("boss")
+    await updater_alive(env)
+    assert (await env.service.status()).risk_confirmation_required is True
+
+    with pytest.raises(UpdateError) as caught:
+        await env.service.request_update("boss", None)
+    assert (caught.value.code, caught.value.field) == (UpdateErrorCode.risk_not_confirmed, "accept_risk")
+    assert await env.runs.active() is None
+
+    run = await env.service.request_update("boss", None, accept_risk=True)
+
+    assert run.status is RunStatus.queued
+    assert any(e.level == "warn" and "risk is accepted" in e.message for e in run.events)
+    (audit,) = [e for e in await env.audit.list() if e.action == "update.run_request"]
+    assert audit.details["risk_accepted"] is True
+
+
+async def test__kubernetes__with_a_backup_destination_no_confirmation_is_needed_and_the_backup_runs() -> None:
+    env = make(releases=REL, kind="kubernetes")
+    await configure(env, backup_first=True)
+    await _destination(env)
+    await env.service.check_now("boss")
+    await updater_alive(env)
+    assert (await env.service.status()).risk_confirmation_required is False
+
+    run = await env.service.request_update("boss", None)
+
+    assert run.status is RunStatus.waiting_backup
+    assert run.backup_run_id is not None
+
+
+async def test__kubernetes__backup_switched_off_still_needs_the_confirmation_even_with_a_destination() -> None:
+    env = make(releases=REL, kind="kubernetes")
+    await configure(env, backup_first=False)
+    await _destination(env)
+    await env.service.check_now("boss")
+    await updater_alive(env)
+
+    with pytest.raises(UpdateError) as caught:
+        await env.service.request_update("boss", None)
+    assert caught.value.code is UpdateErrorCode.risk_not_confirmed
+
+
+async def test__compose__never_asks_for_the_risk_confirmation() -> None:
+    env = make(releases=REL)
+    await configure(env, backup_first=True)
+    await env.service.check_now("boss")
+    await updater_alive(env)
+
+    run = await env.service.request_update("boss", None)
+
+    assert run.status is RunStatus.queued
+    assert (await env.service.status()).risk_confirmation_required is False
+
+
+async def test__kubernetes__auto_policy_does_not_install_without_a_backup_and_tells_the_admins_once() -> None:
+    env = make(releases=REL, kind="kubernetes")
+    await configure(env, backup_first=True)
+    await updater_alive(env)
+
+    await env.service.tick()
+    await env.service.tick()
+
+    assert await env.runs.active() is None
+    assert [p.outcome for _u, _k, p, _d in env.notifier.sent] == ["update_available"]  # type: ignore[attr-defined]
+
+
+async def test__kubernetes__auto_policy_installs_when_the_backup_will_run() -> None:
+    env = make(releases=REL, kind="kubernetes")
+    await configure(env, backup_first=True)
+    await _destination(env)
+    await updater_alive(env)
+
+    await env.service.tick()
+
+    run = await env.runs.active()
+    assert run is not None
+    assert run.status is RunStatus.waiting_backup
+
+
+async def _succeeded_on_kubernetes(env: Env, *, from_rev: str, to_rev: str) -> None:
+    await configure(env, backup_first=False)
+    await env.service.check_now("boss")
+    await updater_alive(env)
+    await env.service.request_update("boss", None, accept_risk=True)
+    spec = await env.service.poll(PollReport())
+    assert spec is not None
+    await env.service.report(
+        spec.run_id, ev(1, phase="finish", status=RunStatus.succeeded, from_revision=from_rev, to_revision=to_rev)
+    )
+    env.service._options = UpdateOptions(  # noqa: SLF001
+        current_version="0.3.2", executor_enabled=True, executor="kubernetes"
+    )
+    await updater_alive(env)
+
+
+async def test__kubernetes__rollback_is_offered_only_while_the_schema_is_unchanged() -> None:
+    env = make(releases=REL, kind="kubernetes")
+    await _succeeded_on_kubernetes(env, from_rev="r1", to_rev="r1")
+
+    status = await env.service.status()
+    assert (status.rollback_version, status.rollback_blocked, status.rollback_needs_restore) == ("0.3.1", False, False)
+    run = await env.service.request_rollback("boss", restore_db=True)
+    assert (run.kind, run.restore_db) == (RunKind.rollback, False), "восстанавливать базу в kubernetes нечем"
+
+
+async def test__kubernetes__rollback_after_a_schema_change_is_blocked() -> None:
+    env = make(releases=REL, kind="kubernetes")
+    await _succeeded_on_kubernetes(env, from_rev="r1", to_rev="r2")
+
+    status = await env.service.status()
+    assert (status.rollback_version, status.rollback_blocked, status.rollback_needs_restore) == (None, True, False)
+    with pytest.raises(UpdateError) as caught:
+        await env.service.request_rollback("boss", restore_db=True)
+    assert caught.value.code is UpdateErrorCode.rollback_unsafe
+
+
+async def test__status__executor_kind_follows_the_options() -> None:
+    assert (await make(kind="kubernetes").service.status()).executor == "kubernetes"
+    assert (await make(executor=False, kind="kubernetes").service.status()).executor == "none"
+    assert (await make().service.status()).executor == "compose"

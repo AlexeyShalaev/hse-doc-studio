@@ -6,6 +6,38 @@ from pathlib import Path
 
 
 @dataclass(frozen=True)
+class KubeSettings:
+    """Исполнитель kubernetes (HSE_UPDATER__EXECUTOR=kubernetes): какой Deployment и как долго ждать."""
+
+    deployment: str
+    namespace: str = ""  # пусто значит namespace ServiceAccount пода апдейтера
+    container: str = "api"
+    api_url: str = ""
+    poll_s: float = 2.0
+    stop_timeout_s: float = 180.0
+    migrate_timeout_s: float = 3600.0
+    probe_job_timeout_s: float = 300.0  # `db current`, cosign
+    pod_start_timeout_s: float = 300.0  # pull образа
+    job_ttl_s: int = 86400
+
+    @classmethod
+    def from_env(cls, e: dict[str, str]) -> KubeSettings:
+        deployment = e.get("HSE_UPDATER__KUBE__DEPLOYMENT", "").strip()
+        if not deployment:
+            msg = "HSE_UPDATER__KUBE__DEPLOYMENT is not set"
+            raise ValueError(msg)
+        return cls(
+            deployment=deployment,
+            namespace=e.get("HSE_UPDATER__KUBE__NAMESPACE", "").strip(),
+            container=e.get("HSE_UPDATER__KUBE__CONTAINER", "api").strip() or "api",
+            api_url=e.get("HSE_UPDATER__KUBE__API_URL", "").strip(),
+            stop_timeout_s=float(e.get("HSE_UPDATER__KUBE__STOP_TIMEOUT_S", "180")),
+            migrate_timeout_s=float(e.get("HSE_UPDATER__KUBE__MIGRATE_TIMEOUT_S", "3600")),
+            pod_start_timeout_s=float(e.get("HSE_UPDATER__KUBE__POD_START_TIMEOUT_S", "300")),
+        )
+
+
+@dataclass(frozen=True)
 class UpdaterConfig:
     api_url: str
     token: str
@@ -26,6 +58,7 @@ class UpdaterConfig:
     min_free_bytes: int = 1024**3
     keep_snapshots: int = 2
     version: str = ""
+    kube: KubeSettings | None = None  # задан значит исполнитель kubernetes, иначе compose
 
     @classmethod
     def from_env(cls, env: dict[str, str] | None = None, *, version: str = "") -> UpdaterConfig:
@@ -35,6 +68,7 @@ class UpdaterConfig:
             msg = "HSE_UPDATER__TOKEN is not set"
             raise ValueError(msg)
         api_url = e.get("HSE_UPDATER__API_URL", "http://api:8000")
+        kube = KubeSettings.from_env(e) if e.get("HSE_UPDATER__EXECUTOR", "compose") == "kubernetes" else None
         env_file = e.get("HSE_UPDATER__ENV_FILE", "").strip()
         return cls(
             api_url=api_url,
@@ -49,4 +83,5 @@ class UpdaterConfig:
             poll_s=float(e.get("HSE_UPDATER__POLL_S", "15")),
             health_timeout_s=float(e.get("HSE_UPDATER__HEALTH_TIMEOUT_S", "300")),
             version=version,
+            kube=kube,
         )

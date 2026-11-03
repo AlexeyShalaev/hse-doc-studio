@@ -7,9 +7,11 @@ from pydantic import BaseModel, Field, SecretStr
 
 class ServerUpdateConfig(BaseModel):
     enabled: bool = Field(default=True, description="Включает проверку релизов, планировщик и раздел админки.")
-    executor: Literal["compose", "none"] = Field(
+    executor: Literal["compose", "kubernetes", "none"] = Field(
         default="none",
         description="Кто ставит обновление. compose: сервис-апдейтер рядом с api (docker compose). "
+        "kubernetes: сервис-апдейтер в кластере меняет образ Deployment api и гоняет миграции Job-ом "
+        "(включается чартом: updater.enabled). "
         "none: только проверка и уведомления, ставит оператор (helm upgrade --atomic, свой CI).",
     )
     updater_token: SecretStr = Field(
