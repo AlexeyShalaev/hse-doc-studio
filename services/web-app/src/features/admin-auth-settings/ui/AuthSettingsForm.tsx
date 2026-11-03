@@ -6,6 +6,7 @@ import type {
   AdminAuthSettings,
   AdminRegistrationSettings,
   AdminSmtpSettings,
+  UpdateAdminAuthRequest,
   UpdateAdminRegistrationRequest,
   UpdateAdminSmtpRequest,
 } from "@entities/session";
@@ -42,7 +43,7 @@ export type AuthSettingsFormProps = {
   oidc: ReactNode;
   /** Отказ сервера приходит отклонённым промисом. */
   saveRegistration: (patch: UpdateAdminRegistrationRequest) => Promise<unknown>;
-  saveAuth: (passwordEnabled: boolean) => Promise<unknown>;
+  saveAuth: (patch: UpdateAdminAuthRequest) => Promise<unknown>;
   saveSmtp: (patch: UpdateAdminSmtpRequest) => Promise<unknown>;
   test: SmtpTest;
   onSaved?: () => void;
@@ -69,8 +70,12 @@ export const AuthSettingsForm = ({
     (key) => !isLocked(registration.fields, REGISTRATION_FIELD[key]),
   );
   const sign = useDraft<SignInDraft>(
-    { password: auth.password_enabled },
-    () => !isLocked(auth.fields, "auth.password_enabled"),
+    { password: auth.password_enabled, passkeys: auth.passkeys_enabled },
+    (key) =>
+      !isLocked(
+        auth.fields,
+        key === "password" ? "auth.password_enabled" : "auth.passkeys_enabled",
+      ),
   );
   const mail = useDraft<SmtpDraft>(
     smtpDraftOf(smtp),
@@ -149,7 +154,15 @@ export const AuthSettingsForm = ({
         done: reg.reset,
       },
       sign.changed.length > 0 && {
-        run: () => saveAuth(sign.value.password),
+        run: () =>
+          saveAuth({
+            password_enabled: sign.isChanged("password")
+              ? sign.value.password
+              : null,
+            passkeys_enabled: sign.isChanged("passkeys")
+              ? sign.value.passkeys
+              : null,
+          }),
         done: sign.reset,
       },
       mail.changed.length > 0 && {

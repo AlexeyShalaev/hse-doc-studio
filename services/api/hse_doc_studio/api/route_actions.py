@@ -212,6 +212,8 @@ ROUTE_ACTIONS: Mapping[RouteKey, RouteRule] = {
     # Где идут сборки: видят все участники, политику сборок соавторов меняет владелец
     ("GET", "/projects/{project_id}/build-runners"): RouteRule(Action.PROJECT_VIEW),
     ("PUT", "/projects/{project_id}/build-runners"): RouteRule(Action.PROJECT_SETTINGS),
+    # Есть ли кому собирать: видят все участники, кнопки «Собрать» гаснут без раннера
+    ("GET", "/projects/{project_id}/build-availability"): RouteRule(Action.PROJECT_VIEW),
     ("POST", "/projects/{project_id}/team/sets"): RouteRule(Action.PROJECT_SETTINGS),
     ("PATCH", "/projects/{project_id}/vcs/settings"): RouteRule(Action.PROJECT_SETTINGS),
     ("PUT", "/projects/{project_id}/git/remote"): RouteRule(Action.PROJECT_SETTINGS),

@@ -6,6 +6,7 @@ import {
   useBootstrap,
   wasSessionEnded,
 } from "@entities/session";
+import { usePasskeySignIn } from "../model/usePasskeySignIn";
 import { useSignIn } from "../model/useSignIn";
 import { ssoStartUrl } from "../lib/ssoStartUrl";
 import { LoginCard } from "./LoginCard";
@@ -14,6 +15,7 @@ export const SignInForm = () => {
   const { data } = useBootstrap();
   const [params] = useSearchParams();
   const { submit, pending, failure } = useSignIn();
+  const passkey = usePasskeySignIn(data?.auth.passkeys_enabled === true);
   // Читаем один раз при показе формы: флаг гаснет при следующем входе.
   const [sessionEnded] = useState(wasSessionEnded);
   if (!data) return null;
@@ -22,11 +24,18 @@ export const SignInForm = () => {
     <LoginCard
       auth={data.auth}
       pending={pending}
-      failure={failure}
+      failure={passkey.failure ?? failure}
       sessionEnded={sessionEnded}
       ssoHref={(id) => ssoStartUrl(id, next)}
       onSubmit={(email, password) => {
         void submit(email, password);
+      }}
+      passkey={{
+        available: passkey.available,
+        pending: passkey.pending,
+        onStart: () => {
+          void passkey.start();
+        },
       }}
     />
   );

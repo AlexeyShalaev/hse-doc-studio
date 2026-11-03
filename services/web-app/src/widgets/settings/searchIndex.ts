@@ -179,6 +179,20 @@ export const SETTINGS_SEARCH_INDEX: readonly SettingSearchEntry[] = [
   },
   {
     sectionId: "account",
+    anchorId: "account-passkeys",
+    labelKey: "search.accountPasskeys",
+    keywords: [
+      "passkey",
+      "ключ доступа",
+      "вход без пароля",
+      "webauthn",
+      "отпечаток",
+      "fingerprint",
+      "security key",
+    ],
+  },
+  {
+    sectionId: "account",
     anchorId: "account-sessions",
     labelKey: "search.accountSessions",
     keywords: [

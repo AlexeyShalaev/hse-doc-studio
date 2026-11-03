@@ -23,6 +23,7 @@ const AUTH: AuthOptions = {
   oidc_providers: [],
   smtp_enabled: true,
   password_min_length: 10,
+  passkeys_enabled: false,
 };
 const INVITATION: InvitationInfo = {
   email: "maria.keller@example.org",

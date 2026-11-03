@@ -12,6 +12,12 @@
     "limit": "16 kB"
   },
   {
+    "name": "Церемонии passkey (lazy, @simplewebauthn/browser)",
+    "path": "dist/assets/webauthn-vendor-*.js",
+    "gzip": true,
+    "limit": "4.5 kB"
+  },
+  {
     "name": "Словарь админки: shell (общий кусок оболочки)",
     "path": "dist/assets/locale-admin-shell-*.js",
     "gzip": true,
@@ -106,5 +112,23 @@
     "path": "dist/assets/locale-admin-mcp-*.js",
     "gzip": true,
     "limit": "0.65 kB"
+  },
+  {
+    "name": "Онбординг: песочница демо-проекта (lazy)",
+    "path": "dist/assets/DemoSandbox-*.js",
+    "gzip": true,
+    "limit": "9.2 kB"
+  },
+  {
+    "name": "Онбординг: анкета, экскурсия и итог (lazy)",
+    "path": "dist/assets/OnboardingFlow-*.js",
+    "gzip": true,
+    "limit": "3 kB"
+  },
+  {
+    "name": "Онбординг: движок тура с подсветкой (lazy, общий кусок)",
+    "path": "dist/assets/tourText-*.js",
+    "gzip": true,
+    "limit": "4.5 kB"
   }
 ]

@@ -63,7 +63,7 @@ Project upload is a large request body. Set `client_max_body_size` to at least `
 
 ## Kubernetes
 
-The chart is in `deploy/helm/hse-doc-studio`: the api (one replica, Recreate strategy), a migrations Job before upgrade, a runner, ingress, Secret and PVC. Postgres and S3 are external. Prefer your own Secret (`secrets.existingSecret`) over values. Details and limits are in the chart README.
+The chart is in `deploy/helm/hse-doc-studio`: the api (one replica, Recreate strategy), a migrations Job before upgrade, a runner, ingress, Secret and PVC. Postgres and S3 are external. Prefer your own Secret (`secrets.existingSecret`) over values. Details and limits are in the chart README. In a cluster the runner builds TeX in a pod per job (`runner.executor: kubernetes`), without `docker.sock`: see "Runners".
 
 ## First run
 

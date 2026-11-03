@@ -33,7 +33,9 @@ nav = [
         { "С чего начать" = "start/index.md" },
         { "Установка" = "start/install.md" },
         { "Первый проект" = "start/first-project.md" },
+        { "Знакомство со Студией" = "start/onboarding.md" },
         { "Обновление и удаление" = "start/update.md" },
+        { "Локальная версия из облака" = "start/local-from-cloud.md" },
         { "Если не поднялось" = "start/troubleshooting.md" },
     ] },
     { "Мастерская" = [

@@ -5,6 +5,14 @@
     "auth.password_enabled": {
       "source": "admin",
       "locked": false
+    },
+    "auth.passkeys_enabled": {
+      "source": "default",
+      "locked": false
     }
-  }
+  },
+  "passkeys_enabled": true,
+  "passkey_domain": null,
+  "passkey_issue": "insecure_origin",
+  "passkey_domains": []
 }

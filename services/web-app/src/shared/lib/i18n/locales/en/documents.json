@@ -165,16 +165,14 @@
       "runnerLost": "Runner lost, retrying ({{attempt}}/{{max}})",
       "runnerLostNoCount": "Runner lost, retrying",
       "runnerLostBody": "The runner building this document went away. The build was handed to another runner, no action needed.",
-      "personalRunner": "Waiting for a personal runner…",
-      "personalRunnerBody": "The build is waiting for the project owner's personal runner. If it doesn't pick it up within a few seconds, it goes to a shared runner.",
+      "personalRunner": "Waiting for a personal runner",
+      "personalRunnerBody": "The build goes to a personal runner. If it doesn't take it within a few seconds, it goes to the installation's shared runners.",
       "superseded": "Build replaced by a newer one",
       "supersededBody": "While this build was waiting, a newer build of the same document was queued and took its place. See the result in the newer build.",
       "hintSeconds": "Expected wait about {{value}} s",
       "hintMinutes": "Expected wait about {{value}} min",
       "retry": "Retry build",
-      "rebuildSuperseded": "Build again",
-      "personalRunner": "Waiting for a personal runner",
-      "personalRunnerBody": "The build goes to a personal runner. If it doesn't take it within a few seconds, it goes to the installation's shared runners."
+      "rebuildSuperseded": "Build again"
     },
     "placement": {
       "waitingMe": "Waiting for your runner \"{{name}}\"… (up to {{seconds}} s)",
@@ -200,6 +198,21 @@
         "lost": "The owner's runner dropped mid-build, retried on a shared runner",
         "disabled": "Personal runners are off, built on a shared runner"
       }
+    },
+    "unavailable": {
+      "title": "Cloud build is unavailable right now",
+      "noRunners": "No runner is connected to the server.",
+      "noRunnerForTags": "No runner is connected for {{kinds}}.",
+      "kind": {
+        "tex": "LaTeX documents",
+        "office": "office documents (Word, PowerPoint)"
+      },
+      "kindSeparator": " and ",
+      "local": "Build the document locally in the desktop Studio: sync the project, build it there, and the PDF will show up on the server.",
+      "admin": "Or ask the administrator to connect a runner.",
+      "adminSelf": "Connect a runner in the admin area.",
+      "openRunners": "Open Runners",
+      "buildAllPartial": "Documents not built: {{count}}. No runner can build them right now."
     }
   },
   "preview": {

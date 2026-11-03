@@ -16,6 +16,7 @@ from hse_doc_studio.core.ai_runtime import IHardwareProbe, IOllamaRegistry, IOll
 from hse_doc_studio.core.compile.docker_diagnosis import DockerUnavailableReason
 from hse_doc_studio.core.git_sync.protocols import IHostKeyScanner
 from hse_doc_studio.core.i18n import set_interface_language
+from hse_doc_studio.core.onboarding.protocols import IExistingUserProbe, IOnboardingRepository
 from hse_doc_studio.core.projects.locator import IProjectLocator
 from hse_doc_studio.core.projects.usage import IProjectQuota, NoopProjectQuota
 from hse_doc_studio.core.remote_runner import IRemoteRunnerSupervisor
@@ -73,6 +74,7 @@ from hse_doc_studio.infra.persistence.compile import JsonCompileRepository
 from hse_doc_studio.infra.persistence.files import LocalFileRepository
 from hse_doc_studio.infra.persistence.filesystem_browser import LocalFilesystemBrowser
 from hse_doc_studio.infra.persistence.forms import JsonFormStateRepository
+from hse_doc_studio.infra.persistence.onboarding import JsonOnboardingRepository, LocalExistingUserProbe
 from hse_doc_studio.infra.persistence.project import JsonProjectRepository
 from hse_doc_studio.infra.persistence.project_index import JsonProjectIndexRepository
 from hse_doc_studio.infra.persistence.project_locator import LocalProjectLocator
@@ -338,6 +340,14 @@ def create_test_container(  # noqa: C901 — one @provide per repo; flat by desi
         @provide
         def get_ai_provider_repo(self) -> IAIProviderRepository:
             return JsonAIProviderRepository(self._data_dir)
+
+        @provide
+        def get_onboarding_repo(self) -> IOnboardingRepository:
+            return JsonOnboardingRepository(self._data_dir)
+
+        @provide
+        def get_existing_user_probe(self, project_index: IProjectIndexRepository) -> IExistingUserProbe:
+            return LocalExistingUserProbe(project_index)
 
         @provide
         def get_agent_persona_repo(self) -> IAgentPersonaRepository:

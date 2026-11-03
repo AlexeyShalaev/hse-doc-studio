@@ -20,6 +20,7 @@ import {
   useStartCompileAll,
 } from "@entities/compile";
 import { useForms } from "@entities/form";
+import { BuildBlockedNotice } from "@features/build-states";
 import { useProject } from "@entities/project";
 import { Spinner } from "@shared/ui/Spinner";
 import { NowBlock } from "./NowBlock";
@@ -134,7 +135,11 @@ export const DocumentsPanel = ({
   const { t } = useTranslation("workbench");
   const { data: project } = useProject(projectId);
   const { data: documents, isLoading } = useDocuments(projectId);
-  const { startAll, isRunning: isCompiling } = useStartCompileAll(projectId);
+  const {
+    startAll,
+    isRunning: isCompiling,
+    block: buildBlock,
+  } = useStartCompileAll(projectId);
   const { cancelAll } = useCancelProjectCompiles(projectId);
   const isStalled = useIsProjectStalled(projectId);
   const compileStreams = useCompileStreamStore((s) => s.streams);
@@ -539,6 +544,13 @@ export const DocumentsPanel = ({
           частое действие в панели, и прятать его под наведение (как остальные
           действия заголовка) значило бы экономить пиксели на главном. */}
       <div className="panel-foot">
+        {!isCompiling && buildBlock !== null && (
+          <BuildBlockedNotice
+            block={buildBlock}
+            projectId={projectId}
+            compact
+          />
+        )}
         {isCompiling ? (
           <button
             type="button"
@@ -558,7 +570,8 @@ export const DocumentsPanel = ({
             type="button"
             className="btn xs primary"
             onClick={handleBuildAll}
-            disabled={docs.length === 0}
+            disabled={docs.length === 0 || buildBlock !== null}
+            data-testid="build-all-button"
             style={{ justifyContent: "center" }}
           >
             <Play size={11} />

@@ -8,6 +8,8 @@ export const LOGIN_ERROR_CODES = [
   "sso_login_required",
   "rate_limited",
   "csrf_failed",
+  "passkey_invalid",
+  "passkeys_disabled",
 ] as const;
 
 export type LoginErrorCode = (typeof LOGIN_ERROR_CODES)[number];
@@ -24,13 +26,14 @@ export const DEFAULT_RETRY_AFTER = 30;
 export const isKnownLoginCode = (code: string): code is LoginErrorCode =>
   (LOGIN_ERROR_CODES as readonly string[]).includes(code);
 
+// Отказы, которые даёт не сервер, а сам клиент: сеть и браузер, не сумевший выполнить вход по passkey.
+const CLIENT_CODES = ["network", "passkey_failed"] as const;
+
 /** Ключ текста ошибки в пространстве auth. */
 export const loginErrorKey = (code: string): string =>
-  isKnownLoginCode(code)
+  isKnownLoginCode(code) || (CLIENT_CODES as readonly string[]).includes(code)
     ? `login.errors.${code}`
-    : code === "network"
-      ? "login.errors.network"
-      : "login.errors.unknown";
+    : "login.errors.unknown";
 
 /** Тон рамки: ожидание и ожидаемые отказы мягче, остальное красным. */
 export const loginErrorTone = (code: string): "warn" | "err" =>

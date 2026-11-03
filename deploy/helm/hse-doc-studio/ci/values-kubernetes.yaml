@@ -1,0 +1,14 @@
+# Поверх values-test.yaml: раннер с исполнителем kubernetes (golden-рендер rendered-kubernetes.golden.yaml).
+runner:
+  executor: kubernetes
+  kubernetes:
+    namespace: hds-builds
+    image: registry.example.org/texlive:TL2024
+    imagePullSecrets: [registry-pull]
+    nodeSelector:
+      pool: builds
+    tolerations:
+      - {key: builds, operator: Exists, effect: NoSchedule}
+    runtimeClassName: gvisor
+    texCache:
+      existingClaim: tex-cache

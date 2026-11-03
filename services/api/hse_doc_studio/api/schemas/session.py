@@ -63,6 +63,8 @@ class AuthOptions(StrictModel):
     oidc_providers: list[OidcProviderOption]
     smtp_enabled: bool
     password_min_length: int
+    # Вход по passkey: включён админом и адрес Студии годится для WebAuthn (HTTPS или localhost).
+    passkeys_enabled: bool = False
 
 
 class OrgRole(StrictModel):
@@ -805,15 +807,30 @@ class UpdateAdminRegistrationRequest(StrictModel):
     require_approval: bool | None = None
 
 
+PasskeyIssue = Literal["no_address", "insecure_origin", "ip_address", "rp_id_mismatch"]
+
+
+class PasskeyDomainCount(StrictModel):
+    domain: str
+    count: int
+
+
 class AdminAuthSettings(StrictModel):
     password_enabled: bool
     # Сколько провайдеров единого входа включено: отключить пароль можно, только если есть куда войти иначе.
     oidc_enabled_count: int
     fields: dict[str, SettingState]
+    passkeys_enabled: bool = True
+    # Домен новых ключей по текущему адресу Студии; null вместе с `passkey_issue`, если адрес не годится.
+    passkey_domain: str | None = None
+    passkey_issue: PasskeyIssue | None = None
+    # Сколько ключей установки привязано к каждому домену: ключи чужого домена после смены адреса не работают.
+    passkey_domains: list[PasskeyDomainCount] = Field(default_factory=list)
 
 
 class UpdateAdminAuthRequest(StrictModel):
     password_enabled: bool | None = None
+    passkeys_enabled: bool | None = None
 
 
 class AdminSmtpSettings(StrictModel):

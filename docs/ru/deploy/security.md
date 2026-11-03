@@ -28,7 +28,7 @@ tags:
 - раннер-хост считайте доверенной инфраструктурой отдельно от api и базы;
 - лучше rootless Docker, sysbox или выделенная виртуальная машина;
 - у api доступа к Docker нет и быть не должно;
-- под Kubernetes пока работает раннер на hostPath; под на задачу с gVisor или Kata в плане следующих этапов.
+- в Kubernetes берите исполнитель `kubernetes` (под на задачу, без сокета и hostPath, Pod Security restricted, без сети); для общих установок добавьте RuntimeClass gVisor или Kata (`runner.kubernetes.runtimeClassName`). См. «Раннеры» и `docs/design/k8s-runner.md`.
 
 ## Границы доверия
 

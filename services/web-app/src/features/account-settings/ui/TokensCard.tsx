@@ -34,6 +34,8 @@ export type TokensCardProps = {
   startOpen?: boolean;
   /** Предустановка из адреса (`?preset=git`): форма открыта с правами только для git. */
   preset?: "git" | null;
+  /** Админ установки: только ему предлагается право «MCP: администрирование». */
+  instanceAdmin?: boolean;
   onRetry?: () => void;
   /** done вызывают после успеха: форма очищается и закрывается. */
   onCreate: (body: CreateApiTokenRequest, done: () => void) => void;
@@ -56,12 +58,16 @@ export const TokensCard = ({
   failure = null,
   startOpen = false,
   preset = null,
+  instanceAdmin = false,
   onRetry,
   onCreate,
   onRevoke,
   onDismissCreated,
 }: TokensCardProps) => {
   const { t, i18n } = useTranslation("account");
+  const offered = TOKEN_SCOPES.filter(
+    (scope) => instanceAdmin || scope !== "mcp:admin",
+  );
   const uid = useId();
   const [open, setOpen] = useState(startOpen || preset === "git");
   const [name, setName] = useState(() =>
@@ -91,7 +97,7 @@ export const TokensCard = ({
     onCreate(
       {
         name: trimmed,
-        scopes: TOKEN_SCOPES.filter((s) => scopes.includes(s)),
+        scopes: offered.filter((s) => scopes.includes(s)),
         expires_in_days: expiry,
       },
       () => {
@@ -385,7 +391,7 @@ export const TokensCard = ({
                 >
                   {t("tokens.preset.git")}
                 </button>
-                {TOKEN_SCOPES.map((scope) => (
+                {offered.map((scope) => (
                   <label
                     key={scope}
                     className="flex"

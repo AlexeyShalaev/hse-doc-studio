@@ -80,6 +80,7 @@ def _map_doc_list_item(entry: DocumentListEntry) -> DocumentListItemResponse:
         output_file=entry.output_file,
         engine=entry.engine,
         group=entry.group,
+        build_tags=sorted(entry.build_tags),
     )
 
 

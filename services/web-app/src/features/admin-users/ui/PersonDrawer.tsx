@@ -5,6 +5,7 @@ import { useTranslation } from "react-i18next";
 import { Avatar } from "@shared/ui";
 import type { AdminUser } from "@entities/session";
 import { formatFull } from "../lib/format";
+import { PersonPasskeys } from "./PersonPasskeys";
 import { ACTION_ICON, userActions, type UserActionKind } from "./userActions";
 import { AccountStatusLabel, RoleLabel, When } from "./parts";
 
@@ -125,6 +126,10 @@ export const PersonDrawer = ({
                     {renderOrgs(user)}
                   </section>
                 )}
+                <section>
+                  <h3 className="ppl-drawer-caption">{t("drawer.passkeys")}</h3>
+                  <PersonPasskeys userId={user.id} />
+                </section>
                 <section>
                   <h3 className="ppl-drawer-caption">{t("drawer.access")}</h3>
                   <div className="ppl-drawer-actions">
