@@ -15,6 +15,7 @@ import { createDemoRouter } from "@shared/api/demo";
 import type { DemoRequest } from "@shared/api/demo";
 import {
   AdminAuthSettingsSchema,
+  AdminMailPreviewSchema,
   AdminOidcProviderPageSchema,
   AdminRegistrationSettingsSchema,
   AdminSmtpSettingsSchema,
@@ -334,6 +335,31 @@ describe("настройки входа в админке", () => {
       within(section).getByTestId("oidc-filter-enabled"),
     ).toHaveTextContent("Выключен");
     expect(within(section).queryByTestId("oidc-empty")).toBeNull();
+  });
+
+  it("предпросмотр писем: ответ проходит схему, письмо в песочнице без скриптов", async () => {
+    const sample = AdminMailPreviewSchema.parse(
+      (await call("GET", "/settings/smtp/preview")).data,
+    );
+    expect(sample.templates).toContain("reset_password");
+    expect((await call("GET", "/settings/smtp/preview")).status).toBe(200);
+
+    const user = userEvent.setup();
+    mount();
+    const section = await screen.findByTestId("admin-mail-preview");
+    const frame = await within(section).findByTestId("mail-preview-frame");
+    // Пустое значение sandbox: ни скриптов, ни доступа к странице.
+    expect(frame.getAttribute("sandbox")).toBe("");
+    expect(frame.getAttribute("srcdoc")).toContain("<html");
+    expect(
+      within(section).getByTestId("mail-preview-subject"),
+    ).toHaveTextContent("verify_email (ru)");
+    await user.click(
+      within(section).getByRole("button", { name: "Показать текстовую часть" }),
+    );
+    expect(within(section).getByTestId("mail-preview-text")).toHaveTextContent(
+      "Demo sample",
+    );
   });
 
   it("почта выключена: тест недоступен", async () => {

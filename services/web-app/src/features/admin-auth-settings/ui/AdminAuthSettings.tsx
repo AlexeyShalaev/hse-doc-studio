@@ -38,6 +38,7 @@ import { ensureAdminSettingsLocales } from "../lib/locales";
 import type { OidcDraft } from "../lib/validate";
 import { AuthSettingsForm } from "./AuthSettingsForm";
 import { LocalesFailed } from "./LocalesFailed";
+import { MailPreviewSection } from "./MailPreviewSection";
 import { OidcSection } from "./OidcSection";
 
 const asFailure = (error: unknown): Failure => ({ code: failureCode(error) });
@@ -349,6 +350,7 @@ export const AdminAuthSettings = ({
           auth={auth.data}
           smtp={smtp.data}
           oidc={oidc}
+          mailPreview={<MailPreviewSection />}
           saveRegistration={(patch) => saveRegistration.mutateAsync(patch)}
           saveAuth={(patch) => saveAuth.mutateAsync(patch)}
           saveSmtp={(patch) => {

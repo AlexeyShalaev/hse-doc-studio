@@ -5,12 +5,14 @@ import {
   AdminOidcProviderPageSchema,
   AdminOidcProviderSchema,
   AdminRegistrationSettingsSchema,
+  AdminMailPreviewSchema,
   AdminSmtpSettingsSchema,
   AdminSmtpTestResultSchema,
   type AdminAuthSettings,
   type UpdateAdminAuthRequest,
   type AdminOidcProvider,
   type AdminRegistrationSettings,
+  type AdminMailPreview,
   type AdminSmtpSettings,
   type AdminSmtpTestResult,
   type CreateAdminOidcProviderRequest,
@@ -55,6 +57,17 @@ export const adminSettingsApi = {
     adminClient
       .post("/settings/smtp/test", { to }, quiet)
       .then(parseResp(AdminSmtpTestResultSchema)),
+
+  mailPreview: (
+    template: string | null,
+    lang: string,
+  ): Promise<AdminMailPreview> =>
+    adminClient
+      .get("/settings/smtp/preview", {
+        ...quiet,
+        params: { ...(template ? { template } : {}), lang },
+      })
+      .then(parseResp(AdminMailPreviewSchema)),
 
   providers: (
     params: ListRequestParams,
