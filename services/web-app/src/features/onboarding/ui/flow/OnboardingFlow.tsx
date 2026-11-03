@@ -1,15 +1,13 @@
 import { useEffect, useMemo, useReducer } from "react";
 import { useLocation, useNavigate } from "react-router";
 import { useTranslation } from "react-i18next";
+import { LocalStudioLink } from "@entities/local-studio";
 import { useGeneralBuildAvailability } from "@entities/runner";
 import { useBootstrap } from "@entities/session";
 import { usePacks } from "@entities/template-catalog";
 import { Modal } from "@shared/ui/Modal";
 import { TourOverlay } from "@shared/ui/Tour";
-import {
-  LOCAL_VERSION_PATH,
-  resolveBuildAvailability,
-} from "../../lib/buildAvailability";
+import { resolveBuildAvailability } from "../../lib/buildAvailability";
 import { DEMO_PATH } from "../../lib/paths";
 import { suggestTemplate } from "../../lib/templateSuggestion";
 import { useOnboardingStore } from "../../model/onboardingStore";
@@ -138,7 +136,6 @@ const FinishDialog = () => {
   const mode = bootstrap?.mode ?? "local";
   const runners = useGeneralBuildAvailability(mode === "server");
   const build = resolveBuildAvailability(mode, runners.data);
-  const localVersion = LOCAL_VERSION_PATH;
 
   useEffect(() => {
     save({ step: "finish" });
@@ -206,19 +203,15 @@ const FinishDialog = () => {
         >
           {t(`finish.build.${build}`)}
         </p>
-        {build === "unavailable" && localVersion !== null && (
-          <button
-            type="button"
-            className="btn sm"
+        {build === "unavailable" && (
+          // Переход на «Локальную версию» закрывает итог как пройденный тур.
+          <span
             style={{ alignSelf: "flex-start" }}
+            onClick={complete}
             data-testid="onboarding-local-version"
-            onClick={() => {
-              complete();
-              void navigate(localVersion ?? "/");
-            }}
           >
-            {t("finish.localVersion")}
-          </button>
+            <LocalStudioLink variant="button" className="sm" />
+          </span>
         )}
       </div>
     </Modal>
