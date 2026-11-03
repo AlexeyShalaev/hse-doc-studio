@@ -121,6 +121,10 @@ IDENTITY_ERROR_STATUS: Mapping[IdentityErrorCode, int] = {
     IdentityErrorCode.git_server_url_invalid: _INPUT,
     IdentityErrorCode.git_server_not_studio: _INPUT,
     IdentityErrorCode.git_server_unreachable: _BAD_GATEWAY,
+    IdentityErrorCode.passkeys_disabled: _FORBIDDEN,
+    IdentityErrorCode.passkey_invalid: _UNAUTHORIZED,
+    IdentityErrorCode.passkey_limit: _STATE,
+    IdentityErrorCode.reauth_required: _FORBIDDEN,
 }
 
 

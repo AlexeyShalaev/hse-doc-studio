@@ -23,7 +23,7 @@ from hse_doc_studio.core.identity.session_policy import Clock, SessionPolicy, lo
 from hse_doc_studio.core.uow import IUnitOfWork
 from hse_doc_studio.use_cases.identity.sessions import session_deadline
 
-_STATUS_ERRORS = {
+STATUS_ERRORS = {
     UserStatus.pending_verification: IdentityErrorCode.email_not_verified,
     UserStatus.pending_approval: IdentityErrorCode.pending_approval,
     UserStatus.disabled: IdentityErrorCode.account_disabled,
@@ -104,7 +104,7 @@ class LoginUC:
             )
             raise IdentityError(IdentityErrorCode.invalid_credentials)
 
-        denied = _STATUS_ERRORS.get(user.status)
+        denied = STATUS_ERRORS.get(user.status)
         if denied is not None:
             await self._audit.record(
                 "auth.login_denied", actor_id=user.id, details={"ip": ip, "status": user.status.value}
@@ -130,7 +130,7 @@ class LoginUC:
             fresh = await self._users.get_for_update(user.id)
             if fresh is None:
                 raise IdentityError(IdentityErrorCode.invalid_credentials)
-            denied = _STATUS_ERRORS.get(fresh.status)
+            denied = STATUS_ERRORS.get(fresh.status)
             if denied is not None:
                 raise IdentityError(denied)
             user = replace(fresh, last_login_at=now)

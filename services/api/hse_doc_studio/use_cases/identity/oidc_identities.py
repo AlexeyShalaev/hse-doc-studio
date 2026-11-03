@@ -7,9 +7,11 @@ from dataclasses import dataclass
 from hse_doc_studio.core.identity.entities import UserIdentity
 from hse_doc_studio.core.identity.errors import IdentityError, IdentityErrorCode
 from hse_doc_studio.core.identity.oidc import IOidcProviderCatalog
+from hse_doc_studio.core.identity.passkeys import IPasskeyRepository
 from hse_doc_studio.core.identity.protocols import IAuditLog, ICredentialRepository, IUserRepository
 from hse_doc_studio.core.uow import IUnitOfWork
 from hse_doc_studio.use_cases.identity.auth_settings import AuthSettingsService
+from hse_doc_studio.use_cases.identity.passkeys import LoginMethods
 
 
 @dataclass(frozen=True)
@@ -39,15 +41,14 @@ class UnlinkOidcIdentityUC:
         settings: AuthSettingsService,
         audit: IAuditLog,
         uow: IUnitOfWork,
+        passkeys: IPasskeyRepository | None = None,
     ) -> None:
         self._users = users
-        self._credentials = credentials
-        self._settings = settings
+        self._methods = LoginMethods(users, credentials, passkeys, settings)
         self._audit = audit
         self._uow = uow
 
     async def execute(self, user_id: str, provider: str) -> None:
-        password_enabled = (await self._settings.effective()).password_enabled
         async with self._uow.begin():
             # Блокировка строки пользователя: две параллельные отвязки не оставят аккаунт без входа.
             if await self._users.get_for_update(user_id) is None:
@@ -55,9 +56,8 @@ class UnlinkOidcIdentityUC:
             identities = await self._users.list_identities(user_id)
             if not any(i.provider == provider for i in identities):
                 raise IdentityError(IdentityErrorCode.not_found)
-            other_providers = any(i.provider != provider for i in identities)
-            has_password = password_enabled and await self._credentials.get_hash(user_id) is not None
-            if not (other_providers or has_password):
+            # Остаться может пароль, другой провайдер или passkey (если их не выключил админ).
+            if not await self._methods.remain(user_id, without_provider=provider):
                 raise IdentityError(IdentityErrorCode.last_login_method)
             await self._users.delete_identity(user_id, provider)
             await self._audit.record("auth.oidc_unlink", actor_id=user_id, details={"provider": provider})

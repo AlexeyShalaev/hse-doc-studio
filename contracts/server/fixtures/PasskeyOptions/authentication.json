@@ -1,0 +1,9 @@
+{
+  "options": {
+    "challenge": "AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8",
+    "timeout": 300000,
+    "rpId": "studio.example.org",
+    "allowCredentials": [],
+    "userVerification": "required"
+  }
+}

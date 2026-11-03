@@ -50,6 +50,10 @@ class AuthTokenKind(StrEnum):
     reset_password = "reset_password"  # noqa: S105 — вид токена, не пароль
     setup = "setup"
     change_email = "change_email"
+    # Одноразовые вызовы (challenge) церемоний passkey: регистрация ключа, вход и повторное подтверждение.
+    passkey_register = "passkey_register"
+    passkey_login = "passkey_login"
+    passkey_reauth = "passkey_reauth"
 
 
 @dataclass(frozen=True)
@@ -156,6 +160,13 @@ class Session:
     expires_at: datetime
     ip: str | None = None
     user_agent: str = ""
+    # Когда человек последний раз подтвердил личность в этой сессии (пароль или passkey) после входа.
+    reauth_at: datetime | None = None
+
+    @property
+    def authenticated_at(self) -> datetime:
+        """Последнее предъявление учётных данных: вход или повторное подтверждение."""
+        return max(self.created_at, self.reauth_at) if self.reauth_at else self.created_at
 
 
 @dataclass(frozen=True)
@@ -385,3 +396,4 @@ class AuthSettings:
     registration_domains: tuple[str, ...] = field(default_factory=tuple)
     require_approval: bool = False
     password_enabled: bool = True
+    passkeys_enabled: bool = True

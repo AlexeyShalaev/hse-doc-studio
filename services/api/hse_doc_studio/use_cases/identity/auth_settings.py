@@ -6,6 +6,7 @@ from collections.abc import Sequence
 from dataclasses import dataclass
 
 from hse_doc_studio.core.identity.auth_settings import (
+    KEY_PASSKEYS_ENABLED,
     KEY_PASSWORD_ENABLED,
     KEY_REGISTRATION_DOMAINS,
     KEY_REGISTRATION_MODE,
@@ -56,6 +57,7 @@ class AuthSettingsPatch:
     registration_domains: Sequence[str] | None = None
     require_approval: bool | None = None
     password_enabled: bool | None = None
+    passkeys_enabled: bool | None = None
 
     def values(self) -> dict[str, object]:
         pairs: dict[str, object | None] = {
@@ -67,6 +69,7 @@ class AuthSettingsPatch:
             ),
             KEY_REQUIRE_APPROVAL: self.require_approval,
             KEY_PASSWORD_ENABLED: self.password_enabled,
+            KEY_PASSKEYS_ENABLED: self.passkeys_enabled,
         }
         return {key: value for key, value in pairs.items() if value is not None}
 

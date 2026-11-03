@@ -35,6 +35,7 @@ from hse_doc_studio.api.routers.v1 import (
     oidc,
     onboarding,
     orgs,
+    passkeys,
     profile,
     project_artifacts,
     project_build_runners,
@@ -74,6 +75,7 @@ api_router = APIRouter(
 api_router.include_router(session.router, tags=["session"])
 api_router.include_router(auth.router, tags=["auth"])
 api_router.include_router(oidc.router, tags=["auth"])
+api_router.include_router(passkeys.router, tags=["auth"])
 api_router.include_router(server_setup.router, tags=["server-setup"])
 api_router.include_router(account.router, tags=["account"])
 api_router.include_router(account_runners.router, tags=["account"])

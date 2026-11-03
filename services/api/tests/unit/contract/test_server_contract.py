@@ -21,6 +21,7 @@ from hse_doc_studio.api.schemas import diagnostics as dg
 from hse_doc_studio.api.schemas import git_remote as gr
 from hse_doc_studio.api.schemas import invitations as inv
 from hse_doc_studio.api.schemas import lifecycle as lc
+from hse_doc_studio.api.schemas import passkeys as pk
 from hse_doc_studio.api.schemas import personal_runners as pr
 from hse_doc_studio.api.schemas import quotas as qt
 from hse_doc_studio.api.schemas import remote_runner as rr
@@ -172,6 +173,17 @@ _SCHEMAS: dict[str, Any] = {
     "UpdateAdminRegistrationRequest": s.UpdateAdminRegistrationRequest,
     "AdminAuthSettings": s.AdminAuthSettings,
     "UpdateAdminAuthRequest": s.UpdateAdminAuthRequest,
+    # passkeys: вход по passkey, ключи в профиле и в админке, повторное подтверждение личности
+    "PasskeyOptions": pk.PasskeyOptions,
+    "PasskeyLoginRequest": pk.PasskeyLoginRequest,
+    "AccountPasskey": pk.AccountPasskey,
+    "AccountPasskeyList": pk.AccountPasskeyList,
+    "CreatePasskeyRequest": pk.CreatePasskeyRequest,
+    "RenamePasskeyRequest": pk.RenamePasskeyRequest,
+    "ReauthRequest": pk.ReauthRequest,
+    "ReauthResponse": pk.ReauthResponse,
+    "AdminUserPasskeyList": pk.AdminUserPasskeyList,
+    "AdminPasskeysReset": pk.AdminPasskeysReset,
     "AdminSmtpSettings": s.AdminSmtpSettings,
     "AdminInstanceSettings": inst.AdminInstanceSettings,
     "UpdateAdminInstanceRequest": inst.UpdateAdminInstanceRequest,
