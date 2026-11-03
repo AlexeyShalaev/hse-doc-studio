@@ -1,4 +1,5 @@
 import { useNavigate } from "react-router";
+import { LOCAL_STUDIO_PATH } from "@entities/local-studio";
 import { useBootstrap, useCapabilities } from "@entities/session";
 import { useLogout } from "../model/useLogout";
 import { AccountMenuView } from "./AccountMenuView";
@@ -19,6 +20,9 @@ export const AccountMenu = () => {
       pending={pending}
       onOpenSettings={() => {
         void navigate("/settings");
+      }}
+      onOpenLocalStudio={() => {
+        void navigate(LOCAL_STUDIO_PATH);
       }}
       {...(has("admin")
         ? {

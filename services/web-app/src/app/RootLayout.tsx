@@ -1,6 +1,7 @@
 import { Suspense, lazy } from "react";
 import { Navigate, Outlet, useLocation } from "react-router";
 import { SystemChatPanel } from "@features/agent-chat";
+import { OnboardingHost } from "@features/onboarding";
 import {
   ServerUnavailable,
   useBootstrap,
@@ -129,6 +130,7 @@ export const RootLayout = () => {
       )}
       <Outlet />
       <CommandPalette />
+      <OnboardingHost />
       <Toaster />
       {DemoScenarioPicker && (
         <Suspense fallback={null}>

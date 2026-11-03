@@ -70,6 +70,9 @@ class IdentityErrorCode(StrEnum):
     owner_storage_exceeded = "owner_storage_exceeded"
     ai_model_not_allowed = "ai_model_not_allowed"
     ai_provider_unavailable = "ai_provider_unavailable"
+    # Сборка без исполнителя: тело несёт теги без раннера, см. api/runner_errors.py.
+    no_runners = "no_runners"
+    no_runner_for_tags = "no_runner_for_tags"
     # Ссылки доступа и гости.
     links_disabled = "links_disabled"
     link_limit = "link_limit"
@@ -109,6 +112,11 @@ class IdentityErrorCode(StrEnum):
     git_server_url_invalid = "git_server_url_invalid"
     git_server_not_studio = "git_server_not_studio"
     git_server_unreachable = "git_server_unreachable"
+    # Вход по passkey и повторное подтверждение личности.
+    passkeys_disabled = "passkeys_disabled"
+    passkey_invalid = "passkey_invalid"
+    passkey_limit = "passkey_limit"
+    reauth_required = "reauth_required"
 
 
 MESSAGES: dict[IdentityErrorCode, tuple[str, str]] = {
@@ -259,6 +267,26 @@ MESSAGES: dict[IdentityErrorCode, tuple[str, str]] = {
     IdentityErrorCode.ai_provider_unavailable: (
         "Провайдер ИИ временно недоступен. Попробуйте позже или выберите другой.",
         "The AI provider is temporarily unavailable. Try later or pick another one.",
+    ),
+    IdentityErrorCode.no_runners: (
+        (
+            "К серверу не подключён ни один раннер, собрать документ здесь сейчас нельзя. Соберите его локально "
+            "в Студии на компьютере или попросите администратора подключить раннер."
+        ),
+        (
+            "No runner is connected to the server, so the document cannot be built here right now. Build it locally "
+            "in the desktop Studio or ask the administrator to connect a runner."
+        ),
+    ),
+    IdentityErrorCode.no_runner_for_tags: (
+        (
+            "Нет раннера, который собирает такие документы. Соберите документ локально в Студии на компьютере "
+            "или попросите администратора подключить подходящий раннер."
+        ),
+        (
+            "No runner can build documents of this kind. Build the document locally in the desktop Studio "
+            "or ask the administrator to connect a suitable runner."
+        ),
     ),
     IdentityErrorCode.ai_provider_runner_invalid: (
         "Выберите свой раннер и объявленный им ИИ-адрес.",
@@ -411,6 +439,22 @@ MESSAGES: dict[IdentityErrorCode, tuple[str, str]] = {
     IdentityErrorCode.git_server_unreachable: (
         "Сервер не отвечает. Проверьте адрес и сеть.",
         "The server isn't responding. Check the address and the network.",
+    ),
+    IdentityErrorCode.passkeys_disabled: (
+        "Вход по passkey на этом сервере недоступен.",
+        "Passkey sign-in is not available on this server.",
+    ),
+    IdentityErrorCode.passkey_invalid: (
+        "Passkey не подошёл. Попробуйте ещё раз или войдите другим способом.",
+        "The passkey didn't work. Try again or use another way to sign in.",
+    ),
+    IdentityErrorCode.passkey_limit: (
+        "У аккаунта может быть не больше 20 passkey. Удалите ненужный.",
+        "An account can have at most 20 passkeys. Remove one you no longer use.",
+    ),
+    IdentityErrorCode.reauth_required: (
+        "Подтвердите, что это вы: введите пароль или используйте passkey.",
+        "Confirm it's you: enter your password or use a passkey.",
     ),
 }
 

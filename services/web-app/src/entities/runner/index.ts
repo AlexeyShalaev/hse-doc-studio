@@ -1,13 +1,17 @@
 export * from "./model/runner.schema";
 export {
+  buildAvailabilityApi,
   myRunnersApi,
   parsePlacement,
   projectBuildRunnersApi,
   remoteRunnerApi,
 } from "./api/runnerApi";
 export {
+  AVAILABILITY_POLL_BLOCKED_MS,
   CONNECT_POLL_MS,
   runnerKeys,
+  useBuildAvailability,
+  useGeneralBuildAvailability,
   useCancelRemotePairing,
   useCreateMyRunnerToken,
   useDecideRunnerPairing,

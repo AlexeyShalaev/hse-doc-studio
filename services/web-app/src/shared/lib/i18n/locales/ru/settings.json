@@ -494,6 +494,7 @@
     "accountCommit": "Подпись версий",
     "accountSessions": "Сессии",
     "runners": "Мои раннеры: сборка на своём компьютере",
-    "remoteRunner": "Облачные сборки на этой машине"
+    "remoteRunner": "Облачные сборки на этой машине",
+    "accountPasskeys": "Passkey"
   }
 }

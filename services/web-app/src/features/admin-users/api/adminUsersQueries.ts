@@ -17,6 +17,7 @@ export const adminUsersKeys = {
   usersList: () => [...adminUsersKeys.all, "users-list"] as const,
   facets: (q: string) => [...adminUsersKeys.all, "facets", q] as const,
   user: (id: string) => [...adminUsersKeys.all, "user", id] as const,
+  passkeys: (id: string) => [...adminUsersKeys.all, "passkeys", id] as const,
   approvalsList: () => [...adminUsersKeys.all, "approvals-list"] as const,
   invitationsList: () => [...adminUsersKeys.all, "invitations-list"] as const,
 };
@@ -117,6 +118,22 @@ export const useIssueResetLink = () => {
   return useMutation({
     mutationFn: (id: string) => adminUsersApi.resetLink(id),
     onSuccess: changed,
+  });
+};
+
+export const useUserPasskeys = (id: string) =>
+  useQuery({
+    queryKey: adminUsersKeys.passkeys(id),
+    queryFn: ({ signal }) => adminUsersApi.passkeys(id, signal),
+    staleTime: 15_000,
+  });
+
+export const useResetPasskeys = () => {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => adminUsersApi.resetPasskeys(id),
+    onSuccess: (_removed, id) =>
+      client.invalidateQueries({ queryKey: adminUsersKeys.passkeys(id) }),
   });
 };
 

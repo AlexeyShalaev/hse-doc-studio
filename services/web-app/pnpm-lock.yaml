@@ -80,6 +80,9 @@ importers:
       '@radix-ui/react-tooltip':
         specifier: ^1.4.1
         version: 1.4.1(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
+      '@simplewebauthn/browser':
+        specifier: 14.0.0
+        version: 14.0.0
       '@tanstack/query-persist-client-core':
         specifier: ^5.105.0
         version: 5.105.0
@@ -1347,11 +1350,13 @@ packages:
   '@rolldown/binding-win32-x64-msvc@1.2.15':
     resolution: {integrity: sha512-HFZd2QNQYn1JbIi+Hpd7H+r/lkWxcfIu28nirZ6eCn2LafuvmExMlb/P96Sfx5tf7pPArw39IdhmCF8vmV+NhQ==}
     engines: {node: ^20.19.0 || >=22.12.0}
-    cpu: [x64]
     os: [win32]
 
   '@rolldown/pluginutils@1.0.1':
     resolution: {integrity: sha512-2j9bGt5Jh8hj+vPtgzPtl72j0yRxHAyumoo6TNfAjsLB04UtpSvPbPcDcBMxz7n+9CYB0c1GxQFxYRg2jimqGw==}
+
+  '@simplewebauthn/browser@14.0.0':
+    resolution: {integrity: sha512-1odWVqeEBTl7lJ9zMKLEsmTlnyrDO5iRcTvfMKKk1WThUnp/i8JJdffdj2icP+tty159s4PgwE3BiMoEW9NFow==}
 
   '@size-limit/file@14.3.0':
     resolution: {integrity: sha512-GWKOi0rorXPbYmwbT926Z91t28rg5gd5hv8ywY1FNcaYf8NbibgK5K5YabYbLkV6KpGwuuixBRtIzl3ZpPzUfw==}
@@ -4915,6 +4920,8 @@ snapshots:
   '@rolldown/binding-win32-x64-msvc@1.2.15': {}
 
   '@rolldown/pluginutils@1.0.1': {}
+
+  '@simplewebauthn/browser@14.0.0': {}
 
   '@size-limit/file@14.3.0(size-limit@14.3.0)':
     dependencies:

@@ -13,7 +13,10 @@ import type { ServerDemoAdminSeed } from "./scenarios";
 export type DemoAdminSettings = {
   registration: AdminRegistrationSettings;
   /** Пароль и число включённых провайдеров считаются из providers. */
-  auth: Pick<AdminAuthSettings, "password_enabled" | "fields">;
+  auth: Pick<
+    AdminAuthSettings,
+    "password_enabled" | "passkeys_enabled" | "fields"
+  >;
   smtp: AdminSmtpSettings;
   providers: AdminOidcProvider[];
 };
@@ -81,7 +84,11 @@ export const createDemoAdminSettings = (
       },
       auth: {
         password_enabled: true,
-        fields: { "auth.password_enabled": field() },
+        passkeys_enabled: true,
+        fields: {
+          "auth.password_enabled": field(),
+          "auth.passkeys_enabled": field(),
+        },
       },
       smtp: {
         enabled: true,
@@ -111,7 +118,11 @@ export const createDemoAdminSettings = (
       },
       auth: {
         password_enabled: false,
-        fields: { "auth.password_enabled": field("admin") },
+        passkeys_enabled: true,
+        fields: {
+          "auth.password_enabled": field("admin"),
+          "auth.passkeys_enabled": field(),
+        },
       },
       smtp: {
         enabled: false,
@@ -140,7 +151,11 @@ export const createDemoAdminSettings = (
     },
     auth: {
       password_enabled: true,
-      fields: { "auth.password_enabled": field() },
+      passkeys_enabled: true,
+      fields: {
+        "auth.password_enabled": field(),
+        "auth.passkeys_enabled": field(),
+      },
     },
     smtp: {
       enabled: true,

@@ -12,6 +12,7 @@ KEY_REGISTRATION_MODE = "auth.registration_mode"
 KEY_REGISTRATION_DOMAINS = "auth.registration_domains"
 KEY_REQUIRE_APPROVAL = "auth.require_approval"
 KEY_PASSWORD_ENABLED = "auth.password_enabled"  # noqa: S105 — имя ключа настройки, не пароль
+KEY_PASSKEYS_ENABLED = "auth.passkeys_enabled"
 
 
 def auth_settings_from(values: Mapping[str, object]) -> AuthSettings:
@@ -24,11 +25,13 @@ def auth_settings_from(values: Mapping[str, object]) -> AuthSettings:
     domains = values.get(KEY_REGISTRATION_DOMAINS)
     password_enabled = values.get(KEY_PASSWORD_ENABLED)
     approval = values.get(KEY_REQUIRE_APPROVAL)
+    passkeys = values.get(KEY_PASSKEYS_ENABLED)
     return AuthSettings(
         registration_mode=mode,
         registration_domains=normalize_domains([str(d) for d in domains]) if isinstance(domains, list) else (),
         require_approval=approval if isinstance(approval, bool) else False,
         password_enabled=password_enabled if isinstance(password_enabled, bool) else True,
+        passkeys_enabled=passkeys if isinstance(passkeys, bool) else True,
     )
 
 
@@ -40,6 +43,7 @@ class AuthEnvOverrides:
     registration_domains: tuple[str, ...] | None = None
     require_approval: bool | None = None
     password_enabled: bool | None = None
+    passkeys_enabled: bool | None = None
 
     def locked_keys(self) -> frozenset[str]:
         pairs = (
@@ -47,6 +51,7 @@ class AuthEnvOverrides:
             (KEY_REGISTRATION_DOMAINS, self.registration_domains),
             (KEY_REQUIRE_APPROVAL, self.require_approval),
             (KEY_PASSWORD_ENABLED, self.password_enabled),
+            (KEY_PASSKEYS_ENABLED, self.passkeys_enabled),
         )
         return frozenset(key for key, value in pairs if value is not None)
 
@@ -65,6 +70,7 @@ def effective_auth_settings(values: Mapping[str, object], env: AuthEnvOverrides)
         ),
         require_approval=env.require_approval if env.require_approval is not None else stored.require_approval,
         password_enabled=env.password_enabled if env.password_enabled is not None else stored.password_enabled,
+        passkeys_enabled=env.passkeys_enabled if env.passkeys_enabled is not None else stored.passkeys_enabled,
     )
 
 

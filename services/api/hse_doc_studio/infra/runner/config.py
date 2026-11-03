@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import os
 import socket
+from enum import StrEnum
 from pathlib import Path
 from urllib.parse import urlsplit
 
@@ -18,6 +19,7 @@ from hse_doc_studio.infra.compile.docker_compile_executor import (
     DEFAULT_IMAGE,
     ExecutorLimits,
 )
+from hse_doc_studio.infra.compile.k8s.config import KubernetesExecutorConfig
 
 _GIB = 1024**3
 
@@ -42,6 +44,13 @@ class AiEndpointConfig(BaseModel):
             # Адрес попадает в журнал при старте; ключ передаётся через key_env, а не в URL.
             raise ValueError("ai endpoint url must not carry credentials, use key_env")
         return value
+
+
+class BuildExecutorKind(StrEnum):
+    """Где идёт сборка TeX: соседний контейнер через docker.sock или под в Kubernetes."""
+
+    docker = "docker"
+    kubernetes = "kubernetes"
 
 
 class RunnerConfig(BaseSettings):
@@ -96,6 +105,13 @@ class RunnerConfig(BaseSettings):
     cache_max_bytes: int = Field(default=2 * _GIB, gt=0, description="Предел кэша блобов; лишнее вытесняется по LRU.")
     workspaces_max_bytes: int = Field(
         default=20 * _GIB, gt=0, description="Предел тёплых папок проектов; давно не использованные удаляются по LRU."
+    )
+    executor: BuildExecutorKind = Field(
+        default=BuildExecutorKind.docker,
+        description="Исполнитель сборки TeX: docker (контейнер через docker.sock) или kubernetes (под на задачу).",
+    )
+    k8s: KubernetesExecutorConfig = Field(
+        default_factory=KubernetesExecutorConfig, description="Настройки исполнителя kubernetes (HSE_RUNNER__K8S__*)."
     )
     tex_image: str = Field(default=DEFAULT_IMAGE, description="Образ TeX Live для сборки; ставится на хосте заранее.")
     tex_cache_volume: str = Field(default=DEFAULT_CACHE_VOLUME, description="Том docker с кэшем TeX.")

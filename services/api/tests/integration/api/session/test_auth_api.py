@@ -215,6 +215,8 @@ async def test_bootstrap_anonymous_matches_the_fixture(env: tuple[AsyncClient, _
     expected = _fixture("Bootstrap", "server_anonymous")
     # Без SMTP письма не уходят: фикстура описывает установку с почтой.
     expected["auth"]["smtp_enabled"] = False
+    # Адрес http://test не годится для WebAuthn (не HTTPS и не localhost): passkey недоступен.
+    expected["auth"]["passkeys_enabled"] = False
     assert body == {**expected, "version": body["version"]}
 
 

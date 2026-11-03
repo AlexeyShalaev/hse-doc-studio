@@ -39,6 +39,8 @@ export type PdfStampEditorProps = {
   ) => void;
   onCompileRequest?: () => void;
   isCompileRunning?: boolean;
+  /** Сборка сейчас невозможна (на сервере нет раннера): кнопка гаснет. */
+  isCompileBlocked?: boolean;
 };
 
 // The horizontal padding (px, each side) of the scrollable preview area. We
@@ -71,6 +73,7 @@ export const PdfStampEditor = ({
   onPlacementChange,
   onCompileRequest,
   isCompileRunning,
+  isCompileBlocked = false,
 }: PdfStampEditorProps) => {
   const { t, i18n } = useTranslation("signatureStamper");
   const pdfUrl = pdfAvailable ? buildPdfUrl(projectId, pdfRelPath) : null;
@@ -211,7 +214,7 @@ export const PdfStampEditor = ({
             type="button"
             className="btn"
             onClick={onCompileRequest}
-            disabled={isCompileRunning}
+            disabled={isCompileRunning || isCompileBlocked}
           >
             {isCompileRunning ? t("pdfEditor.building") : t("pdfEditor.build")}
           </button>

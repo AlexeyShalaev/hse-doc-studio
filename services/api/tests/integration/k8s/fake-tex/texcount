@@ -1,0 +1,5 @@
+#!/bin/sh
+case " $* " in
+  *" -char "*) echo "40+5+0 (1/0/0/0) Total" ;;
+  *) echo "7+1+0 (1/0/0/0) Total" ;;
+esac

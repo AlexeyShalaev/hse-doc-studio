@@ -150,6 +150,18 @@ export const ProjectBuildRunnersSchema = z.strictObject({
 });
 export type ProjectBuildRunners = z.infer<typeof ProjectBuildRunnersSchema>;
 
+/**
+ * Есть ли сейчас кому собирать документы проекта (`GET /projects/{id}/build-availability`).
+ * `cloud: false` в локальном режиме: собирает сама Студия, ограничений нет. `tags`: теги
+ * сборки (`tex`, `office`), для которых сейчас есть живой раннер.
+ */
+export const BuildAvailabilitySchema = z.strictObject({
+  cloud: z.boolean(),
+  any_runner: z.boolean(),
+  tags: z.array(z.string()),
+});
+export type BuildAvailability = z.infer<typeof BuildAvailabilitySchema>;
+
 export const UpdateProjectBuildRunnersRequestSchema = z.strictObject({
   policy: BuildRunnersPolicySchema,
 });

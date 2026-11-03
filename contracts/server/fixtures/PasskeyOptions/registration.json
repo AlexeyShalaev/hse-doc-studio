@@ -1,0 +1,45 @@
+{
+  "options": {
+    "rp": {
+      "name": "HSE Doc Studio",
+      "id": "studio.example.org"
+    },
+    "user": {
+      "id": "MGY4ZTJjMWE5YjdkNGU2ZjhhMWIyYzNkNGU1ZjZhN2I",
+      "name": "anna.petrova@example.org",
+      "displayName": "Анна Петрова"
+    },
+    "challenge": "AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8",
+    "pubKeyCredParams": [
+      {
+        "type": "public-key",
+        "alg": -8
+      },
+      {
+        "type": "public-key",
+        "alg": -7
+      },
+      {
+        "type": "public-key",
+        "alg": -257
+      }
+    ],
+    "timeout": 300000,
+    "excludeCredentials": [
+      {
+        "id": "AQIDBAUGBwgJCgsMDQ4PEA",
+        "type": "public-key",
+        "transports": [
+          "internal",
+          "hybrid"
+        ]
+      }
+    ],
+    "authenticatorSelection": {
+      "residentKey": "required",
+      "requireResidentKey": true,
+      "userVerification": "required"
+    },
+    "attestation": "none"
+  }
+}

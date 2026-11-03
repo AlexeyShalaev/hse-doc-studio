@@ -1,0 +1,209 @@
+{
+  "help": {
+    "button": "Help",
+    "title": "Help",
+    "tour": "Get to know the Studio",
+    "tourHint": "Questions, a tour and a demo project",
+    "demo": "Demo project",
+    "demoHint": "Sandbox: nothing is saved",
+    "restart": "Restart the introduction"
+  },
+  "invite": {
+    "title": "New in the Studio: a 3-minute introduction",
+    "body": "A short tour and a demo project: build, AI agent, comments and git on an example, with no risk to your projects.",
+    "start": "Take it",
+    "later": "Not now"
+  },
+  "restart": {
+    "title": "Introduction to the Studio",
+    "body": "Questions, an interface tour and a demo project in a sandbox. You can take it again at any time.",
+    "button": "Take it again",
+    "statusCompleted": "Completed",
+    "statusSkipped": "Skipped",
+    "statusPending": "Not taken yet",
+    "statusInProgress": "In progress"
+  },
+  "intro": {
+    "kicker": "Welcome",
+    "title": "Meet HSE Studio",
+    "body": "The Studio helps you format a coursework, thesis or report with your university's template: you write the text, the Studio builds a compliant PDF, the AI agent checks it, your supervisor leaves comments, and everything is kept in git.",
+    "plan": "Answer a couple of questions and we will show you the interface and walk through a demo project. About 3 minutes, nothing real is created.",
+    "start": "Start",
+    "skip": "Skip the introduction",
+    "back": "Back",
+    "next": "Next",
+    "skipQuestion": "Skip question",
+    "toTour": "Start the tour",
+    "demoOnly": "Go straight to the demo",
+    "progress": "Question {{current}} of {{total}}"
+  },
+  "questions": {
+    "role": {
+      "title": "Who are you?",
+      "student": "Student",
+      "supervisor": "Teacher or supervisor",
+      "admin": "Studio administrator"
+    },
+    "work": {
+      "title": "What are you working on?",
+      "titleSupervisor": "What works do you supervise?",
+      "other": "Something else or not sure yet",
+      "loading": "Loading templates…"
+    },
+    "latex": {
+      "title": "Experience with LaTeX",
+      "none": "None",
+      "some": "A little",
+      "pro": "Confident"
+    },
+    "git": {
+      "title": "Experience with git",
+      "none": "Never used it",
+      "some": "A little",
+      "pro": "Confident"
+    }
+  },
+  "tour": {
+    "next": "Next",
+    "back": "Back",
+    "skip": "Skip",
+    "finish": "Done",
+    "progress": "Step {{current}} of {{total}}",
+    "close": "Close the tour",
+    "demoBadge": "Demo",
+    "skippedToast": "You can take the introduction later from the Help menu in the top right corner."
+  },
+  "steps": {
+    "homeNewProject": {
+      "title": "New project",
+      "body": "Start a work from your university's template here: the wizard asks for the topic, authors and supervisor and builds a ready skeleton."
+    },
+    "homeSearch": {
+      "title": "Your projects",
+      "body": "Your projects, search (press /) and filters. Pinned projects stay on top."
+    },
+    "homeAgent": {
+      "title": "AI agent",
+      "body": "The agent answers questions about the Studio, and inside a project it edits and checks the text. It is set up in Settings if the administrator allows AI."
+    },
+    "homeSettings": {
+      "title": "Settings",
+      "body": "Theme, language, the profile that signs your versions, git access and AI providers."
+    },
+    "homeAdmin": {
+      "title": "Administration",
+      "body": "The account menu leads to the admin area: people and invitations, build runners, AI providers, quotas and backups."
+    },
+    "homeHelp": {
+      "title": "Help",
+      "body": "Restart the introduction or open the demo project here at any time. Next, let's see the work on an example."
+    },
+    "demoIntro": {
+      "title": "Demo project",
+      "body": "This is a sandbox: the project lives only in this tab, the build, AI and git are simulated. Click anything, nothing will break."
+    },
+    "demoCreate": {
+      "title": "Create a project from a template",
+      "body": "The real wizard asks for more; here one click is enough."
+    },
+    "demoFiles": {
+      "title": "Project files",
+      "body": "On the left are the files: the main document main.tex, the bibliography and images. The Studio keeps the structure in line with the template."
+    },
+    "demoLatex": {
+      "title": "A bit about LaTeX",
+      "body": "The text uses markup: \\section{…} is a section heading, \\title{…} is the topic on the title page. The Studio handles the formatting rules, no need to think about fonts and margins."
+    },
+    "demoEdit": {
+      "title": "Enter your topic",
+      "body": "Replace “Your thesis topic” in the \\title line with your own topic or press the button below."
+    },
+    "demoBuild": {
+      "title": "Build the PDF",
+      "body": "The build turns the source into a PDF that meets the university's rules. On a server runners do it, locally Docker on your computer."
+    },
+    "demoPreview": {
+      "title": "PDF preview",
+      "body": "The document is visible right away. The topic you entered is already on the title page."
+    },
+    "demoAgent": {
+      "title": "Ask the AI agent",
+      "body": "The agent reads the project and can check the text or suggest an edit. Pick a request or press the button below.",
+      "body_supervisor": "The agent helps supervisors too: it checks a student's text and drafts comments. Pick a request or press the button below."
+    },
+    "demoReview": {
+      "title": "Comments",
+      "body": "Comments from the supervisor and the AI sit in the margin. Accept the edit and the comment is resolved.",
+      "body_supervisor": "This is how a student sees your comments. They answer with an edit, and you see what has been fixed."
+    },
+    "demoGit": {
+      "title": "Git: history and sync",
+      "body": "Connect a repository and every saved version goes there as a commit. Press “Sync”.",
+      "body_beginner": "Git keeps the history of versions. You don't need any commands: the Studio commits and pushes for you, you press one button. Optional, but very useful.",
+      "body_pro": "Plain git: a remote over HTTPS or SSH, commits under your name, push and pull with conflict resolution in the interface."
+    }
+  },
+  "actions": {
+    "create": "Create project",
+    "edit": "Fill it in for me",
+    "build": "Build",
+    "askAgent": "Ask the agent",
+    "resolve": "Accept the edit",
+    "sync": "Sync"
+  },
+  "demo": {
+    "banner": "Demo mode: the project exists only in this tab, nothing is sent to the server.",
+    "exit": "Leave the demo",
+    "restart": "Restart the demo",
+    "files": "Files",
+    "editor": "Editor",
+    "build": "Build",
+    "building": "Building…",
+    "rebuild": "Rebuild",
+    "preview": "PDF preview",
+    "previewEmpty": "Build the project to see the PDF.",
+    "previewStale": "Edited since the last build",
+    "page": "Page {{n}}",
+    "abstract": "Abstract",
+    "agent": "AI agent",
+    "agentEmpty": "Pick a request below.",
+    "agentTyping": "the agent is typing…",
+    "you": "You",
+    "agentName": "Agent",
+    "review": "Comments",
+    "reviewEmpty": "No comments.",
+    "resolve": "Accept",
+    "resolved": "Resolved",
+    "git": "Git",
+    "remote": "Repository",
+    "connect": "Connect",
+    "sync": "Sync",
+    "syncing": "Syncing…",
+    "commits": "Commits",
+    "noCommits": "No commits yet.",
+    "pushed": "pushed",
+    "notPushed": "not pushed",
+    "uncommitted": "Uncommitted changes",
+    "templateTitle": "Template",
+    "templateHint": "Picked from your answers",
+    "createProject": "Create the demo project",
+    "project": "Project",
+    "editorLabel": "Source {{path}}",
+    "createFirst": "Create the project first."
+  },
+  "finish": {
+    "title": "Done! Now a real project",
+    "body": "You have walked the whole path: template, text, build, AI, comments and git. Start your own work, the wizard takes a couple of minutes.",
+    "suggested": "Suggested template: {{template}}",
+    "createGeneric": "Create a project",
+    "later": "Later",
+    "build": {
+      "local": "Builds run on your computer in Docker.",
+      "available": "Cloud builds are available on this server.",
+      "unavailable": "Cloud builds are not available on this server right now: no runners are connected. You can already write, work with comments and git; build the PDF in the local Studio on your computer, and the administrator will enable cloud builds.",
+      "unknown": "If the PDF build does not start, the server has no runners yet: tell your administrator. Text, comments and git work without it."
+    },
+    "admin": "As an administrator, start in the admin area: connect a build runner and an AI provider, then invite people.",
+    "supervisor": "Students will invite you to their projects, invitations appear in your Inbox."
+  }
+}

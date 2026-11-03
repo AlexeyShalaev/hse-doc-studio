@@ -49,6 +49,10 @@ class InMemorySessionRepository:
         if id_hash in self._items:
             self._items[id_hash] = replace(self._items[id_hash], last_seen_at=now, expires_at=expires_at)
 
+    async def mark_reauthenticated(self, id_hash: str, now: datetime) -> None:
+        if id_hash in self._items:
+            self._items[id_hash] = replace(self._items[id_hash], reauth_at=now)
+
     async def delete(self, id_hash: str) -> None:
         self._items.pop(id_hash, None)
 

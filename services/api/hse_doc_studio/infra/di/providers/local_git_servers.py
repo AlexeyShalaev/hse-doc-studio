@@ -45,7 +45,12 @@ class LocalGitServersProvider(Provider):
         logins: StudioServerLogins,
     ) -> StudioServersService:
         return StudioServersService(
-            client, credentials, hosts, logins, allow_insecure_http=settings.git.allow_insecure_http
+            client,
+            credentials,
+            hosts,
+            logins,
+            allow_insecure_http=settings.git.allow_insecure_http,
+            local_version=settings.get_app_version(),
         )
 
     @provide

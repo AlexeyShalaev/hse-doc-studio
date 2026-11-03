@@ -15,6 +15,8 @@ from pydantic import BaseModel
 _CHART = Path(__file__).resolve().parents[4] / "deploy" / "helm" / "hse-doc-studio"
 _VALUES = _CHART / "ci" / "values-test.yaml"
 _GOLDEN = _CHART / "ci" / "rendered.golden.yaml"
+_K8S_VALUES = _CHART / "ci" / "values-kubernetes.yaml"
+_K8S_GOLDEN = _CHART / "ci" / "rendered-kubernetes.golden.yaml"
 
 pytestmark = pytest.mark.skipif(shutil.which("helm") is None, reason="helm не установлен")
 
@@ -53,13 +55,19 @@ def test_lint() -> None:
     assert result.returncode == 0, result.stdout + result.stderr
 
 
-def test_template_matches_golden() -> None:
-    result = _helm("template", "rel", str(_CHART), "-f", str(_VALUES))
+@pytest.mark.parametrize(
+    ("values", "golden_path"),
+    [((_VALUES,), _GOLDEN), ((_VALUES, _K8S_VALUES), _K8S_GOLDEN)],
+    ids=["docker", "kubernetes"],
+)
+def test_template_matches_golden(values: tuple[Path, ...], golden_path: Path) -> None:
+    args = [arg for path in values for arg in ("-f", str(path))]
+    result = _helm("template", "rel", str(_CHART), "--namespace", "studio", *args)
     assert result.returncode == 0, result.stderr
     if os.environ.get("UPDATE_GOLDEN"):
-        _GOLDEN.write_text(result.stdout, encoding="utf-8", newline="\n")
+        golden_path.write_text(result.stdout, encoding="utf-8", newline="\n")
     # Пустые строки между документами и в конце зависят от версии helm (4.x их оставляет, 3.x нет).
-    golden = _GOLDEN.read_text(encoding="utf-8")
+    golden = golden_path.read_text(encoding="utf-8")
     assert _squeeze(result.stdout) == _squeeze(golden), "обновите: UPDATE_GOLDEN=1 pytest"
 
 
@@ -93,10 +101,11 @@ def test_env_names_exist_in_settings_and_runner_config() -> None:
     api = next(d for d in _by_kind(docs, "Deployment") if d["metadata"]["name"].endswith("-api"))
     env = {e["name"] for e in api["spec"]["template"]["spec"]["containers"][0]["env"]}
     assert [k for k in env if k.removeprefix("HSE_STUDIO__") not in known] == []
-    runner = next(d for d in _by_kind(docs, "Deployment") if d["metadata"]["name"].endswith("-runner"))
-    renv = {e["name"] for e in runner["spec"]["template"]["spec"]["containers"][0]["env"]}
-    fields = {name.upper() for name in RunnerConfig.model_fields}
-    assert [k for k in renv if k.removeprefix("HSE_RUNNER__") not in fields] == []
+    fields = _paths(RunnerConfig)
+    for runner_docs in (docs, _render("-f", str(_K8S_VALUES))):
+        runner = next(d for d in _by_kind(runner_docs, "Deployment") if d["metadata"]["name"].endswith("-runner"))
+        renv = {e["name"] for e in runner["spec"]["template"]["spec"]["containers"][0]["env"]}
+        assert [k for k in renv if k.removeprefix("HSE_RUNNER__") not in fields] == []
 
 
 def test_secrets_not_inline_in_workloads() -> None:
@@ -230,3 +239,114 @@ def test_backups_s3_requires_bucket() -> None:
         _helm("template", "rel", str(_CHART), "-f", str(_VALUES), "--set", "backups.destination.bucket=").returncode
         != 0
     )
+
+
+def _k8s_runner(*extra: str) -> tuple[list[dict[str, Any]], dict[str, Any]]:
+    docs = _render("-f", str(_K8S_VALUES), *extra)
+    runner = next(d for d in _by_kind(docs, "Deployment") if d["metadata"]["name"].endswith("-runner"))
+    return docs, runner
+
+
+def test_kubernetes_runner_passes_restricted_without_host_access() -> None:
+    _, runner = _k8s_runner()
+    pod = runner["spec"]["template"]["spec"]
+
+    assert "hostPath" not in str(pod["volumes"])
+    assert "docker.sock" not in str(pod)
+    assert "initContainers" not in pod
+    assert pod["securityContext"]["runAsNonRoot"] is True
+    assert pod["securityContext"]["seccompProfile"] == {"type": "RuntimeDefault"}
+    container = pod["containers"][0]["securityContext"]
+    assert container == {
+        "allowPrivilegeEscalation": False,
+        "readOnlyRootFilesystem": True,
+        "capabilities": {"drop": ["ALL"]},
+    }
+    assert pod["serviceAccountName"] == "rel-hse-doc-studio-runner"
+    assert runner["spec"]["strategy"] == {"type": "Recreate"}
+
+
+def test_kubernetes_runner_role_is_minimal_and_namespaced() -> None:
+    docs, _ = _k8s_runner()
+
+    (role,) = _by_kind(docs, "Role")
+    assert role["metadata"]["namespace"] == "hds-builds"
+    granted = {(res, verb) for rule in role["rules"] for res in rule["resources"] for verb in rule["verbs"]}
+    assert {res for res, _ in granted} == {"pods", "pods/log", "pods/exec"}
+    assert ("pods", "update") not in granted
+    assert all(rule["apiGroups"] == [""] for rule in role["rules"])
+    (binding,) = _by_kind(docs, "RoleBinding")
+    assert binding["subjects"] == [
+        {"kind": "ServiceAccount", "name": "rel-hse-doc-studio-runner", "namespace": "default"}
+    ]
+    assert _by_kind(docs, "ClusterRole") == []
+
+
+def test_kubernetes_runner_network_policy_denies_build_pods() -> None:
+    docs, _ = _k8s_runner()
+
+    (policy,) = _by_kind(docs, "NetworkPolicy")
+    assert policy["spec"]["policyTypes"] == ["Ingress", "Egress"]
+    assert "ingress" not in policy["spec"]
+    assert "egress" not in policy["spec"]
+    assert policy["spec"]["podSelector"]["matchLabels"]["hse-doc-studio/component"] == "build"
+    off, _ = _k8s_runner("--set", "runner.kubernetes.networkPolicy.enabled=false")
+    assert _by_kind(off, "NetworkPolicy") == []
+
+
+def test_kubernetes_runner_build_pod_settings_reach_the_runner() -> None:
+    _, runner = _k8s_runner()
+    env = {e["name"]: e.get("value") for e in runner["spec"]["template"]["spec"]["containers"][0]["env"]}
+
+    assert env["HSE_RUNNER__EXECUTOR"] == "kubernetes"
+    assert env["HSE_RUNNER__K8S__NAMESPACE"] == "hds-builds"
+    assert env["HSE_RUNNER__K8S__IMAGE"] == "registry.example.org/texlive:TL2024"
+    assert yaml.safe_load(env["HSE_RUNNER__K8S__TOLERATIONS"])[0]["key"] == "builds"
+    assert yaml.safe_load(env["HSE_RUNNER__K8S__NODE_SELECTOR"]) == {"pool": "builds"}
+    assert yaml.safe_load(env["HSE_RUNNER__K8S__IMAGE_PULL_SECRETS"]) == ["registry-pull"]
+    config = RunnerConfig.model_validate(
+        {"api_url": "http://api", "k8s": {"tolerations": yaml.safe_load(env["HSE_RUNNER__K8S__TOLERATIONS"])}}
+    )
+    assert config.k8s.tolerations[0]["effect"] == "NoSchedule"
+
+
+def test_kubernetes_runner_data_volume_pvc_or_empty_dir() -> None:
+    docs, runner = _k8s_runner()
+    assert [p["metadata"]["name"] for p in _by_kind(docs, "PersistentVolumeClaim")].count(
+        "rel-hse-doc-studio-runner-data"
+    ) == 1
+    volumes = {v["name"]: v for v in runner["spec"]["template"]["spec"]["volumes"]}
+    assert volumes["runner-data"]["persistentVolumeClaim"]["claimName"] == "rel-hse-doc-studio-runner-data"
+
+    docs, runner = _k8s_runner("--set", "runner.persistence.enabled=false")
+    assert "rel-hse-doc-studio-runner-data" not in [
+        p["metadata"]["name"] for p in _by_kind(docs, "PersistentVolumeClaim")
+    ]
+    volumes = {v["name"]: v for v in runner["spec"]["template"]["spec"]["volumes"]}
+    assert volumes["runner-data"] == {"name": "runner-data", "emptyDir": {}}
+
+
+def test_kubernetes_runner_default_build_namespace_is_release_namespace() -> None:
+    result = _helm(
+        "template",
+        "rel",
+        str(_CHART),
+        "--namespace",
+        "studio",
+        "-f",
+        str(_VALUES),
+        "--set",
+        "runner.executor=kubernetes",
+    )
+    assert result.returncode == 0, result.stderr
+    docs = [doc for doc in yaml.safe_load_all(result.stdout) if doc]
+
+    (role,) = _by_kind(docs, "Role")
+    assert role["metadata"]["namespace"] == "studio"
+    (binding,) = _by_kind(docs, "RoleBinding")
+    assert binding["subjects"][0]["namespace"] == "studio"
+
+
+def test_unknown_executor_rejected_by_schema() -> None:
+    result = _helm("template", "rel", str(_CHART), "-f", str(_VALUES), "--set", "runner.executor=podman")
+    assert result.returncode != 0

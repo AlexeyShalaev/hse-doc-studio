@@ -103,3 +103,8 @@ app.kubernetes.io/instance: {{ .Release.Name }}
 - {name: HSE_STUDIO__OBSERVABILITY__METRICS_TOKEN, valueFrom: {secretKeyRef: {name: {{ $secret }}, key: metrics-token, optional: true}}}
 - {name: HSE_STUDIO__OFFICE_EDITOR__JWT_SECRET, valueFrom: {secretKeyRef: {name: {{ $secret }}, key: office-jwt-secret, optional: true}}}
 {{- end -}}
+
+{{/* Namespace подов сборки исполнителя kubernetes: свой или namespace релиза. */}}
+{{- define "hds.runnerBuildNamespace" -}}
+{{- default .Release.Namespace .Values.runner.kubernetes.namespace -}}
+{{- end -}}
