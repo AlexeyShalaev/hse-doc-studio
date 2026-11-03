@@ -90,6 +90,25 @@ A person lost a device: reset their passkeys in the person card and end their se
 
 The local Studio has no sign-in, so passkeys are not used there.
 
+## Landing page for guests
+
+A signed-out visitor who opens the server's root address sees a page about the Studio: what it is, why the cloud version, how to start. The sign-in form sits next to the description (on a phone it opens from the "Sign in" button), and a "Create account" button appears where registration is open (`open` or `domains`). You can share the link with people who do not know the project: the link preview shows the installation name, a description and a picture.
+
+What stays as before:
+
+- the direct sign-in address `/login` and all links: invitations, password reset, email confirmation, OIDC and passkey sign-in, returning after sign-in through `?next=`;
+- a signed-in person goes to their projects, the root does not change for them;
+- the local Studio never shows the landing page.
+
+The name on the page comes from the Installation section ("Installation name" field). The page reveals nothing internal: no versions, no service addresses.
+
+**Switching the landing page off.** The root then goes straight to sign-in, as before the page existed:
+
+- in the admin area: Installation, the "Landing page for guests" switch;
+- with the environment variable `HSE_STUDIO__SERVER__LANDING_ENABLED=false`. A variable that is set wins over the admin setting, and the switch becomes read-only. Without the variable the installation setting decides, and the landing page is on by default.
+
+**Links in messengers.** The interface is a single-page app, and preview bots (Telegram, Slack, mail clients) do not run scripts. So the server itself returns the root address with ready-made `title`, `description` and Open Graph tags (`og:title`, `og:description`, `og:image`); the language comes from `?lang=`, `X-Interface-Language` or `Accept-Language` (Russian by default). The preview picture is served from the same site at `/og-landing.png`. Absolute addresses in the tags are built from the installation's public address: set it in the Installation section (or `HSE_STUDIO__AUTH__PUBLIC_URL`), otherwise the address the request came to is used.
+
 ## Users
 
 In the People section: search, disable and enable, and end all of a user's sessions.
