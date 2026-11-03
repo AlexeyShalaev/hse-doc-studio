@@ -58,6 +58,7 @@ if importlib.util.find_spec("sqlalchemy") is None:
         "integration/api/personal/*",
         "integration/api/mcp/server",
         "integration/api/mcp/server/*",
+        "integration/api/onboarding/test_onboarding_server.py",
         "unit/core/jobs/test_admin_listing.py",
         "unit/use_cases/chat/test_chat_relay.py",
     ]
@@ -69,6 +70,12 @@ if importlib.util.find_spec("joserfc") is None:
     ]
 if importlib.util.find_spec("argon2") is None:
     collect_ignore_glob += ["unit/infra/identity/*", "integration/api/git_remote", "integration/api/git_remote/*"]
+if importlib.util.find_spec("webauthn") is None:
+    collect_ignore_glob += [
+        "unit/use_cases/identity/test_passkeys.py",
+        "integration/api/session/test_passkeys_api.py",
+        "unit/infra/identity/test_webauthn.py",
+    ]
 if importlib.util.find_spec("boto3") is None or importlib.util.find_spec("moto") is None:
     collect_ignore_glob += [
         "integration/test_s3_fixtures.py",

@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import asyncio
-import re
 import shlex
 import uuid
 from asyncio import subprocess as asubprocess
@@ -14,55 +13,28 @@ import structlog
 
 from hse_doc_studio.core.jobs.artifacts import IArtifactStore, PublishPdfRequest
 from hse_doc_studio.infra.compile.host_path_resolver import HostPathResolver
+from hse_doc_studio.infra.compile.latexmk import ENGINE_FLAG as _ENGINE_FLAG
+from hse_doc_studio.infra.compile.latexmk import NONROOT_TEX_ENV as _NONROOT_TEX_ENV
+from hse_doc_studio.infra.compile.latexmk import SENTINEL_DONE as _SENTINEL_DONE
+from hse_doc_studio.infra.compile.latexmk import SENTINEL_FAILED as _SENTINEL_FAILED
+from hse_doc_studio.infra.compile.latexmk import SENTINEL_PAGES as _SENTINEL_PAGES
+from hse_doc_studio.infra.compile.latexmk import SENTINEL_WORDS as _SENTINEL_WORDS
+from hse_doc_studio.infra.compile.latexmk import extract_log_page_count as _extract_log_page_count
+from hse_doc_studio.infra.compile.latexmk import reset_latexmk_state as _reset_latexmk_state
+from hse_doc_studio.infra.compile.latexmk import sum_texcount_total as _sum_texcount_total
 from hse_doc_studio.infra.docker.cli import docker_binary
 from hse_doc_studio.infra.jobs.artifact_store import LocalDiskArtifactStore
 
 logger = structlog.get_logger()
 
-_SENTINEL_DONE = "__DONE__"
-_SENTINEL_FAILED = "__FAILED__"
-# Carries the page count of a successful build back to the runner so it can be
-# persisted on the CompileRecord (and shown in the UI). Not a log line.
-_SENTINEL_PAGES = "__PAGES__:"
-# Carries the prose word + character totals back to the runner as
-# "__WORDS__:<words>:<chars>". Computed by texcount, not a log line.
-_SENTINEL_WORDS = "__WORDS__:"
-
-# xelatex/latexmk print "Output written on <file>.xdv (N pages, ...)" in the
-# per-document .log on a successful run. TeX wraps log lines at max_print_line
-# (79, env override ignored since TL2023) — long .build/<doc_id>/ paths push
-# "(N pages" across the wrap, even mid-number. `\s+` tolerates a wrap between
-# the count and "page"; _extract_log_page_count retries on an unwrapped log
-# for the mid-number case.
-_LOG_PAGE_COUNT_RE = re.compile(r"Output written on [^()]+\((\d+)\s+page")
-
-# texcount -1 prints one line "text+headers+captions (h/f/i/d) Total"; we sum
-# the first three integers (the parts that render as prose, headings included).
-_TEXCOUNT_TOTAL_RE = re.compile(r"^\s*(\d+)\+(\d+)\+(\d+)\b")
-
 DEFAULT_IDLE_TIMEOUT_S = 120.0
 DEFAULT_IMAGE = "texlive/texlive:TL2024-historic"
-_NONROOT_TEX_ENV = (
-    ("HOME", "/tmp"),  # noqa: S108
-    ("TEXMFVAR", "/tmp/texmf-var"),  # noqa: S108
-    ("TEXMFCONFIG", "/tmp/texmf-config"),  # noqa: S108
-)
 DEFAULT_CACHE_VOLUME = "hse-tex-cache"
 DEFAULT_CACHE_TARGET = "/root"
 
 _PROCESS_TERMINATE_TIMEOUT_S = 5.0
 _CONTAINER_KILL_TIMEOUT_S = 15.0
 CONTAINER_NAME_PREFIX = "hds-build-"
-
-# Map our EngineType strings onto latexmk's mode-selector flags. Latexmk
-# decides how many engine + biber + makeindex passes to run; we just tell it
-# which engine to use as the PDF-producing rule.
-_ENGINE_FLAG = {
-    "xelatex": "-xelatex",
-    "lualatex": "-lualatex",
-    "pdflatex": "-pdf",
-}
-
 
 ProcessCallback = Callable[[asubprocess.Process], None]
 
@@ -466,45 +438,6 @@ class DockerCompileExecutor:
         if words is None or chars is None:
             return None
         return (words, chars)
-
-
-def _reset_latexmk_state(build_dir: Path, stem: str) -> None:
-    """Delete latexmk's per-document file database after a failed run.
-
-    latexmk records each rule's success/failure in `<stem>.fdb_latexmk`. Left
-    behind after a failure, it makes the next compile of unchanged source exit
-    12 ("gave an error in previous invocation") without re-running the engine.
-    Removing it forces a clean re-run; the `.log` is intentionally preserved.
-    """
-    with suppress(OSError):
-        (build_dir / f"{stem}.fdb_latexmk").unlink(missing_ok=True)
-
-
-def _sum_texcount_total(block: str) -> int | None:
-    """Sum text+headers+captions from a texcount `-1` total line, or None."""
-    for line in block.splitlines():
-        m = _TEXCOUNT_TOTAL_RE.match(line)
-        if m is not None:
-            return int(m.group(1)) + int(m.group(2)) + int(m.group(3))
-    return None
-
-
-def _extract_log_page_count(log_path: Path) -> int | None:
-    if not log_path.exists():
-        return None
-    try:
-        text = log_path.read_text(encoding="utf-8", errors="replace")
-    except OSError:
-        return None
-    m = _LOG_PAGE_COUNT_RE.search(text)
-    if m is None:
-        # TeX hard-wraps log lines at max_print_line (79, not overridable via
-        # the environment since TL2023), and for long .build/<doc_id>/ paths
-        # the wrap can land anywhere inside "(N pages" — even mid-number
-        # ("(2\n6 pages"). Retry against the log with newlines removed: the
-        # "Output written on" phrase is unique, so unwrapping is safe.
-        m = _LOG_PAGE_COUNT_RE.search(text.replace("\n", ""))
-    return int(m.group(1)) if m is not None else None
 
 
 def _container_name(compile_id: uuid.UUID) -> str:

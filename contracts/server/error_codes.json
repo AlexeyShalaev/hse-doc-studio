@@ -85,7 +85,13 @@
   "git_server_not_studio",
   "git_server_unreachable",
   "quota_exceeded",
+  "no_runners",
+  "no_runner_for_tags",
   "owner_storage_exceeded",
   "ai_model_not_allowed",
-  "ai_provider_unavailable"
+  "ai_provider_unavailable",
+  "passkeys_disabled",
+  "passkey_invalid",
+  "passkey_limit",
+  "reauth_required"
 ]

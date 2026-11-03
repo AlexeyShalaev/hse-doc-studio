@@ -35,6 +35,9 @@ class DocumentListItemResponse(BaseModel):
     # Визуальный блок навигации из пака (espd/pdp/pres/…) — фронтенд рисует
     # дивайдер между соседними доками разных групп.
     group: str | None = None
+    # Теги раннера для сборки (`tex`, `office`; пусто: раннер не нужен). Сервер сверяет их с
+    # `GET /projects/{id}/build-availability` и гасит «Собрать» без исполнителя.
+    build_tags: list[str] = []
 
 
 class CustomFileOverrideResponse(BaseModel):

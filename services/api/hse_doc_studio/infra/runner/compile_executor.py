@@ -9,7 +9,7 @@ import os
 from collections.abc import Callable
 from pathlib import PurePosixPath
 
-from hse_doc_studio.core.compile.errors import DockerUnavailableError, ImageMissingError
+from hse_doc_studio.core.compile.errors import BuildBackendUnavailableError, DockerUnavailableError, ImageMissingError
 from hse_doc_studio.core.jobs.entities import compile_payload_of
 from hse_doc_studio.core.jobs.enums import JobErrorCategory, JobKind
 from hse_doc_studio.core.jobs.errors import JobFailure
@@ -28,6 +28,7 @@ _FAIL_TAIL_CHARS = 6000
 
 CODE_IMAGE_MISSING = "image_missing"
 CODE_DOCKER_UNAVAILABLE = "docker_unavailable"
+CODE_BUILD_BACKEND_UNAVAILABLE = BuildBackendUnavailableError.code
 
 
 class RunnerLogSink:
@@ -51,8 +52,8 @@ class RunnerLogSink:
 class CompileJobExecutor:
     """`JobExecutor` для compile: выход один, итоговый PDF по пути рядом с исходником.
 
-    Отмена приходит отменой задачи: `DockerCompileExecutor` гасит свой контейнер на `CancelledError`,
-    поэтому у процесса сборки ручки здесь нет.
+    Отмена приходит отменой задачи: исполнитель (контейнер docker или под kubernetes) гасит сборку
+    на `CancelledError`, поэтому у процесса сборки ручки здесь нет.
     """
 
     def __init__(
@@ -70,7 +71,7 @@ class CompileJobExecutor:
         self._runner = runner
         self._cache_max_bytes = cache_max_bytes
 
-    async def execute(self, envelope: JobEnvelope, ctx: JobContext) -> JobOutcome:
+    async def execute(self, envelope: JobEnvelope, ctx: JobContext) -> JobOutcome:  # noqa: C901
         spec = envelope.spec
         payload = compile_payload_of(spec)
         try:
@@ -79,6 +80,8 @@ class CompileJobExecutor:
             raise JobFailure.of(JobErrorCategory.unavailable, CODE_IMAGE_MISSING, exc.image) from exc
         except DockerUnavailableError as exc:
             raise JobFailure.of(JobErrorCategory.unavailable, CODE_DOCKER_UNAVAILABLE, str(exc)) from exc
+        except BuildBackendUnavailableError as exc:
+            raise JobFailure.of(JobErrorCategory.unavailable, CODE_BUILD_BACKEND_UNAVAILABLE, str(exc)) from exc
         sink = RunnerLogSink(ctx.log)
         try:
             with self._fetcher.bind(str(spec.id), envelope.job_token):
@@ -107,6 +110,11 @@ class CompileJobExecutor:
                     )
         except (BlobIntegrityError, RunnerApiError, RunnerUnreachable) as exc:
             raise JobFailure.of(JobErrorCategory.unavailable, CODE_BLOB_UNAVAILABLE, str(exc)) from exc
+        except ImageMissingError as exc:
+            # Исполнитель kubernetes узнаёт об отсутствии образа только при запуске пода.
+            raise JobFailure.of(JobErrorCategory.unavailable, CODE_IMAGE_MISSING, exc.image) from exc
+        except BuildBackendUnavailableError as exc:
+            raise JobFailure.of(JobErrorCategory.unavailable, CODE_BUILD_BACKEND_UNAVAILABLE, str(exc)) from exc
         keep = frozenset(entry.sha256 for entry in envelope.manifest if entry.sha256)
         await asyncio.to_thread(self._cache.evict, self._cache_max_bytes, keep)
         await asyncio.to_thread(self._workspaces.evict, frozenset({str(spec.project_id)}))

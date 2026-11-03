@@ -44,6 +44,11 @@ api = [
     "uvicorn[standard]>=0.32",
 ]
 
+# Исполнитель kubernetes раннера: exec в под сборки идёт по websocket (HSE_RUNNER__EXECUTOR=kubernetes).
+kubernetes = [
+    "websockets>=14",
+]
+
 # Серверный режим (этап 2). В local-режиме не импортируется: приложение поднимается без этого extra.
 server = [
     "sqlalchemy[asyncio]>=2.0",
@@ -53,6 +58,7 @@ server = [
     "argon2-cffi>=23.1",
     "aiosmtplib>=3.0",
     "joserfc>=1.0",
+    "webauthn==3.0.1",
 ]
 
 test = [
@@ -220,6 +226,7 @@ markers = [
     "pg: needs a real Postgres (HSE_TEST_PG_DSN); skipped without it.",
     "s3: needs S3 (moto in process, or MinIO via HSE_TEST_S3_ENDPOINT); skipped without the server extra.",
     "requires_sshd: needs a local sshd and ssh-keygen; skipped when they are missing.",
+    "k8s: needs a Kubernetes cluster (kind) and HSE_TEST_K8S_*; skipped without them.",
 ]
 
 filterwarnings = [

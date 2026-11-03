@@ -1,0 +1,18 @@
+{
+  "password_enabled": true,
+  "oidc_enabled_count": 0,
+  "fields": {
+    "auth.password_enabled": {
+      "source": "default",
+      "locked": false
+    },
+    "auth.passkeys_enabled": {
+      "source": "env",
+      "locked": true
+    }
+  },
+  "passkeys_enabled": false,
+  "passkey_domain": "studio.example.org",
+  "passkey_issue": null,
+  "passkey_domains": []
+}

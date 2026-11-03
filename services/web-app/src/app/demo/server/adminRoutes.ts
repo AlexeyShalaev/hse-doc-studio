@@ -79,6 +79,7 @@ export const createAdminRoutes = (
         ...world.bootstrap.auth,
         registration_mode: s.registration.registration_mode,
         password_enabled: s.auth.password_enabled,
+        passkeys_enabled: s.auth.passkeys_enabled,
         smtp_enabled: s.smtp.enabled,
         oidc_providers: s.providers
           .filter((p) => p.enabled)
@@ -90,6 +91,9 @@ export const createAdminRoutes = (
   const authView = (): AdminAuthSettings => ({
     ...state().auth,
     oidc_enabled_count: enabledCount(),
+    passkey_domain: "studio.example.org",
+    passkey_issue: null,
+    passkey_domains: [{ domain: "studio.example.org", count: 3 }],
   });
 
   const providerFrom = (
@@ -195,16 +199,28 @@ export const createAdminRoutes = (
       pattern: "/settings/auth",
       handler: guarded((req) => {
         const s = state();
-        const { password_enabled: value } = (req.body ?? {}) as Record<
-          string,
-          unknown
-        >;
+        const { password_enabled: value, passkeys_enabled: passkeys } =
+          (req.body ?? {}) as Record<string, unknown>;
+        if (typeof passkeys === "boolean") {
+          if (s.auth.fields["auth.passkeys_enabled"]?.locked) return locked();
+          s.auth = {
+            ...s.auth,
+            passkeys_enabled: passkeys,
+            fields: {
+              ...s.auth.fields,
+              "auth.passkeys_enabled": admin("admin"),
+            },
+          };
+          syncBootstrap();
+          return demoJson(authView());
+        }
         if (typeof value !== "boolean") return demoJson(authView());
         if (s.auth.fields["auth.password_enabled"]?.locked) return locked();
         if (!value && enabledCount() === 0) return lastMethod();
         s.auth = {
+          ...s.auth,
           password_enabled: value,
-          fields: { "auth.password_enabled": admin("admin") },
+          fields: { ...s.auth.fields, "auth.password_enabled": admin("admin") },
         };
         syncBootstrap();
         return demoJson(authView());

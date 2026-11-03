@@ -28,7 +28,7 @@ The runner drives sibling containers through `/var/run/docker.sock`. That equals
 - treat the runner host as trusted infrastructure, separate from the api and database;
 - prefer rootless Docker, sysbox or a dedicated virtual machine;
 - the api has no Docker access and must not get any;
-- on Kubernetes the runner currently uses hostPath; a pod per job with gVisor or Kata is planned for later stages.
+- on Kubernetes use the `kubernetes` executor (a pod per job, no socket or hostPath, Pod Security restricted, no network); for shared installations add a gVisor or Kata RuntimeClass (`runner.kubernetes.runtimeClassName`). See "Runners" and `docs/design/k8s-runner.md`.
 
 ## Trust boundaries
 

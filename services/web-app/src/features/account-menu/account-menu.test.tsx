@@ -105,6 +105,16 @@ describe("AccountMenu", () => {
     expect(screen.getByTestId("where")).toHaveTextContent(/^\/admin$/);
   });
 
+  it("leads to the local version screen", async () => {
+    const user = userEvent.setup();
+    mount(serverUser);
+    await user.click(screen.getByTestId("account-menu-trigger"));
+    const item = await screen.findByTestId("account-menu-local-studio");
+    expect(item).toHaveTextContent("Локальная версия");
+    await user.click(item);
+    expect(screen.getByTestId("where")).toHaveTextContent(/^\/local-studio$/);
+  });
+
   it("logout drops every cached query of the user and the CSRF token", async () => {
     const user = userEvent.setup();
     const post = vi

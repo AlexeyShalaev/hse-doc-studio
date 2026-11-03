@@ -60,7 +60,7 @@ export const DocSignaturesPane = ({
     useSignaturesState(projectId);
   const { mutate: updatePlacement } = useUpdateSignaturePlacement();
   const { mutate: updateSlotConfig } = useUpdateSlotConfig();
-  const { start, isRunning, slot } = useStartCompile(projectId, docId);
+  const { start, isRunning, slot, block } = useStartCompile(projectId, docId);
 
   // The signature preview needs a PDF, which exists iff the most recent build
   // actually produced one. Gate on the *compile* result, not doc.status: a doc
@@ -260,6 +260,7 @@ export const DocSignaturesPane = ({
           onPlacementChange={handlePlacementChange}
           onCompileRequest={start}
           isCompileRunning={isRunning}
+          isCompileBlocked={block !== null}
         />
       </div>
     </div>

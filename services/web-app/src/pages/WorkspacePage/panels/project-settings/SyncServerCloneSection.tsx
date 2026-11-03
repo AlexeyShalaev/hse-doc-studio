@@ -4,7 +4,9 @@ import { useTranslation } from "react-i18next";
 import { CopyField } from "@shared/ui/CopyField";
 import { Notice } from "@shared/ui/ConflictKit";
 import { Spinner } from "@shared/ui/Spinner";
+import { OpenInLocalStudio } from "@features/local-studio-guide";
 import { useProjectGitRemote } from "@entities/git-server";
+import { LocalStudioLink } from "@entities/local-studio";
 import { SectionCard } from "../SectionCard";
 
 export type SyncServerCloneSectionProps = {
@@ -114,9 +116,18 @@ export const SyncServerCloneSection = ({
               style={{ gap: 10, fontSize: 13 }}
             >
               {tab === "desktop" ? (
-                <p style={{ margin: 0, lineHeight: 1.5 }}>
-                  {t("clone.desktopSteps")}
-                </p>
+                <>
+                  <div
+                    className="flex items-center"
+                    style={{ gap: 10, flexWrap: "wrap" }}
+                  >
+                    <OpenInLocalStudio projectId={projectId} />
+                    <LocalStudioLink projectId={projectId} />
+                  </div>
+                  <p className="dim" style={{ margin: 0, lineHeight: 1.5 }}>
+                    {t("clone.desktopSteps")}
+                  </p>
+                </>
               ) : (
                 <>
                   <CopyField

@@ -46,6 +46,16 @@ The list shows version, tags, capacity and last poll time.
 - The api and runner versions are checked at registration; an incompatible runner is rejected.
 - After registering, a new runner negotiates capabilities with the api (`/announce`): AI relay, separate slots for it and a stop notice. With an older api that does not know this call the runner keeps working as before, without the relay; an older runner works with a newer api too.
 
+## When there are no runners
+
+On a server, documents are built only on runners. The interface learns in advance which tags (`tex`, `office`) have a live runner right now, shared or the project owner's personal one, and refreshes this by itself without a page reload (`GET /api/v1/projects/{id}/build-availability`).
+
+- No runner at all: Build, Build all and rebuild are disabled, with an explanation next to them. The document can be built locally in the desktop Studio (the project syncs, and the finished PDF is uploaded to the server), or the administrator can connect a runner; administrators get a link to Runners.
+- Runners exist but without the needed tag (for example, no runner with `office`): only those documents are blocked, Build all builds the rest.
+- If a runner disappears between the check and the click, the server answers 409 with code `no_runners` or `no_runner_for_tags` and a `tags` list, and the interface shows a single message.
+
+Local mode needs no runners and never blocks the build.
+
 ## AI through your own runner
 
 The server never reaches into users' internal networks. To use a model on your own hardware (Ollama, vLLM, LM Studio, any OpenAI-compatible endpoint), the owner of a personal runner declares endpoints in the runner's environment and adds a "Via my runner" provider on the site. The server only knows the endpoint name; the URL and key stay with the runner.
@@ -63,6 +73,30 @@ The server never reaches into users' internal networks. To use a model on your o
 - Only the runner owner can relay through it. Without declared endpoints the runner takes no relay jobs.
 
 api-side limits: `HSE_STUDIO__JOBS__RELAY_PICKUP_S` (how long to wait for the runner to take the request), `HSE_STUDIO__JOBS__RELAY_MAX_REQUEST_BYTES`, `HSE_STUDIO__JOBS__RELAY_MAX_RESPONSE_BYTES`, `HSE_STUDIO__JOBS__RELAY_MAX_PENDING_PER_USER`, `HSE_STUDIO__JOBS__RELAY_MAX_DURATION_S`, and the memory budget for request bodies held by api: `HSE_STUDIO__JOBS__RELAY_MAX_PENDING_BYTES_PER_USER` (per person), `HSE_STUDIO__JOBS__RELAY_MAX_PENDING_TOTAL` and `HSE_STUDIO__JOBS__RELAY_MAX_PENDING_BYTES_TOTAL` (whole process). Over the budget the chat gets `relay_busy`. A runner that does not answer shows up in the chat as "Runner "…" did not respond" with a way to pick another model.
+
+## Build executors
+
+The runner itself runs signature verification, submission packing, checks and AI relay; office files are converted by a long-running Gotenberg. Only the TeX build needs a separate executor, chosen by `HSE_RUNNER__EXECUTOR`:
+
+| Value | How the build runs | Fits |
+|---|---|---|
+| `docker` (default) | a sibling TeX Live container through `/var/run/docker.sock` | a machine or VM with Docker, compose |
+| `kubernetes` | a separate pod per build in the runner's namespace through the Kubernetes API | a Kubernetes cluster, including containerd nodes without Docker |
+
+The `kubernetes` executor needs no `docker.sock`, no `hostPath` and no privileges: the runner pod and the build pods pass the Pod Security Standard restricted. Sources go into the pod and the result comes back through the Kubernetes API `exec` (a tar stream), so there is no volume shared between the runner and the pods and the build pods need no network. The runner sets CPU and memory limits and `activeDeadlineSeconds` on every pod, deletes the pod when the job is cancelled and removes pods left over from its previous run. The build log goes to the job log as usual.
+
+| Variable | Value |
+|---|---|
+| `HSE_RUNNER__K8S__NAMESPACE` | namespace of build pods (defaults to the runner's namespace) |
+| `HSE_RUNNER__K8S__IMAGE` | TeX image; defaults to `HSE_RUNNER__TEX_IMAGE` |
+| `HSE_RUNNER__K8S__CPU_REQUEST`, `…CPU_LIMIT`, `…MEMORY_REQUEST`, `…MEMORY_LIMIT` | build pod resources (500m/2, 1Gi/4Gi) |
+| `HSE_RUNNER__K8S__ACTIVE_DEADLINE_S` | pod lifetime limit, seconds (1800) |
+| `HSE_RUNNER__K8S__POD_START_TIMEOUT_S` | how long to wait for the pod to start, image pull included (300) |
+| `HSE_RUNNER__K8S__NODE_SELECTOR`, `…TOLERATIONS` | build pod placement, JSON |
+| `HSE_RUNNER__K8S__RUNTIME_CLASS_NAME` | RuntimeClass for build pods, e.g. `gvisor` |
+| `HSE_RUNNER__K8S__TEX_CACHE_CLAIM` | optional PVC with the TeX font cache |
+
+In the Helm chart this is `runner.executor: kubernetes` and the `runner.kubernetes` block (see the chart README): the chart creates the runner ServiceAccount, a Role limited to pods in its namespace (`pods`, `pods/log`, `pods/exec`), a NetworkPolicy that denies build pods any network, and the runner data volume. A build failing with `image_missing` means the node could not pull the TeX image; `build_backend_unavailable` means Kubernetes refused the pod (permissions, quota, no suitable node), details are in the job log. Design and trade-offs: `docs/design/k8s-runner.md`.
 
 ## Scaling
 

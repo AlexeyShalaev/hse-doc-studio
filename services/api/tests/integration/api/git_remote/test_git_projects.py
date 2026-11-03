@@ -54,3 +54,17 @@ def test__project_git_remote__clone_url_role_and_bootstrap_capability(live: Live
     assert reader["enabled"] is True
     caps = live.call("GET", "/api/v1/session/bootstrap").json()["capabilities"]
     assert (caps["git_remote"], caps["git_server_login"]) == (True, False)
+
+
+def test__local_studio_info__server_address_version_and_install_links(live: Live) -> None:
+    anna = live.person("anna")
+
+    body = live.call("GET", "/api/v1/local-studio", anna).json()
+
+    assert body["server_url"] == live.base
+    assert body["git_remote_enabled"] is True
+    assert body["server_version"]
+    assert body["default_port"] == 17240
+    assert body["install_base_url"].endswith("/master/deploy")
+    assert body["releases_url"].endswith("/releases")
+    assert live.call("GET", "/api/v1/local-studio").status_code == 401

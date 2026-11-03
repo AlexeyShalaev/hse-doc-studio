@@ -8,7 +8,15 @@ export const accountKeys = {
   sessions: () => [...accountKeys.all, "sessions"] as const,
   tokens: () => [...accountKeys.all, "tokens"] as const,
   identities: () => [...accountKeys.all, "identities"] as const,
+  passkeys: () => [...accountKeys.all, "passkeys"] as const,
 };
+
+export const useAccountPasskeys = () =>
+  useQuery({
+    queryKey: accountKeys.passkeys(),
+    queryFn: () => accountApi.passkeys(),
+    staleTime: 15_000,
+  });
 
 export const useAccount = () =>
   useQuery({
