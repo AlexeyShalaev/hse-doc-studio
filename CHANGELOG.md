@@ -6,36 +6,13 @@ Generated from `release-notes.json` via `make changelog` — do not edit by hand
 Release notes are hand-written and bilingual (RU/EN); the app shows them in the
 selected interface language.
 
-## [0.5.0](https://github.com/AlexeyShalaev/hse-doc-studio/compare/v0.4.0...v0.5.0) (2026-11-03)
+## [0.5.0](https://github.com/AlexeyShalaev/hse-doc-studio/compare/v0.4.0...v0.5.0) - 2026-11-03
 
-
-### Features
-
-* **admin:** предпросмотр писем в разделе почты и контракт ответа ([0b11f3b](https://github.com/AlexeyShalaev/hse-doc-studio/commit/0b11f3b39ca16c7044c92e7ce71eb1cb26422f25))
-* **git-sync:** список проектов облака в локальной Студии и открытие одним шагом ([48c4743](https://github.com/AlexeyShalaev/hse-doc-studio/commit/48c47433aebfe4c3956ddf67475344c4dfb32769))
-* **helm:** флаг updater.enabled с ServiceAccount и Role на свой namespace ([64ba9b8](https://github.com/AlexeyShalaev/hse-doc-studio/commit/64ba9b85a1ac0ec554f46caff880167e23d974fe))
-* **mail:** HTML-письма на языке получателя, предпросмотр в админке ([becfa08](https://github.com/AlexeyShalaev/hse-doc-studio/commit/becfa085854d1a5a67be176df0816200b2c7a90a))
-* **mail:** единый HTML-шаблон писем, словари ru/en и скрипт выгрузки для просмотра ([37d4c9d](https://github.com/AlexeyShalaev/hse-doc-studio/commit/37d4c9dae94535ce526687e10a4835fcc9567093))
-* **mail:** письма уходят multipart/alternative на языке получателя, предпросмотр писем для админа ([9baf8ce](https://github.com/AlexeyShalaev/hse-doc-studio/commit/9baf8ce315b848f44dd2ed85249803a978736a01))
-* **settings:** папка для проектов из облака ([4fb95bd](https://github.com/AlexeyShalaev/hse-doc-studio/commit/4fb95bdd45c712f3ac7ce4347fec08b38c4c1d19))
-* **update:** исполнитель kubernetes для автообновления сервера ([f2dc1c0](https://github.com/AlexeyShalaev/hse-doc-studio/commit/f2dc1c01ab9f95039a1275ad924ede662503559f))
-* **update:** исполнитель kubernetes для автообновления сервера ([e732456](https://github.com/AlexeyShalaev/hse-doc-studio/commit/e732456b7e0e91af56f2234577e3eeb5fc0d302a))
-* **web:** настройка папки для проектов из облака ([e66046a](https://github.com/AlexeyShalaev/hse-doc-studio/commit/e66046a7caea3ae16e6e0593efee8ffbfd5891f4))
-* **web:** подсказка в панели сборки для проекта, не подключённого к облаку ([7d9059b](https://github.com/AlexeyShalaev/hse-doc-studio/commit/7d9059bee49d782c97cb2ef1913d4ce71257dedf))
-* **web:** проекты облака в списке локальной Студии, открытие одним нажатием без мастера клонирования ([dc0b07c](https://github.com/AlexeyShalaev/hse-doc-studio/commit/dc0b07c3796ad3a0b7d746e3782675f86d14d6b0))
-* **web:** страница обновлений для исполнителя kubernetes ([d625db5](https://github.com/AlexeyShalaev/hse-doc-studio/commit/d625db564b3a631e84bd60ed080f483837e67323))
-* проекты облака в списке локальной Студии, открытие одним нажатием ([88098f2](https://github.com/AlexeyShalaev/hse-doc-studio/commit/88098f215ab170819be70494f804a8b9ad4d4f69))
-
-
-### Bug Fixes
-
-* **api:** сервер не синхронизирует локальную Ollama при старте ([d499e35](https://github.com/AlexeyShalaev/hse-doc-studio/commit/d499e35c143f6057336cd5d820b1b9f72c3797e4))
-* **api:** сервер не синхронизирует локальную Ollama при старте ([4afa7e4](https://github.com/AlexeyShalaev/hse-doc-studio/commit/4afa7e489276194bbb48055ba1fe05efc9e5abce))
-* **git-sync:** параметр маршрута открытия облачного проекта не называется project_id ([67ebd9b](https://github.com/AlexeyShalaev/hse-doc-studio/commit/67ebd9bb34ce8d247ea93da30485ff57b5d5d1a7))
-* **onboarding:** текст вариантов анкеты не терялся в тёмной теме ([aa04e8d](https://github.com/AlexeyShalaev/hse-doc-studio/commit/aa04e8d9e22aa5f2d518b0ddf72d089b5c06f596))
-* **onboarding:** текст вариантов анкеты не терялся в тёмной теме ([fc5b4fb](https://github.com/AlexeyShalaev/hse-doc-studio/commit/fc5b4fb08b9b02e89e980c3f09b47a2abbf531f7))
-* **settings:** боковое меню настроек прокручивается, MCP в группе ИИ ([628418d](https://github.com/AlexeyShalaev/hse-doc-studio/commit/628418d8f55a6cf42aea3b3f9b5308364ada3380))
-* **settings:** боковое меню настроек прокручивается, MCP в группе ИИ ([27563c3](https://github.com/AlexeyShalaev/hse-doc-studio/commit/27563c353d87ab2a29ac80cbada9d3c3c583f200))
+- Cloud projects in the local Studio: once connected to a server, the local Studio lists your cloud projects itself, in the same list as local ones and marked Cloud. One click on Open downloads the project into the projects folder (changeable in settings), shows the progress and opens it, with no clone wizard and no git on this path. The Open in local Studio link from the cloud takes you straight to the right project. Automatic sync and PDF upload need no setup and work for cloud projects from the start. If an open project is not linked to the cloud, the build panel says so: the PDF will stay on this computer
+- Nicer e-mails: invitations, e-mail confirmation, password reset, address change, passkey notifications and project access e-mails now arrive designed, with a large button, a fallback link, a note on why you received it and a security block, along with a plain-text version. An e-mail is written in the recipient's account language (Russian or English) and the subject is translated too. In the admin area (Sign-in and registration) you can preview every e-mail in both languages and send a test one
+- For administrators, one-button updates in Kubernetes: on the Updates page the Update and Roll back buttons now work in a cluster too. Turn it on with the updater.enabled flag in the Helm chart (off by default) and HSE_STUDIO__SERVER_UPDATE__EXECUTOR=kubernetes: a separate pod changes the api Deployment image, runs migrations as a Job and waits for health, and the image is checked against the digest from the release. Permissions are limited to its own namespace. A backup runs first if one is configured, otherwise you must confirm the risk. If migrations were applied but the new version did not come up, the image is not rolled back automatically: the status is Needs hands, with ready commands. After such an update set the version in your values (image.tag), otherwise the next helm upgrade will bring the old image back
+- Fixes: in the dark theme the answer options in the welcome questionnaire were black on dark and unreadable; the settings sidebar did not scroll, so lower sections (such as AI clients (MCP)) were out of reach, and the AI group heading was shown twice; on the server every start logged a local Ollama sync error
+- For administrators, upgrading from 0.4.0: there are no database migrations in this release, the schema stays at pk_01_passkeys. New settings: updater.enabled in Helm (off by default), HSE_STUDIO__SERVER_UPDATE__EXECUTOR=kubernetes, and for the local Studio the cloud projects folder (Settings, Repository access). E-mails are sent as HTML together with a plain-text version: without SMTP nothing changes and links are still shown on screen
 
 ## [0.4.0](https://github.com/AlexeyShalaev/hse-doc-studio/compare/v0.3.0...v0.4.0) - 2026-11-03
 

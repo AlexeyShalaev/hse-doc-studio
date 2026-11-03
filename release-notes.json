@@ -1,6 +1,32 @@
 {
   "releases": [
     {
+      "version": "0.5.0",
+      "date": "2026-11-03",
+      "notes": [
+        {
+          "ru": "Проекты облака в локальной Студии: после подключения к серверу локальная Студия сама показывает ваши облачные проекты в общем списке с пометкой «Облако». Один клик «Открыть» скачивает проект в папку проектов (её можно поменять в настройках), показывает ход загрузки и открывает его, без мастера клонирования и без git на этом пути. Ссылка из облака «Открыть в локальной Студии» ведёт сразу в нужный проект. Для автосинхронизации и выгрузки PDF ничего включать не нужно, они работают у проектов из облака с самого начала. Если открытый проект не связан с облаком, в панели сборки об этом сказано: PDF останется на этом компьютере",
+          "en": "Cloud projects in the local Studio: once connected to a server, the local Studio lists your cloud projects itself, in the same list as local ones and marked Cloud. One click on Open downloads the project into the projects folder (changeable in settings), shows the progress and opens it, with no clone wizard and no git on this path. The Open in local Studio link from the cloud takes you straight to the right project. Automatic sync and PDF upload need no setup and work for cloud projects from the start. If an open project is not linked to the cloud, the build panel says so: the PDF will stay on this computer"
+        },
+        {
+          "ru": "Красивые письма: приглашения, подтверждение e-mail, сброс пароля, смена адреса, уведомления о ключах passkey и письма о доступе к проектам теперь приходят оформленными, с крупной кнопкой, запасной ссылкой, пояснением, почему вы получили письмо, и блоком безопасности, а также текстовой версией. Письмо приходит на языке аккаунта получателя (русский или английский), тема тоже переведена. В админке (Вход и регистрация) можно посмотреть, как выглядит каждое письмо на обоих языках, и отправить тестовое",
+          "en": "Nicer e-mails: invitations, e-mail confirmation, password reset, address change, passkey notifications and project access e-mails now arrive designed, with a large button, a fallback link, a note on why you received it and a security block, along with a plain-text version. An e-mail is written in the recipient's account language (Russian or English) and the subject is translated too. In the admin area (Sign-in and registration) you can preview every e-mail in both languages and send a test one"
+        },
+        {
+          "ru": "Для администраторов, обновление по кнопке в Kubernetes: на странице «Обновления» кнопки «Обновить» и «Откатить» теперь работают и в кластере. Включается флагом updater.enabled в Helm-чарте (по умолчанию выключен) и HSE_STUDIO__SERVER_UPDATE__EXECUTOR=kubernetes: отдельный под меняет образ Deployment api, прогоняет миграции Job-ом и ждёт здоровья, образ проверяется по дайджесту из релиза. Права только на свой namespace. Перед обновлением запускается бэкап, если он настроен, иначе нужно подтвердить риск. Если миграции применились, а новая версия не поднялась, образ не откатывается сам: статус «Нужны руки» с готовыми командами. После такого обновления укажите версию в values (image.tag), иначе следующий helm upgrade вернёт прежний образ",
+          "en": "For administrators, one-button updates in Kubernetes: on the Updates page the Update and Roll back buttons now work in a cluster too. Turn it on with the updater.enabled flag in the Helm chart (off by default) and HSE_STUDIO__SERVER_UPDATE__EXECUTOR=kubernetes: a separate pod changes the api Deployment image, runs migrations as a Job and waits for health, and the image is checked against the digest from the release. Permissions are limited to its own namespace. A backup runs first if one is configured, otherwise you must confirm the risk. If migrations were applied but the new version did not come up, the image is not rolled back automatically: the status is Needs hands, with ready commands. After such an update set the version in your values (image.tag), otherwise the next helm upgrade will bring the old image back"
+        },
+        {
+          "ru": "Исправления: в тёмной теме варианты вопросов в анкете знакомства были чёрными на тёмном и не читались; боковое меню настроек не прокручивалось, из-за чего нижние разделы (например «ИИ-клиенты (MCP)») были недоступны, а заголовок группы «Искусственный интеллект» выводился дважды; на сервере при каждом запуске в журнал попадала ошибка синхронизации локальной Ollama",
+          "en": "Fixes: in the dark theme the answer options in the welcome questionnaire were black on dark and unreadable; the settings sidebar did not scroll, so lower sections (such as AI clients (MCP)) were out of reach, and the AI group heading was shown twice; on the server every start logged a local Ollama sync error"
+        },
+        {
+          "ru": "Для администраторов, обновление с 0.4.0: миграций базы в этом релизе нет, схема остаётся на pk_01_passkeys. Новые настройки: updater.enabled в Helm (по умолчанию выключен), HSE_STUDIO__SERVER_UPDATE__EXECUTOR=kubernetes, для локальной Студии папка проектов из облака (Настройки, Доступ к репозиториям). Письма отправляются как HTML вместе с текстовой версией: без SMTP ничего не меняется, ссылки по-прежнему показываются на экране",
+          "en": "For administrators, upgrading from 0.4.0: there are no database migrations in this release, the schema stays at pk_01_passkeys. New settings: updater.enabled in Helm (off by default), HSE_STUDIO__SERVER_UPDATE__EXECUTOR=kubernetes, and for the local Studio the cloud projects folder (Settings, Repository access). E-mails are sent as HTML together with a plain-text version: without SMTP nothing changes and links are still shown on screen"
+        }
+      ]
+    },
+    {
       "version": "0.4.0",
       "date": "2026-11-03",
       "notes": [
