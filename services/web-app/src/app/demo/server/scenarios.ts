@@ -162,6 +162,7 @@ const base = (overrides: Partial<Bootstrap>): Bootstrap =>
     capabilities: { ...SERVER_CAPABILITIES },
     csrf_token: null,
     guest: null,
+    landing: { enabled: true, name: "HSE Doc Studio" },
     ...overrides,
   });
 

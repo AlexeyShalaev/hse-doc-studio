@@ -17,6 +17,11 @@ from hse_doc_studio.core.egress import IEgressPolicy
 from hse_doc_studio.core.git_sync.protocols import ILocalAuthorProfile, ISecretCipher
 from hse_doc_studio.core.identity.auth_settings import AuthEnvOverrides
 from hse_doc_studio.core.identity.commit_identity import noreply_domain
+from hse_doc_studio.core.identity.instance_settings import (
+    InstanceEnvOverrides,
+    InstanceSettings,
+    effective_instance_settings,
+)
 from hse_doc_studio.core.identity.lifecycle import IUserLifecycle, RetentionPolicy
 from hse_doc_studio.core.identity.oidc import IOidcClient, IOidcProviderCatalog, IOidcStateCodec, OidcProviderConfig
 from hse_doc_studio.core.identity.passkeys import IPasskeyRepository
@@ -831,7 +836,11 @@ class ServerIdentityProvider(Provider):
         oidc: IOidcProviderCatalog,
         settings_repo: IInstanceSettingsRepository,
         personal: IPersonalRunnerSettings,
+        env: InstanceEnvOverrides,
     ) -> BootstrapUC:
+        async def instance() -> InstanceSettings:
+            return effective_instance_settings(await settings_repo.get_all(), env)
+
         async def personal_runners_allowed() -> bool:
             return (await personal.current()).enabled
 
@@ -846,6 +855,7 @@ class ServerIdentityProvider(Provider):
             oidc_providers=oidc.list_enabled,
             signing_keys_allowed=signing_keys_allowed,
             personal_runners_allowed=personal_runners_allowed,
+            instance=instance,
         )
 
     @provide

@@ -24,6 +24,13 @@ export type LoginCardProps = {
   initialEmail?: string;
   /** Вход по passkey: кнопка и подсказки автозаполнения в поле почты. */
   passkey?: { available: boolean; pending: boolean; onStart: () => void };
+  /**
+   * Заголовок карточки. На лендинге страница уже имеет свой h1, поэтому там h2,
+   * а в диалоге заголовок даёт сам диалог (false).
+   */
+  heading?: "h1" | "h2" | false;
+  /** Фокус в поле почты при показе: на лендинге выключен, чтобы страница не прыгала. */
+  autoFocus?: boolean;
 };
 
 /**
@@ -39,7 +46,10 @@ export const LoginCard = ({
   onSubmit,
   initialEmail = "",
   passkey,
+  heading = "h1",
+  autoFocus = true,
 }: LoginCardProps) => {
+  const Heading = heading === false ? null : heading;
   const { t } = useTranslation("auth");
   const uid = useId();
   const [email, setEmail] = useState(initialEmail);
@@ -64,13 +74,19 @@ export const LoginCard = ({
   };
 
   return (
-    <section data-testid="auth-screen-login" aria-labelledby={`${uid}-title`}>
-      <h1
-        id={`${uid}-title`}
-        style={{ fontSize: 20, fontWeight: 600, margin: "0 0 6px" }}
-      >
-        {t("pages.login.title")}
-      </h1>
+    <section
+      data-testid="auth-screen-login"
+      aria-labelledby={Heading ? `${uid}-title` : undefined}
+      aria-label={Heading ? undefined : t("pages.login.title")}
+    >
+      {Heading && (
+        <Heading
+          id={`${uid}-title`}
+          style={{ fontSize: 20, fontWeight: 600, margin: "0 0 6px" }}
+        >
+          {t("pages.login.title")}
+        </Heading>
+      )}
       <p style={{ margin: "0 0 18px", color: "var(--fg-2)", fontSize: 13.5 }}>
         {auth.password_enabled ? t("pages.login.body") : t("login.ssoOnlyBody")}
       </p>
@@ -139,7 +155,7 @@ export const LoginCard = ({
             type="email"
             name="email"
             autoComplete={hasPasskey ? "username webauthn" : "username"}
-            autoFocus
+            autoFocus={autoFocus}
             required
             value={email}
             onChange={(e) => {

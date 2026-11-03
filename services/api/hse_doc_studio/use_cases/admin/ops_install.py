@@ -14,6 +14,7 @@ from hse_doc_studio.core.identity.instance_settings import (
     KEY_ARTIFACT_RETENTION_DAYS,
     KEY_BUILD_TIMEOUT_S,
     KEY_DOCS_URL,
+    KEY_LANDING_ENABLED,
     KEY_NAME,
     KEY_PERSONAL_ENABLED,
     KEY_PERSONAL_MAX_PER_USER,
@@ -62,6 +63,7 @@ class InstancePatch:
     name: str | None = None
     public_url: str | None = None
     docs_url: str | None = None
+    landing_enabled: bool | None = None
 
 
 @dataclass(frozen=True)
@@ -104,6 +106,14 @@ def _instance_changes(patch: InstancePatch) -> tuple[dict[str, str], list[str]]:
         else:
             raise _invalid()
     return values, cleared
+
+
+def _instance_writes(patch: InstancePatch) -> tuple[dict[str, str | bool], list[str]]:
+    values, cleared = _instance_changes(patch)
+    writes: dict[str, str | bool] = dict(values)
+    if patch.landing_enabled is not None:
+        writes[KEY_LANDING_ENABLED] = patch.landing_enabled
+    return writes, cleared
 
 
 def _check_locked(keys: set[str], env: InstanceEnvOverrides) -> None:
@@ -157,7 +167,7 @@ class UpdateInstanceSettingsUC:
 
     async def execute(self, actor: Actor, patch: InstancePatch) -> InstanceView:
         admin_id = require_admin(actor)
-        values, cleared = _instance_changes(patch)
+        values, cleared = _instance_writes(patch)
         _check_locked({*values, *cleared}, self._env)
         if values or cleared:
             async with self._uow.begin():

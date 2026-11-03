@@ -21,11 +21,11 @@ for (const lang of LANGS) {
     const createdName = `E2E проект ${lang}`;
     let createdId = "";
 
-    test("аноним попадает на экран входа, неверный пароль отклоняется", async ({
+    test("аноним видит лендинг со входом, неверный пароль отклоняется", async ({
       page,
     }) => {
       await page.goto("/");
-      await expect(page).toHaveURL(/\/login/);
+      await expect(page.getByTestId("landing-page")).toBeVisible();
       await expect(page.getByTestId("login-form")).toBeVisible();
       await shot(page, lang, "01-login");
 
@@ -36,7 +36,7 @@ for (const lang of LANGS) {
         .locator("button[type=submit]")
         .click();
       await expect(page.getByTestId("login-error")).toBeVisible();
-      await expect(page).toHaveURL(/\/login/);
+      await expect(page.getByTestId("landing-page")).toBeVisible();
       await shot(page, lang, "02-login-error");
     });
 
@@ -266,7 +266,8 @@ for (const lang of LANGS) {
       const anonymous = await page.request.get("/api/v1/projects");
       expect(anonymous.status()).toBe(401);
       await page.goto("/");
-      await expect(page).toHaveURL(/\/login/);
+      await expect(page.getByTestId("login-form")).toBeVisible();
+      await expect(page.getByTestId("account-menu-trigger")).toHaveCount(0);
     });
   });
 }

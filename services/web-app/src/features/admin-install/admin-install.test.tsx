@@ -157,6 +157,23 @@ describe("настройки установки в админке", () => {
       expect(saved.public_url).toBe("https://studio.hse.example");
     });
 
+    it("лендинг для гостей: включён по умолчанию, выключается и сохраняется", async () => {
+      const user = userEvent.setup();
+      mount(<InstancePage />);
+      const toggle = await screen.findByTestId("admin-landing-toggle");
+      expect(toggle).toBeChecked();
+      await user.click(toggle);
+      await user.click(screen.getByTestId("save-bar-save"));
+      await waitFor(() => {
+        expect(screen.queryByTestId("save-bar")).toBeNull();
+      });
+      const saved = AdminInstanceSettingsSchema.parse(
+        (await call("GET", "/settings/instance")).data,
+      );
+      expect(saved.landing_enabled).toBe(false);
+      expect(saved.fields["instance.landing_enabled"]?.source).toBe("admin");
+    });
+
     it("неверный адрес показывает ошибку и не даёт сохранить", async () => {
       const user = userEvent.setup();
       mount(<InstancePage />);

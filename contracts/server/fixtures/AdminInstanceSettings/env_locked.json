@@ -2,9 +2,11 @@
   "name": "Studio ВШЭ",
   "public_url": "https://studio.hse.example",
   "docs_url": "https://docs.hse.example/studio",
+  "landing_enabled": false,
   "fields": {
     "instance.name": {"source": "admin", "locked": false},
     "instance.public_url": {"source": "env", "locked": true},
-    "instance.docs_url": {"source": "admin", "locked": false}
+    "instance.docs_url": {"source": "admin", "locked": false},
+    "instance.landing_enabled": {"source": "env", "locked": true}
   }
 }

@@ -80,6 +80,11 @@ export const InstanceForm = ({
     },
     (key) => !lockInstance(key),
   );
+  const landingLocked = isLocked(instance.fields, "instance.landing_enabled");
+  const lnd = useDraft<{ enabled: boolean }>(
+    { enabled: instance.landing_enabled },
+    () => !landingLocked,
+  );
   const bld = useDraft<BuildDraft>(
     {
       minutes: String(Math.round(build.timeout_s / 60)),
@@ -132,10 +137,14 @@ export const InstanceForm = ({
     waitBad ||
     maxBad;
   const dirtyCount =
-    inst.changed.length + bld.changed.length + prs.changed.length;
+    inst.changed.length +
+    lnd.changed.length +
+    bld.changed.length +
+    prs.changed.length;
 
   const discard = () => {
     inst.reset();
+    lnd.reset();
     bld.reset();
     prs.reset();
     setTouched(false);
@@ -158,14 +167,20 @@ export const InstanceForm = ({
     const pick = (key: InstanceKey): string | null =>
       inst.isChanged(key) ? inst.value[key].trim() : null;
     const result = await settleSaves([
-      inst.changed.length > 0 && {
+      (inst.changed.length > 0 || lnd.changed.length > 0) && {
         run: () =>
           saveInstance({
             name: pick("name"),
             public_url: pick("public_url"),
             docs_url: pick("docs_url"),
+            landing_enabled: lnd.isChanged("enabled")
+              ? lnd.value.enabled
+              : null,
           }),
-        done: inst.reset,
+        done: () => {
+          inst.reset();
+          lnd.reset();
+        },
       },
       (bld.changed.length > 0 || prs.changed.length > 0) && {
         run: () =>
@@ -255,7 +270,11 @@ export const InstanceForm = ({
         testId="admin-instance"
         title={t("instance.title")}
         description={t("instance.sub")}
-        footer={INSTANCE_KEYS.every(lockInstance) ? <AllLockedNote /> : null}
+        footer={
+          INSTANCE_KEYS.every(lockInstance) && landingLocked ? (
+            <AllLockedNote />
+          ) : null
+        }
       >
         {textRow("name", t("instance.name"), t("instance.nameHint"), {
           maxLength: 120,
@@ -280,6 +299,23 @@ export const InstanceForm = ({
           placeholder: "https://docs.example.org",
           inputMode: "url",
         })}
+        <SettingRow
+          label={t("instance.landing")}
+          hint={t("instance.landingHint")}
+          htmlFor={`${uid}-landing`}
+          locked={landingLocked}
+          testId="instance-landing"
+        >
+          <Switch
+            id={`${uid}-landing`}
+            checked={lnd.value.enabled}
+            disabled={landingLocked}
+            onChange={(enabled) => {
+              lnd.set({ enabled });
+            }}
+            testId="admin-landing-toggle"
+          />
+        </SettingRow>
       </Section>
 
       <Section

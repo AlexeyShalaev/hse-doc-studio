@@ -11,13 +11,14 @@ from hse_doc_studio.core.jobs.routing import PERSONAL_MAX_PER_USER_LIMIT, PERSON
 KEY_NAME = "instance.name"
 KEY_PUBLIC_URL = "instance.public_url"
 KEY_DOCS_URL = "instance.docs_url"
+KEY_LANDING_ENABLED = "instance.landing_enabled"
 KEY_BUILD_TIMEOUT_S = "build.timeout_s"
 KEY_ARTIFACT_RETENTION_DAYS = "build.artifact_retention_days"
 KEY_PERSONAL_ENABLED = "runners.personal_enabled"
 KEY_PERSONAL_WAIT_S = "runners.personal_wait_s"
 KEY_PERSONAL_MAX_PER_USER = "runners.personal_max_per_user"
 
-INSTANCE_KEYS = (KEY_NAME, KEY_PUBLIC_URL, KEY_DOCS_URL)
+INSTANCE_KEYS = (KEY_NAME, KEY_PUBLIC_URL, KEY_DOCS_URL, KEY_LANDING_ENABLED)
 BUILD_KEYS = (KEY_BUILD_TIMEOUT_S, KEY_ARTIFACT_RETENTION_DAYS)
 PERSONAL_RUNNER_KEYS = (KEY_PERSONAL_ENABLED, KEY_PERSONAL_WAIT_S, KEY_PERSONAL_MAX_PER_USER)
 PERSONAL_WAIT_RANGE = (0, PERSONAL_WAIT_MAX_S)
@@ -38,6 +39,7 @@ class InstanceSettings:
     name: str
     public_url: str
     docs_url: str | None
+    landing_enabled: bool = True
 
 
 @dataclass(frozen=True)
@@ -53,6 +55,7 @@ class InstanceEnvOverrides:
     name: str | None = None
     public_url: str | None = None
     docs_url: str | None = None
+    landing_enabled: bool | None = None
     build_timeout_s: int | None = None
     artifact_retention_days: int | None = None
     personal_runners_enabled: bool | None = None
@@ -64,6 +67,7 @@ class InstanceEnvOverrides:
             (KEY_NAME, self.name),
             (KEY_PUBLIC_URL, self.public_url),
             (KEY_DOCS_URL, self.docs_url),
+            (KEY_LANDING_ENABLED, self.landing_enabled),
             (KEY_BUILD_TIMEOUT_S, self.build_timeout_s),
             (KEY_ARTIFACT_RETENTION_DAYS, self.artifact_retention_days),
             (KEY_PERSONAL_ENABLED, self.personal_runners_enabled),
@@ -86,10 +90,16 @@ def _number(values: Mapping[str, object], key: str, bounds: tuple[int, int], def
 
 
 def effective_instance_settings(values: Mapping[str, object], env: InstanceEnvOverrides) -> InstanceSettings:
+    stored_landing = values.get(KEY_LANDING_ENABLED)
     return InstanceSettings(
         name=env.name or _text(values, KEY_NAME) or DEFAULT_NAME,
         public_url=env.public_url or _text(values, KEY_PUBLIC_URL) or "",
         docs_url=env.docs_url or _text(values, KEY_DOCS_URL),
+        landing_enabled=env.landing_enabled
+        if env.landing_enabled is not None
+        else stored_landing
+        if isinstance(stored_landing, bool)
+        else True,
     )
 
 

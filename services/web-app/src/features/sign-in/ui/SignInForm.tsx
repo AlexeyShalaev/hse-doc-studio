@@ -9,9 +9,11 @@ import {
 import { usePasskeySignIn } from "../model/usePasskeySignIn";
 import { useSignIn } from "../model/useSignIn";
 import { ssoStartUrl } from "../lib/ssoStartUrl";
-import { LoginCard } from "./LoginCard";
+import { LoginCard, type LoginCardProps } from "./LoginCard";
 
-export const SignInForm = () => {
+export type SignInFormProps = Pick<LoginCardProps, "heading" | "autoFocus">;
+
+export const SignInForm = ({ heading, autoFocus }: SignInFormProps = {}) => {
   const { data } = useBootstrap();
   const [params] = useSearchParams();
   const { submit, pending, failure } = useSignIn();
@@ -26,6 +28,8 @@ export const SignInForm = () => {
       pending={pending}
       failure={passkey.failure ?? failure}
       sessionEnded={sessionEnded}
+      {...(heading !== undefined ? { heading } : {})}
+      {...(autoFocus !== undefined ? { autoFocus } : {})}
       ssoHref={(id) => ssoStartUrl(id, next)}
       onSubmit={(email, password) => {
         void submit(email, password);

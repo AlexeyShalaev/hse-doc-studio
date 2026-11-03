@@ -23,7 +23,7 @@ else
 	DEV_NULL = /dev/null
 endif
 
-.PHONY: dev-help ensure-network run-services stop-all-services clean-volumes dev server-lite-up server-lite-seed server-lite-down server-lite-reset server-lite-credentials e2e-install e2e-m1 e2e-passkeys server-stack-build server-stack-up server-stack-down e2e-full
+.PHONY: dev-help ensure-network run-services stop-all-services clean-volumes dev server-lite-up server-lite-seed server-lite-down server-lite-reset server-lite-credentials e2e-install e2e-m1 e2e-landing e2e-passkeys server-stack-build server-stack-up server-stack-down e2e-full
 
 dev-help:
 	@echo.
@@ -40,6 +40,7 @@ dev-help:
 	@echo   make server-lite-reset - Stop the stand and erase its data (DESTRUCTIVE)
 	@echo   make e2e-install       - Install Playwright and Chromium for the stand acceptance tests
 	@echo   make e2e-m1            - Run the M1 acceptance e2e against a seeded stand (screenshots in e2e/screenshots)
+	@echo   make e2e-landing       - Run the landing page e2e (guest, phone, links, Open Graph, switch-off) against the same stand
 	@echo   make e2e-passkeys      - Run the passkey e2e (virtual WebAuthn authenticator) against the same stand
 	@echo   make server-stack-build - Build the image with the server extra for the full stack
 	@echo   make server-stack-up   - Full server stack (deploy/server: api, runner, Postgres, MinIO) on 127.0.0.1:17251
@@ -156,6 +157,13 @@ e2e-m1: $(SERVER_LITE_ENV)
 	@. $(SERVER_LITE_ENV); cd e2e && \
 	  E2E_BASE_URL=http://localhost:$${SERVER_LITE_PORT:-8100} E2E_SEED_PASSWORD=$$SERVER_LITE_SEED_PASSWORD \
 	  pnpm exec playwright test --project=m1 --project=local-studio
+
+# Лендинг на корне: гость, телефон, ссылки как раньше, Open Graph и выключение админом (нужен пароль админа).
+e2e-landing: $(SERVER_LITE_ENV)
+	@. $(SERVER_LITE_ENV); cd e2e && \
+	  E2E_BASE_URL=http://localhost:$${SERVER_LITE_PORT:-8100} E2E_SEED_PASSWORD=$$SERVER_LITE_SEED_PASSWORD \
+	  E2E_ADMIN_PASSWORD=$$SERVER_LITE_ADMIN_PASSWORD E2E_ADMIN_EMAIL=$${SERVER_LITE_ADMIN_EMAIL:-admin@example.org} \
+	  pnpm exec playwright test --project=landing
 
 # Passkey с виртуальным аутентификатором Chrome на том же стенде (нужен ещё пароль админа для сброса ключей).
 e2e-passkeys: $(SERVER_LITE_ENV)

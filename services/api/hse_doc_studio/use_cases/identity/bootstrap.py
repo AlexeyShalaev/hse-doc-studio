@@ -7,6 +7,7 @@ from dataclasses import dataclass
 from typing import Literal
 
 from hse_doc_studio.core.identity.entities import AuthSettings, Session, User
+from hse_doc_studio.core.identity.instance_settings import DEFAULT_NAME, InstanceSettings
 from hse_doc_studio.core.identity.passwords import PASSWORD_MIN_LENGTH
 from hse_doc_studio.use_cases.identity.auth_settings import AuthSettingsService
 from hse_doc_studio.use_cases.identity.sessions import SessionService
@@ -29,6 +30,9 @@ class BootstrapResult:
     personal_signing_keys: bool = True
     # Разрешены ли в установке личные раннеры (свои машины для сборки своих проектов).
     personal_runners: bool = False
+    # Лендинг для не вошедшего: включён ли и название установки для него.
+    landing_enabled: bool = True
+    instance_name: str = DEFAULT_NAME
 
 
 class BootstrapUC:
@@ -42,7 +46,9 @@ class BootstrapUC:
         oidc_providers: Callable[[], Awaitable[list[tuple[str, str]]]] | None = None,
         signing_keys_allowed: Callable[[], Awaitable[bool]] | None = None,
         personal_runners_allowed: Callable[[], Awaitable[bool]] | None = None,
+        instance: Callable[[], Awaitable[InstanceSettings]] | None = None,
     ) -> None:
+        self._instance = instance
         self._personal_runners_allowed = personal_runners_allowed
         self._setup = setup
         self._settings = settings
@@ -58,6 +64,7 @@ class BootstrapUC:
         """Пока мастер первого запуска не завершён, клиент ведёт к нему (/first-run)."""
         needs_admin = not await self._setup.is_completed()
         resolved = await self._sessions.resolve(session_secret) if session_secret else None
+        instance = await self._instance() if self._instance else None
         return BootstrapResult(
             setup_state="needs_admin" if needs_admin else "ready",
             auth=await self.auth_settings(),
@@ -68,4 +75,6 @@ class BootstrapUC:
             oidc_providers=tuple(await self._oidc_providers()) if self._oidc_providers else (),
             personal_signing_keys=await self._signing_keys_allowed() if self._signing_keys_allowed else True,
             personal_runners=await self._personal_runners_allowed() if self._personal_runners_allowed else False,
+            landing_enabled=instance.landing_enabled if instance else True,
+            instance_name=instance.name if instance else DEFAULT_NAME,
         )

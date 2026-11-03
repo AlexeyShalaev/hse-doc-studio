@@ -63,6 +63,7 @@ class ServerAdminOpsProvider(Provider):
             name=settings.server.instance_name,
             public_url=settings.auth.public_url,
             docs_url=settings.server.docs_url,
+            landing_enabled=settings.server.landing_enabled,
             build_timeout_s=settings.jobs.build_timeout_s,
             artifact_retention_days=settings.jobs.artifact_retention_days,
             personal_runners_enabled=settings.jobs.personal_runners_enabled,

@@ -153,7 +153,12 @@ export const createInstallRoutes = (
         const s = state();
         const body = (req.body ?? {}) as Record<string, unknown>;
         const f = s.instance.fields;
-        for (const key of ["name", "public_url", "docs_url"] as const) {
+        for (const key of [
+          "name",
+          "public_url",
+          "docs_url",
+          "landing_enabled",
+        ] as const) {
           if (body[key] != null && f[`instance.${key}`]?.locked)
             return locked();
         }
@@ -175,6 +180,10 @@ export const createInstallRoutes = (
           if (docs !== "" && !isHttpUrl(docs, false)) return invalid();
           next.docs_url = docs === "" ? null : docs;
           fields["instance.docs_url"] = admin();
+        }
+        if (typeof body.landing_enabled === "boolean") {
+          next.landing_enabled = body.landing_enabled;
+          fields["instance.landing_enabled"] = admin();
         }
         s.instance = { ...next, fields };
         return demoJson(s.instance);

@@ -64,6 +64,9 @@ jobs:
       - name: Run scenarios
         run: make e2e-m1
 
+      - name: Landing page
+        run: make e2e-landing
+
       - name: Passkeys (virtual authenticator)
         run: make e2e-passkeys
 

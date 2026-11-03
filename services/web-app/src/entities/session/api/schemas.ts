@@ -113,6 +113,13 @@ export const GuestInfoSchema = z.strictObject({
 });
 export type GuestInfo = z.infer<typeof GuestInfoSchema>;
 
+// Лендинг установки для не вошедшего: включён ли и под каким названием. В локальной Студии null.
+export const LandingInfoSchema = z.strictObject({
+  enabled: z.boolean(),
+  name: z.string(),
+});
+export type LandingInfo = z.infer<typeof LandingInfoSchema>;
+
 export const BootstrapSchema = z.strictObject({
   mode: StudioModeSchema,
   version: z.string(),
@@ -126,6 +133,8 @@ export const BootstrapSchema = z.strictObject({
   // invites: счётчик «Входящих» для шапки вошедшего; без входа и локально null.
   // Необязателен в типе, чтобы старые литералы bootstrap (демо, тесты) оставались верными.
   inbox: z.strictObject({ unread: z.number().int() }).nullable().optional(),
+  // Необязателен в типе по той же причине, что и inbox: без поля лендинга нет.
+  landing: LandingInfoSchema.nullable().optional(),
 });
 export type Bootstrap = z.infer<typeof BootstrapSchema>;
 

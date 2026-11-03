@@ -136,5 +136,17 @@
     "path": "dist/assets/tourText-*.js",
     "gzip": true,
     "limit": "4.5 kB"
+  },
+  {
+    "name": "Лендинг (lazy, страница гостя)",
+    "path": "dist/assets/LandingPage-*.js",
+    "gzip": true,
+    "limit": "3 kB"
+  },
+  {
+    "name": "Словарь лендинга (ru и en)",
+    "path": "dist/assets/locale-landing-*.js",
+    "gzip": true,
+    "limit": "7 kB"
   }
 ]

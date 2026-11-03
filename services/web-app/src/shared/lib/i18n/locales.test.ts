@@ -52,6 +52,13 @@ describe("locale parity", () => {
     expect(keysOf("en", file)).toEqual(keysOf("ru", file));
   });
 
+  it("landing dictionary has the same keys in ru and en", () => {
+    expect(keysOf("en", "landing/landing.json")).toEqual(
+      keysOf("ru", "landing/landing.json"),
+    );
+    expect(keysOf("ru", "landing/landing.json").length).toBeGreaterThan(40);
+  });
+
   it.each(NEW_NAMESPACES)("%s exists and is not empty", (ns) => {
     expect(namespaces).toContain(`${ns}.json`);
     expect(keysOf("ru", `${ns}.json`).length).toBeGreaterThan(5);

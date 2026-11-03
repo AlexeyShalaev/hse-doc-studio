@@ -30,6 +30,8 @@
     "publicUrlHint": "Where people open Studio. No query string or fragment.",
     "docsUrl": "Documentation link",
     "docsUrlHint": "Optional. Shown in the help menu.",
+    "landing": "Landing page for guests",
+    "landingHint": "A signed-out visitor sees a page about Studio with sign-in on the root address instead of the bare sign-in screen. The direct sign-in address works either way.",
     "insecure": "An http address sends passwords in clear text. Use https; http is acceptable only for localhost.",
     "urlImpact": "Links already sent in emails and invitations will stop working, and the redirect URI must be updated in single sign-on providers.",
     "issue": {

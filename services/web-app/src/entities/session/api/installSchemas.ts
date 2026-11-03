@@ -13,12 +13,14 @@ export const AdminInstanceSettingsSchema = z.strictObject({
   name: z.string(),
   public_url: z.string(),
   docs_url: z.string().nullable(),
+  landing_enabled: z.boolean(),
   fields,
 });
 export const UpdateAdminInstanceRequestSchema = z.strictObject({
   name: z.string().nullable(),
   public_url: z.string().nullable(),
   docs_url: z.string().nullable(),
+  landing_enabled: z.boolean().nullable(),
 });
 
 export const AdminBuildSettingsSchema = z.strictObject({

@@ -39,5 +39,6 @@
       }
     ]
   },
-  "inbox": null
+  "inbox": null,
+  "landing": {"enabled": true, "name": "HSE Doc Studio"}
 }

@@ -42,6 +42,15 @@ export default defineConfig({
       },
     },
     {
+      // Лендинг на корне server-lite: гость, вход, телефон, ссылки как раньше, Open Graph, выключение админом.
+      name: "landing",
+      testMatch: /landing\.spec\.ts/,
+      use: {
+        ...devices["Desktop Chrome"],
+        channel: process.env.E2E_CHANNEL || undefined,
+      },
+    },
+    {
       // Passkey на server-lite: виртуальный аутентификатор Chrome через CDP (WebAuthn.addVirtualAuthenticator).
       name: "passkeys",
       testMatch: /passkeys\.spec\.ts/,

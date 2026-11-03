@@ -45,5 +45,6 @@
   "guest": null,
   "inbox": {
     "unread": 0
-  }
+  },
+  "landing": {"enabled": true, "name": "HSE Doc Studio"}
 }

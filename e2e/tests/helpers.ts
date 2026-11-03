@@ -45,7 +45,8 @@ export const login = async (page: Page, email: string): Promise<void> => {
 export const logout = async (page: Page): Promise<void> => {
   await page.getByTestId("account-menu-trigger").click();
   await page.getByTestId("account-menu-logout").click();
-  await expect(page).toHaveURL(/\/login/);
+  // Гость видит лендинг со входом (или экран входа, если лендинг выключен).
+  await expect(page.getByTestId("login-form")).toBeVisible();
 };
 
 /** Дожидается, пока список проектов отрисуется (карточки или пустое состояние), и возвращает названия карточек. */
