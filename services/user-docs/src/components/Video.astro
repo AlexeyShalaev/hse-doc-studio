@@ -2,7 +2,7 @@
 /**
  * Короткий ролик статьи (`help.video`). Без звука и без подписей в кадре: слова живут в шагах,
  * правка формулировки не требует перекодирования. preload="none": до нажатия грузится только постер.
- * WebM (VP9) первым, MP4 (H.264) для Safari постарше.
+ * Один формат: MP4 (H.264, yuv420p), его играют все браузеры, включая Safari.
  */
 import {articleLang, videoVariants} from '../lib/help'
 
@@ -16,7 +16,6 @@ const variants = videoVariants(video.src, articleLang(entry.id))
   {
     (['light', 'dark'] as const).map((theme) => (
       <video class={`only-${theme}`} controls muted playsinline preload="none" poster={variants[theme].poster} width="1280" height="800">
-        <source src={variants[theme].webm} type="video/webm" />
         <source src={variants[theme].mp4} type="video/mp4" />
       </video>
     ))

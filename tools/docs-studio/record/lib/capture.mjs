@@ -50,11 +50,9 @@ export async function stopCapture(cap, {base, width}) {
   const list = join(cap.framesDir, 'list.ffconcat')
   await writeFile(list, lines.join('\n') + '\n')
   const vf = `fps=24,scale=${width}:-2:flags=lanczos`
-  // MP4 (H.264, yuv420p, faststart) для всех браузеров; WebM (VP9) меньше и идёт первым.
+  // Один формат: MP4 (H.264, yuv420p, faststart) играют все браузеры, включая Safari.
   await ffmpeg(['-y', '-f', 'concat', '-safe', '0', '-i', list, '-vf', vf, '-c:v', 'libx264', '-crf', '26', '-preset', 'slow',
     '-tune', 'stillimage', '-pix_fmt', 'yuv420p', '-movflags', '+faststart', '-an', `${base}.mp4`])
-  await ffmpeg(['-y', '-f', 'concat', '-safe', '0', '-i', list, '-vf', vf, '-c:v', 'libvpx-vp9', '-crf', '38', '-b:v', '0',
-    '-row-mt', '1', '-deadline', 'good', '-cpu-used', '2', '-pix_fmt', 'yuv420p', '-an', `${base}.webm`])
   await rm(cap.framesDir, {recursive: true, force: true})
   return {seconds: startsAt[cap.count], chapters: cap.marks.map((i) => Number(startsAt[Math.min(i, cap.count)].toFixed(1)))}
 }

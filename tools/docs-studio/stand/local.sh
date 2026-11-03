@@ -6,8 +6,8 @@
 #   stand/local.sh stop
 #   stand/local.sh reset   # стереть данные и проекты стенда (следующий start засеет заново)
 #
-# Реальные данные (~/.config/hse-studio) не затрагиваются. Папки проектов лежат в
-# ~/Documents/hse-studio-docs: путь виден в кадрах, служебный .build там выглядел бы как леса.
+# Реальные данные (~/.config/hse-studio) не затрагиваются. Папки проектов лежат в нейтральной
+# папке (DOCS_PROJECTS_HOME): путь виден в кадрах.
 set -euo pipefail
 HERE="$(cd "$(dirname "$0")/.." && pwd)"
 ROOT="$(cd "$HERE/../.." && pwd)"
@@ -16,7 +16,10 @@ BUILD="$HERE/.build/local"
 DATA="$BUILD/data"
 PIDFILE="$BUILD/api.pid"
 LOG="$BUILD/api.log"
-export DOCS_PROJECTS_HOME="${DOCS_PROJECTS_HOME:-$HOME/Documents/hse-studio-docs}"
+# Папка проектов видна в кадрах (карточки, «Папка проекта»), поэтому она нейтральная: без имени
+# пользователя машины, на которой снимали. Рекордер дополнительно падает, если имя всё же попало в кадр.
+if [ "$(uname)" = "Darwin" ]; then DEFAULT_HOME=/Users/Shared/student/Documents/hse-studio-docs; else DEFAULT_HOME=/tmp/student/Documents/hse-studio-docs; fi
+export DOCS_PROJECTS_HOME="${DOCS_PROJECTS_HOME:-$DEFAULT_HOME}"
 MARKER="$DOCS_PROJECTS_HOME/.hse-studio-docs-stand"
 
 stop() {

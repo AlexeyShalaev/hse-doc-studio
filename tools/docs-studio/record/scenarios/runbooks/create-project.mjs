@@ -15,11 +15,11 @@ export default {
       await next(d)
     },
     async (d) => next(d, true),
-    async (d) => {
+    async (d, w) => {
       await d.click(card(d, d.s('projectCreate', 'kind.projectTitle')), {shot: false})
       await next(d)
       await d.type(d.page.getByPlaceholder(d.s('projectCreate', 'folder.namePlaceholder')), d.t('Сервис бронирования переговорных', 'Meeting room booking service'))
-      await d.type(d.page.getByPlaceholder(d.s('projectCreate', 'folder.folderPlaceholder')), d.t('~/Documents/hse-studio-docs/booking', '~/Documents/hse-studio-docs/booking-en'), {delay: 15})
+      await d.type(d.page.getByPlaceholder(d.s('projectCreate', 'folder.folderPlaceholder')), `${w.projectsHome}/${d.t('booking', 'booking-en')}`, {delay: 15})
       await d.point(d.page.getByPlaceholder(d.s('projectCreate', 'folder.namePlaceholder')))
       await next(d)
     },

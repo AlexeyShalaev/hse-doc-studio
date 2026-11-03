@@ -21,7 +21,7 @@ const helpStep = z.object({
 })
 
 const helpVideo = z.object({
-  /** База ролика в public/media: `<src>.<lang>.<theme>.{webm,mp4}` и постер `<src>.<lang>.<theme>.webp`. */
+  /** База ролика в public/media: `<src>.<lang>.<theme>.mp4` и постер `<src>.<lang>.<theme>.webp`. */
   src: z.string(),
   /** Секунда начала каждого шага, проставляет рекордер. */
   chapters: z.array(z.number()).optional(),

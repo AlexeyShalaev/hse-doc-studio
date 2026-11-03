@@ -13,7 +13,6 @@ export const HELP_BASE = "/help";
 
 const ShotSchema = z.object({ light: z.string(), dark: z.string() });
 const VideoVariantSchema = z.object({
-  webm: z.string(),
   mp4: z.string(),
   poster: z.string(),
 });

@@ -29,12 +29,11 @@ export const videoVariants = (src: string, lang: Lang) =>
     THEMES.map((theme) => [
       theme,
       {
-        webm: mediaUrl(`${src}.${lang}.${theme}.webm`),
         mp4: mediaUrl(`${src}.${lang}.${theme}.mp4`),
         poster: mediaUrl(`${src}.${lang}.${theme}.webp`),
       },
     ]),
-  ) as Record<(typeof THEMES)[number], {webm: string; mp4: string; poster: string}>
+  ) as Record<(typeof THEMES)[number], {mp4: string; poster: string}>
 
 export type HelpArticleEntry = CollectionEntry<'docs'> & {
   data: {help: NonNullable<CollectionEntry<'docs'>['data']['help']>}

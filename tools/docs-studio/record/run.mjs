@@ -5,7 +5,7 @@
 //
 // Для каждого варианта (язык интерфейса × тема) дубль идёт с нуля в новом контексте браузера:
 // кадры шагов → public/media/<shot>.<lang>.<theme>.webp, ролик (если у статьи есть video) →
-// <src>.<lang>.<theme>.{webm,mp4} и постер .webp. Число функций-шагов сценария обязано
+// <src>.<lang>.<theme>.mp4 и постер .webp. Число функций-шагов сценария обязано
 // совпадать с help.steps статьи: рекордер сверяет.
 import {chromium} from 'playwright'
 import {existsSync, readFileSync, readdirSync, statSync} from 'node:fs'
@@ -16,7 +16,8 @@ import {parse} from 'yaml'
 import {mark, posterPng, startCapture, stopCapture} from './lib/capture.mjs'
 import {Director} from './lib/director.mjs'
 import {saveShot} from './lib/media.mjs'
-import {LOCAL_BASE, SERVER_BASE, seedLocal, serverPersonas, signIn, waitFor} from './lib/stands.mjs'
+import {LOCAL_BASE, PROJECTS_HOME, SERVER_BASE, seedLocal, serverPersonas, signIn, waitFor} from './lib/stands.mjs'
+import {assertNoPersonalData} from './lib/privacy.mjs'
 
 const HERE = import.meta.dirname
 const ROOT = resolve(HERE, '../../..')
@@ -81,7 +82,7 @@ for (const key of keys) {
         },
         [theme, lang],
       )
-      const world = {key, lang, theme, baseUrl: base, local, personas: scenario.stand === 'server' ? serverPersonas() : null}
+      const world = {key, lang, theme, baseUrl: base, local, projectsHome: PROJECTS_HOME, personas: scenario.stand === 'server' ? serverPersonas() : null}
       if (scenario.stand === 'server' && scenario.persona) {
         await signIn(context, world.personas[scenario.persona])
         // Проекты персоны: id в адресах экранов знает только стенд.
@@ -92,6 +93,7 @@ for (const key of keys) {
       const d = new Director(page, world, {
         onShot: async (index) => {
           const shot = steps[index].shot
+          await assertNoPersonalData(page, `${variant}, шаг ${index + 1}`)
           const png = await page.screenshot()
           await saveShot(png, join(MEDIA, `${shot}.${lang}.${theme}.webp`))
         },
@@ -110,6 +112,8 @@ for (const key of keys) {
           await scenario.steps[i](d, world)
           // Шаг ничего не нажал, а кадр ему нужен: снимаем итог шага.
           await d.shot()
+          // Ролик пишется непрерывно: экран проверяется и после каждого шага, а не только в кадрах.
+          await assertNoPersonalData(page, `${variant}, после шага ${i + 1}`)
         }
         if (capture) {
           await d.pause(800)

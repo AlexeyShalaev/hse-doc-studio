@@ -123,7 +123,7 @@ make docs-media                        # всё одной командой: с�
 ```
 
 Выход: `services/user-docs/public/media/<shot>.<lang>.<theme>.webp`, ролик
-`<src>.<lang>.<theme>.{webm,mp4}` и постер `.webp`. При ошибке кадр экрана лежит в
+`<src>.<lang>.<theme>.mp4` и постер `.webp`. При ошибке кадр экрана лежит в
 `tools/docs-studio/.build/record/fail-*.png`.
 
 ## Шаг 5. Проверить

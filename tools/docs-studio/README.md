@@ -41,10 +41,10 @@ export default {
 
 - кадр шага: PNG → WebP 1600 px, q80 (`lib/media.mjs`);
 - ролик: CDP-скринкаст с реальными отметками времени (не `recordVideo`, он мылит текст),
-  паузы длиннее 2,5 с сжимаются; MP4 H.264 и WebM VP9, 1280 px, 24 fps; постер WebP;
+  паузы длиннее 2,5 с сжимаются; MP4 H.264, 1280 px, 24 fps; постер WebP;
 - при ошибке кадр экрана: `.build/record/fail-*.png`.
 
-Требования: Docker запущен, `uv`, Node 24 + pnpm, ffmpeg с libx264 и libvpx-vp9. Chromium ставит
+Требования: Docker запущен, `uv`, Node 24 + pnpm, ffmpeg с libx264. Chromium ставит
 `make docs-record` (`playwright install chromium`).
 
 ## В CI

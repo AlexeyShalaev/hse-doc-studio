@@ -1,14 +1,16 @@
 // Стенды съёмки и их «мир»: адрес, персоны, засеянные проекты. Сид идёт настоящими запросами API,
 // как у пользователя, и идемпотентен: существующие проекты находятся по имени.
 import {readFileSync, existsSync} from 'node:fs'
-import {homedir} from 'node:os'
 import {join, resolve} from 'node:path'
 
 const ROOT = resolve(import.meta.dirname, '../../../..')
 
 export const LOCAL_BASE = process.env.DOCS_LOCAL_URL ?? `http://127.0.0.1:${process.env.DOCS_LOCAL_PORT ?? 17790}`
 export const SERVER_BASE = process.env.DOCS_SERVER_URL ?? `http://localhost:${process.env.DOCS_SERVER_PORT ?? 8110}`
-const PROJECTS_HOME = process.env.DOCS_PROJECTS_HOME ?? join(homedir(), 'Documents', 'hse-studio-docs')
+// Та же нейтральная папка, что у stand/local.sh: путь виден в кадрах.
+export const PROJECTS_HOME =
+  process.env.DOCS_PROJECTS_HOME ??
+  (process.platform === 'darwin' ? '/Users/Shared/student/Documents/hse-studio-docs' : '/tmp/student/Documents/hse-studio-docs')
 
 /** Демо-проекты: русская и английская ВКР, синтетические люди. */
 const LOCAL_PROJECTS = {

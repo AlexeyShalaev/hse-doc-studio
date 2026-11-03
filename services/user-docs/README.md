@@ -37,7 +37,7 @@
 
 ## Медиа
 
-`public/media/<ключ>/step-NN.<lang>.<theme>.webp`, ролики `<ключ>/clip.<lang>.<theme>.{webm,mp4}`
+`public/media/<ключ>/step-NN.<lang>.<theme>.webp`, ролики `<ключ>/clip.<lang>.<theme>.mp4`
 и постер `.webp`. Их снимает `tools/docs-studio` со стенда (`make docs-media`), руками не кладут.
 Недостающий кадр не ломает ни сайт, ни панель: шаг остаётся текстом.
 

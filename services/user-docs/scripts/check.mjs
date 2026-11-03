@@ -89,7 +89,7 @@ for (const [key, {file, fm}] of articles.ru) {
     for (const v of variants(s.shot)) if (!existsSync(join(MEDIA, `${v}.webp`))) missingMedia.push(`${v}.webp`)
   })
   if (fm.help.video) {
-    for (const v of variants(fm.help.video.src)) for (const ext of ['webm', 'mp4', 'webp']) if (!existsSync(join(MEDIA, `${v}.${ext}`))) missingMedia.push(`${v}.${ext}`)
+    for (const v of variants(fm.help.video.src)) for (const ext of ['mp4', 'webp']) if (!existsSync(join(MEDIA, `${v}.${ext}`))) missingMedia.push(`${v}.${ext}`)
   }
 }
 for (const key of articles.en.keys()) if (!articles.ru.has(key)) fail(`en/${key}: нет русской пары`)
