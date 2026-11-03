@@ -56,6 +56,7 @@ nav = [
         { "Server installation" = "deploy/install.md" },
         { "People and sign-in" = "deploy/accounts.md" },
         { "Invitations and access requests" = "deploy/invitations.md" },
+        { "Server emails" = "deploy/mail.md" },
         { "Runners" = "deploy/runners.md" },
         { "Security and personal data" = "deploy/security.md" },
         { "Server backups" = "deploy/backups.md" },
