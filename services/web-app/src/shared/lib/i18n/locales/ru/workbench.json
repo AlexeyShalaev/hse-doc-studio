@@ -132,7 +132,8 @@
     "buildError": "{{doc}} — ошибка сборки",
     "notBuilt": "{{doc}} — не собран",
     "formIncomplete": "{{form}} — не заполнена",
-    "missingSignature": "{{doc}} — нет подписи"
+    "missingSignature": "{{doc}} — нет подписи",
+    "buildErrorReason": "{{doc}} — ошибка сборки: {{reason}}"
   },
   "checkpoint": {
     "title": "Контрольная точка",

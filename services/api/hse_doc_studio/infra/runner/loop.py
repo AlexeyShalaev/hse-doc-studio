@@ -404,18 +404,24 @@ class RunnerLoop:
             self._observer.on_job_started(job_id, envelope.spec.kind.value)
         try:
             outcome = await self._await_outcome(envelope, execution, heartbeat, forced, cancelled)
+        except BaseException:
+            await batcher.close()
+            raise
         finally:
             heartbeat.cancel()
             forced.cancel()
             await asyncio.gather(heartbeat, forced, return_exceptions=True)
-            await batcher.close()
         if self._observer is not None:
             status = "lost" if outcome is None else outcome.result.status.value
             self._observer.on_job_finished(job_id, envelope.spec.kind.value, status)
         if outcome is None:
             logger.warning("job %s: lease lost, no report", job_id)
+            await batcher.close()
             return
-        await self._report(envelope, outcome)
+        try:
+            await self._report(envelope, outcome, batcher)
+        finally:
+            await batcher.close()
 
     async def _await_outcome(
         self,
@@ -489,7 +495,7 @@ class RunnerLoop:
             return "unreachable"
         return "cancel" if reply.cancel else "ok"
 
-    async def _report(self, envelope: JobEnvelope, outcome: JobOutcome) -> None:
+    async def _report(self, envelope: JobEnvelope, outcome: JobOutcome, batcher: LogBatcher) -> None:
         job_id = str(envelope.spec.id)
         token = envelope.job_token
         result = outcome.result
@@ -509,6 +515,7 @@ class RunnerLoop:
                 )
             else:
                 refs = tuple(out.ref for out in outcome.outputs)
+        await self._close_log(batcher, result)
         request = CompleteRequest(attempt=envelope.attempt, result=encode_result(result), artifacts=refs)
         try:
             await self._client.complete(job_id, token, request)
@@ -516,6 +523,19 @@ class RunnerLoop:
             logger.warning("job %s: completion not accepted: %s", job_id, exc)
         except RunnerUnreachable:
             logger.exception("job %s: completion not delivered, lease will expire", job_id)
+
+    @staticmethod
+    async def _close_log(batcher: LogBatcher, result: JobResult) -> None:
+        """Причина сбоя уходит в лог раньше завершения: после него сервер порции лога уже не принимает.
+
+        Сборка, упавшая до запуска (нет образа, нет Docker) или при выгрузке результата, иначе оставила бы
+        пустой лог: ошибку знает только раннер.
+        """
+        error = result.error
+        if error is not None and result.status in (JobStatus.failed, JobStatus.timed_out):
+            detail = f": {error.detail}" if error.detail and error.detail != error.code else ""
+            batcher.append(f"[runner] {error.code}{detail}")
+        await batcher.close()
 
     async def _upload(self, envelope: JobEnvelope, outputs: tuple[OutputFile, ...]) -> None:
         job_id = str(envelope.spec.id)

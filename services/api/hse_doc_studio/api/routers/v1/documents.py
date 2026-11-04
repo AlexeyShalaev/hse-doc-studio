@@ -6,6 +6,7 @@ from dishka.integrations.fastapi import FromDishka
 from fastapi import APIRouter, File, HTTPException, Query, UploadFile
 
 from hse_doc_studio.api.dishka_route import SafeDishkaRoute
+from hse_doc_studio.api.schemas.compile import map_compile_error
 from hse_doc_studio.api.schemas.document import (
     CustomFileOverrideResponse,
     DocumentDetailResponse,
@@ -81,6 +82,9 @@ def _map_doc_list_item(entry: DocumentListEntry) -> DocumentListItemResponse:
         engine=entry.engine,
         group=entry.group,
         build_tags=sorted(entry.build_tags),
+        last_compile_error=map_compile_error(
+            entry.failure.code if entry.failure else None, entry.failure.detail if entry.failure else None
+        ),
     )
 
 

@@ -7,12 +7,13 @@ from pathlib import Path
 from typing import NewType
 from uuid import UUID
 
-from dishka import Provider, Scope, provide
+from dishka import AnyOf, Provider, Scope, provide
 
 from hse_doc_studio.api.config import settings
 from hse_doc_studio.core.access.entities import Actor, Role
 from hse_doc_studio.core.access.links import IBuildPayerResolver
 from hse_doc_studio.core.compile.wait import ICompileWaitReader
+from hse_doc_studio.core.events import IJobLogStream
 from hse_doc_studio.core.git_sync.protocols import ISecretCipher
 from hse_doc_studio.core.identity.instance_settings import InstanceEnvOverrides, effective_build_settings
 from hse_doc_studio.core.identity.protocols import IAuditLog, IInstanceSettingsRepository, IUserRepository
@@ -34,7 +35,13 @@ from hse_doc_studio.core.jobs.runners import (
     IRunnerRepository,
     JobTokenSigner,
 )
-from hse_doc_studio.core.jobs.storage import IJobBlobStore, IJobLogSink, IJobOutputIngest, RunnerStoragePolicy
+from hse_doc_studio.core.jobs.storage import (
+    IJobBlobStore,
+    IJobLogReader,
+    IJobLogSink,
+    IJobOutputIngest,
+    RunnerStoragePolicy,
+)
 from hse_doc_studio.core.projects.volume import IProjectVolume
 from hse_doc_studio.core.quotas.protocols import IQuotaGate
 from hse_doc_studio.core.repositories import (
@@ -272,7 +279,7 @@ class ServerJobsProvider(Provider):
         return QueueLiveBlobs(queue)
 
     @provide
-    def get_job_log_sink(self, root: JobStorageRoot) -> IJobLogSink:
+    def get_job_log_sink(self, root: JobStorageRoot) -> AnyOf[FsJobLogSink, IJobLogSink, IJobLogReader]:
         return FsJobLogSink(root, max_bytes=settings.jobs.max_log_bytes)
 
     @provide
@@ -350,6 +357,8 @@ class ServerJobsProvider(Provider):
         router: IJobRouter,
         payer: IBuildPayerResolver,
         quota_gate: IQuotaGate,
+        log_reader: IJobLogReader,
+        log_stream: IJobLogStream,
     ) -> IJobDispatcher:
         async def role_of(actor: Actor, project_id: UUID) -> Role | None:
             project_acl = await acl.load_for(actor, project_id)
@@ -378,4 +387,6 @@ class ServerJobsProvider(Provider):
             # links: гость по ссылке собирает в квоту создателя ссылки (S7).
             payer=payer.payer_for,
             quota_gate=quota_gate,
+            log_reader=log_reader,
+            log_stream=log_stream,
         )

@@ -235,7 +235,10 @@ async def test__log__over_the_limit__is_truncated_not_rejected(env: _Env) -> Non
     )
 
     assert response.status_code == 204
-    assert (env.root / "logs" / str(leased.job_id) / "1.log").stat().st_size == 100
+    logs = env.root / "logs" / str(leased.job_id)
+    # Голова не рвёт строку: первая строка целиком, вторая уходит в скользящий хвост, а не теряется.
+    assert (logs / "1.log").stat().st_size == 91
+    assert (logs / "1.tail").read_text(encoding="utf-8") == "y" * 90 + "\n"
 
 
 async def test__log__stale_attempt__409(env: _Env) -> None:

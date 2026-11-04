@@ -148,7 +148,8 @@
       "title": "Build finished",
       "successPages": "{{code}}: done · {{count}} p.",
       "success": "{{code}}: done",
-      "failure": "{{code}}: build error"
+      "failure": "{{code}}: build error",
+      "failureReason": "{{code}}: build failed. {{reason}}"
     },
     "fixPrompt": "The build of document [{{code}}](doc:{{docId}}) finished with errors. Study the log of the last build (`{{logPath}}`) and the source `{{file}}`, find the cause of the LaTeX errors and fix them. After the edits, rebuild the document with the compile_document tool and make sure the build passes without errors.",
     "explainPrompt": "The build of document [{{code}}](doc:{{docId}}) failed. Read the log of the last build (`{{logPath}}`) and explain in plain language what causes the LaTeX error and how to fix it. Do NOT change files — just explain.",
@@ -213,6 +214,14 @@
       "adminSelf": "Connect a runner in the admin area.",
       "openRunners": "Open Runners",
       "buildAllPartial": "Documents not built: {{count}}. No runner can build them right now."
+    },
+    "failure": {
+      "title": "Build failed",
+      "cancelledTitle": "Build cancelled",
+      "unknownReason": "The reason was not recorded: the build ran on a version without this diagnostics. Open the log below; if it is empty, build the document again.",
+      "noOutputNotStarted": "There is no build output: LaTeX was not started, the build stopped earlier. The reason is above.",
+      "noOutputEmpty": "There is no build output: the runner did not send a single log line. The reason is above; if there is none, it is a runner failure, check its log on its machine.",
+      "retry": "Build again"
     }
   },
   "preview": {

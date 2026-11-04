@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import errno
 import glob
 import logging
 import os
@@ -10,6 +11,7 @@ from collections.abc import Callable
 from pathlib import PurePosixPath
 
 from hse_doc_studio.core.compile.errors import BuildBackendUnavailableError, DockerUnavailableError, ImageMissingError
+from hse_doc_studio.core.compile.failure import DISK_FULL, PDF_MISSING
 from hse_doc_studio.core.jobs.entities import compile_payload_of
 from hse_doc_studio.core.jobs.enums import JobErrorCategory, JobKind
 from hse_doc_studio.core.jobs.errors import JobFailure
@@ -108,8 +110,15 @@ class CompileJobExecutor:
                         if build.success
                         else ()
                     )
+                    if build.success and payload.needs_compile and not outputs:
+                        # Без файла сервер принял бы «успех» без PDF: документ оставался бы со старым результатом.
+                        raise JobFailure.of(JobErrorCategory.internal, PDF_MISSING, final_pdf)
         except (BlobIntegrityError, RunnerApiError, RunnerUnreachable) as exc:
             raise JobFailure.of(JobErrorCategory.unavailable, CODE_BLOB_UNAVAILABLE, str(exc)) from exc
+        except OSError as exc:
+            if exc.errno == errno.ENOSPC:
+                raise JobFailure.of(JobErrorCategory.unavailable, DISK_FULL, str(exc)) from exc
+            raise
         except ImageMissingError as exc:
             # Исполнитель kubernetes узнаёт об отсутствии образа только при запуске пода.
             raise JobFailure.of(JobErrorCategory.unavailable, CODE_IMAGE_MISSING, exc.image) from exc

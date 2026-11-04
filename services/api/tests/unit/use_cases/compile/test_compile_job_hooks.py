@@ -221,7 +221,8 @@ async def test__on_finished__status_table__record_document_and_changelog(
 
     final = env.saved[-1]
     assert final.status is record_status
-    assert (final.log, final.started_at, final.finished_at) == ("full log", STARTED_AT, FINISHED_AT)
+    assert final.log.startswith("full log")
+    assert (final.started_at, final.finished_at) == (STARTED_AT, FINISHED_AT)
     assert (final.pages, final.words, final.chars, final.output_path) == (7, 100, 500, None)
     assert final.check_results == list(checks)
     assert env.doc_status is doc_status
@@ -520,3 +521,82 @@ async def test__on_finished__fingerprint_fails__build_result_is_kept(tmp_path: P
 
     assert env.saved[-1].status is CompileStatus.success
     assert env.doc_status is DocumentStatus.ok
+
+
+# --- причина неудачной сборки ---
+
+
+async def test__on_finished__latex_failure_without_runner_error__build_failed_with_explained_log(
+    tmp_path: Path,
+) -> None:
+    env = Env(tmp_path)
+    await env.hooks.on_started(env.spec)
+
+    await env.hooks.on_finished(env.spec, _result(JobStatus.failed), "! Undefined control sequence.")
+
+    final = env.saved[-1]
+    assert (final.error_code, final.error_detail) == ("build_failed", None)
+    assert final.log.startswith("! Undefined control sequence.\n[error] build_failed: ")
+
+
+async def test__on_finished__empty_runner_log_and_runner_error__log_is_the_explanation_not_empty(
+    tmp_path: Path,
+) -> None:
+    env = Env(tmp_path)
+    await env.hooks.on_started(env.spec)
+    error = JobError(JobErrorCategory.unavailable, "image_missing", "texlive/texlive:TL2024-historic")
+    result = JobResult(
+        status=JobStatus.failed, error=error, data=CompileResult(build_ok=False, finished_at=FINISHED_AT)
+    )
+
+    await env.hooks.on_finished(env.spec, result, "")
+
+    final = env.saved[-1]
+    assert (final.error_code, final.error_detail) == ("image_missing", "texlive/texlive:TL2024-historic")
+    assert final.log.startswith("[error] image_missing: ")
+    assert "texlive/texlive:TL2024-historic" in final.log.splitlines()[-1]
+
+
+@pytest.mark.parametrize("code", ["timed_out", "runner_lost", "storage_unreachable", "disk_full", "job_lost"])
+async def test__on_finished__runner_and_server_codes__recorded_with_log_block(tmp_path: Path, code: str) -> None:
+    env = Env(tmp_path)
+    await env.hooks.on_started(env.spec)
+    result = JobResult(status=JobStatus.failed, error=JobError(JobErrorCategory.unavailable, code))
+
+    await env.hooks.on_finished(env.spec, result, "")
+
+    final = env.saved[-1]
+    assert final.error_code == code
+    assert f"[error] {code}: " in final.log
+
+
+async def test__on_finished__cancelled__recorded_as_cancelled_reason(tmp_path: Path) -> None:
+    env = Env(tmp_path)
+    await env.hooks.on_started(env.spec)
+
+    await env.hooks.on_finished(env.spec, JobResult(status=JobStatus.cancelled), "[cancelled] by user")
+
+    final = env.saved[-1]
+    assert (final.status, final.error_code) == (CompileStatus.cancelled, "cancelled")
+
+
+async def test__on_finished__quota_json_detail__dropped_from_record(tmp_path: Path) -> None:
+    env = Env(tmp_path)
+    await env.hooks.on_started(env.spec)
+    error = JobError(JobErrorCategory.unavailable, "quota_exceeded", '{"used": 3, "limit": 3}')
+
+    await env.hooks.on_finished(env.spec, JobResult(status=JobStatus.failed, error=error), "[error] quota used up")
+
+    final = env.saved[-1]
+    assert (final.error_code, final.error_detail) == ("quota_exceeded", None)
+    assert final.log.startswith("[error] quota used up\n[error] quota_exceeded: ")
+
+
+async def test__on_finished__success__no_error_fields(tmp_path: Path) -> None:
+    env = Env(tmp_path)
+    await env.hooks.on_started(env.spec)
+
+    await env.hooks.on_finished(env.spec, _result(JobStatus.succeeded), "ok")
+
+    final = env.saved[-1]
+    assert (final.error_code, final.error_detail, final.log) == (None, None, "ok")

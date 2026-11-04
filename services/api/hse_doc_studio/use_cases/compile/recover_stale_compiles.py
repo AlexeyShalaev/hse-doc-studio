@@ -5,6 +5,7 @@ from datetime import datetime, timezone
 
 import structlog
 
+from hse_doc_studio.core.compile.failure import RESTARTED
 from hse_doc_studio.core.entities import CompileRecord
 from hse_doc_studio.core.enums import CompileStatus, DocumentStatus
 from hse_doc_studio.core.projects.locator import IProjectLocator
@@ -79,6 +80,7 @@ class RecoverStaleCompilesUC:
                         output_path=record.output_path,
                         check_results=record.check_results,
                         pages=record.pages,
+                        error_code=RESTARTED,
                     )
                 )
                 recovered_compiles += 1

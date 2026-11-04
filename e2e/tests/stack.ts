@@ -121,6 +121,14 @@ export class Client {
     return this.request.put(url, { data, headers: this.headers() });
   }
 
+  /** Текстовый файл проекта (`PUT /files/<путь>`). */
+  putText(url: string, text: string): Promise<APIResponse> {
+    return this.request.put(url, {
+      data: text,
+      headers: { ...this.headers(), "Content-Type": "text/plain" },
+    });
+  }
+
   patch(url: string, data?: unknown): Promise<APIResponse> {
     return this.request.patch(url, { data, headers: this.headers() });
   }

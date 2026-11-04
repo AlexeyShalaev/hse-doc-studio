@@ -7,6 +7,7 @@ from pathlib import Path
 
 import structlog
 
+from hse_doc_studio.core.compile.failure import CANCELLED
 from hse_doc_studio.core.entities import CompileRecord
 from hse_doc_studio.core.enums import CompileStatus, DocumentStatus
 from hse_doc_studio.core.errors import NotFoundError
@@ -105,6 +106,7 @@ class CancelCompileUC:
             output_path=record.output_path,
             check_results=record.check_results,
             pages=record.pages,
+            error_code=CANCELLED,
         )
         await self._compile_repo.save(cancelled_record)
 

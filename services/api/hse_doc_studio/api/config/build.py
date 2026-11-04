@@ -30,7 +30,7 @@ class CompileConfig(BaseModel):
         description="Mount target for the cache volume inside the TeX container.",
     )
     idle_timeout_s: float = Field(
-        default=120.0,
+        default=300.0,
         description="Kill the build if no output is produced for this many seconds.",
     )
     default_max_iterations: int = Field(

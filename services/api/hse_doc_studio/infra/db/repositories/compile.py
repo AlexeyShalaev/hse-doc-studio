@@ -11,6 +11,7 @@ from sqlalchemy.dialects.postgresql import insert as pg_insert
 
 from hse_doc_studio.core.access.context import current_actor
 from hse_doc_studio.core.access.entities import ActorKind
+from hse_doc_studio.core.compile.failure import clip_detail
 from hse_doc_studio.core.entities import CompileRecord
 from hse_doc_studio.core.enums import CompileStatus
 from hse_doc_studio.core.projects.volume import IProjectVolume
@@ -97,6 +98,8 @@ class PostgresCompileRepository:
             "source_commit": record.source_commit,
             "output_sha256": record.output_sha256,
             "output_size": record.output_size,
+            "error_code": record.error_code,
+            "error_detail": clip_detail(record.error_detail),
         }
         actor = current_actor()
         author: dict[str, Any] = {}
@@ -126,10 +129,13 @@ class PostgresCompileRepository:
 
 
 def _clip_log(log: str, limit_bytes: int) -> str:
-    """Лог сверх предела теряет начало: итог сборки и ошибки находятся в конце."""
-    raw = log.encode("utf-8")
+    """Лог сверх предела теряет начало: итог сборки и ошибки находятся в конце.
+
+    Нулевые символы убираются: Postgres не хранит их в тексте, и запись итога упала бы, оставив сборку «идущей».
+    """
+    raw = log.replace("\x00", "").encode("utf-8")
     if len(raw) <= limit_bytes:
-        return log
+        return raw.decode("utf-8")
     room = max(limit_bytes - len(_TRUNCATED_MARK.encode("utf-8")), 0)
     tail = raw[len(raw) - room :].decode("utf-8", errors="ignore") if room else ""
     return _TRUNCATED_MARK + tail
@@ -153,6 +159,8 @@ def _to_record(row: CompileRecordRow, project_folder: Path) -> CompileRecord:
             "source_commit": row.source_commit,
             "output_sha256": row.output_sha256,
             "output_size": row.output_size,
+            "error_code": row.error_code,
+            "error_detail": row.error_detail,
         },
         project_folder=project_folder,
     )

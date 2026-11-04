@@ -45,3 +45,6 @@ class CompileRecordRow(Base):
     source_commit: Mapped[str | None] = mapped_column(String(64))
     output_sha256: Mapped[str | None] = mapped_column(String(64))
     output_size: Mapped[int | None] = mapped_column(BigInteger)
+    # Причина неудачной сборки: код из `core/compile/failure.py` и сырая деталь.
+    error_code: Mapped[str | None] = mapped_column(String(64))
+    error_detail: Mapped[str | None] = mapped_column(Text)

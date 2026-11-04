@@ -22,6 +22,7 @@ from hse_doc_studio.api.schemas.compile import (
     CompileDetailResponse,
     CompileListItemResponse,
     TriggerCompileResponse,
+    map_compile_error,
 )
 from hse_doc_studio.core.access.context import current_actor
 from hse_doc_studio.core.compile.errors import CompileSetupError
@@ -49,6 +50,8 @@ from hse_doc_studio.use_cases.compile.get_build_availability import (
 )
 from hse_doc_studio.use_cases.compile.get_compile import GetCompileInput, GetCompileUC
 from hse_doc_studio.use_cases.compile.get_compile_stream import (
+    RESULT_PREFIX,
+    STATUS_PREFIX,
     GetCompileStreamInput,
     GetCompileStreamUC,
 )
@@ -78,6 +81,7 @@ def _to_list_item(record: CompileRecord) -> CompileListItemResponse:
         chars=record.chars,
         warnings=warnings,
         errors=errors,
+        error=map_compile_error(record.error_code, record.error_detail),
     )
 
 
@@ -194,6 +198,7 @@ async def get_compile(
         warnings=warnings,
         errors=errors,
         check_results=[_map_check_result(r).model_dump() for r in record.check_results],
+        error=map_compile_error(record.error_code, record.error_detail),
         wait=wait_schema(waiting),
         placement=placement_schema(await waits.placement_of(record.id, _viewer_id())),
     )
@@ -235,8 +240,11 @@ async def get_compile_stream(
             if kind in ("wait", "placement"):
                 yield f"event: {kind}\ndata: {value}\n\n"
                 continue
-            if value.startswith("__STATUS__:"):
+            if value.startswith(STATUS_PREFIX):
                 done_payload["status"] = value.split(":", 1)[1] or "success"
+                continue
+            if value.startswith(RESULT_PREFIX):
+                done_payload.update(json.loads(value[len(RESULT_PREFIX) :]))
                 continue
             # JSON-encode so the client can do JSON.parse on event.data.
             yield f"event: log\ndata: {json.dumps(value, ensure_ascii=False)}\n\n"

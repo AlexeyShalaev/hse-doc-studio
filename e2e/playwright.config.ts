@@ -112,6 +112,17 @@ export default defineConfig({
       },
     },
     {
+      // Упавшая сборка объясняет себя: причина и журнал в облаке (личный раннер) и в локальной Студии.
+      name: "build-failure",
+      testMatch: /build-failure\.spec\.ts/,
+      timeout: 20 * 60_000,
+      use: {
+        ...devices["Desktop Chrome"],
+        actionTimeout: 30_000,
+        channel: process.env.E2E_CHANNEL || undefined,
+      },
+    },
+    {
       // Личный раннер вне сети compose и адрес S3 в ссылках (stack.sh outside-up, outside-mode); самостоятельный прогон.
       name: "outside-runner",
       testMatch: /outside-runner\.spec\.ts/,

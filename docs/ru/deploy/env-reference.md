@@ -61,7 +61,7 @@ tags:
 | `HSE_STUDIO__COMPILE__DOCKER_HUB_BASE` | str | `https://hub.docker.com/v2` | оба | Docker Hub v2 API base URL used to fetch tag lists. |
 | `HSE_STUDIO__COMPILE__CACHE_VOLUME_NAME` | str | `hse-tex-cache` | оба | Named Docker volume that persists font/format caches across compiles. |
 | `HSE_STUDIO__COMPILE__CACHE_VOLUME_TARGET` | str | `/root` | оба | Mount target for the cache volume inside the TeX container. |
-| `HSE_STUDIO__COMPILE__IDLE_TIMEOUT_S` | float | `120.0` | оба | Kill the build if no output is produced for this many seconds. |
+| `HSE_STUDIO__COMPILE__IDLE_TIMEOUT_S` | float | `300.0` | оба | Kill the build if no output is produced for this many seconds. |
 | `HSE_STUDIO__COMPILE__DEFAULT_MAX_ITERATIONS` | int | `5` | оба | Fallback for latexmk $max_repeat when the user setting is missing. |
 | `HSE_STUDIO__COMPILE__PREFETCH_IMAGE` | bool | `true` | оба | Pull the TeX image in the background once the install is configured. |
 | `HSE_STUDIO__COMPILE__PROJECTS_HOST_PATH` | str | не задано | оба | Host-side root of the projects bind mount; required when backend runs in Docker. |

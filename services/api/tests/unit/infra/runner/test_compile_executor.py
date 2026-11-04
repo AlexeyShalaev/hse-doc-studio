@@ -227,3 +227,35 @@ async def test__settings__slots_follow_concurrency_and_saving_is_refused(tmp_pat
 def test__tags__docker_gives_the_tex_tag() -> None:
     assert "tex" in detect_tags(office_url=None, tex_available=True, archive_available=lambda fmt: False)
     assert "tex" not in detect_tags(office_url=None, archive_available=lambda fmt: False)
+
+
+async def test__execute__disk_full_while_opening_workspace__typed_failure(
+    tmp_path: Path, docker_log: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    executor, _ = await _executor(_config(tmp_path))
+
+    def full(*_a: object, **_k: object) -> None:
+        raise OSError(28, "No space left on device")
+
+    monkeypatch.setattr(RunnerWorkspaces, "open", full)
+
+    with pytest.raises(JobFailure) as caught:
+        await executor.execute(_envelope(), _ctx())
+
+    assert caught.value.error.code == "disk_full"
+    assert "No space left" in caught.value.error.detail
+
+
+async def test__execute__build_ok_but_no_pdf__pdf_missing_failure(
+    tmp_path: Path, docker_log: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from hse_doc_studio.infra.runner import compile_executor
+
+    executor, _ = await _executor(_config(tmp_path))
+    monkeypatch.setattr(compile_executor, "collect_outputs", lambda *a, **k: ())
+
+    with pytest.raises(JobFailure) as caught:
+        await executor.execute(_envelope(), _ctx())
+
+    assert caught.value.error.code == "pdf_missing"
+    assert caught.value.error.detail == "tz/main.pdf"

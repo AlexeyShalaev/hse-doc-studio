@@ -8,6 +8,8 @@ from pydantic import BaseModel, ConfigDict
 from hse_doc_studio.api.schemas.common import StrictModel
 from hse_doc_studio.api.schemas.personal_runners import CompilePlacement
 from hse_doc_studio.api.schemas.session import CompileWait
+from hse_doc_studio.core.compile.failure import failure_message
+from hse_doc_studio.core.i18n import current_interface_language
 
 
 class BuildAvailabilityResponse(StrictModel):
@@ -21,6 +23,20 @@ class BuildAvailabilityResponse(StrictModel):
     cloud: bool
     any_runner: bool
     tags: list[str]
+
+
+class CompileErrorOut(StrictModel):
+    """Почему сборка не удалась: стабильный код, сырая деталь и текст «что делать» на языке запроса."""
+
+    code: str
+    detail: str | None = None
+    message: str
+
+
+def map_compile_error(code: str | None, detail: str | None) -> CompileErrorOut | None:
+    if code is None:
+        return None
+    return CompileErrorOut(code=code, detail=detail, message=failure_message(code, current_interface_language()))
 
 
 class TriggerCompileResponse(BaseModel):
@@ -46,6 +62,7 @@ class CompileListItemResponse(BaseModel):
     chars: int | None
     warnings: int
     errors: int
+    error: CompileErrorOut | None = None
 
 
 class CompileDetailResponse(BaseModel):
@@ -64,6 +81,8 @@ class CompileDetailResponse(BaseModel):
     warnings: int
     errors: int
     check_results: list[dict[str, Any]]
+    # Причина неудачной или отменённой сборки; у удачной null.
+    error: CompileErrorOut | None = None
     # Только серверный режим: почему сборка не идёт (очередь, нет раннера, заменена). В локальном null.
     wait: CompileWait | None = None
     # Только серверный режим: где идёт сборка (общий раннер, свой раннер или раннер владельца). В локальном null.

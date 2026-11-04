@@ -118,6 +118,9 @@ class CompileRecord:
     source_commit: str | None = None
     output_sha256: str | None = None
     output_size: int | None = None
+    # Почему сборка не удалась: стабильный код (`core/compile/failure.py`) и сырая деталь; у удачной пусто.
+    error_code: str | None = None
+    error_detail: str | None = None
 
 
 @dataclass

@@ -3,20 +3,24 @@ from __future__ import annotations
 import uuid
 from dataclasses import dataclass, replace
 from datetime import datetime, timezone
+from pathlib import Path
 
 import structlog
 
 from hse_doc_studio.core.access.context import current_actor
 from hse_doc_studio.core.access.entities import Actor
 from hse_doc_studio.core.catalog import TemplateVersion
-from hse_doc_studio.core.entities import CompileRecord, Project
-from hse_doc_studio.core.enums import CheckEngine, CompileStatus, DocumentStatus
+from hse_doc_studio.core.compile.errors import CompileSetupError
+from hse_doc_studio.core.compile.failure import CompileFailure, clip_detail, failure_log_block
+from hse_doc_studio.core.entities import CompileRecord, Document, Project
+from hse_doc_studio.core.enums import CheckEngine, CompileStatus, DocumentStatus, EngineType
 from hse_doc_studio.core.errors import NotFoundError
 from hse_doc_studio.core.git_remote.pdf_observer import IBuiltPdfObserver, NoopBuiltPdfObserver
 from hse_doc_studio.core.i18n import current_interface_language, localized_error
 from hse_doc_studio.core.jobs.artifacts import IArtifactStore
 from hse_doc_studio.core.jobs.entities import CheckPlan, CompileJobPayload, JobSpec, job_tags
 from hse_doc_studio.core.jobs.enums import JobKind
+from hse_doc_studio.core.jobs.errors import NoRunnerAvailableError
 from hse_doc_studio.core.jobs.protocols import IJobDispatcher
 from hse_doc_studio.core.projects.locator import IProjectLocator
 from hse_doc_studio.core.repositories import (
@@ -184,7 +188,13 @@ class TriggerCompileUC:
         # Скачивание многогигабайтного образа отдельное действие пользователя
         # (Настройки → Образы → «Установить»): клик по «Сборке» не должен молча
         # превращаться в долгую загрузку. Copy-only варианты проверки не требуют.
-        await self._dispatcher.preflight(spec)
+        try:
+            await self._dispatcher.preflight(spec)
+        except (CompileSetupError, NoRunnerAvailableError) as exc:
+            # Отказ остаётся ошибкой запроса (интерфейс предлагает установить образ), но и в журнале сборок
+            # документа появляется запись: причину видно во вкладке «Сборка» и в списке документов.
+            await self._record_refusal(project_folder, project, doc, compile_id, engine, exc)
+            raise
 
         now = datetime.now(tz=timezone.utc)
         record = CompileRecord(
@@ -222,6 +232,42 @@ class TriggerCompileUC:
         )
 
         return TriggerCompileOutput(compile_id=compile_id)
+
+    async def _record_refusal(  # noqa: PLR0913
+        self,
+        project_folder: Path,
+        project: Project,
+        doc: Document,
+        compile_id: uuid.UUID,
+        engine: EngineType,
+        exc: CompileSetupError | NoRunnerAvailableError,
+    ) -> None:
+        """Запись «сборка не началась»: код отказа, пояснение и деталь; документ краснеет, пока её не заменит новая."""
+        failure = CompileFailure(exc.code, clip_detail(str(exc)))
+        now = datetime.now(tz=timezone.utc)
+        try:
+            await self._compile_repo.save(
+                CompileRecord(
+                    id=compile_id,
+                    project_folder=project_folder,
+                    doc_id=doc.id,
+                    engine=engine,
+                    status=CompileStatus.failure,
+                    started_at=now,
+                    finished_at=now,
+                    log=failure_log_block(failure, current_interface_language()) + "\n",
+                    output_path=None,
+                    check_results=[],
+                    pages=None,
+                    error_code=failure.code,
+                    error_detail=failure.detail,
+                )
+            )
+            doc_index = project.documents.index(doc)
+            project.documents[doc_index] = replace(doc, status=DocumentStatus.err, last_compile_id=compile_id)
+            self._project_repo.save(project)
+        except Exception:  # noqa: BLE001 — запись вторична: отказ запроса важнее её сбоя
+            logger.warning("compile refusal record failed", compile_id=str(compile_id), exc_info=True)
 
     def _check_plan(
         self,

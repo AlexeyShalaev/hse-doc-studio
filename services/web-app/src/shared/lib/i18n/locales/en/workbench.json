@@ -130,7 +130,8 @@
     "buildError": "{{doc}} — build failed",
     "notBuilt": "{{doc}} — not built",
     "formIncomplete": "{{form}} — not filled in",
-    "missingSignature": "{{doc}} — signature missing"
+    "missingSignature": "{{doc}} — signature missing",
+    "buildErrorReason": "{{doc}}: build failed. {{reason}}"
   },
   "checkpoint": {
     "title": "Checkpoint",
