@@ -34,7 +34,7 @@ from hse_doc_studio.core.jobs.runners import (
     IRunnerRepository,
     JobTokenSigner,
 )
-from hse_doc_studio.core.jobs.storage import IJobBlobStore, IJobLogSink, IJobOutputIngest
+from hse_doc_studio.core.jobs.storage import IJobBlobStore, IJobLogSink, IJobOutputIngest, RunnerStoragePolicy
 from hse_doc_studio.core.projects.volume import IProjectVolume
 from hse_doc_studio.core.quotas.protocols import IQuotaGate
 from hse_doc_studio.core.repositories import (
@@ -276,6 +276,13 @@ class ServerJobsProvider(Provider):
         return FsJobLogSink(root, max_bytes=settings.jobs.max_log_bytes)
 
     @provide
+    def get_runner_storage_policy(self) -> RunnerStoragePolicy:
+        s3 = settings.s3
+        return RunnerStoragePolicy(
+            shared_outside=s3.shared_runners_outside, outside_via_api=s3.outside_runner_access == "proxy"
+        )
+
+    @provide
     def get_runner_job_io_service(
         self,
         queue: IJobQueue,
@@ -285,8 +292,11 @@ class ServerJobsProvider(Provider):
         blobs: IJobBlobStore,
         outputs: IJobOutputIngest,
         logs: IJobLogSink,
+        storage_policy: RunnerStoragePolicy,
     ) -> RunnerJobIoService:
-        return RunnerJobIoService(queue, queue_service, runners, signer, blobs, outputs, logs)
+        return RunnerJobIoService(
+            queue, queue_service, runners, signer, blobs, outputs, logs, storage_policy=storage_policy
+        )
 
     @provide
     def get_job_apply_ledger(self, sessions: SessionProvider) -> IJobApplyLedger:

@@ -37,7 +37,7 @@ from hse_doc_studio.core.jobs.wire import (
     RunnerRegisterResponse,
 )
 from hse_doc_studio.infra.runner.backoff import Backoff
-from hse_doc_studio.infra.runner.client import RunnerApiError, RunnerClient, RunnerUnreachable
+from hse_doc_studio.infra.runner.client import RunnerApiError, RunnerClient, RunnerUnreachable, StorageUnreachable
 from hse_doc_studio.infra.runner.executor import JobContext, JobExecutor, JobOutcome, OutputFile
 from hse_doc_studio.infra.runner.log_batcher import DEFAULT_FLUSH_S, LogBatcher
 
@@ -502,9 +502,10 @@ class RunnerLoop:
                     logger.warning("job %s: attempt is stale, outputs dropped", job_id)
                     return
                 logger.exception("job %s: artifact upload failed", job_id)
+                code = "storage_unreachable" if isinstance(exc, StorageUnreachable) else "artifact_upload_failed"
                 result = JobResult(
                     status=JobStatus.failed,
-                    error=JobError(JobErrorCategory.unavailable, "artifact_upload_failed", str(exc)),
+                    error=JobError(JobErrorCategory.unavailable, code, str(exc)),
                 )
             else:
                 refs = tuple(out.ref for out in outcome.outputs)

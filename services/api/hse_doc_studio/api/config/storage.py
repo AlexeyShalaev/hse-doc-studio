@@ -1,8 +1,10 @@
 """S3-совместимое хранилище."""
 
 from pathlib import Path
+from typing import Literal
+from urllib.parse import urlsplit
 
-from pydantic import BaseModel, Field, SecretStr
+from pydantic import BaseModel, Field, SecretStr, field_validator
 
 
 class StorageConfig(BaseModel):
@@ -18,7 +20,20 @@ class StorageConfig(BaseModel):
     )
     public_endpoint: str | None = Field(
         default=None,
-        description="Адрес для подписанных ссылок, если клиенты видят S3 под другим именем, чем сервер.",
+        description="Публичный адрес S3 для подписанных ссылок тем, кто вне сети сервера: браузеры, личные раннеры "
+        "и локальные Студии. Ссылка подписывается сразу для этого хоста; раннеры в сети сервера по-прежнему "
+        "ходят по внутреннему адресу. Пусто означает, что внешние клиенты получают внутренний адрес.",
+    )
+    outside_runner_access: Literal["presigned", "proxy"] = Field(
+        default="presigned",
+        description="Как раннеры вне сети сервера обмениваются файлами с хранилищем: presigned это подписанные "
+        "ссылки на публичный адрес; proxy это поток через api без ссылок (запасной вариант, когда хранилище нельзя "
+        "опубликовать; нагрузка идёт через api).",
+    )
+    shared_runners_outside: bool = Field(
+        default=False,
+        description="Считать общие (установочные) раннеры тоже внешними: им выдаются ссылки на публичный адрес "
+        "или поток через api. По умолчанию внешними считаются только личные раннеры.",
     )
     region: str = Field(default="us-east-1", description="Регион подписи.")
     access_key: SecretStr | None = Field(default=None, description="Ключ доступа; пусто означает цепочку boto3.")
@@ -35,3 +50,17 @@ class StorageConfig(BaseModel):
         "пусто означает не трогать CORS бакета.",
     )
     presign_ttl_s: int = Field(default=300, ge=1, le=3600, description="Срок подписанной ссылки по умолчанию.")
+
+    @field_validator("public_endpoint")
+    @classmethod
+    def _public_endpoint_is_origin(cls, value: str | None) -> str | None:
+        if value is None or not value.strip():
+            return None
+        parts = urlsplit(value.strip())
+        if parts.scheme not in ("http", "https") or not parts.hostname:
+            msg = "public_endpoint должен быть адресом http(s)://хост[:порт]"
+            raise ValueError(msg)
+        if parts.username or parts.password or parts.query or parts.fragment or parts.path.strip("/"):
+            msg = "public_endpoint задаёт только схему, хост и порт: без логина, пути, query и fragment"
+            raise ValueError(msg)
+        return f"{parts.scheme}://{parts.netloc}"

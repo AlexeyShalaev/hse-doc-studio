@@ -3,7 +3,7 @@ from __future__ import annotations
 from collections.abc import AsyncIterator, Collection
 from typing import BinaryIO, Protocol
 
-from hse_doc_studio.core.storage.models import BlobInfo, ObjectInfo, PresignedUrl
+from hse_doc_studio.core.storage.models import BlobInfo, LinkAudience, ObjectInfo, PresignedUrl
 
 ObjectSource = bytes | BinaryIO
 """Источник данных: байты или перематываемый двоичный файл (читается от текущей позиции до конца)."""
@@ -43,12 +43,19 @@ class IObjectStore(Protocol):
         """Все объекты, ключ которых начинается с prefix, по возрастанию ключа."""
         ...
 
-    async def presign_get(self, key: str, *, expires_in_s: int = 300) -> PresignedUrl | None:
-        """Ссылка на чтение с поддержкой Range; None, если хранилище ссылок не выдаёт (диск)."""
+    async def presign_get(
+        self, key: str, *, expires_in_s: int = 300, audience: LinkAudience = LinkAudience.outside
+    ) -> PresignedUrl | None:
+        """Ссылка на чтение с поддержкой Range, подписанная для адреса получателя; None, если ссылок нет (диск)."""
         ...
 
     async def presign_put(
-        self, key: str, *, expires_in_s: int = 300, content_type: str | None = None
+        self,
+        key: str,
+        *,
+        expires_in_s: int = 300,
+        content_type: str | None = None,
+        audience: LinkAudience = LinkAudience.outside,
     ) -> PresignedUrl | None:
         """Ссылка на запись; None, если хранилище ссылок не выдаёт."""
         ...
@@ -77,9 +84,13 @@ class IBlobStore(Protocol):
 
     async def delete(self, sha256: str) -> None: ...
 
-    async def presign_get(self, sha256: str, *, expires_in_s: int = 300) -> PresignedUrl | None: ...
+    async def presign_get(
+        self, sha256: str, *, expires_in_s: int = 300, audience: LinkAudience = LinkAudience.outside
+    ) -> PresignedUrl | None: ...
 
-    async def presign_put(self, sha256: str, *, expires_in_s: int = 300) -> PresignedUrl | None: ...
+    async def presign_put(
+        self, sha256: str, *, expires_in_s: int = 300, audience: LinkAudience = LinkAudience.outside
+    ) -> PresignedUrl | None: ...
 
     async def verify(self, sha256: str) -> BlobInfo:
         """Перечитывает блоб, залитый по presigned PUT, и сверяет хеш; при расхождении удаляет его

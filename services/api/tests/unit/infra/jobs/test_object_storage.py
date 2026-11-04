@@ -11,6 +11,7 @@ from hse_doc_studio.core.jobs.enums import JobKind, JobState
 from hse_doc_studio.core.jobs.errors import ArtifactInvalidError, BlobMissingError, QueuedJobNotFoundError
 from hse_doc_studio.core.jobs.files import ArtifactRef
 from hse_doc_studio.core.jobs.queue import EnqueueRequest
+from hse_doc_studio.core.storage.models import LinkAudience, PresignedUrl
 from hse_doc_studio.infra.jobs.live_blobs import QueueLiveBlobs
 from hse_doc_studio.infra.jobs.object_storage import AnnouncedJobOutputIngest, ObjectJobBlobStore
 from hse_doc_studio.infra.storage.blobs import ObjectBlobStore
@@ -212,3 +213,80 @@ async def test__live_blobs__only_unfinished_jobs_keep_their_manifest(queue: InMe
 
     assert "a" * 64 in live
     assert "b" * 64 not in live
+
+
+class _LinkingStore(FsObjectStore):
+    """Диск, который выдаёт ссылки по получателю, как S3 с внутренним и публичным адресом."""
+
+    async def presign_get(
+        self, key: str, *, expires_in_s: int = 300, audience: LinkAudience = LinkAudience.outside
+    ) -> PresignedUrl | None:
+        return PresignedUrl(url=f"https://{audience.value}.test/{key}", expires_at=datetime.now(UTC))
+
+    async def presign_put(
+        self,
+        key: str,
+        *,
+        expires_in_s: int = 300,
+        content_type: str | None = None,
+        audience: LinkAudience = LinkAudience.outside,
+    ) -> PresignedUrl | None:
+        return PresignedUrl(url=f"https://{audience.value}.test/{key}", expires_at=datetime.now(UTC))
+
+
+@pytest.fixture
+def linking(tmp_path: Path) -> _LinkingStore:
+    return _LinkingStore(tmp_path / "linking", max_object_bytes=1024 * 1024)
+
+
+async def test__blob_store__url_for__signed_for_requested_audience(linking: _LinkingStore) -> None:
+    blobs = ObjectBlobStore(linking)
+    info = await blobs.put(DATA)
+    store = ObjectJobBlobStore(blobs)
+
+    assert (await store.url_for(info.sha256, LinkAudience.internal) or "").startswith("https://internal.test/")
+    assert (await store.url_for(info.sha256, LinkAudience.outside) or "").startswith("https://outside.test/")
+    assert (await store.url_for(info.sha256) or "").startswith("https://outside.test/")
+
+
+@pytest.mark.parametrize(
+    ("audience", "prefix"),
+    [(LinkAudience.internal, "https://internal.test/"), (LinkAudience.outside, "https://outside.test/")],
+)
+async def test__outputs__announce__upload_link_signed_for_requested_audience(
+    queue: InMemoryJobQueue, linking: _LinkingStore, audience: LinkAudience, prefix: str
+) -> None:
+    ingest = AnnouncedJobOutputIngest(queue, linking, ObjectJobOutputIngest(linking))
+    job_id = await _enqueue(queue)
+
+    url = await ingest.announce(job_id, 1, _ref(), audience)
+
+    assert url is not None
+    assert url.startswith(prefix + f"artifacts/{PROJECT}/jobs/{job_id}/")
+
+
+async def test__outputs__announce_without_audience__no_link_and_upload_goes_through_api(
+    queue: InMemoryJobQueue, linking: _LinkingStore
+) -> None:
+    ingest = AnnouncedJobOutputIngest(queue, linking, ObjectJobOutputIngest(linking))
+    job_id = await _enqueue(queue)
+    ref = _ref()
+
+    assert await ingest.announce(job_id, 1, ref, None) is None
+    await ingest.put(job_id, 1, ref.sha256, _chunks(DATA))
+    await ingest.commit(job_id, 1, [ref])
+
+    assert await linking.get(f"artifacts/{PROJECT}/jobs/{job_id}/out/a.pdf") == DATA
+
+
+async def test__outputs__proxy_upload_over_announced_size__rejected_before_storage(
+    queue: InMemoryJobQueue, linking: _LinkingStore
+) -> None:
+    ingest = AnnouncedJobOutputIngest(queue, linking, ObjectJobOutputIngest(linking))
+    job_id = await _enqueue(queue)
+    await ingest.announce(job_id, 1, _ref(), None)
+
+    with pytest.raises(ArtifactInvalidError):
+        await ingest.put(job_id, 1, SHA, _chunks(DATA * 2))
+
+    assert await linking.list_objects(f"artifacts/{PROJECT}/") == []

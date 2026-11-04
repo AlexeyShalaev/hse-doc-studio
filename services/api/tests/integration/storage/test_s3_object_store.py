@@ -3,12 +3,13 @@
 from __future__ import annotations
 
 import hashlib
+import os
 import time
 from datetime import UTC, datetime
 from typing import Any
 
 import pytest
-from hse_doc_studio.core.storage import ChecksumMismatchError, ObjectStoreError, blob_key
+from hse_doc_studio.core.storage import ChecksumMismatchError, LinkAudience, ObjectStoreError, blob_key
 from hse_doc_studio.infra.storage.blobs import ObjectBlobStore
 from hse_doc_studio.infra.storage.s3 import S3ObjectStore
 
@@ -147,6 +148,111 @@ async def test__presign_get__public_endpoint_client__signs_for_public_host(s3_cl
     assert link is not None
     assert link.url.startswith(f"https://files.example.test/{s3_bucket}/a/b?")
     assert "X-Amz-Signature=" in link.url
+
+
+def _client_for(endpoint: str | None) -> Any:
+    import boto3  # noqa: PLC0415
+    from hse_doc_studio.infra.storage.s3 import build_client_config  # noqa: PLC0415
+
+    return boto3.client(
+        "s3",
+        endpoint_url=endpoint,
+        region_name="us-east-1",
+        aws_access_key_id="k",
+        aws_secret_access_key="s",
+        config=build_client_config(path_style=True),
+    )
+
+
+async def test__presign__internal_audience__signed_for_internal_host_outside_for_public(
+    s3_client: Any, s3_bucket: str
+) -> None:
+    store = S3ObjectStore(
+        _client_for("http://minio.tech.svc:80"),
+        s3_bucket,
+        max_object_bytes=10,
+        multipart_threshold_bytes=5 * 1024**2,
+        presign_client=_client_for("https://files.example.test"),
+    )
+
+    inside_get = await store.presign_get("a/b", audience=LinkAudience.internal)
+    inside_put = await store.presign_put("a/b", audience=LinkAudience.internal)
+    outside_get = await store.presign_get("a/b", audience=LinkAudience.outside)
+    outside_put = await store.presign_put("a/b", audience=LinkAudience.outside)
+    default_get = await store.presign_get("a/b")
+
+    assert inside_get is not None
+    assert inside_put is not None
+    assert outside_get is not None
+    assert outside_put is not None
+    assert default_get is not None
+    assert inside_get.url.startswith(f"http://minio.tech.svc:80/{s3_bucket}/a/b?")
+    assert inside_put.url.startswith(f"http://minio.tech.svc:80/{s3_bucket}/a/b?")
+    assert outside_get.url.startswith(f"https://files.example.test/{s3_bucket}/a/b?")
+    assert outside_put.url.startswith(f"https://files.example.test/{s3_bucket}/a/b?")
+    assert default_get.url.startswith("https://files.example.test/")
+
+
+async def test__presign__no_public_endpoint__outside_gets_the_internal_address(s3_client: Any, s3_bucket: str) -> None:
+    store = S3ObjectStore(
+        _client_for("http://minio.tech.svc:80"), s3_bucket, max_object_bytes=10, multipart_threshold_bytes=5 * 1024**2
+    )
+
+    outside = await store.presign_get("a/b", audience=LinkAudience.outside)
+
+    assert not store.has_public_endpoint
+    assert outside is not None
+    assert outside.url.startswith(f"http://minio.tech.svc:80/{s3_bucket}/a/b?")
+
+
+async def test__presign__real_s3__public_host_link_works_and_host_swap_breaks_the_signature(s3_target: Any) -> None:
+    """Подпись v4 включает хост: ссылка, подписанная для публичного имени, работает, а подмена хоста в строке нет."""
+    if s3_target.endpoint_url is None:
+        pytest.skip("moto не проверяет подпись; проверяется на MinIO из CI")
+    requests = pytest.importorskip("requests")
+    internal_url = s3_target.endpoint_url
+    if "localhost" in internal_url:
+        public_url = internal_url.replace("localhost", "127.0.0.1")
+    elif "127.0.0.1" in internal_url:
+        public_url = internal_url.replace("127.0.0.1", "localhost")
+    else:
+        pytest.skip("нужен адрес MinIO с именем localhost или 127.0.0.1, чтобы получить второе имя того же сервера")
+    import boto3  # noqa: PLC0415
+    from hse_doc_studio.infra.storage.s3 import build_client_config  # noqa: PLC0415
+
+    def client(endpoint: str) -> Any:
+        return boto3.client(
+            "s3",
+            endpoint_url=endpoint,
+            region_name="us-east-1",
+            aws_access_key_id=os.environ["HSE_TEST_S3_ACCESS_KEY"],
+            aws_secret_access_key=os.environ["HSE_TEST_S3_SECRET_KEY"],
+            config=build_client_config(path_style=True),
+        )
+
+    store = S3ObjectStore(
+        client(internal_url),
+        s3_target.bucket,
+        max_object_bytes=10**6,
+        multipart_threshold_bytes=5 * 1024**2,
+        presign_client=client(public_url),
+    )
+    await store.put("artifacts/p/a.pdf", PDF, content_type="application/pdf")
+
+    outside = await store.presign_get("artifacts/p/a.pdf", audience=LinkAudience.outside)
+    inside = await store.presign_get("artifacts/p/a.pdf", audience=LinkAudience.internal)
+    upload = await store.presign_put("artifacts/p/b.bin", audience=LinkAudience.outside)
+
+    assert outside is not None
+    assert inside is not None
+    assert upload is not None
+    assert outside.url.startswith(public_url)
+    assert requests.get(outside.url, timeout=10).content == PDF
+    assert requests.get(inside.url, timeout=10).content == PDF
+    swapped = inside.url.replace(internal_url, public_url)
+    assert requests.get(swapped, timeout=10).status_code == 403
+    assert requests.put(upload.url, data=b"from-outside", timeout=10).status_code == 200
+    assert await store.get("artifacts/p/b.bin") == b"from-outside"
 
 
 class _ChangingFile:

@@ -12,7 +12,7 @@ from hse_doc_studio.core.jobs.wire import (
     RunnerRegisterRequest,
 )
 from hse_doc_studio.infra.runner.backoff import Backoff
-from hse_doc_studio.infra.runner.client import RunnerApiError, RunnerClient, RunnerUnreachable
+from hse_doc_studio.infra.runner.client import RunnerApiError, RunnerClient, RunnerUnreachable, StorageUnreachable
 
 from tests.unit.infra.runner.fake_runner_api import (
     RUNNER_TOKEN,
@@ -140,3 +140,29 @@ def test_backoff_grows_caps_and_resets() -> None:
     assert [backoff.next() for _ in range(5)] == [1.0, 2.0, 4.0, 5.0, 5.0]
     backoff.reset()
     assert backoff.next() == 1.0
+
+
+async def test_put_to_url_connect_error_names_the_storage_origin_without_the_signature(
+    transport: SwitchTransport,
+) -> None:
+    client = _client(transport, registered=True)
+    transport.unroutable_hosts.add("minio.tech.svc")
+
+    with pytest.raises(StorageUnreachable) as caught:
+        await client.put_to_url("http://minio.tech.svc:80/studio/k?X-Amz-Signature=deadbeef", b"pdf")
+    await client.aclose()
+
+    message = str(caught.value)
+    assert caught.value.origin == "http://minio.tech.svc:80"
+    assert "HSE_STUDIO__S3__PUBLIC_ENDPOINT" in message
+    assert "HSE_STUDIO__S3__OUTSIDE_RUNNER_ACCESS=proxy" in message
+    assert "deadbeef" not in message
+    assert isinstance(caught.value, RunnerUnreachable)
+
+
+async def test_put_to_url_server_error_is_not_a_storage_reachability_problem(transport: SwitchTransport) -> None:
+    client = _client(transport, registered=True)
+
+    with pytest.raises(RunnerApiError):
+        await client.put_to_url("http://testserver/nope", b"pdf")
+    await client.aclose()

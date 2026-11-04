@@ -8,7 +8,7 @@ from hse_doc_studio.core.storage.errors import (
     ObjectTooLargeError,
 )
 from hse_doc_studio.core.storage.keys import blob_key, is_sha256, validate_key
-from hse_doc_studio.core.storage.models import BlobInfo, ObjectInfo, PresignedUrl
+from hse_doc_studio.core.storage.models import BlobInfo, LinkAudience, ObjectInfo, PresignedUrl
 from hse_doc_studio.core.storage.ports import IBlobStore, IObjectStore
 
 __all__ = [
@@ -17,6 +17,7 @@ __all__ = [
     "IBlobStore",
     "IObjectStore",
     "InvalidObjectKeyError",
+    "LinkAudience",
     "ObjectInfo",
     "ObjectNotFoundError",
     "ObjectStoreError",

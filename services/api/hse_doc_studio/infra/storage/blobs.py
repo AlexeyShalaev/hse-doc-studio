@@ -9,7 +9,7 @@ from collections.abc import AsyncIterator, Collection
 from hse_doc_studio.core.storage.errors import ChecksumMismatchError
 from hse_doc_studio.core.storage.hashing import measure
 from hse_doc_studio.core.storage.keys import blob_key, is_sha256
-from hse_doc_studio.core.storage.models import BlobInfo, PresignedUrl
+from hse_doc_studio.core.storage.models import BlobInfo, LinkAudience, PresignedUrl
 from hse_doc_studio.core.storage.ports import ByteRange, IObjectStore, ObjectSource
 
 _HEAD_CONCURRENCY = 16
@@ -55,11 +55,15 @@ class ObjectBlobStore:
     async def delete(self, sha256: str) -> None:
         await self._store.delete(blob_key(sha256))
 
-    async def presign_get(self, sha256: str, *, expires_in_s: int = 300) -> PresignedUrl | None:
-        return await self._store.presign_get(blob_key(sha256), expires_in_s=expires_in_s)
+    async def presign_get(
+        self, sha256: str, *, expires_in_s: int = 300, audience: LinkAudience = LinkAudience.outside
+    ) -> PresignedUrl | None:
+        return await self._store.presign_get(blob_key(sha256), expires_in_s=expires_in_s, audience=audience)
 
-    async def presign_put(self, sha256: str, *, expires_in_s: int = 300) -> PresignedUrl | None:
-        return await self._store.presign_put(blob_key(sha256), expires_in_s=expires_in_s)
+    async def presign_put(
+        self, sha256: str, *, expires_in_s: int = 300, audience: LinkAudience = LinkAudience.outside
+    ) -> PresignedUrl | None:
+        return await self._store.presign_put(blob_key(sha256), expires_in_s=expires_in_s, audience=audience)
 
     async def verify(self, sha256: str) -> BlobInfo:
         if not is_sha256(sha256):

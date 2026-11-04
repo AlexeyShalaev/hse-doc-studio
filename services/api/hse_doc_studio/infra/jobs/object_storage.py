@@ -21,6 +21,7 @@ from hse_doc_studio.core.storage.errors import ObjectStoreError
 from hse_doc_studio.core.storage.ingest import OutputRejectedError, OutputSpec, output_prefix
 from hse_doc_studio.core.storage.keys import is_sha256
 from hse_doc_studio.core.storage.manifest import IBlobRegistry
+from hse_doc_studio.core.storage.models import LinkAudience
 from hse_doc_studio.core.storage.ports import IBlobStore, IObjectStore
 from hse_doc_studio.infra.storage.job_output_ingest import ObjectJobOutputIngest
 
@@ -52,8 +53,8 @@ class ObjectJobBlobStore:
             await self._registry.forget([sha256])
         return False
 
-    async def url_for(self, sha256: str) -> str | None:
-        link = await self._blobs.presign_get(sha256)
+    async def url_for(self, sha256: str, audience: LinkAudience = LinkAudience.outside) -> str | None:
+        link = await self._blobs.presign_get(sha256, audience=audience)
         return None if link is None else link.url
 
     async def open(self, sha256: str) -> AsyncIterator[bytes]:
@@ -70,11 +71,13 @@ class AnnouncedJobOutputIngest:
         self._store = store
         self._ingest = ingest
 
-    async def announce(self, job_id: UUID, attempt: int, artifact: ArtifactRef) -> str | None:
+    async def announce(
+        self, job_id: UUID, attempt: int, artifact: ArtifactRef, audience: LinkAudience | None = LinkAudience.outside
+    ) -> str | None:
         project = await self._project(job_id)
         spec = OutputSpec(path=artifact.path, size=artifact.size, sha256=artifact.sha256)
         try:
-            (upload,) = await self._ingest.begin(project, str(job_id), [spec])
+            (upload,) = await self._ingest.begin(project, str(job_id), [spec], audience=audience)
         except OutputRejectedError as exc:
             raise ArtifactInvalidError(str(exc)) from exc
         announced = await self._announced(project, job_id, attempt, artifact.sha256)
@@ -126,7 +129,7 @@ class AnnouncedJobOutputIngest:
 
     async def _fill_duplicates(self, project: str, job_id: str, specs: Sequence[OutputSpec]) -> None:
         """Два пути с одним содержимым раннер может залить один раз: недостающий выход копируем с соседнего."""
-        uploads = await self._ingest.begin(project, job_id, specs)
+        uploads = await self._ingest.begin(project, job_id, specs, audience=None)
         keys = {spec.path: upload.key for spec, upload in zip(specs, uploads, strict=True)}
         present: dict[str, str] = {}
         missing: list[OutputSpec] = []
