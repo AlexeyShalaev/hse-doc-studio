@@ -44,11 +44,16 @@ describe("AccountMenuView on a phone", () => {
 
   it("is a bottom sheet with theme, language, assistant and help", async () => {
     viewport = installViewport(390);
-    await open({ onOpenAgent: vi.fn(), onOpenHelp: vi.fn() });
+    await open({
+      onOpenAgent: vi.fn(),
+      onOpenHelp: vi.fn(),
+      onOpenCommands: vi.fn(),
+    });
     expect(screen.getByTestId("account-menu")).toHaveAttribute(
       "data-form",
       "sheet",
     );
+    expect(screen.getByTestId("account-menu-commands")).toBeVisible();
     expect(screen.getByTestId("account-menu-appearance")).toBeVisible();
     expect(screen.getByTestId("account-menu-agent")).toBeVisible();
     expect(screen.getByTestId("account-menu-help")).toBeVisible();
@@ -76,7 +81,11 @@ describe("AccountMenuView on a phone", () => {
 
   it("keeps the desktop menu as it was: no appearance block, no assistant row", async () => {
     viewport = installViewport(1360);
-    await open({ onOpenAgent: vi.fn(), onOpenHelp: vi.fn() });
+    await open({
+      onOpenAgent: vi.fn(),
+      onOpenHelp: vi.fn(),
+      onOpenCommands: vi.fn(),
+    });
     expect(screen.getByTestId("account-menu")).toHaveAttribute(
       "data-form",
       "popover",
@@ -84,5 +93,6 @@ describe("AccountMenuView on a phone", () => {
     expect(screen.queryByTestId("account-menu-appearance")).toBeNull();
     expect(screen.queryByTestId("account-menu-agent")).toBeNull();
     expect(screen.queryByTestId("account-menu-help")).toBeNull();
+    expect(screen.queryByTestId("account-menu-commands")).toBeNull();
   });
 });

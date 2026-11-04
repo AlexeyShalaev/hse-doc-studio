@@ -2474,6 +2474,7 @@ export const ProjectCreateWizard = () => {
       <div
         className="flex shrink-0 flex-row overflow-x-auto border-b border-border max-sm:!p-2 sm:w-[220px] sm:flex-col sm:overflow-y-auto sm:border-r sm:border-b-0"
         data-testid="wizard-steps"
+        data-hscroll
         style={{
           padding: "20px 8px 24px",
           background: "var(--bg-1)",
