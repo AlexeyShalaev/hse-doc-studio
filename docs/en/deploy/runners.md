@@ -76,6 +76,102 @@ Declaring an endpoint is not enough: the cloud does not create a provider by its
 
 api-side limits: `HSE_STUDIO__JOBS__RELAY_PICKUP_S` (how long to wait for the runner to take the request), `HSE_STUDIO__JOBS__RELAY_MAX_REQUEST_BYTES`, `HSE_STUDIO__JOBS__RELAY_MAX_RESPONSE_BYTES`, `HSE_STUDIO__JOBS__RELAY_MAX_PENDING_PER_USER`, `HSE_STUDIO__JOBS__RELAY_MAX_DURATION_S`, and the memory budget for request bodies held by api: `HSE_STUDIO__JOBS__RELAY_MAX_PENDING_BYTES_PER_USER` (per person), `HSE_STUDIO__JOBS__RELAY_MAX_PENDING_TOTAL` and `HSE_STUDIO__JOBS__RELAY_MAX_PENDING_BYTES_TOTAL` (whole process). Over the budget the chat gets `relay_busy`. A runner that does not answer shows up in the chat as "Runner "…" did not respond" with a way to pick another model.
 
+## Runners outside the server network
+
+A runner sends a build result to object storage (S3) through a presigned link issued by the api; project sources it fetches from the api itself. Whoever receives the link opens it, so the address must be routable from that machine. The internal S3 address (`http://minio.<namespace>.svc`, `http://minio:9000`) is visible only inside the server network.
+
+| Who | What it does | S3 address |
+|---|---|---|
+| api | every storage operation | internal, `HSE_STUDIO__S3__ENDPOINT` |
+| shared runner inside the server network (pod in the cluster, compose container) | uploads a result by link | internal |
+| personal runner, local Studio, runner on another machine | uploads a result by link | public, `HSE_STUDIO__S3__PUBLIC_ENDPOINT` |
+| browser | build and submission PDF by link (redirect from the api) | public |
+
+The S3 (v4) request signature includes the host, so a link is signed for the address it will be opened at. Rewriting the host in a finished link does not work: the storage answers 403. Without `PUBLIC_ENDPOINT`, outside recipients get the internal address (as before this setting). A build on a personal runner then fails with `storage_unreachable` and the text "object storage at ... is not reachable from this machine" naming the settings, and the Self-diagnostics page in the admin area warns: "N runner(s) outside the server network, but the storage has no public address".
+
+### Publishing the storage
+
+1. Expose only the S3 API (MinIO port 9000) under a dedicated name, for example `files.example.org`, with TLS. Do not publish the MinIO console (9001) or metrics (`/minio/v2/metrics`). The name must lead to the storage root: an address with a path prefix is not supported.
+2. The proxy must pass the `Host` header unchanged: the storage verifies the signature against it.
+3. Set the address: `s3.publicEndpoint` in Helm, `S3_PUBLIC_ENDPOINT` in the compose `.env`, or `HSE_STUDIO__S3__PUBLIC_ENDPOINT`. The value is scheme, host and port without a path: `https://files.example.org`.
+4. Restart the api and open Self-diagnostics: the storage warning should disappear.
+
+Kubernetes, Ingress (ingress-nginx; substitute your host, service name and namespace):
+
+```yaml
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: studio-s3
+  namespace: <namespace-minio>
+  annotations:
+    nginx.ingress.kubernetes.io/proxy-body-size: "0"
+    nginx.ingress.kubernetes.io/proxy-request-buffering: "off"
+    nginx.ingress.kubernetes.io/configuration-snippet: |
+      limit_except GET HEAD PUT { deny all; }
+spec:
+  ingressClassName: nginx
+  tls:
+    - hosts: [files.example.org]
+      secretName: files-tls
+  rules:
+    - host: files.example.org
+      http:
+        paths:
+          - path: /<bucket>/
+            pathType: Prefix
+            backend:
+              service:
+                name: <minio-service>
+                port: {number: 9000}
+```
+
+The `configuration-snippet` annotation is disabled by default in recent ingress-nginx versions (`allow-snippet-annotations`): if it is off, restrict the methods in the controller policy or use the Gateway API.
+
+Kubernetes, Gateway API (`HTTPRoute` attached to an existing Gateway with an HTTPS listener for that name):
+
+```yaml
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: studio-s3
+  namespace: <namespace-minio>
+spec:
+  parentRefs:
+    - name: <gateway>
+      namespace: <namespace-gateway>
+  hostnames: [files.example.org]
+  rules:
+    - matches:
+        - path: {type: PathPrefix, value: /<bucket>/}
+          method: GET
+        - path: {type: PathPrefix, value: /<bucket>/}
+          method: HEAD
+        - path: {type: PathPrefix, value: /<bucket>/}
+          method: PUT
+      backendRefs:
+        - name: <minio-service>
+          port: 9000
+```
+
+If the Gateway and MinIO are in different namespaces, add a `ReferenceGrant`. Compose: a reverse proxy on the host (nginx, Caddy) with TLS in front of MinIO port 9000; the port is not published in `docker-compose.yml`, so attach the proxy to the compose network or publish the port on `127.0.0.1` with an overlay.
+
+### Security
+
+- The bucket stays private. There is no anonymous access: an object can be opened only through a link signed with the api keys, only with the method and for the key it was issued for. A read link does not work for writing.
+- S3 access keys are never handed to runners or browsers. A runner gets a write link for one output of its own job (prefix `artifacts/<project>/jobs/<job>/`); the api verifies size and sha256 on completion.
+- Link lifetime: 15 minutes for a result upload, 2 minutes for a PDF download. The signature is in the URL, so TLS on the public name is mandatory and the proxy must not log the query string.
+- Outside, `GET`, `HEAD` and `PUT` on the bucket paths are enough. Block `DELETE`, `POST`, listing and other buckets at the proxy, as in the examples above.
+- CORS is needed only by the browser (pdf.js reads the PDF by link with a `Range` header from another origin), not by runners. MinIO answers CORS for any origin by default; narrow it to the Studio address with the MinIO setting `MINIO_API_CORS_ALLOW_ORIGIN`. For AWS, Yandex Object Storage and Ceph set `HSE_STUDIO__S3__CORS_ORIGINS=["https://studio.example.org"]` (Helm `s3.corsOrigins`): the api applies the bucket CORS on startup.
+
+### When the storage cannot be published
+
+`HSE_STUDIO__S3__OUTSIDE_RUNNER_ACCESS=proxy` (Helm `s3.outsideRunnerAccess: proxy`, compose `S3_OUTSIDE_RUNNER_ACCESS=proxy`) turns links off for runners outside the network: they send the result to the api itself (`PUT /api/runner/v1/jobs/{id}/artifacts/{sha256}`) and the api stores it. The runner and job tokens are checked, the size cannot exceed the announced one, the announced one cannot exceed `HSE_STUDIO__JOBS__MAX_ARTIFACT_BYTES` (512 MiB), and the sha256 is verified before anything reaches the storage.
+
+The cost: all result traffic of such runners goes through the api. The body is received into a temporary file (up to 8 MiB in memory, the rest on disk), so the api disk needs room for the number of concurrent uploads times the result size, and the ingress in front of the api must pass large bodies (for ingress-nginx `proxy-body-size`) and not cut long requests. For the browser nothing changes: a PDF by link still needs the public address.
+
+A shared runner located outside the server network (another VM) counts as internal. Declare it outside: `HSE_STUDIO__S3__SHARED_RUNNERS_OUTSIDE=true` (Helm `s3.sharedRunnersOutside`). Design and decisions: `docs/design/s3-public-endpoint.md`.
+
 ## Connected Studios and presence
 
 Once a minute a local Studio sends the server a presence signal over its device-code sign-in: the computer name, the version, what it is doing, the runner and model state, and the sync of cloud projects. The server keeps the fresh time in memory and writes a database row when the state changed or once every two minutes; "online" means a signal not older than three minutes. A device is forgotten after 60 days of silence and a person has at most 20 devices. The intervals are `HSE_STUDIO__DEVICES__INTERVAL_S`, `ONLINE_WINDOW_S`, `PERSIST_INTERVAL_S` and `RETENTION_DAYS` ([reference](env-reference.md)). A person sees their own devices in full, other project members only "working locally", and an instance administrator sees as much as any person. Decisions: `docs/design/connected-devices.md`.
