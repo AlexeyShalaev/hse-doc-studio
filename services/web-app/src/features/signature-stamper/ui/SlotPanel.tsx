@@ -297,7 +297,10 @@ export const SlotPanel = ({
                   </div>
                 </div>
 
-                <div className="flex items-center slot-actions" style={{ gap: 6 }}>
+                <div
+                  className="flex items-center slot-actions"
+                  style={{ gap: 6 }}
+                >
                   <button
                     type="button"
                     className="btn xs"
