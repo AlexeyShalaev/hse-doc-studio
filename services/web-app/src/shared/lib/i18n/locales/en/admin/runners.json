@@ -269,6 +269,8 @@
       "artifact_invalid": "The runner returned a damaged result",
       "blob_missing": "A project file was not found",
       "output_missing": "The build produced no result",
+      "storage_unreachable": "The runner cannot reach the storage: the administrator must set a public S3 address",
+      "artifact_upload_failed": "The runner could not upload its result to the server",
       "superseded": "Replaced by a newer job",
       "no_runner": "No suitable runner",
       "quota": "The job limit was reached",

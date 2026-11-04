@@ -57,6 +57,8 @@ class FakeJob:
 
 class FakeRunnerState:
     def __init__(self) -> None:
+        # Подписанная ссылка хранилища, которую api отдаёт в ответе на заявку выхода; None значит «грузи через api».
+        self.announce_url: str | None = None
         self.queue: list[FakeJob] = []
         self.jobs: dict[str, FakeJob] = {}
         self.registrations: list[dict[str, Any]] = []
@@ -216,7 +218,7 @@ def create_fake_app(state: FakeRunnerState) -> FastAPI:  # noqa: C901
         if isinstance(job, JSONResponse):
             return job
         job.announced.append(body.artifact.model_dump())
-        return {"url": None}
+        return {"url": state.announce_url}
 
     @app.put("/api/runner/v1/jobs/{job_id}/artifacts/{sha256}")
     async def put_artifact(job_id: str, sha256: str, request: Request) -> Any:
@@ -244,8 +246,12 @@ class SwitchTransport(httpx.AsyncBaseTransport):
         self.fail_next: int = 0
         self.status_next: int = 0
         self.status_calls = 0
+        # Хосты, до которых нет маршрута с этой машины (внутреннее хранилище сервера): соединение рвётся.
+        self.unroutable_hosts: set[str] = set()
 
     async def handle_async_request(self, request: httpx.Request) -> httpx.Response:
+        if request.url.host in self.unroutable_hosts:
+            raise httpx.ConnectError("no route to host", request=request)
         if self.down or self.fail_next > 0:
             self.fail_next = max(0, self.fail_next - 1)
             self.failures += 1

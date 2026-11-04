@@ -173,6 +173,30 @@ async def test_outputs_are_uploaded_before_completion(rig: Rig, tmp_path: Path) 
     assert _completed(job)["artifacts"] == [{"path": "out/main.pdf", "sha256": ref.sha256, "size": len(data)}]
 
 
+async def test_outputs_to_unreachable_storage_fail_with_actionable_error(rig: Rig, tmp_path: Path) -> None:
+    data = b"%PDF-1.5 fake"
+    path = tmp_path / "main.pdf"
+    path.write_bytes(data)
+    ref = ArtifactRef(path="out/main.pdf", sha256=hashlib.sha256(data).hexdigest(), size=len(data))
+    rig.executor.outputs = (OutputFile(ref, path),)
+    rig.state.announce_url = "http://minio.tech.svc:80/studio/out/main.pdf?X-Amz-Signature=deadbeef"
+    rig.transport.unroutable_hosts.add("minio.tech.svc")
+    job = rig.state.enqueue(envelope_body("compile", job_id=JOB_A))
+    rig.start()
+    await until(lambda: job.completed)
+    await rig.stop()
+
+    result = _completed(job)["result"]
+    assert isinstance(result, dict)
+    error = result["error"]
+    assert error["code"] == "storage_unreachable"  # type: ignore[index]
+    detail = error["detail"]  # type: ignore[index]
+    assert detail.startswith("object storage at http://minio.tech.svc:80 is not reachable")
+    assert "HSE_STUDIO__S3__PUBLIC_ENDPOINT" in detail
+    assert "deadbeef" not in detail
+    assert "ConnectError" in detail
+
+
 async def test_cancel_flag_from_heartbeat_stops_the_job(rig: Rig) -> None:
     rig.executor.block = True
     job = rig.state.enqueue(envelope_body("compile", job_id=JOB_A))

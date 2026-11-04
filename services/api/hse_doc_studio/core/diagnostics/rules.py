@@ -61,6 +61,8 @@ def judge_object_storage(f: ObjectFacts, t: DiagThresholds) -> Verdict:
     ms = f.roundtrip_ms or 0.0
     values["roundtrip_ms"] = round(ms)
     status = _by_level(ms, t.store_latency_warn_ms, t.store_latency_fail_ms)
+    if status is _OK and f.outside_runners_blind:
+        return Verdict(_WARN, "object_not_public", {**values, "runners": f.outside_runners_blind})
     return Verdict(status, "object_slow" if status is not _OK else "ok", values)
 
 

@@ -4,6 +4,7 @@ import asyncio
 import logging
 from collections.abc import Callable, Mapping
 from typing import Any, cast
+from urllib.parse import urlsplit
 
 import httpx
 
@@ -59,6 +60,25 @@ class RunnerApiError(Exception):
 
 class RunnerUnreachable(Exception):  # noqa: N818
     """API недоступен: сеть, таймаут или 5xx после всех повторов. Вызывающий решает, ждать ли."""
+
+
+class StorageUnreachable(RunnerUnreachable):  # noqa: N818
+    """Подписанная ссылка хранилища не открывается с этой машины: чаще всего сервер выдал внутренний адрес."""
+
+    def __init__(self, origin: str, reason: str) -> None:
+        super().__init__(
+            f"object storage at {origin} is not reachable from this machine ({reason}). "
+            "The server hands out a storage address that is only valid inside its own network: "
+            "the administrator must set HSE_STUDIO__S3__PUBLIC_ENDPOINT (an address clients can open) "
+            "or HSE_STUDIO__S3__OUTSIDE_RUNNER_ACCESS=proxy (files go through the API)."
+        )
+        self.origin = origin
+
+
+def _origin_of(url: str) -> str:
+    """Схема, хост и порт ссылки без пути и query: в подписи ссылки лежит секрет, в сообщение он не попадает."""
+    parts = urlsplit(url)
+    return f"{parts.scheme}://{parts.netloc.rpartition('@')[2]}" if parts.hostname else "<unknown>"
 
 
 class RunnerClient:
@@ -246,6 +266,8 @@ class RunnerClient:
         """Загрузка по подписанной ссылке хранилища: наши заголовки и токены туда не уходят."""
         try:
             response = await self._http.put(url, content=data)
+        except (httpx.ConnectError, httpx.ConnectTimeout) as exc:
+            raise StorageUnreachable(_origin_of(url), type(exc).__name__) from exc
         except httpx.TransportError as exc:
             raise RunnerUnreachable(f"PUT presigned url: {type(exc).__name__}") from exc
         if response.status_code >= 400:

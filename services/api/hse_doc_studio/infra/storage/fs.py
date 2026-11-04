@@ -14,7 +14,7 @@ from typing import BinaryIO
 
 from hse_doc_studio.core.storage.errors import ChecksumMismatchError, ObjectNotFoundError, ObjectStoreError
 from hse_doc_studio.core.storage.keys import validate_key
-from hse_doc_studio.core.storage.models import ObjectInfo, PresignedUrl
+from hse_doc_studio.core.storage.models import LinkAudience, ObjectInfo, PresignedUrl
 from hse_doc_studio.core.storage.ports import ByteRange, ObjectSource
 from hse_doc_studio.infra.storage.checked import check_source
 
@@ -143,12 +143,19 @@ class FsObjectStore:
             elif entry.is_file() and not entry.is_symlink():
                 yield entry
 
-    async def presign_get(self, key: str, *, expires_in_s: int = 300) -> PresignedUrl | None:
+    async def presign_get(
+        self, key: str, *, expires_in_s: int = 300, audience: LinkAudience = LinkAudience.outside
+    ) -> PresignedUrl | None:
         validate_key(key)
         return None
 
     async def presign_put(
-        self, key: str, *, expires_in_s: int = 300, content_type: str | None = None
+        self,
+        key: str,
+        *,
+        expires_in_s: int = 300,
+        content_type: str | None = None,
+        audience: LinkAudience = LinkAudience.outside,
     ) -> PresignedUrl | None:
         validate_key(key)
         return None

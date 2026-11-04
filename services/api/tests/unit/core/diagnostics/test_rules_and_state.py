@@ -88,6 +88,19 @@ def test__object_storage__slow_roundtrip__warn() -> None:
     assert rules.judge_object_storage(ObjectFacts("fs", roundtrip_ms=20), T).status is OK
 
 
+def test__object_storage__outside_runners_without_public_address__warns_with_count() -> None:
+    verdict = rules.judge_object_storage(ObjectFacts("s3", "b", roundtrip_ms=20, outside_runners_blind=2), T)
+
+    assert (verdict.status, verdict.reason) == (WARN, "object_not_public")
+    assert verdict.values["runners"] == 2
+
+
+def test__object_storage__no_outside_runners__ok_and_failure_wins_over_the_warning() -> None:
+    assert rules.judge_object_storage(ObjectFacts("s3", "b", roundtrip_ms=20), T).status is OK
+    broken = rules.judge_object_storage(ObjectFacts("s3", "b", error_stage="check", outside_runners_blind=2), T)
+    assert (broken.status, broken.reason) == (FAIL, "object_unreachable")
+
+
 def test__runners__verdicts() -> None:
     assert rules.judge_runners(RunnerFacts()).reason == "no_runners"
     assert rules.judge_runners(RunnerFacts(registered=2, online=0, queued=0)).status is WARN

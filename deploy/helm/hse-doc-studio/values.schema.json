@@ -120,7 +120,11 @@
         "bucket": {"type": "string", "minLength": 3},
         "region": {"type": "string"},
         "accessKey": {"type": "string"},
-        "secretKey": {"type": "string"}
+        "secretKey": {"type": "string"},
+        "publicEndpoint": {"type": "string", "pattern": "^$|^https?://[^/?#@]+/?$"},
+        "outsideRunnerAccess": {"enum": ["presigned", "proxy"]},
+        "sharedRunnersOutside": {"type": "boolean"},
+        "corsOrigins": {"type": "array", "items": {"type": "string"}}
       },
       "additionalProperties": false
     },

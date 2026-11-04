@@ -24,6 +24,7 @@ from hse_doc_studio.core.jobs.storage import (
     DEFAULT_MAX_ARTIFACT_BYTES,
     DEFAULT_MAX_LOG_BYTES,
 )
+from hse_doc_studio.core.storage.models import LinkAudience
 
 _HEX = frozenset("0123456789abcdef")
 
@@ -44,7 +45,7 @@ class FsJobBlobStore:
     async def exists(self, sha256: str) -> bool:
         return _is_sha256(sha256) and await asyncio.to_thread(self._path(sha256).is_file)
 
-    async def url_for(self, sha256: str) -> str | None:
+    async def url_for(self, sha256: str, audience: LinkAudience = LinkAudience.outside) -> str | None:
         return None
 
     async def open(self, sha256: str) -> AsyncIterator[bytes]:
@@ -86,7 +87,9 @@ class FsJobOutputIngest:
     def _attempt_dir(self, job_id: UUID, attempt: int) -> Path:
         return self._dir / str(job_id) / str(attempt)
 
-    async def announce(self, job_id: UUID, attempt: int, artifact: ArtifactRef) -> str | None:
+    async def announce(
+        self, job_id: UUID, attempt: int, artifact: ArtifactRef, audience: LinkAudience | None = LinkAudience.outside
+    ) -> str | None:
         if not _is_sha256(artifact.sha256):
             raise ArtifactInvalidError("malformed artifact hash")
         if artifact.size > self._max_bytes:

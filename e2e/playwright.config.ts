@@ -102,6 +102,16 @@ export default defineConfig({
       },
     },
     {
+      // Личный раннер вне сети compose и адрес S3 в ссылках (stack.sh outside-up, outside-mode); самостоятельный прогон.
+      name: "outside-runner",
+      testMatch: /outside-runner\.spec\.ts/,
+      timeout: 30 * 60_000,
+      use: {
+        ...devices["Desktop Chrome"],
+        channel: process.env.E2E_CHANNEL || undefined,
+      },
+    },
+    {
       // Сервер как git-remote: токен «Для git», clone/push настоящим git, вход устройства по коду.
       name: "git-remote",
       testMatch: /git-remote\.spec\.ts/,

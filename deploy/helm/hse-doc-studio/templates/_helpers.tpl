@@ -82,6 +82,18 @@ app.kubernetes.io/instance: {{ .Release.Name }}
 - {name: HSE_STUDIO__S3__ENDPOINT, value: {{ .Values.s3.endpoint | quote }}}
 - {name: HSE_STUDIO__S3__BUCKET, value: {{ .Values.s3.bucket | quote }}}
 - {name: HSE_STUDIO__S3__REGION, value: {{ .Values.s3.region | quote }}}
+{{- with .Values.s3.publicEndpoint }}
+- {name: HSE_STUDIO__S3__PUBLIC_ENDPOINT, value: {{ . | quote }}}
+{{- end }}
+{{- if ne (default "presigned" .Values.s3.outsideRunnerAccess) "presigned" }}
+- {name: HSE_STUDIO__S3__OUTSIDE_RUNNER_ACCESS, value: {{ .Values.s3.outsideRunnerAccess | quote }}}
+{{- end }}
+{{- if .Values.s3.sharedRunnersOutside }}
+- {name: HSE_STUDIO__S3__SHARED_RUNNERS_OUTSIDE, value: "true"}
+{{- end }}
+{{- if .Values.s3.corsOrigins }}
+- {name: HSE_STUDIO__S3__CORS_ORIGINS, value: {{ .Values.s3.corsOrigins | toJson | quote }}}
+{{- end }}
 - {name: HSE_STUDIO__MAIL__HOST, value: {{ .Values.mail.host | quote }}}
 - {name: HSE_STUDIO__MAIL__PORT, value: {{ .Values.mail.port | quote }}}
 - {name: HSE_STUDIO__MAIL__USERNAME, value: {{ .Values.mail.username | quote }}}

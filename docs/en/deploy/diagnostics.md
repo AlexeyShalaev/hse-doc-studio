@@ -24,7 +24,7 @@ Statuses: **OK**, **Warning** (works, but will soon be bad), **Failure** (work i
 |---|---|---|
 | Database | reachability, version, latency | start Postgres, check `HSE_STUDIO__DB__*`, disk load |
 | Database migrations | revision in the database against the image | restart api (it migrates itself); an image older than the database means run a fresh image |
-| Object storage | write, read and delete of a probe object | check keys, bucket and free space in `HSE_STUDIO__S3__*` |
+| Object storage | write, read and delete of a probe object; whether runners outside the server network exist while S3 has only an internal address | check keys, bucket and free space in `HSE_STUDIO__S3__*`; set `HSE_STUDIO__S3__PUBLIC_ENDPOINT` or the `proxy` mode (section “Runners outside the server network” in Runners) |
 | Disk and data retention | volumes and database, as the space guard sees them, cleanup errors | shorten retention in “Data retention”, grow the volume |
 | Runners | are shared runners online | register or restart a runner |
 | Queue and stuck jobs | queue wait, jobs with an expired lease | add runners, turn on autoscaling |

@@ -1,0 +1,4 @@
+# Поверх values-test.yaml: публичный адрес S3 для раннеров вне кластера (golden-рендер rendered-public-s3.golden.yaml).
+s3:
+  publicEndpoint: https://files.example.org
+  corsOrigins: ["https://studio.example.org"]

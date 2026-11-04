@@ -76,6 +76,102 @@ tags:
 
 Пределы на стороне api: `HSE_STUDIO__JOBS__RELAY_PICKUP_S` (сколько ждать, пока раннер возьмёт запрос), `HSE_STUDIO__JOBS__RELAY_MAX_REQUEST_BYTES`, `HSE_STUDIO__JOBS__RELAY_MAX_RESPONSE_BYTES`, `HSE_STUDIO__JOBS__RELAY_MAX_PENDING_PER_USER`, `HSE_STUDIO__JOBS__RELAY_MAX_DURATION_S` и бюджет памяти api под тела запросов: `HSE_STUDIO__JOBS__RELAY_MAX_PENDING_BYTES_PER_USER` (на человека), `HSE_STUDIO__JOBS__RELAY_MAX_PENDING_TOTAL` и `HSE_STUDIO__JOBS__RELAY_MAX_PENDING_BYTES_TOTAL` (на весь процесс). Сверх бюджета чат получает `relay_busy`. Раннер, который не ответил, в чате видно сообщением «Раннер «…» не ответил» с выбором другой модели.
 
+## Раннеры вне сети сервера
+
+Результат сборки раннер отправляет в объектное хранилище (S3) по подписанной ссылке, которую выдаёт api; исходники проекта он берёт у самого api. Ссылку открывает тот, кто её получил, поэтому у адреса должен быть маршрут с его машины. Внутренний адрес S3 (`http://minio.<namespace>.svc`, `http://minio:9000`) виден только внутри сети сервера.
+
+| Кто | Что делает | Адрес S3 |
+|---|---|---|
+| api | все операции с хранилищем | внутренний, `HSE_STUDIO__S3__ENDPOINT` |
+| общий раннер в сети сервера (под в кластере, контейнер compose) | выгрузка результата по ссылке | внутренний |
+| личный раннер, локальная Студия, раннер на другой машине | выгрузка результата по ссылке | публичный, `HSE_STUDIO__S3__PUBLIC_ENDPOINT` |
+| браузер | PDF сборки и сдачи по ссылке (редирект с api) | публичный |
+
+Подпись запроса S3 (v4) включает хост, поэтому ссылка подписывается сразу для того адреса, по которому её откроют. Подменить хост в готовой ссылке нельзя: хранилище ответит 403. Без `PUBLIC_ENDPOINT` внешние получатели получают внутренний адрес (как до этой настройки). Тогда сборка на личном раннере завершается ошибкой `storage_unreachable` с текстом «object storage at … is not reachable from this machine» и названием настроек, а страница «Самодиагностика» в админке предупреждает: «Раннеров вне сети сервера: N, а публичного адреса хранилища нет».
+
+### Как опубликовать хранилище
+
+1. Откройте наружу только S3 API (порт 9000 у MinIO) под отдельным именем, например `files.example.org`, с TLS. Консоль MinIO (9001) и метрики (`/minio/v2/metrics`) не публикуйте. Имя должно вести на корень хранилища: адрес с префиксом пути не поддерживается.
+2. Прокси должен передавать заголовок `Host` как есть: по нему хранилище проверяет подпись.
+3. Задайте адрес: `s3.publicEndpoint` в Helm, `S3_PUBLIC_ENDPOINT` в `.env` compose или `HSE_STUDIO__S3__PUBLIC_ENDPOINT`. Значение это схема, хост и порт без пути: `https://files.example.org`.
+4. Перезапустите api и откройте «Самодиагностику»: предупреждение о хранилище должно исчезнуть.
+
+Kubernetes, Ingress (ingress-nginx; хост, имя сервиса и пространство имён подставьте свои):
+
+```yaml
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: studio-s3
+  namespace: <namespace-minio>
+  annotations:
+    nginx.ingress.kubernetes.io/proxy-body-size: "0"
+    nginx.ingress.kubernetes.io/proxy-request-buffering: "off"
+    nginx.ingress.kubernetes.io/configuration-snippet: |
+      limit_except GET HEAD PUT { deny all; }
+spec:
+  ingressClassName: nginx
+  tls:
+    - hosts: [files.example.org]
+      secretName: files-tls
+  rules:
+    - host: files.example.org
+      http:
+        paths:
+          - path: /<bucket>/
+            pathType: Prefix
+            backend:
+              service:
+                name: <minio-service>
+                port: {number: 9000}
+```
+
+Аннотация `configuration-snippet` в новых версиях ingress-nginx по умолчанию выключена (`allow-snippet-annotations`): если её нет, ограничьте методы политикой контроллера или используйте Gateway API.
+
+Kubernetes, Gateway API (`HTTPRoute` к существующему Gateway с HTTPS-слушателем на этом имени):
+
+```yaml
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: studio-s3
+  namespace: <namespace-minio>
+spec:
+  parentRefs:
+    - name: <gateway>
+      namespace: <namespace-gateway>
+  hostnames: [files.example.org]
+  rules:
+    - matches:
+        - path: {type: PathPrefix, value: /<bucket>/}
+          method: GET
+        - path: {type: PathPrefix, value: /<bucket>/}
+          method: HEAD
+        - path: {type: PathPrefix, value: /<bucket>/}
+          method: PUT
+      backendRefs:
+        - name: <minio-service>
+          port: 9000
+```
+
+Если Gateway и MinIO в разных пространствах имён, добавьте `ReferenceGrant`. Compose: обратный прокси на хосте (nginx, Caddy) с TLS перед портом 9000 MinIO; порт в `docker-compose.yml` не публикуется, поэтому прокси подключите к сети compose или опубликуйте порт на `127.0.0.1` оверлеем.
+
+### Безопасность
+
+- Бакет остаётся закрытым. Анонимного доступа нет: открыть объект можно только по ссылке, подписанной ключами api, и только тем методом и для того ключа, для которых она выдана. Ссылка на чтение не годится для записи.
+- Ключи доступа к S3 раннерам и браузерам не передаются. Раннер получает ссылку на запись одного выхода своей задачи (префикс `artifacts/<проект>/jobs/<задача>/`), размер и sha256 api сверяет при завершении.
+- Срок ссылки: на выгрузку результата 15 минут, на скачивание PDF 2 минуты. Подпись лежит в адресе, поэтому TLS на публичном имени обязателен, а прокси не должен писать query в журнал доступа.
+- Наружу достаточно методов `GET`, `HEAD` и `PUT` на путях бакета. `DELETE`, `POST`, листинг и другие бакеты закройте на прокси, как в примерах выше.
+- CORS нужен только браузеру (pdf.js читает PDF по ссылке с заголовком `Range` из другого источника), раннерам он не нужен. MinIO по умолчанию отвечает на CORS любому источнику; сузить до адреса Студии можно переменной MinIO `MINIO_API_CORS_ALLOW_ORIGIN`. Для AWS, Yandex Object Storage и Ceph задайте `HSE_STUDIO__S3__CORS_ORIGINS=["https://studio.example.org"]` (в Helm `s3.corsOrigins`): api выставит CORS бакета при старте.
+
+### Если хранилище публиковать нельзя
+
+`HSE_STUDIO__S3__OUTSIDE_RUNNER_ACCESS=proxy` (Helm `s3.outsideRunnerAccess: proxy`, compose `S3_OUTSIDE_RUNNER_ACCESS=proxy`) выключает ссылки для раннеров вне сети: результат они отправляют самому api (`PUT /api/runner/v1/jobs/{id}/artifacts/{sha256}`), а api кладёт его в хранилище. Токены раннера и задачи проверяются, размер не может превысить заявленный, заявленный не больше `HSE_STUDIO__JOBS__MAX_ARTIFACT_BYTES` (512 МиБ), sha256 сверяется до записи в хранилище.
+
+Цена режима: весь трафик результатов таких раннеров идёт через api. Тело принимается во временный файл (до 8 МиБ в памяти, остальное на диске), так что на диске api нужно место под число одновременных выгрузок умноженное на размер результата, а ingress перед api должен пропускать большие тела (для ingress-nginx `proxy-body-size`) и не обрывать долгие запросы. Для браузера режим ничего не меняет: PDF по ссылке по-прежнему требует публичного адреса.
+
+Общий раннер, который стоит вне сети сервера (другая ВМ), считается внутренним. Объявите его внешним: `HSE_STUDIO__S3__SHARED_RUNNERS_OUTSIDE=true` (Helm `s3.sharedRunnersOutside`). Устройство и решения: `docs/design/s3-public-endpoint.md`.
+
 ## Подключённые Студии и присутствие
 
 Локальная Студия раз в минуту шлёт серверу по своему входу кодом устройства сигнал присутствия: имя компьютера, версию, что она делает, состояние раннера и моделей, синхронизацию облачных проектов. Сервер держит свежее время в памяти и пишет строку в БД, когда состояние изменилось или раз в две минуты; «в сети» значит сигнал не старше трёх минут. Устройство забывается через 60 дней молчания, у человека не больше 20 устройств. Интервалы задают `HSE_STUDIO__DEVICES__INTERVAL_S`, `ONLINE_WINDOW_S`, `PERSIST_INTERVAL_S`, `RETENTION_DAYS` ([справочник](env-reference.md)). Человек видит свои устройства целиком, другие участники проекта только «работает локально», администратор установки видит столько же, сколько любой человек. Решения: `docs/design/connected-devices.md`.

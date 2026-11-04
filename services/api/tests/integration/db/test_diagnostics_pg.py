@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
+from pathlib import Path
+from uuid import uuid4
 
 import pytest
 from hse_doc_studio.core.background import BackgroundTaskRunner, PeriodicTask
@@ -10,18 +12,22 @@ from hse_doc_studio.core.diagnostics import rules
 from hse_doc_studio.core.diagnostics.entities import CheckResult, DiagStatus
 from hse_doc_studio.core.diagnostics.state import CheckState
 from hse_doc_studio.core.diagnostics.thresholds import DEFAULTS
+from hse_doc_studio.core.jobs.runners import Runner, RunnerOwnerKind
 from hse_doc_studio.infra.db.engine import create_sessionmaker
 from hse_doc_studio.infra.db.leader import PgAdvisoryLeaderLock
 from hse_doc_studio.infra.db.migrator import head_revision
 from hse_doc_studio.infra.db.repositories.diagnostics import SqlDiagStore
+from hse_doc_studio.infra.db.repositories.runners import SqlRunnerRepository
 from hse_doc_studio.infra.db.session import SessionProvider
 from hse_doc_studio.infra.diagnostics.probes import (
     BackupProbe,
     DatabaseProbe,
     JobProbe,
     MigrationProbe,
+    ObjectProbe,
     SchedulerProbe,
 )
+from hse_doc_studio.infra.storage.fs import FsObjectStore
 from sqlalchemy.ext.asyncio import AsyncEngine
 
 pytestmark = pytest.mark.pg
@@ -96,3 +102,45 @@ async def test__scheduler_probe__sees_leader_lock_from_any_connection(pg_migrate
 
 async def _noop() -> None:
     return None
+
+
+def _runner(name: str, *, personal: bool, revoked: bool = False) -> Runner:
+    return Runner(
+        id=str(uuid4()),
+        name=name,
+        token_hash=uuid4().hex,
+        tags=frozenset({"tex"}),
+        concurrency=1,
+        resource_class="standard",
+        version="1",
+        created_at=NOW,
+        owner_kind=RunnerOwnerKind.user if personal else RunnerOwnerKind.instance,
+        owner_id=uuid4().hex if personal else None,
+        revoked_at=NOW if revoked else None,
+    )
+
+
+async def test__object_probe__counts_outside_runners_only_when_storage_is_blind(
+    pg_migrated_engine: AsyncEngine, tmp_path: Path
+) -> None:
+    sessions = _sessions(pg_migrated_engine)
+    repo = SqlRunnerRepository(sessions)
+    for row in (
+        _runner("shared", personal=False),
+        _runner("mine", personal=True),
+        _runner("theirs", personal=True),
+        _runner("gone", personal=True, revoked=True),
+    ):
+        await repo.add(row)
+    store = FsObjectStore(tmp_path / "objects", max_object_bytes=1024)
+
+    blind = await ObjectProbe(store, bucket=None, sessions=sessions, outside_blind=True).roundtrip()
+    with_shared = await ObjectProbe(
+        store, bucket=None, sessions=sessions, outside_blind=True, shared_outside=True
+    ).roundtrip()
+    published = await ObjectProbe(store, bucket=None, sessions=sessions, outside_blind=False).roundtrip()
+
+    assert blind.outside_runners_blind == 2
+    assert with_shared.outside_runners_blind == 3
+    assert published.outside_runners_blind == 0
+    assert rules.judge_object_storage(blind, DEFAULTS).reason == "object_not_public"

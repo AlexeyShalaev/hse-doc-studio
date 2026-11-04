@@ -8,10 +8,13 @@
 from __future__ import annotations
 
 from collections.abc import AsyncIterator, Sequence
+from dataclasses import dataclass
 from typing import Protocol
 from uuid import UUID
 
 from hse_doc_studio.core.jobs.files import ArtifactRef
+from hse_doc_studio.core.jobs.routing import RunnerScope
+from hse_doc_studio.core.storage.models import LinkAudience
 
 # Потолки по умолчанию; настраиваются в JobsConfig и отдельны от квоты проекта.
 DEFAULT_MAX_ARTIFACT_BYTES = 512 * 1024 * 1024
@@ -19,13 +22,31 @@ DEFAULT_MAX_LOG_BYTES = 8 * 1024 * 1024
 BLOB_CHUNK_BYTES = 1024 * 1024
 
 
+@dataclass(frozen=True)
+class RunnerStoragePolicy:
+    """Как раннер ходит в объектное хранилище: по внутреннему адресу, по публичному или через API.
+
+    Раннер в сети сервера получает ссылки на внутренний адрес. Раннер вне сети (по умолчанию личный) получает
+    ссылки на публичный адрес, а в режиме proxy ссылок не получает вовсе и обменивается файлами через API.
+    """
+
+    shared_outside: bool = False
+    outside_via_api: bool = False
+
+    def audience_for(self, scope: RunnerScope) -> LinkAudience | None:
+        """Кому подписывать ссылки раннера; `None` значит, что ссылок нет и файлы идут через API."""
+        if scope is RunnerScope.shared and not self.shared_outside:
+            return LinkAudience.internal
+        return None if self.outside_via_api else LinkAudience.outside
+
+
 class IJobBlobStore(Protocol):
     """Входные блобы манифеста по хешу."""
 
     async def exists(self, sha256: str) -> bool: ...
 
-    async def url_for(self, sha256: str) -> str | None:
-        """Подписанная ссылка на чтение; `None` значит, что отдаёт сам API."""
+    async def url_for(self, sha256: str, audience: LinkAudience = LinkAudience.outside) -> str | None:
+        """Подписанная для адреса получателя ссылка на чтение; `None` значит, что отдаёт сам API."""
         ...
 
     async def open(self, sha256: str) -> AsyncIterator[bytes]:
@@ -36,8 +57,12 @@ class IJobBlobStore(Protocol):
 class IJobOutputIngest(Protocol):
     """Единый шов приёма выходов: ключи только своей задачи и попытки, размер и хеш проверяются."""
 
-    async def announce(self, job_id: UUID, attempt: int, artifact: ArtifactRef) -> str | None:
-        """Принять заявку и вернуть подписанную ссылку на загрузку или `None` (грузить через API).
+    async def announce(
+        self, job_id: UUID, attempt: int, artifact: ArtifactRef, audience: LinkAudience | None = LinkAudience.outside
+    ) -> str | None:
+        """Принять заявку и вернуть подписанную для адреса получателя ссылку на загрузку или `None` (грузить через API).
+
+        `audience=None` значит, что ссылку выдавать нельзя: файл пойдёт через API.
 
         Размер выше потолка отвергается `ArtifactInvalidError`.
         """

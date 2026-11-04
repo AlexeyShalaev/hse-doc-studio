@@ -71,9 +71,30 @@ class MigrationProbe:
 class ObjectProbe:
     """Круг записи и чтения пробного объекта в основном хранилище (бакет S3 или каталог)."""
 
-    def __init__(self, store: IObjectStore, *, bucket: str | None) -> None:
+    def __init__(
+        self,
+        store: IObjectStore,
+        *,
+        bucket: str | None,
+        sessions: SessionProvider | None = None,
+        outside_blind: bool = False,
+        shared_outside: bool = False,
+    ) -> None:
+        """`outside_blind` значит, что внешним раннерам выдаётся внутренний адрес S3 (нет ни публичного, ни потока)."""
         self._store = store
         self._bucket = bucket
+        self._sessions = sessions
+        self._outside_blind = outside_blind
+        self._shared_outside = shared_outside
+
+    async def _outside_runners(self) -> int:
+        if not self._outside_blind or self._sessions is None:
+            return 0
+        stmt = select(func.count()).where(RunnerRow.revoked_at.is_(None))
+        if not self._shared_outside:
+            stmt = stmt.where(RunnerRow.owner_kind == "user")
+        async with self._sessions.use() as db:
+            return int((await db.execute(stmt)).scalar_one())
 
     async def roundtrip(self) -> ObjectFacts:
         kind = "s3" if self._bucket else "fs"
@@ -103,7 +124,12 @@ class ObjectProbe:
                 stage = stage or "delete"
         if stage is not None:
             return ObjectFacts(kind, self._bucket, error_stage=stage)
-        return ObjectFacts(base.kind, base.bucket, roundtrip_ms=(time.monotonic() - started) * 1000)
+        return ObjectFacts(
+            base.kind,
+            base.bucket,
+            roundtrip_ms=(time.monotonic() - started) * 1000,
+            outside_runners_blind=await self._outside_runners(),
+        )
 
 
 class RunnerProbe:

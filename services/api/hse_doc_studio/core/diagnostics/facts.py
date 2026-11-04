@@ -28,6 +28,8 @@ class ObjectFacts:
     bucket: str | None = None
     roundtrip_ms: float | None = None
     error_stage: str | None = None  # check | write | read | mismatch | delete
+    # Раннеров вне сети сервера, которым S3 отдаёт внутренний адрес (публичного нет, потока через api нет).
+    outside_runners_blind: int = 0
 
 
 @dataclass(frozen=True)

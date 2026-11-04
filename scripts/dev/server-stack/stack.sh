@@ -10,6 +10,9 @@
 #   stack.sh personal-stop      мягко остановить личный раннер (SIGTERM: раннер успевает сказать /offline)
 #   stack.sh personal-kill      убить личный раннер без ухода (SIGKILL: сервер узнаёт о пропаже по тишине)
 #   stack.sh personal-reset     стереть контейнер и личность личного раннера (повторный прогон с новым токеном)
+#   stack.sh outside-up TOKEN   поднять личный раннер вне сети compose (видит api и шлюз files, но не MinIO)
+#   stack.sh outside-mode MODE  пересоздать api с режимом S3 для внешних раннеров: none, public или proxy
+#   stack.sh outside-stop       остановить и стереть раннер вне сети вместе с его личностью
 # Второй стенд рядом с первым: STACK_PROJECT=имя STACK_PORT=порт (свои .env, каталоги раннеров и тома).
 set -euo pipefail
 
@@ -21,7 +24,7 @@ suffix=""
 [ "$project" = "hse-doc-studio-stack" ] || suffix=".$project"
 env_file="$here/.env$suffix"
 port="${STACK_PORT:-17251}"
-compose=(docker compose -p "$project" --env-file "$env_file" -f "$root/deploy/server/docker-compose.yml" -f "$root/deploy/server/compose.smoke.yml" -f "$root/deploy/server/compose.personal.yml")
+compose=(docker compose -p "$project" --env-file "$env_file" -f "$root/deploy/server/docker-compose.yml" -f "$root/deploy/server/compose.smoke.yml" -f "$root/deploy/server/compose.personal.yml" -f "$root/deploy/server/compose.outside.yml")
 
 ensure_env() {
   [ -f "$env_file" ] && return
@@ -102,17 +105,40 @@ case "${1:-}" in
     "${compose[@]}" --profile personal rm -f -s runner-personal
     rm -rf "${STACK_PERSONAL_RUNNER_DIR:-$here/runner-personal-data$suffix}"
     ;;
+  outside-up)
+    ensure_env
+    token="${2:?usage: $0 outside-up TOKEN}"
+    outside_dir="${STACK_OUTSIDE_RUNNER_DIR:-$here/runner-outside-data$suffix}"
+    mkdir -p "$outside_dir"
+    chmod 777 "$outside_dir"
+    OUTSIDE_RUNNER_TOKEN="$token" OUTSIDE_RUNNER_DATA_DIR="$outside_dir" \
+      "${compose[@]}" --profile outside up -d files runner-outside
+    ;;
+  outside-mode)
+    case "${2:-}" in
+      none) export OUTSIDE_S3_PUBLIC_ENDPOINT="" OUTSIDE_S3_ACCESS=presigned ;;
+      public) export OUTSIDE_S3_PUBLIC_ENDPOINT="http://files.outside.test:9000" OUTSIDE_S3_ACCESS=presigned ;;
+      proxy) export OUTSIDE_S3_PUBLIC_ENDPOINT="" OUTSIDE_S3_ACCESS=proxy ;;
+      *) echo "usage: $0 outside-mode none|public|proxy" >&2; exit 2 ;;
+    esac
+    "${compose[@]}" --profile outside up -d --no-deps --force-recreate api
+    wait_ready
+    ;;
+  outside-stop)
+    "${compose[@]}" --profile outside rm -f -s -v runner-outside
+    rm -rf "${STACK_OUTSIDE_RUNNER_DIR:-$here/runner-outside-data$suffix}" 2>/dev/null || sudo -n rm -rf "${STACK_OUTSIDE_RUNNER_DIR:-$here/runner-outside-data$suffix}"
+    ;;
   down)
     [ -f "$env_file" ] || exit 0
-    "${compose[@]}" --profile personal down --volumes --remove-orphans
+    "${compose[@]}" --profile personal --profile outside down --volumes --remove-orphans
     rm -rf "$env_file"
     # Каталоги раннера на Linux принадлежат его uid (10001): обычный rm не справляется, нужен sudo (в CI он без пароля).
-    for dir in "$here/runner-data$suffix" "$here/runner-personal-data$suffix"; do
+    for dir in "$here/runner-data$suffix" "$here/runner-personal-data$suffix" "$here/runner-outside-data$suffix"; do
       rm -rf "$dir" 2>/dev/null || sudo -n rm -rf "$dir"
     done
     ;;
   *)
-    echo "usage: $0 build|up|env|logs [service]|down|personal-up TOKEN|personal-stop|personal-kill|personal-reset" >&2
+    echo "usage: $0 build|up|env|logs [service]|down|personal-up TOKEN|personal-stop|personal-kill|personal-reset|outside-up TOKEN|outside-mode none|public|proxy|outside-stop" >&2
     exit 2
     ;;
 esac

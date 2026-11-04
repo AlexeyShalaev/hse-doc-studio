@@ -18,7 +18,7 @@ from hse_doc_studio.core.jobs.errors import (
 )
 from hse_doc_studio.core.jobs.queue import IJobQueue, QueuedJob
 from hse_doc_studio.core.jobs.runners import IRunnerRepository, JobTokenSigner, Runner
-from hse_doc_studio.core.jobs.storage import IJobBlobStore, IJobLogSink, IJobOutputIngest
+from hse_doc_studio.core.jobs.storage import IJobBlobStore, IJobLogSink, IJobOutputIngest, RunnerStoragePolicy
 from hse_doc_studio.core.jobs.wire import (
     ArtifactUploadRequest,
     ArtifactUploadResponse,
@@ -49,6 +49,7 @@ class RunnerJobIoService:
         outputs: IJobOutputIngest,
         logs: IJobLogSink,
         *,
+        storage_policy: RunnerStoragePolicy | None = None,
         clock: Callable[[], datetime] = _utc_now,
     ) -> None:
         self._queue = queue
@@ -58,6 +59,7 @@ class RunnerJobIoService:
         self._blobs = blobs
         self._outputs = outputs
         self._logs = logs
+        self._policy = storage_policy or RunnerStoragePolicy()
         self._clock = clock
 
     async def append_log(self, runner: Runner, job_id: UUID, job_token: str, batch: LogBatch) -> None:
@@ -72,11 +74,13 @@ class RunnerJobIoService:
         allowed = _manifest_hashes(job)
         if any(sha not in allowed for sha in request.sha256):
             raise BlobForbiddenError("blob is not in the job manifest")
+        audience = self._policy.audience_for(runner.scope)
         locations: list[BlobLocation] = []
         for sha in dict.fromkeys(request.sha256):
             if not await self._blobs.exists(sha):
                 raise BlobMissingError(f"blob {sha} is missing")
-            locations.append(BlobLocation(sha256=sha, url=await self._blobs.url_for(sha)))
+            url = None if audience is None else await self._blobs.url_for(sha, audience)
+            locations.append(BlobLocation(sha256=sha, url=url))
         return BlobNeedResponse(blobs=tuple(locations))
 
     async def open_blob(self, runner: Runner, job_id: UUID, job_token: str, sha256: str) -> AsyncIterator[bytes]:
@@ -90,7 +94,8 @@ class RunnerJobIoService:
         self, runner: Runner, job_id: UUID, job_token: str, request: ArtifactUploadRequest
     ) -> ArtifactUploadResponse:
         job = await self.authorize(runner, job_id, job_token, request.attempt)
-        url = await self._outputs.announce(job.id, job.attempt, request.artifact)
+        audience = self._policy.audience_for(runner.scope)
+        url = await self._outputs.announce(job.id, job.attempt, request.artifact, audience)
         return ArtifactUploadResponse(url=url)
 
     async def put_artifact(

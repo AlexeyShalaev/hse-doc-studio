@@ -18,7 +18,7 @@ from botocore.exceptions import BotoCoreError, ClientError
 
 from hse_doc_studio.core.storage.errors import ChecksumMismatchError, ObjectNotFoundError, ObjectStoreError
 from hse_doc_studio.core.storage.keys import is_sha256, validate_key
-from hse_doc_studio.core.storage.models import ObjectInfo, PresignedUrl
+from hse_doc_studio.core.storage.models import LinkAudience, ObjectInfo, PresignedUrl
 from hse_doc_studio.core.storage.ports import ByteRange, ObjectSource
 from hse_doc_studio.infra.storage.checked import check_source
 
@@ -75,7 +75,12 @@ class _HashingReader:
 
 
 class S3ObjectStore:
-    """``presign_client`` подписывает ссылки для внешнего адреса, ``client`` ходит по внутреннему."""
+    """``client`` ходит по внутреннему адресу и подписывает ссылки для тех, кто в сети сервера.
+
+    ``presign_client`` подписывает ссылки для публичного адреса: подпись v4 включает хост, поэтому ссылку для
+    внешнего получателя нельзя получить заменой хоста в готовой строке. Без ``presign_client`` внешний
+    получатель получает ссылку на внутренний адрес.
+    """
 
     def __init__(
         self,
@@ -91,6 +96,11 @@ class S3ObjectStore:
         self._bucket = bucket
         self._max_bytes = max_object_bytes
         self._multipart_threshold = multipart_threshold_bytes
+        self._has_public = presign_client is not None
+
+    @property
+    def has_public_endpoint(self) -> bool:
+        return self._has_public
 
     async def _call[T](self, fn: Callable[[], T]) -> T:
         try:
@@ -199,12 +209,19 @@ class S3ObjectStore:
 
         return await self._call(run)
 
-    async def presign_get(self, key: str, *, expires_in_s: int = 300) -> PresignedUrl | None:
+    async def presign_get(
+        self, key: str, *, expires_in_s: int = 300, audience: LinkAudience = LinkAudience.outside
+    ) -> PresignedUrl | None:
         validate_key(key)
-        return await self._presign("get_object", {"Bucket": self._bucket, "Key": key}, expires_in_s, {})
+        return await self._presign("get_object", {"Bucket": self._bucket, "Key": key}, expires_in_s, {}, audience)
 
     async def presign_put(
-        self, key: str, *, expires_in_s: int = 300, content_type: str | None = None
+        self,
+        key: str,
+        *,
+        expires_in_s: int = 300,
+        content_type: str | None = None,
+        audience: LinkAudience = LinkAudience.outside,
     ) -> PresignedUrl | None:
         validate_key(key)
         params: dict[str, Any] = {"Bucket": self._bucket, "Key": key}
@@ -212,14 +229,18 @@ class S3ObjectStore:
         if content_type:
             params["ContentType"] = content_type
             headers["Content-Type"] = content_type
-        return await self._presign("put_object", params, expires_in_s, headers)
+        return await self._presign("put_object", params, expires_in_s, headers, audience)
 
     async def _presign(
-        self, operation: str, params: dict[str, Any], expires_in_s: int, headers: dict[str, str]
+        self,
+        operation: str,
+        params: dict[str, Any],
+        expires_in_s: int,
+        headers: dict[str, str],
+        audience: LinkAudience,
     ) -> PresignedUrl:
-        url = await self._call(
-            lambda: self._presign_client.generate_presigned_url(operation, Params=params, ExpiresIn=expires_in_s)
-        )
+        signer = self._client if audience is LinkAudience.internal else self._presign_client
+        url = await self._call(lambda: signer.generate_presigned_url(operation, Params=params, ExpiresIn=expires_in_s))
         return PresignedUrl(url=url, expires_at=datetime.now(UTC) + timedelta(seconds=expires_in_s), headers=headers)
 
     async def check(self) -> None:

@@ -104,6 +104,9 @@ services:
       HSE_STUDIO__S3__BUCKET: ${S3_BUCKET:-studio}
       HSE_STUDIO__S3__ACCESS_KEY: ${S3_ACCESS_KEY}
       HSE_STUDIO__S3__SECRET_KEY: ${S3_SECRET_KEY}
+      # Публичный адрес MinIO для браузеров и раннеров вне сети compose; пусто значит, что ссылки ведут на minio:9000.
+      HSE_STUDIO__S3__PUBLIC_ENDPOINT: ${S3_PUBLIC_ENDPOINT:-}
+      HSE_STUDIO__S3__OUTSIDE_RUNNER_ACCESS: ${S3_OUTSIDE_RUNNER_ACCESS:-presigned}
       HSE_STUDIO__AUTH__PUBLIC_URL: ${PUBLIC_URL:?задайте PUBLIC_URL в .env}
       HSE_STUDIO__AUTH__TRUSTED_PROXIES: ${TRUSTED_PROXIES:-[]}
       HSE_STUDIO__JOBS__RUNNER_BOOTSTRAP_TOKEN: ${RUNNER_BOOTSTRAP_TOKEN:?задайте RUNNER_BOOTSTRAP_TOKEN в .env}

@@ -15,6 +15,7 @@ from hse_doc_studio.core.storage.ingest import (
     output_prefix,
 )
 from hse_doc_studio.core.storage.keys import is_sha256, validate_key
+from hse_doc_studio.core.storage.models import LinkAudience
 from hse_doc_studio.core.storage.ports import IObjectStore, ObjectSource
 
 
@@ -31,11 +32,14 @@ class ObjectJobOutputIngest:
         *,
         limits: OutputLimits | None = None,
         expires_in_s: int = 900,
+        audience: LinkAudience | None = LinkAudience.outside,
     ) -> list[OutputUpload]:
         keys = self._plan(project_id, job_id, outputs, limits or self._limits)
         uploads: list[OutputUpload] = []
         for spec, key in zip(outputs, keys, strict=True):
-            link = await self._store.presign_put(key, expires_in_s=expires_in_s)
+            link = None
+            if audience is not None:
+                link = await self._store.presign_put(key, expires_in_s=expires_in_s, audience=audience)
             uploads.append(OutputUpload(path=spec.path, key=key, url=link))
         return uploads
 

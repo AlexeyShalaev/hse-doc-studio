@@ -64,6 +64,12 @@ def _s3_urls() -> list[str]:
     return list(dict.fromkeys(found)) if s3.bucket else []
 
 
+def _outside_blind() -> bool:
+    """Внешним раннерам отдаётся внутренний адрес S3: свой (не AWS) endpoint, без публичного адреса и без потока."""
+    s3 = settings.s3
+    return bool(s3.bucket and s3.endpoint and not s3.public_endpoint and s3.outside_runner_access == "presigned")
+
+
 class ServerDiagnosticsProvider(Provider):
     scope = Scope.APP
 
@@ -98,7 +104,15 @@ class ServerDiagnosticsProvider(Provider):
         checks: list[IDiagCheck] = [
             DatabaseCheck(DatabaseProbe(sessions)),
             MigrationsCheck(MigrationProbe(sessions)),
-            ObjectStorageCheck(ObjectProbe(object_store, bucket=settings.s3.bucket)),
+            ObjectStorageCheck(
+                ObjectProbe(
+                    object_store,
+                    bucket=settings.s3.bucket,
+                    sessions=sessions,
+                    outside_blind=_outside_blind(),
+                    shared_outside=settings.s3.shared_runners_outside,
+                )
+            ),
             DiskCheck(guard, instance_settings, engine, runs),
             RunnersCheck(RunnerProbe(sessions, metrics)),
             JobsCheck(JobProbe(sessions, metrics)),

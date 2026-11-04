@@ -122,6 +122,23 @@ cd e2e && eval "$(../scripts/dev/server-stack/stack.sh env)" && pnpm exec playwr
 
 Очередь на настоящем Postgres дополнительно проверяет soak `services/api/tests/integration/e2e/test_queue_soak_pg.py`: 200 задач, случайные сбои раннеров, ни дублей закрытия, ни потерянных задач.
 
+## Раннер вне сети сервера: адрес хранилища в ссылках
+
+`tests/outside-runner.spec.ts` (проект Playwright `outside-runner`) идёт на стенде deploy/server с оверлеем `compose.outside.yml`. Личный раннер Анны сидит в сети `outside`, где есть api и шлюз `files` (имя `files.outside.test:9000`, TCP-проброс к MinIO с неизменным `Host`), но нет самого MinIO: так выглядит ноутбук при внутреннем адресе хранилища в ссылках. Режим для внешних раннеров переключает `stack.sh outside-mode none|public|proxy` (пересоздаёт api):
+
+- `none`: публичного адреса нет, сборка на раннере завершается ошибкой `storage_unreachable` (раньше `PUT presigned url: ConnectError`), самодиагностика даёт `warn` с причиной `object_not_public`;
+- `proxy`: результат идёт через api (`PUT /api/runner/v1/jobs/{id}/artifacts/{sha256}`): MinIO раннеру не виден, поэтому успешная сборка доказывает путь через api; предупреждения нет;
+- `public`: ссылка подписана для `files.outside.test:9000`, результат проходит через шлюз, сборка проходит, предупреждения нет.
+
+```bash
+export STACK_PROJECT=hse-doc-studio-outside STACK_PORT=19831 TAG=pr-outside
+scripts/dev/server-stack/stack.sh build && scripts/dev/server-stack/stack.sh up
+cd e2e && eval "$(../scripts/dev/server-stack/stack.sh env)" && pnpm exec playwright test --project outside-runner
+../scripts/dev/server-stack/stack.sh down
+```
+
+Образ TeX берётся из `OUTSIDE_TEX_IMAGE` (по умолчанию `texlive/texlive:TL2024-historic`, на хосте он должен быть заранее). Проект в CI не запускается.
+
 ## Бэкапы на стенде deploy/server
 
 `tests/backups.spec.ts` (проект Playwright `backups`) идёт после полного смоука на том же стенде и на двух языках интерфейса. Сценарии по порядку:
