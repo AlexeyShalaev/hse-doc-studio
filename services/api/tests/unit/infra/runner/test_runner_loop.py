@@ -191,7 +191,7 @@ async def test_outputs_to_unreachable_storage_fail_with_actionable_error(rig: Ri
     error = result["error"]
     assert error["code"] == "storage_unreachable"  # type: ignore[index]
     detail = error["detail"]  # type: ignore[index]
-    assert "http://minio.tech.svc:80" in detail
+    assert detail.startswith("object storage at http://minio.tech.svc:80 is not reachable")
     assert "HSE_STUDIO__S3__PUBLIC_ENDPOINT" in detail
     assert "deadbeef" not in detail
     assert "ConnectError" in detail
