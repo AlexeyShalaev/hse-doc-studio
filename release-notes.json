@@ -1,6 +1,36 @@
 {
   "releases": [
     {
+      "version": "0.6.0",
+      "date": "2026-11-04",
+      "notes": [
+        {
+          "ru": "Лендинг облака: человек, который открыл адрес сервера и ещё не вошёл, видит страницу с описанием Студии (для кого, что умеет, как начать, безопасность) и формой входа прямо на ней. Ссылкой на облако можно делиться: в мессенджерах она показывается с заголовком, описанием и картинкой. Приглашения, сброс пароля, вход через OIDC и passkey работают как раньше. Администратор может выключить лендинг в настройках установки, тогда сразу вход",
+          "en": "Cloud landing page: someone who opens the server address and is not signed in sees a page describing the Studio (who it is for, what it does, how to start, security) with the sign-in form right on it. The link to the cloud can be shared: messengers show it with a title, a description and a picture. Invitations, password reset, OIDC and passkey sign-in work as before. An administrator can turn the landing off in the installation settings, then the sign-in page opens straight away"
+        },
+        {
+          "ru": "Подключённые Студии: в облачном проекте видно, какие ваши локальные Студии подключены, в сети ли они (или когда были), версию, синхронизацию проекта, выгрузку PDF, состояние личного раннера и ИИ через вашу машину. Локальная Студия показывает то же в обратную сторону: связь с облаком, что видит облако, кто ещё онлайн в проекте. Для каждого документа видно, где и когда он собран и свежая ли сборка. Облачный PDF можно получить в локальную Студию кнопкой «Получить сборку», а при включённой автосинхронизации он подтягивается сам. В облаке есть список «Мои Студии» с кнопкой «Забыть устройство». Передаются только метаданные состояния: без путей, содержимого и ключей",
+          "en": "Connected Studios: a cloud project shows which of your local Studios are connected, whether they are online (or when they last were), the version, project sync, PDF upload, the state of your personal runner and of AI through your machine. The local Studio shows the same the other way round: the link to the cloud, what the cloud sees, who else is online in the project. For each document you can see where and when it was built and whether the build is current. A cloud PDF can be fetched into the local Studio with the Get build button, and with automatic sync on it is fetched by itself. The cloud has a My Studios list with a Forget device button. Only state metadata is sent: no paths, contents or keys"
+        },
+        {
+          "ru": "Люди в проекте: в шапке проекта видны аватары участников, которые сейчас онлайн, с подписью, что и где они делают («редактирует Заявку», «смотрит замечания», «работает локально»), и переходом к тому же документу. У чужого курсора в документе показывается имя, а цвет курсора совпадает с цветом аватара. Участники видят друг друга в браузере и в локальной Студии, гости по ссылке в списке не числятся. Нагрузка минимальная: один лёгкий сигнал в минуту на человека, без записи в базу",
+          "en": "People in the project: the project header shows avatars of members who are online right now, with a caption of what and where they are doing (editing the Application, viewing remarks, working locally) and a jump to the same document. Another person's cursor in a document shows their name, and the cursor colour matches their avatar. Members see each other in the browser and in the local Studio, guests with an access link are not listed. The load is minimal: one light signal a minute per person, nothing written to the database"
+        },
+        {
+          "ru": "Колокольчик и настройки: колокольчик открывает окошко с последними уведомлениями, отметкой прочитанного и ссылкой «Показать все» вместо перехода на страницу. Окно настроек стало выше и шире, меню прокручивается, названия разделов не переносятся. Если локальная Студия не может использовать ИИ через раннер, теперь написана причина и что сделать, а в облаке есть кнопка «Добавить в облаке» для провайдера «Через мой раннер»",
+          "en": "Bell and settings: the bell opens a small window with the latest notifications, a mark-as-read action and a Show all link instead of going to a page. The settings window is taller and wider, its menu scrolls and section names no longer wrap. When a local Studio cannot use AI through its runner, the reason and what to do are now shown, and the cloud has an Add in the cloud button for the Through my runner provider"
+        },
+        {
+          "ru": "Для администраторов, раннеры вне сети сервера и хранилище: личные раннеры и браузеры получают ссылки на S3 по публичному адресу. Он задаётся настройкой s3.publicEndpoint в Helm (HSE_STUDIO__S3__PUBLIC_ENDPOINT), хранилище надо опубликовать под отдельным именем с TLS (инструкция в разделе про раннеры). Без публичного адреса облачная сборка на раннере вне сети падает с понятной ошибкой storage_unreachable, а страница самодиагностики предупреждает. Запасной вариант без публикации хранилища: s3.outsideRunnerAccess: proxy, результаты идут через сервер",
+          "en": "For administrators, runners outside the server network and storage: personal runners and browsers get S3 links at a public address. Set it with s3.publicEndpoint in Helm (HSE_STUDIO__S3__PUBLIC_ENDPOINT); the storage has to be published under its own name with TLS (see the runners section). Without a public address a cloud build on a runner outside the network fails with a clear storage_unreachable error and the self-diagnostics page warns. A fallback without publishing the storage: s3.outsideRunnerAccess: proxy, results go through the server"
+        },
+        {
+          "ru": "Для администраторов, обновление с 0.5.0: в релизе одна миграция базы (cd_01_connected_devices, подключённые устройства и данные сборок), сервер применит её сам при первом запуске, перед обновлением сделайте бэкап. Новые настройки: s3.publicEndpoint, s3.outsideRunnerAccess, s3.sharedRunnersOutside (Helm), HSE_STUDIO__SERVER__LANDING_ENABLED и переключатель лендинга в админке. Исправлено: у проекта из облака кнопка «открыть репозиторий» вела на страницу с ошибкой 404, теперь на страницу проекта",
+          "en": "For administrators, upgrading from 0.5.0: the release has one database migration (cd_01_connected_devices, connected devices and build data), the server applies it itself on first start, take a backup before updating. New settings: s3.publicEndpoint, s3.outsideRunnerAccess, s3.sharedRunnersOutside (Helm), HSE_STUDIO__SERVER__LANDING_ENABLED and the landing switch in the admin area. Fixed: for a cloud project the open repository button led to a 404 page, now it opens the project page"
+        }
+      ]
+    },
+    {
       "version": "0.5.0",
       "date": "2026-11-03",
       "notes": [
