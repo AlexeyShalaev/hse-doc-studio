@@ -1,6 +1,32 @@
 {
   "releases": [
     {
+      "version": "0.7.0",
+      "date": "2026-11-04",
+      "notes": [
+        {
+          "ru": "Мобильная версия облака: Студия удобна на телефоне от 360 px. Диалоги и меню открываются шторкой снизу, таблицы становятся карточками, поля ввода не увеличивают страницу в iOS, кнопки не меньше 40 px, учтены вырез экрана и экранная клавиатура. Работают вход, лендинг, главная со списком проектов и фильтрами, входящие, подключение Студии",
+          "en": "Mobile cloud version: the Studio is comfortable on a phone from 360 px. Dialogs and menus open as bottom sheets, tables become cards, input fields no longer zoom the page in iOS, buttons are at least 40 px, and the screen notch and on-screen keyboard are accounted for. Sign-in, the landing page, the home screen with the project list and filters, the inbox and Studio connection all work"
+        },
+        {
+          "ru": "Рабочее место проекта на телефоне: нижняя панель разделов (документы, замечания, сдача, файлы, ещё), шапка проекта с людьми онлайн, подключёнными Студиями и синхронизацией, редактор с прокручиваемой панелью инструментов и режимом без отвлекающих панелей при вводе, PDF с масштабом кнопками и щипком, чат агента на весь экран. Настройки и админка тоже удобны на телефоне: разделы в шторке, формы в одну колонку, таблицы карточками",
+          "en": "The project workspace on a phone: a bottom bar of sections (documents, remarks, submission, files, more), a project header with people online, connected Studios and sync, an editor with a scrollable toolbar and a distraction-free mode while typing, a PDF with zoom by buttons and pinch, and the agent chat full screen. Settings and the admin area also work well on a phone: sections in a sheet, single-column forms and tables as cards"
+        },
+        {
+          "ru": "На телефоне пока не работают: редактор ONLYOFFICE, режим «Рядом», горячие клавиши (палитра команд и справка в меню аккаунта), перетаскивание файлов в окно, подпись КриптоПро и тур онбординга с подсветкой. Планшет остаётся с десктопной вёрсткой. Мобильная версия проверялась на эмуляции, найденные на реальных устройствах недочёты присылайте",
+          "en": "Not yet working on a phone: the ONLYOFFICE editor, side-by-side mode, keyboard shortcuts (the command palette and help are in the account menu), drag-and-drop of files into the window, CryptoPro signing and the onboarding tour with highlights. Tablets keep the desktop layout. The mobile version was tested on emulation, please report anything you find on real devices"
+        },
+        {
+          "ru": "Исправления: окно «Справка» из меню аккаунта падало с ошибкой на телефоне; страницы «Подписи» и «Авторы» проекта обрезались на узких экранах",
+          "en": "Fixes: the Help window opened from the account menu crashed on a phone; the Signatures and Authors pages of a project were clipped on narrow screens"
+        },
+        {
+          "ru": "Для администраторов, обновление с 0.6.0: миграций базы и новых обязательных настроек в этом релизе нет, меняется только интерфейс",
+          "en": "For administrators, upgrading from 0.6.0: this release has no database migrations and no new required settings, only the interface changes"
+        }
+      ]
+    },
+    {
       "version": "0.6.0",
       "date": "2026-11-04",
       "notes": [
