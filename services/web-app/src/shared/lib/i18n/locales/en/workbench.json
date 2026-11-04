@@ -23,7 +23,9 @@
       "error": "History: sync failed",
       "behind": "History: the repository has new versions",
       "diverged": "History: the repository has new versions"
-    }
+    },
+    "more": "More",
+    "moreTooltip": "Project settings, history, agent"
   },
   "panel": {
     "collapse": "Collapse panel",

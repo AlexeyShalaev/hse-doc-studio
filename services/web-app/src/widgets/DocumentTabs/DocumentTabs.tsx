@@ -38,7 +38,7 @@ import { useCapabilities } from "@entities/session";
 import { EditorIcon, openInEditor, useEditors } from "@entities/system";
 import { env } from "@shared/config";
 import { Modal, Spinner } from "@shared/ui";
-import { toast, useSyncTexStore } from "@shared/lib";
+import { toast, useIsPhoneWidth, useSyncTexStore } from "@shared/lib";
 import {
   ChecksPane,
   CompilePane,
@@ -142,6 +142,8 @@ export const DocumentTabs = ({ projectId, docId }: DocumentTabsProps) => {
   // памятью последнего одиночного режима, и переходы вроде «показать исходник»
   // (SyncTeX, клик по замечанию) не разваливают уже открытую пару панелей.
   const [isSplitRequested, setIsSplitRequested] = useState(false);
+  // Телефон: пара панелей не помещается, сегмента «Рядом» нет (и режим не включается).
+  const isPhone = useIsPhoneWidth();
   const [paneEl, setPaneEl] = useState<HTMLDivElement | null>(null);
   const [paneWidth, setPaneWidth] = useState<number | null>(null);
   useEffect(() => {
@@ -164,7 +166,7 @@ export const DocumentTabs = ({ projectId, docId }: DocumentTabsProps) => {
   // Пара панелей — производное, а не хранимое состояние: когда места не стало,
   // экран молча возвращается к последнему одиночному режиму (его помнит ?tab=),
   // а когда место вернулось — к паре, без каскада перерисовок из эффекта.
-  const isSideBySide = isSplitRequested && canSplit;
+  const isSideBySide = isSplitRequested && canSplit && !isPhone;
 
   const isEditorView = tabParam === "source" || tabParam === "office";
   const pageView = tabParam === null ? undefined : PAGE_VIEW_BY_PARAM[tabParam];
@@ -279,7 +281,7 @@ export const DocumentTabs = ({ projectId, docId }: DocumentTabsProps) => {
     },
   ];
 
-  const segments: readonly ViewSegment[] = [
+  const allSegments: readonly ViewSegment[] = [
     {
       id: "preview",
       label: t("workbench:doc.preview"),
@@ -308,6 +310,10 @@ export const DocumentTabs = ({ projectId, docId }: DocumentTabsProps) => {
       isDisabled: !canSplit,
     },
   ];
+
+  const segments = allSegments.filter(
+    (segment) => !(isPhone && segment.id === "side"),
+  );
 
   const handleSelectView = (view: DocView) => {
     if (view === "side") {

@@ -1,6 +1,8 @@
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, render, screen, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { i18n } from "@shared/lib/i18n";
+import { installViewport } from "@shared/lib/viewport/testing";
 import { ActivityBar, type ActivityBarProps } from "./ActivityBar";
 
 const base = (over: Partial<ActivityBarProps> = {}): ActivityBarProps => ({
@@ -53,5 +55,89 @@ describe("ActivityBar history badge", () => {
       "История: есть конфликты синхронизации",
     );
     expect(history().textContent).not.toContain("4");
+  });
+});
+
+describe("ActivityBar on a phone", () => {
+  let viewport: ReturnType<typeof installViewport> | undefined;
+  beforeEach(async () => {
+    await i18n.changeLanguage("ru");
+  });
+  afterEach(() => {
+    cleanup();
+    viewport?.restore();
+    viewport = undefined;
+  });
+
+  it("is a bottom tab bar with four modes and a «More» tab", () => {
+    viewport = installViewport(390);
+    render(<ActivityBar {...base()} />);
+    const bar = screen.getByRole("navigation");
+    expect(bar).toHaveClass("activity-bar--tabs");
+    const tabs = within(bar).getAllByRole("button");
+    expect(tabs.map((tab) => tab.textContent?.replace(/\d+$/, ""))).toEqual([
+      "Документы",
+      "Замечания",
+      "Сдача",
+      "Файлы",
+      "Ещё",
+    ]);
+  });
+
+  it("moves project settings, history, agent and system settings into the «More» sheet", async () => {
+    viewport = installViewport(390);
+    const calls: string[] = [];
+    render(
+      <ActivityBar
+        {...base({
+          onOpenProjectSettings: () => calls.push("settings"),
+          onOpenVersions: () => calls.push("history"),
+          onToggleAgent: () => calls.push("agent"),
+          onOpenSystemSettings: () => calls.push("system"),
+        })}
+      />,
+    );
+    const user = userEvent.setup();
+    expect(screen.queryByTestId("activity-more")).not.toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: /Ещё/ }));
+    const sheet = screen.getByTestId("activity-more");
+    expect(within(sheet).getAllByRole("button")).toHaveLength(4);
+    await user.click(screen.getByTestId("activity-more-versions"));
+    // Выбор закрывает шторку и делает своё дело.
+    expect(calls).toEqual(["history"]);
+    expect(screen.queryByTestId("activity-more")).not.toBeInTheDocument();
+  });
+
+  it("hides the rows a link visitor may not use", async () => {
+    viewport = installViewport(390);
+    render(
+      <ActivityBar
+        {...base({ hidden: ["submit", "projectSettings", "agent"] })}
+      />,
+    );
+    await userEvent.setup().click(screen.getByRole("button", { name: /Ещё/ }));
+    expect(screen.queryByTestId("activity-more-projectSettings")).toBeNull();
+    expect(screen.queryByTestId("activity-more-agent")).toBeNull();
+    expect(screen.getByTestId("activity-more-versions")).toBeInTheDocument();
+  });
+
+  it("puts the sync badge of the history row on the «More» tab", () => {
+    viewport = installViewport(390);
+    render(
+      <ActivityBar
+        {...base({ versionsBadge: { kind: "count", tone: "err", count: 2 } })}
+      />,
+    );
+    const more = screen.getByRole("button", { name: /Ещё/ });
+    expect(more.querySelector(".activity-badge.err")?.textContent).toBe("2");
+  });
+
+  it("keeps the vertical rail on a desktop", () => {
+    viewport = installViewport(1360);
+    render(<ActivityBar {...base()} />);
+    expect(screen.getByRole("navigation")).not.toHaveClass(
+      "activity-bar--tabs",
+    );
+    expect(screen.queryByRole("button", { name: /Ещё/ })).toBeNull();
   });
 });

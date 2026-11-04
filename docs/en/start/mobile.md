@@ -24,14 +24,18 @@ tags:
 - the project list: search, filters and sorting in a sheet, the "New project" button, opening a project;
 - the inbox and the bell with notifications;
 - the account menu: settings, help, the AI assistant, theme and language, sign-out;
-- the "Connect Studio" and "Local version" screens.
+- the "Connect Studio" and "Local version" screens;
+- the project workbench: a bottom tab bar (documents, issues, submission, files and "More" with project settings, history and the agent), the document list, the overview, project settings, submission, history, files;
+- a document: the PDF preview fitted to the screen with zoom by buttons and by pinching, the text editor with a scrolling toolbar, the outline over the text and a larger font (Safari does not zoom the page while you type); the header and the tab bar hide while you type;
+- people in the project, the connected Studios badge and the sync state in the second row of the project header: a tap opens a sheet;
+- the agent on the full screen.
 
 Dialogs, menus and lists of actions open as a sheet from the bottom: close it with the cross, with "Cancel" or by tapping the dimmed background.
 
 ## What is still easier on a computer
 
-- the project workbench: editor, checks, PDF preview, submission;
-- project and system settings, the admin console;
+- the "Side by side" mode (preview and editor next to each other): it is not available on a phone, there is a switch between them;
+- system settings and the admin console;
 - the ONLYOFFICE editor.
 
 These screens open on a phone too but are designed for a wide screen. We move them to the phone one by one.

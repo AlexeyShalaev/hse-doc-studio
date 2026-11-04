@@ -1,5 +1,6 @@
 import { ArrowDown, ArrowUp, ChevronDown } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import { useIsPhoneWidth } from "@shared/lib";
 import { PopoverAnchor, PopoverTrigger } from "@shared/ui/Popover";
 import type { SyncUi } from "../model/syncUi.model";
 import type { SyncText } from "../model/useSyncText";
@@ -72,6 +73,9 @@ export const SyncButton = ({
   onToggleDetails,
 }: SyncButtonProps) => {
   const { t } = useTranslation("gitSync");
+  // Телефон: одна кнопка на два действия не помещается в шапку, нажатие открывает панель, а
+  // «Синхронизировать» лежит в ней.
+  const isPhone = useIsPhoneWidth();
   const name = t("control.name", { status: text.status, action: text.action });
   const showWhen = ui.state === "up_to_date" && text.when !== "";
 
@@ -91,7 +95,7 @@ export const SyncButton = ({
           aria-label={name}
           aria-busy={ui.busy || undefined}
           title={`${text.status}. ${text.action}`}
-          onClick={onPrimary}
+          onClick={isPhone ? onToggleDetails : onPrimary}
           onContextMenu={(event) => {
             event.preventDefault();
             onToggleDetails();
@@ -119,17 +123,19 @@ export const SyncButton = ({
             </span>
           )}
         </button>
-        <PopoverTrigger asChild>
-          <button
-            type="button"
-            className="sync-chevron"
-            data-sync-trigger
-            aria-label={t("control.details")}
-            title={t("control.details")}
-          >
-            <ChevronDown size={13} aria-hidden="true" />
-          </button>
-        </PopoverTrigger>
+        {!isPhone && (
+          <PopoverTrigger asChild>
+            <button
+              type="button"
+              className="sync-chevron"
+              data-sync-trigger
+              aria-label={t("control.details")}
+              title={t("control.details")}
+            >
+              <ChevronDown size={13} aria-hidden="true" />
+            </button>
+          </PopoverTrigger>
+        )}
       </div>
     </PopoverAnchor>
   );

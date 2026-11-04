@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { useNavigate } from "react-router";
+import { useLocation, useNavigate } from "react-router";
 import { useTranslation } from "react-i18next";
 import { clsx } from "clsx";
 
@@ -20,7 +20,12 @@ import { ReviewPanel } from "@widgets/ReviewPanel";
 import { SubmitPanel } from "@widgets/SubmitPanel";
 import { ChatDock } from "@widgets/ChatDock";
 import type { WorkbenchActivity } from "@shared/lib";
-import { getLastDoc, usePaneResize, useWorkspaceStore } from "@shared/lib";
+import {
+  getLastDoc,
+  useIsDrawerWidth,
+  usePaneResize,
+  useWorkspaceStore,
+} from "@shared/lib";
 import { ResizeHandle } from "@shared/ui";
 import { useCheckpointReadiness } from "./lib";
 import { FilesPanel } from "./panels";
@@ -91,7 +96,13 @@ export const WorkbenchShell = ({
   const systemChatOpen = useWorkspaceStore((state) => state.systemChatOpen);
   const toggleSystemChat = useWorkspaceStore((state) => state.toggleSystemChat);
 
-  const [isMobilePanelOpen, setIsMobilePanelOpen] = useState(false);
+  const isDrawer = useIsDrawerWidth();
+  const { pathname } = useLocation();
+  // Узкое окно: панель выдвижная. На экранах-списках (обзор, файлы, настройки проекта) она
+  // открыта сразу: канвас там без документа, и человеку нужен выбор, а не пустое место.
+  const [isMobilePanelOpen, setIsMobilePanelOpen] = useState(
+    () => isDrawer && /\/(documents|files|project-settings)\/?$/.test(pathname),
+  );
   // Что показывает панель, вместе с входами, при которых это решено. Правка
   // состояния прямо в рендере (а не эффектом) — документированный приём React
   // для «подстройки под изменившийся проп»: эффект с setState здесь дал бы
@@ -207,11 +218,16 @@ export const WorkbenchShell = ({
     // рейку мёртвой: подсветка активности переключалась, ширина панели
     // оставалась нулевой, и развернуть её можно было только незаметным ⌘B.
     // На полноэкранной странице сворачивать нечего — оттуда надо уходить.
-    if (next === activity && !isFullPageCanvas && panelMode !== "settings") {
+    if (
+      !isDrawer &&
+      next === activity &&
+      !isFullPageCanvas &&
+      panelMode !== "settings"
+    ) {
       toggleSidebar();
       return;
     }
-    setSidebarCollapsed(false);
+    if (!isDrawer) setSidebarCollapsed(false);
     setActivity(next);
     // Явно, а не подстройкой в рендере: клик по УЖЕ активному режиму ничего не
     // меняет во входах, но панель обязан забрать у настроек.
@@ -366,6 +382,8 @@ export const WorkbenchShell = ({
           setPanelState({ isSettings: true, activity, mode: "settings" });
           setSidebarCollapsed(false);
           goTo("/project-settings");
+          // Узкое окно: у настроек проекта нет канваса-оглавления, поэтому открываем панель с разделами.
+          if (isDrawer) setIsMobilePanelOpen(true);
         }}
         isProjectSettingsActive={isProjectSettingsActive}
         projectSettingsBadge={projectSettingsBadge}

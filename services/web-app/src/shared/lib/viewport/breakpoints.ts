@@ -16,3 +16,11 @@ export const COMPACT_QUERY = `(max-width: ${String(TABLET_MAX_WIDTH)}px)`;
 export const COARSE_POINTER_QUERY = "(pointer: coarse)";
 
 export type ViewportClass = "phone" | "tablet" | "desktop";
+
+/**
+ * Окно, где рабочее место проекта прячет боковую панель в выдвижную (рейка слева остаётся, на
+ * телефоне рейка уходит вниз вкладками). Граница 820 px старше брейкпоинтов выше: на ней сидит
+ * iPad Air в портрете, и раскладка с рейкой и панелью 260 px оставляла бы канвасу меньше 500 px.
+ */
+export const DRAWER_MAX_WIDTH = 820;
+export const DRAWER_QUERY = `(max-width: ${String(DRAWER_MAX_WIDTH)}px)`;

@@ -37,11 +37,15 @@ import {
 import { PdfThumbnails } from "./PdfThumbnails";
 import { PdfOutline, type OutlineEntry } from "./PdfOutline";
 import { countOccurrences, getOutlineFor, loadPageDims } from "./pdfDoc";
+import { PHONE_QUERY } from "../../lib/viewport";
 import "./pdfViewer.css";
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = workerUrl;
 
 const PT_TO_PX = 96 / 72;
+// Минимальное изменение расстояния между пальцами (доля), с которого щипок меняет масштаб.
+const PINCH_STEP = 0.06;
+
 // Zoom a freshly opened document (no remembered scale) starts at. 100% is the
 // natural PT_TO_PX size; 0.9 opens it a touch smaller so the whole page width
 // fits comfortably without fit-to-width stretching.
@@ -145,7 +149,13 @@ export const PdfViewer = ({
   // Default to DEFAULT_SCALE (90%) rather than fit-to-width, which stretches an
   // A4 page to the pane and lands around 115%. A remembered choice still wins;
   // the "По ширине" button re-enables fit on demand.
-  const [fit, setFit] = useState(() => readPersist(storageKey)?.fit ?? false);
+  // Телефон: страница сразу по ширине экрана, иначе A4 в 90% шире окна.
+  const [fit, setFit] = useState(
+    () =>
+      readPersist(storageKey)?.fit ??
+      (typeof window.matchMedia === "function" &&
+        window.matchMedia(PHONE_QUERY).matches),
+  );
   const [currentPage, setCurrentPage] = useState(1);
   const [pageDraft, setPageDraft] = useState("1");
   const [zoomDraft, setZoomDraft] = useState(() =>
@@ -365,6 +375,31 @@ export const PdfViewer = ({
     setScale((s) => Math.min(Math.max(s * factor, MIN_SCALE), MAX_SCALE));
   };
 
+  // Щипок на сенсорном экране: расстояние между пальцами задаёт множитель масштаба. Пересчёт
+  // идёт шагами, а не на каждое движение: страницы перерисовываются при смене масштаба.
+  const pinchRef = useRef<number | null>(null);
+  const touchDistance = (touches: React.TouchList): number =>
+    Math.hypot(
+      (touches[0]?.clientX ?? 0) - (touches[1]?.clientX ?? 0),
+      (touches[0]?.clientY ?? 0) - (touches[1]?.clientY ?? 0),
+    );
+  const onPinchStart = (event: React.TouchEvent): void => {
+    pinchRef.current =
+      event.touches.length === 2 ? touchDistance(event.touches) : null;
+  };
+  const onPinchMove = (event: React.TouchEvent): void => {
+    const last = pinchRef.current;
+    if (last === null || event.touches.length !== 2 || last === 0) return;
+    const now = touchDistance(event.touches);
+    const ratio = now / last;
+    if (Math.abs(ratio - 1) < PINCH_STEP) return;
+    pinchRef.current = now;
+    zoomBy(ratio);
+  };
+  const onPinchEnd = (): void => {
+    pinchRef.current = null;
+  };
+
   const commitPageInput = (): void => {
     const n = Number.parseInt(pageDraft, 10);
     if (Number.isFinite(n) && n >= 1 && n <= pages.length) goToPage(n);
@@ -539,7 +574,7 @@ export const PdfViewer = ({
       aria-label={ariaLabel}
     >
       <div
-        className="flex items-center"
+        className="pdf-toolbar flex items-center"
         style={{
           padding: "6px 10px",
           borderBottom: "1px solid var(--border)",
@@ -832,9 +867,13 @@ export const PdfViewer = ({
         </div>
       </div>
 
-      <div className="flex" style={{ flex: 1, minHeight: 0 }}>
+      <div
+        className="pdf-body flex"
+        style={{ flex: 1, minHeight: 0, position: "relative" }}
+      >
         {sidebarOpen && (
           <div
+            className="pdf-sidebar"
             style={{
               width: sidebarTab === "thumbs" ? 168 : 240,
               flexShrink: 0,
@@ -867,6 +906,7 @@ export const PdfViewer = ({
 
         <div
           ref={scrollRef}
+          className="pdf-scroll"
           onScroll={onScroll}
           onMouseDown={() => {
             // Ensure the viewer owns focus so Ctrl+A / Ctrl+F target the PDF.
@@ -877,6 +917,10 @@ export const PdfViewer = ({
             // Defer a frame so the browser has finalised the selection.
             requestAnimationFrame(refreshSelectionBar);
           }}
+          onTouchStart={onPinchStart}
+          onTouchMove={onPinchMove}
+          onTouchEnd={onPinchEnd}
+          onTouchCancel={onPinchEnd}
           tabIndex={0}
           role="document"
           aria-label={t("content.aria")}
@@ -887,10 +931,14 @@ export const PdfViewer = ({
             background: "var(--bg-0)",
             display: "flex",
             flexDirection: "column",
-            alignItems: "center",
+            // flex-start + auto-поля у страниц (pdfViewer.css): при увеличении левый край страницы
+            // остаётся доступным, а `center` отрезал его.
+            alignItems: "flex-start",
             gap: PAGE_GAP,
             padding: FIT_PADDING / 2,
             outline: "none",
+            // Щипок двумя пальцами меняет масштаб PDF (см. onPinch*), а не всей страницы.
+            touchAction: "pan-x pan-y",
           }}
         >
           {status === "loading" && (

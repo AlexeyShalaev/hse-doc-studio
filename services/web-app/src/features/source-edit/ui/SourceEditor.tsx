@@ -34,6 +34,7 @@ import { synctexApi } from "@entities/synctex";
 import {
   toast,
   useEditorPrefsStore,
+  useIsPhoneWidth,
   usePendingSave,
   useSyncTexStore,
 } from "@shared/lib";
@@ -326,6 +327,14 @@ const SourceEditorBody = ({
   const showComments = useEditorPrefsStore((s) => s.showComments);
   const showOutline = useEditorPrefsStore((s) => s.showOutline);
   const visualZoom = useEditorPrefsStore((s) => s.visualZoom);
+  // Телефон: оглавление поверх текста, поэтому по умолчанию закрыто (иначе оно открывало бы
+  // редактор шторкой) и закрывается после выбора раздела.
+  const isPhone = useIsPhoneWidth();
+  useEffect(() => {
+    if (isPhone && useEditorPrefsStore.getState().showOutline) {
+      useEditorPrefsStore.getState().toggleShowOutline();
+    }
+  }, [isPhone]);
   const visualMode = visualEligible && sourceMode === "visual";
   const controllerRef = useRef<CodeEditorController | null>(null);
   const [focusMode, setFocusMode] = useState(false);
@@ -1173,7 +1182,10 @@ const SourceEditorBody = ({
             />
             <OutlinePanel
               outline={outline}
-              onSelect={gotoLine}
+              onSelect={(line) => {
+                gotoLine(line);
+                if (isPhone) useEditorPrefsStore.getState().toggleShowOutline();
+              }}
               onClose={() => {
                 useEditorPrefsStore.getState().toggleShowOutline();
               }}
