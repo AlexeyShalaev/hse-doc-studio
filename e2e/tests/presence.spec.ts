@@ -296,6 +296,8 @@ test.describe("люди в проекте: аватары, место, пере�
     await expect(boris_).toBeVisible({ timeout: 30_000 });
     await shot(a.page, "ru", "pp-05-dark");
     const leftAt = Date.now();
+    // Уход со страницы (pagehide) и есть «вкладка сказала ухожу»: Playwright при закрытии вкладки pagehide не гарантирует.
+    await b.page.goto("about:blank");
     await b.page.close();
     await b.context.close();
     // Раньше окна присутствия: вкладка сказала «ухожу», а Анна узнала со своим следующим сигналом (интервал 10 с).
