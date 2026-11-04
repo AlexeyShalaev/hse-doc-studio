@@ -66,6 +66,11 @@ class _World:
     polls: list[str]
 
 
+class _Gotenberg:
+    async def convert_to_pdf(self, source: Path, image: str | None = None) -> bytes | None:
+        return b"%PDF"
+
+
 class _CountingTransport(httpx.AsyncBaseTransport):
     def __init__(self, app: FastAPI, polls: list[str]) -> None:
         self._inner = httpx.ASGITransport(app=app)
@@ -118,8 +123,10 @@ async def world(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> AsyncIterato
         runner_dir=tmp_path / "remote-runner",
         default_name="studio-mac",
         pairing_client=lambda url: RunnerPairingClient(url, version="0.3.0"),
-        session_factory=runner_session_factory(cache_volume="tex-cache", transport=_CountingTransport(app, polls)),
-        # Docker есть, образа TeX нет: Студия объявляет verify и pack без tex.
+        session_factory=runner_session_factory(
+            cache_volume="tex-cache", transport=_CountingTransport(app, polls), office=_Gotenberg()
+        ),
+        # Docker и образ Gotenberg есть, образа TeX нет: Студия объявляет verify, pack и office без tex.
         environment=FakeEnvironment(image=False),
     )
     await supervisor.start()
@@ -161,6 +168,7 @@ async def test__token_from_ui__studio_registers_and_takes_jobs(world: _World) ->
     assert registered is not None
     assert registered.name == "studio-mac"
     assert "tex" not in registered.tags
+    assert "office" in registered.tags
     job_id = await _enqueue_verify(world)
 
     async def taken() -> bool:

@@ -120,6 +120,18 @@ If the model does not work, the Studio panel names the reason:
 
 Two common causes of errors in the model itself. Ollama accepts at most 4096 tokens by default, while an agent request in a project needs about 5000: the chat says the request "does not fit the model window", so raise the context (`num_ctx`, for example 16384) or take a model with a larger window. If the Studio is online but Ollama is stopped, the chat says the model on that computer does not answer.
 
+## Which documents are built through your Studio
+
+Connected as a personal runner, your Studio takes two kinds of jobs from the cloud, and each needs its own setup.
+
+| Document | What you need on your computer |
+|---|---|
+| LaTeX (PDF) | Docker and the TeX Live image (the same one local builds use) |
+| Presentations and office files (pptx, docx, odt, xlsx and others) | Docker and the Gotenberg image (`docker pull gotenberg/gotenberg:8`) |
+| Archives and signature checks | nothing, always available |
+
+Nothing needs switching on for office files: the Studio starts its own Gotenberg conversion service when such a job arrives and stops it after idle time, as it does for local builds. While Docker is not running or the Gotenberg image is not downloaded, the Studio does not tell the cloud it can build office documents, and the cloud keeps showing the "No connected runner for office documents" banner. Once Docker is up and the image is present, the Studio reconnects on its own (checked once a minute) and the banner goes away. If Docker is stopped, the capability is withdrawn the same way, so the cloud does not send a job nobody can run. The Gotenberg image comes from the Studio office-service settings (gotenberg/gotenberg:8 by default); the image named by the cloud is not used.
+
 ## Builds in the cloud and on your side
 
 For each document, in the list and in the "Build" panel, you can see where and when it was last built (cloud, this Studio, another Studio), from which version of the project and whether the PDF is fresh: "matches the cloud", "outdated: the project changed", "in the cloud 5 min, you have none". "Fresh" means the PDF was built from the current version of the project; a PDF with no recorded version is never called fresh.
