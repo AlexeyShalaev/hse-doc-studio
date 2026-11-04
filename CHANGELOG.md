@@ -6,22 +6,12 @@ Generated from `release-notes.json` via `make changelog` — do not edit by hand
 Release notes are hand-written and bilingual (RU/EN); the app shows them in the
 selected interface language.
 
-## [0.8.0](https://github.com/AlexeyShalaev/hse-doc-studio/compare/v0.7.0...v0.8.0) (2026-11-04)
+## [0.8.0](https://github.com/AlexeyShalaev/hse-doc-studio/compare/v0.7.0...v0.8.0) - 2026-11-04
 
-
-### Features
-
-* **web:** причина сбоя сборки во вкладке «Сборка», списке документов и блоке «Сейчас» ([01ccee0](https://github.com/AlexeyShalaev/hse-doc-studio/commit/01ccee0e533fd4e1f1590703a8cf87c433847e5c))
-* настройка «Размер текста» (90-140 %) в «Внешнем виде» ([108fe0d](https://github.com/AlexeyShalaev/hse-doc-studio/commit/108fe0d5b1d495651579c8e9285bfebfad0efdee))
-
-
-### Bug Fixes
-
-* **api:** упавшая сборка сохраняет причину и лог раннера, поток ждёт итога облачной сборки ([9dde85c](https://github.com/AlexeyShalaev/hse-doc-studio/commit/9dde85c08fc0748d3945f00d06369b4fc106fb07))
-* **runner:** личный раннер Студии объявляет тег office ([bc124d5](https://github.com/AlexeyShalaev/hse-doc-studio/commit/bc124d5190acad7234fe080d96706b3279c7bb3f))
-* **web:** на телефоне размер текста 90% не уменьшает зоны касания и поля ([7822b3c](https://github.com/AlexeyShalaev/hse-doc-studio/commit/7822b3c8d47928a2f197654ceaf7e9b5ad9f2dae))
-* **web:** размеры шрифтов плашки причины сбоя в rem ([ed4134c](https://github.com/AlexeyShalaev/hse-doc-studio/commit/ed4134c3661c264db1d23a5644a188bf64ac9d4a))
-* упавшая сборка объясняет себя: причина, журнал раннера и код в облаке и в локальной Студии ([cd18d2e](https://github.com/AlexeyShalaev/hse-doc-studio/commit/cd18d2e1d09614d419f13c18a424042105c11533))
+- Text size: in Settings, Appearance you can choose the interface text size (90, 100, 112, 125 or 140 %). It changes at once across the whole app (menus, forms, dialogs, the editor, the admin area, the landing page), is remembered in your account and applies without flicker on load. Document content and the PDF page are not scaled. On a phone the 90 % step does not shrink buttons and fields below a comfortable size
+- A failed build explains itself: the Build tab shows the failure code and reason, what to do and a Build again button, and the document list and the Now block show the reason under the name. The build log now reaches the cloud (before it was empty even for successful builds), including live, and refusals before start (no Docker, TeX image or runner) are recorded as a failed build. Reasons are named in plain words: no output for too long, no disk space, the result could not be uploaded to storage and others. The build silence timeout is raised from 120 to 300 seconds: the first build on a fresh font cache can stay quiet for a long time
+- Presentations and other office documents in the cloud through your Studio: if Docker runs on your computer and the Gotenberg image is pulled (docker pull gotenberg/gotenberg:8), the local Studio tells the cloud it can convert, and the Build button for presentations and Word documents is no longer blocked. Without Docker or the image the previous explanatory message stays
+- For administrators, upgrading from 0.7.0: the release has one database migration (cf_01_compile_failure, two optional columns in the build record), the server applies it itself on first start, take a backup before updating. New settings: HSE_STUDIO__COMPILE__IDLE_TIMEOUT_S (300 seconds by default) and HSE_RUNNER__TEX_IDLE_TIMEOUT_S for the runner. Runner build logs are kept on the api volume (meant for a single api replica)
 
 ## [0.7.0](https://github.com/AlexeyShalaev/hse-doc-studio/compare/v0.6.0...v0.7.0) - 2026-11-04
 

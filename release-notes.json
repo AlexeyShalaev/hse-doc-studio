@@ -1,6 +1,28 @@
 {
   "releases": [
     {
+      "version": "0.8.0",
+      "date": "2026-11-04",
+      "notes": [
+        {
+          "ru": "Размер текста: в «Настройки, Внешний вид» можно выбрать размер текста интерфейса (90, 100, 112, 125 или 140 %). Меняется сразу во всём приложении (меню, формы, диалоги, редактор, админка, лендинг), запоминается в аккаунте и применяется без мигания при загрузке. Содержимое документа и страница PDF не масштабируются. На телефоне ступень 90 % не уменьшает кнопки и поля ниже удобного размера",
+          "en": "Text size: in Settings, Appearance you can choose the interface text size (90, 100, 112, 125 or 140 %). It changes at once across the whole app (menus, forms, dialogs, the editor, the admin area, the landing page), is remembered in your account and applies without flicker on load. Document content and the PDF page are not scaled. On a phone the 90 % step does not shrink buttons and fields below a comfortable size"
+        },
+        {
+          "ru": "Упавшая сборка объясняет себя: во вкладке «Сборка» видны код и причина сбоя, что делать и кнопка «Собрать снова», а в списке документов и в блоке «Сейчас» причина под названием. Журнал сборки теперь доходит до облака (раньше он был пустым даже у успешных сборок), в том числе вживую, а отказы до запуска (нет Docker, образа TeX или раннера) записываются как неудачная сборка. Причины названы по-человечески: не хватило времени без вывода, нет места на диске, не удалось выгрузить результат в хранилище и другие. Таймаут молчания сборки увеличен со 120 до 300 секунд: первая сборка на свежем кэше шрифтов может долго молчать",
+          "en": "A failed build explains itself: the Build tab shows the failure code and reason, what to do and a Build again button, and the document list and the Now block show the reason under the name. The build log now reaches the cloud (before it was empty even for successful builds), including live, and refusals before start (no Docker, TeX image or runner) are recorded as a failed build. Reasons are named in plain words: no output for too long, no disk space, the result could not be uploaded to storage and others. The build silence timeout is raised from 120 to 300 seconds: the first build on a fresh font cache can stay quiet for a long time"
+        },
+        {
+          "ru": "Презентации и другие офисные документы в облаке через вашу Студию: если на компьютере работает Docker и скачан образ Gotenberg (docker pull gotenberg/gotenberg:8), локальная Студия объявляет облаку возможность конвертации, и кнопка «Собрать» для презентаций и Word-документов перестаёт быть заблокированной. Без Docker или образа остаётся прежнее сообщение с объяснением",
+          "en": "Presentations and other office documents in the cloud through your Studio: if Docker runs on your computer and the Gotenberg image is pulled (docker pull gotenberg/gotenberg:8), the local Studio tells the cloud it can convert, and the Build button for presentations and Word documents is no longer blocked. Without Docker or the image the previous explanatory message stays"
+        },
+        {
+          "ru": "Для администраторов, обновление с 0.7.0: в релизе одна миграция базы (cf_01_compile_failure, две необязательные колонки в записи сборки), сервер применит её сам при первом запуске, перед обновлением сделайте бэкап. Новые настройки: HSE_STUDIO__COMPILE__IDLE_TIMEOUT_S (по умолчанию 300 секунд) и HSE_RUNNER__TEX_IDLE_TIMEOUT_S для раннера. Журналы сборок раннеров хранятся на томе api (рассчитано на одну реплику api)",
+          "en": "For administrators, upgrading from 0.7.0: the release has one database migration (cf_01_compile_failure, two optional columns in the build record), the server applies it itself on first start, take a backup before updating. New settings: HSE_STUDIO__COMPILE__IDLE_TIMEOUT_S (300 seconds by default) and HSE_RUNNER__TEX_IDLE_TIMEOUT_S for the runner. Runner build logs are kept on the api volume (meant for a single api replica)"
+        }
+      ]
+    },
+    {
       "version": "0.7.0",
       "date": "2026-11-04",
       "notes": [
