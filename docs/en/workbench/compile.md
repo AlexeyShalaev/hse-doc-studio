@@ -31,3 +31,35 @@ tags:
 - **Text counters** — after a build texcount recounts prose words and characters; visible in the preview.
 
 The first build downloads the TeX Live image (once, a few gigabytes) — see [“First project”](../start/first-project.md). You don't have to untangle LaTeX errors yourself: “Fix with AI” does it for you, showing every diff.
+
+
+## When a build fails
+
+A failed build always explains itself: the Build tab shows a banner with the error code and a “what to do” text, and the log below is never empty. The document list shows the reason in red under the document name, and the “Now” block repeats it for each document with an error. The same code and text appear in the cloud and in the local Studio.
+
+Everything available goes into the log: the latexmk output, runner lines (`[runner] …`), the refusal reason (`[error] <code>: <text>`) and the detail (a path, an exception, an address). If there is no output of the build itself, the banner says so: LaTeX was not started (no Docker or image, no runner, quota, disk full) or the runner did not send a single line. A cloud build's log arrives from the runner during the build and is saved in the build record; past the size limit the middle is lost, the beginning and the end stay.
+
+| Code | What happened | What to do |
+|---|---|---|
+| `build_failed` | LaTeX returned an error | Find the first line with `!` or `file:line:` in the log and fix the source; “Explain” and “Fix with AI” read the same log |
+| `image_missing` | The machine that builds has no TeX Live image | Settings → Compiler → Images → “Install” on that machine (for a personal runner it is your local Studio) |
+| `docker_unavailable` | Docker is not running or `docker.sock` is not accessible | Start Docker Desktop or the daemon; on Linux check the socket group (`DOCKER_GID`) |
+| `no_runners`, `no_runner_for_tags` | No live runner takes these documents | Connect a personal runner (a local Studio with Docker) or ask the administrator |
+| `quota_exceeded` | The build quota is used up | Wait for the reset or build on a personal runner: it does not spend the quota |
+| `timed_out`, `job_timeout` | The build did not finish in time | Check the log for a LaTeX loop; the administrator can raise the build timeout |
+| `runner_lost`, `lease_lost`, `runner_shutdown` | The runner disappeared, lost connection or was stopped | Start the runner, check its network and build again |
+| `blob_unavailable` | The runner could not fetch the sources | Check that the runner reaches the server and storage addresses (proxy mode for outside runners) |
+| `storage_unreachable`, `artifact_upload_failed`, `artifact_invalid` | The PDF is built but was not uploaded to the server | Administrator: the public S3 address (`HSE_STUDIO__S3__PUBLIC_ENDPOINT`) or proxy mode for outside runners, the output size limit |
+| `output_*`, `apply_failed` | The server could not accept or place the PDF | Build again; administrator: the api log and free space on the projects volume |
+| `pdf_missing` | The build finished but there is no PDF | Check that the document produces a PDF |
+| `disk_full` | The machine that builds is out of space | Free disk space: runner data, docker images and volumes |
+| `staging_failed`, `manifest_*` | The server could not prepare the project (a file too large or unsafe) | Remove large files, rename a file with an unsafe path |
+| `cancelled`, `superseded`, `restarted` | The build was cancelled, replaced by a newer one or interrupted by a restart | Build again |
+
+A refusal before the start (no Docker, no image, no runner) is still shown as a dialog with an install button, but it is now also recorded as a failed build of the document: the reason stays in the Build tab and in the list.
+
+### Cloud build on a personal runner and “Build locally”
+
+A cloud build on a personal runner runs on your local Studio: Docker and the image are needed there. The runner sends the log to the server in batches, so the cloud tab shows it live. A build started with “Build” in the local Studio for a project taken from the cloud leaves an ordinary record with the log and the reason; after a successful build the Studio uploads the PDF to the cloud, and the upload result (or the refusal reason) is shown in the same tab.
+
+If a build fails in the cloud but not locally (or the other way round), compare the TeX Live images: the cloud and the personal runner use the image chosen in the Studio settings, while the server's shared runner uses its own.

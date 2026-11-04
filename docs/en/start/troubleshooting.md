@@ -18,3 +18,4 @@ tags:
 - **Compose does not see the projects folder** — `DATA_DIR` in `.env` must be an absolute path, otherwise Docker treats it as a volume name.
 - **The first build “hangs”** — the TeX Live image is downloading (≈ 9 GB), progress is on the Build tab; it happens once.
 - **Low disk space** — Settings → **Disk**: build-cache cleanup and image removal with an explicit list.
+- **A build says “failed” and the reason is not visible** — open the document's Build tab: it has the code and a “what to do” text, and the document list shows the reason under the name. Code table: [“Build and log”](../workbench/compile.md#when-a-build-fails).
