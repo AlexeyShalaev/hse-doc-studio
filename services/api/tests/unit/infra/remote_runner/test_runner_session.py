@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import asyncio
+import hashlib
+from dataclasses import replace
 from pathlib import Path
 
 import pytest
@@ -14,7 +16,13 @@ from hse_doc_studio.infra.remote_runner.session import (
 from hse_doc_studio.infra.runner.identity import IDENTITY_FILE, RunnerIdentityStore
 
 from tests.unit.infra.remote_runner.fakes import eventually
-from tests.unit.infra.runner.fake_runner_api import TOKEN, FakeRunnerState, SwitchTransport, create_fake_app
+from tests.unit.infra.runner.fake_runner_api import (
+    TOKEN,
+    FakeRunnerState,
+    SwitchTransport,
+    create_fake_app,
+    envelope_body,
+)
 
 _URL = "http://api"
 
@@ -121,3 +129,77 @@ async def test__session__revoked_token__raises_unauthorized(tmp_path: Path) -> N
 def test__cloud_cache_volume__differs_from_the_local_one() -> None:
     """Облачные сборки (в том числе соавторов хозяина) не делят записываемый HOME с локальными проектами."""
     assert cloud_cache_volume("hse-studio-texmf") == "hse-studio-texmf-cloud"
+
+
+class _FakeOffice:
+    """Служба конвертации Студии без Docker: запоминает вызовы и образ, возвращает заданный PDF."""
+
+    def __init__(self, pdf: bytes | None = b"%PDF-1.7 fake") -> None:
+        self.pdf = pdf
+        self.calls: list[tuple[str, str | None]] = []
+
+    async def convert_to_pdf(self, source: Path, image: str | None = None) -> bytes | None:
+        self.calls.append((source.name, image))
+        return self.pdf
+
+
+def _office_spec(data_dir: Path, *, available: bool) -> RunnerSessionSpec:
+    return replace(_spec(data_dir), office_available=available, office_image="gotenberg/gotenberg:8-studio")
+
+
+async def test__session__office_service_available__declares_office_tag(tmp_path: Path) -> None:
+    state = FakeRunnerState()
+    factory = runner_session_factory(
+        cache_volume="tex-cache", transport=SwitchTransport(create_fake_app(state)), office=_FakeOffice()
+    )
+
+    async with factory(_office_spec(tmp_path, available=True), Listener()) as session:
+        await _run_until(session, lambda: state.polls > 0)
+
+    assert "office" in state.registrations[0]["tags"]
+
+
+async def test__session__office_service_unavailable__no_office_tag(tmp_path: Path) -> None:
+    state = FakeRunnerState()
+    factory = runner_session_factory(
+        cache_volume="tex-cache", transport=SwitchTransport(create_fake_app(state)), office=_FakeOffice()
+    )
+
+    async with factory(_office_spec(tmp_path, available=False), Listener()) as session:
+        await _run_until(session, lambda: state.polls > 0)
+
+    assert "office" not in state.registrations[0]["tags"]
+
+
+async def test__session__no_office_service__no_office_tag_even_if_spec_says_available(tmp_path: Path) -> None:
+    state = FakeRunnerState()
+    factory = runner_session_factory(cache_volume="tex-cache", transport=SwitchTransport(create_fake_app(state)))
+
+    async with factory(_office_spec(tmp_path, available=True), Listener()) as session:
+        await _run_until(session, lambda: state.polls > 0)
+
+    assert "office" not in state.registrations[0]["tags"]
+
+
+async def test__session__office_job__converts_with_studio_service_and_uploads_pdf(tmp_path: Path) -> None:
+    source = b"pptx-bytes"
+    digest = hashlib.sha256(source).hexdigest()
+    body = envelope_body("office", job_id="cccccccc-cccc-4ccc-8ccc-cccccccccccc")
+    body["spec"]["payload"]["source"] = {"path": "deck/slides.pptx", "sha256": digest, "size": len(source)}
+    body["spec"]["payload"]["output_path"] = "deck/slides.pdf"
+    body["manifest"] = [{"path": "deck/slides.pptx", "sha256": digest, "size": len(source)}]
+    state = FakeRunnerState()
+    state.blobs[digest] = source
+    job = state.enqueue(body)
+    office = _FakeOffice(b"%PDF-1.7 converted")
+    factory = runner_session_factory(
+        cache_volume="tex-cache", transport=SwitchTransport(create_fake_app(state)), office=office
+    )
+
+    async with factory(_office_spec(tmp_path, available=True), Listener()) as session:
+        await _run_until(session, lambda: job.completed)
+
+    assert job.completed[-1]["result"]["status"] == "succeeded"
+    # Образ из задачи сервера не используется: служба запускается с образом самой Студии.
+    assert office.calls == [("slides.pptx", "gotenberg/gotenberg:8-studio")]
+    assert b"%PDF-1.7 converted" in job.artifacts.values()

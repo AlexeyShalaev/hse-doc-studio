@@ -11,6 +11,7 @@ from __future__ import annotations
 import json
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
+from pathlib import Path
 
 import httpx
 import structlog
@@ -20,6 +21,7 @@ from hse_doc_studio.core.jobs.enums import RunnerErrorCode
 from hse_doc_studio.core.jobs.relay import AiEndpointFlavor
 from hse_doc_studio.core.jobs.runners import DeclaredAiEndpoint, RunnerHostKind
 from hse_doc_studio.core.jobs.wire import FEATURE_AI_RELAY
+from hse_doc_studio.core.office import IOfficeConvertService
 from hse_doc_studio.infra.compile.host_path_resolver import HostPathResolver
 from hse_doc_studio.infra.di.containers.runner import create_runner_container
 from hse_doc_studio.infra.remote_runner.session import (
@@ -167,18 +169,36 @@ def cloud_cache_volume(local_volume: str) -> str:
     return local_volume + CLOUD_CACHE_SUFFIX
 
 
+class StudioOfficeConverter:
+    """Конвертер office-задач сессии: управляемая служба Gotenberg самой Студии.
+
+    Служба поднимается лениво при первой конвертации и гасится после простоя (правила локальных
+    сервисов). Образ задачи и образ TeX игнорируются: запускается образ, который Студия выбрала для себя.
+    """
+
+    def __init__(self, service: IOfficeConvertService, image: str) -> None:
+        self._service = service
+        self._image = image or None
+
+    async def convert_to_pdf(self, source: Path, image: str | None = None) -> bytes | None:
+        return await self._service.convert_to_pdf(source, self._image)
+
+
 def runner_session_factory(
     *,
     cache_volume: str,
     host_paths: HostPathResolver | None = None,
     transport: httpx.AsyncBaseTransport | None = None,
+    office: IOfficeConvertService | None = None,
 ) -> RunnerSessionFactory:
-    """Фабрика сессий Студии; `transport` подменяет сеть в тестах."""
+    """Фабрика сессий Студии; `transport` подменяет сеть в тестах, `office` это служба Gotenberg Студии."""
 
     @asynccontextmanager
     async def open_session(spec: RunnerSessionSpec, listener: IRunnerSessionListener) -> AsyncIterator[IRunnerSession]:
         # Теги объявляются явно: без Docker или образа tex нет, сборки LaTeX уходят на общие раннеры.
-        tags = detect_tags(office_url=None, tex_available=spec.tex_available)
+        # office: служба Gotenberg Студии (запускается по требованию), без неё тега нет.
+        converter = StudioOfficeConverter(office, spec.office_image) if office and spec.office_available else None
+        tags = detect_tags(office_url=None, office_available=converter is not None, tex_available=spec.tex_available)
         config = RunnerConfig(
             api_url=spec.server_url,
             token=SecretStr(spec.registration_token or _NO_REGISTRATION_TOKEN),
@@ -198,6 +218,7 @@ def runner_session_factory(
             host_paths=host_paths,
             ai_endpoints=relay_endpoints(spec.ai_endpoints),
             gate=spec.gate,
+            office_converter=converter,
         )
         try:
             loop = await container.get(RunnerLoop)

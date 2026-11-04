@@ -7,6 +7,7 @@ from hse_doc_studio.core.repositories import ISettingsRepository
 from hse_doc_studio.infra.docker.cli import image_present
 from hse_doc_studio.infra.update.deployment import docker_alive
 from hse_doc_studio.use_cases.compile.list_images import resolve_active_image
+from hse_doc_studio.use_cases.office_services.list_office_service_images import resolve_active_office_image
 
 
 class LocalRunnerEnvironment:
@@ -23,6 +24,10 @@ class LocalRunnerEnvironment:
 
     async def image_present(self, image: str) -> bool:
         return await image_present(image)
+
+    async def office_image(self) -> str:
+        # Образ службы Gotenberg, как у локальных сборок: настройка пользователя или умолчание установки.
+        return await resolve_active_office_image(self._settings_repo, "convert")
 
     def local_busy(self) -> bool:
         return self._dispatcher.has_any_active()

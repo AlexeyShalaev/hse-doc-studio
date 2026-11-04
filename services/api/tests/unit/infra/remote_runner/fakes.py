@@ -107,9 +107,10 @@ async def eventually(predicate: Callable[[], bool], timeout_s: float = 3.0) -> N
 
 
 class FakeEnvironment:
-    def __init__(self, *, docker: bool = True, image: bool = True, busy: bool = False) -> None:
+    def __init__(self, *, docker: bool = True, image: bool = True, busy: bool = False, office: bool = True) -> None:
         self.docker = docker
         self.image = image
+        self.office = office
         self.busy = busy
 
     async def docker_available(self) -> bool:
@@ -118,7 +119,12 @@ class FakeEnvironment:
     async def tex_image(self) -> str:
         return "ghcr.io/example/texlive:2026"
 
+    async def office_image(self) -> str:
+        return "gotenberg/gotenberg:8"
+
     async def image_present(self, image: str) -> bool:
+        if image.startswith("gotenberg"):
+            return self.office
         return self.image
 
     def local_busy(self) -> bool:
