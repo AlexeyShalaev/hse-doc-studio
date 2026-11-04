@@ -50,6 +50,7 @@ nav = [
         { "AI agent" = "workbench/agent.md" },
         { "AI clients (MCP)" = "workbench/mcp.md" },
         { "Link sharing" = "workbench/share-links.md" },
+        { "Who is in the project now" = "workbench/people-online.md" },
     ] },
     { "Deployment" = [
         { "Shared server" = "deploy/index.md" },
