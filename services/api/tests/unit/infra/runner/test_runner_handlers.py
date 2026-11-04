@@ -122,6 +122,11 @@ def test_tags_follow_the_environment() -> None:
     }
 
 
+def test_office_tag_from_studio_service_without_url() -> None:
+    assert "office" in detect_tags(office_url=None, office_available=True, archive_available=lambda fmt: False)
+    assert "office" not in detect_tags(office_url=None, office_available=False, archive_available=lambda fmt: False)
+
+
 def test_explicit_tags_override_detection() -> None:
     config = RunnerConfig(api_url="http://api", token="t", tags=" verify, pack ,")  # type: ignore[arg-type]
 

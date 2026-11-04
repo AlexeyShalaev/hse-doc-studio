@@ -13,6 +13,7 @@ from hse_doc_studio.core.paths import PathMapping
 from hse_doc_studio.core.remote_runner import IRemoteRunnerSettingsStore, IRemoteRunnerSupervisor
 from hse_doc_studio.core.repositories import IAIProviderRepository, ISettingsRepository
 from hse_doc_studio.infra.compile.host_path_resolver import HostPathResolver
+from hse_doc_studio.infra.office.convert_manager import OfficeConvertManager
 from hse_doc_studio.infra.remote_runner.ai_endpoints import LocalAiEndpointResolver
 from hse_doc_studio.infra.remote_runner.environment import LocalRunnerEnvironment
 from hse_doc_studio.infra.remote_runner.runner_session import cloud_cache_volume, runner_session_factory
@@ -37,11 +38,14 @@ class LocalRemoteRunnerProvider(Provider):
         dispatcher: IJobDispatcher,
         mapping: PathMapping,
         providers: IAIProviderRepository,
+        office: OfficeConvertManager,
     ) -> AnyOf[RemoteRunnerSupervisor, IRemoteRunnerSupervisor]:
         # То же соответствие путей, что у локальных сборок (в образе all-in-one docker монтирует папку облачной
         # сборки по пути хоста), но свой том кэша TeX: облачные документы не делят HOME с локальными проектами.
         sessions = runner_session_factory(
-            cache_volume=cloud_cache_volume(settings.compile.cache_volume_name), host_paths=HostPathResolver(mapping)
+            cache_volume=cloud_cache_volume(settings.compile.cache_volume_name),
+            host_paths=HostPathResolver(mapping),
+            office=office,
         )
         return RemoteRunnerSupervisor(
             store,

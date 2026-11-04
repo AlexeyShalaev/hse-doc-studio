@@ -13,16 +13,18 @@ from hse_doc_studio.infra.submission.pack_executor import is_archive_format_avai
 def detect_tags(
     *,
     office_url: str | None,
+    office_available: bool = False,
     tex_available: bool = False,
     archive_available: Callable[[str], bool] = is_archive_format_available,
     ai_relay: bool = False,
 ) -> frozenset[str]:
     """`verify` и `pack` есть всегда (zip и tar.gz нативные), остальное по окружению: docker даёт `tex`,
-    объявленные ИИ-адреса дают `ai`."""
+    объявленные ИИ-адреса дают `ai`, `office` даёт адрес Gotenberg
+    или служба конвертации Студии (`office_available`)."""
     tags = {"verify", *pack_job_tags(ArchiveFormat.zip)}
     if ai_relay:
         tags.add(RELAY_TAG)
-    if office_url:
+    if office_url or office_available:
         tags.add("office")
     if tex_available:
         tags.add("tex")

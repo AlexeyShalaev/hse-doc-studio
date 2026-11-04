@@ -71,8 +71,10 @@ class RunnerProvider(Provider):
         gate: Callable[[], bool] | None = None,
         ai_transport: httpx.AsyncBaseTransport | None = None,
         kube_api: IKubeApi | None = None,
+        office_converter: IOfficeConvertService | None = None,
     ) -> None:
         super().__init__()
+        self._office_converter = office_converter
         self._kube_api = kube_api
         self._config = config
         self._transport = transport
@@ -131,7 +133,9 @@ class RunnerProvider(Provider):
         registry = JobHandlerRegistry()
         registry.register(JobKind.verify_detached, EphemeralVerifyHandler())
         registry.register(JobKind.pack_submission, PackHandler())
-        if config.office_url:
+        if self._office_converter is not None:
+            registry.register(JobKind.office_convert, OfficeConvertHandler(self._office_converter))
+        elif config.office_url:
             registry.register(
                 JobKind.office_convert,
                 OfficeConvertHandler(
@@ -161,6 +165,8 @@ class RunnerProvider(Provider):
 
     @provide
     def get_office_converter(self, config: RunnerConfig) -> IOfficeConvertService:
+        if self._office_converter is not None:
+            return self._office_converter
         if not config.office_url:
             return NoOfficeConverter()
         return GotenbergConverter(config.office_url, config.office_timeout_s, self._office_transport)
@@ -336,13 +342,15 @@ def create_runner_container(  # noqa: PLR0913
     gate: Callable[[], bool] | None = None,
     ai_transport: httpx.AsyncBaseTransport | None = None,
     kube_api: IKubeApi | None = None,
+    office_converter: IOfficeConvertService | None = None,
 ) -> AsyncContainer:
     """Транспорты подменяют сеть в тестах: api раннера, Gotenberg и модели.
 
     Локальная Студия передаёт свои ИИ-адреса (`ai_endpoints`, `None` значит из окружения раннера),
     наблюдатель состояния и шлюз «уступать локальным сборкам». `host_paths` нужен раннеру внутри
     контейнера Студии: docker монтирует папку сборки по пути хоста, а не по пути внутри контейнера.
-    `kube_api` подменяет Kubernetes API исполнителя kubernetes в тестах.
+    `kube_api` подменяет Kubernetes API исполнителя kubernetes в тестах. `office_converter` даёт Студии свой
+    конвертер вместо адреса Gotenberg из конфига (управляемая служба Студии).
     """
     return make_async_container(
         RunnerProvider(
@@ -355,5 +363,6 @@ def create_runner_container(  # noqa: PLR0913
             gate=gate,
             ai_transport=ai_transport,
             kube_api=kube_api,
+            office_converter=office_converter,
         )
     )

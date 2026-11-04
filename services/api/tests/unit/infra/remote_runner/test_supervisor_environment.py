@@ -144,3 +144,65 @@ async def test__server_refused_with_limit__error_with_server_code_and_no_retry(t
     assert supervisor.status().detail_code == "runner_limit"
     await asyncio.sleep(0.05)
     assert len(sessions.specs) == 1
+
+
+async def test__gotenberg_image_present__spec_declares_office_with_studio_image(tmp_path: Path) -> None:
+    sessions = FakeSessions()
+    supervisor = _supervisor(tmp_path, FakeEnvironment(), sessions)
+
+    await supervisor.start()
+
+    await eventually(lambda: len(sessions.specs) == 1)
+    assert (sessions.specs[0].office_available, sessions.specs[0].office_image) == (True, "gotenberg/gotenberg:8")
+    await supervisor.stop()
+
+
+async def test__gotenberg_image_missing__tex_stays_but_no_office(tmp_path: Path) -> None:
+    sessions = FakeSessions()
+    supervisor = _supervisor(tmp_path, FakeEnvironment(office=False), sessions)
+
+    await supervisor.start()
+
+    await eventually(lambda: len(sessions.specs) == 1)
+    assert (sessions.specs[0].tex_available, sessions.specs[0].office_available) == (True, False)
+    await supervisor.stop()
+
+
+async def test__docker_missing__no_office(tmp_path: Path) -> None:
+    sessions = FakeSessions()
+    supervisor = _supervisor(tmp_path, FakeEnvironment(docker=False, image=False, office=False), sessions)
+
+    await supervisor.start()
+
+    await eventually(lambda: len(sessions.specs) == 1)
+    assert sessions.specs[0].office_available is False
+    await supervisor.stop()
+
+
+async def test__gotenberg_installed_later__session_restarts_with_office(tmp_path: Path) -> None:
+    env = FakeEnvironment(office=False)
+    sessions = FakeSessions()
+    supervisor = _supervisor(tmp_path, env, sessions)
+    await supervisor.start()
+    await eventually(lambda: len(sessions.specs) == 1)
+
+    env.office = True
+
+    await eventually(lambda: len(sessions.specs) == 2)
+    assert sessions.specs[1].office_available is True
+    assert sessions.sessions[0].stopped is True
+    await supervisor.stop()
+
+
+async def test__gotenberg_removed__session_restarts_without_office(tmp_path: Path) -> None:
+    env = FakeEnvironment()
+    sessions = FakeSessions()
+    supervisor = _supervisor(tmp_path, env, sessions)
+    await supervisor.start()
+    await eventually(lambda: len(sessions.specs) == 1)
+
+    env.office = False
+
+    await eventually(lambda: len(sessions.specs) == 2)
+    assert sessions.specs[1].office_available is False
+    await supervisor.stop()

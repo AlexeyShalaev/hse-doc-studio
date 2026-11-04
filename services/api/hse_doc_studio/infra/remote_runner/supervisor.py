@@ -11,7 +11,7 @@ import asyncio
 import contextlib
 import time
 from collections.abc import Callable, Coroutine
-from dataclasses import replace
+from dataclasses import dataclass, replace
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
@@ -72,6 +72,14 @@ CRASH_RETRY_S = 30.0
 SLOW_DOWN_STEP_S = 5.0
 
 PairingClientFactory = Callable[[str], RunnerPairingClient]
+
+
+@dataclass(frozen=True)
+class _EnvProbe:
+    tex_image: str
+    tex_available: bool
+    office_image: str
+    office_available: bool
 
 
 class _SlowDownError(Exception):
@@ -415,7 +423,9 @@ class RemoteRunnerSupervisor:
                 if stop.is_set():
                     session.request_stop()
                 if self._environment is not None:
-                    watcher = asyncio.create_task(self._watch_environment(session, spec.tex_available))
+                    watcher = asyncio.create_task(
+                        self._watch_environment(session, (spec.tex_available, spec.office_available))
+                    )
                 await session.run()
         except RunnerSessionFatal as exc:
             return self._on_fatal(exc)
@@ -443,27 +453,36 @@ class RemoteRunnerSupervisor:
         self._sticky, self._detail = RemoteRunnerState.error, exc.detail
         return None
 
-    async def _watch_environment(self, session: IRunnerSession, tex_available: bool) -> None:
+    async def _watch_environment(self, session: IRunnerSession, declared: tuple[bool, bool]) -> None:
+        """Теги tex и office объявляются при подключении; сменились условия, сессия открывается заново."""
         while True:
             await self._sleep(self._env_check_s)
-            image, now_available = await self._probe_environment()
-            if now_available != tex_available:
-                logger.info("remote runner environment changed", tex_available=now_available, image=image)
+            probe = await self._probe_environment()
+            if (probe.tex_available, probe.office_available) != declared:
+                logger.info(
+                    "remote runner environment changed",
+                    tex_available=probe.tex_available,
+                    office_available=probe.office_available,
+                    image=probe.tex_image,
+                )
                 self._env_changed = True
                 session.request_stop()
                 return
 
-    async def _probe_environment(self) -> tuple[str, bool]:
-        """Активный образ TeX и можно ли им собирать; заодно обновляет состояние для интерфейса."""
+    async def _probe_environment(self) -> _EnvProbe:
+        """Что умеет машина: образ TeX, Gotenberg для office; заодно обновляет состояние для интерфейса."""
         env = self._environment
         if env is None:
-            return "", False
+            return _EnvProbe("", False, "", False)
         docker = await env.docker_available()
         image = await env.tex_image()
         present = docker and await env.image_present(image)
+        # Служба конвертации принадлежит Студии и поднимается по требованию: нужен Docker и скачанный образ.
+        office_image = await env.office_image()
+        office = docker and await env.image_present(office_image)
         self._docker = RemoteRunnerDocker.ok if docker else RemoteRunnerDocker.missing
         self._tex = RemoteRunnerTexImage.ready if present else RemoteRunnerTexImage.missing
-        return image, present
+        return _EnvProbe(image, present, office_image, office)
 
     def _gate(self) -> bool:
         """Брать ли сборки сейчас: при «уступать локальным» нет, пока идёт локальная сборка.
@@ -497,15 +516,17 @@ class RemoteRunnerSupervisor:
         settings = self._settings
         if settings.server_url is None:
             raise RuntimeError("remote runner session without server url")
-        image, tex_available = await self._probe_environment()
+        probe = await self._probe_environment()
         return RunnerSessionSpec(
             server_url=settings.server_url,
             registration_token=self._registration_token,
             name=self._name(),
             concurrency=settings.concurrency,
             data_dir=self._runner_dir,
-            tex_image=image,
-            tex_available=tex_available,
+            tex_image=probe.tex_image,
+            tex_available=probe.tex_available,
+            office_available=probe.office_available,
+            office_image=probe.office_image,
             gate=self._gate,
             ai_endpoints=self._endpoints,
         )

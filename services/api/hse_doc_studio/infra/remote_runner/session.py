@@ -68,6 +68,10 @@ class RunnerSessionSpec:
     tex_image: str
     # Без Docker или без образа тег tex не объявляется: сборки LaTeX тогда идут на общие раннеры.
     tex_available: bool
+    # Без Docker или без образа Gotenberg тег office не объявляется: office-документы уходят на общие раннеры.
+    office_available: bool = False
+    # Образ управляемой службы Студии (Gotenberg): задача сервера свой образ не навязывает.
+    office_image: str = ""
     # False: сейчас сборки не брать (идёт локальная сборка, а включено «уступать локальным»).
     gate: Callable[[], bool] = field(default=lambda: True, compare=False)
     ai_endpoints: tuple[LocalAiEndpoint, ...] = ()
@@ -79,6 +83,7 @@ class IRunnerEnvironment(Protocol):
     async def docker_available(self) -> bool: ...
     async def tex_image(self) -> str: ...
     async def image_present(self, image: str) -> bool: ...
+    async def office_image(self) -> str: ...
     def local_busy(self) -> bool: ...
 
 
