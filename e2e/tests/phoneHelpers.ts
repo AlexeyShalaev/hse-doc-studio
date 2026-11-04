@@ -112,8 +112,8 @@ export const clippedContent = (page: Page): Promise<string[]> =>
     return [...found].slice(0, 8);
   });
 
-export const expectNothingClipped = async (page: Page): Promise<void> => {
-  expect(await clippedContent(page)).toEqual([]);
+export const expectNothingClipped = async (page: Page, where?: string): Promise<void> => {
+  expect(await clippedContent(page), where ?? page.url()).toEqual([]);
 };
 
 /** Интерактивные элементы первого экрана меньше минимума: пустой список значит, что цели достаточны. */
