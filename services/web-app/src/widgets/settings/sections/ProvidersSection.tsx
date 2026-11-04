@@ -408,7 +408,7 @@ export const ProvidersSection = () => {
               {t("providers.defaultModelTitle")}
             </div>
             <div
-              className="grid"
+              className="grid grid-split"
               style={{ gridTemplateColumns: "1fr 1fr", gap: "0.5rem" }}
             >
               <Combobox

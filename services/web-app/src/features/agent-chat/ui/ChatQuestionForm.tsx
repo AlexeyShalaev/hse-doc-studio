@@ -89,7 +89,7 @@ export const ChatQuestionForm = ({
                     textTransform: "uppercase",
                     letterSpacing: "0.025rem",
                     padding: "1px 0.375rem",
-                    borderRadius: "62.4375rem",
+                    borderRadius: "999px",
                     background: "var(--bg-3)",
                     color: "var(--fg-2)",
                   }}
@@ -202,7 +202,7 @@ const Choice = ({
         width: "0.875rem",
         height: "0.875rem",
         marginTop: 1,
-        borderRadius: multi ? "0.1875rem" : "62.4375rem",
+        borderRadius: multi ? "0.1875rem" : "999px",
         border: "1.5px solid",
         borderColor: checked ? "var(--accent)" : "var(--fg-3)",
         background: checked ? "var(--accent)" : "transparent",

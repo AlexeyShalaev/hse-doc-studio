@@ -38,7 +38,7 @@ const Badge = ({
         flexShrink: 0,
         fontSize: "0.59375rem",
         padding: "1px 0.375rem",
-        borderRadius: "62.4375rem",
+        borderRadius: "999px",
         border: `1px solid ${color}`,
         color,
         textTransform: "uppercase",
@@ -348,7 +348,7 @@ export const DiskEntityLists = ({
                 style={{
                   width: "0.5rem",
                   height: "0.5rem",
-                  borderRadius: "62.4375rem",
+                  borderRadius: "999px",
                   background:
                     container.state === "running"
                       ? "var(--c-ok)"

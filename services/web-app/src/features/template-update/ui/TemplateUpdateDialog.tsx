@@ -234,6 +234,7 @@ export const TemplateUpdateDialog = ({
                 }))}
               />
               <div
+                className="grid-split"
                 style={{
                   display: "grid",
                   gridTemplateColumns: "minmax(16.25rem, 21.25rem) 1fr",

@@ -34,7 +34,7 @@ const SupervisorRow = ({
       style={{ padding: "0.875rem", background: "var(--bg-2)" }}
     >
       <div
-        className="flex items-center justify-between"
+        className="flex items-center justify-between person-head"
         style={{ marginBottom: "0.625rem" }}
       >
         <div className="flex items-center gap-2">
@@ -100,7 +100,7 @@ const SupervisorRow = ({
           }}
         />
       </div>
-      <div className="flex gap-3">
+      <div className="flex gap-3 author-fields">
         <div className="field flex-1">
           <label>{t("projectSettings.fullName")}</label>
           <input

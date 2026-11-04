@@ -280,6 +280,7 @@ export const TableEditorModal = ({
       ) : (
         <div style={{ maxHeight: "62vh", overflow: "auto" }}>
           <div
+            className="te-toolbar"
             style={{
               position: "sticky",
               top: 0,

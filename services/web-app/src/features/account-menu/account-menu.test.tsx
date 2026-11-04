@@ -7,7 +7,9 @@ import { I18nextProvider } from "react-i18next";
 import { MemoryRouter, useLocation } from "react-router";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ApiError, apiClient, getCsrfToken, setCsrfToken } from "@shared/api";
-import { i18n } from "@shared/lib";
+import { i18n, useUIStore } from "@shared/lib";
+import { installViewport } from "@shared/lib/viewport/testing";
+import { useHelpStore } from "@entities/help";
 import {
   LOCAL_BOOTSTRAP,
   sessionKeys,
@@ -181,5 +183,37 @@ describe("AccountMenu", () => {
     });
     expect(client.getQueryData(["projects", "list"])).toBeUndefined();
     expect(getCsrfToken()).toBeNull();
+  });
+
+  describe("on a phone", () => {
+    let viewport: ReturnType<typeof installViewport> | undefined;
+    afterEach(() => {
+      viewport?.restore();
+      viewport = undefined;
+      useHelpStore.setState({ isOpen: false, everOpened: false });
+    });
+
+    it("opens the screen help from the sheet without handing the click event to the store", async () => {
+      viewport = installViewport(390);
+      const user = userEvent.setup();
+      mount(serverUser);
+      await user.click(screen.getByTestId("account-menu-trigger"));
+      await user.click(await screen.findByTestId("account-menu-help"));
+      const state = useHelpStore.getState();
+      expect(state.isOpen).toBe(true);
+      // Событие клика как articleKey ломало отрисовку панели (JSON.stringify окна).
+      expect(state.articleKey).toBeUndefined();
+      expect(state.focusStep).toBeUndefined();
+    });
+
+    it("opens the command palette from the sheet", async () => {
+      viewport = installViewport(390);
+      const user = userEvent.setup();
+      useUIStore.setState({ paletteOpen: false });
+      mount(serverUser);
+      await user.click(screen.getByTestId("account-menu-trigger"));
+      await user.click(await screen.findByTestId("account-menu-commands"));
+      expect(useUIStore.getState().paletteOpen).toBe(true);
+    });
   });
 });

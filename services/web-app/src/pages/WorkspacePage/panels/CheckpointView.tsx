@@ -150,6 +150,7 @@ export const CheckpointView = ({
           собрать пакет можно было только на отдельной странице, которая
           повторяла тот же список; справа при этом пустовало пол-экрана. */}
       <div
+        className="grid-split"
         style={{
           display: "grid",
           gridTemplateColumns: "minmax(0, 1.4fr) minmax(0, 1fr)",

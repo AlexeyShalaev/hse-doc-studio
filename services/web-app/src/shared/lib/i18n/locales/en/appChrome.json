@@ -181,6 +181,7 @@
     "language": "Language",
     "agent": "AI assistant",
     "help": "Help",
-    "local": "Local version"
+    "local": "Local version",
+    "commands": "Commands and search"
   }
 }

@@ -84,7 +84,7 @@ export const UsageMeter = ({ line }: { line: UsageLine }) => {
           aria-valuenow={percent}
           style={{
             height: "0.375rem",
-            borderRadius: "62.4375rem",
+            borderRadius: "999px",
             background: "var(--bg-3)",
             overflow: "hidden",
           }}
@@ -93,7 +93,7 @@ export const UsageMeter = ({ line }: { line: UsageLine }) => {
             style={{
               width: `${String(Math.max(percent, line.used > 0 ? 2 : 0))}%`,
               height: "100%",
-              borderRadius: "62.4375rem",
+              borderRadius: "999px",
               background: TONE_COLOR[tone],
               transition: "width 300ms ease",
             }}

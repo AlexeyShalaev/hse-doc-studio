@@ -177,7 +177,7 @@ const SeverityFilter = ({
               minWidth: "1rem",
               height: "0.875rem",
               padding: "0 0.25rem",
-              borderRadius: "62.4375rem",
+              borderRadius: "999px",
               background: "var(--bg-3)",
               fontSize: "0.59375rem",
               fontFamily: "var(--font-mono)",

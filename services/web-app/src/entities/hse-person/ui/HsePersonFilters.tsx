@@ -103,7 +103,7 @@ export const HsePersonFilters = ({
                 style={{
                   fontSize: "0.75rem",
                   padding: "0.3125rem 0.75rem",
-                  borderRadius: "62.4375rem",
+                  borderRadius: "999px",
                   cursor: "pointer",
                   border: active
                     ? "1px solid var(--accent)"
@@ -234,7 +234,7 @@ export const HsePersonFilters = ({
                   style={{
                     fontSize: "0.65625rem",
                     padding: "0.125rem 0.5rem",
-                    borderRadius: "62.4375rem",
+                    borderRadius: "999px",
                     cursor: "pointer",
                     border: "1px solid var(--border)",
                     color: active ? "var(--accent)" : "var(--fg-2)",

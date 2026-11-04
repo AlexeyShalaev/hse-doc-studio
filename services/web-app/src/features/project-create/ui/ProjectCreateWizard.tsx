@@ -626,7 +626,7 @@ const StepFolder = () => {
                         flexShrink: 0,
                         fontSize: "0.625rem",
                         padding: "0 0.3125rem",
-                        borderRadius: "62.4375rem",
+                        borderRadius: "999px",
                         background: "var(--bg-3)",
                         color: "var(--fg-2)",
                       }}
@@ -2560,6 +2560,7 @@ export const ProjectCreateWizard = () => {
       <div
         className="flex shrink-0 flex-row overflow-x-auto border-b border-border max-sm:!p-2 sm:w-[13.75rem] sm:flex-col sm:overflow-y-auto sm:border-r sm:border-b-0"
         data-testid="wizard-steps"
+        data-hscroll
         style={{
           padding: "1.25rem 0.5rem 1.5rem",
           background: "var(--bg-1)",
@@ -2649,7 +2650,7 @@ export const ProjectCreateWizard = () => {
                     bottom: "0.25rem",
                     width: "0.1875rem",
                     background: "var(--accent)",
-                    borderRadius: "0 62.4375rem 62.4375rem 0",
+                    borderRadius: "0 999px 999px 0",
                   }}
                 />
               )}

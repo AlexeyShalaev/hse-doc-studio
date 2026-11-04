@@ -194,7 +194,10 @@ export const SlotPanel = ({
               }}
             >
               {/* ── Top row: thumbnail + name + PNG controls ── */}
-              <div className="flex items-center" style={{ gap: "1rem" }}>
+              <div
+                className="flex items-center slot-top"
+                style={{ gap: "1rem" }}
+              >
                 <div
                   className="flex items-center justify-center shrink-0"
                   style={{
@@ -236,7 +239,7 @@ export const SlotPanel = ({
                   style={{ gap: "0.25rem", flex: 1, minWidth: 0 }}
                 >
                   <div
-                    className="flex items-center gap-2"
+                    className="flex items-center gap-2 slot-name"
                     style={{ minWidth: 0 }}
                   >
                     <strong
@@ -300,7 +303,10 @@ export const SlotPanel = ({
                   </div>
                 </div>
 
-                <div className="flex items-center" style={{ gap: "0.375rem" }}>
+                <div
+                  className="flex items-center slot-actions"
+                  style={{ gap: "0.375rem" }}
+                >
                   <button
                     type="button"
                     className="btn xs"

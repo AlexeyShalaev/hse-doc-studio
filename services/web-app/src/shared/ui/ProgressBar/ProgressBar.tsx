@@ -14,7 +14,7 @@ export const ProgressBar = ({ percent, label }: ProgressBarProps) => (
     {...(percent === null ? {} : { "aria-valuenow": Math.round(percent) })}
     style={{
       height: "0.375rem",
-      borderRadius: "62.4375rem",
+      borderRadius: "999px",
       background: "var(--bg-3)",
       overflow: "hidden",
     }}
@@ -27,7 +27,7 @@ export const ProgressBar = ({ percent, label }: ProgressBarProps) => (
             ? "40%"
             : `${String(Math.min(100, Math.max(0, percent)))}%`,
         height: "100%",
-        borderRadius: "62.4375rem",
+        borderRadius: "999px",
         background: "var(--accent)",
         transition: "width 300ms ease",
       }}

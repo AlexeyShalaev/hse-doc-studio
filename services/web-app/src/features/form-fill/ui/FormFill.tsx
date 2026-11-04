@@ -101,6 +101,7 @@ const FormEditor = ({ projectId, formId, form, lang }: FormEditorProps) => {
 
   return (
     <div
+      className="grid-split"
       style={{
         display: "grid",
         gridTemplateColumns: "minmax(0, 1.25fr) minmax(0, 1fr)",
