@@ -30,3 +30,8 @@ export {
   useIsProjectStalled,
 } from "./lib/useCancelCompiles";
 export { useResumeProjectStreams } from "./lib/useResumeProjectStreams";
+export {
+  PRE_LAUNCH_CODES,
+  hasBuildOutput,
+  shortReason,
+} from "./lib/failureText";

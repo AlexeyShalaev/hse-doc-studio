@@ -13,3 +13,5 @@ export type { ProjectBuildsViewProps } from "./ui/ProjectBuildsView";
 export { BuildBlockedNotice } from "./ui/BuildBlockedNotice";
 export type { BuildBlockedNoticeProps } from "./ui/BuildBlockedNotice";
 export { useBuildBlockText } from "./lib/blockText";
+export { CompileFailureNotice } from "./ui/CompileFailureNotice";
+export type { CompileFailureNoticeProps } from "./ui/CompileFailureNotice";

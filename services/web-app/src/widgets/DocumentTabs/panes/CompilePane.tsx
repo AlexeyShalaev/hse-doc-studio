@@ -12,9 +12,18 @@ import {
 } from "lucide-react";
 import type { z } from "zod";
 import { documentApi, getDocMeta } from "@entities/document";
-import { useCancelDocCompile, useStartCompile } from "@entities/compile";
-import type { DocumentResponseSchema } from "@entities/document";
-import { BuildPlacementChip, CompileWaitNotice } from "@features/build-states";
+import {
+  hasBuildOutput,
+  shortReason,
+  useCancelDocCompile,
+  useStartCompile,
+} from "@entities/compile";
+import type { CompileError, DocumentResponseSchema } from "@entities/document";
+import {
+  BuildPlacementChip,
+  CompileFailureNotice,
+  CompileWaitNotice,
+} from "@features/build-states";
 import { DocBuildNote } from "@features/cloud-builds";
 import { CloudBuildHint } from "@features/git-server";
 import { useProject } from "@entities/project";
@@ -86,12 +95,15 @@ export const CompilePane = ({ projectId, doc }: CompilePaneProps) => {
   const [recordWait, setRecordWait] = useState<CompileWait | null>(null);
   const [recordPlacement, setRecordPlacement] =
     useState<CompilePlacement | null>(null);
+  const [recordError, setRecordError] = useState<CompileError | null>(null);
   const logRef = useRef<HTMLDivElement>(null);
 
   const liveOwnsPane = slot !== undefined;
   const logLines = liveOwnsPane ? slot.logLines : diskLines;
   const status: LocalStatus = liveOwnsPane ? slot.status : recordStatus;
   const doneInfo = liveOwnsPane ? slot.doneInfo : null;
+  // Причина сбоя: из события `done` живой сборки, иначе из сохранённой записи.
+  const failure = liveOwnsPane ? (doneInfo?.error ?? null) : recordError;
   // Серверный режим: очередь, нет раннера, заменена. В локальном всегда null.
   const wait = liveOwnsPane ? slot.wait : recordWait;
   // Серверный режим: на чьём раннере идёт сборка. Соавтор видит «раннер владельца».
@@ -145,6 +157,7 @@ export const CompilePane = ({ projectId, doc }: CompilePaneProps) => {
           );
           setRecordWait(detail.wait ?? null);
           setRecordPlacement(detail.placement ?? null);
+          setRecordError(detail.error ?? null);
           setDiskLines((prev) => {
             if (prev.length > 0) return prev; // disk log won
             const log = detail.log ?? "";
@@ -223,13 +236,18 @@ export const CompilePane = ({ projectId, doc }: CompilePaneProps) => {
               count: doneInfo.pages,
             })
           : t("compile.notification.success", { code: meta.code })
-        : t("compile.notification.failure", { code: meta.code });
+        : failure
+          ? t("compile.notification.failureReason", {
+              code: meta.code,
+              reason: shortReason(failure.message),
+            })
+          : t("compile.notification.failure", { code: meta.code });
     try {
       new Notification(t("compile.notification.title"), { body });
     } catch {
       // Notifications can be unavailable (permissions revoked, headless) — ignore.
     }
-  }, [status, meta.code, doneInfo, t]);
+  }, [status, meta.code, doneInfo, failure, t]);
 
   return (
     <div className="flex flex-col" style={{ flex: 1, minHeight: 0 }}>
@@ -357,6 +375,16 @@ export const CompilePane = ({ projectId, doc }: CompilePaneProps) => {
       <DocBuildNote projectId={projectId} docId={doc.id} />
 
       <CloudBuildHint projectId={projectId} />
+
+      {(isFailed || isCancelled) && !wait && (
+        <CompileFailureNotice
+          error={failure}
+          status={isCancelled ? "cancelled" : "failure"}
+          hasOutput={hasBuildOutput(logLines)}
+          onRetry={handleRebuild}
+          retryDisabled={isStarting || buildBlock !== null}
+        />
+      )}
 
       {wait && (
         <CompileWaitNotice

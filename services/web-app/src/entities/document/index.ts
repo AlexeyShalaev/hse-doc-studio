@@ -18,11 +18,13 @@ export {
   CheckResultsResponseSchema,
   CheckRuleSchema,
   CompileDetailSchema,
+  CompileErrorSchema,
   CompileListItemSchema,
   CustomFileSchema,
   DocumentResponseSchema,
   TriggerCompileResponseSchema,
 } from "./api/documentSchemas";
+export type { CompileError } from "./api/documentSchemas";
 export {
   fileKeys,
   useCreateDir,

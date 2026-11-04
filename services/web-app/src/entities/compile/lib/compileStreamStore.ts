@@ -2,6 +2,7 @@ import { create } from "zustand";
 import { createSSEStream } from "@shared/lib/sse";
 import { env } from "@shared/config";
 import { CompileWaitSchema, type CompileWait } from "@entities/session";
+import { CompileErrorSchema, type CompileError } from "@entities/document";
 import { parsePlacement, type CompilePlacement } from "@entities/runner";
 
 export type CompileStatus = "running" | "success" | "failure" | "cancelled";
@@ -13,6 +14,8 @@ export type CompileDoneInfo = {
   errors: number;
   /** Серверный режим: почему сборка не дошла до конца (заменена, нет раннера). */
   wait?: CompileWait | null;
+  /** Причина неудачной или отменённой сборки: код, деталь и текст «что делать». */
+  error?: CompileError | null;
 };
 
 export type CompileStreamSlot = {
@@ -70,6 +73,13 @@ const omitKey = <T>(
 ): Record<string, T> => {
   const { [dropKey]: _dropped, ...rest } = source;
   return rest;
+};
+
+/** Событие `done`: причину сбоя разбираем схемой, чтобы кривое тело не сломало плашку. */
+const parseDone = (raw: unknown): CompileDoneInfo => {
+  const data = raw as CompileDoneInfo;
+  const parsed = CompileErrorSchema.nullish().safeParse(data.error);
+  return { ...data, error: parsed.success ? (parsed.data ?? null) : null };
 };
 
 const streamUrl = (projectId: string, compileId: string): string =>
@@ -135,7 +145,7 @@ export const useCompileStreamStore = create<StoreState & StoreActions>(
             if (slot?.compileId !== compileId) return s;
 
             if (event.type === "done") {
-              const data = event.data as CompileDoneInfo;
+              const data = parseDone(event.data);
               const closer = s._closers[k];
               if (closer) closer();
               const nextClosers = omitKey(s._closers, k);

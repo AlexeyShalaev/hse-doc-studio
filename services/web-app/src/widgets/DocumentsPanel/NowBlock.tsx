@@ -1,5 +1,6 @@
 import { useTranslation } from "react-i18next";
 import { AlertTriangle, ChevronRight } from "lucide-react";
+import { shortReason } from "@entities/compile";
 import { getDocMeta } from "@entities/document";
 import type { DocumentItem } from "./lib/buildDocSections";
 
@@ -24,7 +25,15 @@ export type NowBlockProps = {
 // сейчас». Остальное всё равно видно ниже, в самом списке.
 const MAX_ITEMS = 3;
 
-type NowItem = { key: string; label: string; onOpen: () => void };
+type NowItem = {
+  key: string;
+  label: string;
+  /** Причина под названием: почему упала сборка (первое предложение пояснения сервера). */
+  reason?: string;
+  /** Полный текст для подсказки. */
+  full?: string;
+  onOpen: () => void;
+};
 
 /**
  * «Сейчас» — короткий список того, что мешает сдать работу: упавшие сборки и
@@ -47,9 +56,13 @@ export const NowBlock = ({
     const hasErrors = doc.status === "err" || (doc.errors ?? 0) > 0;
     if (!hasErrors) continue;
     const meta = getDocMeta(doc.id, doc, lang);
+    const failure = doc.last_compile_error ?? null;
     items.push({
       key: `doc:${doc.id}`,
       label: t("now.buildError", { doc: meta.code }),
+      ...(failure
+        ? { reason: shortReason(failure.message), full: failure.message }
+        : {}),
       onOpen: () => {
         onSelectDoc(doc.id);
       },
@@ -82,14 +95,33 @@ export const NowBlock = ({
           onClick={item.onOpen}
           // Панель узкая, и в командном проекте две одноимённые анкеты разных
           // авторов обрезаются в одинаковый текст. Полная строка — в подсказке.
-          title={item.label}
+          title={item.full ? `${item.label}: ${item.full}` : item.label}
+          data-testid={
+            item.key.startsWith("doc:") ? `now-${item.key}` : undefined
+          }
         >
           <AlertTriangle
             size="0.6875rem"
             style={{ flexShrink: 0, color: "var(--c-warn)" }}
           />
-          <span className="flex-1 truncate" style={{ textAlign: "left" }}>
-            {item.label}
+          <span
+            className="flex flex-1 flex-col min-w-0"
+            style={{ textAlign: "left" }}
+          >
+            <span className="truncate">{item.label}</span>
+            {item.reason && (
+              <span
+                data-testid="now-reason"
+                style={{
+                  fontSize: 10.5,
+                  color: "var(--fg-3)",
+                  lineHeight: 1.35,
+                  whiteSpace: "normal",
+                }}
+              >
+                {item.reason}
+              </span>
+            )}
           </span>
           <ChevronRight
             size="0.6875rem"

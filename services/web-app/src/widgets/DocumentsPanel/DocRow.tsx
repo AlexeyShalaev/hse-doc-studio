@@ -5,6 +5,7 @@ import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 import { useTranslation } from "react-i18next";
 import { useCustomFileActions } from "@entities/document";
 import type { DocStatus, getDocMeta } from "@entities/document";
+import { shortReason } from "@entities/compile";
 import { DocBuildSubline } from "@features/cloud-builds";
 import { UploadCustomFileModal } from "@features/custom-document";
 import { env } from "@shared/config";
@@ -167,6 +168,16 @@ export const DocRow = ({
         >
           <span>{renderHighlighted(meta.name, query)}</span>
           <DocBuildSubline projectId={projectId} docId={doc.id} now={now} />
+          {doc.status === "err" && doc.last_compile_error && (
+            <span
+              data-testid={`doc-failure-${doc.id}`}
+              data-code={doc.last_compile_error.code}
+              title={doc.last_compile_error.message}
+              style={{ fontSize: 10.5, lineHeight: 1.3, color: "var(--c-err)" }}
+            >
+              {shortReason(doc.last_compile_error.message)}
+            </span>
+          )}
         </span>
         {isCustom && (
           <span

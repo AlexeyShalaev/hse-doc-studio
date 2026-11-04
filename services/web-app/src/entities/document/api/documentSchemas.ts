@@ -19,6 +19,14 @@ export const CustomFileSchema = z.object({
   preview_available: z.boolean(),
 });
 
+/** Почему сборка не удалась: стабильный код, сырая деталь и текст «что делать» на языке интерфейса. */
+export const CompileErrorSchema = z.object({
+  code: z.string(),
+  detail: z.string().nullish(),
+  message: z.string(),
+});
+export type CompileError = z.infer<typeof CompileErrorSchema>;
+
 export const DocumentResponseSchema = z.object({
   // Team-mode personal docs are per-author instances "{def_id}--{slug}"
   // ("vkr--ivanov"); shared/solo docs keep the plain definition id.
@@ -58,6 +66,8 @@ export const DocumentResponseSchema = z.object({
   // (last_compile_id stays put), so the viewer refreshes off this stamp.
   preview_updated_at: z.string().nullish(),
   status: z.enum(["draft", "building", "ok", "warn", "err", "locked"]),
+  // Статус `err`: почему упала последняя сборка (список документов); у остальных документов null.
+  last_compile_error: CompileErrorSchema.nullish(),
   chosen_variant: z.string().nullable().optional(),
   last_compile_id: z.string().nullable().optional(),
   last_compile_at: z.string().nullable().optional(),
@@ -124,6 +134,8 @@ export const CompileListItemSchema = z.object({
   chars: z.number().nullable().optional(),
   warnings: z.number(),
   errors: z.number(),
+  // Причина неудачной или отменённой сборки; у удачной null.
+  error: CompileErrorSchema.nullish(),
 });
 
 export const CompileDetailSchema = CompileListItemSchema.extend({
