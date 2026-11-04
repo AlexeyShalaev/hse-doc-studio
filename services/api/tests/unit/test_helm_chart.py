@@ -19,6 +19,8 @@ _K8S_VALUES = _CHART / "ci" / "values-kubernetes.yaml"
 _K8S_GOLDEN = _CHART / "ci" / "rendered-kubernetes.golden.yaml"
 _UPDATER_VALUES = _CHART / "ci" / "values-updater.yaml"
 _UPDATER_GOLDEN = _CHART / "ci" / "rendered-updater.golden.yaml"
+_PUBLIC_S3_VALUES = _CHART / "ci" / "values-public-s3.yaml"
+_PUBLIC_S3_GOLDEN = _CHART / "ci" / "rendered-public-s3.golden.yaml"
 
 pytestmark = pytest.mark.skipif(shutil.which("helm") is None, reason="helm не установлен")
 
@@ -63,8 +65,9 @@ def test_lint() -> None:
         ((_VALUES,), _GOLDEN),
         ((_VALUES, _K8S_VALUES), _K8S_GOLDEN),
         ((_VALUES, _UPDATER_VALUES), _UPDATER_GOLDEN),
+        ((_VALUES, _PUBLIC_S3_VALUES), _PUBLIC_S3_GOLDEN),
     ],
-    ids=["docker", "kubernetes", "updater"],
+    ids=["docker", "kubernetes", "updater", "public-s3"],
 )
 def test_template_matches_golden(values: tuple[Path, ...], golden_path: Path) -> None:
     args = [arg for path in values for arg in ("-f", str(path))]
@@ -112,6 +115,37 @@ def test_env_names_exist_in_settings_and_runner_config() -> None:
         runner = next(d for d in _by_kind(runner_docs, "Deployment") if d["metadata"]["name"].endswith("-runner"))
         renv = {e["name"] for e in runner["spec"]["template"]["spec"]["containers"][0]["env"]}
         assert [k for k in renv if k.removeprefix("HSE_RUNNER__") not in fields] == []
+
+
+def _api_env_values(*extra: str) -> dict[str, str]:
+    api = next(d for d in _by_kind(_render(*extra), "Deployment") if d["metadata"]["name"].endswith("-api"))
+    return {e["name"]: e.get("value", "") for e in api["spec"]["template"]["spec"]["containers"][0]["env"]}
+
+
+def test_s3_public_endpoint_absent_by_default() -> None:
+    env = _api_env_values()
+    assert not [
+        name
+        for name in env
+        if name.startswith("HSE_STUDIO__S3__")
+        and name.endswith(("PUBLIC_ENDPOINT", "OUTSIDE_RUNNER_ACCESS", "SHARED_RUNNERS_OUTSIDE", "CORS_ORIGINS"))
+    ]
+
+
+def test_s3_public_endpoint_and_access_mode_reach_api_env() -> None:
+    env = _api_env_values(
+        "--set", "s3.publicEndpoint=https://files.example.org",
+        "--set", "s3.outsideRunnerAccess=proxy",
+        "--set", "s3.sharedRunnersOutside=true",
+    )  # fmt: skip
+    assert env["HSE_STUDIO__S3__PUBLIC_ENDPOINT"] == "https://files.example.org"
+    assert env["HSE_STUDIO__S3__OUTSIDE_RUNNER_ACCESS"] == "proxy"
+    assert env["HSE_STUDIO__S3__SHARED_RUNNERS_OUTSIDE"] == "true"
+
+
+def test_s3_public_endpoint_must_be_an_origin() -> None:
+    result = _helm("template", "rel", str(_CHART), "-f", str(_VALUES), "--set", "s3.publicEndpoint=files.example.org/x")
+    assert result.returncode != 0
 
 
 def test_secrets_not_inline_in_workloads() -> None:
