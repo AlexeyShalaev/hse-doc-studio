@@ -40,10 +40,7 @@ export const AuthLayout = () => {
       className="flex flex-col flex-1 min-h-0"
       style={{ background: "var(--bg-0)", color: "var(--fg-0)" }}
     >
-      <header
-        className="flex items-center justify-between"
-        style={{ padding: "16px 24px" }}
-      >
+      <header className="auth-header flex items-center justify-between">
         <div className="flex items-center" style={{ gap: 10 }}>
           <Logomark />
           <span style={{ fontWeight: 600, fontSize: 14 }}>
@@ -52,21 +49,8 @@ export const AuthLayout = () => {
         </div>
         <AuthSwitches />
       </header>
-      <main
-        className="flex flex-1 items-center justify-center"
-        style={{ padding: "16px 16px 48px", overflowY: "auto" }}
-      >
-        <div
-          style={{
-            width: "100%",
-            maxWidth: wide ? 600 : 420,
-            background: "var(--bg-1)",
-            border: "1px solid var(--line)",
-            borderRadius: 12,
-            padding: 28,
-            boxShadow: "0 8px 32px rgba(0,0,0,0.12)",
-          }}
-        >
+      <main className="auth-main flex flex-1 items-center justify-center">
+        <div className="auth-card" style={{ maxWidth: wide ? 600 : 420 }}>
           <Outlet />
         </div>
       </main>

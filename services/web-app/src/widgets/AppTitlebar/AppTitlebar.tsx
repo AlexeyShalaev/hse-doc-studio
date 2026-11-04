@@ -92,7 +92,7 @@ export const AppTitlebar = ({
       <button
         type="button"
         onClick={handleBackToWelcome}
-        className="flex items-center shrink-0 cursor-pointer"
+        className="titlebar-brand flex items-center shrink-0 cursor-pointer"
         style={{
           background: "transparent",
           border: 0,
@@ -102,7 +102,10 @@ export const AppTitlebar = ({
         }}
       >
         <Logomark />
-        <div className="flex flex-col items-start" style={{ gap: 0 }}>
+        <div
+          className="titlebar-brandtext flex flex-col items-start"
+          style={{ gap: 0 }}
+        >
           <div
             style={{
               fontSize: 13,
@@ -131,7 +134,7 @@ export const AppTitlebar = ({
       </button>
 
       <div
-        className="flex items-center flex-1 min-w-0 overflow-hidden max-sm:!ml-2"
+        className="titlebar-crumbs flex items-center flex-1 min-w-0 overflow-hidden"
         style={{
           gap: 8,
           marginLeft: 26,
@@ -152,8 +155,10 @@ export const AppTitlebar = ({
           aria-label={t("titlebar.projects")}
         >
           <GraduationCap size={15} />
-          {/* На телефоне подпись схлопывалась до одной буквы: оставляем значок */}
-          <span className="max-sm:hidden">{t("titlebar.projects")}</span>
+          {/* Телефон: рядом с именем проекта остаётся значок, на главной подпись нужна как заголовок */}
+          <span className={clsx(!isOnWelcome && "titlebar-crumb-label")}>
+            {t("titlebar.projects")}
+          </span>
         </button>
         {projectName && (
           <>
@@ -206,7 +211,10 @@ export const AppTitlebar = ({
         {!isGuest && (
           <button
             type="button"
-            className={clsx("icon-btn tt", systemChatOpen && "active")}
+            className={clsx(
+              "icon-btn tt titlebar-secondary",
+              systemChatOpen && "active",
+            )}
             data-tt={agentTooltip}
             data-tour="titlebar-agent"
             onClick={toggleSystemChat}
@@ -223,7 +231,10 @@ export const AppTitlebar = ({
         {!isGuest && (
           <button
             type="button"
-            className={clsx("icon-btn tt", settingsActive && "active")}
+            className={clsx(
+              "icon-btn tt titlebar-secondary",
+              settingsActive && "active",
+            )}
             data-tt={t("titlebar.settings")}
             data-tour="titlebar-settings"
             onClick={handleOpenSettings}
@@ -237,7 +248,9 @@ export const AppTitlebar = ({
           </button>
         )}
         {!isGuest && <InboxBell />}
-        {isGuest ? <HelpButton /> : <HelpMenu />}
+        <span className="titlebar-secondary contents">
+          {isGuest ? <HelpButton /> : <HelpMenu />}
+        </span>
         <span data-tour="titlebar-account" className="flex items-center">
           <AccountMenu />
         </span>

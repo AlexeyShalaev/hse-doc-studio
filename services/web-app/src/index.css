@@ -22,6 +22,33 @@
     --font-display: "Inter", sans-serif;
 
     --ease: cubic-bezier(0.4, 0, 0.2, 1);
+
+    /* Адаптив (docs/design/mobile-layout.md). Границы: телефон до 767.98px,
+       планшет 768-1023.98px, десктоп от 1024px; числа те же в
+       shared/lib/viewport/breakpoints.ts. Зона касания 36px на десктопе и
+       40px на телефоне, поле ввода 16px на телефоне: меньше - и iOS Safari
+       увеличивает страницу при фокусе. */
+    --touch-min: 36px;
+    --touch-lg: 44px;
+    --field-fs: 13px;
+    --page-gutter: 24px;
+    --tabbar-h: 56px;
+    --safe-top: env(safe-area-inset-top, 0px);
+    --safe-right: env(safe-area-inset-right, 0px);
+    --safe-bottom: env(safe-area-inset-bottom, 0px);
+    --safe-left: env(safe-area-inset-left, 0px);
+    /* Экранная клавиатура: useKeyboardInset пишет сюда высоту, которую она
+       закрывает, и высоту видимой области. Без клавиатуры 0 и 100dvh. */
+    --kb-inset: 0px;
+    --vv-height: 100dvh;
+  }
+
+  @media (max-width: 767.98px) {
+    :root {
+      --touch-min: 40px;
+      --field-fs: 16px;
+      --page-gutter: 16px;
+    }
   }
 
   :root,
@@ -210,6 +237,29 @@
     height: 100%;
     margin: 0;
     padding: 0;
+  }
+
+  /* Телефон: 100% у html считается от самой большой высоты окна, и нижняя
+     панель Safari закрывала бы низ приложения; dvh следует за видимой частью. */
+  @supports (height: 100dvh) {
+    html,
+    body,
+    #root {
+      height: 100dvh;
+    }
+  }
+
+  html {
+    /* Поворот телефона не должен раздувать шрифт. */
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+  }
+
+  body {
+    /* Двойной тап не увеличивает страницу, жест щипка остаётся. */
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+    overscroll-behavior: none;
   }
 
   body {
@@ -3165,6 +3215,41 @@
         local,
       linear-gradient(var(--border-strong), var(--border-strong)) bottom / 100%
         1px no-repeat scroll;
+  }
+
+  /* Каркас окна Modal (shared/ui/Modal): шапка, середина с прокруткой, кнопки.
+     Отступы живут в классах, а не в style, чтобы телефон мог их сменить. */
+  .modal-head {
+    flex-shrink: 0;
+    padding: 24px 24px 0;
+  }
+  .modal-head--alone {
+    padding: 24px;
+  }
+  .modal-body-fx {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    padding: 24px 24px 24px;
+  }
+  .modal-body-fx.modal-body--titled {
+    padding-top: 16px;
+  }
+  .modal-body-fx.modal-body--footed {
+    padding-bottom: 4px;
+  }
+  .modal-foot {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 10px;
+    padding: 16px 24px 24px;
+  }
+  .modal-close {
+    position: absolute;
+    right: 12px;
+    top: 12px;
   }
 
   /* ── rendered markdown preview (e.g. NDA documents) ───────────── */
@@ -7162,4 +7247,526 @@ a.adm-row:hover .adm-row-chevron {
 }
 .help-anchor:hover {
   color: var(--accent);
+}
+
+/* ── экраны без сессии (widgets/AuthLayout) ── */
+.auth-header {
+  padding: 16px 24px;
+}
+.auth-main {
+  padding: 16px 16px 48px;
+  overflow-y: auto;
+}
+.auth-card {
+  width: 100%;
+  margin: auto;
+  background: var(--bg-1);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 28px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
+}
+
+/* ── таблица карточками (shared/ui/DataTable на телефоне) ── */
+.dt-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.dt-card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-3);
+  background: var(--bg-1);
+}
+.dt-card[data-clickable="true"] {
+  cursor: pointer;
+}
+.dt-card[data-selected="true"] {
+  border-color: var(--accent-line);
+  background: var(--accent-soft);
+}
+.dt-card-skeleton {
+  height: 92px;
+  background: var(--bg-2);
+}
+.dt-card-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+  min-width: 0;
+}
+.dt-card-title {
+  min-width: 0;
+  flex: 1;
+  color: var(--fg-0);
+  font-size: 14px;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+.dt-card-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+  margin: -6px -6px 0 0;
+}
+.dt-card-badges {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+.dt-card-lines {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0;
+}
+.dt-card-line {
+  display: grid;
+  grid-template-columns: minmax(84px, 36%) minmax(0, 1fr);
+  gap: 10px;
+  align-items: baseline;
+  font-size: 12.5px;
+}
+.dt-card-line dt {
+  color: var(--fg-2);
+  font-size: 12px;
+}
+.dt-card-line dd {
+  margin: 0;
+  min-width: 0;
+  color: var(--fg-1);
+  overflow-wrap: anywhere;
+}
+/* Ячейки таблицы выровнены под колонку (вправо, по центру); в карточке всё слева. */
+.dt-card-line dt,
+.dt-card-line dd,
+.dt-card-line dd > *,
+.dt-card-line dt > * {
+  text-align: left !important;
+  justify-content: flex-start !important;
+}
+
+/* ── главная: список проектов ── */
+.welcome-page {
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 36px 32px 80px;
+}
+.welcome-head {
+  margin-bottom: 32px;
+}
+.welcome-toolbar {
+  margin-bottom: 18px;
+}
+
+/* ── кнопка и шторка фильтров (shared/ui/FilterSheet) ── */
+.filter-sheet-trigger {
+  position: relative;
+  flex-shrink: 0;
+}
+.filter-sheet-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: var(--accent);
+  color: var(--accent-ink);
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1;
+}
+.filter-sheet-groups {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+.filter-sheet-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.filter-sheet-group-label {
+  color: var(--fg-2);
+  font-size: 12px;
+  font-weight: 500;
+}
+
+/* ════════════════════════════════════════════════════════════════════════════
+   Адаптив: телефон (до 767.98px). docs/design/mobile-layout.md
+   Блок без слоя и в конце файла: он перекрывает правила слоёв и более ранние
+   правила без слоя при равной специфичности. Правила, привязанные к одному
+   экрану, лежат рядом с экраном выше; здесь общее: зоны касания, поля 16px,
+   шторки, безопасные области.
+   ════════════════════════════════════════════════════════════════════════════ */
+
+@keyframes sheet-in {
+  from {
+    transform: translateY(24px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+@keyframes sheet-out {
+  from {
+    transform: translateY(0);
+    opacity: 1;
+  }
+  to {
+    transform: translateY(24px);
+    opacity: 0;
+  }
+}
+
+/* Подсказки по наведению: на касании :hover залипает после тапа и подпись
+   остаётся поверх интерфейса. */
+@media (hover: none) {
+  .tt[data-tt]::after,
+  .tt-end[data-tt]::after,
+  .tt-r[data-tt]::after {
+    display: none !important;
+  }
+}
+
+/* Поля 16px везде, где основной указатель - палец (телефон и планшет): меньше - и iOS Safari увеличивает страницу при фокусе. */
+@media (pointer: coarse), (max-width: 767.98px) {
+  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not(
+      [type="file"]
+    ):not([type="color"]),
+  textarea,
+  select,
+  .input,
+  .textarea {
+    font-size: 16px !important;
+  }
+}
+
+/* Планшет с касанием: раскладка десктопа, но кнопки не меньше 36px (--touch-min десктопа). */
+@media (pointer: coarse) and (min-width: 768px) and (max-width: 1023.98px) {
+  .btn,
+  .btn.sm,
+  .btn.xs {
+    min-height: var(--touch-min);
+    height: auto;
+  }
+  .icon-btn,
+  .icon-btn.sm {
+    min-width: var(--touch-min);
+    min-height: var(--touch-min);
+    width: var(--touch-min);
+    height: var(--touch-min);
+  }
+  .seg button {
+    min-height: 32px;
+    height: auto;
+  }
+  .row-btn,
+  .titlebar-brand {
+    min-height: var(--touch-min);
+  }
+  .statusbar .seg-clickable {
+    min-height: 28px;
+    display: inline-flex;
+    align-items: center;
+  }
+}
+
+@media (max-width: 767.98px) {
+  .input:not(.textarea),
+  input.input,
+  select.input {
+    min-height: var(--touch-min);
+  }
+
+  /* ── зоны касания ── */
+  .btn,
+  .btn.sm,
+  .btn.xs,
+  .btn.lg {
+    min-height: var(--touch-min);
+    height: auto;
+    padding-top: 0;
+    padding-bottom: 0;
+    font-size: 13.5px;
+  }
+  .icon-btn,
+  .icon-btn.sm {
+    min-width: var(--touch-min);
+    min-height: var(--touch-min);
+    width: var(--touch-min);
+    height: var(--touch-min);
+  }
+  .row-btn {
+    min-height: var(--touch-min);
+  }
+  .seg button,
+  .seg.seg-fill button {
+    min-height: calc(var(--touch-min) - 4px);
+    height: auto;
+    padding-left: 12px;
+    padding-right: 12px;
+    font-size: 13px;
+  }
+  .tabs .tab {
+    min-height: var(--touch-min);
+    height: auto;
+  }
+  .adm-menu-item {
+    min-height: var(--touch-min);
+    font-size: 14px;
+  }
+
+  /* ── плотность «компактная» на телефоне не действует ── */
+  [data-density="compact"] .btn,
+  [data-density="compact"] .btn.sm {
+    min-height: var(--touch-min);
+    height: auto;
+    font-size: 13.5px;
+  }
+  [data-density="compact"] .titlebar {
+    height: auto;
+  }
+
+  /* ── шторки: окна, панели у кнопки и меню действий ── */
+  .modal-panel,
+  .pop-content[data-form="sheet"],
+  .adm-menu[data-form="sheet"] {
+    border-radius: 16px 16px 0 0 !important;
+    border-bottom: 0 !important;
+    box-shadow: var(--shadow-pop);
+  }
+  .modal-panel {
+    position: fixed !important;
+    left: 0 !important;
+    right: 0 !important;
+    top: auto !important;
+    bottom: var(--kb-inset) !important;
+    width: 100% !important;
+    max-width: none !important;
+    max-height: min(92dvh, calc(var(--vv-height) - 12px)) !important;
+    translate: none !important;
+    transform: none !important;
+    margin: 0 !important;
+    padding-bottom: var(--safe-bottom);
+  }
+  .modal-panel[data-state="open"] {
+    animation: sheet-in 220ms var(--ease) both !important;
+  }
+  .modal-panel[data-state="closed"] {
+    animation: sheet-out 160ms var(--ease) both !important;
+  }
+  /* Ручка шторки: подсказка, что окно снизу; закрытие кнопкой и по фону. */
+  .modal-panel::before {
+    content: "";
+    position: absolute;
+    top: 8px;
+    left: 50%;
+    width: 36px;
+    height: 4px;
+    margin-left: -18px;
+    border-radius: 999px;
+    background: var(--border-strong);
+    pointer-events: none;
+  }
+  .modal-head {
+    padding: 22px 56px 0 var(--page-gutter);
+  }
+  .modal-head--alone {
+    padding: 22px 56px 20px var(--page-gutter);
+  }
+  .modal-body-fx {
+    padding: 16px var(--page-gutter) 20px;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+  }
+  .modal-body-fx.modal-body--titled {
+    padding-top: 14px;
+  }
+  .modal-body-fx.modal-body--footed {
+    padding-bottom: 8px;
+  }
+  /* Кнопки окна друг под другом на всю ширину; главная (последняя) сверху. */
+  .modal-foot {
+    flex-direction: column-reverse;
+    align-items: stretch;
+    gap: 8px;
+    padding: 12px var(--page-gutter) 16px;
+  }
+  .modal-foot > .btn {
+    width: 100%;
+    min-height: var(--touch-lg);
+    justify-content: center;
+  }
+  .modal-close {
+    top: 10px;
+    right: 8px;
+  }
+
+  [data-radix-popper-content-wrapper]:has(> .pop-content[data-form="sheet"]),
+  [data-radix-popper-content-wrapper]:has(> .adm-menu[data-form="sheet"]) {
+    position: fixed !important;
+    left: 0 !important;
+    right: 0 !important;
+    top: auto !important;
+    bottom: var(--kb-inset) !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: none !important;
+    transform: none !important;
+    translate: none !important;
+    z-index: 120 !important;
+  }
+  .pop-scrim {
+    position: fixed;
+    inset: 0;
+    z-index: 119;
+    background: rgba(0, 0, 0, 0.5);
+  }
+  [data-theme="light"] .pop-scrim {
+    background: rgba(15, 25, 60, 0.28);
+  }
+  [data-theme="blueprint"] .pop-scrim {
+    background: rgba(0, 19, 36, 0.7);
+  }
+  .pop-content[data-form="sheet"],
+  .adm-menu[data-form="sheet"] {
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: none !important;
+    max-height: min(80dvh, calc(var(--vv-height) - 12px)) !important;
+    margin: 0 !important;
+    padding-bottom: var(--safe-bottom);
+    overflow-y: auto !important;
+    overscroll-behavior: contain;
+    animation: sheet-in 200ms var(--ease) both !important;
+  }
+  .pop-content[data-form="sheet"][data-state="closed"],
+  .adm-menu[data-form="sheet"][data-state="closed"] {
+    animation: sheet-out 140ms var(--ease) both !important;
+  }
+}
+
+@media (max-width: 767.98px) {
+  /* ── вход, регистрация, сброс пароля ── */
+  .auth-header {
+    padding: calc(12px + var(--safe-top)) max(16px, var(--safe-right)) 12px
+      max(16px, var(--safe-left));
+  }
+  .auth-main {
+    align-items: flex-start !important;
+    padding: 8px max(16px, var(--safe-right)) calc(32px + var(--safe-bottom))
+      max(16px, var(--safe-left));
+  }
+  .auth-card {
+    padding: 20px;
+  }
+  .auth-card a {
+    display: inline-flex;
+    align-items: center;
+    min-height: var(--touch-min);
+  }
+  .auth-card .btn {
+    min-height: var(--touch-lg);
+  }
+
+  /* ── главная ── */
+  .welcome-page {
+    padding: 20px max(var(--page-gutter), var(--safe-left))
+      calc(24px + var(--safe-bottom)) max(var(--page-gutter), var(--safe-right));
+  }
+  .welcome-head {
+    margin-bottom: 18px;
+    align-items: stretch !important;
+  }
+  .welcome-head h1 {
+    font-size: 24px !important;
+  }
+  .welcome-actions {
+    width: 100%;
+    flex-wrap: wrap;
+  }
+  .welcome-actions .btn {
+    flex: 1 1 auto;
+  }
+  .welcome-actions .btn.primary {
+    flex: 1 1 100%;
+    order: -1;
+    min-height: var(--touch-lg);
+  }
+  .welcome-toolbar {
+    margin-bottom: 14px;
+    flex-wrap: nowrap !important;
+    gap: 8px !important;
+  }
+  .welcome-search {
+    min-width: 0 !important;
+    min-height: var(--touch-lg);
+    padding: 0 12px !important;
+  }
+  .welcome-search .input {
+    min-height: var(--touch-lg) !important;
+  }
+  .filter-sheet-trigger {
+    min-height: var(--touch-lg);
+    padding: 0 14px;
+  }
+  .filter-sheet-trigger .filter-sheet-label {
+    display: none;
+  }
+  .filter-sheet-trigger {
+    min-width: var(--touch-lg);
+  }
+
+  /* ── шапка: логотип, крошки, колокольчик, аватар; остальное в меню аккаунта ── */
+  .titlebar {
+    height: calc(48px + var(--safe-top));
+    padding: var(--safe-top) max(12px, var(--safe-right)) 0
+      max(12px, var(--safe-left));
+    gap: 8px;
+  }
+  .titlebar-brandtext,
+  .titlebar-secondary,
+  .titlebar-crumb-label {
+    display: none !important;
+  }
+  .titlebar-crumbs {
+    margin-left: 0 !important;
+  }
+  .titlebar-brand {
+    min-width: var(--touch-min);
+    min-height: var(--touch-min);
+    justify-content: center;
+  }
+  .quick-appearance {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 10px 12px 0;
+  }
+  .statusbar {
+    padding-bottom: var(--safe-bottom);
+    height: auto;
+    min-height: 28px;
+  }
+}
+
+@media (max-width: 767.98px) and (prefers-reduced-motion: reduce) {
+  .modal-panel[data-state],
+  .pop-content[data-form="sheet"],
+  .adm-menu[data-form="sheet"] {
+    animation: none !important;
+  }
 }

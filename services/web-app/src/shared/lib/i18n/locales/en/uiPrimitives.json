@@ -199,5 +199,12 @@
   "sortSelect": {
     "label": "Order",
     "column": "By column"
+  },
+  "filterSheet": {
+    "open": "Filters",
+    "title": "Filters",
+    "reset": "Reset",
+    "done": "Done",
+    "active": "Filters on: {{count}}"
   }
 }

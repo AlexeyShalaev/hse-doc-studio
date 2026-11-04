@@ -13,7 +13,11 @@ import { SetupPage } from "@pages/SetupPage";
 import { CommandPalette } from "@widgets/CommandPalette";
 import { DockerStatusBanner } from "@widgets/DockerStatusBanner";
 import { StartupChecks } from "@widgets/StartupChecks";
-import { useWorkspaceStore } from "@shared/lib";
+import {
+  useIsCompactWidth,
+  useKeyboardInset,
+  useWorkspaceStore,
+} from "@shared/lib";
 import { Spinner } from "@shared/ui";
 import { Toaster } from "@shared/ui/Toaster";
 import {
@@ -55,6 +59,8 @@ export const RootLayout = () => {
     (state) => state.setSystemChatOpen,
   );
   const agentDocked = routeDocksAgent(location.pathname);
+  // Телефон и планшет: шторки и нижняя панель поднимаются над экранной клавиатурой.
+  useKeyboardInset(useIsCompactWidth());
   const bootstrap = useBootstrap();
   useSessionIdentityGuard();
   const session = bootstrap.data;
@@ -69,7 +75,7 @@ export const RootLayout = () => {
   if (!session) {
     if (bootstrap.isError) {
       return (
-        <div className="flex flex-col h-screen">
+        <div className="flex flex-col h-dvh">
           <ServerUnavailable
             onRetry={() => {
               void bootstrap.refetch();
@@ -82,7 +88,7 @@ export const RootLayout = () => {
     }
     return (
       <div
-        className="flex flex-col h-screen items-center justify-center"
+        className="flex flex-col h-dvh items-center justify-center"
         data-testid="server-gate-loading"
       >
         <Spinner size="lg" />
@@ -98,7 +104,7 @@ export const RootLayout = () => {
   // Лендинг на корне: так же без титлбара, баннера Docker, проверок запуска и агента.
   if (showsLanding(session, location.pathname)) {
     return (
-      <div className="flex flex-col h-screen">
+      <div className="flex flex-col h-dvh">
         <Outlet />
         <Toaster />
       </div>
@@ -109,7 +115,7 @@ export const RootLayout = () => {
   // проверок запуска и агента, их рисует AuthLayout внутри Outlet.
   if (session.mode === "server" && isPublicPath(location.pathname)) {
     return (
-      <div className="flex flex-col h-screen">
+      <div className="flex flex-col h-dvh">
         <Outlet />
         <Toaster />
         {ServerDemoPicker && (
@@ -130,7 +136,7 @@ export const RootLayout = () => {
   // перезапуска) — пропускаем дальше: запирать интерфейс на догадке нельзя.
   if (hasDocker && setup.data && !setup.data.is_ready) {
     return (
-      <div className="flex flex-col h-screen">
+      <div className="flex flex-col h-dvh">
         <SetupPage />
         <Toaster />
       </div>
@@ -138,7 +144,7 @@ export const RootLayout = () => {
   }
 
   return (
-    <div className="flex flex-col h-screen">
+    <div className="flex flex-col h-dvh">
       {session.capabilities.docker_ui && <DockerStatusBanner />}
       {(session.capabilities.docker_ui || session.capabilities.self_update) && (
         <StartupChecks />

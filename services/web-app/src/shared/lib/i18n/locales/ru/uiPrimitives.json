@@ -209,5 +209,12 @@
   "sortSelect": {
     "label": "Порядок",
     "column": "По столбцу"
+  },
+  "filterSheet": {
+    "open": "Фильтры",
+    "title": "Фильтры",
+    "reset": "Сбросить",
+    "done": "Готово",
+    "active": "Включено фильтров: {{count}}"
   }
 }

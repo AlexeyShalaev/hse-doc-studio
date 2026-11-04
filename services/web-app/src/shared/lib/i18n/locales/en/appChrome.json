@@ -172,6 +172,15 @@
       "owner": "Owner",
       "admin": "Admin",
       "member": "Member"
-    }
+    },
+    "appearance": "Appearance",
+    "theme": "Theme",
+    "themeSystem": "System",
+    "themeDark": "Dark",
+    "themeLight": "Light",
+    "language": "Language",
+    "agent": "AI assistant",
+    "help": "Help",
+    "local": "Local version"
   }
 }

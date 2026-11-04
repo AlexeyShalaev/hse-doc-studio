@@ -37,7 +37,12 @@ import {
   useUpdateProject,
 } from "@entities/project";
 import { ProjectImportDialog } from "@features/project-import";
-import { useRecentProjectIds, useWorkspaceStore } from "@shared/lib";
+import {
+  useIsPhoneWidth,
+  useRecentProjectIds,
+  useWorkspaceStore,
+} from "@shared/lib";
+import { FilterSheet, FilterSheetGroup } from "@shared/ui/FilterSheet";
 import { Spinner } from "@shared/ui/Spinner";
 import { AppTitlebar } from "@widgets/AppTitlebar";
 import { AppStatusBar } from "@widgets/AppStatusBar";
@@ -147,6 +152,22 @@ const RecentProjectTile = ({ project, onOpen }: RecentProjectTileProps) => {
   );
 };
 
+/** На телефоне у группы фильтров видимая подпись (шторка), на десктопе её нет: ряд как был. */
+const FilterGroup = ({
+  label,
+  children,
+}: {
+  label: string;
+  children: React.ReactNode;
+}) => {
+  const isPhone = useIsPhoneWidth();
+  return isPhone ? (
+    <FilterSheetGroup label={label}>{children}</FilterSheetGroup>
+  ) : (
+    <>{children}</>
+  );
+};
+
 export const WelcomePage = () => {
   const { t, i18n } = useTranslation("welcome");
   const navigate = useNavigate();
@@ -176,6 +197,7 @@ export const WelcomePage = () => {
   const toggleSystemChat = useWorkspaceStore((state) => state.toggleSystemChat);
 
   const [query, setQuery] = useState("");
+  const isPhone = useIsPhoneWidth();
   const [filter, setFilter] = useState<FilterType>("active");
   const [scope, setScope] = useState<ScopeType>("all");
   const [sort, setSort] = useState<SortMode>(readStoredSortMode);
@@ -385,22 +407,79 @@ export const WelcomePage = () => {
     cards[next]?.focus();
   };
 
+  const segClass = isPhone ? "seg seg-fill" : "seg shrink-0";
+  const filterGroups = (
+    <>
+      <FilterGroup label={t("filters.label")}>
+        <div className={segClass} role="group" aria-label={t("filters.label")}>
+          {(["active", "all", "archived"] as const).map((f) => (
+            <button
+              key={f}
+              type="button"
+              onClick={() => {
+                setFilter(f);
+              }}
+              aria-pressed={filter === f}
+              className={clsx(filter === f && "active")}
+            >
+              {t(`filters.${f}`)}
+            </button>
+          ))}
+        </div>
+      </FilterGroup>
+      {showScopeFilter && (
+        <FilterGroup label={tAccess("scope.label")}>
+          <div
+            className={segClass}
+            role="group"
+            aria-label={tAccess("scope.label")}
+          >
+            {(["all", "mine", "orgs"] as const).map((value) => (
+              <button
+                key={value}
+                type="button"
+                onClick={() => {
+                  setScope(value);
+                }}
+                aria-pressed={scope === value}
+                className={clsx(scope === value && "active")}
+              >
+                {tAccess(`scope.${value}`)}
+              </button>
+            ))}
+          </div>
+        </FilterGroup>
+      )}
+      <FilterGroup label={t("sort.label")}>
+        <div className={segClass} role="group" aria-label={t("sort.label")}>
+          {(["recent", "pinned", "name"] as const).map((mode) => (
+            <button
+              key={mode}
+              type="button"
+              onClick={() => {
+                handleChangeSort(mode);
+              }}
+              aria-pressed={sort === mode}
+              className={clsx(sort === mode && "active")}
+            >
+              {t(`sort.${mode}`)}
+            </button>
+          ))}
+        </div>
+      </FilterGroup>
+    </>
+  );
+
   return (
     <div className="flex flex-col flex-1 bg-bg-0" style={{ minHeight: 0 }}>
       <AppTitlebar />
 
       <div className="flex flex-1 overflow-hidden">
         <div className="flex-1 overflow-y-auto">
-          <div
-            style={{
-              maxWidth: 1180,
-              margin: "0 auto",
-              padding: "36px 32px 80px",
-            }}
-          >
+          <div className="welcome-page">
             <div
-              className="flex items-center justify-between"
-              style={{ marginBottom: 32, gap: 16, flexWrap: "wrap" }}
+              className="welcome-head flex items-center justify-between"
+              style={{ gap: 16, flexWrap: "wrap" }}
             >
               <div className="flex flex-col" style={{ gap: 6 }}>
                 <span
@@ -433,7 +512,10 @@ export const WelcomePage = () => {
                     : t("header.subtitle")}
                 </p>
               </div>
-              <div className="flex items-center shrink-0" style={{ gap: 8 }}>
+              <div
+                className="welcome-actions flex items-center shrink-0"
+                style={{ gap: 8 }}
+              >
                 {canConnectFolder && (
                   <button
                     type="button"
@@ -490,11 +572,11 @@ export const WelcomePage = () => {
             </div>
 
             <div
-              className="flex items-center"
-              style={{ marginBottom: 18, gap: 12, flexWrap: "wrap" }}
+              className="welcome-toolbar flex items-center"
+              style={{ gap: 12, flexWrap: "wrap" }}
             >
               <div
-                className="flex items-center flex-1"
+                className="welcome-search flex items-center flex-1"
                 data-tour="home-search"
                 style={{
                   gap: 8,
@@ -534,69 +616,31 @@ export const WelcomePage = () => {
                     if (e.key === "Escape") e.currentTarget.blur();
                   }}
                 />
-                <span className="kbd" title={t("filters.searchHint")}>
-                  /
-                </span>
+                {!isPhone && (
+                  <span className="kbd" title={t("filters.searchHint")}>
+                    /
+                  </span>
+                )}
               </div>
-              <div
-                className="seg shrink-0"
-                role="group"
-                aria-label={t("filters.label")}
-              >
-                {(["active", "all", "archived"] as const).map((f) => (
-                  <button
-                    key={f}
-                    type="button"
-                    onClick={() => {
-                      setFilter(f);
-                    }}
-                    aria-pressed={filter === f}
-                    className={clsx(filter === f && "active")}
-                  >
-                    {t(`filters.${f}`)}
-                  </button>
-                ))}
-              </div>
-              {showScopeFilter && (
-                <div
-                  className="seg shrink-0"
-                  role="group"
-                  aria-label={tAccess("scope.label")}
+              {isPhone ? (
+                <FilterSheet
+                  activeCount={
+                    (filter !== "active" ? 1 : 0) +
+                    (showScopeFilter && scope !== "all" ? 1 : 0) +
+                    (sort !== "recent" ? 1 : 0)
+                  }
+                  onReset={() => {
+                    setFilter("active");
+                    setScope("all");
+                    handleChangeSort("recent");
+                  }}
+                  testId="welcome-filters"
                 >
-                  {(["all", "mine", "orgs"] as const).map((value) => (
-                    <button
-                      key={value}
-                      type="button"
-                      onClick={() => {
-                        setScope(value);
-                      }}
-                      aria-pressed={scope === value}
-                      className={clsx(scope === value && "active")}
-                    >
-                      {tAccess(`scope.${value}`)}
-                    </button>
-                  ))}
-                </div>
+                  {filterGroups}
+                </FilterSheet>
+              ) : (
+                filterGroups
               )}
-              <div
-                className="seg shrink-0"
-                role="group"
-                aria-label={t("sort.label")}
-              >
-                {(["recent", "pinned", "name"] as const).map((mode) => (
-                  <button
-                    key={mode}
-                    type="button"
-                    onClick={() => {
-                      handleChangeSort(mode);
-                    }}
-                    aria-pressed={sort === mode}
-                    className={clsx(sort === mode && "active")}
-                  >
-                    {t(`sort.${mode}`)}
-                  </button>
-                ))}
-              </div>
             </div>
 
             {isRecentStripVisible && (

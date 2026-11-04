@@ -3,7 +3,13 @@
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!-- viewport-fit=cover: приложение рисуется и под вырезом, безопасные области учитывает CSS (env(safe-area-inset-*)).
+         interactive-widget=resizes-content: клавиатура Android Chrome уменьшает окно, и dvh следует за ним. -->
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content"
+    />
+    <meta name="theme-color" content="#131313" />
     <meta
       name="description"
       content="Локальный инструмент для подготовки учебных документов НИУ ВШЭ: ВКР, курсовая, ЕСПД, презентации — по ГОСТ, с проверками и сборкой PDF."
@@ -48,6 +54,9 @@
               : "light";
         }
         document.documentElement.setAttribute("data-theme", theme);
+        var bars = { dark: "#131313", light: "#ffffff", blueprint: "#001930" };
+        var meta = document.querySelector('meta[name="theme-color"]');
+        if (meta) meta.setAttribute("content", bars[theme] || bars.dark);
       })();
     </script>
     <script>

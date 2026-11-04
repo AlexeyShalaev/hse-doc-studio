@@ -411,3 +411,36 @@
     padding: 20px;
   }
 }
+
+/* Телефон: зоны касания 40px, вырез и жестовая полоса, шапка без обрезанного названия. */
+@media (max-width: 767.98px) {
+  .lp-wrap {
+    padding-left: max(20px, var(--safe-left));
+    padding-right: max(20px, var(--safe-right));
+  }
+  .lp-header {
+    padding-top: var(--safe-top);
+  }
+  .lp .btn.sm,
+  .lp .seg button {
+    min-height: var(--touch-min);
+  }
+  .lp .lp-brand {
+    min-width: var(--touch-min);
+  }
+  .lp .lp-brand,
+  .lp .lp-link,
+  .lp .lp-footer-links a {
+    display: inline-flex;
+    align-items: center;
+    min-height: var(--touch-min);
+  }
+  .lp-footer {
+    padding-bottom: calc(24px + var(--safe-bottom));
+  }
+}
+@media (max-width: 420px) {
+  .lp-brand-name {
+    display: none;
+  }
+}

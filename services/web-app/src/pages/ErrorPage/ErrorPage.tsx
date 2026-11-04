@@ -115,7 +115,7 @@ export const ErrorPage = ({ status = 500, message }: ErrorPageProps) => {
 
   return (
     <div
-      className="flex flex-col h-screen bg-bg-0"
+      className="flex flex-col h-dvh bg-bg-0"
       style={{ color: "var(--fg-0)" }}
     >
       <div

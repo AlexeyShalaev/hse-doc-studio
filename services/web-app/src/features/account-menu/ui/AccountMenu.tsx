@@ -1,5 +1,7 @@
 import { useNavigate } from "react-router";
+import { openHelp } from "@entities/help";
 import { LOCAL_STUDIO_PATH } from "@entities/local-studio";
+import { useWorkspaceStore } from "@shared/lib";
 import { useBootstrap, useCapabilities } from "@entities/session";
 import { useLogout } from "../model/useLogout";
 import { AccountMenuView } from "./AccountMenuView";
@@ -13,6 +15,7 @@ export const AccountMenu = () => {
   const navigate = useNavigate();
   const { logout, pending } = useLogout();
   const { has } = useCapabilities();
+  const toggleSystemChat = useWorkspaceStore((state) => state.toggleSystemChat);
   if (data?.mode !== "server" || data.user === null) return null;
   return (
     <AccountMenuView
@@ -31,6 +34,8 @@ export const AccountMenu = () => {
             },
           }
         : {})}
+      onOpenAgent={toggleSystemChat}
+      onOpenHelp={openHelp}
       onLogout={() => {
         void logout();
       }}

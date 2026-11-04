@@ -138,3 +138,16 @@ export type {
   GalleryGroup,
   GallerySection,
 } from "./stateGallery";
+
+export {
+  PHONE_MAX_WIDTH,
+  TABLET_MAX_WIDTH,
+  useIsCoarsePointer,
+  useIsCompactWidth,
+  useIsPhoneWidth,
+  useIsTabletWidth,
+  useMediaQuery,
+  useViewportClass,
+} from "./viewport";
+export type { ViewportClass } from "./viewport";
+export { useKeyboardInset } from "./viewport";

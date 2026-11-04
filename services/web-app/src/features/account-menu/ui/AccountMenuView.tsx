@@ -1,4 +1,6 @@
 import {
+  BookOpen,
+  Bot,
   Laptop,
   LogOut,
   Settings,
@@ -6,10 +8,17 @@ import {
   ShieldCheck,
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import { useIsPhoneWidth } from "@shared/lib";
 import { Badge } from "@shared/ui/Badge";
-import { Popover, PopoverContent, PopoverTrigger } from "@shared/ui/Popover";
+import {
+  Popover,
+  PopoverClose,
+  PopoverContent,
+  PopoverTrigger,
+} from "@shared/ui/Popover";
 import { Spinner } from "@shared/ui/Spinner";
 import type { SessionUser } from "@entities/session";
+import { QuickAppearance } from "./QuickAppearance";
 
 export type AccountMenuViewProps = {
   user: SessionUser;
@@ -22,6 +31,12 @@ export type AccountMenuViewProps = {
   /** «Локальная версия»: установка Студии на компьютер и подключение к этому серверу. */
   onOpenLocalStudio?: () => void;
   onLogout: () => void;
+  /**
+   * Телефон: в шапке места нет, поэтому ассистент и справка переезжают сюда, а вместе с ними
+   * тема и язык. На десктопе эти пункты не показываются.
+   */
+  onOpenAgent?: () => void;
+  onOpenHelp?: () => void;
 };
 
 const Avatar = ({ initials, size }: { initials: string; size: number }) => (
@@ -60,8 +75,11 @@ export const AccountMenuView = ({
   onOpenAdmin,
   onOpenLocalStudio,
   onLogout,
+  onOpenAgent,
+  onOpenHelp,
 }: AccountMenuViewProps) => {
   const { t } = useTranslation("appChrome");
+  const isPhone = useIsPhoneWidth();
   const { t: tLocal } = useTranslation("localStudio");
   return (
     <Popover {...(defaultOpen === undefined ? {} : { defaultOpen })}>
@@ -156,7 +174,23 @@ export const AccountMenuView = ({
           </ul>
         )}
 
+        {isPhone && <QuickAppearance />}
+
         <div className="flex flex-col" style={{ padding: 6, marginTop: 6 }}>
+          {isPhone && onOpenAgent && (
+            <PopoverClose asChild>
+              <button
+                type="button"
+                className="row-btn"
+                style={itemStyle}
+                onClick={onOpenAgent}
+                data-testid="account-menu-agent"
+              >
+                <Bot size={14} />
+                {t("accountMenu.agent")}
+              </button>
+            </PopoverClose>
+          )}
           <button
             type="button"
             className="row-btn"
@@ -166,6 +200,20 @@ export const AccountMenuView = ({
             <Settings size={14} />
             {t("accountMenu.settings")}
           </button>
+          {isPhone && onOpenHelp && (
+            <PopoverClose asChild>
+              <button
+                type="button"
+                className="row-btn"
+                style={itemStyle}
+                onClick={onOpenHelp}
+                data-testid="account-menu-help"
+              >
+                <BookOpen size={14} />
+                {t("accountMenu.help")}
+              </button>
+            </PopoverClose>
+          )}
           {onOpenLocalStudio && (
             <button
               type="button"
