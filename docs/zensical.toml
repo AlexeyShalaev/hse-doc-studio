@@ -52,6 +52,7 @@ nav = [
         { "ИИ-клиенты (MCP)" = "workbench/mcp.md" },
         { "Доступ по ссылке" = "workbench/share-links.md" },
         { "Кто сейчас в проекте" = "workbench/people-online.md" },
+        { "Внешний вид и размер текста" = "workbench/appearance.md" },
     ] },
     { "Развёртывание" = [
         { "Общий сервер" = "deploy/index.md" },
