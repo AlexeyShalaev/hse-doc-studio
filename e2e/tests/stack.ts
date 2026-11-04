@@ -270,6 +270,7 @@ export type AdminJob = {
   started_at: string | null;
   finished_at: string | null;
   runner_id: string | null;
+  error_code: string | null;
   route: string;
   runner_scope: string | null;
   route_reason: string | null;

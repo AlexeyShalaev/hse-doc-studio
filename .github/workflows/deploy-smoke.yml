@@ -100,6 +100,9 @@ jobs:
                          --profile services --profile ai config -q
           docker compose --env-file /tmp/server.env -f deploy/server/docker-compose.yml \
                          -f deploy/server/compose.smoke.yml config -q
+          docker compose --env-file /tmp/server.env -f deploy/server/docker-compose.yml \
+                         -f deploy/server/compose.smoke.yml -f deploy/server/compose.personal.yml \
+                         -f deploy/server/compose.outside.yml --profile personal --profile outside config -q
           # Без обязательных значений набор обязан падать с понятной ошибкой.
           if docker compose --env-file /dev/null -f deploy/server/docker-compose.yml config -q 2>/dev/null; then
             echo "::error::deploy/server не требует обязательных секретов"; exit 1

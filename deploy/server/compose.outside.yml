@@ -1,0 +1,50 @@
+# Оверлей «раннер вне сети сервера» для стенда (e2e/tests/outside-runner.spec.ts): личный раннер сидит в сети `outside`,
+# где есть api, но нет MinIO, как раннер на ноутбуке при внутреннем адресе хранилища. Шлюз `files` с именем
+# files.outside.test:9000 играет опубликованное наружу хранилище. Режим выбирает stack.sh outside-mode.
+# Для боевого развёртывания не нужен. Запуск: scripts/dev/server-stack/stack.sh outside-up TOKEN.
+services:
+  api:
+    networks: [default, outside]
+    environment:
+      HSE_STUDIO__S3__PUBLIC_ENDPOINT: ${OUTSIDE_S3_PUBLIC_ENDPOINT:-}
+      HSE_STUDIO__S3__OUTSIDE_RUNNER_ACCESS: ${OUTSIDE_S3_ACCESS:-presigned}
+
+  runner-outside:
+    profiles: [outside]
+    image: ghcr.io/alexeyshalaev/hse-doc-studio:${TAG:-ci}
+    command: ["hse-doc-studio", "runner"]
+    depends_on:
+      api:
+        condition: service_healthy
+    group_add:
+      - "${DOCKER_GID:-0}"
+    environment:
+      HSE_RUNNER__API_URL: http://api:8000
+      HSE_RUNNER__TOKEN: ${OUTSIDE_RUNNER_TOKEN:-}
+      HSE_RUNNER__DATA_DIR: ${OUTSIDE_RUNNER_DATA_DIR:-/var/lib/hse-runner-outside}
+      HSE_RUNNER__NAME: outside-e2e
+      HSE_RUNNER__CONCURRENCY: "1"
+      HSE_RUNNER__TEX_IMAGE: ${OUTSIDE_TEX_IMAGE:-texlive/texlive:TL2024-historic}
+      # Первая сборка на свежем томе кэша TeX молчит дольше обычного: тишина не должна убивать её раньше времени.
+      HSE_RUNNER__TEX_IDLE_TIMEOUT_S: "600"
+    volumes:
+      - ${OUTSIDE_RUNNER_DATA_DIR:-/var/lib/hse-runner-outside}:${OUTSIDE_RUNNER_DATA_DIR:-/var/lib/hse-runner-outside}
+      - /var/run/docker.sock:/var/run/docker.sock
+    networks: [outside]
+    restart: "no"
+
+  files:
+    profiles: [outside]
+    image: python:3.13-alpine
+    command: ["python", "/app/proxy.py"]
+    volumes:
+      - ../../e2e/outside_proxy:/app:ro
+    depends_on:
+      - minio
+    networks:
+      default: {}
+      outside:
+        aliases: [files.outside.test]
+
+networks:
+  outside: {}
