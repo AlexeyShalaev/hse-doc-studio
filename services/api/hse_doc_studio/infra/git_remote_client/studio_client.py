@@ -214,6 +214,8 @@ class HttpStudioServerClient:
         params: dict[str, str] = {"device_id": device_id}
         if project_id is not None:
             params["project_id"] = str(project_id)
+            # Список людей онлайн отдают только по просьбе: старая Студия проверяет ответ строго и поля не знает.
+            params["people"] = "true"
         status, body = await self._request(
             target, "GET", "/git/-/presence/overview", headers=_auth(token), params=params
         )

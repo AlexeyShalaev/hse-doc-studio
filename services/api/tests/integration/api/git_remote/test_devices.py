@@ -457,3 +457,29 @@ def test__cloud_pdf__document_without_a_cloud_build_is_404(live: Live) -> None:
     )
 
     assert response.status_code == 404
+
+
+def test__overview__studio_client_gets_the_people_of_the_project_with_their_place(live: Live) -> None:
+    anna, boris = live.person("anna"), live.person("boris")
+    project = live.create_project(anna)
+    live.add_member(project, boris, "editor")
+    token = live.token(anna, ["git:read"])
+    send(live, token, signal(DEVICE_A, project))
+    posted = live.call(
+        "POST",
+        f"/api/v1/projects/{project}/presence",
+        boris,
+        headers=boris.session,
+        cookies=boris.cookies,
+        json={"session_id": "tab-boris-0001", "activity": "reviewing", "doc_id": "zayavka"},
+    )
+    assert posted.status_code == 200, posted.text
+
+    client = HttpStudioServerClient()
+    body = asyncio.run(client.presence_overview(StudioServerTarget(live.base), Secret(token), DEVICE_A, UUID(project)))
+
+    people = body["people"]["people"]  # type: ignore[index]
+    assert [(p["name"], p["activity"], p["doc_id"], p["channels"], p["me"]) for p in people] == [
+        ("anna", "local", None, ["studio"], True),
+        ("boris", "reviewing", "zayavka", ["web"], False),
+    ]

@@ -255,6 +255,8 @@ ROUTE_ACTIONS: Mapping[RouteKey, RouteRule] = {
     # PDF, выгруженные локальной Студией: читает любой, кто видит результат проекта; убирает тот, кто пишет файлы.
     ("GET", "/projects/{project_id}/artifacts"): RouteRule(Action.OUTPUT_READ),
     ("GET", "/projects/{project_id}/studios"): RouteRule(Action.PROJECT_VIEW),
+    ("POST", "/projects/{project_id}/presence"): RouteRule(Action.PROJECT_VIEW),
+    ("DELETE", "/projects/{project_id}/presence/{session_id}"): RouteRule(Action.PROJECT_VIEW),
     ("GET", "/projects/{project_id}/builds"): RouteRule(Action.OUTPUT_READ),
     ("GET", "/projects/{project_id}/artifacts/{artifact_id}/file"): RouteRule(Action.OUTPUT_READ),
     ("DELETE", "/projects/{project_id}/artifacts/{artifact_id}"): RouteRule(Action.FILES_WRITE),

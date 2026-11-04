@@ -7,6 +7,7 @@ from typing import Protocol
 from uuid import UUID
 
 from hse_doc_studio.core.devices.entities import ConnectedDevice, DeviceReport
+from hse_doc_studio.core.devices.people import WebSession, WebSignal
 
 
 class IDeviceRepository(Protocol):
@@ -41,3 +42,19 @@ class IPresenceRegistry(Protocol):
     def forget(self, user_id: str, device_id: str) -> None: ...
 
     def prune(self, horizon: datetime) -> None: ...
+
+
+class IWebPresenceRegistry(Protocol):
+    """Веб-сессии проектов в памяти процесса: без БД, потому что сигнал приходит каждую минуту от каждой вкладки."""
+
+    def observe(
+        self, project_id: UUID, user_id: str, name: str, signal: WebSignal, now: datetime, window_s: int
+    ) -> None: ...
+
+    def leave(self, project_id: UUID, user_id: str, session_id: str) -> None: ...
+
+    def sessions(self, project_id: UUID, now: datetime, window_s: int) -> list[WebSession]:
+        """Живые сессии проекта: сигнал не старше окна."""
+        ...
+
+    def size(self) -> int: ...

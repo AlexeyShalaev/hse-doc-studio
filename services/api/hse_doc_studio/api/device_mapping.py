@@ -15,6 +15,7 @@ from hse_doc_studio.api.schemas.devices import (
     RunnerOut,
     WorkingLocallyOut,
 )
+from hse_doc_studio.api.schemas.people import map_people_online
 from hse_doc_studio.core.devices.views import AccountDevices, DeviceView, ProjectStudios, WorkingLocally
 from hse_doc_studio.use_cases.artifacts.builds import BuildInfo, ProjectBuilds, StudioBuildInfo
 from hse_doc_studio.use_cases.devices.service import DevicesOverview
@@ -94,6 +95,7 @@ def map_overview(found: DevicesOverview) -> DevicesOverviewResponse:
         online_window_s=found.online_window_s,
         device=map_device(found.device) if found.device is not None else None,
         others=map_people(found.others),
+        people=map_people_online(found.people) if found.people is not None else None,
     )
 
 

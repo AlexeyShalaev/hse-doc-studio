@@ -7,7 +7,7 @@ from dishka import Provider, Scope, provide
 from hse_doc_studio.api.config import settings
 from hse_doc_studio.core.access.repositories import IProjectAclRepository
 from hse_doc_studio.core.devices.entities import PresenceConfig
-from hse_doc_studio.core.devices.protocols import IDeviceRepository, IPresenceRegistry
+from hse_doc_studio.core.devices.protocols import IDeviceRepository, IPresenceRegistry, IWebPresenceRegistry
 from hse_doc_studio.core.identity.protocols import IUserRepository
 from hse_doc_studio.core.jobs.routing import IPersonalRunnerSettings
 from hse_doc_studio.core.jobs.runners import IRunnerRepository
@@ -15,6 +15,14 @@ from hse_doc_studio.core.repositories import IAIProviderRepository
 from hse_doc_studio.infra.db.repositories.devices import PostgresDeviceRepository
 from hse_doc_studio.infra.db.session import SessionProvider
 from hse_doc_studio.infra.devices.registry import PresenceRegistry
+from hse_doc_studio.infra.devices.web_registry import WebPresenceRegistry
+from hse_doc_studio.use_cases.devices.people import (
+    LeaveWebPresenceUC,
+    MemberVerdicts,
+    ProjectPeopleUC,
+    RecordWebPresenceUC,
+    VerdictCache,
+)
 from hse_doc_studio.use_cases.devices.service import (
     DevicesOverviewUC,
     DeviceViewBuilder,
@@ -41,6 +49,14 @@ class ServerDevicesProvider(Provider):
     @provide
     def get_registry(self) -> IPresenceRegistry:
         return PresenceRegistry()
+
+    @provide
+    def get_web_registry(self) -> IWebPresenceRegistry:
+        return WebPresenceRegistry()
+
+    @provide
+    def get_verdict_cache(self) -> VerdictCache:
+        return VerdictCache()
 
     @provide
     def get_device_repository(self, sessions: SessionProvider) -> IDeviceRepository:
@@ -85,6 +101,31 @@ class ServerDevicesProvider(Provider):
         return ProjectStudiosUC(devices, builder, acl, users, config)
 
     @provide(scope=Scope.REQUEST)
+    def get_verdicts(self, cache: VerdictCache, acl: IProjectAclRepository, users: IUserRepository) -> MemberVerdicts:
+        return MemberVerdicts(cache, acl, users)
+
+    @provide(scope=Scope.REQUEST)
+    def get_project_people(  # noqa: PLR0913 — порты одного сценария
+        self,
+        web: IWebPresenceRegistry,
+        devices: IDeviceRepository,
+        builder: DeviceViewBuilder,
+        verdicts: MemberVerdicts,
+        config: PresenceConfig,
+    ) -> ProjectPeopleUC:
+        return ProjectPeopleUC(web, devices, builder, verdicts, config)
+
+    @provide(scope=Scope.REQUEST)
+    def get_record_web_presence(
+        self, web: IWebPresenceRegistry, verdicts: MemberVerdicts, people: ProjectPeopleUC, config: PresenceConfig
+    ) -> RecordWebPresenceUC:
+        return RecordWebPresenceUC(web, verdicts, people, config)
+
+    @provide(scope=Scope.REQUEST)
+    def get_leave_web_presence(self, web: IWebPresenceRegistry) -> LeaveWebPresenceUC:
+        return LeaveWebPresenceUC(web)
+
+    @provide(scope=Scope.REQUEST)
     def get_overview(  # noqa: PLR0913 — порты одного сценария
         self,
         devices: IDeviceRepository,
@@ -92,5 +133,6 @@ class ServerDevicesProvider(Provider):
         studios: ProjectStudiosUC,
         acl: IProjectAclRepository,
         config: PresenceConfig,
+        people: ProjectPeopleUC,
     ) -> DevicesOverviewUC:
-        return DevicesOverviewUC(devices, builder, studios, acl, config)
+        return DevicesOverviewUC(devices, builder, studios, acl, config, people)

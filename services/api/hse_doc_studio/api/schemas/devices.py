@@ -12,6 +12,7 @@ from typing import Literal
 from pydantic import Field, field_validator
 
 from hse_doc_studio.api.schemas.common import StrictModel
+from hse_doc_studio.api.schemas.people import ProjectPeopleResponse
 from hse_doc_studio.core.devices.entities import (
     DEVICE_ID_RE,
     MAX_DOC_ID,
@@ -245,3 +246,6 @@ class DevicesOverviewResponse(StrictModel):
     online_window_s: int
     device: DeviceOut | None
     others: list[WorkingLocallyOut]
+    # Все, кто сейчас в проекте (веб и Студия). Поле есть, только если Студия просила `people=true`: старая Студия
+    # проверяет ответ строго и не знает этого поля.
+    people: ProjectPeopleResponse | None = None
