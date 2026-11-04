@@ -7,6 +7,8 @@ class SettingsResponse(BaseModel):
     theme: str
     # Interface (UI) language {"ru", "en"} — independent from document language.
     interface_language: str
+    # Размер текста интерфейса, проценты от обычного (90, 100, 112, 125, 140).
+    text_scale: int
     default_engine: str
     latex_passes: int
     # Максимум одновременных docker-сборок; лишние ждут в очереди.
@@ -34,6 +36,7 @@ class SettingsResponse(BaseModel):
 class UpdateSettingsRequest(BaseModel):
     theme: str | None = None
     interface_language: str | None = None
+    text_scale: int | None = None
     default_engine: str | None = None
     latex_passes: int | None = None
     max_concurrent_compiles: int | None = None

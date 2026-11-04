@@ -58,3 +58,12 @@ def test__checked_projects_dir__empty_resets_and_bad_values_are_rejected() -> No
         with pytest.raises(HTTPException) as raised:
             _checked_projects_dir(raw, paths)
         assert raised.value.status_code == 400
+
+
+@pytest.mark.parametrize(
+    ("stored", "expected"), [(None, 100), (125, 125), (90, 90), (130, 100), ("140", 100), (True, 100)]
+)
+def test__map_settings__text_scale__step_or_default(stored: object, expected: int) -> None:
+    settings = {} if stored is None else {"text_scale": stored}
+
+    assert _map_settings(settings).text_scale == expected

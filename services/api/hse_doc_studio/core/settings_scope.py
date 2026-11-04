@@ -24,6 +24,7 @@ class SettingScope(StrEnum):
 SETTING_SCOPES: dict[str, SettingScope] = {
     "theme": SettingScope.user,
     "interface_language": SettingScope.user,
+    "text_scale": SettingScope.user,
     "default_engine": SettingScope.user,
     "latex_passes": SettingScope.user,
     "latex_flags": SettingScope.user,
