@@ -7557,7 +7557,10 @@ a.adm-row:hover .adm-row-chevron {
     width: 100% !important;
     max-width: none !important;
     max-height: min(92dvh, calc(var(--vv-height) - 12px)) !important;
-    translate: none !important;
+    /* Tailwind центрирует окно свойством translate через эти переменные; минификатор
+       выбрасывает `translate: none !important`, поэтому гасим сами переменные. */
+    --tw-translate-x: 0px !important;
+    --tw-translate-y: 0px !important;
     transform: none !important;
     margin: 0 !important;
     padding-bottom: var(--safe-bottom);
@@ -7626,7 +7629,6 @@ a.adm-row:hover .adm-row-chevron {
     min-width: 0 !important;
     max-width: none !important;
     transform: none !important;
-    translate: none !important;
     z-index: 120 !important;
   }
   .pop-scrim {
