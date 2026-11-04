@@ -645,6 +645,8 @@ export type SettingsResponse = {
   theme: string;
   // Interface (UI) language — independent from a project's document language.
   interface_language: Lang;
+  // Размер текста интерфейса, % от обычного (90, 100, 112, 125, 140).
+  text_scale?: number;
   default_engine: string;
   latex_passes: number;
   // Максимум одновременных docker-сборок; лишние сборки ждут в очереди.

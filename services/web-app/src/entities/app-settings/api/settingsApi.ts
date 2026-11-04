@@ -6,6 +6,8 @@ export const SettingsResponseSchema = z.object({
   theme: z.string(),
   // Optional for resilience against an older backend that predates this field.
   interface_language: z.enum(["ru", "en"]).optional(),
+  // Размер текста интерфейса, % от обычного. Optional for old backends.
+  text_scale: z.number().int().optional(),
   default_engine: z.string(),
   latex_passes: z.number().int().min(1).max(10),
   // Optional for resilience against an older backend that predates this field.

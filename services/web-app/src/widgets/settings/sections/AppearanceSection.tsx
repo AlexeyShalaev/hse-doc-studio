@@ -1,9 +1,9 @@
 import { Grid3x3, Monitor, Moon, Sun } from "lucide-react";
 import { clsx } from "clsx";
 import { useTranslation } from "react-i18next";
-import { useThemeStore } from "@shared/lib";
+import { TEXT_SCALE_STEPS, useThemeStore } from "@shared/lib";
 import { useUpdateAppSettings } from "@entities/app-settings";
-import type { Theme } from "@shared/lib";
+import type { TextScale, Theme } from "@shared/lib";
 import type { Lang } from "@shared/api";
 import { Setting, SettingHead } from "./Setting";
 
@@ -11,15 +11,23 @@ export const AppearanceSection = () => {
   const { t } = useTranslation("settings");
   const theme = useThemeStore((s) => s.theme);
   const density = useThemeStore((s) => s.density);
+  const textScale = useThemeStore((s) => s.textScale);
   const lang = useThemeStore((s) => s.lang);
   const setTheme = useThemeStore((s) => s.setTheme);
   const setDensity = useThemeStore((s) => s.setDensity);
+  const setTextScale = useThemeStore((s) => s.setTextScale);
   const setLang = useThemeStore((s) => s.setLang);
   const { mutate: updateSettings } = useUpdateAppSettings();
 
   const applyTheme = (next: Theme) => {
     setTheme(next);
     updateSettings({ theme: next });
+  };
+
+  // Размер текста: ступень применяется сразу (store), на аккаунт уходит рядом.
+  const applyTextScale = (next: TextScale) => {
+    setTextScale(next);
+    updateSettings({ text_scale: next });
   };
 
   // Local store is the source of truth (instant, offline); also mirror the
@@ -49,7 +57,7 @@ export const AppearanceSection = () => {
               applyTheme("system");
             }}
           >
-            <Monitor size={11} />
+            <Monitor size="0.6875rem" />
             {t("appearance.themeSystem")}
           </button>
           <button
@@ -59,7 +67,7 @@ export const AppearanceSection = () => {
               applyTheme("dark");
             }}
           >
-            <Moon size={11} />
+            <Moon size="0.6875rem" />
             Dark · Navy ink
           </button>
           <button
@@ -69,7 +77,7 @@ export const AppearanceSection = () => {
               applyTheme("light");
             }}
           >
-            <Sun size={11} />
+            <Sun size="0.6875rem" />
             Light · Paper
           </button>
           <button
@@ -79,7 +87,7 @@ export const AppearanceSection = () => {
               applyTheme("blueprint");
             }}
           >
-            <Grid3x3 size={11} />
+            <Grid3x3 size="0.6875rem" />
             Blueprint
           </button>
         </div>
@@ -106,6 +114,47 @@ export const AppearanceSection = () => {
           </button>
         </div>
       </Setting>
+      <Setting
+        anchorId="appearance-text-size"
+        label={t("appearance.textSize")}
+        hint={t("appearance.textSizeHint")}
+      >
+        <div
+          className="seg"
+          role="radiogroup"
+          aria-label={t("appearance.textSize")}
+          data-testid="text-size-control"
+        >
+          {TEXT_SCALE_STEPS.map((step) => (
+            <button
+              key={step}
+              type="button"
+              role="radio"
+              aria-checked={textScale === step}
+              data-step={step}
+              className={clsx(textScale === step && "active")}
+              onClick={() => {
+                applyTextScale(step);
+              }}
+            >
+              {step}%
+            </button>
+          ))}
+        </div>
+      </Setting>
+      <div className="text-size-preview" data-testid="text-size-preview">
+        <div className="text-size-preview__title">
+          {t("appearance.previewTitle")}
+        </div>
+        <p className="text-size-preview__body">{t("appearance.previewBody")}</p>
+        <div className="text-size-preview__row">
+          <button type="button" className="btn primary">
+            {t("appearance.previewButton")}
+          </button>
+          <span className="chip">{t("appearance.previewChip")}</span>
+          <span className="hint">{t("appearance.previewHint")}</span>
+        </div>
+      </div>
       <Setting anchorId="appearance-language" label={t("appearance.language")}>
         <div className="seg">
           <button

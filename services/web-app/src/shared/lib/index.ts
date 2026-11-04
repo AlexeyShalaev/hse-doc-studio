@@ -15,8 +15,15 @@ export type { DiffLine, DiffLineKind } from "./lineDiff";
 
 export { EDITABLE_TEXT_EXTENSIONS, isEditableTextPath } from "./fileTypes";
 
-export { useThemeStore, useApplyTheme } from "./theme";
-export type { Theme, Density } from "./theme";
+export {
+  useThemeStore,
+  useApplyTheme,
+  TEXT_SCALE_STEPS,
+  DEFAULT_TEXT_SCALE,
+  normalizeTextScale,
+  isTextScale,
+} from "./theme";
+export type { Theme, Density, TextScale } from "./theme";
 
 export {
   VISUAL_ZOOM_MAX,

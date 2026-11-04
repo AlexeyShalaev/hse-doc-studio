@@ -7,10 +7,11 @@ export const settingsKeys = {
   current: () => [...settingsKeys.all, "current"] as const,
 };
 
-export const useAppSettings = () =>
+export const useAppSettings = (options?: { enabled?: boolean }) =>
   useQuery<SettingsData>({
     queryKey: settingsKeys.current(),
     queryFn: () => settingsApi.get(),
+    enabled: options?.enabled ?? true,
   });
 
 export const useUpdateAppSettings = () => {
