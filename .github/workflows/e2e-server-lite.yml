@@ -67,6 +67,9 @@ jobs:
       - name: Landing page
         run: make e2e-landing
 
+      - name: Phone layout
+        run: make e2e-mobile
+
       - name: Passkeys (virtual authenticator)
         run: make e2e-passkeys
 
