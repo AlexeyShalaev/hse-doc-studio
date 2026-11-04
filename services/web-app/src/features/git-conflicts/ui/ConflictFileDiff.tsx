@@ -47,10 +47,10 @@ export const ConflictFileDiff = ({
       return (
         <div
           className="flex items-center justify-center"
-          style={{ gap: 8, padding: 24 }}
+          style={{ gap: "0.5rem", padding: "1.5rem" }}
         >
           <Spinner size="sm" />
-          <span className="dim" style={{ fontSize: 12 }}>
+          <span className="dim" style={{ fontSize: "0.75rem" }}>
             {waitsForSave ? t("diff.saving") : t("diff.loading")}
           </span>
         </div>
@@ -78,14 +78,20 @@ export const ConflictFileDiff = ({
     }
     if (data.binary) {
       return (
-        <div className="card dim" style={{ padding: 14, fontSize: 12 }}>
+        <div
+          className="card dim"
+          style={{ padding: "0.875rem", fontSize: "0.75rem" }}
+        >
           {t("diff.binary")}
         </div>
       );
     }
     if (data.patch.trim() === "") {
       return (
-        <div className="card dim" style={{ padding: 14, fontSize: 12 }}>
+        <div
+          className="card dim"
+          style={{ padding: "0.875rem", fontSize: "0.75rem" }}
+        >
           {t("diff.empty")}
         </div>
       );
@@ -110,8 +116,11 @@ export const ConflictFileDiff = ({
   })();
 
   return (
-    <div className="flex flex-col" style={{ gap: 8, minWidth: 0 }}>
-      <p className="dim" style={{ margin: 0, fontSize: 12, lineHeight: 1.5 }}>
+    <div className="flex flex-col" style={{ gap: "0.5rem", minWidth: 0 }}>
+      <p
+        className="dim"
+        style={{ margin: 0, fontSize: "0.75rem", lineHeight: 1.5 }}
+      >
         {t(`diff.hint.${view}`)}
       </p>
       {body}

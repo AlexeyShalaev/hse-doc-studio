@@ -617,7 +617,7 @@ export const ProjectSettingsView = ({
   return (
     <div
       style={{
-        padding: "24px 32px",
+        padding: "1.5rem 2rem",
         overflowY: "auto",
         flex: 1,
         minHeight: 0,
@@ -636,8 +636,8 @@ export const ProjectSettingsView = ({
         style={{
           display: "grid",
           gridTemplateColumns: "minmax(0, 1fr)",
-          gap: 16,
-          marginTop: 24,
+          gap: "1rem",
+          marginTop: "1.5rem",
         }}
       >
         {activeSections.map((s) => (

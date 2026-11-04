@@ -64,7 +64,7 @@ export const ChangelogModal = ({
         <DialogPrimitive.Overlay className="scrim" />
         <DialogPrimitive.Content
           className="modal-panel fixed left-1/2 top-1/2 z-[102] -translate-x-1/2 -translate-y-1/2"
-          style={{ width: 620, maxWidth: "calc(100vw - 32px)" }}
+          style={{ width: "38.75rem", maxWidth: "calc(100vw - 2rem)" }}
         >
           <DialogPrimitive.Title className="sr-only">
             {t("modal.title")}
@@ -76,23 +76,23 @@ export const ChangelogModal = ({
           <div
             className="flex items-center justify-between"
             style={{
-              padding: "12px 18px",
+              padding: "0.75rem 1.125rem",
               borderBottom: "1px solid var(--border)",
-              gap: 12,
+              gap: "0.75rem",
             }}
           >
-            <div className="flex items-center" style={{ gap: 8 }}>
-              <Sparkles size={14} style={{ color: "var(--accent)" }} />
-              <h3 style={{ fontSize: 14, fontWeight: 600, margin: 0 }}>
+            <div className="flex items-center" style={{ gap: "0.5rem" }}>
+              <Sparkles size="0.875rem" style={{ color: "var(--accent)" }} />
+              <h3 style={{ fontSize: "0.875rem", fontWeight: 600, margin: 0 }}>
                 {t("modal.title")}
               </h3>
               {version && (
                 <span
                   className="mono"
                   style={{
-                    fontSize: 10,
-                    padding: "1px 6px",
-                    borderRadius: 3,
+                    fontSize: "0.625rem",
+                    padding: "1px 0.375rem",
+                    borderRadius: "0.1875rem",
                     background: "var(--accent)",
                     color: "var(--bg-0)",
                   }}
@@ -108,16 +108,16 @@ export const ChangelogModal = ({
               disabled={selfUpdate.isBusy}
               title={t("modal.close")}
             >
-              <X size={14} />
+              <X size="0.875rem" />
             </button>
           </div>
 
           <div
             style={{
-              padding: 16,
-              maxHeight: 360,
+              padding: "1rem",
+              maxHeight: "22.5rem",
               overflowY: "auto",
-              fontSize: 12.5,
+              fontSize: "0.78125rem",
               lineHeight: 1.5,
               wordBreak: "break-word",
             }}
@@ -127,14 +127,18 @@ export const ChangelogModal = ({
                 {release.date && (
                   <div
                     className="dim"
-                    style={{ fontSize: 11, marginBottom: 8 }}
+                    style={{ fontSize: "0.6875rem", marginBottom: "0.5rem" }}
                   >
                     {release.date}
                   </div>
                 )}
                 <ul
                   className="flex flex-col"
-                  style={{ gap: 6, margin: 0, paddingLeft: 18 }}
+                  style={{
+                    gap: "0.375rem",
+                    margin: 0,
+                    paddingLeft: "1.125rem",
+                  }}
                 >
                   {release.notes.map((note) => (
                     <li key={note}>{note}</li>
@@ -149,14 +153,14 @@ export const ChangelogModal = ({
           <div
             className="flex flex-col"
             style={{
-              gap: 8,
-              padding: "12px 18px",
+              gap: "0.5rem",
+              padding: "0.75rem 1.125rem",
               borderTop: "1px solid var(--border)",
             }}
           >
             {showOneClick ? (
               <>
-                <span className="dim" style={{ fontSize: 11 }}>
+                <span className="dim" style={{ fontSize: "0.6875rem" }}>
                   {selfUpdate.status === "done"
                     ? t("oneClick.done")
                     : selfUpdate.isBusy
@@ -166,7 +170,7 @@ export const ChangelogModal = ({
                 <button
                   type="button"
                   className="btn primary flex items-center justify-center"
-                  style={{ gap: 6 }}
+                  style={{ gap: "0.375rem" }}
                   onClick={handleSelfUpdate}
                   disabled={selfUpdate.isBusy || selfUpdate.status === "done"}
                 >
@@ -177,7 +181,7 @@ export const ChangelogModal = ({
                     </>
                   ) : (
                     <>
-                      <Download size={12} />
+                      <Download size="0.75rem" />
                       {t("oneClick.updateTo", { version })}
                     </>
                   )}
@@ -186,26 +190,28 @@ export const ChangelogModal = ({
             ) : (
               <>
                 {selfUpdate.status === "failed" && selfUpdate.error && (
-                  <span style={{ fontSize: 11, color: "var(--c-warn)" }}>
+                  <span
+                    style={{ fontSize: "0.6875rem", color: "var(--c-warn)" }}
+                  >
                     {selfUpdate.error}
                   </span>
                 )}
-                <span className="dim" style={{ fontSize: 11 }}>
+                <span className="dim" style={{ fontSize: "0.6875rem" }}>
                   {t("manual.instructions")}
                 </span>
                 <div
                   className="flex items-center justify-between"
                   style={{
-                    gap: 8,
-                    padding: "8px 10px",
-                    borderRadius: 6,
+                    gap: "0.5rem",
+                    padding: "0.5rem 0.625rem",
+                    borderRadius: "0.375rem",
                     background: "var(--bg-0)",
                     border: "1px solid var(--border)",
                   }}
                 >
                   <code
                     className="mono"
-                    style={{ fontSize: 11.5, wordBreak: "break-all" }}
+                    style={{ fontSize: "0.71875rem", wordBreak: "break-all" }}
                   >
                     {command}
                   </code>
@@ -215,7 +221,7 @@ export const ChangelogModal = ({
                     onClick={handleCopy}
                     title={t("manual.copyCommand")}
                   >
-                    <Copy size={11} />
+                    <Copy size="0.6875rem" />
                   </button>
                 </div>
               </>
@@ -226,9 +232,13 @@ export const ChangelogModal = ({
                 target="_blank"
                 rel="noreferrer noopener"
                 className="flex items-center"
-                style={{ gap: 6, fontSize: 11.5, color: "var(--accent)" }}
+                style={{
+                  gap: "0.375rem",
+                  fontSize: "0.71875rem",
+                  color: "var(--accent)",
+                }}
               >
-                <ExternalLink size={11} />
+                <ExternalLink size="0.6875rem" />
                 {t("modal.openOnGithub")}
               </a>
             )}

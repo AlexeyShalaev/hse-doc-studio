@@ -33,10 +33,17 @@ const Card = ({
 }) => (
   <div
     className="card"
-    style={{ padding: 18, display: "flex", flexDirection: "column", gap: 14 }}
+    style={{
+      padding: "1.125rem",
+      display: "flex",
+      flexDirection: "column",
+      gap: "0.875rem",
+    }}
   >
     {title && (
-      <h3 style={{ margin: 0, fontSize: 13, fontWeight: 600 }}>{title}</h3>
+      <h3 style={{ margin: 0, fontSize: "0.8125rem", fontWeight: 600 }}>
+        {title}
+      </h3>
     )}
     {children}
   </div>
@@ -98,8 +105,8 @@ const FormEditor = ({ projectId, formId, form, lang }: FormEditorProps) => {
       style={{
         display: "grid",
         gridTemplateColumns: "minmax(0, 1.25fr) minmax(0, 1fr)",
-        gap: 20,
-        marginTop: 24,
+        gap: "1.25rem",
+        marginTop: "1.5rem",
       }}
     >
       <div className="flex flex-col gap-4">
@@ -127,7 +134,7 @@ const FormEditor = ({ projectId, formId, form, lang }: FormEditorProps) => {
 
         <label
           className="flex items-center cursor-pointer"
-          style={{ gap: 10, padding: "0 4px" }}
+          style={{ gap: "0.625rem", padding: "0 0.25rem" }}
         >
           <input
             type="checkbox"
@@ -138,7 +145,9 @@ const FormEditor = ({ projectId, formId, form, lang }: FormEditorProps) => {
             }}
             style={{ accentColor: "var(--accent)" }}
           />
-          <span style={{ fontSize: 12.5 }}>{t("editor.signedCheckbox")}</span>
+          <span style={{ fontSize: "0.78125rem" }}>
+            {t("editor.signedCheckbox")}
+          </span>
         </label>
       </div>
 
@@ -150,14 +159,14 @@ const FormEditor = ({ projectId, formId, form, lang }: FormEditorProps) => {
           <div
             className="flex items-center justify-between"
             style={{
-              padding: "10px 14px",
+              padding: "0.625rem 0.875rem",
               borderBottom: "1px solid var(--border)",
               background: "var(--bg-2)",
             }}
           >
             <div className="flex items-center gap-2">
-              <FileText size={12} style={{ color: "var(--fg-2)" }} />
-              <span className="mono" style={{ fontSize: 11 }}>
+              <FileText size="0.75rem" style={{ color: "var(--fg-2)" }} />
+              <span className="mono" style={{ fontSize: "0.6875rem" }}>
                 {preview?.output_name ?? t("preview.fallbackName")}
               </span>
             </div>
@@ -166,14 +175,14 @@ const FormEditor = ({ projectId, formId, form, lang }: FormEditorProps) => {
                 className="chip"
                 style={{ color: "var(--c-ok)", borderColor: "var(--c-ok)" }}
               >
-                <Check size={10} /> {t("preview.ready")}
+                <Check size="0.625rem" /> {t("preview.ready")}
               </span>
             ) : (
               <span
                 className="chip"
                 style={{ color: "var(--c-warn)", borderColor: "var(--c-warn)" }}
               >
-                <AlertTriangle size={10} /> {t("preview.incomplete")}
+                <AlertTriangle size="0.625rem" /> {t("preview.incomplete")}
               </span>
             )}
           </div>
@@ -181,12 +190,12 @@ const FormEditor = ({ projectId, formId, form, lang }: FormEditorProps) => {
           <div
             className="code"
             style={{
-              padding: 14,
+              padding: "0.875rem",
               fontFamily: "var(--font-mono)",
-              fontSize: 11.5,
+              fontSize: "0.71875rem",
               lineHeight: 1.7,
               background: "var(--bg-0)",
-              maxHeight: 460,
+              maxHeight: "28.75rem",
               overflowY: "auto",
             }}
           >
@@ -203,7 +212,10 @@ const FormEditor = ({ projectId, formId, form, lang }: FormEditorProps) => {
 
           <div
             className="flex gap-2"
-            style={{ padding: 10, borderTop: "1px solid var(--border)" }}
+            style={{
+              padding: "0.625rem",
+              borderTop: "1px solid var(--border)",
+            }}
           >
             <button
               type="button"
@@ -211,7 +223,7 @@ const FormEditor = ({ projectId, formId, form, lang }: FormEditorProps) => {
               onClick={handleSave}
               disabled={saving}
             >
-              {saving ? <Spinner size="sm" /> : <Save size={11} />}
+              {saving ? <Spinner size="sm" /> : <Save size="0.6875rem" />}
               {dirty ? t("preview.saveDirty") : t("preview.save")}
             </button>
             <button
@@ -220,7 +232,7 @@ const FormEditor = ({ projectId, formId, form, lang }: FormEditorProps) => {
               onClick={handleCopy}
               disabled={!preview}
             >
-              <Copy size={11} />
+              <Copy size="0.6875rem" />
             </button>
           </div>
         </div>
@@ -229,16 +241,16 @@ const FormEditor = ({ projectId, formId, form, lang }: FormEditorProps) => {
           <div
             className="card"
             style={{
-              padding: 14,
+              padding: "0.875rem",
               display: "flex",
               flexDirection: "column",
-              gap: 6,
+              gap: "0.375rem",
             }}
           >
             <span
               className="dim"
               style={{
-                fontSize: 11,
+                fontSize: "0.6875rem",
                 textTransform: "uppercase",
                 letterSpacing: "0.04em",
               }}
@@ -249,17 +261,17 @@ const FormEditor = ({ projectId, formId, form, lang }: FormEditorProps) => {
               <div
                 key={err.field_id}
                 className="flex items-start gap-2"
-                style={{ fontSize: 12, color: "var(--c-warn)" }}
+                style={{ fontSize: "0.75rem", color: "var(--c-warn)" }}
               >
                 <AlertTriangle
-                  size={12}
-                  style={{ flexShrink: 0, marginTop: 2 }}
+                  size="0.75rem"
+                  style={{ flexShrink: 0, marginTop: "0.125rem" }}
                 />
                 <span>{err.message}</span>
               </div>
             ))}
             {dirty && (
-              <span className="dim" style={{ fontSize: 11 }}>
+              <span className="dim" style={{ fontSize: "0.6875rem" }}>
                 {t("errors.saveHint")}
               </span>
             )}
@@ -275,7 +287,7 @@ export const FormFill = ({ projectId, formId, lang = "ru" }: FormFillProps) => {
 
   if (isLoading || !data) {
     return (
-      <div className="flex justify-center" style={{ padding: 32 }}>
+      <div className="flex justify-center" style={{ padding: "2rem" }}>
         <Spinner />
       </div>
     );

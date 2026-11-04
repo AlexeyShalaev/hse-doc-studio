@@ -68,27 +68,27 @@ const ProviderRow = ({
     <div
       className="flex items-center justify-between"
       style={{
-        gap: 12,
-        padding: "10px 12px",
-        borderRadius: 6,
+        gap: "0.75rem",
+        padding: "0.625rem 0.75rem",
+        borderRadius: "0.375rem",
         border: isDefault
           ? "1px solid var(--accent)"
           : "1px solid var(--border)",
         background: "var(--bg-1)",
       }}
     >
-      <div className="flex flex-col" style={{ gap: 4, minWidth: 0 }}>
-        <div className="flex items-center" style={{ gap: 8 }}>
-          <Bot size={13} style={{ color: "var(--fg-2)" }} />
-          <span style={{ fontSize: 12.5, fontWeight: 500 }}>
+      <div className="flex flex-col" style={{ gap: "0.25rem", minWidth: 0 }}>
+        <div className="flex items-center" style={{ gap: "0.5rem" }}>
+          <Bot size="0.8125rem" style={{ color: "var(--fg-2)" }} />
+          <span style={{ fontSize: "0.78125rem", fontWeight: 500 }}>
             {provider.name}
           </span>
           <span
             className="mono"
             style={{
-              fontSize: 10,
-              padding: "1px 6px",
-              borderRadius: 3,
+              fontSize: "0.625rem",
+              padding: "1px 0.375rem",
+              borderRadius: "0.1875rem",
               background: "var(--bg-3)",
               color: "var(--fg-2)",
             }}
@@ -100,7 +100,7 @@ const ProviderRow = ({
               className={
                 providerSource(provider) === "own" ? "chip" : "chip info"
               }
-              style={{ fontSize: 10 }}
+              style={{ fontSize: "0.625rem" }}
               title={t(`providers.sourceTitle.${providerSource(provider)}`)}
               data-testid={`ai-provider-source-${provider.id}`}
               data-source={providerSource(provider)}
@@ -111,7 +111,7 @@ const ProviderRow = ({
             provider.shared === true && (
               <span
                 className="chip info"
-                style={{ fontSize: 10 }}
+                style={{ fontSize: "0.625rem" }}
                 title={t("providers.sharedTitle")}
                 data-testid="provider-shared"
               >
@@ -122,7 +122,7 @@ const ProviderRow = ({
           {isDefault && (
             <span
               className="mono"
-              style={{ fontSize: 10, color: "var(--accent)" }}
+              style={{ fontSize: "0.625rem", color: "var(--accent)" }}
             >
               {t("providers.default")}
             </span>
@@ -131,7 +131,7 @@ const ProviderRow = ({
         {provider.relay && (
           <div
             className="flex items-center"
-            style={{ gap: 8, fontSize: 11, flexWrap: "wrap" }}
+            style={{ gap: "0.5rem", fontSize: "0.6875rem", flexWrap: "wrap" }}
             data-testid={`ai-provider-relay-${provider.id}`}
             data-state={provider.relay.state}
           >
@@ -148,7 +148,7 @@ const ProviderRow = ({
             </span>
           </div>
         )}
-        <div className="dim" style={{ fontSize: 11 }}>
+        <div className="dim" style={{ fontSize: "0.6875rem" }}>
           {provider.models.length > 0
             ? t("providers.modelCount", { count: provider.models.length })
             : t("providers.modelsNotLoaded")}
@@ -158,9 +158,9 @@ const ProviderRow = ({
           )}
         </div>
       </div>
-      <div className="flex items-center" style={{ gap: 6 }}>
+      <div className="flex items-center" style={{ gap: "0.375rem" }}>
         {provider.shared === true ? (
-          <span className="dim" style={{ fontSize: 11 }}>
+          <span className="dim" style={{ fontSize: "0.6875rem" }}>
             {t("providers.sharedKey")}
           </span>
         ) : (
@@ -172,7 +172,7 @@ const ProviderRow = ({
                 onClick={onEdit}
                 title={t("providers.edit")}
               >
-                <Pencil size={11} />
+                <Pencil size="0.6875rem" />
               </button>
             )}
             <button
@@ -186,7 +186,7 @@ const ProviderRow = ({
                   : t("providers.delete")
               }
             >
-              <Trash2 size={11} />
+              <Trash2 size="0.6875rem" />
             </button>
           </>
         )}
@@ -289,29 +289,38 @@ export const ProvidersSection = () => {
         )}
       />
 
-      <div className="flex flex-col" style={{ gap: 12, paddingBottom: 14 }}>
+      <div
+        className="flex flex-col"
+        style={{ gap: "0.75rem", paddingBottom: "0.875rem" }}
+      >
         <StudioProviderBanner />
         {showOllamaHint && (
           <div
             className="flex items-center justify-between"
             style={{
-              gap: 12,
-              padding: "10px 12px",
-              borderRadius: 6,
+              gap: "0.75rem",
+              padding: "0.625rem 0.75rem",
+              borderRadius: "0.375rem",
               border: "1px solid var(--accent)",
               background: "var(--bg-1)",
             }}
           >
-            <div className="flex items-center" style={{ gap: 10, minWidth: 0 }}>
+            <div
+              className="flex items-center"
+              style={{ gap: "0.625rem", minWidth: 0 }}
+            >
               <Cpu
-                size={14}
+                size="0.875rem"
                 style={{ color: "var(--accent)", flexShrink: 0 }}
               />
-              <div className="flex flex-col" style={{ gap: 2, minWidth: 0 }}>
-                <span style={{ fontSize: 12.5, fontWeight: 500 }}>
+              <div
+                className="flex flex-col"
+                style={{ gap: "0.125rem", minWidth: 0 }}
+              >
+                <span style={{ fontSize: "0.78125rem", fontWeight: 500 }}>
                   {t("providers.ollamaDetectedTitle")}
                 </span>
-                <span className="dim" style={{ fontSize: 11.5 }}>
+                <span className="dim" style={{ fontSize: "0.71875rem" }}>
                   {t("providers.ollamaDetectedText")}
                 </span>
               </div>
@@ -331,16 +340,19 @@ export const ProvidersSection = () => {
           </div>
         )}
         {providersQuery.isLoading ? (
-          <div className="flex items-center" style={{ gap: 8, fontSize: 12 }}>
+          <div
+            className="flex items-center"
+            style={{ gap: "0.5rem", fontSize: "0.75rem" }}
+          >
             <Spinner size="sm" />
             <span className="dim">{t("providers.loading")}</span>
           </div>
         ) : providers.length === 0 ? (
-          <div className="dim" style={{ fontSize: 12 }}>
+          <div className="dim" style={{ fontSize: "0.75rem" }}>
             {t("providers.empty")}
           </div>
         ) : (
-          <div className="flex flex-col" style={{ gap: 6 }}>
+          <div className="flex flex-col" style={{ gap: "0.375rem" }}>
             {providers.map((provider) => (
               <ProviderRow
                 key={provider.id}
@@ -362,13 +374,13 @@ export const ProvidersSection = () => {
 
         <div>
           <button type="button" className="btn xs" onClick={openCreate}>
-            <Plus size={11} />
+            <Plus size="0.6875rem" />
             {t("providers.add")}
           </button>
         </div>
 
         {serverMode && (
-          <p className="dim" style={{ margin: 0, fontSize: 11.5 }}>
+          <p className="dim" style={{ margin: 0, fontSize: "0.71875rem" }}>
             {t("providers.order")}
           </p>
         )}
@@ -378,9 +390,9 @@ export const ProvidersSection = () => {
             id="providers-default-model"
             className="flex flex-col settings-anchor"
             style={{
-              gap: 8,
-              padding: 12,
-              borderRadius: 6,
+              gap: "0.5rem",
+              padding: "0.75rem",
+              borderRadius: "0.375rem",
               border: "1px solid var(--border)",
               background: "var(--bg-1)",
             }}
@@ -388,16 +400,16 @@ export const ProvidersSection = () => {
             <div
               className="dim"
               style={{
-                fontSize: 10,
+                fontSize: "0.625rem",
                 textTransform: "uppercase",
-                letterSpacing: 0.5,
+                letterSpacing: "0.03125rem",
               }}
             >
               {t("providers.defaultModelTitle")}
             </div>
             <div
               className="grid grid-split"
-              style={{ gridTemplateColumns: "1fr 1fr", gap: 8 }}
+              style={{ gridTemplateColumns: "1fr 1fr", gap: "0.5rem" }}
             >
               <Combobox
                 value={defaultProviderId}

@@ -40,11 +40,11 @@ export const userActions = (
 ];
 
 export const ACTION_ICON: Record<UserActionKind, ReactNode> = {
-  resetLink: <KeyRound size={15} aria-hidden="true" />,
-  revokeSessions: <LogOut size={15} aria-hidden="true" />,
-  grantAdmin: <ShieldCheck size={15} aria-hidden="true" />,
-  revokeAdmin: <ShieldOff size={15} aria-hidden="true" />,
-  enable: <CircleCheck size={15} aria-hidden="true" />,
-  disable: <Ban size={15} aria-hidden="true" />,
-  remove: <Trash2 size={15} aria-hidden="true" />,
+  resetLink: <KeyRound size="0.9375rem" aria-hidden="true" />,
+  revokeSessions: <LogOut size="0.9375rem" aria-hidden="true" />,
+  grantAdmin: <ShieldCheck size="0.9375rem" aria-hidden="true" />,
+  revokeAdmin: <ShieldOff size="0.9375rem" aria-hidden="true" />,
+  enable: <CircleCheck size="0.9375rem" aria-hidden="true" />,
+  disable: <Ban size="0.9375rem" aria-hidden="true" />,
+  remove: <Trash2 size="0.9375rem" aria-hidden="true" />,
 };

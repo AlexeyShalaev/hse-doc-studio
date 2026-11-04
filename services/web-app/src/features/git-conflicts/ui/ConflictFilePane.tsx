@@ -55,11 +55,11 @@ const PaneHeader = ({
   const { t } = useTranslation("gitConflicts");
   const type = file.conflict_type;
   return (
-    <div className="flex flex-col" style={{ gap: 6 }}>
-      <div className="flex items-center" style={{ gap: 8, minWidth: 0 }}>
+    <div className="flex flex-col" style={{ gap: "0.375rem" }}>
+      <div className="flex items-center" style={{ gap: "0.5rem", minWidth: 0 }}>
         <h3
           className="mono truncate"
-          style={{ margin: 0, fontSize: 13, fontWeight: 600 }}
+          style={{ margin: 0, fontSize: "0.8125rem", fontWeight: 600 }}
           title={file.path}
         >
           {file.path}
@@ -78,7 +78,10 @@ const PaneHeader = ({
         </span>
       </div>
       {type && needsDecision(file) && (
-        <p className="dim" style={{ margin: 0, fontSize: 12, lineHeight: 1.5 }}>
+        <p
+          className="dim"
+          style={{ margin: 0, fontSize: "0.75rem", lineHeight: 1.5 }}
+        >
           {t(`conflictType.${type}`, { defaultValue: "" })}
         </p>
       )}
@@ -113,7 +116,7 @@ export const ConflictFilePane = ({
     return (
       <div
         className="dim flex items-center justify-center"
-        style={{ flex: 1, fontSize: 12.5, padding: 24 }}
+        style={{ flex: 1, fontSize: "0.78125rem", padding: "1.5rem" }}
       >
         {t("pane.select")}
       </div>
@@ -126,7 +129,7 @@ export const ConflictFilePane = ({
 
   if (!needsDecision(file)) {
     return (
-      <div className="flex flex-col" style={{ gap: 14 }}>
+      <div className="flex flex-col" style={{ gap: "0.875rem" }}>
         <PaneHeader file={file} theirsAuthor={theirsAuthor} />
         <AutoFileInfo file={file} theirsAuthor={theirsAuthor} />
       </div>
@@ -203,10 +206,10 @@ export const ConflictFilePane = ({
       return (
         <div
           className="flex items-center justify-center"
-          style={{ gap: 8, padding: 24 }}
+          style={{ gap: "0.5rem", padding: "1.5rem" }}
         >
           <Spinner size="sm" />
-          <span className="dim" style={{ fontSize: 12 }}>
+          <span className="dim" style={{ fontSize: "0.75rem" }}>
             {t("pane.loading")}
           </span>
         </div>
@@ -310,7 +313,7 @@ export const ConflictFilePane = ({
   })();
 
   return (
-    <div className="flex flex-col" style={{ gap: 14, minWidth: 0 }}>
+    <div className="flex flex-col" style={{ gap: "0.875rem", minWidth: 0 }}>
       <PaneHeader file={file} theirsAuthor={theirsAuthor} />
       {tabs.length > 1 && (
         <ViewTabs views={tabs} value={activeView} onChange={setView} />

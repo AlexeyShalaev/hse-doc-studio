@@ -65,13 +65,13 @@ export const CustomFileDecisionsModal = ({
         </>
       }
     >
-      <div className="flex flex-col" style={{ gap: 8 }}>
+      <div className="flex flex-col" style={{ gap: "0.5rem" }}>
         {items.map((it) => (
           <div
             key={it.doc_id}
             className="flex items-center justify-between gap-3"
             style={{
-              padding: 12,
+              padding: "0.75rem",
               background: "var(--bg-2)",
               borderRadius: "var(--r-2)",
               border: "1px solid var(--border)",
@@ -80,16 +80,16 @@ export const CustomFileDecisionsModal = ({
           >
             <div className="flex items-center gap-2" style={{ minWidth: 0 }}>
               <FileText
-                size={13}
+                size="0.8125rem"
                 style={{ color: "var(--accent)", flexShrink: 0 }}
               />
               <div className="flex flex-col" style={{ gap: 1, minWidth: 0 }}>
-                <strong className="truncate" style={{ fontSize: 12.5 }}>
+                <strong className="truncate" style={{ fontSize: "0.78125rem" }}>
                   {pickLocalized(it.doc_name, lang, it.doc_id)}
                 </strong>
                 <span
                   className="mono dim truncate"
-                  style={{ fontSize: 10.5 }}
+                  style={{ fontSize: "0.65625rem" }}
                   title={it.original_filename}
                 >
                   {it.original_filename}
@@ -99,7 +99,7 @@ export const CustomFileDecisionsModal = ({
             {it.convertible ? (
               <label
                 className="flex items-center gap-2"
-                style={{ fontSize: 11.5, color: "var(--fg-1)" }}
+                style={{ fontSize: "0.71875rem", color: "var(--fg-1)" }}
               >
                 {t("customFilesModal.convertToPdf")}
                 <span
@@ -123,7 +123,11 @@ export const CustomFileDecisionsModal = ({
             ) : (
               <span
                 className="dim"
-                style={{ fontSize: 11, textAlign: "right", maxWidth: 220 }}
+                style={{
+                  fontSize: "0.6875rem",
+                  textAlign: "right",
+                  maxWidth: "13.75rem",
+                }}
               >
                 {t("customFilesModal.unknownFormatNote")}
               </span>

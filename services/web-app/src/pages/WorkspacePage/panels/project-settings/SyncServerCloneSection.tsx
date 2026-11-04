@@ -35,7 +35,7 @@ export const SyncServerCloneSection = ({
     <SectionCard title={t("clone.title")} fullSpan>
       <div
         className="flex flex-col"
-        style={{ gap: 12 }}
+        style={{ gap: "0.75rem" }}
         data-testid="project-git-remote"
         data-state={
           remote.isError
@@ -48,7 +48,7 @@ export const SyncServerCloneSection = ({
         }
       >
         {remote.isLoading && (
-          <span className="flex items-center dim" style={{ gap: 8 }}>
+          <span className="flex items-center dim" style={{ gap: "0.5rem" }}>
             <Spinner size="sm" />
             {t("clone.loading")}
           </span>
@@ -61,7 +61,7 @@ export const SyncServerCloneSection = ({
         )}
         {data?.enabled && data.clone_url && (
           <>
-            <p className="dim" style={{ margin: 0, fontSize: 13 }}>
+            <p className="dim" style={{ margin: 0, fontSize: "0.8125rem" }}>
               {t("clone.lead")}
             </p>
             <div data-testid="project-git-remote-url">
@@ -69,7 +69,7 @@ export const SyncServerCloneSection = ({
             </div>
             <div
               className="flex"
-              style={{ gap: 16, fontSize: 12.5, flexWrap: "wrap" }}
+              style={{ gap: "1rem", fontSize: "0.78125rem", flexWrap: "wrap" }}
             >
               <span data-testid="project-git-remote-branch">
                 {t("clone.branch", { branch: data.branch ?? "master" })}
@@ -113,13 +113,13 @@ export const SyncServerCloneSection = ({
               id={`${uid}-panel`}
               aria-labelledby={`${uid}-tab-${tab}`}
               className="flex flex-col"
-              style={{ gap: 10, fontSize: 13 }}
+              style={{ gap: "0.625rem", fontSize: "0.8125rem" }}
             >
               {tab === "desktop" ? (
                 <>
                   <div
                     className="flex items-center"
-                    style={{ gap: 10, flexWrap: "wrap" }}
+                    style={{ gap: "0.625rem", flexWrap: "wrap" }}
                   >
                     <OpenInLocalStudio projectId={projectId} />
                     <LocalStudioLink projectId={projectId} />

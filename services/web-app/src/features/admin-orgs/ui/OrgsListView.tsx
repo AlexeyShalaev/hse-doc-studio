@@ -121,7 +121,7 @@ export const OrgsListView = ({
         header: () => <span className="sr-only">{t("list.open")}</span>,
         cell: () => (
           <span className="org-chevron">
-            <ChevronRight size={16} aria-hidden="true" />
+            <ChevronRight size="1rem" aria-hidden="true" />
           </span>
         ),
       },
@@ -131,7 +131,7 @@ export const OrgsListView = ({
 
   const createButton = canCreate ? (
     <Button size="sm" type="button" onClick={onCreate} data-testid="org-create">
-      <Plus size={14} aria-hidden="true" />
+      <Plus size="0.875rem" aria-hidden="true" />
       {t("list.create")}
     </Button>
   ) : null;
@@ -188,7 +188,7 @@ export const OrgsListView = ({
         <EmptyState
           framed
           testId="orgs-empty"
-          icon={<Building2 size={18} />}
+          icon={<Building2 size="1.125rem" />}
           title={t("list.empty.title")}
           description={
             canCreate ? t("list.empty.bodyAdmin") : t("list.empty.bodyOrgAdmin")

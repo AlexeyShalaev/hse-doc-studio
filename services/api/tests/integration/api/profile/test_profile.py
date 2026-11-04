@@ -164,3 +164,21 @@ async def test__api__git_fetch_interval__negative__rejected(test_app: AsyncClien
     resp = await test_app.put("/api/v1/settings", json={"git_fetch_interval_s": -1})
 
     assert resp.status_code == 400
+
+
+@pytest.mark.parametrize("value", [90, 100, 112, 125, 140])
+async def test__api__text_scale__step_is_stored(test_app: AsyncClient, value: int) -> None:
+    assert (await test_app.get("/api/v1/settings")).json()["text_scale"] == 100
+
+    resp = await test_app.put("/api/v1/settings", json={"text_scale": value})
+
+    assert resp.status_code == 200, resp.text
+    assert resp.json()["text_scale"] == value
+    assert (await test_app.get("/api/v1/settings")).json()["text_scale"] == value
+
+
+@pytest.mark.parametrize("value", [0, 99, 130, 400, -100])
+async def test__api__text_scale__off_the_scale__rejected(test_app: AsyncClient, value: int) -> None:
+    resp = await test_app.put("/api/v1/settings", json={"text_scale": value})
+
+    assert resp.status_code == 400

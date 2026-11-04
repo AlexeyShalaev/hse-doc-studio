@@ -58,15 +58,15 @@ import { useAuditActionLabel } from "../lib/auditLabel";
 import { detailText } from "../lib/format";
 
 const ICON: Record<AuditCategory, ReactNode> = {
-  auth: <LogIn size={14} />,
-  admin: <UserCog size={14} />,
-  invite: <Mail size={14} />,
-  org: <Building2 size={14} />,
-  group: <Users size={14} />,
-  settings: <Settings2 size={14} />,
-  runner: <Server size={14} />,
-  project: <FolderOpen size={14} />,
-  other: <Activity size={14} />,
+  auth: <LogIn size="0.875rem" />,
+  admin: <UserCog size="0.875rem" />,
+  invite: <Mail size="0.875rem" />,
+  org: <Building2 size="0.875rem" />,
+  group: <Users size="0.875rem" />,
+  settings: <Settings2 size="0.875rem" />,
+  runner: <Server size="0.875rem" />,
+  project: <FolderOpen size="0.875rem" />,
+  other: <Activity size="0.875rem" />,
 };
 
 const SUMMARY_LIMIT = 2;
@@ -306,9 +306,9 @@ export const AuditLog = () => {
         <span
           className="adm-avatar"
           aria-hidden="true"
-          style={{ width: 20, height: 20 }}
+          style={{ width: "1.25rem", height: "1.25rem" }}
         >
-          <Cpu size={11} />
+          <Cpu size="0.6875rem" />
         </span>
         <span className="adm-person-text">
           <span className="adm-person-name">{t("audit.system")}</span>
@@ -359,7 +359,7 @@ export const AuditLog = () => {
             {timeOf(e.at, today)}
           </time>
           <ChevronRight
-            size={14}
+            size="0.875rem"
             className="adm-audit-chevron"
             aria-hidden="true"
           />
@@ -383,13 +383,13 @@ export const AuditLog = () => {
                 </FragmentKV>
               ))}
               <dt>{t("audit.detail.code")}</dt>
-              <dd className="mono" style={{ fontSize: 11.5 }}>
+              <dd className="mono" style={{ fontSize: "0.71875rem" }}>
                 {e.action}
               </dd>
               {e.target && (
                 <>
                   <dt>{t("audit.detail.target")}</dt>
-                  <dd className="mono" style={{ fontSize: 11.5 }}>
+                  <dd className="mono" style={{ fontSize: "0.71875rem" }}>
                     {e.target}
                   </dd>
                 </>
@@ -407,7 +407,7 @@ export const AuditLog = () => {
                       state.setFilter("actor_id", e.actor_id);
                     }}
                   >
-                    <ListFilter size={13} aria-hidden="true" />
+                    <ListFilter size="0.8125rem" aria-hidden="true" />
                     {t("audit.show.byActor")}
                   </Button>
                 )}
@@ -421,7 +421,7 @@ export const AuditLog = () => {
                       state.setFilter("target", e.target);
                     }}
                   >
-                    <ListFilter size={13} aria-hidden="true" />
+                    <ListFilter size="0.8125rem" aria-hidden="true" />
                     {t("audit.show.byTarget")}
                   </Button>
                 )}
@@ -442,7 +442,7 @@ export const AuditLog = () => {
   return (
     <div
       className="flex flex-col"
-      style={{ gap: 16, flex: 1 }}
+      style={{ gap: "1rem", flex: 1 }}
       data-testid="audit-log"
     >
       <PageHeader
@@ -464,7 +464,7 @@ export const AuditLog = () => {
             {refreshing ? (
               <Spinner size="sm" />
             ) : (
-              <RefreshCw size={13} aria-hidden="true" />
+              <RefreshCw size="0.8125rem" aria-hidden="true" />
             )}
             {t("audit.refresh")}
           </Button>
@@ -540,7 +540,7 @@ export const AuditLog = () => {
         ) : (
           <EmptyState
             framed
-            icon={<ScrollText size={18} />}
+            icon={<ScrollText size="1.125rem" />}
             title={t("audit.empty.title")}
             description={t("audit.empty.body")}
             testId="audit-empty"
@@ -574,7 +574,7 @@ export const AuditLog = () => {
             </section>
           ))}
           {failedMore && (
-            <div style={{ padding: "4px 12px 8px" }}>
+            <div style={{ padding: "0.25rem 0.75rem 0.5rem" }}>
               <ErrorState
                 compact
                 title={t("audit.loadFailed")}
@@ -611,7 +611,7 @@ const FragmentKV = ({
     <dt>{label}</dt>
     <dd
       className={machine ? "mono" : undefined}
-      style={machine ? { fontSize: 11.5 } : undefined}
+      style={machine ? { fontSize: "0.71875rem" } : undefined}
     >
       {children}
     </dd>

@@ -1,6 +1,11 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import type { Lang } from "@shared/api";
+import {
+  DEFAULT_TEXT_SCALE,
+  normalizeTextScale,
+  type TextScale,
+} from "./textScale";
 
 // "system" tracks the OS colour scheme; the other three are explicit themes.
 // The stored value is a *preference* — `resolveTheme` turns "system" into a
@@ -11,12 +16,14 @@ export type Density = "comfortable" | "compact";
 type ThemeState = {
   theme: Theme;
   density: Density;
+  textScale: TextScale;
   lang: Lang;
 };
 
 type ThemeActions = {
   setTheme: (theme: Theme) => void;
   setDensity: (density: Density) => void;
+  setTextScale: (textScale: TextScale) => void;
   setLang: (lang: Lang) => void;
   cycleTheme: () => void;
   toggleDensity: () => void;
@@ -40,12 +47,16 @@ export const useThemeStore = create<ThemeState & ThemeActions>()(
     (set, get) => ({
       theme: "system",
       density: "comfortable",
+      textScale: DEFAULT_TEXT_SCALE,
       lang: initialLang(),
       setTheme: (theme: Theme) => {
         set({ theme });
       },
       setDensity: (density: Density) => {
         set({ density });
+      },
+      setTextScale: (textScale: TextScale) => {
+        set({ textScale: normalizeTextScale(textScale) });
       },
       setLang: (lang: Lang) => {
         set({ lang });
@@ -67,9 +78,18 @@ export const useThemeStore = create<ThemeState & ThemeActions>()(
     }),
     {
       name: "hse-studio-theme",
+      // Чужое или устаревшее значение размера текста не должно дойти до страницы.
+      merge: (persisted, current) => ({
+        ...current,
+        ...(persisted as Partial<ThemeState>),
+        textScale: normalizeTextScale(
+          (persisted as Partial<ThemeState> | undefined)?.textScale,
+        ),
+      }),
       partialize: (state) => ({
         theme: state.theme,
         density: state.density,
+        textScale: state.textScale,
         lang: state.lang,
       }),
     },

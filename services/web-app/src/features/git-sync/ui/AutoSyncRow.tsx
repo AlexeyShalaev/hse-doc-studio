@@ -25,19 +25,22 @@ export const AutoSyncRow = ({ auto, pdf = null, now }: AutoSyncRowProps) => {
   return (
     <div
       className="flex flex-col"
-      style={{ gap: 6 }}
+      style={{ gap: "0.375rem" }}
       data-testid="auto-sync-row"
       data-phase={auto.phase}
     >
-      <div className="flex items-center justify-between" style={{ gap: 12 }}>
-        <div className="flex flex-col" style={{ gap: 2, minWidth: 0 }}>
-          <strong id="auto-sync-label" style={{ fontSize: 12.5 }}>
+      <div
+        className="flex items-center justify-between"
+        style={{ gap: "0.75rem" }}
+      >
+        <div className="flex flex-col" style={{ gap: "0.125rem", minWidth: 0 }}>
+          <strong id="auto-sync-label" style={{ fontSize: "0.78125rem" }}>
             {t("autoSync.switch")}
           </strong>
           <span
             id="auto-sync-state"
             className="dim"
-            style={{ fontSize: 11.5, lineHeight: 1.5 }}
+            style={{ fontSize: "0.71875rem", lineHeight: 1.5 }}
             role="status"
           >
             {stateText}
@@ -62,7 +65,7 @@ export const AutoSyncRow = ({ auto, pdf = null, now }: AutoSyncRowProps) => {
       {pdf !== null && (
         <span
           className="dim"
-          style={{ fontSize: 11.5, lineHeight: 1.5 }}
+          style={{ fontSize: "0.71875rem", lineHeight: 1.5 }}
           data-testid="pdf-upload-line"
         >
           {pdf.last === null

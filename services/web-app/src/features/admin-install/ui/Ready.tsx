@@ -16,7 +16,11 @@ export const Ready = ({ children }: { children: ReactNode }) => {
   }, []);
   if (!ready) {
     return (
-      <div className="flex items-center" style={{ gap: 8 }} role="status">
+      <div
+        className="flex items-center"
+        style={{ gap: "0.5rem" }}
+        role="status"
+      >
         <Spinner size="sm" />
       </div>
     );

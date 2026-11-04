@@ -134,7 +134,7 @@ export const CloudProjectOpener = ({
     return (
       <div
         className="flex flex-col"
-        style={{ gap: 12 }}
+        style={{ gap: "0.75rem" }}
         data-testid="cloud-open-failed"
         data-code={problem.code}
       >
@@ -147,7 +147,10 @@ export const CloudProjectOpener = ({
               : problem.message
           }
         />
-        <div className="flex" style={{ gap: 8, justifyContent: "flex-end" }}>
+        <div
+          className="flex"
+          style={{ gap: "0.5rem", justifyContent: "flex-end" }}
+        >
           <Button
             type="button"
             variant="ghost"
@@ -189,13 +192,13 @@ export const CloudProjectOpener = ({
   return (
     <div
       className="flex flex-col"
-      style={{ gap: 10 }}
+      style={{ gap: "0.625rem" }}
       data-testid="cloud-open-progress"
       data-step={step}
     >
       <span
         className="flex items-center dim"
-        style={{ gap: 8, fontSize: 13 }}
+        style={{ gap: "0.5rem", fontSize: "0.8125rem" }}
         role="status"
         aria-live="polite"
       >
@@ -206,7 +209,7 @@ export const CloudProjectOpener = ({
       {percent !== null && (
         <ProgressBar percent={percent} label={t("cloud.open.step.download")} />
       )}
-      <span className="dim" style={{ fontSize: 12 }}>
+      <span className="dim" style={{ fontSize: "0.75rem" }}>
         {t("cloud.open.hint")}
       </span>
     </div>
@@ -225,11 +228,14 @@ const ProfileStep = ({
   return (
     <div
       className="flex flex-col"
-      style={{ gap: 10 }}
+      style={{ gap: "0.625rem" }}
       data-testid="cloud-open-profile"
     >
-      <span className="flex items-center" style={{ gap: 8, fontSize: 13 }}>
-        <AlertTriangle size={14} aria-hidden="true" />
+      <span
+        className="flex items-center"
+        style={{ gap: "0.5rem", fontSize: "0.8125rem" }}
+      >
+        <AlertTriangle size="0.875rem" aria-hidden="true" />
         {t("cloud.open.profile")}
       </span>
       {profile.data ? (

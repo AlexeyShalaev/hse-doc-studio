@@ -45,18 +45,18 @@ export const ProjectAccessBanner = ({
         flexShrink: 0,
         display: "flex",
         alignItems: "flex-start",
-        gap: 10,
-        padding: "8px 14px",
+        gap: "0.625rem",
+        padding: "0.5rem 0.875rem",
         background: "var(--c-warn-soft)",
         borderBottom: "1px solid var(--c-warn)",
-        fontSize: 12,
+        fontSize: "0.75rem",
       }}
     >
       <Lock
-        size={13}
-        style={{ color: "var(--c-warn)", flexShrink: 0, marginTop: 2 }}
+        size="0.8125rem"
+        style={{ color: "var(--c-warn)", flexShrink: 0, marginTop: "0.125rem" }}
       />
-      <div className="flex flex-col" style={{ gap: 2 }}>
+      <div className="flex flex-col" style={{ gap: "0.125rem" }}>
         <strong>
           {access.mode === "files_only"
             ? t("access.filesOnly")

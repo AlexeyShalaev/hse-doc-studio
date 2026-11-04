@@ -46,13 +46,13 @@ export const LoadState = ({
   return (
     <div
       className="flex flex-col"
-      style={{ gap: 16 }}
+      style={{ gap: "1rem" }}
       data-testid="install-loading"
     >
       {Array.from({ length: sections }, (_, i) => (
         <Section
           key={i}
-          title={<span className="adm-skel" style={{ width: 140 }} />}
+          title={<span className="adm-skel" style={{ width: "8.75rem" }} />}
         >
           <TableSkeleton rows={2} columns={2} framed={false} />
         </Section>
@@ -79,7 +79,7 @@ export const AllLockedNote = () => {
   const { t } = useTranslation("adminInstall");
   return (
     <span className="adm-field-note" data-testid="all-locked-note">
-      <Lock size={12} aria-hidden="true" />
+      <Lock size="0.75rem" aria-hidden="true" />
       {t("locked.note")}
     </span>
   );

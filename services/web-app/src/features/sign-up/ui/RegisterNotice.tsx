@@ -17,7 +17,9 @@ export const RegisterUnavailableCard = ({
   const { t } = useTranslation("auth");
   return (
     <section data-testid="auth-screen-register" data-unavailable={reason}>
-      <h1 style={{ fontSize: 20, fontWeight: 600, margin: "0 0 14px" }}>
+      <h1
+        style={{ fontSize: "1.25rem", fontWeight: 600, margin: "0 0 0.875rem" }}
+      >
         {t("pages.register.title")}
       </h1>
       <ResultFrame
@@ -32,11 +34,11 @@ export const RegisterUnavailableCard = ({
         testId="register-unavailable"
         title={t(`register.unavailable.${reason}.title`)}
       >
-        <p style={{ margin: 0, fontSize: 12.5, color: "var(--fg-2)" }}>
+        <p style={{ margin: 0, fontSize: "0.78125rem", color: "var(--fg-2)" }}>
           {t(`register.unavailable.${reason}.body`)}
         </p>
       </ResultFrame>
-      <div style={{ marginTop: 18 }}>
+      <div style={{ marginTop: "1.125rem" }}>
         <Button asChild style={{ width: "100%", justifyContent: "center" }}>
           <Link to="/login" style={{ textDecoration: "none" }}>
             {t("links.login")}
@@ -72,7 +74,9 @@ export const RegisterResultCard = ({
         : status;
   return (
     <section data-testid="auth-screen-registerResult" data-status={status}>
-      <h1 style={{ fontSize: 20, fontWeight: 600, margin: "0 0 14px" }}>
+      <h1
+        style={{ fontSize: "1.25rem", fontWeight: 600, margin: "0 0 0.875rem" }}
+      >
         {t("pages.register.title")}
       </h1>
       <ResultFrame
@@ -81,16 +85,16 @@ export const RegisterResultCard = ({
         testId="register-result"
         title={t(`register.result.${variant}.title`)}
       >
-        <p style={{ margin: 0, fontSize: 12.5, color: "var(--fg-2)" }}>
+        <p style={{ margin: 0, fontSize: "0.78125rem", color: "var(--fg-2)" }}>
           {t(`register.result.${variant}.body`, { email })}
         </p>
       </ResultFrame>
       {status === "check_email" && link && (
-        <div style={{ marginTop: 14 }}>
+        <div style={{ marginTop: "0.875rem" }}>
           <LinkDelivery kind="verify" link={link} once />
         </div>
       )}
-      <div style={{ marginTop: 18 }}>
+      <div style={{ marginTop: "1.125rem" }}>
         <Button
           asChild
           variant="secondary"

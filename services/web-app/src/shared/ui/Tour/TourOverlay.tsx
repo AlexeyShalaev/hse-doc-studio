@@ -229,18 +229,21 @@ export const TourOverlay = ({
           border: "1px solid var(--border)",
           borderRadius: "var(--r-4)",
           boxShadow: "var(--shadow-pop)",
-          padding: 16,
+          padding: "1rem",
           display: "flex",
           flexDirection: "column",
-          gap: 10,
+          gap: "0.625rem",
           transition: animate ? "top .2s ease, left .2s ease" : undefined,
         }}
       >
-        <div className="flex items-center justify-between" style={{ gap: 8 }}>
+        <div
+          className="flex items-center justify-between"
+          style={{ gap: "0.5rem" }}
+        >
           <span
             className="mono dim"
             aria-live="polite"
-            style={{ fontSize: 10.5, letterSpacing: "0.08em" }}
+            style={{ fontSize: "0.65625rem", letterSpacing: "0.08em" }}
           >
             {badge}
             {badge ? " · " : ""}
@@ -251,9 +254,9 @@ export const TourOverlay = ({
             className="icon-btn"
             aria-label={labels.close}
             onClick={onSkip}
-            style={{ width: 24, height: 24 }}
+            style={{ width: "1.5rem", height: "1.5rem" }}
           >
-            <X size={13} />
+            <X size="0.8125rem" />
           </button>
         </div>
         <div
@@ -263,8 +266,8 @@ export const TourOverlay = ({
           aria-valuenow={index + 1}
           aria-label={labels.progress}
           style={{
-            height: 3,
-            borderRadius: 2,
+            height: "0.1875rem",
+            borderRadius: "0.125rem",
             background: "var(--bg-3)",
             overflow: "hidden",
           }}
@@ -279,19 +282,23 @@ export const TourOverlay = ({
         </div>
         <h2
           id={`tour-title-${stepId}`}
-          style={{ margin: 0, fontSize: 15, fontWeight: 600 }}
+          style={{ margin: 0, fontSize: "0.9375rem", fontWeight: 600 }}
         >
           {title}
         </h2>
         <div
           id={`tour-body-${stepId}`}
-          style={{ fontSize: 13, lineHeight: 1.5, color: "var(--fg-1)" }}
+          style={{
+            fontSize: "0.8125rem",
+            lineHeight: 1.5,
+            color: "var(--fg-1)",
+          }}
         >
           {body}
         </div>
         <div
           className="flex items-center justify-between"
-          style={{ gap: 8, marginTop: 4, flexWrap: "wrap" }}
+          style={{ gap: "0.5rem", marginTop: "0.25rem", flexWrap: "wrap" }}
         >
           <button
             type="button"
@@ -301,7 +308,7 @@ export const TourOverlay = ({
           >
             {labels.skip}
           </button>
-          <div className="flex items-center" style={{ gap: 6 }}>
+          <div className="flex items-center" style={{ gap: "0.375rem" }}>
             {onBack && index > 0 && (
               <button
                 type="button"

@@ -72,14 +72,14 @@ const input = (draft: OidcDraft) => ({
 const SettingsSkeleton = () => (
   <div
     className="flex flex-col"
-    style={{ gap: 16 }}
+    style={{ gap: "1rem" }}
     role="status"
     data-testid="admin-settings-loading"
   >
     {[3, 1, 2].map((rows, i) => (
       <Section
         key={i}
-        title={<span className="adm-skel" style={{ width: 160 }} />}
+        title={<span className="adm-skel" style={{ width: "10rem" }} />}
       >
         <TableSkeleton rows={rows} columns={2} framed={false} />
       </Section>
@@ -148,7 +148,10 @@ export const AdminAuthSettings = ({
   }
   if (!ready) {
     return (
-      <div className="flex items-center" style={{ gap: 8, fontSize: 12 }}>
+      <div
+        className="flex items-center"
+        style={{ gap: "0.5rem", fontSize: "0.75rem" }}
+      >
         <Spinner size="sm" />
       </div>
     );
@@ -341,7 +344,7 @@ export const AdminAuthSettings = ({
   return (
     <div
       className="flex flex-col"
-      style={{ gap: 16, flex: 1 }}
+      style={{ gap: "1rem", flex: 1 }}
       data-testid="admin-auth-settings"
     >
       {registration.data && auth.data && smtp.data ? (

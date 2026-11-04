@@ -25,10 +25,10 @@ export const ServerUnavailable = ({
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
-        padding: 24,
+        padding: "1.5rem",
       }}
     >
-      <div style={{ width: "100%", maxWidth: 460 }}>
+      <div style={{ width: "100%", maxWidth: "28.75rem" }}>
         <ResultFrame
           tone="err"
           role="alert"
@@ -42,7 +42,7 @@ export const ServerUnavailable = ({
               disabled={retrying}
               data-testid="server-unavailable-retry"
             >
-              <RotateCcw size={14} aria-hidden />
+              <RotateCcw size="0.875rem" aria-hidden />
               {t("unavailable.retry")}
             </Button>
           }

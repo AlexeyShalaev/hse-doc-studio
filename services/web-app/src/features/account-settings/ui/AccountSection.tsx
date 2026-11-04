@@ -102,23 +102,30 @@ export const AccountSection = () => {
 
   return (
     <>
-      <div className="flex flex-col" style={{ gap: 4, marginBottom: 4 }}>
-        <h4 style={{ margin: 0, fontSize: 14, fontWeight: 600 }}>
+      <div
+        className="flex flex-col"
+        style={{ gap: "0.25rem", marginBottom: "0.25rem" }}
+      >
+        <h4 style={{ margin: 0, fontSize: "0.875rem", fontWeight: 600 }}>
           {t("section.title")}
         </h4>
-        <p style={{ margin: 0, color: "var(--fg-2)", fontSize: 12 }}>
+        <p style={{ margin: 0, color: "var(--fg-2)", fontSize: "0.75rem" }}>
           {t("section.subtitle")}
         </p>
       </div>
 
       <div
         className="flex flex-col"
-        style={{ gap: 14, paddingBottom: 14, maxWidth: 560 }}
+        style={{
+          gap: "0.875rem",
+          paddingBottom: "0.875rem",
+          maxWidth: "35rem",
+        }}
       >
         {account.isLoading && (
           <div
             className="flex items-center"
-            style={{ gap: 8, fontSize: 12 }}
+            style={{ gap: "0.5rem", fontSize: "0.75rem" }}
             data-testid="account-loading"
           >
             <Spinner size="sm" />

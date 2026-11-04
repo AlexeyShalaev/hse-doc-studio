@@ -19,7 +19,7 @@ export const ConfidentialitySection = ({
       <div
         className="flex items-center justify-between"
         style={{
-          padding: 12,
+          padding: "0.75rem",
           background: isNda ? "var(--c-warn-soft)" : "var(--bg-2)",
           borderRadius: "var(--r-2)",
           border:
@@ -31,14 +31,14 @@ export const ConfidentialitySection = ({
       >
         <div className="flex items-center gap-2">
           <Lock
-            size={14}
+            size="0.875rem"
             style={{ color: isNda ? "var(--c-warn)" : "var(--fg-2)" }}
           />
           <div className="flex flex-col" style={{ gap: 1 }}>
-            <strong style={{ fontSize: 12.5 }}>
+            <strong style={{ fontSize: "0.78125rem" }}>
               {t("projectSettings.ndaTitle")}
             </strong>
-            <span className="dim" style={{ fontSize: 11 }}>
+            <span className="dim" style={{ fontSize: "0.6875rem" }}>
               {t("projectSettings.ndaHint")}
             </span>
           </div>

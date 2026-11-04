@@ -59,7 +59,7 @@ const providerEntry = (
     client.setQueryData(gitRemoteKeys.hostSettings(), known);
   },
   render: () => (
-    <div className="flex flex-col" style={{ gap: 12 }}>
+    <div className="flex flex-col" style={{ gap: "0.75rem" }}>
       {/* Чип сервера живёт на шаге адреса; здесь он рядом, чтобы было видно, откуда ссылка. */}
       <ProviderChip url={urlOf(url)} />
       <AccessStep

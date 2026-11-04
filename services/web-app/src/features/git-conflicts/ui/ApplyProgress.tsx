@@ -20,10 +20,10 @@ const Frame = ({ children }: { children: React.ReactNode }) => (
   <div
     className="card flex flex-col items-center"
     style={{
-      gap: 14,
-      padding: "32px 28px",
+      gap: "0.875rem",
+      padding: "2rem 1.75rem",
       margin: "0 auto",
-      maxWidth: 520,
+      maxWidth: "32.5rem",
       width: "100%",
       textAlign: "center",
     }}
@@ -49,10 +49,19 @@ export const ApplyProgress = ({
   if (completion.kind === "done") {
     return (
       <Frame>
-        <CheckCircle2 size={32} style={{ color: "var(--c-ok)" }} aria-hidden />
+        <CheckCircle2
+          size="2rem"
+          style={{ color: "var(--c-ok)" }}
+          aria-hidden
+        />
         <div role="status">
-          <h3 style={{ margin: 0, fontSize: 15 }}>{t("apply.doneTitle")}</h3>
-          <p className="dim" style={{ margin: "6px 0 0", fontSize: 12.5 }}>
+          <h3 style={{ margin: 0, fontSize: "0.9375rem" }}>
+            {t("apply.doneTitle")}
+          </h3>
+          <p
+            className="dim"
+            style={{ margin: "0.375rem 0 0", fontSize: "0.78125rem" }}
+          >
             {t("apply.doneText")}
           </p>
         </div>
@@ -70,7 +79,7 @@ export const ApplyProgress = ({
     return (
       <Frame>
         <OctagonAlert
-          size={32}
+          size="2rem"
           style={{
             color:
               completion.kind === "failed" ? "var(--c-err)" : "var(--fg-2)",
@@ -78,14 +87,18 @@ export const ApplyProgress = ({
           aria-hidden
         />
         <div role="alert">
-          <h3 style={{ margin: 0, fontSize: 15 }}>
+          <h3 style={{ margin: 0, fontSize: "0.9375rem" }}>
             {completion.kind === "failed"
               ? t("apply.failedTitle")
               : t("apply.cancelledTitle")}
           </h3>
           <p
             className="dim"
-            style={{ margin: "6px 0 0", fontSize: 12.5, lineHeight: 1.5 }}
+            style={{
+              margin: "0.375rem 0 0",
+              fontSize: "0.78125rem",
+              lineHeight: 1.5,
+            }}
           >
             {error
               ? gitErrorMessage(error.code, error.detail)
@@ -96,20 +109,24 @@ export const ApplyProgress = ({
           {pushFailed && (
             <p
               className="dim"
-              style={{ margin: "6px 0 0", fontSize: 12.5, lineHeight: 1.5 }}
+              style={{
+                margin: "0.375rem 0 0",
+                fontSize: "0.78125rem",
+                lineHeight: 1.5,
+              }}
             >
               {t("apply.pushFailedHint")}
             </p>
           )}
         </div>
-        <div className="flex" style={{ gap: 8 }}>
+        <div className="flex" style={{ gap: "0.5rem" }}>
           {pushFailed ? (
             <button
               type="button"
               className="btn primary"
               onClick={onOpenHistory}
             >
-              <History size={13} aria-hidden="true" />
+              <History size="0.8125rem" aria-hidden="true" />
               {t("apply.openHistory")}
             </button>
           ) : (
@@ -143,10 +160,14 @@ export const ApplyProgress = ({
     <Frame>
       <Spinner />
       <div role="status">
-        <h3 style={{ margin: 0, fontSize: 15 }}>{t("apply.title")}</h3>
+        <h3 style={{ margin: 0, fontSize: "0.9375rem" }}>{t("apply.title")}</h3>
         <p
           className="dim"
-          style={{ margin: "6px 0 0", fontSize: 12.5, lineHeight: 1.5 }}
+          style={{
+            margin: "0.375rem 0 0",
+            fontSize: "0.78125rem",
+            lineHeight: 1.5,
+          }}
         >
           {t("apply.text")}
         </p>

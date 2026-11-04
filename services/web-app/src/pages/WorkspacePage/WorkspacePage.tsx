@@ -278,7 +278,7 @@ export const WorkspacePage = ({ canvas }: WorkspacePageProps) => {
       )}
 
       {!viaLink && myRole && readOnlyRole && (
-        <div style={{ padding: "8px 12px" }} data-testid="role-banner">
+        <div style={{ padding: "0.5rem 0.75rem" }} data-testid="role-banner">
           <Notice
             tone="info"
             role="status"

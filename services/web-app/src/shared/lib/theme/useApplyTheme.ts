@@ -1,5 +1,6 @@
 import { useEffect } from "react";
 import { useThemeStore } from "./themeStore";
+import { applyTextScale } from "./textScale";
 import { PREFERS_DARK_QUERY, resolveTheme } from "./resolveTheme";
 
 // Цвет строки состояния и адресной строки мобильного браузера повторяет фон шапки темы.
@@ -14,6 +15,11 @@ const syncThemeColor = (root: HTMLElement): void => {
 export const useApplyTheme = (): void => {
   const theme = useThemeStore((state) => state.theme);
   const density = useThemeStore((state) => state.density);
+  const textScale = useThemeStore((state) => state.textScale);
+
+  useEffect(() => {
+    applyTextScale(document.documentElement, textScale);
+  }, [textScale]);
 
   useEffect(() => {
     document.documentElement.setAttribute("data-density", density);

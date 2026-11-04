@@ -69,7 +69,7 @@ export const OrgDetailView = ({
       onClick={onBack}
       data-testid="org-back"
     >
-      <ArrowLeft size={14} aria-hidden="true" />
+      <ArrowLeft size="0.875rem" aria-hidden="true" />
       {t("detail.back")}
     </button>
   );
@@ -78,11 +78,17 @@ export const OrgDetailView = ({
     return (
       <div className="org-page" role="status" aria-label={t("loading")}>
         {back}
-        <div className="flex items-center" style={{ gap: 12 }}>
-          <span className="adm-skel" style={{ width: 34, height: 34 }} />
-          <div className="flex flex-col" style={{ gap: 8, flex: 1 }}>
-            <span className="adm-skel" style={{ width: 220, height: 14 }} />
-            <span className="adm-skel" style={{ width: 160 }} />
+        <div className="flex items-center" style={{ gap: "0.75rem" }}>
+          <span
+            className="adm-skel"
+            style={{ width: "2.125rem", height: "2.125rem" }}
+          />
+          <div className="flex flex-col" style={{ gap: "0.5rem", flex: 1 }}>
+            <span
+              className="adm-skel"
+              style={{ width: "13.75rem", height: "0.875rem" }}
+            />
+            <span className="adm-skel" style={{ width: "10rem" }} />
           </div>
         </div>
         <TableSkeleton rows={4} columns={3} withAvatar />
@@ -104,7 +110,7 @@ export const OrgDetailView = ({
         <EmptyState
           framed
           testId="org-missing"
-          icon={<SearchX size={18} />}
+          icon={<SearchX size="1.125rem" />}
           title={t("detail.missing.title")}
           description={t("detail.missing.body")}
           action={
@@ -193,7 +199,7 @@ export const OrgDetailView = ({
               description={t("detail.settings.lead")}
             >
               <SettingRow label={t("detail.settings.name")}>
-                <span style={{ fontSize: 13, color: "var(--fg-0)" }}>
+                <span style={{ fontSize: "0.8125rem", color: "var(--fg-0)" }}>
                   {org.name}
                 </span>
               </SettingRow>
@@ -239,7 +245,7 @@ export const OrgDetailView = ({
                           data-testid="org-delete"
                           style={{ pointerEvents: "none" }}
                         >
-                          <Trash2 size={14} aria-hidden="true" />
+                          <Trash2 size="0.875rem" aria-hidden="true" />
                           {t("detail.delete.button")}
                         </Button>
                       </span>
@@ -255,7 +261,7 @@ export const OrgDetailView = ({
                         setConfirming(true);
                       }}
                     >
-                      <Trash2 size={14} aria-hidden="true" />
+                      <Trash2 size="0.875rem" aria-hidden="true" />
                       {t("detail.delete.button")}
                     </Button>
                   )}

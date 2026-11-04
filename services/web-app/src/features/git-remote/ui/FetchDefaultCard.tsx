@@ -57,15 +57,15 @@ export const FetchDefaultCard = () => {
           }
         />
       ) : (
-        <div className="flex flex-col" style={{ gap: 6 }}>
+        <div className="flex flex-col" style={{ gap: "0.375rem" }}>
           <label
             htmlFor="git-fetch-default"
-            style={{ fontSize: 12, fontWeight: 500 }}
+            style={{ fontSize: "0.75rem", fontWeight: 500 }}
           >
             {t("access.fetchDefault.label")}
           </label>
-          <div className="flex items-center" style={{ gap: 8 }}>
-            <div style={{ width: 240, maxWidth: "100%" }}>
+          <div className="flex items-center" style={{ gap: "0.5rem" }}>
+            <div style={{ width: "15rem", maxWidth: "100%" }}>
               <Select
                 id="git-fetch-default"
                 placeholder={t("access.fetchDefault.label")}

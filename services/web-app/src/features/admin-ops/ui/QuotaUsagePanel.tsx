@@ -98,7 +98,7 @@ export const QuotaUsagePanel = () => {
           <UsageList lines={usage.data.lines} />
           <div
             className="flex"
-            style={{ gap: 8, flexWrap: "wrap", marginTop: 8 }}
+            style={{ gap: "0.5rem", flexWrap: "wrap", marginTop: "0.5rem" }}
           >
             {COUNTED.map((kind) => (
               <Button
@@ -118,7 +118,7 @@ export const QuotaUsagePanel = () => {
                 }}
                 data-testid={`usage-reset-${kind}`}
               >
-                <RotateCcw size={13} aria-hidden="true" />
+                <RotateCcw size="0.8125rem" aria-hidden="true" />
                 {t("usageAdmin.reset", { kind: quota.t(`kindShort.${kind}`) })}
               </Button>
             ))}

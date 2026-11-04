@@ -38,11 +38,11 @@ export const AccountDevicesSection = () => {
     >
       <Section title={t("account.title")} description={t("account.lead")}>
         {items.length === 0 ? (
-          <p className="dim" style={{ margin: 0, fontSize: 12 }}>
+          <p className="dim" style={{ margin: 0, fontSize: "0.75rem" }}>
             {t("account.empty")}
           </p>
         ) : (
-          <div className="flex flex-col" style={{ gap: 10 }}>
+          <div className="flex flex-col" style={{ gap: "0.625rem" }}>
             {items.map((device) => (
               <DeviceCard
                 key={device.id}
@@ -57,7 +57,7 @@ export const AccountDevicesSection = () => {
                   <>
                     <span
                       className="dim"
-                      style={{ fontSize: 11.5, alignSelf: "center" }}
+                      style={{ fontSize: "0.71875rem", alignSelf: "center" }}
                     >
                       {t("account.projects", { count: device.projects_count })}
                     </span>

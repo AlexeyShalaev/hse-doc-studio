@@ -144,7 +144,7 @@ export const DataTable = <T,>({
     return (
       <div
         className={clsx("dt-cards-wrap", className)}
-        style={{ display: "flex", flexDirection: "column", gap: 10 }}
+        style={{ display: "flex", flexDirection: "column", gap: "0.625rem" }}
       >
         <div
           aria-label={caption}
@@ -274,7 +274,7 @@ export const DataTable = <T,>({
   return (
     <div
       className={clsx(className)}
-      style={{ display: "flex", flexDirection: "column", gap: 10 }}
+      style={{ display: "flex", flexDirection: "column", gap: "0.625rem" }}
     >
       <div
         className="card flat"
@@ -292,7 +292,7 @@ export const DataTable = <T,>({
           style={{
             width: "100%",
             borderCollapse: "collapse",
-            fontSize: 12.5,
+            fontSize: "0.78125rem",
             // С заданными ширинами раскладка не зависит от содержимого строк.
             tableLayout: columnWidths ? "fixed" : undefined,
           }}
@@ -358,12 +358,12 @@ export const DataTable = <T,>({
                         top: 0,
                         zIndex: 1,
                         textAlign: "left",
-                        padding: "9px 12px",
+                        padding: "0.5625rem 0.75rem",
                         background: "var(--bg-2)",
                         borderBottom: "1px solid var(--border)",
                         color: "var(--fg-2)",
                         fontWeight: 500,
-                        fontSize: 11.5,
+                        fontSize: "0.71875rem",
                         whiteSpace: "nowrap",
                       }}
                     >
@@ -376,7 +376,7 @@ export const DataTable = <T,>({
                             cursor: "pointer",
                             display: "inline-flex",
                             alignItems: "center",
-                            gap: 5,
+                            gap: "0.3125rem",
                             color: dir ? "var(--fg-0)" : "inherit",
                           }}
                         >
@@ -385,12 +385,12 @@ export const DataTable = <T,>({
                             header.getContext(),
                           )}
                           {dir === "asc" ? (
-                            <ArrowUp size={12} aria-hidden="true" />
+                            <ArrowUp size="0.75rem" aria-hidden="true" />
                           ) : dir === "desc" ? (
-                            <ArrowDown size={12} aria-hidden="true" />
+                            <ArrowDown size="0.75rem" aria-hidden="true" />
                           ) : (
                             <ArrowUpDown
-                              size={12}
+                              size="0.75rem"
                               aria-hidden="true"
                               className="dt-sort-hint"
                             />
@@ -420,13 +420,13 @@ export const DataTable = <T,>({
               Array.from({ length: skeletonRows }, (_, index) => (
                 <tr key={`sk-${String(index)}`} aria-hidden="true">
                   {columns.map((_, cell) => (
-                    <td key={cell} style={{ padding: "12px" }}>
+                    <td key={cell} style={{ padding: "0.75rem" }}>
                       <span
                         style={{
                           display: "block",
-                          height: 10,
+                          height: "0.625rem",
                           width: `${String(45 + ((index * 17 + cell * 23) % 45))}%`,
-                          borderRadius: 4,
+                          borderRadius: "0.25rem",
                           background: "var(--bg-3)",
                         }}
                       />
@@ -472,7 +472,7 @@ export const DataTable = <T,>({
                       <td
                         key={cell.id}
                         style={{
-                          padding: "10px 12px",
+                          padding: "0.625rem 0.75rem",
                           color: "var(--fg-1)",
                           verticalAlign: "middle",
                         }}

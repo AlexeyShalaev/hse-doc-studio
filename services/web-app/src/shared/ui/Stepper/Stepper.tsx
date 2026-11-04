@@ -59,7 +59,7 @@ const markStyle = (
     alignItems: "center",
     justifyContent: "center",
     flexShrink: 0,
-    fontSize: 10.5,
+    fontSize: "0.65625rem",
     fontWeight: 700,
     border: "1.5px solid var(--border-strong)",
     color: "var(--fg-2)",
@@ -116,7 +116,7 @@ export const Stepper = ({
         padding: 0,
         display: "flex",
         flexDirection: vertical ? "column" : "row",
-        gap: vertical ? 10 : 8,
+        gap: vertical ? "0.625rem" : "0.5rem",
         alignItems: vertical ? "stretch" : "center",
       }}
     >
@@ -131,7 +131,7 @@ export const Stepper = ({
             style={{
               display: "flex",
               alignItems: vertical ? "flex-start" : "center",
-              gap: 8,
+              gap: "0.5rem",
               minWidth: 0,
               flex: vertical
                 ? undefined
@@ -144,9 +144,9 @@ export const Stepper = ({
               {spinning ? (
                 <Spinner size="sm" />
               ) : state === "done" ? (
-                <Check size={12} strokeWidth={3} />
+                <Check size="0.75rem" strokeWidth={3} />
               ) : state === "error" ? (
-                <X size={12} strokeWidth={3} />
+                <X size="0.75rem" strokeWidth={3} />
               ) : (
                 index + 1
               )}
@@ -158,7 +158,7 @@ export const Stepper = ({
               <span
                 className="truncate"
                 style={{
-                  fontSize: 12.5,
+                  fontSize: "0.78125rem",
                   fontWeight: state === "current" ? 600 : 500,
                   color: state === "upcoming" ? "var(--fg-2)" : "var(--fg-0)",
                 }}
@@ -170,13 +170,13 @@ export const Stepper = ({
                 </span>
               </span>
               {vertical && step.description && (
-                <span className="dim" style={{ fontSize: 11 }}>
+                <span className="dim" style={{ fontSize: "0.6875rem" }}>
                   {step.description}
                 </span>
               )}
             </span>
             {vertical && step.meta != null && (
-              <span className="dim tnum" style={{ fontSize: 11 }}>
+              <span className="dim tnum" style={{ fontSize: "0.6875rem" }}>
                 {step.meta}
               </span>
             )}
@@ -185,8 +185,8 @@ export const Stepper = ({
                 aria-hidden="true"
                 style={{
                   flex: 1,
-                  height: 1.5,
-                  minWidth: 12,
+                  height: "0.09375rem",
+                  minWidth: "0.75rem",
                   background:
                     index < currentIndex
                       ? "var(--c-ok)"

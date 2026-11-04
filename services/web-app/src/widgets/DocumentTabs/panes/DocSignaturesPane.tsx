@@ -84,7 +84,7 @@ export const DocSignaturesPane = ({
     return (
       <div
         className="flex items-center justify-center"
-        style={{ padding: 32, flex: 1, minHeight: 0 }}
+        style={{ padding: "2rem", flex: 1, minHeight: 0 }}
       >
         <Spinner size="sm" />
       </div>
@@ -100,20 +100,23 @@ export const DocSignaturesPane = ({
     return (
       <div
         className="flex flex-col items-center justify-center"
-        style={{ flex: 1, padding: 40, gap: 16, minHeight: 0 }}
+        style={{ flex: 1, padding: "2.5rem", gap: "1rem", minHeight: 0 }}
       >
         <div
           className="stripes flex items-center justify-center"
           style={{
-            width: 220,
-            height: 280,
-            borderRadius: 6,
+            width: "13.75rem",
+            height: "17.5rem",
+            borderRadius: "0.375rem",
             border: "1px solid var(--border-strong)",
             color: "var(--fg-3)",
           }}
         >
-          <div className="flex flex-col items-center" style={{ gap: 6 }}>
-            <ShieldOff size={28} />
+          <div
+            className="flex flex-col items-center"
+            style={{ gap: "0.375rem" }}
+          >
+            <ShieldOff size="1.75rem" />
           </div>
         </div>
         <p
@@ -121,8 +124,8 @@ export const DocSignaturesPane = ({
           style={{
             margin: 0,
             textAlign: "center",
-            maxWidth: 380,
-            fontSize: 12.5,
+            maxWidth: "23.75rem",
+            fontSize: "0.78125rem",
           }}
         >
           {t("signatures.customUnsignableHint")}
@@ -198,7 +201,7 @@ export const DocSignaturesPane = ({
         // `minmax(0, 1fr)` (not the default `1fr` ≡ `minmax(auto, 1fr)`) lets the
         // preview column shrink below its content's intrinsic width, so the PDF
         // pane narrows with the layout instead of forcing an overflow.
-        gridTemplateColumns: "300px minmax(0, 1fr)",
+        gridTemplateColumns: "18.75rem minmax(0, 1fr)",
         overflow: "hidden",
       }}
     >
@@ -237,14 +240,17 @@ export const DocSignaturesPane = ({
           <div
             className="flex items-center gap-2"
             style={{
-              padding: "10px 14px",
+              padding: "0.625rem 0.875rem",
               borderBottom: "1px solid var(--border)",
               background: "var(--c-info-soft)",
-              fontSize: 11.5,
+              fontSize: "0.71875rem",
               color: "var(--fg-1)",
             }}
           >
-            <Info size={13} style={{ color: "var(--c-info)", flexShrink: 0 }} />
+            <Info
+              size="0.8125rem"
+              style={{ color: "var(--c-info)", flexShrink: 0 }}
+            />
             <span>{t("signatures.customConvertiblePendingPreview")}</span>
           </div>
         )}

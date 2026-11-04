@@ -74,7 +74,7 @@ export const ConfirmDialog = ({
     >
       <div
         className="flex flex-col"
-        style={{ gap: 10, fontSize: 13, color: "var(--fg-1)" }}
+        style={{ gap: "0.625rem", fontSize: "0.8125rem", color: "var(--fg-1)" }}
         data-testid={testId}
       >
         <div>{body}</div>
@@ -110,8 +110,8 @@ export const SecretWithCommand = ({
           <div
             className="flex flex-col"
             style={{
-              gap: 6,
-              paddingTop: 12,
+              gap: "0.375rem",
+              paddingTop: "0.75rem",
               borderTop: "1px solid var(--border)",
             }}
           >
@@ -159,7 +159,7 @@ export const CreateTokenForm = ({
   return (
     <form
       className="flex flex-col"
-      style={{ gap: 14 }}
+      style={{ gap: "0.875rem" }}
       noValidate
       data-testid="token-create-form"
       onSubmit={(event) => {
@@ -216,7 +216,7 @@ export const CreateTokenForm = ({
       {failure && <FailureNotice failure={failure} />}
       <div
         className="flex items-center"
-        style={{ gap: 8, justifyContent: "flex-end" }}
+        style={{ gap: "0.5rem", justifyContent: "flex-end" }}
       >
         <Button
           type="button"

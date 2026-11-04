@@ -576,11 +576,11 @@ export const PdfViewer = ({
       <div
         className="pdf-toolbar flex items-center"
         style={{
-          padding: "6px 10px",
+          padding: "0.375rem 0.625rem",
           borderBottom: "1px solid var(--border)",
           background: "var(--bg-1)",
-          fontSize: 11.5,
-          gap: 8,
+          fontSize: "0.71875rem",
+          gap: "0.5rem",
           flexShrink: 0,
           flexWrap: "wrap",
         }}
@@ -599,7 +599,7 @@ export const PdfViewer = ({
               setSidebarTab("outline");
             }}
           >
-            <List size={13} />
+            <List size="0.8125rem" />
           </button>
           <button
             type="button"
@@ -613,7 +613,7 @@ export const PdfViewer = ({
               setSidebarTab("thumbs");
             }}
           >
-            <Images size={13} />
+            <Images size="0.8125rem" />
           </button>
         </div>
 
@@ -626,7 +626,7 @@ export const PdfViewer = ({
               goToPage(Math.max(1, currentPage - 1));
             }}
           >
-            <ChevronLeft size={13} />
+            <ChevronLeft size="0.8125rem" />
           </button>
           <input
             ref={pageInputRef}
@@ -646,13 +646,13 @@ export const PdfViewer = ({
             }}
             aria-label={t("nav.pageNumber")}
             style={{
-              width: 38,
+              width: "2.375rem",
               textAlign: "center",
-              fontSize: 11.5,
-              padding: "1px 2px",
+              fontSize: "0.71875rem",
+              padding: "1px 0.125rem",
               background: "var(--bg-0)",
               border: "1px solid var(--border)",
-              borderRadius: 4,
+              borderRadius: "0.25rem",
               color: "var(--fg-0)",
             }}
           />
@@ -665,7 +665,7 @@ export const PdfViewer = ({
               goToPage(Math.min(pages.length, currentPage + 1));
             }}
           >
-            <ChevronRight size={13} />
+            <ChevronRight size="0.8125rem" />
           </button>
         </div>
 
@@ -677,7 +677,7 @@ export const PdfViewer = ({
               zoomBy(0.8);
             }}
           >
-            <Minus size={12} />
+            <Minus size="0.75rem" />
           </button>
           <span
             className="mono"
@@ -685,8 +685,8 @@ export const PdfViewer = ({
               display: "inline-flex",
               alignItems: "center",
               gap: 1,
-              padding: "0 6px",
-              minWidth: 44,
+              padding: "0 0.375rem",
+              minWidth: "2.75rem",
               justifyContent: "center",
             }}
           >
@@ -713,9 +713,9 @@ export const PdfViewer = ({
               title={t("zoom.percentTitle")}
               inputMode="numeric"
               style={{
-                width: 26,
+                width: "1.625rem",
                 textAlign: "right",
-                fontSize: 11.5,
+                fontSize: "0.71875rem",
                 fontFamily: "inherit",
                 padding: 0,
                 background: "transparent",
@@ -733,7 +733,7 @@ export const PdfViewer = ({
               zoomBy(1.25);
             }}
           >
-            <Plus size={12} />
+            <Plus size="0.75rem" />
           </button>
           <button
             type="button"
@@ -743,7 +743,7 @@ export const PdfViewer = ({
               setFit(true);
             }}
           >
-            <Scan size={12} />
+            <Scan size="0.75rem" />
           </button>
         </div>
 
@@ -758,7 +758,7 @@ export const PdfViewer = ({
                 setGuidesOn((v) => !v);
               }}
             >
-              <Frame size={12} />
+              <Frame size="0.75rem" />
             </button>
           )}
           <button
@@ -770,7 +770,7 @@ export const PdfViewer = ({
               setMeasureMode((v) => !v);
             }}
           >
-            <Ruler size={12} />
+            <Ruler size="0.75rem" />
           </button>
           <button
             type="button"
@@ -781,7 +781,7 @@ export const PdfViewer = ({
               setInvert((v) => !v);
             }}
           >
-            <Moon size={12} />
+            <Moon size="0.75rem" />
           </button>
           <button
             type="button"
@@ -791,7 +791,7 @@ export const PdfViewer = ({
               window.open(fetchUrl, "_blank", "noopener");
             }}
           >
-            <Printer size={12} />
+            <Printer size="0.75rem" />
           </button>
         </div>
 
@@ -807,11 +807,11 @@ export const PdfViewer = ({
             style={{
               background: "var(--bg-0)",
               border: "1px solid var(--border)",
-              borderRadius: 6,
-              padding: "3px 8px",
+              borderRadius: "0.375rem",
+              padding: "0.1875rem 0.5rem",
             }}
           >
-            <Search size={13} style={{ color: "var(--fg-3)" }} />
+            <Search size="0.8125rem" style={{ color: "var(--fg-3)" }} />
             <input
               ref={searchInputRef}
               value={query}
@@ -821,8 +821,8 @@ export const PdfViewer = ({
               placeholder={t("search.placeholderWithShortcut")}
               aria-label={t("search.aria")}
               style={{
-                width: 210,
-                fontSize: 12.5,
+                width: "13.125rem",
+                fontSize: "0.78125rem",
                 background: "transparent",
                 border: 0,
                 outline: "none",
@@ -843,7 +843,7 @@ export const PdfViewer = ({
                   stepMatch(-1);
                 }}
               >
-                <ChevronLeft size={12} />
+                <ChevronLeft size="0.75rem" />
               </button>
               <button
                 type="button"
@@ -853,7 +853,7 @@ export const PdfViewer = ({
                   stepMatch(1);
                 }}
               >
-                <ChevronRight size={12} />
+                <ChevronRight size="0.75rem" />
               </button>
             </>
           )}
@@ -875,12 +875,12 @@ export const PdfViewer = ({
           <div
             className="pdf-sidebar"
             style={{
-              width: sidebarTab === "thumbs" ? 168 : 240,
+              width: sidebarTab === "thumbs" ? "10.5rem" : "15rem",
               flexShrink: 0,
               overflowY: "auto",
               borderRight: "1px solid var(--border)",
               background: "var(--bg-1)",
-              padding: "6px 4px",
+              padding: "0.375rem 0.25rem",
             }}
           >
             {sidebarTab === "outline" && outline.length > 0 && (
@@ -942,12 +942,15 @@ export const PdfViewer = ({
           }}
         >
           {status === "loading" && (
-            <div className="flex justify-center" style={{ padding: 40 }}>
+            <div className="flex justify-center" style={{ padding: "2.5rem" }}>
               <Spinner />
             </div>
           )}
           {status === "error" && (
-            <div className="dim" style={{ padding: 24, fontSize: 12.5 }}>
+            <div
+              className="dim"
+              style={{ padding: "1.5rem", fontSize: "0.78125rem" }}
+            >
               {t("content.loadError")}
             </div>
           )}
@@ -993,18 +996,18 @@ export const PdfViewer = ({
         >
           {onAskAgent && (
             <button type="button" onClick={askAgentSelection}>
-              <Sparkles size={12} />
+              <Sparkles size="0.75rem" />
               {t("selection.askAgent")}
             </button>
           )}
           {onFindInSource && (
             <button type="button" onClick={findSelectionInSource}>
-              <FileSearch size={12} />
+              <FileSearch size="0.75rem" />
               {t("selection.findInSource")}
             </button>
           )}
           <button type="button" onClick={copySelection}>
-            <Copy size={12} />
+            <Copy size="0.75rem" />
             {t("selection.copy")}
           </button>
         </div>

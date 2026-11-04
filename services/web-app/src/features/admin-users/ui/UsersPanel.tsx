@@ -428,7 +428,7 @@ export const UsersPanel = ({
             <PickerFilter
               label={t("filters.org")}
               source={ORGS}
-              icon={<Building2 size={13} aria-hidden="true" />}
+              icon={<Building2 size="0.8125rem" aria-hidden="true" />}
               testId="users-filter-org"
               searchPlaceholder={t("filters.orgSearch")}
               value={list.filter("org") || null}
@@ -477,7 +477,7 @@ export const UsersPanel = ({
         onResetFilters={list.reset}
         emptyTitle={t("users.empty.title")}
         emptyHint={t("users.empty.body")}
-        emptyIcon={<Users size={18} />}
+        emptyIcon={<Users size="1.125rem" />}
         columnWidths={COLUMN_WIDTHS}
         selectedRowId={openId}
         onRowClick={(u) => {

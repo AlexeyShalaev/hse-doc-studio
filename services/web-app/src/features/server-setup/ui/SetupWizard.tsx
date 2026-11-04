@@ -25,7 +25,7 @@ const DEFAULT_DRAFT: SettingsDraft = {
 const WizardLoading = () => (
   <div
     className="flex justify-center"
-    style={{ padding: "32px 0" }}
+    style={{ padding: "2rem 0" }}
     data-testid="auth-loading"
   >
     <Spinner />
@@ -75,7 +75,9 @@ export const SetupWizard = ({ signIn = null }: SetupWizardProps) => {
             </Button>
           }
         >
-          <p style={{ margin: 0, fontSize: 12.5, color: "var(--fg-2)" }}>
+          <p
+            style={{ margin: 0, fontSize: "0.78125rem", color: "var(--fg-2)" }}
+          >
             {t("setup.unavailable.body")}
           </p>
         </ResultFrame>

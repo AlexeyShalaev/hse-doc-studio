@@ -56,7 +56,7 @@ export const IdentitiesCard = ({
       {status === "loading" && (
         <div
           className="flex items-center"
-          style={{ gap: 8, fontSize: 12 }}
+          style={{ gap: "0.5rem", fontSize: "0.75rem" }}
           data-testid="identities-loading"
         >
           <Spinner size="sm" />
@@ -99,25 +99,25 @@ export const IdentitiesCard = ({
                   data-testid={`identity-${identity.id}`}
                   className="flex items-center"
                   style={{
-                    gap: 12,
-                    padding: "10px 0",
+                    gap: "0.75rem",
+                    padding: "0.625rem 0",
                     borderBottom: "1px dashed var(--border)",
                   }}
                 >
                   <Icon
-                    size={18}
+                    size="1.125rem"
                     aria-hidden="true"
                     style={{ color: "var(--fg-2)", flexShrink: 0 }}
                   />
                   <div
                     className="flex flex-col"
-                    style={{ gap: 2, flex: 1, minWidth: 0 }}
+                    style={{ gap: "0.125rem", flex: 1, minWidth: 0 }}
                   >
                     <span
                       className="flex items-center"
                       style={{
-                        gap: 8,
-                        fontSize: 13,
+                        gap: "0.5rem",
+                        fontSize: "0.8125rem",
                         fontWeight: 500,
                         flexWrap: "wrap",
                       }}
@@ -127,7 +127,9 @@ export const IdentitiesCard = ({
                         <Badge variant="warning">{t("identities.only")}</Badge>
                       )}
                     </span>
-                    <span style={{ fontSize: 11.5, color: "var(--fg-2)" }}>
+                    <span
+                      style={{ fontSize: "0.71875rem", color: "var(--fg-2)" }}
+                    >
                       {password
                         ? t("identities.passwordHint")
                         : (identity.email ?? t("identities.noEmail"))}
@@ -140,7 +142,7 @@ export const IdentitiesCard = ({
                     confirmId === identity.id ? (
                       <div
                         className="flex"
-                        style={{ gap: 6, flexShrink: 0 }}
+                        style={{ gap: "0.375rem", flexShrink: 0 }}
                         role="group"
                         aria-label={t("identities.confirmUnlink", {
                           name: title,
@@ -180,12 +182,12 @@ export const IdentitiesCard = ({
                         onClick={() => {
                           if (!busy) setConfirmId(identity.id);
                         }}
-                        style={{ gap: 6, flexShrink: 0 }}
+                        style={{ gap: "0.375rem", flexShrink: 0 }}
                       >
                         {busy ? (
                           <Spinner size="sm" />
                         ) : (
-                          <Unlink size={12} aria-hidden="true" />
+                          <Unlink size="0.75rem" aria-hidden="true" />
                         )}
                         {t("identities.unlink")}
                       </Button>
@@ -193,9 +195,9 @@ export const IdentitiesCard = ({
                   ) : (
                     <span
                       style={{
-                        fontSize: 11.5,
+                        fontSize: "0.71875rem",
                         color: "var(--fg-2)",
-                        maxWidth: 170,
+                        maxWidth: "10.625rem",
                         textAlign: "right",
                       }}
                       data-testid={`identity-locked-${identity.id}`}
@@ -227,8 +229,8 @@ export const IdentitiesCard = ({
           )}
 
           {free.length > 0 && (
-            <div className="flex flex-col" style={{ gap: 8 }}>
-              <span style={{ fontSize: 12.5, fontWeight: 500 }}>
+            <div className="flex flex-col" style={{ gap: "0.5rem" }}>
+              <span style={{ fontSize: "0.78125rem", fontWeight: 500 }}>
                 {t("identities.addTitle")}
               </span>
               <div style={ACTIONS}>
@@ -241,7 +243,7 @@ export const IdentitiesCard = ({
                       variant="outline"
                       aria-disabled={linkingId !== null}
                       data-testid={`identity-link-${provider.id}`}
-                      style={{ gap: 8 }}
+                      style={{ gap: "0.5rem" }}
                       onClick={() => {
                         if (linkingId === null) onLink(provider.id);
                       }}
@@ -249,7 +251,7 @@ export const IdentitiesCard = ({
                       {busy ? (
                         <Spinner size="sm" />
                       ) : (
-                        <Link2 size={14} aria-hidden="true" />
+                        <Link2 size="0.875rem" aria-hidden="true" />
                       )}
                       {t("identities.link", { name: provider.label })}
                     </Button>

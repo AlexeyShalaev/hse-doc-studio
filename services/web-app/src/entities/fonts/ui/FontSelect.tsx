@@ -56,7 +56,7 @@ export const FontSelect = ({
   }, [installedFamilies, value]);
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: "0.375rem" }}>
       <select
         className="input"
         value={value}
@@ -91,12 +91,12 @@ export const FontSelect = ({
           title={value}
           style={{
             fontFamily: `'${previewFamily}'`,
-            fontSize: 16,
+            fontSize: "1rem",
             lineHeight: 1.3,
             color: "var(--fg-1)",
-            padding: "5px 9px",
+            padding: "0.3125rem 0.5625rem",
             border: "1px solid var(--border)",
-            borderRadius: 6,
+            borderRadius: "0.375rem",
             background: "var(--bg-2)",
             overflow: "hidden",
             textOverflow: "ellipsis",

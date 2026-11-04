@@ -84,15 +84,15 @@ export const LocalRuntimePanel = () => {
   };
 
   return (
-    <div className="flex flex-col" style={{ gap: 12 }}>
-      <div className="flex flex-col" style={{ gap: 4 }}>
-        <div className="flex items-center" style={{ gap: 8 }}>
-          <Server size={13} style={{ color: "var(--fg-2)" }} />
-          <span style={{ fontSize: 12.5, fontWeight: 600 }}>
+    <div className="flex flex-col" style={{ gap: "0.75rem" }}>
+      <div className="flex flex-col" style={{ gap: "0.25rem" }}>
+        <div className="flex items-center" style={{ gap: "0.5rem" }}>
+          <Server size="0.8125rem" style={{ color: "var(--fg-2)" }} />
+          <span style={{ fontSize: "0.78125rem", fontWeight: 600 }}>
             {t("panel.title")}
           </span>
         </div>
-        <span className="dim" style={{ fontSize: 11 }}>
+        <span className="dim" style={{ fontSize: "0.6875rem" }}>
           {t("panel.description")}
         </span>
       </div>
@@ -103,24 +103,24 @@ export const LocalRuntimePanel = () => {
       <div
         className="flex items-center justify-between"
         style={{
-          gap: 12,
-          padding: "10px 12px",
-          borderRadius: 6,
+          gap: "0.75rem",
+          padding: "0.625rem 0.75rem",
+          borderRadius: "0.375rem",
           border: "1px solid var(--border)",
           background: "var(--bg-1)",
         }}
       >
         <div
           className="flex items-center"
-          style={{ gap: 8, minWidth: 0, fontSize: 12 }}
+          style={{ gap: "0.5rem", minWidth: 0, fontSize: "0.75rem" }}
         >
           {statusQuery.isLoading ? (
             <Spinner size="sm" />
           ) : (
             <span
               style={{
-                width: 8,
-                height: 8,
+                width: "0.5rem",
+                height: "0.5rem",
                 borderRadius: "50%",
                 background: running ? "var(--c-ok)" : "var(--fg-3)",
                 flexShrink: 0,
@@ -129,13 +129,16 @@ export const LocalRuntimePanel = () => {
           )}
           <span style={{ fontWeight: 500 }}>{t(`mode.${mode}`)}</span>
           {status?.version && (
-            <span className="mono dim" style={{ fontSize: 10.5 }}>
+            <span className="mono dim" style={{ fontSize: "0.65625rem" }}>
               v{status.version}
             </span>
           )}
         </div>
 
-        <div className="flex items-center" style={{ gap: 6, flexShrink: 0 }}>
+        <div
+          className="flex items-center"
+          style={{ gap: "0.375rem", flexShrink: 0 }}
+        >
           {mode === "docker" && (
             <button
               type="button"
@@ -144,7 +147,7 @@ export const LocalRuntimePanel = () => {
               disabled={busy}
               title={t("controls.stopTitle")}
             >
-              <Power size={11} />
+              <Power size="0.6875rem" />
               {t("controls.stop")}
             </button>
           )}
@@ -154,7 +157,7 @@ export const LocalRuntimePanel = () => {
               className="btn xs"
               onClick={openEngineInstall}
             >
-              <HardDriveDownload size={11} />
+              <HardDriveDownload size="0.6875rem" />
               {t("controls.downloadEngine")}
             </button>
           )}
@@ -165,7 +168,7 @@ export const LocalRuntimePanel = () => {
               onClick={handleStart}
               disabled={busy}
             >
-              <Play size={11} />
+              <Play size="0.6875rem" />
               {t("controls.start")}
             </button>
           )}
@@ -175,15 +178,19 @@ export const LocalRuntimePanel = () => {
       {mode === "none" && !dockerAvailable && (
         <div
           className="flex items-start"
-          style={{ gap: 6, fontSize: 11, color: "var(--c-warn)" }}
+          style={{
+            gap: "0.375rem",
+            fontSize: "0.6875rem",
+            color: "var(--c-warn)",
+          }}
         >
-          <Cpu size={12} style={{ marginTop: 1, flexShrink: 0 }} />
+          <Cpu size="0.75rem" style={{ marginTop: 1, flexShrink: 0 }} />
           <span>{t("panel.dockerUnavailable")}</span>
         </div>
       )}
 
       {!canInstallModels && (
-        <span className="dim" style={{ fontSize: 11 }}>
+        <span className="dim" style={{ fontSize: "0.6875rem" }}>
           {dockerAvailable && !engineInstalled
             ? t("panel.downloadEngineFirst")
             : t("panel.startRuntimeFirst")}

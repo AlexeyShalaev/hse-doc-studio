@@ -57,11 +57,18 @@ export const FilesPanel = ({ projectId }: FilesPanelProps) => {
               setIsShowingHidden((shown) => !shown);
             }}
           >
-            {isShowingHidden ? <EyeOff size={12} /> : <Eye size={12} />}
+            {isShowingHidden ? (
+              <EyeOff size="0.75rem" />
+            ) : (
+              <Eye size="0.75rem" />
+            )}
           </button>
         </div>
       </div>
-      <div className="panel-body" style={{ padding: "4px 2px 10px" }}>
+      <div
+        className="panel-body"
+        style={{ padding: "0.25rem 0.125rem 0.625rem" }}
+      >
         <FileTree
           projectId={projectId}
           selectedPath={selectedPath}

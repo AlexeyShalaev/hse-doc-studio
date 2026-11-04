@@ -23,11 +23,11 @@ export const HelpButton = () => {
       onClick={toggle}
       style={
         isOpen
-          ? { width: 32, height: 32, color: "var(--accent)" }
-          : { width: 32, height: 32 }
+          ? { width: "2rem", height: "2rem", color: "var(--accent)" }
+          : { width: "2rem", height: "2rem" }
       }
     >
-      <BookOpen size={16} />
+      <BookOpen size="1rem" />
     </button>
   );
 };

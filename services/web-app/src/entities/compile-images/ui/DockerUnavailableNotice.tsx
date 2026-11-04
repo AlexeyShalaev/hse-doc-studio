@@ -44,24 +44,33 @@ export const DockerUnavailableNotice = ({
     <div
       className="flex items-start"
       style={{
-        gap: 10,
-        padding: 12,
-        borderRadius: 6,
+        gap: "0.625rem",
+        padding: "0.75rem",
+        borderRadius: "0.375rem",
         border: "1px solid var(--c-err)",
         background: "var(--c-err-soft)",
       }}
     >
       <AlertTriangle
-        size={14}
+        size="0.875rem"
         style={{ color: "var(--c-err)", marginTop: 1, flexShrink: 0 }}
       />
-      <div className="flex flex-col" style={{ gap: 6, minWidth: 0, flex: 1 }}>
-        <div style={{ fontSize: 12.5, fontWeight: 600, color: "var(--c-err)" }}>
+      <div
+        className="flex flex-col"
+        style={{ gap: "0.375rem", minWidth: 0, flex: 1 }}
+      >
+        <div
+          style={{
+            fontSize: "0.78125rem",
+            fontWeight: 600,
+            color: "var(--c-err)",
+          }}
+        >
           {isPermission
             ? t("images.dockerPermissionTitle")
             : t("images.dockerUnavailable")}
         </div>
-        <div className="dim" style={{ fontSize: 11.5 }}>
+        <div className="dim" style={{ fontSize: "0.71875rem" }}>
           {isPermission
             ? t("images.dockerPermissionHint")
             : (status?.detail ?? fallbackDetail)}
@@ -69,15 +78,15 @@ export const DockerUnavailableNotice = ({
 
         {isPermission && (
           <>
-            <div className="dim" style={{ fontSize: 11.5 }}>
+            <div className="dim" style={{ fontSize: "0.71875rem" }}>
               {t("images.dockerPermissionSteps")}
             </div>
             <div
               className="flex items-center"
               style={{
-                gap: 8,
-                padding: "6px 8px",
-                borderRadius: 4,
+                gap: "0.5rem",
+                padding: "0.375rem 0.5rem",
+                borderRadius: "0.25rem",
                 background: "var(--c-bg)",
                 border: "1px solid var(--c-border)",
               }}
@@ -85,7 +94,7 @@ export const DockerUnavailableNotice = ({
               <pre
                 className="mono"
                 style={{
-                  fontSize: 11,
+                  fontSize: "0.6875rem",
                   margin: 0,
                   overflowX: "auto",
                   flex: 1,
@@ -101,7 +110,7 @@ export const DockerUnavailableNotice = ({
                 title={t("images.dockerFixCopy")}
                 style={{ flexShrink: 0 }}
               >
-                <Copy size={12} />
+                <Copy size="0.75rem" />
                 {t("images.dockerFixCopy")}
               </button>
             </div>
@@ -109,15 +118,15 @@ export const DockerUnavailableNotice = ({
               <details>
                 <summary
                   className="dim"
-                  style={{ fontSize: 11, cursor: "pointer" }}
+                  style={{ fontSize: "0.6875rem", cursor: "pointer" }}
                 >
                   {t("images.dockerRawError")}
                 </summary>
                 <pre
                   className="mono dim"
                   style={{
-                    fontSize: 10.5,
-                    marginTop: 4,
+                    fontSize: "0.65625rem",
+                    marginTop: "0.25rem",
                     whiteSpace: "pre-wrap",
                     wordBreak: "break-all",
                   }}

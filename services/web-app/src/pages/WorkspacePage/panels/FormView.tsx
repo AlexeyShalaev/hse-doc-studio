@@ -27,7 +27,12 @@ export const FormView = ({ project, formId }: FormViewProps) => {
 
   return (
     <div
-      style={{ padding: "24px 32px", overflowY: "auto", flex: 1, minHeight: 0 }}
+      style={{
+        padding: "1.5rem 2rem",
+        overflowY: "auto",
+        flex: 1,
+        minHeight: 0,
+      }}
     >
       <PageHead
         icon={getFormIcon(form?.icon)}
@@ -36,13 +41,16 @@ export const FormView = ({ project, formId }: FormViewProps) => {
       />
 
       {isLoading ? (
-        <div className="flex justify-center" style={{ padding: 32 }}>
+        <div className="flex justify-center" style={{ padding: "2rem" }}>
           <Spinner />
         </div>
       ) : form ? (
         <FormFill projectId={project.id} formId={form.id} lang={lang} />
       ) : (
-        <p className="dim" style={{ marginTop: 24, fontSize: 13 }}>
+        <p
+          className="dim"
+          style={{ marginTop: "1.5rem", fontSize: "0.8125rem" }}
+        >
           {t("form.notFound")}
         </p>
       )}

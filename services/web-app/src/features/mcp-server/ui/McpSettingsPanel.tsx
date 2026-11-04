@@ -56,7 +56,7 @@ const ToolRow = ({
       label={
         <span
           className="flex items-center"
-          style={{ gap: 6, flexWrap: "wrap" }}
+          style={{ gap: "0.375rem", flexWrap: "wrap" }}
         >
           <code>{tool.name}</code>
           {tool.kind === "read" && (
@@ -202,7 +202,7 @@ const CallsTable = ({
         header: t("journal.outcome"),
         enableSorting: false,
         cell: ({ row }) => (
-          <span className="flex items-center" style={{ gap: 6 }}>
+          <span className="flex items-center" style={{ gap: "0.375rem" }}>
             <Badge variant={OUTCOME_TONE[row.original.outcome]}>
               {t(`journal.outcomes.${row.original.outcome}`)}
             </Badge>
@@ -267,7 +267,7 @@ export const McpSettingsPanel = ({ scope }: { scope: McpScope }) => {
   return (
     <div
       className="flex flex-col"
-      style={{ gap: 16 }}
+      style={{ gap: "1rem" }}
       data-testid="mcp-settings"
     >
       <Section>
@@ -305,7 +305,7 @@ export const McpSettingsPanel = ({ scope }: { scope: McpScope }) => {
         {data.enabled ? (
           <CallsTable calls={calls.data ?? []} loading={calls.isPending} />
         ) : (
-          <p className="dim" style={{ padding: "0 16px" }}>
+          <p className="dim" style={{ padding: "0 1rem" }}>
             {t("journal.off")}
           </p>
         )}

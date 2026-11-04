@@ -17,22 +17,22 @@ export const ChecksSection = () => {
       <div
         className="flex items-start"
         style={{
-          gap: 10,
-          padding: "10px 12px",
+          gap: "0.625rem",
+          padding: "0.625rem 0.75rem",
           border: "1px solid var(--border)",
           borderRadius: "var(--r-2)",
           background: "var(--bg-2)",
-          marginBottom: 4,
+          marginBottom: "0.25rem",
         }}
       >
         <Info
-          size={14}
+          size="0.875rem"
           className="shrink-0"
           style={{ color: "var(--c-info)", marginTop: 1 }}
         />
         <div
           className="flex flex-col"
-          style={{ gap: 4, fontSize: 12, lineHeight: 1.5 }}
+          style={{ gap: "0.25rem", fontSize: "0.75rem", lineHeight: 1.5 }}
         >
           <span style={{ color: "var(--fg-1)" }}>
             {t("checks.perDocumentHint")}

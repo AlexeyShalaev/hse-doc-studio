@@ -29,21 +29,24 @@ export const StudioProviderBanner = () => {
     <div
       className="flex items-center"
       style={{
-        gap: 12,
-        padding: "10px 12px",
-        borderRadius: 6,
+        gap: "0.75rem",
+        padding: "0.625rem 0.75rem",
+        borderRadius: "0.375rem",
         border: "1px solid var(--accent-line)",
         background: "var(--accent-soft)",
-        marginBottom: 12,
+        marginBottom: "0.75rem",
       }}
       data-testid="studio-provider-banner"
     >
-      <Bot size={16} style={{ color: "var(--accent)", flexShrink: 0 }} />
-      <div className="flex flex-col" style={{ gap: 2, flex: 1, minWidth: 0 }}>
-        <span style={{ fontSize: 12.5, fontWeight: 600 }}>
+      <Bot size="1rem" style={{ color: "var(--accent)", flexShrink: 0 }} />
+      <div
+        className="flex flex-col"
+        style={{ gap: "0.125rem", flex: 1, minWidth: 0 }}
+      >
+        <span style={{ fontSize: "0.78125rem", fontWeight: 600 }}>
           {t("providerBanner.title", { device: device.name })}
         </span>
-        <span className="dim" style={{ fontSize: 11.5 }}>
+        <span className="dim" style={{ fontSize: "0.71875rem" }}>
           {endpoint.models.length > 0
             ? t("providerBanner.body", {
                 models: modelNames(t, endpoint.models),

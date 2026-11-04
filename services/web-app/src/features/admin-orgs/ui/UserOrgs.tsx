@@ -34,7 +34,11 @@ export const UserOrgs = ({ userId }: { userId: string }) => {
 
   if (orgs.isPending) {
     return (
-      <div className="flex flex-col" style={{ gap: 8 }} aria-hidden="true">
+      <div
+        className="flex flex-col"
+        style={{ gap: "0.5rem" }}
+        aria-hidden="true"
+      >
         <span className="adm-skel" style={{ width: "60%" }} />
         <span className="adm-skel" style={{ width: "45%" }} />
       </div>
@@ -42,13 +46,13 @@ export const UserOrgs = ({ userId }: { userId: string }) => {
   }
   if (orgs.isError && rows.length === 0) {
     return (
-      <p className="org-muted" style={{ margin: 0, fontSize: 12.5 }}>
+      <p className="org-muted" style={{ margin: 0, fontSize: "0.78125rem" }}>
         {t("userOrgs.failed")}
       </p>
     );
   }
   return (
-    <div className="flex flex-col" style={{ gap: 8 }}>
+    <div className="flex flex-col" style={{ gap: "0.5rem" }}>
       {searchable && (
         <SearchInput
           value={q}
@@ -63,7 +67,7 @@ export const UserOrgs = ({ userId }: { userId: string }) => {
         />
       )}
       {rows.length === 0 ? (
-        <p className="org-muted" style={{ margin: 0, fontSize: 12.5 }}>
+        <p className="org-muted" style={{ margin: 0, fontSize: "0.78125rem" }}>
           {q ? t("userOrgs.noMatch") : t("userOrgs.none")}
         </p>
       ) : (

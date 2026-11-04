@@ -60,6 +60,25 @@
       })();
     </script>
     <script>
+      // Text size BEFORE any module loads, so the first paint is already at the
+      // chosen size (no jump after hydration). Same store and key as the theme;
+      // the steps mirror shared/lib/theme/textScale.ts.
+      (function () {
+        try {
+          var raw = localStorage.getItem("hse-studio-theme");
+          var stored = raw && JSON.parse(raw);
+          var s = stored && stored.state && stored.state.textScale;
+          if ([90, 100, 112, 125, 140].indexOf(s) !== -1) {
+            var root = document.documentElement;
+            root.style.setProperty("--text-scale", String(s / 100));
+            root.setAttribute("data-text-scale", String(s));
+          }
+        } catch (e) {
+          /* the default size */
+        }
+      })();
+    </script>
+    <script>
       // Resolve the interface language BEFORE any module loads so the first
       // paint is already correct (no RU→EN flash). Source of truth is the
       // zustand store persisted under "hse-studio-theme" (state under .state).

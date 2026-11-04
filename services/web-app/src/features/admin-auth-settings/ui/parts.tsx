@@ -6,7 +6,7 @@ export const AllLockedNote = () => {
   const { t } = useTranslation("adminSettings");
   return (
     <span className="adm-field-note" data-testid="all-locked-note">
-      <Lock size={12} aria-hidden="true" />
+      <Lock size="0.75rem" aria-hidden="true" />
       {t("locked.note")}
     </span>
   );

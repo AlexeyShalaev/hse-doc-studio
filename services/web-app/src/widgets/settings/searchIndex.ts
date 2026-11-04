@@ -89,6 +89,21 @@ export const SETTINGS_SEARCH_INDEX: readonly SettingSearchEntry[] = [
   },
   {
     sectionId: "appearance",
+    anchorId: "appearance-text-size",
+    labelKey: "search.appearanceTextSize",
+    keywords: [
+      "размер текста",
+      "крупнее",
+      "мельче",
+      "масштаб",
+      "text size",
+      "zoom",
+      "larger",
+      "accessibility",
+    ],
+  },
+  {
+    sectionId: "appearance",
     anchorId: "appearance-language",
     labelKey: "search.appearanceLanguage",
     keywords: [

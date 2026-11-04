@@ -59,8 +59,8 @@ export const getGuestSessionGallery = (): GalleryGroup[] => [
             style={{
               display: "flex",
               justifyContent: "flex-end",
-              padding: 8,
-              minHeight: 220,
+              padding: "0.5rem",
+              minHeight: "13.75rem",
             }}
           >
             <GuestBadgeView

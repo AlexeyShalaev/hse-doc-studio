@@ -141,16 +141,19 @@ export const ProbeIssueCard = ({
       )}
       {branches.length > 0 && (
         <div>
-          <div className="dim" style={{ fontSize: 11.5, marginBottom: 5 }}>
+          <div
+            className="dim"
+            style={{ fontSize: "0.71875rem", marginBottom: "0.3125rem" }}
+          >
             {t("issue.branch_missing.available")}
           </div>
-          <div className="flex" style={{ gap: 6, flexWrap: "wrap" }}>
+          <div className="flex" style={{ gap: "0.375rem", flexWrap: "wrap" }}>
             {branches.map((branch) => (
               <button
                 key={branch}
                 type="button"
                 className="chip accent"
-                style={{ cursor: "pointer", height: 24 }}
+                style={{ cursor: "pointer", height: "1.5rem" }}
                 onClick={() => {
                   handlers.onPickBranch(branch);
                 }}
@@ -167,8 +170,8 @@ export const ProbeIssueCard = ({
           <pre
             className="mono"
             style={{
-              margin: "6px 0 0",
-              fontSize: 11,
+              margin: "0.375rem 0 0",
+              fontSize: "0.6875rem",
               whiteSpace: "pre-wrap",
               wordBreak: "break-word",
               color: "var(--fg-2)",

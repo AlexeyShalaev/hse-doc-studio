@@ -81,7 +81,7 @@ export const CommitIdentityCard = ({
         onSubmit={submit}
         noValidate
         className="flex flex-col"
-        style={{ gap: 14, maxWidth: 520 }}
+        style={{ gap: "0.875rem", maxWidth: "32.5rem" }}
         data-testid="commit-form"
       >
         <Input
@@ -103,10 +103,20 @@ export const CommitIdentityCard = ({
           className="flex flex-col"
           disabled={pending}
         >
-          <legend style={{ fontSize: 12.5, fontWeight: 500, marginBottom: 8 }}>
+          <legend
+            style={{
+              fontSize: "0.78125rem",
+              fontWeight: 500,
+              marginBottom: "0.5rem",
+            }}
+          >
             {t("commit.emailLegend")}
           </legend>
-          <div role="radiogroup" className="flex flex-col" style={{ gap: 8 }}>
+          <div
+            role="radiogroup"
+            className="flex flex-col"
+            style={{ gap: "0.5rem" }}
+          >
             {MODES.map((value) => {
               const id = `${uid}-mode-${value}`;
               const checked = mode === value;
@@ -117,9 +127,9 @@ export const CommitIdentityCard = ({
                   className="flex"
                   data-checked={checked ? "true" : undefined}
                   style={{
-                    gap: 10,
+                    gap: "0.625rem",
                     alignItems: "flex-start",
-                    padding: "10px 12px",
+                    padding: "0.625rem 0.75rem",
                     borderRadius: "var(--r-2)",
                     border: `1px solid ${checked ? "var(--accent)" : "var(--border)"}`,
                     background: checked ? "var(--bg-2)" : "transparent",
@@ -134,16 +144,19 @@ export const CommitIdentityCard = ({
                     onChange={() => {
                       setMode(value);
                     }}
-                    style={{ marginTop: 3 }}
+                    style={{ marginTop: "0.1875rem" }}
                   />
                   <span
                     className="flex flex-col"
-                    style={{ gap: 2, minWidth: 0 }}
+                    style={{ gap: "0.125rem", minWidth: 0 }}
                   >
-                    <span style={{ fontSize: 13, fontWeight: 600 }}>
+                    <span style={{ fontSize: "0.8125rem", fontWeight: 600 }}>
                       {t(`commit.modes.${value}.title`)}
                       {value === "noreply" && (
-                        <span className="chip accent" style={{ marginLeft: 8 }}>
+                        <span
+                          className="chip accent"
+                          style={{ marginLeft: "0.5rem" }}
+                        >
                           {t("commit.recommended")}
                         </span>
                       )}
@@ -178,8 +191,8 @@ export const CommitIdentityCard = ({
           <Notice
             tone="info"
             text={
-              <span className="flex items-center" style={{ gap: 6 }}>
-                <ShieldCheck size={13} aria-hidden="true" />
+              <span className="flex items-center" style={{ gap: "0.375rem" }}>
+                <ShieldCheck size="0.8125rem" aria-hidden="true" />
                 {t("commit.privateNote")}
               </span>
             }
@@ -189,32 +202,32 @@ export const CommitIdentityCard = ({
             tone="warn"
             role="status"
             text={
-              <span className="flex items-center" style={{ gap: 6 }}>
-                <TriangleAlert size={13} aria-hidden="true" />
+              <span className="flex items-center" style={{ gap: "0.375rem" }}>
+                <TriangleAlert size="0.8125rem" aria-hidden="true" />
                 {t("commit.publicNote")}
               </span>
             }
           />
         )}
 
-        <div className="flex flex-col" style={{ gap: 4 }}>
-          <span style={{ fontSize: 11.5, color: "var(--fg-2)" }}>
+        <div className="flex flex-col" style={{ gap: "0.25rem" }}>
+          <span style={{ fontSize: "0.71875rem", color: "var(--fg-2)" }}>
             {t("commit.preview")}
           </span>
           <code
             data-testid="commit-preview"
             className="flex items-center"
             style={{
-              gap: 8,
-              fontSize: 12.5,
-              padding: "8px 10px",
+              gap: "0.5rem",
+              fontSize: "0.78125rem",
+              padding: "0.5rem 0.625rem",
               borderRadius: "var(--r-2)",
               background: "var(--bg-2)",
               overflowWrap: "anywhere",
             }}
           >
             <GitCommitHorizontal
-              size={14}
+              size="0.875rem"
               aria-hidden="true"
               style={{ flexShrink: 0 }}
             />
@@ -230,18 +243,21 @@ export const CommitIdentityCard = ({
           <Button
             type="submit"
             aria-disabled={pending || !dirty}
-            style={{ gap: 8 }}
+            style={{ gap: "0.5rem" }}
             data-testid="commit-save"
           >
             {pending ? (
               <Spinner size="sm" />
             ) : (
-              <Save size={14} aria-hidden="true" />
+              <Save size="0.875rem" aria-hidden="true" />
             )}
             {pending ? t("commit.saving") : t("commit.save")}
           </Button>
           {saved && !dirty && !pending && (
-            <span role="status" style={{ fontSize: 12, color: "var(--c-ok)" }}>
+            <span
+              role="status"
+              style={{ fontSize: "0.75rem", color: "var(--c-ok)" }}
+            >
               {t("commit.saved")}
             </span>
           )}

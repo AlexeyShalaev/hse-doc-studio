@@ -61,9 +61,9 @@ export const ManualCommand = ({ hostPath, socketGid }: ManualCommandProps) => {
   return (
     <div
       style={{
-        marginTop: 18,
-        padding: "12px 14px",
-        borderRadius: 8,
+        marginTop: "1.125rem",
+        padding: "0.75rem 0.875rem",
+        borderRadius: "0.5rem",
         background: "var(--bg-2, var(--bg))",
         border: "1px solid var(--border)",
       }}
@@ -72,12 +72,12 @@ export const ManualCommand = ({ hostPath, socketGid }: ManualCommandProps) => {
         style={{
           display: "flex",
           alignItems: "center",
-          gap: 8,
-          marginBottom: 8,
+          gap: "0.5rem",
+          marginBottom: "0.5rem",
         }}
       >
-        <Terminal size={14} style={{ opacity: 0.7 }} />
-        <span style={{ fontWeight: 600, fontSize: 13 }}>
+        <Terminal size="0.875rem" style={{ opacity: 0.7 }} />
+        <span style={{ fontWeight: 600, fontSize: "0.8125rem" }}>
           {t("manual.title")}
         </span>
         <button
@@ -86,17 +86,20 @@ export const ManualCommand = ({ hostPath, socketGid }: ManualCommandProps) => {
           onClick={handleCopy}
           style={{ marginLeft: "auto" }}
         >
-          {copied ? <Check size={12} /> : <Copy size={12} />}
+          {copied ? <Check size="0.75rem" /> : <Copy size="0.75rem" />}
           {copied ? t("manual.copied") : t("manual.copy")}
         </button>
       </div>
-      <div className="dim" style={{ fontSize: 12, marginBottom: 8 }}>
+      <div
+        className="dim"
+        style={{ fontSize: "0.75rem", marginBottom: "0.5rem" }}
+      >
         {t("manual.hint")}
       </div>
       <code
         style={{
           display: "block",
-          fontSize: 11,
+          fontSize: "0.6875rem",
           lineHeight: 1.6,
           whiteSpace: "pre-wrap",
           wordBreak: "break-all",

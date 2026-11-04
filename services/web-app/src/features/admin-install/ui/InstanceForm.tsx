@@ -258,7 +258,7 @@ export const InstanceForm = ({
     <form
       noValidate
       className="flex flex-col"
-      style={{ gap: 16, flex: 1 }}
+      style={{ gap: "1rem", flex: 1 }}
       data-testid="instance-form"
       onSubmit={(e: FormEvent) => {
         e.preventDefault();

@@ -67,7 +67,7 @@ export const DeviceView = ({
       {state.kind === "loading" && (
         <div
           className="flex items-center"
-          style={{ gap: 8, fontSize: 13 }}
+          style={{ gap: "0.5rem", fontSize: "0.8125rem" }}
           data-testid="device-loading"
         >
           <Spinner size="sm" />
@@ -145,13 +145,18 @@ const EnterCode = ({ onCode }: { onCode: (code: string) => void }) => {
   return (
     <form
       className="flex flex-col"
-      style={{ gap: 14 }}
+      style={{ gap: "0.875rem" }}
       noValidate
       onSubmit={submit}
     >
-      <div className="flex flex-col" style={{ gap: 6 }}>
-        <h1 style={{ margin: 0, fontSize: 18 }}>{t("device.enterTitle")}</h1>
-        <p className="dim" style={{ margin: 0, fontSize: 13, lineHeight: 1.5 }}>
+      <div className="flex flex-col" style={{ gap: "0.375rem" }}>
+        <h1 style={{ margin: 0, fontSize: "1.125rem" }}>
+          {t("device.enterTitle")}
+        </h1>
+        <p
+          className="dim"
+          style={{ margin: 0, fontSize: "0.8125rem", lineHeight: 1.5 }}
+        >
           {t("device.enterLead")}
         </p>
       </div>
@@ -199,10 +204,10 @@ const Pending = ({
   return (
     <div
       className="flex flex-col"
-      style={{ gap: 16 }}
+      style={{ gap: "1rem" }}
       data-testid="device-card"
     >
-      <h1 style={{ margin: 0, fontSize: 18, lineHeight: 1.3 }}>
+      <h1 style={{ margin: 0, fontSize: "1.125rem", lineHeight: 1.3 }}>
         {t("device.question", { name: info.client_name })}
       </h1>
       <DeviceCodeDisplay
@@ -213,7 +218,7 @@ const Pending = ({
       />
       <DeviceFacts>
         <DeviceFact label={t("device.kind")}>
-          <span className="flex items-center" style={{ gap: 6 }}>
+          <span className="flex items-center" style={{ gap: "0.375rem" }}>
             <KindIcon size={13} aria-hidden="true" />
             {t(`device.kindValue.${info.client_kind}`)}
           </span>
@@ -229,10 +234,10 @@ const Pending = ({
         <DeviceFact label={t("device.expires")}>
           <span
             className="flex items-center mono"
-            style={{ gap: 6 }}
+            style={{ gap: "0.375rem" }}
             data-testid="device-countdown"
           >
-            <Clock size={13} aria-hidden="true" />
+            <Clock size="0.8125rem" aria-hidden="true" />
             {left === null
               ? t("device.expiredNow")
               : t("device.expiresIn", { time: left })}
@@ -241,31 +246,43 @@ const Pending = ({
       </DeviceFacts>
       <fieldset
         className="flex flex-col"
-        style={{ gap: 10, border: 0, margin: 0, padding: 0 }}
+        style={{ gap: "0.625rem", border: 0, margin: 0, padding: 0 }}
         data-testid="device-scopes"
       >
-        <legend style={{ fontSize: 12.5, fontWeight: 500, marginBottom: 6 }}>
+        <legend
+          style={{
+            fontSize: "0.78125rem",
+            fontWeight: 500,
+            marginBottom: "0.375rem",
+          }}
+        >
           {t("device.scopesTitle")}
         </legend>
-        <label className="flex items-start" style={{ gap: 10, fontSize: 13 }}>
+        <label
+          className="flex items-start"
+          style={{ gap: "0.625rem", fontSize: "0.8125rem" }}
+        >
           <Switch checked onChange={() => undefined} disabled />
-          <span className="flex flex-col" style={{ gap: 2 }}>
+          <span className="flex flex-col" style={{ gap: "0.125rem" }}>
             <span>{t("device.scopeRead")}</span>
-            <span className="dim" style={{ fontSize: 12 }}>
+            <span className="dim" style={{ fontSize: "0.75rem" }}>
               {t("device.scopeReadHint")}
             </span>
           </span>
         </label>
-        <label className="flex items-start" style={{ gap: 10, fontSize: 13 }}>
+        <label
+          className="flex items-start"
+          style={{ gap: "0.625rem", fontSize: "0.8125rem" }}
+        >
           <Switch
             checked={write}
             onChange={setWrite}
             disabled={!writeRequested || deciding !== null}
             testId="device-scope-write"
           />
-          <span className="flex flex-col" style={{ gap: 2 }}>
+          <span className="flex flex-col" style={{ gap: "0.125rem" }}>
             <span>{t("device.scopeWrite")}</span>
-            <span className="dim" style={{ fontSize: 12 }}>
+            <span className="dim" style={{ fontSize: "0.75rem" }}>
               {t("device.scopeWriteHint")}
             </span>
           </span>
@@ -274,7 +291,7 @@ const Pending = ({
       <Notice tone="warn" text={t("device.warning")} />
       <div
         className="flex items-center"
-        style={{ gap: 8, justifyContent: "flex-end" }}
+        style={{ gap: "0.5rem", justifyContent: "flex-end" }}
       >
         <Button
           type="button"

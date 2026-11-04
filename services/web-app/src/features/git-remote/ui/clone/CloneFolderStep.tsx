@@ -65,7 +65,7 @@ const InspectNote = ({
     return (
       <p
         className="hint flex items-center"
-        style={{ margin: 0, gap: 6 }}
+        style={{ margin: 0, gap: "0.375rem" }}
         role="status"
       >
         <Spinner size="sm" />
@@ -171,12 +171,12 @@ export const CloneFolderStep = ({
       <div
         className="flex items-center"
         style={{
-          gap: 8,
-          padding: "8px 10px",
+          gap: "0.5rem",
+          padding: "0.5rem 0.625rem",
           borderRadius: "var(--r-2)",
           background: "var(--bg-2)",
           border: "1px solid var(--border)",
-          fontSize: 12,
+          fontSize: "0.75rem",
           minWidth: 0,
         }}
         data-testid="clone-source-summary"
@@ -229,7 +229,7 @@ export const CloneFolderStep = ({
         <>
           <div className="field">
             <label htmlFor={folderId}>{t("clone.folder.path.label")}</label>
-            <div className="flex" style={{ gap: 8 }}>
+            <div className="flex" style={{ gap: "0.5rem" }}>
               <input
                 id={folderId}
                 type="text"
@@ -249,7 +249,7 @@ export const CloneFolderStep = ({
               />
               {onBrowse && (
                 <button type="button" className="btn" onClick={onBrowse}>
-                  <FolderOpen size={13} aria-hidden="true" />
+                  <FolderOpen size="0.8125rem" aria-hidden="true" />
                   {t("clone.folder.path.browse")}
                 </button>
               )}

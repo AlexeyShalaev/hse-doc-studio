@@ -192,7 +192,7 @@ export const MembersView = ({
               >
                 <span className="org-role-text">{t(`role.${m.role}`)}</span>
                 <Lock
-                  size={12}
+                  size="0.75rem"
                   aria-hidden="true"
                   style={{ color: "var(--fg-3)" }}
                 />
@@ -263,7 +263,7 @@ export const MembersView = ({
                 {
                   id: "remove",
                   label: t("members.remove.item"),
-                  icon: <UserMinus size={14} aria-hidden="true" />,
+                  icon: <UserMinus size="0.875rem" aria-hidden="true" />,
                   danger: true,
                   disabled: busyUserId === m.user_id,
                   testId: `member-remove-${m.user_id}`,
@@ -347,7 +347,7 @@ export const MembersView = ({
             setAddOpen(true);
           }}
         >
-          <UserPlus size={14} aria-hidden="true" />
+          <UserPlus size="0.875rem" aria-hidden="true" />
           {t("members.add.title")}
         </Button>
       </div>
@@ -402,7 +402,7 @@ export const MembersView = ({
         <form
           id="member-add-form"
           className="flex flex-col"
-          style={{ gap: 14 }}
+          style={{ gap: "0.875rem" }}
           noValidate
           onSubmit={(event) => {
             event.preventDefault();

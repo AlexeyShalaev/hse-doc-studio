@@ -190,7 +190,7 @@ export const DestinationDialog = ({
     >
       <div
         className="flex flex-col"
-        style={{ gap: 10 }}
+        style={{ gap: "0.625rem" }}
         data-testid="backup-dest-dialog"
       >
         {field(
@@ -212,7 +212,7 @@ export const DestinationDialog = ({
         >
           <div
             className="flex"
-            style={{ gap: 8 }}
+            style={{ gap: "0.5rem" }}
             role="radiogroup"
             aria-label={t("dialog.fields.kind")}
           >

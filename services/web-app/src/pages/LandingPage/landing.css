@@ -5,14 +5,14 @@
   overflow-y: auto;
   background: var(--bg-0);
   color: var(--fg-1);
-  font-size: 16px;
+  font-size: 1rem;
   line-height: 1.6;
-  scroll-padding-top: 72px;
+  scroll-padding-top: 4.5rem;
 }
 .lp a {
   color: var(--accent);
   text-decoration: underline;
-  text-underline-offset: 3px;
+  text-underline-offset: 0.1875rem;
 }
 .lp a:hover {
   filter: brightness(1.15);
@@ -28,33 +28,33 @@
 }
 .lp .btn.sm,
 .lp .seg button {
-  min-height: 34px;
-  font-size: 13px;
+  min-height: 2.125rem;
+  font-size: 0.8125rem;
 }
 .lp .btn.lg {
-  height: 46px;
-  padding: 0 22px;
-  font-size: 15px;
+  height: 2.875rem;
+  padding: 0 1.375rem;
+  font-size: 0.9375rem;
 }
 .lp-wrap {
   width: 100%;
-  max-width: 1120px;
+  max-width: 70rem;
   margin: 0 auto;
-  padding: 0 20px;
+  padding: 0 1.25rem;
   box-sizing: border-box;
 }
 .lp-skip {
   position: absolute;
-  left: 12px;
-  top: -60px;
+  left: 0.75rem;
+  top: -3.75rem;
   z-index: 30;
-  padding: 8px 14px;
+  padding: 0.5rem 0.875rem;
   background: var(--bg-1);
   border: 1px solid var(--border-strong);
   border-radius: var(--r-2);
 }
 .lp-skip:focus {
-  top: 12px;
+  top: 0.75rem;
 }
 
 /* шапка */
@@ -69,27 +69,27 @@
 .lp-header-row {
   display: flex;
   align-items: center;
-  gap: 16px;
-  min-height: 60px;
+  gap: 1rem;
+  min-height: 3.75rem;
 }
 .lp .lp-brand {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 0.625rem;
   min-width: 0;
   color: var(--fg-0);
   text-decoration: none;
   font-weight: 600;
-  font-size: 15px;
+  font-size: 0.9375rem;
 }
 .lp-logo {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  width: 32px;
-  height: 32px;
-  border-radius: 8px;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 0.5rem;
   background: var(--accent);
   color: var(--accent-ink);
   font-family: var(--font-mono);
@@ -103,9 +103,9 @@
 }
 .lp-nav {
   display: none;
-  gap: 20px;
-  margin-left: 12px;
-  font-size: 14px;
+  gap: 1.25rem;
+  margin-left: 0.75rem;
+  font-size: 0.875rem;
 }
 .lp .lp-nav a {
   color: var(--fg-1);
@@ -118,17 +118,17 @@
 .lp-header-actions {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 0.625rem;
   margin-left: auto;
   flex-shrink: 0;
 }
 
 /* герой */
 .lp-hero {
-  padding: 40px 0 32px;
+  padding: 2.5rem 0 2rem;
   background:
     radial-gradient(
-      900px 420px at 15% -10%,
+      56.25rem 26.25rem at 15% -10%,
       var(--accent-soft),
       transparent 70%
     ),
@@ -136,20 +136,20 @@
 }
 .lp-hero-grid {
   display: grid;
-  gap: 32px;
+  gap: 2rem;
   align-items: center;
 }
 .lp-eyebrow {
-  margin: 0 0 12px;
+  margin: 0 0 0.75rem;
   font-family: var(--font-mono);
-  font-size: 13px;
+  font-size: 0.8125rem;
   letter-spacing: 0.04em;
   text-transform: uppercase;
   color: var(--accent);
 }
 .lp-h1 {
-  margin: 0 0 16px;
-  font-size: clamp(30px, 6vw, 48px);
+  margin: 0 0 1rem;
+  font-size: clamp(1.875rem, 6vw, 3rem);
   line-height: 1.12;
   letter-spacing: -0.02em;
   font-weight: 700;
@@ -157,28 +157,28 @@
   text-wrap: balance;
 }
 .lp-lead {
-  margin: 0 0 24px;
+  margin: 0 0 1.5rem;
   max-width: 60ch;
-  font-size: 18px;
+  font-size: 1.125rem;
   color: var(--fg-1);
 }
 .lp-cta {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 12px;
+  gap: 0.75rem;
 }
 .lp-note {
-  margin: 16px 0 0;
+  margin: 1rem 0 0;
   max-width: 60ch;
-  font-size: 14px;
+  font-size: 0.875rem;
   color: var(--fg-2);
 }
 .lp-login {
   background: var(--bg-1);
   border: 1px solid var(--border);
   border-radius: var(--r-4);
-  padding: 28px;
+  padding: 1.75rem;
   box-shadow: 0 12px 40px rgba(0, 0, 0, 0.14);
 }
 .lp-dialog-form {
@@ -187,39 +187,39 @@
 
 /* секции */
 .lp-section {
-  padding: 48px 0;
+  padding: 3rem 0;
 }
 .lp-section:nth-of-type(even) {
   background: var(--bg-1);
 }
 .lp-h2 {
-  margin: 0 0 8px;
-  font-size: clamp(24px, 4vw, 32px);
+  margin: 0 0 0.5rem;
+  font-size: clamp(1.5rem, 4vw, 2rem);
   line-height: 1.2;
   letter-spacing: -0.01em;
   color: var(--fg-0);
 }
 .lp-h3 {
-  margin: 8px 0 6px;
-  font-size: 18px;
+  margin: 0.5rem 0 0.375rem;
+  font-size: 1.125rem;
   line-height: 1.3;
   color: var(--fg-0);
 }
 .lp-section-lead {
-  margin: 0 0 24px;
+  margin: 0 0 1.5rem;
   max-width: 62ch;
   color: var(--fg-1);
 }
 .lp-cards {
   display: grid;
-  gap: 16px;
-  margin: 24px 0 0;
+  gap: 1rem;
+  margin: 1.5rem 0 0;
   padding: 0;
   list-style: none;
-  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
 }
 .lp-card {
-  padding: 20px;
+  padding: 1.25rem;
   background: var(--bg-1);
   border: 1px solid var(--border);
   border-radius: var(--r-3);
@@ -237,14 +237,14 @@
 /* возможности */
 .lp-features {
   display: grid;
-  gap: 40px;
-  margin: 32px 0 0;
+  gap: 2.5rem;
+  margin: 2rem 0 0;
   padding: 0;
   list-style: none;
 }
 .lp-feature {
   display: grid;
-  gap: 16px;
+  gap: 1rem;
   align-items: center;
 }
 .lp-feature-copy p {
@@ -264,16 +264,16 @@
 /* как начать */
 .lp-steps {
   display: grid;
-  gap: 16px;
-  margin: 24px 0 0;
+  gap: 1rem;
+  margin: 1.5rem 0 0;
   padding: 0;
   list-style: none;
   counter-reset: lp-step;
-  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(16.25rem, 1fr));
 }
 .lp-steps > li {
   position: relative;
-  padding: 20px 20px 20px 64px;
+  padding: 1.25rem 1.25rem 1.25rem 4rem;
   background: var(--bg-0);
   border: 1px solid var(--border);
   border-radius: var(--r-3);
@@ -282,20 +282,20 @@
 .lp-steps > li::before {
   content: counter(lp-step);
   position: absolute;
-  left: 20px;
-  top: 20px;
+  left: 1.25rem;
+  top: 1.25rem;
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 30px;
-  height: 30px;
+  width: 1.875rem;
+  height: 1.875rem;
   border-radius: 50%;
   background: var(--accent);
   color: var(--accent-ink);
   font-weight: 700;
 }
 .lp-steps p {
-  margin: 0 0 8px;
+  margin: 0 0 0.5rem;
 }
 .lp .lp-h3 {
   margin-top: 0;
@@ -303,31 +303,31 @@
 .lp-links {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px 20px;
-  margin: 16px 0 0;
-  font-size: 15px;
+  gap: 0.5rem 1.25rem;
+  margin: 1rem 0 0;
+  font-size: 0.9375rem;
 }
 .lp-steps .lp-links {
-  margin-top: 12px;
+  margin-top: 0.75rem;
 }
 
 /* безопасность */
 .lp-checklist {
   display: grid;
-  gap: 12px;
-  margin: 24px 0 0;
+  gap: 0.75rem;
+  margin: 1.5rem 0 0;
   padding: 0;
   list-style: none;
-  max-width: 760px;
+  max-width: 47.5rem;
 }
 .lp-checklist li {
   display: flex;
-  gap: 12px;
+  gap: 0.75rem;
   align-items: flex-start;
 }
 .lp-checklist svg {
   flex-shrink: 0;
-  margin-top: 3px;
+  margin-top: 0.1875rem;
   color: var(--accent);
 }
 
@@ -337,8 +337,8 @@
   flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
-  gap: 20px;
-  padding: 28px;
+  gap: 1.25rem;
+  padding: 1.75rem;
   background: var(--accent-soft);
   border: 1px solid var(--accent-line);
   border-radius: var(--r-4);
@@ -348,33 +348,33 @@
   margin: 0;
 }
 .lp-footer {
-  padding: 24px 0 32px;
+  padding: 1.5rem 0 2rem;
   border-top: 1px solid var(--border-soft);
-  font-size: 14px;
+  font-size: 0.875rem;
   color: var(--fg-2);
 }
 .lp-footer-row {
   display: flex;
   flex-wrap: wrap;
   justify-content: space-between;
-  gap: 12px 24px;
+  gap: 0.75rem 1.5rem;
 }
 .lp-footer-links {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px 20px;
+  gap: 0.5rem 1.25rem;
 }
 
 @media (min-width: 800px) {
   .lp-feature {
     grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
-    gap: 40px;
+    gap: 2.5rem;
   }
   .lp-feature:nth-child(even) .lp-feature-copy {
     order: 2;
   }
   .lp-section {
-    padding: 72px 0;
+    padding: 4.5rem 0;
   }
 }
 @media (min-width: 960px) {
@@ -382,11 +382,11 @@
     display: flex;
   }
   .lp-hero {
-    padding: 72px 0 56px;
+    padding: 4.5rem 0 3.5rem;
   }
   .lp-hero-grid {
-    grid-template-columns: minmax(0, 7fr) minmax(340px, 5fr);
-    gap: 56px;
+    grid-template-columns: minmax(0, 7fr) minmax(21.25rem, 5fr);
+    gap: 3.5rem;
   }
   .lp-cards-4 {
     grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -394,29 +394,29 @@
 }
 @media (max-width: 480px) {
   .lp-header-row {
-    gap: 8px;
+    gap: 0.5rem;
   }
   /* В узкой шапке кнопка входа остаётся значком: название установки читается целиком. */
   .lp-btn-label {
     display: none;
   }
   .lp-header-actions .btn.sm {
-    min-width: 40px;
-    padding: 0 10px;
+    min-width: 2.5rem;
+    padding: 0 0.625rem;
   }
   .lp-cta .btn {
     flex: 1 1 100%;
   }
   .lp-final-box {
-    padding: 20px;
+    padding: 1.25rem;
   }
 }
 
 /* Телефон: зоны касания 40px, вырез и жестовая полоса, шапка без обрезанного названия. */
 @media (max-width: 767.98px) {
   .lp-wrap {
-    padding-left: max(20px, var(--safe-left));
-    padding-right: max(20px, var(--safe-right));
+    padding-left: max(1.25rem, var(--safe-left));
+    padding-right: max(1.25rem, var(--safe-right));
   }
   .lp-header {
     padding-top: var(--safe-top);
@@ -436,7 +436,7 @@
     min-height: var(--touch-min);
   }
   .lp-footer {
-    padding-bottom: calc(24px + var(--safe-bottom));
+    padding-bottom: calc(1.5rem + var(--safe-bottom));
   }
 }
 @media (max-width: 420px) {

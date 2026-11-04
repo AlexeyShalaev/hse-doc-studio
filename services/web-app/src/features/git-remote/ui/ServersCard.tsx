@@ -61,9 +61,9 @@ export const ServersCard = ({ settings, credentials }: ServersCardProps) => {
 
   return (
     <>
-      <div className="flex flex-col" style={{ gap: 10 }}>
+      <div className="flex flex-col" style={{ gap: "0.625rem" }}>
         {rows.length === 0 ? (
-          <p className="dim" style={{ margin: 0, fontSize: 12.5 }}>
+          <p className="dim" style={{ margin: 0, fontSize: "0.78125rem" }}>
             {t("servers.empty")}
           </p>
         ) : (
@@ -74,7 +74,7 @@ export const ServersCard = ({ settings, credentials }: ServersCardProps) => {
               padding: 0,
               display: "flex",
               flexDirection: "column",
-              gap: 8,
+              gap: "0.5rem",
             }}
           >
             {rows.map((row) => {
@@ -89,8 +89,8 @@ export const ServersCard = ({ settings, credentials }: ServersCardProps) => {
                   data-testid="server-row"
                   className="flex items-start"
                   style={{
-                    gap: 10,
-                    padding: 12,
+                    gap: "0.625rem",
+                    padding: "0.75rem",
                     borderRadius: "var(--r-2)",
                     border: "1px solid var(--border)",
                     background: "var(--bg-0)",
@@ -101,27 +101,27 @@ export const ServersCard = ({ settings, credentials }: ServersCardProps) => {
                     aria-hidden="true"
                     className="flex items-center justify-center"
                     style={{
-                      width: 28,
-                      height: 28,
+                      width: "1.75rem",
+                      height: "1.75rem",
                       flexShrink: 0,
                       borderRadius: "var(--r-2)",
                       background: "var(--bg-2)",
                       color: "var(--fg-1)",
                     }}
                   >
-                    <Server size={14} />
+                    <Server size="0.875rem" />
                   </span>
                   <div
                     className="flex flex-col"
-                    style={{ gap: 5, flex: 1, minWidth: 0 }}
+                    style={{ gap: "0.3125rem", flex: 1, minWidth: 0 }}
                   >
                     <div
                       className="flex items-center"
-                      style={{ gap: 6, flexWrap: "wrap" }}
+                      style={{ gap: "0.375rem", flexWrap: "wrap" }}
                     >
                       <strong
                         className="mono truncate"
-                        style={{ fontSize: 13, minWidth: 0 }}
+                        style={{ fontSize: "0.8125rem", minWidth: 0 }}
                       >
                         {hostLabel(item.host, item.port)}
                       </strong>
@@ -147,7 +147,7 @@ export const ServersCard = ({ settings, credentials }: ServersCardProps) => {
                         </span>
                       )}
                     </div>
-                    <span className="dim" style={{ fontSize: 11.5 }}>
+                    <span className="dim" style={{ fontSize: "0.71875rem" }}>
                       {t(`servers.detectedBy.${detection.detected_by}`)}
                       {" · "}
                       {t("servers.credentials", {
@@ -158,11 +158,11 @@ export const ServersCard = ({ settings, credentials }: ServersCardProps) => {
                       <ul
                         data-testid="server-credentials"
                         style={{
-                          margin: "2px 0 0",
+                          margin: "0.125rem 0 0",
                           padding: 0,
                           display: "flex",
                           flexDirection: "column",
-                          gap: 3,
+                          gap: "0.1875rem",
                         }}
                       >
                         {row.credentials.map((credential) => (
@@ -170,14 +170,14 @@ export const ServersCard = ({ settings, credentials }: ServersCardProps) => {
                             key={credential.id}
                             className="flex items-center"
                             style={{
-                              gap: 8,
+                              gap: "0.5rem",
                               listStyle: "none",
-                              fontSize: 12,
+                              fontSize: "0.75rem",
                               minWidth: 0,
                             }}
                           >
                             <KeyRound
-                              size={12}
+                              size="0.75rem"
                               aria-hidden="true"
                               style={{ color: "var(--fg-3)", flexShrink: 0 }}
                             />
@@ -219,7 +219,7 @@ export const ServersCard = ({ settings, credentials }: ServersCardProps) => {
               setEditing("new");
             }}
           >
-            <Plus size={13} aria-hidden="true" />
+            <Plus size="0.8125rem" aria-hidden="true" />
             {t("servers.add")}
           </button>
         </div>

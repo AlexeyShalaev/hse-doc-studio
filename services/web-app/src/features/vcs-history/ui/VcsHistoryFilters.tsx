@@ -34,9 +34,9 @@ export type VcsHistoryFiltersProps = {
 
 const controlStyle: React.CSSProperties = {
   width: "auto",
-  fontSize: 12,
-  padding: "6px 10px",
-  height: 30,
+  fontSize: "0.75rem",
+  padding: "0.375rem 0.625rem",
+  height: "1.875rem",
 };
 
 export const VcsHistoryFilters = ({
@@ -67,19 +67,26 @@ export const VcsHistoryFilters = ({
     : [...authors, { value: state.author, label: state.author }];
 
   return (
-    <div className="flex flex-col" style={{ gap: 8 }}>
-      <div className="flex items-center" style={{ gap: 8, flexWrap: "wrap" }}>
+    <div className="flex flex-col" style={{ gap: "0.5rem" }}>
+      <div
+        className="flex items-center"
+        style={{ gap: "0.5rem", flexWrap: "wrap" }}
+      >
         {/* search */}
         <div
           className="flex items-center"
-          style={{ position: "relative", flex: "1 1 200px", minWidth: 160 }}
+          style={{
+            position: "relative",
+            flex: "1 1 12.5rem",
+            minWidth: "10rem",
+          }}
         >
           <Search
-            size={13}
+            size="0.8125rem"
             aria-hidden="true"
             style={{
               position: "absolute",
-              left: 10,
+              left: "0.625rem",
               color: "var(--fg-3)",
               pointerEvents: "none",
             }}
@@ -88,7 +95,11 @@ export const VcsHistoryFilters = ({
             className="input"
             type="search"
             aria-label={t("filters.searchLabel")}
-            style={{ fontSize: 12, padding: "6px 10px 6px 30px", height: 30 }}
+            style={{
+              fontSize: "0.75rem",
+              padding: "0.375rem 0.625rem 0.375rem 1.875rem",
+              height: "1.875rem",
+            }}
             placeholder={t("filters.searchPlaceholder")}
             value={state.query}
             onChange={(e) => {
@@ -102,7 +113,7 @@ export const VcsHistoryFilters = ({
           <select
             className="input"
             aria-label={t("filters.authorLabel")}
-            style={{ ...controlStyle, maxWidth: 190 }}
+            style={{ ...controlStyle, maxWidth: "11.875rem" }}
             value={state.author}
             onChange={(e) => {
               set({ author: e.target.value });
@@ -142,7 +153,7 @@ export const VcsHistoryFilters = ({
             }}
             title={t("filters.resetTitle")}
           >
-            <RotateCcw size={11} aria-hidden="true" />
+            <RotateCcw size="0.6875rem" aria-hidden="true" />
             {t("filters.reset")}
           </button>
         )}
@@ -150,29 +161,32 @@ export const VcsHistoryFilters = ({
 
       {/* custom range */}
       {state.preset === "custom" && (
-        <div className="flex items-center" style={{ gap: 8, flexWrap: "wrap" }}>
-          <span className="dim" style={{ fontSize: 11 }}>
+        <div
+          className="flex items-center"
+          style={{ gap: "0.5rem", flexWrap: "wrap" }}
+        >
+          <span className="dim" style={{ fontSize: "0.6875rem" }}>
             {t("filters.rangeFrom")}
           </span>
           <input
             type="date"
             className="input"
             aria-label={t("filters.rangeFromLabel")}
-            style={{ ...controlStyle, padding: "5px 8px" }}
+            style={{ ...controlStyle, padding: "0.3125rem 0.5rem" }}
             value={state.from}
             max={state.to || undefined}
             onChange={(e) => {
               set({ from: e.target.value });
             }}
           />
-          <span className="dim" style={{ fontSize: 11 }}>
+          <span className="dim" style={{ fontSize: "0.6875rem" }}>
             {t("filters.rangeTo")}
           </span>
           <input
             type="date"
             className="input"
             aria-label={t("filters.rangeToLabel")}
-            style={{ ...controlStyle, padding: "5px 8px" }}
+            style={{ ...controlStyle, padding: "0.3125rem 0.5rem" }}
             value={state.to}
             min={state.from || undefined}
             onChange={(e) => {
@@ -184,15 +198,18 @@ export const VcsHistoryFilters = ({
 
       {/* sync segment */}
       {showSync && (
-        <div className="flex items-center" style={{ gap: 8, flexWrap: "wrap" }}>
-          <span className="dim" style={{ fontSize: 11 }}>
+        <div
+          className="flex items-center"
+          style={{ gap: "0.5rem", flexWrap: "wrap" }}
+        >
+          <span className="dim" style={{ fontSize: "0.6875rem" }}>
             {t("filters.syncLabel")}
           </span>
           <div
             role="group"
             aria-label={t("filters.syncLabel")}
             className="flex"
-            style={{ gap: 4 }}
+            style={{ gap: "0.25rem" }}
           >
             {VCS_SYNC_FILTERS.map((value: VcsSyncFilter) => (
               <button
@@ -217,7 +234,7 @@ export const VcsHistoryFilters = ({
           role="group"
           aria-label={t("filters.kindLabel")}
           className="flex items-center"
-          style={{ gap: 6, flexWrap: "wrap" }}
+          style={{ gap: "0.375rem", flexWrap: "wrap" }}
           title={t("filters.kindHint")}
         >
           <button
@@ -252,7 +269,11 @@ export const VcsHistoryFilters = ({
       )}
 
       {/* result summary */}
-      <span className="dim" style={{ fontSize: 11 }} aria-live="polite">
+      <span
+        className="dim"
+        style={{ fontSize: "0.6875rem" }}
+        aria-live="polite"
+      >
         {active
           ? hasMore
             ? t("filters.foundMore", { count: shown })

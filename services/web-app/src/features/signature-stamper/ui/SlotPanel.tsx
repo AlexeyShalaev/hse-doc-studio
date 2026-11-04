@@ -187,20 +187,23 @@ export const SlotPanel = ({
               key={slot.id}
               className="flex flex-col"
               style={{
-                padding: "14px 18px",
+                padding: "0.875rem 1.125rem",
                 borderBottom:
                   i < slotDefs.length - 1 ? "1px solid var(--border)" : 0,
-                gap: 10,
+                gap: "0.625rem",
               }}
             >
               {/* ── Top row: thumbnail + name + PNG controls ── */}
-              <div className="flex items-center slot-top" style={{ gap: 16 }}>
+              <div
+                className="flex items-center slot-top"
+                style={{ gap: "1rem" }}
+              >
                 <div
                   className="flex items-center justify-center shrink-0"
                   style={{
-                    width: 56,
-                    height: 40,
-                    borderRadius: 6,
+                    width: "3.5rem",
+                    height: "2.5rem",
+                    borderRadius: "0.375rem",
                     background: hasPng ? "var(--bg-0)" : "var(--bg-2)",
                     border: `1px solid ${
                       hasPng
@@ -227,13 +230,13 @@ export const SlotPanel = ({
                       }}
                     />
                   ) : (
-                    <User size={18} />
+                    <User size="1.125rem" />
                   )}
                 </div>
 
                 <div
                   className="flex flex-col"
-                  style={{ gap: 4, flex: 1, minWidth: 0 }}
+                  style={{ gap: "0.25rem", flex: 1, minWidth: 0 }}
                 >
                   <div
                     className="flex items-center gap-2 slot-name"
@@ -241,7 +244,7 @@ export const SlotPanel = ({
                   >
                     <strong
                       className="truncate"
-                      style={{ fontSize: 13.5, color: "var(--fg-0)" }}
+                      style={{ fontSize: "0.84375rem", color: "var(--fg-0)" }}
                     >
                       {personName ?? (
                         <span className="dim">
@@ -249,43 +252,46 @@ export const SlotPanel = ({
                         </span>
                       )}
                     </strong>
-                    <span className="dim shrink-0" style={{ fontSize: 11.5 }}>
+                    <span
+                      className="dim shrink-0"
+                      style={{ fontSize: "0.71875rem" }}
+                    >
                       · {label}
                     </span>
                   </div>
                   <div
                     className="flex items-center"
-                    style={{ gap: 8, flexWrap: "wrap" }}
+                    style={{ gap: "0.5rem", flexWrap: "wrap" }}
                   >
                     {hasPng ? (
                       <span
                         className="flex items-center gap-1"
                         style={{
-                          fontSize: 10.5,
+                          fontSize: "0.65625rem",
                           color: "var(--c-ok)",
                           fontWeight: 500,
                         }}
                       >
-                        <CheckCircle2 size={11} />
+                        <CheckCircle2 size="0.6875rem" />
                         {t("slotPanel.pngLoaded")}
                       </span>
                     ) : (
                       <span
                         className="flex items-center gap-1"
                         style={{
-                          fontSize: 10.5,
+                          fontSize: "0.65625rem",
                           color: "var(--c-warn)",
                           fontWeight: 500,
                         }}
                       >
-                        <ImageOff size={11} />
+                        <ImageOff size="0.6875rem" />
                         {t("slotPanel.pngNotLoaded")}
                       </span>
                     )}
                     {hasPng && (
                       <span
                         className="mono dim"
-                        style={{ fontSize: 10.5 }}
+                        style={{ fontSize: "0.65625rem" }}
                         title={t("slotPanel.usageTitle")}
                       >
                         {t("slotPanel.usage", {
@@ -299,7 +305,7 @@ export const SlotPanel = ({
 
                 <div
                   className="flex items-center slot-actions"
-                  style={{ gap: 6 }}
+                  style={{ gap: "0.375rem" }}
                 >
                   <button
                     type="button"
@@ -310,7 +316,11 @@ export const SlotPanel = ({
                     }}
                     title={t("slotPanel.editorButtonTitle")}
                   >
-                    {hasPng ? <Pencil size={10} /> : <Upload size={10} />}
+                    {hasPng ? (
+                      <Pencil size="0.625rem" />
+                    ) : (
+                      <Upload size="0.625rem" />
+                    )}
                     {hasPng ? t("slotPanel.edit") : t("slotPanel.addSignature")}
                   </button>
                   {hasPng && (
@@ -324,7 +334,7 @@ export const SlotPanel = ({
                       style={{ color: "var(--c-err)" }}
                       title={t("slotPanel.deletePngTitle")}
                     >
-                      <Trash2 size={10} />
+                      <Trash2 size="0.625rem" />
                     </button>
                   )}
                 </div>
@@ -333,11 +343,15 @@ export const SlotPanel = ({
               {/* ── Signature kind: picture or detached e-signature ── */}
               <div
                 className="flex items-center"
-                style={{ gap: 8, flexWrap: "wrap" }}
+                style={{ gap: "0.5rem", flexWrap: "wrap" }}
                 title={t("slotPanel.kindHint")}
               >
                 <span
-                  style={{ fontSize: 11, color: "var(--fg-2)", flexShrink: 0 }}
+                  style={{
+                    fontSize: "0.6875rem",
+                    color: "var(--fg-2)",
+                    flexShrink: 0,
+                  }}
                 >
                   {t("slotPanel.kind")}
                 </span>
@@ -373,7 +387,7 @@ export const SlotPanel = ({
               {isDetachedText && (
                 <div
                   style={{
-                    fontSize: 11,
+                    fontSize: "0.6875rem",
                     color: "var(--fg-2)",
                     lineHeight: 1.5,
                   }}
@@ -386,11 +400,15 @@ export const SlotPanel = ({
               {!isDetachedText && (
                 <div
                   className="flex items-center"
-                  style={{ gap: 8, padding: "6px 0 0", flexWrap: "wrap" }}
+                  style={{
+                    gap: "0.5rem",
+                    padding: "0.375rem 0 0",
+                    flexWrap: "wrap",
+                  }}
                 >
                   {hasIdentity ? (
                     <ShieldCheck
-                      size={12}
+                      size="0.75rem"
                       style={{
                         color: identity?.trusted
                           ? "var(--accent)"
@@ -400,13 +418,13 @@ export const SlotPanel = ({
                     />
                   ) : (
                     <ShieldOff
-                      size={12}
+                      size="0.75rem"
                       style={{ color: "var(--fg-3)", flexShrink: 0 }}
                     />
                   )}
                   <span
                     style={{
-                      fontSize: 11,
+                      fontSize: "0.6875rem",
                       color: "var(--fg-2)",
                       flexShrink: 0,
                     }}
@@ -415,11 +433,11 @@ export const SlotPanel = ({
                   </span>
                   <select
                     style={{
-                      fontSize: 11,
+                      fontSize: "0.6875rem",
                       background: "var(--bg-2)",
                       border: "1px solid var(--border)",
-                      borderRadius: 4,
-                      padding: "2px 4px",
+                      borderRadius: "0.25rem",
+                      padding: "0.125rem 0.25rem",
                       color: "var(--fg-0)",
                     }}
                     value={currentIdentityId ?? ""}
@@ -445,7 +463,7 @@ export const SlotPanel = ({
                     <>
                       <span
                         style={{
-                          fontSize: 11,
+                          fontSize: "0.6875rem",
                           color: "var(--fg-2)",
                           flexShrink: 0,
                         }}
@@ -454,11 +472,11 @@ export const SlotPanel = ({
                       </span>
                       <select
                         style={{
-                          fontSize: 11,
+                          fontSize: "0.6875rem",
                           background: "var(--bg-2)",
                           border: "1px solid var(--border)",
-                          borderRadius: 4,
-                          padding: "2px 4px",
+                          borderRadius: "0.25rem",
+                          padding: "0.125rem 0.25rem",
                           color: "var(--fg-0)",
                         }}
                         value={currentMode}
@@ -493,11 +511,11 @@ export const SlotPanel = ({
               {hasIdentity && !isDetachedText && (
                 <div
                   className="flex items-center"
-                  style={{ gap: 8, paddingLeft: 20 }}
+                  style={{ gap: "0.5rem", paddingLeft: "1.25rem" }}
                 >
                   <span
                     style={{
-                      fontSize: 11,
+                      fontSize: "0.6875rem",
                       color: "var(--fg-2)",
                       flexShrink: 0,
                     }}
@@ -526,11 +544,11 @@ export const SlotPanel = ({
                     }}
                     style={{
                       flex: 1,
-                      fontSize: 11,
+                      fontSize: "0.6875rem",
                       background: "var(--bg-2)",
                       border: "1px solid var(--border)",
-                      borderRadius: 4,
-                      padding: "3px 6px",
+                      borderRadius: "0.25rem",
+                      padding: "0.1875rem 0.375rem",
                       color: "var(--fg-0)",
                     }}
                   />

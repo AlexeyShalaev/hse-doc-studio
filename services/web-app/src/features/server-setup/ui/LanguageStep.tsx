@@ -30,7 +30,7 @@ export const LanguageStep = ({ lang, onLang, onNext }: LanguageStepProps) => {
         role="radiogroup"
         aria-label={t("setup.language.title")}
         className="flex flex-col"
-        style={{ gap: 8 }}
+        style={{ gap: "0.5rem" }}
       >
         {LANGUAGES.map((item) => {
           const active = lang === item.id;
@@ -46,8 +46,8 @@ export const LanguageStep = ({ lang, onLang, onNext }: LanguageStepProps) => {
               }}
               className={clsx("flex items-center text-left")}
               style={{
-                gap: 12,
-                padding: "10px 14px",
+                gap: "0.75rem",
+                padding: "0.625rem 0.875rem",
                 borderRadius: "var(--r-3)",
                 border: `1px solid ${active ? "var(--accent)" : "var(--border)"}`,
                 background: active ? "var(--accent-soft)" : "var(--bg-1)",
@@ -57,16 +57,20 @@ export const LanguageStep = ({ lang, onLang, onNext }: LanguageStepProps) => {
             >
               <span
                 className="mono"
-                style={{ fontSize: 12, color: "var(--fg-2)", width: 22 }}
+                style={{
+                  fontSize: "0.75rem",
+                  color: "var(--fg-2)",
+                  width: "1.375rem",
+                }}
               >
                 {item.native}
               </span>
-              <span style={{ flex: 1, fontSize: 14, fontWeight: 500 }}>
+              <span style={{ flex: 1, fontSize: "0.875rem", fontWeight: 500 }}>
                 {item.name}
               </span>
               {active && (
                 <Check
-                  size={16}
+                  size="1rem"
                   aria-hidden
                   style={{ color: "var(--accent)" }}
                 />
@@ -75,7 +79,13 @@ export const LanguageStep = ({ lang, onLang, onNext }: LanguageStepProps) => {
           );
         })}
       </div>
-      <p style={{ margin: "12px 0 0", fontSize: 12.5, color: "var(--fg-2)" }}>
+      <p
+        style={{
+          margin: "0.75rem 0 0",
+          fontSize: "0.78125rem",
+          color: "var(--fg-2)",
+        }}
+      >
         {t("setup.language.note")}
       </p>
       <StepActions

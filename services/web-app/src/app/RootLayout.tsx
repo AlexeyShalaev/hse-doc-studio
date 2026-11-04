@@ -20,6 +20,7 @@ import {
 } from "@shared/lib";
 import { Spinner } from "@shared/ui";
 import { Toaster } from "@shared/ui/Toaster";
+import { useTextScaleSync } from "./useTextScaleSync";
 import {
   isPublicPath,
   resolveGateRedirect,
@@ -64,6 +65,10 @@ export const RootLayout = () => {
   const bootstrap = useBootstrap();
   useSessionIdentityGuard();
   const session = bootstrap.data;
+  useTextScaleSync(
+    session !== undefined &&
+      (session.mode === "local" || Boolean(session.user)),
+  );
   // Ручки установки и Docker существуют только там, где есть docker_ui. Пока
   // bootstrap не пришёл, их не спрашиваем: аноним на сервере не должен получить
   // каскад 401 и 404 на старте.

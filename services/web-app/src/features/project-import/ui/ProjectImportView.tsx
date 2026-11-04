@@ -41,14 +41,14 @@ export const ProjectImportView = ({
   if (stage === "uploading") {
     const unpacking = percent >= 100;
     return (
-      <div className="flex flex-col" style={{ gap: 14 }}>
+      <div className="flex flex-col" style={{ gap: "0.875rem" }}>
         {file && (
           <ImportFileCard name={file.name} size={file.size} editable={false} />
         )}
-        <div className="flex flex-col" style={{ gap: 8 }}>
+        <div className="flex flex-col" style={{ gap: "0.5rem" }}>
           <p
             className="dim"
-            style={{ margin: 0, fontSize: 12.5, lineHeight: 1.5 }}
+            style={{ margin: 0, fontSize: "0.78125rem", lineHeight: 1.5 }}
           >
             {t("uploading.lead")}
           </p>
@@ -58,12 +58,12 @@ export const ProjectImportView = ({
           />
           <div
             className="dim flex items-center"
-            style={{ gap: 6, fontSize: 11.5 }}
+            style={{ gap: "0.375rem", fontSize: "0.71875rem" }}
             role="status"
           >
             {unpacking ? (
               <>
-                <Loader2 size={12} className="spin" aria-hidden="true" />
+                <Loader2 size="0.75rem" className="spin" aria-hidden="true" />
                 {t("uploading.unpacking")}
               </>
             ) : (
@@ -76,7 +76,7 @@ export const ProjectImportView = ({
   }
 
   return (
-    <div className="flex flex-col" style={{ gap: 14 }}>
+    <div className="flex flex-col" style={{ gap: "0.875rem" }}>
       <FileDropZone
         ref={zoneRef}
         showZone={file === null}
@@ -126,7 +126,7 @@ export const ProjectImportView = ({
       {!file && !failure && (
         <p
           className="dim"
-          style={{ margin: 0, fontSize: 12, lineHeight: 1.55 }}
+          style={{ margin: 0, fontSize: "0.75rem", lineHeight: 1.55 }}
         >
           {t("explain")}
         </p>

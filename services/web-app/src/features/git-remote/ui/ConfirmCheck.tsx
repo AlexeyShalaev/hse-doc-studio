@@ -20,8 +20,8 @@ export const ConfirmCheck = ({
   <label
     className="flex items-start"
     style={{
-      gap: 9,
-      fontSize: 12.5,
+      gap: "0.5625rem",
+      fontSize: "0.78125rem",
       lineHeight: 1.45,
       cursor: disabled ? "default" : "pointer",
       color: "var(--fg-0)",
@@ -35,7 +35,11 @@ export const ConfirmCheck = ({
       onChange={(event) => {
         onChange(event.target.checked);
       }}
-      style={{ marginTop: 2, accentColor: "var(--accent)", flexShrink: 0 }}
+      style={{
+        marginTop: "0.125rem",
+        accentColor: "var(--accent)",
+        flexShrink: 0,
+      }}
     />
     <span>{children}</span>
   </label>

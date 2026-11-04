@@ -67,37 +67,40 @@ const InstalledRow = ({
     <div
       className="flex items-center justify-between"
       style={{
-        gap: 12,
-        padding: "10px 12px",
-        borderRadius: 6,
+        gap: "0.75rem",
+        padding: "0.625rem 0.75rem",
+        borderRadius: "0.375rem",
         border: active ? "1px solid var(--accent)" : "1px solid var(--border)",
         background: active ? "var(--accent-soft, var(--bg-1))" : "var(--bg-1)",
       }}
     >
-      <div className="flex flex-col" style={{ gap: 4, minWidth: 0 }}>
-        <div className="flex items-center" style={{ gap: 8 }}>
+      <div className="flex flex-col" style={{ gap: "0.25rem", minWidth: 0 }}>
+        <div className="flex items-center" style={{ gap: "0.5rem" }}>
           {active ? (
             <Star
-              size={13}
+              size="0.8125rem"
               style={{ color: "var(--accent)", fill: "var(--accent)" }}
             />
           ) : (
-            <CheckCircle2 size={13} style={{ color: "var(--c-ok)" }} />
+            <CheckCircle2 size="0.8125rem" style={{ color: "var(--c-ok)" }} />
           )}
-          <span className="mono" style={{ fontSize: 12, fontWeight: 500 }}>
+          <span
+            className="mono"
+            style={{ fontSize: "0.75rem", fontWeight: 500 }}
+          >
             {entry.image}
           </span>
           {active && (
             <span
               className="mono"
               style={{
-                fontSize: 10,
-                padding: "1px 6px",
-                borderRadius: 3,
+                fontSize: "0.625rem",
+                padding: "1px 0.375rem",
+                borderRadius: "0.1875rem",
                 background: "var(--accent)",
                 color: "var(--bg-0)",
                 textTransform: "uppercase",
-                letterSpacing: 0.5,
+                letterSpacing: "0.03125rem",
               }}
             >
               {t("images.activeBadge")}
@@ -107,20 +110,20 @@ const InstalledRow = ({
         <div
           className="dim"
           style={{
-            fontSize: 11,
+            fontSize: "0.6875rem",
             display: "flex",
-            gap: 8,
+            gap: "0.5rem",
             alignItems: "center",
           }}
         >
           <span>{formatBytes(entry.size_bytes)}</span>
           <span>·</span>
-          <span className="mono" style={{ fontSize: 10 }}>
+          <span className="mono" style={{ fontSize: "0.625rem" }}>
             {entry.id.slice(7, 19)}
           </span>
         </div>
       </div>
-      <div className="flex items-center" style={{ gap: 6 }}>
+      <div className="flex items-center" style={{ gap: "0.375rem" }}>
         {!active && (
           <button
             type="button"
@@ -131,7 +134,7 @@ const InstalledRow = ({
             disabled={pending}
             title={t("images.makeActiveBuildTitle")}
           >
-            <Star size={11} />
+            <Star size="0.6875rem" />
             {t("images.makeActive")}
           </button>
         )}
@@ -144,7 +147,7 @@ const InstalledRow = ({
           disabled={pending}
           title={t("images.updateTitle")}
         >
-          <RefreshCw size={11} />
+          <RefreshCw size="0.6875rem" />
         </button>
         <button
           type="button"
@@ -159,7 +162,7 @@ const InstalledRow = ({
               : t("images.removeLocalTitle")
           }
         >
-          <Trash2 size={11} />
+          <Trash2 size="0.6875rem" />
         </button>
       </div>
     </div>
@@ -187,22 +190,22 @@ const RemoteRow = ({
     <div
       className="flex items-center justify-between"
       style={{
-        gap: 12,
-        padding: "8px 12px",
-        borderRadius: 6,
+        gap: "0.75rem",
+        padding: "0.5rem 0.75rem",
+        borderRadius: "0.375rem",
         background: installed ? "var(--bg-1)" : "transparent",
         border: "1px solid transparent",
       }}
     >
-      <div className="flex flex-col" style={{ gap: 2, minWidth: 0 }}>
-        <div className="flex items-center" style={{ gap: 8 }}>
-          <span className="mono" style={{ fontSize: 12 }}>
+      <div className="flex flex-col" style={{ gap: "0.125rem", minWidth: 0 }}>
+        <div className="flex items-center" style={{ gap: "0.5rem" }}>
+          <span className="mono" style={{ fontSize: "0.75rem" }}>
             {tag.name}
           </span>
           {active && (
             <span
               className="mono"
-              style={{ fontSize: 10, color: "var(--accent)" }}
+              style={{ fontSize: "0.625rem", color: "var(--accent)" }}
             >
               {t("images.activeStar")}
             </span>
@@ -210,7 +213,7 @@ const RemoteRow = ({
           {installed && !active && (
             <span
               className="mono"
-              style={{ fontSize: 10, color: "var(--c-ok)" }}
+              style={{ fontSize: "0.625rem", color: "var(--c-ok)" }}
             >
               {t("images.installedBadge")}
             </span>
@@ -218,7 +221,7 @@ const RemoteRow = ({
         </div>
         <div
           className="dim"
-          style={{ fontSize: 10.5, display: "flex", gap: 8 }}
+          style={{ fontSize: "0.65625rem", display: "flex", gap: "0.5rem" }}
         >
           {tag.size_bytes > 0 && <span>{formatBytes(tag.size_bytes)}</span>}
           {tag.last_updated && (
@@ -229,7 +232,7 @@ const RemoteRow = ({
           )}
         </div>
       </div>
-      <div className="flex items-center" style={{ gap: 6 }}>
+      <div className="flex items-center" style={{ gap: "0.375rem" }}>
         {installed && !active && (
           <button
             type="button"
@@ -239,7 +242,7 @@ const RemoteRow = ({
             }}
             title={t("images.makeActiveBuildTitle")}
           >
-            <Star size={11} />
+            <Star size="0.6875rem" />
             {t("images.activate")}
           </button>
         )}
@@ -251,7 +254,7 @@ const RemoteRow = ({
               onInstall(image);
             }}
           >
-            <Download size={11} />
+            <Download size="0.6875rem" />
             {t("images.install")}
           </button>
         )}
@@ -303,9 +306,9 @@ const RepoBlock = ({
     <div
       className="flex flex-col"
       style={{
-        gap: 6,
-        padding: 10,
-        borderRadius: 6,
+        gap: "0.375rem",
+        padding: "0.625rem",
+        borderRadius: "0.375rem",
         border: "1px solid var(--border)",
       }}
     >
@@ -313,7 +316,7 @@ const RepoBlock = ({
         type="button"
         className="flex items-center justify-between"
         style={{
-          gap: 8,
+          gap: "0.5rem",
           background: "transparent",
           border: "none",
           padding: 0,
@@ -326,12 +329,12 @@ const RepoBlock = ({
       >
         <span
           className="flex items-center"
-          style={{ gap: 8, fontSize: 12, fontWeight: 600 }}
+          style={{ gap: "0.5rem", fontSize: "0.75rem", fontWeight: 600 }}
         >
-          <Cloud size={13} style={{ color: "var(--fg-2)" }} />
+          <Cloud size="0.8125rem" style={{ color: "var(--fg-2)" }} />
           <span className="mono">{repo}</span>
         </span>
-        <span className="dim" style={{ fontSize: 11 }}>
+        <span className="dim" style={{ fontSize: "0.6875rem" }}>
           {expanded ? t("images.hideTags") : t("images.showTags")}
         </span>
       </button>
@@ -341,7 +344,11 @@ const RepoBlock = ({
           {remoteTags.isLoading && (
             <div
               className="flex items-center"
-              style={{ gap: 8, fontSize: 11.5, padding: 8 }}
+              style={{
+                gap: "0.5rem",
+                fontSize: "0.71875rem",
+                padding: "0.5rem",
+              }}
             >
               <Spinner size="sm" />
               <span className="dim">{t("images.fetchingTags")}</span>
@@ -350,7 +357,11 @@ const RepoBlock = ({
           {remoteTags.isError && (
             <div
               className="dim"
-              style={{ fontSize: 11.5, padding: 8, color: "var(--c-warn)" }}
+              style={{
+                fontSize: "0.71875rem",
+                padding: "0.5rem",
+                color: "var(--c-warn)",
+              }}
             >
               {t("images.fetchTagsError")}
             </div>
@@ -359,14 +370,14 @@ const RepoBlock = ({
             <div
               className="flex items-center"
               style={{
-                gap: 6,
-                padding: "4px 8px",
-                borderRadius: 4,
+                gap: "0.375rem",
+                padding: "0.25rem 0.5rem",
+                borderRadius: "0.25rem",
                 border: "1px solid var(--border)",
                 background: "var(--bg-0)",
               }}
             >
-              <Search size={11} style={{ color: "var(--fg-3)" }} />
+              <Search size="0.6875rem" style={{ color: "var(--fg-3)" }} />
               <input
                 type="search"
                 value={query}
@@ -380,12 +391,12 @@ const RepoBlock = ({
                   border: "none",
                   outline: "none",
                   color: "var(--fg-0)",
-                  fontSize: 11.5,
+                  fontSize: "0.71875rem",
                   fontFamily: "var(--font-mono)",
                 }}
               />
               {isSearching && (
-                <span className="dim" style={{ fontSize: 10.5 }}>
+                <span className="dim" style={{ fontSize: "0.65625rem" }}>
                   {filteredTags.length}/{tags.length}
                 </span>
               )}
@@ -394,19 +405,25 @@ const RepoBlock = ({
           {!remoteTags.isLoading &&
             tags.length === 0 &&
             !remoteTags.isError && (
-              <div className="dim" style={{ fontSize: 11.5, padding: 8 }}>
+              <div
+                className="dim"
+                style={{ fontSize: "0.71875rem", padding: "0.5rem" }}
+              >
                 {t("images.noTags")}
               </div>
             )}
           {!remoteTags.isLoading &&
             tags.length > 0 &&
             filteredTags.length === 0 && (
-              <div className="dim" style={{ fontSize: 11.5, padding: 8 }}>
+              <div
+                className="dim"
+                style={{ fontSize: "0.71875rem", padding: "0.5rem" }}
+              >
                 {t("images.noMatch", { query })}
               </div>
             )}
           {visibleTags.length > 0 && (
-            <div className="flex flex-col" style={{ gap: 2 }}>
+            <div className="flex flex-col" style={{ gap: "0.125rem" }}>
               {visibleTags.map((tag) => {
                 const image = `${repo}:${tag.name}`;
                 return (
@@ -477,7 +494,10 @@ export const ImagesSection = () => {
   const renderDocker = () => {
     if (dockerStatus.isLoading) {
       return (
-        <div className="flex items-center" style={{ gap: 8, fontSize: 12 }}>
+        <div
+          className="flex items-center"
+          style={{ gap: "0.5rem", fontSize: "0.75rem" }}
+        >
           <Spinner size="sm" />
           <span className="dim">{t("images.checkingDocker")}</span>
         </div>
@@ -493,11 +513,14 @@ export const ImagesSection = () => {
       );
     }
     return (
-      <div className="flex items-center" style={{ gap: 8, fontSize: 12 }}>
-        <CheckCircle2 size={13} style={{ color: "var(--c-ok)" }} />
+      <div
+        className="flex items-center"
+        style={{ gap: "0.5rem", fontSize: "0.75rem" }}
+      >
+        <CheckCircle2 size="0.8125rem" style={{ color: "var(--c-ok)" }} />
         <span>{t("images.dockerConnected")}</span>
         {data.version && (
-          <span className="mono dim" style={{ fontSize: 11 }}>
+          <span className="mono dim" style={{ fontSize: "0.6875rem" }}>
             {data.version}
           </span>
         )}
@@ -512,9 +535,9 @@ export const ImagesSection = () => {
       <div
         className="flex flex-col"
         style={{
-          gap: 6,
-          padding: 12,
-          borderRadius: 6,
+          gap: "0.375rem",
+          padding: "0.75rem",
+          borderRadius: "0.375rem",
           border: "1px solid var(--accent)",
           background: "var(--bg-1)",
         }}
@@ -522,19 +545,22 @@ export const ImagesSection = () => {
         <div
           className="dim"
           style={{
-            fontSize: 10,
+            fontSize: "0.625rem",
             textTransform: "uppercase",
-            letterSpacing: 0.5,
+            letterSpacing: "0.03125rem",
           }}
         >
           {t("images.activeImage")}
         </div>
-        <div className="flex items-center" style={{ gap: 8 }}>
+        <div className="flex items-center" style={{ gap: "0.5rem" }}>
           <Star
-            size={14}
+            size="0.875rem"
             style={{ color: "var(--accent)", fill: "var(--accent)" }}
           />
-          <span className="mono" style={{ fontSize: 13, fontWeight: 500 }}>
+          <span
+            className="mono"
+            style={{ fontSize: "0.8125rem", fontWeight: 500 }}
+          >
             {activeImage}
           </span>
           {!isInstalled && (
@@ -545,7 +571,7 @@ export const ImagesSection = () => {
                 setInstalling(activeImage);
               }}
             >
-              <Download size={11} />
+              <Download size="0.6875rem" />
               {t("images.install")}
             </button>
           )}
@@ -554,14 +580,14 @@ export const ImagesSection = () => {
           <div
             className="dim"
             style={{
-              fontSize: 11,
+              fontSize: "0.6875rem",
               display: "flex",
               alignItems: "center",
-              gap: 6,
+              gap: "0.375rem",
               color: "var(--c-warn)",
             }}
           >
-            <XCircle size={12} />
+            <XCircle size="0.75rem" />
             {t("images.activeImageNotInstalled")}
           </div>
         )}
@@ -572,7 +598,10 @@ export const ImagesSection = () => {
   const renderInstalled = () => {
     if (imagesList.isLoading) {
       return (
-        <div className="flex items-center" style={{ gap: 8, fontSize: 12 }}>
+        <div
+          className="flex items-center"
+          style={{ gap: "0.5rem", fontSize: "0.75rem" }}
+        >
           <Spinner size="sm" />
           <span className="dim">{t("images.loadingInstalled")}</span>
         </div>
@@ -581,19 +610,19 @@ export const ImagesSection = () => {
     const installed = imagesList.data?.installed ?? [];
     if (installed.length === 0) {
       return (
-        <div className="dim" style={{ fontSize: 12 }}>
+        <div className="dim" style={{ fontSize: "0.75rem" }}>
           {t("images.noInstalled")}
         </div>
       );
     }
     return (
-      <div className="flex flex-col" style={{ gap: 6 }}>
+      <div className="flex flex-col" style={{ gap: "0.375rem" }}>
         <div
           className="dim"
           style={{
-            fontSize: 10,
+            fontSize: "0.625rem",
             textTransform: "uppercase",
-            letterSpacing: 0.5,
+            letterSpacing: "0.03125rem",
           }}
         >
           {t("images.installedLocally")}
@@ -619,13 +648,13 @@ export const ImagesSection = () => {
     const repos = imagesList.data?.allowed_repos ?? [];
     if (repos.length === 0) return null;
     return (
-      <div className="flex flex-col" style={{ gap: 6 }}>
+      <div className="flex flex-col" style={{ gap: "0.375rem" }}>
         <div
           className="dim"
           style={{
-            fontSize: 10,
+            fontSize: "0.625rem",
             textTransform: "uppercase",
-            letterSpacing: 0.5,
+            letterSpacing: "0.03125rem",
           }}
         >
           {t("images.availableFromHub")}
@@ -653,7 +682,10 @@ export const ImagesSection = () => {
         title={t("images.title")}
         sub={t("images.subtitle")}
       />
-      <div className="flex flex-col" style={{ gap: 12, paddingBottom: 14 }}>
+      <div
+        className="flex flex-col"
+        style={{ gap: "0.75rem", paddingBottom: "0.875rem" }}
+      >
         {renderDocker()}
         {renderActive()}
         {renderInstalled()}

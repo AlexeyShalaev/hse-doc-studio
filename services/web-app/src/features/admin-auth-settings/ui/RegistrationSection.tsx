@@ -150,7 +150,7 @@ export const RegistrationSection = ({
         )}
 
         {notes.length > 0 && (
-          <div className="adm-setting-extra" style={{ paddingTop: 12 }}>
+          <div className="adm-setting-extra" style={{ paddingTop: "0.75rem" }}>
             {notes}
           </div>
         )}

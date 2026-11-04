@@ -139,7 +139,7 @@ export const TokensCard = ({
       {status === "loading" && (
         <div
           className="flex items-center"
-          style={{ gap: 8, fontSize: 12 }}
+          style={{ gap: "0.5rem", fontSize: "0.75rem" }}
           data-testid="tokens-loading"
         >
           <Spinner size="sm" />
@@ -184,30 +184,30 @@ export const TokensCard = ({
                     data-expired={expired ? "true" : undefined}
                     className="flex"
                     style={{
-                      gap: 12,
-                      padding: "10px 0",
+                      gap: "0.75rem",
+                      padding: "0.625rem 0",
                       borderBottom: "1px dashed var(--border)",
                       alignItems: "flex-start",
                     }}
                   >
                     <KeyRound
-                      size={18}
+                      size="1.125rem"
                       aria-hidden="true"
                       style={{
                         color: "var(--fg-2)",
                         flexShrink: 0,
-                        marginTop: 2,
+                        marginTop: "0.125rem",
                       }}
                     />
                     <div
                       className="flex flex-col"
-                      style={{ gap: 4, flex: 1, minWidth: 0 }}
+                      style={{ gap: "0.25rem", flex: 1, minWidth: 0 }}
                     >
                       <span
                         className="flex items-center"
                         style={{
-                          gap: 8,
-                          fontSize: 13,
+                          gap: "0.5rem",
+                          fontSize: "0.8125rem",
                           fontWeight: 500,
                           flexWrap: "wrap",
                         }}
@@ -230,14 +230,14 @@ export const TokensCard = ({
                         )}
                       </span>
                       <code
-                        style={{ fontSize: 11.5, color: "var(--fg-2)" }}
+                        style={{ fontSize: "0.71875rem", color: "var(--fg-2)" }}
                         data-testid={`token-prefix-${token.id}`}
                       >
                         {token.prefix}…
                       </code>
                       <span
                         className="flex"
-                        style={{ gap: 6, flexWrap: "wrap" }}
+                        style={{ gap: "0.375rem", flexWrap: "wrap" }}
                       >
                         {token.scopes.map((scope) => (
                           <Badge key={scope} variant="subtle">
@@ -245,7 +245,9 @@ export const TokensCard = ({
                           </Badge>
                         ))}
                       </span>
-                      <span style={{ fontSize: 11.5, color: "var(--fg-2)" }}>
+                      <span
+                        style={{ fontSize: "0.71875rem", color: "var(--fg-2)" }}
+                      >
                         {token.expires_at === null
                           ? t("tokens.noExpiry")
                           : expired
@@ -275,7 +277,7 @@ export const TokensCard = ({
                     {confirmId === token.id ? (
                       <div
                         className="flex"
-                        style={{ gap: 6, flexShrink: 0 }}
+                        style={{ gap: "0.375rem", flexShrink: 0 }}
                         role="group"
                         aria-label={t("tokens.confirmRevoke", {
                           name: token.name,
@@ -317,12 +319,12 @@ export const TokensCard = ({
                         onClick={() => {
                           if (!busy) setConfirmId(token.id);
                         }}
-                        style={{ gap: 6, flexShrink: 0 }}
+                        style={{ gap: "0.375rem", flexShrink: 0 }}
                       >
                         {busy ? (
                           <Spinner size="sm" />
                         ) : (
-                          <Trash2 size={12} aria-hidden="true" />
+                          <Trash2 size="0.75rem" aria-hidden="true" />
                         )}
                         {t("tokens.revoke")}
                       </Button>
@@ -346,9 +348,9 @@ export const TokensCard = ({
               onSubmit={submit}
               className="flex flex-col"
               style={{
-                gap: 12,
-                maxWidth: 420,
-                padding: 14,
+                gap: "0.75rem",
+                maxWidth: "26.25rem",
+                padding: "0.875rem",
                 borderRadius: "var(--r-2)",
                 background: "var(--bg-2)",
               }}
@@ -372,10 +374,14 @@ export const TokensCard = ({
 
               <fieldset
                 className="flex flex-col"
-                style={{ gap: 8, border: 0, margin: 0, padding: 0 }}
+                style={{ gap: "0.5rem", border: 0, margin: 0, padding: 0 }}
               >
                 <legend
-                  style={{ fontSize: 12.5, fontWeight: 500, marginBottom: 6 }}
+                  style={{
+                    fontSize: "0.78125rem",
+                    fontWeight: 500,
+                    marginBottom: "0.375rem",
+                  }}
                 >
                   {t("tokens.scopesLegend")}
                 </legend>
@@ -396,9 +402,9 @@ export const TokensCard = ({
                     key={scope}
                     className="flex"
                     style={{
-                      gap: 10,
+                      gap: "0.625rem",
                       alignItems: "flex-start",
-                      fontSize: 12.5,
+                      fontSize: "0.78125rem",
                     }}
                   >
                     <input
@@ -407,10 +413,10 @@ export const TokensCard = ({
                       onChange={(e) => {
                         toggle(scope, e.target.checked);
                       }}
-                      style={{ marginTop: 3 }}
+                      style={{ marginTop: "0.1875rem" }}
                       data-testid={`token-scope-${scopeKey(scope)}`}
                     />
-                    <span className="flex flex-col" style={{ gap: 2 }}>
+                    <span className="flex flex-col" style={{ gap: "0.125rem" }}>
                       <span>{t(`tokens.scopes.${scopeKey(scope)}.title`)}</span>
                       <span style={HINT}>
                         {t(`tokens.scopes.${scopeKey(scope)}.hint`)}
@@ -421,17 +427,17 @@ export const TokensCard = ({
                 {scopeError && (
                   <span
                     role="alert"
-                    style={{ fontSize: 12, color: "var(--c-err)" }}
+                    style={{ fontSize: "0.75rem", color: "var(--c-err)" }}
                   >
                     {t("tokens.scopesRequired")}
                   </span>
                 )}
               </fieldset>
 
-              <div className="flex flex-col" style={{ gap: 6 }}>
+              <div className="flex flex-col" style={{ gap: "0.375rem" }}>
                 <label
                   htmlFor={`${uid}-expiry`}
-                  style={{ fontSize: 12.5, fontWeight: 500 }}
+                  style={{ fontSize: "0.78125rem", fontWeight: 500 }}
                 >
                   {t("tokens.expiryLabel")}
                 </label>
@@ -461,13 +467,13 @@ export const TokensCard = ({
                 <Button
                   type="submit"
                   aria-disabled={creating}
-                  style={{ gap: 8 }}
+                  style={{ gap: "0.5rem" }}
                   data-testid="token-submit"
                 >
                   {creating ? (
                     <Spinner size="sm" />
                   ) : (
-                    <KeyRound size={14} aria-hidden="true" />
+                    <KeyRound size="0.875rem" aria-hidden="true" />
                   )}
                   {creating ? t("tokens.creating") : t("tokens.create")}
                 </Button>
@@ -489,12 +495,12 @@ export const TokensCard = ({
                 type="button"
                 variant="outline"
                 data-testid="token-new"
-                style={{ gap: 8 }}
+                style={{ gap: "0.5rem" }}
                 onClick={() => {
                   setOpen(true);
                 }}
               >
-                <Plus size={14} aria-hidden="true" />
+                <Plus size="0.875rem" aria-hidden="true" />
                 {t("tokens.new")}
               </Button>
             </div>

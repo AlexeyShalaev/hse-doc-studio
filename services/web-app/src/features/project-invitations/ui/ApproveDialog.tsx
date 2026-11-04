@@ -84,10 +84,13 @@ export const ApproveDialog = ({
     >
       <div
         className="flex flex-col"
-        style={{ gap: 12 }}
+        style={{ gap: "0.75rem" }}
         data-testid="access-request-approve-form"
       >
-        <div className="flex flex-col" style={{ gap: 4, fontSize: 12 }}>
+        <div
+          className="flex flex-col"
+          style={{ gap: "0.25rem", fontSize: "0.75rem" }}
+        >
           {t("form.role")}
           <Select
             ariaLabel={t("form.role")}
@@ -98,7 +101,10 @@ export const ApproveDialog = ({
             }}
           />
         </div>
-        <div className="flex flex-col" style={{ gap: 4, fontSize: 12 }}>
+        <div
+          className="flex flex-col"
+          style={{ gap: "0.25rem", fontSize: "0.75rem" }}
+        >
           {t("form.persona")}
           <Select
             ariaLabel={t("form.persona")}

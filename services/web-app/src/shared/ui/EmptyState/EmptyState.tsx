@@ -33,7 +33,7 @@ export const EmptyState = ({
     data-testid={testId}
   >
     <span className="adm-state-icon" aria-hidden="true">
-      {icon ?? <Inbox size={compact ? 15 : 18} />}
+      {icon ?? <Inbox size={compact ? "0.9375rem" : "1.125rem"} />}
     </span>
     <div className="adm-state-text">
       <p className="adm-state-title">{title}</p>
@@ -71,7 +71,7 @@ export const NoResults = ({
   const text = query?.trim() ?? "";
   return (
     <EmptyState
-      icon={<SearchX size={compact ? 15 : 18} />}
+      icon={<SearchX size={compact ? "0.9375rem" : "1.125rem"} />}
       title={t("noResults.title")}
       description={
         description ??
@@ -123,7 +123,7 @@ export const ErrorState = ({
       data-testid={testId}
     >
       <span className="adm-state-icon" aria-hidden="true">
-        <CircleAlert size={compact ? 15 : 18} />
+        <CircleAlert size={compact ? "0.9375rem" : "1.125rem"} />
       </span>
       <div className="adm-state-text">
         <p className="adm-state-title">{title ?? t("adminKit.error.title")}</p>

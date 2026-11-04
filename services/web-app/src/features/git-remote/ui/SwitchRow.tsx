@@ -27,27 +27,27 @@ export const SwitchRow = ({
   <div
     className="flex items-center justify-between"
     style={{
-      padding: 12,
+      padding: "0.75rem",
       background: "var(--bg-2)",
       borderRadius: "var(--r-2)",
-      gap: 12,
+      gap: "0.75rem",
     }}
   >
-    <div className="flex flex-col" style={{ gap: 2, minWidth: 0 }}>
-      <strong id={`${id}-label`} style={{ fontSize: 12.5 }}>
+    <div className="flex flex-col" style={{ gap: "0.125rem", minWidth: 0 }}>
+      <strong id={`${id}-label`} style={{ fontSize: "0.78125rem" }}>
         {label}
       </strong>
       {hint && (
         <span
           id={`${id}-hint`}
           className="dim"
-          style={{ fontSize: 11, lineHeight: 1.5 }}
+          style={{ fontSize: "0.6875rem", lineHeight: 1.5 }}
         >
           {hint}
         </span>
       )}
     </div>
-    <div className="flex items-center" style={{ gap: 8, flexShrink: 0 }}>
+    <div className="flex items-center" style={{ gap: "0.5rem", flexShrink: 0 }}>
       {busy && <Spinner size="sm" />}
       <button
         type="button"

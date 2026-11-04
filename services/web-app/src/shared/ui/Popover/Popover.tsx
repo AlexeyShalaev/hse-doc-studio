@@ -78,7 +78,7 @@ export const PopoverContent = forwardRef<
               // Above Modal (101) so a popover can open inside a dialog.
               zIndex: 120,
               width,
-              maxWidth: "calc(100vw - 16px)",
+              maxWidth: "calc(100vw - 1rem)",
               maxHeight: "var(--radix-popover-content-available-height)",
               overflowY: "auto",
               ...style,

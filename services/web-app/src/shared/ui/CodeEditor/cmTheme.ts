@@ -13,7 +13,7 @@ export const hseEditorTheme: Extension = EditorView.theme({
     color: "var(--fg-0)",
     backgroundColor: "var(--bg-0)",
     height: "100%",
-    fontSize: "12.5px",
+    fontSize: "0.78125rem",
   },
   ".cm-scroller": {
     fontFamily: "var(--font-mono)",
@@ -22,7 +22,7 @@ export const hseEditorTheme: Extension = EditorView.theme({
   },
   ".cm-content": {
     caretColor: "var(--accent)",
-    padding: "10px 0",
+    padding: "0.625rem 0",
   },
   ".cm-cursor, .cm-dropCursor": {
     borderLeftColor: "var(--accent)",
@@ -41,7 +41,7 @@ export const hseEditorTheme: Extension = EditorView.theme({
   "&.cm-focused .cm-matchingBracket, .cm-matchingBracket": {
     backgroundColor: "transparent",
     outline: "1px solid var(--accent-line)",
-    borderRadius: "2px",
+    borderRadius: "0.125rem",
     color: "var(--fg-0)",
   },
   ".cm-nonmatchingBracket": { color: "var(--c-err)" },
@@ -59,8 +59,8 @@ export const hseEditorTheme: Extension = EditorView.theme({
   },
   ".cm-lineNumbers .cm-gutterElement": {
     fontVariantNumeric: "tabular-nums",
-    padding: "0 8px 0 14px",
-    minWidth: "30px",
+    padding: "0 0.5rem 0 0.875rem",
+    minWidth: "1.875rem",
   },
   ".cm-foldGutter .cm-gutterElement": { color: "var(--fg-3)" },
 
@@ -68,16 +68,16 @@ export const hseEditorTheme: Extension = EditorView.theme({
   ".cm-panels": { backgroundColor: "var(--bg-1)", color: "var(--fg-1)" },
   ".cm-panels.cm-panels-top": { borderBottom: "1px solid var(--border)" },
   ".cm-panel.cm-search": {
-    padding: "6px 8px",
+    padding: "0.375rem 0.5rem",
     fontFamily: "var(--font-sans)",
-    fontSize: "12px",
+    fontSize: "0.75rem",
   },
   ".cm-panel.cm-search input, .cm-panel.cm-search button, .cm-textfield": {
     backgroundColor: "var(--bg-2)",
     color: "var(--fg-0)",
     border: "1px solid var(--border)",
     borderRadius: "var(--r-2)",
-    padding: "2px 6px",
+    padding: "0.125rem 0.375rem",
   },
   ".cm-panel.cm-search label": { color: "var(--fg-2)" },
   ".cm-button": {
@@ -106,10 +106,10 @@ export const hseEditorTheme: Extension = EditorView.theme({
   },
   ".cm-tooltip.cm-tooltip-autocomplete > ul": {
     fontFamily: "var(--font-mono)",
-    fontSize: "12px",
+    fontSize: "0.75rem",
     maxHeight: "16em",
   },
-  ".cm-tooltip-autocomplete > ul > li": { padding: "3px 8px" },
+  ".cm-tooltip-autocomplete > ul > li": { padding: "0.1875rem 0.5rem" },
   ".cm-tooltip-autocomplete > ul > li[aria-selected]": {
     backgroundColor: "var(--accent-soft)",
     color: "var(--fg-0)",
@@ -126,14 +126,14 @@ export const hseEditorTheme: Extension = EditorView.theme({
   // Lint / diagnostics
   ".cm-diagnostic": {
     fontFamily: "var(--font-mono)",
-    fontSize: "11.5px",
-    padding: "4px 8px",
+    fontSize: "0.71875rem",
+    padding: "0.25rem 0.5rem",
     borderRadius: "var(--r-2)",
   },
-  ".cm-diagnostic-error": { borderLeft: "3px solid var(--c-err)" },
-  ".cm-diagnostic-warning": { borderLeft: "3px solid var(--c-warn)" },
-  ".cm-diagnostic-info": { borderLeft: "3px solid var(--c-info)" },
-  ".cm-diagnosticSource": { color: "var(--fg-3)", fontSize: "10.5px" },
+  ".cm-diagnostic-error": { borderLeft: "0.1875rem solid var(--c-err)" },
+  ".cm-diagnostic-warning": { borderLeft: "0.1875rem solid var(--c-warn)" },
+  ".cm-diagnostic-info": { borderLeft: "0.1875rem solid var(--c-info)" },
+  ".cm-diagnosticSource": { color: "var(--fg-3)", fontSize: "0.65625rem" },
   ".cm-lintRange-error": {
     backgroundImage: "none",
     textDecoration: "underline wavy var(--c-err)",
@@ -153,7 +153,7 @@ export const hseEditorTheme: Extension = EditorView.theme({
   // Inline diagnostics (Error-Lens style) shown at the end of a line
   ".cm-inlineDiag": {
     paddingLeft: "1.6em",
-    fontSize: "11px",
+    fontSize: "0.6875rem",
     fontStyle: "italic",
     opacity: "0.92",
     whiteSpace: "pre",

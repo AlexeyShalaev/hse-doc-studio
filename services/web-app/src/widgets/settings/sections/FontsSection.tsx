@@ -8,7 +8,7 @@ export const FontsSection = () => {
   const { t } = useTranslation("settings");
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
       <SettingHead
         anchorId="fonts"
         title={t("fonts.title")}
@@ -18,18 +18,18 @@ export const FontsSection = () => {
       <div
         className="flex"
         style={{
-          gap: 8,
-          padding: "9px 11px",
-          borderRadius: 6,
+          gap: "0.5rem",
+          padding: "0.5625rem 0.6875rem",
+          borderRadius: "0.375rem",
           background: "var(--bg-2)",
           border: "1px solid var(--border)",
-          fontSize: 11.5,
+          fontSize: "0.71875rem",
           color: "var(--fg-2)",
           lineHeight: 1.5,
         }}
       >
         <Info
-          size={14}
+          size="0.875rem"
           style={{
             color: "var(--c-info, var(--accent))",
             flexShrink: 0,

@@ -69,9 +69,9 @@ export const DocBuildLine = ({ view, now, docId }: DocBuildLineProps) => {
     <span
       className="flex items-baseline"
       style={{
-        gap: 6,
+        gap: "0.375rem",
         flexWrap: "wrap",
-        fontSize: 10.5,
+        fontSize: "0.65625rem",
         lineHeight: 1.3,
         color: COLOR[view.tone],
         minWidth: 0,

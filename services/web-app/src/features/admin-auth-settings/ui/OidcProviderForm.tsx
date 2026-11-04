@@ -38,9 +38,9 @@ const SwitchLine = ({
 }) => (
   <div
     className="flex items-center justify-between"
-    style={{ gap: 16, padding: "8px 0" }}
+    style={{ gap: "1rem", padding: "0.5rem 0" }}
   >
-    <span className="flex flex-col" style={{ gap: 2, minWidth: 0 }}>
+    <span className="flex flex-col" style={{ gap: "0.125rem", minWidth: 0 }}>
       <label htmlFor={id} className="form-label">
         {label}
       </label>
@@ -124,7 +124,7 @@ export const OidcProviderForm = ({
             type="button"
             aria-disabled={pending}
             onClick={submit}
-            style={{ gap: 8 }}
+            style={{ gap: "0.5rem" }}
             data-testid="oidc-form-save"
           >
             {pending && <Spinner size="sm" />}
@@ -139,7 +139,7 @@ export const OidcProviderForm = ({
           submit();
         }}
         className="flex flex-col"
-        style={{ gap: 12 }}
+        style={{ gap: "0.75rem" }}
         data-testid="oidc-form"
       >
         <Input
@@ -176,7 +176,7 @@ export const OidcProviderForm = ({
           }}
           {...issue("client_id")}
         />
-        <div className="flex flex-col" style={{ gap: 6 }}>
+        <div className="flex flex-col" style={{ gap: "0.375rem" }}>
           <Input
             id={`${uid}-secret`}
             label={t("oidc.form.secret")}
@@ -213,7 +213,7 @@ export const OidcProviderForm = ({
             : { hint: t("oidc.form.scopesHint") })}
         />
 
-        <div className="flex flex-col" style={{ gap: 2 }}>
+        <div className="flex flex-col" style={{ gap: "0.125rem" }}>
           <SwitchLine
             id={`${uid}-enabled`}
             label={t("oidc.form.enabled")}
@@ -238,7 +238,7 @@ export const OidcProviderForm = ({
 
         <div
           className="flex flex-col"
-          style={{ gap: 6 }}
+          style={{ gap: "0.375rem" }}
           data-testid="oidc-redirect"
         >
           <span className="form-label">{t("oidc.form.redirect")}</span>

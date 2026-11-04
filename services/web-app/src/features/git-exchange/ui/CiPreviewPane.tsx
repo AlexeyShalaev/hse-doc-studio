@@ -56,16 +56,16 @@ export const CiPreviewPane = ({
         className="flex flex-col items-center justify-center dim"
         style={{
           flex: 1,
-          minHeight: 260,
-          gap: 8,
+          minHeight: "16.25rem",
+          gap: "0.5rem",
           textAlign: "center",
-          fontSize: 12.5,
+          fontSize: "0.78125rem",
           borderRadius: "var(--r-3)",
           border: "1px dashed var(--border-strong)",
         }}
         data-testid="ci-preview-invalid"
       >
-        <FileCode2 size={22} aria-hidden="true" />
+        <FileCode2 size="1.375rem" aria-hidden="true" />
         {t("ci.preview.invalid")}
       </div>
     );
@@ -88,7 +88,12 @@ export const CiPreviewPane = ({
     return (
       <div
         className="flex items-center justify-center dim"
-        style={{ flex: 1, minHeight: 260, gap: 8, fontSize: 12.5 }}
+        style={{
+          flex: 1,
+          minHeight: "16.25rem",
+          gap: "0.5rem",
+          fontSize: "0.78125rem",
+        }}
         role="status"
         data-testid="ci-preview-loading"
       >
@@ -99,17 +104,17 @@ export const CiPreviewPane = ({
   }
 
   return (
-    <div className="flex flex-col" style={{ gap: 12, minWidth: 0 }}>
-      <div className="flex items-center" style={{ gap: 8, minWidth: 0 }}>
+    <div className="flex flex-col" style={{ gap: "0.75rem", minWidth: 0 }}>
+      <div className="flex items-center" style={{ gap: "0.5rem", minWidth: 0 }}>
         <FileCode2
-          size={14}
+          size="0.875rem"
           aria-hidden="true"
           style={{ color: "var(--fg-2)" }}
         />
         <span
           className="mono truncate"
           title={file.path}
-          style={{ flex: 1, minWidth: 0, fontSize: 12.5 }}
+          style={{ flex: 1, minWidth: 0, fontSize: "0.78125rem" }}
           data-testid="ci-path"
         >
           {file.path}
@@ -119,7 +124,7 @@ export const CiPreviewPane = ({
           <span
             className="badge"
             data-testid={`ci-state-${state}`}
-            style={{ color: STATE_COLOR[state], fontSize: 11 }}
+            style={{ color: STATE_COLOR[state], fontSize: "0.6875rem" }}
           >
             {t(`ci.state.${state}`)}
           </span>
@@ -131,7 +136,7 @@ export const CiPreviewPane = ({
         data-testid="ci-yaml"
         aria-busy={isLoading}
         style={{
-          height: 280,
+          height: "17.5rem",
           display: "flex",
           flexDirection: "column",
           borderRadius: "var(--r-2)",
@@ -168,7 +173,7 @@ export const CiPreviewPane = ({
         <Notice tone="info" role="status" text={t("ci.exists.same")} />
       )}
       {state === "differs" && (
-        <div className="flex flex-col" style={{ gap: 8 }}>
+        <div className="flex flex-col" style={{ gap: "0.5rem" }}>
           <Notice tone="warn" role="status" text={t("ci.exists.differs")} />
           <CheckRow
             checked={overwrite}
@@ -182,7 +187,7 @@ export const CiPreviewPane = ({
       )}
 
       {hasNda && (
-        <div className="flex flex-col" style={{ gap: 8 }}>
+        <div className="flex flex-col" style={{ gap: "0.5rem" }}>
           <Notice tone="warn" role="status" text={t("ci.nda.warning")} />
           <CheckRow
             checked={ndaAck}
@@ -200,8 +205,8 @@ export const CiPreviewPane = ({
           className="dim"
           style={{
             margin: 0,
-            paddingLeft: 18,
-            fontSize: 11.5,
+            paddingLeft: "1.125rem",
+            fontSize: "0.71875rem",
             lineHeight: 1.55,
           }}
         >
@@ -212,12 +217,15 @@ export const CiPreviewPane = ({
       )}
 
       {preview && preview.command !== "" && (
-        <div className="flex flex-col" style={{ gap: 6 }}>
-          <span style={{ fontSize: 12, fontWeight: 500 }}>
+        <div className="flex flex-col" style={{ gap: "0.375rem" }}>
+          <span style={{ fontSize: "0.75rem", fontWeight: 500 }}>
             {t("ci.local.title")}
           </span>
           <CopyField value={preview.command} label={t("ci.local.title")} />
-          <span className="dim" style={{ fontSize: 11.5, lineHeight: 1.5 }}>
+          <span
+            className="dim"
+            style={{ fontSize: "0.71875rem", lineHeight: 1.5 }}
+          >
             {t("ci.local.hint")}
           </span>
         </div>

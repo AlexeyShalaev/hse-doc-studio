@@ -32,7 +32,7 @@ export const CloudProjectCard = ({ entry, onOpen }: CloudProjectCardProps) => {
   return (
     <div
       className="card hover relative"
-      style={{ padding: 18 }}
+      style={{ padding: "1.125rem" }}
       role="button"
       tabIndex={0}
       aria-label={project.name}
@@ -49,27 +49,27 @@ export const CloudProjectCard = ({ entry, onOpen }: CloudProjectCardProps) => {
     >
       <div
         className="flex items-center justify-between"
-        style={{ marginBottom: 12 }}
+        style={{ marginBottom: "0.75rem" }}
       >
         <div className="flex items-center gap-2" style={{ minWidth: 0 }}>
           <div
             className="flex items-center justify-center shrink-0"
             style={{
-              width: 32,
-              height: 32,
-              borderRadius: 8,
+              width: "2rem",
+              height: "2rem",
+              borderRadius: "0.5rem",
               background: "var(--accent-soft, rgba(120,120,255,0.14))",
               color: "var(--accent)",
             }}
           >
-            <Cloud size={16} aria-hidden="true" />
+            <Cloud size="1rem" aria-hidden="true" />
           </div>
           <span
             className="chip"
             title={t("cloud.badgeTitle", { host: server.host })}
             data-testid="cloud-badge"
           >
-            <Cloud size={9} aria-hidden="true" />
+            <Cloud size="0.5625rem" aria-hidden="true" />
             {t("cloud.badge")}
           </span>
         </div>
@@ -82,15 +82,15 @@ export const CloudProjectCard = ({ entry, onOpen }: CloudProjectCardProps) => {
             onOpen();
           }}
         >
-          <Download size={11} aria-hidden="true" />
+          <Download size="0.6875rem" aria-hidden="true" />
           {t("cloud.openButton")}
         </button>
       </div>
       <h3
         className="text-fg-0"
         style={{
-          margin: "0 0 6px",
-          fontSize: 15,
+          margin: "0 0 0.375rem",
+          fontSize: "0.9375rem",
           fontWeight: 600,
           lineHeight: 1.3,
         }}
@@ -99,9 +99,16 @@ export const CloudProjectCard = ({ entry, onOpen }: CloudProjectCardProps) => {
       </h3>
       <div
         className="flex items-center gap-2 dim"
-        style={{ fontSize: 11.5, marginBottom: 14, minWidth: 0 }}
+        style={{
+          fontSize: "0.71875rem",
+          marginBottom: "0.875rem",
+          minWidth: 0,
+        }}
       >
-        <User size={11} style={{ color: "var(--fg-3)", flexShrink: 0 }} />
+        <User
+          size="0.6875rem"
+          style={{ color: "var(--fg-3)", flexShrink: 0 }}
+        />
         <span className="truncate" style={{ minWidth: 0 }}>
           {project.role === "owner"
             ? t("cloud.ownerSelf")
@@ -110,22 +117,26 @@ export const CloudProjectCard = ({ entry, onOpen }: CloudProjectCardProps) => {
       </div>
       <div
         className="flex items-center justify-between"
-        style={{ paddingTop: 12, borderTop: "1px solid var(--border)" }}
+        style={{ paddingTop: "0.75rem", borderTop: "1px solid var(--border)" }}
       >
-        <span className="dim" style={{ fontSize: 11.5 }}>
+        <span className="dim" style={{ fontSize: "0.71875rem" }}>
           {t("cloud.notHere")}
         </span>
         <div className="flex items-center gap-2 shrink-0">
           {project.role !== "owner" && (
             <span
               className="chip shrink-0"
-              style={{ fontSize: 9.5, height: 16, padding: "1px 6px" }}
+              style={{
+                fontSize: "0.59375rem",
+                height: "1rem",
+                padding: "1px 0.375rem",
+              }}
             >
               {roleLabel(project.role)}
             </span>
           )}
           {updated !== "" && (
-            <span className="mono dim" style={{ fontSize: 10.5 }}>
+            <span className="mono dim" style={{ fontSize: "0.65625rem" }}>
               {updated}
             </span>
           )}

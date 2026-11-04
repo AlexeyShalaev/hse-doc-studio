@@ -65,31 +65,31 @@ export const ChatQuestionForm = ({
     <div
       style={{
         flexShrink: 0,
-        maxHeight: 320,
+        maxHeight: "20rem",
         overflowY: "auto",
-        padding: 12,
+        padding: "0.75rem",
         borderTop: "1px solid var(--border)",
         background: "var(--bg-1)",
         display: "flex",
         flexDirection: "column",
-        gap: 14,
+        gap: "0.875rem",
       }}
     >
       {pending.questions.map((q, i) => {
         const multi = q.multiSelect === true;
         const sel = picked[i] ?? [];
         return (
-          <div key={i} className="flex flex-col" style={{ gap: 6 }}>
-            <div className="flex items-center" style={{ gap: 6 }}>
+          <div key={i} className="flex flex-col" style={{ gap: "0.375rem" }}>
+            <div className="flex items-center" style={{ gap: "0.375rem" }}>
               {q.header && (
                 <span
                   className="mono"
                   style={{
-                    fontSize: 9.5,
+                    fontSize: "0.59375rem",
                     textTransform: "uppercase",
-                    letterSpacing: 0.4,
-                    padding: "1px 6px",
-                    borderRadius: 999,
+                    letterSpacing: "0.025rem",
+                    padding: "1px 0.375rem",
+                    borderRadius: "999px",
                     background: "var(--bg-3)",
                     color: "var(--fg-2)",
                   }}
@@ -98,13 +98,15 @@ export const ChatQuestionForm = ({
                 </span>
               )}
               {multi && (
-                <span className="dim" style={{ fontSize: 10 }}>
+                <span className="dim" style={{ fontSize: "0.625rem" }}>
                   {t("question.multiSelect")}
                 </span>
               )}
             </div>
-            <div style={{ fontSize: 12.5, fontWeight: 500 }}>{q.question}</div>
-            <div className="flex flex-col" style={{ gap: 4 }}>
+            <div style={{ fontSize: "0.78125rem", fontWeight: 500 }}>
+              {q.question}
+            </div>
+            <div className="flex flex-col" style={{ gap: "0.25rem" }}>
               {q.options.map((opt) => (
                 <Choice
                   key={opt.label}
@@ -136,12 +138,12 @@ export const ChatQuestionForm = ({
                     setOtherText((prev) => ({ ...prev, [i]: e.target.value }));
                   }}
                   style={{
-                    marginLeft: 22,
-                    padding: "4px 8px",
+                    marginLeft: "1.375rem",
+                    padding: "0.25rem 0.5rem",
                     border: "1px solid var(--border)",
-                    borderRadius: 6,
+                    borderRadius: "0.375rem",
                     background: "var(--bg-0)",
-                    fontSize: 12,
+                    fontSize: "0.75rem",
                   }}
                 />
               )}
@@ -157,7 +159,7 @@ export const ChatQuestionForm = ({
         onClick={handleSubmit}
         style={{ alignSelf: "flex-end" }}
       >
-        <Send size={12} />
+        <Send size="0.75rem" />
         {t("question.submit")}
       </button>
     </div>
@@ -184,9 +186,9 @@ const Choice = ({
     className="flex items-start"
     onClick={onClick}
     style={{
-      gap: 8,
-      padding: "6px 8px",
-      borderRadius: 6,
+      gap: "0.5rem",
+      padding: "0.375rem 0.5rem",
+      borderRadius: "0.375rem",
       textAlign: "left",
       border: "1px solid",
       borderColor: checked ? "var(--accent)" : "var(--border)",
@@ -197,19 +199,22 @@ const Choice = ({
     <span
       style={{
         flexShrink: 0,
-        width: 14,
-        height: 14,
+        width: "0.875rem",
+        height: "0.875rem",
         marginTop: 1,
-        borderRadius: multi ? 3 : 999,
+        borderRadius: multi ? "0.1875rem" : "999px",
         border: "1.5px solid",
         borderColor: checked ? "var(--accent)" : "var(--fg-3)",
         background: checked ? "var(--accent)" : "transparent",
       }}
     />
     <span style={{ minWidth: 0 }}>
-      <span style={{ fontSize: 12.5 }}>{label}</span>
+      <span style={{ fontSize: "0.78125rem" }}>{label}</span>
       {description && (
-        <span className="dim" style={{ display: "block", fontSize: 11 }}>
+        <span
+          className="dim"
+          style={{ display: "block", fontSize: "0.6875rem" }}
+        >
           {description}
         </span>
       )}

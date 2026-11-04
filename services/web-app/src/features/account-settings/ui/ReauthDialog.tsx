@@ -48,7 +48,7 @@ export const ReauthDialog = ({
       <div
         data-testid="reauth-dialog"
         className="flex flex-col"
-        style={{ gap: 12, padding: "16px 24px 24px" }}
+        style={{ gap: "0.75rem", padding: "1rem 1.5rem 1.5rem" }}
       >
         {hasPasskey && (
           <Button
@@ -59,12 +59,12 @@ export const ReauthDialog = ({
             onClick={() => {
               if (!pending) onPasskey();
             }}
-            style={{ justifyContent: "center", gap: 8 }}
+            style={{ justifyContent: "center", gap: "0.5rem" }}
           >
             {pending ? (
               <Spinner size="sm" />
             ) : (
-              <FingerprintPattern size={15} aria-hidden="true" />
+              <FingerprintPattern size="0.9375rem" aria-hidden="true" />
             )}
             {t("reauth.passkey")}
           </Button>
@@ -73,7 +73,7 @@ export const ReauthDialog = ({
         {hasPassword && (
           <form
             className="flex flex-col"
-            style={{ gap: 10 }}
+            style={{ gap: "0.625rem" }}
             onSubmit={(event) => {
               event.preventDefault();
               if (!pending && password !== "") onPassword(password);
@@ -96,12 +96,12 @@ export const ReauthDialog = ({
               data-testid="reauth-submit"
               disabled={password === ""}
               aria-disabled={pending}
-              style={{ justifyContent: "center", gap: 8 }}
+              style={{ justifyContent: "center", gap: "0.5rem" }}
             >
               {pending ? (
                 <Spinner size="sm" />
               ) : (
-                <KeyRound size={14} aria-hidden="true" />
+                <KeyRound size="0.875rem" aria-hidden="true" />
               )}
               {t("reauth.submit")}
             </Button>
@@ -109,7 +109,7 @@ export const ReauthDialog = ({
         )}
 
         {ssoOnly && (
-          <div className="flex flex-col" style={{ gap: 8 }}>
+          <div className="flex flex-col" style={{ gap: "0.5rem" }}>
             {providers.map((provider) => (
               <Button key={provider.id} variant="secondary" asChild>
                 <a
@@ -122,7 +122,9 @@ export const ReauthDialog = ({
               </Button>
             ))}
             {providers.length === 0 && (
-              <p style={{ margin: 0, fontSize: 12, color: "var(--fg-2)" }}>
+              <p
+                style={{ margin: 0, fontSize: "0.75rem", color: "var(--fg-2)" }}
+              >
                 {t("reauth.signInAgain")}
               </p>
             )}

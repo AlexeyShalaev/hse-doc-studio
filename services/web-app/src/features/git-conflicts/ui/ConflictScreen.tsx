@@ -46,10 +46,10 @@ const CenteredState = ({ children }: { children: React.ReactNode }) => (
     className="flex flex-col items-center justify-center"
     style={{
       flex: 1,
-      gap: 12,
-      padding: 32,
+      gap: "0.75rem",
+      padding: "2rem",
       textAlign: "center",
-      minHeight: 280,
+      minHeight: "17.5rem",
     }}
   >
     {children}
@@ -87,7 +87,7 @@ const NoticeBar = ({
             aria-label={t("notice.dismiss")}
             onClick={onDismiss}
           >
-            <X size={12} aria-hidden="true" />
+            <X size="0.75rem" aria-hidden="true" />
           </button>
         }
       />
@@ -229,9 +229,13 @@ export const ConflictScreen = ({ projectId }: ConflictScreenProps) => {
   if (isLoading) {
     return (
       <CenteredState>
-        <div role="status" className="flex items-center" style={{ gap: 8 }}>
+        <div
+          role="status"
+          className="flex items-center"
+          style={{ gap: "0.5rem" }}
+        >
           <Spinner size="sm" />
-          <span className="dim" style={{ fontSize: 12.5 }}>
+          <span className="dim" style={{ fontSize: "0.78125rem" }}>
             {t("state.loading")}
           </span>
         </div>
@@ -243,12 +247,15 @@ export const ConflictScreen = ({ projectId }: ConflictScreenProps) => {
     return (
       <CenteredState>
         <PartyPopper
-          size={32}
+          size="2rem"
           aria-hidden="true"
           style={{ color: "var(--c-ok)" }}
         />
-        <h2 style={{ margin: 0, fontSize: 16 }}>{t("state.none.title")}</h2>
-        <p className="dim" style={{ margin: 0, fontSize: 12.5, maxWidth: 420 }}>
+        <h2 style={{ margin: 0, fontSize: "1rem" }}>{t("state.none.title")}</h2>
+        <p
+          className="dim"
+          style={{ margin: 0, fontSize: "0.78125rem", maxWidth: "26.25rem" }}
+        >
           {t("state.none.text")}
         </p>
         <button
@@ -258,7 +265,7 @@ export const ConflictScreen = ({ projectId }: ConflictScreenProps) => {
             void navigate(gitHistoryPath(projectId));
           }}
         >
-          <History size={13} aria-hidden="true" />
+          <History size="0.8125rem" aria-hidden="true" />
           {t("state.none.back")}
         </button>
       </CenteredState>
@@ -268,15 +275,15 @@ export const ConflictScreen = ({ projectId }: ConflictScreenProps) => {
   return (
     <CenteredState>
       <OctagonAlert
-        size={32}
+        size="2rem"
         aria-hidden="true"
         style={{ color: "var(--c-err)" }}
       />
-      <h2 style={{ margin: 0, fontSize: 16 }}>{t("state.error.title")}</h2>
+      <h2 style={{ margin: 0, fontSize: "1rem" }}>{t("state.error.title")}</h2>
       <p
         role="alert"
         className="dim"
-        style={{ margin: 0, fontSize: 12.5, maxWidth: 480 }}
+        style={{ margin: 0, fontSize: "0.78125rem", maxWidth: "30rem" }}
       >
         {describeGitError(error, t("state.error.text"))}
       </p>

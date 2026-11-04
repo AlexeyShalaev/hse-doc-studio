@@ -421,33 +421,39 @@ export const DocumentTabs = ({ projectId, docId }: DocumentTabsProps) => {
       <div
         className="document-workspace-header flex items-center"
         style={{
-          padding: "12px 18px",
+          padding: "0.75rem 1.125rem",
           borderBottom: "1px solid var(--border)",
           background: "var(--bg-1)",
-          gap: 14,
+          gap: "0.875rem",
         }}
       >
         <div
           className="document-workspace-icon flex items-center justify-center shrink-0"
           style={{
-            width: 34,
-            height: 34,
-            borderRadius: 8,
+            width: "2.125rem",
+            height: "2.125rem",
+            borderRadius: "0.5rem",
             background: "var(--bg-2)",
             border: "1px solid var(--border)",
             color: "var(--accent)",
           }}
         >
-          <FileText size={16} />
+          <FileText size="1rem" />
         </div>
-        <div className="flex flex-col flex-1 min-w-0" style={{ gap: 2 }}>
+        <div
+          className="flex flex-col flex-1 min-w-0"
+          style={{ gap: "0.125rem" }}
+        >
           <div className="flex items-center gap-2 min-w-0">
-            <span className="mono dim shrink-0" style={{ fontSize: 11 }}>
+            <span
+              className="mono dim shrink-0"
+              style={{ fontSize: "0.6875rem" }}
+            >
               {meta.code} ·
             </span>
             <h2
               className="truncate"
-              style={{ margin: 0, fontSize: 14.5, fontWeight: 600 }}
+              style={{ margin: 0, fontSize: "0.90625rem", fontWeight: 600 }}
             >
               {meta.name}
             </h2>
@@ -459,7 +465,7 @@ export const DocumentTabs = ({ projectId, docId }: DocumentTabsProps) => {
               <span
                 className="chip shrink-0"
                 style={{
-                  fontSize: 9.5,
+                  fontSize: "0.59375rem",
                   background: "var(--bg-3)",
                   color: "var(--fg-2)",
                 }}
@@ -471,9 +477,9 @@ export const DocumentTabs = ({ projectId, docId }: DocumentTabsProps) => {
           <div
             className="document-workspace-meta flex items-center mono"
             style={{
-              fontSize: 10.5,
+              fontSize: "0.65625rem",
               color: "var(--fg-3)",
-              gap: 8,
+              gap: "0.5rem",
               whiteSpace: "nowrap",
               overflow: "hidden",
               textOverflow: "ellipsis",
@@ -510,17 +516,17 @@ export const DocumentTabs = ({ projectId, docId }: DocumentTabsProps) => {
           >
             {isRunning ? (
               <>
-                <RefreshCw size={11} className="spin" />
+                <RefreshCw size="0.6875rem" className="spin" />
                 {t("header.building")}
               </>
             ) : hasPriorBuild ? (
               <>
-                <RefreshCw size={11} />
+                <RefreshCw size="0.6875rem" />
                 {t("header.rebuild")}
               </>
             ) : (
               <>
-                <Play size={11} />
+                <Play size="0.6875rem" />
                 {t("header.build")}
               </>
             )}
@@ -535,9 +541,9 @@ export const DocumentTabs = ({ projectId, docId }: DocumentTabsProps) => {
       <div
         className="tabs"
         style={{
-          padding: "5px 10px 5px 14px",
+          padding: "0.3125rem 0.625rem 0.3125rem 0.875rem",
           alignItems: "center",
-          gap: 8,
+          gap: "0.5rem",
           flexShrink: 0,
         }}
       >
@@ -571,7 +577,7 @@ export const DocumentTabs = ({ projectId, docId }: DocumentTabsProps) => {
                   }
                 }}
               >
-                <Icon size={12} />
+                <Icon size="0.75rem" />
                 {segment.label}
               </button>
             );
@@ -598,13 +604,13 @@ export const DocumentTabs = ({ projectId, docId }: DocumentTabsProps) => {
                   setTabParam(isActive ? null : entry.param);
                 }}
               >
-                <Icon size={12} />
+                <Icon size="0.75rem" />
                 {entry.label}
                 {entry.id === "checks" && docIssues > 0 && (
                   <span
                     className="mono"
                     style={{
-                      fontSize: 9.5,
+                      fontSize: "0.59375rem",
                       color: hasDocErrors ? "var(--c-err)" : "var(--c-warn)",
                     }}
                   >
@@ -625,7 +631,7 @@ export const DocumentTabs = ({ projectId, docId }: DocumentTabsProps) => {
                 data-tt={t("workbench:doc.moreActions")}
                 aria-label={t("workbench:doc.moreActions")}
               >
-                <MoreHorizontal size={14} />
+                <MoreHorizontal size="0.875rem" />
               </button>
             </DropdownMenu.Trigger>
             <DropdownMenu.Portal>
@@ -642,23 +648,26 @@ export const DocumentTabs = ({ projectId, docId }: DocumentTabsProps) => {
               >
                 <DropdownMenu.Item
                   className={menuItemClass}
-                  style={{ padding: "8px 12px", fontSize: 12.5 }}
+                  style={{ padding: "0.5rem 0.75rem", fontSize: "0.78125rem" }}
                   onSelect={() => {
                     setUploadOpen(true);
                   }}
                 >
-                  <Upload size={12} />
+                  <Upload size="0.75rem" />
                   <span>{t("customFile.replaceMenuItem")}</span>
                 </DropdownMenu.Item>
                 {doc.custom_file != null && (
                   <DropdownMenu.Item
                     className={menuItemClass}
-                    style={{ padding: "8px 12px", fontSize: 12.5 }}
+                    style={{
+                      padding: "0.5rem 0.75rem",
+                      fontSize: "0.78125rem",
+                    }}
                     onSelect={() => {
                       setRevertConfirmOpen(true);
                     }}
                   >
-                    <RefreshCw size={12} />
+                    <RefreshCw size="0.75rem" />
                     <span>{t("customFile.revertMenuItem")}</span>
                   </DropdownMenu.Item>
                 )}
@@ -671,9 +680,12 @@ export const DocumentTabs = ({ projectId, docId }: DocumentTabsProps) => {
                       )}
                       download
                       className={menuItemClass}
-                      style={{ padding: "8px 12px", fontSize: 12.5 }}
+                      style={{
+                        padding: "0.5rem 0.75rem",
+                        fontSize: "0.78125rem",
+                      }}
                     >
-                      <Download size={12} />
+                      <Download size="0.75rem" />
                       <span>{t("customFile.downloadMenuItem")}</span>
                     </a>
                   </DropdownMenu.Item>
@@ -682,19 +694,22 @@ export const DocumentTabs = ({ projectId, docId }: DocumentTabsProps) => {
                   <>
                     <DropdownMenu.Item
                       className={menuItemClass}
-                      style={{ padding: "8px 12px", fontSize: 12.5 }}
+                      style={{
+                        padding: "0.5rem 0.75rem",
+                        fontSize: "0.78125rem",
+                      }}
                       onSelect={handleCopyPath}
                     >
-                      <Copy size={12} />
+                      <Copy size="0.75rem" />
                       <span>{t("header.copyPath")}</span>
                     </DropdownMenu.Item>
 
-                    <div className="divider" style={{ margin: "4px 0" }} />
+                    <div className="divider" style={{ margin: "0.25rem 0" }} />
                     <div
                       className="label-up dimmer"
                       style={{
-                        padding: "4px 12px 6px",
-                        fontSize: 9.5,
+                        padding: "0.25rem 0.75rem 0.375rem",
+                        fontSize: "0.59375rem",
                         letterSpacing: "0.1em",
                       }}
                     >
@@ -703,7 +718,10 @@ export const DocumentTabs = ({ projectId, docId }: DocumentTabsProps) => {
                     {!hasAnyEditor && (
                       <div
                         className="dim"
-                        style={{ padding: "0 12px 8px", fontSize: 11.5 }}
+                        style={{
+                          padding: "0 0.75rem 0.5rem",
+                          fontSize: "0.71875rem",
+                        }}
                       >
                         {t("header.noEditorsDetected")}
                       </div>
@@ -716,7 +734,7 @@ export const DocumentTabs = ({ projectId, docId }: DocumentTabsProps) => {
                           "transition-colors",
                           "focus:bg-bg-hover",
                         )}
-                        style={{ padding: "8px 12px" }}
+                        style={{ padding: "0.5rem 0.75rem" }}
                         onSelect={() => {
                           openInEditor(e.scheme, fullPath, 1);
                         }}
@@ -724,9 +742,9 @@ export const DocumentTabs = ({ projectId, docId }: DocumentTabsProps) => {
                         <div
                           className="flex items-center justify-center shrink-0"
                           style={{
-                            width: 28,
-                            height: 28,
-                            borderRadius: 6,
+                            width: "1.75rem",
+                            height: "1.75rem",
+                            borderRadius: "0.375rem",
                             background: "var(--bg-2)",
                             border: "1px solid var(--border)",
                             color: "var(--fg-0)",
@@ -741,7 +759,7 @@ export const DocumentTabs = ({ projectId, docId }: DocumentTabsProps) => {
                           <span
                             className="text-fg-0 group-focus:text-fg-0"
                             style={{
-                              fontSize: 13,
+                              fontSize: "0.8125rem",
                               fontWeight: 500,
                               lineHeight: 1.2,
                             }}
@@ -750,13 +768,13 @@ export const DocumentTabs = ({ projectId, docId }: DocumentTabsProps) => {
                           </span>
                           <span
                             className="mono dimmer"
-                            style={{ fontSize: 10, lineHeight: 1.2 }}
+                            style={{ fontSize: "0.625rem", lineHeight: 1.2 }}
                           >
                             {e.scheme}://
                           </span>
                         </div>
                         <ExternalLink
-                          size={11}
+                          size="0.6875rem"
                           className="ml-auto shrink-0 text-fg-3 opacity-0 transition-opacity group-focus:opacity-100"
                         />
                       </DropdownMenu.Item>

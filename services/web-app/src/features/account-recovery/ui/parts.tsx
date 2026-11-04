@@ -12,25 +12,36 @@ export const Heading = ({
   id?: string;
   children: string;
 }) => (
-  <h1 id={id} style={{ fontSize: 20, fontWeight: 600, margin: "0 0 6px" }}>
+  <h1
+    id={id}
+    style={{ fontSize: "1.25rem", fontWeight: 600, margin: "0 0 0.375rem" }}
+  >
     {children}
   </h1>
 );
 
 export const Lead = ({ children }: { children: ReactNode }) => (
-  <p style={{ margin: "0 0 18px", color: "var(--fg-2)", fontSize: 13.5 }}>
+  <p
+    style={{
+      margin: "0 0 1.125rem",
+      color: "var(--fg-2)",
+      fontSize: "0.84375rem",
+    }}
+  >
     {children}
   </p>
 );
 
 export const Note = ({ children }: { children: ReactNode }) => (
-  <p style={{ margin: 0, fontSize: 12.5, color: "var(--fg-2)" }}>{children}</p>
+  <p style={{ margin: 0, fontSize: "0.78125rem", color: "var(--fg-2)" }}>
+    {children}
+  </p>
 );
 
 export const BackToLogin = ({ primary = false }: { primary?: boolean }) => {
   const { t } = useTranslation("auth");
   return (
-    <div style={{ marginTop: 18 }}>
+    <div style={{ marginTop: "1.125rem" }}>
       <Button
         asChild
         variant={primary ? "primary" : "secondary"}
@@ -52,7 +63,7 @@ export const FailureFrame = ({
   const { t } = useTranslation("auth");
   const key = recoveryErrorKey(failure.code);
   return (
-    <div style={{ marginBottom: 16 }}>
+    <div style={{ marginBottom: "1rem" }}>
       <ResultFrame
         tone={failure.code === "rate_limited" ? "warn" : "err"}
         role="alert"

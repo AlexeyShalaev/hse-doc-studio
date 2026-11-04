@@ -60,7 +60,11 @@ export const PatPanel = ({
   const labelId = `${uid}-label`;
 
   return (
-    <div className="flex flex-col" style={{ gap: 12 }} data-testid="pat-panel">
+    <div
+      className="flex flex-col"
+      style={{ gap: "0.75rem" }}
+      data-testid="pat-panel"
+    >
       {!existing && (
         <TokenLinkCard
           url={url}
@@ -74,15 +78,15 @@ export const PatPanel = ({
         <div
           className="flex items-center"
           style={{
-            gap: 8,
-            padding: "8px 10px",
+            gap: "0.5rem",
+            padding: "0.5rem 0.625rem",
             borderRadius: "var(--r-2)",
             background: "var(--bg-2)",
             border: "1px solid var(--border)",
-            fontSize: 12,
+            fontSize: "0.75rem",
           }}
         >
-          <Lock size={13} aria-hidden="true" style={{ flexShrink: 0 }} />
+          <Lock size="0.8125rem" aria-hidden="true" style={{ flexShrink: 0 }} />
           <span className="truncate" style={{ minWidth: 0, flex: 1 }}>
             {existing.label}
             {existing.token_family && (
@@ -97,7 +101,7 @@ export const PatPanel = ({
         <label htmlFor={tokenId}>
           {existing ? t("pat.newToken") : t("pat.token")}
         </label>
-        <div className="flex" style={{ gap: 6 }}>
+        <div className="flex" style={{ gap: "0.375rem" }}>
           <input
             id={tokenId}
             // Случайное имя и autocomplete выключены: менеджер паролей не должен
@@ -135,9 +139,9 @@ export const PatPanel = ({
             onClick={onToggleShowToken}
           >
             {showToken ? (
-              <EyeOff size={14} aria-hidden="true" />
+              <EyeOff size="0.875rem" aria-hidden="true" />
             ) : (
-              <Eye size={14} aria-hidden="true" />
+              <Eye size="0.875rem" aria-hidden="true" />
             )}
           </button>
           {onCheckToken && (
@@ -148,7 +152,7 @@ export const PatPanel = ({
               disabled={disabled || draft.token.trim() === ""}
               onClick={onCheckToken}
             >
-              <ScanSearch size={14} aria-hidden="true" />
+              <ScanSearch size="0.875rem" aria-hidden="true" />
               {t("pat.check")}
             </button>
           )}
@@ -174,7 +178,11 @@ export const PatPanel = ({
           <summary>{t("pat.advanced")}</summary>
           <div
             className="flex flex-col"
-            style={{ gap: 10, marginTop: 8, maxWidth: 360 }}
+            style={{
+              gap: "0.625rem",
+              marginTop: "0.5rem",
+              maxWidth: "22.5rem",
+            }}
           >
             <div className="field">
               <label htmlFor={labelId}>{t("pat.label")}</label>

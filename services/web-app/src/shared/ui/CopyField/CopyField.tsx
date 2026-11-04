@@ -72,7 +72,10 @@ export const CopyField = ({
   return (
     <div
       className={clsx("flex", className)}
-      style={{ gap: 6, alignItems: multiline ? "flex-start" : "stretch" }}
+      style={{
+        gap: "0.375rem",
+        alignItems: multiline ? "flex-start" : "stretch",
+      }}
     >
       <Field
         ref={field}
@@ -86,11 +89,11 @@ export const CopyField = ({
         style={{
           flex: 1,
           minWidth: 0,
-          fontSize: 11.5,
+          fontSize: "0.71875rem",
           ...(multiline
             ? {
                 resize: "none",
-                minHeight: 72,
+                minHeight: "4.5rem",
                 lineHeight: 1.45,
                 ...(wrap === "spaces"
                   ? {
@@ -114,12 +117,12 @@ export const CopyField = ({
       >
         {state === "copied" ? (
           <Check
-            size={13}
+            size="0.8125rem"
             style={{ color: "var(--c-ok)" }}
             aria-hidden="true"
           />
         ) : (
-          <Copy size={13} aria-hidden="true" />
+          <Copy size="0.8125rem" aria-hidden="true" />
         )}
         {state === "copied" ? t("copyField.copied") : t("copyField.copy")}
       </button>

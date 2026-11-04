@@ -44,9 +44,11 @@ export const TransferSectionView = ({
       data-testid="project-transfer"
       data-state={pending ? "pending" : "none"}
     >
-      <div className="flex flex-col" style={{ gap: 2 }}>
-        <strong style={{ fontSize: 12.5 }}>{t("transfer.title")}</strong>
-        <span className="dim" style={{ fontSize: 11 }}>
+      <div className="flex flex-col" style={{ gap: "0.125rem" }}>
+        <strong style={{ fontSize: "0.78125rem" }}>
+          {t("transfer.title")}
+        </strong>
+        <span className="dim" style={{ fontSize: "0.6875rem" }}>
           {pending
             ? t("transfer.pending", {
                 name: pending.to.name,
@@ -72,11 +74,11 @@ export const TransferSectionView = ({
         <Button
           type="button"
           variant="danger"
-          style={{ gap: 6 }}
+          style={{ gap: "0.375rem" }}
           data-testid="project-transfer-start"
           onClick={onStart}
         >
-          <ArrowRightLeft size={11} aria-hidden="true" />
+          <ArrowRightLeft size="0.6875rem" aria-hidden="true" />
           {t("transfer.start")}
         </Button>
       )}

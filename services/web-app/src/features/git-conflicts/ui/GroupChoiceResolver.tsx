@@ -29,14 +29,14 @@ export const GroupChoiceResolver = ({
       : "signature_group";
   const Icon = type === "signature_group" ? ShieldCheck : CaseSensitive;
   return (
-    <div className="flex flex-col" style={{ gap: 10 }}>
+    <div className="flex flex-col" style={{ gap: "0.625rem" }}>
       <Notice
         tone="warn"
         role="status"
         text={
-          <span className="flex flex-col" style={{ gap: 2 }}>
-            <strong className="flex items-center" style={{ gap: 6 }}>
-              <Icon size={13} aria-hidden="true" />
+          <span className="flex flex-col" style={{ gap: "0.125rem" }}>
+            <strong className="flex items-center" style={{ gap: "0.375rem" }}>
+              <Icon size="0.8125rem" aria-hidden="true" />
               {t(`group.${type}.title`)}
             </strong>
             <span>{t(`group.${type}.text`)}</span>

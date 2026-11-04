@@ -21,12 +21,15 @@ type StatusRowProps = {
 };
 
 const StatusRow = ({ sev, count, label }: StatusRowProps) => (
-  <div className="flex items-center" style={{ gap: 8 }}>
+  <div className="flex items-center" style={{ gap: "0.5rem" }}>
     <span className={`dot ${sev}`} />
-    <span className="mono" style={{ fontSize: 13, minWidth: 22 }}>
+    <span
+      className="mono"
+      style={{ fontSize: "0.8125rem", minWidth: "1.375rem" }}
+    >
       {count}
     </span>
-    <span className="dim" style={{ fontSize: 12.5 }}>
+    <span className="dim" style={{ fontSize: "0.78125rem" }}>
       {label}
     </span>
   </div>
@@ -54,7 +57,12 @@ export const OverviewView = ({ projectId, onSelectDoc }: OverviewViewProps) => {
 
   return (
     <div
-      style={{ padding: "24px 32px", overflowY: "auto", flex: 1, minHeight: 0 }}
+      style={{
+        padding: "1.5rem 2rem",
+        overflowY: "auto",
+        flex: 1,
+        minHeight: 0,
+      }}
     >
       <PageHead
         icon={LayoutDashboard}
@@ -62,40 +70,40 @@ export const OverviewView = ({ projectId, onSelectDoc }: OverviewViewProps) => {
         sub={t("overview.subtitle")}
       />
 
-      <div style={{ marginTop: 20 }}>
+      <div style={{ marginTop: "1.25rem" }}>
         <TemplateUpdateCard projectId={projectId} />
       </div>
 
       <div
         style={{
-          marginTop: 24,
+          marginTop: "1.5rem",
           display: "grid",
-          gap: 14,
-          gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))",
-          maxWidth: 860,
+          gap: "0.875rem",
+          gridTemplateColumns: "repeat(auto-fit, minmax(16.25rem, 1fr))",
+          maxWidth: "53.75rem",
         }}
       >
         <SectionCard title={t("overview.documentsSummary")}>
           {isLoading ? (
-            <div className="flex items-center" style={{ gap: 8 }}>
+            <div className="flex items-center" style={{ gap: "0.5rem" }}>
               <Spinner size="sm" />
-              <span className="dim" style={{ fontSize: 12.5 }}>
+              <span className="dim" style={{ fontSize: "0.78125rem" }}>
                 {t("panel.loading")}
               </span>
             </div>
           ) : total === 0 ? (
-            <p className="dim" style={{ margin: 0, fontSize: 12.5 }}>
+            <p className="dim" style={{ margin: 0, fontSize: "0.78125rem" }}>
               {t("overview.noDocuments")}
             </p>
           ) : (
             <>
               <span
                 className="mono"
-                style={{ fontSize: 30, fontWeight: 600, lineHeight: 1 }}
+                style={{ fontSize: "1.875rem", fontWeight: 600, lineHeight: 1 }}
               >
                 {total}
               </span>
-              <div className="flex flex-col" style={{ gap: 7 }}>
+              <div className="flex flex-col" style={{ gap: "0.4375rem" }}>
                 <StatusRow
                   sev="ok"
                   count={ok}
@@ -118,7 +126,7 @@ export const OverviewView = ({ projectId, onSelectDoc }: OverviewViewProps) => {
       </div>
 
       {has("git_remote") && (
-        <div style={{ marginTop: 14 }}>
+        <div style={{ marginTop: "0.875rem" }}>
           <PdfArtifactsCard
             projectId={projectId}
             canDelete={project?.access?.mode === "full"}
@@ -130,12 +138,12 @@ export const OverviewView = ({ projectId, onSelectDoc }: OverviewViewProps) => {
         <button
           type="button"
           className="btn primary"
-          style={{ marginTop: 20 }}
+          style={{ marginTop: "1.25rem" }}
           onClick={() => {
             onSelectDoc(firstDoc.id);
           }}
         >
-          <FileText size={13} />
+          <FileText size="0.8125rem" />
           {t("overview.openLastDoc")}
         </button>
       )}

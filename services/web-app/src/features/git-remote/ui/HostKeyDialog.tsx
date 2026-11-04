@@ -89,12 +89,15 @@ const FingerprintList = ({ keys }: { keys: GitHostKey[] }) => {
         padding: 0,
         display: "flex",
         flexDirection: "column",
-        gap: 8,
+        gap: "0.5rem",
       }}
     >
       {keys.map((key) => (
         <li key={`${key.type}-${key.fingerprint_sha256}`}>
-          <div className="dim" style={{ fontSize: 11, marginBottom: 3 }}>
+          <div
+            className="dim"
+            style={{ fontSize: "0.6875rem", marginBottom: "0.1875rem" }}
+          >
             {key.type}
           </div>
           <CopyField
@@ -235,9 +238,9 @@ export const HostKeyDialog = ({
       onClose={close}
       width={600}
       title={
-        <span className="flex items-center" style={{ gap: 8 }}>
+        <span className="flex items-center" style={{ gap: "0.5rem" }}>
           <Icon
-            size={17}
+            size="1.0625rem"
             aria-hidden="true"
             style={{ color: isChanged ? "var(--c-err)" : "var(--c-warn)" }}
           />
@@ -286,7 +289,7 @@ export const HostKeyDialog = ({
     >
       <div
         className="flex flex-col"
-        style={{ gap: 12 }}
+        style={{ gap: "0.75rem" }}
         data-testid={`host-key-${isChanged ? "changed" : "unknown"}`}
       >
         {isChanged ? (
@@ -300,7 +303,7 @@ export const HostKeyDialog = ({
               <div>
                 <div
                   className="dim"
-                  style={{ fontSize: 11.5, marginBottom: 4 }}
+                  style={{ fontSize: "0.71875rem", marginBottom: "0.25rem" }}
                 >
                   {t("hostKey.before")}
                 </div>
@@ -313,7 +316,10 @@ export const HostKeyDialog = ({
               </div>
             )}
             <div>
-              <div className="dim" style={{ fontSize: 11.5, marginBottom: 4 }}>
+              <div
+                className="dim"
+                style={{ fontSize: "0.71875rem", marginBottom: "0.25rem" }}
+              >
                 {t("hostKey.after")}
               </div>
               {hasFingerprint ? (
@@ -322,7 +328,7 @@ export const HostKeyDialog = ({
                 <div
                   className="flex items-center dim"
                   role="status"
-                  style={{ gap: 8, fontSize: 12.5 }}
+                  style={{ gap: "0.5rem", fontSize: "0.78125rem" }}
                 >
                   <Spinner size="sm" />
                   {t("hostKey.revealing")}
@@ -368,7 +374,7 @@ export const HostKeyDialog = ({
         ) : (
           <>
             <FingerprintList keys={keys} />
-            <p className="dim" style={{ margin: 0, fontSize: 11.5 }}>
+            <p className="dim" style={{ margin: 0, fontSize: "0.71875rem" }}>
               {t("hostKey.whereToCheck")}
             </p>
             {docs && (
@@ -379,11 +385,11 @@ export const HostKeyDialog = ({
                 className="btn sm"
                 style={{
                   alignSelf: "flex-start",
-                  gap: 6,
+                  gap: "0.375rem",
                   textDecoration: "none",
                 }}
               >
-                <ExternalLink size={12} aria-hidden="true" />
+                <ExternalLink size="0.75rem" aria-hidden="true" />
                 {t("hostKey.openDocs", { host })}
               </a>
             )}

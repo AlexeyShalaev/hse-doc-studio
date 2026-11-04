@@ -67,11 +67,11 @@ const SourceRow = ({
         {source.editable ? (
           <div
             className="flex items-center"
-            style={{ gap: 6, flexWrap: "wrap" }}
+            style={{ gap: "0.375rem", flexWrap: "wrap" }}
           >
             <Input
               type="number"
-              style={{ width: 90 }}
+              style={{ width: "5.625rem" }}
               value={draft}
               min={source.min_days ?? 1}
               max={source.max_days ?? undefined}
@@ -133,7 +133,10 @@ const SourceRow = ({
           </div>
         ) : null}
         {run?.error && (
-          <div role="alert" style={{ color: "var(--c-err)", fontSize: 12 }}>
+          <div
+            role="alert"
+            style={{ color: "var(--c-err)", fontSize: "0.75rem" }}
+          >
             {run.error}
           </div>
         )}
@@ -173,11 +176,14 @@ const Thresholds = ({
     Number.isInteger(w) && Number.isInteger(c) && w >= 50 && c <= 99 && w < c;
   const changed = w !== value.warn_percent || c !== value.critical_percent;
   return (
-    <div className="flex items-center" style={{ gap: 8, flexWrap: "wrap" }}>
+    <div
+      className="flex items-center"
+      style={{ gap: "0.5rem", flexWrap: "wrap" }}
+    >
       <span>{t("lifecycle.thresholds.warn")}</span>
       <Input
         type="number"
-        style={{ width: 80 }}
+        style={{ width: "5rem" }}
         value={warn}
         onChange={(e) => {
           setWarn(e.target.value);
@@ -187,7 +193,7 @@ const Thresholds = ({
       <span>{t("lifecycle.thresholds.critical")}</span>
       <Input
         type="number"
-        style={{ width: 80 }}
+        style={{ width: "5rem" }}
         value={crit}
         onChange={(e) => {
           setCrit(e.target.value);

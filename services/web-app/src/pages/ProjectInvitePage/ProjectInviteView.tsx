@@ -60,17 +60,17 @@ export const ProjectInviteView = ({
   return (
     <section
       className="flex flex-col"
-      style={{ gap: 14 }}
+      style={{ gap: "0.875rem" }}
       data-testid="project-invite-page"
       data-state={dataState}
     >
-      <div className="flex items-center" style={{ gap: 10 }}>
-        <MailOpen size={20} aria-hidden="true" />
-        <h1 style={{ margin: 0, fontSize: 20 }}>{t("page.title")}</h1>
+      <div className="flex items-center" style={{ gap: "0.625rem" }}>
+        <MailOpen size="1.25rem" aria-hidden="true" />
+        <h1 style={{ margin: 0, fontSize: "1.25rem" }}>{t("page.title")}</h1>
       </div>
       {preview?.state === "ok" ? (
         <>
-          <p style={{ margin: 0, fontSize: 14, lineHeight: 1.5 }}>
+          <p style={{ margin: 0, fontSize: "0.875rem", lineHeight: 1.5 }}>
             {t("page.lead", {
               actor: preview.inviter_name ?? "",
               project: preview.project_name ?? "",
@@ -93,11 +93,11 @@ export const ProjectInviteView = ({
           {(dataState === "ok" || dataState === "signup") &&
             state.kind === "preview" &&
             !state.signedInAs && (
-              <p className="dim" style={{ margin: 0, fontSize: 12.5 }}>
+              <p className="dim" style={{ margin: 0, fontSize: "0.78125rem" }}>
                 {t("page.signInAs", { hint: preview.email_hint ?? "" })}
               </p>
             )}
-          <div className="flex" style={{ gap: 8, flexWrap: "wrap" }}>
+          <div className="flex" style={{ gap: "0.5rem", flexWrap: "wrap" }}>
             {state.kind === "preview" &&
               state.signedInAs &&
               !state.accepted && (

@@ -94,7 +94,7 @@ export const SignInSection = ({ settings, draft }: SignInSectionProps) => {
         </SettingRow>
         <div
           className="adm-setting-extra flex flex-col"
-          style={{ paddingTop: 12, gap: 8 }}
+          style={{ paddingTop: "0.75rem", gap: "0.5rem" }}
         >
           {settings.passkey_issue && (
             <div data-testid="auth-passkey-issue">
@@ -120,14 +120,14 @@ export const SignInSection = ({ settings, draft }: SignInSectionProps) => {
             </div>
           )}
           <p
-            style={{ margin: 0, fontSize: 11.5, color: "var(--fg-2)" }}
+            style={{ margin: 0, fontSize: "0.71875rem", color: "var(--fg-2)" }}
             data-testid="auth-passkey-address-hint"
           >
             {t("signin.passkeyAddressHint")}
           </p>
         </div>
         {((onlyMethod && !locked) || draft.isChanged("password")) && (
-          <div className="adm-setting-extra" style={{ paddingTop: 12 }}>
+          <div className="adm-setting-extra" style={{ paddingTop: "0.75rem" }}>
             {onlyMethod && !locked && (
               <Notice tone="info" text={t("signin.onlyMethod")} />
             )}

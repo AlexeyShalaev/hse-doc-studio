@@ -29,7 +29,7 @@ export const DeviceNameField = ({
   return (
     <div
       className="flex flex-col"
-      style={{ gap: 6 }}
+      style={{ gap: "0.375rem" }}
       data-testid="device-name-field"
     >
       <Input
@@ -43,10 +43,10 @@ export const DeviceNameField = ({
         }}
         data-testid="device-name-input"
       />
-      <span className="dim" style={{ fontSize: 11.5 }}>
+      <span className="dim" style={{ fontSize: "0.71875rem" }}>
         {t("name.hint")}
       </span>
-      <div className="flex" style={{ gap: 8 }}>
+      <div className="flex" style={{ gap: "0.5rem" }}>
         <Button
           variant="primary"
           size="sm"

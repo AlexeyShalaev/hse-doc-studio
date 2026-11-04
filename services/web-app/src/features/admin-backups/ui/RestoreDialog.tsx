@@ -128,7 +128,7 @@ export const RestoreDialog = ({
     >
       <div
         className="flex flex-col"
-        style={{ gap: 12 }}
+        style={{ gap: "0.75rem" }}
         data-testid="backup-restore"
         data-phase={phase ?? "none"}
       >
@@ -145,7 +145,7 @@ export const RestoreDialog = ({
           </div>
         )}
         {(phase === "verifying" || (!job && !failure && !other)) && (
-          <div className="flex items-center" style={{ gap: 8 }}>
+          <div className="flex items-center" style={{ gap: "0.5rem" }}>
             <Spinner size="sm" />
             <span>{t("restore.verifying")}</span>
           </div>
@@ -162,7 +162,7 @@ export const RestoreDialog = ({
         )}
         {phase === "applying" && (
           <>
-            <div className="flex items-center" style={{ gap: 8 }}>
+            <div className="flex items-center" style={{ gap: "0.5rem" }}>
               <Spinner size="sm" />
               <span>{t("restore.applying")}</span>
             </div>
@@ -207,7 +207,7 @@ export const RestoreDialog = ({
         {job && job.log.length > 0 && (
           <pre
             className="form-hint"
-            style={{ maxHeight: 180, overflow: "auto", margin: 0 }}
+            style={{ maxHeight: "11.25rem", overflow: "auto", margin: 0 }}
             data-testid="backup-restore-log"
           >
             {job.log.join("\n")}
@@ -269,7 +269,7 @@ const Confirmation = ({
 }) => {
   const { t } = useTranslation("adminBackups");
   return (
-    <div className="flex flex-col" style={{ gap: 10 }}>
+    <div className="flex flex-col" style={{ gap: "0.625rem" }}>
       <Notice tone="info" text={t("restore.verified")} />
       {!job.apply_allowed ? (
         <Notice tone="info" text={t("restore.disabled")} />

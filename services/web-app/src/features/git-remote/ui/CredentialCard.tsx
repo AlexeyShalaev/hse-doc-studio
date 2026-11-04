@@ -87,35 +87,41 @@ export const CredentialCard = ({ credential }: CredentialCardProps) => {
       className="flex flex-col"
       data-testid="credential-card"
       style={{
-        gap: 10,
-        padding: 12,
+        gap: "0.625rem",
+        padding: "0.75rem",
         borderRadius: "var(--r-2)",
         border: "1px solid var(--border)",
         background: "var(--bg-0)",
         listStyle: "none",
       }}
     >
-      <div className="flex items-start" style={{ gap: 10 }}>
+      <div className="flex items-start" style={{ gap: "0.625rem" }}>
         <span
           aria-hidden="true"
           className="flex items-center justify-center"
           style={{
-            width: 28,
-            height: 28,
+            width: "1.75rem",
+            height: "1.75rem",
             flexShrink: 0,
             borderRadius: "var(--r-2)",
             background: "var(--bg-2)",
             color: "var(--fg-1)",
           }}
         >
-          <Icon size={14} />
+          <Icon size="0.875rem" />
         </span>
-        <div className="flex flex-col" style={{ gap: 4, flex: 1, minWidth: 0 }}>
+        <div
+          className="flex flex-col"
+          style={{ gap: "0.25rem", flex: 1, minWidth: 0 }}
+        >
           <div
             className="flex items-center"
-            style={{ gap: 6, flexWrap: "wrap" }}
+            style={{ gap: "0.375rem", flexWrap: "wrap" }}
           >
-            <strong className="truncate" style={{ fontSize: 13, minWidth: 0 }}>
+            <strong
+              className="truncate"
+              style={{ fontSize: "0.8125rem", minWidth: 0 }}
+            >
               {credential.label}
             </strong>
             <span className="chip subtle">
@@ -128,7 +134,11 @@ export const CredentialCard = ({ credential }: CredentialCardProps) => {
           </div>
           <span
             className="dim flex items-center"
-            style={{ gap: 6, fontSize: 11.5, flexWrap: "wrap" }}
+            style={{
+              gap: "0.375rem",
+              fontSize: "0.71875rem",
+              flexWrap: "wrap",
+            }}
           >
             <span className="mono">{credential.host}</span>
             {credential.token_family && (
@@ -144,7 +154,7 @@ export const CredentialCard = ({ credential }: CredentialCardProps) => {
               </span>
             )}
           </span>
-          <span className="dim" style={{ fontSize: 11.5 }}>
+          <span className="dim" style={{ fontSize: "0.71875rem" }}>
             {t("access.credentials.created", {
               when: formatRelativeTime(credential.created_at),
             })}
@@ -159,14 +169,17 @@ export const CredentialCard = ({ credential }: CredentialCardProps) => {
             <ExpiryBadge expiresAt={credential.expires_at} showFar hideSoon />
           )}
           {credential.status === "auth_failed" && (
-            <span style={{ fontSize: 11.5, color: "var(--c-err)" }}>
+            <span style={{ fontSize: "0.71875rem", color: "var(--c-err)" }}>
               {t("access.credentials.authFailedHint")}
             </span>
           )}
         </div>
       </div>
 
-      <div className="flex items-center" style={{ gap: 6, flexWrap: "wrap" }}>
+      <div
+        className="flex items-center"
+        style={{ gap: "0.375rem", flexWrap: "wrap" }}
+      >
         {usedCount > 0 ? (
           <Popover>
             <PopoverTrigger asChild>
@@ -179,15 +192,15 @@ export const CredentialCard = ({ credential }: CredentialCardProps) => {
               align="start"
               aria-label={t("access.credentials.usedByHeading")}
             >
-              <div style={{ padding: 10 }}>
+              <div style={{ padding: "0.625rem" }}>
                 <div
                   className="dim"
                   style={{
-                    fontSize: 10.5,
+                    fontSize: "0.65625rem",
                     fontWeight: 600,
                     letterSpacing: "0.06em",
                     textTransform: "uppercase",
-                    marginBottom: 6,
+                    marginBottom: "0.375rem",
                   }}
                 >
                   {t("access.credentials.usedByHeading")}
@@ -199,7 +212,7 @@ export const CredentialCard = ({ credential }: CredentialCardProps) => {
                     listStyle: "none",
                     display: "flex",
                     flexDirection: "column",
-                    gap: 2,
+                    gap: "0.125rem",
                   }}
                 >
                   {credential.used_by.map((project) => (
@@ -221,7 +234,7 @@ export const CredentialCard = ({ credential }: CredentialCardProps) => {
             </PopoverContent>
           </Popover>
         ) : (
-          <span className="dim" style={{ fontSize: 11.5 }}>
+          <span className="dim" style={{ fontSize: "0.71875rem" }}>
             {t("credentials.unused")}
           </span>
         )}
@@ -251,7 +264,7 @@ export const CredentialCard = ({ credential }: CredentialCardProps) => {
               void runCheck();
             }}
           >
-            <ScanSearch size={11} aria-hidden="true" />
+            <ScanSearch size="0.6875rem" aria-hidden="true" />
             {t("access.credentials.check")}
           </button>
         )}
@@ -300,7 +313,7 @@ export const CredentialCard = ({ credential }: CredentialCardProps) => {
             setDialog("delete");
           }}
         >
-          <Trash2 size={11} aria-hidden="true" />
+          <Trash2 size="0.6875rem" aria-hidden="true" />
           {t("access.credentials.delete")}
         </button>
       </div>

@@ -495,7 +495,7 @@ export const SettingsPage = () => {
     <>
       <div className="settings-modal-title">{t("settingsPage.title")}</div>
       <div className="settings-modal-search">
-        <Search size={15} />
+        <Search size="0.9375rem" />
         <input
           type="text"
           value={query}
@@ -525,7 +525,7 @@ export const SettingsPage = () => {
                     handleResultClick(entry);
                   }}
                 >
-                  <Icon size={14} />
+                  <Icon size="0.875rem" />
                   <span className="settings-modal-result-text">
                     <span className="settings-modal-result-label">
                       {t(entry.labelKey, { ns: "settings" })}
@@ -563,7 +563,7 @@ export const SettingsPage = () => {
                     setIsMenuOpen(false);
                   }}
                 >
-                  <Icon size={15} />
+                  <Icon size="0.9375rem" />
                   <span>{t(s.labelKey)}</span>
                 </Link>
               </Fragment>
@@ -604,11 +604,11 @@ export const SettingsPage = () => {
                     setIsMenuOpen(true);
                   }}
                 >
-                  <active.icon size={16} aria-hidden />
+                  <active.icon size="1rem" aria-hidden />
                   <span className="settings-phone-title">
                     {t(active.labelKey)}
                   </span>
-                  <ChevronDown size={14} aria-hidden />
+                  <ChevronDown size="0.875rem" aria-hidden />
                 </button>
                 <button
                   type="button"
@@ -617,7 +617,7 @@ export const SettingsPage = () => {
                   aria-label={t("settingsPage.close")}
                   onClick={handleClose}
                 >
-                  <X size={18} />
+                  <X size="1.125rem" />
                 </button>
               </div>
             ) : (
@@ -627,7 +627,7 @@ export const SettingsPage = () => {
                 aria-label={t("settingsPage.close")}
                 onClick={handleClose}
               >
-                <X size={17} />
+                <X size="1.0625rem" />
               </button>
             )}
 

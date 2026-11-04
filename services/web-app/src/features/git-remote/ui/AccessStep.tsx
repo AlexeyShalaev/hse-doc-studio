@@ -80,7 +80,7 @@ export const AccessStep = ({
       {fixing && (
         <div
           style={{
-            padding: "8px 10px",
+            padding: "0.5rem 0.625rem",
             borderRadius: "var(--r-2)",
             background: "var(--bg-2)",
             border: "1px solid var(--border)",

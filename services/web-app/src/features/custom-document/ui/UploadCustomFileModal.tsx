@@ -81,7 +81,7 @@ export const UploadCustomFileModal = ({
         </>
       }
     >
-      <div className="flex flex-col" style={{ gap: 12 }}>
+      <div className="flex flex-col" style={{ gap: "0.75rem" }}>
         <input
           ref={fileRef}
           type="file"
@@ -111,9 +111,9 @@ export const UploadCustomFileModal = ({
             flexDirection: "column",
             alignItems: "center",
             justifyContent: "center",
-            gap: 8,
-            padding: "28px 16px",
-            borderRadius: 8,
+            gap: "0.5rem",
+            padding: "1.75rem 1rem",
+            borderRadius: "0.5rem",
             border: `1.5px dashed ${dragging ? "var(--accent)" : "var(--border)"}`,
             background: dragging ? "var(--bg-3, var(--bg-2))" : "var(--bg-2)",
             color: "var(--fg-1)",
@@ -123,18 +123,18 @@ export const UploadCustomFileModal = ({
           }}
         >
           {selected ? (
-            <FileText size={26} style={{ color: "var(--accent)" }} />
+            <FileText size="1.625rem" style={{ color: "var(--accent)" }} />
           ) : (
-            <UploadCloud size={26} style={{ color: "var(--accent)" }} />
+            <UploadCloud size="1.625rem" style={{ color: "var(--accent)" }} />
           )}
-          <span style={{ fontSize: 13, fontWeight: 600 }}>
+          <span style={{ fontSize: "0.8125rem", fontWeight: 600 }}>
             {selected
               ? selected.name
               : dragging
                 ? t("customFile.dropActive")
                 : t("customFile.dropTitle")}
           </span>
-          <span style={{ fontSize: 11.5, color: "var(--fg-3)" }}>
+          <span style={{ fontSize: "0.71875rem", color: "var(--fg-3)" }}>
             {t("customFile.dropHint")}
           </span>
         </button>
@@ -143,18 +143,18 @@ export const UploadCustomFileModal = ({
           <div
             className="flex items-start gap-2"
             style={{
-              padding: "10px 14px",
-              borderRadius: 8,
+              padding: "0.625rem 0.875rem",
+              borderRadius: "0.5rem",
               background:
                 cls === "unknown" ? "var(--bg-2)" : "var(--c-info-soft)",
               border: cls === "unknown" ? "1px solid var(--border)" : "none",
-              fontSize: 12,
+              fontSize: "0.75rem",
               lineHeight: 1.5,
               color: "var(--fg-1)",
             }}
           >
             <Info
-              size={14}
+              size="0.875rem"
               style={{
                 color: cls === "unknown" ? "var(--fg-3)" : "var(--c-info)",
                 flexShrink: 0,

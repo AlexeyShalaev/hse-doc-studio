@@ -97,7 +97,7 @@ export const PersonaPicker = ({
           {active?.label ?? t("persona.fallbackLabel")}
         </span>
         <ChevronDown
-          size={13}
+          size="0.8125rem"
           style={{ flexShrink: 0, color: "var(--fg-2)" }}
         />
       </button>
@@ -106,16 +106,16 @@ export const PersonaPicker = ({
         <div
           style={{
             position: "absolute",
-            bottom: "calc(100% + 6px)",
+            bottom: "calc(100% + 0.375rem)",
             left: 0,
-            width: 300,
-            maxHeight: 380,
+            width: "18.75rem",
+            maxHeight: "23.75rem",
             overflowY: "auto",
             zIndex: 50,
-            padding: 6,
+            padding: "0.375rem",
             background: "var(--bg-1)",
             border: "1px solid var(--border)",
-            borderRadius: "var(--r-2, 8px)",
+            borderRadius: "var(--r-2, 0.5rem)",
             boxShadow: "var(--shadow-elev, 0 8px 24px rgba(0,0,0,0.3))",
           }}
         >
@@ -127,11 +127,11 @@ export const PersonaPicker = ({
                 type="button"
                 className="flex items-start"
                 style={{
-                  gap: 8,
+                  gap: "0.5rem",
                   width: "100%",
                   textAlign: "left",
-                  padding: "7px 8px",
-                  borderRadius: 6,
+                  padding: "0.4375rem 0.5rem",
+                  borderRadius: "0.375rem",
                   background: isActive ? "var(--bg-hover)" : "transparent",
                   border: "none",
                   cursor: "pointer",
@@ -162,7 +162,7 @@ export const PersonaPicker = ({
                   <span
                     style={{
                       display: "block",
-                      fontSize: 12.5,
+                      fontSize: "0.78125rem",
                       fontWeight: 500,
                     }}
                   >
@@ -170,7 +170,11 @@ export const PersonaPicker = ({
                   </span>
                   <span
                     className="dim"
-                    style={{ display: "block", fontSize: 11, lineHeight: 1.35 }}
+                    style={{
+                      display: "block",
+                      fontSize: "0.6875rem",
+                      lineHeight: 1.35,
+                    }}
                   >
                     {persona.description}
                   </span>
@@ -180,7 +184,7 @@ export const PersonaPicker = ({
           })}
 
           {customOpen && (
-            <div style={{ padding: "6px 8px 4px" }}>
+            <div style={{ padding: "0.375rem 0.5rem 0.25rem" }}>
               <textarea
                 className="mono"
                 value={customDraft}
@@ -193,17 +197,17 @@ export const PersonaPicker = ({
                 style={{
                   width: "100%",
                   resize: "vertical",
-                  fontSize: 12,
-                  padding: "6px 8px",
+                  fontSize: "0.75rem",
+                  padding: "0.375rem 0.5rem",
                   background: "var(--bg-0)",
                   border: "1px solid var(--border)",
-                  borderRadius: 6,
+                  borderRadius: "0.375rem",
                   color: "var(--fg-0)",
                 }}
               />
               <div
                 className="flex justify-end"
-                style={{ gap: 6, marginTop: 6 }}
+                style={{ gap: "0.375rem", marginTop: "0.375rem" }}
               >
                 <button
                   type="button"
@@ -221,15 +225,15 @@ export const PersonaPicker = ({
             type="button"
             className="flex items-center"
             style={{
-              gap: 6,
+              gap: "0.375rem",
               width: "100%",
-              marginTop: 4,
-              padding: "7px 8px",
+              marginTop: "0.25rem",
+              padding: "0.4375rem 0.5rem",
               border: "none",
               borderTop: "1px solid var(--border)",
               background: "transparent",
               cursor: "pointer",
-              fontSize: 12,
+              fontSize: "0.75rem",
               color: "var(--fg-2)",
             }}
             onClick={() => {
@@ -237,7 +241,7 @@ export const PersonaPicker = ({
               void navigate("/settings/agent-personas");
             }}
           >
-            <Settings2 size={13} style={{ flexShrink: 0 }} />
+            <Settings2 size="0.8125rem" style={{ flexShrink: 0 }} />
             <span>{t("persona.manage")}</span>
           </button>
         </div>

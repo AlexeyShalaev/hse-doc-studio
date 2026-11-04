@@ -53,7 +53,7 @@ export const SessionsCard = ({
       {status === "loading" && (
         <div
           className="flex items-center"
-          style={{ gap: 8, fontSize: 12 }}
+          style={{ gap: "0.5rem", fontSize: "0.75rem" }}
           data-testid="sessions-loading"
         >
           <Spinner size="sm" />
@@ -93,25 +93,25 @@ export const SessionsCard = ({
                   data-current={session.current ? "true" : undefined}
                   className="flex items-center"
                   style={{
-                    gap: 12,
-                    padding: "10px 0",
+                    gap: "0.75rem",
+                    padding: "0.625rem 0",
                     borderBottom: "1px dashed var(--border)",
                   }}
                 >
                   <Icon
-                    size={18}
+                    size="1.125rem"
                     aria-hidden="true"
                     style={{ color: "var(--fg-2)", flexShrink: 0 }}
                   />
                   <div
                     className="flex flex-col"
-                    style={{ gap: 2, flex: 1, minWidth: 0 }}
+                    style={{ gap: "0.125rem", flex: 1, minWidth: 0 }}
                   >
                     <span
                       className="flex items-center"
                       style={{
-                        gap: 8,
-                        fontSize: 13,
+                        gap: "0.5rem",
+                        fontSize: "0.8125rem",
                         fontWeight: 500,
                         flexWrap: "wrap",
                       }}
@@ -128,7 +128,9 @@ export const SessionsCard = ({
                         <Badge variant="success">{t("sessions.current")}</Badge>
                       )}
                     </span>
-                    <span style={{ fontSize: 11.5, color: "var(--fg-2)" }}>
+                    <span
+                      style={{ fontSize: "0.71875rem", color: "var(--fg-2)" }}
+                    >
                       {t("sessions.lastSeen", {
                         when: formatPastTime(session.last_seen_at),
                       })}
@@ -139,9 +141,9 @@ export const SessionsCard = ({
                   {session.current ? (
                     <span
                       style={{
-                        fontSize: 11.5,
+                        fontSize: "0.71875rem",
                         color: "var(--fg-2)",
-                        maxWidth: 150,
+                        maxWidth: "9.375rem",
                         textAlign: "right",
                       }}
                     >
@@ -160,12 +162,12 @@ export const SessionsCard = ({
                       onClick={() => {
                         if (!busy && !revokingOthers) onRevoke(session.id);
                       }}
-                      style={{ gap: 6 }}
+                      style={{ gap: "0.375rem" }}
                     >
                       {busy ? (
                         <Spinner size="sm" />
                       ) : (
-                        <LogOut size={12} aria-hidden="true" />
+                        <LogOut size="0.75rem" aria-hidden="true" />
                       )}
                       {t("sessions.end")}
                     </Button>
@@ -185,7 +187,7 @@ export const SessionsCard = ({
 
           {others.length === 0 ? (
             <p
-              style={{ margin: 0, fontSize: 12, color: "var(--fg-2)" }}
+              style={{ margin: 0, fontSize: "0.75rem", color: "var(--fg-2)" }}
               data-testid="sessions-alone"
             >
               {t("sessions.alone")}
@@ -196,7 +198,7 @@ export const SessionsCard = ({
               role="group"
               aria-label={t("sessions.confirmAll", { count: others.length })}
             >
-              <span style={{ fontSize: 12.5 }}>
+              <span style={{ fontSize: "0.78125rem" }}>
                 {t("sessions.confirmAll", { count: others.length })}
               </span>
               <Button
@@ -231,7 +233,7 @@ export const SessionsCard = ({
                 variant="outline"
                 aria-disabled={revokingOthers || revokingId !== null}
                 data-testid="sessions-end-others"
-                style={{ gap: 8 }}
+                style={{ gap: "0.5rem" }}
                 onClick={() => {
                   setConfirmAll(true);
                 }}
@@ -239,7 +241,7 @@ export const SessionsCard = ({
                 {revokingOthers ? (
                   <Spinner size="sm" />
                 ) : (
-                  <LogOut size={14} aria-hidden="true" />
+                  <LogOut size="0.875rem" aria-hidden="true" />
                 )}
                 {t("sessions.endOthers", { count: others.length })}
               </Button>

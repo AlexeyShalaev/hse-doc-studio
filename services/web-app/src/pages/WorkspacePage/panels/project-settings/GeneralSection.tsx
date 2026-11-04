@@ -65,7 +65,7 @@ export const GeneralSection = ({
           >
             <span className="truncate">{templateLabel}</span>
           </span>
-          <span className="dim mono shrink-0" style={{ fontSize: 11 }}>
+          <span className="dim mono shrink-0" style={{ fontSize: "0.6875rem" }}>
             {project.lock.pack_id}/{project.lock.template_id}@
             {project.lock.version}
           </span>
@@ -82,7 +82,7 @@ export const GeneralSection = ({
               ? t("projectSettings.languageEn")
               : t("projectSettings.languageRu")}
           </span>
-          <span className="dim" style={{ fontSize: 11 }}>
+          <span className="dim" style={{ fontSize: "0.6875rem" }}>
             {t("projectSettings.workLanguageHint")}
           </span>
         </div>
@@ -107,7 +107,7 @@ export const GeneralSection = ({
                   });
               }}
             >
-              <FolderOpen size={12} />
+              <FolderOpen size="0.75rem" />
             </button>
             {showEditor && <OpenFolderInEditor path={project.folder} />}
           </div>
@@ -115,11 +115,11 @@ export const GeneralSection = ({
             <button
               type="button"
               className="btn ghost self-start"
-              style={{ marginTop: 8 }}
+              style={{ marginTop: "0.5rem" }}
               disabled={isMoving}
               onClick={onRequestMove}
             >
-              <FolderInput size={11} />
+              <FolderInput size="0.6875rem" />
               {isMoving
                 ? t("projectSettings.moving")
                 : t("projectSettings.moveToAnotherFolder")}

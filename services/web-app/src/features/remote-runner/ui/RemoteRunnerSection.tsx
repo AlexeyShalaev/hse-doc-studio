@@ -89,7 +89,10 @@ export const RemoteRunnerSection = () => {
         testId="remote-runner-error"
       />
     ) : (
-      <div className="flex items-center" style={{ gap: 8, fontSize: 12 }}>
+      <div
+        className="flex items-center"
+        style={{ gap: "0.5rem", fontSize: "0.75rem" }}
+      >
         <Spinner size="sm" />
       </div>
     );

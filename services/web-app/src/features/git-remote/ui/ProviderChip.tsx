@@ -70,14 +70,17 @@ const ProviderPicker = ({
       >
         <div
           className="flex flex-col"
-          style={{ gap: 10, padding: 12 }}
+          style={{ gap: "0.625rem", padding: "0.75rem" }}
           data-testid="provider-picker"
         >
           <div>
-            <div style={{ fontWeight: 600, fontSize: 13 }}>
+            <div style={{ fontWeight: 600, fontSize: "0.8125rem" }}>
               {t("providerPicker.title")}
             </div>
-            <p className="dim" style={{ margin: "3px 0 0", fontSize: 11.5 }}>
+            <p
+              className="dim"
+              style={{ margin: "0.1875rem 0 0", fontSize: "0.71875rem" }}
+            >
               {t("providerPicker.text", { host })}
             </p>
           </div>
@@ -85,7 +88,7 @@ const ProviderPicker = ({
             role="radiogroup"
             aria-label={t("providerPicker.title")}
             className="flex flex-col"
-            style={{ gap: 3 }}
+            style={{ gap: "0.1875rem" }}
           >
             {PROVIDER_ORDER.map((id) => {
               const active = detection.id === id;
@@ -104,16 +107,16 @@ const ProviderPicker = ({
                   style={{
                     display: "flex",
                     alignItems: "center",
-                    gap: 8,
-                    padding: "6px 8px",
+                    gap: "0.5rem",
+                    padding: "0.375rem 0.5rem",
                     borderRadius: "var(--r-2)",
                     background: active ? "var(--accent-soft)" : "transparent",
                     textAlign: "left",
-                    fontSize: 12.5,
+                    fontSize: "0.78125rem",
                   }}
                 >
-                  <span style={{ width: 14, flexShrink: 0 }}>
-                    {active && <Check size={13} aria-hidden="true" />}
+                  <span style={{ width: "0.875rem", flexShrink: 0 }}>
+                    {active && <Check size="0.8125rem" aria-hidden="true" />}
                   </span>
                   {t(`providerPicker.option.${id}`)}
                 </button>
@@ -183,23 +186,23 @@ export const ProviderChip = ({
     url.kind !== "file" && detection.id === "other" && !detection.version;
 
   return (
-    <div className="flex flex-col" style={{ gap: 4 }}>
+    <div className="flex flex-col" style={{ gap: "0.25rem" }}>
       <div
         className="flex items-center"
         data-testid="provider-chip"
         data-detected-by={detection.detected_by}
-        style={{ gap: 8, minWidth: 0, flexWrap: "wrap" }}
+        style={{ gap: "0.5rem", minWidth: 0, flexWrap: "wrap" }}
       >
         <span
           className="chip accent"
-          style={{ gap: 5 }}
+          style={{ gap: "0.3125rem" }}
           title={
             url.kind === "file"
               ? undefined
               : t(`providerChip.detectedBy.${detection.detected_by}`)
           }
         >
-          <Icon size={11} aria-hidden="true" />
+          <Icon size="0.6875rem" aria-hidden="true" />
           {url.kind === "file"
             ? t("urlKind.file")
             : t(`provider.${detection.id}`)}
@@ -212,7 +215,7 @@ export const ProviderChip = ({
         {url.host && (
           <span
             className="mono dim"
-            style={{ fontSize: 11.5 }}
+            style={{ fontSize: "0.71875rem" }}
             data-testid="provider-host"
           >
             {url.host}
@@ -222,7 +225,11 @@ export const ProviderChip = ({
         {repoPath !== "" && (
           <span
             className="mono truncate"
-            style={{ fontSize: 11.5, color: "var(--fg-0)", minWidth: 0 }}
+            style={{
+              fontSize: "0.71875rem",
+              color: "var(--fg-0)",
+              minWidth: 0,
+            }}
             title={repoPath}
           >
             {repoPath}
@@ -241,7 +248,7 @@ export const ProviderChip = ({
         <p
           className="dim"
           data-testid="provider-unknown-hint"
-          style={{ margin: 0, fontSize: 11.5 }}
+          style={{ margin: 0, fontSize: "0.71875rem" }}
         >
           {t("providerChip.unknownHint")}
         </p>

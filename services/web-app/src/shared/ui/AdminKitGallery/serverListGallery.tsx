@@ -217,7 +217,7 @@ const ServerTableDemo = () => {
     (s) => STATUS_LABEL[s as Person["status"]],
   );
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
       <FilterBar
         search={state.q}
         onSearchChange={state.setQ}
@@ -365,7 +365,7 @@ const LogDemo = () => {
     getId: (row) => String(row.id),
   });
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: "0.625rem" }}>
       <div className="fbar">
         <DateRangeFilter
           value={{
@@ -379,20 +379,23 @@ const LogDemo = () => {
       </div>
       <div
         className="card flat"
-        style={{ padding: 0, maxHeight: 260, overflow: "auto" }}
+        style={{ padding: 0, maxHeight: "16.25rem", overflow: "auto" }}
       >
         {log.items.map((row) => (
           <div
             key={row.id}
             style={{
               display: "flex",
-              gap: 12,
-              padding: "6px 12px",
+              gap: "0.75rem",
+              padding: "0.375rem 0.75rem",
               borderBottom: "1px solid var(--border)",
-              fontSize: 12.5,
+              fontSize: "0.78125rem",
             }}
           >
-            <span className="mono" style={{ color: "var(--fg-2)", width: 70 }}>
+            <span
+              className="mono"
+              style={{ color: "var(--fg-2)", width: "4.375rem" }}
+            >
               {row.id}
             </span>
             <span style={{ flex: 1 }}>{row.action}</span>
@@ -418,16 +421,16 @@ const PickerDemo = () => {
       style={{
         display: "flex",
         flexDirection: "column",
-        gap: 14,
-        minHeight: 360,
+        gap: "0.875rem",
+        minHeight: "22.5rem",
       }}
     >
       <label
         style={{
           display: "flex",
           flexDirection: "column",
-          gap: 6,
-          fontSize: 12.5,
+          gap: "0.375rem",
+          fontSize: "0.78125rem",
         }}
       >
         Добавить участника
@@ -471,7 +474,7 @@ const PaginationStates = () => {
   const [size, setSize] = useState(50);
   const sizes = useMemo(() => [25, 50, 100, 200], []);
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: "1.125rem" }}>
       <Pagination
         page={page}
         pageSize={size}
@@ -566,7 +569,13 @@ export const getServerListGallery = (): GalleryGroup[] => [
         frame: "window",
         width: 520,
         render: () => (
-          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+          <div
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              gap: "0.625rem",
+            }}
+          >
             <SearchDemo />
             <SearchDemo busy initial="Келлер" />
           </div>
@@ -594,11 +603,13 @@ export const getServerListGallery = (): GalleryGroup[] => [
         frame: "window",
         width: 560,
         render: () => (
-          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+          <div
+            style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}
+          >
             <NoResults framed query="келлер" onReset={() => undefined} />
             <EmptyState
               framed
-              icon={<Users size={18} />}
+              icon={<Users size="1.125rem" />}
               title="Людей пока нет"
               description="Пригласите первых участников."
               action={

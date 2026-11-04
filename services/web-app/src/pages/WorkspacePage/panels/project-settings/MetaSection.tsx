@@ -64,8 +64,11 @@ export const MetaSection = ({
   return (
     <SectionCard title={title ?? t("projectSettings.sectionMeta")} fullSpan>
       {showBlockSwitcher && (
-        <div className="flex flex-col" style={{ gap: 8, marginBottom: 14 }}>
-          <span className="dim" style={{ fontSize: 11.5 }}>
+        <div
+          className="flex flex-col"
+          style={{ gap: "0.5rem", marginBottom: "0.875rem" }}
+        >
+          <span className="dim" style={{ fontSize: "0.71875rem" }}>
             {teamHint ?? t("projectSettings.metaTeamHint")}
           </span>
           <div className="seg self-start">
@@ -79,9 +82,9 @@ export const MetaSection = ({
                 }}
               >
                 {b.key === SHARED_META_BLOCK_KEY ? (
-                  <Files size={10} />
+                  <Files size="0.625rem" />
                 ) : (
-                  <Users size={10} />
+                  <Users size="0.625rem" />
                 )}
                 {b.label}
               </button>
@@ -95,11 +98,11 @@ export const MetaSection = ({
             <div
               className="dim"
               style={{
-                fontSize: 10.5,
+                fontSize: "0.65625rem",
                 textTransform: "uppercase",
                 letterSpacing: "0.07em",
-                marginTop: grpIdx === 0 ? 0 : 16,
-                marginBottom: 8,
+                marginTop: grpIdx === 0 ? 0 : "1rem",
+                marginBottom: "0.5rem",
               }}
             >
               {grp.label}
@@ -108,8 +111,8 @@ export const MetaSection = ({
           <div
             style={{
               display: "grid",
-              gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))",
-              gap: 12,
+              gridTemplateColumns: "repeat(auto-fill, minmax(13.75rem, 1fr))",
+              gap: "0.75rem",
             }}
           >
             {grp.fields.map(([key, def]) => {
@@ -146,7 +149,7 @@ export const MetaSection = ({
                     {!authorMeta && requiredAt === "finalize" && (
                       <span
                         style={{
-                          fontSize: 9.5,
+                          fontSize: "0.59375rem",
                           color: "var(--c-warn)",
                           textTransform: "uppercase",
                           letterSpacing: "0.06em",

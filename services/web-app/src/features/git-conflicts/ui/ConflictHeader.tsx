@@ -63,13 +63,13 @@ const SaveState = ({
       )}
       {state === "saved" && (
         <>
-          <Check size={12} aria-hidden="true" />
+          <Check size="0.75rem" aria-hidden="true" />
           {t("save.saved")}
         </>
       )}
       {state === "error" && (
         <>
-          <AlertTriangle size={12} aria-hidden="true" />
+          <AlertTriangle size="0.75rem" aria-hidden="true" />
           {t("save.error")}
           <button type="button" className="btn xs" onClick={onRetry}>
             {t("save.retry")}
@@ -102,24 +102,30 @@ export const ConflictHeader = ({
   return (
     <header className="conflict-header">
       <div className="conflict-title-row">
-        <div className="flex items-center" style={{ gap: 12, minWidth: 0 }}>
+        <div
+          className="flex items-center"
+          style={{ gap: "0.75rem", minWidth: 0 }}
+        >
           <div
             className="flex items-center justify-center shrink-0"
             style={{
-              width: 38,
-              height: 38,
-              borderRadius: 10,
+              width: "2.375rem",
+              height: "2.375rem",
+              borderRadius: "0.625rem",
               background: "var(--c-err-soft)",
               color: "var(--c-err)",
             }}
           >
-            <GitMerge size={18} aria-hidden="true" />
+            <GitMerge size="1.125rem" aria-hidden="true" />
           </div>
-          <div className="flex flex-col" style={{ gap: 2, minWidth: 0 }}>
+          <div
+            className="flex flex-col"
+            style={{ gap: "0.125rem", minWidth: 0 }}
+          >
             <h2
               style={{
                 margin: 0,
-                fontSize: 18,
+                fontSize: "1.125rem",
                 fontWeight: 600,
                 letterSpacing: "-0.01em",
               }}
@@ -128,7 +134,7 @@ export const ConflictHeader = ({
             </h2>
             <p
               className="dim"
-              style={{ margin: 0, fontSize: 12.5, maxWidth: 640 }}
+              style={{ margin: 0, fontSize: "0.78125rem", maxWidth: "40rem" }}
             >
               {t("subtitle")}
             </p>
@@ -141,7 +147,7 @@ export const ConflictHeader = ({
             disabled={isBusy}
             onClick={onAbort}
           >
-            <XCircle size={13} aria-hidden="true" />
+            <XCircle size="0.8125rem" aria-hidden="true" />
             {t("action.abort")}
           </button>
           <button
@@ -154,7 +160,7 @@ export const ConflictHeader = ({
             {isCompleting ? (
               <Spinner size="sm" />
             ) : (
-              <Send size={13} aria-hidden="true" />
+              <Send size="0.8125rem" aria-hidden="true" />
             )}
             {isCompleting ? t("action.completing") : t("action.complete")}
           </button>
@@ -177,10 +183,14 @@ export const ConflictHeader = ({
       </div>
 
       <div className="conflict-progress">
-        <div className="flex items-center" style={{ gap: 12 }}>
+        <div className="flex items-center" style={{ gap: "0.75rem" }}>
           <span
             id={labelId}
-            style={{ fontSize: 12, fontWeight: 600, whiteSpace: "nowrap" }}
+            style={{
+              fontSize: "0.75rem",
+              fontWeight: 600,
+              whiteSpace: "nowrap",
+            }}
           >
             {t("progress.label", {
               done: progress.resolved,
@@ -202,7 +212,7 @@ export const ConflictHeader = ({
           </div>
           <SaveState state={saveState} onRetry={onRetrySave} />
         </div>
-        <span id={hintId} className="dim" style={{ fontSize: 11.5 }}>
+        <span id={hintId} className="dim" style={{ fontSize: "0.71875rem" }}>
           {progress.open === 0
             ? t("progress.ready")
             : t("progress.left", { count: progress.openItems })}

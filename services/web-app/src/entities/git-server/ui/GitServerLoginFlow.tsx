@@ -94,7 +94,7 @@ export const GitServerLoginFlow = ({
     return (
       <form
         className="flex flex-col"
-        style={{ gap: 12 }}
+        style={{ gap: "0.75rem" }}
         onSubmit={submit}
         noValidate
         data-testid="git-server-login"
@@ -113,7 +113,10 @@ export const GitServerLoginFlow = ({
           {...(code ? { error: t(`errors:code.${code}`) } : {})}
           data-testid="git-server-url"
         />
-        <div className="flex" style={{ gap: 8, justifyContent: "flex-end" }}>
+        <div
+          className="flex"
+          style={{ gap: "0.5rem", justifyContent: "flex-end" }}
+        >
           <Button type="button" variant="ghost" onClick={onCancel}>
             {t("login.cancel")}
           </Button>
@@ -160,7 +163,7 @@ const LoginState = ({
     return (
       <div
         className="flex flex-col"
-        style={{ gap: 12 }}
+        style={{ gap: "0.75rem" }}
         data-testid="git-server-login-code"
         data-state="pending"
       >
@@ -172,7 +175,7 @@ const LoginState = ({
         />
         <span
           className="flex items-center dim"
-          style={{ gap: 8, fontSize: 13 }}
+          style={{ gap: "0.5rem", fontSize: "0.8125rem" }}
           role="status"
           aria-live="polite"
         >
@@ -180,7 +183,10 @@ const LoginState = ({
           {t("login.waiting")}
           {left && ` · ${t("login.expiresIn", { time: left })}`}
         </span>
-        <div className="flex" style={{ gap: 8, justifyContent: "flex-end" }}>
+        <div
+          className="flex"
+          style={{ gap: "0.5rem", justifyContent: "flex-end" }}
+        >
           <Button type="button" variant="ghost" onClick={onCancel}>
             {t("login.cancel")}
           </Button>
@@ -193,7 +199,7 @@ const LoginState = ({
               style={{ textDecoration: "none" }}
               data-testid="git-server-login-open-browser"
             >
-              <ExternalLink size={12} aria-hidden="true" />
+              <ExternalLink size="0.75rem" aria-hidden="true" />
               {t("login.openBrowser")}
             </a>
           )}
@@ -209,13 +215,16 @@ const LoginState = ({
   return (
     <div
       className="flex flex-col"
-      style={{ gap: 12 }}
+      style={{ gap: "0.75rem" }}
       data-testid="git-server-login-code"
       data-state={login.state}
     >
       <Notice tone={tone} role="status" text={text} />
       {login.state !== "approved" && (
-        <div className="flex" style={{ gap: 8, justifyContent: "flex-end" }}>
+        <div
+          className="flex"
+          style={{ gap: "0.5rem", justifyContent: "flex-end" }}
+        >
           <Button type="button" variant="ghost" onClick={onCancel}>
             {t("login.cancel")}
           </Button>

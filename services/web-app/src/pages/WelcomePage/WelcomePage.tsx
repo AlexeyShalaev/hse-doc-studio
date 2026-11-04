@@ -113,37 +113,37 @@ const RecentProjectTile = ({ project, onOpen }: RecentProjectTileProps) => {
       onClick={onOpen}
       className="card hover flex items-center text-left"
       style={{
-        gap: 10,
-        padding: "9px 12px",
-        flex: "1 1 210px",
-        maxWidth: 300,
+        gap: "0.625rem",
+        padding: "0.5625rem 0.75rem",
+        flex: "1 1 13.125rem",
+        maxWidth: "18.75rem",
         minWidth: 0,
       }}
     >
       <span
         className="flex items-center justify-center shrink-0"
         style={{
-          width: 26,
-          height: 26,
-          borderRadius: 7,
+          width: "1.625rem",
+          height: "1.625rem",
+          borderRadius: "0.4375rem",
           background: `oklch(60% 0.16 ${hue} / 0.14)`,
           color: `oklch(70% 0.16 ${hue})`,
         }}
       >
-        <Icon size={13} />
+        <Icon size="0.8125rem" />
       </span>
       {/* minWidth инлайном: утилита min-w-0 в этой сборке Tailwind не рождается. */}
       <span className="flex flex-col" style={{ minWidth: 0, gap: 1 }}>
         <span
           className="truncate text-fg-0"
-          style={{ fontSize: 12.5, fontWeight: 500 }}
+          style={{ fontSize: "0.78125rem", fontWeight: 500 }}
         >
           {project.name}
         </span>
         {/* На сервере папки нет: под названием владелец проекта. */}
         <span
           className={clsx("truncate", project.folder !== "" && "mono")}
-          style={{ fontSize: 10, color: "var(--fg-3)" }}
+          style={{ fontSize: "0.625rem", color: "var(--fg-3)" }}
         >
           {project.folder !== "" ? project.folder : project.owner?.name}
         </span>
@@ -479,13 +479,13 @@ export const WelcomePage = () => {
           <div className="welcome-page">
             <div
               className="welcome-head flex items-center justify-between"
-              style={{ gap: 16, flexWrap: "wrap" }}
+              style={{ gap: "1rem", flexWrap: "wrap" }}
             >
-              <div className="flex flex-col" style={{ gap: 6 }}>
+              <div className="flex flex-col" style={{ gap: "0.375rem" }}>
                 <span
                   className="mono dim"
                   style={{
-                    fontSize: 10.5,
+                    fontSize: "0.65625rem",
                     textTransform: "uppercase",
                     letterSpacing: "0.08em",
                   }}
@@ -496,7 +496,7 @@ export const WelcomePage = () => {
                   className="text-fg-0"
                   style={{
                     margin: 0,
-                    fontSize: 28,
+                    fontSize: "1.75rem",
                     fontWeight: 600,
                     letterSpacing: "-0.02em",
                   }}
@@ -505,7 +505,11 @@ export const WelcomePage = () => {
                 </h1>
                 <p
                   className="dim"
-                  style={{ margin: 0, fontSize: 13, maxWidth: 620 }}
+                  style={{
+                    margin: 0,
+                    fontSize: "0.8125rem",
+                    maxWidth: "38.75rem",
+                  }}
                 >
                   {isServerList
                     ? tAccess("header.subtitle")
@@ -514,7 +518,7 @@ export const WelcomePage = () => {
               </div>
               <div
                 className="welcome-actions flex items-center shrink-0"
-                style={{ gap: 8 }}
+                style={{ gap: "0.5rem" }}
               >
                 {canConnectFolder && (
                   <button
@@ -522,7 +526,7 @@ export const WelcomePage = () => {
                     className="btn"
                     onClick={handleConnectFolder}
                   >
-                    <Upload size={13} />
+                    <Upload size="0.8125rem" />
                     {t("header.openFolder")}
                   </button>
                 )}
@@ -532,7 +536,7 @@ export const WelcomePage = () => {
                     className="btn"
                     onClick={handleImportArchive}
                   >
-                    <FileArchive size={13} />
+                    <FileArchive size="0.8125rem" />
                     {tImport("open")}
                   </button>
                 )}
@@ -542,7 +546,7 @@ export const WelcomePage = () => {
                     className="btn"
                     onClick={handleCloneFromGit}
                   >
-                    <GitBranch size={13} />
+                    <GitBranch size="0.8125rem" />
                     {t("header.cloneFromGit")}
                   </button>
                 )}
@@ -555,7 +559,7 @@ export const WelcomePage = () => {
                     }}
                     data-testid="welcome-connect-server"
                   >
-                    <Server size={13} />
+                    <Server size="0.8125rem" />
                     {tLocal("welcome.connect")}
                   </button>
                 )}
@@ -565,7 +569,7 @@ export const WelcomePage = () => {
                   data-tour="home-new-project"
                   onClick={handleCreateProject}
                 >
-                  <Plus size={14} />
+                  <Plus size="0.875rem" />
                   {t("header.newProject")}
                 </button>
               </div>
@@ -573,22 +577,22 @@ export const WelcomePage = () => {
 
             <div
               className="welcome-toolbar flex items-center"
-              style={{ gap: 12, flexWrap: "wrap" }}
+              style={{ gap: "0.75rem", flexWrap: "wrap" }}
             >
               <div
                 className="welcome-search flex items-center flex-1"
                 data-tour="home-search"
                 style={{
-                  gap: 8,
-                  minWidth: 220,
+                  gap: "0.5rem",
+                  minWidth: "13.75rem",
                   background: "var(--bg-1)",
                   border: "1px solid var(--border)",
                   borderRadius: "var(--r-2)",
-                  padding: "6px 12px",
+                  padding: "0.375rem 0.75rem",
                 }}
               >
                 <Search
-                  size={13}
+                  size="0.8125rem"
                   style={{ color: "var(--fg-3)", flexShrink: 0 }}
                 />
                 <input
@@ -599,7 +603,7 @@ export const WelcomePage = () => {
                     background: "transparent",
                     border: 0,
                     padding: 0,
-                    fontSize: 13,
+                    fontSize: "0.8125rem",
                     flex: 1,
                     minWidth: 0,
                     outline: "none",
@@ -644,16 +648,16 @@ export const WelcomePage = () => {
             </div>
 
             {isRecentStripVisible && (
-              <div style={{ marginBottom: 22 }}>
+              <div style={{ marginBottom: "1.375rem" }}>
                 <div
                   className="flex items-center"
-                  style={{ gap: 6, marginBottom: 10 }}
+                  style={{ gap: "0.375rem", marginBottom: "0.625rem" }}
                 >
-                  <History size={11} style={{ color: "var(--fg-3)" }} />
+                  <History size="0.6875rem" style={{ color: "var(--fg-3)" }} />
                   <h2
                     className="mono dim m-0"
                     style={{
-                      fontSize: 10.5,
+                      fontSize: "0.65625rem",
                       letterSpacing: "0.12em",
                       textTransform: "uppercase",
                     }}
@@ -663,7 +667,7 @@ export const WelcomePage = () => {
                 </div>
                 <div
                   className="flex items-stretch"
-                  style={{ gap: 10, flexWrap: "wrap" }}
+                  style={{ gap: "0.625rem", flexWrap: "wrap" }}
                 >
                   {recentProjects.map((project) => (
                     <RecentProjectTile
@@ -724,8 +728,8 @@ export const WelcomePage = () => {
                 style={{
                   display: "grid",
                   gridTemplateColumns:
-                    "repeat(auto-fill, minmax(min(360px, 100%), 1fr))",
-                  gap: 16,
+                    "repeat(auto-fill, minmax(min(22.5rem, 100%), 1fr))",
+                  gap: "1rem",
                 }}
               >
                 {filtered.map((project) => (

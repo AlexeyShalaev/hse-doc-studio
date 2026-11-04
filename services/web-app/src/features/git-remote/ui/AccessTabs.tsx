@@ -72,8 +72,8 @@ export const AccessTabs = ({
       data-testid="access-tabs"
       style={{
         display: "grid",
-        gridTemplateColumns: "repeat(auto-fit, minmax(128px, 1fr))",
-        gap: 6,
+        gridTemplateColumns: "repeat(auto-fit, minmax(8rem, 1fr))",
+        gap: "0.375rem",
       }}
     >
       {methods.map((method, index) => {
@@ -95,8 +95,8 @@ export const AccessTabs = ({
             data-testid={`access-tab-${method}`}
             className="flex flex-col items-start"
             style={{
-              gap: 3,
-              padding: "8px 10px",
+              gap: "0.1875rem",
+              padding: "0.5rem 0.625rem",
               textAlign: "left",
               borderRadius: "var(--r-2)",
               border: `1px solid ${active ? "var(--accent-line)" : "var(--border)"}`,
@@ -115,16 +115,19 @@ export const AccessTabs = ({
             <span
               className="flex items-center"
               style={{
-                gap: 6,
-                fontSize: 12.5,
+                gap: "0.375rem",
+                fontSize: "0.78125rem",
                 fontWeight: 600,
                 color: active ? "var(--accent)" : "var(--fg-0)",
               }}
             >
-              <Icon size={13} aria-hidden="true" />
+              <Icon size="0.8125rem" aria-hidden="true" />
               {t(`method.${method}`)}
             </span>
-            <span className="dim" style={{ fontSize: 11, lineHeight: 1.35 }}>
+            <span
+              className="dim"
+              style={{ fontSize: "0.6875rem", lineHeight: 1.35 }}
+            >
               {t(`method.caption.${method}`)}
             </span>
           </button>

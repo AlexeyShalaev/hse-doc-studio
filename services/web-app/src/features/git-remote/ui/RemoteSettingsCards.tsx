@@ -69,22 +69,27 @@ const Row = ({ label, children }: { label: string; children: ReactNode }) => (
   <div
     style={{
       display: "grid",
-      gridTemplateColumns: "minmax(96px, 132px) minmax(0, 1fr)",
-      gap: 12,
+      gridTemplateColumns: "minmax(6rem, 8.25rem) minmax(0, 1fr)",
+      gap: "0.75rem",
       alignItems: "start",
     }}
   >
-    <dt className="dim" style={{ fontSize: 11.5, paddingTop: 3 }}>
+    <dt
+      className="dim"
+      style={{ fontSize: "0.71875rem", paddingTop: "0.1875rem" }}
+    >
       {label}
     </dt>
-    <dd style={{ margin: 0, minWidth: 0, fontSize: 12.5 }}>{children}</dd>
+    <dd style={{ margin: 0, minWidth: 0, fontSize: "0.78125rem" }}>
+      {children}
+    </dd>
   </div>
 );
 
 const Loading = ({ label }: { label: string }) => (
   <div
     className="flex items-center"
-    style={{ gap: 8, fontSize: 12 }}
+    style={{ gap: "0.5rem", fontSize: "0.75rem" }}
     data-testid="remote-settings-loading"
   >
     <Spinner size="sm" />
@@ -101,8 +106,8 @@ const EmptyRemote = () => {
       className="flex flex-col items-center"
       data-testid="remote-empty"
       style={{
-        gap: 10,
-        padding: "22px 16px",
+        gap: "0.625rem",
+        padding: "1.375rem 1rem",
         textAlign: "center",
         borderRadius: "var(--r-3)",
         border: "1px dashed var(--border-strong)",
@@ -113,21 +118,26 @@ const EmptyRemote = () => {
         aria-hidden="true"
         className="flex items-center justify-center"
         style={{
-          width: 40,
-          height: 40,
+          width: "2.5rem",
+          height: "2.5rem",
           borderRadius: "50%",
           background: "var(--bg-2)",
           color: "var(--fg-2)",
         }}
       >
-        <CloudOff size={18} />
+        <CloudOff size="1.125rem" />
       </span>
-      <strong style={{ fontSize: 13 }}>
+      <strong style={{ fontSize: "0.8125rem" }}>
         {t("settings.remote.emptyTitle")}
       </strong>
       <p
         className="dim"
-        style={{ margin: 0, maxWidth: 420, fontSize: 12, lineHeight: 1.55 }}
+        style={{
+          margin: 0,
+          maxWidth: "26.25rem",
+          fontSize: "0.75rem",
+          lineHeight: 1.55,
+        }}
       >
         {t("settings.remote.emptyText")}
       </p>
@@ -172,10 +182,13 @@ const AccessBlock = ({ status, credential }: AccessBlockProps) => {
     credential?.status === "auth_failed" ||
     (kind === "pat" && (expiry.state === "expired" || expiry.state === "soon"));
   return (
-    <div className="flex flex-col" style={{ gap: 8 }}>
-      <div className="flex items-center" style={{ gap: 8, flexWrap: "wrap" }}>
+    <div className="flex flex-col" style={{ gap: "0.5rem" }}>
+      <div
+        className="flex items-center"
+        style={{ gap: "0.5rem", flexWrap: "wrap" }}
+      >
         <Icon
-          size={13}
+          size="0.8125rem"
           aria-hidden="true"
           style={{ color: "var(--fg-2)", flexShrink: 0 }}
         />
@@ -188,14 +201,17 @@ const AccessBlock = ({ status, credential }: AccessBlockProps) => {
         <CredentialStatusChip status={credential?.status ?? "unverified"} />
         {kind === "pat" && <ExpiryBadge expiresAt={credential?.expires_at} />}
         {credential?.token_family && (
-          <span className="mono dim" style={{ fontSize: 11 }}>
+          <span className="mono dim" style={{ fontSize: "0.6875rem" }}>
             {t("settings.remote.tokenFamily", {
               family: credential.token_family,
             })}
           </span>
         )}
       </div>
-      <div className="flex items-center" style={{ gap: 6, flexWrap: "wrap" }}>
+      <div
+        className="flex items-center"
+        style={{ gap: "0.375rem", flexWrap: "wrap" }}
+      >
         <button
           type="button"
           className={needsAttention ? "btn xs primary" : "btn xs"}
@@ -225,7 +241,7 @@ const AccessBlock = ({ status, credential }: AccessBlockProps) => {
         <div
           id="remote-public-key"
           className="flex flex-col"
-          style={{ gap: 6 }}
+          style={{ gap: "0.375rem" }}
         >
           <CopyField
             multiline
@@ -233,7 +249,7 @@ const AccessBlock = ({ status, credential }: AccessBlockProps) => {
             label={t("settings.remote.publicKey")}
           />
           {fingerprint && (
-            <span className="dim" style={{ fontSize: 11 }}>
+            <span className="dim" style={{ fontSize: "0.6875rem" }}>
               {t("settings.remote.fingerprint")}:{" "}
               <span className="mono">{fingerprint}</span>
             </span>
@@ -355,10 +371,13 @@ export const RemoteConnectionCard = ({
   return (
     <div
       className="flex flex-col"
-      style={{ gap: 14 }}
+      style={{ gap: "0.875rem" }}
       data-testid="remote-card"
     >
-      <div className="flex items-center" style={{ gap: 8, flexWrap: "wrap" }}>
+      <div
+        className="flex items-center"
+        style={{ gap: "0.5rem", flexWrap: "wrap" }}
+      >
         <Badge variant={STATE_VARIANT[status.ui_state] ?? "default"}>
           {tSync(`state.${status.ui_state}`, { defaultValue: status.ui_state })}
         </Badge>
@@ -366,7 +385,7 @@ export const RemoteConnectionCard = ({
           {t(`provider.${remote.provider}`, { defaultValue: remote.provider })}
         </span>
         {remote.host && (
-          <span className="mono dim" style={{ fontSize: 11.5 }}>
+          <span className="mono dim" style={{ fontSize: "0.71875rem" }}>
             {remote.host}
           </span>
         )}
@@ -376,10 +395,15 @@ export const RemoteConnectionCard = ({
       <BlockedNotice status={status} />
 
       <dl
-        style={{ margin: 0, display: "flex", flexDirection: "column", gap: 14 }}
+        style={{
+          margin: 0,
+          display: "flex",
+          flexDirection: "column",
+          gap: "0.875rem",
+        }}
       >
         <Row label={t("settings.remote.address")}>
-          <div className="flex flex-col" style={{ gap: 6 }}>
+          <div className="flex flex-col" style={{ gap: "0.375rem" }}>
             <CopyField
               value={remote.display_url}
               label={t("settings.remote.addressLabel")}
@@ -395,7 +419,7 @@ export const RemoteConnectionCard = ({
                   target="_blank"
                   rel="noreferrer"
                 >
-                  <ExternalLink size={11} aria-hidden="true" />
+                  <ExternalLink size="0.6875rem" aria-hidden="true" />
                   {t("settings.remote.openInBrowser")}
                 </a>
               </div>
@@ -405,11 +429,11 @@ export const RemoteConnectionCard = ({
         <Row label={t("settings.remote.branch")}>
           <span
             className="flex items-center"
-            style={{ gap: 8, flexWrap: "wrap" }}
+            style={{ gap: "0.5rem", flexWrap: "wrap" }}
           >
             <span className="chip mono">{remote.branch}</span>
             {mapped && (
-              <span className="dim" style={{ fontSize: 11.5 }}>
+              <span className="dim" style={{ fontSize: "0.71875rem" }}>
                 {tSync("popover.branchMapped", {
                   local: remote.local_branch,
                   remote: remote.branch,
@@ -448,7 +472,10 @@ export const RemoteConnectionCard = ({
         </Row>
       </dl>
 
-      <div className="flex items-center" style={{ gap: 8, flexWrap: "wrap" }}>
+      <div
+        className="flex items-center"
+        style={{ gap: "0.5rem", flexWrap: "wrap" }}
+      >
         {hasConflicts ? (
           <button
             type="button"
@@ -471,7 +498,7 @@ export const RemoteConnectionCard = ({
             {isBusy ? (
               <Spinner size="sm" />
             ) : (
-              <RefreshCw size={12} aria-hidden="true" />
+              <RefreshCw size="0.75rem" aria-hidden="true" />
             )}
             {isBusy
               ? t("settings.remote.syncing")
@@ -493,18 +520,21 @@ export const RemoteConnectionCard = ({
       <div
         className="flex items-center justify-between"
         style={{
-          gap: 12,
-          padding: 12,
+          gap: "0.75rem",
+          padding: "0.75rem",
           border:
             "1px solid color-mix(in oklch, var(--c-err) 30%, var(--border))",
           borderRadius: "var(--r-2)",
         }}
       >
-        <div className="flex flex-col" style={{ gap: 2, minWidth: 0 }}>
-          <strong style={{ fontSize: 12.5 }}>
+        <div className="flex flex-col" style={{ gap: "0.125rem", minWidth: 0 }}>
+          <strong style={{ fontSize: "0.78125rem" }}>
             {t("settings.danger.title")}
           </strong>
-          <span className="dim" style={{ fontSize: 11, lineHeight: 1.5 }}>
+          <span
+            className="dim"
+            style={{ fontSize: "0.6875rem", lineHeight: 1.5 }}
+          >
             {t("settings.danger.text")}
           </span>
         </div>
@@ -516,7 +546,7 @@ export const RemoteConnectionCard = ({
             setDisconnectOpen(true);
           }}
         >
-          <Unplug size={11} aria-hidden="true" />
+          <Unplug size="0.6875rem" aria-hidden="true" />
           {t("settings.danger.button")}
         </button>
       </div>
@@ -585,7 +615,7 @@ export const FetchOptionsCard = ({ projectId }: RemoteSettingsCardProps) => {
   return (
     <div
       className="flex flex-col"
-      style={{ gap: 12 }}
+      style={{ gap: "0.75rem" }}
       data-testid="fetch-options"
     >
       <SwitchRow
@@ -620,7 +650,7 @@ export const FetchOptionsCard = ({ projectId }: RemoteSettingsCardProps) => {
           {pdf.last && (
             <span
               className="dim"
-              style={{ fontSize: 11 }}
+              style={{ fontSize: "0.6875rem" }}
               data-testid="pdf-upload-last"
             >
               {pdf.last.ok
@@ -649,15 +679,15 @@ export const FetchOptionsCard = ({ projectId }: RemoteSettingsCardProps) => {
         }}
       />
 
-      <div className="flex flex-col" style={{ gap: 6 }}>
+      <div className="flex flex-col" style={{ gap: "0.375rem" }}>
         <label
           htmlFor="git-fetch-interval"
-          style={{ fontSize: 12, fontWeight: 500 }}
+          style={{ fontSize: "0.75rem", fontWeight: 500 }}
         >
           {t("settings.options.interval")}
         </label>
-        <div className="flex items-center" style={{ gap: 8 }}>
-          <div style={{ width: 260, maxWidth: "100%" }}>
+        <div className="flex items-center" style={{ gap: "0.5rem" }}>
+          <div style={{ width: "16.25rem", maxWidth: "100%" }}>
             <Select
               id="git-fetch-interval"
               placeholder={t("settings.options.interval")}
@@ -674,7 +704,7 @@ export const FetchOptionsCard = ({ projectId }: RemoteSettingsCardProps) => {
           </div>
           {pendingKind === "interval" && <Spinner size="sm" />}
         </div>
-        <span className="dim" style={{ fontSize: 11 }}>
+        <span className="dim" style={{ fontSize: "0.6875rem" }}>
           {enabled && nextFetchAt
             ? t("settings.options.nextCheck", {
                 when: formatRelativeTime(nextFetchAt),
@@ -727,11 +757,11 @@ export const SharedFolderCard = ({ projectId }: RemoteSettingsCardProps) => {
   return (
     <div
       className="flex flex-col"
-      style={{ gap: 12 }}
+      style={{ gap: "0.75rem" }}
       data-testid="shared-folder-card"
     >
       <SharedFolderWarning provider={shared.provider} />
-      <span className="dim" style={{ fontSize: 11.5, lineHeight: 1.5 }}>
+      <span className="dim" style={{ fontSize: "0.71875rem", lineHeight: 1.5 }}>
         <span className="mono" title={shared.root}>
           {t("sharedFolder.root", { path: shared.root })}
         </span>

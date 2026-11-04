@@ -47,22 +47,22 @@ export const EmptyState = ({
   const isSearchMiss = trimmedQuery !== "";
 
   return (
-    <div className="card" style={{ padding: "48px 32px", textAlign: "center" }}>
+    <div className="card" style={{ padding: "3rem 2rem", textAlign: "center" }}>
       <div
         className="flex items-center justify-center"
         style={{
-          width: 64,
-          height: 64,
-          margin: "0 auto 18px",
-          borderRadius: 16,
+          width: "4rem",
+          height: "4rem",
+          margin: "0 auto 1.125rem",
+          borderRadius: "1rem",
           background: "var(--bg-2)",
           border: "1px solid var(--border)",
           color: "var(--fg-3)",
         }}
       >
-        {isSearchMiss ? <SearchX size={32} /> : <GraduationCap size={32} />}
+        {isSearchMiss ? <SearchX size="2rem" /> : <GraduationCap size="2rem" />}
       </div>
-      <h3 style={{ margin: 0, fontSize: 16, fontWeight: 600 }}>
+      <h3 style={{ margin: 0, fontSize: "1rem", fontWeight: 600 }}>
         {isSearchMiss
           ? t("empty.noMatchTitle")
           : scopeFiltered
@@ -73,7 +73,11 @@ export const EmptyState = ({
       </h3>
       <p
         className="dim"
-        style={{ margin: "8px auto 18px", maxWidth: 440, lineHeight: 1.5 }}
+        style={{
+          margin: "0.5rem auto 1.125rem",
+          maxWidth: "27.5rem",
+          lineHeight: 1.5,
+        }}
       >
         {isSearchMiss
           ? t("empty.noMatchDescription", { query: trimmedQuery })
@@ -85,7 +89,7 @@ export const EmptyState = ({
       </p>
       {isSearchMiss ? (
         <button type="button" className="btn" onClick={onResetQuery}>
-          <SearchX size={13} />
+          <SearchX size="0.8125rem" />
           {t("empty.resetQuery")}
         </button>
       ) : scopeFiltered && onResetScope ? (
@@ -95,21 +99,21 @@ export const EmptyState = ({
       ) : (
         <div
           className="flex items-center justify-center"
-          style={{ gap: 8, flexWrap: "wrap" }}
+          style={{ gap: "0.5rem", flexWrap: "wrap" }}
         >
           <button type="button" className="btn primary" onClick={onCreate}>
-            <Plus size={13} />
+            <Plus size="0.8125rem" />
             {t("empty.create")}
           </button>
           {onImport && (
             <button type="button" className="btn" onClick={onImport}>
-              <FileArchive size={13} />
+              <FileArchive size="0.8125rem" />
               {tImport("empty")}
             </button>
           )}
           {onClone && (
             <button type="button" className="btn" onClick={onClone}>
-              <GitBranch size={13} />
+              <GitBranch size="0.8125rem" />
               {t("empty.clone")}
             </button>
           )}
@@ -120,7 +124,11 @@ export const EmptyState = ({
               onClick={onLocalStudio}
               data-testid="welcome-empty-local-studio"
             >
-              {isServer ? <Laptop size={13} /> : <Server size={13} />}
+              {isServer ? (
+                <Laptop size="0.8125rem" />
+              ) : (
+                <Server size="0.8125rem" />
+              )}
               {isServer ? tLocal("link.label") : tLocal("welcome.connect")}
             </button>
           )}
@@ -129,7 +137,11 @@ export const EmptyState = ({
       {!isSearchMiss && !scopeFiltered && !isServer && onLocalStudio && (
         <p
           className="dim"
-          style={{ margin: "14px auto 0", maxWidth: 440, fontSize: 12.5 }}
+          style={{
+            margin: "0.875rem auto 0",
+            maxWidth: "27.5rem",
+            fontSize: "0.78125rem",
+          }}
         >
           {tLocal("welcome.emptyLocal")}
         </p>

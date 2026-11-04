@@ -32,25 +32,34 @@ export const OnboardingRestartCard = () => {
       className="card"
       data-testid="onboarding-restart"
       style={{
-        padding: 16,
-        marginTop: 16,
+        padding: "1rem",
+        marginTop: "1rem",
         display: "flex",
         alignItems: "center",
-        gap: 12,
+        gap: "0.75rem",
         flexWrap: "wrap",
       }}
     >
-      <Compass size={18} style={{ color: "var(--accent)", flexShrink: 0 }} />
-      <div className="flex flex-col flex-1" style={{ gap: 4, minWidth: 200 }}>
-        <strong style={{ fontSize: 13.5, color: "var(--fg-0)" }}>
+      <Compass
+        size="1.125rem"
+        style={{ color: "var(--accent)", flexShrink: 0 }}
+      />
+      <div
+        className="flex flex-col flex-1"
+        style={{ gap: "0.25rem", minWidth: "12.5rem" }}
+      >
+        <strong style={{ fontSize: "0.84375rem", color: "var(--fg-0)" }}>
           {t("restart.title")}
           {data && (
-            <span className="chip" style={{ marginLeft: 8, fontWeight: 400 }}>
+            <span
+              className="chip"
+              style={{ marginLeft: "0.5rem", fontWeight: 400 }}
+            >
               {t(STATUS_KEY[data.status])}
             </span>
           )}
         </strong>
-        <span className="dim" style={{ fontSize: 12.5 }}>
+        <span className="dim" style={{ fontSize: "0.78125rem" }}>
           {t("restart.body")}
         </span>
       </div>

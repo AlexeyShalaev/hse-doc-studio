@@ -118,8 +118,8 @@ export const FileDropZone = ({
           onDrop={onDrop}
           className="flex flex-col items-center justify-center"
           style={{
-            gap: 6,
-            padding: "28px 16px",
+            gap: "0.375rem",
+            padding: "1.75rem 1rem",
             borderRadius: "var(--r-3)",
             border: `1.5px dashed ${dragging ? "var(--accent)" : "var(--border-strong)"}`,
             background: dragging ? "var(--accent-soft)" : "var(--bg-1)",
@@ -130,11 +130,11 @@ export const FileDropZone = ({
           }}
         >
           <UploadCloud
-            size={24}
+            size="1.5rem"
             aria-hidden="true"
             style={{ color: dragging ? "var(--accent)" : "var(--fg-3)" }}
           />
-          <span style={{ fontSize: 13, color: "var(--fg-0)" }}>
+          <span style={{ fontSize: "0.8125rem", color: "var(--fg-0)" }}>
             {dragging ? (
               activeTitle
             ) : (
@@ -147,7 +147,7 @@ export const FileDropZone = ({
             )}
           </span>
           {hint && (
-            <span className="dim" style={{ fontSize: 11.5 }}>
+            <span className="dim" style={{ fontSize: "0.71875rem" }}>
               {hint}
             </span>
           )}

@@ -26,7 +26,7 @@ export const RequireCapability = ({
     return (
       <div
         data-testid="require-capability-loading"
-        style={{ display: "flex", justifyContent: "center", padding: 24 }}
+        style={{ display: "flex", justifyContent: "center", padding: "1.5rem" }}
       >
         <Spinner size="md" />
       </div>

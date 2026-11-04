@@ -38,13 +38,13 @@ export const DoneStep = ({
       >
         <ul
           style={{
-            margin: "4px 0 0",
-            paddingLeft: 18,
-            fontSize: 12.5,
+            margin: "0.25rem 0 0",
+            paddingLeft: "1.125rem",
+            fontSize: "0.78125rem",
             color: "var(--fg-2)",
             display: "flex",
             flexDirection: "column",
-            gap: 3,
+            gap: "0.1875rem",
           }}
         >
           {next.map((key) => (
@@ -52,18 +52,18 @@ export const DoneStep = ({
           ))}
         </ul>
       </ResultFrame>
-      <div style={{ marginTop: 22 }}>
+      <div style={{ marginTop: "1.375rem" }}>
         <Button
           type="button"
           aria-disabled={opening}
-          style={{ width: "100%", justifyContent: "center", gap: 8 }}
+          style={{ width: "100%", justifyContent: "center", gap: "0.5rem" }}
           onClick={() => {
             if (!opening) onOpen();
           }}
           data-testid="setup-open"
         >
           {t("setup.done.open")}
-          <ArrowRight size={15} aria-hidden />
+          <ArrowRight size="0.9375rem" aria-hidden />
         </Button>
       </div>
     </section>

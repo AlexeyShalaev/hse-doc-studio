@@ -123,8 +123,8 @@ export const StatusDot = ({
       style={{
         display: "inline-flex",
         alignItems: "center",
-        gap: 6,
-        fontSize: 12.5,
+        gap: "0.375rem",
+        fontSize: "0.78125rem",
         color: "var(--fg-1)",
         whiteSpace: "nowrap",
       }}

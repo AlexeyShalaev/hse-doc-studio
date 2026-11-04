@@ -16,11 +16,11 @@ import { useWorkspaceStore } from "@shared/lib";
 type Kind = RequirementFormat["kind"];
 
 const LABEL_STYLE: React.CSSProperties = {
-  fontSize: 10.5,
+  fontSize: "0.65625rem",
   textTransform: "uppercase",
   letterSpacing: "0.08em",
   color: "var(--fg-3)",
-  marginBottom: 4,
+  marginBottom: "0.25rem",
   display: "block",
 };
 
@@ -104,7 +104,7 @@ export const RequirementsFormatEditor = ({
   const activeHint = kinds.find((k) => k.value === kind)?.hint ?? "";
 
   return (
-    <div className="card" style={{ marginTop: 16, overflow: "hidden" }}>
+    <div className="card" style={{ marginTop: "1rem", overflow: "hidden" }}>
       <button
         type="button"
         onClick={() => {
@@ -113,8 +113,8 @@ export const RequirementsFormatEditor = ({
         className="flex items-center"
         style={{
           width: "100%",
-          gap: 10,
-          padding: "12px 16px",
+          gap: "0.625rem",
+          padding: "0.75rem 1rem",
           background: "transparent",
           border: 0,
           cursor: "pointer",
@@ -122,16 +122,16 @@ export const RequirementsFormatEditor = ({
           textAlign: "left",
         }}
       >
-        <SlidersHorizontal size={15} style={{ color: "var(--fg-3)" }} />
-        <span style={{ fontSize: 13, fontWeight: 600 }}>
+        <SlidersHorizontal size="0.9375rem" style={{ color: "var(--fg-3)" }} />
+        <span style={{ fontSize: "0.8125rem", fontWeight: 600 }}>
           {t("requirementsFormat.header")}
         </span>
-        <span className="chip" style={{ fontSize: 10.5 }}>
+        <span className="chip" style={{ fontSize: "0.65625rem" }}>
           {currentLabel}
         </span>
         <span
           className="chip"
-          style={{ fontSize: 10, color: "var(--fg-3)" }}
+          style={{ fontSize: "0.625rem", color: "var(--fg-3)" }}
           title={
             overridden
               ? t("requirementsFormat.scopeProjectTitle")
@@ -143,21 +143,26 @@ export const RequirementsFormatEditor = ({
             : t("requirementsFormat.scopeTemplate")}
         </span>
         <span style={{ flex: 1 }} />
-        {open ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
+        {open ? <ChevronDown size="1rem" /> : <ChevronRight size="1rem" />}
       </button>
 
       {open && (
         <div
           style={{
-            padding: "4px 16px 16px",
+            padding: "0.25rem 1rem 1rem",
             borderTop: "1px solid var(--border)",
             display: "flex",
             flexDirection: "column",
-            gap: 14,
+            gap: "0.875rem",
           }}
         >
           <div
-            style={{ display: "flex", gap: 6, marginTop: 12, flexWrap: "wrap" }}
+            style={{
+              display: "flex",
+              gap: "0.375rem",
+              marginTop: "0.75rem",
+              flexWrap: "wrap",
+            }}
           >
             {kinds.map((k) => (
               <button
@@ -175,13 +180,19 @@ export const RequirementsFormatEditor = ({
 
           <p
             className="dim"
-            style={{ margin: 0, fontSize: 11.5, lineHeight: 1.5 }}
+            style={{ margin: 0, fontSize: "0.71875rem", lineHeight: 1.5 }}
           >
             {activeHint}
           </p>
 
           {kind === "id" && (
-            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+            <div
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                gap: "0.75rem",
+              }}
+            >
               <div>
                 <label style={LABEL_STYLE}>
                   {t("requirementsFormat.idPatternLabel")}
@@ -216,7 +227,13 @@ export const RequirementsFormatEditor = ({
           )}
 
           {kind === "custom" && (
-            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+            <div
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                gap: "0.75rem",
+              }}
+            >
               <div>
                 <label style={LABEL_STYLE}>
                   {t("requirementsFormat.defPatternLabel")}
@@ -252,7 +269,11 @@ export const RequirementsFormatEditor = ({
 
           {mutation.isError && (
             <div
-              style={{ fontSize: 11.5, color: "var(--c-err)", lineHeight: 1.5 }}
+              style={{
+                fontSize: "0.71875rem",
+                color: "var(--c-err)",
+                lineHeight: 1.5,
+              }}
             >
               {mutation.error instanceof Error
                 ? mutation.error.message
@@ -260,7 +281,7 @@ export const RequirementsFormatEditor = ({
             </div>
           )}
 
-          <div className="flex items-center" style={{ gap: 8 }}>
+          <div className="flex items-center" style={{ gap: "0.5rem" }}>
             <button
               type="button"
               className="btn primary xs"
@@ -290,7 +311,7 @@ export const RequirementsFormatEditor = ({
               onClick={handleAskAi}
               title={t("requirementsFormat.askAiTitle")}
             >
-              <Sparkles size={13} />
+              <Sparkles size="0.8125rem" />
               {t("requirementsFormat.askAi")}
             </button>
           </div>

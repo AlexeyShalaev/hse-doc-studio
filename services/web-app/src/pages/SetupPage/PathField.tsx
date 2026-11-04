@@ -41,19 +41,19 @@ export const PathField = ({ value, isRelative, onChange }: PathFieldProps) => {
   };
 
   return (
-    <form onSubmit={handleSubmit} style={{ marginTop: 12 }}>
+    <form onSubmit={handleSubmit} style={{ marginTop: "0.75rem" }}>
       <label
         htmlFor="setup-path"
         className="dim"
         style={{
           display: "flex",
           alignItems: "center",
-          gap: 6,
-          fontSize: 11,
-          marginBottom: 5,
+          gap: "0.375rem",
+          fontSize: "0.6875rem",
+          marginBottom: "0.3125rem",
         }}
       >
-        <Keyboard size={12} />
+        <Keyboard size="0.75rem" />
         {t("folder.typeLabel")}
       </label>
       <input
@@ -69,7 +69,7 @@ export const PathField = ({ value, isRelative, onChange }: PathFieldProps) => {
         style={{
           width: "100%",
           fontFamily: "var(--font-mono, monospace)",
-          fontSize: 12.5,
+          fontSize: "0.78125rem",
         }}
       />
       {isRelative && (
@@ -78,13 +78,13 @@ export const PathField = ({ value, isRelative, onChange }: PathFieldProps) => {
           style={{
             display: "flex",
             alignItems: "center",
-            gap: 7,
-            marginTop: 7,
-            fontSize: 12,
+            gap: "0.4375rem",
+            marginTop: "0.4375rem",
+            fontSize: "0.75rem",
             color: "var(--c-warn)",
           }}
         >
-          <AlertTriangle size={13} style={{ flexShrink: 0 }} />
+          <AlertTriangle size="0.8125rem" style={{ flexShrink: 0 }} />
           {t("folder.relativeWarning")}
         </div>
       )}

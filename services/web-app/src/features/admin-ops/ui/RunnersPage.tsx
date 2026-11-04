@@ -63,10 +63,10 @@ export const RunnersPage = ({
               onClick={() => {
                 setCreating(true);
               }}
-              style={{ gap: 6 }}
+              style={{ gap: "0.375rem" }}
               data-testid="runner-token-create"
             >
-              <Plus size={14} aria-hidden="true" />
+              <Plus size="0.875rem" aria-hidden="true" />
               {t("tokens.create")}
             </Button>
           ) : undefined

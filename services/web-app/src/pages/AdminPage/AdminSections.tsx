@@ -74,9 +74,9 @@ type Attention = {
 };
 
 const TONE_ICON: Record<Tone, ReactNode> = {
-  danger: <TriangleAlert size={15} />,
-  warning: <CircleAlert size={15} />,
-  info: <Mail size={15} />,
+  danger: <TriangleAlert size="0.9375rem" />,
+  warning: <CircleAlert size="0.9375rem" />,
+  info: <Mail size="0.9375rem" />,
 };
 
 const isBad = (s: AdminService): boolean =>
@@ -134,7 +134,7 @@ const Kpis = () => {
       <KpiTile
         testId="overview-kpi-people"
         to="/admin/users"
-        icon={<Users size={14} aria-hidden="true" />}
+        icon={<Users size="0.875rem" aria-hidden="true" />}
         label={t("overview.kpi.people")}
         loading={users.isPending && !users.isError}
         error={failedEmpty(users) ? failed : undefined}
@@ -149,7 +149,7 @@ const Kpis = () => {
       <KpiTile
         testId="overview-kpi-runners"
         to="/admin/runners"
-        icon={<Server size={14} aria-hidden="true" />}
+        icon={<Server size="0.875rem" aria-hidden="true" />}
         label={t("overview.kpi.runners")}
         loading={runners.isPending && !runners.isError}
         error={failedEmpty(runners) ? failed : undefined}
@@ -187,7 +187,7 @@ const Kpis = () => {
       <KpiTile
         testId="overview-kpi-storage"
         to="/admin/storage"
-        icon={<HardDrive size={14} aria-hidden="true" />}
+        icon={<HardDrive size="0.875rem" aria-hidden="true" />}
         label={t("overview.kpi.storage")}
         loading={storage.isPending && !storage.isError}
         error={failedEmpty(storage) ? failed : undefined}
@@ -209,7 +209,7 @@ const Kpis = () => {
       <KpiTile
         testId="overview-kpi-services"
         to="/admin/services"
-        icon={<Activity size={14} aria-hidden="true" />}
+        icon={<Activity size="0.875rem" aria-hidden="true" />}
         label={t("overview.kpi.services")}
         loading={services.isPending && !services.isError}
         error={failedEmpty(services) ? failed : undefined}
@@ -373,10 +373,12 @@ const AttentionBlock = () => {
         <TableSkeleton rows={2} columns={1} framed={false} />
       )}
       {items.length === 0 && !loading && !failed && (
-        <div style={{ padding: "0 8px 8px" }}>
+        <div style={{ padding: "0 0.5rem 0.5rem" }}>
           <EmptyState
             compact
-            icon={<CircleCheck size={15} style={{ color: "var(--c-ok)" }} />}
+            icon={
+              <CircleCheck size="0.9375rem" style={{ color: "var(--c-ok)" }} />
+            }
             title={t("overview.attention.allClear")}
             description={t("overview.attention.allClearBody")}
             testId="overview-attention-clear"
@@ -386,7 +388,7 @@ const AttentionBlock = () => {
       {failed && (
         <div
           style={{
-            padding: "4px 8px 8px",
+            padding: "0.25rem 0.5rem 0.5rem",
             borderTop: items.length > 0 ? "1px solid var(--border)" : 0,
           }}
         >
@@ -432,7 +434,7 @@ const ActivityBlock = () => {
         <TableSkeleton rows={4} columns={2} withAvatar framed={false} />
       )}
       {audit.isError && (
-        <div style={{ padding: "4px 8px 8px" }}>
+        <div style={{ padding: "0.25rem 0.5rem 0.5rem" }}>
           <ErrorState
             compact
             title={t("overview.activity.failed")}
@@ -473,9 +475,9 @@ const ActivityBlock = () => {
                     <span
                       className="adm-avatar"
                       aria-hidden="true"
-                      style={{ width: 26, height: 26 }}
+                      style={{ width: "1.625rem", height: "1.625rem" }}
                     >
-                      <Cpu size={13} />
+                      <Cpu size="0.8125rem" />
                     </span>
                   )
                 }
@@ -512,7 +514,7 @@ const QuickActions = () => {
       <SectionList label={t("overview.quick.title")}>
         <ListRow
           testId="overview-quick-invite"
-          icon={<UserPlus size={15} />}
+          icon={<UserPlus size="0.9375rem" />}
           tone="accent"
           title={t("overview.quick.invite")}
           description={t("overview.quick.inviteHint")}
@@ -520,7 +522,7 @@ const QuickActions = () => {
         />
         <ListRow
           testId="overview-quick-token"
-          icon={<KeyRound size={15} />}
+          icon={<KeyRound size="0.9375rem" />}
           tone="accent"
           title={t("overview.quick.token")}
           description={t("overview.quick.tokenHint")}
@@ -528,7 +530,7 @@ const QuickActions = () => {
         />
         <ListRow
           testId="overview-quick-signin"
-          icon={<SlidersHorizontal size={15} />}
+          icon={<SlidersHorizontal size="0.9375rem" />}
           tone="accent"
           title={t("overview.quick.signIn")}
           description={t("overview.quick.signInHint")}

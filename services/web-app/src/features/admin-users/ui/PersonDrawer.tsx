@@ -94,7 +94,7 @@ export const PersonDrawer = ({
                     className="icon-btn"
                     aria-label={t("close")}
                   >
-                    <X size={16} aria-hidden="true" />
+                    <X size="1rem" aria-hidden="true" />
                   </button>
                 </Dialog.Close>
               </div>

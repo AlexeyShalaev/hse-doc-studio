@@ -25,7 +25,7 @@ const Stat = ({ tally, label }: StatProps) => {
   if (tally.total === 0) return null;
   const isDone = tally.done === tally.total;
   return (
-    <div className="flex flex-col" style={{ gap: 2 }}>
+    <div className="flex flex-col" style={{ gap: "0.125rem" }}>
       <span
         className="cp-stat-value"
         style={{ color: isDone ? "var(--c-ok)" : "var(--fg-0)" }}
@@ -37,7 +37,11 @@ const Stat = ({ tally, label }: StatProps) => {
       </span>
       <span
         className="label-up"
-        style={{ fontSize: 9.5, letterSpacing: "0.1em", color: "var(--fg-3)" }}
+        style={{
+          fontSize: "0.59375rem",
+          letterSpacing: "0.1em",
+          color: "var(--fg-3)",
+        }}
       >
         {label}
       </span>
@@ -77,11 +81,11 @@ export const CheckpointHero = ({
 
   return (
     <header>
-      <div className="flex items-center" style={{ gap: 10 }}>
+      <div className="flex items-center" style={{ gap: "0.625rem" }}>
         <span
           className="label-up"
           style={{
-            fontSize: 9.5,
+            fontSize: "0.59375rem",
             letterSpacing: "0.14em",
             color: "var(--fg-3)",
           }}
@@ -91,13 +95,13 @@ export const CheckpointHero = ({
         <span style={{ flex: 1, height: 1, background: "var(--border)" }} />
         {isPacked && (
           <span className="chip subtle" style={{ flexShrink: 0 }}>
-            <Check size={11} style={{ color: "var(--c-ok)" }} />
+            <Check size="0.6875rem" style={{ color: "var(--c-ok)" }} />
             {t("submit.packed")}
           </span>
         )}
       </div>
 
-      <h1 className="cp-title" style={{ marginTop: 12 }}>
+      <h1 className="cp-title" style={{ marginTop: "0.75rem" }}>
         {name}
       </h1>
 
@@ -106,7 +110,7 @@ export const CheckpointHero = ({
       <div className="cp-band">
         {hasFigure ? (
           <>
-            <div className="flex items-center" style={{ gap: 10 }}>
+            <div className="flex items-center" style={{ gap: "0.625rem" }}>
               <ReadinessRing
                 done={readiness.done}
                 total={readiness.total}
@@ -114,11 +118,13 @@ export const CheckpointHero = ({
                 label={readinessLabel}
               />
               <div className="flex flex-col" style={{ gap: 1 }}>
-                <strong style={{ fontSize: 14 }}>{readinessLabel}</strong>
+                <strong style={{ fontSize: "0.875rem" }}>
+                  {readinessLabel}
+                </strong>
                 <span
                   className="dim"
                   style={{
-                    fontSize: 11.5,
+                    fontSize: "0.71875rem",
                     color: readiness.isComplete ? "var(--c-ok)" : "var(--fg-2)",
                   }}
                 >
@@ -149,7 +155,7 @@ export const CheckpointHero = ({
 
             <div
               className="progress"
-              style={{ flex: 1, minWidth: 140, marginLeft: "auto" }}
+              style={{ flex: 1, minWidth: "8.75rem", marginLeft: "auto" }}
             >
               <div
                 style={{
@@ -162,7 +168,7 @@ export const CheckpointHero = ({
             </div>
           </>
         ) : (
-          <span className="dim" style={{ fontSize: 12.5 }}>
+          <span className="dim" style={{ fontSize: "0.78125rem" }}>
             {t("checkpoint.noItems")}
           </span>
         )}
@@ -179,13 +185,13 @@ export const CheckpointHero = ({
             <button
               type="button"
               className="btn xs ghost"
-              style={{ marginTop: 8 }}
+              style={{ marginTop: "0.5rem" }}
               onClick={() => {
                 setIsRestOpen((open) => !open);
               }}
             >
               <ChevronDown
-                size={11}
+                size="0.6875rem"
                 style={{
                   transform: isRestOpen ? "rotate(180deg)" : undefined,
                   transition: "transform 0.15s var(--ease)",

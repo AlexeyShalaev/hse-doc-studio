@@ -144,7 +144,7 @@ export const PersonalRunnersView = ({
                 <KindIcon
                   size={11}
                   aria-hidden="true"
-                  style={{ verticalAlign: -1, marginRight: 4 }}
+                  style={{ verticalAlign: -1, marginRight: "0.25rem" }}
                 />
                 {t(`personal.kind.${runner.host_kind ?? "cli"}`)}
                 {" · "}
@@ -161,7 +161,7 @@ export const PersonalRunnersView = ({
                       tabIndex={0}
                       data-testid={`runner-outdated-${runner.id}`}
                     >
-                      <TriangleAlert size={11} aria-hidden="true" />v
+                      <TriangleAlert size="0.6875rem" aria-hidden="true" />v
                       {runner.version}
                     </span>
                   </Tooltip>
@@ -191,7 +191,7 @@ export const PersonalRunnersView = ({
                 />
               </span>
               {st !== "revoked" && (
-                <span className="ops-cell-sub" style={{ paddingLeft: 16 }}>
+                <span className="ops-cell-sub" style={{ paddingLeft: "1rem" }}>
                   {seen}
                 </span>
               )}
@@ -239,9 +239,9 @@ export const PersonalRunnersView = ({
                       ? t("personal.resume")
                       : t("personal.pause"),
                     icon: r.paused ? (
-                      <Play size={14} aria-hidden="true" />
+                      <Play size="0.875rem" aria-hidden="true" />
                     ) : (
-                      <Pause size={14} aria-hidden="true" />
+                      <Pause size="0.875rem" aria-hidden="true" />
                     ),
                     disabled: busy,
                     onSelect: pause,
@@ -250,7 +250,7 @@ export const PersonalRunnersView = ({
                   {
                     id: "revoke",
                     label: t("personal.revoke"),
-                    icon: <Trash2 size={14} aria-hidden="true" />,
+                    icon: <Trash2 size="0.875rem" aria-hidden="true" />,
                     danger: true,
                     disabled: busy,
                     onSelect: revoke,
@@ -313,7 +313,7 @@ export const PersonalRunnersView = ({
       flush
       testId="admin-personal-runners"
     >
-      <div className="ops-stack" style={{ padding: "0 20px 20px" }}>
+      <div className="ops-stack" style={{ padding: "0 1.25rem 1.25rem" }}>
         {enabled === false && (
           <Banner
             tone="warning"
@@ -323,10 +323,10 @@ export const PersonalRunnersView = ({
               <Link
                 to="/admin/instance"
                 className="btn sm"
-                style={{ gap: 6, textDecoration: "none" }}
+                style={{ gap: "0.375rem", textDecoration: "none" }}
               >
                 {t("personal.disabled.action")}
-                <ArrowRight size={13} aria-hidden="true" />
+                <ArrowRight size="0.8125rem" aria-hidden="true" />
               </Link>
             }
           >
@@ -343,7 +343,7 @@ export const PersonalRunnersView = ({
         {status === "ready" && runners.length === 0 && (
           <EmptyState
             testId="admin-personal-runners-empty"
-            icon={<Users size={18} />}
+            icon={<Users size="1.125rem" />}
             title={t("personal.empty.title")}
             description={t("personal.empty.body")}
           />
@@ -353,7 +353,7 @@ export const PersonalRunnersView = ({
             <KpiGrid>
               <KpiTile
                 testId="admin-personal-runners-online"
-                icon={<Laptop size={14} aria-hidden="true" />}
+                icon={<Laptop size="0.875rem" aria-hidden="true" />}
                 label={t("personal.online")}
                 value={online}
                 unit={t("personal.onlineOf", { total: live.length })}
@@ -368,14 +368,14 @@ export const PersonalRunnersView = ({
               />
               <KpiTile
                 testId="admin-personal-runners-owners"
-                icon={<Users size={14} aria-hidden="true" />}
+                icon={<Users size="0.875rem" aria-hidden="true" />}
                 label={t("personal.ownersLabel")}
                 value={owners}
                 secondary={t("personal.ownersHint")}
               />
               <KpiTile
                 testId="admin-personal-runners-paused"
-                icon={<Pause size={14} aria-hidden="true" />}
+                icon={<Pause size="0.875rem" aria-hidden="true" />}
                 label={t("personal.pausedLabel")}
                 value={paused}
                 secondary={t("personal.pausedHint")}

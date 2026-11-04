@@ -76,6 +76,27 @@ export default tseslint.config(
 
       "react-hooks/immutability": "off",
 
+      // Размер текста интерфейса меняется в настройках (корневой rem): шрифт не задают жёстким px.
+      "no-restricted-syntax": [
+        "error",
+        {
+          selector: "Property[key.name='fontSize'] > Literal[raw=/^[0-9.]+$/]",
+          message:
+            'fontSize в px не масштабируется настройкой «Размер текста»: пишите rem ("0.8125rem") или токен, см. docs/design/mobile-layout.md.',
+        },
+        {
+          selector:
+            "Property[key.name='fontSize'] ConditionalExpression > Literal[raw=/^[0-9.]+$/]",
+          message:
+            "fontSize в px не масштабируется настройкой «Размер текста»: пишите rem или токен, см. docs/design/mobile-layout.md.",
+        },
+        {
+          selector: "Property[key.name='fontSize'] > Literal[value=/px$/]",
+          message:
+            "fontSize в px не масштабируется настройкой «Размер текста»: пишите rem или токен, см. docs/design/mobile-layout.md.",
+        },
+      ],
+
       // Code quality
       "no-console": ["warn", { allow: ["warn", "error"] }],
       "prettier/prettier": ["error", { endOfLine: "auto" }],

@@ -36,13 +36,13 @@ const Badge = ({
     <span
       style={{
         flexShrink: 0,
-        fontSize: 9.5,
-        padding: "1px 6px",
-        borderRadius: 999,
+        fontSize: "0.59375rem",
+        padding: "1px 0.375rem",
+        borderRadius: "999px",
         border: `1px solid ${color}`,
         color,
         textTransform: "uppercase",
-        letterSpacing: 0.4,
+        letterSpacing: "0.025rem",
         whiteSpace: "nowrap",
       }}
     >
@@ -82,8 +82,8 @@ const Group = ({
         type="button"
         className="flex items-center justify-between"
         style={{
-          gap: 8,
-          padding: "10px 12px",
+          gap: "0.5rem",
+          padding: "0.625rem 0.75rem",
           background: "var(--bg-1)",
           border: "none",
           cursor: "pointer",
@@ -94,22 +94,34 @@ const Group = ({
           setOpen((v) => !v);
         }}
       >
-        <span className="flex items-center" style={{ gap: 8, minWidth: 0 }}>
-          {open ? <ChevronDown size={13} /> : <ChevronRight size={13} />}
+        <span
+          className="flex items-center"
+          style={{ gap: "0.5rem", minWidth: 0 }}
+        >
+          {open ? (
+            <ChevronDown size="0.8125rem" />
+          ) : (
+            <ChevronRight size="0.8125rem" />
+          )}
           <span style={{ color: "var(--fg-2)", display: "flex" }}>{icon}</span>
-          <span style={{ fontSize: 12.5, fontWeight: 600 }}>{title}</span>
-          <span className="dim" style={{ fontSize: 11 }}>
+          <span style={{ fontSize: "0.78125rem", fontWeight: 600 }}>
+            {title}
+          </span>
+          <span className="dim" style={{ fontSize: "0.6875rem" }}>
             {count}
           </span>
         </span>
-        <span className="mono dim" style={{ fontSize: 11, flexShrink: 0 }}>
+        <span
+          className="mono dim"
+          style={{ fontSize: "0.6875rem", flexShrink: 0 }}
+        >
           {formatBytes(sizeBytes)}
         </span>
       </button>
       {open && (
         <div
           className="flex flex-col"
-          style={{ gap: 2, padding: "6px 8px 8px" }}
+          style={{ gap: "0.125rem", padding: "0.375rem 0.5rem 0.5rem" }}
         >
           {children}
           {footer}
@@ -134,15 +146,23 @@ const Row = ({
 }) => (
   <div
     className="flex items-center"
-    style={{ gap: 8, padding: "5px 6px", borderRadius: 6, minWidth: 0 }}
+    style={{
+      gap: "0.5rem",
+      padding: "0.3125rem 0.375rem",
+      borderRadius: "0.375rem",
+      minWidth: 0,
+    }}
   >
     <span style={{ flexShrink: 0, display: "flex" }}>{leading}</span>
     <span className="flex flex-col" style={{ minWidth: 0, flex: 1, gap: 1 }}>
-      <span className="flex items-center" style={{ gap: 6, minWidth: 0 }}>
+      <span
+        className="flex items-center"
+        style={{ gap: "0.375rem", minWidth: 0 }}
+      >
         <span
           className="mono"
           style={{
-            fontSize: 11.5,
+            fontSize: "0.71875rem",
             overflow: "hidden",
             textOverflow: "ellipsis",
             whiteSpace: "nowrap",
@@ -153,7 +173,7 @@ const Row = ({
         </span>
         {badges}
       </span>
-      <span className="dim" style={{ fontSize: 10.5 }}>
+      <span className="dim" style={{ fontSize: "0.65625rem" }}>
         {meta}
       </span>
     </span>
@@ -162,8 +182,12 @@ const Row = ({
 );
 
 const LockHint = ({ title }: { title: string }) => (
-  <span className="dim" title={title} style={{ display: "flex", padding: 4 }}>
-    <Lock size={11} />
+  <span
+    className="dim"
+    title={title}
+    style={{ display: "flex", padding: "0.25rem" }}
+  >
+    <Lock size="0.6875rem" />
   </span>
 );
 
@@ -213,7 +237,7 @@ export const DiskEntityLists = ({
           title={t("disk.removeDanglingTitle")}
           onClick={onRemoveDangling}
         >
-          <Trash2 size={11} />
+          <Trash2 size="0.6875rem" />
         </button>
       );
     }
@@ -238,7 +262,7 @@ export const DiskEntityLists = ({
           onRemoveImage(image);
         }}
       >
-        <Trash2 size={11} />
+        <Trash2 size="0.6875rem" />
       </button>
     );
   };
@@ -257,15 +281,15 @@ export const DiskEntityLists = ({
           onRemoveContainer(container);
         }}
       >
-        <Trash2 size={11} />
+        <Trash2 size="0.6875rem" />
       </button>
     );
   };
 
   return (
-    <div className="flex flex-col" style={{ gap: 8 }}>
+    <div className="flex flex-col" style={{ gap: "0.5rem" }}>
       <Group
-        icon={<Layers size={13} />}
+        icon={<Layers size="0.8125rem" />}
         title={t("disk.imagesGroup")}
         count={images.length}
         sizeBytes={usage.images_total_bytes}
@@ -277,9 +301,9 @@ export const DiskEntityLists = ({
             leading={
               <span
                 style={{
-                  width: 8,
-                  height: 8,
-                  borderRadius: 2,
+                  width: "0.5rem",
+                  height: "0.5rem",
+                  borderRadius: "0.125rem",
                   background: categoryColor(image.category),
                 }}
               />
@@ -311,7 +335,7 @@ export const DiskEntityLists = ({
       </Group>
 
       <Group
-        icon={<Box size={13} />}
+        icon={<Box size="0.8125rem" />}
         title={t("disk.containersGroup")}
         count={containers.length}
         sizeBytes={usage.containers_total_bytes}
@@ -322,9 +346,9 @@ export const DiskEntityLists = ({
             leading={
               <span
                 style={{
-                  width: 8,
-                  height: 8,
-                  borderRadius: 999,
+                  width: "0.5rem",
+                  height: "0.5rem",
+                  borderRadius: "999px",
                   background:
                     container.state === "running"
                       ? "var(--c-ok)"
@@ -344,21 +368,24 @@ export const DiskEntityLists = ({
           />
         ))}
         {containers.length === 0 && (
-          <span className="dim" style={{ fontSize: 11, padding: 6 }}>
+          <span
+            className="dim"
+            style={{ fontSize: "0.6875rem", padding: "0.375rem" }}
+          >
             {t("disk.noContainers")}
           </span>
         )}
       </Group>
 
       <Group
-        icon={<Database size={13} />}
+        icon={<Database size="0.8125rem" />}
         title={t("disk.volumesGroup")}
         count={volumes.length}
         sizeBytes={usage.volumes_total_bytes}
         footer={
           <span
             className="dim"
-            style={{ fontSize: 10.5, padding: "4px 6px 0" }}
+            style={{ fontSize: "0.65625rem", padding: "0.25rem 0.375rem 0" }}
           >
             {t("disk.volumesHint")}
           </span>
@@ -367,7 +394,9 @@ export const DiskEntityLists = ({
         {volumes.map((volume) => (
           <Row
             key={volume.name}
-            leading={<Database size={11} style={{ color: "var(--fg-3)" }} />}
+            leading={
+              <Database size="0.6875rem" style={{ color: "var(--fg-3)" }} />
+            }
             primary={volume.name}
             meta={[
               formatBytes(volume.size_bytes),
@@ -377,7 +406,10 @@ export const DiskEntityLists = ({
           />
         ))}
         {volumes.length === 0 && (
-          <span className="dim" style={{ fontSize: 11, padding: 6 }}>
+          <span
+            className="dim"
+            style={{ fontSize: "0.6875rem", padding: "0.375rem" }}
+          >
             {t("disk.noVolumes")}
           </span>
         )}

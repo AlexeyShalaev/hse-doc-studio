@@ -33,15 +33,15 @@ export const DockerNotice = ({
         style={{
           display: "flex",
           alignItems: "flex-start",
-          gap: 10,
-          padding: "12px 14px",
-          borderRadius: 10,
+          gap: "0.625rem",
+          padding: "0.75rem 0.875rem",
+          borderRadius: "0.625rem",
           background: "var(--c-warn-soft)",
           border: "1px solid var(--c-warn)",
         }}
       >
         <AlertTriangle
-          size={16}
+          size="1rem"
           style={{ color: "var(--c-warn)", flexShrink: 0, marginTop: 1 }}
         />
         <div style={{ flex: 1, minWidth: 0 }}>
@@ -50,7 +50,10 @@ export const DockerNotice = ({
               defaultValue: t("docker.unknown.title"),
             })}
           </div>
-          <div className="dim" style={{ fontSize: 12, marginTop: 3 }}>
+          <div
+            className="dim"
+            style={{ fontSize: "0.75rem", marginTop: "0.1875rem" }}
+          >
             {t(`docker.${code}.hint`, {
               defaultValue: t("docker.unknown.hint"),
             })}
@@ -63,7 +66,7 @@ export const DockerNotice = ({
           onClick={onRecheck}
           style={{ flexShrink: 0 }}
         >
-          <RefreshCw size={11} />
+          <RefreshCw size="0.6875rem" />
           {t("docker.recheck")}
         </button>
       </div>

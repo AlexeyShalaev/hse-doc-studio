@@ -35,7 +35,7 @@ export const DemoScenarioPicker = () => {
   return (
     <div
       className="fixed"
-      style={{ left: 12, bottom: 40, zIndex: 110 }}
+      style={{ left: "0.75rem", bottom: "2.5rem", zIndex: 110 }}
       data-testid="git-demo-picker"
     >
       <Popover open={open} onOpenChange={setOpen}>
@@ -44,13 +44,13 @@ export const DemoScenarioPicker = () => {
             type="button"
             className="btn sm"
             style={{
-              gap: 6,
+              gap: "0.375rem",
               boxShadow: "0 2px 10px rgba(0, 0, 0, 0.25)",
               background: "var(--bg-1)",
             }}
             aria-label={t("demo.open")}
           >
-            <FlaskConical size={14} aria-hidden />
+            <FlaskConical size="0.875rem" aria-hidden />
             <span>{t(`demo.scenario.${scenarioId}.title`)}</span>
           </button>
         </PopoverTrigger>
@@ -59,30 +59,36 @@ export const DemoScenarioPicker = () => {
           side="top"
           align="start"
           aria-label={t("demo.title")}
-          style={{ maxHeight: 520, overflowY: "auto", padding: 0 }}
+          style={{ maxHeight: "32.5rem", overflowY: "auto", padding: 0 }}
         >
           <div
             style={{
-              padding: "10px 14px",
+              padding: "0.625rem 0.875rem",
               borderBottom: "1px solid var(--border)",
             }}
           >
-            <div style={{ fontWeight: 600, fontSize: 13 }}>
+            <div style={{ fontWeight: 600, fontSize: "0.8125rem" }}>
               {t("demo.title")}
             </div>
-            <div style={{ fontSize: 11.5, color: "var(--fg-2)", marginTop: 2 }}>
+            <div
+              style={{
+                fontSize: "0.71875rem",
+                color: "var(--fg-2)",
+                marginTop: "0.125rem",
+              }}
+            >
               {t("demo.subtitle")}
             </div>
           </div>
           {GROUPS.map((group) => (
-            <div key={group} style={{ padding: "6px 6px 2px" }}>
+            <div key={group} style={{ padding: "0.375rem 0.375rem 0.125rem" }}>
               <div
                 style={{
-                  fontSize: 10.5,
+                  fontSize: "0.65625rem",
                   letterSpacing: "0.06em",
                   textTransform: "uppercase",
                   color: "var(--fg-3)",
-                  padding: "6px 8px 4px",
+                  padding: "0.375rem 0.5rem 0.25rem",
                 }}
               >
                 {t(`demo.group.${group}`)}
@@ -98,8 +104,8 @@ export const DemoScenarioPicker = () => {
                   className={clsx("w-full text-left")}
                   style={{
                     display: "block",
-                    padding: "6px 8px",
-                    borderRadius: 6,
+                    padding: "0.375rem 0.5rem",
+                    borderRadius: "0.375rem",
                     background:
                       scenario.id === scenarioId
                         ? "var(--bg-3)"
@@ -107,10 +113,10 @@ export const DemoScenarioPicker = () => {
                     cursor: "pointer",
                   }}
                 >
-                  <div style={{ fontSize: 12.5, color: "var(--fg-0)" }}>
+                  <div style={{ fontSize: "0.78125rem", color: "var(--fg-0)" }}>
                     {t(`demo.scenario.${scenario.id}.title`)}
                   </div>
-                  <div style={{ fontSize: 11.5, color: "var(--fg-2)" }}>
+                  <div style={{ fontSize: "0.71875rem", color: "var(--fg-2)" }}>
                     {t(`demo.scenario.${scenario.id}.hint`)}
                   </div>
                 </button>
@@ -119,10 +125,10 @@ export const DemoScenarioPicker = () => {
           ))}
           <div
             style={{
-              margin: "6px 0 0",
-              padding: "10px 14px",
+              margin: "0.375rem 0 0",
+              padding: "0.625rem 0.875rem",
               borderTop: "1px solid var(--border)",
-              fontSize: 11.5,
+              fontSize: "0.71875rem",
               color: "var(--fg-2)",
               lineHeight: 1.5,
             }}

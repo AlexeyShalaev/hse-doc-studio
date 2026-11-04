@@ -31,13 +31,13 @@ const StepIcon = ({ status }: { status: CleanupStep["status"] }) => {
     case "running":
       return <Spinner size="sm" />;
     case "done":
-      return <CheckCircle2 size={13} style={{ color: "var(--c-ok)" }} />;
+      return <CheckCircle2 size="0.8125rem" style={{ color: "var(--c-ok)" }} />;
     case "error":
-      return <XCircle size={13} style={{ color: "var(--c-err)" }} />;
+      return <XCircle size="0.8125rem" style={{ color: "var(--c-err)" }} />;
     case "skipped":
-      return <CircleSlash size={13} style={{ color: "var(--fg-3)" }} />;
+      return <CircleSlash size="0.8125rem" style={{ color: "var(--fg-3)" }} />;
     default:
-      return <Circle size={13} style={{ color: "var(--fg-3)" }} />;
+      return <Circle size="0.8125rem" style={{ color: "var(--fg-3)" }} />;
   }
 };
 
@@ -90,8 +90,8 @@ export const DiskCleanupPanel = () => {
     <div
       className="flex flex-col"
       style={{
-        gap: 8,
-        padding: 12,
+        gap: "0.5rem",
+        padding: "0.75rem",
         borderRadius: "var(--r-3)",
         border: active
           ? "1px solid var(--accent-line)"
@@ -99,22 +99,25 @@ export const DiskCleanupPanel = () => {
         background: "var(--bg-1)",
       }}
     >
-      <div className="flex items-center justify-between" style={{ gap: 8 }}>
-        <div className="flex items-center" style={{ gap: 8 }}>
+      <div
+        className="flex items-center justify-between"
+        style={{ gap: "0.5rem" }}
+      >
+        <div className="flex items-center" style={{ gap: "0.5rem" }}>
           {active ? (
             <Spinner size="sm" />
           ) : job.status === "done" ? (
-            <CheckCircle2 size={14} style={{ color: "var(--c-ok)" }} />
+            <CheckCircle2 size="0.875rem" style={{ color: "var(--c-ok)" }} />
           ) : job.status === "error" ? (
-            <XCircle size={14} style={{ color: "var(--c-err)" }} />
+            <XCircle size="0.875rem" style={{ color: "var(--c-err)" }} />
           ) : (
-            <Ban size={14} style={{ color: "var(--fg-2)" }} />
+            <Ban size="0.875rem" style={{ color: "var(--fg-2)" }} />
           )}
-          <span style={{ fontSize: 12.5, fontWeight: 600 }}>
+          <span style={{ fontSize: "0.78125rem", fontWeight: 600 }}>
             {t(JOB_TITLE_KEY[job.status])}
           </span>
           {job.freed_bytes > 0 && (
-            <span className="dim" style={{ fontSize: 11.5 }}>
+            <span className="dim" style={{ fontSize: "0.71875rem" }}>
               {t("disk.jobFreedSoFar", { size: formatBytes(job.freed_bytes) })}
             </span>
           )}
@@ -128,20 +131,20 @@ export const DiskCleanupPanel = () => {
               cancel.mutate();
             }}
           >
-            <Ban size={11} />
+            <Ban size="0.6875rem" />
             {t("disk.jobCancel")}
           </button>
         )}
       </div>
 
-      <div className="flex flex-col" style={{ gap: 4 }}>
+      <div className="flex flex-col" style={{ gap: "0.25rem" }}>
         {job.steps.map((step, index) => {
           const { label, mono } = stepLabel(step, t);
           return (
             <div
               key={`${step.kind}-${step.ref ?? String(index)}`}
               className="flex items-center"
-              style={{ gap: 8, fontSize: 11.5, minWidth: 0 }}
+              style={{ gap: "0.5rem", fontSize: "0.71875rem", minWidth: 0 }}
             >
               <span style={{ flexShrink: 0, display: "flex" }}>
                 <StepIcon status={step.status} />
@@ -163,7 +166,7 @@ export const DiskCleanupPanel = () => {
               {step.status === "done" && step.freed_bytes > 0 && (
                 <span
                   className="dim mono"
-                  style={{ flexShrink: 0, fontSize: 10.5 }}
+                  style={{ flexShrink: 0, fontSize: "0.65625rem" }}
                 >
                   −{formatBytes(step.freed_bytes)}
                 </span>
@@ -172,7 +175,7 @@ export const DiskCleanupPanel = () => {
                 <span
                   style={{
                     flexShrink: 0,
-                    fontSize: 10.5,
+                    fontSize: "0.65625rem",
                     color: "var(--c-err)",
                   }}
                   title={step.error}

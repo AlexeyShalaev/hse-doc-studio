@@ -38,7 +38,7 @@ const ReadinessRing = ({ done, total }: CheckpointReadiness) => {
   const ratio = total > 0 ? Math.min(1, Math.max(0, done / total)) : 0;
   const isDone = total > 0 && done >= total;
   return (
-    <span className="readiness" style={{ flexShrink: 0, gap: 5 }}>
+    <span className="readiness" style={{ flexShrink: 0, gap: "0.3125rem" }}>
       <svg
         className="readiness-ring"
         width={RING_BOX}
@@ -61,7 +61,7 @@ const ReadinessRing = ({ done, total }: CheckpointReadiness) => {
           strokeDashoffset={RING_LENGTH * (1 - ratio)}
         />
       </svg>
-      <span className="mono dim" style={{ fontSize: 9.5 }}>
+      <span className="mono dim" style={{ fontSize: "0.59375rem" }}>
         {done}/{total}
       </span>
     </span>
@@ -87,14 +87,14 @@ export const CheckpointRow = ({
   // Кнопка закрепления — СОСЕД строки, а не вложенная кнопка: <button> внутри
   // <button> невалиден и ломает клавиатуру. Тот же приём, что у меню документа.
   return (
-    <div className="flex items-center" style={{ gap: 2 }}>
+    <div className="flex items-center" style={{ gap: "0.125rem" }}>
       <button
         type="button"
         className={clsx("row-btn", isActive && "active")}
         onClick={onOpen}
         title={description ?? name}
         aria-label={`${name} — ${t("submit.openCheckpoint")}`}
-        style={{ alignItems: "center", gap: 8, flex: 1, minWidth: 0 }}
+        style={{ alignItems: "center", gap: "0.5rem", flex: 1, minWidth: 0 }}
       >
         <span
           className={clsx("dot", isPacked ? "ok" : "info")}
@@ -109,13 +109,16 @@ export const CheckpointRow = ({
             gap: 1,
           }}
         >
-          <span className="truncate" style={{ fontSize: 12, lineHeight: 1.3 }}>
+          <span
+            className="truncate"
+            style={{ fontSize: "0.75rem", lineHeight: 1.3 }}
+          >
             {name}
           </span>
           {isPacked && (
             <span
               className="mono dim"
-              style={{ fontSize: 9, letterSpacing: "0.06em" }}
+              style={{ fontSize: "0.5625rem", letterSpacing: "0.06em" }}
             >
               {t("submit.packed")}
             </span>
@@ -142,7 +145,7 @@ export const CheckpointRow = ({
             color: isPinned ? "var(--accent)" : undefined,
           }}
         >
-          <Pin size={12} />
+          <Pin size="0.75rem" />
         </button>
       )}
     </div>

@@ -29,17 +29,17 @@ export const DangerZoneSection = ({
       <div
         className="flex items-center justify-between"
         style={{
-          padding: 12,
+          padding: "0.75rem",
           border:
             "1px solid color-mix(in oklch, var(--c-err) 30%, var(--border))",
           borderRadius: "var(--r-2)",
         }}
       >
-        <div className="flex flex-col" style={{ gap: 2 }}>
-          <strong style={{ fontSize: 12.5 }}>
+        <div className="flex flex-col" style={{ gap: "0.125rem" }}>
+          <strong style={{ fontSize: "0.78125rem" }}>
             {t("projectSettings.archiveProject")}
           </strong>
-          <span className="dim" style={{ fontSize: 11 }}>
+          <span className="dim" style={{ fontSize: "0.6875rem" }}>
             {t("projectSettings.archiveProjectHint")}
           </span>
         </div>
@@ -52,17 +52,17 @@ export const DangerZoneSection = ({
       <div
         className="flex items-center justify-between"
         style={{
-          padding: 12,
+          padding: "0.75rem",
           border:
             "1px solid color-mix(in oklch, var(--c-err) 30%, var(--border))",
           borderRadius: "var(--r-2)",
         }}
       >
-        <div className="flex flex-col" style={{ gap: 2 }}>
-          <strong style={{ fontSize: 12.5 }}>
+        <div className="flex flex-col" style={{ gap: "0.125rem" }}>
+          <strong style={{ fontSize: "0.78125rem" }}>
             {t("projectSettings.unlinkFromFolder")}
           </strong>
-          <span className="dim" style={{ fontSize: 11 }}>
+          <span className="dim" style={{ fontSize: "0.6875rem" }}>
             {t("projectSettings.unlinkFromFolderHint")}
           </span>
         </div>
@@ -72,7 +72,7 @@ export const DangerZoneSection = ({
           disabled={isRemoving}
           onClick={onUnlink}
         >
-          <Trash2 size={11} />
+          <Trash2 size="0.6875rem" />
           {t("projectSettings.unlink")}
         </button>
       </div>

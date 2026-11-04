@@ -604,7 +604,11 @@ export const SignatureEditorModal = ({
 
       {error && (
         <div
-          style={{ color: "var(--c-err)", fontSize: 12.5, marginBottom: 10 }}
+          style={{
+            color: "var(--c-err)",
+            fontSize: "0.78125rem",
+            marginBottom: "0.625rem",
+          }}
         >
           {error}
         </div>
@@ -620,13 +624,13 @@ export const SignatureEditorModal = ({
         style={{
           position: "relative",
           height: PREVIEW_H,
-          borderRadius: 8,
+          borderRadius: "0.5rem",
           border: "1px solid var(--border)",
           backgroundColor: "var(--bg-0)",
           backgroundImage:
             "linear-gradient(45deg, var(--bg-2) 25%, transparent 25%), linear-gradient(-45deg, var(--bg-2) 25%, transparent 25%), linear-gradient(45deg, transparent 75%, var(--bg-2) 75%), linear-gradient(-45deg, transparent 75%, var(--bg-2) 75%)",
-          backgroundSize: "16px 16px",
-          backgroundPosition: "0 0, 0 8px, 8px -8px, -8px 0",
+          backgroundSize: "1rem 1rem",
+          backgroundPosition: "0 0, 0 0.5rem, 0.5rem -0.5rem, -0.5rem 0",
           overflow: "hidden",
         }}
       >
@@ -636,22 +640,24 @@ export const SignatureEditorModal = ({
             style={{
               width: "100%",
               height: "100%",
-              gap: 10,
+              gap: "0.625rem",
               color: "var(--fg-2)",
               textAlign: "center",
               padding: PREVIEW_PAD,
               boxSizing: "border-box",
             }}
           >
-            <ImagePlus size={26} style={{ color: "var(--fg-3)" }} />
-            <div style={{ fontSize: 12.5 }}>{t("editorModal.dropPrompt")}</div>
-            <div className="flex items-center" style={{ gap: 8 }}>
+            <ImagePlus size="1.625rem" style={{ color: "var(--fg-3)" }} />
+            <div style={{ fontSize: "0.78125rem" }}>
+              {t("editorModal.dropPrompt")}
+            </div>
+            <div className="flex items-center" style={{ gap: "0.5rem" }}>
               <button
                 type="button"
                 className="btn xs"
                 onClick={() => fileRef.current?.click()}
               >
-                <Upload size={11} />
+                <Upload size="0.6875rem" />
                 {t("editorModal.chooseFile")}
               </button>
               <button
@@ -745,12 +751,12 @@ export const SignatureEditorModal = ({
             className="flex items-center"
             style={{
               position: "absolute",
-              right: 10,
-              bottom: 10,
+              right: "0.625rem",
+              bottom: "0.625rem",
               zIndex: 2,
-              gap: 2,
-              padding: 3,
-              borderRadius: 8,
+              gap: "0.125rem",
+              padding: "0.1875rem",
+              borderRadius: "0.5rem",
               border: "1px solid var(--border)",
               background: "var(--bg-1)",
               boxShadow:
@@ -765,9 +771,9 @@ export const SignatureEditorModal = ({
                 zoomFromCenter(zoom / ZOOM_STEP);
               }}
               disabled={zoom <= ZOOM_MIN + 0.001}
-              style={{ padding: "3px 5px" }}
+              style={{ padding: "0.1875rem 0.3125rem" }}
             >
-              <ZoomOut size={13} />
+              <ZoomOut size="0.8125rem" />
             </button>
             <button
               type="button"
@@ -776,7 +782,7 @@ export const SignatureEditorModal = ({
               onClick={() => {
                 zoomFromCenter(1);
               }}
-              style={{ minWidth: 44, padding: "3px 4px" }}
+              style={{ minWidth: "2.75rem", padding: "0.1875rem 0.25rem" }}
             >
               {`${String(Math.round(zoom * 100))}%`}
             </button>
@@ -788,9 +794,9 @@ export const SignatureEditorModal = ({
                 zoomFromCenter(zoom * ZOOM_STEP);
               }}
               disabled={zoom >= ZOOM_MAX - 0.001}
-              style={{ padding: "3px 5px" }}
+              style={{ padding: "0.1875rem 0.3125rem" }}
             >
-              <ZoomIn size={13} />
+              <ZoomIn size="0.8125rem" />
             </button>
           </div>
         )}
@@ -803,13 +809,13 @@ export const SignatureEditorModal = ({
             style={{
               display: "flex",
               flexDirection: "column",
-              gap: 8,
-              marginTop: 12,
+              gap: "0.5rem",
+              marginTop: "0.75rem",
             }}
           >
             <div
               className="flex items-center"
-              style={{ gap: 6, flexWrap: "wrap" }}
+              style={{ gap: "0.375rem", flexWrap: "wrap" }}
             >
               <ToolBtn
                 active={tool === "bg"}
@@ -820,7 +826,7 @@ export const SignatureEditorModal = ({
                       }
                     : openBg
                 }
-                icon={<Wand2 size={13} />}
+                icon={<Wand2 size="0.8125rem" />}
                 label={t("editorModal.removeBg")}
               />
               <ToolBtn
@@ -828,7 +834,7 @@ export const SignatureEditorModal = ({
                 onClick={() => {
                   setTool(tool === "erase" ? "none" : "erase");
                 }}
-                icon={<Eraser size={13} />}
+                icon={<Eraser size="0.8125rem" />}
                 label={t("editorModal.eraser")}
               />
               <ToolBtn
@@ -836,7 +842,7 @@ export const SignatureEditorModal = ({
                 onClick={() => {
                   setTool(tool === "magic" ? "none" : "magic");
                 }}
-                icon={<Wand size={13} />}
+                icon={<Wand size="0.8125rem" />}
                 label={t("editorModal.magicEraser")}
               />
               <ToolBtn
@@ -844,7 +850,7 @@ export const SignatureEditorModal = ({
                 onClick={() => {
                   setTool(tool === "crop" ? "none" : "crop");
                 }}
-                icon={<Crop size={13} />}
+                icon={<Crop size="0.8125rem" />}
                 label={t("editorModal.crop")}
               />
               <button
@@ -853,7 +859,7 @@ export const SignatureEditorModal = ({
                 onClick={applyAutoTrim}
                 title={t("editorModal.autoTrimTitle")}
               >
-                <Scissors size={12} />
+                <Scissors size="0.75rem" />
                 {t("editorModal.auto")}
               </button>
               <button
@@ -864,7 +870,7 @@ export const SignatureEditorModal = ({
                 }}
                 title={t("editorModal.rotateLeftTitle")}
               >
-                <RotateCcw size={12} />
+                <RotateCcw size="0.75rem" />
                 {t("editorModal.degrees")}
               </button>
               <button
@@ -875,7 +881,7 @@ export const SignatureEditorModal = ({
                 }}
                 title={t("editorModal.rotateRightTitle")}
               >
-                <RotateCw size={12} />
+                <RotateCw size="0.75rem" />
                 {t("editorModal.degrees")}
               </button>
             </div>
@@ -883,8 +889,8 @@ export const SignatureEditorModal = ({
             <div
               className="flex items-center"
               style={{
-                gap: 6,
-                paddingTop: 8,
+                gap: "0.375rem",
+                paddingTop: "0.5rem",
                 borderTop: "1px solid var(--border)",
               }}
             >
@@ -895,7 +901,7 @@ export const SignatureEditorModal = ({
                 disabled={!canUndo}
                 title={t("editorModal.undoTitle")}
               >
-                <Undo2 size={12} />
+                <Undo2 size="0.75rem" />
                 {t("editorModal.undo")}
               </button>
               <button
@@ -905,7 +911,7 @@ export const SignatureEditorModal = ({
                 disabled={!canRedo}
                 title={t("editorModal.redoTitle")}
               >
-                <Redo2 size={12} />
+                <Redo2 size="0.75rem" />
                 {t("editorModal.redo")}
               </button>
               <button
@@ -914,7 +920,7 @@ export const SignatureEditorModal = ({
                 onClick={reset}
                 title={t("editorModal.resetTitle")}
               >
-                <RefreshCcw size={12} />
+                <RefreshCcw size="0.75rem" />
                 {t("editorModal.reset")}
               </button>
               <button
@@ -924,7 +930,7 @@ export const SignatureEditorModal = ({
                 title={t("editorModal.replaceTitle")}
                 style={{ marginLeft: "auto" }}
               >
-                <Upload size={12} />
+                <Upload size="0.75rem" />
                 {t("editorModal.replace")}
               </button>
             </div>
@@ -933,7 +939,7 @@ export const SignatureEditorModal = ({
           {/* ── Tool sub-panels ── */}
           {tool === "bg" && (
             <ToolPanel>
-              <div style={{ fontSize: 11, color: "var(--fg-2)" }}>
+              <div style={{ fontSize: "0.6875rem", color: "var(--fg-2)" }}>
                 {t("editorModal.bgHint")}
               </div>
               <SliderRow
@@ -952,7 +958,7 @@ export const SignatureEditorModal = ({
               />
               <label
                 className="flex items-center"
-                style={{ gap: 8, fontSize: 11 }}
+                style={{ gap: "0.5rem", fontSize: "0.6875rem" }}
               >
                 <span>{t("editorModal.inkColor")}</span>
                 <select
@@ -975,7 +981,7 @@ export const SignatureEditorModal = ({
                     setTool("none");
                   }}
                 >
-                  <XIcon size={11} />
+                  <XIcon size="0.6875rem" />
                   {t("editorModal.done")}
                 </button>
               </div>
@@ -991,7 +997,7 @@ export const SignatureEditorModal = ({
                 max={120}
                 onChange={setBrush}
               />
-              <div style={{ fontSize: 11, color: "var(--fg-2)" }}>
+              <div style={{ fontSize: "0.6875rem", color: "var(--fg-2)" }}>
                 {t("editorModal.eraseHint")}
               </div>
               <div className="flex" style={{ justifyContent: "flex-end" }}>
@@ -1002,7 +1008,7 @@ export const SignatureEditorModal = ({
                     setTool("none");
                   }}
                 >
-                  <XIcon size={11} />
+                  <XIcon size="0.6875rem" />
                   {t("editorModal.done")}
                 </button>
               </div>
@@ -1011,7 +1017,7 @@ export const SignatureEditorModal = ({
 
           {tool === "magic" && (
             <ToolPanel>
-              <div style={{ fontSize: 11, color: "var(--fg-2)" }}>
+              <div style={{ fontSize: "0.6875rem", color: "var(--fg-2)" }}>
                 {t("editorModal.magicHint")}
               </div>
               <SliderRow
@@ -1023,7 +1029,7 @@ export const SignatureEditorModal = ({
               />
               <label
                 className="flex items-center"
-                style={{ gap: 8, fontSize: 11 }}
+                style={{ gap: "0.5rem", fontSize: "0.6875rem" }}
               >
                 <span>{t("editorModal.magicArea")}</span>
                 <select
@@ -1045,7 +1051,7 @@ export const SignatureEditorModal = ({
                     setTool("none");
                   }}
                 >
-                  <XIcon size={11} />
+                  <XIcon size="0.6875rem" />
                   {t("editorModal.done")}
                 </button>
               </div>
@@ -1054,7 +1060,7 @@ export const SignatureEditorModal = ({
 
           {tool === "crop" && (
             <ToolPanel>
-              <div style={{ fontSize: 11, color: "var(--fg-2)" }}>
+              <div style={{ fontSize: "0.6875rem", color: "var(--fg-2)" }}>
                 {t("editorModal.cropHint")}
               </div>
               <PanelActions
@@ -1077,11 +1083,11 @@ export const SignatureEditorModal = ({
 // ── small presentational helpers ───────────────────────────────────────────
 
 const selStyle: React.CSSProperties = {
-  fontSize: 11,
+  fontSize: "0.6875rem",
   background: "var(--bg-2)",
   border: "1px solid var(--border)",
-  borderRadius: 4,
-  padding: "2px 6px",
+  borderRadius: "0.25rem",
+  padding: "0.125rem 0.375rem",
   color: "var(--fg-0)",
 };
 
@@ -1107,10 +1113,10 @@ const ToolPanel = ({ children }: { children: React.ReactNode }) => (
     style={{
       display: "flex",
       flexDirection: "column",
-      gap: 12,
-      marginTop: 12,
-      padding: "12px 14px",
-      borderRadius: 8,
+      gap: "0.75rem",
+      marginTop: "0.75rem",
+      padding: "0.75rem 0.875rem",
+      borderRadius: "0.5rem",
       border: "1px solid var(--border)",
       background: "var(--bg-1)",
     }}
@@ -1128,7 +1134,12 @@ type SliderRowProps = {
 };
 const SliderRow = ({ label, value, min, max, onChange }: SliderRowProps) => (
   <label
-    style={{ display: "flex", flexDirection: "column", gap: 4, fontSize: 11 }}
+    style={{
+      display: "flex",
+      flexDirection: "column",
+      gap: "0.25rem",
+      fontSize: "0.6875rem",
+    }}
   >
     <span className="flex items-center justify-between">
       <span>{label}</span>
@@ -1162,7 +1173,7 @@ const PanelActions = ({
   return (
     <div
       className="flex items-center"
-      style={{ gap: 8, justifyContent: "flex-end" }}
+      style={{ gap: "0.5rem", justifyContent: "flex-end" }}
     >
       <button type="button" className="btn xs ghost" onClick={onCancel}>
         {t("editorModal.panelCancel")}

@@ -24,7 +24,7 @@ export const ConflictBannerView = ({
   return (
     <div role="status" className="sync-banner" data-tone="err">
       <TriangleAlert
-        size={14}
+        size="0.875rem"
         aria-hidden="true"
         style={{ color: "var(--c-err)", flexShrink: 0, marginTop: 1 }}
       />

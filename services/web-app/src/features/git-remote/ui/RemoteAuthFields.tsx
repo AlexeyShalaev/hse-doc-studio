@@ -111,7 +111,7 @@ export const RemoteAuthFields = ({
         id={`${uid}-panel`}
         aria-labelledby={fixing ? undefined : `${uid}-tab-${method}`}
         className="flex flex-col"
-        style={{ gap: 12 }}
+        style={{ gap: "0.75rem" }}
       >
         {mismatch && (
           <Notice
@@ -139,7 +139,7 @@ export const RemoteAuthFields = ({
         {isLoadingCredentials && method !== "none" && (
           <div
             className="flex items-center dim"
-            style={{ gap: 8, fontSize: 12 }}
+            style={{ gap: "0.5rem", fontSize: "0.75rem" }}
           >
             <Spinner size="sm" />
             {t("picker.loading")}
@@ -188,7 +188,7 @@ export const RemoteAuthFields = ({
                   disabled={isSaving || !secretsOk}
                   onClick={auth.checkSaved}
                 >
-                  <ScanSearch size={13} aria-hidden="true" />
+                  <ScanSearch size="0.8125rem" aria-hidden="true" />
                   {t("pat.checkSaved")}
                 </button>
               </div>
@@ -280,19 +280,19 @@ const PublicRepoPanel = () => {
       className="flex flex-col"
       data-testid="public-panel"
       style={{
-        gap: 10,
-        padding: 14,
+        gap: "0.625rem",
+        padding: "0.875rem",
         borderRadius: "var(--r-3)",
         border: "1px dashed var(--border-strong)",
         background: "var(--bg-2)",
       }}
     >
-      <div className="flex items-start" style={{ gap: 10 }}>
+      <div className="flex items-start" style={{ gap: "0.625rem" }}>
         <span
           aria-hidden="true"
           style={{
-            width: 32,
-            height: 32,
+            width: "2rem",
+            height: "2rem",
             flexShrink: 0,
             borderRadius: "50%",
             display: "inline-flex",
@@ -302,9 +302,9 @@ const PublicRepoPanel = () => {
             color: "var(--accent)",
           }}
         >
-          <Globe size={16} />
+          <Globe size="1rem" />
         </span>
-        <div style={{ fontSize: 12.5, lineHeight: 1.5 }}>
+        <div style={{ fontSize: "0.78125rem", lineHeight: 1.5 }}>
           <strong style={{ display: "block", fontWeight: 600 }}>
             {t("none.title")}
           </strong>
@@ -318,21 +318,25 @@ const PublicRepoPanel = () => {
           padding: 0,
           display: "flex",
           flexDirection: "column",
-          gap: 4,
-          fontSize: 12,
+          gap: "0.25rem",
+          fontSize: "0.75rem",
         }}
       >
         {rows.map((row) => (
-          <li key={row.text} className="flex items-center" style={{ gap: 6 }}>
+          <li
+            key={row.text}
+            className="flex items-center"
+            style={{ gap: "0.375rem" }}
+          >
             {row.ok ? (
               <Check
-                size={13}
+                size="0.8125rem"
                 aria-hidden="true"
                 style={{ color: "var(--c-ok)" }}
               />
             ) : (
               <X
-                size={13}
+                size="0.8125rem"
                 aria-hidden="true"
                 style={{ color: "var(--c-warn)" }}
               />

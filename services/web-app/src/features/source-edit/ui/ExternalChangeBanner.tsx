@@ -56,15 +56,15 @@ export const ExternalChangeBanner = ({
       <div
         className="flex items-center"
         style={{
-          gap: 10,
-          padding: "8px 12px",
+          gap: "0.625rem",
+          padding: "0.5rem 0.75rem",
           borderBottom: "1px solid var(--c-warn)",
           background: "var(--c-warn-soft, rgba(210,153,34,0.12))",
-          fontSize: 12,
+          fontSize: "0.75rem",
         }}
       >
         <AlertTriangle
-          size={14}
+          size="0.875rem"
           style={{ color: "var(--c-warn)", flexShrink: 0 }}
         />
         <span style={{ flex: 1, minWidth: 0 }}>
@@ -76,7 +76,7 @@ export const ExternalChangeBanner = ({
           onClick={onTakeDisk}
           disabled={busy}
         >
-          <HardDriveDownload size={11} />
+          <HardDriveDownload size="0.6875rem" />
           {t("externalChange.takeDisk")}
         </button>
         <button
@@ -85,7 +85,7 @@ export const ExternalChangeBanner = ({
           onClick={onKeepMine}
           disabled={busy}
         >
-          <Save size={11} />
+          <Save size="0.6875rem" />
           {t("externalChange.keepMine")}
         </button>
         <button
@@ -95,7 +95,7 @@ export const ExternalChangeBanner = ({
             setHunks(diffHunks(diffLines(diskContent, getBufferContent())));
           }}
         >
-          <GitCompare size={11} />
+          <GitCompare size="0.6875rem" />
           {t("externalChange.compare")}
         </button>
       </div>
@@ -108,7 +108,13 @@ export const ExternalChangeBanner = ({
         title={t("externalChange.diffTitle")}
         width={860}
       >
-        <div style={{ fontSize: 11.5, color: "var(--fg-2)", marginBottom: 10 }}>
+        <div
+          style={{
+            fontSize: "0.71875rem",
+            color: "var(--fg-2)",
+            marginBottom: "0.625rem",
+          }}
+        >
           {t("externalChange.diffLegend")}
         </div>
         <div
@@ -116,11 +122,17 @@ export const ExternalChangeBanner = ({
             maxHeight: "60vh",
             overflow: "auto",
             border: "1px solid var(--border)",
-            borderRadius: 6,
+            borderRadius: "0.375rem",
           }}
         >
           {(hunks ?? []).length === 0 ? (
-            <div style={{ padding: 12, fontSize: 12, color: "var(--fg-2)" }}>
+            <div
+              style={{
+                padding: "0.75rem",
+                fontSize: "0.75rem",
+                color: "var(--fg-2)",
+              }}
+            >
               {t("externalChange.diffEmpty")}
             </div>
           ) : (
@@ -140,9 +152,9 @@ export const ExternalChangeBanner = ({
                       className="mono"
                       style={{
                         display: "flex",
-                        gap: 8,
-                        padding: "1px 8px",
-                        fontSize: 11,
+                        gap: "0.5rem",
+                        padding: "1px 0.5rem",
+                        fontSize: "0.6875rem",
                         whiteSpace: "pre-wrap",
                         wordBreak: "break-word",
                         background: style.bg,
@@ -150,13 +162,21 @@ export const ExternalChangeBanner = ({
                     >
                       <span
                         className="dim"
-                        style={{ width: 34, textAlign: "right", flexShrink: 0 }}
+                        style={{
+                          width: "2.125rem",
+                          textAlign: "right",
+                          flexShrink: 0,
+                        }}
                       >
                         {line.leftNo ?? ""}
                       </span>
                       <span
                         className="dim"
-                        style={{ width: 34, textAlign: "right", flexShrink: 0 }}
+                        style={{
+                          width: "2.125rem",
+                          textAlign: "right",
+                          flexShrink: 0,
+                        }}
                       >
                         {line.rightNo ?? ""}
                       </span>

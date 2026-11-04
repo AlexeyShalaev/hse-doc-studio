@@ -50,9 +50,9 @@ const CertificateFacts = ({ cert }: { cert: GitTlsCertificate }) => {
         margin: 0,
         display: "grid",
         gridTemplateColumns: "max-content 1fr",
-        columnGap: 14,
-        rowGap: 4,
-        fontSize: 12,
+        columnGap: "0.875rem",
+        rowGap: "0.25rem",
+        fontSize: "0.75rem",
       }}
     >
       {rows.map(([label, value]) => (
@@ -164,9 +164,9 @@ export const TlsTrustDialog = ({
       onClose={close}
       width={620}
       title={
-        <span className="flex items-center" style={{ gap: 8 }}>
+        <span className="flex items-center" style={{ gap: "0.5rem" }}>
           <Icon
-            size={17}
+            size="1.0625rem"
             aria-hidden="true"
             style={{ color: mismatch ? "var(--c-err)" : "var(--c-warn)" }}
           />
@@ -210,7 +210,7 @@ export const TlsTrustDialog = ({
     >
       <div
         className="flex flex-col"
-        style={{ gap: 12 }}
+        style={{ gap: "0.75rem" }}
         data-testid={`tls-dialog-${mode}`}
       >
         {mismatch && (
@@ -242,10 +242,10 @@ export const TlsTrustDialog = ({
         {choice === "ca" ? (
           <div
             className="flex flex-col"
-            style={{ gap: 10 }}
+            style={{ gap: "0.625rem" }}
             data-testid="tls-ca"
           >
-            <p style={{ margin: 0, fontSize: 12.5, lineHeight: 1.5 }}>
+            <p style={{ margin: 0, fontSize: "0.78125rem", lineHeight: 1.5 }}>
               {t("tls.ca.text")}
             </p>
             <CaCertificateInput
@@ -256,7 +256,7 @@ export const TlsTrustDialog = ({
               }}
               idPrefix="tls-ca"
             />
-            <p className="dim" style={{ margin: 0, fontSize: 11.5 }}>
+            <p className="dim" style={{ margin: 0, fontSize: "0.71875rem" }}>
               {t("tls.ca.stored", { host: hostLabel })}
               {mismatch ? ` ${t("tls.ca.replacesPin")}` : ""}
             </p>
@@ -264,25 +264,30 @@ export const TlsTrustDialog = ({
         ) : (
           <div
             className="flex flex-col"
-            style={{ gap: 10 }}
+            style={{ gap: "0.625rem" }}
             data-testid="tls-pin"
           >
             {newFingerprint !== null ? (
               <>
-                <p style={{ margin: 0, fontSize: 12.5, lineHeight: 1.5 }}>
+                <p
+                  style={{ margin: 0, fontSize: "0.78125rem", lineHeight: 1.5 }}
+                >
                   {t("tls.pin.text")}
                 </p>
                 {certificate && <CertificateFacts cert={certificate} />}
                 {mismatch && expected ? (
                   <div
                     className="flex flex-col"
-                    style={{ gap: 8 }}
+                    style={{ gap: "0.5rem" }}
                     data-testid="tls-compare"
                   >
                     <div>
                       <div
                         className="dim"
-                        style={{ fontSize: 11.5, marginBottom: 4 }}
+                        style={{
+                          fontSize: "0.71875rem",
+                          marginBottom: "0.25rem",
+                        }}
                       >
                         {t("tls.pin.expected")}
                       </div>
@@ -294,8 +299,8 @@ export const TlsTrustDialog = ({
                     <div>
                       <div
                         style={{
-                          fontSize: 11.5,
-                          marginBottom: 4,
+                          fontSize: "0.71875rem",
+                          marginBottom: "0.25rem",
                           color: "var(--c-err)",
                         }}
                       >
@@ -311,7 +316,10 @@ export const TlsTrustDialog = ({
                   <div>
                     <div
                       className="dim"
-                      style={{ fontSize: 11.5, marginBottom: 4 }}
+                      style={{
+                        fontSize: "0.71875rem",
+                        marginBottom: "0.25rem",
+                      }}
                     >
                       {t("tls.pin.fingerprint")}
                     </div>
@@ -358,7 +366,7 @@ export const TlsTrustDialog = ({
           </div>
         )}
 
-        <p className="dim" style={{ margin: 0, fontSize: 11.5 }}>
+        <p className="dim" style={{ margin: 0, fontSize: "0.71875rem" }}>
           {t("tls.noDisable")}
         </p>
         {error && <Notice tone="err" role="alert" text={error} />}

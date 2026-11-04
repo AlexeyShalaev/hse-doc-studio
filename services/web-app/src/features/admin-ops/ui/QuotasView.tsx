@@ -77,7 +77,10 @@ const UnitField = ({
 }) => {
   const { t } = useTranslation("adminQuotas");
   return (
-    <div className="flex flex-col" style={{ gap: 4, alignItems: "flex-end" }}>
+    <div
+      className="flex flex-col"
+      style={{ gap: "0.25rem", alignItems: "flex-end" }}
+    >
       <span className="ops-unit-field">
         <Input
           id={id}
@@ -100,7 +103,11 @@ const UnitField = ({
       {error && (
         <span
           role="alert"
-          style={{ fontSize: 12, color: "var(--c-err)", maxWidth: 260 }}
+          style={{
+            fontSize: "0.75rem",
+            color: "var(--c-err)",
+            maxWidth: "16.25rem",
+          }}
         >
           {error}
         </span>
@@ -195,10 +202,14 @@ const LimitsForm = ({
             <span
               role="status"
               className="flex items-center"
-              style={{ gap: 6, fontSize: 12.5, color: "var(--c-ok)" }}
+              style={{
+                gap: "0.375rem",
+                fontSize: "0.78125rem",
+                color: "var(--c-ok)",
+              }}
               data-testid="quotas-saved"
             >
-              <Check size={14} aria-hidden="true" />
+              <Check size="0.875rem" aria-hidden="true" />
               {t("quotas.saved")}
             </span>
           ) : undefined
@@ -269,7 +280,7 @@ const Explainer = () => {
       <ul className="ops-steps">
         {items.map(({ icon: Icon, key }) => (
           <li key={key}>
-            <Icon size={15} aria-hidden="true" />
+            <Icon size="0.9375rem" aria-hidden="true" />
             <span>
               <strong>{t(`quotas.explain.${key}.title`)}</strong>
               {t(`quotas.explain.${key}.body`)}
@@ -317,18 +328,25 @@ export const QuotasView = ({
 };
 
 const QuotasSkeleton = () => (
-  <div className="adm-section" data-variant="card" style={{ padding: 20 }}>
+  <div
+    className="adm-section"
+    data-variant="card"
+    style={{ padding: "1.25rem" }}
+  >
     {[0, 1].map((row) => (
       <div
         key={row}
         className="flex items-center"
-        style={{ gap: 24, padding: "12px 0" }}
+        style={{ gap: "1.5rem", padding: "0.75rem 0" }}
       >
-        <span className="flex flex-col" style={{ flex: 1, gap: 8 }}>
+        <span className="flex flex-col" style={{ flex: 1, gap: "0.5rem" }}>
           <span className="adm-skel" style={{ width: "40%" }} />
           <span className="adm-skel" style={{ width: "70%" }} />
         </span>
-        <span className="adm-skel" style={{ width: 150, height: 30 }} />
+        <span
+          className="adm-skel"
+          style={{ width: "9.375rem", height: "1.875rem" }}
+        />
       </div>
     ))}
   </div>

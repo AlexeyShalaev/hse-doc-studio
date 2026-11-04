@@ -10,7 +10,7 @@ type FontSource = "google" | "system" | "upload";
 type SourceTab = {
   id: FontSource;
   labelKey: string;
-  icon: ComponentType<{ size?: number }>;
+  icon: ComponentType<{ size?: number | string }>;
 };
 
 const SOURCES: SourceTab[] = [
@@ -24,9 +24,9 @@ export const FontBrowser = () => {
   const [source, setSource] = useState<FontSource>("system");
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
       <div>
-        <span style={{ fontSize: 12, fontWeight: 600 }}>
+        <span style={{ fontSize: "0.75rem", fontWeight: 600 }}>
           {t("fonts.addTitle")}
         </span>
       </div>
@@ -35,9 +35,9 @@ export const FontBrowser = () => {
       <div
         className="flex"
         style={{
-          gap: 2,
-          padding: 3,
-          borderRadius: 8,
+          gap: "0.125rem",
+          padding: "0.1875rem",
+          borderRadius: "0.5rem",
           background: "var(--bg-2)",
           border: "1px solid var(--border)",
         }}
@@ -57,11 +57,11 @@ export const FontBrowser = () => {
               className="flex items-center justify-center"
               style={{
                 flex: 1,
-                gap: 6,
-                padding: "7px 10px",
-                borderRadius: 6,
+                gap: "0.375rem",
+                padding: "0.4375rem 0.625rem",
+                borderRadius: "0.375rem",
                 border: "none",
-                fontSize: 12,
+                fontSize: "0.75rem",
                 fontWeight: active ? 600 : 500,
                 cursor: "pointer",
                 color: active ? "var(--fg-0)" : "var(--fg-2)",
@@ -69,7 +69,7 @@ export const FontBrowser = () => {
                 boxShadow: active ? "0 1px 2px rgba(0,0,0,0.08)" : "none",
               }}
             >
-              <Icon size={14} />
+              <Icon size="0.875rem" />
               {t(labelKey)}
             </button>
           );

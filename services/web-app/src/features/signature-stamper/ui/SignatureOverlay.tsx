@@ -205,14 +205,14 @@ export const SignatureOverlay = ({
             flexDirection: "column",
             alignItems: "center",
             justifyContent: "center",
-            gap: 2,
-            fontSize: 9,
+            gap: "0.125rem",
+            fontSize: "0.5625rem",
             textAlign: "center",
             pointerEvents: "none",
             color: "var(--fg-2)",
           }}
         >
-          <Lock size={12} />
+          <Lock size="0.75rem" />
           <span>{t("overlay.invisible")}</span>
         </div>
       ) : pngUrl ? (
@@ -237,7 +237,7 @@ export const SignatureOverlay = ({
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
-            fontSize: 10,
+            fontSize: "0.625rem",
             textTransform: "uppercase",
             pointerEvents: "none",
           }}
@@ -249,13 +249,13 @@ export const SignatureOverlay = ({
         onPointerDown={handleHandlePointerDown}
         style={{
           position: "absolute",
-          right: -7,
-          bottom: -7,
-          width: 14,
-          height: 14,
+          right: "-0.4375rem",
+          bottom: "-0.4375rem",
+          width: "0.875rem",
+          height: "0.875rem",
           background: "var(--accent)",
           border: "2px solid var(--bg-0)",
-          borderRadius: 3,
+          borderRadius: "0.1875rem",
           cursor: "nwse-resize",
           touchAction: "none",
         }}

@@ -196,7 +196,7 @@ export const FormatToolbar = ({
               aria-pressed={showOutline}
               onClick={toggleShowOutline}
             >
-              <ListTree size={15} />
+              <ListTree size="0.9375rem" />
             </button>,
           )}
           {!readOnly && (
@@ -212,7 +212,7 @@ export const FormatToolbar = ({
                     execHistory("undo");
                   }}
                 >
-                  <Undo2 size={15} />
+                  <Undo2 size="0.9375rem" />
                 </button>,
               )}
               {toolbarTooltip(
@@ -226,7 +226,7 @@ export const FormatToolbar = ({
                     execHistory("redo");
                   }}
                 >
-                  <Redo2 size={15} />
+                  <Redo2 size="0.9375rem" />
                 </button>,
               )}
             </>
@@ -268,25 +268,25 @@ export const FormatToolbar = ({
               {iconButton(
                 "bold",
                 t("format.bold"),
-                <Bold size={15} />,
+                <Bold size="0.9375rem" />,
                 formatState?.bold,
               )}
               {iconButton(
                 "italic",
                 t("format.italic"),
-                <Italic size={15} />,
+                <Italic size="0.9375rem" />,
                 formatState?.italic,
               )}
               {iconButton(
                 "underline",
                 t("format.underline"),
-                <Underline size={15} />,
+                <Underline size="0.9375rem" />,
                 formatState?.underline,
               )}
               {iconButton(
                 "monospace",
                 t("format.monospace"),
-                <Code size={15} />,
+                <Code size="0.9375rem" />,
                 formatState?.monospace,
               )}
             </div>
@@ -296,24 +296,24 @@ export const FormatToolbar = ({
               {iconButton(
                 "bulletList",
                 t("format.bulletList"),
-                <List size={15} />,
+                <List size="0.9375rem" />,
                 formatState?.list === "itemize",
               )}
               {iconButton(
                 "numberedList",
                 t("format.numberedList"),
-                <ListOrdered size={15} />,
+                <ListOrdered size="0.9375rem" />,
                 formatState?.list === "enumerate",
               )}
               {iconButton(
                 "inlineMath",
                 t("format.inlineMath"),
-                <Sigma size={15} />,
+                <Sigma size="0.9375rem" />,
               )}
               {iconButton(
                 "displayMath",
                 t("format.displayMath"),
-                <SquareSigma size={15} />,
+                <SquareSigma size="0.9375rem" />,
               )}
             </div>
 
@@ -325,7 +325,7 @@ export const FormatToolbar = ({
                   aria-label={t("insert.open")}
                   title={t("insert.slashHint")}
                 >
-                  <Plus size={14} />
+                  <Plus size="0.875rem" />
                   <span>{t("insert.open")}</span>
                 </button>
               </DropdownMenu.Trigger>
@@ -355,7 +355,7 @@ export const FormatToolbar = ({
                         }}
                       >
                         <span className="visual-insert-item-icon">
-                          <Icon size={15} />
+                          <Icon size="0.9375rem" />
                         </span>
                         <span className="visual-insert-item-copy">
                           <span>{item.label}</span>
@@ -385,7 +385,7 @@ export const FormatToolbar = ({
                   exec("prevField");
                 }}
               >
-                <ChevronLeft size={14} />
+                <ChevronLeft size="0.875rem" />
               </button>,
             )}
             {toolbarTooltip(
@@ -413,7 +413,7 @@ export const FormatToolbar = ({
                   exec("nextField");
                 }}
               >
-                <ChevronRight size={14} />
+                <ChevronRight size="0.875rem" />
               </button>,
             )}
           </span>
@@ -429,7 +429,7 @@ export const FormatToolbar = ({
               disabled={visualZoom <= VISUAL_ZOOM_MIN}
               onClick={zoomVisualOut}
             >
-              <Minus size={14} />
+              <Minus size="0.875rem" />
             </button>,
           )}
           {toolbarTooltip(
@@ -452,7 +452,7 @@ export const FormatToolbar = ({
               disabled={visualZoom >= VISUAL_ZOOM_MAX}
               onClick={zoomVisualIn}
             >
-              <Plus size={14} />
+              <Plus size="0.875rem" />
             </button>,
           )}
         </div>
@@ -469,7 +469,7 @@ export const FormatToolbar = ({
             aria-pressed={showComments}
             onClick={toggleShowComments}
           >
-            <MessageSquareText size={15} />
+            <MessageSquareText size="0.9375rem" />
           </button>,
         )}
         {toolbarTooltip(
@@ -484,7 +484,11 @@ export const FormatToolbar = ({
             aria-pressed={focusMode}
             onClick={onToggleFocusMode}
           >
-            {focusMode ? <Minimize2 size={15} /> : <Maximize2 size={15} />}
+            {focusMode ? (
+              <Minimize2 size="0.9375rem" />
+            ) : (
+              <Maximize2 size="0.9375rem" />
+            )}
           </button>,
         )}
       </div>

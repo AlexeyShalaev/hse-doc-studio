@@ -87,7 +87,7 @@ export const DeleteCredentialDialog = ({
             {remove.isPending ? (
               <Spinner size="sm" />
             ) : (
-              <Trash2 size={12} aria-hidden="true" />
+              <Trash2 size="0.75rem" aria-hidden="true" />
             )}
             {used
               ? t("access.credentials.deleteDialog.confirmUsed")
@@ -96,9 +96,9 @@ export const DeleteCredentialDialog = ({
         </>
       }
     >
-      <div className="flex flex-col" style={{ gap: 12 }}>
+      <div className="flex flex-col" style={{ gap: "0.75rem" }}>
         {used ? (
-          <div className="flex flex-col" style={{ gap: 8 }}>
+          <div className="flex flex-col" style={{ gap: "0.5rem" }}>
             <Notice
               tone="warn"
               role="status"
@@ -119,7 +119,7 @@ export const DeleteCredentialDialog = ({
                 listStyle: "none",
                 display: "flex",
                 flexDirection: "column",
-                gap: 4,
+                gap: "0.25rem",
               }}
             >
               {projects.map((project) => (
@@ -128,10 +128,10 @@ export const DeleteCredentialDialog = ({
                   className="truncate"
                   title={project.name}
                   style={{
-                    padding: "6px 10px",
+                    padding: "0.375rem 0.625rem",
                     borderRadius: "var(--r-2)",
                     background: "var(--bg-2)",
-                    fontSize: 12.5,
+                    fontSize: "0.78125rem",
                   }}
                 >
                   {project.name}
@@ -140,7 +140,7 @@ export const DeleteCredentialDialog = ({
             </ul>
           </div>
         ) : (
-          <p className="dim" style={{ margin: 0, fontSize: 12.5 }}>
+          <p className="dim" style={{ margin: 0, fontSize: "0.78125rem" }}>
             {t("access.credentials.deleteDialog.unused")}
           </p>
         )}

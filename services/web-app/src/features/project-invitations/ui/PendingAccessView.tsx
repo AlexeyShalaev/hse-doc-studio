@@ -62,11 +62,11 @@ export const PendingAccessView = ({
   }
   return (
     <section style={CARD} data-testid="project-access-pending">
-      <div className="flex flex-col" style={{ gap: 3 }}>
-        <h5 style={{ margin: 0, fontSize: 13.5, fontWeight: 600 }}>
+      <div className="flex flex-col" style={{ gap: "0.1875rem" }}>
+        <h5 style={{ margin: 0, fontSize: "0.84375rem", fontWeight: 600 }}>
           {t("pending.title")}
         </h5>
-        <p style={{ margin: 0, color: "var(--fg-2)", fontSize: 12 }}>
+        <p style={{ margin: 0, color: "var(--fg-2)", fontSize: "0.75rem" }}>
           {t("pending.lead")}
         </p>
       </div>
@@ -77,7 +77,9 @@ export const PendingAccessView = ({
       )}
       {invitations.length > 0 && (
         <div data-testid="pending-invitations">
-          <strong style={{ fontSize: 12.5 }}>{t("pending.invitations")}</strong>
+          <strong style={{ fontSize: "0.78125rem" }}>
+            {t("pending.invitations")}
+          </strong>
           <ul
             style={{ listStyle: "none", margin: 0, padding: 0 }}
             className="flex flex-col"
@@ -99,17 +101,21 @@ export const PendingAccessView = ({
                   data-state={expired ? "expired" : "pending"}
                 >
                   <Icon
-                    size={16}
+                    size="1rem"
                     aria-hidden="true"
                     style={{ color: "var(--fg-2)", flexShrink: 0 }}
                   />
                   <div
                     className="flex flex-col"
-                    style={{ gap: 2, flex: 1, minWidth: 0 }}
+                    style={{ gap: "0.125rem", flex: 1, minWidth: 0 }}
                   >
                     <span
                       className="flex items-center"
-                      style={{ gap: 8, fontSize: 13, flexWrap: "wrap" }}
+                      style={{
+                        gap: "0.5rem",
+                        fontSize: "0.8125rem",
+                        flexWrap: "wrap",
+                      }}
                     >
                       <span style={{ overflowWrap: "anywhere" }}>{who}</span>
                       <Badge variant="default">{roleLabel(inv.role)}</Badge>
@@ -121,7 +127,9 @@ export const PendingAccessView = ({
                         </Badge>
                       )}
                     </span>
-                    <span style={{ fontSize: 11.5, color: "var(--fg-2)" }}>
+                    <span
+                      style={{ fontSize: "0.71875rem", color: "var(--fg-2)" }}
+                    >
                       {t("pending.sent", {
                         count: inv.sent_count,
                         date: formatDate(inv.last_sent_at, lang),
@@ -165,7 +173,9 @@ export const PendingAccessView = ({
       )}
       {requests.length > 0 && (
         <div data-testid="pending-access-requests">
-          <strong style={{ fontSize: 12.5 }}>{t("pending.requests")}</strong>
+          <strong style={{ fontSize: "0.78125rem" }}>
+            {t("pending.requests")}
+          </strong>
           <ul
             style={{ listStyle: "none", margin: 0, padding: 0 }}
             className="flex flex-col"
@@ -178,26 +188,28 @@ export const PendingAccessView = ({
                 data-testid={`access-request-row-${req.id}`}
               >
                 <UserRound
-                  size={16}
+                  size="1rem"
                   aria-hidden="true"
                   style={{ color: "var(--fg-2)", flexShrink: 0 }}
                 />
                 <div
                   className="flex flex-col"
-                  style={{ gap: 2, flex: 1, minWidth: 0 }}
+                  style={{ gap: "0.125rem", flex: 1, minWidth: 0 }}
                 >
-                  <span style={{ fontSize: 13 }}>
+                  <span style={{ fontSize: "0.8125rem" }}>
                     {req.requester.name}{" "}
-                    <span className="dim" style={{ fontSize: 11.5 }}>
+                    <span className="dim" style={{ fontSize: "0.71875rem" }}>
                       {req.requester.email}
                     </span>
                   </span>
                   {req.message && (
-                    <span style={{ fontSize: 12, fontStyle: "italic" }}>
+                    <span style={{ fontSize: "0.75rem", fontStyle: "italic" }}>
                       «{req.message}»
                     </span>
                   )}
-                  <span style={{ fontSize: 11.5, color: "var(--fg-2)" }}>
+                  <span
+                    style={{ fontSize: "0.71875rem", color: "var(--fg-2)" }}
+                  >
                     {formatDate(req.created_at, lang)}
                   </span>
                 </div>

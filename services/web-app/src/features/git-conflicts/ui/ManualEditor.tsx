@@ -33,14 +33,17 @@ export const ManualEditor = ({
   const base = appliedText ?? initialText;
 
   return (
-    <div className="flex flex-col" style={{ gap: 8, minWidth: 0 }}>
-      <p className="dim" style={{ margin: 0, fontSize: 12, lineHeight: 1.5 }}>
+    <div className="flex flex-col" style={{ gap: "0.5rem", minWidth: 0 }}>
+      <p
+        className="dim"
+        style={{ margin: 0, fontSize: "0.75rem", lineHeight: 1.5 }}
+      >
         {t("manual.hint")}
       </p>
       <div
         className="card"
         style={{
-          height: 420,
+          height: "26.25rem",
           overflow: "hidden",
           borderColor: markers ? "var(--c-err)" : undefined,
         }}
@@ -54,7 +57,7 @@ export const ManualEditor = ({
         />
       </div>
       {markers && <Notice tone="err" role="alert" text={t("manual.markers")} />}
-      <div className="flex items-center" style={{ gap: 8 }}>
+      <div className="flex items-center" style={{ gap: "0.5rem" }}>
         <button
           type="button"
           className="btn primary"

@@ -42,9 +42,9 @@ const MarketplaceCard = ({ font }: MarketplaceCardProps) => {
       style={{
         display: "flex",
         alignItems: "center",
-        gap: 12,
-        padding: "10px 12px",
-        borderRadius: 6,
+        gap: "0.75rem",
+        padding: "0.625rem 0.75rem",
+        borderRadius: "0.375rem",
         border: "1px solid var(--border)",
         background: "var(--bg-2)",
       }}
@@ -53,7 +53,7 @@ const MarketplaceCard = ({ font }: MarketplaceCardProps) => {
         <div
           style={{
             fontFamily: `'${font.family}', ${cssFallback(font.category)}`,
-            fontSize: 19,
+            fontSize: "1.1875rem",
             lineHeight: 1.3,
             color: "var(--fg-0)",
             overflow: "hidden",
@@ -66,20 +66,22 @@ const MarketplaceCard = ({ font }: MarketplaceCardProps) => {
         </div>
         <div
           className="flex items-center"
-          style={{ gap: 8, marginTop: 4, flexWrap: "wrap" }}
+          style={{ gap: "0.5rem", marginTop: "0.25rem", flexWrap: "wrap" }}
         >
-          <span style={{ fontSize: 12, fontWeight: 500 }}>{font.family}</span>
-          <span className="chip" style={{ fontSize: 10 }}>
+          <span style={{ fontSize: "0.75rem", fontWeight: 500 }}>
+            {font.family}
+          </span>
+          <span className="chip" style={{ fontSize: "0.625rem" }}>
             {t(`fonts.cat.${catKey(font.category)}`, {
               defaultValue: font.category,
             })}
           </span>
           {font.cyrillic && (
-            <span className="chip" style={{ fontSize: 10 }}>
+            <span className="chip" style={{ fontSize: "0.625rem" }}>
               {t("fonts.cyrillicBadge")}
             </span>
           )}
-          <span style={{ fontSize: 10.5, color: "var(--fg-3)" }}>
+          <span style={{ fontSize: "0.65625rem", color: "var(--fg-3)" }}>
             {t("fonts.marketplaceWeights", { count: font.file_count })}
           </span>
         </div>
@@ -88,9 +90,13 @@ const MarketplaceCard = ({ font }: MarketplaceCardProps) => {
         className="btn btn-secondary"
         onClick={handleInstall}
         disabled={install.isPending}
-        style={{ fontSize: 12, gap: 6, flexShrink: 0 }}
+        style={{ fontSize: "0.75rem", gap: "0.375rem", flexShrink: 0 }}
       >
-        {install.isPending ? <Spinner size="sm" /> : <Download size={14} />}
+        {install.isPending ? (
+          <Spinner size="sm" />
+        ) : (
+          <Download size="0.875rem" />
+        )}
         {t("fonts.install")}
       </button>
     </div>
@@ -132,26 +138,32 @@ export const GoogleFontsSource = () => {
   useGoogleFontsStylesheet(families);
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-      <p style={{ fontSize: 11.5, color: "var(--fg-3)", margin: 0 }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: "0.625rem" }}>
+      <p style={{ fontSize: "0.71875rem", color: "var(--fg-3)", margin: 0 }}>
         {t("fonts.marketplaceHint")}
       </p>
 
       {/* Controls */}
-      <div className="flex items-center" style={{ gap: 8, flexWrap: "wrap" }}>
+      <div
+        className="flex items-center"
+        style={{ gap: "0.5rem", flexWrap: "wrap" }}
+      >
         <div
           className="flex items-center"
           style={{
-            gap: 6,
-            padding: "5px 8px",
+            gap: "0.375rem",
+            padding: "0.3125rem 0.5rem",
             border: "1px solid var(--border)",
-            borderRadius: 6,
+            borderRadius: "0.375rem",
             background: "var(--bg-2)",
             flex: 1,
-            minWidth: 180,
+            minWidth: "11.25rem",
           }}
         >
-          <Search size={13} style={{ color: "var(--fg-3)", flexShrink: 0 }} />
+          <Search
+            size="0.8125rem"
+            style={{ color: "var(--fg-3)", flexShrink: 0 }}
+          />
           <input
             value={query}
             onChange={(e) => {
@@ -163,7 +175,7 @@ export const GoogleFontsSource = () => {
               border: "none",
               background: "transparent",
               outline: "none",
-              fontSize: 12,
+              fontSize: "0.75rem",
               color: "var(--fg-0)",
             }}
           />
@@ -175,7 +187,7 @@ export const GoogleFontsSource = () => {
             setCategory(e.target.value || null);
             setLimit(PAGE_SIZE);
           }}
-          style={{ fontSize: 12, width: "auto" }}
+          style={{ fontSize: "0.75rem", width: "auto" }}
         >
           <option value="">{t("fonts.marketplaceCatAll")}</option>
           {MARKETPLACE_CATEGORIES.map((c) => (
@@ -187,8 +199,8 @@ export const GoogleFontsSource = () => {
         <label
           className="flex items-center"
           style={{
-            gap: 6,
-            fontSize: 12,
+            gap: "0.375rem",
+            fontSize: "0.75rem",
             color: "var(--fg-1)",
             cursor: "pointer",
           }}
@@ -209,21 +221,33 @@ export const GoogleFontsSource = () => {
       {isFetching && items.length === 0 ? (
         <Spinner size="sm" />
       ) : items.length === 0 ? (
-        <p style={{ fontSize: 12, color: "var(--fg-3)", margin: "4px 0" }}>
+        <p
+          style={{
+            fontSize: "0.75rem",
+            color: "var(--fg-3)",
+            margin: "0.25rem 0",
+          }}
+        >
           {t("fonts.marketplaceEmpty")}
         </p>
       ) : (
         <>
-          <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+          <div
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              gap: "0.375rem",
+            }}
+          >
             {items.map((f) => (
               <MarketplaceCard key={f.id} font={f} />
             ))}
           </div>
           <div
             className="flex items-center justify-between"
-            style={{ marginTop: 2 }}
+            style={{ marginTop: "0.125rem" }}
           >
-            <span style={{ fontSize: 11, color: "var(--fg-3)" }}>
+            <span style={{ fontSize: "0.6875rem", color: "var(--fg-3)" }}>
               {t("fonts.marketplaceCount", { shown: items.length, total })}
             </span>
             {items.length < total && (
@@ -233,9 +257,13 @@ export const GoogleFontsSource = () => {
                   setLimit((n) => n + PAGE_SIZE);
                 }}
                 disabled={isFetching}
-                style={{ fontSize: 12, gap: 6 }}
+                style={{ fontSize: "0.75rem", gap: "0.375rem" }}
               >
-                {isFetching ? <Spinner size="sm" /> : <ChevronDown size={14} />}
+                {isFetching ? (
+                  <Spinner size="sm" />
+                ) : (
+                  <ChevronDown size="0.875rem" />
+                )}
                 {t("fonts.marketplaceLoadMore")}
               </button>
             )}

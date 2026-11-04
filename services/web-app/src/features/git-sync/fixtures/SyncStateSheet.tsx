@@ -12,7 +12,7 @@ import type { SyncStateFixture } from "./syncStates";
 const noop = (): void => undefined;
 
 const label = {
-  fontSize: 10.5,
+  fontSize: "0.65625rem",
   letterSpacing: "0.06em",
   textTransform: "uppercase" as const,
   color: "var(--fg-3)",
@@ -52,8 +52,8 @@ export const SyncStateSheet = ({ fixture }: { fixture: SyncStateFixture }) => {
   if (!ui.visible) return null;
 
   return (
-    <div className="flex flex-col" style={{ gap: 16 }}>
-      <div className="flex flex-wrap items-start" style={{ gap: 24 }}>
+    <div className="flex flex-col" style={{ gap: "1rem" }}>
+      <div className="flex flex-wrap items-start" style={{ gap: "1.5rem" }}>
         <Slot title="Кнопка в заголовке">
           <Popover open={false}>
             <SyncButton
@@ -71,11 +71,11 @@ export const SyncStateSheet = ({ fixture }: { fixture: SyncStateFixture }) => {
           <div
             className="flex items-center"
             style={{
-              padding: "4px 10px",
-              borderRadius: 6,
+              padding: "0.25rem 0.625rem",
+              borderRadius: "0.375rem",
               border: "1px solid var(--border)",
               background: "var(--bg-2)",
-              fontSize: 11.5,
+              fontSize: "0.71875rem",
             }}
           >
             <SyncStatusSegmentView
@@ -93,13 +93,13 @@ export const SyncStateSheet = ({ fixture }: { fixture: SyncStateFixture }) => {
               className="tnum"
               style={{
                 display: "inline-flex",
-                minWidth: 18,
-                height: 18,
-                padding: "0 5px",
-                borderRadius: 9,
+                minWidth: "1.125rem",
+                height: "1.125rem",
+                padding: "0 0.3125rem",
+                borderRadius: "0.5625rem",
                 alignItems: "center",
                 justifyContent: "center",
-                fontSize: 11,
+                fontSize: "0.6875rem",
                 fontWeight: 600,
                 color: "var(--bg-0)",
                 background: `var(--c-${ui.railBadge.tone})`,
@@ -108,7 +108,7 @@ export const SyncStateSheet = ({ fixture }: { fixture: SyncStateFixture }) => {
               {ui.railBadge.count}
             </span>
           ) : (
-            <span className="dim" style={{ fontSize: 12 }}>
+            <span className="dim" style={{ fontSize: "0.75rem" }}>
               нет
             </span>
           )}
@@ -125,11 +125,11 @@ export const SyncStateSheet = ({ fixture }: { fixture: SyncStateFixture }) => {
         </Slot>
       )}
 
-      <div className="flex flex-wrap items-start" style={{ gap: 24 }}>
+      <div className="flex flex-wrap items-start" style={{ gap: "1.5rem" }}>
         <Slot title="Панель под кнопкой">
           <div
             className="overflow-hidden rounded-r-3 border border-border bg-bg-1 shadow-elev-pop"
-            style={{ width: 400, maxWidth: "100%" }}
+            style={{ width: "25rem", maxWidth: "100%" }}
           >
             <SyncPopover
               ui={ui}
@@ -154,7 +154,7 @@ export const SyncStateSheet = ({ fixture }: { fixture: SyncStateFixture }) => {
         <Slot title="Панель на странице «Версии»">
           <div
             className="rounded-r-3 border border-border bg-bg-1"
-            style={{ width: 460, maxWidth: "100%", padding: 14 }}
+            style={{ width: "28.75rem", maxWidth: "100%", padding: "0.875rem" }}
           >
             <SyncPanelView
               ui={ui}

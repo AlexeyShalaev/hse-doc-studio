@@ -46,7 +46,7 @@ const OutlineRow = ({
     <>
       <div
         className="flex items-center"
-        style={{ paddingLeft: 6 + depth * 12, gap: 2 }}
+        style={{ paddingLeft: 6 + depth * 12, gap: "0.125rem" }}
       >
         {hasChildren ? (
           <button
@@ -58,10 +58,14 @@ const OutlineRow = ({
             }}
             style={{ flexShrink: 0 }}
           >
-            {open ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
+            {open ? (
+              <ChevronDown size="0.75rem" />
+            ) : (
+              <ChevronRight size="0.75rem" />
+            )}
           </button>
         ) : (
-          <span style={{ width: 18, flexShrink: 0 }} />
+          <span style={{ width: "1.125rem", flexShrink: 0 }} />
         )}
         <button
           type="button"
@@ -71,7 +75,7 @@ const OutlineRow = ({
             minWidth: 0,
             textAlign: "left",
             opacity: entry.pageNum == null ? 0.5 : 1,
-            padding: "3px 4px",
+            padding: "0.1875rem 0.25rem",
           }}
           disabled={entry.pageNum == null}
           onClick={() => {
@@ -79,7 +83,7 @@ const OutlineRow = ({
           }}
           title={entry.title}
         >
-          <span className="truncate" style={{ fontSize: 12 }}>
+          <span className="truncate" style={{ fontSize: "0.75rem" }}>
             {entry.title}
           </span>
         </button>

@@ -136,12 +136,12 @@ export const TemplateUpdateDialog = ({
           : (toVersion ?? "")
       }
       footer={
-        <div className="flex items-center" style={{ gap: 8 }}>
+        <div className="flex items-center" style={{ gap: "0.5rem" }}>
           <span
             className="dim flex items-center"
-            style={{ gap: 6, fontSize: 11, flex: 1 }}
+            style={{ gap: "0.375rem", fontSize: "0.6875rem", flex: 1 }}
           >
-            <ShieldCheck size={12} />
+            <ShieldCheck size="0.75rem" />
             {t("dialog.safety")}
           </span>
           <button
@@ -161,7 +161,7 @@ export const TemplateUpdateDialog = ({
             {apply.isPending ? (
               <Spinner size="sm" />
             ) : (
-              <ArrowUpCircle size={13} />
+              <ArrowUpCircle size="0.8125rem" />
             )}
             {apply.isPending ? t("dialog.applying") : t("dialog.apply")}
           </button>
@@ -169,23 +169,40 @@ export const TemplateUpdateDialog = ({
       }
     >
       {plan.isLoading ? (
-        <div className="flex items-center" style={{ gap: 8, padding: 16 }}>
+        <div
+          className="flex items-center"
+          style={{ gap: "0.5rem", padding: "1rem" }}
+        >
           <Spinner size="sm" />
-          <span className="dim" style={{ fontSize: 12 }}>
+          <span className="dim" style={{ fontSize: "0.75rem" }}>
             {t("dialog.loading")}
           </span>
         </div>
       ) : plan.isError || !plan.data ? (
-        <div style={{ padding: 16, fontSize: 12, color: "var(--c-err)" }}>
+        <div
+          style={{
+            padding: "1rem",
+            fontSize: "0.75rem",
+            color: "var(--c-err)",
+          }}
+        >
           {plan.error instanceof Error ? plan.error.message : ""}
         </div>
       ) : (
-        <div className="flex flex-col" style={{ gap: 12 }}>
+        <div className="flex flex-col" style={{ gap: "0.75rem" }}>
           {outdated && <Notice text={t("dialog.outdated")} />}
           {notes.length > 0 && (
-            <div className="flex flex-col" style={{ gap: 4 }}>
-              <strong style={{ fontSize: 12 }}>{t("dialog.notes")}</strong>
-              <ul style={{ margin: 0, paddingLeft: 18, fontSize: 12 }}>
+            <div className="flex flex-col" style={{ gap: "0.25rem" }}>
+              <strong style={{ fontSize: "0.75rem" }}>
+                {t("dialog.notes")}
+              </strong>
+              <ul
+                style={{
+                  margin: 0,
+                  paddingLeft: "1.125rem",
+                  fontSize: "0.75rem",
+                }}
+              >
                 {notes.map((note) => (
                   <li key={note}>{note}</li>
                 ))}
@@ -203,7 +220,7 @@ export const TemplateUpdateDialog = ({
             ))}
 
           {ops.length === 0 ? (
-            <p className="dim" style={{ margin: 0, fontSize: 12 }}>
+            <p className="dim" style={{ margin: 0, fontSize: "0.75rem" }}>
               {t("dialog.nothing")}
             </p>
           ) : (
@@ -220,9 +237,9 @@ export const TemplateUpdateDialog = ({
                 className="grid-split"
                 style={{
                   display: "grid",
-                  gridTemplateColumns: "minmax(260px, 340px) 1fr",
-                  gap: 12,
-                  minHeight: 320,
+                  gridTemplateColumns: "minmax(16.25rem, 21.25rem) 1fr",
+                  gap: "0.75rem",
+                  minHeight: "20rem",
                 }}
               >
                 <FileList>
@@ -248,7 +265,10 @@ export const TemplateUpdateDialog = ({
                     />
                   ))}
                 </FileList>
-                <div className="flex flex-col" style={{ gap: 8, minWidth: 0 }}>
+                <div
+                  className="flex flex-col"
+                  style={{ gap: "0.5rem", minWidth: 0 }}
+                >
                   {selectedOp ? (
                     <>
                       <ViewTabs
@@ -272,7 +292,7 @@ export const TemplateUpdateDialog = ({
                   ) : (
                     <div
                       className="dim flex items-center justify-center"
-                      style={{ flex: 1, fontSize: 12 }}
+                      style={{ flex: 1, fontSize: "0.75rem" }}
                     >
                       {t("dialog.selectFile")}
                     </div>
@@ -317,7 +337,7 @@ const FileRow = ({
       trailing={
         op.approximate_base ? (
           <AlertTriangle
-            size={11}
+            size="0.6875rem"
             style={{ color: "var(--c-warn)", flexShrink: 0 }}
           />
         ) : undefined

@@ -70,7 +70,11 @@ export const DocSection = ({
         aria-expanded={!isCollapsed}
         aria-controls={listId}
       >
-        {isCollapsed ? <ChevronRight size={11} /> : <ChevronDown size={11} />}
+        {isCollapsed ? (
+          <ChevronRight size="0.6875rem" />
+        ) : (
+          <ChevronDown size="0.6875rem" />
+        )}
         <span className="nav-group-title">{title}</span>
         <span className="nav-group-rollup">
           {okCount > 0 && (

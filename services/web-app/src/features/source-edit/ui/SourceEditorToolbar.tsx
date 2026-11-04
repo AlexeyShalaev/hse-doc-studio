@@ -97,7 +97,7 @@ export const SourceEditorToolbar = ({
     <div className="source-editor-toolbar">
       <div className="source-editor-identity">
         <span className="source-editor-file-icon" aria-hidden="true">
-          <FileText size={14} />
+          <FileText size="0.875rem" />
         </span>
         <span className="source-editor-file-copy">
           <span className="source-editor-file-name" title={relativePath}>
@@ -114,7 +114,7 @@ export const SourceEditorToolbar = ({
             className="chip tt source-editor-readonly"
             data-tt={readOnlyReason ?? t("toolbar.readOnlyDefault")}
           >
-            <Lock size={10} />
+            <Lock size="0.625rem" />
             {t("toolbar.readOnly")}
           </span>
         )}
@@ -159,7 +159,7 @@ export const SourceEditorToolbar = ({
                 onModeChange("visual");
               }}
             >
-              <Eye size={13} />
+              <Eye size="0.8125rem" />
               <span>{t("toolbar.mode.visual")}</span>
             </button>
             <button
@@ -170,7 +170,7 @@ export const SourceEditorToolbar = ({
                 onModeChange("code");
               }}
             >
-              <Code size={13} />
+              <Code size="0.8125rem" />
               <span>{t("toolbar.mode.code")}</span>
             </button>
           </div>
@@ -195,19 +195,19 @@ export const SourceEditorToolbar = ({
             >
               {counts.error > 0 && (
                 <span style={{ color: "var(--c-err)" }}>
-                  <XCircle size={12} />
+                  <XCircle size="0.75rem" />
                   {counts.error}
                 </span>
               )}
               {counts.warning > 0 && (
                 <span style={{ color: "var(--c-warn)" }}>
-                  <AlertTriangle size={12} />
+                  <AlertTriangle size="0.75rem" />
                   {counts.warning}
                 </span>
               )}
               {counts.error === 0 && counts.warning === 0 && (
                 <span style={{ color: "var(--c-info)" }}>
-                  <Info size={12} />
+                  <Info size="0.75rem" />
                   {counts.info}
                 </span>
               )}
@@ -219,7 +219,7 @@ export const SourceEditorToolbar = ({
               aria-label={t("toolbar.prevProblem")}
               onClick={onPrevProblem}
             >
-              <ChevronUp size={14} />
+              <ChevronUp size="0.875rem" />
             </button>
             <button
               type="button"
@@ -228,7 +228,7 @@ export const SourceEditorToolbar = ({
               aria-label={t("toolbar.nextProblem")}
               onClick={onNextProblem}
             >
-              <ChevronDown size={14} />
+              <ChevronDown size="0.875rem" />
             </button>
             <button
               type="button"
@@ -238,7 +238,7 @@ export const SourceEditorToolbar = ({
               aria-pressed={inlineDiagnostics}
               onClick={onToggleInline}
             >
-              <MessageSquareWarning size={13} />
+              <MessageSquareWarning size="0.8125rem" />
             </button>
           </div>
         )}
@@ -252,7 +252,7 @@ export const SourceEditorToolbar = ({
             aria-pressed={wrapLines}
             onClick={onToggleWrap}
           >
-            <WrapText size={13} />
+            <WrapText size="0.8125rem" />
           </button>
         )}
 
@@ -265,11 +265,11 @@ export const SourceEditorToolbar = ({
           aria-live="polite"
         >
           {status === "saving" ? (
-            <RefreshCw size={11} className="spin" />
+            <RefreshCw size="0.6875rem" className="spin" />
           ) : status === "saved" ? (
-            <Check size={12} />
+            <Check size="0.75rem" />
           ) : status === "error" ? (
-            <AlertTriangle size={12} />
+            <AlertTriangle size="0.75rem" />
           ) : (
             <span className="source-editor-dirty-dot" />
           )}
@@ -285,7 +285,7 @@ export const SourceEditorToolbar = ({
             onClick={onSave}
             disabled={!isDirty}
           >
-            <Save size={12} />
+            <Save size="0.75rem" />
             <span>{t("toolbar.save")}</span>
           </button>
         )}

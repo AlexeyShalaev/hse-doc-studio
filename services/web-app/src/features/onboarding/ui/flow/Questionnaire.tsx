@@ -65,25 +65,25 @@ export const Questionnaire = ({
 
   if (index === -1) {
     return (
-      <div className="flex flex-col" style={{ gap: 14 }}>
+      <div className="flex flex-col" style={{ gap: "0.875rem" }}>
         <span
           className="mono dim"
-          style={{ fontSize: 10.5, letterSpacing: "0.08em" }}
+          style={{ fontSize: "0.65625rem", letterSpacing: "0.08em" }}
         >
           {t("intro.kicker")}
         </span>
-        <h2 style={{ margin: 0, fontSize: 20, fontWeight: 600 }}>
+        <h2 style={{ margin: 0, fontSize: "1.25rem", fontWeight: 600 }}>
           {t("intro.title")}
         </h2>
-        <p style={{ margin: 0, fontSize: 13.5, lineHeight: 1.55 }}>
+        <p style={{ margin: 0, fontSize: "0.84375rem", lineHeight: 1.55 }}>
           {t("intro.body")}
         </p>
-        <p className="dim" style={{ margin: 0, fontSize: 13 }}>
+        <p className="dim" style={{ margin: 0, fontSize: "0.8125rem" }}>
           {t("intro.plan")}
         </p>
         <div
           className="flex items-center justify-between"
-          style={{ gap: 8, flexWrap: "wrap", marginTop: 6 }}
+          style={{ gap: "0.5rem", flexWrap: "wrap", marginTop: "0.375rem" }}
         >
           <button
             type="button"
@@ -115,17 +115,17 @@ export const Questionnaire = ({
       : t(`questions.${id ?? "role"}.title`);
 
   return (
-    <div className="flex flex-col" style={{ gap: 14 }}>
+    <div className="flex flex-col" style={{ gap: "0.875rem" }}>
       <span
         className="mono dim"
         aria-live="polite"
-        style={{ fontSize: 10.5, letterSpacing: "0.08em" }}
+        style={{ fontSize: "0.65625rem", letterSpacing: "0.08em" }}
       >
         {t("intro.progress", { current: index + 1, total: questions.length })}
       </span>
       <h2
         id="onboarding-question"
-        style={{ margin: 0, fontSize: 18, fontWeight: 600 }}
+        style={{ margin: 0, fontSize: "1.125rem", fontWeight: 600 }}
       >
         {title}
       </h2>
@@ -133,10 +133,10 @@ export const Questionnaire = ({
         role="radiogroup"
         aria-labelledby="onboarding-question"
         className="flex flex-col"
-        style={{ gap: 6, maxHeight: 300, overflowY: "auto" }}
+        style={{ gap: "0.375rem", maxHeight: "18.75rem", overflowY: "auto" }}
       >
         {id === "work" && packs.isLoading && (
-          <span className="dim" style={{ fontSize: 12.5 }}>
+          <span className="dim" style={{ fontSize: "0.78125rem" }}>
             {t("questions.work.loading")}
           </span>
         )}
@@ -152,9 +152,9 @@ export const Questionnaire = ({
               data-testid={`onboarding-answer-${id ?? ""}-${option.value}`}
               className="card hover flex items-center justify-between"
               style={{
-                padding: "10px 12px",
+                padding: "0.625rem 0.75rem",
                 textAlign: "left",
-                fontSize: 13.5,
+                fontSize: "0.84375rem",
                 // кнопка не наследует цвет: в тёмной теме UA даёт чёрный текст на тёмной карточке
                 color: "var(--fg-0)",
                 borderColor: selected ? "var(--accent)" : undefined,
@@ -168,7 +168,7 @@ export const Questionnaire = ({
             >
               <span>{option.label}</span>
               {selected && (
-                <Check size={14} style={{ color: "var(--accent)" }} />
+                <Check size="0.875rem" style={{ color: "var(--accent)" }} />
               )}
             </button>
           );
@@ -176,7 +176,7 @@ export const Questionnaire = ({
       </div>
       <div
         className="flex items-center justify-between"
-        style={{ gap: 8, flexWrap: "wrap" }}
+        style={{ gap: "0.5rem", flexWrap: "wrap" }}
       >
         <button
           type="button"
@@ -187,7 +187,7 @@ export const Questionnaire = ({
         >
           {t("intro.back")}
         </button>
-        <div className="flex items-center" style={{ gap: 6 }}>
+        <div className="flex items-center" style={{ gap: "0.375rem" }}>
           <button
             type="button"
             className="btn ghost sm"

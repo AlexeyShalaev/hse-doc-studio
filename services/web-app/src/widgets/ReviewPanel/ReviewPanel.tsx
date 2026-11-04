@@ -72,18 +72,18 @@ const ReviewRow = ({
       type="button"
       className={clsx("row-btn", isActive && "active")}
       onClick={onSelect}
-      style={{ alignItems: "center", gap: 8 }}
+      style={{ alignItems: "center", gap: "0.5rem" }}
     >
       <span className={"dot " + sev} />
       <span
         className="mono"
         style={{
           flexShrink: 0,
-          fontSize: 10.5,
+          fontSize: "0.65625rem",
           color: isActive ? "var(--accent)" : "var(--fg-3)",
           // Выравнивает колонку кодов: длинный код сдвигает название, а не
           // наезжает на него.
-          minWidth: 28,
+          minWidth: "1.75rem",
           whiteSpace: "nowrap",
           letterSpacing: "0.02em",
         }}
@@ -92,7 +92,7 @@ const ReviewRow = ({
       </span>
       <span
         className="truncate"
-        style={{ flex: 1, minWidth: 0, fontSize: 12, lineHeight: 1.35 }}
+        style={{ flex: 1, minWidth: 0, fontSize: "0.75rem", lineHeight: 1.35 }}
       >
         {name}
       </span>
@@ -102,7 +102,7 @@ const ReviewRow = ({
           title={countsTitle}
           style={{
             flexShrink: 0,
-            fontSize: 9.5,
+            fontSize: "0.59375rem",
             color: errors > 0 ? "var(--c-err)" : "var(--c-warn)",
             letterSpacing: "0.04em",
           }}
@@ -115,7 +115,11 @@ const ReviewRow = ({
       {!hasCounts && statusLabel != null && (
         <span
           className="mono dim"
-          style={{ flexShrink: 0, fontSize: 9.5, letterSpacing: "0.04em" }}
+          style={{
+            flexShrink: 0,
+            fontSize: "0.59375rem",
+            letterSpacing: "0.04em",
+          }}
         >
           {statusLabel}
         </span>
@@ -195,12 +199,12 @@ export const ReviewPanel = ({
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
-          gap: 8,
-          padding: "24px 0",
+          gap: "0.5rem",
+          padding: "1.5rem 0",
         }}
       >
         <Spinner size="sm" />
-        <span className="dim" style={{ fontSize: 11.5 }}>
+        <span className="dim" style={{ fontSize: "0.71875rem" }}>
           {t("panel.loading")}
         </span>
       </div>
@@ -213,16 +217,19 @@ export const ReviewPanel = ({
           flexDirection: "column",
           alignItems: "center",
           justifyContent: "center",
-          gap: 6,
-          padding: "34px 14px",
+          gap: "0.375rem",
+          padding: "2.125rem 0.875rem",
           textAlign: "center",
         }}
       >
-        <ShieldCheck size={18} style={{ color: "var(--fg-3)" }} />
-        <span style={{ fontSize: 12.5, color: "var(--fg-2)" }}>
+        <ShieldCheck size="1.125rem" style={{ color: "var(--fg-3)" }} />
+        <span style={{ fontSize: "0.78125rem", color: "var(--fg-2)" }}>
           {t("review.empty")}
         </span>
-        <span className="dim" style={{ fontSize: 11, lineHeight: 1.45 }}>
+        <span
+          className="dim"
+          style={{ fontSize: "0.6875rem", lineHeight: 1.45 }}
+        >
           {t("review.emptyHint")}
         </span>
       </div>
@@ -277,7 +284,11 @@ export const ReviewPanel = ({
               onClick={cancelAll}
               style={{ color: isStalled ? "var(--c-err)" : undefined }}
             >
-              {isStalled ? <AlertTriangle size={12} /> : <Square size={12} />}
+              {isStalled ? (
+                <AlertTriangle size="0.75rem" />
+              ) : (
+                <Square size="0.75rem" />
+              )}
             </button>
           ) : (
             <button
@@ -291,7 +302,7 @@ export const ReviewPanel = ({
               onClick={handleBuildAll}
               disabled={docs.length === 0 || buildBlock !== null}
             >
-              <Play size={12} />
+              <Play size="0.75rem" />
             </button>
           )}
         </div>
@@ -300,7 +311,7 @@ export const ReviewPanel = ({
       <div className="panel-body">
         <div
           className="seg"
-          style={{ display: "flex", width: "100%", marginBottom: 8 }}
+          style={{ display: "flex", width: "100%", marginBottom: "0.5rem" }}
         >
           {tabs.map((item) => (
             <button
@@ -311,10 +322,13 @@ export const ReviewPanel = ({
               onClick={() => {
                 setTab(item.id);
               }}
-              style={{ flex: 1, minWidth: 0, padding: "4px 6px" }}
+              style={{ flex: 1, minWidth: 0, padding: "0.25rem 0.375rem" }}
             >
               <span className="truncate">{item.label}</span>
-              <span className="mono" style={{ fontSize: 9.5, opacity: 0.75 }}>
+              <span
+                className="mono"
+                style={{ fontSize: "0.59375rem", opacity: 0.75 }}
+              >
                 {String(item.count)}
               </span>
             </button>

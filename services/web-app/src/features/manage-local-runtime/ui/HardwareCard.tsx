@@ -44,16 +44,20 @@ const TONE_COLOR: Record<NoteTone, string> = {
 type StatProps = { icon: React.ReactNode; label: string; value: string };
 
 const Stat = ({ icon, label, value }: StatProps) => (
-  <div className="flex items-center" style={{ gap: 8, minWidth: 0 }}>
+  <div className="flex items-center" style={{ gap: "0.5rem", minWidth: 0 }}>
     <span style={{ color: "var(--fg-2)", display: "inline-flex" }}>{icon}</span>
     <div className="flex flex-col" style={{ minWidth: 0 }}>
       <span
         className="dim"
-        style={{ fontSize: 10, textTransform: "uppercase", letterSpacing: 0.4 }}
+        style={{
+          fontSize: "0.625rem",
+          textTransform: "uppercase",
+          letterSpacing: "0.025rem",
+        }}
       >
         {label}
       </span>
-      <span style={{ fontSize: 12, fontWeight: 500 }} title={value}>
+      <span style={{ fontSize: "0.75rem", fontWeight: 500 }} title={value}>
         {value}
       </span>
     </div>
@@ -69,29 +73,29 @@ export const HardwareCard = ({ hardware }: HardwareCardProps) => {
     <div
       className="flex flex-col"
       style={{
-        gap: 10,
-        padding: 12,
-        borderRadius: 6,
+        gap: "0.625rem",
+        padding: "0.75rem",
+        borderRadius: "0.375rem",
         border: "1px solid var(--border)",
         background: "var(--bg-1)",
       }}
     >
       <div
         className="grid"
-        style={{ gridTemplateColumns: "1.4fr 1fr 1fr", gap: 12 }}
+        style={{ gridTemplateColumns: "1.4fr 1fr 1fr", gap: "0.75rem" }}
       >
         <Stat
-          icon={<Microchip size={14} />}
+          icon={<Microchip size="0.875rem" />}
           label={t("hardware.gpuLabel")}
           value={gpuLabel(hardware)}
         />
         <Stat
-          icon={<MemoryStick size={14} />}
+          icon={<MemoryStick size="0.875rem" />}
           label={t("hardware.ramLabel")}
           value={gb(hardware.total_ram_mb)}
         />
         <Stat
-          icon={<Cpu size={14} />}
+          icon={<Cpu size="0.875rem" />}
           label={t("hardware.cpuLabel")}
           value={
             hardware.cpu_count
@@ -102,12 +106,19 @@ export const HardwareCard = ({ hardware }: HardwareCardProps) => {
       </div>
       <div
         className="flex items-start"
-        style={{ gap: 6, fontSize: 11, color: TONE_COLOR[note.tone] }}
+        style={{
+          gap: "0.375rem",
+          fontSize: "0.6875rem",
+          color: TONE_COLOR[note.tone],
+        }}
       >
         {note.tone === "warn" ? (
-          <AlertTriangle size={12} style={{ marginTop: 1, flexShrink: 0 }} />
+          <AlertTriangle
+            size="0.75rem"
+            style={{ marginTop: 1, flexShrink: 0 }}
+          />
         ) : (
-          <Info size={12} style={{ marginTop: 1, flexShrink: 0 }} />
+          <Info size="0.75rem" style={{ marginTop: 1, flexShrink: 0 }} />
         )}
         <span>{t(note.key)}</span>
       </div>

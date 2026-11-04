@@ -26,6 +26,8 @@ _DEFAULTS: dict[str, Any] = {
     # conversation — INDEPENDENT from a project's document language
     # (`project.lang` / the `set_language` chat tool). One of {"ru", "en"}.
     "interface_language": "ru",
+    # Размер текста интерфейса, процентов от обычного: ступень из TEXT_SCALE_STEPS (value_rules.py).
+    "text_scale": 100,
     "default_engine": "xelatex",
     "latex_passes": 3,
     # Максимум ОДНОВРЕМЕННЫХ docker-сборок (texlive-контейнеров). «Собрать

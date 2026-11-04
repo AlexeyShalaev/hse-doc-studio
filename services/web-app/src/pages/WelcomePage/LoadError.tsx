@@ -14,28 +14,32 @@ export const LoadError = ({ onRetry, retrying = false }: LoadErrorProps) => {
     <div
       className="card"
       role="alert"
-      style={{ padding: "48px 32px", textAlign: "center" }}
+      style={{ padding: "3rem 2rem", textAlign: "center" }}
     >
       <div
         className="flex items-center justify-center"
         style={{
-          width: 64,
-          height: 64,
-          margin: "0 auto 18px",
-          borderRadius: 16,
+          width: "4rem",
+          height: "4rem",
+          margin: "0 auto 1.125rem",
+          borderRadius: "1rem",
           background: "var(--c-warn-soft)",
           border: "1px solid var(--border)",
           color: "var(--c-warn)",
         }}
       >
-        <CloudOff size={30} aria-hidden="true" />
+        <CloudOff size="1.875rem" aria-hidden="true" />
       </div>
-      <h3 style={{ margin: 0, fontSize: 16, fontWeight: 600 }}>
+      <h3 style={{ margin: 0, fontSize: "1rem", fontWeight: 600 }}>
         {t("loadError.title")}
       </h3>
       <p
         className="dim"
-        style={{ margin: "8px auto 18px", maxWidth: 420, lineHeight: 1.5 }}
+        style={{
+          margin: "0.5rem auto 1.125rem",
+          maxWidth: "26.25rem",
+          lineHeight: 1.5,
+        }}
       >
         {t("loadError.description")}
       </p>
@@ -45,7 +49,7 @@ export const LoadError = ({ onRetry, retrying = false }: LoadErrorProps) => {
         onClick={onRetry}
         disabled={retrying}
       >
-        {retrying ? <Spinner size="sm" /> : <RotateCcw size={13} />}
+        {retrying ? <Spinner size="sm" /> : <RotateCcw size="0.8125rem" />}
         {t("loadError.retry")}
       </button>
     </div>

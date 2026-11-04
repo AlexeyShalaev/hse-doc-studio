@@ -68,22 +68,22 @@ export const ProjectConnectWizard = () => {
           className="flex flex-col"
           style={{
             width: "100%",
-            maxWidth: 640,
-            padding: "32px 24px 24px",
-            gap: 20,
+            maxWidth: "40rem",
+            padding: "2rem 1.5rem 1.5rem",
+            gap: "1.25rem",
           }}
         >
           {/* Header */}
           <div>
             <div
               className="flex items-center gap-2"
-              style={{ marginBottom: 6 }}
+              style={{ marginBottom: "0.375rem" }}
             >
-              <FolderOpen size={14} style={{ color: "var(--accent)" }} />
+              <FolderOpen size="0.875rem" style={{ color: "var(--accent)" }} />
               <span
                 className="mono"
                 style={{
-                  fontSize: 10,
+                  fontSize: "0.625rem",
                   color: "var(--accent)",
                   letterSpacing: "0.1em",
                   textTransform: "uppercase",
@@ -94,15 +94,15 @@ export const ProjectConnectWizard = () => {
             </div>
             <h2
               style={{
-                margin: "0 0 4px",
-                fontSize: 20,
+                margin: "0 0 0.25rem",
+                fontSize: "1.25rem",
                 fontWeight: 600,
                 letterSpacing: "-0.01em",
               }}
             >
               {t("header.title")}
             </h2>
-            <p className="dim" style={{ margin: 0, fontSize: 12.5 }}>
+            <p className="dim" style={{ margin: 0, fontSize: "0.78125rem" }}>
               <Trans
                 i18nKey="header.description"
                 ns="projectConnect"
@@ -134,7 +134,7 @@ export const ProjectConnectWizard = () => {
                   setIsPickerOpen(true);
                 }}
               >
-                <FolderOpen size={13} />
+                <FolderOpen size="0.8125rem" />
                 {t("folder.browse")}
               </button>
             </div>
@@ -154,22 +154,25 @@ export const ProjectConnectWizard = () => {
             <div
               className="card flex items-start gap-2"
               style={{
-                padding: 10,
+                padding: "0.625rem",
                 borderColor: "var(--c-err)",
                 background: "var(--c-err-soft)",
                 color: "var(--c-err)",
-                fontSize: 12,
+                fontSize: "0.75rem",
               }}
             >
               <AlertTriangle
-                size={13}
+                size="0.8125rem"
                 style={{ flexShrink: 0, marginTop: 1 }}
               />
               <span>{connectError}</span>
             </div>
           )}
 
-          <div className="flex items-center justify-between" style={{ gap: 8 }}>
+          <div
+            className="flex items-center justify-between"
+            style={{ gap: "0.5rem" }}
+          >
             <button
               type="button"
               className="btn ghost"
@@ -189,9 +192,9 @@ export const ProjectConnectWizard = () => {
                   disabled={isPending}
                 >
                   {isPending ? (
-                    <Loader2 size={12} className="spin" />
+                    <Loader2 size="0.75rem" className="spin" />
                   ) : (
-                    <Plug size={12} />
+                    <Plug size="0.75rem" />
                   )}
                   {t("actions.connect")}
                 </button>
@@ -205,7 +208,7 @@ export const ProjectConnectWizard = () => {
                     className="btn primary"
                     onClick={goCreateHere}
                   >
-                    <FolderPlus size={12} />
+                    <FolderPlus size="0.75rem" />
                     {t("actions.createHere")}
                   </button>
                 )}
@@ -246,14 +249,14 @@ const InspectionPanel = ({
       <div
         className="card flex items-center gap-2"
         style={{
-          padding: 12,
+          padding: "0.75rem",
           borderStyle: "dashed",
           background: "var(--bg-0)",
           color: "var(--fg-3)",
-          fontSize: 12,
+          fontSize: "0.75rem",
         }}
       >
-        <FolderOpen size={13} style={{ flexShrink: 0 }} />
+        <FolderOpen size="0.8125rem" style={{ flexShrink: 0 }} />
         <span>{t("inspection.empty")}</span>
       </div>
     );
@@ -264,13 +267,13 @@ const InspectionPanel = ({
       <div
         className="card flex items-center gap-2"
         style={{
-          padding: 12,
+          padding: "0.75rem",
           background: "var(--bg-1)",
-          fontSize: 12,
+          fontSize: "0.75rem",
           color: "var(--fg-2)",
         }}
       >
-        <Loader2 size={13} className="spin" style={{ flexShrink: 0 }} />
+        <Loader2 size="0.8125rem" className="spin" style={{ flexShrink: 0 }} />
         <span>{t("inspection.checking")}</span>
       </div>
     );
@@ -281,14 +284,17 @@ const InspectionPanel = ({
       <div
         className="card flex items-start gap-2"
         style={{
-          padding: 12,
+          padding: "0.75rem",
           borderColor: "var(--c-err)",
           background: "var(--c-err-soft)",
           color: "var(--c-err)",
-          fontSize: 12,
+          fontSize: "0.75rem",
         }}
       >
-        <AlertTriangle size={13} style={{ flexShrink: 0, marginTop: 1 }} />
+        <AlertTriangle
+          size="0.8125rem"
+          style={{ flexShrink: 0, marginTop: 1 }}
+        />
         <span>{errorMsg}</span>
       </div>
     );
@@ -301,19 +307,19 @@ const InspectionPanel = ({
       <div
         className="card flex items-start gap-2"
         style={{
-          padding: 12,
+          padding: "0.75rem",
           borderColor: "var(--c-err)",
           background: "var(--c-err-soft)",
           color: "var(--c-err)",
-          fontSize: 12,
+          fontSize: "0.75rem",
         }}
       >
-        <FileX size={14} style={{ flexShrink: 0, marginTop: 1 }} />
+        <FileX size="0.875rem" style={{ flexShrink: 0, marginTop: 1 }} />
         <div>
-          <div style={{ fontWeight: 600, marginBottom: 2 }}>
+          <div style={{ fontWeight: 600, marginBottom: "0.125rem" }}>
             {t("inspection.notExists")}
           </div>
-          <div className="mono" style={{ fontSize: 11 }}>
+          <div className="mono" style={{ fontSize: "0.6875rem" }}>
             {data.path}
           </div>
         </div>
@@ -326,19 +332,22 @@ const InspectionPanel = ({
       <div
         className="card flex items-start gap-2"
         style={{
-          padding: 12,
+          padding: "0.75rem",
           borderColor: "var(--c-warn)",
           background: "var(--c-warn-soft)",
           color: "var(--c-warn)",
-          fontSize: 12,
+          fontSize: "0.75rem",
         }}
       >
-        <AlertTriangle size={14} style={{ flexShrink: 0, marginTop: 1 }} />
+        <AlertTriangle
+          size="0.875rem"
+          style={{ flexShrink: 0, marginTop: 1 }}
+        />
         <div>
-          <div style={{ fontWeight: 600, marginBottom: 2 }}>
+          <div style={{ fontWeight: 600, marginBottom: "0.125rem" }}>
             {t("inspection.notDir")}
           </div>
-          <div className="mono" style={{ fontSize: 11 }}>
+          <div className="mono" style={{ fontSize: "0.6875rem" }}>
             {data.path}
           </div>
         </div>
@@ -352,7 +361,7 @@ const InspectionPanel = ({
       <div
         className="card"
         style={{
-          padding: 14,
+          padding: "0.875rem",
           borderColor: "var(--c-ok)",
           background: "var(--c-ok-soft)",
         }}
@@ -362,36 +371,42 @@ const InspectionPanel = ({
           style={{
             color: "var(--c-ok)",
             fontWeight: 600,
-            fontSize: 12.5,
-            marginBottom: 8,
+            fontSize: "0.78125rem",
+            marginBottom: "0.5rem",
           }}
         >
-          <Check size={14} />
+          <Check size="0.875rem" />
           {t("inspection.found")}
         </div>
-        <div className="mono dim" style={{ fontSize: 11, marginBottom: 10 }}>
+        <div
+          className="mono dim"
+          style={{ fontSize: "0.6875rem", marginBottom: "0.625rem" }}
+        >
           {data.path}
         </div>
-        <div className="flex flex-col" style={{ gap: 4, fontSize: 12.5 }}>
+        <div
+          className="flex flex-col"
+          style={{ gap: "0.25rem", fontSize: "0.78125rem" }}
+        >
           <div>
-            <span className="dim" style={{ marginRight: 8 }}>
+            <span className="dim" style={{ marginRight: "0.5rem" }}>
               {t("inspection.fieldName")}
             </span>
             <span style={{ fontWeight: 600 }}>{proj.name}</span>
           </div>
           <div className="flex items-center gap-2">
             <span className="dim">{t("inspection.fieldPack")}</span>
-            <Layers size={11} style={{ color: "var(--accent)" }} />
-            <span className="mono" style={{ fontSize: 11.5 }}>
+            <Layers size="0.6875rem" style={{ color: "var(--accent)" }} />
+            <span className="mono" style={{ fontSize: "0.71875rem" }}>
               {proj.pack_id} / {proj.template_id}
             </span>
             <span className="chip">{proj.version}</span>
           </div>
           <div>
-            <span className="dim" style={{ marginRight: 8 }}>
+            <span className="dim" style={{ marginRight: "0.5rem" }}>
               {t("inspection.fieldEngine")}
             </span>
-            <span className="mono" style={{ fontSize: 11.5 }}>
+            <span className="mono" style={{ fontSize: "0.71875rem" }}>
               {proj.engine}
             </span>
           </div>
@@ -405,7 +420,7 @@ const InspectionPanel = ({
     <div
       className="card"
       style={{
-        padding: 14,
+        padding: "0.875rem",
         borderColor: "var(--c-warn)",
         background: "var(--c-warn-soft)",
       }}
@@ -415,17 +430,20 @@ const InspectionPanel = ({
         style={{
           color: "var(--c-warn)",
           fontWeight: 600,
-          fontSize: 12.5,
-          marginBottom: 6,
+          fontSize: "0.78125rem",
+          marginBottom: "0.375rem",
         }}
       >
-        <AlertTriangle size={14} />
+        <AlertTriangle size="0.875rem" />
         {t("inspection.noProject")}
       </div>
-      <div className="mono dim" style={{ fontSize: 11, marginBottom: 8 }}>
+      <div
+        className="mono dim"
+        style={{ fontSize: "0.6875rem", marginBottom: "0.5rem" }}
+      >
         {data.path}
       </div>
-      <div className="dim" style={{ fontSize: 12, lineHeight: 1.5 }}>
+      <div className="dim" style={{ fontSize: "0.75rem", lineHeight: 1.5 }}>
         <Trans
           i18nKey="inspection.noProjectHint"
           ns="projectConnect"

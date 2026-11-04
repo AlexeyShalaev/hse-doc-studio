@@ -96,9 +96,9 @@ export const CheckCard = ({
     <div
       className="flex items-center transition-colors"
       style={{
-        gap: 8,
-        padding: "6px 10px 6px 12px",
-        borderRadius: 6,
+        gap: "0.5rem",
+        padding: "0.375rem 0.625rem 0.375rem 0.75rem",
+        borderRadius: "0.375rem",
       }}
       onMouseEnter={(e) => {
         e.currentTarget.style.background = "var(--bg-hover)";
@@ -109,7 +109,7 @@ export const CheckCard = ({
     >
       <div
         className="flex items-center"
-        style={{ gap: 10, flex: 1, minWidth: 0, ...dimStyle }}
+        style={{ gap: "0.625rem", flex: 1, minWidth: 0, ...dimStyle }}
       >
         <Ic
           size={14}
@@ -130,7 +130,7 @@ export const CheckCard = ({
           <span
             className="truncate"
             style={{
-              fontSize: 12.5,
+              fontSize: "0.78125rem",
               fontWeight: 500,
               color: "var(--fg-0)",
             }}
@@ -141,7 +141,7 @@ export const CheckCard = ({
           {isSkipped && item.skippedReason && (
             <span
               className="truncate"
-              style={{ fontSize: 11, color: "var(--fg-3)" }}
+              style={{ fontSize: "0.6875rem", color: "var(--fg-3)" }}
               title={item.skippedReason}
             >
               {item.skippedReason}
@@ -158,7 +158,7 @@ export const CheckCard = ({
                 onGoToSource(item);
               }}
               style={{
-                fontSize: 11,
+                fontSize: "0.6875rem",
                 fontWeight: 500,
                 color: sevColor,
                 letterSpacing: "0.02em",
@@ -176,7 +176,7 @@ export const CheckCard = ({
             <span
               className="mono shrink-0"
               style={{
-                fontSize: 11,
+                fontSize: "0.6875rem",
                 fontWeight: 500,
                 color: sevColor,
                 opacity: 0.85,
@@ -216,7 +216,7 @@ export const CheckCard = ({
             }}
             style={{ background: "transparent", color: "var(--accent)" }}
           >
-            <Sparkles size={12} />
+            <Sparkles size="0.75rem" />
           </button>
         )}
 
@@ -231,7 +231,7 @@ export const CheckCard = ({
             }}
             style={{ background: "transparent" }}
           >
-            <CircleSlash size={12} />
+            <CircleSlash size="0.75rem" />
           </button>
         )}
 
@@ -258,7 +258,7 @@ export const CheckCard = ({
                 }}
                 style={{ background: "transparent" }}
               >
-                <ExternalLink size={12} />
+                <ExternalLink size="0.75rem" />
               </button>
             ) : (
               <DropdownMenu.Root>
@@ -269,7 +269,7 @@ export const CheckCard = ({
                     data-tt={t("checks.card.openInEditor")}
                     style={{ background: "transparent" }}
                   >
-                    <ExternalLink size={12} />
+                    <ExternalLink size="0.75rem" />
                   </button>
                 </DropdownMenu.Trigger>
                 <DropdownMenu.Portal>
@@ -291,7 +291,7 @@ export const CheckCard = ({
                           "flex cursor-pointer select-none items-center gap-2 outline-none",
                           "focus:bg-bg-hover",
                         )}
-                        style={{ padding: "8px 12px" }}
+                        style={{ padding: "0.5rem 0.75rem" }}
                         onSelect={() => {
                           openInEditor(
                             e.scheme,
@@ -303,7 +303,9 @@ export const CheckCard = ({
                         <span style={{ color: "var(--fg-0)" }}>
                           <EditorIcon editorId={e.id} size={14} />
                         </span>
-                        <span style={{ fontSize: 12.5 }}>{e.label}</span>
+                        <span style={{ fontSize: "0.78125rem" }}>
+                          {e.label}
+                        </span>
                       </DropdownMenu.Item>
                     ))}
                   </DropdownMenu.Content>
@@ -332,7 +334,7 @@ export const CheckCard = ({
             ...(isIgnored ? { color: "var(--accent)" } : {}),
           }}
         >
-          {isIgnored ? <Eye size={12} /> : <EyeOff size={12} />}
+          {isIgnored ? <Eye size="0.75rem" /> : <EyeOff size="0.75rem" />}
         </button>
       )}
     </div>

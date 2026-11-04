@@ -21,9 +21,9 @@ export const BootstrapSummary = () => {
       style={{
         display: "grid",
         gridTemplateColumns: "max-content 1fr",
-        gap: "4px 16px",
+        gap: "0.25rem 1rem",
         margin: 0,
-        fontSize: 12.5,
+        fontSize: "0.78125rem",
       }}
     >
       {rows.map(([key, value]) => (

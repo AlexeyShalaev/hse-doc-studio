@@ -77,7 +77,7 @@ const IncomingCommitDiff = ({
   const { t } = useTranslation("workspace");
   const { data: diff, isLoading } = useVcsDiff(projectId, { toId: commitId });
   return (
-    <div className="flex flex-col" style={{ gap: 8 }}>
+    <div className="flex flex-col" style={{ gap: "0.5rem" }}>
       <h3 className="mono dim" style={SECTION_LABEL}>
         {t("versions.incomingChanges")}
       </h3>
@@ -212,20 +212,25 @@ export const VersionsView = ({ project }: VersionsViewProps) => {
 
   const wrap = (children: React.ReactNode) => (
     <div
-      style={{ padding: "24px 32px", overflowY: "auto", flex: 1, minHeight: 0 }}
+      style={{
+        padding: "1.5rem 2rem",
+        overflowY: "auto",
+        flex: 1,
+        minHeight: 0,
+      }}
     >
       <PageHead
         icon={History}
         title={t("versions.title")}
         sub={t("versions.subtitle")}
       />
-      <div style={{ marginTop: 24 }}>{children}</div>
+      <div style={{ marginTop: "1.5rem" }}>{children}</div>
     </div>
   );
 
   if (statusLoading) {
     return wrap(
-      <div className="flex justify-center" style={{ padding: 32 }}>
+      <div className="flex justify-center" style={{ padding: "2rem" }}>
         <Spinner />
       </div>,
     );
@@ -236,7 +241,7 @@ export const VersionsView = ({ project }: VersionsViewProps) => {
       <SectionCard title={t("versions.unavailableTitle")}>
         <p
           className="dim"
-          style={{ fontSize: 12.5, margin: 0, lineHeight: 1.6 }}
+          style={{ fontSize: "0.78125rem", margin: 0, lineHeight: 1.6 }}
         >
           {t("versions.unavailableHint")}
         </p>
@@ -249,7 +254,7 @@ export const VersionsView = ({ project }: VersionsViewProps) => {
       <SectionCard title={t("versions.notEnabledTitle")}>
         <p
           className="dim"
-          style={{ fontSize: 12.5, margin: 0, lineHeight: 1.6 }}
+          style={{ fontSize: "0.78125rem", margin: 0, lineHeight: 1.6 }}
         >
           {t("versions.notEnabledHint")}
         </p>
@@ -262,7 +267,7 @@ export const VersionsView = ({ project }: VersionsViewProps) => {
           }}
           disabled={initing}
         >
-          {initing ? <Spinner size="sm" /> : <History size={13} />}
+          {initing ? <Spinner size="sm" /> : <History size="0.8125rem" />}
           {t("versions.enableHistory")}
         </button>
       </SectionCard>,
@@ -313,7 +318,7 @@ export const VersionsView = ({ project }: VersionsViewProps) => {
   }
 
   return wrap(
-    <div className="flex flex-col" style={{ gap: 20 }}>
+    <div className="flex flex-col" style={{ gap: "1.25rem" }}>
       {/* sync with a repository */}
       {syncSupported && (
         <SectionCard title={t("versions.syncTitle")}>
@@ -335,15 +340,15 @@ export const VersionsView = ({ project }: VersionsViewProps) => {
 
       {/* status + save-version composer */}
       <SectionCard title={t("versions.saveVersionTitle")}>
-        <p className="dim" style={{ margin: 0, fontSize: 11.5 }}>
+        <p className="dim" style={{ margin: 0, fontSize: "0.71875rem" }}>
           {t("versions.saveVersionHint", {
             when: formatWhen(status?.last_snapshot_at ?? null),
           })}
         </p>
-        <div className="flex items-center" style={{ gap: 8 }}>
+        <div className="flex items-center" style={{ gap: "0.5rem" }}>
           <input
             className="input"
-            style={{ flex: 1, fontSize: 12 }}
+            style={{ flex: 1, fontSize: "0.75rem" }}
             placeholder={t("versions.versionNamePlaceholder")}
             value={message}
             onChange={(e) => {
@@ -359,7 +364,7 @@ export const VersionsView = ({ project }: VersionsViewProps) => {
             onClick={handleSnapshot}
             disabled={snapshotting || !message.trim()}
           >
-            {snapshotting ? <Spinner size="sm" /> : <Camera size={13} />}
+            {snapshotting ? <Spinner size="sm" /> : <Camera size="0.8125rem" />}
             {t("versions.saveVersion")}
           </button>
         </div>
@@ -370,15 +375,15 @@ export const VersionsView = ({ project }: VersionsViewProps) => {
         <div
           className="flex items-center"
           style={{
-            gap: 10,
-            padding: "10px 14px",
+            gap: "0.625rem",
+            padding: "0.625rem 0.875rem",
             borderRadius: "var(--r-2)",
             background: "var(--accent-soft)",
             border: "1px solid var(--accent-line)",
           }}
         >
-          <Undo2 size={14} style={{ color: "var(--accent)" }} />
-          <span style={{ fontSize: 12, flex: 1 }}>
+          <Undo2 size="0.875rem" style={{ color: "var(--accent)" }} />
+          <span style={{ fontSize: "0.75rem", flex: 1 }}>
             {t("versions.restoredBanner")}
           </span>
           <button
@@ -387,7 +392,7 @@ export const VersionsView = ({ project }: VersionsViewProps) => {
             onClick={handleUndo}
             disabled={restoring}
           >
-            {restoring ? <Spinner size="sm" /> : <Undo2 size={11} />}
+            {restoring ? <Spinner size="sm" /> : <Undo2 size="0.6875rem" />}
             {t("versions.undo")}
           </button>
           <button
@@ -404,7 +409,7 @@ export const VersionsView = ({ project }: VersionsViewProps) => {
 
       {/* versions: important | recent side by side */}
       {historyLoading ? (
-        <div className="flex justify-center" style={{ padding: 24 }}>
+        <div className="flex justify-center" style={{ padding: "1.5rem" }}>
           <Spinner size="sm" />
         </div>
       ) : (
@@ -413,11 +418,11 @@ export const VersionsView = ({ project }: VersionsViewProps) => {
           style={{
             display: "grid",
             gridTemplateColumns: "minmax(0, 1fr) minmax(0, 1.2fr)",
-            gap: 20,
+            gap: "1.25rem",
             alignItems: "start",
           }}
         >
-          <div className="flex flex-col" style={{ gap: 8 }}>
+          <div className="flex flex-col" style={{ gap: "0.5rem" }}>
             <h3 className="mono dim" style={SECTION_LABEL}>
               {t("versions.importantVersions")}
             </h3>
@@ -425,13 +430,13 @@ export const VersionsView = ({ project }: VersionsViewProps) => {
               <div
                 className="card dim flex items-center justify-center"
                 style={{
-                  gap: 8,
-                  padding: 22,
-                  fontSize: 12,
+                  gap: "0.5rem",
+                  padding: "1.375rem",
+                  fontSize: "0.75rem",
                   textAlign: "center",
                 }}
               >
-                <Bookmark size={14} />
+                <Bookmark size="0.875rem" />
                 {t("versions.noNamedVersions")}
               </div>
             ) : (
@@ -450,7 +455,7 @@ export const VersionsView = ({ project }: VersionsViewProps) => {
           <div
             ref={recentRef}
             className="flex flex-col"
-            style={{ gap: 10, scrollMarginTop: 8 }}
+            style={{ gap: "0.625rem", scrollMarginTop: 8 }}
           >
             <h3 className="mono dim" style={SECTION_LABEL}>
               {t("versions.recentChanges")}
@@ -458,7 +463,11 @@ export const VersionsView = ({ project }: VersionsViewProps) => {
             {total === 0 && recent.length === 0 && !filtersActive ? (
               <div
                 className="card dim"
-                style={{ padding: 22, fontSize: 12, textAlign: "center" }}
+                style={{
+                  padding: "1.375rem",
+                  fontSize: "0.75rem",
+                  textAlign: "center",
+                }}
               >
                 {t("versions.noChanges")}
               </div>
@@ -478,8 +487,8 @@ export const VersionsView = ({ project }: VersionsViewProps) => {
                   <div
                     className="card dim"
                     style={{
-                      padding: 22,
-                      fontSize: 12,
+                      padding: "1.375rem",
+                      fontSize: "0.75rem",
                       textAlign: "center",
                     }}
                   >
@@ -510,7 +519,7 @@ export const VersionsView = ({ project }: VersionsViewProps) => {
       )}
 
       {/* what changed: full width */}
-      <div className="flex flex-col" style={{ gap: 8 }}>
+      <div className="flex flex-col" style={{ gap: "0.5rem" }}>
         <h3 className="mono dim" style={SECTION_LABEL}>
           {t("versions.whatChanged")}
         </h3>
@@ -539,7 +548,7 @@ export const VersionsView = ({ project }: VersionsViewProps) => {
 
 const SECTION_LABEL: React.CSSProperties = {
   margin: 0,
-  fontSize: 10.5,
+  fontSize: "0.65625rem",
   letterSpacing: "0.12em",
   textTransform: "uppercase",
 };

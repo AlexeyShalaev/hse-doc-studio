@@ -51,7 +51,7 @@ export const ResetCard = ({
       <form
         onSubmit={submit}
         className="flex flex-col"
-        style={{ gap: 14 }}
+        style={{ gap: "0.875rem" }}
         data-testid="reset-form"
       >
         <Input
@@ -93,12 +93,12 @@ export const ResetCard = ({
         <Button
           type="submit"
           aria-disabled={pending}
-          style={{ justifyContent: "center", gap: 8 }}
+          style={{ justifyContent: "center", gap: "0.5rem" }}
         >
           {pending ? (
             <Spinner size="sm" />
           ) : (
-            <KeyRound size={15} aria-hidden="true" />
+            <KeyRound size="0.9375rem" aria-hidden="true" />
           )}
           {pending ? t("reset.submitting") : t("reset.submit")}
         </Button>
@@ -112,7 +112,7 @@ export const ResetDoneCard = () => {
   return (
     <section data-testid="auth-screen-resetDone">
       <Heading>{t("pages.reset.title")}</Heading>
-      <div style={{ height: 12 }} />
+      <div style={{ height: "0.75rem" }} />
       <ResultFrame
         tone="ok"
         role="status"
@@ -132,7 +132,7 @@ export const ResetExpiredCard = () => {
   return (
     <section data-testid="auth-screen-resetExpired">
       <Heading>{t("pages.reset.title")}</Heading>
-      <div style={{ height: 12 }} />
+      <div style={{ height: "0.75rem" }} />
       <ResultFrame
         tone="warn"
         role="alert"
@@ -141,7 +141,7 @@ export const ResetExpiredCard = () => {
       >
         <Note>{t("reset.expired.body")}</Note>
       </ResultFrame>
-      <div style={{ marginTop: 18 }}>
+      <div style={{ marginTop: "1.125rem" }}>
         <Button asChild style={{ width: "100%", justifyContent: "center" }}>
           <Link to="/forgot" style={{ textDecoration: "none" }}>
             {t("reset.expired.action")}

@@ -110,7 +110,7 @@ export const SyncPopover = ({
         key="intro"
         style={{
           margin: 0,
-          fontSize: 12.5,
+          fontSize: "0.78125rem",
           lineHeight: 1.55,
           color: "var(--fg-1)",
         }}
@@ -152,7 +152,7 @@ export const SyncPopover = ({
     body.push(
       <div key="steps">
         {ui.operationKind !== null && (
-          <div style={{ ...sectionTitleStyle, marginBottom: 8 }}>
+          <div style={{ ...sectionTitleStyle, marginBottom: "0.5rem" }}>
             {text.phase}
           </div>
         )}
@@ -181,7 +181,7 @@ export const SyncPopover = ({
       <p
         key="conflicts-hint"
         className="dim"
-        style={{ margin: 0, fontSize: 12, lineHeight: 1.5 }}
+        style={{ margin: 0, fontSize: "0.75rem", lineHeight: 1.5 }}
       >
         {t("stateHint.conflicts")}
       </p>,
@@ -219,7 +219,7 @@ export const SyncPopover = ({
     body.push(
       <div
         key="error"
-        style={{ display: "flex", flexDirection: "column", gap: 8 }}
+        style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}
       >
         <Notice
           tone={ui.state === "offline" ? "warn" : "err"}
@@ -228,7 +228,7 @@ export const SyncPopover = ({
         />
         <details className="sync-details">
           <summary>{t("popover.technical")}</summary>
-          <div style={{ paddingTop: 8 }}>
+          <div style={{ paddingTop: "0.5rem" }}>
             <CopyField
               value={`${lastError.code}: ${lastError.detail}`}
               label={t("popover.technical")}
@@ -249,7 +249,7 @@ export const SyncPopover = ({
       <p
         key="hint"
         className="dim"
-        style={{ margin: 0, fontSize: 12, lineHeight: 1.5 }}
+        style={{ margin: 0, fontSize: "0.75rem", lineHeight: 1.5 }}
       >
         {t(`stateHint.${ui.state}`)}
       </p>,
@@ -311,7 +311,7 @@ export const SyncPopover = ({
       aria-label={t("popover.settings")}
       title={t("popover.settings")}
     >
-      <Settings size={15} aria-hidden="true" />
+      <Settings size="0.9375rem" aria-hidden="true" />
     </button>
   );
 
@@ -339,11 +339,11 @@ export const SyncPopover = ({
               onClick={onCancel}
               disabled={isCancelling}
             >
-              <X size={13} aria-hidden="true" />
+              <X size="0.8125rem" aria-hidden="true" />
               {t("popover.cancel")}
             </button>
           ) : (
-            <span className="dim" style={{ fontSize: 11.5 }}>
+            <span className="dim" style={{ fontSize: "0.71875rem" }}>
               {t("popover.notCancellable")}
             </span>
           )}
@@ -393,7 +393,7 @@ export const SyncPopover = ({
               disabled={!ui.canSync || isStarting}
             >
               <RefreshCw
-                size={13}
+                size="0.8125rem"
                 aria-hidden="true"
                 className={isStarting ? "spin" : undefined}
               />
@@ -441,17 +441,17 @@ export const SyncPopover = ({
       <div
         style={{
           display: "flex",
-          gap: 11,
+          gap: "0.6875rem",
           alignItems: "center",
-          padding: "13px 14px 11px",
+          padding: "0.8125rem 0.875rem 0.6875rem",
         }}
       >
         <span
           aria-hidden="true"
           style={{
-            width: 34,
-            height: 34,
-            borderRadius: 9,
+            width: "2.125rem",
+            height: "2.125rem",
+            borderRadius: "0.5625rem",
             flexShrink: 0,
             display: "inline-flex",
             alignItems: "center",
@@ -465,7 +465,7 @@ export const SyncPopover = ({
         <div style={{ minWidth: 0, flex: 1 }}>
           <div
             style={{
-              fontSize: 13,
+              fontSize: "0.8125rem",
               fontWeight: 600,
               letterSpacing: "-0.01em",
               color: "var(--fg-0)",
@@ -474,12 +474,18 @@ export const SyncPopover = ({
             {text.status}
           </div>
           {metaParts.length > 0 && (
-            <div className="dim" style={{ fontSize: 11, marginTop: 1 }}>
+            <div
+              className="dim"
+              style={{ fontSize: "0.6875rem", marginTop: 1 }}
+            >
               {metaParts.join(" · ")}
             </div>
           )}
           {!isConnected && (
-            <div className="dim" style={{ fontSize: 11, marginTop: 1 }}>
+            <div
+              className="dim"
+              style={{ fontSize: "0.6875rem", marginTop: 1 }}
+            >
               {t("popover.noRemote.subtitle")}
             </div>
           )}
@@ -490,8 +496,8 @@ export const SyncPopover = ({
         <div
           className="flex items-center"
           style={{
-            gap: 8,
-            padding: "7px 14px",
+            gap: "0.5rem",
+            padding: "0.4375rem 0.875rem",
             background: "var(--bg-2)",
             borderTop: "1px solid var(--border)",
             borderBottom: "1px solid var(--border)",
@@ -505,7 +511,7 @@ export const SyncPopover = ({
           </span>
           <span
             className="mono truncate"
-            style={{ fontSize: 11.5, flex: 1, color: "var(--fg-0)" }}
+            style={{ fontSize: "0.71875rem", flex: 1, color: "var(--fg-0)" }}
             title={remote.display_url}
           >
             {repoLabel(remote.display_url)}
@@ -521,7 +527,7 @@ export const SyncPopover = ({
                 : t("popover.branch")
             }
           >
-            <GitBranch size={10} aria-hidden="true" />
+            <GitBranch size="0.625rem" aria-hidden="true" />
             {remote.branch}
           </span>
           {remote.web_url && (
@@ -533,7 +539,7 @@ export const SyncPopover = ({
               aria-label={t("popover.openInBrowser")}
               title={t("popover.openInBrowser")}
             >
-              <ExternalLink size={13} aria-hidden="true" />
+              <ExternalLink size="0.8125rem" aria-hidden="true" />
             </a>
           )}
         </div>
@@ -544,9 +550,9 @@ export const SyncPopover = ({
           style={{
             display: "flex",
             flexDirection: "column",
-            gap: 12,
-            padding: "12px 14px",
-            maxHeight: 360,
+            gap: "0.75rem",
+            padding: "0.75rem 0.875rem",
+            maxHeight: "22.5rem",
             overflowY: "auto",
           }}
         >
@@ -557,8 +563,8 @@ export const SyncPopover = ({
       <div
         className="flex items-center"
         style={{
-          gap: 8,
-          padding: "10px 14px",
+          gap: "0.5rem",
+          padding: "0.625rem 0.875rem",
           borderTop: "1px solid var(--border)",
           background: "var(--bg-1)",
           flexWrap: "nowrap",
@@ -571,9 +577,9 @@ export const SyncPopover = ({
         <div
           className="dim"
           style={{
-            fontSize: 10.5,
+            fontSize: "0.65625rem",
             lineHeight: 1.45,
-            padding: "0 14px 10px",
+            padding: "0 0.875rem 0.625rem",
             background: "var(--bg-1)",
           }}
         >

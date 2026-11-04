@@ -119,7 +119,7 @@ const ServiceCard = ({ service }: { service: AdminService }) => {
     >
       <div className="ops-service-head">
         <span className="ops-service-icon" aria-hidden="true">
-          <Icon size={16} />
+          <Icon size="1rem" />
         </span>
         <div className="ops-service-title">
           <h3 className="ops-service-name">
@@ -132,7 +132,7 @@ const ServiceCard = ({ service }: { service: AdminService }) => {
       {(foot !== null || (counted && service.status !== "unconfigured")) && (
         <div className="ops-service-foot">
           {counted && service.status !== "unconfigured" && (
-            <span className="flex flex-col" style={{ gap: 6 }}>
+            <span className="flex flex-col" style={{ gap: "0.375rem" }}>
               <span className="ops-service-line">
                 <span>
                   {t("services.online", {
@@ -208,9 +208,9 @@ export const ServicesView = ({
           ) : undefined
         }
         actions={
-          <span className="flex items-center" style={{ gap: 12 }}>
+          <span className="flex items-center" style={{ gap: "0.75rem" }}>
             {checkedAt !== null && status === "ready" && (
-              <span style={{ fontSize: 12, color: "var(--fg-2)" }}>
+              <span style={{ fontSize: "0.75rem", color: "var(--fg-2)" }}>
                 {t("services.checked", {
                   when: formatPastTime(checkedAt, now ?? checkedAt),
                 })}
@@ -221,14 +221,14 @@ export const ServicesView = ({
               variant="secondary"
               type="button"
               disabled={refreshing}
-              style={{ gap: 6 }}
+              style={{ gap: "0.375rem" }}
               data-testid="services-refresh"
               onClick={onRefresh}
             >
               {refreshing ? (
                 <Spinner size="sm" />
               ) : (
-                <RefreshCw size={13} aria-hidden="true" />
+                <RefreshCw size="0.8125rem" aria-hidden="true" />
               )}
               {t("services.check")}
             </Button>
@@ -288,7 +288,7 @@ export const ServicesView = ({
 const ServicesSkeleton = () => (
   <ul className="ops-services" aria-hidden="true">
     {[0, 1, 2, 3, 4, 5].map((i) => (
-      <li key={i} className="ops-service" style={{ height: 132 }}>
+      <li key={i} className="ops-service" style={{ height: "8.25rem" }}>
         <span className="adm-skel" style={{ width: "50%" }} />
         <span className="adm-skel" style={{ width: "80%" }} />
       </li>

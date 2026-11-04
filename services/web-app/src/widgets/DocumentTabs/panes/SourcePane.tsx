@@ -100,24 +100,24 @@ export const SourcePane = ({ projectId, doc }: SourcePaneProps) => {
     return (
       <div
         className="flex flex-1 items-center justify-center"
-        style={{ padding: 24 }}
+        style={{ padding: "1.5rem" }}
       >
         <div
           className="flex flex-col items-center"
-          style={{ gap: 12, textAlign: "center", maxWidth: 360 }}
+          style={{ gap: "0.75rem", textAlign: "center", maxWidth: "22.5rem" }}
         >
-          <FileQuestion size={28} style={{ color: "var(--fg-3)" }} />
-          <div className="mono dim" style={{ fontSize: 11.5 }}>
+          <FileQuestion size="1.75rem" style={{ color: "var(--fg-3)" }} />
+          <div className="mono dim" style={{ fontSize: "0.71875rem" }}>
             {meta.file}
           </div>
           <p
             className="dim"
-            style={{ margin: 0, fontSize: 13, lineHeight: 1.5 }}
+            style={{ margin: 0, fontSize: "0.8125rem", lineHeight: 1.5 }}
           >
             {t("source.binaryHint")}
           </p>
           <a href={downloadHref} className="btn" download={fileName}>
-            <Download size={12} />
+            <Download size="0.75rem" />
             {t("source.download")}
           </a>
         </div>

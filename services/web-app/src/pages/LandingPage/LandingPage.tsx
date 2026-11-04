@@ -190,7 +190,7 @@ export const LandingPage = () => {
               data-testid="landing-login-button"
               aria-label={t("login")}
             >
-              <LogIn size={14} aria-hidden="true" />
+              <LogIn size="0.875rem" aria-hidden="true" />
               <span className="lp-btn-label">{t("login")}</span>
             </Button>
           </div>
@@ -208,13 +208,13 @@ export const LandingPage = () => {
               <p className="lp-lead">{t("hero.lead", { name })}</p>
               <div className="lp-cta">
                 <Button size="lg" onClick={openLogin}>
-                  <LogIn size={15} aria-hidden="true" />
+                  <LogIn size="0.9375rem" aria-hidden="true" />
                   {t("login")}
                 </Button>
                 {registerOpen && (
                   <Button size="lg" variant="secondary" asChild>
                     <Link to="/register" data-testid="landing-register">
-                      <UserPlus size={15} aria-hidden="true" />
+                      <UserPlus size="0.9375rem" aria-hidden="true" />
                       {t("register")}
                     </Link>
                   </Button>
@@ -246,7 +246,11 @@ export const LandingPage = () => {
           <ul className="lp-cards">
             {AUDIENCE.map(({ id, icon: Icon }) => (
               <li className="lp-card" key={id}>
-                <Icon size={20} aria-hidden="true" className="lp-card-icon" />
+                <Icon
+                  size="1.25rem"
+                  aria-hidden="true"
+                  className="lp-card-icon"
+                />
                 <h3 className="lp-h3">{t(`audience.${id}.title`)}</h3>
                 <p>{t(`audience.${id}.text`)}</p>
               </li>
@@ -263,7 +267,11 @@ export const LandingPage = () => {
             {FEATURES.map(({ id, icon: Icon, shot }, index) => (
               <li className="lp-feature" key={id}>
                 <div className="lp-feature-copy">
-                  <Icon size={20} aria-hidden="true" className="lp-card-icon" />
+                  <Icon
+                    size="1.25rem"
+                    aria-hidden="true"
+                    className="lp-card-icon"
+                  />
                   <h3 className="lp-h3">{t(`features.${id}.title`)}</h3>
                   <p>{t(`features.${id}.text`)}</p>
                 </div>
@@ -283,7 +291,11 @@ export const LandingPage = () => {
           <ul className="lp-cards lp-cards-4">
             {CLOUD.map(({ id, icon: Icon }) => (
               <li className="lp-card" key={id}>
-                <Icon size={20} aria-hidden="true" className="lp-card-icon" />
+                <Icon
+                  size="1.25rem"
+                  aria-hidden="true"
+                  className="lp-card-icon"
+                />
                 <h3 className="lp-h3">{t(`cloud.${id}.title`)}</h3>
                 <p>{t(`cloud.${id}.text`)}</p>
               </li>
@@ -326,7 +338,7 @@ export const LandingPage = () => {
             {(["projects", "admin", "tracking", "ai", "login"] as const).map(
               (id) => (
                 <li key={id}>
-                  <ShieldCheck size={18} aria-hidden="true" />
+                  <ShieldCheck size="1.125rem" aria-hidden="true" />
                   <span>{t(`security.${id}`)}</span>
                 </li>
               ),
@@ -344,13 +356,13 @@ export const LandingPage = () => {
             </div>
             <div className="lp-cta">
               <Button size="lg" onClick={openLogin}>
-                <LogIn size={15} aria-hidden="true" />
+                <LogIn size="0.9375rem" aria-hidden="true" />
                 {t("login")}
               </Button>
               {registerOpen && (
                 <Button size="lg" variant="secondary" asChild>
                   <Link to="/register">
-                    <UserPlus size={15} aria-hidden="true" />
+                    <UserPlus size="0.9375rem" aria-hidden="true" />
                     {t("register")}
                   </Link>
                 </Button>

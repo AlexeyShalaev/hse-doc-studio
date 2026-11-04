@@ -952,6 +952,7 @@ const credentialPublic = (credential: GitCredential): GitCredential =>
 const FALLBACK_APP_SETTINGS = {
   theme: "system",
   interface_language: "ru",
+  text_scale: 100,
   default_engine: "xelatex",
   latex_passes: 2,
   max_concurrent_compiles: 2,

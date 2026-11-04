@@ -23,7 +23,7 @@ export const AuthSwitches = () => {
   const dark = resolveTheme(theme, prefersDark) !== "light";
 
   return (
-    <div className="flex items-center" style={{ gap: 8 }}>
+    <div className="flex items-center" style={{ gap: "0.5rem" }}>
       <div className="seg" role="group" aria-label={t("layout.language")}>
         {LANGUAGES.map((item) => (
           <button
@@ -49,7 +49,11 @@ export const AuthSwitches = () => {
           setTheme(dark ? "light" : "dark");
         }}
       >
-        {dark ? <Sun size={14} aria-hidden /> : <Moon size={14} aria-hidden />}
+        {dark ? (
+          <Sun size="0.875rem" aria-hidden />
+        ) : (
+          <Moon size="0.875rem" aria-hidden />
+        )}
       </button>
     </div>
   );

@@ -157,7 +157,7 @@ const OffsetPager = ({
               go(0);
             }}
           >
-            <ChevronsLeft size={14} aria-hidden="true" />
+            <ChevronsLeft size="0.875rem" aria-hidden="true" />
           </button>
         )}
         <button
@@ -168,7 +168,7 @@ const OffsetPager = ({
             go(page - 1);
           }}
         >
-          <ChevronLeft size={13} aria-hidden="true" />
+          <ChevronLeft size="0.8125rem" aria-hidden="true" />
           {t("dataTable.prev")}
         </button>
         <PageJump page={page} pages={pages} onJump={go} />
@@ -181,7 +181,7 @@ const OffsetPager = ({
           }}
         >
           {t("dataTable.next")}
-          <ChevronRight size={13} aria-hidden="true" />
+          <ChevronRight size="0.8125rem" aria-hidden="true" />
         </button>
         {pages > 2 && (
           <button
@@ -194,7 +194,7 @@ const OffsetPager = ({
               go(pages - 1);
             }}
           >
-            <ChevronsRight size={14} aria-hidden="true" />
+            <ChevronsRight size="0.875rem" aria-hidden="true" />
           </button>
         )}
       </span>

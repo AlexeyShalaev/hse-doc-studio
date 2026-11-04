@@ -94,7 +94,7 @@ export const ProjectImportDialog = ({
           className="btn primary"
           disabled={file === null}
         >
-          <Upload size={12} aria-hidden="true" />
+          <Upload size="0.75rem" aria-hidden="true" />
           {t("submit")}
         </button>
       </>

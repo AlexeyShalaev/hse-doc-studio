@@ -90,7 +90,10 @@ export const PersonCell = ({
         size={size === "sm" ? 20 : 28}
       />
       <span className="adm-person-text">
-        <span className="flex items-center" style={{ gap: 6, minWidth: 0 }}>
+        <span
+          className="flex items-center"
+          style={{ gap: "0.375rem", minWidth: 0 }}
+        >
           <span
             className="adm-person-name"
             data-unknown={unknown ? "true" : undefined}

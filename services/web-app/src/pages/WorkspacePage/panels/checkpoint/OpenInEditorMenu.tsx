@@ -33,7 +33,7 @@ export const OpenInEditorMenu = ({
           }
           disabled={!hasAnyEditor || !outputDir}
         >
-          <ExternalLink size={11} />
+          <ExternalLink size="0.6875rem" />
         </button>
       </DropdownMenu.Trigger>
       <DropdownMenu.Portal>
@@ -51,14 +51,14 @@ export const OpenInEditorMenu = ({
           <div
             className="label-up dimmer"
             style={{
-              padding: "8px 12px 6px",
-              fontSize: 9.5,
+              padding: "0.5rem 0.75rem 0.375rem",
+              fontSize: "0.59375rem",
               letterSpacing: "0.1em",
             }}
           >
             {t("pack.openFolderInEditor")}
           </div>
-          <div className="divider" style={{ marginBottom: 4 }} />
+          <div className="divider" style={{ marginBottom: "0.25rem" }} />
           {editors.map((e) => (
             <DropdownMenu.Item
               key={e.id}
@@ -67,7 +67,7 @@ export const OpenInEditorMenu = ({
                 "transition-colors",
                 "focus:bg-bg-hover",
               )}
-              style={{ padding: "8px 12px" }}
+              style={{ padding: "0.5rem 0.75rem" }}
               onSelect={() => {
                 if (outputDir) openInEditor(e.scheme, outputDir, null);
               }}
@@ -75,9 +75,9 @@ export const OpenInEditorMenu = ({
               <div
                 className="flex items-center justify-center shrink-0"
                 style={{
-                  width: 28,
-                  height: 28,
-                  borderRadius: 6,
+                  width: "1.75rem",
+                  height: "1.75rem",
+                  borderRadius: "0.375rem",
                   background: "var(--bg-2)",
                   border: "1px solid var(--border)",
                   color: "var(--fg-0)",
@@ -88,19 +88,23 @@ export const OpenInEditorMenu = ({
               <div className="flex flex-col min-w-0" style={{ gap: 1 }}>
                 <span
                   className="text-fg-0 group-focus:text-fg-0"
-                  style={{ fontSize: 13, fontWeight: 500, lineHeight: 1.2 }}
+                  style={{
+                    fontSize: "0.8125rem",
+                    fontWeight: 500,
+                    lineHeight: 1.2,
+                  }}
                 >
                   {e.label}
                 </span>
                 <span
                   className="mono dimmer"
-                  style={{ fontSize: 10, lineHeight: 1.2 }}
+                  style={{ fontSize: "0.625rem", lineHeight: 1.2 }}
                 >
                   {e.scheme}://
                 </span>
               </div>
               <ExternalLink
-                size={11}
+                size="0.6875rem"
                 className="ml-auto shrink-0 text-fg-3 opacity-0 transition-opacity group-focus:opacity-100"
               />
             </DropdownMenu.Item>

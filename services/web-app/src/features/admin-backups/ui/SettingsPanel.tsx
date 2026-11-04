@@ -48,7 +48,7 @@ export const SettingsPanel = ({
       description={t("settings.lead")}
       testId="backup-settings"
       footer={
-        <div className="flex items-center" style={{ gap: 12 }}>
+        <div className="flex items-center" style={{ gap: "0.75rem" }}>
           <Button
             size="sm"
             disabled={!changed || saving}
@@ -71,7 +71,7 @@ export const SettingsPanel = ({
           {failure && !failure.field && (
             <span
               role="alert"
-              style={{ color: "var(--c-err)", fontSize: 12.5 }}
+              style={{ color: "var(--c-err)", fontSize: "0.78125rem" }}
             >
               {t(failureKey(failure.code))}
             </span>

@@ -111,7 +111,7 @@ describe("мастер создания проекта на сервере", () 
     const steps = screen.getByTestId("wizard-steps");
     expect(steps.className).toContain("flex-row");
     expect(steps.className).toContain("sm:flex-col");
-    expect(steps.className).toContain("sm:w-[220px]");
+    expect(steps.className).toContain("sm:w-[13.75rem]");
     expect(steps.getAttribute("style") ?? "").not.toContain("width");
   });
 

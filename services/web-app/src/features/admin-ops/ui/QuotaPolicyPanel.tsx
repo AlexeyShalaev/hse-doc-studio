@@ -166,7 +166,7 @@ export const QuotaPolicyView = ({
         description={t("adminOps:resources.behavior.lead")}
         testId="quota-behavior"
         footer={
-          <div className="flex items-center" style={{ gap: 12 }}>
+          <div className="flex items-center" style={{ gap: "0.75rem" }}>
             <Button
               size="sm"
               disabled={!changed || saving}
@@ -193,7 +193,7 @@ export const QuotaPolicyView = ({
             {tried && !body && (
               <span
                 role="alert"
-                style={{ color: "var(--c-err)", fontSize: 12.5 }}
+                style={{ color: "var(--c-err)", fontSize: "0.78125rem" }}
               >
                 {t("adminOps:resources.invalid")}
               </span>
@@ -201,7 +201,7 @@ export const QuotaPolicyView = ({
             {failure && (
               <span
                 role="alert"
-                style={{ color: "var(--c-err)", fontSize: 12.5 }}
+                style={{ color: "var(--c-err)", fontSize: "0.78125rem" }}
               >
                 {t(failureKey(failure.code))}
               </span>
@@ -210,10 +210,14 @@ export const QuotaPolicyView = ({
               <span
                 role="status"
                 className="flex items-center"
-                style={{ gap: 6, fontSize: 12.5, color: "var(--c-ok)" }}
+                style={{
+                  gap: "0.375rem",
+                  fontSize: "0.78125rem",
+                  color: "var(--c-ok)",
+                }}
                 data-testid="quota-policy-saved"
               >
-                <Check size={14} aria-hidden="true" />
+                <Check size="0.875rem" aria-hidden="true" />
                 {t("quotas.saved")}
               </span>
             )}

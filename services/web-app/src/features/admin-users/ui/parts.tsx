@@ -31,7 +31,7 @@ export const RoleLabel = ({ isAdmin }: { isAdmin: boolean }) => {
   const { t } = useTranslation("adminUsers");
   return isAdmin ? (
     <span className="ppl-role">
-      <ShieldCheck size={12} aria-hidden="true" />
+      <ShieldCheck size="0.75rem" aria-hidden="true" />
       {t("users.admin")}
     </span>
   ) : (

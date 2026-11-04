@@ -35,19 +35,22 @@ const FontRow = ({ font, previewFamily }: FontRowProps) => {
       style={{
         display: "flex",
         alignItems: "center",
-        gap: 10,
-        padding: "8px 10px",
-        borderRadius: 6,
+        gap: "0.625rem",
+        padding: "0.5rem 0.625rem",
+        borderRadius: "0.375rem",
         border: "1px solid var(--border)",
         background: "var(--bg-2)",
       }}
     >
-      <Type size={15} style={{ color: "var(--accent)", flexShrink: 0 }} />
+      <Type
+        size="0.9375rem"
+        style={{ color: "var(--accent)", flexShrink: 0 }}
+      />
       <div style={{ flex: 1, minWidth: 0 }}>
         <div
           style={{
             fontFamily: previewFamily ? `'${previewFamily}'` : undefined,
-            fontSize: 16,
+            fontSize: "1rem",
             lineHeight: 1.25,
             color: "var(--fg-0)",
             overflow: "hidden",
@@ -60,7 +63,7 @@ const FontRow = ({ font, previewFamily }: FontRowProps) => {
         <div
           className="mono"
           style={{
-            fontSize: 11,
+            fontSize: "0.6875rem",
             color: "var(--fg-3)",
             overflow: "hidden",
             textOverflow: "ellipsis",
@@ -71,7 +74,9 @@ const FontRow = ({ font, previewFamily }: FontRowProps) => {
           {font.family ? ` · ${font.family}` : ""}
         </div>
       </div>
-      <span style={{ fontSize: 11, color: "var(--fg-3)", flexShrink: 0 }}>
+      <span
+        style={{ fontSize: "0.6875rem", color: "var(--fg-3)", flexShrink: 0 }}
+      >
         {formatFontSize(font.size_bytes)}
       </span>
       <button
@@ -79,9 +84,9 @@ const FontRow = ({ font, previewFamily }: FontRowProps) => {
         onClick={handleDelete}
         disabled={del.isPending}
         title={t("fonts.delete")}
-        style={{ padding: 4, color: "var(--fg-2)" }}
+        style={{ padding: "0.25rem", color: "var(--fg-2)" }}
       >
-        {del.isPending ? <Spinner size="sm" /> : <Trash2 size={14} />}
+        {del.isPending ? <Spinner size="sm" /> : <Trash2 size="0.875rem" />}
       </button>
     </div>
   );
@@ -95,8 +100,8 @@ export const InstalledFontsList = () => {
   const previewFamilies = useInstalledFontFaces(fonts);
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-      <span style={{ fontSize: 12, fontWeight: 600 }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+      <span style={{ fontSize: "0.75rem", fontWeight: 600 }}>
         {t("fonts.installedTitle")}
         {fonts.length > 0 && (
           <span style={{ color: "var(--fg-3)", fontWeight: 400 }}>
@@ -109,11 +114,13 @@ export const InstalledFontsList = () => {
       {isLoading ? (
         <Spinner size="sm" />
       ) : fonts.length === 0 ? (
-        <p style={{ fontSize: 12, color: "var(--fg-3)", margin: 0 }}>
+        <p style={{ fontSize: "0.75rem", color: "var(--fg-3)", margin: 0 }}>
           {t("fonts.empty")}
         </p>
       ) : (
-        <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+        <div
+          style={{ display: "flex", flexDirection: "column", gap: "0.375rem" }}
+        >
           {fonts.map((f) => (
             <FontRow
               key={f.name}

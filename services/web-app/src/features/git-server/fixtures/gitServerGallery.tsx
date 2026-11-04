@@ -7,7 +7,7 @@ const entry = (id: string, title: string, view: View): GalleryEntry => ({
   frame: "page",
   width: 640,
   render: () => (
-    <div style={{ padding: 24, maxWidth: 560 }}>
+    <div style={{ padding: "1.5rem", maxWidth: "35rem" }}>
       <GitServerSource
         clientName="Студия на MacBook Анны"
         onPick={() => undefined}

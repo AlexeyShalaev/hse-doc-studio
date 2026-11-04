@@ -15,7 +15,7 @@ export const ProfileStep = ({ onSaved, onCancel }: ProfileStepProps) => {
   const { t } = useTranslation("gitRemote");
   const profileQuery = useProfile();
   return (
-    <div className="flex flex-col" style={{ gap: 12 }}>
+    <div className="flex flex-col" style={{ gap: "0.75rem" }}>
       {profileQuery.isError && !profileQuery.data ? (
         <Notice
           tone="err"

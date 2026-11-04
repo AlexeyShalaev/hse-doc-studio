@@ -37,8 +37,8 @@ export const DiffPatch = ({ file, stat, maxHeight = 460 }: DiffPatchProps) => {
       <div
         className="flex items-center"
         style={{
-          gap: 8,
-          padding: "8px 12px",
+          gap: "0.5rem",
+          padding: "0.5rem 0.75rem",
           borderBottom: "1px solid var(--border)",
           background: "var(--bg-1)",
         }}
@@ -47,9 +47,9 @@ export const DiffPatch = ({ file, stat, maxHeight = 460 }: DiffPatchProps) => {
           className="mono"
           style={{
             flexShrink: 0,
-            width: 16,
+            width: "1rem",
             textAlign: "center",
-            fontSize: 11,
+            fontSize: "0.6875rem",
             fontWeight: 700,
             color: meta.color,
           }}
@@ -59,7 +59,7 @@ export const DiffPatch = ({ file, stat, maxHeight = 460 }: DiffPatchProps) => {
         </span>
         <span
           className="mono truncate"
-          style={{ fontSize: 11.5, flex: 1, color: "var(--fg-0)" }}
+          style={{ fontSize: "0.71875rem", flex: 1, color: "var(--fg-0)" }}
           title={file.path}
         >
           {file.path}
@@ -67,7 +67,12 @@ export const DiffPatch = ({ file, stat, maxHeight = 460 }: DiffPatchProps) => {
         {!file.binary && (
           <span
             className="mono"
-            style={{ fontSize: 10.5, flexShrink: 0, display: "flex", gap: 6 }}
+            style={{
+              fontSize: "0.65625rem",
+              flexShrink: 0,
+              display: "flex",
+              gap: "0.375rem",
+            }}
           >
             <span style={{ color: "var(--c-ok)" }}>+{String(stat.add)}</span>
             <span style={{ color: "var(--c-err)" }}>−{String(stat.del)}</span>
@@ -76,11 +81,17 @@ export const DiffPatch = ({ file, stat, maxHeight = 460 }: DiffPatchProps) => {
       </div>
 
       {file.binary ? (
-        <div className="dim" style={{ padding: "12px", fontSize: 11.5 }}>
+        <div
+          className="dim"
+          style={{ padding: "0.75rem", fontSize: "0.71875rem" }}
+        >
           {t("diffPatch.binary")}
         </div>
       ) : hunks.length === 0 ? (
-        <div className="dim" style={{ padding: "12px", fontSize: 11.5 }}>
+        <div
+          className="dim"
+          style={{ padding: "0.75rem", fontSize: "0.71875rem" }}
+        >
           {t("diffPatch.noTextChanges")}
         </div>
       ) : (

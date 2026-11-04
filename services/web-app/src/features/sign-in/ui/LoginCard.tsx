@@ -82,24 +82,40 @@ export const LoginCard = ({
       {Heading && (
         <Heading
           id={`${uid}-title`}
-          style={{ fontSize: 20, fontWeight: 600, margin: "0 0 6px" }}
+          style={{
+            fontSize: "1.25rem",
+            fontWeight: 600,
+            margin: "0 0 0.375rem",
+          }}
         >
           {t("pages.login.title")}
         </Heading>
       )}
-      <p style={{ margin: "0 0 18px", color: "var(--fg-2)", fontSize: 13.5 }}>
+      <p
+        style={{
+          margin: "0 0 1.125rem",
+          color: "var(--fg-2)",
+          fontSize: "0.84375rem",
+        }}
+      >
         {auth.password_enabled ? t("pages.login.body") : t("login.ssoOnlyBody")}
       </p>
 
       {sessionEnded && !showFailure && (
-        <div style={{ marginBottom: 16 }}>
+        <div style={{ marginBottom: "1rem" }}>
           <ResultFrame
             tone="info"
             role="status"
             testId="login-session-ended"
             title={t("login.sessionEnded")}
           >
-            <p style={{ margin: 0, fontSize: 12.5, color: "var(--fg-2)" }}>
+            <p
+              style={{
+                margin: 0,
+                fontSize: "0.78125rem",
+                color: "var(--fg-2)",
+              }}
+            >
               {t("login.sessionEndedHint")}
             </p>
           </ResultFrame>
@@ -107,7 +123,7 @@ export const LoginCard = ({
       )}
 
       {showFailure && (
-        <div id={errorId} style={{ marginBottom: 16 }}>
+        <div id={errorId} style={{ marginBottom: "1rem" }}>
           <ResultFrame
             tone={loginErrorTone(failure.code)}
             role="alert"
@@ -125,14 +141,24 @@ export const LoginCard = ({
                   data-testid="login-countdown"
                   aria-hidden="true"
                   className="mono"
-                  style={{ margin: 0, fontSize: 12.5, color: "var(--fg-2)" }}
+                  style={{
+                    margin: 0,
+                    fontSize: "0.78125rem",
+                    color: "var(--fg-2)",
+                  }}
                 >
                   {t("login.retryIn", { count: left })}
                 </p>
               </>
             )}
             {failure.code !== "rate_limited" && (
-              <p style={{ margin: 0, fontSize: 12.5, color: "var(--fg-2)" }}>
+              <p
+                style={{
+                  margin: 0,
+                  fontSize: "0.78125rem",
+                  color: "var(--fg-2)",
+                }}
+              >
                 {t(`${loginErrorKey(failure.code)}Hint`, { defaultValue: "" })}
               </p>
             )}
@@ -145,7 +171,7 @@ export const LoginCard = ({
           onSubmit={submit}
           noValidate={false}
           className="flex flex-col"
-          style={{ gap: 14 }}
+          style={{ gap: "0.875rem" }}
           aria-describedby={showFailure ? errorId : undefined}
           data-testid="login-form"
         >
@@ -176,10 +202,10 @@ export const LoginCard = ({
             }}
             readOnly={pending}
           />
-          <div className="flex justify-end" style={{ marginTop: -6 }}>
+          <div className="flex justify-end" style={{ marginTop: "-0.375rem" }}>
             <Link
               to="/forgot"
-              style={{ color: "var(--accent)", fontSize: 12.5 }}
+              style={{ color: "var(--accent)", fontSize: "0.78125rem" }}
             >
               {t("links.forgot")}
             </Link>
@@ -188,12 +214,12 @@ export const LoginCard = ({
             type="submit"
             disabled={waiting || email === "" || password === ""}
             aria-disabled={pending}
-            style={{ justifyContent: "center", gap: 8 }}
+            style={{ justifyContent: "center", gap: "0.5rem" }}
           >
             {pending ? (
               <Spinner size="sm" />
             ) : (
-              <LogIn size={15} aria-hidden="true" />
+              <LogIn size="0.9375rem" aria-hidden="true" />
             )}
             {pending ? t("login.submitting") : t("login.submit")}
           </Button>
@@ -206,10 +232,10 @@ export const LoginCard = ({
             <div
               className="flex items-center"
               style={{
-                gap: 10,
-                margin: "18px 0",
+                gap: "0.625rem",
+                margin: "1.125rem 0",
                 color: "var(--fg-3)",
-                fontSize: 12,
+                fontSize: "0.75rem",
               }}
               role="separator"
               aria-label={t("login.or")}
@@ -228,12 +254,12 @@ export const LoginCard = ({
             onClick={() => {
               if (!passkey.pending) passkey.onStart();
             }}
-            style={{ justifyContent: "center", gap: 8, width: "100%" }}
+            style={{ justifyContent: "center", gap: "0.5rem", width: "100%" }}
           >
             {passkey.pending ? (
               <Spinner size="sm" />
             ) : (
-              <FingerprintPattern size={15} aria-hidden="true" />
+              <FingerprintPattern size="0.9375rem" aria-hidden="true" />
             )}
             {passkey.pending ? t("login.passkeyPending") : t("login.passkey")}
           </Button>
@@ -246,10 +272,10 @@ export const LoginCard = ({
             <div
               className="flex items-center"
               style={{
-                gap: 10,
-                margin: "18px 0",
+                gap: "0.625rem",
+                margin: "1.125rem 0",
                 color: "var(--fg-3)",
-                fontSize: 12,
+                fontSize: "0.75rem",
               }}
               role="separator"
               aria-label={t("login.or")}
@@ -259,18 +285,18 @@ export const LoginCard = ({
               <span style={{ flex: 1, height: 1, background: "var(--line)" }} />
             </div>
           )}
-          <div className="flex flex-col" style={{ gap: 8 }}>
+          <div className="flex flex-col" style={{ gap: "0.5rem" }}>
             {auth.oidc_providers.map((provider) => (
               <Button key={provider.id} variant="secondary" asChild>
                 <a
                   href={ssoHref(provider.id)}
                   style={{
                     justifyContent: "center",
-                    gap: 8,
+                    gap: "0.5rem",
                     textDecoration: "none",
                   }}
                 >
-                  <KeyRound size={15} aria-hidden="true" />
+                  <KeyRound size="0.9375rem" aria-hidden="true" />
                   {t("login.sso", { name: provider.label })}
                 </a>
               </Button>
@@ -282,14 +308,20 @@ export const LoginCard = ({
       {!auth.password_enabled && !hasSso && !hasPasskey && (
         <p
           data-testid="login-no-methods"
-          style={{ color: "var(--fg-2)", fontSize: 13 }}
+          style={{ color: "var(--fg-2)", fontSize: "0.8125rem" }}
         >
           {t("login.noMethods")}
         </p>
       )}
 
       {canRegister && (
-        <p style={{ margin: "20px 0 0", fontSize: 13, color: "var(--fg-2)" }}>
+        <p
+          style={{
+            margin: "1.25rem 0 0",
+            fontSize: "0.8125rem",
+            color: "var(--fg-2)",
+          }}
+        >
           {t("login.noAccount")}{" "}
           <Link to="/register" style={{ color: "var(--accent)" }}>
             {t("links.register")}

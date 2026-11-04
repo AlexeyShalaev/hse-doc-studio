@@ -20,24 +20,24 @@ export const AccessCard = ({
     aria-labelledby={`${id}-title`}
     className="settings-anchor flex flex-col"
     style={{
-      gap: 12,
-      padding: 16,
+      gap: "0.75rem",
+      padding: "1rem",
       borderRadius: "var(--r-3)",
       border: "1px solid var(--border)",
       background: "var(--bg-1)",
     }}
   >
-    <header className="flex flex-col" style={{ gap: 3 }}>
+    <header className="flex flex-col" style={{ gap: "0.1875rem" }}>
       <h5
         id={`${id}-title`}
-        style={{ margin: 0, fontSize: 13, fontWeight: 600 }}
+        style={{ margin: 0, fontSize: "0.8125rem", fontWeight: 600 }}
       >
         {title}
       </h5>
       {description && (
         <p
           className="dim"
-          style={{ margin: 0, fontSize: 11.5, lineHeight: 1.55 }}
+          style={{ margin: 0, fontSize: "0.71875rem", lineHeight: 1.55 }}
         >
           {description}
         </p>

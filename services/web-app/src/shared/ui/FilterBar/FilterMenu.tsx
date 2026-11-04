@@ -104,7 +104,7 @@ export const FilterMenu = ({
           >
             {icon}
             <FilterTriggerText label={label} summary={summary} />
-            <ChevronDown size={13} aria-hidden="true" />
+            <ChevronDown size="0.8125rem" aria-hidden="true" />
           </button>
         </PopoverTrigger>
         {chosen.length > 0 && (
@@ -117,7 +117,7 @@ export const FilterMenu = ({
               onChange([]);
             }}
           >
-            <X size={12} aria-hidden="true" />
+            <X size="0.75rem" aria-hidden="true" />
           </button>
         )}
       </span>
@@ -159,7 +159,7 @@ export const FilterMenu = ({
                   data-on={on ? "true" : undefined}
                   aria-hidden="true"
                 >
-                  {on && <Check size={11} />}
+                  {on && <Check size="0.6875rem" />}
                 </span>
                 <span className="fmenu-text">{option.label}</span>
                 {option.count != null && (

@@ -1113,14 +1113,14 @@ const SourceEditorBody = ({
         <div
           className="flex items-center"
           style={{
-            gap: 6,
-            padding: "3px 12px",
+            gap: "0.375rem",
+            padding: "0.1875rem 0.75rem",
             borderBottom: "1px solid var(--border)",
-            fontSize: 11,
+            fontSize: "0.6875rem",
             color: "var(--fg-2)",
           }}
         >
-          <RefreshCw size={11} />
+          <RefreshCw size="0.6875rem" />
           {t("externalChange.updatedExternally")}
         </div>
       )}
@@ -1139,10 +1139,10 @@ const SourceEditorBody = ({
         <div
           className="flex items-center justify-between gap-3"
           style={{
-            padding: "5px 12px",
+            padding: "0.3125rem 0.75rem",
             borderBottom: "1px solid var(--border)",
             background: "color-mix(in srgb, var(--c-warn) 14%, var(--bg-1))",
-            fontSize: 11.5,
+            fontSize: "0.71875rem",
           }}
         >
           <span className="flex items-center gap-2">
@@ -1332,8 +1332,8 @@ const ClassicSourceEditor = ({
           role="status"
           className="dim"
           style={{
-            padding: "4px 12px",
-            fontSize: 11.5,
+            padding: "0.25rem 0.75rem",
+            fontSize: "0.71875rem",
             borderBottom: "1px solid var(--border)",
           }}
         >
@@ -1410,10 +1410,10 @@ const LiveSourceEditor = ({
     return (
       <div
         className="flex flex-1 flex-col items-center justify-center"
-        style={{ gap: 8 }}
+        style={{ gap: "0.5rem" }}
       >
         <Spinner />
-        <span className="dim" style={{ fontSize: 12 }}>
+        <span className="dim" style={{ fontSize: "0.75rem" }}>
           {tRealtime("connectingEditor")}
         </span>
       </div>

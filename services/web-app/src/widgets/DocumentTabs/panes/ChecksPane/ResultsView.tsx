@@ -108,7 +108,13 @@ export const ResultsView = ({
   return (
     <div
       className="flex flex-col"
-      style={{ padding: 16, gap: 12, overflowY: "auto", flex: 1, minHeight: 0 }}
+      style={{
+        padding: "1rem",
+        gap: "0.75rem",
+        overflowY: "auto",
+        flex: 1,
+        minHeight: 0,
+      }}
     >
       {groups.map(([ref, items]) => {
         const groupProps: GroupProps = {
@@ -133,7 +139,7 @@ export const ResultsView = ({
         return <Group key={ref} {...groupProps} />;
       })}
       {filtered.length === 0 && (
-        <div className="dim" style={{ padding: 24, textAlign: "center" }}>
+        <div className="dim" style={{ padding: "1.5rem", textAlign: "center" }}>
           {t("checks.noneInCategory")}
         </div>
       )}
@@ -198,7 +204,7 @@ const Group = ({
         // Severity strip runs the full height of the group block — header
         // through items — visually binding the violations to their rule.
         boxShadow: `inset 3px 0 0 ${sevColor}`,
-        borderRadius: 6,
+        borderRadius: "0.375rem",
         background: "transparent",
       }}
     >
@@ -207,12 +213,12 @@ const Group = ({
         onClick={isPassed ? undefined : onToggle}
         className="flex items-center w-full text-left"
         style={{
-          padding: "10px 12px 10px 14px",
-          gap: 12,
+          padding: "0.625rem 0.75rem 0.625rem 0.875rem",
+          gap: "0.75rem",
           background: "transparent",
           border: "none",
           cursor: isPassed ? "default" : "pointer",
-          borderRadius: "6px 6px 0 0",
+          borderRadius: "0.375rem 0.375rem 0 0",
         }}
         onMouseEnter={(e) => {
           if (!isPassed) e.currentTarget.style.background = "var(--bg-hover)";
@@ -223,7 +229,7 @@ const Group = ({
       >
         {!isPassed && (
           <ChevronDown
-            size={13}
+            size="0.8125rem"
             style={{
               color: "var(--fg-2)",
               flexShrink: 0,
@@ -240,11 +246,14 @@ const Group = ({
             flexShrink: 0,
           }}
         />
-        <div className="flex-1 flex flex-col min-w-0" style={{ gap: 2 }}>
+        <div
+          className="flex-1 flex flex-col min-w-0"
+          style={{ gap: "0.125rem" }}
+        >
           <span
             className="truncate"
             style={{
-              fontSize: 13,
+              fontSize: "0.8125rem",
               fontWeight: 500,
               color: "var(--fg-0)",
               lineHeight: 1.25,
@@ -255,7 +264,7 @@ const Group = ({
           <span
             className="mono dim truncate"
             style={{
-              fontSize: 10.5,
+              fontSize: "0.65625rem",
               letterSpacing: "0.02em",
               lineHeight: 1.2,
             }}
@@ -267,7 +276,7 @@ const Group = ({
         <span
           className="mono shrink-0"
           style={{
-            fontSize: 11,
+            fontSize: "0.6875rem",
             fontWeight: 500,
             color: sevColor,
             letterSpacing: "0.03em",
@@ -284,8 +293,8 @@ const Group = ({
         <div
           className="flex flex-col"
           style={{
-            gap: 2,
-            padding: "0 6px 6px 6px",
+            gap: "0.125rem",
+            padding: "0 0.375rem 0.375rem 0.375rem",
           }}
         >
           {items.map((c) => {

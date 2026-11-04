@@ -39,19 +39,25 @@ export const GuestView = ({
     <div
       className="flex flex-col"
       style={{
-        gap: 16,
-        padding: "24px",
+        gap: "1rem",
+        padding: "1.5rem",
         width: "100%",
-        maxWidth: 1100,
+        maxWidth: "68.75rem",
         margin: "0 auto",
       }}
       data-testid="guest-view"
     >
       <div>
-        <h1 style={{ margin: 0, fontSize: 20, fontWeight: 600 }}>
+        <h1 style={{ margin: 0, fontSize: "1.25rem", fontWeight: 600 }}>
           {projectName}
         </h1>
-        <p style={{ margin: "6px 0 0", color: "var(--fg-2)", fontSize: 13 }}>
+        <p
+          style={{
+            margin: "0.375rem 0 0",
+            color: "var(--fg-2)",
+            fontSize: "0.8125rem",
+          }}
+        >
           {t("view.lead")}
         </p>
       </div>
@@ -69,16 +75,16 @@ export const GuestView = ({
       {status === "ready" && docs.length > 0 && (
         <div
           className="flex"
-          style={{ gap: 16, alignItems: "flex-start", flexWrap: "wrap" }}
+          style={{ gap: "1rem", alignItems: "flex-start", flexWrap: "wrap" }}
         >
           <ul
             className="flex flex-col"
             style={{
-              gap: 8,
+              gap: "0.5rem",
               listStyle: "none",
               margin: 0,
               padding: 0,
-              flex: "0 0 320px",
+              flex: "0 0 20rem",
               minWidth: 0,
             }}
           >
@@ -88,25 +94,25 @@ export const GuestView = ({
                 data-testid={`guest-view-doc-${doc.id}`}
                 className="flex items-center"
                 style={{
-                  gap: 10,
-                  padding: 12,
+                  gap: "0.625rem",
+                  padding: "0.75rem",
                   borderRadius: "var(--r-3)",
                   border: `1px solid ${current?.id === doc.id ? "var(--accent-line, var(--border))" : "var(--border)"}`,
                   background: "var(--bg-1)",
                 }}
               >
                 <FileText
-                  size={16}
+                  size="1rem"
                   aria-hidden="true"
                   style={{ color: "var(--fg-2)", flexShrink: 0 }}
                 />
                 <div
                   className="flex flex-col"
-                  style={{ flex: 1, minWidth: 0, gap: 2 }}
+                  style={{ flex: 1, minWidth: 0, gap: "0.125rem" }}
                 >
                   <span
                     style={{
-                      fontSize: 13,
+                      fontSize: "0.8125rem",
                       fontWeight: 600,
                       overflowWrap: "anywhere",
                     }}
@@ -114,7 +120,7 @@ export const GuestView = ({
                     {doc.name}
                   </span>
                   {doc.pdfUrl === null ? (
-                    <span style={{ fontSize: 12, color: "var(--fg-2)" }}>
+                    <span style={{ fontSize: "0.75rem", color: "var(--fg-2)" }}>
                       {t("view.notBuilt")}
                     </span>
                   ) : (
@@ -133,7 +139,7 @@ export const GuestView = ({
                         setSelected(doc.id);
                       }}
                     >
-                      <Eye size={15} />
+                      <Eye size="0.9375rem" />
                     </button>
                     <a
                       className="icon-btn"
@@ -142,7 +148,7 @@ export const GuestView = ({
                       aria-label={t("view.download")}
                       data-testid={`guest-view-download-${doc.id}`}
                     >
-                      <Download size={15} />
+                      <Download size="0.9375rem" />
                     </a>
                   </>
                 )}
@@ -152,7 +158,7 @@ export const GuestView = ({
           {current?.pdfUrl && (
             <div
               style={{
-                flex: "1 1 480px",
+                flex: "1 1 30rem",
                 minWidth: 0,
                 height: "75vh",
                 border: "1px solid var(--border)",
@@ -170,7 +176,11 @@ export const GuestView = ({
               ) : (
                 <div
                   className="flex items-center justify-center"
-                  style={{ height: "100%", color: "var(--fg-2)", fontSize: 13 }}
+                  style={{
+                    height: "100%",
+                    color: "var(--fg-2)",
+                    fontSize: "0.8125rem",
+                  }}
                 >
                   PDF · {current.name}
                 </div>

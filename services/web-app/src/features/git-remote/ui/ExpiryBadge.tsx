@@ -27,7 +27,7 @@ export const ExpiryBadge = ({
     return (
       <span
         className="dim"
-        style={{ fontSize: 11.5 }}
+        style={{ fontSize: "0.71875rem" }}
         data-testid="expiry-date"
       >
         {expiry.state === "expired"
@@ -56,7 +56,7 @@ export const ExpiryBadge = ({
   return (
     <span
       className="dim"
-      style={{ fontSize: 11.5 }}
+      style={{ fontSize: "0.71875rem" }}
       data-testid="expiry-badge"
       data-state="ok"
     >

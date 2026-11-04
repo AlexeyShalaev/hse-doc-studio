@@ -25,8 +25,8 @@ const ActionRow = ({
   <div
     className="flex items-center"
     style={{
-      gap: 14,
-      padding: 12,
+      gap: "0.875rem",
+      padding: "0.75rem",
       borderRadius: "var(--r-2)",
       background: "var(--bg-2)",
       flexWrap: "wrap",
@@ -36,8 +36,8 @@ const ActionRow = ({
       aria-hidden="true"
       className="flex items-center justify-center"
       style={{
-        width: 34,
-        height: 34,
+        width: "2.125rem",
+        height: "2.125rem",
         borderRadius: "var(--r-2)",
         background: "var(--bg-1)",
         border: "1px solid var(--border)",
@@ -49,10 +49,10 @@ const ActionRow = ({
     </span>
     <div
       className="flex flex-col"
-      style={{ gap: 2, flex: "1 1 220px", minWidth: 0 }}
+      style={{ gap: "0.125rem", flex: "1 1 13.75rem", minWidth: 0 }}
     >
-      <strong style={{ fontSize: 12.5 }}>{title}</strong>
-      <span className="dim" style={{ fontSize: 11.5, lineHeight: 1.5 }}>
+      <strong style={{ fontSize: "0.78125rem" }}>{title}</strong>
+      <span className="dim" style={{ fontSize: "0.71875rem", lineHeight: 1.5 }}>
         {text}
       </span>
     </div>
@@ -74,17 +74,17 @@ export const ExchangeCard = ({ projectId, onNavigate }: ExchangeCardProps) => {
   return (
     <div
       className="flex flex-col"
-      style={{ gap: 10 }}
+      style={{ gap: "0.625rem" }}
       data-testid="exchange-card"
     >
       <p
         className="dim"
-        style={{ margin: 0, fontSize: 12.5, lineHeight: 1.55 }}
+        style={{ margin: 0, fontSize: "0.78125rem", lineHeight: 1.55 }}
       >
         {t("card.lead")}
       </p>
       <ActionRow
-        icon={<FileDown size={16} />}
+        icon={<FileDown size="1rem" />}
         title={t("card.export.title")}
         text={t("card.export.text")}
         action={
@@ -100,7 +100,7 @@ export const ExchangeCard = ({ projectId, onNavigate }: ExchangeCardProps) => {
         }
       />
       <ActionRow
-        icon={<FileUp size={16} />}
+        icon={<FileUp size="1rem" />}
         title={t("card.import.title")}
         text={t("card.import.text")}
         action={

@@ -20,20 +20,26 @@ export const RegistryModelRow = ({
     <div
       className="flex items-center justify-between"
       style={{
-        gap: 12,
-        padding: "10px 12px",
-        borderRadius: 6,
+        gap: "0.75rem",
+        padding: "0.625rem 0.75rem",
+        borderRadius: "0.375rem",
         border: "1px solid var(--border)",
         background: "var(--bg-1)",
       }}
     >
-      <div className="flex flex-col" style={{ gap: 4, minWidth: 0 }}>
-        <div className="flex items-center" style={{ gap: 8, flexWrap: "wrap" }}>
-          <span className="mono" style={{ fontSize: 12.5, fontWeight: 500 }}>
+      <div className="flex flex-col" style={{ gap: "0.25rem", minWidth: 0 }}>
+        <div
+          className="flex items-center"
+          style={{ gap: "0.5rem", flexWrap: "wrap" }}
+        >
+          <span
+            className="mono"
+            style={{ fontSize: "0.78125rem", fontWeight: 500 }}
+          >
             {model.name}
           </span>
           {model.pulls && (
-            <span className="dim" style={{ fontSize: 10.5 }}>
+            <span className="dim" style={{ fontSize: "0.65625rem" }}>
               ↓ {model.pulls}
             </span>
           )}
@@ -42,9 +48,9 @@ export const RegistryModelRow = ({
               key={cap}
               className="mono"
               style={{
-                fontSize: 10,
-                padding: "1px 6px",
-                borderRadius: 3,
+                fontSize: "0.625rem",
+                padding: "1px 0.375rem",
+                borderRadius: "0.1875rem",
                 background: "var(--bg-3)",
                 color: "var(--fg-2)",
               }}
@@ -54,18 +60,25 @@ export const RegistryModelRow = ({
           ))}
         </div>
         {model.description && (
-          <div className="dim" style={{ fontSize: 11 }}>
+          <div className="dim" style={{ fontSize: "0.6875rem" }}>
             {model.description}
           </div>
         )}
       </div>
-      <div className="flex items-center" style={{ gap: 6, flexShrink: 0 }}>
+      <div
+        className="flex items-center"
+        style={{ gap: "0.375rem", flexShrink: 0 }}
+      >
         {installed ? (
           <span
             className="flex items-center"
-            style={{ gap: 4, fontSize: 11, color: "var(--c-ok)" }}
+            style={{
+              gap: "0.25rem",
+              fontSize: "0.6875rem",
+              color: "var(--c-ok)",
+            }}
           >
-            <Check size={12} /> {t("registryRow.installed")}
+            <Check size="0.75rem" /> {t("registryRow.installed")}
           </span>
         ) : (
           <button
@@ -75,7 +88,7 @@ export const RegistryModelRow = ({
             disabled={busy}
             title={t("registryRow.installLatestTitle")}
           >
-            <Download size={11} />
+            <Download size="0.6875rem" />
             {t("registryRow.install")}
           </button>
         )}

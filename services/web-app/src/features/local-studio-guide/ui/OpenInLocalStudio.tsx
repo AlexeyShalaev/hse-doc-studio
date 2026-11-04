@@ -40,7 +40,7 @@ export const OpenInLocalStudio = ({
         disabled
         data-testid="open-in-local-studio"
       >
-        <Laptop size={13} aria-hidden="true" />
+        <Laptop size="0.8125rem" aria-hidden="true" />
         {label}
       </button>
     );
@@ -54,9 +54,9 @@ export const OpenInLocalStudio = ({
       style={{ textDecoration: "none" }}
       data-testid="open-in-local-studio"
     >
-      <Laptop size={13} aria-hidden="true" />
+      <Laptop size="0.8125rem" aria-hidden="true" />
       {label}
-      <ExternalLink size={11} aria-hidden="true" />
+      <ExternalLink size="0.6875rem" aria-hidden="true" />
     </a>
   );
 };

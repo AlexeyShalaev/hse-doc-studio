@@ -41,7 +41,7 @@ export const DiagnosticsPanel = ({
     <div
       className="flex flex-col"
       style={{
-        height: 184,
+        height: "11.5rem",
         flexShrink: 0,
         borderTop: "1px solid var(--border)",
         background: "var(--bg-1)",
@@ -50,14 +50,14 @@ export const DiagnosticsPanel = ({
       <div
         className="flex items-center justify-between"
         style={{
-          padding: "6px 8px 6px 12px",
+          padding: "0.375rem 0.5rem 0.375rem 0.75rem",
           borderBottom: "1px solid var(--border)",
           flexShrink: 0,
         }}
       >
         <span
           className="label-up dimmer"
-          style={{ fontSize: 9.5, letterSpacing: "0.1em" }}
+          style={{ fontSize: "0.59375rem", letterSpacing: "0.1em" }}
         >
           {t("panel.title")} · {sorted.length}
         </span>
@@ -67,13 +67,16 @@ export const DiagnosticsPanel = ({
           data-tt={t("panel.hide")}
           onClick={onClose}
         >
-          <X size={12} />
+          <X size="0.75rem" />
         </button>
       </div>
 
-      <div style={{ flex: 1, overflowY: "auto", padding: "4px 0" }}>
+      <div style={{ flex: 1, overflowY: "auto", padding: "0.25rem 0" }}>
         {sorted.length === 0 ? (
-          <div className="dim" style={{ padding: 14, fontSize: 12 }}>
+          <div
+            className="dim"
+            style={{ padding: "0.875rem", fontSize: "0.75rem" }}
+          >
             {t("panel.empty")}
           </div>
         ) : (
@@ -87,8 +90,8 @@ export const DiagnosticsPanel = ({
                 type="button"
                 className={clsx("flex items-center w-full text-left row-btn")}
                 style={{
-                  gap: 9,
-                  padding: "5px 12px",
+                  gap: "0.5625rem",
+                  padding: "0.3125rem 0.75rem",
                   borderRadius: 0,
                   background: isActive ? "var(--bg-hover)" : "transparent",
                 }}
@@ -98,15 +101,15 @@ export const DiagnosticsPanel = ({
                 title={d.message}
               >
                 <Icon
-                  size={13}
+                  size="0.8125rem"
                   style={{ color: meta.color, flexShrink: 0, opacity: 0.9 }}
                 />
                 <span
                   className="mono shrink-0"
                   style={{
-                    fontSize: 10.5,
+                    fontSize: "0.65625rem",
                     color: meta.color,
-                    minWidth: 44,
+                    minWidth: "2.75rem",
                     letterSpacing: "0.02em",
                   }}
                 >
@@ -114,14 +117,14 @@ export const DiagnosticsPanel = ({
                 </span>
                 <span
                   className="flex-1 truncate"
-                  style={{ fontSize: 12, color: "var(--fg-0)" }}
+                  style={{ fontSize: "0.75rem", color: "var(--fg-0)" }}
                 >
                   {d.message}
                 </span>
                 {d.source && (
                   <span
                     className="mono dimmer shrink-0"
-                    style={{ fontSize: 10 }}
+                    style={{ fontSize: "0.625rem" }}
                   >
                     {d.source}
                   </span>

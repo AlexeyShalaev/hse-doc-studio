@@ -46,10 +46,10 @@ export const ShareLinkView = (props: ShareLinkViewProps) => {
         data-testid="share-link-page"
         data-state="loading"
         className="flex flex-col items-center"
-        style={{ gap: 10, padding: "24px 0" }}
+        style={{ gap: "0.625rem", padding: "1.5rem 0" }}
       >
         <Spinner />
-        <span style={{ fontSize: 12.5, color: "var(--fg-2)" }}>
+        <span style={{ fontSize: "0.78125rem", color: "var(--fg-2)" }}>
           {t("page.loading")}
         </span>
       </section>
@@ -57,7 +57,9 @@ export const ShareLinkView = (props: ShareLinkViewProps) => {
   }
 
   const heading = (
-    <h1 style={{ fontSize: 20, fontWeight: 600, margin: "0 0 14px" }}>
+    <h1
+      style={{ fontSize: "1.25rem", fontWeight: 600, margin: "0 0 0.875rem" }}
+    >
       {t("page.title")}
     </h1>
   );
@@ -72,17 +74,21 @@ export const ShareLinkView = (props: ShareLinkViewProps) => {
         {heading}
         <div
           className="flex flex-col items-center"
-          style={{ gap: 10, textAlign: "center", padding: "8px 0 4px" }}
+          style={{
+            gap: "0.625rem",
+            textAlign: "center",
+            padding: "0.5rem 0 0.25rem",
+          }}
         >
           <Link2Off
-            size={28}
+            size="1.75rem"
             aria-hidden="true"
             style={{ color: "var(--fg-2)" }}
           />
           <p
             style={{
               margin: 0,
-              fontSize: 13,
+              fontSize: "0.8125rem",
               color: "var(--fg-1)",
               lineHeight: 1.5,
             }}
@@ -90,7 +96,7 @@ export const ShareLinkView = (props: ShareLinkViewProps) => {
             {t("page.inactive")}
           </p>
         </div>
-        <div style={{ marginTop: 18 }}>
+        <div style={{ marginTop: "1.125rem" }}>
           <Button
             asChild
             variant="secondary"
@@ -110,19 +116,25 @@ export const ShareLinkView = (props: ShareLinkViewProps) => {
       <section data-testid="share-link-page" data-state={state}>
         {heading}
         {preview.project_name && <ProjectCard preview={preview} />}
-        <p style={{ margin: "12px 0 0", fontSize: 13, lineHeight: 1.5 }}>
+        <p
+          style={{
+            margin: "0.75rem 0 0",
+            fontSize: "0.8125rem",
+            lineHeight: 1.5,
+          }}
+        >
           {state === "org_only"
             ? t("page.orgOnly", { org: preview.owner_name ?? "" })
             : t("page.loginLead")}
         </p>
-        <div style={{ marginTop: 18 }}>
+        <div style={{ marginTop: "1.125rem" }}>
           <Button asChild style={{ width: "100%", justifyContent: "center" }}>
             <Link
               to={props.loginHref}
               style={{ textDecoration: "none" }}
               data-testid="share-link-login"
             >
-              <LogIn size={14} aria-hidden="true" /> {t("page.login")}
+              <LogIn size="0.875rem" aria-hidden="true" /> {t("page.login")}
             </Link>
           </Button>
         </div>
@@ -136,7 +148,7 @@ export const ShareLinkView = (props: ShareLinkViewProps) => {
       {heading}
       <form
         className="flex flex-col"
-        style={{ gap: 14 }}
+        style={{ gap: "0.875rem" }}
         onSubmit={(event) => {
           event.preventDefault();
           if (!nameValid) return;
@@ -152,9 +164,10 @@ export const ShareLinkView = (props: ShareLinkViewProps) => {
         {passwordStep ? (
           <p
             className="flex items-center"
-            style={{ gap: 8, margin: 0, fontSize: 13 }}
+            style={{ gap: "0.5rem", margin: 0, fontSize: "0.8125rem" }}
           >
-            <KeyRound size={15} aria-hidden="true" /> {t("page.passwordLead")}
+            <KeyRound size="0.9375rem" aria-hidden="true" />{" "}
+            {t("page.passwordLead")}
           </p>
         ) : (
           <ProjectCard preview={preview} />
@@ -174,7 +187,9 @@ export const ShareLinkView = (props: ShareLinkViewProps) => {
           />
         )}
         {preview.signed_in && props.signedInName && (
-          <p style={{ margin: 0, fontSize: 12.5, color: "var(--fg-2)" }}>
+          <p
+            style={{ margin: 0, fontSize: "0.78125rem", color: "var(--fg-2)" }}
+          >
             {t("page.signedInAs", { name: props.signedInName })}
           </p>
         )}
@@ -217,8 +232,8 @@ const ProjectCard = ({ preview }: { preview: ShareLinkPreview }) => {
     <div
       className="flex items-start"
       style={{
-        gap: 12,
-        padding: 14,
+        gap: "0.75rem",
+        padding: "0.875rem",
         border: "1px solid var(--border)",
         borderRadius: "var(--r-3)",
         background: "var(--bg-1)",
@@ -226,18 +241,18 @@ const ProjectCard = ({ preview }: { preview: ShareLinkPreview }) => {
       data-testid="share-link-project"
     >
       <FileText
-        size={20}
+        size="1.25rem"
         aria-hidden="true"
-        style={{ color: "var(--accent)", flexShrink: 0, marginTop: 2 }}
+        style={{ color: "var(--accent)", flexShrink: 0, marginTop: "0.125rem" }}
       />
-      <div className="flex flex-col" style={{ gap: 4, minWidth: 0 }}>
-        <strong style={{ fontSize: 13.5, lineHeight: 1.4 }}>
+      <div className="flex flex-col" style={{ gap: "0.25rem", minWidth: 0 }}>
+        <strong style={{ fontSize: "0.84375rem", lineHeight: 1.4 }}>
           {t("page.offered", {
             owner: preview.owner_name ?? "",
             project: preview.project_name ?? "",
           })}
         </strong>
-        <span style={{ fontSize: 12, color: "var(--fg-2)" }}>
+        <span style={{ fontSize: "0.75rem", color: "var(--fg-2)" }}>
           {t(`page.role.${roleKey(preview)}`)}
         </span>
       </div>

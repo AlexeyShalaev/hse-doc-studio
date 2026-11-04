@@ -16,16 +16,16 @@ const hostLabel = (host: GitHost): string =>
   host.port ? `${host.host}:${String(host.port)}` : host.host;
 
 const cellStyle: React.CSSProperties = {
-  padding: "8px 10px",
+  padding: "0.5rem 0.625rem",
   textAlign: "left",
   verticalAlign: "top",
   borderBottom: "1px solid var(--border)",
-  fontSize: 12,
+  fontSize: "0.75rem",
 };
 
 const headStyle: React.CSSProperties = {
   ...cellStyle,
-  fontSize: 10.5,
+  fontSize: "0.65625rem",
   fontWeight: 600,
   letterSpacing: "0.06em",
   textTransform: "uppercase",
@@ -72,7 +72,7 @@ export const KnownHostsTable = ({ hosts }: KnownHostsTableProps) => {
           data-testid="known-hosts"
           style={{
             width: "100%",
-            minWidth: 520,
+            minWidth: "32.5rem",
             borderCollapse: "collapse",
           }}
         >
@@ -104,9 +104,12 @@ export const KnownHostsTable = ({ hosts }: KnownHostsTableProps) => {
                     whiteSpace: "nowrap",
                   }}
                 >
-                  <span className="flex items-center" style={{ gap: 6 }}>
+                  <span
+                    className="flex items-center"
+                    style={{ gap: "0.375rem" }}
+                  >
                     <ServerCog
-                      size={13}
+                      size="0.8125rem"
                       aria-hidden="true"
                       style={{ color: "var(--fg-2)" }}
                     />
@@ -114,11 +117,11 @@ export const KnownHostsTable = ({ hosts }: KnownHostsTableProps) => {
                   </span>
                 </th>
                 <td data-label={t("access.hosts.columnKeys")} style={cellStyle}>
-                  <div className="flex flex-col" style={{ gap: 4 }}>
+                  <div className="flex flex-col" style={{ gap: "0.25rem" }}>
                     {host.key_types.length > 0 && (
                       <span
                         className="flex"
-                        style={{ gap: 4, flexWrap: "wrap" }}
+                        style={{ gap: "0.25rem", flexWrap: "wrap" }}
                       >
                         {host.key_types.map((type) => (
                           <span key={type} className="chip subtle">
@@ -134,14 +137,17 @@ export const KnownHostsTable = ({ hosts }: KnownHostsTableProps) => {
                         listStyle: "none",
                         display: "flex",
                         flexDirection: "column",
-                        gap: 2,
+                        gap: "0.125rem",
                       }}
                     >
                       {host.fingerprints_sha256.map((fingerprint) => (
                         <li
                           key={fingerprint}
                           className="mono"
-                          style={{ fontSize: 11, wordBreak: "break-all" }}
+                          style={{
+                            fontSize: "0.6875rem",
+                            wordBreak: "break-all",
+                          }}
                         >
                           {fingerprint}
                         </li>

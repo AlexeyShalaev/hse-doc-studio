@@ -16,30 +16,37 @@ export const InviteCard = ({ onStart, onDismiss }: InviteCardProps) => {
       data-testid="onboarding-invite"
       style={{
         position: "fixed",
-        right: 16,
-        bottom: 40,
+        right: "1rem",
+        bottom: "2.5rem",
         zIndex: 60,
-        width: "min(340px, calc(100vw - 32px))",
+        width: "min(21.25rem, calc(100vw - 2rem))",
         background: "var(--bg-1)",
         border: "1px solid var(--border)",
         borderRadius: "var(--r-3)",
         boxShadow: "var(--shadow-pop)",
-        padding: 14,
+        padding: "0.875rem",
         display: "flex",
         flexDirection: "column",
-        gap: 8,
+        gap: "0.5rem",
       }}
     >
-      <div className="flex items-start" style={{ gap: 10 }}>
+      <div className="flex items-start" style={{ gap: "0.625rem" }}>
         <Compass
-          size={16}
-          style={{ color: "var(--accent)", marginTop: 2, flexShrink: 0 }}
+          size="1rem"
+          style={{
+            color: "var(--accent)",
+            marginTop: "0.125rem",
+            flexShrink: 0,
+          }}
         />
-        <div className="flex flex-col flex-1" style={{ gap: 4 }}>
-          <strong style={{ fontSize: 13, color: "var(--fg-0)" }}>
+        <div className="flex flex-col flex-1" style={{ gap: "0.25rem" }}>
+          <strong style={{ fontSize: "0.8125rem", color: "var(--fg-0)" }}>
             {t("invite.title")}
           </strong>
-          <span className="dim" style={{ fontSize: 12, lineHeight: 1.45 }}>
+          <span
+            className="dim"
+            style={{ fontSize: "0.75rem", lineHeight: 1.45 }}
+          >
             {t("invite.body")}
           </span>
         </div>
@@ -48,12 +55,12 @@ export const InviteCard = ({ onStart, onDismiss }: InviteCardProps) => {
           className="icon-btn"
           aria-label={t("invite.later")}
           onClick={onDismiss}
-          style={{ width: 22, height: 22 }}
+          style={{ width: "1.375rem", height: "1.375rem" }}
         >
-          <X size={12} />
+          <X size="0.75rem" />
         </button>
       </div>
-      <div className="flex justify-end" style={{ gap: 6 }}>
+      <div className="flex justify-end" style={{ gap: "0.375rem" }}>
         <button type="button" className="btn ghost sm" onClick={onDismiss}>
           {t("invite.later")}
         </button>

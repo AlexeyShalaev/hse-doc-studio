@@ -21,8 +21,8 @@ export const ComposeNotice = ({ project, path }: ComposeNoticeProps) => {
   return (
     <div
       style={{
-        padding: "14px 16px",
-        borderRadius: 10,
+        padding: "0.875rem 1rem",
+        borderRadius: "0.625rem",
         background: "var(--c-info-soft)",
         border: "1px solid var(--c-info)",
       }}
@@ -31,23 +31,29 @@ export const ComposeNotice = ({ project, path }: ComposeNoticeProps) => {
         style={{
           display: "flex",
           alignItems: "center",
-          gap: 8,
-          marginBottom: 4,
+          gap: "0.5rem",
+          marginBottom: "0.25rem",
         }}
       >
-        <Info size={15} style={{ color: "var(--c-info)", flexShrink: 0 }} />
+        <Info
+          size="0.9375rem"
+          style={{ color: "var(--c-info)", flexShrink: 0 }}
+        />
         <span style={{ fontWeight: 600, color: "var(--c-info)" }}>
           {t("compose.title", { project })}
         </span>
       </div>
-      <p className="dim" style={{ fontSize: 12.5, margin: "0 0 10px 23px" }}>
+      <p
+        className="dim"
+        style={{ fontSize: "0.78125rem", margin: "0 0 0.625rem 1.4375rem" }}
+      >
         {t("compose.hint")}
       </p>
       <code
         style={{
           display: "block",
-          marginLeft: 23,
-          fontSize: 11.5,
+          marginLeft: "1.4375rem",
+          fontSize: "0.71875rem",
           lineHeight: 1.8,
           whiteSpace: "pre-wrap",
           wordBreak: "break-all",

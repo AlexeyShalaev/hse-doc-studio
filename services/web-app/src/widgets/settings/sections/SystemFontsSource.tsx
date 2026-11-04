@@ -56,11 +56,11 @@ export const SystemFontsSource = () => {
   // просило человека сделать руками то, что умеет само (см. DockerHostFontProvider).
   if (!data?.available) {
     return (
-      <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-        <p style={{ fontSize: 12, color: "var(--fg-3)", margin: 0 }}>
+      <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+        <p style={{ fontSize: "0.75rem", color: "var(--fg-3)", margin: 0 }}>
           {t("fonts.systemUnavailable")}
         </p>
-        <p style={{ fontSize: 11.5, color: "var(--fg-3)", margin: 0 }}>
+        <p style={{ fontSize: "0.71875rem", color: "var(--fg-3)", margin: 0 }}>
           {t("fonts.systemUnavailableHint")}
         </p>
       </div>
@@ -68,22 +68,25 @@ export const SystemFontsSource = () => {
   }
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-      <p style={{ fontSize: 11.5, color: "var(--fg-3)", margin: 0 }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+      <p style={{ fontSize: "0.71875rem", color: "var(--fg-3)", margin: 0 }}>
         {t("fonts.systemHint")}
       </p>
 
       <div
         className="flex items-center"
         style={{
-          gap: 6,
-          padding: "5px 8px",
+          gap: "0.375rem",
+          padding: "0.3125rem 0.5rem",
           border: "1px solid var(--border)",
-          borderRadius: 6,
+          borderRadius: "0.375rem",
           background: "var(--bg-2)",
         }}
       >
-        <Search size={13} style={{ color: "var(--fg-3)", flexShrink: 0 }} />
+        <Search
+          size="0.8125rem"
+          style={{ color: "var(--fg-3)", flexShrink: 0 }}
+        />
         <input
           value={query}
           onChange={(e) => {
@@ -95,7 +98,7 @@ export const SystemFontsSource = () => {
             border: "none",
             background: "transparent",
             outline: "none",
-            fontSize: 12,
+            fontSize: "0.75rem",
             color: "var(--fg-0)",
           }}
         />
@@ -103,15 +106,21 @@ export const SystemFontsSource = () => {
 
       <div
         style={{
-          maxHeight: 320,
+          maxHeight: "20rem",
           overflowY: "auto",
           display: "flex",
           flexDirection: "column",
-          gap: 4,
+          gap: "0.25rem",
         }}
       >
         {visible.length === 0 ? (
-          <p style={{ fontSize: 12, color: "var(--fg-3)", margin: "6px 0" }}>
+          <p
+            style={{
+              fontSize: "0.75rem",
+              color: "var(--fg-3)",
+              margin: "0.375rem 0",
+            }}
+          >
             {t("fonts.systemNoMatch")}
           </p>
         ) : (
@@ -123,9 +132,9 @@ export const SystemFontsSource = () => {
                 style={{
                   display: "flex",
                   alignItems: "center",
-                  gap: 10,
-                  padding: "8px 10px",
-                  borderRadius: 6,
+                  gap: "0.625rem",
+                  padding: "0.5rem 0.625rem",
+                  borderRadius: "0.375rem",
                   border: "1px solid var(--border)",
                   background: "var(--bg-2)",
                   cursor: f.already_installed ? "default" : "pointer",
@@ -146,7 +155,7 @@ export const SystemFontsSource = () => {
                     <div
                       style={{
                         fontFamily: `'${f.family}'`,
-                        fontSize: 16,
+                        fontSize: "1rem",
                         lineHeight: 1.25,
                         color: "var(--fg-0)",
                         overflow: "hidden",
@@ -161,7 +170,7 @@ export const SystemFontsSource = () => {
                   <div
                     className="mono"
                     style={{
-                      fontSize: 11,
+                      fontSize: "0.6875rem",
                       color: "var(--fg-3)",
                       overflow: "hidden",
                       textOverflow: "ellipsis",
@@ -175,7 +184,7 @@ export const SystemFontsSource = () => {
                 {f.already_installed && (
                   <span
                     style={{
-                      fontSize: 10,
+                      fontSize: "0.625rem",
                       color: "var(--fg-3)",
                       flexShrink: 0,
                     }}
@@ -190,19 +199,19 @@ export const SystemFontsSource = () => {
       </div>
 
       <div className="flex items-center justify-between">
-        <span style={{ fontSize: 11, color: "var(--fg-3)" }}>
+        <span style={{ fontSize: "0.6875rem", color: "var(--fg-3)" }}>
           {t("fonts.systemSelected", { count: selected.size })}
         </span>
         <button
           className="btn btn-primary"
           onClick={handleImport}
           disabled={selected.size === 0 || importFonts.isPending}
-          style={{ fontSize: 12, gap: 6 }}
+          style={{ fontSize: "0.75rem", gap: "0.375rem" }}
         >
           {importFonts.isPending ? (
             <Spinner size="sm" />
           ) : (
-            <HardDriveDownload size={14} />
+            <HardDriveDownload size="0.875rem" />
           )}
           {t("fonts.importSelected", { count: selected.size })}
         </button>

@@ -64,11 +64,14 @@ export const TemplateVersionPanel = ({
   };
 
   return (
-    <div className="flex flex-col" style={{ gap: 14 }}>
-      <div className="flex items-center" style={{ gap: 8, fontSize: 12.5 }}>
+    <div className="flex flex-col" style={{ gap: "0.875rem" }}>
+      <div
+        className="flex items-center"
+        style={{ gap: "0.5rem", fontSize: "0.78125rem" }}
+      >
         <span>{t("section.current", { version: status.current_version })}</span>
         {status.current && (
-          <span className="badge" style={{ fontSize: 10.5 }}>
+          <span className="badge" style={{ fontSize: "0.65625rem" }}>
             {status.current.released
               ? t("section.released")
               : t("section.draft")}
@@ -76,7 +79,7 @@ export const TemplateVersionPanel = ({
         )}
       </div>
       {status.in_progress && (
-        <span className="dim" style={{ fontSize: 12 }}>
+        <span className="dim" style={{ fontSize: "0.75rem" }}>
           {t("section.inProgress")}
         </span>
       )}
@@ -84,10 +87,17 @@ export const TemplateVersionPanel = ({
         <Hint icon="warn" text={t("section.digestMismatch")} />
       )}
       {status.unresolved_markers.length > 0 && (
-        <div className="flex flex-col" style={{ gap: 4, fontSize: 12 }}>
+        <div
+          className="flex flex-col"
+          style={{ gap: "0.25rem", fontSize: "0.75rem" }}
+        >
           <Hint icon="warn" text={t("section.markers")} />
           {status.unresolved_markers.map((path) => (
-            <span key={path} className="mono" style={{ paddingLeft: 22 }}>
+            <span
+              key={path}
+              className="mono"
+              style={{ paddingLeft: "1.375rem" }}
+            >
               {path}
             </span>
           ))}
@@ -97,8 +107,10 @@ export const TemplateVersionPanel = ({
       {status.available.length === 0 ? (
         <Hint icon="ok" text={t("section.upToDate")} />
       ) : (
-        <div className="flex flex-col" style={{ gap: 10 }}>
-          <strong style={{ fontSize: 12 }}>{t("section.available")}</strong>
+        <div className="flex flex-col" style={{ gap: "0.625rem" }}>
+          <strong style={{ fontSize: "0.75rem" }}>
+            {t("section.available")}
+          </strong>
           {status.available.map((update) => {
             const notes = notesOf(update, i18n.language);
             const breaking = breakingOf(update, i18n.language);
@@ -107,28 +119,31 @@ export const TemplateVersionPanel = ({
                 key={update.version.version}
                 className="card"
                 style={{
-                  padding: 12,
+                  padding: "0.75rem",
                   display: "flex",
                   flexDirection: "column",
-                  gap: 8,
+                  gap: "0.5rem",
                 }}
               >
-                <div className="flex items-center" style={{ gap: 8 }}>
-                  <strong className="mono" style={{ fontSize: 12.5 }}>
+                <div className="flex items-center" style={{ gap: "0.5rem" }}>
+                  <strong className="mono" style={{ fontSize: "0.78125rem" }}>
                     {update.version.version}
                   </strong>
                   {update.update_class && (
                     <span
                       className="badge"
                       style={{
-                        fontSize: 10.5,
+                        fontSize: "0.65625rem",
                         color: classTone(update.update_class),
                       }}
                     >
                       {t(`class.${update.update_class}`)}
                     </span>
                   )}
-                  <span className="dim" style={{ fontSize: 11, flex: 1 }}>
+                  <span
+                    className="dim"
+                    style={{ fontSize: "0.6875rem", flex: 1 }}
+                  >
                     {update.version.released_at}
                   </span>
                   <button
@@ -139,29 +154,41 @@ export const TemplateVersionPanel = ({
                       setTarget(update);
                     }}
                   >
-                    <ArrowUpCircle size={11} />
+                    <ArrowUpCircle size="0.6875rem" />
                     {t("section.review")}
                   </button>
                 </div>
                 {notes.length > 0 && (
-                  <ul style={{ margin: 0, paddingLeft: 18, fontSize: 12 }}>
+                  <ul
+                    style={{
+                      margin: 0,
+                      paddingLeft: "1.125rem",
+                      fontSize: "0.75rem",
+                    }}
+                  >
                     {notes.map((note) => (
                       <li key={note}>{note}</li>
                     ))}
                   </ul>
                 )}
                 {breaking.length > 0 && (
-                  <div className="flex flex-col" style={{ gap: 2 }}>
+                  <div className="flex flex-col" style={{ gap: "0.125rem" }}>
                     <span
                       style={{
-                        fontSize: 11.5,
+                        fontSize: "0.71875rem",
                         color: "var(--c-err)",
                         fontWeight: 600,
                       }}
                     >
                       {t("section.breaking")}
                     </span>
-                    <ul style={{ margin: 0, paddingLeft: 18, fontSize: 12 }}>
+                    <ul
+                      style={{
+                        margin: 0,
+                        paddingLeft: "1.125rem",
+                        fontSize: "0.75rem",
+                      }}
+                    >
                       {breaking.map((note) => (
                         <li key={note}>{note}</li>
                       ))}
@@ -175,7 +202,10 @@ export const TemplateVersionPanel = ({
       )}
 
       {last && (
-        <div className="flex items-center" style={{ gap: 8, fontSize: 12 }}>
+        <div
+          className="flex items-center"
+          style={{ gap: "0.5rem", fontSize: "0.75rem" }}
+        >
           <span style={{ flex: 1 }}>
             {t("section.lastUpdate", {
               from: last.from_version,
@@ -190,7 +220,7 @@ export const TemplateVersionPanel = ({
               setIsRevertOpen(true);
             }}
           >
-            <RotateCcw size={11} />
+            <RotateCcw size="0.6875rem" />
             {t("section.revert")}
           </button>
         </div>
@@ -213,7 +243,7 @@ export const TemplateVersionPanel = ({
         title={t("section.revertConfirmTitle")}
         width={460}
         footer={
-          <div className="flex justify-end" style={{ gap: 8 }}>
+          <div className="flex justify-end" style={{ gap: "0.5rem" }}>
             <button
               type="button"
               className="btn"
@@ -233,14 +263,14 @@ export const TemplateVersionPanel = ({
               {revert.isPending ? (
                 <Spinner size="sm" />
               ) : (
-                <RotateCcw size={13} />
+                <RotateCcw size="0.8125rem" />
               )}
               {t("section.revert")}
             </button>
           </div>
         }
       >
-        <p style={{ margin: 0, fontSize: 12.5, lineHeight: 1.5 }}>
+        <p style={{ margin: 0, fontSize: "0.78125rem", lineHeight: 1.5 }}>
           {t("section.revertConfirmText", {
             version: last?.from_version ?? "",
           })}
@@ -264,9 +294,11 @@ const CompareWithTemplate = ({
   const tracking = useSetTemplateTracking();
 
   return (
-    <div className="flex flex-col" style={{ gap: 8 }}>
-      <div className="flex items-center" style={{ gap: 8 }}>
-        <strong style={{ fontSize: 12, flex: 1 }}>{t("compare.title")}</strong>
+    <div className="flex flex-col" style={{ gap: "0.5rem" }}>
+      <div className="flex items-center" style={{ gap: "0.5rem" }}>
+        <strong style={{ fontSize: "0.75rem", flex: 1 }}>
+          {t("compare.title")}
+        </strong>
         {!isShown && (
           <button
             type="button"
@@ -275,12 +307,12 @@ const CompareWithTemplate = ({
               setIsShown(true);
             }}
           >
-            <Eye size={11} />
+            <Eye size="0.6875rem" />
             {t("compare.show")}
           </button>
         )}
       </div>
-      <span className="dim" style={{ fontSize: 11.5 }}>
+      <span className="dim" style={{ fontSize: "0.71875rem" }}>
         {t("compare.hint")}
       </span>
       {isShown && isLoading && <Spinner size="sm" />}
@@ -289,8 +321,15 @@ const CompareWithTemplate = ({
       )}
       {isShown &&
         data?.files.map((file) => (
-          <div key={file.path} className="flex flex-col" style={{ gap: 6 }}>
-            <div className="flex items-center" style={{ gap: 8, fontSize: 12 }}>
+          <div
+            key={file.path}
+            className="flex flex-col"
+            style={{ gap: "0.375rem" }}
+          >
+            <div
+              className="flex items-center"
+              style={{ gap: "0.5rem", fontSize: "0.75rem" }}
+            >
               <button
                 type="button"
                 className="mono truncate"
@@ -310,14 +349,17 @@ const CompareWithTemplate = ({
               >
                 {file.path}
               </button>
-              <span className="dim" style={{ fontSize: 11 }}>
+              <span className="dim" style={{ fontSize: "0.6875rem" }}>
                 {file.ignored
                   ? t("compare.ignored")
                   : t(`compare.${file.status}`)}
               </span>
               {file.approximate && (
                 <span title={t("compare.approximateHint")}>
-                  <AlertTriangle size={11} style={{ color: "var(--c-warn)" }} />
+                  <AlertTriangle
+                    size="0.6875rem"
+                    style={{ color: "var(--c-warn)" }}
+                  />
                 </span>
               )}
               <button
@@ -333,7 +375,11 @@ const CompareWithTemplate = ({
                   });
                 }}
               >
-                {file.ignored ? <Eye size={11} /> : <EyeOff size={11} />}
+                {file.ignored ? (
+                  <Eye size="0.6875rem" />
+                ) : (
+                  <EyeOff size="0.6875rem" />
+                )}
                 {file.ignored ? t("compare.track") : t("compare.untrack")}
               </button>
             </div>
@@ -351,15 +397,18 @@ const CompareWithTemplate = ({
 };
 
 const Hint = ({ icon, text }: { icon: "ok" | "warn"; text: string }) => (
-  <div className="flex items-start" style={{ gap: 8, fontSize: 12 }}>
+  <div
+    className="flex items-start"
+    style={{ gap: "0.5rem", fontSize: "0.75rem" }}
+  >
     {icon === "ok" ? (
       <CheckCircle2
-        size={13}
+        size="0.8125rem"
         style={{ color: "var(--c-ok)", flexShrink: 0, marginTop: 1 }}
       />
     ) : (
       <AlertTriangle
-        size={13}
+        size="0.8125rem"
         style={{ color: "var(--c-warn)", flexShrink: 0, marginTop: 1 }}
       />
     )}

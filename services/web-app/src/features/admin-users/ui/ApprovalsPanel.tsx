@@ -166,7 +166,7 @@ export const ApprovalsPanel = () => {
         <EmptyState
           framed
           testId="approvals-empty"
-          icon={<CheckCheck size={18} />}
+          icon={<CheckCheck size="1.125rem" />}
           title={t("approvals.empty.title")}
           description={t("approvals.empty.body")}
         />
@@ -220,7 +220,7 @@ export const ApprovalsPanel = () => {
             {busy && working.size > 1 ? (
               <Spinner size="sm" />
             ) : (
-              <CheckCheck size={14} aria-hidden="true" />
+              <CheckCheck size="0.875rem" aria-hidden="true" />
             )}
             {progress !== null && working.size > 1
               ? t("approvals.approving", {
@@ -306,7 +306,7 @@ export const ApprovalsPanel = () => {
                       go(u, false);
                     }}
                   >
-                    <X size={14} aria-hidden="true" />
+                    <X size="0.875rem" aria-hidden="true" />
                     {t("approvals.reject")}
                   </Button>
                   <Button
@@ -323,7 +323,7 @@ export const ApprovalsPanel = () => {
                     {rowBusy && working.size === 1 ? (
                       <Spinner size="sm" />
                     ) : (
-                      <Check size={14} aria-hidden="true" />
+                      <Check size="0.875rem" aria-hidden="true" />
                     )}
                     {t("approvals.approve")}
                   </Button>

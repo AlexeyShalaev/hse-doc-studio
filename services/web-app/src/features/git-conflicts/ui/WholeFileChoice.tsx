@@ -62,7 +62,7 @@ export const WholeFileChoice = ({
       role="radiogroup"
       aria-label={t("file.groupLabel")}
       className="flex flex-col"
-      style={{ gap: 8 }}
+      style={{ gap: "0.5rem" }}
     >
       {options.map((choice) => {
         const id = `${groupId}-${choice}`;
@@ -83,19 +83,25 @@ export const WholeFileChoice = ({
                 onChoose(choice);
               }}
             />
-            <span className="flex flex-col" style={{ gap: 2, minWidth: 0 }}>
-              <span style={{ fontSize: 13, fontWeight: 600 }}>
+            <span
+              className="flex flex-col"
+              style={{ gap: "0.125rem", minWidth: 0 }}
+            >
+              <span style={{ fontSize: "0.8125rem", fontWeight: 600 }}>
                 {t(labelKey(file, choice))}
                 {file.default_resolution === choice && (
                   <span
                     className="chip accent"
-                    style={{ marginLeft: 8, fontFamily: "var(--font-sans)" }}
+                    style={{
+                      marginLeft: "0.5rem",
+                      fontFamily: "var(--font-sans)",
+                    }}
                   >
                     {t("file.recommended")}
                   </span>
                 )}
               </span>
-              <span style={{ fontSize: 11.5 }}>{factsFor(choice)}</span>
+              <span style={{ fontSize: "0.71875rem" }}>{factsFor(choice)}</span>
             </span>
           </label>
         );

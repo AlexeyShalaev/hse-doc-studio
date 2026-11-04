@@ -103,14 +103,14 @@ export const HsePersonLookupModal = ({
       description={t("description")}
       width={780}
     >
-      <div className="flex flex-col" style={{ gap: 12 }}>
-        <div className="field" style={{ gap: 4 }}>
+      <div className="flex flex-col" style={{ gap: "0.75rem" }}>
+        <div className="field" style={{ gap: "0.25rem" }}>
           <div style={{ position: "relative" }}>
             <Search
-              size={16}
+              size="1rem"
               style={{
                 position: "absolute",
-                left: 12,
+                left: "0.75rem",
                 top: "50%",
                 transform: "translateY(-50%)",
                 color: "var(--fg-3)",
@@ -126,10 +126,10 @@ export const HsePersonLookupModal = ({
                 setQuery(e.target.value);
               }}
               style={{
-                paddingLeft: 38,
-                paddingTop: 10,
-                paddingBottom: 10,
-                fontSize: 14,
+                paddingLeft: "2.375rem",
+                paddingTop: "0.625rem",
+                paddingBottom: "0.625rem",
+                fontSize: "0.875rem",
                 width: "100%",
               }}
             />
@@ -146,7 +146,7 @@ export const HsePersonLookupModal = ({
         />
 
         {canSearch && persons.length > 0 && (
-          <div style={{ fontSize: 11, color: "var(--fg-3)" }}>
+          <div style={{ fontSize: "0.6875rem", color: "var(--fg-3)" }}>
             {t("results.count", { count: persons.length })}
           </div>
         )}
@@ -156,10 +156,10 @@ export const HsePersonLookupModal = ({
           style={{
             display: "flex",
             flexDirection: "column",
-            gap: 6,
+            gap: "0.375rem",
             maxHeight: "48vh",
             overflowY: "auto",
-            minHeight: 160,
+            minHeight: "10rem",
           }}
         >
           {!canSearch ? (
@@ -205,7 +205,7 @@ export const HsePersonLookupModal = ({
           )}
         </div>
 
-        <p className="hint" style={{ margin: 0, fontSize: 10.5 }}>
+        <p className="hint" style={{ margin: 0, fontSize: "0.65625rem" }}>
           {t("results.source")}
         </p>
       </div>

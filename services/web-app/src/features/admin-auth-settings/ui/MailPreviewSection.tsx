@@ -30,7 +30,7 @@ export const MailPreviewSection = () => {
           className="adm-fields-row"
           style={{ alignItems: "center", flexWrap: "wrap" }}
         >
-          <div style={{ minWidth: 260, flex: 1 }}>
+          <div style={{ minWidth: "16.25rem", flex: 1 }}>
             <Select
               id={`${uid}-template`}
               ariaLabel={t("mailPreview.template")}
@@ -43,7 +43,7 @@ export const MailPreviewSection = () => {
               }))}
             />
           </div>
-          <div style={{ width: 96 }}>
+          <div style={{ width: "6rem" }}>
             <Select
               id={`${uid}-lang`}
               ariaLabel={t("mailPreview.language")}
@@ -75,9 +75,9 @@ export const MailPreviewSection = () => {
               srcDoc={data.html}
               style={{
                 width: "100%",
-                height: 640,
+                height: "40rem",
                 border: "1px solid var(--border)",
-                borderRadius: 8,
+                borderRadius: "0.5rem",
                 background: "#fff",
               }}
             />
@@ -98,12 +98,12 @@ export const MailPreviewSection = () => {
                 data-testid="mail-preview-text"
                 style={{
                   margin: 0,
-                  padding: 12,
-                  fontSize: 12,
+                  padding: "0.75rem",
+                  fontSize: "0.75rem",
                   whiteSpace: "pre-wrap",
                   overflowWrap: "anywhere",
                   border: "1px solid var(--border)",
-                  borderRadius: 8,
+                  borderRadius: "0.5rem",
                 }}
               >
                 {data.text}

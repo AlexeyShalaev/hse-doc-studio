@@ -68,7 +68,9 @@ export const AdminStep = ({
           testId="setup-admin-created"
           title={t("setup.admin.created")}
         >
-          <p style={{ margin: 0, fontSize: 12.5, color: "var(--fg-2)" }}>
+          <p
+            style={{ margin: 0, fontSize: "0.78125rem", color: "var(--fg-2)" }}
+          >
             {created.name}
             {" · "}
             <span className="mono">{created.email}</span>
@@ -119,7 +121,7 @@ export const AdminStep = ({
       <form
         onSubmit={submit}
         className="flex flex-col"
-        style={{ gap: 14 }}
+        style={{ gap: "0.875rem" }}
         data-testid="setup-admin-form"
       >
         {tokenRequired && (
@@ -211,10 +213,10 @@ export const AdminStep = ({
             <Button
               type="submit"
               aria-disabled={pending}
-              style={{ gap: 8 }}
+              style={{ gap: "0.5rem" }}
               data-testid="setup-admin-submit"
             >
-              {!pending && <UserCog size={15} aria-hidden />}
+              {!pending && <UserCog size="0.9375rem" aria-hidden />}
               <PendingLabel
                 pending={pending}
                 idle={t("setup.admin.submit")}

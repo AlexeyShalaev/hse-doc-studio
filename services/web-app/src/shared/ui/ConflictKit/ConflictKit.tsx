@@ -17,7 +17,7 @@ export type ActionTagProps = {
 export const ActionTag = ({ label, tone, minWidth = 74 }: ActionTagProps) => (
   <span
     style={{
-      fontSize: 10.5,
+      fontSize: "0.65625rem",
       fontWeight: 600,
       color: toneColor(tone),
       minWidth,
@@ -52,7 +52,7 @@ export const FileRowShell = ({
 }: FileRowShellProps) => (
   <div
     style={{
-      padding: "6px 8px",
+      padding: "0.375rem 0.5rem",
       borderRadius: "var(--r-2)",
       background: isSelected ? "var(--accent-soft)" : undefined,
     }}
@@ -64,7 +64,7 @@ export const FileRowShell = ({
       data-file-row=""
       aria-current={isSelected ? "true" : undefined}
       style={{
-        gap: 8,
+        gap: "0.5rem",
         width: "100%",
         background: "none",
         border: 0,
@@ -76,7 +76,7 @@ export const FileRowShell = ({
       {tag}
       <span
         className="mono truncate"
-        style={{ fontSize: 11.5, flex: 1, color: "var(--fg-0)" }}
+        style={{ fontSize: "0.71875rem", flex: 1, color: "var(--fg-0)" }}
         title={path}
       >
         {path}
@@ -84,7 +84,9 @@ export const FileRowShell = ({
       {trailing}
     </button>
     {children != null && (
-      <div style={{ marginTop: 6, marginLeft: childrenIndent }}>{children}</div>
+      <div style={{ marginTop: "0.375rem", marginLeft: childrenIndent }}>
+        {children}
+      </div>
     )}
   </div>
 );
@@ -101,8 +103,8 @@ export const FileList = ({ children, maxHeight = 420 }: FileListProps) => (
     className="card"
     style={
       maxHeight === "none"
-        ? { padding: 4 }
-        : { overflow: "auto", maxHeight, padding: 4 }
+        ? { padding: "0.25rem" }
+        : { overflow: "auto", maxHeight, padding: "0.25rem" }
     }
   >
     {children}
@@ -134,18 +136,18 @@ export const Notice = ({ text, tone = "warn", role, action }: NoticeProps) => {
       role={role}
       className="flex items-start"
       style={{
-        gap: 8,
-        padding: "8px 10px",
+        gap: "0.5rem",
+        padding: "0.5rem 0.625rem",
         borderRadius: "var(--r-2)",
         background: toneSoft(tone),
-        fontSize: 11.5,
+        fontSize: "0.71875rem",
         lineHeight: 1.5,
       }}
     >
       <Icon
-        size={13}
+        size="0.8125rem"
         aria-hidden="true"
-        style={{ color: toneColor(tone), flexShrink: 0, marginTop: 2 }}
+        style={{ color: toneColor(tone), flexShrink: 0, marginTop: "0.125rem" }}
       />
       <span style={{ flex: 1, minWidth: 0 }}>{text}</span>
       {action}
@@ -162,12 +164,12 @@ export type CountBadge = {
 };
 
 export const CountBadges = ({ items }: { items: CountBadge[] }) => (
-  <div className="flex" style={{ gap: 6, flexWrap: "wrap" }}>
+  <div className="flex" style={{ gap: "0.375rem", flexWrap: "wrap" }}>
     {items.map((item) => (
       <span
         key={item.key}
         className="badge"
-        style={{ color: toneColor(item.tone), fontSize: 11 }}
+        style={{ color: toneColor(item.tone), fontSize: "0.6875rem" }}
       >
         {item.count} · {item.label}
       </span>
@@ -189,7 +191,7 @@ export const ViewTabs = <V extends string>({
   value,
   onChange,
 }: ViewTabsProps<V>) => (
-  <div className="flex" style={{ gap: 4 }}>
+  <div className="flex" style={{ gap: "0.25rem" }}>
     {views.map((view) => (
       <button
         key={view.value}

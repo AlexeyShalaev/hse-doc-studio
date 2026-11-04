@@ -51,15 +51,15 @@ export const UsageMeter = ({ line }: { line: UsageLine }) => {
   return (
     <div
       className="flex flex-col"
-      style={{ gap: 6, padding: "10px 0" }}
+      style={{ gap: "0.375rem", padding: "0.625rem 0" }}
       data-testid={`usage-${line.kind}`}
       data-state={line.state}
     >
-      <div className="flex items-center" style={{ gap: 10 }}>
+      <div className="flex items-center" style={{ gap: "0.625rem" }}>
         <span style={{ fontWeight: 500, flex: 1 }}>{label}</span>
         <span
           className="tabular-nums"
-          style={{ fontSize: 13, color: "var(--fg-2)" }}
+          style={{ fontSize: "0.8125rem", color: "var(--fg-2)" }}
         >
           {limited
             ? t("usedOf", {
@@ -83,8 +83,8 @@ export const UsageMeter = ({ line }: { line: UsageLine }) => {
           aria-valuemax={100}
           aria-valuenow={percent}
           style={{
-            height: 6,
-            borderRadius: 999,
+            height: "0.375rem",
+            borderRadius: "999px",
             background: "var(--bg-3)",
             overflow: "hidden",
           }}
@@ -93,14 +93,14 @@ export const UsageMeter = ({ line }: { line: UsageLine }) => {
             style={{
               width: `${String(Math.max(percent, line.used > 0 ? 2 : 0))}%`,
               height: "100%",
-              borderRadius: 999,
+              borderRadius: "999px",
               background: TONE_COLOR[tone],
               transition: "width 300ms ease",
             }}
           />
         </div>
       )}
-      <div style={{ fontSize: 12, color: "var(--fg-3)" }}>
+      <div style={{ fontSize: "0.75rem", color: "var(--fg-3)" }}>
         {line.source && t(`source.${line.source}`)}
         {line.source && line.resets_at && " · "}
         {line.resets_at &&

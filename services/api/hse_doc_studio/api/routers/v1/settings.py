@@ -13,7 +13,14 @@ from hse_doc_studio.use_cases.settings.update_settings import (
     UpdateSettingsInput,
     UpdateSettingsUC,
 )
-from hse_doc_studio.use_cases.settings.value_rules import disk_usage_warn_gb, git_fetch_interval_s, projects_dir
+from hse_doc_studio.use_cases.settings.value_rules import (
+    DEFAULT_TEXT_SCALE,
+    TEXT_SCALE_STEPS,
+    disk_usage_warn_gb,
+    git_fetch_interval_s,
+    projects_dir,
+    text_scale,
+)
 
 router = APIRouter(route_class=SafeDishkaRoute)
 
@@ -34,6 +41,7 @@ def _map_settings(settings: dict[str, Any]) -> SettingsResponse:
     return SettingsResponse(
         theme=str(settings.get("theme", "system")),
         interface_language=str(settings.get("interface_language", "ru")),
+        text_scale=text_scale(settings.get("text_scale")) or DEFAULT_TEXT_SCALE,
         default_engine=str(settings.get("default_engine", "xelatex")),
         latex_passes=_int_setting(settings, "latex_passes", 3),
         max_concurrent_compiles=_int_setting(settings, "max_concurrent_compiles", 2),
@@ -50,6 +58,16 @@ def _map_settings(settings: dict[str, Any]) -> SettingsResponse:
         git_fetch_interval_s=_int_setting(settings, "git_fetch_interval_s", 300),
         projects_dir=_text_setting(settings, "projects_dir"),
     )
+
+
+def _checked_text_scale(value: int) -> int:
+    """Ступень размера текста; число вне шкалы это 400, а не молчаливое округление."""
+    step = text_scale(value)
+    if step is None:
+        raise HTTPException(
+            status_code=400, detail=f"text_scale must be one of {', '.join(map(str, TEXT_SCALE_STEPS))}"
+        )
+    return step
 
 
 def _checked_projects_dir(raw: str | None, paths: PathMapping) -> str | None:
@@ -71,7 +89,7 @@ async def get_settings(
 
 
 @router.put("/settings", response_model=SettingsResponse)
-async def update_settings(  # noqa: C901, PLR0912 — flat per-field patch mapping with explicit-null handling
+async def update_settings(  # noqa: C901, PLR0912, PLR0915 — flat per-field patch mapping with explicit-null handling
     body: UpdateSettingsRequest,
     uc: FromDishka[UpdateSettingsUC],
     paths: FromDishka[PathMapping],
@@ -91,6 +109,8 @@ async def update_settings(  # noqa: C901, PLR0912 — flat per-field patch mappi
                 detail="interface_language must be 'ru' or 'en'",
             )
         patch["interface_language"] = body.interface_language
+    if "text_scale" in fields_set and body.text_scale is not None:
+        patch["text_scale"] = _checked_text_scale(body.text_scale)
     if "default_engine" in fields_set and body.default_engine is not None:
         patch["default_engine"] = body.default_engine
     if "latex_passes" in fields_set and body.latex_passes is not None:

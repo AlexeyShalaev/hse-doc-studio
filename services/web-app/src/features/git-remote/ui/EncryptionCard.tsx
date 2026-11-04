@@ -10,7 +10,7 @@ export type EncryptionCardProps = {
 };
 
 const Fact = ({ children }: { children: ReactNode }) => (
-  <li style={{ fontSize: 12, lineHeight: 1.55, color: "var(--fg-1)" }}>
+  <li style={{ fontSize: "0.75rem", lineHeight: 1.55, color: "var(--fg-1)" }}>
     {children}
   </li>
 );
@@ -34,13 +34,13 @@ export const EncryptionCard = ({ status }: EncryptionCardProps) => {
       title={t("access.encryption.title")}
       description={t("access.encryption.threat")}
     >
-      <div className="flex items-center" style={{ gap: 8 }}>
+      <div className="flex items-center" style={{ gap: "0.5rem" }}>
         <Badge variant={status.ok ? "success" : "error"}>
           {status.ok
             ? t("access.encryption.enabled")
             : t("access.encryption.unavailableChip")}
         </Badge>
-        <span className="dim" style={{ fontSize: 11.5 }}>
+        <span className="dim" style={{ fontSize: "0.71875rem" }}>
           {t("access.encryption.stored", { count: status.credentials_total })}
         </span>
       </div>
@@ -70,7 +70,7 @@ export const EncryptionCard = ({ status }: EncryptionCardProps) => {
               {t("access.encryption.sharedFolder", { provider: providerName })}
               <span
                 className="mono dim"
-                style={{ display: "block", marginTop: 4 }}
+                style={{ display: "block", marginTop: "0.25rem" }}
               >
                 {t("access.encryption.sharedRoot", { path: shared.root })}
               </span>
@@ -89,10 +89,10 @@ export const EncryptionCard = ({ status }: EncryptionCardProps) => {
       <ul
         style={{
           margin: 0,
-          paddingLeft: 18,
+          paddingLeft: "1.125rem",
           display: "flex",
           flexDirection: "column",
-          gap: 3,
+          gap: "0.1875rem",
         }}
       >
         <Fact>

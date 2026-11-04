@@ -20,15 +20,15 @@ const ToggleRow = ({
   <div
     className="flex items-center justify-between"
     style={{
-      padding: 12,
+      padding: "0.75rem",
       background: "var(--bg-2)",
       borderRadius: "var(--r-2)",
-      gap: 12,
+      gap: "0.75rem",
     }}
   >
     <div className="flex flex-col" style={{ gap: 1 }}>
-      <strong style={{ fontSize: 12.5 }}>{label}</strong>
-      <span className="dim" style={{ fontSize: 11 }}>
+      <strong style={{ fontSize: "0.78125rem" }}>{label}</strong>
+      <span className="dim" style={{ fontSize: "0.6875rem" }}>
         {hint}
       </span>
     </div>
@@ -55,7 +55,7 @@ export const VcsSettingsCard = ({ projectId }: VcsSettingsCardProps) => {
   };
 
   return (
-    <div className="flex flex-col" style={{ gap: 10 }}>
+    <div className="flex flex-col" style={{ gap: "0.625rem" }}>
       <ToggleRow
         label={t("settings.trackingLabel")}
         hint={t("settings.trackingHint")}

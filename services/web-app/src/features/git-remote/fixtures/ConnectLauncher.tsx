@@ -19,7 +19,7 @@ export const ConnectLauncher = ({
     };
   }, [mode]);
   return (
-    <div className="flex items-center flex-wrap" style={{ gap: 12 }}>
+    <div className="flex items-center flex-wrap" style={{ gap: "0.75rem" }}>
       <button
         type="button"
         className="btn"

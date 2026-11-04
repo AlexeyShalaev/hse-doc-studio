@@ -39,7 +39,7 @@ export const OccupiedCard = ({
           signedIn ? "setup.occupied.waiting" : "setup.occupied.signInFirst",
         )}
       >
-        <p style={{ margin: 0, fontSize: 12.5, color: "var(--fg-2)" }}>
+        <p style={{ margin: 0, fontSize: "0.78125rem", color: "var(--fg-2)" }}>
           {t(
             signedIn
               ? "setup.occupied.waitingHint"
@@ -50,8 +50,8 @@ export const OccupiedCard = ({
       {!signedIn && signIn && (
         <div
           style={{
-            marginTop: 20,
-            paddingTop: 20,
+            marginTop: "1.25rem",
+            paddingTop: "1.25rem",
             borderTop: "1px solid var(--border)",
           }}
         >

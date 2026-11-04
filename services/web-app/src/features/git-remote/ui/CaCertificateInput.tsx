@@ -30,7 +30,7 @@ export const CaCertificateInput = ({
       : null;
 
   return (
-    <div className="flex flex-col" style={{ gap: 10 }}>
+    <div className="flex flex-col" style={{ gap: "0.625rem" }}>
       <FileDropZone
         accept=".pem,.crt,.cer"
         title={t("tls.ca.drop.title")}
@@ -46,7 +46,7 @@ export const CaCertificateInput = ({
         }}
       />
       {fileName && (
-        <span className="dim" style={{ fontSize: 11.5 }}>
+        <span className="dim" style={{ fontSize: "0.71875rem" }}>
           {t("tls.ca.fromFile", { name: fileName })}
         </span>
       )}
@@ -69,7 +69,7 @@ export const CaCertificateInput = ({
         {...(message ? { error: message } : {})}
       />
       {problem === null && (
-        <span className="dim" style={{ fontSize: 11.5 }}>
+        <span className="dim" style={{ fontSize: "0.71875rem" }}>
           {t("tls.ca.count", { count: pemCount(value) })}
         </span>
       )}

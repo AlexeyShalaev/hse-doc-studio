@@ -127,7 +127,7 @@ export const ProjectCard = ({
   return (
     <div
       className={clsx("card hover relative", project.archived && "opacity-60")}
-      style={{ padding: 18 }}
+      style={{ padding: "1.125rem" }}
       // Карточка остаётся <div role="button">: внутри уже есть настоящие
       // кнопки (закрепить / архив), а <button> внутри <button> невалиден.
       role="button"
@@ -146,7 +146,7 @@ export const ProjectCard = ({
     >
       <div
         className="flex items-center justify-between"
-        style={{ marginBottom: 12 }}
+        style={{ marginBottom: "0.75rem" }}
       >
         {/* minWidth: 0 инлайном (утилита min-w-0 в этой сборке Tailwind не
             генерируется) + truncate на тексте: длинное название шаблона
@@ -155,14 +155,14 @@ export const ProjectCard = ({
           <div
             className="flex items-center justify-center shrink-0"
             style={{
-              width: 32,
-              height: 32,
-              borderRadius: 8,
+              width: "2rem",
+              height: "2rem",
+              borderRadius: "0.5rem",
               background: accentBg,
               color: accentFg,
             }}
           >
-            <Icon size={16} />
+            <Icon size="1rem" />
           </div>
           {hasTemplate && (
             <span
@@ -182,7 +182,7 @@ export const ProjectCard = ({
             className="chip shrink-0"
             title={kindMeta.label}
             style={{
-              gap: 4,
+              gap: "0.25rem",
               background: kindBg,
               color: kindFg,
               borderColor: kindLine,
@@ -212,7 +212,7 @@ export const ProjectCard = ({
                 data-tt={project.pinned ? t("card.unpin") : t("card.pin")}
                 style={project.pinned ? { color: "var(--accent)" } : undefined}
               >
-                <Pin size={11} />
+                <Pin size="0.6875rem" />
               </button>
               <button
                 type="button"
@@ -226,7 +226,7 @@ export const ProjectCard = ({
                   project.archived ? t("card.unarchive") : t("card.archive")
                 }
               >
-                <Archive size={11} />
+                <Archive size="0.6875rem" />
               </button>
             </>
           )}
@@ -236,8 +236,8 @@ export const ProjectCard = ({
       <h3
         className="text-fg-0"
         style={{
-          margin: "0 0 6px",
-          fontSize: 15,
+          margin: "0 0 0.375rem",
+          fontSize: "0.9375rem",
           fontWeight: 600,
           lineHeight: 1.3,
         }}
@@ -247,7 +247,11 @@ export const ProjectCard = ({
       {ownerLine ? (
         <div
           className="flex items-center gap-2 dim"
-          style={{ fontSize: 11.5, marginBottom: 14, minWidth: 0 }}
+          style={{
+            fontSize: "0.71875rem",
+            marginBottom: "0.875rem",
+            minWidth: 0,
+          }}
           data-testid="project-owner"
         >
           <ownerLine.Icon
@@ -259,22 +263,28 @@ export const ProjectCard = ({
           </span>
         </div>
       ) : (
-        <div className="mono dim" style={{ fontSize: 11, marginBottom: 14 }}>
+        <div
+          className="mono dim"
+          style={{ fontSize: "0.6875rem", marginBottom: "0.875rem" }}
+        >
           {project.folder}
         </div>
       )}
 
       <div
         className="flex items-center justify-between"
-        style={{ paddingTop: 12, borderTop: "1px solid var(--border)" }}
+        style={{ paddingTop: "0.75rem", borderTop: "1px solid var(--border)" }}
       >
         <div className="flex items-center gap-2 min-w-0">
           {supervisor && (
             <>
-              <User size={11} style={{ color: "var(--fg-3)", flexShrink: 0 }} />
+              <User
+                size="0.6875rem"
+                style={{ color: "var(--fg-3)", flexShrink: 0 }}
+              />
               <span
                 className="dim truncate"
-                style={{ fontSize: 11.5, minWidth: 0 }}
+                style={{ fontSize: "0.71875rem", minWidth: 0 }}
               >
                 {supervisor.name}
               </span>
@@ -285,7 +295,11 @@ export const ProjectCard = ({
               className="chip shrink-0"
               data-testid="project-role"
               title={tAccess("card.myRole", { role: roleLabel(role) })}
-              style={{ fontSize: 9.5, height: 16, padding: "1px 6px" }}
+              style={{
+                fontSize: "0.59375rem",
+                height: "1rem",
+                padding: "1px 0.375rem",
+              }}
             >
               <RoleIcon size={8} />
               {roleLabel(role)}
@@ -296,9 +310,13 @@ export const ProjectCard = ({
               className="chip shrink-0"
               data-testid="cloud-badge"
               title={tCloud("cloud.badgeTitle", { host: cloudHost })}
-              style={{ fontSize: 9.5, height: 16, padding: "1px 6px" }}
+              style={{
+                fontSize: "0.59375rem",
+                height: "1rem",
+                padding: "1px 0.375rem",
+              }}
             >
-              <Cloud size={8} />
+              <Cloud size="0.5rem" />
               {tCloud("cloud.badge")}
             </span>
           )}
@@ -306,27 +324,39 @@ export const ProjectCard = ({
             <span
               className="chip shrink-0"
               data-testid={`project-card-via-link-${project.id}`}
-              style={{ fontSize: 9.5, height: 16, padding: "1px 6px" }}
+              style={{
+                fontSize: "0.59375rem",
+                height: "1rem",
+                padding: "1px 0.375rem",
+              }}
             >
-              <Link2 size={8} />
+              <Link2 size="0.5rem" />
               {tGuest("card.viaLink")}
             </span>
           )}
           {supervisor?.role === "company" && (
             <span
               className="chip shrink-0"
-              style={{ fontSize: 9.5, height: 16, padding: "1px 6px" }}
+              style={{
+                fontSize: "0.59375rem",
+                height: "1rem",
+                padding: "1px 0.375rem",
+              }}
             >
-              <Briefcase size={8} />
+              <Briefcase size="0.5rem" />
               {t("card.company")}
             </span>
           )}
           {supervisor?.role === "university" && (
             <span
               className="chip shrink-0"
-              style={{ fontSize: 9.5, height: 16, padding: "1px 6px" }}
+              style={{
+                fontSize: "0.59375rem",
+                height: "1rem",
+                padding: "1px 0.375rem",
+              }}
             >
-              <Building size={8} />
+              <Building size="0.5rem" />
               {t("card.university")}
             </span>
           )}
@@ -342,14 +372,14 @@ export const ProjectCard = ({
                 background: "var(--c-warn-soft)",
               }}
             >
-              <Lock size={8} />
+              <Lock size="0.5rem" />
               NDA
             </span>
           )}
-          <span className="mono dim" style={{ fontSize: 10.5 }}>
+          <span className="mono dim" style={{ fontSize: "0.65625rem" }}>
             {(project.lang ?? "ru").toUpperCase()}
           </span>
-          <span className="mono dim" style={{ fontSize: 10.5 }}>
+          <span className="mono dim" style={{ fontSize: "0.65625rem" }}>
             ·{" "}
             {formatRelative(project.updated_at, localeTag(), (time) =>
               t("card.today", { time }),

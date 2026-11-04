@@ -21,17 +21,17 @@ export const ChatApprovalBar = ({
     <div
       className="flex flex-col"
       style={{
-        gap: 8,
-        padding: 10,
+        gap: "0.5rem",
+        padding: "0.625rem",
         borderTop: "1px solid var(--c-warn)",
         background: "var(--bg-1)",
       }}
     >
       <div
         className="flex items-center"
-        style={{ gap: 6, fontSize: 12, color: "var(--c-warn)" }}
+        style={{ gap: "0.375rem", fontSize: "0.75rem", color: "var(--c-warn)" }}
       >
-        <ShieldAlert size={13} />
+        <ShieldAlert size="0.8125rem" />
         {t("approval.prompt")}
       </div>
       {approvals.map((approval) => (
@@ -39,10 +39,10 @@ export const ChatApprovalBar = ({
           key={approval.callId}
           className="mono"
           style={{
-            fontSize: 11,
+            fontSize: "0.6875rem",
             color: "var(--fg-2)",
-            padding: "4px 8px",
-            borderRadius: 4,
+            padding: "0.25rem 0.5rem",
+            borderRadius: "0.25rem",
             background: "var(--bg-2)",
           }}
         >
@@ -50,7 +50,7 @@ export const ChatApprovalBar = ({
           <span className="dim"> ({JSON.stringify(approval.args)})</span>
         </div>
       ))}
-      <div className="flex items-center" style={{ gap: 6 }}>
+      <div className="flex items-center" style={{ gap: "0.375rem" }}>
         <button
           type="button"
           className="btn xs"
@@ -59,7 +59,7 @@ export const ChatApprovalBar = ({
             onApprove(approvals.map((a) => a.callId));
           }}
         >
-          <Check size={11} />
+          <Check size="0.6875rem" />
           {t("approval.apply")}
         </button>
         <button
@@ -68,7 +68,7 @@ export const ChatApprovalBar = ({
           disabled={pending}
           onClick={onReject}
         >
-          <X size={11} />
+          <X size="0.6875rem" />
           {t("approval.reject")}
         </button>
       </div>

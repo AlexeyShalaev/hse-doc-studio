@@ -59,7 +59,7 @@ export const GroupForm = ({
   return (
     <form
       className="flex flex-col"
-      style={{ gap: 14 }}
+      style={{ gap: "0.875rem" }}
       noValidate
       data-testid="group-form"
       onSubmit={(event) => {
@@ -91,13 +91,19 @@ export const GroupForm = ({
       ) : (
         <fieldset
           className="flex flex-col"
-          style={{ gap: 8, border: 0, margin: 0, padding: 0, minWidth: 0 }}
+          style={{
+            gap: "0.5rem",
+            border: 0,
+            margin: 0,
+            padding: 0,
+            minWidth: 0,
+          }}
         >
           <legend className="org-legend">
             {t("groups.form.members", { count: chosen.length })}
           </legend>
           {source === null ? (
-            <p className="org-muted" style={{ margin: 0, fontSize: 12 }}>
+            <p className="org-muted" style={{ margin: 0, fontSize: "0.75rem" }}>
               {t("groups.form.noMembers")}
             </p>
           ) : (
@@ -129,7 +135,7 @@ export const GroupForm = ({
                       setChosen(chosen.filter((x) => x.id !== p.id));
                     }}
                   >
-                    <X size={12} aria-hidden="true" />
+                    <X size="0.75rem" aria-hidden="true" />
                   </button>
                 </li>
               ))}
@@ -140,7 +146,7 @@ export const GroupForm = ({
       {failure && <FailureNotice failure={failure} />}
       <div
         className="flex items-center"
-        style={{ gap: 8, justifyContent: "flex-end" }}
+        style={{ gap: "0.5rem", justifyContent: "flex-end" }}
       >
         <Button
           type="button"
@@ -230,7 +236,7 @@ const GroupMembers = ({
   return (
     <fieldset
       className="flex flex-col"
-      style={{ gap: 8, border: 0, margin: 0, padding: 0, minWidth: 0 }}
+      style={{ gap: "0.5rem", border: 0, margin: 0, padding: 0, minWidth: 0 }}
       data-testid="group-members"
     >
       <legend className="org-legend">
@@ -265,16 +271,19 @@ const GroupMembers = ({
       )}
       {failure && <FailureNotice failure={failure} />}
       {members.isPending ? (
-        <div className="flex items-center" style={{ gap: 8, fontSize: 12 }}>
+        <div
+          className="flex items-center"
+          style={{ gap: "0.5rem", fontSize: "0.75rem" }}
+        >
           <Spinner size="sm" />
           <span className="org-muted">{t("loading")}</span>
         </div>
       ) : members.isError && rows.length === 0 ? (
-        <p className="org-muted" style={{ margin: 0, fontSize: 12 }}>
+        <p className="org-muted" style={{ margin: 0, fontSize: "0.75rem" }}>
           {t("groups.form.loadFailed")}
         </p>
       ) : rows.length === 0 ? (
-        <p className="org-muted" style={{ margin: 0, fontSize: 12 }}>
+        <p className="org-muted" style={{ margin: 0, fontSize: "0.75rem" }}>
           {q ? t("groups.form.noMatch") : t("groups.noPeople")}
         </p>
       ) : (
@@ -286,8 +295,8 @@ const GroupMembers = ({
             <li key={m.user_id} className="org-member-row">
               <Avatar name={m.name} seed={m.user_id} size={24} />
               <span className="flex flex-col" style={{ minWidth: 0, flex: 1 }}>
-                <span style={{ fontSize: 12.5 }}>{m.name}</span>
-                <span style={{ fontSize: 11, color: "var(--fg-2)" }}>
+                <span style={{ fontSize: "0.78125rem" }}>{m.name}</span>
+                <span style={{ fontSize: "0.6875rem", color: "var(--fg-2)" }}>
                   {m.email}
                 </span>
               </span>
@@ -306,7 +315,7 @@ const GroupMembers = ({
                 {busyId === m.user_id ? (
                   <Spinner size="sm" />
                 ) : (
-                  <X size={13} aria-hidden="true" />
+                  <X size="0.8125rem" aria-hidden="true" />
                 )}
               </Button>
             </li>

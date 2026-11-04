@@ -78,8 +78,8 @@ export const ChatMessages = ({
       onScroll={handleScroll}
       className="flex flex-col"
       style={{
-        gap: 12,
-        padding: 12,
+        gap: "0.75rem",
+        padding: "0.75rem",
         overflowY: "auto",
         flex: 1,
         minWidth: 0,
@@ -88,7 +88,11 @@ export const ChatMessages = ({
       {visible.length === 0 && !liveText && (
         <div
           className="dim"
-          style={{ fontSize: 12, textAlign: "center", marginTop: 24 }}
+          style={{
+            fontSize: "0.75rem",
+            textAlign: "center",
+            marginTop: "1.5rem",
+          }}
         >
           {t("messages.emptyHint")}
         </div>
@@ -111,7 +115,7 @@ export const ChatMessages = ({
         </Bubble>
       )}
       {running && !liveText && (
-        <div className="dim mono" style={{ fontSize: 11 }}>
+        <div className="dim mono" style={{ fontSize: "0.6875rem" }}>
           {t("messages.thinking")}
         </div>
       )}
@@ -176,10 +180,10 @@ const BlockView = ({
       <div
         className="mono"
         style={{
-          fontSize: 11,
+          fontSize: "0.6875rem",
           color: "var(--fg-2)",
           display: "flex",
-          gap: 6,
+          gap: "0.375rem",
           alignItems: "center",
           flexWrap: "wrap",
           minWidth: 0,
@@ -187,7 +191,7 @@ const BlockView = ({
           wordBreak: "break-word",
         }}
       >
-        <Wrench size={11} style={{ flexShrink: 0 }} />
+        <Wrench size="0.6875rem" style={{ flexShrink: 0 }} />
         <span style={{ minWidth: 0 }}>{block.tool_name}</span>
         {docId && <DocChip projectId={projectId} docId={docId} />}
         <span className="dim" style={{ minWidth: 0 }}>
@@ -213,9 +217,9 @@ const ToolResultBlock = ({ block }: { block: ChatContentBlock }) => {
     <div
       style={{
         border: "1px solid var(--border)",
-        borderRadius: 6,
+        borderRadius: "0.375rem",
         background: "var(--bg-1)",
-        fontSize: 11.5,
+        fontSize: "0.71875rem",
         minWidth: 0,
         maxWidth: "100%",
         overflow: "hidden",
@@ -225,8 +229,8 @@ const ToolResultBlock = ({ block }: { block: ChatContentBlock }) => {
         type="button"
         className="flex items-center"
         style={{
-          gap: 6,
-          padding: "6px 10px",
+          gap: "0.375rem",
+          padding: "0.375rem 0.625rem",
           width: "100%",
           color: block.is_error ? "var(--c-err)" : "var(--fg-2)",
         }}
@@ -234,8 +238,12 @@ const ToolResultBlock = ({ block }: { block: ChatContentBlock }) => {
           setOpen((v) => !v);
         }}
       >
-        {open ? <ChevronDown size={11} /> : <ChevronRight size={11} />}
-        <Wrench size={11} style={{ flexShrink: 0 }} />
+        {open ? (
+          <ChevronDown size="0.6875rem" />
+        ) : (
+          <ChevronRight size="0.6875rem" />
+        )}
+        <Wrench size="0.6875rem" style={{ flexShrink: 0 }} />
         <span className="mono" style={{ flexShrink: 0 }}>
           {block.tool_name}
         </span>
@@ -256,7 +264,7 @@ const ToolResultBlock = ({ block }: { block: ChatContentBlock }) => {
           className="mono"
           style={{
             margin: 0,
-            padding: "0 10px 8px 10px",
+            padding: "0 0.625rem 0.5rem 0.625rem",
             whiteSpace: "pre-wrap",
             wordBreak: "break-word",
             overflowWrap: "anywhere",
@@ -282,11 +290,18 @@ const Bubble = ({
   return (
     <div
       className="flex flex-col"
-      style={{ gap: 3, alignItems: isUser ? "flex-end" : "flex-start" }}
+      style={{
+        gap: "0.1875rem",
+        alignItems: isUser ? "flex-end" : "flex-start",
+      }}
     >
       <span
         className="dim"
-        style={{ fontSize: 10, textTransform: "uppercase", letterSpacing: 0.5 }}
+        style={{
+          fontSize: "0.625rem",
+          textTransform: "uppercase",
+          letterSpacing: "0.03125rem",
+        }}
       >
         {roleKey ? t(roleKey) : role}
       </span>
@@ -294,9 +309,9 @@ const Bubble = ({
         style={{
           maxWidth: "92%",
           minWidth: 0,
-          padding: "8px 11px",
-          borderRadius: 8,
-          fontSize: 12.5,
+          padding: "0.5rem 0.6875rem",
+          borderRadius: "0.5rem",
+          fontSize: "0.78125rem",
           lineHeight: 1.5,
           background: isUser
             ? "var(--accent-soft, var(--bg-2))"

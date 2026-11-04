@@ -16,14 +16,14 @@ const CommitBody = ({
     <span
       aria-hidden="true"
       style={{
-        width: 24,
-        height: 24,
+        width: "1.5rem",
+        height: "1.5rem",
         borderRadius: "50%",
         flexShrink: 0,
         display: "inline-flex",
         alignItems: "center",
         justifyContent: "center",
-        fontSize: 9.5,
+        fontSize: "0.59375rem",
         fontWeight: 700,
         background: "var(--accent-soft)",
         color: "var(--accent)",
@@ -35,14 +35,18 @@ const CommitBody = ({
     <span style={{ minWidth: 0, flex: 1, textAlign: "left" }}>
       <span
         className="truncate"
-        style={{ display: "block", fontSize: 12, color: "var(--fg-0)" }}
+        style={{ display: "block", fontSize: "0.75rem", color: "var(--fg-0)" }}
         title={commit.message}
       >
         {commit.message}
       </span>
       <span
         className="truncate"
-        style={{ display: "block", fontSize: 11, color: "var(--fg-2)" }}
+        style={{
+          display: "block",
+          fontSize: "0.6875rem",
+          color: "var(--fg-2)",
+        }}
       >
         {commit.author}
         {" · "}
@@ -70,8 +74,8 @@ export const CommitRow = ({
         style={{
           display: "flex",
           alignItems: "center",
-          gap: 9,
-          padding: "5px 0",
+          gap: "0.5625rem",
+          padding: "0.3125rem 0",
           minWidth: 0,
         }}
       >
@@ -119,7 +123,11 @@ export const CommitSection = ({
     <section aria-label={title} style={{ minWidth: 0 }}>
       <div
         className="flex items-center"
-        style={{ gap: 6, marginBottom: 2, justifyContent: "space-between" }}
+        style={{
+          gap: "0.375rem",
+          marginBottom: "0.125rem",
+          justifyContent: "space-between",
+        }}
       >
         <span style={sectionTitleStyle}>{title}</span>
         <span className="chip subtle tnum">{total}</span>
@@ -136,7 +144,10 @@ export const CommitSection = ({
         ))}
       </ul>
       {total > commits.length && (
-        <div className="dim" style={{ fontSize: 11, paddingTop: 2 }}>
+        <div
+          className="dim"
+          style={{ fontSize: "0.6875rem", paddingTop: "0.125rem" }}
+        >
           {moreLabel(total - commits.length)}
         </div>
       )}

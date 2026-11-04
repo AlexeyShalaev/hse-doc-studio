@@ -127,7 +127,10 @@ export const CloneVerdictCard = ({
 
       {branches.length > 1 && (
         <div>
-          <div className="dim" style={{ fontSize: 11.5, marginBottom: 5 }}>
+          <div
+            className="dim"
+            style={{ fontSize: "0.71875rem", marginBottom: "0.3125rem" }}
+          >
             {t("clone.source.found.branchPick")}
           </div>
           <div
@@ -135,9 +138,9 @@ export const CloneVerdictCard = ({
             role="group"
             aria-label={t("clone.source.found.branchPick")}
             style={{
-              gap: 6,
+              gap: "0.375rem",
               flexWrap: "wrap",
-              maxHeight: 96,
+              maxHeight: "6rem",
               overflowY: "auto",
             }}
           >
@@ -147,7 +150,7 @@ export const CloneVerdictCard = ({
                 type="button"
                 aria-pressed={name === shownBranch}
                 className={name === shownBranch ? "chip accent" : "chip"}
-                style={{ cursor: "pointer", height: 24 }}
+                style={{ cursor: "pointer", height: "1.5rem" }}
                 onClick={() => {
                   if (name !== shownBranch) onPickBranch(name);
                 }}
@@ -172,14 +175,14 @@ export const CloneVerdictCard = ({
         role="group"
         aria-label={t("clone.source.verdict.label")}
         className="flex flex-col"
-        style={{ gap: 6 }}
+        style={{ gap: "0.375rem" }}
         data-testid="clone-access-verdict"
       >
         <div
           className="flex items-start"
           style={{
-            gap: 8,
-            fontSize: 12.5,
+            gap: "0.5rem",
+            fontSize: "0.78125rem",
             color: "var(--fg-0)",
             fontWeight: 500,
           }}
@@ -189,7 +192,7 @@ export const CloneVerdictCard = ({
             aria-hidden="true"
             style={{
               flexShrink: 0,
-              marginTop: 2,
+              marginTop: "0.125rem",
               color: full ? "var(--c-ok)" : "var(--c-warn)",
             }}
           />

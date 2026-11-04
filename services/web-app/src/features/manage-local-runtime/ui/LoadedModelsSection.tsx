@@ -43,10 +43,14 @@ export const LoadedModelsSection = () => {
   if (models.length === 0) return null;
 
   return (
-    <div className="flex flex-col" style={{ gap: 6 }}>
+    <div className="flex flex-col" style={{ gap: "0.375rem" }}>
       <div
         className="dim"
-        style={{ fontSize: 10, textTransform: "uppercase", letterSpacing: 0.5 }}
+        style={{
+          fontSize: "0.625rem",
+          textTransform: "uppercase",
+          letterSpacing: "0.03125rem",
+        }}
       >
         {t("loaded.heading")}
       </div>
@@ -57,25 +61,31 @@ export const LoadedModelsSection = () => {
             key={m.name}
             className="flex items-center justify-between"
             style={{
-              gap: 12,
-              padding: "8px 12px",
-              borderRadius: 6,
+              gap: "0.75rem",
+              padding: "0.5rem 0.75rem",
+              borderRadius: "0.375rem",
               border: "1px solid var(--border)",
               background: "var(--bg-1)",
             }}
           >
-            <div className="flex flex-col" style={{ gap: 2, minWidth: 0 }}>
-              <div className="flex items-center" style={{ gap: 8 }}>
+            <div
+              className="flex flex-col"
+              style={{ gap: "0.125rem", minWidth: 0 }}
+            >
+              <div className="flex items-center" style={{ gap: "0.5rem" }}>
                 {m.vram_bytes > 0 ? (
-                  <Zap size={12} style={{ color: "var(--c-ok)" }} />
+                  <Zap size="0.75rem" style={{ color: "var(--c-ok)" }} />
                 ) : (
-                  <MemoryStick size={12} style={{ color: "var(--fg-2)" }} />
+                  <MemoryStick
+                    size="0.75rem"
+                    style={{ color: "var(--fg-2)" }}
+                  />
                 )}
-                <span className="mono" style={{ fontSize: 12 }}>
+                <span className="mono" style={{ fontSize: "0.75rem" }}>
                   {m.name}
                 </span>
               </div>
-              <span className="dim" style={{ fontSize: 11 }}>
+              <span className="dim" style={{ fontSize: "0.6875rem" }}>
                 {placement(m)}
                 {exp ? ` · ${exp}` : ""}
               </span>

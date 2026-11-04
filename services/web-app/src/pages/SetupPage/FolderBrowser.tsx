@@ -100,21 +100,25 @@ export const FolderBrowser = ({
           display: "flex",
           alignItems: "center",
           flexWrap: "wrap",
-          gap: 2,
-          padding: "7px 10px",
+          gap: "0.125rem",
+          padding: "0.4375rem 0.625rem",
           borderBottom: "1px solid var(--border)",
-          fontSize: 12,
-          minHeight: 34,
+          fontSize: "0.75rem",
+          minHeight: "2.125rem",
         }}
       >
         {crumbs.map((crumb, index) => (
           <span
             key={crumb.path}
-            style={{ display: "inline-flex", alignItems: "center", gap: 2 }}
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: "0.125rem",
+            }}
           >
             {index > 0 && (
               <ChevronRight
-                size={11}
+                size="0.6875rem"
                 style={{ opacity: 0.35, flexShrink: 0 }}
               />
             )}
@@ -126,7 +130,7 @@ export const FolderBrowser = ({
                 onNavigate(crumb.path);
               }}
               style={{
-                padding: "1px 5px",
+                padding: "1px 0.3125rem",
                 fontWeight: index === crumbs.length - 1 ? 600 : 400,
                 opacity: index === crumbs.length - 1 ? 1 : 0.75,
               }}
@@ -138,7 +142,7 @@ export const FolderBrowser = ({
         {isLoading && (
           <Loader2
             className="spin"
-            size={12}
+            size="0.75rem"
             style={{ marginLeft: "auto", opacity: 0.5, flexShrink: 0 }}
           />
         )}
@@ -160,7 +164,7 @@ export const FolderBrowser = ({
       <div className="setup-browser-list">
         {parent !== null && (
           <Row
-            icon={<CornerLeftUp size={14} style={{ opacity: 0.6 }} />}
+            icon={<CornerLeftUp size="0.875rem" style={{ opacity: 0.6 }} />}
             label=".."
             dim
             onClick={() => {
@@ -171,7 +175,9 @@ export const FolderBrowser = ({
 
         {probeFailed && (
           <Note
-            icon={<XCircle size={15} style={{ color: "var(--c-err)" }} />}
+            icon={
+              <XCircle size="0.9375rem" style={{ color: "var(--c-err)" }} />
+            }
             title={t(`browser.failed.${probe.reason ?? probe.status}.title`, {
               defaultValue: t("browser.failed.unknown.title"),
             })}
@@ -183,7 +189,9 @@ export const FolderBrowser = ({
 
         {missing && (
           <Note
-            icon={<FolderX size={15} style={{ color: "var(--c-warn)" }} />}
+            icon={
+              <FolderX size="0.9375rem" style={{ color: "var(--c-warn)" }} />
+            }
             title={t("browser.missing.title")}
             hint={t("browser.missing.hint")}
           />
@@ -191,7 +199,7 @@ export const FolderBrowser = ({
 
         {nothingMatched && (
           <Note
-            icon={<SearchX size={15} style={{ opacity: 0.5 }} />}
+            icon={<SearchX size="0.9375rem" style={{ opacity: 0.5 }} />}
             title={t("browser.noMatches.title", { query: query.trim() })}
             hint={t("browser.noMatches.hint")}
           />
@@ -199,7 +207,7 @@ export const FolderBrowser = ({
 
         {filtering && folders.length === 0 && files.length > 0 && (
           <Note
-            icon={<FileSearch size={15} style={{ opacity: 0.5 }} />}
+            icon={<FileSearch size="0.9375rem" style={{ opacity: 0.5 }} />}
             title={t("browser.filesOnly.title")}
             hint={t("browser.filesOnly.hint")}
           />
@@ -211,7 +219,7 @@ export const FolderBrowser = ({
           folders.length === 0 &&
           !isLoading && (
             <Note
-              icon={<FolderPlus size={15} style={{ opacity: 0.5 }} />}
+              icon={<FolderPlus size="0.9375rem" style={{ opacity: 0.5 }} />}
               title={t("browser.noSubfolders.title")}
               hint={t("browser.noSubfolders.hint")}
             />
@@ -220,7 +228,7 @@ export const FolderBrowser = ({
         {folders.map((entry) => (
           <Row
             key={entry.name}
-            icon={<Folder size={14} style={{ color: "var(--c-info)" }} />}
+            icon={<Folder size="0.875rem" style={{ color: "var(--c-info)" }} />}
             label={entry.name}
             highlight={query}
             onClick={() => {
@@ -234,7 +242,7 @@ export const FolderBrowser = ({
         {files.slice(0, FILE_PREVIEW_LIMIT).map((entry) => (
           <Row
             key={entry.name}
-            icon={<File size={13} style={{ opacity: 0.35 }} />}
+            icon={<File size="0.8125rem" style={{ opacity: 0.35 }} />}
             label={entry.name}
             highlight={query}
             dim
@@ -243,7 +251,10 @@ export const FolderBrowser = ({
         {files.length > FILE_PREVIEW_LIMIT && (
           <div
             className="dim"
-            style={{ padding: "6px 12px 10px 34px", fontSize: 11 }}
+            style={{
+              padding: "0.375rem 0.75rem 0.625rem 2.125rem",
+              fontSize: "0.6875rem",
+            }}
           >
             {t("browser.moreFiles", {
               count: files.length - FILE_PREVIEW_LIMIT,
@@ -286,12 +297,12 @@ const FilterField = ({
       style={{
         display: "flex",
         alignItems: "center",
-        gap: 7,
-        padding: "5px 10px",
+        gap: "0.4375rem",
+        padding: "0.3125rem 0.625rem",
         borderBottom: "1px solid var(--border)",
       }}
     >
-      <Search size={13} style={{ opacity: 0.45, flexShrink: 0 }} />
+      <Search size="0.8125rem" style={{ opacity: 0.45, flexShrink: 0 }} />
       <input
         ref={inputRef}
         value={value}
@@ -311,9 +322,9 @@ const FilterField = ({
           background: "transparent",
           color: "inherit",
           font: "inherit",
-          fontSize: 12.5,
+          fontSize: "0.78125rem",
           outline: "none",
-          padding: "2px 0",
+          padding: "0.125rem 0",
         }}
       />
       {matched !== null && (
@@ -321,7 +332,7 @@ const FilterField = ({
           <span
             className="dim"
             aria-live="polite"
-            style={{ fontSize: 11, flexShrink: 0 }}
+            style={{ fontSize: "0.6875rem", flexShrink: 0 }}
           >
             {t("browser.matched", { count: matched })}
           </span>
@@ -333,9 +344,9 @@ const FilterField = ({
               onChange("");
               inputRef.current?.focus();
             }}
-            style={{ padding: "1px 4px", flexShrink: 0 }}
+            style={{ padding: "1px 0.25rem", flexShrink: 0 }}
           >
-            <X size={11} />
+            <X size="0.6875rem" />
           </button>
         </>
       )}
@@ -363,14 +374,14 @@ const Row = ({ icon, label, highlight, dim = false, onClick }: RowProps) => {
       style={{
         display: "flex",
         alignItems: "center",
-        gap: 9,
+        gap: "0.5625rem",
         width: "100%",
-        padding: "6px 12px",
+        padding: "0.375rem 0.75rem",
         border: "none",
         background: "transparent",
         color: "inherit",
         font: "inherit",
-        fontSize: 13,
+        fontSize: "0.8125rem",
         textAlign: "left",
         cursor: interactive ? "pointer" : "default",
         opacity: dim ? 0.55 : 1,
@@ -403,7 +414,7 @@ const Highlighted = ({ text, needle }: { text: string; needle: string }) => {
         style={{
           background: "var(--c-info-soft)",
           color: "var(--c-info)",
-          borderRadius: 3,
+          borderRadius: "0.1875rem",
           padding: "0 1px",
         }}
       >
@@ -421,11 +432,16 @@ type NoteProps = {
 };
 
 const Note = ({ icon, title, hint }: NoteProps) => (
-  <div style={{ display: "flex", gap: 9, padding: "14px 12px" }}>
+  <div
+    style={{ display: "flex", gap: "0.5625rem", padding: "0.875rem 0.75rem" }}
+  >
     <span style={{ flexShrink: 0, marginTop: 1 }}>{icon}</span>
     <div>
-      <div style={{ fontSize: 13, fontWeight: 600 }}>{title}</div>
-      <div className="dim" style={{ fontSize: 12, marginTop: 2 }}>
+      <div style={{ fontSize: "0.8125rem", fontWeight: 600 }}>{title}</div>
+      <div
+        className="dim"
+        style={{ fontSize: "0.75rem", marginTop: "0.125rem" }}
+      >
         {hint}
       </div>
     </div>

@@ -173,16 +173,21 @@ export const CryptoProSignDialog = ({
                 void run(phase.api, phase.certs);
               }}
             >
-              <KeyRound size={12} />
+              <KeyRound size="0.75rem" />
               {t("detached.cryptopro.sign")}
             </button>
           )}
         </>
       }
     >
-      <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+      <div
+        style={{ display: "flex", flexDirection: "column", gap: "0.625rem" }}
+      >
         {phase.kind === "loading" && (
-          <div className="flex items-center gap-2" style={{ fontSize: 12 }}>
+          <div
+            className="flex items-center gap-2"
+            style={{ fontSize: "0.75rem" }}
+          >
             <Spinner size="sm" />
             {t("detached.cryptopro.loading")}
           </div>
@@ -191,11 +196,19 @@ export const CryptoProSignDialog = ({
         {phase.kind === "error" && (
           <div
             className="flex items-start gap-2"
-            style={{ fontSize: 12, lineHeight: 1.55, color: "var(--fg-1)" }}
+            style={{
+              fontSize: "0.75rem",
+              lineHeight: 1.55,
+              color: "var(--fg-1)",
+            }}
           >
             <AlertTriangle
-              size={14}
-              style={{ color: "var(--c-warn)", flexShrink: 0, marginTop: 2 }}
+              size="0.875rem"
+              style={{
+                color: "var(--c-warn)",
+                flexShrink: 0,
+                marginTop: "0.125rem",
+              }}
             />
             <div>
               <div style={{ fontWeight: 500 }}>
@@ -203,7 +216,7 @@ export const CryptoProSignDialog = ({
               </div>
               <div>{t(`detached.cryptopro.error.${phase.code}.hint`)}</div>
               {phase.code === "failed" && phase.message && (
-                <div className="mono dim" style={{ fontSize: 10.5 }}>
+                <div className="mono dim" style={{ fontSize: "0.65625rem" }}>
                   {phase.message}
                 </div>
               )}
@@ -213,7 +226,7 @@ export const CryptoProSignDialog = ({
 
         {phase.kind === "pick" && (
           <>
-            <div style={{ fontSize: 12, color: "var(--fg-2)" }}>
+            <div style={{ fontSize: "0.75rem", color: "var(--fg-2)" }}>
               {t("detached.cryptopro.pick")}
             </div>
             {phase.certs.map((c) => (
@@ -221,10 +234,10 @@ export const CryptoProSignDialog = ({
                 key={c.thumbprint}
                 style={{
                   display: "flex",
-                  gap: 8,
+                  gap: "0.5rem",
                   alignItems: "flex-start",
-                  padding: "8px 10px",
-                  borderRadius: 6,
+                  padding: "0.5rem 0.625rem",
+                  borderRadius: "0.375rem",
                   cursor: "pointer",
                   border: `1px solid ${
                     thumb === c.thumbprint ? "var(--accent)" : "var(--border)"
@@ -240,7 +253,7 @@ export const CryptoProSignDialog = ({
                     setThumb(c.thumbprint);
                   }}
                 />
-                <span style={{ fontSize: 12, lineHeight: 1.45 }}>
+                <span style={{ fontSize: "0.75rem", lineHeight: 1.45 }}>
                   <strong>{c.subject}</strong>
                   <br />
                   <span className="dim">
@@ -250,7 +263,11 @@ export const CryptoProSignDialog = ({
               </label>
             ))}
             <div
-              style={{ fontSize: 11, color: "var(--fg-3)", lineHeight: 1.5 }}
+              style={{
+                fontSize: "0.6875rem",
+                color: "var(--fg-3)",
+                lineHeight: 1.5,
+              }}
             >
               {t("detached.cryptopro.note")}
             </div>
@@ -258,7 +275,10 @@ export const CryptoProSignDialog = ({
         )}
 
         {phase.kind === "working" && (
-          <div className="flex items-center gap-2" style={{ fontSize: 12 }}>
+          <div
+            className="flex items-center gap-2"
+            style={{ fontSize: "0.75rem" }}
+          >
             <Spinner size="sm" />
             {t(`detached.cryptopro.step.${phase.step}`)}
           </div>

@@ -134,21 +134,24 @@ export const ProjectChecksSection = ({
 
   return (
     <SectionCard title={t("projectChecks.title")} fullSpan>
-      <span className="dim" style={{ fontSize: 12 }}>
+      <span className="dim" style={{ fontSize: "0.75rem" }}>
         {t("projectChecks.subtitle")}
       </span>
       <div
         style={{
-          margin: "0 -18px -18px",
+          margin: "0 -1.125rem -1.125rem",
           padding: 0,
-          maxHeight: 600,
+          maxHeight: "37.5rem",
           display: "flex",
           flexDirection: "column",
           minHeight: 0,
         }}
       >
         {isLoading ? (
-          <div className="dim" style={{ padding: 24, textAlign: "center" }}>
+          <div
+            className="dim"
+            style={{ padding: "1.5rem", textAlign: "center" }}
+          >
             {t("projectChecks.loading")}
           </div>
         ) : (

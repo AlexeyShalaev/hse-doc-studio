@@ -40,24 +40,24 @@ export const SeverityMenu = ({
           disabled={disabled}
           className={clsx("sev shrink-0", sevForChip)}
           style={{
-            minWidth: 60,
+            minWidth: "3.75rem",
             justifyContent: "center",
-            gap: 4,
+            gap: "0.25rem",
             cursor: disabled ? "not-allowed" : "pointer",
             position: "relative",
           }}
           title={t("severity.menuTitle")}
         >
           {severity.toUpperCase()}
-          <ChevronDown size={9} style={{ opacity: 0.7 }} />
+          <ChevronDown size="0.5625rem" style={{ opacity: 0.7 }} />
           {isOverridden && (
             <span
               style={{
                 position: "absolute",
-                top: -2,
-                right: -2,
-                width: 5,
-                height: 5,
+                top: "-0.125rem",
+                right: "-0.125rem",
+                width: "0.3125rem",
+                height: "0.3125rem",
                 borderRadius: "50%",
                 background: "var(--accent)",
                 boxShadow: "0 0 0 1.5px var(--bg-1)",
@@ -81,8 +81,8 @@ export const SeverityMenu = ({
           <div
             className="label-up dimmer"
             style={{
-              padding: "6px 10px 4px",
-              fontSize: 9.5,
+              padding: "0.375rem 0.625rem 0.25rem",
+              fontSize: "0.59375rem",
               letterSpacing: "0.1em",
             }}
           >
@@ -96,19 +96,19 @@ export const SeverityMenu = ({
                 "flex cursor-pointer select-none items-center gap-2 outline-none",
                 "focus:bg-bg-hover",
               )}
-              style={{ padding: "7px 10px", fontSize: 12 }}
+              style={{ padding: "0.4375rem 0.625rem", fontSize: "0.75rem" }}
               onSelect={() => {
                 onSet(opt.value);
               }}
             >
               <span
                 className={"sev " + opt.value}
-                style={{ minWidth: 48, justifyContent: "center" }}
+                style={{ minWidth: "3rem", justifyContent: "center" }}
               >
                 {opt.label}
               </span>
               {severity === opt.value && (
-                <Check size={11} className="ml-auto text-accent" />
+                <Check size="0.6875rem" className="ml-auto text-accent" />
               )}
             </DropdownMenu.Item>
           ))}
@@ -120,12 +120,12 @@ export const SeverityMenu = ({
                   "flex cursor-pointer select-none items-center gap-2 outline-none",
                   "focus:bg-bg-hover",
                 )}
-                style={{ padding: "7px 10px", fontSize: 12 }}
+                style={{ padding: "0.4375rem 0.625rem", fontSize: "0.75rem" }}
                 onSelect={() => {
                   onReset();
                 }}
               >
-                <RotateCcw size={11} className="text-fg-3" />
+                <RotateCcw size="0.6875rem" className="text-fg-3" />
                 <span>{t("common:actions.reset")}</span>
               </DropdownMenu.Item>
             </>

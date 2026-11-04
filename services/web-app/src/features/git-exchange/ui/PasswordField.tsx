@@ -36,7 +36,7 @@ export const PasswordField = ({
   return (
     <div className="field">
       <label htmlFor={inputId}>{label}</label>
-      <div className="flex" style={{ gap: 6 }}>
+      <div className="flex" style={{ gap: "0.375rem" }}>
         <input
           id={inputId}
           type={shown ? "text" : "password"}
@@ -65,9 +65,9 @@ export const PasswordField = ({
           }}
         >
           {shown ? (
-            <EyeOff size={14} aria-hidden="true" />
+            <EyeOff size="0.875rem" aria-hidden="true" />
           ) : (
-            <Eye size={14} aria-hidden="true" />
+            <Eye size="0.875rem" aria-hidden="true" />
           )}
         </button>
       </div>

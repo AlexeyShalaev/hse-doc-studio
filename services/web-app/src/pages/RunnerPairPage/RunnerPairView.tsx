@@ -64,7 +64,7 @@ export const RunnerPairView = ({
       {state.kind === "loading" && (
         <div
           className="flex items-center"
-          style={{ gap: 8, fontSize: 13 }}
+          style={{ gap: "0.5rem", fontSize: "0.8125rem" }}
           data-testid="runner-pair-loading"
         >
           <Spinner size="sm" />
@@ -114,13 +114,18 @@ const EnterCode = ({ onCode }: { onCode: (code: string) => void }) => {
   return (
     <form
       className="flex flex-col"
-      style={{ gap: 14 }}
+      style={{ gap: "0.875rem" }}
       noValidate
       onSubmit={submit}
     >
-      <div className="flex flex-col" style={{ gap: 6 }}>
-        <h1 style={{ margin: 0, fontSize: 18 }}>{t("pair.enterTitle")}</h1>
-        <p className="dim" style={{ margin: 0, fontSize: 13, lineHeight: 1.5 }}>
+      <div className="flex flex-col" style={{ gap: "0.375rem" }}>
+        <h1 style={{ margin: 0, fontSize: "1.125rem" }}>
+          {t("pair.enterTitle")}
+        </h1>
+        <p
+          className="dim"
+          style={{ margin: 0, fontSize: "0.8125rem", lineHeight: 1.5 }}
+        >
           {t("pair.enterLead")}
         </p>
       </div>
@@ -171,10 +176,10 @@ const Pending = ({
   return (
     <div
       className="flex flex-col"
-      style={{ gap: 16 }}
+      style={{ gap: "1rem" }}
       data-testid="runner-pair-pending"
     >
-      <h1 style={{ margin: 0, fontSize: 18, lineHeight: 1.3 }}>
+      <h1 style={{ margin: 0, fontSize: "1.125rem", lineHeight: 1.3 }}>
         {t("pair.question", { name: info.name })}
       </h1>
       <DeviceCodeDisplay
@@ -185,7 +190,7 @@ const Pending = ({
       />
       <DeviceFacts>
         <DeviceFact label={t("pair.kind")}>
-          <span className="flex items-center" style={{ gap: 6 }}>
+          <span className="flex items-center" style={{ gap: "0.375rem" }}>
             <KindIcon size={13} aria-hidden="true" />
             {t(`mine.kind.${info.host_kind}`)}
           </span>
@@ -201,10 +206,10 @@ const Pending = ({
         <DeviceFact label={t("pair.expires")}>
           <span
             className="flex items-center mono"
-            style={{ gap: 6 }}
+            style={{ gap: "0.375rem" }}
             data-testid="runner-pair-countdown"
           >
-            <Clock size={13} aria-hidden="true" />
+            <Clock size="0.8125rem" aria-hidden="true" />
             {left === null
               ? t("pair.expiredNow")
               : t("pair.expiresIn", { time: left })}
@@ -221,7 +226,7 @@ const Pending = ({
       />
       <label
         className="flex items-center"
-        style={{ gap: 10, fontSize: 13, cursor: "pointer" }}
+        style={{ gap: "0.625rem", fontSize: "0.8125rem", cursor: "pointer" }}
       >
         <Switch
           checked={mine}
@@ -233,7 +238,7 @@ const Pending = ({
       </label>
       <div
         className="flex items-center"
-        style={{ gap: 8, justifyContent: "flex-end" }}
+        style={{ gap: "0.5rem", justifyContent: "flex-end" }}
       >
         <Button
           type="button"

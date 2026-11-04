@@ -17,11 +17,15 @@ export const McpConnectGuide = ({
       description={withToken ? t("connect.hintServer") : t("connect.hintLocal")}
       testId="mcp-connect"
     >
-      <div className="flex flex-col" style={{ gap: 12 }}>
+      <div className="flex flex-col" style={{ gap: "0.75rem" }}>
         <CopyField value={url} label={t("connect.url")} />
         {clientConfigs(url, withToken).map((config) => (
-          <div key={config.id} className="flex flex-col" style={{ gap: 4 }}>
-            <strong style={{ fontSize: 13 }}>
+          <div
+            key={config.id}
+            className="flex flex-col"
+            style={{ gap: "0.25rem" }}
+          >
+            <strong style={{ fontSize: "0.8125rem" }}>
               {t(`connect.clients.${config.id}`)}
             </strong>
             <CopyField

@@ -42,7 +42,7 @@ export const ProjectsFolderCard = () => {
     >
       <form
         className="flex flex-col"
-        style={{ gap: 8 }}
+        style={{ gap: "0.5rem" }}
         onSubmit={(event) => {
           event.preventDefault();
           if (changed) save(value.trim() === "" ? null : value.trim());
@@ -60,7 +60,7 @@ export const ProjectsFolderCard = () => {
           }}
           data-testid="projects-dir-input"
         />
-        <div className="flex items-center" style={{ gap: 8 }}>
+        <div className="flex items-center" style={{ gap: "0.5rem" }}>
           <Button
             type="submit"
             disabled={!changed || update.isPending}

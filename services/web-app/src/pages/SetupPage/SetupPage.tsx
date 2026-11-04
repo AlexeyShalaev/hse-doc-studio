@@ -118,9 +118,9 @@ export const SetupPage = () => {
         style={{
           display: "flex",
           alignItems: "center",
-          gap: 14,
+          gap: "0.875rem",
           width: "100%",
-          maxWidth: 1180,
+          maxWidth: "73.75rem",
           margin: "0 auto",
         }}
       >
@@ -129,28 +129,37 @@ export const SetupPage = () => {
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
-            width: 42,
-            height: 42,
-            borderRadius: 12,
+            width: "2.625rem",
+            height: "2.625rem",
+            borderRadius: "0.75rem",
             background: "var(--c-info-soft)",
             border: "1px solid var(--c-info)",
             flexShrink: 0,
           }}
         >
-          <GraduationCap size={21} style={{ color: "var(--c-info)" }} />
+          <GraduationCap size="1.3125rem" style={{ color: "var(--c-info)" }} />
         </div>
         <div style={{ minWidth: 0 }}>
-          <div style={{ display: "flex", alignItems: "baseline", gap: 9 }}>
-            <h1 style={{ margin: 0, fontSize: 19, fontWeight: 650 }}>
+          <div
+            style={{
+              display: "flex",
+              alignItems: "baseline",
+              gap: "0.5625rem",
+            }}
+          >
+            <h1 style={{ margin: 0, fontSize: "1.1875rem", fontWeight: 650 }}>
               {t("brand.name")}
             </h1>
             {status && status.app_version !== "" && (
-              <span className="dim" style={{ fontSize: 11 }}>
+              <span className="dim" style={{ fontSize: "0.6875rem" }}>
                 {t("brand.version", { version: status.app_version })}
               </span>
             )}
           </div>
-          <p className="dim" style={{ margin: "2px 0 0", fontSize: 12.5 }}>
+          <p
+            className="dim"
+            style={{ margin: "0.125rem 0 0", fontSize: "0.78125rem" }}
+          >
             {t("brand.tagline")}
           </p>
         </div>
@@ -163,10 +172,19 @@ export const SetupPage = () => {
 
       <div className="setup-body">
         <section className="setup-card">
-          <h2 style={{ margin: "0 0 3px", fontSize: 15, fontWeight: 600 }}>
+          <h2
+            style={{
+              margin: "0 0 0.1875rem",
+              fontSize: "0.9375rem",
+              fontWeight: 600,
+            }}
+          >
             {t("folder.title")}
           </h2>
-          <p className="dim" style={{ margin: "0 0 12px", fontSize: 12.5 }}>
+          <p
+            className="dim"
+            style={{ margin: "0 0 0.75rem", fontSize: "0.78125rem" }}
+          >
             {t("folder.subtitle")}
           </p>
 
@@ -188,17 +206,17 @@ export const SetupPage = () => {
               style={{
                 display: "flex",
                 alignItems: "center",
-                gap: 8,
-                marginTop: 10,
-                padding: "8px 10px",
-                borderRadius: 8,
+                gap: "0.5rem",
+                marginTop: "0.625rem",
+                padding: "0.5rem 0.625rem",
+                borderRadius: "0.5rem",
                 background: "var(--c-ok-soft)",
                 border: "1px solid var(--c-ok)",
-                fontSize: 12.5,
+                fontSize: "0.78125rem",
               }}
             >
               <History
-                size={14}
+                size="0.875rem"
                 style={{ color: "var(--c-ok)", flexShrink: 0 }}
               />
               <span>{t("folder.previousInstall")}</span>
@@ -211,17 +229,17 @@ export const SetupPage = () => {
               style={{
                 display: "flex",
                 alignItems: "center",
-                gap: 8,
-                marginTop: 10,
-                padding: "8px 10px",
-                borderRadius: 8,
+                gap: "0.5rem",
+                marginTop: "0.625rem",
+                padding: "0.5rem 0.625rem",
+                borderRadius: "0.5rem",
                 background: "var(--c-warn-soft)",
                 border: "1px solid var(--c-warn)",
-                fontSize: 12.5,
+                fontSize: "0.78125rem",
               }}
             >
               <AlertTriangle
-                size={14}
+                size="0.875rem"
                 style={{ color: "var(--c-warn)", flexShrink: 0 }}
               />
               <span>{t("folder.readOnly")}</span>
@@ -229,7 +247,9 @@ export const SetupPage = () => {
           )}
 
           {canApply && (
-            <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
+            <div
+              style={{ display: "flex", gap: "0.5rem", marginTop: "0.75rem" }}
+            >
               {!alreadyHasSuggested && (
                 <button
                   type="button"
@@ -240,7 +260,7 @@ export const SetupPage = () => {
                   }}
                   title={suggested}
                 >
-                  <FolderPlus size={14} />
+                  <FolderPlus size="0.875rem" />
                   {t("apply.createHere", { name: DEFAULT_FOLDER_NAME })}
                 </button>
               )}
@@ -259,7 +279,7 @@ export const SetupPage = () => {
                   : exists
                     ? t("apply.useThis", { name: baseName(browser.path) })
                     : t("apply.createAndUse", { name: baseName(browser.path) })}
-                <ArrowRight size={15} />
+                <ArrowRight size="0.9375rem" />
               </button>
             </div>
           )}
@@ -268,12 +288,12 @@ export const SetupPage = () => {
             <div
               role="alert"
               style={{
-                marginTop: 12,
-                padding: "9px 11px",
-                borderRadius: 8,
+                marginTop: "0.75rem",
+                padding: "0.5625rem 0.6875rem",
+                borderRadius: "0.5rem",
                 background: "var(--c-err-soft)",
                 border: "1px solid var(--c-err)",
-                fontSize: 12.5,
+                fontSize: "0.78125rem",
                 color: "var(--c-err)",
               }}
             >

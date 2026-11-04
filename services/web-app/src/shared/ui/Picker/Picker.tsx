@@ -53,10 +53,10 @@ export type PickerSource = {
 };
 
 const KIND_ICON: Record<Exclude<PickerItem["kind"], "user">, ReactNode> = {
-  org: <Building2 size={14} aria-hidden="true" />,
-  group: <Users size={14} aria-hidden="true" />,
-  project: <FileText size={14} aria-hidden="true" />,
-  runner: <Server size={14} aria-hidden="true" />,
+  org: <Building2 size="0.875rem" aria-hidden="true" />,
+  group: <Users size="0.875rem" aria-hidden="true" />,
+  project: <FileText size="0.875rem" aria-hidden="true" />,
+  runner: <Server size="0.875rem" aria-hidden="true" />,
 };
 
 /** Значок строки: аватар человека или значок вида. */
@@ -151,7 +151,7 @@ export const PickerPanel = ({
   return (
     <div className="picker-panel" data-testid={testId}>
       <div className="picker-search">
-        <Search size={14} aria-hidden="true" />
+        <Search size="0.875rem" aria-hidden="true" />
         <input
           role="combobox"
           aria-expanded="true"
@@ -221,7 +221,11 @@ export const PickerPanel = ({
               )}
             </span>
             {item.id === selectedId && (
-              <Check size={14} aria-hidden="true" className="combo-check" />
+              <Check
+                size="0.875rem"
+                aria-hidden="true"
+                className="combo-check"
+              />
             )}
           </li>
         ))}
@@ -296,7 +300,7 @@ export const Picker = ({
               </span>
             )}
             <ChevronDown
-              size={14}
+              size="0.875rem"
               aria-hidden="true"
               className="picker-chevron"
             />
@@ -312,7 +316,7 @@ export const Picker = ({
               onChange(null);
             }}
           >
-            <X size={13} aria-hidden="true" />
+            <X size="0.8125rem" aria-hidden="true" />
           </button>
         )}
       </span>
@@ -323,7 +327,7 @@ export const Picker = ({
         // Список не уже поля, из которого открыт.
         style={{
           overflowY: "hidden",
-          width: "max(320px, var(--radix-popover-trigger-width))",
+          width: "max(20rem, var(--radix-popover-trigger-width))",
         }}
       >
         <PickerPanel
@@ -414,7 +418,7 @@ export const PickerFilter = ({
           >
             {icon}
             <FilterTriggerText label={label} summary={summary} />
-            <ChevronDown size={13} aria-hidden="true" />
+            <ChevronDown size="0.8125rem" aria-hidden="true" />
           </button>
         </PopoverTrigger>
         {value !== null && (
@@ -428,7 +432,7 @@ export const PickerFilter = ({
               onChange(null);
             }}
           >
-            <X size={12} aria-hidden="true" />
+            <X size="0.75rem" aria-hidden="true" />
           </button>
         )}
       </span>

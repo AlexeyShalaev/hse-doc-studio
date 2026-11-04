@@ -121,7 +121,7 @@ export const OidcSection = ({
             onClick={add}
             data-testid="oidc-add"
           >
-            <Plus size={14} aria-hidden="true" />
+            <Plus size="0.875rem" aria-hidden="true" />
             {t("oidc.add")}
           </Button>
         )
@@ -138,7 +138,7 @@ export const OidcSection = ({
         />
       )}
       {status === "error" && (
-        <div style={{ padding: "0 20px 16px" }}>
+        <div style={{ padding: "0 1.25rem 1rem" }}>
           <ErrorState
             compact
             title={t("oidc.loadFailed")}
@@ -157,7 +157,7 @@ export const OidcSection = ({
       )}
       {status === "ready" && providers.length === 0 && !filtered && (
         <EmptyState
-          icon={<KeyRound size={18} />}
+          icon={<KeyRound size="1.125rem" />}
           title={t("oidc.empty.title")}
           description={t("oidc.empty.body")}
           testId="oidc-empty"
@@ -169,7 +169,7 @@ export const OidcSection = ({
               onClick={add}
               data-testid="oidc-add"
             >
-              <Plus size={14} aria-hidden="true" />
+              <Plus size="0.875rem" aria-hidden="true" />
               {t("oidc.add")}
             </Button>
           }
@@ -190,7 +190,7 @@ export const OidcSection = ({
                   data-tone={provider.enabled ? "accent" : "neutral"}
                   aria-hidden="true"
                 >
-                  <KeyRound size={15} />
+                  <KeyRound size="0.9375rem" />
                 </span>
                 <div className="adm-item-text">
                   <span className="adm-item-title">{provider.label}</span>
@@ -225,7 +225,7 @@ export const OidcSection = ({
                       {
                         id: "edit",
                         label: t("oidc.edit"),
-                        icon: <Pencil size={14} />,
+                        icon: <Pencil size="0.875rem" />,
                         onSelect: () => {
                           open({ mode: "edit", provider });
                         },
@@ -237,9 +237,9 @@ export const OidcSection = ({
                           ? t("oidc.disable")
                           : t("oidc.enable"),
                         icon: provider.enabled ? (
-                          <PowerOff size={14} />
+                          <PowerOff size="0.875rem" />
                         ) : (
-                          <Power size={14} />
+                          <Power size="0.875rem" />
                         ),
                         onSelect: () => {
                           onToggle(provider);
@@ -249,7 +249,7 @@ export const OidcSection = ({
                       {
                         id: "delete",
                         label: t("oidc.delete"),
-                        icon: <Trash2 size={14} />,
+                        icon: <Trash2 size="0.875rem" />,
                         danger: true,
                         onSelect: () => {
                           onReset?.();
@@ -269,7 +269,7 @@ export const OidcSection = ({
         <div className="adm-list-pager">{pagination}</div>
       )}
       {failure && !removing && !form && (
-        <div style={{ padding: "0 20px 16px" }}>
+        <div style={{ padding: "0 1.25rem 1rem" }}>
           <Notice tone="err" role="alert" text={t(failureKey(failure.code))} />
         </div>
       )}

@@ -83,7 +83,7 @@ export const FilterBar = ({
   const reset =
     onReset && active && filters.length > 1 && summary === undefined ? (
       <button type="button" className="btn ghost sm" onClick={onReset}>
-        <X size={12} aria-hidden="true" />
+        <X size="0.75rem" aria-hidden="true" />
         {t("filterBar.reset")}
       </button>
     ) : null;
@@ -157,7 +157,7 @@ export const FilterBar = ({
                 <span
                   style={{
                     color: "var(--fg-2)",
-                    marginLeft: 2,
+                    marginLeft: "0.125rem",
                     fontVariantNumeric: "tabular-nums",
                   }}
                 >
@@ -194,7 +194,12 @@ const Chip = ({
     className={clsx("chip sans", selected && "accent")}
     aria-pressed={selected}
     onClick={onClick}
-    style={{ cursor: "pointer", height: 26, padding: "0 10px", fontSize: 12 }}
+    style={{
+      cursor: "pointer",
+      height: "1.625rem",
+      padding: "0 0.625rem",
+      fontSize: "0.75rem",
+    }}
   >
     {children}
   </button>

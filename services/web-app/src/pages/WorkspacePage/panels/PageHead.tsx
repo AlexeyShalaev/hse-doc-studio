@@ -12,20 +12,20 @@ export const PageHead = ({ icon: Icon, title, sub }: PageHeadProps) => {
       <div
         className="flex items-center justify-center shrink-0"
         style={{
-          width: 38,
-          height: 38,
-          borderRadius: 10,
+          width: "2.375rem",
+          height: "2.375rem",
+          borderRadius: "0.625rem",
           background: "var(--accent-soft)",
           color: "var(--accent)",
         }}
       >
-        <Icon size={18} />
+        <Icon size="1.125rem" />
       </div>
-      <div className="flex flex-col" style={{ gap: 2 }}>
+      <div className="flex flex-col" style={{ gap: "0.125rem" }}>
         <h2
           style={{
             margin: 0,
-            fontSize: 18,
+            fontSize: "1.125rem",
             fontWeight: 600,
             letterSpacing: "-0.01em",
           }}
@@ -35,7 +35,7 @@ export const PageHead = ({ icon: Icon, title, sub }: PageHeadProps) => {
         {sub && (
           <p
             className="dim"
-            style={{ margin: 0, fontSize: 12.5, maxWidth: 640 }}
+            style={{ margin: 0, fontSize: "0.78125rem", maxWidth: "40rem" }}
           >
             {sub}
           </p>

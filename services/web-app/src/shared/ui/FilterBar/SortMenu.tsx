@@ -66,7 +66,7 @@ export const SortMenu = <S extends string>({
                 aria-label={t(value?.desc ? "sortMenu.desc" : "sortMenu.asc")}
               />
             )}
-            <ChevronDown size={13} aria-hidden="true" />
+            <ChevronDown size="0.8125rem" aria-hidden="true" />
           </button>
         </PopoverTrigger>
       </span>
@@ -97,7 +97,7 @@ export const SortMenu = <S extends string>({
           <SortItem
             on={value?.desc === false}
             disabled={!value}
-            icon={<ArrowUp size={12} aria-hidden="true" />}
+            icon={<ArrowUp size="0.75rem" aria-hidden="true" />}
             onClick={() => {
               pickDirection(false);
             }}
@@ -107,7 +107,7 @@ export const SortMenu = <S extends string>({
           <SortItem
             on={value?.desc === true}
             disabled={!value}
-            icon={<ArrowDown size={12} aria-hidden="true" />}
+            icon={<ArrowDown size="0.75rem" aria-hidden="true" />}
             onClick={() => {
               pickDirection(true);
             }}
@@ -146,7 +146,7 @@ const SortItem = ({
       data-on={on ? "true" : undefined}
       aria-hidden="true"
     >
-      {on && <Check size={11} />}
+      {on && <Check size="0.6875rem" />}
     </span>
     <span className="fmenu-text">{children}</span>
     {icon}

@@ -67,10 +67,21 @@ export const PeopleOnline = ({
     <PopoverContent width={340} aria-label={t("people.title")}>
       <div
         className="flex flex-col"
-        style={{ gap: 4, padding: 10, maxHeight: "70vh", overflowY: "auto" }}
+        style={{
+          gap: "0.25rem",
+          padding: "0.625rem",
+          maxHeight: "70vh",
+          overflowY: "auto",
+        }}
         data-testid="people-list"
       >
-        <span style={{ fontSize: 12.5, fontWeight: 600, padding: "0 2px" }}>
+        <span
+          style={{
+            fontSize: "0.78125rem",
+            fontWeight: 600,
+            padding: "0 0.125rem",
+          }}
+        >
           {t("people.title")}
         </span>
         <ul className="pp-list">
@@ -118,13 +129,16 @@ export const PeopleOnline = ({
           })}
         </ul>
         {people.total > people.people.length && (
-          <span className="dim" style={{ fontSize: 11 }}>
+          <span className="dim" style={{ fontSize: "0.6875rem" }}>
             {t("people.truncated", {
               count: people.total - people.people.length,
             })}
           </span>
         )}
-        <span className="dim" style={{ fontSize: 11, lineHeight: 1.4 }}>
+        <span
+          className="dim"
+          style={{ fontSize: "0.6875rem", lineHeight: 1.4 }}
+        >
           {t("people.note")}
         </span>
       </div>
@@ -211,7 +225,7 @@ export const PeopleOnline = ({
             {hidden > 0 ? (
               <span>{t("people.more", { count: hidden })}</span>
             ) : (
-              <ChevronDown size={12} aria-hidden="true" />
+              <ChevronDown size="0.75rem" aria-hidden="true" />
             )}
           </button>
         </PopoverTrigger>

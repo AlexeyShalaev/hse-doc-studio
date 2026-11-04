@@ -77,7 +77,7 @@ export const ConnectRunnerDialog = ({
       {isOpen && (
         <div
           className="flex flex-col"
-          style={{ gap: 16 }}
+          style={{ gap: "1rem" }}
           data-testid="runner-connect-dialog"
         >
           <div
@@ -100,9 +100,9 @@ export const ConnectRunnerDialog = ({
                 }}
               >
                 {id === "studio" ? (
-                  <Laptop size={14} aria-hidden="true" />
+                  <Laptop size="0.875rem" aria-hidden="true" />
                 ) : (
-                  <Terminal size={14} aria-hidden="true" />
+                  <Terminal size="0.875rem" aria-hidden="true" />
                 )}
                 {id === "studio"
                   ? t("connectDialog.tabStudio")
@@ -150,7 +150,7 @@ const StudioTab = ({ onPairCode }: { onPairCode: (code: string) => void }) => {
   return (
     <form
       className="flex flex-col"
-      style={{ gap: 14 }}
+      style={{ gap: "0.875rem" }}
       noValidate
       onSubmit={submit}
     >
@@ -159,7 +159,7 @@ const StudioTab = ({ onPairCode }: { onPairCode: (code: string) => void }) => {
         <li>{t("connectDialog.studio.step2")}</li>
         <li>{t("connectDialog.studio.step3")}</li>
       </ol>
-      <div className="flex items-end" style={{ gap: 8 }}>
+      <div className="flex items-end" style={{ gap: "0.5rem" }}>
         <div style={{ flex: 1 }}>
           <Input
             id={`${id}-code`}
@@ -207,7 +207,7 @@ const TokenForm = ({
   return (
     <form
       className="flex flex-col"
-      style={{ gap: 14 }}
+      style={{ gap: "0.875rem" }}
       noValidate
       data-testid="runner-token-form"
       onSubmit={(event) => {
@@ -215,7 +215,7 @@ const TokenForm = ({
         onSubmit({ label: label.trim(), ttl_hours: ttl });
       }}
     >
-      <p style={{ margin: 0, fontSize: 12.5, color: "var(--fg-1)" }}>
+      <p style={{ margin: 0, fontSize: "0.78125rem", color: "var(--fg-1)" }}>
         {t("connectDialog.server.lead")}
       </p>
       <Input
@@ -229,7 +229,7 @@ const TokenForm = ({
         }}
         data-testid="runner-token-label"
       />
-      <div className="flex flex-col" style={{ gap: 6 }}>
+      <div className="flex flex-col" style={{ gap: "0.375rem" }}>
         <span className="form-label" id="runner-token-ttl">
           {t("connectDialog.server.ttl")}
         </span>
@@ -258,7 +258,7 @@ const TokenForm = ({
       {error && <Notice tone="err" role="alert" text={error} />}
       <div
         className="flex items-center"
-        style={{ gap: 8, justifyContent: "flex-end" }}
+        style={{ gap: "0.5rem", justifyContent: "flex-end" }}
       >
         <Button
           type="button"
@@ -301,8 +301,8 @@ const TokenResult = ({
           <div
             className="flex flex-col"
             style={{
-              gap: 8,
-              paddingTop: 12,
+              gap: "0.5rem",
+              paddingTop: "0.75rem",
               borderTop: "1px solid var(--border)",
             }}
           >
@@ -363,14 +363,22 @@ const TokenResult = ({
               target="_blank"
               rel="noreferrer"
               className="form-hint"
-              style={{ display: "inline-flex", alignItems: "center", gap: 4 }}
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "0.25rem",
+              }}
               data-testid="runner-token-ai-docs"
             >
-              <ExternalLink size={12} aria-hidden="true" />
+              <ExternalLink size="0.75rem" aria-hidden="true" />
               {t("connectDialog.server.aiDocs")}
             </a>
             <span className="myr-waiting" role="status">
-              <Loader2 size={13} className="animate-spin" aria-hidden="true" />
+              <Loader2
+                size="0.8125rem"
+                className="animate-spin"
+                aria-hidden="true"
+              />
               {t("connectDialog.server.waiting")}
             </span>
           </div>

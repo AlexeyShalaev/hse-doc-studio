@@ -36,14 +36,14 @@ export const ImportProgress = (props: ImportProgressProps) => {
     return (
       <div
         className="flex flex-col"
-        style={{ gap: 8 }}
+        style={{ gap: "0.5rem" }}
         role="status"
         aria-live="polite"
         data-testid="import-upload"
       >
         <div
           className="flex items-center justify-between"
-          style={{ fontSize: 12.5 }}
+          style={{ fontSize: "0.78125rem" }}
         >
           <span>{t("import.progress.upload")}</span>
           {percent !== null && (

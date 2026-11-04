@@ -171,7 +171,7 @@ export const HostSettingsDialog = ({
     >
       <div
         className="flex flex-col"
-        style={{ gap: 16 }}
+        style={{ gap: "1rem" }}
         data-testid="host-settings"
       >
         {adding && (
@@ -213,22 +213,26 @@ export const HostSettingsDialog = ({
 
         <fieldset
           className="flex flex-col"
-          style={{ gap: 6, border: 0, margin: 0, padding: 0 }}
+          style={{ gap: "0.375rem", border: 0, margin: 0, padding: 0 }}
         >
-          <legend style={{ fontSize: 12, fontWeight: 600, padding: 0 }}>
+          <legend style={{ fontSize: "0.75rem", fontWeight: 600, padding: 0 }}>
             {t("servers.dialog.provider")}
           </legend>
-          <div role="radiogroup" className="flex flex-col" style={{ gap: 3 }}>
+          <div
+            role="radiogroup"
+            className="flex flex-col"
+            style={{ gap: "0.1875rem" }}
+          >
             {options.map((id) => (
               <label
                 key={id}
                 className="flex items-center"
                 style={{
-                  gap: 8,
-                  padding: "5px 8px",
+                  gap: "0.5rem",
+                  padding: "0.3125rem 0.5rem",
                   borderRadius: "var(--r-2)",
                   cursor: "pointer",
-                  fontSize: 12.5,
+                  fontSize: "0.78125rem",
                   background:
                     choice === id ? "var(--accent-soft)" : "transparent",
                 }}
@@ -250,14 +254,18 @@ export const HostSettingsDialog = ({
           </div>
         </fieldset>
 
-        <div className="flex flex-col" style={{ gap: 8 }}>
-          <div style={{ fontSize: 12, fontWeight: 600 }}>
+        <div className="flex flex-col" style={{ gap: "0.5rem" }}>
+          <div style={{ fontSize: "0.75rem", fontWeight: 600 }}>
             {t("servers.dialog.ca")}
           </div>
           {settings?.ca_present && !removeCa ? (
             <div
               className="flex items-center"
-              style={{ gap: 8, flexWrap: "wrap", fontSize: 12.5 }}
+              style={{
+                gap: "0.5rem",
+                flexWrap: "wrap",
+                fontSize: "0.78125rem",
+              }}
             >
               <span className="chip accent">{t("servers.caPresent")}</span>
               <button
@@ -292,8 +300,8 @@ export const HostSettingsDialog = ({
         </div>
 
         {settings?.pinned_fingerprint && (
-          <div className="flex flex-col" style={{ gap: 6 }}>
-            <div style={{ fontSize: 12, fontWeight: 600 }}>
+          <div className="flex flex-col" style={{ gap: "0.375rem" }}>
+            <div style={{ fontSize: "0.75rem", fontWeight: 600 }}>
               {t("servers.dialog.pin")}
             </div>
             {removePin ? (
@@ -323,7 +331,7 @@ export const HostSettingsDialog = ({
           </div>
         )}
 
-        <p className="dim" style={{ margin: 0, fontSize: 11.5 }}>
+        <p className="dim" style={{ margin: 0, fontSize: "0.71875rem" }}>
           {t("tls.noDisable")}
         </p>
         {error && <Notice tone="err" role="alert" text={error} />}

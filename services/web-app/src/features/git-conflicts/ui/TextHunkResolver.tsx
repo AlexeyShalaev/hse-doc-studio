@@ -116,7 +116,7 @@ export const TextHunkResolver = ({
 
   if (isManual) {
     return (
-      <div className="flex flex-col" style={{ gap: 10 }}>
+      <div className="flex flex-col" style={{ gap: "0.625rem" }}>
         <Notice
           tone="info"
           role="status"
@@ -142,12 +142,15 @@ export const TextHunkResolver = ({
 
   let hunkIndex = -1;
   return (
-    <div className="flex flex-col" style={{ gap: 10 }}>
+    <div className="flex flex-col" style={{ gap: "0.625rem" }}>
       {detail.truncated && (
         <Notice tone="warn" role="status" text={t("parts.truncated")} />
       )}
       <div className="hunk-toolbar">
-        <span style={{ fontSize: 12, fontWeight: 600 }} aria-live="polite">
+        <span
+          style={{ fontSize: "0.75rem", fontWeight: 600 }}
+          aria-live="polite"
+        >
           {openCount > 0
             ? t("parts.open", { open: openCount, total: hunks.length })
             : t("parts.allDone")}
@@ -182,7 +185,7 @@ export const TextHunkResolver = ({
             onJump(-1);
           }}
         >
-          <ChevronUp size={12} aria-hidden="true" />
+          <ChevronUp size="0.75rem" aria-hidden="true" />
           {t("parts.prev")}
         </button>
         <button
@@ -195,7 +198,7 @@ export const TextHunkResolver = ({
             onJump(1);
           }}
         >
-          <ChevronDown size={12} aria-hidden="true" />
+          <ChevronDown size="0.75rem" aria-hidden="true" />
           {t("parts.next")}
         </button>
       </div>
@@ -213,7 +216,7 @@ export const TextHunkResolver = ({
         />
       )}
 
-      <div className="flex flex-col" style={{ gap: 10 }}>
+      <div className="flex flex-col" style={{ gap: "0.625rem" }}>
         {detail.segments.map((segment, index) => {
           const start = starts[index] ?? 1;
           if (segment.type === "hunk") {
@@ -264,7 +267,7 @@ export const TextHunkResolver = ({
                       toggle(index);
                     }}
                   >
-                    <FoldVertical size={12} aria-hidden="true" />
+                    <FoldVertical size="0.75rem" aria-hidden="true" />
                     {t("parts.fold")}
                   </button>
                 )}
@@ -282,7 +285,7 @@ export const TextHunkResolver = ({
                   toggle(index);
                 }}
               >
-                <UnfoldVertical size={12} aria-hidden="true" />
+                <UnfoldVertical size="0.75rem" aria-hidden="true" />
                 {t("parts.unfold", { count: hidden })}
               </button>
               {tail > 0 && <CleanLines lines={lines.slice(-tail)} />}

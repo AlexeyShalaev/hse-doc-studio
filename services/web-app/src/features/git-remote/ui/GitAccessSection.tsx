@@ -42,7 +42,7 @@ const QueryBody = ({
       <div
         className="flex items-center"
         role="status"
-        style={{ gap: 8, fontSize: 12 }}
+        style={{ gap: "0.5rem", fontSize: "0.75rem" }}
       >
         <Spinner size="sm" />
         <span className="dim">{t("access.loading")}</span>
@@ -90,19 +90,23 @@ export const GitAccessSection = () => {
       <div
         id="git-access"
         className="flex flex-col settings-anchor"
-        style={{ gap: 4, marginBottom: 4 }}
+        style={{ gap: "0.25rem", marginBottom: "0.25rem" }}
       >
-        <h4 style={{ margin: 0, fontSize: 14, fontWeight: 600 }}>
+        <h4 style={{ margin: 0, fontSize: "0.875rem", fontWeight: 600 }}>
           {t("title")}
         </h4>
-        <p style={{ margin: 0, color: "var(--fg-2)", fontSize: 12 }}>
+        <p style={{ margin: 0, color: "var(--fg-2)", fontSize: "0.75rem" }}>
           {t("subtitle")}
         </p>
       </div>
 
       <div
         className="flex flex-col"
-        style={{ gap: 14, paddingBottom: 14, maxWidth: 720 }}
+        style={{
+          gap: "0.875rem",
+          paddingBottom: "0.875rem",
+          maxWidth: "45rem",
+        }}
       >
         <AccessCard id="git-access-credentials" title={t("credentials.title")}>
           <QueryBody
@@ -114,7 +118,7 @@ export const GitAccessSection = () => {
             }}
           >
             {credentials.data?.length === 0 ? (
-              <p className="dim" style={{ margin: 0, fontSize: 12.5 }}>
+              <p className="dim" style={{ margin: 0, fontSize: "0.78125rem" }}>
                 {t("credentials.empty")}
               </p>
             ) : (
@@ -132,7 +136,7 @@ export const GitAccessSection = () => {
                     padding: 0,
                     display: "flex",
                     flexDirection: "column",
-                    gap: 8,
+                    gap: "0.5rem",
                   }}
                 >
                   {credentials.data?.map((credential) => (
@@ -181,7 +185,7 @@ export const GitAccessSection = () => {
             }}
           >
             {hosts.data?.length === 0 ? (
-              <p className="dim" style={{ margin: 0, fontSize: 12.5 }}>
+              <p className="dim" style={{ margin: 0, fontSize: "0.78125rem" }}>
                 {t("hosts.empty")}
               </p>
             ) : (
