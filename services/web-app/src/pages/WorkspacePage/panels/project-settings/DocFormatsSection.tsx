@@ -22,18 +22,18 @@ export const DocFormatsSection = ({
   const { t } = useTranslation("workspace");
   return (
     <SectionCard title={t("projectSettings.sectionDocFormats")}>
-      <div className="flex flex-col" style={{ gap: 4 }}>
+      <div className="flex flex-col" style={{ gap: "0.25rem" }}>
         {groups.map((group, groupIndex) => (
           <Fragment key={group.key}>
             {group.title != null && (
               <div
                 className="mono dim"
                 style={{
-                  fontSize: 9.5,
+                  fontSize: "0.59375rem",
                   letterSpacing: "0.12em",
                   textTransform: "uppercase",
-                  marginTop: groupIndex > 0 ? 12 : 0,
-                  marginBottom: 2,
+                  marginTop: groupIndex > 0 ? "0.75rem" : 0,
+                  marginBottom: "0.125rem",
                 }}
               >
                 {group.title}
@@ -46,12 +46,12 @@ export const DocFormatsSection = ({
                 <div
                   key={doc.id}
                   className="flex items-center justify-between gap-3"
-                  style={{ padding: "3px 0", flexWrap: "wrap" }}
+                  style={{ padding: "0.1875rem 0", flexWrap: "wrap" }}
                 >
                   {/* minWidth инлайном: утилиты min-w-0 в сборке Tailwind нет. */}
                   <span
                     className="truncate"
-                    style={{ fontSize: 12.5, minWidth: 0 }}
+                    style={{ fontSize: "0.78125rem", minWidth: 0 }}
                   >
                     {docName}
                   </span>
@@ -79,7 +79,10 @@ export const DocFormatsSection = ({
             })}
           </Fragment>
         ))}
-        <span className="dim" style={{ fontSize: 11, marginTop: 6 }}>
+        <span
+          className="dim"
+          style={{ fontSize: "0.6875rem", marginTop: "0.375rem" }}
+        >
           {t("projectSettings.docFormatsHint")}
         </span>
       </div>

@@ -90,14 +90,14 @@ export const DiagnosticActionMenu = ({
           left: x,
           top: y,
           width: MENU_WIDTH,
-          maxHeight: "min(60vh, 420px)",
+          maxHeight: "min(60vh, 26.25rem)",
           overflowY: "auto",
           zIndex: 61,
           background: "var(--bg-1)",
           border: "1px solid var(--border)",
           borderRadius: "var(--r-3)",
           boxShadow: "var(--shadow-pop, 0 12px 40px rgba(0,0,0,0.45))",
-          padding: 4,
+          padding: "0.25rem",
         }}
         onMouseDown={(event) => {
           event.stopPropagation();
@@ -115,23 +115,23 @@ export const DiagnosticActionMenu = ({
               key={`${String(d.line)}-${ruleId ?? "?"}-${String(index)}`}
               className="flex flex-col"
               style={{
-                gap: 4,
-                padding: 6,
+                gap: "0.25rem",
+                padding: "0.375rem",
                 borderTop: index > 0 ? "1px solid var(--border)" : undefined,
               }}
             >
               <div
                 className="flex items-start gap-2"
-                style={{ padding: "2px 4px" }}
+                style={{ padding: "0.125rem 0.25rem" }}
               >
                 <Icon
-                  size={13}
+                  size="0.8125rem"
                   style={{ color: meta.color, flexShrink: 0, marginTop: 1 }}
                 />
                 <div className="flex flex-col min-w-0" style={{ gap: 1 }}>
                   <span
                     style={{
-                      fontSize: 12.5,
+                      fontSize: "0.78125rem",
                       color: "var(--fg-0)",
                       lineHeight: 1.3,
                     }}
@@ -139,7 +139,10 @@ export const DiagnosticActionMenu = ({
                     {d.message}
                   </span>
                   {ruleId && (
-                    <span className="mono dimmer" style={{ fontSize: 10 }}>
+                    <span
+                      className="mono dimmer"
+                      style={{ fontSize: "0.625rem" }}
+                    >
                       {t("actionMenu.ruleLine", { ruleId, line: d.line })}
                     </span>
                   )}
@@ -150,13 +153,13 @@ export const DiagnosticActionMenu = ({
                 <button
                   type="button"
                   className="row-btn"
-                  style={{ gap: 8, color: "var(--c-ok)" }}
+                  style={{ gap: "0.5rem", color: "var(--c-ok)" }}
                   onClick={() => {
                     actions.onApplyFix?.(d);
                     onClose();
                   }}
                 >
-                  <Wand2 size={13} style={{ flexShrink: 0 }} />
+                  <Wand2 size="0.8125rem" style={{ flexShrink: 0 }} />
                   <span>{d.fix.title ?? t("actionMenu.applyFix")}</span>
                 </button>
               )}
@@ -164,13 +167,13 @@ export const DiagnosticActionMenu = ({
               <button
                 type="button"
                 className="row-btn"
-                style={{ gap: 8, color: "var(--accent)" }}
+                style={{ gap: "0.5rem", color: "var(--accent)" }}
                 onClick={() => {
                   actions.onFixWithAi(d);
                   onClose();
                 }}
               >
-                <Sparkles size={13} style={{ flexShrink: 0 }} />
+                <Sparkles size="0.8125rem" style={{ flexShrink: 0 }} />
                 <span>{t("actionMenu.fixWithAi")}</span>
               </button>
 
@@ -178,9 +181,13 @@ export const DiagnosticActionMenu = ({
                 <>
                   <div
                     className="flex items-center"
-                    style={{ gap: 5, padding: "2px 8px", flexWrap: "wrap" }}
+                    style={{
+                      gap: "0.3125rem",
+                      padding: "0.125rem 0.5rem",
+                      flexWrap: "wrap",
+                    }}
                   >
-                    <span className="dimmer" style={{ fontSize: 11 }}>
+                    <span className="dimmer" style={{ fontSize: "0.6875rem" }}>
                       {t("actionMenu.severity")}
                     </span>
                     {SEVERITY_OPTIONS.map((opt) => {
@@ -192,14 +199,14 @@ export const DiagnosticActionMenu = ({
                             className={clsx("sev", opt)}
                             title={t("actionMenu.currentSeverity")}
                             style={{
-                              minWidth: 56,
+                              minWidth: "3.5rem",
                               justifyContent: "center",
-                              gap: 3,
+                              gap: "0.1875rem",
                               fontWeight: 700,
                               boxShadow: `0 0 0 1.5px var(--c-${opt})`,
                             }}
                           >
-                            <Check size={10} />
+                            <Check size="0.625rem" />
                             {opt.toUpperCase()}
                           </span>
                         );
@@ -213,7 +220,7 @@ export const DiagnosticActionMenu = ({
                             severity: opt.toUpperCase(),
                           })}
                           style={{
-                            minWidth: 56,
+                            minWidth: "3.5rem",
                             justifyContent: "center",
                             cursor: "pointer",
                             opacity: 0.45,
@@ -237,7 +244,7 @@ export const DiagnosticActionMenu = ({
                           onClose();
                         }}
                       >
-                        <RotateCcw size={11} />
+                        <RotateCcw size="0.6875rem" />
                       </button>
                     )}
                   </div>
@@ -246,13 +253,13 @@ export const DiagnosticActionMenu = ({
                     <button
                       type="button"
                       className="row-btn"
-                      style={{ gap: 8 }}
+                      style={{ gap: "0.5rem" }}
                       onClick={() => {
                         actions.onIgnoreFinding?.(d);
                         onClose();
                       }}
                     >
-                      <CircleSlash size={13} style={{ flexShrink: 0 }} />
+                      <CircleSlash size="0.8125rem" style={{ flexShrink: 0 }} />
                       <span>{t("actionMenu.ignoreFinding")}</span>
                     </button>
                   )}
@@ -260,13 +267,13 @@ export const DiagnosticActionMenu = ({
                   <button
                     type="button"
                     className="row-btn"
-                    style={{ gap: 8 }}
+                    style={{ gap: "0.5rem" }}
                     onClick={() => {
                       actions.onIgnoreRule(ruleId);
                       onClose();
                     }}
                   >
-                    <EyeOff size={13} style={{ flexShrink: 0 }} />
+                    <EyeOff size="0.8125rem" style={{ flexShrink: 0 }} />
                     <span>{t("actionMenu.ignoreRule")}</span>
                   </button>
                 </>

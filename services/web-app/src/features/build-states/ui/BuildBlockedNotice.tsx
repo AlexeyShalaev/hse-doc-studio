@@ -38,15 +38,15 @@ export const BuildBlockedNotice = ({
       style={
         compact
           ? {
-              fontSize: 10.5,
+              fontSize: "0.65625rem",
               lineHeight: 1.4,
               color: "var(--fg-2)",
-              padding: "6px 8px",
+              padding: "0.375rem 0.5rem",
               border: "1px solid var(--c-warn)",
-              borderRadius: 4,
+              borderRadius: "0.25rem",
             }
           : {
-              padding: "12px 16px",
+              padding: "0.75rem 1rem",
               background: "var(--bg-1)",
               borderBottom: "1px solid var(--c-warn)",
               borderLeft: "3px solid var(--c-warn)",
@@ -54,15 +54,20 @@ export const BuildBlockedNotice = ({
       }
     >
       <ServerOff
-        size={compact ? 12 : 18}
+        size={compact ? "0.75rem" : "1.125rem"}
         style={{ color: "var(--c-warn)", flexShrink: 0, marginTop: 1 }}
       />
-      <div className="flex flex-col" style={{ gap: 3, minWidth: 0, flex: 1 }}>
-        <strong style={{ fontSize: compact ? 11 : 13 }}>{title}</strong>
+      <div
+        className="flex flex-col"
+        style={{ gap: "0.1875rem", minWidth: 0, flex: 1 }}
+      >
+        <strong style={{ fontSize: compact ? "0.6875rem" : "0.8125rem" }}>
+          {title}
+        </strong>
         <span
           className="build-blocked-text"
           style={{
-            fontSize: compact ? 10.5 : 12,
+            fontSize: compact ? "0.65625rem" : "0.75rem",
             color: "var(--fg-2)",
             lineHeight: 1.5,
           }}
@@ -74,7 +79,10 @@ export const BuildBlockedNotice = ({
         </span>
         <div
           className="flex items-center flex-wrap"
-          style={{ gap: compact ? 8 : 12, marginTop: compact ? 2 : 4 }}
+          style={{
+            gap: compact ? "0.5rem" : "0.75rem",
+            marginTop: compact ? "0.125rem" : "0.25rem",
+          }}
         >
           <LocalStudioLink
             projectId={projectId}
@@ -87,7 +95,7 @@ export const BuildBlockedNotice = ({
             <Link
               to="/admin/runners"
               data-testid="build-blocked-runners-link"
-              style={{ fontSize: compact ? 10.5 : 12 }}
+              style={{ fontSize: compact ? "0.65625rem" : "0.75rem" }}
             >
               {t("compile.unavailable.openRunners")}
             </Link>

@@ -200,7 +200,7 @@ const CloneWizardBody = ({
       <div
         role="status"
         className="flex items-center dim"
-        style={{ gap: 8, minHeight: 160, justifyContent: "center" }}
+        style={{ gap: "0.5rem", minHeight: "10rem", justifyContent: "center" }}
       >
         <Spinner size="sm" />
         {t("clone.loading")}
@@ -222,18 +222,21 @@ const CloneWizardBody = ({
   }));
 
   return (
-    <div className="flex flex-col" style={{ gap: 20 }}>
+    <div className="flex flex-col" style={{ gap: "1.25rem" }}>
       <div>
-        <div className="flex items-center gap-2" style={{ marginBottom: 6 }}>
+        <div
+          className="flex items-center gap-2"
+          style={{ marginBottom: "0.375rem" }}
+        >
           <GitBranch
-            size={14}
+            size="0.875rem"
             aria-hidden="true"
             style={{ color: "var(--accent)" }}
           />
           <span
             className="mono"
             style={{
-              fontSize: 10,
+              fontSize: "0.625rem",
               color: "var(--accent)",
               letterSpacing: "0.1em",
               textTransform: "uppercase",
@@ -244,8 +247,8 @@ const CloneWizardBody = ({
         </div>
         <h2
           style={{
-            margin: "0 0 4px",
-            fontSize: 20,
+            margin: "0 0 0.25rem",
+            fontSize: "1.25rem",
             fontWeight: 600,
             letterSpacing: "-0.01em",
           }}
@@ -254,7 +257,7 @@ const CloneWizardBody = ({
         </h2>
         <p
           className="dim"
-          style={{ margin: 0, fontSize: 12.5, lineHeight: 1.5 }}
+          style={{ margin: 0, fontSize: "0.78125rem", lineHeight: 1.5 }}
         >
           {currentStep === "profile"
             ? t("clone.lead.profile")
@@ -387,8 +390,8 @@ export const CloneWizard = (props: CloneWizardProps) => (
       <div
         style={{
           width: "100%",
-          maxWidth: 640,
-          padding: "32px 24px 40px",
+          maxWidth: "40rem",
+          padding: "2rem 1.5rem 2.5rem",
         }}
       >
         <CloneWizardBody {...props} />

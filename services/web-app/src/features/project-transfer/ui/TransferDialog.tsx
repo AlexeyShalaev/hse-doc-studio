@@ -129,10 +129,13 @@ export const TransferDialog = ({
     >
       <div
         className="flex flex-col"
-        style={{ gap: 12 }}
+        style={{ gap: "0.75rem" }}
         data-testid="transfer-dialog"
       >
-        <label className="flex flex-col" style={{ gap: 4, fontSize: 12 }}>
+        <label
+          className="flex flex-col"
+          style={{ gap: "0.25rem", fontSize: "0.75rem" }}
+        >
           {t("transfer.target")}
           <Input
             value={query}
@@ -145,7 +148,7 @@ export const TransferDialog = ({
         </label>
         <ul
           className="flex flex-col"
-          style={{ listStyle: "none", margin: 0, padding: 0, gap: 2 }}
+          style={{ listStyle: "none", margin: 0, padding: 0, gap: "0.125rem" }}
           data-testid="transfer-target"
           role="listbox"
           aria-label={t("transfer.target")}
@@ -163,9 +166,9 @@ export const TransferDialog = ({
                   className="flex items-center"
                   data-testid={`transfer-target-${c.kind}-${c.id}`}
                   style={{
-                    gap: 10,
+                    gap: "0.625rem",
                     width: "100%",
-                    padding: "6px 8px",
+                    padding: "0.375rem 0.5rem",
                     borderRadius: "var(--r-2)",
                     border: selected
                       ? "1px solid var(--accent)"
@@ -178,10 +181,10 @@ export const TransferDialog = ({
                     setTarget(c);
                   }}
                 >
-                  <Icon size={14} aria-hidden="true" />
-                  <span style={{ fontSize: 13 }}>{c.name}</span>
+                  <Icon size="0.875rem" aria-hidden="true" />
+                  <span style={{ fontSize: "0.8125rem" }}>{c.name}</span>
                   {c.detail && (
-                    <span className="dim" style={{ fontSize: 11.5 }}>
+                    <span className="dim" style={{ fontSize: "0.71875rem" }}>
                       {c.detail}
                     </span>
                   )}
@@ -190,7 +193,7 @@ export const TransferDialog = ({
             );
           })}
           {candidates.data?.items.length === 0 && (
-            <li className="dim" style={{ fontSize: 12 }}>
+            <li className="dim" style={{ fontSize: "0.75rem" }}>
               {t("transfer.none")}
             </li>
           )}
@@ -205,7 +208,10 @@ export const TransferDialog = ({
             }
           />
         )}
-        <label className="flex flex-col" style={{ gap: 4, fontSize: 12 }}>
+        <label
+          className="flex flex-col"
+          style={{ gap: "0.25rem", fontSize: "0.75rem" }}
+        >
           {t("form.message")}
           <Textarea
             value={message}

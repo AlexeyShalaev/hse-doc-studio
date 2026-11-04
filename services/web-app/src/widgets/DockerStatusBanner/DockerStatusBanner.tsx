@@ -28,15 +28,15 @@ export const DockerStatusBanner = () => {
         flexShrink: 0,
         display: "flex",
         alignItems: "center",
-        gap: 10,
-        padding: "7px 14px",
+        gap: "0.625rem",
+        padding: "0.4375rem 0.875rem",
         background: "var(--c-err-soft)",
         borderBottom: "1px solid var(--c-err)",
-        fontSize: 12,
+        fontSize: "0.75rem",
       }}
     >
       <AlertTriangle
-        size={13}
+        size="0.8125rem"
         style={{ color: "var(--c-err)", flexShrink: 0 }}
       />
       <span style={{ color: "var(--c-err)", fontWeight: 600, flexShrink: 0 }}>
@@ -63,7 +63,7 @@ export const DockerStatusBanner = () => {
           void navigate("/settings/compiler");
         }}
       >
-        <ExternalLink size={11} />
+        <ExternalLink size="0.6875rem" />
         {t("dockerBanner.openSettings")}
       </button>
     </div>

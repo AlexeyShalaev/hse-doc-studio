@@ -20,7 +20,7 @@ const SigningBody = () => {
   return (
     <div
       className="flex flex-col"
-      style={{ gap: 20, flex: 1 }}
+      style={{ gap: "1.25rem", flex: 1 }}
       data-testid="admin-signing-page"
     >
       <PageHead title={t("signing.page.title")} lead={t("signing.page.lead")} />

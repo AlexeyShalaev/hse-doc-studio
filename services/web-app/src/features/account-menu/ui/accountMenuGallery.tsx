@@ -28,7 +28,11 @@ const entry = (
   width: 420,
   render: () => (
     <div
-      style={{ minHeight: 280, display: "flex", justifyContent: "flex-end" }}
+      style={{
+        minHeight: "17.5rem",
+        display: "flex",
+        justifyContent: "flex-end",
+      }}
     >
       <AccountMenuView
         user={user}

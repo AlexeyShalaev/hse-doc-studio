@@ -354,7 +354,13 @@ export const getServerSetupGallery = (): GalleryGroup[] => [
         render: () => (
           <OccupiedCard
             signIn={
-              <p style={{ margin: 0, fontSize: 12.5, color: "var(--fg-2)" }}>
+              <p
+                style={{
+                  margin: 0,
+                  fontSize: "0.78125rem",
+                  color: "var(--fg-2)",
+                }}
+              >
                 [форма входа]
               </p>
             }

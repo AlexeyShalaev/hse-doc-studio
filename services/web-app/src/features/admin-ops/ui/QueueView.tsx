@@ -157,7 +157,7 @@ export const QueueView = ({
           const { job } = row.original;
           // Название проекта бывает длинным: строка режется, таблица не уезжает вбок.
           return (
-            <span className="ops-cell" style={{ maxWidth: 280 }}>
+            <span className="ops-cell" style={{ maxWidth: "17.5rem" }}>
               <span className="ops-cell-title">
                 {t(`queue.kind.${job.kind}`, { defaultValue: job.kind })}
               </span>
@@ -248,7 +248,7 @@ export const QueueView = ({
               className="chip sans"
               data-testid={`queue-where-${row.original.job.id}`}
               data-where={where}
-              style={{ fontSize: 11 }}
+              style={{ fontSize: "0.6875rem" }}
             >
               {t(`queue.where.${where}`)}
             </span>
@@ -285,7 +285,7 @@ export const QueueView = ({
                 size="sm"
                 variant="ghost"
                 type="button"
-                style={{ gap: 5 }}
+                style={{ gap: "0.3125rem" }}
                 aria-label={t("queue.cancelLabel", {
                   kind: t(`queue.kind.${row.original.job.kind}`, {
                     defaultValue: row.original.job.kind,
@@ -297,7 +297,7 @@ export const QueueView = ({
                   row.original.cancel();
                 }}
               >
-                <XCircle size={13} aria-hidden="true" />
+                <XCircle size="0.8125rem" aria-hidden="true" />
                 {t("queue.cancel")}
               </Button>
             </span>
@@ -509,7 +509,7 @@ export const QueueView = ({
       <KpiGrid>
         <KpiTile
           testId="queue-stat-queued"
-          icon={<ListOrdered size={14} aria-hidden="true" />}
+          icon={<ListOrdered size="0.875rem" aria-hidden="true" />}
           label={t("queue.stats.queued")}
           value={(summary?.queued ?? 0).toLocaleString(localeTag())}
           loading={kpiLoading}
@@ -525,7 +525,7 @@ export const QueueView = ({
         />
         <KpiTile
           testId="queue-stat-running"
-          icon={<LoaderCircle size={14} aria-hidden="true" />}
+          icon={<LoaderCircle size="0.875rem" aria-hidden="true" />}
           label={t("queue.stats.running")}
           value={(summary?.running ?? 0).toLocaleString(localeTag())}
           loading={kpiLoading}
@@ -543,7 +543,7 @@ export const QueueView = ({
         />
         <KpiTile
           testId="queue-stat-wait"
-          icon={<Clock size={14} aria-hidden="true" />}
+          icon={<Clock size="0.875rem" aria-hidden="true" />}
           label={t("queue.stats.wait")}
           value={dur(summary?.wait_p50_s ?? null) ?? t("queue.stats.noData")}
           loading={kpiLoading}
@@ -556,7 +556,7 @@ export const QueueView = ({
         />
         <KpiTile
           testId="queue-stat-failed"
-          icon={<CircleAlert size={14} aria-hidden="true" />}
+          icon={<CircleAlert size="0.875rem" aria-hidden="true" />}
           label={t("queue.stats.failed")}
           value={broken.toLocaleString(localeTag())}
           loading={kpiLoading}
@@ -571,7 +571,7 @@ export const QueueView = ({
 
       {summary && summary.classes.length > 0 && (
         <div className="ops-classes" data-testid="queue-classes">
-          <Timer size={14} aria-hidden="true" />
+          <Timer size="0.875rem" aria-hidden="true" />
           <span>{t("queue.classes.title")}</span>
           {[...summary.classes]
             .sort((a, b) => classRank(a.name) - classRank(b.name))

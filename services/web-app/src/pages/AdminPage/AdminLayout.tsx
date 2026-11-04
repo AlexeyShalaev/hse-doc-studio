@@ -195,7 +195,7 @@ const AdminNav = () => {
     <div className="adm-nav-head">
       <WithTip narrow={narrow && !isPhone} label={name}>
         <span className="adm-nav-mark" aria-hidden="true">
-          <ShieldCheck size={16} />
+          <ShieldCheck size="1rem" />
         </span>
       </WithTip>
       <div className="adm-nav-head-text" style={{ minWidth: 0, flex: 1 }}>
@@ -255,7 +255,7 @@ const AdminNav = () => {
                       setIsMenuOpen(false);
                     }}
                   >
-                    <Icon size={15} aria-hidden="true" />
+                    <Icon size="0.9375rem" aria-hidden="true" />
                     <span className="adm-nav-label">{label}</span>
                     {counter && (
                       <span
@@ -292,7 +292,7 @@ const AdminNav = () => {
           data-testid="admin-back-to-studio"
           aria-label={narrow && !isPhone ? t("nav.back") : undefined}
         >
-          <ArrowLeft size={15} aria-hidden="true" />
+          <ArrowLeft size="0.9375rem" aria-hidden="true" />
           <span className="adm-nav-label">{t("nav.back")}</span>
         </Link>
       </WithTip>
@@ -334,7 +334,7 @@ const AdminNav = () => {
                 {currentCounter.count}
               </span>
             )}
-            <ChevronDown size={14} aria-hidden="true" />
+            <ChevronDown size="0.875rem" aria-hidden="true" />
           </button>
         </div>
         <Modal

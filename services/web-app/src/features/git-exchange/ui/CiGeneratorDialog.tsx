@@ -142,9 +142,9 @@ export const CiGeneratorDialog = ({
   ) : (
     <div
       className="flex"
-      style={{ gap: 20, flexWrap: "wrap", alignItems: "flex-start" }}
+      style={{ gap: "1.25rem", flexWrap: "wrap", alignItems: "flex-start" }}
     >
-      <div style={{ flex: "1 1 240px", minWidth: 0, maxWidth: 300 }}>
+      <div style={{ flex: "1 1 15rem", minWidth: 0, maxWidth: "18.75rem" }}>
         <CiOptionsPanel
           options={options}
           onChange={change}
@@ -157,7 +157,7 @@ export const CiGeneratorDialog = ({
       </div>
       <div
         className="flex flex-col"
-        style={{ flex: "2 1 360px", minWidth: 0, gap: 12 }}
+        style={{ flex: "2 1 22.5rem", minWidth: 0, gap: "0.75rem" }}
       >
         <CiPreviewPane
           preview={state.preview}
@@ -214,7 +214,7 @@ export const CiGeneratorDialog = ({
                 {writer.isPending ? (
                   <Spinner size="sm" />
                 ) : (
-                  <FilePlus2 size={12} aria-hidden="true" />
+                  <FilePlus2 size="0.75rem" aria-hidden="true" />
                 )}
                 {t("ci.write")}
               </button>

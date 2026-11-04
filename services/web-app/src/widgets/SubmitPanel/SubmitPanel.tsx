@@ -54,7 +54,7 @@ const checkpointDocId = (profileId: string): string => `pack:${profileId}`;
 
 const MUTED_NOTE_STYLE = {
   padding: "6px 10px",
-  fontSize: 11.5,
+  fontSize: "0.71875rem",
   lineHeight: 1.4,
   color: "var(--fg-3)",
 } as const;
@@ -159,7 +159,7 @@ export const SubmitPanel = ({
               setSidebarCollapsed(true);
             }}
           >
-            <ChevronLeft size={11} />
+            <ChevronLeft size="0.6875rem" />
           </button>
         </div>
       </div>
@@ -174,7 +174,7 @@ export const SubmitPanel = ({
               title={selectedAuthorName}
               style={{
                 minWidth: 0,
-                maxWidth: 120,
+                maxWidth: "7.5rem",
                 textTransform: "none",
                 letterSpacing: 0,
                 color: "var(--fg-2)",
@@ -189,7 +189,7 @@ export const SubmitPanel = ({
             style={{
               display: "flex",
               justifyContent: "center",
-              padding: "10px 0",
+              padding: "0.625rem 0",
             }}
           >
             <Spinner size="sm" />
@@ -264,10 +264,10 @@ export const SubmitPanel = ({
                     onOpenForm(form.id);
                   }}
                   title={ownerName == null ? title : `${title} — ${ownerName}`}
-                  style={{ alignItems: "center", gap: 8 }}
+                  style={{ alignItems: "center", gap: "0.5rem" }}
                 >
                   <Icon
-                    size={13}
+                    size="0.8125rem"
                     style={{
                       flexShrink: 0,
                       color: isActive ? "var(--accent)" : "var(--fg-2)",
@@ -278,7 +278,7 @@ export const SubmitPanel = ({
                     style={{
                       flex: 1,
                       minWidth: 0,
-                      fontSize: 12,
+                      fontSize: "0.75rem",
                       textAlign: "left",
                     }}
                   >
@@ -290,8 +290,8 @@ export const SubmitPanel = ({
                       style={{
                         flexShrink: 1,
                         minWidth: 0,
-                        maxWidth: 84,
-                        fontSize: 10.5,
+                        maxWidth: "5.25rem",
+                        fontSize: "0.65625rem",
                         textAlign: "right",
                       }}
                     >
@@ -310,10 +310,10 @@ export const SubmitPanel = ({
           type="button"
           className={clsx("row-btn", isSignaturesActive && "active")}
           onClick={onOpenSignatures}
-          style={{ alignItems: "center", gap: 8 }}
+          style={{ alignItems: "center", gap: "0.5rem" }}
         >
           <PenTool
-            size={13}
+            size="0.8125rem"
             style={{
               flexShrink: 0,
               color: isSignaturesActive ? "var(--accent)" : "var(--fg-2)",
@@ -321,14 +321,23 @@ export const SubmitPanel = ({
           />
           <span
             className="truncate"
-            style={{ flex: 1, minWidth: 0, fontSize: 12, textAlign: "left" }}
+            style={{
+              flex: 1,
+              minWidth: 0,
+              fontSize: "0.75rem",
+              textAlign: "left",
+            }}
           >
             {t("submit.openSignatures")}
           </span>
           {runtimeSlots.length > 0 && (
             <span
               className="mono dim"
-              style={{ flexShrink: 0, fontSize: 9.5, letterSpacing: "0.04em" }}
+              style={{
+                flexShrink: 0,
+                fontSize: "0.59375rem",
+                letterSpacing: "0.04em",
+              }}
             >
               {signedSlotCount}/{runtimeSlots.length}
             </span>
@@ -342,10 +351,10 @@ export const SubmitPanel = ({
               type="button"
               className={clsx("row-btn", isRequirementsActive && "active")}
               onClick={onOpenRequirements}
-              style={{ alignItems: "center", gap: 8 }}
+              style={{ alignItems: "center", gap: "0.5rem" }}
             >
               <ListCheck
-                size={13}
+                size="0.8125rem"
                 style={{
                   flexShrink: 0,
                   color: isRequirementsActive ? "var(--accent)" : "var(--fg-2)",
@@ -356,7 +365,7 @@ export const SubmitPanel = ({
                 style={{
                   flex: 1,
                   minWidth: 0,
-                  fontSize: 12,
+                  fontSize: "0.75rem",
                   textAlign: "left",
                 }}
               >

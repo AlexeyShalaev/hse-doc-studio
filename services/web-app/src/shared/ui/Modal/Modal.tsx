@@ -61,9 +61,9 @@ export const Modal = ({
           // Высокая форма не вылезает за окно: шапка и кнопки стоят на месте,
           // прокручивается только середина.
           style={{
-            width,
-            maxWidth: "calc(100vw - 32px)",
-            maxHeight: "calc(100dvh - 64px)",
+            width: `${String(width / 16)}rem`,
+            maxWidth: "calc(100vw - 2rem)",
+            maxHeight: "calc(100dvh - 4rem)",
             padding: 0,
           }}
         >
@@ -78,8 +78,8 @@ export const Modal = ({
                 <DialogPrimitive.Title
                   style={{
                     margin: 0,
-                    paddingRight: 28,
-                    fontSize: 15,
+                    paddingRight: "1.75rem",
+                    fontSize: "0.9375rem",
                     fontWeight: 600,
                     color: "var(--fg-0)",
                   }}
@@ -90,9 +90,9 @@ export const Modal = ({
               {description && (
                 <DialogPrimitive.Description
                   style={{
-                    marginTop: title ? 8 : 0,
+                    marginTop: title ? "0.5rem" : 0,
                     marginBottom: 0,
-                    fontSize: 13,
+                    fontSize: "0.8125rem",
                     lineHeight: 1.5,
                     color: "var(--fg-2)",
                   }}

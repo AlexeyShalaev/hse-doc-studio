@@ -138,7 +138,7 @@ export const Combobox = ({
           {selected ? selected.label : placeholderText}
         </span>
         <ChevronDown
-          size={14}
+          size="0.875rem"
           className="shrink-0"
           style={{ color: "var(--fg-2)" }}
         />
@@ -180,7 +180,7 @@ export const Combobox = ({
                     }}
                   >
                     <Check
-                      size={13}
+                      size="0.8125rem"
                       className="combo-check"
                       style={{ opacity: option.value === value ? 1 : 0 }}
                     />

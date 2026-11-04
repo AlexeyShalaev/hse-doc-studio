@@ -30,27 +30,36 @@ const DownloadRow = ({ job, onRetry, onDismiss }: DownloadRowProps) => {
     <div
       className="flex flex-col"
       style={{
-        gap: 6,
-        padding: "8px 12px",
-        borderRadius: 6,
+        gap: "0.375rem",
+        padding: "0.5rem 0.75rem",
+        borderRadius: "0.375rem",
         border: "1px solid var(--border)",
         background: "var(--bg-1)",
       }}
     >
-      <div className="flex items-center justify-between" style={{ gap: 12 }}>
-        <div className="flex items-center" style={{ gap: 8, minWidth: 0 }}>
+      <div
+        className="flex items-center justify-between"
+        style={{ gap: "0.75rem" }}
+      >
+        <div
+          className="flex items-center"
+          style={{ gap: "0.5rem", minWidth: 0 }}
+        >
           {job.state === "running" && <Spinner size="sm" />}
           {job.state === "success" && (
-            <CheckCircle2 size={13} style={{ color: "var(--c-ok)" }} />
+            <CheckCircle2 size="0.8125rem" style={{ color: "var(--c-ok)" }} />
           )}
           {job.state === "failure" && (
-            <XCircle size={13} style={{ color: "var(--c-err)" }} />
+            <XCircle size="0.8125rem" style={{ color: "var(--c-err)" }} />
           )}
-          <span className="mono" style={{ fontSize: 12 }}>
+          <span className="mono" style={{ fontSize: "0.75rem" }}>
             {job.name}
           </span>
         </div>
-        <div className="flex items-center" style={{ gap: 6, flexShrink: 0 }}>
+        <div
+          className="flex items-center"
+          style={{ gap: "0.375rem", flexShrink: 0 }}
+        >
           {job.state === "failure" && (
             <button
               type="button"
@@ -58,7 +67,7 @@ const DownloadRow = ({ job, onRetry, onDismiss }: DownloadRowProps) => {
               onClick={onRetry}
               title={t("downloads.retryTitle")}
             >
-              <RotateCcw size={11} />
+              <RotateCcw size="0.6875rem" />
               {t("downloads.retry")}
             </button>
           )}
@@ -69,7 +78,7 @@ const DownloadRow = ({ job, onRetry, onDismiss }: DownloadRowProps) => {
               onClick={onDismiss}
               title={t("downloads.dismissTitle")}
             >
-              <X size={12} />
+              <X size="0.75rem" />
             </button>
           )}
         </div>
@@ -78,7 +87,7 @@ const DownloadRow = ({ job, onRetry, onDismiss }: DownloadRowProps) => {
       <div
         className="dim"
         style={{
-          fontSize: 11,
+          fontSize: "0.6875rem",
           color: job.state === "failure" ? "var(--c-err)" : "var(--fg-2)",
         }}
       >
@@ -88,8 +97,8 @@ const DownloadRow = ({ job, onRetry, onDismiss }: DownloadRowProps) => {
       {job.state === "running" && pct !== null && (
         <div
           style={{
-            height: 4,
-            borderRadius: 2,
+            height: "0.25rem",
+            borderRadius: "0.125rem",
             background: "var(--bg-3)",
             overflow: "hidden",
           }}
@@ -142,10 +151,14 @@ export const DownloadsSection = () => {
   if (jobs.length === 0) return null;
 
   return (
-    <div className="flex flex-col" style={{ gap: 6 }}>
+    <div className="flex flex-col" style={{ gap: "0.375rem" }}>
       <div
         className="dim"
-        style={{ fontSize: 10, textTransform: "uppercase", letterSpacing: 0.5 }}
+        style={{
+          fontSize: "0.625rem",
+          textTransform: "uppercase",
+          letterSpacing: "0.03125rem",
+        }}
       >
         {t("downloads.heading")}
       </div>

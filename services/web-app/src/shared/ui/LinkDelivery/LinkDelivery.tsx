@@ -31,26 +31,26 @@ export const LinkDelivery = ({
         border: "1px dashed var(--line-strong, var(--line))",
         borderRadius: "var(--r-3)",
         background: "var(--bg-2, transparent)",
-        padding: "12px 14px",
+        padding: "0.75rem 0.875rem",
         display: "flex",
         flexDirection: "column",
-        gap: 8,
+        gap: "0.5rem",
       }}
     >
-      <div className="flex items-center" style={{ gap: 8 }}>
+      <div className="flex items-center" style={{ gap: "0.5rem" }}>
         <MailX
-          size={15}
+          size="0.9375rem"
           aria-hidden="true"
           style={{ color: "var(--fg-2)", flexShrink: 0 }}
         />
-        <strong style={{ fontSize: 12.5, fontWeight: 600 }}>
+        <strong style={{ fontSize: "0.78125rem", fontWeight: 600 }}>
           {t("linkDelivery.title")}
         </strong>
       </div>
       <p
         style={{
           margin: 0,
-          fontSize: 12.5,
+          fontSize: "0.78125rem",
           lineHeight: 1.5,
           color: "var(--fg-2)",
         }}

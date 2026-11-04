@@ -126,7 +126,7 @@ export const DocRow = ({
   return (
     <div
       className="flex items-center"
-      style={{ gap: 2 }}
+      style={{ gap: "0.125rem" }}
       onMouseEnter={() => {
         setIsHovered(true);
       }}
@@ -144,17 +144,17 @@ export const DocRow = ({
         onClick={() => {
           onSelectDoc(doc.id);
         }}
-        style={{ alignItems: "center", gap: 8, flex: 1, minWidth: 0 }}
+        style={{ alignItems: "center", gap: "0.5rem", flex: 1, minWidth: 0 }}
       >
         <span className={"dot " + sev} />
         <span
           className="mono shrink-0"
           style={{
-            fontSize: 10.5,
+            fontSize: "0.65625rem",
             color: isActive ? "var(--accent)" : "var(--fg-3)",
             // minWidth keeps the code column aligned; a longer code
             // pushes the name instead of overlapping it.
-            minWidth: 28,
+            minWidth: "1.75rem",
             whiteSpace: "nowrap",
             letterSpacing: "0.02em",
           }}
@@ -163,7 +163,7 @@ export const DocRow = ({
         </span>
         <span
           className="flex flex-col flex-1 min-w-0"
-          style={{ fontSize: 12, lineHeight: 1.35, minWidth: 0, gap: 1 }}
+          style={{ fontSize: "0.75rem", lineHeight: 1.35, minWidth: 0, gap: 1 }}
         >
           <span>{renderHighlighted(meta.name, query)}</span>
           <DocBuildSubline projectId={projectId} docId={doc.id} now={now} />
@@ -173,8 +173,8 @@ export const DocRow = ({
             className="chip"
             style={{
               flexShrink: 0,
-              fontSize: 9,
-              padding: "1px 6px",
+              fontSize: "0.5625rem",
+              padding: "1px 0.375rem",
               background: "var(--bg-3)",
               color: "var(--fg-2)",
             }}
@@ -186,7 +186,7 @@ export const DocRow = ({
           <span
             className="mono shrink-0"
             style={{
-              fontSize: 9.5,
+              fontSize: "0.59375rem",
               color: errors > 0 ? "var(--c-err)" : "var(--c-warn)",
               letterSpacing: "0.04em",
             }}
@@ -205,14 +205,14 @@ export const DocRow = ({
             style={{
               flexShrink: 0,
               opacity: isKebabVisible ? 1 : 0,
-              width: isKebabVisible ? 22 : 0,
+              width: isKebabVisible ? "1.375rem" : 0,
               overflow: "hidden",
               pointerEvents: isKebabVisible ? "auto" : "none",
               transition: "opacity 0.1s",
             }}
             aria-label={t("customFile.replaceMenuItem")}
           >
-            <MoreVertical size={12} />
+            <MoreVertical size="0.75rem" />
           </button>
         </DropdownMenu.Trigger>
         <DropdownMenu.Portal>
@@ -232,12 +232,12 @@ export const DocRow = ({
                 "flex cursor-pointer select-none items-center gap-2 outline-none",
                 "focus:bg-bg-hover",
               )}
-              style={{ padding: "8px 12px", fontSize: 12.5 }}
+              style={{ padding: "0.5rem 0.75rem", fontSize: "0.78125rem" }}
               onSelect={() => {
                 setUploadOpen(true);
               }}
             >
-              <Upload size={12} />
+              <Upload size="0.75rem" />
               <span>{t("customFile.replaceMenuItem")}</span>
             </DropdownMenu.Item>
             {isCustom && (
@@ -246,12 +246,12 @@ export const DocRow = ({
                   "flex cursor-pointer select-none items-center gap-2 outline-none",
                   "focus:bg-bg-hover",
                 )}
-                style={{ padding: "8px 12px", fontSize: 12.5 }}
+                style={{ padding: "0.5rem 0.75rem", fontSize: "0.78125rem" }}
                 onSelect={() => {
                   setRevertConfirmOpen(true);
                 }}
               >
-                <RefreshCw size={12} />
+                <RefreshCw size="0.75rem" />
                 <span>{t("customFile.revertMenuItem")}</span>
               </DropdownMenu.Item>
             )}
@@ -264,9 +264,9 @@ export const DocRow = ({
                     "flex cursor-pointer select-none items-center gap-2 outline-none",
                     "focus:bg-bg-hover",
                   )}
-                  style={{ padding: "8px 12px", fontSize: 12.5 }}
+                  style={{ padding: "0.5rem 0.75rem", fontSize: "0.78125rem" }}
                 >
-                  <Download size={12} />
+                  <Download size="0.75rem" />
                   <span>{t("customFile.downloadMenuItem")}</span>
                 </a>
               </DropdownMenu.Item>

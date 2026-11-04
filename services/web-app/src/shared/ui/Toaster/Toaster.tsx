@@ -42,13 +42,13 @@ export const Toaster = () => {
         position: "fixed",
         // Внизу справа, над строкой состояния: сверху уведомление закрывало
         // кнопку синхронизации и открытую под ней панель, а именно о них оно и сообщает.
-        bottom: 40,
-        right: 16,
+        bottom: "2.5rem",
+        right: "1rem",
         zIndex: 200,
         display: "flex",
         flexDirection: "column",
-        gap: 8,
-        maxWidth: 380,
+        gap: "0.5rem",
+        maxWidth: "23.75rem",
         pointerEvents: "none",
       }}
       aria-live="polite"
@@ -62,25 +62,28 @@ export const Toaster = () => {
             className="card scale-in"
             role="alert"
             style={{
-              padding: 12,
-              gap: 10,
+              padding: "0.75rem",
+              gap: "0.625rem",
               display: "flex",
               alignItems: "flex-start",
               borderColor: color,
               background: SOFT_BY_KIND[t.kind],
               boxShadow: "var(--shadow-2)",
-              minWidth: 280,
+              minWidth: "17.5rem",
               pointerEvents: "auto",
             }}
           >
-            <Icon size={14} style={{ color, marginTop: 1, flexShrink: 0 }} />
+            <Icon
+              size="0.875rem"
+              style={{ color, marginTop: 1, flexShrink: 0 }}
+            />
             <div style={{ flex: 1, minWidth: 0 }}>
               {t.title && (
                 <div
                   style={{
-                    fontSize: 12.5,
+                    fontSize: "0.78125rem",
                     fontWeight: 600,
-                    marginBottom: 2,
+                    marginBottom: "0.125rem",
                     color,
                   }}
                 >
@@ -89,7 +92,7 @@ export const Toaster = () => {
               )}
               <div
                 style={{
-                  fontSize: 12,
+                  fontSize: "0.75rem",
                   lineHeight: 1.4,
                   wordBreak: "break-word",
                   color: "var(--fg-0)",
@@ -101,7 +104,7 @@ export const Toaster = () => {
                 <button
                   type="button"
                   className="btn xs"
-                  style={{ marginTop: 8 }}
+                  style={{ marginTop: "0.5rem" }}
                   onClick={() => {
                     t.action?.onClick();
                     dismiss(t.id);
@@ -119,7 +122,7 @@ export const Toaster = () => {
               }}
               aria-label={translate("toaster.close")}
             >
-              <X size={11} />
+              <X size="0.6875rem" />
             </button>
           </div>
         );

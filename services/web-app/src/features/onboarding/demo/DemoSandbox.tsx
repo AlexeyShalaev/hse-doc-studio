@@ -194,25 +194,28 @@ const DemoSession = ({ onRestart }: { onRestart: () => void }) => {
       <div
         className="flex items-center"
         style={{
-          gap: 10,
-          padding: "8px 16px",
+          gap: "0.625rem",
+          padding: "0.5rem 1rem",
           borderBottom: "1px solid var(--border)",
           background: "color-mix(in oklch, var(--accent) 10%, var(--bg-1))",
           flexWrap: "wrap",
         }}
       >
         <span className="chip" style={{ color: "var(--accent)" }}>
-          <FlaskConical size={11} />
+          <FlaskConical size="0.6875rem" />
           {t("tour.demoBadge")}
         </span>
-        <strong style={{ fontSize: 13 }}>
+        <strong style={{ fontSize: "0.8125rem" }}>
           {state.project?.name ?? content.projectName}
         </strong>
-        <span className="dim flex-1" style={{ fontSize: 12, minWidth: 200 }}>
+        <span
+          className="dim flex-1"
+          style={{ fontSize: "0.75rem", minWidth: "12.5rem" }}
+        >
           {t("demo.banner")}
         </span>
         <button type="button" className="btn ghost sm" onClick={onRestart}>
-          <RotateCcw size={12} />
+          <RotateCcw size="0.75rem" />
           {t("demo.restart")}
         </button>
         <button
@@ -224,7 +227,7 @@ const DemoSession = ({ onRestart }: { onRestart: () => void }) => {
             else void navigate("/");
           }}
         >
-          <LogOut size={12} />
+          <LogOut size="0.75rem" />
           {t("demo.exit")}
         </button>
       </div>
@@ -234,11 +237,11 @@ const DemoSession = ({ onRestart }: { onRestart: () => void }) => {
           flex: 1,
           minHeight: 0,
           overflow: "auto",
-          padding: 12,
+          padding: "0.75rem",
           display: "grid",
-          gap: 12,
+          gap: "0.75rem",
           gridTemplateColumns:
-            "repeat(auto-fit, minmax(min(240px, 100%), 1fr))",
+            "repeat(auto-fit, minmax(min(15rem, 100%), 1fr))",
           alignItems: "stretch",
         }}
       >

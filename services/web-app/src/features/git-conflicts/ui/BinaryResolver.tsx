@@ -78,7 +78,7 @@ const FilePreview = ({ projectId, path, side, info, alt }: PreviewProps) => {
     if (!exists) {
       return (
         <PreviewNote
-          icon={<FileX size={22} aria-hidden="true" />}
+          icon={<FileX size="1.375rem" aria-hidden="true" />}
           text={t("binary.missing")}
         />
       );
@@ -87,7 +87,7 @@ const FilePreview = ({ projectId, path, side, info, alt }: PreviewProps) => {
       const ext = extensionOf(path);
       return (
         <PreviewNote
-          icon={<FileQuestion size={22} aria-hidden="true" />}
+          icon={<FileQuestion size="1.375rem" aria-hidden="true" />}
           text={
             ext ? `${ext}. ${t("binary.noPreview")}` : t("binary.noPreview")
           }
@@ -97,7 +97,7 @@ const FilePreview = ({ projectId, path, side, info, alt }: PreviewProps) => {
     if (tooBig) {
       return (
         <PreviewNote
-          icon={<ImageOff size={22} aria-hidden="true" />}
+          icon={<ImageOff size="1.375rem" aria-hidden="true" />}
           text={t("binary.tooBig")}
         />
       );
@@ -114,7 +114,7 @@ const FilePreview = ({ projectId, path, side, info, alt }: PreviewProps) => {
     if (isError || broken || !url) {
       return (
         <PreviewNote
-          icon={<ImageOff size={22} aria-hidden="true" />}
+          icon={<ImageOff size="1.375rem" aria-hidden="true" />}
           text={t("binary.error")}
         />
       );
@@ -181,7 +181,11 @@ const Tile = ({
         </span>
         {isNewer && <span className="chip accent">{t("binary.newer")}</span>}
         {checked && (
-          <Check size={13} aria-hidden="true" style={{ marginLeft: "auto" }} />
+          <Check
+            size="0.8125rem"
+            aria-hidden="true"
+            style={{ marginLeft: "auto" }}
+          />
         )}
       </span>
       <FilePreview
@@ -191,7 +195,7 @@ const Tile = ({
         info={info}
         alt={previewAlt}
       />
-      <span style={{ fontSize: 11.5 }}>
+      <span style={{ fontSize: "0.71875rem" }}>
         <SideFacts side={info} />
       </span>
     </label>
@@ -232,15 +236,18 @@ export const BinaryResolver = ({
     file.allowed.length === 0 || file.allowed.includes(choice);
 
   return (
-    <div className="flex flex-col" style={{ gap: 10 }}>
-      <p className="dim" style={{ margin: 0, fontSize: 12, lineHeight: 1.5 }}>
+    <div className="flex flex-col" style={{ gap: "0.625rem" }}>
+      <p
+        className="dim"
+        style={{ margin: 0, fontSize: "0.75rem", lineHeight: 1.5 }}
+      >
         {t("binary.explain")}
       </p>
       <div
         role="radiogroup"
         aria-label={t("file.groupLabel")}
         className="flex flex-col"
-        style={{ gap: 8 }}
+        style={{ gap: "0.5rem" }}
       >
         <div className="file-tiles">
           <Tile
@@ -290,19 +297,25 @@ export const BinaryResolver = ({
                 onChoose("newest");
               }}
             />
-            <span className="flex flex-col" style={{ gap: 2, minWidth: 0 }}>
-              <span style={{ fontSize: 13, fontWeight: 600 }}>
+            <span
+              className="flex flex-col"
+              style={{ gap: "0.125rem", minWidth: 0 }}
+            >
+              <span style={{ fontSize: "0.8125rem", fontWeight: 600 }}>
                 {t("file.choice.newest")}
                 {file.default_resolution === "newest" && (
                   <span
                     className="chip accent"
-                    style={{ marginLeft: 8, fontFamily: "var(--font-sans)" }}
+                    style={{
+                      marginLeft: "0.5rem",
+                      fontFamily: "var(--font-sans)",
+                    }}
                   >
                     {t("file.recommended")}
                   </span>
                 )}
               </span>
-              <span className="dim" style={{ fontSize: 11.5 }}>
+              <span className="dim" style={{ fontSize: "0.71875rem" }}>
                 {newer
                   ? t("binary.newestKeeps", {
                       author: newerAuthor ?? t("side.unknown"),
@@ -316,8 +329,11 @@ export const BinaryResolver = ({
       </div>
 
       {canNewest && copyPath && (
-        <div className="flex flex-col" style={{ gap: 6 }}>
-          <span className="dim" style={{ fontSize: 11.5, lineHeight: 1.5 }}>
+        <div className="flex flex-col" style={{ gap: "0.375rem" }}>
+          <span
+            className="dim"
+            style={{ fontSize: "0.71875rem", lineHeight: 1.5 }}
+          >
             {t("binary.copySaved")}
           </span>
           <CopyField value={copyPath} label={t("binary.copyLabel")} />

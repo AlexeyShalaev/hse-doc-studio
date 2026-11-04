@@ -15,28 +15,36 @@ export const UsageView = ({ status, usage, onRetry }: UsageViewProps) => {
     <div
       data-testid="usage-section"
       className="flex flex-col"
-      style={{ gap: 12 }}
+      style={{ gap: "0.75rem" }}
     >
       <div
         id="usage"
         className="flex flex-col settings-anchor"
-        style={{ gap: 4 }}
+        style={{ gap: "0.25rem" }}
       >
-        <h4 style={{ margin: 0, fontSize: 14, fontWeight: 600 }}>
+        <h4 style={{ margin: 0, fontSize: "0.875rem", fontWeight: 600 }}>
           {t("section.title")}
         </h4>
-        <p style={{ margin: 0, color: "var(--fg-2)", fontSize: 12 }}>
+        <p style={{ margin: 0, color: "var(--fg-2)", fontSize: "0.75rem" }}>
           {t("section.lead")}
         </p>
       </div>
       {status === "loading" && (
-        <div className="flex items-center" style={{ gap: 8 }} role="status">
+        <div
+          className="flex items-center"
+          style={{ gap: "0.5rem" }}
+          role="status"
+        >
           <Spinner />
           {t("section.loading")}
         </div>
       )}
       {status === "error" && (
-        <div role="alert" className="flex items-center" style={{ gap: 12 }}>
+        <div
+          role="alert"
+          className="flex items-center"
+          style={{ gap: "0.75rem" }}
+        >
           <span style={{ color: "var(--c-err)" }}>
             {t("section.loadFailed")}
           </span>
@@ -52,10 +60,10 @@ export const UsageView = ({ status, usage, onRetry }: UsageViewProps) => {
           <section
             className="adm-section"
             data-variant="card"
-            style={{ padding: "8px 16px" }}
+            style={{ padding: "0.5rem 1rem" }}
             aria-label={t("section.mine")}
           >
-            <h5 style={{ margin: "8px 0 0", fontSize: 13 }}>
+            <h5 style={{ margin: "0.5rem 0 0", fontSize: "0.8125rem" }}>
               {t("section.mine")}
             </h5>
             <UsageList lines={usage.user.lines} />
@@ -65,17 +73,17 @@ export const UsageView = ({ status, usage, onRetry }: UsageViewProps) => {
               key={org.owner_id}
               className="adm-section"
               data-variant="card"
-              style={{ padding: "8px 16px" }}
+              style={{ padding: "0.5rem 1rem" }}
               data-testid={`usage-org-${org.owner_id}`}
               aria-label={t("section.org", { name: org.owner_name })}
             >
-              <h5 style={{ margin: "8px 0 0", fontSize: 13 }}>
+              <h5 style={{ margin: "0.5rem 0 0", fontSize: "0.8125rem" }}>
                 {t("section.org", { name: org.owner_name })}
               </h5>
               <UsageList lines={org.lines} />
             </section>
           ))}
-          <p style={{ margin: 0, color: "var(--fg-3)", fontSize: 12 }}>
+          <p style={{ margin: 0, color: "var(--fg-3)", fontSize: "0.75rem" }}>
             {t("section.membersHint")} {t("section.aiHint")}
           </p>
         </>

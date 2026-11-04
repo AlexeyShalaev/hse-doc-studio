@@ -25,23 +25,23 @@ export const CloneStepLayout = ({
 }: CloneStepLayoutProps) => {
   const body = (
     <>
-      <div className="flex flex-col" style={{ gap: 16 }}>
+      <div className="flex flex-col" style={{ gap: "1rem" }}>
         {children}
       </div>
       <div
         className="flex items-center"
         style={{
           justifyContent: "space-between",
-          gap: 10,
-          paddingTop: 16,
-          marginTop: 20,
+          gap: "0.625rem",
+          paddingTop: "1rem",
+          marginTop: "1.25rem",
           borderTop: "1px solid var(--border)",
         }}
       >
-        <div className="flex items-center" style={{ gap: 8 }}>
+        <div className="flex items-center" style={{ gap: "0.5rem" }}>
           {start}
         </div>
-        <div className="flex items-center" style={{ gap: 8 }}>
+        <div className="flex items-center" style={{ gap: "0.5rem" }}>
           {end}
         </div>
       </div>

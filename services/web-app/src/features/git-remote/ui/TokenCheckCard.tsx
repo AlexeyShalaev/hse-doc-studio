@@ -36,7 +36,7 @@ const TONE: Record<TokenVerdict["kind"], FrameTone> = {
 };
 
 const Scopes = ({ scopes }: { scopes: readonly string[] }) => (
-  <span className="flex" style={{ gap: 4, flexWrap: "wrap" }}>
+  <span className="flex" style={{ gap: "0.25rem", flexWrap: "wrap" }}>
     {scopes.map((scope) => (
       <span key={scope} className="chip subtle mono">
         {scope}
@@ -98,9 +98,9 @@ const Facts = ({
         margin: 0,
         display: "grid",
         gridTemplateColumns: "max-content 1fr",
-        columnGap: 14,
-        rowGap: 4,
-        fontSize: 12,
+        columnGap: "0.875rem",
+        rowGap: "0.25rem",
+        fontSize: "0.75rem",
         alignItems: "center",
       }}
     >
@@ -139,8 +139,8 @@ export const TokenCheckCard = ({
         className="flex items-start"
         data-testid="token-check-running"
         style={{
-          gap: 10,
-          padding: "12px 14px",
+          gap: "0.625rem",
+          padding: "0.75rem 0.875rem",
           borderRadius: "var(--r-3)",
           border: "1px solid var(--border)",
           background: "var(--bg-1)",
@@ -148,10 +148,13 @@ export const TokenCheckCard = ({
       >
         <Spinner size="sm" />
         <div>
-          <div style={{ fontWeight: 600, fontSize: 13 }}>
+          <div style={{ fontWeight: 600, fontSize: "0.8125rem" }}>
             {t("tokenCheck.running.title")}
           </div>
-          <div className="dim" style={{ fontSize: 12.5, marginTop: 2 }}>
+          <div
+            className="dim"
+            style={{ fontSize: "0.78125rem", marginTop: "0.125rem" }}
+          >
             {t("tokenCheck.running.text")}
           </div>
         </div>
@@ -204,7 +207,7 @@ export const TokenCheckCard = ({
         <>
           {tls && onReviewCertificate && (
             <Btn primary onClick={onReviewCertificate}>
-              <ShieldCheck size={13} aria-hidden="true" />
+              <ShieldCheck size="0.8125rem" aria-hidden="true" />
               {t("tokenCheck.reviewCertificate")}
             </Btn>
           )}
@@ -214,9 +217,9 @@ export const TokenCheckCard = ({
               target="_blank"
               rel="noopener noreferrer"
               className="btn primary"
-              style={{ gap: 6, textDecoration: "none" }}
+              style={{ gap: "0.375rem", textDecoration: "none" }}
             >
-              <ExternalLink size={12} aria-hidden="true" />
+              <ExternalLink size="0.75rem" aria-hidden="true" />
               {t("tokenCheck.createNew")}
             </a>
           )}

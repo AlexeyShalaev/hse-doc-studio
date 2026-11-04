@@ -46,7 +46,7 @@ export const VcsDiffBrowser = ({
 
   if (isLoading) {
     return (
-      <div className="flex justify-center" style={{ padding: 24 }}>
+      <div className="flex justify-center" style={{ padding: "1.5rem" }}>
         <Spinner size="sm" />
       </div>
     );
@@ -56,9 +56,9 @@ export const VcsDiffBrowser = ({
     return (
       <div
         className="dim flex items-center justify-center"
-        style={{ gap: 8, padding: 28, fontSize: 12 }}
+        style={{ gap: "0.5rem", padding: "1.75rem", fontSize: "0.75rem" }}
       >
-        <FileDiff size={14} />
+        <FileDiff size="0.875rem" />
         {emptyHint ?? t("diffBrowser.emptyHint")}
       </div>
     );
@@ -74,11 +74,11 @@ export const VcsDiffBrowser = ({
   const multiFile = files.length > 1;
 
   return (
-    <div className="vcs-diff-browser flex flex-col" style={{ gap: 10 }}>
+    <div className="vcs-diff-browser flex flex-col" style={{ gap: "0.625rem" }}>
       {/* summary */}
       <div
         className="flex items-center"
-        style={{ gap: 10, flexWrap: "wrap", fontSize: 11.5 }}
+        style={{ gap: "0.625rem", flexWrap: "wrap", fontSize: "0.71875rem" }}
       >
         <span className="dim">
           {t("diffBrowser.filesChanged", { count: files.length })}

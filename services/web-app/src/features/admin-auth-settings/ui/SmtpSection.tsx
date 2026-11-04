@@ -138,7 +138,7 @@ export const SmtpSection = ({
               placeholder: "smtp.example.org",
               ...issue("host"),
             })}
-            <div style={{ width: 92, flexShrink: 0 }}>
+            <div style={{ width: "5.75rem", flexShrink: 0 }}>
               {input("port", {
                 id: `${uid}-port`,
                 "aria-label": t("smtp.port"),
@@ -254,13 +254,13 @@ export const SmtpSection = ({
               type="submit"
               variant="secondary"
               aria-disabled={!canTest}
-              style={{ gap: 6, flexShrink: 0 }}
+              style={{ gap: "0.375rem", flexShrink: 0 }}
               data-testid="smtp-test-send"
             >
               {test.pending ? (
                 <Spinner size="sm" />
               ) : (
-                <Send size={13} aria-hidden="true" />
+                <Send size="0.8125rem" aria-hidden="true" />
               )}
               {test.pending ? t("smtp.test.sending") : t("smtp.test.send")}
             </Button>
@@ -300,7 +300,7 @@ export const SmtpSection = ({
               {test.result.error && (
                 <code
                   className="mono"
-                  style={{ fontSize: 11, overflowWrap: "anywhere" }}
+                  style={{ fontSize: "0.6875rem", overflowWrap: "anywhere" }}
                 >
                   {test.result.error}
                 </code>

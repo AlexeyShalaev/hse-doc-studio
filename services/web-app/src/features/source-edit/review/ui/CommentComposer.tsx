@@ -75,7 +75,10 @@ export const CommentComposer = ({
 
   const showList = at !== null && isFetched;
   return (
-    <div className="flex flex-col" style={{ gap: 6, position: "relative" }}>
+    <div
+      className="flex flex-col"
+      style={{ gap: "0.375rem", position: "relative" }}
+    >
       <textarea
         ref={area}
         value={text}
@@ -84,7 +87,7 @@ export const CommentComposer = ({
         aria-label={placeholder}
         data-testid="review-composer"
         className="input"
-        style={{ resize: "vertical", fontSize: 12.5 }}
+        style={{ resize: "vertical", fontSize: "0.78125rem" }}
         onChange={(event) => {
           setText(event.target.value);
           setCaret(event.target.selectionStart);
@@ -129,7 +132,7 @@ export const CommentComposer = ({
             right: 0,
             bottom: "100%",
             margin: 0,
-            padding: 4,
+            padding: "0.25rem",
             listStyle: "none",
             background: "var(--bg-1)",
             border: "1px solid var(--border)",
@@ -139,7 +142,10 @@ export const CommentComposer = ({
           }}
         >
           {candidates.length === 0 && (
-            <li className="dim" style={{ padding: "4px 8px", fontSize: 12 }}>
+            <li
+              className="dim"
+              style={{ padding: "0.25rem 0.5rem", fontSize: "0.75rem" }}
+            >
               {t("mentionNone")}
             </li>
           )}
@@ -149,8 +155,8 @@ export const CommentComposer = ({
               role="option"
               aria-selected={index === active}
               style={{
-                padding: "4px 8px",
-                fontSize: 12.5,
+                padding: "0.25rem 0.5rem",
+                fontSize: "0.78125rem",
                 cursor: "pointer",
                 borderRadius: "var(--r-1)",
                 background: index === active ? "var(--bg-3)" : "transparent",
@@ -162,7 +168,10 @@ export const CommentComposer = ({
             >
               {candidate.name}
               {candidate.detail && (
-                <span className="dim" style={{ marginLeft: 6, fontSize: 11 }}>
+                <span
+                  className="dim"
+                  style={{ marginLeft: "0.375rem", fontSize: "0.6875rem" }}
+                >
                   {candidate.detail}
                 </span>
               )}
@@ -171,11 +180,17 @@ export const CommentComposer = ({
         </ul>
       )}
       {error && (
-        <span role="alert" style={{ color: "var(--c-err)", fontSize: 11.5 }}>
+        <span
+          role="alert"
+          style={{ color: "var(--c-err)", fontSize: "0.71875rem" }}
+        >
           {error}
         </span>
       )}
-      <div className="flex" style={{ gap: 6, justifyContent: "flex-end" }}>
+      <div
+        className="flex"
+        style={{ gap: "0.375rem", justifyContent: "flex-end" }}
+      >
         {onCancel && (
           <button type="button" className="btn xs ghost" onClick={onCancel}>
             {t("cancel")}

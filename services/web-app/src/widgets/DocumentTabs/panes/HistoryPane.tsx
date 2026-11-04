@@ -72,12 +72,20 @@ export const HistoryPane = ({ projectId, docId }: HistoryPaneProps) => {
   return (
     <div
       className="flex flex-col"
-      style={{ padding: 18, gap: 14, flex: 1, minHeight: 0, overflowY: "auto" }}
+      style={{
+        padding: "1.125rem",
+        gap: "0.875rem",
+        flex: 1,
+        minHeight: 0,
+        overflowY: "auto",
+      }}
     >
       <div className="flex items-center justify-between">
-        <div className="flex flex-col" style={{ gap: 2 }}>
-          <strong style={{ fontSize: 13 }}>{t("history.title")}</strong>
-          <span className="dim" style={{ fontSize: 11.5 }}>
+        <div className="flex flex-col" style={{ gap: "0.125rem" }}>
+          <strong style={{ fontSize: "0.8125rem" }}>
+            {t("history.title")}
+          </strong>
+          <span className="dim" style={{ fontSize: "0.71875rem" }}>
             {t("history.subtitle")}
           </span>
         </div>
@@ -88,7 +96,7 @@ export const HistoryPane = ({ projectId, docId }: HistoryPaneProps) => {
             setComposing((v) => !v);
           }}
         >
-          <Plus size={11} />
+          <Plus size="0.6875rem" />
           {t("history.newEntry")}
         </button>
       </div>
@@ -97,8 +105,8 @@ export const HistoryPane = ({ projectId, docId }: HistoryPaneProps) => {
         <div
           className="card"
           style={{
-            padding: 12,
-            gap: 8,
+            padding: "0.75rem",
+            gap: "0.5rem",
             display: "flex",
             flexDirection: "column",
           }}
@@ -131,7 +139,7 @@ export const HistoryPane = ({ projectId, docId }: HistoryPaneProps) => {
               onClick={handleAdd}
               disabled={isPending}
             >
-              {isPending ? <Spinner size="sm" /> : <Plus size={11} />}
+              {isPending ? <Spinner size="sm" /> : <Plus size="0.6875rem" />}
               {t("history.add")}
             </button>
           </div>
@@ -141,25 +149,29 @@ export const HistoryPane = ({ projectId, docId }: HistoryPaneProps) => {
       {isLoading ? (
         <div
           className="flex items-center justify-center"
-          style={{ padding: 32 }}
+          style={{ padding: "2rem" }}
         >
           <Spinner size="sm" />
         </div>
       ) : entries.length === 0 ? (
         <div
           className="dim"
-          style={{ padding: 24, textAlign: "center", fontSize: 12 }}
+          style={{
+            padding: "1.5rem",
+            textAlign: "center",
+            fontSize: "0.75rem",
+          }}
         >
           {t("history.empty")}
         </div>
       ) : (
-        <div style={{ position: "relative", paddingLeft: 16 }}>
+        <div style={{ position: "relative", paddingLeft: "1rem" }}>
           <div
             style={{
               position: "absolute",
-              left: 4,
-              top: 8,
-              bottom: 8,
+              left: "0.25rem",
+              top: "0.5rem",
+              bottom: "0.5rem",
               width: 1,
               background: "var(--border)",
             }}
@@ -168,15 +180,15 @@ export const HistoryPane = ({ projectId, docId }: HistoryPaneProps) => {
             <div
               key={e.id}
               className="flex flex-col"
-              style={{ marginBottom: 18, position: "relative" }}
+              style={{ marginBottom: "1.125rem", position: "relative" }}
             >
               <div
                 style={{
                   position: "absolute",
-                  left: -16,
-                  top: 4,
-                  width: 9,
-                  height: 9,
+                  left: "-1rem",
+                  top: "0.25rem",
+                  width: "0.5625rem",
+                  height: "0.5625rem",
                   borderRadius: "50%",
                   background: i === 0 ? "var(--accent)" : "var(--bg-2)",
                   border:
@@ -186,32 +198,35 @@ export const HistoryPane = ({ projectId, docId }: HistoryPaneProps) => {
               />
               <div
                 className="flex items-center gap-2"
-                style={{ marginBottom: 4 }}
+                style={{ marginBottom: "0.25rem" }}
               >
                 <span
                   className="mono"
                   style={{
-                    fontSize: 12,
+                    fontSize: "0.75rem",
                     fontWeight: 600,
                     color: i === 0 ? "var(--accent)" : "var(--fg-0)",
                   }}
                 >
                   {kindLabel(e.kind)}
                 </span>
-                <span className="mono dim" style={{ fontSize: 10.5 }}>
+                <span className="mono dim" style={{ fontSize: "0.65625rem" }}>
                   {formatDate(e.at)}
                 </span>
                 {i === 0 && (
-                  <span className="sev info" style={{ marginLeft: 4 }}>
+                  <span className="sev info" style={{ marginLeft: "0.25rem" }}>
                     HEAD
                   </span>
                 )}
               </div>
-              <div style={{ fontSize: 12, color: "var(--fg-1)" }}>
+              <div style={{ fontSize: "0.75rem", color: "var(--fg-1)" }}>
                 {summarize(e)}
               </div>
               {e.note && (
-                <div className="dim" style={{ fontSize: 11.5, marginTop: 2 }}>
+                <div
+                  className="dim"
+                  style={{ fontSize: "0.71875rem", marginTop: "0.125rem" }}
+                >
                   {e.note}
                 </div>
               )}

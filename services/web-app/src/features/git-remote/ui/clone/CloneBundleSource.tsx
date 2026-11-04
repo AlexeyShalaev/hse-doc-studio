@@ -59,10 +59,13 @@ export const CloneBundleSource = ({
   return (
     <div
       className="flex flex-col"
-      style={{ gap: 14 }}
+      style={{ gap: "0.875rem" }}
       data-testid="bundle-source"
     >
-      <p className="dim" style={{ margin: 0, fontSize: 12.5, lineHeight: 1.5 }}>
+      <p
+        className="dim"
+        style={{ margin: 0, fontSize: "0.78125rem", lineHeight: 1.5 }}
+      >
         {t("clone.bundle.hint")}
       </p>
 
@@ -87,14 +90,14 @@ export const CloneBundleSource = ({
       {file !== null && (
         <div
           className="card flex items-center"
-          style={{ gap: 12, padding: "10px 12px" }}
+          style={{ gap: "0.75rem", padding: "0.625rem 0.75rem" }}
           data-testid="bundle-file"
         >
           <span
             className="flex items-center justify-center"
             style={{
-              width: 34,
-              height: 34,
+              width: "2.125rem",
+              height: "2.125rem",
               borderRadius: "var(--r-2)",
               background: "var(--bg-2)",
               border: "1px solid var(--border)",
@@ -103,20 +106,24 @@ export const CloneBundleSource = ({
             }}
           >
             {encrypted ? (
-              <Lock size={16} aria-hidden="true" />
+              <Lock size="1rem" aria-hidden="true" />
             ) : (
-              <FileArchive size={16} aria-hidden="true" />
+              <FileArchive size="1rem" aria-hidden="true" />
             )}
           </span>
           <span style={{ flex: 1, minWidth: 0 }}>
             <span
               className="mono truncate"
-              style={{ display: "block", fontSize: 12.5, color: "var(--fg-0)" }}
+              style={{
+                display: "block",
+                fontSize: "0.78125rem",
+                color: "var(--fg-0)",
+              }}
               title={file.name}
             >
               {file.name}
             </span>
-            <span className="dim" style={{ fontSize: 11.5 }}>
+            <span className="dim" style={{ fontSize: "0.71875rem" }}>
               {formatFileSize(file.size)}
               {encrypted && ` · ${t("clone.bundle.encrypted")}`}
             </span>
@@ -139,7 +146,7 @@ export const CloneBundleSource = ({
               onFileChange(null);
             }}
           >
-            <X size={13} aria-hidden="true" />
+            <X size="0.8125rem" aria-hidden="true" />
           </button>
         </div>
       )}
@@ -152,7 +159,7 @@ export const CloneBundleSource = ({
       {encrypted && (
         <div className="field">
           <label htmlFor={passwordId}>{t("clone.bundle.password")}</label>
-          <div className="flex" style={{ gap: 6 }}>
+          <div className="flex" style={{ gap: "0.375rem" }}>
             <input
               id={passwordId}
               type={showPassword ? "text" : "password"}
@@ -181,9 +188,9 @@ export const CloneBundleSource = ({
               }}
             >
               {showPassword ? (
-                <EyeOff size={14} aria-hidden="true" />
+                <EyeOff size="0.875rem" aria-hidden="true" />
               ) : (
-                <Eye size={14} aria-hidden="true" />
+                <Eye size="0.875rem" aria-hidden="true" />
               )}
             </button>
           </div>

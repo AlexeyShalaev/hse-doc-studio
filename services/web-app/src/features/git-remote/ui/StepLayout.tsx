@@ -27,13 +27,13 @@ export const StepLayout = ({
       <div
         className="flex flex-col"
         style={{
-          gap: 14,
+          gap: "0.875rem",
           overflowY: "auto",
-          maxHeight: "calc(100vh - 340px)",
-          minHeight: 180,
+          maxHeight: "calc(100vh - 21.25rem)",
+          minHeight: "11.25rem",
           // Запас под рамку фокуса у полей на краях прокручиваемой области.
-          padding: "2px 4px 4px",
-          margin: "0 -4px",
+          padding: "0.125rem 0.25rem 0.25rem",
+          margin: "0 -0.25rem",
         }}
       >
         {children}
@@ -42,16 +42,16 @@ export const StepLayout = ({
         className="flex items-center"
         style={{
           justifyContent: "space-between",
-          gap: 10,
-          paddingTop: 14,
-          marginTop: 14,
+          gap: "0.625rem",
+          paddingTop: "0.875rem",
+          marginTop: "0.875rem",
           borderTop: "1px solid var(--border)",
         }}
       >
-        <div className="flex items-center" style={{ gap: 8 }}>
+        <div className="flex items-center" style={{ gap: "0.5rem" }}>
           {start}
         </div>
-        <div className="flex items-center" style={{ gap: 8 }}>
+        <div className="flex items-center" style={{ gap: "0.5rem" }}>
           {end}
         </div>
       </div>

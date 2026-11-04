@@ -93,22 +93,22 @@ export const RecentActivity = () => {
   if (projectList.length === 0) return null;
 
   return (
-    <div style={{ marginTop: 36 }}>
+    <div style={{ marginTop: "2.25rem" }}>
       <div
         className="flex items-center justify-between"
-        style={{ marginBottom: 14 }}
+        style={{ marginBottom: "0.875rem" }}
       >
         <h3
           className="mono dim m-0"
           style={{
-            fontSize: 10.5,
+            fontSize: "0.65625rem",
             letterSpacing: "0.12em",
             textTransform: "uppercase",
           }}
         >
           {t("activity.title")}
         </h3>
-        <span className="dim" style={{ fontSize: 11 }}>
+        <span className="dim" style={{ fontSize: "0.6875rem" }}>
           {t("activity.subtitle")}
         </span>
       </div>
@@ -117,7 +117,11 @@ export const RecentActivity = () => {
         {isLoading && events.length === 0 ? (
           <div
             className="dim"
-            style={{ padding: "24px 14px", textAlign: "center", fontSize: 12 }}
+            style={{
+              padding: "1.5rem 0.875rem",
+              textAlign: "center",
+              fontSize: "0.75rem",
+            }}
           >
             {t("activity.loading")}
           </div>
@@ -125,13 +129,13 @@ export const RecentActivity = () => {
           <div
             className="flex items-center justify-center"
             style={{
-              gap: 8,
-              padding: "28px 14px",
+              gap: "0.5rem",
+              padding: "1.75rem 0.875rem",
               color: "var(--fg-3)",
-              fontSize: 12,
+              fontSize: "0.75rem",
             }}
           >
-            <Inbox size={14} />
+            <Inbox size="0.875rem" />
             {t("activity.empty")}
           </div>
         ) : (
@@ -144,10 +148,10 @@ export const RecentActivity = () => {
                 tabIndex={0}
                 className="flex items-center cursor-pointer"
                 style={{
-                  padding: "10px 14px",
+                  padding: "0.625rem 0.875rem",
                   borderBottom:
                     i < events.length - 1 ? "1px solid var(--border)" : "0",
-                  gap: 12,
+                  gap: "0.75rem",
                 }}
                 onClick={() => {
                   void navigate(
@@ -169,13 +173,13 @@ export const RecentActivity = () => {
                 <span className={clsx("dot", severity)} />
                 <span
                   className="mono dim shrink-0"
-                  style={{ fontSize: 10.5, width: 72 }}
+                  style={{ fontSize: "0.65625rem", width: "4.5rem" }}
                 >
                   {formatTimeAgo(event.at)}
                 </span>
                 <span
                   className="chip shrink-0"
-                  style={{ maxWidth: 140 }}
+                  style={{ maxWidth: "8.75rem" }}
                   title={event.project.name}
                 >
                   <span className="truncate">{event.project.name}</span>
@@ -194,7 +198,7 @@ export const RecentActivity = () => {
                 <span
                   className="flex-1 min-w-0 truncate"
                   style={{
-                    fontSize: 12.5,
+                    fontSize: "0.78125rem",
                     color: severity === "err" ? "var(--c-err)" : "var(--fg-1)",
                   }}
                   title={event.summary}
@@ -202,7 +206,7 @@ export const RecentActivity = () => {
                   {event.summary}
                 </span>
                 <ChevronRight
-                  size={11}
+                  size="0.6875rem"
                   style={{ color: "var(--fg-3)", flexShrink: 0 }}
                 />
               </div>

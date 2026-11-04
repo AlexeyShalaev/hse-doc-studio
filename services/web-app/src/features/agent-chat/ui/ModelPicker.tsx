@@ -196,14 +196,14 @@ export const ModelPicker = ({
       >
         {isActive && row.unavailable ? (
           <TriangleAlert
-            size={13}
+            size="0.8125rem"
             className="combo-check"
             style={{ color: "var(--c-warn)" }}
             aria-hidden="true"
           />
         ) : (
           <Check
-            size={13}
+            size="0.8125rem"
             className="combo-check"
             style={{ opacity: isActive ? 1 : 0 }}
           />
@@ -212,7 +212,11 @@ export const ModelPicker = ({
         {/* Чей провайдер и почему недоступен: имя не пропадает за причиной. */}
         <span
           className="modelpick-provider truncate"
-          style={{ display: "inline-flex", alignItems: "center", gap: 4 }}
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            gap: "0.25rem",
+          }}
         >
           {row.unavailable && <StatusDot status="offline" hideLabel />}
           {row.unavailable
@@ -234,18 +238,18 @@ export const ModelPicker = ({
           role="status"
           data-testid="model-picker-unavailable"
           style={{
-            fontSize: 11,
-            gap: 4,
+            fontSize: "0.6875rem",
+            gap: "0.25rem",
             display: "inline-flex",
             alignItems: "center",
             color: "var(--c-warn)",
-            maxWidth: 220,
+            maxWidth: "13.75rem",
           }}
           title={t("model.selectedUnavailable", {
             reason: selectedUnavailable,
           })}
         >
-          <TriangleAlert size={11} aria-hidden="true" />
+          <TriangleAlert size="0.6875rem" aria-hidden="true" />
           <span className="truncate">
             {t("model.selectedUnavailable", { reason: selectedUnavailable })}
           </span>
@@ -272,7 +276,7 @@ export const ModelPicker = ({
       >
         <span className="truncate">{triggerLabel}</span>
         <ChevronDown
-          size={13}
+          size="0.8125rem"
           style={{ flexShrink: 0, color: "var(--fg-2)" }}
         />
       </button>
@@ -312,7 +316,7 @@ export const ModelPicker = ({
                 <>
                   <div
                     className="combo-empty"
-                    style={{ textAlign: "left", fontSize: 11 }}
+                    style={{ textAlign: "left", fontSize: "0.6875rem" }}
                     data-testid="model-picker-default-order"
                   >
                     {t("model.defaultOrder")}
@@ -335,10 +339,10 @@ export const ModelPicker = ({
                         <div
                           className="dim"
                           style={{
-                            padding: "6px 10px 2px",
-                            fontSize: 10.5,
+                            padding: "0.375rem 0.625rem 0.125rem",
+                            fontSize: "0.65625rem",
                             textTransform: "uppercase",
-                            letterSpacing: 0.4,
+                            letterSpacing: "0.025rem",
                           }}
                         >
                           {t(`model.group.${source}`)}
@@ -364,9 +368,9 @@ export const ModelPicker = ({
                         }}
                       >
                         {otherOpen ? (
-                          <ChevronDown size={13} />
+                          <ChevronDown size="0.8125rem" />
                         ) : (
-                          <ChevronRight size={13} />
+                          <ChevronRight size="0.8125rem" />
                         )}
                         <span>{t("model.otherModels")}</span>
                         <span className="dim modelpick-more-count">

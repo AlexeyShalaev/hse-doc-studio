@@ -27,14 +27,14 @@ const Logomark = () => (
   <div
     className="flex items-center justify-center font-mono shrink-0"
     style={{
-      width: 22,
-      height: 22,
-      borderRadius: 5,
+      width: "1.375rem",
+      height: "1.375rem",
+      borderRadius: "0.3125rem",
       background:
         "linear-gradient(135deg, var(--accent), color-mix(in oklch, var(--accent) 60%, var(--fg-0) 0%))",
       color: "var(--accent-ink)",
       fontWeight: 700,
-      fontSize: 10,
+      fontSize: "0.625rem",
       letterSpacing: "-0.02em",
       boxShadow: "0 0 0 1px var(--accent-line)",
     }}
@@ -44,7 +44,7 @@ const Logomark = () => (
 );
 
 const Mono = ({ children }: { children: React.ReactNode }) => (
-  <span className="mono" style={{ fontSize: 11.5 }}>
+  <span className="mono" style={{ fontSize: "0.71875rem" }}>
     {children}
   </span>
 );
@@ -91,7 +91,7 @@ const AboutUpdates = ({
                 copyPath(data.data_dir ?? "");
               }}
             >
-              <Copy size={12} />
+              <Copy size="0.75rem" />
             </button>
             <OpenFolderInEditor path={data.data_dir} />
           </div>
@@ -106,14 +106,14 @@ const AboutUpdates = ({
         {isLoading ? (
           <Spinner size="sm" />
         ) : !update.feedEnabled ? (
-          <span className="dim" style={{ fontSize: 12 }}>
+          <span className="dim" style={{ fontSize: "0.75rem" }}>
             {t("about.updatesDisabled")}
           </span>
         ) : update.isChecking && !update.hasInfo ? (
           <Spinner size="sm" />
         ) : update.updateAvailable ? (
-          <div className="flex items-center" style={{ gap: 8 }}>
-            <span style={{ fontSize: 12, color: "var(--c-warn)" }}>
+          <div className="flex items-center" style={{ gap: "0.5rem" }}>
+            <span style={{ fontSize: "0.75rem", color: "var(--c-warn)" }}>
               {t("about.updateAvailable", { version: update.latestVersion })}
             </span>
             <button
@@ -127,9 +127,9 @@ const AboutUpdates = ({
             </button>
           </div>
         ) : (
-          <div className="flex items-center" style={{ gap: 8 }}>
+          <div className="flex items-center" style={{ gap: "0.5rem" }}>
             {update.hasInfo && (
-              <span style={{ fontSize: 12, color: "var(--c-ok)" }}>
+              <span style={{ fontSize: "0.75rem", color: "var(--c-ok)" }}>
                 {t("about.upToDate")}
               </span>
             )}
@@ -142,7 +142,7 @@ const AboutUpdates = ({
               {update.hasInfo ? t("about.check") : t("about.checkUpdates")}
             </button>
             {update.reason && (
-              <span className="dim" style={{ fontSize: 11 }}>
+              <span className="dim" style={{ fontSize: "0.6875rem" }}>
                 {update.reason}
               </span>
             )}
@@ -151,10 +151,10 @@ const AboutUpdates = ({
       </Setting>
 
       <Setting anchorId="about-auto-update" label={t("about.autoUpdate")}>
-        <div className="flex flex-col" style={{ gap: 4 }}>
+        <div className="flex flex-col" style={{ gap: "0.25rem" }}>
           <label
             className="flex items-center"
-            style={{ gap: 6, fontSize: 12, cursor: "pointer" }}
+            style={{ gap: "0.375rem", fontSize: "0.75rem", cursor: "pointer" }}
           >
             <input
               type="checkbox"
@@ -210,7 +210,7 @@ export const AboutSection = () => {
   const sourceLabel = data?.source_url.replace(/^https?:\/\//, "");
 
   return (
-    <div className="flex flex-col" style={{ gap: 16 }}>
+    <div className="flex flex-col" style={{ gap: "1rem" }}>
       <SettingHead
         anchorId="about"
         title="HSE Studio"
@@ -219,18 +219,18 @@ export const AboutSection = () => {
       <div
         className="flex flex-col"
         style={{
-          gap: 8,
-          padding: 14,
+          gap: "0.5rem",
+          padding: "0.875rem",
           background: "var(--bg-0)",
           borderRadius: "var(--r-3)",
           border: "1px solid var(--border)",
         }}
       >
-        <div className="flex items-center" style={{ gap: 8 }}>
+        <div className="flex items-center" style={{ gap: "0.5rem" }}>
           <Logomark />
           <strong>{t("about.productName")}</strong>
         </div>
-        <p style={{ margin: 0, color: "var(--fg-2)", fontSize: 12 }}>
+        <p style={{ margin: 0, color: "var(--fg-2)", fontSize: "0.75rem" }}>
           {t("about.description")}
         </p>
       </div>
@@ -239,7 +239,7 @@ export const AboutSection = () => {
         {isLoading ? (
           <Spinner size="sm" />
         ) : (
-          <span style={{ fontSize: 12 }}>
+          <span style={{ fontSize: "0.75rem" }}>
             {data ? t(MODE_LABELS[data.deployment_mode]) : "—"}
           </span>
         )}
@@ -264,7 +264,7 @@ export const AboutSection = () => {
             target="_blank"
             rel="noreferrer noopener"
             className="mono"
-            style={{ fontSize: 11.5, color: "var(--accent)" }}
+            style={{ fontSize: "0.71875rem", color: "var(--accent)" }}
           >
             {sourceLabel}
           </a>

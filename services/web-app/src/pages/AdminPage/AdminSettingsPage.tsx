@@ -10,7 +10,7 @@ export const AdminSettingsPage = () => {
   return (
     <div
       className="flex flex-col"
-      style={{ gap: 20, flex: 1 }}
+      style={{ gap: "1.25rem", flex: 1 }}
       data-testid="admin-settings"
     >
       <PageHeader title={t("page.title")} description={t("page.lead")} />

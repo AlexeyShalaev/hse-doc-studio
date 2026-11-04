@@ -26,7 +26,7 @@ const panel = {
 const head = {
   padding: "8px 12px",
   borderBottom: "1px solid var(--border)",
-  fontSize: 11,
+  fontSize: "0.6875rem",
   textTransform: "uppercase",
   letterSpacing: "0.08em",
   color: "var(--fg-2)",
@@ -45,13 +45,19 @@ export const CreatePanel = ({
 }) => {
   const { t } = useTranslation("onboarding");
   return (
-    <div style={{ ...panel, padding: 14, gap: 10 }} data-tour="demo-create">
-      <span className="mono dim" style={{ fontSize: 10.5 }}>
+    <div
+      style={{ ...panel, padding: "0.875rem", gap: "0.625rem" }}
+      data-tour="demo-create"
+    >
+      <span className="mono dim" style={{ fontSize: "0.65625rem" }}>
         {t("demo.templateTitle")}
       </span>
-      <div className="card" style={{ padding: 12 }}>
-        <strong style={{ fontSize: 13.5 }}>{templateLabel}</strong>
-        <div className="dim" style={{ fontSize: 11.5, marginTop: 4 }}>
+      <div className="card" style={{ padding: "0.75rem" }}>
+        <strong style={{ fontSize: "0.84375rem" }}>{templateLabel}</strong>
+        <div
+          className="dim"
+          style={{ fontSize: "0.71875rem", marginTop: "0.25rem" }}
+        >
           {t("demo.templateHint")}
         </div>
       </div>
@@ -78,7 +84,7 @@ export const FilesPanel = ({
   return (
     <div style={panel} data-tour="demo-files">
       <div style={head}>{t("demo.files")}</div>
-      <ul style={{ listStyle: "none", margin: 0, padding: 6 }}>
+      <ul style={{ listStyle: "none", margin: 0, padding: "0.375rem" }}>
         {state.files.map((file) => {
           const isDir = file.path.endsWith("/");
           return (
@@ -90,13 +96,21 @@ export const FilesPanel = ({
                   state.activePath === file.path && "active",
                 )}
                 disabled={isDir}
-                style={{ width: "100%", justifyContent: "flex-start", gap: 8 }}
+                style={{
+                  width: "100%",
+                  justifyContent: "flex-start",
+                  gap: "0.5rem",
+                }}
                 onClick={() => {
                   world.openFile(file.path);
                 }}
               >
-                {isDir ? <Folder size={13} /> : <File size={13} />}
-                <span className="mono" style={{ fontSize: 12 }}>
+                {isDir ? (
+                  <Folder size="0.8125rem" />
+                ) : (
+                  <File size="0.8125rem" />
+                )}
+                <span className="mono" style={{ fontSize: "0.75rem" }}>
                   {file.path}
                 </span>
               </button>
@@ -137,19 +151,22 @@ export const EditorPanel = ({
           className="mono"
           style={{
             flex: 1,
-            minHeight: 260,
+            minHeight: "16.25rem",
             resize: "none",
             border: 0,
             outline: "none",
-            padding: 12,
-            fontSize: 12.5,
+            padding: "0.75rem",
+            fontSize: "0.78125rem",
             lineHeight: 1.55,
             background: "var(--bg-0)",
             color: "var(--fg-0)",
           }}
         />
       ) : (
-        <div className="dim" style={{ padding: 16, fontSize: 12.5 }}>
+        <div
+          className="dim"
+          style={{ padding: "1rem", fontSize: "0.78125rem" }}
+        >
           {t("demo.createFirst")}
         </div>
       )}
@@ -165,7 +182,7 @@ const paper = {
   boxShadow: "0 1px 4px rgba(0,0,0,.25)",
   padding: "9% 8%",
   fontFamily: "'Times New Roman', Times, serif",
-  fontSize: 10,
+  fontSize: "0.625rem",
   lineHeight: 1.45,
   display: "flex",
   flexDirection: "column",
@@ -179,11 +196,13 @@ const Page = ({ page, n }: { page: PreviewPage; n: number }) => {
         <div style={{ flex: 1 }} />
         <div
           data-testid="demo-preview-title"
-          style={{ textAlign: "center", fontSize: 14, fontWeight: 700 }}
+          style={{ textAlign: "center", fontSize: "0.875rem", fontWeight: 700 }}
         >
           {page.title}
         </div>
-        <div style={{ textAlign: "right", marginTop: 24 }}>{page.author}</div>
+        <div style={{ textAlign: "right", marginTop: "1.5rem" }}>
+          {page.author}
+        </div>
         <div style={{ flex: 1 }} />
         <div style={{ textAlign: "center" }}>{page.footer}</div>
       </div>
@@ -196,17 +215,17 @@ const Page = ({ page, n }: { page: PreviewPage; n: number }) => {
           <div style={{ textAlign: "center", fontWeight: 700 }}>
             {t("demo.abstract")}
           </div>
-          <p style={{ textIndent: "1.25em", margin: "6px 0 12px" }}>
+          <p style={{ textIndent: "1.25em", margin: "0.375rem 0 0.75rem" }}>
             {page.abstract}
           </p>
         </>
       )}
       {page.sections.map((section, i) => (
         <div key={section.heading}>
-          <div style={{ fontWeight: 700, marginTop: 8 }}>
+          <div style={{ fontWeight: 700, marginTop: "0.5rem" }}>
             {i + 1}. {section.heading}
           </div>
-          <p style={{ textIndent: "1.25em", margin: "4px 0" }}>
+          <p style={{ textIndent: "1.25em", margin: "0.25rem 0" }}>
             {section.text}
           </p>
         </div>
@@ -241,7 +260,7 @@ export const PreviewPanel = ({
           }}
           style={{ textTransform: "none", letterSpacing: 0 }}
         >
-          <Play size={12} />
+          <Play size="0.75rem" />
           {running
             ? t("demo.building")
             : state.build.status === "done"
@@ -253,12 +272,12 @@ export const PreviewPanel = ({
         style={{
           flex: 1,
           overflowY: "auto",
-          padding: 12,
+          padding: "0.75rem",
           display: "flex",
           flexDirection: "column",
-          gap: 12,
+          gap: "0.75rem",
           background: "var(--bg-2)",
-          minHeight: 260,
+          minHeight: "16.25rem",
         }}
       >
         {state.build.status === "done" && state.dirty && (
@@ -270,13 +289,13 @@ export const PreviewPanel = ({
           <pre
             className="mono"
             aria-live="polite"
-            style={{ margin: 0, fontSize: 11.5, color: "var(--fg-1)" }}
+            style={{ margin: 0, fontSize: "0.71875rem", color: "var(--fg-1)" }}
           >
             {state.build.log.join("\n")}
           </pre>
         )}
         {!running && state.build.pages.length === 0 && (
-          <span className="dim" style={{ fontSize: 12.5 }}>
+          <span className="dim" style={{ fontSize: "0.78125rem" }}>
             {t("demo.previewEmpty")}
           </span>
         )}
@@ -317,7 +336,7 @@ export const SidePanel = ({
   ];
   return (
     <div style={panel}>
-      <div role="tablist" className="seg" style={{ margin: 8 }}>
+      <div role="tablist" className="seg" style={{ margin: "0.5rem" }}>
         {tabs.map((item) => (
           <button
             key={item.id}
@@ -330,30 +349,30 @@ export const SidePanel = ({
               onTab(item.id);
             }}
           >
-            <item.icon size={12} />
+            <item.icon size="0.75rem" />
             {item.label}
           </button>
         ))}
       </div>
       <div
         role="tabpanel"
-        style={{ flex: 1, overflowY: "auto", padding: "0 12px 12px" }}
+        style={{ flex: 1, overflowY: "auto", padding: "0 0.75rem 0.75rem" }}
       >
         {tab === "agent" && (
           <div
             data-tour="demo-agent"
             className="flex flex-col"
-            style={{ gap: 8 }}
+            style={{ gap: "0.5rem" }}
           >
             {state.chat.length === 0 && (
-              <span className="dim" style={{ fontSize: 12.5 }}>
+              <span className="dim" style={{ fontSize: "0.78125rem" }}>
                 {t("demo.agentEmpty")}
               </span>
             )}
             <div
               aria-live="polite"
               className="flex flex-col"
-              style={{ gap: 8 }}
+              style={{ gap: "0.5rem" }}
             >
               {state.chat.map((m) => (
                 <div
@@ -361,15 +380,15 @@ export const SidePanel = ({
                   className="card"
                   data-testid={`demo-chat-${m.role}`}
                   style={{
-                    padding: 10,
-                    fontSize: 12.5,
+                    padding: "0.625rem",
+                    fontSize: "0.78125rem",
                     lineHeight: 1.5,
                     background: m.role === "user" ? "var(--bg-2)" : undefined,
                   }}
                 >
                   <div
                     className="mono dim"
-                    style={{ fontSize: 10.5, marginBottom: 4 }}
+                    style={{ fontSize: "0.65625rem", marginBottom: "0.25rem" }}
                   >
                     {m.role === "user" ? t("demo.you") : t("demo.agentName")}
                     {m.streaming ? ` · ${t("demo.agentTyping")}` : ""}
@@ -378,7 +397,7 @@ export const SidePanel = ({
                 </div>
               ))}
             </div>
-            <div className="flex flex-col" style={{ gap: 6 }}>
+            <div className="flex flex-col" style={{ gap: "0.375rem" }}>
               {content.prompts.map((p) => (
                 <button
                   key={p.id}
@@ -406,11 +425,11 @@ export const SidePanel = ({
               padding: 0,
               display: "flex",
               flexDirection: "column",
-              gap: 8,
+              gap: "0.5rem",
             }}
           >
             {state.comments.length === 0 && (
-              <li className="dim" style={{ fontSize: 12.5 }}>
+              <li className="dim" style={{ fontSize: "0.78125rem" }}>
                 {t("demo.reviewEmpty")}
               </li>
             )}
@@ -420,29 +439,36 @@ export const SidePanel = ({
                 className="card"
                 data-testid={`demo-comment-${c.id}`}
                 style={{
-                  padding: 10,
-                  fontSize: 12.5,
+                  padding: "0.625rem",
+                  fontSize: "0.78125rem",
                   opacity: c.resolved ? 0.6 : 1,
                 }}
               >
                 <div
                   className="flex items-center"
-                  style={{ gap: 6, marginBottom: 4 }}
+                  style={{ gap: "0.375rem", marginBottom: "0.25rem" }}
                 >
-                  {c.kind === "agent" ? <Bot size={12} /> : <User size={12} />}
-                  <strong style={{ fontSize: 12 }}>{c.author}</strong>
+                  {c.kind === "agent" ? (
+                    <Bot size="0.75rem" />
+                  ) : (
+                    <User size="0.75rem" />
+                  )}
+                  <strong style={{ fontSize: "0.75rem" }}>{c.author}</strong>
                 </div>
                 <div
                   className="mono dim"
-                  style={{ fontSize: 11, marginBottom: 4 }}
+                  style={{ fontSize: "0.6875rem", marginBottom: "0.25rem" }}
                 >
                   «{c.quote}»
                 </div>
                 <div>{c.text}</div>
-                <div className="flex justify-end" style={{ marginTop: 6 }}>
+                <div
+                  className="flex justify-end"
+                  style={{ marginTop: "0.375rem" }}
+                >
                   {c.resolved ? (
                     <span className="chip">
-                      <Check size={10} /> {t("demo.resolved")}
+                      <Check size="0.625rem" /> {t("demo.resolved")}
                     </span>
                   ) : (
                     <button
@@ -465,10 +491,10 @@ export const SidePanel = ({
           <div
             data-tour="demo-git"
             className="flex flex-col"
-            style={{ gap: 10, fontSize: 12.5 }}
+            style={{ gap: "0.625rem", fontSize: "0.78125rem" }}
           >
-            <div className="flex flex-col" style={{ gap: 4 }}>
-              <span className="mono dim" style={{ fontSize: 10.5 }}>
+            <div className="flex flex-col" style={{ gap: "0.25rem" }}>
+              <span className="mono dim" style={{ fontSize: "0.65625rem" }}>
                 {t("demo.remote")}
               </span>
               <span className="mono" style={{ wordBreak: "break-all" }}>
@@ -489,14 +515,14 @@ export const SidePanel = ({
                 void world.sync();
               }}
             >
-              <GitBranch size={12} />
+              <GitBranch size="0.75rem" />
               {state.git.busy
                 ? t("demo.syncing")
                 : state.git.remote
                   ? t("demo.sync")
                   : `${t("demo.connect")} · ${t("demo.sync")}`}
             </button>
-            <span className="mono dim" style={{ fontSize: 10.5 }}>
+            <span className="mono dim" style={{ fontSize: "0.65625rem" }}>
               {t("demo.commits")}
             </span>
             {state.git.commits.length === 0 ? (
@@ -508,13 +534,13 @@ export const SidePanel = ({
                     key={c.sha}
                     data-testid="demo-commit"
                     className="flex items-center"
-                    style={{ gap: 8, padding: "4px 0" }}
+                    style={{ gap: "0.5rem", padding: "0.25rem 0" }}
                   >
                     <span className="mono" style={{ color: "var(--accent)" }}>
                       {c.sha}
                     </span>
                     <span className="flex-1 truncate">{c.message}</span>
-                    <span className="dim" style={{ fontSize: 11 }}>
+                    <span className="dim" style={{ fontSize: "0.6875rem" }}>
                       {c.pushed ? t("demo.pushed") : t("demo.notPushed")}
                     </span>
                   </li>

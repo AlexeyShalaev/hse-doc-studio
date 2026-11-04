@@ -37,29 +37,29 @@ export const TemplateUpdateCard = ({ projectId }: TemplateUpdateCardProps) => {
     <div
       className="card"
       style={{
-        padding: 16,
+        padding: "1rem",
         display: "flex",
         flexDirection: "column",
-        gap: 10,
+        gap: "0.625rem",
         borderColor: "color-mix(in oklch, var(--accent) 40%, var(--border))",
-        maxWidth: 860,
+        maxWidth: "53.75rem",
       }}
     >
-      <div className="flex items-center" style={{ gap: 8 }}>
-        <Sparkles size={14} style={{ color: "var(--accent)" }} />
-        <strong style={{ fontSize: 13 }}>{t("card.title")}</strong>
+      <div className="flex items-center" style={{ gap: "0.5rem" }}>
+        <Sparkles size="0.875rem" style={{ color: "var(--accent)" }} />
+        <strong style={{ fontSize: "0.8125rem" }}>{t("card.title")}</strong>
       </div>
-      <span style={{ fontSize: 12.5 }}>
+      <span style={{ fontSize: "0.78125rem" }}>
         {t("card.text", { version: update.version.version })}
       </span>
       {notes.length > 0 && (
-        <ul style={{ margin: 0, paddingLeft: 18, fontSize: 12 }}>
+        <ul style={{ margin: 0, paddingLeft: "1.125rem", fontSize: "0.75rem" }}>
           {notes.map((note) => (
             <li key={note}>{note}</li>
           ))}
         </ul>
       )}
-      <div className="flex" style={{ gap: 8 }}>
+      <div className="flex" style={{ gap: "0.5rem" }}>
         <button
           type="button"
           className="btn primary"
@@ -67,7 +67,7 @@ export const TemplateUpdateCard = ({ projectId }: TemplateUpdateCardProps) => {
             setIsOpen(true);
           }}
         >
-          <ArrowUpCircle size={13} />
+          <ArrowUpCircle size="0.8125rem" />
           {t("card.review")}
         </button>
         <button

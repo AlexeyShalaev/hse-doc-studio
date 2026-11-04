@@ -21,8 +21,8 @@ export const CheckRow = ({
   <label
     className="flex items-start"
     style={{
-      gap: 9,
-      fontSize: 12.5,
+      gap: "0.5625rem",
+      fontSize: "0.78125rem",
       lineHeight: 1.45,
       cursor: disabled ? "default" : "pointer",
       opacity: disabled ? 0.6 : 1,
@@ -37,14 +37,22 @@ export const CheckRow = ({
       onChange={(event) => {
         onChange(event.target.checked);
       }}
-      style={{ marginTop: 2, accentColor: "var(--accent)", flexShrink: 0 }}
+      style={{
+        marginTop: "0.125rem",
+        accentColor: "var(--accent)",
+        flexShrink: 0,
+      }}
     />
     <span style={{ minWidth: 0 }}>
       {children}
       {hint && (
         <span
           className="dim"
-          style={{ display: "block", fontSize: 11, marginTop: 2 }}
+          style={{
+            display: "block",
+            fontSize: "0.6875rem",
+            marginTop: "0.125rem",
+          }}
         >
           {hint}
         </span>

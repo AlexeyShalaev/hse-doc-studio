@@ -52,7 +52,7 @@ export const DeleteModifyResolver = ({
       role="radiogroup"
       aria-label={t("file.groupLabel")}
       className="flex flex-col"
-      style={{ gap: 8 }}
+      style={{ gap: "0.5rem" }}
     >
       {options.map((choice) => {
         const id = `${groupId}-${choice}`;
@@ -75,13 +75,20 @@ export const DeleteModifyResolver = ({
                 onChoose(choice);
               }}
             />
-            <span className="flex flex-col" style={{ gap: 3, minWidth: 0 }}>
+            <span
+              className="flex flex-col"
+              style={{ gap: "0.1875rem", minWidth: 0 }}
+            >
               <span
                 className="flex items-center"
-                style={{ gap: 6, fontSize: 13, fontWeight: 600 }}
+                style={{
+                  gap: "0.375rem",
+                  fontSize: "0.8125rem",
+                  fontWeight: 600,
+                }}
               >
                 <Icon
-                  size={14}
+                  size="0.875rem"
                   aria-hidden="true"
                   style={{
                     flexShrink: 0,
@@ -90,10 +97,10 @@ export const DeleteModifyResolver = ({
                 />
                 {t(`${prefix}.${choice}`)}
               </span>
-              <span style={{ fontSize: 12, lineHeight: 1.5 }}>
+              <span style={{ fontSize: "0.75rem", lineHeight: 1.5 }}>
                 {t(`deleteModify.${tone}.${choice}`)}
               </span>
-              <span className="dim" style={{ fontSize: 11.5 }}>
+              <span className="dim" style={{ fontSize: "0.71875rem" }}>
                 {keepsFile ? (
                   <>
                     {t("deleteModify.changedBy", {

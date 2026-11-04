@@ -38,13 +38,17 @@ const Row = ({
 }) => (
   <div
     className="flex flex-col"
-    style={{ gap: 3, padding: "8px 0", borderTop: "1px solid var(--border)" }}
+    style={{
+      gap: "0.1875rem",
+      padding: "0.5rem 0",
+      borderTop: "1px solid var(--border)",
+    }}
     data-testid={testId}
   >
     <span
       className="dim"
       style={{
-        fontSize: 10.5,
+        fontSize: "0.65625rem",
         letterSpacing: "0.04em",
         textTransform: "uppercase",
       }}
@@ -62,23 +66,26 @@ const ProjectRows = ({ device, now }: { device: Device; now: number }) => {
   const pdf = project.pdf;
   return (
     <Row label={t("card.project")} testId="device-project">
-      <div className="flex items-center" style={{ gap: 8, flexWrap: "wrap" }}>
+      <div
+        className="flex items-center"
+        style={{ gap: "0.5rem", flexWrap: "wrap" }}
+      >
         <StatusDot
           status={SYNC_DOT[project.sync]}
           label={t(`card.sync.${project.sync}`)}
         />
         {project.ahead > 0 && (
-          <span className="mono dim" style={{ fontSize: 11 }}>
+          <span className="mono dim" style={{ fontSize: "0.6875rem" }}>
             {t("card.ahead", { commits: commitsText(t, project.ahead) })}
           </span>
         )}
         {project.behind > 0 && (
-          <span className="mono dim" style={{ fontSize: 11 }}>
+          <span className="mono dim" style={{ fontSize: "0.6875rem" }}>
             {t("card.behind", { commits: commitsText(t, project.behind) })}
           </span>
         )}
       </div>
-      <span className="dim" style={{ fontSize: 11.5 }}>
+      <span className="dim" style={{ fontSize: "0.71875rem" }}>
         {project.last_sync_at !== null
           ? t("card.lastSync", {
               when: formatPastTime(project.last_sync_at, now),
@@ -90,7 +97,7 @@ const ProjectRows = ({ device, now }: { device: Device; now: number }) => {
       <span
         className="dim"
         style={{
-          fontSize: 11.5,
+          fontSize: "0.71875rem",
           color: pdf !== null && !pdf.ok ? "var(--c-warn)" : undefined,
         }}
         data-testid="device-pdf"
@@ -117,20 +124,20 @@ const RunnerRow = ({ device }: { device: Device }) => {
   return (
     <Row label={t("card.runner")} testId="device-runner">
       {runner === null ? (
-        <span className="dim" style={{ fontSize: 11.5 }}>
+        <span className="dim" style={{ fontSize: "0.71875rem" }}>
           {t("card.runnerNone")}
         </span>
       ) : (
         <>
           <div
             className="flex items-center"
-            style={{ gap: 8, flexWrap: "wrap" }}
+            style={{ gap: "0.5rem", flexWrap: "wrap" }}
           >
             <StatusDot
               status={RUNNER_DOT[runner.state]}
               label={`${runner.name}: ${t(`card.runnerState.${runner.state}`)}`}
             />
-            <span className="dim" style={{ fontSize: 11.5 }}>
+            <span className="dim" style={{ fontSize: "0.71875rem" }}>
               {runner.busy
                 ? t("card.runnerBusy", {
                     running: runner.running_jobs,
@@ -140,9 +147,13 @@ const RunnerRow = ({ device }: { device: Device }) => {
             </span>
           </div>
           {runner.tags.length > 0 && (
-            <div className="flex" style={{ gap: 4, flexWrap: "wrap" }}>
+            <div className="flex" style={{ gap: "0.25rem", flexWrap: "wrap" }}>
               {runner.tags.map((tag) => (
-                <span key={tag} className="chip sans" style={{ fontSize: 10 }}>
+                <span
+                  key={tag}
+                  className="chip sans"
+                  style={{ fontSize: "0.625rem" }}
+                >
                   {tag}
                 </span>
               ))}
@@ -168,20 +179,23 @@ const AiEndpointRow = ({
     <div
       className="flex flex-col"
       style={{
-        gap: 3,
-        padding: "6px 8px",
-        borderRadius: 6,
+        gap: "0.1875rem",
+        padding: "0.375rem 0.5rem",
+        borderRadius: "0.375rem",
         background: "var(--bg-2)",
       }}
       data-testid={`device-endpoint-${endpoint.name}`}
       data-state={endpoint.state}
     >
-      <div className="flex items-center" style={{ gap: 8, flexWrap: "wrap" }}>
-        <Bot size={12} style={{ color: "var(--fg-2)" }} />
-        <span style={{ fontSize: 12, fontWeight: 500 }}>
+      <div
+        className="flex items-center"
+        style={{ gap: "0.5rem", flexWrap: "wrap" }}
+      >
+        <Bot size="0.75rem" style={{ color: "var(--fg-2)" }} />
+        <span style={{ fontSize: "0.75rem", fontWeight: 500 }}>
           {t("ai.endpoint", { name: endpoint.name, flavor: endpoint.flavor })}
         </span>
-        <span className="dim" style={{ fontSize: 11 }}>
+        <span className="dim" style={{ fontSize: "0.6875rem" }}>
           {endpoint.reachable === null
             ? t("ai.unchecked")
             : endpoint.reachable
@@ -189,12 +203,12 @@ const AiEndpointRow = ({
               : t("ai.unreachable")}
         </span>
       </div>
-      <span className="dim" style={{ fontSize: 11.5 }}>
+      <span className="dim" style={{ fontSize: "0.71875rem" }}>
         {endpoint.models.length > 0
           ? modelsText(t, endpoint.models)
           : t("ai.noModels")}
       </span>
-      <span className="dim" style={{ fontSize: 11.5 }}>
+      <span className="dim" style={{ fontSize: "0.71875rem" }}>
         {endpoint.provider_name !== null
           ? t("ai.providerYes", { name: endpoint.provider_name })
           : t("ai.providerNo")}
@@ -222,7 +236,7 @@ export const AiAdvice = ({ state }: { state: AiState }) => {
   if (!AI_NEEDS_ACTION.has(state) && state !== "studio_offline") return null;
   return (
     <span
-      style={{ fontSize: 11.5, color: "var(--fg-1)", lineHeight: 1.45 }}
+      style={{ fontSize: "0.71875rem", color: "var(--fg-1)", lineHeight: 1.45 }}
       data-testid="device-ai-advice"
     >
       {t(`ai.advice.${state}`)}
@@ -281,9 +295,9 @@ export const DeviceCard = ({
     <div
       className="flex flex-col"
       style={{
-        gap: 2,
-        padding: "10px 12px",
-        borderRadius: 8,
+        gap: "0.125rem",
+        padding: "0.625rem 0.75rem",
+        borderRadius: "0.5rem",
         border: "1px solid var(--border)",
         background: "var(--bg-1)",
       }}
@@ -291,11 +305,14 @@ export const DeviceCard = ({
       data-device={device.id}
       data-presence={device.presence}
     >
-      <div className="flex items-center" style={{ gap: 8, minWidth: 0 }}>
-        <Monitor size={14} style={{ color: "var(--fg-2)", flexShrink: 0 }} />
+      <div className="flex items-center" style={{ gap: "0.5rem", minWidth: 0 }}>
+        <Monitor
+          size="0.875rem"
+          style={{ color: "var(--fg-2)", flexShrink: 0 }}
+        />
         <span
           className="truncate"
-          style={{ fontSize: 13, fontWeight: 600 }}
+          style={{ fontSize: "0.8125rem", fontWeight: 600 }}
           title={device.name}
           data-testid="device-name"
         >
@@ -310,9 +327,9 @@ export const DeviceCard = ({
       </div>
       <div
         className="flex items-center dim"
-        style={{ gap: 6, fontSize: 11.5, flexWrap: "wrap" }}
+        style={{ gap: "0.375rem", fontSize: "0.71875rem", flexWrap: "wrap" }}
       >
-        <Cpu size={11} />
+        <Cpu size="0.6875rem" />
         <span>{t(`os.${device.os}`)}</span>
         <span>·</span>
         <span>{t("version", { version: device.version })}</span>
@@ -332,8 +349,8 @@ export const DeviceCard = ({
         <div
           className="flex"
           style={{
-            gap: 8,
-            paddingTop: 8,
+            gap: "0.5rem",
+            paddingTop: "0.5rem",
             borderTop: "1px solid var(--border)",
           }}
         >

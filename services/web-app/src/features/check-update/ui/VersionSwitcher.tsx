@@ -45,11 +45,11 @@ export const VersionSwitcher = ({
       .join(" ");
 
   return (
-    <div className="flex flex-col" style={{ gap: 6 }}>
-      <div className="flex items-center" style={{ gap: 8 }}>
+    <div className="flex flex-col" style={{ gap: "0.375rem" }}>
+      <div className="flex items-center" style={{ gap: "0.5rem" }}>
         <select
           className="input"
-          style={{ maxWidth: 260 }}
+          style={{ maxWidth: "16.25rem" }}
           value={value}
           disabled={selfUpdate.isBusy}
           onChange={(e) => {
@@ -82,20 +82,20 @@ export const VersionSwitcher = ({
 
       {/* Ровно одна поясняющая строка — та, что относится к текущему состоянию. */}
       {selfUpdate.status === "failed" && selfUpdate.error ? (
-        <span style={{ fontSize: 11, color: "var(--c-warn)" }}>
+        <span style={{ fontSize: "0.6875rem", color: "var(--c-warn)" }}>
           {selfUpdate.error}
         </span>
       ) : selfUpdate.isBusy ? (
-        <span className="dim" style={{ fontSize: 11 }}>
+        <span className="dim" style={{ fontSize: "0.6875rem" }}>
           {t("oneClick.busy")}
         </span>
       ) : !canSelfUpdate ? (
-        <span className="dim" style={{ fontSize: 11 }}>
+        <span className="dim" style={{ fontSize: "0.6875rem" }}>
           {t("versions.manualOnly")}
         </span>
       ) : (
         isSwitch && (
-          <span className="dim" style={{ fontSize: 11 }}>
+          <span className="dim" style={{ fontSize: "0.6875rem" }}>
             {target.newer ? t("versions.hintUp") : t("versions.hintDown")}
           </span>
         )

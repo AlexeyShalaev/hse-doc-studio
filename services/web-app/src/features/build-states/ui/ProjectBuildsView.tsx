@@ -32,7 +32,7 @@ const RunnerChips = ({
     <ul
       className="flex"
       style={{
-        gap: 8,
+        gap: "0.5rem",
         flexWrap: "wrap",
         listStyle: "none",
         margin: 0,
@@ -45,7 +45,11 @@ const RunnerChips = ({
         <li
           key={`${String(index)}-${runner.name}`}
           className="chip sans"
-          style={{ display: "inline-flex", gap: 6, alignItems: "center" }}
+          style={{
+            display: "inline-flex",
+            gap: "0.375rem",
+            alignItems: "center",
+          }}
         >
           <StatusDot
             status={RUNNER_STATE_DOT[runner.state]}
@@ -80,7 +84,7 @@ export const ProjectBuildsView = ({
     return (
       <div
         className="flex items-center"
-        style={{ gap: 8, fontSize: 12 }}
+        style={{ gap: "0.5rem", fontSize: "0.75rem" }}
         data-testid="project-builds-loading"
       >
         <Spinner size="sm" />
@@ -111,10 +115,14 @@ export const ProjectBuildsView = ({
     return (
       <div
         className="flex items-start"
-        style={{ gap: 8, fontSize: 12.5, color: "var(--fg-1)" }}
+        style={{ gap: "0.5rem", fontSize: "0.78125rem", color: "var(--fg-1)" }}
         data-testid="project-builds-org"
       >
-        <Building2 size={14} aria-hidden="true" style={{ marginTop: 2 }} />
+        <Building2
+          size="0.875rem"
+          aria-hidden="true"
+          style={{ marginTop: "0.125rem" }}
+        />
         <span>{t("projectSettings.builds.org")}</span>
       </div>
     );
@@ -131,12 +139,12 @@ export const ProjectBuildsView = ({
     return (
       <div
         className="flex flex-col"
-        style={{ gap: 10 }}
+        style={{ gap: "0.625rem" }}
         data-testid="project-builds-readonly"
         data-policy={info.policy}
       >
         {disabledNote}
-        <p style={{ margin: 0, fontSize: 12.5, color: "var(--fg-1)" }}>
+        <p style={{ margin: 0, fontSize: "0.78125rem", color: "var(--fg-1)" }}>
           {info.policy === "owner" && enabled
             ? first
               ? t("projectSettings.builds.coauthorOwner", { name: first })
@@ -157,7 +165,7 @@ export const ProjectBuildsView = ({
   return (
     <div
       className="flex flex-col"
-      style={{ gap: 14 }}
+      style={{ gap: "0.875rem" }}
       data-testid="project-builds"
     >
       {disabledNote}
@@ -168,14 +176,17 @@ export const ProjectBuildsView = ({
         <legend
           style={{
             padding: 0,
-            fontSize: 12.5,
+            fontSize: "0.78125rem",
             fontWeight: 500,
-            marginBottom: 2,
+            marginBottom: "0.125rem",
           }}
         >
           {t("projectSettings.builds.coauthorsLabel")}
         </legend>
-        <p className="dim" style={{ margin: "0 0 8px", fontSize: 11.5 }}>
+        <p
+          className="dim"
+          style={{ margin: "0 0 0.5rem", fontSize: "0.71875rem" }}
+        >
           {t("projectSettings.builds.coauthorsHint")}
         </p>
         {/* Те же карточки выбора, что «Вход и регистрация» в админке: не системные радиокнопки. */}
@@ -204,7 +215,7 @@ export const ProjectBuildsView = ({
                 <span className="adm-choice-mark" aria-hidden="true" />
                 <span
                   className="adm-choice-title flex items-center"
-                  style={{ gap: 6 }}
+                  style={{ gap: "0.375rem" }}
                 >
                   {t(`projectSettings.builds.policy.${policy}.title`)}
                   {saving && checked && <Spinner size="sm" />}
@@ -220,7 +231,7 @@ export const ProjectBuildsView = ({
       <p
         style={{
           margin: 0,
-          fontSize: 12,
+          fontSize: "0.75rem",
           color: "var(--fg-1)",
           lineHeight: 1.5,
         }}
@@ -230,24 +241,27 @@ export const ProjectBuildsView = ({
       </p>
       <div
         className="flex flex-col"
-        style={{ gap: 6 }}
+        style={{ gap: "0.375rem" }}
         data-testid="project-builds-owner-runners"
       >
-        <span className="dim" style={{ fontSize: 11.5 }}>
+        <span className="dim" style={{ fontSize: "0.71875rem" }}>
           {t("projectSettings.builds.myRunners")}
         </span>
         {info.owner_runners.length > 0 ? (
           <RunnerChips runners={info.owner_runners} />
         ) : (
-          <span className="flex items-center" style={{ gap: 8, fontSize: 12 }}>
+          <span
+            className="flex items-center"
+            style={{ gap: "0.5rem", fontSize: "0.75rem" }}
+          >
             <span className="dim">{t("projectSettings.builds.noRunners")}</span>
             <Link
               to="/settings/runners"
               className="btn xs"
-              style={{ gap: 4, textDecoration: "none" }}
+              style={{ gap: "0.25rem", textDecoration: "none" }}
               data-testid="project-builds-connect"
             >
-              <Plus size={11} aria-hidden="true" />
+              <Plus size="0.6875rem" aria-hidden="true" />
               {t("projectSettings.builds.connect")}
             </Link>
           </span>

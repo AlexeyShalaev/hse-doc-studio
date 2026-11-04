@@ -18,7 +18,10 @@ const asRows = (v: unknown): Record<string, string>[] =>
   Array.isArray(v) ? (v as Record<string, string>[]) : [];
 
 const BoolControl = ({ field, value, onChange, lang }: FieldControlProps) => (
-  <label className="flex items-center cursor-pointer" style={{ gap: 10 }}>
+  <label
+    className="flex items-center cursor-pointer"
+    style={{ gap: "0.625rem" }}
+  >
     <input
       type="checkbox"
       checked={value === true}
@@ -27,7 +30,7 @@ const BoolControl = ({ field, value, onChange, lang }: FieldControlProps) => (
       }}
       style={{ accentColor: "var(--accent)" }}
     />
-    <span style={{ fontSize: 12.5 }}>{loc(field.label, lang)}</span>
+    <span style={{ fontSize: "0.78125rem" }}>{loc(field.label, lang)}</span>
   </label>
 );
 
@@ -93,10 +96,10 @@ const NumberControl = ({ field, value, onChange }: FieldControlProps) => {
         <span
           className="mono"
           style={{
-            fontSize: 14,
+            fontSize: "0.875rem",
             fontWeight: 600,
             color: "var(--accent)",
-            width: 52,
+            width: "3.25rem",
             textAlign: "right",
           }}
         >
@@ -134,9 +137,9 @@ const Chip = ({
     onClick={onClick}
     className="flex items-center cursor-pointer"
     style={{
-      padding: "7px 12px",
+      padding: "0.4375rem 0.75rem",
       borderRadius: "var(--r-2)",
-      fontSize: 12.5,
+      fontSize: "0.78125rem",
       fontWeight: selected ? 600 : 400,
       background: selected ? "var(--accent-soft)" : "var(--bg-2)",
       border:
@@ -150,7 +153,7 @@ const Chip = ({
 );
 
 const SelectControl = ({ field, value, onChange, lang }: FieldControlProps) => (
-  <div className="flex flex-wrap" style={{ gap: 8 }}>
+  <div className="flex flex-wrap" style={{ gap: "0.5rem" }}>
     {field.options.map((opt) => (
       <Chip
         key={opt.id}
@@ -179,7 +182,7 @@ const MultiSelectControl = ({
     );
   };
   return (
-    <div className="flex flex-wrap" style={{ gap: 8 }}>
+    <div className="flex flex-wrap" style={{ gap: "0.5rem" }}>
       {field.options.map((opt) => (
         <Chip
           key={opt.id}
@@ -222,17 +225,17 @@ const FieldShell = ({
   lang: string;
   children: ReactElement;
 }) => (
-  <div className="flex flex-col" style={{ gap: 8 }}>
+  <div className="flex flex-col" style={{ gap: "0.5rem" }}>
     {/* bool renders its own inline label */}
     {field.type !== "bool" && (
-      <label style={{ fontSize: 12.5, fontWeight: 500 }}>
+      <label style={{ fontSize: "0.78125rem", fontWeight: 500 }}>
         {loc(field.label, lang)}
         {field.required && <span style={{ color: "var(--c-err)" }}> *</span>}
       </label>
     )}
     {children}
     {field.help && (
-      <span className="dim" style={{ fontSize: 11.5 }}>
+      <span className="dim" style={{ fontSize: "0.71875rem" }}>
         {loc(field.help, lang)}
       </span>
     )}
@@ -248,7 +251,7 @@ const MarkdownBlock = ({
 }) => (
   <div
     className="dim"
-    style={{ fontSize: 12, lineHeight: 1.6, whiteSpace: "pre-wrap" }}
+    style={{ fontSize: "0.75rem", lineHeight: 1.6, whiteSpace: "pre-wrap" }}
   >
     {loc(field.content, lang)}
   </div>

@@ -153,7 +153,10 @@ const FinishDialog = () => {
       width={520}
       title={t("finish.title")}
       footer={
-        <div className="flex justify-end" style={{ gap: 8, flexWrap: "wrap" }}>
+        <div
+          className="flex justify-end"
+          style={{ gap: "0.5rem", flexWrap: "wrap" }}
+        >
           <button
             type="button"
             className="btn ghost"
@@ -182,7 +185,7 @@ const FinishDialog = () => {
     >
       <div
         className="flex flex-col"
-        style={{ gap: 10, fontSize: 13.5, lineHeight: 1.5 }}
+        style={{ gap: "0.625rem", fontSize: "0.84375rem", lineHeight: 1.5 }}
         data-testid="onboarding-finish"
       >
         <p style={{ margin: 0 }}>{t("finish.body")}</p>
@@ -197,7 +200,7 @@ const FinishDialog = () => {
         )}
         <p
           className="dim"
-          style={{ margin: 0, fontSize: 12.5 }}
+          style={{ margin: 0, fontSize: "0.78125rem" }}
           data-testid="onboarding-build-note"
           data-availability={build}
         >

@@ -127,14 +127,14 @@ const Logomark = () => (
   <div
     className="flex items-center justify-center font-mono shrink-0"
     style={{
-      width: 22,
-      height: 22,
-      borderRadius: 5,
+      width: "1.375rem",
+      height: "1.375rem",
+      borderRadius: "0.3125rem",
       background:
         "linear-gradient(135deg, var(--accent), color-mix(in oklch, var(--accent) 60%, var(--fg-0) 0%))",
       color: "var(--accent-ink)",
       fontWeight: 700,
-      fontSize: 10,
+      fontSize: "0.625rem",
       letterSpacing: "-0.02em",
       boxShadow: "0 0 0 1px var(--accent-line)",
     }}
@@ -156,9 +156,9 @@ const StepPack = () => {
     <div
       style={{
         display: "grid",
-        gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))",
-        gap: 12,
-        maxWidth: 720,
+        gridTemplateColumns: "repeat(auto-fill, minmax(17.5rem, 1fr))",
+        gap: "0.75rem",
+        maxWidth: "45rem",
       }}
     >
       {packList.map((pack: PackResponse) => {
@@ -174,7 +174,7 @@ const StepPack = () => {
             }}
             className="card hover"
             style={{
-              padding: 14,
+              padding: "0.875rem",
               textAlign: "left",
               borderColor: isActive ? "var(--accent)" : "var(--border)",
               background: isActive ? "var(--accent-soft)" : "var(--bg-1)",
@@ -182,10 +182,10 @@ const StepPack = () => {
           >
             <div
               style={{
-                fontSize: 13,
+                fontSize: "0.8125rem",
                 fontWeight: 600,
                 color: "var(--fg-0)",
-                marginBottom: 4,
+                marginBottom: "0.25rem",
               }}
             >
               {pickLocalized(pack.name, i18n.language, pack.id)}
@@ -193,7 +193,7 @@ const StepPack = () => {
             <div
               className="dim"
               style={{
-                fontSize: 11.5,
+                fontSize: "0.71875rem",
                 lineHeight: 1.45,
                 display: "-webkit-box",
                 WebkitLineClamp: 3,
@@ -205,7 +205,7 @@ const StepPack = () => {
             </div>
             <div
               className="mono dimmer"
-              style={{ fontSize: 10.5, marginTop: 8 }}
+              style={{ fontSize: "0.65625rem", marginTop: "0.5rem" }}
             >
               {t("pack.templatesCount", { count: pack.templates.length })}
             </div>
@@ -241,7 +241,7 @@ const StepTemplate = () => {
 
   if (!pack)
     return (
-      <div className="dim" style={{ fontSize: 12 }}>
+      <div className="dim" style={{ fontSize: "0.75rem" }}>
         {t("template.selectPackFirst")}
       </div>
     );
@@ -250,9 +250,9 @@ const StepTemplate = () => {
     <div
       style={{
         display: "grid",
-        gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))",
-        gap: 12,
-        maxWidth: 720,
+        gridTemplateColumns: "repeat(auto-fill, minmax(17.5rem, 1fr))",
+        gap: "0.75rem",
+        maxWidth: "45rem",
       }}
     >
       {pack.templates.map((tpl) => {
@@ -267,7 +267,7 @@ const StepTemplate = () => {
             }}
             className="card hover"
             style={{
-              padding: 14,
+              padding: "0.875rem",
               textAlign: "left",
               borderColor: isActive ? "var(--accent)" : "var(--border)",
               background: isActive ? "var(--accent-soft)" : "var(--bg-1)",
@@ -275,15 +275,15 @@ const StepTemplate = () => {
           >
             <div
               style={{
-                fontSize: 13,
+                fontSize: "0.8125rem",
                 fontWeight: 600,
                 color: "var(--fg-0)",
-                marginBottom: 4,
+                marginBottom: "0.25rem",
               }}
             >
               {pickLocalized(tpl.name, i18n.language, tpl.id)}
             </div>
-            <div className="mono dim" style={{ fontSize: 11 }}>
+            <div className="mono dim" style={{ fontSize: "0.6875rem" }}>
               {pickLocalized(tpl.short_name, i18n.language, "")}
             </div>
           </button>
@@ -319,13 +319,13 @@ const StepVersion = () => {
   if (isLoading) return <Spinner />;
   if (!packId || !templateId)
     return (
-      <div className="dim" style={{ fontSize: 12 }}>
+      <div className="dim" style={{ fontSize: "0.75rem" }}>
         {t("version.selectTemplateFirst")}
       </div>
     );
 
   return (
-    <div className="flex flex-col" style={{ gap: 8, maxWidth: 560 }}>
+    <div className="flex flex-col" style={{ gap: "0.5rem", maxWidth: "35rem" }}>
       {(versions ?? []).map((v: VersionListItemResponse) => {
         const isActive = version === v.version;
         return (
@@ -337,8 +337,8 @@ const StepVersion = () => {
             }}
             className="card hover flex items-center"
             style={{
-              padding: 12,
-              gap: 10,
+              padding: "0.75rem",
+              gap: "0.625rem",
               textAlign: "left",
               borderColor: isActive ? "var(--accent)" : "var(--border)",
               background: isActive ? "var(--accent-soft)" : "var(--bg-1)",
@@ -348,14 +348,17 @@ const StepVersion = () => {
               <div
                 className="mono"
                 style={{
-                  fontSize: 13,
+                  fontSize: "0.8125rem",
                   fontWeight: 600,
                   color: "var(--fg-0)",
                 }}
               >
                 {v.version}
               </div>
-              <div className="dim" style={{ fontSize: 11.5, marginTop: 2 }}>
+              <div
+                className="dim"
+                style={{ fontSize: "0.71875rem", marginTop: "0.125rem" }}
+              >
                 {pickLocalized(v.summary, i18n.language, "")}
               </div>
             </div>
@@ -402,7 +405,7 @@ const StepKind = () => {
   ];
 
   return (
-    <div className="flex" style={{ gap: 12, maxWidth: 560 }}>
+    <div className="flex" style={{ gap: "0.75rem", maxWidth: "35rem" }}>
       {options.map((o) => {
         const isActive = kind === o.value;
         return (
@@ -415,7 +418,7 @@ const StepKind = () => {
             className="card hover"
             style={{
               flex: 1,
-              padding: 16,
+              padding: "1rem",
               textAlign: "left",
               borderColor: isActive ? "var(--accent)" : "var(--border)",
               background: isActive ? "var(--accent-soft)" : "var(--bg-1)",
@@ -423,15 +426,18 @@ const StepKind = () => {
           >
             <div
               style={{
-                fontSize: 13,
+                fontSize: "0.8125rem",
                 fontWeight: 600,
                 color: "var(--fg-0)",
-                marginBottom: 4,
+                marginBottom: "0.25rem",
               }}
             >
               {o.title}
             </div>
-            <div className="dim" style={{ fontSize: 11.5, lineHeight: 1.45 }}>
+            <div
+              className="dim"
+              style={{ fontSize: "0.71875rem", lineHeight: 1.45 }}
+            >
               {o.sub}
             </div>
           </button>
@@ -476,8 +482,8 @@ const StepFolder = () => {
   const folderRoots = suggestions?.folder_roots.slice(0, 5) ?? [];
 
   return (
-    <div className="flex flex-col" style={{ gap: 16, maxWidth: 560 }}>
-      <div className="field" style={{ gap: 4 }}>
+    <div className="flex flex-col" style={{ gap: "1rem", maxWidth: "35rem" }}>
+      <div className="field" style={{ gap: "0.25rem" }}>
         <label>{t("folder.nameLabel")}</label>
         <input
           type="text"
@@ -492,7 +498,7 @@ const StepFolder = () => {
         <div className="hint">{t("folder.nameHint")}</div>
       </div>
 
-      <div className="field" style={{ gap: 4 }}>
+      <div className="field" style={{ gap: "0.25rem" }}>
         <label>{t("folder.folderLabel")}</label>
         <div className="flex gap-2">
           <input
@@ -513,7 +519,7 @@ const StepFolder = () => {
               setIsPickerOpen(true);
             }}
           >
-            <FolderOpen size={13} />
+            <FolderOpen size="0.8125rem" />
             {t("folder.browse")}
           </button>
         </div>
@@ -527,13 +533,13 @@ const StepFolder = () => {
             }}
             className="flex items-center gap-2"
             style={{
-              marginTop: 6,
-              padding: "8px 10px",
+              marginTop: "0.375rem",
+              padding: "0.5rem 0.625rem",
               borderRadius: "var(--r-2)",
               border: "1px dashed var(--border-strong)",
               background: "transparent",
               cursor: "pointer",
-              fontSize: 11.5,
+              fontSize: "0.71875rem",
               color: "var(--fg-2)",
               textAlign: "left",
             }}
@@ -546,7 +552,7 @@ const StepFolder = () => {
               e.currentTarget.style.color = "var(--fg-2)";
             }}
           >
-            <Folder size={11} style={{ color: "var(--accent)" }} />
+            <Folder size="0.6875rem" style={{ color: "var(--accent)" }} />
             {t("folder.autoSuggest")}
             <span className="mono" style={{ color: "var(--fg-1)" }}>
               {autoFolder}
@@ -555,11 +561,13 @@ const StepFolder = () => {
         )}
 
         {folderRoots.length > 0 && (
-          <div style={{ marginTop: showAutoSuggestion ? 10 : 6 }}>
-            <div className="hint" style={{ marginBottom: 6 }}>
+          <div
+            style={{ marginTop: showAutoSuggestion ? "0.625rem" : "0.375rem" }}
+          >
+            <div className="hint" style={{ marginBottom: "0.375rem" }}>
               {t("folder.recentRoots")}
             </div>
-            <div className="flex" style={{ flexWrap: "wrap", gap: 6 }}>
+            <div className="flex" style={{ flexWrap: "wrap", gap: "0.375rem" }}>
               {folderRoots.map((root) => {
                 const target = joinProjectPath(
                   root.path,
@@ -578,14 +586,14 @@ const StepFolder = () => {
                     }}
                     className="flex items-center gap-2"
                     style={{
-                      padding: "5px 9px",
+                      padding: "0.3125rem 0.5625rem",
                       borderRadius: "var(--r-2)",
                       border: active
                         ? "1px solid var(--accent)"
                         : "1px solid var(--border-strong)",
                       background: active ? "var(--accent-soft)" : "var(--bg-1)",
                       cursor: "pointer",
-                      fontSize: 11.5,
+                      fontSize: "0.71875rem",
                       color: active ? "var(--accent)" : "var(--fg-1)",
                       maxWidth: "100%",
                     }}
@@ -599,7 +607,7 @@ const StepFolder = () => {
                     }}
                   >
                     <Folder
-                      size={11}
+                      size="0.6875rem"
                       style={{ color: "var(--accent)", flexShrink: 0 }}
                     />
                     <span
@@ -608,7 +616,7 @@ const StepFolder = () => {
                         overflow: "hidden",
                         textOverflow: "ellipsis",
                         whiteSpace: "nowrap",
-                        maxWidth: 220,
+                        maxWidth: "13.75rem",
                       }}
                     >
                       {leaf}
@@ -616,9 +624,9 @@ const StepFolder = () => {
                     <span
                       style={{
                         flexShrink: 0,
-                        fontSize: 10,
-                        padding: "0 5px",
-                        borderRadius: 999,
+                        fontSize: "0.625rem",
+                        padding: "0 0.3125rem",
+                        borderRadius: "62.4375rem",
                         background: "var(--bg-3)",
                         color: "var(--fg-2)",
                       }}
@@ -676,7 +684,7 @@ const OwnerOption = ({
     onClick={onSelect}
     className="flex items-center gap-2"
     style={{
-      padding: "9px 12px",
+      padding: "0.5625rem 0.75rem",
       borderRadius: "var(--r-2)",
       border: active
         ? "1px solid var(--accent)"
@@ -685,7 +693,7 @@ const OwnerOption = ({
       cursor: "pointer",
       textAlign: "left",
       minWidth: 0,
-      flex: "1 1 200px",
+      flex: "1 1 12.5rem",
     }}
   >
     <OptionIcon
@@ -699,14 +707,14 @@ const OwnerOption = ({
       <span
         className="truncate"
         style={{
-          fontSize: 12.5,
+          fontSize: "0.78125rem",
           fontWeight: 500,
           color: active ? "var(--accent)" : "var(--fg-0)",
         }}
       >
         {title}
       </span>
-      <span className="dim truncate" style={{ fontSize: 11 }}>
+      <span className="dim truncate" style={{ fontSize: "0.6875rem" }}>
         {hint}
       </span>
     </span>
@@ -723,8 +731,8 @@ const StepName = () => {
   );
 
   return (
-    <div className="flex flex-col" style={{ gap: 16, maxWidth: 560 }}>
-      <div className="field" style={{ gap: 4 }}>
+    <div className="flex flex-col" style={{ gap: "1rem", maxWidth: "35rem" }}>
+      <div className="field" style={{ gap: "0.25rem" }}>
         <label>{t("name.nameLabel")}</label>
         <input
           type="text"
@@ -740,13 +748,13 @@ const StepName = () => {
       </div>
 
       {orgs.length > 0 && (
-        <div className="field" style={{ gap: 4 }}>
+        <div className="field" style={{ gap: "0.25rem" }}>
           <label id="owner-label">{t("name.ownerLabel")}</label>
           <div
             role="radiogroup"
             aria-labelledby="owner-label"
             className="flex"
-            style={{ flexWrap: "wrap", gap: 8 }}
+            style={{ flexWrap: "wrap", gap: "0.5rem" }}
           >
             <OwnerOption
               active={ownerOrgSlug === null}
@@ -826,8 +834,8 @@ const StepLang = () => {
   };
 
   return (
-    <div className="flex flex-col" style={{ gap: 16, maxWidth: 640 }}>
-      <div className="dim" style={{ fontSize: 12.5, lineHeight: 1.5 }}>
+    <div className="flex flex-col" style={{ gap: "1rem", maxWidth: "40rem" }}>
+      <div className="dim" style={{ fontSize: "0.78125rem", lineHeight: 1.5 }}>
         {t("lang.intro")}
       </div>
 
@@ -835,7 +843,7 @@ const StepLang = () => {
         style={{
           display: "grid",
           gridTemplateColumns: "1fr 1fr",
-          gap: 10,
+          gap: "0.625rem",
         }}
       >
         {(["ru", "en"] as const).map((l) => {
@@ -849,7 +857,7 @@ const StepLang = () => {
               }}
               className="card hover"
               style={{
-                padding: 14,
+                padding: "0.875rem",
                 textAlign: "left",
                 borderColor: isActive ? "var(--accent)" : "var(--border)",
                 background: isActive ? "var(--accent-soft)" : "var(--bg-1)",
@@ -857,17 +865,17 @@ const StepLang = () => {
             >
               <div
                 className="flex items-center gap-2"
-                style={{ marginBottom: 4 }}
+                style={{ marginBottom: "0.25rem" }}
               >
                 <Languages
-                  size={14}
+                  size="0.875rem"
                   style={{
                     color: isActive ? "var(--accent)" : "var(--fg-2)",
                   }}
                 />
                 <span
                   style={{
-                    fontSize: 13,
+                    fontSize: "0.8125rem",
                     fontWeight: 600,
                     color: "var(--fg-0)",
                   }}
@@ -875,7 +883,7 @@ const StepLang = () => {
                   {l === "ru" ? t("lang.russian") : t("lang.english")}
                 </span>
               </div>
-              <div className="mono dim" style={{ fontSize: 11 }}>
+              <div className="mono dim" style={{ fontSize: "0.6875rem" }}>
                 {hintFor(l)}
               </div>
             </button>
@@ -886,26 +894,29 @@ const StepLang = () => {
       {docs.length > 0 && (
         <div
           className="card"
-          style={{ padding: 12, background: "var(--bg-2)" }}
+          style={{ padding: "0.75rem", background: "var(--bg-2)" }}
         >
-          <div className="flex items-center gap-2" style={{ marginBottom: 10 }}>
-            <Info size={13} style={{ color: "var(--c-info)" }} />
-            <span style={{ fontSize: 12.5, fontWeight: 600 }}>
+          <div
+            className="flex items-center gap-2"
+            style={{ marginBottom: "0.625rem" }}
+          >
+            <Info size="0.8125rem" style={{ color: "var(--c-info)" }} />
+            <span style={{ fontSize: "0.78125rem", fontWeight: 600 }}>
               {t("lang.tableTitle")}
             </span>
           </div>
-          <div className="flex flex-col" style={{ gap: 4 }}>
+          <div className="flex flex-col" style={{ gap: "0.25rem" }}>
             {docs.map((d) => (
               <div
                 key={d.id}
                 className="flex items-center"
-                style={{ gap: 10, fontSize: 12 }}
+                style={{ gap: "0.625rem", fontSize: "0.75rem" }}
               >
                 <span
                   className="chip mono"
                   style={{
-                    fontSize: 10,
-                    minWidth: 48,
+                    fontSize: "0.625rem",
+                    minWidth: "3rem",
                     justifyContent: "center",
                   }}
                 >
@@ -930,23 +941,23 @@ const StepLang = () => {
           <div
             className="flex items-center"
             style={{
-              gap: 10,
-              marginTop: 8,
-              paddingTop: 8,
+              gap: "0.625rem",
+              marginTop: "0.5rem",
+              paddingTop: "0.5rem",
               borderTop: "1px solid var(--border-soft)",
-              fontSize: 10,
+              fontSize: "0.625rem",
             }}
           >
             <span style={{ flex: 1 }} />
             <span
               className="mono dim"
-              style={{ width: 16, textAlign: "center" }}
+              style={{ width: "1rem", textAlign: "center" }}
             >
               RU
             </span>
             <span
               className="mono dim"
-              style={{ width: 16, textAlign: "center" }}
+              style={{ width: "1rem", textAlign: "center" }}
             >
               EN
             </span>
@@ -957,7 +968,7 @@ const StepLang = () => {
           всегда на русском) всё равно входит в комплект, просто на своём
           языке. Показываем пояснение, когда такие документы есть. */}
       {docs.length > 0 && (lang === "ru" ? ruCount : enCount) < docs.length && (
-        <div className="dim" style={{ fontSize: 11, lineHeight: 1.5 }}>
+        <div className="dim" style={{ fontSize: "0.6875rem", lineHeight: 1.5 }}>
           {t("lang.inclusionNote")}
         </div>
       )}
@@ -968,13 +979,13 @@ const StepLang = () => {
 const LangCell = ({ available }: { available: boolean }) =>
   available ? (
     <Check
-      size={13}
-      style={{ color: "var(--c-ok)", width: 16, flexShrink: 0 }}
+      size="0.8125rem"
+      style={{ color: "var(--c-ok)", width: "1rem", flexShrink: 0 }}
     />
   ) : (
     <Minus
-      size={13}
-      style={{ color: "var(--fg-3)", width: 16, flexShrink: 0 }}
+      size="0.8125rem"
+      style={{ color: "var(--fg-3)", width: "1rem", flexShrink: 0 }}
     />
   );
 
@@ -1013,18 +1024,23 @@ const StepPresentation = () => {
   if (!versionDetail) return <Spinner />;
   if (variants.length === 0) {
     return (
-      <div className="dim" style={{ fontSize: 12.5, maxWidth: 560 }}>
+      <div
+        className="dim"
+        style={{ fontSize: "0.78125rem", maxWidth: "35rem" }}
+      >
         {t("presentation.none")}
       </div>
     );
   }
 
   return (
-    <div className="flex flex-col" style={{ gap: 16, maxWidth: 640 }}>
-      <div className="dim" style={{ fontSize: 12.5, lineHeight: 1.5 }}>
+    <div className="flex flex-col" style={{ gap: "1rem", maxWidth: "40rem" }}>
+      <div className="dim" style={{ fontSize: "0.78125rem", lineHeight: 1.5 }}>
         {t("presentation.intro")}
       </div>
-      <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+      <div
+        style={{ display: "flex", flexDirection: "column", gap: "0.625rem" }}
+      >
         {variants.map((v) => {
           const isActive = selected === v.id;
           const VIcon = presIconFor(v.output_file);
@@ -1040,8 +1056,8 @@ const StepPresentation = () => {
               style={{
                 display: "flex",
                 alignItems: "center",
-                gap: 12,
-                padding: 14,
+                gap: "0.75rem",
+                padding: "0.875rem",
                 textAlign: "left",
                 borderColor: isActive ? "var(--accent)" : "var(--border)",
                 background: isActive ? "var(--accent-soft)" : "var(--bg-1)",
@@ -1050,19 +1066,19 @@ const StepPresentation = () => {
               <div
                 className="flex items-center justify-center shrink-0"
                 style={{
-                  width: 34,
-                  height: 34,
-                  borderRadius: 8,
+                  width: "2.125rem",
+                  height: "2.125rem",
+                  borderRadius: "0.5rem",
                   background: isActive ? "var(--accent-soft)" : "var(--bg-0)",
                   color: isActive ? "var(--accent)" : "var(--fg-2)",
                 }}
               >
-                <VIcon size={17} />
+                <VIcon size="1.0625rem" />
               </div>
               <div style={{ minWidth: 0, flex: 1 }}>
                 <div
                   style={{
-                    fontSize: 13,
+                    fontSize: "0.8125rem",
                     fontWeight: 600,
                     color: "var(--fg-0)",
                   }}
@@ -1071,7 +1087,11 @@ const StepPresentation = () => {
                 </div>
                 <div
                   className="dim"
-                  style={{ fontSize: 11, lineHeight: 1.4, marginTop: 2 }}
+                  style={{
+                    fontSize: "0.6875rem",
+                    lineHeight: 1.4,
+                    marginTop: "0.125rem",
+                  }}
                 >
                   {t(`presentation.desc.${v.id}`, {
                     defaultValue: t("presentation.descFallback"),
@@ -1079,7 +1099,10 @@ const StepPresentation = () => {
                 </div>
               </div>
               {ext && (
-                <span className="mono dim shrink-0" style={{ fontSize: 10 }}>
+                <span
+                  className="mono dim shrink-0"
+                  style={{ fontSize: "0.625rem" }}
+                >
                   .{ext}
                 </span>
               )}
@@ -1174,21 +1197,27 @@ const StepAuthors = () => {
   };
 
   return (
-    <div className="flex flex-col" style={{ gap: 10, maxWidth: 560 }}>
+    <div
+      className="flex flex-col"
+      style={{ gap: "0.625rem", maxWidth: "35rem" }}
+    >
       {isTeam && versionDetail !== undefined && !supportsTeam && (
         <div
           className="card flex items-start"
           style={{
-            gap: 8,
-            padding: 12,
+            gap: "0.5rem",
+            padding: "0.75rem",
             borderColor: "var(--c-err)",
             background: "var(--c-err-soft)",
             color: "var(--c-err)",
-            fontSize: 12,
+            fontSize: "0.75rem",
             lineHeight: 1.5,
           }}
         >
-          <AlertTriangle size={13} style={{ flexShrink: 0, marginTop: 2 }} />
+          <AlertTriangle
+            size="0.8125rem"
+            style={{ flexShrink: 0, marginTop: "0.125rem" }}
+          />
           <span>{t("authors.teamNotSupported")}</span>
         </div>
       )}
@@ -1197,17 +1226,21 @@ const StepAuthors = () => {
         <div
           className="card flex items-start"
           style={{
-            gap: 8,
-            padding: 12,
+            gap: "0.5rem",
+            padding: "0.75rem",
             background: "var(--bg-2)",
             color: "var(--fg-1)",
-            fontSize: 11.5,
+            fontSize: "0.71875rem",
             lineHeight: 1.5,
           }}
         >
           <Info
-            size={13}
-            style={{ color: "var(--c-info)", flexShrink: 0, marginTop: 2 }}
+            size="0.8125rem"
+            style={{
+              color: "var(--c-info)",
+              flexShrink: 0,
+              marginTop: "0.125rem",
+            }}
           />
           <span>{t("authors.teamIntro")}</span>
         </div>
@@ -1225,11 +1258,11 @@ const StepAuthors = () => {
           <div
             key={idx}
             className="card"
-            style={{ padding: 12, position: "relative" }}
+            style={{ padding: "0.75rem", position: "relative" }}
           >
             <div
               className="flex items-center justify-between"
-              style={{ marginBottom: 8 }}
+              style={{ marginBottom: "0.5rem" }}
             >
               <span className="label-up dim">
                 {t("authors.author", { index: idx + 1 })}
@@ -1244,12 +1277,15 @@ const StepAuthors = () => {
                   title={t("authors.removeTitle")}
                   aria-label={t("authors.removeAria")}
                 >
-                  <Trash2 size={12} />
+                  <Trash2 size="0.75rem" />
                 </button>
               )}
             </div>
-            <div className="flex" style={{ gap: 8 }}>
-              <div className="field" style={{ flex: 2, minWidth: 0, gap: 4 }}>
+            <div className="flex" style={{ gap: "0.5rem" }}>
+              <div
+                className="field"
+                style={{ flex: 2, minWidth: 0, gap: "0.25rem" }}
+              >
                 <label>{t("authors.nameLabel")}</label>
                 <div style={{ position: "relative" }}>
                   <input
@@ -1279,12 +1315,12 @@ const StepAuthors = () => {
                       className="card"
                       style={{
                         position: "absolute",
-                        top: "calc(100% + 4px)",
+                        top: "calc(100% + 0.25rem)",
                         left: 0,
                         right: 0,
                         zIndex: 30,
-                        padding: 4,
-                        maxHeight: 208,
+                        padding: "0.25rem",
+                        maxHeight: "13rem",
                         overflowY: "auto",
                         boxShadow: "0 8px 24px rgba(0, 0, 0, 0.18)",
                       }}
@@ -1303,13 +1339,13 @@ const StepAuthors = () => {
                           style={{
                             width: "100%",
                             textAlign: "left",
-                            gap: 8,
-                            padding: "6px 8px",
+                            gap: "0.5rem",
+                            padding: "0.375rem 0.5rem",
                             borderRadius: "var(--r-2)",
                             border: "none",
                             background: "transparent",
                             cursor: "pointer",
-                            fontSize: 12.5,
+                            fontSize: "0.78125rem",
                             color: "var(--fg-0)",
                           }}
                           onMouseEnter={(e) => {
@@ -1333,7 +1369,7 @@ const StepAuthors = () => {
                               className="mono"
                               style={{
                                 flexShrink: 0,
-                                fontSize: 10.5,
+                                fontSize: "0.65625rem",
                                 color: "var(--fg-2)",
                               }}
                             >
@@ -1346,7 +1382,10 @@ const StepAuthors = () => {
                   )}
                 </div>
               </div>
-              <div className="field" style={{ flex: 1, minWidth: 120, gap: 4 }}>
+              <div
+                className="field"
+                style={{ flex: 1, minWidth: "7.5rem", gap: "0.25rem" }}
+              >
                 <label>{t("authors.groupLabel")}</label>
                 <input
                   type="text"
@@ -1365,11 +1404,16 @@ const StepAuthors = () => {
 
             {isTeam && (
               <>
-                <div className="field" style={{ gap: 4, marginTop: 10 }}>
+                <div
+                  className="field"
+                  style={{ gap: "0.25rem", marginTop: "0.625rem" }}
+                >
                   <label>
                     {t("authors.topicLabel")}
                     {author.managed && (
-                      <span style={{ color: "var(--c-err)", marginLeft: 4 }}>
+                      <span
+                        style={{ color: "var(--c-err)", marginLeft: "0.25rem" }}
+                      >
                         *
                       </span>
                     )}
@@ -1391,11 +1435,15 @@ const StepAuthors = () => {
                 </div>
                 <div
                   className="flex"
-                  style={{ gap: 12, marginTop: 10, alignItems: "flex-start" }}
+                  style={{
+                    gap: "0.75rem",
+                    marginTop: "0.625rem",
+                    alignItems: "flex-start",
+                  }}
                 >
                   <div
                     className="field"
-                    style={{ flex: 1, minWidth: 0, gap: 4 }}
+                    style={{ flex: 1, minWidth: 0, gap: "0.25rem" }}
                   >
                     <label>{t("authors.slugLabel")}</label>
                     <input
@@ -1417,7 +1465,11 @@ const StepAuthors = () => {
                   </div>
                   <label
                     className="flex items-center cursor-pointer"
-                    style={{ gap: 8, paddingTop: 24, flexShrink: 0 }}
+                    style={{
+                      gap: "0.5rem",
+                      paddingTop: "1.5rem",
+                      flexShrink: 0,
+                    }}
                   >
                     <input
                       type="checkbox"
@@ -1427,13 +1479,13 @@ const StepAuthors = () => {
                       }}
                       style={{ accentColor: "var(--accent)" }}
                     />
-                    <span style={{ fontSize: 12 }}>
+                    <span style={{ fontSize: "0.75rem" }}>
                       {t("authors.managedLabel")}
                     </span>
                   </label>
                 </div>
                 {!author.managed && (
-                  <div className="hint" style={{ marginTop: 4 }}>
+                  <div className="hint" style={{ marginTop: "0.25rem" }}>
                     {t("authors.notManagedHint")}
                   </div>
                 )}
@@ -1454,9 +1506,9 @@ const StepAuthors = () => {
         onClick={handleAddAuthor}
         className="flex items-center justify-center"
         style={{
-          padding: "12px 14px",
-          gap: 6,
-          fontSize: 12,
+          padding: "0.75rem 0.875rem",
+          gap: "0.375rem",
+          fontSize: "0.75rem",
           borderRadius: "var(--r-3)",
           border: "1px dashed var(--border-strong)",
           background: "transparent",
@@ -1475,29 +1527,35 @@ const StepAuthors = () => {
           e.currentTarget.style.borderColor = "var(--border-strong)";
         }}
       >
-        <Plus size={13} />
+        <Plus size="0.8125rem" />
         {t("authors.addMore")}
       </button>
 
       {isTeam && (
-        <div className="card" style={{ padding: 14 }}>
-          <div className="flex items-start justify-between" style={{ gap: 12 }}>
-            <div className="flex flex-col" style={{ gap: 4, minWidth: 0 }}>
+        <div className="card" style={{ padding: "0.875rem" }}>
+          <div
+            className="flex items-start justify-between"
+            style={{ gap: "0.75rem" }}
+          >
+            <div
+              className="flex flex-col"
+              style={{ gap: "0.25rem", minWidth: 0 }}
+            >
               <div className="flex items-center gap-2">
                 <FolderOpen
-                  size={13}
+                  size="0.8125rem"
                   style={{
                     color: sharedEnabled ? "var(--accent)" : "var(--fg-3)",
                     flexShrink: 0,
                   }}
                 />
-                <strong style={{ fontSize: 12.5 }}>
+                <strong style={{ fontSize: "0.78125rem" }}>
                   {t("authors.sharedTitle")}
                 </strong>
               </div>
               <p
                 className="dim"
-                style={{ margin: 0, fontSize: 11.5, lineHeight: 1.5 }}
+                style={{ margin: 0, fontSize: "0.71875rem", lineHeight: 1.5 }}
               >
                 {t("authors.sharedDescription")}
               </p>
@@ -1516,7 +1574,7 @@ const StepAuthors = () => {
         </div>
       )}
 
-      <div className="hint" style={{ marginTop: 4 }}>
+      <div className="hint" style={{ marginTop: "0.25rem" }}>
         {t("authors.hint")}
       </div>
     </div>
@@ -1541,31 +1599,31 @@ const SupervisorCard = ({
 }: SupervisorCardProps) => {
   const { t } = useTranslation("projectCreate");
   return (
-    <div className="card" style={{ padding: 14 }}>
+    <div className="card" style={{ padding: "0.875rem" }}>
       <div
         className="flex items-center justify-between"
-        style={{ marginBottom: 10, gap: 8, flexWrap: "wrap" }}
+        style={{ marginBottom: "0.625rem", gap: "0.5rem", flexWrap: "wrap" }}
       >
         <div className="flex items-center gap-2">
           {value.role === "university" ? (
             <Building
-              size={13}
+              size="0.8125rem"
               style={{ color: "var(--accent)", flexShrink: 0 }}
             />
           ) : (
             <Briefcase
-              size={13}
+              size="0.8125rem"
               style={{ color: "var(--c-warn)", flexShrink: 0 }}
             />
           )}
-          <strong style={{ fontSize: 12.5 }}>{title}</strong>
+          <strong style={{ fontSize: "0.78125rem" }}>{title}</strong>
           {primary &&
             (required ? (
-              <span style={{ color: "var(--c-err)", fontSize: 10.5 }}>
+              <span style={{ color: "var(--c-err)", fontSize: "0.65625rem" }}>
                 {t("supervisor.required")}
               </span>
             ) : (
-              <span className="dim" style={{ fontSize: 10.5 }}>
+              <span className="dim" style={{ fontSize: "0.65625rem" }}>
                 {t("supervisor.optional")}
               </span>
             ))}
@@ -1578,7 +1636,7 @@ const SupervisorCard = ({
               onChange({ role: "university" });
             }}
           >
-            <Building size={10} />
+            <Building size="0.625rem" />
             {t("supervisor.fromUniversity")}
           </button>
           <button
@@ -1588,12 +1646,12 @@ const SupervisorCard = ({
               onChange({ role: "company" });
             }}
           >
-            <Briefcase size={10} />
+            <Briefcase size="0.625rem" />
             {t("supervisor.fromCompany")}
           </button>
         </div>
       </div>
-      <div className="flex justify-end" style={{ marginBottom: 8 }}>
+      <div className="flex justify-end" style={{ marginBottom: "0.5rem" }}>
         <HsePersonLookupButton
           initialQuery={value.name}
           onSelect={(fields) => {
@@ -1606,8 +1664,8 @@ const SupervisorCard = ({
           }}
         />
       </div>
-      <div className="flex flex-col" style={{ gap: 10 }}>
-        <div className="field" style={{ gap: 4 }}>
+      <div className="flex flex-col" style={{ gap: "0.625rem" }}>
+        <div className="field" style={{ gap: "0.25rem" }}>
           <label>{t("supervisor.nameLabel")}</label>
           <input
             type="text"
@@ -1623,7 +1681,7 @@ const SupervisorCard = ({
             }}
           />
         </div>
-        <div className="field" style={{ gap: 4 }}>
+        <div className="field" style={{ gap: "0.25rem" }}>
           <label>
             {value.role === "university"
               ? t("supervisor.titleLabelUniversity")
@@ -1667,7 +1725,10 @@ const StepSupervisor = () => {
   const required = isSupervisorRequired(versionDetail?.meta_fields ?? {});
 
   return (
-    <div className="flex flex-col" style={{ gap: 14, maxWidth: 560 }}>
+    <div
+      className="flex flex-col"
+      style={{ gap: "0.875rem", maxWidth: "35rem" }}
+    >
       <SupervisorCard
         title={t("supervisor.primaryTitle")}
         primary
@@ -1678,7 +1739,7 @@ const StepSupervisor = () => {
         }}
       />
 
-      <div className="flex items-center" style={{ gap: 10 }}>
+      <div className="flex items-center" style={{ gap: "0.625rem" }}>
         <span
           style={{
             flex: 1,
@@ -1695,12 +1756,12 @@ const StepSupervisor = () => {
         >
           {coSupervisorEnabled ? (
             <>
-              <Minus size={11} />
+              <Minus size="0.6875rem" />
               {t("supervisor.removeCo")}
             </>
           ) : (
             <>
-              <Plus size={11} />
+              <Plus size="0.6875rem" />
               {t("supervisor.addCo")}
             </>
           )}
@@ -1751,25 +1812,31 @@ const StepMeta = () => {
   const createFields = getCreateMetaFields(versionDetail?.meta_fields ?? {});
 
   return (
-    <div className="flex flex-col" style={{ gap: 14, maxWidth: 560 }}>
+    <div
+      className="flex flex-col"
+      style={{ gap: "0.875rem", maxWidth: "35rem" }}
+    >
       {isLoading ? (
         <Spinner />
       ) : createFields.length === 0 ? (
         <div
           className="card flex items-center"
           style={{
-            padding: 12,
-            gap: 8,
+            padding: "0.75rem",
+            gap: "0.5rem",
             background: "var(--bg-2)",
             color: "var(--fg-2)",
-            fontSize: 12,
+            fontSize: "0.75rem",
           }}
         >
-          <Check size={13} style={{ color: "var(--c-ok)", flexShrink: 0 }} />
+          <Check
+            size="0.8125rem"
+            style={{ color: "var(--c-ok)", flexShrink: 0 }}
+          />
           {t("meta.noRequired")}
         </div>
       ) : (
-        <div className="flex flex-col" style={{ gap: 12 }}>
+        <div className="flex flex-col" style={{ gap: "0.75rem" }}>
           {createFields.map(([key, def]) => {
             const value = (meta[key] as string | undefined) ?? "";
             const help = pickLocalized(
@@ -1778,10 +1845,12 @@ const StepMeta = () => {
               "",
             );
             return (
-              <div key={key} className="field" style={{ gap: 4 }}>
+              <div key={key} className="field" style={{ gap: "0.25rem" }}>
                 <label>
                   {pickLocalized(def.label, i18n.language, key)}
-                  <span style={{ color: "var(--c-err)", marginLeft: 4 }}>
+                  <span
+                    style={{ color: "var(--c-err)", marginLeft: "0.25rem" }}
+                  >
                     *
                   </span>
                 </label>
@@ -1824,22 +1893,30 @@ const StepMeta = () => {
         </div>
       )}
 
-      <div className="card" style={{ padding: 14 }}>
-        <div className="flex items-start justify-between" style={{ gap: 12 }}>
-          <div className="flex flex-col" style={{ gap: 4, minWidth: 0 }}>
+      <div className="card" style={{ padding: "0.875rem" }}>
+        <div
+          className="flex items-start justify-between"
+          style={{ gap: "0.75rem" }}
+        >
+          <div
+            className="flex flex-col"
+            style={{ gap: "0.25rem", minWidth: 0 }}
+          >
             <div className="flex items-center gap-2">
               <Lock
-                size={13}
+                size="0.8125rem"
                 style={{
                   color: nda ? "var(--c-warn)" : "var(--fg-3)",
                   flexShrink: 0,
                 }}
               />
-              <strong style={{ fontSize: 12.5 }}>{t("meta.ndaTitle")}</strong>
+              <strong style={{ fontSize: "0.78125rem" }}>
+                {t("meta.ndaTitle")}
+              </strong>
             </div>
             <p
               className="dim"
-              style={{ margin: 0, fontSize: 11.5, lineHeight: 1.5 }}
+              style={{ margin: 0, fontSize: "0.71875rem", lineHeight: 1.5 }}
             >
               {t("meta.ndaDescription")}
             </p>
@@ -1859,16 +1936,16 @@ const StepMeta = () => {
           <div
             className="flex items-center fade-up"
             style={{
-              gap: 8,
-              marginTop: 10,
-              padding: "8px 10px",
+              gap: "0.5rem",
+              marginTop: "0.625rem",
+              padding: "0.5rem 0.625rem",
               background: "var(--c-warn-soft)",
               color: "var(--c-warn)",
               borderRadius: "var(--r-2)",
-              fontSize: 11.5,
+              fontSize: "0.71875rem",
             }}
           >
-            <AlertTriangle size={12} style={{ flexShrink: 0 }} />
+            <AlertTriangle size="0.75rem" style={{ flexShrink: 0 }} />
             <span>{t("meta.ndaWarning")}</span>
           </div>
         )}
@@ -1888,20 +1965,20 @@ const FieldRow = ({ icon: Icon, label, children }: FieldRowProps) => (
   <div
     className="flex items-center"
     style={{
-      gap: 12,
-      padding: "8px 0",
+      gap: "0.75rem",
+      padding: "0.5rem 0",
       borderBottom: "1px dashed var(--border-soft)",
-      fontSize: 12.5,
+      fontSize: "0.78125rem",
       minWidth: 0,
     }}
   >
-    <Icon size={12} style={{ color: "var(--fg-3)", flexShrink: 0 }} />
+    <Icon size="0.75rem" style={{ color: "var(--fg-3)", flexShrink: 0 }} />
     <span
       className="mono dim"
       style={{
-        width: 100,
+        width: "6.25rem",
         flexShrink: 0,
-        fontSize: 9.5,
+        fontSize: "0.59375rem",
         textTransform: "uppercase",
         letterSpacing: "0.08em",
       }}
@@ -1927,7 +2004,7 @@ const SupervisorRow = ({
       <span>
         {value.name}
         {value.title && (
-          <span className="dim" style={{ marginLeft: 6 }}>
+          <span className="dim" style={{ marginLeft: "0.375rem" }}>
             · {value.title}
           </span>
         )}
@@ -1990,18 +2067,21 @@ const StepReview = () => {
     coSupervisorEnabled && coSupervisor.name.trim() !== "";
 
   return (
-    <div className="flex flex-col" style={{ gap: 12, maxWidth: 560 }}>
+    <div
+      className="flex flex-col"
+      style={{ gap: "0.75rem", maxWidth: "35rem" }}
+    >
       {/* Summary card */}
-      <div className="card" style={{ padding: 16 }}>
+      <div className="card" style={{ padding: "1rem" }}>
         <div
           className="flex items-start justify-between"
-          style={{ gap: 12, marginBottom: 14 }}
+          style={{ gap: "0.75rem", marginBottom: "0.875rem" }}
         >
           <div style={{ minWidth: 0, flex: 1 }}>
             <h3
               style={{
-                margin: "0 0 4px",
-                fontSize: 15,
+                margin: "0 0 0.25rem",
+                fontSize: "0.9375rem",
                 fontWeight: 600,
                 color: "var(--fg-0)",
                 letterSpacing: "-0.01em",
@@ -2013,7 +2093,7 @@ const StepReview = () => {
             </h3>
             <div
               className="flex items-center"
-              style={{ gap: 6, flexWrap: "wrap" }}
+              style={{ gap: "0.375rem", flexWrap: "wrap" }}
             >
               <span className="chip accent">
                 {pickLocalized(tpl?.name, i18n.language, templateId ?? "—")}
@@ -2026,7 +2106,7 @@ const StepReview = () => {
               </span>
               {nda && (
                 <span className="sev warn">
-                  <Lock size={9} />
+                  <Lock size="0.5625rem" />
                   NDA
                 </span>
               )}
@@ -2037,7 +2117,7 @@ const StepReview = () => {
         {folderless ? (
           <FieldRow icon={Building2} label={t("review.ownerLabel")}>
             {orgName ?? t("name.ownerMe")}
-            <span className="dim" style={{ marginLeft: 6 }}>
+            <span className="dim" style={{ marginLeft: "0.375rem" }}>
               · {t("review.storedOnServer")}
             </span>
           </FieldRow>
@@ -2046,7 +2126,7 @@ const StepReview = () => {
             <span
               className="mono"
               style={{
-                fontSize: 11.5,
+                fontSize: "0.71875rem",
                 overflow: "hidden",
                 textOverflow: "ellipsis",
                 whiteSpace: "nowrap",
@@ -2077,24 +2157,30 @@ const StepReview = () => {
           {filledAuthors.length === 0 ? (
             <span className="dim">{t("review.noAuthors")}</span>
           ) : (
-            <div className="flex flex-col" style={{ gap: isTeam ? 6 : 2 }}>
+            <div
+              className="flex flex-col"
+              style={{ gap: isTeam ? "0.375rem" : "0.125rem" }}
+            >
               {filledAuthors.map((a, i) => (
                 <div key={i}>
                   <div
                     className="flex items-center"
-                    style={{ gap: 6, flexWrap: "wrap" }}
+                    style={{ gap: "0.375rem", flexWrap: "wrap" }}
                   >
                     <span>{a.name}</span>
                     {a.group && <span className="mono dim">({a.group})</span>}
                     {isTeam && a.slug && (
-                      <span className="chip mono" style={{ fontSize: 10 }}>
+                      <span
+                        className="chip mono"
+                        style={{ fontSize: "0.625rem" }}
+                      >
                         {a.slug}/
                       </span>
                     )}
                     {isTeam && (
                       <span
                         className={clsx("sev", a.managed && "ok")}
-                        style={{ fontSize: 10 }}
+                        style={{ fontSize: "0.625rem" }}
                       >
                         {a.managed
                           ? t("review.managedBadge")
@@ -2105,7 +2191,7 @@ const StepReview = () => {
                   {isTeam && a.topic.trim() !== "" && (
                     <div
                       className="dim"
-                      style={{ fontSize: 11.5, marginTop: 1 }}
+                      style={{ fontSize: "0.71875rem", marginTop: 1 }}
                     >
                       {a.topic}
                     </div>
@@ -2141,24 +2227,24 @@ const StepReview = () => {
       </div>
 
       {/* Documents to create */}
-      <div className="card" style={{ padding: 14 }}>
+      <div className="card" style={{ padding: "0.875rem" }}>
         <div
           className="flex items-center justify-between"
-          style={{ marginBottom: 10 }}
+          style={{ marginBottom: "0.625rem" }}
         >
-          <strong style={{ fontSize: 12.5 }}>
+          <strong style={{ fontSize: "0.78125rem" }}>
             {t("review.documentsTitle")}
           </strong>
-          <span className="mono dim" style={{ fontSize: 11 }}>
+          <span className="mono dim" style={{ fontSize: "0.6875rem" }}>
             {t("review.documentsCount", { count: documents.length })}
           </span>
         </div>
         {documents.length === 0 ? (
-          <div className="dim" style={{ fontSize: 12 }}>
+          <div className="dim" style={{ fontSize: "0.75rem" }}>
             {t("review.loadingStructure")}
           </div>
         ) : (
-          <div className="flex flex-col" style={{ gap: 2 }}>
+          <div className="flex flex-col" style={{ gap: "0.125rem" }}>
             {documents.map((d) => {
               const code =
                 d.code[lang] ?? d.code.ru ?? d.code.en ?? d.id.toUpperCase();
@@ -2168,19 +2254,19 @@ const StepReview = () => {
                   key={d.id}
                   className="flex items-center"
                   style={{
-                    gap: 10,
-                    padding: "5px 0",
-                    fontSize: 12,
+                    gap: "0.625rem",
+                    padding: "0.3125rem 0",
+                    fontSize: "0.75rem",
                     minWidth: 0,
                   }}
                 >
                   <span
                     className="chip mono"
                     style={{
-                      width: 56,
+                      width: "3.5rem",
                       justifyContent: "center",
                       flexShrink: 0,
-                      fontSize: 10,
+                      fontSize: "0.625rem",
                     }}
                   >
                     {code}
@@ -2200,7 +2286,7 @@ const StepReview = () => {
                   {!d.required && (
                     <span
                       className="mono dim"
-                      style={{ fontSize: 10, flexShrink: 0 }}
+                      style={{ fontSize: "0.625rem", flexShrink: 0 }}
                     >
                       {t("review.optionalDoc")}
                     </span>
@@ -2472,22 +2558,22 @@ export const ProjectCreateWizard = () => {
     >
       {/* Список шагов: колонка слева, а на узком экране полоса сверху с прокруткой */}
       <div
-        className="flex shrink-0 flex-row overflow-x-auto border-b border-border max-sm:!p-2 sm:w-[220px] sm:flex-col sm:overflow-y-auto sm:border-r sm:border-b-0"
+        className="flex shrink-0 flex-row overflow-x-auto border-b border-border max-sm:!p-2 sm:w-[13.75rem] sm:flex-col sm:overflow-y-auto sm:border-r sm:border-b-0"
         data-testid="wizard-steps"
         style={{
-          padding: "20px 8px 24px",
+          padding: "1.25rem 0.5rem 1.5rem",
           background: "var(--bg-1)",
         }}
       >
         <div
           className="flex items-center gap-2 max-sm:hidden"
-          style={{ padding: "0 12px 16px" }}
+          style={{ padding: "0 0.75rem 1rem" }}
         >
           <Logomark />
           <div className="flex flex-col" style={{ gap: 0, minWidth: 0 }}>
             <div
               style={{
-                fontSize: 12,
+                fontSize: "0.75rem",
                 fontWeight: 600,
                 whiteSpace: "nowrap",
               }}
@@ -2496,7 +2582,7 @@ export const ProjectCreateWizard = () => {
             </div>
             <div
               className="mono dim"
-              style={{ fontSize: 10, whiteSpace: "nowrap" }}
+              style={{ fontSize: "0.625rem", whiteSpace: "nowrap" }}
             >
               {t("wizard.stepCounter", {
                 current: step + 1,
@@ -2528,9 +2614,9 @@ export const ProjectCreateWizard = () => {
               className="flex items-center gap-2 max-sm:!w-auto max-sm:shrink-0 max-sm:whitespace-nowrap"
               style={{
                 width: "100%",
-                padding: "6px 14px",
+                padding: "0.375rem 0.875rem",
                 color: active ? "var(--fg-0)" : idleColor,
-                fontSize: 12.5,
+                fontSize: "0.78125rem",
                 position: "relative",
                 background: "transparent",
                 border: 0,
@@ -2559,19 +2645,19 @@ export const ProjectCreateWizard = () => {
                   style={{
                     position: "absolute",
                     left: 0,
-                    top: 4,
-                    bottom: 4,
-                    width: 3,
+                    top: "0.25rem",
+                    bottom: "0.25rem",
+                    width: "0.1875rem",
                     background: "var(--accent)",
-                    borderRadius: "0 999px 999px 0",
+                    borderRadius: "0 62.4375rem 62.4375rem 0",
                   }}
                 />
               )}
               <div
                 className="flex items-center justify-center shrink-0"
                 style={{
-                  width: 20,
-                  height: 20,
+                  width: "1.25rem",
+                  height: "1.25rem",
                   borderRadius: "50%",
                   background: active
                     ? "var(--accent)"
@@ -2585,12 +2671,12 @@ export const ProjectCreateWizard = () => {
                       : "var(--fg-3)",
                   border:
                     "1px solid " + (active ? "transparent" : "var(--border)"),
-                  fontSize: 10,
+                  fontSize: "0.625rem",
                   fontFamily: "var(--font-mono)",
                   fontWeight: 600,
                 }}
               >
-                {done ? <Check size={11} /> : i + 1}
+                {done ? <Check size="0.6875rem" /> : i + 1}
               </div>
               <span>{t(`steps.${s.id}.title`)}</span>
             </button>
@@ -2600,13 +2686,19 @@ export const ProjectCreateWizard = () => {
 
       {/* Right pane */}
       <div className="flex-1 flex flex-col" style={{ minWidth: 0 }}>
-        <div className="max-sm:!px-4" style={{ padding: "20px 28px 8px" }}>
-          <div className="flex items-center gap-2" style={{ marginBottom: 4 }}>
+        <div
+          className="max-sm:!px-4"
+          style={{ padding: "1.25rem 1.75rem 0.5rem" }}
+        >
+          <div
+            className="flex items-center gap-2"
+            style={{ marginBottom: "0.25rem" }}
+          >
             <CurIcon size={14} style={{ color: "var(--accent)" }} />
             <span
               className="mono"
               style={{
-                fontSize: 10,
+                fontSize: "0.625rem",
                 color: "var(--accent)",
                 letterSpacing: "0.1em",
                 textTransform: "uppercase",
@@ -2617,8 +2709,8 @@ export const ProjectCreateWizard = () => {
           </div>
           <h2
             style={{
-              margin: "0 0 4px",
-              fontSize: 18,
+              margin: "0 0 0.25rem",
+              fontSize: "1.125rem",
               fontWeight: 600,
               letterSpacing: "-0.01em",
             }}
@@ -2631,7 +2723,7 @@ export const ProjectCreateWizard = () => {
           </h2>
           <p
             className="dim"
-            style={{ margin: 0, fontSize: 12.5, maxWidth: 560 }}
+            style={{ margin: 0, fontSize: "0.78125rem", maxWidth: "35rem" }}
           >
             {t(`steps.${cur.id}.sub`)}
           </p>
@@ -2640,7 +2732,7 @@ export const ProjectCreateWizard = () => {
         <div
           className="flex-1 max-sm:!px-4"
           style={{
-            padding: "20px 28px 24px",
+            padding: "1.25rem 1.75rem 1.5rem",
             overflowY: "auto",
             overflowX: "hidden",
             minWidth: 0,
@@ -2652,7 +2744,7 @@ export const ProjectCreateWizard = () => {
         <div
           className="flex flex-wrap items-center justify-between gap-2 max-sm:!px-3"
           style={{
-            padding: "12px 20px",
+            padding: "0.75rem 1.25rem",
             borderTop: "1px solid var(--border)",
             background: "var(--bg-1)",
           }}
@@ -2675,7 +2767,7 @@ export const ProjectCreateWizard = () => {
               disabled={step === 0}
               onClick={prevStep}
             >
-              <ArrowLeft size={12} />
+              <ArrowLeft size="0.75rem" />
               {t("wizard.back")}
             </button>
             {!isLastStep ? (
@@ -2686,7 +2778,7 @@ export const ProjectCreateWizard = () => {
                 disabled={!isStepValid}
               >
                 {t("wizard.next")}
-                <ArrowRight size={12} />
+                <ArrowRight size="0.75rem" />
               </button>
             ) : (
               <button
@@ -2707,9 +2799,9 @@ export const ProjectCreateWizard = () => {
                 }
               >
                 {isPending ? (
-                  <Loader2 size={12} className="spin" />
+                  <Loader2 size="0.75rem" className="spin" />
                 ) : (
-                  <Check size={12} />
+                  <Check size="0.75rem" />
                 )}
                 {t("wizard.create")}
               </button>

@@ -103,18 +103,18 @@ export const RemoteRunnerView = ({
   return (
     <div
       className="flex flex-col"
-      style={{ gap: 16 }}
+      style={{ gap: "1rem" }}
       data-testid="remote-runner"
     >
       <div
         id="remote-runner"
         className="settings-anchor flex flex-col"
-        style={{ gap: 4 }}
+        style={{ gap: "0.25rem" }}
       >
-        <h4 style={{ margin: 0, fontSize: 14, fontWeight: 600 }}>
+        <h4 style={{ margin: 0, fontSize: "0.875rem", fontWeight: 600 }}>
           {t("remote.title")}
         </h4>
-        <p style={{ margin: 0, color: "var(--fg-2)", fontSize: 12 }}>
+        <p style={{ margin: 0, color: "var(--fg-2)", fontSize: "0.75rem" }}>
           {t("remote.sub")}
         </p>
       </div>
@@ -276,8 +276,8 @@ const StateLine = ({
     <div
       className="flex items-center"
       style={{
-        gap: 12,
-        padding: "10px 14px",
+        gap: "0.75rem",
+        padding: "0.625rem 0.875rem",
         borderRadius: "var(--r-3)",
         border: "1px solid var(--border)",
         background: "var(--bg-1)",
@@ -292,11 +292,11 @@ const StateLine = ({
         label={text}
       />
       {status.paired && status.server_url && (
-        <span className="dim" style={{ fontSize: 12 }}>
+        <span className="dim" style={{ fontSize: "0.75rem" }}>
           <Laptop
-            size={12}
+            size="0.75rem"
             aria-hidden="true"
-            style={{ verticalAlign: -2, marginRight: 4 }}
+            style={{ verticalAlign: -2, marginRight: "0.25rem" }}
           />
           {t("remote.connectedTo", {
             server: status.server_url.replace(/^https?:\/\//, ""),
@@ -305,12 +305,12 @@ const StateLine = ({
         </span>
       )}
       {status.running_jobs > 0 && (
-        <span className="chip sans" style={{ fontSize: 11 }}>
+        <span className="chip sans" style={{ fontSize: "0.6875rem" }}>
           {t("remote.running", { count: status.running_jobs })}
         </span>
       )}
       {status.state === "offline" && detailText && (
-        <span className="dim" style={{ fontSize: 12 }}>
+        <span className="dim" style={{ fontSize: "0.75rem" }}>
           {detailText}
         </span>
       )}
@@ -354,7 +354,7 @@ const PairForm = ({
   return (
     <form
       className="flex flex-col"
-      style={{ gap: 12 }}
+      style={{ gap: "0.75rem" }}
       noValidate
       onSubmit={submit}
       data-testid="remote-runner-pair-form"
@@ -402,7 +402,10 @@ const PairForm = ({
           data-testid="remote-runner-name"
         />
       )}
-      <div className="flex items-center" style={{ gap: 10, flexWrap: "wrap" }}>
+      <div
+        className="flex items-center"
+        style={{ gap: "0.625rem", flexWrap: "wrap" }}
+      >
         <Button
           type="submit"
           disabled={busy}
@@ -411,7 +414,7 @@ const PairForm = ({
           }
         >
           {busy && <Spinner size="sm" />}
-          <Cloud size={13} aria-hidden="true" />
+          <Cloud size="0.8125rem" aria-hidden="true" />
           {withToken ? t("remote.useToken") : t("remote.pair")}
         </Button>
         <button
@@ -447,22 +450,24 @@ const PairingCode = ({
     <div
       className="flex flex-col"
       style={{
-        gap: 12,
-        padding: 18,
+        gap: "0.75rem",
+        padding: "1.125rem",
         borderRadius: "var(--r-3)",
         border: "1px solid var(--accent)",
         background: "var(--bg-1)",
       }}
       data-testid="remote-runner-pairing"
     >
-      <strong style={{ fontSize: 13 }}>{t("remote.code.title")}</strong>
-      <span className="dim" style={{ fontSize: 12 }}>
+      <strong style={{ fontSize: "0.8125rem" }}>
+        {t("remote.code.title")}
+      </strong>
+      <span className="dim" style={{ fontSize: "0.75rem" }}>
         {t("remote.code.lead")}
       </span>
       <span
         className="mono"
         style={{
-          fontSize: 28,
+          fontSize: "1.75rem",
           fontWeight: 600,
           letterSpacing: "0.14em",
           color: "var(--fg-0)",
@@ -473,23 +478,26 @@ const PairingCode = ({
       </span>
       <span
         className="dim"
-        style={{ fontSize: 12 }}
+        style={{ fontSize: "0.75rem" }}
         data-testid="remote-runner-code-countdown"
       >
         {left === null
           ? t("remote.code.expired")
           : t("remote.code.expires", { time: left })}
       </span>
-      <div className="flex items-center" style={{ gap: 10, flexWrap: "wrap" }}>
+      <div
+        className="flex items-center"
+        style={{ gap: "0.625rem", flexWrap: "wrap" }}
+      >
         <a
           href={pairing.verification_uri_complete}
           target="_blank"
           rel="noreferrer"
           className="btn primary"
-          style={{ textDecoration: "none", gap: 6 }}
+          style={{ textDecoration: "none", gap: "0.375rem" }}
           data-testid="remote-runner-open-verification"
         >
-          <ExternalLink size={13} aria-hidden="true" />
+          <ExternalLink size="0.8125rem" aria-hidden="true" />
           {t("remote.code.open")}
         </a>
         <Button
@@ -538,13 +546,13 @@ const CloudModels = ({
       testId="remote-runner-models"
     >
       {candidates.length === 0 ? (
-        <p className="dim" style={{ margin: 0, fontSize: 12 }}>
+        <p className="dim" style={{ margin: 0, fontSize: "0.75rem" }}>
           {t("remote.models.empty")}
         </p>
       ) : (
         <ul
           className="flex flex-col"
-          style={{ gap: 10, listStyle: "none", margin: 0, padding: 0 }}
+          style={{ gap: "0.625rem", listStyle: "none", margin: 0, padding: 0 }}
         >
           {candidates.map((c) => {
             const on = chosen.has(c.providerId);
@@ -564,17 +572,17 @@ const CloudModels = ({
               <li
                 key={c.providerId}
                 className="flex flex-col"
-                style={{ gap: 8 }}
+                style={{ gap: "0.5rem" }}
                 data-testid={`remote-runner-ai-endpoint-${c.defaultName}`}
                 data-on={on ? "true" : undefined}
               >
                 <div
                   className="flex items-start"
-                  style={{ gap: 12, flexWrap: "wrap" }}
+                  style={{ gap: "0.75rem", flexWrap: "wrap" }}
                 >
                   <div
                     className="flex items-center"
-                    style={{ gap: 10, minWidth: 220, flex: 1 }}
+                    style={{ gap: "0.625rem", minWidth: "13.75rem", flex: 1 }}
                   >
                     <Switch
                       checked={on}
@@ -591,22 +599,25 @@ const CloudModels = ({
                     />
                     <span
                       className="flex flex-col"
-                      style={{ gap: 2, minWidth: 0 }}
+                      style={{ gap: "0.125rem", minWidth: 0 }}
                     >
-                      <span style={{ fontSize: 12.5, fontWeight: 500 }}>
+                      <span style={{ fontSize: "0.78125rem", fontWeight: 500 }}>
                         {c.name}
                         <span className="dim" style={{ fontWeight: 400 }}>
                           {" · "}
                           {t(`remote.models.flavor.${c.flavor}`)}
                         </span>
                       </span>
-                      <span className="dim mono" style={{ fontSize: 11 }}>
+                      <span
+                        className="dim mono"
+                        style={{ fontSize: "0.6875rem" }}
+                      >
                         {c.url}
                       </span>
                     </span>
                   </div>
                   {on && (
-                    <div style={{ width: 200 }}>
+                    <div style={{ width: "12.5rem" }}>
                       <Input
                         label={t("remote.models.name")}
                         value={name}
@@ -644,7 +655,7 @@ const CloudModels = ({
                       to: name,
                     })}
                     action={
-                      <span className="flex" style={{ gap: 6 }}>
+                      <span className="flex" style={{ gap: "0.375rem" }}>
                         <Button
                           type="button"
                           size="sm"

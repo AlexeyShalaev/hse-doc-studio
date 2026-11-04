@@ -71,7 +71,7 @@ const Loading = () => {
     <div
       className="flex items-center dim"
       role="status"
-      style={{ gap: 8, minHeight: 160, justifyContent: "center" }}
+      style={{ gap: "0.5rem", minHeight: "10rem", justifyContent: "center" }}
     >
       <Spinner size="sm" />
       {t("connect.loading")}
@@ -380,7 +380,7 @@ const ConnectFlowBody = ({
         : `connect.lead.${currentStep}`;
 
   return (
-    <div className="flex flex-col" style={{ gap: 14 }}>
+    <div className="flex flex-col" style={{ gap: "0.875rem" }}>
       {currentStep !== "profile" && (
         <Stepper
           steps={stepperSteps}
@@ -389,7 +389,10 @@ const ConnectFlowBody = ({
           label={t("connect.steps.label")}
         />
       )}
-      <p className="dim" style={{ margin: 0, fontSize: 12.5, lineHeight: 1.5 }}>
+      <p
+        className="dim"
+        style={{ margin: 0, fontSize: "0.78125rem", lineHeight: 1.5 }}
+      >
         {t(leadKey)}
       </p>
 

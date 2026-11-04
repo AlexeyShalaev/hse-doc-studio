@@ -30,31 +30,35 @@ export const RestartingScreen = ({ target }: RestartingScreenProps) => {
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
-        padding: "40px 20px",
+        padding: "2.5rem 1.25rem",
       }}
     >
-      <div style={{ width: "100%", maxWidth: 440, textAlign: "center" }}>
+      <div style={{ width: "100%", maxWidth: "27.5rem", textAlign: "center" }}>
         <div
           style={{
             display: "inline-flex",
             alignItems: "center",
             justifyContent: "center",
-            width: 52,
-            height: 52,
-            borderRadius: 14,
+            width: "3.25rem",
+            height: "3.25rem",
+            borderRadius: "0.875rem",
             background: "var(--c-ok-soft)",
             border: "1px solid var(--c-ok)",
-            marginBottom: 16,
+            marginBottom: "1rem",
           }}
         >
-          <FolderCheck size={25} style={{ color: "var(--c-ok)" }} />
+          <FolderCheck size="1.5625rem" style={{ color: "var(--c-ok)" }} />
         </div>
-        <h2 style={{ margin: "0 0 6px", fontSize: 19 }}>
+        <h2 style={{ margin: "0 0 0.375rem", fontSize: "1.1875rem" }}>
           {t("restarting.title")}
         </h2>
         <code
           className="dim"
-          style={{ fontSize: 12, wordBreak: "break-all", userSelect: "all" }}
+          style={{
+            fontSize: "0.75rem",
+            wordBreak: "break-all",
+            userSelect: "all",
+          }}
         >
           {target}
         </code>
@@ -62,11 +66,11 @@ export const RestartingScreen = ({ target }: RestartingScreenProps) => {
         <ul
           style={{
             listStyle: "none",
-            margin: "24px 0 0",
+            margin: "1.5rem 0 0",
             padding: 0,
             textAlign: "left",
             display: "grid",
-            gap: 10,
+            gap: "0.625rem",
           }}
         >
           {steps.map((step) => (
@@ -75,14 +79,14 @@ export const RestartingScreen = ({ target }: RestartingScreenProps) => {
               style={{
                 display: "flex",
                 alignItems: "center",
-                gap: 10,
-                fontSize: 13,
+                gap: "0.625rem",
+                fontSize: "0.8125rem",
                 opacity: step.done ? 0.6 : 1,
               }}
             >
               {step.done ? (
                 <Check
-                  size={14}
+                  size="0.875rem"
                   style={{ color: "var(--c-ok)", flexShrink: 0 }}
                 />
               ) : (
@@ -93,7 +97,10 @@ export const RestartingScreen = ({ target }: RestartingScreenProps) => {
           ))}
         </ul>
 
-        <p className="dim" style={{ fontSize: 12, marginTop: 22 }}>
+        <p
+          className="dim"
+          style={{ fontSize: "0.75rem", marginTop: "1.375rem" }}
+        >
           {t("restarting.hint")}
         </p>
       </div>

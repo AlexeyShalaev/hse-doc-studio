@@ -136,7 +136,7 @@ export const HistoryTable = ({
         onRetry={onRetry}
         emptyTitle={t("history.empty")}
         emptyHint={t("history.emptyHint")}
-        emptyIcon={<History size={18} />}
+        emptyIcon={<History size="1.125rem" />}
         pagination={{
           page: pageIndex,
           pageSize: RUNS_PAGE_SIZE,

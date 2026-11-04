@@ -45,13 +45,13 @@ const Counts = ({ ui }: { ui: SyncUi }) => {
     <>
       {ui.incoming > 0 && (
         <span className="sync-count" aria-hidden="true">
-          <ArrowDown size={10} strokeWidth={2.4} />
+          <ArrowDown size="0.625rem" strokeWidth={2.4} />
           {ui.incoming}
         </span>
       )}
       {ui.outgoing > 0 && (
         <span className="sync-count" aria-hidden="true">
-          <ArrowUp size={10} strokeWidth={2.4} />
+          <ArrowUp size="0.625rem" strokeWidth={2.4} />
           {ui.outgoing}
         </span>
       )}
@@ -132,7 +132,7 @@ export const SyncButton = ({
               aria-label={t("control.details")}
               title={t("control.details")}
             >
-              <ChevronDown size={13} aria-hidden="true" />
+              <ChevronDown size="0.8125rem" aria-hidden="true" />
             </button>
           </PopoverTrigger>
         )}

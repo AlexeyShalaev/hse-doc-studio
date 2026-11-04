@@ -30,7 +30,7 @@ export const ServerDemoPicker = () => {
     // (z-index 90+): не ложится на меню админки и не спорит с диалогами.
     <div
       className="fixed"
-      style={{ right: 16, bottom: 36, zIndex: 80 }}
+      style={{ right: "1rem", bottom: "2.25rem", zIndex: 80 }}
       data-testid="server-demo-picker"
     >
       <Popover open={open} onOpenChange={setOpen}>
@@ -39,7 +39,7 @@ export const ServerDemoPicker = () => {
             type="button"
             className="btn sm"
             style={{
-              gap: 6,
+              gap: "0.375rem",
               boxShadow: "0 2px 10px rgba(0, 0, 0, 0.25)",
               background: "var(--bg-1)",
               border: "1px dashed var(--c-warn)",
@@ -47,7 +47,11 @@ export const ServerDemoPicker = () => {
             }}
             aria-label={t("demo.open")}
           >
-            <Server size={14} aria-hidden style={{ color: "var(--c-warn)" }} />
+            <Server
+              size="0.875rem"
+              aria-hidden
+              style={{ color: "var(--c-warn)" }}
+            />
             <span style={{ color: "var(--c-warn)", fontWeight: 600 }}>
               {t("demo.prefix")}
             </span>
@@ -59,22 +63,28 @@ export const ServerDemoPicker = () => {
           side="top"
           align="end"
           aria-label={t("demo.title")}
-          style={{ maxHeight: 520, overflowY: "auto", padding: 0 }}
+          style={{ maxHeight: "32.5rem", overflowY: "auto", padding: 0 }}
         >
           <div
             style={{
-              padding: "10px 14px",
+              padding: "0.625rem 0.875rem",
               borderBottom: "1px solid var(--border)",
             }}
           >
-            <div style={{ fontWeight: 600, fontSize: 13 }}>
+            <div style={{ fontWeight: 600, fontSize: "0.8125rem" }}>
               {t("demo.title")}
             </div>
-            <div style={{ fontSize: 11.5, color: "var(--fg-2)", marginTop: 2 }}>
+            <div
+              style={{
+                fontSize: "0.71875rem",
+                color: "var(--fg-2)",
+                marginTop: "0.125rem",
+              }}
+            >
               {t("demo.subtitle")}
             </div>
           </div>
-          <div style={{ padding: 6 }}>
+          <div style={{ padding: "0.375rem" }}>
             {SERVER_SCENARIOS.map((scenario) => (
               <button
                 key={scenario.id}
@@ -86,17 +96,17 @@ export const ServerDemoPicker = () => {
                 className={clsx("w-full text-left")}
                 style={{
                   display: "block",
-                  padding: "6px 8px",
-                  borderRadius: 6,
+                  padding: "0.375rem 0.5rem",
+                  borderRadius: "0.375rem",
                   background:
                     scenario.id === scenarioId ? "var(--bg-3)" : "transparent",
                   cursor: "pointer",
                 }}
               >
-                <div style={{ fontSize: 12.5, color: "var(--fg-0)" }}>
+                <div style={{ fontSize: "0.78125rem", color: "var(--fg-0)" }}>
                   {t(`demo.scenario.${scenario.id}.title`)}
                 </div>
-                <div style={{ fontSize: 11.5, color: "var(--fg-2)" }}>
+                <div style={{ fontSize: "0.71875rem", color: "var(--fg-2)" }}>
                   {t(`demo.scenario.${scenario.id}.hint`)}
                 </div>
               </button>

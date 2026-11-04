@@ -41,7 +41,7 @@ export const TemplateFileDiff = ({
 
   if (isLoading) {
     return (
-      <div className="flex justify-center" style={{ padding: 16 }}>
+      <div className="flex justify-center" style={{ padding: "1rem" }}>
         <Spinner size="sm" />
       </div>
     );
@@ -49,7 +49,10 @@ export const TemplateFileDiff = ({
   if (isError || !data) return null;
   if (data.binary) {
     return (
-      <div className="dim" style={{ padding: 12, fontSize: 11.5 }}>
+      <div
+        className="dim"
+        style={{ padding: "0.75rem", fontSize: "0.71875rem" }}
+      >
         {t("dialog.binary")}
       </div>
     );

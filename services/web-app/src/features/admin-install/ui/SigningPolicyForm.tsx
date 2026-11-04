@@ -63,7 +63,7 @@ export const SigningPolicyForm = ({
   return (
     <div
       className="flex flex-col"
-      style={{ gap: 16, flex: 1 }}
+      style={{ gap: "1rem", flex: 1 }}
       data-testid="signing-form"
     >
       <Section
@@ -124,11 +124,11 @@ export const SigningPolicyForm = ({
         >
           <span
             className="flex items-center"
-            style={{ gap: 8, fontSize: 13 }}
+            style={{ gap: "0.5rem", fontSize: "0.8125rem" }}
             data-testid="signing-stored"
           >
             <KeyRound
-              size={14}
+              size="0.875rem"
               aria-hidden="true"
               style={{ color: "var(--fg-2)" }}
             />
@@ -147,13 +147,13 @@ export const SigningPolicyForm = ({
       >
         <SectionList>
           <ListRow
-            icon={<ShieldAlert size={15} />}
+            icon={<ShieldAlert size="0.9375rem" />}
             tone="warning"
             title={t("signing.risksTitle")}
             description={t("signing.risks")}
           />
           <ListRow
-            icon={<FileSignature size={15} />}
+            icon={<FileSignature size="0.9375rem" />}
             tone="info"
             title={t("signing.altTitle")}
             description={

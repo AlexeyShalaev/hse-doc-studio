@@ -97,28 +97,33 @@ export const CompileWaitNotice = ({
       data-testid={`compile-wait-${wait.reason}`}
       className="flex items-start gap-3"
       style={{
-        padding: "12px 16px",
+        padding: "0.75rem 1rem",
         background: tone.bg,
         borderBottom: `1px solid ${tone.border}`,
         borderLeft: `3px solid ${tone.fg}`,
       }}
     >
       <Icon
-        size={18}
+        size="1.125rem"
         className={wait.reason === "runner_lost" ? "spin" : undefined}
         style={{ color: tone.fg, flexShrink: 0, marginTop: 1 }}
       />
-      <div className="flex flex-col" style={{ gap: 3, minWidth: 0, flex: 1 }}>
-        <strong style={{ fontSize: 13 }}>{title}</strong>
-        <span style={{ fontSize: 12, color: "var(--fg-2)", lineHeight: 1.5 }}>
+      <div
+        className="flex flex-col"
+        style={{ gap: "0.1875rem", minWidth: 0, flex: 1 }}
+      >
+        <strong style={{ fontSize: "0.8125rem" }}>{title}</strong>
+        <span
+          style={{ fontSize: "0.75rem", color: "var(--fg-2)", lineHeight: 1.5 }}
+        >
           {t(`compile.wait.${view.bodyKey}`)}
         </span>
         {hint && (
           <span
             className="flex items-center gap-1 mono"
-            style={{ fontSize: 11, color: "var(--fg-3)" }}
+            style={{ fontSize: "0.6875rem", color: "var(--fg-3)" }}
           >
-            <CalendarClock size={11} />
+            <CalendarClock size="0.6875rem" />
             {t(
               hint.unit === "s"
                 ? "compile.wait.hintSeconds"
@@ -136,7 +141,7 @@ export const CompileWaitNotice = ({
           disabled={retryDisabled}
           style={{ flexShrink: 0 }}
         >
-          <RefreshCw size={11} />
+          <RefreshCw size="0.6875rem" />
           {wait.reason === "superseded"
             ? t("compile.wait.rebuildSuperseded")
             : t("compile.wait.retry")}

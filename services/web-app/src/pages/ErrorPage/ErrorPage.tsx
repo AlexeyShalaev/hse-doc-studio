@@ -121,61 +121,66 @@ export const ErrorPage = ({ status = 500, message }: ErrorPageProps) => {
       <div
         className="flex items-center"
         style={{
-          height: 40,
+          height: "2.5rem",
           flexShrink: 0,
-          gap: 8,
-          padding: "0 12px",
+          gap: "0.5rem",
+          padding: "0 0.75rem",
           borderBottom: "1px solid var(--border)",
           background: "var(--bg-1)",
         }}
       >
-        <AlertTriangle size={15} style={{ color: "var(--c-warn)" }} />
-        <span style={{ fontSize: 13, fontWeight: 600 }}>HSE Studio</span>
-        <span className="mono dim" style={{ fontSize: 10 }}>
+        <AlertTriangle size="0.9375rem" style={{ color: "var(--c-warn)" }} />
+        <span style={{ fontSize: "0.8125rem", fontWeight: 600 }}>
+          HSE Studio
+        </span>
+        <span className="mono dim" style={{ fontSize: "0.625rem" }}>
           ERROR {meta.status}
         </span>
       </div>
 
       <main
         className="flex flex-1 items-center justify-center"
-        style={{ padding: 24 }}
+        style={{ padding: "1.5rem" }}
       >
         <section
           className="flex flex-col"
           style={{
-            width: "min(520px, 100%)",
-            gap: 14,
-            padding: 18,
+            width: "min(32.5rem, 100%)",
+            gap: "0.875rem",
+            padding: "1.125rem",
             border: "1px solid var(--border)",
             borderRadius: "var(--r-3)",
             background: "var(--bg-1)",
             boxShadow: "var(--shadow-1)",
           }}
         >
-          <div className="flex items-start" style={{ gap: 12 }}>
+          <div className="flex items-start" style={{ gap: "0.75rem" }}>
             <div
               className="flex items-center justify-center"
               style={{
-                width: 34,
-                height: 34,
+                width: "2.125rem",
+                height: "2.125rem",
                 flexShrink: 0,
                 borderRadius: "var(--r-2)",
                 background: "var(--c-warn-soft)",
                 color: "var(--c-warn)",
               }}
             >
-              <AlertTriangle size={18} />
+              <AlertTriangle size="1.125rem" />
             </div>
-            <div className="flex flex-col" style={{ gap: 5, minWidth: 0 }}>
-              <div className="mono dim" style={{ fontSize: 10 }}>
+            <div
+              className="flex flex-col"
+              style={{ gap: "0.3125rem", minWidth: 0 }}
+            >
+              <div className="mono dim" style={{ fontSize: "0.625rem" }}>
                 {meta.status}
               </div>
-              <h1 style={{ margin: 0, fontSize: 20, lineHeight: 1.2 }}>
+              <h1 style={{ margin: 0, fontSize: "1.25rem", lineHeight: 1.2 }}>
                 {meta.title}
               </h1>
               <p
                 className="dim"
-                style={{ margin: 0, fontSize: 13, lineHeight: 1.5 }}
+                style={{ margin: 0, fontSize: "0.8125rem", lineHeight: 1.5 }}
               >
                 {meta.message}
               </p>
@@ -186,12 +191,12 @@ export const ErrorPage = ({ status = 500, message }: ErrorPageProps) => {
             <div
               className="mono"
               style={{
-                padding: "9px 10px",
+                padding: "0.5625rem 0.625rem",
                 borderRadius: "var(--r-2)",
                 border: "1px solid var(--border)",
                 background: "var(--bg-0)",
                 color: "var(--fg-2)",
-                fontSize: 11,
+                fontSize: "0.6875rem",
                 lineHeight: 1.5,
                 overflowWrap: "anywhere",
               }}
@@ -202,7 +207,7 @@ export const ErrorPage = ({ status = 500, message }: ErrorPageProps) => {
 
           <div
             className="flex items-center"
-            style={{ gap: 8, flexWrap: "wrap" }}
+            style={{ gap: "0.5rem", flexWrap: "wrap" }}
           >
             <button
               type="button"
@@ -211,7 +216,7 @@ export const ErrorPage = ({ status = 500, message }: ErrorPageProps) => {
                 void navigate(-1);
               }}
             >
-              <ArrowLeft size={11} />
+              <ArrowLeft size="0.6875rem" />
               {t("errorPage.back")}
             </button>
             <button
@@ -221,7 +226,7 @@ export const ErrorPage = ({ status = 500, message }: ErrorPageProps) => {
                 void navigate("/", { replace: true });
               }}
             >
-              <Home size={11} />
+              <Home size="0.6875rem" />
               {t("errorPage.home")}
             </button>
             <button
@@ -231,7 +236,7 @@ export const ErrorPage = ({ status = 500, message }: ErrorPageProps) => {
                 window.location.reload();
               }}
             >
-              <RotateCcw size={11} />
+              <RotateCcw size="0.6875rem" />
               {t("errorPage.reload")}
             </button>
             <button
@@ -245,7 +250,7 @@ export const ErrorPage = ({ status = 500, message }: ErrorPageProps) => {
                 );
               }}
             >
-              <Bug size={11} />
+              <Bug size="0.6875rem" />
               {t("errorPage.report")}
             </button>
           </div>

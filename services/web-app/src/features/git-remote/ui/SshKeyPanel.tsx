@@ -47,17 +47,21 @@ export const SshKeyPanel = ({
         className="flex items-center"
         data-testid="deploy-repo"
         style={{
-          gap: 6,
+          gap: "0.375rem",
           alignSelf: "flex-start",
           maxWidth: "100%",
-          padding: "3px 8px",
+          padding: "0.1875rem 0.5rem",
           borderRadius: "var(--r-2)",
           border: "1px solid var(--border)",
           background: "var(--bg-2)",
-          fontSize: 11.5,
+          fontSize: "0.71875rem",
         }}
       >
-        <FolderGit2 size={12} aria-hidden="true" style={{ flexShrink: 0 }} />
+        <FolderGit2
+          size="0.75rem"
+          aria-hidden="true"
+          style={{ flexShrink: 0 }}
+        />
         <span className="dim">{t("ssh.deployFor")}</span>
         <span className="mono truncate" style={{ minWidth: 0 }}>
           {repoPath}
@@ -75,7 +79,7 @@ export const SshKeyPanel = ({
       {isCreating ? (
         <Spinner size="sm" />
       ) : (
-        <Plus size={13} aria-hidden="true" />
+        <Plus size="0.8125rem" aria-hidden="true" />
       )}
       {primary
         ? t(scope === "deploy" ? "ssh.createDeploy" : "ssh.create")
@@ -87,7 +91,7 @@ export const SshKeyPanel = ({
     return (
       <div
         className="flex flex-col"
-        style={{ gap: 12 }}
+        style={{ gap: "0.75rem" }}
         data-testid="ssh-panel"
         data-scope={scope}
       >
@@ -95,8 +99,8 @@ export const SshKeyPanel = ({
         <div
           className="flex flex-col items-start"
           style={{
-            gap: 10,
-            padding: 16,
+            gap: "0.625rem",
+            padding: "1rem",
             borderRadius: "var(--r-3)",
             border: "1px dashed var(--border-strong)",
             background: "var(--bg-2)",
@@ -105,8 +109,8 @@ export const SshKeyPanel = ({
           <span
             aria-hidden="true"
             style={{
-              width: 32,
-              height: 32,
+              width: "2rem",
+              height: "2rem",
               borderRadius: "50%",
               display: "inline-flex",
               alignItems: "center",
@@ -115,9 +119,9 @@ export const SshKeyPanel = ({
               color: "var(--accent)",
             }}
           >
-            <KeyRound size={16} />
+            <KeyRound size="1rem" />
           </span>
-          <div style={{ fontSize: 12.5, lineHeight: 1.5 }}>
+          <div style={{ fontSize: "0.78125rem", lineHeight: 1.5 }}>
             <strong style={{ display: "block", fontWeight: 600 }}>
               {scope === "deploy"
                 ? t("ssh.deployEmptyTitle", { repo: repoPath })
@@ -137,7 +141,7 @@ export const SshKeyPanel = ({
   return (
     <div
       className="flex flex-col"
-      style={{ gap: 12 }}
+      style={{ gap: "0.75rem" }}
       data-testid="ssh-panel"
       data-scope={scope}
     >
@@ -147,18 +151,18 @@ export const SshKeyPanel = ({
           role="radiogroup"
           aria-label={t("ssh.chooseKey")}
           className="flex flex-col"
-          style={{ gap: 4 }}
+          style={{ gap: "0.25rem" }}
         >
           {keys.map((key) => (
             <label
               key={key.id}
               className="flex items-center"
               style={{
-                gap: 8,
-                padding: "6px 8px",
+                gap: "0.5rem",
+                padding: "0.375rem 0.5rem",
                 borderRadius: "var(--r-2)",
                 cursor: "pointer",
-                fontSize: 12.5,
+                fontSize: "0.78125rem",
                 background:
                   key.id === selectedId ? "var(--accent-soft)" : "transparent",
               }}
@@ -175,7 +179,7 @@ export const SshKeyPanel = ({
               <span className="truncate" style={{ flex: 1, minWidth: 0 }}>
                 {key.label}
               </span>
-              <span className="dim" style={{ fontSize: 11 }}>
+              <span className="dim" style={{ fontSize: "0.6875rem" }}>
                 {formatDate(key.created_at)}
               </span>
             </label>
@@ -184,12 +188,12 @@ export const SshKeyPanel = ({
       )}
 
       {selected?.public_key && (
-        <div className="flex flex-col" style={{ gap: 8 }}>
+        <div className="flex flex-col" style={{ gap: "0.5rem" }}>
           <div
             className="flex items-center"
-            style={{ gap: 8, justifyContent: "space-between" }}
+            style={{ gap: "0.5rem", justifyContent: "space-between" }}
           >
-            <span style={{ fontSize: 12, fontWeight: 600 }}>
+            <span style={{ fontSize: "0.75rem", fontWeight: 600 }}>
               {t("ssh.publicKey")}
             </span>
             <CredentialStatusChip status={selected.status} />
@@ -202,9 +206,9 @@ export const SshKeyPanel = ({
           {selected.fingerprint_sha256 && (
             <div
               className="flex items-center dim"
-              style={{ gap: 6, fontSize: 11.5, minWidth: 0 }}
+              style={{ gap: "0.375rem", fontSize: "0.71875rem", minWidth: 0 }}
             >
-              <Fingerprint size={12} aria-hidden="true" />
+              <Fingerprint size="0.75rem" aria-hidden="true" />
               <span>{t("ssh.fingerprint")}</span>
               <span
                 className="mono truncate"
@@ -218,7 +222,7 @@ export const SshKeyPanel = ({
         </div>
       )}
 
-      <p className="dim" style={{ margin: 0, fontSize: 11.5 }}>
+      <p className="dim" style={{ margin: 0, fontSize: "0.71875rem" }}>
         {t(`ssh.scope.${scope}Hint`)}
       </p>
 

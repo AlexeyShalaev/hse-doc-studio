@@ -35,7 +35,7 @@ const ACTION_ORDER = ["binary_newest", "merged", "take_theirs", "delete"];
 
 const sectionLabelStyle: React.CSSProperties = {
   margin: 0,
-  fontSize: 10.5,
+  fontSize: "0.65625rem",
   letterSpacing: "0.12em",
   textTransform: "uppercase",
 };
@@ -72,7 +72,7 @@ export const AutoMergedList = ({
     t(`auto.action.${action}`, { defaultValue: action });
 
   return (
-    <section className="flex flex-col" style={{ gap: 6 }}>
+    <section className="flex flex-col" style={{ gap: "0.375rem" }}>
       <button
         type="button"
         className="flex items-center mono dim"
@@ -83,7 +83,7 @@ export const AutoMergedList = ({
         }}
         style={{
           ...sectionLabelStyle,
-          gap: 4,
+          gap: "0.25rem",
           background: "none",
           border: 0,
           padding: 0,
@@ -92,25 +92,25 @@ export const AutoMergedList = ({
         }}
       >
         {expanded ? (
-          <ChevronDown size={12} aria-hidden="true" />
+          <ChevronDown size="0.75rem" aria-hidden="true" />
         ) : (
-          <ChevronRight size={12} aria-hidden="true" />
+          <ChevronRight size="0.75rem" aria-hidden="true" />
         )}
         {t("list.auto")} · {items.length}
       </button>
-      <div id={listId} className="flex flex-col" style={{ gap: 6 }}>
+      <div id={listId} className="flex flex-col" style={{ gap: "0.375rem" }}>
         {expanded && (
           <>
             <p
               className="dim"
-              style={{ margin: 0, fontSize: 11.5, lineHeight: 1.5 }}
+              style={{ margin: 0, fontSize: "0.71875rem", lineHeight: 1.5 }}
             >
               {t("auto.hint")}
             </p>
             <p
               className="dim"
               data-testid="auto-summary"
-              style={{ margin: 0, fontSize: 11 }}
+              style={{ margin: 0, fontSize: "0.6875rem" }}
             >
               {summarize(items)
                 .map(([action, count]) =>
@@ -138,7 +138,7 @@ export const AutoMergedList = ({
                   {item.copy_path ? (
                     <span
                       className="dim"
-                      style={{ fontSize: 11 }}
+                      style={{ fontSize: "0.6875rem" }}
                       title={item.copy_path}
                     >
                       {t("auto.copy")}{" "}

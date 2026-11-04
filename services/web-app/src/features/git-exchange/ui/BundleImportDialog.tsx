@@ -151,7 +151,7 @@ export const BundleImportDialog = ({
       onSubmit={submit}
       noValidate
       className="flex flex-col"
-      style={{ gap: 14 }}
+      style={{ gap: "0.875rem" }}
     >
       {disabledReason !== null && (
         <Notice tone="warn" role="status" text={disabledReason} />
@@ -210,7 +210,7 @@ export const BundleImportDialog = ({
       {file === null && !failure && !flow.cancelled && (
         <p
           className="dim"
-          style={{ margin: 0, fontSize: 12, lineHeight: 1.55 }}
+          style={{ margin: 0, fontSize: "0.75rem", lineHeight: 1.55 }}
         >
           {t("import.explain")}
         </p>
@@ -221,7 +221,7 @@ export const BundleImportDialog = ({
   const body = (() => {
     if (stage === "uploading") {
       return (
-        <div className="flex flex-col" style={{ gap: 14 }}>
+        <div className="flex flex-col" style={{ gap: "0.875rem" }}>
           {file !== null && (
             <BundleFileCard
               file={file}
@@ -236,10 +236,10 @@ export const BundleImportDialog = ({
     }
     if (stage === "running") {
       return (
-        <div className="flex flex-col" style={{ gap: 14 }}>
+        <div className="flex flex-col" style={{ gap: "0.875rem" }}>
           <p
             className="dim"
-            style={{ margin: 0, fontSize: 12.5, lineHeight: 1.5 }}
+            style={{ margin: 0, fontSize: "0.78125rem", lineHeight: 1.5 }}
           >
             {t("import.progress.lead")}
           </p>
@@ -324,7 +324,7 @@ export const BundleImportDialog = ({
           className="btn primary"
           disabled={!canImport}
         >
-          <Upload size={12} aria-hidden="true" />
+          <Upload size="0.75rem" aria-hidden="true" />
           {t("import.submit")}
         </button>
       </>

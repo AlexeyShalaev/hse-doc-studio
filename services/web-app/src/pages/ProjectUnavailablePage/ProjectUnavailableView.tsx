@@ -33,54 +33,60 @@ export const ProjectUnavailableView = ({
   return (
     <main
       className="flex flex-1 items-center justify-center"
-      style={{ padding: 24 }}
+      style={{ padding: "1.5rem" }}
       data-testid="project-unavailable"
     >
       <section
         className="flex flex-col"
         style={{
-          width: "min(520px, 100%)",
-          gap: 16,
-          padding: 24,
+          width: "min(32.5rem, 100%)",
+          gap: "1rem",
+          padding: "1.5rem",
           border: "1px solid var(--border)",
           borderRadius: "var(--r-3)",
           background: "var(--bg-1)",
           boxShadow: "var(--shadow-1)",
         }}
       >
-        <div className="flex items-start" style={{ gap: 14 }}>
+        <div className="flex items-start" style={{ gap: "0.875rem" }}>
           <div
             className="flex items-center justify-center shrink-0"
             style={{
-              width: 40,
-              height: 40,
+              width: "2.5rem",
+              height: "2.5rem",
               borderRadius: "var(--r-2)",
               background: "var(--bg-2)",
               border: "1px solid var(--border)",
               color: "var(--fg-2)",
             }}
           >
-            <LockKeyhole size={20} aria-hidden="true" />
+            <LockKeyhole size="1.25rem" aria-hidden="true" />
           </div>
-          <div className="flex flex-col" style={{ gap: 6, minWidth: 0 }}>
-            <h1 style={{ margin: 0, fontSize: 20, lineHeight: 1.25 }}>
+          <div
+            className="flex flex-col"
+            style={{ gap: "0.375rem", minWidth: 0 }}
+          >
+            <h1 style={{ margin: 0, fontSize: "1.25rem", lineHeight: 1.25 }}>
               {t("unavailable.title")}
             </h1>
             <p
               className="dim"
-              style={{ margin: 0, fontSize: 13, lineHeight: 1.5 }}
+              style={{ margin: 0, fontSize: "0.8125rem", lineHeight: 1.5 }}
             >
               {t("unavailable.message")}
             </p>
           </div>
         </div>
-        <div className="flex items-center" style={{ gap: 8, flexWrap: "wrap" }}>
+        <div
+          className="flex items-center"
+          style={{ gap: "0.5rem", flexWrap: "wrap" }}
+        >
           <button type="button" className="btn primary" onClick={onHome}>
-            <Home size={12} />
+            <Home size="0.75rem" />
             {t("unavailable.home")}
           </button>
           <button type="button" className="btn" onClick={onBack}>
-            <ArrowLeft size={12} />
+            <ArrowLeft size="0.75rem" />
             {t("unavailable.back")}
           </button>
           {requestAccess && !requestAccess.sent && (
@@ -92,7 +98,7 @@ export const ProjectUnavailableView = ({
                 setOpen(true);
               }}
             >
-              <Send size={12} />
+              <Send size="0.75rem" />
               {t("unavailable.requestAccess")}
             </button>
           )}
@@ -107,7 +113,7 @@ export const ProjectUnavailableView = ({
           </div>
         )}
         {!requestAccess && (
-          <p className="dim" style={{ margin: 0, fontSize: 12 }}>
+          <p className="dim" style={{ margin: 0, fontSize: "0.75rem" }}>
             {t("unavailable.signInToRequest")}
           </p>
         )}
@@ -134,7 +140,10 @@ export const ProjectUnavailableView = ({
             </Button>
           }
         >
-          <label className="flex flex-col" style={{ gap: 4, fontSize: 12 }}>
+          <label
+            className="flex flex-col"
+            style={{ gap: "0.25rem", fontSize: "0.75rem" }}
+          >
             {t("unavailable.requestMessage")}
             <Textarea
               rows={3}

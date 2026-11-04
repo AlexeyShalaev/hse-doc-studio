@@ -57,12 +57,16 @@ export const EnvironmentStep = ({
       {loading && checks === null && (
         <div
           className="flex items-center"
-          style={{ gap: 10, padding: "14px 0", color: "var(--fg-2)" }}
+          style={{
+            gap: "0.625rem",
+            padding: "0.875rem 0",
+            color: "var(--fg-2)",
+          }}
           role="status"
           data-testid="setup-environment-loading"
         >
           <Spinner size="sm" />
-          <span style={{ fontSize: 13 }}>
+          <span style={{ fontSize: "0.8125rem" }}>
             {t("setup.environment.checking")}
           </span>
         </div>
@@ -75,7 +79,9 @@ export const EnvironmentStep = ({
           testId="setup-environment-failed"
           title={t("setup.environment.loadFailed")}
         >
-          <p style={{ margin: 0, fontSize: 12.5, color: "var(--fg-2)" }}>
+          <p
+            style={{ margin: 0, fontSize: "0.78125rem", color: "var(--fg-2)" }}
+          >
             {t("setup.environment.loadFailedHint")}
           </p>
         </ResultFrame>
@@ -84,7 +90,7 @@ export const EnvironmentStep = ({
       {checks && (
         <ul
           className="flex flex-col"
-          style={{ listStyle: "none", margin: 0, padding: 0, gap: 8 }}
+          style={{ listStyle: "none", margin: 0, padding: 0, gap: "0.5rem" }}
           data-testid="setup-checks"
         >
           {checks.map((check) => {
@@ -95,14 +101,16 @@ export const EnvironmentStep = ({
                 data-testid={`setup-check-${check.id}`}
                 data-status={check.status}
                 style={{
-                  padding: "10px 14px",
+                  padding: "0.625rem 0.875rem",
                   borderRadius: "var(--r-3)",
                   border: "1px solid var(--border)",
                   background: "var(--bg-1)",
                 }}
               >
-                <div className="flex items-center" style={{ gap: 8 }}>
-                  <span style={{ flex: 1, fontSize: 13.5, fontWeight: 500 }}>
+                <div className="flex items-center" style={{ gap: "0.5rem" }}>
+                  <span
+                    style={{ flex: 1, fontSize: "0.84375rem", fontWeight: 500 }}
+                  >
                     {t(`setup.environment.check.${check.id}`)}
                   </span>
                   {required && (
@@ -116,8 +124,8 @@ export const EnvironmentStep = ({
                 </div>
                 <p
                   style={{
-                    margin: "4px 0 0",
-                    fontSize: 12.5,
+                    margin: "0.25rem 0 0",
+                    fontSize: "0.78125rem",
                     color: "var(--fg-2)",
                   }}
                 >
@@ -127,8 +135,8 @@ export const EnvironmentStep = ({
                   <p
                     className="mono"
                     style={{
-                      margin: "4px 0 0",
-                      fontSize: 11.5,
+                      margin: "0.25rem 0 0",
+                      fontSize: "0.71875rem",
                       color: "var(--c-err)",
                     }}
                   >
@@ -142,47 +150,59 @@ export const EnvironmentStep = ({
       )}
 
       {verdict && verdict.blocking.length > 0 && (
-        <div style={{ marginTop: 14 }}>
+        <div style={{ marginTop: "0.875rem" }}>
           <ResultFrame
             tone="err"
             role="alert"
             testId="setup-environment-blocked"
             title={t("setup.environment.blocked")}
           >
-            <p style={{ margin: 0, fontSize: 12.5, color: "var(--fg-2)" }}>
+            <p
+              style={{
+                margin: 0,
+                fontSize: "0.78125rem",
+                color: "var(--fg-2)",
+              }}
+            >
               {t("setup.environment.blockedHint")}
             </p>
           </ResultFrame>
         </div>
       )}
       {verdict !== null && !blocked && verdict.warnings.length > 0 && (
-        <div style={{ marginTop: 14 }}>
+        <div style={{ marginTop: "0.875rem" }}>
           <ResultFrame
             tone="warn"
             role="status"
             testId="setup-environment-warnings"
             title={t("setup.environment.warnings")}
           >
-            <p style={{ margin: 0, fontSize: 12.5, color: "var(--fg-2)" }}>
+            <p
+              style={{
+                margin: 0,
+                fontSize: "0.78125rem",
+                color: "var(--fg-2)",
+              }}
+            >
               {t("setup.environment.warningsHint")}
             </p>
           </ResultFrame>
         </div>
       )}
 
-      <div style={{ marginTop: 14 }}>
+      <div style={{ marginTop: "0.875rem" }}>
         <Button
           type="button"
           variant="secondary"
           size="sm"
           aria-disabled={loading}
-          style={{ gap: 6 }}
+          style={{ gap: "0.375rem" }}
           onClick={() => {
             if (!loading) onRecheck();
           }}
           data-testid="setup-recheck"
         >
-          <RotateCw size={13} aria-hidden />
+          <RotateCw size="0.8125rem" aria-hidden />
           {t("setup.environment.recheck")}
         </Button>
       </div>
@@ -193,7 +213,7 @@ export const EnvironmentStep = ({
           <Button
             type="button"
             aria-disabled={blocked || completing}
-            style={{ gap: 8 }}
+            style={{ gap: "0.5rem" }}
             onClick={() => {
               if (!blocked && !completing) onComplete();
             }}

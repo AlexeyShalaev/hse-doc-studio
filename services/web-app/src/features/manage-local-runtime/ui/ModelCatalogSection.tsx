@@ -19,7 +19,11 @@ const MIN_SEARCH_LEN = 2;
 const Label = ({ children }: { children: React.ReactNode }) => (
   <div
     className="dim"
-    style={{ fontSize: 10, textTransform: "uppercase", letterSpacing: 0.5 }}
+    style={{
+      fontSize: "0.625rem",
+      textTransform: "uppercase",
+      letterSpacing: "0.03125rem",
+    }}
   >
     {children}
   </div>
@@ -93,23 +97,23 @@ export const ModelCatalogSection = ({
     canInstall && isUnfit(m) ? t("catalog.notEnoughMemory") : undefined;
 
   return (
-    <div className="flex flex-col" style={{ gap: 8 }}>
+    <div className="flex flex-col" style={{ gap: "0.5rem" }}>
       {installedModels.length > 0 && (
-        <div className="flex flex-col" style={{ gap: 6 }}>
+        <div className="flex flex-col" style={{ gap: "0.375rem" }}>
           <Label>{t("catalog.installedModels")}</Label>
           {installedModels.map((name) => (
             <div
               key={name}
               className="flex items-center justify-between"
               style={{
-                gap: 12,
-                padding: "8px 12px",
-                borderRadius: 6,
+                gap: "0.75rem",
+                padding: "0.5rem 0.75rem",
+                borderRadius: "0.375rem",
                 border: "1px solid var(--border)",
                 background: "var(--bg-1)",
               }}
             >
-              <span className="mono" style={{ fontSize: 12 }}>
+              <span className="mono" style={{ fontSize: "0.75rem" }}>
                 {name}
               </span>
               <button
@@ -121,7 +125,7 @@ export const ModelCatalogSection = ({
                 disabled={busy}
                 title={t("catalog.deleteModelTitle")}
               >
-                <Trash2 size={11} />
+                <Trash2 size="0.6875rem" />
               </button>
             </div>
           ))}
@@ -132,14 +136,17 @@ export const ModelCatalogSection = ({
       <div
         className="flex items-center"
         style={{
-          gap: 8,
-          padding: "6px 10px",
-          borderRadius: 6,
+          gap: "0.5rem",
+          padding: "0.375rem 0.625rem",
+          borderRadius: "0.375rem",
           border: "1px solid var(--border)",
           background: "var(--bg-1)",
         }}
       >
-        <Search size={13} style={{ color: "var(--fg-2)", flexShrink: 0 }} />
+        <Search
+          size="0.8125rem"
+          style={{ color: "var(--fg-2)", flexShrink: 0 }}
+        />
         <input
           value={query}
           onChange={(e) => {
@@ -152,7 +159,7 @@ export const ModelCatalogSection = ({
             border: "none",
             background: "transparent",
             outline: "none",
-            fontSize: 12,
+            fontSize: "0.75rem",
             color: "var(--fg-0)",
           }}
         />
@@ -165,18 +172,21 @@ export const ModelCatalogSection = ({
             }}
             title={t("catalog.clear")}
           >
-            <X size={12} />
+            <X size="0.75rem" />
           </button>
         )}
       </div>
 
       {isLoading ? (
-        <div className="flex items-center" style={{ gap: 8, fontSize: 12 }}>
+        <div
+          className="flex items-center"
+          style={{ gap: "0.5rem", fontSize: "0.75rem" }}
+        >
           <Spinner size="sm" />
           <span className="dim">{t("catalog.matchingHardware")}</span>
         </div>
       ) : !searching ? (
-        <div className="flex flex-col" style={{ gap: 6 }}>
+        <div className="flex flex-col" style={{ gap: "0.375rem" }}>
           <Label>{t("catalog.catalog")}</Label>
           {filteredCatalog.map((m) => (
             <ModelRow
@@ -192,9 +202,9 @@ export const ModelCatalogSection = ({
           ))}
         </div>
       ) : (
-        <div className="flex flex-col" style={{ gap: 8 }}>
+        <div className="flex flex-col" style={{ gap: "0.5rem" }}>
           {filteredCatalog.length > 0 && (
-            <div className="flex flex-col" style={{ gap: 6 }}>
+            <div className="flex flex-col" style={{ gap: "0.375rem" }}>
               <Label>{t("catalog.fromCatalog")}</Label>
               {filteredCatalog.map((m) => (
                 <ModelRow
@@ -211,8 +221,8 @@ export const ModelCatalogSection = ({
             </div>
           )}
 
-          <div className="flex flex-col" style={{ gap: 6 }}>
-            <div className="flex items-center" style={{ gap: 8 }}>
+          <div className="flex flex-col" style={{ gap: "0.375rem" }}>
+            <div className="flex items-center" style={{ gap: "0.5rem" }}>
               <Label>{t("catalog.fromRegistry")}</Label>
               {registryQuery.isFetching && <Spinner size="sm" />}
             </div>
@@ -227,7 +237,7 @@ export const ModelCatalogSection = ({
                 disabled={installDisabled}
                 style={{ alignSelf: "flex-start" }}
               >
-                <Download size={11} />
+                <Download size="0.6875rem" />
                 {t("catalog.installExact", { name: typed })}
               </button>
             )}
@@ -247,7 +257,7 @@ export const ModelCatalogSection = ({
             {!registryQuery.isFetching &&
               registryResults.length === 0 &&
               !showCustom && (
-                <span className="dim" style={{ fontSize: 11 }}>
+                <span className="dim" style={{ fontSize: "0.6875rem" }}>
                   {registryQuery.isError
                     ? t("catalog.registryUnavailable")
                     : t("catalog.nothingFound")}

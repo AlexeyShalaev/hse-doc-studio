@@ -35,21 +35,24 @@ const AuthorRow = ({
 }: AuthorRowProps) => {
   const { t } = useTranslation("workspace");
   return (
-    <div className="card" style={{ padding: 14, background: "var(--bg-2)" }}>
+    <div
+      className="card"
+      style={{ padding: "0.875rem", background: "var(--bg-2)" }}
+    >
       <div
         className="flex items-center justify-between"
-        style={{ marginBottom: 10 }}
+        style={{ marginBottom: "0.625rem" }}
       >
         <div className="flex items-center gap-2">
-          <Users size={13} style={{ color: "var(--accent)" }} />
-          <strong style={{ fontSize: 12.5 }}>
+          <Users size="0.8125rem" style={{ color: "var(--accent)" }} />
+          <strong style={{ fontSize: "0.78125rem" }}>
             {t("projectSettings.author", { number: index + 1 })}
           </strong>
           {isTeam && !!value.slug && (
             <span
               className="chip mono tt"
               data-tt={t("projectSettings.authorFolderHint")}
-              style={{ fontSize: 10 }}
+              style={{ fontSize: "0.625rem" }}
             >
               {value.slug}
             </span>
@@ -90,7 +93,7 @@ const AuthorRow = ({
             style={{ color: "var(--c-err)" }}
             onClick={onRemove}
           >
-            <Trash2 size={11} />
+            <Trash2 size="0.6875rem" />
           </button>
         )}
       </div>
@@ -105,7 +108,7 @@ const AuthorRow = ({
             }}
           />
         </div>
-        <div className="field" style={{ width: 140 }}>
+        <div className="field" style={{ width: "8.75rem" }}>
           <label>{t("projectSettings.group")}</label>
           <input
             className="input"
@@ -118,7 +121,7 @@ const AuthorRow = ({
         </div>
       </div>
       {isTeam && (
-        <div className="field" style={{ marginTop: 10 }}>
+        <div className="field" style={{ marginTop: "0.625rem" }}>
           <label>{t("projectSettings.authorTopic")}</label>
           <input
             className="input"
@@ -163,9 +166,9 @@ export const AuthorsSection = ({
   const groupHint = groupPlaceholder || t("projectSettings.groupPlaceholder");
   return (
     <SectionCard title={t("projectSettings.sectionAuthors")} fullSpan>
-      <div className="flex flex-col" style={{ gap: 10 }}>
+      <div className="flex flex-col" style={{ gap: "0.625rem" }}>
         {authors.length === 0 ? (
-          <span className="dim" style={{ fontSize: 11.5 }}>
+          <span className="dim" style={{ fontSize: "0.71875rem" }}>
             {t("projectSettings.noAuthors")}
           </span>
         ) : (
@@ -201,7 +204,7 @@ export const AuthorsSection = ({
           className="btn ghost self-start"
           onClick={onAddAuthor}
         >
-          <Plus size={11} />
+          <Plus size="0.6875rem" />
           {t("projectSettings.addAuthor")}
         </button>
       </div>

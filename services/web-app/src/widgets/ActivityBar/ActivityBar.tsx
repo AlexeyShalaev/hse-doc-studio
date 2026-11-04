@@ -273,7 +273,7 @@ export const ActivityBar = ({
                   data-testid={`activity-more-${row.id}`}
                   onClick={closeAnd(row.onSelect)}
                 >
-                  <row.icon size={17} aria-hidden />
+                  <row.icon size="1.0625rem" aria-hidden />
                   <span className="activity-more-label">{row.label}</span>
                   {row.badge?.kind === "count" && (
                     <span
@@ -328,7 +328,7 @@ export const ActivityBar = ({
       <div
         className="divider"
         aria-hidden
-        style={{ width: 24, margin: "4px 0" }}
+        style={{ width: "1.5rem", margin: "0.25rem 0" }}
       />
 
       {!hidden.includes("agent") && (

@@ -38,13 +38,13 @@ export const SecretOnce = ({
 
   return (
     <section aria-label={label} className="card secret-once">
-      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
         <KeyRound
-          size={15}
+          size="0.9375rem"
           aria-hidden="true"
           style={{ color: "var(--c-warn)" }}
         />
-        <strong style={{ fontSize: 13.5 }}>{label}</strong>
+        <strong style={{ fontSize: "0.84375rem" }}>{label}</strong>
       </div>
       <p className="secret-once-warning">
         {warning ?? t("secretOnce.warning")}
@@ -65,22 +65,30 @@ export const SecretOnce = ({
           style={{
             display: "flex",
             flexDirection: "column",
-            gap: 10,
-            padding: 12,
+            gap: "0.625rem",
+            padding: "0.75rem",
             borderRadius: "var(--r-2)",
             background: "var(--c-warn-soft)",
-            fontSize: 12.5,
+            fontSize: "0.78125rem",
           }}
         >
-          <span style={{ display: "flex", gap: 8, alignItems: "flex-start" }}>
+          <span
+            style={{ display: "flex", gap: "0.5rem", alignItems: "flex-start" }}
+          >
             <TriangleAlert
-              size={14}
+              size="0.875rem"
               aria-hidden="true"
               style={{ color: "var(--c-warn)", flexShrink: 0, marginTop: 1 }}
             />
             {t("secretOnce.notCopied")}
           </span>
-          <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
+          <div
+            style={{
+              display: "flex",
+              gap: "0.5rem",
+              justifyContent: "flex-end",
+            }}
+          >
             <button
               type="button"
               className="btn sm"

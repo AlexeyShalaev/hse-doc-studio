@@ -79,7 +79,7 @@ const BackupsContent = () => {
   return (
     <div
       className="flex flex-col"
-      style={{ gap: 20 }}
+      style={{ gap: "1.25rem" }}
       data-testid="backups-page"
     >
       <PageHeader
@@ -101,7 +101,7 @@ const BackupsContent = () => {
             {busy || start.isPending ? (
               <Spinner size="sm" />
             ) : (
-              <Play size={14} />
+              <Play size="0.875rem" />
             )}
             {t("page.runNow")}
           </Button>
@@ -175,12 +175,12 @@ const BackupsContent = () => {
             }}
             data-testid="backup-add"
           >
-            <Plus size={14} />
+            <Plus size="0.875rem" />
             {t("destinations.add")}
           </Button>
         }
       >
-        <p className="form-hint" style={{ margin: "0 0 8px" }}>
+        <p className="form-hint" style={{ margin: "0 0 0.5rem" }}>
           {t("destinations.separate")}
         </p>
         <ViewState
@@ -206,9 +206,9 @@ const BackupsContent = () => {
                 testId={`backup-dest-${d.id}`}
                 icon={
                   d.kind === "s3" ? (
-                    <Archive size={15} />
+                    <Archive size="0.9375rem" />
                   ) : (
-                    <HardDrive size={15} />
+                    <HardDrive size="0.9375rem" />
                   )
                 }
                 title={
@@ -230,7 +230,7 @@ const BackupsContent = () => {
                         data-testid={`backup-dest-check-${d.id}`}
                         data-ok={String(d.last_check_ok)}
                         style={{
-                          marginLeft: 8,
+                          marginLeft: "0.5rem",
                           color: d.last_check_ok
                             ? "var(--c-ok)"
                             : "var(--c-err)",
@@ -253,7 +253,7 @@ const BackupsContent = () => {
                 meta={
                   <span
                     className="flex items-center"
-                    style={{ gap: 6, flexWrap: "wrap" }}
+                    style={{ gap: "0.375rem", flexWrap: "wrap" }}
                   >
                     <Button
                       size="sm"
@@ -340,9 +340,9 @@ const BackupsContent = () => {
         {list.some((d) => d.kind === "local") && (
           <p
             className="form-hint"
-            style={{ display: "flex", gap: 6, margin: "8px 0 0" }}
+            style={{ display: "flex", gap: "0.375rem", margin: "0.5rem 0 0" }}
           >
-            <TriangleAlert size={14} aria-hidden="true" />
+            <TriangleAlert size="0.875rem" aria-hidden="true" />
             {t("destinations.localRoot", {
               root: status.data?.local_root ?? "",
             })}

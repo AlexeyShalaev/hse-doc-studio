@@ -222,18 +222,18 @@ export const OfficeEditorPane = ({
     return (
       <div
         className="flex flex-col items-center justify-center"
-        style={{ flex: 1, padding: 40, gap: 14, minHeight: 0 }}
+        style={{ flex: 1, padding: "2.5rem", gap: "0.875rem", minHeight: 0 }}
       >
         <RefreshCw
-          size={26}
+          size="1.625rem"
           className="spin"
           style={{ color: "var(--accent)" }}
         />
-        <div className="flex flex-col items-center" style={{ gap: 4 }}>
-          <span style={{ fontSize: 13.5, fontWeight: 600 }}>
+        <div className="flex flex-col items-center" style={{ gap: "0.25rem" }}>
+          <span style={{ fontSize: "0.84375rem", fontWeight: 600 }}>
             {t("office.starting")}
           </span>
-          <span className="dim" style={{ fontSize: 12 }}>
+          <span className="dim" style={{ fontSize: "0.75rem" }}>
             {t("office.startingHint")}
           </span>
         </div>
@@ -270,8 +270,8 @@ export const OfficeEditorPane = ({
         className="flex flex-col items-center justify-center"
         style={{
           flex: 1,
-          padding: 40,
-          gap: 16,
+          padding: "2.5rem",
+          gap: "1rem",
           minHeight: 0,
           overflowY: "auto",
         }}
@@ -279,16 +279,16 @@ export const OfficeEditorPane = ({
         <div
           className="stripes flex items-center justify-center"
           style={{
-            width: 240,
-            height: 135,
-            borderRadius: 6,
+            width: "15rem",
+            height: "8.4375rem",
+            borderRadius: "0.375rem",
             border: "1px solid var(--border-strong)",
             color: "var(--fg-3)",
           }}
         >
-          <FileEdit size={28} />
+          <FileEdit size="1.75rem" />
         </div>
-        <span style={{ fontSize: 14, fontWeight: 600 }}>
+        <span style={{ fontSize: "0.875rem", fontWeight: 600 }}>
           {t("office.notInstalledTitle")}
         </span>
         <p
@@ -296,8 +296,8 @@ export const OfficeEditorPane = ({
           style={{
             margin: 0,
             textAlign: "center",
-            maxWidth: 440,
-            fontSize: 12.5,
+            maxWidth: "27.5rem",
+            fontSize: "0.78125rem",
           }}
         >
           {t("office.notInstalledBody")}
@@ -309,22 +309,22 @@ export const OfficeEditorPane = ({
             void navigate("/settings/presentations");
           }}
         >
-          <Settings size={12} />
+          <Settings size="0.75rem" />
           {t("office.installInSettings")}
         </button>
-        <div className="flex flex-col items-center" style={{ gap: 6 }}>
-          <span className="dim" style={{ fontSize: 11 }}>
+        <div className="flex flex-col items-center" style={{ gap: "0.375rem" }}>
+          <span className="dim" style={{ fontSize: "0.6875rem" }}>
             {t("office.pullHintSecondary")}
           </span>
           <div
             className="mono dim flex items-center"
             style={{
-              gap: 8,
-              padding: "4px 4px 4px 10px",
-              borderRadius: 6,
+              gap: "0.5rem",
+              padding: "0.25rem 0.25rem 0.25rem 0.625rem",
+              borderRadius: "0.375rem",
               border: "1px solid var(--border)",
               background: "var(--bg-1)",
-              fontSize: 10.5,
+              fontSize: "0.65625rem",
             }}
           >
             <span>{pullCommand}</span>
@@ -333,14 +333,14 @@ export const OfficeEditorPane = ({
               className="btn xs tt"
               data-tt={t("office.copyCommand")}
               onClick={handleCopyCommand}
-              style={{ width: 24, padding: 0 }}
+              style={{ width: "1.5rem", padding: 0 }}
             >
-              <Copy size={10} />
+              <Copy size="0.625rem" />
             </button>
           </div>
         </div>
         <button type="button" className="btn" onClick={refetch}>
-          <RefreshCw size={12} />
+          <RefreshCw size="0.75rem" />
           {t("office.checkAgain")}
         </button>
       </div>
@@ -353,8 +353,8 @@ export const OfficeEditorPane = ({
         className="flex flex-col items-center justify-center"
         style={{
           flex: 1,
-          padding: 40,
-          gap: 16,
+          padding: "2.5rem",
+          gap: "1rem",
           minHeight: 0,
           overflowY: "auto",
         }}
@@ -362,16 +362,16 @@ export const OfficeEditorPane = ({
         <div
           className="stripes flex items-center justify-center"
           style={{
-            width: 240,
-            height: 135,
-            borderRadius: 6,
+            width: "15rem",
+            height: "8.4375rem",
+            borderRadius: "0.375rem",
             border: "1px solid var(--border-strong)",
             color: "var(--fg-3)",
           }}
         >
-          <FileEdit size={28} />
+          <FileEdit size="1.75rem" />
         </div>
-        <span style={{ fontSize: 14, fontWeight: 600 }}>
+        <span style={{ fontSize: "0.875rem", fontWeight: 600 }}>
           {t("office.unavailableTitle")}
         </span>
         <p
@@ -379,8 +379,8 @@ export const OfficeEditorPane = ({
           style={{
             margin: 0,
             textAlign: "center",
-            maxWidth: 440,
-            fontSize: 12.5,
+            maxWidth: "27.5rem",
+            fontSize: "0.78125rem",
           }}
         >
           {state.kind === "script_error"
@@ -388,7 +388,7 @@ export const OfficeEditorPane = ({
             : state.detail}
         </p>
         <button type="button" className="btn" onClick={refetch}>
-          <RefreshCw size={12} />
+          <RefreshCw size="0.75rem" />
           {t("office.retry")}
         </button>
       </div>
@@ -407,13 +407,16 @@ export const OfficeEditorPane = ({
       <div
         className="flex items-center gap-2"
         style={{
-          padding: "5px 10px",
+          padding: "0.3125rem 0.625rem",
           borderBottom: "1px solid var(--border)",
           flexShrink: 0,
         }}
       >
-        <FileEdit size={13} style={{ color: "var(--accent)", flexShrink: 0 }} />
-        <span className="dim" style={{ fontSize: 11 }}>
+        <FileEdit
+          size="0.8125rem"
+          style={{ color: "var(--accent)", flexShrink: 0 }}
+        />
+        <span className="dim" style={{ fontSize: "0.6875rem" }}>
           {t("office.autosaveNote")}
         </span>
       </div>

@@ -139,7 +139,11 @@ export const InvitationsPanel = forwardRef<HTMLInputElement>(
             return (
               <span className="ppl-target">
                 <span className="ppl-target-icon" aria-hidden="true">
-                  {inv.email ? <Mail size={14} /> : <Link2 size={14} />}
+                  {inv.email ? (
+                    <Mail size="0.875rem" />
+                  ) : (
+                    <Link2 size="0.875rem" />
+                  )}
                 </span>
                 <span className="ppl-target-text">
                   <span>{inv.email ?? t("invitations.anyone")}</span>
@@ -206,7 +210,7 @@ export const InvitationsPanel = forwardRef<HTMLInputElement>(
                     {
                       id: "resend",
                       label: t("invitations.resend"),
-                      icon: <RefreshCw size={15} aria-hidden="true" />,
+                      icon: <RefreshCw size="0.9375rem" aria-hidden="true" />,
                       disabled: busy,
                       testId: `invite-resend-${inv.id}`,
                       onSelect: () => {
@@ -224,7 +228,7 @@ export const InvitationsPanel = forwardRef<HTMLInputElement>(
                     {
                       id: "revoke",
                       label: t("invitations.revoke"),
-                      icon: <Trash2 size={15} aria-hidden="true" />,
+                      icon: <Trash2 size="0.9375rem" aria-hidden="true" />,
                       danger: true,
                       disabled: busy,
                       testId: `invite-revoke-${inv.id}`,
@@ -346,20 +350,20 @@ export const InvitationsPanel = forwardRef<HTMLInputElement>(
                 {invite.isPending ? (
                   <Spinner size="sm" />
                 ) : (
-                  <Send size={14} aria-hidden="true" />
+                  <Send size="0.875rem" aria-hidden="true" />
                 )}
                 {t("invitations.create")}
               </Button>
             </div>
           </form>
           {failure && (
-            <div style={{ marginTop: 12 }}>
+            <div style={{ marginTop: "0.75rem" }}>
               <FailureNotice failure={failure} />
             </div>
           )}
           {shown?.kind === "link" && (
             <div
-              style={{ marginTop: 16 }}
+              style={{ marginTop: "1rem" }}
               data-testid="invite-link"
               className="ppl-reveal"
             >
@@ -383,12 +387,16 @@ export const InvitationsPanel = forwardRef<HTMLInputElement>(
           {shown?.kind === "sent" && (
             <p
               className="flex items-center ppl-muted"
-              style={{ gap: 8, margin: "14px 0 0", fontSize: 12.5 }}
+              style={{
+                gap: "0.5rem",
+                margin: "0.875rem 0 0",
+                fontSize: "0.78125rem",
+              }}
               role="status"
               data-testid="invite-sent"
             >
               <MailCheck
-                size={15}
+                size="0.9375rem"
                 aria-hidden="true"
                 style={{ color: "var(--c-ok)" }}
               />
@@ -423,7 +431,7 @@ export const InvitationsPanel = forwardRef<HTMLInputElement>(
               <PickerFilter
                 label={t("filters.org")}
                 source={ORGS}
-                icon={<Building2 size={13} aria-hidden="true" />}
+                icon={<Building2 size="0.8125rem" aria-hidden="true" />}
                 testId="invites-filter-org"
                 searchPlaceholder={t("filters.orgSearch")}
                 value={state.filter("org") || null}

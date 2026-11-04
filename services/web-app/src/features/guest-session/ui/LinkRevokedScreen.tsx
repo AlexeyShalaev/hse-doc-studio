@@ -12,22 +12,26 @@ export const LinkRevokedScreen = () => {
       className="flex flex-col items-center justify-center"
       style={{
         flex: 1,
-        gap: 12,
-        padding: 32,
+        gap: "0.75rem",
+        padding: "2rem",
         textAlign: "center",
         minHeight: "60vh",
       }}
     >
-      <Link2Off size={32} aria-hidden="true" style={{ color: "var(--fg-2)" }} />
-      <h1 style={{ margin: 0, fontSize: 18, fontWeight: 600 }}>
+      <Link2Off
+        size="2rem"
+        aria-hidden="true"
+        style={{ color: "var(--fg-2)" }}
+      />
+      <h1 style={{ margin: 0, fontSize: "1.125rem", fontWeight: 600 }}>
         {t("revoked.title")}
       </h1>
       <p
         style={{
           margin: 0,
           color: "var(--fg-2)",
-          fontSize: 13,
-          maxWidth: 420,
+          fontSize: "0.8125rem",
+          maxWidth: "26.25rem",
           lineHeight: 1.5,
         }}
       >

@@ -40,14 +40,14 @@ const EMPTY_DRAFT: BibliographyDraft = { entries: [] };
 const CARD_BORDER = "1px solid var(--border)";
 
 const iconButtonStyle: React.CSSProperties = {
-  minWidth: 24,
-  height: 24,
-  padding: "0 5px",
+  minWidth: "1.5rem",
+  height: "1.5rem",
+  padding: "0 0.3125rem",
   border: "1px solid var(--border)",
-  borderRadius: 5,
+  borderRadius: "0.3125rem",
   background: "var(--bg-1)",
   color: "var(--fg-2)",
-  fontSize: 12,
+  fontSize: "0.75rem",
   lineHeight: 1,
   cursor: "pointer",
 };
@@ -122,7 +122,7 @@ export const BibliographyEditorModal = ({
       type="button"
       title={label}
       aria-label={label}
-      style={{ ...iconButtonStyle, minWidth: 28, ...fontStyle }}
+      style={{ ...iconButtonStyle, minWidth: "1.75rem", ...fontStyle }}
       onMouseDown={(event) => {
         event.preventDefault(); // keep the focused cell's selection
       }}
@@ -160,7 +160,7 @@ export const BibliographyEditorModal = ({
       }
     >
       {!scaffold ? (
-        <p style={{ margin: 0, color: "var(--fg-2)", fontSize: 13 }}>
+        <p style={{ margin: 0, color: "var(--fg-2)", fontSize: "0.8125rem" }}>
           {t("bibliographyEditor.unsupported")}
         </p>
       ) : (
@@ -172,9 +172,9 @@ export const BibliographyEditorModal = ({
               zIndex: 1,
               display: "flex",
               alignItems: "center",
-              gap: 8,
-              marginBottom: 12,
-              paddingBottom: 8,
+              gap: "0.5rem",
+              marginBottom: "0.75rem",
+              paddingBottom: "0.5rem",
               borderBottom: CARD_BORDER,
               background: "var(--bg-1)",
             }}
@@ -204,7 +204,11 @@ export const BibliographyEditorModal = ({
               ↷
             </button>
             <span
-              style={{ width: 1, height: 18, background: "var(--border)" }}
+              style={{
+                width: 1,
+                height: "1.125rem",
+                background: "var(--border)",
+              }}
             />
             {formatButton("bold", t("bibliographyEditor.bold"), "Ж", {
               fontWeight: 700,
@@ -219,7 +223,7 @@ export const BibliographyEditorModal = ({
               style={{
                 marginLeft: "auto",
                 color: "var(--fg-3)",
-                fontSize: 12,
+                fontSize: "0.75rem",
               }}
             >
               {t("bibliographyEditor.count", { count })}
@@ -233,7 +237,7 @@ export const BibliographyEditorModal = ({
               padding: 0,
               display: "flex",
               flexDirection: "column",
-              gap: 10,
+              gap: "0.625rem",
             }}
           >
             {draft.entries.map((entry, index) => (
@@ -241,12 +245,12 @@ export const BibliographyEditorModal = ({
                 key={index}
                 style={{
                   display: "grid",
-                  gridTemplateColumns: "26px 1fr auto",
-                  gap: 8,
+                  gridTemplateColumns: "1.625rem 1fr auto",
+                  gap: "0.5rem",
                   alignItems: "start",
-                  padding: 10,
+                  padding: "0.625rem",
                   border: CARD_BORDER,
-                  borderRadius: 8,
+                  borderRadius: "0.5rem",
                   background: "var(--bg-0)",
                 }}
               >
@@ -255,24 +259,28 @@ export const BibliographyEditorModal = ({
                     fontVariantNumeric: "tabular-nums",
                     fontWeight: 700,
                     color: "var(--accent)",
-                    paddingTop: 5,
+                    paddingTop: "0.3125rem",
                   }}
                 >
                   {index + 1}.
                 </span>
                 <div
-                  style={{ display: "flex", flexDirection: "column", gap: 6 }}
+                  style={{
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: "0.375rem",
+                  }}
                 >
                   <label
                     style={{
                       display: "flex",
                       alignItems: "center",
-                      gap: 6,
-                      fontSize: 12,
+                      gap: "0.375rem",
+                      fontSize: "0.75rem",
                       color: "var(--fg-3)",
                     }}
                   >
-                    <span style={{ minWidth: 34 }}>
+                    <span style={{ minWidth: "2.125rem" }}>
                       {t("bibliographyEditor.key")}
                     </span>
                     <input
@@ -295,17 +303,17 @@ export const BibliographyEditorModal = ({
                       style={{
                         boxSizing: "border-box",
                         flex: 1,
-                        padding: "3px 6px",
+                        padding: "0.1875rem 0.375rem",
                         border: `1px solid ${
                           entry.key.trim() === ""
                             ? "var(--danger, var(--accent-line))"
                             : "var(--border)"
                         }`,
-                        borderRadius: 5,
+                        borderRadius: "0.3125rem",
                         background: "var(--bg-1)",
                         color: "var(--fg-0)",
                         fontFamily: "var(--font-mono)",
-                        fontSize: 12,
+                        fontSize: "0.75rem",
                       }}
                     />
                   </label>
@@ -321,7 +329,11 @@ export const BibliographyEditorModal = ({
                   />
                 </div>
                 <div
-                  style={{ display: "flex", flexDirection: "column", gap: 4 }}
+                  style={{
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: "0.25rem",
+                  }}
                 >
                   <button
                     type="button"
@@ -365,10 +377,10 @@ export const BibliographyEditorModal = ({
               <li
                 style={{
                   border: CARD_BORDER,
-                  borderRadius: 8,
-                  padding: "16px 8px",
+                  borderRadius: "0.5rem",
+                  padding: "1rem 0.5rem",
                   color: "var(--fg-3)",
-                  fontSize: 12,
+                  fontSize: "0.75rem",
                   fontStyle: "italic",
                   textAlign: "center",
                 }}
@@ -384,14 +396,14 @@ export const BibliographyEditorModal = ({
               apply((d) => addEntry(d), null);
             }}
             style={{
-              marginTop: 12,
-              padding: "6px 12px",
+              marginTop: "0.75rem",
+              padding: "0.375rem 0.75rem",
               border: "1px dashed var(--accent-line)",
-              borderRadius: 7,
+              borderRadius: "0.4375rem",
               background: "var(--accent-soft)",
               color: "var(--accent)",
               fontFamily: "var(--font-sans)",
-              fontSize: 12,
+              fontSize: "0.75rem",
               fontWeight: 600,
               cursor: "pointer",
             }}

@@ -4,7 +4,7 @@
 .ops-stack {
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 1.25rem;
   min-width: 0;
 }
 
@@ -12,8 +12,8 @@
 .ops-banner {
   display: flex;
   align-items: flex-start;
-  gap: 12px;
-  padding: 12px 16px;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
   border-radius: var(--r-3);
   border: 1px solid var(--border);
   background: var(--bg-1);
@@ -42,17 +42,17 @@
   min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 0.125rem;
 }
 .ops-banner-title {
   margin: 0;
-  font-size: 13px;
+  font-size: 0.8125rem;
   font-weight: 600;
   color: var(--fg-0);
 }
 .ops-banner-body {
   margin: 0;
-  font-size: 12.5px;
+  font-size: 0.78125rem;
   line-height: 1.5;
   color: var(--fg-1);
 }
@@ -69,7 +69,7 @@
   background: var(--bg-hover);
 }
 .ops-table td {
-  height: 52px;
+  height: 3.25rem;
 }
 /* Строки без перехода по клику не подсвечиваются: подсветка обещает действие. */
 .ops-table.ops-static tbody tr:hover {
@@ -78,13 +78,13 @@
 .ops-version {
   display: inline-flex;
   align-items: center;
-  height: 17px;
-  padding: 0 5px;
+  height: 1.0625rem;
+  padding: 0 0.3125rem;
   border-radius: var(--r-1);
   background: var(--bg-3);
   color: var(--fg-1);
   font-family: var(--font-mono);
-  font-size: 10.5px;
+  font-size: 0.65625rem;
   font-variant-numeric: tabular-nums;
 }
 /* Таблица во всю ширину карточки раздела: без второй рамки. */
@@ -108,17 +108,17 @@
 .ops-cell {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 0.125rem;
   min-width: 0;
 }
 .ops-cell-title {
-  font-size: 13px;
+  font-size: 0.8125rem;
   font-weight: 500;
   color: var(--fg-0);
   white-space: nowrap;
 }
 .ops-cell-sub {
-  font-size: 12px;
+  font-size: 0.75rem;
   color: var(--fg-2);
   white-space: nowrap;
   overflow: hidden;
@@ -127,7 +127,7 @@
 /* Имя раннера в очереди в одну строку: длинное режется, а не ломает ряд. */
 .ops-ellipsis {
   display: block;
-  max-width: 150px;
+  max-width: 9.375rem;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -138,14 +138,14 @@
 }
 .ops-code {
   font-family: var(--font-mono);
-  font-size: 11px;
+  font-size: 0.6875rem;
   color: var(--fg-2);
   letter-spacing: 0;
 }
 .ops-tags {
   display: flex;
   flex-wrap: wrap;
-  gap: 4px;
+  gap: 0.25rem;
 }
 /* Тег и класс раннера в строке: щелчок ставит фильтр списка. */
 .ops-tag-btn {
@@ -168,29 +168,29 @@
   cursor: pointer;
   color: inherit;
   text-decoration: underline dotted;
-  text-underline-offset: 2px;
+  text-underline-offset: 0.125rem;
 }
 .ops-link:hover {
   color: var(--fg-0);
 }
 /* Поиск и фильтры внутри карточки раздела (токены): те же отступы, что у строк. */
 .ops-section-bar {
-  padding: 0 20px 12px;
+  padding: 0 1.25rem 0.75rem;
 }
 .ops-section-pager {
-  padding: 10px 20px 4px;
+  padding: 0.625rem 1.25rem 0.25rem;
   border-top: 1px solid var(--border);
 }
 .ops-sort > button {
-  min-width: 170px;
+  min-width: 10.625rem;
 }
 .ops-owner-org {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
+  gap: 0.25rem;
 }
 .ops-version[data-outdated] {
-  gap: 3px;
+  gap: 0.1875rem;
   background: var(--c-warn-soft);
   color: var(--c-warn);
   cursor: help;
@@ -198,14 +198,14 @@
 .ops-token-actions {
   display: inline-flex;
   justify-content: flex-end;
-  width: 28px;
+  width: 1.75rem;
   flex-shrink: 0;
 }
 .ops-row-actions {
   display: flex;
   align-items: center;
   justify-content: flex-end;
-  gap: 4px;
+  gap: 0.25rem;
 }
 /* Отмена в очереди видна у строки под курсором или с фокусом: одинаковые
    кнопки в каждой строке только шумят. На сенсорных экранах видна всегда. */
@@ -227,11 +227,11 @@
 .ops-load {
   display: flex;
   flex-direction: column;
-  gap: 5px;
-  width: 96px;
+  gap: 0.3125rem;
+  width: 6rem;
 }
 .ops-load-text {
-  font-size: 12.5px;
+  font-size: 0.78125rem;
   color: var(--fg-1);
   font-variant-numeric: tabular-nums;
 }
@@ -241,14 +241,14 @@
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 6px 16px;
-  font-size: 12.5px;
+  gap: 0.375rem 1rem;
+  font-size: 0.78125rem;
   color: var(--fg-2);
 }
 .ops-classes-item {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: 0.375rem;
   color: var(--fg-1);
 }
 .ops-classes-item strong {
@@ -260,8 +260,8 @@
 .ops-foot {
   display: flex;
   align-items: center;
-  gap: 12px;
-  font-size: 12px;
+  gap: 0.75rem;
+  font-size: 0.75rem;
   color: var(--fg-2);
 }
 
@@ -271,16 +271,16 @@
   margin: 0;
   padding: 0;
   display: grid;
-  gap: 12px;
-  grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr));
+  gap: 0.75rem;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 18.75rem), 1fr));
   /* Карточки в ряду одной высоты: нижняя строка прижата к низу. */
   align-items: stretch;
 }
 .ops-service {
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  padding: 16px;
+  gap: 0.75rem;
+  padding: 1rem;
   border-radius: var(--r-3);
   border: 1px solid var(--border);
   background: var(--bg-1);
@@ -290,14 +290,14 @@
 .ops-service[data-status="down"] {
   border-color: color-mix(in oklch, var(--c-err) 50%, var(--border));
   box-shadow:
-    inset 3px 0 0 var(--c-err),
+    inset 0.1875rem 0 0 var(--c-err),
     var(--shadow-1);
 }
 .ops-service[data-status="degraded"],
 .ops-service[data-health="partial"] {
   border-color: color-mix(in oklch, var(--c-warn) 50%, var(--border));
   box-shadow:
-    inset 3px 0 0 var(--c-warn),
+    inset 0.1875rem 0 0 var(--c-warn),
     var(--shadow-1);
 }
 .ops-service[data-status="unconfigured"] {
@@ -308,11 +308,11 @@
 .ops-service-head {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 0.75rem;
 }
 .ops-service-icon {
-  width: 32px;
-  height: 32px;
+  width: 2rem;
+  height: 2rem;
   flex-shrink: 0;
   display: inline-flex;
   align-items: center;
@@ -338,17 +338,17 @@
   min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 3px;
+  gap: 0.1875rem;
 }
 .ops-service-name {
   margin: 0;
-  font-size: 13.5px;
+  font-size: 0.84375rem;
   font-weight: 600;
   color: var(--fg-0);
 }
 .ops-service-role {
   margin: 0;
-  font-size: 12px;
+  font-size: 0.75rem;
   line-height: 1.45;
   color: var(--fg-2);
 }
@@ -356,21 +356,21 @@
   margin-top: auto;
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  padding-top: 12px;
+  gap: 0.375rem;
+  padding-top: 0.75rem;
   border-top: 1px solid var(--border);
-  font-size: 12.5px;
+  font-size: 0.78125rem;
   color: var(--fg-1);
 }
 .ops-service-line {
   display: flex;
   align-items: baseline;
   justify-content: space-between;
-  gap: 8px;
+  gap: 0.5rem;
 }
 .ops-service-impact {
   margin: 0;
-  font-size: 12px;
+  font-size: 0.75rem;
   line-height: 1.45;
   color: var(--fg-2);
 }
@@ -379,45 +379,45 @@
 .ops-disk {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 0.75rem;
 }
 .ops-disk-figure {
   display: flex;
   align-items: baseline;
   flex-wrap: wrap;
-  gap: 4px 10px;
+  gap: 0.25rem 0.625rem;
 }
 .ops-disk-value {
-  font-size: 22px;
+  font-size: 1.375rem;
   font-weight: 600;
   color: var(--fg-0);
   letter-spacing: -0.01em;
 }
 .ops-disk-of {
-  font-size: 13px;
+  font-size: 0.8125rem;
   color: var(--fg-2);
 }
 .ops-bar {
   display: flex;
-  gap: 2px;
-  height: 12px;
-  border-radius: 4px;
+  gap: 0.125rem;
+  height: 0.75rem;
+  border-radius: 0.25rem;
   overflow: hidden;
   background: var(--bg-1);
 }
 .ops-bar > span {
   display: block;
   height: 100%;
-  min-width: 2px;
+  min-width: 0.125rem;
 }
 .ops-bar > span:first-child {
-  border-radius: 4px 0 0 4px;
+  border-radius: 0.25rem 0 0 0.25rem;
 }
 .ops-bar > span:last-child {
-  border-radius: 0 4px 4px 0;
+  border-radius: 0 0.25rem 0.25rem 0;
 }
 .ops-bar > span:only-child {
-  border-radius: 4px;
+  border-radius: 0.25rem;
 }
 .ops-bar [data-part="used"] {
   background: var(--accent);
@@ -437,32 +437,32 @@
   display: flex;
   align-items: center;
   justify-content: flex-end;
-  gap: 10px;
+  gap: 0.625rem;
 }
 .ops-share .adm-meter {
-  width: 120px;
+  width: 7.5rem;
   flex-shrink: 0;
 }
 /* Без tabular-nums: у Inter моноширинные цифры с «%» выглядят разреженными,
    а выравнивание по правому краю и так держит столбец. */
 .ops-share-pct {
-  width: 36px;
+  width: 2.25rem;
   text-align: right;
   color: var(--fg-1);
-  font-size: 12px;
+  font-size: 0.75rem;
 }
 .ops-rank {
-  width: 20px;
+  width: 1.25rem;
   color: var(--fg-3);
   font-variant-numeric: tabular-nums;
-  font-size: 12px;
+  font-size: 0.75rem;
 }
 
 /* ── квоты: поле с единицей ── */
 .ops-unit-field {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 0.5rem;
 }
 .ops-unit-field .input {
   width: var(--adm-num-width);
@@ -473,8 +473,8 @@
   gap: 0;
 }
 .ops-unit {
-  min-width: 48px;
-  font-size: 12.5px;
+  min-width: 3rem;
+  font-size: 0.78125rem;
   color: var(--fg-2);
 }
 .ops-steps {
@@ -486,9 +486,9 @@
 }
 .ops-steps li {
   display: flex;
-  gap: 12px;
-  padding: 12px 20px;
-  font-size: 12.5px;
+  gap: 0.75rem;
+  padding: 0.75rem 1.25rem;
+  font-size: 0.78125rem;
   line-height: 1.5;
   color: var(--fg-1);
 }
@@ -497,7 +497,7 @@
 }
 .ops-steps li > svg {
   flex-shrink: 0;
-  margin-top: 2px;
+  margin-top: 0.125rem;
   color: var(--fg-2);
 }
 .ops-steps strong {
@@ -508,7 +508,7 @@
 
 @media (max-width: 1180px) {
   .ops-share .adm-meter {
-    width: 72px;
+    width: 4.5rem;
   }
 }
 
@@ -519,58 +519,61 @@
 }
 .ops-resources-row {
   display: grid;
-  grid-template-columns: minmax(180px, 1.4fr) repeat(2, minmax(150px, 1fr));
-  gap: 16px;
+  grid-template-columns: minmax(11.25rem, 1.4fr) repeat(
+      2,
+      minmax(9.375rem, 1fr)
+    );
+  gap: 1rem;
   align-items: center;
-  padding: 10px 0;
+  padding: 0.625rem 0;
   border-top: 1px solid var(--border);
 }
 .ops-resources-row:first-child {
   border-top: none;
 }
 .ops-resources-head {
-  font-size: 12px;
+  font-size: 0.75rem;
   color: var(--fg-3);
   padding-top: 0;
 }
 .ops-resources-hint {
   display: block;
-  font-size: 12px;
+  font-size: 0.75rem;
   color: var(--fg-3);
   font-weight: 400;
 }
 .ops-override-form {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: 0.5rem;
   align-items: center;
-  padding: 4px 0 12px;
+  padding: 0.25rem 0 0.75rem;
 }
 .ops-kpis {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-  gap: 10px;
-  margin-bottom: 12px;
+  grid-template-columns: repeat(auto-fit, minmax(9.375rem, 1fr));
+  gap: 0.625rem;
+  margin-bottom: 0.75rem;
 }
 .ops-facts {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
-  gap: 10px 20px;
-  margin: 0 0 12px;
+  grid-template-columns: repeat(auto-fit, minmax(11.875rem, 1fr));
+  gap: 0.625rem 1.25rem;
+  margin: 0 0 0.75rem;
 }
 .ops-facts dt {
-  font-size: 12px;
+  font-size: 0.75rem;
   color: var(--fg-3);
 }
 .ops-facts dd {
-  margin: 2px 0 0;
-  font-size: 13.5px;
+  margin: 0.125rem 0 0;
+  font-size: 0.84375rem;
   word-break: break-word;
 }
 @media (max-width: 720px) {
   .ops-resources-row {
     grid-template-columns: 1fr;
-    gap: 6px;
+    gap: 0.375rem;
   }
   .ops-resources-head {
     display: none;
@@ -581,20 +584,20 @@
 .lc-table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 13px;
+  font-size: 0.8125rem;
 }
 .lc-table th {
   text-align: left;
   font-weight: 500;
   color: var(--fg-2);
-  padding: 6px 8px;
+  padding: 0.375rem 0.5rem;
 }
 .lc-table td {
-  padding: 8px;
+  padding: 0.5rem;
   vertical-align: top;
   border-top: 1px solid var(--border);
 }
 .lc-sub {
-  font-size: 12px;
+  font-size: 0.75rem;
   color: var(--fg-2);
 }

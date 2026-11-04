@@ -33,14 +33,14 @@ const Logomark = () => (
   <div
     className="flex items-center justify-center font-mono shrink-0"
     style={{
-      width: 26,
-      height: 26,
-      borderRadius: 6,
+      width: "1.625rem",
+      height: "1.625rem",
+      borderRadius: "0.375rem",
       background:
         "linear-gradient(135deg, var(--accent), color-mix(in oklch, var(--accent) 60%, var(--fg-0) 0%))",
       color: "var(--accent-ink)",
       fontWeight: 700,
-      fontSize: 12,
+      fontSize: "0.75rem",
       letterSpacing: "-0.02em",
       boxShadow: "0 0 0 1px var(--accent-line)",
     }}
@@ -100,7 +100,7 @@ export const AppTitlebar = ({
             background: "transparent",
             border: 0,
             padding: 0,
-            gap: 8,
+            gap: "0.5rem",
             alignItems: "center",
           }}
         >
@@ -111,7 +111,7 @@ export const AppTitlebar = ({
           >
             <div
               style={{
-                fontSize: 13,
+                fontSize: "0.8125rem",
                 fontWeight: 600,
                 letterSpacing: "-0.01em",
                 color: "var(--fg-0)",
@@ -123,11 +123,11 @@ export const AppTitlebar = ({
               <div
                 className="mono"
                 style={{
-                  fontSize: 9.5,
+                  fontSize: "0.59375rem",
                   color: "var(--fg-3)",
                   textTransform: "uppercase",
                   letterSpacing: "0.1em",
-                  marginTop: -2,
+                  marginTop: "-0.125rem",
                 }}
               >
                 {versionLabel}
@@ -139,10 +139,10 @@ export const AppTitlebar = ({
         <div
           className="titlebar-crumbs flex items-center flex-1 min-w-0 overflow-hidden"
           style={{
-            gap: 8,
-            marginLeft: 26,
+            gap: "0.5rem",
+            marginLeft: "1.625rem",
             color: "var(--fg-2)",
-            fontSize: 12.5,
+            fontSize: "0.78125rem",
             alignItems: "center",
           }}
         >
@@ -154,13 +154,13 @@ export const AppTitlebar = ({
             )}
             style={{
               width: "auto",
-              padding: "5px 10px",
+              padding: "0.3125rem 0.625rem",
               color: isOnWelcome ? "var(--fg-0)" : "var(--fg-2)",
             }}
             onClick={handleBackToWelcome}
             aria-label={t("titlebar.projects")}
           >
-            <GraduationCap size={15} />
+            <GraduationCap size="0.9375rem" />
             {/* Телефон: рядом с именем проекта остаётся значок, на главной подпись нужна как заголовок */}
             <span className={clsx(!isOnWelcome && "titlebar-crumb-label")}>
               {t("titlebar.projects")}
@@ -169,13 +169,13 @@ export const AppTitlebar = ({
           {projectName && (
             <>
               <ChevronRight
-                size={12}
+                size="0.75rem"
                 className="titlebar-crumb-root"
                 style={{ color: "var(--fg-3)", flexShrink: 0 }}
               />
               <div
                 className="flex items-center min-w-0 overflow-hidden"
-                style={{ gap: 8 }}
+                style={{ gap: "0.5rem" }}
               >
                 {projectSwitcher ?? (
                   <span
@@ -194,7 +194,7 @@ export const AppTitlebar = ({
                         "color-mix(in oklch, var(--c-warn) 30%, transparent)",
                     }}
                   >
-                    <Lock size={10} />
+                    <Lock size="0.625rem" />
                     NDA
                   </span>
                 )}
@@ -205,12 +205,12 @@ export const AppTitlebar = ({
 
         <div
           className="flex items-center shrink-0"
-          style={{ gap: 4, alignItems: "center" }}
+          style={{ gap: "0.25rem", alignItems: "center" }}
         >
           {projectActions && !isPhone && (
             <div
               className="flex items-center shrink-0"
-              style={{ marginRight: 4 }}
+              style={{ marginRight: "0.25rem" }}
             >
               {projectActions}
             </div>
@@ -227,11 +227,11 @@ export const AppTitlebar = ({
               onClick={toggleSystemChat}
               style={
                 systemChatOpen
-                  ? { width: 32, height: 32, color: "var(--accent)" }
-                  : { width: 32, height: 32 }
+                  ? { width: "2rem", height: "2rem", color: "var(--accent)" }
+                  : { width: "2rem", height: "2rem" }
               }
             >
-              <Bot size={16} />
+              <Bot size="1rem" />
             </button>
           )}
 
@@ -247,11 +247,11 @@ export const AppTitlebar = ({
               onClick={handleOpenSettings}
               style={
                 settingsActive
-                  ? { width: 32, height: 32, color: "var(--accent)" }
-                  : { width: 32, height: 32 }
+                  ? { width: "2rem", height: "2rem", color: "var(--accent)" }
+                  : { width: "2rem", height: "2rem" }
               }
             >
-              <Settings size={16} />
+              <Settings size="1rem" />
             </button>
           )}
           {!isGuest && <InboxBell />}

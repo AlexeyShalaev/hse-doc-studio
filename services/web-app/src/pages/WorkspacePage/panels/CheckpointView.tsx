@@ -67,7 +67,7 @@ export const CheckpointView = ({
     return (
       <div style={PAGE_STYLE}>
         <PageHead icon={ClipboardCheck} title={t("checkpoint.title")} />
-        <div className="flex justify-center" style={{ padding: 32 }}>
+        <div className="flex justify-center" style={{ padding: "2rem" }}>
           <Spinner />
         </div>
       </div>
@@ -80,7 +80,10 @@ export const CheckpointView = ({
     return (
       <div style={PAGE_STYLE}>
         <PageHead icon={ClipboardCheck} title={t("checkpoint.title")} />
-        <p className="dim" style={{ marginTop: 24, fontSize: 13 }}>
+        <p
+          className="dim"
+          style={{ marginTop: "1.5rem", fontSize: "0.8125rem" }}
+        >
           {t("submit.noProfiles")}
         </p>
       </div>
@@ -150,12 +153,12 @@ export const CheckpointView = ({
         style={{
           display: "grid",
           gridTemplateColumns: "minmax(0, 1.4fr) minmax(0, 1fr)",
-          gap: 20,
-          marginTop: 24,
+          gap: "1.25rem",
+          marginTop: "1.5rem",
           alignItems: "start",
         }}
       >
-        <div className="flex flex-col" style={{ gap: 16 }}>
+        <div className="flex flex-col" style={{ gap: "1rem" }}>
           {items.length > 0 && (
             <SectionCard title={t("checkpoint.sectionDocs")}>
               <div className="flex flex-col">
@@ -203,14 +206,14 @@ export const CheckpointView = ({
                       <span className={clsx("dot", sev)} />
                       <span
                         className="truncate"
-                        style={{ minWidth: 0, fontSize: 13 }}
+                        style={{ minWidth: 0, fontSize: "0.8125rem" }}
                         title={meta.name}
                       >
                         {meta.name}
                       </span>
                       <span
                         style={{
-                          fontSize: 11.5,
+                          fontSize: "0.71875rem",
                           whiteSpace: "nowrap",
                           color:
                             sev === "err"
@@ -246,7 +249,7 @@ export const CheckpointView = ({
                             <span
                               key={signature.slotId}
                               className="flex items-center"
-                              style={{ gap: 5 }}
+                              style={{ gap: "0.3125rem" }}
                             >
                               <span
                                 className={clsx(
@@ -287,7 +290,7 @@ export const CheckpointView = ({
                   return (
                     <div key={form.id} className="cp-row">
                       <Icon
-                        size={13}
+                        size="0.8125rem"
                         style={{
                           justifySelf: "end",
                           flexShrink: 0,
@@ -299,13 +302,13 @@ export const CheckpointView = ({
                       />
                       <span
                         className="truncate"
-                        style={{ minWidth: 0, fontSize: 13 }}
+                        style={{ minWidth: 0, fontSize: "0.8125rem" }}
                       >
                         {pickLocalized(form.title, lang, form.id)}
                       </span>
                       <span
                         style={{
-                          fontSize: 11.5,
+                          fontSize: "0.71875rem",
                           whiteSpace: "nowrap",
                           color: form.complete
                             ? "var(--fg-2)"

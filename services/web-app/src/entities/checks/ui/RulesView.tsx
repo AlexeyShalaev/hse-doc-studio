@@ -34,7 +34,13 @@ export const RulesView = ({
   return (
     <div
       className="flex flex-col"
-      style={{ padding: 16, gap: 16, overflowY: "auto", flex: 1, minHeight: 0 }}
+      style={{
+        padding: "1rem",
+        gap: "1rem",
+        overflowY: "auto",
+        flex: 1,
+        minHeight: 0,
+      }}
     >
       {categoriesWithCounts.length > 0 && (
         <CategoryChips
@@ -46,7 +52,7 @@ export const RulesView = ({
       )}
 
       {rulesBySource.length === 0 && (
-        <div className="dim" style={{ padding: 24, textAlign: "center" }}>
+        <div className="dim" style={{ padding: "1.5rem", textAlign: "center" }}>
           {t("rules.empty")}
         </div>
       )}
@@ -83,14 +89,14 @@ const CategoryChips = ({
 }: CategoryChipsProps) => {
   const { t } = useTranslation("checks");
   return (
-    <div className="flex flex-col" style={{ gap: 6 }}>
+    <div className="flex flex-col" style={{ gap: "0.375rem" }}>
       <span
         className="label-up dimmer"
-        style={{ fontSize: 9.5, letterSpacing: "0.1em" }}
+        style={{ fontSize: "0.59375rem", letterSpacing: "0.1em" }}
       >
         {t("rules.categories")}
       </span>
-      <div className="flex flex-wrap" style={{ gap: 6 }}>
+      <div className="flex flex-wrap" style={{ gap: "0.375rem" }}>
         {categoriesWithCounts.map(([cat, count]) => {
           const off = disabledCategories.has(cat);
           return (
@@ -112,7 +118,7 @@ const CategoryChips = ({
               }
             >
               {cat}
-              <span className="mono dim" style={{ fontSize: 9.5 }}>
+              <span className="mono dim" style={{ fontSize: "0.59375rem" }}>
                 {count}
               </span>
             </button>
@@ -149,21 +155,21 @@ const SourceGroup = ({
   const anyEnabled = enabledCount > 0;
 
   return (
-    <div className="flex flex-col" style={{ gap: 6 }}>
+    <div className="flex flex-col" style={{ gap: "0.375rem" }}>
       <div
         className="flex items-center justify-between"
-        style={{ padding: "0 4px" }}
+        style={{ padding: "0 0.25rem" }}
       >
-        <div className="flex items-center" style={{ gap: 8 }}>
-          <span style={{ fontSize: 12.5, fontWeight: 600 }}>
+        <div className="flex items-center" style={{ gap: "0.5rem" }}>
+          <span style={{ fontSize: "0.78125rem", fontWeight: 600 }}>
             {formatSource(source, rules[0]?.source_label)}
           </span>
-          <span className="mono dimmer" style={{ fontSize: 10 }}>
+          <span className="mono dimmer" style={{ fontSize: "0.625rem" }}>
             {source}
           </span>
         </div>
-        <div className="flex items-center" style={{ gap: 10 }}>
-          <span className="dim" style={{ fontSize: 11 }}>
+        <div className="flex items-center" style={{ gap: "0.625rem" }}>
+          <span className="dim" style={{ fontSize: "0.6875rem" }}>
             {enabledCount} / {rules.length}
           </span>
           <button
@@ -223,8 +229,8 @@ const RuleRow = ({
     <div
       className="flex items-center"
       style={{
-        padding: "9px 12px",
-        gap: 12,
+        padding: "0.5625rem 0.75rem",
+        gap: "0.75rem",
         borderTop: isFirst ? "none" : "1px solid var(--border)",
         opacity: rule.enabled ? 1 : 0.55,
       }}
@@ -240,11 +246,11 @@ const RuleRow = ({
           onResetSeverity(rule.rule_id);
         }}
       />
-      <div className="flex flex-col min-w-0 flex-1" style={{ gap: 2 }}>
-        <span style={{ fontSize: 12.5, fontWeight: 500 }}>
+      <div className="flex flex-col min-w-0 flex-1" style={{ gap: "0.125rem" }}>
+        <span style={{ fontSize: "0.78125rem", fontWeight: 500 }}>
           {pickLocalized(rule.title, i18n.language, rule.rule_id)}
         </span>
-        <span className="mono dim" style={{ fontSize: 10.5 }}>
+        <span className="mono dim" style={{ fontSize: "0.65625rem" }}>
           {rule.rule_id}
         </span>
       </div>

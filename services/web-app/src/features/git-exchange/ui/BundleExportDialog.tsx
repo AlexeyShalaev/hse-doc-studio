@@ -96,11 +96,11 @@ export const BundleExportDialog = ({
       }}
       noValidate
       className="flex flex-col"
-      style={{ gap: 14 }}
+      style={{ gap: "0.875rem" }}
     >
       <p
         className="dim"
-        style={{ margin: 0, fontSize: 12.5, lineHeight: 1.55 }}
+        style={{ margin: 0, fontSize: "0.78125rem", lineHeight: 1.55 }}
       >
         {t("export.explain")}
       </p>
@@ -108,7 +108,7 @@ export const BundleExportDialog = ({
       {contents.isLoading && (
         <div
           className="flex items-center dim"
-          style={{ gap: 8, fontSize: 12 }}
+          style={{ gap: "0.5rem", fontSize: "0.75rem" }}
           role="status"
         >
           <Spinner size="sm" />
@@ -125,7 +125,7 @@ export const BundleExportDialog = ({
         />
       )}
 
-      <div className="flex flex-col" style={{ gap: 10 }}>
+      <div className="flex flex-col" style={{ gap: "0.625rem" }}>
         <CheckRow
           checked={protect}
           disabled={working}
@@ -137,14 +137,18 @@ export const BundleExportDialog = ({
           testId="export-protect"
         >
           <span
-            style={{ display: "inline-flex", alignItems: "center", gap: 6 }}
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: "0.375rem",
+            }}
           >
-            <Lock size={12} aria-hidden="true" />
+            <Lock size="0.75rem" aria-hidden="true" />
             {t("export.protect")}
           </span>
         </CheckRow>
         {protect && (
-          <div className="flex flex-col" style={{ gap: 10 }}>
+          <div className="flex flex-col" style={{ gap: "0.625rem" }}>
             <PasswordField
               label={t("export.password")}
               value={password}
@@ -202,7 +206,7 @@ export const BundleExportDialog = ({
             downloadBlob(saved.blob, saved.filename);
           }}
         >
-          <Download size={12} aria-hidden="true" />
+          <Download size="0.75rem" aria-hidden="true" />
           {t("export.done.again")}
         </button>
       }
@@ -263,7 +267,7 @@ export const BundleExportDialog = ({
                 {working ? (
                   <Spinner size="sm" />
                 ) : (
-                  <Download size={12} aria-hidden="true" />
+                  <Download size="0.75rem" aria-hidden="true" />
                 )}
                 {working ? t("export.working") : t("export.submit")}
               </button>

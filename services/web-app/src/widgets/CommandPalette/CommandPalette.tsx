@@ -326,7 +326,7 @@ export const CommandPalette = () => {
         <DialogPrimitive.Overlay className="scrim" />
         <DialogPrimitive.Content
           className="modal-panel fixed left-1/2 top-1/3 z-[101] -translate-x-1/2 -translate-y-1/2"
-          style={{ width: 520, maxWidth: "calc(100vw - 32px)" }}
+          style={{ width: "32.5rem", maxWidth: "calc(100vw - 2rem)" }}
         >
           <DialogPrimitive.Title className="sr-only">
             {t("commandPalette.title")}
@@ -334,17 +334,17 @@ export const CommandPalette = () => {
           <div
             className="flex items-center"
             style={{
-              padding: "10px 14px",
+              padding: "0.625rem 0.875rem",
               borderBottom: "1px solid var(--border)",
-              gap: 10,
+              gap: "0.625rem",
             }}
           >
-            <Search size={14} style={{ color: "var(--fg-2)" }} />
+            <Search size="0.875rem" style={{ color: "var(--fg-2)" }} />
             <input
               ref={inputRef}
               className="flex-1 bg-transparent outline-none text-fg-0"
               style={{
-                fontSize: 13,
+                fontSize: "0.8125rem",
                 border: 0,
                 padding: 0,
               }}
@@ -358,13 +358,16 @@ export const CommandPalette = () => {
           </div>
           <div
             style={{
-              maxHeight: 360,
+              maxHeight: "22.5rem",
               overflowY: "auto",
-              padding: 6,
+              padding: "0.375rem",
             }}
           >
             {filtered.length === 0 ? (
-              <div className="dim" style={{ padding: 16, textAlign: "center" }}>
+              <div
+                className="dim"
+                style={{ padding: "1rem", textAlign: "center" }}
+              >
                 {t("commandPalette.empty")}
               </div>
             ) : (
@@ -377,7 +380,7 @@ export const CommandPalette = () => {
                     className="row-btn"
                     onClick={c.run}
                   >
-                    <Icon size={14} style={{ color: "var(--fg-2)" }} />
+                    <Icon size="0.875rem" style={{ color: "var(--fg-2)" }} />
                     <span className="flex-1">{c.label}</span>
                     {c.shortcut && <span className="kbd">{c.shortcut}</span>}
                   </button>

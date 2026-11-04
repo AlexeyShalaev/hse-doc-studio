@@ -14,10 +14,10 @@ export type ContentsPreviewProps = {
 const factStyle: React.CSSProperties = {
   display: "flex",
   justifyContent: "space-between",
-  gap: 12,
-  padding: "5px 0",
+  gap: "0.75rem",
+  padding: "0.3125rem 0",
   borderBottom: "1px solid var(--border)",
-  fontSize: 12,
+  fontSize: "0.75rem",
 };
 
 const Fact = ({ label, value }: { label: string; value: string }) => (
@@ -45,7 +45,7 @@ export const ContentsPreview = ({
       <div
         className="flex items-center dim"
         role="status"
-        style={{ gap: 8, fontSize: 12 }}
+        style={{ gap: "0.5rem", fontSize: "0.75rem" }}
       >
         <Spinner size="sm" />
         {t("contents.loading")}
@@ -68,7 +68,7 @@ export const ContentsPreview = ({
   }
 
   return (
-    <div className="flex flex-col" style={{ gap: 10 }}>
+    <div className="flex flex-col" style={{ gap: "0.625rem" }}>
       {contents.over_limit.length > 0 && (
         <div data-testid="over-limit">
           <Notice
@@ -84,7 +84,7 @@ export const ContentsPreview = ({
                 {t("contents.overLimit.text")}
                 <ul
                   style={{
-                    margin: "6px 0 0",
+                    margin: "0.375rem 0 0",
                     padding: 0,
                     listStyle: "none",
                   }}
@@ -93,11 +93,11 @@ export const ContentsPreview = ({
                     <li
                       key={file.path}
                       className="flex"
-                      style={{ gap: 8, justifyContent: "space-between" }}
+                      style={{ gap: "0.5rem", justifyContent: "space-between" }}
                     >
                       <span
                         className="mono truncate"
-                        style={{ fontSize: 11.5, minWidth: 0 }}
+                        style={{ fontSize: "0.71875rem", minWidth: 0 }}
                         title={file.path}
                       >
                         {file.path}
@@ -133,7 +133,7 @@ export const ContentsPreview = ({
       )}
       <details className="sync-details" data-testid="contents-details">
         <summary>{t("contents.title")}</summary>
-        <div style={{ marginTop: 8 }}>
+        <div style={{ marginTop: "0.5rem" }}>
           <dl style={{ margin: 0 }}>
             <Fact
               label={t("contents.filesLabel")}
@@ -167,10 +167,14 @@ export const ContentsPreview = ({
             />
           </dl>
           {contents.largest.length > 0 && (
-            <div style={{ marginTop: 10 }}>
+            <div style={{ marginTop: "0.625rem" }}>
               <div
                 className="dim"
-                style={{ fontSize: 11, marginBottom: 4, fontWeight: 600 }}
+                style={{
+                  fontSize: "0.6875rem",
+                  marginBottom: "0.25rem",
+                  fontWeight: 600,
+                }}
               >
                 {t("contents.largest")}
               </div>
@@ -180,10 +184,10 @@ export const ContentsPreview = ({
                     key={file.path}
                     className="flex"
                     style={{
-                      gap: 8,
+                      gap: "0.5rem",
                       justifyContent: "space-between",
-                      fontSize: 11.5,
-                      padding: "2px 0",
+                      fontSize: "0.71875rem",
+                      padding: "0.125rem 0",
                     }}
                   >
                     <span

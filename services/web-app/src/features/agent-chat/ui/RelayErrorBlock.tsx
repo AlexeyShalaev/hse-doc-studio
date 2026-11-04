@@ -31,21 +31,21 @@ export const RelayErrorBlock = ({
       data-code={code}
       className="flex items-start"
       style={{
-        gap: 10,
-        margin: "6px 12px",
-        padding: "10px 12px",
+        gap: "0.625rem",
+        margin: "0.375rem 0.75rem",
+        padding: "0.625rem 0.75rem",
         borderRadius: "var(--r-2)",
         border:
           "1px solid color-mix(in oklch, var(--c-warn) 40%, var(--border))",
         background: "var(--c-warn-soft)",
-        fontSize: 12,
+        fontSize: "0.75rem",
         lineHeight: 1.5,
       }}
     >
       <ServerOff
-        size={14}
+        size="0.875rem"
         aria-hidden="true"
-        style={{ color: "var(--c-warn)", flexShrink: 0, marginTop: 2 }}
+        style={{ color: "var(--c-warn)", flexShrink: 0, marginTop: "0.125rem" }}
       />
       <span style={{ flex: 1, minWidth: 0 }}>{text}</span>
       <button

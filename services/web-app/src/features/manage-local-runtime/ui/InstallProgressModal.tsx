@@ -60,7 +60,7 @@ export const InstallProgressModal = ({
         <DialogPrimitive.Overlay className="scrim" />
         <DialogPrimitive.Content
           className="modal-panel fixed left-1/2 top-1/2 z-[102] -translate-x-1/2 -translate-y-1/2"
-          style={{ width: 720, maxWidth: "calc(100vw - 32px)" }}
+          style={{ width: "45rem", maxWidth: "calc(100vw - 2rem)" }}
         >
           <DialogPrimitive.Title className="sr-only">
             {title}
@@ -72,19 +72,19 @@ export const InstallProgressModal = ({
           <div
             className="flex items-center justify-between"
             style={{
-              padding: "12px 18px",
+              padding: "0.75rem 1.125rem",
               borderBottom: "1px solid var(--border)",
-              gap: 12,
+              gap: "0.75rem",
             }}
           >
-            <div className="flex items-center" style={{ gap: 8 }}>
-              <Download size={14} style={{ color: "var(--accent)" }} />
-              <h3 style={{ fontSize: 14, fontWeight: 600, margin: 0 }}>
+            <div className="flex items-center" style={{ gap: "0.5rem" }}>
+              <Download size="0.875rem" style={{ color: "var(--accent)" }} />
+              <h3 style={{ fontSize: "0.875rem", fontWeight: 600, margin: 0 }}>
                 {title}
               </h3>
               <span
                 className="mono dim"
-                style={{ fontSize: 11.5 }}
+                style={{ fontSize: "0.71875rem" }}
                 title={target ?? ""}
               >
                 {target}
@@ -96,7 +96,7 @@ export const InstallProgressModal = ({
               onClick={onClose}
               title={t("installModal.close")}
             >
-              <X size={14} />
+              <X size="0.875rem" />
             </button>
           </div>
 
@@ -104,12 +104,12 @@ export const InstallProgressModal = ({
             ref={logRef}
             className="mono"
             style={{
-              padding: 12,
-              height: 360,
+              padding: "0.75rem",
+              height: "22.5rem",
               overflowY: "auto",
               background: "var(--bg-0)",
               borderBottom: "1px solid var(--border)",
-              fontSize: 11.5,
+              fontSize: "0.71875rem",
               lineHeight: 1.45,
               whiteSpace: "pre",
             }}
@@ -127,9 +127,12 @@ export const InstallProgressModal = ({
 
           <div
             className="flex items-center justify-between"
-            style={{ padding: "10px 18px", gap: 12 }}
+            style={{ padding: "0.625rem 1.125rem", gap: "0.75rem" }}
           >
-            <div className="flex items-center" style={{ gap: 8, fontSize: 12 }}>
+            <div
+              className="flex items-center"
+              style={{ gap: "0.5rem", fontSize: "0.75rem" }}
+            >
               {state === "running" && (
                 <>
                   <Spinner size="sm" />
@@ -138,7 +141,10 @@ export const InstallProgressModal = ({
               )}
               {state === "success" && (
                 <>
-                  <CheckCircle2 size={14} style={{ color: "var(--c-ok)" }} />
+                  <CheckCircle2
+                    size="0.875rem"
+                    style={{ color: "var(--c-ok)" }}
+                  />
                   <span style={{ color: "var(--c-ok)" }}>
                     {t("installModal.done")}
                   </span>
@@ -146,14 +152,14 @@ export const InstallProgressModal = ({
               )}
               {state === "failure" && (
                 <>
-                  <XCircle size={14} style={{ color: "var(--c-err)" }} />
+                  <XCircle size="0.875rem" style={{ color: "var(--c-err)" }} />
                   <span style={{ color: "var(--c-err)" }}>
                     {t("installModal.failed")}
                   </span>
                 </>
               )}
             </div>
-            <div className="flex items-center" style={{ gap: 8 }}>
+            <div className="flex items-center" style={{ gap: "0.5rem" }}>
               {state === "failure" && url !== null && (
                 <button
                   type="button"

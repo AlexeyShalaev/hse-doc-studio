@@ -11,7 +11,7 @@ export type AutoFileInfoProps = {
 export const AutoFileInfo = ({ file, theirsAuthor }: AutoFileInfoProps) => {
   const { t } = useTranslation("gitConflicts");
   return (
-    <div className="flex flex-col" style={{ gap: 10 }}>
+    <div className="flex flex-col" style={{ gap: "0.625rem" }}>
       <Notice
         tone="info"
         role="status"
@@ -21,9 +21,9 @@ export const AutoFileInfo = ({ file, theirsAuthor }: AutoFileInfoProps) => {
         })}
       />
       {file.copy_path && (
-        <p style={{ margin: 0, fontSize: 12, lineHeight: 1.5 }}>
+        <p style={{ margin: 0, fontSize: "0.75rem", lineHeight: 1.5 }}>
           {t("auto.copy")}{" "}
-          <span className="mono" style={{ fontSize: 11.5 }}>
+          <span className="mono" style={{ fontSize: "0.71875rem" }}>
             {file.copy_path}
           </span>
         </p>

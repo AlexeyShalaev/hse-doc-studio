@@ -144,7 +144,7 @@ const HeaderDemo = () => {
       description="Машины, которые выполняют сборки и проверки."
       actions={
         <button type="button" className="btn primary sm">
-          <Plus size={13} aria-hidden="true" />
+          <Plus size="0.8125rem" aria-hidden="true" />
           Создать токен
         </button>
       }
@@ -169,7 +169,13 @@ const SettingsDemo = () => {
   const [open, setOpen] = useState(false);
   const dirty = (name !== "HSE Doc Studio" ? 1 : 0) + (open ? 1 : 0);
   return (
-    <div style={{ display: "flex", flexDirection: "column", minHeight: 420 }}>
+    <div
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        minHeight: "26.25rem",
+      }}
+    >
       <Section
         title="Название и адрес"
         description="Название видно в письмах и заголовке окна."
@@ -229,14 +235,14 @@ const KPIS = (
   <KpiGrid>
     <KpiTile
       label="Люди"
-      icon={<Users size={14} aria-hidden="true" />}
+      icon={<Users size="0.875rem" aria-hidden="true" />}
       value="128"
       tone="warning"
       secondary="3 ждут одобрения"
     />
     <KpiTile
       label="Раннеры на связи"
-      icon={<Server size={14} aria-hidden="true" />}
+      icon={<Server size="0.875rem" aria-hidden="true" />}
       value="4"
       unit="из 5"
       secondary="В очереди 2, выполняется 3"
@@ -244,7 +250,7 @@ const KPIS = (
     />
     <KpiTile
       label="Занято места"
-      icon={<HardDrive size={14} aria-hidden="true" />}
+      icon={<HardDrive size="0.875rem" aria-hidden="true" />}
       value="86 ГБ"
       progress={78}
       progressTone="warning"
@@ -296,7 +302,9 @@ export const getAdminKitGallery = (): GalleryGroup[] => [
         frame: "window",
         width: 720,
         render: () => (
-          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+          <div
+            style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}
+          >
             <StickySaveBar dirtyCount={2} busy onSave={noop} onDiscard={noop} />
             <StickySaveBar
               dirtyCount={1}
@@ -348,7 +356,7 @@ export const getAdminKitGallery = (): GalleryGroup[] => [
         render: () => (
           <EmptyState
             framed
-            icon={<KeyRound size={18} />}
+            icon={<KeyRound size="1.125rem" />}
             title="Токенов пока нет"
             description="Создайте токен и запустите раннер на своей машине."
             action={
@@ -365,7 +373,9 @@ export const getAdminKitGallery = (): GalleryGroup[] => [
         frame: "window",
         width: 560,
         render: () => (
-          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+          <div
+            style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}
+          >
             <ErrorState
               framed
               description="Сервер не ответил. Проверьте соединение."
@@ -401,7 +411,13 @@ export const getAdminKitGallery = (): GalleryGroup[] => [
         frame: "window",
         width: 520,
         render: () => (
-          <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+          <div
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              gap: "0.875rem",
+            }}
+          >
             <PersonCell
               id="u_01"
               name="Мария Келлер"
@@ -424,14 +440,14 @@ export const getAdminKitGallery = (): GalleryGroup[] => [
           <Section title="Требует внимания" flush>
             <SectionList>
               <ListRow
-                icon={<Users size={15} />}
+                icon={<Users size="0.9375rem" />}
                 tone="warning"
                 title="2 человека ждут одобрения"
                 description="Пока заявка не одобрена, человек не может войти."
                 to="/admin/users"
               />
               <ListRow
-                icon={<Server size={15} />}
+                icon={<Server size="0.9375rem" />}
                 tone="danger"
                 title="Ни один раннер не на связи"
                 description="Сборки ждут в очереди."
@@ -447,8 +463,10 @@ export const getAdminKitGallery = (): GalleryGroup[] => [
         frame: "window",
         width: 560,
         render: () => (
-          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-            <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+          <div
+            style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}
+          >
+            <div style={{ display: "flex", gap: "0.375rem", flexWrap: "wrap" }}>
               <Badge>Пользователь</Badge>
               <Badge variant="accent">Администратор</Badge>
               <Badge variant="success">Активен</Badge>
@@ -456,7 +474,7 @@ export const getAdminKitGallery = (): GalleryGroup[] => [
               <Badge variant="error">Отключён</Badge>
               <Badge variant="info">Задано окружением</Badge>
             </div>
-            <div style={{ display: "flex", gap: 14, flexWrap: "wrap" }}>
+            <div style={{ display: "flex", gap: "0.875rem", flexWrap: "wrap" }}>
               {(
                 ["success", "warning", "danger", "neutral", "info"] as const
               ).map((s) => (
@@ -480,19 +498,19 @@ export const getAdminKitGallery = (): GalleryGroup[] => [
                 {
                   id: "pause",
                   label: "Поставить на паузу",
-                  icon: <Pause size={14} />,
+                  icon: <Pause size="0.875rem" />,
                   onSelect: noop,
                 },
                 {
                   id: "rotate",
                   label: "Новый токен",
-                  icon: <RefreshCw size={14} />,
+                  icon: <RefreshCw size="0.875rem" />,
                   onSelect: noop,
                 },
                 {
                   id: "remove",
                   label: "Удалить",
-                  icon: <Trash2 size={14} />,
+                  icon: <Trash2 size="0.875rem" />,
                   danger: true,
                   onSelect: noop,
                 },
@@ -647,7 +665,13 @@ export const getAdminKitGallery = (): GalleryGroup[] => [
         frame: "window",
         width: 420,
         render: () => (
-          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+          <div
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              gap: "0.625rem",
+            }}
+          >
             {(
               ["online", "stale", "offline", "paused", "degraded"] as const
             ).map((s) => (

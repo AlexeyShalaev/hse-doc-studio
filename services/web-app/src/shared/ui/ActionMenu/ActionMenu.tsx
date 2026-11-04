@@ -56,7 +56,7 @@ export const ActionMenu = ({
           aria-label={label}
           data-testid={testId}
         >
-          <MoreHorizontal size={16} aria-hidden="true" />
+          <MoreHorizontal size="1rem" aria-hidden="true" />
         </button>
       </DropdownMenu.Trigger>
       {isSheet && (

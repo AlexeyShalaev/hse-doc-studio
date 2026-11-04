@@ -28,7 +28,7 @@ const InstanceBody = () => {
   return (
     <div
       className="flex flex-col"
-      style={{ gap: 20, flex: 1 }}
+      style={{ gap: "1.25rem", flex: 1 }}
       data-testid="admin-install"
     >
       <PageHead

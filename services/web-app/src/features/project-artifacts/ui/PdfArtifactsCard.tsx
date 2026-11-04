@@ -48,24 +48,30 @@ const ArtifactRow = ({
   return (
     <div
       className="flex items-center justify-between"
-      style={{ gap: 12 }}
+      style={{ gap: "0.75rem" }}
       data-testid="artifact-row"
     >
-      <div className="flex flex-col" style={{ gap: 2, minWidth: 0 }}>
-        <strong style={{ fontSize: 12.5 }} className="truncate">
+      <div className="flex flex-col" style={{ gap: "0.125rem", minWidth: 0 }}>
+        <strong style={{ fontSize: "0.78125rem" }} className="truncate">
           {artifact.file_name}
         </strong>
-        <span className="dim" style={{ fontSize: 11.5, lineHeight: 1.5 }}>
+        <span
+          className="dim"
+          style={{ fontSize: "0.71875rem", lineHeight: 1.5 }}
+        >
           {meta.join(" · ")}
         </span>
       </div>
-      <div className="flex items-center" style={{ gap: 6, flexShrink: 0 }}>
+      <div
+        className="flex items-center"
+        style={{ gap: "0.375rem", flexShrink: 0 }}
+      >
         <button type="button" className="btn sm" onClick={onOpen}>
-          <Eye size={13} aria-hidden="true" />
+          <Eye size="0.8125rem" aria-hidden="true" />
           {t("artifacts.open")}
         </button>
         <a className="btn sm" href={href} download={artifact.file_name}>
-          <Download size={13} aria-hidden="true" />
+          <Download size="0.8125rem" aria-hidden="true" />
           {t("artifacts.download")}
         </a>
         {canDelete && (
@@ -77,7 +83,7 @@ const ArtifactRow = ({
             disabled={isDeleting}
             onClick={onDelete}
           >
-            <Trash2 size={14} aria-hidden="true" />
+            <Trash2 size="0.875rem" aria-hidden="true" />
           </button>
         )}
       </div>
@@ -144,34 +150,37 @@ export const PdfArtifactsCard = ({
     <div
       className="card"
       style={{
-        padding: 18,
+        padding: "1.125rem",
         display: "flex",
         flexDirection: "column",
-        gap: 14,
-        maxWidth: 860,
+        gap: "0.875rem",
+        maxWidth: "53.75rem",
       }}
       data-testid="pdf-artifacts-card"
     >
-      <div className="flex flex-col" style={{ gap: 4 }}>
-        <h3 style={{ margin: 0, fontSize: 13, fontWeight: 600 }}>
+      <div className="flex flex-col" style={{ gap: "0.25rem" }}>
+        <h3 style={{ margin: 0, fontSize: "0.8125rem", fontWeight: 600 }}>
           {t("artifacts.title")}
         </h3>
-        <span className="dim" style={{ fontSize: 12 }}>
+        <span className="dim" style={{ fontSize: "0.75rem" }}>
           {t("artifacts.hint")}
         </span>
       </div>
       {[...latest.entries()].map(([docId, artifact]) => (
-        <div key={docId} className="flex flex-col" style={{ gap: 8 }}>
-          <span className="mono dim" style={{ fontSize: 11 }}>
+        <div key={docId} className="flex flex-col" style={{ gap: "0.5rem" }}>
+          <span className="mono dim" style={{ fontSize: "0.6875rem" }}>
             {docId}
           </span>
           {row(artifact)}
           {(older.get(docId)?.length ?? 0) > 0 && (
             <details>
-              <summary className="dim" style={{ fontSize: 11.5 }}>
+              <summary className="dim" style={{ fontSize: "0.71875rem" }}>
                 {t("artifacts.older", { count: older.get(docId)?.length })}
               </summary>
-              <div className="flex flex-col" style={{ gap: 8, paddingTop: 8 }}>
+              <div
+                className="flex flex-col"
+                style={{ gap: "0.5rem", paddingTop: "0.5rem" }}
+              >
                 {(older.get(docId) ?? []).map(row)}
               </div>
             </details>
@@ -194,7 +203,7 @@ export const PdfArtifactsCard = ({
         width={960}
       >
         {viewing && (
-          <div style={{ height: "70vh", minHeight: 320 }}>
+          <div style={{ height: "70vh", minHeight: "20rem" }}>
             <PdfViewer
               url={artifactFileUrl(viewing.file_url)}
               refreshKey={viewing.id}

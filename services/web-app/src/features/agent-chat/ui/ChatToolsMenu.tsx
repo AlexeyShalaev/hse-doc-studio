@@ -135,7 +135,7 @@ export const ChatToolsMenu = ({
           setOpen((v) => !v);
         }}
       >
-        <SlidersHorizontal size={12} />
+        <SlidersHorizontal size="0.75rem" />
         <span className="dim">
           {enabledCount}/{names.length}
         </span>
@@ -145,27 +145,27 @@ export const ChatToolsMenu = ({
         <div
           style={{
             position: "absolute",
-            bottom: "calc(100% + 6px)",
+            bottom: "calc(100% + 0.375rem)",
             right: 0,
-            width: 280,
-            maxHeight: 360,
+            width: "17.5rem",
+            maxHeight: "22.5rem",
             overflowY: "auto",
             zIndex: 50,
-            padding: 8,
+            padding: "0.5rem",
             background: "var(--bg-1)",
             border: "1px solid var(--border)",
-            borderRadius: "var(--r-2, 8px)",
+            borderRadius: "var(--r-2, 0.5rem)",
             boxShadow: "var(--shadow-elev, 0 8px 24px rgba(0,0,0,0.3))",
           }}
         >
           <div
             className="flex items-center justify-between"
-            style={{ padding: "2px 4px 8px" }}
+            style={{ padding: "0.125rem 0.25rem 0.5rem" }}
           >
-            <span style={{ fontSize: 12, fontWeight: 600 }}>
+            <span style={{ fontSize: "0.75rem", fontWeight: 600 }}>
               {t("tools.heading")}
             </span>
-            <div className="flex items-center" style={{ gap: 6 }}>
+            <div className="flex items-center" style={{ gap: "0.375rem" }}>
               <button
                 type="button"
                 className="btn xs ghost"
@@ -188,14 +188,14 @@ export const ChatToolsMenu = ({
           </div>
 
           {groups.map(({ group, items }) => (
-            <div key={group} style={{ marginBottom: 6 }}>
+            <div key={group} style={{ marginBottom: "0.375rem" }}>
               <div
                 className="dim"
                 style={{
-                  fontSize: 10,
+                  fontSize: "0.625rem",
                   textTransform: "uppercase",
-                  letterSpacing: 0.4,
-                  padding: "4px 4px 2px",
+                  letterSpacing: "0.025rem",
+                  padding: "0.25rem 0.25rem 0.125rem",
                 }}
               >
                 {t(GROUP_LABEL_KEY[group] ?? "tools.groupOther")}
@@ -207,11 +207,11 @@ export const ChatToolsMenu = ({
                     key={tool.name}
                     className="flex items-center"
                     style={{
-                      gap: 8,
-                      padding: "5px 6px",
-                      borderRadius: 6,
+                      gap: "0.5rem",
+                      padding: "0.3125rem 0.375rem",
+                      borderRadius: "0.375rem",
                       cursor: "pointer",
-                      fontSize: 12.5,
+                      fontSize: "0.78125rem",
                     }}
                     title={tool.description}
                     onMouseEnter={(e) => {

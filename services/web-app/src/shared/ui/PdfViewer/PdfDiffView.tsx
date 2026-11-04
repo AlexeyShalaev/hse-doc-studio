@@ -442,7 +442,7 @@ export const PdfDiffView = ({
               setSidebarTab("outline");
             }}
           >
-            <List size={13} />
+            <List size="0.8125rem" />
           </button>
           <button
             type="button"
@@ -456,11 +456,11 @@ export const PdfDiffView = ({
               setSidebarTab("thumbs");
             }}
           >
-            <Images size={13} />
+            <Images size="0.8125rem" />
           </button>
         </div>
 
-        <span className="dim" style={{ fontSize: 11.5 }}>
+        <span className="dim" style={{ fontSize: "0.71875rem" }}>
           {t("diff.compareWith")}
         </span>
         <select
@@ -489,7 +489,7 @@ export const PdfDiffView = ({
               go(page - 1);
             }}
           >
-            <ChevronLeft size={13} />
+            <ChevronLeft size="0.8125rem" />
           </button>
           <input
             value={pageDraft}
@@ -508,13 +508,13 @@ export const PdfDiffView = ({
             }}
             aria-label={t("nav.pageNumber")}
             style={{
-              width: 38,
+              width: "2.375rem",
               textAlign: "center",
-              fontSize: 11.5,
-              padding: "1px 2px",
+              fontSize: "0.71875rem",
+              padding: "1px 0.125rem",
               background: "var(--bg-0)",
               border: "1px solid var(--border)",
-              borderRadius: 4,
+              borderRadius: "0.25rem",
               color: "var(--fg-0)",
             }}
           />
@@ -527,7 +527,7 @@ export const PdfDiffView = ({
               go(page + 1);
             }}
           >
-            <ChevronRight size={13} />
+            <ChevronRight size="0.8125rem" />
           </button>
         </div>
 
@@ -539,7 +539,7 @@ export const PdfDiffView = ({
               zoomBy(0.8);
             }}
           >
-            <Minus size={12} />
+            <Minus size="0.75rem" />
           </button>
           <span
             className="mono"
@@ -547,8 +547,8 @@ export const PdfDiffView = ({
               display: "inline-flex",
               alignItems: "center",
               gap: 1,
-              padding: "0 6px",
-              minWidth: 44,
+              padding: "0 0.375rem",
+              minWidth: "2.75rem",
               justifyContent: "center",
             }}
           >
@@ -575,9 +575,9 @@ export const PdfDiffView = ({
               title={t("zoom.percentTitle")}
               inputMode="numeric"
               style={{
-                width: 26,
+                width: "1.625rem",
                 textAlign: "right",
-                fontSize: 11.5,
+                fontSize: "0.71875rem",
                 fontFamily: "inherit",
                 padding: 0,
                 background: "transparent",
@@ -595,7 +595,7 @@ export const PdfDiffView = ({
               zoomBy(1.25);
             }}
           >
-            <Plus size={12} />
+            <Plus size="0.75rem" />
           </button>
           <button
             type="button"
@@ -606,7 +606,7 @@ export const PdfDiffView = ({
               setFit(true);
             }}
           >
-            <Scan size={12} />
+            <Scan size="0.75rem" />
           </button>
         </div>
 
@@ -619,7 +619,7 @@ export const PdfDiffView = ({
               setMode("diff");
             }}
           >
-            <Contrast size={12} />
+            <Contrast size="0.75rem" />
           </button>
           <button
             type="button"
@@ -629,7 +629,7 @@ export const PdfDiffView = ({
               setMode("fade");
             }}
           >
-            <Layers size={12} />
+            <Layers size="0.75rem" />
           </button>
           <button
             type="button"
@@ -639,7 +639,7 @@ export const PdfDiffView = ({
               setMode("swipe");
             }}
           >
-            <Columns2 size={12} />
+            <Columns2 size="0.75rem" />
           </button>
         </div>
 
@@ -653,7 +653,7 @@ export const PdfDiffView = ({
               setSwipe(Number(e.target.value));
             }}
             aria-label={t("diff.swipePositionAria")}
-            style={{ width: 110 }}
+            style={{ width: "6.875rem" }}
           />
         )}
         {mode === "fade" && (
@@ -666,11 +666,11 @@ export const PdfDiffView = ({
               setFade(Number(e.target.value) / 100);
             }}
             aria-label={t("diff.opacityAria")}
-            style={{ width: 110 }}
+            style={{ width: "6.875rem" }}
           />
         )}
         {mode === "diff" && (
-          <span className="dim mono" style={{ fontSize: 10.5 }}>
+          <span className="dim mono" style={{ fontSize: "0.65625rem" }}>
             <span style={{ color: "rgb(38,166,74)" }}>■</span> {t("diff.added")}{" "}
             <span style={{ color: "rgb(208,52,52)" }}>■</span>{" "}
             {t("diff.removed")}
@@ -688,7 +688,7 @@ export const PdfDiffView = ({
                 setGuidesOn((v) => !v);
               }}
             >
-              <Frame size={12} />
+              <Frame size="0.75rem" />
             </button>
           )}
           <button
@@ -700,7 +700,7 @@ export const PdfDiffView = ({
               setMeasureMode((v) => !v);
             }}
           >
-            <Ruler size={12} />
+            <Ruler size="0.75rem" />
           </button>
           <button
             type="button"
@@ -711,7 +711,7 @@ export const PdfDiffView = ({
               setInvert((v) => !v);
             }}
           >
-            <Moon size={12} />
+            <Moon size="0.75rem" />
           </button>
           <button
             type="button"
@@ -721,7 +721,7 @@ export const PdfDiffView = ({
               window.open(currentUrl, "_blank", "noopener");
             }}
           >
-            <Printer size={12} />
+            <Printer size="0.75rem" />
           </button>
         </div>
 
@@ -737,11 +737,11 @@ export const PdfDiffView = ({
             style={{
               background: "var(--bg-0)",
               border: "1px solid var(--border)",
-              borderRadius: 6,
-              padding: "3px 8px",
+              borderRadius: "0.375rem",
+              padding: "0.1875rem 0.5rem",
             }}
           >
-            <Search size={13} style={{ color: "var(--fg-3)" }} />
+            <Search size="0.8125rem" style={{ color: "var(--fg-3)" }} />
             <input
               value={query}
               onChange={(e) => {
@@ -750,8 +750,8 @@ export const PdfDiffView = ({
               placeholder={t("search.placeholder")}
               aria-label={t("search.aria")}
               style={{
-                width: 150,
-                fontSize: 12.5,
+                width: "9.375rem",
+                fontSize: "0.78125rem",
                 background: "transparent",
                 border: 0,
                 outline: "none",
@@ -772,7 +772,7 @@ export const PdfDiffView = ({
                   stepMatch(-1);
                 }}
               >
-                <ChevronLeft size={12} />
+                <ChevronLeft size="0.75rem" />
               </button>
               <button
                 type="button"
@@ -782,7 +782,7 @@ export const PdfDiffView = ({
                   stepMatch(1);
                 }}
               >
-                <ChevronRight size={12} />
+                <ChevronRight size="0.75rem" />
               </button>
             </>
           )}
@@ -796,7 +796,7 @@ export const PdfDiffView = ({
           onClick={onClose}
           style={{ marginLeft: "auto" }}
         >
-          <X size={14} />
+          <X size="0.875rem" />
         </button>
       </div>
 
@@ -804,12 +804,12 @@ export const PdfDiffView = ({
         {sidebarOpen && (
           <div
             style={{
-              width: sidebarTab === "thumbs" ? 168 : 240,
+              width: sidebarTab === "thumbs" ? "10.5rem" : "15rem",
               flexShrink: 0,
               overflowY: "auto",
               borderRight: "1px solid var(--border)",
               background: "var(--bg-1)",
-              padding: "6px 4px",
+              padding: "0.375rem 0.25rem",
             }}
           >
             {sidebarTab === "outline" && outline.length > 0 && (
@@ -828,14 +828,18 @@ export const PdfDiffView = ({
 
         <div ref={areaRef} className="pdf-diff-area">
           {!curDoc && (
-            <div style={{ padding: 40 }}>
+            <div style={{ padding: "2.5rem" }}>
               <Spinner />
             </div>
           )}
           {curDoc && baseError && (
             <div
               className="dim"
-              style={{ padding: 24, fontSize: 12.5, maxWidth: 420 }}
+              style={{
+                padding: "1.5rem",
+                fontSize: "0.78125rem",
+                maxWidth: "26.25rem",
+              }}
             >
               {t("diff.noArchive")}
             </div>

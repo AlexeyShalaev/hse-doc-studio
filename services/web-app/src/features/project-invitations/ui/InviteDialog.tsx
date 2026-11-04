@@ -118,7 +118,7 @@ const InviteDialogInner = ({
           </Button>
         }
       >
-        <div className="flex flex-col" style={{ gap: 12 }}>
+        <div className="flex flex-col" style={{ gap: "0.75rem" }}>
           <Notice tone="warn" text={t("form.manualHint")} />
           <div data-testid="invite-link">
             <CopyField value={manual.link} label={t("form.linkLabel")} />
@@ -154,7 +154,7 @@ const InviteDialogInner = ({
       <form
         id={formId}
         className="flex flex-col"
-        style={{ gap: 12 }}
+        style={{ gap: "0.75rem" }}
         data-testid="invite-form"
         onSubmit={(e) => {
           e.preventDefault();
@@ -162,7 +162,10 @@ const InviteDialogInner = ({
         }}
       >
         {user === null && (
-          <label className="flex flex-col" style={{ gap: 4, fontSize: 12 }}>
+          <label
+            className="flex flex-col"
+            style={{ gap: "0.25rem", fontSize: "0.75rem" }}
+          >
             {t("form.email")}
             <Input
               type="email"
@@ -176,10 +179,15 @@ const InviteDialogInner = ({
             />
           </label>
         )}
-        <div className="flex" style={{ gap: 12, flexWrap: "wrap" }}>
+        <div className="flex" style={{ gap: "0.75rem", flexWrap: "wrap" }}>
           <div
             className="flex flex-col"
-            style={{ gap: 4, fontSize: 12, flex: 1, minWidth: 160 }}
+            style={{
+              gap: "0.25rem",
+              fontSize: "0.75rem",
+              flex: 1,
+              minWidth: "10rem",
+            }}
             data-testid="invite-role"
           >
             {t("form.role")}
@@ -194,7 +202,12 @@ const InviteDialogInner = ({
           </div>
           <div
             className="flex flex-col"
-            style={{ gap: 4, fontSize: 12, flex: 1, minWidth: 160 }}
+            style={{
+              gap: "0.25rem",
+              fontSize: "0.75rem",
+              flex: 1,
+              minWidth: "10rem",
+            }}
             data-testid="invite-persona"
           >
             {t("form.persona")}
@@ -211,7 +224,10 @@ const InviteDialogInner = ({
             />
           </div>
         </div>
-        <div className="flex flex-col" style={{ gap: 6, fontSize: 12 }}>
+        <div
+          className="flex flex-col"
+          style={{ gap: "0.375rem", fontSize: "0.75rem" }}
+        >
           {role === "reader" && (
             <Check
               checked={showSources}
@@ -241,7 +257,7 @@ const InviteDialogInner = ({
         </div>
         <div
           className="flex flex-col"
-          style={{ gap: 4, fontSize: 12 }}
+          style={{ gap: "0.25rem", fontSize: "0.75rem" }}
           data-testid="invite-expiry"
         >
           {t("form.expiry")}
@@ -257,7 +273,10 @@ const InviteDialogInner = ({
             }}
           />
         </div>
-        <label className="flex flex-col" style={{ gap: 4, fontSize: 12 }}>
+        <label
+          className="flex flex-col"
+          style={{ gap: "0.25rem", fontSize: "0.75rem" }}
+        >
           {t("form.message")}
           <Textarea
             value={message}
@@ -295,7 +314,7 @@ const Check = ({
 }) => (
   <label
     className="flex items-center"
-    style={{ gap: 8, opacity: disabled ? 0.6 : 1 }}
+    style={{ gap: "0.5rem", opacity: disabled ? 0.6 : 1 }}
   >
     <input
       type="checkbox"

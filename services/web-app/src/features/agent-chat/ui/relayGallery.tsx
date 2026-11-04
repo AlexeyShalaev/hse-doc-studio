@@ -44,7 +44,13 @@ const entry = (
 
 const picker = (groups: ModelProviderGroup[]) => (
   // Выбор открыт сразу: в галерее видно сам список.
-  <div style={{ paddingTop: 260, display: "flex", justifyContent: "flex-end" }}>
+  <div
+    style={{
+      paddingTop: "16.25rem",
+      display: "flex",
+      justifyContent: "flex-end",
+    }}
+  >
     <ModelPicker
       groups={groups}
       selectedProviderId="relay"

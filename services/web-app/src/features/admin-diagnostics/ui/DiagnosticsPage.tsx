@@ -39,9 +39,9 @@ const GROUPS = ["data", "compute", "security", "operations"] as const;
 const BADGE = { ok: "success", warn: "warning", fail: "error" } as const;
 const TONE = { ok: "success", warn: "warning", fail: "danger" } as const;
 const ICON = {
-  ok: <CircleCheck size={15} />,
-  warn: <TriangleAlert size={15} />,
-  fail: <CircleAlert size={15} />,
+  ok: <CircleCheck size="0.9375rem" />,
+  warn: <TriangleAlert size="0.9375rem" />,
+  fail: <CircleAlert size="0.9375rem" />,
 };
 
 /** Раздел админки «Самодиагностика»: состояние проверок, подсказки, пороги. */
@@ -85,11 +85,11 @@ const CheckRow = ({
       tone={status ? TONE[status] : "neutral"}
       icon={
         muted ? (
-          <CircleMinus size={15} />
+          <CircleMinus size="0.9375rem" />
         ) : status ? (
           ICON[status]
         ) : (
-          <CircleHelp size={15} />
+          <CircleHelp size="0.9375rem" />
         )
       }
       title={
@@ -124,7 +124,7 @@ const CheckRow = ({
         </span>
       }
       meta={
-        <span className="flex items-center" style={{ gap: 8 }}>
+        <span className="flex items-center" style={{ gap: "0.5rem" }}>
           {check.checked_at && (
             <span className="dim" data-testid={`diag-time-${check.id}`}>
               {when(check.checked_at)}
@@ -195,7 +195,7 @@ const DiagnosticsContent = () => {
   return (
     <div
       className="flex flex-col"
-      style={{ gap: 20 }}
+      style={{ gap: "1.25rem" }}
       data-testid="diagnostics-page"
     >
       <PageHeader
@@ -217,7 +217,7 @@ const DiagnosticsContent = () => {
             {run.isPending && runningId === "*" ? (
               <Spinner size="sm" />
             ) : (
-              <RefreshCw size={14} />
+              <RefreshCw size="0.875rem" />
             )}
             {t("page.runNow")}
           </Button>

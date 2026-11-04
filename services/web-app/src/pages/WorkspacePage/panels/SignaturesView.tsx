@@ -46,7 +46,7 @@ export const SignaturesView = ({ project }: SignaturesViewProps) => {
     return (
       <div
         style={{
-          padding: "24px 32px",
+          padding: "1.5rem 2rem",
           flex: 1,
           minHeight: 0,
           display: "flex",
@@ -77,7 +77,7 @@ export const SignaturesView = ({ project }: SignaturesViewProps) => {
   return (
     <div
       style={{
-        padding: "24px 32px",
+        padding: "1.5rem 2rem",
         overflowY: "auto",
         flex: 1,
         minHeight: 0,
@@ -93,16 +93,16 @@ export const SignaturesView = ({ project }: SignaturesViewProps) => {
         <div
           className="card"
           style={{
-            marginTop: 20,
-            padding: 18,
+            marginTop: "1.25rem",
+            padding: "1.125rem",
             color: "var(--fg-2)",
-            fontSize: 12,
+            fontSize: "0.75rem",
           }}
         >
           {t("signatures.noSlots")}
         </div>
       ) : (
-        <div style={{ marginTop: 20 }}>
+        <div style={{ marginTop: "1.25rem" }}>
           <SlotPanel
             projectId={project.id}
             slotDefs={slots}
@@ -119,17 +119,22 @@ export const SignaturesView = ({ project }: SignaturesViewProps) => {
         </div>
       )}
 
-      <div className="card" style={{ marginTop: 16, padding: 14 }}>
-        <div className="flex items-center gap-2" style={{ marginBottom: 6 }}>
-          <Info size={12} style={{ color: "var(--c-info)" }} />
-          <strong style={{ fontSize: 12 }}>{t("signatures.howItWorks")}</strong>
+      <div className="card" style={{ marginTop: "1rem", padding: "0.875rem" }}>
+        <div
+          className="flex items-center gap-2"
+          style={{ marginBottom: "0.375rem" }}
+        >
+          <Info size="0.75rem" style={{ color: "var(--c-info)" }} />
+          <strong style={{ fontSize: "0.75rem" }}>
+            {t("signatures.howItWorks")}
+          </strong>
         </div>
         <ul
           className="dim"
           style={{
             margin: 0,
-            paddingLeft: 18,
-            fontSize: 11.5,
+            paddingLeft: "1.125rem",
+            fontSize: "0.71875rem",
             lineHeight: 1.6,
           }}
         >
@@ -139,16 +144,19 @@ export const SignaturesView = ({ project }: SignaturesViewProps) => {
         </ul>
       </div>
 
-      <div className="card" style={{ marginTop: 16, padding: 14 }}>
-        <div className="flex items-center gap-2" style={{ marginBottom: 6 }}>
-          <Info size={12} style={{ color: "var(--c-info)" }} />
-          <strong style={{ fontSize: 12 }}>
+      <div className="card" style={{ marginTop: "1rem", padding: "0.875rem" }}>
+        <div
+          className="flex items-center gap-2"
+          style={{ marginBottom: "0.375rem" }}
+        >
+          <Info size="0.75rem" style={{ color: "var(--c-info)" }} />
+          <strong style={{ fontSize: "0.75rem" }}>
             {t("signatures.whereStored")}
           </strong>
         </div>
         <p
           className="dim mono"
-          style={{ margin: 0, fontSize: 11, lineHeight: 1.6 }}
+          style={{ margin: 0, fontSize: "0.6875rem", lineHeight: 1.6 }}
         >
           {project.folder}/.hse-studio/signatures/
         </p>

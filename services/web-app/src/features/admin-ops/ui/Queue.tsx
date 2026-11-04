@@ -105,7 +105,7 @@ export const Queue = () => {
               })}
             </p>
             {cancelling?.status === "running" && (
-              <p style={{ margin: "8px 0 0", color: "var(--fg-2)" }}>
+              <p style={{ margin: "0.5rem 0 0", color: "var(--fg-2)" }}>
                 {t("queue.cancelDialog.running")}
               </p>
             )}

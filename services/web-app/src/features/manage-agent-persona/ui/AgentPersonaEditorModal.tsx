@@ -106,7 +106,7 @@ export const AgentPersonaEditorModal = ({
         <DialogPrimitive.Overlay className="scrim" />
         <DialogPrimitive.Content
           className="modal-panel fixed left-1/2 top-1/2 z-[102] -translate-x-1/2 -translate-y-1/2"
-          style={{ width: 480, maxWidth: "calc(100vw - 32px)" }}
+          style={{ width: "30rem", maxWidth: "calc(100vw - 2rem)" }}
         >
           <DialogPrimitive.Description className="sr-only">
             {t("editor.srDescription")}
@@ -115,12 +115,12 @@ export const AgentPersonaEditorModal = ({
           <div
             className="flex items-center justify-between"
             style={{
-              padding: "12px 18px",
+              padding: "0.75rem 1.125rem",
               borderBottom: "1px solid var(--border)",
             }}
           >
             <DialogPrimitive.Title
-              style={{ fontSize: 14, fontWeight: 600, margin: 0 }}
+              style={{ fontSize: "0.875rem", fontWeight: 600, margin: 0 }}
             >
               {isEdit ? t("editor.titleEdit") : t("editor.titleCreate")}
             </DialogPrimitive.Title>
@@ -130,11 +130,11 @@ export const AgentPersonaEditorModal = ({
               onClick={onClose}
               title={t("editor.close")}
             >
-              <X size={14} />
+              <X size="0.875rem" />
             </button>
           </div>
 
-          <div style={{ padding: 18, overflowY: "auto" }}>
+          <div style={{ padding: "1.125rem", overflowY: "auto" }}>
             <div className="flex flex-col gap-4">
               <div className="flex flex-col gap-1.5">
                 <label className="text-xs font-medium text-fg-1">
@@ -176,7 +176,7 @@ export const AgentPersonaEditorModal = ({
                   value={instruction}
                   placeholder={t("editor.labelInstructionPlaceholder")}
                   rows={6}
-                  style={{ resize: "vertical", minHeight: 120 }}
+                  style={{ resize: "vertical", minHeight: "7.5rem" }}
                   onChange={(e) => {
                     setInstruction(e.target.value);
                   }}
@@ -191,8 +191,8 @@ export const AgentPersonaEditorModal = ({
           <div
             className="flex items-center justify-end"
             style={{
-              gap: 8,
-              padding: "10px 18px",
+              gap: "0.5rem",
+              padding: "0.625rem 1.125rem",
               borderTop: "1px solid var(--border)",
             }}
           >

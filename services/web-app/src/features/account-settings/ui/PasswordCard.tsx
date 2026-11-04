@@ -87,7 +87,7 @@ export const PasswordCard = ({
       <form
         onSubmit={submit}
         className="flex flex-col"
-        style={{ gap: 12, maxWidth: 420 }}
+        style={{ gap: "0.75rem", maxWidth: "26.25rem" }}
         data-testid="password-form"
       >
         <Input
@@ -150,7 +150,11 @@ export const PasswordCard = ({
         />
         <label
           className="flex"
-          style={{ gap: 10, alignItems: "flex-start", fontSize: 12.5 }}
+          style={{
+            gap: "0.625rem",
+            alignItems: "flex-start",
+            fontSize: "0.78125rem",
+          }}
         >
           <input
             type="checkbox"
@@ -158,11 +162,11 @@ export const PasswordCard = ({
             onChange={(e) => {
               setSignOutOthers(e.target.checked);
             }}
-            style={{ marginTop: 3 }}
+            style={{ marginTop: "0.1875rem" }}
           />
-          <span className="flex flex-col" style={{ gap: 2 }}>
+          <span className="flex flex-col" style={{ gap: "0.125rem" }}>
             <span>{t("password.signOutOthers")}</span>
-            <span style={{ fontSize: 11.5, color: "var(--fg-2)" }}>
+            <span style={{ fontSize: "0.71875rem", color: "var(--fg-2)" }}>
               {t("password.signOutOthersHint")}
             </span>
           </span>
@@ -188,13 +192,13 @@ export const PasswordCard = ({
           <Button
             type="submit"
             aria-disabled={pending}
-            style={{ gap: 8 }}
+            style={{ gap: "0.5rem" }}
             data-testid="password-submit"
           >
             {pending ? (
               <Spinner size="sm" />
             ) : (
-              <KeyRound size={14} aria-hidden="true" />
+              <KeyRound size="0.875rem" aria-hidden="true" />
             )}
             {pending ? t("password.submitting") : t("password.submit")}
           </Button>

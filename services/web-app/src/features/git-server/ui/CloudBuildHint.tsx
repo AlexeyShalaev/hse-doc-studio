@@ -27,16 +27,16 @@ export const CloudBuildHint = ({ projectId }: CloudBuildHintProps) => {
       role="status"
       data-testid="cloud-build-hint"
       style={{
-        gap: 8,
-        padding: "8px 16px",
-        fontSize: 11.5,
+        gap: "0.5rem",
+        padding: "0.5rem 1rem",
+        fontSize: "0.71875rem",
         lineHeight: 1.5,
         borderBottom: "1px solid var(--border)",
         background: "var(--bg-1)",
         color: "var(--fg-2)",
       }}
     >
-      <CloudOff size={13} aria-hidden="true" style={{ flexShrink: 0 }} />
+      <CloudOff size="0.8125rem" aria-hidden="true" style={{ flexShrink: 0 }} />
       <span style={{ flex: 1, minWidth: 0 }}>
         {t("cloud.build.notConnected")}
       </span>
@@ -45,10 +45,10 @@ export const CloudBuildHint = ({ projectId }: CloudBuildHintProps) => {
         target="_blank"
         rel="noreferrer noopener"
         className="flex items-center"
-        style={{ gap: 4, flexShrink: 0 }}
+        style={{ gap: "0.25rem", flexShrink: 0 }}
         data-testid="cloud-build-hint-docs"
       >
-        <ExternalLink size={11} aria-hidden="true" />
+        <ExternalLink size="0.6875rem" aria-hidden="true" />
         {t("cloud.build.docs")}
       </a>
     </div>

@@ -102,7 +102,7 @@ export const Select = forwardRef<HTMLButtonElement, SelectProps>(
               // lists scroll instead of running off-screen.
               width: "var(--radix-select-trigger-width)",
               maxHeight:
-                "min(320px, var(--radix-select-content-available-height))",
+                "min(20rem, var(--radix-select-content-available-height))",
             }}
           >
             <SelectPrimitive.Viewport

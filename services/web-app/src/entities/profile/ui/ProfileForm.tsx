@@ -164,7 +164,7 @@ export const ProfileForm = ({
       onSubmit={submit}
       aria-busy={isSaving}
       className="flex flex-col"
-      style={{ gap: compact ? 14 : 16 }}
+      style={{ gap: compact ? "0.875rem" : "1rem" }}
       data-testid="profile-form"
     >
       {profile.is_default && !compact && (
@@ -177,7 +177,7 @@ export const ProfileForm = ({
         />
       )}
 
-      <div className="flex flex-col" style={{ gap: 14 }}>
+      <div className="flex flex-col" style={{ gap: "0.875rem" }}>
         <div
           id={anchors?.name}
           className={anchors?.name ? "field settings-anchor" : "field"}
@@ -259,15 +259,15 @@ export const ProfileForm = ({
 
       <div
         className="flex flex-col"
-        style={{ gap: 6 }}
+        style={{ gap: "0.375rem" }}
         data-testid="profile-preview"
       >
         <span
           className="dim"
           style={{
-            fontSize: 10,
+            fontSize: "0.625rem",
             textTransform: "uppercase",
-            letterSpacing: 0.5,
+            letterSpacing: "0.03125rem",
           }}
         >
           {t("form.preview")}
@@ -275,8 +275,8 @@ export const ProfileForm = ({
         <div
           className="flex items-center"
           style={{
-            gap: 10,
-            padding: "9px 12px",
+            gap: "0.625rem",
+            padding: "0.5625rem 0.75rem",
             borderRadius: "var(--r-2)",
             border: "1px solid var(--border)",
             background: "var(--bg-2)",
@@ -286,14 +286,14 @@ export const ProfileForm = ({
           <span
             aria-hidden="true"
             style={{
-              width: 26,
-              height: 26,
+              width: "1.625rem",
+              height: "1.625rem",
               borderRadius: "50%",
               flexShrink: 0,
               display: "inline-flex",
               alignItems: "center",
               justifyContent: "center",
-              fontSize: 10,
+              fontSize: "0.625rem",
               fontWeight: 700,
               background: "var(--accent-soft)",
               color: "var(--accent)",
@@ -305,7 +305,7 @@ export const ProfileForm = ({
           <span
             className="mono truncate"
             style={{
-              fontSize: 12.5,
+              fontSize: "0.78125rem",
               color: hasPreview ? "var(--fg-0)" : "var(--fg-3)",
               minWidth: 0,
             }}
@@ -319,16 +319,16 @@ export const ProfileForm = ({
       <div
         className="flex items-start"
         style={{
-          gap: 8,
-          fontSize: 11.5,
+          gap: "0.5rem",
+          fontSize: "0.71875rem",
           lineHeight: 1.5,
           color: "var(--fg-2)",
         }}
       >
         <ShieldAlert
-          size={13}
+          size="0.8125rem"
           aria-hidden="true"
-          style={{ flexShrink: 0, marginTop: 2 }}
+          style={{ flexShrink: 0, marginTop: "0.125rem" }}
         />
         <span>{t("form.privacy")}</span>
       </div>
@@ -355,7 +355,7 @@ export const ProfileForm = ({
       <div
         className="flex items-center"
         style={{
-          gap: 10,
+          gap: "0.625rem",
           justifyContent: compact ? "flex-end" : "flex-start",
           flexWrap: "wrap",
         }}
@@ -369,9 +369,13 @@ export const ProfileForm = ({
           <span
             role="status"
             className="flex items-center"
-            style={{ gap: 5, fontSize: 12, color: "var(--c-ok)" }}
+            style={{
+              gap: "0.3125rem",
+              fontSize: "0.75rem",
+              color: "var(--c-ok)",
+            }}
           >
-            <Check size={13} aria-hidden="true" />
+            <Check size="0.8125rem" aria-hidden="true" />
             {t("form.saved")}
           </span>
         )}

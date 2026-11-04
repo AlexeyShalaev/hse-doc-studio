@@ -58,7 +58,12 @@ export const ConnectServerFlow = ({
   return (
     <div
       className="flex flex-col"
-      style={{ gap: 16, width: "100%", maxWidth: 560, padding: "32px 24px" }}
+      style={{
+        gap: "1rem",
+        width: "100%",
+        maxWidth: "35rem",
+        padding: "2rem 1.5rem",
+      }}
       data-testid="connect-server"
       data-stage={stage.kind}
     >
@@ -105,15 +110,20 @@ export const ConnectServerFlow = ({
 const Header = () => {
   const { t } = useTranslation("localStudio");
   return (
-    <header className="flex flex-col" style={{ gap: 6 }}>
+    <header className="flex flex-col" style={{ gap: "0.375rem" }}>
       <h1
         className="flex items-center"
-        style={{ margin: 0, fontSize: 20, fontWeight: 600, gap: 10 }}
+        style={{
+          margin: 0,
+          fontSize: "1.25rem",
+          fontWeight: 600,
+          gap: "0.625rem",
+        }}
       >
-        <Server size={20} aria-hidden="true" />
+        <Server size="1.25rem" aria-hidden="true" />
         {t("connectLocal.title")}
       </h1>
-      <p className="dim" style={{ margin: 0, fontSize: 13 }}>
+      <p className="dim" style={{ margin: 0, fontSize: "0.8125rem" }}>
         {t("connectLocal.lead")}
       </p>
     </header>
@@ -130,7 +140,7 @@ const AddressForm = ({ onSubmit }: { onSubmit: (url: string) => void }) => {
   return (
     <form
       className="flex flex-col"
-      style={{ gap: 12 }}
+      style={{ gap: "0.75rem" }}
       onSubmit={submit}
       noValidate
       data-testid="connect-server-address"
@@ -207,7 +217,7 @@ const CheckStage = ({
     return (
       <span
         className="flex items-center dim"
-        style={{ gap: 8 }}
+        style={{ gap: "0.5rem" }}
         data-testid="connect-server-checking"
       >
         <Spinner size="sm" />
@@ -218,7 +228,7 @@ const CheckStage = ({
   if (query.isError || !query.data) {
     const code = failureCode(query.error);
     return (
-      <div className="flex flex-col" style={{ gap: 10 }}>
+      <div className="flex flex-col" style={{ gap: "0.625rem" }}>
         <Notice
           tone="err"
           role="alert"
@@ -243,23 +253,23 @@ const CheckStage = ({
   const found = query.data;
   const connected = found.state === "ok" && found.credential_id !== null;
   return (
-    <div className="flex flex-col" style={{ gap: 12 }}>
+    <div className="flex flex-col" style={{ gap: "0.75rem" }}>
       <div
         className="card flex flex-col"
-        style={{ padding: "12px 14px", gap: 4 }}
+        style={{ padding: "0.75rem 0.875rem", gap: "0.25rem" }}
         data-testid="connect-server-card"
       >
-        <span style={{ fontWeight: 600, fontSize: 14 }}>
+        <span style={{ fontWeight: 600, fontSize: "0.875rem" }}>
           {hostOf(found.server_url)}
         </span>
-        <span className="dim" style={{ fontSize: 12.5 }}>
+        <span className="dim" style={{ fontSize: "0.78125rem" }}>
           {t("connectLocal.versions", {
             server: found.server_version,
             local: found.local_version,
           })}
         </span>
         {connected && found.account_name && (
-          <span style={{ fontSize: 12.5, color: "var(--c-ok)" }}>
+          <span style={{ fontSize: "0.78125rem", color: "var(--c-ok)" }}>
             {t("connectLocal.signedIn", { name: found.account_name })}
           </span>
         )}
@@ -276,7 +286,10 @@ const CheckStage = ({
           onCancel={onCancelLogin}
         />
       ) : (
-        <div className="flex" style={{ gap: 8, justifyContent: "flex-end" }}>
+        <div
+          className="flex"
+          style={{ gap: "0.5rem", justifyContent: "flex-end" }}
+        >
           <Button type="button" variant="ghost" onClick={onEdit}>
             {t("connectLocal.edit")}
           </Button>
@@ -303,7 +316,7 @@ const CheckStage = ({
         </div>
       )}
       {!login && !connected && (
-        <span className="dim" style={{ fontSize: 12 }}>
+        <span className="dim" style={{ fontSize: "0.75rem" }}>
           {t("connectLocal.connectHint")}
         </span>
       )}
@@ -331,13 +344,17 @@ const Done = ({
 
   if (projectId) {
     return (
-      <div className="flex flex-col" style={{ gap: 10 }}>
+      <div className="flex flex-col" style={{ gap: "0.625rem" }}>
         <span
           className="flex items-center"
-          style={{ gap: 8, fontSize: 13.5, color: "var(--c-ok)" }}
+          style={{
+            gap: "0.5rem",
+            fontSize: "0.84375rem",
+            color: "var(--c-ok)",
+          }}
           role="status"
         >
-          <CheckCircle2 size={16} aria-hidden="true" />
+          <CheckCircle2 size="1rem" aria-hidden="true" />
           {t("connectLocal.done", { host: hostOf(check.server_url) })}
         </span>
         <div data-testid="connect-server-opening">
@@ -363,7 +380,7 @@ const Done = ({
   return (
     <span
       className="flex items-center dim"
-      style={{ gap: 8 }}
+      style={{ gap: "0.5rem" }}
       data-testid="connect-server-done"
     >
       <Spinner size="sm" />

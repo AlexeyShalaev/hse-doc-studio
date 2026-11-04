@@ -69,26 +69,26 @@ export const PasskeysCard = ({
         data-testid={`passkey-item-${passkey.id}`}
         className="flex flex-col"
         style={{
-          gap: 8,
-          padding: "10px 0",
+          gap: "0.5rem",
+          padding: "0.625rem 0",
           borderBottom: "1px dashed var(--border)",
         }}
       >
-        <div className="flex items-center" style={{ gap: 12 }}>
+        <div className="flex items-center" style={{ gap: "0.75rem" }}>
           <FingerprintPattern
-            size={18}
+            size="1.125rem"
             aria-hidden="true"
             style={{ color: "var(--fg-2)", flexShrink: 0 }}
           />
           <div
             className="flex flex-col"
-            style={{ gap: 2, flex: 1, minWidth: 0 }}
+            style={{ gap: "0.125rem", flex: 1, minWidth: 0 }}
           >
             <span
               className="flex items-center"
               style={{
-                gap: 8,
-                fontSize: 13,
+                gap: "0.5rem",
+                fontSize: "0.8125rem",
                 fontWeight: 500,
                 flexWrap: "wrap",
               }}
@@ -108,7 +108,7 @@ export const PasskeysCard = ({
                 </Badge>
               )}
             </span>
-            <span style={{ fontSize: 11.5, color: "var(--fg-2)" }}>
+            <span style={{ fontSize: "0.71875rem", color: "var(--fg-2)" }}>
               {t("passkeys.created", { when: formatDay(passkey.created_at) })}
               {" · "}
               {passkey.last_used_at
@@ -130,7 +130,7 @@ export const PasskeysCard = ({
               setConfirmId(null);
             }}
           >
-            <Pencil size={12} aria-hidden="true" />
+            <Pencil size="0.75rem" aria-hidden="true" />
           </Button>
           <Button
             type="button"
@@ -143,12 +143,12 @@ export const PasskeysCard = ({
               setConfirmId(passkey.id);
               setEditing(null);
             }}
-            style={{ gap: 6 }}
+            style={{ gap: "0.375rem" }}
           >
             {deleting ? (
               <Spinner size="sm" />
             ) : (
-              <Trash2 size={12} aria-hidden="true" />
+              <Trash2 size="0.75rem" aria-hidden="true" />
             )}
             {t("passkeys.delete")}
           </Button>
@@ -165,7 +165,7 @@ export const PasskeysCard = ({
               setEditing(null);
             }}
           >
-            <div style={{ flex: 1, minWidth: 180 }}>
+            <div style={{ flex: 1, minWidth: "11.25rem" }}>
               <Input
                 aria-label={t("passkeys.nameLabel")}
                 value={draft}
@@ -204,7 +204,9 @@ export const PasskeysCard = ({
             role="group"
             aria-label={t("passkeys.confirmDelete", { name: passkey.name })}
           >
-            <span style={{ fontSize: 12.5, flex: 1, minWidth: 200 }}>
+            <span
+              style={{ fontSize: "0.78125rem", flex: 1, minWidth: "12.5rem" }}
+            >
               {t("passkeys.confirmDelete", { name: passkey.name })}
             </span>
             <Button
@@ -245,7 +247,7 @@ export const PasskeysCard = ({
       {status === "loading" && (
         <div
           className="flex items-center"
-          style={{ gap: 8, fontSize: 12 }}
+          style={{ gap: "0.5rem", fontSize: "0.75rem" }}
           data-testid="passkeys-loading"
         >
           <Spinner size="sm" />
@@ -272,7 +274,7 @@ export const PasskeysCard = ({
         <>
           {items.length === 0 ? (
             <p
-              style={{ margin: 0, fontSize: 12, color: "var(--fg-2)" }}
+              style={{ margin: 0, fontSize: "0.75rem", color: "var(--fg-2)" }}
               data-testid="passkeys-empty"
             >
               {t("passkeys.empty")}
@@ -306,12 +308,12 @@ export const PasskeysCard = ({
               onClick={() => {
                 if (!adding) onAdd();
               }}
-              style={{ gap: 8 }}
+              style={{ gap: "0.5rem" }}
             >
               {adding ? (
                 <Spinner size="sm" />
               ) : (
-                <Plus size={14} aria-hidden="true" />
+                <Plus size="0.875rem" aria-hidden="true" />
               )}
               {t("passkeys.add")}
             </Button>

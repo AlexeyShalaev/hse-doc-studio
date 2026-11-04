@@ -66,7 +66,7 @@ export const MachineCard = ({
   return (
     <div
       style={{
-        borderRadius: 10,
+        borderRadius: "0.625rem",
         border: "1px solid var(--border)",
         background: "var(--bg)",
       }}
@@ -77,26 +77,26 @@ export const MachineCard = ({
       <div
         style={{
           display: "grid",
-          gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))",
-          gap: "9px 16px",
-          padding: "12px 14px",
-          fontSize: 12.5,
+          gridTemplateColumns: "repeat(auto-fit, minmax(8.75rem, 1fr))",
+          gap: "0.5625rem 1rem",
+          padding: "0.75rem 0.875rem",
+          fontSize: "0.78125rem",
         }}
       >
-        <Fact icon={<Laptop size={13} />} value={OS_LABEL[os]} />
+        <Fact icon={<Laptop size="0.8125rem" />} value={OS_LABEL[os]} />
         {engine && (
           <>
             <Fact
-              icon={<Container size={13} />}
+              icon={<Container size="0.8125rem" />}
               value={`${engine.operating_system} ${engine.server_version}`}
             />
             <Fact
-              icon={<Cpu size={13} />}
+              icon={<Cpu size="0.8125rem" />}
               value={t("machine.cores", { count: engine.cpus })}
               hint={t("machine.coresHint")}
             />
             <Fact
-              icon={<MemoryStick size={13} />}
+              icon={<MemoryStick size="0.8125rem" />}
               value={formatBytes(engine.memory_bytes)}
               hint={t("machine.memoryHint")}
             />
@@ -104,7 +104,7 @@ export const MachineCard = ({
         )}
         {freeBytes !== null && (
           <Fact
-            icon={<HardDrive size={13} />}
+            icon={<HardDrive size="0.8125rem" />}
             value={t("machine.free", { size: formatBytes(freeBytes) })}
             hint={lowDisk ? t("machine.lowDiskHint") : t("machine.freeHint")}
             tone={lowDisk ? "warn" : undefined}
@@ -117,14 +117,14 @@ export const MachineCard = ({
           неверному начертанию в готовом документе. */}
       <div
         style={{
-          padding: "10px 14px",
+          padding: "0.625rem 0.875rem",
           borderTop: "1px solid var(--border)",
-          fontSize: 12.5,
+          fontSize: "0.78125rem",
         }}
       >
-        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
           <Type
-            size={13}
+            size="0.8125rem"
             style={{
               opacity: 0.55,
               flexShrink: 0,
@@ -132,7 +132,10 @@ export const MachineCard = ({
             }}
           />
           <span style={{ fontWeight: 600 }}>{t("machine.fontsTitle")}</span>
-          <span className="dim" style={{ marginLeft: "auto", fontSize: 11 }}>
+          <span
+            className="dim"
+            style={{ marginLeft: "auto", fontSize: "0.6875rem" }}
+          >
             {fonts?.directory
               ? t("machine.fontsFound", { count: fonts.count })
               : t("machine.fontsMissing")}
@@ -143,9 +146,9 @@ export const MachineCard = ({
             onClick={() => {
               setEditingFonts((value) => !value);
             }}
-            style={{ padding: "1px 5px", flexShrink: 0 }}
+            style={{ padding: "1px 0.3125rem", flexShrink: 0 }}
           >
-            <Pencil size={11} />
+            <Pencil size="0.6875rem" />
             {editingFonts ? t("machine.fontsCancel") : t("machine.fontsEdit")}
           </button>
         </div>
@@ -163,9 +166,9 @@ export const MachineCard = ({
             }}
             style={{
               width: "100%",
-              marginTop: 7,
+              marginTop: "0.4375rem",
               fontFamily: "var(--font-mono, monospace)",
-              fontSize: 11.5,
+              fontSize: "0.71875rem",
             }}
           />
         ) : (
@@ -173,8 +176,8 @@ export const MachineCard = ({
             className="dim"
             style={{
               display: "block",
-              marginTop: 4,
-              fontSize: 11.5,
+              marginTop: "0.25rem",
+              fontSize: "0.71875rem",
               wordBreak: "break-all",
             }}
           >
@@ -182,7 +185,10 @@ export const MachineCard = ({
           </code>
         )}
 
-        <div className="dim" style={{ fontSize: 11, marginTop: 5 }}>
+        <div
+          className="dim"
+          style={{ fontSize: "0.6875rem", marginTop: "0.3125rem" }}
+        >
           {fonts?.directory
             ? t("machine.fontsHint")
             : t("machine.fontsMissingHint")}
@@ -195,14 +201,14 @@ export const MachineCard = ({
       {tex && (
         <div
           style={{
-            padding: "10px 14px",
+            padding: "0.625rem 0.875rem",
             borderTop: "1px solid var(--border)",
-            fontSize: 12.5,
+            fontSize: "0.78125rem",
           }}
         >
-          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
             <Package
-              size={13}
+              size="0.8125rem"
               style={{
                 opacity: 0.55,
                 flexShrink: 0,
@@ -210,7 +216,10 @@ export const MachineCard = ({
               }}
             />
             <span style={{ fontWeight: 600 }}>{t("machine.texTitle")}</span>
-            <span className="dim" style={{ marginLeft: "auto", fontSize: 11 }}>
+            <span
+              className="dim"
+              style={{ marginLeft: "auto", fontSize: "0.6875rem" }}
+            >
               {tex.present ? t("machine.texPresent") : t("machine.texAbsent")}
             </span>
           </div>
@@ -219,9 +228,9 @@ export const MachineCard = ({
               style={{
                 display: "flex",
                 alignItems: "center",
-                gap: 7,
-                marginTop: 6,
-                fontSize: 12,
+                gap: "0.4375rem",
+                marginTop: "0.375rem",
+                fontSize: "0.75rem",
                 cursor: "pointer",
               }}
             >
@@ -242,9 +251,9 @@ export const MachineCard = ({
         <div
           className="dim"
           style={{
-            padding: "9px 14px 0",
+            padding: "0.5625rem 0.875rem 0",
             borderTop: "1px solid var(--border)",
-            fontSize: 11,
+            fontSize: "0.6875rem",
             textTransform: "uppercase",
             letterSpacing: "0.04em",
           }}
@@ -257,11 +266,11 @@ export const MachineCard = ({
         <dl
           style={{
             margin: 0,
-            padding: "8px 14px 14px",
+            padding: "0.5rem 0.875rem 0.875rem",
             display: "grid",
             gridTemplateColumns: "auto 1fr",
-            gap: "7px 14px",
-            fontSize: 12,
+            gap: "0.4375rem 0.875rem",
+            fontSize: "0.75rem",
           }}
         >
           <Row label={t("machine.image")} value={container.image} mono />
@@ -320,7 +329,7 @@ const Fact = ({ icon, value, hint, tone }: FactProps) => (
     style={{
       display: "inline-flex",
       alignItems: "center",
-      gap: 6,
+      gap: "0.375rem",
       color: tone === "warn" ? "var(--c-warn)" : undefined,
     }}
   >
@@ -349,7 +358,7 @@ const Row = ({ label, value, mono = false }: RowProps) => (
         wordBreak: "break-all",
         whiteSpace: "pre-line",
         fontFamily: mono ? "var(--font-mono, monospace)" : undefined,
-        fontSize: mono ? 11.5 : undefined,
+        fontSize: mono ? "0.71875rem" : undefined,
       }}
     >
       {value}

@@ -27,15 +27,20 @@ export const CloudStudiosPanel = ({
   return (
     <div
       className="flex flex-col"
-      style={{ gap: 10, padding: 12, maxHeight: "70vh", overflowY: "auto" }}
+      style={{
+        gap: "0.625rem",
+        padding: "0.75rem",
+        maxHeight: "70vh",
+        overflowY: "auto",
+      }}
       data-testid="cloud-studios-panel"
     >
-      <span style={{ fontSize: 12.5, fontWeight: 600 }}>
+      <span style={{ fontSize: "0.78125rem", fontWeight: 600 }}>
         {t("badge.title")}
       </span>
       {studios.mine.length > 0 && (
         <>
-          <span className="dim" style={{ fontSize: 11 }}>
+          <span className="dim" style={{ fontSize: "0.6875rem" }}>
             {t("panel.mine")}
           </span>
           {studios.mine.map((device) => (
@@ -54,24 +59,27 @@ export const CloudStudiosPanel = ({
       {studios.others.length > 0 && (
         <div
           className="flex flex-col"
-          style={{ gap: 6 }}
+          style={{ gap: "0.375rem" }}
           data-testid="studios-others"
         >
-          <span className="dim" style={{ fontSize: 11 }}>
+          <span className="dim" style={{ fontSize: "0.6875rem" }}>
             {t("panel.others")}
           </span>
           {studios.others.map((person) => (
             <div
               key={person.user_id}
               className="flex items-center"
-              style={{ gap: 8, fontSize: 12.5 }}
+              style={{ gap: "0.5rem", fontSize: "0.78125rem" }}
               data-testid="studio-other"
             >
-              <Users size={13} style={{ color: "var(--fg-2)" }} />
+              <Users size="0.8125rem" style={{ color: "var(--fg-2)" }} />
               {t("panel.workingLocally", { name: person.name })}
             </div>
           ))}
-          <span className="dim" style={{ fontSize: 11, lineHeight: 1.4 }}>
+          <span
+            className="dim"
+            style={{ fontSize: "0.6875rem", lineHeight: 1.4 }}
+          >
             {t("panel.othersNote")}
           </span>
         </div>

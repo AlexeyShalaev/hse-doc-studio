@@ -20,9 +20,9 @@ const Code = ({ children }: { children: React.ReactNode }) => (
   <span
     className="mono"
     style={{
-      fontSize: 11.5,
-      padding: "1px 6px",
-      borderRadius: 5,
+      fontSize: "0.71875rem",
+      padding: "1px 0.375rem",
+      borderRadius: "0.3125rem",
       background: "var(--bg-2)",
       border: "1px solid var(--border)",
       color: "var(--fg-1)",
@@ -52,18 +52,18 @@ const HowItWorks = () => {
     <div
       className="card"
       style={{
-        marginTop: 20,
-        padding: 18,
+        marginTop: "1.25rem",
+        padding: "1.125rem",
         display: "flex",
         flexDirection: "column",
-        gap: 16,
+        gap: "1rem",
       }}
     >
       <div>
         <h3
           style={{
             margin: 0,
-            fontSize: 13,
+            fontSize: "0.8125rem",
             fontWeight: 600,
             color: "var(--fg-0)",
           }}
@@ -72,7 +72,11 @@ const HowItWorks = () => {
         </h3>
         <p
           className="dim"
-          style={{ margin: "4px 0 0", fontSize: 12, lineHeight: 1.55 }}
+          style={{
+            margin: "0.25rem 0 0",
+            fontSize: "0.75rem",
+            lineHeight: 1.55,
+          }}
         >
           {t("requirements.howItWorksIntroPrefix")}
           <span className="mono">.tex</span>
@@ -80,25 +84,35 @@ const HowItWorks = () => {
         </p>
       </div>
 
-      <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+      <div
+        style={{ display: "flex", flexDirection: "column", gap: "0.625rem" }}
+      >
         {steps.map((s, i) => (
-          <div key={i} className="flex items-center" style={{ gap: 10 }}>
+          <div
+            key={i}
+            className="flex items-center"
+            style={{ gap: "0.625rem" }}
+          >
             <span
               className="flex items-center justify-center shrink-0"
               style={{
-                width: 20,
-                height: 20,
-                borderRadius: 6,
+                width: "1.25rem",
+                height: "1.25rem",
+                borderRadius: "0.375rem",
                 background: "var(--accent-soft)",
                 color: "var(--accent)",
-                fontSize: 11,
+                fontSize: "0.6875rem",
                 fontWeight: 700,
               }}
             >
               {i + 1}
             </span>
             <span
-              style={{ fontSize: 12.5, color: "var(--fg-1)", lineHeight: 1.5 }}
+              style={{
+                fontSize: "0.78125rem",
+                color: "var(--fg-1)",
+                lineHeight: 1.5,
+              }}
             >
               {s.text}
               {s.code ? (
@@ -115,15 +129,15 @@ const HowItWorks = () => {
       <div
         style={{
           borderTop: "1px solid var(--border)",
-          paddingTop: 14,
+          paddingTop: "0.875rem",
           display: "flex",
           flexDirection: "column",
-          gap: 8,
+          gap: "0.5rem",
         }}
       >
         <div
           style={{
-            fontSize: 10.5,
+            fontSize: "0.65625rem",
             textTransform: "uppercase",
             letterSpacing: "0.08em",
             color: "var(--fg-3)",
@@ -135,16 +149,19 @@ const HowItWorks = () => {
           <div
             key={l.status}
             className="flex items-center"
-            style={{ gap: 10, fontSize: 12 }}
+            style={{ gap: "0.625rem", fontSize: "0.75rem" }}
           >
             <span
               className={`sev ${l.status}`}
-              style={{ width: 118, flexShrink: 0 }}
+              style={{ width: "7.375rem", flexShrink: 0 }}
             >
               <span className={`dot ${l.status}`} />
               {statusLabel(l.status)}
             </span>
-            <span className="dim" style={{ fontSize: 11.5, lineHeight: 1.5 }}>
+            <span
+              className="dim"
+              style={{ fontSize: "0.71875rem", lineHeight: 1.5 }}
+            >
               {l.hint}
             </span>
           </div>
@@ -153,9 +170,17 @@ const HowItWorks = () => {
 
       <div
         className="flex"
-        style={{ gap: 7, fontSize: 11, color: "var(--fg-3)", lineHeight: 1.5 }}
+        style={{
+          gap: "0.4375rem",
+          fontSize: "0.6875rem",
+          color: "var(--fg-3)",
+          lineHeight: 1.5,
+        }}
       >
-        <Info size={13} style={{ flexShrink: 0, marginTop: 2 }} />
+        <Info
+          size="0.8125rem"
+          style={{ flexShrink: 0, marginTop: "0.125rem" }}
+        />
         <span>
           {t("requirements.macrosNotePrefix")}
           <span className="mono">\req</span>
@@ -179,7 +204,12 @@ export const RequirementsView = () => {
 
   return (
     <div
-      style={{ padding: "24px 32px", overflowY: "auto", flex: 1, minHeight: 0 }}
+      style={{
+        padding: "1.5rem 2rem",
+        overflowY: "auto",
+        flex: 1,
+        minHeight: 0,
+      }}
     >
       <PageHead
         icon={ListChecks}
@@ -198,17 +228,23 @@ export const RequirementsView = () => {
       )}
 
       {isLoading ? (
-        <div style={{ display: "flex", justifyContent: "center", padding: 40 }}>
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "center",
+            padding: "2.5rem",
+          }}
+        >
           <Spinner />
         </div>
       ) : isError ? (
         <div
           className="card"
           style={{
-            marginTop: 16,
-            padding: 18,
+            marginTop: "1rem",
+            padding: "1.125rem",
             color: "var(--c-err)",
-            fontSize: 12.5,
+            fontSize: "0.78125rem",
           }}
         >
           {t("requirements.loadError", {
@@ -219,15 +255,18 @@ export const RequirementsView = () => {
       ) : items.length === 0 ? (
         <div
           className="card"
-          style={{ marginTop: 16, padding: 24, textAlign: "center" }}
+          style={{ marginTop: "1rem", padding: "1.5rem", textAlign: "center" }}
         >
-          <Inbox size={22} style={{ color: "var(--fg-3)", marginBottom: 8 }} />
+          <Inbox
+            size="1.375rem"
+            style={{ color: "var(--fg-3)", marginBottom: "0.5rem" }}
+          />
           <div
             style={{
-              fontSize: 13,
+              fontSize: "0.8125rem",
               fontWeight: 600,
               color: "var(--fg-0)",
-              marginBottom: 4,
+              marginBottom: "0.25rem",
             }}
           >
             {t("requirements.emptyTitle")}
@@ -236,36 +275,36 @@ export const RequirementsView = () => {
             className="dim"
             style={{
               margin: "0 auto",
-              fontSize: 12,
+              fontSize: "0.75rem",
               lineHeight: 1.55,
-              maxWidth: 460,
+              maxWidth: "28.75rem",
             }}
           >
             {t("requirements.emptyHint")}
           </p>
         </div>
       ) : (
-        <div className="card" style={{ marginTop: 16, overflow: "hidden" }}>
+        <div className="card" style={{ marginTop: "1rem", overflow: "hidden" }}>
           <div
             className="flex items-center"
             style={{
-              padding: "10px 16px",
+              padding: "0.625rem 1rem",
               borderBottom: "1px solid var(--border)",
               background: "var(--bg-2)",
-              gap: 12,
-              fontSize: 10.5,
+              gap: "0.75rem",
+              fontSize: "0.65625rem",
               textTransform: "uppercase",
               letterSpacing: "0.08em",
               color: "var(--fg-3)",
             }}
           >
-            <span style={{ width: 64 }}>{t("requirements.colId")}</span>
+            <span style={{ width: "4rem" }}>{t("requirements.colId")}</span>
             <span className="flex-1">{t("requirements.colDescription")}</span>
-            <span style={{ width: 80 }}>{t("requirements.colSource")}</span>
-            <span style={{ width: 220 }}>
+            <span style={{ width: "5rem" }}>{t("requirements.colSource")}</span>
+            <span style={{ width: "13.75rem" }}>
               {t("requirements.colReferencedIn")}
             </span>
-            <span style={{ width: 110, textAlign: "right" }}>
+            <span style={{ width: "6.875rem", textAlign: "right" }}>
               {t("requirements.colStatus")}
             </span>
           </div>
@@ -274,16 +313,20 @@ export const RequirementsView = () => {
               key={r.id}
               className="flex items-center"
               style={{
-                padding: "10px 16px",
+                padding: "0.625rem 1rem",
                 borderBottom:
                   i < items.length - 1 ? "1px solid var(--border)" : 0,
-                gap: 12,
-                fontSize: 12,
+                gap: "0.75rem",
+                fontSize: "0.75rem",
               }}
             >
               <span
                 className="mono"
-                style={{ width: 64, color: "var(--accent)", fontWeight: 600 }}
+                style={{
+                  width: "4rem",
+                  color: "var(--accent)",
+                  fontWeight: 600,
+                }}
               >
                 {r.id}
               </span>
@@ -297,7 +340,7 @@ export const RequirementsView = () => {
               <span
                 className="chip mono"
                 style={{
-                  width: 80,
+                  width: "5rem",
                   justifyContent: "center",
                   textTransform: "uppercase",
                 }}
@@ -306,14 +349,14 @@ export const RequirementsView = () => {
               </span>
               <span
                 style={{
-                  width: 220,
+                  width: "13.75rem",
                   display: "flex",
-                  gap: 4,
+                  gap: "0.25rem",
                   flexWrap: "wrap",
                 }}
               >
                 {r.referenced_in.length === 0 ? (
-                  <span className="dim" style={{ fontSize: 11 }}>
+                  <span className="dim" style={{ fontSize: "0.6875rem" }}>
                     —
                   </span>
                 ) : (
@@ -321,7 +364,10 @@ export const RequirementsView = () => {
                     <span
                       key={d}
                       className="chip mono"
-                      style={{ fontSize: 10, textTransform: "uppercase" }}
+                      style={{
+                        fontSize: "0.625rem",
+                        textTransform: "uppercase",
+                      }}
                     >
                       {d}
                     </span>
@@ -330,7 +376,7 @@ export const RequirementsView = () => {
               </span>
               <span
                 className={`sev ${r.status}`}
-                style={{ width: 110, justifyContent: "flex-end" }}
+                style={{ width: "6.875rem", justifyContent: "flex-end" }}
               >
                 <span className={`dot ${r.status}`} />
                 {statusLabel(r.status)}

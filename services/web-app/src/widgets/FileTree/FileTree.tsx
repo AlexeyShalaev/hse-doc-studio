@@ -73,13 +73,13 @@ const FileTreeMenu = ({
         position: "fixed",
         left: Math.min(menu.x, window.innerWidth - 210),
         top: Math.min(menu.y, window.innerHeight - 130),
-        width: 200,
+        width: "12.5rem",
         zIndex: 61,
         background: "var(--bg-1)",
         border: "1px solid var(--border)",
         borderRadius: "var(--r-3)",
         boxShadow: "var(--shadow-pop, 0 12px 40px rgba(0,0,0,0.45))",
-        padding: 4,
+        padding: "0.25rem",
       }}
       onClick={(e) => {
         e.stopPropagation();
@@ -87,31 +87,34 @@ const FileTreeMenu = ({
     >
       {node === null ? (
         <>
-          <div className="dimmer" style={{ fontSize: 10, padding: "4px 8px" }}>
+          <div
+            className="dimmer"
+            style={{ fontSize: "0.625rem", padding: "0.25rem 0.5rem" }}
+          >
             {t("fileTree.projectRoot")}
           </div>
           <button
             type="button"
             className="row-btn"
-            style={{ gap: 8 }}
+            style={{ gap: "0.5rem" }}
             onClick={() => {
               onCreate("", "file");
               onClose();
             }}
           >
-            <FilePlus size={13} style={{ flexShrink: 0 }} />
+            <FilePlus size="0.8125rem" style={{ flexShrink: 0 }} />
             <span>{t("fileTree.newFile")}</span>
           </button>
           <button
             type="button"
             className="row-btn"
-            style={{ gap: 8 }}
+            style={{ gap: "0.5rem" }}
             onClick={() => {
               onCreate("", "folder");
               onClose();
             }}
           >
-            <FolderPlus size={13} style={{ flexShrink: 0 }} />
+            <FolderPlus size="0.8125rem" style={{ flexShrink: 0 }} />
             <span>{t("fileTree.newFolder")}</span>
           </button>
         </>
@@ -119,7 +122,7 @@ const FileTreeMenu = ({
         <>
           <div
             className="mono dimmer truncate"
-            style={{ fontSize: 10, padding: "4px 8px" }}
+            style={{ fontSize: "0.625rem", padding: "0.25rem 0.5rem" }}
           >
             {node.path}
           </div>
@@ -128,25 +131,25 @@ const FileTreeMenu = ({
               <button
                 type="button"
                 className="row-btn"
-                style={{ gap: 8 }}
+                style={{ gap: "0.5rem" }}
                 onClick={() => {
                   onCreate(node.path, "file");
                   onClose();
                 }}
               >
-                <FilePlus size={13} style={{ flexShrink: 0 }} />
+                <FilePlus size="0.8125rem" style={{ flexShrink: 0 }} />
                 <span>{t("fileTree.newFileHere")}</span>
               </button>
               <button
                 type="button"
                 className="row-btn"
-                style={{ gap: 8 }}
+                style={{ gap: "0.5rem" }}
                 onClick={() => {
                   onCreate(node.path, "folder");
                   onClose();
                 }}
               >
-                <FolderPlus size={13} style={{ flexShrink: 0 }} />
+                <FolderPlus size="0.8125rem" style={{ flexShrink: 0 }} />
                 <span>{t("fileTree.newFolderHere")}</span>
               </button>
             </>
@@ -156,25 +159,25 @@ const FileTreeMenu = ({
               <button
                 type="button"
                 className="row-btn"
-                style={{ gap: 8 }}
+                style={{ gap: "0.5rem" }}
                 onClick={() => {
                   onRename(node);
                   onClose();
                 }}
               >
-                <Pencil size={13} style={{ flexShrink: 0 }} />
+                <Pencil size="0.8125rem" style={{ flexShrink: 0 }} />
                 <span>{t("fileTree.rename")}</span>
               </button>
               <button
                 type="button"
                 className="row-btn"
-                style={{ gap: 8, color: "var(--c-err)" }}
+                style={{ gap: "0.5rem", color: "var(--c-err)" }}
                 onClick={() => {
                   onDelete(node);
                   onClose();
                 }}
               >
-                <Trash2 size={13} style={{ flexShrink: 0 }} />
+                <Trash2 size="0.8125rem" style={{ flexShrink: 0 }} />
                 <span>{t("fileTree.delete")}</span>
               </button>
             </>
@@ -182,15 +185,15 @@ const FileTreeMenu = ({
             <div
               className="dimmer"
               style={{
-                gap: 8,
-                padding: "6px 8px",
-                fontSize: 11.5,
+                gap: "0.5rem",
+                padding: "0.375rem 0.5rem",
+                fontSize: "0.71875rem",
                 display: "flex",
                 alignItems: "center",
               }}
               title={t("fileTree.protectedTitle")}
             >
-              <Lock size={13} style={{ flexShrink: 0 }} />
+              <Lock size="0.8125rem" style={{ flexShrink: 0 }} />
               <span>{t("fileTree.protected")}</span>
             </div>
           )}
@@ -392,7 +395,7 @@ export const FileTree = ({
           flex: 1,
           minHeight: 0,
           overflowY: "auto",
-          padding: "2px 0 10px",
+          padding: "0.125rem 0 0.625rem",
         }}
         onContextMenu={(e) => {
           // Right-clicking empty space (not a row — rows stopPropagation) opens
@@ -411,16 +414,16 @@ export const FileTree = ({
         {creating?.parentPath === "" && (
           <div
             className="flex items-center"
-            style={{ paddingLeft: 8 + 17, gap: 4 }}
+            style={{ paddingLeft: 8 + 17, gap: "0.25rem" }}
           >
             {creating.kind === "folder" ? (
               <FolderPlus
-                size={13}
+                size="0.8125rem"
                 style={{ color: "var(--fg-3)", flexShrink: 0 }}
               />
             ) : (
               <FilePlus
-                size={13}
+                size="0.8125rem"
                 style={{ color: "var(--fg-3)", flexShrink: 0 }}
               />
             )}
@@ -440,15 +443,21 @@ export const FileTree = ({
           </div>
         )}
         {isLoading ? (
-          <div className="flex justify-center" style={{ padding: 20 }}>
+          <div className="flex justify-center" style={{ padding: "1.25rem" }}>
             <Spinner size="sm" />
           </div>
         ) : isError ? (
-          <div className="dim" style={{ padding: 14, fontSize: 12 }}>
+          <div
+            className="dim"
+            style={{ padding: "0.875rem", fontSize: "0.75rem" }}
+          >
             {t("fileTree.loadError")}
           </div>
         ) : tree.length === 0 ? (
-          <div className="dim" style={{ padding: 14, fontSize: 12 }}>
+          <div
+            className="dim"
+            style={{ padding: "0.875rem", fontSize: "0.75rem" }}
+          >
             {t("fileTree.emptyTree")}
           </div>
         ) : (
@@ -484,7 +493,10 @@ export const FileTree = ({
         }
         width={440}
         footer={
-          <div className="flex items-center justify-end" style={{ gap: 8 }}>
+          <div
+            className="flex items-center justify-end"
+            style={{ gap: "0.5rem" }}
+          >
             <button
               type="button"
               className="btn"
@@ -504,7 +516,7 @@ export const FileTree = ({
               {deleteFile.isPending ? (
                 <Spinner size="sm" />
               ) : (
-                <Trash2 size={13} />
+                <Trash2 size="0.8125rem" />
               )}
               {t("fileTree.delete")}
             </button>
@@ -512,23 +524,30 @@ export const FileTree = ({
         }
       >
         {deleteTarget && (
-          <div className="flex items-start" style={{ gap: 10 }}>
+          <div className="flex items-start" style={{ gap: "0.625rem" }}>
             <div
               className="flex items-center justify-center"
               style={{
-                width: 30,
-                height: 30,
+                width: "1.875rem",
+                height: "1.875rem",
                 flexShrink: 0,
                 borderRadius: "var(--r-2)",
                 background: "var(--c-err-soft)",
                 color: "var(--c-err)",
               }}
             >
-              <AlertTriangle size={15} />
+              <AlertTriangle size="0.9375rem" />
             </div>
-            <div className="flex flex-col" style={{ gap: 6, minWidth: 0 }}>
+            <div
+              className="flex flex-col"
+              style={{ gap: "0.375rem", minWidth: 0 }}
+            >
               <span
-                style={{ fontSize: 13, lineHeight: 1.5, color: "var(--fg-1)" }}
+                style={{
+                  fontSize: "0.8125rem",
+                  lineHeight: 1.5,
+                  color: "var(--fg-1)",
+                }}
               >
                 {deleteTarget.type === "folder"
                   ? t("fileTree.deleteFolderConfirm")
@@ -536,7 +555,7 @@ export const FileTree = ({
               </span>
               <span
                 className="mono dim"
-                style={{ fontSize: 11.5, wordBreak: "break-all" }}
+                style={{ fontSize: "0.71875rem", wordBreak: "break-all" }}
               >
                 {deleteTarget.path}
               </span>

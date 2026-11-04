@@ -50,7 +50,7 @@ export const ActiveFilters = ({
             })}
             onClick={item.onRemove}
           >
-            <X size={11} aria-hidden="true" />
+            <X size="0.6875rem" aria-hidden="true" />
           </button>
         </span>
       ))}

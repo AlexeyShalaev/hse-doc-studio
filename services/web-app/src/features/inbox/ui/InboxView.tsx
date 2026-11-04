@@ -87,11 +87,19 @@ export const InboxView = ({
   return (
     <main
       className="flex flex-col"
-      style={{ padding: "24px 32px", gap: 16, maxWidth: 860, width: "100%" }}
+      style={{
+        padding: "1.5rem 2rem",
+        gap: "1rem",
+        maxWidth: "53.75rem",
+        width: "100%",
+      }}
       data-testid="inbox-page"
     >
-      <div className="flex items-center justify-between" style={{ gap: 12 }}>
-        <h1 style={{ margin: 0, fontSize: 20 }}>{t("title")}</h1>
+      <div
+        className="flex items-center justify-between"
+        style={{ gap: "0.75rem" }}
+      >
+        <h1 style={{ margin: 0, fontSize: "1.25rem" }}>{t("title")}</h1>
         {unread > 0 && (
           <Button
             type="button"
@@ -104,7 +112,7 @@ export const InboxView = ({
           </Button>
         )}
       </div>
-      <div role="tablist" className="flex" style={{ gap: 4 }}>
+      <div role="tablist" className="flex" style={{ gap: "0.25rem" }}>
         {tabs.map((id) => (
           <button
             key={id}
@@ -124,7 +132,7 @@ export const InboxView = ({
 
       {empty && (
         <div data-testid="inbox-empty">
-          <EmptyState icon={<Inbox size={22} />} title={t("empty")} />
+          <EmptyState icon={<Inbox size="1.375rem" />} title={t("empty")} />
         </div>
       )}
 
@@ -140,13 +148,13 @@ export const InboxView = ({
               data-testid={`inbox-invitation-${inv.id}`}
               data-state={expired ? "expired" : "pending"}
             >
-              <strong style={{ fontSize: 13.5 }}>
+              <strong style={{ fontSize: "0.84375rem" }}>
                 {t("invitation.title", {
                   actor: inv.invited_by?.name ?? inv.project.owner_name,
                   project: inv.project.name,
                 })}
               </strong>
-              <span className="flex items-center" style={{ gap: 8 }}>
+              <span className="flex items-center" style={{ gap: "0.5rem" }}>
                 <Badge>{roleLabel(inv.role)}</Badge>
                 {inv.persona && (
                   <Badge variant="subtle">
@@ -155,7 +163,7 @@ export const InboxView = ({
                     })}
                   </Badge>
                 )}
-                <span className="dim" style={{ fontSize: 11.5 }}>
+                <span className="dim" style={{ fontSize: "0.71875rem" }}>
                   {expired
                     ? t("invitation.expired")
                     : t("invitation.until", {
@@ -164,12 +172,18 @@ export const InboxView = ({
                 </span>
               </span>
               {inv.message && (
-                <p style={{ margin: 0, fontSize: 12.5, fontStyle: "italic" }}>
+                <p
+                  style={{
+                    margin: 0,
+                    fontSize: "0.78125rem",
+                    fontStyle: "italic",
+                  }}
+                >
                   «{inv.message}»
                 </p>
               )}
               {!expired && (
-                <div className="flex" style={{ gap: 8 }}>
+                <div className="flex" style={{ gap: "0.5rem" }}>
                   <Button
                     type="button"
                     size="sm"
@@ -207,13 +221,13 @@ export const InboxView = ({
             data-testid={`inbox-transfer-${tr.id}`}
             data-state={tr.status}
           >
-            <strong style={{ fontSize: 13.5 }}>
+            <strong style={{ fontSize: "0.84375rem" }}>
               {t("transfer.title", {
                 actor: tr.from.name,
                 project: tr.project.name,
               })}
             </strong>
-            <span className="dim" style={{ fontSize: 12 }}>
+            <span className="dim" style={{ fontSize: "0.75rem" }}>
               {tr.previous_owner_role
                 ? t("transfer.becomesEditor", { actor: tr.from.name })
                 : t("transfer.fromOrg")}
@@ -221,7 +235,7 @@ export const InboxView = ({
               {t("invitation.until", { date: date(tr.expires_at, lang) })}
             </span>
             {tr.status === "pending" && (
-              <div className="flex" style={{ gap: 8 }}>
+              <div className="flex" style={{ gap: "0.5rem" }}>
                 <Button
                   type="button"
                   size="sm"
@@ -257,16 +271,16 @@ export const InboxView = ({
             style={CARD}
             data-testid={`inbox-access-request-${n.payload.ref_id ?? n.id}`}
           >
-            <strong style={{ fontSize: 13.5 }}>
+            <strong style={{ fontSize: "0.84375rem" }}>
               {t("request.title", {
                 actor: n.payload.actor_name ?? "",
                 project: n.payload.project_name ?? "",
               })}
             </strong>
-            <span className="dim" style={{ fontSize: 11.5 }}>
+            <span className="dim" style={{ fontSize: "0.71875rem" }}>
               {date(n.created_at, lang)}
             </span>
-            <div className="flex" style={{ gap: 8 }}>
+            <div className="flex" style={{ gap: "0.5rem" }}>
               <Button
                 type="button"
                 size="sm"
@@ -296,12 +310,14 @@ export const InboxView = ({
 
       {show("requests") && myRequests.length > 0 && (
         <section style={CARD} data-testid="inbox-my-requests">
-          <strong style={{ fontSize: 13 }}>{t("myRequests.title")}</strong>
+          <strong style={{ fontSize: "0.8125rem" }}>
+            {t("myRequests.title")}
+          </strong>
           {myRequests.map((r) => (
             <div
               key={r.id}
               className="flex items-center justify-between"
-              style={{ gap: 8, fontSize: 12.5 }}
+              style={{ gap: "0.5rem", fontSize: "0.78125rem" }}
               data-testid={`inbox-my-request-${r.id}`}
             >
               <span>
@@ -333,7 +349,7 @@ export const InboxView = ({
 
       {tab === "all" && feed.length > 0 && (
         <section style={CARD} data-testid="inbox-notifications">
-          <strong style={{ fontSize: 13 }}>{t("feed")}</strong>
+          <strong style={{ fontSize: "0.8125rem" }}>{t("feed")}</strong>
           {feed.map((n) => (
             <button
               key={n.id}
@@ -342,10 +358,10 @@ export const InboxView = ({
               data-testid={`inbox-notification-${n.id}`}
               data-read={n.read_at !== null}
               style={{
-                gap: 8,
+                gap: "0.5rem",
                 textAlign: "left",
-                padding: "6px 0",
-                fontSize: 12.5,
+                padding: "0.375rem 0",
+                fontSize: "0.78125rem",
                 fontWeight: n.read_at === null ? 600 : 400,
                 color: n.read_at === null ? "var(--fg-0)" : "var(--fg-1)",
                 background: "transparent",
@@ -360,15 +376,15 @@ export const InboxView = ({
                 <span
                   aria-hidden="true"
                   style={{
-                    width: 6,
-                    height: 6,
-                    borderRadius: 3,
+                    width: "0.375rem",
+                    height: "0.375rem",
+                    borderRadius: "0.1875rem",
                     background: "var(--accent)",
                   }}
                 />
               )}
               <span style={{ flex: 1 }}>{notificationText(n)}</span>
-              <span className="dim" style={{ fontSize: 11 }}>
+              <span className="dim" style={{ fontSize: "0.6875rem" }}>
                 {date(n.created_at, lang)}
               </span>
             </button>

@@ -98,7 +98,7 @@ const OrgRedirect = () => {
 const Loading = () => (
   <div
     className="flex flex-1 flex-col justify-center"
-    style={{ minHeight: 240 }}
+    style={{ minHeight: "15rem" }}
   >
     <AdminChunkLoading />
   </div>

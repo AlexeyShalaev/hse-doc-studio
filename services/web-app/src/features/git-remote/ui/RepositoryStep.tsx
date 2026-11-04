@@ -122,7 +122,7 @@ export const RepositoryStep = ({
           autoComplete="off"
           autoCapitalize="off"
           placeholder={t("repo.branch.placeholder")}
-          style={{ maxWidth: 240 }}
+          style={{ maxWidth: "15rem" }}
           onChange={(event) => {
             onBranchChange(event.target.value);
           }}
@@ -133,7 +133,7 @@ export const RepositoryStep = ({
       </div>
 
       {ndaRequired && (
-        <div className="flex flex-col" style={{ gap: 8 }}>
+        <div className="flex flex-col" style={{ gap: "0.5rem" }}>
           <Notice
             tone="warn"
             role="status"

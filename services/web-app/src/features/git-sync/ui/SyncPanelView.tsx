@@ -70,14 +70,17 @@ const Stat = ({
   tone?: string;
 }) => (
   <div className="sync-stat">
-    <span className="dim" style={{ fontSize: 10.5, letterSpacing: "0.04em" }}>
+    <span
+      className="dim"
+      style={{ fontSize: "0.65625rem", letterSpacing: "0.04em" }}
+    >
       {label}
     </span>
     <span
       className="flex items-center tnum"
       style={{
-        gap: 5,
-        fontSize: 18,
+        gap: "0.3125rem",
+        fontSize: "1.125rem",
         fontWeight: 600,
         lineHeight: 1.2,
         color: tone ?? "var(--fg-0)",
@@ -87,7 +90,7 @@ const Stat = ({
       {value}
     </span>
     {sub !== undefined && (
-      <span className="dim" style={{ fontSize: 11 }}>
+      <span className="dim" style={{ fontSize: "0.6875rem" }}>
         {sub}
       </span>
     )}
@@ -139,14 +142,18 @@ export const SyncPanelView = ({
       <div
         className="flex flex-col items-center"
         data-testid="sync-panel-empty"
-        style={{ gap: 12, padding: "10px 0 4px", textAlign: "center" }}
+        style={{
+          gap: "0.75rem",
+          padding: "0.625rem 0 0.25rem",
+          textAlign: "center",
+        }}
       >
         <span
           aria-hidden="true"
           style={{
-            width: 52,
-            height: 52,
-            borderRadius: 14,
+            width: "3.25rem",
+            height: "3.25rem",
+            borderRadius: "0.875rem",
             display: "inline-flex",
             alignItems: "center",
             justifyContent: "center",
@@ -154,13 +161,16 @@ export const SyncPanelView = ({
             color: "var(--fg-2)",
           }}
         >
-          <CloudOff size={24} />
+          <CloudOff size="1.5rem" />
         </span>
-        <div className="flex flex-col" style={{ gap: 4, maxWidth: 520 }}>
+        <div
+          className="flex flex-col"
+          style={{ gap: "0.25rem", maxWidth: "32.5rem" }}
+        >
           <h4
             style={{
               margin: 0,
-              fontSize: 14,
+              fontSize: "0.875rem",
               fontWeight: 600,
               color: "var(--fg-0)",
             }}
@@ -169,14 +179,14 @@ export const SyncPanelView = ({
           </h4>
           <p
             className="dim"
-            style={{ margin: 0, fontSize: 12.5, lineHeight: 1.6 }}
+            style={{ margin: 0, fontSize: "0.78125rem", lineHeight: 1.6 }}
           >
             {t("panel.empty.text")}
           </p>
         </div>
         <div
           className="flex items-center justify-center"
-          style={{ gap: 8, flexWrap: "wrap" }}
+          style={{ gap: "0.5rem", flexWrap: "wrap" }}
         >
           <button
             type="button"
@@ -188,7 +198,7 @@ export const SyncPanelView = ({
           </button>
           {onBundle && (
             <button type="button" className="btn" onClick={onBundle}>
-              <FileArchive size={13} aria-hidden="true" />
+              <FileArchive size="0.8125rem" aria-hidden="true" />
               {t("panel.empty.bundle")}
             </button>
           )}
@@ -196,7 +206,7 @@ export const SyncPanelView = ({
         {onBundle && (
           <p
             className="dim"
-            style={{ margin: 0, fontSize: 11.5, maxWidth: 480 }}
+            style={{ margin: 0, fontSize: "0.71875rem", maxWidth: "30rem" }}
           >
             {t("panel.empty.bundleHint")}
           </p>
@@ -269,11 +279,11 @@ export const SyncPanelView = ({
             onClick={onCancel}
             disabled={isCancelling}
           >
-            <X size={13} aria-hidden="true" />
+            <X size="0.8125rem" aria-hidden="true" />
             {t("popover.cancel")}
           </button>
         ) : (
-          <span className="dim" style={{ fontSize: 11.5 }}>
+          <span className="dim" style={{ fontSize: "0.71875rem" }}>
             {t("popover.notCancellable")}
           </span>
         );
@@ -304,7 +314,7 @@ export const SyncPanelView = ({
             disabled={!ui.canSync || isStarting}
           >
             <RefreshCw
-              size={13}
+              size="0.8125rem"
               aria-hidden="true"
               className={isStarting ? "spin" : undefined}
             />
@@ -339,7 +349,7 @@ export const SyncPanelView = ({
           : t(`phase.${id}`),
     }));
     return (
-      <div className="flex flex-col" style={{ gap: 6 }}>
+      <div className="flex flex-col" style={{ gap: "0.375rem" }}>
         <Stepper
           steps={steps}
           current={current}
@@ -348,7 +358,7 @@ export const SyncPanelView = ({
           label={t("popover.phases")}
         />
         {isQueued && (
-          <span className="dim" style={{ fontSize: 11.5 }}>
+          <span className="dim" style={{ fontSize: "0.71875rem" }}>
             {t("phaseHint.queued")}
           </span>
         )}
@@ -405,7 +415,7 @@ export const SyncPanelView = ({
     notices.push(
       <div
         key="error"
-        style={{ display: "flex", flexDirection: "column", gap: 8 }}
+        style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}
       >
         <Notice
           tone={ui.state === "offline" ? "warn" : "err"}
@@ -414,7 +424,7 @@ export const SyncPanelView = ({
         />
         <details className="sync-details">
           <summary>{t("popover.technical")}</summary>
-          <div style={{ paddingTop: 8 }}>
+          <div style={{ paddingTop: "0.5rem" }}>
             <CopyField
               value={`${lastError.code}: ${lastError.detail}`}
               label={t("popover.technical")}
@@ -476,7 +486,7 @@ export const SyncPanelView = ({
     <button
       type="button"
       className="sync-history-link"
-      style={{ marginTop: 4 }}
+      style={{ marginTop: "0.25rem" }}
       onClick={() => {
         onShowInHistory(mode);
       }}
@@ -486,15 +496,22 @@ export const SyncPanelView = ({
   );
 
   return (
-    <div className="flex flex-col" style={{ gap: 14 }} data-testid="sync-panel">
+    <div
+      className="flex flex-col"
+      style={{ gap: "0.875rem" }}
+      data-testid="sync-panel"
+    >
       {/* состояние и действия */}
-      <div className="flex items-center" style={{ gap: 12, flexWrap: "wrap" }}>
+      <div
+        className="flex items-center"
+        style={{ gap: "0.75rem", flexWrap: "wrap" }}
+      >
         <span
           aria-hidden="true"
           style={{
-            width: 38,
-            height: 38,
-            borderRadius: 10,
+            width: "2.375rem",
+            height: "2.375rem",
+            borderRadius: "0.625rem",
             flexShrink: 0,
             display: "inline-flex",
             alignItems: "center",
@@ -505,10 +522,10 @@ export const SyncPanelView = ({
         >
           <SyncStateIcon icon={ui.icon} size={19} />
         </span>
-        <div style={{ minWidth: 0, flex: "1 1 220px" }}>
+        <div style={{ minWidth: 0, flex: "1 1 13.75rem" }}>
           <div
             style={{
-              fontSize: 14,
+              fontSize: "0.875rem",
               fontWeight: 600,
               letterSpacing: "-0.01em",
               color: "var(--fg-0)",
@@ -517,11 +534,14 @@ export const SyncPanelView = ({
           >
             {text.status}
           </div>
-          <div className="dim" style={{ fontSize: 11.5, marginTop: 1 }}>
+          <div className="dim" style={{ fontSize: "0.71875rem", marginTop: 1 }}>
             {headerMeta.join(" · ")}
           </div>
         </div>
-        <div className="flex items-center" style={{ gap: 8, flexWrap: "wrap" }}>
+        <div
+          className="flex items-center"
+          style={{ gap: "0.5rem", flexWrap: "wrap" }}
+        >
           {primary}
           {showCheck && (
             <button
@@ -540,7 +560,7 @@ export const SyncPanelView = ({
             aria-label={t("popover.settings")}
             title={t("popover.settings")}
           >
-            <Settings size={15} aria-hidden="true" />
+            <Settings size="0.9375rem" aria-hidden="true" />
           </button>
         </div>
       </div>
@@ -549,8 +569,8 @@ export const SyncPanelView = ({
       <div
         className="flex items-center"
         style={{
-          gap: 8,
-          padding: "7px 12px",
+          gap: "0.5rem",
+          padding: "0.4375rem 0.75rem",
           background: "var(--bg-2)",
           border: "1px solid var(--border)",
           borderRadius: "var(--r-2)",
@@ -564,7 +584,7 @@ export const SyncPanelView = ({
         </span>
         <span
           className="mono truncate"
-          style={{ fontSize: 12, flex: 1, color: "var(--fg-0)" }}
+          style={{ fontSize: "0.75rem", flex: 1, color: "var(--fg-0)" }}
           title={remote.display_url}
         >
           {repoLabel(remote.display_url)}
@@ -580,7 +600,7 @@ export const SyncPanelView = ({
               : t("popover.branch")
           }
         >
-          <GitBranch size={10} aria-hidden="true" />
+          <GitBranch size="0.625rem" aria-hidden="true" />
           {remote.branch}
         </span>
         {remote.web_url && (
@@ -592,7 +612,7 @@ export const SyncPanelView = ({
             aria-label={t("popover.openInBrowser")}
             title={t("popover.openInBrowser")}
           >
-            <ExternalLink size={13} aria-hidden="true" />
+            <ExternalLink size="0.8125rem" aria-hidden="true" />
           </a>
         )}
       </div>
@@ -603,8 +623,8 @@ export const SyncPanelView = ({
       <div
         style={{
           display: "grid",
-          gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))",
-          gap: 10,
+          gridTemplateColumns: "repeat(auto-fit, minmax(9.375rem, 1fr))",
+          gap: "0.625rem",
         }}
       >
         <Stat
@@ -612,7 +632,7 @@ export const SyncPanelView = ({
           value={status.behind}
           icon={
             <ArrowDown
-              size={15}
+              size="0.9375rem"
               aria-hidden="true"
               style={{ color: "var(--accent)" }}
             />
@@ -628,7 +648,7 @@ export const SyncPanelView = ({
           value={status.ahead}
           icon={
             <ArrowUp
-              size={15}
+              size="0.9375rem"
               aria-hidden="true"
               style={{ color: "var(--c-info)" }}
             />
@@ -642,7 +662,7 @@ export const SyncPanelView = ({
         <Stat
           label={t("panel.stats.checked")}
           value={
-            <span style={{ fontSize: 14 }}>
+            <span style={{ fontSize: "0.875rem" }}>
               {checkedAt
                 ? formatPastTime(checkedAt, now)
                 : t("panel.stats.never")}
@@ -657,7 +677,7 @@ export const SyncPanelView = ({
         <Stat
           label={t("panel.stats.synced")}
           value={
-            <span style={{ fontSize: 14 }}>
+            <span style={{ fontSize: "0.875rem" }}>
               {status.last_sync_at
                 ? formatPastTime(status.last_sync_at, now)
                 : t("panel.stats.never")}
@@ -674,7 +694,7 @@ export const SyncPanelView = ({
       </div>
 
       {notices.length > 0 && (
-        <div className="flex flex-col" style={{ gap: 8 }}>
+        <div className="flex flex-col" style={{ gap: "0.5rem" }}>
           {notices}
         </div>
       )}
@@ -684,8 +704,8 @@ export const SyncPanelView = ({
         <div
           style={{
             display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))",
-            gap: 20,
+            gridTemplateColumns: "repeat(auto-fit, minmax(16.25rem, 1fr))",
+            gap: "1.25rem",
             alignItems: "start",
           }}
         >
@@ -722,7 +742,10 @@ export const SyncPanelView = ({
 
       {hasIncoming && selectedIncomingId !== null && incomingDetails}
 
-      <p className="dim" style={{ margin: 0, fontSize: 11, lineHeight: 1.45 }}>
+      <p
+        className="dim"
+        style={{ margin: 0, fontSize: "0.6875rem", lineHeight: 1.45 }}
+      >
         {t("popover.hint")}
         {onBundle && (
           <>
@@ -763,12 +786,12 @@ const PushRejected = ({ detail }: { detail: string }) => {
       style={{
         display: "flex",
         flexDirection: "column",
-        gap: 6,
-        padding: "10px 12px",
+        gap: "0.375rem",
+        padding: "0.625rem 0.75rem",
         borderRadius: "var(--r-2)",
         border: "1px solid var(--c-err)",
         background: "var(--bg-1)",
-        fontSize: 12.5,
+        fontSize: "0.78125rem",
       }}
     >
       <strong style={{ color: "var(--c-err)" }}>
@@ -776,7 +799,7 @@ const PushRejected = ({ detail }: { detail: string }) => {
       </strong>
       <span className="dim">{t("pushRejected.lead")}</span>
       {lines.length > 0 && (
-        <ul style={{ margin: 0, paddingLeft: 18 }}>
+        <ul style={{ margin: 0, paddingLeft: "1.125rem" }}>
           {lines.map((line) => (
             <li
               key={line}

@@ -19,28 +19,39 @@ export const ImportResultView = ({
   return (
     <div
       className="flex flex-col"
-      style={{ gap: 14 }}
+      style={{ gap: "0.875rem" }}
       data-testid="project-import-done"
     >
-      <div className="flex items-start" style={{ gap: 12 }}>
+      <div className="flex items-start" style={{ gap: "0.75rem" }}>
         <CheckCircle2
-          size={22}
+          size="1.375rem"
           aria-hidden="true"
           style={{ color: "var(--c-ok)", flexShrink: 0, marginTop: 1 }}
         />
         <div style={{ minWidth: 0 }}>
           <div
-            style={{ fontSize: 13.5, fontWeight: 600, color: "var(--fg-0)" }}
+            style={{
+              fontSize: "0.84375rem",
+              fontWeight: 600,
+              color: "var(--fg-0)",
+            }}
           >
             {t("done.title")}
           </div>
           <p
             className="dim"
-            style={{ margin: "4px 0 0", fontSize: 12.5, lineHeight: 1.5 }}
+            style={{
+              margin: "0.25rem 0 0",
+              fontSize: "0.78125rem",
+              lineHeight: 1.5,
+            }}
           >
             {t("done.lead", { name: result.name })}
           </p>
-          <p className="mono dim" style={{ margin: "6px 0 0", fontSize: 11.5 }}>
+          <p
+            className="mono dim"
+            style={{ margin: "0.375rem 0 0", fontSize: "0.71875rem" }}
+          >
             {facts.join(" · ")}
           </p>
         </div>
@@ -49,11 +60,11 @@ export const ImportResultView = ({
         <Notice tone="info" role="status" text={t("done.regenerated")} />
       )}
       {result.warnings.length > 0 && (
-        <div className="flex flex-col" style={{ gap: 6 }}>
+        <div className="flex flex-col" style={{ gap: "0.375rem" }}>
           <div
             className="dim"
             style={{
-              fontSize: 11,
+              fontSize: "0.6875rem",
               textTransform: "uppercase",
               letterSpacing: "0.08em",
             }}

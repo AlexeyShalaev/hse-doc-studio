@@ -25,8 +25,8 @@ export const Segmented = <V extends string>({
     aria-label={label}
     className="flex"
     style={{
-      gap: 2,
-      padding: 2,
+      gap: "0.125rem",
+      padding: "0.125rem",
       borderRadius: "var(--r-2)",
       background: "var(--bg-2)",
       border: "1px solid var(--border)",

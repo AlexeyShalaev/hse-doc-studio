@@ -192,7 +192,7 @@ export const AuthSettingsForm = ({
   };
 
   return (
-    <div className="flex flex-col" style={{ gap: 16, flex: 1 }}>
+    <div className="flex flex-col" style={{ gap: "1rem", flex: 1 }}>
       <RegistrationSection
         settings={registration}
         draft={reg}

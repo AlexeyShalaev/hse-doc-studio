@@ -79,7 +79,11 @@ export const SearchInput = ({
 
   return (
     <div className={clsx("search-input", className)}>
-      <Search size={14} aria-hidden="true" className="search-input-icon" />
+      <Search
+        size="0.875rem"
+        aria-hidden="true"
+        className="search-input-icon"
+      />
       <input
         ref={inputRef}
         type="search"
@@ -115,7 +119,7 @@ export const SearchInput = ({
             title={t("searchInput.clear")}
             onClick={clear}
           >
-            <X size={13} aria-hidden="true" />
+            <X size="0.8125rem" aria-hidden="true" />
           </button>
         )}
       </span>

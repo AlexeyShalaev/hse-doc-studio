@@ -113,7 +113,11 @@ export const CloneProgressStep = ({
         <div
           role="status"
           className="flex items-center dim"
-          style={{ gap: 8, minHeight: 120, justifyContent: "center" }}
+          style={{
+            gap: "0.5rem",
+            minHeight: "7.5rem",
+            justifyContent: "center",
+          }}
         >
           <Spinner size="sm" />
           {t("clone.progress.starting")}
@@ -201,7 +205,7 @@ export const CloneProgressStep = ({
           </button>
         }
       >
-        <p className="dim" style={{ margin: 0, fontSize: 12.5 }}>
+        <p className="dim" style={{ margin: 0, fontSize: "0.78125rem" }}>
           {t("clone.lead.progress")}
         </p>
         {stepper}
@@ -315,8 +319,8 @@ export const CloneProgressStep = ({
               <pre
                 className="mono"
                 style={{
-                  margin: "6px 0 0",
-                  fontSize: 11,
+                  margin: "0.375rem 0 0",
+                  fontSize: "0.6875rem",
                   whiteSpace: "pre-wrap",
                   wordBreak: "break-word",
                   color: "var(--fg-2)",

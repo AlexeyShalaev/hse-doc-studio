@@ -42,13 +42,13 @@ export const HelpMenu = () => {
           aria-label={t("help.button")}
           data-tour="titlebar-help"
           data-testid="help-menu-trigger"
-          style={{ width: 32, height: 32 }}
+          style={{ width: "2rem", height: "2rem" }}
         >
-          <CircleHelp size={16} />
+          <CircleHelp size="1rem" />
         </button>
       </PopoverTrigger>
       <PopoverContent width={280} aria-label={t("help.title")}>
-        <div className="flex flex-col" style={{ padding: 6 }}>
+        <div className="flex flex-col" style={{ padding: "0.375rem" }}>
           {/* Пользовательская справка (features/help-center): статья текущего экрана и весь сайт. */}
           <button
             type="button"
@@ -60,10 +60,13 @@ export const HelpMenu = () => {
               openHelp();
             }}
           >
-            <BookOpen size={15} style={{ marginTop: 2, flexShrink: 0 }} />
-            <span className="flex flex-col" style={{ gap: 2 }}>
+            <BookOpen
+              size="0.9375rem"
+              style={{ marginTop: "0.125rem", flexShrink: 0 }}
+            />
+            <span className="flex flex-col" style={{ gap: "0.125rem" }}>
               <span style={{ color: "var(--fg-0)" }}>{tHelp("command")}</span>
-              <span className="dim" style={{ fontSize: 11.5 }}>
+              <span className="dim" style={{ fontSize: "0.71875rem" }}>
                 {tHelp("menuScreenHint")}
               </span>
             </span>
@@ -79,10 +82,13 @@ export const HelpMenu = () => {
               setOpen(false);
             }}
           >
-            <ExternalLink size={15} style={{ marginTop: 2, flexShrink: 0 }} />
-            <span className="flex flex-col" style={{ gap: 2 }}>
+            <ExternalLink
+              size="0.9375rem"
+              style={{ marginTop: "0.125rem", flexShrink: 0 }}
+            />
+            <span className="flex flex-col" style={{ gap: "0.125rem" }}>
               <span style={{ color: "var(--fg-0)" }}>{tHelp("openSite")}</span>
-              <span className="dim" style={{ fontSize: 11.5 }}>
+              <span className="dim" style={{ fontSize: "0.71875rem" }}>
                 {tHelp("menuSiteHint")}
               </span>
             </span>
@@ -97,10 +103,13 @@ export const HelpMenu = () => {
               start("manual");
             }}
           >
-            <Compass size={15} style={{ marginTop: 2, flexShrink: 0 }} />
-            <span className="flex flex-col" style={{ gap: 2 }}>
+            <Compass
+              size="0.9375rem"
+              style={{ marginTop: "0.125rem", flexShrink: 0 }}
+            />
+            <span className="flex flex-col" style={{ gap: "0.125rem" }}>
               <span style={{ color: "var(--fg-0)" }}>{t("help.tour")}</span>
-              <span className="dim" style={{ fontSize: 11.5 }}>
+              <span className="dim" style={{ fontSize: "0.71875rem" }}>
                 {t("help.tourHint")}
               </span>
             </span>
@@ -115,10 +124,13 @@ export const HelpMenu = () => {
               void navigate(DEMO_PATH);
             }}
           >
-            <FlaskConical size={15} style={{ marginTop: 2, flexShrink: 0 }} />
-            <span className="flex flex-col" style={{ gap: 2 }}>
+            <FlaskConical
+              size="0.9375rem"
+              style={{ marginTop: "0.125rem", flexShrink: 0 }}
+            />
+            <span className="flex flex-col" style={{ gap: "0.125rem" }}>
               <span style={{ color: "var(--fg-0)" }}>{t("help.demo")}</span>
-              <span className="dim" style={{ fontSize: 11.5 }}>
+              <span className="dim" style={{ fontSize: "0.71875rem" }}>
                 {t("help.demoHint")}
               </span>
             </span>

@@ -72,15 +72,15 @@ export const DeviceCodeShell = ({
 }) => (
   <main
     className="flex flex-1 items-center justify-center"
-    style={{ padding: 24, overflowY: "auto" }}
+    style={{ padding: "1.5rem", overflowY: "auto" }}
     data-testid={testId}
   >
     <section
       className="flex flex-col"
       style={{
-        width: "min(520px, 100%)",
-        gap: 16,
-        padding: 24,
+        width: "min(32.5rem, 100%)",
+        gap: "1rem",
+        padding: "1.5rem",
         border: "1px solid var(--border)",
         borderRadius: "var(--r-3)",
         background: "var(--bg-1)",
@@ -89,9 +89,9 @@ export const DeviceCodeShell = ({
     >
       <span
         className="flex items-center"
-        style={{ gap: 8, fontSize: 12, color: "var(--fg-2)" }}
+        style={{ gap: "0.5rem", fontSize: "0.75rem", color: "var(--fg-2)" }}
       >
-        <Link2 size={14} aria-hidden="true" />
+        <Link2 size="0.875rem" aria-hidden="true" />
         {caption}
       </span>
       {children}
@@ -114,20 +114,20 @@ export const DeviceCodeDisplay = ({
   <div
     className="flex flex-col"
     style={{
-      gap: 4,
-      padding: "12px 14px",
+      gap: "0.25rem",
+      padding: "0.75rem 0.875rem",
       borderRadius: "var(--r-2)",
       border: "1px solid var(--accent)",
       background: "var(--bg-0)",
     }}
   >
-    <span className="dim" style={{ fontSize: 12 }}>
+    <span className="dim" style={{ fontSize: "0.75rem" }}>
       {title}
     </span>
     <span
       className="mono"
       style={{
-        fontSize: 28,
+        fontSize: "1.75rem",
         fontWeight: 600,
         letterSpacing: "0.14em",
         color: "var(--fg-0)",
@@ -136,7 +136,7 @@ export const DeviceCodeDisplay = ({
     >
       {code}
     </span>
-    <span className="dim" style={{ fontSize: 12 }}>
+    <span className="dim" style={{ fontSize: "0.75rem" }}>
       {hint}
     </span>
   </div>
@@ -148,9 +148,9 @@ export const DeviceFacts = ({ children }: { children: ReactNode }) => (
     style={{
       display: "grid",
       gridTemplateColumns: "max-content 1fr",
-      gap: "8px 16px",
+      gap: "0.5rem 1rem",
       margin: 0,
-      fontSize: 13,
+      fontSize: "0.8125rem",
     }}
   >
     {children}
@@ -202,23 +202,23 @@ export const DeviceResult = ({
   return (
     <div
       className="flex flex-col"
-      style={{ gap: 14 }}
+      style={{ gap: "0.875rem" }}
       role="status"
       aria-live="polite"
       data-testid={testId}
       data-state={state}
     >
-      <div className="flex items-start" style={{ gap: 12 }}>
+      <div className="flex items-start" style={{ gap: "0.75rem" }}>
         <Icon
-          size={22}
+          size="1.375rem"
           aria-hidden="true"
           style={{ color: TONE_COLOR[tone], flexShrink: 0 }}
         />
-        <div className="flex flex-col" style={{ gap: 4 }}>
-          <h1 style={{ margin: 0, fontSize: 18 }}>{title}</h1>
+        <div className="flex flex-col" style={{ gap: "0.25rem" }}>
+          <h1 style={{ margin: 0, fontSize: "1.125rem" }}>{title}</h1>
           <p
             className="dim"
-            style={{ margin: 0, fontSize: 13, lineHeight: 1.5 }}
+            style={{ margin: 0, fontSize: "0.8125rem", lineHeight: 1.5 }}
           >
             {body}
           </p>
@@ -227,7 +227,7 @@ export const DeviceResult = ({
       {actions && (
         <div
           className="flex items-center"
-          style={{ gap: 8, justifyContent: "flex-end" }}
+          style={{ gap: "0.5rem", justifyContent: "flex-end" }}
         >
           {actions}
         </div>

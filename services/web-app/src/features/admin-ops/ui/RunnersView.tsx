@@ -216,7 +216,8 @@ export const RunnersView = ({
                 tabIndex={0}
                 data-testid={`runner-outdated-${runner.id}`}
               >
-                <TriangleAlert size={11} aria-hidden="true" />v{runner.version}
+                <TriangleAlert size="0.6875rem" aria-hidden="true" />v
+                {runner.version}
               </span>
             </Tooltip>
           ) : (
@@ -237,7 +238,7 @@ export const RunnersView = ({
                 <StatusDot status={DOT[st]} label={t(`runners.status.${st}`)} />
               </span>
               {st !== "revoked" && (
-                <span className="ops-cell-sub" style={{ paddingLeft: 16 }}>
+                <span className="ops-cell-sub" style={{ paddingLeft: "1rem" }}>
                   {seen}
                 </span>
               )}
@@ -318,9 +319,9 @@ export const RunnersView = ({
                     id: "pause",
                     label: r.paused ? t("runners.resume") : t("runners.pause"),
                     icon: r.paused ? (
-                      <Play size={14} aria-hidden="true" />
+                      <Play size="0.875rem" aria-hidden="true" />
                     ) : (
-                      <Pause size={14} aria-hidden="true" />
+                      <Pause size="0.875rem" aria-hidden="true" />
                     ),
                     disabled: busy,
                     onSelect: pause,
@@ -329,7 +330,7 @@ export const RunnersView = ({
                   {
                     id: "rotate",
                     label: t("runners.rotate"),
-                    icon: <RotateCw size={14} aria-hidden="true" />,
+                    icon: <RotateCw size="0.875rem" aria-hidden="true" />,
                     disabled: busy,
                     onSelect: rotate,
                     testId: `runner-rotate-${r.id}`,
@@ -337,7 +338,7 @@ export const RunnersView = ({
                   {
                     id: "revoke",
                     label: t("runners.revokeAction"),
-                    icon: <Trash2 size={14} aria-hidden="true" />,
+                    icon: <Trash2 size="0.875rem" aria-hidden="true" />,
                     danger: true,
                     disabled: busy,
                     onSelect: revoke,
@@ -520,10 +521,10 @@ export const RunnersView = ({
                 variant="secondary"
                 size="sm"
                 onClick={onOpenQueue}
-                style={{ gap: 6 }}
+                style={{ gap: "0.375rem" }}
               >
                 {t("runners.noneOnline.queue", { count: waiting })}
-                <ArrowRight size={13} aria-hidden="true" />
+                <ArrowRight size="0.8125rem" aria-hidden="true" />
               </Button>
             ) : undefined
           }
@@ -536,7 +537,7 @@ export const RunnersView = ({
         <KpiGrid>
           <KpiTile
             testId="runners-stat-online"
-            icon={<Server size={14} aria-hidden="true" />}
+            icon={<Server size="0.875rem" aria-hidden="true" />}
             label={t("runners.stats.online")}
             value={num(counts?.online ?? 0)}
             loading={countsStatus === "loading"}
@@ -561,7 +562,7 @@ export const RunnersView = ({
           />
           <KpiTile
             testId="runners-stat-running"
-            icon={<LoaderCircle size={14} aria-hidden="true" />}
+            icon={<LoaderCircle size="0.875rem" aria-hidden="true" />}
             label={t("runners.stats.running")}
             value={num(summary?.running ?? 0)}
             loading={summaryStatus === "loading"}
@@ -574,7 +575,7 @@ export const RunnersView = ({
           />
           <KpiTile
             testId="runners-stat-waiting"
-            icon={<ListOrdered size={14} aria-hidden="true" />}
+            icon={<ListOrdered size="0.875rem" aria-hidden="true" />}
             label={t("runners.stats.waiting")}
             value={num(waiting ?? 0)}
             loading={summaryStatus === "loading"}
@@ -596,7 +597,7 @@ export const RunnersView = ({
           />
           <KpiTile
             testId="runners-stat-version"
-            icon={<Tag size={14} aria-hidden="true" />}
+            icon={<Tag size="0.875rem" aria-hidden="true" />}
             label={t("runners.stats.version")}
             value={newest ?? ""}
             loading={countsStatus === "loading"}
@@ -614,7 +615,7 @@ export const RunnersView = ({
         <EmptyState
           framed
           testId="runners-empty"
-          icon={<Server size={18} />}
+          icon={<Server size="1.125rem" />}
           title={t("runners.empty.title")}
           description={t("runners.empty.body")}
           action={
@@ -622,10 +623,10 @@ export const RunnersView = ({
               type="button"
               size="sm"
               onClick={onCreateToken}
-              style={{ gap: 6 }}
+              style={{ gap: "0.375rem" }}
               data-testid="runners-empty-create"
             >
-              <Plus size={14} aria-hidden="true" />
+              <Plus size="0.875rem" aria-hidden="true" />
               {t("tokens.create")}
             </Button>
           }
@@ -782,7 +783,7 @@ const TokensSection = ({
       flush
       testId="runner-tokens"
       footer={
-        <span style={{ fontSize: 12, color: "var(--fg-2)" }}>
+        <span style={{ fontSize: "0.75rem", color: "var(--fg-2)" }}>
           {t("tokens.howTo")}
         </span>
       }
@@ -835,7 +836,7 @@ const TokensSection = ({
         </div>
       )}
       {tokens.status !== "ready" && (
-        <div style={{ padding: "0 20px 16px" }}>
+        <div style={{ padding: "0 1.25rem 1rem" }}>
           <ViewState
             status={tokens.status}
             errorText={t("tokens.loadFailed")}
@@ -847,10 +848,10 @@ const TokensSection = ({
         </div>
       )}
       {tokens.status === "ready" && empty && (
-        <div style={{ padding: "0 20px 16px" }}>
+        <div style={{ padding: "0 1.25rem 1rem" }}>
           <EmptyState
             testId="tokens-empty"
-            icon={<KeyRound size={18} />}
+            icon={<KeyRound size="1.125rem" />}
             title={t("tokens.empty.title")}
             description={t("tokens.empty.body")}
           />
@@ -860,7 +861,7 @@ const TokensSection = ({
         !empty &&
         tokens.items.length === 0 &&
         !tokens.failed && (
-          <div style={{ padding: "0 20px 16px" }}>
+          <div style={{ padding: "0 1.25rem 1rem" }}>
             <NoResults
               compact
               query={state.searchOnly}
@@ -870,7 +871,7 @@ const TokensSection = ({
           </div>
         )}
       {tokens.status === "ready" && tokens.failed && (
-        <div style={{ padding: "0 20px 16px" }}>
+        <div style={{ padding: "0 1.25rem 1rem" }}>
           <ViewState
             status="error"
             errorText={t("tokens.loadFailed")}
@@ -929,7 +930,7 @@ const TokenRow = ({
       className={active ? undefined : "ops-dim-row"}
     >
       <ListRow
-        icon={<KeyRound size={15} />}
+        icon={<KeyRound size="0.9375rem" />}
         tone={active ? "accent" : "neutral"}
         title={label}
         description={[
@@ -963,7 +964,7 @@ const TokenRow = ({
                     {
                       id: "revoke",
                       label: t("tokens.revoke"),
-                      icon: <Trash2 size={14} aria-hidden="true" />,
+                      icon: <Trash2 size="0.875rem" aria-hidden="true" />,
                       danger: true,
                       testId: `token-revoke-${token.id}`,
                       onSelect: () => {
@@ -982,7 +983,10 @@ const TokenRow = ({
 };
 
 const TokensSkeleton = () => (
-  <div className="flex flex-col" style={{ gap: 14, padding: "4px 0" }}>
+  <div
+    className="flex flex-col"
+    style={{ gap: "0.875rem", padding: "0.25rem 0" }}
+  >
     {[60, 45, 52].map((w) => (
       <span key={w} className="adm-skel" style={{ width: `${String(w)}%` }} />
     ))}

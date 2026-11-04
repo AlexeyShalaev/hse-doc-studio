@@ -128,10 +128,10 @@ const ServerList = ({
   return (
     <div
       className="flex flex-col"
-      style={{ gap: 10 }}
+      style={{ gap: "0.625rem" }}
       data-testid="git-server-picker"
     >
-      <span style={{ fontSize: 12.5, fontWeight: 600 }}>
+      <span style={{ fontSize: "0.78125rem", fontWeight: 600 }}>
         {t("servers.title")}
       </span>
       {loading && <Spinner size="sm" />}
@@ -139,7 +139,7 @@ const ServerList = ({
         <Notice tone="err" role="alert" text={t("servers.loadFailed")} />
       )}
       {!loading && !failed && items.length === 0 && (
-        <p className="dim" style={{ margin: 0, fontSize: 13 }}>
+        <p className="dim" style={{ margin: 0, fontSize: "0.8125rem" }}>
           {t("servers.empty")}
         </p>
       )}
@@ -151,8 +151,8 @@ const ServerList = ({
             type="button"
             className="flex items-center"
             style={{
-              gap: 12,
-              padding: "10px 12px",
+              gap: "0.75rem",
+              padding: "0.625rem 0.75rem",
               borderRadius: "var(--r-2)",
               border: "1px solid var(--border)",
               background: "var(--bg-1)",
@@ -165,10 +165,19 @@ const ServerList = ({
             data-testid={`git-server-${item.credential_id}`}
             data-state={item.state}
           >
-            <Server size={18} aria-hidden="true" style={{ flexShrink: 0 }} />
-            <span className="flex flex-col" style={{ gap: 2, flex: 1 }}>
-              <span style={{ fontWeight: 500, fontSize: 13 }}>{item.host}</span>
-              <span className="dim" style={{ fontSize: 12 }}>
+            <Server
+              size="1.125rem"
+              aria-hidden="true"
+              style={{ flexShrink: 0 }}
+            />
+            <span
+              className="flex flex-col"
+              style={{ gap: "0.125rem", flex: 1 }}
+            >
+              <span style={{ fontWeight: 500, fontSize: "0.8125rem" }}>
+                {item.host}
+              </span>
+              <span className="dim" style={{ fontSize: "0.75rem" }}>
                 {[
                   item.account_name
                     ? t("servers.account", { name: item.account_name })
@@ -179,7 +188,9 @@ const ServerList = ({
                   .join(" · ")}
               </span>
             </span>
-            <span style={{ fontSize: 12, color: STATE_COLOR[item.state] }}>
+            <span
+              style={{ fontSize: "0.75rem", color: STATE_COLOR[item.state] }}
+            >
               {item.state === "ok"
                 ? t("servers.open")
                 : `${t(`servers.state.${item.state}`)} · ${t("servers.relogin")}`}
@@ -194,7 +205,7 @@ const ServerList = ({
         style={{ alignSelf: "flex-start" }}
         data-testid="git-server-login-open"
       >
-        <Plus size={12} aria-hidden="true" />
+        <Plus size="0.75rem" aria-hidden="true" />
         {t("servers.loginOpen")}
       </Button>
     </div>
@@ -219,20 +230,20 @@ const ServerProjects = ({
   return (
     <div
       className="flex flex-col"
-      style={{ gap: 10 }}
+      style={{ gap: "0.625rem" }}
       data-testid="git-server-projects"
     >
-      <div className="flex items-center" style={{ gap: 8 }}>
+      <div className="flex items-center" style={{ gap: "0.5rem" }}>
         <button
           type="button"
           className="btn xs"
           onClick={onBack}
           data-testid="git-server-projects-back"
         >
-          <ChevronLeft size={12} aria-hidden="true" />
+          <ChevronLeft size="0.75rem" aria-hidden="true" />
           {t("projects.back")}
         </button>
-        <span style={{ fontSize: 12.5, fontWeight: 600 }}>
+        <span style={{ fontSize: "0.78125rem", fontWeight: 600 }}>
           {t("projects.title")}
         </span>
       </div>
@@ -271,8 +282,8 @@ const ServerProjects = ({
           key={project.id}
           className="flex items-center"
           style={{
-            gap: 12,
-            padding: "10px 12px",
+            gap: "0.75rem",
+            padding: "0.625rem 0.75rem",
             borderRadius: "var(--r-2)",
             border: "1px solid var(--border)",
             background: "var(--bg-1)",
@@ -281,12 +292,12 @@ const ServerProjects = ({
         >
           <span
             className="flex flex-col"
-            style={{ gap: 2, flex: 1, minWidth: 0 }}
+            style={{ gap: "0.125rem", flex: 1, minWidth: 0 }}
           >
-            <span style={{ fontWeight: 500, fontSize: 13 }}>
+            <span style={{ fontWeight: 500, fontSize: "0.8125rem" }}>
               {project.name}
             </span>
-            <span className="dim" style={{ fontSize: 12 }}>
+            <span className="dim" style={{ fontSize: "0.75rem" }}>
               {[
                 t("projects.owner", { name: project.owner_name }),
                 t(`projects.role.${project.role}`),

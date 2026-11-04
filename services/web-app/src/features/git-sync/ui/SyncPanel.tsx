@@ -56,7 +56,7 @@ export const SyncPanel = ({
 
   if (isLoading) {
     return (
-      <div className="flex justify-center" style={{ padding: 16 }}>
+      <div className="flex justify-center" style={{ padding: "1rem" }}>
         <Spinner size="sm" />
       </div>
     );

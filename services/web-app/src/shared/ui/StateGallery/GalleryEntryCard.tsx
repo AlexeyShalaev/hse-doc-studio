@@ -38,8 +38,8 @@ const frameStyle = (entry: GalleryEntry): React.CSSProperties => {
       return {
         width: entry.width ?? 680,
         maxWidth: "100%",
-        padding: 20,
-        borderRadius: 12,
+        padding: "1.25rem",
+        borderRadius: "0.75rem",
         border: "1px solid var(--border)",
         background: "var(--bg-1)",
         boxShadow: "var(--shadow-elev-pop, 0 8px 28px rgba(0, 0, 0, 0.28))",
@@ -48,17 +48,17 @@ const frameStyle = (entry: GalleryEntry): React.CSSProperties => {
       return {
         width: entry.width ?? 820,
         maxWidth: "100%",
-        borderRadius: 12,
+        borderRadius: "0.75rem",
         border: "1px solid var(--border)",
         background: "var(--bg-0)",
         overflow: "hidden",
       };
     case "screen":
       return {
-        height: "max(640px, calc(100vh - 150px))",
+        height: "max(40rem, calc(100vh - 9.375rem))",
         display: "flex",
         flexDirection: "column",
-        borderRadius: 12,
+        borderRadius: "0.75rem",
         border: "1px solid var(--border)",
         background: "var(--bg-0)",
         overflow: "hidden",
@@ -104,12 +104,12 @@ export const GalleryEntryCard = ({
     >
       <header
         className="flex items-start"
-        style={{ gap: 12, marginBottom: 10 }}
+        style={{ gap: "0.75rem", marginBottom: "0.625rem" }}
       >
         <div style={{ minWidth: 0, flex: 1 }}>
           <h4
             id={`entry-title-${entry.id}`}
-            style={{ margin: 0, fontSize: 14, fontWeight: 600 }}
+            style={{ margin: 0, fontSize: "0.875rem", fontWeight: 600 }}
           >
             {entry.title}
             {isLive && (
@@ -117,13 +117,13 @@ export const GalleryEntryCard = ({
                 className="flex-inline items-center dim"
                 style={{
                   display: "inline-flex",
-                  gap: 4,
-                  marginLeft: 10,
-                  fontSize: 11,
+                  gap: "0.25rem",
+                  marginLeft: "0.625rem",
+                  fontSize: "0.6875rem",
                   fontWeight: 500,
                 }}
               >
-                <FlaskConical size={12} aria-hidden="true" />
+                <FlaskConical size="0.75rem" aria-hidden="true" />
                 живое
               </span>
             )}
@@ -131,7 +131,11 @@ export const GalleryEntryCard = ({
           {entry.note && (
             <p
               className="dim"
-              style={{ margin: "3px 0 0", fontSize: 12.5, lineHeight: 1.5 }}
+              style={{
+                margin: "0.1875rem 0 0",
+                fontSize: "0.78125rem",
+                lineHeight: 1.5,
+              }}
             >
               {entry.note}
             </p>
@@ -139,7 +143,11 @@ export const GalleryEntryCard = ({
         </div>
         <code
           className="mono dim"
-          style={{ fontSize: 11, whiteSpace: "nowrap", paddingTop: 2 }}
+          style={{
+            fontSize: "0.6875rem",
+            whiteSpace: "nowrap",
+            paddingTop: "0.125rem",
+          }}
         >
           {entry.id}
         </code>
@@ -149,9 +157,9 @@ export const GalleryEntryCard = ({
         <div
           className="flex items-center"
           style={{
-            gap: 12,
-            padding: "14px 16px",
-            borderRadius: 10,
+            gap: "0.75rem",
+            padding: "0.875rem 1rem",
+            borderRadius: "0.625rem",
             border: "1px dashed var(--border)",
             background: "var(--bg-1)",
           }}
@@ -164,7 +172,7 @@ export const GalleryEntryCard = ({
           >
             Открыть
           </button>
-          <span className="dim" style={{ fontSize: 12 }}>
+          <span className="dim" style={{ fontSize: "0.75rem" }}>
             {demo
               ? "Работает на демо-данных в памяти вкладки; сценарий выберется сам."
               : "Демо-режим недоступен в этой сборке."}
@@ -187,14 +195,14 @@ export const GalleryEntryCard = ({
       )}
 
       {isActive && (
-        <div style={{ marginTop: 8 }} className="flex items-center">
+        <div style={{ marginTop: "0.5rem" }} className="flex items-center">
           <button type="button" className="btn sm" onClick={open}>
             Начать заново
           </button>
           <button
             type="button"
             className="btn sm"
-            style={{ marginLeft: 8 }}
+            style={{ marginLeft: "0.5rem" }}
             onClick={onCloseLive}
           >
             Закрыть

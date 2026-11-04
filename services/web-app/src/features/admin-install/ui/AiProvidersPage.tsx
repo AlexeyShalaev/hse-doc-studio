@@ -142,7 +142,7 @@ const AiBody = ({
   return (
     <div
       className="flex flex-col"
-      style={{ gap: 20, flex: 1 }}
+      style={{ gap: "1.25rem", flex: 1 }}
       data-testid="admin-ai-page"
     >
       <PageHead
@@ -156,7 +156,7 @@ const AiBody = ({
               onClick={add}
               data-testid="shared-provider-add"
             >
-              <Plus size={14} aria-hidden="true" />
+              <Plus size="0.875rem" aria-hidden="true" />
               {t("ai.add")}
             </Button>
           ) : null
@@ -282,7 +282,7 @@ const AiBody = ({
       >
         <div
           className="flex flex-col"
-          style={{ gap: 10, fontSize: 13 }}
+          style={{ gap: "0.625rem", fontSize: "0.8125rem" }}
           data-testid="shared-provider-delete"
         >
           <span>{t("ai.deleteBody", { name: deleting?.name ?? "" })}</span>

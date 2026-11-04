@@ -60,14 +60,19 @@ export const RegistrationStep = ({
       >
         <legend
           className="flex items-center"
-          style={{ gap: 8, padding: 0, marginBottom: 8, fontSize: 12.5 }}
+          style={{
+            gap: "0.5rem",
+            padding: 0,
+            marginBottom: "0.5rem",
+            fontSize: "0.78125rem",
+          }}
         >
           <span style={{ fontWeight: 600 }}>
             {t("setup.registration.modeLabel")}
           </span>
           {modeLocked && <LockedBadge />}
         </legend>
-        <div className="flex flex-col" style={{ gap: 8 }}>
+        <div className="flex flex-col" style={{ gap: "0.5rem" }}>
           {MODES.map((mode) => {
             const active = draft.registration_mode === mode;
             return (
@@ -77,9 +82,9 @@ export const RegistrationStep = ({
                 data-active={active}
                 style={{
                   display: "flex",
-                  gap: 10,
+                  gap: "0.625rem",
                   alignItems: "flex-start",
-                  padding: "10px 12px",
+                  padding: "0.625rem 0.75rem",
                   borderRadius: "var(--r-3)",
                   border: `1px solid ${active ? "var(--accent)" : "var(--border)"}`,
                   background: active ? "var(--accent-soft)" : "var(--bg-1)",
@@ -96,12 +101,19 @@ export const RegistrationStep = ({
                   onChange={() => {
                     onChange({ registration_mode: mode });
                   }}
-                  style={{ marginTop: 3 }}
+                  style={{ marginTop: "0.1875rem" }}
                 />
-                <span className="flex flex-col" style={{ gap: 2, minWidth: 0 }}>
+                <span
+                  className="flex flex-col"
+                  style={{ gap: "0.125rem", minWidth: 0 }}
+                >
                   <span
                     className="flex items-center"
-                    style={{ gap: 8, fontSize: 13.5, fontWeight: 500 }}
+                    style={{
+                      gap: "0.5rem",
+                      fontSize: "0.84375rem",
+                      fontWeight: 500,
+                    }}
                   >
                     {t(`setup.registration.mode.${mode}.title`)}
                     {mode === "invite" && (
@@ -110,7 +122,9 @@ export const RegistrationStep = ({
                       </span>
                     )}
                   </span>
-                  <span style={{ fontSize: 12.5, color: "var(--fg-2)" }}>
+                  <span
+                    style={{ fontSize: "0.78125rem", color: "var(--fg-2)" }}
+                  >
                     {t(`setup.registration.mode.${mode}.body`)}
                   </span>
                 </span>
@@ -121,7 +135,7 @@ export const RegistrationStep = ({
       </fieldset>
 
       {draft.registration_mode === "domains" && (
-        <div style={{ marginTop: 14 }} data-testid="setup-domains">
+        <div style={{ marginTop: "0.875rem" }} data-testid="setup-domains">
           <Input
             id={`${uid}-domains`}
             label={t("setup.registration.domains")}
@@ -138,7 +152,7 @@ export const RegistrationStep = ({
               : { hint: t("setup.registration.domainsHint") })}
           />
           {domainsLocked && (
-            <div style={{ marginTop: 6 }}>
+            <div style={{ marginTop: "0.375rem" }}>
               <LockedBadge />
             </div>
           )}
@@ -148,7 +162,11 @@ export const RegistrationStep = ({
       {approvalApplies(draft.registration_mode) && (
         <label
           className="flex"
-          style={{ gap: 10, marginTop: 14, alignItems: "flex-start" }}
+          style={{
+            gap: "0.625rem",
+            marginTop: "0.875rem",
+            alignItems: "flex-start",
+          }}
         >
           <input
             type="checkbox"
@@ -157,17 +175,17 @@ export const RegistrationStep = ({
             onChange={(e) => {
               onChange({ require_approval: e.target.checked });
             }}
-            style={{ marginTop: 3 }}
+            style={{ marginTop: "0.1875rem" }}
           />
-          <span className="flex flex-col" style={{ gap: 2 }}>
+          <span className="flex flex-col" style={{ gap: "0.125rem" }}>
             <span
               className="flex items-center"
-              style={{ gap: 8, fontSize: 13.5, fontWeight: 500 }}
+              style={{ gap: "0.5rem", fontSize: "0.84375rem", fontWeight: 500 }}
             >
               {t("setup.registration.approval")}
               {approvalLocked && <LockedBadge />}
             </span>
-            <span style={{ fontSize: 12.5, color: "var(--fg-2)" }}>
+            <span style={{ fontSize: "0.78125rem", color: "var(--fg-2)" }}>
               {t("setup.registration.approvalHint")}
             </span>
           </span>

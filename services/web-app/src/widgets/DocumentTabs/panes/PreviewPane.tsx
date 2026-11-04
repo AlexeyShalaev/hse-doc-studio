@@ -242,23 +242,26 @@ export const PreviewPane = ({ project, doc }: PreviewPaneProps) => {
     return (
       <div
         className="flex flex-col items-center justify-center"
-        style={{ flex: 1, padding: 40, gap: 16, minHeight: 0 }}
+        style={{ flex: 1, padding: "2.5rem", gap: "1rem", minHeight: 0 }}
       >
         <div
           className="stripes flex items-center justify-center"
           style={{
-            width: 220,
-            height: 280,
-            borderRadius: 6,
+            width: "13.75rem",
+            height: "17.5rem",
+            borderRadius: "0.375rem",
             border: "1px solid var(--border-strong)",
             color: "var(--fg-3)",
           }}
         >
-          <div className="flex flex-col items-center" style={{ gap: 6 }}>
-            <FileText size={28} />
+          <div
+            className="flex flex-col items-center"
+            style={{ gap: "0.375rem" }}
+          >
+            <FileText size="1.75rem" />
             <span
               className="mono"
-              style={{ fontSize: 10, textTransform: "uppercase" }}
+              style={{ fontSize: "0.625rem", textTransform: "uppercase" }}
             >
               {t("preview.notBuilt")}
             </span>
@@ -269,8 +272,8 @@ export const PreviewPane = ({ project, doc }: PreviewPaneProps) => {
           style={{
             margin: 0,
             textAlign: "center",
-            maxWidth: 380,
-            fontSize: 12.5,
+            maxWidth: "23.75rem",
+            fontSize: "0.78125rem",
           }}
         >
           {doc.engine === null ? (
@@ -317,25 +320,30 @@ export const PreviewPane = ({ project, doc }: PreviewPaneProps) => {
           <div
             className="flex items-center gap-2"
             style={{
-              padding: "6px 10px",
+              padding: "0.375rem 0.625rem",
               borderBottom: "1px solid var(--border)",
               flexShrink: 0,
             }}
           >
             <Globe
-              size={13}
+              size="0.8125rem"
               style={{ color: "var(--accent)", flexShrink: 0 }}
             />
             <span
               className="mono dim tt shrink-0"
               data-tt={t("preview.htmlPreviewTooltip")}
-              style={{ whiteSpace: "nowrap", fontSize: 11 }}
+              style={{ whiteSpace: "nowrap", fontSize: "0.6875rem" }}
             >
               {t("preview.htmlPreviewBadge")}
             </span>
             <span
               className="mono dim truncate"
-              style={{ fontSize: 11, flex: 1, minWidth: 0, textAlign: "right" }}
+              style={{
+                fontSize: "0.6875rem",
+                flex: 1,
+                minWidth: 0,
+                textAlign: "right",
+              }}
             >
               {artifactName}
             </span>
@@ -346,7 +354,7 @@ export const PreviewPane = ({ project, doc }: PreviewPaneProps) => {
                 setHtmlRefresh((n) => n + 1);
               }}
             >
-              <RefreshCw size={12} />
+              <RefreshCw size="0.75rem" />
               {t("preview.refresh")}
             </button>
             <button
@@ -356,7 +364,7 @@ export const PreviewPane = ({ project, doc }: PreviewPaneProps) => {
                 window.open(artifactHref, "_blank", "noopener");
               }}
             >
-              <ExternalLink size={12} />
+              <ExternalLink size="0.75rem" />
               {t("preview.openInNewTab")}
             </button>
             <a
@@ -364,7 +372,7 @@ export const PreviewPane = ({ project, doc }: PreviewPaneProps) => {
               className="btn shrink-0"
               download={artifactName}
             >
-              <Download size={12} />
+              <Download size="0.75rem" />
               {t("preview.download")}
             </a>
           </div>
@@ -410,7 +418,7 @@ export const PreviewPane = ({ project, doc }: PreviewPaneProps) => {
                   style={{
                     background: "var(--bg-3)",
                     color: "var(--fg-1)",
-                    fontSize: 10.5,
+                    fontSize: "0.65625rem",
                   }}
                 >
                   {t("preview.customFileBadge")}
@@ -428,7 +436,7 @@ export const PreviewPane = ({ project, doc }: PreviewPaneProps) => {
                 className="btn shrink-0"
                 download={artifactName}
               >
-                <Download size={12} />
+                <Download size="0.75rem" />
                 {t("preview.downloadOriginal", { ext: `.${ext}` })}
               </a>
             </>
@@ -453,31 +461,34 @@ export const PreviewPane = ({ project, doc }: PreviewPaneProps) => {
     return (
       <div
         className="flex flex-col items-center justify-center"
-        style={{ flex: 1, padding: 40, gap: 16, minHeight: 0 }}
+        style={{ flex: 1, padding: "2.5rem", gap: "1rem", minHeight: 0 }}
       >
         <div
           className="stripes flex items-center justify-center"
           style={{
-            width: 220,
-            height: 280,
-            borderRadius: 6,
+            width: "13.75rem",
+            height: "17.5rem",
+            borderRadius: "0.375rem",
             border: "1px solid var(--border-strong)",
             color: "var(--fg-3)",
           }}
         >
-          <div className="flex flex-col items-center" style={{ gap: 6 }}>
+          <div
+            className="flex flex-col items-center"
+            style={{ gap: "0.375rem" }}
+          >
             <ArtifactIcon size={28} />
             {ext && (
               <span
                 className="mono"
-                style={{ fontSize: 10, textTransform: "uppercase" }}
+                style={{ fontSize: "0.625rem", textTransform: "uppercase" }}
               >
                 .{ext}
               </span>
             )}
           </div>
         </div>
-        <span className="mono" style={{ fontSize: 12.5 }}>
+        <span className="mono" style={{ fontSize: "0.78125rem" }}>
           {artifactName}
         </span>
         <p
@@ -485,8 +496,8 @@ export const PreviewPane = ({ project, doc }: PreviewPaneProps) => {
           style={{
             margin: 0,
             textAlign: "center",
-            maxWidth: 380,
-            fontSize: 12.5,
+            maxWidth: "23.75rem",
+            fontSize: "0.78125rem",
           }}
         >
           {doc.custom_file != null
@@ -502,9 +513,9 @@ export const PreviewPane = ({ project, doc }: PreviewPaneProps) => {
             to="/settings/presentations"
             className="dim"
             style={{
-              fontSize: 11.5,
+              fontSize: "0.71875rem",
               textAlign: "center",
-              maxWidth: 380,
+              maxWidth: "23.75rem",
               textDecoration: "underline",
               textUnderlineOffset: 3,
             }}
@@ -514,12 +525,12 @@ export const PreviewPane = ({ project, doc }: PreviewPaneProps) => {
         )}
         <div className="flex items-center gap-2">
           <a href={artifactHref} className="btn" download={artifactName}>
-            <Download size={12} />
+            <Download size="0.75rem" />
             {t("preview.download")}
           </a>
           {offerTextFallback && (
             <button type="button" className="btn" onClick={openInSourceTab}>
-              <FileEdit size={12} />
+              <FileEdit size="0.75rem" />
               {t("preview.openAsText")}
             </button>
           )}
@@ -531,7 +542,7 @@ export const PreviewPane = ({ project, doc }: PreviewPaneProps) => {
                 window.open(artifactHref, "_blank", "noopener");
               }}
             >
-              <ExternalLink size={12} />
+              <ExternalLink size="0.75rem" />
               {t("preview.openInNewTab")}
             </button>
           )}
@@ -568,7 +579,7 @@ export const PreviewPane = ({ project, doc }: PreviewPaneProps) => {
       onFindInSource={onFindInSource}
       toolbarExtras={
         <>
-          <span className="mono dim truncate" style={{ maxWidth: 200 }}>
+          <span className="mono dim truncate" style={{ maxWidth: "12.5rem" }}>
             {meta.out}
           </span>
           {lastCompile?.words != null && (
@@ -594,7 +605,7 @@ export const PreviewPane = ({ project, doc }: PreviewPaneProps) => {
                 setDiffOpen(true);
               }}
             >
-              <GitCompare size={11} />
+              <GitCompare size="0.6875rem" />
               {t("preview.compare")}
             </button>
           )}
@@ -605,7 +616,7 @@ export const PreviewPane = ({ project, doc }: PreviewPaneProps) => {
             target="_blank"
             rel="noreferrer"
           >
-            <Download size={11} />
+            <Download size="0.6875rem" />
             PDF
           </a>
           {hasEnabledSignature && (
@@ -619,7 +630,11 @@ export const PreviewPane = ({ project, doc }: PreviewPaneProps) => {
                   : t("preview.downloadSignedTitle")
               }
             >
-              {hasDetachedSlot ? <Archive size={11} /> : <PenTool size={11} />}
+              {hasDetachedSlot ? (
+                <Archive size="0.6875rem" />
+              ) : (
+                <PenTool size="0.6875rem" />
+              )}
               {hasDetachedSlot
                 ? t("preview.pdfWithSig")
                 : t("preview.withSignatures")}

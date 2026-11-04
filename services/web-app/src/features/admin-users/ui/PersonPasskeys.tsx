@@ -31,7 +31,7 @@ export const PersonPasskeysView = ({
     <div
       data-testid="person-passkeys"
       className="flex flex-col"
-      style={{ gap: 8 }}
+      style={{ gap: "0.5rem" }}
     >
       {status === "loading" && <Spinner size="sm" />}
       {status === "error" && (
@@ -39,7 +39,10 @@ export const PersonPasskeysView = ({
       )}
       {status === "ready" && (
         <>
-          <p className="ppl-muted" style={{ margin: 0, fontSize: 12.5 }}>
+          <p
+            className="ppl-muted"
+            style={{ margin: 0, fontSize: "0.78125rem" }}
+          >
             <span data-testid="person-passkeys-count">
               {t("passkeys.count", { count: items.length })}
             </span>
@@ -50,7 +53,7 @@ export const PersonPasskeysView = ({
                 listStyle: "none",
                 margin: 0,
                 padding: 0,
-                fontSize: 12.5,
+                fontSize: "0.78125rem",
               }}
               className="flex flex-col"
             >
@@ -58,7 +61,7 @@ export const PersonPasskeysView = ({
                 <li
                   key={item.id}
                   data-testid={`person-passkey-${item.id}`}
-                  style={{ padding: "4px 0" }}
+                  style={{ padding: "0.25rem 0" }}
                 >
                   <span style={{ fontWeight: 500 }}>{item.name}</span>
                   <span className="ppl-muted">
@@ -77,9 +80,9 @@ export const PersonPasskeysView = ({
           )}
           {items.length > 0 &&
             (confirm ? (
-              <div className="flex flex-col" style={{ gap: 8 }}>
+              <div className="flex flex-col" style={{ gap: "0.5rem" }}>
                 <Notice tone="warn" text={t("passkeys.confirm")} />
-                <div className="flex" style={{ gap: 8 }}>
+                <div className="flex" style={{ gap: "0.5rem" }}>
                   <Button
                     type="button"
                     variant="danger"

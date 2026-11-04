@@ -101,14 +101,14 @@ export const DisconnectDialog = ({
             {disconnect.isPending ? (
               <Spinner size="sm" />
             ) : (
-              <Unplug size={12} aria-hidden="true" />
+              <Unplug size="0.75rem" aria-hidden="true" />
             )}
             {t("settings.disconnect.confirm")}
           </button>
         </>
       }
     >
-      <div className="flex flex-col" style={{ gap: 12 }}>
+      <div className="flex flex-col" style={{ gap: "0.75rem" }}>
         {unsent > 0 && (
           <Notice
             tone="warn"
@@ -118,11 +118,11 @@ export const DisconnectDialog = ({
         )}
 
         {label !== null && (
-          <div className="flex flex-col" style={{ gap: 6 }}>
+          <div className="flex flex-col" style={{ gap: "0.375rem" }}>
             <label
               className="flex items-start"
               style={{
-                gap: 8,
+                gap: "0.5rem",
                 cursor: canForget ? "pointer" : "not-allowed",
                 opacity: canForget ? 1 : 0.6,
               }}
@@ -134,13 +134,17 @@ export const DisconnectDialog = ({
                 onChange={(event) => {
                   setForget(event.target.checked);
                 }}
-                style={{ accentColor: "var(--accent)", marginTop: 3 }}
+                style={{ accentColor: "var(--accent)", marginTop: "0.1875rem" }}
               />
-              <span style={{ fontSize: 12.5 }}>
+              <span style={{ fontSize: "0.78125rem" }}>
                 {t("settings.disconnect.forget", { label })}
                 <span
                   className="dim"
-                  style={{ display: "block", fontSize: 11, marginTop: 2 }}
+                  style={{
+                    display: "block",
+                    fontSize: "0.6875rem",
+                    marginTop: "0.125rem",
+                  }}
                 >
                   {t("settings.disconnect.forgetHint")}
                 </span>

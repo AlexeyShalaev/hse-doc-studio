@@ -317,9 +317,9 @@ export const DocumentsPanel = ({
             disabled={sections.length === 0}
           >
             {isEveryCollapsed ? (
-              <ChevronsUpDown size={12} />
+              <ChevronsUpDown size="0.75rem" />
             ) : (
-              <ChevronsDownUp size={12} />
+              <ChevronsDownUp size="0.75rem" />
             )}
           </button>
         </div>
@@ -328,7 +328,10 @@ export const DocumentsPanel = ({
       <div className="panel-body">
         <FetchAllNotice projectId={projectId} />
         <div className="panel-filter">
-          <Search size={12} style={{ flexShrink: 0, color: "var(--fg-3)" }} />
+          <Search
+            size="0.75rem"
+            style={{ flexShrink: 0, color: "var(--fg-3)" }}
+          />
           <input
             type="text"
             value={query}
@@ -343,7 +346,7 @@ export const DocumentsPanel = ({
               aria-label={t("panel.clearFilter")}
               onClick={handleClearQuery}
             >
-              <X size={11} />
+              <X size="0.6875rem" />
             </button>
           )}
         </div>
@@ -423,7 +426,7 @@ export const DocumentsPanel = ({
                   {/* ФИО целиком не влезает в 260px — режем многоточием. */}
                   <span
                     className="truncate"
-                    style={{ maxWidth: 104, minWidth: 0 }}
+                    style={{ maxWidth: "6.5rem", minWidth: 0 }}
                   >
                     {label}
                   </span>
@@ -447,17 +450,20 @@ export const DocumentsPanel = ({
           <div
             className="flex items-start gap-2"
             style={{
-              margin: "0 2px 8px",
-              padding: "6px 8px",
-              fontSize: 10.5,
+              margin: "0 0.125rem 0.5rem",
+              padding: "0.375rem 0.5rem",
+              fontSize: "0.65625rem",
               lineHeight: 1.4,
               background: "var(--c-err-soft, rgba(239, 68, 68, 0.08))",
               border: "1px solid var(--c-err)",
               color: "var(--c-err)",
-              borderRadius: 4,
+              borderRadius: "0.25rem",
             }}
           >
-            <AlertTriangle size={12} style={{ flexShrink: 0, marginTop: 1 }} />
+            <AlertTriangle
+              size="0.75rem"
+              style={{ flexShrink: 0, marginTop: 1 }}
+            />
             <span>{t("documents.stalledWarning")}</span>
           </div>
         )}
@@ -465,12 +471,12 @@ export const DocumentsPanel = ({
           <div
             className="flex items-center gap-1"
             style={{
-              margin: "0 2px 8px",
-              fontSize: 10,
+              margin: "0 0.125rem 0.5rem",
+              fontSize: "0.625rem",
               color: "var(--fg-3)",
             }}
           >
-            <RefreshCw size={9} className="spin" />
+            <RefreshCw size="0.5625rem" className="spin" />
             <span>{t("documents.buildInProgress")}</span>
           </div>
         )}
@@ -496,7 +502,11 @@ export const DocumentsPanel = ({
         {isLoading && docs.length === 0 && (
           <div
             className="flex items-center justify-center gap-2"
-            style={{ padding: "12px 0", fontSize: 11, color: "var(--fg-3)" }}
+            style={{
+              padding: "0.75rem 0",
+              fontSize: "0.6875rem",
+              color: "var(--fg-3)",
+            }}
           >
             <Spinner size="sm" />
             <span>{t("panel.loading")}</span>
@@ -506,8 +516,8 @@ export const DocumentsPanel = ({
         {!isLoading && docs.length === 0 && (
           <div
             style={{
-              padding: "14px 10px",
-              fontSize: 11.5,
+              padding: "0.875rem 0.625rem",
+              fontSize: "0.71875rem",
               lineHeight: 1.45,
               color: "var(--fg-3)",
             }}
@@ -519,13 +529,17 @@ export const DocumentsPanel = ({
         {docs.length > 0 && visibleSections.length === 0 && (
           <div
             className="flex flex-col items-start gap-2"
-            style={{ padding: "14px 10px" }}
+            style={{ padding: "0.875rem 0.625rem" }}
           >
-            <span style={{ fontSize: 12, color: "var(--fg-1)" }}>
+            <span style={{ fontSize: "0.75rem", color: "var(--fg-1)" }}>
               {t("panel.nothingFound")}
             </span>
             <span
-              style={{ fontSize: 10.5, lineHeight: 1.4, color: "var(--fg-3)" }}
+              style={{
+                fontSize: "0.65625rem",
+                lineHeight: 1.4,
+                color: "var(--fg-3)",
+              }}
             >
               {t("panel.nothingFoundHint")}
             </span>
@@ -564,7 +578,11 @@ export const DocumentsPanel = ({
               borderColor: isStalled ? "var(--c-err)" : undefined,
             }}
           >
-            {isStalled ? <AlertTriangle size={11} /> : <Square size={11} />}
+            {isStalled ? (
+              <AlertTriangle size="0.6875rem" />
+            ) : (
+              <Square size="0.6875rem" />
+            )}
             {t("panel.stopBuilds")}
           </button>
         ) : (
@@ -576,14 +594,14 @@ export const DocumentsPanel = ({
             data-testid="build-all-button"
             style={{ justifyContent: "center" }}
           >
-            <Play size={11} />
+            <Play size="0.6875rem" />
             {t("panel.buildAll")}
           </button>
         )}
         {isCompiling && isStalled && (
           <span
             style={{
-              fontSize: 10,
+              fontSize: "0.625rem",
               lineHeight: 1.4,
               color: "var(--c-err)",
             }}

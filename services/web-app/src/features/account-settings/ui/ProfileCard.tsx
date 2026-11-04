@@ -92,7 +92,7 @@ export const ProfileCard = ({
       <form
         onSubmit={submitName}
         className="flex flex-col"
-        style={{ gap: 12, maxWidth: 420 }}
+        style={{ gap: "0.75rem", maxWidth: "26.25rem" }}
       >
         <Input
           id="account-name"
@@ -113,18 +113,21 @@ export const ProfileCard = ({
           <Button
             type="submit"
             aria-disabled={pending || !dirty}
-            style={{ gap: 8 }}
+            style={{ gap: "0.5rem" }}
             data-testid="profile-save"
           >
             {pending ? (
               <Spinner size="sm" />
             ) : (
-              <Save size={14} aria-hidden="true" />
+              <Save size="0.875rem" aria-hidden="true" />
             )}
             {pending ? t("profile.saving") : t("profile.save")}
           </Button>
           {saved && !dirty && !pending && (
-            <span role="status" style={{ fontSize: 12, color: "var(--c-ok)" }}>
+            <span
+              role="status"
+              style={{ fontSize: "0.75rem", color: "var(--c-ok)" }}
+            >
               {t("profile.saved")}
             </span>
           )}
@@ -135,26 +138,34 @@ export const ProfileCard = ({
         id="account-email"
         className="flex flex-col settings-anchor"
         style={{
-          gap: 8,
-          paddingTop: 12,
+          gap: "0.5rem",
+          paddingTop: "0.75rem",
           borderTop: "1px dashed var(--border)",
         }}
       >
-        <div className="flex items-center" style={{ gap: 8, flexWrap: "wrap" }}>
-          <Mail size={14} aria-hidden="true" style={{ color: "var(--fg-2)" }} />
+        <div
+          className="flex items-center"
+          style={{ gap: "0.5rem", flexWrap: "wrap" }}
+        >
+          <Mail
+            size="0.875rem"
+            aria-hidden="true"
+            style={{ color: "var(--fg-2)" }}
+          />
           <span
-            style={{ fontSize: 13, fontWeight: 500 }}
+            style={{ fontSize: "0.8125rem", fontWeight: 500 }}
             data-testid="account-email-value"
           >
             {profile.email}
           </span>
           {emailVerified ? (
             <Badge variant="success">
-              <BadgeCheck size={11} aria-hidden="true" /> {t("email.verified")}
+              <BadgeCheck size="0.6875rem" aria-hidden="true" />{" "}
+              {t("email.verified")}
             </Badge>
           ) : (
             <Badge variant="warning">
-              <TriangleAlert size={11} aria-hidden="true" />{" "}
+              <TriangleAlert size="0.6875rem" aria-hidden="true" />{" "}
               {t("email.unverified")}
             </Badge>
           )}
@@ -177,7 +188,7 @@ export const ProfileCard = ({
             onSubmit={submitEmail}
             noValidate
             className="flex flex-col"
-            style={{ gap: 12, maxWidth: 420 }}
+            style={{ gap: "0.75rem", maxWidth: "26.25rem" }}
             data-testid="email-form"
           >
             <Input
@@ -234,12 +245,12 @@ export const ProfileCard = ({
               <Button
                 type="submit"
                 aria-disabled={email.pending}
-                style={{ gap: 8 }}
+                style={{ gap: "0.5rem" }}
               >
                 {email.pending ? (
                   <Spinner size="sm" />
                 ) : (
-                  <Mail size={14} aria-hidden="true" />
+                  <Mail size="0.875rem" aria-hidden="true" />
                 )}
                 {email.pending ? t("email.sending") : t("email.submit")}
               </Button>

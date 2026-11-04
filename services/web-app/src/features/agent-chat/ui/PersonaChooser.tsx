@@ -50,12 +50,15 @@ export const PersonaChooser = ({
   };
 
   return (
-    <div style={{ flex: 1, overflowY: "auto", padding: "20px 16px" }}>
-      <div style={{ textAlign: "center", marginBottom: 16 }}>
-        <div style={{ fontSize: 14, fontWeight: 600 }}>
+    <div style={{ flex: 1, overflowY: "auto", padding: "1.25rem 1rem" }}>
+      <div style={{ textAlign: "center", marginBottom: "1rem" }}>
+        <div style={{ fontSize: "0.875rem", fontWeight: 600 }}>
           {t("persona.chooserTitle")}
         </div>
-        <div className="dim" style={{ fontSize: 12, marginTop: 4 }}>
+        <div
+          className="dim"
+          style={{ fontSize: "0.75rem", marginTop: "0.25rem" }}
+        >
           {t("persona.chooserSubtitle")}
         </div>
       </div>
@@ -64,7 +67,7 @@ export const PersonaChooser = ({
         style={{
           display: "grid",
           gridTemplateColumns: "1fr 1fr",
-          gap: 8,
+          gap: "0.5rem",
         }}
       >
         {personas.map((persona) => {
@@ -75,11 +78,11 @@ export const PersonaChooser = ({
               type="button"
               className="flex flex-col"
               style={{
-                gap: 6,
+                gap: "0.375rem",
                 alignItems: "flex-start",
                 textAlign: "left",
-                padding: "10px 10px",
-                borderRadius: 8,
+                padding: "0.625rem 0.625rem",
+                borderRadius: "0.5rem",
                 cursor: "pointer",
                 background: isActive ? "var(--bg-hover)" : "var(--bg-1)",
                 border: `1px solid ${isActive ? "var(--accent)" : "var(--border)"}`,
@@ -90,7 +93,7 @@ export const PersonaChooser = ({
             >
               <div
                 className="flex items-center"
-                style={{ gap: 6, width: "100%" }}
+                style={{ gap: "0.375rem", width: "100%" }}
               >
                 <PersonaIcon
                   id={persona.id}
@@ -101,17 +104,26 @@ export const PersonaChooser = ({
                     color: isActive ? "var(--accent)" : "var(--fg-2)",
                   }}
                 />
-                <span style={{ fontSize: 12.5, fontWeight: 600, minWidth: 0 }}>
+                <span
+                  style={{
+                    fontSize: "0.78125rem",
+                    fontWeight: 600,
+                    minWidth: 0,
+                  }}
+                >
                   {persona.label}
                 </span>
                 {isActive && (
                   <Check
-                    size={13}
+                    size="0.8125rem"
                     style={{ marginLeft: "auto", color: "var(--accent)" }}
                   />
                 )}
               </div>
-              <span className="dim" style={{ fontSize: 11, lineHeight: 1.35 }}>
+              <span
+                className="dim"
+                style={{ fontSize: "0.6875rem", lineHeight: 1.35 }}
+              >
                 {persona.description}
               </span>
             </button>
@@ -120,7 +132,7 @@ export const PersonaChooser = ({
       </div>
 
       {customOpen && (
-        <div style={{ marginTop: 10 }}>
+        <div style={{ marginTop: "0.625rem" }}>
           <textarea
             className="mono"
             value={customDraft}
@@ -133,15 +145,15 @@ export const PersonaChooser = ({
             style={{
               width: "100%",
               resize: "vertical",
-              fontSize: 12,
-              padding: "8px 10px",
+              fontSize: "0.75rem",
+              padding: "0.5rem 0.625rem",
               background: "var(--bg-0)",
               border: "1px solid var(--border)",
-              borderRadius: 8,
+              borderRadius: "0.5rem",
               color: "var(--fg-0)",
             }}
           />
-          <div className="flex justify-end" style={{ marginTop: 6 }}>
+          <div className="flex justify-end" style={{ marginTop: "0.375rem" }}>
             <button
               type="button"
               className="btn xs"

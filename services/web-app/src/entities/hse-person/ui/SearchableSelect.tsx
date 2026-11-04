@@ -64,7 +64,7 @@ export const SearchableSelect = ({
         style={{
           display: "flex",
           alignItems: "center",
-          gap: 6,
+          gap: "0.375rem",
           width: "100%",
           textAlign: "left",
           cursor: disabled ? "default" : "pointer",
@@ -84,7 +84,7 @@ export const SearchableSelect = ({
         </span>
         {selected ? (
           <X
-            size={13}
+            size="0.8125rem"
             style={{ color: "var(--fg-3)", flexShrink: 0 }}
             onClick={(e) => {
               e.stopPropagation();
@@ -93,7 +93,7 @@ export const SearchableSelect = ({
           />
         ) : null}
         <ChevronDown
-          size={13}
+          size="0.8125rem"
           style={{ color: "var(--fg-3)", flexShrink: 0 }}
         />
       </button>
@@ -103,14 +103,14 @@ export const SearchableSelect = ({
           style={{
             position: "absolute",
             zIndex: 20,
-            top: "calc(100% + 4px)",
+            top: "calc(100% + 0.25rem)",
             left: 0,
             right: 0,
             background: "var(--bg-1)",
             border: "1px solid var(--border)",
-            borderRadius: 8,
+            borderRadius: "0.5rem",
             boxShadow: "0 10px 28px rgba(0,0,0,0.22)",
-            padding: 6,
+            padding: "0.375rem",
           }}
         >
           <input
@@ -121,22 +121,26 @@ export const SearchableSelect = ({
             onChange={(e) => {
               setQuery(e.target.value);
             }}
-            style={{ marginBottom: 6, fontSize: 12, width: "100%" }}
+            style={{
+              marginBottom: "0.375rem",
+              fontSize: "0.75rem",
+              width: "100%",
+            }}
           />
           <div
             style={{
-              maxHeight: 240,
+              maxHeight: "15rem",
               overflowY: "auto",
               display: "flex",
               flexDirection: "column",
-              gap: 2,
+              gap: "0.125rem",
             }}
           >
             {filtered.length === 0 ? (
               <span
                 style={{
-                  padding: "6px 8px",
-                  fontSize: 11.5,
+                  padding: "0.375rem 0.5rem",
+                  fontSize: "0.71875rem",
                   color: "var(--fg-3)",
                 }}
               >
@@ -153,9 +157,9 @@ export const SearchableSelect = ({
                   }}
                   style={{
                     textAlign: "left",
-                    padding: "5px 8px",
-                    borderRadius: 6,
-                    fontSize: 12,
+                    padding: "0.3125rem 0.5rem",
+                    borderRadius: "0.375rem",
+                    fontSize: "0.75rem",
                     cursor: "pointer",
                     background:
                       o.value === value ? "var(--bg-3)" : "transparent",

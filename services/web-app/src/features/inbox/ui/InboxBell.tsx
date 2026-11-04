@@ -120,26 +120,26 @@ export const InboxBellView = ({
           aria-label={label}
           data-testid="inbox-bell"
           data-count={count}
-          style={{ width: 32, height: 32, position: "relative" }}
+          style={{ width: "2rem", height: "2rem", position: "relative" }}
         >
-          <Bell size={16} aria-hidden="true" />
+          <Bell size="1rem" aria-hidden="true" />
           {count > 0 && (
             <span
               aria-hidden="true"
               data-testid="inbox-bell-badge"
               style={{
                 position: "absolute",
-                top: 3,
-                right: 2,
-                minWidth: 15,
-                height: 15,
-                padding: "0 4px",
-                borderRadius: 8,
+                top: "0.1875rem",
+                right: "0.125rem",
+                minWidth: "0.9375rem",
+                height: "0.9375rem",
+                padding: "0 0.25rem",
+                borderRadius: "0.5rem",
                 background: "var(--c-err)",
                 color: "white",
-                fontSize: 9.5,
+                fontSize: "0.59375rem",
                 fontWeight: 600,
-                lineHeight: "15px",
+                lineHeight: "0.9375rem",
                 textAlign: "center",
               }}
             >
@@ -169,12 +169,18 @@ export const InboxBellView = ({
         <div
           className="flex items-center justify-between shrink-0"
           style={{
-            gap: 8,
-            padding: "8px 8px 8px 12px",
+            gap: "0.5rem",
+            padding: "0.5rem 0.5rem 0.5rem 0.75rem",
             borderBottom: "1px solid var(--border)",
           }}
         >
-          <span style={{ fontSize: 13, fontWeight: 600, color: "var(--fg-0)" }}>
+          <span
+            style={{
+              fontSize: "0.8125rem",
+              fontWeight: 600,
+              color: "var(--fg-0)",
+            }}
+          >
             {t("popover.title")}
           </span>
           {unreadInList > 0 && (
@@ -195,10 +201,10 @@ export const InboxBellView = ({
             <div
               className="flex items-center justify-center"
               style={{
-                gap: 8,
-                padding: 24,
+                gap: "0.5rem",
+                padding: "1.5rem",
                 color: "var(--fg-2)",
-                fontSize: 12.5,
+                fontSize: "0.78125rem",
               }}
               data-testid="inbox-popover-loading"
             >
@@ -229,7 +235,7 @@ export const InboxBellView = ({
             <div data-testid="inbox-popover-empty">
               <EmptyState
                 compact
-                icon={<Inbox size={15} />}
+                icon={<Inbox size="0.9375rem" />}
                 title={t("popover.empty")}
               />
             </div>
@@ -266,7 +272,7 @@ export const InboxBellView = ({
                       </span>
                       <span
                         className="flex flex-col min-w-0"
-                        style={{ flex: 1, gap: 2 }}
+                        style={{ flex: 1, gap: "0.125rem" }}
                       >
                         <span
                           style={{
@@ -285,7 +291,12 @@ export const InboxBellView = ({
                           )}
                           {text(n)}
                         </span>
-                        <span style={{ fontSize: 11, color: "var(--fg-2)" }}>
+                        <span
+                          style={{
+                            fontSize: "0.6875rem",
+                            color: "var(--fg-2)",
+                          }}
+                        >
                           {formatPastTime(n.created_at)}
                           {needsDecision(n) && (
                             <>
@@ -303,9 +314,9 @@ export const InboxBellView = ({
                           data-testid="inbox-popover-unread-dot"
                           className="shrink-0"
                           style={{
-                            width: 7,
-                            height: 7,
-                            marginTop: 5,
+                            width: "0.4375rem",
+                            height: "0.4375rem",
+                            marginTop: "0.3125rem",
                             borderRadius: "50%",
                             background: "var(--accent)",
                           }}
@@ -321,7 +332,7 @@ export const InboxBellView = ({
 
         <div
           className="flex shrink-0"
-          style={{ padding: 6, borderTop: "1px solid var(--border)" }}
+          style={{ padding: "0.375rem", borderTop: "1px solid var(--border)" }}
         >
           <Button
             asChild

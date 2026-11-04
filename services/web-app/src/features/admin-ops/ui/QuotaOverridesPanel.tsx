@@ -75,7 +75,7 @@ export const QuotaOverridesPanel = () => {
         cell: ({ row }) => (
           <span>
             <strong>{row.original.owner_name}</strong>{" "}
-            <span style={{ color: "var(--fg-3)", fontSize: 12 }}>
+            <span style={{ color: "var(--fg-3)", fontSize: "0.75rem" }}>
               {t(`overrides.ownerKind.${row.original.owner_kind}`)}
             </span>
           </span>
@@ -118,7 +118,7 @@ export const QuotaOverridesPanel = () => {
               );
             }}
           >
-            <Trash2 size={14} aria-hidden="true" />
+            <Trash2 size="0.875rem" aria-hidden="true" />
           </Button>
         ),
       },

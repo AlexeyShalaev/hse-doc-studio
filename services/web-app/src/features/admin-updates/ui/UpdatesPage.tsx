@@ -92,14 +92,14 @@ const UpdatesContent = () => {
   return (
     <div
       className="flex flex-col"
-      style={{ gap: 20 }}
+      style={{ gap: "1.25rem" }}
       data-testid="updates-page"
     >
       <PageHeader
         title={t("page.title")}
         description={t("page.lead")}
         actions={
-          <div className="flex" style={{ gap: 8, flexWrap: "wrap" }}>
+          <div className="flex" style={{ gap: "0.5rem", flexWrap: "wrap" }}>
             <Button
               variant="ghost"
               disabled={check.isPending}
@@ -112,7 +112,7 @@ const UpdatesContent = () => {
               {check.isPending ? (
                 <Spinner size="sm" />
               ) : (
-                <RefreshCw size={14} />
+                <RefreshCw size="0.875rem" />
               )}
               {t("page.check")}
             </Button>
@@ -125,7 +125,7 @@ const UpdatesContent = () => {
                 setConfirmUpdate(true);
               }}
             >
-              <Download size={14} />
+              <Download size="0.875rem" />
               {t("page.updateNow")}
             </Button>
           </div>
@@ -280,7 +280,7 @@ const UpdatesContent = () => {
         {data.available && data.available.notes.length > 0 && (
           <ul
             className="form-hint"
-            style={{ margin: "8px 0 0 16px" }}
+            style={{ margin: "0.5rem 0 0 1rem" }}
             data-testid="update-notes"
           >
             {data.available.notes.map((note) => (
@@ -296,7 +296,7 @@ const UpdatesContent = () => {
             </p>
           )}
         {data.executor === "none" && data.available && (
-          <div style={{ marginTop: 8 }}>
+          <div style={{ marginTop: "0.5rem" }}>
             <CopyField
               value={data.manual_command}
               label={t("version.manualCommand")}
@@ -309,7 +309,7 @@ const UpdatesContent = () => {
           </p>
         )}
         {data.rollback_version && (
-          <div style={{ marginTop: 12 }}>
+          <div style={{ marginTop: "0.75rem" }}>
             <Button
               variant="ghost"
               size="sm"
@@ -320,7 +320,7 @@ const UpdatesContent = () => {
                 setConfirmRollback(true);
               }}
             >
-              <Undo2 size={14} />
+              <Undo2 size="0.875rem" />
               {t("version.rollback", { version: data.rollback_version })}
             </Button>
           </div>
@@ -408,7 +408,11 @@ const UpdatesContent = () => {
           {needRisk && (
             <div
               className="flex"
-              style={{ gap: 8, alignItems: "center", marginTop: 12 }}
+              style={{
+                gap: "0.5rem",
+                alignItems: "center",
+                marginTop: "0.75rem",
+              }}
             >
               <Switch
                 id="update-accept-risk"
@@ -496,7 +500,7 @@ const UpdatesContent = () => {
         >
           <ol
             className="flex flex-col"
-            style={{ gap: 6 }}
+            style={{ gap: "0.375rem" }}
             data-testid="update-events"
           >
             {opened.events.map((e, i) => (

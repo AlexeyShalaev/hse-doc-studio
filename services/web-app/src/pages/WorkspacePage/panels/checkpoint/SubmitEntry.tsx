@@ -42,11 +42,14 @@ export const SubmitEntry = ({ project }: SubmitEntryProps) => {
     <div style={PAGE_STYLE}>
       <PageHead icon={ClipboardCheck} title={t("checkpoint.title")} />
       {profiles.length === 0 ? (
-        <p className="dim" style={{ marginTop: 24, fontSize: 13 }}>
+        <p
+          className="dim"
+          style={{ marginTop: "1.5rem", fontSize: "0.8125rem" }}
+        >
           {t("submit.noProfiles")}
         </p>
       ) : (
-        <div className="flex justify-center" style={{ padding: 32 }}>
+        <div className="flex justify-center" style={{ padding: "2rem" }}>
           <Spinner />
         </div>
       )}

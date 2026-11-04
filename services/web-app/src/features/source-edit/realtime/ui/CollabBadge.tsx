@@ -33,7 +33,7 @@ export const CollabBadge = ({ snapshot }: CollabBadgeProps) => {
   return (
     <span
       className="flex items-center"
-      style={{ gap: 6 }}
+      style={{ gap: "0.375rem" }}
       data-testid="collab-badge"
       data-status={status}
     >
@@ -46,11 +46,11 @@ export const CollabBadge = ({ snapshot }: CollabBadgeProps) => {
           color,
           display: "inline-flex",
           alignItems: "center",
-          gap: 3,
-          fontSize: 11,
+          gap: "0.1875rem",
+          fontSize: "0.6875rem",
         }}
       >
-        {offline ? <CloudOff size={12} /> : <Cloud size={12} />}
+        {offline ? <CloudOff size="0.75rem" /> : <Cloud size="0.75rem" />}
         <span>{t(`status.${offline ? "offline" : status}`).split(":")[0]}</span>
       </span>
       {!canWrite && status !== "refused" && (
@@ -59,7 +59,7 @@ export const CollabBadge = ({ snapshot }: CollabBadgeProps) => {
           data-tt={t("readOnly")}
           data-testid="collab-readonly"
         >
-          <Lock size={10} />
+          <Lock size="0.625rem" />
         </span>
       )}
       {peers.length > 0 && (
@@ -67,18 +67,18 @@ export const CollabBadge = ({ snapshot }: CollabBadgeProps) => {
           className="flex items-center tt"
           data-tt={t("peers", { names })}
           data-testid="collab-peers"
-          style={{ gap: 2 }}
+          style={{ gap: "0.125rem" }}
         >
-          <Users size={12} style={{ color: "var(--fg-2)" }} />
+          <Users size="0.75rem" style={{ color: "var(--fg-2)" }} />
           {peers.slice(0, MAX_AVATARS).map((peer) => (
             <span
               key={peer.clientId}
               aria-label={peer.name}
               style={{
-                width: 18,
-                height: 18,
-                borderRadius: 9,
-                fontSize: 9,
+                width: "1.125rem",
+                height: "1.125rem",
+                borderRadius: "0.5625rem",
+                fontSize: "0.5625rem",
                 fontWeight: 700,
                 color: "#fff",
                 display: "inline-flex",
@@ -92,7 +92,7 @@ export const CollabBadge = ({ snapshot }: CollabBadgeProps) => {
             </span>
           ))}
           {peers.length > MAX_AVATARS && (
-            <span className="dim" style={{ fontSize: 10.5 }}>
+            <span className="dim" style={{ fontSize: "0.65625rem" }}>
               +{peers.length - MAX_AVATARS}
             </span>
           )}

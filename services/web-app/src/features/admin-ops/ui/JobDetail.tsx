@@ -62,7 +62,7 @@ export const JobDetail = ({
               <span
                 data-testid="job-error"
                 className="flex flex-col"
-                style={{ gap: 2, alignItems: "flex-end" }}
+                style={{ gap: "0.125rem", alignItems: "flex-end" }}
               >
                 <span style={{ color: "var(--c-err)" }}>
                   {t(`queue.errors.${job.error}`, {

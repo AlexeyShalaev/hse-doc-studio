@@ -52,9 +52,9 @@ export const CopyButton = ({ value, label }: CopyButtonProps) => {
         }}
       >
         {state === "copied" ? (
-          <Check size={12} aria-hidden="true" />
+          <Check size="0.75rem" aria-hidden="true" />
         ) : (
-          <Copy size={12} aria-hidden="true" />
+          <Copy size="0.75rem" aria-hidden="true" />
         )}
       </button>
       <span

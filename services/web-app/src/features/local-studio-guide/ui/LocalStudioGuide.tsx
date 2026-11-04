@@ -56,18 +56,31 @@ export const LocalStudioGuide = ({
   return (
     <div
       className="flex flex-col"
-      style={{ gap: 18, width: "100%", maxWidth: 880, padding: "28px 24px" }}
+      style={{
+        gap: "1.125rem",
+        width: "100%",
+        maxWidth: "55rem",
+        padding: "1.75rem 1.5rem",
+      }}
       data-testid="local-studio-guide"
     >
-      <header className="flex flex-col" style={{ gap: 6 }}>
+      <header className="flex flex-col" style={{ gap: "0.375rem" }}>
         <h1
           className="flex items-center"
-          style={{ margin: 0, fontSize: 22, fontWeight: 600, gap: 10 }}
+          style={{
+            margin: 0,
+            fontSize: "1.375rem",
+            fontWeight: 600,
+            gap: "0.625rem",
+          }}
         >
-          <Laptop size={22} aria-hidden="true" />
+          <Laptop size="1.375rem" aria-hidden="true" />
           {t("title")}
         </h1>
-        <p className="dim" style={{ margin: 0, fontSize: 13.5, maxWidth: 680 }}>
+        <p
+          className="dim"
+          style={{ margin: 0, fontSize: "0.84375rem", maxWidth: "42.5rem" }}
+        >
           {t("lead")}
         </p>
       </header>
@@ -75,7 +88,7 @@ export const LocalStudioGuide = ({
       <Why />
 
       {info.isLoading && (
-        <span className="flex items-center dim" style={{ gap: 8 }}>
+        <span className="flex items-center dim" style={{ gap: "0.5rem" }}>
           <Spinner size="sm" />
           {t("loading")}
         </span>
@@ -100,10 +113,10 @@ export const LocalStudioGuide = ({
           target="_blank"
           rel="noreferrer noopener"
           className="flex items-center"
-          style={{ gap: 6, fontSize: 13 }}
+          style={{ gap: "0.375rem", fontSize: "0.8125rem" }}
           data-testid="local-studio-docs"
         >
-          <ExternalLink size={12} aria-hidden="true" />
+          <ExternalLink size="0.75rem" aria-hidden="true" />
           {t("docs")}
         </a>
       )}
@@ -123,14 +136,22 @@ const Why = () => {
     <Section title={t("why.title")} testId="local-studio-why">
       <ul
         className="flex flex-col"
-        style={{ gap: 10, margin: 0, padding: 0, listStyle: "none" }}
+        style={{ gap: "0.625rem", margin: 0, padding: 0, listStyle: "none" }}
       >
         {WHY.map(({ key, Icon }) => (
-          <li key={key} className="flex" style={{ gap: 10, fontSize: 13 }}>
+          <li
+            key={key}
+            className="flex"
+            style={{ gap: "0.625rem", fontSize: "0.8125rem" }}
+          >
             <Icon
-              size={16}
+              size="1rem"
               aria-hidden="true"
-              style={{ flexShrink: 0, marginTop: 2, color: "var(--accent)" }}
+              style={{
+                flexShrink: 0,
+                marginTop: "0.125rem",
+                color: "var(--accent)",
+              }}
             />
             <span>
               <strong>{t(`why.${key}.title`)}</strong>
@@ -140,7 +161,10 @@ const Why = () => {
           </li>
         ))}
       </ul>
-      <p className="dim" style={{ margin: "10px 0 0", fontSize: 12.5 }}>
+      <p
+        className="dim"
+        style={{ margin: "0.625rem 0 0", fontSize: "0.78125rem" }}
+      >
         {t("why.sync")}
       </p>
     </Section>
@@ -151,7 +175,14 @@ const Requirements = () => {
   const { t } = useTranslation("localStudio");
   return (
     <Section title={t("requirements.title")} testId="local-studio-requirements">
-      <ul style={{ margin: 0, paddingLeft: 18, fontSize: 13, lineHeight: 1.7 }}>
+      <ul
+        style={{
+          margin: 0,
+          paddingLeft: "1.125rem",
+          fontSize: "0.8125rem",
+          lineHeight: 1.7,
+        }}
+      >
         <li>{t("requirements.docker")}</li>
         <li>{t("requirements.disk")}</li>
         <li>{t("requirements.memory")}</li>
@@ -193,7 +224,7 @@ const Install = ({
       description={t("install.lead")}
       testId="local-studio-install"
     >
-      <div className="flex flex-col" style={{ gap: 12 }}>
+      <div className="flex flex-col" style={{ gap: "0.75rem" }}>
         <div
           className="seg"
           role="tablist"
@@ -223,9 +254,9 @@ const Install = ({
           id={`${uid}-panel`}
           aria-labelledby={`${uid}-tab-${os}`}
           className="flex flex-col"
-          style={{ gap: 10, fontSize: 13 }}
+          style={{ gap: "0.625rem", fontSize: "0.8125rem" }}
         >
-          <ol style={{ margin: 0, paddingLeft: 18, lineHeight: 1.7 }}>
+          <ol style={{ margin: 0, paddingLeft: "1.125rem", lineHeight: 1.7 }}>
             <li>
               {t(`install.docker.${os}`)}{" "}
               <a
@@ -246,18 +277,24 @@ const Install = ({
               wrap="spaces"
             />
           </div>
-          <span className="dim" style={{ fontSize: 12.5 }}>
+          <span className="dim" style={{ fontSize: "0.78125rem" }}>
             {t("install.after")}
           </span>
-          <div className="flex items-end" style={{ gap: 16, flexWrap: "wrap" }}>
-            <label className="flex flex-col" style={{ gap: 4, fontSize: 12.5 }}>
+          <div
+            className="flex items-end"
+            style={{ gap: "1rem", flexWrap: "wrap" }}
+          >
+            <label
+              className="flex flex-col"
+              style={{ gap: "0.25rem", fontSize: "0.78125rem" }}
+            >
               {t("install.port")}
               <input
                 className="input mono"
                 inputMode="numeric"
                 value={portText}
                 aria-invalid={portInvalid}
-                style={{ width: 110 }}
+                style={{ width: "6.875rem" }}
                 onChange={(event) => {
                   setPortText(event.target.value);
                   const next = Number(event.target.value);
@@ -269,7 +306,11 @@ const Install = ({
             {info.recommended_tag && (
               <label
                 className="flex items-center"
-                style={{ gap: 6, fontSize: 12.5, paddingBottom: 6 }}
+                style={{
+                  gap: "0.375rem",
+                  fontSize: "0.78125rem",
+                  paddingBottom: "0.375rem",
+                }}
               >
                 <input
                   type="checkbox"
@@ -283,16 +324,16 @@ const Install = ({
               </label>
             )}
           </div>
-          <span className="dim" style={{ fontSize: 12 }}>
+          <span className="dim" style={{ fontSize: "0.75rem" }}>
             {t("install.portHint")}
           </span>
           <details>
-            <summary style={{ cursor: "pointer", fontSize: 12.5 }}>
+            <summary style={{ cursor: "pointer", fontSize: "0.78125rem" }}>
               {t("install.manual")}
             </summary>
             <div
               className="flex flex-col"
-              style={{ gap: 8, marginTop: 8 }}
+              style={{ gap: "0.5rem", marginTop: "0.5rem" }}
               data-testid="local-studio-manual-command"
             >
               <CopyField
@@ -301,7 +342,7 @@ const Install = ({
                 multiline
                 wrap="spaces"
               />
-              <span className="dim" style={{ fontSize: 12 }}>
+              <span className="dim" style={{ fontSize: "0.75rem" }}>
                 {t("install.manualAfter", { port })}
               </span>
             </div>
@@ -311,10 +352,14 @@ const Install = ({
             target="_blank"
             rel="noreferrer noopener"
             className="flex items-center"
-            style={{ gap: 6, fontSize: 12.5, alignSelf: "flex-start" }}
+            style={{
+              gap: "0.375rem",
+              fontSize: "0.78125rem",
+              alignSelf: "flex-start",
+            }}
             data-testid="local-studio-releases"
           >
-            <Download size={12} aria-hidden="true" />
+            <Download size="0.75rem" aria-hidden="true" />
             {t("install.releases")}
           </a>
         </div>
@@ -331,11 +376,14 @@ const Connect = ({ info, port }: { info: LocalStudioInfo; port: number }) => {
       description={t("connect.lead")}
       testId="local-studio-connect"
     >
-      <div className="flex flex-col" style={{ gap: 12, fontSize: 13 }}>
+      <div
+        className="flex flex-col"
+        style={{ gap: "0.75rem", fontSize: "0.8125rem" }}
+      >
         {!info.git_remote_enabled && (
           <Notice tone="warn" role="status" text={t("connect.disabled")} />
         )}
-        <ol style={{ margin: 0, paddingLeft: 18, lineHeight: 1.7 }}>
+        <ol style={{ margin: 0, paddingLeft: "1.125rem", lineHeight: 1.7 }}>
           <li>{t("connect.step1")}</li>
           <li>{t("connect.step2")}</li>
           <li>{t("connect.step3")}</li>
@@ -343,10 +391,10 @@ const Connect = ({ info, port }: { info: LocalStudioInfo; port: number }) => {
         {info.git_remote_enabled && (
           <div
             className="flex items-center"
-            style={{ gap: 10, flexWrap: "wrap" }}
+            style={{ gap: "0.625rem", flexWrap: "wrap" }}
           >
             <OpenInLocalStudio port={port} />
-            <span className="dim" style={{ fontSize: 12 }}>
+            <span className="dim" style={{ fontSize: "0.75rem" }}>
               {t("connect.buttonHint", { port })}
             </span>
           </div>
@@ -354,7 +402,7 @@ const Connect = ({ info, port }: { info: LocalStudioInfo; port: number }) => {
         <div data-testid="local-studio-server-url">
           <CopyField value={info.server_url} label={t("connect.serverUrl")} />
         </div>
-        <span className="dim" style={{ fontSize: 12 }}>
+        <span className="dim" style={{ fontSize: "0.75rem" }}>
           {t("connect.manual")}
         </span>
         <Notice
@@ -382,7 +430,7 @@ const ProjectBlock = ({
       description={t("project.lead")}
       testId="local-studio-project"
     >
-      <div className="flex flex-col" style={{ gap: 10 }}>
+      <div className="flex flex-col" style={{ gap: "0.625rem" }}>
         {info.git_remote_enabled && (
           <div style={{ alignSelf: "flex-start" }}>
             <OpenInLocalStudio projectId={projectId} port={port} />
@@ -392,7 +440,10 @@ const ProjectBlock = ({
           value={studioCloneUrl(info.server_url, projectId)}
           label={t("project.cloneUrl")}
         />
-        <Link to={gitSettingsPath(projectId)} style={{ fontSize: 12.5 }}>
+        <Link
+          to={gitSettingsPath(projectId)}
+          style={{ fontSize: "0.78125rem" }}
+        >
           {t("project.settings")}
         </Link>
       </div>

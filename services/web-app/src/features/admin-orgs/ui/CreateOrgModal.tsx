@@ -42,7 +42,7 @@ export const CreateOrgForm = ({
   return (
     <form
       className="flex flex-col"
-      style={{ gap: 14 }}
+      style={{ gap: "0.875rem" }}
       noValidate
       onSubmit={(event) => {
         event.preventDefault();
@@ -80,7 +80,7 @@ export const CreateOrgForm = ({
       {failure && <FailureNotice failure={failure} />}
       <div
         className="flex items-center"
-        style={{ gap: 8, justifyContent: "flex-end" }}
+        style={{ gap: "0.5rem", justifyContent: "flex-end" }}
       >
         <Button
           type="button"

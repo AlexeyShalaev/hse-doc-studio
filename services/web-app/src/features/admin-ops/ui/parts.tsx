@@ -26,9 +26,9 @@ export const FailureNotice = ({ failure }: { failure: Failure }) => {
 export type BannerTone = "danger" | "warning" | "info";
 
 const BANNER_ICON: Record<BannerTone, ReactNode> = {
-  danger: <CircleAlert size={16} aria-hidden="true" />,
-  warning: <TriangleAlert size={16} aria-hidden="true" />,
-  info: <Info size={16} aria-hidden="true" />,
+  danger: <CircleAlert size="1rem" aria-hidden="true" />,
+  warning: <TriangleAlert size="1rem" aria-hidden="true" />,
+  info: <Info size="1rem" aria-hidden="true" />,
 };
 
 /** Заметная строка над содержимым: что сломано и что из этого следует. */
@@ -94,7 +94,7 @@ export const ViewState = ({
       <EmptyState
         framed={!compact}
         compact={compact}
-        icon={<Lock size={compact ? 15 : 18} />}
+        icon={<Lock size={compact ? "0.9375rem" : "1.125rem"} />}
         title={t("forbidden.title")}
         description={t("forbidden.body")}
         testId={testId ? `${testId}-forbidden` : "ops-forbidden"}

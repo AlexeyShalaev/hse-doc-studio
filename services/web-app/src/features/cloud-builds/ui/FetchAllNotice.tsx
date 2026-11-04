@@ -14,13 +14,13 @@ export const FetchAllNotice = ({ projectId }: { projectId: string }) => {
     <div
       className="flex flex-col items-start"
       style={{
-        gap: 6,
-        padding: "6px 10px",
-        margin: "6px 8px",
-        borderRadius: 6,
+        gap: "0.375rem",
+        padding: "0.375rem 0.625rem",
+        margin: "0.375rem 0.5rem",
+        borderRadius: "0.375rem",
         background: "var(--accent-soft)",
         border: "1px solid var(--accent-line)",
-        fontSize: 11.5,
+        fontSize: "0.71875rem",
       }}
       data-testid="fetch-all-notice"
     >
@@ -36,7 +36,7 @@ export const FetchAllNotice = ({ projectId }: { projectId: string }) => {
         }}
         data-testid="fetch-all-builds"
       >
-        <Download size={11} />
+        <Download size="0.6875rem" />
         {fetchBuild.isPending ? t("builds.fetching") : t("builds.fetchAll")}
       </Button>
     </div>

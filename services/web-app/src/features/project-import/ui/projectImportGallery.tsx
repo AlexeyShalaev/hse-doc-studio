@@ -46,7 +46,7 @@ const entry = (
   frame: "window",
   width: W,
   render: () => (
-    <div style={{ padding: 24 }}>
+    <div style={{ padding: "1.5rem" }}>
       <ProjectImportView
         stage="idle"
         file={null}

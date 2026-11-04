@@ -115,7 +115,7 @@ export const Runners = ({
   return (
     <>
       {notice && (
-        <div style={{ marginBottom: 12 }}>
+        <div style={{ marginBottom: "0.75rem" }}>
           <FailureNotice failure={notice} />
         </div>
       )}
@@ -162,7 +162,7 @@ export const Runners = ({
           setRevokingToken(token);
         }}
       />
-      <div style={{ marginTop: 20 }}>
+      <div style={{ marginTop: "1.25rem" }}>
         <PersonalRunners />
       </div>
       <ConfirmDialog

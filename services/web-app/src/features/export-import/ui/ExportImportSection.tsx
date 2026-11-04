@@ -15,27 +15,27 @@ type ExportMode = "plain" | "encrypted";
 
 const headingStyle: React.CSSProperties = {
   margin: 0,
-  fontSize: 14,
+  fontSize: "0.875rem",
   fontWeight: 600,
   color: "var(--fg-0)",
 };
 
 const labelStyle: React.CSSProperties = {
   display: "block",
-  fontSize: 11,
+  fontSize: "0.6875rem",
   fontWeight: 600,
   color: "var(--fg-2)",
   letterSpacing: "0.04em",
   textTransform: "uppercase",
-  marginBottom: 8,
+  marginBottom: "0.5rem",
 };
 
 const fieldStyle: React.CSSProperties = {
   background: "var(--bg-0)",
   border: "1px solid var(--border)",
   borderRadius: "var(--r-2)",
-  padding: "7px 10px",
-  fontSize: 12,
+  padding: "0.4375rem 0.625rem",
+  fontSize: "0.75rem",
   color: "var(--fg-0)",
   outline: "none",
   width: "100%",
@@ -45,8 +45,8 @@ const fieldStyle: React.CSSProperties = {
 const choiceRow: React.CSSProperties = {
   display: "flex",
   alignItems: "center",
-  gap: 8,
-  fontSize: 12.5,
+  gap: "0.5rem",
+  fontSize: "0.78125rem",
   cursor: "pointer",
   color: "var(--fg-1)",
 };
@@ -197,21 +197,21 @@ export const ExportImportSection = () => {
   };
 
   return (
-    <div className="flex flex-col" style={{ gap: 20 }}>
+    <div className="flex flex-col" style={{ gap: "1.25rem" }}>
       {/* ── Export ─────────────────────────────────────────────── */}
       <div
         id="data-export"
         className="flex flex-col settings-anchor"
-        style={{ gap: 12 }}
+        style={{ gap: "0.75rem" }}
       >
         <h4 style={headingStyle}>{t("export.heading")}</h4>
-        <p style={{ margin: 0, fontSize: 12, color: "var(--fg-2)" }}>
+        <p style={{ margin: 0, fontSize: "0.75rem", color: "var(--fg-2)" }}>
           {t("export.description")}
         </p>
 
         <div>
           <span style={labelStyle}>{t("export.includeLabel")}</span>
-          <div className="flex flex-col" style={{ gap: 8 }}>
+          <div className="flex flex-col" style={{ gap: "0.5rem" }}>
             <label style={choiceRow}>
               <input
                 type="checkbox"
@@ -247,7 +247,10 @@ export const ExportImportSection = () => {
 
         <div>
           <span style={labelStyle}>{t("export.typeLabel")}</span>
-          <div className="flex" style={{ gap: 16, marginBottom: 6 }}>
+          <div
+            className="flex"
+            style={{ gap: "1rem", marginBottom: "0.375rem" }}
+          >
             <label style={choiceRow}>
               <input
                 type="radio"
@@ -280,7 +283,7 @@ export const ExportImportSection = () => {
               {t("export.modeEncrypted")}
             </label>
           </div>
-          <p style={{ margin: 0, fontSize: 11, color: "var(--fg-3)" }}>
+          <p style={{ margin: 0, fontSize: "0.6875rem", color: "var(--fg-3)" }}>
             {typeHint}
           </p>
         </div>
@@ -307,7 +310,7 @@ export const ExportImportSection = () => {
             onClick={handleExport}
             disabled={exportMutation.isPending || nothingSelected}
           >
-            <Download size={13} />
+            <Download size="0.8125rem" />
             {exportMutation.isPending
               ? t("export.downloadButtonPending")
               : t("export.downloadButton")}
@@ -321,10 +324,10 @@ export const ExportImportSection = () => {
       <div
         id="data-import"
         className="flex flex-col settings-anchor"
-        style={{ gap: 12 }}
+        style={{ gap: "0.75rem" }}
       >
         <h4 style={headingStyle}>{t("import.heading")}</h4>
-        <p style={{ margin: 0, fontSize: 12, color: "var(--fg-2)" }}>
+        <p style={{ margin: 0, fontSize: "0.75rem", color: "var(--fg-2)" }}>
           {t("import.description")}
         </p>
 
@@ -346,8 +349,8 @@ export const ExportImportSection = () => {
           <div
             className="flex flex-col"
             style={{
-              gap: 8,
-              padding: 10,
+              gap: "0.5rem",
+              padding: "0.625rem",
               background: "var(--bg-2)",
               borderRadius: "var(--r-2)",
             }}
@@ -393,7 +396,7 @@ export const ExportImportSection = () => {
             }}
             disabled={importMutation.isPending}
           >
-            <Upload size={13} />
+            <Upload size="0.8125rem" />
             {importMutation.isPending
               ? t("import.pickFileButtonPending")
               : t("import.pickFileButton")}

@@ -33,7 +33,7 @@ export const InviteForm = ({ token: tokenProp }: { token?: string }) => {
     return (
       <div
         className="flex justify-center"
-        style={{ padding: "32px 0" }}
+        style={{ padding: "2rem 0" }}
         data-testid="auth-loading"
       >
         <Spinner />

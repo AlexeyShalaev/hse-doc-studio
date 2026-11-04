@@ -29,7 +29,7 @@ const WarningBody = ({ warning }: { warning: OperationWarning }) => {
   const key = KNOWN.has(warning.code) ? warning.code : "unknown";
   const paths = warning.paths;
   return (
-    <span className="flex flex-col" style={{ gap: 2 }}>
+    <span className="flex flex-col" style={{ gap: "0.125rem" }}>
       <strong>{t(`warnings.${key}.title`)}</strong>
       <span>{t(`warnings.${key}.text`, { code: warning.code })}</span>
       {paths.length > 0 && (
@@ -37,7 +37,7 @@ const WarningBody = ({ warning }: { warning: OperationWarning }) => {
           <summary>{t("warnings.files", { count: paths.length })}</summary>
           <ul>
             {paths.map((path) => (
-              <li key={path} className="mono" style={{ fontSize: 11 }}>
+              <li key={path} className="mono" style={{ fontSize: "0.6875rem" }}>
                 {path}
               </li>
             ))}

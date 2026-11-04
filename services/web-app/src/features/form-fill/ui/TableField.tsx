@@ -49,8 +49,8 @@ export const TableField = ({
         style={{
           display: "grid",
           gridTemplateColumns: `repeat(${String(columns.length)}, 1fr) 28px`,
-          gap: 6,
-          fontSize: 10.5,
+          gap: "0.375rem",
+          fontSize: "0.65625rem",
           textTransform: "uppercase",
           letterSpacing: "0.04em",
         }}
@@ -67,7 +67,7 @@ export const TableField = ({
           style={{
             display: "grid",
             gridTemplateColumns: `repeat(${String(columns.length)}, 1fr) 28px`,
-            gap: 6,
+            gap: "0.375rem",
             alignItems: "center",
           }}
         >
@@ -90,14 +90,14 @@ export const TableField = ({
               handleRemove(rowIndex);
             }}
           >
-            <X size={12} />
+            <X size="0.75rem" />
           </button>
         </div>
       ))}
 
       <div>
         <button type="button" className="btn xs" onClick={handleAdd}>
-          <Plus size={11} />
+          <Plus size="0.6875rem" />
           {t("table.addRow")}
         </button>
       </div>

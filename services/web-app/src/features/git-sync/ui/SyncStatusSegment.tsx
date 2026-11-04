@@ -83,13 +83,13 @@ export const SyncStatusSegmentView = ({
           </span>
           {ui.state !== "syncing" && ui.incoming > 0 && (
             <span className="inline-flex items-center" aria-hidden="true">
-              <ArrowDown size={10} strokeWidth={2.4} />
+              <ArrowDown size="0.625rem" strokeWidth={2.4} />
               {ui.incoming}
             </span>
           )}
           {ui.state !== "syncing" && ui.outgoing > 0 && (
             <span className="inline-flex items-center" aria-hidden="true">
-              <ArrowUp size={10} strokeWidth={2.4} />
+              <ArrowUp size="0.625rem" strokeWidth={2.4} />
               {ui.outgoing}
             </span>
           )}

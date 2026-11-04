@@ -29,18 +29,21 @@ const SupervisorRow = ({
 }: SupervisorRowProps) => {
   const { t } = useTranslation("workspace");
   return (
-    <div className="card" style={{ padding: 14, background: "var(--bg-2)" }}>
+    <div
+      className="card"
+      style={{ padding: "0.875rem", background: "var(--bg-2)" }}
+    >
       <div
         className="flex items-center justify-between"
-        style={{ marginBottom: 10 }}
+        style={{ marginBottom: "0.625rem" }}
       >
         <div className="flex items-center gap-2">
           {value.role === "university" ? (
-            <Building size={13} style={{ color: "var(--accent)" }} />
+            <Building size="0.8125rem" style={{ color: "var(--accent)" }} />
           ) : (
-            <Briefcase size={13} style={{ color: "var(--c-warn)" }} />
+            <Briefcase size="0.8125rem" style={{ color: "var(--c-warn)" }} />
           )}
-          <strong style={{ fontSize: 12.5 }}>
+          <strong style={{ fontSize: "0.78125rem" }}>
             {label ??
               (primary
                 ? t("projectSettings.primarySupervisor")
@@ -57,7 +60,7 @@ const SupervisorRow = ({
                   onChange({ role: "university" });
                 }}
               >
-                <Building size={10} />
+                <Building size="0.625rem" />
                 {t("projectSettings.university")}
               </button>
               <button
@@ -67,7 +70,7 @@ const SupervisorRow = ({
                   onChange({ role: "company" });
                 }}
               >
-                <Briefcase size={10} />
+                <Briefcase size="0.625rem" />
                 {t("projectSettings.company")}
               </button>
             </div>
@@ -79,12 +82,12 @@ const SupervisorRow = ({
               style={{ color: "var(--c-err)" }}
               onClick={onRemove}
             >
-              <Trash2 size={11} />
+              <Trash2 size="0.6875rem" />
             </button>
           )}
         </div>
       </div>
-      <div className="flex justify-end" style={{ marginBottom: 8 }}>
+      <div className="flex justify-end" style={{ marginBottom: "0.5rem" }}>
         <HsePersonLookupButton
           initialQuery={value.name}
           onSelect={(fields) => {
@@ -172,7 +175,7 @@ export const SupervisorSection = ({
   return (
     <SectionCard title={t("projectSettings.sectionSupervisor")} fullSpan>
       {inviteSlot && <div className="flex">{inviteSlot}</div>}
-      <div className="flex flex-col" style={{ gap: 10 }}>
+      <div className="flex flex-col" style={{ gap: "0.625rem" }}>
         {supervisor ? (
           <SupervisorRow
             value={supervisor}
@@ -186,7 +189,7 @@ export const SupervisorSection = ({
             className="btn ghost self-start"
             onClick={onAddSupervisor}
           >
-            <Plus size={11} />
+            <Plus size="0.6875rem" />
             {t("projectSettings.addSupervisor")}
           </button>
         )}
@@ -202,7 +205,7 @@ export const SupervisorSection = ({
             className="btn ghost self-start"
             onClick={onAddCoSupervisor}
           >
-            <Plus size={11} />
+            <Plus size="0.6875rem" />
             {t("projectSettings.addCoSupervisor")}
           </button>
         )}
@@ -222,10 +225,10 @@ export const SupervisorSection = ({
               className="btn ghost"
               onClick={onAddAcademicSupervisor}
             >
-              <Plus size={11} />
+              <Plus size="0.6875rem" />
               {t("projectSettings.addAcademicSupervisor")}
             </button>
-            <span className="dim" style={{ fontSize: 11 }}>
+            <span className="dim" style={{ fontSize: "0.6875rem" }}>
               {t("projectSettings.academicSupervisorHint")}
             </span>
           </div>

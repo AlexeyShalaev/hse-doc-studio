@@ -156,21 +156,29 @@ export const FreezeCard = ({
   return (
     <div
       style={{
-        padding: "12px 14px",
+        padding: "0.75rem 0.875rem",
         borderBottom: "1px solid var(--border)",
         display: "flex",
         flexDirection: "column",
-        gap: 8,
+        gap: "0.5rem",
       }}
     >
       <div className="flex items-center gap-2">
-        <Lock size={13} style={{ color: "var(--fg-2)" }} />
-        <strong style={{ fontSize: 12.5 }}>{t("detached.freeze.title")}</strong>
+        <Lock size="0.8125rem" style={{ color: "var(--fg-2)" }} />
+        <strong style={{ fontSize: "0.78125rem" }}>
+          {t("detached.freeze.title")}
+        </strong>
       </div>
 
       {!frozen && (
         <>
-          <div style={{ fontSize: 11, color: "var(--fg-2)", lineHeight: 1.5 }}>
+          <div
+            style={{
+              fontSize: "0.6875rem",
+              color: "var(--fg-2)",
+              lineHeight: 1.5,
+            }}
+          >
             {t("detached.freeze.intro")}
           </div>
           <div>
@@ -181,7 +189,11 @@ export const FreezeCard = ({
               onClick={handleFreeze}
               title={pdfAvailable ? undefined : t("detached.freeze.needBuild")}
             >
-              {freeze.isPending ? <Spinner size="sm" /> : <Lock size={10} />}
+              {freeze.isPending ? (
+                <Spinner size="sm" />
+              ) : (
+                <Lock size="0.625rem" />
+              )}
               {t("detached.freeze.freeze")}
             </button>
           </div>
@@ -194,16 +206,16 @@ export const FreezeCard = ({
             <div
               className="flex items-start gap-2"
               style={{
-                padding: "8px 10px",
-                borderRadius: 6,
+                padding: "0.5rem 0.625rem",
+                borderRadius: "0.375rem",
                 background: "var(--c-warn-soft)",
                 color: "var(--c-warn)",
-                fontSize: 11,
+                fontSize: "0.6875rem",
                 lineHeight: 1.45,
               }}
             >
               <AlertTriangle
-                size={13}
+                size="0.8125rem"
                 style={{ flexShrink: 0, marginTop: 1 }}
               />
               <span>{t("detached.freeze.plateOutdated")}</span>
@@ -213,22 +225,22 @@ export const FreezeCard = ({
             <div
               className="flex items-start gap-2"
               style={{
-                padding: "8px 10px",
-                borderRadius: 6,
+                padding: "0.5rem 0.625rem",
+                borderRadius: "0.375rem",
                 background: "var(--c-warn-soft)",
                 color: "var(--c-warn)",
-                fontSize: 11,
+                fontSize: "0.6875rem",
                 lineHeight: 1.45,
               }}
             >
               <AlertTriangle
-                size={13}
+                size="0.8125rem"
                 style={{ flexShrink: 0, marginTop: 1 }}
               />
               <span>{t("detached.freeze.stale")}</span>
             </div>
           )}
-          <div style={{ fontSize: 10.5, color: "var(--fg-2)" }}>
+          <div style={{ fontSize: "0.65625rem", color: "var(--fg-2)" }}>
             {t("detached.freeze.frozenAt", {
               date: formatDateTime(frozen.frozen_at),
               size: formatSize(frozen.size),
@@ -240,10 +252,10 @@ export const FreezeCard = ({
             onClick={copySha}
             title={t("detached.freeze.copy")}
             style={{
-              gap: 6,
-              fontSize: 10,
-              padding: "4px 6px",
-              borderRadius: 4,
+              gap: "0.375rem",
+              fontSize: "0.625rem",
+              padding: "0.25rem 0.375rem",
+              borderRadius: "0.25rem",
               border: "1px solid var(--border)",
               background: "var(--bg-2)",
               color: "var(--fg-1)",
@@ -255,11 +267,11 @@ export const FreezeCard = ({
             <span style={{ flex: 1 }}>
               {t("detached.freeze.sha256")}: {frozen.sha256}
             </span>
-            <Copy size={10} style={{ flexShrink: 0 }} />
+            <Copy size="0.625rem" style={{ flexShrink: 0 }} />
           </button>
           <div
             className="flex items-center"
-            style={{ gap: 6, flexWrap: "wrap" }}
+            style={{ gap: "0.375rem", flexWrap: "wrap" }}
           >
             <button
               type="button"
@@ -270,7 +282,7 @@ export const FreezeCard = ({
               {freeze.isPending ? (
                 <Spinner size="sm" />
               ) : (
-                <RefreshCw size={10} />
+                <RefreshCw size="0.625rem" />
               )}
               {t("detached.freeze.refreeze")}
             </button>
@@ -281,7 +293,7 @@ export const FreezeCard = ({
                 downloadUrl(signatureDownloadUrls.frozenPdf(projectId, docId));
               }}
             >
-              <Download size={10} />
+              <Download size="0.625rem" />
               {t("detached.freeze.downloadPdf")}
             </button>
             <button
@@ -298,7 +310,7 @@ export const FreezeCard = ({
                 );
               }}
             >
-              <PackageCheck size={10} />
+              <PackageCheck size="0.625rem" />
               {t("detached.freeze.requestZip")}
             </button>
             {signatureCount > 0 && !frozen.stale && (
@@ -315,7 +327,7 @@ export const FreezeCard = ({
                   );
                 }}
               >
-                <PackageCheck size={10} />
+                <PackageCheck size="0.625rem" />
                 {t("detached.freeze.signedZip")}
               </button>
             )}
@@ -326,7 +338,7 @@ export const FreezeCard = ({
               style={{ color: "var(--c-err)" }}
               onClick={handleUnfreeze}
             >
-              <Trash2 size={10} />
+              <Trash2 size="0.625rem" />
               {t("detached.freeze.unfreeze")}
             </button>
           </div>
@@ -364,27 +376,27 @@ const VerdictBadge = ({
   if (stale) {
     kind = "err";
     text = t("detached.verdict.stale");
-    icon = <XCircle size={11} />;
+    icon = <XCircle size="0.6875rem" />;
   } else if (!current) {
     kind = "err";
     text = t("detached.verdict.outdated");
-    icon = <XCircle size={11} />;
+    icon = <XCircle size="0.6875rem" />;
   } else if (verdict === "valid") {
     kind = "ok";
     text = t("detached.verdict.valid");
-    icon = <CheckCircle2 size={11} />;
+    icon = <CheckCircle2 size="0.6875rem" />;
   } else if (verdict === "invalid") {
     kind = "err";
     text = t("detached.verdict.invalid");
-    icon = <XCircle size={11} />;
+    icon = <XCircle size="0.6875rem" />;
   } else if (verdict === "unknown_key") {
     kind = "warn";
     text = t("detached.verdict.unknown_key");
-    icon = <HelpCircle size={11} />;
+    icon = <HelpCircle size="0.6875rem" />;
   } else {
     kind = "warn";
     text = t("detached.verdict.unverified");
-    icon = <AlertTriangle size={11} />;
+    icon = <AlertTriangle size="0.6875rem" />;
   }
   const style = VERDICT_STYLE[kind];
   return (
@@ -392,10 +404,10 @@ const VerdictBadge = ({
       className="flex items-center gap-1"
       style={{
         ...style,
-        fontSize: 10.5,
+        fontSize: "0.65625rem",
         fontWeight: 500,
-        padding: "2px 7px",
-        borderRadius: 4,
+        padding: "0.125rem 0.4375rem",
+        borderRadius: "0.25rem",
         alignSelf: "flex-start",
       }}
     >
@@ -508,10 +520,12 @@ const SignDialog = ({
         </>
       }
     >
-      <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+      <div
+        style={{ display: "flex", flexDirection: "column", gap: "0.625rem" }}
+      >
         {effectiveMode === "pick" && selected && (
           <>
-            <label style={{ fontSize: 12, fontWeight: 500 }}>
+            <label style={{ fontSize: "0.75rem", fontWeight: 500 }}>
               {t("detached.sign.key")}
             </label>
             <select
@@ -520,7 +534,7 @@ const SignDialog = ({
               onChange={(e) => {
                 setIdentityId(e.target.value);
               }}
-              style={{ fontSize: 13 }}
+              style={{ fontSize: "0.8125rem" }}
             >
               {keys.map((k) => (
                 <option key={k.id} value={k.id}>
@@ -530,7 +544,7 @@ const SignDialog = ({
             </select>
             {selected.protected && (
               <>
-                <label style={{ fontSize: 12, fontWeight: 500 }}>
+                <label style={{ fontSize: "0.75rem", fontWeight: 500 }}>
                   {t("detached.sign.passphrase")}
                 </label>
                 <input
@@ -541,7 +555,7 @@ const SignDialog = ({
                   onChange={(e) => {
                     setPassphrase(e.target.value);
                   }}
-                  style={{ fontSize: 13 }}
+                  style={{ fontSize: "0.8125rem" }}
                 />
               </>
             )}
@@ -553,7 +567,7 @@ const SignDialog = ({
                 setMode("create");
               }}
             >
-              <KeyRound size={10} />
+              <KeyRound size="0.625rem" />
               {t("detached.sign.newKey")}
             </button>
           </>
@@ -562,12 +576,16 @@ const SignDialog = ({
           <>
             {keys.length === 0 && (
               <div
-                style={{ fontSize: 12, color: "var(--fg-2)", lineHeight: 1.5 }}
+                style={{
+                  fontSize: "0.75rem",
+                  color: "var(--fg-2)",
+                  lineHeight: 1.5,
+                }}
               >
                 {t("detached.sign.noKeys")}
               </div>
             )}
-            <label style={{ fontSize: 12, fontWeight: 500 }}>
+            <label style={{ fontSize: "0.75rem", fontWeight: 500 }}>
               {t("detached.sign.name")}
             </label>
             <input
@@ -576,9 +594,9 @@ const SignDialog = ({
               onChange={(e) => {
                 setName(e.target.value);
               }}
-              style={{ fontSize: 13 }}
+              style={{ fontSize: "0.8125rem" }}
             />
-            <label style={{ fontSize: 12, fontWeight: 500 }}>
+            <label style={{ fontSize: "0.75rem", fontWeight: 500 }}>
               {t("detached.sign.email")}
             </label>
             <input
@@ -588,9 +606,9 @@ const SignDialog = ({
               onChange={(e) => {
                 setEmail(e.target.value);
               }}
-              style={{ fontSize: 13 }}
+              style={{ fontSize: "0.8125rem" }}
             />
-            <label style={{ fontSize: 12, fontWeight: 500 }}>
+            <label style={{ fontSize: "0.75rem", fontWeight: 500 }}>
               {t("detached.sign.passphraseOptional")}
             </label>
             <input
@@ -600,7 +618,7 @@ const SignDialog = ({
               onChange={(e) => {
                 setNewPass(e.target.value);
               }}
-              style={{ fontSize: 13 }}
+              style={{ fontSize: "0.8125rem" }}
             />
             {keys.length > 0 && (
               <button
@@ -616,7 +634,13 @@ const SignDialog = ({
             )}
           </>
         )}
-        <div style={{ fontSize: 11, color: "var(--fg-3)", lineHeight: 1.5 }}>
+        <div
+          style={{
+            fontSize: "0.6875rem",
+            color: "var(--fg-3)",
+            lineHeight: 1.5,
+          }}
+        >
           {t("detached.sign.gostNote")}
         </div>
       </div>
@@ -637,8 +661,8 @@ export type SlotDetachedSignatureProps = {
 };
 
 const Field = ({ name, value }: { name: string; value: React.ReactNode }) => (
-  <div className="flex" style={{ gap: 6, fontSize: 10.5 }}>
-    <span className="dim shrink-0" style={{ minWidth: 70 }}>
+  <div className="flex" style={{ gap: "0.375rem", fontSize: "0.65625rem" }}>
+    <span className="dim shrink-0" style={{ minWidth: "4.375rem" }}>
       {name}
     </span>
     <span style={{ color: "var(--fg-1)", wordBreak: "break-word" }}>
@@ -720,11 +744,11 @@ export const SlotDetachedSignature = ({
     return (
       <div
         style={{
-          marginLeft: 42,
+          marginLeft: "2.625rem",
           display: "flex",
           flexDirection: "column",
-          gap: 6,
-          fontSize: 10.5,
+          gap: "0.375rem",
+          fontSize: "0.65625rem",
           color: "var(--fg-2)",
         }}
       >
@@ -738,7 +762,7 @@ export const SlotDetachedSignature = ({
             }}
             title={t("detached.cryptopro.buttonTitle")}
           >
-            <KeyRound size={10} />
+            <KeyRound size="0.625rem" />
             {t("detached.cryptopro.button")}
           </button>
         </div>
@@ -753,12 +777,12 @@ export const SlotDetachedSignature = ({
   return (
     <div
       style={{
-        marginLeft: 42,
+        marginLeft: "2.625rem",
         display: "flex",
         flexDirection: "column",
-        gap: 6,
-        padding: dragOver ? 6 : 0,
-        borderRadius: 6,
+        gap: "0.375rem",
+        padding: dragOver ? "0.375rem" : 0,
+        borderRadius: "0.375rem",
         border: dragOver ? "1px dashed var(--accent)" : "1px solid transparent",
       }}
       onDragOver={(e) => {
@@ -804,9 +828,9 @@ export const SlotDetachedSignature = ({
           style={{
             display: "flex",
             flexDirection: "column",
-            gap: 4,
-            padding: "8px 10px",
-            borderRadius: 6,
+            gap: "0.25rem",
+            padding: "0.5rem 0.625rem",
+            borderRadius: "0.375rem",
             border: "1px solid var(--border)",
             background: "var(--bg-0)",
           }}
@@ -818,7 +842,11 @@ export const SlotDetachedSignature = ({
           />
           {signature.verdict === "unknown_key" ? (
             <div
-              style={{ fontSize: 10.5, color: "var(--fg-1)", lineHeight: 1.45 }}
+              style={{
+                fontSize: "0.65625rem",
+                color: "var(--fg-1)",
+                lineHeight: 1.45,
+              }}
             >
               {t("detached.slot.unknownKey", { keyId: signature.signer_id })}
             </div>
@@ -863,9 +891,9 @@ export const SlotDetachedSignature = ({
           {signature.notes.length > 0 && (
             <ul
               style={{
-                margin: "2px 0 0",
-                paddingLeft: 14,
-                fontSize: 10,
+                margin: "0.125rem 0 0",
+                paddingLeft: "0.875rem",
+                fontSize: "0.625rem",
                 color: "var(--fg-2)",
                 lineHeight: 1.45,
               }}
@@ -904,7 +932,7 @@ export const SlotDetachedSignature = ({
               {completeChain.isPending ? (
                 <Spinner size="sm" />
               ) : (
-                <Link2 size={10} />
+                <Link2 size="0.625rem" />
               )}
               {t("detached.chain.complete")}
             </button>
@@ -913,10 +941,10 @@ export const SlotDetachedSignature = ({
       {signature?.root_fingerprint && (
         <div
           style={{
-            padding: "6px 8px",
-            borderRadius: 6,
+            padding: "0.375rem 0.5rem",
+            borderRadius: "0.375rem",
             border: "1px solid var(--border)",
-            fontSize: 10.5,
+            fontSize: "0.65625rem",
             lineHeight: 1.5,
           }}
         >
@@ -930,7 +958,7 @@ export const SlotDetachedSignature = ({
             <button
               type="button"
               className="btn xs"
-              style={{ marginTop: 4 }}
+              style={{ marginTop: "0.25rem" }}
               disabled={busy}
               onClick={() => {
                 if (
@@ -953,14 +981,17 @@ export const SlotDetachedSignature = ({
                 );
               }}
             >
-              <ShieldCheck size={10} />
+              <ShieldCheck size="0.625rem" />
               {t("detached.chain.trust")}
             </button>
           )}
         </div>
       )}
 
-      <div className="flex items-center" style={{ gap: 6, flexWrap: "wrap" }}>
+      <div
+        className="flex items-center"
+        style={{ gap: "0.375rem", flexWrap: "wrap" }}
+      >
         {!signature && (
           <>
             <button
@@ -970,7 +1001,11 @@ export const SlotDetachedSignature = ({
               onClick={() => fileRef.current?.click()}
               title={t("detached.slot.uploadTitle")}
             >
-              {attach.isPending ? <Spinner size="sm" /> : <FileUp size={10} />}
+              {attach.isPending ? (
+                <Spinner size="sm" />
+              ) : (
+                <FileUp size="0.625rem" />
+              )}
               {t("detached.slot.upload")}
             </button>
             <button
@@ -981,7 +1016,7 @@ export const SlotDetachedSignature = ({
                 setSignOpen(true);
               }}
             >
-              <PenLine size={10} />
+              <PenLine size="0.625rem" />
               {t("detached.slot.signHere")}
             </button>
             <button
@@ -993,7 +1028,7 @@ export const SlotDetachedSignature = ({
               }}
               title={t("detached.cryptopro.buttonTitle")}
             >
-              <KeyRound size={10} />
+              <KeyRound size="0.625rem" />
               {t("detached.cryptopro.button")}
             </button>
           </>
@@ -1005,7 +1040,11 @@ export const SlotDetachedSignature = ({
             disabled={busy}
             onClick={() => keyRef.current?.click()}
           >
-            {recheck.isPending ? <Spinner size="sm" /> : <FileKey size={10} />}
+            {recheck.isPending ? (
+              <Spinner size="sm" />
+            ) : (
+              <FileKey size="0.625rem" />
+            )}
             {t("detached.slot.addKey")}
           </button>
         )}
@@ -1022,7 +1061,7 @@ export const SlotDetachedSignature = ({
               }}
               title={t("detached.slot.download")}
             >
-              <Download size={10} />
+              <Download size="0.625rem" />
             </button>
             <button
               type="button"
@@ -1031,7 +1070,7 @@ export const SlotDetachedSignature = ({
               onClick={() => fileRef.current?.click()}
               title={t("detached.slot.replace")}
             >
-              <FileUp size={10} />
+              <FileUp size="0.625rem" />
             </button>
             <button
               type="button"
@@ -1045,7 +1084,7 @@ export const SlotDetachedSignature = ({
               }}
               title={t("detached.slot.recheck")}
             >
-              <RefreshCw size={10} />
+              <RefreshCw size="0.625rem" />
             </button>
             <button
               type="button"
@@ -1055,13 +1094,13 @@ export const SlotDetachedSignature = ({
               onClick={handleDelete}
               title={t("detached.slot.delete")}
             >
-              <Trash2 size={10} />
+              <Trash2 size="0.625rem" />
             </button>
           </>
         )}
       </div>
       {!signature && (
-        <div style={{ fontSize: 10, color: "var(--fg-3)" }}>
+        <div style={{ fontSize: "0.625rem", color: "var(--fg-3)" }}>
           {t("detached.slot.drop")}
         </div>
       )}
@@ -1116,11 +1155,11 @@ export const SignerPlateEditor = ({
   return (
     <div
       style={{
-        marginLeft: 42,
+        marginLeft: "2.625rem",
         display: "flex",
         flexDirection: "column",
-        gap: 6,
-        fontSize: 10.5,
+        gap: "0.375rem",
+        fontSize: "0.65625rem",
       }}
     >
       <input
@@ -1140,8 +1179,8 @@ export const SignerPlateEditor = ({
       {signer ? (
         <div
           style={{
-            padding: "6px 8px",
-            borderRadius: 6,
+            padding: "0.375rem 0.5rem",
+            borderRadius: "0.375rem",
             border: "1px solid var(--border)",
             background: "var(--bg-0)",
             lineHeight: 1.5,
@@ -1171,7 +1210,10 @@ export const SignerPlateEditor = ({
           {t("detached.plate.empty")}
         </div>
       )}
-      <div className="flex items-center" style={{ gap: 6, flexWrap: "wrap" }}>
+      <div
+        className="flex items-center"
+        style={{ gap: "0.375rem", flexWrap: "wrap" }}
+      >
         <button
           type="button"
           className="btn xs"
@@ -1179,7 +1221,11 @@ export const SignerPlateEditor = ({
           onClick={() => fileRef.current?.click()}
           title={t("detached.plate.fromFileTitle")}
         >
-          {setSigner.isPending ? <Spinner size="sm" /> : <FileKey size={10} />}
+          {setSigner.isPending ? (
+            <Spinner size="sm" />
+          ) : (
+            <FileKey size="0.625rem" />
+          )}
           {t("detached.plate.fromFile")}
         </button>
         {keys.length > 0 && (
@@ -1195,7 +1241,11 @@ export const SignerPlateEditor = ({
                 );
               }
             }}
-            style={{ height: 22, fontSize: 10.5, padding: "0 4px" }}
+            style={{
+              height: "1.375rem",
+              fontSize: "0.65625rem",
+              padding: "0 0.25rem",
+            }}
           >
             <option value="">{t("detached.plate.myKey")}</option>
             {keys.map((k) => (
@@ -1226,11 +1276,11 @@ export const SignerPlateEditor = ({
             }}
             title={t("detached.plate.clear")}
           >
-            <Trash2 size={10} />
+            <Trash2 size="0.625rem" />
           </button>
         )}
       </div>
-      <label className="flex items-center" style={{ gap: 6 }}>
+      <label className="flex items-center" style={{ gap: "0.375rem" }}>
         <span className="dim">{t("detached.plate.level")}</span>
         <select
           className="input"
@@ -1242,7 +1292,11 @@ export const SignerPlateEditor = ({
               { onError },
             );
           }}
-          style={{ height: 22, fontSize: 10.5, padding: "0 4px" }}
+          style={{
+            height: "1.375rem",
+            fontSize: "0.65625rem",
+            padding: "0 0.25rem",
+          }}
         >
           <option value="">{t("detached.plate.levelNone")}</option>
           <option value="ukep">{t("detached.plate.levelUkep")}</option>
@@ -1250,7 +1304,9 @@ export const SignerPlateEditor = ({
         </select>
       </label>
       {manual && (
-        <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+        <div
+          style={{ display: "flex", flexDirection: "column", gap: "0.25rem" }}
+        >
           <input
             className="input"
             placeholder={t("detached.plate.ownerPlaceholder")}
@@ -1258,7 +1314,7 @@ export const SignerPlateEditor = ({
             onChange={(e) => {
               setOwner(e.target.value);
             }}
-            style={{ height: 24, fontSize: 11 }}
+            style={{ height: "1.5rem", fontSize: "0.6875rem" }}
           />
           <input
             className="input"
@@ -1267,9 +1323,9 @@ export const SignerPlateEditor = ({
             onChange={(e) => {
               setCertId(e.target.value);
             }}
-            style={{ height: 24, fontSize: 11 }}
+            style={{ height: "1.5rem", fontSize: "0.6875rem" }}
           />
-          <label className="flex items-center" style={{ gap: 6 }}>
+          <label className="flex items-center" style={{ gap: "0.375rem" }}>
             <span className="dim">{t("detached.plate.validUntil")}</span>
             <input
               type="date"
@@ -1278,7 +1334,11 @@ export const SignerPlateEditor = ({
               onChange={(e) => {
                 setValidTo(e.target.value);
               }}
-              style={{ height: 22, fontSize: 10.5, padding: "0 6px" }}
+              style={{
+                height: "1.375rem",
+                fontSize: "0.65625rem",
+                padding: "0 0.375rem",
+              }}
             />
           </label>
           <div>

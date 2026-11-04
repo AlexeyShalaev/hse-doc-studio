@@ -122,11 +122,11 @@ export const AccessView = ({
 
   return (
     <section style={CARD} data-testid="project-access" id="project-access">
-      <div className="flex flex-col" style={{ gap: 3 }}>
-        <h5 style={{ margin: 0, fontSize: 13.5, fontWeight: 600 }}>
+      <div className="flex flex-col" style={{ gap: "0.1875rem" }}>
+        <h5 style={{ margin: 0, fontSize: "0.84375rem", fontWeight: 600 }}>
           {t("panel.title")}
         </h5>
-        <p style={{ margin: 0, color: "var(--fg-2)", fontSize: 12 }}>
+        <p style={{ margin: 0, color: "var(--fg-2)", fontSize: "0.75rem" }}>
           {t("panel.lead")}
         </p>
       </div>
@@ -134,7 +134,7 @@ export const AccessView = ({
       {status === "loading" && (
         <div
           className="flex items-center"
-          style={{ gap: 8, fontSize: 12 }}
+          style={{ gap: "0.5rem", fontSize: "0.75rem" }}
           data-testid="access-loading"
         >
           <Spinner size="sm" />
@@ -183,7 +183,7 @@ export const AccessView = ({
 
       {status === "ready" && listQuery !== "" && entries.length === 0 && (
         <p
-          style={{ margin: 0, fontSize: 12, color: "var(--fg-2)" }}
+          style={{ margin: 0, fontSize: "0.75rem", color: "var(--fg-2)" }}
           data-testid="access-list-none"
         >
           {t("panel.listNone")}
@@ -219,25 +219,25 @@ export const AccessView = ({
                 data-testid={`access-row-${key}`}
                 className="flex items-center"
                 style={{
-                  gap: 12,
-                  padding: "10px 0",
+                  gap: "0.75rem",
+                  padding: "0.625rem 0",
                   borderBottom: "1px dashed var(--border)",
                 }}
               >
                 <Icon
-                  size={18}
+                  size="1.125rem"
                   aria-hidden="true"
                   style={{ color: "var(--fg-2)", flexShrink: 0 }}
                 />
                 <div
                   className="flex flex-col"
-                  style={{ gap: 2, flex: 1, minWidth: 0 }}
+                  style={{ gap: "0.125rem", flex: 1, minWidth: 0 }}
                 >
                   <span
                     className="flex items-center"
                     style={{
-                      gap: 8,
-                      fontSize: 13,
+                      gap: "0.5rem",
+                      fontSize: "0.8125rem",
                       fontWeight: 500,
                       flexWrap: "wrap",
                     }}
@@ -255,7 +255,7 @@ export const AccessView = ({
                   {detail && (
                     <span
                       style={{
-                        fontSize: 11.5,
+                        fontSize: "0.71875rem",
                         color: "var(--fg-2)",
                         overflowWrap: "anywhere",
                       }}
@@ -267,7 +267,7 @@ export const AccessView = ({
                 {editable ? (
                   <>
                     <div
-                      style={{ width: 150 }}
+                      style={{ width: "9.375rem" }}
                       data-testid={`access-role-${key}`}
                     >
                       <Select
@@ -295,20 +295,20 @@ export const AccessView = ({
                       {busy ? (
                         <Spinner size="sm" />
                       ) : (
-                        <X size={14} aria-hidden="true" />
+                        <X size="0.875rem" aria-hidden="true" />
                       )}
                     </Button>
                   </>
                 ) : (
                   <span
                     className="flex items-center"
-                    style={{ gap: 6 }}
+                    style={{ gap: "0.375rem" }}
                     title={entry.locked ? t("panel.lockedHint") : undefined}
                     data-testid={`access-fixed-${key}`}
                   >
                     {entry.locked && (
                       <Lock
-                        size={12}
+                        size="0.75rem"
                         aria-hidden="true"
                         style={{ color: "var(--fg-2)" }}
                       />
@@ -339,12 +339,14 @@ export const AccessView = ({
       {status === "ready" && canManage && (
         <div
           className="flex flex-col"
-          style={{ gap: 10 }}
+          style={{ gap: "0.625rem" }}
           data-testid="access-add"
         >
-          <strong style={{ fontSize: 12.5 }}>{t("panel.add.title")}</strong>
-          <div className="flex" style={{ gap: 8, flexWrap: "wrap" }}>
-            <div style={{ flex: 1, minWidth: 200 }}>
+          <strong style={{ fontSize: "0.78125rem" }}>
+            {t("panel.add.title")}
+          </strong>
+          <div className="flex" style={{ gap: "0.5rem", flexWrap: "wrap" }}>
+            <div style={{ flex: 1, minWidth: "12.5rem" }}>
               <Input
                 aria-label={t("panel.add.searchLabel")}
                 placeholder={t("panel.add.search")}
@@ -355,7 +357,7 @@ export const AccessView = ({
                 data-testid="access-search"
               />
             </div>
-            <div style={{ width: 150 }} data-testid="access-new-role">
+            <div style={{ width: "9.375rem" }} data-testid="access-new-role">
               <Select
                 ariaLabel={t("panel.add.role")}
                 value={role}
@@ -366,7 +368,9 @@ export const AccessView = ({
               />
             </div>
           </div>
-          <p style={{ margin: 0, fontSize: 11.5, color: "var(--fg-2)" }}>
+          <p
+            style={{ margin: 0, fontSize: "0.71875rem", color: "var(--fg-2)" }}
+          >
             {onInvite ? t("panel.add.inviteHint") : t("panel.add.hint")}
           </p>
           {onInvite && (
@@ -375,19 +379,22 @@ export const AccessView = ({
                 type="button"
                 variant="outline"
                 size="xs"
-                style={{ gap: 6 }}
+                style={{ gap: "0.375rem" }}
                 data-testid="access-invite-email"
                 onClick={() => {
                   onInvite(null, role);
                 }}
               >
-                <Mail size={12} aria-hidden="true" />
+                <Mail size="0.75rem" aria-hidden="true" />
                 {t("panel.add.inviteEmail")}
               </Button>
             </div>
           )}
           {candidatesLoading && (
-            <div className="flex items-center" style={{ gap: 8, fontSize: 12 }}>
+            <div
+              className="flex items-center"
+              style={{ gap: "0.5rem", fontSize: "0.75rem" }}
+            >
               <Spinner size="sm" />
               <span className="dim">{t("panel.add.loading")}</span>
             </div>
@@ -418,7 +425,7 @@ export const AccessView = ({
             query.trim() !== "" &&
             candidates.length === 0 && (
               <p
-                style={{ margin: 0, fontSize: 12, color: "var(--fg-2)" }}
+                style={{ margin: 0, fontSize: "0.75rem", color: "var(--fg-2)" }}
                 data-testid="access-none"
               >
                 {t("panel.add.none")}
@@ -440,10 +447,10 @@ export const AccessView = ({
                     key={key}
                     data-testid={`access-candidate-${key}`}
                     className="flex items-center"
-                    style={{ gap: 12, padding: "8px 0" }}
+                    style={{ gap: "0.75rem", padding: "0.5rem 0" }}
                   >
                     <Icon
-                      size={16}
+                      size="1rem"
                       aria-hidden="true"
                       style={{ color: "var(--fg-2)", flexShrink: 0 }}
                     />
@@ -451,11 +458,16 @@ export const AccessView = ({
                       className="flex flex-col"
                       style={{ flex: 1, minWidth: 0 }}
                     >
-                      <span style={{ fontSize: 13, fontWeight: 500 }}>
+                      <span style={{ fontSize: "0.8125rem", fontWeight: 500 }}>
                         {c.name}
                       </span>
                       {c.detail && (
-                        <span style={{ fontSize: 11.5, color: "var(--fg-2)" }}>
+                        <span
+                          style={{
+                            fontSize: "0.71875rem",
+                            color: "var(--fg-2)",
+                          }}
+                        >
                           {c.detail}
                         </span>
                       )}
@@ -465,14 +477,14 @@ export const AccessView = ({
                       variant="outline"
                       size="xs"
                       disabled={adding}
-                      style={{ gap: 6 }}
+                      style={{ gap: "0.375rem" }}
                       data-testid={`access-add-${key}`}
                       onClick={() => {
                         if (invite) invite(c, role);
                         else onAdd(c, role);
                       }}
                     >
-                      <Plus size={12} aria-hidden="true" />
+                      <Plus size="0.75rem" aria-hidden="true" />
                       {invites ? t("panel.add.invite") : t("panel.add.button")}
                     </Button>
                     {invites && directAdd && (
@@ -496,7 +508,11 @@ export const AccessView = ({
           )}
           {candidatesMore && !candidatesLoading && (
             <p
-              style={{ margin: 0, fontSize: 11.5, color: "var(--fg-2)" }}
+              style={{
+                margin: 0,
+                fontSize: "0.71875rem",
+                color: "var(--fg-2)",
+              }}
               data-testid="access-more"
             >
               {t("panel.add.more", { limit: PICKER_LIMIT })}

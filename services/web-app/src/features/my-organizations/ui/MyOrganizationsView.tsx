@@ -50,25 +50,29 @@ export const MyOrganizationsView = ({
       <div
         id="organizations"
         className="flex flex-col settings-anchor"
-        style={{ gap: 4, marginBottom: 4 }}
+        style={{ gap: "0.25rem", marginBottom: "0.25rem" }}
       >
-        <h4 style={{ margin: 0, fontSize: 14, fontWeight: 600 }}>
+        <h4 style={{ margin: 0, fontSize: "0.875rem", fontWeight: 600 }}>
           {t("section.title")}
         </h4>
-        <p style={{ margin: 0, color: "var(--fg-2)", fontSize: 12 }}>
+        <p style={{ margin: 0, color: "var(--fg-2)", fontSize: "0.75rem" }}>
           {t("section.subtitle")}
         </p>
       </div>
 
       <div
         className="flex flex-col"
-        style={{ gap: 14, paddingBottom: 14, maxWidth: 560 }}
+        style={{
+          gap: "0.875rem",
+          paddingBottom: "0.875rem",
+          maxWidth: "35rem",
+        }}
         data-testid="my-orgs"
       >
         {status === "loading" && (
           <div
             className="flex items-center"
-            style={{ gap: 8, fontSize: 12 }}
+            style={{ gap: "0.5rem", fontSize: "0.75rem" }}
             data-testid="my-orgs-loading"
           >
             <Spinner size="sm" />
@@ -100,8 +104,8 @@ export const MyOrganizationsView = ({
             data-testid="my-orgs-empty"
             className="flex flex-col items-center"
             style={{
-              gap: 8,
-              padding: "32px 20px",
+              gap: "0.5rem",
+              padding: "2rem 1.25rem",
               textAlign: "center",
               border: "1px dashed var(--border)",
               borderRadius: "var(--r-3)",
@@ -109,17 +113,19 @@ export const MyOrganizationsView = ({
             }}
           >
             <Building2
-              size={26}
+              size="1.625rem"
               aria-hidden="true"
               style={{ color: "var(--fg-2)" }}
             />
-            <strong style={{ fontSize: 13.5 }}>{t("empty.title")}</strong>
+            <strong style={{ fontSize: "0.84375rem" }}>
+              {t("empty.title")}
+            </strong>
             <p
               style={{
                 margin: 0,
-                fontSize: 12,
+                fontSize: "0.75rem",
                 color: "var(--fg-2)",
-                maxWidth: 380,
+                maxWidth: "23.75rem",
                 lineHeight: 1.5,
               }}
             >
@@ -136,24 +142,24 @@ export const MyOrganizationsView = ({
                 key={org.slug}
                 data-testid={`my-org-${org.slug}`}
                 style={{
-                  padding: 16,
+                  padding: "1rem",
                   borderRadius: "var(--r-3)",
                   border: "1px solid var(--border)",
                   background: "var(--bg-1)",
                   display: "flex",
                   flexDirection: "column",
-                  gap: 12,
+                  gap: "0.75rem",
                 }}
               >
-                <div className="flex items-start" style={{ gap: 12 }}>
+                <div className="flex items-start" style={{ gap: "0.75rem" }}>
                   <div
                     className="flex flex-col"
-                    style={{ gap: 3, flex: 1, minWidth: 0 }}
+                    style={{ gap: "0.1875rem", flex: 1, minWidth: 0 }}
                   >
                     <h5
                       style={{
                         margin: 0,
-                        fontSize: 13.5,
+                        fontSize: "0.84375rem",
                         fontWeight: 600,
                         overflowWrap: "anywhere",
                       }}
@@ -162,9 +168,13 @@ export const MyOrganizationsView = ({
                     </h5>
                     <span
                       className="flex items-center"
-                      style={{ gap: 6, fontSize: 11.5, color: "var(--fg-2)" }}
+                      style={{
+                        gap: "0.375rem",
+                        fontSize: "0.71875rem",
+                        color: "var(--fg-2)",
+                      }}
                     >
-                      <Users size={12} aria-hidden="true" />
+                      <Users size="0.75rem" aria-hidden="true" />
                       {t("card.members", { count: org.member_count })}
                     </span>
                   </div>
@@ -179,7 +189,7 @@ export const MyOrganizationsView = ({
                 <p
                   style={{
                     margin: 0,
-                    fontSize: 12,
+                    fontSize: "0.75rem",
                     color: "var(--fg-2)",
                     lineHeight: 1.5,
                   }}
@@ -187,10 +197,10 @@ export const MyOrganizationsView = ({
                   {t(`roleHint.${org.my_role}`)}
                 </p>
 
-                <div className="flex flex-col" style={{ gap: 6 }}>
+                <div className="flex flex-col" style={{ gap: "0.375rem" }}>
                   <span
                     style={{
-                      fontSize: 11.5,
+                      fontSize: "0.71875rem",
                       color: "var(--fg-2)",
                       fontWeight: 500,
                     }}
@@ -198,11 +208,14 @@ export const MyOrganizationsView = ({
                     {t("card.groups")}
                   </span>
                   {org.groups.length === 0 ? (
-                    <span style={{ fontSize: 12, color: "var(--fg-2)" }}>
+                    <span style={{ fontSize: "0.75rem", color: "var(--fg-2)" }}>
                       {t("card.noGroups")}
                     </span>
                   ) : (
-                    <div className="flex" style={{ gap: 6, flexWrap: "wrap" }}>
+                    <div
+                      className="flex"
+                      style={{ gap: "0.375rem", flexWrap: "wrap" }}
+                    >
                       {org.groups.map((g) => (
                         <Badge key={g} variant="subtle">
                           {g}
@@ -218,16 +231,16 @@ export const MyOrganizationsView = ({
 
                 <div
                   className="flex items-center"
-                  style={{ gap: 8, flexWrap: "wrap" }}
+                  style={{ gap: "0.5rem", flexWrap: "wrap" }}
                 >
                   {manages(org, instanceAdmin) && (
                     <Link
                       to={`/admin/orgs/${encodeURIComponent(org.slug)}`}
                       className="btn sm"
                       data-testid={`my-org-manage-${org.slug}`}
-                      style={{ gap: 6 }}
+                      style={{ gap: "0.375rem" }}
                     >
-                      <Settings2 size={14} aria-hidden="true" />
+                      <Settings2 size="0.875rem" aria-hidden="true" />
                       {t("card.manage")}
                     </Link>
                   )}
@@ -237,7 +250,7 @@ export const MyOrganizationsView = ({
                     size="sm"
                     disabled={org.sole_owner || leaving}
                     data-testid={`my-org-leave-${org.slug}`}
-                    style={{ gap: 6 }}
+                    style={{ gap: "0.375rem" }}
                     onClick={() => {
                       onReset?.();
                       setConfirming(org);
@@ -246,7 +259,7 @@ export const MyOrganizationsView = ({
                     {leaving ? (
                       <Spinner size="sm" />
                     ) : (
-                      <LogOut size={14} aria-hidden="true" />
+                      <LogOut size="0.875rem" aria-hidden="true" />
                     )}
                     {t("card.leave")}
                   </Button>

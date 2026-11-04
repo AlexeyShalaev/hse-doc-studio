@@ -28,27 +28,32 @@ export const ModelRow = ({
     <div
       className="flex items-center justify-between"
       style={{
-        gap: 12,
-        padding: "10px 12px",
-        borderRadius: 6,
+        gap: "0.75rem",
+        padding: "0.625rem 0.75rem",
+        borderRadius: "0.375rem",
         border: model.recommended
           ? "1px solid var(--accent)"
           : "1px solid var(--border)",
         background: "var(--bg-1)",
       }}
     >
-      <div className="flex flex-col" style={{ gap: 4, minWidth: 0 }}>
-        <div className="flex items-center" style={{ gap: 8, flexWrap: "wrap" }}>
-          <span style={{ fontSize: 12.5, fontWeight: 500 }}>{model.label}</span>
-          <span className="mono dim" style={{ fontSize: 10.5 }}>
+      <div className="flex flex-col" style={{ gap: "0.25rem", minWidth: 0 }}>
+        <div
+          className="flex items-center"
+          style={{ gap: "0.5rem", flexWrap: "wrap" }}
+        >
+          <span style={{ fontSize: "0.78125rem", fontWeight: 500 }}>
+            {model.label}
+          </span>
+          <span className="mono dim" style={{ fontSize: "0.65625rem" }}>
             {model.name}
           </span>
           <span
             className="mono"
             style={{
-              fontSize: 10,
-              padding: "1px 6px",
-              borderRadius: 3,
+              fontSize: "0.625rem",
+              padding: "1px 0.375rem",
+              borderRadius: "0.1875rem",
               background: "var(--bg-3)",
               color: "var(--fg-2)",
             }}
@@ -58,30 +63,45 @@ export const ModelRow = ({
           {model.recommended && (
             <span
               className="flex items-center"
-              style={{ gap: 3, fontSize: 10, color: "var(--accent)" }}
+              style={{
+                gap: "0.1875rem",
+                fontSize: "0.625rem",
+                color: "var(--accent)",
+              }}
             >
-              <Sparkles size={11} /> {t("modelRow.recommended")}
+              <Sparkles size="0.6875rem" /> {t("modelRow.recommended")}
             </span>
           )}
         </div>
-        <div className="dim" style={{ fontSize: 11 }}>
+        <div className="dim" style={{ fontSize: "0.6875rem" }}>
           {model.tasks.join(" · ")}
         </div>
         <div
           className="flex items-center"
-          style={{ gap: 5, fontSize: 11, color: NOTE_COLOR(model) }}
+          style={{
+            gap: "0.3125rem",
+            fontSize: "0.6875rem",
+            color: NOTE_COLOR(model),
+          }}
         >
-          {model.on_gpu ? <Zap size={11} /> : <Cpu size={11} />}
+          {model.on_gpu ? <Zap size="0.6875rem" /> : <Cpu size="0.6875rem" />}
           <span>{model.note}</span>
         </div>
       </div>
-      <div className="flex items-center" style={{ gap: 6, flexShrink: 0 }}>
+      <div
+        className="flex items-center"
+        style={{ gap: "0.375rem", flexShrink: 0 }}
+      >
         {installed ? (
           <span
             className="flex items-center"
-            style={{ gap: 4, fontSize: 11, color: "var(--c-ok)" }}
+            style={{
+              gap: "0.25rem",
+              fontSize: "0.6875rem",
+              color: "var(--c-ok)",
+            }}
           >
-            <Check size={12} /> {t("modelRow.installed")}
+            <Check size="0.75rem" /> {t("modelRow.installed")}
           </span>
         ) : (
           <button
@@ -95,7 +115,7 @@ export const ModelRow = ({
                 : t("modelRow.installTitle")
             }
           >
-            <Download size={11} />
+            <Download size="0.6875rem" />
             {t("modelRow.install")}
           </button>
         )}

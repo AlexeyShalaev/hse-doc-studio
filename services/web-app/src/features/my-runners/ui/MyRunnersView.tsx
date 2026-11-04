@@ -140,7 +140,7 @@ export const MyRunnersView = ({
                 <KindIcon
                   size={11}
                   aria-hidden="true"
-                  style={{ verticalAlign: -1, marginRight: 4 }}
+                  style={{ verticalAlign: -1, marginRight: "0.25rem" }}
                 />
                 {t(`mine.kind.${runner.host_kind}`)}
                 {" · "}
@@ -153,7 +153,7 @@ export const MyRunnersView = ({
                       tabIndex={0}
                       data-testid={`my-runner-outdated-${runner.id}`}
                     >
-                      <TriangleAlert size={11} aria-hidden="true" />
+                      <TriangleAlert size="0.6875rem" aria-hidden="true" />
                       {t("mine.version", { version: runner.version })}{" "}
                       {t("mine.outdated")}
                     </span>
@@ -203,7 +203,7 @@ export const MyRunnersView = ({
                 />
               </span>
               {!runner.revoked && (
-                <span className="myr-cell-sub" style={{ paddingLeft: 16 }}>
+                <span className="myr-cell-sub" style={{ paddingLeft: "1rem" }}>
                   {seen}
                   {row.original.hint && (
                     <>
@@ -329,7 +329,7 @@ export const MyRunnersView = ({
             {
               id: "rename",
               label: t("mine.rename"),
-              icon: <Pencil size={14} aria-hidden="true" />,
+              icon: <Pencil size="0.875rem" aria-hidden="true" />,
               disabled: busy,
               testId: `my-runner-rename-${runner.id}`,
               onSelect: () => {
@@ -344,9 +344,9 @@ export const MyRunnersView = ({
                   ? t("mine.resume")
                   : t("mine.pause"),
               icon: runner.paused ? (
-                <Play size={14} aria-hidden="true" />
+                <Play size="0.875rem" aria-hidden="true" />
               ) : (
-                <Pause size={14} aria-hidden="true" />
+                <Pause size="0.875rem" aria-hidden="true" />
               ),
               // Пауза ничего не меняет, пока личные раннеры выключены админом;
               // паузу администратора хозяин не снимает.
@@ -360,7 +360,7 @@ export const MyRunnersView = ({
               ? {
                   id: "reconnect",
                   label: t("mine.reconnect"),
-                  icon: <Laptop size={14} aria-hidden="true" />,
+                  icon: <Laptop size="0.875rem" aria-hidden="true" />,
                   disabled: busy,
                   testId: `my-runner-reconnect-${runner.id}`,
                   onSelect: () => {
@@ -370,7 +370,7 @@ export const MyRunnersView = ({
               : {
                   id: "rotate",
                   label: t("mine.rotate"),
-                  icon: <RotateCw size={14} aria-hidden="true" />,
+                  icon: <RotateCw size="0.875rem" aria-hidden="true" />,
                   disabled: busy,
                   testId: `my-runner-rotate-${runner.id}`,
                   onSelect: () => {
@@ -380,7 +380,7 @@ export const MyRunnersView = ({
             {
               id: "revoke",
               label: t("mine.revoke"),
-              icon: <Trash2 size={14} aria-hidden="true" />,
+              icon: <Trash2 size="0.875rem" aria-hidden="true" />,
               danger: true,
               disabled: busy,
               testId: `my-runner-revoke-${runner.id}`,
@@ -430,10 +430,10 @@ export const MyRunnersView = ({
           size="sm"
           onClick={onConnect}
           disabled={!enabled}
-          style={{ gap: 6, flexShrink: 0 }}
+          style={{ gap: "0.375rem", flexShrink: 0 }}
           data-testid="my-runner-connect"
         >
-          <Plus size={14} aria-hidden="true" />
+          <Plus size="0.875rem" aria-hidden="true" />
           {t("mine.connect")}
         </Button>
       </div>
@@ -444,7 +444,7 @@ export const MyRunnersView = ({
           role="status"
           data-testid="my-runners-disabled"
         >
-          <TriangleAlert size={16} aria-hidden="true" />
+          <TriangleAlert size="1rem" aria-hidden="true" />
           <div>
             <p className="myr-banner-title">{t("mine.disabled.title")}</p>
             <p className="myr-banner-body">{t("mine.disabled.body")}</p>
@@ -461,11 +461,11 @@ export const MyRunnersView = ({
         >
           <summary>
             <ChevronRight
-              size={14}
+              size="0.875rem"
               className="myr-chevron"
               aria-hidden="true"
             />
-            <Info size={14} aria-hidden="true" />
+            <Info size="0.875rem" aria-hidden="true" />
             {t("mine.how.title")}
           </summary>
           <ol>
@@ -495,7 +495,7 @@ export const MyRunnersView = ({
         <EmptyState
           framed
           testId="my-runners-empty"
-          icon={<Server size={18} />}
+          icon={<Server size="1.125rem" />}
           title={t("mine.empty.title")}
           description={t("mine.empty.body")}
           action={
@@ -504,10 +504,10 @@ export const MyRunnersView = ({
                 type="button"
                 size="sm"
                 onClick={onConnect}
-                style={{ gap: 6 }}
+                style={{ gap: "0.375rem" }}
                 data-testid="my-runners-empty-connect"
               >
-                <Plus size={14} aria-hidden="true" />
+                <Plus size="0.875rem" aria-hidden="true" />
                 {t("mine.connect")}
               </Button>
             ) : undefined
@@ -559,7 +559,7 @@ export const MyRunnersView = ({
               return (
                 <div key={token.id} data-testid={`my-runner-token-${token.id}`}>
                   <ListRow
-                    icon={<KeyRound size={15} />}
+                    icon={<KeyRound size="0.9375rem" />}
                     tone={expired ? "neutral" : "accent"}
                     title={label}
                     description={
@@ -579,7 +579,7 @@ export const MyRunnersView = ({
                           {
                             id: "revoke",
                             label: t("tokens.revoke"),
-                            icon: <Trash2 size={14} aria-hidden="true" />,
+                            icon: <Trash2 size="0.875rem" aria-hidden="true" />,
                             danger: true,
                             testId: `my-runner-token-revoke-${token.id}`,
                             onSelect: () => {

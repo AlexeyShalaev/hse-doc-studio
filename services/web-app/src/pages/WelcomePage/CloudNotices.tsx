@@ -43,7 +43,7 @@ export const CloudNotices = ({
   return (
     <div
       className="flex flex-col"
-      style={{ gap: 8, marginBottom: 16 }}
+      style={{ gap: "0.5rem", marginBottom: "1rem" }}
       data-testid="cloud-notices"
     >
       {failed && (

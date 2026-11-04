@@ -43,7 +43,7 @@ export const ChecksToolbar = ({
     <div
       className="flex items-center justify-between"
       style={{
-        padding: "12px 18px",
+        padding: "0.75rem 1.125rem",
         borderBottom: "1px solid var(--border)",
         background: "var(--bg-1)",
       }}
@@ -55,7 +55,7 @@ export const ChecksToolbar = ({
           <RulesStatBlock total={totalRules} enabled={enabledCount} />
         )}
       </div>
-      <div className="flex items-center" style={{ gap: 8 }}>
+      <div className="flex items-center" style={{ gap: "0.5rem" }}>
         {mode === "results" && onFixAll && counts.err + counts.warn > 0 && (
           <button
             type="button"
@@ -63,7 +63,7 @@ export const ChecksToolbar = ({
             onClick={onFixAll}
             title={t("checks.fixWithAiTitle")}
           >
-            <Sparkles size={11} />
+            <Sparkles size="0.6875rem" />
             {t("checks.fixWithAi")}
           </button>
         )}
@@ -102,11 +102,11 @@ export const ChecksToolbar = ({
 const PassRateBlock = ({ passRate }: { passRate: number }) => {
   const { t } = useTranslation("documents");
   return (
-    <div className="flex flex-col" style={{ gap: 2 }}>
-      <strong style={{ fontSize: 13 }}>
+    <div className="flex flex-col" style={{ gap: "0.125rem" }}>
+      <strong style={{ fontSize: "0.8125rem" }}>
         {t("checks.compliance", { rate: passRate })}
       </strong>
-      <div className="progress" style={{ width: 200 }}>
+      <div className="progress" style={{ width: "12.5rem" }}>
         <div
           style={{
             width: `${String(passRate)}%`,
@@ -132,11 +132,11 @@ const RulesStatBlock = ({
 }) => {
   const { t } = useTranslation("documents");
   return (
-    <div className="flex flex-col" style={{ gap: 2 }}>
-      <strong style={{ fontSize: 13 }}>
+    <div className="flex flex-col" style={{ gap: "0.125rem" }}>
+      <strong style={{ fontSize: "0.8125rem" }}>
         {t("checks.activeRules", { enabled, total })}
       </strong>
-      <span className="dim" style={{ fontSize: 11 }}>
+      <span className="dim" style={{ fontSize: "0.6875rem" }}>
         {t("checks.rulesSubtitle")}
       </span>
     </div>
@@ -174,14 +174,14 @@ const SeverityFilter = ({
               display: "inline-flex",
               alignItems: "center",
               justifyContent: "center",
-              minWidth: 16,
-              height: 14,
-              padding: "0 4px",
-              borderRadius: 999,
+              minWidth: "1rem",
+              height: "0.875rem",
+              padding: "0 0.25rem",
+              borderRadius: "62.4375rem",
               background: "var(--bg-3)",
-              fontSize: 9.5,
+              fontSize: "0.59375rem",
               fontFamily: "var(--font-mono)",
-              marginLeft: 4,
+              marginLeft: "0.25rem",
             }}
           >
             {counts[f]}

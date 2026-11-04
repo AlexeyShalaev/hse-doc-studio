@@ -6,14 +6,14 @@ import type { SetupFailure } from "../model/useServerSetup";
 import { setupErrorKey } from "../lib/setupErrors";
 
 const titleStyle: CSSProperties = {
-  fontSize: 20,
+  fontSize: "1.25rem",
   fontWeight: 600,
-  margin: "0 0 6px",
+  margin: "0 0 0.375rem",
 };
 const leadStyle: CSSProperties = {
-  margin: "0 0 18px",
+  margin: "0 0 1.125rem",
   color: "var(--fg-2)",
-  fontSize: 13.5,
+  fontSize: "0.84375rem",
 };
 
 /** Заголовок шага: у каждого шага один h1, на него ссылается aria-labelledby. */
@@ -55,14 +55,14 @@ export const FailureFrame = ({
   const { t } = useTranslation("auth");
   const key = setupErrorKey(failure.code);
   return (
-    <div style={{ marginBottom: 16 }}>
+    <div style={{ marginBottom: "1rem" }}>
       <ResultFrame
         tone={failure.code === "rate_limited" ? "warn" : "err"}
         role="alert"
         testId={testId}
         title={t(key)}
       >
-        <p style={{ margin: 0, fontSize: 12.5, color: "var(--fg-2)" }}>
+        <p style={{ margin: 0, fontSize: "0.78125rem", color: "var(--fg-2)" }}>
           {t(`${key}Hint`, { defaultValue: "" })}
         </p>
       </ResultFrame>
@@ -82,7 +82,7 @@ export const StepActions = ({
   return (
     <div
       className="flex items-center justify-between"
-      style={{ gap: 12, marginTop: 22 }}
+      style={{ gap: "0.75rem", marginTop: "1.375rem" }}
     >
       {onBack ? (
         <Button type="button" variant="ghost" onClick={onBack}>

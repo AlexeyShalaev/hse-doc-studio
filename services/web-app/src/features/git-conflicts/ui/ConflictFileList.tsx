@@ -18,7 +18,7 @@ export type ConflictFileListProps = {
 
 const sectionLabelStyle: React.CSSProperties = {
   margin: 0,
-  fontSize: 10.5,
+  fontSize: "0.65625rem",
   letterSpacing: "0.12em",
   textTransform: "uppercase",
 };
@@ -30,8 +30,8 @@ const StatusMark = ({ resolved }: { resolved: boolean }) => {
     <span
       className="flex items-center justify-center"
       style={{
-        width: 16,
-        height: 16,
+        width: "1rem",
+        height: "1rem",
         borderRadius: "50%",
         flexShrink: 0,
         color: resolved ? "var(--accent-ink)" : "transparent",
@@ -39,7 +39,7 @@ const StatusMark = ({ resolved }: { resolved: boolean }) => {
         border: resolved ? "none" : "2px solid var(--c-err)",
       }}
     >
-      {resolved && <Check size={10} strokeWidth={3} aria-hidden="true" />}
+      {resolved && <Check size="0.625rem" strokeWidth={3} aria-hidden="true" />}
       <span className="sr-only">
         {resolved ? t("row.resolved") : t("row.open")}
       </span>
@@ -57,7 +57,7 @@ const KindChip = ({ file }: { file: ConflictFile }) => {
   return (
     <span
       className="badge"
-      style={{ fontSize: 10, flexShrink: 0, color: "var(--fg-2)" }}
+      style={{ fontSize: "0.625rem", flexShrink: 0, color: "var(--fg-2)" }}
     >
       {t(`kind.${kind}`, { defaultValue: kind })}
     </span>
@@ -128,15 +128,15 @@ export const ConflictFileList = ({
       ref={rootRef}
       aria-label={t("list.aria")}
       className="flex flex-col"
-      style={{ gap: 14 }}
+      style={{ gap: "0.875rem" }}
       onKeyDown={handleKeyDown}
     >
-      <section className="flex flex-col" style={{ gap: 6 }}>
+      <section className="flex flex-col" style={{ gap: "0.375rem" }}>
         <h3 className="mono dim" style={sectionLabelStyle}>
           {t("list.needs")} · {needs.length}
         </h3>
         {needs.length === 0 ? (
-          <p className="dim" style={{ margin: 0, fontSize: 12 }}>
+          <p className="dim" style={{ margin: 0, fontSize: "0.75rem" }}>
             {t("list.noneNeeded")}
           </p>
         ) : (
@@ -156,7 +156,7 @@ export const ConflictFileList = ({
                   trailing={<KindChip file={file} />}
                   childrenIndent={24}
                 >
-                  <span className="dim" style={{ fontSize: 11 }}>
+                  <span className="dim" style={{ fontSize: "0.6875rem" }}>
                     {progressLine(file, progress, draft?.kind === "text", t)}
                   </span>
                 </FileRowShell>

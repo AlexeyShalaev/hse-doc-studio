@@ -105,7 +105,7 @@ export const ChatDebugPanel = ({
     <div
       style={{
         flexShrink: 0,
-        maxHeight: 200,
+        maxHeight: "12.5rem",
         display: "flex",
         flexDirection: "column",
         borderTop: "1px solid var(--border)",
@@ -114,16 +114,16 @@ export const ChatDebugPanel = ({
     >
       <div
         className="flex items-center justify-between"
-        style={{ padding: "4px 10px" }}
+        style={{ padding: "0.25rem 0.625rem" }}
       >
         <span
           className="dim"
-          style={{ fontSize: 10, textTransform: "uppercase" }}
+          style={{ fontSize: "0.625rem", textTransform: "uppercase" }}
         >
           {t("debugPanel.title")}
         </span>
-        <div className="flex items-center" style={{ gap: 8 }}>
-          <span className="dim mono" style={{ fontSize: 10 }}>
+        <div className="flex items-center" style={{ gap: "0.5rem" }}>
+          <span className="dim mono" style={{ fontSize: "0.625rem" }}>
             {status} · {debug.length}
           </span>
           <button
@@ -133,17 +133,21 @@ export const ChatDebugPanel = ({
             disabled={debug.length === 0}
             onClick={handleCopy}
           >
-            {copied ? <Check size={11} /> : <Copy size={11} />}
+            {copied ? <Check size="0.6875rem" /> : <Copy size="0.6875rem" />}
             {copied ? t("debugPanel.copied") : t("debugPanel.copy")}
           </button>
         </div>
       </div>
       <div
         className="mono"
-        style={{ overflowY: "auto", padding: "0 10px 6px", fontSize: 10.5 }}
+        style={{
+          overflowY: "auto",
+          padding: "0 0.625rem 0.375rem",
+          fontSize: "0.65625rem",
+        }}
       >
         {debug.length === 0 && (
-          <div className="dim" style={{ padding: "4px 0" }}>
+          <div className="dim" style={{ padding: "0.25rem 0" }}>
             {t("debugPanel.noEvents")}
           </div>
         )}
@@ -155,12 +159,12 @@ export const ChatDebugPanel = ({
             <div
               key={i}
               className="flex"
-              style={{ gap: 8, lineHeight: 1.6, alignItems: "baseline" }}
+              style={{ gap: "0.5rem", lineHeight: 1.6, alignItems: "baseline" }}
             >
               <span
                 style={{
                   color: isGap ? "var(--c-warn)" : "var(--fg-3)",
-                  minWidth: 52,
+                  minWidth: "3.25rem",
                   textAlign: "right",
                   flexShrink: 0,
                 }}
@@ -170,7 +174,7 @@ export const ChatDebugPanel = ({
               <span
                 style={{
                   color: TYPE_COLOR[entry.type] ?? "var(--fg-1)",
-                  minWidth: 96,
+                  minWidth: "6rem",
                   flexShrink: 0,
                 }}
               >
@@ -193,7 +197,7 @@ export const ChatDebugPanel = ({
           <div
             style={{
               color: silent ? "var(--c-err)" : "var(--fg-3)",
-              paddingTop: 2,
+              paddingTop: "0.125rem",
             }}
           >
             ⏱{" "}

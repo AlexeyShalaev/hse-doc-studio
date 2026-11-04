@@ -55,14 +55,14 @@ const ALIGN_GLYPH: Record<ColumnAlign, string> = {
 };
 
 const iconButtonStyle: React.CSSProperties = {
-  minWidth: 22,
-  height: 22,
-  padding: "0 4px",
+  minWidth: "1.375rem",
+  height: "1.375rem",
+  padding: "0 0.25rem",
   border: "1px solid var(--border)",
-  borderRadius: 5,
+  borderRadius: "0.3125rem",
   background: "var(--bg-1)",
   color: "var(--fg-2)",
-  fontSize: 11,
+  fontSize: "0.6875rem",
   lineHeight: 1,
   cursor: "pointer",
 };
@@ -138,7 +138,7 @@ export const TableEditorModal = ({
       type="button"
       title={label}
       aria-label={label}
-      style={{ ...iconButtonStyle, minWidth: 26, ...fontStyle }}
+      style={{ ...iconButtonStyle, minWidth: "1.625rem", ...fontStyle }}
       onMouseDown={(event) => {
         event.preventDefault(); // keep the cell's selection
       }}
@@ -157,7 +157,7 @@ export const TableEditorModal = ({
         key={columnIndex}
         style={{
           border: CELL_BORDER,
-          padding: 6,
+          padding: "0.375rem",
           background: "var(--bg-2)",
           verticalAlign: "top",
         }}
@@ -176,18 +176,18 @@ export const TableEditorModal = ({
           style={{
             boxSizing: "border-box",
             width: "100%",
-            marginBottom: 5,
-            padding: "3px 5px",
+            marginBottom: "0.3125rem",
+            padding: "0.1875rem 0.3125rem",
             border: "1px solid var(--border)",
-            borderRadius: 5,
+            borderRadius: "0.3125rem",
             background: "var(--bg-1)",
             color: "var(--fg-0)",
             fontFamily: "var(--font-sans)",
-            fontSize: 12,
+            fontSize: "0.75rem",
             fontWeight: 600,
           }}
         />
-        <div style={{ display: "flex", gap: 3, flexWrap: "wrap" }}>
+        <div style={{ display: "flex", gap: "0.1875rem", flexWrap: "wrap" }}>
           {ALIGNS.map((align) => (
             <button
               key={align}
@@ -274,7 +274,7 @@ export const TableEditorModal = ({
       }
     >
       {!scaffold ? (
-        <p style={{ margin: 0, color: "var(--fg-2)", fontSize: 13 }}>
+        <p style={{ margin: 0, color: "var(--fg-2)", fontSize: "0.8125rem" }}>
           {t("tableEditor.unsupported")}
         </p>
       ) : (
@@ -286,9 +286,9 @@ export const TableEditorModal = ({
               zIndex: 1,
               display: "flex",
               alignItems: "center",
-              gap: 8,
-              marginBottom: 10,
-              paddingBottom: 8,
+              gap: "0.5rem",
+              marginBottom: "0.625rem",
+              paddingBottom: "0.5rem",
               borderBottom: CELL_BORDER,
               background: "var(--bg-1)",
             }}
@@ -318,7 +318,11 @@ export const TableEditorModal = ({
               ↷
             </button>
             <span
-              style={{ width: 1, height: 18, background: "var(--border)" }}
+              style={{
+                width: 1,
+                height: "1.125rem",
+                background: "var(--border)",
+              }}
             />
             {formatButton("bold", t("tableEditor.bold"), "Ж", {
               fontWeight: 700,
@@ -345,11 +349,11 @@ export const TableEditorModal = ({
                 )}
                 <th
                   style={{
-                    width: 34,
+                    width: "2.125rem",
                     border: CELL_BORDER,
                     background: "var(--bg-2)",
                     verticalAlign: "top",
-                    padding: 4,
+                    padding: "0.25rem",
                   }}
                 >
                   <button
@@ -415,10 +419,10 @@ export const TableEditorModal = ({
                     colSpan={columns + 1}
                     style={{
                       border: CELL_BORDER,
-                      padding: "16px 8px",
+                      padding: "1rem 0.5rem",
                       color: "var(--fg-3)",
                       fontFamily: "var(--font-sans)",
-                      fontSize: 12,
+                      fontSize: "0.75rem",
                       fontStyle: "italic",
                       textAlign: "center",
                     }}
@@ -436,14 +440,14 @@ export const TableEditorModal = ({
               apply(addRow, null);
             }}
             style={{
-              marginTop: 12,
-              padding: "6px 12px",
+              marginTop: "0.75rem",
+              padding: "0.375rem 0.75rem",
               border: "1px dashed var(--accent-line)",
-              borderRadius: 7,
+              borderRadius: "0.4375rem",
               background: "var(--accent-soft)",
               color: "var(--accent)",
               fontFamily: "var(--font-sans)",
-              fontSize: 12,
+              fontSize: "0.75rem",
               fontWeight: 600,
               cursor: "pointer",
             }}
@@ -453,9 +457,9 @@ export const TableEditorModal = ({
           {!canEditColumns && (
             <p
               style={{
-                margin: "10px 0 0",
+                margin: "0.625rem 0 0",
                 color: "var(--fg-3)",
-                fontSize: 11,
+                fontSize: "0.6875rem",
                 fontStyle: "italic",
               }}
             >

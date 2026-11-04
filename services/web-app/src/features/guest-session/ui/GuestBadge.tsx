@@ -47,10 +47,10 @@ export const GuestBadgeView = ({
           className="btn ghost sm"
           data-testid="guest-badge"
           aria-label={t("badge.menu")}
-          style={{ gap: 6 }}
+          style={{ gap: "0.375rem" }}
         >
-          <UserRound size={14} aria-hidden="true" />
-          <span className="truncate" style={{ maxWidth: 180 }}>
+          <UserRound size="0.875rem" aria-hidden="true" />
+          <span className="truncate" style={{ maxWidth: "11.25rem" }}>
             {label}
           </span>
         </button>
@@ -60,13 +60,24 @@ export const GuestBadgeView = ({
         aria-label={t("badge.menu")}
         data-testid="guest-menu"
       >
-        <div style={{ padding: 12, borderBottom: "1px solid var(--border)" }}>
-          <div style={{ fontSize: 13, fontWeight: 600 }}>{label}</div>
-          <div style={{ fontSize: 11.5, color: "var(--fg-2)", marginTop: 2 }}>
+        <div
+          style={{
+            padding: "0.75rem",
+            borderBottom: "1px solid var(--border)",
+          }}
+        >
+          <div style={{ fontSize: "0.8125rem", fontWeight: 600 }}>{label}</div>
+          <div
+            style={{
+              fontSize: "0.71875rem",
+              color: "var(--fg-2)",
+              marginTop: "0.125rem",
+            }}
+          >
             {t("badge.hint")}
           </div>
         </div>
-        <div className="flex flex-col" style={{ padding: 4 }}>
+        <div className="flex flex-col" style={{ padding: "0.25rem" }}>
           <button
             type="button"
             className="btn ghost sm"
@@ -74,7 +85,8 @@ export const GuestBadgeView = ({
             onClick={onRename}
             data-testid="guest-rename"
           >
-            <PencilLine size={14} aria-hidden="true" /> {t("badge.rename")}
+            <PencilLine size="0.875rem" aria-hidden="true" />{" "}
+            {t("badge.rename")}
           </button>
           <button
             type="button"
@@ -83,7 +95,7 @@ export const GuestBadgeView = ({
             onClick={onSignIn}
             data-testid="guest-sign-in"
           >
-            <LogIn size={14} aria-hidden="true" /> {t("badge.signIn")}
+            <LogIn size="0.875rem" aria-hidden="true" /> {t("badge.signIn")}
           </button>
           <button
             type="button"
@@ -92,7 +104,7 @@ export const GuestBadgeView = ({
             onClick={onLeave}
             data-testid="guest-leave"
           >
-            <LogOut size={14} aria-hidden="true" /> {t("badge.leave")}
+            <LogOut size="0.875rem" aria-hidden="true" /> {t("badge.leave")}
           </button>
         </div>
       </PopoverContent>

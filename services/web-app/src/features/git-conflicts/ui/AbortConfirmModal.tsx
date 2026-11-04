@@ -30,7 +30,10 @@ export const AbortConfirmModal = ({
       title={t("abort.title")}
       width={460}
       footer={
-        <div className="flex items-center justify-end" style={{ gap: 8 }}>
+        <div
+          className="flex items-center justify-end"
+          style={{ gap: "0.5rem" }}
+        >
           <button
             type="button"
             className="btn"
@@ -54,18 +57,24 @@ export const AbortConfirmModal = ({
       <div
         className="flex items-start"
         style={{
-          gap: 8,
-          padding: 12,
+          gap: "0.5rem",
+          padding: "0.75rem",
           borderRadius: "var(--r-2)",
           background: "var(--accent-soft)",
         }}
       >
         <ShieldCheck
-          size={15}
+          size="0.9375rem"
           aria-hidden="true"
           style={{ color: "var(--accent)", flexShrink: 0, marginTop: 1 }}
         />
-        <span style={{ fontSize: 12, lineHeight: 1.55, color: "var(--fg-1)" }}>
+        <span
+          style={{
+            fontSize: "0.75rem",
+            lineHeight: 1.55,
+            color: "var(--fg-1)",
+          }}
+        >
           {versionName
             ? t("abort.text", { name: versionName })
             : t("abort.textPlain")}

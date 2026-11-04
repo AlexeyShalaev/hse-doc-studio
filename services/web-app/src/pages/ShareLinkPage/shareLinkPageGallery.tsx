@@ -24,7 +24,7 @@ const HIDDEN: ShareLinkPreview = {
 };
 
 const card = (extra: Partial<ShareLinkViewProps>) => (
-  <div style={{ maxWidth: 400, margin: "0 auto", padding: 24 }}>
+  <div style={{ maxWidth: "25rem", margin: "0 auto", padding: "1.5rem" }}>
     <ShareLinkView
       status="ready"
       preview={OK}

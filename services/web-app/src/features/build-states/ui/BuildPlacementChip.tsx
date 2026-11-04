@@ -54,9 +54,9 @@ export const BuildPlacementChip = ({
       style={{
         display: "inline-flex",
         alignItems: "center",
-        gap: 5,
+        gap: "0.3125rem",
         maxWidth: "100%",
-        fontSize: 11,
+        fontSize: "0.6875rem",
         color: COLOR[view.tone],
         borderColor:
           view.tone === "neutral"
@@ -64,7 +64,7 @@ export const BuildPlacementChip = ({
             : `color-mix(in oklch, ${COLOR[view.tone]} 40%, var(--border))`,
       }}
     >
-      <Icon size={11} aria-hidden="true" style={{ flexShrink: 0 }} />
+      <Icon size="0.6875rem" aria-hidden="true" style={{ flexShrink: 0 }} />
       <span className="truncate" style={{ color: "var(--fg-1)" }}>
         {text}
       </span>

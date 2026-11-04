@@ -50,12 +50,12 @@ export const CheckpointBuilds = ({
   const builds = (submissions ?? []).filter((s) => s.profile_id === profileId);
 
   return (
-    <div style={{ marginTop: 28 }}>
+    <div style={{ marginTop: "1.75rem" }}>
       <h3
         className="mono dim"
         style={{
-          margin: "0 0 14px",
-          fontSize: 10.5,
+          margin: "0 0 0.875rem",
+          fontSize: "0.65625rem",
           textTransform: "uppercase",
           letterSpacing: "0.12em",
         }}
@@ -64,15 +64,20 @@ export const CheckpointBuilds = ({
       </h3>
       <div className="card">
         {isLoading ? (
-          <div style={{ padding: 18, textAlign: "center" }}>
+          <div style={{ padding: "1.125rem", textAlign: "center" }}>
             <Spinner size="sm" />
           </div>
         ) : builds.length === 0 ? (
           <div
             className="flex items-center justify-center"
-            style={{ gap: 8, padding: 28, color: "var(--fg-3)", fontSize: 12 }}
+            style={{
+              gap: "0.5rem",
+              padding: "1.75rem",
+              color: "var(--fg-3)",
+              fontSize: "0.75rem",
+            }}
           >
-            <Inbox size={14} />
+            <Inbox size="0.875rem" />
             {t("pack.noSubmissions")}
           </div>
         ) : (
@@ -81,41 +86,49 @@ export const CheckpointBuilds = ({
               key={s.id}
               className="flex items-center"
               style={{
-                padding: "10px 16px",
+                padding: "0.625rem 1rem",
                 borderBottom:
                   i < builds.length - 1 ? "1px solid var(--border)" : 0,
-                gap: 12,
+                gap: "0.75rem",
               }}
             >
-              <Package size={13} style={{ color: "var(--fg-3)" }} />
+              <Package size="0.8125rem" style={{ color: "var(--fg-3)" }} />
               <span
                 className="mono"
-                style={{ fontSize: 11.5, color: "var(--fg-0)", width: 116 }}
+                style={{
+                  fontSize: "0.71875rem",
+                  color: "var(--fg-0)",
+                  width: "7.25rem",
+                }}
               >
                 {formatDate(s.created_at)}
               </span>
               {s.archive_format && (
                 <span
                   className="chip mono"
-                  style={{ fontSize: 10, textTransform: "uppercase" }}
+                  style={{ fontSize: "0.625rem", textTransform: "uppercase" }}
                   title={t("pack.archiveFormatTitle")}
                 >
                   {s.archive_format}
                 </span>
               )}
-              <span className="dim" style={{ fontSize: 11 }}>
+              <span className="dim" style={{ fontSize: "0.6875rem" }}>
                 {t("pack.docCount", { count: s.doc_count ?? 0 })}
               </span>
               <span
                 className="flex-1 mono dim truncate"
-                style={{ fontSize: 11 }}
+                style={{ fontSize: "0.6875rem" }}
                 title={s.output_path ?? ""}
               >
                 {s.output_path ?? "—"}
               </span>
               <span
                 className="mono dim shrink-0"
-                style={{ fontSize: 10.5, width: 68, textAlign: "right" }}
+                style={{
+                  fontSize: "0.65625rem",
+                  width: "4.25rem",
+                  textAlign: "right",
+                }}
               >
                 {formatBytes(s.size_bytes)}
               </span>
@@ -132,7 +145,7 @@ export const CheckpointBuilds = ({
                   data-tt={t("pack.download")}
                   download
                 >
-                  <Download size={11} />
+                  <Download size="0.6875rem" />
                 </a>
               )}
               <button
@@ -152,7 +165,7 @@ export const CheckpointBuilds = ({
                   }
                 }}
               >
-                <FolderOpen size={11} />
+                <FolderOpen size="0.6875rem" />
               </button>
             </div>
           ))

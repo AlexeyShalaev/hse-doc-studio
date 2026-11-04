@@ -41,7 +41,7 @@ export const StoredBackupsDialog = ({
     >
       <div
         className="flex flex-col"
-        style={{ gap: 12 }}
+        style={{ gap: "0.75rem" }}
         data-testid="backup-stored"
       >
         <Notice tone="info" text={t("stored.restoreNote")} />
@@ -60,7 +60,7 @@ export const StoredBackupsDialog = ({
           >
             <div
               className="flex items-center"
-              style={{ gap: 8, justifyContent: "space-between" }}
+              style={{ gap: "0.5rem", justifyContent: "space-between" }}
             >
               <strong>{item.backup_id}</strong>
               <span className="dim">
@@ -68,7 +68,7 @@ export const StoredBackupsDialog = ({
                 {formatFileSize(item.size)}
               </span>
             </div>
-            <div className="dim" style={{ fontSize: 12 }}>
+            <div className="dim" style={{ fontSize: "0.75rem" }}>
               {t("stored.meta", {
                 version: item.app_version,
                 schema: item.schema_revision ?? "—",
@@ -81,7 +81,7 @@ export const StoredBackupsDialog = ({
               multiline
               wrap="spaces"
             />
-            <div className="flex items-center" style={{ gap: 8 }}>
+            <div className="flex items-center" style={{ gap: "0.5rem" }}>
               <Button
                 size="sm"
                 onClick={() => {
@@ -93,7 +93,7 @@ export const StoredBackupsDialog = ({
               </Button>
             </div>
             {confirm === item.backup_id ? (
-              <div className="flex items-center" style={{ gap: 8 }}>
+              <div className="flex items-center" style={{ gap: "0.5rem" }}>
                 <span>{t("stored.confirmDelete")}</span>
                 <Button
                   size="sm"

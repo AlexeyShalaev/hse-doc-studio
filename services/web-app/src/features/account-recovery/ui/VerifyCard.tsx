@@ -41,7 +41,7 @@ const ResendForm = ({
   };
   if (sent) {
     return (
-      <div data-testid="verify-resent" style={{ marginTop: 18 }}>
+      <div data-testid="verify-resent" style={{ marginTop: "1.125rem" }}>
         <ResultFrame
           tone="ok"
           role="status"
@@ -55,7 +55,7 @@ const ResendForm = ({
           </Note>
         </ResultFrame>
         {sent.link && (
-          <div style={{ marginTop: 14 }}>
+          <div style={{ marginTop: "0.875rem" }}>
             <LinkDelivery kind="verify" link={sent.link} once />
           </div>
         )}
@@ -66,10 +66,10 @@ const ResendForm = ({
     <form
       onSubmit={submit}
       className="flex flex-col"
-      style={{ gap: 12, marginTop: 18 }}
+      style={{ gap: "0.75rem", marginTop: "1.125rem" }}
       data-testid="verify-resend-form"
     >
-      <p style={{ margin: 0, fontSize: 13, color: "var(--fg-2)" }}>
+      <p style={{ margin: 0, fontSize: "0.8125rem", color: "var(--fg-2)" }}>
         {t("verify.resend.lead")}
       </p>
       {failure && <FailureFrame failure={failure} testId="verify-error" />}
@@ -90,12 +90,12 @@ const ResendForm = ({
         type="submit"
         disabled={email.trim() === ""}
         aria-disabled={pending}
-        style={{ justifyContent: "center", gap: 8 }}
+        style={{ justifyContent: "center", gap: "0.5rem" }}
       >
         {pending ? (
           <Spinner size="sm" />
         ) : (
-          <Send size={15} aria-hidden="true" />
+          <Send size="0.9375rem" aria-hidden="true" />
         )}
         {pending ? t("verify.resend.submitting") : t("verify.resend.submit")}
       </Button>
@@ -109,11 +109,15 @@ export const VerifyCard = ({ state, resend, onRetry }: VerifyCardProps) => {
   return (
     <section data-testid="auth-screen-verify" data-state={state}>
       <Heading>{t("pages.verify.title")}</Heading>
-      <div style={{ height: 12 }} />
+      <div style={{ height: "0.75rem" }} />
       {state === "checking" && (
         <div
           className="flex items-center"
-          style={{ gap: 10, color: "var(--fg-2)", fontSize: 13.5 }}
+          style={{
+            gap: "0.625rem",
+            color: "var(--fg-2)",
+            fontSize: "0.84375rem",
+          }}
           data-testid="verify-checking"
         >
           <Spinner />
@@ -144,7 +148,7 @@ export const VerifyCard = ({ state, resend, onRetry }: VerifyCardProps) => {
             <Note>{t("verify.invalid.body")}</Note>
           </ResultFrame>
           <ResendForm {...resend} />
-          <p style={{ margin: "20px 0 0", fontSize: 13 }}>
+          <p style={{ margin: "1.25rem 0 0", fontSize: "0.8125rem" }}>
             <Link to="/login" style={{ color: "var(--accent)" }}>
               {t("links.login")}
             </Link>
@@ -162,7 +166,7 @@ export const VerifyCard = ({ state, resend, onRetry }: VerifyCardProps) => {
             <Note>{t("verify.unreachable.body")}</Note>
           </ResultFrame>
           {onRetry && (
-            <div style={{ marginTop: 18 }}>
+            <div style={{ marginTop: "1.125rem" }}>
               <Button
                 variant="secondary"
                 onClick={onRetry}

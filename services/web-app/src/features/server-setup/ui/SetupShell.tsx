@@ -29,7 +29,7 @@ export const SetupShell = ({
   }));
   return (
     <div data-testid="setup-wizard" data-step={step}>
-      <div className="setup-progress-wide" style={{ marginBottom: 24 }}>
+      <div className="setup-progress-wide" style={{ marginBottom: "1.5rem" }}>
         <Stepper
           steps={steps}
           current={step}
@@ -37,11 +37,18 @@ export const SetupShell = ({
           label={t("setup.progress")}
         />
       </div>
-      <div className="setup-progress-narrow" style={{ marginBottom: 20 }}>
+      <div
+        className="setup-progress-narrow"
+        style={{ marginBottom: "1.25rem" }}
+      >
         <p
           className="mono"
           data-testid="setup-progress-text"
-          style={{ margin: "0 0 6px", fontSize: 11.5, color: "var(--fg-2)" }}
+          style={{
+            margin: "0 0 0.375rem",
+            fontSize: "0.71875rem",
+            color: "var(--fg-2)",
+          }}
         >
           {t("setup.stepOf", {
             n: index + 1,

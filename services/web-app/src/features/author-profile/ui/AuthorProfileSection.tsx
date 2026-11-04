@@ -32,24 +32,28 @@ export const AuthorProfileSection = () => {
       <div
         id="profile"
         className="flex flex-col settings-anchor"
-        style={{ gap: 4, marginBottom: 4 }}
+        style={{ gap: "0.25rem", marginBottom: "0.25rem" }}
       >
-        <h4 style={{ margin: 0, fontSize: 14, fontWeight: 600 }}>
+        <h4 style={{ margin: 0, fontSize: "0.875rem", fontWeight: 600 }}>
           {t("section.title")}
         </h4>
-        <p style={{ margin: 0, color: "var(--fg-2)", fontSize: 12 }}>
+        <p style={{ margin: 0, color: "var(--fg-2)", fontSize: "0.75rem" }}>
           {t("section.subtitle")}
         </p>
       </div>
 
       <div
         className="flex flex-col"
-        style={{ gap: 14, paddingBottom: 14, maxWidth: 520 }}
+        style={{
+          gap: "0.875rem",
+          paddingBottom: "0.875rem",
+          maxWidth: "32.5rem",
+        }}
       >
         {profileQuery.isLoading && (
           <div
             className="flex items-center"
-            style={{ gap: 8, fontSize: 12 }}
+            style={{ gap: "0.5rem", fontSize: "0.75rem" }}
             data-testid="profile-loading"
           >
             <Spinner size="sm" />
@@ -79,7 +83,7 @@ export const AuthorProfileSection = () => {
         {profile && (
           <div
             style={{
-              padding: 16,
+              padding: "1rem",
               borderRadius: "var(--r-3)",
               border: "1px solid var(--border)",
               background: "var(--bg-1)",
@@ -100,7 +104,7 @@ export const AuthorProfileSection = () => {
                     disabled={clear.isPending}
                     onClick={handleReset}
                   >
-                    <UserRoundX size={13} aria-hidden="true" />
+                    <UserRoundX size="0.8125rem" aria-hidden="true" />
                     {t("section.reset")}
                   </button>
                 )

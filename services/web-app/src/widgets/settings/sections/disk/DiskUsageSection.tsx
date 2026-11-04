@@ -26,12 +26,12 @@ const StackedBar = ({ segments }: { segments: Segment[] }) => (
   <div
     className="flex items-center"
     style={{
-      height: 22,
+      height: "1.375rem",
       borderRadius: "var(--r-2)",
       overflow: "hidden",
       background: "var(--bg-2)",
-      gap: 2,
-      padding: 2,
+      gap: "0.125rem",
+      padding: "0.125rem",
     }}
   >
     {segments.map((s) => (
@@ -41,9 +41,9 @@ const StackedBar = ({ segments }: { segments: Segment[] }) => (
         style={{
           flex: `${s.bytes.toFixed(0)} 0 0`,
           height: "100%",
-          borderRadius: 2,
+          borderRadius: "0.125rem",
           background: s.color,
-          minWidth: 3,
+          minWidth: "0.1875rem",
         }}
       />
     ))}
@@ -55,15 +55,19 @@ const Legend = ({ segments }: { segments: Segment[] }) => {
   return (
     <div
       className="flex flex-wrap items-center"
-      style={{ gap: "6px 16px", fontSize: 11.5 }}
+      style={{ gap: "0.375rem 1rem", fontSize: "0.71875rem" }}
     >
       {segments.map((s) => (
-        <div key={s.key} className="flex items-center" style={{ gap: 6 }}>
+        <div
+          key={s.key}
+          className="flex items-center"
+          style={{ gap: "0.375rem" }}
+        >
           <span
             style={{
-              width: 8,
-              height: 8,
-              borderRadius: 2,
+              width: "0.5rem",
+              height: "0.5rem",
+              borderRadius: "0.125rem",
               background: s.color,
               flexShrink: 0,
             }}
@@ -127,14 +131,17 @@ export const DiskUsageSection = () => {
   const plan = usage?.available ? buildCleanAllPlan(usage) : null;
 
   const renderOverview = (data: DockerUsage) => (
-    <div className="flex flex-col" style={{ gap: 10 }}>
-      <div className="flex items-center justify-between" style={{ gap: 8 }}>
-        <span style={{ fontSize: 13, fontWeight: 600 }}>
+    <div className="flex flex-col" style={{ gap: "0.625rem" }}>
+      <div
+        className="flex items-center justify-between"
+        style={{ gap: "0.5rem" }}
+      >
+        <span style={{ fontSize: "0.8125rem", fontWeight: 600 }}>
           {t("disk.total")}: {formatBytes(total)}
         </span>
-        <span className="flex items-center" style={{ gap: 8 }}>
+        <span className="flex items-center" style={{ gap: "0.5rem" }}>
           {data.cleanable_bytes > 0 && (
-            <span className="dim" style={{ fontSize: 11.5 }}>
+            <span className="dim" style={{ fontSize: "0.71875rem" }}>
               {t("disk.cleanable", { size: formatBytes(data.cleanable_bytes) })}
             </span>
           )}
@@ -148,7 +155,7 @@ export const DiskUsageSection = () => {
             }}
           >
             <RefreshCw
-              size={12}
+              size="0.75rem"
               className={usageQuery.isFetching ? "animate-spin" : undefined}
             />
           </button>
@@ -160,7 +167,7 @@ export const DiskUsageSection = () => {
   );
 
   const renderActions = (data: DockerUsage) => (
-    <div className="flex flex-wrap items-center" style={{ gap: 8 }}>
+    <div className="flex flex-wrap items-center" style={{ gap: "0.5rem" }}>
       <button
         type="button"
         className="btn xs"
@@ -171,7 +178,7 @@ export const DiskUsageSection = () => {
       >
         {t("disk.cleanBuildCache")}
         {data.build_cache_reclaimable_bytes > 0 && (
-          <span className="dim mono" style={{ fontSize: 10 }}>
+          <span className="dim mono" style={{ fontSize: "0.625rem" }}>
             {formatBytes(data.build_cache_reclaimable_bytes)}
           </span>
         )}
@@ -195,7 +202,7 @@ export const DiskUsageSection = () => {
           setConfirmAllOpen(true);
         }}
       >
-        {busy ? <Spinner size="sm" /> : <Trash2 size={11} />}
+        {busy ? <Spinner size="sm" /> : <Trash2 size="0.6875rem" />}
         {t("disk.cleanAll")}
       </button>
     </div>
@@ -209,9 +216,15 @@ export const DiskUsageSection = () => {
         sub={t("disk.subtitle")}
       />
 
-      <div className="flex flex-col" style={{ gap: 12, paddingBottom: 14 }}>
+      <div
+        className="flex flex-col"
+        style={{ gap: "0.75rem", paddingBottom: "0.875rem" }}
+      >
         {usageQuery.isLoading ? (
-          <div className="flex items-center" style={{ gap: 8, fontSize: 12 }}>
+          <div
+            className="flex items-center"
+            style={{ gap: "0.5rem", fontSize: "0.75rem" }}
+          >
             <Spinner size="sm" />
             <span className="dim">{t("disk.loading")}</span>
           </div>
@@ -219,18 +232,18 @@ export const DiskUsageSection = () => {
           <div
             className="flex items-start"
             style={{
-              gap: 10,
-              padding: 12,
-              borderRadius: 6,
+              gap: "0.625rem",
+              padding: "0.75rem",
+              borderRadius: "0.375rem",
               border: "1px solid var(--c-err)",
               background: "var(--c-err-soft)",
             }}
           >
             <AlertTriangle
-              size={14}
+              size="0.875rem"
               style={{ color: "var(--c-err)", marginTop: 1, flexShrink: 0 }}
             />
-            <div style={{ fontSize: 12.5, color: "var(--c-err)" }}>
+            <div style={{ fontSize: "0.78125rem", color: "var(--c-err)" }}>
               {t("disk.dockerUnavailable")}
             </div>
           </div>
@@ -321,14 +334,17 @@ export const DiskUsageSection = () => {
                 });
               }}
             >
-              <Trash2 size={12} />
+              <Trash2 size="0.75rem" />
               {t("disk.cleanAllConfirmButton")}
             </button>
           </>
         }
       >
         {plan && usage && (
-          <div className="flex flex-col" style={{ gap: 6, fontSize: 12 }}>
+          <div
+            className="flex flex-col"
+            style={{ gap: "0.375rem", fontSize: "0.75rem" }}
+          >
             {usage.build_cache_reclaimable_bytes > 0 && (
               <div className="flex items-center justify-between">
                 <span className="dim">{t("disk.stepBuildCache")}</span>
@@ -347,7 +363,7 @@ export const DiskUsageSection = () => {
               <div
                 key={image.reference}
                 className="flex items-center justify-between"
-                style={{ gap: 8, minWidth: 0 }}
+                style={{ gap: "0.5rem", minWidth: 0 }}
               >
                 <span
                   className="mono"
@@ -369,7 +385,7 @@ export const DiskUsageSection = () => {
               <div
                 key={container.name}
                 className="flex items-center justify-between"
-                style={{ gap: 8 }}
+                style={{ gap: "0.5rem" }}
               >
                 <span className="mono">{container.name}</span>
                 <span className="mono dim">

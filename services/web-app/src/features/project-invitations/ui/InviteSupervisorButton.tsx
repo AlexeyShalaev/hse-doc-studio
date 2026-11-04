@@ -20,13 +20,13 @@ export const InviteSupervisorButton = ({
         type="button"
         size="sm"
         variant="outline"
-        style={{ gap: 6 }}
+        style={{ gap: "0.375rem" }}
         data-testid="invite-supervisor"
         onClick={() => {
           setOpen(true);
         }}
       >
-        <MailPlus size={12} aria-hidden="true" />
+        <MailPlus size="0.75rem" aria-hidden="true" />
         {t("supervisor.invite")}
       </Button>
       <InviteDialog

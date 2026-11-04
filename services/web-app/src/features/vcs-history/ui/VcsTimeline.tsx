@@ -153,8 +153,8 @@ export const VcsTimeline = ({
         className={clsx("flex items-center", isActive && "active")}
         data-sync={commit.sync ?? undefined}
         style={{
-          padding: "10px 14px",
-          gap: 12,
+          padding: "0.625rem 0.875rem",
+          gap: "0.75rem",
           borderBottom: isLast && !hasFooter ? 0 : "1px solid var(--border)",
           background: isActive ? "var(--accent-soft)" : undefined,
           cursor: "pointer",
@@ -164,7 +164,7 @@ export const VcsTimeline = ({
         }}
       >
         <Icon
-          size={named ? 15 : 13}
+          size={named ? "0.9375rem" : "0.8125rem"}
           aria-hidden="true"
           style={{
             color: named ? "var(--accent)" : "var(--fg-3)",
@@ -175,7 +175,7 @@ export const VcsTimeline = ({
           <span
             className="truncate"
             style={{
-              fontSize: named ? 13 : 12.5,
+              fontSize: named ? "0.8125rem" : "0.78125rem",
               fontWeight: named ? 600 : 400,
               color: "var(--fg-0)",
             }}
@@ -183,7 +183,7 @@ export const VcsTimeline = ({
           >
             {commit.message}
           </span>
-          <span className="dim truncate" style={{ fontSize: 10.5 }}>
+          <span className="dim truncate" style={{ fontSize: "0.65625rem" }}>
             {meta.join(" · ")}
           </span>
         </div>
@@ -193,14 +193,14 @@ export const VcsTimeline = ({
             aria-label={commit.author}
             title={commit.author}
             style={{
-              width: 22,
-              height: 22,
+              width: "1.375rem",
+              height: "1.375rem",
               borderRadius: "50%",
               flexShrink: 0,
               display: "inline-flex",
               alignItems: "center",
               justifyContent: "center",
-              fontSize: 9,
+              fontSize: "0.5625rem",
               fontWeight: 700,
               background: "var(--accent-soft)",
               color: "var(--accent)",
@@ -222,14 +222,14 @@ export const VcsTimeline = ({
               flexShrink: 0,
             }}
           >
-            <mark.icon size={14} aria-hidden="true" />
+            <mark.icon size="0.875rem" aria-hidden="true" />
           </span>
         )}
         {isHead ? (
           <span
             className="chip"
             style={{
-              fontSize: 9.5,
+              fontSize: "0.59375rem",
               background: "var(--accent-soft)",
               color: "var(--accent)",
               borderColor: "var(--accent-line)",
@@ -249,7 +249,7 @@ export const VcsTimeline = ({
               onRestore(commit);
             }}
           >
-            <RotateCcw size={11} aria-hidden="true" />
+            <RotateCcw size="0.6875rem" aria-hidden="true" />
             {t("timeline.restore")}
           </button>
         )}
@@ -291,7 +291,7 @@ export const VcsTimeline = ({
   const footer = hasFooter ? (
     <div
       className="flex items-center justify-center"
-      style={{ padding: "10px 14px" }}
+      style={{ padding: "0.625rem 0.875rem" }}
     >
       <button
         type="button"

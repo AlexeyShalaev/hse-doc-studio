@@ -28,7 +28,7 @@ export const LinkAccessBanner = ({
         : "editor";
   const allowed = t(`banner.allowed.${allowedKey}`);
   return (
-    <div style={{ padding: "8px 12px" }} data-testid="link-access-banner">
+    <div style={{ padding: "0.5rem 0.75rem" }} data-testid="link-access-banner">
       <Notice
         tone="info"
         role="status"

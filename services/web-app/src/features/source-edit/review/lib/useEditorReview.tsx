@@ -126,7 +126,7 @@ export const useEditorReview = ({
           data-testid="review-add"
           onClick={startComment}
         >
-          <MessageSquarePlus size={13} />
+          <MessageSquarePlus size="0.8125rem" />
         </button>
       )}
       <button
@@ -141,9 +141,11 @@ export const useEditorReview = ({
           setOpen(!panelOpen);
         }}
       >
-        <MessageSquare size={13} />
+        <MessageSquare size="0.8125rem" />
         {openCount > 0 && (
-          <span style={{ fontSize: 10.5, marginLeft: 2 }}>{openCount}</span>
+          <span style={{ fontSize: "0.65625rem", marginLeft: "0.125rem" }}>
+            {openCount}
+          </span>
         )}
       </button>
     </>

@@ -42,17 +42,17 @@ const LinkChips = ({ link }: { link: ShareLink }) => {
       <Badge variant="accent">{t(`roles.${link.role}`)}</Badge>
       {link.role === "reader" && link.show_sources && (
         <Badge variant="subtle">
-          <Eye size={11} aria-hidden /> {t("row.sources")}
+          <Eye size="0.6875rem" aria-hidden /> {t("row.sources")}
         </Badge>
       )}
       {link.require_login && (
         <Badge variant="subtle">
-          <LogIn size={11} aria-hidden /> {t("row.loginRequired")}
+          <LogIn size="0.6875rem" aria-hidden /> {t("row.loginRequired")}
         </Badge>
       )}
       {link.has_password && (
         <Badge variant="subtle">
-          <KeyRound size={11} aria-hidden /> {t("row.password")}
+          <KeyRound size="0.6875rem" aria-hidden /> {t("row.password")}
         </Badge>
       )}
       {link.state === "expired" ? (
@@ -157,7 +157,7 @@ const LinkRow = ({
     >
       <div className="share-link-row-head">
         <span className="share-link-icon" aria-hidden>
-          <Link2 size={14} />
+          <Link2 size="0.875rem" />
         </span>
         <span className="share-link-label">{link.label}</span>
         <LinkChips link={link} />
@@ -215,7 +215,7 @@ export const ShareLinksView = (props: ShareLinksViewProps) => {
       disabled={!canCreate}
       data-testid="share-link-create"
     >
-      <Plus size={13} aria-hidden /> {t("section.create")}
+      <Plus size="0.8125rem" aria-hidden /> {t("section.create")}
     </Button>
   );
 

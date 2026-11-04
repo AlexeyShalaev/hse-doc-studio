@@ -138,7 +138,7 @@ export const PageHeader = ({
         {meta && (
           <div
             className="flex items-center"
-            style={{ gap: 8, flexWrap: "wrap", marginTop: 4 }}
+            style={{ gap: "0.5rem", flexWrap: "wrap", marginTop: "0.25rem" }}
           >
             {meta}
           </div>

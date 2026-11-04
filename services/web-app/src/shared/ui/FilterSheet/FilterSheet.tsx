@@ -47,7 +47,7 @@ export const FilterSheet = ({
           setIsOpen(true);
         }}
       >
-        <SlidersHorizontal size={15} aria-hidden="true" />
+        <SlidersHorizontal size="0.9375rem" aria-hidden="true" />
         <span className="filter-sheet-label">
           {label ?? t("filterSheet.open")}
         </span>

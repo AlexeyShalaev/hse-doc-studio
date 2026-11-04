@@ -19,19 +19,23 @@ export const AccountCard = ({
     data-testid={testId}
     className={id ? "settings-anchor" : undefined}
     style={{
-      padding: 16,
+      padding: "1rem",
       borderRadius: "var(--r-3)",
       border: "1px solid var(--border)",
       background: "var(--bg-1)",
       display: "flex",
       flexDirection: "column",
-      gap: 12,
+      gap: "0.75rem",
     }}
   >
-    <div className="flex flex-col" style={{ gap: 3 }}>
-      <h5 style={{ margin: 0, fontSize: 13.5, fontWeight: 600 }}>{title}</h5>
+    <div className="flex flex-col" style={{ gap: "0.1875rem" }}>
+      <h5 style={{ margin: 0, fontSize: "0.84375rem", fontWeight: 600 }}>
+        {title}
+      </h5>
       {sub && (
-        <p style={{ margin: 0, color: "var(--fg-2)", fontSize: 12 }}>{sub}</p>
+        <p style={{ margin: 0, color: "var(--fg-2)", fontSize: "0.75rem" }}>
+          {sub}
+        </p>
       )}
     </div>
     {children}

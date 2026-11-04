@@ -60,7 +60,7 @@ export const AdminUsers = ({
         <EmptyState
           framed
           testId="users-forbidden"
-          icon={<Lock size={18} />}
+          icon={<Lock size="1.125rem" />}
           title={t("forbidden.title")}
           description={t("forbidden.body")}
         />
@@ -88,7 +88,7 @@ export const AdminUsers = ({
               });
             }}
           >
-            <UserPlus size={14} aria-hidden="true" />
+            <UserPlus size="0.875rem" aria-hidden="true" />
             {t("invite")}
           </Button>
         }

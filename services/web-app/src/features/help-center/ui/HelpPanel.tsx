@@ -162,7 +162,7 @@ export const HelpPanel = () => {
       data-testid="help-panel"
     >
       <header className="help-panel-head">
-        <BookOpen size={15} aria-hidden="true" />
+        <BookOpen size="0.9375rem" aria-hidden="true" />
         <div className="help-panel-head-title">
           {article && !searching ? article.title : t("title")}
         </div>
@@ -171,14 +171,14 @@ export const HelpPanel = () => {
           className="icon-btn"
           aria-label={t("close")}
           onClick={close}
-          style={{ width: 28, height: 28 }}
+          style={{ width: "1.75rem", height: "1.75rem" }}
         >
-          <X size={15} />
+          <X size="0.9375rem" />
         </button>
       </header>
 
       <label className="help-panel-search">
-        <Search size={13} aria-hidden="true" />
+        <Search size="0.8125rem" aria-hidden="true" />
         <input
           type="search"
           value={query}
@@ -221,7 +221,7 @@ export const HelpPanel = () => {
               open();
             }}
           >
-            <ArrowLeft size={13} /> {t("backToScreen")}
+            <ArrowLeft size="0.8125rem" /> {t("backToScreen")}
           </button>
         )}
 
@@ -277,7 +277,7 @@ export const HelpPanel = () => {
           rel="noreferrer"
         >
           {article ? t("openArticle") : t("openSite")}
-          <ExternalLink size={12} aria-hidden="true" />
+          <ExternalLink size="0.75rem" aria-hidden="true" />
         </a>
       </footer>
     </aside>

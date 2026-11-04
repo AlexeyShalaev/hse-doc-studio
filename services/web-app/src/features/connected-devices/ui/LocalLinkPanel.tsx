@@ -30,13 +30,17 @@ const Section = ({
 }) => (
   <div
     className="flex flex-col"
-    style={{ gap: 5, paddingTop: 8, borderTop: "1px solid var(--border)" }}
+    style={{
+      gap: "0.3125rem",
+      paddingTop: "0.5rem",
+      borderTop: "1px solid var(--border)",
+    }}
     data-testid={testId}
   >
     <span
       className="dim"
       style={{
-        fontSize: 10.5,
+        fontSize: "0.65625rem",
         letterSpacing: "0.04em",
         textTransform: "uppercase",
       }}
@@ -55,10 +59,17 @@ const ServerRows = ({ server, now }: { server: LinkServer; now: number }) => {
       ? t("local.cloudSeesOffline")
       : t("local.cloudSeesWaiting");
   return (
-    <div className="flex flex-col" style={{ gap: 4 }} data-testid="link-server">
-      <div className="flex items-center" style={{ gap: 8, flexWrap: "wrap" }}>
-        <Cloud size={13} style={{ color: "var(--fg-2)" }} />
-        <span style={{ fontSize: 12.5, fontWeight: 600 }}>
+    <div
+      className="flex flex-col"
+      style={{ gap: "0.25rem" }}
+      data-testid="link-server"
+    >
+      <div
+        className="flex items-center"
+        style={{ gap: "0.5rem", flexWrap: "wrap" }}
+      >
+        <Cloud size="0.8125rem" style={{ color: "var(--fg-2)" }} />
+        <span style={{ fontSize: "0.78125rem", fontWeight: 600 }}>
           {t("local.server", { host: server.host })}
         </span>
         <StatusDot
@@ -67,29 +78,33 @@ const ServerRows = ({ server, now }: { server: LinkServer; now: number }) => {
         />
       </div>
       {server.account_name !== null && (
-        <span className="dim" style={{ fontSize: 11.5 }}>
+        <span className="dim" style={{ fontSize: "0.71875rem" }}>
           {t("local.account", { name: server.account_name })}
         </span>
       )}
       {(server.state === "expired" || server.state === "revoked") && (
         <span
           className="flex items-center"
-          style={{ gap: 6, fontSize: 11.5, color: "var(--c-warn)" }}
+          style={{
+            gap: "0.375rem",
+            fontSize: "0.71875rem",
+            color: "var(--c-warn)",
+          }}
           data-testid="link-relogin"
         >
-          <KeyRound size={12} />
+          <KeyRound size="0.75rem" />
           {t("local.relogin")}
         </span>
       )}
       {server.state === "ok" && (
         <>
-          <span style={{ fontSize: 12 }} data-testid="link-cloud-sees">
+          <span style={{ fontSize: "0.75rem" }} data-testid="link-cloud-sees">
             {t("local.cloudSees", { state: sees })}
           </span>
           <span
             className="dim"
             style={{
-              fontSize: 11.5,
+              fontSize: "0.71875rem",
               color: server.last?.ok === false ? "var(--c-warn)" : undefined,
             }}
             data-testid="link-last-sent"
@@ -103,7 +118,7 @@ const ServerRows = ({ server, now }: { server: LinkServer; now: number }) => {
                 : t("local.lastFailed", { code: server.last.code ?? "?" })}
           </span>
           {server.cloud_error !== null && (
-            <span style={{ fontSize: 11.5, color: "var(--c-warn)" }}>
+            <span style={{ fontSize: "0.71875rem", color: "var(--c-warn)" }}>
               {t("local.cloudError", { code: server.cloud_error })}
             </span>
           )}
@@ -140,13 +155,18 @@ export const LocalLinkPanel = ({
       className="flex flex-col"
       style={
         embedded
-          ? { gap: 10 }
-          : { gap: 10, padding: 12, maxHeight: "70vh", overflowY: "auto" }
+          ? { gap: "0.625rem" }
+          : {
+              gap: "0.625rem",
+              padding: "0.75rem",
+              maxHeight: "70vh",
+              overflowY: "auto",
+            }
       }
       data-testid="local-link-panel"
     >
       {!embedded && (
-        <span style={{ fontSize: 12.5, fontWeight: 600 }}>
+        <span style={{ fontSize: "0.78125rem", fontWeight: 600 }}>
           {t("local.title")}
         </span>
       )}
@@ -154,12 +174,12 @@ export const LocalLinkPanel = ({
       {device !== null && <DeviceCard device={device} now={now} />}
       <Section title={t("local.allowed")} testId="link-allowed">
         {!link.runner.enabled && announced.length === 0 ? (
-          <span className="dim" style={{ fontSize: 11.5 }}>
+          <span className="dim" style={{ fontSize: "0.71875rem" }}>
             {t("local.allowedNone")}
           </span>
         ) : (
           <>
-            <span style={{ fontSize: 12 }}>
+            <span style={{ fontSize: "0.75rem" }}>
               {t("local.allowedRunner", {
                 state: t(`card.runnerState.${runnerStateKey(link)}`),
               })}
@@ -172,7 +192,7 @@ export const LocalLinkPanel = ({
                 <div
                   key={endpoint.name}
                   className="flex flex-col"
-                  style={{ gap: 2 }}
+                  style={{ gap: "0.125rem" }}
                   data-testid={`link-endpoint-${endpoint.name}`}
                 >
                   <StatusDot
@@ -188,7 +208,7 @@ export const LocalLinkPanel = ({
       </Section>
       <Section title={t("local.othersTitle")} testId="link-others">
         {others.length === 0 ? (
-          <span className="dim" style={{ fontSize: 11.5 }}>
+          <span className="dim" style={{ fontSize: "0.71875rem" }}>
             {t("local.othersEmpty")}
           </span>
         ) : (
@@ -196,9 +216,9 @@ export const LocalLinkPanel = ({
             <div
               key={person.user_id}
               className="flex items-center"
-              style={{ gap: 8, fontSize: 12.5 }}
+              style={{ gap: "0.5rem", fontSize: "0.78125rem" }}
             >
-              <Users size={13} style={{ color: "var(--fg-2)" }} />
+              <Users size="0.8125rem" style={{ color: "var(--fg-2)" }} />
               {t("panel.workingLocally", { name: person.name })}
             </div>
           ))

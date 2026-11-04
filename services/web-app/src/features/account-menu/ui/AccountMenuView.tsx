@@ -50,7 +50,7 @@ const Avatar = ({ initials, size }: { initials: string; size: number }) => (
       background: "var(--accent-soft, var(--bg-2))",
       color: "var(--accent)",
       boxShadow: "0 0 0 1px var(--accent-line)",
-      fontSize: size > 28 ? 13 : 11,
+      fontSize: size > 28 ? "0.8125rem" : "0.6875rem",
       fontWeight: 600,
       textTransform: "uppercase",
     }}
@@ -90,7 +90,7 @@ export const AccountMenuView = ({
           data-tt={t("accountMenu.title")}
           aria-label={t("accountMenu.open", { name: user.name })}
           data-testid="account-menu-trigger"
-          style={{ width: 32, height: 32 }}
+          style={{ width: "2rem", height: "2rem" }}
         >
           <Avatar initials={user.avatar_initials} size={24} />
         </button>
@@ -103,8 +103,8 @@ export const AccountMenuView = ({
         <div
           className="flex items-center"
           style={{
-            gap: 10,
-            padding: 12,
+            gap: "0.625rem",
+            padding: "0.75rem",
             borderBottom: "1px solid var(--border)",
           }}
         >
@@ -112,13 +112,17 @@ export const AccountMenuView = ({
           <div className="flex flex-col min-w-0" style={{ gap: 1 }}>
             <span
               className="truncate"
-              style={{ fontSize: 13, fontWeight: 600, color: "var(--fg-0)" }}
+              style={{
+                fontSize: "0.8125rem",
+                fontWeight: 600,
+                color: "var(--fg-0)",
+              }}
             >
               {user.name}
             </span>
             <span
               className="truncate"
-              style={{ fontSize: 11.5, color: "var(--fg-2)" }}
+              style={{ fontSize: "0.71875rem", color: "var(--fg-2)" }}
             >
               {user.email}
             </span>
@@ -129,19 +133,19 @@ export const AccountMenuView = ({
           <div
             className="flex flex-wrap"
             style={{
-              gap: 6,
-              padding: "8px 12px 0",
+              gap: "0.375rem",
+              padding: "0.5rem 0.75rem 0",
             }}
           >
             {user.is_instance_admin && (
               <Badge variant="accent" data-testid="account-menu-admin">
-                <ShieldCheck size={11} aria-hidden="true" />
+                <ShieldCheck size="0.6875rem" aria-hidden="true" />
                 {t("accountMenu.admin")}
               </Badge>
             )}
             {!user.email_verified && (
               <Badge variant="warning" data-testid="account-menu-unverified">
-                <ShieldAlert size={11} aria-hidden="true" />
+                <ShieldAlert size="0.6875rem" aria-hidden="true" />
                 {t("accountMenu.unverified")}
               </Badge>
             )}
@@ -154,8 +158,8 @@ export const AccountMenuView = ({
             style={{
               listStyle: "none",
               margin: 0,
-              padding: "8px 12px 0",
-              fontSize: 12,
+              padding: "0.5rem 0.75rem 0",
+              fontSize: "0.75rem",
               color: "var(--fg-1)",
             }}
           >
@@ -163,7 +167,7 @@ export const AccountMenuView = ({
               <li
                 key={org.slug}
                 className="flex items-center justify-between"
-                style={{ gap: 8, padding: "2px 0" }}
+                style={{ gap: "0.5rem", padding: "0.125rem 0" }}
               >
                 <span className="truncate">{org.name}</span>
                 <span className="shrink-0" style={{ color: "var(--fg-2)" }}>
@@ -176,7 +180,10 @@ export const AccountMenuView = ({
 
         {isPhone && <QuickAppearance />}
 
-        <div className="flex flex-col" style={{ padding: 6, marginTop: 6 }}>
+        <div
+          className="flex flex-col"
+          style={{ padding: "0.375rem", marginTop: "0.375rem" }}
+        >
           {isPhone && onOpenAgent && (
             <PopoverClose asChild>
               <button
@@ -186,7 +193,7 @@ export const AccountMenuView = ({
                 onClick={onOpenAgent}
                 data-testid="account-menu-agent"
               >
-                <Bot size={14} />
+                <Bot size="0.875rem" />
                 {t("accountMenu.agent")}
               </button>
             </PopoverClose>
@@ -197,7 +204,7 @@ export const AccountMenuView = ({
             style={itemStyle}
             onClick={onOpenSettings}
           >
-            <Settings size={14} />
+            <Settings size="0.875rem" />
             {t("accountMenu.settings")}
           </button>
           {isPhone && onOpenHelp && (
@@ -209,7 +216,7 @@ export const AccountMenuView = ({
                 onClick={onOpenHelp}
                 data-testid="account-menu-help"
               >
-                <BookOpen size={14} />
+                <BookOpen size="0.875rem" />
                 {t("accountMenu.help")}
               </button>
             </PopoverClose>
@@ -222,7 +229,7 @@ export const AccountMenuView = ({
               onClick={onOpenLocalStudio}
               data-testid="account-menu-local-studio"
             >
-              <Laptop size={14} />
+              <Laptop size="0.875rem" />
               {tLocal("menu.label")}
             </button>
           )}
@@ -234,7 +241,7 @@ export const AccountMenuView = ({
               onClick={onOpenAdmin}
               data-testid="account-menu-open-admin"
             >
-              <ShieldCheck size={14} />
+              <ShieldCheck size="0.875rem" />
               {t("accountMenu.openAdmin")}
             </button>
           )}
@@ -246,7 +253,7 @@ export const AccountMenuView = ({
             onClick={onLogout}
             data-testid="account-menu-logout"
           >
-            {pending ? <Spinner size="sm" /> : <LogOut size={14} />}
+            {pending ? <Spinner size="sm" /> : <LogOut size="0.875rem" />}
             {t("accountMenu.logout")}
           </button>
         </div>

@@ -107,7 +107,7 @@ const SideColumn = ({
       <span className="truncate" title={label}>
         {label}
       </span>
-      {included && <Check size={12} aria-hidden="true" />}
+      {included && <Check size="0.75rem" aria-hidden="true" />}
     </div>
     {lines.length === 0 ? (
       <div className="hunk-line dim" style={{ fontStyle: "italic" }}>
@@ -182,21 +182,21 @@ export const HunkCard = forwardRef<HTMLDivElement, HunkCardProps>(
         onFocus={onActivate}
       >
         <div className="hunk-head">
-          <strong style={{ fontSize: 12.5 }}>
+          <strong style={{ fontSize: "0.78125rem" }}>
             {t("hunk.title", { n: index + 1, total })}
           </strong>
-          <span className="dim mono" style={{ fontSize: 10.5 }}>
+          <span className="dim mono" style={{ fontSize: "0.65625rem" }}>
             {t("hunk.line", { line: hunk.ours_start })}
           </span>
           <span style={{ flex: 1 }} />
           {resolved ? (
             <>
               <span className="hunk-state" data-state="resolved">
-                <Check size={11} aria-hidden="true" />
+                <Check size="0.6875rem" aria-hidden="true" />
                 {t(`hunk.chosen.${value}`)}
               </span>
               <button type="button" className="btn xs ghost" onClick={onClear}>
-                <Undo2 size={11} aria-hidden="true" />
+                <Undo2 size="0.6875rem" aria-hidden="true" />
                 {t("hunk.undo")}
               </button>
             </>
@@ -266,11 +266,11 @@ export const HunkCard = forwardRef<HTMLDivElement, HunkCardProps>(
         )}
 
         {editing ? (
-          <div className="flex flex-col" style={{ gap: 6 }}>
+          <div className="flex flex-col" style={{ gap: "0.375rem" }}>
             <label
               className="dim"
               htmlFor={`hunk-edit-${hunk.key}`}
-              style={{ fontSize: 11.5 }}
+              style={{ fontSize: "0.71875rem" }}
             >
               {t("hunk.customHint")}
             </label>
@@ -288,12 +288,12 @@ export const HunkCard = forwardRef<HTMLDivElement, HunkCardProps>(
             {hasMarkers && (
               <span
                 role="alert"
-                style={{ fontSize: 11.5, color: "var(--c-err)" }}
+                style={{ fontSize: "0.71875rem", color: "var(--c-err)" }}
               >
                 {t("hunk.customMarkers")}
               </span>
             )}
-            <div className="flex" style={{ gap: 6 }}>
+            <div className="flex" style={{ gap: "0.375rem" }}>
               <button
                 type="button"
                 className="btn sm primary"
@@ -337,7 +337,7 @@ export const HunkCard = forwardRef<HTMLDivElement, HunkCardProps>(
               aria-pressed={value === "custom"}
               onClick={startEditing}
             >
-              <Pencil size={11} aria-hidden="true" />
+              <Pencil size="0.6875rem" aria-hidden="true" />
               {t("hunk.choose.custom")}
             </button>
             {hunk.base.length > 0 && (

@@ -39,20 +39,24 @@ export const TableSkeleton = ({
           style={{
             display: "grid",
             gridTemplateColumns: `repeat(${String(columns)}, minmax(0, 1fr))`,
-            gap: 16,
+            gap: "1rem",
             alignItems: "center",
-            padding: "14px 16px",
+            padding: "0.875rem 1rem",
             borderTop: row === 0 ? 0 : "1px solid var(--border)",
           }}
         >
           {Array.from({ length: columns }, (_, col) =>
             col === 0 && withAvatar ? (
-              <span key={col} className="flex items-center" style={{ gap: 10 }}>
+              <span
+                key={col}
+                className="flex items-center"
+                style={{ gap: "0.625rem" }}
+              >
                 <span
                   className="adm-skel"
                   style={{
-                    width: 24,
-                    height: 24,
+                    width: "1.5rem",
+                    height: "1.5rem",
                     borderRadius: "50%",
                     flexShrink: 0,
                   }}

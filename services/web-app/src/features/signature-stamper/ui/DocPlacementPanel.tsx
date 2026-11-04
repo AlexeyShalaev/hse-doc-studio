@@ -73,7 +73,11 @@ export const DocPlacementPanel = ({
     return (
       <div
         className="dim"
-        style={{ padding: 18, fontSize: 12.5, textAlign: "center" }}
+        style={{
+          padding: "1.125rem",
+          fontSize: "0.78125rem",
+          textAlign: "center",
+        }}
       >
         {t("docPlacement.noSlots")}
       </div>
@@ -84,9 +88,9 @@ export const DocPlacementPanel = ({
     <div className="flex flex-col" style={{ minHeight: 0 }}>
       <div
         style={{
-          padding: "12px 14px",
+          padding: "0.75rem 0.875rem",
           borderBottom: "1px solid var(--border)",
-          fontSize: 11,
+          fontSize: "0.6875rem",
           color: "var(--fg-2)",
           lineHeight: 1.5,
         }}
@@ -95,10 +99,10 @@ export const DocPlacementPanel = ({
         <button
           type="button"
           className="btn xs ghost"
-          style={{ marginTop: 8 }}
+          style={{ marginTop: "0.5rem" }}
           onClick={onOpenProjectSignatures}
         >
-          <ExternalLink size={10} />
+          <ExternalLink size="0.625rem" />
           {t("docPlacement.managePng")}
         </button>
       </div>
@@ -135,28 +139,28 @@ export const DocPlacementPanel = ({
           <div
             key={slot.id}
             style={{
-              padding: "12px 14px",
+              padding: "0.75rem 0.875rem",
               borderBottom:
                 i < docSlots.length - 1 ? "1px solid var(--border)" : 0,
               display: "flex",
               flexDirection: "column",
-              gap: 8,
+              gap: "0.5rem",
               opacity: hasPng ? 1 : 0.7,
             }}
           >
-            <div className="flex items-center" style={{ gap: 10 }}>
+            <div className="flex items-center" style={{ gap: "0.625rem" }}>
               <div
                 className="flex items-center justify-center shrink-0"
                 style={{
-                  width: 32,
-                  height: 32,
+                  width: "2rem",
+                  height: "2rem",
                   borderRadius: "50%",
                   background: "var(--bg-2)",
                   border: "1px solid var(--border)",
                   color: "var(--fg-3)",
                 }}
               >
-                <User size={14} />
+                <User size="0.875rem" />
               </div>
               <div
                 className="flex flex-col"
@@ -164,7 +168,7 @@ export const DocPlacementPanel = ({
               >
                 <strong
                   className="truncate"
-                  style={{ fontSize: 12.5, color: "var(--fg-0)" }}
+                  style={{ fontSize: "0.78125rem", color: "var(--fg-0)" }}
                 >
                   {personName ?? (
                     <span className="dim">
@@ -172,11 +176,14 @@ export const DocPlacementPanel = ({
                     </span>
                   )}
                 </strong>
-                <span className="dim truncate" style={{ fontSize: 10.5 }}>
+                <span
+                  className="dim truncate"
+                  style={{ fontSize: "0.65625rem" }}
+                >
                   {label}
                   {requiredAt.length > 0 && (
                     <span
-                      style={{ color: "var(--c-warn)", marginLeft: 6 }}
+                      style={{ color: "var(--c-warn)", marginLeft: "0.375rem" }}
                       title={t("docPlacement.requiredAtTitle", {
                         checkpoints: requiredAtNames,
                       })}
@@ -192,7 +199,11 @@ export const DocPlacementPanel = ({
               {hasPng ? (
                 <label
                   className="flex items-center"
-                  style={{ gap: 6, fontSize: 11, cursor: "pointer" }}
+                  style={{
+                    gap: "0.375rem",
+                    fontSize: "0.6875rem",
+                    cursor: "pointer",
+                  }}
                   title={
                     isEnabled
                       ? t("docPlacement.enabledTitle")
@@ -229,16 +240,20 @@ export const DocPlacementPanel = ({
               ) : (
                 <span
                   className="flex items-center gap-1 shrink-0"
-                  style={{ fontSize: 10.5, color: "var(--c-warn)" }}
+                  style={{ fontSize: "0.65625rem", color: "var(--c-warn)" }}
                 >
-                  <ImageOff size={11} /> {t("docPlacement.noPng")}
+                  <ImageOff size="0.6875rem" /> {t("docPlacement.noPng")}
                 </span>
               )}
             </div>
 
             <div
               className="flex items-center"
-              style={{ gap: 6, paddingLeft: 42, fontSize: 10.5 }}
+              style={{
+                gap: "0.375rem",
+                paddingLeft: "2.625rem",
+                fontSize: "0.65625rem",
+              }}
               title={t("detached.mode.hint")}
             >
               <span className="dim">{t("detached.mode.title")}</span>
@@ -275,22 +290,26 @@ export const DocPlacementPanel = ({
               <div
                 className="flex items-center"
                 style={{
-                  gap: 6,
-                  fontSize: 10.5,
-                  paddingLeft: 42,
+                  gap: "0.375rem",
+                  fontSize: "0.65625rem",
+                  paddingLeft: "2.625rem",
                   flexWrap: "wrap",
                 }}
               >
                 <label
                   className="flex items-center"
-                  style={{ gap: 5 }}
+                  style={{ gap: "0.3125rem" }}
                   title={t("docPlacement.signDateTitle")}
                 >
                   <span className="dim">{t("docPlacement.signDate")}</span>
                   <input
                     type="date"
                     className="input"
-                    style={{ height: 22, fontSize: 10.5, padding: "0 6px" }}
+                    style={{
+                      height: "1.375rem",
+                      fontSize: "0.65625rem",
+                      padding: "0 0.375rem",
+                    }}
                     value={placement?.sign_date ?? ""}
                     onChange={(e) => {
                       // "" очищает дату — подпись штампуется без неё.
@@ -303,15 +322,15 @@ export const DocPlacementPanel = ({
                 <span
                   className="flex items-center gap-1 mono"
                   style={{
-                    padding: "1px 6px",
-                    borderRadius: 3,
+                    padding: "1px 0.375rem",
+                    borderRadius: "0.1875rem",
                     background: isOnThisPage
                       ? "var(--c-ok-soft)"
                       : "var(--bg-2)",
                     color: isOnThisPage ? "var(--c-ok)" : "var(--fg-2)",
                   }}
                 >
-                  <MapPin size={9} />{" "}
+                  <MapPin size="0.5625rem" />{" "}
                   {t("docPlacement.page", { page: placedPage })}
                 </span>
                 {!isOnThisPage && (
@@ -326,7 +345,7 @@ export const DocPlacementPanel = ({
                         page: placedPage,
                       })}
                     >
-                      <ArrowRight size={10} />
+                      <ArrowRight size="0.625rem" />
                       {t("docPlacement.jump")}
                     </button>
                     <button
@@ -371,8 +390,8 @@ export const DocPlacementPanel = ({
             {!hasPng && (
               <div
                 style={{
-                  paddingLeft: 42,
-                  fontSize: 10.5,
+                  paddingLeft: "2.625rem",
+                  fontSize: "0.65625rem",
                   color: "var(--fg-2)",
                 }}
               >
@@ -381,7 +400,11 @@ export const DocPlacementPanel = ({
                   type="button"
                   className="btn xs ghost"
                   onClick={onOpenProjectSignatures}
-                  style={{ height: 16, padding: "0 6px", fontSize: 10 }}
+                  style={{
+                    height: "1rem",
+                    padding: "0 0.375rem",
+                    fontSize: "0.625rem",
+                  }}
                 >
                   {t("docPlacement.toolsSignatures")}
                 </button>

@@ -18,13 +18,13 @@ export type CredentialPickerProps = {
 const rowStyle = (active: boolean): React.CSSProperties => ({
   display: "flex",
   alignItems: "center",
-  gap: 10,
-  padding: "8px 10px",
+  gap: "0.625rem",
+  padding: "0.5rem 0.625rem",
   borderRadius: "var(--r-2)",
   border: `1px solid ${active ? "var(--accent-line)" : "var(--border)"}`,
   background: active ? "var(--accent-soft)" : "var(--bg-1)",
   cursor: "pointer",
-  fontSize: 12.5,
+  fontSize: "0.78125rem",
 });
 
 // «Уже есть токен для этого сервера»: выбираем сохранённый доступ или заводим
@@ -41,7 +41,7 @@ export const CredentialPicker = ({
       role="radiogroup"
       aria-label={t("picker.label", { host })}
       className="flex flex-col"
-      style={{ gap: 6 }}
+      style={{ gap: "0.375rem" }}
       data-testid="credential-picker"
     >
       {credentials.map((credential) => (
@@ -56,7 +56,7 @@ export const CredentialPicker = ({
             style={{ accentColor: "var(--accent)" }}
           />
           <Lock
-            size={13}
+            size="0.8125rem"
             aria-hidden="true"
             style={{ color: "var(--fg-2)", flexShrink: 0 }}
           />
@@ -66,7 +66,7 @@ export const CredentialPicker = ({
             </span>
             <span
               className="dim truncate"
-              style={{ display: "block", fontSize: 11 }}
+              style={{ display: "block", fontSize: "0.6875rem" }}
             >
               {credential.token_family ? `${credential.token_family}… · ` : ""}
               {credential.last_used_at
@@ -91,7 +91,7 @@ export const CredentialPicker = ({
           style={{ accentColor: "var(--accent)" }}
         />
         <Plus
-          size={13}
+          size="0.8125rem"
           aria-hidden="true"
           style={{ color: "var(--fg-2)", flexShrink: 0 }}
         />

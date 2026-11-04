@@ -23,7 +23,7 @@ export const DialogLauncher = ({
 }: DialogLauncherProps) => {
   const [isOpen, setOpen] = useState(defaultOpen);
   return (
-    <div className="flex items-center flex-wrap" style={{ gap: 12 }}>
+    <div className="flex items-center flex-wrap" style={{ gap: "0.75rem" }}>
       <button
         type="button"
         className="btn"
@@ -34,7 +34,7 @@ export const DialogLauncher = ({
         {label}
       </button>
       {hint && (
-        <span className="dim" style={{ fontSize: 12 }}>
+        <span className="dim" style={{ fontSize: "0.75rem" }}>
           {hint}
         </span>
       )}

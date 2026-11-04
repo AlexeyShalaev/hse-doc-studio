@@ -48,7 +48,7 @@ export const PolicyPanel = ({
       description={t("policy.lead")}
       testId="update-policy"
       footer={
-        <div className="flex items-center" style={{ gap: 12 }}>
+        <div className="flex items-center" style={{ gap: "0.75rem" }}>
           <Button
             size="sm"
             disabled={!changed || saving}
@@ -68,7 +68,7 @@ export const PolicyPanel = ({
           {failure && !failure.field && (
             <span
               role="alert"
-              style={{ color: "var(--c-err)", fontSize: 12.5 }}
+              style={{ color: "var(--c-err)", fontSize: "0.78125rem" }}
             >
               {t(failureKey(failure.code))}
             </span>
@@ -119,7 +119,7 @@ export const PolicyPanel = ({
       >
         <div
           className="flex"
-          style={{ gap: 6, flexWrap: "wrap" }}
+          style={{ gap: "0.375rem", flexWrap: "wrap" }}
           role="group"
           aria-label={t("policy.days.label")}
         >

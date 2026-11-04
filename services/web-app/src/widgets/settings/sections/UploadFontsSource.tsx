@@ -37,7 +37,7 @@ export const UploadFontsSource = () => {
   };
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
       <input
         ref={fileRef}
         type="file"
@@ -67,9 +67,9 @@ export const UploadFontsSource = () => {
           flexDirection: "column",
           alignItems: "center",
           justifyContent: "center",
-          gap: 8,
-          padding: "28px 16px",
-          borderRadius: 8,
+          gap: "0.5rem",
+          padding: "1.75rem 1rem",
+          borderRadius: "0.5rem",
           border: `1.5px dashed ${dragging ? "var(--accent)" : "var(--border)"}`,
           background: dragging ? "var(--bg-3, var(--bg-2))" : "var(--bg-2)",
           color: "var(--fg-1)",
@@ -81,12 +81,12 @@ export const UploadFontsSource = () => {
         {upload.isPending ? (
           <Spinner size="sm" />
         ) : (
-          <UploadCloud size={26} style={{ color: "var(--accent)" }} />
+          <UploadCloud size="1.625rem" style={{ color: "var(--accent)" }} />
         )}
-        <span style={{ fontSize: 13, fontWeight: 600 }}>
+        <span style={{ fontSize: "0.8125rem", fontWeight: 600 }}>
           {dragging ? t("fonts.uploadDropActive") : t("fonts.uploadDropTitle")}
         </span>
-        <span style={{ fontSize: 11.5, color: "var(--fg-3)" }}>
+        <span style={{ fontSize: "0.71875rem", color: "var(--fg-3)" }}>
           {t("fonts.uploadDropHint")}
         </span>
       </button>

@@ -44,7 +44,7 @@ export const ThresholdsPanel = ({
       description={t("thresholds.lead")}
       testId="diag-thresholds"
       footer={
-        <div className="flex items-center" style={{ gap: 12 }}>
+        <div className="flex items-center" style={{ gap: "0.75rem" }}>
           <Button
             size="sm"
             disabled={!changed || invalid || saving}

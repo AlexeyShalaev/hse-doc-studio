@@ -146,22 +146,22 @@ export const FolderPickerModal = ({
         <DialogPrimitive.Overlay className="scrim" />
         <DialogPrimitive.Content
           className="modal-panel fixed left-1/2 top-1/2 z-[101] -translate-x-1/2 -translate-y-1/2"
-          style={{ width: 640, maxWidth: "calc(100vw - 32px)" }}
+          style={{ width: "40rem", maxWidth: "calc(100vw - 2rem)" }}
         >
           {/* Header */}
           <div
             className="flex items-center gap-2"
             style={{
-              padding: "14px 16px",
+              padding: "0.875rem 1rem",
               borderBottom: "1px solid var(--border)",
               minWidth: 0,
             }}
           >
-            <FolderOpen size={14} style={{ color: "var(--accent)" }} />
+            <FolderOpen size="0.875rem" style={{ color: "var(--accent)" }} />
             <DialogPrimitive.Title
               style={{
                 margin: 0,
-                fontSize: 13,
+                fontSize: "0.8125rem",
                 fontWeight: 600,
                 letterSpacing: "-0.01em",
               }}
@@ -173,7 +173,7 @@ export const FolderPickerModal = ({
               className="icon-btn"
               aria-label={t("modal.close")}
             >
-              <X size={14} />
+              <X size="0.875rem" />
             </DialogPrimitive.Close>
           </div>
 
@@ -181,15 +181,15 @@ export const FolderPickerModal = ({
           <div
             className="flex items-center gap-1 overflow-x-auto"
             style={{
-              padding: "8px 14px",
+              padding: "0.5rem 0.875rem",
               borderBottom: "1px solid var(--border)",
               background: "var(--bg-0)",
-              minHeight: 36,
+              minHeight: "2.25rem",
               scrollbarWidth: "thin",
             }}
           >
             {crumbs.length === 0 ? (
-              <span className="mono dim" style={{ fontSize: 11 }}>
+              <span className="mono dim" style={{ fontSize: "0.6875rem" }}>
                 {t("breadcrumbs.loading")}
               </span>
             ) : (
@@ -197,15 +197,15 @@ export const FolderPickerModal = ({
                 <span
                   key={c.path}
                   className="flex items-center"
-                  style={{ gap: 2, minWidth: 0 }}
+                  style={{ gap: "0.125rem", minWidth: 0 }}
                 >
                   {i > 0 && (
                     <ChevronRight
-                      size={11}
+                      size="0.6875rem"
                       style={{
                         color: "var(--fg-3)",
                         flexShrink: 0,
-                        margin: "0 2px",
+                        margin: "0 0.125rem",
                       }}
                     />
                   )}
@@ -219,9 +219,9 @@ export const FolderPickerModal = ({
                     style={{
                       background: "transparent",
                       border: 0,
-                      padding: "3px 6px",
+                      padding: "0.1875rem 0.375rem",
                       borderRadius: "var(--r-1)",
-                      fontSize: 11,
+                      fontSize: "0.6875rem",
                       color:
                         i === crumbs.length - 1 ? "var(--fg-0)" : "var(--fg-2)",
                       fontWeight: i === crumbs.length - 1 ? 600 : 400,
@@ -229,7 +229,7 @@ export const FolderPickerModal = ({
                       whiteSpace: "nowrap",
                       display: "inline-flex",
                       alignItems: "center",
-                      gap: 4,
+                      gap: "0.25rem",
                       transition: "background 0.1s, color 0.1s",
                     }}
                     onMouseEnter={(e) => {
@@ -245,7 +245,7 @@ export const FolderPickerModal = ({
                       }
                     }}
                   >
-                    {c.isRoot && <Home size={10} />}
+                    {c.isRoot && <Home size="0.625rem" />}
                     {c.label}
                   </button>
                 </span>
@@ -257,7 +257,7 @@ export const FolderPickerModal = ({
           {data && data.entries.length > 0 && (
             <div
               style={{
-                padding: "8px 14px",
+                padding: "0.5rem 0.875rem",
                 borderBottom: "1px solid var(--border)",
                 background: "var(--bg-1)",
               }}
@@ -265,15 +265,15 @@ export const FolderPickerModal = ({
               <div
                 className="flex items-center"
                 style={{
-                  gap: 6,
-                  padding: "4px 8px",
+                  gap: "0.375rem",
+                  padding: "0.25rem 0.5rem",
                   background: "var(--bg-2)",
                   border: "1px solid var(--border)",
                   borderRadius: "var(--r-2)",
                 }}
               >
                 <Search
-                  size={12}
+                  size="0.75rem"
                   style={{ color: "var(--fg-3)", flexShrink: 0 }}
                 />
                 <input
@@ -297,7 +297,7 @@ export const FolderPickerModal = ({
                     border: 0,
                     outline: "none",
                     color: "var(--fg-0)",
-                    fontSize: 12,
+                    fontSize: "0.75rem",
                     padding: 0,
                   }}
                 />
@@ -318,7 +318,7 @@ export const FolderPickerModal = ({
                       alignItems: "center",
                     }}
                   >
-                    <X size={11} />
+                    <X size="0.6875rem" />
                   </button>
                 )}
               </div>
@@ -329,7 +329,7 @@ export const FolderPickerModal = ({
           <div
             style={{
               maxHeight: "50vh",
-              minHeight: 240,
+              minHeight: "15rem",
               overflowY: "auto",
               background: "var(--bg-1)",
             }}
@@ -337,7 +337,7 @@ export const FolderPickerModal = ({
             {isLoading ? (
               <div
                 className="flex items-center justify-center"
-                style={{ padding: "40px 16px" }}
+                style={{ padding: "2.5rem 1rem" }}
               >
                 <Spinner />
               </div>
@@ -345,12 +345,12 @@ export const FolderPickerModal = ({
               <div
                 className="flex items-center gap-2"
                 style={{
-                  padding: "16px",
+                  padding: "1rem",
                   color: "var(--c-err)",
-                  fontSize: 12,
+                  fontSize: "0.75rem",
                 }}
               >
-                <AlertCircle size={14} style={{ flexShrink: 0 }} />
+                <AlertCircle size="0.875rem" style={{ flexShrink: 0 }} />
                 <span>{errorMessage}</span>
               </div>
             ) : data ? (
@@ -363,7 +363,7 @@ export const FolderPickerModal = ({
                         e.name.toLowerCase().includes(q),
                       );
                 return (
-                  <div style={{ padding: "4px 6px" }}>
+                  <div style={{ padding: "0.25rem 0.375rem" }}>
                     {data.parent && (
                       <button
                         type="button"
@@ -373,7 +373,7 @@ export const FolderPickerModal = ({
                         }}
                       >
                         <CornerLeftUp
-                          size={14}
+                          size="0.875rem"
                           style={{ color: "var(--fg-3)", flexShrink: 0 }}
                         />
                         <span className="mono dim">{t("list.up")}</span>
@@ -383,9 +383,9 @@ export const FolderPickerModal = ({
                       <div
                         className="dim"
                         style={{
-                          padding: "24px 12px",
+                          padding: "1.5rem 0.75rem",
                           textAlign: "center",
-                          fontSize: 12,
+                          fontSize: "0.75rem",
                         }}
                       >
                         {t("list.empty")}
@@ -394,9 +394,9 @@ export const FolderPickerModal = ({
                       <div
                         className="dim"
                         style={{
-                          padding: "24px 12px",
+                          padding: "1.5rem 0.75rem",
                           textAlign: "center",
-                          fontSize: 12,
+                          fontSize: "0.75rem",
                         }}
                       >
                         {t("list.noResults")}{" "}
@@ -423,7 +423,7 @@ export const FolderPickerModal = ({
                         >
                           {entry.is_dir ? (
                             <Folder
-                              size={14}
+                              size="0.875rem"
                               style={{
                                 color: "var(--accent)",
                                 flexShrink: 0,
@@ -431,7 +431,7 @@ export const FolderPickerModal = ({
                             />
                           ) : (
                             <File
-                              size={14}
+                              size="0.875rem"
                               style={{
                                 color: "var(--fg-3)",
                                 flexShrink: 0,
@@ -452,7 +452,7 @@ export const FolderPickerModal = ({
                           {!entry.is_dir && (
                             <span
                               className="mono dimmer"
-                              style={{ fontSize: 10, flexShrink: 0 }}
+                              style={{ fontSize: "0.625rem", flexShrink: 0 }}
                             >
                               {t("list.file")}
                             </span>
@@ -464,8 +464,8 @@ export const FolderPickerModal = ({
                       <div
                         className="mono dim"
                         style={{
-                          padding: "6px 12px 2px",
-                          fontSize: 10,
+                          padding: "0.375rem 0.75rem 0.125rem",
+                          fontSize: "0.625rem",
                           textAlign: "right",
                         }}
                       >
@@ -498,17 +498,17 @@ export const FolderPickerModal = ({
                 width: "100%",
                 background: "transparent",
                 border: 0,
-                padding: "8px 16px",
+                padding: "0.5rem 1rem",
                 textAlign: "left",
-                fontSize: 11,
+                fontSize: "0.6875rem",
                 cursor: "pointer",
                 display: "flex",
                 alignItems: "center",
-                gap: 6,
+                gap: "0.375rem",
               }}
             >
               <ChevronRight
-                size={11}
+                size="0.6875rem"
                 style={{
                   transform: manualExpanded ? "rotate(90deg)" : "none",
                   transition: "transform 0.15s",
@@ -519,13 +519,13 @@ export const FolderPickerModal = ({
             {manualExpanded && (
               <form
                 onSubmit={handleManualSubmit}
-                style={{ padding: "0 16px 12px" }}
+                style={{ padding: "0 1rem 0.75rem" }}
               >
                 <div className="flex gap-2">
                   <input
                     type="text"
                     className="input mono"
-                    style={{ fontSize: 11.5, flex: 1 }}
+                    style={{ fontSize: "0.71875rem", flex: 1 }}
                     value={manualPath}
                     onChange={(e) => {
                       setManualPath(e.target.value);
@@ -545,7 +545,7 @@ export const FolderPickerModal = ({
           {/* Selection preview */}
           <div
             style={{
-              padding: "10px 16px",
+              padding: "0.625rem 1rem",
               borderTop: "1px solid var(--border)",
               background: canConfirm ? "var(--accent-soft)" : "var(--bg-0)",
               minWidth: 0,
@@ -555,14 +555,14 @@ export const FolderPickerModal = ({
               className="label-up"
               style={{
                 color: canConfirm ? "var(--accent)" : "var(--fg-3)",
-                marginBottom: 4,
+                marginBottom: "0.25rem",
               }}
             >
               {canConfirm ? t("preview.willSelect") : t("preview.navigateHint")}
             </div>
             <div className="flex items-center gap-2" style={{ minWidth: 0 }}>
               <Folder
-                size={13}
+                size="0.8125rem"
                 style={{
                   color: canConfirm ? "var(--accent)" : "var(--fg-3)",
                   flexShrink: 0,
@@ -570,7 +570,7 @@ export const FolderPickerModal = ({
               />
               <span
                 style={{
-                  fontSize: 12.5,
+                  fontSize: "0.78125rem",
                   fontWeight: 600,
                   color: "var(--fg-0)",
                   flexShrink: 0,
@@ -581,7 +581,7 @@ export const FolderPickerModal = ({
               <span
                 className="mono dim"
                 style={{
-                  fontSize: 10.5,
+                  fontSize: "0.65625rem",
                   overflow: "hidden",
                   textOverflow: "ellipsis",
                   whiteSpace: "nowrap",
@@ -599,10 +599,10 @@ export const FolderPickerModal = ({
           <div
             className="flex items-center justify-end"
             style={{
-              padding: "12px 16px",
+              padding: "0.75rem 1rem",
               borderTop: "1px solid var(--border)",
               background: "var(--bg-0)",
-              gap: 8,
+              gap: "0.5rem",
             }}
           >
             <button type="button" className="btn ghost sm" onClick={onClose}>

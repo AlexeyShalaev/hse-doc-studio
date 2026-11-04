@@ -39,7 +39,7 @@ export const ForgotCard = ({
       <form
         onSubmit={submit}
         className="flex flex-col"
-        style={{ gap: 14 }}
+        style={{ gap: "0.875rem" }}
         data-testid="forgot-form"
       >
         <Input
@@ -60,17 +60,17 @@ export const ForgotCard = ({
           type="submit"
           disabled={email.trim() === ""}
           aria-disabled={pending}
-          style={{ justifyContent: "center", gap: 8 }}
+          style={{ justifyContent: "center", gap: "0.5rem" }}
         >
           {pending ? (
             <Spinner size="sm" />
           ) : (
-            <Mail size={15} aria-hidden="true" />
+            <Mail size="0.9375rem" aria-hidden="true" />
           )}
           {pending ? t("forgot.submitting") : t("forgot.submit")}
         </Button>
       </form>
-      <p style={{ margin: "20px 0 0", fontSize: 13 }}>
+      <p style={{ margin: "1.25rem 0 0", fontSize: "0.8125rem" }}>
         <Link to="/login" style={{ color: "var(--accent)" }}>
           {t("links.login")}
         </Link>
@@ -96,7 +96,7 @@ export const ForgotSentCard = ({
   return (
     <section data-testid="auth-screen-forgotSent" data-smtp={smtp}>
       <Heading>{t("pages.forgot.title")}</Heading>
-      <div style={{ height: 12 }} />
+      <div style={{ height: "0.75rem" }} />
       <ResultFrame
         tone="ok"
         role="status"
@@ -108,7 +108,7 @@ export const ForgotSentCard = ({
         </Note>
       </ResultFrame>
       {link && (
-        <div style={{ marginTop: 14 }}>
+        <div style={{ marginTop: "0.875rem" }}>
           <LinkDelivery kind="reset" link={link} once />
         </div>
       )}

@@ -69,7 +69,7 @@ export const RepoUrlField = ({
             onCommit();
           }}
         />
-        <div id={urlHintId} style={{ minHeight: 20 }}>
+        <div id={urlHintId} style={{ minHeight: "1.25rem" }}>
           {parsed.ok ? (
             <ProviderChip url={parsed.url} />
           ) : showError ? (

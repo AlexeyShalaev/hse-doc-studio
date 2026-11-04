@@ -44,8 +44,8 @@ export const EditorBusyView = ({
       className="flex flex-col items-center justify-center"
       style={{
         flex: 1,
-        padding: 40,
-        gap: 16,
+        padding: "2.5rem",
+        gap: "1rem",
         minHeight: 0,
         overflowY: "auto",
       }}
@@ -53,26 +53,26 @@ export const EditorBusyView = ({
       <div
         className="stripes flex items-center justify-center"
         style={{
-          width: 240,
-          height: 135,
-          borderRadius: 6,
+          width: "15rem",
+          height: "8.4375rem",
+          borderRadius: "0.375rem",
           border: "1px solid var(--border-strong)",
           color: "var(--fg-3)",
           position: "relative",
         }}
       >
-        <FileEdit size={28} />
+        <FileEdit size="1.75rem" />
         <Users
-          size={16}
+          size="1rem"
           style={{
             position: "absolute",
-            right: 12,
-            bottom: 10,
+            right: "0.75rem",
+            bottom: "0.625rem",
             color: "var(--c-warn)",
           }}
         />
       </div>
-      <span style={{ fontSize: 14, fontWeight: 600 }}>
+      <span style={{ fontSize: "0.875rem", fontWeight: 600 }}>
         {t("office.busy.title")}
       </span>
       <p
@@ -80,8 +80,8 @@ export const EditorBusyView = ({
         style={{
           margin: 0,
           textAlign: "center",
-          maxWidth: 440,
-          fontSize: 12.5,
+          maxWidth: "27.5rem",
+          fontSize: "0.78125rem",
           lineHeight: 1.5,
         }}
       >
@@ -94,7 +94,7 @@ export const EditorBusyView = ({
           onClick={onRetry}
           disabled={left > 0}
         >
-          <RefreshCw size={12} />
+          <RefreshCw size="0.75rem" />
           {left > 0
             ? t("office.busy.retryIn", { seconds: left })
             : t("office.busy.retry")}
@@ -105,12 +105,15 @@ export const EditorBusyView = ({
             download={downloadName ?? true}
             className="btn"
           >
-            <Download size={12} />
+            <Download size="0.75rem" />
             {t("office.busy.download")}
           </a>
         )}
       </div>
-      <span className="dim" style={{ fontSize: 11, maxWidth: 440 }}>
+      <span
+        className="dim"
+        style={{ fontSize: "0.6875rem", maxWidth: "27.5rem" }}
+      >
         {t("office.busy.downloadHint")}
       </span>
     </div>

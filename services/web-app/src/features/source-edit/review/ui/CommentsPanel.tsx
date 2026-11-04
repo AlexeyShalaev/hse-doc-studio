@@ -52,7 +52,7 @@ const Body = ({ text }: { text: string }) => (
   <p
     style={{
       margin: 0,
-      fontSize: 12.5,
+      fontSize: "0.78125rem",
       whiteSpace: "pre-wrap",
       overflowWrap: "anywhere",
     }}
@@ -92,10 +92,13 @@ const CommentRow = ({
   return (
     <div
       className="flex flex-col"
-      style={{ gap: 4 }}
+      style={{ gap: "0.25rem" }}
       data-testid={`review-comment-${comment.id}`}
     >
-      <div className="flex items-center" style={{ gap: 6, fontSize: 11.5 }}>
+      <div
+        className="flex items-center"
+        style={{ gap: "0.375rem", fontSize: "0.71875rem" }}
+      >
         <strong>{comment.author_name}</strong>
         <span className="dim">{formatRelativeTime(comment.created_at)}</span>
         {comment.edited_at && <span className="dim">({t("edited")})</span>}
@@ -157,7 +160,10 @@ const CommentRow = ({
         <Body text={comment.body} />
       )}
       {remove.isError && (
-        <span role="alert" style={{ color: "var(--c-err)", fontSize: 11.5 }}>
+        <span
+          role="alert"
+          style={{ color: "var(--c-err)", fontSize: "0.71875rem" }}
+        >
           {failure(remove.error)}
         </span>
       )}
@@ -206,10 +212,10 @@ const ThreadCard = ({
       data-status={thread.status}
       data-active={active}
       style={{
-        padding: 10,
+        padding: "0.625rem",
         display: "flex",
         flexDirection: "column",
-        gap: 8,
+        gap: "0.5rem",
         borderRadius: "var(--r-2)",
         border: `1px solid ${active ? "var(--accent)" : "var(--border)"}`,
         background: done ? "var(--bg-2)" : "var(--bg-1)",
@@ -223,8 +229,8 @@ const ThreadCard = ({
         onClick={onActivate}
         style={{
           textAlign: "left",
-          fontSize: 11.5,
-          padding: "2px 6px",
+          fontSize: "0.71875rem",
+          padding: "0.125rem 0.375rem",
           background: "var(--bg-2)",
           border: 0,
           borderLeft: "3px solid var(--c-warn)",
@@ -239,7 +245,7 @@ const ThreadCard = ({
       {state && state !== "ok" && (
         <span
           className="dim"
-          style={{ fontSize: 11 }}
+          style={{ fontSize: "0.6875rem" }}
           data-testid="review-anchor-state"
         >
           {t(`state.${state}`)}
@@ -265,7 +271,7 @@ const ThreadCard = ({
         />
       ))}
       {done && thread.resolved_by_name && (
-        <span className="dim" style={{ fontSize: 11 }}>
+        <span className="dim" style={{ fontSize: "0.6875rem" }}>
           {t("resolvedBy", { name: thread.resolved_by_name })}
         </span>
       )}
@@ -295,13 +301,16 @@ const ThreadCard = ({
               });
             }}
           >
-            {done ? <RotateCcw size={11} /> : <Check size={11} />}
+            {done ? <RotateCcw size="0.6875rem" /> : <Check size="0.6875rem" />}
             {done ? t("reopen") : t("resolve")}
           </button>
         </div>
       )}
       {status.isError && (
-        <span role="alert" style={{ color: "var(--c-err)", fontSize: 11.5 }}>
+        <span
+          role="alert"
+          style={{ color: "var(--c-err)", fontSize: "0.71875rem" }}
+        >
           {failure(status.error)}
         </span>
       )}
@@ -326,7 +335,7 @@ export const CommentsPanel = (props: CommentsPanelProps) => {
       data-testid="review-panel"
       className="review-panel flex flex-col"
       style={{
-        width: 320,
+        width: "20rem",
         flexShrink: 0,
         minHeight: 0,
         borderLeft: "1px solid var(--border)",
@@ -336,13 +345,15 @@ export const CommentsPanel = (props: CommentsPanelProps) => {
       <header
         className="flex items-center"
         style={{
-          gap: 8,
-          padding: "8px 10px",
+          gap: "0.5rem",
+          padding: "0.5rem 0.625rem",
           borderBottom: "1px solid var(--border)",
         }}
       >
-        <MessageSquare size={13} />
-        <strong style={{ fontSize: 12.5, flex: 1 }}>{t("title")}</strong>
+        <MessageSquare size="0.8125rem" />
+        <strong style={{ fontSize: "0.78125rem", flex: 1 }}>
+          {t("title")}
+        </strong>
         <button
           type="button"
           className="btn xs ghost"
@@ -358,32 +369,37 @@ export const CommentsPanel = (props: CommentsPanelProps) => {
           aria-label={t("close")}
           onClick={props.onClose}
         >
-          <X size={13} />
+          <X size="0.8125rem" />
         </button>
       </header>
       <div
         className="flex flex-col"
-        style={{ gap: 10, padding: 10, overflowY: "auto", flex: 1 }}
+        style={{
+          gap: "0.625rem",
+          padding: "0.625rem",
+          overflowY: "auto",
+          flex: 1,
+        }}
       >
         {props.pending && (
           <section
             data-testid="review-new-thread"
             style={{
-              padding: 10,
+              padding: "0.625rem",
               border: "1px solid var(--accent)",
               borderRadius: "var(--r-2)",
               display: "flex",
               flexDirection: "column",
-              gap: 8,
+              gap: "0.5rem",
             }}
           >
-            <strong style={{ fontSize: 12 }}>{t("newThread")}</strong>
+            <strong style={{ fontSize: "0.75rem" }}>{t("newThread")}</strong>
             <span
               className="mono dim"
               style={{
-                fontSize: 11.5,
+                fontSize: "0.71875rem",
                 borderLeft: "3px solid var(--c-warn)",
-                paddingLeft: 6,
+                paddingLeft: "0.375rem",
               }}
             >
               {props.pending.anchor.quote.replace(/\s+/g, " ").slice(0, 160)}
@@ -415,14 +431,14 @@ export const CommentsPanel = (props: CommentsPanelProps) => {
         {visible.length === 0 && !props.pending && (
           <p
             className="dim"
-            style={{ margin: 0, fontSize: 12.5 }}
+            style={{ margin: 0, fontSize: "0.78125rem" }}
             data-testid="review-empty"
           >
             {props.threads.length === 0 ? t("empty") : t("emptyOpen")}
           </p>
         )}
         {!props.canComment && (
-          <p className="dim" style={{ margin: 0, fontSize: 11.5 }}>
+          <p className="dim" style={{ margin: 0, fontSize: "0.71875rem" }}>
             {t("readOnlyHint")}
           </p>
         )}

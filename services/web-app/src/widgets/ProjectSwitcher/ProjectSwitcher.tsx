@@ -35,9 +35,9 @@ type PanelRect = {
 // в index.css правила для них нет, поэтому передаём готовый узел со стилями.
 const GROUP_HEADING_STYLE: CSSProperties = {
   display: "block",
-  padding: "6px 8px 4px",
+  padding: "0.375rem 0.5rem 0.25rem",
   fontFamily: "var(--font-mono)",
-  fontSize: 9.5,
+  fontSize: "0.59375rem",
   letterSpacing: "0.12em",
   textTransform: "uppercase",
   color: "var(--fg-3)",
@@ -94,7 +94,7 @@ const ProjectSwitcherRow = ({
         style={{
           flex: "1 1 auto",
           minWidth: 0,
-          fontSize: 10.5,
+          fontSize: "0.65625rem",
           color: "var(--fg-3)",
         }}
       >
@@ -292,7 +292,7 @@ export const ProjectSwitcher = ({
         aria-label={t("projectSwitcher.trigger")}
         aria-haspopup="dialog"
         aria-expanded={isPanelOpen}
-        style={{ width: "auto", padding: "4px 8px", maxWidth: 320 }}
+        style={{ width: "auto", padding: "0.25rem 0.5rem", maxWidth: "20rem" }}
         onClick={() => {
           setPanelOpen(!isPanelOpen);
         }}
@@ -310,7 +310,7 @@ export const ProjectSwitcher = ({
             : t("projectSwitcher.noProject")}
         </span>
         <ChevronDown
-          size={12}
+          size="0.75rem"
           style={{ flexShrink: 0, color: "var(--fg-3)" }}
         />
       </button>
@@ -402,10 +402,10 @@ export const ProjectSwitcher = ({
             <div
               style={{
                 borderTop: "1px solid var(--border)",
-                padding: 4,
+                padding: "0.25rem",
                 display: "flex",
                 flexDirection: "column",
-                gap: 2,
+                gap: "0.125rem",
               }}
             >
               <button
@@ -415,7 +415,10 @@ export const ProjectSwitcher = ({
                   handleGo("/");
                 }}
               >
-                <GraduationCap size={14} style={{ color: "var(--fg-2)" }} />
+                <GraduationCap
+                  size="0.875rem"
+                  style={{ color: "var(--fg-2)" }}
+                />
                 <span style={{ flex: 1 }}>
                   {t("projectSwitcher.allProjects")}
                 </span>
@@ -427,7 +430,7 @@ export const ProjectSwitcher = ({
                   handleGo("/wizard?mode=create");
                 }}
               >
-                <Plus size={14} style={{ color: "var(--fg-2)" }} />
+                <Plus size="0.875rem" style={{ color: "var(--fg-2)" }} />
                 <span style={{ flex: 1 }}>
                   {t("projectSwitcher.newProject")}
                 </span>
@@ -440,7 +443,7 @@ export const ProjectSwitcher = ({
                   handleGo("/wizard?mode=connect");
                 }}
               >
-                <FolderPlus size={14} style={{ color: "var(--fg-2)" }} />
+                <FolderPlus size="0.875rem" style={{ color: "var(--fg-2)" }} />
                 <span style={{ flex: 1 }}>
                   {t("projectSwitcher.connectFolder")}
                 </span>

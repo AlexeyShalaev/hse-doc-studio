@@ -30,7 +30,7 @@ const LockMark = ({ text }: { text: string | true }) => {
         aria-label={content}
         data-testid="input-locked"
       >
-        <Lock size={13} aria-hidden="true" />
+        <Lock size="0.8125rem" aria-hidden="true" />
       </span>
     </Tooltip>
   );

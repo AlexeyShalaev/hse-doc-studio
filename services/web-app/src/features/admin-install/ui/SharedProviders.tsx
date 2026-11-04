@@ -97,7 +97,7 @@ export const SharedProviders = ({
       flush
       footer={
         <span className="adm-field-note">
-          <Lock size={12} aria-hidden="true" />
+          <Lock size="0.75rem" aria-hidden="true" />
           {t("ai.keyNote")}
         </span>
       }
@@ -110,7 +110,7 @@ export const SharedProviders = ({
         />
       ) : providers.length === 0 ? (
         <EmptyState
-          icon={<Bot size={18} />}
+          icon={<Bot size="1.125rem" />}
           title={t("ai.empty.title")}
           description={t("ai.empty.body")}
           testId="shared-provider-empty"
@@ -121,7 +121,7 @@ export const SharedProviders = ({
               onClick={onAdd}
               data-testid="shared-provider-add"
             >
-              <Plus size={14} aria-hidden="true" />
+              <Plus size="0.875rem" aria-hidden="true" />
               {t("ai.addFirst")}
             </Button>
           }
@@ -146,7 +146,7 @@ export const SharedProviders = ({
                     data-tone={provider.has_api_key ? "accent" : "warning"}
                     aria-hidden="true"
                   >
-                    <Bot size={15} />
+                    <Bot size="0.9375rem" />
                   </span>
                   <div className="adm-item-text">
                     <span className="adm-item-title">{provider.name}</span>
@@ -178,7 +178,7 @@ export const SharedProviders = ({
                     {status && (
                       <span
                         className="adm-item-desc flex items-center"
-                        style={{ gap: 6, flexWrap: "wrap" }}
+                        style={{ gap: "0.375rem", flexWrap: "wrap" }}
                         role="status"
                         data-testid={`shared-provider-check-${provider.id}`}
                       >
@@ -200,7 +200,10 @@ export const SharedProviders = ({
                               status="danger"
                               label={t("ai.checkFailed")}
                             />
-                            <code className="mono" style={{ fontSize: 11 }}>
+                            <code
+                              className="mono"
+                              style={{ fontSize: "0.6875rem" }}
+                            >
                               {status.error}
                             </code>
                           </>
@@ -230,7 +233,7 @@ export const SharedProviders = ({
                               {
                                 id: "check",
                                 label: t("ai.check"),
-                                icon: <RefreshCw size={14} />,
+                                icon: <RefreshCw size="0.875rem" />,
                                 disabled: status?.state === "running",
                                 onSelect: () => {
                                   check(provider);
@@ -242,7 +245,7 @@ export const SharedProviders = ({
                         {
                           id: "edit",
                           label: t("ai.edit"),
-                          icon: <Pencil size={14} />,
+                          icon: <Pencil size="0.875rem" />,
                           onSelect: () => {
                             onEdit(provider);
                           },
@@ -251,7 +254,7 @@ export const SharedProviders = ({
                         {
                           id: "delete",
                           label: t("ai.delete"),
-                          icon: <Trash2 size={14} />,
+                          icon: <Trash2 size="0.875rem" />,
                           danger: true,
                           disabled: deleting,
                           onSelect: () => {

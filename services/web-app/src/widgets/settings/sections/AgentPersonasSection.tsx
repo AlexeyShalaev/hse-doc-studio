@@ -27,24 +27,27 @@ const RoleRow = ({ label, description, badge, children }: RoleRowProps) => (
   <div
     className="flex items-center justify-between"
     style={{
-      gap: 12,
-      padding: "10px 12px",
-      borderRadius: 6,
+      gap: "0.75rem",
+      padding: "0.625rem 0.75rem",
+      borderRadius: "0.375rem",
       border: "1px solid var(--border)",
       background: "var(--bg-1)",
     }}
   >
-    <div className="flex flex-col" style={{ gap: 4, minWidth: 0 }}>
-      <div className="flex items-center" style={{ gap: 8 }}>
-        <Drama size={13} style={{ color: "var(--fg-2)", flexShrink: 0 }} />
-        <span style={{ fontSize: 12.5, fontWeight: 500 }}>{label}</span>
+    <div className="flex flex-col" style={{ gap: "0.25rem", minWidth: 0 }}>
+      <div className="flex items-center" style={{ gap: "0.5rem" }}>
+        <Drama
+          size="0.8125rem"
+          style={{ color: "var(--fg-2)", flexShrink: 0 }}
+        />
+        <span style={{ fontSize: "0.78125rem", fontWeight: 500 }}>{label}</span>
         {badge && (
           <span
             className="mono"
             style={{
-              fontSize: 10,
-              padding: "1px 6px",
-              borderRadius: 3,
+              fontSize: "0.625rem",
+              padding: "1px 0.375rem",
+              borderRadius: "0.1875rem",
               background: "var(--bg-3)",
               color: "var(--fg-2)",
             }}
@@ -54,12 +57,15 @@ const RoleRow = ({ label, description, badge, children }: RoleRowProps) => (
         )}
       </div>
       {description && (
-        <div className="dim" style={{ fontSize: 11 }}>
+        <div className="dim" style={{ fontSize: "0.6875rem" }}>
           {description}
         </div>
       )}
     </div>
-    <div className="flex items-center" style={{ gap: 6, flexShrink: 0 }}>
+    <div
+      className="flex items-center"
+      style={{ gap: "0.375rem", flexShrink: 0 }}
+    >
       {children}
     </div>
   </div>
@@ -126,33 +132,39 @@ export const AgentPersonasSection = () => {
         sub={t("agentPersonas.subtitle")}
       />
 
-      <div className="flex flex-col" style={{ gap: 16, paddingBottom: 14 }}>
+      <div
+        className="flex flex-col"
+        style={{ gap: "1rem", paddingBottom: "0.875rem" }}
+      >
         <div
           id="agent-personas-custom"
           className="flex flex-col settings-anchor"
-          style={{ gap: 8 }}
+          style={{ gap: "0.5rem" }}
         >
           <div
             className="dim"
             style={{
-              fontSize: 10,
+              fontSize: "0.625rem",
               textTransform: "uppercase",
-              letterSpacing: 0.5,
+              letterSpacing: "0.03125rem",
             }}
           >
             {t("agentPersonas.yourRoles")}
           </div>
           {customQuery.isLoading ? (
-            <div className="flex items-center" style={{ gap: 8, fontSize: 12 }}>
+            <div
+              className="flex items-center"
+              style={{ gap: "0.5rem", fontSize: "0.75rem" }}
+            >
               <Spinner size="sm" />
               <span className="dim">{t("agentPersonas.loadingRoles")}</span>
             </div>
           ) : custom.length === 0 ? (
-            <div className="dim" style={{ fontSize: 12 }}>
+            <div className="dim" style={{ fontSize: "0.75rem" }}>
               {t("agentPersonas.noCustomRoles")}
             </div>
           ) : (
-            <div className="flex flex-col" style={{ gap: 6 }}>
+            <div className="flex flex-col" style={{ gap: "0.375rem" }}>
               {custom.map((persona) => (
                 <RoleRow
                   key={persona.id}
@@ -167,7 +179,7 @@ export const AgentPersonasSection = () => {
                       openDuplicate(persona);
                     }}
                   >
-                    <Copy size={11} />
+                    <Copy size="0.6875rem" />
                   </button>
                   <button
                     type="button"
@@ -177,7 +189,7 @@ export const AgentPersonasSection = () => {
                       openEdit(persona);
                     }}
                   >
-                    <Pencil size={11} />
+                    <Pencil size="0.6875rem" />
                   </button>
                   <button
                     type="button"
@@ -188,7 +200,7 @@ export const AgentPersonasSection = () => {
                       handleDelete(persona);
                     }}
                   >
-                    <Trash2 size={11} />
+                    <Trash2 size="0.6875rem" />
                   </button>
                 </RoleRow>
               ))}
@@ -197,7 +209,7 @@ export const AgentPersonasSection = () => {
 
           <div>
             <button type="button" className="btn xs" onClick={openCreate}>
-              <Plus size={11} />
+              <Plus size="0.6875rem" />
               {t("agentPersonas.createRole")}
             </button>
           </div>
@@ -206,19 +218,19 @@ export const AgentPersonasSection = () => {
         <div
           id="agent-personas-builtin"
           className="flex flex-col settings-anchor"
-          style={{ gap: 8 }}
+          style={{ gap: "0.5rem" }}
         >
           <div
             className="dim"
             style={{
-              fontSize: 10,
+              fontSize: "0.625rem",
               textTransform: "uppercase",
-              letterSpacing: 0.5,
+              letterSpacing: "0.03125rem",
             }}
           >
             {t("agentPersonas.builtinRoles")}
           </div>
-          <div className="flex flex-col" style={{ gap: 6 }}>
+          <div className="flex flex-col" style={{ gap: "0.375rem" }}>
             {builtins.map((persona) => (
               <RoleRow
                 key={persona.id}
@@ -234,7 +246,7 @@ export const AgentPersonasSection = () => {
                     openDuplicate(persona);
                   }}
                 >
-                  <Copy size={11} />
+                  <Copy size="0.6875rem" />
                   {t("agentPersonas.duplicateLabel")}
                 </button>
               </RoleRow>

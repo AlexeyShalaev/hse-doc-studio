@@ -147,9 +147,12 @@ export const KpiTile = ({
         <span aria-label={t("adminKit.loading")} role="status">
           <span
             className="adm-skel"
-            style={{ height: 24, width: "45%", margin: "3px 0" }}
+            style={{ height: "1.5rem", width: "45%", margin: "0.1875rem 0" }}
           />
-          <span className="adm-skel" style={{ width: "70%", marginTop: 8 }} />
+          <span
+            className="adm-skel"
+            style={{ width: "70%", marginTop: "0.5rem" }}
+          />
         </span>
       ) : error ? (
         <span className="adm-kpi-sub" data-tone="danger" role="alert">

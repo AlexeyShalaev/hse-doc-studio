@@ -533,16 +533,19 @@ export const SystemChatPanel = ({
       <div
         className="flex items-center justify-between"
         style={{
-          gap: 8,
-          padding: "8px 10px",
+          gap: "0.5rem",
+          padding: "0.5rem 0.625rem",
           borderBottom: "1px solid var(--border)",
         }}
       >
-        <div className="flex items-center min-w-0" style={{ gap: 6 }}>
-          <Bot size={15} style={{ color: "var(--accent)", flexShrink: 0 }} />
+        <div className="flex items-center min-w-0" style={{ gap: "0.375rem" }}>
+          <Bot
+            size="0.9375rem"
+            style={{ color: "var(--accent)", flexShrink: 0 }}
+          />
           <span
             className="truncate"
-            style={{ fontSize: 13, fontWeight: 600 }}
+            style={{ fontSize: "0.8125rem", fontWeight: 600 }}
             title={activeSession?.title}
           >
             {inProject ? t("panel.titleProject") : t("panel.titleAssistant")}
@@ -559,7 +562,7 @@ export const SystemChatPanel = ({
             title={t("panel.newChat")}
             onClick={handleNewChat}
           >
-            <Plus size={15} />
+            <Plus size="0.9375rem" />
           </button>
           <button
             type="button"
@@ -569,7 +572,7 @@ export const SystemChatPanel = ({
               setHistoryOpen((open) => !open);
             }}
           >
-            <History size={15} />
+            <History size="0.9375rem" />
           </button>
           <button
             type="button"
@@ -579,7 +582,7 @@ export const SystemChatPanel = ({
               setDebugOpen((v) => !v);
             }}
           >
-            <Bug size={14} />
+            <Bug size="0.875rem" />
           </button>
           <button
             type="button"
@@ -587,13 +590,13 @@ export const SystemChatPanel = ({
             title={t("panel.close")}
             onClick={onClose}
           >
-            <X size={14} />
+            <X size="0.875rem" />
           </button>
 
           {historyOpen && (
             <div className="chat-history-popover">
               <div className="chat-history-search">
-                <Search size={13} />
+                <Search size="0.8125rem" />
                 <input
                   type="text"
                   value={historyQuery}
@@ -675,7 +678,7 @@ export const SystemChatPanel = ({
                                 handleStartRename(session.id, session.title);
                               }}
                             >
-                              <Pencil size={12} />
+                              <Pencil size="0.75rem" />
                             </button>
                             <button
                               type="button"
@@ -685,7 +688,7 @@ export const SystemChatPanel = ({
                                 handleDeleteChat(session.id);
                               }}
                             >
-                              <Trash2 size={12} />
+                              <Trash2 size="0.75rem" />
                             </button>
                           </div>
                         )}
@@ -702,7 +705,7 @@ export const SystemChatPanel = ({
       {sessionsQuery.isLoading ? (
         <div
           className="flex items-center justify-center"
-          style={{ flex: 1, gap: 8, fontSize: 12 }}
+          style={{ flex: 1, gap: "0.5rem", fontSize: "0.75rem" }}
         >
           <Spinner size="sm" />
           <span className="dim">{t("panel.loading")}</span>
@@ -710,15 +713,18 @@ export const SystemChatPanel = ({
       ) : activeId === null ? (
         <div
           className="flex flex-col items-center justify-center"
-          style={{ flex: 1, gap: 10, padding: 20 }}
+          style={{ flex: 1, gap: "0.625rem", padding: "1.25rem" }}
         >
-          <span className="dim" style={{ fontSize: 12, textAlign: "center" }}>
+          <span
+            className="dim"
+            style={{ fontSize: "0.75rem", textAlign: "center" }}
+          >
             {inProject
               ? t("panel.emptyProjectHint")
               : t("panel.emptyAssistantHint")}
           </span>
           <button type="button" className="btn xs" onClick={handleNewChat}>
-            <Plus size={11} />
+            <Plus size="0.6875rem" />
             {t("panel.newChatShort")}
           </button>
         </div>
@@ -760,8 +766,8 @@ export const SystemChatPanel = ({
             stream.state.errorCode !== "relay_busy" && (
               <div
                 style={{
-                  padding: "6px 12px",
-                  fontSize: 11.5,
+                  padding: "0.375rem 0.75rem",
+                  fontSize: "0.71875rem",
                   color: "var(--c-err)",
                 }}
               >
@@ -820,7 +826,10 @@ export const SystemChatPanel = ({
           {usage && (
             <div
               className="dim mono"
-              style={{ fontSize: 10, padding: "2px 10px 6px" }}
+              style={{
+                fontSize: "0.625rem",
+                padding: "0.125rem 0.625rem 0.375rem",
+              }}
             >
               {t("panel.tokens", {
                 total: usage.total,

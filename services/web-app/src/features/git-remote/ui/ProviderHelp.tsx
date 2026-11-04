@@ -43,15 +43,15 @@ export const ProviderHelp = ({
       data-testid={`provider-help-${scope}`}
     >
       <summary>{t("help.keySummary", { provider: providerName })}</summary>
-      <div style={{ marginTop: 8 }}>
+      <div style={{ marginTop: "0.5rem" }}>
         <ol
           style={{
             margin: 0,
-            paddingLeft: 20,
+            paddingLeft: "1.25rem",
             display: "flex",
             flexDirection: "column",
-            gap: 5,
-            fontSize: 12,
+            gap: "0.3125rem",
+            fontSize: "0.75rem",
             lineHeight: 1.5,
             color: "var(--fg-1)",
           }}
@@ -67,15 +67,22 @@ export const ProviderHelp = ({
             rel="noopener noreferrer"
             className="btn sm"
             data-testid={`key-page-link-${scope}`}
-            style={{ marginTop: 10, gap: 6, textDecoration: "none" }}
+            style={{
+              marginTop: "0.625rem",
+              gap: "0.375rem",
+              textDecoration: "none",
+            }}
           >
-            <ExternalLink size={12} aria-hidden="true" />
+            <ExternalLink size="0.75rem" aria-hidden="true" />
             {scope === "deploy"
               ? t("help.openDeployKeyPage", { provider: providerName })
               : t("help.openKeyPage", { provider: providerName })}
           </a>
         )}
-        <p className="dim" style={{ margin: "8px 0 0", fontSize: 11.5 }}>
+        <p
+          className="dim"
+          style={{ margin: "0.5rem 0 0", fontSize: "0.71875rem" }}
+        >
           {t("help.keyNote")}
         </p>
       </div>

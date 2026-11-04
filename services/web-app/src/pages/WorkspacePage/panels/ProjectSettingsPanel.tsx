@@ -114,7 +114,7 @@ export const ProjectSettingsPanel = ({
                   onSelectSection(group.id);
                 }}
               >
-                <Icon size={13} style={{ flexShrink: 0 }} />
+                <Icon size="0.8125rem" style={{ flexShrink: 0 }} />
                 <span className="truncate" style={{ minWidth: 0 }}>
                   {t(group.labelKey)}
                 </span>

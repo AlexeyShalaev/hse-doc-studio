@@ -13,11 +13,15 @@ export const SettingHead = ({ title, sub, anchorId }: SettingHeadProps) => (
   <div
     id={anchorId}
     className={anchorClass(anchorId, "flex flex-col")}
-    style={{ gap: 4, marginBottom: 4 }}
+    style={{ gap: "0.25rem", marginBottom: "0.25rem" }}
   >
-    <h4 style={{ margin: 0, fontSize: 14, fontWeight: 600 }}>{title}</h4>
+    <h4 style={{ margin: 0, fontSize: "0.875rem", fontWeight: 600 }}>
+      {title}
+    </h4>
     {sub && (
-      <p style={{ margin: 0, color: "var(--fg-2)", fontSize: 12 }}>{sub}</p>
+      <p style={{ margin: 0, color: "var(--fg-2)", fontSize: "0.75rem" }}>
+        {sub}
+      </p>
     )}
   </div>
 );
@@ -34,17 +38,17 @@ export const Setting = ({ label, hint, anchorId, children }: SettingProps) => (
     id={anchorId}
     className={anchorClass(anchorId, "flex flex-col")}
     style={{
-      gap: 8,
-      paddingBottom: 14,
+      gap: "0.5rem",
+      paddingBottom: "0.875rem",
       borderBottom: "1px dashed var(--border)",
     }}
   >
     <div
       className="setting-row flex items-center justify-between"
-      style={{ gap: 12 }}
+      style={{ gap: "0.75rem" }}
     >
-      <div className="flex flex-col" style={{ gap: 2 }}>
-        <label style={{ fontSize: 12, fontWeight: 500 }}>{label}</label>
+      <div className="flex flex-col" style={{ gap: "0.125rem" }}>
+        <label style={{ fontSize: "0.75rem", fontWeight: 500 }}>{label}</label>
         {hint && <span className="hint">{hint}</span>}
       </div>
       <div className="setting-control" style={{ maxWidth: "60%" }}>

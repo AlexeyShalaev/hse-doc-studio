@@ -94,7 +94,7 @@ export const GroupsView = ({
       }}
       data-testid="group-add"
     >
-      <Plus size={14} aria-hidden="true" />
+      <Plus size="0.875rem" aria-hidden="true" />
       {t("groups.add")}
     </Button>
   );
@@ -106,11 +106,15 @@ export const GroupsView = ({
     <div className="org-stack" data-testid="groups-tab">
       {shown && (
         <>
-          <div className="flex items-center" style={{ gap: 12 }}>
+          <div className="flex items-center" style={{ gap: "0.75rem" }}>
             <div style={{ flex: 1, minWidth: 0 }}>
               <p
                 className="org-muted"
-                style={{ margin: 0, fontSize: 12.5, maxWidth: 620 }}
+                style={{
+                  margin: 0,
+                  fontSize: "0.78125rem",
+                  maxWidth: "38.75rem",
+                }}
               >
                 {t("groups.lead")}
               </p>
@@ -159,7 +163,7 @@ export const GroupsView = ({
         <EmptyState
           framed
           testId="groups-empty"
-          icon={<UsersRound size={18} />}
+          icon={<UsersRound size="1.125rem" />}
           title={t("groups.empty.title")}
           description={t("groups.empty.body")}
           action={addButton}
@@ -188,16 +192,16 @@ export const GroupsView = ({
                   <span
                     className="adm-row-icon"
                     aria-hidden="true"
-                    style={{ width: 32, height: 32 }}
+                    style={{ width: "2rem", height: "2rem" }}
                   >
-                    <UsersRound size={15} />
+                    <UsersRound size="0.9375rem" />
                   </span>
                   <div
                     className="flex flex-col"
                     style={{ gap: 1, flex: 1, minWidth: 0 }}
                   >
                     <span className="org-group-name">{group.name}</span>
-                    <span className="org-muted" style={{ fontSize: 12 }}>
+                    <span className="org-muted" style={{ fontSize: "0.75rem" }}>
                       {t("groups.count", { count })}
                     </span>
                   </div>
@@ -212,7 +216,7 @@ export const GroupsView = ({
                       open({ mode: "edit", group });
                     }}
                   >
-                    <Pencil size={13} aria-hidden="true" />
+                    <Pencil size="0.8125rem" aria-hidden="true" />
                   </Button>
                   <Button
                     size="xs"
@@ -226,15 +230,18 @@ export const GroupsView = ({
                       setRemoving(group);
                     }}
                   >
-                    <Trash2 size={13} aria-hidden="true" />
+                    <Trash2 size="0.8125rem" aria-hidden="true" />
                   </Button>
                 </div>
                 {count === 0 ? (
-                  <span className="org-faint" style={{ fontSize: 12 }}>
+                  <span className="org-faint" style={{ fontSize: "0.75rem" }}>
                     {t("groups.noPeople")}
                   </span>
                 ) : preview.length > 0 ? (
-                  <div className="flex items-center" style={{ gap: 10 }}>
+                  <div
+                    className="flex items-center"
+                    style={{ gap: "0.625rem" }}
+                  >
                     <span className="org-stack-avatars">
                       {preview.map((m) => (
                         <span key={m.user_id} title={m.name}>

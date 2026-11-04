@@ -30,9 +30,9 @@ const Row = ({
     data-testid={testId}
     style={{
       display: "flex",
-      gap: 12,
+      gap: "0.75rem",
       alignItems: "flex-start",
-      padding: "12px 14px",
+      padding: "0.75rem 0.875rem",
       borderRadius: "var(--r-3)",
       border: "1px solid var(--border)",
       background: "var(--bg-1)",
@@ -41,11 +41,16 @@ const Row = ({
     <span aria-hidden style={{ color: "var(--fg-2)", marginTop: 1 }}>
       {icon}
     </span>
-    <span className="flex flex-col" style={{ gap: 2, flex: 1, minWidth: 0 }}>
-      <span style={{ fontSize: 13.5, fontWeight: 500 }}>{title}</span>
-      <span style={{ fontSize: 12.5, color: "var(--fg-2)" }}>{body}</span>
+    <span
+      className="flex flex-col"
+      style={{ gap: "0.125rem", flex: 1, minWidth: 0 }}
+    >
+      <span style={{ fontSize: "0.84375rem", fontWeight: 500 }}>{title}</span>
+      <span style={{ fontSize: "0.78125rem", color: "var(--fg-2)" }}>
+        {body}
+      </span>
     </span>
-    <span className="flex items-center" style={{ gap: 6 }}>
+    <span className="flex items-center" style={{ gap: "0.375rem" }}>
       {badge}
     </span>
   </li>
@@ -87,11 +92,11 @@ export const SignInStep = ({
       {failure && <FailureFrame failure={failure} />}
       <ul
         className="flex flex-col"
-        style={{ listStyle: "none", margin: 0, padding: 0, gap: 8 }}
+        style={{ listStyle: "none", margin: 0, padding: 0, gap: "0.5rem" }}
       >
         <Row
           testId="setup-signin-password"
-          icon={<KeyRound size={16} />}
+          icon={<KeyRound size="1rem" />}
           title={t("setup.signin.password.title")}
           body={t(
             passwordEnabled
@@ -109,14 +114,14 @@ export const SignInStep = ({
         />
         <Row
           testId="setup-signin-sso"
-          icon={<ShieldCheck size={16} />}
+          icon={<ShieldCheck size="1rem" />}
           title={t("setup.signin.sso.title")}
           body={t("setup.signin.sso.body")}
           badge={<Badge>{t("setup.signin.sso.later")}</Badge>}
         />
         <Row
           testId="setup-signin-mail"
-          icon={<Mail size={16} />}
+          icon={<Mail size="1rem" />}
           title={t("setup.signin.mail.title")}
           body={t(
             smtpEnabled ? "setup.signin.mail.on" : "setup.signin.mail.off",
@@ -134,7 +139,7 @@ export const SignInStep = ({
           <Button
             type="button"
             aria-disabled={pending}
-            style={{ gap: 8 }}
+            style={{ gap: "0.5rem" }}
             onClick={() => {
               if (!pending) onSubmit();
             }}

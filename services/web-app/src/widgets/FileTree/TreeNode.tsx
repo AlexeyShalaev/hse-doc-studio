@@ -33,7 +33,7 @@ const parentOf = (path: string): string =>
 const DROP_TARGET_STYLE: CSSProperties = {
   background: "var(--accent-soft)",
   boxShadow: "inset 0 0 0 1px var(--accent-line)",
-  borderRadius: "var(--r-2, 4px)",
+  borderRadius: "var(--r-2, 0.25rem)",
 };
 
 type FileLeafIconProps = { path: string; active: boolean };
@@ -46,12 +46,14 @@ const FileLeafIcon = ({ path, active }: FileLeafIconProps) => {
   };
   const lower = path.toLowerCase();
   if (/\.(tex|cls|sty|ltx|dtx|def)$/.test(lower))
-    return <FileCode size={13} style={style} />;
-  if (lower.endsWith(".json")) return <FileJson size={13} style={style} />;
-  if (/\.(bib|bst)$/.test(lower)) return <FileType size={13} style={style} />;
+    return <FileCode size="0.8125rem" style={style} />;
+  if (lower.endsWith(".json"))
+    return <FileJson size="0.8125rem" style={style} />;
+  if (/\.(bib|bst)$/.test(lower))
+    return <FileType size="0.8125rem" style={style} />;
   if (/\.(png|jpe?g|gif|svg|webp|pdf)$/.test(lower))
-    return <Image size={13} style={style} />;
-  return <FileText size={13} style={style} />;
+    return <Image size="0.8125rem" style={style} />;
+  return <FileText size="0.8125rem" style={style} />;
 };
 
 /**
@@ -101,14 +103,14 @@ export const InlineInput = ({
       className="mono"
       style={{
         marginLeft: indent,
-        marginRight: 6,
+        marginRight: "0.375rem",
         flex: 1,
         minWidth: 0,
-        fontSize: 12.5,
-        padding: "1px 5px",
+        fontSize: "0.78125rem",
+        padding: "1px 0.3125rem",
         background: "var(--bg-0)",
         border: "1px solid var(--accent)",
-        borderRadius: "var(--r-2, 4px)",
+        borderRadius: "var(--r-2, 0.25rem)",
         color: "var(--fg-0)",
         outline: "none",
       }}
@@ -194,7 +196,7 @@ export const TreeNode = ({ node, depth, ctx }: TreeNodeProps) => {
             draggable={node.deletable}
             style={{
               paddingLeft: indent,
-              gap: 5,
+              gap: "0.3125rem",
               opacity: node.isHidden ? 0.5 : 1,
               ...(dragOver ? DROP_TARGET_STYLE : null),
             }}
@@ -224,12 +226,12 @@ export const TreeNode = ({ node, depth, ctx }: TreeNodeProps) => {
           >
             {open ? (
               <ChevronDown
-                size={12}
+                size="0.75rem"
                 style={{ color: "var(--fg-3)", flexShrink: 0 }}
               />
             ) : (
               <ChevronRight
-                size={12}
+                size="0.75rem"
                 style={{ color: "var(--fg-3)", flexShrink: 0 }}
               />
             )}
@@ -243,16 +245,16 @@ export const TreeNode = ({ node, depth, ctx }: TreeNodeProps) => {
         {open && create && (
           <div
             className="flex items-center"
-            style={{ paddingLeft: 8 + (depth + 1) * 13 + 17, gap: 4 }}
+            style={{ paddingLeft: 8 + (depth + 1) * 13 + 17, gap: "0.25rem" }}
           >
             {create.kind === "folder" ? (
               <FolderPlus
-                size={13}
+                size="0.8125rem"
                 style={{ color: "var(--fg-3)", flexShrink: 0 }}
               />
             ) : (
               <FilePlus
-                size={13}
+                size="0.8125rem"
                 style={{ color: "var(--fg-3)", flexShrink: 0 }}
               />
             )}
@@ -306,7 +308,7 @@ export const TreeNode = ({ node, depth, ctx }: TreeNodeProps) => {
       draggable={node.deletable}
       style={{
         paddingLeft: indent + 17,
-        gap: 6,
+        gap: "0.375rem",
         opacity: node.isHidden ? 0.5 : 1,
         ...(dragOver ? DROP_TARGET_STYLE : null),
       }}
@@ -341,7 +343,7 @@ export const TreeNode = ({ node, depth, ctx }: TreeNodeProps) => {
       <FileLeafIcon path={node.path} active={isActive} />
       <span className="truncate flex-1">{node.name}</span>
       {node.isReadOnly && (
-        <Lock size={10} style={{ color: "var(--fg-3)", flexShrink: 0 }} />
+        <Lock size="0.625rem" style={{ color: "var(--fg-3)", flexShrink: 0 }} />
       )}
     </button>
   );

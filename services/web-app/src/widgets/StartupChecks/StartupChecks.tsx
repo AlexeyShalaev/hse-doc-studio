@@ -63,14 +63,17 @@ export const StartupChecks = () => {
         flexShrink: 0,
         display: "flex",
         alignItems: "center",
-        gap: 10,
-        padding: "7px 14px",
+        gap: "0.625rem",
+        padding: "0.4375rem 0.875rem",
         background: "var(--c-warn-soft)",
         borderBottom: "1px solid var(--c-warn)",
-        fontSize: 12,
+        fontSize: "0.75rem",
       }}
     >
-      <HardDrive size={13} style={{ color: "var(--c-warn)", flexShrink: 0 }} />
+      <HardDrive
+        size="0.8125rem"
+        style={{ color: "var(--c-warn)", flexShrink: 0 }}
+      />
       <span style={{ color: "var(--c-warn)", fontWeight: 600, flexShrink: 0 }}>
         {t("diskBanner.title")}
       </span>
@@ -96,7 +99,7 @@ export const StartupChecks = () => {
           setDiskBannerDismissed(true);
         }}
       >
-        <X size={13} />
+        <X size="0.8125rem" />
       </button>
     </div>
   );

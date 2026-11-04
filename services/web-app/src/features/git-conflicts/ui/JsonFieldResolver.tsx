@@ -71,7 +71,7 @@ const FieldValue = ({
   }
   if (typeof value === "number") {
     return (
-      <span className="mono" style={{ fontSize: 11.5 }}>
+      <span className="mono" style={{ fontSize: "0.71875rem" }}>
         {value}
       </span>
     );
@@ -143,7 +143,11 @@ const ChoiceCell = ({
           {label}
         </span>
         {checked && (
-          <Check size={12} aria-hidden="true" style={{ marginLeft: "auto" }} />
+          <Check
+            size="0.75rem"
+            aria-hidden="true"
+            style={{ marginLeft: "auto" }}
+          />
         )}
       </span>
       <span className="field-side-body" id={id}>
@@ -192,14 +196,14 @@ const FieldCard = ({
       <div className="hunk-head">
         <strong
           style={{
-            fontSize: 12.5,
+            fontSize: "0.78125rem",
             fontFamily: field.label ? undefined : "var(--font-mono)",
           }}
         >
           {title}
         </strong>
         {field.label && (
-          <span className="dim mono" style={{ fontSize: 10.5 }}>
+          <span className="dim mono" style={{ fontSize: "0.65625rem" }}>
             {field.pointer}
           </span>
         )}
@@ -207,7 +211,7 @@ const FieldCard = ({
         {resolved ? (
           <>
             <span className="hunk-state" data-state="resolved">
-              <Check size={11} aria-hidden="true" />
+              <Check size="0.6875rem" aria-hidden="true" />
               {t(`fields.chosen.${choice}`)}
             </span>
             <button
@@ -217,7 +221,7 @@ const FieldCard = ({
                 onClear(field.pointer);
               }}
             >
-              <Undo2 size={11} aria-hidden="true" />
+              <Undo2 size="0.6875rem" aria-hidden="true" />
               {t("hunk.undo")}
             </button>
           </>
@@ -276,7 +280,7 @@ const FieldCard = ({
             label={t("fields.union")}
             onChoose={pick}
           >
-            <span className="dim" style={{ fontSize: 11.5 }}>
+            <span className="dim" style={{ fontSize: "0.71875rem" }}>
               {t("fields.unionHint")}
             </span>
             <FieldValue value={union} type={field.type} against={field.base} />
@@ -303,7 +307,7 @@ const AutoFields = ({
   const listId = useId();
   if (fields.length === 0) return null;
   return (
-    <section className="flex flex-col" style={{ gap: 6 }}>
+    <section className="flex flex-col" style={{ gap: "0.375rem" }}>
       <button
         type="button"
         className="flex items-center"
@@ -313,27 +317,27 @@ const AutoFields = ({
           setOpen((value) => !value);
         }}
         style={{
-          gap: 4,
+          gap: "0.25rem",
           background: "none",
           border: 0,
           padding: 0,
           cursor: "pointer",
           textAlign: "left",
-          fontSize: 12,
+          fontSize: "0.75rem",
           fontWeight: 600,
           color: "var(--fg-1)",
         }}
       >
         {open ? (
-          <ChevronDown size={13} aria-hidden="true" />
+          <ChevronDown size="0.8125rem" aria-hidden="true" />
         ) : (
-          <ChevronRight size={13} aria-hidden="true" />
+          <ChevronRight size="0.8125rem" aria-hidden="true" />
         )}
         {t("fields.auto.title", { count: fields.length })}
       </button>
       {open && (
-        <div id={listId} className="flex flex-col" style={{ gap: 6 }}>
-          <p className="dim" style={{ margin: 0, fontSize: 11.5 }}>
+        <div id={listId} className="flex flex-col" style={{ gap: "0.375rem" }}>
+          <p className="dim" style={{ margin: 0, fontSize: "0.71875rem" }}>
             {t("fields.auto.hint")}
           </p>
           <div className="card" style={{ padding: 0, overflow: "hidden" }}>
@@ -342,10 +346,10 @@ const AutoFields = ({
               const merged = winner === "theirs" ? field.theirs : field.ours;
               return (
                 <div key={field.pointer} className="field-auto-row">
-                  <div className="flex items-center" style={{ gap: 8 }}>
+                  <div className="flex items-center" style={{ gap: "0.5rem" }}>
                     <strong
                       style={{
-                        fontSize: 12,
+                        fontSize: "0.75rem",
                         fontFamily: field.label
                           ? undefined
                           : "var(--font-mono)",
@@ -357,7 +361,7 @@ const AutoFields = ({
                       {t(autoSourceKey(field))}
                     </span>
                   </div>
-                  <div style={{ fontSize: 12 }}>
+                  <div style={{ fontSize: "0.75rem" }}>
                     <FieldValue value={merged} type={field.type} />
                   </div>
                 </div>
@@ -392,10 +396,13 @@ export const JsonFieldResolver = ({
   const progress = fieldsProgress(detail, resolution);
 
   return (
-    <div className="flex flex-col" style={{ gap: 10 }}>
+    <div className="flex flex-col" style={{ gap: "0.625rem" }}>
       {conflicts.length > 0 && (
         <div className="hunk-toolbar">
-          <span style={{ fontSize: 12, fontWeight: 600 }} aria-live="polite">
+          <span
+            style={{ fontSize: "0.75rem", fontWeight: 600 }}
+            aria-live="polite"
+          >
             {progress.open > 0
               ? t("fields.open", {
                   open: progress.open,
@@ -438,7 +445,7 @@ export const JsonFieldResolver = ({
         />
       )}
 
-      <div className="flex flex-col" style={{ gap: 10 }}>
+      <div className="flex flex-col" style={{ gap: "0.625rem" }}>
         {conflicts.map((field, index) => (
           <FieldCard
             key={field.pointer}

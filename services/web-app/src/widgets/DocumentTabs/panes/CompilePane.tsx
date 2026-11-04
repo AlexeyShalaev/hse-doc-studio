@@ -236,7 +236,7 @@ export const CompilePane = ({ projectId, doc }: CompilePaneProps) => {
       <div
         className="flex items-center justify-between"
         style={{
-          padding: "10px 16px",
+          padding: "0.625rem 1rem",
           borderBottom: "1px solid var(--border)",
           background: "var(--bg-1)",
         }}
@@ -244,7 +244,7 @@ export const CompilePane = ({ projectId, doc }: CompilePaneProps) => {
         <div className="flex items-center gap-3">
           {/* engine === null → copy-only variant (pptx/reveal): the build just
               runs checks and publishes the file, no LaTeX engine involved. */}
-          <strong style={{ fontSize: 12.5 }}>
+          <strong style={{ fontSize: "0.78125rem" }}>
             {doc.engine === null
               ? t("compile.noCompilation")
               : (doc.engine ?? "xelatex")}{" "}
@@ -255,7 +255,7 @@ export const CompilePane = ({ projectId, doc }: CompilePaneProps) => {
               <span className={wait ? "dot pending" : "dot live"} />
               <span
                 className="mono"
-                style={{ fontSize: 11, color: "var(--c-info)" }}
+                style={{ fontSize: "0.6875rem", color: "var(--c-info)" }}
               >
                 {wait ? t("compile.waiting") : t("compile.running")}
               </span>
@@ -272,7 +272,7 @@ export const CompilePane = ({ projectId, doc }: CompilePaneProps) => {
               <span className="dot ok" />
               {t("compile.done")}
               {doneInfo?.pages != null && (
-                <span className="dim" style={{ marginLeft: 6 }}>
+                <span className="dim" style={{ marginLeft: "0.375rem" }}>
                   {t("compile.donePages", { count: doneInfo.pages })}
                 </span>
               )}
@@ -303,7 +303,11 @@ export const CompilePane = ({ projectId, doc }: CompilePaneProps) => {
                 borderColor: isStalled ? "var(--c-err)" : undefined,
               }}
             >
-              {isStalled ? <AlertTriangle size={11} /> : <Square size={11} />}
+              {isStalled ? (
+                <AlertTriangle size="0.6875rem" />
+              ) : (
+                <Square size="0.6875rem" />
+              )}
               {t("compile.cancel")}
             </button>
           ) : (
@@ -313,7 +317,7 @@ export const CompilePane = ({ projectId, doc }: CompilePaneProps) => {
               onClick={handleRebuild}
               disabled={buildBlock !== null}
             >
-              <RefreshCw size={11} />
+              <RefreshCw size="0.6875rem" />
               {t("compile.rebuild")}
             </button>
           )}
@@ -325,7 +329,7 @@ export const CompilePane = ({ projectId, doc }: CompilePaneProps) => {
                 onClick={handleExplain}
                 title={t("compile.explainTitle")}
               >
-                <HelpCircle size={11} />
+                <HelpCircle size="0.6875rem" />
                 {t("compile.explain")}
               </button>
               <button
@@ -334,7 +338,7 @@ export const CompilePane = ({ projectId, doc }: CompilePaneProps) => {
                 onClick={handleFixWithAi}
                 title={t("compile.fixWithAiTitle")}
               >
-                <Sparkles size={11} />
+                <Sparkles size="0.6875rem" />
                 {t("compile.fixWithAi")}
               </button>
             </>
@@ -345,7 +349,7 @@ export const CompilePane = ({ projectId, doc }: CompilePaneProps) => {
             className="btn xs ghost"
             title={t("compile.downloadLogTitle", { path: logPath })}
           >
-            <Download size={11} />
+            <Download size="0.6875rem" />
             {t("compile.downloadLog")}
           </a>
         </div>
@@ -367,21 +371,24 @@ export const CompilePane = ({ projectId, doc }: CompilePaneProps) => {
         <div
           className="flex items-start gap-2"
           style={{
-            padding: "8px 16px",
-            fontSize: 11.5,
+            padding: "0.5rem 1rem",
+            fontSize: "0.71875rem",
             background: "var(--c-err-soft, rgba(239, 68, 68, 0.08))",
             borderBottom: "1px solid var(--c-err)",
             color: "var(--c-err)",
             lineHeight: 1.5,
           }}
         >
-          <AlertTriangle size={14} style={{ flexShrink: 0, marginTop: 1 }} />
+          <AlertTriangle
+            size="0.875rem"
+            style={{ flexShrink: 0, marginTop: 1 }}
+          />
           <span>{t("compile.stalledWarning")}</span>
         </div>
       )}
 
-      <div style={{ padding: "0 16px", background: "var(--bg-1)" }}>
-        <div className="progress" style={{ height: 3 }}>
+      <div style={{ padding: "0 1rem", background: "var(--bg-1)" }}>
+        <div className="progress" style={{ height: "0.1875rem" }}>
           <div
             style={{
               width: isRunning ? "60%" : isDone || isFailed ? "100%" : "0%",
@@ -396,22 +403,22 @@ export const CompilePane = ({ projectId, doc }: CompilePaneProps) => {
         style={{
           flex: 1,
           overflow: "auto",
-          padding: 16,
+          padding: "1rem",
           background: "var(--bg-0)",
           fontFamily: "var(--font-mono)",
-          fontSize: 11.5,
+          fontSize: "0.71875rem",
           lineHeight: 1.6,
         }}
       >
         {logLines.length === 0 && !isRunning && !wait && (
           <div
             className="flex flex-col items-center justify-center"
-            style={{ height: "100%", color: "var(--fg-3)", gap: 12 }}
+            style={{ height: "100%", color: "var(--fg-3)", gap: "0.75rem" }}
           >
-            <Terminal size={32} />
+            <Terminal size="2rem" />
             <span
               className="mono"
-              style={{ fontSize: 10, textTransform: "uppercase" }}
+              style={{ fontSize: "0.625rem", textTransform: "uppercase" }}
             >
               {t("compile.runBuild")}
             </span>
@@ -421,7 +428,7 @@ export const CompilePane = ({ projectId, doc }: CompilePaneProps) => {
               onClick={handleRebuild}
               disabled={isRunning || buildBlock !== null}
             >
-              <Play size={11} />
+              <Play size="0.6875rem" />
               {t("compile.runXelatex")}
             </button>
           </div>
@@ -431,18 +438,21 @@ export const CompilePane = ({ projectId, doc }: CompilePaneProps) => {
             key={i}
             style={{ color: logLineColor(line), whiteSpace: "pre-wrap" }}
           >
-            <span style={{ color: "var(--fg-3)", marginRight: 8 }}>
+            <span style={{ color: "var(--fg-3)", marginRight: "0.5rem" }}>
               {String(i + 1).padStart(3, " ")}
             </span>
             {line}
           </div>
         ))}
         {isRunning && (
-          <div className="flex items-center gap-1" style={{ marginTop: 4 }}>
+          <div
+            className="flex items-center gap-1"
+            style={{ marginTop: "0.25rem" }}
+          >
             <span style={{ color: "var(--c-ok)" }}>▮</span>
             <span
               className="blink"
-              style={{ color: "var(--c-ok)", marginLeft: -2 }}
+              style={{ color: "var(--c-ok)", marginLeft: "-0.125rem" }}
             >
               ▌
             </span>

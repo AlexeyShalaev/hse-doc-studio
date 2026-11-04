@@ -103,7 +103,7 @@ export const ChatComposer = ({
     <div
       className="agent-composer-shell"
       style={{
-        padding: 10,
+        padding: "0.625rem",
         borderTop: "1px solid var(--border)",
         background: "var(--bg-0)",
       }}
@@ -198,7 +198,7 @@ export const ChatComposer = ({
               onClick={onStop}
               title={t("composer.stop")}
             >
-              <Square size={13} />
+              <Square size="0.8125rem" />
             </button>
           ) : (
             <button
@@ -208,7 +208,7 @@ export const ChatComposer = ({
               disabled={sendDisabled}
               title={t("composer.send")}
             >
-              <Send size={14} />
+              <Send size="0.875rem" />
             </button>
           )}
         </div>

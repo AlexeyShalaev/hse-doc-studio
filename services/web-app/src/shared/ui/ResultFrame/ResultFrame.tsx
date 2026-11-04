@@ -56,22 +56,22 @@ export const ResultFrame = ({
         borderRadius: "var(--r-3)",
         border: `1px solid ${color}`,
         background: soft,
-        padding: "12px 14px",
+        padding: "0.75rem 0.875rem",
         display: "flex",
         flexDirection: "column",
-        gap: 10,
+        gap: "0.625rem",
       }}
     >
-      <div className="flex items-start" style={{ gap: 9 }}>
+      <div className="flex items-start" style={{ gap: "0.5625rem" }}>
         <Icon
-          size={16}
+          size="1rem"
           aria-hidden="true"
           style={{ color, flexShrink: 0, marginTop: 1 }}
         />
         <h3
           style={{
             margin: 0,
-            fontSize: 13.5,
+            fontSize: "0.84375rem",
             fontWeight: 600,
             color: "var(--fg-0)",
             lineHeight: 1.35,
@@ -84,11 +84,11 @@ export const ResultFrame = ({
         <div
           className="flex flex-col"
           style={{
-            gap: 8,
-            fontSize: 12.5,
+            gap: "0.5rem",
+            fontSize: "0.78125rem",
             lineHeight: 1.5,
             color: "var(--fg-1)",
-            paddingLeft: 25,
+            paddingLeft: "1.5625rem",
           }}
         >
           {children}
@@ -97,7 +97,7 @@ export const ResultFrame = ({
       {actions != null && (
         <div
           className="flex items-center"
-          style={{ gap: 8, flexWrap: "wrap", paddingLeft: 25 }}
+          style={{ gap: "0.5rem", flexWrap: "wrap", paddingLeft: "1.5625rem" }}
         >
           {actions}
         </div>
@@ -112,9 +112,9 @@ export const Facts = ({ items }: { items: [string, string][] }) => (
       margin: 0,
       display: "grid",
       gridTemplateColumns: "max-content 1fr",
-      columnGap: 14,
-      rowGap: 3,
-      fontSize: 12,
+      columnGap: "0.875rem",
+      rowGap: "0.1875rem",
+      fontSize: "0.75rem",
     }}
   >
     {items.map(([label, value]) => (

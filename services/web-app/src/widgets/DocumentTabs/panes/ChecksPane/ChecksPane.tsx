@@ -301,14 +301,17 @@ export const ChecksPane = ({ projectId, docId }: ChecksPaneProps) => {
         <div
           className="flex items-center gap-2"
           style={{
-            padding: "10px 18px",
+            padding: "0.625rem 1.125rem",
             borderBottom: "1px solid var(--border)",
             background: "var(--c-info-soft)",
-            fontSize: 11.5,
+            fontSize: "0.71875rem",
             color: "var(--fg-1)",
           }}
         >
-          <Info size={13} style={{ color: "var(--c-info)", flexShrink: 0 }} />
+          <Info
+            size="0.8125rem"
+            style={{ color: "var(--c-info)", flexShrink: 0 }}
+          />
           <span>{t("checks.customFileBanner")}</span>
         </div>
       )}

@@ -42,8 +42,12 @@ export const Tooltip = ({
             // class had no effect. Inline style is immune to that and always applies.
             style={
               sans
-                ? { padding: "6px 10px", maxWidth: 320, lineHeight: 1.45 }
-                : { padding: "6px 12px" }
+                ? {
+                    padding: "0.375rem 0.625rem",
+                    maxWidth: "20rem",
+                    lineHeight: 1.45,
+                  }
+                : { padding: "0.375rem 0.75rem" }
             }
             className={clsx(
               "z-50 overflow-hidden rounded-r-1 border shadow-elev-1",

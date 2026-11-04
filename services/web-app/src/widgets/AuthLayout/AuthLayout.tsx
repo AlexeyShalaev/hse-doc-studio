@@ -8,13 +8,13 @@ const Logomark = () => (
     className="flex items-center justify-center font-mono shrink-0"
     aria-hidden
     style={{
-      width: 32,
-      height: 32,
-      borderRadius: 8,
+      width: "2rem",
+      height: "2rem",
+      borderRadius: "0.5rem",
       background: "linear-gradient(135deg, var(--accent), var(--accent))",
       color: "var(--accent-ink)",
       fontWeight: 700,
-      fontSize: 15,
+      fontSize: "0.9375rem",
       boxShadow: "0 0 0 1px var(--accent-line)",
     }}
   >
@@ -41,16 +41,19 @@ export const AuthLayout = () => {
       style={{ background: "var(--bg-0)", color: "var(--fg-0)" }}
     >
       <header className="auth-header flex items-center justify-between">
-        <div className="flex items-center" style={{ gap: 10 }}>
+        <div className="flex items-center" style={{ gap: "0.625rem" }}>
           <Logomark />
-          <span style={{ fontWeight: 600, fontSize: 14 }}>
+          <span style={{ fontWeight: 600, fontSize: "0.875rem" }}>
             {t("layout.product")}
           </span>
         </div>
         <AuthSwitches />
       </header>
       <main className="auth-main flex flex-1 items-center justify-center">
-        <div className="auth-card" style={{ maxWidth: wide ? 600 : 420 }}>
+        <div
+          className="auth-card"
+          style={{ maxWidth: wide ? "37.5rem" : "26.25rem" }}
+        >
           <Outlet />
         </div>
       </main>
@@ -59,8 +62,8 @@ export const AuthLayout = () => {
           className="mono"
           data-testid="auth-layout-version"
           style={{
-            padding: "10px 24px",
-            fontSize: 11,
+            padding: "0.625rem 1.5rem",
+            fontSize: "0.6875rem",
             color: "var(--fg-3)",
             textAlign: "center",
           }}

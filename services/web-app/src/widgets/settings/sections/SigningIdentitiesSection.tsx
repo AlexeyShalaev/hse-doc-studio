@@ -81,9 +81,9 @@ const SelfSignedForm = ({ onClose }: SelfSignedFormProps) => {
   return (
     <form
       onSubmit={handleSubmit}
-      style={{ display: "flex", flexDirection: "column", gap: 10 }}
+      style={{ display: "flex", flexDirection: "column", gap: "0.625rem" }}
     >
-      <label style={{ fontSize: 12, fontWeight: 500 }}>
+      <label style={{ fontSize: "0.75rem", fontWeight: 500 }}>
         {t("signing.labelField")}
       </label>
       <input
@@ -94,9 +94,9 @@ const SelfSignedForm = ({ onClose }: SelfSignedFormProps) => {
         }}
         placeholder={t("signing.labelSelfSignedPlaceholder")}
         required
-        style={{ fontSize: 13 }}
+        style={{ fontSize: "0.8125rem" }}
       />
-      <label style={{ fontSize: 12, fontWeight: 500 }}>
+      <label style={{ fontSize: "0.75rem", fontWeight: 500 }}>
         {t("signing.commonNameField")}
       </label>
       <input
@@ -107,9 +107,9 @@ const SelfSignedForm = ({ onClose }: SelfSignedFormProps) => {
         }}
         placeholder={t("signing.commonNamePlaceholder")}
         required
-        style={{ fontSize: 13 }}
+        style={{ fontSize: "0.8125rem" }}
       />
-      <label style={{ fontSize: 12, fontWeight: 500 }}>
+      <label style={{ fontSize: "0.75rem", fontWeight: 500 }}>
         {t("signing.validityField")}
       </label>
       <input
@@ -121,14 +121,14 @@ const SelfSignedForm = ({ onClose }: SelfSignedFormProps) => {
         onChange={(e) => {
           setDays(Number(e.target.value));
         }}
-        style={{ fontSize: 13 }}
+        style={{ fontSize: "0.8125rem" }}
       />
       <div
         style={{
           display: "flex",
-          gap: 8,
+          gap: "0.5rem",
           justifyContent: "flex-end",
-          marginTop: 4,
+          marginTop: "0.25rem",
         }}
       >
         <button type="button" className="btn btn-ghost" onClick={onClose}>
@@ -178,9 +178,9 @@ const Pkcs12Form = ({ onClose }: Pkcs12FormProps) => {
   return (
     <form
       onSubmit={handleSubmit}
-      style={{ display: "flex", flexDirection: "column", gap: 10 }}
+      style={{ display: "flex", flexDirection: "column", gap: "0.625rem" }}
     >
-      <label style={{ fontSize: 12, fontWeight: 500 }}>
+      <label style={{ fontSize: "0.75rem", fontWeight: 500 }}>
         {t("signing.labelField")}
       </label>
       <input
@@ -191,9 +191,9 @@ const Pkcs12Form = ({ onClose }: Pkcs12FormProps) => {
         }}
         placeholder={t("signing.labelPkcs12Placeholder")}
         required
-        style={{ fontSize: 13 }}
+        style={{ fontSize: "0.8125rem" }}
       />
-      <label style={{ fontSize: 12, fontWeight: 500 }}>
+      <label style={{ fontSize: "0.75rem", fontWeight: 500 }}>
         {t("signing.fileField")}
       </label>
       <input
@@ -211,22 +211,22 @@ const Pkcs12Form = ({ onClose }: Pkcs12FormProps) => {
         style={{
           display: "flex",
           alignItems: "center",
-          gap: 8,
-          padding: "7px 12px",
+          gap: "0.5rem",
+          padding: "0.4375rem 0.75rem",
           border: "1px dashed var(--border)",
-          borderRadius: 6,
+          borderRadius: "0.375rem",
           background: file
             ? "color-mix(in oklch, var(--accent) 8%, var(--bg-1))"
             : "var(--bg-2)",
           color: file ? "var(--fg-0)" : "var(--fg-2)",
           cursor: "pointer",
-          fontSize: 12,
+          fontSize: "0.75rem",
           textAlign: "left",
           transition: "border-color 0.15s, background 0.15s",
         }}
       >
         <FileUp
-          size={14}
+          size="0.875rem"
           style={{
             flexShrink: 0,
             color: file ? "var(--accent)" : "var(--fg-3)",
@@ -239,7 +239,7 @@ const Pkcs12Form = ({ onClose }: Pkcs12FormProps) => {
           <span
             style={{
               marginLeft: "auto",
-              fontSize: 10,
+              fontSize: "0.625rem",
               color: "var(--fg-3)",
               flexShrink: 0,
             }}
@@ -248,7 +248,7 @@ const Pkcs12Form = ({ onClose }: Pkcs12FormProps) => {
           </span>
         )}
       </button>
-      <label style={{ fontSize: 12, fontWeight: 500 }}>
+      <label style={{ fontSize: "0.75rem", fontWeight: 500 }}>
         {t("signing.passwordField")}
       </label>
       <input
@@ -258,14 +258,14 @@ const Pkcs12Form = ({ onClose }: Pkcs12FormProps) => {
         onChange={(e) => {
           setPass(e.target.value);
         }}
-        style={{ fontSize: 13 }}
+        style={{ fontSize: "0.8125rem" }}
       />
       <div
         style={{
           display: "flex",
-          gap: 8,
+          gap: "0.5rem",
           justifyContent: "flex-end",
-          marginTop: 4,
+          marginTop: "0.25rem",
         }}
       >
         <button type="button" className="btn btn-ghost" onClick={onClose}>
@@ -307,25 +307,28 @@ const IdentityCard = ({ identity }: IdentityCardProps) => {
       style={{
         display: "flex",
         alignItems: "center",
-        gap: 10,
-        padding: "8px 10px",
-        borderRadius: 6,
+        gap: "0.625rem",
+        padding: "0.5rem 0.625rem",
+        borderRadius: "0.375rem",
         border: "1px solid var(--border)",
         background: "var(--bg-2)",
       }}
     >
       {identity.trusted ? (
         <ShieldCheck
-          size={16}
+          size="1rem"
           style={{ color: "var(--accent)", flexShrink: 0 }}
         />
       ) : (
-        <ShieldOff size={16} style={{ color: "var(--fg-3)", flexShrink: 0 }} />
+        <ShieldOff
+          size="1rem"
+          style={{ color: "var(--fg-3)", flexShrink: 0 }}
+        />
       )}
       <div style={{ flex: 1, minWidth: 0 }}>
         <div
           style={{
-            fontSize: 13,
+            fontSize: "0.8125rem",
             fontWeight: 500,
             overflow: "hidden",
             textOverflow: "ellipsis",
@@ -334,23 +337,29 @@ const IdentityCard = ({ identity }: IdentityCardProps) => {
         >
           {identity.label}
         </div>
-        <div style={{ fontSize: 11, color: "var(--fg-2)", marginTop: 2 }}>
+        <div
+          style={{
+            fontSize: "0.6875rem",
+            color: "var(--fg-2)",
+            marginTop: "0.125rem",
+          }}
+        >
           <span>{t(KIND_LABEL[identity.kind])}</span>
-          <span style={{ margin: "0 5px" }}>·</span>
+          <span style={{ margin: "0 0.3125rem" }}>·</span>
           <span>{identity.subject_cn}</span>
-          <span style={{ margin: "0 5px" }}>·</span>
+          <span style={{ margin: "0 0.3125rem" }}>·</span>
           <span style={{ color: expired ? "var(--warn)" : "var(--fg-2)" }}>
             {expired ? t("signing.expired") : t("signing.validUntil")}
             {formatDate(identity.not_after)}
           </span>
           {identity.kind === "openpgp" && identity.fingerprint && (
             <>
-              <span style={{ margin: "0 5px" }}>·</span>
+              <span style={{ margin: "0 0.3125rem" }}>·</span>
               <span className="mono" title={identity.fingerprint}>
                 {formatFingerprint(identity.fingerprint.slice(-16))}
               </span>
               {identity.protected && (
-                <span style={{ marginLeft: 6, color: "var(--fg-3)" }}>
+                <span style={{ marginLeft: "0.375rem", color: "var(--fg-3)" }}>
                   {t("signing.openpgp.protected")}
                 </span>
               )}
@@ -358,7 +367,7 @@ const IdentityCard = ({ identity }: IdentityCardProps) => {
           )}
           {identity.kind !== "openpgp" && !identity.trusted && (
             <>
-              <span style={{ margin: "0 5px" }}>·</span>
+              <span style={{ margin: "0 0.3125rem" }}>·</span>
               <span style={{ color: "var(--fg-3)" }}>
                 {t("signing.selfSigned")}
               </span>
@@ -371,9 +380,9 @@ const IdentityCard = ({ identity }: IdentityCardProps) => {
           className="btn btn-ghost icon"
           href={publicKeyUrl(identity.id)}
           title={t("signing.openpgp.exportPublic")}
-          style={{ padding: 4, color: "var(--fg-2)" }}
+          style={{ padding: "0.25rem", color: "var(--fg-2)" }}
         >
-          <Download size={14} />
+          <Download size="0.875rem" />
         </a>
       )}
       <button
@@ -381,9 +390,9 @@ const IdentityCard = ({ identity }: IdentityCardProps) => {
         onClick={handleDelete}
         disabled={del.isPending}
         title={t("signing.delete")}
-        style={{ padding: 4, color: "var(--fg-2)" }}
+        style={{ padding: "0.25rem", color: "var(--fg-2)" }}
       >
-        {del.isPending ? <Spinner size="sm" /> : <Trash2 size={14} />}
+        {del.isPending ? <Spinner size="sm" /> : <Trash2 size="0.875rem" />}
       </button>
     </div>
   );
@@ -401,7 +410,7 @@ const SigningForbidden = () => {
   const { t } = useTranslation("settings");
   return (
     <div
-      style={{ display: "flex", flexDirection: "column", gap: 16 }}
+      style={{ display: "flex", flexDirection: "column", gap: "1rem" }}
       data-testid="signing-forbidden"
     >
       <SettingHead
@@ -413,15 +422,17 @@ const SigningForbidden = () => {
         tone="info"
         text={`${t("signing.forbiddenTitle")}. ${t("signing.forbiddenBody")}`}
       />
-      <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-        <strong style={{ fontSize: 12.5 }}>
+      <div
+        style={{ display: "flex", flexDirection: "column", gap: "0.375rem" }}
+      >
+        <strong style={{ fontSize: "0.78125rem" }}>
           {t("signing.forbiddenAltTitle")}
         </strong>
         <ul
           style={{
             margin: 0,
-            paddingLeft: 18,
-            fontSize: 12,
+            paddingLeft: "1.125rem",
+            fontSize: "0.75rem",
             lineHeight: 1.6,
             color: "var(--fg-2)",
           }}
@@ -429,7 +440,13 @@ const SigningForbidden = () => {
           <li>{t("signing.forbiddenAlt1")}</li>
           <li>{t("signing.forbiddenAlt2")}</li>
         </ul>
-        <p style={{ margin: "4px 0 0", fontSize: 12, color: "var(--fg-2)" }}>
+        <p
+          style={{
+            margin: "0.25rem 0 0",
+            fontSize: "0.75rem",
+            color: "var(--fg-2)",
+          }}
+        >
           {t("signing.forbiddenAsk")}
         </p>
       </div>
@@ -452,7 +469,7 @@ const SigningIdentitiesList = () => {
   const [mode, setMode] = useState<Mode>("none");
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
       <SettingHead
         anchorId="signing"
         title={t("signing.title")}
@@ -462,12 +479,14 @@ const SigningIdentitiesList = () => {
       {isLoading ? (
         <Spinner size="sm" />
       ) : (
-        <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+        <div
+          style={{ display: "flex", flexDirection: "column", gap: "0.375rem" }}
+        >
           {(identities ?? []).map((id) => (
             <IdentityCard key={id.id} identity={id} />
           ))}
           {(identities ?? []).length === 0 && (
-            <p style={{ fontSize: 12, color: "var(--fg-3)", margin: 0 }}>
+            <p style={{ fontSize: "0.75rem", color: "var(--fg-3)", margin: 0 }}>
               {t("signing.loading")}
             </p>
           )}
@@ -477,15 +496,15 @@ const SigningIdentitiesList = () => {
       <OpenPgpStatus />
 
       {mode === "none" && (
-        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+        <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
           <button
             className="btn btn-secondary"
             onClick={() => {
               setMode("openpgp");
             }}
-            style={{ fontSize: 12, gap: 6 }}
+            style={{ fontSize: "0.75rem", gap: "0.375rem" }}
           >
-            <KeyRound size={14} />
+            <KeyRound size="0.875rem" />
             {t("signing.openpgp.create")}
           </button>
           <button
@@ -493,9 +512,9 @@ const SigningIdentitiesList = () => {
             onClick={() => {
               setMode("openpgp-import");
             }}
-            style={{ fontSize: 12, gap: 6 }}
+            style={{ fontSize: "0.75rem", gap: "0.375rem" }}
           >
-            <Upload size={14} />
+            <Upload size="0.875rem" />
             {t("signing.openpgp.import")}
           </button>
           <button
@@ -503,9 +522,9 @@ const SigningIdentitiesList = () => {
             onClick={() => {
               setMode("self-signed");
             }}
-            style={{ fontSize: 12, gap: 6 }}
+            style={{ fontSize: "0.75rem", gap: "0.375rem" }}
           >
-            <Plus size={14} />
+            <Plus size="0.875rem" />
             {t("signing.selfSigned")}
           </button>
           <button
@@ -513,9 +532,9 @@ const SigningIdentitiesList = () => {
             onClick={() => {
               setMode("pkcs12");
             }}
-            style={{ fontSize: 12, gap: 6 }}
+            style={{ fontSize: "0.75rem", gap: "0.375rem" }}
           >
-            <Upload size={14} />
+            <Upload size="0.875rem" />
             {t("signing.importP12")}
           </button>
         </div>

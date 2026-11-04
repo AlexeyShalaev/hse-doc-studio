@@ -49,7 +49,7 @@ export const OutlinePanel = ({
     <nav className="visual-outline-panel" aria-label={t("outline.title")}>
       <div className="visual-outline-header">
         <span className="visual-outline-title">
-          <ListTree size={14} />
+          <ListTree size="0.875rem" />
           {t("outline.title")}
         </span>
         <span className="visual-outline-progress">
@@ -67,13 +67,13 @@ export const OutlinePanel = ({
           aria-label={t("outline.close")}
           onClick={onClose}
         >
-          <X size={13} />
+          <X size="0.8125rem" />
         </button>
       </div>
 
       {items.length > 0 && (
         <label className="visual-outline-search">
-          <Search size={13} aria-hidden="true" />
+          <Search size="0.8125rem" aria-hidden="true" />
           <input
             value={query}
             onChange={(event) => {
@@ -90,7 +90,7 @@ export const OutlinePanel = ({
                 setQuery("");
               }}
             >
-              <X size={12} />
+              <X size="0.75rem" />
             </button>
           )}
         </label>

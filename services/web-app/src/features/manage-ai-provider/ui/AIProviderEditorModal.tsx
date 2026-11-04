@@ -321,17 +321,17 @@ export const AIProviderEditorModal = ({
           // Анатомия как у общего Modal: заголовок с описанием, середина,
           // кнопки справа без отдельной полосы.
           style={{
-            width: runnerKind ? 560 : 480,
-            maxWidth: "calc(100vw - 32px)",
-            maxHeight: "calc(100vh - 64px)",
+            width: runnerKind ? "35rem" : "30rem",
+            maxWidth: "calc(100vw - 2rem)",
+            maxHeight: "calc(100vh - 4rem)",
           }}
         >
-          <div style={{ padding: "24px 24px 0", flexShrink: 0 }}>
+          <div style={{ padding: "1.5rem 1.5rem 0", flexShrink: 0 }}>
             <DialogPrimitive.Title
               style={{
                 margin: 0,
-                paddingRight: 28,
-                fontSize: 15,
+                paddingRight: "1.75rem",
+                fontSize: "0.9375rem",
                 fontWeight: 600,
                 color: "var(--fg-0)",
               }}
@@ -340,8 +340,8 @@ export const AIProviderEditorModal = ({
             </DialogPrimitive.Title>
             <DialogPrimitive.Description
               style={{
-                margin: "8px 0 0",
-                fontSize: 13,
+                margin: "0.5rem 0 0",
+                fontSize: "0.8125rem",
                 lineHeight: 1.5,
                 color: "var(--fg-2)",
               }}
@@ -354,15 +354,15 @@ export const AIProviderEditorModal = ({
             className="icon-btn"
             onClick={onClose}
             aria-label={t("modal.close")}
-            style={{ position: "absolute", right: 12, top: 12 }}
+            style={{ position: "absolute", right: "0.75rem", top: "0.75rem" }}
           >
-            <X size={14} />
+            <X size="0.875rem" />
           </button>
 
           <div
             className="modal-body"
             style={{
-              padding: "16px 24px 4px",
+              padding: "1rem 1.5rem 0.25rem",
               overflowY: "auto",
               flex: "1 1 auto",
               minHeight: 0,
@@ -490,9 +490,9 @@ export const AIProviderEditorModal = ({
                       title={t("models.fetchTitle")}
                     >
                       {fetchState === "loading" ? (
-                        <Loader2 size={11} className="animate-spin" />
+                        <Loader2 size="0.6875rem" className="animate-spin" />
                       ) : (
-                        <Download size={11} />
+                        <Download size="0.6875rem" />
                       )}
                       {t("models.fetchFromApi")}
                     </button>
@@ -516,7 +516,7 @@ export const AIProviderEditorModal = ({
                           title={t("models.removeModel")}
                           aria-label={`${t("models.removeModel")}: ${model}`}
                         >
-                          <Trash2 size={11} />
+                          <Trash2 size="0.6875rem" />
                         </button>
                       </span>
                     ))}
@@ -544,9 +544,9 @@ export const AIProviderEditorModal = ({
                     variant="secondary"
                     onClick={addModel}
                     disabled={!newModel.trim()}
-                    style={{ gap: 6, flexShrink: 0 }}
+                    style={{ gap: "0.375rem", flexShrink: 0 }}
                   >
-                    <Plus size={13} aria-hidden="true" />
+                    <Plus size="0.8125rem" aria-hidden="true" />
                     {t("models.addModel")}
                   </Button>
                 </div>
@@ -602,7 +602,7 @@ export const AIProviderEditorModal = ({
                 className="grid"
                 style={{
                   gridTemplateColumns: isRunner ? "1fr" : "1fr 1fr",
-                  gap: 8,
+                  gap: "0.5rem",
                 }}
               >
                 {!isRunner && (
@@ -645,7 +645,11 @@ export const AIProviderEditorModal = ({
 
           <div
             className="flex items-center justify-end"
-            style={{ gap: 10, padding: "16px 24px 24px", flexShrink: 0 }}
+            style={{
+              gap: "0.625rem",
+              padding: "1rem 1.5rem 1.5rem",
+              flexShrink: 0,
+            }}
           >
             <Button
               type="button"
@@ -692,11 +696,11 @@ const RunnerFields = ({
       <div
         className="flex items-center justify-between"
         style={{
-          gap: 12,
-          padding: "10px 12px",
+          gap: "0.75rem",
+          padding: "0.625rem 0.75rem",
           borderRadius: "var(--r-2)",
           border: "1px dashed var(--border)",
-          fontSize: 12.5,
+          fontSize: "0.78125rem",
         }}
         data-testid="ai-provider-no-runners"
       >

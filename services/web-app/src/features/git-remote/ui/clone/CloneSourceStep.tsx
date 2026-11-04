@@ -239,7 +239,7 @@ export const CloneSourceStep = ({
               id={`${uid}-panel-url`}
               aria-labelledby={`${uid}-tab-url`}
               className="flex flex-col"
-              style={{ gap: 16 }}
+              style={{ gap: "1rem" }}
             >
               <RepoUrlField
                 url={source.urlText}
@@ -258,7 +258,7 @@ export const CloneSourceStep = ({
               {showAuth && (
                 <section
                   className="flex flex-col"
-                  style={{ gap: 12 }}
+                  style={{ gap: "0.75rem" }}
                   aria-label={t("clone.source.access")}
                   data-testid="clone-access"
                 >
@@ -278,8 +278,8 @@ export const CloneSourceStep = ({
                   className="flex items-start"
                   data-testid="clone-checking"
                   style={{
-                    gap: 10,
-                    padding: "12px 14px",
+                    gap: "0.625rem",
+                    padding: "0.75rem 0.875rem",
                     borderRadius: "var(--r-3)",
                     border: "1px solid var(--border)",
                     background: "var(--bg-1)",
@@ -287,12 +287,12 @@ export const CloneSourceStep = ({
                 >
                   <Spinner size="sm" />
                   <div>
-                    <div style={{ fontWeight: 600, fontSize: 13 }}>
+                    <div style={{ fontWeight: 600, fontSize: "0.8125rem" }}>
                       {t("clone.source.checking.title")}
                     </div>
                     <div
                       className="dim"
-                      style={{ fontSize: 12.5, marginTop: 2 }}
+                      style={{ fontSize: "0.78125rem", marginTop: "0.125rem" }}
                     >
                       {t("clone.source.checking.text")}
                     </div>

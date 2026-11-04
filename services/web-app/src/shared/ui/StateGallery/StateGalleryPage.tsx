@@ -40,9 +40,9 @@ const Segmented = <T extends string>({
     aria-label={label}
     className="flex items-center"
     style={{
-      gap: 2,
-      padding: 2,
-      borderRadius: 8,
+      gap: "0.125rem",
+      padding: "0.125rem",
+      borderRadius: "0.5rem",
       border: "1px solid var(--border)",
       background: "var(--bg-1)",
     }}
@@ -140,15 +140,20 @@ export const StateGalleryPage = ({
       <header
         className="flex items-center flex-wrap"
         style={{
-          gap: 16,
-          padding: "10px 20px",
+          gap: "1rem",
+          padding: "0.625rem 1.25rem",
           borderBottom: "1px solid var(--border)",
           background: "var(--bg-1)",
         }}
       >
-        <div style={{ flex: 1, minWidth: 220 }}>
-          <h1 style={{ margin: 0, fontSize: 15, fontWeight: 600 }}>{title}</h1>
-          <p className="dim" style={{ margin: "2px 0 0", fontSize: 12 }}>
+        <div style={{ flex: 1, minWidth: "13.75rem" }}>
+          <h1 style={{ margin: 0, fontSize: "0.9375rem", fontWeight: 600 }}>
+            {title}
+          </h1>
+          <p
+            className="dim"
+            style={{ margin: "0.125rem 0 0", fontSize: "0.75rem" }}
+          >
             {total} состояний. Страница есть только в разработке.
           </p>
         </div>
@@ -179,13 +184,13 @@ export const StateGalleryPage = ({
         {/* На узком экране навигация ложится над содержимым и не отнимает ширину */}
         <nav
           aria-label="Разделы галереи"
-          className="flex flex-col max-sm:max-h-40 max-sm:w-full max-sm:border-b max-sm:border-border sm:w-[250px] sm:border-r sm:border-border"
+          className="flex flex-col max-sm:max-h-40 max-sm:w-full max-sm:border-b max-sm:border-border sm:w-[15.625rem] sm:border-r sm:border-border"
           data-testid="gallery-nav"
           style={{
             flexShrink: 0,
             overflowY: "auto",
-            padding: "14px 10px",
-            gap: 14,
+            padding: "0.875rem 0.625rem",
+            gap: "0.875rem",
             background: "var(--bg-1)",
           }}
         >
@@ -195,8 +200,8 @@ export const StateGalleryPage = ({
               visible.length === sections.length ? "page" : undefined
             }
             style={{
-              padding: "2px 8px",
-              fontSize: 12,
+              padding: "0.125rem 0.5rem",
+              fontSize: "0.75rem",
               textDecoration: "none",
               color: "var(--fg-2)",
             }}
@@ -209,8 +214,8 @@ export const StateGalleryPage = ({
                 to={`${basePath}?section=${section.id}`}
                 style={{
                   display: "block",
-                  padding: "2px 8px",
-                  fontSize: 12.5,
+                  padding: "0.125rem 0.5rem",
+                  fontSize: "0.78125rem",
                   fontWeight: 600,
                   color: "var(--fg-0)",
                   textDecoration: "none",
@@ -226,8 +231,8 @@ export const StateGalleryPage = ({
                     className="dim"
                     style={{
                       display: "block",
-                      padding: "2px 8px 2px 18px",
-                      fontSize: 12,
+                      padding: "0.125rem 0.5rem 0.125rem 1.125rem",
+                      fontSize: "0.75rem",
                       textDecoration: "none",
                     }}
                   >
@@ -245,16 +250,16 @@ export const StateGalleryPage = ({
             flex: 1,
             minWidth: 0,
             overflowY: "auto",
-            padding: "20px 28px 80px",
+            padding: "1.25rem 1.75rem 5rem",
           }}
         >
           {visible.map((section) => (
-            <div key={section.id} style={{ marginBottom: 56 }}>
+            <div key={section.id} style={{ marginBottom: "3.5rem" }}>
               <h2
                 id={`section-${section.id}`}
                 style={{
-                  margin: "0 0 18px",
-                  fontSize: 20,
+                  margin: "0 0 1.125rem",
+                  fontSize: "1.25rem",
                   fontWeight: 650,
                   scrollMarginTop: 16,
                 }}
@@ -262,12 +267,12 @@ export const StateGalleryPage = ({
                 {section.title}
               </h2>
               {section.groups.map((group) => (
-                <div key={group.id} style={{ marginBottom: 36 }}>
+                <div key={group.id} style={{ marginBottom: "2.25rem" }}>
                   <h3
                     id={`group-${group.id}`}
                     style={{
-                      margin: "0 0 4px",
-                      fontSize: 13,
+                      margin: "0 0 0.25rem",
+                      fontSize: "0.8125rem",
                       fontWeight: 600,
                       letterSpacing: "0.04em",
                       textTransform: "uppercase",
@@ -280,14 +285,14 @@ export const StateGalleryPage = ({
                   {group.description && (
                     <p
                       className="dim"
-                      style={{ margin: "0 0 14px", fontSize: 12.5 }}
+                      style={{ margin: "0 0 0.875rem", fontSize: "0.78125rem" }}
                     >
                       {group.description}
                     </p>
                   )}
                   <div
                     className="flex flex-col"
-                    style={{ gap: 28, marginTop: 14 }}
+                    style={{ gap: "1.75rem", marginTop: "0.875rem" }}
                   >
                     {group.entries.map((entry) => (
                       <GalleryEntryCard

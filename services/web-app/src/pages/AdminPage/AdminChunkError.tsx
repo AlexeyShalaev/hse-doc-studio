@@ -7,9 +7,9 @@ export const AdminChunkError = ({ onRetry }: { onRetry: () => void }) => {
   return (
     <div
       className="flex flex-1 items-center justify-center"
-      style={{ padding: 24 }}
+      style={{ padding: "1.5rem" }}
     >
-      <div style={{ width: "100%", maxWidth: 480 }}>
+      <div style={{ width: "100%", maxWidth: "30rem" }}>
         <ResultFrame
           tone="err"
           role="alert"

@@ -31,7 +31,7 @@ export const HelpAnchor = ({ article, step, className }: HelpAnchorProps) => {
         open(article, step);
       }}
     >
-      <CircleHelp size={13} aria-hidden="true" />
+      <CircleHelp size="0.8125rem" aria-hidden="true" />
     </button>
   );
 };

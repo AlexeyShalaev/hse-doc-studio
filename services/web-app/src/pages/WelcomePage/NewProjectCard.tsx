@@ -13,9 +13,9 @@ export const NewProjectCard = ({ onClick }: NewProjectCardProps) => {
       onClick={onClick}
       className="card hover text-left cursor-pointer flex flex-col items-start justify-center"
       style={{
-        padding: 18,
+        padding: "1.125rem",
         borderStyle: "dashed",
-        minHeight: 180,
+        minHeight: "11.25rem",
         background: "transparent",
         color: "var(--fg-2)",
       }}
@@ -23,26 +23,26 @@ export const NewProjectCard = ({ onClick }: NewProjectCardProps) => {
       <div
         className="flex items-center justify-center"
         style={{
-          width: 36,
-          height: 36,
-          borderRadius: 10,
+          width: "2.25rem",
+          height: "2.25rem",
+          borderRadius: "0.625rem",
           background: "var(--accent-soft)",
           color: "var(--accent)",
-          marginBottom: 12,
+          marginBottom: "0.75rem",
         }}
       >
-        <Plus size={20} />
+        <Plus size="1.25rem" />
       </div>
       <h3
         className="text-fg-0"
-        style={{ margin: 0, fontSize: 14, fontWeight: 600 }}
+        style={{ margin: 0, fontSize: "0.875rem", fontWeight: 600 }}
       >
         {t("newCard.title")}
       </h3>
       <p
         style={{
-          margin: "4px 0 0",
-          fontSize: 12,
+          margin: "0.25rem 0 0",
+          fontSize: "0.75rem",
           color: "var(--fg-2)",
           lineHeight: 1.4,
         }}
@@ -51,7 +51,11 @@ export const NewProjectCard = ({ onClick }: NewProjectCardProps) => {
       </p>
       <div
         className="flex items-center gap-2"
-        style={{ marginTop: 14, color: "var(--fg-3)", fontSize: 11 }}
+        style={{
+          marginTop: "0.875rem",
+          color: "var(--fg-3)",
+          fontSize: "0.6875rem",
+        }}
       >
         <span className="kbd">⌘</span>
         <span className="kbd">N</span>

@@ -80,7 +80,7 @@ export const VcsChangedFiles = ({
           className="mono"
           style={{
             flexShrink: 0,
-            width: 13,
+            width: "0.8125rem",
             textAlign: "center",
             fontWeight: 700,
             color: meta.color,
@@ -88,14 +88,22 @@ export const VcsChangedFiles = ({
         >
           {meta.letter}
         </span>
-        <FileText size={12} style={{ flexShrink: 0, color: "var(--fg-3)" }} />
+        <FileText
+          size="0.75rem"
+          style={{ flexShrink: 0, color: "var(--fg-3)" }}
+        />
         <span className="truncate" style={{ flex: 1 }}>
           {label}
         </span>
         {!file.binary && (stat.add > 0 || stat.del > 0) && (
           <span
             className="mono"
-            style={{ flexShrink: 0, display: "flex", gap: 5, fontSize: 9.5 }}
+            style={{
+              flexShrink: 0,
+              display: "flex",
+              gap: "0.3125rem",
+              fontSize: "0.59375rem",
+            }}
           >
             {stat.add > 0 && (
               <span style={{ color: "var(--c-ok)" }}>+{String(stat.add)}</span>
@@ -132,7 +140,7 @@ export const VcsChangedFiles = ({
             title={child.path}
           >
             <ChevronRight
-              size={12}
+              size="0.75rem"
               style={{
                 flexShrink: 0,
                 color: "var(--fg-3)",
@@ -140,7 +148,10 @@ export const VcsChangedFiles = ({
                 transition: "transform 0.1s",
               }}
             />
-            <Folder size={12} style={{ flexShrink: 0, color: "var(--fg-3)" }} />
+            <Folder
+              size="0.75rem"
+              style={{ flexShrink: 0, color: "var(--fg-3)" }}
+            />
             <span className="truncate" style={{ flex: 1 }}>
               {child.name}
             </span>
@@ -164,8 +175,8 @@ export const VcsChangedFiles = ({
       <div
         className="flex items-center"
         style={{
-          gap: 6,
-          padding: "6px 8px",
+          gap: "0.375rem",
+          padding: "0.375rem 0.5rem",
           borderBottom: "1px solid var(--border)",
         }}
       >
@@ -174,10 +185,10 @@ export const VcsChangedFiles = ({
           style={{ position: "relative", flex: 1 }}
         >
           <Search
-            size={12}
+            size="0.75rem"
             style={{
               position: "absolute",
-              left: 8,
+              left: "0.5rem",
               color: "var(--fg-3)",
               pointerEvents: "none",
             }}
@@ -185,9 +196,9 @@ export const VcsChangedFiles = ({
           <input
             className="input mono"
             style={{
-              fontSize: 11,
-              padding: "5px 24px 5px 26px",
-              height: 28,
+              fontSize: "0.6875rem",
+              padding: "0.3125rem 1.5rem 0.3125rem 1.625rem",
+              height: "1.75rem",
             }}
             placeholder={t("changedFiles.searchPlaceholder")}
             value={query}
@@ -199,18 +210,18 @@ export const VcsChangedFiles = ({
             <button
               type="button"
               className="icon-btn sm"
-              style={{ position: "absolute", right: 2 }}
+              style={{ position: "absolute", right: "0.125rem" }}
               onClick={() => {
                 setQuery("");
               }}
               title={t("changedFiles.clear")}
             >
-              <X size={12} />
+              <X size="0.75rem" />
             </button>
           )}
         </div>
         {canTree && (
-          <div className="flex items-center" style={{ gap: 2 }}>
+          <div className="flex items-center" style={{ gap: "0.125rem" }}>
             <button
               type="button"
               className={clsx("icon-btn sm", showTree && "active")}
@@ -219,7 +230,7 @@ export const VcsChangedFiles = ({
               }}
               title={t("changedFiles.viewTree")}
             >
-              <FolderTree size={13} />
+              <FolderTree size="0.8125rem" />
             </button>
             <button
               type="button"
@@ -229,7 +240,7 @@ export const VcsChangedFiles = ({
               }}
               title={t("changedFiles.viewList")}
             >
-              <List size={13} />
+              <List size="0.8125rem" />
             </button>
           </div>
         )}
@@ -239,7 +250,11 @@ export const VcsChangedFiles = ({
         {filtered.length === 0 ? (
           <div
             className="dim"
-            style={{ padding: 14, fontSize: 11.5, textAlign: "center" }}
+            style={{
+              padding: "0.875rem",
+              fontSize: "0.71875rem",
+              textAlign: "center",
+            }}
           >
             {t("changedFiles.empty")}
           </div>

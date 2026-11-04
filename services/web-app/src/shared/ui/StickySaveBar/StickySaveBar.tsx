@@ -65,7 +65,7 @@ export const StickySaveBar = ({
           role={error ? "alert" : "status"}
         >
           {error ? (
-            <CircleAlert size={14} aria-hidden="true" />
+            <CircleAlert size="0.875rem" aria-hidden="true" />
           ) : (
             <span className="dot warn" aria-hidden="true" />
           )}

@@ -29,13 +29,13 @@ export type CiOptionsPanelProps = {
 const Group = ({ title, children }: { title: string; children: ReactNode }) => (
   <fieldset
     className="flex flex-col"
-    style={{ gap: 8, margin: 0, padding: 0, border: 0, minWidth: 0 }}
+    style={{ gap: "0.5rem", margin: 0, padding: 0, border: 0, minWidth: 0 }}
   >
     <legend
       style={{
         padding: 0,
-        marginBottom: 8,
-        fontSize: 11,
+        marginBottom: "0.5rem",
+        fontSize: "0.6875rem",
         fontWeight: 600,
         letterSpacing: "0.04em",
         textTransform: "uppercase",
@@ -63,7 +63,7 @@ export const CiOptionsPanel = ({
   const imageId = useId();
 
   return (
-    <div className="flex flex-col" style={{ gap: 18 }}>
+    <div className="flex flex-col" style={{ gap: "1.125rem" }}>
       <Group title={t("ci.options.provider")}>
         <Segmented
           label={t("ci.options.provider")}
@@ -97,10 +97,10 @@ export const CiOptionsPanel = ({
             className="flex flex-col"
             data-testid="ci-docs"
             style={{
-              gap: 6,
-              maxHeight: 148,
+              gap: "0.375rem",
+              maxHeight: "9.25rem",
               overflowY: "auto",
-              padding: 8,
+              padding: "0.5rem",
               borderRadius: "var(--r-2)",
               border: "1px solid var(--border)",
               background: "var(--bg-1)",
@@ -109,7 +109,7 @@ export const CiOptionsPanel = ({
             {documentsLoading && (
               <span
                 className="flex items-center dim"
-                style={{ gap: 8, fontSize: 12 }}
+                style={{ gap: "0.5rem", fontSize: "0.75rem" }}
                 role="status"
               >
                 <Spinner size="sm" />
@@ -117,14 +117,18 @@ export const CiOptionsPanel = ({
               </span>
             )}
             {documentsFailed && (
-              <span className="dim" style={{ fontSize: 12 }} role="alert">
+              <span
+                className="dim"
+                style={{ fontSize: "0.75rem" }}
+                role="alert"
+              >
                 {t("ci.docs.failed")}
               </span>
             )}
             {!documentsLoading &&
               !documentsFailed &&
               documents.length === 0 && (
-                <span className="dim" style={{ fontSize: 12 }}>
+                <span className="dim" style={{ fontSize: "0.75rem" }}>
                   {t("ci.docs.empty")}
                 </span>
               )}
@@ -169,7 +173,7 @@ export const CiOptionsPanel = ({
         />
         <p
           className="dim"
-          style={{ margin: 0, fontSize: 11.5, lineHeight: 1.5 }}
+          style={{ margin: 0, fontSize: "0.71875rem", lineHeight: 1.5 }}
         >
           {t(`ci.publish.${options.publish}.hint`)}
         </p>
@@ -203,11 +207,15 @@ export const CiOptionsPanel = ({
 
       <details>
         <summary
-          style={{ cursor: "pointer", fontSize: 12, color: "var(--fg-1)" }}
+          style={{
+            cursor: "pointer",
+            fontSize: "0.75rem",
+            color: "var(--fg-1)",
+          }}
         >
           {t("ci.advanced.title")}
         </summary>
-        <div className="field" style={{ marginTop: 10 }}>
+        <div className="field" style={{ marginTop: "0.625rem" }}>
           <label htmlFor={imageId}>{t("ci.advanced.image")}</label>
           <input
             id={imageId}

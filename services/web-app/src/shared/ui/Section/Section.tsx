@@ -61,7 +61,7 @@ export const Section = ({
         <div
           className="adm-section-body"
           data-flush={flush ? "true" : undefined}
-          style={hasHead ? undefined : { paddingTop: flush ? 0 : 16 }}
+          style={hasHead ? undefined : { paddingTop: flush ? 0 : "1rem" }}
         >
           {children}
         </div>
@@ -131,7 +131,7 @@ export const SettingRow = ({
                 aria-label={lockText}
                 data-testid={testId ? `${testId}-locked` : undefined}
               >
-                <Lock size={12} aria-hidden="true" />
+                <Lock size="0.75rem" aria-hidden="true" />
                 {lockStyle === "chip" && t("adminKit.locked")}
               </span>
             </Tooltip>
@@ -192,7 +192,7 @@ export const ListRow = ({
       {meta && <span className="adm-row-meta">{meta}</span>}
       {(to ?? onClick) && (
         <ChevronRight
-          size={15}
+          size="0.9375rem"
           className="adm-row-chevron"
           aria-hidden="true"
         />

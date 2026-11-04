@@ -50,7 +50,7 @@ export const PresenceButton = ({ summary, isOpen }: PresenceButtonProps) => {
             />
             {!isPhone && (
               <ChevronDown
-                size={12}
+                size="0.75rem"
                 aria-hidden="true"
                 style={{ color: "var(--fg-2)" }}
               />

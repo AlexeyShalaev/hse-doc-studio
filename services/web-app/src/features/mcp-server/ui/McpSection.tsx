@@ -35,18 +35,18 @@ export const McpSection = () => {
   return (
     <div
       className="flex flex-col"
-      style={{ gap: 16 }}
+      style={{ gap: "1rem" }}
       data-testid="mcp-section"
     >
       <div
         id="mcp"
         className="settings-anchor flex flex-col"
-        style={{ gap: 4 }}
+        style={{ gap: "0.25rem" }}
       >
-        <h4 style={{ margin: 0, fontSize: 14, fontWeight: 600 }}>
+        <h4 style={{ margin: 0, fontSize: "0.875rem", fontWeight: 600 }}>
           {t("title")}
         </h4>
-        <p style={{ margin: 0, color: "var(--fg-2)", fontSize: 12 }}>
+        <p style={{ margin: 0, color: "var(--fg-2)", fontSize: "0.75rem" }}>
           {t("lead")}
         </p>
       </div>
@@ -65,7 +65,7 @@ export const McpSection = () => {
         >
           <p style={{ margin: 0, lineHeight: 1.8 }}>
             {data.tools.map((name) => (
-              <code key={name} style={{ marginRight: 8 }}>
+              <code key={name} style={{ marginRight: "0.5rem" }}>
                 {name}
               </code>
             ))}

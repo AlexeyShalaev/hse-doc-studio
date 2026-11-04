@@ -195,12 +195,12 @@ export const PdfStampEditor = ({
     return (
       <div
         className="flex flex-col items-center justify-center"
-        style={{ flex: 1, padding: 40, gap: 16, minHeight: 0 }}
+        style={{ flex: 1, padding: "2.5rem", gap: "1rem", minHeight: 0 }}
       >
-        <FileWarning size={28} style={{ color: "var(--c-warn)" }} />
+        <FileWarning size="1.75rem" style={{ color: "var(--c-warn)" }} />
         <p
           className="dim"
-          style={{ margin: 0, textAlign: "center", maxWidth: 380 }}
+          style={{ margin: 0, textAlign: "center", maxWidth: "23.75rem" }}
         >
           <Trans
             i18nKey="pdfEditor.notCompiled"
@@ -228,19 +228,19 @@ export const PdfStampEditor = ({
       <div
         className="flex items-center"
         style={{
-          padding: "8px 14px",
+          padding: "0.5rem 0.875rem",
           borderBottom: "1px solid var(--border)",
           background: "var(--bg-1)",
-          gap: 10,
-          fontSize: 11.5,
+          gap: "0.625rem",
+          fontSize: "0.71875rem",
         }}
       >
-        <span className="mono dim" style={{ fontSize: 10 }}>
+        <span className="mono dim" style={{ fontSize: "0.625rem" }}>
           {pdfRelPath}
         </span>
         <div
           className="flex items-center"
-          style={{ gap: 6, marginLeft: "auto" }}
+          style={{ gap: "0.375rem", marginLeft: "auto" }}
         >
           <button
             type="button"
@@ -251,9 +251,12 @@ export const PdfStampEditor = ({
             }}
             aria-label={t("pdfEditor.prevPage")}
           >
-            <ChevronLeft size={11} />
+            <ChevronLeft size="0.6875rem" />
           </button>
-          <div className="flex items-center" style={{ gap: 4, fontSize: 11 }}>
+          <div
+            className="flex items-center"
+            style={{ gap: "0.25rem", fontSize: "0.6875rem" }}
+          >
             <span className="dim">{t("pdfEditor.pageShort")}</span>
             <input
               key={page}
@@ -272,11 +275,11 @@ export const PdfStampEditor = ({
               }}
               className="input mono"
               style={{
-                width: 52,
-                height: 22,
-                fontSize: 11,
+                width: "3.25rem",
+                height: "1.375rem",
+                fontSize: "0.6875rem",
                 textAlign: "center",
-                padding: "0 4px",
+                padding: "0 0.25rem",
               }}
               aria-label={t("pdfEditor.pageNumberAria")}
             />
@@ -291,7 +294,7 @@ export const PdfStampEditor = ({
             }}
             aria-label={t("pdfEditor.nextPage")}
           >
-            <ChevronRight size={11} />
+            <ChevronRight size="0.6875rem" />
           </button>
         </div>
       </div>
@@ -309,7 +312,7 @@ export const PdfStampEditor = ({
         }}
       >
         {isError ? (
-          <div className="dim" style={{ padding: 40 }}>
+          <div className="dim" style={{ padding: "2.5rem" }}>
             {t("pdfEditor.loadFailed")}
           </div>
         ) : (

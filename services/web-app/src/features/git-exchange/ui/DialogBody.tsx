@@ -6,10 +6,10 @@ import type { ReactNode } from "react";
 export const DialogBody = ({ children }: { children: ReactNode }) => (
   <div
     style={{
-      maxHeight: "calc(100vh - 260px)",
+      maxHeight: "calc(100vh - 16.25rem)",
       overflowY: "auto",
-      padding: 2,
-      margin: -2,
+      padding: "0.125rem",
+      margin: "-0.125rem",
     }}
   >
     {children}

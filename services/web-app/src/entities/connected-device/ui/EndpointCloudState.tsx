@@ -30,7 +30,7 @@ export const EndpointCloudState = ({
   return (
     <div
       className="flex flex-col"
-      style={{ gap: 2 }}
+      style={{ gap: "0.125rem" }}
       data-testid={`endpoint-cloud-state-${name}`}
       data-state={state}
     >

@@ -84,7 +84,11 @@ const ConfirmByNameInner = ({
       >
         <label
           htmlFor={inputId}
-          style={{ display: "block", fontSize: 12.5, color: "var(--fg-2)" }}
+          style={{
+            display: "block",
+            fontSize: "0.78125rem",
+            color: "var(--fg-2)",
+          }}
         >
           {t("confirmByName.prompt")}{" "}
           <strong className="mono" style={{ color: "var(--fg-0)" }}>
@@ -102,14 +106,14 @@ const ConfirmByNameInner = ({
           spellCheck={false}
           disabled={pending}
           aria-invalid={typed.length > 0 && !matches}
-          style={{ width: "100%", marginTop: 8 }}
+          style={{ width: "100%", marginTop: "0.5rem" }}
         />
         {error && (
           <p
             role="alert"
             style={{
-              margin: "10px 0 0",
-              fontSize: 12.5,
+              margin: "0.625rem 0 0",
+              fontSize: "0.78125rem",
               color: "var(--c-err)",
             }}
           >

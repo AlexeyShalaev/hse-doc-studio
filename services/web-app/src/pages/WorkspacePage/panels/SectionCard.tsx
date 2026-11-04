@@ -18,16 +18,16 @@ export const SectionCard = ({
       className="card"
       style={{
         gridColumn: fullSpan ? "1 / -1" : undefined,
-        padding: 18,
+        padding: "1.125rem",
         display: "flex",
         flexDirection: "column",
-        gap: 14,
+        gap: "0.875rem",
       }}
     >
       <h3
         style={{
           margin: 0,
-          fontSize: 13,
+          fontSize: "0.8125rem",
           fontWeight: 600,
           color: accent === "err" ? "var(--c-err)" : "var(--fg-0)",
         }}

@@ -85,14 +85,14 @@ export const NowBlock = ({
           title={item.label}
         >
           <AlertTriangle
-            size={11}
+            size="0.6875rem"
             style={{ flexShrink: 0, color: "var(--c-warn)" }}
           />
           <span className="flex-1 truncate" style={{ textAlign: "left" }}>
             {item.label}
           </span>
           <ChevronRight
-            size={11}
+            size="0.6875rem"
             style={{ flexShrink: 0, color: "var(--fg-3)" }}
           />
         </button>

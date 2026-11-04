@@ -66,11 +66,11 @@ export const HsePersonRow = ({
       style={{
         display: "flex",
         alignItems: "center",
-        gap: 6,
-        borderRadius: 8,
+        gap: "0.375rem",
+        borderRadius: "0.5rem",
         border: "1px solid var(--border)",
         background: hovered ? "var(--bg-3)" : "var(--bg-2)",
-        paddingRight: 6,
+        paddingRight: "0.375rem",
       }}
     >
       <button
@@ -83,11 +83,11 @@ export const HsePersonRow = ({
         style={{
           display: "flex",
           alignItems: "center",
-          gap: 10,
+          gap: "0.625rem",
           flex: 1,
           minWidth: 0,
           textAlign: "left",
-          padding: "8px 4px 8px 10px",
+          padding: "0.5rem 0.25rem 0.5rem 0.625rem",
           border: "none",
           background: "transparent",
           cursor: picking ? "progress" : "pointer",
@@ -104,8 +104,8 @@ export const HsePersonRow = ({
               setImgFailed(true);
             }}
             style={{
-              width: 34,
-              height: 34,
+              width: "2.125rem",
+              height: "2.125rem",
               borderRadius: "50%",
               objectFit: "cover",
               flexShrink: 0,
@@ -115,14 +115,14 @@ export const HsePersonRow = ({
           <span
             aria-hidden
             style={{
-              width: 34,
-              height: 34,
+              width: "2.125rem",
+              height: "2.125rem",
               borderRadius: "50%",
               flexShrink: 0,
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
-              fontSize: 12,
+              fontSize: "0.75rem",
               fontWeight: 600,
               color: "var(--fg-2)",
               background: "var(--bg-3)",
@@ -135,7 +135,7 @@ export const HsePersonRow = ({
           <span
             style={{
               display: "block",
-              fontSize: 13,
+              fontSize: "0.8125rem",
               fontWeight: 500,
               color: "var(--fg-0)",
               overflow: "hidden",
@@ -148,7 +148,7 @@ export const HsePersonRow = ({
           <span
             style={{
               display: "block",
-              fontSize: 11,
+              fontSize: "0.6875rem",
               color: "var(--fg-3)",
               overflow: "hidden",
               textOverflow: "ellipsis",
@@ -162,9 +162,9 @@ export const HsePersonRow = ({
           <span
             style={{
               flexShrink: 0,
-              fontSize: 10,
-              padding: "2px 6px",
-              borderRadius: 4,
+              fontSize: "0.625rem",
+              padding: "0.125rem 0.375rem",
+              borderRadius: "0.25rem",
               color: "var(--accent)",
               background: "color-mix(in srgb, var(--accent) 12%, transparent)",
             }}
@@ -182,7 +182,7 @@ export const HsePersonRow = ({
         aria-label={t("results.openProfile")}
         style={{ flexShrink: 0, color: "var(--fg-3)" }}
       >
-        <ExternalLink size={14} />
+        <ExternalLink size="0.875rem" />
       </a>
     </div>
   );

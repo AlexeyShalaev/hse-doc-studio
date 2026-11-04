@@ -29,7 +29,7 @@ export const HsePersonLookupButton = ({
           setOpen(true);
         }}
       >
-        <GraduationCap size={12} />
+        <GraduationCap size="0.75rem" />
         {t("button")}
       </button>
       {open && (

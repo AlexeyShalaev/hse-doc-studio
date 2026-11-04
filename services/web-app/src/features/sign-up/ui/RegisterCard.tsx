@@ -97,26 +97,36 @@ export const RegisterCard = ({
     >
       <h1
         id={`${uid}-title`}
-        style={{ fontSize: 20, fontWeight: 600, margin: "0 0 6px" }}
+        style={{ fontSize: "1.25rem", fontWeight: 600, margin: "0 0 0.375rem" }}
       >
         {invitation ? t("pages.invite.title") : t("pages.register.title")}
       </h1>
       <p
         data-testid="register-hint"
-        style={{ margin: "0 0 18px", color: "var(--fg-2)", fontSize: 13.5 }}
+        style={{
+          margin: "0 0 1.125rem",
+          color: "var(--fg-2)",
+          fontSize: "0.84375rem",
+        }}
       >
         {hint}
       </p>
 
       {showFrame && (
-        <div id={errorId} style={{ marginBottom: 16 }}>
+        <div id={errorId} style={{ marginBottom: "1rem" }}>
           <ResultFrame
             tone={failure.code === "rate_limited" ? "warn" : "err"}
             role="alert"
             testId="register-error"
             title={t(registerErrorKey(failure.code))}
           >
-            <p style={{ margin: 0, fontSize: 12.5, color: "var(--fg-2)" }}>
+            <p
+              style={{
+                margin: 0,
+                fontSize: "0.78125rem",
+                color: "var(--fg-2)",
+              }}
+            >
               {t(`${registerErrorKey(failure.code)}Hint`, {
                 defaultValue: "",
               })}
@@ -128,7 +138,7 @@ export const RegisterCard = ({
       <form
         onSubmit={submit}
         className="flex flex-col"
-        style={{ gap: 14 }}
+        style={{ gap: "0.875rem" }}
         aria-describedby={showFrame ? errorId : undefined}
         data-testid="register-form"
       >
@@ -175,19 +185,23 @@ export const RegisterCard = ({
               onClick={() => {
                 if (!busy) passkey.onStart(name.trim());
               }}
-              style={{ justifyContent: "center", gap: 8, width: "100%" }}
+              style={{ justifyContent: "center", gap: "0.5rem", width: "100%" }}
             >
               {passkey.pending ? (
                 <Spinner size="sm" />
               ) : (
-                <FingerprintPattern size={15} aria-hidden="true" />
+                <FingerprintPattern size="0.9375rem" aria-hidden="true" />
               )}
               {passkey.pending
                 ? t("register.passkeyPending")
                 : t("register.passkey")}
             </Button>
             <p
-              style={{ margin: "6px 0 0", fontSize: 12, color: "var(--fg-3)" }}
+              style={{
+                margin: "0.375rem 0 0",
+                fontSize: "0.75rem",
+                color: "var(--fg-3)",
+              }}
             >
               {t("register.passkeyHint")}
             </p>
@@ -195,10 +209,10 @@ export const RegisterCard = ({
               <div
                 className="flex items-center"
                 style={{
-                  gap: 10,
-                  margin: "14px 0 0",
+                  gap: "0.625rem",
+                  margin: "0.875rem 0 0",
                   color: "var(--fg-3)",
-                  fontSize: 12,
+                  fontSize: "0.75rem",
                 }}
                 role="separator"
                 aria-label={t("register.orPassword")}
@@ -254,12 +268,12 @@ export const RegisterCard = ({
             <Button
               type="submit"
               aria-disabled={pending}
-              style={{ justifyContent: "center", gap: 8 }}
+              style={{ justifyContent: "center", gap: "0.5rem" }}
             >
               {pending ? (
                 <Spinner size="sm" />
               ) : (
-                <UserPlus size={15} aria-hidden="true" />
+                <UserPlus size="0.9375rem" aria-hidden="true" />
               )}
               {pending ? t("register.submitting") : t("register.submit")}
             </Button>
@@ -267,7 +281,13 @@ export const RegisterCard = ({
         )}
       </form>
 
-      <p style={{ margin: "20px 0 0", fontSize: 13, color: "var(--fg-2)" }}>
+      <p
+        style={{
+          margin: "1.25rem 0 0",
+          fontSize: "0.8125rem",
+          color: "var(--fg-2)",
+        }}
+      >
         {t("register.haveAccount")}{" "}
         <Link to="/login" style={{ color: "var(--accent)" }}>
           {t("register.toLogin")}

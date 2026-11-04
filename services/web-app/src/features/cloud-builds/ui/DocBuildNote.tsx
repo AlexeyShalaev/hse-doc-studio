@@ -27,11 +27,11 @@ export const DocBuildNoteView = ({
     <div
       className="flex items-center"
       style={{
-        gap: 10,
-        padding: "6px 16px",
+        gap: "0.625rem",
+        padding: "0.375rem 1rem",
         borderBottom: "1px solid var(--border)",
         background: "var(--bg-1)",
-        fontSize: 12,
+        fontSize: "0.75rem",
         flexWrap: "wrap",
       }}
       data-testid="doc-build-note"
@@ -42,7 +42,7 @@ export const DocBuildNoteView = ({
         <span
           className="chip sans"
           style={{
-            fontSize: 10.5,
+            fontSize: "0.65625rem",
             color: view.fresh === false ? "var(--c-warn)" : "var(--c-ok)",
           }}
         >
@@ -50,12 +50,12 @@ export const DocBuildNoteView = ({
         </span>
       )}
       {text.commit !== null && (
-        <span className="mono dim" style={{ fontSize: 11 }}>
+        <span className="mono dim" style={{ fontSize: "0.6875rem" }}>
           {text.commit}
         </span>
       )}
       {view.fromCloud && (
-        <span className="dim" style={{ fontSize: 11 }}>
+        <span className="dim" style={{ fontSize: "0.6875rem" }}>
           {t("builds.local.from")}
         </span>
       )}
@@ -69,7 +69,7 @@ export const DocBuildNoteView = ({
           }}
           data-testid="doc-build-fetch"
         >
-          <Download size={11} />
+          <Download size="0.6875rem" />
           {pending ? t("builds.fetching") : t("builds.fetch")}
         </Button>
       )}

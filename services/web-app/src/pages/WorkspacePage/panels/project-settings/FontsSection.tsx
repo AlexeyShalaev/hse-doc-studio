@@ -61,15 +61,15 @@ export const FontsSection = ({
 
   return (
     <SectionCard title={t("projectSettings.sectionFonts")} fullSpan>
-      <span className="dim" style={{ fontSize: 11.5 }}>
+      <span className="dim" style={{ fontSize: "0.71875rem" }}>
         {t("projectSettings.fontsHint")}
       </span>
       <div
         style={{
           display: "grid",
-          gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))",
-          gap: 12,
-          marginTop: 10,
+          gridTemplateColumns: "repeat(auto-fill, minmax(13.75rem, 1fr))",
+          gap: "0.75rem",
+          marginTop: "0.625rem",
         }}
       >
         {fontSlots.map((slot) => (

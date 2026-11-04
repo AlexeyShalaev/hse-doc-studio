@@ -66,7 +66,7 @@ const DiskUsage = ({
     return (
       <EmptyState
         compact
-        icon={<HardDrive size={15} />}
+        icon={<HardDrive size="0.9375rem" />}
         title={t("storage.disk.unknown")}
         description={t("storage.disk.unknownBody")}
       />
@@ -183,7 +183,7 @@ export const StorageView = ({
                   ? {
                       subtitle: (
                         <span className="ops-owner-org">
-                          <Building2 size={11} aria-hidden="true" />
+                          <Building2 size="0.6875rem" aria-hidden="true" />
                           {t("storage.owners.org")}
                         </span>
                       ),
@@ -281,7 +281,7 @@ export const StorageView = ({
           <KpiGrid>
             <KpiTile
               testId="storage-total"
-              icon={<FolderOpen size={14} aria-hidden="true" />}
+              icon={<FolderOpen size="0.875rem" aria-hidden="true" />}
               label={t("storage.stats.projects")}
               value={storage.projects.toLocaleString(localeTag())}
               secondary={
@@ -295,7 +295,7 @@ export const StorageView = ({
             />
             <KpiTile
               testId="storage-objects"
-              icon={<Package size={14} aria-hidden="true" />}
+              icon={<Package size="0.875rem" aria-hidden="true" />}
               label={t("storage.stats.objects")}
               value={formatFileSize(storage.blob_bytes)}
               secondary={t("storage.stats.objectsHint", {
@@ -305,7 +305,7 @@ export const StorageView = ({
             />
             <KpiTile
               testId="storage-free"
-              icon={<Archive size={14} aria-hidden="true" />}
+              icon={<Archive size="0.875rem" aria-hidden="true" />}
               label={t("storage.stats.free")}
               value={
                 free === null ? t("storage.unknown") : formatFileSize(free)
@@ -342,12 +342,12 @@ export const StorageView = ({
               <EmptyState
                 framed
                 testId="storage-empty"
-                icon={<FolderOpen size={18} />}
+                icon={<FolderOpen size="1.125rem" />}
                 title={t("storage.empty.title")}
                 description={t("storage.empty.body")}
               />
             ) : (
-              <div className="ops-stack" style={{ gap: 12 }}>
+              <div className="ops-stack" style={{ gap: "0.75rem" }}>
                 <FilterBar
                   search={state.q}
                   onSearchChange={state.setQ}
@@ -398,7 +398,7 @@ export const StorageView = ({
           </Section>
 
           <p
-            style={{ margin: 0, fontSize: 12, color: "var(--fg-2)" }}
+            style={{ margin: 0, fontSize: "0.75rem", color: "var(--fg-2)" }}
             data-testid="storage-note"
           >
             {storage.computed_at === null
