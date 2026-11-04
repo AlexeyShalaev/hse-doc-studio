@@ -46,7 +46,7 @@ export const CompileFailureNotice = ({
     >
       <Icon size={18} style={{ color, flexShrink: 0, marginTop: 1 }} />
       <div className="flex flex-col" style={{ gap: 3, minWidth: 0, flex: 1 }}>
-        <strong style={{ fontSize: 13 }}>
+        <strong style={{ fontSize: "0.8125rem" }}>
           {cancelled
             ? t("compile.failure.cancelledTitle")
             : t("compile.failure.title")}
@@ -56,7 +56,7 @@ export const CompileFailureNotice = ({
               data-testid="compile-failure-code"
               style={{
                 marginLeft: 8,
-                fontSize: 11,
+                fontSize: "0.6875rem",
                 fontWeight: 400,
                 color: "var(--fg-3)",
               }}
@@ -67,7 +67,7 @@ export const CompileFailureNotice = ({
         </strong>
         <span
           data-testid="compile-failure-message"
-          style={{ fontSize: 12, color: "var(--fg-2)", lineHeight: 1.5 }}
+          style={{ fontSize: "0.75rem", color: "var(--fg-2)", lineHeight: 1.5 }}
         >
           {error ? error.message : t("compile.failure.unknownReason")}
         </span>
@@ -76,7 +76,7 @@ export const CompileFailureNotice = ({
             className="mono"
             data-testid="compile-failure-detail"
             style={{
-              fontSize: 11,
+              fontSize: "0.6875rem",
               color: "var(--fg-3)",
               whiteSpace: "pre-wrap",
               overflowWrap: "anywhere",
@@ -88,7 +88,11 @@ export const CompileFailureNotice = ({
         {!hasOutput && (
           <span
             data-testid="compile-failure-no-output"
-            style={{ fontSize: 11.5, color: "var(--fg-2)", lineHeight: 1.5 }}
+            style={{
+              fontSize: "0.7188rem",
+              color: "var(--fg-2)",
+              lineHeight: 1.5,
+            }}
           >
             {preLaunch
               ? t("compile.failure.noOutputNotStarted")

@@ -113,7 +113,7 @@ export const NowBlock = ({
               <span
                 data-testid="now-reason"
                 style={{
-                  fontSize: 10.5,
+                  fontSize: "0.65625rem",
                   color: "var(--fg-3)",
                   lineHeight: 1.35,
                   whiteSpace: "normal",

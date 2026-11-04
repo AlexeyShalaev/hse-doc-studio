@@ -173,7 +173,11 @@ export const DocRow = ({
               data-testid={`doc-failure-${doc.id}`}
               data-code={doc.last_compile_error.code}
               title={doc.last_compile_error.message}
-              style={{ fontSize: 10.5, lineHeight: 1.3, color: "var(--c-err)" }}
+              style={{
+                fontSize: "0.65625rem",
+                lineHeight: 1.3,
+                color: "var(--c-err)",
+              }}
             >
               {shortReason(doc.last_compile_error.message)}
             </span>
