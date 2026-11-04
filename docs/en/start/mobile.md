@@ -30,14 +30,19 @@ tags:
 - people in the project, the connected Studios badge and the sync state in the second row of the project header: a tap opens a sheet;
 - the agent on the full screen;
 - account and installation settings: a full-screen page with the sections in a sheet with search;
-- the admin console: the sections in a sheet (no side rail), tables as cards, a person card on the full screen.
+- the admin console: the sections in a sheet (no side rail), tables as cards, a person card on the full screen;
+- help on the full screen, the command palette (the "Commands and search" row in the account menu), the AI provider and agent persona editors, the folder picker, the table and bibliography editor;
+- the submission checklist, the form with its preview and the template update: two columns become one.
 
 Dialogs, menus and lists of actions open as a sheet from the bottom: close it with the cross, with "Cancel" or by tapping the dimmed background.
 
 ## What is still easier on a computer
 
 - the "Side by side" mode (preview and editor next to each other): it is not available on a phone, there is a switch between them;
-- the ONLYOFFICE editor: it opens, but it is designed for a wide screen and is not supported on a phone.
+- the ONLYOFFICE editor: it opens, but it is designed for a wide screen and is not supported on a phone;
+- keyboard shortcuts, dragging files into the window and Ctrl/Cmd+click on text to jump to the PDF: they do not work on a phone, and each has a button or a menu item;
+- CryptoPro signing: the browser plugin exists only on a computer;
+- the table editor and the visual editor: tight on a phone, edit a large table on a computer.
 
 ## If something does not fit
 
