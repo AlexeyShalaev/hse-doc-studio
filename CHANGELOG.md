@@ -6,6 +6,23 @@ Generated from `release-notes.json` via `make changelog` — do not edit by hand
 Release notes are hand-written and bilingual (RU/EN); the app shows them in the
 selected interface language.
 
+## [0.8.0](https://github.com/AlexeyShalaev/hse-doc-studio/compare/v0.7.0...v0.8.0) (2026-11-04)
+
+
+### Features
+
+* **web:** причина сбоя сборки во вкладке «Сборка», списке документов и блоке «Сейчас» ([01ccee0](https://github.com/AlexeyShalaev/hse-doc-studio/commit/01ccee0e533fd4e1f1590703a8cf87c433847e5c))
+* настройка «Размер текста» (90-140 %) в «Внешнем виде» ([108fe0d](https://github.com/AlexeyShalaev/hse-doc-studio/commit/108fe0d5b1d495651579c8e9285bfebfad0efdee))
+
+
+### Bug Fixes
+
+* **api:** упавшая сборка сохраняет причину и лог раннера, поток ждёт итога облачной сборки ([9dde85c](https://github.com/AlexeyShalaev/hse-doc-studio/commit/9dde85c08fc0748d3945f00d06369b4fc106fb07))
+* **runner:** личный раннер Студии объявляет тег office ([bc124d5](https://github.com/AlexeyShalaev/hse-doc-studio/commit/bc124d5190acad7234fe080d96706b3279c7bb3f))
+* **web:** на телефоне размер текста 90% не уменьшает зоны касания и поля ([7822b3c](https://github.com/AlexeyShalaev/hse-doc-studio/commit/7822b3c8d47928a2f197654ceaf7e9b5ad9f2dae))
+* **web:** размеры шрифтов плашки причины сбоя в rem ([ed4134c](https://github.com/AlexeyShalaev/hse-doc-studio/commit/ed4134c3661c264db1d23a5644a188bf64ac9d4a))
+* упавшая сборка объясняет себя: причина, журнал раннера и код в облаке и в локальной Студии ([cd18d2e](https://github.com/AlexeyShalaev/hse-doc-studio/commit/cd18d2e1d09614d419f13c18a424042105c11533))
+
 ## [0.7.0](https://github.com/AlexeyShalaev/hse-doc-studio/compare/v0.6.0...v0.7.0) - 2026-11-04
 
 - Mobile cloud version: the Studio is comfortable on a phone from 360 px. Dialogs and menus open as bottom sheets, tables become cards, input fields no longer zoom the page in iOS, buttons are at least 40 px, and the screen notch and on-screen keyboard are accounted for. Sign-in, the landing page, the home screen with the project list and filters, the inbox and Studio connection all work
