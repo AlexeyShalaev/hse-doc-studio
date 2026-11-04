@@ -58,7 +58,8 @@ def _provider(repo: _Repo) -> Provider:
 
 
 def _client(tmp_path: Path, repo: _Repo, mode: StudioMode = StudioMode.server) -> TestClient:
-    (tmp_path / "index.html").write_text(INDEX, encoding="utf-8")
+    # Байтами: write_text на Windows превратил бы \n в \r\n, и ответ перестал бы совпадать с INDEX.
+    (tmp_path / "index.html").write_bytes(INDEX.encode("utf-8"))
     (tmp_path / "og-landing.png").write_bytes(b"\x89PNG-fake")
     app = FastAPI()
     install_landing_root(app, mode=mode, static_dir=tmp_path)
