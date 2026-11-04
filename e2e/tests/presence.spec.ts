@@ -121,6 +121,25 @@ const studioLogin = async (
   return credential;
 };
 
+/**
+ * Уход со страницы перед закрытием: pagehide отправляет серверу «ухожу». Playwright при закрытии контекста pagehide
+ * не гарантирует (в headless-оболочке Chromium его нет), и сессия закрытой вкладки висела бы до конца окна присутствия
+ * и мешала следующему сценарию.
+ */
+const depart = async (who: {
+  context: BrowserContext;
+  page: Page;
+}): Promise<void> => {
+  await who.page.goto("about:blank");
+  await who.context.close();
+};
+
+/** Снимок страницы на переднем плане: у фоновой вкладки другого контекста headless-оболочка снимок не отдаёт. */
+const snap = async (page: Page, name: string): Promise<void> => {
+  await page.bringToFront();
+  await shot(page, "ru", name);
+};
+
 const avatarOf = (page: Page, userId: string) =>
   page.getByTestId("project-people").locator(`[data-user="${userId}"]`);
 
@@ -209,16 +228,16 @@ test.describe("люди в проекте: аватары, место, пере�
       "data-count",
       "2",
     );
-    await shot(a.page, "ru", "pp-01-two-people");
+    await snap(a.page, "pp-01-two-people");
 
     // Список по нажатию: обе строки, у «в проекте» перехода нет.
     await a.page.getByTestId("people-more").click();
     await expect(a.page.getByTestId("people-row")).toHaveCount(2);
-    await shot(a.page, "ru", "pp-02-list");
+    await snap(a.page, "pp-02-list");
     expect(a.page.errors).toEqual([]);
     expect(b.page.errors).toEqual([]);
-    await a.context.close();
-    await b.context.close();
+    await depart(a);
+    await depart(b);
   });
 
   test("2. Борис в редакторе: у Анны подпись «редактирует», нажатие ведёт к документу, у курсора имя и цвет аватара", async ({
@@ -244,7 +263,7 @@ test.describe("люди в проекте: аватары, место, пере�
     await expect(a.page.getByRole("tooltip").first()).toContainText(
       "редактирует",
     );
-    await shot(a.page, "ru", "pp-03-editing-tooltip");
+    await snap(a.page, "pp-03-editing-tooltip");
 
     await boris_.click();
     await expect(a.page).toHaveURL(
@@ -271,30 +290,33 @@ test.describe("люди в проекте: аватары, место, пере�
       (el) => getComputedStyle(el).borderLeftColor,
     );
     expect(caretColor).toBe(avatarColor);
-    await shot(a.page, "ru", "pp-04-cursor-label");
+    await snap(a.page, "pp-04-cursor-label");
     // Через несколько секунд простоя подпись гаснет, курсор остаётся.
     await expect(caret.locator(".cm-ySelectionInfo")).toHaveCSS("opacity", "0", {
       timeout: 15_000,
     });
     await expect(caret).toBeVisible();
     expect(a.page.errors).toEqual([]);
-    await a.context.close();
-    await b.context.close();
+    await depart(a);
+    await depart(b);
   });
 
   test("3. закрытая вкладка уходит сразу, а упавшая без выхода по окну присутствия", async ({
     browser,
   }) => {
-    test.setTimeout(3 * 60_000);
+    test.setTimeout(4 * 60_000);
     const a = await signedIn(browser, ANNA.email, "dark");
     await a.page.goto(`/projects/${project.id}`);
+
+    // Прошлые сценарии могли оставить сессии Бориса: ждём, пока они уйдут по окну, чтобы начать с чистого списка.
+    const boris_ = avatarOf(a.page, borisId);
+    await expect(boris_).toHaveCount(0, { timeout: (WINDOW_S + 20) * 1000 });
 
     // Нормальное закрытие: вкладка успевает сказать «ухожу».
     let b = await signedIn(browser, BORIS.email);
     await b.page.goto(`/projects/${project.id}`);
-    const boris_ = avatarOf(a.page, borisId);
     await expect(boris_).toBeVisible({ timeout: 30_000 });
-    await shot(a.page, "ru", "pp-05-dark");
+    await snap(a.page, "pp-05-dark");
     const leftAt = Date.now();
     // Уход со страницы (pagehide) и есть «вкладка сказала ухожу»: Playwright при закрытии вкладки pagehide не гарантирует.
     await b.page.goto("about:blank");
@@ -411,7 +433,7 @@ test.describe("люди в проекте: аватары, место, пере�
       /Анна Петрова \(вы\), Владелец, работает локально, в локальной Студии/,
       { timeout: 60_000 },
     );
-    await shot(page, "ru", "pp-06-local-studio");
+    await snap(page, "pp-06-local-studio");
     expect(page.errors).toEqual([]);
     await context.close();
     await b.context.close();
