@@ -1,5 +1,11 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import {
+  cleanup,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Route, Routes } from "react-router";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -7,6 +13,7 @@ import { settingsApi, type SettingsData } from "@entities/app-settings";
 import { gitRemoteApi } from "@entities/git-remote";
 import { profileApi, type Profile } from "@entities/profile";
 import { i18n } from "@shared/lib/i18n";
+import { installViewport } from "@shared/lib/viewport/testing";
 
 vi.mock("@widgets/AppTitlebar", () => ({ AppTitlebar: () => null }));
 vi.mock("@widgets/AppStatusBar", () => ({ AppStatusBar: () => null }));
@@ -168,5 +175,78 @@ describe("SettingsPage: repository access section", () => {
     expect(
       await screen.findByRole("button", { name: /Токены и ключи/ }),
     ).toBeInTheDocument();
+  });
+});
+
+describe("SettingsPage on a phone", () => {
+  let viewport: ReturnType<typeof installViewport> | undefined;
+  beforeEach(async () => {
+    await i18n.changeLanguage("ru");
+    vi.spyOn(profileApi, "get").mockResolvedValue(PROFILE);
+  });
+  afterEach(() => {
+    cleanup();
+    vi.restoreAllMocks();
+    viewport?.restore();
+    viewport = undefined;
+  });
+
+  it("has no sidebar column: the current section is a button that opens the menu sheet", async () => {
+    viewport = installViewport(390);
+    const user = userEvent.setup();
+    mount("/settings/profile");
+    expect(document.querySelector(".settings-modal-sidebar")).toBeNull();
+    const trigger = screen.getByTestId("settings-menu-trigger");
+    expect(trigger).toHaveTextContent("Автор версий");
+    expect(screen.queryByTestId("settings-menu")).not.toBeInTheDocument();
+    await user.click(trigger);
+    const menu = screen.getByTestId("settings-menu");
+    expect(menu.closest("[data-form]")).toHaveAttribute("data-form", "sheet");
+    expect(
+      within(menu).getByRole("link", { name: "Автор версий" }),
+    ).toHaveClass("active");
+  });
+
+  it("closes the sheet and shows the section after a choice", async () => {
+    viewport = installViewport(390);
+    const user = userEvent.setup();
+    mount("/settings/profile");
+    await user.click(screen.getByTestId("settings-menu-trigger"));
+    await user.click(
+      within(screen.getByTestId("settings-menu")).getByRole("link", {
+        name: "Внешний вид",
+      }),
+    );
+    expect(screen.queryByTestId("settings-menu")).not.toBeInTheDocument();
+    expect(screen.getByTestId("settings-menu-trigger")).toHaveTextContent(
+      "Внешний вид",
+    );
+  });
+
+  it("finds a setting from the sheet and closes it", async () => {
+    viewport = installViewport(390);
+    const user = userEvent.setup();
+    mount("/settings/appearance");
+    await user.click(screen.getByTestId("settings-menu-trigger"));
+    await user.type(
+      within(screen.getByTestId("settings-menu")).getByPlaceholderText(
+        "Поиск по настройкам",
+      ),
+      "почта",
+    );
+    await user.click(
+      await screen.findByRole("button", { name: /E-mail автора/ }),
+    );
+    expect(screen.queryByTestId("settings-menu")).not.toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByLabelText("Имя")).toBeInTheDocument();
+    });
+  });
+
+  it("keeps the sidebar on a desktop", () => {
+    viewport = installViewport(1360);
+    mount("/settings/profile");
+    expect(document.querySelector(".settings-modal-sidebar")).not.toBeNull();
+    expect(screen.queryByTestId("settings-menu-trigger")).toBeNull();
   });
 });

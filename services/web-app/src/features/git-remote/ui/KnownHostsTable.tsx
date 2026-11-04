@@ -68,6 +68,7 @@ export const KnownHostsTable = ({ hosts }: KnownHostsTableProps) => {
     <>
       <div style={{ overflowX: "auto" }}>
         <table
+          className="tbl-cards"
           data-testid="known-hosts"
           style={{
             width: "100%",
@@ -112,7 +113,7 @@ export const KnownHostsTable = ({ hosts }: KnownHostsTableProps) => {
                     {hostLabel(host)}
                   </span>
                 </th>
-                <td style={cellStyle}>
+                <td data-label={t("access.hosts.columnKeys")} style={cellStyle}>
                   <div className="flex flex-col" style={{ gap: 4 }}>
                     {host.key_types.length > 0 && (
                       <span
@@ -150,6 +151,7 @@ export const KnownHostsTable = ({ hosts }: KnownHostsTableProps) => {
                 </td>
                 <td
                   className="dim"
+                  data-label={t("access.hosts.columnAdded")}
                   style={{ ...cellStyle, whiteSpace: "nowrap" }}
                 >
                   {formatRelativeTime(host.added_at)}
