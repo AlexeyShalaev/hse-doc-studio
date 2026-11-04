@@ -6,37 +6,14 @@ Generated from `release-notes.json` via `make changelog` — do not edit by hand
 Release notes are hand-written and bilingual (RU/EN); the app shows them in the
 selected interface language.
 
-## [0.6.0](https://github.com/AlexeyShalaev/hse-doc-studio/compare/v0.5.0...v0.6.0) (2026-11-04)
+## [0.6.0](https://github.com/AlexeyShalaev/hse-doc-studio/compare/v0.5.0...v0.6.0) - 2026-11-04
 
-
-### Features
-
-* **api:** настройка лендинга и корень сервера с тегами Open Graph ([a3776e2](https://github.com/AlexeyShalaev/hse-doc-studio/commit/a3776e20b4c11703a205cd501371eba8a411cc6d))
-* **deploy:** публичный адрес S3 и режим доступа внешних раннеров в чарте и compose ([37a1b96](https://github.com/AlexeyShalaev/hse-doc-studio/commit/37a1b964f9c2f2dd0097e0651e4a8dc6f642a439))
-* **devices:** люди в проекте: аватары в шапке, место, курсоры и расчёт нагрузки ([ffddacb](https://github.com/AlexeyShalaev/hse-doc-studio/commit/ffddacb3ee87441c5935acd6beb6258226f008df))
-* **devices:** люди в проекте: сигнал вкладки, общий список онлайн и цвет человека одной функцией с курсором ([159fc6e](https://github.com/AlexeyShalaev/hse-doc-studio/commit/159fc6e77f63c00a4f30366c8f669e51b211ddab))
-* **devices:** присутствие подключённых Студий и статус сборок документов ([bf0c1a1](https://github.com/AlexeyShalaev/hse-doc-studio/commit/bf0c1a1d0eef5e3d0e51754d2fcbc46233f514e9))
-* **diagnostics:** предупреждение, когда есть раннеры вне сети, а публичного адреса S3 нет ([de0f918](https://github.com/AlexeyShalaev/hse-doc-studio/commit/de0f918f3f2728c4006e707ccf5bf88810725a0b))
-* **storage:** ссылки на S3 по получателю: публичный адрес для раннеров вне сети и режим proxy ([f1bc687](https://github.com/AlexeyShalaev/hse-doc-studio/commit/f1bc687cb653591136fc24d2787ceab39068799a))
-* **web:** аватары людей в шапке проекта, место и переход к документу, подпись с именем у чужого курсора ([1dd96ff](https://github.com/AlexeyShalaev/hse-doc-studio/commit/1dd96ff8c40bf042a8852360c1b1d19fc1b8453c))
-* **web:** лендинг облака для не вошедшего человека ([2b7495b](https://github.com/AlexeyShalaev/hse-doc-studio/commit/2b7495b083e3d8e8545aff96ca21bc5fb42a2fad))
-* **web:** окошко уведомлений под колокольчиком ([acf3fc0](https://github.com/AlexeyShalaev/hse-doc-studio/commit/acf3fc0a77845c20822f168c746d6d88c52c2167))
-* **web:** окошко уведомлений под колокольчиком вместо перехода на страницу ([c51da19](https://github.com/AlexeyShalaev/hse-doc-studio/commit/c51da194399b92a0494e7e3449d2331a279a4199))
-* **web:** плашка и панель подключённых Студий, статус сборок, получение облачного PDF ([0708e3b](https://github.com/AlexeyShalaev/hse-doc-studio/commit/0708e3b20fbf649b816ce5ff8968fec6f8d5a3a6))
-* лендинг облака для не вошедшего человека ([1d7681e](https://github.com/AlexeyShalaev/hse-doc-studio/commit/1d7681eddc0814b0765c7bbfff90862bcaa104ee))
-* подключённые Студии, ИИ через вашу машину и статус сборок с обеих сторон ([a818e96](https://github.com/AlexeyShalaev/hse-doc-studio/commit/a818e96b42f7b6bd5e21bd24965309c052b4f329))
-
-
-### Bug Fixes
-
-* **api:** корень и картинка предпросмотра отвечают на HEAD ([9d9abf2](https://github.com/AlexeyShalaev/hse-doc-studio/commit/9d9abf217e1f667177065907ca9650f5daa529d9))
-* **chat:** понятные причины сбоя модели за раннером и переполнения окна Ollama ([bfacc35](https://github.com/AlexeyShalaev/hse-doc-studio/commit/bfacc35997a4a657e8f6233ceb9378807d5b2e10))
-* **git-sync:** кнопка «открыть репозиторий» ведёт на страницу проекта сервера Студии ([cf83c14](https://github.com/AlexeyShalaev/hse-doc-studio/commit/cf83c14aad9dd0d1d396989e7c70b675e2d7344a))
-* **git-sync:** ссылка на репозиторий ведёт на страницу проекта сервера Студии ([fa21697](https://github.com/AlexeyShalaev/hse-doc-studio/commit/fa21697b56467737a77c1fc99df419a9cdc3a35c))
-* **settings:** окно настроек выше и шире, меню шире ([f24065f](https://github.com/AlexeyShalaev/hse-doc-studio/commit/f24065fb17dbbd9a219dc0c36d46511c260b34df))
-* **settings:** окно настроек выше и шире, меню шире и не переносит названия ([042e93e](https://github.com/AlexeyShalaev/hse-doc-studio/commit/042e93ea86b71c6baaff1a2d684da9c6720a9914))
-* **storage:** публичный адрес S3 для раннеров вне сети сервера и режим proxy ([f49c8d9](https://github.com/AlexeyShalaev/hse-doc-studio/commit/f49c8d95f33e9b93be433df5c5241770b2b39810))
-* **web:** контраст инициалов на аватарах и подписи у курсора: затемнение поверх цвета человека ([6f05e1d](https://github.com/AlexeyShalaev/hse-doc-studio/commit/6f05e1d6c75ae77f0a0d8860eb1d4ab91d3f0a98))
+- Cloud landing page: someone who opens the server address and is not signed in sees a page describing the Studio (who it is for, what it does, how to start, security) with the sign-in form right on it. The link to the cloud can be shared: messengers show it with a title, a description and a picture. Invitations, password reset, OIDC and passkey sign-in work as before. An administrator can turn the landing off in the installation settings, then the sign-in page opens straight away
+- Connected Studios: a cloud project shows which of your local Studios are connected, whether they are online (or when they last were), the version, project sync, PDF upload, the state of your personal runner and of AI through your machine. The local Studio shows the same the other way round: the link to the cloud, what the cloud sees, who else is online in the project. For each document you can see where and when it was built and whether the build is current. A cloud PDF can be fetched into the local Studio with the Get build button, and with automatic sync on it is fetched by itself. The cloud has a My Studios list with a Forget device button. Only state metadata is sent: no paths, contents or keys
+- People in the project: the project header shows avatars of members who are online right now, with a caption of what and where they are doing (editing the Application, viewing remarks, working locally) and a jump to the same document. Another person's cursor in a document shows their name, and the cursor colour matches their avatar. Members see each other in the browser and in the local Studio, guests with an access link are not listed. The load is minimal: one light signal a minute per person, nothing written to the database
+- Bell and settings: the bell opens a small window with the latest notifications, a mark-as-read action and a Show all link instead of going to a page. The settings window is taller and wider, its menu scrolls and section names no longer wrap. When a local Studio cannot use AI through its runner, the reason and what to do are now shown, and the cloud has an Add in the cloud button for the Through my runner provider
+- For administrators, runners outside the server network and storage: personal runners and browsers get S3 links at a public address. Set it with s3.publicEndpoint in Helm (HSE_STUDIO__S3__PUBLIC_ENDPOINT); the storage has to be published under its own name with TLS (see the runners section). Without a public address a cloud build on a runner outside the network fails with a clear storage_unreachable error and the self-diagnostics page warns. A fallback without publishing the storage: s3.outsideRunnerAccess: proxy, results go through the server
+- For administrators, upgrading from 0.5.0: the release has one database migration (cd_01_connected_devices, connected devices and build data), the server applies it itself on first start, take a backup before updating. New settings: s3.publicEndpoint, s3.outsideRunnerAccess, s3.sharedRunnersOutside (Helm), HSE_STUDIO__SERVER__LANDING_ENABLED and the landing switch in the admin area. Fixed: for a cloud project the open repository button led to a 404 page, now it opens the project page
 
 ## [0.5.0](https://github.com/AlexeyShalaev/hse-doc-studio/compare/v0.4.0...v0.5.0) - 2026-11-03
 
