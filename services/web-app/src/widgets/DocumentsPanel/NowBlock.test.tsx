@@ -6,7 +6,7 @@ import { NowBlock } from "./NowBlock";
 import type { DocumentItem } from "./lib/buildDocSections";
 
 const doc = (over: Partial<DocumentItem>): DocumentItem =>
-  ({ id: "report", status: "err", ...over }) as DocumentItem;
+  ({ id: "report", status: "err", ...over }) as unknown as DocumentItem;
 
 const mount = (documents: DocumentItem[]) =>
   render(
