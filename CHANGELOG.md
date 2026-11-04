@@ -6,6 +6,38 @@ Generated from `release-notes.json` via `make changelog` — do not edit by hand
 Release notes are hand-written and bilingual (RU/EN); the app shows them in the
 selected interface language.
 
+## [0.6.0](https://github.com/AlexeyShalaev/hse-doc-studio/compare/v0.5.0...v0.6.0) (2026-11-04)
+
+
+### Features
+
+* **api:** настройка лендинга и корень сервера с тегами Open Graph ([a3776e2](https://github.com/AlexeyShalaev/hse-doc-studio/commit/a3776e20b4c11703a205cd501371eba8a411cc6d))
+* **deploy:** публичный адрес S3 и режим доступа внешних раннеров в чарте и compose ([37a1b96](https://github.com/AlexeyShalaev/hse-doc-studio/commit/37a1b964f9c2f2dd0097e0651e4a8dc6f642a439))
+* **devices:** люди в проекте: аватары в шапке, место, курсоры и расчёт нагрузки ([ffddacb](https://github.com/AlexeyShalaev/hse-doc-studio/commit/ffddacb3ee87441c5935acd6beb6258226f008df))
+* **devices:** люди в проекте: сигнал вкладки, общий список онлайн и цвет человека одной функцией с курсором ([159fc6e](https://github.com/AlexeyShalaev/hse-doc-studio/commit/159fc6e77f63c00a4f30366c8f669e51b211ddab))
+* **devices:** присутствие подключённых Студий и статус сборок документов ([bf0c1a1](https://github.com/AlexeyShalaev/hse-doc-studio/commit/bf0c1a1d0eef5e3d0e51754d2fcbc46233f514e9))
+* **diagnostics:** предупреждение, когда есть раннеры вне сети, а публичного адреса S3 нет ([de0f918](https://github.com/AlexeyShalaev/hse-doc-studio/commit/de0f918f3f2728c4006e707ccf5bf88810725a0b))
+* **storage:** ссылки на S3 по получателю: публичный адрес для раннеров вне сети и режим proxy ([f1bc687](https://github.com/AlexeyShalaev/hse-doc-studio/commit/f1bc687cb653591136fc24d2787ceab39068799a))
+* **web:** аватары людей в шапке проекта, место и переход к документу, подпись с именем у чужого курсора ([1dd96ff](https://github.com/AlexeyShalaev/hse-doc-studio/commit/1dd96ff8c40bf042a8852360c1b1d19fc1b8453c))
+* **web:** лендинг облака для не вошедшего человека ([2b7495b](https://github.com/AlexeyShalaev/hse-doc-studio/commit/2b7495b083e3d8e8545aff96ca21bc5fb42a2fad))
+* **web:** окошко уведомлений под колокольчиком ([acf3fc0](https://github.com/AlexeyShalaev/hse-doc-studio/commit/acf3fc0a77845c20822f168c746d6d88c52c2167))
+* **web:** окошко уведомлений под колокольчиком вместо перехода на страницу ([c51da19](https://github.com/AlexeyShalaev/hse-doc-studio/commit/c51da194399b92a0494e7e3449d2331a279a4199))
+* **web:** плашка и панель подключённых Студий, статус сборок, получение облачного PDF ([0708e3b](https://github.com/AlexeyShalaev/hse-doc-studio/commit/0708e3b20fbf649b816ce5ff8968fec6f8d5a3a6))
+* лендинг облака для не вошедшего человека ([1d7681e](https://github.com/AlexeyShalaev/hse-doc-studio/commit/1d7681eddc0814b0765c7bbfff90862bcaa104ee))
+* подключённые Студии, ИИ через вашу машину и статус сборок с обеих сторон ([a818e96](https://github.com/AlexeyShalaev/hse-doc-studio/commit/a818e96b42f7b6bd5e21bd24965309c052b4f329))
+
+
+### Bug Fixes
+
+* **api:** корень и картинка предпросмотра отвечают на HEAD ([9d9abf2](https://github.com/AlexeyShalaev/hse-doc-studio/commit/9d9abf217e1f667177065907ca9650f5daa529d9))
+* **chat:** понятные причины сбоя модели за раннером и переполнения окна Ollama ([bfacc35](https://github.com/AlexeyShalaev/hse-doc-studio/commit/bfacc35997a4a657e8f6233ceb9378807d5b2e10))
+* **git-sync:** кнопка «открыть репозиторий» ведёт на страницу проекта сервера Студии ([cf83c14](https://github.com/AlexeyShalaev/hse-doc-studio/commit/cf83c14aad9dd0d1d396989e7c70b675e2d7344a))
+* **git-sync:** ссылка на репозиторий ведёт на страницу проекта сервера Студии ([fa21697](https://github.com/AlexeyShalaev/hse-doc-studio/commit/fa21697b56467737a77c1fc99df419a9cdc3a35c))
+* **settings:** окно настроек выше и шире, меню шире ([f24065f](https://github.com/AlexeyShalaev/hse-doc-studio/commit/f24065fb17dbbd9a219dc0c36d46511c260b34df))
+* **settings:** окно настроек выше и шире, меню шире и не переносит названия ([042e93e](https://github.com/AlexeyShalaev/hse-doc-studio/commit/042e93ea86b71c6baaff1a2d684da9c6720a9914))
+* **storage:** публичный адрес S3 для раннеров вне сети сервера и режим proxy ([f49c8d9](https://github.com/AlexeyShalaev/hse-doc-studio/commit/f49c8d95f33e9b93be433df5c5241770b2b39810))
+* **web:** контраст инициалов на аватарах и подписи у курсора: затемнение поверх цвета человека ([6f05e1d](https://github.com/AlexeyShalaev/hse-doc-studio/commit/6f05e1d6c75ae77f0a0d8860eb1d4ab91d3f0a98))
+
 ## [0.5.0](https://github.com/AlexeyShalaev/hse-doc-studio/compare/v0.4.0...v0.5.0) - 2026-11-03
 
 - Cloud projects in the local Studio: once connected to a server, the local Studio lists your cloud projects itself, in the same list as local ones and marked Cloud. One click on Open downloads the project into the projects folder (changeable in settings), shows the progress and opens it, with no clone wizard and no git on this path. The Open in local Studio link from the cloud takes you straight to the right project. Automatic sync and PDF upload need no setup and work for cloud projects from the start. If an open project is not linked to the cloud, the build panel says so: the PDF will stay on this computer
