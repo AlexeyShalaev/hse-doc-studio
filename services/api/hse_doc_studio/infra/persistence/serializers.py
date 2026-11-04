@@ -352,6 +352,8 @@ def serialize_compile_record(record: CompileRecord) -> dict[str, Any]:
         "source_commit": record.source_commit,
         "output_sha256": record.output_sha256,
         "output_size": record.output_size,
+        "error_code": record.error_code,
+        "error_detail": record.error_detail,
     }
 
 
@@ -376,6 +378,8 @@ def deserialize_compile_record(data: dict[str, Any], project_folder: Path) -> Co
         source_commit=data.get("source_commit"),
         output_sha256=data.get("output_sha256"),
         output_size=data.get("output_size"),
+        error_code=data.get("error_code"),
+        error_detail=data.get("error_detail"),
     )
 
 

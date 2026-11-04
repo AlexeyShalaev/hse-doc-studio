@@ -1,15 +1,18 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from pathlib import PurePosixPath
+from pathlib import Path, PurePosixPath
 from uuid import UUID
 
 import structlog
 
+from hse_doc_studio.core.compile.failure import CompileFailure
 from hse_doc_studio.core.entities import Document
+from hse_doc_studio.core.enums import DocumentStatus
 from hse_doc_studio.core.errors import NotFoundError
 from hse_doc_studio.core.jobs.entities import compile_job_tags
 from hse_doc_studio.core.repositories import (
+    ICompileRepository,
     IProjectIndexRepository,
     IProjectRepository,
     ITemplateRepository,
@@ -53,6 +56,8 @@ class DocumentListEntry:
     # Теги раннера, нужные сборке документа (`tex`, `office` или пусто): по ним интерфейс сервера
     # заранее гасит «Собрать», если такого раннера сейчас нет.
     build_tags: frozenset[str] = frozenset()
+    # Причина последней неудачной сборки документа в статусе err; None, если сборка не падала или записи нет.
+    failure: CompileFailure | None = None
 
 
 @dataclass
@@ -67,8 +72,10 @@ class ListDocumentsUC:
         project_repo: IProjectRepository,
         project_index_repo: IProjectIndexRepository,
         template_repo: ITemplateRepository | None = None,
+        compile_repo: ICompileRepository | None = None,
     ) -> None:
         self._template_repo = template_repo
+        self._compile_repo = compile_repo
         self._template_service = ProjectTemplateService()
         self._get_uc = GetProjectUC(project_repo, project_index_repo)
 
@@ -129,6 +136,19 @@ class ListDocumentsUC:
                     engine=str(engine) if engine is not None else None,
                     group=doc_def.group if doc_def is not None else None,
                     build_tags=build_tags,
+                    failure=await self._failure_of(project.folder, doc),
                 )
             )
         return ListDocumentsOutput(documents=visible_docs, entries=entries)
+
+    async def _failure_of(self, folder: Path, doc: Document) -> CompileFailure | None:
+        if self._compile_repo is None or doc.status is not DocumentStatus.err or doc.last_compile_id is None:
+            return None
+        try:
+            record = await self._compile_repo.get_for_project(folder, doc.last_compile_id)
+        except Exception:  # noqa: BLE001 — причина вторична: список документов важнее её чтения
+            logger.warning("list_documents: compile record unreadable", doc_id=doc.id, exc_info=True)
+            return None
+        if record is None or record.error_code is None:
+            return None
+        return CompileFailure(record.error_code, record.error_detail)

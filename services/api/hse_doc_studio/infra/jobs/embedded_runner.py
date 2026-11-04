@@ -8,7 +8,8 @@ from hse_doc_studio.core.checks.protocols import ICheckRunner
 from hse_doc_studio.core.compile.errors import DockerUnavailableError, ImageMissingError
 from hse_doc_studio.core.i18n import localized_error
 from hse_doc_studio.core.jobs.entities import BuildOutcome, CompileResult, JobResult, JobSpec, compile_payload_of
-from hse_doc_studio.core.jobs.enums import JobStatus
+from hse_doc_studio.core.jobs.enums import JobErrorCategory, JobStatus
+from hse_doc_studio.core.jobs.errors import JobError
 from hse_doc_studio.core.jobs.outputs import IJobOutputs
 from hse_doc_studio.core.jobs.protocols import JobRunContext
 from hse_doc_studio.core.language_check import ILanguageCheckService
@@ -127,6 +128,8 @@ class EmbeddedCompileRunner:
             pages=state.pages,
             words=state.words,
             chars=state.chars,
+            failure_code=None if state.success else state.failure_code,
+            failure_detail=None if state.success else state.failure_detail,
         )
 
     async def run_post(self, spec: JobSpec, ctx: JobRunContext, outcome: BuildOutcome) -> JobResult:
@@ -141,8 +144,14 @@ class EmbeddedCompileRunner:
             self._lt_manager,
             self._resolve_lt_image,
         )
+        error = (
+            JobError(JobErrorCategory.internal, outcome.failure_code, outcome.failure_detail or "")
+            if outcome.failure_code is not None
+            else None
+        )
         return JobResult(
             status=outcome.status,
+            error=error,
             data=CompileResult(
                 build_ok=outcome.success,
                 check_results=tuple(check_results),

@@ -51,6 +51,9 @@ class BuildOutcome:
     pages: int | None = None
     words: int | None = None
     chars: int | None = None
+    # Код причины, если сборка упала не ошибкой LaTeX, а средой: молчание, docker, путь, нет PDF.
+    failure_code: str | None = None
+    failure_detail: str | None = None
 
 
 @dataclass(frozen=True)

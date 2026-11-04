@@ -140,6 +140,26 @@ async def test_failure_of_executor_is_reported_as_failed(rig: Rig) -> None:
     assert result["error"] == {"category": "invalid_input", "code": "bad_source", "detail": "no main.tex"}
 
 
+async def test_failure_reason_goes_to_the_job_log_before_completion(rig: Rig) -> None:
+    job = rig.state.enqueue(envelope_body("compile", job_id=JOB_A))
+    rig.executor.fail = JobFailure(JobError(JobErrorCategory.unavailable, "image_missing", "texlive/texlive:latest"))
+    rig.start()
+    await until(lambda: job.completed)
+    await rig.stop()
+
+    assert job.log_lines[-1] == "[runner] image_missing: texlive/texlive:latest"
+
+
+async def test_crash_of_executor_is_visible_in_the_job_log(rig: Rig) -> None:
+    job = rig.state.enqueue(envelope_body("compile", job_id=JOB_A))
+    rig.executor.fail = RuntimeError("boom")
+    rig.start()
+    await until(lambda: job.completed)
+    await rig.stop()
+
+    assert job.log_lines[-1] == "[runner] executor_crashed: RuntimeError: boom"
+
+
 async def test_crash_of_executor_does_not_stop_the_loop(rig: Rig) -> None:
     first = rig.state.enqueue(envelope_body("compile", job_id=JOB_A))
     rig.executor.fail = RuntimeError("boom")
@@ -195,6 +215,8 @@ async def test_outputs_to_unreachable_storage_fail_with_actionable_error(rig: Ri
     assert "HSE_STUDIO__S3__PUBLIC_ENDPOINT" in detail
     assert "deadbeef" not in detail
     assert "ConnectError" in detail
+    assert job.log_lines[-1].startswith("[runner] storage_unreachable: object storage at http://minio.tech.svc:80")
+    assert "deadbeef" not in job.log_lines[-1]
 
 
 async def test_cancel_flag_from_heartbeat_stops_the_job(rig: Rig) -> None:

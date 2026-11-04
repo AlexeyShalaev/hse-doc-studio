@@ -11,6 +11,7 @@ from hse_doc_studio.core.errors import NotFoundError
 from hse_doc_studio.core.i18n import set_interface_language
 from hse_doc_studio.core.jobs.entities import CompileJobPayload, JobSpec, compile_payload_of
 from hse_doc_studio.core.jobs.enums import JobKind
+from hse_doc_studio.core.jobs.errors import NoRunnerAvailableError
 from hse_doc_studio.core.jobs.protocols import IJobHooks
 from hse_doc_studio.core.services import CheckResolutionService, ProjectTemplateService
 from hse_doc_studio.core.value_objects import ChecksOverride
@@ -165,7 +166,7 @@ async def test__trigger_compile__order__materialize_then_preflight_then_pending_
     ]
 
 
-async def test__trigger_compile__preflight_refuses__nothing_written_nothing_submitted(tmp_path) -> None:
+async def test__trigger_compile__preflight_refuses__failed_record_with_reason_nothing_submitted(tmp_path) -> None:
     h = Harness(tmp_path)
     project = make_project(folder=tmp_path, documents=[make_document("tz")])
     h.given(project, documents=(make_document_definition("tz"),))
@@ -174,9 +175,37 @@ async def test__trigger_compile__preflight_refuses__nothing_written_nothing_subm
     with pytest.raises(ImageMissingError):
         await h.uc.execute(TriggerCompileInput(project_id=project.id, doc_id="tz"))
 
-    h.compile_repo.save.assert_not_called()
-    h.project_repo.save.assert_not_called()
+    (record,) = [call.args[0] for call in h.compile_repo.save.call_args_list]
+    assert record.status is CompileStatus.failure
+    assert (record.error_code, record.error_detail) == ("image_missing", "Docker image not installed: texlive:latest")
+    assert record.log.startswith("[error] image_missing: ")
+    doc = next(d for d in h.project_repo.save.call_args.args[0].documents if d.id == "tz")
+    assert (doc.status, doc.last_compile_id) == (DocumentStatus.err, record.id)
     assert h.dispatcher.submitted == []
+
+
+async def test__trigger_compile__no_runner__failed_record_with_no_runners_code(tmp_path) -> None:
+    h = Harness(tmp_path)
+    project = make_project(folder=tmp_path, documents=[make_document("tz")])
+    h.given(project, documents=(make_document_definition("tz"),))
+    h.dispatcher.preflight_error = NoRunnerAvailableError(frozenset({"tex"}))
+
+    with pytest.raises(NoRunnerAvailableError):
+        await h.uc.execute(TriggerCompileInput(project_id=project.id, doc_id="tz"))
+
+    (record,) = [call.args[0] for call in h.compile_repo.save.call_args_list]
+    assert (record.status, record.error_code) == (CompileStatus.failure, "no_runners")
+
+
+async def test__trigger_compile__refusal_record_cannot_be_saved__original_refusal_still_raised(tmp_path) -> None:
+    h = Harness(tmp_path)
+    project = make_project(folder=tmp_path, documents=[make_document("tz")])
+    h.given(project, documents=(make_document_definition("tz"),))
+    h.dispatcher.preflight_error = ImageMissingError("texlive:latest")
+    h.compile_repo.save.side_effect = OSError("disk full")
+
+    with pytest.raises(ImageMissingError):
+        await h.uc.execute(TriggerCompileInput(project_id=project.id, doc_id="tz"))
 
 
 async def test__trigger_compile__success__pending_record_and_building_status_before_submit(tmp_path) -> None:

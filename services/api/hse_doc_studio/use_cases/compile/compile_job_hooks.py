@@ -8,12 +8,22 @@ from pathlib import Path
 
 import structlog
 
+from hse_doc_studio.core.compile.failure import (
+    BUILD_FAILED,
+    CANCELLED,
+    UNKNOWN,
+    CompileFailure,
+    clip_detail,
+    failure_log_block,
+)
 from hse_doc_studio.core.entities import ChangeLogEntry, CompileRecord
 from hse_doc_studio.core.enums import ChangeLogKind, CheckSeverity, CompileStatus, DocumentStatus, VcsCommitKind
 from hse_doc_studio.core.git_remote.pdf_observer import IBuiltPdfObserver
+from hse_doc_studio.core.i18n import current_interface_language
 from hse_doc_studio.core.jobs.artifacts import IArtifactStore
 from hse_doc_studio.core.jobs.entities import CompileResult, JobResult, JobSpec, compile_payload_of
 from hse_doc_studio.core.jobs.enums import JobStatus, RunnerErrorCode
+from hse_doc_studio.core.quotas.errors import QUOTA_EXCEEDED
 from hse_doc_studio.core.repositories import (
     IChangeLogRepository,
     ICompileRepository,
@@ -26,6 +36,31 @@ from hse_doc_studio.core.vcs.protocols import IVcsFolderLocks, IVcsService
 from hse_doc_studio.use_cases.vcs.excludes import project_vcs_exclude
 
 logger = structlog.get_logger()
+
+
+def compile_failure(final_status: CompileStatus, result: JobResult, data: CompileResult | None) -> CompileFailure:
+    """Причина неудачной или отменённой сборки: код раннера или сервера, иначе ошибка самого LaTeX."""
+    error = result.error
+    if error is not None and error.code:
+        detail = clip_detail(error.detail)
+        if error.code == QUOTA_EXCEEDED or (detail is not None and detail.startswith("{")):
+            # Расход квоты и прочие JSON-детали читает интерфейс по коду; в записи нужен только текст.
+            detail = None
+        if detail == error.code:
+            detail = None
+        return CompileFailure(error.code, detail)
+    if final_status is CompileStatus.cancelled:
+        return CompileFailure(CANCELLED)
+    if data is None or not data.build_ok:
+        return CompileFailure(BUILD_FAILED)
+    return CompileFailure(UNKNOWN)
+
+
+def _with_failure(log: str, failure: CompileFailure) -> str:
+    """Журнал закрывается объяснением: без него упавшая сборка с пустым выводом читалась бы как «ничего не было»."""
+    block = failure_log_block(failure, current_interface_language())
+    text = log.rstrip("\n")
+    return f"{text}\n{block}\n" if text else f"{block}\n"
 
 
 class CompileJobHooks:
@@ -102,6 +137,9 @@ class CompileJobHooks:
         else:
             final_status = CompileStatus.failure
         success = final_status is CompileStatus.success
+        failure = None if success else compile_failure(final_status, result, data)
+        if failure is not None:
+            log = _with_failure(log, failure)
         await self._restore_started_at(compile_id)
 
         has_errors = any(r.severity == CheckSeverity.err for r in check_results)
@@ -121,6 +159,8 @@ class CompileJobHooks:
             pages=pages,
             words=data.words if data is not None else None,
             chars=data.chars if data is not None else None,
+            error_code=failure.code if failure is not None else None,
+            error_detail=failure.detail if failure is not None else None,
         )
         await self._compile_repo.save(final_record)
 

@@ -27,7 +27,8 @@ from hse_doc_studio.infra.jobs.artifact_store import LocalDiskArtifactStore
 
 logger = structlog.get_logger()
 
-DEFAULT_IDLE_TIMEOUT_S = 120.0
+# Первая сборка на новом образе молча строит кэш шрифтов: на медленном диске это больше двух минут.
+DEFAULT_IDLE_TIMEOUT_S = 300.0
 DEFAULT_IMAGE = "texlive/texlive:TL2024-historic"
 DEFAULT_CACHE_VOLUME = "hse-tex-cache"
 DEFAULT_CACHE_TARGET = "/root"

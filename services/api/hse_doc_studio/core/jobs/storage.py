@@ -85,3 +85,15 @@ class IJobLogSink(Protocol):
     async def append(self, job_id: UUID, attempt: int, seq: int, lines: Sequence[str]) -> bool:
         """Дописать порцию; порция с уже принятым `seq` игнорируется и даёт `False`."""
         ...
+
+
+class IJobLogReader(Protocol):
+    """Чтение принятого лога задачи: итог для записи сборки и живой хвост для потока."""
+
+    async def read(self, job_id: UUID, *, max_bytes: int) -> str:
+        """Лог всех попыток по порядку; сверх `max_bytes` теряется начало (итог и ошибки в конце)."""
+        ...
+
+    async def read_from(self, job_id: UUID, attempt: int, offset: int) -> tuple[str, int]:
+        """Новые строки попытки с байтового смещения и следующее смещение; только целые строки."""
+        ...

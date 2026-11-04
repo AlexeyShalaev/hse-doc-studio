@@ -324,6 +324,8 @@ async def test__compile__latexmk_exit_12__fails_resets_state_and_feeds_log_to_ch
     assert record["status"] == "failure"
     assert "latexmk exited with code 12" in record["log"]
     assert _DANGLING_CITE_LINE in record["log"]
+    assert record["error"]["code"] == "build_failed"
+    assert "[error] build_failed: " in record["log"]
     # Состояние latexmk сброшено, чтобы следующая сборка не упёрлась в «gave an error»,
     # а .log остался для разбора.
     assert not _file(project, "thesis/.build/thesis/thesis.fdb_latexmk").exists()
@@ -540,9 +542,11 @@ async def test__compile__stream_of_failed_build__ends_with_failure_status(
     install_fake_docker(monkeypatch, tmp_path, exit_code=12, duration_s=0.3)
     compile_id = await _trigger(test_app, project)
 
-    _lines, done = await _stream(test_app, project, compile_id)
+    lines, done = await _stream(test_app, project, compile_id)
 
     assert done["status"] == "failure"
+    assert done["error"]["code"] == "build_failed"
+    assert any(line.startswith("[error] build_failed: ") for line in lines)
 
 
 # --- 7. сборка без docker ----------------------------------------------------
@@ -682,7 +686,10 @@ async def test__compile__failed_build__passes_build_log_to_checks(
     record = await _compile(test_app, project)
 
     assert record["status"] == "failure"
-    assert run_all.call_args.kwargs["log_content"] == record["log"]
+    # Проверки получают лог самой сборки; пояснение причины дописывается к записи уже после них.
+    fed = run_all.call_args.kwargs["log_content"]
+    assert record["log"].startswith(fed)
+    assert record["log"][len(fed) :].lstrip("\n").startswith("[error] build_failed: ")
 
 
 async def test__compile__rules_with_external_engine__languagetool_started_once(
@@ -743,7 +750,7 @@ async def test__compile__success_with_auto_commit_disabled__creates_no_commit(
 # --- 11. префлайт ------------------------------------------------------------
 
 
-async def test__compile__docker_daemon_unavailable__409_without_record_or_building_status(
+async def test__compile__docker_daemon_unavailable__409_with_failed_record_carrying_the_reason(
     test_app: AsyncClient, project: dict[str, Any], preflight: Preflight
 ) -> None:
     preflight.status.return_value = DockerStatus(
@@ -761,10 +768,10 @@ async def test__compile__docker_daemon_unavailable__409_without_record_or_buildi
     assert detail["code"] == "docker_unavailable"
     assert detail["detail"] == "daemon is down"
     assert detail["reason"] == str(DockerUnavailableReason.DAEMON_UNREACHABLE)
-    await _assert_nothing_scheduled(test_app, project)
+    await _assert_refusal_recorded(test_app, project, "docker_unavailable")
 
 
-async def test__compile__image_not_installed__409_without_record_or_building_status(
+async def test__compile__image_not_installed__409_with_failed_record_carrying_the_reason(
     test_app: AsyncClient, project: dict[str, Any], preflight: Preflight
 ) -> None:
     preflight.inspect.return_value = None
@@ -776,14 +783,23 @@ async def test__compile__image_not_installed__409_without_record_or_building_sta
     assert detail["code"] == "image_missing"
     assert detail["image"]
     assert detail["image"] in detail["detail"]
-    await _assert_nothing_scheduled(test_app, project)
+    await _assert_refusal_recorded(test_app, project, "image_missing")
 
 
-async def _assert_nothing_scheduled(client: AsyncClient, project: dict[str, Any]) -> None:
+async def _assert_refusal_recorded(client: AsyncClient, project: dict[str, Any], code: str) -> None:
+    """Отказ до запуска оставляет запись «ошибка»: причина видна во вкладке «Сборка» и в списке документов."""
     listing = await client.get(f"/api/v1/projects/{project['id']}/documents/thesis/compiles")
     assert listing.status_code == 200, listing.text
-    assert listing.json() == []
-    assert await _doc_status(client, project) == "draft"
+    (item,) = listing.json()
+    assert item["status"] == "failure"
+    assert item["error"]["code"] == code
+    detail = (await client.get(f"/api/v1/projects/{project['id']}/documents/thesis/compiles/{item['id']}")).json()
+    assert detail["error"]["message"]
+    assert f"[error] {code}: " in detail["log"]
+    assert await _doc_status(client, project) == "err"
+    docs = (await client.get(f"/api/v1/projects/{project['id']}/documents")).json()
+    thesis = next(d for d in docs if d["id"] == "thesis")
+    assert thesis["last_compile_error"]["code"] == code
 
 
 # --- 12. зафиксированный изъян: сбой в фазе проверок --------------------------

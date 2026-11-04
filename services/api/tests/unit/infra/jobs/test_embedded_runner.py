@@ -591,6 +591,43 @@ async def test__run_post__build_failed__log_content_is_full_log_and_status_faile
     assert result.data_as(CompileResult).build_ok is False
 
 
+@pytest.mark.parametrize(
+    ("line", "code"),
+    [
+        ("[error] no output for 120s, killing process", "idle_timeout"),
+        ("[error] docker exec failed: [Errno 2] docker", "docker_exec_failed"),
+        ("[error] cannot resolve host path for project: x", "host_path_unmapped"),
+        ("[error] cannot create build dir /p: denied", "build_dir_failed"),
+        ("[error] expected PDF not produced: tz.pdf", "pdf_missing"),
+    ],
+)
+async def test__run_build__executor_error_line_before_failed__outcome_carries_the_code(
+    tmp_path: Path, line: str, code: str
+) -> None:
+    h = Harness(tmp_path)
+    h.executor.lines = ["latex output", line, "__FAILED__"]
+
+    outcome = await h.runner.run_build(h.spec(), h.ctx)
+    result = await h.runner.run_post(h.spec(), h.ctx, outcome)
+
+    assert outcome.failure_code == code
+    assert outcome.failure_detail == line.removeprefix("[error] ")
+    assert result.error is not None
+    assert (result.error.code, result.error.detail) == (code, line.removeprefix("[error] "))
+    assert h.log.lines[-1] == line
+
+
+async def test__run_build__plain_latex_failure__no_failure_code(tmp_path: Path) -> None:
+    h = Harness(tmp_path)
+    h.executor.lines = ["! Undefined control sequence.", "__FAILED__"]
+
+    outcome = await h.runner.run_build(h.spec(), h.ctx)
+    result = await h.runner.run_post(h.spec(), h.ctx, outcome)
+
+    assert outcome.failure_code is None
+    assert result.error is None
+
+
 async def test__run_post__checks_banner__published_but_kept_out_of_log(tmp_path: Path) -> None:
     h = Harness(tmp_path)
     h.log.emit("build line")

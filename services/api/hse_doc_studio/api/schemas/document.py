@@ -5,6 +5,8 @@ from typing import Any
 
 from pydantic import BaseModel, ConfigDict
 
+from hse_doc_studio.api.schemas.compile import CompileErrorOut
+
 
 class DocumentListItemResponse(BaseModel):
     model_config = ConfigDict(json_encoders={datetime: lambda v: v.isoformat()})
@@ -38,6 +40,8 @@ class DocumentListItemResponse(BaseModel):
     # Теги раннера для сборки (`tex`, `office`; пусто: раннер не нужен). Сервер сверяет их с
     # `GET /projects/{id}/build-availability` и гасит «Собрать» без исполнителя.
     build_tags: list[str] = []
+    # Почему упала последняя сборка (документ в статусе err): код, деталь и текст «что делать».
+    last_compile_error: CompileErrorOut | None = None
 
 
 class CustomFileOverrideResponse(BaseModel):

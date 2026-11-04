@@ -29,6 +29,7 @@ import structlog
 
 from hse_doc_studio.core.access.context import ActorRequired, set_current_actor
 from hse_doc_studio.core.access.entities import Actor, ActorKind, ActorSource, Role
+from hse_doc_studio.core.events import IJobLogStream
 from hse_doc_studio.core.i18n import set_interface_language
 from hse_doc_studio.core.jobs.applier import (
     ApplyError,
@@ -57,6 +58,7 @@ from hse_doc_studio.core.jobs.quotas import IProjectOrgReader, IQuotaResolver
 from hse_doc_studio.core.jobs.registry import job_kind_spec
 from hse_doc_studio.core.jobs.routing import IJobRouter, JobRoute, RouteDecision
 from hse_doc_studio.core.jobs.runners import IRunnerRepository
+from hse_doc_studio.core.jobs.storage import IJobLogReader
 from hse_doc_studio.core.jobs.verify import VerifyDetachedPayload
 from hse_doc_studio.core.jobs.wire import JobEnvelope
 from hse_doc_studio.core.projects.volume import IProjectVolume
@@ -77,6 +79,9 @@ ERROR_CODE_TIMED_OUT = "timed_out"
 ERROR_CODE_CANCELLED = "cancelled"
 
 DEFAULT_POLL_INTERVAL_S = 0.5
+# Сколько лога раннера кладётся в запись сборки: пределу таблицы записей и так тесно, хвост важнее начала.
+RECORD_LOG_MAX_BYTES = 1024 * 1024
+_BUS_KEEP_S = 120.0
 # Раннер живой, если опрашивал сервер не дольше этого назад: предел долгого опроса плюс запас.
 DEFAULT_RUNNER_LIVE_WINDOW_S = 60.0
 DEFAULT_TIMEOUT_S = 600.0
@@ -130,7 +135,12 @@ class QueueJobDispatcher:
         router: IJobRouter | None = None,
         payer: PayerSource | None = None,
         quota_gate: IQuotaGate | None = None,
+        log_reader: IJobLogReader | None = None,
+        log_stream: IJobLogStream | None = None,
     ) -> None:
+        # Лог раннера лежит файлом на сервере: сюда он читается в запись сборки и в живой поток вкладки «Сборка».
+        self._log_reader = log_reader
+        self._log_stream = log_stream
         self._wakeup = wakeup
         # Сборка на общем маршруте тратит квоту сборок; на личном раннере не тратит (D5).
         self._quota_gate = quota_gate
@@ -221,8 +231,16 @@ class QueueJobDispatcher:
             rejected = not accepted
             return accepted
 
-        job = await self._wait(spec.id, claimed)
+        pump = _LogPump(self._log_reader, self._log_stream, spec.id)
+        try:
+            job = await self._wait(spec.id, claimed, pump.tick)
+            if not rejected:
+                await pump.flush(job)
+        except BaseException:
+            pump.close()
+            raise
         if rejected:
+            pump.close()
             # Записи сборки нет: задача прекращается, как и во встроенном диспетчере.
             await self._cancel_quietly(spec.id)
             if self._ledger is not None:
@@ -231,13 +249,26 @@ class QueueJobDispatcher:
                 await self._wait(spec.id, None)
                 await self._ledger.mark_applied(spec.id)
             return
-        await self._finish(spec, job, hooks)
+        try:
+            await self._finish(spec, job, hooks)
+        finally:
+            pump.close()
 
     async def _finish(self, spec: JobSpec, job: QueuedJob | None, hooks: IJobHooks | None) -> None:
         result = await self._applied_result(spec, job)
         if hooks is not None:
-            await hooks.on_finished(spec, result, "")
+            await hooks.on_finished(spec, result, await self._runner_log(spec, job))
         await self._settle(spec, job)
+
+    async def _runner_log(self, spec: JobSpec, job: QueuedJob | None) -> str:
+        """Лог раннера по задаче: то, что он успел прислать до итога; нет лога или нет читателя это пустая строка."""
+        if self._log_reader is None or job is None:
+            return ""
+        try:
+            return await self._log_reader.read(spec.id, max_bytes=RECORD_LOG_MAX_BYTES)
+        except Exception:
+            logger.warning("job log unreadable", job_id=str(spec.id), exc_info=True)
+            return ""
 
     async def cancel(self, job_id: UUID) -> bool:
         tracked = job_id in self._in_flight
@@ -562,10 +593,16 @@ class QueueJobDispatcher:
 
     # --- waiting ---
 
-    async def _wait(self, job_id: UUID, on_claimed: Callable[[], Awaitable[bool]] | None) -> QueuedJob | None:
+    async def _wait(
+        self,
+        job_id: UUID,
+        on_claimed: Callable[[], Awaitable[bool]] | None,
+        on_tick: Callable[[QueuedJob], Awaitable[None]] | None = None,
+    ) -> QueuedJob | None:
         """Ждёт терминальное состояние; `on_claimed` вызывается один раз, когда раннер взял задачу.
 
-        `None` возвращается, если `on_claimed` ответил False либо записи очереди не стало.
+        `None` возвращается, если `on_claimed` ответил False либо записи очереди не стало. `on_tick` получает
+        запись при каждом опросе, пока задача идёт: живой лог сборки.
         """
         claimed = False
         while True:
@@ -579,6 +616,8 @@ class QueueJobDispatcher:
                     return None
             if job.state.is_terminal:
                 return job
+            if on_tick is not None and job.attempt >= 1:
+                await on_tick(job)
             await asyncio.sleep(self._interval)
 
     def _result_of(self, spec: JobSpec, job: QueuedJob | None) -> JobResult:
@@ -598,6 +637,47 @@ class QueueJobDispatcher:
                 return _unfinished(spec, JobStatus.failed, ERROR_CODE_JOB_LOST)
             case _:
                 return _unfinished(spec, JobStatus.failed, code or ERROR_CODE_JOB_LOST)
+
+
+class _LogPump:
+    """Переносит строки лога раннера из файла сервера в живой поток сборки, пока задача идёт.
+
+    Без него вкладка «Сборка» в облаке молчала до конца сборки: раннер шлёт лог серверу, а поток читал только шину.
+    Шина закрывается после записи итога: подписчик читает запись и видит статус.
+    """
+
+    def __init__(self, reader: IJobLogReader | None, stream: IJobLogStream | None, job_id: UUID) -> None:
+        self._reader = reader
+        self._stream = stream
+        self._job_id = job_id
+        self._attempt = 0
+        self._offset = 0
+        self._partial = ""
+
+    async def tick(self, job: QueuedJob) -> None:
+        if self._reader is None or self._stream is None:
+            return
+        if job.attempt != self._attempt:
+            # Повторная попытка пишет новый файл: смещение прежнего к нему не относится.
+            self._attempt, self._offset = job.attempt, 0
+        try:
+            text, self._offset = await self._reader.read_from(self._job_id, self._attempt, self._offset)
+        except Exception:
+            logger.warning("job log tail failed", job_id=str(self._job_id), exc_info=True)
+            return
+        for line in text.splitlines():
+            self._stream.publish(self._job_id, line)
+
+    async def flush(self, job: QueuedJob | None) -> None:
+        if job is not None:
+            await self.tick(job)
+
+    def close(self) -> None:
+        if self._stream is None or self._reader is None:
+            return
+        self._stream.close(self._job_id)
+        # Буфер строк в памяти нужен только подписчикам, что ещё читают; потом всё берётся из записи сборки.
+        asyncio.get_running_loop().call_later(_BUS_KEEP_S, self._stream.discard, self._job_id)
 
 
 def _unfinished(spec: JobSpec, status: JobStatus, code: str | None) -> JobResult:

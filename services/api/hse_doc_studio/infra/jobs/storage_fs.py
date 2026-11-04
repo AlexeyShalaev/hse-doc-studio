@@ -157,10 +157,21 @@ class FsJobOutputIngest:
         return self._attempt_dir(job_id, attempt) / sha256
 
 
+LOG_TAIL_BYTES = 512 * 1024
+LOG_GAP_MARK = "[... лог раннера обрезан: превышен предел размера, середина пропущена ...]\n"
+
+
 class FsJobLogSink:
-    def __init__(self, root: Path, *, max_bytes: int = DEFAULT_MAX_LOG_BYTES) -> None:
+    """Лог попытки: голова до предела и скользящий хвост сверх него.
+
+    Хвост важнее середины: итог latexmk, ошибки раннера и причина сбоя пишутся в самом конце, поэтому
+    после предела строки не отбрасываются, а идут в `<attempt>.tail`, где держатся последние `tail_bytes`.
+    """
+
+    def __init__(self, root: Path, *, max_bytes: int = DEFAULT_MAX_LOG_BYTES, tail_bytes: int = LOG_TAIL_BYTES) -> None:
         self._dir = root / "logs"
         self._max_bytes = max_bytes
+        self._tail_bytes = tail_bytes
         self._lock = Lock()
 
     async def append(self, job_id: UUID, attempt: int, seq: int, lines: Sequence[str]) -> bool:
@@ -169,15 +180,74 @@ class FsJobLogSink:
     def _append(self, job_id: UUID, attempt: int, seq: int, lines: Sequence[str]) -> bool:
         directory = self._dir / str(job_id)
         log = directory / f"{attempt}.log"
+        tail = directory / f"{attempt}.tail"
         marker = directory / f"{attempt}.seq"
         with self._lock:
             directory.mkdir(parents=True, exist_ok=True)
             if marker.is_file() and seq <= int(marker.read_text(encoding="ascii")):
                 return False
-            room = self._max_bytes - (log.stat().st_size if log.is_file() else 0)
-            text = "".join(f"{line}\n" for line in lines).encode("utf-8", errors="replace")[: max(room, 0)]
-            if text:
+            data = "".join(f"{line}\n" for line in lines).encode("utf-8", errors="replace")
+            room = max(self._max_bytes - (log.stat().st_size if log.is_file() else 0), 0)
+            head, rest = data[:room], data[room:]
+            # Голова не рвёт строку посередине: остаток строки уходит в хвост целиком.
+            if rest and head and not head.endswith(b"\n"):
+                cut = head.rfind(b"\n") + 1
+                head, rest = head[:cut], head[cut:] + rest
+            if head:
                 with log.open("ab") as handle:
-                    handle.write(text)
+                    handle.write(head)
+            if rest:
+                self._append_tail(tail, rest)
             marker.write_text(str(seq), encoding="ascii")
         return True
+
+    def _append_tail(self, tail: Path, data: bytes) -> None:
+        with tail.open("ab") as handle:
+            handle.write(data)
+        if tail.stat().st_size > 2 * self._tail_bytes:
+            kept = tail.read_bytes()[-self._tail_bytes :]
+            kept = kept[kept.find(b"\n") + 1 :] if b"\n" in kept else kept
+            tail.write_bytes(kept)
+
+    async def read(self, job_id: UUID, *, max_bytes: int) -> str:
+        return await asyncio.to_thread(self._read, job_id, max_bytes)
+
+    def _read(self, job_id: UUID, max_bytes: int) -> str:
+        directory = self._dir / str(job_id)
+        with self._lock:
+            attempts = (
+                sorted(int(p.stem) for p in directory.glob("*.seq") if p.stem.isdigit()) if directory.is_dir() else []
+            )
+            parts: list[str] = []
+            for attempt in attempts:
+                text = self._read_attempt(directory, attempt)
+                if not text:
+                    continue
+                parts.append(f"--- попытка {attempt} / attempt {attempt} ---\n{text}" if len(attempts) > 1 else text)
+        raw = "".join(parts).encode("utf-8")
+        if len(raw) > max_bytes:
+            raw = raw[-max_bytes:]
+        return raw.decode("utf-8", errors="ignore")
+
+    @staticmethod
+    def _read_attempt(directory: Path, attempt: int) -> str:
+        head = directory / f"{attempt}.log"
+        tail = directory / f"{attempt}.tail"
+        text = head.read_bytes().decode("utf-8", errors="replace") if head.is_file() else ""
+        if tail.is_file():
+            text += LOG_GAP_MARK + tail.read_bytes().decode("utf-8", errors="replace")
+        return text
+
+    async def read_from(self, job_id: UUID, attempt: int, offset: int) -> tuple[str, int]:
+        return await asyncio.to_thread(self._read_from, job_id, attempt, offset)
+
+    def _read_from(self, job_id: UUID, attempt: int, offset: int) -> tuple[str, int]:
+        log = self._dir / str(job_id) / f"{attempt}.log"
+        with self._lock:
+            if not log.is_file():
+                return "", offset
+            with log.open("rb") as handle:
+                handle.seek(offset)
+                data = handle.read()
+        end = data.rfind(b"\n") + 1
+        return data[:end].decode("utf-8", errors="replace"), offset + end

@@ -71,6 +71,29 @@ class BuildState:
     pages: int | None = None
     words: int | None = None
     chars: int | None = None
+    failure_code: str | None = None
+    failure_detail: str | None = None
+
+
+# Строки `[error] …` исполнителя перед `__FAILED__`: по ним сборка получает код причины, а не общий «LaTeX упал».
+_EXECUTOR_ERRORS: tuple[tuple[str, str], ...] = (
+    ("[error] no output for", "idle_timeout"),
+    ("[error] docker exec failed", "docker_exec_failed"),
+    ("[error] cannot resolve host path", "host_path_unmapped"),
+    ("[error] cannot create build dir", "build_dir_failed"),
+    ("[error] expected PDF not produced", "pdf_missing"),
+    ("[error] unsupported engine", "unsupported_engine"),
+)
+
+
+def failure_code_of(line: str) -> str | None:
+    return next((code for prefix, code in _EXECUTOR_ERRORS if line.startswith(prefix)), None)
+
+
+def _note_failure(line: str, state: BuildState) -> None:
+    code = failure_code_of(line)
+    if code is not None and state.failure_code is None:
+        state.failure_code, state.failure_detail = code, line.removeprefix("[error] ")
 
 
 async def consume_build_stream(lines: AsyncIterator[str], log: JobLogSink, state: BuildState) -> None:
@@ -88,6 +111,7 @@ async def consume_build_stream(lines: AsyncIterator[str], log: JobLogSink, state
         elif line.startswith(_SENTINEL_WORDS):
             state.words, state.chars = parse_words_sentinel(line)
         else:
+            _note_failure(line, state)
             log.emit(line)
 
 
