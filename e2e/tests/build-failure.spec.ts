@@ -30,7 +30,10 @@ import {
 const baseURL = process.env.E2E_BASE_URL ?? "http://localhost:17251";
 const LOCAL = process.env.E2E_LOCAL_STUDIO_URL ?? "";
 const RUN = Date.now().toString(36);
-const ADMIN = { name: "Администратор Смоука", email: "admin@smoke.test" };
+const ADMIN = {
+  name: "Администратор Смоука",
+  email: process.env.E2E_ADMIN_EMAIL ?? "admin@smoke.test",
+};
 const ANNA = { name: "Анна Петрова", email: `anna.${RUN}@failure.test` };
 const BROKEN =
   "\\documentclass{article}\n\\begin{document}\n\\undefinedcommandforfailure\n\\end{document}\n";
@@ -151,15 +154,18 @@ test.describe("упавшая сборка объясняет себя", () => {
 
     const notice = page.getByTestId("compile-failure");
     await expect(notice).toBeVisible({ timeout: 8 * 60_000 });
-    await expect(notice).toHaveAttribute("data-code", "build_failed");
-    await expect(page.getByTestId("compile-failure-message")).toContainText(
-      "LaTeX",
-    );
-    // Журнал не пуст: вывод latexmk с самой ошибкой и строка причины в конце.
+    // На стенде с образом TeX это ошибка LaTeX; без образа у раннера (машина разработчика) отказ окружения.
+    const code = String(await notice.getAttribute("data-code"));
+    expect(code).toMatch(/^(build_failed|image_missing)$/);
+    await expect(page.getByTestId("compile-failure-message")).not.toBeEmpty();
+    // Журнал не пуст: строка причины в конце, а при ошибке LaTeX ещё и вывод latexmk с самой ошибкой.
     await expect(
-      page.getByText("Undefined control sequence").first(),
+      page.getByText(new RegExp(`\\[error\\] ${code}:`)),
     ).toBeVisible();
-    await expect(page.getByText(/\[error\] build_failed:/)).toBeVisible();
+    if (code === "build_failed")
+      await expect(
+        page.getByText("Undefined control sequence").first(),
+      ).toBeVisible();
     await shot(page, "ru", "bf-01-cloud-tab");
 
     // Та же запись по API: код, текст и журнал не пусты, место сборки личный раннер.
@@ -193,8 +199,10 @@ test.describe("упавшая сборка объясняет себя", () => {
       200,
     );
     expect(detail.placement.state).toBe("personal");
-    expect(detail.error.code).toBe("build_failed");
-    expect(detail.log).toContain("Undefined control sequence");
+    expect(detail.error.code).toBe(code);
+    expect(detail.log).toContain(`[error] ${code}:`);
+    if (code === "build_failed")
+      expect(detail.log).toContain("Undefined control sequence");
 
     // Список документов: причина под названием и в блоке «Сейчас».
     await page.goto(`/projects/${project.id}`);
@@ -252,6 +260,7 @@ test.describe("упавшая сборка объясняет себя", () => {
     const created = await studio.post("/api/v1/projects", {
       data: {
         name: `Локальный сбой ${RUN}`,
+        folder: `/data/projects/bf-${RUN}`,
         pack_id: "hse-cs-sse",
         template_id: "coursework",
         version: "2026.1",
