@@ -1,6 +1,7 @@
 import {
   BookOpen,
   Bot,
+  Command,
   Laptop,
   LogOut,
   Settings,
@@ -37,6 +38,8 @@ export type AccountMenuViewProps = {
    */
   onOpenAgent?: () => void;
   onOpenHelp?: () => void;
+  /** Палитра команд: на телефоне нет сочетания клавиш, и открыть её можно только отсюда. */
+  onOpenCommands?: () => void;
 };
 
 const Avatar = ({ initials, size }: { initials: string; size: number }) => (
@@ -77,6 +80,7 @@ export const AccountMenuView = ({
   onLogout,
   onOpenAgent,
   onOpenHelp,
+  onOpenCommands,
 }: AccountMenuViewProps) => {
   const { t } = useTranslation("appChrome");
   const isPhone = useIsPhoneWidth();
@@ -188,6 +192,20 @@ export const AccountMenuView = ({
               >
                 <Bot size={14} />
                 {t("accountMenu.agent")}
+              </button>
+            </PopoverClose>
+          )}
+          {isPhone && onOpenCommands && (
+            <PopoverClose asChild>
+              <button
+                type="button"
+                className="row-btn"
+                style={itemStyle}
+                onClick={onOpenCommands}
+                data-testid="account-menu-commands"
+              >
+                <Command size={14} />
+                {t("accountMenu.commands")}
               </button>
             </PopoverClose>
           )}

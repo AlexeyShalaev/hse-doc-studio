@@ -7,6 +7,7 @@ import { GuestBadge, useGuest } from "@features/guest-session";
 import { HelpButton } from "@features/help-center";
 import { InboxBell } from "@features/inbox";
 import { HelpMenu } from "@features/onboarding";
+import { useBootstrap } from "@entities/session";
 import { useSystemInfo } from "@entities/system";
 import { useIsPhoneWidth, useWorkspaceStore } from "@shared/lib";
 
@@ -66,6 +67,11 @@ export const AppTitlebar = ({
   const isGuest = useGuest() !== null;
   // Телефон: люди, Студия и синхронизация уходят во вторую строку, в первой места им нет.
   const isPhone = useIsPhoneWidth();
+  // Агент, настройки и справка уходят в меню аккаунта только там, где оно есть: в локальной Студии аккаунта нет,
+  // и без этих кнопок в шапке до настроек на телефоне было бы не добраться.
+  const bootstrap = useBootstrap().data;
+  const accountMenu = bootstrap?.mode === "server" && bootstrap.user !== null;
+  const secondary = accountMenu ? "titlebar-secondary" : undefined;
 
   // Real backend version; drop the suffix until it resolves rather than show a
   // stale hardcoded number.
@@ -219,7 +225,8 @@ export const AppTitlebar = ({
             <button
               type="button"
               className={clsx(
-                "icon-btn tt titlebar-secondary",
+                "icon-btn tt",
+                secondary,
                 systemChatOpen && "active",
               )}
               data-tt={agentTooltip}
@@ -239,7 +246,8 @@ export const AppTitlebar = ({
             <button
               type="button"
               className={clsx(
-                "icon-btn tt titlebar-secondary",
+                "icon-btn tt",
+                secondary,
                 settingsActive && "active",
               )}
               data-tt={t("titlebar.settings")}
@@ -255,7 +263,7 @@ export const AppTitlebar = ({
             </button>
           )}
           {!isGuest && <InboxBell />}
-          <span className="titlebar-secondary contents">
+          <span className={clsx(secondary, "contents")}>
             {isGuest ? <HelpButton /> : <HelpMenu />}
           </span>
           <span data-tour="titlebar-account" className="flex items-center">

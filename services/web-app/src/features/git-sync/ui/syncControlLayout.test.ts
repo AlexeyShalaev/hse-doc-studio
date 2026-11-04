@@ -10,9 +10,9 @@ const css = readFileSync(
 );
 
 describe("sync control narrow layout", () => {
-  it("hides the words and keeps the icon and counts at 820px and below", () => {
+  it("hides the words and keeps the icon and counts on a tablet and a phone (up to 1023.98px)", () => {
     const block =
-      /@media \(max-width: 820px\) \{\s*\/\*[^]*?\*\/\s*\.sync-label,\s*\.sync-when \{\s*display: none;/.exec(
+      /@media \(max-width: 1023\.98px\) \{\s*\/\*[^]*?\*\/\s*\.sync-label,\s*\.sync-when \{\s*display: none;/.exec(
         css,
       );
     expect(block).not.toBeNull();
