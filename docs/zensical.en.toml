@@ -37,6 +37,7 @@ nav = [
         { "Introduction to the Studio" = "start/onboarding.md" },
         { "Updating and uninstalling" = "start/update.md" },
         { "Local version from the cloud" = "start/local-from-cloud.md" },
+        { "Mobile version" = "start/mobile.md" },
         { "Troubleshooting" = "start/troubleshooting.md" },
     ] },
     { "Workbench" = [
