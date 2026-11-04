@@ -1789,6 +1789,9 @@
     line-height: 1;
     letter-spacing: 0;
     text-shadow: 0 1px 1px rgb(0 0 0 / 0.35);
+    /* Цвет человека задан инлайном и общий с курсором; затемнение поверх даёт белым инициалам контраст не ниже
+       AA на любом цвете палитры (без затемнения у зелёного и оранжевого около 3,5). */
+    background-image: linear-gradient(rgb(0 0 0 / 0.2), rgb(0 0 0 / 0.2));
     cursor: pointer;
     box-sizing: content-box;
   }
@@ -1922,6 +1925,7 @@
     font-size: 11px;
     font-weight: 600;
     line-height: 1.35;
+    background-image: linear-gradient(rgb(0 0 0 / 0.2), rgb(0 0 0 / 0.2));
     opacity: 0;
     animation: cm-yinfo-fade 4s ease-out both;
   }

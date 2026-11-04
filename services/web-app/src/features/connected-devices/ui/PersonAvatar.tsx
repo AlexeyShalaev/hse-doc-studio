@@ -6,7 +6,7 @@ const markStyle = (person: PersonOnline, size: number) => ({
   width: size,
   height: size,
   fontSize: Math.max(9, Math.round(size * 0.4)),
-  background: person.color,
+  backgroundColor: person.color,
 });
 
 export type AvatarMarkProps = { person: PersonOnline; size?: number };

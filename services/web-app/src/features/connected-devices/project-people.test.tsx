@@ -118,7 +118,7 @@ describe("аватары людей в проекте", () => {
       <PeopleOnline people={makePeople([me, boris])} docName={docName} />,
     );
     const [, second] = screen.getAllByTestId("person-avatar");
-    expect(second?.style.background).toBe("rgb(47, 158, 68)");
+    expect(second?.style.backgroundColor).toBe("rgb(47, 158, 68)");
   });
 
   it("пять аватаров и «+3», остальные в списке по нажатию", async () => {
