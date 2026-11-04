@@ -28,8 +28,9 @@
        shared/lib/viewport/breakpoints.ts. Зона касания 36px на десктопе и
        40px на телефоне, поле ввода 16px на телефоне: меньше - и iOS Safari
        увеличивает страницу при фокусе. */
-    --touch-min: 2.25rem;
-    --touch-lg: 2.75rem;
+    /* Зоны касания и поле 16px не уменьшаются при размере текста 90%: max() держит нижнюю границу в px. */
+    --touch-min: max(2.25rem, 36px);
+    --touch-lg: max(2.75rem, 44px);
     --field-fs: 0.8125rem;
     --page-gutter: 1.5rem;
     --tabbar-h: 3.5rem;
@@ -45,9 +46,13 @@
 
   @media (max-width: 767.98px) {
     :root {
-      --touch-min: 2.5rem;
-      --field-fs: 1rem;
+      --touch-min: max(2.5rem, 40px);
+      --field-fs: max(1rem, 16px);
       --page-gutter: 1rem;
+    }
+    /* На телефоне ступень 90% не уменьшает интерфейс: зоны касания 40px и поля 16px остаются в силе. */
+    html[data-text-scale="90"] {
+      font-size: 16px;
     }
   }
 

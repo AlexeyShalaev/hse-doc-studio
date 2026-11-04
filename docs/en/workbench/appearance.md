@@ -17,6 +17,7 @@ Five steps: 90%, 100% (default), 112%, 125% and 140%. The choice applies immedia
 - **What grows.** Menus, lists, forms, buttons, dialogs and phone sheets, project panels, the admin console, the landing page, the source editor and the visual editor. Spacing and heights grow with the text, icons too, and touch targets never get smaller.
 - **What stays the same.** The content of a document and the page scale in the PDF preview. The page zoom of the visual editor is set separately, as before.
 - **Where it is stored.** In your account and in the browser. The browser copy lets the page open at the right size straight away, with no jump after loading; the account carries the choice to another device. While a device is on the default size, signing in picks up the account value.
+- **Phone.** On a phone (under 768 px) the 90% step does not shrink the interface: 40 px touch targets and 16 px fields stay as at 100%. Sheets, the bottom bar and dialogs grow with the text.
 - **Large browser font.** The browser's "Font size" setting no longer stretches the interface on top of the chosen step; browser page zoom (Ctrl and plus) works as before.
 
 ## Low vision and small screens
