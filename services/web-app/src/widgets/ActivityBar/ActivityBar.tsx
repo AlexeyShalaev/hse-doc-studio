@@ -5,12 +5,16 @@ import {
   FolderTree,
   History,
   type LucideIcon,
+  Menu,
   Settings,
   SlidersHorizontal,
   ShieldAlert,
 } from "lucide-react";
+import { useState } from "react";
+import { clsx } from "clsx";
 import { useTranslation } from "react-i18next";
-import type { WorkbenchActivity } from "@shared/lib";
+import { useIsPhoneWidth, type WorkbenchActivity } from "@shared/lib";
+import { Modal } from "@shared/ui";
 import { ActivityItem } from "./ActivityItem";
 import type { ActivityBadgeTone, ActivityItemBadge } from "./ActivityItem";
 
@@ -145,6 +149,9 @@ export const ActivityBar = ({
     (item) => !(item.id === "submit" && hidden.includes("submit")),
   );
 
+  const isPhone = useIsPhoneWidth();
+  const [isMoreOpen, setIsMoreOpen] = useState(false);
+
   const renderActivity = (item: ActivityDescriptor) => (
     <ActivityItem
       key={item.id}
@@ -165,6 +172,123 @@ export const ActivityBar = ({
       }}
     />
   );
+
+  // Телефон: нижняя панель вкладок. Четыре режима и «Ещё»: настройки проекта, история, агент
+  // и настройки системы уходят в шторку, пять-восемь значков в ряд не дали бы зон касания 40 px.
+  if (isPhone) {
+    const versionsItemBadge =
+      versionsBadge ??
+      (counts.changedFiles > 0
+        ? ({ kind: "count", tone: "info", count: counts.changedFiles } as const)
+        : undefined);
+    // Бейдж «Ещё» складывается из бейджей спрятанных пунктов: самый тревожный наверх.
+    const moreBadge: ActivityItemBadge | undefined =
+      [projectSettingsBadge, versionsItemBadge].find(
+        (badge) => badge?.kind === "count" && badge.tone === "err",
+      ) ??
+      projectSettingsBadge ??
+      versionsItemBadge;
+    const closeAnd = (action: () => void) => () => {
+      setIsMoreOpen(false);
+      action();
+    };
+    const moreRows: {
+      id: string;
+      icon: LucideIcon;
+      label: string;
+      badge?: ActivityItemBadge | undefined;
+      active?: boolean;
+      onSelect: () => void;
+      hide?: boolean;
+    }[] = [
+      {
+        id: "projectSettings",
+        icon: SlidersHorizontal,
+        label: t("activity.projectSettings"),
+        badge: projectSettingsBadge,
+        active: isProjectSettingsActive,
+        onSelect: onOpenProjectSettings,
+        hide: hidden.includes("projectSettings"),
+      },
+      {
+        id: "versions",
+        icon: History,
+        label: t("activity.versions"),
+        badge: versionsItemBadge,
+        active: isVersionsActive,
+        onSelect: onOpenVersions,
+      },
+      {
+        id: "agent",
+        icon: Bot,
+        label: t("activity.agent"),
+        active: isAgentActive,
+        onSelect: onToggleAgent,
+        hide: hidden.includes("agent"),
+      },
+      {
+        id: "systemSettings",
+        icon: Settings,
+        label: t("activity.systemSettings"),
+        onSelect: onOpenSystemSettings,
+        hide: hidden.includes("systemSettings"),
+      },
+    ];
+    return (
+      <>
+        <nav
+          className="activity-bar activity-bar--tabs"
+          aria-label={t("overview.title")}
+        >
+          {shown.map(renderActivity)}
+          <ActivityItem
+            icon={Menu}
+            label={t("activity.more")}
+            tooltip={t("activity.moreTooltip")}
+            isActive={isProjectSettingsActive || isVersionsActive || isMoreOpen}
+            badge={moreBadge}
+            onSelect={() => {
+              setIsMoreOpen(true);
+            }}
+          />
+        </nav>
+        <Modal
+          isOpen={isMoreOpen}
+          onClose={() => {
+            setIsMoreOpen(false);
+          }}
+          title={t("activity.more")}
+        >
+          <div className="activity-more" data-testid="activity-more">
+            {moreRows
+              .filter((row) => !row.hide)
+              .map((row) => (
+                <button
+                  key={row.id}
+                  type="button"
+                  className={clsx(
+                    "row-btn activity-more-row",
+                    row.active && "active",
+                  )}
+                  data-testid={`activity-more-${row.id}`}
+                  onClick={closeAnd(row.onSelect)}
+                >
+                  <row.icon size={17} aria-hidden />
+                  <span className="activity-more-label">{row.label}</span>
+                  {row.badge?.kind === "count" && (
+                    <span
+                      className={clsx("activity-badge inline", row.badge.tone)}
+                    >
+                      {row.badge.count > 99 ? "99+" : row.badge.count}
+                    </span>
+                  )}
+                </button>
+              ))}
+          </div>
+        </Modal>
+      </>
+    );
+  }
 
   return (
     <nav className="activity-bar" aria-label={t("overview.title")}>

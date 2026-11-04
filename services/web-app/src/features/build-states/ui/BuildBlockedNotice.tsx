@@ -60,6 +60,7 @@ export const BuildBlockedNotice = ({
       <div className="flex flex-col" style={{ gap: 3, minWidth: 0, flex: 1 }}>
         <strong style={{ fontSize: compact ? 11 : 13 }}>{title}</strong>
         <span
+          className="build-blocked-text"
           style={{
             fontSize: compact ? 10.5 : 12,
             color: "var(--fg-2)",

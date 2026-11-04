@@ -190,6 +190,7 @@ export const DocSignaturesPane = ({
 
   return (
     <div
+      className="doc-signatures-grid"
       style={{
         flex: 1,
         minHeight: 0,

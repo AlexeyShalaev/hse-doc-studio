@@ -34,12 +34,12 @@ export const AppStatusBar = ({ projectId }: AppStatusBarProps = {}) => {
 
   const engine = settings?.default_engine ?? "xelatex";
 
-  // Телефон: ни палитры команд (клавиатуры нет), ни движка, ни Docker; остаётся то, что про проект.
-  if (isPhone && !projectId) return null;
+  // Телефон: строки состояния нет. Палитра команд без клавиатуры не нужна, синхронизация и обновление шаблона видны в шапке проекта и на вкладке «Ещё».
+  if (isPhone) return null;
 
   return (
     <div className="statusbar">
-      {showDocker && !isPhone && (
+      {showDocker && (
         <span className="seg-item">
           <span className={dockerDotClass} />
           docker · {dockerLabel}
@@ -51,26 +51,22 @@ export const AppStatusBar = ({ projectId }: AppStatusBarProps = {}) => {
       {projectId && <SyncStatusSegment projectId={projectId} />}
       {projectId && <TemplateUpdateSegment projectId={projectId} />}
 
-      {showEngine && !isPhone && (
-        <span className="seg-item mono">{engine}</span>
-      )}
-      {!isPhone && (
-        <span
-          className="seg-item seg-clickable"
-          role="button"
-          tabIndex={0}
-          title={t("appStatusBar.paletteTooltip")}
-          onClick={togglePalette}
-          onKeyDown={(e) => {
-            if (e.key === "Enter" || e.key === " ") {
-              e.preventDefault();
-              togglePalette();
-            }
-          }}
-        >
-          ⌘K {t("appStatusBar.commands")}
-        </span>
-      )}
+      {showEngine && <span className="seg-item mono">{engine}</span>}
+      <span
+        className="seg-item seg-clickable"
+        role="button"
+        tabIndex={0}
+        title={t("appStatusBar.paletteTooltip")}
+        onClick={togglePalette}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            togglePalette();
+          }
+        }}
+      >
+        ⌘K {t("appStatusBar.commands")}
+      </span>
     </div>
   );
 };

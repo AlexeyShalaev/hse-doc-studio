@@ -144,6 +144,7 @@ export {
   TABLET_MAX_WIDTH,
   useIsCoarsePointer,
   useIsCompactWidth,
+  useIsDrawerWidth,
   useIsPhoneWidth,
   useIsTabletWidth,
   useMediaQuery,

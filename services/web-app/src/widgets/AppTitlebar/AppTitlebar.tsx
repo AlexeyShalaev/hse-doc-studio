@@ -8,7 +8,7 @@ import { HelpButton } from "@features/help-center";
 import { InboxBell } from "@features/inbox";
 import { HelpMenu } from "@features/onboarding";
 import { useSystemInfo } from "@entities/system";
-import { useWorkspaceStore } from "@shared/lib";
+import { useIsPhoneWidth, useWorkspaceStore } from "@shared/lib";
 
 export type AppTitlebarProps = {
   projectName?: string | null;
@@ -64,6 +64,8 @@ export const AppTitlebar = ({
   const { data: systemInfo } = useSystemInfo();
   // links: гостю по ссылке недоступны агент и настройки приложения; вместо меню аккаунта бейдж гостя.
   const isGuest = useGuest() !== null;
+  // Телефон: люди, Студия и синхронизация уходят во вторую строку, в первой места им нет.
+  const isPhone = useIsPhoneWidth();
 
   // Real backend version; drop the suffix until it resolves rather than show a
   // stale hardcoded number.
@@ -88,174 +90,185 @@ export const AppTitlebar = ({
   };
 
   return (
-    <div className="titlebar">
-      <button
-        type="button"
-        onClick={handleBackToWelcome}
-        className="titlebar-brand flex items-center shrink-0 cursor-pointer"
-        style={{
-          background: "transparent",
-          border: 0,
-          padding: 0,
-          gap: 8,
-          alignItems: "center",
-        }}
-      >
-        <Logomark />
-        <div
-          className="titlebar-brandtext flex flex-col items-start"
-          style={{ gap: 0 }}
-        >
-          <div
-            style={{
-              fontSize: 13,
-              fontWeight: 600,
-              letterSpacing: "-0.01em",
-              color: "var(--fg-0)",
-            }}
-          >
-            HSE Studio
-          </div>
-          {showVersion && (
-            <div
-              className="mono"
-              style={{
-                fontSize: 9.5,
-                color: "var(--fg-3)",
-                textTransform: "uppercase",
-                letterSpacing: "0.1em",
-                marginTop: -2,
-              }}
-            >
-              {versionLabel}
-            </div>
-          )}
-        </div>
-      </button>
-
-      <div
-        className="titlebar-crumbs flex items-center flex-1 min-w-0 overflow-hidden"
-        style={{
-          gap: 8,
-          marginLeft: 26,
-          color: "var(--fg-2)",
-          fontSize: 12.5,
-          alignItems: "center",
-        }}
-      >
+    <>
+      <div className="titlebar">
         <button
           type="button"
-          className="row-btn shrink-0"
-          style={{
-            width: "auto",
-            padding: "5px 10px",
-            color: isOnWelcome ? "var(--fg-0)" : "var(--fg-2)",
-          }}
           onClick={handleBackToWelcome}
-          aria-label={t("titlebar.projects")}
+          className="titlebar-brand flex items-center shrink-0 cursor-pointer"
+          style={{
+            background: "transparent",
+            border: 0,
+            padding: 0,
+            gap: 8,
+            alignItems: "center",
+          }}
         >
-          <GraduationCap size={15} />
-          {/* Телефон: рядом с именем проекта остаётся значок, на главной подпись нужна как заголовок */}
-          <span className={clsx(!isOnWelcome && "titlebar-crumb-label")}>
-            {t("titlebar.projects")}
-          </span>
-        </button>
-        {projectName && (
-          <>
-            <ChevronRight
-              size={12}
-              style={{ color: "var(--fg-3)", flexShrink: 0 }}
-            />
-            <div
-              className="flex items-center min-w-0 overflow-hidden"
-              style={{ gap: 8 }}
-            >
-              {projectSwitcher ?? (
-                <span
-                  className="truncate"
-                  style={{ color: "var(--fg-0)", fontWeight: 500 }}
-                >
-                  {projectName}
-                </span>
-              )}
-              {projectIsNda && (
-                <span
-                  className="chip shrink-0"
-                  style={{
-                    color: "var(--c-warn)",
-                    borderColor:
-                      "color-mix(in oklch, var(--c-warn) 30%, transparent)",
-                  }}
-                >
-                  <Lock size={10} />
-                  NDA
-                </span>
-              )}
-            </div>
-          </>
-        )}
-      </div>
-
-      <div
-        className="flex items-center shrink-0"
-        style={{ gap: 4, alignItems: "center" }}
-      >
-        {projectActions && (
+          <Logomark />
           <div
-            className="flex items-center shrink-0"
-            style={{ marginRight: 4 }}
+            className="titlebar-brandtext flex flex-col items-start"
+            style={{ gap: 0 }}
           >
-            {projectActions}
+            <div
+              style={{
+                fontSize: 13,
+                fontWeight: 600,
+                letterSpacing: "-0.01em",
+                color: "var(--fg-0)",
+              }}
+            >
+              HSE Studio
+            </div>
+            {showVersion && (
+              <div
+                className="mono"
+                style={{
+                  fontSize: 9.5,
+                  color: "var(--fg-3)",
+                  textTransform: "uppercase",
+                  letterSpacing: "0.1em",
+                  marginTop: -2,
+                }}
+              >
+                {versionLabel}
+              </div>
+            )}
           </div>
-        )}
-        {!isGuest && (
-          <button
-            type="button"
-            className={clsx(
-              "icon-btn tt titlebar-secondary",
-              systemChatOpen && "active",
-            )}
-            data-tt={agentTooltip}
-            data-tour="titlebar-agent"
-            onClick={toggleSystemChat}
-            style={
-              systemChatOpen
-                ? { width: 32, height: 32, color: "var(--accent)" }
-                : { width: 32, height: 32 }
-            }
-          >
-            <Bot size={16} />
-          </button>
-        )}
+        </button>
 
-        {!isGuest && (
+        <div
+          className="titlebar-crumbs flex items-center flex-1 min-w-0 overflow-hidden"
+          style={{
+            gap: 8,
+            marginLeft: 26,
+            color: "var(--fg-2)",
+            fontSize: 12.5,
+            alignItems: "center",
+          }}
+        >
           <button
             type="button"
             className={clsx(
-              "icon-btn tt titlebar-secondary",
-              settingsActive && "active",
+              "row-btn shrink-0",
+              projectName && "titlebar-crumb-root",
             )}
-            data-tt={t("titlebar.settings")}
-            data-tour="titlebar-settings"
-            onClick={handleOpenSettings}
-            style={
-              settingsActive
-                ? { width: 32, height: 32, color: "var(--accent)" }
-                : { width: 32, height: 32 }
-            }
+            style={{
+              width: "auto",
+              padding: "5px 10px",
+              color: isOnWelcome ? "var(--fg-0)" : "var(--fg-2)",
+            }}
+            onClick={handleBackToWelcome}
+            aria-label={t("titlebar.projects")}
           >
-            <Settings size={16} />
+            <GraduationCap size={15} />
+            {/* Телефон: рядом с именем проекта остаётся значок, на главной подпись нужна как заголовок */}
+            <span className={clsx(!isOnWelcome && "titlebar-crumb-label")}>
+              {t("titlebar.projects")}
+            </span>
           </button>
-        )}
-        {!isGuest && <InboxBell />}
-        <span className="titlebar-secondary contents">
-          {isGuest ? <HelpButton /> : <HelpMenu />}
-        </span>
-        <span data-tour="titlebar-account" className="flex items-center">
-          <AccountMenu />
-        </span>
-        <GuestBadge />
+          {projectName && (
+            <>
+              <ChevronRight
+                size={12}
+                className="titlebar-crumb-root"
+                style={{ color: "var(--fg-3)", flexShrink: 0 }}
+              />
+              <div
+                className="flex items-center min-w-0 overflow-hidden"
+                style={{ gap: 8 }}
+              >
+                {projectSwitcher ?? (
+                  <span
+                    className="truncate"
+                    style={{ color: "var(--fg-0)", fontWeight: 500 }}
+                  >
+                    {projectName}
+                  </span>
+                )}
+                {projectIsNda && (
+                  <span
+                    className="chip shrink-0"
+                    style={{
+                      color: "var(--c-warn)",
+                      borderColor:
+                        "color-mix(in oklch, var(--c-warn) 30%, transparent)",
+                    }}
+                  >
+                    <Lock size={10} />
+                    NDA
+                  </span>
+                )}
+              </div>
+            </>
+          )}
+        </div>
+
+        <div
+          className="flex items-center shrink-0"
+          style={{ gap: 4, alignItems: "center" }}
+        >
+          {projectActions && !isPhone && (
+            <div
+              className="flex items-center shrink-0"
+              style={{ marginRight: 4 }}
+            >
+              {projectActions}
+            </div>
+          )}
+          {!isGuest && (
+            <button
+              type="button"
+              className={clsx(
+                "icon-btn tt titlebar-secondary",
+                systemChatOpen && "active",
+              )}
+              data-tt={agentTooltip}
+              data-tour="titlebar-agent"
+              onClick={toggleSystemChat}
+              style={
+                systemChatOpen
+                  ? { width: 32, height: 32, color: "var(--accent)" }
+                  : { width: 32, height: 32 }
+              }
+            >
+              <Bot size={16} />
+            </button>
+          )}
+
+          {!isGuest && (
+            <button
+              type="button"
+              className={clsx(
+                "icon-btn tt titlebar-secondary",
+                settingsActive && "active",
+              )}
+              data-tt={t("titlebar.settings")}
+              data-tour="titlebar-settings"
+              onClick={handleOpenSettings}
+              style={
+                settingsActive
+                  ? { width: 32, height: 32, color: "var(--accent)" }
+                  : { width: 32, height: 32 }
+              }
+            >
+              <Settings size={16} />
+            </button>
+          )}
+          {!isGuest && <InboxBell />}
+          <span className="titlebar-secondary contents">
+            {isGuest ? <HelpButton /> : <HelpMenu />}
+          </span>
+          <span data-tour="titlebar-account" className="flex items-center">
+            <AccountMenu />
+          </span>
+          <GuestBadge />
+        </div>
       </div>
-    </div>
+      {isPhone && projectActions && (
+        <div className="titlebar-subrow" data-testid="titlebar-subrow">
+          {projectActions}
+        </div>
+      )}
+    </>
   );
 };

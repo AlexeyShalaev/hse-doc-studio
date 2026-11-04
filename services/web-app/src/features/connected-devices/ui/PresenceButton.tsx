@@ -1,5 +1,6 @@
 import { ChevronDown } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import { useIsCompactWidth } from "@shared/lib";
 import { PopoverAnchor, PopoverTrigger } from "@shared/ui/Popover";
 import { StatusDot } from "@shared/ui/StatusDot";
 import type { PresenceSummary } from "../model/summary";
@@ -23,6 +24,8 @@ export type PresenceButtonProps = {
  */
 export const PresenceButton = ({ summary, isOpen }: PresenceButtonProps) => {
   const { t } = useTranslation("devices");
+  // Телефон и планшет: в шапке остаётся одна точка состояния, подпись и стрелка уходят в панель.
+  const isPhone = useIsCompactWidth();
   return (
     <PopoverAnchor asChild>
       <div
@@ -40,12 +43,18 @@ export const PresenceButton = ({ summary, isOpen }: PresenceButtonProps) => {
             aria-label={t("badge.aria", { summary: summary.title })}
             title={summary.title}
           >
-            <StatusDot status={DOT[summary.tone]} label={summary.label} />
-            <ChevronDown
-              size={12}
-              aria-hidden="true"
-              style={{ color: "var(--fg-2)" }}
+            <StatusDot
+              status={DOT[summary.tone]}
+              label={summary.label}
+              hideLabel={isPhone}
             />
+            {!isPhone && (
+              <ChevronDown
+                size={12}
+                aria-hidden="true"
+                style={{ color: "var(--fg-2)" }}
+              />
+            )}
           </button>
         </PopoverTrigger>
       </div>

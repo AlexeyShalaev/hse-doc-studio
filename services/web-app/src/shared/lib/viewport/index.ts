@@ -1,6 +1,8 @@
 export {
   COARSE_POINTER_QUERY,
   COMPACT_QUERY,
+  DRAWER_MAX_WIDTH,
+  DRAWER_QUERY,
   PHONE_MAX_WIDTH,
   PHONE_QUERY,
   TABLET_MAX_WIDTH,
@@ -11,6 +13,7 @@ export { useMediaQuery } from "./useMediaQuery";
 export {
   useIsCoarsePointer,
   useIsCompactWidth,
+  useIsDrawerWidth,
   useIsPhoneWidth,
   useIsTabletWidth,
   useViewportClass,

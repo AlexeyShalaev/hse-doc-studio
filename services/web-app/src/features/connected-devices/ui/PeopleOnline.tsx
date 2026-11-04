@@ -8,10 +8,13 @@ import {
   type PersonOnline,
   type ProjectPeople,
 } from "@entities/connected-device";
+import { useIsPhoneWidth } from "@shared/lib";
 import { Popover, PopoverContent, PopoverTrigger } from "@shared/ui/Popover";
 import { Tooltip } from "@shared/ui/Tooltip";
 import { deviceText, personSummary, whereText } from "../lib/peopleText";
 import { AvatarMark, PersonAvatar } from "./PersonAvatar";
+
+const PHONE_AVATARS = 2;
 
 export type PeopleOnlineProps = {
   people: ProjectPeople;
@@ -34,7 +37,11 @@ export const PeopleOnline = ({
   const { t } = useTranslation("devices");
   const roleLabel = useProjectRoleLabel();
   const [open, setOpen] = useState(false);
-  const { shown, hidden } = splitPeople(people.people, people.total);
+  const isPhone = useIsPhoneWidth();
+  const split = splitPeople(people.people, people.total);
+  // Телефон: два аватара и «+N» одной кнопкой на 40 px, список людей в шторке.
+  const shown = isPhone ? split.shown.slice(0, PHONE_AVATARS) : split.shown;
+  const hidden = isPhone ? people.total - shown.length : split.hidden;
   // Одного себя показывать незачем: аватары появляются, когда в проекте есть кто-то ещё.
   if (!people.people.some((p) => !p.me)) return null;
 
@@ -55,6 +62,99 @@ export const PeopleOnline = ({
           onOpenDoc(person);
         }
       : null;
+
+  const peopleList = (
+    <PopoverContent width={340} aria-label={t("people.title")}>
+      <div
+        className="flex flex-col"
+        style={{ gap: 4, padding: 10, maxHeight: "70vh", overflowY: "auto" }}
+        data-testid="people-list"
+      >
+        <span style={{ fontSize: 12.5, fontWeight: 600, padding: "0 2px" }}>
+          {t("people.title")}
+        </span>
+        <ul className="pp-list">
+          {people.people.map((person) => {
+            const p = parts(person);
+            const go = opener(person, p.doc);
+            const row = (
+              <>
+                <AvatarMark person={person} />
+                <span className="pp-row-text">
+                  <span className="pp-row-name">
+                    {person.me ? t("people.you", { name: p.name }) : p.name}
+                    <span className="pp-row-role">{p.role}</span>
+                  </span>
+                  <span className="pp-row-where">
+                    {p.where}
+                    {`, ${p.device}`}
+                  </span>
+                  {go !== null && (
+                    <span className="pp-row-go">{t("people.open")}</span>
+                  )}
+                </span>
+              </>
+            );
+            return (
+              <li key={person.user_id} data-testid="people-row">
+                {go !== null ? (
+                  <button
+                    type="button"
+                    className="pp-row"
+                    onClick={() => {
+                      setOpen(false);
+                      go();
+                    }}
+                  >
+                    {row}
+                  </button>
+                ) : (
+                  <div className="pp-row" data-static="true">
+                    {row}
+                  </div>
+                )}
+              </li>
+            );
+          })}
+        </ul>
+        {people.total > people.people.length && (
+          <span className="dim" style={{ fontSize: 11 }}>
+            {t("people.truncated", {
+              count: people.total - people.people.length,
+            })}
+          </span>
+        )}
+        <span className="dim" style={{ fontSize: 11, lineHeight: 1.4 }}>
+          {t("people.note")}
+        </span>
+      </div>
+    </PopoverContent>
+  );
+
+  if (isPhone) {
+    return (
+      <Popover open={open} onOpenChange={setOpen}>
+        <PopoverTrigger asChild>
+          <button
+            type="button"
+            className="pp-group pp-group--phone"
+            data-testid="project-people"
+            data-count={people.total}
+            aria-label={t("people.aria", { count: people.total })}
+            aria-expanded={open}
+          >
+            {shown.map((person) => (
+              <AvatarMark key={person.user_id} person={person} />
+            ))}
+            {hidden > 0 && (
+              <span className="pp-more-count">{`+${String(hidden)}`}</span>
+            )}
+          </button>
+        </PopoverTrigger>
+        {peopleList}
+      </Popover>
+    );
+  }
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -116,71 +216,7 @@ export const PeopleOnline = ({
           </button>
         </PopoverTrigger>
       </div>
-      <PopoverContent width={340} aria-label={t("people.title")}>
-        <div
-          className="flex flex-col"
-          style={{ gap: 4, padding: 10, maxHeight: "70vh", overflowY: "auto" }}
-          data-testid="people-list"
-        >
-          <span style={{ fontSize: 12.5, fontWeight: 600, padding: "0 2px" }}>
-            {t("people.title")}
-          </span>
-          <ul className="pp-list">
-            {people.people.map((person) => {
-              const p = parts(person);
-              const go = opener(person, p.doc);
-              const row = (
-                <>
-                  <AvatarMark person={person} />
-                  <span className="pp-row-text">
-                    <span className="pp-row-name">
-                      {person.me ? t("people.you", { name: p.name }) : p.name}
-                      <span className="pp-row-role">{p.role}</span>
-                    </span>
-                    <span className="pp-row-where">
-                      {p.where}
-                      {`, ${p.device}`}
-                    </span>
-                    {go !== null && (
-                      <span className="pp-row-go">{t("people.open")}</span>
-                    )}
-                  </span>
-                </>
-              );
-              return (
-                <li key={person.user_id} data-testid="people-row">
-                  {go !== null ? (
-                    <button
-                      type="button"
-                      className="pp-row"
-                      onClick={() => {
-                        setOpen(false);
-                        go();
-                      }}
-                    >
-                      {row}
-                    </button>
-                  ) : (
-                    <div className="pp-row" data-static="true">
-                      {row}
-                    </div>
-                  )}
-                </li>
-              );
-            })}
-          </ul>
-          {people.total > people.people.length && (
-            <span className="dim" style={{ fontSize: 11 }}>
-              {t("people.truncated", {
-                count: people.total - people.people.length,
-              })}
-            </span>
-          )}
-          <span className="dim" style={{ fontSize: 11, lineHeight: 1.4 }}>
-            {t("people.note")}
-          </span>
-        </div>
-      </PopoverContent>
+      {peopleList}
     </Popover>
   );
 };

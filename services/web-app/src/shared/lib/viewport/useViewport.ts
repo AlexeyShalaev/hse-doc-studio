@@ -1,6 +1,7 @@
 import {
   COARSE_POINTER_QUERY,
   COMPACT_QUERY,
+  DRAWER_QUERY,
   PHONE_QUERY,
   TABLET_QUERY,
   type ViewportClass,
@@ -27,3 +28,6 @@ export const useViewportClass = (): ViewportClass => {
   if (isPhone) return "phone";
   return isTablet ? "tablet" : "desktop";
 };
+
+/** Рабочее место проекта с выдвижной панелью (до 820 px). */
+export const useIsDrawerWidth = (): boolean => useMediaQuery(DRAWER_QUERY);

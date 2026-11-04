@@ -324,7 +324,7 @@ export const CommentsPanel = (props: CommentsPanelProps) => {
     <aside
       aria-label={t("title")}
       data-testid="review-panel"
-      className="flex flex-col"
+      className="review-panel flex flex-col"
       style={{
         width: 320,
         flexShrink: 0,
