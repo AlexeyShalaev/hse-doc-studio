@@ -6,27 +6,13 @@ Generated from `release-notes.json` via `make changelog` — do not edit by hand
 Release notes are hand-written and bilingual (RU/EN); the app shows them in the
 selected interface language.
 
-## [0.7.0](https://github.com/AlexeyShalaev/hse-doc-studio/compare/v0.6.0...v0.7.0) (2026-11-04)
+## [0.7.0](https://github.com/AlexeyShalaev/hse-doc-studio/compare/v0.6.0...v0.7.0) - 2026-11-04
 
-
-### Features
-
-* **web:** адаптив под телефон, часть 1: основа и оболочка ([e1ebcf6](https://github.com/AlexeyShalaev/hse-doc-studio/commit/e1ebcf6574e2dd8d11b4c3451eb7eb3a15bacf5d))
-* **web:** адаптив под телефон, часть 2: рабочее место проекта ([0005a76](https://github.com/AlexeyShalaev/hse-doc-studio/commit/0005a76d2abc4cd2fafdad55a122dcff82aff246))
-* **web:** адаптив под телефон, часть 3: настройки и админка ([aa50490](https://github.com/AlexeyShalaev/hse-doc-studio/commit/aa504907daa08daee446e5cf0e6a29f1303aa674))
-* **web:** адаптив под телефон, часть 4: окна, справка и редкие экраны ([409087b](https://github.com/AlexeyShalaev/hse-doc-studio/commit/409087b04390273b4403b56e5e937651ba4f1db0))
-* **web:** адаптив под телефон, часть 4: окна, справка и редкие экраны ([947da73](https://github.com/AlexeyShalaev/hse-doc-studio/commit/947da73bdf18461b0fe19c97c328b32e71e04623))
-* **web:** адаптивная основа и оболочка для телефона ([8c21f68](https://github.com/AlexeyShalaev/hse-doc-studio/commit/8c21f68110158d12d1672683e3a6454f158e8dd6))
-* **web:** настройки и админка на телефоне: шторка разделов, таблицы карточками ([6ec1d0a](https://github.com/AlexeyShalaev/hse-doc-studio/commit/6ec1d0ab72917d45f469f0218733a549e2501a99))
-* **web:** рабочее место проекта на телефоне: вкладки, шапка, редактор, PDF ([fc5ac91](https://github.com/AlexeyShalaev/hse-doc-studio/commit/fc5ac91f38a417962b00f8fe2ac98b3db0f31f58))
-
-
-### Bug Fixes
-
-* **api:** тест лендинга не зависит от перевода строк Windows ([2b591d9](https://github.com/AlexeyShalaev/hse-doc-studio/commit/2b591d9a6b689ae0ce574ce2d349459be0665888))
-* **api:** тест сборки мусора блобов не зависит от текущей даты ([ee0d95b](https://github.com/AlexeyShalaev/hse-doc-studio/commit/ee0d95be39400a10148758c70332c5641b1a8827))
-* **web:** подписи, авторы и руководитель на телефоне: строки переносятся, поля друг под другом ([061dfab](https://github.com/AlexeyShalaev/hse-doc-studio/commit/061dfab6d63327f7d0dca259364a2cd7886e11ea))
-* **web:** шторка окна на телефоне в рабочей сборке: гасим переменные translate ([84542b0](https://github.com/AlexeyShalaev/hse-doc-studio/commit/84542b0282f1a1dab322afa12e5b5b29258b818d))
+- Mobile cloud version: the Studio is comfortable on a phone from 360 px. Dialogs and menus open as bottom sheets, tables become cards, input fields no longer zoom the page in iOS, buttons are at least 40 px, and the screen notch and on-screen keyboard are accounted for. Sign-in, the landing page, the home screen with the project list and filters, the inbox and Studio connection all work
+- The project workspace on a phone: a bottom bar of sections (documents, remarks, submission, files, more), a project header with people online, connected Studios and sync, an editor with a scrollable toolbar and a distraction-free mode while typing, a PDF with zoom by buttons and pinch, and the agent chat full screen. Settings and the admin area also work well on a phone: sections in a sheet, single-column forms and tables as cards
+- Not yet working on a phone: the ONLYOFFICE editor, side-by-side mode, keyboard shortcuts (the command palette and help are in the account menu), drag-and-drop of files into the window, CryptoPro signing and the onboarding tour with highlights. Tablets keep the desktop layout. The mobile version was tested on emulation, please report anything you find on real devices
+- Fixes: the Help window opened from the account menu crashed on a phone; the Signatures and Authors pages of a project were clipped on narrow screens
+- For administrators, upgrading from 0.6.0: this release has no database migrations and no new required settings, only the interface changes
 
 ## [0.6.0](https://github.com/AlexeyShalaev/hse-doc-studio/compare/v0.5.0...v0.6.0) - 2026-11-04
 
