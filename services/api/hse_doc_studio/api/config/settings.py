@@ -16,6 +16,7 @@ from hse_doc_studio.api.config.backups import BackupsConfig
 from hse_doc_studio.api.config.build import CompileConfig, FontsConfig
 from hse_doc_studio.api.config.collab import CollabConfig
 from hse_doc_studio.api.config.db import DbConfig
+from hse_doc_studio.api.config.devices import DevicesConfig
 from hse_doc_studio.api.config.diagnostics import DiagnosticsConfig
 from hse_doc_studio.api.config.egress import EgressConfig
 from hse_doc_studio.api.config.git import GitConfig, VCSConfig
@@ -98,6 +99,7 @@ class Settings(BaseSettings):
     git: GitConfig = Field(default_factory=GitConfig)
     git_remote: GitRemoteConfig = Field(default_factory=GitRemoteConfig)
     artifacts: ArtifactsConfig = Field(default_factory=ArtifactsConfig)
+    devices: DevicesConfig = Field(default_factory=DevicesConfig)
     secrets: SecretsConfig = Field(default_factory=SecretsConfig)
     jobs: JobsConfig = Field(default_factory=JobsConfig)
     ai_gateway: AiGatewayConfig = Field(default_factory=AiGatewayConfig)
@@ -135,6 +137,13 @@ class Settings(BaseSettings):
     host_data_dir: str | None = Field(
         default=None,
         description="Host path of data_dir for sibling-container mounts; None when backend runs natively.",
+    )
+    device_name: str | None = Field(
+        default=None,
+        description="Имя этого компьютера для списка подключённых Студий на сервере (по умолчанию имя машины).",
+    )
+    device_os: str | None = Field(
+        default=None, description="Семейство ОС машины (macos, windows, linux) для списка подключённых Студий."
     )
     packs_dir: Path = Field(
         default=_DEFAULT_PACKS_DIR,

@@ -4,6 +4,7 @@ import { failureCode } from "@shared/api";
 import { i18n, toast } from "@shared/lib";
 import { ErrorState, Modal, Button, Spinner } from "@shared/ui";
 import { useAIProviders } from "@entities/ai-provider";
+import { useStudioLink } from "@entities/connected-device";
 import {
   useCancelRemotePairing,
   usePairRemoteRunner,
@@ -43,6 +44,8 @@ export const RemoteRunnerSection = () => {
   const { t } = useTranslation("runners");
   const remote = useRemoteRunner();
   const providers = useAIProviders();
+  // Что про открытые модели знает облако: причина «разрешил здесь, а там не работает» видна в списке моделей.
+  const cloudLink = useStudioLink(null, remote.data?.paired === true);
   const update = useUpdateRemoteRunner();
   const pair = usePairRemoteRunner();
   const token = useRemoteRunnerToken();
@@ -97,6 +100,7 @@ export const RemoteRunnerSection = () => {
       <RemoteRunnerView
         status={remote.data}
         candidates={cloudCandidates(providers.data ?? [])}
+        cloudLink={cloudLink.data}
         now={now}
         busy={busy}
         error={error}

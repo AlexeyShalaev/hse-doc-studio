@@ -13,6 +13,10 @@ import {
 import { Notice } from "@shared/ui/ConflictKit";
 import { Switch } from "@shared/ui/Switch";
 import {
+  EndpointCloudState,
+  type StudioLink,
+} from "@entities/connected-device";
+import {
   REMOTE_STATE_DOT,
   isValidEndpointName,
   isValidServerUrl,
@@ -32,6 +36,8 @@ export type CloudModelCandidate = {
 export type RemoteRunnerViewProps = {
   status: RemoteRunnerStatus;
   candidates: readonly CloudModelCandidate[];
+  /** Как облако видит эту Студию: по нему под открытой моделью видно, работает ли она в облаке и что сделать. */
+  cloudLink?: StudioLink | undefined;
   now: number;
   /** Идёт запрос: управление занято. */
   busy?: boolean;
@@ -71,6 +77,7 @@ const countdown = (expiresAt: string, now: number): string | null => {
 export const RemoteRunnerView = ({
   status,
   candidates,
+  cloudLink,
   now,
   busy = false,
   error = null,
@@ -218,6 +225,7 @@ export const RemoteRunnerView = ({
           <CloudModels
             status={status}
             candidates={candidates}
+            cloudLink={cloudLink}
             busy={busy}
             onModels={onModels}
           />
@@ -501,11 +509,13 @@ const PairingCode = ({
 const CloudModels = ({
   status,
   candidates,
+  cloudLink,
   busy,
   onModels,
 }: {
   status: RemoteRunnerStatus;
   candidates: readonly CloudModelCandidate[];
+  cloudLink: StudioLink | undefined;
   busy: boolean;
   onModels: (choices: { name: string; provider_id: string }[]) => void;
 }) => {
@@ -616,6 +626,16 @@ const CloudModels = ({
                     </div>
                   )}
                 </div>
+                {on && saved !== undefined && (
+                  <EndpointCloudState
+                    name={saved}
+                    announced={
+                      status.ai_endpoints.find((e) => e.name === saved)
+                        ?.announced ?? false
+                    }
+                    link={cloudLink}
+                  />
+                )}
                 {renaming && (
                   <Notice
                     tone="warn"

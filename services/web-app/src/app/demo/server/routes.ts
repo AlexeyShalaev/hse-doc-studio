@@ -13,6 +13,7 @@ import { createPersonalRoutes } from "./personalRoutes";
 import { createProjectAccessRoutes } from "./projectAccessRoutes";
 import { createProjectRoutes } from "./projectRoutes";
 import { createUsageRoutes } from "./quotaRoutes";
+import { cloudDeviceDemoRoutes } from "../deviceRoutes";
 import { createSetupRoutes } from "./setupRoutes";
 import { createShareLinkRoutes, createSharingAdminRoutes } from "./shareLinks";
 import { createSystemRoutes } from "./systemRoutes";
@@ -165,6 +166,7 @@ export const serverDemoRoutes: DemoRoute[] = [
   ...createUsageRoutes(() => world),
   ...createGitRemoteRoutes(() => world),
   ...createSharedProviderUserRoutes(() => world),
+  ...cloudDeviceDemoRoutes,
   ...catalogRoutes,
 ].map((route) => ({
   ...route,

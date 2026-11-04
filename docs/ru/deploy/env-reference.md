@@ -185,6 +185,7 @@ tags:
 | `HSE_STUDIO__GIT__MAX_INCOMING_TOTAL_BYTES` | int | `2000000000` | оба | Largest total size of the files one sync, clone or import takes from a remote branch. |
 | `HSE_STUDIO__GIT__FETCH_TICK_S` | float | `30.0` | оба | How often the background fetch looks for projects that are due. |
 | `HSE_STUDIO__GIT__FETCH_STARTUP_DELAY_S` | float | `60.0` | оба | Delay before the first background fetch after the server starts. |
+| `HSE_STUDIO__GIT__PRESENCE_STARTUP_DELAY_S` | float | `20.0` | оба | Delay before the first presence signal of a connected local Studio after it starts. |
 | `HSE_STUDIO__GIT__FETCH_CONCURRENCY` | int | `2` | оба | Projects fetched in the background at the same time. |
 | `HSE_STUDIO__GIT__LARGE_FILE_WARN_BYTES` | int | `95000000` | оба | Blobs from this size are reported before push: hosting services reject files near 100 MB. |
 | `HSE_STUDIO__GIT_REMOTE__ENABLED` | bool | `true` | оба | Отдавать проекты по git (clone, fetch, push) на /git/<id>.git. |
@@ -194,6 +195,10 @@ tags:
 | `HSE_STUDIO__GIT_REMOTE__LOCK_WAIT_S` | int | `30` | оба | Сколько push ждёт замок папки проекта. |
 | `HSE_STUDIO__ARTIFACTS__MAX_PDF_BYTES` | int | `104857600` | оба | Предел размера одного PDF, выгружаемого локальной Студией, в байтах. |
 | `HSE_STUDIO__ARTIFACTS__KEEP_PER_DOCUMENT` | int | `5` | оба | Сколько последних выгруженных PDF хранится на документ. |
+| `HSE_STUDIO__DEVICES__INTERVAL_S` | int | `60` | server | Как часто локальная Студия шлёт сигнал присутствия, в секундах. |
+| `HSE_STUDIO__DEVICES__ONLINE_WINDOW_S` | int | `180` | server | Сколько секунд после последнего сигнала Студия считается онлайн (не меньше трёх интервалов). |
+| `HSE_STUDIO__DEVICES__PERSIST_INTERVAL_S` | int | `120` | server | Не чаще, чем раз в столько секунд сервер пишет неизменившееся присутствие в базу. |
+| `HSE_STUDIO__DEVICES__RETENTION_DAYS` | int | `60` | server | Через сколько дней молчания устройство забывается. |
 | `HSE_STUDIO__SECRETS__KEY` 🔒 | str | секрет, не печатается | оба | Fernet key (urlsafe base64 of 32 bytes) taken from the environment. |
 | `HSE_STUDIO__SECRETS__KEY_FILE` | Path | не задано | оба | File holding the Fernet key (docker secret). |
 | `HSE_STUDIO__SECRETS__RETIRED_KEYS` 🔒 | str | секрет, не печатается | оба | Retired Fernet keys, comma separated: they only decrypt, which makes key rotation possible. |
@@ -376,6 +381,8 @@ tags:
 | `HSE_STUDIO__MODE` | local / server | `local` | оба | Instance mode: 'local' (single-user install) or 'server' (shared; not supported yet). |
 | `HSE_STUDIO__DATA_DIR` | Path | `~/.config/hse-studio` | оба | Local data storage directory |
 | `HSE_STUDIO__HOST_DATA_DIR` | str | не задано | оба | Host path of data_dir for sibling-container mounts; None when backend runs natively. |
+| `HSE_STUDIO__DEVICE_NAME` | str | не задано | оба | Имя этого компьютера для списка подключённых Студий на сервере (по умолчанию имя машины). |
+| `HSE_STUDIO__DEVICE_OS` | str | не задано | оба | Семейство ОС машины (macos, windows, linux) для списка подключённых Студий. |
 | `HSE_STUDIO__PACKS_DIR` | Path | каталог `packs` монорепы, в образе `/app/packs` | оба | Directory with template packs (auto-detected from monorepo root locally; /app/packs in docker) |
 | `HSE_STUDIO__STATIC_DIR` | Path | не задано | оба | Serve built frontend from this directory (all-in-one mode) |
 | `HSE_STUDIO__HELP_DIR` | Path | `services/user-docs/dist` монорепы, в образе `/app/help` | оба | Built user help (services/user-docs: user/, admin/, media/) served at /help/; no dir, no help |

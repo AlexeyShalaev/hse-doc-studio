@@ -28,6 +28,14 @@ class PublishPdfOutcome:
     final_name: str
 
 
+@dataclass(frozen=True)
+class PdfFingerprint:
+    """Размер и SHA-256 готового PDF: по ним облако и Студия сверяют, одна ли у них сборка."""
+
+    size: int
+    sha256: str
+
+
 class IArtifactStore(Protocol):
     async def publish_pdf(self, req: PublishPdfRequest) -> PublishPdfOutcome:
         """Переносит собранный PDF из `.build/<doc_id>/` к исходнику."""
@@ -44,4 +52,8 @@ class IArtifactStore(Protocol):
     async def archived_pdf_link(self, project_id: UUID, doc_id: str, job_id: UUID) -> PresignedUrl | None:
         """Короткоживущая ссылка на архивный PDF с Range; None, если хранилище ссылок не выдаёт.
         `FileNotFoundError`, если архива нет."""
+        ...
+
+    async def fingerprint_pdf(self, workspace: Path, doc_id: str, source_file: str) -> PdfFingerprint | None:
+        """Отпечаток свежего PDF документа (рядом с исходником или в `.build`); None, если файла нет."""
         ...

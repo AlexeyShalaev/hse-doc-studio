@@ -274,7 +274,7 @@
     "yieldHint": "While a local build runs, cloud builds aren't taken. Model requests through the runner keep working.",
     "models": {
       "title": "Models for the cloud",
-      "lead": "Local models the server can reach through this machine. The address stays here; the server only knows the name.",
+      "lead": "Local models the server can reach through this machine. The address stays here, the server only knows the name. That is not enough: for the cloud chat to use a model, add a \"through my runner\" provider in the cloud (Settings, AI providers). Under each model you see what the cloud knows about it.",
       "empty": "No local Ollama or OpenAI-compatible providers in your network.",
       "open": "Open to the cloud",
       "name": "Name for the server",

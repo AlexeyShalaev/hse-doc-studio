@@ -5,19 +5,24 @@
 
 from __future__ import annotations
 
+import hashlib
 import ssl
 from collections.abc import AsyncIterator
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
+from uuid import UUID
 
 import httpx
 
 from hse_doc_studio.core.git_remote.client import (
+    CloudPdfReply,
     DeviceGrant,
     DeviceTokenReply,
+    JsonObject,
     PdfUpload,
     PdfUploadReply,
+    PresenceReply,
     StudioAccount,
     StudioProject,
     StudioProjectPage,
@@ -40,6 +45,9 @@ _CREATED = 201
 _UPLOAD_CHUNK = 1 << 20
 # Загрузка файла идёт дольше обычных вызовов: ответ ждёт, пока сервер примет и запишет тело.
 _UPLOAD_TIMEOUT = httpx.Timeout(20.0, read=180.0, write=300.0)
+_NOT_MODIFIED = 304
+_CONFLICT = 409
+_DOWNLOAD_TIMEOUT = httpx.Timeout(20.0, read=120.0)
 
 
 def _parse_dt(value: object) -> datetime | None:
@@ -185,6 +193,129 @@ class HttpStudioServerClient:
             created=bool(body.get("created")),
             size=int(artifact.get("size") or upload.size),
         )
+
+    async def send_presence(self, target: StudioServerTarget, token: Secret, report: JsonObject) -> PresenceReply:
+        status, body = await self._request(target, "POST", "/git/-/presence", headers=_auth(token), json=report)
+        if status == _UNAUTHORIZED:
+            raise StudioServerError(StudioServerErrorCode.unauthorized)
+        if status == _NOT_FOUND:
+            raise StudioServerError(StudioServerErrorCode.presence_unsupported)
+        if status == _CONFLICT:
+            raise StudioServerError(StudioServerErrorCode.too_many_devices)
+        if status != _OK:
+            raise StudioServerError(StudioServerErrorCode.unreachable)
+        return PresenceReply(
+            interval_s=int(body.get("interval_s") or 60), online_window_s=int(body.get("online_window_s") or 180)
+        )
+
+    async def presence_overview(
+        self, target: StudioServerTarget, token: Secret, device_id: str, project_id: UUID | None
+    ) -> JsonObject:
+        params: dict[str, str] = {"device_id": device_id}
+        if project_id is not None:
+            params["project_id"] = str(project_id)
+        status, body = await self._request(
+            target, "GET", "/git/-/presence/overview", headers=_auth(token), params=params
+        )
+        return _checked(status, body, StudioServerErrorCode.presence_unsupported)
+
+    async def project_builds(self, target: StudioServerTarget, token: Secret, project_id: UUID) -> JsonObject:
+        status, body = await self._request(target, "GET", f"/git/-/projects/{project_id}/builds", headers=_auth(token))
+        return _checked(status, body, StudioServerErrorCode.presence_unsupported)
+
+    async def download_cloud_pdf(  # noqa: PLR0913 — параметры одной загрузки
+        self,
+        target: StudioServerTarget,
+        token: Secret,
+        project_id: UUID,
+        doc_id: str,
+        dest: Path,
+        *,
+        known_sha256: str | None,
+        max_bytes: int,
+    ) -> CloudPdfReply:
+        headers = _auth(token)
+        if known_sha256:
+            headers["If-None-Match"] = f'"{known_sha256}"'
+        path = f"/git/-/projects/{project_id}/documents/{doc_id}/pdf"
+        try:
+            async with (
+                self._client(target) as client,
+                client.stream("GET", path, headers=headers, timeout=_DOWNLOAD_TIMEOUT) as response,
+            ):
+                if response.status_code == _NOT_MODIFIED:
+                    return CloudPdfReply(unchanged=True, sha256=known_sha256)
+                if response.status_code != _OK:
+                    await response.aread()
+                    raise _cloud_pdf_failure(response.status_code, _json_body(response))
+                return await _save_stream(response, dest, max_bytes)
+        except (httpx.HTTPError, ssl.SSLError, OSError):
+            raise StudioServerError(StudioServerErrorCode.unreachable) from None
+
+
+def _json_body(response: httpx.Response) -> dict[str, Any]:
+    try:
+        body = response.json()
+    except ValueError:
+        return {}
+    return body if isinstance(body, dict) else {}
+
+
+def _checked(status: int, body: dict[str, Any], unsupported: str) -> JsonObject:
+    if status == _UNAUTHORIZED:
+        raise StudioServerError(StudioServerErrorCode.unauthorized)
+    if status in {_NOT_FOUND, _FORBIDDEN}:
+        raise StudioServerError(unsupported)
+    if status != _OK:
+        raise StudioServerError(StudioServerErrorCode.unreachable)
+    return body
+
+
+async def _save_stream(response: httpx.Response, dest: Path, max_bytes: int) -> CloudPdfReply:
+    """Тело в файл `dest` частями: предел размера и сверка SHA-256 до того, как файл станет виден."""
+    declared = response.headers.get("content-length")
+    if declared and declared.isdigit() and int(declared) > max_bytes:
+        raise StudioServerError(StudioServerErrorCode.cloud_pdf_too_large)
+    digest = hashlib.sha256()
+    size = 0
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    try:
+        with dest.open("wb") as handle:
+            async for chunk in response.aiter_bytes(_UPLOAD_CHUNK):
+                size += len(chunk)
+                if size > max_bytes:
+                    raise StudioServerError(StudioServerErrorCode.cloud_pdf_too_large)
+                digest.update(chunk)
+                handle.write(chunk)
+    except BaseException:
+        dest.unlink(missing_ok=True)
+        raise
+    sha256 = digest.hexdigest()
+    claimed = response.headers.get("x-content-sha256")
+    if claimed and claimed.lower() != sha256:
+        dest.unlink(missing_ok=True)
+        raise StudioServerError(StudioServerErrorCode.unreachable)
+    pages = response.headers.get("x-pages")
+    return CloudPdfReply(
+        unchanged=False,
+        sha256=sha256,
+        size=size,
+        source_commit=response.headers.get("x-source-commit"),
+        built_at=_parse_dt(response.headers.get("x-built-at")),
+        pages=int(pages) if pages and pages.isdigit() else None,
+    )
+
+
+def _cloud_pdf_failure(status: int, body: dict[str, Any]) -> StudioServerError:
+    if status == _UNAUTHORIZED:
+        return StudioServerError(StudioServerErrorCode.unauthorized)
+    if status == _FORBIDDEN:
+        return StudioServerError(StudioServerErrorCode.cloud_pdf_forbidden)
+    if status == _NOT_FOUND:
+        return StudioServerError(StudioServerErrorCode.cloud_pdf_missing)
+    if status == _TOO_LARGE:
+        return StudioServerError(StudioServerErrorCode.cloud_pdf_too_large)
+    return StudioServerError(StudioServerErrorCode.unreachable)
 
 
 def _pdf_params(upload: PdfUpload) -> dict[str, str | int]:

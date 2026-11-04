@@ -16,6 +16,7 @@ from hse_doc_studio.api.routers.v1 import (
     checks,
     compile,
     device_flow,
+    devices,
     docker_system,
     documents,
     export_import,
@@ -56,6 +57,7 @@ from hse_doc_studio.api.routers.v1 import (
     share_links,
     signatures,
     signing_identities,
+    studio_link,
     submission,
     synctex,
     system,
@@ -81,6 +83,7 @@ api_router.include_router(server_setup.router, tags=["server-setup"])
 api_router.include_router(account.router, tags=["account"])
 api_router.include_router(mcp.router, tags=["mcp"])
 api_router.include_router(account_runners.router, tags=["account"])
+api_router.include_router(devices.router, tags=["account"])
 api_router.include_router(orgs.router, tags=["orgs"])
 api_router.include_router(catalog.router, tags=["catalog"])
 api_router.include_router(project_members.router, tags=["projects"])
@@ -126,6 +129,7 @@ api_router.include_router(onboarding.router, tags=["onboarding"])
 api_router.include_router(git_servers.router, tags=["git-sync"])
 api_router.include_router(git_global.router, tags=["git-sync"])
 api_router.include_router(remote_runner.router, tags=["remote-runner"])
+api_router.include_router(studio_link.router, tags=["studio-link"])
 # links
 api_router.include_router(share_links.router, tags=["sharing"])
 api_router.include_router(share_link_public.router, tags=["sharing"])

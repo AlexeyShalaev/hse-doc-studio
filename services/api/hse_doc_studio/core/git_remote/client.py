@@ -29,6 +29,12 @@ class StudioServerErrorCode:
     pdf_rejected = "pdf_rejected"
     pdf_unknown_document = "pdf_unknown_document"
     pdf_unsupported = "pdf_unsupported"
+    # Присутствие и облачные сборки (docs/design/connected-devices.md): старый сервер этих маршрутов не знает.
+    presence_unsupported = "presence_unsupported"
+    too_many_devices = "too_many_devices"
+    cloud_pdf_missing = "cloud_pdf_missing"
+    cloud_pdf_forbidden = "cloud_pdf_forbidden"
+    cloud_pdf_too_large = "cloud_pdf_too_large"
 
 
 class StudioServerError(Exception):
@@ -91,6 +97,29 @@ class StudioProjectPage:
     offset: int
 
 
+JsonObject = dict[str, object]
+
+
+@dataclass(frozen=True)
+class PresenceReply:
+    """Ответ сервера на сигнал присутствия: как часто слать и сколько секунд после сигнала Студия считается онлайн."""
+
+    interval_s: int
+    online_window_s: int
+
+
+@dataclass(frozen=True)
+class CloudPdfReply:
+    """Итог скачивания PDF облачной сборки: файл записан в `dest` или сервер ответил, что у нас уже он же."""
+
+    unchanged: bool
+    sha256: str | None = None
+    size: int = 0
+    source_commit: str | None = None
+    built_at: datetime | None = None
+    pages: int | None = None
+
+
 class IStudioServerClient(Protocol):
     async def info(self, target: StudioServerTarget) -> str:
         """Версия сервера; не Студия: `git_server_not_studio`, нет связи: `git_server_unreachable`."""
@@ -108,6 +137,34 @@ class IStudioServerClient(Protocol):
 
     async def upload_pdf(self, target: StudioServerTarget, token: Secret, upload: PdfUpload) -> PdfUploadReply:
         """Отказы сервера приходят как `StudioServerError` с кодами `pdf_*`; 401: `auth_failed`."""
+        ...
+
+    async def send_presence(self, target: StudioServerTarget, token: Secret, report: JsonObject) -> PresenceReply:
+        """Сигнал присутствия; 401: `auth_failed`, сервер без маршрута: `presence_unsupported`."""
+        ...
+
+    async def presence_overview(
+        self, target: StudioServerTarget, token: Secret, device_id: str, project_id: UUID | None
+    ) -> JsonObject:
+        """Как облако видит эту Студию и кто ещё работает в проекте (сырой ответ сервера)."""
+        ...
+
+    async def project_builds(self, target: StudioServerTarget, token: Secret, project_id: UUID) -> JsonObject:
+        """Статус сборок проекта на сервере (сырой ответ сервера)."""
+        ...
+
+    async def download_cloud_pdf(  # noqa: PLR0913 — параметры одной загрузки
+        self,
+        target: StudioServerTarget,
+        token: Secret,
+        project_id: UUID,
+        doc_id: str,
+        dest: Path,
+        *,
+        known_sha256: str | None,
+        max_bytes: int,
+    ) -> CloudPdfReply:
+        """Скачивает PDF последней облачной сборки в `dest`; тот же отпечаток: `unchanged` без тела."""
         ...
 
 

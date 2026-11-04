@@ -94,6 +94,9 @@ class PostgresCompileRepository:
             "check_results": data["check_results"],
             "log": _clip_log(record.log, self._log_limit),
             "output_path": data["output_path"],
+            "source_commit": record.source_commit,
+            "output_sha256": record.output_sha256,
+            "output_size": record.output_size,
         }
         actor = current_actor()
         author: dict[str, Any] = {}
@@ -147,6 +150,9 @@ def _to_record(row: CompileRecordRow, project_folder: Path) -> CompileRecord:
             "pages": row.pages,
             "words": row.words,
             "chars": row.chars,
+            "source_commit": row.source_commit,
+            "output_sha256": row.output_sha256,
+            "output_size": row.output_size,
         },
         project_folder=project_folder,
     )

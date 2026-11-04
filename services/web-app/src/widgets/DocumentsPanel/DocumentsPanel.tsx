@@ -21,6 +21,7 @@ import {
 } from "@entities/compile";
 import { useForms } from "@entities/form";
 import { BuildBlockedNotice } from "@features/build-states";
+import { FetchAllNotice } from "@features/cloud-builds";
 import { useProject } from "@entities/project";
 import { Spinner } from "@shared/ui/Spinner";
 import { NowBlock } from "./NowBlock";
@@ -325,6 +326,7 @@ export const DocumentsPanel = ({
       </div>
 
       <div className="panel-body">
+        <FetchAllNotice projectId={projectId} />
         <div className="panel-filter">
           <Search size={12} style={{ flexShrink: 0, color: "var(--fg-3)" }} />
           <input

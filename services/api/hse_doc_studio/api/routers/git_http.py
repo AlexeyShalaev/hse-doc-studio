@@ -16,12 +16,16 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Path, Query, Request, Response
 from fastapi.responses import JSONResponse, PlainTextResponse, StreamingResponse
+from pydantic import ValidationError
 
 from hse_doc_studio.api.artifact_mapping import map_artifact
 from hse_doc_studio.api.config import settings
+from hse_doc_studio.api.device_mapping import map_builds, map_overview
 from hse_doc_studio.api.observability.client_ip import client_ip
 from hse_doc_studio.api.rate_limit import enforce
 from hse_doc_studio.api.schemas.artifacts import PdfUploadResponse
+from hse_doc_studio.api.schemas.builds import ProjectBuildsResponse
+from hse_doc_studio.api.schemas.devices import DevicesOverviewResponse, HeartbeatRequest, HeartbeatResponse
 from hse_doc_studio.api.schemas.git_remote import (
     GitProject,
     GitProjectPage,
@@ -32,6 +36,8 @@ from hse_doc_studio.api.schemas.git_remote import (
 )
 from hse_doc_studio.core.access.context import set_current_actor
 from hse_doc_studio.core.artifacts.entities import ArtifactError, ArtifactErrorCode
+from hse_doc_studio.core.builds.entities import BuildStamp
+from hse_doc_studio.core.devices.entities import DEVICE_ID_RE
 from hse_doc_studio.core.git_remote.entities import GitService
 from hse_doc_studio.core.git_remote.protocols import GitRpcOutcome, IGitSmartHttp
 from hse_doc_studio.core.i18n import localized_error
@@ -42,7 +48,9 @@ from hse_doc_studio.core.listing import DEFAULT_LIMIT, MAX_LIMIT, Window
 from hse_doc_studio.core.mode import StudioMode
 from hse_doc_studio.core.rate_limit import GIT_AUTH_FAIL, GIT_HTTP
 from hse_doc_studio.infra.git_remote.smart_http import git_protocol
+from hse_doc_studio.use_cases.artifacts.builds import GitProjectGate, OpenCloudBuildPdfUC, ProjectBuildsUC
 from hse_doc_studio.use_cases.artifacts.pdf import PdfUploadMeta, PdfUploadResult, UploadProjectPdfUC
+from hse_doc_studio.use_cases.devices.service import DevicesOverviewUC, RecordHeartbeatUC, TooManyDevicesError
 from hse_doc_studio.use_cases.git_remote.auth import (
     AUTH_REALM,
     AuthorizeGitServiceUC,
@@ -201,6 +209,131 @@ async def git_projects(
         offset=offset,
     )
     return JSONResponse(page.model_dump(mode="json"), headers={"Cache-Control": "no-store"})
+
+
+_PRESENCE_BODY_LIMIT = 64 * 1024
+
+
+async def _presence_body(request: Request) -> HeartbeatRequest | JSONResponse:
+    """Тело сигнала после проверки токена: не больше предела и по контракту (иначе 413 или 422)."""
+    length = request.headers.get("content-length")
+    too_large = JSONResponse({"detail": "Request body is too large", "code": "presence_too_large"}, status_code=413)
+    if length is not None and length.isdigit() and int(length) > _PRESENCE_BODY_LIMIT:
+        return too_large
+    raw = await request.body()
+    if len(raw) > _PRESENCE_BODY_LIMIT:
+        return too_large
+    try:
+        return HeartbeatRequest.model_validate_json(raw)
+    except ValidationError:
+        return JSONResponse({"detail": "Invalid presence report", "code": "presence_invalid"}, status_code=422)
+
+
+@router.post("/-/presence", response_model=HeartbeatResponse)
+async def git_presence(request: Request) -> Response:
+    """Сигнал присутствия локальной Студии (docs/design/connected-devices.md): метаданные по тому же токену."""
+    try:
+        principal = await authenticate(request)
+    except GitHttpError as exc:
+        return _json_error(exc)
+    except IdentityError as exc:
+        return _rate_limited(exc)
+    body = await _presence_body(request)
+    if isinstance(body, JSONResponse):
+        return body
+    uc = await _container_get(request, RecordHeartbeatUC)
+    try:
+        receipt = await uc.execute(principal.user_id, principal.token.id, body.to_report())
+    except TooManyDevicesError:
+        return JSONResponse(
+            {"detail": "Too many devices on this account", "code": "too_many_devices"},
+            status_code=409,
+            headers=_NO_CACHE,
+        )
+    reply = HeartbeatResponse(
+        interval_s=receipt.interval_s, online_window_s=receipt.online_window_s, server_time=receipt.server_time
+    )
+    return JSONResponse(reply.model_dump(mode="json"), headers=_NO_CACHE)
+
+
+@router.get("/-/presence/overview", response_model=DevicesOverviewResponse)
+async def git_presence_overview(
+    request: Request,
+    device_id: Annotated[str, Query(min_length=32, max_length=32)],
+    project_id: UUID | None = None,
+) -> Response:
+    """Как облако видит эту Студию и кто ещё из участников проекта сейчас работает локально."""
+    try:
+        principal = await authenticate(request)
+    except GitHttpError as exc:
+        return _json_error(exc)
+    except IdentityError as exc:
+        return _rate_limited(exc)
+    if not DEVICE_ID_RE.fullmatch(device_id):
+        return JSONResponse({"detail": "Invalid device id", "code": "device_id_invalid"}, status_code=422)
+    uc = await _container_get(request, DevicesOverviewUC)
+    found = await uc.execute(principal.actor, device_id, project_id)
+    return JSONResponse(map_overview(found).model_dump(mode="json"), headers=_NO_CACHE)
+
+
+@router.get("/-/projects/{project_id}/builds", response_model=ProjectBuildsResponse)
+async def git_project_builds(request: Request, project_id: UUID) -> Response:
+    """Статус сборок проекта для локальной Студии: облачная и выгруженная сборки по документам, коммит и свежесть."""
+    try:
+        principal = await authenticate(request)
+        await (await _container_get(request, GitProjectGate)).require(principal.actor, project_id)
+        found = await (await _container_get(request, ProjectBuildsUC)).execute(project_id)
+    except GitHttpError as exc:
+        return _json_error(exc)
+    except IdentityError as exc:
+        return _rate_limited(exc)
+    except ArtifactError as exc:
+        return _artifact_error(exc)
+    body = map_builds(found, settings.artifacts.max_pdf_bytes)
+    return JSONResponse(body.model_dump(mode="json"), headers=_NO_CACHE)
+
+
+@router.get("/-/projects/{project_id}/documents/{doc_id}/pdf")
+async def git_cloud_pdf(request: Request, project_id: UUID, doc_id: Annotated[str, Path(max_length=128)]) -> Response:
+    """PDF последней облачной сборки документа: токен с чтением исходников. Тот же отпечаток: 304 без тела."""
+    uc = await _container_get(request, OpenCloudBuildPdfUC)
+    try:
+        principal = await authenticate(request)
+        stamp = await uc.stamp(principal.actor, project_id, doc_id)
+        headers = _pdf_headers(stamp)
+        known = request.headers.get("if-none-match", "").strip('"')
+        if stamp.sha256 and known == stamp.sha256:
+            return Response(status_code=304, headers=headers)
+        concurrency = await _container_get(request, GitConcurrency)
+        if not concurrency.try_acquire(principal.user_id):
+            return _busy()
+        try:
+            pdf = await uc.read(project_id, stamp)
+        finally:
+            concurrency.release(principal.user_id)
+    except GitHttpError as exc:
+        return _json_error(exc)
+    except IdentityError as exc:
+        return _rate_limited(exc)
+    except ArtifactError as exc:
+        return _artifact_error(exc)
+    return Response(
+        content=pdf.content,
+        media_type="application/pdf",
+        headers={**_pdf_headers(stamp), "X-Content-SHA256": pdf.sha256, "ETag": f'"{pdf.sha256}"'},
+    )
+
+
+def _pdf_headers(stamp: BuildStamp) -> dict[str, str]:
+    headers = {**_NO_CACHE, "X-Built-At": stamp.finished_at.isoformat()}
+    if stamp.source_commit:
+        headers["X-Source-Commit"] = stamp.source_commit
+    if stamp.pages:
+        headers["X-Pages"] = str(stamp.pages)
+    if stamp.sha256:
+        headers["X-Content-SHA256"] = stamp.sha256
+        headers["ETag"] = f'"{stamp.sha256}"'
+    return headers
 
 
 _ARTIFACT_STATUS = {

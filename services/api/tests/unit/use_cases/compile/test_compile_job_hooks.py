@@ -6,12 +6,14 @@ from contextlib import asynccontextmanager
 from dataclasses import replace
 from datetime import datetime, timezone
 from pathlib import Path
+from types import SimpleNamespace
 from typing import Any
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 from hse_doc_studio.core.entities import CompileRecord
 from hse_doc_studio.core.enums import ChangeLogKind, CheckSeverity, CompileStatus, DocumentStatus, EngineType
+from hse_doc_studio.core.jobs.artifacts import PdfFingerprint
 from hse_doc_studio.core.jobs.entities import CompileResult, JobResult, JobSpec
 from hse_doc_studio.core.jobs.enums import JobErrorCategory, JobKind, JobStatus
 from hse_doc_studio.core.jobs.errors import JobError
@@ -452,3 +454,69 @@ async def test__recovered_hooks__record_missing__nothing_is_recreated(tmp_path: 
     await hooks.on_finished(env.spec, _result(JobStatus.failed), "log")
 
     env.compile_repo.save.assert_not_called()
+
+
+# --- коммит и отпечаток PDF в записи сборки (docs/design/connected-devices.md, часть 3) ---
+
+
+async def test__on_finished__success__record_gets_commit_and_pdf_fingerprint(tmp_path: Path) -> None:
+    env = Env(tmp_path)
+    env.vcs_service.commit.side_effect = None
+    env.vcs_service.commit.return_value = SimpleNamespace(id="c" * 40)
+    env.artifacts.fingerprint_pdf.return_value = PdfFingerprint(size=1234, sha256="ab" * 32)
+    await env.hooks.on_started(env.spec)
+
+    await env.hooks.on_finished(env.spec, _result(JobStatus.succeeded), "log")
+
+    stamped = env.saved[-1]
+    assert (stamped.source_commit, stamped.output_sha256, stamped.output_size) == ("c" * 40, "ab" * 32, 1234)
+    assert stamped.status is CompileStatus.success
+
+
+async def test__on_finished__nothing_to_commit_and_clean_tree__record_gets_current_head(tmp_path: Path) -> None:
+    env = Env(tmp_path)
+    env.vcs_service.commit.side_effect = None
+    env.vcs_service.commit.return_value = None
+    env.vcs_service.status.return_value = SimpleNamespace(head="d" * 40, dirty=False)
+    env.artifacts.fingerprint_pdf.return_value = None
+    await env.hooks.on_started(env.spec)
+
+    await env.hooks.on_finished(env.spec, _result(JobStatus.succeeded), "log")
+
+    stamped = env.saved[-1]
+    assert (stamped.source_commit, stamped.output_sha256) == ("d" * 40, None)
+
+
+async def test__on_finished__unsaved_edits__pdf_is_not_tied_to_a_version(tmp_path: Path) -> None:
+    env = Env(tmp_path)
+    env.vcs_service.commit.side_effect = None
+    env.vcs_service.commit.return_value = None
+    env.vcs_service.status.return_value = SimpleNamespace(head="d" * 40, dirty=True)
+    env.artifacts.fingerprint_pdf.return_value = PdfFingerprint(size=1, sha256="ef" * 32)
+    await env.hooks.on_started(env.spec)
+
+    await env.hooks.on_finished(env.spec, _result(JobStatus.succeeded), "log")
+
+    stamped = env.saved[-1]
+    assert (stamped.source_commit, stamped.output_sha256) == (None, "ef" * 32)
+
+
+async def test__on_finished__failure__record_is_not_stamped(tmp_path: Path) -> None:
+    env = Env(tmp_path)
+    await env.hooks.on_started(env.spec)
+
+    await env.hooks.on_finished(env.spec, _result(JobStatus.failed), "log")
+
+    env.artifacts.fingerprint_pdf.assert_not_called()
+    assert env.saved[-1].source_commit is None
+
+
+async def test__on_finished__fingerprint_fails__build_result_is_kept(tmp_path: Path) -> None:
+    env = Env(tmp_path)
+    env.artifacts.fingerprint_pdf.side_effect = RuntimeError("disk")
+    await env.hooks.on_started(env.spec)
+
+    await env.hooks.on_finished(env.spec, _result(JobStatus.succeeded), "log")
+
+    assert env.saved[-1].status is CompileStatus.success
+    assert env.doc_status is DocumentStatus.ok

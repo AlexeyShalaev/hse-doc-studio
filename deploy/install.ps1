@@ -122,6 +122,8 @@ function Start-AppContainer {
         '--group-add', '0',
         '--add-host=host.docker.internal:host-gateway',
         '-e', 'HSE_STUDIO__SERVER__PORT=8000',
+        '-e', "HSE_STUDIO__DEVICE_NAME=$($env:COMPUTERNAME)",
+        '-e', 'HSE_STUDIO__DEVICE_OS=windows',
         $Image
     )
 }

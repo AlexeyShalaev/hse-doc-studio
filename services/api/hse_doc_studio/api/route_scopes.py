@@ -296,6 +296,9 @@ ROUTE_SCOPES: Mapping[RouteKey, RouteScope] = {
     ("POST", "/git/operations/{operation_id}/cancel"): _A,
     ("GET", "/git/shared-folder"): _LOCAL,
     # Облачные сборки локальной Студии: её личный раннер на сервере
+    ("GET", "/device"): _LOCAL,
+    ("PUT", "/device"): _LOCAL,
+    ("GET", "/git/studio-link"): _LOCAL,
     ("GET", "/remote-runner"): _LOCAL,
     ("PUT", "/remote-runner"): _LOCAL,
     ("POST", "/remote-runner/pair"): _LOCAL,
@@ -313,6 +316,9 @@ ROUTE_SCOPES: Mapping[RouteKey, RouteScope] = {
     ("PUT", "/api/runner/v1/jobs/{job_id}/artifacts/{sha256}"): RouteScope.job_token,
     ("POST", "/api/runner/v1/jobs/{job_id}/complete"): RouteScope.job_token,
     # Личные раннеры (трек core): аккаунт и протокол раннера
+    # Подключённые Студии: свои устройства человека
+    ("GET", "/account/devices"): _A,
+    ("DELETE", "/account/devices/{device_id}"): _A,
     ("GET", "/account/runners"): _A,
     ("PATCH", "/account/runners/{runner_id}"): _A,
     ("POST", "/account/runners/{runner_id}/rotate-token"): _A,
@@ -496,6 +502,11 @@ ROUTE_SCOPES: Mapping[RouteKey, RouteScope] = {
     ("GET", "/git/-/whoami"): RouteScope.git_token,
     ("GET", "/git/-/projects"): RouteScope.git_token,
     ("PUT", "/git/-/projects/{project_id}/documents/{doc_id}/pdf"): RouteScope.git_token,
+    # Присутствие и сборки для локальной Студии (docs/design/connected-devices.md)
+    ("POST", "/git/-/presence"): RouteScope.git_token,
+    ("GET", "/git/-/presence/overview"): RouteScope.git_token,
+    ("GET", "/git/-/projects/{project_id}/builds"): RouteScope.git_token,
+    ("GET", "/git/-/projects/{project_id}/documents/{doc_id}/pdf"): RouteScope.git_token,
     # gitremote: вход устройства по коду; подтверждает только вошедший по сессии (маршрут отвергает PAT)
     # gitremote: вход локальной Студии на сервер Студии и его проекты
     ("POST", "/git/servers/login"): _LOCAL,

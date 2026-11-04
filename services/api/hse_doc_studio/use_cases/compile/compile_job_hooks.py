@@ -107,23 +107,22 @@ class CompileJobHooks:
         has_errors = any(r.severity == CheckSeverity.err for r in check_results)
         has_warnings = any(r.severity == CheckSeverity.warn for r in check_results)
 
-        await self._compile_repo.save(
-            CompileRecord(
-                id=compile_id,
-                project_folder=self._project_folder,
-                doc_id=doc_id,
-                engine=payload.engine,
-                status=final_status,
-                started_at=self._started_at or finished_at,
-                finished_at=finished_at,
-                log=log,
-                output_path=None,
-                check_results=check_results,
-                pages=pages,
-                words=data.words if data is not None else None,
-                chars=data.chars if data is not None else None,
-            )
+        final_record = CompileRecord(
+            id=compile_id,
+            project_folder=self._project_folder,
+            doc_id=doc_id,
+            engine=payload.engine,
+            status=final_status,
+            started_at=self._started_at or finished_at,
+            finished_at=finished_at,
+            log=log,
+            output_path=None,
+            check_results=check_results,
+            pages=pages,
+            words=data.words if data is not None else None,
+            chars=data.chars if data is not None else None,
         )
+        await self._compile_repo.save(final_record)
 
         if result.error is not None and result.error.code == RunnerErrorCode.superseded.value:
             # Заменённую сборку закрываем одной записью: состояние документа уже принадлежит новой сборке.
@@ -181,13 +180,7 @@ class CompileJobHooks:
         # track_pdf). Идёт после записи итога и переноса PDF к исходнику, под общей
         # блокировкой папки, чтобы не гоняться с параллельным снимком.
         if success:
-            await self._vcs_commit_on_success(doc_id, pages)
-            # PDF сохраняется для визуального diff с последующими сборками.
-            await self._artifacts.archive_pdf(
-                spec.project_id, self._project_folder, doc_id, compile_id, payload.source_file
-            )
-            if not has_errors:
-                self._notify_pdf_built(spec, doc_id, pages)
+            await self._after_success(spec, final_record, pages=pages, has_errors=has_errors)
 
         logger.debug(
             "compile task finished",
@@ -195,6 +188,17 @@ class CompileJobHooks:
             status=final_status,
             doc_id=doc_id,
         )
+
+    async def _after_success(
+        self, spec: JobSpec, record: CompileRecord, *, pages: int | None, has_errors: bool
+    ) -> None:
+        """Снимок исходников, архив PDF для визуального diff, коммит и отпечаток в записи, выгрузка на сервер."""
+        source_file = compile_payload_of(spec).source_file
+        commit = await self._vcs_commit_on_success(record.doc_id, pages)
+        await self._artifacts.archive_pdf(spec.project_id, self._project_folder, record.doc_id, record.id, source_file)
+        await self._stamp_build(record, commit, source_file)
+        if not has_errors:
+            self._notify_pdf_built(spec, record.doc_id, pages)
 
     def _notify_pdf_built(self, spec: JobSpec, doc_id: str, pages: int | None) -> None:
         """Выгрузка на сервер Студии (если проект оттуда) идёт фоном и сборку не задерживает."""
@@ -211,24 +215,28 @@ class CompileJobHooks:
             existing = await self._compile_repo.get_for_project(self._project_folder, compile_id)
             self._started_at = existing.started_at if existing is not None else None
 
-    async def _vcs_commit_on_success(self, doc_id: str, pages: int | None) -> None:
+    async def _vcs_commit_on_success(self, doc_id: str, pages: int | None) -> str | None:
         """Record a `compile` snapshot in the project's VCS store. Best-effort:
-        a VCS failure must never affect the build's outcome."""
+        a VCS failure must never affect the build's outcome.
+
+        Возвращает коммит, с которого собран PDF: новый снимок или текущая вершина, если снимать нечего;
+        без снимка (выключен или сбой) и с несохранёнными правками коммита нет: PDF нельзя связать с версией.
+        """
         project_folder = self._project_folder
         try:
             project = self._project_repo.get(project_folder)
             if project is None or not self._vcs_service.is_available(project):
-                return
+                return None
             settings = VcsSettings.from_meta(project.meta)
             if not settings.auto_commit_on_compile:
-                return
+                return None
             pages_part = f" · {pages} стр." if pages else ""
             message = f"Сборка: {doc_id}{pages_part}"
             async with self._vcs_locks.for_folder(project_folder):
                 if not self._vcs_service.is_initialized(project):
                     exclude = project_vcs_exclude(project, self._template_repo)
                     await asyncio.to_thread(self._vcs_service.init, project, exclude)
-                await asyncio.to_thread(
+                made = await asyncio.to_thread(
                     lambda: self._vcs_service.commit(
                         project,
                         message=message,
@@ -236,5 +244,27 @@ class CompileJobHooks:
                         include_pdf=settings.track_pdf,
                     )
                 )
+                if made is not None:
+                    return str(made.id)
+                state = await asyncio.to_thread(self._vcs_service.status, project, settings)
+                return state.head if not state.dirty else None
         except Exception as exc:  # noqa: BLE001
             logger.warning("vcs compile-commit failed", doc_id=doc_id, exc=str(exc))
+        return None
+
+    async def _stamp_build(self, record: CompileRecord, commit: str | None, source_file: str) -> None:
+        """Коммит и отпечаток PDF в запись сборки: по ним видно, свежая ли сборка и одна ли она у облака и Студии."""
+        try:
+            fingerprint = await self._artifacts.fingerprint_pdf(self._project_folder, record.doc_id, source_file)
+            if commit is None and fingerprint is None:
+                return
+            await self._compile_repo.save(
+                replace(
+                    record,
+                    source_commit=commit,
+                    output_sha256=fingerprint.sha256 if fingerprint is not None else None,
+                    output_size=fingerprint.size if fingerprint is not None else None,
+                )
+            )
+        except Exception as exc:  # noqa: BLE001 — отпечаток вторичен: сборка от него не зависит
+            logger.warning("compile stamp failed", compile_id=str(record.id), exc=str(exc))

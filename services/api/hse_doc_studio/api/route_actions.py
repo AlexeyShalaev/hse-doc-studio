@@ -160,6 +160,8 @@ ROUTE_ACTIONS: Mapping[RouteKey, RouteRule] = {
     ("DELETE", "/projects/{project_id}/git/conflicts"): RouteRule(Action.HISTORY_REWRITE),
     ("POST", "/projects/{project_id}/git/fetch"): RouteRule(Action.HISTORY_WRITE),
     ("POST", "/projects/{project_id}/git/pdf"): RouteRule(Action.BUILD_RUN),
+    ("GET", "/projects/{project_id}/git/builds"): RouteRule(Action.OUTPUT_READ),
+    ("POST", "/projects/{project_id}/git/builds/fetch"): RouteRule(Action.BUILD_RUN),
     ("POST", "/projects/{project_id}/git/bundle/export"): RouteRule(Action.HISTORY_WRITE),
     ("POST", "/projects/{project_id}/git/bundle/import"): RouteRule(Action.HISTORY_REWRITE),
     ("POST", "/projects/{project_id}/git/ci/preview"): RouteRule(Action.HISTORY_WRITE),
@@ -252,6 +254,8 @@ ROUTE_ACTIONS: Mapping[RouteKey, RouteRule] = {
     ("GET", "/projects/{project_id}/git-remote"): RouteRule(Action.GIT_FETCH),
     # PDF, выгруженные локальной Студией: читает любой, кто видит результат проекта; убирает тот, кто пишет файлы.
     ("GET", "/projects/{project_id}/artifacts"): RouteRule(Action.OUTPUT_READ),
+    ("GET", "/projects/{project_id}/studios"): RouteRule(Action.PROJECT_VIEW),
+    ("GET", "/projects/{project_id}/builds"): RouteRule(Action.OUTPUT_READ),
     ("GET", "/projects/{project_id}/artifacts/{artifact_id}/file"): RouteRule(Action.OUTPUT_READ),
     ("DELETE", "/projects/{project_id}/artifacts/{artifact_id}"): RouteRule(Action.FILES_WRITE),
 }

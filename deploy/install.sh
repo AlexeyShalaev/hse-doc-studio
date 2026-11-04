@@ -101,6 +101,15 @@ socket_group() {
 
 # ── 2. Запуск ───────────────────────────────────────────────────────────────
 
+# Семейство ОС для списка подключённых Студий в облаке (внутри контейнера оно неизвестно).
+device_os() {
+    case "$OS" in
+        Darwin) echo macos ;;
+        Linux) echo linux ;;
+        *) echo "" ;;
+    esac
+}
+
 start_container() {
     # $GROUP_ARGS раскрывается БЕЗ кавычек намеренно: в POSIX sh нет массивов, а
     # значение — заведомо два слова из флага и числа.
@@ -112,6 +121,8 @@ start_container() {
         -v "$DOCKER_SOCK:/var/run/docker.sock" \
         --add-host=host.docker.internal:host-gateway \
         -e HSE_STUDIO__SERVER__PORT=8000 \
+        -e "HSE_STUDIO__DEVICE_NAME=$(hostname -s 2>/dev/null || hostname)" \
+        -e "HSE_STUDIO__DEVICE_OS=$(device_os)" \
         $GROUP_ARGS \
         "$IMAGE" 2>&1 >/dev/null
 }

@@ -16,3 +16,5 @@ export * from "./session";
 export * from "./runner";
 export * from "./project-artifact";
 export * from "./review";
+export * from "./connected-device";
+export * from "./project-build";

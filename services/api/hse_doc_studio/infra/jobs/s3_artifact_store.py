@@ -12,7 +12,7 @@ from uuid import UUID
 
 import structlog
 
-from hse_doc_studio.core.jobs.artifacts import IArtifactStore, PublishPdfOutcome, PublishPdfRequest
+from hse_doc_studio.core.jobs.artifacts import IArtifactStore, PdfFingerprint, PublishPdfOutcome, PublishPdfRequest
 from hse_doc_studio.core.storage import InvalidObjectKeyError, ObjectNotFoundError, ObjectStoreError, validate_key
 from hse_doc_studio.core.storage.models import PresignedUrl
 from hse_doc_studio.core.storage.ports import IObjectStore
@@ -67,6 +67,9 @@ class S3ArtifactStore:
             await self._prune(project_id, doc_id, current=key)
         except (ObjectStoreError, OSError) as exc:
             logger.warning("pdf archive failed", doc_id=doc_id, exc=str(exc))
+
+    async def fingerprint_pdf(self, workspace: Path, doc_id: str, source_file: str) -> PdfFingerprint | None:
+        return await self._local.fingerprint_pdf(workspace, doc_id, source_file)
 
     async def read_archived_pdf(self, project_id: UUID, workspace: Path, doc_id: str, job_id: UUID) -> bytes:
         try:

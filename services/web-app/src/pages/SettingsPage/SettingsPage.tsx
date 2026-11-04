@@ -50,6 +50,10 @@ import { AuthorProfileSection } from "@features/author-profile";
 import { ExportImportSection } from "@features/export-import";
 import { GitAccessSection } from "@features/git-remote";
 import { MyOrganizationsSection } from "@features/my-organizations";
+import {
+  AccountDevicesSection,
+  LocalLinkSection,
+} from "@features/connected-devices";
 import { MyRunnersSection } from "@features/my-runners";
 import { OnboardingRestartCard } from "@features/onboarding";
 import { UsageSection } from "@features/usage";
@@ -336,11 +340,21 @@ const renderSection = (id: SettingsSectionId) => {
     case "git-access":
       return <GitAccessSection />;
     case "runners":
-      return <MyRunnersSection />;
+      return (
+        <>
+          <MyRunnersSection />
+          <AccountDevicesSection />
+        </>
+      );
     case "mcp":
       return <McpSection />;
     case "remote-runner":
-      return <RemoteRunnerSection />;
+      return (
+        <>
+          <RemoteRunnerSection />
+          <LocalLinkSection />
+        </>
+      );
     case "about":
       return <AboutSection />;
   }

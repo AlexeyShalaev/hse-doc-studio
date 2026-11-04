@@ -1,5 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useUpdateGitSettings } from "@entities/git-sync";
+import {
+  markAutoFetched,
+  shouldAutoFetch,
+  useAutoFetchCloudBuilds,
+} from "@entities/project-build";
 import { useProjectLastEdit } from "@shared/lib";
 import {
   autoSyncPhase,
@@ -57,6 +62,23 @@ export const useAutoSync = (
   const behind = status?.behind ?? 0;
   const lastSyncId = status?.last_sync?.id ?? null;
   const operationStartedAt = status?.operation?.started_at ?? null;
+
+  const autoFetch = useAutoFetchCloudBuilds();
+  const autoFetchRef = useRef(autoFetch);
+  useEffect(() => {
+    autoFetchRef.current = autoFetch;
+  }, [autoFetch]);
+
+  // Облачные сборки: после синхронизации проекта (и при открытии) тихо берём готовый PDF облака, чтобы документ
+  // открывался без пересборки. Не на мобильной сети и не чаще раза в несколько минут на проект; результат не
+  // показывается тостами: статус сборок в списке документов обновится сам.
+  useEffect(() => {
+    if (!enabled || !online) return;
+    const now = Date.now();
+    if (!shouldAutoFetch(projectId, now)) return;
+    markAutoFetched(projectId, now);
+    autoFetchRef.current(projectId).catch(() => undefined);
+  }, [enabled, online, projectId, lastSyncId]);
 
   const [tick, setTick] = useState(0);
   const [lastRunAt, setLastRunAt] = useState<number | null>(null);
