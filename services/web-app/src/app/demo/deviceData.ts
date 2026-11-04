@@ -1,6 +1,8 @@
 import type {
   Device,
   DevicesOverview,
+  PersonOnline,
+  ProjectPeople,
   ProjectStudios,
   StudioLink,
 } from "@entities/connected-device";
@@ -77,6 +79,57 @@ export const demoProjectStudios = (): ProjectStudios => ({
   others: [{ user_id: "u_boris", name: "Борис Смирнов" }],
 });
 
+const person = (overrides: Partial<PersonOnline>): PersonOnline => ({
+  user_id: "u_anna",
+  name: "Анна Петрова",
+  initials: "АП",
+  color: "#1c7ed6",
+  role: "owner",
+  me: false,
+  activity: "viewing",
+  doc_id: null,
+  channels: ["web"],
+  seen_at: minutesAgo(0),
+  ...overrides,
+});
+
+/** Люди в проекте: сам смотрящий, соавтор в редакторе, рецензент с замечаниями и работающий локально. */
+export const demoProjectPeople = (): ProjectPeople => ({
+  interval_s: 60,
+  online_window_s: 180,
+  total: 4,
+  people: [
+    person({ me: true, activity: "viewing", doc_id: "tz" }),
+    person({
+      user_id: "u_boris",
+      name: "Борис Смирнов",
+      initials: "БС",
+      color: "#2f9e44",
+      role: "editor",
+      activity: "editing",
+      doc_id: "tz",
+    }),
+    person({
+      user_id: "u_vera",
+      name: "Вера Лебедева",
+      initials: "ВЛ",
+      color: "#e8590c",
+      role: "reviewer",
+      activity: "reviewing",
+      doc_id: "tz",
+    }),
+    person({
+      user_id: "u_gleb",
+      name: "Глеб Орлов",
+      initials: "ГО",
+      color: "#7048e8",
+      role: "editor",
+      activity: "local",
+      channels: ["studio"],
+    }),
+  ],
+});
+
 export const demoAccountDevices = () => ({
   online_window_s: 180,
   items: [demoDevice({ project: null }), demoOfflineDevice()],
@@ -131,6 +184,7 @@ const overview = (device: Device | null): DevicesOverview => ({
   online_window_s: 180,
   device,
   others: [{ user_id: "u_boris", name: "Борис Смирнов" }],
+  people: demoProjectPeople(),
 });
 
 export const demoStudioLink = (projectId: string | null): StudioLink => ({

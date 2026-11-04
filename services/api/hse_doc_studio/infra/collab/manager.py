@@ -32,6 +32,7 @@ from hse_doc_studio.core.collab.awareness import (
     encode_awareness,
     write_uint,
 )
+from hse_doc_studio.core.collab.colors import person_color
 from hse_doc_studio.core.collab.ports import ITextStore
 from hse_doc_studio.core.collab.text_diff import diff_edits, merge3
 from hse_doc_studio.infra.collab import protocol as proto
@@ -50,9 +51,6 @@ CLOSE_UNSUPPORTED = 4415
 CLOSE_BUSY = 4429
 CLOSE_TOO_BIG = 1009
 CLOSE_OVERLOADED = 1013
-
-# Цвета курсоров: насыщенные, читаются на светлой и тёмной теме; подсветка выделения это тот же цвет с прозрачностью.
-_PALETTE = ("#d6336c", "#1c7ed6", "#2f9e44", "#e8590c", "#7048e8", "#0c8599", "#c2255c", "#5c940d")
 
 
 class CollabRefusedError(Exception):
@@ -80,7 +78,7 @@ class CollabIdentity:
 
     @property
     def color(self) -> str:
-        return _PALETTE[sum(self.key.encode("utf-8")) % len(_PALETTE)]
+        return person_color(self.key)
 
 
 class _Bucket:

@@ -155,6 +155,18 @@ export default defineConfig({
       },
     },
     {
+      // Люди в проекте: аватары, место, переход к документу, подпись у курсора, уход по окну присутствия;
+      // идёт после полного смоука на том же стенде (compose.smoke.yml задаёт короткое окно).
+      name: "presence",
+      testMatch: /presence\.spec\.ts/,
+      timeout: 5 * 60_000,
+      use: {
+        ...devices["Desktop Chrome"],
+        actionTimeout: 20_000,
+        channel: process.env.E2E_CHANNEL || undefined,
+      },
+    },
+    {
       // Страница «Обновления» и закрытый протокол апдейтера; идёт после полного смоука на том же стенде.
       name: "updates",
       testMatch: /updates\.spec\.ts/,

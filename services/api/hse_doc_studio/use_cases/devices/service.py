@@ -10,6 +10,7 @@ from __future__ import annotations
 from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
+from typing import TYPE_CHECKING
 from uuid import UUID
 
 import structlog
@@ -43,6 +44,10 @@ from hse_doc_studio.core.jobs.routing import IPersonalRunnerSettings
 from hse_doc_studio.core.jobs.runners import IRunnerRepository, Runner
 from hse_doc_studio.core.jobs.wire import FEATURE_AI_RELAY
 from hse_doc_studio.core.repositories import IAIProviderRepository
+
+if TYPE_CHECKING:
+    from hse_doc_studio.core.devices.people import ProjectPeople
+    from hse_doc_studio.use_cases.devices.people import ProjectPeopleUC
 
 logger = structlog.get_logger()
 
@@ -317,6 +322,8 @@ class DevicesOverview:
     online_window_s: int
     device: DeviceView | None
     others: tuple[WorkingLocally, ...] = ()
+    # Все, кто сейчас в проекте (веб и Студия), с местом и ролью; None, пока право на исходники не открыто.
+    people: ProjectPeople | None = None
 
 
 class DevicesOverviewUC:
@@ -327,24 +334,31 @@ class DevicesOverviewUC:
         studios: ProjectStudiosUC,
         acl: IProjectAclRepository,
         config: PresenceConfig,
+        people: ProjectPeopleUC | None = None,
     ) -> None:
         self._devices = devices
         self._builder = builder
         self._studios = studios
         self._acl = acl
         self._config = config
+        self._people = people
 
-    async def execute(self, actor: Actor, device_id: str, project_id: UUID | None) -> DevicesOverview:
+    async def execute(
+        self, actor: Actor, device_id: str, project_id: UUID | None, *, with_people: bool = False
+    ) -> DevicesOverview:
         owner = _owner(actor)
         own = await self._devices.get(owner, device_id)
         views = await self._builder.build(owner, [own], project_id=project_id) if own is not None else []
         others: tuple[WorkingLocally, ...] = ()
+        people: ProjectPeople | None = None
         if project_id is not None:
             acl = await self._acl.load_for(actor, project_id, include_links=False)
             if decide(actor, Action.GIT_FETCH, acl) is Decision.allow:
                 reporting = await self._devices.list_for_project(project_id)
                 others = await self._studios.people(actor, project_id, reporting)
-        return DevicesOverview(self._config.online_window_s, views[0] if views else None, others)
+                if with_people and self._people is not None:
+                    people = await self._people.execute(actor, project_id, reporting)
+        return DevicesOverview(self._config.online_window_s, views[0] if views else None, others, people)
 
 
 def _owner(actor: Actor) -> str:

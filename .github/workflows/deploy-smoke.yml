@@ -274,6 +274,13 @@ jobs:
           pnpm exec playwright test --project=onboarding
         working-directory: e2e
 
+      # Люди в проекте на том же стенде: аватары, переход к документу, подпись у курсора, уход по окну присутствия.
+      - name: Run presence e2e
+        run: |
+          eval "$(../scripts/dev/server-stack/stack.sh env)"
+          pnpm exec playwright test --project=presence
+        working-directory: e2e
+
       - name: Stand logs on failure
         if: failure()
         run: |

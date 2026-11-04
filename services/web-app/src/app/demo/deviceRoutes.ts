@@ -3,6 +3,7 @@ import type { DemoRoute } from "@shared/api/demo";
 import {
   demoAccountDevices,
   demoCloudBuilds,
+  demoProjectPeople,
   demoLocalBuilds,
   demoProjectStudios,
   demoStudioLink,
@@ -29,6 +30,16 @@ export const cloudDeviceDemoRoutes: DemoRoute[] = [
     method: "GET",
     pattern: "/projects/:id/studios",
     handler: () => demoJson(demoProjectStudios()),
+  },
+  {
+    method: "POST",
+    pattern: "/projects/:id/presence",
+    handler: () => demoJson(demoProjectPeople()),
+  },
+  {
+    method: "DELETE",
+    pattern: "/projects/:id/presence/:session",
+    handler: () => demoNoContent(),
   },
   {
     method: "GET",

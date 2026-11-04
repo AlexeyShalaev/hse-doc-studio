@@ -233,5 +233,38 @@
     "min": "{{count}} min",
     "hour": "{{count}} h",
     "day": "{{count}} d"
+  },
+  "people": {
+    "title": "In the project now",
+    "aria_one": "{{count}} person in the project now",
+    "aria_other": "{{count}} people in the project now",
+    "list": "People who are in the project now",
+    "more": "+{{count}}",
+    "you": "{{name}} (you)",
+    "open": "Go to the document",
+    "openHint": "Click to go to the document",
+    "summary": "{{name}}, {{role}}, {{where}}, {{device}}, online",
+    "truncated_one": "and {{count}} more person",
+    "truncated_other": "and {{count}} more people",
+    "note": "Only project members see this list. It shows where a person is now: the document and the mode, never the content. A person with several tabs open is shown once.",
+    "where": {
+      "editing": "is editing",
+      "viewing": "is viewing",
+      "reviewing": "is viewing the findings",
+      "building": "is building",
+      "browsing": "is in the project",
+      "local": "is working locally"
+    },
+    "whereDoc": {
+      "editing": "is editing “{{doc}}”",
+      "viewing": "is viewing “{{doc}}”",
+      "reviewing": "is viewing the findings of “{{doc}}”",
+      "building": "is building “{{doc}}”"
+    },
+    "device": {
+      "web": "in the browser",
+      "studio": "in the local Studio",
+      "both": "in the browser and the local Studio"
+    }
   }
 }

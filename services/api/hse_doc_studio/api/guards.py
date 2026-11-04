@@ -61,7 +61,8 @@ _READ_METHODS = frozenset({"GET", "HEAD", "OPTIONS"})
 # истории (единственный выход для данных более новой Студии) и убрать проект
 # из списка. Предпросмотр CI тоже ничего не пишет: это POST только ради тела запроса.
 # Выборка из удалённого репозитория не трогает файлы проекта, поэтому «только чтение» ей не помеха.
-_ALLOWED_SUFFIXES = ("/vcs/restore", "/git/ci/preview", "/git/fetch")
+# Сигнал присутствия вкладки живёт в памяти и проект не меняет: читатель в «только чтении» тоже в проекте.
+_ALLOWED_SUFFIXES = ("/vcs/restore", "/git/ci/preview", "/git/fetch", "/presence", "/presence/{session_id}")
 _LOCKED = 423
 _FORBIDDEN = 403
 _NOT_FOUND = 404

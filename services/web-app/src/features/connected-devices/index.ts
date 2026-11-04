@@ -7,3 +7,5 @@ export { StudioPresence } from "./ui/StudioPresence";
 export { StudioProviderBanner } from "./ui/StudioProviderBanner";
 export { useAddCloudProvider } from "./model/useAddCloudProvider";
 export { cloudSummary, localSummary, pickServer } from "./model/summary";
+export { ProjectPeople } from "./ui/ProjectPeople";
+export { PeopleOnline } from "./ui/PeopleOnline";

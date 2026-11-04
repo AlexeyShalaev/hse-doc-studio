@@ -4,6 +4,7 @@ import type {
   LinkServer,
   StudioLink,
 } from "../model/device.schema";
+import type { PersonOnline, ProjectPeople } from "../model/people.schema";
 
 // Данные для тестов и галерей: устройство в сети с раннером и моделью, у которой в облаке нет провайдера.
 
@@ -105,4 +106,30 @@ export const makeLink = (overrides: Partial<StudioLink> = {}): StudioLink => ({
   servers: [makeServer()],
   project: makeDevice().project,
   ...overrides,
+});
+
+export const makePerson = (
+  overrides: Partial<PersonOnline> = {},
+): PersonOnline => ({
+  user_id: "u1",
+  name: "Анна Петрова",
+  initials: "АП",
+  color: "#1c7ed6",
+  role: "owner",
+  me: false,
+  activity: "viewing",
+  doc_id: null,
+  channels: ["web"],
+  seen_at: minutesBefore(0),
+  ...overrides,
+});
+
+export const makePeople = (
+  people: PersonOnline[],
+  total: number = people.length,
+): ProjectPeople => ({
+  interval_s: 60,
+  online_window_s: 180,
+  total,
+  people,
 });

@@ -92,6 +92,8 @@ Other project members see only "Working locally: Boris", and only while Boris's 
 
 **In the local Studio** the same badge shows the link to the cloud: "Cloud online", "Cloud cannot see the Studio", "No connection to the server", "Server sign-in expired" or "revoked". The panel shows the server and who you are signed in as, whether the cloud sees this Studio and when the last signal was sent, the runner and the models opened to the cloud with their state on the cloud side, the last sync and PDF upload, and which other project members are working locally right now.
 
+**People in the project.** Next to the badge you see avatars of everyone who is in this project right now, in the cloud or in their own Studio, with where they are (“is editing “Proposal””, “is working locally”). The local Studio shows the same list when it is signed in to the server and you may read sources; without a server there are no avatars. More: [Who is in the project now](../workbench/people-online.md).
+
 ### Computer name
 
 The cloud shows the Studio under the computer's name. If it is not named (inside a container the host name is a random string), it is "Local Studio". Change it in "Settings, Cloud builds, Link with the cloud": an empty field returns the default name.

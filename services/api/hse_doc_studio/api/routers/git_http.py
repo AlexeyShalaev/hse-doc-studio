@@ -261,8 +261,12 @@ async def git_presence_overview(
     request: Request,
     device_id: Annotated[str, Query(min_length=32, max_length=32)],
     project_id: UUID | None = None,
+    people: bool = False,
 ) -> Response:
-    """Как облако видит эту Студию и кто ещё из участников проекта сейчас работает локально."""
+    """Как облако видит эту Студию и кто ещё из участников проекта сейчас работает локально.
+
+    `people=true` добавляет всех, кто сейчас в проекте (веб и Студия); без неё ответ прежний для старых Студий.
+    """
     try:
         principal = await authenticate(request)
     except GitHttpError as exc:
@@ -272,8 +276,9 @@ async def git_presence_overview(
     if not DEVICE_ID_RE.fullmatch(device_id):
         return JSONResponse({"detail": "Invalid device id", "code": "device_id_invalid"}, status_code=422)
     uc = await _container_get(request, DevicesOverviewUC)
-    found = await uc.execute(principal.actor, device_id, project_id)
-    return JSONResponse(map_overview(found).model_dump(mode="json"), headers=_NO_CACHE)
+    found = await uc.execute(principal.actor, device_id, project_id, with_people=people)
+    body = map_overview(found).model_dump(mode="json", exclude=None if people else {"people"})
+    return JSONResponse(body, headers=_NO_CACHE)
 
 
 @router.get("/-/projects/{project_id}/builds", response_model=ProjectBuildsResponse)

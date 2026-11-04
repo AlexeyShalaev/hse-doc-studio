@@ -1763,6 +1763,191 @@
     min-width: 0;
   }
 
+  /* ── люди в проекте (шапка) ──────────────────────────────────────── */
+  /* Аватары тех, кто сейчас в проекте. Цвет человека приходит с сервера и тот же, что у его курсора в документе;
+     у кнопок цвет текста задан явно: у <button> в тёмной теме без него текст чёрный. */
+  .pp-group {
+    display: inline-flex;
+    align-items: center;
+    flex-shrink: 0;
+    height: 28px;
+    padding-left: 4px;
+  }
+  .pp-avatar {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    margin-left: -5px;
+    padding: 0;
+    border: 2px solid var(--bg-1);
+    border-radius: 50%;
+    color: #fff;
+    font-family: inherit;
+    font-weight: 700;
+    line-height: 1;
+    letter-spacing: 0;
+    text-shadow: 0 1px 1px rgb(0 0 0 / 0.35);
+    /* Цвет человека задан инлайном и общий с курсором; затемнение поверх даёт белым инициалам контраст не ниже
+       AA на любом цвете палитры (без затемнения у зелёного и оранжевого около 3,5). */
+    background-image: linear-gradient(rgb(0 0 0 / 0.2), rgb(0 0 0 / 0.2));
+    cursor: pointer;
+    box-sizing: content-box;
+  }
+  .pp-group > .pp-avatar:first-child {
+    margin-left: 0;
+  }
+  span.pp-avatar {
+    cursor: inherit;
+    margin-left: 0;
+  }
+  .pp-avatar:hover {
+    z-index: 1;
+    filter: brightness(1.08);
+  }
+  .pp-avatar[data-me="true"] {
+    box-shadow: 0 0 0 2px var(--accent);
+    z-index: 1;
+  }
+  .pp-avatar:focus-visible,
+  .pp-more:focus-visible,
+  .pp-row:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+    z-index: 2;
+  }
+  .pp-dot {
+    position: absolute;
+    right: -3px;
+    bottom: -3px;
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    background: var(--c-ok);
+    border: 2px solid var(--bg-1);
+    box-sizing: border-box;
+  }
+  .pp-more {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 22px;
+    height: 22px;
+    margin-left: 4px;
+    padding: 0 5px;
+    border: 1px solid var(--border);
+    border-radius: var(--r-pill);
+    background: var(--bg-2);
+    color: var(--fg-1);
+    font: inherit;
+    font-size: 11px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .pp-more:hover {
+    background: var(--bg-3);
+    color: var(--fg-0);
+  }
+  .pp-tip {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    max-width: 260px;
+    line-height: 1.4;
+  }
+  .pp-list {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+  .pp-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    padding: 6px 6px;
+    border: 0;
+    border-radius: var(--r-2);
+    background: transparent;
+    color: var(--fg-0);
+    font: inherit;
+    text-align: left;
+  }
+  button.pp-row {
+    cursor: pointer;
+  }
+  button.pp-row:hover {
+    background: var(--bg-hover);
+  }
+  .pp-row-text {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    flex: 1;
+  }
+  .pp-row-name {
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+    font-size: 12.5px;
+    font-weight: 600;
+  }
+  .pp-row-role {
+    color: var(--fg-2);
+    font-size: 11px;
+    font-weight: 400;
+  }
+  .pp-row-where {
+    color: var(--fg-1);
+    font-size: 11.5px;
+    overflow-wrap: anywhere;
+  }
+  .pp-row-go {
+    margin-top: 2px;
+    color: var(--accent);
+    font-size: 11px;
+    font-weight: 500;
+  }
+
+  /* Подпись у чужого курсора в документе: видна несколько секунд после появления или движения, потом
+     гаснет; по наведению на курсор возвращается. Своя анимация и обычный шрифт интерфейса, потому что у библиотеки
+     подпись скрыта всегда и набрана мелким шрифтом с засечками. Селектор длиннее библиотечного: так наши правила
+     выигрывают при любом порядке стилей. */
+  .cm-editor .cm-ySelectionCaret > .cm-ySelectionInfo {
+    top: -1.55em;
+    padding: 1px 5px;
+    border-radius: 3px 3px 3px 0;
+    font-family: var(--font-sans, system-ui, sans-serif);
+    font-size: 11px;
+    font-weight: 600;
+    line-height: 1.35;
+    background-image: linear-gradient(rgb(0 0 0 / 0.2), rgb(0 0 0 / 0.2));
+    opacity: 0;
+    animation: cm-yinfo-fade 4s ease-out both;
+  }
+  .cm-editor .cm-ySelectionCaret:hover > .cm-ySelectionInfo {
+    animation: none;
+    opacity: 1;
+  }
+  @keyframes cm-yinfo-fade {
+    0%,
+    75% {
+      opacity: 1;
+    }
+    100% {
+      opacity: 0;
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .cm-editor .cm-ySelectionCaret > .cm-ySelectionInfo {
+      animation: none;
+    }
+  }
+
   /* ── sync control (titlebar) ─────────────────────────────────── */
   /* Кнопка синхронизации: основная часть выполняет действие по состоянию, стрелка
      справа открывает панель подробностей. Тон задаёт только акцент (значок,
