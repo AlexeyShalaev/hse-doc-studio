@@ -8512,3 +8512,46 @@ a.adm-row:hover .adm-row-chevron {
     grid-row: 4;
   }
 }
+
+/* Подписи: строка слота переносит кнопки под название, подпись роли не режется. */
+@media (max-width: 767.98px) {
+  .slot-top {
+    flex-wrap: wrap;
+  }
+  .slot-top > .flex-col {
+    flex: 1 1 140px !important;
+  }
+  .slot-actions {
+    flex: 1 1 100%;
+    justify-content: flex-end;
+  }
+  .slot-name {
+    flex-wrap: wrap;
+  }
+  .slot-name > .shrink-0 {
+    flex-shrink: 1 !important;
+    min-width: 0;
+  }
+}
+
+/* Авторы: ФИО и группа друг под другом, шапка карточки переносится. */
+@media (max-width: 767.98px) {
+  .author-fields {
+    flex-direction: column;
+  }
+  .author-fields > .field {
+    width: auto !important;
+    min-width: 0;
+  }
+  .author-head {
+    flex-wrap: wrap;
+    min-width: 0;
+  }
+}
+
+@media (max-width: 767.98px) {
+  .person-head {
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+}

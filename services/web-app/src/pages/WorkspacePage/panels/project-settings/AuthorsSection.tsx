@@ -37,10 +37,10 @@ const AuthorRow = ({
   return (
     <div className="card" style={{ padding: 14, background: "var(--bg-2)" }}>
       <div
-        className="flex items-center justify-between"
+        className="flex items-center justify-between person-head"
         style={{ marginBottom: 10 }}
       >
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 author-head">
           <Users size={13} style={{ color: "var(--accent)" }} />
           <strong style={{ fontSize: 12.5 }}>
             {t("projectSettings.author", { number: index + 1 })}
@@ -94,7 +94,7 @@ const AuthorRow = ({
           </button>
         )}
       </div>
-      <div className="flex gap-3">
+      <div className="flex gap-3 author-fields">
         <div className="field flex-1">
           <label>{t("projectSettings.fullName")}</label>
           <input
