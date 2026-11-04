@@ -170,6 +170,7 @@ e2e-landing: $(SERVER_LITE_ENV)
 e2e-mobile: $(SERVER_LITE_ENV)
 	@. $(SERVER_LITE_ENV); cd e2e && \
 	  E2E_BASE_URL=http://localhost:$${SERVER_LITE_PORT:-8100} E2E_SEED_PASSWORD=$$SERVER_LITE_SEED_PASSWORD \
+	  E2E_ADMIN_PASSWORD=$$SERVER_LITE_ADMIN_PASSWORD E2E_ADMIN_EMAIL=$${SERVER_LITE_ADMIN_EMAIL:-admin@example.org} \
 	  pnpm exec playwright test --project=mobile
 
 # Passkey с виртуальным аутентификатором Chrome на том же стенде (нужен ещё пароль админа для сброса ключей).
