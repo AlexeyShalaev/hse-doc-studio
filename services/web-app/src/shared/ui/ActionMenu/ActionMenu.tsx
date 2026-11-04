@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 import { MoreHorizontal } from "lucide-react";
+import { useIsPhoneWidth } from "../../lib/viewport";
 
 // Действия строки таблицы, свёрнутые в «⋯». Опасные пункты отделены чертой и
 // окрашены; подтверждение (ConfirmByName, Modal) показывает вызывающий.
@@ -29,6 +30,8 @@ export const ActionMenu = ({
   testId,
   align = "end",
 }: ActionMenuProps) => {
+  // Телефон: длинное меню - шторка снизу с крупными строками (index.css, .adm-menu).
+  const isSheet = useIsPhoneWidth();
   const safe = items.filter((i) => !i.danger);
   const danger = items.filter((i) => i.danger);
   const render = (item: ActionMenuItem) => (
@@ -56,9 +59,15 @@ export const ActionMenu = ({
           <MoreHorizontal size={16} aria-hidden="true" />
         </button>
       </DropdownMenu.Trigger>
+      {isSheet && (
+        <DropdownMenu.Portal>
+          <div className="pop-scrim" aria-hidden="true" />
+        </DropdownMenu.Portal>
+      )}
       <DropdownMenu.Portal>
         <DropdownMenu.Content
           className="adm-menu"
+          data-form={isSheet ? "sheet" : "menu"}
           align={align}
           sideOffset={4}
           collisionPadding={8}

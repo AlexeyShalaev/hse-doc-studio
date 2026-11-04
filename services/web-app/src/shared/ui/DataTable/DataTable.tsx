@@ -8,6 +8,7 @@ import {
 import { ArrowDown, ArrowUp, ArrowUpDown } from "lucide-react";
 import { clsx } from "clsx";
 import { useTranslation } from "react-i18next";
+import { useIsPhoneWidth } from "../../lib/viewport";
 import { EmptyState, ErrorState, NoResults } from "../EmptyState";
 import { Pagination, type CursorPaginationProps } from "../Pagination";
 
@@ -72,6 +73,11 @@ export type DataTableProps<T> = {
   /** Высота прокручиваемой области, px; шапка липкая. */
   maxHeight?: number;
   className?: string;
+  /**
+   * Вид на телефоне: `cards` (по умолчанию) - карточка на строку, `table` - прежняя таблица с
+   * прокруткой внутри блока. Роли столбцов в карточке задаёт `meta.card` у столбца.
+   */
+  phone?: "cards" | "table";
 };
 
 export const DataTable = <T,>({
@@ -99,8 +105,10 @@ export const DataTable = <T,>({
   skeletonRows = 5,
   maxHeight,
   className,
+  phone = "cards",
 }: DataTableProps<T>) => {
   const { t } = useTranslation("uiPrimitives");
+  const isCards = useIsPhoneWidth() && phone === "cards";
   const table = useReactTable({
     data,
     columns,
@@ -123,6 +131,145 @@ export const DataTable = <T,>({
   const showError = error != null;
   const showEmpty = !loading && !showError && data.length === 0;
   const busy = loading && !showSkeleton;
+
+  if (isCards) {
+    const renderHeader = (columnId: string): React.ReactNode => {
+      const header = table
+        .getFlatHeaders()
+        .find((item) => item.column.id === columnId);
+      return header
+        ? flexRender(header.column.columnDef.header, header.getContext())
+        : null;
+    };
+    return (
+      <div
+        className={clsx("dt-cards-wrap", className)}
+        style={{ display: "flex", flexDirection: "column", gap: 10 }}
+      >
+        <div
+          aria-label={caption}
+          aria-busy={loading}
+          role="list"
+          className="dt-cards"
+          style={{ opacity: busy ? 0.6 : 1 }}
+        >
+          {showSkeleton &&
+            Array.from({ length: Math.min(skeletonRows, 3) }, (_, index) => (
+              <div
+                key={`sk-${String(index)}`}
+                className="dt-card dt-card-skeleton"
+                aria-hidden="true"
+              />
+            ))}
+          {!showSkeleton &&
+            !showError &&
+            table.getRowModel().rows.map((row) => {
+              const cells = row.getVisibleCells();
+              const roleOf = (cell: (typeof cells)[number], index: number) =>
+                cell.column.columnDef.meta?.card ??
+                (cell.column.id === "actions"
+                  ? "actions"
+                  : index === 0
+                    ? "title"
+                    : "line");
+              const byRole = (role: string) =>
+                cells.filter((cell, index) => roleOf(cell, index) === role);
+              const render = (cell: (typeof cells)[number]) =>
+                flexRender(cell.column.columnDef.cell, cell.getContext());
+              const selected = selectedRowId === row.id;
+              const actions = byRole("actions");
+              const badges = byRole("badges");
+              return (
+                <div
+                  key={row.id}
+                  role="listitem"
+                  className="dt-card"
+                  data-selected={selected ? "true" : undefined}
+                  data-clickable={onRowClick ? "true" : undefined}
+                  tabIndex={onRowClick ? 0 : undefined}
+                  onClick={
+                    onRowClick
+                      ? () => {
+                          onRowClick(row.original);
+                        }
+                      : undefined
+                  }
+                  onKeyDown={
+                    onRowClick
+                      ? (event) => {
+                          if (event.target !== event.currentTarget) return;
+                          if (event.key === "Enter" || event.key === " ") {
+                            event.preventDefault();
+                            onRowClick(row.original);
+                          }
+                        }
+                      : undefined
+                  }
+                >
+                  <div className="dt-card-head">
+                    <div className="dt-card-title">
+                      {byRole("title").map((cell) => (
+                        <div key={cell.id}>{render(cell)}</div>
+                      ))}
+                    </div>
+                    {actions.length > 0 && (
+                      <div
+                        className="dt-card-actions"
+                        onClick={(event) => {
+                          event.stopPropagation();
+                        }}
+                      >
+                        {actions.map((cell) => (
+                          <span key={cell.id}>{render(cell)}</span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                  {badges.length > 0 && (
+                    <div className="dt-card-badges">
+                      {badges.map((cell) => (
+                        <span key={cell.id}>{render(cell)}</span>
+                      ))}
+                    </div>
+                  )}
+                  {byRole("line").length > 0 && (
+                    <dl className="dt-card-lines">
+                      {byRole("line").map((cell) => (
+                        <div key={cell.id} className="dt-card-line">
+                          <dt>{renderHeader(cell.column.id)}</dt>
+                          <dd>{render(cell)}</dd>
+                        </div>
+                      ))}
+                    </dl>
+                  )}
+                </div>
+              );
+            })}
+          {showError && (
+            <ErrorState
+              title={t("dataTable.errorTitle")}
+              description={error}
+              onRetry={onRetry}
+            />
+          )}
+          {showEmpty &&
+            (filtered ? (
+              <NoResults query={searchQuery} onReset={onResetFilters} />
+            ) : (
+              <EmptyState
+                icon={emptyIcon}
+                title={emptyTitle ?? t("dataTable.emptyTitle")}
+                description={emptyHint}
+                action={emptyAction ?? undefined}
+              />
+            ))}
+        </div>
+        {pagination && !showError && !showSkeleton && (
+          <Pagination {...pagination} />
+        )}
+      </div>
+    );
+  }
 
   return (
     <div

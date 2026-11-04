@@ -36,6 +36,7 @@ nav = [
         { "Знакомство со Студией" = "start/onboarding.md" },
         { "Обновление и удаление" = "start/update.md" },
         { "Локальная версия из облака" = "start/local-from-cloud.md" },
+        { "Мобильная версия" = "start/mobile.md" },
         { "Если не поднялось" = "start/troubleshooting.md" },
     ] },
     { "Мастерская" = [

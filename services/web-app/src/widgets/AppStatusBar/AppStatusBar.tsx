@@ -5,7 +5,7 @@ import { useAppSettings } from "@entities/app-settings";
 import { useRunnerHealth } from "@entities/system";
 import { SyncStatusSegment } from "@features/git-sync";
 import { useTemplateUpdateSignal } from "@features/template-update";
-import { useUIStore } from "@shared/lib";
+import { useIsPhoneWidth, useUIStore } from "@shared/lib";
 
 export type AppStatusBarProps = {
   /** Открытый проект: строка состояния подсказывает про обновление его шаблона. */
@@ -14,6 +14,7 @@ export type AppStatusBarProps = {
 
 export const AppStatusBar = ({ projectId }: AppStatusBarProps = {}) => {
   const { t } = useTranslation("appChrome");
+  const isPhone = useIsPhoneWidth();
   const togglePalette = useUIStore((state) => state.togglePaletteOpen);
   const { data: health, isError: healthIsError } = useRunnerHealth();
   const { data: settings } = useAppSettings();
@@ -33,9 +34,12 @@ export const AppStatusBar = ({ projectId }: AppStatusBarProps = {}) => {
 
   const engine = settings?.default_engine ?? "xelatex";
 
+  // Телефон: ни палитры команд (клавиатуры нет), ни движка, ни Docker; остаётся то, что про проект.
+  if (isPhone && !projectId) return null;
+
   return (
     <div className="statusbar">
-      {showDocker && (
+      {showDocker && !isPhone && (
         <span className="seg-item">
           <span className={dockerDotClass} />
           docker · {dockerLabel}
@@ -47,22 +51,26 @@ export const AppStatusBar = ({ projectId }: AppStatusBarProps = {}) => {
       {projectId && <SyncStatusSegment projectId={projectId} />}
       {projectId && <TemplateUpdateSegment projectId={projectId} />}
 
-      {showEngine && <span className="seg-item mono">{engine}</span>}
-      <span
-        className="seg-item seg-clickable"
-        role="button"
-        tabIndex={0}
-        title={t("appStatusBar.paletteTooltip")}
-        onClick={togglePalette}
-        onKeyDown={(e) => {
-          if (e.key === "Enter" || e.key === " ") {
-            e.preventDefault();
-            togglePalette();
-          }
-        }}
-      >
-        ⌘K {t("appStatusBar.commands")}
-      </span>
+      {showEngine && !isPhone && (
+        <span className="seg-item mono">{engine}</span>
+      )}
+      {!isPhone && (
+        <span
+          className="seg-item seg-clickable"
+          role="button"
+          tabIndex={0}
+          title={t("appStatusBar.paletteTooltip")}
+          onClick={togglePalette}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" || e.key === " ") {
+              e.preventDefault();
+              togglePalette();
+            }
+          }}
+        >
+          ⌘K {t("appStatusBar.commands")}
+        </span>
+      )}
     </div>
   );
 };

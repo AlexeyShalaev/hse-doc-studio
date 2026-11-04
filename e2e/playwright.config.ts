@@ -61,6 +61,16 @@ export default defineConfig({
       },
     },
     {
+      // Телефон на server-lite: вход, список проектов, шторки, отсутствие горизонтальной прокрутки, зоны касания.
+      // Размеры и касание задаёт сам сценарий (360x740, 390x844, планшет 820x1180).
+      name: "mobile",
+      testMatch: /mobile\.spec\.ts/,
+      use: {
+        ...devices["Pixel 7"],
+        channel: process.env.E2E_CHANNEL || undefined,
+      },
+    },
+    {
       // Passkey на server-lite: виртуальный аутентификатор Chrome через CDP (WebAuthn.addVirtualAuthenticator).
       name: "passkeys",
       testMatch: /passkeys\.spec\.ts/,
