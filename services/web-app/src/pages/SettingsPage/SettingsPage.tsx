@@ -1,10 +1,12 @@
 import { Fragment, useEffect, useState } from "react";
 import { Link, Navigate, useNavigate, useParams } from "react-router";
 import { useTranslation } from "react-i18next";
-import { i18n } from "@shared/lib";
+import { i18n, useIsPhoneWidth } from "@shared/lib";
+import { Modal } from "@shared/ui";
 import {
   Bot,
   Building2,
+  ChevronDown,
   CloudCog,
   Cpu,
   DatabaseBackup,
@@ -381,6 +383,9 @@ export const SettingsPage = () => {
   const navigate = useNavigate();
   const { section } = useParams<{ section: string }>();
   const [query, setQuery] = useState("");
+  // Телефон: меню разделов в шторке, а не колонкой слева; страница на весь экран.
+  const isPhone = useIsPhoneWidth();
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
   // A new object (bumped nonce) on every result click so the scroll/flash effect
   // re-runs even when the same setting is clicked twice in a row.
   const [flash, setFlash] = useState<{
@@ -468,6 +473,7 @@ export const SettingsPage = () => {
   };
 
   const handleResultClick = (entry: SettingSearchEntry) => {
+    setIsMenuOpen(false);
     if (entry.sectionId !== active.id) {
       void navigate(`/settings/${entry.sectionId}`, { replace: true });
     }
@@ -485,6 +491,89 @@ export const SettingsPage = () => {
     }
   };
 
+  const sidebarBody = (
+    <>
+      <div className="settings-modal-title">{t("settingsPage.title")}</div>
+      <div className="settings-modal-search">
+        <Search size={15} />
+        <input
+          type="text"
+          value={query}
+          onChange={(e) => {
+            handleQueryChange(e.target.value);
+          }}
+          placeholder={t("settingsPage.searchPlaceholder")}
+        />
+      </div>
+
+      {isSearching ? (
+        <div className="settings-modal-results">
+          {results.length === 0 ? (
+            <div className="settings-modal-empty">
+              {t("settingsPage.empty")}
+            </div>
+          ) : (
+            results.map((entry) => {
+              const def = SECTIONS.find((s) => s.id === entry.sectionId);
+              const Icon = def?.icon ?? Search;
+              return (
+                <button
+                  key={entry.anchorId}
+                  type="button"
+                  className="settings-modal-result"
+                  onClick={() => {
+                    handleResultClick(entry);
+                  }}
+                >
+                  <Icon size={14} />
+                  <span className="settings-modal-result-text">
+                    <span className="settings-modal-result-label">
+                      {t(entry.labelKey, { ns: "settings" })}
+                    </span>
+                    <span className="settings-modal-result-section">
+                      {def ? t(def.labelKey) : null}
+                    </span>
+                  </span>
+                </button>
+              );
+            })
+          )}
+        </div>
+      ) : (
+        <nav className="settings-modal-nav">
+          {visibleSections.map((s, index) => {
+            const Icon = s.icon;
+            const isActive = s.id === active.id;
+            // Заголовок печатается на первом разделе группы: список
+            // объявлен уже сгруппированным, поэтому достаточно сравнить
+            // с предыдущим — отдельная вложенная структура тут лишняя.
+            const isGroupStart = visibleSections[index - 1]?.group !== s.group;
+            return (
+              <Fragment key={s.id}>
+                {isGroupStart && (
+                  <div className="settings-modal-group">
+                    {t(SECTION_GROUPS[s.group])}
+                  </div>
+                )}
+                <Link
+                  to={`/settings/${s.id}`}
+                  replace
+                  className={clsx("settings-modal-link", isActive && "active")}
+                  onClick={() => {
+                    setIsMenuOpen(false);
+                  }}
+                >
+                  <Icon size={15} />
+                  <span>{t(s.labelKey)}</span>
+                </Link>
+              </Fragment>
+            );
+          })}
+        </nav>
+      )}
+    </>
+  );
+
   return (
     <div className="flex flex-col flex-1 bg-bg-0" style={{ minHeight: 0 }}>
       <AppTitlebar />
@@ -499,99 +588,48 @@ export const SettingsPage = () => {
             e.stopPropagation();
           }}
         >
-          <aside className="settings-modal-sidebar">
-            <div className="settings-modal-title">
-              {t("settingsPage.title")}
-            </div>
-            <div className="settings-modal-search">
-              <Search size={15} />
-              <input
-                type="text"
-                value={query}
-                onChange={(e) => {
-                  handleQueryChange(e.target.value);
-                }}
-                placeholder={t("settingsPage.searchPlaceholder")}
-              />
-            </div>
-
-            {isSearching ? (
-              <div className="settings-modal-results">
-                {results.length === 0 ? (
-                  <div className="settings-modal-empty">
-                    {t("settingsPage.empty")}
-                  </div>
-                ) : (
-                  results.map((entry) => {
-                    const def = SECTIONS.find((s) => s.id === entry.sectionId);
-                    const Icon = def?.icon ?? Search;
-                    return (
-                      <button
-                        key={entry.anchorId}
-                        type="button"
-                        className="settings-modal-result"
-                        onClick={() => {
-                          handleResultClick(entry);
-                        }}
-                      >
-                        <Icon size={14} />
-                        <span className="settings-modal-result-text">
-                          <span className="settings-modal-result-label">
-                            {t(entry.labelKey, { ns: "settings" })}
-                          </span>
-                          <span className="settings-modal-result-section">
-                            {def ? t(def.labelKey) : null}
-                          </span>
-                        </span>
-                      </button>
-                    );
-                  })
-                )}
-              </div>
-            ) : (
-              <nav className="settings-modal-nav">
-                {visibleSections.map((s, index) => {
-                  const Icon = s.icon;
-                  const isActive = s.id === active.id;
-                  // Заголовок печатается на первом разделе группы: список
-                  // объявлен уже сгруппированным, поэтому достаточно сравнить
-                  // с предыдущим — отдельная вложенная структура тут лишняя.
-                  const isGroupStart =
-                    visibleSections[index - 1]?.group !== s.group;
-                  return (
-                    <Fragment key={s.id}>
-                      {isGroupStart && (
-                        <div className="settings-modal-group">
-                          {t(SECTION_GROUPS[s.group])}
-                        </div>
-                      )}
-                      <Link
-                        to={`/settings/${s.id}`}
-                        replace
-                        className={clsx(
-                          "settings-modal-link",
-                          isActive && "active",
-                        )}
-                      >
-                        <Icon size={15} />
-                        <span>{t(s.labelKey)}</span>
-                      </Link>
-                    </Fragment>
-                  );
-                })}
-              </nav>
-            )}
-          </aside>
+          {!isPhone && (
+            <aside className="settings-modal-sidebar">{sidebarBody}</aside>
+          )}
 
           <section className="settings-modal-main">
-            <button
-              type="button"
-              className="icon-btn settings-modal-close"
-              aria-label={t("settingsPage.close")}
-              onClick={handleClose}
-            >
-              <X size={17} />
-            </button>
+            {isPhone ? (
+              <div className="settings-phone-bar">
+                <button
+                  type="button"
+                  className="settings-phone-menu"
+                  data-testid="settings-menu-trigger"
+                  aria-haspopup="dialog"
+                  onClick={() => {
+                    setIsMenuOpen(true);
+                  }}
+                >
+                  <active.icon size={16} aria-hidden />
+                  <span className="settings-phone-title">
+                    {t(active.labelKey)}
+                  </span>
+                  <ChevronDown size={14} aria-hidden />
+                </button>
+                <button
+                  type="button"
+                  className="icon-btn"
+                  data-testid="settings-close"
+                  aria-label={t("settingsPage.close")}
+                  onClick={handleClose}
+                >
+                  <X size={18} />
+                </button>
+              </div>
+            ) : (
+              <button
+                type="button"
+                className="icon-btn settings-modal-close"
+                aria-label={t("settingsPage.close")}
+                onClick={handleClose}
+              >
+                <X size={17} />
+              </button>
+            )}
 
             <div className="settings-modal-content">
               {renderSection(active.id)}
@@ -599,6 +637,20 @@ export const SettingsPage = () => {
           </section>
         </div>
       </div>
+
+      {isPhone && (
+        <Modal
+          isOpen={isMenuOpen}
+          onClose={() => {
+            setIsMenuOpen(false);
+          }}
+          title={t("settingsPage.title")}
+        >
+          <div className="settings-phone-menu-body" data-testid="settings-menu">
+            {sidebarBody}
+          </div>
+        </Modal>
+      )}
     </div>
   );
 };

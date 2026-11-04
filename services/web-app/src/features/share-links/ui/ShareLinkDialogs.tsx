@@ -427,7 +427,7 @@ export const LinkVisitsModal = ({
           <p className="share-link-muted">{t("visits.empty")}</p>
         )}
         {status === "ready" && items.length > 0 && (
-          <table className="share-link-visits-table">
+          <table className="share-link-visits-table tbl-cards">
             <thead>
               <tr>
                 <th scope="col">{t("visits.who")}</th>
@@ -446,9 +446,9 @@ export const LinkVisitsModal = ({
                         : t("visits.guestNoName")
                       : (visit.name ?? "")}
                   </td>
-                  <td>{when(visit.first_at)}</td>
-                  <td>{when(visit.last_at)}</td>
-                  <td>{visit.opens}</td>
+                  <td data-label={t("visits.first")}>{when(visit.first_at)}</td>
+                  <td data-label={t("visits.last")}>{when(visit.last_at)}</td>
+                  <td data-label={t("visits.opens")}>{visit.opens}</td>
                 </tr>
               ))}
             </tbody>

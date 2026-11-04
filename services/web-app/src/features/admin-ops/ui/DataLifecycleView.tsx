@@ -49,8 +49,13 @@ const SourceRow = ({
         <strong>{t(`lifecycle.source.${source.key}.title`)}</strong>
         <div className="lc-sub">{t(`lifecycle.source.${source.key}.body`)}</div>
       </td>
-      <td>{t(`lifecycle.strategy.${source.strategy}`)}</td>
-      <td data-testid={`lc-size-${source.key}`}>
+      <td data-label={t("lifecycle.col.how")}>
+        {t(`lifecycle.strategy.${source.strategy}`)}
+      </td>
+      <td
+        data-label={t("lifecycle.col.size")}
+        data-testid={`lc-size-${source.key}`}
+      >
         {source.bytes === null ? "—" : formatFileSize(source.bytes)}
         {source.rows ? (
           <div className="lc-sub">
@@ -58,9 +63,12 @@ const SourceRow = ({
           </div>
         ) : null}
       </td>
-      <td>
+      <td data-label={t("lifecycle.col.retention")}>
         {source.editable ? (
-          <div className="flex items-center" style={{ gap: 6 }}>
+          <div
+            className="flex items-center"
+            style={{ gap: 6, flexWrap: "wrap" }}
+          >
             <Input
               type="number"
               style={{ width: 90 }}
@@ -114,7 +122,10 @@ const SourceRow = ({
           </div>
         )}
       </td>
-      <td data-testid={`lc-last-${source.key}`}>
+      <td
+        data-label={t("lifecycle.col.last")}
+        data-testid={`lc-last-${source.key}`}
+      >
         {run?.at ? formatPastTime(run.at) : "—"}
         {run?.removed ? (
           <div className="lc-sub">
@@ -162,7 +173,7 @@ const Thresholds = ({
     Number.isInteger(w) && Number.isInteger(c) && w >= 50 && c <= 99 && w < c;
   const changed = w !== value.warn_percent || c !== value.critical_percent;
   return (
-    <div className="flex items-center" style={{ gap: 8 }}>
+    <div className="flex items-center" style={{ gap: 8, flexWrap: "wrap" }}>
       <span>{t("lifecycle.thresholds.warn")}</span>
       <Input
         type="number"
@@ -301,7 +312,7 @@ export const DataLifecycleView = (props: DataLifecycleViewProps) => {
                 title={t(`lifecycle.group.${group}`)}
                 testId={`lc-group-${group}`}
               >
-                <table className="lc-table">
+                <table className="lc-table tbl-cards">
                   <thead>
                     <tr>
                       <th>{t("lifecycle.col.source")}</th>

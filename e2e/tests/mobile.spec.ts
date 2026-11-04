@@ -1,5 +1,12 @@
 import { expect, test, type Page } from "@playwright/test";
-import { LANGS, USERS, seedPassword, shot, type Lang } from "./helpers";
+import { LANGS, USERS, shot, type Lang } from "./helpers";
+import {
+  MIN_TOUCH,
+  SIZES,
+  expectNoHorizontalScroll,
+  expectTouchTarget,
+  loginOnPhone,
+} from "./phoneHelpers";
 import { mockBuiltPdf, mockPeopleAndStudios } from "./phoneMocks";
 
 /**
@@ -7,70 +14,6 @@ import { mockBuiltPdf, mockPeopleAndStudios } from "./phoneMocks";
  * зоны касания не меньше 40 px. Два размера (360x740 и 390x844) и два языка интерфейса (его задаёт локаль браузера).
  * Скриншоты: screenshots/<язык>/mobile-<ширина>-*.png.
  */
-const SIZES = [
-  { width: 360, height: 740 },
-  { width: 390, height: 844 },
-] as const;
-
-const MIN_TOUCH = 40;
-
-/** Вход на экране /login: на телефоне лендинг прячет форму в окно, а прямой адрес даёт её сразу. */
-const loginOnPhone = async (page: Page, email: string): Promise<void> => {
-  await page.goto("/login");
-  await page.locator("input[type=email]").fill(email);
-  await page.locator("input[type=password]").fill(seedPassword());
-  await page.locator("form button[type=submit]").first().click();
-  await expect(page.getByTestId("account-menu-trigger")).toBeVisible();
-};
-
-/**
- * Элементы, торчащие за правый край окна. Страница приложения не прокручивается (body: overflow hidden),
- * поэтому scrollWidth ничего не скажет: ищем сами элементы, не спрятанные внутри блока со своей прокруткой.
- */
-const overflowing = (page: Page): Promise<string[]> =>
-  page.evaluate(() => {
-    const viewport = document.documentElement.clientWidth;
-    const clipped = (el: Element): boolean => {
-      for (let p = el.parentElement; p; p = p.parentElement) {
-        if (getComputedStyle(p).overflowX === "visible") continue;
-        if (p.getBoundingClientRect().right <= viewport + 1) return true;
-      }
-      return false;
-    };
-    const found: string[] = [];
-    for (const el of document.querySelectorAll("body *")) {
-      const rect = el.getBoundingClientRect();
-      if (rect.width === 0 || rect.height === 0) continue;
-      if (getComputedStyle(el).position === "fixed") continue;
-      if (rect.right > viewport + 1 && !clipped(el)) {
-        found.push(
-          `${el.tagName.toLowerCase()}.${String(el.className)} right=${String(Math.round(rect.right))}`,
-        );
-      }
-    }
-    return found.slice(0, 8);
-  });
-
-const expectNoHorizontalScroll = async (page: Page): Promise<void> => {
-  const dims = await page.evaluate(() => ({
-    scroll: document.documentElement.scrollWidth,
-    client: document.documentElement.clientWidth,
-  }));
-  expect(dims.scroll).toBeLessThanOrEqual(dims.client);
-  expect(await overflowing(page)).toEqual([]);
-};
-
-const expectTouchTarget = async (
-  page: Page,
-  locator: ReturnType<Page["locator"]>,
-  what: string,
-): Promise<void> => {
-  const box = await locator.boundingBox();
-  expect(box, what).not.toBeNull();
-  expect(box?.width ?? 0, `${what}: ширина`).toBeGreaterThanOrEqual(MIN_TOUCH);
-  expect(box?.height ?? 0, `${what}: высота`).toBeGreaterThanOrEqual(MIN_TOUCH);
-};
-
 for (const lang of LANGS) {
   for (const size of SIZES) {
     test.describe(`Телефон ${String(size.width)} [${lang}]`, () => {

@@ -99,7 +99,7 @@ const UpdatesContent = () => {
         title={t("page.title")}
         description={t("page.lead")}
         actions={
-          <div className="flex" style={{ gap: 8 }}>
+          <div className="flex" style={{ gap: 8, flexWrap: "wrap" }}>
             <Button
               variant="ghost"
               disabled={check.isPending}

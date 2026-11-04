@@ -12,6 +12,7 @@ import {
   ArrowUpCircle,
   Bot,
   Building2,
+  ChevronDown,
   ClipboardList,
   DatabaseBackup,
   DatabaseZap,
@@ -28,9 +29,10 @@ import {
   Users,
   type LucideIcon,
 } from "lucide-react";
-import { Link, NavLink, Outlet } from "react-router";
+import { Link, NavLink, Outlet, useLocation } from "react-router";
 import { useTranslation } from "react-i18next";
-import { Tooltip, UiVariantContext } from "@shared/ui";
+import { useIsPhoneWidth } from "@shared/lib";
+import { Modal, Tooltip, UiVariantContext } from "@shared/ui";
 import { useBootstrap } from "@entities/session";
 import { AppStatusBar } from "@widgets/AppStatusBar";
 import { AppTitlebar } from "@widgets/AppTitlebar";
@@ -159,9 +161,22 @@ const WithTip = ({
     children
   );
 
+/** Раздел админки, который открыт по адресу: для подписи на кнопке меню телефона. */
+const activeNavItem = (pathname: string): NavItem | undefined => {
+  const items = ADMIN_NAV.flatMap((group) => group.items);
+  return (
+    items.find(
+      (item) => item.id !== "overview" && pathname.startsWith(item.to),
+    ) ?? items.find((item) => item.id === "overview")
+  );
+};
+
 const AdminNav = () => {
   const { t } = useTranslation("adminShell");
   const narrow = useNarrow();
+  const isPhone = useIsPhoneWidth();
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const { pathname } = useLocation();
   const [status, setStatus] = useState<NavStatus>({
     counters: {},
     instanceName: null,
@@ -176,6 +191,172 @@ const AdminNav = () => {
   const bootstrap = useBootstrap().data;
   const name = status.instanceName ?? t("nav.instanceFallback");
 
+  const head = (
+    <div className="adm-nav-head">
+      <WithTip narrow={narrow && !isPhone} label={name}>
+        <span className="adm-nav-mark" aria-hidden="true">
+          <ShieldCheck size={16} />
+        </span>
+      </WithTip>
+      <div className="adm-nav-head-text" style={{ minWidth: 0, flex: 1 }}>
+        <div className="adm-nav-title" data-testid="admin-instance-name">
+          {name}
+        </div>
+        {status.instanceHost && (
+          <div className="adm-nav-who" data-testid="admin-instance-host">
+            <span>{status.instanceHost}</span>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+
+  const groups = (
+    <div className="adm-nav-scroll">
+      {ADMIN_NAV.map((group) => (
+        <ul
+          key={group.id}
+          className="adm-nav-group"
+          aria-labelledby={
+            group.id === "main" ? undefined : `admin-nav-g-${group.id}`
+          }
+        >
+          {group.id !== "main" && (
+            <li
+              id={`admin-nav-g-${group.id}`}
+              className="adm-nav-caption"
+              role="presentation"
+            >
+              {t(`nav.groups.${group.id}`)}
+            </li>
+          )}
+          {group.items.map(({ id, to, icon: Icon }) => {
+            const label = t(`nav.${id}`);
+            const counter = counters[id];
+            const key = COUNTER_KEY[id];
+            const counterText =
+              counter && key ? t(key, { count: counter.count }) : null;
+            const tipNarrow = narrow && !isPhone;
+            return (
+              <li key={id}>
+                <WithTip
+                  narrow={tipNarrow}
+                  label={counterText ? `${label} · ${counterText}` : label}
+                >
+                  <NavLink
+                    to={to}
+                    end={id === "overview"}
+                    data-testid={`admin-nav-${id}`}
+                    aria-label={tipNarrow ? label : undefined}
+                    className={({ isActive }) =>
+                      `adm-nav-item${isActive ? " active" : ""}`
+                    }
+                    onClick={() => {
+                      setIsMenuOpen(false);
+                    }}
+                  >
+                    <Icon size={15} aria-hidden="true" />
+                    <span className="adm-nav-label">{label}</span>
+                    {counter && (
+                      <span
+                        className="adm-count"
+                        data-tone={counter.tone}
+                        data-dot={counter.count === 0 || undefined}
+                        data-testid={`admin-nav-count-${id}`}
+                        title={counterText ?? undefined}
+                      >
+                        {counter.count > 0 && (
+                          <span aria-hidden="true">{counter.count}</span>
+                        )}
+                        {counterText && (
+                          <span className="sr-only">{counterText}</span>
+                        )}
+                      </span>
+                    )}
+                  </NavLink>
+                </WithTip>
+              </li>
+            );
+          })}
+        </ul>
+      ))}
+    </div>
+  );
+
+  const foot = (
+    <div className="adm-nav-foot">
+      <WithTip narrow={narrow && !isPhone} label={t("nav.back")}>
+        <Link
+          to="/"
+          className="adm-nav-item"
+          data-testid="admin-back-to-studio"
+          aria-label={narrow && !isPhone ? t("nav.back") : undefined}
+        >
+          <ArrowLeft size={15} aria-hidden="true" />
+          <span className="adm-nav-label">{t("nav.back")}</span>
+        </Link>
+      </WithTip>
+      {bootstrap && (
+        <div className="adm-nav-version" data-testid="admin-version">
+          {t("nav.version", { version: bootstrap.version })}
+        </div>
+      )}
+    </div>
+  );
+
+  // Телефон: рейка не помещается рядом с содержимым. Вместо неё кнопка с названием открытого
+  // раздела над страницей, список разделов открывается шторкой.
+  if (isPhone) {
+    const current = activeNavItem(pathname);
+    const CurrentIcon = current?.icon ?? LayoutDashboard;
+    const currentCounter = current ? counters[current.id] : undefined;
+    return (
+      <>
+        <Suspense fallback={null}>
+          <NavStatusProbe onChange={report} />
+        </Suspense>
+        <div className="adm-phone-bar" data-testid="admin-nav">
+          <button
+            type="button"
+            className="adm-phone-menu"
+            data-testid="admin-menu-trigger"
+            aria-haspopup="dialog"
+            onClick={() => {
+              setIsMenuOpen(true);
+            }}
+          >
+            <CurrentIcon size={16} aria-hidden="true" />
+            <span className="adm-phone-title">
+              {current ? t(`nav.${current.id}`) : t("nav.label")}
+            </span>
+            {currentCounter && currentCounter.count > 0 && (
+              <span className="adm-count" data-tone={currentCounter.tone}>
+                {currentCounter.count}
+              </span>
+            )}
+            <ChevronDown size={14} aria-hidden="true" />
+          </button>
+        </div>
+        <Modal
+          isOpen={isMenuOpen}
+          onClose={() => {
+            setIsMenuOpen(false);
+          }}
+          title={name}
+        >
+          <nav
+            aria-label={t("nav.label")}
+            className="adm-nav adm-nav--sheet"
+            data-testid="admin-menu"
+          >
+            {groups}
+            {foot}
+          </nav>
+        </Modal>
+      </>
+    );
+  }
+
   return (
     <nav
       aria-label={t("nav.label")}
@@ -185,106 +366,9 @@ const AdminNav = () => {
       <Suspense fallback={null}>
         <NavStatusProbe onChange={report} />
       </Suspense>
-      <div className="adm-nav-head">
-        <WithTip narrow={narrow} label={name}>
-          <span className="adm-nav-mark" aria-hidden="true">
-            <ShieldCheck size={16} />
-          </span>
-        </WithTip>
-        <div className="adm-nav-head-text" style={{ minWidth: 0, flex: 1 }}>
-          <div className="adm-nav-title" data-testid="admin-instance-name">
-            {name}
-          </div>
-          {status.instanceHost && (
-            <div className="adm-nav-who" data-testid="admin-instance-host">
-              <span>{status.instanceHost}</span>
-            </div>
-          )}
-        </div>
-      </div>
-      <div className="adm-nav-scroll">
-        {ADMIN_NAV.map((group) => (
-          <ul
-            key={group.id}
-            className="adm-nav-group"
-            aria-labelledby={
-              group.id === "main" ? undefined : `admin-nav-g-${group.id}`
-            }
-          >
-            {group.id !== "main" && (
-              <li
-                id={`admin-nav-g-${group.id}`}
-                className="adm-nav-caption"
-                role="presentation"
-              >
-                {t(`nav.groups.${group.id}`)}
-              </li>
-            )}
-            {group.items.map(({ id, to, icon: Icon }) => {
-              const label = t(`nav.${id}`);
-              const counter = counters[id];
-              const key = COUNTER_KEY[id];
-              const counterText =
-                counter && key ? t(key, { count: counter.count }) : null;
-              return (
-                <li key={id}>
-                  <WithTip
-                    narrow={narrow}
-                    label={counterText ? `${label} · ${counterText}` : label}
-                  >
-                    <NavLink
-                      to={to}
-                      end={id === "overview"}
-                      data-testid={`admin-nav-${id}`}
-                      aria-label={narrow ? label : undefined}
-                      className={({ isActive }) =>
-                        `adm-nav-item${isActive ? " active" : ""}`
-                      }
-                    >
-                      <Icon size={15} aria-hidden="true" />
-                      <span className="adm-nav-label">{label}</span>
-                      {counter && (
-                        <span
-                          className="adm-count"
-                          data-tone={counter.tone}
-                          data-dot={counter.count === 0 || undefined}
-                          data-testid={`admin-nav-count-${id}`}
-                          title={counterText ?? undefined}
-                        >
-                          {counter.count > 0 && (
-                            <span aria-hidden="true">{counter.count}</span>
-                          )}
-                          {counterText && (
-                            <span className="sr-only">{counterText}</span>
-                          )}
-                        </span>
-                      )}
-                    </NavLink>
-                  </WithTip>
-                </li>
-              );
-            })}
-          </ul>
-        ))}
-      </div>
-      <div className="adm-nav-foot">
-        <WithTip narrow={narrow} label={t("nav.back")}>
-          <Link
-            to="/"
-            className="adm-nav-item"
-            data-testid="admin-back-to-studio"
-            aria-label={narrow ? t("nav.back") : undefined}
-          >
-            <ArrowLeft size={15} aria-hidden="true" />
-            <span className="adm-nav-label">{t("nav.back")}</span>
-          </Link>
-        </WithTip>
-        {bootstrap && (
-          <div className="adm-nav-version" data-testid="admin-version">
-            {t("nav.version", { version: bootstrap.version })}
-          </div>
-        )}
-      </div>
+      {head}
+      {groups}
+      {foot}
     </nav>
   );
 };
@@ -298,7 +382,7 @@ export const AdminLayout = () => (
   >
     <UiVariantContext.Provider value="console">
       <AppTitlebar showVersion={false} />
-      <div className="flex flex-1" style={{ minHeight: 0 }}>
+      <div className="adm-body flex flex-1" style={{ minHeight: 0 }}>
         <AdminNav />
         <main className="adm-main">
           <Outlet />

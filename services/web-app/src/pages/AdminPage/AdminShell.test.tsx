@@ -13,6 +13,8 @@ import {
 } from "vitest";
 import { adminClient } from "@shared/api";
 import { i18n, loadAdminNamespaces } from "@shared/lib";
+import { installViewport } from "@shared/lib/viewport/testing";
+import userEvent from "@testing-library/user-event";
 import { installServerDemo } from "@/app/demo";
 import { activateServerScenario } from "@/app/demo/server";
 import { AdminLayout } from "./AdminLayout";
@@ -149,5 +151,64 @@ describe("оболочка и сводка админки", () => {
     expect(
       await screen.findByText("3 people are waiting for account approval"),
     ).toBeInTheDocument();
+  });
+});
+
+describe("оболочка админки на телефоне", () => {
+  let viewport: ReturnType<typeof installViewport> | undefined;
+  beforeAll(async () => {
+    installServerDemo();
+    await loadAdminNamespaces(["shell", "audit"]);
+  });
+  beforeEach(async () => {
+    await i18n.changeLanguage("ru");
+  });
+  afterEach(() => {
+    cleanup();
+    vi.restoreAllMocks();
+    viewport?.restore();
+    viewport = undefined;
+  });
+
+  it("вместо рейки кнопка с названием раздела, список разделов в шторке", async () => {
+    activateServerScenario("ops_services_degraded");
+    viewport = installViewport(390);
+    const user = userEvent.setup();
+    mount();
+    expect(document.querySelector("nav.adm-nav")).toBeNull();
+    const trigger = screen.getByTestId("admin-menu-trigger");
+    expect(trigger).toHaveTextContent("Обзор");
+    expect(screen.queryByTestId("admin-menu")).not.toBeInTheDocument();
+    await user.click(trigger);
+    const menu = screen.getByTestId("admin-menu");
+    expect(menu.closest("[data-form]")).toHaveAttribute("data-form", "sheet");
+    for (const group of ["Люди", "Сборки", "Система", "Настройки", "Журнал"]) {
+      expect(within(menu).getByText(group)).toBeInTheDocument();
+    }
+    // Все разделы и возврат в Студию.
+    expect(within(menu).getAllByRole("link")).toHaveLength(18);
+    expect(
+      await screen.findByTestId("admin-nav-count-services"),
+    ).toHaveTextContent("4");
+    expect(screen.getByTestId("admin-back-to-studio")).toHaveAttribute(
+      "href",
+      "/",
+    );
+  });
+
+  it("выбор раздела закрывает шторку", async () => {
+    viewport = installViewport(360);
+    const user = userEvent.setup();
+    mount();
+    await user.click(screen.getByTestId("admin-menu-trigger"));
+    await user.click(screen.getByTestId("admin-nav-runners"));
+    expect(screen.queryByTestId("admin-menu")).not.toBeInTheDocument();
+  });
+
+  it("на десктопе рейка на месте", () => {
+    viewport = installViewport(1360);
+    mount();
+    expect(screen.getByTestId("admin-nav")).toBeInTheDocument();
+    expect(screen.queryByTestId("admin-menu-trigger")).toBeNull();
   });
 });

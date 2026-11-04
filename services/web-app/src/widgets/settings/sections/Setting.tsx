@@ -39,12 +39,17 @@ export const Setting = ({ label, hint, anchorId, children }: SettingProps) => (
       borderBottom: "1px dashed var(--border)",
     }}
   >
-    <div className="flex items-center justify-between" style={{ gap: 12 }}>
+    <div
+      className="setting-row flex items-center justify-between"
+      style={{ gap: 12 }}
+    >
       <div className="flex flex-col" style={{ gap: 2 }}>
         <label style={{ fontSize: 12, fontWeight: 500 }}>{label}</label>
         {hint && <span className="hint">{hint}</span>}
       </div>
-      <div style={{ maxWidth: "60%" }}>{children}</div>
+      <div className="setting-control" style={{ maxWidth: "60%" }}>
+        {children}
+      </div>
     </div>
   </div>
 );

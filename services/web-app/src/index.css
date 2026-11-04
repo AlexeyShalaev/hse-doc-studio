@@ -2956,35 +2956,6 @@
     animation: settingFlash 1.4s ease-out;
   }
 
-  @media (max-width: 760px) {
-    .settings-modal-overlay {
-      padding: 12px;
-    }
-    .settings-modal {
-      width: 100%;
-      height: calc(100vh - 24px);
-      min-height: 0;
-      grid-template-columns: 1fr;
-      grid-template-rows: auto minmax(0, 1fr);
-    }
-    .settings-modal-sidebar {
-      border-right: 0;
-      border-bottom: 1px solid var(--border);
-    }
-    .settings-modal-nav {
-      flex-direction: row;
-      overflow-x: auto;
-      overflow-y: hidden;
-    }
-    .settings-modal-link {
-      white-space: nowrap;
-      flex-shrink: 0;
-    }
-    .settings-modal-content {
-      padding: 58px 18px 24px;
-    }
-  }
-
   /* ── agent chat history ────────────────────────────────────── */
   .chat-panel-actions {
     display: flex;
@@ -5773,38 +5744,38 @@ th button:focus-visible .dt-sort-hint {
 }
 /* На узком окне навигация сжимается до значков, подписи уходят в подсказки. */
 @media (max-width: 1024px) {
-  .adm-nav {
+  .adm-nav:not(.adm-nav--sheet) {
     width: 60px;
   }
-  .adm-nav-head {
+  .adm-nav:not(.adm-nav--sheet) .adm-nav-head {
     justify-content: center;
     padding: 12px 0;
   }
-  .adm-nav-head-text,
-  .adm-nav-label,
-  .adm-nav-version {
+  .adm-nav:not(.adm-nav--sheet) .adm-nav-head-text,
+  .adm-nav:not(.adm-nav--sheet) .adm-nav-label,
+  .adm-nav:not(.adm-nav--sheet) .adm-nav-version {
     display: none;
   }
-  .adm-nav-scroll,
-  .adm-nav-foot {
+  .adm-nav:not(.adm-nav--sheet) .adm-nav-scroll,
+  .adm-nav:not(.adm-nav--sheet) .adm-nav-foot {
     padding-left: 8px;
     padding-right: 8px;
   }
-  .adm-nav-caption {
+  .adm-nav:not(.adm-nav--sheet) .adm-nav-caption {
     height: 1px;
     padding: 0;
     margin: 9px 6px;
     background: var(--border);
     font-size: 0;
   }
-  .adm-nav-item {
+  .adm-nav:not(.adm-nav--sheet) .adm-nav-item {
     justify-content: center;
     padding: 0;
     height: 34px;
   }
   /* В полосе значков число не помещается и закрывает значок: вместо него
      точка в углу, справа от значка, а число читается в подсказке. */
-  .adm-nav-item .adm-count {
+  .adm-nav:not(.adm-nav--sheet) .adm-nav-item .adm-count {
     position: absolute;
     top: 7px;
     right: 6px;
@@ -5816,16 +5787,19 @@ th button:focus-visible .dt-sort-hint {
     background: var(--fg-2);
     box-shadow: 0 0 0 2px var(--bg-1);
   }
-  .adm-nav-item .adm-count > [aria-hidden="true"] {
+  .adm-nav:not(.adm-nav--sheet)
+    .adm-nav-item
+    .adm-count
+    > [aria-hidden="true"] {
     display: none;
   }
-  .adm-nav-item .adm-count[data-tone="accent"] {
+  .adm-nav:not(.adm-nav--sheet) .adm-nav-item .adm-count[data-tone="accent"] {
     background: var(--accent);
   }
-  .adm-nav-item .adm-count[data-tone="warning"] {
+  .adm-nav:not(.adm-nav--sheet) .adm-nav-item .adm-count[data-tone="warning"] {
     background: var(--c-warn);
   }
-  .adm-nav-item .adm-count[data-tone="danger"] {
+  .adm-nav:not(.adm-nav--sheet) .adm-nav-item .adm-count[data-tone="danger"] {
     background: var(--c-err);
   }
   :root {
@@ -8099,5 +8073,305 @@ a.adm-row:hover .adm-row-chevron {
   .activity-badge.inline {
     position: static;
     border-color: transparent;
+  }
+}
+
+/* ════════════════════════════════════════════════════════════════════════════
+   Настройки аккаунта и установки на телефоне: страница на весь экран, меню разделов шторкой,
+   строки настроек в одну колонку.
+   ════════════════════════════════════════════════════════════════════════════ */
+@media (max-width: 767.98px) {
+  .settings-modal-overlay {
+    padding: 0;
+    align-items: stretch;
+    background: var(--bg-0);
+    backdrop-filter: none;
+  }
+  .settings-modal {
+    width: 100%;
+    height: 100%;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+  }
+  .settings-modal-main {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
+  }
+  .settings-phone-bar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+    padding: calc(6px + var(--safe-top)) max(8px, var(--safe-right)) 6px
+      max(8px, var(--safe-left));
+    border-bottom: 1px solid var(--border);
+    background: var(--bg-1);
+  }
+  .settings-phone-menu {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex: 1;
+    min-width: 0;
+    min-height: var(--touch-lg);
+    padding: 0 12px;
+    border: 1px solid var(--border);
+    border-radius: var(--r-3);
+    background: var(--bg-2);
+    color: var(--fg-0);
+    font-size: 14.5px;
+    font-weight: 600;
+    text-align: left;
+    cursor: pointer;
+  }
+  .settings-phone-title {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .settings-modal-content {
+    flex: 1;
+    min-height: 0;
+    height: auto;
+    padding: 16px max(var(--page-gutter), var(--safe-right))
+      calc(28px + var(--safe-bottom)) max(var(--page-gutter), var(--safe-left));
+  }
+  /* Меню разделов в шторке: без заголовка (он у шторки), список на всю ширину. */
+  .settings-phone-menu-body {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin: 0 -8px;
+  }
+  .settings-phone-menu-body .settings-modal-title {
+    display: none;
+  }
+  .settings-phone-menu-body .settings-modal-search {
+    min-height: var(--touch-lg);
+    margin: 0 8px;
+  }
+  .settings-phone-menu-body .settings-modal-link,
+  .settings-phone-menu-body .settings-modal-result {
+    min-height: var(--touch-lg);
+    font-size: 14.5px;
+  }
+}
+
+/* ════════════════════════════════════════════════════════════════════════════
+   Админка на телефоне: кнопка раздела над страницей и список разделов в шторке вместо рейки.
+   ════════════════════════════════════════════════════════════════════════════ */
+@media (max-width: 767.98px) {
+  .adm-body {
+    flex-direction: column;
+  }
+  :root {
+    --adm-gutter: var(--page-gutter);
+  }
+  .adm-phone-bar {
+    display: flex;
+    flex-shrink: 0;
+    padding: 8px max(12px, var(--safe-right)) 8px max(12px, var(--safe-left));
+    border-bottom: 1px solid var(--border);
+    background: var(--bg-1);
+  }
+  .adm-phone-menu {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    min-width: 0;
+    min-height: var(--touch-lg);
+    padding: 0 12px;
+    border: 1px solid var(--border);
+    border-radius: var(--r-3);
+    background: var(--bg-2);
+    color: var(--fg-0);
+    font-size: 14.5px;
+    font-weight: 600;
+    text-align: left;
+    cursor: pointer;
+  }
+  .adm-phone-title {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .adm-nav--sheet {
+    width: 100%;
+    border-right: 0;
+    background: transparent;
+    margin: 0 -8px;
+    width: calc(100% + 16px);
+  }
+  .adm-nav--sheet .adm-nav-scroll {
+    overflow: visible;
+    padding: 0 4px;
+  }
+  .adm-nav--sheet .adm-nav-item {
+    min-height: var(--touch-lg);
+    font-size: 14.5px;
+    padding: 0 12px;
+  }
+  .adm-nav--sheet .adm-nav-foot {
+    padding: 8px 4px 0;
+  }
+  .adm-main {
+    padding-bottom: var(--safe-bottom);
+  }
+  .adm-tab,
+  .fmenu-trigger {
+    min-height: var(--touch-min);
+  }
+  /* Переключатель: дорожка 32x18 остаётся, зона касания 52x40 вокруг неё. */
+  .toggle {
+    width: 52px;
+    height: var(--touch-min);
+    background: transparent !important;
+    border-color: transparent !important;
+  }
+  .toggle::before {
+    content: "";
+    position: absolute;
+    top: 50%;
+    left: 10px;
+    width: 32px;
+    height: 18px;
+    margin-top: -9px;
+    box-sizing: border-box;
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    background: var(--bg-3);
+    transition: background 0.15s;
+  }
+  .toggle.on::before {
+    border-color: transparent;
+    background: var(--accent);
+  }
+  .toggle::after {
+    top: 50%;
+    left: 12px;
+    margin-top: -7px;
+  }
+  .help-anchor {
+    width: var(--touch-min);
+    height: var(--touch-min);
+    margin: -12px -10px -12px -6px;
+  }
+  .fmenu-trigger {
+    padding-left: 14px;
+    padding-right: 12px;
+  }
+  /* Карточка человека: на весь экран, а не панелью сбоку. */
+  /* !important: стили карточки лежат в чанке админки и грузятся позже этого файла. */
+  .ppl-drawer {
+    width: 100% !important;
+    border-left: 0 !important;
+    padding-top: var(--safe-top);
+  }
+  .ppl-drawer-body {
+    padding-bottom: calc(16px + var(--safe-bottom));
+  }
+  .ppl-drawer-action {
+    min-height: var(--touch-lg);
+  }
+  .adm-header-actions {
+    flex-wrap: wrap;
+    width: 100%;
+  }
+  .adm-header-actions > * {
+    flex: 1 1 auto;
+  }
+  /* Строка раздела: название слева, справа сведения и действие; не помещаются в одну строку - уходят под название. */
+  .adm-row {
+    flex-wrap: wrap;
+    padding-left: var(--page-gutter);
+    padding-right: var(--page-gutter);
+  }
+  .adm-row-text {
+    flex: 1 1 150px;
+  }
+  .adm-row-meta {
+    white-space: normal;
+    flex-wrap: wrap;
+  }
+}
+
+/* Таблица карточками на телефоне для таблиц, собранных вручную (DataTable делает это сам): строка
+   становится карточкой, у ячейки с data-label подпись столбца слева. Первая ячейка названием без
+   подписи, пустая последняя (действия) пропадает. Заголовок остаётся для скринридера. */
+@media (max-width: 767.98px) {
+  table.tbl-cards,
+  .tbl-cards tbody,
+  .tbl-cards tr,
+  .tbl-cards td,
+  .tbl-cards th[scope="row"] {
+    display: block !important;
+    width: 100% !important;
+    min-width: 0 !important;
+  }
+  .tbl-cards thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+  }
+  .tbl-cards tr {
+    margin-bottom: 10px;
+    padding: 12px 14px;
+    border: 1px solid var(--border);
+    border-radius: var(--r-3);
+    background: var(--bg-1);
+  }
+  .tbl-cards td,
+  .tbl-cards th[scope="row"] {
+    padding: 4px 0 !important;
+    border: 0 !important;
+    white-space: normal !important;
+    text-align: left !important;
+  }
+  .tbl-cards td[data-label] {
+    display: grid !important;
+    grid-template-columns: minmax(84px, 36%) minmax(0, 1fr);
+    gap: 10px;
+    align-items: baseline;
+  }
+  .tbl-cards td[data-label]::before {
+    content: attr(data-label);
+    color: var(--fg-2);
+    font-size: 12px;
+  }
+  .tbl-cards td:empty {
+    display: none !important;
+  }
+}
+
+/* Строка настройки: подпись над переключателем, пока он не помещается рядом (телефон и планшет). */
+@media (max-width: 1023.98px) {
+  .setting-row {
+    flex-direction: column;
+    align-items: stretch !important;
+    gap: 8px !important;
+  }
+  .setting-control {
+    max-width: 100% !important;
+    min-width: 0;
+  }
+  .setting-control > .seg {
+    width: 100%;
+  }
+  .setting-control > .seg button {
+    flex: 1 1 0;
+    min-width: 0;
   }
 }
