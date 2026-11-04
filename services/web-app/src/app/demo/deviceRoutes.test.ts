@@ -3,6 +3,7 @@ import { createDemoRouter } from "@shared/api/demo";
 import {
   AccountDevicesSchema,
   LocalDeviceSchema,
+  ProjectPeopleSchema,
   ProjectStudiosSchema,
   StudioLinkSchema,
 } from "@entities/connected-device";
@@ -47,6 +48,17 @@ describe("демо подключённых Студий", () => {
       "/projects/p1/studios",
     );
     expect(() => ProjectStudiosSchema.parse(studios?.data)).not.toThrow();
+    const people = await call(
+      cloudDeviceDemoRoutes,
+      "POST",
+      "/projects/p1/presence",
+      {
+        session_id: "tab-demo-0001",
+        activity: "viewing",
+        doc_id: null,
+      },
+    );
+    expect(() => ProjectPeopleSchema.parse(people?.data)).not.toThrow();
     const builds = await call(
       cloudDeviceDemoRoutes,
       "GET",

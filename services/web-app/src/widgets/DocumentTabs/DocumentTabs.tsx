@@ -32,7 +32,8 @@ import {
 import { useStartCompile } from "@entities/compile";
 import { UploadCustomFileModal } from "@features/custom-document";
 import { BuildBlockedNotice } from "@features/build-states";
-import { useProject } from "@entities/project";
+import { isReadOnlyRole, useProject } from "@entities/project";
+import { usePlaceStore, type DocActivity } from "@entities/connected-device";
 import { useCapabilities } from "@entities/session";
 import { EditorIcon, openInEditor, useEditors } from "@entities/system";
 import { env } from "@shared/config";
@@ -176,6 +177,24 @@ export const DocumentTabs = ({ projectId, docId }: DocumentTabsProps) => {
       : isEditorView
         ? "editor"
         : "preview";
+
+  // Что вкладка делает с документом, сообщаем плашке людей в шапке (features/connected-devices): режим решает
+  // вид центра и право правки, а не страница.
+  const canEdit = !isReadOnlyRole(project?.my_role);
+  const placeActivity: DocActivity =
+    isRunning || activeView === "compile"
+      ? "building"
+      : activeView === "checks"
+        ? "reviewing"
+        : (activeView === "editor" || activeView === "side") && canEdit
+          ? "editing"
+          : "viewing";
+  useEffect(() => {
+    usePlaceStore.getState().report(docId, placeActivity);
+    return () => {
+      usePlaceStore.getState().clear(docId);
+    };
+  }, [docId, placeActivity]);
 
   // SyncTeX cross-pane jumps switch the view to the side being navigated to: a
   // forward jump (source→PDF) shows the preview; an inverse jump shows the

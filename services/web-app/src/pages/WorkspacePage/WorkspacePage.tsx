@@ -8,7 +8,7 @@ import {
   useProject,
   useProjectRoleLabel,
 } from "@entities/project";
-import { StudioPresence } from "@features/connected-devices";
+import { ProjectPeople, StudioPresence } from "@features/connected-devices";
 import { ConflictScreen } from "@features/git-conflicts";
 import { LinkAccessBanner, useGuest } from "@features/guest-session";
 import { useResumeProjectStreams, useStartCompileAll } from "@entities/compile";
@@ -257,6 +257,10 @@ export const WorkspacePage = ({ canvas }: WorkspacePageProps) => {
         projectActions={
           viaLink ? undefined : (
             <>
+              <ProjectPeople
+                projectId={projectId}
+                docId={canvas === "document" && docId ? docId : null}
+              />
               <StudioPresence projectId={projectId} />
               <SyncCluster projectId={projectId} />
             </>

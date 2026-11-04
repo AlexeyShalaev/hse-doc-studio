@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { ProjectPeopleSchema } from "./people.schema";
 
 // Контракт подключённых Студий (docs/design/connected-devices.md): сервер отдаёт только метаданные состояния.
 
@@ -133,6 +134,8 @@ export const DevicesOverviewSchema = z.strictObject({
   online_window_s: z.number().int(),
   device: DeviceSchema.nullable(),
   others: z.array(WorkingLocallySchema),
+  // Все, кто сейчас в проекте; null, пока сервер не отдаёт список (старый сервер) или права на исходники нет.
+  people: ProjectPeopleSchema.nullish(),
 });
 export type DevicesOverview = z.infer<typeof DevicesOverviewSchema>;
 

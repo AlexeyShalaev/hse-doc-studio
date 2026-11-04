@@ -26,6 +26,7 @@ import {
   usePutFile,
   useUploadFile,
 } from "@entities/document";
+import { nudgePeople } from "@entities/connected-device";
 import { isReadOnlyRole, useProject } from "@entities/project";
 import { useBootstrap } from "@entities/session";
 import { apiClient } from "@shared/api/client";
@@ -1362,6 +1363,13 @@ const LiveSourceEditor = ({
       toast.warning(tRealtime("reset"));
     },
   });
+  // В файл пришёл или ушёл соавтор: список людей в шапке просим обновить раньше очередного сигнала (запросы
+  // сами не чаще раза в несколько секунд). Отдельного канала для этого нет: события комнаты уже здесь.
+  const queryClient = useQueryClient();
+  const peerCount = snapshot.peers.length;
+  useEffect(() => {
+    nudgePeople(queryClient, props.projectId);
+  }, [peerCount, queryClient, props.projectId]);
   const [gaveUp, setGaveUp] = useState(false);
   useEffect(() => {
     const timer = setTimeout(() => {

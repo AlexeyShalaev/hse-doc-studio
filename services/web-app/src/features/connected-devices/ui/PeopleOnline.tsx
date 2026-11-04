@@ -1,0 +1,186 @@
+import { useState } from "react";
+import { ChevronDown } from "lucide-react";
+import { useTranslation } from "react-i18next";
+import { useProjectRoleLabel } from "@entities/project";
+import {
+  hasDocument,
+  splitPeople,
+  type PersonOnline,
+  type ProjectPeople,
+} from "@entities/connected-device";
+import { Popover, PopoverContent, PopoverTrigger } from "@shared/ui/Popover";
+import { Tooltip } from "@shared/ui/Tooltip";
+import { deviceText, personSummary, whereText } from "../lib/peopleText";
+import { AvatarMark, PersonAvatar } from "./PersonAvatar";
+
+export type PeopleOnlineProps = {
+  people: ProjectPeople;
+  /** Название документа по его идентификатору; null, если документ этому смотрящему не виден. */
+  docName: (docId: string) => string | null;
+  /** Перейти к документу человека. Без обработчика аватары и строки только показывают. */
+  onOpenDoc?: (person: PersonOnline) => void;
+};
+
+/**
+ * Люди в проекте сейчас: компактные аватары в шапке (не больше пяти и «+N»), подпись по наведению и фокусу,
+ * список по нажатию на «+N» или стрелку. Пока в проекте нет никого, кроме самого смотрящего,
+ * ничего не рисует: плашка Студии рядом остаётся одна.
+ */
+export const PeopleOnline = ({
+  people,
+  docName,
+  onOpenDoc,
+}: PeopleOnlineProps) => {
+  const { t } = useTranslation("devices");
+  const roleLabel = useProjectRoleLabel();
+  const [open, setOpen] = useState(false);
+  const { shown, hidden } = splitPeople(people.people, people.total);
+  // Одного себя показывать незачем: аватары появляются, когда в проекте есть кто-то ещё.
+  if (!people.people.some((p) => !p.me)) return null;
+
+  const parts = (person: PersonOnline) => {
+    const doc = person.doc_id !== null ? docName(person.doc_id) : null;
+    return {
+      name: person.name,
+      role: roleLabel(person.role),
+      where: whereText(t, person.activity, doc),
+      device: deviceText(t, person),
+      doc,
+    };
+  };
+  /** Переход к документу человека; null, если идти некуда (сам человек, нет документа, документ не виден). */
+  const opener = (person: PersonOnline, doc: string | null) =>
+    onOpenDoc !== undefined && !person.me && hasDocument(person) && doc !== null
+      ? () => {
+          onOpenDoc(person);
+        }
+      : null;
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <div
+        className="pp-group"
+        role="group"
+        aria-label={t("people.aria", { count: people.total })}
+        data-testid="project-people"
+        data-count={people.total}
+      >
+        {shown.map((person) => {
+          const p = parts(person);
+          const summary = personSummary(t, person, p);
+          const go = opener(person, p.doc);
+          return (
+            <Tooltip
+              key={person.user_id}
+              side="bottom"
+              delayDuration={150}
+              content={
+                <span className="pp-tip">
+                  <strong>
+                    {person.me ? t("people.you", { name: p.name }) : p.name}
+                  </strong>
+                  <span>{`${p.role}, ${p.device}`}</span>
+                  <span>{p.where}</span>
+                  {go !== null && (
+                    <span className="dim">{t("people.openHint")}</span>
+                  )}
+                </span>
+              }
+            >
+              <PersonAvatar
+                person={person}
+                aria-label={
+                  go !== null ? `${summary}. ${t("people.open")}` : summary
+                }
+                onClick={() => {
+                  if (go !== null) go();
+                  else setOpen(true);
+                }}
+              />
+            </Tooltip>
+          );
+        })}
+        <PopoverTrigger asChild>
+          <button
+            type="button"
+            className="pp-more"
+            data-testid="people-more"
+            aria-label={t("people.list")}
+            aria-expanded={open}
+          >
+            {hidden > 0 ? (
+              <span>{t("people.more", { count: hidden })}</span>
+            ) : (
+              <ChevronDown size={12} aria-hidden="true" />
+            )}
+          </button>
+        </PopoverTrigger>
+      </div>
+      <PopoverContent width={340} aria-label={t("people.title")}>
+        <div
+          className="flex flex-col"
+          style={{ gap: 4, padding: 10, maxHeight: "70vh", overflowY: "auto" }}
+          data-testid="people-list"
+        >
+          <span style={{ fontSize: 12.5, fontWeight: 600, padding: "0 2px" }}>
+            {t("people.title")}
+          </span>
+          <ul className="pp-list">
+            {people.people.map((person) => {
+              const p = parts(person);
+              const go = opener(person, p.doc);
+              const row = (
+                <>
+                  <AvatarMark person={person} />
+                  <span className="pp-row-text">
+                    <span className="pp-row-name">
+                      {person.me ? t("people.you", { name: p.name }) : p.name}
+                      <span className="pp-row-role">{p.role}</span>
+                    </span>
+                    <span className="pp-row-where">
+                      {p.where}
+                      {`, ${p.device}`}
+                    </span>
+                    {go !== null && (
+                      <span className="pp-row-go">{t("people.open")}</span>
+                    )}
+                  </span>
+                </>
+              );
+              return (
+                <li key={person.user_id} data-testid="people-row">
+                  {go !== null ? (
+                    <button
+                      type="button"
+                      className="pp-row"
+                      onClick={() => {
+                        setOpen(false);
+                        go();
+                      }}
+                    >
+                      {row}
+                    </button>
+                  ) : (
+                    <div className="pp-row" data-static="true">
+                      {row}
+                    </div>
+                  )}
+                </li>
+              );
+            })}
+          </ul>
+          {people.total > people.people.length && (
+            <span className="dim" style={{ fontSize: 11 }}>
+              {t("people.truncated", {
+                count: people.total - people.people.length,
+              })}
+            </span>
+          )}
+          <span className="dim" style={{ fontSize: 11, lineHeight: 1.4 }}>
+            {t("people.note")}
+          </span>
+        </div>
+      </PopoverContent>
+    </Popover>
+  );
+};
