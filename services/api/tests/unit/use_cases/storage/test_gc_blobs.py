@@ -94,7 +94,9 @@ async def test__run__more_than_one_batch__all_removed(world: World) -> None:
 async def test__run__old_object_without_registry_row__removed_registered_kept(world: World) -> None:
     orphan = await world.add(b"old-orphan", age=timedelta(0), registered=False)
     registered = await world.add(b"registered", age=timedelta(0), registered=False)
-    later = NOW + timedelta(days=20)
+    # Возраст файла без строки в реестре считается по mtime на диске, то есть от настоящих часов:
+    # «позже» тоже отсчитывается от них, иначе тест ломается, когда проходит срок от фиксированной даты.
+    later = datetime.now(tz=timezone.utc) + timedelta(days=20)
     await world.registry.record({registered: len(b"registered")}, later - timedelta(days=1))
 
     report = await world.uc().run(later)
