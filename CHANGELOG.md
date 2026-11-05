@@ -6,6 +6,26 @@ Generated from `release-notes.json` via `make changelog` — do not edit by hand
 Release notes are hand-written and bilingual (RU/EN); the app shows them in the
 selected interface language.
 
+## [0.9.0](https://github.com/AlexeyShalaev/hse-doc-studio/compare/v0.8.0...v0.9.0) (2026-11-05)
+
+
+### Features
+
+* **compile:** код font_missing и первая строка ошибки LaTeX в build_failed ([a70a196](https://github.com/AlexeyShalaev/hse-doc-studio/commit/a70a1966463cbcb70771f2795198b2bbafb226f2))
+
+
+### Bug Fixes
+
+* **packs:** 2026.1.1 без правок шрифтов, только пустые поля ([ba90f13](https://github.com/AlexeyShalaev/hse-doc-studio/commit/ba90f13d783c483e1e412f0bf3b84c9c12f35b8a))
+* **packs:** версия 2026.1.1 шаблона КП СПИ — пустые поля и шрифты без Microsoft ([9d3e3b0](https://github.com/AlexeyShalaev/hse-doc-studio/commit/9d3e3b01baba41f95969078a0d298d22ce9be353))
+* **packs:** версия 2026.1.1 шаблона КП СПИ: пустые поля и шрифты без Microsoft ([d182eb8](https://github.com/AlexeyShalaev/hse-doc-studio/commit/d182eb8372ff7006d32d47f26f26ccde43d2a9f0))
+* **runner:** выходы сборки копируются до выгрузки, пропавший PDF даёт pdf_missing ([5db0b9c](https://github.com/AlexeyShalaev/hse-doc-studio/commit/5db0b9c54f1e54a64e574930831aea1ef906922d))
+* **runner:** облачные сборки получают управляемые шрифты ([cbde6d2](https://github.com/AlexeyShalaev/hse-doc-studio/commit/cbde6d2bf010a2d7558a4675ffe18fecc6ad7711))
+* **runner:** шрифты в облачных сборках, ложный artifact_upload_failed, font_missing ([919b51e](https://github.com/AlexeyShalaev/hse-doc-studio/commit/919b51e7d205be41c9f1ef0904498c6e3f0a92b3))
+* **web:** слот сборки закрывается по данным сервера, если поток оборвался без done ([195efc2](https://github.com/AlexeyShalaev/hse-doc-studio/commit/195efc2429809be14907318db3a20b4f964ce4cb))
+* **web:** явный выбор размера текста сильнее значения аккаунта, сохранение с повтором ([1ccd91c](https://github.com/AlexeyShalaev/hse-doc-studio/commit/1ccd91c3adbf38eb08301672910ab749b462234e))
+* явный выбор размера текста не перекрывается значением аккаунта ([fef1c7d](https://github.com/AlexeyShalaev/hse-doc-studio/commit/fef1c7d7d37ca11ef73ab38b847b71db7a1fb8ef))
+
 ## [0.8.0](https://github.com/AlexeyShalaev/hse-doc-studio/compare/v0.7.0...v0.8.0) - 2026-11-04
 
 - Text size: in Settings, Appearance you can choose the interface text size (90, 100, 112, 125 or 140 %). It changes at once across the whole app (menus, forms, dialogs, the editor, the admin area, the landing page), is remembered in your account and applies without flicker on load. Document content and the PDF page are not scaled. On a phone the 90 % step does not shrink buttons and fields below a comfortable size
