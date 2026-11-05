@@ -173,6 +173,8 @@
       "settings_storage_thresholds_update": "Изменены пороги места на диске",
       "lifecycle_run_now": "Запущена очистка источника данных",
       "diagnostics_run": "Запущена самодиагностика",
+      "diagnostics_accept": "Принято осознанно предупреждение самодиагностики",
+      "diagnostics_accept_revoke": "Возвращено предупреждение самодиагностики",
       "settings_diagnostics_update": "Изменены пороги самодиагностики",
       "mcp_call": "Вызов инструмента MCP",
       "auth_passkey_added": "Добавлен passkey",
