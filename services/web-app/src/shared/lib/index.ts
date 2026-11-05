@@ -125,6 +125,7 @@ export type {
 
 export {
   flushPendingSaves,
+  hasUnsavedChanges,
   registerPendingSave,
   usePendingSave,
 } from "./pendingSaves";
@@ -159,3 +160,14 @@ export {
 } from "./viewport";
 export type { ViewportClass } from "./viewport";
 export { useKeyboardInset } from "./viewport";
+
+export {
+  handleStaleBuild,
+  installStaleBuildGuard,
+  isChunkLoadError,
+  reloadToNewBuild,
+  reportIfChunkError,
+  startVersionWatch,
+  useStaleBuildStore,
+} from "./staleBuild";
+export type { StaleReason } from "./staleBuild";

@@ -20,6 +20,7 @@ from starlette.responses import FileResponse, HTMLResponse, Response
 
 from hse_doc_studio.api.auth_cookie import public_origin
 from hse_doc_studio.api.help_site import pick_language
+from hse_doc_studio.api.spa_static import index_response
 from hse_doc_studio.core.identity.instance_settings import (
     InstanceEnvOverrides,
     InstanceSettings,
@@ -116,7 +117,7 @@ def install_landing_root(app: FastAPI, *, mode: StudioMode, static_dir: Path) ->
 
     @app.api_route("/", methods=["GET", "HEAD"], include_in_schema=False)
     async def root(request: Request) -> Response:
-        plain = FileResponse(index_html)
+        plain = index_response(index_html)
         if mode is not StudioMode.server:
             return plain
         try:

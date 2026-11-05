@@ -6,7 +6,11 @@ import {
   useParams,
   useSearchParams,
 } from "react-router";
-import { loadAdminNamespaces, type AdminNamespace } from "@shared/lib";
+import {
+  loadAdminNamespaces,
+  reportIfChunkError,
+  type AdminNamespace,
+} from "@shared/lib";
 import { PageContainer, type PageWidth } from "@shared/ui";
 import { AdminChunkError } from "./AdminChunkError";
 import { AdminChunkLoading } from "./AdminChunkLoading";
@@ -129,7 +133,8 @@ const WithLocales = ({
       () => {
         if (live) setDone({ token, ok: true });
       },
-      () => {
+      (error: unknown) => {
+        reportIfChunkError(error);
         if (live) setDone({ token, ok: false });
       },
     );
@@ -204,7 +209,8 @@ export const AdminApp = () => {
       () => {
         if (live) setReady(true);
       },
-      () => {
+      (error: unknown) => {
+        reportIfChunkError(error);
         if (live) setFailed(true);
       },
     );

@@ -1,7 +1,11 @@
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { App } from "@app";
+import { installStaleBuildGuard, startVersionWatch } from "@shared/lib";
 import "./index.css";
+
+installStaleBuildGuard();
+startVersionWatch();
 
 const rootElement = document.getElementById("root");
 

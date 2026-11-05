@@ -6,11 +6,10 @@ from dataclasses import asdict
 
 import structlog
 from dishka.integrations.fastapi import setup_dishka
-from fastapi import FastAPI, Request
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
-from fastapi.responses import FileResponse, PlainTextResponse
-from fastapi.staticfiles import StaticFiles
+from fastapi.responses import PlainTextResponse
 
 from hse_doc_studio.api.admin_access import install_admin_access
 from hse_doc_studio.api.config import Settings, settings
@@ -48,6 +47,7 @@ from hse_doc_studio.api.routers.server_routers import include_server_routers
 from hse_doc_studio.api.routers.v1 import api_router
 from hse_doc_studio.api.security_install import install_server_security
 from hse_doc_studio.api.server_setup import prepare_server_setup
+from hse_doc_studio.api.spa_static import install_spa_fallback, mount_assets
 from hse_doc_studio.core.access.context import ActorRequired
 from hse_doc_studio.core.ai_runtime import IOllamaRuntime
 from hse_doc_studio.core.git_sync.protocols import IGitRemoteRegistry
@@ -700,9 +700,7 @@ def _mount_spa(app: FastAPI, settings: Settings) -> None:
     if settings.static_dir is None:
         raise ValueError("static_dir must be set before calling _mount_spa")
     static_dir = settings.static_dir
-    index_html = static_dir / "index.html"
-
-    app.mount("/assets", StaticFiles(directory=static_dir / "assets"), name="assets")
+    mount_assets(app, static_dir)
     # Корень с тегами для предпросмотра ссылок и картинка предпросмотра: до SPA-фолбэка.
     install_landing_root(app, mode=settings.mode, static_dir=static_dir)
 
@@ -723,11 +721,7 @@ def _mount_spa(app: FastAPI, settings: Settings) -> None:
     async def serve_config_js() -> PlainTextResponse:
         return PlainTextResponse(config_js_content, media_type="application/javascript")
 
-    # SPA fallback — all unmatched routes return index.html so the React
-    # router can handle navigation on the client side
-    @app.get("/{full_path:path}", include_in_schema=False)
-    async def spa_fallback(full_path: str, request: Request) -> FileResponse:  # noqa: ARG001
-        return FileResponse(index_html)
+    install_spa_fallback(app, static_dir)
 
 
 def main() -> None:
