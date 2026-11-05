@@ -52,3 +52,31 @@ async def test__real_template__fresh_project_matches_its_recorded_base(
         check=True,
     ).stdout
     assert "Hse-Base-Approximate" not in message
+
+
+async def test__real_coursework__existing_project_is_offered_the_patch_2026_1_1(
+    test_app: AsyncClient, tmp_path: Path
+) -> None:
+    """Проект на 2026.1 получает исправление как patch: затронуты только заявление и Beamer-презентация."""
+    folder = tmp_path / "sse"
+    folder.mkdir()
+    payload = {
+        **project_api_payload(str(folder)),
+        "pack_id": "hse-cs-sse",
+        "template_id": "coursework",
+        "version": "2026.1",
+        "lang": "ru",
+    }
+    created = await test_app.post("/api/v1/projects", json=payload)
+    assert created.status_code == 201, created.text
+    project = created.json()
+    base = f"/api/v1/projects/{project['id']}/template-update"
+
+    status = (await test_app.get(base)).json()
+    assert status["current_version"] == "2026.1"
+    assert status["recommended"]["version"]["version"] == "2026.1.1"
+    assert status["recommended"]["update_class"] == "patch"
+
+    plan = (await test_app.post(f"{base}/plan", json={"to_version": "2026.1.1"})).json()
+    changed = {f["path"] for f in plan["files"] if f["action"] != "unchanged"}
+    assert changed == {"topic_application/topic_application.tex", "presentation/beamer/presentation.tex"}
