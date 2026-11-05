@@ -24,7 +24,7 @@ from hse_doc_studio.infra.compile.backend import BuildBackend
 from hse_doc_studio.infra.compile.concurrency import CompileConcurrencyLimiter
 from hse_doc_studio.infra.compile.docker_compile_executor import DockerCompileExecutor, sweep_build_containers
 from hse_doc_studio.infra.compile.docker_image_manager import DockerImageManager
-from hse_doc_studio.infra.compile.host_path_resolver import HostPathResolver
+from hse_doc_studio.infra.compile.host_path_resolver import HostPathResolver, PathNotInContainerMountError
 from hse_doc_studio.infra.compile.k8s.api import IKubeApi, KubeApiError
 from hse_doc_studio.infra.compile.k8s.client import KubernetesApiClient, TokenSource
 from hse_doc_studio.infra.compile.k8s.config import instance_label
@@ -174,13 +174,17 @@ class RunnerProvider(Provider):
     @provide
     async def get_build_backend(self, config: RunnerConfig) -> AsyncIterator[BuildBackend]:
         if config.executor is BuildExecutorKind.docker:
+            resolver = self._host_paths or HostPathResolver()
             yield BuildBackend(
                 executor=DockerCompileExecutor(
-                    self._host_paths or HostPathResolver(),
+                    resolver,
                     image=config.tex_image,
                     cache_volume_name=config.tex_cache_volume,
                     idle_timeout_s=config.tex_idle_timeout_s,
                     limits=config.executor_limits(),
+                    fonts_dir=config.fonts_dir,
+                    fonts_host_dir=_fonts_host_dir(config, resolver),
+                    fonts_mount_target=config.fonts_mount_target,
                 ),
                 environment=DockerImageManager(),
                 sweep=sweep_build_containers,
@@ -300,6 +304,19 @@ class RunnerProvider(Provider):
             ),
             observer=self._observer,
         )
+
+
+def _fonts_host_dir(config: RunnerConfig, resolver: HostPathResolver) -> str | None:
+    """Путь папки шрифтов для `docker -v`: заданный явно или переведённый соответствием путей хоста."""
+    if config.fonts_dir is None:
+        return None
+    if config.fonts_host_dir:
+        return config.fonts_host_dir.replace("\\", "/").rstrip("/")
+    try:
+        return resolver.to_host(config.fonts_dir)
+    except PathNotInContainerMountError as exc:
+        logger.warning("fonts folder is not mapped to a host path, fonts are not mounted: %s", exc)
+        return None
 
 
 def endpoints_of(config: RunnerConfig) -> tuple[AiEndpoint, ...]:

@@ -6,7 +6,7 @@ from dataclasses import replace
 from pathlib import Path
 
 import pytest
-from hse_doc_studio.infra.remote_runner.runner_session import cloud_cache_volume, runner_session_factory
+from hse_doc_studio.infra.remote_runner.runner_session import SessionFonts, cloud_cache_volume, runner_session_factory
 from hse_doc_studio.infra.remote_runner.session import (
     RunnerSessionFatal,
     RunnerSessionSpec,
@@ -79,6 +79,59 @@ async def test__session__registers_saves_identity_and_reports_online(tmp_path: P
 async def test__session__tex_available__declares_tex_tag(tmp_path: Path) -> None:
     state = FakeRunnerState()
     factory = runner_session_factory(cache_volume="tex-cache", transport=SwitchTransport(create_fake_app(state)))
+
+    async with factory(_spec(tmp_path, tex=True), Listener()) as session:
+        await _run_until(session, lambda: state.polls > 0)
+
+    assert "tex" in state.registrations[0]["tags"]
+
+
+async def test__session__tex_available__host_fonts_are_adopted_once_before_the_loop_starts(tmp_path: Path) -> None:
+    state = FakeRunnerState()
+    calls: list[str] = []
+
+    async def ensure() -> None:
+        calls.append("adopt")
+
+    fonts = SessionFonts(tmp_path / "fonts", str(tmp_path / "fonts"), "/usr/local/share/fonts/hse", ensure)
+    factory = runner_session_factory(
+        cache_volume="tex-cache", transport=SwitchTransport(create_fake_app(state)), fonts=fonts
+    )
+
+    async with factory(_spec(tmp_path, tex=True), Listener()) as session:
+        await _run_until(session, lambda: state.polls > 0)
+
+    assert calls == ["adopt"]
+
+
+async def test__session__no_docker__host_fonts_are_not_touched(tmp_path: Path) -> None:
+    state = FakeRunnerState()
+    calls: list[str] = []
+
+    async def ensure() -> None:
+        calls.append("adopt")
+
+    fonts = SessionFonts(tmp_path / "fonts", str(tmp_path / "fonts"), "/usr/local/share/fonts/hse", ensure)
+    factory = runner_session_factory(
+        cache_volume="tex-cache", transport=SwitchTransport(create_fake_app(state)), fonts=fonts
+    )
+
+    async with factory(_spec(tmp_path, tex=False), Listener()) as session:
+        await _run_until(session, lambda: state.polls > 0)
+
+    assert calls == []
+
+
+async def test__session__font_adoption_fails__runner_still_connects(tmp_path: Path) -> None:
+    state = FakeRunnerState()
+
+    async def ensure() -> None:
+        raise OSError("docker socket gone")
+
+    fonts = SessionFonts(tmp_path / "fonts", str(tmp_path / "fonts"), "/usr/local/share/fonts/hse", ensure)
+    factory = runner_session_factory(
+        cache_volume="tex-cache", transport=SwitchTransport(create_fake_app(state)), fonts=fonts
+    )
 
     async with factory(_spec(tmp_path, tex=True), Listener()) as session:
         await _run_until(session, lambda: state.polls > 0)

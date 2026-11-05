@@ -270,6 +270,11 @@
               "properties": {"existingClaim": {"type": "string"}},
               "additionalProperties": false
             },
+            "fonts": {
+              "type": "object",
+              "properties": {"existingClaim": {"type": "string"}},
+              "additionalProperties": false
+            },
             "networkPolicy": {
               "type": "object",
               "properties": {"enabled": {"type": "boolean"}},

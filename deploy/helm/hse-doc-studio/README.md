@@ -106,9 +106,10 @@ runner:
     tolerations: []
     # runtimeClassName: gvisor        # для общих установок, если RuntimeClass есть
     # texCache: {existingClaim: tex-cache}
+    # fonts: {existingClaim: studio-fonts}   # PVC со шрифтами Times New Roman, Arial, Consolas
 ```
 
-Образ TeX Live весит несколько гигабайт: первая сборка на узле ждёт его pull (`podStartTimeoutSeconds`, по умолчанию 300). Заранее подтянуть можно DaemonSet-ом с этим образом и командой `sleep`. Кэш TeX по умолчанию не нужен (формат собирается во временном каталоге пода); `texCache.existingClaim` монтирует PVC с кэшем шрифтов, нужен `ReadWriteMany` или один узел.
+Образ TeX Live весит несколько гигабайт: первая сборка на узле ждёт его pull (`podStartTimeoutSeconds`, по умолчанию 300). Заранее подтянуть можно DaemonSet-ом с этим образом и командой `sleep`. Кэш TeX по умолчанию не нужен (формат собирается во временном каталоге пода); `texCache.existingClaim` монтирует PVC с кэшем шрифтов, нужен `ReadWriteMany` или один узел. `fonts.existingClaim` монтирует PVC со шрифтами (`.ttf`, `.otf`, `.ttc`) в поды сборки только для чтения: шаблоны ГОСТ просят Times New Roman, Arial и Consolas, а в образе TeX Live их нет и Studio не поставляет их из-за лицензии. Без шрифтов шаблоны с `\IfFontExistsTF` берут свободную замену, а прямой `\setmainfont{Arial}` даёт сбой `font_missing`.
 
 Проверка в кластере после установки: собрать документ, в журнале задачи видна строка `pod=hds-builds/hds-build-…`, а `kubectl -n hds-builds get pods -w` показывает появление и удаление пода. Устройство и развилки: `docs/design/k8s-runner.md`.
 

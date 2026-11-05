@@ -350,6 +350,17 @@ def test_kubernetes_runner_build_pod_settings_reach_the_runner() -> None:
     assert config.k8s.tolerations[0]["effect"] == "NoSchedule"
 
 
+def test_kubernetes_runner_fonts_claim_reaches_the_runner_only_when_set() -> None:
+    def env_of(runner: dict[str, Any]) -> dict[str, Any]:
+        return {e["name"]: e.get("value") for e in runner["spec"]["template"]["spec"]["containers"][0]["env"]}
+
+    _, plain = _k8s_runner()
+    _, with_fonts = _k8s_runner("--set", "runner.kubernetes.fonts.existingClaim=studio-fonts")
+
+    assert "HSE_RUNNER__K8S__FONTS_CLAIM" not in env_of(plain)
+    assert env_of(with_fonts)["HSE_RUNNER__K8S__FONTS_CLAIM"] == "studio-fonts"
+
+
 def test_kubernetes_runner_data_volume_pvc_or_empty_dir() -> None:
     docs, runner = _k8s_runner()
     assert [p["metadata"]["name"] for p in _by_kind(docs, "PersistentVolumeClaim")].count(
