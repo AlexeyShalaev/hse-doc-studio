@@ -188,6 +188,17 @@ export default defineConfig({
       },
     },
     {
+      // Осознанное принятие предупреждений самодиагностики; идёт после полного смоука, до бэкапов.
+      name: "acknowledge",
+      testMatch: /acknowledge\.spec\.ts/,
+      timeout: 3 * 60_000,
+      use: {
+        ...devices["Desktop Chrome"],
+        actionTimeout: 15_000,
+        channel: process.env.E2E_CHANNEL || undefined,
+      },
+    },
+    {
       // Страница «Обновления» и закрытый протокол апдейтера; идёт после полного смоука на том же стенде.
       name: "updates",
       testMatch: /updates\.spec\.ts/,
