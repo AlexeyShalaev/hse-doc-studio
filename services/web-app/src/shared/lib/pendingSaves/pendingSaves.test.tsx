@@ -1,6 +1,10 @@
 import { render } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
-import { flushPendingSaves, registerPendingSave } from "./pendingSaves";
+import {
+  flushPendingSaves,
+  hasUnsavedChanges,
+  registerPendingSave,
+} from "./pendingSaves";
 import { usePendingSave } from "./usePendingSave";
 
 describe("pendingSaves", () => {
@@ -63,5 +67,20 @@ describe("pendingSaves", () => {
     expect(seen).toEqual([2]);
     unmount();
     expect((await flushPendingSaves()).total).toBe(0);
+  });
+});
+
+describe("hasUnsavedChanges", () => {
+  it("true, пока хоть один редактор держит несохранённое, и снимается при отписке", () => {
+    let dirty = false;
+    const off = registerPendingSave(
+      () => undefined,
+      () => dirty,
+    );
+    expect(hasUnsavedChanges()).toBe(false);
+    dirty = true;
+    expect(hasUnsavedChanges()).toBe(true);
+    off();
+    expect(hasUnsavedChanges()).toBe(false);
   });
 });

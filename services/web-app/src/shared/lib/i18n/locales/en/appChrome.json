@@ -138,6 +138,13 @@
       "system": "System"
     }
   },
+  "staleBuild": {
+    "title": "A new version of Studio is out",
+    "message": "This tab is running an old version and some screens are no longer available. Reload the page to continue.",
+    "saveHint": "Studio will try to save your edits before reloading.",
+    "refresh": "Refresh",
+    "banner": "A new version of Studio is out. Reload the page when convenient."
+  },
   "errorPage": {
     "notFoundTitle": "Page not found",
     "notFoundMessage": "No such route, or it's no longer available.",

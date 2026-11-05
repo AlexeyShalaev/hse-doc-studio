@@ -77,12 +77,15 @@ export const useProjectAutosave = (project: Project): UseProjectAutosave => {
 
   // Let operations that read the project from disk (git sync, snapshots) write
   // the debounced edits first, and wait for the answer.
-  usePendingSave(async () => {
-    if (!debouncedSave.isPending()) return;
-    debouncedSave.cancel();
-    if (Object.keys(pendingRef.current).length === 0) return;
-    await updateProjectAsync({ id: project.id, data: pendingRef.current });
-  });
+  usePendingSave(
+    async () => {
+      if (!debouncedSave.isPending()) return;
+      debouncedSave.cancel();
+      if (Object.keys(pendingRef.current).length === 0) return;
+      await updateProjectAsync({ id: project.id, data: pendingRef.current });
+    },
+    () => debouncedSave.isPending(),
+  );
 
   // Flush a pending autosave on unmount (navigating away, closing the panel) so
   // edits made within the debounce window aren't silently dropped.

@@ -1003,15 +1003,19 @@ const SourceEditorBody = ({
   // Let operations that read the project from disk (git sync, snapshots) write
   // the unsaved buffer first. A conflict with an outside edit is not ours to
   // resolve silently, so that case is left alone.
-  usePendingSave(async () => {
-    if (provider && !readOnly) {
-      await provider.flush();
-      return;
-    }
-    if (readOnly || conflict || valueRef.current === savedRef.current) return;
-    debouncedSave.cancel();
-    await save(valueRef.current);
-  });
+  usePendingSave(
+    async () => {
+      if (provider && !readOnly) {
+        await provider.flush();
+        return;
+      }
+      if (readOnly || conflict || valueRef.current === savedRef.current) return;
+      debouncedSave.cancel();
+      await save(valueRef.current);
+    },
+    // A shared buffer syncs live; only a solo buffer can hold unsaved text.
+    () => !readOnly && !provider && valueRef.current !== savedRef.current,
+  );
 
   // Flush a pending autosave on unmount (e.g. switching files) so edits made
   // within the debounce window aren't silently dropped.

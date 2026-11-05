@@ -2,6 +2,7 @@
 
 // Версия из package.json, подставляется vite.config.ts через define.
 declare const __APP_VERSION__: string;
+declare const __BUILD_ID__: string;
 
 // Включает демо синхронизации по git: ответы по git, профилю и доступам отдаёт
 // память вкладки, остальное идёт настоящему бэкенду. Запуск: VITE_GIT_DEMO=1 pnpm dev.
