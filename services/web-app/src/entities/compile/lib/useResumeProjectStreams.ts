@@ -22,6 +22,7 @@ import { useCompileStreamStore } from "./compileStreamStore";
 export const useResumeProjectStreams = (projectId: string): void => {
   const { data: documents } = useDocuments(projectId);
   const start = useCompileStreamStore((s) => s.start);
+  const settleFromServer = useCompileStreamStore((s) => s.settleFromServer);
   const queryClient = useQueryClient();
 
   // Re-attach SSE for any doc the backend says is currently building.
@@ -29,13 +30,23 @@ export const useResumeProjectStreams = (projectId: string): void => {
     if (!documents) return;
     const snapshot = useCompileStreamStore.getState().streams;
     for (const doc of documents) {
-      if (doc.status !== "building" || !doc.last_compile_id) continue;
+      if (!doc.last_compile_id) continue;
+      if (doc.status !== "building") {
+        // Сервер закрыл сборку, а слот ещё «идёт»: поток оборвался без `done`.
+        settleFromServer(
+          projectId,
+          doc.id,
+          doc.last_compile_id,
+          doc.status === "err" ? "failure" : "success",
+        );
+        continue;
+      }
       const k = `${projectId}::${doc.id}`;
       const existing = snapshot[k];
       if (existing?.compileId === doc.last_compile_id) continue;
       start(projectId, doc.id, doc.last_compile_id);
     }
-  }, [documents, projectId, start]);
+  }, [documents, projectId, start, settleFromServer]);
 
   // Invalidate the documents query when a build wraps up so the UI reflects
   // the final status (ok/warn/err) instead of remaining stuck on "building".
