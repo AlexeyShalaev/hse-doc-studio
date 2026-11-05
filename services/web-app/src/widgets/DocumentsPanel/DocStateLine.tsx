@@ -102,6 +102,7 @@ export const DocStateLine = ({
       style={{
         fontSize: "0.65625rem",
         lineHeight: 1.3,
+        overflowWrap: "anywhere",
         color: TONE_COLOR[tone],
       }}
     >

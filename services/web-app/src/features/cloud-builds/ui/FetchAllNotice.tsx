@@ -12,7 +12,7 @@ export const FetchAllNotice = ({ projectId }: { projectId: string }) => {
   if (builds.mode !== "local" || builds.fetchable.length === 0) return null;
   return (
     <div
-      className="flex flex-col items-start"
+      className="flex flex-col items-stretch"
       style={{
         gap: "0.375rem",
         padding: "0.375rem 0.625rem",
@@ -21,6 +21,8 @@ export const FetchAllNotice = ({ projectId }: { projectId: string }) => {
         background: "var(--accent-soft)",
         border: "1px solid var(--accent-line)",
         fontSize: "0.71875rem",
+        minWidth: 0,
+        overflowWrap: "anywhere",
       }}
       data-testid="fetch-all-notice"
     >
@@ -30,6 +32,7 @@ export const FetchAllNotice = ({ projectId }: { projectId: string }) => {
       <Button
         size="xs"
         variant="primary"
+        className="wrap-btn"
         disabled={fetchBuild.isPending}
         onClick={() => {
           fetchBuild.run(null);

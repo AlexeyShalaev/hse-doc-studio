@@ -69,8 +69,10 @@ export const DocBuildLine = ({ view, now, docId }: DocBuildLineProps) => {
     <span
       className="flex items-baseline"
       style={{
-        gap: "0.375rem",
+        columnGap: "0.375rem",
+        rowGap: "0.0625rem",
         flexWrap: "wrap",
+        overflowWrap: "anywhere",
         fontSize: "0.65625rem",
         lineHeight: 1.3,
         color: COLOR[view.tone],
@@ -86,8 +88,8 @@ export const DocBuildLine = ({ view, now, docId }: DocBuildLineProps) => {
       <span style={{ minWidth: 0 }}>{compact}</span>
       {text.freshness !== null && (
         <span
-          className="shrink-0"
           style={{
+            minWidth: 0,
             color: view.fresh === false ? "var(--c-warn)" : "var(--fg-3)",
           }}
         >

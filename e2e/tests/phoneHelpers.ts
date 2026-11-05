@@ -137,3 +137,77 @@ export const smallTargets = (page: Page): Promise<string[]> =>
     }
     return out;
   }, MIN_TOUCH);
+
+/** Размер текста до загрузки приложения: тот же ключ localStorage, что читает загрузочный скрипт. */
+export const presetTextScale = async (page: Page, scale: number): Promise<void> => {
+  await page.addInitScript((value) => {
+    const raw = localStorage.getItem("hse-studio-theme");
+    const stored = raw ? (JSON.parse(raw) as { state?: object; version?: number }) : {};
+    localStorage.setItem(
+      "hse-studio-theme",
+      JSON.stringify({
+        ...stored,
+        version: stored.version ?? 0,
+        state: { ...stored.state, textScale: value, textScaleChosen: value !== 100 },
+      }),
+    );
+  }, scale);
+};
+
+/**
+ * Содержимое панели, вылезающее за её рамку: элемент правее или левее границ панели, а также обрезанный текст без
+ * многоточия (элемент с overflow hidden, у которого scrollWidth больше видимой ширины). Скрытые кнопки-меню строк
+ * (нулевая ширина до наведения) и всплывающие слои не в счёт.
+ */
+export const escapesPanel = (page: Page, rootSelector: string): Promise<string[]> =>
+  page.evaluate((selector) => {
+    const root = document.querySelector(selector);
+    if (!root) return [`нет элемента ${selector}`];
+    const box = root.getBoundingClientRect();
+    const name = (el: Element): string =>
+      `${el.tagName.toLowerCase()}.${String(el.className).split(" ").filter(Boolean).slice(0, 2).join(".")} «${(el.textContent ?? "").trim().slice(0, 24)}»`;
+    const found = new Set<string>();
+    if (root.scrollWidth > root.clientWidth + 1) {
+      found.add(`панель прокручивается вбок: ${String(root.scrollWidth)} > ${String(root.clientWidth)}`);
+    }
+    for (const el of root.querySelectorAll("*")) {
+      if (el.closest("[aria-hidden=true], .sr-only, [aria-haspopup=menu]")) continue;
+      const rect = el.getBoundingClientRect();
+      if (rect.width === 0 || rect.height === 0) continue;
+      const style = getComputedStyle(el);
+      if (style.position === "fixed" || style.visibility === "hidden") continue;
+      if (rect.right > box.right + 0.5 || rect.left < box.left - 0.5) {
+        found.add(`за рамкой: ${name(el)} (${String(Math.round(rect.left))}..${String(Math.round(rect.right))} при ${String(Math.round(box.left))}..${String(Math.round(box.right))})`);
+      }
+      const clips = style.overflowX === "hidden" || style.overflowX === "clip";
+      if (clips && style.textOverflow !== "ellipsis" && el.clientWidth > 4 && el.scrollWidth > el.clientWidth + 1) {
+        found.add(`обрезан без многоточия: ${name(el)} (${String(el.scrollWidth)} > ${String(el.clientWidth)})`);
+      }
+    }
+    return [...found].slice(0, 10);
+  }, rootSelector);
+
+/** Пары элементов внутри блока, которые накладываются друг на друга больше чем на 1 px. */
+export const overlapping = (page: Page, rootSelector: string, itemSelector: string): Promise<string[]> =>
+  page.evaluate(
+    ({ root, item }) => {
+      const items = [...document.querySelectorAll(root)].flatMap((r) => [...r.querySelectorAll(item)]).filter((el) => {
+        const r = el.getBoundingClientRect();
+        return r.width > 0 && r.height > 0;
+      });
+      const label = (el: Element): string => `${el.tagName.toLowerCase()}.${String(el.className).split(" ")[0] ?? ""} «${(el.textContent ?? "").trim().slice(0, 16)}»`;
+      const out: string[] = [];
+      for (let i = 0; i < items.length; i += 1) {
+        for (let j = i + 1; j < items.length; j += 1) {
+          const a = items[i]!.getBoundingClientRect();
+          const b = items[j]!.getBoundingClientRect();
+          if (items[i]!.contains(items[j]!) || items[j]!.contains(items[i]!)) continue;
+          const w = Math.min(a.right, b.right) - Math.max(a.left, b.left);
+          const h = Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top);
+          if (w > 1 && h > 1) out.push(`${label(items[i]!)} налезает на ${label(items[j]!)}`);
+        }
+      }
+      return out.slice(0, 10);
+    },
+    { root: rootSelector, item: itemSelector },
+  );

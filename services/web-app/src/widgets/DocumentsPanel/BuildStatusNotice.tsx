@@ -36,7 +36,7 @@ const StallAlert = ({ projectId }: { projectId: string }) => {
       }}
     >
       <AlertTriangle size="0.75rem" style={{ flexShrink: 0, marginTop: 1 }} />
-      <span>
+      <span style={{ minWidth: 0, overflowWrap: "anywhere" }}>
         {t("documents.stalledWarning", { count: silentMinutes(silentMs) })}
       </span>
     </div>
@@ -82,8 +82,8 @@ export const BuildStatusNotice = ({
         color: "var(--fg-3)",
       }}
     >
-      <RefreshCw size="0.5625rem" className="spin" />
-      <span>{text}</span>
+      <RefreshCw size="0.5625rem" className="spin" style={{ flexShrink: 0 }} />
+      <span style={{ minWidth: 0, overflowWrap: "anywhere" }}>{text}</span>
     </div>
   );
 };
