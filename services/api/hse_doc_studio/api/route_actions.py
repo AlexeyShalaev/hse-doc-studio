@@ -162,6 +162,7 @@ ROUTE_ACTIONS: Mapping[RouteKey, RouteRule] = {
     ("POST", "/projects/{project_id}/git/pdf"): RouteRule(Action.BUILD_RUN),
     ("GET", "/projects/{project_id}/git/builds"): RouteRule(Action.OUTPUT_READ),
     ("POST", "/projects/{project_id}/git/builds/fetch"): RouteRule(Action.BUILD_RUN),
+    ("POST", "/projects/{project_id}/git/builds/cancel"): RouteRule(Action.BUILD_RUN),
     ("POST", "/projects/{project_id}/git/bundle/export"): RouteRule(Action.HISTORY_WRITE),
     ("POST", "/projects/{project_id}/git/bundle/import"): RouteRule(Action.HISTORY_REWRITE),
     ("POST", "/projects/{project_id}/git/ci/preview"): RouteRule(Action.HISTORY_WRITE),
