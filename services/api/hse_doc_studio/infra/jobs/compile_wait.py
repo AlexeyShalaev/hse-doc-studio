@@ -6,6 +6,8 @@ import math
 from uuid import UUID
 
 from hse_doc_studio.core.compile.wait import (
+    CompilePhase,
+    CompilePhaseInfo,
     CompilePlacementInfo,
     CompileWaitInfo,
     CompileWaitReason,
@@ -101,6 +103,32 @@ class QueueCompileWaitReader:
         if viewer_id != project.owner_user_id and project.build_runners is not ProjectBuildRunners.owner:
             return False
         return any(r.revoked_at is None for r in await self._runners.list_owned(project.owner_user_id))
+
+    async def phase_of(self, compile_id: UUID) -> CompilePhaseInfo | None:
+        job = await self._queue.get(compile_id)
+        if job is None or job.state not in (JobState.queued, JobState.running):
+            return None
+        if job.state is JobState.running:
+            return CompilePhaseInfo(CompilePhase.running, job.queued_at, job.started_at)
+        busy, capacity = await self._load(job)
+        return CompilePhaseInfo(
+            CompilePhase.queued, job.queued_at, None, busy if capacity else None, capacity if capacity else None
+        )
+
+    async def _load(self, job: QueuedJob) -> tuple[int, int]:
+        """Сколько задач ведут подходящие онлайн-раннеры и сколько могут вести (общие и личные хозяина проекта)."""
+        now = self._clock()
+        runners = [
+            r
+            for r in await self._runners.list()
+            if r.revoked_at is None and runner_status(r, now) is RunnerStatus.online and job.tags <= r.tags
+        ]
+        if not runners:
+            return 0, 0
+        ids = {r.id for r in runners}
+        running = await self._queue.list(state=JobState.running)
+        busy = sum(1 for other in running if other.runner_id is not None and other.runner_id.hex in ids)
+        return busy, sum(r.concurrency for r in runners)
 
     async def of(self, compile_id: UUID) -> CompileWaitInfo | None:
         job = await self._queue.get(compile_id)

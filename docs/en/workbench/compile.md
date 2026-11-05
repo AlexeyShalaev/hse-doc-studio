@@ -33,6 +33,28 @@ tags:
 The first build downloads the TeX Live image (once, a few gigabytes) — see [“First project”](../start/first-project.md). You don't have to untangle LaTeX errors yourself: “Fix with AI” does it for you, showing every diff.
 
 
+## Queue and concurrency
+
+A runner has a concurrency limit (`concurrency`): how many builds it runs at once. “Build all” queues every document at once, the runner takes as many as the limit allows (a personal runner takes one by default) and the rest honestly wait. So each document has its own state label under the name:
+
+| Label | Meaning |
+|---|---|
+| “queued”, “queued, position 2” | the job is queued, no runner has taken it yet; waiting is normal |
+| “queued, runner busy: 1 of 1” | the suitable runners are fully busy |
+| “waiting for your runner” | the build waits for your personal runner, then moves to a shared one |
+| “no free runner with the required tags” | no suitable runner is online (offline, wrong tags); not a stall, a runner is needed |
+| “building 1:05” | a runner took the build, the time counts from the start of this very build |
+| “not responding for 6 min” | the build is running, but it has sent no output line for over 5 minutes |
+| “error”, “built” | the result of the last build |
+
+The red “The build is not responding” banner and the red button appear only for a running build that stays silent for more than 5 minutes (the same as the idle time after which a runner drops a build itself, 300 seconds). Time in the queue is not counted; every new output line resets it. While the queue is moving, a calm grey line sits above the document list (“Building: 1, queued: 3”) and the button reads “Cancel queue”.
+
+## Stopping a build
+
+“Stop build” stops both the queue and builds that are already running. For a cloud build the server asks the runner to stop the process and the container, the build record becomes `cancelled`, and the log ends with a `[cancelled]` line. Stopping again is harmless. The author of the build and any member with the right to run builds can stop it.
+
+In the local Studio, while the project is building in the cloud, the button reads “Stop cloud build”: the request goes to the server with the Studio sign-in, the button shows “Stopping…” while it runs, and if it fails (no connection, no right, a new sign-in is needed) the reason is shown in a message. While the cloud has an unfinished build the Studio polls the status every few seconds, so cancel, error and done reach it without a reload; the cloud sees a local build in the list of connected devices.
+
 ## When a build fails
 
 A failed build always explains itself: the Build tab shows a banner with the error code and a “what to do” text, and the log below is never empty. The document list shows the reason in red under the document name, and the “Now” block repeats it for each document with an error. The same code and text appear in the cloud and in the local Studio.

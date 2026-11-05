@@ -2,12 +2,18 @@ import { useCallback } from "react";
 import { useCancelCompile } from "@entities/document";
 import { useCompileStreamStore } from "./compileStreamStore";
 
-/** True if any running slot in this project is currently flagged stalled. */
+/** True, если в проекте есть ЗАПУЩЕННАЯ раннером сборка без вывода дольше порога (очередь не в счёт). */
 export const useIsProjectStalled = (projectId: string): boolean =>
   useCompileStreamStore((s) => {
     const prefix = `${projectId}::`;
     for (const [k, slot] of Object.entries(s.streams)) {
-      if (k.startsWith(prefix) && slot.status === "running" && slot.isStalled) {
+      if (
+        k.startsWith(prefix) &&
+        slot.status === "running" &&
+        slot.phase !== "queued" &&
+        slot.wait === null &&
+        slot.isStalled
+      ) {
         return true;
       }
     }

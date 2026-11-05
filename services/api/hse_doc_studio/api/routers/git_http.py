@@ -24,7 +24,7 @@ from hse_doc_studio.api.device_mapping import map_builds, map_overview
 from hse_doc_studio.api.observability.client_ip import client_ip
 from hse_doc_studio.api.rate_limit import enforce
 from hse_doc_studio.api.schemas.artifacts import PdfUploadResponse
-from hse_doc_studio.api.schemas.builds import ProjectBuildsResponse
+from hse_doc_studio.api.schemas.builds import CancelBuildsRequest, CancelBuildsResponse, ProjectBuildsResponse
 from hse_doc_studio.api.schemas.devices import DevicesOverviewResponse, HeartbeatRequest, HeartbeatResponse
 from hse_doc_studio.api.schemas.git_remote import (
     GitProject,
@@ -48,7 +48,12 @@ from hse_doc_studio.core.listing import DEFAULT_LIMIT, MAX_LIMIT, Window
 from hse_doc_studio.core.mode import StudioMode
 from hse_doc_studio.core.rate_limit import GIT_AUTH_FAIL, GIT_HTTP
 from hse_doc_studio.infra.git_remote.smart_http import git_protocol
-from hse_doc_studio.use_cases.artifacts.builds import GitProjectGate, OpenCloudBuildPdfUC, ProjectBuildsUC
+from hse_doc_studio.use_cases.artifacts.builds import (
+    CancelCloudBuildsUC,
+    GitProjectGate,
+    OpenCloudBuildPdfUC,
+    ProjectBuildsUC,
+)
 from hse_doc_studio.use_cases.artifacts.pdf import PdfUploadMeta, PdfUploadResult, UploadProjectPdfUC
 from hse_doc_studio.use_cases.devices.service import DevicesOverviewUC, RecordHeartbeatUC, TooManyDevicesError
 from hse_doc_studio.use_cases.git_remote.auth import (
@@ -296,6 +301,22 @@ async def git_project_builds(request: Request, project_id: UUID) -> Response:
         return _artifact_error(exc)
     body = map_builds(found, settings.artifacts.max_pdf_bytes)
     return JSONResponse(body.model_dump(mode="json"), headers=_NO_CACHE)
+
+
+@router.post("/-/projects/{project_id}/builds/cancel", response_model=CancelBuildsResponse)
+async def git_cancel_builds(request: Request, project_id: UUID, body: CancelBuildsRequest) -> Response:
+    """Остановить облачные сборки проекта (в очереди и идущие) по просьбе локальной Студии; повтор безвреден."""
+    try:
+        principal = await authenticate(request)
+        await (await _container_get(request, GitProjectGate)).require_build(principal.actor, project_id)
+        stopped = await (await _container_get(request, CancelCloudBuildsUC)).execute(project_id, body.doc_id)
+    except GitHttpError as exc:
+        return _json_error(exc)
+    except IdentityError as exc:
+        return _rate_limited(exc)
+    except ArtifactError as exc:
+        return _artifact_error(exc)
+    return JSONResponse(CancelBuildsResponse(cancelled=stopped).model_dump(mode="json"), headers=_NO_CACHE)
 
 
 @router.get("/-/projects/{project_id}/documents/{doc_id}/pdf")

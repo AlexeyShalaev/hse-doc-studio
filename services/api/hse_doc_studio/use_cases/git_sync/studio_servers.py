@@ -500,6 +500,12 @@ class StudioServersService:
         target, secret = await self._authorized(credential_id)
         return await self._marking_denied(credential_id, self._client.project_builds(target, secret, project_id))
 
+    async def cancel_project_builds(self, credential_id: UUID, project_id: UUID, doc_id: str | None) -> int:
+        target, secret = await self._authorized(credential_id)
+        return await self._marking_denied(
+            credential_id, self._client.cancel_project_builds(target, secret, project_id, doc_id)
+        )
+
     async def download_cloud_pdf(  # noqa: PLR0913 — параметры одной загрузки
         self,
         credential_id: UUID,

@@ -13,20 +13,26 @@ from hse_doc_studio.core.identity.protocols import IAuditLog
 from hse_doc_studio.core.jobs.artifacts import IArtifactStore
 from hse_doc_studio.core.projects.locator import IProjectLocator
 from hse_doc_studio.core.projects.usage import IProjectQuota
-from hse_doc_studio.core.repositories import IProjectIndexRepository, IProjectRepository
+from hse_doc_studio.core.repositories import ICompileRepository, IProjectIndexRepository, IProjectRepository
 from hse_doc_studio.core.storage import IObjectStore
 from hse_doc_studio.core.uow import IUnitOfWork
 from hse_doc_studio.core.vcs.protocols import IVcsService
 from hse_doc_studio.infra.db.repositories.artifacts import PostgresProjectArtifactRepository
 from hse_doc_studio.infra.db.repositories.build_stamps import PostgresBuildStampRepository
 from hse_doc_studio.infra.db.session import SessionProvider
-from hse_doc_studio.use_cases.artifacts.builds import GitProjectGate, OpenCloudBuildPdfUC, ProjectBuildsUC
+from hse_doc_studio.use_cases.artifacts.builds import (
+    CancelCloudBuildsUC,
+    GitProjectGate,
+    OpenCloudBuildPdfUC,
+    ProjectBuildsUC,
+)
 from hse_doc_studio.use_cases.artifacts.pdf import (
     DeleteProjectArtifactUC,
     ListProjectArtifactsUC,
     OpenProjectArtifactUC,
     UploadProjectPdfUC,
 )
+from hse_doc_studio.use_cases.compile.cancel_compile import CancelCompileUC
 
 
 class ServerArtifactsProvider(Provider):
@@ -83,6 +89,12 @@ class ServerArtifactsProvider(Provider):
         artifacts: IProjectArtifactRepository,
     ) -> ProjectBuildsUC:
         return ProjectBuildsUC(locator, vcs, stamps, artifacts)
+
+    @provide(scope=Scope.REQUEST)
+    def get_cancel_cloud_builds(
+        self, locator: IProjectLocator, compile_repo: ICompileRepository, cancel: CancelCompileUC
+    ) -> CancelCloudBuildsUC:
+        return CancelCloudBuildsUC(locator, compile_repo, cancel)
 
     @provide(scope=Scope.REQUEST)
     def get_open_cloud_pdf(

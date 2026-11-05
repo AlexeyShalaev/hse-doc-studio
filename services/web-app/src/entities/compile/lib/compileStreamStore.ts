@@ -4,6 +4,7 @@ import { env } from "@shared/config";
 import { CompileWaitSchema, type CompileWait } from "@entities/session";
 import { CompileErrorSchema, type CompileError } from "@entities/document";
 import { parsePlacement, type CompilePlacement } from "@entities/runner";
+import { isSlotStalled, parsePhase } from "./compilePhase";
 
 export type CompileStatus = "running" | "success" | "failure" | "cancelled";
 
@@ -33,9 +34,21 @@ export type CompileStreamSlot = {
    * раннер, на личном, на общем или на общем после фолбэка. null в локальном.
    */
   placement: CompilePlacement | null;
-  /** Wall-clock of the last log line, used by the idle watchdog. */
+  /**
+   * Серверный режим: задача ждёт раннера («queued») или раннер её уже взял («running»), по событию потока
+   * `phase`. null: события ещё не было (или локальный режим, где сборка идёт сразу).
+   */
+  phase: "queued" | "running" | null;
+  /** Когда эта вкладка увидела, что раннер взял сборку (или время запуска с сервера при подключении позже). */
+  runStartedAt: number | null;
+  /** Загрузка подходящих раннеров, пока сборка в очереди. */
+  load: { busy: number; capacity: number } | null;
+  /** Wall-clock of the last event or log line of THIS build, used by the idle watchdog. */
   lastEventAt: number;
-  /** Watchdog flag: no log lines for STALE_THRESHOLD_MS while status=running. */
+  /**
+   * Watchdog flag: запущенная раннером сборка молчит дольше порога. Очередь и ожидание раннера не считаются:
+   * отсчёт идёт не от нажатия «Собрать», а от запуска и последней строки вывода.
+   */
   isStalled: boolean;
 };
 
@@ -96,11 +109,8 @@ const parseDone = (raw: unknown): CompileDoneInfo => {
 const streamUrl = (projectId: string, compileId: string): string =>
   `${env.VITE_API_BASE_URL}/api/v1/projects/${projectId}/compiles/${compileId}/stream`;
 
-// 90s with no output is past the docker pull / font cache phase, so it
-// almost certainly means the build is wedged. The backend has its own
-// idle_timeout (default 120s) that will kill+save failure; this just lets
-// the user act sooner.
-const STALE_THRESHOLD_MS = 90_000;
+// Пороги тишины живут в compilePhase.ts: 5 минут для запущенной раннером сборки (как простой раннера, 300 с)
+// и 90 секунд без событий `phase` (локальный режим: бэкенд сам снимает сборку через 120 с простоя).
 const WATCHDOG_INTERVAL_MS = 5_000;
 
 export const useCompileStreamStore = create<StoreState & StoreActions>(
@@ -140,6 +150,9 @@ export const useCompileStreamStore = create<StoreState & StoreActions>(
               doneInfo: null,
               wait: null,
               placement: null,
+              phase: null,
+              runStartedAt: null,
+              load: null,
               lastEventAt: Date.now(),
               isStalled: false,
             },
@@ -186,6 +199,44 @@ export const useCompileStreamStore = create<StoreState & StoreActions>(
               };
             }
 
+            if (event.type === "phase") {
+              const phase = parsePhase(event.data);
+              if (phase === null) return s;
+              const now = Date.now();
+              const started =
+                slot.phase !== "running" && phase.phase === "running";
+              const startedAtServer =
+                phase.started_at === null
+                  ? Number.NaN
+                  : Date.parse(phase.started_at);
+              return {
+                streams: {
+                  ...s.streams,
+                  [k]: {
+                    ...slot,
+                    phase: phase.phase,
+                    // Раннер взял задачу: молчание считается с этого момента, а не с нажатия кнопки.
+                    runStartedAt: started
+                      ? slot.phase === null && !Number.isNaN(startedAtServer)
+                        ? Math.min(now, startedAtServer)
+                        : now
+                      : slot.runStartedAt,
+                    load:
+                      phase.phase === "queued" &&
+                      phase.runners_capacity != null &&
+                      phase.runners_busy != null
+                        ? {
+                            busy: phase.runners_busy,
+                            capacity: phase.runners_capacity,
+                          }
+                        : null,
+                    lastEventAt: started ? now : slot.lastEventAt,
+                    isStalled: started ? false : slot.isStalled,
+                  },
+                },
+              };
+            }
+
             if (event.type === "wait") {
               const parsed = CompileWaitSchema.safeParse(event.data);
               // Пустое или непонятное тело снимает ожидание: сборка пошла.
@@ -219,6 +270,10 @@ export const useCompileStreamStore = create<StoreState & StoreActions>(
                   logLines: [...slot.logLines, line],
                   // Пошёл вывод раннера: сборка уже идёт, ожидание снято.
                   wait: null,
+                  phase: slot.phase === "queued" ? "running" : slot.phase,
+                  runStartedAt:
+                    slot.phase === "queued" ? Date.now() : slot.runStartedAt,
+                  load: null,
                   lastEventAt: Date.now(),
                   isStalled: false,
                 },
@@ -311,9 +366,8 @@ export const useCompileStreamStore = create<StoreState & StoreActions>(
       const nextStreams = { ...state.streams };
       for (const [k, slot] of Object.entries(state.streams)) {
         if (slot.status !== "running") continue;
-        // Ожидание очереди молчит по делу: сервер сам присылает события `wait`.
-        if (slot.wait !== null) continue;
-        const shouldBeStalled = now - slot.lastEventAt > STALE_THRESHOLD_MS;
+        // Очередь и ожидание раннера молчат по делу; тревога только для запущенной сборки.
+        const shouldBeStalled = isSlotStalled(slot, now);
         if (shouldBeStalled !== slot.isStalled) {
           nextStreams[k] = { ...slot, isStalled: shouldBeStalled };
           changed = true;

@@ -110,3 +110,11 @@ export const FetchBuildResponseSchema = z.strictObject({
   ),
 });
 export type FetchBuildResponse = z.infer<typeof FetchBuildResponseSchema>;
+
+/** Остановка облачных сборок из локальной Студии: `POST /api/v1/projects/{id}/git/builds/cancel`. */
+export const CancelCloudBuildsResponseSchema = z.strictObject({
+  cancelled: z.number().int().min(0),
+});
+export type CancelCloudBuildsResponse = z.infer<
+  typeof CancelCloudBuildsResponseSchema
+>;

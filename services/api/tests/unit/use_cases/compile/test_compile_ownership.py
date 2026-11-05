@@ -45,3 +45,55 @@ async def test__stream_foreign_live_compile__no_log_leak() -> None:
     assert len(lines) == 1
     assert lines[0].startswith("[error]")
     log_stream.subscribe.assert_not_called()
+
+
+def _own_compile(status: str) -> tuple[MagicMock, AsyncMock, MagicMock, MagicMock]:
+    from hse_doc_studio.core.enums import CompileStatus
+
+    locator = MagicMock()
+    project = MagicMock()
+    project.documents = []
+    locator.locate = AsyncMock(return_value=(Path("/p/mine"), project))
+    record = MagicMock()
+    record.status = CompileStatus(status)
+    record.log = "line"
+    record.doc_id = "tz"
+    repo = AsyncMock()
+    repo.get_for_project.return_value = record
+    dispatcher = MagicMock()
+    dispatcher.is_active.return_value = False
+    dispatcher.cancel = AsyncMock(return_value=True)
+    project_repo = MagicMock()
+    project_repo.get.return_value = None
+    return locator, repo, dispatcher, project_repo
+
+
+@pytest.mark.parametrize("status", ["pending", "running"])
+async def test__cancel_untracked_unfinished__job_cancel_requested_and_record_cancelled(status: str) -> None:
+    from hse_doc_studio.core.enums import CompileStatus
+
+    locator, repo, dispatcher, project_repo = _own_compile(status)
+    uc = CancelCompileUC(project_repo, locator, repo, dispatcher, MagicMock())
+    compile_id = uuid.uuid4()
+
+    out = await uc.execute(CancelCompileInput(project_id=uuid.uuid4(), compile_id=compile_id))
+
+    dispatcher.cancel.assert_awaited_once_with(compile_id)
+    assert out.record_finalised is True
+    saved = repo.save.await_args.args[0]
+    assert saved.status is CompileStatus.cancelled
+    assert "[cancelled]" in saved.log
+
+
+@pytest.mark.parametrize("status", ["success", "failure", "cancelled"])
+async def test__cancel_already_finished__idempotent_noop(status: str) -> None:
+    locator, repo, dispatcher, project_repo = _own_compile(status)
+    uc = CancelCompileUC(project_repo, locator, repo, dispatcher, MagicMock())
+
+    first = await uc.execute(CancelCompileInput(project_id=uuid.uuid4(), compile_id=uuid.uuid4()))
+    second = await uc.execute(CancelCompileInput(project_id=uuid.uuid4(), compile_id=uuid.uuid4()))
+
+    assert first.record_finalised is False
+    assert second.record_finalised is False
+    repo.save.assert_not_awaited()
+    dispatcher.cancel.assert_not_awaited()

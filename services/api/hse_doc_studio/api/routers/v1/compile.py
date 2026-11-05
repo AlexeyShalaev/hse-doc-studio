@@ -237,7 +237,7 @@ async def get_compile_stream(
             "errors": 0,
         }
         async for kind, value in merged_events(stream, waits, compile_id, viewer):
-            if kind in ("wait", "placement"):
+            if kind in ("wait", "placement", "phase"):
                 yield f"event: {kind}\ndata: {value}\n\n"
                 continue
             if value.startswith(STATUS_PREFIX):

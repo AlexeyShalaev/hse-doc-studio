@@ -1,8 +1,10 @@
 import { apiClient, parseResp } from "@shared/api";
 import {
+  CancelCloudBuildsResponseSchema,
   FetchBuildResponseSchema,
   LocalBuildsSchema,
   ProjectBuildsSchema,
+  type CancelCloudBuildsResponse,
   type FetchBuildRequest,
   type FetchBuildResponse,
   type LocalBuilds,
@@ -32,4 +34,16 @@ export const localBuildsApi = {
     apiClient
       .post(`/projects/${projectId}/git/builds/fetch`, body, quiet)
       .then(parseResp(FetchBuildResponseSchema)),
+  /** Остановить облачные сборки проекта (одного документа или всех) по входу этой Студии. */
+  cancelCloud: (
+    projectId: string,
+    docId: string | null,
+  ): Promise<CancelCloudBuildsResponse> =>
+    apiClient
+      .post(
+        `/projects/${projectId}/git/builds/cancel`,
+        { doc_id: docId },
+        quiet,
+      )
+      .then(parseResp(CancelCloudBuildsResponseSchema)),
 };

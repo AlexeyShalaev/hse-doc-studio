@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from datetime import datetime
 from enum import StrEnum
 from typing import Protocol
 from uuid import UUID
@@ -27,6 +28,25 @@ class CompileWaitInfo:
     # Номер текущей попытки и их максимум: для runner_lost.
     attempt: int | None = None
     max_attempts: int | None = None
+
+
+class CompilePhase(StrEnum):
+    """Где сборка в жизни задачи: ждёт раннера или раннер её уже взял."""
+
+    queued = "queued"
+    running = "running"
+
+
+@dataclass(frozen=True)
+class CompilePhaseInfo:
+    """Фаза и время: постановка в очередь, начало работы раннера (None, пока в очереди), загрузка раннеров."""
+
+    phase: CompilePhase
+    queued_at: datetime
+    started_at: datetime | None = None
+    # Подходящие онлайн-раннеры: сколько задач они уже ведут и сколько могут вести одновременно.
+    runners_busy: int | None = None
+    runners_capacity: int | None = None
 
 
 class PlacementState(StrEnum):
@@ -74,6 +94,10 @@ class ICompileWaitReader(Protocol):
         """Где идёт сборка; None в локальном режиме и у сборок без записи очереди."""
         ...
 
+    async def phase_of(self, compile_id: UUID) -> CompilePhaseInfo | None:
+        """В очереди или идёт на раннере; None в локальном режиме, у сборок без записи очереди и у законченных."""
+        ...
+
 
 class NoCompileWait:
     """Локальный режим: сборка стартует сразу, ждать нечего."""
@@ -84,4 +108,7 @@ class NoCompileWait:
         return None
 
     async def placement_of(self, compile_id: UUID, viewer_id: str | None) -> CompilePlacementInfo | None:  # noqa: ARG002
+        return None
+
+    async def phase_of(self, compile_id: UUID) -> CompilePhaseInfo | None:  # noqa: ARG002
         return None
