@@ -32,10 +32,8 @@ breaking_changes:
 changes:
   ru:
     - "Заявление о выборе темы КП и презентация Beamer собираются, когда у проекта не заполнены данные руководителя или автора (должность, степень, ФИО консультанта): раньше сборка падала с ошибкой «There's no line here to end»."
-    - 'Шрифты подбираются по цепочке свободных замен с кириллицей (Liberation, Tinos и Arimo, TeX Gyre, PT, DejaVu), поэтому сборка не падает в среде без Arial, Times New Roman и Consolas; при установленных шрифтах внешний вид прежний.'
   en:
     - "The course project topic application and the Beamer slides build when the project has no supervisor or author details (position, degree, consultant name): it used to fail with “There's no line here to end”."
-    - 'Fonts are picked from a chain of free replacements with Cyrillic (Liberation, Tinos and Arimo, TeX Gyre, PT, DejaVu), so the build no longer fails in an environment without Arial, Times New Roman and Consolas; with the fonts installed the look is unchanged.'
 
 # ── классификация (для фильтров в каталоге) ──
 # Методичка ОП СПИ §2.1: КП выполняется в академическом (research) или

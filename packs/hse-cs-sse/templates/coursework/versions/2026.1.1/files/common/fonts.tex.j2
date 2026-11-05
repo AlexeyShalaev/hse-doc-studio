@@ -7,9 +7,8 @@
 % ((# Каждый шрифт выбирается с независимым фолбэком:               #))
 % ((#   1) по имени — системный ИЛИ установленный в Студии          #))
 % ((#      (Settings → Шрифты, папка монтируется в контейнер);      #))
-% ((#   2) свободные клоны с кириллицей по цепочке (Liberation,      #))
-% ((#      Tinos, PT, Noto, DejaVu): каждое имя проверяется          #))
-% ((#      \IfFontExistsTF, сборка не падает, если нет ни одного.    #))
+% ((#   2) свободный клон с кириллицей из дерева TeX Live, если      #))
+% ((#      выбранный шрифт недоступен (сборка никогда не падает).    #))
 % ((#                                                              #))
 % ((# Источник: common/fonts.tex.j2 (dynamic_includes в version.yaml).#))
 % ((# Литерал «{{ '{' }}» нужен, чтобы избежать последовательности   #))
@@ -17,73 +16,34 @@
 % ((# ============================================================ #))
 \usepackage{fontspec}
 
-% Цепочка кандидатов: берётся первый шрифт, который есть в системе или в дереве
-% TeX Live; если нет ни одного, выполняется запасной код (файл DejaVu из TeX Live).
-% \IfFontExistsTF сам не падает; при проверке отсутствующего имени в логе остаются
-% безвредные строки «kpathsea: Running mktextfm …».
-% Запасные шрифты подобраны так, чтобы polyglossia (Beamer) находил в них
-% кириллицу: Arimo, PT Serif и DejaVu Sans Mono по имени эту проверку не проходят.
-%   \hseFontChain{<команда fontspec>}{<имена через запятую>}{<запасной код>}
-\ExplSyntaxOn
-\bool_new:N \l__hse_font_found_bool
-\NewDocumentCommand{\hseFontChain}{m +m +m}
- {
-  \bool_set_false:N \l__hse_font_found_bool
-  \clist_map_inline:nn {#2}
-   {
-    \IfFontExistsTF {##1}
-     {
-      \use:c {#1} {##1}
-      \bool_set_true:N \l__hse_font_found_bool
-      \clist_map_break:
-     }
-     {}
-   }
-  \bool_if:NF \l__hse_font_found_bool {#3}
- }
-\ExplSyntaxOff
-
-% ── Основной шрифт (по умолчанию Times New Roman) ───────────
-% Liberation Serif — метрический клон Times New Roman. Запасной вариант —
-% Tinos (тоже клон; по имени у него не находятся жирный и курсив, поэтому
-% подключается файлами), затем DejaVu Serif.
-\hseFontChain{setmainfont}{%
-  {{ project.meta.font_main | default('Times New Roman', true) }},%
-  Times New Roman, Liberation Serif%
+% ── Основной шрифт (по умолчанию Times New Roman → Tinos) ───
+\IfFontExistsTF{{ '{' }}{{ project.meta.font_main | default('Times New Roman', true) }}{{ '}' }}{%
+  \setmainfont{{ '{' }}{{ project.meta.font_main | default('Times New Roman', true) }}{{ '}' }}%
 }{%
-  \IfFontExistsTF{Tinos-Regular.ttf}{%
-    \setmainfont{Tinos}[Extension=.ttf, UprightFont=*-Regular, BoldFont=*-Bold, ItalicFont=*-Italic, BoldItalicFont=*-BoldItalic]%
-  }{%
-    \IfFontExistsTF{DejaVu Serif}{\setmainfont{DejaVu Serif}}{}%
-  }%
+  \setmainfont{Tinos}[Extension=.ttf, UprightFont=*-Regular, BoldFont=*-Bold, ItalicFont=*-Italic, BoldItalicFont=*-BoldItalic]%
 }
 
-% ── Рубленый шрифт (по умолчанию Arial) ─────────────────────
-% Liberation Sans — метрический клон Arial. Запасной вариант — DejaVu Sans
-% (файлами), затем PT Sans и Noto Sans.
-\hseFontChain{setsansfont}{%
-  {{ project.meta.font_sans | default('Arial', true) }},%
-  Arial, Liberation Sans%
+% ── Рубленый шрифт (по умолчанию Arial → DejaVuSans) ────────
+\IfFontExistsTF{{ '{' }}{{ project.meta.font_sans | default('Arial', true) }}{{ '}' }}{%
+  \setsansfont{{ '{' }}{{ project.meta.font_sans | default('Arial', true) }}{{ '}' }}%
 }{%
-  \IfFontExistsTF{DejaVuSans.ttf}{%
-    \setsansfont{DejaVuSans}[Extension=.ttf, UprightFont=*, BoldFont=*-Bold, ItalicFont=*-Oblique, BoldItalicFont=*-BoldOblique]%
-  }{%
-    \hseFontChain{setsansfont}{PT Sans, Noto Sans}{}%
-  }%
+  \setsansfont{DejaVuSans}[Extension=.ttf, UprightFont=*, BoldFont=*-Bold, ItalicFont=*-Oblique, BoldItalicFont=*-BoldOblique]%
 }
 
 % ── Моноширинный шрифт (код/листинги) ───────────────────────
 % Если в настройках проекта не выбран — берётся дефолт документа
 % (\hseDefaultMono: Courier New в ЕСПД, Consolas в ВКР), заданный
-% в преамбуле ПЕРЕД \input этого файла. Liberation Mono — клон Courier New.
-% Запасной вариант — DejaVu Sans Mono (файлами), затем Noto Sans Mono.
-\hseFontChain{setmonofont}{%
-  {{ (project.meta.font_mono ~ ',') if project.meta.font_mono else '' }}%
-  \hseDefaultMono, Consolas, Liberation Mono%
+% в преамбуле ПЕРЕД \input этого файла.
+((* if project.meta.font_mono *))
+\IfFontExistsTF{{ '{' }}{{ project.meta.font_mono }}{{ '}' }}{%
+  \setmonofont{{ '{' }}{{ project.meta.font_mono }}{{ '}' }}%
 }{%
-  \IfFontExistsTF{DejaVuSansMono.ttf}{%
-    \setmonofont{DejaVuSansMono}[Extension=.ttf, UprightFont=*, BoldFont=*-Bold, ItalicFont=*-Oblique, BoldItalicFont=*-BoldOblique]%
-  }{%
-    \hseFontChain{setmonofont}{Noto Sans Mono}{}%
-  }%
+  \setmonofont{DejaVuSansMono}[Extension=.ttf, UprightFont=*, BoldFont=*-Bold, ItalicFont=*-Oblique, BoldItalicFont=*-BoldOblique]%
 }
+((* else *))
+\IfFontExistsTF{\hseDefaultMono}{%
+  \setmonofont{\hseDefaultMono}%
+}{%
+  \setmonofont{DejaVuSansMono}[Extension=.ttf, UprightFont=*, BoldFont=*-Bold, ItalicFont=*-Oblique, BoldItalicFont=*-BoldOblique]%
+}
+((* endif *))

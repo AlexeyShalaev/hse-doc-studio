@@ -8,5 +8,5 @@ releases:
     digest: sha256:993592c386058e0a91864a6ac3e4b4c3d06ad15d96356b7cb5281825b00e0f04
     kind: major
   2026.1.1:
-    digest: sha256:dcb109166e62cbcc75c9cf677d9b5b7e4e56e4de8caa18631a5a23313c2ed1e4
+    digest: sha256:81fc1b7aa89279554ddcb1f3d9523e3e591967429671c6bd6b007f7b36189d8f
     kind: patch
