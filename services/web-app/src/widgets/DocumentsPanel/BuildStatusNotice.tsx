@@ -82,11 +82,7 @@ export const BuildStatusNotice = ({
         color: "var(--fg-3)",
       }}
     >
-      <RefreshCw
-        size="0.5625rem"
-        className="spin"
-        style={{ flexShrink: 0 }}
-      />
+      <RefreshCw size="0.5625rem" className="spin" style={{ flexShrink: 0 }} />
       <span style={{ minWidth: 0, overflowWrap: "anywhere" }}>{text}</span>
     </div>
   );
