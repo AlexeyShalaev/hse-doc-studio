@@ -125,6 +125,17 @@ const mockProviders = async (page: Page): Promise<void> => {
 };
 
 /** Проект из seed: другие сценарии стенда создают свои проекты, и первым в списке бывает чужой. */
+/** Провайдер из заглушки на сервере неизвестен: новый чат создаётся без него, а выбор модели остаётся на стороне интерфейса. */
+const mockChatCreation = async (page: Page): Promise<void> => {
+  await page.route(/\/api\/v1\/agent\/chats$/, async (route: Route) => {
+    if (route.request().method() !== "POST") return route.continue();
+    const body = route.request().postDataJSON() as Record<string, unknown>;
+    delete body.provider_id;
+    delete body.model;
+    return route.continue({ postData: JSON.stringify(body) });
+  });
+};
+
 const firstProjectId = async (page: Page): Promise<string> => {
   const listing = await page.request.get("/api/v1/projects?limit=100");
   const items = ((await listing.json()) as { items: { id: string; name: string }[] }).items;
@@ -241,6 +252,7 @@ for (const lang of LANGS) {
           );
           await loginOnPhone(page, USERS.anna.email);
           await mockProviders(page);
+          await mockChatCreation(page);
           const projectId = await firstProjectId(page);
           await page.goto(`/projects/${projectId}/documents`);
           if (phone) {
