@@ -159,7 +159,10 @@ const CheckRow = ({
         </span>
       }
       meta={
-        <span className="flex items-center" style={{ gap: "0.5rem" }}>
+        <span
+          className="flex items-center"
+          style={{ gap: "0.5rem", flexWrap: "wrap" }}
+        >
           {check.checked_at && (
             <span className="dim" data-testid={`diag-time-${check.id}`}>
               {when(check.checked_at)}
