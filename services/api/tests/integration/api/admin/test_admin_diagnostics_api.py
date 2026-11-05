@@ -20,7 +20,9 @@ from hse_doc_studio.core.identity.protocols import IActorResolver
 from hse_doc_studio.core.mode import StudioMode
 from hse_doc_studio.infra.identity.resolvers import ChainActorResolver, SessionCookieResolver
 from hse_doc_studio.use_cases.diagnostics.admin import (
+    AcceptDiagnosticsWarningUC,
     GetDiagnosticsUC,
+    RevokeDiagnosticsAcceptanceUC,
     RunDiagnosticsUC,
     UpdateDiagnosticsThresholdsUC,
 )
@@ -45,6 +47,7 @@ class _Stack:
         checks = [
             ScriptedCheck(CheckId.database, Verdict(DiagStatus.ok, "ok", {"latency_ms": 3, "version": "16"})),
             ScriptedCheck(CheckId.disk, Verdict(DiagStatus.warn, "disk_warning", {"volume": "data", "percent": 85})),
+            ScriptedCheck(CheckId.backups, Verdict(DiagStatus.warn, "backups_disabled")),
         ]
         self.service = DiagnosticsService(
             checks,  # type: ignore[arg-type]
@@ -55,7 +58,7 @@ class _Stack:
             timeout_s=5,
             clock=lambda: NOW,
         )
-        self.get = GetDiagnosticsUC(self.service, self.settings, interval_s=300, enabled=True)
+        self.get = GetDiagnosticsUC(self.service, self.settings, interval_s=300, enabled=True, clock=lambda: NOW)
         self.client: AsyncClient
 
 
@@ -79,6 +82,15 @@ class _Provider(Provider):
     @provide
     def run_uc(self) -> RunDiagnosticsUC:
         return RunDiagnosticsUC(self.s.service, self.s.get, self.s.users.audit)
+
+    @provide
+    def accept_uc(self) -> AcceptDiagnosticsWarningUC:
+        s = self.s
+        return AcceptDiagnosticsWarningUC(s.settings, s.users.audit, NoopUow(), s.service, s.get, clock=lambda: NOW)
+
+    @provide
+    def revoke_uc(self) -> RevokeDiagnosticsAcceptanceUC:
+        return RevokeDiagnosticsAcceptanceUC(self.s.settings, self.s.users.audit, NoopUow(), self.s.get)
 
     @provide
     def update_uc(self) -> UpdateDiagnosticsThresholdsUC:
@@ -108,6 +120,8 @@ _ROUTES = [
     ("GET", "/api/admin/diagnostics", None),
     ("POST", "/api/admin/diagnostics/run", {"check": None}),
     ("PUT", "/api/admin/diagnostics/thresholds", {"values": _full(), "notify": True}),
+    ("PUT", "/api/admin/diagnostics/accepted/backups", {"reason": "так надо"}),
+    ("DELETE", "/api/admin/diagnostics/accepted/backups", None),
 ]
 
 
@@ -144,6 +158,8 @@ async def test__run__fills_status_reason_hint_and_overall(stack: _Stack) -> None
     assert disk["values"] == {"volume": "data", "percent": 85}
     assert disk["checked_at"] is not None
     assert res.json()["overall"] == "warn"
+    assert (disk["acceptable"], disk["accepted"]) == (False, None)  # место на диске принять нельзя
+    assert by_id["backups"]["acceptable"] is True
     assert [e.action for e in await stack.users.audit.list()] == ["diagnostics.run"]
 
 
@@ -178,3 +194,66 @@ async def test__thresholds__saved_validated_and_returned(stack: _Stack) -> None:
     assert ok.json()["notify"] is False
     assert inverted.status_code == 422
     assert partial.status_code == 422
+
+
+async def test__accept__over_http_greys_the_warning_and_revoke_brings_it_back(stack: _Stack) -> None:
+    boss = await stack.users.add(str(uuid4()), admin=True)
+    c = stack.client
+    await c.post("/api/admin/diagnostics/run", json={"check": None}, headers=boss)
+
+    res = await c.put(
+        "/api/admin/diagnostics/accepted/backups",
+        json={"reason": "Бэкапы делает хостер", "until": "2026-12-01T00:00:00Z"},
+        headers=boss,
+    )
+
+    body = res.json()
+    by_id = {x["id"]: x for x in body["checks"]}
+    assert res.status_code == 200
+    assert by_id["backups"]["status"] == "warn"  # статус честный, гасится только итог
+    assert by_id["backups"]["accepted"]["reason"] == "Бэкапы делает хостер"
+    assert by_id["backups"]["accepted"]["until"].startswith("2026-12-01")
+    assert by_id["backups"]["acceptable"] is False
+    assert body["overall"] == "warn"  # диск всё ещё предупреждает
+    assert [(a["check"], a["active"]) for a in body["accepted"]] == [("backups", True)]
+    assert (await stack.settings.get_all())["diagnostics.accepted"]["backups"]["reason"] == "Бэкапы делает хостер"
+    (event, *_) = await stack.users.audit.list()
+    assert (event.action, event.target, event.details["reason"]) == (
+        "diagnostics.accept",
+        "backups",
+        "Бэкапы делает хостер",
+    )
+
+    back = await c.delete("/api/admin/diagnostics/accepted/backups", headers=boss)
+
+    assert back.status_code == 200
+    assert {x["id"]: x for x in back.json()["checks"]}["backups"]["accepted"] is None
+    assert back.json()["accepted"] == []
+    assert (await stack.users.audit.list())[0].action == "diagnostics.accept_revoke"
+    assert (await c.delete("/api/admin/diagnostics/accepted/backups", headers=boss)).status_code == 404
+
+
+async def test__accept__critical_check_and_bad_input_are_422_and_nothing_is_stored(stack: _Stack) -> None:
+    boss = await stack.users.add(str(uuid4()), admin=True)
+    c = stack.client
+    await c.post("/api/admin/diagnostics/run", json={"check": None}, headers=boss)
+    audit_before = len(await stack.users.audit.list())
+
+    disk = await c.put("/api/admin/diagnostics/accepted/disk", json={"reason": "пусть"}, headers=boss)
+    healthy = await c.put("/api/admin/diagnostics/accepted/database", json={"reason": "пусть"}, headers=boss)
+    empty = await c.put("/api/admin/diagnostics/accepted/backups", json={"reason": ""}, headers=boss)
+    long = await c.put("/api/admin/diagnostics/accepted/backups", json={"reason": "я" * 201}, headers=boss)
+    past = await c.put(
+        "/api/admin/diagnostics/accepted/backups",
+        json={"reason": "ок", "until": "2020-01-01T00:00:00Z"},
+        headers=boss,
+    )
+    naive = await c.put(
+        "/api/admin/diagnostics/accepted/backups", json={"reason": "ок", "until": "2030-01-01T00:00:00"}, headers=boss
+    )
+    unknown = await c.put("/api/admin/diagnostics/accepted/nope", json={"reason": "ок"}, headers=boss)
+
+    assert [r.status_code for r in (disk, healthy, empty, long, past, naive)] == [422] * 6
+    assert unknown.status_code == 404
+    assert "diagnostics.accepted" not in await stack.settings.get_all()
+    assert len(await stack.users.audit.list()) == audit_before

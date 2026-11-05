@@ -5,13 +5,14 @@ import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 import { useTranslation } from "react-i18next";
 import { useCustomFileActions } from "@entities/document";
 import type { DocStatus, getDocMeta } from "@entities/document";
-import { shortReason } from "@entities/compile";
+import { shortReason, useCompileSlot } from "@entities/compile";
 import { DocBuildSubline } from "@features/cloud-builds";
 import { UploadCustomFileModal } from "@features/custom-document";
 import { env } from "@shared/config";
 import { Modal } from "@shared/ui";
 import { Spinner } from "@shared/ui/Spinner";
 import { toast } from "@shared/lib";
+import { DocStateLine } from "./DocStateLine";
 import type { DocumentItem } from "./lib/buildDocSections";
 
 const STATUS_TO_DOT: Record<DocStatus, string> = {
@@ -96,6 +97,8 @@ export const DocRow = ({
   const [isFocusWithin, setIsFocusWithin] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const now = useMinuteNow();
+  const slot = useCompileSlot(projectId, doc.id);
+  const hasLiveSlot = slot?.status === "running";
   const { remove, isRemoving } = useCustomFileActions(projectId, doc.id);
   const isCustom = doc.custom_file != null;
   const sev = isBuilding ? "building" : STATUS_TO_DOT[doc.status];
@@ -169,7 +172,14 @@ export const DocRow = ({
           }}
         >
           <span title={meta.name}>{renderHighlighted(meta.name, query)}</span>
-          <DocBuildSubline projectId={projectId} docId={doc.id} now={now} />
+          <DocStateLine
+            projectId={projectId}
+            docId={doc.id}
+            status={doc.status}
+          />
+          {!hasLiveSlot && (
+            <DocBuildSubline projectId={projectId} docId={doc.id} now={now} />
+          )}
           {doc.status === "err" && doc.last_compile_error && (
             <span
               data-testid={`doc-failure-${doc.id}`}

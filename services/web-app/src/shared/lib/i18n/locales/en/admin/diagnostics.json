@@ -17,13 +17,15 @@
     "warn": "There are warnings",
     "fail": "There are failures",
     "counts": "OK: {{ok}}, warnings: {{warn}}, failures: {{fail}}",
-    "last": "scheduled pass {{at}}"
+    "last": "scheduled pass {{at}}",
+    "accepted": "accepted: {{count}}"
   },
   "status": {
     "ok": "OK",
     "warn": "Warning",
     "fail": "Failure",
-    "na": "not configured"
+    "na": "not configured",
+    "accepted": "Accepted"
   },
   "group": {
     "data": "Data",
@@ -183,5 +185,34 @@
       "label": "Notify admins",
       "hint": "An inbox message when a check turns into a warning or failure, and when it recovers."
     }
+  },
+  "accept": {
+    "button": "I accept: this is on purpose",
+    "title": "Accept the warning: {{check}}",
+    "lead": "Confirm that you knowingly live with this warning.",
+    "consequences": "An accepted warning stops counting as a problem: its status turns grey \"Accepted\", and the menu dot, the overview line, banners and admin notifications go away. The check keeps running: if things get worse and it fails, you will see that as usual.",
+    "reason": "Reason (required)",
+    "reasonHint": "Why, in a few words: {{count}} of {{max}}",
+    "term": "Term",
+    "forever": "Indefinitely",
+    "until": "Until a date",
+    "untilDate": "Acceptance end date",
+    "revertHint": "You can undo it at any time: \"Bring the warning back\" in the \"Accepted warnings\" section of the Self-diagnostics page. Accepting and undoing are written to the audit log.",
+    "cancel": "Cancel",
+    "submit": "I accept: this is on purpose",
+    "failed": "Could not accept: this warning cannot be accepted or is already fixed. Reload the page."
+  },
+  "accepted": {
+    "title": "Accepted warnings",
+    "lead": "Warnings you agreed to live with. They stay out of the overall status, the menu, notifications and alerts; metrics remain, flagged accepted.",
+    "empty": "Nothing is accepted.",
+    "return": "Bring the warning back",
+    "noteReason": "Accepted on purpose, reason: {{reason}}",
+    "line": "Accepted by {{by}}, {{at}}, indefinitely.",
+    "lineUntil": "Accepted by {{by}}, {{at}}, until {{until}}.",
+    "dormant": "Not needed now",
+    "dormantHint": "The cause is fixed: the record stays but silences nothing.",
+    "banner": "{{check}}: accepted on purpose",
+    "bannerReason": "Reason: {{reason}}"
   }
 }

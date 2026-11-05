@@ -36,7 +36,11 @@
       "services_many": "{{count}} сервисов с перебоями",
       "services_other": "{{count}} сервиса с перебоями",
       "storage": "Заканчивается место",
-      "data": "Мало места"
+      "data": "Мало места",
+      "diagnostics_one": "{{count}} предупреждение самодиагностики",
+      "diagnostics_few": "{{count}} предупреждения самодиагностики",
+      "diagnostics_many": "{{count}} предупреждений самодиагностики",
+      "diagnostics_other": "{{count}} предупреждения самодиагностики"
     },
     "back": "Вернуться в Студию",
     "version": "Версия {{version}}",

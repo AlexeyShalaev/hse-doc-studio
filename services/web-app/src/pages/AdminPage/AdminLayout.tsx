@@ -141,6 +141,7 @@ const COUNTER_KEY: Record<string, string> = {
   services: "nav.count.services",
   storage: "nav.count.storage",
   data: "nav.count.data",
+  diagnostics: "nav.count.diagnostics",
 };
 
 const WithTip = ({

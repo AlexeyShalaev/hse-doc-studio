@@ -16,15 +16,16 @@ import type { DocMeta } from "@entities/document";
 import {
   useCancelProjectCompiles,
   useCompileStreamStore,
-  useIsProjectStalled,
+  useProjectBuildSummary,
   useStartCompileAll,
 } from "@entities/compile";
 import { useForms } from "@entities/form";
 import { BuildBlockedNotice } from "@features/build-states";
-import { FetchAllNotice } from "@features/cloud-builds";
+import { FetchAllNotice, useCloudBuildStop } from "@features/cloud-builds";
 import { useProject } from "@entities/project";
 import { Spinner } from "@shared/ui/Spinner";
 import { NowBlock } from "./NowBlock";
+import { BuildStatusNotice } from "./BuildStatusNotice";
 import { DocSection } from "./DocSection";
 import type { DocSectionRow } from "./DocSection";
 import { buildDocSections } from "./lib/buildDocSections";
@@ -142,7 +143,11 @@ export const DocumentsPanel = ({
     block: buildBlock,
   } = useStartCompileAll(projectId);
   const { cancelAll } = useCancelProjectCompiles(projectId);
-  const isStalled = useIsProjectStalled(projectId);
+  const summary = useProjectBuildSummary(projectId);
+  // Тревога только за сборкой, которую раннер уже взял и которая замолчала; очередь не зависание.
+  const isStalled = summary.stalled > 0;
+  const isOnlyQueued = summary.running === 0 && summary.queued > 0;
+  const cloudStop = useCloudBuildStop(projectId);
   const compileStreams = useCompileStreamStore((s) => s.streams);
 
   const [storedState, setState] = useState<PanelState>(() =>
@@ -446,38 +451,20 @@ export const DocumentsPanel = ({
           />
         )}
 
-        {isCompiling && isStalled && (
-          <div
-            className="flex items-start gap-2"
-            style={{
-              margin: "0 0.125rem 0.5rem",
-              padding: "0.375rem 0.5rem",
-              fontSize: "0.65625rem",
-              lineHeight: 1.4,
-              background: "var(--c-err-soft, rgba(239, 68, 68, 0.08))",
-              border: "1px solid var(--c-err)",
-              color: "var(--c-err)",
-              borderRadius: "0.25rem",
-            }}
-          >
-            <AlertTriangle
-              size="0.75rem"
-              style={{ flexShrink: 0, marginTop: 1 }}
-            />
-            <span>{t("documents.stalledWarning")}</span>
-          </div>
-        )}
-        {isCompiling && !isStalled && (
+        <BuildStatusNotice projectId={projectId} isCompiling={isCompiling} />
+        {!isCompiling && cloudStop.isCloudRunning && (
           <div
             className="flex items-center gap-1"
+            data-testid="cloud-build-note"
             style={{
               margin: "0 0.125rem 0.5rem",
-              fontSize: "0.625rem",
+              fontSize: "0.65625rem",
+              lineHeight: 1.4,
               color: "var(--fg-3)",
             }}
           >
             <RefreshCw size="0.5625rem" className="spin" />
-            <span>{t("documents.buildInProgress")}</span>
+            <span>{t("documents.cloudBuildInProgress")}</span>
           </div>
         )}
 
@@ -572,9 +559,11 @@ export const DocumentsPanel = ({
             type="button"
             className="btn xs"
             onClick={cancelAll}
+            data-testid="stop-builds-button"
+            data-stalled={String(isStalled)}
             style={{
               justifyContent: "center",
-              color: isStalled ? "var(--c-err)" : undefined,
+              color: isStalled ? "var(--c-err)" : "var(--fg-0)",
               borderColor: isStalled ? "var(--c-err)" : undefined,
             }}
           >
@@ -583,7 +572,25 @@ export const DocumentsPanel = ({
             ) : (
               <Square size="0.6875rem" />
             )}
-            {t("panel.stopBuilds")}
+            {isOnlyQueued ? t("panel.cancelQueue") : t("panel.stopBuilds")}
+          </button>
+        ) : cloudStop.isCloudRunning ? (
+          <button
+            type="button"
+            className="btn xs"
+            onClick={cloudStop.stop}
+            disabled={cloudStop.isStopping}
+            data-testid="stop-cloud-build-button"
+            style={{ justifyContent: "center", color: "var(--fg-0)" }}
+          >
+            {cloudStop.isStopping ? (
+              <Spinner size="sm" />
+            ) : (
+              <Square size="0.6875rem" />
+            )}
+            {cloudStop.isStopping
+              ? t("panel.stopping")
+              : t("panel.stopCloudBuild")}
           </button>
         ) : (
           <button
@@ -592,22 +599,11 @@ export const DocumentsPanel = ({
             onClick={handleBuildAll}
             disabled={docs.length === 0 || buildBlock !== null}
             data-testid="build-all-button"
-            style={{ justifyContent: "center" }}
+            style={{ justifyContent: "center", color: "var(--accent-ink)" }}
           >
             <Play size="0.6875rem" />
             {t("panel.buildAll")}
           </button>
-        )}
-        {isCompiling && isStalled && (
-          <span
-            style={{
-              fontSize: "0.625rem",
-              lineHeight: 1.4,
-              color: "var(--c-err)",
-            }}
-          >
-            {t("documents.stalledWarning")}
-          </span>
         )}
       </div>
     </div>

@@ -43,6 +43,7 @@ _SCHEMAS: dict[str, Any] = {
     "AdminDiagnostics": dg.DiagOverviewBody,
     "UpdateAdminDiagnosticsThresholds": dg.DiagThresholdsRequest,
     "RunAdminDiagnosticsRequest": dg.DiagRunRequest,
+    "AcceptAdminDiagnosticsWarning": dg.DiagAcceptRequest,
     "AdminDataLifecycle": lc.LifecycleOverviewBody,
     "AdminUpdateStatus": upd.UpdateStatusOut,
     "AdminUpdateRun": upd.RunOut,

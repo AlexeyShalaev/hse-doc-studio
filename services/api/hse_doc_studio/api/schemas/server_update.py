@@ -73,6 +73,13 @@ class RunPageOut(StrictModel):
     offset: int
 
 
+class BackupsAcceptedOut(StrictModel):
+    reason: str
+    by_name: str
+    at: AwareDatetime
+    until: AwareDatetime | None
+
+
 class UpdateStatusOut(StrictModel):
     settings: UpdateSettingsBody
     current_version: str
@@ -94,6 +101,8 @@ class UpdateStatusOut(StrictModel):
     rollback_needs_restore: bool
     rollback_blocked: bool
     risk_confirmation_required: bool
+    # Бэкапы отключены осознанно (самодиагностика): подтверждение риска не нужно, диалог показывает причину.
+    backups_accepted: BackupsAcceptedOut | None
     manual_command: str
 
 

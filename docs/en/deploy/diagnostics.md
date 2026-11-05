@@ -35,6 +35,33 @@ Statuses: **OK**, **Warning** (works, but will soon be bad), **Failure** (work i
 
 The exact hint is shown on the page under each problem.
 
+## Accepting a warning on purpose
+
+If you knowingly live with a warning (you do not back up, you do not connect public runners), you can accept it: the row has an **"I accept: this is on purpose"** button. The dialog asks for a reason (up to 200 characters) and, optionally, a term: indefinitely (default) or until a date.
+
+An accepted warning:
+
+- gets a grey "Accepted" status with the reason, who accepted it and when; it stays out of the page total, the dot on "Self-diagnostics" in the menu and the "Needs attention" line on the admin overview; the "no runners" and "no backup destination" banners are replaced by a grey line with the reason;
+- sends no notifications to admins;
+- stays in the metrics, flagged: `hse_diag_check_status` shows the real status while `hse_diag_check_accepted{check}` is `1`; `hse_diag_overall_status` ignores accepted checks; the public `/health/diagnostics` shows `accepted` for such a check;
+- is silent while the cause is there. If you later enable backups or connect a runner, the record stays but silences nothing; if the warning comes back, it is silenced again until you remove the record or the term ends.
+
+All accepted warnings are listed in the **"Accepted warnings"** section at the bottom of the page; **"Bring the warning back"** removes the acceptance (also on the check row and in the grey banners). Accepting and undoing are written to the audit log (`diagnostics.accept`, `diagnostics.accept_revoke`: who, when, reason, term), are available only to the installation admin and are stored in the installation settings (`diagnostics.accepted`), no migration needed.
+
+| Can be accepted (warning only) | Can never be accepted |
+|---|---|
+| Runners: no shared runners, or none online (while the queue is empty) | Database, migrations, disk and data retention |
+| Object storage: no public S3 address for runners outside the server network | Object storage: unreachable, cannot write or read |
+| Backups: switched off or no destination | Queue and stuck jobs, background tasks (leader) |
+| Mail: SMTP unreachable | Certificate expiry (expiring or expired); backups that are configured but stale or failing |
+| Certificates: the address could not be checked from the container | Any failure (`fail`), including those of acceptable checks |
+
+If an accepted check gets worse to a failure or its cause changes (for example backups are configured but stale), the acceptance does not apply and the warning shows as usual.
+
+### Accepted backups and updates
+
+When "no backups" is accepted, a manual update on Kubernetes (the `kubernetes` executor, which has no database snapshot) no longer asks you to confirm the risk with a switch: the dialog shows one line, "Backups are off on purpose, reason: ...". Auto-install without a backup still does not start: the acceptance does not enable it, and admins get the update notification.
+
 ## Thresholds and notifications
 
 At the bottom of the page: database and storage latency, queue wait, job overdue, certificate expiry, backup age. “Reset to defaults” restores factory values. Disk thresholds are shared with the space guard and edited in “Data retention”.
@@ -70,12 +97,13 @@ Only statuses by check id: no reasons, values or addresses. The response code is
 
 | Metric | Meaning |
 |---|---|
-| `hse_diag_check_status{check}` | 0 OK, 1 warning, 2 failure |
+| `hse_diag_check_status{check}` | 0 OK, 1 warning, 2 failure (an accepted check is shown as is) |
+| `hse_diag_check_accepted{check}` | 1 when the warning is accepted on purpose |
 | `hse_diag_check_last_timestamp_seconds{check}` | when the check last ran |
 | `hse_diag_check_duration_seconds{check}` | duration of the last check |
-| `hse_diag_overall_status` | overall result |
+| `hse_diag_overall_status` | overall result without accepted warnings |
 
-Metrics read the process cache and are fresh on the leader and on instances whose page was opened; with several instances scrape all of them and take the maximum. Example rule: `max(hse_diag_overall_status) >= 2` for 10 minutes.
+Metrics read the process cache and are fresh on the leader and on instances whose page was opened; with several instances scrape all of them and take the maximum. Example rule: `max(hse_diag_overall_status) >= 2` for 10 minutes. Build per-check alerts so that accepted checks do not fire: `hse_diag_check_status >= 1 unless on(check) hse_diag_check_accepted == 1`.
 
 ## If the page is empty
 

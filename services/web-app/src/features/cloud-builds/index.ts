@@ -7,3 +7,4 @@ export { DocBuildNote, DocBuildNoteView } from "./ui/DocBuildNote";
 export { FetchAllNotice } from "./ui/FetchAllNotice";
 export { useDocBuilds } from "./model/useDocBuilds";
 export { useFetchBuild } from "./model/useFetchBuild";
+export { cancelErrorKey, useCloudBuildStop } from "./model/useCancelCloudBuild";

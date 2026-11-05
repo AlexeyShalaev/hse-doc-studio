@@ -6,6 +6,7 @@ from datetime import UTC, datetime, timedelta
 import pytest
 from hse_doc_studio.core.backup.entities import RunStatus as BackupStatus
 from hse_doc_studio.core.backup.errors import BackupErrorCode
+from hse_doc_studio.core.diagnostics.acceptance import KEY_ACCEPTED, Acceptance, acceptances_to
 from hse_doc_studio.core.server_update.entities import (
     ReleaseInfo,
     RunKind,
@@ -427,6 +428,65 @@ async def test__kubernetes__manual_update_without_backup_needs_the_risk_confirme
     assert any(e.level == "warn" and "risk is accepted" in e.message for e in run.events)
     (audit,) = [e for e in await env.audit.list() if e.action == "update.run_request"]
     assert audit.details["risk_accepted"] is True
+
+
+async def _accept_no_backups(env: Env, *, until: datetime | None = None, reason: str = "Бэкапы делает хостер") -> None:
+    stored = {"backups": Acceptance("backups", reason, "boss", "Админ", env.clock.now, until)}
+    await env.settings.set(KEY_ACCEPTED, acceptances_to(stored), source="admin")
+
+
+async def test__kubernetes__backups_accepted_on_purpose__manual_update_does_not_ask_and_says_why() -> None:
+    env = make(releases=REL, kind="kubernetes")
+    await configure(env, backup_first=True)
+    await _accept_no_backups(env)
+    await env.service.check_now("boss")
+    await updater_alive(env)
+
+    status = await env.service.status()
+    assert status.risk_confirmation_required is False
+    assert status.backups_accepted is not None
+    assert status.backups_accepted.reason == "Бэкапы делает хостер"
+
+    run = await env.service.request_update("boss", None)  # accept_risk не нужен
+
+    assert run.status is RunStatus.queued
+    assert any(e.level == "warn" and "on purpose" in e.message for e in run.events)
+    (audit,) = [e for e in await env.audit.list() if e.action == "update.run_request"]
+    assert (audit.details["risk_accepted"], audit.details["risk_waiver"]) == (True, "Бэкапы делает хостер")
+
+
+async def test__kubernetes__acceptance_expired_or_destination_added__confirmation_is_asked_again() -> None:
+    env = make(releases=REL, kind="kubernetes")
+    await configure(env, backup_first=True)
+    await _accept_no_backups(env, until=env.clock.now + timedelta(hours=1))
+    await env.service.check_now("boss")
+    await updater_alive(env)
+    env.clock.advance(hours=2)
+    await updater_alive(env)
+
+    status = await env.service.status()
+    assert (status.risk_confirmation_required, status.backups_accepted) == (True, None)
+    with pytest.raises(UpdateError) as caught:
+        await env.service.request_update("boss", None)
+    assert caught.value.code is UpdateErrorCode.risk_not_confirmed
+
+    await _accept_no_backups(env)
+    await _destination(env)  # бэкапы появились: подтверждение не нужно вовсе, запись молчит
+    status = await env.service.status()
+    assert (status.risk_confirmation_required, status.backups_accepted) == (False, None)
+
+
+async def test__kubernetes__auto_install_ignores_the_acceptance_and_still_only_tells_the_admins() -> None:
+    env = make(releases=REL, kind="kubernetes")
+    await configure(env, backup_first=True)
+    await _accept_no_backups(env)
+    await updater_alive(env)
+
+    await env.service.tick()
+
+    assert await env.runs.active() is None
+    outcomes = [(p.outcome, p.excerpt) for _, _, p, _ in env.notifier.sent]  # type: ignore[attr-defined]
+    assert outcomes == [("update_available", "backup_required")]
 
 
 async def test__kubernetes__with_a_backup_destination_no_confirmation_is_needed_and_the_backup_runs() -> None:

@@ -434,6 +434,8 @@ ROUTE_SCOPES: Mapping[RouteKey, RouteScope] = {
     ("GET", "/api/admin/diagnostics"): _ADM,
     ("POST", "/api/admin/diagnostics/run"): _ADM,
     ("PUT", "/api/admin/diagnostics/thresholds"): _ADM,
+    ("PUT", "/api/admin/diagnostics/accepted/{check}"): _ADM,
+    ("DELETE", "/api/admin/diagnostics/accepted/{check}"): _ADM,
     ("GET", "/api/admin/usage"): _ADM,
     ("GET", "/api/admin/usage/summary"): _ADM,
     ("POST", "/api/admin/usage/reset"): _ADM,
@@ -506,6 +508,7 @@ ROUTE_SCOPES: Mapping[RouteKey, RouteScope] = {
     ("POST", "/git/-/presence"): RouteScope.git_token,
     ("GET", "/git/-/presence/overview"): RouteScope.git_token,
     ("GET", "/git/-/projects/{project_id}/builds"): RouteScope.git_token,
+    ("POST", "/git/-/projects/{project_id}/builds/cancel"): RouteScope.git_token,
     ("GET", "/git/-/projects/{project_id}/documents/{doc_id}/pdf"): RouteScope.git_token,
     # gitremote: вход устройства по коду; подтверждает только вошедший по сессии (маршрут отвергает PAT)
     # gitremote: вход локальной Студии на сервер Студии и его проекты

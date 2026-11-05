@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from datetime import datetime
 
+from pydantic import Field
+
 from hse_doc_studio.api.schemas.common import StrictModel
 
 
@@ -37,3 +39,13 @@ class ProjectBuildsResponse(StrictModel):
     dirty: bool
     documents: list[DocumentBuildsOut]
     max_pdf_bytes: int
+
+
+class CancelBuildsRequest(StrictModel):
+    # Без документа останавливаются все незавершённые сборки проекта.
+    doc_id: str | None = Field(default=None, max_length=128)
+
+
+class CancelBuildsResponse(StrictModel):
+    # Сколько сборок остановлено; ноль, если все уже закончились (повторная отмена).
+    cancelled: int

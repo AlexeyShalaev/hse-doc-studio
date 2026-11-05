@@ -123,6 +123,17 @@ export default defineConfig({
       },
     },
     {
+      // Очередь сборок без ложной тревоги: личный раннер с concurrency 1, «Собрать всё», отмена.
+      name: "build-queue",
+      testMatch: /build-queue\.spec\.ts/,
+      timeout: 20 * 60_000,
+      use: {
+        ...devices["Desktop Chrome"],
+        actionTimeout: 30_000,
+        channel: process.env.E2E_CHANNEL || undefined,
+      },
+    },
+    {
       // Личный раннер вне сети compose и адрес S3 в ссылках (stack.sh outside-up, outside-mode); самостоятельный прогон.
       name: "outside-runner",
       testMatch: /outside-runner\.spec\.ts/,
@@ -184,6 +195,17 @@ export default defineConfig({
       use: {
         ...devices["Desktop Chrome"],
         actionTimeout: 20_000,
+        channel: process.env.E2E_CHANNEL || undefined,
+      },
+    },
+    {
+      // Осознанное принятие предупреждений самодиагностики; идёт после полного смоука, до бэкапов.
+      name: "acknowledge",
+      testMatch: /acknowledge\.spec\.ts/,
+      timeout: 3 * 60_000,
+      use: {
+        ...devices["Desktop Chrome"],
+        actionTimeout: 15_000,
         channel: process.env.E2E_CHANNEL || undefined,
       },
     },

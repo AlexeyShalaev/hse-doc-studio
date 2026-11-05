@@ -19,7 +19,10 @@ import {
   vi,
 } from "vitest";
 import { i18n } from "@shared/lib";
+import { diagnosticsApi } from "../admin-diagnostics/api/diagnosticsApi";
+import { ensureAdminDiagnosticsLocales } from "../admin-diagnostics/lib/locales";
 import { backupsApi } from "./api/backupsApi";
+import type { AdminDiagnostics } from "@entities/session";
 import type {
   BackupDestination,
   BackupRun,
@@ -227,13 +230,43 @@ describe("расписание: чистая логика формы", () => {
   });
 });
 
+const diag = (accepted: boolean): AdminDiagnostics => ({
+  overall: "ok",
+  enabled: true,
+  interval_s: 300,
+  last_tick_at: NOW,
+  checks: [
+    {
+      id: "backups",
+      group: "operations",
+      status: "warn",
+      reason: "backups_no_destination",
+      hint: "backups_no_destination",
+      values: {},
+      applicable: true,
+      acceptable: !accepted,
+      accepted: accepted
+        ? { reason: "Бэкапы у хостера", by_name: "Анна", at: NOW, until: null }
+        : null,
+      checked_at: NOW,
+      status_since: NOW,
+      duration_ms: 3,
+    },
+  ],
+  accepted: [],
+  thresholds: [],
+  notify: true,
+});
+
 describe("раздел «Бэкапы»", () => {
   beforeAll(async () => {
+    await ensureAdminDiagnosticsLocales();
     await ensureAdminBackupsLocales();
     await i18n.changeLanguage("ru");
   });
 
   beforeEach(() => {
+    vi.spyOn(diagnosticsApi, "overview").mockResolvedValue(diag(false));
     vi.spyOn(backupsApi, "status").mockResolvedValue(status());
     vi.spyOn(backupsApi, "destinations").mockResolvedValue([dest()]);
     vi.spyOn(backupsApi, "runs").mockResolvedValue({
@@ -279,6 +312,32 @@ describe("раздел «Бэкапы»", () => {
       await screen.findByTestId("backup-banner-empty"),
     ).toBeInTheDocument();
     expect(screen.getByTestId("backup-run-now")).toBeDisabled();
+  });
+
+  it("баннер «нет назначения» предлагает принять осознанно, принятое заменяет его серой строкой", async () => {
+    vi.spyOn(backupsApi, "destinations").mockResolvedValue([]);
+    vi.spyOn(backupsApi, "status").mockResolvedValue(
+      status({ destinations_total: 0 }),
+    );
+    const { unmount } = render(wrap(<BackupsPage />));
+    const banner = await screen.findByTestId("backup-banner-empty");
+    expect(
+      await within(banner).findByTestId("diag-accept-backups"),
+    ).toBeVisible();
+    unmount();
+
+    vi.spyOn(diagnosticsApi, "overview").mockResolvedValue(diag(true));
+    const revoke = vi
+      .spyOn(diagnosticsApi, "revoke")
+      .mockResolvedValue(diag(false));
+    render(wrap(<BackupsPage />));
+    const accepted = await screen.findByTestId("backup-banner-accepted");
+    expect(accepted).toHaveTextContent("Причина: Бэкапы у хостера");
+    expect(screen.queryByTestId("backup-banner-empty")).toBeNull();
+    await userEvent.click(within(accepted).getByTestId("diag-return-backups"));
+    await waitFor(() => {
+      expect(revoke).toHaveBeenCalledWith("backups");
+    });
   });
 
   it("идущий запуск виден баннером, кнопка запуска заблокирована", async () => {

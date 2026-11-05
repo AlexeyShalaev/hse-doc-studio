@@ -225,6 +225,19 @@ class HttpStudioServerClient:
         status, body = await self._request(target, "GET", f"/git/-/projects/{project_id}/builds", headers=_auth(token))
         return _checked(status, body, StudioServerErrorCode.presence_unsupported)
 
+    async def cancel_project_builds(
+        self, target: StudioServerTarget, token: Secret, project_id: UUID, doc_id: str | None
+    ) -> int:
+        status, body = await self._request(
+            target, "POST", f"/git/-/projects/{project_id}/builds/cancel", headers=_auth(token), json={"doc_id": doc_id}
+        )
+        if status == _FORBIDDEN:
+            raise StudioServerError(StudioServerErrorCode.cancel_forbidden)
+        if status == _NOT_FOUND:
+            raise StudioServerError(StudioServerErrorCode.cancel_unsupported)
+        cancelled = _checked(status, body, StudioServerErrorCode.cancel_unsupported).get("cancelled", 0)
+        return cancelled if isinstance(cancelled, int) else 0
+
     async def download_cloud_pdf(  # noqa: PLR0913 — параметры одной загрузки
         self,
         target: StudioServerTarget,

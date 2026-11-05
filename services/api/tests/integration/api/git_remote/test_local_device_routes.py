@@ -79,3 +79,6 @@ async def test__builds__unknown_project_is_not_found(test_app: AsyncClient) -> N
     assert (
         await test_app.post(f"/api/v1/projects/{uuid4()}/git/builds/fetch", json={"doc_id": "x"})
     ).status_code == 404
+    assert (
+        await test_app.post(f"/api/v1/projects/{uuid4()}/git/builds/cancel", json={"doc_id": None})
+    ).status_code == 404

@@ -59,6 +59,17 @@ Checks are grouped: **Data**, **Builds and background jobs**, **Certificates**, 
 - **Background jobs**, “No background-job leader found”: restart api; if that does not help, check
   the database connection.
 
+## Accept a warning on purpose
+
+If you knowingly do not back up or do not connect public runners, you can accept the warning: click
+**I accept: this is on purpose** in the check row (or in the banner on the “Backups” page), write a
+reason of up to 200 characters and pick a term, indefinitely or until a date. The row turns grey
+(“Accepted”), and the menu dot, the overview line and admin notifications go away. All accepted
+warnings are listed at the bottom of the page under **Accepted warnings**; **Bring the warning back**
+removes the acceptance. Failures and checks that protect data and uptime (database, migrations, disk,
+queue, certificate expiry) cannot be accepted. When “no backups” is accepted, a manual update on
+Kubernetes no longer asks you to confirm the risk each time and shows the reason in one line.
+
 ## If something goes wrong
 
 - **“No checks have run yet”**: the server runs the first scheduled pass on its own within

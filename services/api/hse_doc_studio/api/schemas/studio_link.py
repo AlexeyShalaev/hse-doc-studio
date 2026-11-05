@@ -121,3 +121,12 @@ class FetchOutcomeOut(StrictModel):
 
 class FetchBuildResponse(StrictModel):
     items: list[FetchOutcomeOut]
+
+
+class CancelCloudBuildsRequest(StrictModel):
+    # Без документа останавливаются все облачные сборки проекта.
+    doc_id: str | None = Field(default=None, max_length=128)
+
+
+class CancelCloudBuildsResponse(StrictModel):
+    cancelled: int

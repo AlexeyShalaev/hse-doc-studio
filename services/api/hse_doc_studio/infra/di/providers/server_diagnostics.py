@@ -29,7 +29,9 @@ from hse_doc_studio.infra.diagnostics.probes import (
     TlsProbe,
 )
 from hse_doc_studio.use_cases.diagnostics.admin import (
+    AcceptDiagnosticsWarningUC,
     GetDiagnosticsUC,
+    RevokeDiagnosticsAcceptanceUC,
     RunDiagnosticsUC,
     UpdateDiagnosticsThresholdsUC,
 )
@@ -142,3 +144,20 @@ class ServerDiagnosticsProvider(Provider):
         self, instance_settings: IInstanceSettingsRepository, audit: IAuditLog, uow: IUnitOfWork, get: GetDiagnosticsUC
     ) -> UpdateDiagnosticsThresholdsUC:
         return UpdateDiagnosticsThresholdsUC(instance_settings, audit, uow, get)
+
+    @provide
+    def get_accept_uc(
+        self,
+        instance_settings: IInstanceSettingsRepository,
+        audit: IAuditLog,
+        uow: IUnitOfWork,
+        service: DiagnosticsService,
+        get: GetDiagnosticsUC,
+    ) -> AcceptDiagnosticsWarningUC:
+        return AcceptDiagnosticsWarningUC(instance_settings, audit, uow, service, get)
+
+    @provide
+    def get_revoke_uc(
+        self, instance_settings: IInstanceSettingsRepository, audit: IAuditLog, uow: IUnitOfWork, get: GetDiagnosticsUC
+    ) -> RevokeDiagnosticsAcceptanceUC:
+        return RevokeDiagnosticsAcceptanceUC(instance_settings, audit, uow, get)

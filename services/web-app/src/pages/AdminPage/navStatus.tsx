@@ -1,4 +1,5 @@
 import { useEffect } from "react";
+import { openProblems, useDiagnosticsQuiet } from "@features/admin-diagnostics";
 import { useInstanceSettings } from "@features/admin-install";
 import {
   diskTone,
@@ -18,7 +19,7 @@ import { useApprovalCount } from "@features/admin-users";
 export type NavCounterTone = "accent" | "warning" | "danger";
 export type NavCounters = Partial<
   Record<
-    "users" | "runners" | "services" | "storage" | "data",
+    "users" | "runners" | "services" | "storage" | "data" | "diagnostics",
     /** count 0: только точка, без числа (место на диске). */
     { count: number; tone: NavCounterTone }
   >
@@ -57,6 +58,11 @@ export const NavStatusProbe = ({
   const storage = useStorage().data;
   const diskCritical = storage ? diskTone(storage) === "danger" : false;
   const dataLevel = useLifecycle().data?.level ?? "ok";
+  // Принятые осознанно предупреждения точки не дают: считаем только открытые.
+  const diag = useDiagnosticsQuiet().data;
+  const problems = diag ? openProblems(diag) : [];
+  const diagCount = problems.length;
+  const diagFail = problems.some((c) => c.status === "fail");
   const name = instance?.name.trim() ?? "";
   const host = instance ? hostOf(instance.public_url) : null;
 
@@ -77,6 +83,12 @@ export const NavStatusProbe = ({
         tone: dataLevel === "critical" ? "danger" : "warning",
       };
     }
+    if (diagCount > 0) {
+      counters.diagnostics = {
+        count: diagCount,
+        tone: diagFail ? "danger" : "warning",
+      };
+    }
     onChange({
       counters,
       instanceName: name !== "" ? name : null,
@@ -89,6 +101,8 @@ export const NavStatusProbe = ({
     degraded,
     diskCritical,
     dataLevel,
+    diagCount,
+    diagFail,
     name,
     host,
     onChange,

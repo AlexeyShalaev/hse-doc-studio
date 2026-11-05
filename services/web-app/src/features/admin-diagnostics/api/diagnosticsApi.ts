@@ -1,6 +1,7 @@
 import { adminClient, parseResp } from "@shared/api";
 import {
   AdminDiagnosticsSchema,
+  type AcceptDiagnosticsRequest,
   type AdminDiagnostics,
   type UpdateDiagnosticsThresholdsRequest,
 } from "@entities/session";
@@ -23,5 +24,18 @@ export const diagnosticsApi = {
   ): Promise<AdminDiagnostics> =>
     adminClient
       .put("/diagnostics/thresholds", body, quiet)
+      .then(parseResp(AdminDiagnosticsSchema)),
+  /** Принять предупреждение осознанно: причина обязательна, срок необязателен. */
+  accept: (
+    check: string,
+    body: AcceptDiagnosticsRequest,
+  ): Promise<AdminDiagnostics> =>
+    adminClient
+      .put(`/diagnostics/accepted/${encodeURIComponent(check)}`, body, quiet)
+      .then(parseResp(AdminDiagnosticsSchema)),
+  /** Вернуть предупреждение: снять принятие. */
+  revoke: (check: string): Promise<AdminDiagnostics> =>
+    adminClient
+      .delete(`/diagnostics/accepted/${encodeURIComponent(check)}`, quiet)
       .then(parseResp(AdminDiagnosticsSchema)),
 };

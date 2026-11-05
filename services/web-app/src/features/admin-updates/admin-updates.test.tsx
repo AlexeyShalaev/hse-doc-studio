@@ -19,7 +19,10 @@ import {
   vi,
 } from "vitest";
 import { i18n } from "@shared/lib";
+import { diagnosticsApi } from "../admin-diagnostics/api/diagnosticsApi";
+import { ensureAdminDiagnosticsLocales } from "../admin-diagnostics/lib/locales";
 import { updatesApi } from "./api/updatesApi";
+import type { AdminDiagnostics } from "@entities/session";
 import type { UpdateRun, UpdateStatus } from "./api/schemas";
 import { ensureAdminUpdatesLocales } from "./lib/locales";
 import {
@@ -93,8 +96,44 @@ const status = (patch: Partial<UpdateStatus> = {}): UpdateStatus => ({
   rollback_needs_restore: false,
   rollback_blocked: false,
   risk_confirmation_required: false,
+  backups_accepted: null,
   manual_command: "docker compose pull && docker compose up -d",
   ...patch,
+});
+
+const diagnostics = (
+  backups: { acceptable?: boolean; accepted?: boolean } = {},
+): AdminDiagnostics => ({
+  overall: "ok",
+  enabled: true,
+  interval_s: 300,
+  last_tick_at: NOW,
+  checks: [
+    {
+      id: "backups",
+      group: "operations",
+      status: "warn",
+      reason: "backups_disabled",
+      hint: "backups_disabled",
+      values: {},
+      applicable: true,
+      acceptable: backups.acceptable ?? false,
+      accepted: backups.accepted
+        ? {
+            reason: "Бэкапы делает хостер",
+            by_name: "Анна",
+            at: NOW,
+            until: null,
+          }
+        : null,
+      checked_at: NOW,
+      status_since: NOW,
+      duration_ms: 3,
+    },
+  ],
+  accepted: [],
+  thresholds: [],
+  notify: true,
 });
 
 const wrap = (node: React.ReactNode) => (
@@ -143,11 +182,15 @@ describe("окно и политика: чистая логика формы", (
 
 describe("раздел «Обновления»", () => {
   beforeAll(async () => {
+    await ensureAdminDiagnosticsLocales();
     await ensureAdminUpdatesLocales();
     await i18n.changeLanguage("ru");
   });
 
   beforeEach(() => {
+    vi.spyOn(diagnosticsApi, "overview").mockResolvedValue(
+      diagnostics({ acceptable: true }),
+    );
     vi.spyOn(updatesApi, "status").mockResolvedValue(status());
     vi.spyOn(updatesApi, "runs").mockResolvedValue({
       items: [
@@ -342,6 +385,61 @@ describe("раздел «Обновления»", () => {
     await waitFor(() => {
       expect(start).toHaveBeenCalledWith("0.3.2", true);
     });
+  });
+
+  it("Kubernetes без бэкапа, принятого осознанно: подтверждение риска не спрашивают, одна строка с причиной", async () => {
+    vi.spyOn(diagnosticsApi, "overview").mockResolvedValue(
+      diagnostics({ accepted: true }),
+    );
+    vi.spyOn(updatesApi, "status").mockResolvedValue(
+      status({
+        executor: "kubernetes",
+        backup_destination_configured: false,
+        risk_confirmation_required: false,
+        backups_accepted: {
+          reason: "Бэкапы делает хостер",
+          by_name: "Анна",
+          at: NOW,
+          until: null,
+        },
+      }),
+    );
+    const start = vi
+      .spyOn(updatesApi, "start")
+      .mockResolvedValue(run({ status: "queued" }));
+    render(wrap(<UpdatesPage />));
+    expect(
+      await screen.findByTestId("update-banner-backups-accepted"),
+    ).toHaveTextContent("Причина: Бэкапы делает хостер");
+    expect(screen.queryByTestId("update-banner-nobackup-kube")).toBeNull();
+    const button = screen.getByTestId("update-now");
+    await waitFor(() => expect(button).toBeEnabled());
+    await userEvent.click(button);
+    const confirm = await screen.findByTestId("update-confirm");
+    expect(screen.queryByTestId("update-accept-risk")).toBeNull();
+    expect(screen.getByTestId("update-backups-accepted")).toHaveTextContent(
+      "Бэкапы отключены осознанно, причина: Бэкапы делает хостер",
+    );
+    expect(confirm).toBeEnabled();
+    await userEvent.click(confirm);
+    await waitFor(() => {
+      expect(start).toHaveBeenCalledWith("0.3.2", false);
+    });
+  });
+
+  it("Kubernetes без бэкапа: у баннера риска есть кнопка принять осознанно", async () => {
+    vi.spyOn(updatesApi, "status").mockResolvedValue(
+      status({
+        executor: "kubernetes",
+        backup_destination_configured: false,
+        risk_confirmation_required: true,
+      }),
+    );
+    render(wrap(<UpdatesPage />));
+    const banner = await screen.findByTestId("update-banner-nobackup-kube");
+    expect(
+      await within(banner).findByTestId("diag-accept-backups"),
+    ).toBeVisible();
   });
 
   it("Kubernetes: апдейтер не отвечает, кнопка заблокирована, подсказка про под", async () => {

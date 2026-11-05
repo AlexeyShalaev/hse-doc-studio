@@ -8445,6 +8445,7 @@ a.adm-row:hover .adm-row-chevron {
   .adm-row-meta {
     white-space: normal;
     flex-wrap: wrap;
+    max-width: 100%;
   }
 }
 

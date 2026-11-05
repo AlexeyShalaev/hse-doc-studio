@@ -178,7 +178,8 @@
     "ok": "Update",
     "bodyKube": "The updater checks the image, stops the api, applies the migrations in a Job and starts the new version. If it does not come up while the schema is unchanged, the previous image is put back.",
     "schemaKube": "If the migrations managed to change the database schema, the image is not rolled back (the previous one does not start on the new schema): the run ends as \"Needs hands\" with instructions.",
-    "acceptRisk": "I understand: there will be no full backup and the database cannot be rolled back"
+    "acceptRisk": "I understand: there will be no full backup and the database cannot be rolled back",
+    "backupsAccepted": "Backups are off on purpose, reason: {{reason}}"
   },
   "confirmRollback": {
     "title": "Roll back to {{version}}?",

@@ -300,7 +300,7 @@ export const AdminApp = () => {
         <Route
           path="backups"
           element={
-            <Page width="wide" ns={["backups"]}>
+            <Page width="wide" ns={["backups", "diagnostics"]}>
               <AdminBackupsPage />
             </Page>
           }
@@ -308,7 +308,7 @@ export const AdminApp = () => {
         <Route
           path="updates"
           element={
-            <Page width="wide" ns={["updates"]}>
+            <Page width="wide" ns={["updates", "diagnostics"]}>
               <AdminUpdatesPage />
             </Page>
           }

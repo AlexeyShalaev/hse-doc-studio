@@ -5,6 +5,7 @@ import {
   CircleHelp,
   CircleMinus,
   RefreshCw,
+  ShieldCheck,
   TriangleAlert,
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
@@ -20,8 +21,10 @@ import {
   Spinner,
   TableSkeleton,
 } from "@shared/ui";
+import type { TFunction } from "i18next";
 import type {
   AdminDiagnostics,
+  DiagAcceptance,
   DiagCheck,
   DiagStatus,
 } from "@entities/session";
@@ -32,6 +35,8 @@ import {
   useSaveThresholds,
 } from "../api/queries";
 import { ensureAdminDiagnosticsLocales } from "../lib/locales";
+import { AcceptDialog } from "./AcceptDialog";
+import { RevokeButton } from "./RevokeButton";
 import { ThresholdsPanel } from "./ThresholdsPanel";
 
 const GROUPS = ["data", "compute", "security", "operations"] as const;
@@ -55,18 +60,33 @@ export const DiagnosticsPage = () => {
   return ready ? <DiagnosticsContent /> : <TableSkeleton rows={6} />;
 };
 
+/** Кто, когда и до какого срока принял предупреждение. */
+const acceptedLine = (
+  t: TFunction,
+  acc: DiagAcceptance,
+  when: (iso: string) => string,
+): string =>
+  t(acc.until ? "accepted.lineUntil" : "accepted.line", {
+    by: acc.by_name,
+    at: when(acc.at),
+    until: acc.until ? when(acc.until) : "",
+  });
+
 const CheckRow = ({
   check,
   busy,
   onRecheck,
+  onAccept,
 }: {
   check: DiagCheck;
   busy: boolean;
   onRecheck: (id: string) => void;
+  onAccept: (id: string) => void;
 }) => {
   const { t } = useTranslation("adminDiagnostics");
   const status: DiagStatus | null = check.status;
-  const muted = !check.applicable;
+  const accepted = check.accepted;
+  const muted = !check.applicable || accepted !== null;
   const when = (iso: string) => new Date(iso).toLocaleString(localeTag());
   const reasonKey =
     check.reason === "ok"
@@ -82,7 +102,7 @@ const CheckRow = ({
   return (
     <ListRow
       testId={`diag-check-${check.id}`}
-      tone={status ? TONE[status] : "neutral"}
+      tone={status && !accepted ? TONE[status] : "neutral"}
       icon={
         muted ? (
           <CircleMinus size="0.9375rem" />
@@ -97,18 +117,33 @@ const CheckRow = ({
           data-testid={`diag-status-${check.id}`}
           data-status={status ?? "none"}
           data-applicable={String(check.applicable)}
+          data-accepted={String(accepted !== null)}
         >
           {t(`check.${check.id}`, { defaultValue: check.id })}{" "}
           {status && !muted && (
             <Badge variant={BADGE[status]}>{t(`status.${status}`)}</Badge>
           )}
-          {muted && <Badge variant="subtle">{t("status.na")}</Badge>}
+          {accepted && <Badge variant="subtle">{t("status.accepted")}</Badge>}
+          {!check.applicable && (
+            <Badge variant="subtle">{t("status.na")}</Badge>
+          )}
         </span>
       }
       description={
         <span>
           <span data-testid={`diag-reason-${check.id}`}>{reason}</span>
-          {check.hint && (
+          {accepted && (
+            <span
+              className="dim"
+              style={{ display: "block" }}
+              data-testid={`diag-accepted-note-${check.id}`}
+            >
+              {t("accepted.noteReason", { reason: accepted.reason })}
+              {" · "}
+              {acceptedLine(t, accepted, when)}
+            </span>
+          )}
+          {check.hint && !accepted && (
             <span
               className="dim"
               style={{ display: "block" }}
@@ -124,12 +159,28 @@ const CheckRow = ({
         </span>
       }
       meta={
-        <span className="flex items-center" style={{ gap: "0.5rem" }}>
+        <span
+          className="flex items-center"
+          style={{ gap: "0.5rem", flexWrap: "wrap" }}
+        >
           {check.checked_at && (
             <span className="dim" data-testid={`diag-time-${check.id}`}>
               {when(check.checked_at)}
             </span>
           )}
+          {check.acceptable && (
+            <Button
+              size="sm"
+              variant="secondary"
+              data-testid={`diag-accept-${check.id}`}
+              onClick={() => {
+                onAccept(check.id);
+              }}
+            >
+              {t("accept.button")}
+            </Button>
+          )}
+          {accepted && <RevokeButton check={check.id} />}
           <Button
             size="sm"
             variant="ghost"
@@ -151,7 +202,8 @@ const Summary = ({ data }: { data: AdminDiagnostics }) => {
   const { t } = useTranslation("adminDiagnostics");
   const checked = data.checks.filter((c) => c.status !== null);
   const count = (s: DiagStatus) =>
-    checked.filter((c) => c.status === s && c.applicable).length;
+    checked.filter((c) => c.status === s && c.applicable && !c.accepted).length;
+  const accepted = data.checks.filter((c) => c.accepted !== null).length;
   const last = data.last_tick_at
     ? new Date(data.last_tick_at).toLocaleString(localeTag())
     : null;
@@ -177,10 +229,66 @@ const Summary = ({ data }: { data: AdminDiagnostics }) => {
           warn: count("warn"),
           fail: count("fail"),
         })}
+        {accepted > 0 ? `, ${t("summary.accepted", { count: accepted })}` : ""}
         {last ? ` · ${t("summary.last", { at: last })}` : ""}
         {data.enabled ? "" : ` · ${t("summary.disabled")}`}
       </span>
     </Banner>
+  );
+};
+
+/** Все принятые предупреждения в одном месте: причина, кто и когда принял, срок, «Вернуть». */
+const AcceptedSection = ({ data }: { data: AdminDiagnostics }) => {
+  const { t } = useTranslation("adminDiagnostics");
+  const when = (iso: string) => new Date(iso).toLocaleString(localeTag());
+  return (
+    <Section
+      title={t("accepted.title")}
+      description={t("accepted.lead")}
+      testId="diag-accepted"
+    >
+      {data.accepted.length === 0 ? (
+        <p className="form-hint" data-testid="diag-accepted-empty">
+          {t("accepted.empty")}
+        </p>
+      ) : (
+        <SectionList label={t("accepted.title")}>
+          {data.accepted.map(({ check, acceptance, active }) => (
+            <ListRow
+              key={check}
+              testId={`diag-accepted-${check}`}
+              tone="neutral"
+              icon={<ShieldCheck size="0.9375rem" />}
+              title={
+                <span data-active={String(active)}>
+                  {t(`check.${check}`, { defaultValue: check })}{" "}
+                  <Badge variant="subtle">
+                    {active ? t("status.accepted") : t("accepted.dormant")}
+                  </Badge>
+                </span>
+              }
+              description={
+                <span>
+                  <span data-testid={`diag-accepted-reason-${check}`}>
+                    {t("accepted.noteReason", { reason: acceptance.reason })}
+                  </span>
+                  <span className="dim" style={{ display: "block" }}>
+                    {acceptedLine(t, acceptance, when)}
+                    {active ? "" : ` ${t("accepted.dormantHint")}`}
+                  </span>
+                </span>
+              }
+              meta={
+                <RevokeButton
+                  check={check}
+                  testId={`diag-accepted-return-${check}`}
+                />
+              }
+            />
+          ))}
+        </SectionList>
+      )}
+    </Section>
   );
 };
 
@@ -190,6 +298,7 @@ const DiagnosticsContent = () => {
   const run = useRunDiagnostics();
   const save = useSaveThresholds();
   const [runningId, setRunningId] = useState<string | null>(null);
+  const [accepting, setAccepting] = useState<string | null>(null);
   const data = overview.data;
 
   return (
@@ -252,6 +361,7 @@ const DiagnosticsContent = () => {
                       key={check.id}
                       check={check}
                       busy={run.isPending}
+                      onAccept={setAccepting}
                       onRecheck={(id) => {
                         setRunningId(id);
                         run.mutate(id, {
@@ -266,6 +376,15 @@ const DiagnosticsContent = () => {
               </Section>
             );
           })}
+          <AcceptedSection data={data} />
+          {accepting && (
+            <AcceptDialog
+              check={accepting}
+              onClose={() => {
+                setAccepting(null);
+              }}
+            />
+          )}
           <p className="form-hint" data-testid="diag-disk-note">
             {t("diskNote")} <Link to="/admin/data">{t("diskNoteLink")}</Link>
           </p>

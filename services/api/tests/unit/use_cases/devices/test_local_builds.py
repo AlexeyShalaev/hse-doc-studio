@@ -12,6 +12,7 @@ import pytest
 from hse_doc_studio.core.devices.builds import BuildRelation, FetchStatus
 from hse_doc_studio.core.entities import CompileRecord
 from hse_doc_studio.core.enums import CompileStatus, EngineType
+from hse_doc_studio.core.errors import NotFoundError
 from hse_doc_studio.core.git_remote.client import (
     CloudPdfReply,
     StudioServerError,
@@ -38,11 +39,19 @@ class Servers:
         self.downloads: list[tuple[str, str | None]] = []
         self.error: Exception | None = None
         self.unchanged = False
+        self.cancels: list[str | None] = []
+        self.cancel_error: Exception | None = None
 
     async def project_builds(self, _credential_id: UUID, _project_id: UUID) -> dict[str, Any]:
         if isinstance(self.raw, Exception):
             raise self.raw
         return self.raw
+
+    async def cancel_project_builds(self, _credential_id: UUID, _project_id: UUID, doc_id: str | None) -> int:
+        self.cancels.append(doc_id)
+        if self.cancel_error is not None:
+            raise self.cancel_error
+        return 1
 
     async def download_cloud_pdf(
         self,
@@ -367,3 +376,36 @@ async def test__fetch__server_says_unchanged__keeps_local_file(tmp_path: Path) -
 
     assert outcome.status is FetchStatus.unchanged
     assert len(compiles.records) == 1
+
+
+# --- остановка облачных сборок ---
+
+
+async def test__cancel_cloud__asks_the_server_with_the_device_login(tmp_path: Path) -> None:
+    servers = Servers(raw_builds())
+    uc, _ = build(tmp_path, servers)
+
+    stopped = await uc.cancel_cloud(uuid4(), "vkr")
+
+    assert (stopped, servers.cancels) == (1, ["vkr"])
+
+
+async def test__cancel_cloud__no_right_or_no_network__error_reaches_the_caller(tmp_path: Path) -> None:
+    servers = Servers(raw_builds())
+    servers.cancel_error = StudioServerError(StudioServerErrorCode.cancel_forbidden)
+    uc, _ = build(tmp_path, servers)
+
+    with pytest.raises(StudioServerError) as raised:
+        await uc.cancel_cloud(uuid4(), None)
+
+    assert raised.value.code == StudioServerErrorCode.cancel_forbidden
+
+
+async def test__cancel_cloud__project_not_connected__not_found(tmp_path: Path) -> None:
+    servers = Servers(raw_builds())
+    uc, _ = build(tmp_path, servers, connected=False)
+
+    with pytest.raises(NotFoundError):
+        await uc.cancel_cloud(uuid4(), None)
+
+    assert servers.cancels == []
