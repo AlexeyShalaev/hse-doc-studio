@@ -244,6 +244,13 @@ export type LifecycleRun = z.infer<typeof LifecycleRunSchema>;
 
 // Самодиагностика (api/schemas/diagnostics.py): проверки со статусом, причиной и подсказкой, итог, пороги.
 export const DiagStatusSchema = z.enum(["ok", "warn", "fail"]);
+// Запись о принятии предупреждения: кто, когда, зачем и до какого срока (null: бессрочно).
+export const DiagAcceptanceSchema = z.strictObject({
+  reason: z.string(),
+  by_name: z.string(),
+  at: iso,
+  until: iso.nullable(),
+});
 export const DiagCheckSchema = z.strictObject({
   id: z.string(),
   group: z.enum(["data", "compute", "security", "operations"]),
@@ -253,6 +260,10 @@ export const DiagCheckSchema = z.strictObject({
   hint: z.string().nullable(),
   values: z.record(z.string(), z.union([z.string(), z.number()])),
   applicable: z.boolean(),
+  // Предупреждение можно принять осознанно (кнопка «Принимаю»).
+  acceptable: z.boolean(),
+  // Принято и действует: статус остаётся warn, но в итог, меню и уведомления не входит.
+  accepted: DiagAcceptanceSchema.nullable(),
   checked_at: iso.nullable(),
   status_since: iso.nullable(),
   duration_ms: z.number().int().nullable(),
@@ -264,12 +275,19 @@ export const DiagThresholdSchema = z.strictObject({
   min: z.number().int(),
   max: z.number().int(),
 });
+export const DiagAcceptedSchema = z.strictObject({
+  check: z.string(),
+  acceptance: DiagAcceptanceSchema,
+  // true: предупреждение сейчас есть и погашено принятием; false: причину уже исправили, запись молчит.
+  active: z.boolean(),
+});
 export const AdminDiagnosticsSchema = z.strictObject({
   overall: DiagStatusSchema,
   enabled: z.boolean(),
   interval_s: z.number(),
   last_tick_at: iso.nullable(),
   checks: z.array(DiagCheckSchema),
+  accepted: z.array(DiagAcceptedSchema),
   thresholds: z.array(DiagThresholdSchema),
   notify: z.boolean(),
 });
@@ -277,10 +295,19 @@ export const UpdateDiagnosticsThresholdsRequestSchema = z.strictObject({
   values: z.record(z.string(), z.number().int()),
   notify: z.boolean(),
 });
+export const AcceptDiagnosticsRequestSchema = z.strictObject({
+  reason: z.string().min(1).max(200),
+  until: iso.nullable(),
+});
 export const RunDiagnosticsRequestSchema = z.strictObject({
   check: z.string().nullable(),
 });
 export type DiagStatus = z.infer<typeof DiagStatusSchema>;
+export type DiagAcceptance = z.infer<typeof DiagAcceptanceSchema>;
+export type DiagAccepted = z.infer<typeof DiagAcceptedSchema>;
+export type AcceptDiagnosticsRequest = z.infer<
+  typeof AcceptDiagnosticsRequestSchema
+>;
 export type DiagCheck = z.infer<typeof DiagCheckSchema>;
 export type DiagThreshold = z.infer<typeof DiagThresholdSchema>;
 export type AdminDiagnostics = z.infer<typeof AdminDiagnosticsSchema>;

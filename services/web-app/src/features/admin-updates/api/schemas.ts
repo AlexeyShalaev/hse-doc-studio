@@ -99,6 +99,15 @@ export const UpdateStatusSchema = z.strictObject({
   rollback_needs_restore: z.boolean(),
   rollback_blocked: z.boolean(),
   risk_confirmation_required: z.boolean(),
+  // «Бэкапы не делаю сознательно» принято в самодиагностике: подтверждать риск не нужно.
+  backups_accepted: z
+    .strictObject({
+      reason: z.string(),
+      by_name: z.string(),
+      at: z.string(),
+      until: z.string().nullable(),
+    })
+    .nullable(),
   manual_command: z.string(),
 });
 export type UpdateStatus = z.infer<typeof UpdateStatusSchema>;

@@ -1,5 +1,11 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { cleanup, render, screen, within } from "@testing-library/react";
+import {
+  cleanup,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import { I18nextProvider } from "react-i18next";
 import { MemoryRouter, Route, Routes } from "react-router";
 import {
@@ -139,6 +145,74 @@ describe("оболочка и сводка админки", () => {
     ).toBeInTheDocument();
     const people = screen.getByTestId("overview-kpi-people");
     expect(await within(people).findByText("17")).toBeInTheDocument();
+  });
+
+  const diagBody = (accepted: boolean): Record<string, unknown> => {
+    const at = "2026-11-05T10:00:00Z";
+    const acceptance = {
+      reason: "Бэкапы у хостера",
+      by_name: "Анна",
+      at,
+      until: null,
+    };
+    return {
+      overall: accepted ? "ok" : "warn",
+      enabled: true,
+      interval_s: 300,
+      last_tick_at: at,
+      checks: [
+        {
+          id: "backups",
+          group: "operations",
+          status: "warn",
+          reason: "backups_disabled",
+          hint: "backups_disabled",
+          values: {},
+          applicable: true,
+          acceptable: !accepted,
+          accepted: accepted ? acceptance : null,
+          checked_at: at,
+          status_since: at,
+          duration_ms: 1,
+        },
+      ],
+      accepted: accepted
+        ? [{ check: "backups", acceptance, active: true }]
+        : [],
+      thresholds: [],
+      notify: true,
+    };
+  };
+
+  const withDiagnostics = (accepted: boolean) => {
+    const get = adminClient.get.bind(adminClient);
+    return vi
+      .spyOn(adminClient, "get")
+      .mockImplementation((url, config) =>
+        url === "/diagnostics"
+          ? Promise.resolve({ data: diagBody(accepted) })
+          : get(url, config),
+      );
+  };
+
+  it("самодиагностика: открытое предупреждение даёт точку у раздела", async () => {
+    activateServerScenario("admin_ready");
+    withDiagnostics(false);
+    mount();
+    const count = await screen.findByTestId("admin-nav-count-diagnostics");
+    expect(count).toHaveTextContent("1");
+    expect(count).toHaveAttribute("data-tone", "warning");
+  });
+
+  it("самодиагностика: принятое осознанно предупреждение точки не даёт", async () => {
+    activateServerScenario("admin_ready");
+    const get = withDiagnostics(true);
+    mount();
+    await waitFor(() => {
+      expect(get).toHaveBeenCalledWith("/diagnostics", expect.anything());
+    });
+    await screen.findByTestId("admin-nav-count-users");
+    expect(screen.queryByTestId("admin-nav-count-diagnostics")).toBeNull();
   });
 
   it("сводка на английском", async () => {
