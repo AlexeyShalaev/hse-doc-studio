@@ -9,6 +9,7 @@ from datetime import timedelta
 
 import structlog
 
+from hse_doc_studio.core.diagnostics.acceptance import Acceptance, acceptances_from, applies
 from hse_doc_studio.core.diagnostics.entities import CheckResult, DiagStatus, Verdict
 from hse_doc_studio.core.diagnostics.ports import IDiagCheck, IDiagStore
 from hse_doc_studio.core.diagnostics.state import CheckState, advance
@@ -43,6 +44,7 @@ class DiagnosticsService:
         self._clock = clock
         self._lock = asyncio.Lock()
         self.last: dict[str, CheckState] = {}  # для /metrics этого процесса
+        self.accepted: dict[str, Acceptance] = {}  # принятые осознанно и действующие сейчас, тоже для /metrics
 
     @property
     def check_ids(self) -> list[str]:
@@ -50,7 +52,14 @@ class DiagnosticsService:
 
     async def snapshot(self) -> dict[str, CheckState]:
         self.last = await self._store.load()
+        self.accepted = await self._applying(self.last)
         return self.last
+
+    async def _applying(self, states: dict[str, CheckState]) -> dict[str, Acceptance]:
+        """Принятия, которые сейчас гасят предупреждение: срок не вышел, проверка в принимаемом состоянии."""
+        now = self._clock()
+        records = acceptances_from(await self._settings.get_all())
+        return {cid: acc for cid, acc in records.items() if (st := states.get(cid)) and applies(acc, st.result, now)}
 
     async def tick(self) -> None:
         """Плановый проход (под лидерским локом): все проверки, уведомления, метка живости."""
@@ -64,9 +73,12 @@ class DiagnosticsService:
             targets = [c for c in self._checks if only is None or c.spec.id.value == only]
             results = await asyncio.gather(*(self._one(c, thresholds) for c in targets))
             previous = await self._store.load()
+            records = acceptances_from(await self._settings.get_all())
             for result in results:
-                await self._record(previous.get(result.check_id), result, thresholds, notify=notify)
+                accepted = (acc := records.get(result.check_id)) is not None and applies(acc, result, self._clock())
+                await self._record(previous.get(result.check_id), result, thresholds, notify=notify and not accepted)
             self.last = await self._store.load()
+            self.accepted = await self._applying(self.last)
             return self.last
 
     async def _one(self, check: IDiagCheck, thresholds: DiagThresholds) -> CheckResult:
@@ -96,7 +108,8 @@ class DiagnosticsService:
             prev, result, confirm_runs=thresholds.confirm_runs, repeat=timedelta(hours=thresholds.repeat_hours), now=now
         )
         if not notify:
-            # Ручной прогон: статус и серия обновляются, рассылку и её отметки оставляем как были.
+            # Ручной прогон и принятое осознанно предупреждение: статус и серия обновляются, рассылку и её
+            # отметки оставляем как были, поэтому после снятия принятия админы узнают о проблеме на ближайшем проходе.
             state = CheckState(
                 state.result,
                 state.status_since,

@@ -9,6 +9,7 @@ from fastapi import APIRouter, Depends, Request, Response, status
 from hse_doc_studio.api.config import settings
 from hse_doc_studio.api.schemas.admin import PageParams, page_params
 from hse_doc_studio.api.schemas.server_update import (
+    BackupsAcceptedOut,
     ReleaseOut,
     RollbackBody,
     RunEventOut,
@@ -107,6 +108,16 @@ def _status(st: UpdateStatus) -> UpdateStatusOut:
         rollback_needs_restore=st.rollback_needs_restore,
         rollback_blocked=st.rollback_blocked,
         risk_confirmation_required=st.risk_confirmation_required,
+        backups_accepted=(
+            BackupsAcceptedOut(
+                reason=st.backups_accepted.reason,
+                by_name=st.backups_accepted.by_name,
+                at=st.backups_accepted.at,
+                until=st.backups_accepted.until,
+            )
+            if st.backups_accepted
+            else None
+        ),
         manual_command=manual_command(settings.server_update.executor, st.available.version if st.available else None),
     )
 

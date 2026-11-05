@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Mapping
+from collections.abc import Collection, Mapping
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import IntEnum, StrEnum
@@ -92,6 +92,6 @@ class CheckResult:
         return not (self.status is DiagStatus.ok and self.reason in NOT_APPLICABLE_REASONS)
 
 
-def overall(results: list[CheckResult]) -> DiagStatus:
-    """Общий итог: худший статус применимых проверок."""
-    return max((r.status for r in results), default=DiagStatus.ok)
+def overall(results: list[CheckResult], accepted: Collection[str] = ()) -> DiagStatus:
+    """Общий итог: худший статус проверок, кроме принятых осознанно (`accepted`: их id)."""
+    return max((r.status for r in results if r.check_id not in accepted), default=DiagStatus.ok)
