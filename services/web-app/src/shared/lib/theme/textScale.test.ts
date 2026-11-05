@@ -11,7 +11,10 @@ import { useThemeStore } from "./themeStore";
 describe("textScale", () => {
   beforeEach(() => {
     localStorage.clear();
-    useThemeStore.setState({ textScale: DEFAULT_TEXT_SCALE });
+    useThemeStore.setState({
+      textScale: DEFAULT_TEXT_SCALE,
+      textScaleChosen: false,
+    });
     document.documentElement.removeAttribute("style");
     document.documentElement.removeAttribute("data-text-scale");
   });
@@ -42,6 +45,27 @@ describe("textScale", () => {
       localStorage.getItem("hse-studio-theme") ?? "{}",
     ) as { state?: { textScale?: number } };
     expect(stored.state?.textScale).toBe(140);
+  });
+
+  it("migrates an old record: a non-default size counts as chosen", async () => {
+    localStorage.setItem(
+      "hse-studio-theme",
+      JSON.stringify({ state: { textScale: 125 }, version: 0 }),
+    );
+    await useThemeStore.persist.rehydrate();
+    expect(useThemeStore.getState().textScaleChosen).toBe(true);
+    localStorage.setItem(
+      "hse-studio-theme",
+      JSON.stringify({ state: { textScale: 100 }, version: 0 }),
+    );
+    await useThemeStore.persist.rehydrate();
+    expect(useThemeStore.getState().textScaleChosen).toBe(false);
+  });
+
+  it("adopting the account value is not a choice", () => {
+    useThemeStore.getState().adoptTextScale(125);
+    expect(useThemeStore.getState().textScale).toBe(125);
+    expect(useThemeStore.getState().textScaleChosen).toBe(false);
   });
 
   it("drops an off-scale value from the store", () => {

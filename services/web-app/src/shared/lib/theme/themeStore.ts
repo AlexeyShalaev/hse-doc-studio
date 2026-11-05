@@ -17,13 +17,18 @@ type ThemeState = {
   theme: Theme;
   density: Density;
   textScale: TextScale;
+  // Человек сам выбирал ступень на этом устройстве: тогда его выбор сильнее значения аккаунта.
+  textScaleChosen: boolean;
   lang: Lang;
 };
 
 type ThemeActions = {
   setTheme: (theme: Theme) => void;
   setDensity: (density: Density) => void;
+  // Явный выбор человека: запоминается и всегда побеждает значение аккаунта.
   setTextScale: (textScale: TextScale) => void;
+  // Значение с аккаунта на устройстве без выбора: не считается выбором.
+  adoptTextScale: (textScale: TextScale) => void;
   setLang: (lang: Lang) => void;
   cycleTheme: () => void;
   toggleDensity: () => void;
@@ -48,6 +53,7 @@ export const useThemeStore = create<ThemeState & ThemeActions>()(
       theme: "system",
       density: "comfortable",
       textScale: DEFAULT_TEXT_SCALE,
+      textScaleChosen: false,
       lang: initialLang(),
       setTheme: (theme: Theme) => {
         set({ theme });
@@ -56,6 +62,12 @@ export const useThemeStore = create<ThemeState & ThemeActions>()(
         set({ density });
       },
       setTextScale: (textScale: TextScale) => {
+        set({
+          textScale: normalizeTextScale(textScale),
+          textScaleChosen: true,
+        });
+      },
+      adoptTextScale: (textScale: TextScale) => {
         set({ textScale: normalizeTextScale(textScale) });
       },
       setLang: (lang: Lang) => {
@@ -79,17 +91,23 @@ export const useThemeStore = create<ThemeState & ThemeActions>()(
     {
       name: "hse-studio-theme",
       // Чужое или устаревшее значение размера текста не должно дойти до страницы.
-      merge: (persisted, current) => ({
-        ...current,
-        ...(persisted as Partial<ThemeState>),
-        textScale: normalizeTextScale(
-          (persisted as Partial<ThemeState> | undefined)?.textScale,
-        ),
-      }),
+      merge: (persisted, current) => {
+        const stored = persisted as Partial<ThemeState> | undefined;
+        const textScale = normalizeTextScale(stored?.textScale);
+        return {
+          ...current,
+          ...stored,
+          textScale,
+          // Старые записи без флага: не обычный размер значит, что человек его выбирал.
+          textScaleChosen:
+            stored?.textScaleChosen ?? textScale !== DEFAULT_TEXT_SCALE,
+        };
+      },
       partialize: (state) => ({
         theme: state.theme,
         density: state.density,
         textScale: state.textScale,
+        textScaleChosen: state.textScaleChosen,
         lang: state.lang,
       }),
     },

@@ -24,10 +24,10 @@ export const AppearanceSection = () => {
     updateSettings({ theme: next });
   };
 
-  // Размер текста: ступень применяется сразу (store), на аккаунт уходит рядом.
+  // Размер текста: ступень применяется сразу и запоминается как явный выбор;
+  // на аккаунт (с повтором при ошибке) её отправляет useTextScaleSync.
   const applyTextScale = (next: TextScale) => {
     setTextScale(next);
-    updateSettings({ text_scale: next });
   };
 
   // Local store is the source of truth (instant, offline); also mirror the
