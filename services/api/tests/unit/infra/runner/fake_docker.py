@@ -33,6 +33,10 @@ elif argv[:1] == ["run"] and "latexmk" in argv:
         Path(os.environ["FAKE_DOCKER_PID"]).write_text(str(os.getpid()))
         print("started", flush=True)
         time.sleep(60)
+    if mode == "font":
+        print("kpathsea: Running mktextfm Arial")
+        print("./common/fonts.tex:7: Package fontspec Error: The font \\"Arial\\" cannot be found.")
+        sys.exit(1)
     if mode == "fail":
         print("! LaTeX Error: boom")
         sys.exit(12)

@@ -197,8 +197,22 @@ spec:
 | `HSE_RUNNER__K8S__NODE_SELECTOR`, `…TOLERATIONS` | размещение подов сборки, JSON |
 | `HSE_RUNNER__K8S__RUNTIME_CLASS_NAME` | RuntimeClass подов сборки, например `gvisor` |
 | `HSE_RUNNER__K8S__TEX_CACHE_CLAIM` | необязательный PVC с кэшем шрифтов TeX |
+| `HSE_RUNNER__K8S__FONTS_CLAIM` | необязательный PVC со шрифтами (`.ttf`, `.otf`, `.ttc`), монтируется в поды сборки только для чтения |
 
 В Helm-чарте это `runner.executor: kubernetes` и блок `runner.kubernetes` (см. README чарта): чарт создаёт ServiceAccount раннера, Role только на поды своего namespace (`pods`, `pods/log`, `pods/exec`), NetworkPolicy, запрещающую подам сборки сеть, и том данных раннера. Если сборка падает с кодом `image_missing`, узел не смог скачать образ TeX; `build_backend_unavailable` значит, что Kubernetes отказал в поде (права, квота, нет подходящего узла), подробность в журнале задачи. Устройство и развилки: `docs/design/k8s-runner.md`.
+
+## Шрифты сборки
+
+Шаблоны по ГОСТ просят Times New Roman, Arial и Consolas, а в образе TeX Live их нет, и Studio не поставляет их ни в образах, ни в репозитории (лицензия Microsoft). Без них шаблоны с `\IfFontExistsTF` берут свободную замену и собираются, а шаблон с прямым `\setmainfont{Arial}` падает с кодом `font_missing` и именем шрифта в подробностях. Строки `kpathsea: Running mktextfm Arial` в журнале сами не ошибка: так XeTeX ищет шрифт по имени.
+
+Чтобы сборки на раннере видели ваши шрифты, положите лицензионные файлы в папку и подключите её:
+
+| Исполнитель | Как |
+|---|---|
+| `docker` | `HSE_RUNNER__FONTS_DIR` указывает на папку (в ней `.ttf`, `.otf`, `.ttc`); раннер монтирует её в контейнер сборки только для чтения в `HSE_RUNNER__FONTS_MOUNT_TARGET` (по умолчанию `/usr/local/share/fonts/hse`), где её видит fontconfig. Если раннер сам работает в контейнере, а `docker.sock` хостовый, папка должна лежать на хосте: путь на хосте задаёт `HSE_RUNNER__FONTS_HOST_DIR` (без него путь переводится так же, как путь папок проектов). Пустая папка или переменная не заданы: ничего не монтируется |
+| `kubernetes` | `HSE_RUNNER__K8S__FONTS_CLAIM` называет PVC со шрифтами в namespace подов сборки; он монтируется в поды только для чтения (`HSE_RUNNER__K8S__FONTS_MOUNT_TARGET`) |
+
+Другой путь: собрать свой образ TeX Live со шрифтами (`FROM texlive/texlive`, `COPY fonts/ /usr/local/share/fonts/hse/`, `RUN fc-cache -f`) и указать его в `HSE_RUNNER__TEX_IMAGE`. Личный раннер (локальная Студия) настраивать не нужно: он берёт шрифты из «Настройки, Шрифты» вашей Студии, см. [Шрифты в облачных сборках](../workbench/compile.md#шрифты-в-облачных-сборках).
 
 ## Масштабирование
 

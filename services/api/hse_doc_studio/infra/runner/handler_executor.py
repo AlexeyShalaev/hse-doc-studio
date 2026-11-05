@@ -7,6 +7,7 @@ import contextlib
 import contextvars
 import glob
 from collections.abc import Iterator
+from functools import partial
 from pathlib import Path
 
 from hse_doc_studio.core.jobs.base import JobResultData
@@ -23,7 +24,7 @@ from hse_doc_studio.infra.jobs.handler_registry import JobHandlerRegistry
 from hse_doc_studio.infra.runner.client import RunnerApiError, RunnerClient, RunnerUnreachable
 from hse_doc_studio.infra.runner.executor import JobContext, JobOutcome, OutputFile
 from hse_doc_studio.infra.runner.outputs import collect_outputs
-from hse_doc_studio.infra.runner.workspace import BlobCache, BlobIntegrityError, RunnerWorkspaces
+from hse_doc_studio.infra.runner.workspace import BlobCache, BlobIntegrityError, OutputChangedError, RunnerWorkspaces
 
 CODE_UNSUPPORTED_KIND = "unsupported_kind"
 CODE_BLOB_UNAVAILABLE = "blob_unavailable"
@@ -103,6 +104,7 @@ class HandlerJobExecutor:
         except ValueError as exc:
             raise JobFailure.of(JobErrorCategory.unavailable, CODE_UNSUPPORTED_KIND, str(spec.kind)) from exc
         ctx.log(f"{spec.kind}: start")
+        job_key = str(spec.id)
         try:
             with self._fetcher.bind(str(spec.id), envelope.job_token):
                 async with self._workspaces.open(str(spec.project_id), envelope.manifest) as workspace:
@@ -118,10 +120,15 @@ class HandlerJobExecutor:
                         ),
                     )
                     outputs = await asyncio.to_thread(_collect, workspace.root, _output_refs(data))
+                    # Выгрузка идёт после выхода из блока: копия не даёт следующей задаче проекта убрать файл.
+                    outputs = await asyncio.to_thread(self._workspaces.stage, job_key, outputs)
         except (BlobIntegrityError, RunnerApiError, RunnerUnreachable) as exc:
             raise JobFailure.of(JobErrorCategory.unavailable, CODE_BLOB_UNAVAILABLE, str(exc)) from exc
+        except OutputChangedError as exc:
+            raise JobFailure.of(JobErrorCategory.internal, CODE_OUTPUT_CHANGED, str(exc)) from exc
         keep = frozenset(entry.sha256 for entry in envelope.manifest if entry.sha256)
         await asyncio.to_thread(self._cache.evict, self._cache_max_bytes, keep)
         await asyncio.to_thread(self._workspaces.evict, frozenset({str(spec.project_id)}))
         ctx.log(f"{spec.kind}: done")
-        return JobOutcome(JobResult(status=JobStatus.succeeded, data=data), outputs)
+        cleanup = partial(self._workspaces.release, job_key) if outputs else None
+        return JobOutcome(JobResult(status=JobStatus.succeeded, data=data), outputs, cleanup=cleanup)

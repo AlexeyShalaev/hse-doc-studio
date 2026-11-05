@@ -113,6 +113,9 @@ def build_pod_manifest(spec: BuildPodSpec, cfg: KubernetesExecutorConfig, namesp
         ]
         mounts.append({"name": "tex-cache", "mountPath": CACHE_MOUNT})
         volumes.append({"name": "tex-cache", "persistentVolumeClaim": {"claimName": cfg.tex_cache_claim}})
+    if cfg.fonts_claim:
+        mounts.append({"name": "fonts", "mountPath": cfg.fonts_mount_target, "readOnly": True})
+        volumes.append({"name": "fonts", "persistentVolumeClaim": {"claimName": cfg.fonts_claim, "readOnly": True}})
     metadata: dict[str, object] = {
         "name": spec.name,
         "namespace": namespace,

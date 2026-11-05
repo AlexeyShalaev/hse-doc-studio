@@ -41,7 +41,8 @@ Everything available goes into the log: the latexmk output, runner lines (`[runn
 
 | Code | What happened | What to do |
 |---|---|---|
-| `build_failed` | LaTeX returned an error | Find the first line with `!` or `file:line:` in the log and fix the source; “Explain” and “Fix with AI” read the same log |
+| `build_failed` | LaTeX returned an error | The details hold the first error line; find it in the log (`!` or `file:line:`) and fix the source; “Explain” and “Fix with AI” read the same log. `Running mktextfm Arial` lines in the log are not an error by themselves: that is how XeTeX looks a font up by name, and the template falls back to a free font |
+| `font_missing` | The build container lacks a font the document asks for (name in the details) | [Fonts in cloud builds](#fonts-in-cloud-builds) |
 | `image_missing` | The machine that builds has no TeX Live image | Settings → Compiler → Images → “Install” on that machine (for a personal runner it is your local Studio) |
 | `docker_unavailable` | Docker is not running or `docker.sock` is not accessible | Start Docker Desktop or the daemon; on Linux check the socket group (`DOCKER_GID`) |
 | `no_runners`, `no_runner_for_tags` | No live runner takes these documents | Connect a personal runner (a local Studio with Docker) or ask the administrator |
@@ -51,7 +52,7 @@ Everything available goes into the log: the latexmk output, runner lines (`[runn
 | `blob_unavailable` | The runner could not fetch the sources | Check that the runner reaches the server and storage addresses (proxy mode for outside runners) |
 | `storage_unreachable`, `artifact_upload_failed`, `artifact_invalid` | The PDF is built but was not uploaded to the server | Administrator: the public S3 address (`HSE_STUDIO__S3__PUBLIC_ENDPOINT`) or proxy mode for outside runners, the output size limit |
 | `output_*`, `apply_failed` | The server could not accept or place the PDF | Build again; administrator: the api log and free space on the projects volume |
-| `pdf_missing` | The build finished but there is no PDF | Check that the document produces a PDF |
+| `pdf_missing` | The build finished but there is no PDF, or the runner lost the built file before the upload | Check that the document produces a PDF; if it repeats, check the runner log |
 | `disk_full` | The machine that builds is out of space | Free disk space: runner data, docker images and volumes |
 | `staging_failed`, `manifest_*` | The server could not prepare the project (a file too large or unsafe) | Remove large files, rename a file with an unsafe path |
 | `cancelled`, `superseded`, `restarted` | The build was cancelled, replaced by a newer one or interrupted by a restart | Build again |
@@ -63,3 +64,11 @@ A refusal before the start (no Docker, no image, no runner) is still shown as a 
 A cloud build on a personal runner runs on your local Studio: Docker and the image are needed there. The runner sends the log to the server in batches, so the cloud tab shows it live. A build started with “Build” in the local Studio for a project taken from the cloud leaves an ordinary record with the log and the reason; after a successful build the Studio uploads the PDF to the cloud, and the upload result (or the refusal reason) is shown in the same tab.
 
 If a build fails in the cloud but not locally (or the other way round), compare the TeX Live images: the cloud and the personal runner use the image chosen in the Studio settings, while the server's shared runner uses its own.
+
+### Fonts in cloud builds
+
+The GOST templates ask for Times New Roman, Arial and Consolas. The TeX Live image does not contain them (the Microsoft licence does not allow shipping them), so the fonts are attached to the build container separately:
+
+- **Local build and personal runner (your Studio).** Cloud builds use the same fonts folder as local ones (“Settings → Fonts”). If the folder is empty and the computer has Times New Roman, Arial or Consolas, the Studio takes them from the computer once when the runner connects, by the same rules as the first install. If the computer has none either, install them in “Settings → Fonts” and reconnect the runner (switch it off and on under “Settings, Cloud builds”).
+- **Shared server runner.** The administrator sets a fonts folder (`HSE_RUNNER__FONTS_DIR`) or a PVC (`HSE_RUNNER__K8S__FONTS_CLAIM`), see [Runners](../deploy/runners.md#fonts-for-builds). Microsoft fonts are not part of the images or the repository: the administrator supplies their own licensed files.
+- **Without the fonts** templates with `\IfFontExistsTF` use a free fallback (Tinos for Times New Roman, DejaVu Sans for Arial) and build; only the letter shapes differ a little. If a document asks for a font directly (`\setmainfont{Arial}` with no check), the build fails with the code `font_missing` and the font name. Fix it by providing the font as above, or by replacing it in the preamble with `\IfFontExistsTF{Arial}{\setmainfont{Arial}}{\setmainfont{Liberation Sans}}`.

@@ -6,6 +6,7 @@
 from __future__ import annotations
 
 import asyncio
+import re
 from collections.abc import AsyncIterator, Awaitable, Callable
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
@@ -13,6 +14,7 @@ from pathlib import Path
 from uuid import UUID
 
 from hse_doc_studio.core.checks.protocols import ICheckRunner
+from hse_doc_studio.core.compile.failure import BUILD_FAILED, FONT_MISSING
 from hse_doc_studio.core.enums import Lang
 from hse_doc_studio.core.i18n import current_interface_language
 from hse_doc_studio.core.jobs.entities import CheckPlan, CompileJobPayload
@@ -73,6 +75,10 @@ class BuildState:
     chars: int | None = None
     failure_code: str | None = None
     failure_detail: str | None = None
+    # Из лога LaTeX: шрифт, который fontspec не нашёл, имя из `mktextfm` и первая строка ошибки.
+    missing_font: str | None = None
+    mktextfm_font: str | None = None
+    first_error: str | None = None
 
 
 # Строки `[error] …` исполнителя перед `__FAILED__`: по ним сборка получает код причины, а не общий «LaTeX упал».
@@ -90,10 +96,41 @@ def failure_code_of(line: str) -> str | None:
     return next((code for prefix, code in _EXECUTOR_ERRORS if line.startswith(prefix)), None)
 
 
+_FONT_NOT_FOUND = re.compile(r'The font "([^"]+)" cannot be found')
+_MKTEXTFM = re.compile(r"^kpathsea: Running mktextfm (.+?)\s*$")
+# Ошибка LaTeX: `файл:строка: текст` (-file-line-error) или `! текст`. Две строки `!` печатает сам mktextfm,
+# когда ищет метрики шрифта по имени: это шум, он бывает и в успешной сборке.
+_LATEX_ERROR = re.compile(r"^(?:[^\s:]+\.(?:tex|sty|cls|def|cfg|ltx|bib|clo|fd):\d+: .+|! .+)$")
+_MKTEXTFM_NOISE = ("! I can't find file", "! Emergency stop")
+
+
 def _note_failure(line: str, state: BuildState) -> None:
     code = failure_code_of(line)
     if code is not None and state.failure_code is None:
         state.failure_code, state.failure_detail = code, line.removeprefix("[error] ")
+        return
+    if state.missing_font is None and (found := _FONT_NOT_FOUND.search(line)):
+        state.missing_font = found.group(1)
+    if (spooled := _MKTEXTFM.match(line)) and state.mktextfm_font is None:
+        state.mktextfm_font = spooled.group(1)
+    if state.first_error is None and _LATEX_ERROR.match(line) and not line.startswith(_MKTEXTFM_NOISE):
+        state.first_error = line.strip()[:500]
+
+
+def resolve_failure(state: BuildState) -> tuple[str | None, str | None]:
+    """Код и деталь неудачной сборки: причина исполнителя, затем шрифт, затем первая ошибка LaTeX.
+
+    Имя шрифта из `mktextfm` считается причиной, только если другой ошибки LaTeX в логе нет: иначе это шум
+    поиска метрик, а сборку остановило другое.
+    """
+    if state.failure_code is not None:
+        return state.failure_code, state.failure_detail
+    font = state.missing_font or (state.mktextfm_font if state.first_error is None else None)
+    if font is not None:
+        return FONT_MISSING, font
+    if state.first_error is not None:
+        return BUILD_FAILED, state.first_error
+    return None, None
 
 
 async def consume_build_stream(lines: AsyncIterator[str], log: JobLogSink, state: BuildState) -> None:

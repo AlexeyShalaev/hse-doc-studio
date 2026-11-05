@@ -116,6 +116,24 @@ class RunnerConfig(BaseSettings):
     tex_image: str = Field(default=DEFAULT_IMAGE, description="Образ TeX Live для сборки; ставится на хосте заранее.")
     tex_cache_volume: str = Field(default=DEFAULT_CACHE_VOLUME, description="Том docker с кэшем TeX.")
     tex_idle_timeout_s: float = Field(default=DEFAULT_IDLE_TIMEOUT_S, gt=0, description="Тишина сборки до убийства.")
+    fonts_dir: Path | None = Field(
+        default=None,
+        description=(
+            "Папка со шрифтами (.ttf, .otf, .ttc), которую раннер монтирует в контейнер сборки только для чтения: "
+            "так XeLaTeX находит Times New Roman, Arial и Consolas по имени. Пусто значит без своих шрифтов, "
+            "шаблоны берут свободную замену. Шрифты Microsoft в образах и репозитории не поставляются."
+        ),
+    )
+    fonts_host_dir: str | None = Field(
+        default=None,
+        description=(
+            "Путь к папке шрифтов на хосте docker, если раннер сам работает в контейнере и видит папку под другим "
+            "путём; пусто значит перевести fonts_dir тем же соответствием путей, что папки проектов."
+        ),
+    )
+    fonts_mount_target: str = Field(
+        default="/usr/local/share/fonts/hse", description="Куда монтировать папку шрифтов в контейнере сборки."
+    )
     isolation: bool = Field(
         default=True,
         description="Изоляция контейнеров сборки: без сети, корень только для чтения, пределы процессора и памяти.",

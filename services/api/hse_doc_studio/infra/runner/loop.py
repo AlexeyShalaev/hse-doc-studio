@@ -9,6 +9,7 @@ from dataclasses import dataclass, field
 from enum import StrEnum
 from typing import Protocol
 
+from hse_doc_studio.core.compile.failure import PDF_MISSING
 from hse_doc_studio.core.jobs.codec import encode_result
 from hse_doc_studio.core.jobs.entities import JobResult
 from hse_doc_studio.core.jobs.enums import JobErrorCategory, JobKind, JobStatus, RunnerErrorCode
@@ -496,33 +497,57 @@ class RunnerLoop:
         return "cancel" if reply.cancel else "ok"
 
     async def _report(self, envelope: JobEnvelope, outcome: JobOutcome, batcher: LogBatcher) -> None:
+        try:
+            await self._complete(envelope, outcome, batcher)
+        finally:
+            if outcome.cleanup is not None:
+                with contextlib.suppress(OSError):
+                    outcome.cleanup()
+
+    async def _complete(self, envelope: JobEnvelope, outcome: JobOutcome, batcher: LogBatcher) -> None:
         job_id = str(envelope.spec.id)
-        token = envelope.job_token
         result = outcome.result
         refs: tuple[ArtifactRef, ...] = ()
         if result.status is JobStatus.succeeded and outcome.outputs:
-            try:
-                await self._upload(envelope, outcome.outputs)
-            except (RunnerApiError, RunnerUnreachable, OSError) as exc:
-                if isinstance(exc, RunnerApiError) and _lease_is_gone(exc):
-                    logger.warning("job %s: attempt is stale, outputs dropped", job_id)
-                    return
-                logger.exception("job %s: artifact upload failed", job_id)
-                code = "storage_unreachable" if isinstance(exc, StorageUnreachable) else "artifact_upload_failed"
-                result = JobResult(
-                    status=JobStatus.failed,
-                    error=JobError(JobErrorCategory.unavailable, code, str(exc)),
-                )
-            else:
-                refs = tuple(out.ref for out in outcome.outputs)
+            uploaded = await self._upload_outputs(envelope, outcome.outputs)
+            if uploaded is None:
+                return
+            failed, refs = uploaded
+            result = failed or result
         await self._close_log(batcher, result)
         request = CompleteRequest(attempt=envelope.attempt, result=encode_result(result), artifacts=refs)
         try:
-            await self._client.complete(job_id, token, request)
+            await self._client.complete(job_id, envelope.job_token, request)
         except RunnerApiError as exc:
             logger.warning("job %s: completion not accepted: %s", job_id, exc)
         except RunnerUnreachable:
             logger.exception("job %s: completion not delivered, lease will expire", job_id)
+
+    async def _upload_outputs(
+        self, envelope: JobEnvelope, outputs: tuple[OutputFile, ...]
+    ) -> tuple[JobResult | None, tuple[ArtifactRef, ...]] | None:
+        """Выгрузка выходов: `None` значит аренда потеряна и отчитываться не надо; иначе сбой (или `None`) и ссылки.
+
+        Пропавший файл на диске раннера и отказ сервера получают разные коды: первое не вина сервера.
+        """
+        job_id = str(envelope.spec.id)
+        try:
+            payloads = await self._read_outputs(outputs)
+        except FileNotFoundError as exc:
+            logger.exception("job %s: output file is gone before upload", job_id)
+            error = JobError(JobErrorCategory.internal, PDF_MISSING, exc.filename or str(exc))
+            return JobResult(status=JobStatus.failed, error=error), ()
+        try:
+            await self._upload(envelope, payloads)
+        except (RunnerApiError, RunnerUnreachable, OSError) as exc:
+            if isinstance(exc, RunnerApiError) and _lease_is_gone(exc):
+                logger.warning("job %s: attempt is stale, outputs dropped", job_id)
+                return None
+            logger.exception("job %s: artifact upload failed", job_id)
+            code = "storage_unreachable" if isinstance(exc, StorageUnreachable) else "artifact_upload_failed"
+            error = JobError(JobErrorCategory.unavailable, code, str(exc))
+            return JobResult(status=JobStatus.failed, error=error), ()
+        return None, tuple(out.ref for out in outputs)
 
     @staticmethod
     async def _close_log(batcher: LogBatcher, result: JobResult) -> None:
@@ -537,11 +562,15 @@ class RunnerLoop:
             batcher.append(f"[runner] {error.code}{detail}")
         await batcher.close()
 
-    async def _upload(self, envelope: JobEnvelope, outputs: tuple[OutputFile, ...]) -> None:
+    @staticmethod
+    async def _read_outputs(outputs: tuple[OutputFile, ...]) -> tuple[tuple[OutputFile, bytes], ...]:
+        """Читает файлы раньше любого обращения к серверу: пропавший файл и отказ сервера не смешиваются."""
+        return tuple([(out, await asyncio.to_thread(out.path.read_bytes)) for out in outputs])
+
+    async def _upload(self, envelope: JobEnvelope, payloads: tuple[tuple[OutputFile, bytes], ...]) -> None:
         job_id = str(envelope.spec.id)
         token = envelope.job_token
-        for out in outputs:
-            data = await asyncio.to_thread(out.path.read_bytes)
+        for out, data in payloads:
             slot = await self._client.announce_artifact(job_id, token, ArtifactUploadRequest(envelope.attempt, out.ref))
             if slot.url is None:
                 await self._client.put_artifact(job_id, token, out.ref.sha256, data)

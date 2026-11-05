@@ -180,6 +180,11 @@ spec:
             {{- if $k.runtimeClassName }}
             - {name: HSE_RUNNER__K8S__RUNTIME_CLASS_NAME, value: {{ $k.runtimeClassName | quote }}}
             {{- end }}
+            {{- with $k.fonts }}
+            {{- if .existingClaim }}
+            - {name: HSE_RUNNER__K8S__FONTS_CLAIM, value: {{ .existingClaim | quote }}}
+            {{- end }}
+            {{- end }}
             {{- if $k.texCache.existingClaim }}
             - {name: HSE_RUNNER__K8S__TEX_CACHE_CLAIM, value: {{ $k.texCache.existingClaim | quote }}}
             {{- end }}

@@ -259,3 +259,73 @@ async def test__execute__build_ok_but_no_pdf__pdf_missing_failure(
 
     assert caught.value.error.code == "pdf_missing"
     assert caught.value.error.detail == "tz/main.pdf"
+
+
+async def test__execute__fonts_dir_with_fonts__mounted_read_only_into_the_container(
+    tmp_path: Path, docker_log: Path
+) -> None:
+    fonts = tmp_path / "fonts"
+    fonts.mkdir()
+    (fonts / "arial.ttf").write_bytes(b"font")
+    executor, _ = await _executor(_config(tmp_path, fonts_dir=fonts))
+
+    await executor.execute(_envelope(), _ctx())
+
+    latexmk = next(call for call in recorded_calls(docker_log) if "latexmk" in call)
+    assert f"{fonts.as_posix()}:/usr/local/share/fonts/hse:ro" in latexmk
+
+
+async def test__execute__fonts_dir_empty_or_unset__nothing_mounted(tmp_path: Path, docker_log: Path) -> None:
+    fonts = tmp_path / "fonts"
+    fonts.mkdir()
+    for config in (_config(tmp_path, fonts_dir=fonts), _config(tmp_path)):
+        executor, _ = await _executor(config)
+        await executor.execute(_envelope(), _ctx())
+
+    for call in (c for c in recorded_calls(docker_log) if "latexmk" in c):
+        assert not any(arg.endswith("/usr/local/share/fonts/hse:ro") for arg in call)
+
+
+async def test__execute__fonts_host_dir__wins_over_path_translation(tmp_path: Path, docker_log: Path) -> None:
+    fonts = tmp_path / "fonts"
+    fonts.mkdir()
+    (fonts / "arial.ttf").write_bytes(b"font")
+    executor, _ = await _executor(_config(tmp_path, fonts_dir=fonts, fonts_host_dir="/srv/studio/fonts/"))
+
+    await executor.execute(_envelope(), _ctx())
+
+    latexmk = next(call for call in recorded_calls(docker_log) if "latexmk" in call)
+    assert "/srv/studio/fonts:/usr/local/share/fonts/hse:ro" in latexmk
+
+
+async def test__execute__font_not_found__failed_with_font_missing_and_font_name(
+    tmp_path: Path, docker_log: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("FAKE_DOCKER_MODE", "font")
+    executor, _ = await _executor(_config(tmp_path))
+
+    outcome = await executor.execute(_envelope(), _ctx())
+
+    assert outcome.result.status is JobStatus.failed
+    assert outcome.result.error is not None
+    assert outcome.result.error.code == "font_missing"
+    assert outcome.result.error.detail == "Arial"
+    assert outcome.outputs == ()
+
+
+async def test__execute__outputs_are_staged__next_job_of_the_project_cannot_remove_the_pdf(
+    tmp_path: Path, docker_log: Path
+) -> None:
+    executor, _ = await _executor(_config(tmp_path))
+    envelope = _envelope()
+
+    outcome = await executor.execute(envelope, _ctx())
+
+    # Другая сборка того же проекта («Собрать всё») синхронизирует папку по манифесту и стирает чужие файлы.
+    workspaces = executor._workspaces  # noqa: SLF001
+    async with workspaces.open(str(envelope.spec.project_id), envelope.manifest):
+        pass
+    assert outcome.outputs[0].path.read_bytes() == b"%PDF-1.5 built"
+    assert outcome.cleanup is not None
+    outcome.cleanup()
+    assert not outcome.outputs[0].path.exists()

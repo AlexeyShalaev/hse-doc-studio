@@ -250,6 +250,10 @@ runner:
     # Необязательный PVC с кэшем шрифтов TeX (/cache). Нужен ReadWriteMany либо один узел.
     texCache:
       existingClaim: ""
+    # Необязательный PVC со шрифтами (.ttf, .otf, .ttc): монтируется в поды сборки только для чтения,
+    # чтобы XeLaTeX находил Times New Roman, Arial и Consolas. Шрифты Microsoft в образы не входят.
+    fonts:
+      existingClaim: ""
     # Запрет всей сети подам сборки (нужен CNI с поддержкой NetworkPolicy).
     networkPolicy:
       enabled: true

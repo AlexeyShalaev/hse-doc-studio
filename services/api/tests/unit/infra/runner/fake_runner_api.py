@@ -59,6 +59,7 @@ class FakeRunnerState:
     def __init__(self) -> None:
         # Подписанная ссылка хранилища, которую api отдаёт в ответе на заявку выхода; None значит «грузи через api».
         self.announce_url: str | None = None
+        self.announce_status: int | None = None
         self.queue: list[FakeJob] = []
         self.jobs: dict[str, FakeJob] = {}
         self.registrations: list[dict[str, Any]] = []
@@ -217,6 +218,8 @@ def create_fake_app(state: FakeRunnerState) -> FastAPI:  # noqa: C901
         job = job_or_error(job_id, body.attempt)
         if isinstance(job, JSONResponse):
             return job
+        if state.announce_status is not None:
+            return _error(state.announce_status, "artifact_invalid")
         job.announced.append(body.artifact.model_dump())
         return {"url": state.announce_url}
 

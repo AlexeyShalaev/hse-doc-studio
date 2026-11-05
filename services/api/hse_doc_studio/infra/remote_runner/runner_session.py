@@ -9,8 +9,9 @@
 from __future__ import annotations
 
 import json
-from collections.abc import AsyncIterator
+from collections.abc import AsyncIterator, Awaitable, Callable
 from contextlib import asynccontextmanager
+from dataclasses import dataclass
 from pathlib import Path
 
 import httpx
@@ -184,12 +185,26 @@ class StudioOfficeConverter:
         return await self._service.convert_to_pdf(source, self._image)
 
 
-def runner_session_factory(
+@dataclass(frozen=True)
+class SessionFonts:
+    """Шрифты облачных сборок Студии: те же управляемые шрифты, что у локальных сборок.
+
+    `ensure` один раз берёт шрифты с компьютера (правилами первой установки), если в хранилище их ещё нет.
+    """
+
+    folder: Path
+    host_folder: str
+    mount_target: str
+    ensure: Callable[[], Awaitable[object]] | None = None
+
+
+def runner_session_factory(  # noqa: PLR0913
     *,
     cache_volume: str,
     host_paths: HostPathResolver | None = None,
     transport: httpx.AsyncBaseTransport | None = None,
     office: IOfficeConvertService | None = None,
+    fonts: SessionFonts | None = None,
 ) -> RunnerSessionFactory:
     """Фабрика сессий Студии; `transport` подменяет сеть в тестах, `office` это служба Gotenberg Студии."""
 
@@ -198,6 +213,11 @@ def runner_session_factory(
         # Теги объявляются явно: без Docker или образа tex нет, сборки LaTeX уходят на общие раннеры.
         # office: служба Gotenberg Студии (запускается по требованию), без неё тега нет.
         converter = StudioOfficeConverter(office, spec.office_image) if office and spec.office_available else None
+        if fonts is not None and fonts.ensure is not None and spec.tex_available:
+            try:
+                await fonts.ensure()
+            except Exception:  # noqa: BLE001 — шрифты не повод не подключать раннер
+                logger.exception("remote runner: host fonts adoption failed")
         tags = detect_tags(office_url=None, office_available=converter is not None, tex_available=spec.tex_available)
         config = RunnerConfig(
             api_url=spec.server_url,
@@ -210,6 +230,9 @@ def runner_session_factory(
             tex_cache_volume=cache_volume,
             isolation=True,
             host_kind=RunnerHostKind.desktop,
+            fonts_dir=fonts.folder if fonts is not None else None,
+            fonts_host_dir=fonts.host_folder if fonts is not None else None,
+            fonts_mount_target=fonts.mount_target if fonts is not None else "/usr/local/share/fonts/hse",
         )
         observing = ObservingTransport(listener, inner=transport)
         container = create_runner_container(

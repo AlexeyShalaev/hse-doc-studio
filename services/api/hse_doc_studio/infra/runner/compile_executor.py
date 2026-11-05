@@ -8,6 +8,7 @@ import glob
 import logging
 import os
 from collections.abc import Callable
+from functools import partial
 from pathlib import PurePosixPath
 
 from hse_doc_studio.core.compile.errors import BuildBackendUnavailableError, DockerUnavailableError, ImageMissingError
@@ -21,9 +22,9 @@ from hse_doc_studio.core.jobs.wire import JobEnvelope
 from hse_doc_studio.infra.jobs.embedded_runner import EmbeddedCompileRunner
 from hse_doc_studio.infra.runner.client import RunnerApiError, RunnerUnreachable
 from hse_doc_studio.infra.runner.executor import JobContext, JobExecutor, JobOutcome
-from hse_doc_studio.infra.runner.handler_executor import CODE_BLOB_UNAVAILABLE, JobBlobFetcher
+from hse_doc_studio.infra.runner.handler_executor import CODE_BLOB_UNAVAILABLE, CODE_OUTPUT_CHANGED, JobBlobFetcher
 from hse_doc_studio.infra.runner.outputs import collect_outputs
-from hse_doc_studio.infra.runner.workspace import BlobCache, BlobIntegrityError, RunnerWorkspaces
+from hse_doc_studio.infra.runner.workspace import BlobCache, BlobIntegrityError, OutputChangedError, RunnerWorkspaces
 
 _LOG = logging.getLogger(__name__)
 _FAIL_TAIL_CHARS = 6000
@@ -85,6 +86,7 @@ class CompileJobExecutor:
         except BuildBackendUnavailableError as exc:
             raise JobFailure.of(JobErrorCategory.unavailable, CODE_BUILD_BACKEND_UNAVAILABLE, str(exc)) from exc
         sink = RunnerLogSink(ctx.log)
+        job_key = str(spec.id)
         try:
             with self._fetcher.bind(str(spec.id), envelope.job_token):
                 async with self._workspaces.open(str(spec.project_id), envelope.manifest) as workspace:
@@ -113,8 +115,12 @@ class CompileJobExecutor:
                     if build.success and payload.needs_compile and not outputs:
                         # Без файла сервер принял бы «успех» без PDF: документ оставался бы со старым результатом.
                         raise JobFailure.of(JobErrorCategory.internal, PDF_MISSING, final_pdf)
+                    # Выгрузка идёт после выхода из блока: копия не даёт следующей задаче проекта убрать PDF.
+                    outputs = await asyncio.to_thread(self._workspaces.stage, job_key, outputs)
         except (BlobIntegrityError, RunnerApiError, RunnerUnreachable) as exc:
             raise JobFailure.of(JobErrorCategory.unavailable, CODE_BLOB_UNAVAILABLE, str(exc)) from exc
+        except OutputChangedError as exc:
+            raise JobFailure.of(JobErrorCategory.internal, CODE_OUTPUT_CHANGED, str(exc)) from exc
         except OSError as exc:
             if exc.errno == errno.ENOSPC:
                 raise JobFailure.of(JobErrorCategory.unavailable, DISK_FULL, str(exc)) from exc
@@ -127,7 +133,7 @@ class CompileJobExecutor:
         keep = frozenset(entry.sha256 for entry in envelope.manifest if entry.sha256)
         await asyncio.to_thread(self._cache.evict, self._cache_max_bytes, keep)
         await asyncio.to_thread(self._workspaces.evict, frozenset({str(spec.project_id)}))
-        return JobOutcome(result, outputs)
+        return JobOutcome(result, outputs, cleanup=partial(self._workspaces.release, job_key) if outputs else None)
 
 
 class RoutingJobExecutor:

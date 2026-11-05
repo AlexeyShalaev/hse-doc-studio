@@ -47,6 +47,14 @@ class KubernetesExecutorConfig(BaseModel):
     priority_class_name: str = ""
     runtime_class_name: str = Field(default="", description="RuntimeClass подов сборки, например gvisor или kata.")
     tex_cache_claim: str = Field(default="", description="PVC с кэшем шрифтов TeX в /cache; пусто значит без кэша.")
+    fonts_claim: str = Field(
+        default="",
+        description=(
+            "PVC со шрифтами (.ttf, .otf, .ttc): монтируется в поды сборки только для чтения, чтобы XeLaTeX "
+            "находил Times New Roman, Arial и Consolas по имени; пусто значит без своих шрифтов."
+        ),
+    )
+    fonts_mount_target: str = Field(default="/usr/local/share/fonts/hse", description="Куда монтировать fonts_claim.")
     max_output_bytes: int = Field(default=512 * _MIB, gt=0, description="Предел выхода сборки (.build документа).")
 
     def resolved_namespace(self) -> str:

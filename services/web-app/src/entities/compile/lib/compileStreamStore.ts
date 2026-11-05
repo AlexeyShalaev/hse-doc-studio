@@ -56,6 +56,17 @@ type StoreActions = {
    * Called right after a successful POST /cancel so the UI flips immediately.
    */
   markCancelled: (projectId: string, docId: string) => void;
+  /**
+   * Закрыть слот «идёт» по данным сервера: документ уже не `building`, а слот ещё ждёт `done`
+   * (поток оборвался без события). Без этого упавшая сборка висела бы «зависшей» с кнопкой «Остановить».
+   * Слот другой сборки (другой compileId) не трогаем.
+   */
+  settleFromServer: (
+    projectId: string,
+    docId: string,
+    compileId: string,
+    status: "success" | "failure",
+  ) => void;
   /** Re-evaluate isStalled across all running slots. Called by the watchdog. */
   tickWatchdog: () => void;
 };
@@ -268,6 +279,27 @@ export const useCompileStreamStore = create<StoreState & StoreActions>(
           },
           _closers: nextClosers,
           pending: nextPending,
+        };
+      });
+    },
+
+    settleFromServer: (projectId, docId, compileId, status) => {
+      const k = key(projectId, docId);
+      const slot = get().streams[k];
+      if (slot?.status !== "running" || slot.compileId !== compileId) return;
+      const closer = get()._closers[k];
+      if (closer) closer();
+      set((s) => {
+        const current = s.streams[k];
+        if (current?.status !== "running" || current.compileId !== compileId) {
+          return s;
+        }
+        return {
+          streams: {
+            ...s.streams,
+            [k]: { ...current, status, wait: null, isStalled: false },
+          },
+          _closers: omitKey(s._closers, k),
         };
       });
     },

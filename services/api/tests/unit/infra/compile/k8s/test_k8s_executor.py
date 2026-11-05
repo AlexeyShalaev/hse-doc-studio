@@ -142,6 +142,29 @@ async def test__run__tex_cache_claim__mounted_with_font_cache_env(tmp_path: Path
     assert env["TEXMFVAR"].startswith("/tmp/")
 
 
+async def test__run__fonts_claim__mounted_read_only_where_fontconfig_scans(tmp_path: Path, project: Path) -> None:
+    api = FakeKubeApi(tmp_path / "cluster")
+
+    await _run(_executor(api, fonts_claim="studio-fonts"), project)
+
+    spec = cast(dict[str, Any], api.only_pod().manifest["spec"])
+    assert {"name": "fonts", "persistentVolumeClaim": {"claimName": "studio-fonts", "readOnly": True}} in spec[
+        "volumes"
+    ]
+    assert {"name": "fonts", "mountPath": "/usr/local/share/fonts/hse", "readOnly": True} in spec["containers"][0][
+        "volumeMounts"
+    ]
+
+
+async def test__run__no_fonts_claim__no_fonts_volume(tmp_path: Path, project: Path) -> None:
+    api = FakeKubeApi(tmp_path / "cluster")
+
+    await _run(_executor(api), project)
+
+    spec = cast(dict[str, Any], api.only_pod().manifest["spec"])
+    assert all(v["name"] != "fonts" for v in spec["volumes"])
+
+
 async def test__run__latexmk_fails__failed_log_downloaded_and_latexmk_state_reset(
     tmp_path: Path, project: Path
 ) -> None:

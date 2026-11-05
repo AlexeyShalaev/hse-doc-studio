@@ -207,3 +207,30 @@ async def test_directory_in_place_of_file_is_replaced(tmp_path: Path) -> None:
         (ws.root / "a.tex" / "x").write_text("x", encoding="utf-8", newline="\n")
     async with spaces.open("p", manifest) as ws:
         assert (ws.root / "a.tex").read_bytes() == b"alpha"
+
+
+async def test_staged_outputs_survive_the_next_sync_of_the_project_and_release_removes_them(tmp_path: Path) -> None:
+    store = _Store({"a": b"alpha"})
+    _, spaces = _make(tmp_path, store)
+    manifest = (_entry("doc/a.tex", b"alpha"),)
+    async with spaces.open("p1", manifest) as ws:
+        (ws.root / "doc" / "a.pdf").write_bytes(b"%PDF")
+        outputs = collect_outputs(ws.root, ["doc/a.pdf"])
+        staged = spaces.stage("job1", outputs)
+
+    async with spaces.open("p1", manifest) as ws:
+        assert not (ws.root / "doc" / "a.pdf").exists()
+    assert staged[0].ref == outputs[0].ref
+    assert staged[0].path.read_bytes() == b"%PDF"
+    spaces.release("job1")
+    assert not staged[0].path.exists()
+
+
+async def test_stale_staged_outputs_are_removed_on_start(tmp_path: Path) -> None:
+    leftover = tmp_path / "outputs" / "old-job" / "0"
+    leftover.mkdir(parents=True)
+    (leftover / "a.pdf").write_bytes(b"%PDF")
+
+    _make(tmp_path, _Store({}))
+
+    assert not (tmp_path / "outputs" / "old-job").exists()

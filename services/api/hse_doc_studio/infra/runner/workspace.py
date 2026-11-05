@@ -22,6 +22,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from hse_doc_studio.core.jobs.files import ManifestFile, validate_relative_posix
+from hse_doc_studio.infra.runner.executor import OutputFile
 
 BlobFetcher = Callable[[str], Awaitable[bytes]]
 
@@ -34,6 +35,10 @@ _SHA_LEN = 64
 
 class BlobIntegrityError(Exception):
     """Скачанные байты не совпали с заявленными sha256 или размером."""
+
+
+class OutputChangedError(Exception):
+    """Файл результата изменился между сбором и копированием в папку выгрузки."""
 
 
 class WorkspaceStuckError(Exception):
@@ -176,6 +181,41 @@ class RunnerWorkspaces:
         self._max_bytes = max_bytes
         self._locks: defaultdict[str, asyncio.Lock] = defaultdict(asyncio.Lock)
         self._root.mkdir(parents=True, exist_ok=True)
+        # Выходы ждут выгрузки вне рабочих папок: следующая задача того же проекта чистит папку по манифесту.
+        self._staging = root / "outputs"
+        if self._staging.exists():
+            _rmtree(self._staging)  # остатки прошлого запуска, выгружать их уже некому
+        self._staging.mkdir(parents=True, exist_ok=True)
+
+    def stage(self, job_id: str, outputs: tuple[OutputFile, ...]) -> tuple[OutputFile, ...]:
+        """Копирует выходы в папку выгрузки, пока замок проекта ещё держится.
+
+        Выгрузка идёт после выхода из `open`, а другая задача того же проекта (например, «Собрать всё») успевает
+        вычистить из папки файлы, которых нет в манифесте, в том числе только что собранный PDF.
+        """
+        if not outputs:
+            return ()
+        target = self._staging / job_id
+        staged: list[OutputFile] = []
+        try:
+            for index, out in enumerate(outputs):
+                folder = target / str(index)
+                folder.mkdir(parents=True, exist_ok=True)
+                copy = folder / out.path.name
+                shutil.copyfile(out.path, copy)
+                if file_sha256(copy) != out.ref.sha256:
+                    raise OutputChangedError(out.ref.path)
+                staged.append(OutputFile(ref=out.ref, path=copy))
+        except BaseException:
+            self.release(job_id)
+            raise
+        return tuple(staged)
+
+    def release(self, job_id: str) -> None:
+        """Убирает копии выходов задачи после выгрузки (или отказа от неё)."""
+        target = self._staging / job_id
+        if target.exists():
+            _rmtree(target)
 
     @contextlib.asynccontextmanager
     async def open(self, project_id: str, manifest: tuple[ManifestFile, ...]) -> AsyncIterator[Workspace]:
