@@ -617,15 +617,79 @@ async def test__run_build__executor_error_line_before_failed__outcome_carries_th
     assert h.log.lines[-1] == line
 
 
-async def test__run_build__plain_latex_failure__no_failure_code(tmp_path: Path) -> None:
+async def test__run_build__plain_latex_failure__build_failed_with_first_error_line(tmp_path: Path) -> None:
     h = Harness(tmp_path)
     h.executor.lines = ["! Undefined control sequence.", "__FAILED__"]
 
     outcome = await h.runner.run_build(h.spec(), h.ctx)
     result = await h.runner.run_post(h.spec(), h.ctx, outcome)
 
+    assert outcome.failure_code == "build_failed"
+    assert result.error is not None
+    assert result.error.detail == "! Undefined control sequence."
+
+
+async def test__run_build__fontspec_cannot_find_font__font_missing_with_name(tmp_path: Path) -> None:
+    h = Harness(tmp_path)
+    h.executor.lines = [
+        "kpathsea: Running mktextfm Arial",
+        './common/fonts.tex:7: Package fontspec Error: The font "Arial" cannot be found.',
+        "__FAILED__",
+    ]
+
+    outcome = await h.runner.run_build(h.spec(), h.ctx)
+
+    assert outcome.failure_code == "font_missing"
+    assert outcome.failure_detail == "Arial"
+
+
+async def test__run_build__mktextfm_without_other_error__font_missing(tmp_path: Path) -> None:
+    h = Harness(tmp_path)
+    h.executor.lines = [
+        "kpathsea: Running mktextfm Consolas",
+        "mktextfm: `mf-nowin -progname=mf input Consolas' failed to make Consolas.tfm.",
+        "__FAILED__",
+    ]
+
+    outcome = await h.runner.run_build(h.spec(), h.ctx)
+
+    assert outcome.failure_code == "font_missing"
+    assert outcome.failure_detail == "Consolas"
+
+
+async def test__run_build__mktextfm_noise_before_real_error__build_failed_not_font(tmp_path: Path) -> None:
+    h = Harness(tmp_path)
+    h.executor.lines = [
+        "kpathsea: Running mktextfm Arial",
+        "! I can't find file `Arial'.",
+        "! Emergency stop.",
+        "./topic_application.tex:84: LaTeX Error: There's no line here to end.",
+        "__FAILED__",
+    ]
+
+    outcome = await h.runner.run_build(h.spec(), h.ctx)
+
+    assert outcome.failure_code == "build_failed"
+    assert outcome.failure_detail == "./topic_application.tex:84: LaTeX Error: There's no line here to end."
+
+
+async def test__run_build__mktextfm_noise_in_successful_build__no_failure(tmp_path: Path) -> None:
+    h = Harness(tmp_path)
+    h.executor.lines = ["kpathsea: Running mktextfm Arial", "__DONE__"]
+
+    outcome = await h.runner.run_build(h.spec(), h.ctx)
+
+    assert outcome.success
     assert outcome.failure_code is None
-    assert result.error is None
+
+
+async def test__run_build__executor_error_beats_font_hint(tmp_path: Path) -> None:
+    h = Harness(tmp_path)
+    h.executor.lines = ["kpathsea: Running mktextfm Arial", "[error] no output for 300s", "__FAILED__"]
+
+    outcome = await h.runner.run_build(h.spec(), h.ctx)
+
+    assert outcome.failure_code == "idle_timeout"
 
 
 async def test__run_post__checks_banner__published_but_kept_out_of_log(tmp_path: Path) -> None:

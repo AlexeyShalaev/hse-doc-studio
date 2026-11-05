@@ -14,6 +14,7 @@ from hse_doc_studio.core.enums import Lang
 BUILD_FAILED = "build_failed"
 PDF_MISSING = "pdf_missing"
 DISK_FULL = "disk_full"
+FONT_MISSING = "font_missing"
 UNKNOWN = "unknown"
 
 # Сборку остановили руками или заменили более новой: не сбой окружения.
@@ -43,6 +44,22 @@ _TEXTS: dict[str, tuple[str, str]] = {
         (
             "The build finished but no PDF was produced. Check that the document produces a PDF and that "
             "\\begin{document} is not commented out."
+        ),
+    ),
+    FONT_MISSING: (
+        (
+            "В контейнере сборки нет шрифта, который просит документ (имя в подробностях). Личный раннер "
+            "(локальная Студия): откройте «Настройки → Шрифты», установите шрифты (Times New Roman, Arial, "
+            "Consolas) и переподключите раннер. Общий раннер: администратору подключить каталог шрифтов "
+            "(HSE_RUNNER__FONTS_DIR или fonts_claim в Kubernetes) либо образ TeX со шрифтами. Или замените шрифт "
+            "в преамбуле на свободный (\\IfFontExistsTF со свободной заменой)."
+        ),
+        (
+            "The build container has no font the document asks for (name in the details). Personal runner "
+            "(local Studio): open “Settings → Fonts”, install the fonts (Times New Roman, Arial, Consolas) and "
+            "reconnect the runner. Shared runner: the administrator should provide a fonts folder "
+            "(HSE_RUNNER__FONTS_DIR or fonts_claim in Kubernetes) or a TeX image with the fonts. Or replace the "
+            "font in the preamble with a free one (\\IfFontExistsTF with a free fallback)."
         ),
     ),
     "image_missing": (

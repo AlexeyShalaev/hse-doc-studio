@@ -21,6 +21,7 @@ from hse_doc_studio.infra.jobs.compile_body import (
     BuildState,
     CapacityGate,
     consume_build_stream,
+    resolve_failure,
     run_checks,
     run_copy_only,
 )
@@ -121,6 +122,7 @@ class EmbeddedCompileRunner:
                 self._resolve_office_image,
             )
         # Время окончания снимается до проверок и не сдвигается на их длительность.
+        failure_code, failure_detail = (None, None) if state.success else resolve_failure(state)
         return BuildOutcome(
             success=state.success,
             status=JobStatus.succeeded if state.success else JobStatus.failed,
@@ -128,8 +130,8 @@ class EmbeddedCompileRunner:
             pages=state.pages,
             words=state.words,
             chars=state.chars,
-            failure_code=None if state.success else state.failure_code,
-            failure_detail=None if state.success else state.failure_detail,
+            failure_code=failure_code,
+            failure_detail=failure_detail,
         )
 
     async def run_post(self, spec: JobSpec, ctx: JobRunContext, outcome: BuildOutcome) -> JobResult:
