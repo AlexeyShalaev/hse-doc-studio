@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import hashlib
+from collections.abc import Callable
 from pathlib import Path
 
 import pytest
@@ -36,6 +37,7 @@ class FakeExecutor:
         self.block = False
         self.fail: Exception | None = None
         self.outputs: tuple[OutputFile, ...] = ()
+        self.cleanup: Callable[[], None] | None = None
         self.saw_cancel = False
         self.running = 0
         self.peak = 0
@@ -55,7 +57,7 @@ class FakeExecutor:
                     raise
             if self.fail is not None:
                 raise self.fail
-            return JobOutcome(JobResult(status=JobStatus.succeeded), self.outputs)
+            return JobOutcome(JobResult(status=JobStatus.succeeded), self.outputs, cleanup=self.cleanup)
         finally:
             self.running -= 1
 
@@ -217,6 +219,52 @@ async def test_outputs_to_unreachable_storage_fail_with_actionable_error(rig: Ri
     assert "ConnectError" in detail
     assert job.log_lines[-1].startswith("[runner] storage_unreachable: object storage at http://minio.tech.svc:80")
     assert "deadbeef" not in job.log_lines[-1]
+
+
+async def test_output_file_gone_before_upload_reports_pdf_missing_not_upload_failure(rig: Rig, tmp_path: Path) -> None:
+    ref = ArtifactRef(path="out/main.pdf", sha256="a" * 64, size=3)
+    rig.executor.outputs = (OutputFile(ref, tmp_path / "vanished" / "main.pdf"),)
+    job = rig.state.enqueue(envelope_body("compile", job_id=JOB_A))
+    rig.start()
+    await until(lambda: job.completed)
+    await rig.stop()
+
+    result = _completed(job)["result"]
+    assert isinstance(result, dict)
+    assert result["status"] == "failed"
+    error = result["error"]
+    assert error["code"] == "pdf_missing"  # type: ignore[index]
+    assert "vanished" in error["detail"]  # type: ignore[index]
+    assert job.artifacts == {}
+    assert job.log_lines[-1].startswith("[runner] pdf_missing")
+
+
+async def test_server_refusing_the_upload_is_still_artifact_upload_failed(rig: Rig, tmp_path: Path) -> None:
+    data = b"%PDF-1.5 fake"
+    path = tmp_path / "main.pdf"
+    path.write_bytes(data)
+    ref = ArtifactRef(path="out/main.pdf", sha256=hashlib.sha256(data).hexdigest(), size=len(data) + 1)
+    rig.executor.outputs = (OutputFile(ref, path),)
+    rig.state.announce_status = 422
+    job = rig.state.enqueue(envelope_body("compile", job_id=JOB_A))
+    rig.start()
+    await until(lambda: job.completed)
+    await rig.stop()
+
+    result = _completed(job)["result"]
+    assert isinstance(result, dict)
+    assert result["error"]["code"] == "artifact_upload_failed"  # type: ignore[index]
+
+
+async def test_cleanup_of_outputs_runs_after_report(rig: Rig, tmp_path: Path) -> None:
+    called: list[str] = []
+    rig.executor.cleanup = lambda: called.append("cleaned")
+    job = rig.state.enqueue(envelope_body("compile", job_id=JOB_A))
+    rig.start()
+    await until(lambda: job.completed)
+    await rig.stop()
+
+    assert called == ["cleaned"]
 
 
 async def test_cancel_flag_from_heartbeat_stops_the_job(rig: Rig) -> None:

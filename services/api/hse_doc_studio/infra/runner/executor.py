@@ -23,6 +23,8 @@ class OutputFile:
 class JobOutcome:
     result: JobResult
     outputs: tuple[OutputFile, ...] = ()
+    # Вызывается после выгрузки выходов (или отказа от неё): убирает их копии на диске раннера.
+    cleanup: Callable[[], None] | None = None
 
 
 @dataclass(frozen=True)
