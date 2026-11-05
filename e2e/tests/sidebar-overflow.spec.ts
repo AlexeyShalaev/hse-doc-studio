@@ -124,12 +124,13 @@ const mockProviders = async (page: Page): Promise<void> => {
   );
 };
 
+/** Проект из seed: другие сценарии стенда создают свои проекты, и первым в списке бывает чужой. */
 const firstProjectId = async (page: Page): Promise<string> => {
   const listing = await page.request.get("/api/v1/projects?limit=100");
-  const items = ((await listing.json()) as { items: { id: string }[] }).items;
-  const first = items[0];
-  if (!first) throw new Error("у демо-пользователя нет проектов");
-  return first.id;
+  const items = ((await listing.json()) as { items: { id: string; name: string }[] }).items;
+  const own = items.find((item) => (USERS.anna.projects as readonly string[]).includes(item.name));
+  if (!own) throw new Error("у демо-пользователя нет проекта из seed");
+  return own.id;
 };
 
 const PANEL_WIDTH_KEY = "hse-studio.workbench.panelWidth";
@@ -248,9 +249,13 @@ for (const lang of LANGS) {
           } else {
             await page.locator("nav.activity-bar").getByRole("button", { name: /Агент|Agent/ }).click();
           }
-          await page.getByRole("button", { name: /Новый чат|New chat/ }).first().click();
           const footer = page.locator(".agent-composer-footer");
-          await expect(footer).toBeVisible();
+          // Кнопка «Новый чат» может нажаться до загрузки списка чатов: повторяем, пока не появится поле ввода.
+          await expect(async () => {
+            if (await footer.isVisible()) return;
+            await page.getByRole("button", { name: /Новый чат|New chat/ }).first().click({ timeout: 2000 });
+            await expect(footer).toBeVisible({ timeout: 3000 });
+          }).toPass({ timeout: 30_000 });
           await shot(page, L, `${tag}-composer`);
 
           const model = footer.locator(".agent-composer-modelbtn").first();
