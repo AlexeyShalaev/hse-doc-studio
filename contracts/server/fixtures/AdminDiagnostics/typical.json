@@ -15,6 +15,8 @@
         "version": "16.4"
       },
       "applicable": true,
+      "acceptable": false,
+      "accepted": null,
       "checked_at": "2026-11-05T10:00:00Z",
       "status_since": "2026-11-05T08:00:00Z",
       "duration_ms": 12
@@ -32,6 +34,8 @@
         "safe_mode": 0
       },
       "applicable": true,
+      "acceptable": false,
+      "accepted": null,
       "checked_at": "2026-11-05T10:00:00Z",
       "status_since": "2026-11-05T08:00:00Z",
       "duration_ms": 12
@@ -44,6 +48,8 @@
       "hint": null,
       "values": {},
       "applicable": false,
+      "acceptable": false,
+      "accepted": null,
       "checked_at": "2026-11-05T10:00:00Z",
       "status_since": "2026-11-05T08:00:00Z",
       "duration_ms": 12
@@ -58,11 +64,14 @@
         "age_hours": 40.5
       },
       "applicable": true,
+      "acceptable": false,
+      "accepted": null,
       "checked_at": "2026-11-05T10:00:00Z",
       "status_since": "2026-11-05T08:00:00Z",
       "duration_ms": 12
     }
   ],
+  "accepted": [],
   "thresholds": [
     {
       "name": "db_latency_warn_ms",

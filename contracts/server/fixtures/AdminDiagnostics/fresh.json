@@ -12,11 +12,14 @@
       "hint": null,
       "values": {},
       "applicable": true,
+      "acceptable": false,
+      "accepted": null,
       "checked_at": null,
       "status_since": null,
       "duration_ms": null
     }
   ],
+  "accepted": [],
   "thresholds": [
     {
       "name": "db_latency_warn_ms",

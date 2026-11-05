@@ -25,16 +25,20 @@ def build_public_router(container: AsyncContainer) -> APIRouter:
 
     @router.get("/health/diagnostics")
     async def diagnostics() -> JSONResponse:
-        states = await (await container.get(DiagnosticsService)).snapshot()
+        service = await container.get(DiagnosticsService)
+        states = await service.snapshot()
         results = [s.result for s in states.values()]
         headers = {"Cache-Control": "no-store"}
         if not results:
             return JSONResponse({"status": "unknown", "checks": {}}, status_code=503, headers=headers)
-        total = overall(results)
+        total = overall(results, service.accepted)
         body = {
             "status": total.name,
             "checked_at": max(r.checked_at for r in results).isoformat(),
-            "checks": {r.check_id: r.status.name for r in sorted(results, key=lambda r: r.check_id)},
+            "checks": {
+                r.check_id: "accepted" if r.check_id in service.accepted else r.status.name
+                for r in sorted(results, key=lambda r: r.check_id)
+            },
         }
         code = 503 if total is DiagStatus.fail else 200
         return JSONResponse(body, status_code=code, headers=headers)
@@ -62,4 +66,6 @@ def install_diagnostics(app: FastAPI, container: AsyncContainer, cfg: Settings, 
     async def _diagnostics_startup() -> None:
         (await container.get(BackgroundHolder)).runner = app.state.background
         service = await container.get(DiagnosticsService)
-        metrics.add_collector(diagnostics_collector(lambda: {k: v.result for k, v in service.last.items()}))
+        metrics.add_collector(
+            diagnostics_collector(lambda: {k: v.result for k, v in service.last.items()}, lambda: service.accepted)
+        )

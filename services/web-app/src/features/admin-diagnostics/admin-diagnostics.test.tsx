@@ -1,6 +1,7 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
   cleanup,
+  fireEvent,
   render,
   screen,
   waitFor,
@@ -19,7 +20,11 @@ import {
   vi,
 } from "vitest";
 import { i18n } from "@shared/lib";
-import type { AdminDiagnostics, DiagCheck } from "@entities/session";
+import type {
+  AdminDiagnostics,
+  DiagAcceptance,
+  DiagCheck,
+} from "@entities/session";
 import { diagnosticsApi } from "./api/diagnosticsApi";
 import { ensureAdminDiagnosticsLocales } from "./lib/locales";
 import {
@@ -29,6 +34,9 @@ import {
   misordered,
   outOfRange,
 } from "./lib/thresholds";
+import { acceptableCheck, openProblems, untilOfDate } from "./lib/acceptance";
+import { AcceptedBanner } from "./ui/AcceptedBanner";
+import { AcceptWarningButton } from "./ui/AcceptWarningButton";
 import { DiagnosticsPage } from "./ui/DiagnosticsPage";
 
 const AT = "2026-11-05T10:00:00Z";
@@ -40,6 +48,8 @@ const check = (patch: Partial<DiagCheck> & { id: string }): DiagCheck => ({
   hint: null,
   values: {},
   applicable: true,
+  acceptable: false,
+  accepted: null,
   checked_at: AT,
   status_since: AT,
   duration_ms: 5,
@@ -95,6 +105,7 @@ const overview = (patch: Partial<AdminDiagnostics> = {}): AdminDiagnostics => ({
       duration_ms: null,
     }),
   ],
+  accepted: [],
   thresholds: TH.map(([name, def, min, max]) => ({
     name,
     value: def,
@@ -316,5 +327,293 @@ describe("раздел «Самодиагностика»", () => {
       "Volume “data” is running out of space: 83% used.",
     );
     await i18n.changeLanguage("ru");
+  });
+});
+
+const ACC: DiagAcceptance = {
+  reason: "Бэкапы делает хостер",
+  by_name: "Анна Админова",
+  at: AT,
+  until: null,
+};
+
+const noBackups = (patch: Partial<DiagCheck> = {}): DiagCheck =>
+  check({
+    id: "backups",
+    group: "operations",
+    status: "warn",
+    reason: "backups_disabled",
+    hint: "backups_disabled",
+    acceptable: true,
+    ...patch,
+  });
+
+describe("принятие предупреждений: чистая логика", () => {
+  const now = new Date(2026, 10, 5, 12, 0, 0);
+
+  it("«до даты» это конец дня; пустая, кривая и прошедшая дата не годятся", () => {
+    expect(untilOfDate("2026-11-06", now)).toBe(
+      new Date(2026, 10, 6, 23, 59, 59).toISOString(),
+    );
+    expect(untilOfDate("2026-11-05", now)).toBe(
+      new Date(2026, 10, 5, 23, 59, 59).toISOString(),
+    );
+    expect(untilOfDate("2026-11-04", now)).toBeNull();
+    expect(untilOfDate("", now)).toBeNull();
+    expect(untilOfDate("05.11.2026", now)).toBeNull();
+  });
+
+  it("открытые проблемы не включают принятые, не настроенные и непроверенные", () => {
+    const data = overview({
+      checks: [
+        noBackups({ accepted: ACC, acceptable: false }),
+        check({ id: "disk", status: "warn", reason: "disk_warning" }),
+        check({ id: "database", status: "fail", reason: "db_unreachable" }),
+        check({ id: "smtp", status: null, reason: null }),
+        check({ id: "tls_s3", reason: "not_configured", applicable: false }),
+        check({ id: "migrations" }),
+      ],
+    });
+    expect(openProblems(data).map((c) => c.id)).toEqual(["disk", "database"]);
+    expect(acceptableCheck(data, "backups")).toBeNull();
+    expect(
+      acceptableCheck(overview({ checks: [noBackups()] }), "backups")?.id,
+    ).toBe("backups");
+  });
+});
+
+describe("принятие предупреждений: страница, диалог, список", () => {
+  beforeAll(async () => {
+    await ensureAdminDiagnosticsLocales();
+    await i18n.changeLanguage("ru");
+  });
+
+  afterEach(() => {
+    cleanup();
+    vi.restoreAllMocks();
+  });
+
+  const withBackups = (patch: Partial<AdminDiagnostics> = {}) =>
+    overview({
+      checks: [
+        check({ id: "disk", status: "warn", reason: "disk_warning" }),
+        noBackups(),
+      ],
+      ...patch,
+    });
+
+  it("кнопка есть только у принимаемого предупреждения, диска среди них нет", async () => {
+    vi.spyOn(diagnosticsApi, "overview").mockResolvedValue(withBackups());
+    render(wrap(<DiagnosticsPage />));
+    await screen.findByTestId("diag-check-disk");
+    expect(screen.getByTestId("diag-accept-backups")).toHaveTextContent(
+      "Принимаю: не делаю сознательно",
+    );
+    expect(screen.queryByTestId("diag-accept-disk")).toBeNull();
+  });
+
+  it("диалог: причина обязательна, до 200 символов, срок по умолчанию бессрочно", async () => {
+    vi.spyOn(diagnosticsApi, "overview").mockResolvedValue(withBackups());
+    const accept = vi
+      .spyOn(diagnosticsApi, "accept")
+      .mockResolvedValue(withBackups());
+    render(wrap(<DiagnosticsPage />));
+    await userEvent.click(await screen.findByTestId("diag-accept-backups"));
+
+    const dialog = await screen.findByTestId("diag-accept-dialog");
+    expect(dialog).toHaveTextContent(/можно вернуть/);
+    expect(dialog).toHaveTextContent(/пропадут точка в меню/);
+    const submit = screen.getByTestId("diag-accept-submit");
+    const reason = screen.getByTestId("diag-accept-reason");
+    expect(reason).toHaveAttribute("maxlength", "200");
+    expect(screen.getByTestId("diag-accept-forever")).toBeChecked();
+    expect(submit).toBeDisabled();
+
+    await userEvent.type(reason, "   ");
+    expect(submit).toBeDisabled();
+    await userEvent.clear(reason);
+    await userEvent.type(reason, "Бэкапы делает хостер");
+    expect(submit).toBeEnabled();
+    await userEvent.click(submit);
+
+    await waitFor(() => {
+      expect(accept).toHaveBeenCalledWith("backups", {
+        reason: "Бэкапы делает хостер",
+        until: null,
+      });
+    });
+    await waitFor(() => {
+      expect(screen.queryByTestId("diag-accept-dialog")).toBeNull();
+    });
+  });
+
+  it("диалог: «до даты» требует будущую дату и отправляет конец дня", async () => {
+    vi.spyOn(diagnosticsApi, "overview").mockResolvedValue(withBackups());
+    const accept = vi
+      .spyOn(diagnosticsApi, "accept")
+      .mockResolvedValue(withBackups());
+    render(wrap(<DiagnosticsPage />));
+    await userEvent.click(await screen.findByTestId("diag-accept-backups"));
+    await userEvent.type(screen.getByTestId("diag-accept-reason"), "до весны");
+    await userEvent.click(screen.getByTestId("diag-accept-until"));
+    const submit = screen.getByTestId("diag-accept-submit");
+    expect(submit).toBeDisabled();
+
+    const day = new Date(Date.now() + 3 * 24 * 3600 * 1000);
+    const pad = (n: number): string => String(n).padStart(2, "0");
+    const value = `${day.getFullYear()}-${pad(day.getMonth() + 1)}-${pad(day.getDate())}`;
+    fireEvent.change(screen.getByTestId("diag-accept-date"), {
+      target: { value },
+    });
+    expect(submit).toBeEnabled();
+    await userEvent.click(submit);
+
+    await waitFor(() => {
+      expect(accept).toHaveBeenCalledTimes(1);
+    });
+    const body = accept.mock.calls[0]?.[1];
+    expect(new Date(body?.until ?? "").getDate()).toBe(day.getDate());
+  });
+
+  it("отказ сервера показан в диалоге, окно остаётся открытым", async () => {
+    vi.spyOn(diagnosticsApi, "overview").mockResolvedValue(withBackups());
+    vi.spyOn(diagnosticsApi, "accept").mockRejectedValue(new Error("422"));
+    render(wrap(<DiagnosticsPage />));
+    await userEvent.click(await screen.findByTestId("diag-accept-backups"));
+    await userEvent.type(screen.getByTestId("diag-accept-reason"), "так надо");
+    await userEvent.click(screen.getByTestId("diag-accept-submit"));
+    expect(await screen.findByTestId("diag-accept-failed")).toBeVisible();
+    expect(screen.getByTestId("diag-accept-dialog")).toBeVisible();
+  });
+
+  it("принятое: серый статус, причина, кто и когда, итог без него", async () => {
+    vi.spyOn(diagnosticsApi, "overview").mockResolvedValue(
+      overview({
+        overall: "ok",
+        checks: [
+          check({ id: "database" }),
+          noBackups({ accepted: ACC, acceptable: false }),
+        ],
+        accepted: [{ check: "backups", acceptance: ACC, active: true }],
+      }),
+    );
+    render(wrap(<DiagnosticsPage />));
+    const row = await screen.findByTestId("diag-check-backups");
+    expect(screen.getByTestId("diag-status-backups")).toHaveAttribute(
+      "data-accepted",
+      "true",
+    );
+    expect(within(row).getByText("Принято")).toBeInTheDocument();
+    expect(within(row).queryByText("Предупреждение")).toBeNull();
+    expect(screen.getByTestId("diag-accepted-note-backups")).toHaveTextContent(
+      /Принято осознанно, причина: Бэкапы делает хостер.*Принял Анна Админова.*бессрочно/,
+    );
+    expect(screen.queryByTestId("diag-hint-backups")).toBeNull();
+    expect(screen.queryByTestId("diag-accept-backups")).toBeNull();
+    expect(screen.getByTestId("diag-summary-status")).toHaveTextContent(
+      "В порядке: 1, предупреждений: 0, сбоев: 0, принято: 1",
+    );
+    expect(screen.getByTestId("diag-summary-status")).toHaveAttribute(
+      "data-status",
+      "ok",
+    );
+  });
+
+  it("«Принятые предупреждения»: список в одном месте, «Вернуть» снимает принятие", async () => {
+    const dormant: DiagAcceptance = {
+      ...ACC,
+      reason: "Раннеров нет",
+      until: AT,
+    };
+    vi.spyOn(diagnosticsApi, "overview").mockResolvedValue(
+      overview({
+        overall: "ok",
+        checks: [
+          noBackups({ accepted: ACC, acceptable: false }),
+          check({ id: "runners", group: "compute" }),
+        ],
+        accepted: [
+          { check: "backups", acceptance: ACC, active: true },
+          { check: "runners", acceptance: dormant, active: false },
+        ],
+      }),
+    );
+    const revoke = vi
+      .spyOn(diagnosticsApi, "revoke")
+      .mockResolvedValue(withBackups());
+    render(wrap(<DiagnosticsPage />));
+    const list = await screen.findByTestId("diag-accepted");
+    expect(within(list).getByTestId("diag-accepted-backups")).toBeVisible();
+    const sleeping = within(list).getByTestId("diag-accepted-runners");
+    expect(sleeping).toHaveTextContent("Сейчас не нужно");
+    expect(sleeping).toHaveTextContent(/Причину уже исправили/);
+    expect(sleeping).toHaveTextContent(/до /);
+
+    await userEvent.click(
+      within(list).getByTestId("diag-accepted-return-backups"),
+    );
+    await waitFor(() => {
+      expect(revoke).toHaveBeenCalledWith("backups");
+    });
+  });
+
+  it("пустой список принятого", async () => {
+    vi.spyOn(diagnosticsApi, "overview").mockResolvedValue(withBackups());
+    render(wrap(<DiagnosticsPage />));
+    expect(await screen.findByTestId("diag-accepted-empty")).toBeVisible();
+  });
+
+  it("в английском интерфейсе кнопка, диалог и список переведены", async () => {
+    await i18n.changeLanguage("en");
+    vi.spyOn(diagnosticsApi, "overview").mockResolvedValue(
+      overview({
+        checks: [
+          noBackups({ accepted: ACC, acceptable: false }),
+          noBackups({ id: "runners", group: "compute" }),
+        ],
+        accepted: [{ check: "backups", acceptance: ACC, active: true }],
+      }),
+    );
+    render(wrap(<DiagnosticsPage />));
+    await userEvent.click(await screen.findByTestId("diag-accept-runners"));
+    expect(await screen.findByTestId("diag-accept-dialog")).toHaveTextContent(
+      /You can undo it at any time/,
+    );
+    expect(screen.getByTestId("diag-accept-submit")).toHaveTextContent(
+      "I accept: this is on purpose",
+    );
+    expect(
+      screen.getByTestId("diag-accepted-return-backups"),
+    ).toHaveTextContent("Bring the warning back");
+    await i18n.changeLanguage("ru");
+  });
+
+  it("кнопка для баннеров другой страницы сама скрывается, когда принять нельзя", async () => {
+    vi.spyOn(diagnosticsApi, "overview").mockResolvedValue(withBackups());
+    const { unmount } = render(wrap(<AcceptWarningButton check="backups" />));
+    expect(await screen.findByTestId("diag-accept-backups")).toBeVisible();
+    unmount();
+    render(wrap(<AcceptWarningButton check="disk" />));
+    await waitFor(() => {
+      expect(diagnosticsApi.overview).toHaveBeenCalled();
+    });
+    expect(screen.queryByTestId("diag-accept-disk")).toBeNull();
+  });
+
+  it("баннер принятого показывает причину и возвращает предупреждение", async () => {
+    vi.spyOn(diagnosticsApi, "overview").mockResolvedValue(
+      overview({ checks: [noBackups({ accepted: ACC, acceptable: false })] }),
+    );
+    const revoke = vi
+      .spyOn(diagnosticsApi, "revoke")
+      .mockResolvedValue(withBackups());
+    render(wrap(<AcceptedBanner check="backups" />));
+    const banner = await screen.findByTestId("diag-accepted-banner-backups");
+    expect(banner).toHaveTextContent("Бэкапы: принято осознанно");
+    expect(banner).toHaveTextContent("Причина: Бэкапы делает хостер");
+    await userEvent.click(screen.getByTestId("diag-return-backups"));
+    await waitFor(() => {
+      expect(revoke).toHaveBeenCalledWith("backups");
+    });
   });
 });

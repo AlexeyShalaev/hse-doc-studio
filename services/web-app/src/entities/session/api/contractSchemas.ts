@@ -142,6 +142,7 @@ export const CONTRACT_SCHEMAS: Record<string, ZodType> = {
   UpdateAdminDiagnosticsThresholds:
     ops.UpdateDiagnosticsThresholdsRequestSchema,
   RunAdminDiagnosticsRequest: ops.RunDiagnosticsRequestSchema,
+  AcceptAdminDiagnosticsWarning: ops.AcceptDiagnosticsRequestSchema,
   AdminDataLifecycle: ops.AdminDataLifecycleSchema,
   AdminUpdateStatus: upd.UpdateStatusSchema,
   AdminUpdateRun: upd.UpdateRunSchema,

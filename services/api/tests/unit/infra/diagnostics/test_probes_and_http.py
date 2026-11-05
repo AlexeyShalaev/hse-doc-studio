@@ -134,9 +134,23 @@ def test__metrics__expose_status_age_duration_and_overall() -> None:
     assert list(diagnostics_collector(dict)()) == []
 
 
+def test__metrics__accepted_warning_stays_visible_but_leaves_the_overall_status() -> None:
+    results = {"db": _result("db", DiagStatus.ok), "backups": _result("backups", DiagStatus.warn)}
+
+    lines = list(diagnostics_collector(lambda: results, lambda: {"backups"})())
+
+    assert 'hse_diag_check_status{check="backups"} 1' in lines  # само значение не прячем: мониторинг видит факт
+    assert 'hse_diag_check_accepted{check="backups"} 1' in lines
+    assert 'hse_diag_check_accepted{check="db"} 0' in lines
+    assert "hse_diag_overall_status 0" in lines
+    failing = {**results, "disk": _result("disk", DiagStatus.fail)}
+    assert "hse_diag_overall_status 2" in list(diagnostics_collector(lambda: failing, lambda: {"backups"})())
+
+
 class _Service:
-    def __init__(self, states: dict[str, CheckState]) -> None:
+    def __init__(self, states: dict[str, CheckState], accepted: set[str] | None = None) -> None:
         self.states = states
+        self.accepted = accepted or set()
 
     async def snapshot(self) -> dict[str, CheckState]:
         return self.states
@@ -150,14 +164,14 @@ class _Container:
         return self.service
 
 
-def _app(states: dict[str, CheckState]) -> FastAPI:
+def _app(states: dict[str, CheckState], accepted: set[str] | None = None) -> FastAPI:
     app = FastAPI()
-    app.include_router(build_public_router(_Container(_Service(states))))  # type: ignore[arg-type]
+    app.include_router(build_public_router(_Container(_Service(states, accepted))))  # type: ignore[arg-type]
     return app
 
 
-async def _get(states: dict[str, CheckState]) -> tuple[int, dict[str, object]]:
-    async with AsyncClient(transport=ASGITransport(app=_app(states)), base_url="http://t") as client:
+async def _get(states: dict[str, CheckState], accepted: set[str] | None = None) -> tuple[int, dict[str, object]]:
+    async with AsyncClient(transport=ASGITransport(app=_app(states, accepted)), base_url="http://t") as client:
         res = await client.get("/health/diagnostics")
     return res.status_code, res.json()
 
@@ -174,6 +188,17 @@ async def test__public_endpoint__statuses_only_no_reasons_or_values() -> None:
     assert body["checks"] == {"database": "ok", "disk": "warn"}
     assert "secret" not in str(body)
     assert "reason" not in str(body)
+
+
+async def test__public_endpoint__accepted_warning_is_marked_and_does_not_make_the_total_warn() -> None:
+    states = {
+        "database": CheckState(_result("database", DiagStatus.ok), NOW),
+        "backups": CheckState(_result("backups", DiagStatus.warn), NOW),
+    }
+    code, body = await _get(states, {"backups"})
+
+    assert (code, body["status"]) == (200, "ok")
+    assert body["checks"] == {"backups": "accepted", "database": "ok"}
 
 
 async def test__public_endpoint__fail_is_503_and_empty_is_unknown_503() -> None:

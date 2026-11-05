@@ -30,7 +30,9 @@
       "services_one": "{{count}} service with problems",
       "services_other": "{{count}} services with problems",
       "storage": "Running out of space",
-      "data": "Low disk space"
+      "data": "Low disk space",
+      "diagnostics_one": "{{count}} self-diagnostics warning",
+      "diagnostics_other": "{{count}} self-diagnostics warnings"
     },
     "back": "Back to Studio",
     "version": "Version {{version}}",

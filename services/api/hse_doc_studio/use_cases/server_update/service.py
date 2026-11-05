@@ -19,6 +19,7 @@ from hse_doc_studio.core.backup.entities import RunStatus as BackupRunStatus
 from hse_doc_studio.core.backup.entities import RunTrigger as BackupTrigger
 from hse_doc_studio.core.backup.errors import BackupError, BackupErrorCode
 from hse_doc_studio.core.backup.protocols import IAdminDirectory, IBackupDestinationRepository, IBackupRunRepository
+from hse_doc_studio.core.diagnostics.acceptance import BACKUPS_CHECK, Acceptance, live_acceptance
 from hse_doc_studio.core.identity.protocols import IAuditLog, IInstanceSettingsRepository
 from hse_doc_studio.core.identity.session_policy import Clock, utc_now
 from hse_doc_studio.core.invitations.entities import NotificationKind, NotificationPayload
@@ -66,6 +67,8 @@ logger = structlog.get_logger()
 SOURCE_SYSTEM = "system"
 _SEEN_WRITE_EVERY_S = 20.0
 _ERROR_LIMIT = 500
+_RISK_NOTE = "no full backup and no schema rollback: the risk is accepted"
+_WAIVER_NOTE = "no full backup and no schema rollback: backups are off on purpose (accepted in self-diagnostics)"
 
 # Исход запуска -> код `system_alert` во «Входящих».
 _ALERT = {
@@ -186,6 +189,8 @@ class UpdateService:
         has_destination = await self._destinations.get_default() is not None
         snapshotless = self._options.snapshotless
         unsafe_rollback = bool(last_ok and snapshotless and (schema_changed or not last_ok.to_revision))
+        risky = self._options.executor_enabled and snapshotless and not (settings.backup_first and has_destination)
+        waiver = live_acceptance(values, BACKUPS_CHECK, now) if risky else None
         return UpdateStatus(
             settings=settings,
             current_version=self._cur,
@@ -209,9 +214,8 @@ class UpdateService:
             rollback_needs_restore=bool(can_rollback and schema_changed and not snapshotless),
             executor=self._options.executor if self._options.executor_enabled else "none",
             rollback_blocked=can_rollback and unsafe_rollback,
-            risk_confirmation_required=self._options.executor_enabled
-            and snapshotless
-            and not (settings.backup_first and has_destination),
+            risk_confirmation_required=risky and waiver is None,
+            backups_accepted=waiver,
         )
 
     # ---- настройки ----
@@ -325,7 +329,9 @@ class UpdateService:
         if target is None or not is_newer(target.version, self._cur):
             raise UpdateError(UpdateErrorCode.nothing_to_update, "already on the latest version")
         risky = await self._risk_unconfirmed(settings)
-        if risky and not accept_risk:
+        # «Бэкапы не делаю сознательно» принято на странице самодиагностики: подтверждение каждый раз не нужно.
+        waiver = live_acceptance(values, BACKUPS_CHECK, self._clock()) if risky else None
+        if risky and not accept_risk and waiver is None:
             raise UpdateError(
                 UpdateErrorCode.risk_not_confirmed,
                 "there is no full backup before this update and the database cannot be rolled back: configure a "
@@ -340,6 +346,7 @@ class UpdateService:
             settings,
             actor_id=actor_id,
             risk_accepted=risky,
+            risk_waiver=waiver,
         )
 
     async def request_rollback(self, actor_id: str, *, restore_db: bool) -> UpdateRun:
@@ -405,6 +412,7 @@ class UpdateService:
         restore_db: bool = False,
         verify: Verify | None = None,
         risk_accepted: bool = False,
+        risk_waiver: Acceptance | None = None,
     ) -> UpdateRun:
         now = self._clock()
         want_backup = settings.backup_first and await self._destinations.get_default() is not None
@@ -425,7 +433,7 @@ class UpdateService:
         if risk_accepted:
             run = append_events(
                 run,
-                [RunEvent(0, now, "backup", "warn", "no full backup and no schema rollback: the risk is accepted")],
+                [RunEvent(0, now, "backup", "warn", _RISK_NOTE if risk_waiver is None else _WAIVER_NOTE)],
             )
         if not await self._runs.add(run):
             raise UpdateError(UpdateErrorCode.already_running, "another update is already in progress")
@@ -440,6 +448,7 @@ class UpdateService:
                 "backup_first": want_backup,
                 "restore_db": restore_db,
                 "risk_accepted": risk_accepted,
+                "risk_waiver": risk_waiver.reason if risk_waiver else None,
             },
         )
         if want_backup:

@@ -35,6 +35,10 @@ import {
   type AdminAuditEvent,
   type AdminService,
 } from "@entities/session";
+import {
+  acceptedCheck,
+  useDiagnosticsQuiet,
+} from "@features/admin-diagnostics";
 import { useInstanceSettings } from "@features/admin-install";
 import {
   diskTone,
@@ -247,6 +251,8 @@ const AttentionBlock = () => {
   const services = useServices();
   const storage = useStorage();
   const auth = useBootstrap().data?.auth;
+  // «Публичных раннеров не подключаю»: принятое осознанно предупреждение здесь молчит.
+  const runnersAccepted = acceptedCheck(useDiagnosticsQuiet().data, "runners");
 
   const items: Attention[] = [];
   const waiting = approvals.data ?? 0;
@@ -282,13 +288,15 @@ const AttentionBlock = () => {
   const quiet = counts ? quietRunners(counts) : 0;
   const working = online + quiet;
   if (counts && liveRunners(counts) === 0) {
-    items.push({
-      id: "runners-missing",
-      tone: "warning",
-      title: t("overview.attention.runnersMissing"),
-      body: t("overview.attention.runnersMissingBody"),
-      to: "/admin/runners?create=token",
-    });
+    if (!runnersAccepted) {
+      items.push({
+        id: "runners-missing",
+        tone: "warning",
+        title: t("overview.attention.runnersMissing"),
+        body: t("overview.attention.runnersMissingBody"),
+        to: "/admin/runners?create=token",
+      });
+    }
   } else if (working > 0 && online === 0) {
     items.push({
       id: "runners-none",

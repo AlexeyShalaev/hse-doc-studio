@@ -1,0 +1,190 @@
+{
+  "overall": "warn",
+  "enabled": true,
+  "interval_s": 300.0,
+  "last_tick_at": "2026-11-05T10:00:01Z",
+  "checks": [
+    {
+      "id": "database",
+      "group": "data",
+      "status": "ok",
+      "reason": "ok",
+      "hint": null,
+      "values": {
+        "latency_ms": 4,
+        "version": "16.4"
+      },
+      "applicable": true,
+      "acceptable": false,
+      "accepted": null,
+      "checked_at": "2026-11-05T10:00:00Z",
+      "status_since": "2026-11-05T08:00:00Z",
+      "duration_ms": 12
+    },
+    {
+      "id": "disk",
+      "group": "data",
+      "status": "warn",
+      "reason": "disk_warning",
+      "hint": "disk_warning",
+      "values": {
+        "volume": "data",
+        "percent": 83,
+        "biggest_source": "audit_log",
+        "safe_mode": 0
+      },
+      "applicable": true,
+      "acceptable": false,
+      "accepted": null,
+      "checked_at": "2026-11-05T10:00:00Z",
+      "status_since": "2026-11-05T08:00:00Z",
+      "duration_ms": 12
+    },
+    {
+      "id": "tls_public",
+      "group": "security",
+      "status": "ok",
+      "reason": "not_configured",
+      "hint": null,
+      "values": {},
+      "applicable": false,
+      "acceptable": false,
+      "accepted": null,
+      "checked_at": "2026-11-05T10:00:00Z",
+      "status_since": "2026-11-05T08:00:00Z",
+      "duration_ms": 12
+    },
+    {
+      "id": "backups",
+      "group": "operations",
+      "status": "warn",
+      "reason": "backups_disabled",
+      "hint": "backups_disabled",
+      "values": {},
+      "applicable": true,
+      "acceptable": false,
+      "accepted": {
+        "reason": "Бэкапы делает хостер на уровне диска",
+        "by_name": "Анна Админова",
+        "at": "2026-11-05T09:30:00Z",
+        "until": null
+      },
+      "checked_at": "2026-11-05T10:00:00Z",
+      "status_since": "2026-11-05T08:00:00Z",
+      "duration_ms": 12
+    }
+  ],
+  "accepted": [
+    {
+      "check": "backups",
+      "acceptance": {
+        "reason": "Бэкапы делает хостер на уровне диска",
+        "by_name": "Анна Админова",
+        "at": "2026-11-05T09:30:00Z",
+        "until": null
+      },
+      "active": true
+    }
+  ],
+  "thresholds": [
+    {
+      "name": "db_latency_warn_ms",
+      "value": 300,
+      "default": 300,
+      "min": 10,
+      "max": 60000
+    },
+    {
+      "name": "db_latency_fail_ms",
+      "value": 2000,
+      "default": 2000,
+      "min": 20,
+      "max": 120000
+    },
+    {
+      "name": "store_latency_warn_ms",
+      "value": 2000,
+      "default": 2000,
+      "min": 100,
+      "max": 120000
+    },
+    {
+      "name": "store_latency_fail_ms",
+      "value": 15000,
+      "default": 15000,
+      "min": 200,
+      "max": 300000
+    },
+    {
+      "name": "queue_wait_warn_s",
+      "value": 600,
+      "default": 600,
+      "min": 30,
+      "max": 86400
+    },
+    {
+      "name": "queue_wait_fail_s",
+      "value": 3600,
+      "default": 3600,
+      "min": 60,
+      "max": 604800
+    },
+    {
+      "name": "stuck_job_warn_s",
+      "value": 300,
+      "default": 300,
+      "min": 30,
+      "max": 86400
+    },
+    {
+      "name": "stuck_job_fail_s",
+      "value": 1800,
+      "default": 1800,
+      "min": 60,
+      "max": 604800
+    },
+    {
+      "name": "tls_warn_days",
+      "value": 21,
+      "default": 21,
+      "min": 2,
+      "max": 120
+    },
+    {
+      "name": "tls_fail_days",
+      "value": 7,
+      "default": 7,
+      "min": 1,
+      "max": 60
+    },
+    {
+      "name": "backup_warn_hours",
+      "value": 36,
+      "default": 36,
+      "min": 1,
+      "max": 720
+    },
+    {
+      "name": "backup_fail_hours",
+      "value": 96,
+      "default": 96,
+      "min": 2,
+      "max": 2160
+    },
+    {
+      "name": "confirm_runs",
+      "value": 2,
+      "default": 2,
+      "min": 1,
+      "max": 10
+    },
+    {
+      "name": "repeat_hours",
+      "value": 24,
+      "default": 24,
+      "min": 1,
+      "max": 168
+    }
+  ],
+  "notify": true
+}

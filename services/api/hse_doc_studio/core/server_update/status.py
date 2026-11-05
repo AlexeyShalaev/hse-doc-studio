@@ -3,6 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import datetime
 
+from hse_doc_studio.core.diagnostics.acceptance import Acceptance
 from hse_doc_studio.core.server_update.entities import ReleaseInfo, UpdateRun, UpdateSettings
 
 
@@ -29,3 +30,4 @@ class UpdateStatus:
     executor: str = "none"  # compose, kubernetes или none
     rollback_blocked: bool = False  # kubernetes: обновление меняло схему, откат образа без отката базы невозможен
     risk_confirmation_required: bool = False  # kubernetes: бэкап не пройдёт, ручной запуск требует accept_risk
+    backups_accepted: Acceptance | None = None  # «бэкапы не делаю сознательно»: подтверждение риска не спрашиваем

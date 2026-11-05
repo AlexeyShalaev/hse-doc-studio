@@ -108,5 +108,6 @@
   "rollback_needs_restore": false,
   "rollback_blocked": false,
   "risk_confirmation_required": false,
+  "backups_accepted": null,
   "manual_command": "docker compose pull && docker compose up -d"
 }

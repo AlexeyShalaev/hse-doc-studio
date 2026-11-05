@@ -13,6 +13,12 @@ import {
   Spinner,
   TableSkeleton,
 } from "@shared/ui";
+import {
+  AcceptedBanner,
+  AcceptWarningButton,
+  acceptedCheck,
+  useDiagnosticsQuiet,
+} from "@features/admin-diagnostics";
 import { Banner, ViewState } from "@features/admin-ops/ui/parts";
 import {
   useBackupRuns,
@@ -53,6 +59,8 @@ const BackupsContent = () => {
   const { t } = useTranslation("adminBackups");
   const status = useBackupStatus();
   const destinations = useDestinations();
+  const accepted =
+    acceptedCheck(useDiagnosticsQuiet().data, "backups") !== null;
   const [page, setPage] = useState(0);
   const busy = Boolean(status.data?.running);
   const runs = useBackupRuns(page, busy);
@@ -140,22 +148,28 @@ const BackupsContent = () => {
             {last.error}
           </Banner>
         )}
-      {destinations.isSuccess && list.length === 0 && (
+      <AcceptedBanner check="backups" testId="backup-banner-accepted" />
+      {destinations.isSuccess && list.length === 0 && !accepted && (
         <Banner
           tone="warning"
           title={t("banner.noDestination")}
           testId="backup-banner-empty"
+          action={<AcceptWarningButton check="backups" />}
         >
           {t("banner.noDestinationBody")}
         </Banner>
       )}
-      {status.data && !status.data.settings.enabled && list.length > 0 && (
-        <Banner
-          tone="info"
-          title={t("banner.disabled")}
-          testId="backup-banner-disabled"
-        />
-      )}
+      {status.data &&
+        !status.data.settings.enabled &&
+        list.length > 0 &&
+        !accepted && (
+          <Banner
+            tone="info"
+            title={t("banner.disabled")}
+            testId="backup-banner-disabled"
+            action={<AcceptWarningButton check="backups" />}
+          />
+        )}
 
       <Section
         title={

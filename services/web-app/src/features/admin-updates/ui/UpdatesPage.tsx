@@ -13,6 +13,10 @@ import {
 } from "@shared/ui";
 import { Notice } from "@shared/ui/ConflictKit";
 import { Switch } from "@shared/ui/Switch";
+import {
+  AcceptedBanner,
+  AcceptWarningButton,
+} from "@features/admin-diagnostics";
 import { Banner, ViewState } from "@features/admin-ops/ui/parts";
 import {
   useCancelUpdate,
@@ -202,11 +206,18 @@ const UpdatesContent = () => {
           {t(kube ? "banner.updaterOfflineKube" : "banner.updaterOfflineBody")}
         </Banner>
       )}
+      {kube && data.backups_accepted && (
+        <AcceptedBanner
+          check="backups"
+          testId="update-banner-backups-accepted"
+        />
+      )}
       {needRisk && (
         <Banner
           tone="warning"
           title={t("banner.noBackupKube")}
           testId="update-banner-nobackup-kube"
+          action={<AcceptWarningButton check="backups" />}
         >
           {t("banner.noBackupKubeBody")}
         </Banner>
@@ -403,6 +414,13 @@ const UpdatesContent = () => {
           {kube && (
             <p className="form-hint" data-testid="update-kube-schema">
               {t("confirmUpdate.schemaKube")}
+            </p>
+          )}
+          {kube && data.backups_accepted && (
+            <p className="form-hint" data-testid="update-backups-accepted">
+              {t("confirmUpdate.backupsAccepted", {
+                reason: data.backups_accepted.reason,
+              })}
             </p>
           )}
           {needRisk && (

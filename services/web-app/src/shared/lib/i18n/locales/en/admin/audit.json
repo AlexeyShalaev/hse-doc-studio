@@ -173,6 +173,8 @@
       "settings_storage_thresholds_update": "Disk space thresholds changed",
       "lifecycle_run_now": "Data source cleanup started",
       "diagnostics_run": "Self-diagnostics run",
+      "diagnostics_accept": "Self-diagnostics warning accepted on purpose",
+      "diagnostics_accept_revoke": "Self-diagnostics warning brought back",
       "settings_diagnostics_update": "Self-diagnostics thresholds changed",
       "mcp_call": "MCP tool call",
       "auth_passkey_added": "Passkey added",
