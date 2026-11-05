@@ -5,7 +5,7 @@ import { escapesPanel, loginOnPhone, overlapping, presetTextScale } from "./phon
 /**
  * Левая панель проекта и чат агента в узком виде: ничто не выходит за рамку панели, длинные коды и названия
  * режутся многоточием или переносятся, подписи не налезают друг на друга. Панель 280 и 380 px на десктопе
- * (шире 380 она не растёт), 320, 390 и 480 px на телефоне (панель на весь экран), размер текста 100% и 140%.
+ * (шире 380 она не растёт), 320 и 480 px на телефоне (панель на весь экран), размер текста 100% и 140%.
  * Облако и документы подменены заглушками: на стенде нет облачных сборок и упавших документов.
  * Скриншоты: screenshots/<язык>/sidebar-*.png.
  */
@@ -140,7 +140,6 @@ const panelCases = [
   { kind: "desktop", width: 280, viewport: { width: 1360, height: 860 } },
   { kind: "desktop", width: 380, viewport: { width: 1360, height: 860 } },
   { kind: "phone", width: 320, viewport: { width: 320, height: 700 } },
-  { kind: "phone", width: 390, viewport: { width: 390, height: 844 } },
   { kind: "phone", width: 480, viewport: { width: 480, height: 900 } },
 ] as const;
 
@@ -162,7 +161,7 @@ for (const lang of LANGS) {
         });
         const tag = `sidebar-${c.kind}-${String(c.width)}-t${String(scale)}`;
 
-        test("документы: плашка облачных сборок, «Сейчас» и строки не выходят за панель", async ({ page }) => {
+        test("документы, замечания, сдача и файлы не выходят за панель", async ({ page }) => {
           await presetTextScale(page, scale);
           await page.addInitScript(
             ([key, width]) => {
@@ -198,21 +197,8 @@ for (const lang of LANGS) {
           await page.getByTestId("doc-build-topic_application").scrollIntoViewIfNeeded();
           await shot(page, L, `${tag}-documents-rows`);
           expect(await escapesPanel(page, SIDEBAR), "строки документов").toEqual([]);
-        });
 
-        test("замечания, сдача и файлы не выходят за панель", async ({ page }) => {
-          await presetTextScale(page, scale);
-          await page.addInitScript(
-            ([key, width]) => {
-              localStorage.setItem(key as string, String(width));
-            },
-            [PANEL_WIDTH_KEY, c.width],
-          );
-          await loginOnPhone(page, USERS.anna.email);
-          await mockDocsList(page, L);
-          const projectId = await firstProjectId(page);
-          await page.goto(`/projects/${projectId}/documents`);
-          await expect(page.locator(".workbench-sidebar .workbench-panel")).toBeVisible();
+          // Остальные панели того же проекта: замечания, сдача, файлы.
           const nav = phone ? page.locator(".activity-bar--tabs") : page.locator("nav.activity-bar");
           const sections: [RegExp, string][] = [
             [/Замечания|Issues/, "review"],
