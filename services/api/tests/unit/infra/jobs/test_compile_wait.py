@@ -9,6 +9,8 @@ from uuid import UUID, uuid4
 
 from hse_doc_studio.api import compile_stream
 from hse_doc_studio.core.compile.wait import (
+    CompilePhase,
+    CompilePhaseInfo,
     CompilePlacementInfo,
     CompileWaitInfo,
     CompileWaitReason,
@@ -157,14 +159,21 @@ class _ScriptedWaits:
     enabled = True
 
     def __init__(
-        self, script: list[CompileWaitInfo | None], placements: list[CompilePlacementInfo | None] | None = None
+        self,
+        script: list[CompileWaitInfo | None],
+        placements: list[CompilePlacementInfo | None] | None = None,
+        phases: list[CompilePhaseInfo | None] | None = None,
     ) -> None:
         self._script = script
+        self._phases = phases or [None]
         self._placements = placements or [None]
         self.viewers: list[str | None] = []
 
     async def of(self, compile_id: UUID) -> CompileWaitInfo | None:  # noqa: ARG002
         return self._script.pop(0) if len(self._script) > 1 else self._script[0]
+
+    async def phase_of(self, compile_id: UUID) -> CompilePhaseInfo | None:  # noqa: ARG002
+        return self._phases.pop(0) if len(self._phases) > 1 else self._phases[0]
 
     async def placement_of(self, compile_id: UUID, viewer_id: str | None) -> CompilePlacementInfo | None:  # noqa: ARG002
         self.viewers.append(viewer_id)
@@ -347,3 +356,59 @@ async def test__placement__disabled_note_only_for_runner_owner() -> None:
         PlacementState.shared, fallback=PlacementFallback.disabled
     )
     assert await reader.placement_of(job, "boris") == CompilePlacementInfo(PlacementState.shared)
+
+
+async def test__phase__queued_job_is_queued_with_runner_load() -> None:
+    queue, runners = InMemoryJobQueue(clock=lambda: NOW), InMemoryRunnerRepository()
+    await _runner(runners, seen=NOW, tags={"tex"})
+    first, second = uuid4(), uuid4()
+    await queue.enqueue(_request(first))
+    await queue.enqueue(_request(second))
+    runner = (await runners.list())[0]
+    claimed = await queue.claim(RunnerRef(UUID(runner.id), frozenset({"tex"})), lease_s=45.0)
+    assert claimed is not None
+
+    waiting = second if claimed.id == first else first
+    info = await _reader(queue, runners).phase_of(waiting)
+
+    assert info is not None
+    assert (info.phase, info.started_at, info.runners_busy, info.runners_capacity) == (CompilePhase.queued, None, 1, 1)
+
+
+async def test__phase__running_job_carries_the_runner_start_time() -> None:
+    queue, runners = InMemoryJobQueue(clock=lambda: NOW), InMemoryRunnerRepository()
+    job_id = uuid4()
+    await queue.enqueue(_request(job_id))
+    await queue.claim(RunnerRef(uuid4(), frozenset({"tex"})), lease_s=45.0)
+
+    info = await _reader(queue, runners).phase_of(job_id)
+
+    assert info is not None
+    assert info.phase is CompilePhase.running
+    assert info.started_at == NOW
+
+
+async def test__phase__finished_or_unknown_job_has_no_phase() -> None:
+    queue, runners = InMemoryJobQueue(clock=lambda: NOW), InMemoryRunnerRepository()
+    job_id = uuid4()
+    await queue.enqueue(_request(job_id))
+    await queue.request_cancel(job_id)
+
+    reader = _reader(queue, runners)
+    assert await reader.phase_of(job_id) is None
+    assert await reader.phase_of(uuid4()) is None
+
+
+async def test__merged_events__phase_is_sent_first_and_on_change(monkeypatch) -> None:  # noqa: ANN001
+    monkeypatch.setattr(compile_stream, "_WAIT_POLL_S", 0.01)
+    queued = CompilePhaseInfo(CompilePhase.queued, NOW)
+    running = CompilePhaseInfo(CompilePhase.running, NOW, NOW)
+    waits = _ScriptedWaits([None], phases=[queued, queued, running])
+
+    events = [e async for e in compile_stream.merged_events(_lines("a", delay=0.1), waits, uuid4())]  # type: ignore[arg-type]
+
+    phases = [value for kind, value in events if kind == "phase"]
+    assert len(phases) == 2
+    assert '"phase": "queued"' in phases[0]
+    assert '"phase": "running"' in phases[1]
+    assert events[0][0] == "phase"

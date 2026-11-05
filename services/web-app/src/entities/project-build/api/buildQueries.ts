@@ -9,6 +9,15 @@ export const buildKeys = {
 };
 
 const POLL_MS = 30_000;
+/** Пока в облаке идёт сборка, статус обновляем часто: отмена и итог должны дойти до Студии без перезагрузки. */
+export const POLL_BUSY_MS = 4_000;
+
+const pollInterval = (
+  data: { documents: readonly { cloud_running: boolean }[] } | undefined,
+): number =>
+  data?.documents.some((d) => d.cloud_running) === true
+    ? POLL_BUSY_MS
+    : POLL_MS;
 
 /** Облако: статус сборок проекта; пока вкладка видна, обновляется сам (сборка закончилась, Студия выгрузила PDF). */
 export const useCloudBuilds = (projectId: string, enabled = true) =>
@@ -17,7 +26,7 @@ export const useCloudBuilds = (projectId: string, enabled = true) =>
     queryFn: () => cloudBuildsApi.list(projectId),
     enabled: enabled && !!projectId,
     staleTime: 10_000,
-    refetchInterval: POLL_MS,
+    refetchInterval: (query) => pollInterval(query.state.data),
     refetchIntervalInBackground: false,
     retry: false,
   });
@@ -29,10 +38,22 @@ export const useLocalBuilds = (projectId: string, enabled = true) =>
     queryFn: () => localBuildsApi.list(projectId),
     enabled: enabled && !!projectId,
     staleTime: 10_000,
-    refetchInterval: POLL_MS,
+    refetchInterval: (query) => pollInterval(query.state.data),
     refetchIntervalInBackground: false,
     retry: false,
   });
+
+/** «Остановить сборку» облачной сборки из Студии: после ответа статус перечитывается сразу. */
+export const useCancelCloudBuilds = (projectId: string) => {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (docId: string | null) =>
+      localBuildsApi.cancelCloud(projectId, docId),
+    onSettled: () => {
+      void client.invalidateQueries({ queryKey: buildKeys.local(projectId) });
+    },
+  });
+};
 
 /** «Получить сборку»: скачать готовый PDF облачной сборки. */
 export const useFetchCloudBuild = (projectId: string) => {

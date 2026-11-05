@@ -89,6 +89,13 @@ class CancelCompileUC:
             self._maybe_unstick_document(project_folder, record.doc_id, inp.compile_id)
             return CancelCompileOutput(cancelled_task=False, record_finalised=False)
 
+        # Задача могла остаться в очереди или на раннере, хотя процесс её уже не отслеживает (перезапуск, другой
+        # экземпляр сервера): без запроса отмены раннер дособрал бы то, что в записи уже «отменено».
+        try:
+            await self._dispatcher.cancel(inp.compile_id)
+        except Exception:  # noqa: BLE001 — запись всё равно закрываем, иначе кнопки останутся заблокированными
+            logger.warning("cancel_compile: job cancel request failed", compile_id=str(inp.compile_id), exc_info=True)
+
         finished_at = datetime.now(tz=timezone.utc)
         log_tail = (record.log or "").rstrip()
         suffix = "[cancelled] cancelled by user (no live task)"

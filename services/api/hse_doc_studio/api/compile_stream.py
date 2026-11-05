@@ -3,12 +3,13 @@
 from __future__ import annotations
 
 import asyncio
+import json
 from collections.abc import AsyncIterator
 from uuid import UUID
 
 from hse_doc_studio.api.schemas.personal_runners import CompilePlacement
 from hse_doc_studio.api.schemas.session import CompileWait
-from hse_doc_studio.core.compile.wait import CompilePlacementInfo, CompileWaitInfo, ICompileWaitReader
+from hse_doc_studio.core.compile.wait import CompilePhaseInfo, CompilePlacementInfo, CompileWaitInfo, ICompileWaitReader
 
 _WAIT_POLL_S = 2.0
 _Event = tuple[str, str]
@@ -38,6 +39,19 @@ def placement_schema(info: CompilePlacementInfo | None) -> CompilePlacement | No
     )
 
 
+def phase_payload(info: CompilePhaseInfo) -> str:
+    """Тело события `phase`: время и загрузка раннеров; клиент сам считает, сколько сборка уже работает."""
+    return json.dumps(
+        {
+            "phase": info.phase.value,
+            "queued_at": info.queued_at.isoformat(),
+            "started_at": info.started_at.isoformat() if info.started_at is not None else None,
+            "runners_busy": info.runners_busy,
+            "runners_capacity": info.runners_capacity,
+        }
+    )
+
+
 async def _pump_logs(stream: AsyncIterator[str], events: asyncio.Queue[_Event | None]) -> None:
     try:
         async for line in stream:
@@ -55,7 +69,14 @@ async def _pump_waits(
     """
     last: str | None = None
     last_placement: str | None = None
+    last_phase: str | None = None
     while True:
+        phase = await waits.phase_of(compile_id)
+        if phase is not None:
+            sent = phase_payload(phase)
+            if sent != last_phase:
+                await events.put(("phase", sent))
+            last_phase = sent
         info = wait_schema(await waits.of(compile_id))
         payload = "null" if info is None else info.model_dump_json()
         if payload != last and (last is not None or info is not None):

@@ -506,6 +506,7 @@ ROUTE_SCOPES: Mapping[RouteKey, RouteScope] = {
     ("POST", "/git/-/presence"): RouteScope.git_token,
     ("GET", "/git/-/presence/overview"): RouteScope.git_token,
     ("GET", "/git/-/projects/{project_id}/builds"): RouteScope.git_token,
+    ("POST", "/git/-/projects/{project_id}/builds/cancel"): RouteScope.git_token,
     ("GET", "/git/-/projects/{project_id}/documents/{doc_id}/pdf"): RouteScope.git_token,
     # gitremote: вход устройства по коду; подтверждает только вошедший по сессии (маршрут отвергает PAT)
     # gitremote: вход локальной Студии на сервер Студии и его проекты

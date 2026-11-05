@@ -1,14 +1,14 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from pathlib import Path, PurePosixPath
 from uuid import UUID
 
 import structlog
 
 from hse_doc_studio.core.compile.failure import CompileFailure
-from hse_doc_studio.core.entities import Document
-from hse_doc_studio.core.enums import DocumentStatus
+from hse_doc_studio.core.entities import Document, Project
+from hse_doc_studio.core.enums import CompileStatus, DocumentStatus
 from hse_doc_studio.core.errors import NotFoundError
 from hse_doc_studio.core.jobs.entities import compile_job_tags
 from hse_doc_studio.core.repositories import (
@@ -22,6 +22,8 @@ from hse_doc_studio.core.team import author_by_slug, is_doc_active
 from hse_doc_studio.use_cases.projects.get_project import GetProjectInput, GetProjectUC
 
 logger = structlog.get_logger()
+
+_UNFINISHED = (CompileStatus.pending, CompileStatus.running)
 
 
 @dataclass
@@ -74,6 +76,7 @@ class ListDocumentsUC:
         template_repo: ITemplateRepository | None = None,
         compile_repo: ICompileRepository | None = None,
     ) -> None:
+        self._project_repo = project_repo
         self._template_repo = template_repo
         self._compile_repo = compile_repo
         self._template_service = ProjectTemplateService()
@@ -81,7 +84,7 @@ class ListDocumentsUC:
 
     async def execute(self, inp: ListDocumentsInput) -> ListDocumentsOutput:
         result = await self._get_uc.execute(GetProjectInput(project_id=inp.project_id))
-        project = result.project
+        project = await self._settle_orphans(result.project)
         version = (
             self._template_repo.get_version(project.lock.pack_id, project.lock.template_id, project.lock.version)
             if self._template_repo is not None
@@ -140,6 +143,39 @@ class ListDocumentsUC:
                 )
             )
         return ListDocumentsOutput(documents=visible_docs, entries=entries)
+
+    async def _settle_orphans(self, project: Project) -> Project:
+        """Документ «собирается», а записи сборки нет или она закончена: статус пришёл чужим (синхронизация из облака).
+
+        Локальная Студия получает `project.json` с `building` от облачной сборки, которой в её журнале нет: без
+        сверки панель вечно «собирается», а «Остановить» нечего останавливать. Закрываем такой статус по записи.
+        """
+        if self._compile_repo is None:
+            return project
+        fixed: dict[str, Document] = {}
+        for doc in project.documents:
+            if doc.status is DocumentStatus.building and (status := await self._orphan_status(project.folder, doc)):
+                fixed[doc.id] = replace(doc, status=status)
+        if not fixed:
+            return project
+        project.documents[:] = [fixed.get(doc.id, doc) for doc in project.documents]
+        self._project_repo.save(project)
+        return project
+
+    async def _orphan_status(self, folder: Path, doc: Document) -> DocumentStatus | None:
+        """Новый статус «зависшего» документа; None, если сборка жива, успешна (итог пишет она сама) или не читается."""
+        if doc.last_compile_id is None or self._compile_repo is None:
+            return DocumentStatus.draft
+        try:
+            record = await self._compile_repo.get_for_project(folder, doc.last_compile_id)
+        except Exception:  # noqa: BLE001 — сверка вторична: список документов важнее
+            logger.warning("list_documents: compile record unreadable", doc_id=doc.id, exc_info=True)
+            return None
+        if record is None:
+            return DocumentStatus.draft
+        if record.status in _UNFINISHED or record.status is CompileStatus.success:
+            return None
+        return DocumentStatus.err
 
     async def _failure_of(self, folder: Path, doc: Document) -> CompileFailure | None:
         if self._compile_repo is None or doc.status is not DocumentStatus.err or doc.last_compile_id is None:

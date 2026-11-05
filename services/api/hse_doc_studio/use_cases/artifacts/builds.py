@@ -25,8 +25,10 @@ from hse_doc_studio.core.entities import Project
 from hse_doc_studio.core.i18n import localized_error
 from hse_doc_studio.core.jobs.artifacts import IArtifactStore
 from hse_doc_studio.core.projects.locator import IProjectLocator
+from hse_doc_studio.core.repositories import ICompileRepository
 from hse_doc_studio.core.vcs.entities import VcsSettings
 from hse_doc_studio.core.vcs.protocols import IVcsService
+from hse_doc_studio.use_cases.compile.cancel_compile import CancelCompileInput, CancelCompileUC
 
 logger = structlog.get_logger()
 
@@ -94,6 +96,44 @@ class GitProjectGate:
                     "You have no right to read the sources and the result of this project.",
                 ),
             )
+
+    async def require_build(self, actor: Actor, project_id: UUID) -> None:
+        """Право запускать и останавливать сборки: то же, что у кнопки «Остановить сборку» в вебе."""
+        await self.require(actor, project_id)
+        acl = await self._acl.load_for(actor, project_id, include_links=False)
+        if acl is None or decide(actor, Action.BUILD_RUN, acl) is not Decision.allow:
+            raise ArtifactError(
+                ArtifactErrorCode.forbidden,
+                localized_error(
+                    "Для этого проекта нет права запускать и останавливать сборки.",
+                    "You have no right to run or stop builds in this project.",
+                ),
+            )
+
+
+class CancelCloudBuildsUC:
+    """Остановить облачные сборки проекта по просьбе локальной Студии: в очереди и идущие на раннере.
+
+    Идемпотентно: законченных сборок нет среди `unfinished`, повторный вызов даёт ноль остановленных.
+    """
+
+    def __init__(self, locator: IProjectLocator, compile_repo: ICompileRepository, cancel: CancelCompileUC) -> None:
+        self._locator = locator
+        self._compile_repo = compile_repo
+        self._cancel = cancel
+
+    async def execute(self, project_id: UUID, doc_id: str | None) -> int:
+        located = await self._locator.locate(project_id)
+        if located is None:
+            raise _not_found()
+        folder, _project = located
+        stopped = 0
+        for record in await self._compile_repo.list_unfinished(folder):
+            if doc_id is not None and record.doc_id != doc_id:
+                continue
+            await self._cancel.execute(CancelCompileInput(project_id=project_id, compile_id=record.id))
+            stopped += 1
+        return stopped
 
 
 class ProjectBuildsUC:

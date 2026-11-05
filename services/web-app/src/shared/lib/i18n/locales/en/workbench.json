@@ -39,7 +39,17 @@
     "nothingFoundHint": "Change the query or reset the filters",
     "resetFilters": "Reset filters",
     "loading": "Loading…",
-    "expandAllGroups": "Expand all groups"
+    "expandAllGroups": "Expand all groups",
+    "cancelQueue": "Cancel queue",
+    "stopCloudBuild": "Stop cloud build",
+    "stopping": "Stopping…",
+    "cancelDone": "The cloud build was stopped",
+    "cancelNothing": "No cloud builds are running any more",
+    "cancelFailed": "Could not stop the cloud build",
+    "cancelForbidden": "You have no right to stop builds in this project",
+    "cancelOffline": "No connection to the Studio server: the build was not stopped, try again",
+    "cancelSignIn": "Sign in to the Studio server again",
+    "cancelUnsupported": "The Studio server cannot stop builds: update it"
   },
   "documents": {
     "title": "Documents",
@@ -58,10 +68,27 @@
     "groupOther": "Other",
     "empty": "This project has no documents yet",
     "buildInProgress": "Building…",
-    "stalledWarning": "The build has been unresponsive longer than usual. It may have stalled — stop it and start again.",
+    "stalledWarning": "The build is not responding: a runner took it, but there has been no output for {{count}} min. It may have stalled: stop it and start again.",
     "rollupOk": "built",
     "rollupWarn": "with warnings",
-    "rollupErr": "with errors"
+    "rollupErr": "with errors",
+    "queueSummary": "Building: {{running}}, queued: {{queued}}",
+    "queueOnly": "Queued: {{count}}. The runner takes builds one by one, this is not a stall.",
+    "cloudBuildInProgress": "Building in the cloud…",
+    "state": {
+      "queued": "queued",
+      "queuedPos": "queued, position {{position}}",
+      "queuedBusy": "queued, runner busy: {{busy}} of {{capacity}}",
+      "queuedBusyPos": "queued, position {{position}}, runner busy: {{busy}} of {{capacity}}",
+      "personal": "waiting for your runner",
+      "noRunner": "no free runner with the required tags",
+      "retry": "runner lost, retry {{attempt}} of {{max}}",
+      "starting": "starting",
+      "running": "building {{time}}",
+      "silent": "not responding for {{count}} min",
+      "failed": "error",
+      "built": "built"
+    }
   },
   "review": {
     "title": "Issues",

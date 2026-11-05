@@ -202,6 +202,20 @@ class LocalBuildsUC:
         except GitSyncError as exc:
             return None, exc.code.value
 
+    # --- остановка облачных сборок ----------------------------------------------------------------------------
+
+    async def cancel_cloud(self, project_id: UUID, doc_id: str | None) -> int:
+        """Остановить облачные сборки проекта по входу этой Студии; сколько остановлено (ноль: уже закончились)."""
+        project = (await self._projects.execute(GetProjectInput(project_id=project_id))).project
+        link = await self._link(project)
+        if link is None:
+            raise NotFoundError(
+                localized_error(
+                    "Проект не подключён к серверу Студии", "The project is not connected to a Studio server"
+                )
+            )
+        return await self._servers.cancel_project_builds(link.credential_id, link.server_project, doc_id)
+
     # --- получение --------------------------------------------------------------------------------------------
 
     async def fetch(

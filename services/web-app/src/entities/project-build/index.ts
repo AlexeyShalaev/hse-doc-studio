@@ -2,7 +2,9 @@ export * from "./model/build.schema";
 export { cloudBuildsApi, localBuildsApi } from "./api/buildApi";
 export {
   buildKeys,
+  POLL_BUSY_MS,
   useAutoFetchCloudBuilds,
+  useCancelCloudBuilds,
   useCloudBuilds,
   useFetchCloudBuild,
   useLocalBuilds,

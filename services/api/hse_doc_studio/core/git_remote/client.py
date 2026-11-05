@@ -35,6 +35,9 @@ class StudioServerErrorCode:
     cloud_pdf_missing = "cloud_pdf_missing"
     cloud_pdf_forbidden = "cloud_pdf_forbidden"
     cloud_pdf_too_large = "cloud_pdf_too_large"
+    # Остановка облачных сборок: нет права запускать сборки, старый сервер маршрута не знает.
+    cancel_forbidden = "cancel_forbidden"
+    cancel_unsupported = "cancel_unsupported"
 
 
 class StudioServerError(Exception):
@@ -151,6 +154,12 @@ class IStudioServerClient(Protocol):
 
     async def project_builds(self, target: StudioServerTarget, token: Secret, project_id: UUID) -> JsonObject:
         """Статус сборок проекта на сервере (сырой ответ сервера)."""
+        ...
+
+    async def cancel_project_builds(
+        self, target: StudioServerTarget, token: Secret, project_id: UUID, doc_id: str | None
+    ) -> int:
+        """Остановить облачные сборки проекта (одного документа или всех); сколько остановлено."""
         ...
 
     async def download_cloud_pdf(  # noqa: PLR0913 — параметры одной загрузки

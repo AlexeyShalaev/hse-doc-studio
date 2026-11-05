@@ -16,6 +16,8 @@ from hse_doc_studio.api.dishka_route import SafeDishkaRoute
 from hse_doc_studio.api.schemas.builds import BuildOut
 from hse_doc_studio.api.schemas.devices import DevicesOverviewResponse, ProjectSyncOut
 from hse_doc_studio.api.schemas.studio_link import (
+    CancelCloudBuildsRequest,
+    CancelCloudBuildsResponse,
     DeviceNameRequest,
     DocumentBuildStatusOut,
     FetchBuildRequest,
@@ -168,6 +170,25 @@ async def local_builds(project_id: UUID, uc: FromDishka[LocalBuildsUC]) -> Local
         cloud_head=found.cloud_head,
         documents=[_document(d) for d in found.documents],
     )
+
+
+@router.post("/projects/{project_id}/git/builds/cancel", response_model=CancelCloudBuildsResponse)
+async def cancel_cloud_builds(
+    project_id: UUID, body: CancelCloudBuildsRequest, uc: FromDishka[LocalBuildsUC]
+) -> CancelCloudBuildsResponse:
+    """Остановить облачную сборку (в очереди или на раннере) по входу этой Студии; повтор безвреден."""
+    try:
+        stopped = await uc.cancel_cloud(project_id, body.doc_id)
+    except NotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except StudioServerError as exc:
+        status = {
+            StudioServerErrorCode.unauthorized: 401,
+            StudioServerErrorCode.cancel_forbidden: 403,
+            StudioServerErrorCode.cancel_unsupported: 501,
+        }.get(exc.code, 502)
+        raise HTTPException(status_code=status, detail=exc.code) from exc
+    return CancelCloudBuildsResponse(cancelled=stopped)
 
 
 @router.post("/projects/{project_id}/git/builds/fetch", response_model=FetchBuildResponse)

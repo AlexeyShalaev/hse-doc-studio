@@ -35,3 +35,15 @@ export {
   hasBuildOutput,
   shortReason,
 } from "./lib/failureText";
+export {
+  LEGACY_STALL_AFTER_MS,
+  STALL_AFTER_MS,
+  buildStateOf,
+  formatElapsed,
+  isSlotStalled,
+  silentMinutes,
+} from "./lib/compilePhase";
+export type { BuildState } from "./lib/compilePhase";
+export { useProjectBuildSummary } from "./lib/useProjectBuildSummary";
+export type { ProjectBuildSummary } from "./lib/useProjectBuildSummary";
+export { useNowWhile } from "./lib/useNowWhile";
