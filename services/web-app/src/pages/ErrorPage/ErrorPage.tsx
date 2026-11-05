@@ -1,7 +1,8 @@
 import { AlertTriangle, ArrowLeft, Bug, Home, RotateCcw } from "lucide-react";
 import { isRouteErrorResponse, useNavigate, useRouteError } from "react-router";
 import { useTranslation } from "react-i18next";
-import { i18n } from "@shared/lib";
+import { i18n, isChunkLoadError } from "@shared/lib";
+import { StaleBuildScreen } from "./StaleBuildScreen";
 
 const REPO_URL = "https://github.com/AlexeyShalaev/hse-doc-studio";
 // GitHub обрезает слишком длинные prefill-URL — стек ограничиваем заранее.
@@ -112,6 +113,8 @@ export const ErrorPage = ({ status = 500, message }: ErrorPageProps) => {
   const routeError = useRouteError();
   const navigate = useNavigate();
   const meta = getErrorMeta(routeError, status, message);
+
+  if (isChunkLoadError(routeError)) return <StaleBuildScreen />;
 
   return (
     <div

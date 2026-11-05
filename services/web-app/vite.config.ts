@@ -7,13 +7,16 @@ const { version } = JSON.parse(
   readFileSync(new URL("./package.json", import.meta.url), "utf-8"),
 ) as { version: string };
 
+// Идентификатор сборки: версия в package.json не меняется между пересборками одного релиза.
+const buildId = Date.now().toString(36);
+
 const emitVersionJson = (): Plugin => ({
   name: "emit-version-json",
   writeBundle(options) {
     const outDir = options.dir ?? "dist";
     writeFileSync(
       path.join(outDir, "version.json"),
-      JSON.stringify({ version }),
+      JSON.stringify({ version, build: buildId }),
     );
   },
 });
@@ -70,6 +73,7 @@ export default defineConfig(({ mode }) => {
   return {
     define: {
       __APP_VERSION__: JSON.stringify(version),
+      __BUILD_ID__: JSON.stringify(buildId),
     },
 
     plugins: [react(), emitVersionJson()],
