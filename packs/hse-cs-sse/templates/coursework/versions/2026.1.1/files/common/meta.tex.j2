@@ -1,0 +1,141 @@
+% ((# ============================================================ #))
+% ((# common/meta.tex — АВТОГЕНЕРИРУЕМЫЙ ФАЙЛ. НЕ РЕДАКТИРОВАТЬ.    #))
+% ((#                                                              #))
+% ((# Тул перегенерирует его из .hse-studio/project.json ПЕРЕД      #))
+% ((# каждой сборкой. Здесь все ИЗМЕНЯЕМЫЕ данные проекта (ФИО,     #))
+% ((# группа, год, руководитель, редакция заявки…) в виде макросов  #))
+% ((# \hse… — документы используют их вместо литералов, поэтому     #))
+% ((# правка в настройках сразу попадает в PDF.                     #))
+% ((#                                                              #))
+% ((# Источник: common/meta.tex.j2 (dynamic_includes в version.yaml).#))
+% ((# Двухстрочная форма \newcommand{..}{%<NL>val} нужна, чтобы      #))
+% ((# избежать «{{{» — Jinja принял бы его за открытие выражения.    #))
+% ((# ============================================================ #))
+
+% ── Плейсхолдер «заполните сами» ────────────────────────────
+% Жёлтая подсветка мест, которые студент заменяет своим текстом:
+%   \hseFill{сформулируйте цель работы}
+% Каждое слово в своём \colorbox — длинный плейсхолдер переносится по словам.
+% Определён первым: макросы ниже подставляют его вместо пустых полей.
+\ExplSyntaxOn
+\ProvideDocumentCommand{\hseFill}{m}
+ {
+  \group_begin:
+  \setlength{\fboxsep}{1.5pt}
+  \seq_set_split:Nnn \l_tmpa_seq { ~ } { <#1> }
+  \seq_set_map:NNn \l_tmpb_seq \l_tmpa_seq { \colorbox{yellow!50}{##1} }
+  \seq_use:Nn \l_tmpb_seq { ~ }
+  \group_end:
+ }
+% \hseOptional{…} — та же подсветка без угловых скобок: готовый текст,
+% который оставляют как есть или удаляют, если к работе не относится.
+\ProvideDocumentCommand{\hseOptional}{m}
+ {
+  \group_begin:
+  \setlength{\fboxsep}{1.5pt}
+  \seq_set_split:Nnn \l_tmpa_seq { ~ } { #1 }
+  \seq_set_map:NNn \l_tmpb_seq \l_tmpa_seq { \colorbox{yellow!50}{##1} }
+  \seq_use:Nn \l_tmpb_seq { ~ }
+  \group_end:
+ }
+\ExplSyntaxOff
+
+% ── Тема работы ─────────────────────────────────────────────
+% \hseProjectName — имя проекта (тема на языке работы, как назвал автор).
+% \hseTitleRu / \hseTitleEn — тема на русском и английском для сводки заявки,
+% заявления и титула: русская берётся из name_ru, иначе из имени проекта.
+\newcommand{\hseProjectName}{%
+{{ project.name | texesc }}}
+\newcommand{\hseTitleRu}{%
+((* if project.meta.name_ru *)){{ project.meta.name_ru | texesc }}((* else *)){{ project.name | texesc }}((* endif *))}
+\newcommand{\hseTitleEn}{%
+((* if project.meta.name_en *)){{ project.meta.name_en | texesc }}((* else *))\hseFill{укажите название на английском в настройках проекта}((* endif *))}
+% Совместимость со сценарием презентации: англ. название = \hseTitleEn.
+\newcommand{\hseProjectNameEn}{\hseTitleEn}
+
+% ── Язык выполнения работы (= язык проекта) ─────────────────
+\newcommand{\hseWorkLang}{%
+((* if project.lang == 'en' *))английский((* else *))русский((* endif *))}
+\newcommand{\hseWorkLangEn}{%
+((* if project.lang == 'en' *))English((* else *))Russian((* endif *))}
+
+% ── Автор ───────────────────────────────────────────────────
+\newcommand{\hseAuthorName}{%
+((* if author.name *)){{ author.name | texesc }}((* elif project.authors *)){{ project.authors[0].name | texesc }}((* endif *))}
+\newcommand{\hseAuthorEmail}{%
+((* if author.email *)){{ author.email | texesc }}((* elif project.authors *)){{ project.authors[0].email | default('') | texesc }}((* endif *))}
+\newcommand{\hseGroup}{%
+((* if author.group *)){{ author.group | texesc }}((* elif project.authors and project.authors[0].group *)){{ project.authors[0].group | texesc }}((* else *))\hseFill{группа}((* endif *))}
+
+% ── Учебные метаданные ──────────────────────────────────────
+\newcommand{\hseYear}{%
+{{ project.meta.year | default('') | texesc }}}
+\newcommand{\hseDegreeType}{Магистратура}
+\newcommand{\hseDegreeLevel}{магистратуры}
+\newcommand{\hseCourse}{1}
+\newcommand{\hseSpecialization}{%
+{{ project.meta.specialization | default('Системная и программная инженерия', true) | texesc }}}
+\newcommand{\hseProgramCode}{%
+{{ project.meta.program_code | default('09.04.04 «Программная инженерия»', true) | texesc }}}
+\newcommand{\hseFaculty}{%
+{{ project.meta.faculty | default('Факультет компьютерных наук', true) | texesc }}}
+\newcommand{\hseDepartment}{%
+{{ project.meta.department | default('Департамент программной инженерии', true) | texesc }}}
+\newcommand{\hseSupervisorDepartment}{%
+{{ project.meta.supervisor_department | default(project.meta.department, true) | default('Департамент программной инженерии', true) | texesc }}}
+\newcommand{\hseCity}{%
+{{ project.meta.city | default('Москва', true) | texesc }}}
+\newcommand{\hseUDC}{%
+{{ project.meta.udc | default('004', true) | texesc }}}
+
+% ── Руководители ────────────────────────────────────────────
+% Person: name — ФИО, title — должность, degree — степень и звание.
+\newcommand{\hseSupervisorName}{%
+((* if project.supervisor.name *)){{ project.supervisor.name | texesc }}((* else *))\hseFill{ФИО научного руководителя}((* endif *))}
+\newcommand{\hseSupervisorTitle}{%
+{{ project.supervisor.title | default('') | texesc }}}
+\newcommand{\hseSupervisorDegree}{%
+{{ project.supervisor.degree | default('') | texesc }}}
+% «Д. С. Хопкинс, проф., д.м.н., основатель университета» — п. 5 сводки.
+\newcommand{\hseSupervisorFull}{%
+\hseSupervisorName((* if project.supervisor.degree *)), {{ project.supervisor.degree | texesc }}((* endif *))((* if project.supervisor.title *)), {{ project.supervisor.title | texesc }}((* endif *))((* if not project.supervisor.degree and not project.supervisor.title *)), \hseFill{степень, звание, должность}((* endif *))}
+\newcommand{\hseCoSupervisorName}{%
+{{ project.co_supervisor.name | default('') | texesc }}}
+\newcommand{\hseCoSupervisorTitle}{%
+{{ project.co_supervisor.title | default('') | texesc }}}
+\newcommand{\hseCoSupervisorDegree}{%
+{{ project.co_supervisor.degree | default('') | texesc }}}
+\newcommand{\hseAcademicSupervisorName}{%
+{{ project.academic_supervisor.name | default('С. А. Шершаков', true) | texesc }}}
+\newcommand{\hseAcademicSupervisorTitle}{%
+{{ project.academic_supervisor.title | default('Академический руководитель образовательной программы «Системная и программная инженерия»', true) | texesc }}}
+
+% Строка даты под подписью: дата ставится от руки или в инструменте «Подписи».
+% Год — календарный год сборки (заявка подписывается осенью, а \hseYear —
+% год защиты, т.е. следующий).
+\newcommand{\signdateblank}{«\rule{0.8cm}{0.4pt}» \rule{2.5cm}{0.4pt} \the\year~г.}
+
+% ── Булевы флаги для условной печати ────────────────────────
+\newif\ifhseHasSupervisorTitle
+((* if project.supervisor.title or project.supervisor.degree *))\hseHasSupervisorTitletrue((* else *))\hseHasSupervisorTitlefalse((* endif *))
+\newif\ifhseHasCoSupervisor
+((* if project.co_supervisor.name *))\hseHasCoSupervisortrue((* else *))\hseHasCoSupervisorfalse((* endif *))
+\newif\ifhseHasNameEn
+((* if project.meta.name_en *))\hseHasNameEntrue((* else *))\hseHasNameEnfalse((* endif *))
+\newif\ifhseHasAuthorEmail
+((* if author.email or (project.authors and project.authors[0].email) *))\hseHasAuthorEmailtrue((* else *))\hseHasAuthorEmailfalse((* endif *))
+% Научный руководитель из компании (role: company), а не сотрудник ВШЭ:
+% в заявлении нужно согласие академического руководителя.
+\newif\ifhseExternalSupervisor
+((* if project.supervisor.role == 'company' *))\hseExternalSupervisortrue((* else *))\hseExternalSupervisorfalse((* endif *))
+% Редакция заявки: предварительная (PRP, до 15.11) или доработанная (EPP, CP1).
+\newif\ifhseExtendedProposal
+((* if 'Доработ' in (project.meta.proposal_stage | default('', true)) *))\hseExtendedProposaltrue((* else *))\hseExtendedProposalfalse((* endif *))
+% Формат КП (методичка §2.1): проектно-исследовательский или академический.
+\newif\ifhseResearchKind
+((* if project.kind == 'research' *))\hseResearchKindtrue((* else *))\hseResearchKindfalse((* endif *))
+% Совместимость со сценарием презентации бакалавриата.
+\newif\ifhseTeam
+\hseTeamfalse
+\newif\ifhseSharedDoc
+\hseSharedDocfalse
