@@ -1,6 +1,32 @@
 {
   "releases": [
     {
+      "version": "0.9.0",
+      "date": "2026-11-05",
+      "notes": [
+        {
+          "ru": "Заявление о выборе темы и презентация собираются без данных руководителя или автора: новая версия шаблона курсового проекта 2026.1.1 исправляет ошибку «There's no line here to end», из-за которой сборка падала, если поле подписи было пустым. Новые проекты создаются сразу на ней, существующие видят её как рекомендуемое небольшое обновление: примите его в настройках проекта",
+          "en": "The topic application and the presentation build without supervisor or author data: the new course project template version 2026.1.1 fixes the There's no line here to end error that broke the build when a signature field was empty. New projects are created on it right away, existing ones see it as a recommended small update: accept it in the project settings"
+        },
+        {
+          "ru": "Облачные сборки через личный раннер получают те же шрифты, что и локальные: Times New Roman, Arial и Consolas, которые локальная Студия берёт с вашего компьютера при подключении раннера, если папка шрифтов пуста. Общему раннеру и раннеру в Kubernetes каталог шрифтов задаётся настройкой (том). Шрифты Microsoft в Студию и образы не входят. Если шаблон просит шрифт напрямую и его нет, сборка падает с понятной причиной «нет шрифта» и названием",
+          "en": "Cloud builds on a personal runner get the same fonts as local builds: Times New Roman, Arial and Consolas, which the local Studio takes from your computer when the runner connects if the fonts folder is empty. For a shared runner and a runner in Kubernetes the fonts folder is set by a setting (a volume). Microsoft fonts are not shipped with the Studio or its images. If a template asks for a font directly and it is missing, the build fails with a clear font missing reason and the font name"
+        },
+        {
+          "ru": "Исправлена ложная ошибка выгрузки: когда «Собрать всё» запускало несколько сборок одного проекта, вторая сборка могла удалить готовый PDF первой, и первая сообщала «не удалось выгрузить результат». Теперь результат копируется отдельно до выгрузки, а если файла действительно нет, причина называется «PDF не получен». Также упавшая сборка больше не показывает вечное «Сборка не отвечает дольше обычного» и кнопку «Остановить сборку»",
+          "en": "Fixed a false upload error: when Build all started several builds of one project, the second build could delete the first one's finished PDF and the first reported that the result could not be uploaded. The result is now copied aside before uploading, and if the file really is missing the reason is named PDF not received. A failed build also no longer shows an endless Build is not responding warning and the Stop build button"
+        },
+        {
+          "ru": "Размер текста: выбранная ступень больше не возвращается к значению из аккаунта. Раньше, если выбрать 100 % сразу после 140 %, настройка могла откатиться обратно, пока сохранение не дошло до сервера. Теперь явный выбор на устройстве всегда сильнее значения аккаунта и сохраняется на аккаунт с повтором при ошибке",
+          "en": "Text size: the step you pick no longer snaps back to the account value. Before, choosing 100 % right after 140 % could roll back until the save reached the server. Now an explicit choice on the device always beats the account value and is saved to the account, retrying on error"
+        },
+        {
+          "ru": "Для администраторов, обновление с 0.8.0: миграций базы нет. Новые настройки раннера: HSE_RUNNER__FONTS_DIR, HSE_RUNNER__FONTS_HOST_DIR и HSE_RUNNER__FONTS_MOUNT_TARGET (раннер с Docker), HSE_RUNNER__K8S__FONTS_CLAIM и runner.kubernetes.fonts.existingClaim в Helm (раннер в Kubernetes). Шаблон 2026.1.1 подключается автоматически для новых проектов",
+          "en": "For administrators, upgrading from 0.8.0: no database migrations. New runner settings: HSE_RUNNER__FONTS_DIR, HSE_RUNNER__FONTS_HOST_DIR and HSE_RUNNER__FONTS_MOUNT_TARGET (Docker runner), HSE_RUNNER__K8S__FONTS_CLAIM and runner.kubernetes.fonts.existingClaim in Helm (Kubernetes runner). Template 2026.1.1 is used automatically for new projects"
+        }
+      ]
+    },
+    {
       "version": "0.8.0",
       "date": "2026-11-04",
       "notes": [
