@@ -36,6 +36,28 @@ const rootFontSize = (page: Page): Promise<number> =>
     parseFloat(getComputedStyle(document.documentElement).fontSize),
   );
 
+/**
+ * Аккаунт админа общий для всех тестов: предыдущий тест мог оставить на нём 140%. Сбрасываем text_scale в начале
+ * (а не в конце, конец может не наступить), иначе новое устройство берёт со счёта чужую ступень.
+ */
+const resetAccountScale = async (page: Page): Promise<void> => {
+  const boot = (await (
+    await page.request.get("/api/v1/session/bootstrap")
+  ).json()) as { csrf_token?: string };
+  const res = await page.request.put("/api/v1/settings", {
+    data: { text_scale: 100 },
+    headers: { "X-CSRF-Token": boot.csrf_token ?? "" },
+  });
+  expect(res.ok(), await res.text()).toBe(true);
+};
+
+const accountScale = async (page: Page): Promise<number> =>
+  (
+    (await (await page.request.get("/api/v1/settings")).json()) as {
+      text_scale: number;
+    }
+  ).text_scale;
+
 /** Размер текста до загрузки приложения: тот же ключ localStorage, что читает загрузочный скрипт. */
 const presetScale = async (page: Page, scale: number): Promise<void> => {
   await page.addInitScript((value) => {
@@ -48,7 +70,11 @@ const presetScale = async (page: Page, scale: number): Promise<void> => {
       JSON.stringify({
         ...stored,
         version: stored.version ?? 0,
-        state: { ...stored.state, textScale: value },
+        state: {
+          ...stored.state,
+          textScale: value,
+          textScaleChosen: value !== 100,
+        },
       }),
     );
   }, scale);
@@ -68,8 +94,9 @@ for (const lang of LANGS) {
       page,
     }) => {
       await loginOnPhone(page, ADMIN_EMAIL, adminPassword());
+      await resetAccountScale(page);
       await page.goto("/settings/appearance");
-      expect(await rootFontSize(page)).toBe(16);
+      await expect.poll(() => rootFontSize(page)).toBe(16);
 
       const control = page.getByTestId("text-size-control");
       await control.locator('[data-step="140"]').click();
@@ -80,25 +107,20 @@ for (const lang of LANGS) {
       expect(await rootFontSize(page)).toBeCloseTo(22.4, 1);
       await shot(page, L, "text-scale-settings-140");
 
-      await expect
-        .poll(
-          async () =>
-            (
-              (await (await page.request.get("/api/v1/settings")).json()) as {
-                text_scale: number;
-              }
-            ).text_scale,
-        )
-        .toBe(140);
+      await expect.poll(() => accountScale(page)).toBe(140);
 
       await page.reload();
-      expect(await rootFontSize(page)).toBeCloseTo(22.4, 1);
+      await expect.poll(() => rootFontSize(page)).toBeCloseTo(22.4, 1);
 
       await page
         .getByTestId("text-size-control")
         .locator('[data-step="100"]')
         .click();
-      expect(await rootFontSize(page)).toBe(16);
+      await expect.poll(() => rootFontSize(page)).toBe(16);
+      await expect.poll(() => accountScale(page)).toBe(100);
+      // Явный выбор не откатывается обратно к значению аккаунта и после перезагрузки.
+      await page.reload();
+      await expect.poll(() => rootFontSize(page)).toBe(16);
     });
   });
 
@@ -118,6 +140,7 @@ for (const lang of LANGS) {
         }) => {
           await presetScale(page, scale);
           await loginOnPhone(page, ADMIN_EMAIL, adminPassword());
+          await resetAccountScale(page);
           for (const path of SCREENS) {
             await page.goto(path);
             await page.waitForLoadState("networkidle");

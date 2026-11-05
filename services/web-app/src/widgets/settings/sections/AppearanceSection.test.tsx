@@ -1,8 +1,7 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { settingsApi, type SettingsData } from "@entities/app-settings";
 import { useThemeStore } from "@shared/lib";
 import { i18n } from "@shared/lib/i18n";
 import { AppearanceSection } from "./AppearanceSection";
@@ -17,7 +16,7 @@ const mount = () =>
 describe("AppearanceSection: text size", () => {
   beforeEach(async () => {
     await i18n.changeLanguage("ru");
-    useThemeStore.setState({ textScale: 100 });
+    useThemeStore.setState({ textScale: 100, textScaleChosen: false });
   });
   afterEach(() => {
     cleanup();
@@ -38,17 +37,12 @@ describe("AppearanceSection: text size", () => {
     expect(screen.getByTestId("text-size-preview")).toBeInTheDocument();
   });
 
-  it("applies a step to the store at once and saves it to the account", async () => {
-    const update = vi
-      .spyOn(settingsApi, "update")
-      .mockResolvedValue({ text_scale: 125 } as SettingsData);
+  it("applies a step to the store at once and remembers it as the person's choice", async () => {
     const user = userEvent.setup();
     mount();
     await user.click(screen.getByRole("radio", { name: "125%" }));
     expect(useThemeStore.getState().textScale).toBe(125);
     expect(screen.getByRole("radio", { name: "125%" })).toBeChecked();
-    await waitFor(() => {
-      expect(update).toHaveBeenCalledWith({ text_scale: 125 });
-    });
+    expect(useThemeStore.getState().textScaleChosen).toBe(true);
   });
 });
