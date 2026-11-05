@@ -64,7 +64,7 @@ export default defineConfig({
       // Телефон на server-lite: вход, список проектов, шторки, отсутствие горизонтальной прокрутки, зоны касания.
       // Размеры и касание задаёт сам сценарий (360x740, 390x844, планшет 820x1180).
       name: "mobile",
-      testMatch: /(mobile(-admin|-rare)?|text-scale)\.spec\.ts/,
+      testMatch: /(mobile(-admin|-rare)?|text-scale|sidebar-overflow)\.spec\.ts/,
       use: {
         ...devices["Pixel 7"],
         channel: process.env.E2E_CHANNEL || undefined,

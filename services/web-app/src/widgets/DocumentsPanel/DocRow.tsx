@@ -126,7 +126,7 @@ export const DocRow = ({
 
   return (
     <div
-      className="flex items-center"
+      className="flex items-center doc-row"
       style={{ gap: "0.125rem" }}
       onMouseEnter={() => {
         setIsHovered(true);
@@ -141,7 +141,7 @@ export const DocRow = ({
     >
       <button
         type="button"
-        className={clsx("row-btn", isActive && "active")}
+        className={clsx("row-btn doc-row-btn", isActive && "active")}
         onClick={() => {
           onSelectDoc(doc.id);
         }}
@@ -149,30 +149,33 @@ export const DocRow = ({
       >
         <span className={"dot " + sev} />
         <span
-          className="mono shrink-0"
+          className="mono doc-code"
           style={{
             fontSize: "0.65625rem",
             color: isActive ? "var(--accent)" : "var(--fg-3)",
-            // minWidth keeps the code column aligned; a longer code
-            // pushes the name instead of overlapping it.
-            minWidth: "1.75rem",
-            whiteSpace: "nowrap",
             letterSpacing: "0.02em",
           }}
+          title={meta.code}
         >
           {renderHighlighted(meta.code, query)}
         </span>
         <span
-          className="flex flex-col flex-1 min-w-0"
-          style={{ fontSize: "0.75rem", lineHeight: 1.35, minWidth: 0, gap: 1 }}
+          className="doc-main"
+          style={{
+            fontSize: "0.75rem",
+            lineHeight: 1.35,
+            gap: 1,
+            overflowWrap: "anywhere",
+          }}
         >
-          <span>{renderHighlighted(meta.name, query)}</span>
+          <span title={meta.name}>{renderHighlighted(meta.name, query)}</span>
           <DocBuildSubline projectId={projectId} docId={doc.id} now={now} />
           {doc.status === "err" && doc.last_compile_error && (
             <span
               data-testid={`doc-failure-${doc.id}`}
               data-code={doc.last_compile_error.code}
               title={doc.last_compile_error.message}
+              className="doc-failure"
               style={{
                 fontSize: "0.65625rem",
                 lineHeight: 1.3,
@@ -185,7 +188,7 @@ export const DocRow = ({
         </span>
         {isCustom && (
           <span
-            className="chip"
+            className="chip doc-chip"
             style={{
               flexShrink: 0,
               fontSize: "0.5625rem",
@@ -199,7 +202,7 @@ export const DocRow = ({
         )}
         {(errors > 0 || warnings > 0) && (
           <span
-            className="mono shrink-0"
+            className="mono shrink-0 doc-counts"
             style={{
               fontSize: "0.59375rem",
               color: errors > 0 ? "var(--c-err)" : "var(--c-warn)",

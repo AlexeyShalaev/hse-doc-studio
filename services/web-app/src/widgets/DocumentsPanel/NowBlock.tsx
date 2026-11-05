@@ -104,11 +104,8 @@ export const NowBlock = ({
             size="0.6875rem"
             style={{ flexShrink: 0, color: "var(--c-warn)" }}
           />
-          <span
-            className="flex flex-1 flex-col min-w-0"
-            style={{ textAlign: "left" }}
-          >
-            <span className="truncate">{item.label}</span>
+          <span className="now-item-text">
+            <span className="now-item-label">{item.label}</span>
             {item.reason && (
               <span
                 data-testid="now-reason"
@@ -117,6 +114,7 @@ export const NowBlock = ({
                   color: "var(--fg-3)",
                   lineHeight: 1.35,
                   whiteSpace: "normal",
+                  overflowWrap: "anywhere",
                 }}
               >
                 {item.reason}

@@ -133,84 +133,88 @@ export const ChatComposer = ({
         />
 
         <div className="agent-composer-footer">
-          <ModelPicker
-            groups={modelGroups}
-            selectedProviderId={selectedProviderId}
-            selectedModel={selectedModel}
-            disabled={controlsDisabled || modelGroups.length === 0}
-            openRequest={modelPickerRequest}
-            onSelect={onModelSelect}
-          />
-
-          {personas.length > 0 && (
-            <PersonaPicker
-              personas={personas}
-              selectedPersona={selectedPersona}
-              personaInstructions={personaInstructions}
-              disabled={controlsDisabled}
-              onSelect={onPersonaSelect}
+          <div className="agent-composer-primary">
+            <ModelPicker
+              groups={modelGroups}
+              selectedProviderId={selectedProviderId}
+              selectedModel={selectedModel}
+              disabled={controlsDisabled || modelGroups.length === 0}
+              openRequest={modelPickerRequest}
+              onSelect={onModelSelect}
             />
-          )}
-
-          <div
-            className="agent-composer-mode"
-            role="group"
-            aria-label={t("composer.modeGroupLabel")}
-          >
-            <button
-              type="button"
-              className="agent-composer-mode-btn"
-              data-active={!autoApprove ? "true" : undefined}
-              disabled={controlsDisabled}
-              onClick={() => {
-                onModeChange(false);
-              }}
-            >
-              Ask
-            </button>
-            <button
-              type="button"
-              className="agent-composer-mode-btn"
-              data-active={autoApprove ? "true" : undefined}
-              disabled={controlsDisabled}
-              onClick={() => {
-                onModeChange(true);
-              }}
-            >
-              Auto
-            </button>
+            <div className="agent-composer-spacer" />
+            {running ? (
+              <button
+                type="button"
+                className="icon-btn agent-composer-action"
+                onClick={onStop}
+                title={t("composer.stop")}
+                aria-label={t("composer.stop")}
+              >
+                <Square size="0.8125rem" />
+              </button>
+            ) : (
+              <button
+                type="button"
+                className="icon-btn agent-composer-action"
+                onClick={submit}
+                disabled={sendDisabled}
+                title={t("composer.send")}
+                aria-label={t("composer.send")}
+              >
+                <Send size="0.875rem" />
+              </button>
+            )}
           </div>
-          {tools.length > 0 && (
-            <ChatToolsMenu
-              tools={tools}
-              enabled={enabledTools}
-              onChange={onEnabledToolsChange}
-              disabled={controlsDisabled}
-            />
-          )}
 
-          <div className="agent-composer-spacer" />
+          <div className="agent-composer-secondary">
+            {personas.length > 0 && (
+              <PersonaPicker
+                personas={personas}
+                selectedPersona={selectedPersona}
+                personaInstructions={personaInstructions}
+                disabled={controlsDisabled}
+                onSelect={onPersonaSelect}
+              />
+            )}
 
-          {running ? (
-            <button
-              type="button"
-              className="icon-btn agent-composer-action"
-              onClick={onStop}
-              title={t("composer.stop")}
+            <div
+              className="agent-composer-mode"
+              role="group"
+              aria-label={t("composer.modeGroupLabel")}
             >
-              <Square size="0.8125rem" />
-            </button>
-          ) : (
-            <button
-              type="button"
-              className="icon-btn agent-composer-action"
-              onClick={submit}
-              disabled={sendDisabled}
-              title={t("composer.send")}
-            >
-              <Send size="0.875rem" />
-            </button>
-          )}
+              <button
+                type="button"
+                className="agent-composer-mode-btn"
+                data-active={!autoApprove ? "true" : undefined}
+                disabled={controlsDisabled}
+                onClick={() => {
+                  onModeChange(false);
+                }}
+              >
+                Ask
+              </button>
+              <button
+                type="button"
+                className="agent-composer-mode-btn"
+                data-active={autoApprove ? "true" : undefined}
+                disabled={controlsDisabled}
+                onClick={() => {
+                  onModeChange(true);
+                }}
+              >
+                Auto
+              </button>
+            </div>
+            {tools.length > 0 && (
+              <ChatToolsMenu
+                tools={tools}
+                enabled={enabledTools}
+                onChange={onEnabledToolsChange}
+                disabled={controlsDisabled}
+              />
+            )}
+          </div>
         </div>
       </div>
     </div>
