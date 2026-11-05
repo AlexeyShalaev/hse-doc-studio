@@ -34,7 +34,13 @@ beforeEach(async () => {
   reload.mockReset();
   Object.defineProperty(window, "location", {
     configurable: true,
-    value: { ...window.location, reload },
+    value: {
+      reload,
+      pathname: "/",
+      search: "",
+      hash: "",
+      href: "http://localhost/",
+    },
   });
   window.sessionStorage.clear();
   useStaleBuildStore.setState({ reason: null, screenShown: false });

@@ -14,7 +14,7 @@ const reply = (body: unknown, type = "application/json"): typeof fetch =>
         headers: { "content-type": type },
       }),
     ),
-  ) as unknown as typeof fetch;
+  );
 
 describe("fetchHasNewBuild", () => {
   it("более поздняя сборка это новая версия", async () => {
