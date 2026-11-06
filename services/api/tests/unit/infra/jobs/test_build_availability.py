@@ -97,9 +97,8 @@ async def test__of__dead_runner__not_counted(runner: Runner) -> None:
     assert result.tags == frozenset()
 
 
-@pytest.mark.parametrize("reason", [RouteReason.waiting_personal, RouteReason.fallback_busy])
-async def test__of__personal_runner_of_owner__adds_its_tags(reason: RouteReason) -> None:
-    router = _PersonalRouter(frozenset({"office"}), reason)
+async def test__of__personal_runner_of_owner__adds_its_tags() -> None:
+    router = _PersonalRouter(frozenset({"office"}), RouteReason.waiting_personal)
 
     result = await _availability(_runner("tex"), router=router)
 

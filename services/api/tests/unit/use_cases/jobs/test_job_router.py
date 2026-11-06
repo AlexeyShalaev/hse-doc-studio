@@ -162,8 +162,67 @@ async def test__decide__no_matching_runner_online__fallback_offline(world: _Worl
     assert (await world.decide()).reason is RouteReason.fallback_offline
 
 
+async def _occupy(world: _World) -> None:
+    first = await world.decide()
+    assert first.route is JobRoute.personal_first
+    await world.queue.enqueue(
+        EnqueueRequest(
+            job_id=uuid4(),
+            kind=JobKind.compile,
+            project_id=world.project,
+            user_id=world.owner,
+            tags=TEX,
+            payload={},
+            route=first.route,
+            route_owner_id=first.route_owner_id,
+            personal_until=first.personal_until,
+        )
+    )
+
+
+async def test__decide__busy_and_no_live_shared_runner__stays_personal(world: _World) -> None:
+    await world.runner(concurrency=1)
+    await _occupy(world)
+
+    decision = await world.decide()
+
+    assert decision.route is JobRoute.personal_first
+    assert decision.reason is RouteReason.waiting_personal
+    assert decision.route_owner_id == world.owner.hex
+
+
+@pytest.mark.parametrize(
+    "changes",
+    [
+        {"last_seen_at": NOW - timedelta(minutes=10)},
+        {"paused": True},
+        {"revoked_at": NOW},
+        {"tags": frozenset({"office"})},
+    ],
+    ids=["stale", "paused", "revoked", "other_tags"],
+)
+async def test__decide__busy_and_shared_runner_unfit__stays_personal(world: _World, changes: dict[str, object]) -> None:
+    await world.runner(concurrency=1)
+    await world.runner(owner_kind=RunnerOwnerKind.instance, owner_id=None, **changes)
+    await _occupy(world)
+
+    assert (await world.decide()).route is JobRoute.personal_first
+
+
+async def test__decide__busy_and_live_shared_runner__fallback_busy(world: _World) -> None:
+    await world.runner(concurrency=1)
+    await world.runner(owner_kind=RunnerOwnerKind.instance, owner_id=None)
+    await _occupy(world)
+
+    decision = await world.decide()
+
+    assert decision.route is JobRoute.shared
+    assert decision.reason is RouteReason.fallback_busy
+
+
 async def test__decide__capacity_used_by_waiting_and_running__fallback_busy(world: _World) -> None:
     await world.runner(concurrency=1)
+    await world.runner(owner_kind=RunnerOwnerKind.instance, owner_id=None)
     first = await world.decide()
     assert first.route is JobRoute.personal_first
     await world.queue.enqueue(

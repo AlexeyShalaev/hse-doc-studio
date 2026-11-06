@@ -11,29 +11,17 @@ import structlog
 from hse_doc_studio.core.access.entities import Actor
 from hse_doc_studio.core.jobs.availability import BUILD_TAGS, BuildAvailability
 from hse_doc_studio.core.jobs.enums import JobKind
-from hse_doc_studio.core.jobs.routing import IJobRouter, JobRoute, RouteReason, RunnerScope
-from hse_doc_studio.core.jobs.runners import IRunnerRepository, Runner
+from hse_doc_studio.core.jobs.liveness import DEFAULT_RUNNER_LIVE_WINDOW_S, is_live_shared
+from hse_doc_studio.core.jobs.routing import IJobRouter, JobRoute
+from hse_doc_studio.core.jobs.runners import IRunnerRepository
 
 logger = structlog.get_logger()
-
-# Раннер живой, если опрашивал сервер не дольше этого назад: предел долгого опроса плюс запас.
-DEFAULT_RUNNER_LIVE_WINDOW_S = 60.0
 
 type ActorPayer = Callable[[Actor, UUID], Awaitable[UUID]]
 
 
 def _utc_now() -> datetime:
     return datetime.now(UTC)
-
-
-def is_live_shared(runner: Runner, now: datetime, live_window: timedelta) -> bool:
-    """Общий раннер, не отозван, не на паузе и опрашивал сервер в пределах окна."""
-    # Чужой личный раннер сборку не возьмёт: личные раннеры владельца решает маршрут.
-    if runner.scope is not RunnerScope.shared:
-        return False
-    if runner.revoked_at is not None or runner.paused or runner.last_seen_at is None:
-        return False
-    return now - runner.last_seen_at <= live_window
 
 
 class LocalBuildAvailability:
@@ -49,7 +37,8 @@ class LocalBuildAvailability:
 class RunnerBuildAvailability:
     """Теги общих живых раннеров плюс теги личных раннеров владельца, если маршрут их допускает.
 
-    Нагрузку личных раннеров не учитываем: занятый свой раннер всё равно сборку возьмёт, кнопку не гасим.
+    Для тега без общего раннера маршрут занятого личного раннера остаётся за ним (`personal_first`), поэтому
+    такой тег обслуживается. `fallback_busy` бывает только при живом общем раннере с этим тегом.
     """
 
     def __init__(
@@ -97,6 +86,6 @@ class RunnerBuildAvailability:
             decision = await self._router.decide(
                 kind=JobKind.compile, tags=frozenset({tag}), project_id=project_id, user_id=user_id
             )
-            if decision.route is JobRoute.personal_first or decision.reason is RouteReason.fallback_busy:
+            if decision.route is JobRoute.personal_first:
                 served.add(tag)
         return frozenset(served)

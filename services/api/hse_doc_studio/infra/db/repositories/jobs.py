@@ -19,6 +19,7 @@ from sqlalchemy.orm import aliased
 
 from hse_doc_studio.core.jobs.enums import JobKind, JobPriorityClass, JobState, JobStatus, RunnerErrorCode
 from hse_doc_studio.core.jobs.errors import QueuedJobNotFoundError, StaleAttemptError
+from hse_doc_studio.core.jobs.liveness import DEFAULT_RUNNER_LIVE_WINDOW_S
 from hse_doc_studio.core.jobs.queue import (
     EnqueueOutcome,
     EnqueueRequest,
@@ -36,7 +37,7 @@ from hse_doc_studio.core.jobs.routing import (
     RunnerScope,
 )
 from hse_doc_studio.core.jobs.scheduler import AFFINITY_WAIT, QueueQuota, assign_vtime, retry_available
-from hse_doc_studio.infra.db.orm.jobs import FairShareRow, JobQueueStateRow, JobRow, JobRunnerPollRow
+from hse_doc_studio.infra.db.orm.jobs import FairShareRow, JobQueueStateRow, JobRow, JobRunnerPollRow, RunnerRow
 from hse_doc_studio.infra.db.orm.projects import ProjectRow
 from hse_doc_studio.infra.db.session import SessionProvider
 
@@ -45,6 +46,8 @@ from hse_doc_studio.infra.db.session import SessionProvider
 _CAPS_LOCK_KEY = 0x4A4F4253  # "JOBS"
 # Виды, которые может взять личный раннер владельца проекта (без проверки подписи и ретрансляции).
 _PERSONAL_KINDS = sorted(spec.kind.value for spec in build_job_kinds() if spec.policy.personal_runner_allowed)
+# Окно «живого» общего раннера: то же, что у проверки доступности сборки.
+_SHARED_LIVE_WINDOW_S = DEFAULT_RUNNER_LIVE_WINDOW_S
 _KEPT_REASONS = sorted(reason.value for reason in KEPT_FALLBACK_REASONS)
 
 
@@ -202,7 +205,7 @@ class PostgresJobQueue:
             )
             if personal:
                 # Личный раннер квот установки не тратит: блокировка квот ему не нужна.
-                stmt = self._personal_candidate(runner)
+                stmt = self._personal_candidate(runner, now)
             else:
                 if not runner.accept_jobs:
                     return None
@@ -488,7 +491,7 @@ class PostgresJobQueue:
         )
 
     @staticmethod
-    def _personal_candidate(runner: RunnerRef) -> Select[Any] | None:
+    def _personal_candidate(runner: RunnerRef, now: datetime) -> Select[Any] | None:
         """Задачи проектов хозяина раннера (проверка владельца и политики в момент выдачи) и его ретрансляции."""
         owner = runner.owner_id
         if owner is None:
@@ -516,6 +519,28 @@ class PostgresJobQueue:
                     job.route_owner_id == owner,
                     job.kind.in_(_PERSONAL_KINDS),
                     project_allows,
+                )
+            )
+            # Задача, ушедшая на общие из-за занятости (`fallback_busy`), когда общих раннеров с нужными тегами
+            # нет, достаётся личному раннеру хозяина проекта: владелец и политика проверены в `project_allows`.
+            live_shared = (
+                select(literal(1))
+                .where(
+                    RunnerRow.owner_kind == "instance",
+                    RunnerRow.revoked_at.is_(None),
+                    RunnerRow.paused.is_(False),
+                    RunnerRow.last_seen_at >= now - timedelta(seconds=_SHARED_LIVE_WINDOW_S),
+                    RunnerRow.tags.contains(job.tags),
+                )
+                .exists()
+            )
+            branches.append(
+                and_(
+                    job.route == JobRoute.shared.value,
+                    job.route_reason == RouteReason.fallback_busy.value,
+                    job.kind.in_(_PERSONAL_KINDS),
+                    project_allows,
+                    ~live_shared,
                 )
             )
         if runner.accept_relay and owner_uuid is not None:
