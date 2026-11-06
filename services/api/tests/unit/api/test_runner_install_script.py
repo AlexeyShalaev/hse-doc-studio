@@ -77,7 +77,7 @@ def test__plan__prints_actions_masks_token_and_writes_nothing(tmp_path: Path, un
     assert result.returncode == 0, result.stderr
     assert IMAGE in result.stdout
     assert "would run:" in result.stdout
-    assert "https://studio.example.org" in result.stdout
+    assert "  studio  : https://studio.example.org" in result.stdout.splitlines()
     assert SECRET not in result.stdout + result.stderr
     assert "TOKEN=***" in result.stdout
     assert not (tmp_path / "home").exists()
