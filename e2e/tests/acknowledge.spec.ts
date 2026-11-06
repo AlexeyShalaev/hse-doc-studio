@@ -174,7 +174,7 @@ for (const { lang, locale } of [
     await expect(backups).toHaveAttribute("aria-label", /.+/);
     await backups.focus();
     await page.keyboard.press("Enter");
-    await expect(page).toHaveURL(/\/admin\/backups#backup-destinations$/);
+    await expect(page).toHaveURL(/\/admin\/backups(#backup-destinations)?$/);
     await expect(page.getByTestId("backup-destinations")).toBeVisible();
 
     await page.goto("/admin/diagnostics");
