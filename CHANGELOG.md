@@ -6,25 +6,12 @@ Generated from `release-notes.json` via `make changelog` — do not edit by hand
 Release notes are hand-written and bilingual (RU/EN); the app shows them in the
 selected interface language.
 
-## [0.12.0](https://github.com/AlexeyShalaev/hse-doc-studio/compare/v0.11.0...v0.12.0) (2026-11-06)
+## [0.12.0](https://github.com/AlexeyShalaev/hse-doc-studio/compare/v0.11.0...v0.12.0) - 2026-11-07
 
-
-### Features
-
-* **runners:** admin UI for installing a runner over SSH ([033bb02](https://github.com/AlexeyShalaev/hse-doc-studio/commit/033bb0231b7a9173127da606c9b3bbd0f76f975a))
-* **runners:** copyable docker and install-script commands for runner tokens ([10ce3ba](https://github.com/AlexeyShalaev/hse-doc-studio/commit/10ce3bae4583f8a24a36f9fbe4da56d5b5a67d07))
-* **runners:** copyable docker and install-script commands for runner tokens ([dc341fa](https://github.com/AlexeyShalaev/hse-doc-studio/commit/dc341fa3f16fe690d62a5e4e7f2360fb17367d4a))
-* **runners:** install a runner on the Studio machine from the admin UI (docker, kubernetes) ([382f266](https://github.com/AlexeyShalaev/hse-doc-studio/commit/382f266301ab1901010e33c6b21b2c769d320c16))
-* **runners:** install a runner over SSH from the admin API ([2d62037](https://github.com/AlexeyShalaev/hse-doc-studio/commit/2d62037961a1d4d94639096a9a2963a203c3d758))
-* **runners:** install a runner over SSH from the admin API (host key confirmation, SSRF guard, encrypted saved access) ([34286e9](https://github.com/AlexeyShalaev/hse-doc-studio/commit/34286e97cf1f1e3b66b0e1036026d50c963cfbcc))
-* **web:** admin UI for installing a runner over SSH (restored on top of the API branch) ([b2fdcdf](https://github.com/AlexeyShalaev/hse-doc-studio/commit/b2fdcdfa5613776feae226461494c96ff5d86269))
-* **web:** show the Docker install command before the switch is turned on ([6dc1a3d](https://github.com/AlexeyShalaev/hse-doc-studio/commit/6dc1a3dbad13bb4661fc18bb3d6ad03fcf5b838f))
-
-
-### Bug Fixes
-
-* **web:** read the blocked reason with dot notation ([fdfdf7e](https://github.com/AlexeyShalaev/hse-doc-studio/commit/fdfdf7e70d9325759bee7a467bf5f37cc3b85d6c))
-* **web:** restore the command tab strings lost in the merge ([b4616c4](https://github.com/AlexeyShalaev/hse-doc-studio/commit/b4616c47fe5b788d8920552c4ce5e1b15b50744b))
+- Installing a runner with a single command: creating a token now shows a ready docker run line and a script that installs the runner as a service (systemd on Linux, launchd on macOS). The script contains no secrets and supports a dry run, status and uninstall.
+- Installing a runner on the same machine as Studio from the admin area: as a container in Docker, or as a separate restricted Deployment in Kubernetes (off by default in Helm, value runner.installFromUi.enabled).
+- Installing a runner on other machines over SSH from the admin area: host key fingerprint confirmation, password or key with passphrase, a plan and step-by-step progress. Credentials are one-time by default; you can optionally save them encrypted for updates and reinstalls. Internal networks stay blocked until the address is added to HSE_STUDIO__RUNNER_INSTALL__SSH_ALLOWLIST.
+- For administrators: the server applies the new migration on first start (ri_01_runner_ssh_credentials), no manual steps are needed. SSH installation requires asyncssh (included in the server build).
 
 ## [0.11.0](https://github.com/AlexeyShalaev/hse-doc-studio/compare/v0.10.0...v0.11.0) - 2026-11-06
 
