@@ -52,11 +52,13 @@ class AsyncSshSession:
         self._secrets = secrets
 
     async def run(self, command: str, *, stdin: str | None = None, timeout: float = 120.0) -> SshResult:
+        # Без входа stdin закрывается сразу: иначе команда, читающая stdin, висит до таймаута.
+        feed: dict[str, Any] = {"stdin": asyncssh.DEVNULL} if stdin is None else {"input": stdin}
         try:
             done = await self._conn.run(
-                command, input=stdin, check=False, timeout=timeout, encoding="utf-8", errors="replace"
+                command, check=False, timeout=timeout, encoding="utf-8", errors="replace", **feed
             )
-        except (TimeoutError, asyncio.TimeoutError) as exc:
+        except (TimeoutError, asyncio.TimeoutError, asyncssh.TimeoutError) as exc:
             raise SshError("command_timeout") from exc
         except (asyncssh.Error, OSError) as exc:
             raise SshError("connection_lost", _scrub(str(exc), *self._secrets)) from exc

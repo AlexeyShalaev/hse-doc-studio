@@ -48,7 +48,12 @@ from hse_doc_studio.use_cases.admin.ops_storage import GetStorageUsageUC, ListSt
 from hse_doc_studio.use_cases.identity.smtp_settings import SmtpSettingsService
 from hse_doc_studio.use_cases.jobs.queue_service import JobQueueService
 from hse_doc_studio.use_cases.jobs.runners import RunnerRegistry
-from hse_doc_studio.use_cases.runner_install import InstallJobStore, RunnerInstallService
+from hse_doc_studio.use_cases.runner_install import (
+    InstallJobStore,
+    RunnerInstallService,
+    SshInstallService,
+    SshSessionStore,
+)
 from httpx import ASGITransport, AsyncClient
 
 from tests.fakes.auth import empty_bearer_resolver
@@ -69,6 +74,7 @@ from tests.fakes.runners import (
     InMemoryRunnerAdminReader,
     InMemoryRunnerRepository,
 )
+from tests.fakes.ssh import FakeConnector, FakeEgress, FakeHost, InMemorySshCredentials
 from tests.integration.api.admin.test_admin_users_api import _Env as _UsersEnv
 
 
@@ -115,7 +121,28 @@ class _Stack:
             register_timeout_s=0.3,
             poll_s=0.01,
         )
+        self.ssh_host = FakeHost()
+        self.ssh_connector = FakeConnector(self.ssh_host)
+        self.ssh_egress = FakeEgress()
+        self.ssh_credentials = InMemorySshCredentials()
+        self.ssh_sessions = SshSessionStore()
+        self.ssh = SshInstallService(
+            self.registry,
+            self.ssh_connector,
+            self.ssh_egress,
+            self.ssh_sessions,
+            self.install_jobs,
+            users.audit,
+            NoopUow(),
+            self.ssh_credentials,
+            image="registry.example/hds:1.2.3",
+            script=lambda image: f"# runner install script for {image}\n",
+            register_timeout_s=0.3,
+            poll_s=0.01,
+            verify_timeout_s=0.1,
+        )
         self.client: AsyncClient
+        self.app: FastAPI
 
 
 class _Provider(Provider):
@@ -140,6 +167,10 @@ class _Provider(Provider):
     @provide
     def runner_install(self) -> RunnerInstallService:
         return self.s.install
+
+    @provide
+    def ssh_install(self) -> SshInstallService:
+        return self.s.ssh
 
     @provide
     def list_runners(self) -> ListRunnersUC:
@@ -240,6 +271,7 @@ async def stack(monkeypatch: pytest.MonkeyPatch) -> AsyncIterator[_Stack]:
     setup_dishka(container, app)
     async with AsyncClient(transport=ASGITransport(app=app, client=("203.0.113.9", 5000)), base_url="http://test") as c:
         s.client = c
+        s.app = app
         yield s
     await container.close()
 
@@ -295,6 +327,18 @@ _ROUTES: list[tuple[str, str, Any]] = [
     ("POST", "/api/admin/runner-install/local/docker", {}),
     ("DELETE", "/api/admin/runner-install/local/docker/hse-runner-1", None),
     ("GET", f"/api/admin/runner-install/jobs/{uuid4()}", None),
+    ("GET", "/api/admin/runner-install/ssh", None),
+    (
+        "POST",
+        "/api/admin/runner-install/ssh/probe",
+        {"host": "srv.example.org", "username": "root", "auth_kind": "password", "password": "x"},
+    ),
+    ("POST", "/api/admin/runner-install/ssh/abc/confirm", {"fingerprint": "SHA256:0123456789"}),
+    ("POST", "/api/admin/runner-install/ssh/abc/install", {}),
+    ("DELETE", "/api/admin/runner-install/ssh/abc", None),
+    ("GET", "/api/admin/runner-install/ssh/credentials", None),
+    ("DELETE", "/api/admin/runner-install/ssh/credentials/abc", None),
+    ("POST", "/api/admin/runner-install/ssh/credentials/abc/run", {"action": "update"}),
 ]
 
 

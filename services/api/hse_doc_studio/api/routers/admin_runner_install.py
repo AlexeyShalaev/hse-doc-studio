@@ -256,7 +256,7 @@ async def ssh_confirm(
     return SshPlanResponse(
         session_id=session.id,
         system=_remote(session.system),
-        plan=[PlanStepInfo(key=p.key, action=p.action) for p in session.plan],  # type: ignore[arg-type]
+        plan=[PlanStepInfo(key=p.key, action=p.action) for p in session.plan],
     )
 
 
