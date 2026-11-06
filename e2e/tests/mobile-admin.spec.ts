@@ -136,6 +136,22 @@ for (const lang of LANGS) {
         await shot(page, L, name("34-admin-runners"));
       });
 
+      test("админка: окно установки раннера на телефоне, причина скрытых способов видна", async ({ page }) => {
+        await loginAdmin(page);
+        await page.goto("/admin/runners");
+        await page.getByTestId("runner-install-open").tap();
+        // Стенд server-lite без docker.sock и не в кластере: кнопок установки нет, причина объяснена текстом.
+        await expect(page.getByTestId("install-local-docker-unavailable")).toBeVisible();
+        await expect(page.getByTestId("install-local-kubernetes-unavailable")).toBeVisible();
+        await expect(page.getByTestId("install-local-docker-start")).toHaveCount(0);
+        await expectNoHorizontalScroll(page);
+        await expectNothingClipped(page);
+        await shot(page, L, name("35-install-runner"));
+        // Для другой машины окно ведёт к токену с командой.
+        await page.getByTestId("install-command-open").tap();
+        await expect(page.getByTestId("token-create-form")).toBeVisible();
+      });
+
       test("админка: таблицы карточками, карточка человека на весь экран, цели касания", async ({ page }) => {
         await loginAdmin(page);
         await page.goto("/admin/users");

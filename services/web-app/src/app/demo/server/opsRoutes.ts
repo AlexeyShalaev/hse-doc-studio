@@ -138,6 +138,32 @@ const commandsFor = (value: string, rotated = false) => {
   };
 };
 
+// Демо установки раннера: docker доступен, кластер выключен; шаги идут по одному на каждый опрос хода.
+type DemoInstall = { name: string; target: string; polls: number };
+const DEMO_STEPS: Record<string, readonly string[]> = {
+  docker: ["token", "pull", "start", "register"],
+  kubernetes: ["token", "secret", "volume", "deployment", "register"],
+};
+
+const installJobOf = (id: string, job: DemoInstall) => {
+  const keys = DEMO_STEPS[job.target] ?? [];
+  const done = Math.min(job.polls, keys.length);
+  return {
+    id,
+    target: job.target,
+    name: job.name,
+    state: done >= keys.length ? "succeeded" : "running",
+    steps: keys.map((key, index) => ({
+      key,
+      state: index < done ? "done" : index === done ? "running" : "pending",
+      detail: "",
+    })),
+    error_code: null,
+    error_detail: "",
+    created_at: new Date().toISOString(),
+  };
+};
+
 export const createOpsRoutes = (
   getWorld: () => ServerDemoWorld,
 ): DemoRoute[] => {
@@ -149,6 +175,7 @@ export const createOpsRoutes = (
       return demoError(401, "auth_required", "Authentication required");
     return user.is_instance_admin ? null : notFound();
   };
+  const installs = new Map<string, DemoInstall>();
   const guarded =
     (handler: DemoRoute["handler"]): DemoRoute["handler"] =>
     (req) =>
@@ -304,6 +331,51 @@ export const createOpsRoutes = (
   };
 
   return [
+    {
+      method: "GET",
+      pattern: "/runner-install/local",
+      handler: guarded(() =>
+        demoJson({
+          docker: { available: true, reason: null },
+          kubernetes: { available: false, reason: "disabled" },
+        }),
+      ),
+    },
+    {
+      method: "GET",
+      pattern: "/runner-install/local/instances",
+      handler: guarded(() => demoJson([])),
+    },
+    {
+      method: "POST",
+      pattern: "/runner-install/local/:target",
+      handler: guarded((req) => {
+        const target = req.params.target ?? "";
+        if (target !== "docker") {
+          return demoError(409, "install_unavailable", "Unavailable");
+        }
+        const requested = str(body(req).name).trim();
+        const job: DemoInstall = {
+          name: `${requested || "hse-runner"}-a1b2c3`,
+          target,
+          polls: 0,
+        };
+        const id = `job${String(installs.size + 1)}`;
+        installs.set(id, job);
+        return demoJson(installJobOf(id, job), 202);
+      }),
+    },
+    {
+      method: "GET",
+      pattern: "/runner-install/jobs/:id",
+      handler: guarded((req) => {
+        const id = req.params.id ?? "";
+        const job = installs.get(id);
+        if (!job) return notFound();
+        job.polls += 1;
+        return demoJson(installJobOf(id, job));
+      }),
+    },
     {
       method: "GET",
       pattern: "/runners",

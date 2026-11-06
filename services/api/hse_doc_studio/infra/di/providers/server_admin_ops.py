@@ -5,6 +5,7 @@ from __future__ import annotations
 from dishka import Provider, Scope, provide
 
 from hse_doc_studio.api.config import ServerConfig, settings
+from hse_doc_studio.api.runner_install import render_install_script
 from hse_doc_studio.core.ai import IAIModelLister
 from hse_doc_studio.core.egress import IEgressPolicy
 from hse_doc_studio.core.git_sync.protocols import ISecretCipher
@@ -15,15 +16,21 @@ from hse_doc_studio.core.jobs.queue import IJobQueue
 from hse_doc_studio.core.jobs.quotas import IQuotaOverrideRepository
 from hse_doc_studio.core.jobs.runners import IRunnerRepository
 from hse_doc_studio.core.repositories import IAIProviderRepository, IInstanceAiProviderDirectory
+from hse_doc_studio.core.runner_install import ILocalRunnerHost, InstallTarget
 from hse_doc_studio.core.signatures.key_policy import IServerKeyCounter
 from hse_doc_studio.core.storage.usage import IStorageUsageReader
 from hse_doc_studio.core.uow import IUnitOfWork
 from hse_doc_studio.infra.db.repositories.ai_providers import PostgresAIProviderRepository
 from hse_doc_studio.infra.db.repositories.jobs_admin import SqlAdminProjectPicker, SqlJobAdminReader
+from hse_doc_studio.infra.db.repositories.runner_ssh_credentials import PostgresSshCredentialRepository
 from hse_doc_studio.infra.db.repositories.runners import SqlRunnerAdminReader
 from hse_doc_studio.infra.db.repositories.signing_key_policy import SqlServerKeyCounter
 from hse_doc_studio.infra.db.repositories.storage_usage import SqlStorageUsageReader
 from hse_doc_studio.infra.db.session import SessionProvider
+from hse_doc_studio.infra.egress.policy import ResolvingEgressPolicy
+from hse_doc_studio.infra.runner_install.docker_host import DockerLocalHost
+from hse_doc_studio.infra.runner_install.kube_host import KubeLocalHost
+from hse_doc_studio.infra.runner_install.ssh_connector import AsyncSshConnector
 from hse_doc_studio.use_cases.admin.ops_ai_providers import (
     CheckInstanceAiProviderUC,
     CreateInstanceAiProviderUC,
@@ -52,6 +59,13 @@ from hse_doc_studio.use_cases.admin.ops_storage import GetStorageUsageUC, ListSt
 from hse_doc_studio.use_cases.identity.smtp_settings import SmtpSettingsService
 from hse_doc_studio.use_cases.jobs.personal_settings import InstancePersonalRunnerSettings
 from hse_doc_studio.use_cases.jobs.queue_service import JobQueueService
+from hse_doc_studio.use_cases.jobs.runners import RunnerRegistry
+from hse_doc_studio.use_cases.runner_install import (
+    InstallJobStore,
+    RunnerInstallService,
+    SshInstallService,
+    SshSessionStore,
+)
 
 
 class ServerAdminOpsProvider(Provider):
@@ -234,3 +248,66 @@ class ServerAdminOpsProvider(Provider):
         self, store: InstanceAiProviderStore, lister: IAIModelLister
     ) -> CheckInstanceAiProviderUC:
         return CheckInstanceAiProviderUC(store, lister)
+
+    @provide
+    def get_install_job_store(self) -> InstallJobStore:
+        return InstallJobStore()
+
+    @provide
+    def get_runner_install_service(
+        self, registry: RunnerRegistry, jobs: InstallJobStore, audit: IAuditLog, uow: IUnitOfWork
+    ) -> RunnerInstallService:
+        cfg = settings.runner_install
+        hosts: dict[InstallTarget, ILocalRunnerHost] = {
+            InstallTarget.docker: DockerLocalHost(enabled=cfg.docker_enabled),
+            InstallTarget.kubernetes: KubeLocalHost(
+                enabled=cfg.kubernetes_enabled,
+                service_account=cfg.kubernetes_service_account,
+                storage_class=cfg.kubernetes_storage_class,
+                storage_size=cfg.kubernetes_storage_size,
+            ),
+        }
+        return RunnerInstallService(
+            registry,
+            hosts,
+            jobs,
+            audit,
+            uow,
+            image=f"{settings.image_base}:{settings.get_app_version()}",
+            data_dir=cfg.data_dir,
+            internal_urls={InstallTarget.kubernetes: cfg.kubernetes_studio_url} if cfg.kubernetes_studio_url else None,
+        )
+
+    @provide
+    def get_ssh_session_store(self) -> SshSessionStore:
+        return SshSessionStore()
+
+    @provide
+    def get_ssh_install_service(  # noqa: PLR0913
+        self,
+        registry: RunnerRegistry,
+        sessions: SshSessionStore,
+        jobs: InstallJobStore,
+        audit: IAuditLog,
+        uow: IUnitOfWork,
+        db: SessionProvider,
+        cipher: ISecretCipher,
+    ) -> SshInstallService:
+        cfg = settings.runner_install
+        # Своя политика: частные сети и адреса кластера закрыты, пока админ не внёс их в allowlist; метаданные облака
+        # закрыты всегда.
+        egress = ResolvingEgressPolicy([*settings.egress.allowlist, *cfg.ssh_allowlist])
+        return SshInstallService(
+            registry,
+            AsyncSshConnector(),
+            egress,
+            sessions,
+            jobs,
+            audit,
+            uow,
+            PostgresSshCredentialRepository(db, cipher) if cfg.ssh_save_credentials else None,
+            enabled=cfg.ssh_enabled,
+            image=f"{settings.image_base}:{settings.get_app_version()}",
+            script=render_install_script,
+            data_dir=cfg.data_dir,
+        )

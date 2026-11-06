@@ -19,6 +19,8 @@ _K8S_VALUES = _CHART / "ci" / "values-kubernetes.yaml"
 _K8S_GOLDEN = _CHART / "ci" / "rendered-kubernetes.golden.yaml"
 _UPDATER_VALUES = _CHART / "ci" / "values-updater.yaml"
 _UPDATER_GOLDEN = _CHART / "ci" / "rendered-updater.golden.yaml"
+_INSTALL_UI_VALUES = _CHART / "ci" / "values-install-ui.yaml"
+_INSTALL_UI_GOLDEN = _CHART / "ci" / "rendered-install-ui.golden.yaml"
 _PUBLIC_S3_VALUES = _CHART / "ci" / "values-public-s3.yaml"
 _PUBLIC_S3_GOLDEN = _CHART / "ci" / "rendered-public-s3.golden.yaml"
 
@@ -66,8 +68,9 @@ def test_lint() -> None:
         ((_VALUES, _K8S_VALUES), _K8S_GOLDEN),
         ((_VALUES, _UPDATER_VALUES), _UPDATER_GOLDEN),
         ((_VALUES, _PUBLIC_S3_VALUES), _PUBLIC_S3_GOLDEN),
+        ((_VALUES, _INSTALL_UI_VALUES), _INSTALL_UI_GOLDEN),
     ],
-    ids=["docker", "kubernetes", "updater", "public-s3"],
+    ids=["docker", "kubernetes", "updater", "public-s3", "install-ui"],
 )
 def test_template_matches_golden(values: tuple[Path, ...], golden_path: Path) -> None:
     args = [arg for path in values for arg in ("-f", str(path))]
@@ -499,3 +502,54 @@ def test_updater_requires_a_token_unless_the_secret_is_external() -> None:
     base = ("template", "rel", str(_CHART), "-f", str(_VALUES), "--set", "updater.enabled=true")
     assert _helm(*base).returncode != 0
     assert _helm(*base, "--set", "secrets.existingSecret=mine").returncode == 0
+
+
+def _api_deployment(docs: list[dict[str, Any]]) -> dict[str, Any]:
+    return next(d for d in _by_kind(docs, "Deployment") if d["metadata"]["name"].endswith("-api"))
+
+
+def test_install_from_ui_is_off_by_default() -> None:
+    docs = _render()
+    names = [d["metadata"]["name"] for d in docs]
+
+    assert not [n for n in names if "runner-ui" in n or n.endswith("-api-runner-install")]
+    api = _api_deployment(docs)
+    assert "serviceAccountName" not in api["spec"]["template"]["spec"]
+    env = {e["name"] for e in api["spec"]["template"]["spec"]["containers"][0]["env"]}
+    assert not [n for n in env if "RUNNER_INSTALL" in n]
+
+
+def test_install_from_ui_gives_the_api_only_what_it_creates() -> None:
+    docs = _render("-f", str(_INSTALL_UI_VALUES))
+    roles = {d["metadata"]["name"]: d for d in _by_kind(docs, "Role")}
+    api_role = roles["rel-hse-doc-studio-api-runner-install"]
+    granted = {
+        (g, r): set(rule["verbs"]) for rule in api_role["rules"] for g in rule["apiGroups"] for r in rule["resources"]
+    }
+
+    assert granted[("apps", "deployments")] == {"create", "get", "list", "delete"}
+    assert granted[("", "secrets")] == {"create", "delete"}
+    assert granted[("", "persistentvolumeclaims")] == {"create", "delete"}
+    assert not [k for k in granted if k[1] in {"roles", "rolebindings", "serviceaccounts", "pods", "pods/exec"}]
+    assert not _by_kind(docs, "ClusterRole")
+    assert not _by_kind(docs, "ClusterRoleBinding")
+
+
+def test_install_from_ui_runner_account_reaches_only_build_pods() -> None:
+    docs = _render("-f", str(_INSTALL_UI_VALUES))
+    role = next(d for d in _by_kind(docs, "Role") if d["metadata"]["name"] == "rel-hse-doc-studio-runner-ui-builds")
+    resources = {r for rule in role["rules"] for r in rule["resources"]}
+
+    assert resources == {"pods", "pods/log", "pods/exec"}
+    assert not [r for r in resources if "secret" in r]
+
+
+def test_install_from_ui_wires_the_api_account_and_settings() -> None:
+    api = _api_deployment(_render("-f", str(_INSTALL_UI_VALUES)))
+    pod = api["spec"]["template"]["spec"]
+    env = {e["name"]: e.get("value") for e in pod["containers"][0]["env"]}
+
+    assert pod["serviceAccountName"] == "rel-hse-doc-studio-api"
+    assert env["HSE_STUDIO__RUNNER_INSTALL__KUBERNETES_ENABLED"] == "true"
+    assert env["HSE_STUDIO__RUNNER_INSTALL__KUBERNETES_SERVICE_ACCOUNT"] == "rel-hse-doc-studio-runner-ui"
+    assert env["HSE_STUDIO__RUNNER_INSTALL__KUBERNETES_STORAGE_SIZE"] == "8Gi"

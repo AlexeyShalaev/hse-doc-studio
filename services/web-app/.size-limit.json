@@ -66,6 +66,12 @@
     "limit": "12.7 kB"
   },
   {
+    "name": "Словарь админки: runnerInstall (установка раннеров)",
+    "path": "dist/assets/locale-admin-runnerInstall-*.js",
+    "gzip": true,
+    "limit": "6 kB"
+  },
+  {
     "name": "Словарь админки: quotas",
     "path": "dist/assets/locale-admin-quotas-*.js",
     "gzip": true,

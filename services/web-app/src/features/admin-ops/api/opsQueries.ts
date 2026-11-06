@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type {
   CreateAdminRunnerTokenRequest,
+  StartLocalInstallRequest,
   UpdateAdminQuotasRequest,
 } from "@entities/session";
 import { opsApi } from "./opsApi";
@@ -23,6 +24,10 @@ export const opsKeys = {
   person: (id: string) => ["admin", "ops", "person", id] as const,
   buildSettings: ["admin", "ops", "build-settings"] as const,
   personalRunners: ["admin", "ops", "runners", "personal"] as const,
+  installLocal: ["admin", "ops", "runner-install", "local"] as const,
+  installJob: (id: string) =>
+    ["admin", "ops", "runner-install", "job", id] as const,
+  installInstances: ["admin", "ops", "runner-install", "instances"] as const,
 };
 
 /** Опрос идёт только пока вкладка видна: react-query не тикает в фоне без явного флага. */
@@ -202,6 +207,65 @@ export const useUpdateQuotas = () => {
     mutationFn: (body: UpdateAdminQuotasRequest) => opsApi.updateQuotas(body),
     onSuccess: () => {
       invalidate(opsKeys.quotas);
+    },
+  });
+};
+
+/** Возможности установки на этой машине: читаются при открытии окна, без фонового опроса. */
+export const useLocalInstallCapabilities = (enabled: boolean) =>
+  useQuery({
+    queryKey: opsKeys.installLocal,
+    queryFn: () => opsApi.localCapabilities(),
+    enabled,
+    staleTime: 0,
+    gcTime: 0,
+  });
+
+export const useStartLocalInstall = () =>
+  useMutation({
+    mutationFn: (v: {
+      target: "docker" | "kubernetes";
+      body: StartLocalInstallRequest;
+    }) => opsApi.startLocalInstall(v.target, v.body),
+    gcTime: 0,
+  });
+
+const INSTALL_POLL_MS = 1000;
+
+/** Ход установки: опрос раз в секунду, пока задача не закончится. */
+export const useInstallJob = (id: string | null) =>
+  useQuery({
+    queryKey: opsKeys.installJob(id ?? ""),
+    queryFn: () => opsApi.installJob(id ?? ""),
+    enabled: id !== null,
+    staleTime: 0,
+    gcTime: 0,
+    refetchInterval: (query) =>
+      query.state.data?.state === "running" || !query.state.data
+        ? INSTALL_POLL_MS
+        : false,
+  });
+
+export const useLocalInstances = (enabled: boolean) =>
+  useQuery({
+    queryKey: opsKeys.installInstances,
+    queryFn: () => opsApi.localInstances(),
+    enabled,
+    staleTime: 0,
+    gcTime: 0,
+  });
+
+export const useRemoveLocalInstance = () => {
+  const invalidate = useInvalidate();
+  return useMutation({
+    mutationFn: (v: { target: "docker" | "kubernetes"; name: string }) =>
+      opsApi.removeLocalInstance(v.target, v.name),
+    onSuccess: () => {
+      invalidate(
+        opsKeys.installInstances,
+        opsKeys.runners,
+        opsKeys.runnerSummary,
+      );
     },
   });
 };

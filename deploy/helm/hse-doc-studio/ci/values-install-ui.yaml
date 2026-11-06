@@ -1,0 +1,5 @@
+# Поверх values-test.yaml: установка раннеров из админки в этот кластер (golden-рендер rendered-install-ui.golden.yaml).
+runner:
+  installFromUi:
+    enabled: true
+    storageSize: 8Gi
