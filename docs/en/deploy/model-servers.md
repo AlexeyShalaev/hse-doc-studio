@@ -44,6 +44,7 @@ A server can then be stopped, started, inspected through the container log and r
 
 - The container is not published: in the shared Docker network only the Studio sees it, without the network the port is open on the host's `127.0.0.1` only.
 - vLLM and SGLang run with an API key. The key is generated (32 bytes), stored encrypted as the shared provider's key, and never appears in API responses or the audit log.
+- The Hugging Face token (needed for private and gated models in vLLM and SGLang) is stored only encrypted under the Studio secrets key. The UI and API show only that it is set: you can replace or delete it but never read it back. It never reaches responses, logs or the audit trail (the audit records only the `model_server.hf_token_set` / `model_server.hf_token_clear` fact).
 - Container secrets (API key, Hugging Face token) are passed through a temporary `0600` file that is deleted right after the start, not through process arguments.
 - `model_server.install`, `.start`, `.stop`, `.remove` go to the audit log: engine, model, target, no secrets.
 - The install needs the Studio to reach the host `docker.sock`. The socket equals root on the host: give it only to an installation you trust.

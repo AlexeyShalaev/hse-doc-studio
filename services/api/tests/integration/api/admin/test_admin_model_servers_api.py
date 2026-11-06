@@ -16,12 +16,19 @@ from hse_doc_studio.api.routers.admin import make_admin_router
 from hse_doc_studio.core.identity.protocols import IActorResolver
 from hse_doc_studio.core.mode import StudioMode
 from hse_doc_studio.infra.identity.resolvers import ChainActorResolver, SessionCookieResolver
-from hse_doc_studio.use_cases.admin.model_servers import ModelServerService, ModelServerSettings, ModelServersUC
+from hse_doc_studio.use_cases.admin.model_servers import (
+    HfTokenVault,
+    ModelServerService,
+    ModelServerSettings,
+    ModelServersUC,
+)
 from hse_doc_studio.use_cases.identity.sessions import SessionService
 from httpx import ASGITransport, AsyncClient
 
 from tests.fakes.auth import empty_bearer_resolver
+from tests.fakes.identity import InMemoryInstanceSettingsRepository
 from tests.fakes.model_servers import FakeEngineClient, FakeProbe, FakeRegistry, FakeResources, FakeRuntime, hardware
+from tests.fakes.ops import NoopUow, ReversingCipher
 from tests.integration.api.admin.test_admin_users_api import _Env as _UsersEnv
 
 
@@ -33,6 +40,8 @@ class _Stack:
         self.registry = FakeRegistry()
         self.probe = FakeProbe(hardware())
         self.settings = ModelServerSettings(startup_timeout_s=2.0)
+        self.repo = InMemoryInstanceSettingsRepository()
+        self.vault = HfTokenVault(self.repo, ReversingCipher())  # type: ignore[arg-type]
         self.service = self.build()
 
     def build(self) -> ModelServerService:
@@ -43,6 +52,7 @@ class _Stack:
             FakeResources(),  # type: ignore[arg-type]
             self.registry,  # type: ignore[arg-type]
             self.settings,
+            self.vault,
         )
 
 
@@ -61,7 +71,7 @@ class _Provider(Provider):
 
     @provide
     def uc(self) -> ModelServersUC:
-        return ModelServersUC(self.s.service, self.s.users.audit)
+        return ModelServersUC(self.s.service, self.s.users.audit, self.s.vault, NoopUow())  # type: ignore[arg-type]
 
 
 @pytest_asyncio.fixture
@@ -274,3 +284,54 @@ async def test_stop_start_logs_and_remove(stack: _Stack) -> None:
     assert (await stack.client.get(base, headers=headers)).status_code == 404  # type: ignore[attr-defined]
     actions = {e.action for e in await stack.users.audit.list(limit=50)}
     assert {"model_server.install", "model_server.stop", "model_server.start", "model_server.remove"} <= actions
+
+
+TOKEN = "hf_SECRETTOKENVALUE123"
+
+
+async def test_hf_token_is_stored_encrypted_and_never_returned(stack: _Stack) -> None:
+    headers = await _admin(stack)
+    url = "/api/admin/model-servers/settings"
+    assert (await stack.client.get(url, headers=headers)).json() == {"hf_token_set": False}  # type: ignore[attr-defined]
+    put = await stack.client.put(url, headers=headers, json={"hf_token": TOKEN})  # type: ignore[attr-defined]
+    assert put.json() == {"hf_token_set": True}
+    assert put.headers["cache-control"] == "no-store"
+    assert (await stack.client.get(url, headers=headers)).json() == {"hf_token_set": True}  # type: ignore[attr-defined]
+    stored = await stack.repo.get_secret("model_servers.hf_token")
+    assert stored is not None
+    assert TOKEN not in stored
+    assert TOKEN not in str(await stack.repo.get_all())
+    for entry in await stack.users.audit.list(limit=50):
+        assert TOKEN not in str(entry.details)
+    assert (await stack.client.delete(url, headers=headers)).json() == {"hf_token_set": False}  # type: ignore[attr-defined]
+    assert await stack.repo.get_secret("model_servers.hf_token") is None
+
+
+async def test_hf_token_validation_and_error_text_do_not_echo_it(stack: _Stack) -> None:
+    headers = await _admin(stack)
+    bad = await stack.client.put(  # type: ignore[attr-defined]
+        "/api/admin/model-servers/settings", headers=headers, json={"hf_token": "has space inside"}
+    )
+    assert bad.status_code == 422
+    assert "has space" not in bad.text
+    student = await stack.users.add("stud")
+    r = await stack.client.put("/api/admin/model-servers/settings", headers=student, json={"hf_token": TOKEN})  # type: ignore[attr-defined]
+    assert r.status_code == 404
+
+
+async def test_saved_hf_token_reaches_the_container_only_as_secret_env(stack: _Stack) -> None:
+    headers = await _admin(stack)
+    stack.probe.info = hardware(nvidia=True, vram_mb=24576)
+    await stack.client.put("/api/admin/model-servers/settings", headers=headers, json={"hf_token": TOKEN})  # type: ignore[attr-defined]
+    r = await stack.client.post(  # type: ignore[attr-defined]
+        "/api/admin/model-servers", headers=headers, json={"engine": "vllm", "model": "Qwen/Qwen3-4B"}
+    )
+    done = await _wait_done(stack, headers, r.json()["id"])
+    spec = stack.runtime.specs[0]
+    assert spec.secret_env["HF_TOKEN"] == TOKEN
+    assert TOKEN not in " ".join(spec.command)
+    assert TOKEN not in str(dict(spec.env))
+    assert TOKEN not in str(dict(spec.labels))
+    logs = await stack.client.get(f"/api/admin/model-servers/{done['id']}/logs", headers=headers)  # type: ignore[attr-defined]
+    assert TOKEN not in logs.text
+    assert TOKEN not in str(done)

@@ -37,7 +37,12 @@ from hse_doc_studio.infra.model_servers.client import HttpModelServerClient
 from hse_doc_studio.infra.model_servers.docker_runtime import DockerContainerRuntime
 from hse_doc_studio.infra.model_servers.host_resources import LocalHostResources
 from hse_doc_studio.infra.model_servers.provider_registry import ContainerProviderRegistry
-from hse_doc_studio.use_cases.admin.model_servers import ModelServerService, ModelServerSettings, ModelServersUC
+from hse_doc_studio.use_cases.admin.model_servers import (
+    HfTokenVault,
+    ModelServerService,
+    ModelServerSettings,
+    ModelServersUC,
+)
 from hse_doc_studio.use_cases.admin.ops_ai_providers import (
     CheckInstanceAiProviderUC,
     CreateInstanceAiProviderUC,
@@ -275,6 +280,7 @@ class ServerAdminOpsProvider(Provider):
         hardware: IHardwareProbe,
         resources: IHostResources,
         registry: IModelProviderRegistry,
+        vault: HfTokenVault,
     ) -> ModelServerService:
         cfg = settings.model_servers
         images = {
@@ -295,8 +301,15 @@ class ServerAdminOpsProvider(Provider):
                 startup_timeout_s=cfg.startup_timeout_s,
                 ready_timeout_s=cfg.ready_timeout_s,
             ),
+            vault,
         )
 
     @provide
-    def get_model_servers_uc(self, service: ModelServerService, audit: IAuditLog) -> ModelServersUC:
-        return ModelServersUC(service, audit)
+    def get_hf_token_vault(self, repo: IInstanceSettingsRepository, cipher: ISecretCipher) -> HfTokenVault:
+        return HfTokenVault(repo, cipher)
+
+    @provide
+    def get_model_servers_uc(
+        self, service: ModelServerService, audit: IAuditLog, vault: HfTokenVault, uow: IUnitOfWork
+    ) -> ModelServersUC:
+        return ModelServersUC(service, audit, vault, uow)

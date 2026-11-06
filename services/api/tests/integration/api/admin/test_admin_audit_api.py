@@ -295,6 +295,8 @@ _AUDITED_ELSEWHERE: dict[tuple[str, str], str] = {
     ("POST", "/api/admin/model-servers/{id}/start"): "model_server.start",
     ("POST", "/api/admin/model-servers/{id}/stop"): "model_server.stop",
     ("DELETE", "/api/admin/model-servers/{id}"): "model_server.remove",
+    ("PUT", "/api/admin/model-servers/settings"): "model_server.hf_token_set",
+    ("DELETE", "/api/admin/model-servers/settings"): "model_server.hf_token_clear",
 }
 
 # Изменяющие ручки без записи в журнале осознанно: только проверка соединения, состояние не меняется.
