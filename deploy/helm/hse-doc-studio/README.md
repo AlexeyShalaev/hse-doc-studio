@@ -35,7 +35,7 @@ helm install studio deploy/helm/hse-doc-studio -f my-values.yaml
 helm upgrade hse-doc-studio deploy/helm/hse-doc-studio --reuse-values --set image.tag=<версия> --atomic --wait
 ```
 
-**Установка раннеров из админки: `runner.installFromUi.enabled=true`.** По умолчанию выключено (на проде общие раннеры включают сознательно). Включение добавляет ServiceAccount `<релиз>-runner-ui` с Role только на поды сборки и ServiceAccount `<релиз>-api` с Role на Deployment (`create`, `get`, `list`, `delete`), Secret (`create`, `delete`) и PersistentVolumeClaim (`create`, `delete`) в namespace релиза, переключает на него api и включает кнопку «На этой же машине» на странице «Раннеры». Role и RoleBinding Студия создавать не может, ClusterRole нет. Подробности: `docs/ru/deploy/runners.md`.
+**Установка раннеров из админки: `runner.installFromUi.enabled=true`.** По умолчанию выключено (на проде общие раннеры включают сознательно). Включение добавляет ServiceAccount `<релиз>-runner-ui` с Role только на поды сборки и ServiceAccount `<релиз>-api` с Role на Deployment (`create`, `get`, `list`, `delete`), Secret (`create`, `delete`) и PersistentVolumeClaim (`create`, `delete`) в namespace релиза, переключает на него api и включает кнопку «На этой же машине» на странице «Раннеры». Role и RoleBinding Студия создавать не может, ClusterRole нет. Ход установок хранится в памяти одного процесса api, поэтому функция рассчитана на одну реплику (как и сам чарт). Подробности: `docs/ru/deploy/runners.md`.
 
 **Кнопки в админке: `updater.enabled=true`.** Чарт добавляет под `updater` (исполнитель `kubernetes`), его ServiceAccount и Role и переключает api на этот исполнитель:
 
