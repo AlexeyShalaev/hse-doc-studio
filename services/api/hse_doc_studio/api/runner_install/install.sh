@@ -42,7 +42,8 @@ run() {
     if [ "$DRY_RUN" = 1 ]; then
         say "  would run: $*"
     else
-        "$@"
+        # stdin команд закрыт: при запуске через `sh -s` скрипт читается из stdin, и команда не должна съесть его остаток.
+        "$@" </dev/null
     fi
 }
 
@@ -70,7 +71,7 @@ need_docker() {
         die "docker not found. The runner runs as a container: install Docker (https://docs.docker.com/engine/install/) and run this again."
     }
     if [ "$DRY_RUN" != 1 ]; then
-        docker info >/dev/null 2>&1 || die "docker is installed but not reachable for this user (daemon stopped, or no permission: try sudo)"
+        docker info >/dev/null 2>&1 </dev/null || die "docker is installed but not reachable for this user (daemon stopped, or no permission: try sudo)"
     fi
 }
 

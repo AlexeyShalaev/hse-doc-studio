@@ -25,6 +25,9 @@ spec:
         {{- end }}
         checksum/secret: {{ include (print $.Template.BasePath "/secret.yaml") . | sha256sum }}
     spec:
+      {{- if .Values.runner.installFromUi.enabled }}
+      serviceAccountName: {{ include "hds.fullname" . }}-api
+      {{- end }}
       {{- with .Values.imagePullSecrets }}
       imagePullSecrets:
         {{- toYaml . | nindent 8 }}
@@ -48,6 +51,14 @@ spec:
             {{- include "hds.env" . | nindent 12 }}
             {{- if .Values.backups.enabled }}
             {{- include "hds.backupsEnv" . | nindent 12 }}
+            {{- end }}
+            {{- if .Values.runner.installFromUi.enabled }}
+            # Установка раннеров из админки в этот кластер: права и ServiceAccount раннеров в runner-install-ui.yaml.
+            - {name: HSE_STUDIO__RUNNER_INSTALL__KUBERNETES_ENABLED, value: "true"}
+            - {name: HSE_STUDIO__RUNNER_INSTALL__KUBERNETES_SERVICE_ACCOUNT, value: {{ include "hds.fullname" . }}-runner-ui}
+            - {name: HSE_STUDIO__RUNNER_INSTALL__KUBERNETES_STUDIO_URL, value: "http://{{ include "hds.fullname" . }}:{{ .Values.service.port }}"}
+            - {name: HSE_STUDIO__RUNNER_INSTALL__KUBERNETES_STORAGE_SIZE, value: {{ .Values.runner.installFromUi.storageSize | quote }}}
+            - {name: HSE_STUDIO__RUNNER_INSTALL__KUBERNETES_STORAGE_CLASS, value: {{ .Values.runner.installFromUi.storageClassName | quote }}}
             {{- end }}
             {{- if .Values.updater.enabled }}
             # Обновление из админки: версию ставит сервис updater (updater-kubernetes.yaml), api только решает и учитывает.

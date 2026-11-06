@@ -27,6 +27,7 @@ from hse_doc_studio.api.config.mail import MailConfig
 from hse_doc_studio.api.config.model_servers import ModelServersConfig
 from hse_doc_studio.api.config.observability import ObservabilityConfig
 from hse_doc_studio.api.config.rate_limit import RateLimitConfig
+from hse_doc_studio.api.config.runner_install import RunnerInstallConfig
 from hse_doc_studio.api.config.runtime import CorsConfig, HttpServerConfig, LoggingConfig
 from hse_doc_studio.api.config.server_update import ServerUpdateConfig
 from hse_doc_studio.api.config.services import (
@@ -106,6 +107,7 @@ class Settings(BaseSettings):
     model_servers: ModelServersConfig = Field(default_factory=ModelServersConfig)
     ai_gateway: AiGatewayConfig = Field(default_factory=AiGatewayConfig)
     autoscale: AutoscaleConfig = Field(default_factory=AutoscaleConfig)
+    runner_install: RunnerInstallConfig = Field(default_factory=RunnerInstallConfig)
     backups: BackupsConfig = Field(default_factory=BackupsConfig)
     server_update: ServerUpdateConfig = Field(default_factory=ServerUpdateConfig)
     lifecycle: LifecycleConfig = Field(default_factory=LifecycleConfig)

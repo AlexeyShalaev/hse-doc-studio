@@ -227,6 +227,13 @@ runner:
     storageClassName: ""
     accessModes: [ReadWriteOnce]
     size: 10Gi
+  # Установка раннеров из админки Студии в этот кластер (кнопка «На этой же машине» на странице раннеров).
+  # По умолчанию выключено: общие раннеры на проде включают сознательно. Включение даёт ServiceAccount Студии
+  # права create/get/list/delete на Deployment, create/delete на Secret и PVC в namespace релиза.
+  installFromUi:
+    enabled: false
+    storageClassName: ""
+    storageSize: 5Gi
   # Только executor=kubernetes: поды сборки.
   kubernetes:
     # Namespace подов сборки; пусто значит namespace релиза. Свой namespace должен существовать; пометьте его

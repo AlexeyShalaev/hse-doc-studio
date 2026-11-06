@@ -1,0 +1,52 @@
+from __future__ import annotations
+
+from hse_doc_studio.core.runner_install import (
+    Capability,
+    InstallError,
+    InstallStepState,
+    InstallTarget,
+    LocalInstance,
+    LocalRunnerSpec,
+    ProgressReporter,
+)
+
+
+class FakeLocalHost:
+    """Хост установки на подмене: помнит, что ему передали, и умеет упасть на заданном шаге."""
+
+    def __init__(
+        self,
+        target: InstallTarget = InstallTarget.docker,
+        capability: Capability | None = None,
+        *,
+        fail_with: InstallError | None = None,
+    ) -> None:
+        self.target = target
+        self._capability = capability or Capability.yes()
+        self.fail_with = fail_with
+        self.specs: list[LocalRunnerSpec] = []
+        self.removed: list[str] = []
+        self.instances: list[LocalInstance] = []
+
+    async def capability(self) -> Capability:
+        return self._capability
+
+    def steps(self) -> tuple[str, ...]:
+        return ("pull", "start")
+
+    async def install(self, spec: LocalRunnerSpec, report: ProgressReporter) -> None:
+        self.specs.append(spec)
+        await report("pull", InstallStepState.running, "")
+        if self.fail_with is not None:
+            raise self.fail_with
+        await report("pull", InstallStepState.done, "")
+        await report("start", InstallStepState.done, "")
+
+    async def list_instances(self) -> list[LocalInstance]:
+        return list(self.instances)
+
+    async def remove(self, name: str) -> bool:
+        if name not in {i.name for i in self.instances}:
+            return False
+        self.removed.append(name)
+        return True
