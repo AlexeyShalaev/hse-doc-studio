@@ -93,7 +93,8 @@ for (const lang of LANGS) {
         const error = page.getByTestId("ssh-error");
         await expect(error).toBeVisible();
         await expect(page.getByTestId("ssh-fingerprint")).toHaveCount(0);
-        expect(await page.content()).not.toContain("e2e-canary-password");
+        // Значение поля React отражает в атрибуте value, поэтому смотрим на видимый текст, а не на разметку.
+        expect(await page.locator("body").innerText()).not.toContain("e2e-canary-password");
         await page.getByTestId("ssh-host").fill("");
       }
       await shot(page, L, "runner-install-ssh-blocked");
