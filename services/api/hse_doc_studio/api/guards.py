@@ -24,6 +24,7 @@ from hse_doc_studio.api.config import settings
 from hse_doc_studio.api.git_errors import install_git_error_handlers
 from hse_doc_studio.api.identity_errors import install_identity_error_handlers
 from hse_doc_studio.api.import_errors import install_project_import_error_handlers
+from hse_doc_studio.api.model_server_errors import install_model_server_error_handlers
 from hse_doc_studio.api.quota_errors import install_quota_error_handlers
 from hse_doc_studio.api.review_errors import install_review_error_handlers
 from hse_doc_studio.api.route_actions import RouteRule, route_key, rule_for, scope_for_rule
@@ -329,6 +330,7 @@ def install_exception_handlers(app: FastAPI) -> None:
     app.add_exception_handler(ProjectForbiddenError, _forbidden_handler)
     install_git_error_handlers(app)
     install_backup_error_handlers(app)
+    install_model_server_error_handlers(app)
     install_update_error_handlers(app)
     install_identity_error_handlers(app)
     install_quota_error_handlers(app)

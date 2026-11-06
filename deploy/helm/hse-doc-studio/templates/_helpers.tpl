@@ -99,6 +99,7 @@ app.kubernetes.io/instance: {{ .Release.Name }}
 - {name: HSE_STUDIO__MAIL__USERNAME, value: {{ .Values.mail.username | quote }}}
 - {name: HSE_STUDIO__MAIL__FROM_ADDRESS, value: {{ .Values.mail.fromAddress | quote }}}
 - {name: HSE_STUDIO__LANGUAGETOOL__POOL_REPLICAS, value: {{ .Values.services.languagetoolReplicas | toJson | quote }}}
+- {name: HSE_STUDIO__MODEL_SERVERS__LOCAL_ENABLED, value: {{ .Values.modelServers.local.enabled | quote }}}
 - {name: HSE_STUDIO__OFFICE_EDITOR__POOL_REPLICAS, value: {{ .Values.services.officeEditorReplicas | toJson | quote }}}
 - {name: HSE_STUDIO__OFFICE_EDITOR__BACKEND_INTERNAL_URL, value: {{ default (printf "http://%s:%v" (include "hds.fullname" .) .Values.service.port) .Values.services.backendInternalUrl | quote }}}
 {{- range $key, $value := .Values.api.extraEnv }}
