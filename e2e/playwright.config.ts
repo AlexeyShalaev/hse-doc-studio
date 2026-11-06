@@ -71,6 +71,15 @@ export default defineConfig({
       },
     },
     {
+      // Команды установки раннера у токена (docker, скрипт-служба): копирование и скрипт без секретов.
+      name: "runner-install",
+      testMatch: /runner-install\.spec\.ts/,
+      use: {
+        ...devices["Desktop Chrome"],
+        channel: process.env.E2E_CHANNEL || undefined,
+      },
+    },
+    {
       // Passkey на server-lite: виртуальный аутентификатор Chrome через CDP (WebAuthn.addVirtualAuthenticator).
       name: "passkeys",
       testMatch: /passkeys\.spec\.ts/,

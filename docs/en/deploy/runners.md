@@ -36,6 +36,28 @@ tags:
 
 In compose the first runner registers with `RUNNER_BOOTSTRAP_TOKEN`.
 
+## One-command install
+
+After a token is created (and after "Issue a new token" on a runner) the dialog shows the secret once and ready commands in three tabs. The Studio address comes from the instance `public_url`, or from the address the admin opened the page at when it is not set.
+
+| Tab | What it does |
+|---|---|
+| Docker | one `docker run -d --restart unless-stopped …` line with the image of the same version as the Studio, the address and the token |
+| Script (service) | `curl -fsSL <address>/api/runner/v1/install.sh \| sudo env … sh -s -- install`: installs the runner as a systemd service on Linux or a launchd service on macOS |
+| Variables | a line with environment variables for a machine that already has the `hse-doc-studio` command |
+
+Every command has a Copy button. For the script you pick the system: on Linux the command goes through `sudo`, on macOS a per-user service is installed without `sudo`.
+
+The script is built so it can be checked before it runs:
+
+- it is the same for everyone and holds no secrets: the token and the Studio address come from the command environment. Read it with the "Show the script that will run" link or `curl -fsSL <address>/api/runner/v1/install.sh -o install.sh`;
+- `sh install.sh plan` (or `HSE_RUNNER_DRY_RUN=1`) prints every action and changes nothing; the token is masked in the plan;
+- `install` prints the plan first: image, Studio address, data directory, service and environment file paths; the token lives in an environment file with mode 0600, not in the service definition;
+- running it again is idempotent: files are rewritten with the same values, the service restarts, and the runner identity stored in the data directory is kept;
+- `sh install.sh uninstall` stops and removes the service and the environment file; with `--purge` also the image and the data directory. Revoke the runner in the admin list afterwards.
+
+The runner on the host runs as a container, so the script needs Docker. Without it the script stops with a clear message and a link to the install guide. The service name (`HSE_RUNNER_SERVICE`), image (`HSE_RUNNER_IMAGE`) and data directory (`HSE_RUNNER_DATA_DIR`) can be overridden by environment; that is how several runners share one machine.
+
 ## Management
 
 The list shows version, tags, capacity and last poll time.
