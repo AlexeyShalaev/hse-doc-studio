@@ -21,5 +21,8 @@
     "last_seen_ip": null
   },
   "runner_token": "hse_rn_8d2e6b4f1a9c3075",
-  "command": "HSE_RUNNER__API_URL=https://studio.example.org HSE_RUNNER__TOKEN=hse_rn_8d2e6b4f1a9c3075 hse-doc-studio runner"
+  "command": "HSE_RUNNER__API_URL=https://studio.example.org HSE_RUNNER__RUNNER_TOKEN=hse_rn_8d2e6b4f1a9c3075 hse-doc-studio runner",
+  "docker_command": "docker run -d --name hse-runner --restart unless-stopped --group-add \"$(stat -c %g /var/run/docker.sock)\" -v /var/run/docker.sock:/var/run/docker.sock -v /var/lib/hse-runner:/var/lib/hse-runner -e HSE_RUNNER__API_URL=https://studio.example.org -e HSE_RUNNER__RUNNER_TOKEN=hse_rn_8d2e6b4f1a9c3075 -e HSE_RUNNER__DATA_DIR=/var/lib/hse-runner ghcr.io/alexeyshalaev/hse-doc-studio:0.4.0 hse-doc-studio runner",
+  "script_command": "curl -fsSL https://studio.example.org/api/runner/v1/install.sh | sudo env HSE_RUNNER__API_URL=https://studio.example.org HSE_RUNNER__RUNNER_TOKEN=hse_rn_8d2e6b4f1a9c3075 sh -s -- install",
+  "script_command_macos": "curl -fsSL https://studio.example.org/api/runner/v1/install.sh | env HSE_RUNNER__API_URL=https://studio.example.org HSE_RUNNER__RUNNER_TOKEN=hse_rn_8d2e6b4f1a9c3075 sh -s -- install"
 }

@@ -34,6 +34,9 @@ class CreatedRegistrationTokenResponse(StrictModel):
     secret: str
     # Готовая команда запуска раннера с этим токеном; секрет в ней виден так же один раз.
     command: str
+    docker_command: str
+    script_command: str
+    script_command_macos: str
 
 
 RunnerStatusName = Literal["online", "stale", "offline", "paused", "revoked", "disabled"]
@@ -76,6 +79,9 @@ class RotatedRunnerTokenResponse(StrictModel):
     runner: RunnerInfo
     runner_token: str
     command: str
+    docker_command: str
+    script_command: str
+    script_command_macos: str
 
 
 class RunnerSummaryInfo(StrictModel):

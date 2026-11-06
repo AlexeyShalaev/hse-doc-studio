@@ -6,6 +6,12 @@ Generated from `release-notes.json` via `make changelog` — do not edit by hand
 Release notes are hand-written and bilingual (RU/EN); the app shows them in the
 selected interface language.
 
+## [0.11.0](https://github.com/AlexeyShalaev/hse-doc-studio/compare/v0.10.0...v0.11.0) - 2026-11-06
+
+- "Build all" no longer leaves jobs queued forever when the personal runner is busy and there are no shared runners: jobs wait for a free slot on the personal runner. Jobs that are already stuck are picked up on the runner's next poll.
+- Self-diagnostics: every problem row can be opened to reach the page where it is fixed, for example a queue failure leads to the runners queue tab and backups lead to the backups page.
+- Settings, Disk: Studio offers to clean up old system versions (images of earlier versions, stale tags of helper images, the stopped updater). The latest previous version kept for rollback is protected from bulk cleanup.
+
 ## [0.10.0](https://github.com/AlexeyShalaev/hse-doc-studio/compare/v0.9.0...v0.10.0) - 2026-11-06
 
 - A stale tab after an update no longer breaks the admin area: the app picks up the new version and offers to reload the page.

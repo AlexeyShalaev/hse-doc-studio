@@ -144,22 +144,23 @@ const TOKENS: AdminRunnerToken[] = [
   token("t5", "Старый", { revoked: true }),
 ];
 
-const COMMAND =
-  "HSE_RUNNER__API_URL=https://studio.example.org HSE_RUNNER__TOKEN=hse_rt_3f9a1c7e5b2d4a60 hse-doc-studio runner";
+const COMMANDS = (secret: string, env: string) => ({
+  command: `HSE_RUNNER__API_URL=https://studio.example.org ${env}=${secret} hse-doc-studio runner`,
+  docker_command: `docker run -d --name hse-runner --restart unless-stopped -v /var/run/docker.sock:/var/run/docker.sock -e HSE_RUNNER__API_URL=https://studio.example.org -e ${env}=${secret} ghcr.io/alexeyshalaev/hse-doc-studio:0.4.0 hse-doc-studio runner`,
+  script_command: `curl -fsSL https://studio.example.org/api/runner/v1/install.sh | sudo env HSE_RUNNER__API_URL=https://studio.example.org ${env}=${secret} sh -s -- install`,
+  script_command_macos: `curl -fsSL https://studio.example.org/api/runner/v1/install.sh | env HSE_RUNNER__API_URL=https://studio.example.org ${env}=${secret} sh -s -- install`,
+});
 
 const CREATED: AdminRunnerTokenCreated = {
   token: token("t9", "Сервер в аудитории 305"),
   secret: "hse_rt_3f9a1c7e5b2d4a60",
-  command: COMMAND,
+  ...COMMANDS("hse_rt_3f9a1c7e5b2d4a60", "HSE_RUNNER__TOKEN"),
 };
 
 const ROTATED: AdminRunnerRotated = {
   runner: RUNNER_1,
   runner_token: "hse_rn_8d2e6b4f1a9c3075",
-  command: COMMAND.replace(
-    "hse_rt_3f9a1c7e5b2d4a60",
-    "hse_rn_8d2e6b4f1a9c3075",
-  ),
+  ...COMMANDS("hse_rn_8d2e6b4f1a9c3075", "HSE_RUNNER__RUNNER_TOKEN"),
 };
 
 /** Окно статического списка галереи: страницы есть, фильтров сервера нет. */
@@ -669,7 +670,7 @@ export const getAdminOpsGallery = (): GalleryGroup[] => [
           <SecretWithCommand
             label="Токен регистрации"
             secret={CREATED.secret}
-            command={CREATED.command}
+            commands={CREATED}
             onClose={noop}
           />
         ),
