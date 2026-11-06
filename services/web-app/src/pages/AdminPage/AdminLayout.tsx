@@ -31,7 +31,7 @@ import {
 } from "lucide-react";
 import { Link, NavLink, Outlet, useLocation } from "react-router";
 import { useTranslation } from "react-i18next";
-import { useIsPhoneWidth } from "@shared/lib";
+import { useIsPhoneWidth, useScrollToHash } from "@shared/lib";
 import { Modal, Tooltip, UiVariantContext } from "@shared/ui";
 import { useBootstrap } from "@entities/session";
 import { AppStatusBar } from "@widgets/AppStatusBar";
@@ -375,21 +375,24 @@ const AdminNav = () => {
 };
 
 /** Каркас админки: заголовок приложения, сгруппированная навигация, содержимое. */
-export const AdminLayout = () => (
-  <div
-    className="adm-shell ui-console flex flex-col flex-1 bg-bg-0"
-    style={{ minHeight: 0 }}
-    data-testid="admin-layout"
-  >
-    <UiVariantContext.Provider value="console">
-      <AppTitlebar showVersion={false} />
-      <div className="adm-body flex flex-1" style={{ minHeight: 0 }}>
-        <AdminNav />
-        <main className="adm-main">
-          <Outlet />
-        </main>
-      </div>
-    </UiVariantContext.Provider>
-    <AppStatusBar />
-  </div>
-);
+export const AdminLayout = () => {
+  useScrollToHash();
+  return (
+    <div
+      className="adm-shell ui-console flex flex-col flex-1 bg-bg-0"
+      style={{ minHeight: 0 }}
+      data-testid="admin-layout"
+    >
+      <UiVariantContext.Provider value="console">
+        <AppTitlebar showVersion={false} />
+        <div className="adm-body flex flex-1" style={{ minHeight: 0 }}>
+          <AdminNav />
+          <main className="adm-main">
+            <Outlet />
+          </main>
+        </div>
+      </UiVariantContext.Provider>
+      <AppStatusBar />
+    </div>
+  );
+};

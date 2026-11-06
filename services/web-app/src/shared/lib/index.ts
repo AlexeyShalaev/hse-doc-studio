@@ -171,3 +171,4 @@ export {
   useStaleBuildStore,
 } from "./staleBuild";
 export type { StaleReason } from "./staleBuild";
+export { useScrollToHash } from "./useScrollToHash";
