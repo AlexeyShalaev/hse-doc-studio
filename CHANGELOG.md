@@ -6,6 +6,29 @@ Generated from `release-notes.json` via `make changelog` — do not edit by hand
 Release notes are hand-written and bilingual (RU/EN); the app shows them in the
 selected interface language.
 
+## [0.10.0](https://github.com/AlexeyShalaev/hse-doc-studio/compare/v0.9.0...v0.10.0) (2026-11-06)
+
+
+### Features
+
+* **diagnostics:** осознанное принятие предупреждений самодиагностики ([7391e5c](https://github.com/AlexeyShalaev/hse-doc-studio/commit/7391e5ca55c097d44acc524198cebc789e4e624e))
+* **diagnostics:** осознанное принятие предупреждений самодиагностики ([b5d72e6](https://github.com/AlexeyShalaev/hse-doc-studio/commit/b5d72e696a5ccf8d0d1a0ffb88cba2132da76c56))
+* **web-app:** кнопка «Принимаю», список принятых предупреждений и точка самодиагностики в меню ([20ea856](https://github.com/AlexeyShalaev/hse-doc-studio/commit/20ea856cb2d92a0905efe10008afcc12e249d723))
+
+
+### Bug Fixes
+
+* **api:** маршруты остановки облачных сборок внесены в таблицы прав и областей токена ([396d9a7](https://github.com/AlexeyShalaev/hse-doc-studio/commit/396d9a79b51b1026c3a35e54a53e951dd855a4ca))
+* **diagnostics:** журнал аудита и права для принятия предупреждений ([f811d3a](https://github.com/AlexeyShalaev/hse-doc-studio/commit/f811d3af5dae15efb0bb36eb8449fc84e08a210d))
+* **web-app:** кнопки строки самодиагностики переносятся на телефоне ([7bce9b9](https://github.com/AlexeyShalaev/hse-doc-studio/commit/7bce9b9fc40f873ff514251668941f89a3055410))
+* **web-app:** панель документов и строка чата агента не выходят за рамки в узком виде ([76d4b4f](https://github.com/AlexeyShalaev/hse-doc-studio/commit/76d4b4f5e9b711d8103b3bf26fe0446d899b7d9e))
+* **web-app:** панель документов и строка чата агента не выходят за рамки в узком виде ([ae5da18](https://github.com/AlexeyShalaev/hse-doc-studio/commit/ae5da18e0030fda1a550be12224c67af2de7d2a6))
+* **web-app:** сведения строки раздела админки не шире строки на телефоне ([aded8fc](https://github.com/AlexeyShalaev/hse-doc-studio/commit/aded8fc4b5ef45fff4ebb81fca8a45d91e55e4ec))
+* **web:** очередь сборок не считается зависанием, отмена облачной сборки из локальной Студии ([380ce6b](https://github.com/AlexeyShalaev/hse-doc-studio/commit/380ce6bc1553974f1b5cb651e8bd2d7ff9516df6))
+* **web:** очередь сборок не считается зависанием, отмена облачной сборки из локальной Студии ([dc9d73c](https://github.com/AlexeyShalaev/hse-doc-studio/commit/dc9d73c10a564c9a0069ed07ffe0f0a7c8652016))
+* **web:** сообщение о новой версии вместо ошибки при устаревшей вкладке ([b92e6df](https://github.com/AlexeyShalaev/hse-doc-studio/commit/b92e6df776296e3e8b4bee7f988397b6a8c191ae))
+* устаревшая вкладка после выкатки: сообщение о новой версии вместо «Ошибка приложения» ([0746a6a](https://github.com/AlexeyShalaev/hse-doc-studio/commit/0746a6a9f8229fd020e94ec0a8c7984300989fa8))
+
 ## [0.9.0](https://github.com/AlexeyShalaev/hse-doc-studio/compare/v0.8.0...v0.9.0) - 2026-11-05
 
 - The topic application and the presentation build without supervisor or author data: the new course project template version 2026.1.1 fixes the There's no line here to end error that broke the build when a signature field was empty. New projects are created on it right away, existing ones see it as a recommended small update: accept it in the project settings
