@@ -223,6 +223,13 @@ tags:
 | `HSE_STUDIO__JOBS__RELAY_MAX_PENDING_BYTES_PER_USER` | int | `16777216` | оба | Сумма тел запросов к моделям одного человека в памяти api. |
 | `HSE_STUDIO__JOBS__RELAY_MAX_PENDING_TOTAL` | int | `32` | оба | Одновременных ретрансляций ИИ на весь процесс api (все люди). |
 | `HSE_STUDIO__JOBS__RELAY_MAX_PENDING_BYTES_TOTAL` | int | `134217728` | оба | Сумма тел запросов к моделям в памяти api (все люди). |
+| `HSE_STUDIO__MODEL_SERVERS__LOCAL_ENABLED` | bool | `true` | оба | Разрешена ли установка серверов моделей на машине со Студией (соседние контейнеры через docker.sock). В Kubernetes чарт выключает её по умолчанию: сокет узла равен root на узле. |
+| `HSE_STUDIO__MODEL_SERVERS__OLLAMA_IMAGE` | str | пусто | оба | Образ Ollama; пусто значит образ по умолчанию. |
+| `HSE_STUDIO__MODEL_SERVERS__VLLM_IMAGE` | str | пусто | оба | Образ vLLM (OpenAI-совместимый сервер); пусто значит по умолчанию. |
+| `HSE_STUDIO__MODEL_SERVERS__SGLANG_IMAGE` | str | пусто | оба | Образ SGLang; пусто значит образ по умолчанию. |
+| `HSE_STUDIO__MODEL_SERVERS__MAX_CONCURRENT_INSTALLS` | int | `1` | оба | Сколько установок серверов моделей может идти одновременно. |
+| `HSE_STUDIO__MODEL_SERVERS__STARTUP_TIMEOUT_S` | float | `120.0` | оба | Сколько ждать адрес и готовность контейнера движка после запуска. |
+| `HSE_STUDIO__MODEL_SERVERS__READY_TIMEOUT_S` | float | `3600.0` | оба | Сколько ждать готовности vLLM и SGLang: при первом запуске они скачивают веса модели. |
 | `HSE_STUDIO__AI_GATEWAY__RETRIES` | int | `2` | оба | Повторов временной ошибки провайдера, пока в поток ничего не ушло. |
 | `HSE_STUDIO__AI_GATEWAY__RETRY_BASE_DELAY_S` | float | `0.5` | оба | Первая пауза перед повтором, дальше вдвое. |
 | `HSE_STUDIO__AI_GATEWAY__RETRY_MAX_DELAY_S` | float | `8.0` | оба | Потолок паузы между повторами. |
