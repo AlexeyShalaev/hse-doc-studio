@@ -57,6 +57,57 @@ The script is built so it can be checked before it runs:
 - `sh install.sh uninstall` stops and removes the service and the environment file; with `--purge` also the image and the data directory. Revoke the runner in the admin list afterwards.
 
 The runner on the host runs as a container, so the script needs Docker. Without it the script stops with a clear message and a link to the install guide. The service name (`HSE_RUNNER_SERVICE`), image (`HSE_RUNNER_IMAGE`) and data directory (`HSE_RUNNER_DATA_DIR`) can be overridden by environment; that is how several runners share one machine.
+## Installing on the same machine from the admin area
+
+The "Install a runner" button on the Runners page puts a runner where the Studio itself runs. A way is offered only when it is technically possible; otherwise the reason is shown in place of the button.
+
+| Way | When available | What the Studio does |
+|---|---|---|
+| Docker next to it | the Studio sees `docker.sock` and Docker answers (the same access the Disk page uses) | starts a `hse-runner-<name>` container from the image of its own version with `--restart unless-stopped`; the token goes through a mode-0600 environment file that is deleted right after the start |
+| Deployment in the cluster | the Studio runs in Kubernetes, the chart has `runner.installFromUi.enabled`, and the Studio ServiceAccount may create resources | creates a Secret with the token, a data volume and a Deployment with the `kubernetes` executor under a separate ServiceAccount |
+
+Progress is shown step by step (token, image, start, connection to the Studio); every error has a readable reason and a Retry button. The registration token is single-use for an hour and is revoked at once on failure; the audit log gets the start, the result and the removal, without secrets. Runners installed this way are listed in the same window and can be removed there.
+
+Why a way may be hidden:
+
+- Docker: no `docker.sock`, Docker does not answer, or the way is turned off with `HSE_STUDIO__RUNNER_INSTALL__DOCKER_ENABLED=false`. In the `deploy/server` set the api has no Docker access on purpose (the socket is root on the host), so you see the reason instead of a button: use the SSH install or the command next to the token.
+- Kubernetes: the Studio is not in a cluster, the chart value is off, or its ServiceAccount lacks rights.
+
+### Kubernetes: what the chart turns on
+
+`runner.installFromUi.enabled` is `false` by default, and stays so on production where shared runners were not enabled. Turning it on adds:
+
+- a ServiceAccount and Role for the runners themselves, `<release>-runner-ui`: build pods only (`pods` create, get, list, delete; `pods/log` get; `pods/exec` create, get) in the release namespace, like the built-in runner;
+- a `<release>-api` ServiceAccount and Role for the Studio: Deployment (create, get, list, delete), Secret (create and delete only, no reading) and PersistentVolumeClaim (create, delete) in the release namespace. The Studio cannot create Roles or RoleBindings, so it cannot grant itself or a runner anything extra; there is no ClusterRole.
+
+A runner installed from the admin area lives in the release namespace and gets its own data volume (`runner.installFromUi.storageSize`, `storageClassName`) so the token issued to it survives a pod restart. Its Studio address is internal (the chart Service).
+
+## Installing over SSH on another machine
+
+"Install a runner" → "Over SSH" installs the runner on a Linux machine (macOS when the user is logged in, without guarantees). The Studio itself logs in over SSH, so the machine must be reachable from the Studio server.
+
+1. **Form.** Address and port, login, sign-in method (a password or a private key with an optional passphrase), whether `sudo` is needed, the runner name.
+2. **Address protection.** Before connecting anywhere the Studio resolves the name and checks every address. Loopback, private networks (including cluster pod and service addresses), link-local and cloud metadata addresses are closed. An internal host is opened only by an explicit entry in `HSE_STUDIO__RUNNER_INSTALL__SSH_ALLOWLIST` (or the shared `HSE_STUDIO__EGRESS__ALLOWLIST`): a name, `*.corp.example`, an IP or a CIDR. Cloud metadata and link-local addresses stay closed even when listed. The connection goes to the checked IP, not to the name again, so DNS swapping between the check and the login does not work.
+3. **Fingerprint.** The Studio gets only the host key; the password and key are not sent yet. You compare the SHA256 fingerprint with what the host itself shows (`ssh-keygen -lf /etc/ssh/ssh_host_ed25519_key.pub`) and confirm. The login then goes with the key pinned: if the host answers with another key, the connection drops before any credentials are sent. There is no silent trust.
+4. **Plan.** The Studio detects the OS, architecture, Docker and systemd and shows the steps: connect, token, Docker, service, verify, runner connects to the Studio. When Docker is missing it offers the official get.docker.com script (an explicit switch); without Docker the install does not start. If the login is not root and `sudo` is off, the service step is marked impossible.
+5. **Progress.** Steps run in real time and every error has a readable reason. The session lives 15 minutes, so "Retry" does not ask for the data again. The runner is installed with the same script as in "One-command install": it reaches the host over stdin (the token and the sudo password never appear in command arguments or `ps`).
+
+### Credentials
+
+By default the data is **one-time**: the password, key and passphrase live only in the api process memory during the install and are wiped after success, cancel or session expiry. They are written to no database, log, audit entry or API response; error texts are scrubbed of them.
+
+The **"Save the access encrypted"** switch stores them in the `runner_ssh_credentials` table under the Studio secrets encryption key (like git tokens; rotating the key re-encrypts them as well). A saved access is visible as a fact (name, host, sign-in method, fingerprint); the value cannot be shown, only deleted. It powers:
+
+- **Update**: reruns the script on the host (the image is pulled, the service restarts) and keeps the runner identity;
+- **Reinstall**: removes the service with its data (`uninstall --purge`) and installs again with a new token.
+
+The saved host key stays pinned: if it changed, the install stops with "host key differs" before any password is sent. Saving can be forbidden with `HSE_STUDIO__RUNNER_INSTALL__SSH_SAVE_CREDENTIALS=false`, and SSH install as a whole with `HSE_STUDIO__RUNNER_INSTALL__SSH_ENABLED=false`.
+
+### Limits and audit
+
+Install progress (steps and fingerprint confirmation sessions) is kept in the memory of one api process. This assumes a single replica, as the chart runs (`Recreate`): with several replicas a progress request can reach another one and get 404. Several replicas would need shared storage, which does not exist yet.
+
+Instance admins only; anyone else gets 404. Connection attempts are limited: 10 per minute per admin and 5 per minute per host and port (429), at most three installs run at once. The audit log records `runner_install.ssh.probe`, `confirm`, `start`, `succeeded`, `failed`, `cancel`, `credentials_save`, `credentials_delete`, `run_saved` with the address, login and fingerprint, without secrets.
 
 ## Management
 

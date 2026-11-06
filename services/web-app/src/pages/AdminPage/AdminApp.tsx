@@ -266,7 +266,14 @@ export const AdminApp = () => {
             key={part}
             path={part}
             element={
-              <Page width={width} ns={["ops", part]}>
+              <Page
+                width={width}
+                ns={
+                  part === "runners"
+                    ? ["ops", part, "runnerInstall"]
+                    : ["ops", part]
+                }
+              >
                 <OpsRoute part={part} />
               </Page>
             }
