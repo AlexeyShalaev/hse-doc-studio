@@ -206,12 +206,10 @@ export const InstallRunnerDialog = ({
   isOpen,
   onClose,
   onOpenCommand,
-  onOpenSsh,
 }: {
   isOpen: boolean;
   onClose: () => void;
   onOpenCommand: () => void;
-  onOpenSsh?: () => void;
 }) => {
   const { t } = useTranslation("adminRunnerInstall");
   const capabilities = useLocalInstallCapabilities(isOpen);
@@ -318,25 +316,6 @@ export const InstallRunnerDialog = ({
                     }
                   />
                 </div>
-              )}
-              {onOpenSsh && (
-                <Row
-                  title={t("ssh.rowTitle")}
-                  lead={t("ssh.rowLead")}
-                  testId="install-ssh"
-                >
-                  <Button
-                    type="button"
-                    size="sm"
-                    onClick={() => {
-                      close();
-                      onOpenSsh();
-                    }}
-                    data-testid="install-ssh-open"
-                  >
-                    {t("ssh.open")}
-                  </Button>
-                </Row>
               )}
               <Row
                 title={t("command.title")}

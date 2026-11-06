@@ -1,7 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type {
   CreateAdminRunnerTokenRequest,
-  SshProbeRequest,
   StartLocalInstallRequest,
   UpdateAdminQuotasRequest,
 } from "@entities/session";
@@ -29,13 +28,6 @@ export const opsKeys = {
   installJob: (id: string) =>
     ["admin", "ops", "runner-install", "job", id] as const,
   installInstances: ["admin", "ops", "runner-install", "instances"] as const,
-  sshCredentials: [
-    "admin",
-    "ops",
-    "runner-install",
-    "ssh-credentials",
-  ] as const,
-  sshCapability: ["admin", "ops", "runner-install", "ssh"] as const,
 };
 
 /** Опрос идёт только пока вкладка видна: react-query не тикает в фоне без явного флага. */
@@ -277,61 +269,3 @@ export const useRemoveLocalInstance = () => {
     },
   });
 };
-
-export const useSshCapability = (enabled: boolean) =>
-  useQuery({
-    queryKey: opsKeys.sshCapability,
-    queryFn: () => opsApi.sshCapability(),
-    enabled,
-    staleTime: 0,
-    gcTime: 0,
-  });
-
-/** Пароль и ключ не попадают в кэш: мутации с секретом живут без gcTime. */
-export const useSshProbe = () =>
-  useMutation({
-    mutationFn: (body: SshProbeRequest) => opsApi.sshProbe(body),
-    gcTime: 0,
-  });
-
-export const useSshConfirm = () =>
-  useMutation({
-    mutationFn: (v: { sessionId: string; fingerprint: string }) =>
-      opsApi.sshConfirm(v.sessionId, v.fingerprint),
-    gcTime: 0,
-  });
-
-export const useSshInstall = () =>
-  useMutation({
-    mutationFn: (v: {
-      sessionId: string;
-      body: { name: string; install_docker: boolean };
-    }) => opsApi.sshInstall(v.sessionId, v.body),
-    gcTime: 0,
-  });
-
-export const useSshCredentials = (enabled: boolean) =>
-  useQuery({
-    queryKey: opsKeys.sshCredentials,
-    queryFn: () => opsApi.sshCredentials(),
-    enabled,
-    staleTime: 0,
-    gcTime: 0,
-  });
-
-export const useSshDeleteCredential = () => {
-  const invalidate = useInvalidate();
-  return useMutation({
-    mutationFn: (id: string) => opsApi.sshDeleteCredential(id),
-    onSuccess: () => {
-      invalidate(opsKeys.sshCredentials);
-    },
-  });
-};
-
-export const useSshRunSaved = () =>
-  useMutation({
-    mutationFn: (v: { id: string; action: "update" | "reinstall" }) =>
-      opsApi.sshRunSaved(v.id, v.action),
-    gcTime: 0,
-  });

@@ -10,7 +10,6 @@ import { Queue } from "./Queue";
 import { AutoscalePanel } from "./AutoscalePanel";
 import { InstallRunnerDialog } from "./InstallRunnerDialog";
 import { Runners } from "./Runners";
-import { SshInstallDialog } from "./SshInstallDialog";
 import { Tabs } from "./parts";
 
 type Tab = "runners" | "queue";
@@ -34,7 +33,6 @@ export const RunnersPage = ({
     fromUrl === "queue" || fromUrl === "runners" ? fromUrl : initialTab;
   const [creating, setCreating] = useState(initialCreateToken);
   const [installing, setInstalling] = useState(false);
-  const [sshOpen, setSshOpen] = useState(false);
   const runners = useRunnerSummary();
   const summary = useQueueSummary();
 
@@ -127,15 +125,6 @@ export const RunnersPage = ({
         }}
         onOpenCommand={() => {
           setCreating(true);
-        }}
-        onOpenSsh={() => {
-          setSshOpen(true);
-        }}
-      />
-      <SshInstallDialog
-        isOpen={sshOpen}
-        onClose={() => {
-          setSshOpen(false);
         }}
       />
       <div

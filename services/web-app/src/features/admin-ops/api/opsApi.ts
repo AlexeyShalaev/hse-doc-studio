@@ -19,10 +19,6 @@ import {
   InstallJobSchema,
   LocalInstallCapabilitiesSchema,
   LocalInstanceSchema,
-  SavedSshCredentialSchema,
-  SshCapabilitySchema,
-  SshPlanSchema,
-  SshProbeResponseSchema,
   type AdminBuildSettings,
   type AdminJob,
   type AdminJobPage,
@@ -41,11 +37,6 @@ import {
   type InstallJob,
   type LocalInstallCapabilities,
   type LocalInstance,
-  type SavedSshCredential,
-  type SshCapability,
-  type SshPlan,
-  type SshProbeRequest,
-  type SshProbeResponse,
   type StartLocalInstallRequest,
   type UpdateAdminQuotasRequest,
 } from "@entities/session";
@@ -132,49 +123,6 @@ export const opsApi = {
     adminClient
       .get("/runner-install/local/instances", quiet)
       .then(parseResp(z.array(LocalInstanceSchema))),
-  sshCapability: (): Promise<SshCapability> =>
-    adminClient
-      .get("/runner-install/ssh", quiet)
-      .then(parseResp(SshCapabilitySchema)),
-  sshProbe: (body: SshProbeRequest): Promise<SshProbeResponse> =>
-    adminClient
-      .post("/runner-install/ssh/probe", body, quiet)
-      .then(parseResp(SshProbeResponseSchema)),
-  sshConfirm: (sessionId: string, fingerprint: string): Promise<SshPlan> =>
-    adminClient
-      .post(
-        `/runner-install/ssh/${enc(sessionId)}/confirm`,
-        { fingerprint },
-        quiet,
-      )
-      .then(parseResp(SshPlanSchema)),
-  sshInstall: (
-    sessionId: string,
-    body: { name: string; install_docker: boolean },
-  ): Promise<InstallJob> =>
-    adminClient
-      .post(`/runner-install/ssh/${enc(sessionId)}/install`, body, quiet)
-      .then(parseResp(InstallJobSchema)),
-  sshCancel: async (sessionId: string): Promise<void> => {
-    await adminClient.delete(`/runner-install/ssh/${enc(sessionId)}`, quiet);
-  },
-  sshCredentials: (): Promise<SavedSshCredential[]> =>
-    adminClient
-      .get("/runner-install/ssh/credentials", quiet)
-      .then(parseResp(z.array(SavedSshCredentialSchema))),
-  sshDeleteCredential: async (id: string): Promise<void> => {
-    await adminClient.delete(
-      `/runner-install/ssh/credentials/${enc(id)}`,
-      quiet,
-    );
-  },
-  sshRunSaved: (
-    id: string,
-    action: "update" | "reinstall",
-  ): Promise<InstallJob> =>
-    adminClient
-      .post(`/runner-install/ssh/credentials/${enc(id)}/run`, { action }, quiet)
-      .then(parseResp(InstallJobSchema)),
   removeLocalInstance: async (
     target: "docker" | "kubernetes",
     name: string,

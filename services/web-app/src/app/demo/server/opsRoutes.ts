@@ -164,34 +164,6 @@ const installJobOf = (id: string, job: DemoInstall) => {
   };
 };
 
-// Демо установки по SSH: пароль "wrong" не принимается, 10.x закрыт защитой, down.* не отвечает, nodocker.* без Docker.
-type DemoSshSession = {
-  host: string;
-  port: number;
-  username: string;
-  password: string;
-  save: boolean;
-  label: string;
-  confirmed: boolean;
-  docker: boolean;
-};
-type DemoSshSaved = {
-  id: string;
-  label: string;
-  host: string;
-  port: number;
-  username: string;
-};
-const SSH_STEPS = [
-  "connect",
-  "token",
-  "docker",
-  "service",
-  "verify",
-  "register",
-] as const;
-const SSH_FINGERPRINT = "SHA256:Qm9yb2R1bmEtZGVtby1maW5nZXJwcmludC0wMDAx";
-
 export const createOpsRoutes = (
   getWorld: () => ServerDemoWorld,
 ): DemoRoute[] => {
@@ -204,26 +176,6 @@ export const createOpsRoutes = (
     return user.is_instance_admin ? null : notFound();
   };
   const installs = new Map<string, DemoInstall>();
-  const sshSessions = new Map<string, DemoSshSession>();
-  const sshSaved: DemoSshSaved[] = [];
-  const sshJobs = new Map<string, { name: string; polls: number }>();
-  const sshJob = (id: string, job: { name: string; polls: number }) => {
-    const done = Math.min(job.polls, SSH_STEPS.length);
-    return {
-      id,
-      target: "ssh",
-      name: job.name,
-      state: done >= SSH_STEPS.length ? "succeeded" : "running",
-      steps: SSH_STEPS.map((key, index) => ({
-        key,
-        state: index < done ? "done" : index === done ? "running" : "pending",
-        detail: "",
-      })),
-      error_code: null,
-      error_detail: "",
-      created_at: new Date().toISOString(),
-    };
-  };
   const guarded =
     (handler: DemoRoute["handler"]): DemoRoute["handler"] =>
     (req) =>
@@ -381,166 +333,6 @@ export const createOpsRoutes = (
   return [
     {
       method: "GET",
-      pattern: "/runner-install/ssh",
-      handler: guarded(() =>
-        demoJson({ enabled: true, can_save_credentials: true }),
-      ),
-    },
-    {
-      method: "POST",
-      pattern: "/runner-install/ssh/probe",
-      handler: guarded((req) => {
-        const b = body(req);
-        const host = str(b.host).trim();
-        const password = str(b.password) || str(b.private_key);
-        if (host === "" || str(b.username) === "" || password === "") {
-          return invalid();
-        }
-        if (host.startsWith("10.")) {
-          return demoError(422, "address_blocked", "blocked", {
-            reason: "private",
-          });
-        }
-        if (host.startsWith("down.")) {
-          return demoError(422, "unreachable", "unreachable");
-        }
-        const id = `ssh${String(sshSessions.size + 1)}`;
-        sshSessions.set(id, {
-          host,
-          port: num(b.port) ?? 22,
-          username: str(b.username),
-          password,
-          save: b.save_credentials === true,
-          label: str(b.label),
-          confirmed: false,
-          docker: !host.startsWith("nodocker."),
-        });
-        return demoJson(
-          {
-            session_id: id,
-            host_key: { key_type: "ssh-ed25519", fingerprint: SSH_FINGERPRINT },
-            expires_in_s: 900,
-          },
-          201,
-        );
-      }),
-    },
-    {
-      method: "POST",
-      pattern: "/runner-install/ssh/:sid/confirm",
-      handler: guarded((req) => {
-        const session = sshSessions.get(req.params.sid ?? "");
-        if (!session) return notFound();
-        if (str(body(req).fingerprint) !== SSH_FINGERPRINT) {
-          return demoError(409, "fingerprint_mismatch", "mismatch");
-        }
-        if (session.password === "wrong") {
-          return demoError(422, "auth_failed", "auth failed");
-        }
-        session.confirmed = true;
-        return demoJson({
-          session_id: req.params.sid,
-          system: {
-            os: "linux",
-            arch: "x86_64",
-            distro: "ubuntu",
-            has_docker: session.docker,
-            docker_usable: session.docker,
-            has_systemd: true,
-            is_root: true,
-          },
-          plan: [
-            { key: "connect", action: "run" },
-            { key: "token", action: "run" },
-            {
-              key: "docker",
-              action: session.docker ? "skip" : "install_docker",
-            },
-            { key: "service", action: "run" },
-            { key: "verify", action: "run" },
-            { key: "register", action: "run" },
-          ],
-        });
-      }),
-    },
-    {
-      method: "POST",
-      pattern: "/runner-install/ssh/:sid/install",
-      handler: guarded((req) => {
-        const session = sshSessions.get(req.params.sid ?? "");
-        if (!session) return notFound();
-        if (!session.confirmed) {
-          return demoError(422, "not_confirmed", "not confirmed");
-        }
-        if (!session.docker && body(req).install_docker !== true) {
-          return demoError(422, "docker_missing", "docker missing");
-        }
-        const job = { name: `${session.host}-a1b2c3`, polls: 0 };
-        const id = `sshjob${String(sshJobs.size + 1)}`;
-        sshJobs.set(id, job);
-        if (session.save) {
-          sshSaved.push({
-            id: `cred${String(sshSaved.length + 1)}`,
-            label: session.label || `${session.username}@${session.host}`,
-            host: session.host,
-            port: session.port,
-            username: session.username,
-          });
-        }
-        sshSessions.delete(req.params.sid ?? "");
-        return demoJson(sshJob(id, job), 202);
-      }),
-    },
-    {
-      method: "DELETE",
-      pattern: "/runner-install/ssh/:sid",
-      handler: guarded((req) => {
-        sshSessions.delete(req.params.sid ?? "");
-        return demoNoContent();
-      }),
-    },
-    {
-      method: "GET",
-      pattern: "/runner-install/ssh/credentials",
-      handler: guarded(() =>
-        demoJson(
-          sshSaved.map((c) => ({
-            ...c,
-            sudo: false,
-            auth_kind: "password",
-            key_type: "ssh-ed25519",
-            fingerprint: SSH_FINGERPRINT,
-            created_at: new Date().toISOString(),
-            last_used_at: null,
-            runner_name: null,
-          })),
-        ),
-      ),
-    },
-    {
-      method: "DELETE",
-      pattern: "/runner-install/ssh/credentials/:id",
-      handler: guarded((req) => {
-        const index = sshSaved.findIndex((c) => c.id === req.params.id);
-        if (index < 0) return notFound();
-        sshSaved.splice(index, 1);
-        return demoNoContent();
-      }),
-    },
-    {
-      method: "POST",
-      pattern: "/runner-install/ssh/credentials/:id/run",
-      handler: guarded((req) => {
-        const saved = sshSaved.find((c) => c.id === req.params.id);
-        if (!saved) return notFound();
-        const job = { name: `${saved.host}-d4e5f6`, polls: 0 };
-        const id = `sshjob${String(sshJobs.size + 1)}`;
-        sshJobs.set(id, job);
-        return demoJson(sshJob(id, job), 202);
-      }),
-    },
-    {
-      method: "GET",
       pattern: "/runner-install/local",
       handler: guarded(() =>
         demoJson({
@@ -578,11 +370,6 @@ export const createOpsRoutes = (
       pattern: "/runner-install/jobs/:id",
       handler: guarded((req) => {
         const id = req.params.id ?? "";
-        const sshOne = sshJobs.get(id);
-        if (sshOne) {
-          sshOne.polls += 1;
-          return demoJson(sshJob(id, sshOne));
-        }
         const job = installs.get(id);
         if (!job) return notFound();
         job.polls += 1;
