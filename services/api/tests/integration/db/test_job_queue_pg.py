@@ -10,9 +10,10 @@ import pytest
 from hse_doc_studio.core.jobs.enums import JobKind, JobState
 from hse_doc_studio.core.jobs.queue import EnqueueRequest, QueuedJob, RunnerRef
 from hse_doc_studio.core.jobs.quotas import QuotaOverride, QuotaOwnerKind, QuotaResource
-from hse_doc_studio.core.jobs.routing import JobRoute, RunnerScope
+from hse_doc_studio.core.jobs.routing import JobRoute, RouteReason, RunnerScope
 from hse_doc_studio.core.jobs.scheduler import QueueQuota
 from hse_doc_studio.infra.db.engine import create_sessionmaker
+from hse_doc_studio.infra.db.orm.jobs import RunnerRow
 from hse_doc_studio.infra.db.repositories.job_quotas import SqlProjectOrgReader, SqlQuotaOverrideRepository
 from hse_doc_studio.infra.db.repositories.jobs import PostgresJobQueue
 from hse_doc_studio.infra.db.session import SessionProvider
@@ -223,3 +224,109 @@ async def test__claim__personal_runner_does_not_wait_for_the_quota_lock(pg_migra
             await transaction.rollback()
     assert taken is not None
     assert taken.id == job.id
+
+
+async def _busy_shared_job(
+    engine: AsyncEngine, queue: PostgresJobQueue, *, build_runners: str = "shared", author_is_owner: bool = True
+) -> tuple[UUID, QueuedJob]:
+    sessions = SessionProvider(create_sessionmaker(engine))
+    owner = UUID(await seed_user(sessions))
+    project = await seed_project(sessions, owner_user_id=str(owner), build_runners=build_runners)
+    outcome = await queue.enqueue(
+        EnqueueRequest(
+            job_id=uuid4(),
+            kind=JobKind.compile,
+            project_id=project,
+            user_id=owner if author_is_owner else uuid4(),
+            tags=frozenset({"tex"}),
+            payload={},
+            route=JobRoute.shared,
+            route_reason=RouteReason.fallback_busy,
+        )
+    )
+    return owner, outcome.job
+
+
+async def _add_shared_runner(engine: AsyncEngine, *, last_seen_at: datetime | None, **changes: object) -> None:
+    sessions = SessionProvider(create_sessionmaker(engine))
+    async with sessions.use() as session:
+        session.add(
+            RunnerRow(
+                id=uuid4().hex,
+                owner_kind="instance",
+                name="shared",
+                token_hash=uuid4().hex,
+                tags=["tex", "pack"],
+                resource_class="standard",
+                concurrency=1,
+                version="x",
+                created_at=datetime(2020, 1, 1, tzinfo=UTC),
+                last_seen_at=last_seen_at,
+                **changes,
+            )
+        )
+
+
+def _personal(owner: UUID) -> RunnerRef:
+    return RunnerRef(id=uuid4(), tags=frozenset({"tex"}), scope=RunnerScope.personal, owner_id=str(owner))
+
+
+async def test__claim__stuck_fallback_busy_without_shared_runner__personal_runner_takes_it(
+    pg_migrated_engine: AsyncEngine,
+) -> None:
+    queue = _queue(pg_migrated_engine)
+    owner, job = await _busy_shared_job(pg_migrated_engine, queue)
+
+    taken = await queue.claim(_personal(owner), lease_s=LEASE_S)
+
+    assert taken is not None
+    assert taken.id == job.id
+    assert taken.runner_scope is RunnerScope.personal
+
+
+@pytest.mark.parametrize(
+    "changes",
+    [{}, {"paused": True}, {"revoked_at": datetime(2020, 1, 1, tzinfo=UTC)}, {"last_seen_at": None}],
+    ids=["live", "paused", "revoked", "never_seen"],
+)
+async def test__claim__fallback_busy_with_shared_runner__follows_its_liveness(
+    pg_migrated_engine: AsyncEngine, changes: dict[str, object]
+) -> None:
+    queue = _queue(pg_migrated_engine)
+    owner, job = await _busy_shared_job(pg_migrated_engine, queue)
+    seen = {"last_seen_at": datetime.now(UTC)} | changes
+    await _add_shared_runner(pg_migrated_engine, **seen)  # type: ignore[arg-type]
+
+    taken = await queue.claim(_personal(owner), lease_s=LEASE_S)
+
+    assert (taken is not None) is (changes != {})
+    if taken is not None:
+        assert taken.id == job.id
+
+
+async def test__claim__fallback_busy_job_of_coauthor_under_shared_policy__personal_runner_skips_it(
+    pg_migrated_engine: AsyncEngine,
+) -> None:
+    queue = _queue(pg_migrated_engine)
+    owner, _ = await _busy_shared_job(pg_migrated_engine, queue, author_is_owner=False)
+
+    assert await queue.claim(_personal(owner), lease_s=LEASE_S) is None
+
+
+async def test__claim__fallback_busy_job_of_coauthor_under_owner_policy__personal_runner_takes_it(
+    pg_migrated_engine: AsyncEngine,
+) -> None:
+    queue = _queue(pg_migrated_engine)
+    owner, job = await _busy_shared_job(pg_migrated_engine, queue, build_runners="owner", author_is_owner=False)
+
+    taken = await queue.claim(_personal(owner), lease_s=LEASE_S)
+
+    assert taken is not None
+    assert taken.id == job.id
+
+
+async def test__claim__other_owner_runner__does_not_take_fallback_busy_job(pg_migrated_engine: AsyncEngine) -> None:
+    queue = _queue(pg_migrated_engine)
+    await _busy_shared_job(pg_migrated_engine, queue)
+
+    assert await queue.claim(_personal(uuid4()), lease_s=LEASE_S) is None

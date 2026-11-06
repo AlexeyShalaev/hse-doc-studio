@@ -49,6 +49,7 @@ from hse_doc_studio.core.jobs.enums import (
 )
 from hse_doc_studio.core.jobs.errors import JobError, NoRunnerAvailableError, QueuedJobNotFoundError
 from hse_doc_studio.core.jobs.files import ArtifactRef
+from hse_doc_studio.core.jobs.liveness import DEFAULT_RUNNER_LIVE_WINDOW_S, is_live_shared
 from hse_doc_studio.core.jobs.office import OfficeConvertPayload
 from hse_doc_studio.core.jobs.pack import PackSubmissionPayload
 from hse_doc_studio.core.jobs.policy import JobKindPolicy
@@ -68,7 +69,6 @@ from hse_doc_studio.core.quotas.messages import describe_quota_exceeded
 from hse_doc_studio.core.quotas.protocols import IQuotaGate
 from hse_doc_studio.core.repositories import ISettingsRepository
 from hse_doc_studio.core.storage.manifest import IBlobUploader, ManifestError, ManifestLimits
-from hse_doc_studio.infra.jobs.availability import is_live_shared
 from hse_doc_studio.use_cases.jobs.wakeup import JobWakeup
 
 logger = structlog.get_logger()
@@ -82,8 +82,6 @@ DEFAULT_POLL_INTERVAL_S = 0.5
 # Сколько лога раннера кладётся в запись сборки: пределу таблицы записей и так тесно, хвост важнее начала.
 RECORD_LOG_MAX_BYTES = 1024 * 1024
 _BUS_KEEP_S = 120.0
-# Раннер живой, если опрашивал сервер не дольше этого назад: предел долгого опроса плюс запас.
-DEFAULT_RUNNER_LIVE_WINDOW_S = 60.0
 DEFAULT_TIMEOUT_S = 600.0
 
 # Папки, которые в манифест сборки не попадают: служебные, выходы и чужая история.

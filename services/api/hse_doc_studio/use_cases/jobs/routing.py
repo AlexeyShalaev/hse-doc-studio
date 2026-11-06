@@ -13,6 +13,7 @@ from uuid import UUID
 
 from hse_doc_studio.core.jobs.admin import RunnerStatus, runner_status
 from hse_doc_studio.core.jobs.enums import JobKind
+from hse_doc_studio.core.jobs.liveness import DEFAULT_RUNNER_LIVE_WINDOW_S, is_live_shared
 from hse_doc_studio.core.jobs.registry import job_kind_spec
 from hse_doc_studio.core.jobs.routing import (
     IPersonalRunnerLoad,
@@ -78,14 +79,24 @@ class JobRouter:
             return RouteDecision.shared(RouteReason.fallback_offline)
         capacity = sum(runner.concurrency for runner in candidates)
         load = await self._load.personal_load(owner, frozenset(UUID(runner.id) for runner in candidates), now)
-        if load >= capacity:
+        if load >= capacity and await self.has_live_shared(tags, now):
             # «Собрать всё»: первая сборка ждёт свой раннер, остальные сразу идут на общие, а не стоят по окну.
+            # Без живого общего раннера с нужными тегами уходить некуда: задача остаётся за личным раннером
+            # (его выдача окно не проверяет) и ждёт слот, а не зависает в очереди общих.
             return RouteDecision.shared(RouteReason.fallback_busy)
         return RouteDecision(
             route=JobRoute.personal_first,
             reason=RouteReason.waiting_personal,
             route_owner_id=owner,
             personal_until=now + timedelta(seconds=settings.wait_s),
+        )
+
+    async def has_live_shared(self, tags: frozenset[str], now: datetime | None = None) -> bool:
+        """Есть ли живой общий раннер с нужными тегами, который подберёт задачу из общей очереди."""
+        moment = now or self._clock()
+        window = timedelta(seconds=DEFAULT_RUNNER_LIVE_WINDOW_S)
+        return any(
+            tags <= runner.tags and is_live_shared(runner, moment, window) for runner in await self._runners.list()
         )
 
     async def online_runners(self, owner_id: str, tags: frozenset[str], now: datetime | None = None) -> list[Runner]:
