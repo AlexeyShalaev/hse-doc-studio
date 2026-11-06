@@ -16,6 +16,9 @@ import {
   AdminStorageOwnerPageSchema,
   AdminStorageUsageSchema,
   AdminUserSchema,
+  InstallJobSchema,
+  LocalInstallCapabilitiesSchema,
+  LocalInstanceSchema,
   type AdminBuildSettings,
   type AdminJob,
   type AdminJobPage,
@@ -31,6 +34,10 @@ import {
   type AdminStorageOwnerRow,
   type AdminUser,
   type CreateAdminRunnerTokenRequest,
+  type InstallJob,
+  type LocalInstallCapabilities,
+  type LocalInstance,
+  type StartLocalInstallRequest,
   type UpdateAdminQuotasRequest,
 } from "@entities/session";
 import {
@@ -94,6 +101,36 @@ export const opsApi = {
       .then(parseResp(AdminRunnerTokenCreatedSchema)),
   revokeToken: async (id: string): Promise<void> => {
     await adminClient.delete(`/runner-tokens/${enc(id)}`, quiet);
+  },
+
+  /** Где здесь можно поставить раннер (docker рядом, кластер) и почему нельзя. */
+  localCapabilities: (): Promise<LocalInstallCapabilities> =>
+    adminClient
+      .get("/runner-install/local", quiet)
+      .then(parseResp(LocalInstallCapabilitiesSchema)),
+  startLocalInstall: (
+    target: "docker" | "kubernetes",
+    body: StartLocalInstallRequest,
+  ): Promise<InstallJob> =>
+    adminClient
+      .post(`/runner-install/local/${target}`, body, quiet)
+      .then(parseResp(InstallJobSchema)),
+  installJob: (id: string): Promise<InstallJob> =>
+    adminClient
+      .get(`/runner-install/jobs/${enc(id)}`, quiet)
+      .then(parseResp(InstallJobSchema)),
+  localInstances: (): Promise<LocalInstance[]> =>
+    adminClient
+      .get("/runner-install/local/instances", quiet)
+      .then(parseResp(z.array(LocalInstanceSchema))),
+  removeLocalInstance: async (
+    target: "docker" | "kubernetes",
+    name: string,
+  ): Promise<void> => {
+    await adminClient.delete(
+      `/runner-install/local/${target}/${enc(name)}`,
+      quiet,
+    );
   },
 
   /** Страница очереди по курсору: новые первыми, имена людей и раннеров в строке. */

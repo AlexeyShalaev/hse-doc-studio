@@ -520,6 +520,55 @@ describe("операционные разделы: экраны", () => {
     ).toHaveTextContent("Снять с паузы");
   }, 20_000);
 
+  it("установка раннера: docker доступен, кластер скрыт с пояснением", async () => {
+    const user = userEvent.setup();
+    render(wrap(<RunnersPage />));
+    await user.click(await screen.findByTestId("runner-install-open"));
+
+    const docker = await screen.findByTestId("install-local-docker");
+    expect(
+      within(docker).getByTestId("install-local-docker-start"),
+    ).toBeVisible();
+    const kube = screen.getByTestId("install-local-kubernetes");
+    expect(within(kube).queryByRole("button")).toBeNull();
+    expect(
+      within(kube).getByTestId("install-local-kubernetes-unavailable"),
+    ).toHaveTextContent("На проде общие раннеры включают сознательно");
+  }, 20_000);
+
+  it("установка раннера: шаги идут по очереди и заканчиваются успехом", async () => {
+    const user = userEvent.setup();
+    render(wrap(<RunnersPage />));
+    await user.click(await screen.findByTestId("runner-install-open"));
+    await user.type(await screen.findByTestId("install-name"), "Лаб");
+    await user.click(await screen.findByTestId("install-local-docker-start"));
+
+    const steps = await screen.findByTestId("install-steps");
+    expect(within(steps).getByTestId("install-step-token")).toBeVisible();
+    expect(
+      await screen.findByTestId("install-success", {}, { timeout: 10_000 }),
+    ).toHaveTextContent("Раннер установлен");
+    expect(
+      within(screen.getByTestId("install-steps"))
+        .getAllByRole("listitem")
+        .every((item) => item.getAttribute("data-state") === "done"),
+    ).toBe(true);
+    await user.click(screen.getByTestId("install-done"));
+    await waitFor(() => {
+      expect(screen.queryByTestId("install-dialog")).toBeNull();
+    });
+  }, 30_000);
+
+  it("установка раннера: для другой машины ведёт к токену с командой", async () => {
+    const user = userEvent.setup();
+    render(wrap(<RunnersPage />));
+    await user.click(await screen.findByTestId("runner-install-open"));
+    await user.click(await screen.findByTestId("install-command-open"));
+
+    expect(await screen.findByTestId("token-create-form")).toBeVisible();
+    expect(screen.queryByTestId("install-dialog")).toBeNull();
+  }, 20_000);
+
   it("токен показывается один раз, вместе с командой запуска", async () => {
     const user = userEvent.setup();
     render(wrap(<RunnersPage />));

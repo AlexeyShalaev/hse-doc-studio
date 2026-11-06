@@ -36,6 +36,31 @@ tags:
 
 In compose the first runner registers with `RUNNER_BOOTSTRAP_TOKEN`.
 
+## Installing on the same machine from the admin area
+
+The "Install a runner" button on the Runners page puts a runner where the Studio itself runs. A way is offered only when it is technically possible; otherwise the reason is shown in place of the button.
+
+| Way | When available | What the Studio does |
+|---|---|---|
+| Docker next to it | the Studio sees `docker.sock` and Docker answers (the same access the Disk page uses) | starts a `hse-runner-<name>` container from the image of its own version with `--restart unless-stopped`; the token goes through a mode-0600 environment file that is deleted right after the start |
+| Deployment in the cluster | the Studio runs in Kubernetes, the chart has `runner.installFromUi.enabled`, and the Studio ServiceAccount may create resources | creates a Secret with the token, a data volume and a Deployment with the `kubernetes` executor under a separate ServiceAccount |
+
+Progress is shown step by step (token, image, start, connection to the Studio); every error has a readable reason and a Retry button. The registration token is single-use for an hour and is revoked at once on failure; the audit log gets the start, the result and the removal, without secrets. Runners installed this way are listed in the same window and can be removed there.
+
+Why a way may be hidden:
+
+- Docker: no `docker.sock`, Docker does not answer, or the way is turned off with `HSE_STUDIO__RUNNER_INSTALL__DOCKER_ENABLED=false`. In the `deploy/server` set the api has no Docker access on purpose (the socket is root on the host), so you see the reason instead of a button: use the SSH install or the command next to the token.
+- Kubernetes: the Studio is not in a cluster, the chart value is off, or its ServiceAccount lacks rights.
+
+### Kubernetes: what the chart turns on
+
+`runner.installFromUi.enabled` is `false` by default, and stays so on production where shared runners were not enabled. Turning it on adds:
+
+- a ServiceAccount and Role for the runners themselves, `<release>-runner-ui`: build pods only (`pods` create, get, list, delete; `pods/log` get; `pods/exec` create, get) in the release namespace, like the built-in runner;
+- a `<release>-api` ServiceAccount and Role for the Studio: Deployment (create, get, list, delete), Secret (create and delete only, no reading) and PersistentVolumeClaim (create, delete) in the release namespace. The Studio cannot create Roles or RoleBindings, so it cannot grant itself or a runner anything extra; there is no ClusterRole.
+
+A runner installed from the admin area lives in the release namespace and gets its own data volume (`runner.installFromUi.storageSize`, `storageClassName`) so the token issued to it survives a pod restart. Its Studio address is internal (the chart Service).
+
 ## Management
 
 The list shows version, tags, capacity and last poll time.

@@ -15,6 +15,7 @@ from hse_doc_studio.core.jobs.queue import IJobQueue
 from hse_doc_studio.core.jobs.quotas import IQuotaOverrideRepository
 from hse_doc_studio.core.jobs.runners import IRunnerRepository
 from hse_doc_studio.core.repositories import IAIProviderRepository, IInstanceAiProviderDirectory
+from hse_doc_studio.core.runner_install import ILocalRunnerHost, InstallTarget
 from hse_doc_studio.core.signatures.key_policy import IServerKeyCounter
 from hse_doc_studio.core.storage.usage import IStorageUsageReader
 from hse_doc_studio.core.uow import IUnitOfWork
@@ -24,6 +25,8 @@ from hse_doc_studio.infra.db.repositories.runners import SqlRunnerAdminReader
 from hse_doc_studio.infra.db.repositories.signing_key_policy import SqlServerKeyCounter
 from hse_doc_studio.infra.db.repositories.storage_usage import SqlStorageUsageReader
 from hse_doc_studio.infra.db.session import SessionProvider
+from hse_doc_studio.infra.runner_install.docker_host import DockerLocalHost
+from hse_doc_studio.infra.runner_install.kube_host import KubeLocalHost
 from hse_doc_studio.use_cases.admin.ops_ai_providers import (
     CheckInstanceAiProviderUC,
     CreateInstanceAiProviderUC,
@@ -52,6 +55,8 @@ from hse_doc_studio.use_cases.admin.ops_storage import GetStorageUsageUC, ListSt
 from hse_doc_studio.use_cases.identity.smtp_settings import SmtpSettingsService
 from hse_doc_studio.use_cases.jobs.personal_settings import InstancePersonalRunnerSettings
 from hse_doc_studio.use_cases.jobs.queue_service import JobQueueService
+from hse_doc_studio.use_cases.jobs.runners import RunnerRegistry
+from hse_doc_studio.use_cases.runner_install import InstallJobStore, RunnerInstallService
 
 
 class ServerAdminOpsProvider(Provider):
@@ -234,3 +239,32 @@ class ServerAdminOpsProvider(Provider):
         self, store: InstanceAiProviderStore, lister: IAIModelLister
     ) -> CheckInstanceAiProviderUC:
         return CheckInstanceAiProviderUC(store, lister)
+
+    @provide
+    def get_install_job_store(self) -> InstallJobStore:
+        return InstallJobStore()
+
+    @provide
+    def get_runner_install_service(
+        self, registry: RunnerRegistry, jobs: InstallJobStore, audit: IAuditLog, uow: IUnitOfWork
+    ) -> RunnerInstallService:
+        cfg = settings.runner_install
+        hosts: dict[InstallTarget, ILocalRunnerHost] = {
+            InstallTarget.docker: DockerLocalHost(enabled=cfg.docker_enabled),
+            InstallTarget.kubernetes: KubeLocalHost(
+                enabled=cfg.kubernetes_enabled,
+                service_account=cfg.kubernetes_service_account,
+                storage_class=cfg.kubernetes_storage_class,
+                storage_size=cfg.kubernetes_storage_size,
+            ),
+        }
+        return RunnerInstallService(
+            registry,
+            hosts,
+            jobs,
+            audit,
+            uow,
+            image=f"{settings.image_base}:{settings.get_app_version()}",
+            data_dir=cfg.data_dir,
+            internal_urls={InstallTarget.kubernetes: cfg.kubernetes_studio_url} if cfg.kubernetes_studio_url else None,
+        )

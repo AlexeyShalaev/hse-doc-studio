@@ -64,6 +64,49 @@ export const AdminRunnerRotatedSchema = z.strictObject({
   runner_token: z.string(),
   command: z.string(),
 });
+export const InstallCapabilitySchema = z.strictObject({
+  available: z.boolean(),
+  reason: z
+    .enum([
+      "disabled",
+      "no_socket",
+      "docker_unreachable",
+      "not_in_cluster",
+      "no_permission",
+    ])
+    .nullable(),
+});
+export const LocalInstallCapabilitiesSchema = z.strictObject({
+  docker: InstallCapabilitySchema,
+  kubernetes: InstallCapabilitySchema,
+});
+export const InstallJobSchema = z.strictObject({
+  id: z.string(),
+  target: z.enum(["docker", "kubernetes", "ssh"]),
+  name: z.string(),
+  state: z.enum(["running", "succeeded", "failed"]),
+  steps: z.array(
+    z.strictObject({
+      key: z.string(),
+      state: z.enum(["pending", "running", "done", "failed", "skipped"]),
+      detail: z.string(),
+    }),
+  ),
+  error_code: z.string().nullable(),
+  error_detail: z.string(),
+  created_at: iso,
+});
+export const LocalInstanceSchema = z.strictObject({
+  target: z.enum(["docker", "kubernetes"]),
+  name: z.string(),
+  image: z.string(),
+  state: z.string(),
+  created_at: iso.nullable(),
+});
+export const StartLocalInstallRequestSchema = z.strictObject({
+  name: z.string().max(40),
+  concurrency: z.number().int().min(1).max(8),
+});
 export const UpdateAdminRunnerRequestSchema = z.strictObject({
   paused: z.boolean(),
 });
@@ -164,6 +207,15 @@ export type CreateAdminRunnerTokenRequest = z.infer<
 >;
 export type AdminRunnerTokenCreated = z.infer<
   typeof AdminRunnerTokenCreatedSchema
+>;
+export type InstallCapability = z.infer<typeof InstallCapabilitySchema>;
+export type LocalInstallCapabilities = z.infer<
+  typeof LocalInstallCapabilitiesSchema
+>;
+export type InstallJob = z.infer<typeof InstallJobSchema>;
+export type LocalInstance = z.infer<typeof LocalInstanceSchema>;
+export type StartLocalInstallRequest = z.infer<
+  typeof StartLocalInstallRequestSchema
 >;
 export type AdminRunnerRotated = z.infer<typeof AdminRunnerRotatedSchema>;
 export type AdminRunnerPage = z.infer<typeof AdminRunnerPageSchema>;

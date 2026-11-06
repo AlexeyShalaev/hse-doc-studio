@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Plus } from "lucide-react";
+import { Plus, Server } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useSearchParams } from "react-router";
 import { Button, PageHeader } from "@shared/ui";
@@ -8,6 +8,7 @@ import { LONG_WAIT_S } from "../lib/jobs";
 import { liveRunners } from "../lib/runnerStatus";
 import { Queue } from "./Queue";
 import { AutoscalePanel } from "./AutoscalePanel";
+import { InstallRunnerDialog } from "./InstallRunnerDialog";
 import { Runners } from "./Runners";
 import { Tabs } from "./parts";
 
@@ -31,6 +32,7 @@ export const RunnersPage = ({
   const tab: Tab =
     fromUrl === "queue" || fromUrl === "runners" ? fromUrl : initialTab;
   const [creating, setCreating] = useState(initialCreateToken);
+  const [installing, setInstalling] = useState(false);
   const runners = useRunnerSummary();
   const summary = useQueueSummary();
 
@@ -56,19 +58,34 @@ export const RunnersPage = ({
         description={t("page.lead")}
         actions={
           tab === "runners" ? (
-            <Button
-              type="button"
-              variant="primary"
-              size="sm"
-              onClick={() => {
-                setCreating(true);
-              }}
-              style={{ gap: "0.375rem" }}
-              data-testid="runner-token-create"
-            >
-              <Plus size="0.875rem" aria-hidden="true" />
-              {t("tokens.create")}
-            </Button>
+            <>
+              <Button
+                type="button"
+                variant="primary"
+                size="sm"
+                onClick={() => {
+                  setInstalling(true);
+                }}
+                style={{ gap: "0.375rem" }}
+                data-testid="runner-install-open"
+              >
+                <Server size="0.875rem" aria-hidden="true" />
+                {t("install.open")}
+              </Button>
+              <Button
+                type="button"
+                variant="secondary"
+                size="sm"
+                onClick={() => {
+                  setCreating(true);
+                }}
+                style={{ gap: "0.375rem" }}
+                data-testid="runner-token-create"
+              >
+                <Plus size="0.875rem" aria-hidden="true" />
+                {t("tokens.create")}
+              </Button>
+            </>
           ) : undefined
         }
         tabs={
@@ -100,6 +117,15 @@ export const RunnersPage = ({
             ]}
           />
         }
+      />
+      <InstallRunnerDialog
+        isOpen={installing}
+        onClose={() => {
+          setInstalling(false);
+        }}
+        onOpenCommand={() => {
+          setCreating(true);
+        }}
       />
       <div
         id="ops-tab-panel"

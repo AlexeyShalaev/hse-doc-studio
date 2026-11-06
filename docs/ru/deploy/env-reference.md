@@ -236,6 +236,13 @@ tags:
 | `HSE_STUDIO__AUTOSCALE__COMPOSE_FILE` | str | не задано | оба | Файл compose для режима compose (`-f`). |
 | `HSE_STUDIO__AUTOSCALE__COMPOSE_SERVICE` | str | `runner` | оба | Сервис раннеров в compose, который масштабируется. |
 | `HSE_STUDIO__AUTOSCALE__COMPOSE_TIMEOUT_S` | float | `120.0` | оба | Таймаут команды docker compose. |
+| `HSE_STUDIO__RUNNER_INSTALL__DOCKER_ENABLED` | bool | `true` | оба | Разрешить установку раннера соседним контейнером через docker.sock Студии (если сокет доступен). |
+| `HSE_STUDIO__RUNNER_INSTALL__KUBERNETES_ENABLED` | bool | `false` | оба | Разрешить установку раннера Deployment-ом в кластере Студии. Включает чарт (runner.installFromUi.enabled) вместе с правами ServiceAccount Студии. |
+| `HSE_STUDIO__RUNNER_INSTALL__KUBERNETES_SERVICE_ACCOUNT` | str | пусто | оба | ServiceAccount установленных из админки раннеров: его создаёт чарт, права только на поды сборки. |
+| `HSE_STUDIO__RUNNER_INSTALL__KUBERNETES_STUDIO_URL` | str | пусто | оба | Адрес Студии для раннеров в кластере (внутренний Service); пусто значит публичный адрес. |
+| `HSE_STUDIO__RUNNER_INSTALL__KUBERNETES_STORAGE_CLASS` | str | пусто | оба | StorageClass тома данных установленного раннера; пусто значит по умолчанию кластера. |
+| `HSE_STUDIO__RUNNER_INSTALL__KUBERNETES_STORAGE_SIZE` | str | `5Gi` | оба | Размер тома данных установленного раннера. |
+| `HSE_STUDIO__RUNNER_INSTALL__DATA_DIR` | str | `/var/lib/hse-runner` | оба | Каталог данных раннера на хосте (docker) и в поде (kubernetes). |
 | `HSE_STUDIO__BACKUPS__ENABLED` | bool | `true` | оба | Включает планировщик бэкапов и раздел админки; false убирает фоновый цикл целиком. |
 | `HSE_STUDIO__BACKUPS__TICK_S` | float | `30.0` | оба | Как часто планировщик проверяет, не пора ли запустить бэкап по расписанию. |
 | `HSE_STUDIO__BACKUPS__LOCAL_ROOT` | Path | не задано | оба | Корень локальных назначений: каталог бэкапа это подкаталог корня. Пусто значит data_dir/backups. Для защиты от потери диска смонтируйте сюда отдельный том. |
