@@ -11,8 +11,31 @@
   "secret": {
     "hint": "Copy it now and pass it to whoever starts the runner.",
     "commandTitle": "Start command",
-    "commandLabel": "Runner start command",
-    "commandHint": "Run it on the runner machine. The Studio address and the secret are already filled in; after the first start the runner stores its own token and the value can be removed from the environment."
+    "tabsLabel": "How to start",
+    "tab": {
+      "docker": "Docker",
+      "script": "Script (service)",
+      "env": "Variables"
+    },
+    "osLabel": "Operating system of the runner machine",
+    "os": {
+      "linux": "Linux (systemd)",
+      "macos": "macOS (launchd)"
+    },
+    "commandLabel": {
+      "docker": "docker run command",
+      "script": "Service install command",
+      "env": "Start with environment variables"
+    },
+    "commandHint": {
+      "docker": "One line for a machine with Docker: the runner container starts at once and comes back after a reboot. The Studio address and the secret are already filled in.",
+      "env": "For a machine that already has the hse-doc-studio command. After the first start the runner stores its own token and the value can be removed from the environment.",
+      "script": {
+        "linux": "Downloads the script and installs a systemd service (needs root and Docker). You can read the script first, and running it again is safe. To remove: the same address, `sh -s -- uninstall`.",
+        "macos": "Downloads the script and installs a per-user launchd service (needs Docker Desktop or Colima, no sudo). You can read the script first, and running it again is safe. To remove: the same address, `sh -s -- uninstall`."
+      }
+    },
+    "scriptView": "Show the script that will run"
   },
   "runners": {
     "caption": "Runners",
