@@ -7101,6 +7101,37 @@ button.adm-row:focus-visible {
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
+/* Строка самодиагностики: название ведёт в раздел, ссылка растянута на всю строку, а кнопки
+   действий лежат поверх неё и остаются отдельными целями. */
+.adm-row:has(.diag-link) {
+  position: relative;
+}
+.adm-row:has(.diag-link):hover {
+  background: var(--bg-hover);
+}
+.adm-row:has(.diag-link:focus-visible) {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+.diag-link {
+  color: inherit;
+  text-decoration: none;
+}
+.diag-link:hover {
+  text-decoration: underline;
+}
+.diag-link:focus-visible {
+  outline: none;
+}
+.diag-link::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+}
+.adm-row:has(.diag-link) .adm-row-meta button {
+  position: relative;
+  z-index: 1;
+}
 .adm-row-chevron {
   color: var(--fg-3);
   flex-shrink: 0;

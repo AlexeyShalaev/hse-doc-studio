@@ -4,6 +4,7 @@ import {
   CircleCheck,
   CircleHelp,
   CircleMinus,
+  ChevronRight,
   RefreshCw,
   ShieldCheck,
   TriangleAlert,
@@ -35,6 +36,7 @@ import {
   useSaveThresholds,
 } from "../api/queries";
 import { ensureAdminDiagnosticsLocales } from "../lib/locales";
+import { targetOf } from "../lib/targets";
 import { AcceptDialog } from "./AcceptDialog";
 import { RevokeButton } from "./RevokeButton";
 import { ThresholdsPanel } from "./ThresholdsPanel";
@@ -99,6 +101,8 @@ const CheckRow = ({
           defaultValue: t("reason.unknown", { code: check.reason }),
         })
       : t("notChecked");
+  const target = targetOf(check);
+  const checkName = t(`check.${check.id}`, { defaultValue: check.id });
   return (
     <ListRow
       testId={`diag-check-${check.id}`}
@@ -119,7 +123,22 @@ const CheckRow = ({
           data-applicable={String(check.applicable)}
           data-accepted={String(accepted !== null)}
         >
-          {t(`check.${check.id}`, { defaultValue: check.id })}{" "}
+          {target ? (
+            <Link
+              to={target.to}
+              className="diag-link"
+              data-testid={`diag-link-${check.id}`}
+              data-target={target.key}
+              aria-label={t("target.label", {
+                check: checkName,
+                target: t(`target.${target.key}`),
+              })}
+            >
+              {checkName}
+            </Link>
+          ) : (
+            checkName
+          )}{" "}
           {status && !muted && (
             <Badge variant={BADGE[status]}>{t(`status.${status}`)}</Badge>
           )}
@@ -192,6 +211,13 @@ const CheckRow = ({
           >
             {t("recheck")}
           </Button>
+          {target && (
+            <ChevronRight
+              size="0.9375rem"
+              className="adm-row-chevron"
+              aria-hidden="true"
+            />
+          )}
         </span>
       }
     />
