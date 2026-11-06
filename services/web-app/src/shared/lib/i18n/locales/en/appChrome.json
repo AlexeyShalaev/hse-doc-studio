@@ -60,6 +60,8 @@
     "openSettings": "Open settings"
   },
   "diskBanner": {
+    "oldTitle": "Old versions are taking space",
+    "oldDetail": "Old versions take up {{size}}: remove them with one button in the Disk section.",
     "title": "Docker is using a lot of space",
     "detail": "{{size}} can be freed up — old images, build cache.",
     "open": "Open Disk",

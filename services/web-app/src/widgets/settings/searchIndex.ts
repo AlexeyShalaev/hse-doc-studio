@@ -517,6 +517,23 @@ export const SETTINGS_SEARCH_INDEX: readonly SettingSearchEntry[] = [
   },
   {
     sectionId: "disk",
+    anchorId: "disk-old-versions",
+    labelKey: "search.diskOldVersions",
+    keywords: [
+      "старые версии",
+      "old versions",
+      "обновление",
+      "update",
+      "откат",
+      "rollback",
+      "образы",
+      "images",
+      "очистка",
+      "cleanup",
+    ],
+  },
+  {
+    sectionId: "disk",
     anchorId: "disk-entities",
     labelKey: "search.diskEntities",
     keywords: [

@@ -21,13 +21,14 @@ from hse_doc_studio.use_cases.system.get_docker_disk_usage import (
 
 logger = structlog.get_logger()
 
-CleanupTarget = Literal["build_cache", "dangling_images", "unused_images", "stopped_containers"]
+CleanupTarget = Literal["build_cache", "dangling_images", "unused_images", "stopped_containers", "old_versions"]
 
 ALL_TARGETS: tuple[CleanupTarget, ...] = (
     "build_cache",
     "dangling_images",
     "unused_images",
     "stopped_containers",
+    "old_versions",
 )
 
 
@@ -39,6 +40,8 @@ class StartDockerCleanupInput:
     # the blast radius beyond what the current usage report allows.
     images: list[str] = field(default_factory=list)
     containers: list[str] = field(default_factory=list)
+    # Для цели «old_versions»: убрать и образ отката (последней предыдущей версии).
+    include_rollback: bool = False
 
 
 class StartDockerCleanupUC:
@@ -51,6 +54,8 @@ class StartDockerCleanupUC:
         settings_repo: ISettingsRepository,
         default_images: dict[str, str],
         always_protected: frozenset[str],
+        current_version: str = "",
+        image_base: str = "",
     ) -> None:
         self._jobs = jobs
         self._usage_uc = GetDockerDiskUsageUC(
@@ -58,6 +63,8 @@ class StartDockerCleanupUC:
             settings_repo=settings_repo,
             default_images=default_images,
             always_protected=always_protected,
+            current_version=current_version,
+            image_base=image_base,
         )
 
     async def execute(self, inp: StartDockerCleanupInput) -> CleanupJob:
@@ -72,12 +79,22 @@ class StartDockerCleanupUC:
             steps.append(CleanupStep(kind="dangling_images"))
         removable = unused_app_image_refs(output.usage)
         stopped_managed = [c.name for c in output.usage.containers if c.managed and c.state != "running"]
+        old_images: list[str] = []
+        old_containers: list[str] = []
+        if "old_versions" in inp.targets:
+            old = output.old_versions
+            old_images = [i.ref for i in old.items if i.kind != "container"]
+            old_containers = [i.ref for i in old.items if i.kind == "container"]
+            # Образ отката защищён от общих целей; в план он попадает только по явному флагу.
+            if inp.include_rollback and old.rollback is not None:
+                removable = [*removable, old.rollback.ref]
+                old_images.append(old.rollback.ref)
         steps.extend(
             CleanupStep(kind="image", ref=ref)
             for ref in _plan_refs(
                 allowed=removable,
                 take_all="unused_images" in inp.targets,
-                explicit=inp.images,
+                explicit=[*inp.images, *old_images],
                 error_ru="образ занят или защищён",
                 error_en="image is in use or protected",
             )
@@ -87,7 +104,7 @@ class StartDockerCleanupUC:
             for name in _plan_refs(
                 allowed=stopped_managed,
                 take_all="stopped_containers" in inp.targets,
-                explicit=inp.containers,
+                explicit=[*inp.containers, *old_containers],
                 error_ru="контейнер запущен или не управляется приложением",
                 error_en="container is running or not managed by the app",
             )

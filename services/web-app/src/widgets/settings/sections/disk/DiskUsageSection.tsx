@@ -16,6 +16,7 @@ import {
 } from "@entities/docker-system";
 import { Setting, SettingHead } from "../Setting";
 import { DiskCleanupPanel } from "./DiskCleanupPanel";
+import { DiskOldVersions } from "./DiskOldVersions";
 import { DiskEntityLists } from "./DiskEntityLists";
 import { buildSegments, type Segment } from "./lib";
 
@@ -119,6 +120,7 @@ export const DiskUsageSection = () => {
     targets?: CleanupTarget[];
     images?: string[];
     containers?: string[];
+    includeRollback?: boolean;
   }) => {
     startCleanup.mutate(input);
   };
@@ -245,6 +247,9 @@ export const DiskUsageSection = () => {
             />
             <div style={{ fontSize: "0.78125rem", color: "var(--c-err)" }}>
               {t("disk.dockerUnavailable")}
+              <div id="disk-old-versions" className="settings-anchor">
+                {t("disk.oldUnavailable")}
+              </div>
             </div>
           </div>
         ) : (
@@ -252,6 +257,13 @@ export const DiskUsageSection = () => {
             {renderOverview(usage)}
             {renderActions(usage)}
             <DiskCleanupPanel />
+            <DiskOldVersions
+              oldVersions={usage.old_versions}
+              busy={busy}
+              onClean={(includeRollback) => {
+                start({ targets: ["old_versions"], includeRollback });
+              }}
+            />
             <div id="disk-entities" className="settings-anchor">
               <DiskEntityLists
                 usage={usage}

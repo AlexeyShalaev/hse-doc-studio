@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 
 from hse_doc_studio.core.repositories import ISettingsRepository
 from hse_doc_studio.infra.docker.system_manager import (
@@ -9,6 +9,7 @@ from hse_doc_studio.infra.docker.system_manager import (
     DockerDiskUsage,
     DockerSystemManager,
 )
+from hse_doc_studio.use_cases.system.old_versions import OldVersions, find_old_versions
 
 
 @dataclass
@@ -18,6 +19,7 @@ class GetDockerDiskUsageOutput:
     # app-category images + stopped managed containers. The startup banner
     # compares this against the disk_usage_warn_gb setting.
     cleanable_bytes: int
+    old_versions: OldVersions
 
 
 class GetDockerDiskUsageUC:
@@ -27,21 +29,35 @@ class GetDockerDiskUsageUC:
         settings_repo: ISettingsRepository,
         default_images: dict[str, str],
         always_protected: frozenset[str],
+        current_version: str = "",
+        image_base: str = "",
     ) -> None:
         self._manager = manager
         self._settings_repo = settings_repo
         self._default_images = dict(default_images)
         self._always_protected = always_protected
+        self._current_version = current_version
+        self._image_base = image_base
 
     async def execute(self) -> GetDockerDiskUsageOutput:
         usage = ours_only(await self._manager.disk_usage(await self.protected_refs()))
-        return GetDockerDiskUsageOutput(usage=usage, cleanable_bytes=cleanable_bytes(usage))
+        old = find_old_versions(usage, self._current_version, self._image_base)
+        usage = _protect_rollback(usage, old)
+        return GetDockerDiskUsageOutput(usage=usage, cleanable_bytes=cleanable_bytes(usage), old_versions=old)
 
     async def protected_refs(self) -> frozenset[str]:
         """Images that must survive cleanup: each category's configured/active ref."""
         stored = await self._settings_repo.get()
         refs = {str(stored.get(key) or default) for key, default in self._default_images.items()}
         return frozenset(refs) | self._always_protected
+
+
+def _protect_rollback(usage: DockerDiskUsage, old: OldVersions) -> DockerDiskUsage:
+    """Образ отката защищён от общих целей очистки: убрать его можно только осознанно."""
+    if old.rollback is None:
+        return usage
+    images = [replace(i, protected=True) if i.reference == old.rollback.ref else i for i in usage.images]
+    return replace(usage, images=images)
 
 
 def ours_only(usage: DockerDiskUsage) -> DockerDiskUsage:
