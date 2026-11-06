@@ -84,3 +84,9 @@ export type InstallRequest = {
   name?: string;
   force?: boolean;
 };
+
+/** Токен Hugging Face сервер не возвращает никогда: только признак, что он сохранён. */
+export const ModelServerSettingsSchema = z.object({
+  hf_token_set: z.boolean(),
+});
+export type ModelServerSettings = z.infer<typeof ModelServerSettingsSchema>;

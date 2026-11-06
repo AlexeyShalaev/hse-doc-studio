@@ -6,6 +6,7 @@ export const modelServerKeys = {
   all: ["admin", "model-servers"] as const,
   capabilities: ["admin", "model-servers", "capabilities"] as const,
   list: ["admin", "model-servers", "list"] as const,
+  settings: ["admin", "model-servers", "settings"] as const,
   logs: (id: string) => ["admin", "model-servers", "logs", id] as const,
 };
 
@@ -84,4 +85,27 @@ export const useServerAction = () => {
     },
     onSuccess: refresh,
   });
+};
+
+export const useModelServerSettings = () =>
+  useQuery({
+    queryKey: modelServerKeys.settings,
+    queryFn: () => modelServersApi.settings(),
+    staleTime: 60_000,
+  });
+
+export const useHfToken = () => {
+  const client = useQueryClient();
+  const done = (saved: { hf_token_set: boolean }) => {
+    client.setQueryData(modelServerKeys.settings, saved);
+  };
+  const save = useMutation({
+    mutationFn: (token: string) => modelServersApi.saveHfToken(token),
+    onSuccess: done,
+  });
+  const clear = useMutation({
+    mutationFn: () => modelServersApi.clearHfToken(),
+    onSuccess: done,
+  });
+  return { save, clear };
 };

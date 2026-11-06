@@ -2,6 +2,7 @@ import { useTranslation } from "react-i18next";
 import { PageHeader, Section, Spinner } from "@shared/ui";
 import { useCapabilities, useModelServers } from "../api/queries";
 import { HardwarePanel } from "./HardwarePanel";
+import { HfTokenPanel } from "./HfTokenPanel";
 import { InstallPanel } from "./InstallPanel";
 import { ServerCard } from "./ServerCard";
 
@@ -28,6 +29,9 @@ export const ModelServersPage = () => {
       {caps.data && <HardwarePanel caps={caps.data} />}
       {caps.data?.local_enabled && caps.data.docker_available && (
         <InstallPanel caps={caps.data} />
+      )}
+      {caps.data?.local_enabled && caps.data.docker_available && (
+        <HfTokenPanel />
       )}
       <Section title={t("servers.title")} testId="ms-servers">
         {(servers.data ?? []).length === 0 ? (

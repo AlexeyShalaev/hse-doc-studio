@@ -6,12 +6,14 @@ import {
   LogsSchema,
   ModelServerListSchema,
   ModelServerSchema,
+  ModelServerSettingsSchema,
   type Capabilities,
   type CatalogModel,
   type Engine,
   type Estimate,
   type InstallRequest,
   type ModelServer,
+  type ModelServerSettings,
 } from "./schemas";
 
 // Ошибки показывает сам экран по коду: тост не нужен.
@@ -32,6 +34,18 @@ export const modelServersApi = {
     adminClient
       .post(`${base}/estimate`, { engine, model }, quiet)
       .then(parseResp(EstimateSchema)),
+  settings: (): Promise<ModelServerSettings> =>
+    adminClient
+      .get(`${base}/settings`, quiet)
+      .then(parseResp(ModelServerSettingsSchema)),
+  saveHfToken: (token: string): Promise<ModelServerSettings> =>
+    adminClient
+      .put(`${base}/settings`, { hf_token: token }, quiet)
+      .then(parseResp(ModelServerSettingsSchema)),
+  clearHfToken: (): Promise<ModelServerSettings> =>
+    adminClient
+      .delete(`${base}/settings`, quiet)
+      .then(parseResp(ModelServerSettingsSchema)),
   list: (): Promise<ModelServer[]> =>
     adminClient
       .get(base, quiet)

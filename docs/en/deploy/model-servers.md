@@ -11,7 +11,7 @@ tags:
 
 <p class="hds-lede">The admin console (`/admin`, "Model servers") installs a model server, runs it in a sibling Docker container and registers a shared AI provider that everyone can use.</p>
 
-The page is available to the instance administrator only, in shared-server mode. For now the `/api/admin/model-servers` API is available; the admin page comes in a following step.
+The page is available to the instance administrator only, in shared-server mode.
 
 ## Engines
 

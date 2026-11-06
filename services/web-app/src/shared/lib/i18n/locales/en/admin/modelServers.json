@@ -82,7 +82,9 @@
     "done": "done",
     "failed": "failed"
   },
-  "progress": { "label": "Model download progress" },
+  "progress": {
+    "label": "Model download progress"
+  },
   "server": {
     "start": "Start",
     "stop": "Stop",
@@ -108,5 +110,17 @@
     "model_server_start_failed": "Could not start the server.",
     "model_server_invalid_input": "Check the model name.",
     "model_server_not_found": "Server not found."
+  },
+  "hfToken": {
+    "title": "Hugging Face token",
+    "lead": "Needed by vLLM and SGLang for private and gated models. Stored encrypted only.",
+    "label": "Token",
+    "hint": "The value is never shown or returned. You can replace or delete it.",
+    "isSet": "Saved",
+    "notSet": "Not set",
+    "save": "Save",
+    "replace": "Replace",
+    "remove": "Delete",
+    "invalid": "The token is not valid."
   }
 }

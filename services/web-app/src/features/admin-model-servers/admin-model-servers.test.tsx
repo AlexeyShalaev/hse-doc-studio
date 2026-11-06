@@ -219,6 +219,37 @@ describe("страница серверов моделей", () => {
     expect(screen.queryByTestId("ms-install")).not.toBeInTheDocument();
   });
 
+  it("токен Hugging Face: сохраняется, значение не показывается, можно удалить", async () => {
+    const settings = vi
+      .spyOn(modelServersApi, "settings")
+      .mockResolvedValue({ hf_token_set: false });
+    const save = vi
+      .spyOn(modelServersApi, "saveHfToken")
+      .mockResolvedValue({ hf_token_set: true });
+    const clear = vi
+      .spyOn(modelServersApi, "clearHfToken")
+      .mockResolvedValue({ hf_token_set: false });
+    view();
+    const input = await screen.findByTestId("ms-hf-input");
+    expect(input).toHaveAttribute("type", "password");
+    expect(screen.getByTestId("ms-hf-state")).toHaveTextContent("Не задан");
+    await userEvent.type(input, "hf_SECRET");
+    await userEvent.click(screen.getByTestId("ms-hf-save"));
+    await waitFor(() => {
+      expect(save).toHaveBeenCalledWith("hf_SECRET");
+    });
+    expect(await screen.findByTestId("ms-hf-state")).toHaveTextContent(
+      "Сохранён",
+    );
+    expect(screen.getByTestId("ms-hf-input")).toHaveValue("");
+    expect(document.body.textContent).not.toContain("hf_SECRET");
+    await userEvent.click(screen.getByTestId("ms-hf-clear"));
+    await waitFor(() => {
+      expect(clear).toHaveBeenCalled();
+    });
+    expect(settings).toHaveBeenCalled();
+  });
+
   it("английский словарь содержит те же ключи", async () => {
     await i18n.changeLanguage("en");
     vi.spyOn(modelServersApi, "capabilities").mockResolvedValue(
