@@ -6,6 +6,25 @@ Generated from `release-notes.json` via `make changelog` — do not edit by hand
 Release notes are hand-written and bilingual (RU/EN); the app shows them in the
 selected interface language.
 
+## [0.11.0](https://github.com/AlexeyShalaev/hse-doc-studio/compare/v0.10.0...v0.11.0) (2026-11-06)
+
+
+### Features
+
+* **admin:** строки самодиагностики ведут в разделы, где проблему решают ([c8657a5](https://github.com/AlexeyShalaev/hse-doc-studio/commit/c8657a592bd6c04a519b489030998aea9e2112f8))
+* **admin:** строки самодиагностики ведут в разделы, где проблему решают ([3bacfb2](https://github.com/AlexeyShalaev/hse-doc-studio/commit/3bacfb24781385cce673403ddfb3bd927765f136))
+* **disk:** блок «Старые версии» на странице «Диск» ([46d710e](https://github.com/AlexeyShalaev/hse-doc-studio/commit/46d710e5e87d87c2412c7d4a4757eaee8f30cc4c))
+* **disk:** блок «Старые версии» на странице «Диск» ([14ca465](https://github.com/AlexeyShalaev/hse-doc-studio/commit/14ca465ef285c89cf95be17776b3621575b7a0de))
+
+
+### Bug Fixes
+
+* **demo:** даты приглашений считаются от текущего времени, срок не истекает ([10ae6c0](https://github.com/AlexeyShalaev/hse-doc-studio/commit/10ae6c0617fdc899155c02ee431010f13d306fda))
+* **demo:** отсчёт сроков приглашений от сегодняшнего дня ([10c9091](https://github.com/AlexeyShalaev/hse-doc-studio/commit/10c90916960442ad26c64d865c911db9723e1b60))
+* **jobs:** keep builds with the busy personal runner when no shared runner is alive ([fff3547](https://github.com/AlexeyShalaev/hse-doc-studio/commit/fff3547429f997aa75492c4c14a2f163eb9ed258))
+* **jobs:** keep builds with the busy personal runner when no shared runner is alive ([e779545](https://github.com/AlexeyShalaev/hse-doc-studio/commit/e779545c61460da2cb8b0ae58bc7d3d0abffe58d))
+* **web:** anchor demo invitation dates to the current day so they do not expire ([923e6d4](https://github.com/AlexeyShalaev/hse-doc-studio/commit/923e6d4e169ee898beaf329fcf4149a3cd4ca23d))
+
 ## [0.10.0](https://github.com/AlexeyShalaev/hse-doc-studio/compare/v0.9.0...v0.10.0) - 2026-11-06
 
 - A stale tab after an update no longer breaks the admin area: the app picks up the new version and offers to reload the page.
