@@ -260,7 +260,7 @@ describe("оболочка админки на телефоне", () => {
       expect(within(menu).getByText(group)).toBeInTheDocument();
     }
     // Все разделы и возврат в Студию.
-    expect(within(menu).getAllByRole("link")).toHaveLength(18);
+    expect(within(menu).getAllByRole("link")).toHaveLength(19);
     expect(
       await screen.findByTestId("admin-nav-count-services"),
     ).toHaveTextContent("4");

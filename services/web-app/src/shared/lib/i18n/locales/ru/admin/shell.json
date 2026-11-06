@@ -15,6 +15,7 @@
     "instance": "Установка",
     "signing": "Ключи подписи",
     "aiProviders": "ИИ-провайдеры",
+    "modelServers": "Серверы моделей",
     "groups": {
       "people": "Люди",
       "builds": "Сборки",

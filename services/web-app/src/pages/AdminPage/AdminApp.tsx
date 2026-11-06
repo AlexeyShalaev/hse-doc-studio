@@ -63,6 +63,13 @@ const AdminUpdatesPage = lazy(() =>
   import("@features/admin-updates").then((m) => ({ default: m.UpdatesPage })),
 );
 
+// Серверы ИИ-моделей: установка Ollama, vLLM и SGLang.
+const AdminModelServersPage = lazy(() =>
+  import("@features/admin-model-servers").then((m) => ({
+    default: m.ModelServersPage,
+  })),
+);
+
 // MCP-сервер установки: включение, инструменты, журнал вызовов.
 const AdminMcpPage = lazy(() =>
   import("@features/mcp-server").then((m) => ({ default: m.AdminMcpPage })),
@@ -318,6 +325,14 @@ export const AdminApp = () => {
           element={
             <Page width="wide" ns={["diagnostics"]}>
               <AdminDiagnosticsPage />
+            </Page>
+          }
+        />
+        <Route
+          path="model-servers"
+          element={
+            <Page width="wide" ns={["modelServers"]}>
+              <AdminModelServersPage />
             </Page>
           }
         />

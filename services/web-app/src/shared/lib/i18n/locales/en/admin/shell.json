@@ -15,6 +15,7 @@
     "instance": "Installation",
     "signing": "Signing keys",
     "aiProviders": "AI providers",
+    "modelServers": "Model servers",
     "groups": {
       "people": "People",
       "builds": "Builds",

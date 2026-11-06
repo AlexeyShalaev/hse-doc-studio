@@ -120,6 +120,12 @@
     "limit": "0.65 kB"
   },
   {
+    "name": "Словарь админки: modelServers",
+    "path": "dist/assets/locale-admin-modelServers-*.js",
+    "gzip": true,
+    "limit": "4.2 kB"
+  },
+  {
     "name": "Онбординг: песочница демо-проекта (lazy)",
     "path": "dist/assets/DemoSandbox-*.js",
     "gzip": true,

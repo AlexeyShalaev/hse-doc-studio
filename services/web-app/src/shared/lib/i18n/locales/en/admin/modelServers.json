@@ -1,0 +1,112 @@
+{
+  "title": "Model servers",
+  "lead": "Install Ollama, vLLM and SGLang next to the Studio. A ready server registers itself as a shared AI provider.",
+  "disabled": "Installing next to the Studio is turned off by the cluster administrator (modelServers.local.enabled).",
+  "noDocker": "The Studio cannot see Docker: model servers cannot be installed without it.",
+  "engine": {
+    "ollama": "Ollama",
+    "vllm": "vLLM",
+    "sglang": "SGLang"
+  },
+  "hardware": {
+    "title": "Hardware",
+    "lead": "We use it to suggest which engine and model fit.",
+    "gpu": "GPU",
+    "ram": "RAM",
+    "cpu": "CPU cores",
+    "arch": "Architecture",
+    "disk": "Free disk",
+    "noGpu": "Not detected",
+    "unknown": "unknown",
+    "gb": "{{value}} GB",
+    "engineOk": "suitable"
+  },
+  "reason": {
+    "engine_requires_gpu": "needs an NVIDIA GPU",
+    "docker_gpu_unsupported": "Docker does not pass the GPU to containers",
+    "arch_unsupported": "CPU architecture is not supported by the images",
+    "size_unknown": "could not determine the model size",
+    "memory_unknown": "memory size is unknown",
+    "memory_low": "not enough memory",
+    "memory_tight": "memory is tight",
+    "disk_low": "low disk space",
+    "cpu_only": "will be very slow without a GPU"
+  },
+  "install": {
+    "title": "New server",
+    "lead": "Pick an engine and a model. Before downloading we show whether it fits.",
+    "engine": "Engine",
+    "model": "Model",
+    "modelHint": {
+      "ollama": "An Ollama library tag, for example qwen3:8b.",
+      "vllm": "A Hugging Face id, for example Qwen/Qwen3-8B.",
+      "sglang": "A Hugging Face id, for example Qwen/Qwen3-8B."
+    },
+    "name": "Provider name",
+    "nameHint": "Empty: engine and model.",
+    "force": "Install despite the warning",
+    "submit": "Install"
+  },
+  "fit": {
+    "fits": "Fits",
+    "tight": "Tight",
+    "too_large": "Will not fit",
+    "unknown": "Size unknown"
+  },
+  "estimate": {
+    "summary": "Weights about {{weights}}, about {{needed}} with room for context; {{available}} available ({{kind}}).",
+    "vram": "GPU memory",
+    "ram": "RAM",
+    "rough": "The estimate is approximate: real usage depends on the context length."
+  },
+  "servers": {
+    "title": "Installed servers",
+    "empty": "No servers yet."
+  },
+  "status": {
+    "installing": "Installing",
+    "running": "Running",
+    "stopped": "Stopped",
+    "failed": "Failed"
+  },
+  "step": {
+    "container": "Container",
+    "engine": "Engine",
+    "model": "Model",
+    "provider": "Provider",
+    "verify": "Check"
+  },
+  "stepState": {
+    "pending": "waiting",
+    "running": "in progress",
+    "done": "done",
+    "failed": "failed"
+  },
+  "progress": { "label": "Model download progress" },
+  "server": {
+    "start": "Start",
+    "stop": "Stop",
+    "remove": "Remove",
+    "showLogs": "Log",
+    "hideLogs": "Hide log",
+    "logsLoading": "Loading...",
+    "registered": "Registered as a shared AI provider.",
+    "notResponding": "The server is running, but the model has not answered yet: it may still be loading into memory."
+  },
+  "remove": {
+    "title": "Remove server",
+    "description": "The container and the AI provider will be removed. Downloaded models stay on disk.",
+    "confirm": "Remove"
+  },
+  "error": {
+    "generic": "That did not work. Try again.",
+    "model_server_local_install_disabled": "Installing next to the Studio is turned off.",
+    "model_server_docker_unavailable": "Docker is not available to the Studio.",
+    "model_server_engine_requires_gpu": "This engine needs an NVIDIA GPU that Docker can use.",
+    "model_server_too_large": "The model will not fit into this machine's memory.",
+    "model_server_busy": "Another install is already running.",
+    "model_server_start_failed": "Could not start the server.",
+    "model_server_invalid_input": "Check the model name.",
+    "model_server_not_found": "Server not found."
+  }
+}
