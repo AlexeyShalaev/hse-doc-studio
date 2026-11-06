@@ -315,7 +315,7 @@ async def ssh_run_saved(
 @ssh_router.delete("/{session_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def ssh_cancel(session_id: str, request: Request) -> Response:
     try:
-        (await _ssh(request)).cancel(require_actor(), session_id)
+        await (await _ssh(request)).cancel(require_actor(), session_id)
     except SshSessionNotFoundError as exc:
         raise _ssh_failure(exc) from exc
     return Response(status_code=status.HTTP_204_NO_CONTENT)

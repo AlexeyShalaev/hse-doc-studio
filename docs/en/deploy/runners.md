@@ -82,6 +82,31 @@ Why a way may be hidden:
 
 A runner installed from the admin area lives in the release namespace and gets its own data volume (`runner.installFromUi.storageSize`, `storageClassName`) so the token issued to it survives a pod restart. Its Studio address is internal (the chart Service).
 
+## Installing over SSH on another machine
+
+"Install a runner" → "Over SSH" installs the runner on a Linux machine (macOS when the user is logged in, without guarantees). The Studio itself logs in over SSH, so the machine must be reachable from the Studio server.
+
+1. **Form.** Address and port, login, sign-in method (a password or a private key with an optional passphrase), whether `sudo` is needed, the runner name.
+2. **Address protection.** Before connecting anywhere the Studio resolves the name and checks every address. Loopback, private networks (including cluster pod and service addresses), link-local and cloud metadata addresses are closed. An internal host is opened only by an explicit entry in `HSE_STUDIO__RUNNER_INSTALL__SSH_ALLOWLIST` (or the shared `HSE_STUDIO__EGRESS__ALLOWLIST`): a name, `*.corp.example`, an IP or a CIDR. Cloud metadata and link-local addresses stay closed even when listed. The connection goes to the checked IP, not to the name again, so DNS swapping between the check and the login does not work.
+3. **Fingerprint.** The Studio gets only the host key; the password and key are not sent yet. You compare the SHA256 fingerprint with what the host itself shows (`ssh-keygen -lf /etc/ssh/ssh_host_ed25519_key.pub`) and confirm. The login then goes with the key pinned: if the host answers with another key, the connection drops before any credentials are sent. There is no silent trust.
+4. **Plan.** The Studio detects the OS, architecture, Docker and systemd and shows the steps: connect, token, Docker, service, verify, runner connects to the Studio. When Docker is missing it offers the official get.docker.com script (an explicit switch); without Docker the install does not start. If the login is not root and `sudo` is off, the service step is marked impossible.
+5. **Progress.** Steps run in real time and every error has a readable reason. The session lives 15 minutes, so "Retry" does not ask for the data again. The runner is installed with the same script as in "One-command install": it reaches the host over stdin (the token and the sudo password never appear in command arguments or `ps`).
+
+### Credentials
+
+By default the data is **one-time**: the password, key and passphrase live only in the api process memory during the install and are wiped after success, cancel or session expiry. They are written to no database, log, audit entry or API response; error texts are scrubbed of them.
+
+The **"Save the access encrypted"** switch stores them in the `runner_ssh_credentials` table under the Studio secrets encryption key (like git tokens; rotating the key re-encrypts them as well). A saved access is visible as a fact (name, host, sign-in method, fingerprint); the value cannot be shown, only deleted. It powers:
+
+- **Update**: reruns the script on the host (the image is pulled, the service restarts) and keeps the runner identity;
+- **Reinstall**: removes the service with its data (`uninstall --purge`) and installs again with a new token.
+
+The saved host key stays pinned: if it changed, the install stops with "host key differs" before any password is sent. Saving can be forbidden with `HSE_STUDIO__RUNNER_INSTALL__SSH_SAVE_CREDENTIALS=false`, and SSH install as a whole with `HSE_STUDIO__RUNNER_INSTALL__SSH_ENABLED=false`.
+
+### Limits and audit
+
+Instance admins only; anyone else gets 404. Connection attempts are limited: 10 per minute per admin and 5 per minute per host and port (429), at most three installs run at once. The audit log records `runner_install.ssh.probe`, `confirm`, `start`, `succeeded`, `failed`, `cancel`, `credentials_save`, `credentials_delete`, `run_saved` with the address, login and fingerprint, without secrets.
+
 ## Management
 
 The list shows version, tags, capacity and last poll time.

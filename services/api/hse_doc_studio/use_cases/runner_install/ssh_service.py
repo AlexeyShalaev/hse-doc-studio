@@ -324,10 +324,11 @@ class SshInstallService:
         self._spawn(self._execute(actor, session, job, studio_url, install_docker=install_docker, fresh=True))
         return job
 
-    def cancel(self, actor: Actor, session_id: str) -> None:
+    async def cancel(self, actor: Actor, session_id: str) -> None:
         actor_id = _require_admin(actor)
-        self._sessions.get(session_id, actor_id)
+        session = self._sessions.get(session_id, actor_id)
         self._sessions.remove(session_id)
+        await self._audit_event("runner_install.ssh.cancel", actor_id, session.target, {})
 
     # ---- saved credentials -------------------------------------------------------------------------------------
 

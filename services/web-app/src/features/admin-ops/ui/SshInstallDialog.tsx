@@ -2,7 +2,8 @@ import { useState, type FormEvent } from "react";
 import type { TFunction } from "i18next";
 import { useTranslation } from "react-i18next";
 import { ApiError, failureCode } from "@shared/api";
-import { Button, Input, Modal, Spinner, Switch, Textarea } from "@shared/ui";
+import { Button, Input, Modal, Spinner, Textarea } from "@shared/ui";
+import { Switch } from "@shared/ui/Switch";
 import { Notice } from "@shared/ui/ConflictKit";
 import type { SavedSshCredential, SshPlan } from "@entities/session";
 import {
