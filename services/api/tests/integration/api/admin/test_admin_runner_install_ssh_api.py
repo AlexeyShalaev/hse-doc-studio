@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import asyncio
+import shlex
 from datetime import UTC, datetime
 from typing import Any
 
@@ -301,7 +302,8 @@ async def test__ssh_install__missing_docker_needs_an_explicit_choice(stack: _Sta
     assert refused.status_code == 422
     assert refused.json()["detail"] == {"code": "docker_missing"}
     assert job["state"] == "succeeded"
-    assert "get.docker.com" in find_call(stack.ssh_host, "get.docker.com").command
+    installer = find_call(stack.ssh_host, "get.docker.com")
+    assert shlex.split(installer.command)[-1] == "curl -fsSL https://get.docker.com | sh"
 
 
 async def test__ssh_install__non_root_without_sudo_is_blocked_with_sudo_it_uses_the_password_on_stdin(

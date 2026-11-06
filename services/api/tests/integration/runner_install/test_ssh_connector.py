@@ -4,14 +4,17 @@ from __future__ import annotations
 
 from collections.abc import AsyncIterator
 from dataclasses import dataclass, field
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
-import asyncssh
 import pytest
 import pytest_asyncio
 from hse_doc_studio.core.git_sync.secret import Secret
 from hse_doc_studio.core.runner_install import HostKey, SshAuth, SshAuthKind, SshError, SshTarget
-from hse_doc_studio.infra.runner_install.ssh_connector import AsyncSshConnector
+
+if TYPE_CHECKING:
+    from hse_doc_studio.infra.runner_install.ssh_connector import AsyncSshConnector
+
+asyncssh = pytest.importorskip("asyncssh", reason="extra server не установлен")
 
 PASSWORD = "s3cret-pass"
 USER = "deploy"
@@ -59,6 +62,8 @@ class World:
 async def world() -> AsyncIterator[World]:
     host_key = asyncssh.generate_private_key("ssh-ed25519")
     client_key = asyncssh.generate_private_key("ssh-ed25519")
+    from hse_doc_studio.infra.runner_install.ssh_connector import AsyncSshConnector  # noqa: PLC0415
+
     state = ServerState()
 
     async def handle(process: asyncssh.SSHServerProcess[Any]) -> None:
