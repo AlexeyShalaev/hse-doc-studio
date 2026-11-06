@@ -295,6 +295,9 @@ describe("операционные разделы: демо-API", () => {
     expect(created.status).toBe(201);
     const body = AdminRunnerTokenCreatedSchema.parse(created.data);
     expect(body.command).toContain(body.secret);
+    expect(body.docker_command).toContain(body.secret);
+    expect(body.script_command).toContain(body.secret);
+    expect(body.script_command_macos).not.toContain("sudo");
     const list = JSON.stringify((await call("GET", "/runner-tokens")).data);
     expect(list).not.toContain(body.secret);
     expect(list).toContain(body.token.id);
@@ -580,8 +583,32 @@ describe("операционные разделы: экраны", () => {
     const secret = await screen.findByTestId("secret-once");
     const text = secret.textContent ?? "";
     expect(text).toMatch(/hse_rt_/);
+    // По умолчанию открыта вкладка Docker: одна строка docker run с токеном и адресом Студии.
+    expect(within(secret).getByTestId("runner-how-docker")).toHaveAttribute(
+      "aria-selected",
+      "true",
+    );
+    expect(text).toContain("docker run");
     expect(text).toContain("HSE_RUNNER__API_URL=https://studio.example.org");
-    expect(text).toContain("hse-doc-studio runner");
+
+    // Вкладка со скриптом: команда для Linux с sudo и для macOS без него, ссылка на сам скрипт.
+    await user.click(within(secret).getByTestId("runner-how-script"));
+    const script = within(secret).getByTestId("runner-command-script");
+    expect(script.textContent).toContain("/api/runner/v1/install.sh");
+    expect(script.textContent).toContain("sudo env");
+    expect(within(secret).getByTestId("runner-script-view")).toHaveAttribute(
+      "href",
+      "/api/runner/v1/install.sh",
+    );
+    await user.click(within(secret).getByTestId("runner-script-os-macos"));
+    expect(
+      within(secret).getByTestId("runner-command-script").textContent,
+    ).not.toContain("sudo");
+
+    await user.click(within(secret).getByTestId("runner-how-env"));
+    expect(
+      within(secret).getByTestId("runner-command-env").textContent,
+    ).toContain("hse-doc-studio runner");
     // В списке токенов секрета нет, только название.
     expect(await screen.findByText("Стенд 2")).toBeVisible();
     expect(
@@ -647,7 +674,7 @@ describe("операционные разделы: экраны", () => {
     await user.click(screen.getByTestId("rotate-dialog-confirm"));
     const secret = await screen.findByTestId("secret-once");
     expect(secret.textContent).toMatch(/hse_rn_/);
-    expect(secret.textContent).toContain("HSE_RUNNER__TOKEN=hse_rn_");
+    expect(secret.textContent).toContain("HSE_RUNNER__RUNNER_TOKEN=hse_rn_");
   }, 20_000);
 
   it("отзыв раннера требует ввести его имя", async () => {

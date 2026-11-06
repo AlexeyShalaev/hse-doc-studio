@@ -306,6 +306,7 @@ ROUTE_SCOPES: Mapping[RouteKey, RouteScope] = {
     ("DELETE", "/remote-runner/pairing"): _LOCAL,
     ("DELETE", "/remote-runner"): _LOCAL,
     # Протокол раннера и админка лежат вне /api/v1, ключ это полный путь маршрута
+    ("GET", "/api/runner/v1/install.sh"): _P,
     ("POST", "/api/runner/v1/register"): RouteScope.runner_token,
     ("POST", "/api/runner/v1/poll"): RouteScope.runner_token,
     ("POST", "/api/runner/v1/jobs/{job_id}/heartbeat"): RouteScope.job_token,

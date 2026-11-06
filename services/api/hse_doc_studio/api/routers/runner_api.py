@@ -5,13 +5,14 @@ from __future__ import annotations
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, Header, Path, Request, Response
-from fastapi.responses import StreamingResponse
+from fastapi.responses import PlainTextResponse, StreamingResponse
 
 from hse_doc_studio.api.actor import require_server_mode
 from hse_doc_studio.api.observability.client_ip import client_ip
 from hse_doc_studio.api.rate_limit import enforce_ip
 from hse_doc_studio.api.runner_auth import JOB_TOKEN_HEADER, authenticated_runner, bearer_secret
-from hse_doc_studio.api.runner_commands import studio_base_url
+from hse_doc_studio.api.runner_commands import runner_image, studio_base_url
+from hse_doc_studio.api.runner_install import render_install_script
 from hse_doc_studio.api.schemas.runner import (
     ArtifactRefBody,
     ArtifactUploadRequestBody,
@@ -62,6 +63,16 @@ from hse_doc_studio.use_cases.jobs.runners import RunnerRegistry
 _SHA256_PATTERN = r"^[0-9a-f]{64}$"
 
 router = APIRouter(prefix=RUNNER_API_PREFIX, tags=["runner"], dependencies=[Depends(require_server_mode)])
+
+
+@router.get("/install.sh", response_class=PlainTextResponse)
+async def runner_install_script() -> PlainTextResponse:
+    """Скрипт установки раннера как службы: одинаков для всех и не содержит секретов (токен идёт окружением команды)."""
+    return PlainTextResponse(
+        render_install_script(runner_image()),
+        media_type="text/x-shellscript; charset=utf-8",
+        headers={"Cache-Control": "no-store", "X-Content-Type-Options": "nosniff"},
+    )
 
 
 @router.post("/register", response_model=RunnerRegisterResponseBody)

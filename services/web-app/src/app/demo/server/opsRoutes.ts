@@ -121,8 +121,22 @@ const secret = (prefix: string): string => {
   return `${prefix}_${Array.from(bytes, (b) => b.toString(16).padStart(2, "0")).join("")}`;
 };
 
-const commandFor = (value: string): string =>
-  `HSE_RUNNER__API_URL=${API_URL} HSE_RUNNER__TOKEN=${value} hse-doc-studio runner`;
+const DEMO_IMAGE = "ghcr.io/alexeyshalaev/hse-doc-studio:demo";
+
+const commandsFor = (value: string, rotated = false) => {
+  const env = rotated ? "HSE_RUNNER__RUNNER_TOKEN" : "HSE_RUNNER__TOKEN";
+  const script = `curl -fsSL ${API_URL}/api/runner/v1/install.sh | `;
+  const vars = `HSE_RUNNER__API_URL=${API_URL} ${env}=${value}`;
+  return {
+    command: `${vars} hse-doc-studio runner`,
+    docker_command:
+      'docker run -d --name hse-runner --restart unless-stopped --group-add "$(stat -c %g /var/run/docker.sock)" ' +
+      `-v /var/run/docker.sock:/var/run/docker.sock -v /var/lib/hse-runner:/var/lib/hse-runner -e HSE_RUNNER__API_URL=${API_URL} -e ${env}=${value} ` +
+      `-e HSE_RUNNER__DATA_DIR=/var/lib/hse-runner ${DEMO_IMAGE} hse-doc-studio runner`,
+    script_command: `${script}sudo env ${vars} sh -s -- install`,
+    script_command_macos: `${script}env ${vars} sh -s -- install`,
+  };
+};
 
 // Демо установки раннера: docker доступен, кластер выключен; шаги идут по одному на каждый опрос хода.
 type DemoInstall = { name: string; target: string; polls: number };
@@ -474,7 +488,7 @@ export const createOpsRoutes = (
         return demoJson({
           runner: wireRunner(found),
           runner_token: value,
-          command: commandFor(value),
+          ...commandsFor(value, true),
         });
       }),
     },
@@ -555,10 +569,7 @@ export const createOpsRoutes = (
         };
         ops.tokens = [token, ...ops.tokens];
         const value = secret("hse_rt");
-        return demoJson(
-          { token, secret: value, command: commandFor(value) },
-          201,
-        );
+        return demoJson({ token, secret: value, ...commandsFor(value) }, 201);
       }),
     },
     {
