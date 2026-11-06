@@ -249,6 +249,15 @@
           },
           "additionalProperties": false
         },
+        "installFromUi": {
+          "type": "object",
+          "properties": {
+            "enabled": {"type": "boolean"},
+            "storageClassName": {"type": "string"},
+            "storageSize": {"type": ["string", "integer"]}
+          },
+          "additionalProperties": false
+        },
         "kubernetes": {
           "type": "object",
           "properties": {

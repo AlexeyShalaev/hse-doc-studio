@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import asyncio
 from collections.abc import AsyncIterator
+from datetime import UTC, datetime
 from typing import Any
 from uuid import uuid4
 
@@ -19,7 +21,9 @@ from hse_doc_studio.core.entities import AIProvider
 from hse_doc_studio.core.identity.protocols import IActorResolver
 from hse_doc_studio.core.jobs.enums import JobKind
 from hse_doc_studio.core.jobs.queue import EnqueueRequest
+from hse_doc_studio.core.jobs.runners import hash_runner_secret
 from hse_doc_studio.core.mode import StudioMode
+from hse_doc_studio.core.runner_install import InstallError, InstallTarget, LocalInstance
 from hse_doc_studio.infra.identity.resolvers import ChainActorResolver, SessionCookieResolver
 from hse_doc_studio.use_cases.admin.ops_ai_providers import (
     CheckInstanceAiProviderUC,
@@ -44,6 +48,12 @@ from hse_doc_studio.use_cases.admin.ops_storage import GetStorageUsageUC, ListSt
 from hse_doc_studio.use_cases.identity.smtp_settings import SmtpSettingsService
 from hse_doc_studio.use_cases.jobs.queue_service import JobQueueService
 from hse_doc_studio.use_cases.jobs.runners import RunnerRegistry
+from hse_doc_studio.use_cases.runner_install import (
+    InstallJobStore,
+    RunnerInstallService,
+    SshInstallService,
+    SshSessionStore,
+)
 from httpx import ASGITransport, AsyncClient
 
 from tests.fakes.auth import empty_bearer_resolver
@@ -58,11 +68,13 @@ from tests.fakes.ops import (
     NoopUow,
     ReversingCipher,
 )
+from tests.fakes.runner_install import FakeLocalHost
 from tests.fakes.runners import (
     InMemoryRegistrationTokenRepository,
     InMemoryRunnerAdminReader,
     InMemoryRunnerRepository,
 )
+from tests.fakes.ssh import FakeConnector, FakeEgress, FakeHost, InMemorySshCredentials
 from tests.integration.api.admin.test_admin_users_api import _Env as _UsersEnv
 
 
@@ -96,7 +108,41 @@ class _Stack:
         self.store = InstanceAiProviderStore(self.providers)
         self.registry = RunnerRegistry(self.runners, self.tokens, users.audit, NoopUow())
         self.smtp = SmtpSettingsService(self.settings, ReversingCipher())  # type: ignore[arg-type]
+        self.install_host = FakeLocalHost()
+        self.install_jobs = InstallJobStore()
+        self.install = RunnerInstallService(
+            self.registry,
+            {InstallTarget.docker: self.install_host},
+            self.install_jobs,
+            users.audit,
+            NoopUow(),
+            image="registry.example/hds:1.2.3",
+            data_dir="/var/lib/hse-runner",
+            register_timeout_s=0.3,
+            poll_s=0.01,
+        )
+        self.ssh_host = FakeHost()
+        self.ssh_connector = FakeConnector(self.ssh_host)
+        self.ssh_egress = FakeEgress()
+        self.ssh_credentials = InMemorySshCredentials()
+        self.ssh_sessions = SshSessionStore()
+        self.ssh = SshInstallService(
+            self.registry,
+            self.ssh_connector,
+            self.ssh_egress,
+            self.ssh_sessions,
+            self.install_jobs,
+            users.audit,
+            NoopUow(),
+            self.ssh_credentials,
+            image="registry.example/hds:1.2.3",
+            script=lambda image: f"# runner install script for {image}\n",
+            register_timeout_s=0.3,
+            poll_s=0.01,
+            verify_timeout_s=0.1,
+        )
         self.client: AsyncClient
+        self.app: FastAPI
 
 
 class _Provider(Provider):
@@ -117,6 +163,14 @@ class _Provider(Provider):
     @provide
     def registry(self) -> RunnerRegistry:
         return self.s.registry
+
+    @provide
+    def runner_install(self) -> RunnerInstallService:
+        return self.s.install
+
+    @provide
+    def ssh_install(self) -> SshInstallService:
+        return self.s.ssh
 
     @provide
     def list_runners(self) -> ListRunnersUC:
@@ -217,6 +271,7 @@ async def stack(monkeypatch: pytest.MonkeyPatch) -> AsyncIterator[_Stack]:
     setup_dishka(container, app)
     async with AsyncClient(transport=ASGITransport(app=app, client=("203.0.113.9", 5000)), base_url="http://test") as c:
         s.client = c
+        s.app = app
         yield s
     await container.close()
 
@@ -267,6 +322,23 @@ _ROUTES: list[tuple[str, str, Any]] = [
     ("DELETE", f"/api/admin/ai-providers/{uuid4()}", None),
     ("POST", f"/api/admin/ai-providers/{uuid4()}/check", None),
     ("POST", "/api/admin/runner-tokens", {"label": "t"}),
+    ("GET", "/api/admin/runner-install/local", None),
+    ("GET", "/api/admin/runner-install/local/instances", None),
+    ("POST", "/api/admin/runner-install/local/docker", {}),
+    ("DELETE", "/api/admin/runner-install/local/docker/hse-runner-1", None),
+    ("GET", f"/api/admin/runner-install/jobs/{uuid4()}", None),
+    ("GET", "/api/admin/runner-install/ssh", None),
+    (
+        "POST",
+        "/api/admin/runner-install/ssh/probe",
+        {"host": "srv.example.org", "username": "root", "auth_kind": "password", "password": "x"},
+    ),
+    ("POST", "/api/admin/runner-install/ssh/abc/confirm", {"fingerprint": "SHA256:0123456789"}),
+    ("POST", "/api/admin/runner-install/ssh/abc/install", {}),
+    ("DELETE", "/api/admin/runner-install/ssh/abc", None),
+    ("GET", "/api/admin/runner-install/ssh/credentials", None),
+    ("DELETE", "/api/admin/runner-install/ssh/credentials/abc", None),
+    ("POST", "/api/admin/runner-install/ssh/credentials/abc/run", {"action": "update"}),
 ]
 
 
@@ -515,3 +587,135 @@ def _admin_actor():  # type: ignore[no-untyped-def]
     from hse_doc_studio.core.access.entities import Actor, ActorKind  # noqa: PLC0415
 
     return Actor(kind=ActorKind.user, id="boss", is_instance_admin=True)
+
+
+async def _finished(stack: _Stack, job_id: str, headers: Any) -> dict[str, Any]:
+    for _ in range(200):
+        job = (await stack.client.get(f"/api/admin/runner-install/jobs/{job_id}", headers=headers)).json()
+        if job["state"] != "running":
+            return job
+        await asyncio.sleep(0.01)
+    raise AssertionError("install job did not finish")
+
+
+async def _register_like_runner(stack: _Stack) -> None:
+    """Раннер на той стороне: берёт переданный ему токен и тратит его, как при регистрации."""
+    for _ in range(200):
+        if stack.install_host.specs:
+            digest = hash_runner_secret(stack.install_host.specs[0].token)
+            await stack.tokens.consume(digest, datetime.now(UTC))
+            return
+        await asyncio.sleep(0.01)
+
+
+async def test__runner_install__capabilities_report_each_host_with_reason(stack: _Stack) -> None:
+    boss = await stack.users.add("boss", admin=True)
+
+    response = await stack.client.get("/api/admin/runner-install/local", headers=boss)
+
+    assert response.status_code == 200
+    assert response.headers["cache-control"] == "no-store"
+    assert response.json() == {
+        "docker": {"available": True, "reason": None},
+        "kubernetes": {"available": False, "reason": "disabled"},
+    }
+
+
+async def test__runner_install__unavailable_host_is_refused_with_reason(stack: _Stack) -> None:
+    boss = await stack.users.add("boss", admin=True)
+
+    response = await stack.client.post("/api/admin/runner-install/local/kubernetes", json={}, headers=boss)
+
+    assert response.status_code == 409
+    assert response.json()["detail"] == {"code": "install_unavailable", "reason": "disabled"}
+    assert await stack.tokens.list() == []
+
+
+async def test__runner_install__success_flow_never_leaks_the_token(stack: _Stack) -> None:
+    boss = await stack.users.add("boss", admin=True)
+
+    started = await stack.client.post(
+        "/api/admin/runner-install/local/docker", json={"name": "Lab Box", "concurrency": 2}, headers=boss
+    )
+    await _register_like_runner(stack)
+    job = await _finished(stack, started.json()["id"], boss)
+
+    assert started.status_code == 202
+    assert job["state"] == "succeeded"
+    assert [s["key"] for s in job["steps"]] == ["token", "pull", "start", "register"]
+    assert all(s["state"] == "done" for s in job["steps"])
+    spec = stack.install_host.specs[0]
+    assert spec.name.startswith("lab-box-")
+    assert spec.concurrency == 2
+    assert spec.image == "registry.example/hds:1.2.3"
+    assert spec.data_dir == f"/var/lib/hse-runner/{spec.name}"
+    assert spec.token.startswith("hsrt_")
+    everything = started.text + str(job) + str([(e.action, e.details) for e in await stack.users.audit.list()])
+    assert spec.token not in everything
+    actions = [e.action for e in await stack.users.audit.list()]
+    assert "runner_install.local.start" in actions
+    assert "runner_install.local.succeeded" in actions
+
+
+async def test__runner_install__failure_revokes_the_token_and_explains(stack: _Stack) -> None:
+    boss = await stack.users.add("boss", admin=True)
+    stack.install_host.fail_with = InstallError("image_pull_failed", "pull access denied")
+
+    started = await stack.client.post("/api/admin/runner-install/local/docker", json={}, headers=boss)
+    job = await _finished(stack, started.json()["id"], boss)
+
+    assert job["state"] == "failed"
+    assert job["error_code"] == "image_pull_failed"
+    assert job["error_detail"] == "pull access denied"
+    assert [s["state"] for s in job["steps"]][:2] == ["done", "failed"]
+    assert all(t.revoked_at is not None for t in await stack.tokens.list())
+    assert "runner_install.local.failed" in [e.action for e in await stack.users.audit.list()]
+
+
+async def test__runner_install__register_timeout_is_reported(stack: _Stack) -> None:
+    boss = await stack.users.add("boss", admin=True)
+
+    started = await stack.client.post("/api/admin/runner-install/local/docker", json={}, headers=boss)
+    job = await _finished(stack, started.json()["id"], boss)
+
+    assert job["state"] == "failed"
+    assert job["error_code"] == "register_timeout"
+
+
+async def test__runner_install__second_install_while_running_is_busy(stack: _Stack) -> None:
+    boss = await stack.users.add("boss", admin=True)
+
+    first = await stack.client.post("/api/admin/runner-install/local/docker", json={}, headers=boss)
+    second = await stack.client.post("/api/admin/runner-install/local/docker", json={}, headers=boss)
+
+    assert first.status_code == 202
+    assert second.status_code == 409
+    assert second.json()["detail"] == {"code": "install_busy"}
+    await _finished(stack, first.json()["id"], boss)
+
+
+async def test__runner_install__invalid_input_is_rejected(stack: _Stack) -> None:
+    boss = await stack.users.add("boss", admin=True)
+    c = stack.client
+
+    assert (
+        await c.post("/api/admin/runner-install/local/docker", json={"concurrency": 99}, headers=boss)
+    ).status_code == 422
+    assert (await c.post("/api/admin/runner-install/local/ssh", json={}, headers=boss)).status_code == 422
+    assert (await c.post("/api/admin/runner-install/local/docker", json={"x": 1}, headers=boss)).status_code == 422
+    assert (await c.get(f"/api/admin/runner-install/jobs/{uuid4()}", headers=boss)).status_code == 404
+
+
+async def test__runner_install__instances_list_and_remove_are_audited(stack: _Stack) -> None:
+    boss = await stack.users.add("boss", admin=True)
+    stack.install_host.instances = [LocalInstance(InstallTarget.docker, "hse-runner-abc123", "img:1", "running", None)]
+
+    listed = (await stack.client.get("/api/admin/runner-install/local/instances", headers=boss)).json()
+    missing = await stack.client.delete("/api/admin/runner-install/local/docker/nope", headers=boss)
+    removed = await stack.client.delete("/api/admin/runner-install/local/docker/hse-runner-abc123", headers=boss)
+
+    assert listed[0]["name"] == "hse-runner-abc123"
+    assert missing.status_code == 404
+    assert removed.status_code == 204
+    assert stack.install_host.removed == ["hse-runner-abc123"]
+    assert "runner_install.local.remove" in [e.action for e in await stack.users.audit.list()]

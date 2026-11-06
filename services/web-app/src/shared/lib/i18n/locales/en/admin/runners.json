@@ -508,5 +508,8 @@
         "unit": "pcs"
       }
     }
+  },
+  "install": {
+    "open": "Install a runner"
   }
 }
