@@ -98,3 +98,12 @@ def test_ollama_spec_is_gpu_optional() -> None:
     spec = build_container_spec(Engine.ollama, server_id="ab12", model="qwen3:4b", gpu=True)
     assert spec.gpu_optional
     assert spec.command == ()
+
+
+def test_default_images_are_pinned() -> None:
+    from hse_doc_studio.core.model_servers import ENGINES  # noqa: PLC0415
+
+    for spec in ENGINES.values():
+        _, _, tag = spec.image.partition(":")
+        assert tag
+        assert tag != "latest"

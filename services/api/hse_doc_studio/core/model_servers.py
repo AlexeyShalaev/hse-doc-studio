@@ -68,6 +68,7 @@ class Fit(StrEnum):
 
 @dataclass(frozen=True)
 class EngineSpec:
+    # Образ закреплён тегом (проверен на Docker Hub 06.11.2026); настройка *_IMAGE переопределяет.
     engine: Engine
     image: str
     port: int
@@ -83,7 +84,7 @@ class EngineSpec:
 ENGINES: Mapping[Engine, EngineSpec] = {
     Engine.ollama: EngineSpec(
         Engine.ollama,
-        "ollama/ollama:latest",
+        "ollama/ollama:0.40.15",
         11434,
         False,
         AIProviderType.ollama,
@@ -93,7 +94,7 @@ ENGINES: Mapping[Engine, EngineSpec] = {
     ),
     Engine.vllm: EngineSpec(
         Engine.vllm,
-        "vllm/vllm-openai:latest",
+        "vllm/vllm-openai:v0.32.0",
         8000,
         True,
         AIProviderType.openai_compat,
@@ -103,7 +104,7 @@ ENGINES: Mapping[Engine, EngineSpec] = {
     ),
     Engine.sglang: EngineSpec(
         Engine.sglang,
-        "lmsysorg/sglang:latest",
+        "lmsysorg/sglang:v0.5.23",
         30000,
         True,
         AIProviderType.openai_compat,

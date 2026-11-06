@@ -50,13 +50,13 @@ A server can then be stopped, started, inspected through the container log and r
 
 ## Kubernetes
 
-In the Helm chart installing next to the Studio is off: `modelServers.local.enabled: false` (`HSE_STUDIO__MODEL_SERVERS__LOCAL_ENABLED=false`). The api pod gets no docker.sock, the page hides the "on this machine" option and the API answers `409 model_server_local_install_disabled`. Turn it on only for a dedicated node where docker.sock is mounted on purpose.
+**Installing next to the Studio is not supported in Kubernetes.** It is off in the Helm chart: `modelServers.local.enabled: false` (`HSE_STUDIO__MODEL_SERVERS__LOCAL_ENABLED=false`). The reason: the install starts sibling containers through the node's docker.sock, which the api pod does not get (the socket equals root on the node and breaks Pod Security restricted, so the chart does not mount it). The page hides the "on this machine" option and the API answers `409 model_server_local_install_disabled`. You can turn it on only by editing the chart by hand (a hostPath mount of the socket into the api pod on a dedicated node), at your own risk. For a cluster use an install on a separate machine over SSH, or an external model server added as an ordinary AI provider.
 
 ## Settings
 
 | Variable | Purpose |
 |---|---|
 | `HSE_STUDIO__MODEL_SERVERS__LOCAL_ENABLED` | allow installing next to the Studio (yes by default, off in Helm) |
-| `HSE_STUDIO__MODEL_SERVERS__OLLAMA_IMAGE`, `..._VLLM_IMAGE`, `..._SGLANG_IMAGE` | engine images; empty means the default image |
+| `HSE_STUDIO__MODEL_SERVERS__OLLAMA_IMAGE`, `..._VLLM_IMAGE`, `..._SGLANG_IMAGE` | engine images; empty means the default image with a pinned tag (Ollama 0.40.15, vLLM v0.32.0, SGLang v0.5.23) |
 | `HSE_STUDIO__MODEL_SERVERS__MAX_CONCURRENT_INSTALLS` | number of concurrent installs |
 | `HSE_STUDIO__MODEL_SERVERS__STARTUP_TIMEOUT_S`, `..._READY_TIMEOUT_S` | how long to wait for start and readiness (vLLM and SGLang on the first weight download) |

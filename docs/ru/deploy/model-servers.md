@@ -50,14 +50,14 @@ tags:
 
 ## Kubernetes
 
-В Helm-чарте установка на машине со Студией выключена: `modelServers.local.enabled: false` (переменная `HSE_STUDIO__MODEL_SERVERS__LOCAL_ENABLED=false`). Под api не получает docker.sock, и страница скрывает вариант «на этой машине», а API отвечает `409 model_server_local_install_disabled`. Включать значение имеет смысл только для установки на выделенном узле, где docker.sock смонтирован осознанно.
+**В Kubernetes локальная установка не поддерживается.** В Helm-чарте она выключена: `modelServers.local.enabled: false` (`HSE_STUDIO__MODEL_SERVERS__LOCAL_ENABLED=false`). Причина: установка запускает соседние контейнеры через docker.sock узла, а под api его не получает (сокет равен root на узле и ломает Pod Security restricted, поэтому чарт его не монтирует). Страница скрывает вариант «на этой машине», API отвечает `409 model_server_local_install_disabled`. Включить значение можно только с ручной правкой чарта (hostPath-монтирование сокета в под api на выделенном узле), и это на вашей ответственности. Для кластера используйте установку на отдельной машине по SSH или внешний сервер модели, добавленный как обычный ИИ-провайдер.
 
 ## Настройки
 
 | Переменная | Назначение |
 |---|---|
 | `HSE_STUDIO__MODEL_SERVERS__LOCAL_ENABLED` | разрешить установку рядом со Студией (по умолчанию да, в Helm нет) |
-| `HSE_STUDIO__MODEL_SERVERS__OLLAMA_IMAGE`, `..._VLLM_IMAGE`, `..._SGLANG_IMAGE` | образы движков; пусто значит образ по умолчанию |
+| `HSE_STUDIO__MODEL_SERVERS__OLLAMA_IMAGE`, `..._VLLM_IMAGE`, `..._SGLANG_IMAGE` | образы движков; пусто значит образ по умолчанию с закреплённым тегом (Ollama 0.40.15, vLLM v0.32.0, SGLang v0.5.23) |
 | `HSE_STUDIO__MODEL_SERVERS__MAX_CONCURRENT_INSTALLS` | число одновременных установок |
 | `HSE_STUDIO__MODEL_SERVERS__STARTUP_TIMEOUT_S`, `..._READY_TIMEOUT_S` | сколько ждать запуска и готовности (vLLM и SGLang при первой загрузке весов) |
 
