@@ -60,13 +60,13 @@ const Field = ({ children }: { children: React.ReactNode }) => (
 /** Сообщение об отказе: код каталога SSH, причина политики адреса либо общий отказ. */
 const errorText = (t: TFunction, code: string, reason?: string): string => {
   if (code === "address_blocked") {
-    return t("install.ssh.error.address_blocked", {
-      reason: t(`install.ssh.blocked.${reason ?? "private"}`, {
+    return t("ssh.error.address_blocked", {
+      reason: t(`ssh.blocked.${reason ?? "private"}`, {
         defaultValue: reason ?? "",
       }),
     });
   }
-  const key = `install.ssh.error.${code}`;
+  const key = `ssh.error.${code}`;
   const text = t(key, { defaultValue: "" });
   return text !== "" ? text : t(failureKey(code));
 };
@@ -82,13 +82,13 @@ const SavedList = ({
   onRun: (item: SavedSshCredential, action: "update" | "reinstall") => void;
   onDelete: (item: SavedSshCredential) => void;
 }) => {
-  const { t } = useTranslation("adminRunners");
+  const { t } = useTranslation("adminRunnerInstall");
   const [confirm, setConfirm] = useState<string | null>(null);
   return (
     <div className="flex flex-col" style={{ gap: "0.5rem" }}>
-      <span className="form-label">{t("install.ssh.saved.title")}</span>
+      <span className="form-label">{t("ssh.saved.title")}</span>
       <p className="form-hint" style={{ margin: 0 }}>
-        {t("install.ssh.saved.lead")}
+        {t("ssh.saved.lead")}
       </p>
       <ul
         className="flex flex-col"
@@ -113,10 +113,9 @@ const SavedList = ({
             </span>
             <span className="form-hint" style={{ wordBreak: "break-all" }}>
               {item.username}@{item.host}:{item.port},{" "}
-              {t(`install.ssh.saved.auth.${item.auth_kind}`)},{" "}
-              {item.fingerprint}
+              {t(`ssh.saved.auth.${item.auth_kind}`)}, {item.fingerprint}
             </span>
-            <span className="form-hint">{t("install.ssh.saved.present")}</span>
+            <span className="form-hint">{t("ssh.saved.present")}</span>
             <div className="flex" style={{ gap: "0.375rem", flexWrap: "wrap" }}>
               <Button
                 type="button"
@@ -128,7 +127,7 @@ const SavedList = ({
                 }}
                 data-testid={`ssh-saved-update-${item.id}`}
               >
-                {t("install.ssh.saved.update")}
+                {t("ssh.saved.update")}
               </Button>
               <Button
                 type="button"
@@ -139,7 +138,7 @@ const SavedList = ({
                 }}
                 data-testid={`ssh-saved-reinstall-${item.id}`}
               >
-                {t("install.ssh.saved.reinstall")}
+                {t("ssh.saved.reinstall")}
               </Button>
               {confirm === item.id ? (
                 <button
@@ -151,7 +150,7 @@ const SavedList = ({
                   }}
                   data-testid={`ssh-saved-delete-confirm-${item.id}`}
                 >
-                  {t("install.ssh.saved.deleteConfirm")}
+                  {t("ssh.saved.deleteConfirm")}
                 </button>
               ) : (
                 <Button
@@ -163,7 +162,7 @@ const SavedList = ({
                   }}
                   data-testid={`ssh-saved-delete-${item.id}`}
                 >
-                  {t("install.ssh.saved.delete")}
+                  {t("ssh.saved.delete")}
                 </Button>
               )}
             </div>
@@ -185,7 +184,7 @@ export const SshInstallDialog = ({
   isOpen: boolean;
   onClose: () => void;
 }) => {
-  const { t } = useTranslation("adminRunners");
+  const { t } = useTranslation("adminRunnerInstall");
   const capability = useSshCapability(isOpen);
   const saved = useSshCredentials(isOpen);
   const probe = useSshProbe();
@@ -339,8 +338,8 @@ export const SshInstallDialog = ({
     <Modal
       isOpen={isOpen}
       onClose={close}
-      title={t("install.ssh.title")}
-      description={t("install.ssh.lead")}
+      title={t("ssh.title")}
+      description={t("ssh.lead")}
       width={640}
     >
       {isOpen && (
@@ -356,7 +355,7 @@ export const SshInstallDialog = ({
           )}
 
           {capability.data && !capability.data.enabled && (
-            <Notice tone="info" text={t("install.ssh.disabled")} />
+            <Notice tone="info" text={t("ssh.disabled")} />
           )}
 
           {stage === "form" && capability.data?.enabled && (
@@ -387,7 +386,7 @@ export const SshInstallDialog = ({
                   }}
                 >
                   <Input
-                    label={t("install.ssh.host")}
+                    label={t("ssh.host")}
                     value={form.host}
                     autoComplete="off"
                     spellCheck={false}
@@ -397,7 +396,7 @@ export const SshInstallDialog = ({
                     data-testid="ssh-host"
                   />
                   <Input
-                    label={t("install.ssh.port")}
+                    label={t("ssh.port")}
                     type="number"
                     min={1}
                     max={65535}
@@ -408,7 +407,7 @@ export const SshInstallDialog = ({
                     data-testid="ssh-port"
                   />
                   <Input
-                    label={t("install.ssh.username")}
+                    label={t("ssh.username")}
                     value={form.username}
                     autoComplete="off"
                     spellCheck={false}
@@ -420,7 +419,7 @@ export const SshInstallDialog = ({
                 </div>
                 <Field>
                   <span className="form-label" id="ssh-auth-label">
-                    {t("install.ssh.auth")}
+                    {t("ssh.auth")}
                   </span>
                   <div
                     className="seg seg-fill"
@@ -441,14 +440,14 @@ export const SshInstallDialog = ({
                         }}
                         data-testid={`ssh-auth-${kind}`}
                       >
-                        {t(`install.ssh.authKind.${kind}`)}
+                        {t(`ssh.authKind.${kind}`)}
                       </button>
                     ))}
                   </div>
                 </Field>
                 {form.authKind === "password" ? (
                   <Input
-                    label={t("install.ssh.password")}
+                    label={t("ssh.password")}
                     type="password"
                     value={form.password}
                     autoComplete="new-password"
@@ -460,8 +459,8 @@ export const SshInstallDialog = ({
                 ) : (
                   <>
                     <Textarea
-                      label={t("install.ssh.privateKey")}
-                      hint={t("install.ssh.privateKeyHint")}
+                      label={t("ssh.privateKey")}
+                      hint={t("ssh.privateKeyHint")}
                       isMono
                       rows={5}
                       value={form.privateKey}
@@ -473,8 +472,8 @@ export const SshInstallDialog = ({
                       data-testid="ssh-private-key"
                     />
                     <Input
-                      label={t("install.ssh.passphrase")}
-                      hint={t("install.ssh.passphraseHint")}
+                      label={t("ssh.passphrase")}
+                      hint={t("ssh.passphraseHint")}
                       type="password"
                       value={form.passphrase}
                       autoComplete="new-password"
@@ -491,22 +490,22 @@ export const SshInstallDialog = ({
                     onChange={(v) => {
                       set("sudo", v);
                     }}
-                    label={t("install.ssh.sudo")}
+                    label={t("ssh.sudo")}
                     describedBy="ssh-sudo-hint"
                     testId="ssh-sudo"
                   />
                   <div className="flex flex-col">
                     <span style={{ fontSize: "0.8125rem" }}>
-                      {t("install.ssh.sudo")}
+                      {t("ssh.sudo")}
                     </span>
                     <span className="form-hint" id="ssh-sudo-hint">
-                      {t("install.ssh.sudoHint")}
+                      {t("ssh.sudoHint")}
                     </span>
                   </div>
                 </div>
                 <Input
-                  label={t("install.name")}
-                  hint={t("install.nameHint")}
+                  label={t("name")}
+                  hint={t("nameHint")}
                   value={form.name}
                   maxLength={40}
                   autoComplete="off"
@@ -534,24 +533,24 @@ export const SshInstallDialog = ({
                       onChange={(v) => {
                         set("save", v);
                       }}
-                      label={t("install.ssh.save")}
+                      label={t("ssh.save")}
                       describedBy="ssh-save-hint"
                       testId="ssh-save"
                     />
                     <span style={{ fontSize: "0.8125rem" }}>
-                      {t("install.ssh.save")}
+                      {t("ssh.save")}
                     </span>
                   </div>
                   <span className="form-hint" id="ssh-save-hint">
                     {capability.data.can_save_credentials
                       ? form.save
-                        ? t("install.ssh.saveOn")
-                        : t("install.ssh.saveOff")
-                      : t("install.ssh.saveUnavailable")}
+                        ? t("ssh.saveOn")
+                        : t("ssh.saveOff")
+                      : t("ssh.saveUnavailable")}
                   </span>
                   {form.save && (
                     <Input
-                      label={t("install.ssh.label")}
+                      label={t("ssh.label")}
                       value={form.label}
                       maxLength={80}
                       autoComplete="off"
@@ -575,7 +574,7 @@ export const SshInstallDialog = ({
                     data-testid="ssh-probe-submit"
                   >
                     {probe.isPending && <Spinner size="sm" />}
-                    {t("install.ssh.connect")}
+                    {t("ssh.connect")}
                   </Button>
                 </div>
               </form>
@@ -585,7 +584,7 @@ export const SshInstallDialog = ({
           {stage === "fingerprint" && hostKey && (
             <div className="flex flex-col" style={{ gap: "0.75rem" }}>
               <p style={{ margin: 0, fontSize: "0.8125rem" }}>
-                {t("install.ssh.fingerprintLead", {
+                {t("ssh.fingerprintLead", {
                   host: form.host.trim(),
                   port: form.port,
                 })}
@@ -594,11 +593,11 @@ export const SshInstallDialog = ({
                 className="flex flex-col"
                 style={{ gap: "0.25rem", margin: 0, fontSize: "0.8125rem" }}
               >
-                <dt className="form-hint">{t("install.ssh.keyType")}</dt>
+                <dt className="form-hint">{t("ssh.keyType")}</dt>
                 <dd style={{ margin: 0 }} data-testid="ssh-key-type">
                   {hostKey.key_type}
                 </dd>
-                <dt className="form-hint">{t("install.ssh.fingerprint")}</dt>
+                <dt className="form-hint">{t("ssh.fingerprint")}</dt>
                 <dd
                   className="mono"
                   style={{ margin: 0, wordBreak: "break-all" }}
@@ -608,14 +607,14 @@ export const SshInstallDialog = ({
                 </dd>
               </dl>
               <p className="form-hint" style={{ margin: 0 }}>
-                {t("install.ssh.fingerprintHint")}
+                {t("ssh.fingerprintHint")}
               </p>
               <div
                 className="flex items-center"
                 style={{ gap: "0.5rem", justifyContent: "flex-end" }}
               >
                 <Button type="button" variant="ghost" onClick={close}>
-                  {t("install.ssh.reject")}
+                  {t("ssh.reject")}
                 </Button>
                 <Button
                   type="button"
@@ -625,7 +624,7 @@ export const SshInstallDialog = ({
                   data-testid="ssh-confirm"
                 >
                   {confirm.isPending && <Spinner size="sm" />}
-                  {t("install.ssh.trust")}
+                  {t("ssh.trust")}
                 </Button>
               </div>
             </div>
@@ -637,12 +636,12 @@ export const SshInstallDialog = ({
                 style={{ margin: 0, fontSize: "0.8125rem" }}
                 data-testid="ssh-system"
               >
-                {t("install.ssh.system", {
+                {t("ssh.system", {
                   os: plan.system.distro || plan.system.os,
                   arch: plan.system.arch,
                   docker: plan.system.has_docker
-                    ? t("install.ssh.dockerYes")
-                    : t("install.ssh.dockerNo"),
+                    ? t("ssh.dockerYes")
+                    : t("ssh.dockerNo"),
                 })}
               </p>
               <ol
@@ -657,9 +656,9 @@ export const SshInstallDialog = ({
                     data-testid={`ssh-plan-${step.key}`}
                     data-action={step.action}
                   >
-                    {t(`install.step.${step.key}`)}{" "}
+                    {t(`step.${step.key}`)}{" "}
                     <span className="form-hint">
-                      {t(`install.ssh.action.${step.action}`)}
+                      {t(`ssh.action.${step.action}`)}
                     </span>
                   </li>
                 ))}
@@ -669,15 +668,15 @@ export const SshInstallDialog = ({
                   <Switch
                     checked={installDocker}
                     onChange={setInstallDocker}
-                    label={t("install.ssh.installDocker")}
+                    label={t("ssh.installDocker")}
                     testId="ssh-install-docker"
                   />
                   <div className="flex flex-col">
                     <span style={{ fontSize: "0.8125rem" }}>
-                      {t("install.ssh.installDocker")}
+                      {t("ssh.installDocker")}
                     </span>
                     <span className="form-hint">
-                      {t("install.ssh.installDockerHint")}
+                      {t("ssh.installDockerHint")}
                     </span>
                   </div>
                 </div>
@@ -687,8 +686,8 @@ export const SshInstallDialog = ({
                   <Notice
                     tone="err"
                     role="alert"
-                    text={t(`install.ssh.blockedStep.${blocked.key}`, {
-                      defaultValue: t("install.ssh.blockedStep.default"),
+                    text={t(`ssh.blockedStep.${blocked.key}`, {
+                      defaultValue: t("ssh.blockedStep.default"),
                     })}
                   />
                 </div>
@@ -710,7 +709,7 @@ export const SshInstallDialog = ({
                   data-testid="ssh-install"
                 >
                   {install.isPending && <Spinner size="sm" />}
-                  {t("install.local.start")}
+                  {t("local.start")}
                 </Button>
               </div>
             </div>
@@ -721,16 +720,12 @@ export const SshInstallDialog = ({
               {current ? (
                 <>
                   <p style={{ margin: 0, fontSize: "0.8125rem" }}>
-                    {t("install.progress", { name: current.name })}
+                    {t("progress", { name: current.name })}
                   </p>
                   <InstallProgress job={current} />
                   {current.state === "succeeded" && (
                     <div data-testid="install-success">
-                      <Notice
-                        tone="info"
-                        role="status"
-                        text={t("install.succeeded")}
-                      />
+                      <Notice tone="info" role="status" text={t("succeeded")} />
                     </div>
                   )}
                   {current.state === "failed" && (
@@ -771,7 +766,7 @@ export const SshInstallDialog = ({
                     }}
                     data-testid="install-retry"
                   >
-                    {t("install.retry")}
+                    {t("retry")}
                   </Button>
                 )}
                 <Button
@@ -781,7 +776,7 @@ export const SshInstallDialog = ({
                   onClick={close}
                   data-testid="install-done"
                 >
-                  {t("install.done")}
+                  {t("done")}
                 </Button>
               </div>
             </div>
