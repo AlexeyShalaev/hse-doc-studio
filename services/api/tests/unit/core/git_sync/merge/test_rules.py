@@ -313,17 +313,17 @@ def test__project__lock_with_another_template__is_a_conflict(project_json: Json)
 
 def test__project__schema_takes_the_maximum_and_created_at_the_minimum(project_json: Json) -> None:
     def newer(data: Json) -> None:
-        data["schema"].update(version=3, read_compat=2, write_compat=3, written_by="0.10.0")
+        data["schema"].update(version=3, read_compat=2, write_compat=3, written_by="99.0.0")
         data["created_at"] = (_T0 - timedelta(days=1)).isoformat()
 
     def other(data: Json) -> None:
-        data["schema"].update(version=2, read_compat=1, write_compat=2, written_by="0.9.5")
+        data["schema"].update(version=2, read_compat=1, write_compat=2, written_by="0.0.5")
         data["created_at"] = (_T0 + timedelta(days=1)).isoformat()
 
     decision = _merge(_PROJECT, project_json, _edited(project_json, other), _edited(project_json, newer))
 
     merged = _load(decision.content)
-    assert merged["schema"] == {"version": 3, "read_compat": 2, "write_compat": 3, "written_by": "0.10.0"}
+    assert merged["schema"] == {"version": 3, "read_compat": 2, "write_compat": 3, "written_by": "99.0.0"}
     assert merged["created_at"] == (_T0 - timedelta(days=1)).isoformat()
     assert not decision.conflict
 
