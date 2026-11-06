@@ -49,10 +49,15 @@ export const StartupChecks = () => {
 
   const warnGb = appSettings?.disk_usage_warn_gb ?? 10;
   const cleanableBytes = usage.data?.cleanable_bytes ?? 0;
+  const oldVersionsBytes = usage.data?.old_versions.reclaimable_bytes ?? 0;
   const shouldWarnDisk =
     warnGb > 0 &&
     usage.data?.available === true &&
     cleanableBytes >= warnGb * GIB;
+  // Same threshold as the generic warning: when old versions alone have grown
+  // past it, the banner names them (they are the part one button removes).
+  const oldVersionsDominate =
+    shouldWarnDisk && oldVersionsBytes >= warnGb * GIB;
 
   if (!shouldWarnDisk || diskBannerDismissed) return null;
 
@@ -63,7 +68,8 @@ export const StartupChecks = () => {
         flexShrink: 0,
         display: "flex",
         alignItems: "center",
-        gap: "0.625rem",
+        flexWrap: "wrap",
+        gap: "0.375rem 0.625rem",
         padding: "0.4375rem 0.875rem",
         background: "var(--c-warn-soft)",
         borderBottom: "1px solid var(--c-warn)",
@@ -75,10 +81,12 @@ export const StartupChecks = () => {
         style={{ color: "var(--c-warn)", flexShrink: 0 }}
       />
       <span style={{ color: "var(--c-warn)", fontWeight: 600, flexShrink: 0 }}>
-        {t("diskBanner.title")}
+        {oldVersionsDominate ? t("diskBanner.oldTitle") : t("diskBanner.title")}
       </span>
-      <span className="dim" style={{ flex: 1, minWidth: 0 }}>
-        {t("diskBanner.detail", { size: formatBytes(cleanableBytes) })}
+      <span className="dim" style={{ flex: "1 1 12rem", minWidth: 0 }}>
+        {oldVersionsDominate
+          ? t("diskBanner.oldDetail", { size: formatBytes(oldVersionsBytes) })
+          : t("diskBanner.detail", { size: formatBytes(cleanableBytes) })}
       </span>
       <button
         type="button"

@@ -13,6 +13,8 @@ export type {
   DockerImageUsage,
   DockerContainerUsage,
   DockerVolumeUsage,
+  OldVersionItem,
+  OldVersions,
   CleanupTarget,
   CleanupStep,
   CleanupJob,

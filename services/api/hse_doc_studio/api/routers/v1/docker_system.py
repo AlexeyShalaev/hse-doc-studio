@@ -13,6 +13,8 @@ from hse_doc_studio.api.schemas.docker_system import (
     DockerImageUsageResponse,
     DockerUsageResponse,
     DockerVolumeUsageResponse,
+    OldVersionItemResponse,
+    OldVersionsResponse,
 )
 from hse_doc_studio.infra.docker.cleanup_jobs import CleanupJob
 from hse_doc_studio.use_cases.system.cleanup_docker import (
@@ -22,8 +24,15 @@ from hse_doc_studio.use_cases.system.cleanup_docker import (
     StartDockerCleanupUC,
 )
 from hse_doc_studio.use_cases.system.get_docker_disk_usage import GetDockerDiskUsageUC
+from hse_doc_studio.use_cases.system.old_versions import OldVersionItem
 
 router = APIRouter(route_class=SafeDishkaRoute)
+
+
+def _map_old_item(item: OldVersionItem) -> OldVersionItemResponse:
+    return OldVersionItemResponse(
+        kind=item.kind, ref=item.ref, version=item.version, size_bytes=item.size_bytes, created=item.created
+    )
 
 
 def _map_job(job: CleanupJob | None) -> CleanupJobResponse | None:
@@ -96,6 +105,13 @@ async def get_docker_usage(
         build_cache_count=usage.build_cache_count,
         total_bytes=usage.total_bytes,
         cleanable_bytes=result.cleanable_bytes,
+        old_versions=OldVersionsResponse(
+            current_version=result.old_versions.current_version,
+            rollback=_map_old_item(result.old_versions.rollback) if result.old_versions.rollback else None,
+            items=[_map_old_item(i) for i in result.old_versions.items],
+            reclaimable_bytes=result.old_versions.reclaimable_bytes,
+            rollback_bytes=result.old_versions.rollback_bytes,
+        ),
     )
 
 
@@ -110,6 +126,7 @@ async def start_docker_cleanup(
                 targets=list(body.targets),
                 images=list(body.images),
                 containers=list(body.containers),
+                include_rollback=body.include_rollback,
             )
         )
     except ValueError as exc:

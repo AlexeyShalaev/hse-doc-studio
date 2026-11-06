@@ -35,6 +35,26 @@ export const DockerVolumeUsageSchema = z.object({
 
 export type DockerVolumeUsage = z.infer<typeof DockerVolumeUsageSchema>;
 
+export const OldVersionItemSchema = z.object({
+  kind: z.enum(["studio_image", "service_image", "container"]),
+  ref: z.string(),
+  version: z.string(),
+  size_bytes: z.number().int().nonnegative(),
+  created: z.string(),
+});
+
+export type OldVersionItem = z.infer<typeof OldVersionItemSchema>;
+
+export const OldVersionsSchema = z.object({
+  current_version: z.string(),
+  rollback: OldVersionItemSchema.nullable(),
+  items: z.array(OldVersionItemSchema),
+  reclaimable_bytes: z.number().int().nonnegative(),
+  rollback_bytes: z.number().int().nonnegative(),
+});
+
+export type OldVersions = z.infer<typeof OldVersionsSchema>;
+
 export const DockerUsageSchema = z.object({
   available: z.boolean(),
   images: z.array(DockerImageUsageSchema),
@@ -48,6 +68,7 @@ export const DockerUsageSchema = z.object({
   build_cache_count: z.number().int().nonnegative(),
   total_bytes: z.number().int().nonnegative(),
   cleanable_bytes: z.number().int().nonnegative(),
+  old_versions: OldVersionsSchema,
 });
 
 export type DockerUsage = z.infer<typeof DockerUsageSchema>;
@@ -57,6 +78,7 @@ export const CLEANUP_TARGETS = [
   "dangling_images",
   "unused_images",
   "stopped_containers",
+  "old_versions",
 ] as const;
 
 export type CleanupTarget = (typeof CLEANUP_TARGETS)[number];
@@ -93,6 +115,7 @@ export type DockerCleanupInput = {
   targets?: CleanupTarget[];
   images?: string[];
   containers?: string[];
+  includeRollback?: boolean;
 };
 
 export const dockerSystemApi = {
@@ -105,6 +128,7 @@ export const dockerSystemApi = {
         targets: body.targets ?? [],
         images: body.images ?? [],
         containers: body.containers ?? [],
+        include_rollback: body.includeRollback ?? false,
       })
       .then(parseResp(CleanupJobSchema)),
 

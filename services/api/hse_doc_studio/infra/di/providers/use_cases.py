@@ -2504,6 +2504,8 @@ class UseCaseProvider(Provider):
             settings_repo=settings_repo,
             default_images=_docker_default_images(),
             always_protected=_docker_always_protected(),
+            current_version=settings.get_app_version(),
+            image_base=settings.image_base,
         )
 
     @provide
@@ -2519,6 +2521,8 @@ class UseCaseProvider(Provider):
             settings_repo=settings_repo,
             default_images=_docker_default_images(),
             always_protected=_docker_always_protected(),
+            current_version=settings.get_app_version(),
+            image_base=settings.image_base,
         )
 
     @provide

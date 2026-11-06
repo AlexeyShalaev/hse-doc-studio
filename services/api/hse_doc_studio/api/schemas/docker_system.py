@@ -4,7 +4,7 @@ from typing import Literal
 
 from pydantic import BaseModel, Field
 
-CleanupTargetName = Literal["build_cache", "dangling_images", "unused_images", "stopped_containers"]
+CleanupTargetName = Literal["build_cache", "dangling_images", "unused_images", "stopped_containers", "old_versions"]
 
 
 class DockerImageUsageResponse(BaseModel):
@@ -37,6 +37,23 @@ class DockerVolumeUsageResponse(BaseModel):
     managed: bool
 
 
+class OldVersionItemResponse(BaseModel):
+    kind: Literal["studio_image", "service_image", "container"]
+    ref: str
+    version: str
+    size_bytes: int
+    created: str
+
+
+class OldVersionsResponse(BaseModel):
+    current_version: str
+    # Последняя предыдущая версия: по умолчанию не удаляется, чтобы остался откат.
+    rollback: OldVersionItemResponse | None
+    items: list[OldVersionItemResponse]
+    reclaimable_bytes: int
+    rollback_bytes: int
+
+
 class DockerUsageResponse(BaseModel):
     available: bool
     images: list[DockerImageUsageResponse]
@@ -52,12 +69,14 @@ class DockerUsageResponse(BaseModel):
     total_bytes: int
     # Сколько освободит «Очистить всё» — сигнал для стартового предупреждения.
     cleanable_bytes: int
+    old_versions: OldVersionsResponse
 
 
 class DockerCleanupRequest(BaseModel):
     targets: list[CleanupTargetName] = Field(default_factory=list)
     images: list[str] = Field(default_factory=list)
     containers: list[str] = Field(default_factory=list)
+    include_rollback: bool = False
 
 
 class CleanupStepResponse(BaseModel):
