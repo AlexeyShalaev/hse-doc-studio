@@ -6,6 +6,14 @@ Generated from `release-notes.json` via `make changelog` — do not edit by hand
 Release notes are hand-written and bilingual (RU/EN); the app shows them in the
 selected interface language.
 
+## [0.10.0](https://github.com/AlexeyShalaev/hse-doc-studio/compare/v0.9.0...v0.10.0) - 2026-11-06
+
+- A stale tab after an update no longer breaks the admin area: the app picks up the new version and offers to reload the page.
+- The build queue shows real phases (queued, building), and the "Build is not responding" warning counts from the actual start, not from the click.
+- Stopping a build in the cloud is synced with the local Studio and back: the status updates in both places.
+- Warnings about missing backups and public runners can be acknowledged on purpose, and they stop nagging.
+- The documents panel and the agent chat no longer overflow at narrow widths and large text sizes: buttons, labels and the model picker fit.
+
 ## [0.9.0](https://github.com/AlexeyShalaev/hse-doc-studio/compare/v0.8.0...v0.9.0) - 2026-11-05
 
 - The topic application and the presentation build without supervisor or author data: the new course project template version 2026.1.1 fixes the There's no line here to end error that broke the build when a signature field was empty. New projects are created on it right away, existing ones see it as a recommended small update: accept it in the project settings
