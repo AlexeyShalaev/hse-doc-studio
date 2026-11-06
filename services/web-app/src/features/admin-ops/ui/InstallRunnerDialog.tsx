@@ -32,7 +32,7 @@ const STEP_ICON = {
 
 /** Шаги установки: что сделано, что идёт, где упало. */
 export const InstallProgress = ({ job }: { job: InstallJob }) => {
-  const { t } = useTranslation("adminRunners");
+  const { t } = useTranslation("adminRunnerInstall");
   return (
     <ol
       className="flex flex-col"
@@ -54,10 +54,8 @@ export const InstallProgress = ({ job }: { job: InstallJob }) => {
           <span aria-hidden="true" style={{ display: "inline-flex" }}>
             {STEP_ICON[step.state]}
           </span>
-          <span>{t(`install.step.${step.key}`)}</span>
-          <span className="sr-only">
-            {t(`install.stepState.${step.state}`)}
-          </span>
+          <span>{t(`step.${step.key}`)}</span>
+          <span className="sr-only">{t(`stepState.${step.state}`)}</span>
         </li>
       ))}
     </ol>
@@ -102,11 +100,11 @@ const TargetRow = ({
   onInstall: (target: Target) => void;
   disabled: boolean;
 }) => {
-  const { t } = useTranslation("adminRunners");
+  const { t } = useTranslation("adminRunnerInstall");
   return (
     <Row
-      title={t(`install.local.${target}.title`)}
-      lead={t(`install.local.${target}.lead`)}
+      title={t(`local.${target}.title`)}
+      lead={t(`local.${target}.lead`)}
       testId={`install-local-${target}`}
     >
       {capability.available ? (
@@ -120,7 +118,7 @@ const TargetRow = ({
           }}
           data-testid={`install-local-${target}-start`}
         >
-          {t("install.local.start")}
+          {t("local.start")}
         </Button>
       ) : (
         <p
@@ -128,7 +126,7 @@ const TargetRow = ({
           style={{ margin: 0 }}
           data-testid={`install-local-${target}-unavailable`}
         >
-          {t(`install.reason.${target}.${capability.reason ?? "disabled"}`)}
+          {t(`reason.${target}.${capability.reason ?? "disabled"}`)}
         </p>
       )}
     </Row>
@@ -144,7 +142,7 @@ const InstanceRow = ({
   onRemove: (instance: LocalInstance) => void;
   pending: boolean;
 }) => {
-  const { t } = useTranslation("adminRunners");
+  const { t } = useTranslation("adminRunnerInstall");
   const [sure, setSure] = useState(false);
   return (
     <li
@@ -156,7 +154,7 @@ const InstanceRow = ({
         {instance.name}
         <span className="form-hint">
           {" "}
-          {t(`install.target.${instance.target}`)}, {instance.state}
+          {t(`target.${instance.target}`)}, {instance.state}
         </span>
       </span>
       {sure ? (
@@ -180,7 +178,7 @@ const InstanceRow = ({
             }}
             data-testid={`install-instance-${instance.name}-confirm`}
           >
-            {t("install.instances.removeConfirm")}
+            {t("instances.removeConfirm")}
           </button>
         </>
       ) : (
@@ -193,7 +191,7 @@ const InstanceRow = ({
           }}
           data-testid={`install-instance-${instance.name}-remove`}
         >
-          {t("install.instances.remove")}
+          {t("instances.remove")}
         </Button>
       )}
     </li>
@@ -213,7 +211,7 @@ export const InstallRunnerDialog = ({
   onClose: () => void;
   onOpenCommand: () => void;
 }) => {
-  const { t } = useTranslation("adminRunners");
+  const { t } = useTranslation("adminRunnerInstall");
   const capabilities = useLocalInstallCapabilities(isOpen);
   const instances = useLocalInstances(isOpen);
   const start = useStartLocalInstall();
@@ -258,8 +256,8 @@ export const InstallRunnerDialog = ({
     <Modal
       isOpen={isOpen}
       onClose={close}
-      title={t("install.title")}
-      description={t("install.lead")}
+      title={t("title")}
+      description={t("lead")}
       width={600}
     >
       {isOpen && (
@@ -271,8 +269,8 @@ export const InstallRunnerDialog = ({
           {jobId === null ? (
             <>
               <Input
-                label={t("install.name")}
-                hint={t("install.nameHint")}
+                label={t("name")}
+                hint={t("nameHint")}
                 value={name}
                 maxLength={40}
                 autoComplete="off"
@@ -281,7 +279,7 @@ export const InstallRunnerDialog = ({
                 }}
                 data-testid="install-name"
               />
-              <span className="form-label">{t("install.local.heading")}</span>
+              <span className="form-label">{t("local.heading")}</span>
               {capabilities.isPending ? (
                 <Spinner size="sm" />
               ) : capabilities.data ? (
@@ -303,7 +301,7 @@ export const InstallRunnerDialog = ({
                 <Notice
                   tone="err"
                   role="alert"
-                  text={t("install.capabilitiesFailed")}
+                  text={t("capabilitiesFailed")}
                 />
               )}
               {failure && (
@@ -313,15 +311,15 @@ export const InstallRunnerDialog = ({
                     role="alert"
                     text={
                       failure === "install_busy"
-                        ? t("install.busy")
+                        ? t("busy")
                         : t(failureKey(failure))
                     }
                   />
                 </div>
               )}
               <Row
-                title={t("install.command.title")}
-                lead={t("install.command.lead")}
+                title={t("command.title")}
+                lead={t("command.lead")}
                 testId="install-command"
               >
                 <Button
@@ -333,14 +331,12 @@ export const InstallRunnerDialog = ({
                   }}
                   data-testid="install-command-open"
                 >
-                  {t("install.command.open")}
+                  {t("command.open")}
                 </Button>
               </Row>
               {instances.data && instances.data.length > 0 && (
                 <div className="flex flex-col" style={{ gap: "0.375rem" }}>
-                  <span className="form-label">
-                    {t("install.instances.title")}
-                  </span>
+                  <span className="form-label">{t("instances.title")}</span>
                   <ul
                     className="flex flex-col"
                     style={{
@@ -373,16 +369,12 @@ export const InstallRunnerDialog = ({
               {current ? (
                 <>
                   <p style={{ margin: 0, fontSize: "0.8125rem" }}>
-                    {t("install.progress", { name: current.name })}
+                    {t("progress", { name: current.name })}
                   </p>
                   <InstallProgress job={current} />
                   {current.state === "succeeded" && (
                     <div data-testid="install-success">
-                      <Notice
-                        tone="info"
-                        role="status"
-                        text={t("install.succeeded")}
-                      />
+                      <Notice tone="info" role="status" text={t("succeeded")} />
                     </div>
                   )}
                   {current.state === "failed" && (
@@ -390,12 +382,9 @@ export const InstallRunnerDialog = ({
                       <Notice
                         tone="err"
                         role="alert"
-                        text={t(
-                          `install.error.${current.error_code ?? "unexpected"}`,
-                          {
-                            defaultValue: t("install.error.unexpected"),
-                          },
-                        )}
+                        text={t(`error.${current.error_code ?? "unexpected"}`, {
+                          defaultValue: t("error.unexpected"),
+                        })}
                       />
                       {current.error_detail && (
                         <pre
@@ -429,7 +418,7 @@ export const InstallRunnerDialog = ({
                     }}
                     data-testid="install-retry"
                   >
-                    {t("install.retry")}
+                    {t("retry")}
                   </Button>
                 )}
                 <Button
@@ -439,7 +428,7 @@ export const InstallRunnerDialog = ({
                   onClick={close}
                   data-testid="install-done"
                 >
-                  {t("install.done")}
+                  {t("done")}
                 </Button>
               </div>
             </div>
