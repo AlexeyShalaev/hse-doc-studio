@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
+
+from hse_doc_studio.core.egress import EgressAllowlist
 
 
 class RunnerInstallConfig(BaseModel):
@@ -34,3 +36,22 @@ class RunnerInstallConfig(BaseModel):
     data_dir: str = Field(
         default="/var/lib/hse-runner", description="Каталог данных раннера на хосте (docker) и в поде (kubernetes)."
     )
+    ssh_enabled: bool = Field(default=True, description="Разрешить установку раннеров по SSH из админки.")
+    ssh_allowlist: list[str] = Field(
+        default_factory=list,
+        description=(
+            "Внутренние узлы, на которые можно ставить раннер по SSH: имя (host.corp.local, *.corp.local), IP или "
+            "CIDR. Без записи закрыты частные сети, loopback и адреса кластера; адреса метаданных облака и "
+            "link-local закрыты всегда. Дополняет HSE_STUDIO__EGRESS__ALLOWLIST."
+        ),
+    )
+    ssh_save_credentials: bool = Field(
+        default=True,
+        description="Разрешить сохранять SSH-доступы зашифрованно (нужен ключ шифрования секретов).",
+    )
+
+    @field_validator("ssh_allowlist")
+    @classmethod
+    def _valid_allowlist(cls, value: list[str]) -> list[str]:
+        EgressAllowlist.parse(value)
+        return value

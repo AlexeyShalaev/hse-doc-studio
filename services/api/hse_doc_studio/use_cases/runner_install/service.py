@@ -28,6 +28,7 @@ from hse_doc_studio.core.runner_install import (
 from hse_doc_studio.core.runner_install.entities import InstallJobState
 from hse_doc_studio.core.uow import IUnitOfWork
 from hse_doc_studio.use_cases.jobs.runners import RunnerRegistry
+from hse_doc_studio.use_cases.runner_install.common import wait_token_used
 from hse_doc_studio.use_cases.runner_install.jobs import InstallJobStore
 
 logger = structlog.get_logger()
@@ -179,15 +180,8 @@ class RunnerInstallService:
 
     async def _wait_registered(self, job: InstallJob, actor: Actor, token_id: str) -> None:
         self._jobs.set_step(job, "register", InstallStepState.running)
-        waited = 0.0
-        while waited < self._register_timeout_s:
-            for token in await self._registry.list_registration_tokens(actor):
-                if token.id == token_id and token.uses >= 1:
-                    self._jobs.set_step(job, "register", InstallStepState.done)
-                    return
-            await asyncio.sleep(self._poll_s)
-            waited += self._poll_s
-        raise InstallError("register_timeout")
+        await wait_token_used(self._registry, actor, token_id, timeout_s=self._register_timeout_s, poll_s=self._poll_s)
+        self._jobs.set_step(job, "register", InstallStepState.done)
 
     async def _fail(self, actor: Actor, job: InstallJob, token_id: str | None, code: str, detail: str) -> None:
         for step in job.steps:

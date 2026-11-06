@@ -52,3 +52,93 @@ class LocalInstanceInfo(StrictModel):
     image: str
     state: str
     created_at: datetime | None = None
+
+
+# ---- SSH ----
+
+SshAuthKindName = Literal["password", "key"]
+
+
+class SshProbeRequest(StrictModel):
+    """Секреты (`password`, `private_key`, `passphrase`) принимаются только здесь и никогда не возвращаются."""
+
+    host: str = Field(min_length=1, max_length=255)
+    port: int = Field(default=22, ge=1, le=65535)
+    username: str = Field(min_length=1, max_length=64, pattern=r"^[A-Za-z0-9_][A-Za-z0-9_.@-]*$")
+    auth_kind: SshAuthKindName
+    password: str | None = Field(default=None, max_length=1024, repr=False)
+    private_key: str | None = Field(default=None, max_length=16384, repr=False)
+    passphrase: str | None = Field(default=None, max_length=1024, repr=False)
+    sudo: bool = False
+    save_credentials: bool = False
+    label: str = Field(default="", max_length=80)
+
+
+class HostKeyInfo(StrictModel):
+    key_type: str
+    fingerprint: str
+
+
+class SshProbeResponse(StrictModel):
+    session_id: str
+    host_key: HostKeyInfo
+    expires_in_s: int
+
+
+class SshConfirmRequest(StrictModel):
+    fingerprint: str = Field(min_length=10, max_length=128)
+
+
+class RemoteSystemInfo(StrictModel):
+    os: str
+    arch: str
+    distro: str
+    has_docker: bool
+    docker_usable: bool
+    has_systemd: bool
+    is_root: bool
+
+
+PlanActionName = Literal["run", "skip", "install_docker", "blocked"]
+
+
+class PlanStepInfo(StrictModel):
+    key: str
+    action: PlanActionName
+
+
+class SshPlanResponse(StrictModel):
+    session_id: str
+    system: RemoteSystemInfo
+    plan: list[PlanStepInfo]
+
+
+class SshInstallRequest(StrictModel):
+    name: str = Field(default="", max_length=40)
+    install_docker: bool = False
+
+
+class SavedCredentialInfo(StrictModel):
+    """Факт наличия сохранённого доступа: значения пароля и ключа не показываются никогда."""
+
+    id: str
+    label: str
+    host: str
+    port: int
+    username: str
+    sudo: bool
+    auth_kind: SshAuthKindName
+    key_type: str
+    fingerprint: str
+    created_at: datetime
+    last_used_at: datetime | None = None
+    runner_name: str | None = None
+
+
+class SshRunSavedRequest(StrictModel):
+    action: Literal["update", "reinstall"]
+
+
+class SshCapabilityResponse(StrictModel):
+    enabled: bool
+    can_save_credentials: bool

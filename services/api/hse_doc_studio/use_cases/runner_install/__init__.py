@@ -4,5 +4,26 @@ from hse_doc_studio.use_cases.runner_install.service import (
     InstallUnavailableError,
     RunnerInstallService,
 )
+from hse_doc_studio.use_cases.runner_install.ssh_service import (
+    FingerprintMismatchError,
+    PlanStep,
+    SshInstallService,
+    SshPolicyError,
+    SshSession,
+    SshSessionNotFoundError,
+    SshSessionStore,
+)
 
-__all__ = ["InstallBusyError", "InstallJobStore", "InstallUnavailableError", "RunnerInstallService"]
+__all__ = [
+    "FingerprintMismatchError",
+    "InstallBusyError",
+    "InstallJobStore",
+    "InstallUnavailableError",
+    "PlanStep",
+    "RunnerInstallService",
+    "SshInstallService",
+    "SshPolicyError",
+    "SshSession",
+    "SshSessionNotFoundError",
+    "SshSessionStore",
+]

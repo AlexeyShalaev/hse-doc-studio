@@ -53,6 +53,7 @@ from hse_doc_studio.infra.db.orm.project_usage import ProjectUsageRow
 from hse_doc_studio.infra.db.orm.projects import ProjectMemberRow, ProjectRow
 from hse_doc_studio.infra.db.orm.quotas import AiUsageRow, UsageCounterRow
 from hse_doc_studio.infra.db.orm.review import ReviewCommentRow, ReviewThreadRow
+from hse_doc_studio.infra.db.orm.runner_ssh import RunnerSshCredentialRow
 from hse_doc_studio.infra.db.orm.server_update import UpdateRunRow
 from hse_doc_studio.infra.db.orm.sharing import (
     GuestSessionLinkRow,
@@ -119,6 +120,7 @@ __all__ = [
     "RunnerPairingRow",
     "RunnerRegistrationTokenRow",
     "RunnerRow",
+    "RunnerSshCredentialRow",
     "SessionRow",
     "ShareLinkGrantRow",
     "ShareLinkRow",

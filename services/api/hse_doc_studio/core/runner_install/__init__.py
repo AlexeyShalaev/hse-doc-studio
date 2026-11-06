@@ -11,10 +11,27 @@ from hse_doc_studio.core.runner_install.entities import (
     UnavailableReason,
 )
 from hse_doc_studio.core.runner_install.protocols import ILocalRunnerHost, ProgressReporter
+from hse_doc_studio.core.runner_install.ssh import (
+    HostKey,
+    ISshConnector,
+    ISshCredentialRepository,
+    ISshSession,
+    RemoteSystem,
+    SavedSshCredential,
+    SshAuth,
+    SshAuthKind,
+    SshError,
+    SshResult,
+    SshTarget,
+)
 
 __all__ = [
     "Capability",
+    "HostKey",
     "ILocalRunnerHost",
+    "ISshConnector",
+    "ISshCredentialRepository",
+    "ISshSession",
     "InstallError",
     "InstallJob",
     "InstallStepState",
@@ -22,5 +39,12 @@ __all__ = [
     "LocalInstance",
     "LocalRunnerSpec",
     "ProgressReporter",
+    "RemoteSystem",
+    "SavedSshCredential",
+    "SshAuth",
+    "SshAuthKind",
+    "SshError",
+    "SshResult",
+    "SshTarget",
     "UnavailableReason",
 ]

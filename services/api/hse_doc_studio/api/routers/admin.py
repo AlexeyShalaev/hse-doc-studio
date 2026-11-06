@@ -52,6 +52,7 @@ def make_admin_router() -> APIRouter:
     router.include_router(admin_settings.router)
     router.include_router(admin_runners.router)
     router.include_router(admin_runner_install.router)
+    router.include_router(admin_runner_install.ssh_router)
     router.include_router(admin_ops.router)
     router.include_router(admin_quotas.router)
     router.include_router(admin_autoscale.router)
