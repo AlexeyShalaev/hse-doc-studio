@@ -3,11 +3,17 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
-from typing import Annotated, Literal
+from typing import Annotated, Literal, TypedDict
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response, status
 
-from hse_doc_studio.api.runner_commands import registration_command, studio_base_url
+from hse_doc_studio.api.runner_commands import (
+    registration_command,
+    registration_docker_command,
+    registration_script_command,
+    runner_token_command,
+    studio_base_url,
+)
 from hse_doc_studio.api.schemas.admin import (
     Page,
     PageParams,
@@ -101,9 +107,26 @@ def _runner_info(
     )
 
 
-def _command(request: Request, secret: str) -> str:
-    """Команда запуска раннера: адрес Студии берётся из public_url, иначе из запроса админа."""
-    return registration_command(studio_base_url(request), secret)
+class _Commands(TypedDict):
+    command: str
+    docker_command: str
+    script_command: str
+    script_command_macos: str
+
+
+def _commands(request: Request, secret: str, *, rotated: bool = False) -> _Commands:
+    """Команды запуска раннера: адрес Студии берётся из public_url, иначе из запроса админа.
+
+    После ротации токен раннера перекрывает сохранённую личность (`HSE_RUNNER__RUNNER_TOKEN`), а не регистрирует.
+    """
+    base = studio_base_url(request)
+    env_name = "HSE_RUNNER__RUNNER_TOKEN" if rotated else "HSE_RUNNER__TOKEN"
+    return _Commands(
+        command=runner_token_command(base, secret) if rotated else registration_command(base, secret),
+        docker_command=registration_docker_command(base, secret, env_name=env_name),
+        script_command=registration_script_command(base, secret, env_name=env_name),
+        script_command_macos=registration_script_command(base, secret, env_name=env_name, macos=True),
+    )
 
 
 async def _registry(request: Request) -> RunnerRegistry:
@@ -120,15 +143,16 @@ def _not_found(_exc: RunnerNotFoundError) -> HTTPException:
 
 @router.post("/runner-tokens", response_model=CreatedRegistrationTokenResponse, status_code=status.HTTP_201_CREATED)
 async def create_registration_token(
-    body: CreateRegistrationTokenRequest, request: Request
+    body: CreateRegistrationTokenRequest, request: Request, response: Response
 ) -> CreatedRegistrationTokenResponse:
+    response.headers.update(_NO_STORE)
     created = await (await _registry(request)).create_registration_token(
         require_actor(), label=body.label, ttl=timedelta(hours=body.ttl_hours), max_uses=body.max_uses
     )
     return CreatedRegistrationTokenResponse(
         token=_token_info(created.token),
         secret=created.secret,
-        command=_command(request, created.secret),
+        **_commands(request, created.secret),
     )
 
 
@@ -238,7 +262,8 @@ async def update_runner(runner_id: str, body: UpdateRunnerRequest, request: Requ
 
 
 @router.post("/runners/{runner_id}/rotate-token", response_model=RotatedRunnerTokenResponse)
-async def rotate_runner_token(runner_id: str, request: Request) -> RotatedRunnerTokenResponse:
+async def rotate_runner_token(runner_id: str, request: Request, response: Response) -> RotatedRunnerTokenResponse:
+    response.headers.update(_NO_STORE)
     try:
         rotated = await (await _registry(request)).rotate_token(require_actor(), runner_id)
     except RunnerNotFoundError as exc:
@@ -246,7 +271,7 @@ async def rotate_runner_token(runner_id: str, request: Request) -> RotatedRunner
     return RotatedRunnerTokenResponse(
         runner=_runner_info(rotated.runner),
         runner_token=rotated.secret,
-        command=_command(request, rotated.secret),
+        **_commands(request, rotated.secret, rotated=True),
     )
 
 
