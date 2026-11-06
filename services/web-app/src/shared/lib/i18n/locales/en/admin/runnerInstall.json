@@ -120,7 +120,7 @@
       "blocked": "not possible"
     },
     "installDocker": "Install Docker",
-    "installDockerHint": "The Studio runs the official get.docker.com install script on that machine. Without Docker the runner cannot start.",
+    "installDockerHint": "The Studio will run the official install script on the host: curl -fsSL https://get.docker.com | sh (through sudo when enabled). Without Docker the runner cannot start.",
     "blockedStep": {
       "service": "A service cannot be installed on this host: the system is unsupported, or the login is not root and sudo is off.",
       "docker": "Install Docker on this system yourself.",
