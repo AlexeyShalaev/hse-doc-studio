@@ -37,17 +37,8 @@ export type DemoInvites = {
 
 export const DEMO_INVITE_PROJECT_ID = "p_01hxa1c4de";
 const DAY = 86_400_000;
-// Отсчёт от начала текущих суток, а не от фиксированной даты: иначе срок «через 5 дней» со временем истекает.
-const iso = (offsetDays: number): string => {
-  const today = new Date();
-  const base = Date.UTC(
-    today.getUTCFullYear(),
-    today.getUTCMonth(),
-    today.getUTCDate(),
-    9,
-  );
-  return new Date(base + offsetDays * DAY).toISOString();
-};
+const iso = (offsetDays: number): string =>
+  new Date(Date.now() + offsetDays * DAY).toISOString();
 
 const ANNA = { id: "u_01hx7k2m9c", name: "Анна Петрова" };
 const PAVEL = { id: "u_01hx7k5pavel", name: "Павел Орлов" };

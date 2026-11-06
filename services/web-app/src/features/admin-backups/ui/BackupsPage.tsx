@@ -179,6 +179,7 @@ const BackupsContent = () => {
           </>
         }
         description={t("destinations.lead")}
+        id="backup-destinations"
         testId="backup-destinations"
         actions={
           <Button
