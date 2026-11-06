@@ -105,6 +105,8 @@ The saved host key stays pinned: if it changed, the install stops with "host key
 
 ### Limits and audit
 
+Install progress (steps and fingerprint confirmation sessions) is kept in the memory of one api process. This assumes a single replica, as the chart runs (`Recreate`): with several replicas a progress request can reach another one and get 404. Several replicas would need shared storage, which does not exist yet.
+
 Instance admins only; anyone else gets 404. Connection attempts are limited: 10 per minute per admin and 5 per minute per host and port (429), at most three installs run at once. The audit log records `runner_install.ssh.probe`, `confirm`, `start`, `succeeded`, `failed`, `cancel`, `credentials_save`, `credentials_delete`, `run_saved` with the address, login and fingerprint, without secrets.
 
 ## Management
