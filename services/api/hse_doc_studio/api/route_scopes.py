@@ -340,6 +340,9 @@ ROUTE_SCOPES: Mapping[RouteKey, RouteScope] = {
     # Админка установки: гард admin_guard сам отвечает 401 анониму и 404 не админу
     ("DELETE", "/api/admin/invitations/{invite_id}"): _ADM,
     ("DELETE", "/api/admin/model-servers/{server_id}"): _ADM,
+    ("DELETE", "/api/admin/model-servers/settings"): _ADM,
+    ("GET", "/api/admin/model-servers/settings"): _ADM,
+    ("PUT", "/api/admin/model-servers/settings"): _ADM,
     ("GET", "/api/admin/model-servers"): _ADM,
     ("GET", "/api/admin/model-servers/capabilities"): _ADM,
     ("GET", "/api/admin/model-servers/catalog"): _ADM,
