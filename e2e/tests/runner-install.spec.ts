@@ -77,6 +77,28 @@ for (const lang of LANGS) {
       await anon.close();
     });
 
+    test("SSH: адреса внутренней сети и метаданных облака закрыты защитой, пароль нигде не виден", async ({
+      page,
+    }) => {
+      await loginOnPhone(page, ADMIN_EMAIL, adminPassword());
+      await page.goto("/admin/runners");
+      await page.getByTestId("runner-install-open").click();
+      await page.getByTestId("install-ssh-open").click();
+
+      for (const host of ["10.0.0.5", "169.254.169.254", "127.0.0.1"]) {
+        await page.getByTestId("ssh-host").fill(host);
+        await page.getByTestId("ssh-username").fill("deploy");
+        await page.getByTestId("ssh-password").fill("e2e-canary-password");
+        await page.getByTestId("ssh-probe-submit").click();
+        const error = page.getByTestId("ssh-error");
+        await expect(error).toBeVisible();
+        await expect(page.getByTestId("ssh-fingerprint")).toHaveCount(0);
+        expect(await page.content()).not.toContain("e2e-canary-password");
+        await page.getByTestId("ssh-host").fill("");
+      }
+      await shot(page, L, "runner-install-ssh-blocked");
+    });
+
     test("токен на телефоне: ничего не обрезано", async ({ page }) => {
       await page.setViewportSize({ width: 360, height: 740 });
       await openSecret(page, `e2e-install-phone-${lang}`);

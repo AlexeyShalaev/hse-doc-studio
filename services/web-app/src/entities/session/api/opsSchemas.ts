@@ -113,6 +113,63 @@ export const StartLocalInstallRequestSchema = z.strictObject({
   name: z.string().max(40),
   concurrency: z.number().int().min(1).max(8),
 });
+export const SshCapabilitySchema = z.strictObject({
+  enabled: z.boolean(),
+  can_save_credentials: z.boolean(),
+});
+export const SshHostKeySchema = z.strictObject({
+  key_type: z.string(),
+  fingerprint: z.string(),
+});
+export const SshProbeResponseSchema = z.strictObject({
+  session_id: z.string(),
+  host_key: SshHostKeySchema,
+  expires_in_s: z.number().int(),
+});
+export const SshPlanSchema = z.strictObject({
+  session_id: z.string(),
+  system: z.strictObject({
+    os: z.string(),
+    arch: z.string(),
+    distro: z.string(),
+    has_docker: z.boolean(),
+    docker_usable: z.boolean(),
+    has_systemd: z.boolean(),
+    is_root: z.boolean(),
+  }),
+  plan: z.array(
+    z.strictObject({
+      key: z.string(),
+      action: z.enum(["run", "skip", "install_docker", "blocked"]),
+    }),
+  ),
+});
+export const SavedSshCredentialSchema = z.strictObject({
+  id: z.string(),
+  label: z.string(),
+  host: z.string(),
+  port: z.number().int(),
+  username: z.string(),
+  sudo: z.boolean(),
+  auth_kind: z.enum(["password", "key"]),
+  key_type: z.string(),
+  fingerprint: z.string(),
+  created_at: iso,
+  last_used_at: iso.nullable(),
+  runner_name: z.string().nullable(),
+});
+export const SshProbeRequestSchema = z.strictObject({
+  host: z.string().min(1).max(255),
+  port: z.number().int().min(1).max(65535),
+  username: z.string().min(1).max(64),
+  auth_kind: z.enum(["password", "key"]),
+  password: z.string().max(1024).nullable(),
+  private_key: z.string().max(16384).nullable(),
+  passphrase: z.string().max(1024).nullable(),
+  sudo: z.boolean(),
+  save_credentials: z.boolean(),
+  label: z.string().max(80),
+});
 export const UpdateAdminRunnerRequestSchema = z.strictObject({
   paused: z.boolean(),
 });
@@ -223,6 +280,11 @@ export type LocalInstance = z.infer<typeof LocalInstanceSchema>;
 export type StartLocalInstallRequest = z.infer<
   typeof StartLocalInstallRequestSchema
 >;
+export type SshCapability = z.infer<typeof SshCapabilitySchema>;
+export type SshProbeResponse = z.infer<typeof SshProbeResponseSchema>;
+export type SshPlan = z.infer<typeof SshPlanSchema>;
+export type SavedSshCredential = z.infer<typeof SavedSshCredentialSchema>;
+export type SshProbeRequest = z.infer<typeof SshProbeRequestSchema>;
 export type AdminRunnerRotated = z.infer<typeof AdminRunnerRotatedSchema>;
 export type AdminRunnerPage = z.infer<typeof AdminRunnerPageSchema>;
 export type AdminRunnerTokenPage = z.infer<typeof AdminRunnerTokenPageSchema>;

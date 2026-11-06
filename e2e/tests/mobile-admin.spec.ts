@@ -152,6 +152,20 @@ for (const lang of LANGS) {
         await expect(page.getByTestId("token-create-form")).toBeVisible();
       });
 
+      test("админка: форма установки по SSH на телефоне, ничего не обрезано, поля секретов скрыты", async ({ page }) => {
+        await loginAdmin(page);
+        await page.goto("/admin/runners");
+        await page.getByTestId("runner-install-open").tap();
+        await page.getByTestId("install-ssh-open").tap();
+        await expect(page.getByTestId("ssh-form")).toBeVisible();
+        await expect(page.getByTestId("ssh-password")).toHaveAttribute("type", "password");
+        await page.getByTestId("ssh-auth-key").tap();
+        await expect(page.getByTestId("ssh-private-key")).toBeVisible();
+        await expectNoHorizontalScroll(page);
+        await expectNothingClipped(page);
+        await shot(page, L, name("36-install-ssh"));
+      });
+
       test("админка: таблицы карточками, карточка человека на весь экран, цели касания", async ({ page }) => {
         await loginAdmin(page);
         await page.goto("/admin/users");
