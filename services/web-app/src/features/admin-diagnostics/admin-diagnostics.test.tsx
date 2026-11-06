@@ -320,9 +320,37 @@ describe("раздел «Самодиагностика»", () => {
     expect(await screen.findByTestId("diag-error")).toBeInTheDocument();
   });
 
+  it("строка со сбоем ведёт в раздел, где его решают; без решения это не ссылка", async () => {
+    render(wrap(<DiagnosticsPage />));
+    await screen.findByTestId("diag-check-disk");
+    const disk = screen.getByTestId("diag-link-disk");
+    expect(disk).toHaveAttribute("href", "/admin/data");
+    expect(disk).toHaveAccessibleName(
+      "Диск и хранение данных, открыть: хранение данных",
+    );
+    expect(screen.getByTestId("diag-link-backups")).toHaveAttribute(
+      "href",
+      "/admin/backups",
+    );
+    expect(screen.getByTestId("diag-link-smtp")).toHaveAttribute(
+      "href",
+      "/admin/settings#admin-smtp",
+    );
+    // У базы решения в интерфейсе нет: ни ссылки, ни стрелки.
+    expect(screen.queryByTestId("diag-link-database")).toBeNull();
+    expect(
+      within(screen.getByTestId("diag-check-database")).queryByRole("link"),
+    ).toBeNull();
+    // Кнопки действий остаются отдельными целями рядом со ссылкой.
+    expect(screen.getByTestId("diag-recheck-disk").tagName).toBe("BUTTON");
+  });
+
   it("в английском интерфейсе тексты переведены", async () => {
     await i18n.changeLanguage("en");
     render(wrap(<DiagnosticsPage />));
+    expect(await screen.findByTestId("diag-link-disk")).toHaveAccessibleName(
+      "Disk and data retention, open: data retention",
+    );
     expect(await screen.findByTestId("diag-reason-disk")).toHaveTextContent(
       "Volume “data” is running out of space: 83% used.",
     );

@@ -142,3 +142,46 @@ for (const { lang, locale } of [
     expect(actions).toContain("diagnostics.accept_revoke");
   });
 }
+
+/**
+ * Строки самодиагностики ведут туда, где проблему решают: «Бэкапы» на раздел бэкапов к местам хранения,
+ * «Очередь» на вкладку очереди раннеров. Строка без решения в интерфейсе («База данных») не ссылка.
+ */
+for (const { lang, locale } of [
+  { lang: "ru", locale: "ru-RU" },
+  { lang: "en", locale: "en-US" },
+] as const) {
+  test(`строки самодиагностики ведут в разделы (${lang})`, async ({ browser }) => {
+    const api = new Client(await pwRequest.newContext({ baseURL }), ORIGIN);
+    await ensureAdmin(api, ADMIN);
+    await api.delete("/api/admin/diagnostics/accepted/backups");
+    await api.post("/api/admin/diagnostics/run", { check: null });
+
+    const context = await browser.newContext({ baseURL, locale, viewport: { width: 1440, height: 1000 } });
+    const login = await context.request.post("/api/v1/auth/login", {
+      data: { email: ADMIN.email, password: stackPassword() },
+      headers: { Origin: ORIGIN },
+    });
+    expect(login.status(), await login.text()).toBe(200);
+    const page = await context.newPage();
+
+    await page.goto("/admin/diagnostics");
+    await expect(page.getByTestId("diagnostics-page")).toBeVisible();
+    await expect(page.getByTestId("diag-link-database")).toHaveCount(0);
+
+    // С клавиатуры: фокус на ссылку и Enter.
+    const backups = page.getByTestId("diag-link-backups");
+    await expect(backups).toHaveAttribute("aria-label", /.+/);
+    await backups.focus();
+    await page.keyboard.press("Enter");
+    await expect(page).toHaveURL(/\/admin\/backups#backup-destinations$/);
+    await expect(page.getByTestId("backup-destinations")).toBeVisible();
+
+    await page.goto("/admin/diagnostics");
+    await page.getByTestId("diag-link-jobs").click();
+    await expect(page).toHaveURL(/\/admin\/runners\?tab=queue/);
+    await expect(page.getByTestId("runners-page")).toBeVisible();
+
+    await context.close();
+  });
+}

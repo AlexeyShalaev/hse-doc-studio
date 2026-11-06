@@ -214,5 +214,19 @@
     "dormantHint": "The cause is fixed: the record stays but silences nothing.",
     "banner": "{{check}}: accepted on purpose",
     "bannerReason": "Reason: {{reason}}"
+  },
+  "target": {
+    "label": "{{check}}, open: {{target}}",
+    "runners": "runners",
+    "runnerToken": "runner token creation",
+    "queue": "job queue",
+    "queueStuck": "stuck jobs in the queue",
+    "queueWaiting": "waiting jobs in the queue",
+    "services": "service status",
+    "data": "data retention",
+    "backups": "backups",
+    "backupDestinations": "backup destinations",
+    "smtp": "mail settings",
+    "instance": "server address settings"
   }
 }
