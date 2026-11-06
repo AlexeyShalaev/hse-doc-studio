@@ -1,6 +1,32 @@
 {
   "releases": [
     {
+      "version": "0.10.0",
+      "date": "2026-11-06",
+      "notes": [
+        {
+          "ru": "Устаревшая вкладка после обновления больше не ломает админку: приложение подхватывает новую версию и предлагает перезагрузить страницу.",
+          "en": "A stale tab after an update no longer breaks the admin area: the app picks up the new version and offers to reload the page."
+        },
+        {
+          "ru": "Очередь сборок показывает реальные фазы (в очереди, идёт сборка), а предупреждение «Сборка не отвечает» считается от настоящего старта, а не от нажатия кнопки.",
+          "en": "The build queue shows real phases (queued, building), and the \"Build is not responding\" warning counts from the actual start, not from the click."
+        },
+        {
+          "ru": "Остановка сборки в облаке синхронизируется с локальной студией, и наоборот: статус обновляется в обоих местах.",
+          "en": "Stopping a build in the cloud is synced with the local Studio and back: the status updates in both places."
+        },
+        {
+          "ru": "Предупреждения об отсутствии резервных копий и публичных раннеров можно принять осознанно, и они перестанут напоминать о себе.",
+          "en": "Warnings about missing backups and public runners can be acknowledged on purpose, and they stop nagging."
+        },
+        {
+          "ru": "Панель документов и чат агента больше не вылезают за рамки в узкой ширине и при крупном тексте: кнопки, подписи и выбор модели помещаются.",
+          "en": "The documents panel and the agent chat no longer overflow at narrow widths and large text sizes: buttons, labels and the model picker fit."
+        }
+      ]
+    },
+    {
       "version": "0.9.0",
       "date": "2026-11-05",
       "notes": [
