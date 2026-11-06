@@ -210,7 +210,7 @@ export const SshInstallDialog = ({
   };
   const fail = (e: unknown) => {
     const code = failureCode(e);
-    const raw = e instanceof ApiError ? e.data?.["reason"] : undefined;
+    const raw = e instanceof ApiError ? e.data?.reason : undefined;
     const reason = typeof raw === "string" ? raw : undefined;
     setError(errorText(t, code, reason));
   };
