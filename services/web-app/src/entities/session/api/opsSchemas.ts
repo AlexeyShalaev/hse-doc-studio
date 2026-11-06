@@ -58,11 +58,17 @@ export const AdminRunnerTokenCreatedSchema = z.strictObject({
   token: AdminRunnerTokenSchema,
   secret: z.string(),
   command: z.string(),
+  docker_command: z.string(),
+  script_command: z.string(),
+  script_command_macos: z.string(),
 });
 export const AdminRunnerRotatedSchema = z.strictObject({
   runner: AdminRunnerSchema,
   runner_token: z.string(),
   command: z.string(),
+  docker_command: z.string(),
+  script_command: z.string(),
+  script_command_macos: z.string(),
 });
 export const UpdateAdminRunnerRequestSchema = z.strictObject({
   paused: z.boolean(),

@@ -456,6 +456,38 @@ async def test__runner_token__secret_and_command_shown_once(stack: _Stack) -> No
     assert "hse-doc-studio runner" not in listed
 
 
+async def test__runner_token__install_commands_carry_secret_once_and_never_cache(stack: _Stack) -> None:
+    boss = await stack.users.add("boss", admin=True)
+    c = stack.client
+
+    response = await c.post("/api/admin/runner-tokens", json={"label": "vm"}, headers=boss)
+    created = response.json()
+    secret = created["secret"]
+
+    assert response.headers["cache-control"] == "no-store"
+    assert secret in created["docker_command"]
+    assert created["docker_command"].startswith("docker run ")
+    assert "HSE_RUNNER__TOKEN=" + secret in created["docker_command"]
+    assert created["script_command"].startswith("curl -fsSL ")
+    assert "/api/runner/v1/install.sh" in created["script_command"]
+    assert " | sudo env " in created["script_command"]
+    assert " | env " in created["script_command_macos"]
+    assert "sudo" not in created["script_command_macos"]
+    assert secret in created["script_command"]
+    listed = (await c.get("/api/admin/runner-tokens", headers=boss)).text
+    assert secret not in listed
+    assert "install.sh" not in listed
+
+
+async def test__runner_token__install_commands_require_admin(stack: _Stack) -> None:
+    plain = await stack.users.add("plain")
+
+    response = await stack.client.post("/api/admin/runner-tokens", json={"label": "vm"}, headers=plain)
+
+    assert response.status_code == 404
+    assert "install.sh" not in response.text
+
+
 async def test__runners__list_has_status(stack: _Stack) -> None:
     from hse_doc_studio.core.jobs.wire import RUNNER_PROTOCOL_VERSION, RunnerRegisterRequest  # noqa: PLC0415
 

@@ -84,19 +84,42 @@ export const ConfirmDialog = ({
   );
 };
 
-/** Секрет и готовая команда запуска раннера. Показываются один раз. */
+export type RunnerCommands = {
+  command: string;
+  docker_command: string;
+  script_command: string;
+  script_command_macos: string;
+};
+
+type HowTab = "docker" | "script" | "env";
+type ScriptOs = "linux" | "macos";
+
+const INSTALL_SCRIPT_PATH = "/api/runner/v1/install.sh";
+
+/** Секрет и готовые команды запуска раннера (docker, скрипт-служба, переменные). Показываются один раз. */
 export const SecretWithCommand = ({
   label,
   secret,
-  command,
+  commands,
   onClose,
 }: {
   label: string;
   secret: string;
-  command: string;
+  commands: RunnerCommands;
   onClose: () => void;
 }) => {
   const { t } = useTranslation("adminRunners");
+  const [how, setHow] = useState<HowTab>("docker");
+  const [os, setOs] = useState<ScriptOs>("linux");
+  const tabs: readonly HowTab[] = ["docker", "script", "env"];
+  const value =
+    how === "docker"
+      ? commands.docker_command
+      : how === "env"
+        ? commands.command
+        : os === "macos"
+          ? commands.script_command_macos
+          : commands.script_command;
   // Команда тоже содержит секрет и нужна один раз: она внутри той же панели,
   // а «Готово» стоит последним, под ней.
   return (
@@ -110,21 +133,90 @@ export const SecretWithCommand = ({
           <div
             className="flex flex-col"
             style={{
-              gap: "0.375rem",
+              gap: "0.5rem",
               paddingTop: "0.75rem",
               borderTop: "1px solid var(--border)",
             }}
           >
             <span className="form-label">{t("secret.commandTitle")}</span>
-            <CopyField
-              value={command}
-              label={t("secret.commandLabel")}
-              multiline
-              wrap="spaces"
-            />
-            <p className="form-hint" style={{ margin: 0 }}>
-              {t("secret.commandHint")}
-            </p>
+            <div
+              className="seg"
+              role="tablist"
+              aria-label={t("secret.tabsLabel")}
+            >
+              {tabs.map((id) => (
+                <button
+                  key={id}
+                  type="button"
+                  role="tab"
+                  id={`runner-how-${id}`}
+                  aria-selected={how === id}
+                  aria-controls="runner-how-panel"
+                  className={how === id ? "active" : undefined}
+                  data-testid={`runner-how-${id}`}
+                  onClick={() => {
+                    setHow(id);
+                  }}
+                >
+                  {t(`secret.tab.${id}`)}
+                </button>
+              ))}
+            </div>
+            <div
+              role="tabpanel"
+              id="runner-how-panel"
+              aria-labelledby={`runner-how-${how}`}
+              className="flex flex-col"
+              style={{ gap: "0.5rem" }}
+            >
+              {how === "script" && (
+                <div
+                  className="seg"
+                  role="radiogroup"
+                  aria-label={t("secret.osLabel")}
+                >
+                  {(["linux", "macos"] as const).map((id) => (
+                    <button
+                      key={id}
+                      type="button"
+                      role="radio"
+                      aria-checked={os === id}
+                      className={os === id ? "active" : undefined}
+                      data-testid={`runner-script-os-${id}`}
+                      onClick={() => {
+                        setOs(id);
+                      }}
+                    >
+                      {t(`secret.os.${id}`)}
+                    </button>
+                  ))}
+                </div>
+              )}
+              <div data-testid={`runner-command-${how}`}>
+                <CopyField
+                  value={value}
+                  label={t(`secret.commandLabel.${how}`)}
+                  multiline
+                  wrap="spaces"
+                />
+              </div>
+              <p className="form-hint" style={{ margin: 0 }}>
+                {how === "script"
+                  ? t(`secret.commandHint.script.${os}`)
+                  : t(`secret.commandHint.${how}`)}
+              </p>
+              {how === "script" && (
+                <a
+                  href={INSTALL_SCRIPT_PATH}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="form-hint"
+                  data-testid="runner-script-view"
+                >
+                  {t("secret.scriptView")}
+                </a>
+              )}
+            </div>
           </div>
         }
       />
@@ -269,7 +361,7 @@ export const CreateTokenDialog = ({
           <SecretWithCommand
             label={t("tokens.created.label")}
             secret={created.secret}
-            command={created.command}
+            commands={created}
             onClose={onClose}
           />
         ) : (
@@ -305,7 +397,7 @@ export const RotatedDialog = ({
         <SecretWithCommand
           label={t("runners.rotated.label")}
           secret={rotated.runner_token}
-          command={rotated.command}
+          commands={rotated}
           onClose={onClose}
         />
       )}
