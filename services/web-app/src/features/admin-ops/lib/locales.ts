@@ -7,6 +7,7 @@ export const ensureAdminOpsLocales = (): Promise<void> =>
   loadAdminNamespaces([
     "ops",
     "runners",
+    "runnerInstall",
     "quotas",
     "services",
     "storage",

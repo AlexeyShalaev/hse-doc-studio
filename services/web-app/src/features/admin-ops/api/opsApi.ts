@@ -16,6 +16,13 @@ import {
   AdminStorageOwnerPageSchema,
   AdminStorageUsageSchema,
   AdminUserSchema,
+  InstallJobSchema,
+  LocalInstallCapabilitiesSchema,
+  LocalInstanceSchema,
+  SavedSshCredentialSchema,
+  SshCapabilitySchema,
+  SshPlanSchema,
+  SshProbeResponseSchema,
   type AdminBuildSettings,
   type AdminJob,
   type AdminJobPage,
@@ -31,6 +38,15 @@ import {
   type AdminStorageOwnerRow,
   type AdminUser,
   type CreateAdminRunnerTokenRequest,
+  type InstallJob,
+  type LocalInstallCapabilities,
+  type LocalInstance,
+  type SavedSshCredential,
+  type SshCapability,
+  type SshPlan,
+  type SshProbeRequest,
+  type SshProbeResponse,
+  type StartLocalInstallRequest,
   type UpdateAdminQuotasRequest,
 } from "@entities/session";
 import {
@@ -94,6 +110,79 @@ export const opsApi = {
       .then(parseResp(AdminRunnerTokenCreatedSchema)),
   revokeToken: async (id: string): Promise<void> => {
     await adminClient.delete(`/runner-tokens/${enc(id)}`, quiet);
+  },
+
+  /** Где здесь можно поставить раннер (docker рядом, кластер) и почему нельзя. */
+  localCapabilities: (): Promise<LocalInstallCapabilities> =>
+    adminClient
+      .get("/runner-install/local", quiet)
+      .then(parseResp(LocalInstallCapabilitiesSchema)),
+  startLocalInstall: (
+    target: "docker" | "kubernetes",
+    body: StartLocalInstallRequest,
+  ): Promise<InstallJob> =>
+    adminClient
+      .post(`/runner-install/local/${target}`, body, quiet)
+      .then(parseResp(InstallJobSchema)),
+  installJob: (id: string): Promise<InstallJob> =>
+    adminClient
+      .get(`/runner-install/jobs/${enc(id)}`, quiet)
+      .then(parseResp(InstallJobSchema)),
+  localInstances: (): Promise<LocalInstance[]> =>
+    adminClient
+      .get("/runner-install/local/instances", quiet)
+      .then(parseResp(z.array(LocalInstanceSchema))),
+  sshCapability: (): Promise<SshCapability> =>
+    adminClient
+      .get("/runner-install/ssh", quiet)
+      .then(parseResp(SshCapabilitySchema)),
+  sshProbe: (body: SshProbeRequest): Promise<SshProbeResponse> =>
+    adminClient
+      .post("/runner-install/ssh/probe", body, quiet)
+      .then(parseResp(SshProbeResponseSchema)),
+  sshConfirm: (sessionId: string, fingerprint: string): Promise<SshPlan> =>
+    adminClient
+      .post(
+        `/runner-install/ssh/${enc(sessionId)}/confirm`,
+        { fingerprint },
+        quiet,
+      )
+      .then(parseResp(SshPlanSchema)),
+  sshInstall: (
+    sessionId: string,
+    body: { name: string; install_docker: boolean },
+  ): Promise<InstallJob> =>
+    adminClient
+      .post(`/runner-install/ssh/${enc(sessionId)}/install`, body, quiet)
+      .then(parseResp(InstallJobSchema)),
+  sshCancel: async (sessionId: string): Promise<void> => {
+    await adminClient.delete(`/runner-install/ssh/${enc(sessionId)}`, quiet);
+  },
+  sshCredentials: (): Promise<SavedSshCredential[]> =>
+    adminClient
+      .get("/runner-install/ssh/credentials", quiet)
+      .then(parseResp(z.array(SavedSshCredentialSchema))),
+  sshDeleteCredential: async (id: string): Promise<void> => {
+    await adminClient.delete(
+      `/runner-install/ssh/credentials/${enc(id)}`,
+      quiet,
+    );
+  },
+  sshRunSaved: (
+    id: string,
+    action: "update" | "reinstall",
+  ): Promise<InstallJob> =>
+    adminClient
+      .post(`/runner-install/ssh/credentials/${enc(id)}/run`, { action }, quiet)
+      .then(parseResp(InstallJobSchema)),
+  removeLocalInstance: async (
+    target: "docker" | "kubernetes",
+    name: string,
+  ): Promise<void> => {
+    await adminClient.delete(
+      `/runner-install/local/${target}/${enc(name)}`,
+      quiet,
+    );
   },
 
   /** Страница очереди по курсору: новые первыми, имена людей и раннеров в строке. */

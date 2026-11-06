@@ -59,6 +59,8 @@ server = [
     "aiosmtplib>=3.0",
     "joserfc>=1.0",
     "webauthn==3.0.1",
+    # Установка раннера на другие машины по SSH из админки (docs/design/runner-install.md).
+    "asyncssh[bcrypt]>=2.21",
 ]
 
 test = [

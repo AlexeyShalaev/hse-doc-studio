@@ -260,6 +260,15 @@ _AUDITED_ELSEWHERE: dict[tuple[str, str], str] = {
     ("PUT", "/api/admin/data-lifecycle/retention/{id}"): "settings.retention_update",
     ("PUT", "/api/admin/data-lifecycle/thresholds"): "settings.storage_thresholds_update",
     ("POST", "/api/admin/data-lifecycle/{id}/run"): "lifecycle.run_now",
+    # установка раннеров из админки: проверяют test_admin_ops_api и test_admin_runner_install_ssh_api
+    ("POST", "/api/admin/runner-install/local/{id}"): "runner_install.local.start",
+    ("DELETE", "/api/admin/runner-install/local/{id}/{id}"): "runner_install.local.remove",
+    ("POST", "/api/admin/runner-install/ssh/probe"): "runner_install.ssh.probe",
+    ("POST", "/api/admin/runner-install/ssh/{id}/confirm"): "runner_install.ssh.confirm",
+    ("POST", "/api/admin/runner-install/ssh/{id}/install"): "runner_install.ssh.start",
+    ("DELETE", "/api/admin/runner-install/ssh/{id}"): "runner_install.ssh.cancel",
+    ("DELETE", "/api/admin/runner-install/ssh/credentials/{id}"): "runner_install.ssh.credentials_delete",
+    ("POST", "/api/admin/runner-install/ssh/credentials/{id}/run"): "runner_install.ssh.run_saved",
     # самодиагностика: проверяет test_admin_diagnostics_api
     ("POST", "/api/admin/diagnostics/run"): "diagnostics.run",
     ("PUT", "/api/admin/diagnostics/thresholds"): "settings.diagnostics_update",
