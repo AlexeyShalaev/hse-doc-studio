@@ -1,6 +1,24 @@
 {
   "releases": [
     {
+      "version": "0.11.0",
+      "date": "2026-11-06",
+      "notes": [
+        {
+          "ru": "Сборка «собрать всё» больше не оставляет задачи в очереди навсегда, когда личный раннер занят и общих раннеров нет: задачи ждут свободного слота личного раннера. Уже застрявшие задачи подхватываются при следующем опросе раннера.",
+          "en": "\"Build all\" no longer leaves jobs queued forever when the personal runner is busy and there are no shared runners: jobs wait for a free slot on the personal runner. Jobs that are already stuck are picked up on the runner's next poll."
+        },
+        {
+          "ru": "Самодиагностика: каждую проблемную строку можно открыть и попасть на страницу, где её решают, например сбой очереди ведёт на вкладку очереди раннеров, а бэкапы на страницу бэкапов.",
+          "en": "Self-diagnostics: every problem row can be opened to reach the page where it is fixed, for example a queue failure leads to the runners queue tab and backups lead to the backups page."
+        },
+        {
+          "ru": "Настройки, «Диск»: Студия предлагает очистить старые версии системы (образы прежних версий, устаревшие теги вспомогательных образов, остановленный апдейтер). Последняя предыдущая версия для отката защищена от массовой очистки.",
+          "en": "Settings, Disk: Studio offers to clean up old system versions (images of earlier versions, stale tags of helper images, the stopped updater). The latest previous version kept for rollback is protected from bulk cleanup."
+        }
+      ]
+    },
+    {
       "version": "0.10.0",
       "date": "2026-11-06",
       "notes": [

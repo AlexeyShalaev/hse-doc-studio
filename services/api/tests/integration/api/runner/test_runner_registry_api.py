@@ -214,6 +214,11 @@ async def test__admin_flow__list_rotate_pause_revoke(env: _Env, as_actor) -> Non
     rotated = await env.client.post(f"/api/admin/runners/{runner_id}/rotate-token")
     assert rotated.status_code == 200
     assert rotated.json()["runner_token"] != registered["runner_token"]
+    new_secret = rotated.json()["runner_token"]
+    assert rotated.headers["cache-control"] == "no-store"
+    assert f"HSE_RUNNER__RUNNER_TOKEN={new_secret}" in rotated.json()["command"]
+    assert f"HSE_RUNNER__RUNNER_TOKEN={new_secret}" in rotated.json()["docker_command"]
+    assert f"HSE_RUNNER__RUNNER_TOKEN={new_secret}" in rotated.json()["script_command"]
     assert (await env.client.delete(f"/api/admin/runners/{runner_id}")).status_code == 204
     assert (await env.client.get("/api/admin/runners")).json()["items"][0]["revoked"] is True
     assert (await env.client.delete("/api/admin/runners/missing")).status_code == 404
