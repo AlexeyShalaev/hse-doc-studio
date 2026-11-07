@@ -23,8 +23,11 @@ from hse_doc_studio.core.access.entities import Actor
 from hse_doc_studio.core.ai_runtime import IHardwareProbe
 from hse_doc_studio.core.entities import HardwareInfo
 from hse_doc_studio.core.enums import GpuVendor
+from hse_doc_studio.core.git_sync.errors import GitSyncError
+from hse_doc_studio.core.git_sync.protocols import ISecretCipher
+from hse_doc_studio.core.git_sync.secret import Secret
 from hse_doc_studio.core.i18n import localized_error
-from hse_doc_studio.core.identity.protocols import IAuditLog
+from hse_doc_studio.core.identity.protocols import IAuditLog, IInstanceSettingsRepository
 from hse_doc_studio.core.model_servers import (
     ENGINES,
     LABEL_ENGINE,
@@ -53,6 +56,8 @@ from hse_doc_studio.core.model_servers import (
     estimate_requirements,
     valid_model_ref,
 )
+from hse_doc_studio.core.secrets import column_aad
+from hse_doc_studio.core.uow import IUnitOfWork
 from hse_doc_studio.use_cases.admin.users import require_admin
 
 logger = structlog.get_logger()
@@ -151,6 +156,43 @@ def engine_availability(engine: Engine, hardware: HardwareInfo, image: str) -> E
     return EngineAvailability(engine, image, not reasons, tuple(reasons))
 
 
+HF_TOKEN_KEY = "model_servers.hf_token"  # noqa: S105 — имя ключа настроек, не токен
+_SECRET_TABLE = "instance_settings"  # noqa: S105
+_SECRET_COLUMN = "secret_enc"  # noqa: S105
+_MAX_TOKEN_LEN = 512
+
+
+class HfTokenVault:
+    """Токен Hugging Face: только шифртекст под ключом секретов. Значение наружу не отдаётся, в журналы не пишется."""
+
+    def __init__(self, repo: IInstanceSettingsRepository, cipher: ISecretCipher) -> None:
+        self._repo = repo
+        self._cipher = cipher
+
+    def _aad(self) -> str:
+        return column_aad(_SECRET_TABLE, _SECRET_COLUMN, HF_TOKEN_KEY)
+
+    async def is_set(self) -> bool:
+        return await self._repo.get_secret(HF_TOKEN_KEY) is not None
+
+    async def reveal(self) -> str:
+        """Пустая строка, если токена нет или ключ шифрования недоступен: установка идёт без токена."""
+        token = await self._repo.get_secret(HF_TOKEN_KEY)
+        if token is None:
+            return ""
+        try:
+            return self._cipher.decrypt(token, aad=self._aad()).reveal()
+        except GitSyncError:
+            return ""
+
+    async def save(self, value: str) -> None:
+        sealed = self._cipher.encrypt(Secret(value), aad=self._aad())
+        await self._repo.set_secret(HF_TOKEN_KEY, sealed, source="admin")
+
+    async def clear(self) -> None:
+        await self._repo.delete(HF_TOKEN_KEY)
+
+
 class ModelServerService:
     """Состояние и работа с серверами. Живёт в APP-скоупе: фоновые установки переживают запрос."""
 
@@ -162,7 +204,9 @@ class ModelServerService:
         resources: IHostResources,
         registry: IModelProviderRegistry,
         settings: ModelServerSettings,
+        vault: HfTokenVault | None = None,
     ) -> None:
+        self._vault = vault
         self._runtime = runtime
         self._client = client
         self._hardware = hardware
@@ -280,6 +324,7 @@ class ModelServerService:
             name=job.name,
             image=self._image(job.engine),
             api_key=api_key,
+            hf_token=await self._vault.reveal() if self._vault else "",
             gpu=gpu,
             provider_id=provider_id,
         )
@@ -506,9 +551,17 @@ class ModelServerService:
 class ModelServersUC:
     """Запросный фасад: проверка админа и аудит поверх `ModelServerService`. Секретов в аудите нет."""
 
-    def __init__(self, service: ModelServerService, audit: IAuditLog) -> None:
+    def __init__(
+        self,
+        service: ModelServerService,
+        audit: IAuditLog,
+        vault: HfTokenVault | None = None,
+        uow: IUnitOfWork | None = None,
+    ) -> None:
         self._service = service
         self._audit = audit
+        self._vault = vault
+        self._uow = uow
 
     async def capabilities(self, actor: Actor) -> Capabilities:
         require_admin(actor)
@@ -566,3 +619,27 @@ class ModelServersUC:
             target=server_id,
             details={"engine": view.engine.value, "model": view.model, "purge_models": purge_models},
         )
+
+    async def hf_token_set(self, actor: Actor) -> bool:
+        require_admin(actor)
+        assert self._vault is not None  # noqa: S101
+        return await self._vault.is_set()
+
+    async def save_hf_token(self, actor: Actor, value: str) -> None:
+        admin_id = require_admin(actor)
+        token = value.strip()
+        if not token or len(token) > _MAX_TOKEN_LEN or any(c.isspace() for c in token):
+            raise _invalid("Токен задан неверно.", "The token is not valid.")
+        assert self._vault is not None  # noqa: S101
+        assert self._uow is not None  # noqa: S101
+        async with self._uow.begin():
+            await self._vault.save(token)
+            await self._audit.record("model_server.hf_token_set", actor_id=admin_id)
+
+    async def clear_hf_token(self, actor: Actor) -> None:
+        admin_id = require_admin(actor)
+        assert self._vault is not None  # noqa: S101
+        assert self._uow is not None  # noqa: S101
+        async with self._uow.begin():
+            await self._vault.clear()
+            await self._audit.record("model_server.hf_token_clear", actor_id=admin_id)
