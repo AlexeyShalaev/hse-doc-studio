@@ -30,8 +30,8 @@ from hse_doc_studio.infra.compile.k8s.pod import (
     build_pod_manifest,
     build_selector,
     download_command,
-    marker,
     new_pod_name,
+    probe_command,
     upload_command,
 )
 from hse_doc_studio.infra.compile.k8s.transfer import OutputSpool, OutputTooLargeError, extract_build, pack_workspace
@@ -57,38 +57,69 @@ _TS_RE = re.compile(r"^(\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d)(?:\.(\d{1,9}))?Z$")
 _SIGKILL_EXIT = 137
 _POLL_S = 0.5
 _RECONNECT_S = 1.0
-
-
-@dataclass(frozen=True)
-class _Markers:
-    exit: str
-    words: str
-    chars: str
-    end: str
+# Сколько тишины в потоке лога терпеть до проверки итога через exec и переподключения потока.
+_PROBE_S = 30.0
+# Сколько ждать texcount после выхода latexmk: счётчики не стоят сборки.
+_COUNTS_TIMEOUT_S = 120.0
 
 
 @dataclass
 class _Run:
+    """Итог сборки из маркеров лога (или из файлов пода, если поток лога замолчал)."""
+
     rc: int | None = None
     words: list[str] | None = None
     chars: list[str] | None = None
     ended: bool = False
     timed_out: bool = False
+    counts_skipped: bool = False
 
-    def take(self, line: str, marks: _Markers) -> bool:
-        """Маркер сборки: запоминает его и возвращает True; обычную строку лога не трогает."""
-        if line.startswith(marks.end):
+    def take(self, line: str, nonce: str) -> str | None:
+        """Снимает с строки маркеры `<nonce>:<вид>:` и возвращает остаток для журнала (None, если остатка нет).
+
+        Маркер ищется не только в начале строки: вывод без перевода строки в конце (latexmk, texcount
+        с ошибками разбора) склеивается со следующим маркером, и маркер конца терять нельзя.
+        """
+        prefix = f"{nonce}:"
+        head, sep, rest = line.partition(prefix)
+        if not sep:
+            return line
+        for chunk in rest.split(prefix):
+            kind, _, value = chunk.partition(":")
+            self._mark(kind, value)
+        return head or None
+
+    def _mark(self, kind: str, value: str) -> None:
+        if kind == "end":
             self.ended = True
-        elif line.startswith(marks.exit):
+        elif kind == "exit":
             with suppress(ValueError):
-                self.rc = int(line[len(marks.exit) :].strip())
-        elif line.startswith(marks.words):
-            self.words = [*(self.words or ()), line[len(marks.words) :]]
-        elif line.startswith(marks.chars):
-            self.chars = [*(self.chars or ()), line[len(marks.chars) :]]
-        else:
-            return False
-        return True
+                self.rc = int(value.strip())
+        elif kind == "words":
+            self.words = [*(self.words or ()), value]
+        elif kind == "chars":
+            self.chars = [*(self.chars or ()), value]
+
+    def adopt(self, probe: str) -> None:
+        """Итог из файлов пода (`probe_command`): код latexmk, а после конца ещё и строки texcount."""
+        words: list[str] = []
+        chars: list[str] = []
+        ended = False
+        for line in probe.splitlines():
+            kind, _, value = line.partition(":")
+            if kind == "rc" and self.rc is None:
+                with suppress(ValueError):
+                    self.rc = int(value.strip())
+            elif line == "end":
+                ended = True
+            elif kind == "words":
+                words.append(value)
+            elif kind == "chars":
+                chars.append(value)
+        if ended and self.rc is not None:
+            self.ended = True
+            self.words = self.words or words or None
+            self.chars = self.chars or chars or None
 
 
 class LogCursor:
@@ -141,6 +172,8 @@ class KubernetesTexExecutor:
         artifacts: IArtifactStore | None = None,
         poll_s: float = _POLL_S,
         reconnect_s: float = _RECONNECT_S,
+        probe_s: float = _PROBE_S,
+        counts_timeout_s: float = _COUNTS_TIMEOUT_S,
     ) -> None:
         self._api = api
         self._cfg = config
@@ -151,6 +184,8 @@ class KubernetesTexExecutor:
         self._artifacts = artifacts or LocalDiskArtifactStore()
         self._poll_s = poll_s
         self._reconnect_s = reconnect_s
+        self._probe_s = min(probe_s, idle_timeout_s)
+        self._counts_timeout_s = counts_timeout_s
 
     @property
     def namespace(self) -> str:
@@ -233,6 +268,8 @@ class KubernetesTexExecutor:
             run = _Run()
             async for line in self._follow(spec, run):
                 yield line
+            if run.counts_skipped:
+                yield f"[warn] texcount did not finish in {self._counts_timeout_s:.0f}s, word counts skipped"
             if run.timed_out:
                 yield f"[error] no output for {self._idle_timeout_s:.0f}s, killing pod"
                 yield SENTINEL_FAILED
@@ -346,35 +383,75 @@ class KubernetesTexExecutor:
         finally:
             spool.close()
 
-    async def _follow(self, spec: BuildPodSpec, run: _Run) -> AsyncIterator[str]:
-        marks = _Markers(
-            exit=marker(spec.nonce, "exit"),
-            words=marker(spec.nonce, "words"),
-            chars=marker(spec.nonce, "chars"),
-            end=marker(spec.nonce, "end"),
-        )
+    async def _follow(self, spec: BuildPodSpec, run: _Run) -> AsyncIterator[str]:  # noqa: C901
+        """Строки лога до маркера конца.
+
+        Тишина в потоке ещё не сбой: поток kubelet может зависнуть, не закрывшись, а texcount может идти долго.
+        Каждые `probe_s` тишины итог читается из файлов пода через exec, а поток переподключается с `sinceTime`.
+        Сборку убивает только настоящее отсутствие прогресса: latexmk молчит дольше `idle_timeout_s` и не
+        завершился. После выхода latexmk счётчики texcount ждутся не дольше `counts_timeout_s`, дальше сборка
+        идёт без них, как у исполнителя docker.
+        """
+        loop = asyncio.get_running_loop()
         queue: asyncio.Queue[str | None] = asyncio.Queue()
-        pump = asyncio.create_task(self._pump(spec.name, queue))
+        cursor = LogCursor()
+        pump = asyncio.create_task(self._pump(spec.name, queue, cursor))
+        last_line = loop.time()
+        exited_at: float | None = None
         try:
             while True:
                 try:
-                    line = await asyncio.wait_for(queue.get(), timeout=self._idle_timeout_s)
+                    line = await asyncio.wait_for(queue.get(), timeout=self._probe_s)
                 except TimeoutError:
-                    run.timed_out = True
-                    return
+                    await self._probe(spec.name, run)
+                    if run.ended:
+                        return
+                    now = loop.time()
+                    if run.rc is not None:
+                        exited_at = exited_at if exited_at is not None else now
+                        if now - exited_at >= self._counts_timeout_s:
+                            logger.warning("texcount did not finish, build goes on without counts", pod=spec.name)
+                            run.ended = run.counts_skipped = True
+                            return
+                    elif now - last_line >= self._idle_timeout_s:
+                        run.timed_out = True
+                        return
+                    # Поток мог зависнуть, не закрывшись: новое соединение с `sinceTime` догонит пропущенное.
+                    pump.cancel()
+                    await asyncio.gather(pump, return_exceptions=True)
+                    pump = asyncio.create_task(self._pump(spec.name, queue, cursor))
+                    continue
                 if line is None:
                     return
-                if not run.take(line, marks):
-                    yield line
-                elif run.ended:
+                last_line = loop.time()
+                had_rc = run.rc is not None
+                text = run.take(line, spec.nonce)
+                if text is not None:
+                    yield text
+                if run.rc is not None and not had_rc:
+                    exited_at = loop.time()
+                if run.ended:
                     return
         finally:
             pump.cancel()
             await asyncio.gather(pump, return_exceptions=True)
 
-    async def _pump(self, name: str, queue: asyncio.Queue[str | None]) -> None:
-        """Лог с переподключением, пока контейнер жив; конец потока обозначает `None`."""
-        cursor = LogCursor()
+    async def _probe(self, name: str, run: _Run) -> None:
+        """Итог сборки из файлов пода через exec; сбой exec не ошибка, решает таймер тишины."""
+        out = bytearray()
+        try:
+            result = await self._api.exec(self._namespace, name, CONTAINER, probe_command(), stdout=out.extend)
+        except KubeApiError as exc:
+            logger.warning("cannot probe build pod", pod=name, error=str(exc))
+            return
+        if result.exit_code == 0:
+            run.adopt(out.decode("utf-8", errors="replace"))
+
+    async def _pump(self, name: str, queue: asyncio.Queue[str | None], cursor: LogCursor) -> None:
+        """Лог с переподключением, пока контейнер жив; конец потока обозначает `None`.
+
+        Отменённый насос (переподключение по тишине) `None` не кладёт: читатель ждёт следующий насос.
+        """
         try:
             while True:
                 cursor.reconnect()
@@ -382,18 +459,23 @@ class KubernetesTexExecutor:
                     async for raw in self._api.stream_log(self._namespace, name, CONTAINER, cursor.since):
                         stamp, text = _split_timestamp(raw)
                         if cursor.accept(stamp):
-                            await queue.put(text)
+                            queue.put_nowait(text)
                 except KubeApiError as exc:
                     logger.warning("build pod log stream failed", pod=name, error=str(exc))
-                try:
-                    state = await self._api.read_pod(self._namespace, name)
-                except KubeApiError:
-                    state = None
-                if state is None or state.phase not in ("Pending", "Running") or not state.container_running:
+                if not await self._container_alive(name):
+                    queue.put_nowait(None)
                     return
                 await asyncio.sleep(self._reconnect_s)
-        finally:
+        except Exception:
             queue.put_nowait(None)
+            raise
+
+    async def _container_alive(self, name: str) -> bool:
+        try:
+            state = await self._api.read_pod(self._namespace, name)
+        except KubeApiError:
+            return False
+        return state is not None and state.phase in ("Pending", "Running") and state.container_running
 
     async def _raise_if_resource_stop(self, name: str) -> None:
         """Под остановлен по памяти или выселен за эфемерное хранилище: сбой ресурса, а не LaTeX и не общий сбой."""

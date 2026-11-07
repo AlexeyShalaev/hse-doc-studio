@@ -1,5 +1,16 @@
 #!/bin/sh
+# Поддельный texcount: исходник с texerr печатает итог как настоящий texcount при ошибках разбора (последняя
+# строка « (errors:N)» без перевода строки), со slowcount зависает.
+for arg in "$@"; do src="$arg"; done
 case " $* " in
-  *" -char "*) echo "40+5+0 (1/0/0/0) Total" ;;
-  *) echo "7+1+0 (1/0/0/0) Total" ;;
+  *" -char "*) total="40+5+0 (1/0/0/0) Total" ;;
+  *) total="7+1+0 (1/0/0/0) Total" ;;
 esac
+if grep -q 'slowcount' "$src"; then
+  sleep 600
+fi
+if grep -q 'texerr' "$src"; then
+  printf '\n%s\n (errors:2)' "$total"
+  exit 0
+fi
+echo "$total"

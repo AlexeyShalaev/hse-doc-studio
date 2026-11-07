@@ -19,7 +19,8 @@ from hse_doc_studio.infra.compile.latexmk import (
 
 CONTAINER = "tex"
 POD_NAME_PREFIX = "hds-build-"
-READY_MARKER = "/tmp/.hds/ready"  # noqa: S108
+STATE_DIR = "/tmp/.hds"  # noqa: S108
+READY_MARKER = f"{STATE_DIR}/ready"
 CACHE_MOUNT = "/cache"
 
 LABEL_MANAGED_BY = "app.kubernetes.io/managed-by"
@@ -51,12 +52,14 @@ def build_selector(instance: str) -> str:
     return f"{LABEL_COMPONENT}={COMPONENT_BUILD},{LABEL_RUNNER}={instance}"
 
 
-def marker(nonce: str, kind: str) -> str:
-    return f"{nonce}:{kind}:"
-
-
 def build_script(spec: BuildPodSpec) -> str:
-    """POSIX sh: ждёт вход, собирает, печатает маркеры с nonce и спит до удаления пода (выход забирает exec)."""
+    """POSIX sh: ждёт вход, собирает, печатает маркеры с nonce и спит до удаления пода (выход забирает exec).
+
+    Итог (код latexmk и вывод texcount) пишется ещё и в файлы `STATE_DIR`: если поток лога замолчит, исполнитель
+    прочитает их через exec (`probe_command`). Строки texcount идут через awk: тот завершает каждую строку
+    переводом строки, даже если texcount его не напечатал (при ошибках разбора он кончает вывод на
+    « (errors:N)» без перевода строки, и следующий маркер прилипал к этой строке).
+    """
     src = spec.source
     launcher = ["sh", "-c", NONROOT_FORMAT_PREPARE, spec.engine]
     latexmk = shlex.join([*launcher, *latexmk_argv(spec.engine_flag, spec.max_iterations, src)])
@@ -66,18 +69,40 @@ def build_script(spec: BuildPodSpec) -> str:
         [
             "set -u",
             'n="$HDS_NONCE"',
+            f"d={STATE_DIR}",
             f"while [ ! -f {READY_MARKER} ]; do sleep 0.2; done",
             f"cd {shlex.quote(src.workdir)} && {latexmk} 2>&1",
             "rc=$?",
+            'echo "$rc" > "$d/rc"',
             'echo "$n:exit:$rc"',
             'if [ "$rc" = 0 ]; then',
-            f'  {words} | sed "s/^/$n:words:/"',
-            f'  {chars} | sed "s/^/$n:chars:/"',
+            f'  {words} > "$d/words"',
+            '  awk -v p="$n:words:" \'{ print p $0 }\' "$d/words"',
+            f'  {chars} > "$d/chars"',
+            '  awk -v p="$n:chars:" \'{ print p $0 }\' "$d/chars"',
             "fi",
+            'touch "$d/end"',
             'echo "$n:end:"',
             "while :; do sleep 3600; done",
         ]
     )
+
+
+def probe_command() -> list[str]:
+    """Итог сборки из файлов `STATE_DIR`: `rc:<код>`, после конца ещё `end`, `words:…` и `chars:…` построчно."""
+    return [
+        "sh",
+        "-c",
+        (
+            f"cd {STATE_DIR} || exit 0; "
+            '[ -f rc ] && echo "rc:$(cat rc)"; '
+            "[ -f end ] || exit 0; "
+            "echo end; "
+            "[ -f words ] && awk '{ print \"words:\" $0 }' words; "
+            "[ -f chars ] && awk '{ print \"chars:\" $0 }' chars; "
+            "exit 0"
+        ),
+    ]
 
 
 def upload_command(size: int) -> list[str]:

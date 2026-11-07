@@ -41,8 +41,14 @@ async def api() -> AsyncIterator[KubernetesApiClient]:
     await client.aclose()
 
 
-def _executor(
-    api: KubernetesApiClient, *, image: str | None = None, idle: float = 60.0, instance: str | None = None
+def _executor(  # noqa: PLR0913
+    api: KubernetesApiClient,
+    *,
+    image: str | None = None,
+    idle: float = 60.0,
+    instance: str | None = None,
+    probe: float = 30.0,
+    counts_timeout: float = 120.0,
 ) -> KubernetesTexExecutor:
     config = KubernetesExecutorConfig(
         namespace=os.environ["HSE_TEST_K8S_NAMESPACE"],
@@ -55,7 +61,13 @@ def _executor(
         memory_limit="128Mi",
     )
     return KubernetesTexExecutor(
-        api, config, image="unused", instance=instance or f"it-{uuid.uuid4().hex[:8]}", idle_timeout_s=idle
+        api,
+        config,
+        image="unused",
+        instance=instance or f"it-{uuid.uuid4().hex[:8]}",
+        idle_timeout_s=idle,
+        probe_s=probe,
+        counts_timeout_s=counts_timeout,
     )
 
 
@@ -88,6 +100,27 @@ async def test__kind__build__pdf_counts_and_pod_removed(api: KubernetesApiClient
     assert any("fake build of main.tex in /work/tz" in line for line in lines)
     assert (project / "tz" / "main.pdf").read_bytes() == b"%PDF-1.5 fake main\n"
     assert await executor.sweep() == 0
+
+
+async def test__kind__texcount_parse_errors__build_finishes(api: KubernetesApiClient, tmp_path: Path) -> None:
+    # Регрессия 0.14.0: вывод texcount без перевода строки в конце склеивал маркер конца со счётчиками,
+    # и готовая сборка падала через idle_timeout.
+    project = _project(tmp_path, "texerr")
+
+    lines = await _collect(_executor(api, idle=20, probe=5), project)
+
+    assert lines[-1] == SENTINEL_DONE, lines
+    assert f"{SENTINEL_WORDS}8:45" in lines
+
+
+async def test__kind__texcount_hangs__pdf_without_counts(api: KubernetesApiClient, tmp_path: Path) -> None:
+    project = _project(tmp_path, "slowcount")
+
+    lines = await _collect(_executor(api, idle=60, probe=1, counts_timeout=5), project)
+
+    assert lines[-1] == SENTINEL_DONE, lines
+    assert not any(line.startswith(SENTINEL_WORDS) for line in lines)
+    assert (project / "tz" / "main.pdf").read_bytes() == b"%PDF-1.5 fake main\n"
 
 
 async def test__kind__latexmk_fails__log_back_and_state_reset(api: KubernetesApiClient, tmp_path: Path) -> None:

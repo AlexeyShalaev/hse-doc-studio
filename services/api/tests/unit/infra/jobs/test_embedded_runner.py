@@ -27,7 +27,7 @@ from hse_doc_studio.core.system_capacity import (
 )
 from hse_doc_studio.core.value_objects import CheckResult
 from hse_doc_studio.infra.compile.concurrency import CompileConcurrencyLimiter
-from hse_doc_studio.infra.jobs.compile_body import parse_words_sentinel, resolve_compile_limit
+from hse_doc_studio.infra.jobs.compile_body import CHECKS_TIMEOUT_RULE, parse_words_sentinel, resolve_compile_limit
 from hse_doc_studio.infra.jobs.embedded_runner import EmbeddedCompileRunner
 from hse_doc_studio.infra.jobs.outputs import LocalJobOutputs
 from pypdf import PdfWriter
@@ -108,7 +108,9 @@ class Harness:
     async def _resolve_office_image(self) -> str:
         return "gotenberg:active"
 
-    def make_runner(self, heartbeat_interval_s: float = 25.0) -> EmbeddedCompileRunner:
+    def make_runner(
+        self, heartbeat_interval_s: float = 25.0, checks_timeout_s: float | None = None
+    ) -> EmbeddedCompileRunner:
         return EmbeddedCompileRunner(
             executor=self.executor,  # type: ignore[arg-type]
             image_manager=self.image_manager,
@@ -123,6 +125,7 @@ class Harness:
             resolve_lt_image=self._resolve_lt_image,
             resolve_office_image=self._resolve_office_image,
             heartbeat_interval_s=heartbeat_interval_s,
+            checks_timeout_s=checks_timeout_s,
         )
 
     @property
@@ -748,6 +751,45 @@ async def test__run_post__plan_without_languagetool__not_started(tmp_path: Path)
     await h.runner.run_post(replace(spec, payload=replace(payload, check_plan=plan)), h.ctx, _outcome())
 
     h.lt_manager.ensure_running.assert_not_awaited()
+
+
+async def test__run_post__checks_hang__build_stays_success_with_timeout_warning(tmp_path: Path) -> None:
+    # Проверки ждут то, что не придёт (LanguageTool): у них свой предел, сборка не падает и PDF не теряется.
+    h = Harness(tmp_path)
+
+    async def never_ready(_image: str) -> None:
+        await asyncio.Event().wait()
+
+    h.lt_manager.ensure_running = AsyncMock(side_effect=never_ready)
+    h.runner = h.make_runner(checks_timeout_s=0.05)
+
+    result = await h.runner.run_post(h.spec(), h.ctx, _outcome())
+
+    data = result.data_as(CompileResult)
+    assert result.status is JobStatus.succeeded
+    assert result.error is None
+    assert data.build_ok
+    (finding,) = data.check_results
+    assert finding.rule_id == CHECKS_TIMEOUT_RULE
+    assert finding.severity is CheckSeverity.warn
+    assert "Проверки не уложились в 0 с" in finding.message
+    assert "кэш" not in finding.message
+    assert any(line.startswith("[checks] проверки не уложились") for line in h.log.lines)
+
+
+async def test__run_post__slow_check_rules__timeout_warning_not_failure(tmp_path: Path) -> None:
+    h = Harness(tmp_path)
+    release = threading.Event()
+    h.check_runner.run_all.side_effect = lambda **_: release.wait(5) and []
+    h.runner = h.make_runner(checks_timeout_s=0.05)
+
+    try:
+        result = await h.runner.run_post(h.spec(), h.ctx, _outcome())
+    finally:
+        release.set()
+
+    assert result.status is JobStatus.succeeded
+    assert [r.rule_id for r in result.data_as(CompileResult).check_results] == [CHECKS_TIMEOUT_RULE]
 
 
 async def test__run_post__runs_checks_in_worker_thread(tmp_path: Path) -> None:

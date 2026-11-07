@@ -12,6 +12,7 @@ from pathlib import Path
 from typing import IO, cast
 
 from hse_doc_studio.infra.compile.k8s.api import ExecResult, KubeApiError, PodManifest, PodState
+from hse_doc_studio.infra.compile.k8s.pod import probe_command
 
 _BASE = datetime(2026, 11, 3, 10, 0, 0, tzinfo=UTC)
 
@@ -26,6 +27,8 @@ class FakePod:
     log: list[str] = field(default_factory=list)
     reads: int = 0
     deleted: bool = False
+    # Что отдаёт exec `probe_command` (итог из файлов /tmp/.hds пода); пусто значит latexmk ещё идёт.
+    probe: str = ""
 
     @property
     def labels(self) -> dict[str, str]:
@@ -84,6 +87,7 @@ class FakeKubeApi:
         hang_after_log: bool = True,
         drop_log_after: int | None = None,
         after_log_state: PodState | None = None,
+        stall_after: int | None = None,
     ) -> None:
         self._root = root
         self._build = build
@@ -92,6 +96,8 @@ class FakeKubeApi:
         self._hang = hang_after_log
         self._drop_after = drop_log_after
         self._after_log_state = after_log_state
+        # Первый поток лога отдаёт столько строк и виснет, не закрываясь (как зависший поток kubelet).
+        self._stall_after = stall_after
         self.pods: dict[str, FakePod] = {}
         self.deleted: list[str] = []
         self.log_requests: list[str | None] = []
@@ -145,6 +151,9 @@ class FakeKubeApi:
             if self._drop_after is not None and count >= self._drop_after:
                 self._drop_after = None
                 raise KubeApiError("log stream reset")
+            if self._stall_after is not None and count >= self._stall_after:
+                self._stall_after = None
+                await asyncio.Event().wait()
             yield line
         if self._after_log_state is not None:
             pod.states = [self._after_log_state]
@@ -169,6 +178,10 @@ class FakeKubeApi:
             with tarfile.open(fileobj=io.BytesIO(data), mode="r:") as tar:
                 tar.extractall(pod.work, filter="data")
             pod.ready.set()
+            return ExecResult(0)
+        if list(command) == probe_command():
+            if stdout is not None and pod.probe:
+                stdout(pod.probe.encode())
             return ExecResult(0)
         assert command[:2] == ["tar", "-c"], command  # noqa: S101
         rel = command[-1]
