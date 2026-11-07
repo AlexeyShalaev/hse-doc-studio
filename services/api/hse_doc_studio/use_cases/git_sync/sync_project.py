@@ -52,6 +52,7 @@ from hse_doc_studio.core.jobs.protocols import IJobDispatcher
 from hse_doc_studio.core.template_update.text import is_binary
 from hse_doc_studio.core.vcs.protocols import IVcsFolderLocks
 from hse_doc_studio.use_cases.git_sync.health import with_failure, with_success
+from hse_doc_studio.use_cases.git_sync.provider_resolver import ProviderResolver
 from hse_doc_studio.use_cases.git_sync.status import default_state
 from hse_doc_studio.use_cases.git_sync.sync_apply import (
     HEADS_PREFIX,
@@ -130,6 +131,7 @@ class SyncProjectUC:
         dispatcher: IJobDispatcher,
         policy: GitSyncPolicy,
         fetch_book: FetchBook,
+        providers: ProviderResolver | None = None,
     ) -> None:
         self._get_project = get_project
         self._applier = applier
@@ -142,6 +144,7 @@ class SyncProjectUC:
         self._dispatcher = dispatcher
         self._policy = policy
         self._fetch_book = fetch_book
+        self._providers = providers
 
     async def run(self, project: Project, operation_id: str, resolve: ResolveRequest | None = None) -> None:
         """Итог (успех, сбой, отмена) записывается в операцию. Наружу выходит только CancelledError.
@@ -295,6 +298,9 @@ class SyncProjectUC:
         # Связь есть: растущая после сбоев пауза фоновой выборки больше не нужна.
         self._fetch_book.succeeded(project.folder)
         await self._update_state(project, lambda s: replace(with_success(s, at=_now()), remote_empty=False))
+        if self._providers is not None:
+            # Сервер могли обновить после подключения: версия в статусе не должна застревать на старой.
+            await self._providers.refresh(target.url)
 
     async def _apply(
         self,

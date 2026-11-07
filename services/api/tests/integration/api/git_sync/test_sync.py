@@ -20,9 +20,11 @@ from hse_doc_studio.api.config import settings as app_settings
 from hse_doc_studio.api.schemas.git_sync import GitErrorBody, GitStatusResponse, OperationResponse
 from hse_doc_studio.core.git_sync.entities import OperationKind, OperationPhase
 from hse_doc_studio.core.git_sync.protocols import IGitOperationRegistry, IGitTransport
+from hse_doc_studio.core.git_sync.url import RemoteUrl
 from hse_doc_studio.core.jobs.protocols import IJobDispatcher
 from hse_doc_studio.use_cases.git_sync import sync_project
 from hse_doc_studio.use_cases.git_sync.conflict_plan import ConflictPlanner
+from hse_doc_studio.use_cases.git_sync.provider_resolver import ProviderResolver
 from hse_doc_studio.use_cases.template_update.recover_template_updates import RecoverTemplateUpdatesUC
 from hse_doc_studio.use_cases.template_update.transaction import TemplateUpdateTransaction
 from httpx import ASGITransport, AsyncClient
@@ -1140,3 +1142,20 @@ async def test__sync__after_failure_succeeds__health_and_error_are_cleared(
     assert result.outcome == "up_to_date"
     status = await _status(stack, project)
     assert (status.health, status.last_error) == ("ok", None)
+
+
+async def test__sync__fetch_succeeded__refreshes_server_info(
+    stack: Stack, project: dict[str, Any], remote: BareRemote, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Версия сервера, запомненная при подключении, освежается синхронизацией, а не живёт вечно."""
+    await _connect_in_sync(stack, project, remote)
+    seen: list[str] = []
+
+    async def spy(_resolver: ProviderResolver, url: RemoteUrl) -> None:
+        seen.append(url.display_url)
+
+    monkeypatch.setattr(ProviderResolver, "refresh", spy)
+
+    await _sync_ok(stack, project)
+
+    assert seen == [remote.url]

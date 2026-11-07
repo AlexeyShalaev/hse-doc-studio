@@ -29,10 +29,12 @@ from hse_doc_studio.core.git_sync.protocols import (
     IGitSyncStateRepository,
 )
 from hse_doc_studio.core.git_sync.secret import Secret
+from hse_doc_studio.core.git_sync.url import RemoteUrl
 from hse_doc_studio.infra.git_sync.git_remote_runner import GitRemoteRunner
 from hse_doc_studio.infra.git_sync.git_transport import GitTransport
 from hse_doc_studio.infra.git_sync.store_remotes import GitStoreRemotes
 from hse_doc_studio.use_cases.git_sync.fetch_all_remotes import FetchAllGitRemotesUC, FetchTickResult
+from hse_doc_studio.use_cases.git_sync.provider_resolver import ProviderResolver
 from httpx import ASGITransport, AsyncClient
 
 from tests.fixtures.app import create_test_app, create_test_container
@@ -896,3 +898,43 @@ async def test__tick__untrusted_store__is_not_retried_on_every_tick(
     await _tick(stack, clock)
 
     assert guard_calls == 1
+
+
+# --- сведения о сервере -----------------------------------------------------------------------------------------
+
+
+def _spy_provider_refresh(monkeypatch: pytest.MonkeyPatch) -> list[str]:
+    """Адреса, для которых Студия освежала сведения о сервере (версию); сама проверка покрыта юнит-тестами."""
+    seen: list[str] = []
+
+    async def spy(_resolver: ProviderResolver, url: RemoteUrl) -> None:
+        seen.append(url.display_url)
+
+    monkeypatch.setattr(ProviderResolver, "refresh", spy)
+    return seen
+
+
+async def test__post_fetch__success__refreshes_server_info(
+    client: AsyncClient, project: dict[str, Any], remote: BareRemote, stack: Stack, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Версия сервера, запомненная при подключении, освежается удачной выборкой, а не живёт вечно."""
+    await _connected(client, project, remote)
+    seen = _spy_provider_refresh(monkeypatch)
+    await _age_fetch(stack, project, timedelta(minutes=1))
+
+    await _post_fetch(client, project)
+
+    assert seen == [remote.url]
+
+
+async def test__post_fetch__failure__does_not_ask_the_server_again(
+    client: AsyncClient, project: dict[str, Any], remote: BareRemote, stack: Stack, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    await _connected(client, project, remote)
+    seen = _spy_provider_refresh(monkeypatch)
+    FetchSpy(monkeypatch).fail(GitErrorCode.offline)
+    await _age_fetch(stack, project, timedelta(minutes=1))
+
+    await _post_fetch(client, project)
+
+    assert seen == []

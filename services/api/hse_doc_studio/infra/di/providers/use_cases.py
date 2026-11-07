@@ -322,7 +322,11 @@ from hse_doc_studio.use_cases.git_sync.hosts import ForgetHostUC, ListHostsUC, T
 from hse_doc_studio.use_cases.git_sync.local_gate import LocalSyncGate
 from hse_doc_studio.use_cases.git_sync.operations import CancelOperationUC, GetOperationUC
 from hse_doc_studio.use_cases.git_sync.probe_remote import ProbeRemoteUC
-from hse_doc_studio.use_cases.git_sync.provider_resolver import LOCAL_GUESS_ORDER, ProviderResolver
+from hse_doc_studio.use_cases.git_sync.provider_resolver import (
+    LOCAL_GUESS_ORDER,
+    ProviderRefreshBook,
+    ProviderResolver,
+)
 from hse_doc_studio.use_cases.git_sync.resolve_conflicts import ResolveConflictsUC
 from hse_doc_studio.use_cases.git_sync.save_draft import SaveDraftUC
 from hse_doc_studio.use_cases.git_sync.shared_folder import DetectSharedFolderUC
@@ -1582,11 +1586,11 @@ class UseCaseProvider(Provider):
 
     @provide
     def get_git_provider_resolver(
-        self, host_settings: IGitHostSettingsRepository, detector: IProviderDetector
+        self, host_settings: IGitHostSettingsRepository, detector: IProviderDetector, refresh: ProviderRefreshBook
     ) -> ProviderResolver:
         if settings.mode is StudioMode.local:
-            return ProviderResolver(host_settings, detector, LOCAL_GUESS_ORDER)
-        return ProviderResolver(host_settings, detector)
+            return ProviderResolver(host_settings, detector, LOCAL_GUESS_ORDER, refresh)
+        return ProviderResolver(host_settings, detector, refresh_book=refresh)
 
     @provide
     def get_git_token_checker(
@@ -1813,6 +1817,7 @@ class UseCaseProvider(Provider):
         dispatcher: IJobDispatcher,
         policy: GitSyncPolicy,
         book: FetchBook,
+        providers: ProviderResolver,
     ) -> SyncProjectUC:
         return SyncProjectUC(
             get_project=GetProjectUC(project_repo, project_index_repo),
@@ -1826,6 +1831,7 @@ class UseCaseProvider(Provider):
             dispatcher=dispatcher,
             policy=policy,
             fetch_book=book,
+            providers=providers,
         )
 
     @provide
@@ -2048,6 +2054,7 @@ class UseCaseProvider(Provider):
         status_builder: GitStatusBuilder,
         policy: GitSyncPolicy,
         book: FetchBook,
+        providers: ProviderResolver,
     ) -> FetchGitRemoteUC:
         return FetchGitRemoteUC(
             project_repo=project_repo,
@@ -2061,6 +2068,7 @@ class UseCaseProvider(Provider):
             status_builder=status_builder,
             policy=policy,
             book=book,
+            providers=providers,
         )
 
     @provide

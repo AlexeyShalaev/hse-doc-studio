@@ -42,6 +42,7 @@ from hse_doc_studio.core.git_sync.remote_project import PROJECT_FILE, parse_remo
 from hse_doc_studio.core.git_sync.url import parse_remote_url
 from hse_doc_studio.core.repositories import IProjectIndexRepository, IProjectRepository
 from hse_doc_studio.use_cases.git_sync.health import with_failure, with_success
+from hse_doc_studio.use_cases.git_sync.provider_resolver import ProviderResolver
 from hse_doc_studio.use_cases.git_sync.status import (
     TRACKING_PREFIX,
     GitStatusBuilder,
@@ -93,6 +94,7 @@ class FetchGitRemoteUC:
         policy: GitSyncPolicy,
         book: FetchBook,
         clock: Clock = utc_now,
+        providers: ProviderResolver | None = None,
     ) -> None:
         self._get_project = GetProjectUC(project_repo, project_index_repo)
         self._remotes = store_remotes
@@ -105,6 +107,7 @@ class FetchGitRemoteUC:
         self._policy = policy
         self._book = book
         self._clock = clock
+        self._providers = providers
 
     async def execute(self, inp: FetchGitRemoteInput) -> GitStatusView:
         """По просьбе интерфейса: не чаще раза в FETCH_DEBOUNCE_S, итог всегда в статусе."""
@@ -193,6 +196,9 @@ class FetchGitRemoteUC:
             return FetchOutcome(FetchResult.failed, GitOperationError(error.code, error.detail))
         self._book.succeeded(folder)
         await asyncio.to_thread(self._record_success, project, config, before)
+        if self._providers is not None:
+            # Сервер могли обновить после подключения: версия в статусе не должна застревать на старой.
+            await self._providers.refresh(target.url)
         return FetchOutcome(FetchResult.fetched)
 
     def _load_state(self, project: Project, config: StoreRemoteConfig) -> SyncState:

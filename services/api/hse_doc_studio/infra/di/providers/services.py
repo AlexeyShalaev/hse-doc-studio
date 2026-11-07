@@ -209,6 +209,7 @@ from hse_doc_studio.infra.vcs.template_base_store import GitTemplateBaseStore
 from hse_doc_studio.use_cases.ai_providers.relay_info import ProviderRelayDescriber
 from hse_doc_studio.use_cases.compile.list_images import resolve_active_image
 from hse_doc_studio.use_cases.git_sync.conflict_plan import ConflictPlanner
+from hse_doc_studio.use_cases.git_sync.provider_resolver import ProviderRefreshBook
 from hse_doc_studio.use_cases.languagetool.list_languagetool_images import resolve_active_languagetool_image
 from hse_doc_studio.use_cases.office_editor.access import IOfficeAccess, LocalOfficeAccess
 from hse_doc_studio.use_cases.office_services.list_office_service_images import resolve_active_office_image
@@ -936,6 +937,11 @@ class DomainServiceProvider(Provider):
     def get_git_fetch_book(self) -> FetchBook:
         # Общий на процесс: кнопка «обновить» и фоновый цикл должны видеть одни замки и один счёт сбоев.
         return FetchBook()
+
+    @provide
+    def get_git_provider_refresh_book(self) -> ProviderRefreshBook:
+        # Общий на процесс: сведения о сервере освежаются не чаще раза в интервал на хост, а не на каждый проект.
+        return ProviderRefreshBook()
 
     @provide
     def get_git_store_remotes(self, vcs_service: IVcsService, store_git: StoreGit) -> IGitStoreRemotes:

@@ -3,15 +3,23 @@
 Порядок задан каталогом провайдеров (core/git_sync/providers.py). Ответ API спрашивается только у тех хостов,
 которых нет среди публичных (github.com, gitlab.com, codeberg.org, bitbucket.org): у них и версия, и корень API
 известны заранее. Найденное запоминается в настройках хоста: статус проекта показывает провайдера и версию без сети.
+
+Запомненный ответ стареет: сервер обновляют, а проверка шла один раз, при подключении. Поэтому удачная выборка или
+синхронизация освежает его (`refresh`), но не чаще раза в `PROVIDER_REFRESH_S` на хост: у десятков проектов одного
+сервера один общий ответ.
 """
 
 from __future__ import annotations
 
+import time
+from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
 from urllib.parse import urlsplit
 
-from hse_doc_studio.core.git_sync.host_settings import GitHostSettings
+import structlog
+
+from hse_doc_studio.core.git_sync.host_settings import GitHostSettings, host_settings_key
 from hse_doc_studio.core.git_sync.protocols import DetectionRequest, IGitHostSettingsRepository, IProviderDetector
 from hse_doc_studio.core.git_sync.providers import (
     ApiDetection,
@@ -25,6 +33,11 @@ from hse_doc_studio.core.git_sync.providers import (
     web_base,
 )
 from hse_doc_studio.core.git_sync.url import RemoteKind, RemoteUrl
+
+logger = structlog.get_logger()
+
+# Как долго запомненный ответ API (версия сервера) считается свежим после последней проверки.
+PROVIDER_REFRESH_S = 15 * 60
 
 # Порядок, в котором спрашиваем незнакомый сервер: самый вероятный для внутренних установок первым.
 _GUESS_ORDER = (GitProvider.gitlab, GitProvider.gitea, GitProvider.github)
@@ -41,6 +54,24 @@ class ResolvedProvider:
     ca_file: Path | None
 
 
+class ProviderRefreshBook:
+    """Когда ответ API хоста освежали в последний раз. Общий на процесс: кнопка и фоновая выборка видят одно."""
+
+    def __init__(self, interval_s: float = PROVIDER_REFRESH_S, clock: Callable[[], float] = time.monotonic) -> None:
+        self._interval_s = interval_s
+        self._clock = clock
+        self._last: dict[str, float] = {}
+
+    def take(self, key: str) -> bool:
+        """Пора ли спросить хост снова. Отметка ставится сразу: параллельные выборки второй раз его не спросят."""
+        now = self._clock()
+        last = self._last.get(key)
+        if last is not None and now - last < self._interval_s:
+            return False
+        self._last[key] = now
+        return True
+
+
 def _saas_hosts() -> frozenset[str]:
     return frozenset(rule.value for spec in catalog().providers for rule in spec.host_rules if rule.match == "exact")
 
@@ -51,15 +82,36 @@ class ProviderResolver:
         settings: IGitHostSettingsRepository,
         detector: IProviderDetector,
         guess_order: tuple[GitProvider, ...] = _GUESS_ORDER,
+        refresh_book: ProviderRefreshBook | None = None,
     ) -> None:
         self._settings = settings
         self._detector = detector
         self._guess_order = guess_order
+        self._refresh_book = refresh_book
 
     async def known(self, host: str | None, port: int | None) -> ProviderInfo:
         """Провайдер без сети: выбор пользователя, имя хоста, ответ API при прошлой проверке."""
         stored = await self._settings.get(host, port) if host else None
         return self._decide(host, stored, None)
+
+    async def refresh(self, url: RemoteUrl) -> None:
+        """Освежить запомненный ответ API хоста после удачной связи с ним (выборка, синхронизация).
+
+        Спрашиваем только хост, чей ответ уже запомнен: незнакомый сервер так не начнут перебирать каждые четверть
+        часа. Сбой проверки ничего не портит: остаётся прежний ответ, статус покажет его.
+        """
+        host = url.host
+        if self._refresh_book is None or host is None or url.kind not in {RemoteKind.https, RemoteKind.http}:
+            return
+        try:
+            stored = await self._settings.get(host, url.port)
+            if stored is None or stored.detected is None:
+                return
+            if not self._refresh_book.take(host_settings_key(host, url.port)):
+                return
+            await self.resolve(url)
+        except Exception:  # noqa: BLE001 — сведения о сервере вторичны: выборка уже удалась
+            logger.info("git provider refresh failed", host=host, exc_info=True)
 
     async def resolve(self, url: RemoteUrl) -> ResolvedProvider:
         host = url.host
