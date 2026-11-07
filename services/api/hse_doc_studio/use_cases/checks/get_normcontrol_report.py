@@ -15,6 +15,7 @@ from hse_doc_studio.core.repositories import (
 )
 from hse_doc_studio.core.team import is_doc_active
 from hse_doc_studio.core.value_objects import CheckResult
+from hse_doc_studio.use_cases.compile.last_compile import effective_last_compile_id
 from hse_doc_studio.use_cases.projects.get_project import GetProjectInput, GetProjectUC
 
 logger = structlog.get_logger()
@@ -104,7 +105,8 @@ class GetNormcontrolReportUC:
             # Невыбранные руководства (РП/РО) не учитываются в нормоконтроле.
             if not is_doc_active(project, doc):
                 continue
-            results = await self._results_for(project.folder, doc.last_compile_id)
+            compile_id = await effective_last_compile_id(self._compile_repo, project.folder, doc)
+            results = await self._results_for(project.folder, compile_id)
             doc_counts = SeverityCounts()
             for r in results:
                 doc_counts.add(r.severity)

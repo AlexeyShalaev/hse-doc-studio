@@ -727,11 +727,13 @@ class UseCaseProvider(Provider):
         project_repo: IProjectRepository,
         project_index_repo: IProjectIndexRepository,
         template_repo: ITemplateRepository,
+        compile_repo: ICompileRepository,
     ) -> GetDocumentUC:
         return GetDocumentUC(
             project_repo=project_repo,
             project_index_repo=project_index_repo,
             template_repo=template_repo,
+            compile_repo=compile_repo,
         )
 
     @provide

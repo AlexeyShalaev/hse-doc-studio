@@ -21,6 +21,7 @@ from hse_doc_studio.core.repositories import (
 from hse_doc_studio.core.services import CheckResolutionService, ProjectTemplateService
 from hse_doc_studio.core.value_objects import CheckResult, ChecksOverride
 from hse_doc_studio.infra.checks.utils import expand_inputs
+from hse_doc_studio.use_cases.compile.last_compile import effective_last_compile_id
 from hse_doc_studio.use_cases.projects.get_project import GetProjectInput, GetProjectUC
 
 logger = structlog.get_logger()
@@ -86,16 +87,18 @@ class GetCheckResultsUC:
                 )
             )
 
-        if doc.last_compile_id is None:
+        # Ссылка, пришедшая синхронизацией с другой стороны, заменяется последней своей сборкой.
+        compile_id = await effective_last_compile_id(self._compile_repo, project.folder, doc)
+        if compile_id is None:
             return GetCheckResultsOutput(compile_id=None, results=[])
 
-        record = await self._compile_repo.get_for_project(project.folder, doc.last_compile_id)
+        record = await self._compile_repo.get_for_project(project.folder, compile_id)
         if record is None:
             logger.warning(
                 "GetCheckResultsUC: last_compile_id points to a missing record",
                 project_id=str(inp.project_id),
                 doc_id=inp.doc_id,
-                compile_id=str(doc.last_compile_id),
+                compile_id=str(compile_id),
             )
             return GetCheckResultsOutput(compile_id=None, results=[])
 

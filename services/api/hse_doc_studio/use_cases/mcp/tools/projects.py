@@ -6,6 +6,8 @@ from hse_doc_studio.core.access.context import require_actor
 from hse_doc_studio.core.agent.entities import AgentToolContext, ToolResult, ToolSpec
 from hse_doc_studio.core.enums import ToolKind
 from hse_doc_studio.core.i18n import localized_error
+from hse_doc_studio.core.repositories import ICompileRepository
+from hse_doc_studio.use_cases.compile.last_compile import effective_last_compile_id
 from hse_doc_studio.use_cases.mcp.tools._base import McpTool, json_result, project_schema, text_arg
 from hse_doc_studio.use_cases.projects.get_project import GetProjectInput, GetProjectUC
 from hse_doc_studio.use_cases.projects.get_project_access import GetProjectAccessInput, GetProjectAccessUC
@@ -54,6 +56,16 @@ class GetProjectTool(McpTool):
         )
         project = found.project
         membership = found.membership
+        # Ссылка на сборку, пришедшая синхронизацией с другой стороны, заменяется своей: get_compile её найдёт.
+        compiles = await self._deps.get(ICompileRepository)  # type: ignore[type-abstract]
+        documents = [
+            {
+                "id": d.id,
+                "status": d.status,
+                "last_compile_id": await effective_last_compile_id(compiles, project.folder, d),
+            }
+            for d in project.documents
+        ]
         return json_result(
             {
                 "id": project.id,
@@ -65,9 +77,7 @@ class GetProjectTool(McpTool):
                 "supervisor": project.supervisor,
                 "co_supervisor": project.co_supervisor,
                 "meta": project.meta,
-                "documents": [
-                    {"id": d.id, "status": d.status, "last_compile_id": d.last_compile_id} for d in project.documents
-                ],
+                "documents": documents,
                 "archived": project.archived,
                 "updated_at": project.updated_at,
                 "my_role": membership.my_role if membership is not None else None,
