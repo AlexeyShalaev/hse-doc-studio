@@ -29,6 +29,7 @@ class Verify(StrEnum):
 class RunKind(StrEnum):
     update = "update"
     rollback = "rollback"  # ручной возврат на предыдущую версию
+    downgrade = "downgrade"  # откат на выбранную прежнюю версию: только если схема базы та же (нужна ревизия head)
 
 
 class RunTrigger(StrEnum):

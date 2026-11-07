@@ -109,5 +109,9 @@
   "rollback_blocked": false,
   "risk_confirmation_required": false,
   "backups_accepted": null,
-  "manual_command": "docker compose pull && docker compose up -d"
+  "manual_command": "docker compose pull && docker compose up -d",
+  "auto_update_enabled": true,
+  "db_revision": "r2",
+  "updater_can_downgrade": true,
+  "downgrade_targets": []
 }

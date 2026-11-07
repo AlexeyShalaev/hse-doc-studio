@@ -23,7 +23,7 @@ import { diagnosticsApi } from "../admin-diagnostics/api/diagnosticsApi";
 import { ensureAdminDiagnosticsLocales } from "../admin-diagnostics/lib/locales";
 import { updatesApi } from "./api/updatesApi";
 import type { AdminDiagnostics } from "@entities/session";
-import type { UpdateRun, UpdateStatus } from "./api/schemas";
+import type { DowngradeTarget, UpdateRun, UpdateStatus } from "./api/schemas";
 import { ensureAdminUpdatesLocales } from "./lib/locales";
 import {
   minutesOf,
@@ -98,7 +98,28 @@ const status = (patch: Partial<UpdateStatus> = {}): UpdateStatus => ({
   risk_confirmation_required: false,
   backups_accepted: null,
   manual_command: "docker compose pull && docker compose up -d",
+  auto_update_enabled: true,
+  db_revision: "r2",
+  updater_can_downgrade: true,
+  downgrade_targets: [],
   ...patch,
+});
+
+const target = (patch: Partial<DowngradeTarget> = {}): DowngradeTarget => ({
+  version: "0.3.0",
+  date: "2026-10-30",
+  notes: [],
+  has_digest: true,
+  compat: "compatible",
+  revision: "r2",
+  ...patch,
+});
+
+const release = (version: string, has_digest = true) => ({
+  version,
+  date: "",
+  notes: [],
+  has_digest,
 });
 
 const diagnostics = (
@@ -501,5 +522,193 @@ describe("раздел «Обновления»", () => {
     expect((await screen.findByTestId("update-events")).textContent).toContain(
       "снимок",
     );
+  });
+  const downgradeStatus = (patch: Partial<UpdateStatus> = {}) =>
+    status({
+      current_version: "0.3.3",
+      available: null,
+      releases: [
+        release("0.3.3"),
+        release("0.3.2"),
+        release("0.3.1"),
+        release("0.3.0", false),
+      ],
+      downgrade_targets: [
+        target({ version: "0.3.2" }),
+        target({ version: "0.3.1", compat: "incompatible", revision: "r1" }),
+        target({
+          version: "0.3.0",
+          compat: "unknown",
+          revision: null,
+          has_digest: false,
+        }),
+      ],
+      ...patch,
+    });
+
+  it("список версий: текущая отмечена, откат только на совместимые со схемой", async () => {
+    vi.spyOn(updatesApi, "status").mockResolvedValue(downgradeStatus());
+    render(wrap(<UpdatesPage />));
+    const list = await screen.findByTestId("update-versions-list");
+    expect(
+      within(screen.getByTestId("update-version-0.3.3")).getByTestId(
+        "update-version-current-mark",
+      ),
+    ).toBeInTheDocument();
+    expect(within(list).queryByTestId("update-downgrade-0.3.3")).toBeNull();
+    expect(screen.getByTestId("update-downgrade-0.3.2")).toBeEnabled();
+    expect(screen.getByTestId("update-downgrade-0.3.1")).toBeDisabled();
+    expect(
+      screen.getByTestId("update-version-compat-0.3.1").textContent,
+    ).toContain("откат невозможен");
+    // у 0.3.0 нет дайджеста, а проверка образа включена
+    expect(screen.getByTestId("update-downgrade-0.3.0")).toBeDisabled();
+  });
+
+  it("откат просит подтверждение с предупреждением и вызывает API с выбранной версией", async () => {
+    const down = vi
+      .spyOn(updatesApi, "downgrade")
+      .mockResolvedValue(run({ kind: "downgrade", status: "queued" }));
+    vi.spyOn(updatesApi, "status").mockResolvedValue(downgradeStatus());
+    render(wrap(<UpdatesPage />));
+    await userEvent.click(await screen.findByTestId("update-downgrade-0.3.2"));
+    expect(down).not.toHaveBeenCalled();
+    expect(
+      await screen.findByTestId("downgrade-backup-yes"),
+    ).toBeInTheDocument();
+    expect(screen.getByTestId("downgrade-pauses-auto")).toBeInTheDocument();
+    await userEvent.click(screen.getByTestId("update-downgrade-confirm"));
+    await waitFor(() => {
+      expect(down).toHaveBeenCalledWith("0.3.2");
+    });
+  });
+
+  it("без бэкапа диалог откатa прямо об этом говорит", async () => {
+    vi.spyOn(updatesApi, "status").mockResolvedValue(
+      downgradeStatus({ backup_destination_configured: false }),
+    );
+    render(wrap(<UpdatesPage />));
+    await userEvent.click(await screen.findByTestId("update-downgrade-0.3.2"));
+    expect(
+      await screen.findByTestId("downgrade-backup-no"),
+    ).toBeInTheDocument();
+  });
+
+  it("отказ сервера по схеме показан понятным текстом", async () => {
+    const { ApiError } = await import("@shared/api");
+    vi.spyOn(updatesApi, "downgrade").mockRejectedValue(
+      new ApiError("x", "schema_incompatible", 409),
+    );
+    vi.spyOn(updatesApi, "status").mockResolvedValue(downgradeStatus());
+    render(wrap(<UpdatesPage />));
+    await userEvent.click(await screen.findByTestId("update-downgrade-0.3.2"));
+    await userEvent.click(
+      await screen.findByTestId("update-downgrade-confirm"),
+    );
+    expect((await screen.findByTestId("update-failure")).textContent).toContain(
+      "другая схема базы",
+    );
+  });
+
+  it("старый апдейтер: откат недоступен, причина названа", async () => {
+    vi.spyOn(updatesApi, "status").mockResolvedValue(
+      downgradeStatus({ updater_can_downgrade: false }),
+    );
+    render(wrap(<UpdatesPage />));
+    expect(
+      (await screen.findByTestId("update-versions-why")).textContent,
+    ).toContain("обновите его вместе с чартом");
+    expect(screen.getByTestId("update-downgrade-0.3.2")).toBeDisabled();
+  });
+
+  it("откат не поднялся: баннер говорит, что система на прежней версии", async () => {
+    vi.spyOn(updatesApi, "status").mockResolvedValue(
+      downgradeStatus({
+        last_run: run({
+          kind: "downgrade",
+          status: "rolled_back",
+          from_version: "0.3.3",
+          to_version: "0.3.2",
+          error: "здоровье не восстановилось",
+        }),
+      }),
+    );
+    render(wrap(<UpdatesPage />));
+    const banner = await screen.findByTestId("update-banner-downgrade");
+    expect(banner.textContent).toContain("вернулась на 0.3.3");
+    expect(banner.textContent).toContain("здоровье не восстановилось");
+  });
+
+  it("после успешного отката есть кнопка вернуть прежнюю версию", async () => {
+    const start = vi
+      .spyOn(updatesApi, "start")
+      .mockResolvedValue(run({ status: "queued" }));
+    vi.spyOn(updatesApi, "status").mockResolvedValue(
+      downgradeStatus({
+        current_version: "0.3.2",
+        last_run: run({
+          kind: "downgrade",
+          status: "succeeded",
+          from_version: "0.3.3",
+          to_version: "0.3.2",
+        }),
+      }),
+    );
+    render(wrap(<UpdatesPage />));
+    await userEvent.click(await screen.findByTestId("update-return"));
+    await userEvent.click(await screen.findByTestId("update-confirm"));
+    await waitFor(() => {
+      expect(start).toHaveBeenCalledWith("0.3.3", false);
+    });
+  });
+
+  it("переключатель автоустановки: выключение шлёт запрос, состояние и время проверки видны", async () => {
+    const setAuto = vi.spyOn(updatesApi, "setAuto").mockResolvedValue(
+      status({
+        auto_update_enabled: false,
+        settings: { ...status().settings, policy: "notify" },
+      }),
+    );
+    render(wrap(<UpdatesPage />));
+    const sw = await screen.findByTestId("update-auto-switch");
+    expect(sw).toHaveAttribute("aria-checked", "true");
+    expect(screen.getByTestId("update-auto-state").textContent).toBe(
+      "Включена",
+    );
+    expect(screen.getByTestId("update-auto-checked").textContent).not.toBe("—");
+    await userEvent.click(sw);
+    await waitFor(() => {
+      expect(setAuto).toHaveBeenCalledWith(false);
+    });
+    await waitFor(() => {
+      expect(screen.getByTestId("update-auto-state").textContent).toContain(
+        "проверка и уведомления идут",
+      );
+    });
+  });
+
+  it("автоустановка выключена: сказано, что проверки и уведомления остаются", async () => {
+    vi.spyOn(updatesApi, "status").mockResolvedValue(
+      status({
+        auto_update_enabled: false,
+        settings: { ...status().settings, policy: "notify" },
+      }),
+    );
+    render(wrap(<UpdatesPage />));
+    expect(await screen.findByTestId("update-auto-switch")).toHaveAttribute(
+      "aria-checked",
+      "false",
+    );
+    expect(screen.getByTestId("update-auto").textContent).toContain(
+      "по-прежнему проверяет релизы",
+    );
+  });
+
+  it("Helm: переключатель автоустановки заблокирован", async () => {
+    vi.spyOn(updatesApi, "status").mockResolvedValue(
+      status({ executor: "none", auto_update_enabled: false }),
+    );
+    render(wrap(<UpdatesPage />));
+    expect(await screen.findByTestId("update-auto-switch")).toBeDisabled();
   });
 });

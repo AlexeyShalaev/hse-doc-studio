@@ -30,7 +30,14 @@
     "checkFailed": "Could not ask for the release list",
     "updaterOfflineKube": "Auto-install and the update buttons do not work until it runs: check the updater pod with `kubectl get pods -l app.kubernetes.io/component=updater` and its log. Release checks and notifications still work.",
     "noBackupKube": "No backup will be taken before the update, and the database cannot be rolled back",
-    "noBackupKubeBody": "There is no database snapshot in Kubernetes. Set up a destination in Backups (and keep the full backup enabled in the policy): then a backup runs before the update. Without it a manual update needs the risk confirmed, and auto-install does not start."
+    "noBackupKubeBody": "There is no database snapshot in Kubernetes. Set up a destination in Backups (and keep the full backup enabled in the policy): then a backup runs before the update. Without it a manual update needs the risk confirmed, and auto-install does not start.",
+    "downgrade": {
+      "succeeded": "Rolled back from {{from}} to {{to}} ({{at}}). Automatic installs are paused if they were on.",
+      "rolled_back": "The rollback to {{to}} ({{at}}) did not come up. The system is back on {{from}}, nothing is lost. The reason is in the log.",
+      "failed": "The rollback to {{to}} ({{at}}) did not finish. Manual action is needed: the steps are in the run log.",
+      "cancelled": "The rollback to {{to}} ({{at}}) was not performed and nothing was changed.",
+      "return": "Return to {{version}}"
+    }
   },
   "version": {
     "title": "Version",
@@ -139,7 +146,8 @@
     },
     "kind": {
       "update": "Update",
-      "rollback": "Rollback"
+      "rollback": "Rollback",
+      "downgrade": "Rollback to a chosen version"
     },
     "trigger": {
       "auto": "automatic",
@@ -208,6 +216,60 @@
     "network": "No connection to the server.",
     "unknown": "Something went wrong. Try again later.",
     "risk_not_confirmed": "Confirm the risk: there will be no backup before the update.",
-    "rollback_unsafe": "Rollback is impossible: the update changed the database schema and the previous version cannot run on it."
+    "rollback_unsafe": "Rollback is impossible: the update changed the database schema and the previous version cannot run on it.",
+    "schema_incompatible": "Rollback refused: that version needs a different database schema. Nothing was changed.",
+    "digest_missing": "That release publishes no image digest, so the image cannot be verified: turn verification off in the policy or pick another version.",
+    "updater_outdated": "The updater is older than the Studio and cannot roll back to a chosen version: update it together with the chart."
+  },
+  "auto": {
+    "title": "Automatic installs",
+    "lead": "When it is on, the Studio installs new versions by itself in the maintenance window. When it is off, nothing is installed by itself, but release checks and notifications keep working.",
+    "label": "Install updates automatically",
+    "hint": {
+      "on": "On: new versions are installed in the maintenance window, with a backup and automatic rollback.",
+      "paused": "Off: nothing is installed by itself. The Studio still checks for releases and notifies administrators; install with the button.",
+      "off": "Release checks are off in the policy below, so there is nothing to install or announce."
+    },
+    "state": "Status",
+    "states": {
+      "on": "On",
+      "paused": "Off (checks and notifications continue)",
+      "off": "Off, releases are not checked"
+    },
+    "checksOff": "not checked",
+    "manualOnly": "This installation updates by hand, so the switch is not available."
+  },
+  "versions": {
+    "title": "Versions",
+    "lead": "Published releases (image digest and signature are verified as for an update). You can go back to an earlier version only if it runs on the current database schema.",
+    "current": "installed",
+    "newer": "newer",
+    "rollbackTo": "Roll back to {{version}}",
+    "noDigest": "The release publishes no image digest: turn verification off in the policy to use it.",
+    "compat": {
+      "compatible": "database schema matches ({{revision}})",
+      "incompatible": "works on schema {{revision}}, the database is at {{current}}: rollback is not possible",
+      "unknown": "this version was not run here: the updater checks the schema before stopping anything"
+    },
+    "why": {
+      "manual": "This installation updates by hand: roll back with Helm or by hand.",
+      "offline": "The updater does not answer, so rollback is unavailable.",
+      "outdated": "The updater is older than the Studio and cannot roll back to a chosen version: update it together with the chart (helm upgrade)."
+    }
+  },
+  "confirmDowngrade": {
+    "title": "Roll back to {{version}}?",
+    "body": "The Studio goes from {{current}} back to {{version}}. This is an image rollback only: the database schema is not changed.",
+    "ok": "Roll back",
+    "downtime": "The Studio is unavailable during the swap, usually 1-3 minutes. Running builds are interrupted.",
+    "schema": {
+      "compatible": "The version runs on the current database schema ({{revision}}): data stays as is.",
+      "incompatible": "The version needs a different schema ({{revision}}): the rollback will be refused.",
+      "unknown": "Nothing is stopped until the updater has checked that the version fits the current database schema. If it does not, the rollback is refused and nothing changes."
+    },
+    "backupYes": "A full backup is taken first and the rollback waits for its success.",
+    "backupNo": "No backup destination is configured (or the backup is off in the policy): only the database snapshot of the updater is taken. Set up a destination in Backups first if you want a full backup.",
+    "backupNoKube": "No backup destination is configured (or the backup is off in the policy), and Kubernetes has no database snapshot. The schema is not changed by this rollback, but a backup in Backups is still worth taking first.",
+    "pausesAuto": "After a successful rollback automatic installs are switched off, otherwise the newer version would come back in the next window. Turn them on again when you are ready."
   }
 }

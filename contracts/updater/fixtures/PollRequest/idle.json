@@ -1,5 +1,8 @@
 {
   "protocol": 1,
   "updater_version": "0.3.1",
-  "busy": false
+  "busy": false,
+  "capabilities": [
+    "downgrade"
+  ]
 }

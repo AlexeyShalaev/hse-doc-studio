@@ -44,7 +44,13 @@ async def poll(body: UpdaterPollBody, request: Request) -> UpdaterPollOut:
     """Апдейтер спрашивает работу. Запрос служит и признаком жизни; занятый апдейтер работу не получает."""
     await _authorize(request)
     service = await request.state.dishka_container.get(UpdateService)
-    spec = await service.poll(PollReport(updater_version=body.updater_version, busy=body.busy))
+    spec = await service.poll(
+        PollReport(
+            updater_version=body.updater_version,
+            busy=body.busy,
+            capabilities=tuple(sorted({c[:32] for c in body.capabilities})),
+        )
+    )
     if spec is None:
         return UpdaterPollOut(run=None)
     return UpdaterPollOut(

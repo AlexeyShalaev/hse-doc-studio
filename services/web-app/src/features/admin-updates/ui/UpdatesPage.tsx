@@ -21,17 +21,21 @@ import { Banner, ViewState } from "@features/admin-ops/ui/parts";
 import {
   useCancelUpdate,
   useCheckUpdates,
+  useDowngradeUpdate,
   useRollbackUpdate,
   useSaveUpdateSettings,
+  useSetAutoUpdate,
   useStartUpdate,
   useUpdateRuns,
   useUpdateStatus,
 } from "../api/queries";
-import type { UpdateRun } from "../api/schemas";
+import type { DowngradeTarget, UpdateRun } from "../api/schemas";
 import { failureKey, failureOf, type UpdateFailure } from "../lib/failure";
 import { ensureAdminUpdatesLocales } from "../lib/locales";
+import { AutoUpdateSection } from "./AutoUpdateSection";
 import { HistoryTable } from "./HistoryTable";
 import { PolicyPanel } from "./PolicyPanel";
+import { VersionsSection } from "./VersionsSection";
 
 /** Раздел админки «Обновления»: версия, политика и окно, история, «обновить сейчас» и «откатить». */
 export const UpdatesPage = () => {
@@ -56,9 +60,15 @@ const UpdatesContent = () => {
   const rollback = useRollbackUpdate();
   const cancel = useCancelUpdate();
   const save = useSaveUpdateSettings();
+  const toggleAuto = useSetAutoUpdate();
+  const downgrade = useDowngradeUpdate();
   const [failure, setFailure] = useState<UpdateFailure | null>(null);
   const [saveFailure, setSaveFailure] = useState<UpdateFailure | null>(null);
   const [confirmUpdate, setConfirmUpdate] = useState(false);
+  const [updateVersion, setUpdateVersion] = useState<string | null>(null);
+  const [autoFailure, setAutoFailure] = useState<UpdateFailure | null>(null);
+  const [pickedDowngrade, setPickedDowngrade] =
+    useState<DowngradeTarget | null>(null);
   const [acceptRisk, setAcceptRisk] = useState(false);
   const [confirmRollback, setConfirmRollback] = useState(false);
   const [opened, setOpened] = useState<UpdateRun | null>(null);
@@ -126,6 +136,7 @@ const UpdatesContent = () => {
               onClick={() => {
                 setFailure(null);
                 setAcceptRisk(false);
+                setUpdateVersion(null);
                 setConfirmUpdate(true);
               }}
             >
@@ -172,8 +183,26 @@ const UpdatesContent = () => {
             : ""}
         </Banner>
       )}
+      {!active && last?.kind === "downgrade" && (
+        <DowngradeBanner
+          last={last}
+          when={when}
+          canReturn={
+            data.updater_online &&
+            data.releases.some((r) => r.version === last.from_version) &&
+            last.from_version !== data.current_version
+          }
+          onReturn={() => {
+            setFailure(null);
+            setAcceptRisk(false);
+            setUpdateVersion(last.from_version);
+            setConfirmUpdate(true);
+          }}
+        />
+      )}
       {!active &&
         last &&
+        last.kind !== "downgrade" &&
         (last.status === "failed" || last.status === "rolled_back") && (
           <Banner
             tone={last.status === "failed" ? "danger" : "warning"}
@@ -338,6 +367,29 @@ const UpdatesContent = () => {
         )}
       </Section>
 
+      <AutoUpdateSection
+        data={data}
+        pending={toggleAuto.isPending}
+        failure={autoFailure}
+        onToggle={(enabled) => {
+          setAutoFailure(null);
+          toggleAuto.mutate(enabled, {
+            onError: (e) => {
+              setAutoFailure(failureOf(e));
+            },
+          });
+        }}
+      />
+
+      <VersionsSection
+        data={data}
+        busy={busy}
+        onPick={(target) => {
+          setFailure(null);
+          setPickedDowngrade(target);
+        }}
+      />
+
       <PolicyPanel
         key={JSON.stringify(data.settings)}
         settings={data.settings}
@@ -364,13 +416,15 @@ const UpdatesContent = () => {
         onOpen={onOpen}
       />
 
-      {confirmUpdate && data.available && (
+      {confirmUpdate && (updateVersion ?? data.available?.version) && (
         <Modal
           isOpen
           onClose={() => {
             setConfirmUpdate(false);
           }}
-          title={t("confirmUpdate.title", { version: data.available.version })}
+          title={t("confirmUpdate.title", {
+            version: updateVersion ?? data.available?.version ?? "",
+          })}
           description={t(
             kube ? "confirmUpdate.bodyKube" : "confirmUpdate.body",
           )}
@@ -390,7 +444,7 @@ const UpdatesContent = () => {
                 onClick={() => {
                   start.mutate(
                     {
-                      version: data.available?.version ?? null,
+                      version: updateVersion ?? data.available?.version ?? null,
                       acceptRisk: needRisk && acceptRisk,
                     },
                     {
@@ -494,6 +548,78 @@ const UpdatesContent = () => {
         </Modal>
       )}
 
+      {pickedDowngrade && (
+        <Modal
+          isOpen
+          onClose={() => {
+            setPickedDowngrade(null);
+          }}
+          title={t("confirmDowngrade.title", {
+            version: pickedDowngrade.version,
+          })}
+          description={t("confirmDowngrade.body", {
+            current: data.current_version,
+            version: pickedDowngrade.version,
+          })}
+          footer={
+            <>
+              <Button
+                variant="ghost"
+                onClick={() => {
+                  setPickedDowngrade(null);
+                }}
+              >
+                {t("cancel")}
+              </Button>
+              <Button
+                variant="danger"
+                data-testid="update-downgrade-confirm"
+                disabled={downgrade.isPending}
+                onClick={() => {
+                  downgrade.mutate(pickedDowngrade.version, {
+                    onSuccess: () => {
+                      setPickedDowngrade(null);
+                    },
+                    onError: (e) => {
+                      setPickedDowngrade(null);
+                      fail(e);
+                    },
+                  });
+                }}
+              >
+                {t("confirmDowngrade.ok")}
+              </Button>
+            </>
+          }
+        >
+          <Notice tone="info" text={t("confirmDowngrade.downtime")} />
+          <Notice
+            tone="info"
+            text={t(`confirmDowngrade.schema.${pickedDowngrade.compat}`, {
+              revision: pickedDowngrade.revision ?? "?",
+            })}
+          />
+          {data.settings.backup_first && data.backup_destination_configured ? (
+            <p className="form-hint" data-testid="downgrade-backup-yes">
+              {t("confirmDowngrade.backupYes")}
+            </p>
+          ) : (
+            <p className="form-hint" data-testid="downgrade-backup-no">
+              {t(
+                kube
+                  ? "confirmDowngrade.backupNoKube"
+                  : "confirmDowngrade.backupNo",
+              )}
+            </p>
+          )}
+          {data.settings.policy === "auto" && (
+            <p className="form-hint" data-testid="downgrade-pauses-auto">
+              {t("confirmDowngrade.pausesAuto")}
+            </p>
+          )}
+        </Modal>
+      )}
+
       {opened && (
         <Modal
           isOpen
@@ -543,4 +669,66 @@ const UpdatesContent = () => {
       )}
     </div>
   );
+};
+
+type DowngradeBannerProps = {
+  last: UpdateRun;
+  when: (iso: string) => string;
+  canReturn: boolean;
+  onReturn: () => void;
+};
+
+/** Итог последнего отката на выбранную версию: честно про исход и, если откат встал, как вернуть прежнюю. */
+const DowngradeBanner = ({
+  last,
+  when,
+  canReturn,
+  onReturn,
+}: DowngradeBannerProps) => {
+  const { t } = useTranslation("adminUpdates");
+  if (last.status === "succeeded") {
+    return (
+      <Banner
+        tone="info"
+        title={t("banner.downgrade.succeeded", {
+          to: last.to_version,
+          from: last.from_version,
+          at: when(last.created_at),
+        })}
+        testId="update-banner-downgrade"
+        action={
+          canReturn ? (
+            <Button
+              size="sm"
+              variant="ghost"
+              data-testid="update-return"
+              onClick={onReturn}
+            >
+              {t("banner.downgrade.return", { version: last.from_version })}
+            </Button>
+          ) : undefined
+        }
+      />
+    );
+  }
+  if (
+    last.status === "failed" ||
+    last.status === "rolled_back" ||
+    last.status === "cancelled"
+  ) {
+    return (
+      <Banner
+        tone={last.status === "failed" ? "danger" : "warning"}
+        title={t(`banner.downgrade.${last.status}`, {
+          to: last.to_version,
+          from: last.from_version,
+          at: when(last.created_at),
+        })}
+        testId="update-banner-downgrade"
+      >
+        {last.error}
+      </Banner>
+    );
+  }
+  return null;
 };

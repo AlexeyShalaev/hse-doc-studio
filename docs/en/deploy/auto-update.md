@@ -53,6 +53,29 @@ Something went wrong in steps 4-5: the previous images come back automatically. 
 
 The "Roll back to X" button is available while the version of the last successful update is installed. If the update changed the database schema, the rollback restores the snapshot taken before it: **everything written after the update is lost**, so an explicit confirmation is required. Without a schema change the rollback only brings back the images.
 
+## Rollback to a chosen version
+
+The admin "Versions" block lists the published releases: the installed one is marked, and you can go back to an earlier one with "Roll back to X". It works in compose and in Kubernetes (the `kubernetes` executor), for administrators only, and needs an updater of the same version as the Studio (it tells the api it supports rollback to a chosen version; an older updater gets the `updater_outdated` refusal).
+
+**Database schema policy.** Rolling back to a chosen version rolls back the image only: it does not change the database schema or roll data back. So it is allowed to a version whose migration head equals the current database revision. The match is exact: we do not promise schema backward compatibility, and an image older than the schema either does not start (the `db-ahead` guard) or runs on a foreign schema. The check has two steps:
+
+1. The api compares the version with the run history (which revision the database was at when that version ran). A known and different revision is refused with 409 `schema_incompatible`, nothing is created. The list marks such a version "rollback is not possible".
+2. A version that was never installed here is checked by the updater: it pulls and verifies the image (the digest from the release `image-digest.json`, with "Digest and signature" the cosign signature too, as for an update) and then runs `hse-doc-studio db current` on that image. If its head differs from the database revision, the run is cancelled with the "Cancelled" status and the `schema_incompatible` code before any service is stopped: nothing was touched, the reason is in the run log.
+
+Migrations are not run forward or backward by this rollback. If the schema changed between the versions, the only way back is restoring a backup taken on that version by hand (or, in compose, the "Roll back to previous" button right after an update, which restores the snapshot). So the first release with a new migration closes rollback to versions before it.
+
+**Backup.** The rollback uses the same setting as an update: if Backups has a destination and the policy keeps the full backup on, a full backup runs before the rollback and the rollback waits for its success (the backup failed: the rollback is cancelled, nothing is touched). In compose the updater also takes a database snapshot. Without a destination the dialog warns that there will be no full backup.
+
+**Progress and outcome.** Like an update: image check, api stop, image swap, health wait. The version did not come up: the system returns to the previous one by itself, the status is "Rolled back", the banner says which version it stayed on, the reason is in the log. If that failed too, the status is "Needs hands" and the log has the steps. To go back to the version you rolled back from, use the button in the banner (an ordinary update). One run goes at a time (update, rollback or an automatic run): a second request gets 409 `already_running`.
+
+**Automatic installs after a rollback.** A successful rollback to a chosen version switches automatic installs off by itself (policy `notify`), otherwise the next window would bring the newer version back. The event is audited (`update.auto_toggle`, reason `downgrade`). Turn them on again with the switch when you are ready.
+
+After a rollback from the admin, pin the version in your values (`image.tag`) or in the GitOps repository, as after an update.
+
+## Automatic installs switch
+
+In the "Automatic installs" block the switch sets the `auto` policy (on) or `notify` (off); the window settings stay as they are. While automatic installs are off the updater installs nothing by itself: no automatic run is created, and one that was created but not yet taken by the updater is cancelled (runs you started yourself are not touched). Release checks and administrator notifications continue, and the page shows the state and the time of the last check. The state lives in the database (`instance_settings`, the update policy key), the api scheduler reads it, and it survives restarts of the api and the updater. The "Off" mode (releases are not checked) is neither turned on nor off by the switch. Every switch is audited (`update.auto_toggle`: who, before, after). API: `PUT /api/admin/updates/auto` with `{"enabled": false}`, rollback: `POST /api/admin/updates/downgrade` with `{"version": "0.12.0"}`; both are admin-only.
+
 ## Kubernetes
 
 There are two ways, pick one.
@@ -104,6 +127,8 @@ Migrations run as a separate Job before the upgrade. To stop notifications set `
 | "The updater does not answer" (Kubernetes) | `kubectl get pods -l app.kubernetes.io/component=updater` and its log; `updater.token` and the `updater-token` key in the api Secret must match, the Role must allow the api Deployment |
 | Run cancelled `precheck_failed` (Kubernetes) | the new image could not be pulled or the database is unreadable: `kubectl describe job` with the `hse-doc-studio/update-run` label; the api was not stopped |
 | Update cancelled `unsupported_container_options` | a container has options the updater cannot carry over; update by hand |
+| Rollback refused `schema_incompatible` | the version runs on another database schema; nothing was changed, the only way back is restoring a backup by hand |
+| "The updater is older than the Studio" (`updater_outdated`) | update the updater together with the chart (`helm upgrade`); rollback to a chosen version appears |
 | TAG in `.env` does not change | the file is not writable by the app user: `chmod o+w .env` |
 
 Metrics for alerts: `hse_update_available`, `hse_update_updater_up`, `hse_update_last_run_success`, `hse_update_runs_total{result}`. Process settings: `HSE_STUDIO__SERVER_UPDATE__*` in the [reference](https://github.com/AlexeyShalaev/hse-doc-studio/blob/master/docs/ru/deploy/env-reference.md).

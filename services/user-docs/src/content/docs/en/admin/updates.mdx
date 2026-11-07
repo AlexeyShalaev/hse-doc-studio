@@ -21,6 +21,10 @@ help:
       hint: 'If the update changed the database schema, the rollback restored the database from the snapshot; the history marks it “database restored from the snapshot”.'
     - text: 'To go back to the previous version by hand, click **Roll back to** with the version number and confirm with **Roll back**.'
       hint: 'If the update changed the database schema, everything written after the update is lost. The confirmation window warns you about it.'
+    - text: 'To go back to an earlier version, find it in the **Versions** block (the installed one is marked) and click **Roll back to** with its number. Rollback is only possible to versions that run on the current database schema: each row says whether it fits.'
+      hint: 'The image and signature of the chosen version are verified as for an update. If the database schema does not match, the rollback is refused and nothing changes. A full backup is taken first when Backups has a destination. After a successful rollback automatic installs are switched off.'
+    - text: 'The **Install updates automatically** switch in the **Automatic installs** block turns automatic installs on and off. The state and the time of the last check are shown next to it.'
+      hint: 'While it is off, the Studio installs nothing by itself, but it still checks for releases and notifies administrators.'
     - text: 'In the **Policy and window** block choose the **Mode** (**Off**, **Notify** or **Install automatically**), set the window days and time in UTC and click **Save**.'
       hint: '**Largest step without a human** limits automatic installs to patches or minor versions; a new major version is only offered.'
       shot: admin/updates/step-07
@@ -55,3 +59,5 @@ needed, the database.
   shows where the database snapshot is and the command to bring the services back.
 - **“This release publishes no image digest”**: a verified update will not pass. Wait for the next
   release or pick **None** in **Image verification** if you trust the source.
+- **“Rollback refused: that version needs a different database schema”**: the version you want runs on a different database schema than the current one. Nothing was done and the data is untouched. Restore a backup taken on that version by hand.
+- **“The rollback did not come up”**: the system has already gone back to the version you rolled back from. The reason is in **Log**; you can return to the version you left with the button in the banner or with an update.

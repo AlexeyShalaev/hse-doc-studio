@@ -279,6 +279,8 @@ _AUDITED_ELSEWHERE: dict[tuple[str, str], str] = {
     ("POST", "/api/admin/updates/check"): "update.check",
     ("POST", "/api/admin/updates/runs"): "update.run_request",
     ("POST", "/api/admin/updates/rollback"): "update.rollback_request",
+    ("POST", "/api/admin/updates/downgrade"): "update.downgrade_request",
+    ("PUT", "/api/admin/updates/auto"): "update.auto_toggle",
     ("POST", "/api/admin/updates/runs/{id}/cancel"): "update.run_cancel",
     ("POST", "/api/admin/queue/{id}/cancel"): "queue.job_cancel",
     ("POST", "/api/admin/runner-tokens"): "runner.registration_token_create",

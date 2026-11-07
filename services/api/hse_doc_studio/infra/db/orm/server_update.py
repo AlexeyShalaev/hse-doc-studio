@@ -16,7 +16,7 @@ from hse_doc_studio.infra.db.base import Base
 class UpdateRunRow(Base):
     __tablename__ = "update_runs"
     __table_args__ = (
-        CheckConstraint("kind IN ('update', 'rollback')", name="kind"),
+        CheckConstraint("kind IN ('update', 'rollback', 'downgrade')", name="kind"),
         CheckConstraint("trigger IN ('auto', 'manual')", name="trigger"),
         CheckConstraint(
             "status IN ('waiting_backup', 'queued', 'running', 'succeeded', 'rolled_back', 'failed', 'cancelled')",

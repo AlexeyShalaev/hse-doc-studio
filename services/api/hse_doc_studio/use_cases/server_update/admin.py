@@ -31,6 +31,13 @@ class UpdateAdmin:
     async def rollback(self, actor: Actor, *, restore_db: bool) -> UpdateRun:
         return await self._service.request_rollback(require_admin(actor), restore_db=restore_db)
 
+    async def downgrade(self, actor: Actor, version: str) -> UpdateRun:
+        return await self._service.request_downgrade(require_admin(actor), version)
+
+    async def set_auto_update(self, actor: Actor, *, enabled: bool) -> UpdateStatus:
+        await self._service.set_auto_update(require_admin(actor), enabled=enabled)
+        return await self._service.status()
+
     async def cancel(self, actor: Actor, run_id: str) -> UpdateRun:
         return await self._service.cancel(require_admin(actor), run_id)
 

@@ -7,7 +7,7 @@
 from __future__ import annotations
 
 from collections.abc import Mapping
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from datetime import datetime
 from typing import Protocol
 from uuid import uuid4
@@ -28,6 +28,7 @@ from hse_doc_studio.core.listing import Found, Window
 from hse_doc_studio.core.server_update.decision import Action, DecisionInput, decide
 from hse_doc_studio.core.server_update.entities import (
     TERMINAL_STATUSES,
+    ReleaseInfo,
     RunEvent,
     RunKind,
     RunStatus,
@@ -46,6 +47,7 @@ from hse_doc_studio.core.server_update.settings import (
     KEY_CHECKED_AT,
     KEY_NOTIFIED,
     KEY_RELEASES,
+    KEY_UPDATER_CAPS,
     KEY_UPDATER_SEEN,
     KEY_UPDATER_VERSION,
     releases_from,
@@ -56,7 +58,14 @@ from hse_doc_studio.core.server_update.settings import (
     validate_settings,
 )
 from hse_doc_studio.core.server_update.status import UpdateStatus
-from hse_doc_studio.core.server_update.versions import newest_release, pick_target
+from hse_doc_studio.core.server_update.versions import (
+    DowngradeTarget,
+    SchemaVerdict,
+    newest_release,
+    older_releases,
+    pick_target,
+    schema_verdict,
+)
 from hse_doc_studio.core.server_update.window import in_window, next_window_start
 from hse_doc_studio.core.uow import IUnitOfWork
 from hse_doc_studio.core.update.services import is_newer
@@ -67,6 +76,7 @@ logger = structlog.get_logger()
 SOURCE_SYSTEM = "system"
 _SEEN_WRITE_EVERY_S = 20.0
 _ERROR_LIMIT = 500
+CAP_DOWNGRADE = "downgrade"
 _RISK_NOTE = "no full backup and no schema rollback: the risk is accepted"
 _WAIVER_NOTE = "no full backup and no schema rollback: backups are off on purpose (accepted in self-diagnostics)"
 
@@ -100,6 +110,7 @@ class RunSpec:
 class PollReport:
     updater_version: str = ""
     busy: bool = False
+    capabilities: tuple[str, ...] = ()  # что умеет апдейтер: `downgrade` и т.п. (старый апдейтер не присылает)
 
 
 @dataclass(frozen=True)
@@ -191,6 +202,7 @@ class UpdateService:
         unsafe_rollback = bool(last_ok and snapshotless and (schema_changed or not last_ok.to_revision))
         risky = self._options.executor_enabled and snapshotless and not (settings.backup_first and has_destination)
         waiver = live_acceptance(values, BACKUPS_CHECK, now) if risky else None
+        can_downgrade = self._updater_can(values, CAP_DOWNGRADE)
         return UpdateStatus(
             settings=settings,
             current_version=self._cur,
@@ -216,7 +228,29 @@ class UpdateService:
             rollback_blocked=can_rollback and unsafe_rollback,
             risk_confirmation_required=risky and waiver is None,
             backups_accepted=waiver,
+            auto_update_enabled=settings.policy is UpdatePolicy.auto,
+            db_revision=self._options.db_head,
+            updater_can_downgrade=can_downgrade,
+            downgrade_targets=await self._downgrade_targets(releases),
         )
+
+    def _updater_can(self, values: Mapping[str, object], capability: str) -> bool:
+        caps = values.get(KEY_UPDATER_CAPS)
+        return isinstance(caps, list) and capability in caps
+
+    async def _downgrade_targets(self, releases: tuple[ReleaseInfo, ...]) -> tuple[DowngradeTarget, ...]:
+        older = older_releases(self._cur, releases)
+        if not older:
+            return ()
+        known = {
+            **await self._runs.known_revisions(),
+            **({self._cur: self._options.db_head} if self._options.db_head else {}),
+        }
+        out = []
+        for release in older:
+            verdict, revision = schema_verdict(release.version, self._options.db_head, known)
+            out.append(DowngradeTarget(release, verdict, revision))
+        return tuple(out)
 
     # ---- настройки ----
 
@@ -235,6 +269,51 @@ class UpdateService:
                     details={"before": settings_to(before), "after": settings_to(new)},
                 )
         return new
+
+    async def set_auto_update(self, actor_id: str, *, enabled: bool) -> UpdateSettings:
+        """Переключатель автоустановки: `auto` <-> `notify`. Остальные настройки (окно, предел шага) не трогаются.
+
+        Выключенная автоустановка ничего не ставит сама, но проверка релизов и уведомления работают. Состояние это
+        политика в `instance_settings`: апдейтер и планировщик читают её из базы, перезапуски его не сбрасывают.
+        Режим `off` (релизы не проверяются) переключатель включает в `auto` и сам в него не переводит.
+        """
+        values = await self._repo.get_all()
+        before = settings_from(values)
+        if enabled:
+            if not self._options.executor_enabled:
+                raise UpdateError(
+                    UpdateErrorCode.executor_unavailable,
+                    "this installation updates by hand (helm upgrade --atomic); the in-app executor is off",
+                )
+            policy = UpdatePolicy.auto
+        else:
+            policy = UpdatePolicy.notify if before.policy is UpdatePolicy.auto else before.policy
+        new = replace(before, policy=policy)
+        if policy is before.policy:
+            return before
+        async with self._uow.begin():
+            for key, value in settings_to(new).items():
+                await self._repo.set(key, value, source=SOURCE_ADMIN)
+            if before.policy is UpdatePolicy.off:
+                await self._repo.delete(KEY_ATTEMPT_AT)
+            await self._audit.record(
+                "update.auto_toggle",
+                actor_id=actor_id,
+                details={"enabled": enabled, "before": before.policy.value, "after": policy.value},
+            )
+        if not enabled:
+            await self._drop_pending_auto_run()
+        return new
+
+    async def _drop_pending_auto_run(self) -> None:
+        """Автозапуск, ещё не отданный апдейтеру, при выключении автоустановки отменяется."""
+        run = await self._runs.active()
+        if (
+            run is not None
+            and run.trigger is RunTrigger.auto
+            and run.status in {RunStatus.waiting_backup, RunStatus.queued}
+        ):
+            await self._finish(run, RunStatus.cancelled, "auto_update_disabled", "auto-update was turned off")
 
     # ---- проверка релизов ----
 
@@ -301,6 +380,9 @@ class UpdateService:
             if settings.notify_admins:
                 await self._alert("update_available", target.version, decision.reason.value, f"upd-av:{target.version}")
         elif decision.action is Action.start:
+            fresh = settings_from(await self._repo.get_all())
+            if fresh.policy is not UpdatePolicy.auto:  # админ выключил автоустановку, пока тик решал
+                return
             await self._create_run(
                 RunKind.update, RunTrigger.auto, target.version, target.digests_url, settings, actor_id=None
             )
@@ -383,6 +465,52 @@ class UpdateService:
             verify=Verify.none,  # образ уже стоял на этом хосте и был проверен при установке
         )
 
+    async def request_downgrade(self, actor_id: str, version: str) -> UpdateRun:
+        """Откат на выбранную прежнюю версию (образ), без отката схемы базы.
+
+        Политика: только на версию, чей head миграций равен текущей ревизии базы. Здесь это проверяется по тому,
+        что известно из истории запусков; версии, которых на этом хосте не было, проверяет апдейтер по образу до
+        остановки сервисов. Несовместимый откат не выполняется: он потерял бы данные или не запустился.
+        """
+        values = await self._repo.get_all()
+        settings = settings_from(values)
+        self._require_executor(values)
+        if not self._updater_can(values, CAP_DOWNGRADE):
+            raise UpdateError(
+                UpdateErrorCode.updater_outdated,
+                "the updater service is older than this version and cannot roll back to a chosen version: update it "
+                "together with the chart (helm upgrade)",
+            )
+        target = next((r for r in releases_from(values) if r.version == version), None)
+        if target is None:
+            raise UpdateError(UpdateErrorCode.unknown_version, "version is not in the release list", field="version")
+        if not is_newer(self._cur, target.version):
+            raise UpdateError(
+                UpdateErrorCode.invalid_input, "the chosen version is not older than the installed one", field="version"
+            )
+        known = await self._runs.known_revisions()
+        if self._options.db_head:
+            known[self._cur] = self._options.db_head
+        verdict, revision = schema_verdict(target.version, self._options.db_head, known)
+        if verdict is SchemaVerdict.incompatible:
+            raise UpdateError(
+                UpdateErrorCode.schema_incompatible,
+                f"{target.version} works on database schema {revision}, the database is at "
+                f"{self._options.db_head}: rolling back would break the data or the version would not start. "
+                "Nothing was changed. Restore a backup taken on that version by hand instead.",
+                field="version",
+            )
+        if settings.verify is not Verify.none and not target.digests_url:
+            raise UpdateError(
+                UpdateErrorCode.digest_missing,
+                "this release publishes no image digest, so the image cannot be verified: turn verification off in "
+                "the policy or pick another version",
+                field="version",
+            )
+        return await self._create_run(
+            RunKind.downgrade, RunTrigger.manual, target.version, target.digests_url, settings, actor_id=actor_id
+        )
+
     async def cancel(self, actor_id: str, run_id: str) -> UpdateRun:
         run = await self.get_run(run_id)
         if run.status not in {RunStatus.waiting_backup, RunStatus.queued}:
@@ -438,7 +566,11 @@ class UpdateService:
         if not await self._runs.add(run):
             raise UpdateError(UpdateErrorCode.already_running, "another update is already in progress")
         await self._audit.record(
-            "update.run_request" if kind is RunKind.update else "update.rollback_request",
+            {
+                RunKind.update: "update.run_request",
+                RunKind.rollback: "update.rollback_request",
+                RunKind.downgrade: "update.downgrade_request",
+            }[kind],
             actor_id=actor_id,
             target=run.id,
             details={
@@ -522,7 +654,10 @@ class UpdateService:
             await self._repo.set(KEY_UPDATER_SEEN, now.isoformat(), source=SOURCE_SYSTEM)
             if report.updater_version:
                 await self._repo.set(KEY_UPDATER_VERSION, report.updater_version, source=SOURCE_SYSTEM)
+            await self._repo.set(KEY_UPDATER_CAPS, sorted(report.capabilities), source=SOURCE_SYSTEM)
         if report.busy or not self._options.executor_enabled:
+            return None
+        if not await self._auto_run_still_wanted():
             return None
         async with self._uow.begin():
             run = await self._runs.claim_next(now_iso=now.isoformat())
@@ -531,6 +666,16 @@ class UpdateService:
             run = append_events(run, [RunEvent(0, now, "preflight", "info", "picked up by the updater")])
             await self._runs.save(run)
         return RunSpec(run.id, run.kind, run.from_version, run.to_version, run.verify, run.digests_url, run.restore_db)
+
+    async def _auto_run_still_wanted(self) -> bool:
+        """Автозапуск, созданный до выключения автоустановки, апдейтеру не отдаётся: он отменяется."""
+        run = await self._runs.active()
+        if run is None or run.status is not RunStatus.queued or run.trigger is not RunTrigger.auto:
+            return True
+        if settings_from(await self._repo.get_all()).policy is UpdatePolicy.auto:
+            return True
+        await self._finish(run, RunStatus.cancelled, "auto_update_disabled", "auto-update was turned off")
+        return False
 
     async def report(self, run_id: str, event: EventReport) -> UpdateRun:
         """Событие апдейтера. Повтор `seq` и события после конца запуска игнорируются (доставка «хотя бы раз»)."""
@@ -584,11 +729,27 @@ class UpdateService:
         )
         if status is RunStatus.succeeded:
             await self._repo.delete(KEY_NOTIFIED)
+            if run.kind is RunKind.downgrade:
+                await self._pause_auto_after_downgrade(run)
         if settings_from(await self._repo.get_all()).notify_admins:
             await self._alert(_ALERT[status], run.to_version, message if failed else "", f"upd:{run.id}")
         self.snapshot.active = False
         logger.info("update run finished", run_id=run.id, status=status.value, to=run.to_version)
         return done
+
+    async def _pause_auto_after_downgrade(self, run: UpdateRun) -> None:
+        """После отката на старую версию автоустановка выключается: иначе она в ближайшее окно вернула бы новую."""
+        before = settings_from(await self._repo.get_all())
+        if before.policy is not UpdatePolicy.auto:
+            return
+        for key, value in settings_to(replace(before, policy=UpdatePolicy.notify)).items():
+            await self._repo.set(key, value, source=SOURCE_SYSTEM)
+        await self._audit.record(
+            "update.auto_toggle",
+            actor_id=None,
+            target=run.id,
+            details={"enabled": False, "before": "auto", "after": "notify", "reason": "downgrade"},
+        )
 
     # ---- уведомления и метрики ----
 

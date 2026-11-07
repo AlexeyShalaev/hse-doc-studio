@@ -8,6 +8,8 @@ import urllib.request
 from typing import Any, Protocol
 
 PROTOCOL = 1
+# Что умеет этот апдейтер; api не поручает ему то, чего здесь нет (откат на выбранную версию со сверкой схемы базы).
+CAPABILITIES = ["downgrade"]
 HTTP_NOT_FOUND = 404
 
 
@@ -42,7 +44,10 @@ class HttpApi:
         return data if isinstance(data, dict) else {}
 
     def poll(self, *, busy: bool) -> dict[str, Any] | None:
-        data = self._post("/poll", {"protocol": PROTOCOL, "updater_version": self._version, "busy": busy})
+        data = self._post(
+            "/poll",
+            {"protocol": PROTOCOL, "updater_version": self._version, "busy": busy, "capabilities": CAPABILITIES},
+        )
         run = data.get("run")
         return run if isinstance(run, dict) else None
 

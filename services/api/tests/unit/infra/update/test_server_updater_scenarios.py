@@ -409,3 +409,51 @@ async def test__unsupported_container_options_stop_the_run_before_any_change(tmp
     run = await rig.final(spec)
     assert run.status is RunStatus.cancelled
     assert run.error_code == "unsupported_container_options"
+
+
+async def test__downgrade__refuses_a_target_on_another_schema_before_stopping_anything(
+    tmp_path: Path, host: FakeHost
+) -> None:
+    rig = Rig(tmp_path, make(current="0.3.1"), host)
+    spec = {**await rig.request(), "kind": "downgrade"}  # head целевого образа r2, база на r1
+
+    rig.engine.execute(spec)
+    run = await rig.final(spec)
+
+    assert run.status is RunStatus.cancelled
+    assert run.error_code == "schema_incompatible"
+    assert host.db_rev == "r1"
+    assert host.versions() == {"api": "sha256:old", "runner": "sha256:old"}
+    assert "stop" not in [e["phase"] for e in rig.api.events]
+
+
+async def test__downgrade__on_the_same_schema_swaps_images_without_touching_the_database(
+    tmp_path: Path, host: FakeHost
+) -> None:
+    host.images["sha256:new"]["Head"] = "r1"  # целевая версия живёт на той же схеме
+    rig = Rig(tmp_path, make(current="0.3.1"), host)
+    spec = {**await rig.request(), "kind": "downgrade"}
+
+    rig.engine.execute(spec)
+    run = await rig.final(spec)
+
+    assert run.status is RunStatus.succeeded
+    assert (run.from_revision, run.to_revision) == ("r1", "r1")
+    assert host.db_rev == "r1"
+    assert host.versions() == {"api": "sha256:new", "runner": "sha256:new"}
+
+
+async def test__downgrade__target_that_does_not_come_up_leaves_the_previous_version_running(
+    tmp_path: Path, host: FakeHost
+) -> None:
+    host.images["sha256:new"]["Head"] = "r1"
+    host.new_image_healthy = False
+    rig = Rig(tmp_path, make(current="0.3.1"), host)
+    spec = {**await rig.request(), "kind": "downgrade"}
+
+    rig.engine.execute(spec)
+    run = await rig.final(spec)
+
+    assert run.status is RunStatus.rolled_back
+    assert host.versions() == {"api": "sha256:old", "runner": "sha256:old"}
+    assert run.db_restored is False

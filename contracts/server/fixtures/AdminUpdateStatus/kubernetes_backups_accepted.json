@@ -114,5 +114,9 @@
     "at": "2026-11-05T09:30:00Z",
     "until": "2026-12-01T00:00:00Z"
   },
-  "manual_command": "helm upgrade hse-doc-studio deploy/helm/hse-doc-studio --reuse-values --set image.tag=0.4.0 --atomic --wait"
+  "manual_command": "helm upgrade hse-doc-studio deploy/helm/hse-doc-studio --reuse-values --set image.tag=0.4.0 --atomic --wait",
+  "auto_update_enabled": true,
+  "db_revision": "r2",
+  "updater_can_downgrade": true,
+  "downgrade_targets": []
 }
