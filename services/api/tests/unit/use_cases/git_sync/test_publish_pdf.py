@@ -22,6 +22,7 @@ from hse_doc_studio.core.git_sync.entities import (
     CredentialStatus,
     GitCredential,
     GitCredentialKind,
+    PdfUploadRecord,
     StoreRemoteConfig,
     SyncState,
 )
@@ -218,17 +219,54 @@ async def test__publish__fresh_copy_in_build_dir__preferred_over_stale_neighbour
     assert env.servers.calls[0][1].size == len(PDF) + 5
 
 
-async def test__publish__output_outside_folder_or_not_pdf__refused(tmp_path: Path) -> None:
+async def test__publish__output_outside_folder__refused(tmp_path: Path) -> None:
     env = Env(tmp_path)
     (tmp_path / "secret.pdf").write_bytes(PDF)
 
     env.output = "../secret.pdf"
     outside = await env.uc.execute(env.project.id, "coursework")
-    env.output = "coursework/slides.pptx"
-    other = await env.uc.execute(env.project.id, "coursework")
 
-    assert (outside.code, other.code) == ("no_pdf_file", "not_pdf")
+    assert (outside.status, outside.code) == (PdfPublishStatus.failed, "no_pdf_file")
     assert env.servers.calls == []
+
+
+@pytest.mark.parametrize("output", ["presentation/slides.pptx", "report/custom.docx", None])
+async def test__publish__variant_without_pdf__skipped_without_error_record(tmp_path: Path, output: str | None) -> None:
+    """Презентация в варианте pptx собирается успешно и будит выгрузку: это не отказ, выгружать просто нечего."""
+    env = Env(tmp_path)
+    before = env.states.state
+
+    env.output = output
+    result = await env.uc.execute(env.project.id, "presentation")
+
+    assert (result.status, result.reason, result.code) == (PdfPublishStatus.skipped, PdfSkipReason.no_pdf, None)
+    assert env.servers.calls == []
+    assert env.states.state is before  # ничего не записано
+    assert env.states.state.last_pdf_upload is None  # type: ignore[union-attr]
+
+
+async def test__publish__variant_without_pdf__clears_its_old_not_pdf_failure(tmp_path: Path) -> None:
+    """Отказ «не PDF», записанный прежней версией, окно больше не показывает; чужие записи не трогаем."""
+    env = Env(tmp_path)
+    old = PdfUploadRecord("presentation", datetime.now(UTC), ok=False, code="not_pdf", detail="не PDF")
+    env.states.state = replace(env.states.state, last_pdf_upload=old)  # type: ignore[arg-type]
+    env.output = "presentation/slides.pptx"
+
+    await env.uc.execute(env.project.id, "presentation")
+
+    assert env.states.state.last_pdf_upload is None  # type: ignore[union-attr]
+
+
+async def test__publish__variant_without_pdf__keeps_other_records(tmp_path: Path) -> None:
+    env = Env(tmp_path)
+    ok = PdfUploadRecord("coursework", datetime.now(UTC), ok=True, size=10)
+    failed = PdfUploadRecord("presentation", datetime.now(UTC), ok=False, code="pdf_forbidden")
+    env.output = "presentation/slides.pptx"
+
+    for record in (ok, failed):
+        env.states.state = replace(env.states.state, last_pdf_upload=record)  # type: ignore[arg-type]
+        await env.uc.execute(env.project.id, "presentation")
+        assert env.states.state.last_pdf_upload == record  # type: ignore[union-attr]
 
 
 async def test__publish__oversized_pdf__failed_before_upload(tmp_path: Path) -> None:
