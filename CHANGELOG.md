@@ -6,6 +6,12 @@ Generated from `release-notes.json` via `make changelog` — do not edit by hand
 Release notes are hand-written and bilingual (RU/EN); the app shows them in the
 selected interface language.
 
+## [0.14.0](https://github.com/AlexeyShalaev/hse-doc-studio/compare/v0.13.0...v0.14.0) - 2026-11-07
+
+- Roll back to an earlier version from the admin area: a list of published releases, each with a verdict on database schema compatibility. A rollback is allowed only to a version with the same migration state, a backup is taken first when configured, and if the version does not come up the system returns to the previous image. Requires an updated updater.
+- Auto-install switch for updates: while it is off, new versions are not installed on their own, but checks and notifications continue. After a successful rollback auto-install switches to notify-only mode. Rollbacks and toggles are written to the audit log.
+- Limits and isolation for Kubernetes runners: requests and limits for CPU, memory and storage on runners and build pods (set in Helm and in the install form in the UI), clear failure reasons for out-of-memory and storage overruns, deny-all network traffic for build pods, optional runner egress policies, ResourceQuota and LimitRange, stricter pod security settings and reduced Studio permissions. Already installed runners stay unchanged until reinstalled.
+
 ## [0.13.0](https://github.com/AlexeyShalaev/hse-doc-studio/compare/v0.12.0...v0.13.0) - 2026-11-07
 
 - Model servers: the admin area has a new Model servers page. It installs Ollama, vLLM or SGLang on the machine that runs Studio, or on another one over SSH (one-time password or key, with an offer to save the access encrypted). It shows the API address and key. By default a server listens on the loopback interface only; vLLM and SGLang are exposed publicly only with an API key and after confirmation. For gated models a Hugging Face token is set in settings. In Helm, installing on the same machine is off by default (modelServers.local.enabled).

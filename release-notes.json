@@ -1,6 +1,24 @@
 {
   "releases": [
     {
+      "version": "0.14.0",
+      "date": "2026-11-07",
+      "notes": [
+        {
+          "ru": "Откат на прежнюю версию из админки: список опубликованных релизов, у каждой версии вердикт по совместимости со схемой базы. Откат разрешён только на версию с тем же состоянием миграций, перед ним делается бэкап, если он настроен, а если версия не поднялась, система возвращается на прежний образ. Для работы нужен обновлённый updater.",
+          "en": "Roll back to an earlier version from the admin area: a list of published releases, each with a verdict on database schema compatibility. A rollback is allowed only to a version with the same migration state, a backup is taken first when configured, and if the version does not come up the system returns to the previous image. Requires an updated updater."
+        },
+        {
+          "ru": "Переключатель автоустановки обновлений: пока он выключен, новые версии сами не ставятся, но проверка и уведомления продолжаются. После успешного отката автоустановка переходит в режим уведомлений. Откаты и переключения пишутся в журнал аудита.",
+          "en": "Auto-install switch for updates: while it is off, new versions are not installed on their own, but checks and notifications continue. After a successful rollback auto-install switches to notify-only mode. Rollbacks and toggles are written to the audit log."
+        },
+        {
+          "ru": "Лимиты и изоляция раннеров в Kubernetes: requests и limits по CPU, памяти и диску для раннеров и подов сборки (задаются в Helm и в форме установки из UI), понятные причины сбоя при нехватке памяти или диска, запрет сетевого трафика для подов сборки, опциональные политики исходящего трафика раннеров, ResourceQuota и LimitRange, более строгие настройки безопасности подов и урезанные права Студии. Уже установленные раннеры не меняются до переустановки.",
+          "en": "Limits and isolation for Kubernetes runners: requests and limits for CPU, memory and storage on runners and build pods (set in Helm and in the install form in the UI), clear failure reasons for out-of-memory and storage overruns, deny-all network traffic for build pods, optional runner egress policies, ResourceQuota and LimitRange, stricter pod security settings and reduced Studio permissions. Already installed runners stay unchanged until reinstalled."
+        }
+      ]
+    },
+    {
       "version": "0.13.0",
       "date": "2026-11-07",
       "notes": [
