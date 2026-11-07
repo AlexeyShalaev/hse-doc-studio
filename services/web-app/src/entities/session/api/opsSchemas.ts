@@ -444,3 +444,13 @@ export type AdminDiagnostics = z.infer<typeof AdminDiagnosticsSchema>;
 export type UpdateDiagnosticsThresholdsRequest = z.infer<
   typeof UpdateDiagnosticsThresholdsRequestSchema
 >;
+
+/** Вместо раннера поставить сервер ИИ-модели тем же SSH-слоем (docs/design/model-servers.md). */
+export type ModelServerInstall = {
+  engine: "ollama" | "vllm" | "sglang";
+  model: string;
+  name?: string;
+  exposure: "localhost" | "public";
+  acknowledge_public?: boolean;
+  force?: boolean;
+};

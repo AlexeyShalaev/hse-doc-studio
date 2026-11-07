@@ -18,7 +18,7 @@ import shlex
 from collections.abc import Callable, Coroutine, Mapping
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
-from typing import Any
+from typing import Any, Protocol
 from uuid import uuid4
 
 import structlog
@@ -105,6 +105,8 @@ class SshSession:
     job: InstallJob | None = None
     # Установка по сохранённым данным: после отказа сессия не нужна, повторить можно новым запуском.
     one_shot: bool = False
+    # Что устанавливать; пусто значит раннер (поведение по умолчанию).
+    payload: SshPayload | None = None
 
     def wipe(self) -> None:
         self.auth = None
@@ -141,6 +143,45 @@ class SshSessionStore:
         now = self._clock()
         for sid in [i for i, s in self._items.items() if now - s.touched_at > SESSION_TTL]:
             self.remove(sid)
+
+
+@dataclass(slots=True)
+class SshStepContext:
+    """Всё, что нужно шагам полезной нагрузки после входа: сеанс, задание, sudo и общие шаги (Docker)."""
+
+    service: SshInstallService
+    actor: Actor
+    session: SshSession
+    job: InstallJob
+    conn: ISshSession
+    studio_url: str
+    install_docker: bool
+    fresh: bool
+    sudo: str = ""
+    sudo_stdin: str = ""
+    state: dict[str, Any] = field(default_factory=dict)
+
+    def step(self, key: str, state: InstallStepState, detail: str = "") -> None:
+        self.service.jobs.set_step(self.job, key, state, detail)
+
+    async def ensure_docker(self) -> None:
+        await self.service.ensure_docker(self)
+
+
+class SshPayload(Protocol):
+    """Что запускать на хосте после входа: подключаемый шаг установки (раннер, сервер ИИ-модели)."""
+
+    steps: tuple[str, ...]
+
+    async def run(self, ctx: SshStepContext) -> None:
+        """Шаги после `connect`. Бросает `InstallError`; секреты в тексте ошибки не допускаются."""
+        ...
+
+    async def on_failure(self, ctx: SshStepContext) -> None: ...
+
+    def secrets(self, ctx: SshStepContext) -> list[str]:
+        """Значения, которые вырезаются из текста ошибки."""
+        ...
 
 
 def _require_admin(actor: Actor) -> str:
@@ -228,6 +269,11 @@ class SshInstallService:
         self._verify_timeout_s = verify_timeout_s
         self._clock = clock
         self._tasks: set[asyncio.Task[None]] = set()
+        self._runner_payload: SshPayload = RunnerSshPayload()
+
+    @property
+    def jobs(self) -> InstallJobStore:
+        return self._jobs
 
     def capability(self, actor: Actor) -> dict[str, bool]:
         _require_admin(actor)
@@ -296,8 +342,16 @@ class SshInstallService:
 
     # ---- 3. install --------------------------------------------------------------------------------------------
 
-    async def install(
-        self, actor: Actor, session_id: str, *, studio_url: str, name: str | None, install_docker: bool
+    async def install(  # noqa: PLR0913
+        self,
+        actor: Actor,
+        session_id: str,
+        *,
+        studio_url: str,
+        name: str | None,
+        install_docker: bool,
+        payload: SshPayload | None = None,
+        job_name: str | None = None,
     ) -> InstallJob:
         actor_id = _require_admin(actor)
         session = self._sessions.get(session_id, actor_id)
@@ -312,8 +366,9 @@ class SshInstallService:
             raise InstallError("plan_blocked", blocked.key)
         if any(p.key == "docker" and p.action == "install_docker" for p in session.plan) and not install_docker:
             raise InstallError("docker_missing")
-        runner_name = self._runner_name(name, session.target)
-        job = self._jobs.create(InstallTarget.ssh, runner_name, actor_id, STEPS)
+        session.payload = payload
+        runner_name = job_name or self._runner_name(name, session.target)
+        job = self._jobs.create(InstallTarget.ssh, runner_name, actor_id, (payload or self._runner_payload).steps)
         session.job = job
         await self._audit_event(
             "runner_install.ssh.start",
@@ -451,8 +506,8 @@ class SshInstallService:
         recon: bool = False,
     ) -> None:
         conn: ISshSession | None = None
-        token_id: str | None = None
-        secret = ""
+        payload = session.payload or self._runner_payload
+        ctx: SshStepContext | None = None
         step = self._jobs.set_step
         try:
             step(job, "connect", InstallStepState.running)
@@ -472,41 +527,62 @@ class SshInstallService:
             )
             await self._save_credentials(actor, session, job)
 
-            step(job, "token", InstallStepState.running)
-            created = await self._registry.create_registration_token(
-                actor, label=f"ssh {job.name}", ttl=TOKEN_TTL, max_uses=1
-            )
-            token_id, secret = created.token.id, created.secret
-            step(job, "token", InstallStepState.done)
-
             sudo, sudo_stdin = self._sudo(session)
-            await self._ensure_docker(conn, session, job, sudo, sudo_stdin, install_docker=install_docker)
-            await self._install_service(conn, session, job, sudo, sudo_stdin, secret, studio_url, fresh=fresh)
-            await self._verify(conn, job)
-            if fresh:
-                step(job, "register", InstallStepState.running)
-                await wait_token_used(
-                    self._registry, actor, token_id, timeout_s=self._register_timeout_s, poll_s=self._poll_s
-                )
-                step(job, "register", InstallStepState.done)
-            else:
-                step(job, "register", InstallStepState.skipped)
-                await self._revoke(actor, token_id)
+            ctx = SshStepContext(
+                self, actor, session, job, conn, studio_url, install_docker, fresh, sudo=sudo, sudo_stdin=sudo_stdin
+            )
+            await payload.run(ctx)
             job.state = InstallJobState.succeeded
             await self._audit_event("runner_install.ssh.succeeded", actor.id or "", session.target, {"job": job.id})
             if session.credential_id and self._credentials is not None:
                 await self._credentials.mark_used(session.credential_id, self._clock(), job.name)
             self._sessions.remove(session.id)
         except (InstallError, SshError) as exc:
-            detail = (exc.detail or "").replace(secret, "***") if secret else (exc.detail or "")
-            await self._fail(actor, session, job, token_id, exc.code, detail)
+            detail = exc.detail or ""
+            for secret in payload.secrets(ctx) if ctx is not None else []:
+                detail = detail.replace(secret, "***") if secret else detail
+            await self._fail(actor, session, job, ctx, exc.code, detail)
         except Exception:
             logger.exception("ssh_install_failed", job=job.id)
-            await self._fail(actor, session, job, token_id, "unexpected", "")
+            await self._fail(actor, session, job, ctx, "unexpected", "")
         finally:
             if conn is not None:
                 with contextlib.suppress(Exception):
                     await conn.close()
+
+    async def ensure_docker(self, ctx: SshStepContext) -> None:
+        """Общий шаг «Docker есть или ставим» для любой полезной нагрузки."""
+        await self._ensure_docker(
+            ctx.conn, ctx.session, ctx.job, ctx.sudo, ctx.sudo_stdin, install_docker=ctx.install_docker
+        )
+
+    async def open_saved(self, actor: Actor, credential_id: str) -> ISshSession:
+        """Соединение по сохранённым данным (SSRF-политика и закреплённый ключ хоста) для управления сервером."""
+        _require_admin(actor)
+        if self._credentials is None:
+            raise RunnerNotFoundError(credential_id)
+        saved = await self._credentials.get(credential_id)
+        auth = await self._credentials.get_auth(credential_id)
+        if saved is None or auth is None:
+            raise RunnerNotFoundError(credential_id)
+        target = SshTarget(saved.host, saved.port, saved.username, saved.sudo)
+        address = await self._authorize(target.host, target.port)
+        try:
+            return await self._connector.connect(address, target, auth, saved.host_key)
+        except SshError as exc:
+            raise InstallError("host_key_changed" if exc.code == "host_key_mismatch" else exc.code, exc.detail) from exc
+
+    async def saved_sudo(self, credential_id: str) -> tuple[str, str]:
+        """Префикс sudo и первая строка stdin для сохранённого доступа (пароль sudo идёт только через stdin)."""
+        if self._credentials is None:
+            return "", ""
+        saved = await self._credentials.get(credential_id)
+        auth = await self._credentials.get_auth(credential_id)
+        if saved is None or not saved.sudo or auth is None:
+            return "", ""
+        if auth.kind is SshAuthKind.password:
+            return "sudo -S -p '' ", auth.secret.reveal() + "\n"
+        return "sudo -n ", ""
 
     async def _ensure_docker(  # noqa: PLR0913
         self,
@@ -608,8 +684,8 @@ class SshInstallService:
             with contextlib.suppress(RunnerNotFoundError):
                 await self._registry.revoke_registration_token(actor, token_id)
 
-    async def _fail(
-        self, actor: Actor, session: SshSession, job: InstallJob, token_id: str | None, code: str, detail: str
+    async def _fail(  # noqa: PLR0913
+        self, actor: Actor, session: SshSession, job: InstallJob, ctx: SshStepContext | None, code: str, detail: str
     ) -> None:
         for step in job.steps:
             if step.state is InstallStepState.running:
@@ -618,9 +694,60 @@ class SshInstallService:
         job.state = InstallJobState.failed
         job.error_code = code
         job.error_detail = detail[:400]
-        await self._revoke(actor, token_id)
+        payload = session.payload or self._runner_payload
+        if ctx is not None:
+            with contextlib.suppress(Exception):
+                await payload.on_failure(ctx)
         await self._audit_event(
             "runner_install.ssh.failed", actor.id or "", session.target, {"job": job.id, "code": code}
         )
         if session.one_shot:
             self._sessions.remove(session.id)
+
+
+class RunnerSshPayload:
+    """Установка раннера: токен регистрации, Docker, служба, проверка, ожидание регистрации."""
+
+    steps: tuple[str, ...] = STEPS
+
+    def secrets(self, ctx: SshStepContext) -> list[str]:
+        return [ctx.state.get("secret", "")]
+
+    async def run(self, ctx: SshStepContext) -> None:
+        service = ctx.service
+        step = ctx.step
+        step("token", InstallStepState.running)
+        created = await service._registry.create_registration_token(  # noqa: SLF001 — один модуль
+            ctx.actor, label=f"ssh {ctx.job.name}", ttl=TOKEN_TTL, max_uses=1
+        )
+        ctx.state["token_id"], ctx.state["secret"] = created.token.id, created.secret
+        step("token", InstallStepState.done)
+
+        await ctx.ensure_docker()
+        await service._install_service(  # noqa: SLF001
+            ctx.conn,
+            ctx.session,
+            ctx.job,
+            ctx.sudo,
+            ctx.sudo_stdin,
+            created.secret,
+            ctx.studio_url,
+            fresh=ctx.fresh,
+        )
+        await service._verify(ctx.conn, ctx.job)  # noqa: SLF001
+        if ctx.fresh:
+            step("register", InstallStepState.running)
+            await wait_token_used(
+                service._registry,  # noqa: SLF001
+                ctx.actor,
+                created.token.id,
+                timeout_s=service._register_timeout_s,  # noqa: SLF001
+                poll_s=service._poll_s,  # noqa: SLF001
+            )
+            step("register", InstallStepState.done)
+        else:
+            step("register", InstallStepState.skipped)
+            await service._revoke(ctx.actor, created.token.id)  # noqa: SLF001
+
+    async def on_failure(self, ctx: SshStepContext) -> None:
+        await ctx.service._revoke(ctx.actor, ctx.state.get("token_id"))  # noqa: SLF001

@@ -11,7 +11,7 @@ tags:
 
 <p class="hds-lede">The admin console (`/admin`, "Model servers") installs a model server, runs it in a sibling Docker container and registers a shared AI provider that everyone can use.</p>
 
-The page is available to the instance administrator only, in shared-server mode. For now the `/api/admin/model-servers` API is available; the admin page comes in a following step.
+The page is available to the instance administrator only, in shared-server mode.
 
 ## Engines
 
@@ -44,13 +44,30 @@ A server can then be stopped, started, inspected through the container log and r
 
 - The container is not published: in the shared Docker network only the Studio sees it, without the network the port is open on the host's `127.0.0.1` only.
 - vLLM and SGLang run with an API key. The key is generated (32 bytes), stored encrypted as the shared provider's key, and never appears in API responses or the audit log.
+- The Hugging Face token (needed for private and gated models in vLLM and SGLang) is stored only encrypted under the Studio secrets key. The UI and API show only that it is set: you can replace or delete it but never read it back. It never reaches responses, logs or the audit trail (the audit records only the `model_server.hf_token_set` / `model_server.hf_token_clear` fact).
 - Container secrets (API key, Hugging Face token) are passed through a temporary `0600` file that is deleted right after the start, not through process arguments.
 - `model_server.install`, `.start`, `.stop`, `.remove` go to the audit log: engine, model, target, no secrets.
 - The install needs the Studio to reach the host `docker.sock`. The socket equals root on the host: give it only to an installation you trust.
 
+## Installing on another machine over SSH
+
+Choose "On another machine over SSH" in the form. Login, host key fingerprint confirmation, SSRF protection, rate limiting, one-time or encrypted saved credentials and step progress are shared with [runner install](runners.md): there is one SSH layer, and models have no SSH of their own.
+
+1. The Studio fetches the host key; you compare the fingerprint with what the machine itself shows.
+2. The Studio logs in with the pinned key, detects the system and Docker (and installs Docker if you allowed it).
+3. Steps: GPU (`nvidia-smi`; vLLM and SGLang need NVIDIA), engine container, model, provider, the "model responds" check.
+
+**Access to the server.** By default the container is published on the remote machine's `127.0.0.1` only: it is not visible from the internet or neighbouring networks. The Studio cannot reach such a server, so no AI provider is **registered** for it; use the server on the machine itself. "From the network (with an API key)" opens the port on all interfaces, needs an explicit confirmation, generates an API key (stored encrypted with the provider) and registers a shared AI provider in the Studio. This mode is unavailable for Ollama, which has no API key. Do not open the port to the internet without need; restrict it to the Studio's address with a firewall.
+
+**State in the database.** Servers (local and over SSH) are written to the `model_servers` table at every step, so install progress and the list survive a Studio restart. An install cut off by a restart shows as "Failed: interrupted by a restart". The record has no secrets.
+
+**Managing later.** Start, stop, log and removal of an SSH server work if "Save access encrypted" was ticked at install time. Without saved access the record is visible but the server cannot be managed from here: removal deletes the record and the provider, and the container stays on the machine (remove it yourself: `docker rm -f hse-ms-<id>`).
+
+Secrets on the remote machine: the API key and the Hugging Face token travel over stdin into a temporary `0600` file that is deleted right after `docker run`. They are absent from command arguments, the audit log and API responses. Audit: `runner_install.ssh.*` (the shared layer) and `model_server.*`.
+
 ## Kubernetes
 
-**Installing next to the Studio is not supported in Kubernetes.** It is off in the Helm chart: `modelServers.local.enabled: false` (`HSE_STUDIO__MODEL_SERVERS__LOCAL_ENABLED=false`). The reason: the install starts sibling containers through the node's docker.sock, which the api pod does not get (the socket equals root on the node and breaks Pod Security restricted, so the chart does not mount it). The page hides the "on this machine" option and the API answers `409 model_server_local_install_disabled`. You can turn it on only by editing the chart by hand (a hostPath mount of the socket into the api pod on a dedicated node), at your own risk. For a cluster use an install on a separate machine over SSH, or an external model server added as an ordinary AI provider.
+**Installing next to the Studio is not supported in Kubernetes.** It is off in the Helm chart: `modelServers.local.enabled: false` (`HSE_STUDIO__MODEL_SERVERS__LOCAL_ENABLED=false`). The reason: the install starts sibling containers through the node's docker.sock, which the api pod does not get (the socket equals root on the node and breaks Pod Security restricted, so the chart does not mount it). The page makes the "on the Studio machine" option unavailable and the API answers `409 model_server_local_install_disabled`. You can turn it on only by editing the chart by hand (a hostPath mount of the socket into the api pod on a dedicated node), at your own risk. For a cluster use an install on a separate machine over SSH, or an external model server added as an ordinary AI provider.
 
 ## Settings
 

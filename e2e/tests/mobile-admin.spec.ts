@@ -27,7 +27,7 @@ const adminPassword = (): string => {
 const SETTINGS = ["appearance", "account", "organizations", "usage", "profile", "providers", "mcp", "runners", "git-access", "about"];
 const ADMIN = [
   "", "users", "orgs", "runners", "quotas", "services", "storage", "backups", "updates", "data",
-  "diagnostics", "instance", "settings", "signing", "ai-providers", "mcp", "audit",
+  "diagnostics", "instance", "settings", "signing", "ai-providers", "model-servers", "mcp", "audit",
 ];
 
 const loginAdmin = (page: Page): Promise<void> => loginOnPhone(page, ADMIN_EMAIL, adminPassword());
@@ -109,7 +109,7 @@ for (const lang of LANGS) {
 
         await trigger.tap();
         await expect(page.getByRole("dialog")).toHaveAttribute("data-form", "sheet");
-        await expect(page.getByTestId("admin-menu").getByRole("link")).toHaveCount(18);
+        await expect(page.getByTestId("admin-menu").getByRole("link")).toHaveCount(19);
         await shot(page, L, name("33-admin-menu"));
         await page.getByTestId("admin-nav-runners").tap();
         await expect(page).toHaveURL(/\/admin\/runners/);

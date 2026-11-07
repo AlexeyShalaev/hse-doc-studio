@@ -29,6 +29,7 @@ from hse_doc_studio.api.schemas.runner_install import (
 from hse_doc_studio.core.access.context import require_actor
 from hse_doc_studio.core.git_sync.secret import Secret
 from hse_doc_studio.core.jobs.errors import RunnerNotFoundError
+from hse_doc_studio.core.model_servers import Engine, Exposure
 from hse_doc_studio.core.rate_limit import SSH_ATTEMPT, SSH_ATTEMPT_HOST
 from hse_doc_studio.core.runner_install import (
     Capability,
@@ -46,6 +47,7 @@ from hse_doc_studio.core.runner_install import (
     SshTarget,
     UnavailableReason,
 )
+from hse_doc_studio.use_cases.admin.model_servers_ssh import ModelServerSshInstaller
 from hse_doc_studio.use_cases.runner_install import (
     FingerprintMismatchError,
     InstallBusyError,
@@ -271,13 +273,29 @@ async def ssh_confirm(
 @ssh_router.post("/{session_id}/install", response_model=InstallJobInfo, status_code=status.HTTP_202_ACCEPTED)
 async def ssh_install(session_id: str, body: SshInstallRequest, request: Request, response: Response) -> InstallJobInfo:
     response.headers.update(_NO_STORE)
+    actor = require_actor()
+    payload = None
+    if body.model_server is not None:
+        installer = await request.state.dishka_container.get(ModelServerSshInstaller)
+        spec = body.model_server
+        payload = installer.payload(
+            actor,
+            engine=Engine(spec.engine),
+            model=spec.model,
+            name=spec.name,
+            exposure=Exposure(spec.exposure),
+            acknowledge_public=spec.acknowledge_public,
+            force=spec.force,
+        )
     try:
         job = await (await _ssh(request)).install(
-            require_actor(),
+            actor,
             session_id,
             studio_url=studio_base_url(request),
             name=body.name or None,
             install_docker=body.install_docker,
+            payload=payload,
+            job_name=payload.name if payload is not None else None,
         )
     except (SshSessionNotFoundError, InstallBusyError, InstallError) as exc:
         raise _ssh_failure(exc) from exc

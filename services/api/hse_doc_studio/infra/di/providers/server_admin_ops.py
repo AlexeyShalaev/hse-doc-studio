@@ -22,6 +22,8 @@ from hse_doc_studio.core.model_servers import (
     IHostResources,
     IModelProviderRegistry,
     IModelServerClient,
+    IModelServerStore,
+    IRemoteRuntimes,
 )
 from hse_doc_studio.core.repositories import IAIProviderRepository, IInstanceAiProviderDirectory
 from hse_doc_studio.core.runner_install import (
@@ -35,6 +37,7 @@ from hse_doc_studio.core.storage.usage import IStorageUsageReader
 from hse_doc_studio.core.uow import IUnitOfWork
 from hse_doc_studio.infra.db.repositories.ai_providers import PostgresAIProviderRepository
 from hse_doc_studio.infra.db.repositories.jobs_admin import SqlAdminProjectPicker, SqlJobAdminReader
+from hse_doc_studio.infra.db.repositories.model_servers import PostgresModelServerStore
 from hse_doc_studio.infra.db.repositories.runner_ssh_credentials import PostgresSshCredentialRepository
 from hse_doc_studio.infra.db.repositories.runners import SqlRunnerAdminReader
 from hse_doc_studio.infra.db.repositories.signing_key_policy import SqlServerKeyCounter
@@ -46,10 +49,17 @@ from hse_doc_studio.infra.model_servers.client import HttpModelServerClient
 from hse_doc_studio.infra.model_servers.docker_runtime import DockerContainerRuntime
 from hse_doc_studio.infra.model_servers.host_resources import LocalHostResources
 from hse_doc_studio.infra.model_servers.provider_registry import ContainerProviderRegistry
+from hse_doc_studio.infra.model_servers.ssh_runtime import SshRuntimeFactory, build_remote
 from hse_doc_studio.infra.runner_install.docker_host import DockerLocalHost
 from hse_doc_studio.infra.runner_install.kube_host import KubeLocalHost
 from hse_doc_studio.infra.runner_install.ssh_connector import AsyncSshConnector
-from hse_doc_studio.use_cases.admin.model_servers import ModelServerService, ModelServerSettings, ModelServersUC
+from hse_doc_studio.use_cases.admin.model_servers import (
+    HfTokenVault,
+    ModelServerService,
+    ModelServerSettings,
+    ModelServersUC,
+)
+from hse_doc_studio.use_cases.admin.model_servers_ssh import ModelServerSshInstaller
 from hse_doc_studio.use_cases.admin.ops_ai_providers import (
     CheckInstanceAiProviderUC,
     CreateInstanceAiProviderUC,
@@ -294,13 +304,12 @@ class ServerAdminOpsProvider(Provider):
         hardware: IHardwareProbe,
         resources: IHostResources,
         registry: IModelProviderRegistry,
+        vault: HfTokenVault,
+        store: IModelServerStore,
+        remote: IRemoteRuntimes,
     ) -> ModelServerService:
         cfg = settings.model_servers
-        images = {
-            Engine.ollama: cfg.ollama_image,
-            Engine.vllm: cfg.vllm_image,
-            Engine.sglang: cfg.sglang_image,
-        }
+        images = self._engine_images()
         return ModelServerService(
             runtime,
             client,
@@ -314,11 +323,47 @@ class ServerAdminOpsProvider(Provider):
                 startup_timeout_s=cfg.startup_timeout_s,
                 ready_timeout_s=cfg.ready_timeout_s,
             ),
+            vault,
+            store,
+            remote,
+        )
+
+    @staticmethod
+    def _engine_images() -> dict[Engine, str]:
+        cfg = settings.model_servers
+        found = {Engine.ollama: cfg.ollama_image, Engine.vllm: cfg.vllm_image, Engine.sglang: cfg.sglang_image}
+        return {e: i for e, i in found.items() if i}
+
+    @provide
+    def get_model_server_store(self, sessions: SessionProvider) -> IModelServerStore:
+        return PostgresModelServerStore(sessions)
+
+    @provide
+    def get_remote_runtimes(self, ssh: SshInstallService) -> IRemoteRuntimes:
+        return SshRuntimeFactory(ssh)
+
+    @provide
+    def get_model_server_ssh_installer(
+        self, store: IModelServerStore, registry: IModelProviderRegistry, vault: HfTokenVault
+    ) -> ModelServerSshInstaller:
+        return ModelServerSshInstaller(
+            store,
+            registry,
+            vault,
+            build_remote,
+            images=self._engine_images(),
+            ready_timeout_s=settings.model_servers.ready_timeout_s,
         )
 
     @provide
-    def get_model_servers_uc(self, service: ModelServerService, audit: IAuditLog) -> ModelServersUC:
-        return ModelServersUC(service, audit)
+    def get_hf_token_vault(self, repo: IInstanceSettingsRepository, cipher: ISecretCipher) -> HfTokenVault:
+        return HfTokenVault(repo, cipher)
+
+    @provide
+    def get_model_servers_uc(
+        self, service: ModelServerService, audit: IAuditLog, vault: HfTokenVault, uow: IUnitOfWork
+    ) -> ModelServersUC:
+        return ModelServersUC(service, audit, vault, uow)
 
     @provide
     def get_install_job_store(self) -> InstallJobStore:

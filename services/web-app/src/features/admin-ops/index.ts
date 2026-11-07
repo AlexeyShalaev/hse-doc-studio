@@ -1,4 +1,5 @@
 export { RunnersPage } from "./ui/RunnersPage";
+export { SshInstallDialog } from "./ui/SshInstallDialog";
 export { Quotas as QuotasPage } from "./ui/Quotas";
 export { Services as ServicesPage } from "./ui/Services";
 export { Storage as StoragePage } from "./ui/Storage";

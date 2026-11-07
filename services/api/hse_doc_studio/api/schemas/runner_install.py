@@ -126,9 +126,22 @@ class SshPlanResponse(StrictModel):
     plan: list[PlanStepInfo]
 
 
+class ModelServerInstall(StrictModel):
+    """Вместо раннера поставить сервер ИИ-модели (docs/design/model-servers.md): слой SSH тот же."""
+
+    engine: Literal["ollama", "vllm", "sglang"]
+    model: str = Field(min_length=1, max_length=200)
+    name: str = Field(default="", max_length=64)
+    # localhost: слушает только loopback машины, провайдер не регистрируется; public: наружу, нужен ключ API.
+    exposure: Literal["localhost", "public"] = "localhost"
+    acknowledge_public: bool = False
+    force: bool = False
+
+
 class SshInstallRequest(StrictModel):
     name: str = Field(default="", max_length=40)
     install_docker: bool = False
+    model_server: ModelServerInstall | None = None
 
 
 class SavedCredentialInfo(StrictModel):
