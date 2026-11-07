@@ -305,4 +305,4 @@ async def test__call_tool__clone_cloud_project__server_not_connected__explains(s
         result = await client.call_tool("clone_cloud_project", {"url": url, "wait_s": 0})
 
     assert result.is_error is True
-    assert "studio.example.org" in result.content[0].text  # type: ignore[union-attr]
+    assert result.content[0].text.startswith(("Сервер studio.example.org не подключён", "The server studio"))  # type: ignore[union-attr]

@@ -275,5 +275,5 @@ async def test__tool__not_connected__explains_how_to_connect() -> None:
     result = await tool.handle(_ctx(), {"url": f"https://studio.example.org/projects/{ANNA}/"})
 
     assert result.is_error is True
-    assert "studio.example.org" in result.text
+    assert result.text.startswith("Сервер studio.example.org не подключён")
     assert "Подключиться к серверу" in result.text or "Connect to a server" in result.text
