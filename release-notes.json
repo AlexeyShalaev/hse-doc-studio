@@ -1,6 +1,28 @@
 {
   "releases": [
     {
+      "version": "0.12.0",
+      "date": "2026-11-07",
+      "notes": [
+        {
+          "ru": "Установка раннера одной командой: при создании токена показываются готовая строка docker run и скрипт, который ставит раннер как службу (systemd на Linux, launchd на macOS). Скрипт без секретов, умеет проверку, статус и удаление.",
+          "en": "Installing a runner with a single command: creating a token now shows a ready docker run line and a script that installs the runner as a service (systemd on Linux, launchd on macOS). The script contains no secrets and supports a dry run, status and uninstall."
+        },
+        {
+          "ru": "Установка раннера на той же машине, где работает Студия, из админки: в Docker контейнером, в Kubernetes отдельным Deployment с ограниченными правами (в Helm выключено по умолчанию, значение runner.installFromUi.enabled).",
+          "en": "Installing a runner on the same machine as Studio from the admin area: as a container in Docker, or as a separate restricted Deployment in Kubernetes (off by default in Helm, value runner.installFromUi.enabled)."
+        },
+        {
+          "ru": "Установка раннера на другие машины по SSH из админки: подтверждение отпечатка хоста, пароль или ключ с passphrase, план и ход установки по шагам. Учётные данные по умолчанию одноразовые; по желанию их можно сохранить зашифрованно для обновления и переустановки. Внутренние сети закрыты, пока адрес не добавлен в HSE_STUDIO__RUNNER_INSTALL__SSH_ALLOWLIST.",
+          "en": "Installing a runner on other machines over SSH from the admin area: host key fingerprint confirmation, password or key with passphrase, a plan and step-by-step progress. Credentials are one-time by default; you can optionally save them encrypted for updates and reinstalls. Internal networks stay blocked until the address is added to HSE_STUDIO__RUNNER_INSTALL__SSH_ALLOWLIST."
+        },
+        {
+          "ru": "Для администраторов: сервер сам применит новую миграцию при первом запуске (ri_01_runner_ssh_credentials), вручную ничего делать не нужно. SSH-установка требует asyncssh (входит в серверную сборку).",
+          "en": "For administrators: the server applies the new migration on first start (ri_01_runner_ssh_credentials), no manual steps are needed. SSH installation requires asyncssh (included in the server build)."
+        }
+      ]
+    },
+    {
       "version": "0.11.0",
       "date": "2026-11-06",
       "notes": [
