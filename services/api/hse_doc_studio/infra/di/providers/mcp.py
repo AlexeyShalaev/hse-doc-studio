@@ -7,12 +7,12 @@ from dishka import AsyncContainer, Provider, Scope, provide
 from hse_doc_studio.api.config import settings
 from hse_doc_studio.core.access.checker import IProjectAccessChecker
 from hse_doc_studio.core.identity.protocols import IAuditLog, IAuditReader, IInstanceSettingsRepository
-from hse_doc_studio.core.mcp.protocols import IMcpCallJournal, IMcpSettingsStore
+from hse_doc_studio.core.mcp.protocols import IMcpCallJournal, IMcpChangeAudit, IMcpSettingsStore
 from hse_doc_studio.core.mode import StudioMode
 from hse_doc_studio.core.repositories import ISettingsRepository
 from hse_doc_studio.core.uow import IUnitOfWork
-from hse_doc_studio.infra.mcp.local import LocalMcpSettingsStore, MemoryMcpCallJournal
-from hse_doc_studio.infra.mcp.server import AuditMcpCallJournal, ServerMcpSettingsStore
+from hse_doc_studio.infra.mcp.local import LocalMcpSettingsStore, LogMcpChangeAudit, MemoryMcpCallJournal
+from hse_doc_studio.infra.mcp.server import AuditMcpCallJournal, AuditMcpChangeAudit, ServerMcpSettingsStore
 from hse_doc_studio.use_cases.chat._registry import ToolRegistry
 from hse_doc_studio.use_cases.compile.get_archived_pdf import GetArchivedPdfUC
 from hse_doc_studio.use_cases.files.get_file import GetFileUC
@@ -37,6 +37,10 @@ class McpProvider(Provider):
     @provide(scope=Scope.APP)
     def get_mcp_call_journal(self) -> IMcpCallJournal:
         return MemoryMcpCallJournal()
+
+    @provide(scope=Scope.APP)
+    def get_mcp_change_audit(self) -> IMcpChangeAudit:
+        return LogMcpChangeAudit()
 
     @provide
     def get_mcp_catalog(self, registry: ToolRegistry, container: AsyncContainer) -> McpCatalog:
@@ -92,6 +96,10 @@ class ServerMcpProvider(Provider):
         self, repo: IInstanceSettingsRepository, audit: IAuditLog, uow: IUnitOfWork
     ) -> IMcpSettingsStore:
         return ServerMcpSettingsStore(repo, audit, uow)
+
+    @provide(override=True)
+    def get_mcp_change_audit(self, audit: IAuditLog, uow: IUnitOfWork) -> IMcpChangeAudit:
+        return AuditMcpChangeAudit(audit, uow)
 
     @provide(override=True)
     def get_mcp_call_journal(self, audit: IAuditLog, reader: IAuditReader, uow: IUnitOfWork) -> IMcpCallJournal:

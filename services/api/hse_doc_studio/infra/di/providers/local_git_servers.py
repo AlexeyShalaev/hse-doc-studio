@@ -38,7 +38,12 @@ from hse_doc_studio.use_cases.devices.local_builds import LocalBuildsUC
 from hse_doc_studio.use_cases.devices.local_presence import LocalPresenceService, PresenceBoard
 from hse_doc_studio.use_cases.documents.get_document import GetDocumentUC
 from hse_doc_studio.use_cases.git_sync.clone_project import CloneProjectUC, GetCloneDefaultsUC
-from hse_doc_studio.use_cases.git_sync.cloud_projects import CloudOpens, ListCloudProjectsUC, OpenCloudProjectUC
+from hse_doc_studio.use_cases.git_sync.cloud_projects import (
+    CloneCloudProjectUC,
+    CloudOpens,
+    ListCloudProjectsUC,
+    OpenCloudProjectUC,
+)
 from hse_doc_studio.use_cases.git_sync.pdf_scheduler import PdfPublishScheduler
 from hse_doc_studio.use_cases.git_sync.publish_pdf import PublishPdfUC
 from hse_doc_studio.use_cases.git_sync.status import GitStatusBuilder
@@ -122,6 +127,12 @@ class LocalGitServersProvider(Provider):
         opens: CloudOpens,
     ) -> OpenCloudProjectUC:
         return OpenCloudProjectUC(servers, list_projects, clone, defaults, operations, opens)
+
+    @provide(scope=Scope.REQUEST)
+    def get_clone_cloud_project_uc(
+        self, servers: StudioServersService, opener: OpenCloudProjectUC, operations: IGitOperationRegistry
+    ) -> CloneCloudProjectUC:
+        return CloneCloudProjectUC(servers, opener, operations)
 
     @provide
     def get_pdf_scheduler(self, publish: PublishPdfUC) -> PdfPublishScheduler:

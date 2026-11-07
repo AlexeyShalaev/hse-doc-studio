@@ -7,6 +7,7 @@ from pathlib import Path
 
 import pytest_asyncio
 from dishka import AsyncContainer
+from hse_doc_studio.core.access.actions import Action
 from hse_doc_studio.core.mcp.entities import McpToolGroup
 from hse_doc_studio.use_cases.chat._registry import ToolRegistry
 from hse_doc_studio.use_cases.chat.tool_access import TOOL_ACCESS
@@ -26,12 +27,13 @@ async def request_container(tmp_path: Path) -> AsyncIterator[AsyncContainer]:
     await root.close()
 
 
-async def test__catalog__server_mode__has_every_rule(request_container: AsyncContainer) -> None:
+async def test__catalog__server_mode__has_every_rule_but_local_only(request_container: AsyncContainer) -> None:
     registry = await request_container.get(ToolRegistry)
 
     catalog = McpCatalog(registry, request_container, server_mode=True)
 
-    assert [e.meta.name for e in catalog.all()] == [r.name for r in MCP_TOOL_RULES]
+    assert [e.meta.name for e in catalog.all()] == [r.name for r in MCP_TOOL_RULES if not r.meta.local_only]
+    assert catalog.get("clone_cloud_project") is None
 
 
 async def test__catalog__local_mode__drops_server_only(request_container: AsyncContainer) -> None:
@@ -41,6 +43,28 @@ async def test__catalog__local_mode__drops_server_only(request_container: AsyncC
 
     assert McpToolGroup.review not in groups
     assert McpToolGroup.admin not in groups
+    assert catalog.get("clone_cloud_project") is not None
+
+
+async def test__catalog__local_mode__create_project_requires_folder(request_container: AsyncContainer) -> None:
+    catalog = McpCatalog(await request_container.get(ToolRegistry), request_container, server_mode=False)
+
+    entry = catalog.get("create_project")
+
+    assert entry is not None
+    assert "folder" in entry.spec.parameters["required"]
+    assert "ask_user" not in entry.spec.description
+
+
+async def test__catalog__set_project_people__needs_project_settings(request_container: AsyncContainer) -> None:
+    catalog = McpCatalog(await request_container.get(ToolRegistry), request_container, server_mode=True)
+
+    entry = catalog.get("set_project_people")
+
+    assert entry is not None
+    assert entry.rule.action is Action.PROJECT_SETTINGS
+    assert entry.rule.guards_write
+    assert entry.spec.parameters["required"] == ["project_id"]
 
 
 async def test__catalog__kinds_match_handlers(request_container: AsyncContainer) -> None:
@@ -78,3 +102,7 @@ def test__rules__names_are_unique_and_every_class_is_ruled() -> None:
 
 def test__rules__admin_tools__are_server_only() -> None:
     assert all(r.meta.server_only for r in MCP_TOOL_RULES if r.meta.group is McpToolGroup.admin)
+
+
+def test__rules__no_tool_is_both_server_and_local_only() -> None:
+    assert not [r.name for r in MCP_TOOL_RULES if r.meta.server_only and r.meta.local_only]

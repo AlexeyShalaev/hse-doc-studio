@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections.abc import Mapping
 from typing import Protocol, TypeVar
 
 from hse_doc_studio.core.mcp.entities import McpCallQuery, McpCallRecord, McpSettings
@@ -29,3 +30,12 @@ class IDependencyResolver(Protocol):
     """
 
     async def get(self, dependency_type: type[T], component: str | None = ...) -> T: ...
+
+
+class IMcpChangeAudit(Protocol):
+    """Изменения через тулы MCP с подробностями: в облаке событие аудита, локально строка лога без значений.
+
+    Сам вызов и так попадает в журнал (`IMcpCallJournal`), но там только имена аргументов; здесь что изменилось.
+    """
+
+    async def record(self, action: str, *, target: str | None, details: Mapping[str, object]) -> None: ...

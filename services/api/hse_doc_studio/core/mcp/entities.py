@@ -37,6 +37,8 @@ class McpToolMeta:
     dangerous: bool = False
     # Есть только на сервере (ревью, админка).
     server_only: bool = False
+    # Есть только в локальной Студии (клонирование проекта из облака).
+    local_only: bool = False
     admin: bool = False
 
     @property

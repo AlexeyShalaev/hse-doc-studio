@@ -3,9 +3,14 @@
 from __future__ import annotations
 
 from collections import deque
+from collections.abc import Mapping
+
+import structlog
 
 from hse_doc_studio.core.mcp.entities import McpCallQuery, McpCallRecord, McpSettings
 from hse_doc_studio.core.repositories import ISettingsRepository
+
+logger = structlog.get_logger(__name__)
 
 SETTINGS_KEY = "mcp"
 JOURNAL_SIZE = 500
@@ -42,3 +47,11 @@ class MemoryMcpCallJournal:
             and (query.outcome is None or r.outcome is query.outcome)
         ]
         return found[: query.limit]
+
+
+class LogMcpChangeAudit:
+    """Локально аудита нет: вызов уже в журнале, а здесь строка лога с именами полей, без значений (там ФИО)."""
+
+    async def record(self, action: str, *, target: str | None, details: Mapping[str, object]) -> None:
+        fields = details.get("fields")
+        logger.info("mcp_change", action=action, target=target, fields=fields if isinstance(fields, list) else None)

@@ -2,7 +2,10 @@
 
 from __future__ import annotations
 
+import json
+import re
 from typing import Any
+from uuid import UUID
 
 import pytest
 
@@ -181,3 +184,95 @@ async def test__admin_settings__change__is_audited(stand: Stand) -> None:
     events = stand.admin().get("/api/admin/audit", params={"action": "settings.mcp_update"}).json()
 
     assert events["items"][0]["action"] == "settings.mcp_update"
+
+
+_TEMPLATE = {"pack_id": "hse-cs-se", "template_id": "vkr", "version": "2026.1"}
+
+
+def _created_id(result: dict[str, Any]) -> str:
+    assert result["isError"] is False, result
+    match = re.search(r"id ([0-9a-f-]{36})", result["content"][0]["text"])
+    assert match is not None, result
+    return match.group(1)
+
+
+async def test__tools_list__server__create_project_without_folder_and_no_clone(stand: Stand) -> None:
+    _enable(stand)
+    person = await stand.person("zoya")
+    headers = _token(stand, person.email, ["mcp"])
+
+    tools = {t["name"]: t for t in _rpc(stand, headers, "tools/list").json()["result"]["tools"]}
+
+    schema = tools["create_project"]["inputSchema"]
+    assert "folder" not in schema["properties"]
+    assert "folder" not in schema["required"]
+    assert "ask_user" not in tools["create_project"]["description"]
+    assert "clone_cloud_project" not in tools
+    assert "set_project_people" in tools
+
+
+@pytest.mark.parametrize("folder", [None, "", " ", "/home/anna/vkr"])
+async def test__call_tool__create_project__server_picks_the_folder(stand: Stand, folder: str | None) -> None:
+    _enable(stand)
+    person = await stand.person("yan")
+    headers = _token(stand, person.email, ["mcp"])
+    args: dict[str, Any] = {"name": "ВКР через MCP", **_TEMPLATE}
+    if folder is not None:
+        args["folder"] = folder
+
+    project_id = _created_id(_call(stand, headers, "create_project", args))
+
+    found = _call(stand, headers, "get_project", {"project_id": project_id})
+    assert found["isError"] is False, found
+    assert "ВКР через MCP" in found["content"][0]["text"]
+
+
+async def test__call_tool__set_project_people__owner_changes_and_audit_records(stand: Stand) -> None:
+    _enable(stand)
+    owner = await stand.person("xenia")
+    headers = _token(stand, owner.email, ["mcp"])
+    project_id = _created_id(_call(stand, headers, "create_project", {"name": "Курсовая", **_TEMPLATE}))
+
+    result = _call(
+        stand,
+        headers,
+        "set_project_people",
+        {
+            "project_id": project_id,
+            "supervisor": {"name": "Петров П. П.", "title": "доцент", "degree": "канд. техн. наук"},
+            "authors": [{"name": "Ксения Иванова", "group": "БПИ221"}],
+        },
+    )
+
+    assert result["isError"] is False, result
+    card = json.loads(_call(stand, headers, "get_project", {"project_id": project_id})["content"][0]["text"])
+    assert card["supervisor"]["degree"] == "канд. техн. наук"
+    assert [(a["name"], a["group"]) for a in card["authors"]] == [("Ксения Иванова", "БПИ221")]
+    events = stand.admin().get("/api/admin/audit", params={"action": "project.people_update"}).json()["items"]
+    (event,) = [e for e in events if e["target"] == project_id]
+    assert event["actor_id"] == owner.id
+    assert event["details"]["fields"] == ["supervisor", "authors"]
+    assert event["details"]["via"] == "mcp"
+
+
+async def test__call_tool__set_project_people__reader__forbidden(stand: Stand) -> None:
+    from hse_doc_studio.infra.db.orm.projects import ProjectMemberRow  # noqa: PLC0415
+
+    _enable(stand)
+    owner = await stand.person("walter")
+    reader = await stand.person("wanda")
+    project_id = _created_id(
+        _call(stand, _token(stand, owner.email, ["mcp"]), "create_project", {"name": "Общий", **_TEMPLATE})
+    )
+    async with stand.sessions.use() as db:
+        db.add(
+            ProjectMemberRow(project_id=UUID(project_id), principal_kind="user", principal_id=reader.id, role="reader")
+        )
+    headers = _token(stand, reader.email, ["mcp"])
+
+    result = _call(stand, headers, "set_project_people", {"project_id": project_id, "supervisor": {"name": "Чужой"}})
+
+    assert result["isError"] is True
+    assert result["_meta"]["code"] == "forbidden"
+    events = stand.admin().get("/api/admin/audit", params={"action": "project.people_update"}).json()["items"]
+    assert not [e for e in events if e["target"] == project_id]
