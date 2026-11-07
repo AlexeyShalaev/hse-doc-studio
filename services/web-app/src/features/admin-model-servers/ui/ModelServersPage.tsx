@@ -27,12 +27,8 @@ export const ModelServersPage = () => {
         </Section>
       )}
       {caps.data && <HardwarePanel caps={caps.data} />}
-      {caps.data?.local_enabled && caps.data.docker_available && (
-        <InstallPanel caps={caps.data} />
-      )}
-      {caps.data?.local_enabled && caps.data.docker_available && (
-        <HfTokenPanel />
-      )}
+      {caps.data && <InstallPanel caps={caps.data} />}
+      {caps.data && <HfTokenPanel />}
       <Section title={t("servers.title")} testId="ms-servers">
         {(servers.data ?? []).length === 0 ? (
           <p className="dim" style={{ margin: 0, padding: "0.75rem 1rem" }}>

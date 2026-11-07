@@ -8,12 +8,14 @@ from __future__ import annotations
 
 import re
 import shlex
-from collections.abc import AsyncIterator, Mapping
+from collections.abc import AsyncIterator, Awaitable, Callable, Mapping
 from dataclasses import dataclass, field
+from datetime import datetime
 from enum import StrEnum
 from typing import Protocol
 from uuid import UUID
 
+from hse_doc_studio.core.access.entities import Actor
 from hse_doc_studio.core.entities import HardwareInfo
 from hse_doc_studio.core.enums import AIProviderType, GpuVendor
 
@@ -57,6 +59,15 @@ class StepState(StrEnum):
     running = "running"
     done = "done"
     failed = "failed"
+    skipped = "skipped"
+
+
+class Exposure(StrEnum):
+    """Кто видит эндпоинт: сеть Docker рядом со Студией, только loopback хоста или все (нужен ключ API)."""
+
+    internal = "internal"
+    localhost = "localhost"
+    public = "public"
 
 
 class Fit(StrEnum):
@@ -256,6 +267,8 @@ class ContainerSpec:
     # Можно ли при отказе `--gpus` запуститься на процессоре (Ollama да, vLLM и SGLang нет).
     gpu_optional: bool = True
     shm_size: str | None = None
+    # Адрес привязки опубликованного порта: "127.0.0.1" или "0.0.0.0"; пусто значит как решит рантайм.
+    bind: str | None = None
 
 
 def build_container_spec(
@@ -269,6 +282,7 @@ def build_container_spec(
     hf_token: str = "",
     gpu: bool = False,
     provider_id: UUID | None = None,
+    bind: str | None = None,
 ) -> ContainerSpec:
     spec = ENGINES[engine]
     labels = {
@@ -313,6 +327,7 @@ def build_container_spec(
         gpu=gpu,
         gpu_optional=not spec.needs_gpu,
         shm_size=shm,
+        bind=bind,
     )
 
 
@@ -416,6 +431,9 @@ class ModelServerErrorCode(StrEnum):
     busy = "model_server_busy"
     not_found = "model_server_not_found"
     start_failed = "model_server_start_failed"
+    not_manageable = "model_server_not_manageable"
+    public_needs_key = "model_server_public_needs_key"
+    public_unconfirmed = "model_server_public_unconfirmed"
 
 
 class ModelServerError(Exception):
@@ -423,3 +441,51 @@ class ModelServerError(Exception):
         super().__init__(message)
         self.code = code
         self.message = message
+
+
+@dataclass(frozen=True)
+class ServerRecord:
+    """Запись о сервере в базе. Секретов нет: ключ API лежит у провайдера, токен HF в хранилище секретов."""
+
+    id: str
+    engine: Engine
+    model: str
+    name: str
+    target: Target
+    credential_id: str | None
+    host: str
+    container: str
+    status: ServerStatus
+    exposure: Exposure
+    endpoint: str | None
+    provider_id: str | None
+    image: str
+    steps: Mapping[str, StepState]
+    percent: int | None
+    text: str
+    error: str | None
+    created_by: str
+    created_at: datetime
+    updated_at: datetime
+
+
+class IModelServerStore(Protocol):
+    async def save(self, record: ServerRecord) -> None: ...
+
+    async def get(self, server_id: str) -> ServerRecord | None: ...
+
+    async def list(self) -> list[ServerRecord]: ...
+
+    async def delete(self, server_id: str) -> None: ...
+
+
+class IRemoteRuntimes(Protocol):
+    """Docker на удалённой машине по сохранённому SSH-доступу; закрывает соединение `close`."""
+
+    async def open(self, actor: Actor, credential_id: str, public_host: str) -> RemoteRuntime: ...
+
+
+@dataclass
+class RemoteRuntime:
+    runtime: IContainerRuntime
+    close: Callable[[], Awaitable[None]]

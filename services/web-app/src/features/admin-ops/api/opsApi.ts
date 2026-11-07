@@ -41,6 +41,7 @@ import {
   type InstallJob,
   type LocalInstallCapabilities,
   type LocalInstance,
+  type ModelServerInstall,
   type SavedSshCredential,
   type SshCapability,
   type SshPlan,
@@ -150,7 +151,11 @@ export const opsApi = {
       .then(parseResp(SshPlanSchema)),
   sshInstall: (
     sessionId: string,
-    body: { name: string; install_docker: boolean },
+    body: {
+      name: string;
+      install_docker: boolean;
+      model_server?: ModelServerInstall;
+    },
   ): Promise<InstallJob> =>
     adminClient
       .post(`/runner-install/ssh/${enc(sessionId)}/install`, body, quiet)

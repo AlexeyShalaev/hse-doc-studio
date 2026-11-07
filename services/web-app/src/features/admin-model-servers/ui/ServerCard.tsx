@@ -12,8 +12,6 @@ const STATUS_VARIANT = {
   failed: "error",
 } as const;
 
-const STEP_ORDER = ["container", "engine", "model", "provider", "verify"];
-
 /** Один установленный сервер: статус, шаги, ход загрузки, запуск и остановка, журнал, удаление. */
 export const ServerCard = ({ server }: { server: ModelServer }) => {
   const { t } = useTranslation("adminModelServers");
@@ -38,7 +36,26 @@ export const ServerCard = ({ server }: { server: ModelServer }) => {
           {t(`status.${server.status}`)}
         </Badge>
         <Badge>{t(`engine.${server.engine}`)}</Badge>
+        {server.target === "ssh" && (
+          <Badge data-testid={`ms-target-${server.id}`}>
+            {t("server.viaSsh", { host: server.host })}
+          </Badge>
+        )}
+        {server.target === "ssh" && (
+          <Badge variant={server.exposure === "public" ? "warning" : "default"}>
+            {t(`server.exposure.${server.exposure}`)}
+          </Badge>
+        )}
       </div>
+      {!server.manageable && (
+        <p
+          className="dim"
+          style={{ margin: 0, fontSize: "0.875rem" }}
+          data-testid={`ms-unmanaged-${server.id}`}
+        >
+          {t("server.notManageable")}
+        </p>
+      )}
       <div
         className="dim"
         style={{ fontSize: "0.875rem", overflowWrap: "anywhere" }}
@@ -57,7 +74,7 @@ export const ServerCard = ({ server }: { server: ModelServer }) => {
               margin: "0.5rem 0 0",
             }}
           >
-            {STEP_ORDER.map((step) => (
+            {Object.keys(server.steps).map((step) => (
               <li
                 key={step}
                 data-state={server.steps[step] ?? "pending"}
@@ -99,7 +116,7 @@ export const ServerCard = ({ server }: { server: ModelServer }) => {
         </p>
       )}
       <div className="flex flex-wrap" style={{ gap: "0.5rem" }}>
-        {server.status === "running" && (
+        {server.status === "running" && server.manageable && (
           <Button
             size="sm"
             variant="ghost"
@@ -111,7 +128,7 @@ export const ServerCard = ({ server }: { server: ModelServer }) => {
             {t("server.stop")}
           </Button>
         )}
-        {server.status === "stopped" && (
+        {server.status === "stopped" && server.manageable && (
           <Button
             size="sm"
             disabled={action.isPending}
@@ -125,6 +142,7 @@ export const ServerCard = ({ server }: { server: ModelServer }) => {
         <Button
           size="sm"
           variant="ghost"
+          hidden={!server.manageable}
           data-testid={`ms-logs-${server.id}`}
           onClick={() => {
             setShowLogs(!showLogs);

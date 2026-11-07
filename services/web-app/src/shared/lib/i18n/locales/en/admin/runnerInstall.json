@@ -58,7 +58,15 @@
     "secret": "Secret with the token",
     "volume": "Data volume",
     "deployment": "Runner Deployment",
-    "register": "Runner connects to the Studio"
+    "register": "Runner connects to the Studio",
+    "connect": "SSH connection",
+    "docker": "Docker on the host",
+    "service": "Runner service",
+    "verify": "Check",
+    "gpu": "GPU",
+    "container": "Server container",
+    "model": "Model",
+    "provider": "AI provider in the Studio"
   },
   "stepState": {
     "pending": "waiting",
@@ -74,7 +82,13 @@
     "container_start_failed": "Docker could not start the container.",
     "kube_forbidden": "The cluster refused the request. Check the Studio ServiceAccount Role.",
     "kube_failed": "The cluster returned an error while creating resources.",
-    "register_timeout": "The runner started but did not connect to the Studio within three minutes. Check that it can reach the Studio address and retry."
+    "register_timeout": "The runner started but did not connect to the Studio within three minutes. Check that it can reach the Studio address and retry.",
+    "engine_requires_gpu": "The machine has no NVIDIA GPU, and this engine needs one.",
+    "not_ready": "The server did not become ready in time.",
+    "model_pull_failed": "Could not download the model.",
+    "model_server_public_needs_key": "Ollama has no API key, so it cannot be exposed.",
+    "model_server_public_unconfirmed": "Confirm that the server will be reachable from the network.",
+    "model_server_invalid_input": "Check the model name."
   },
   "ssh": {
     "rowTitle": "Over SSH on another machine",
@@ -176,7 +190,13 @@
       "install_busy": "An install is already running or too many are running.",
       "unexpected": "The install failed for an unexpected reason. See the Studio log for details.",
       "register_timeout": "The runner started but did not connect to the Studio within three minutes. Check that the host can reach the Studio address and retry.",
-      "input_invalid": "Check the form fields."
+      "input_invalid": "Check the form fields.",
+      "engine_requires_gpu": "The machine has no NVIDIA GPU, and this engine needs one.",
+      "not_ready": "The server did not become ready in time.",
+      "model_pull_failed": "Could not download the model.",
+      "model_server_public_needs_key": "Ollama has no API key, so it cannot be exposed.",
+      "model_server_public_unconfirmed": "Confirm that the server will be reachable from the network.",
+      "model_server_invalid_input": "Check the model name."
     }
   }
 }
