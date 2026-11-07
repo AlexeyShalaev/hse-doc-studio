@@ -11,11 +11,13 @@ from hse_doc_studio.core.entities import Document
 from hse_doc_studio.core.errors import NotFoundError
 from hse_doc_studio.core.i18n import localized_error
 from hse_doc_studio.core.repositories import (
+    ICompileRepository,
     IProjectIndexRepository,
     IProjectRepository,
     ITemplateRepository,
 )
 from hse_doc_studio.core.services import ProjectTemplateService
+from hse_doc_studio.use_cases.compile.last_compile import with_effective_last_compile
 from hse_doc_studio.use_cases.projects.get_project import GetProjectInput, GetProjectUC
 
 logger = structlog.get_logger()
@@ -65,8 +67,10 @@ class GetDocumentUC:
         project_repo: IProjectRepository,
         project_index_repo: IProjectIndexRepository,
         template_repo: ITemplateRepository | None = None,
+        compile_repo: ICompileRepository | None = None,
     ) -> None:
         self._template_repo = template_repo
+        self._compile_repo = compile_repo
         self._template_service = ProjectTemplateService()
         self._get_uc = GetProjectUC(project_repo, project_index_repo)
 
@@ -145,7 +149,8 @@ class GetDocumentUC:
             preview_file, preview_updated_at = self._sibling_pdf_preview(project.folder, output_file)
 
         return GetDocumentOutput(
-            document=doc,
+            # Ссылка на сборку с другой стороны синхронизации заменяется своей (use_cases/compile/last_compile.py).
+            document=await with_effective_last_compile(self._compile_repo, project.folder, doc),
             name=dict(doc_def.name) if doc_def is not None else None,
             code=dict(doc_def.code) if doc_def is not None else None,
             source_file=source_file,
