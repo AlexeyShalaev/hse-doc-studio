@@ -27,6 +27,7 @@ from hse_doc_studio.api.schemas import quotas as qt
 from hse_doc_studio.api.schemas import remote_runner as rr
 from hse_doc_studio.api.schemas import review
 from hse_doc_studio.api.schemas import runner_admin as ra
+from hse_doc_studio.api.schemas import runner_isolation as ri
 from hse_doc_studio.api.schemas import server_update as upd
 from hse_doc_studio.api.schemas import session as s
 from hse_doc_studio.api.schemas import sharing as sh
@@ -123,6 +124,8 @@ _SCHEMAS: dict[str, Any] = {
     "ProjectTransferCandidateList": adm.PickerList,
     "AdminRunnerList": adm.Page[ra.RunnerInfo],
     "AdminRunnerSummary": ra.RunnerSummaryInfo,
+    "AdminRunnerDeployment": ri.AdminRunnerDeployment,
+    "AdminRunnerIsolation": ri.AdminRunnerIsolation,
     "AdminRunnerTokenList": adm.Page[ra.RegistrationTokenInfo],
     "CreateAdminRunnerTokenRequest": ra.CreateRegistrationTokenRequest,
     "AdminRunnerTokenCreated": ra.CreatedRegistrationTokenResponse,

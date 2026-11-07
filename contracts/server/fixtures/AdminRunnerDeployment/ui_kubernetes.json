@@ -1,0 +1,99 @@
+{
+  "runner_id": "6f1c2b3a5d6e47f89a0b1c2d3e4f5a6b",
+  "name": "builds-a",
+  "version": "0.14.0",
+  "studio_version": "0.14.0",
+  "outdated": false,
+  "limits_supported": true,
+  "reinstall": [],
+  "origin": "ui",
+  "report": {
+    "reported_at": "2026-11-08T09:12:00Z",
+    "executor": "kubernetes",
+    "platform": "kubernetes",
+    "namespace": "studio",
+    "pod_name": "builds-a-7d9f8b6c5-x2k4q",
+    "service_account": "rel-runner-ui",
+    "resources": {
+      "cpu_request": "100m",
+      "cpu_limit": "1000m",
+      "memory_request": "256Mi",
+      "memory_limit": "2048Mi",
+      "ephemeral_request": "128Mi",
+      "ephemeral_limit": "2048Mi",
+      "source": "pod"
+    },
+    "security": {
+      "run_as_non_root": true,
+      "run_as_user": 1000,
+      "read_only_root": true,
+      "no_privilege_escalation": true,
+      "seccomp": true,
+      "capabilities_dropped": true,
+      "automount_token": true
+    },
+    "build": {
+      "namespace": "studio",
+      "image": "texlive/texlive:TL2024-historic",
+      "resources": {
+        "cpu_request": "500m",
+        "cpu_limit": "2",
+        "memory_request": "1Gi",
+        "memory_limit": "4Gi",
+        "ephemeral_request": "1Gi",
+        "ephemeral_limit": "4Gi",
+        "source": "config"
+      },
+      "network_disabled": null,
+      "pids_limit": null,
+      "work_size_limit": "2Gi",
+      "tmp_size_limit": "1Gi",
+      "active_deadline_s": 1800,
+      "runtime_class": null,
+      "security": {
+        "run_as_non_root": true,
+        "run_as_user": 1000,
+        "read_only_root": true,
+        "no_privilege_escalation": true,
+        "seccomp": true,
+        "capabilities_dropped": true,
+        "automount_token": false
+      }
+    }
+  },
+  "live": {
+    "name": "builds-a",
+    "namespace": "studio",
+    "image": "ghcr.io/alexeyshalaev/hse-doc-studio:0.14.0",
+    "service_account": "rel-runner-ui",
+    "ready": true,
+    "resources": {
+      "cpu_request": "100m",
+      "cpu_limit": "1",
+      "memory_request": "256Mi",
+      "memory_limit": "2Gi",
+      "ephemeral_request": "128Mi",
+      "ephemeral_limit": "2Gi",
+      "source": "cluster"
+    },
+    "build_resources": {
+      "cpu_request": "500m",
+      "cpu_limit": "2",
+      "memory_request": "1Gi",
+      "memory_limit": "4Gi",
+      "ephemeral_request": "1Gi",
+      "ephemeral_limit": "4Gi",
+      "source": "cluster"
+    },
+    "security": {
+      "run_as_non_root": true,
+      "run_as_user": 1000,
+      "read_only_root": true,
+      "no_privilege_escalation": true,
+      "seccomp": true,
+      "capabilities_dropped": true,
+      "automount_token": true
+    }
+  },
+  "live_status": "ok"
+}

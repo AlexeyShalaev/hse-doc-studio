@@ -1,0 +1,45 @@
+{
+  "config": "none",
+  "live_read": "off",
+  "checked_at": null,
+  "release_namespace": null,
+  "chart_runner": null,
+  "build": null,
+  "install_from_ui": {
+    "enabled": false,
+    "namespace": null,
+    "service_account": null,
+    "storage_class": null,
+    "storage_size": "5Gi",
+    "runner": {
+      "cpu_request": "100m",
+      "cpu_limit": "1",
+      "memory_request": "256Mi",
+      "memory_limit": "2Gi",
+      "ephemeral_request": "128Mi",
+      "ephemeral_limit": "2Gi",
+      "source": "config"
+    },
+    "build": {
+      "cpu_request": "500m",
+      "cpu_limit": "2",
+      "memory_request": "1Gi",
+      "memory_limit": "4Gi",
+      "ephemeral_request": "1Gi",
+      "ephemeral_limit": "4Gi",
+      "source": "config"
+    },
+    "bounds": {
+      "max_cpu": "8",
+      "max_memory": "16Gi",
+      "min_runner_cpu": "100m",
+      "min_runner_memory": "256Mi",
+      "min_build_cpu": "500m",
+      "min_build_memory": "1Gi"
+    }
+  },
+  "network": null,
+  "quota": null,
+  "limit_range": null,
+  "pod_security": null
+}

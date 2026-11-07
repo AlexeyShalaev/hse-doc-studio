@@ -45,6 +45,11 @@ from hse_doc_studio.use_cases.admin.ops_runners import (
 from hse_doc_studio.use_cases.admin.ops_services import ServicesOverviewUC
 from hse_doc_studio.use_cases.admin.ops_signing import GetSigningPolicyUC, UpdateSigningPolicyUC
 from hse_doc_studio.use_cases.admin.ops_storage import GetStorageUsageUC, ListStorageOwnersUC
+from hse_doc_studio.use_cases.admin.runner_isolation import (
+    RunnerDeploymentUC,
+    RunnerIsolationSettings,
+    RunnerIsolationUC,
+)
 from hse_doc_studio.use_cases.identity.smtp_settings import SmtpSettingsService
 from hse_doc_studio.use_cases.jobs.queue_service import JobQueueService
 from hse_doc_studio.use_cases.jobs.runners import RunnerRegistry
@@ -56,6 +61,7 @@ from hse_doc_studio.use_cases.runner_install import (
 )
 from httpx import ASGITransport, AsyncClient
 
+from tests.factories.runner_isolation import make_declared, make_install_facts, make_report
 from tests.fakes.auth import empty_bearer_resolver
 from tests.fakes.identity import InMemoryInstanceSettingsRepository
 from tests.fakes.job_queue import InMemoryJobQueue
@@ -69,6 +75,7 @@ from tests.fakes.ops import (
     ReversingCipher,
 )
 from tests.fakes.runner_install import FakeLocalHost
+from tests.fakes.runner_isolation import FakeClusterReader
 from tests.fakes.runners import (
     InMemoryRegistrationTokenRepository,
     InMemoryRunnerAdminReader,
@@ -141,6 +148,10 @@ class _Stack:
             poll_s=0.01,
             verify_timeout_s=0.1,
         )
+        self.cluster = FakeClusterReader()
+        self.isolation = RunnerIsolationSettings(
+            declared=None, install=make_install_facts(), read_live=False, studio_version="0.14.0"
+        )
         self.client: AsyncClient
         self.app: FastAPI
 
@@ -175,6 +186,15 @@ class _Provider(Provider):
     @provide
     def list_runners(self) -> ListRunnersUC:
         return ListRunnersUC(self.s.runner_reader)
+
+    # Настройки изоляции тест меняет на ходу: сценарии строятся на каждый запрос.
+    @provide(scope=Scope.REQUEST)
+    def runner_deployment(self) -> RunnerDeploymentUC:
+        return RunnerDeploymentUC(self.s.runners, self.s.cluster, self.s.isolation)
+
+    @provide(scope=Scope.REQUEST)
+    def runner_isolation(self) -> RunnerIsolationUC:
+        return RunnerIsolationUC(self.s.cluster, self.s.isolation)
 
     @provide
     def runner_summary(self) -> RunnerSummaryUC:
@@ -298,6 +318,8 @@ _ROUTES: list[tuple[str, str, Any]] = [
     ("GET", "/api/admin/storage/owners", None),
     ("GET", "/api/admin/runners", None),
     ("GET", "/api/admin/runners/summary", None),
+    ("GET", "/api/admin/runners/isolation", None),
+    ("GET", f"/api/admin/runners/{uuid4().hex}/deployment", None),
     ("GET", "/api/admin/runner-tokens", None),
     ("GET", "/api/admin/pickers/runners", None),
     ("GET", "/api/admin/pickers/projects", None),
@@ -759,3 +781,213 @@ async def test__runner_install__instances_list_and_remove_are_audited(stack: _St
     assert removed.status_code == 204
     assert stack.install_host.removed == ["hse-runner-abc123"]
     assert "runner_install.local.remove" in [e.action for e in await stack.users.audit.list()]
+
+
+# ---- Как развёрнут раннер и изоляция раннеров в кластере ----
+
+
+async def _registered(stack: _Stack, *, version: str = "0.14.0", name: str = "r1") -> str:
+    from hse_doc_studio.core.jobs.wire import RUNNER_PROTOCOL_VERSION, RunnerRegisterRequest  # noqa: PLC0415
+
+    created = await stack.registry.create_registration_token(_admin_actor(), label="t")
+    registered = await stack.registry.register(
+        created.secret,
+        RunnerRegisterRequest(
+            name=name,
+            protocol=RUNNER_PROTOCOL_VERSION,
+            version=version,
+            tags=frozenset({"tex"}),
+            concurrency=1,
+            resource_class="standard",
+        ),
+    )
+    return registered.runner.id
+
+
+async def test__runner_deployment__old_runner_has_no_data_and_a_reinstall_hint(stack: _Stack) -> None:
+    boss = await stack.users.add("boss", admin=True)
+    runner_id = await _registered(stack, version="0.13.2")
+
+    response = await stack.client.get(f"/api/admin/runners/{runner_id}/deployment", headers=boss)
+
+    assert response.status_code == 200
+    assert response.headers["cache-control"] == "no-store"
+    body = response.json()
+    assert body["report"] is None
+    assert body["live"] is None
+    assert body["live_status"] == "not_applicable"
+    assert body["outdated"] is True
+    assert body["limits_supported"] is False
+    assert body["reinstall"] == ["before_limits"]
+    assert body["origin"] is None
+    listed = (await stack.client.get("/api/admin/runners", headers=boss)).json()["items"][0]
+    assert listed["reinstall"] == ["before_limits"]
+    assert listed["deployment_reported"] is False
+
+
+async def test__runner_deployment__report_is_shown_with_its_source_and_origin(stack: _Stack) -> None:
+    from dataclasses import replace  # noqa: PLC0415
+
+    boss = await stack.users.add("boss", admin=True)
+    runner_id = await _registered(stack)
+    runner = await stack.runners.get(runner_id)
+    assert runner is not None
+    await stack.registry.report_deployment(runner, make_report())
+    stack.isolation = replace(stack.isolation, declared=make_declared())
+
+    body = (await stack.client.get(f"/api/admin/runners/{runner_id}/deployment", headers=boss)).json()
+
+    assert body["origin"] == "chart"
+    assert body["reinstall"] == []
+    report = body["report"]
+    assert report["reported_at"] is not None
+    assert report["executor"] == "kubernetes"
+    assert report["resources"]["source"] == "pod"
+    assert report["resources"]["memory_limit"] == "2048Mi"
+    assert report["build"]["namespace"] == "studio-builds"
+    assert report["build"]["security"]["automount_token"] is False
+    listed = (await stack.client.get("/api/admin/runners", headers=boss)).json()["items"][0]
+    assert listed["deployment_reported"] is True
+
+
+async def test__runner_deployment__live_deployment_of_an_admin_installed_runner(stack: _Stack) -> None:
+    from dataclasses import replace  # noqa: PLC0415
+
+    from hse_doc_studio.core.jobs.deployment import SecurityFacts  # noqa: PLC0415
+    from hse_doc_studio.core.runner_isolation import DeploymentListing, LiveDeployment, LookupStatus  # noqa: PLC0415
+
+    boss = await stack.users.add("boss", admin=True)
+    runner_id = await _registered(stack, name="builds-a")
+    stack.isolation = replace(stack.isolation, install=make_install_facts(enabled=True, service_account="rel-ui"))
+    stack.cluster.listing = DeploymentListing(
+        LookupStatus.ok,
+        (
+            LiveDeployment(
+                name="builds-a", namespace="studio", image="img:0.13.0", ready=True, security=SecurityFacts()
+            ),
+        ),
+    )
+
+    body = (await stack.client.get(f"/api/admin/runners/{runner_id}/deployment", headers=boss)).json()
+
+    assert body["live_status"] == "ok"
+    assert body["origin"] == "ui"
+    assert body["live"]["image"] == "img:0.13.0"
+    assert body["live"]["resources"] is None
+    assert body["reinstall"] == ["no_pod_limits"]
+    stack.cluster.listing = DeploymentListing(LookupStatus.forbidden)
+    stack.cluster.listed = 0
+    body = (await stack.client.get(f"/api/admin/runners/{runner_id}/deployment", headers=boss)).json()
+    assert body["live_status"] == "forbidden"
+    assert body["live"] is None
+
+
+async def test__runner_deployment__unknown_and_personal_runners_are_404(stack: _Stack) -> None:
+    from dataclasses import replace  # noqa: PLC0415
+
+    from hse_doc_studio.core.jobs.runners import RunnerOwnerKind  # noqa: PLC0415
+
+    boss = await stack.users.add("boss", admin=True)
+    runner_id = await _registered(stack)
+    runner = await stack.runners.get(runner_id)
+    assert runner is not None
+    await stack.runners.add(replace(runner, owner_kind=RunnerOwnerKind.user, owner_id="anna"))
+
+    assert (await stack.client.get("/api/admin/runners/nope/deployment", headers=boss)).status_code == 404
+    assert (await stack.client.get(f"/api/admin/runners/{runner_id}/deployment", headers=boss)).status_code == 404
+
+
+async def test__runners_isolation__without_helm_shows_only_install_settings(stack: _Stack) -> None:
+    boss = await stack.users.add("boss", admin=True)
+
+    response = await stack.client.get("/api/admin/runners/isolation", headers=boss)
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["config"] == "none"
+    assert body["live_read"] == "off"
+    assert body["chart_runner"] is None
+    assert body["network"] is None
+    assert body["install_from_ui"]["bounds"]["max_memory"] == "16Gi"
+    assert body["install_from_ui"]["runner"]["ephemeral_limit"] == "2Gi"
+    assert stack.cluster.asked == []
+
+
+async def test__runners_isolation__config_is_not_presented_as_checked(stack: _Stack) -> None:
+    from dataclasses import replace  # noqa: PLC0415
+
+    boss = await stack.users.add("boss", admin=True)
+    stack.isolation = replace(stack.isolation, declared=make_declared())
+
+    body = (await stack.client.get("/api/admin/runners/isolation", headers=boss)).json()
+
+    assert body["config"] == "helm"
+    assert body["live_read"] == "off"
+    assert body["checked_at"] is None
+    assert body["build"]["namespace"] == "builds"
+    assert body["chart_runner"]["security"]["read_only_root"] is True
+    assert body["chart_runner"]["docker_socket"] is False
+    assert body["network"]["build_deny_all"] == {"declared": True, "live": None}
+    assert body["network"]["runner_egress"]["extra_rules"] == 2
+    assert body["quota"]["declared"] == {"pods": "20", "limits.memory": "80Gi"}
+    assert body["quota"]["live_found"] is None
+    assert body["limit_range"]["declared"] is None
+    assert body["pod_security"] is None
+    assert stack.cluster.asked == []
+
+
+async def test__runners_isolation__live_state_is_read_when_allowed(stack: _Stack) -> None:
+    from dataclasses import replace  # noqa: PLC0415
+
+    from hse_doc_studio.core.runner_isolation import (  # noqa: PLC0415
+        ClusterTargets,
+        LiveClusterState,
+        LiveQuota,
+        LiveStatus,
+        NamespaceSecurity,
+    )
+
+    boss = await stack.users.add("boss", admin=True)
+    stack.isolation = replace(stack.isolation, declared=make_declared(), read_live=True)
+    stack.cluster.state = LiveClusterState(
+        status=LiveStatus.partial,
+        checked_at=datetime.now(UTC),
+        build_deny_all=False,
+        quota_checked=True,
+        quota=LiveQuota(name="rel-builds", hard={"pods": "20"}, used={"pods": "3"}),
+        limit_range_checked=True,
+        namespaces=(NamespaceSecurity(namespace="studio", enforce="restricted"),),
+    )
+
+    body = (await stack.client.get("/api/admin/runners/isolation", headers=boss)).json()
+
+    assert stack.cluster.asked == [ClusterTargets(release_namespace="studio", build_namespace="builds")]
+    assert body["live_read"] == "partial"
+    assert body["checked_at"] is not None
+    assert body["network"]["build_deny_all"] == {"declared": True, "live": False}
+    assert body["quota"]["live_used"] == {"pods": "3"}
+    assert body["limit_range"]["live_found"] is False
+    assert body["pod_security"][0]["enforce"] == "restricted"
+
+
+async def test__runner_isolation__answers_carry_no_secrets(stack: _Stack) -> None:
+    from dataclasses import replace  # noqa: PLC0415
+
+    boss = await stack.users.add("boss", admin=True)
+    created = await stack.registry.create_registration_token(_admin_actor(), label="t")
+    runner_id = await _registered(stack)
+    runner = await stack.runners.get(runner_id)
+    assert runner is not None
+    await stack.registry.report_deployment(runner, make_report())
+    stack.isolation = replace(stack.isolation, declared=make_declared())
+
+    texts = [
+        (await stack.client.get(f"/api/admin/runners/{runner_id}/deployment", headers=boss)).text,
+        (await stack.client.get("/api/admin/runners/isolation", headers=boss)).text,
+    ]
+
+    for text in texts:
+        assert created.secret not in text
+        assert "hsrn_" not in text
+        assert "hsrt_" not in text
+        assert "token_hash" not in text

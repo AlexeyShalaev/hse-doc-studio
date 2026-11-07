@@ -27,6 +27,12 @@ RUNNER_MIN_CPU_M = 100
 RUNNER_MIN_MEMORY = 256 * 1024**2
 BUILD_MIN_CPU_M = 500
 BUILD_MIN_MEMORY = 1024**3
+# Те же нижние границы строками Kubernetes: для экрана изоляции раннеров.
+MIN_QUANTITIES = {"runner_cpu": "100m", "runner_memory": "256Mi", "build_cpu": "500m", "build_memory": "1Gi"}
+# Эфемерный диск (requests, limits) раннера из админки и его подов сборки: том данных на PVC, а /tmp раннера держит
+# спул выгрузки (до 512 МиБ); подам сборки нужны /work + /tmp + логи.
+RUNNER_EPHEMERAL = ("128Mi", "2Gi")
+BUILD_EPHEMERAL = ("1Gi", "4Gi")
 
 
 class InvalidResourcesError(ValueError):
