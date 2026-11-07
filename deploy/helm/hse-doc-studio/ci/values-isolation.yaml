@@ -1,0 +1,24 @@
+# Поверх values-test.yaml: полная изоляция раннеров (golden-рендер rendered-isolation.golden.yaml): исполнитель
+# kubernetes в отдельном namespace с квотой и LimitRange, сетевые политики раннеров, установка из админки.
+runner:
+  executor: kubernetes
+  networkPolicy:
+    enabled: true
+    apiServerCidrs: [192.168.49.2/32]
+    apiServerPorts: [8443]
+    extraEgress:
+      - to:
+          - ipBlock: {cidr: 203.0.113.10/32}
+        ports:
+          - {protocol: TCP, port: 443}
+  installFromUi:
+    enabled: true
+    buildResources:
+      requests: {cpu: 500m, memory: 1Gi}
+      limits: {cpu: "3", memory: 6Gi}
+  kubernetes:
+    namespace: hds-builds
+    quota:
+      enabled: true
+    limitRange:
+      enabled: true

@@ -10,6 +10,8 @@ from dataclasses import replace
 from pathlib import Path
 
 import pytest
+from hse_doc_studio.core.compile.failure import failure_message
+from hse_doc_studio.core.enums import Lang
 from hse_doc_studio.core.jobs.entities import compile_payload_of
 from hse_doc_studio.core.jobs.enums import JobStatus
 from hse_doc_studio.core.jobs.errors import JobFailure
@@ -25,7 +27,7 @@ from hse_doc_studio.infra.runner.executor import JobContext
 from hse_doc_studio.infra.runner.workspace import BlobCache, RunnerWorkspaces
 
 from tests.unit.core.jobs.samples import make_compile_spec
-from tests.unit.infra.compile.k8s.fake_kube import FakeKubeApi
+from tests.unit.infra.compile.k8s.fake_kube import FakeKubeApi, FakePod
 
 _SOURCE = b"\\documentclass{article}"
 
@@ -111,6 +113,27 @@ async def test__execute__kubernetes_forbidden__build_backend_unavailable(tmp_pat
 
     assert caught.value.error.code == "build_backend_unavailable"
     assert "forbidden" in (caught.value.error.detail or "")
+
+
+async def test__execute__kubernetes_oom__out_of_memory_code_with_user_text(tmp_path: Path) -> None:
+    async def cut(pod: FakePod) -> list[str]:
+        return ["This is XeTeX"]
+
+    api = FakeKubeApi(
+        tmp_path / "cluster",
+        build=cut,
+        hang_after_log=False,
+        after_log_state=PodState(phase="Failed", terminated_reason="OOMKilled", terminated_exit_code=137),
+    )
+
+    with pytest.raises(JobFailure) as caught:
+        await (await _executor(tmp_path, api)).execute(_envelope(), _ctx([]))
+
+    assert caught.value.error.code == "build_out_of_memory"
+    assert "OOMKilled" in (caught.value.error.detail or "")
+    assert "памяти" in failure_message("build_out_of_memory", Lang.ru)
+    assert "out of memory" in failure_message("build_out_of_memory", Lang.en)
+    assert failure_message("build_storage_exceeded", Lang.en) != failure_message("unknown_code_xyz", Lang.en)
 
 
 async def test__backend__kubernetes__tex_without_docker_and_sweep_by_instance(tmp_path: Path) -> None:

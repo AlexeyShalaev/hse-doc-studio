@@ -78,7 +78,7 @@ Why a way may be hidden:
 `runner.installFromUi.enabled` is `false` by default, and stays so on production where shared runners were not enabled. Turning it on adds:
 
 - a ServiceAccount and Role for the runners themselves, `<release>-runner-ui`: build pods only (`pods` create, get, list, delete; `pods/log` get; `pods/exec` create, get) in the release namespace, like the built-in runner;
-- a `<release>-api` ServiceAccount and Role for the Studio: Deployment (create, get, list, delete), Secret (create and delete only, no reading) and PersistentVolumeClaim (create, delete) in the release namespace. The Studio cannot create Roles or RoleBindings, so it cannot grant itself or a runner anything extra; there is no ClusterRole.
+- a `<release>-api` ServiceAccount and Role for the Studio: Deployment (create, list, delete), Secret (create and delete only, no reading) and PersistentVolumeClaim (create, delete) in the release namespace. The Studio cannot create Roles or RoleBindings, so it cannot grant itself or a runner anything extra; there is no ClusterRole.
 
 A runner installed from the admin area lives in the release namespace and gets its own data volume (`runner.installFromUi.storageSize`, `storageClassName`) so the token issued to it survives a pod restart. Its Studio address is internal (the chart Service).
 
@@ -264,7 +264,7 @@ The `kubernetes` executor needs no `docker.sock`, no `hostPath` and no privilege
 |---|---|
 | `HSE_RUNNER__K8S__NAMESPACE` | namespace of build pods (defaults to the runner's namespace) |
 | `HSE_RUNNER__K8S__IMAGE` | TeX image; defaults to `HSE_RUNNER__TEX_IMAGE` |
-| `HSE_RUNNER__K8S__CPU_REQUEST`, `…CPU_LIMIT`, `…MEMORY_REQUEST`, `…MEMORY_LIMIT` | build pod resources (500m/2, 1Gi/4Gi) |
+| `HSE_RUNNER__K8S__CPU_REQUEST`, `…CPU_LIMIT`, `…MEMORY_REQUEST`, `…MEMORY_LIMIT`, `…EPHEMERAL_STORAGE_REQUEST`, `…EPHEMERAL_STORAGE_LIMIT` | build pod resources (500m/2, 1Gi/4Gi, 1Gi/4Gi); a pod killed for memory fails with `build_out_of_memory` |
 | `HSE_RUNNER__K8S__ACTIVE_DEADLINE_S` | pod lifetime limit, seconds (1800) |
 | `HSE_RUNNER__K8S__POD_START_TIMEOUT_S` | how long to wait for the pod to start, image pull included (300) |
 | `HSE_RUNNER__K8S__NODE_SELECTOR`, `…TOLERATIONS` | build pod placement, JSON |
@@ -272,7 +272,7 @@ The `kubernetes` executor needs no `docker.sock`, no `hostPath` and no privilege
 | `HSE_RUNNER__K8S__TEX_CACHE_CLAIM` | optional PVC with the TeX font cache |
 | `HSE_RUNNER__K8S__FONTS_CLAIM` | optional PVC with fonts (`.ttf`, `.otf`, `.ttc`), mounted read-only into the build pods |
 
-In the Helm chart this is `runner.executor: kubernetes` and the `runner.kubernetes` block (see the chart README): the chart creates the runner ServiceAccount, a Role limited to pods in its namespace (`pods`, `pods/log`, `pods/exec`), a NetworkPolicy that denies build pods any network, and the runner data volume. A build failing with `image_missing` means the node could not pull the TeX image; `build_backend_unavailable` means Kubernetes refused the pod (permissions, quota, no suitable node), details are in the job log. Design and trade-offs: `docs/design/k8s-runner.md`.
+In the Helm chart this is `runner.executor: kubernetes` and the `runner.kubernetes` block (see the chart README): the chart creates the runner ServiceAccount, a Role limited to pods in its namespace (`pods`, `pods/log`, `pods/exec`), a NetworkPolicy that denies build pods any network, and the runner data volume. A build failing with `image_missing` means the node could not pull the TeX image; `build_backend_unavailable` means Kubernetes refused the pod (permissions, quota, no suitable node), details are in the job log. Limits, network policies, quota and how to verify them: [Runner isolation and limits](runner-isolation.md). Design and trade-offs: `docs/design/k8s-runner.md`.
 
 ## Scaling
 

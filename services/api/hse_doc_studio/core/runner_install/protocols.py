@@ -10,6 +10,7 @@ from hse_doc_studio.core.runner_install.entities import (
     LocalInstance,
     LocalRunnerSpec,
 )
+from hse_doc_studio.core.runner_install.resources import ResourceOverrides
 
 ProgressReporter = Callable[[str, InstallStepState, str], Awaitable[None]]
 
@@ -23,6 +24,10 @@ class ILocalRunnerHost(Protocol):
 
     def steps(self) -> tuple[str, ...]:
         """Ключи шагов установки по порядку (кроме общих «токен» и «регистрация»)."""
+        ...
+
+    def check_resources(self, overrides: ResourceOverrides | None) -> None:
+        """Лимиты из формы вне границ хоста бросают `InvalidResourcesError`; хост без лимитов их игнорирует."""
         ...
 
     async def install(self, spec: LocalRunnerSpec, report: ProgressReporter) -> None: ...

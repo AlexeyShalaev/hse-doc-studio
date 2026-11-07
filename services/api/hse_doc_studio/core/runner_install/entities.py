@@ -6,6 +6,8 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from enum import StrEnum
 
+from hse_doc_studio.core.runner_install.resources import ResourceOverrides
+
 
 class InstallTarget(StrEnum):
     docker = "docker"
@@ -54,6 +56,7 @@ class LocalRunnerSpec:
     data_dir: str
     concurrency: int
     token: str = field(repr=False)
+    resources: ResourceOverrides | None = None
 
 
 @dataclass(frozen=True, slots=True)

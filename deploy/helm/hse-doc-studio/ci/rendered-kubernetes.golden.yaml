@@ -224,6 +224,8 @@ spec:
       annotations:
         checksum/secret: 3d4af20705b72dc5a7dd296489f57e02b20395a134958a3730b60e804bee7f94
     spec:
+      # Студия не ходит в Kubernetes API: токен ServiceAccount в поде не нужен.
+      automountServiceAccountToken: false
       securityContext:
         runAsNonRoot: true
         runAsUser: 10001
@@ -346,6 +348,9 @@ spec:
         app.kubernetes.io/component: runner
     spec:
       serviceAccountName: rel-hse-doc-studio-runner
+      # Токен нужен: раннер создаёт поды сборки через Kubernetes API (права: Role выше, только поды сборки).
+      automountServiceAccountToken: true
+      enableServiceLinks: false
       # На SIGTERM раннер перестаёт брать задачи и дорабатывает текущие сборки.
       terminationGracePeriodSeconds: 600
       securityContext:
@@ -379,6 +384,8 @@ spec:
             - {name: HSE_RUNNER__K8S__MEMORY_REQUEST, value: "1Gi"}
             - {name: HSE_RUNNER__K8S__CPU_LIMIT, value: "2"}
             - {name: HSE_RUNNER__K8S__MEMORY_LIMIT, value: "4Gi"}
+            - {name: HSE_RUNNER__K8S__EPHEMERAL_STORAGE_REQUEST, value: "1Gi"}
+            - {name: HSE_RUNNER__K8S__EPHEMERAL_STORAGE_LIMIT, value: "4Gi"}
             - {name: HSE_RUNNER__K8S__WORK_SIZE_LIMIT, value: "2Gi"}
             - {name: HSE_RUNNER__K8S__TMP_SIZE_LIMIT, value: "1Gi"}
             - {name: HSE_RUNNER__K8S__ACTIVE_DEADLINE_S, value: "1800"}
@@ -398,12 +405,19 @@ spec:
             - {name: runner-data, mountPath: "/var/lib/hse-runner"}
             - {name: tmp, mountPath: /tmp}
           resources:
-            {}
+            limits:
+              cpu: "1"
+              ephemeral-storage: 2Gi
+              memory: 2Gi
+            requests:
+              cpu: 100m
+              ephemeral-storage: 128Mi
+              memory: 256Mi
       volumes:
         - name: runner-data
           persistentVolumeClaim: {claimName: rel-hse-doc-studio-runner-data}
         - name: tmp
-          emptyDir: {}
+          emptyDir: {sizeLimit: "1Gi"}
 
 ---
 # Source: hse-doc-studio/templates/ingress.yaml
@@ -463,6 +477,7 @@ spec:
         app.kubernetes.io/component: migrate
     spec:
       restartPolicy: Never
+      automountServiceAccountToken: false
       securityContext:
         runAsNonRoot: true
         runAsUser: 10001

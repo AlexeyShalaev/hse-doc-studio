@@ -213,10 +213,28 @@ runner:
   dockerGid: 0
   # Каталог на узле создаётся от root (hostPath, fsGroup на него не действует): раннер доходит до него
   # через initContainer, который выдаёт его пользователю podSecurityContext.
-  resources: {}
+  # Под раннера только ставит задачи и гоняет файлы (TeX считают поды сборки или docker рядом), поэтому небольшой.
+  # Память с запасом: раннер хеширует и пакует исходники, а при concurrency > 1 держит несколько сборок сразу.
+  resources:
+    requests: {cpu: 100m, memory: 256Mi, ephemeral-storage: 128Mi}
+    limits: {cpu: "1", memory: 2Gi, ephemeral-storage: 2Gi}
+  # Размер /tmp пода раннера (спул выгрузки результата сборки, до 512 МиБ).
+  tmpSizeLimit: 1Gi
   nodeSelector: {}
   tolerations: []
   affinity: {}
+  # Исходящая сеть подов раннера (chart-раннер и раннеры из админки). По умолчанию выключено: адреса, которые нужны
+  # раннеру (Kubernetes API, объектное хранилище S3, если оно вне кластера), чарт знать не может, а неверный список
+  # оставит раннеры без связи. Включайте после проверки (docs/en/deploy/runner-isolation.md). Разрешено: DNS, Студия
+  # (api этого релиза), Kubernetes API по портам apiServerPorts, плюс extraEgress.
+  networkPolicy:
+    enabled: false
+    # Адреса Kubernetes API (CIDR узлов control plane или `kubernetes` Service после DNAT). Пусто: порты
+    # apiServerPorts на любые адреса, кроме link-local (169.254.0.0/16: metadata облака).
+    apiServerCidrs: []
+    apiServerPorts: [443, 6443]
+    # Свои egress-правила дословно (spec.egress): S3 вне кластера, внешний OnlyOffice и прочее нужное раннеру.
+    extraEgress: []
   # Только executor=kubernetes: сколько ждать доработки текущих сборок при остановке пода раннера.
   terminationGracePeriodSeconds: 600
   # Только executor=kubernetes: том данных раннера (identity.json с выданным токеном, кэш блобов, рабочие папки).
@@ -234,6 +252,18 @@ runner:
     enabled: false
     storageClassName: ""
     storageSize: 5Gi
+    # Лимиты раннера, поставленного из админки: умолчания формы установки. В форме админ может задать свои
+    # (limits.cpu и limits.memory), бэкенд проверяет их по нижним границам (раннер 100m и 256Mi, поды сборки
+    # 500m и 1Gi) и по верхним maxCpu и maxMemory; requests подбираются под лимит.
+    resources:
+      requests: {cpu: 100m, memory: 256Mi}
+      limits: {cpu: "1", memory: 2Gi}
+    # Поды сборки таких раннеров (создаёт сам раннер, в namespace релиза).
+    buildResources:
+      requests: {cpu: 500m, memory: 1Gi}
+      limits: {cpu: "2", memory: 4Gi}
+    maxCpu: "8"
+    maxMemory: 16Gi
   # Только executor=kubernetes: поды сборки.
   kubernetes:
     # Namespace подов сборки; пусто значит namespace релиза. Свой namespace должен существовать; пометьте его
@@ -244,9 +274,12 @@ runner:
     imagePullPolicy: IfNotPresent
     # Имена Secret для pull образа TeX в namespace подов сборки.
     imagePullSecrets: []
+    # Память: XeLaTeX обычного документа (ГОСТ-шаблон, десятки страниц, рисунки) занимает 0.5-1.5 ГиБ, большие
+    # TikZ и растровые рисунки до 3 ГиБ. Предел 4Gi держит запас; под, убитый по памяти, получает у пользователя код
+    # build_out_of_memory с пояснением. ephemeral-storage: /work + /tmp (workSizeLimit + tmpSizeLimit) и логи.
     resources:
-      requests: {cpu: 500m, memory: 1Gi}
-      limits: {cpu: "2", memory: 4Gi}
+      requests: {cpu: 500m, memory: 1Gi, ephemeral-storage: 1Gi}
+      limits: {cpu: "2", memory: 4Gi, ephemeral-storage: 4Gi}
     # emptyDir /work (исходники и .build) и /tmp (форматы TeX).
     workSizeLimit: 2Gi
     tmpSizeLimit: 1Gi
@@ -269,6 +302,25 @@ runner:
     # чтобы XeLaTeX находил Times New Roman, Arial и Consolas. Шрифты Microsoft в образы не входят.
     fonts:
       existingClaim: ""
-    # Запрет всей сети подам сборки (нужен CNI с поддержкой NetworkPolicy).
+    # Запрет всей сети подам сборки (нужен CNI с поддержкой NetworkPolicy). Действует и для подов сборки раннеров,
+    # поставленных из админки (installFromUi). Подам сеть не нужна: исходники и результат идут через exec API.
     networkPolicy:
       enabled: true
+    # ResourceQuota на namespace подов сборки: общий потолок, чтобы шторм сборок не съел кластер. Только для
+    # отдельного namespace (runner.kubernetes.namespace не пуст и не равен namespace релиза).
+    quota:
+      enabled: false
+      pods: "20"
+      requestsCpu: "10"
+      requestsMemory: 20Gi
+      limitsCpu: "40"
+      limitsMemory: 80Gi
+      requestsEphemeralStorage: 20Gi
+      limitsEphemeralStorage: 80Gi
+    # LimitRange того же namespace: умолчания и потолок на контейнер для подов без своих значений. Поды сборки
+    # свои значения задают, LimitRange страхует от чужих подов в этом namespace.
+    limitRange:
+      enabled: false
+      default: {cpu: "1", memory: 2Gi, ephemeral-storage: 2Gi}
+      defaultRequest: {cpu: 250m, memory: 512Mi, ephemeral-storage: 256Mi}
+      max: {cpu: "8", memory: 16Gi, ephemeral-storage: 8Gi}

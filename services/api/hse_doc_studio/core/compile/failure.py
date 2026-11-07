@@ -94,6 +94,33 @@ _TEXTS: dict[str, tuple[str, str]] = {
             "check the events of the runner namespace and the permissions of its service account."
         ),
     ),
+    "build_out_of_memory": (
+        (
+            "Сборке не хватило памяти: контейнер сборки убит по лимиту (OOMKilled). Обычно виноваты очень "
+            "большие рисунки (PDF/PNG высокого разрешения), TikZ/pgfplots с огромным числом точек или "
+            "бесконечная рекурсия в макросах. Уменьшите рисунки и соберите снова; если документ обычный, "
+            "администратору: поднять лимит памяти подов сборки (runner.kubernetes.resources.limits.memory)."
+        ),
+        (
+            "The build ran out of memory: the build container was killed at its limit (OOMKilled). Usually "
+            "this means very large figures (high-resolution PDF/PNG), TikZ/pgfplots with a huge number of "
+            "points, or runaway macro recursion. Shrink the figures and build again; if the document is an "
+            "ordinary one, administrator: raise the memory limit of build pods "
+            "(runner.kubernetes.resources.limits.memory)."
+        ),
+    ),
+    "build_storage_exceeded": (
+        (
+            "Сборке не хватило временного места: под сборки выселен за предел эфемерного хранилища (рабочая "
+            "папка, /tmp). Уберите из проекта крупные файлы и соберите снова; администратору: поднять "
+            "runner.kubernetes.workSizeLimit, tmpSizeLimit и ephemeralStorage."
+        ),
+        (
+            "The build ran out of scratch space: the build pod was evicted for exceeding its ephemeral "
+            "storage limit (work folder, /tmp). Remove large files from the project and build again; "
+            "administrator: raise runner.kubernetes.workSizeLimit, tmpSizeLimit and ephemeralStorage."
+        ),
+    ),
     "blob_unavailable": (
         (
             "Раннер не смог получить исходники проекта с сервера. Проверьте, что раннер видит адрес сервера и"

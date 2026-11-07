@@ -33,6 +33,22 @@ class RunnerInstallConfig(BaseModel):
         default="", description="StorageClass тома данных установленного раннера; пусто значит по умолчанию кластера."
     )
     kubernetes_storage_size: str = Field(default="5Gi", description="Размер тома данных установленного раннера.")
+    kubernetes_runner_cpu_request: str = Field(default="100m", description="requests.cpu пода раннера.")
+    kubernetes_runner_cpu_limit: str = Field(default="1", description="limits.cpu пода раннера.")
+    kubernetes_runner_memory_request: str = Field(default="256Mi", description="requests.memory пода раннера.")
+    kubernetes_runner_memory_limit: str = Field(default="2Gi", description="limits.memory пода раннера.")
+    kubernetes_build_cpu_request: str = Field(default="500m", description="requests.cpu подов сборки.")
+    kubernetes_build_cpu_limit: str = Field(default="2", description="limits.cpu подов сборки.")
+    kubernetes_build_memory_request: str = Field(default="1Gi", description="requests.memory подов сборки.")
+    kubernetes_build_memory_limit: str = Field(
+        default="4Gi", description="limits.memory подов сборки: TeX на обычном документе укладывается в 1-2 ГиБ."
+    )
+    kubernetes_resource_max_cpu: str = Field(
+        default="8", description="Верхняя граница CPU, которую админ может задать в форме установки."
+    )
+    kubernetes_resource_max_memory: str = Field(
+        default="16Gi", description="Верхняя граница памяти, которую админ может задать в форме установки."
+    )
     data_dir: str = Field(
         default="/var/lib/hse-runner", description="Каталог данных раннера на хосте (docker) и в поде (kubernetes)."
     )

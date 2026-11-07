@@ -21,6 +21,8 @@ _UPDATER_VALUES = _CHART / "ci" / "values-updater.yaml"
 _UPDATER_GOLDEN = _CHART / "ci" / "rendered-updater.golden.yaml"
 _INSTALL_UI_VALUES = _CHART / "ci" / "values-install-ui.yaml"
 _INSTALL_UI_GOLDEN = _CHART / "ci" / "rendered-install-ui.golden.yaml"
+_ISOLATION_VALUES = _CHART / "ci" / "values-isolation.yaml"
+_ISOLATION_GOLDEN = _CHART / "ci" / "rendered-isolation.golden.yaml"
 _PUBLIC_S3_VALUES = _CHART / "ci" / "values-public-s3.yaml"
 _PUBLIC_S3_GOLDEN = _CHART / "ci" / "rendered-public-s3.golden.yaml"
 
@@ -69,8 +71,9 @@ def test_lint() -> None:
         ((_VALUES, _UPDATER_VALUES), _UPDATER_GOLDEN),
         ((_VALUES, _PUBLIC_S3_VALUES), _PUBLIC_S3_GOLDEN),
         ((_VALUES, _INSTALL_UI_VALUES), _INSTALL_UI_GOLDEN),
+        ((_VALUES, _ISOLATION_VALUES), _ISOLATION_GOLDEN),
     ],
-    ids=["docker", "kubernetes", "updater", "public-s3", "install-ui"],
+    ids=["docker", "kubernetes", "updater", "public-s3", "install-ui", "isolation"],
 )
 def test_template_matches_golden(values: tuple[Path, ...], golden_path: Path) -> None:
     args = [arg for path in values for arg in ("-f", str(path))]
@@ -527,7 +530,7 @@ def test_install_from_ui_gives_the_api_only_what_it_creates() -> None:
         (g, r): set(rule["verbs"]) for rule in api_role["rules"] for g in rule["apiGroups"] for r in rule["resources"]
     }
 
-    assert granted[("apps", "deployments")] == {"create", "get", "list", "delete"}
+    assert granted[("apps", "deployments")] == {"create", "list", "delete"}
     assert granted[("", "secrets")] == {"create", "delete"}
     assert granted[("", "persistentvolumeclaims")] == {"create", "delete"}
     assert not [k for k in granted if k[1] in {"roles", "rolebindings", "serviceaccounts", "pods", "pods/exec"}]
@@ -553,3 +556,155 @@ def test_install_from_ui_wires_the_api_account_and_settings() -> None:
     assert env["HSE_STUDIO__RUNNER_INSTALL__KUBERNETES_ENABLED"] == "true"
     assert env["HSE_STUDIO__RUNNER_INSTALL__KUBERNETES_SERVICE_ACCOUNT"] == "rel-hse-doc-studio-runner-ui"
     assert env["HSE_STUDIO__RUNNER_INSTALL__KUBERNETES_STORAGE_SIZE"] == "8Gi"
+
+
+# ---- Изоляция и лимиты раннеров (docs/en/deploy/runner-isolation.md) ----
+
+
+def _isolation(*extra: str) -> list[dict[str, Any]]:
+    return _render("-f", str(_ISOLATION_VALUES), "--namespace", "studio", *extra)
+
+
+def _named(docs: list[dict[str, Any]], kind: str, name: str) -> dict[str, Any]:
+    return next(d for d in _by_kind(docs, kind) if d["metadata"]["name"] == name)
+
+
+def test_runner_pods_have_requests_and_limits_by_default() -> None:
+    docker = next(d for d in _by_kind(_render(), "Deployment") if d["metadata"]["name"].endswith("-runner"))
+    kube = next(
+        d for d in _by_kind(_render("-f", str(_K8S_VALUES)), "Deployment") if d["metadata"]["name"].endswith("-runner")
+    )
+    for runner in (docker, kube):
+        res = runner["spec"]["template"]["spec"]["containers"][0]["resources"]
+        assert {"cpu", "memory", "ephemeral-storage"} <= set(res["requests"])
+        assert {"cpu", "memory", "ephemeral-storage"} <= set(res["limits"])
+
+
+def test_build_pod_limits_reach_the_runner_env_with_ephemeral_storage() -> None:
+    _, runner = _k8s_runner()
+    env = {e["name"]: e.get("value") for e in runner["spec"]["template"]["spec"]["containers"][0]["env"]}
+
+    assert env["HSE_RUNNER__K8S__MEMORY_LIMIT"] == "4Gi"
+    assert env["HSE_RUNNER__K8S__MEMORY_REQUEST"] == "1Gi"
+    assert env["HSE_RUNNER__K8S__EPHEMERAL_STORAGE_LIMIT"] == "4Gi"
+    assert env["HSE_RUNNER__K8S__EPHEMERAL_STORAGE_REQUEST"] == "1Gi"
+
+
+def test_kubernetes_runner_tmp_is_bounded_and_token_is_explicit() -> None:
+    _, runner = _k8s_runner()
+    pod = runner["spec"]["template"]["spec"]
+
+    assert next(v for v in pod["volumes"] if v["name"] == "tmp")["emptyDir"] == {"sizeLimit": "1Gi"}
+    assert pod["automountServiceAccountToken"] is True
+    assert pod["enableServiceLinks"] is False
+
+
+def test_pods_without_kubernetes_api_access_do_not_mount_a_token() -> None:
+    api = _api_deployment(_render())
+    assert api["spec"]["template"]["spec"]["automountServiceAccountToken"] is False
+    assert (
+        _api_deployment(_render("-f", str(_INSTALL_UI_VALUES)))["spec"]["template"]["spec"].get(
+            "automountServiceAccountToken"
+        )
+        is None
+    )
+    docker = next(d for d in _by_kind(_render(), "Deployment") if d["metadata"]["name"].endswith("-runner"))
+    assert docker["spec"]["template"]["spec"]["automountServiceAccountToken"] is False
+    (job,) = _by_kind(_render(), "Job")
+    assert job["spec"]["template"]["spec"]["automountServiceAccountToken"] is False
+
+
+def test_quota_and_limit_range_are_off_by_default_and_live_in_the_build_namespace() -> None:
+    plain = _render("-f", str(_K8S_VALUES))
+    assert not _by_kind(plain, "ResourceQuota")
+    assert not _by_kind(plain, "LimitRange")
+
+    docs = _isolation()
+    (quota,) = _by_kind(docs, "ResourceQuota")
+    (limits,) = _by_kind(docs, "LimitRange")
+    assert quota["metadata"]["namespace"] == limits["metadata"]["namespace"] == "hds-builds"
+    assert {"pods", "requests.memory", "limits.memory", "limits.ephemeral-storage"} <= set(quota["spec"]["hard"])
+    assert limits["spec"]["limits"][0]["type"] == "Container"
+    assert "memory" in limits["spec"]["limits"][0]["max"]
+
+
+def test_quota_in_the_release_namespace_is_refused() -> None:
+    result = _helm(
+        "template", "rel", str(_CHART), "-f", str(_VALUES), "-f", str(_K8S_VALUES),
+        "--set", "runner.kubernetes.namespace=", "--set", "runner.kubernetes.quota.enabled=true",
+    )  # fmt: skip
+    assert result.returncode != 0
+    assert "separate build namespace" in result.stderr
+
+
+def test_install_from_ui_build_pods_are_denied_any_network() -> None:
+    policy = _named(
+        _render("-f", str(_INSTALL_UI_VALUES), "--namespace", "studio"),
+        "NetworkPolicy",
+        "rel-hse-doc-studio-runner-ui-builds-deny-all",
+    )
+
+    assert policy["metadata"]["namespace"] == "studio"
+    assert policy["spec"]["policyTypes"] == ["Ingress", "Egress"]
+    assert "egress" not in policy["spec"]
+    assert "ingress" not in policy["spec"]
+    assert policy["spec"]["podSelector"]["matchLabels"]["hse-doc-studio/component"] == "build"
+
+
+def test_runner_egress_policy_is_opt_in() -> None:
+    docs = _render("-f", str(_INSTALL_UI_VALUES))
+    assert not [d for d in _by_kind(docs, "NetworkPolicy") if d["metadata"]["name"].endswith("-egress")]
+
+
+def test_runner_egress_policy_allows_dns_studio_and_the_api_server_only() -> None:
+    docs = _isolation()
+    egress_policies = [d for d in _by_kind(docs, "NetworkPolicy") if d["metadata"]["name"].endswith("-egress")]
+    assert {d["metadata"]["name"] for d in egress_policies} == {
+        "rel-hse-doc-studio-runner-egress",
+        "rel-hse-doc-studio-runner-ui-egress",
+    }
+    for policy in egress_policies:
+        assert policy["spec"]["policyTypes"] == ["Egress"]
+        dns, studio, api_server, extra = policy["spec"]["egress"]
+        assert {p["port"] for p in dns["ports"]} == {53}
+        assert studio["to"][0]["podSelector"]["matchLabels"]["app.kubernetes.io/component"] == "api"
+        assert studio["ports"] == [{"protocol": "TCP", "port": 8000}]
+        assert api_server["to"] == [{"ipBlock": {"cidr": "192.168.49.2/32"}}]
+        assert api_server["ports"] == [{"protocol": "TCP", "port": 8443}]
+        assert extra["to"] == [{"ipBlock": {"cidr": "203.0.113.10/32"}}]
+    by_name = {d["metadata"]["name"]: d for d in egress_policies}
+    assert by_name["rel-hse-doc-studio-runner-ui-egress"]["spec"]["podSelector"]["matchLabels"] == {
+        "hse-doc-studio/runner-install": "true"
+    }
+
+
+def test_runner_egress_policy_without_cidrs_excludes_link_local_metadata() -> None:
+    docs = _render(
+        "-f", str(_K8S_VALUES), "--set", "runner.networkPolicy.enabled=true", "--namespace", "studio"
+    )  # fmt: skip
+    policy = _named(docs, "NetworkPolicy", "rel-hse-doc-studio-runner-egress")
+    api_server = policy["spec"]["egress"][2]
+
+    assert api_server["to"] == [{"ipBlock": {"cidr": "0.0.0.0/0", "except": ["169.254.0.0/16"]}}]
+    assert {p["port"] for p in api_server["ports"]} == {443, 6443}
+
+
+def test_install_from_ui_resources_reach_the_api_and_names_exist_in_settings() -> None:
+    api = _api_deployment(_render("-f", str(_ISOLATION_VALUES)))
+    env = {e["name"]: e.get("value") for e in api["spec"]["template"]["spec"]["containers"][0]["env"]}
+
+    assert env["HSE_STUDIO__RUNNER_INSTALL__KUBERNETES_BUILD_MEMORY_LIMIT"] == "6Gi"
+    assert env["HSE_STUDIO__RUNNER_INSTALL__KUBERNETES_BUILD_CPU_LIMIT"] == "3"
+    assert env["HSE_STUDIO__RUNNER_INSTALL__KUBERNETES_RUNNER_MEMORY_LIMIT"] == "2Gi"
+    known = _paths(Settings)
+    assert [k for k in env if k.startswith("HSE_STUDIO__") and k.removeprefix("HSE_STUDIO__") not in known] == []
+    docs = _isolation()
+    runner = next(d for d in _by_kind(docs, "Deployment") if d["metadata"]["name"].endswith("-runner"))
+    renv = {e["name"] for e in runner["spec"]["template"]["spec"]["containers"][0]["env"]}
+    assert [k for k in renv if k.removeprefix("HSE_RUNNER__") not in _paths(RunnerConfig)] == []
+
+
+def test_no_workload_of_the_chart_uses_hostpath_in_kubernetes_mode() -> None:
+    for doc in _isolation():
+        if doc["kind"] in {"Deployment", "Job"}:
+            assert "hostPath" not in str(doc["spec"]["template"]["spec"].get("volumes", []))

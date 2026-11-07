@@ -122,4 +122,68 @@ describe("установка раннера: отказы и повтор", () =
       await screen.findByTestId("install-start-failure"),
     ).toHaveTextContent("уже идёт");
   });
+
+  it("лимиты уходят только для кластера и только заполненные поля", async () => {
+    vi.spyOn(opsApi, "localCapabilities").mockResolvedValue({
+      docker: { available: true, reason: null },
+      kubernetes: { available: true, reason: null },
+    });
+    const start = vi
+      .spyOn(opsApi, "startLocalInstall")
+      .mockResolvedValue({ ...failedJob, state: "running", error_code: null });
+    vi.spyOn(opsApi, "installJob").mockResolvedValue(failedJob);
+    const user = userEvent.setup();
+    render(
+      wrap(
+        <InstallRunnerDialog
+          isOpen
+          onClose={vi.fn()}
+          onOpenCommand={vi.fn()}
+        />,
+      ),
+    );
+
+    await user.click(
+      await screen.findByText("Лимиты ресурсов (установка в кластер)"),
+    );
+    await user.type(screen.getByTestId("install-limit-build_memory"), "6Gi");
+    await user.click(screen.getByTestId("install-local-kubernetes-start"));
+
+    await waitFor(() => {
+      expect(start).toHaveBeenCalledWith("kubernetes", {
+        name: "",
+        concurrency: 1,
+        resources: { build_memory: "6Gi" },
+      });
+    });
+  });
+
+  it("границы нарушены: бэкенд отказал, форма объясняет формат и границы", async () => {
+    vi.spyOn(opsApi, "localCapabilities").mockResolvedValue({
+      docker: { available: false, reason: "disabled" },
+      kubernetes: { available: true, reason: null },
+    });
+    const { ApiError } = await import("@shared/api");
+    vi.spyOn(opsApi, "startLocalInstall").mockRejectedValue(
+      new ApiError("bad", "invalid_resources", 422),
+    );
+    const user = userEvent.setup();
+    render(
+      wrap(
+        <InstallRunnerDialog
+          isOpen
+          onClose={vi.fn()}
+          onOpenCommand={vi.fn()}
+        />,
+      ),
+    );
+
+    await user.click(
+      await screen.findByTestId("install-local-kubernetes-start"),
+    );
+
+    expect(
+      await screen.findByTestId("install-start-failure"),
+    ).toHaveTextContent("вне допустимых границ");
+  });
 });

@@ -24,9 +24,22 @@ class LocalCapabilitiesResponse(StrictModel):
     kubernetes: CapabilityInfo
 
 
+_QUANTITY = r"^[0-9]+(\.[0-9]+)?(m|Ki|Mi|Gi|Ti|k|K|M|G|T)?$"
+
+
+class ResourceLimitsRequest(StrictModel):
+    """Лимиты из формы установки (Kubernetes); пусто значит умолчание Helm. Границы проверяет бэкенд."""
+
+    runner_cpu: str | None = Field(default=None, max_length=12, pattern=_QUANTITY)
+    runner_memory: str | None = Field(default=None, max_length=12, pattern=_QUANTITY)
+    build_cpu: str | None = Field(default=None, max_length=12, pattern=_QUANTITY)
+    build_memory: str | None = Field(default=None, max_length=12, pattern=_QUANTITY)
+
+
 class StartLocalInstallRequest(StrictModel):
     name: str = Field(default="", max_length=40)
     concurrency: int = Field(default=1, ge=1, le=8)
+    resources: ResourceLimitsRequest | None = None
 
 
 class InstallStepInfo(StrictModel):

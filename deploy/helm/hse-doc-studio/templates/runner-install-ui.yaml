@@ -59,7 +59,7 @@ metadata:
     {{- include "hds.labels" . | nindent 4 }}
     app.kubernetes.io/component: api
 ---
-# Права самой Студии: создать и убрать Deployment, Secret с токеном и том данных раннера. Secret без get и list,
+# Права самой Студии: создать, перечислить (по метке) и убрать Deployment, Secret с токеном и том данных раннера. Secret без get и list,
 # Role и RoleBinding без доступа, ClusterRole нет.
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
@@ -72,7 +72,7 @@ metadata:
 rules:
   - apiGroups: [apps]
     resources: [deployments]
-    verbs: [create, get, list, delete]
+    verbs: [create, list, delete]
   - apiGroups: [""]
     resources: [secrets]
     verbs: [create, delete]

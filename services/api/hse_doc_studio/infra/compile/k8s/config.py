@@ -33,6 +33,10 @@ class KubernetesExecutorConfig(BaseModel):
     cpu_limit: str = "2"
     memory_request: str = "1Gi"
     memory_limit: str = "4Gi"
+    ephemeral_storage_request: str = Field(default="1Gi", description="requests.ephemeral-storage пода сборки.")
+    ephemeral_storage_limit: str = Field(
+        default="4Gi", description="limits.ephemeral-storage пода сборки: /work + /tmp + логи с запасом."
+    )
     work_size_limit: str = Field(default="2Gi", description="Предел emptyDir /work (исходники и .build).")
     tmp_size_limit: str = Field(default="1Gi", description="Предел emptyDir /tmp (форматы и кэш TeX).")
     active_deadline_s: int = Field(default=1800, ge=60, description="activeDeadlineSeconds пода сборки.")

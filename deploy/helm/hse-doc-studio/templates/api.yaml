@@ -27,6 +27,9 @@ spec:
     spec:
       {{- if .Values.runner.installFromUi.enabled }}
       serviceAccountName: {{ include "hds.fullname" . }}-api
+      {{- else }}
+      # Студия не ходит в Kubernetes API: токен ServiceAccount в поде не нужен.
+      automountServiceAccountToken: false
       {{- end }}
       {{- with .Values.imagePullSecrets }}
       imagePullSecrets:
@@ -57,6 +60,17 @@ spec:
             - {name: HSE_STUDIO__RUNNER_INSTALL__KUBERNETES_ENABLED, value: "true"}
             - {name: HSE_STUDIO__RUNNER_INSTALL__KUBERNETES_SERVICE_ACCOUNT, value: {{ include "hds.fullname" . }}-runner-ui}
             - {name: HSE_STUDIO__RUNNER_INSTALL__KUBERNETES_STUDIO_URL, value: "http://{{ include "hds.fullname" . }}:{{ .Values.service.port }}"}
+            {{- $ui := .Values.runner.installFromUi }}
+            - {name: HSE_STUDIO__RUNNER_INSTALL__KUBERNETES_RUNNER_CPU_REQUEST, value: {{ $ui.resources.requests.cpu | quote }}}
+            - {name: HSE_STUDIO__RUNNER_INSTALL__KUBERNETES_RUNNER_CPU_LIMIT, value: {{ $ui.resources.limits.cpu | quote }}}
+            - {name: HSE_STUDIO__RUNNER_INSTALL__KUBERNETES_RUNNER_MEMORY_REQUEST, value: {{ $ui.resources.requests.memory | quote }}}
+            - {name: HSE_STUDIO__RUNNER_INSTALL__KUBERNETES_RUNNER_MEMORY_LIMIT, value: {{ $ui.resources.limits.memory | quote }}}
+            - {name: HSE_STUDIO__RUNNER_INSTALL__KUBERNETES_BUILD_CPU_REQUEST, value: {{ $ui.buildResources.requests.cpu | quote }}}
+            - {name: HSE_STUDIO__RUNNER_INSTALL__KUBERNETES_BUILD_CPU_LIMIT, value: {{ $ui.buildResources.limits.cpu | quote }}}
+            - {name: HSE_STUDIO__RUNNER_INSTALL__KUBERNETES_BUILD_MEMORY_REQUEST, value: {{ $ui.buildResources.requests.memory | quote }}}
+            - {name: HSE_STUDIO__RUNNER_INSTALL__KUBERNETES_BUILD_MEMORY_LIMIT, value: {{ $ui.buildResources.limits.memory | quote }}}
+            - {name: HSE_STUDIO__RUNNER_INSTALL__KUBERNETES_RESOURCE_MAX_CPU, value: {{ $ui.maxCpu | quote }}}
+            - {name: HSE_STUDIO__RUNNER_INSTALL__KUBERNETES_RESOURCE_MAX_MEMORY, value: {{ $ui.maxMemory | quote }}}
             - {name: HSE_STUDIO__RUNNER_INSTALL__KUBERNETES_STORAGE_SIZE, value: {{ .Values.runner.installFromUi.storageSize | quote }}}
             - {name: HSE_STUDIO__RUNNER_INSTALL__KUBERNETES_STORAGE_CLASS, value: {{ .Values.runner.installFromUi.storageClassName | quote }}}
             {{- end }}

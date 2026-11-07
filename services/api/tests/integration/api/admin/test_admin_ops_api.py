@@ -631,6 +631,46 @@ async def test__runner_install__unavailable_host_is_refused_with_reason(stack: _
     assert await stack.tokens.list() == []
 
 
+async def test__runner_install__resource_limits_from_the_form_reach_the_host_and_audit(stack: _Stack) -> None:
+    boss = await stack.users.add("boss", admin=True)
+    body = {"resources": {"build_memory": "6Gi", "build_cpu": "3"}}
+
+    started = await stack.client.post("/api/admin/runner-install/local/docker", json=body, headers=boss)
+    await _register_like_runner(stack)
+    await _finished(stack, started.json()["id"], boss)
+
+    assert started.status_code == 202
+    resources = stack.install_host.specs[0].resources
+    assert resources is not None
+    assert (resources.build_memory, resources.build_cpu, resources.runner_memory) == ("6Gi", "3", None)
+    audit = [e for e in await stack.users.audit.list() if e.action == "runner_install.local.start"]
+    assert audit[0].details["resources"] == {"build_cpu": "3", "build_memory": "6Gi"}
+
+
+async def test__runner_install__resource_limits_out_of_bounds_are_422_before_any_token(stack: _Stack) -> None:
+    boss = await stack.users.add("boss", admin=True)
+    stack.install_host.reject_field = "build_memory"
+
+    response = await stack.client.post(
+        "/api/admin/runner-install/local/docker", json={"resources": {"build_memory": "999Gi"}}, headers=boss
+    )
+
+    assert response.status_code == 422
+    assert response.json()["detail"] == {"code": "invalid_resources", "field": "build_memory", "reason": "max"}
+    assert await stack.tokens.list() == []
+
+
+async def test__runner_install__garbage_quantity_is_rejected_by_the_schema(stack: _Stack) -> None:
+    boss = await stack.users.add("boss", admin=True)
+
+    response = await stack.client.post(
+        "/api/admin/runner-install/local/docker", json={"resources": {"build_cpu": "lots; rm -rf"}}, headers=boss
+    )
+
+    assert response.status_code == 422
+    assert await stack.tokens.list() == []
+
+
 async def test__runner_install__success_flow_never_leaks_the_token(stack: _Stack) -> None:
     boss = await stack.users.add("boss", admin=True)
 

@@ -53,3 +53,15 @@ class BuildBackendUnavailableError(CompileSetupError):
     """Исполнитель сборки вне процесса (Kubernetes API) отказал: нет прав, квоты, узла или пода."""
 
     code = "build_backend_unavailable"
+
+
+class BuildOutOfMemoryError(CompileSetupError):
+    """Под сборки убит по памяти (OOMKilled или SIGKILL у latexmk): документу не хватило лимита памяти пода."""
+
+    code = "build_out_of_memory"
+
+
+class BuildStorageExceededError(CompileSetupError):
+    """Под сборки выселен за предел эфемерного хранилища (emptyDir /work, /tmp или ephemeral-storage)."""
+
+    code = "build_storage_exceeded"

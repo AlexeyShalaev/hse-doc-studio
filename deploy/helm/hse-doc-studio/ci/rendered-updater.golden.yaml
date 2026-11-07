@@ -185,6 +185,8 @@ spec:
       annotations:
         checksum/secret: e5538a18ebb8f0da6003827e5a5ba9bb366bf4b8fe029b41a3d897c99f9701c0
     spec:
+      # Студия не ходит в Kubernetes API: токен ServiceAccount в поде не нужен.
+      automountServiceAccountToken: false
       securityContext:
         runAsNonRoot: true
         runAsUser: 10001
@@ -307,11 +309,14 @@ spec:
         app.kubernetes.io/instance: rel
         app.kubernetes.io/component: runner
     spec:
+      # Этот раннер работает через docker.sock, а не Kubernetes API: токен ServiceAccount ему не нужен.
+      automountServiceAccountToken: false
       securityContext:
         runAsNonRoot: true
         runAsUser: 10001
         runAsGroup: 10001
         supplementalGroups: [0]
+        seccompProfile: {type: RuntimeDefault}
       initContainers:
         # hostPath создаётся от root, fsGroup на него не действует: отдаём каталог пользователю раннера.
         - name: fix-data-dir
@@ -330,6 +335,9 @@ spec:
           image: ghcr.io/alexeyshalaev/hse-doc-studio:latest
           imagePullPolicy: IfNotPresent
           command: ["hse-doc-studio", "runner"]
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities: {drop: [ALL]}
           env:
             - {name: HSE_RUNNER__API_URL, value: "http://rel-hse-doc-studio:8000"}
             - {name: HSE_RUNNER__DATA_DIR, value: "/var/lib/hse-runner"}
@@ -341,7 +349,14 @@ spec:
             - {name: runner-data, mountPath: "/var/lib/hse-runner"}
             - {name: docker-sock, mountPath: /var/run/docker.sock}
           resources:
-            {}
+            limits:
+              cpu: "1"
+              ephemeral-storage: 2Gi
+              memory: 2Gi
+            requests:
+              cpu: 100m
+              ephemeral-storage: 128Mi
+              memory: 256Mi
       volumes:
         - name: runner-data
           hostPath: {path: "/var/lib/hse-runner", type: DirectoryOrCreate}
@@ -482,6 +497,7 @@ spec:
         app.kubernetes.io/component: migrate
     spec:
       restartPolicy: Never
+      automountServiceAccountToken: false
       securityContext:
         runAsNonRoot: true
         runAsUser: 10001
