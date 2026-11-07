@@ -72,6 +72,12 @@
     "limit": "9 kB"
   },
   {
+    "name": "Словарь админки: runnerIsolation (как развёрнуты раннеры, изоляция в кластере)",
+    "path": "dist/assets/locale-admin-runnerIsolation-*.js",
+    "gzip": true,
+    "limit": "6 kB"
+  },
+  {
     "name": "Словарь админки: quotas",
     "path": "dist/assets/locale-admin-quotas-*.js",
     "gzip": true,

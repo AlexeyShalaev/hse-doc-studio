@@ -27,6 +27,7 @@ from hse_doc_studio.core.runner_install import (
     UnavailableReason,
     resolve,
 )
+from hse_doc_studio.core.runner_install.resources import BUILD_EPHEMERAL, RUNNER_EPHEMERAL
 from hse_doc_studio.infra.compile.k8s.api import KubeApiError
 from hse_doc_studio.infra.compile.k8s.client import KubernetesApiClient, TokenSource
 from hse_doc_studio.infra.compile.k8s.config import SA_DIR, KubernetesExecutorConfig
@@ -42,10 +43,40 @@ DEFAULT_RESOURCES = ResourceDefaults(
     runner=PodResources(cpu_request="100m", cpu_limit="1", memory_request="256Mi", memory_limit="2Gi"),
     build=PodResources(cpu_request="500m", cpu_limit="2", memory_request="1Gi", memory_limit="4Gi"),
 )
-# Эфемерное хранилище: том данных на PVC, а /tmp раннера держит спул выгрузки (до 512 МиБ) и временные файлы.
+# /tmp раннера держит спул выгрузки (до 512 МиБ) и временные файлы; эфемерный диск в core (RUNNER_EPHEMERAL).
 _RUNNER_TMP_SIZE = "1Gi"
-_RUNNER_EPHEMERAL = ("128Mi", "2Gi")
-_BUILD_EPHEMERAL = ("1Gi", "4Gi")
+_RUNNER_EPHEMERAL = RUNNER_EPHEMERAL
+_BUILD_EPHEMERAL = BUILD_EPHEMERAL
+
+
+_POD_FIELDS = (
+    ("HSE_RUNNER__POD__NAMESPACE", "metadata.namespace"),
+    ("HSE_RUNNER__POD__NAME", "metadata.name"),
+    ("HSE_RUNNER__POD__SERVICE_ACCOUNT", "spec.serviceAccountName"),
+)
+_POD_RESOURCES = (
+    ("HSE_RUNNER__POD__CPU_REQUEST_M", "requests.cpu", "1m"),
+    ("HSE_RUNNER__POD__CPU_LIMIT_M", "limits.cpu", "1m"),
+    ("HSE_RUNNER__POD__MEMORY_REQUEST_MI", "requests.memory", "1Mi"),
+    ("HSE_RUNNER__POD__MEMORY_LIMIT_MI", "limits.memory", "1Mi"),
+    ("HSE_RUNNER__POD__EPHEMERAL_REQUEST_MI", "requests.ephemeral-storage", "1Mi"),
+    ("HSE_RUNNER__POD__EPHEMERAL_LIMIT_MI", "limits.ephemeral-storage", "1Mi"),
+)
+
+
+def pod_info_env(container: str) -> list[dict[str, Any]]:
+    """Переменные downward API о своём поде; те же пишет чарт (runner.yaml, runner-kubernetes.yaml)."""
+    env: list[dict[str, Any]] = [
+        {"name": name, "valueFrom": {"fieldRef": {"fieldPath": path}}} for name, path in _POD_FIELDS
+    ]
+    env += [
+        {
+            "name": name,
+            "valueFrom": {"resourceFieldRef": {"containerName": container, "resource": resource, "divisor": divisor}},
+        }
+        for name, resource, divisor in _POD_RESOURCES
+    ]
+    return env
 
 
 class KubeLocalHost:
@@ -165,6 +196,8 @@ class KubeLocalHost:
             {"name": "HSE_RUNNER__K8S__MEMORY_LIMIT", "value": build_res.memory_limit},
             {"name": "HSE_RUNNER__K8S__EPHEMERAL_STORAGE_REQUEST", "value": _BUILD_EPHEMERAL[0]},
             {"name": "HSE_RUNNER__K8S__EPHEMERAL_STORAGE_LIMIT", "value": _BUILD_EPHEMERAL[1]},
+            # Свой под из downward API: раннер сообщает это в админку (как развёрнут), на работу не влияет.
+            *pod_info_env("runner"),
         ]
         deployment = {
             "apiVersion": "apps/v1",

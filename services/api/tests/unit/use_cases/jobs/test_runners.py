@@ -258,3 +258,39 @@ async def test__announce__changed_capabilities_are_audited_once(world: World) ->
     latest = max(announced, key=lambda e: e.id)
     assert latest.details["ai_endpoints"] == {"from": [], "to": ["ollama:ollama"]}
     assert latest.details["tags"] == {"from": ["office"], "to": ["ai", "office"]}
+
+
+async def test__report_deployment__stored_for_shared_and_ignored_for_personal(world: World) -> None:
+    from dataclasses import replace  # noqa: PLC0415
+
+    from hse_doc_studio.core.jobs.runners import RunnerOwnerKind  # noqa: PLC0415
+
+    from tests.factories.runner_isolation import make_report  # noqa: PLC0415
+
+    created = await world.registry.create_registration_token(ADMIN)
+    registered = await world.registry.register(created.secret, _request())
+    runner = await world.registry.authenticate(registered.secret)
+
+    await world.registry.report_deployment(runner, make_report())
+    stored = await world.runners.get(runner.id)
+    assert stored is not None
+    assert stored.deployment == make_report()
+
+    personal = replace(stored, deployment=None, owner_kind=RunnerOwnerKind.user, owner_id="anna")
+    await world.runners.add(personal)
+    await world.registry.report_deployment(personal, make_report())
+    again = await world.runners.get(runner.id)
+    assert again is not None
+    assert again.deployment is None
+
+
+async def test__report_deployment__revoked_runner_is_refused(world: World) -> None:
+    from tests.factories.runner_isolation import make_report  # noqa: PLC0415
+
+    created = await world.registry.create_registration_token(ADMIN)
+    registered = await world.registry.register(created.secret, _request())
+    runner = await world.registry.authenticate(registered.secret)
+    await world.registry.revoke(ADMIN, runner.id)
+
+    with pytest.raises(RunnerAuthError):
+        await world.registry.report_deployment(runner, make_report())

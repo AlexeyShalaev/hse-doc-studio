@@ -9,6 +9,7 @@ from urllib.parse import urlsplit
 import httpx
 
 from hse_doc_studio.core.jobs.codec import decode, decode_poll_response, encode
+from hse_doc_studio.core.jobs.deployment import RunnerDeployment
 from hse_doc_studio.core.jobs.wire import (
     FEATURE_AI_SLOTS,
     RUNNER_API_PREFIX,
@@ -213,6 +214,10 @@ class RunnerClient:
     async def offline(self) -> None:
         """Мягкая остановка: сервер сразу уводит сборки хозяина на общие раннеры."""
         await self._send("POST", "/offline", retries=0, timeout_s=5.0)
+
+    async def report_deployment(self, report: RunnerDeployment) -> None:
+        """Как раннер развёрнут; шлётся только после согласования `deployment_info`, без повторов."""
+        await self._send("POST", "/deployment", json=encode(report), retries=0, timeout_s=10.0)
 
     async def deregister(self) -> None:
         """Раннер отзывает сам себя; дальше его токен не годится."""

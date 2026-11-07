@@ -1,0 +1,53 @@
+{
+  "executor": "docker",
+  "platform": "host",
+  "namespace": null,
+  "pod_name": null,
+  "service_account": null,
+  "resources": {
+    "cpu_request": null,
+    "cpu_limit": null,
+    "memory_request": null,
+    "memory_limit": "8192Mi",
+    "ephemeral_request": null,
+    "ephemeral_limit": null,
+    "source": "cgroup"
+  },
+  "security": {
+    "run_as_non_root": true,
+    "run_as_user": 1001,
+    "read_only_root": false,
+    "no_privilege_escalation": false,
+    "seccomp": false,
+    "capabilities_dropped": true,
+    "automount_token": null
+  },
+  "build": {
+    "namespace": null,
+    "image": "texlive/texlive:TL2024-historic",
+    "resources": {
+      "cpu_request": null,
+      "cpu_limit": "2",
+      "memory_request": null,
+      "memory_limit": "4g",
+      "ephemeral_request": null,
+      "ephemeral_limit": null,
+      "source": "config"
+    },
+    "network_disabled": true,
+    "pids_limit": 512,
+    "work_size_limit": null,
+    "tmp_size_limit": "512m",
+    "active_deadline_s": null,
+    "runtime_class": null,
+    "security": {
+      "run_as_non_root": true,
+      "run_as_user": 1001,
+      "read_only_root": true,
+      "no_privilege_escalation": true,
+      "seccomp": null,
+      "capabilities_dropped": true,
+      "automount_token": null
+    }
+  }
+}

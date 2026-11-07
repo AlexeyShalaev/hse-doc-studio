@@ -201,6 +201,9 @@ class RunnerRow(Base):
     renamed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     # Кто поставил на паузу: `owner` или `admin`; паузу админа хозяин не снимает.
     paused_by: Mapped[str | None] = mapped_column(String(16))
+    # Отчёт раннера о развёртывании (`/deployment`): исполнитель, лимиты, securityContext; без секретов.
+    deployment: Mapped[dict[str, Any] | None] = mapped_column(JSONB)
+    deployment_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
 
 class RunnerRegistrationTokenRow(Base):

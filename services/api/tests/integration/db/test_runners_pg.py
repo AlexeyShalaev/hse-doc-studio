@@ -113,3 +113,29 @@ async def test__runners__duplicate_token_hash__rejected(pg_migrated_engine: Asyn
 
     with pytest.raises(IntegrityError):
         await runners.add(_runner("r2", "same"))
+
+
+async def test__runners__deployment_report_roundtrip_and_garbage_reads_as_no_data(
+    pg_migrated_engine: AsyncEngine,
+) -> None:
+    from hse_doc_studio.infra.db.orm.jobs import RunnerRow  # noqa: PLC0415
+    from sqlalchemy import update  # noqa: PLC0415
+
+    from tests.factories.runner_isolation import make_report  # noqa: PLC0415
+
+    runners, _ = _repos(pg_migrated_engine)
+    await runners.add(_runner("r1", "h1"))
+    assert (await runners.get("r1")).deployment is None  # type: ignore[union-attr]
+
+    assert await runners.set_deployment("r1", make_report(), NOW) is True
+    stored = await runners.get("r1")
+    assert stored is not None
+    assert stored.deployment == make_report()
+    assert stored.deployment_at == NOW
+
+    async with pg_migrated_engine.begin() as conn:
+        await conn.execute(update(RunnerRow).where(RunnerRow.id == "r1").values(deployment={"executor": "podman"}))
+    assert (await runners.get("r1")).deployment is None  # type: ignore[union-attr]
+
+    await runners.revoke("r1", NOW)
+    assert await runners.set_deployment("r1", make_report(), NOW) is False

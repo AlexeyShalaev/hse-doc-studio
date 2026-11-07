@@ -42,7 +42,9 @@ FEATURE_ANNOUNCE = "announce"
 FEATURE_OFFLINE = "offline"
 FEATURE_AI_SLOTS = "ai_slots"
 FEATURE_AI_RELAY = "ai_relay"
-SERVER_FEATURES = frozenset({FEATURE_ANNOUNCE, FEATURE_OFFLINE, FEATURE_AI_SLOTS, FEATURE_AI_RELAY})
+# Раннер сообщает, как он развёрнут (`POST /deployment`): исполнитель, лимиты, контекст безопасности.
+FEATURE_DEPLOYMENT = "deployment_info"
+SERVER_FEATURES = frozenset({FEATURE_ANNOUNCE, FEATURE_OFFLINE, FEATURE_AI_SLOTS, FEATURE_AI_RELAY, FEATURE_DEPLOYMENT})
 
 
 @dataclass(frozen=True)

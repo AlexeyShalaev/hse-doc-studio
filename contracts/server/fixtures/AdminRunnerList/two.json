@@ -19,7 +19,11 @@
       "owner": null,
       "host_kind": "cli",
       "ai_endpoints": [],
-      "last_seen_ip": null
+      "last_seen_ip": null,
+      "reinstall": [
+        "before_limits"
+      ],
+      "deployment_reported": false
     },
     {
       "id": "0f9e8d7c6b5a49382716f5e4d3c2b1a0",
@@ -39,7 +43,9 @@
       "owner": null,
       "host_kind": "cli",
       "ai_endpoints": [],
-      "last_seen_ip": null
+      "last_seen_ip": null,
+      "reinstall": [],
+      "deployment_reported": true
     },
     {
       "id": "11112222333344445555666677778888",
@@ -59,7 +65,9 @@
       "owner": null,
       "host_kind": "cli",
       "ai_endpoints": [],
-      "last_seen_ip": null
+      "last_seen_ip": null,
+      "reinstall": [],
+      "deployment_reported": false
     }
   ],
   "total": 43,

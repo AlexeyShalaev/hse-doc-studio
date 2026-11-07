@@ -11,6 +11,7 @@ from typing import Protocol
 
 from hse_doc_studio.core.compile.failure import PDF_MISSING
 from hse_doc_studio.core.jobs.codec import encode_result
+from hse_doc_studio.core.jobs.deployment import RunnerDeployment
 from hse_doc_studio.core.jobs.entities import JobResult
 from hse_doc_studio.core.jobs.enums import JobErrorCategory, JobKind, JobStatus, RunnerErrorCode
 from hse_doc_studio.core.jobs.errors import JobError, JobFailure
@@ -23,6 +24,7 @@ from hse_doc_studio.core.jobs.wire import (
     FEATURE_AI_RELAY,
     FEATURE_AI_SLOTS,
     FEATURE_ANNOUNCE,
+    FEATURE_DEPLOYMENT,
     FEATURE_OFFLINE,
     MAX_POLL_WAIT_S,
     RUNNER_PROTOCOL_VERSION,
@@ -55,6 +57,7 @@ _LEASE_LOST_CODES = frozenset(
 )
 # Запас на остановку исполнителя после принудительной отмены при выключении.
 _FORCE_GRACE_S = 5.0
+DEPLOYMENT_REPORT_EVERY_S = 3600.0
 
 
 class RunnerFatalError(Exception):
@@ -102,6 +105,10 @@ class RunnerLoopConfig:
     gate: Callable[[], bool] | None = None
     # Пауза перед новой проверкой, пока шлюз закрыт и брать нечего.
     gate_recheck_s: float = 1.0
+    # Как раннер развёрнут (исполнитель, лимиты, securityContext): отчёт для админки. None значит не сообщать.
+    deployment: Callable[[], RunnerDeployment] | None = None
+    # Как часто повторять отчёт: числа почти не меняются, повтор нужен, если сервер восстановили из бэкапа.
+    deployment_every_s: float = DEPLOYMENT_REPORT_EVERY_S
 
 
 class RunnerLoop:
@@ -138,6 +145,8 @@ class RunnerLoop:
         self._announced: RunnerAnnounceResponse | None = None
         self._ai_endpoints = config.ai_endpoints
         self._state: RunnerLoopState | None = None
+        # Монотонное время последнего отчёта о развёртывании; None, пока не отправлен.
+        self._deployment_sent_at: float | None = None
 
     @property
     def running_jobs(self) -> int:
@@ -171,6 +180,8 @@ class RunnerLoop:
         endpoints = self._ai_endpoints
         relay = cfg.ai_concurrency > 0 and bool(endpoints)
         features = {FEATURE_ANNOUNCE, FEATURE_OFFLINE} | ({FEATURE_AI_SLOTS, FEATURE_AI_RELAY} if relay else set())
+        if cfg.deployment is not None:
+            features.add(FEATURE_DEPLOYMENT)
         tags = set(cfg.tags) | ({RELAY_TAG} if relay else set())
         return RunnerAnnounceRequest(
             name=cfg.name,
@@ -196,6 +207,24 @@ class RunnerLoop:
             logger.info("server does not know /announce: protocol 1.0 without ai relay")
         else:
             self._set_state(RunnerLoopState.paused if self._announced.paused else RunnerLoopState.online)
+            await self._report_deployment()
+
+    async def _report_deployment(self) -> None:
+        """Отчёт о развёртывании; сбой не мешает работе: сервер просто покажет прежний отчёт или «нет данных»."""
+        build = self._config.deployment
+        if build is None or FEATURE_DEPLOYMENT not in self._client.features:
+            return
+        self._deployment_sent_at = time.monotonic()
+        try:
+            await self._client.report_deployment(build())
+        except (RunnerApiError, RunnerUnreachable, ValueError, OSError) as exc:
+            logger.warning("deployment report not delivered: %s", exc)
+
+    async def _report_deployment_if_due(self) -> None:
+        sent = self._deployment_sent_at
+        if sent is None or time.monotonic() - sent < self._config.deployment_every_s:
+            return
+        await self._report_deployment()
 
     async def _announce_until_ready(self) -> None:
         backoff = self._config.backoff_factory()
@@ -252,6 +281,7 @@ class RunnerLoop:
                 self._set_state(RunnerLoopState.online)
             if response is not None:
                 self._spawn(response)
+            await self._report_deployment_if_due()
 
     async def _wait_for_slot(self) -> None:
         """Слот освободится по окончании задачи; шлюз закрыт без задач: проверим снова чуть позже."""

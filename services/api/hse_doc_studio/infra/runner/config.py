@@ -46,6 +46,24 @@ class AiEndpointConfig(BaseModel):
         return value
 
 
+class RunnerPodInfo(BaseModel):
+    """Сведения о своём поде из downward API (HSE_RUNNER__POD__*): только для отчёта в админку, на работу не влияют."""
+
+    namespace: str = Field(default="", description="Namespace пода раннера (fieldRef metadata.namespace).")
+    name: str = Field(default="", description="Имя пода раннера (fieldRef metadata.name).")
+    service_account: str = Field(default="", description="ServiceAccount пода (fieldRef spec.serviceAccountName).")
+    cpu_request_m: int | None = Field(default=None, ge=0, description="requests.cpu в милликорах (divisor 1m).")
+    cpu_limit_m: int | None = Field(default=None, ge=0, description="limits.cpu в милликорах (divisor 1m).")
+    memory_request_mi: int | None = Field(default=None, ge=0, description="requests.memory в МиБ (divisor 1Mi).")
+    memory_limit_mi: int | None = Field(default=None, ge=0, description="limits.memory в МиБ (divisor 1Mi).")
+    ephemeral_request_mi: int | None = Field(
+        default=None, ge=0, description="requests.ephemeral-storage в МиБ (divisor 1Mi)."
+    )
+    ephemeral_limit_mi: int | None = Field(
+        default=None, ge=0, description="limits.ephemeral-storage в МиБ (divisor 1Mi)."
+    )
+
+
 class BuildExecutorKind(StrEnum):
     """Где идёт сборка TeX: соседний контейнер через docker.sock или под в Kubernetes."""
 
@@ -112,6 +130,9 @@ class RunnerConfig(BaseSettings):
     )
     k8s: KubernetesExecutorConfig = Field(
         default_factory=KubernetesExecutorConfig, description="Настройки исполнителя kubernetes (HSE_RUNNER__K8S__*)."
+    )
+    pod: RunnerPodInfo = Field(
+        default_factory=RunnerPodInfo, description="Свой под из downward API (HSE_RUNNER__POD__*) для админки."
     )
     tex_image: str = Field(default=DEFAULT_IMAGE, description="Образ TeX Live для сборки; ставится на хосте заранее.")
     tex_cache_volume: str = Field(default=DEFAULT_CACHE_VOLUME, description="Том docker с кэшем TeX.")

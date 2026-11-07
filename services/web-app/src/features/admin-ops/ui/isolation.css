@@ -1,0 +1,109 @@
+/* Техническая информация о раннерах: карточка «Как развёрнут» и изоляция в кластере. */
+.iso-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  min-width: 0;
+}
+.iso-grid {
+  display: grid;
+  gap: 1rem 1.5rem;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 18rem), 1fr));
+}
+.iso-block {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  min-width: 0;
+}
+.iso-block-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.25rem 0.5rem;
+  margin: 0;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--fg-0);
+}
+.iso-sub {
+  margin: 0.25rem 0 0;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--fg-2);
+}
+.iso-note {
+  margin: 0;
+  font-size: 0.75rem;
+  line-height: 1.5;
+  color: var(--fg-2);
+  overflow-wrap: anywhere;
+}
+.iso-facts {
+  margin: 0;
+  display: grid;
+  grid-template-columns: minmax(6.5rem, 12rem) minmax(0, 1fr);
+  column-gap: 0.875rem;
+  row-gap: 0.25rem;
+  font-size: 0.75rem;
+}
+.iso-facts dt {
+  color: var(--fg-2);
+  overflow-wrap: anywhere;
+}
+.iso-facts dd {
+  margin: 0;
+  min-width: 0;
+  color: var(--fg-0);
+  overflow-wrap: anywhere;
+}
+.iso-facts dd[data-tone="warning"] {
+  color: var(--c-warn, #b45309);
+}
+.iso-facts dd[data-tone="muted"] {
+  color: var(--fg-2);
+}
+.iso-list {
+  margin: 0;
+  padding-left: 1.125rem;
+  font-size: 0.75rem;
+  line-height: 1.5;
+  color: var(--fg-1);
+  overflow-wrap: anywhere;
+}
+.iso-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.75rem;
+  table-layout: fixed;
+}
+.iso-table th,
+.iso-table td {
+  padding: 0.25rem 0.375rem 0.25rem 0;
+  text-align: left;
+  vertical-align: top;
+  overflow-wrap: anywhere;
+}
+.iso-table th {
+  font-weight: 500;
+  color: var(--fg-2);
+}
+.iso-table td {
+  color: var(--fg-0);
+}
+.iso-toggle {
+  align-self: flex-start;
+}
+
+/* Узкий экран: подпись над значением, без горизонтальной прокрутки. */
+@media (max-width: 30rem) {
+  .iso-facts {
+    grid-template-columns: minmax(0, 1fr);
+    row-gap: 0;
+  }
+  .iso-facts dd {
+    margin-bottom: 0.375rem;
+  }
+}

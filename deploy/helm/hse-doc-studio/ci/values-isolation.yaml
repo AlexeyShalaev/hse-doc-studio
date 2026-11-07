@@ -1,6 +1,9 @@
 # Поверх values-test.yaml: полная изоляция раннеров (golden-рендер rendered-isolation.golden.yaml): исполнитель
-# kubernetes в отдельном namespace с квотой и LimitRange, сетевые политики раннеров, установка из админки.
+# kubernetes в отдельном namespace с квотой и LimitRange, сетевые политики раннеров, установка из админки и чтение
+# живого состояния изоляции для админки.
 runner:
+  isolationInfo:
+    readCluster: true
   executor: kubernetes
   networkPolicy:
     enabled: true

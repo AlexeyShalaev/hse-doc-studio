@@ -145,3 +145,4 @@ cd services/api && HSE_TEST_K8S_API_URL=$(kubectl --kubeconfig /tmp/hds.kubeconf
 - NetworkPolicy «всё запрещено» для подов сборки раннеров из админки; исходящая сеть самих раннеров опциональна (`runner.networkPolicy`, выключена: чарт не знает адресов API-сервера и S3);
 - ResourceQuota и LimitRange отдельного namespace сборок как опция;
 - `automountServiceAccountToken: false` у api (без установки из админки), задания миграций и docker-раннера; Role Студии без `get` на Deployment.
+- Экран «Как развёрнут» и «Изоляция раннеров в кластере» в админке: раннер сообщает о себе (`deployment_info`, `POST /deployment`, поля пода из downward API `HSE_RUNNER__POD__*`), чарт кладёт выжимку values в `HSE_STUDIO__RUNNER_CLUSTER__DECLARED`, живое состояние Студия читает только с `runner.isolationInfo.readCluster` (Role на чтение политик, квоты и LimitRange, ClusterRole `get` на свои namespace).

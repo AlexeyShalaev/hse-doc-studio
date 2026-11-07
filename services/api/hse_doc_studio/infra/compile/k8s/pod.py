@@ -7,6 +7,7 @@ import shlex
 import uuid
 from dataclasses import dataclass
 
+from hse_doc_studio.core.jobs.deployment import BuildIsolation, ResourceFigures, ResourceSource, SecurityFacts
 from hse_doc_studio.infra.compile.k8s.config import KubernetesExecutorConfig
 from hse_doc_studio.infra.compile.latexmk import (
     NONROOT_FORMAT_PREPARE,
@@ -190,3 +191,33 @@ def _placement(cfg: KubernetesExecutorConfig) -> dict[str, object]:
         "imagePullSecrets": [{"name": name} for name in cfg.image_pull_secrets],
     }
     return {key: value for key, value in fields.items() if value}
+
+
+def build_isolation(cfg: KubernetesExecutorConfig, namespace: str, image: str) -> BuildIsolation:
+    """Что получат поды сборки по `build_pod_manifest`: для отчёта раннера в админку (тест сверяет с манифестом)."""
+    return BuildIsolation(
+        namespace=namespace,
+        image=image or None,
+        resources=ResourceFigures(
+            cpu_request=cfg.cpu_request,
+            cpu_limit=cfg.cpu_limit,
+            memory_request=cfg.memory_request,
+            memory_limit=cfg.memory_limit,
+            ephemeral_request=cfg.ephemeral_storage_request,
+            ephemeral_limit=cfg.ephemeral_storage_limit,
+            source=ResourceSource.config,
+        ),
+        work_size_limit=cfg.work_size_limit,
+        tmp_size_limit=cfg.tmp_size_limit,
+        active_deadline_s=cfg.active_deadline_s,
+        runtime_class=cfg.runtime_class_name or None,
+        security=SecurityFacts(
+            run_as_non_root=True,
+            run_as_user=cfg.run_as_user,
+            read_only_root=True,
+            no_privilege_escalation=True,
+            seccomp=True,
+            capabilities_dropped=True,
+            automount_token=False,
+        ),
+    )

@@ -24,6 +24,7 @@ from hse_doc_studio.core.jobs.codec import (
     encode_envelope,
     encode_poll_response,
 )
+from hse_doc_studio.core.jobs.deployment import RunnerDeployment
 from hse_doc_studio.core.jobs.enums import JobKind, RunnerErrorCode
 from hse_doc_studio.core.jobs.files import ArtifactRef, ManifestFile
 from pydantic import BaseModel
@@ -33,7 +34,17 @@ _FIXTURES = _CONTRACT / "fixtures"
 
 # Схема -> как разобрать эталон проводной моделью и собрать обратно; None значит у схемы нет датакласса.
 # Вложенные схемы: отдельных эталонов нет, их покрывают объемлющие.
-_NESTED = {"ActorWire", "JobSpecWire", "JobResultWire", "BlobLocationBody", "DeclaredAiEndpointBody", "RelayEventBody"}
+_NESTED = {
+    "ActorWire",
+    "JobSpecWire",
+    "JobResultWire",
+    "BlobLocationBody",
+    "DeclaredAiEndpointBody",
+    "RelayEventBody",
+    "RunnerResourcesBody",
+    "RunnerSecurityBody",
+    "RunnerBuildIsolationBody",
+}
 
 
 def _encode_poll(request: wire.PollRequest) -> object:
@@ -71,6 +82,7 @@ _WIRE: dict[str, tuple[Callable[[Any], Any], Callable[[Any], Any]] | None] = {
     "RunnerPairPollResponseBody": (lambda d: decode(wire.RunnerPairPollResponse, d), encode),
     "RelayEventBatchBody": (lambda d: decode(wire.RelayEventBatch, d), encode),
     "RelayEventAckBody": (lambda d: decode(wire.RelayEventAck, d), encode),
+    "RunnerDeploymentBody": (lambda d: decode(RunnerDeployment, d), encode),
 }
 
 
@@ -223,9 +235,13 @@ def test__models__announce_rejects_duplicate_endpoint_names() -> None:
 
 
 def test__wire__server_features_are_the_documented_capabilities() -> None:
-    assert {wire.FEATURE_ANNOUNCE, wire.FEATURE_OFFLINE, wire.FEATURE_AI_SLOTS, wire.FEATURE_AI_RELAY} == (
-        wire.SERVER_FEATURES
-    )
+    assert {
+        wire.FEATURE_ANNOUNCE,
+        wire.FEATURE_OFFLINE,
+        wire.FEATURE_AI_SLOTS,
+        wire.FEATURE_AI_RELAY,
+        wire.FEATURE_DEPLOYMENT,
+    } == wire.SERVER_FEATURES
 
 
 def test__poll_request__needs_some_free_slot_and_accepts_a_relay_only_poll() -> None:
@@ -234,3 +250,13 @@ def test__poll_request__needs_some_free_slot_and_accepts_a_relay_only_poll() -> 
         schemas.PollRequestBody.model_validate({"wait_s": 0, "free_slots": 0})
     with pytest.raises(ValueError, match="free slot"):
         wire.PollRequest(wait_s=0, free_slots=0)
+
+
+def test__models__deployment_rejects_unknown_fields_and_long_names() -> None:
+    body = json.loads((_FIXTURES / "RunnerDeploymentBody" / "kubernetes.json").read_text(encoding="utf-8"))
+    with pytest.raises(ValueError, match="extra"):
+        schemas.RunnerDeploymentBody.model_validate({**body, "token": "hsrn_x"})
+    with pytest.raises(ValueError, match="253"):
+        schemas.RunnerDeploymentBody.model_validate({**body, "namespace": "n" * 300})
+    with pytest.raises(ValueError, match="namespace"):
+        decode(RunnerDeployment, {**body, "namespace": "n" * 300})

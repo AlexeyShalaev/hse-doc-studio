@@ -1,0 +1,15 @@
+{
+  "runner_id": "8b1c2b3a5d6e47f89a0b1c2d3e4f5a6b",
+  "name": "lab-pc",
+  "version": "0.12.0",
+  "studio_version": "0.14.0",
+  "outdated": true,
+  "limits_supported": false,
+  "reinstall": [
+    "before_limits"
+  ],
+  "origin": null,
+  "report": null,
+  "live": null,
+  "live_status": "not_applicable"
+}

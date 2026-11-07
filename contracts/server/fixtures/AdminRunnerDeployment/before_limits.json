@@ -1,0 +1,33 @@
+{
+  "runner_id": "7a1c2b3a5d6e47f89a0b1c2d3e4f5a6b",
+  "name": "old-box",
+  "version": "0.13.2",
+  "studio_version": "0.14.0",
+  "outdated": true,
+  "limits_supported": false,
+  "reinstall": [
+    "before_limits",
+    "no_pod_limits"
+  ],
+  "origin": "ui",
+  "report": null,
+  "live": {
+    "name": "old-box",
+    "namespace": "studio",
+    "image": "ghcr.io/alexeyshalaev/hse-doc-studio:0.13.2",
+    "service_account": "rel-runner-ui",
+    "ready": true,
+    "resources": null,
+    "build_resources": null,
+    "security": {
+      "run_as_non_root": true,
+      "run_as_user": 1000,
+      "read_only_root": false,
+      "no_privilege_escalation": true,
+      "seccomp": true,
+      "capabilities_dropped": true,
+      "automount_token": true
+    }
+  },
+  "live_status": "ok"
+}

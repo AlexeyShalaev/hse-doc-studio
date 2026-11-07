@@ -72,6 +72,29 @@ With `runner.installFromUi.enabled` the Studio gets one namespaced Role: Deploym
 
 For a separate build namespace (`runner.kubernetes.namespace`) the chart can add a ResourceQuota (`runner.kubernetes.quota`: pods, total requests and limits of CPU, memory and ephemeral storage) and a LimitRange (`runner.kubernetes.limitRange`: container defaults and a maximum). Both are off by default. Build pods set their own requests and limits, so they satisfy the quota; the LimitRange protects against foreign pods in that namespace. When a quota is full, the pod is refused and the build fails with `build_backend_unavailable` and the Kubernetes reason in the detail. The chart refuses to render a quota in the release namespace (it would limit the Studio too). Runners installed from the admin area live in the release namespace, so a quota does not apply to them.
 
+## What the admin area shows
+
+"Runners and queue" has two places with technical information. Each value is labelled with its source and the screen never mixes them: "configured" comes from configuration, "reported by the runner" from the runner's own report, "checked in the cluster" from the Kubernetes API.
+
+**Runner details** (row menu, "Deployment details"):
+
+- executor (`docker` or `kubernetes`), where the runner itself runs (pod, container, host), the runner version next to the Studio version and an "outdated" mark;
+- the hint "reinstall the runner or upgrade the Helm release so the limits apply" when the runner is older than 0.14.0 or its pod has no CPU and memory limits. The same mark sits next to the version in the table;
+- namespace and pod name, ServiceAccount, CPU, memory and ephemeral storage requests and limits of the runner itself (from the pod downward API; with older manifests only the cgroup limits);
+- build pods: namespace, TeX image, requests and limits, `/work` and `/tmp`, `activeDeadlineSeconds`, RuntimeClass, and for the docker executor no network and the process limit;
+- securityContext: `runAsNonRoot` and uid, read-only root, no privilege escalation, seccomp, dropped capabilities, ServiceAccount token. For the runner these are observed on its own process (`/proc/self/status`), for build pods it is what the runner writes into the manifest;
+- for a runner installed from the admin area, its Deployment from the cluster: image, readiness, requests and limits, build pod limits and securityContext. The Studio reads it with the `list` right it already has for installing.
+
+The runner reports this itself after `/announce` (protocol feature `deployment_info`, `POST /api/runner/v1/deployment`) and repeats hourly. Older runners cannot, their details say "no data"; older servers do not negotiate the feature, so a new runner sends them nothing. Personal runners' reports are not stored and not shown. The report carries no tokens, environment variables or addresses.
+
+**"Runner isolation in the cluster"** below the runner list:
+
+- the chart runner (executor, replicas, namespace, ServiceAccount, data volume, requests and limits, securityContext, a `docker.sock` warning), build pods, defaults and bounds of the install form;
+- network: deny-all for build pods (chart runner and runners from the admin area), the runner egress policy and what it allows (DNS, Studio api port, API server addresses and ports, number of `extraEgress` rules);
+- ResourceQuota and LimitRange of the build namespace, Pod Security labels of the release and build namespaces.
+
+What the chart configures is always known: the chart puts a summary of the values into `HSE_STUDIO__RUNNER_CLUSTER__DECLARED` (no secrets). That is not a check, so the screen says "configured" and "not checked in the cluster". To let the Studio compare it with the cluster, set `runner.isolationInfo.readCluster: true`. The chart then gives the Studio ServiceAccount a Role with `get` and `list` on NetworkPolicy, ResourceQuota and LimitRange in the release and build namespaces, and a ClusterRole with `get` on those two namespaces only (by `resourceNames`, for the Pod Security labels). No Secrets, no pods, no writes. When some of these rights are missing the screen says "partly checked" and never presents unchecked values as checked. Outside Helm (docker compose) the block shows only the install-from-admin settings.
+
 ## Checking on a cluster
 
 ```sh

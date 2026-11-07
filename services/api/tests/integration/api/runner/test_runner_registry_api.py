@@ -23,6 +23,7 @@ from hse_doc_studio.use_cases.admin.ops_runners import ListRegistrationTokensUC,
 from hse_doc_studio.use_cases.jobs.runners import RunnerRegistry
 from httpx import ASGITransport, AsyncClient
 
+from tests.factories.runner_isolation import report_body
 from tests.fakes.auth import InMemoryAuditLog
 from tests.fakes.runners import (
     InMemoryRegistrationTokenRepository,
@@ -60,6 +61,7 @@ class _Provider(Provider):
         runners, tokens = InMemoryRunnerRepository(), InMemoryRegistrationTokenRepository()
         self.registry = RunnerRegistry(runners, tokens, InMemoryAuditLog(), _Uow())
         self.reader = InMemoryRunnerAdminReader(runners, tokens)
+        self.runners = runners
 
     @provide
     def registry_(self) -> RunnerRegistry:
@@ -79,9 +81,10 @@ class _Provider(Provider):
 
 
 class _Env:
-    def __init__(self, client: AsyncClient, resolver: _HeldActorResolver) -> None:
+    def __init__(self, client: AsyncClient, resolver: _HeldActorResolver, runners: InMemoryRunnerRepository) -> None:
         self.client = client
         self.resolver = resolver
+        self.runners = runners
 
 
 @pytest_asyncio.fixture
@@ -94,7 +97,7 @@ async def env(monkeypatch: pytest.MonkeyPatch) -> AsyncIterator[_Env]:
     container = make_async_container(provider, FastapiProvider())
     setup_dishka(container, app)
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
-        result = _Env(client, provider.resolver_)
+        result = _Env(client, provider.resolver_, provider.runners)
         yield result
     await container.close()
 
@@ -244,3 +247,73 @@ async def test__local_mode__routes_absent(monkeypatch: pytest.MonkeyPatch) -> No
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
         assert (await client.get("/api/admin/runners")).status_code == 404
         assert (await client.post("/api/runner/v1/register", json=_body())).status_code == 404
+
+
+# ---- Отчёт раннера о развёртывании (`deployment_info`) ----
+
+
+async def _runner_headers(env: _Env, as_actor) -> tuple[dict[str, str], str]:  # type: ignore[no-untyped-def]
+    as_actor(_ADMIN)
+    secret = await _admin_token(env)
+    as_actor(None)
+    registered = (
+        await env.client.post("/api/runner/v1/register", json=_body(), headers={"Authorization": f"Bearer {secret}"})
+    ).json()
+    return {"Authorization": f"Bearer {registered['runner_token']}"}, registered["runner_id"]
+
+
+def _announce(features: list[str]) -> dict[str, object]:
+    return {
+        "name": "r1",
+        "version": "0.14.0",
+        "tags": ["tex"],
+        "concurrency": 1,
+        "ai_concurrency": 0,
+        "host_kind": "cli",
+        "features": features,
+        "ai_endpoints": [],
+    }
+
+
+async def test__announce__deployment_info_is_negotiated(env: _Env, as_actor) -> None:  # type: ignore[no-untyped-def]
+    headers, _ = await _runner_headers(env, as_actor)
+
+    answer = await env.client.post(
+        "/api/runner/v1/announce", json=_announce(["announce", "deployment_info"]), headers=headers
+    )
+    old = await env.client.post("/api/runner/v1/announce", json=_announce(["announce"]), headers=headers)
+
+    assert "deployment_info" in answer.json()["server_features"]
+    assert "deployment_info" not in old.json()["server_features"]
+
+
+async def test__deployment__report_is_stored_for_the_admin(env: _Env, as_actor) -> None:  # type: ignore[no-untyped-def]
+    headers, runner_id = await _runner_headers(env, as_actor)
+
+    response = await env.client.post("/api/runner/v1/deployment", json=report_body(), headers=headers)
+
+    assert response.status_code == 204
+    runner = await env.runners.get(runner_id)
+    assert runner is not None
+    assert runner.deployment is not None
+    assert runner.deployment.service_account == "rel-runner"
+    assert runner.deployment_at is not None
+
+
+async def test__deployment__needs_the_runner_token_and_a_strict_body(env: _Env, as_actor) -> None:  # type: ignore[no-untyped-def]
+    headers, runner_id = await _runner_headers(env, as_actor)
+
+    anonymous = await env.client.post("/api/runner/v1/deployment", json=report_body())
+    extra = await env.client.post(
+        "/api/runner/v1/deployment", json={**report_body(), "env": {"HSE_RUNNER__TOKEN": "x"}}, headers=headers
+    )
+    huge = await env.client.post(
+        "/api/runner/v1/deployment", json={**report_body(), "pod_name": "p" * 400}, headers=headers
+    )
+
+    assert anonymous.status_code == 401
+    assert extra.status_code == 422
+    assert huge.status_code == 422
+    runner = await env.runners.get(runner_id)
+    assert runner is not None
+    assert runner.deployment is None
