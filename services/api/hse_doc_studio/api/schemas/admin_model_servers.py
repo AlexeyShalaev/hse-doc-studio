@@ -9,7 +9,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 EngineName = Literal["ollama", "vllm", "sglang"]
 StatusName = Literal["installing", "running", "stopped", "failed"]
-StepStateName = Literal["pending", "running", "done", "failed"]
+StepStateName = Literal["pending", "running", "done", "failed", "skipped"]
 FitName = Literal["fits", "tight", "too_large", "unknown"]
 
 
@@ -90,6 +90,10 @@ class ModelServerResponse(BaseModel):
     percent: int | None
     text: str
     error: str | None
+    target: Literal["local", "ssh"] = "local"
+    host: str = ""
+    exposure: Literal["internal", "localhost", "public"] = "internal"
+    manageable: bool = True
 
 
 class ModelServerList(BaseModel):
@@ -98,3 +102,15 @@ class ModelServerList(BaseModel):
 
 class LogsResponse(BaseModel):
     text: str
+
+
+class ModelServerSettingsResponse(BaseModel):
+    """Токен Hugging Face наружу не отдаётся никогда: только признак, что он сохранён."""
+
+    hf_token_set: bool
+
+
+class SaveHfTokenRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    hf_token: str = Field(min_length=1, max_length=512, repr=False)

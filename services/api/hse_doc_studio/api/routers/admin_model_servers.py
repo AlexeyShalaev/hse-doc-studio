@@ -19,6 +19,8 @@ from hse_doc_studio.api.schemas.admin_model_servers import (
     LogsResponse,
     ModelServerList,
     ModelServerResponse,
+    ModelServerSettingsResponse,
+    SaveHfTokenRequest,
 )
 from hse_doc_studio.core.access.context import require_actor
 from hse_doc_studio.core.model_servers import Engine
@@ -54,6 +56,10 @@ def _server(view: ServerView) -> ModelServerResponse:
         percent=view.percent,
         text=view.text,
         error=view.error,
+        target=view.target.value,
+        host=view.host,
+        exposure=view.exposure.value,
+        manageable=view.manageable,
     )
 
 
@@ -108,6 +114,27 @@ async def post_estimate(body: EstimateRequest, request: Request) -> EstimateResp
         disk_ok=est.disk_ok,
         reasons=list(est.reasons),
     )
+
+
+@router.get("/settings", response_model=ModelServerSettingsResponse)
+async def get_settings(request: Request, response: Response) -> ModelServerSettingsResponse:
+    response.headers.update(_NO_STORE)
+    return ModelServerSettingsResponse(hf_token_set=await (await _uc(request)).hf_token_set(require_actor()))
+
+
+@router.put("/settings", response_model=ModelServerSettingsResponse)
+async def put_settings(body: SaveHfTokenRequest, request: Request, response: Response) -> ModelServerSettingsResponse:
+    response.headers.update(_NO_STORE)
+    uc = await _uc(request)
+    await uc.save_hf_token(require_actor(), body.hf_token)
+    return ModelServerSettingsResponse(hf_token_set=True)
+
+
+@router.delete("/settings", response_model=ModelServerSettingsResponse)
+async def delete_settings(request: Request, response: Response) -> ModelServerSettingsResponse:
+    response.headers.update(_NO_STORE)
+    await (await _uc(request)).clear_hf_token(require_actor())
+    return ModelServerSettingsResponse(hf_token_set=False)
 
 
 @router.get("", response_model=ModelServerList)

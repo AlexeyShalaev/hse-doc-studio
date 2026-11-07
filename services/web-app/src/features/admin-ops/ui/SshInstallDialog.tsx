@@ -5,7 +5,11 @@ import { ApiError, failureCode } from "@shared/api";
 import { Button, Input, Modal, Spinner, Textarea } from "@shared/ui";
 import { Switch } from "@shared/ui/Switch";
 import { Notice } from "@shared/ui/ConflictKit";
-import type { SavedSshCredential, SshPlan } from "@entities/session";
+import type {
+  ModelServerInstall,
+  SavedSshCredential,
+  SshPlan,
+} from "@entities/session";
 import {
   useInstallJob,
   useSshCapability,
@@ -180,9 +184,12 @@ const SavedList = ({
 export const SshInstallDialog = ({
   isOpen,
   onClose,
+  modelServer = null,
 }: {
   isOpen: boolean;
   onClose: () => void;
+  /** Поставить сервер ИИ-модели вместо раннера: тот же вход, отпечаток и ход, другая полезная нагрузка. */
+  modelServer?: ModelServerInstall | null;
 }) => {
   const { t } = useTranslation("adminRunnerInstall");
   const capability = useSshCapability(isOpen);
@@ -299,7 +306,11 @@ export const SshInstallDialog = ({
     install.mutate(
       {
         sessionId: session,
-        body: { name: form.name.trim(), install_docker: installDocker },
+        body: {
+          name: form.name.trim(),
+          install_docker: installDocker,
+          ...(modelServer ? { model_server: modelServer } : {}),
+        },
       },
       {
         onSuccess: (created) => {
@@ -338,8 +349,10 @@ export const SshInstallDialog = ({
     <Modal
       isOpen={isOpen}
       onClose={close}
-      title={t("ssh.title")}
-      description={t("ssh.lead")}
+      title={modelServer ? t("adminModelServers:ssh.title") : t("ssh.title")}
+      description={
+        modelServer ? t("adminModelServers:ssh.lead") : t("ssh.lead")
+      }
       width={640}
     >
       {isOpen && (
@@ -360,7 +373,7 @@ export const SshInstallDialog = ({
 
           {stage === "form" && capability.data?.enabled && (
             <>
-              {saved.data && saved.data.length > 0 && (
+              {!modelServer && saved.data && saved.data.length > 0 && (
                 <SavedList
                   items={saved.data}
                   busy={runSaved.isPending}
@@ -503,17 +516,19 @@ export const SshInstallDialog = ({
                     </span>
                   </div>
                 </div>
-                <Input
-                  label={t("name")}
-                  hint={t("nameHint")}
-                  value={form.name}
-                  maxLength={40}
-                  autoComplete="off"
-                  onChange={(e) => {
-                    set("name", e.target.value);
-                  }}
-                  data-testid="ssh-runner-name"
-                />
+                {!modelServer && (
+                  <Input
+                    label={t("name")}
+                    hint={t("nameHint")}
+                    value={form.name}
+                    maxLength={40}
+                    autoComplete="off"
+                    onChange={(e) => {
+                      set("name", e.target.value);
+                    }}
+                    data-testid="ssh-runner-name"
+                  />
+                )}
                 <div
                   className="flex flex-col"
                   style={{
@@ -644,7 +659,26 @@ export const SshInstallDialog = ({
                     : t("ssh.dockerNo"),
                 })}
               </p>
+              {modelServer && (
+                <div data-testid="ssh-model-summary">
+                  <p style={{ margin: 0, fontSize: "0.8125rem" }}>
+                    {t("adminModelServers:ssh.summary", {
+                      engine: t(
+                        `adminModelServers:engine.${modelServer.engine}`,
+                      ),
+                      model: modelServer.model,
+                    })}
+                  </p>
+                  <Notice
+                    tone={modelServer.exposure === "public" ? "warn" : "info"}
+                    text={t(
+                      `adminModelServers:ssh.exposure.${modelServer.exposure}`,
+                    )}
+                  />
+                </div>
+              )}
               <ol
+                hidden={modelServer !== null}
                 className="flex flex-col"
                 style={{ gap: "0.25rem", margin: 0, paddingLeft: "1.25rem" }}
                 data-testid="ssh-plan"

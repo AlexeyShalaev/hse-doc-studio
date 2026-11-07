@@ -11,6 +11,7 @@ import {
   ArrowLeft,
   ArrowUpCircle,
   Bot,
+  Cpu,
   Building2,
   ChevronDown,
   ClipboardList,
@@ -60,6 +61,7 @@ export type AdminSection =
   | "settings"
   | "signing"
   | "aiProviders"
+  | "modelServers"
   | "mcp"
   | "audit";
 
@@ -106,6 +108,7 @@ const ADMIN_NAV: readonly NavGroup[] = [
       { id: "settings", to: "/admin/settings", icon: SlidersHorizontal },
       { id: "signing", to: "/admin/signing", icon: KeyRound },
       { id: "aiProviders", to: "/admin/ai-providers", icon: Bot },
+      { id: "modelServers", to: "/admin/model-servers", icon: Cpu },
       { id: "mcp", to: "/admin/mcp", icon: Plug },
     ],
   },

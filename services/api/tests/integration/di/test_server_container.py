@@ -516,7 +516,11 @@ async def test__server_container__relay_client_and_describer_read_personal_runne
     assert describer._settings is personal
 
 
-async def test__server_container__resolves_model_servers_uc_and_registry() -> None:
+async def test__server_container__resolves_model_servers_uc_and_registry(monkeypatch: pytest.MonkeyPatch) -> None:
+    from cryptography.fernet import Fernet  # noqa: PLC0415
+    from pydantic import SecretStr  # noqa: PLC0415
+
+    monkeypatch.setattr(settings.secrets, "key", SecretStr(Fernet.generate_key().decode()))
     from hse_doc_studio.core.model_servers import IModelProviderRegistry  # noqa: PLC0415
     from hse_doc_studio.use_cases.admin.model_servers import ModelServersUC  # noqa: PLC0415
     from sqlalchemy.ext.asyncio import create_async_engine  # noqa: PLC0415

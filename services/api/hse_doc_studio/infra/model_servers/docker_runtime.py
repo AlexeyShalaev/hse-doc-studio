@@ -34,13 +34,21 @@ def _scrub(text: str, secrets: list[str]) -> str:
     return text.strip()[:_MAX_ERROR_LEN]
 
 
+def _publish_args(spec: ContainerSpec, network: str | None) -> list[str]:
+    if network:
+        return ["--network", network]
+    if spec.bind:
+        return ["-p", f"{spec.bind}:{spec.port}:{spec.port}"]
+    return ["-p", f"127.0.0.1::{spec.port}"]
+
+
 def run_args(spec: ContainerSpec, network: str | None, env_file: str | None, *, gpu: bool) -> list[str]:
     """Аргументы `docker run`. Секретов здесь нет: они едут в `--env-file`."""
     args = ["run", "-d", "--name", spec.name, *managed_label_args(), "--restart", "unless-stopped"]
     for key, value in spec.labels.items():
         args += ["--label", f"{key}={value}"]
     # Наружу не публикуем: в общей сети контейнер виден только Студии, без сети только на loopback хоста.
-    args += ["--network", network] if network else ["-p", f"127.0.0.1::{spec.port}"]
+    args += _publish_args(spec, network)
     args += ["-v", f"{spec.volume[0]}:{spec.volume[1]}"]
     for key, value in spec.env.items():
         args += ["-e", f"{key}={value}"]
