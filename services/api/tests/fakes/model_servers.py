@@ -145,3 +145,41 @@ class FakeRegistry:
 
     async def unregister(self, admin_id: str, provider_id: UUID) -> None:
         self.unregistered.append(provider_id)
+
+
+class InMemoryModelServerStore:
+    def __init__(self) -> None:
+        self.items: dict[str, object] = {}
+        self.history: list[object] = []
+
+    async def save(self, record) -> None:  # type: ignore[no-untyped-def]
+        self.items[record.id] = record
+        self.history.append(record)
+
+    async def get(self, server_id: str):  # type: ignore[no-untyped-def]
+        return self.items.get(server_id)
+
+    async def list(self):  # type: ignore[no-untyped-def]
+        return list(self.items.values())
+
+    async def delete(self, server_id: str) -> None:
+        self.items.pop(server_id, None)
+
+
+class FakeRemote:
+    """IRemoteRuntimes: отдаёт один и тот же FakeRuntime и считает открытия."""
+
+    def __init__(self, runtime: FakeRuntime) -> None:
+        self.runtime = runtime
+        self.opened: list[tuple[str, str]] = []
+        self.closed = 0
+
+    async def open(self, actor, credential_id: str, public_host: str):  # type: ignore[no-untyped-def]
+        from hse_doc_studio.core.model_servers import RemoteRuntime  # noqa: PLC0415
+
+        self.opened.append((credential_id, public_host))
+
+        async def close() -> None:
+            self.closed += 1
+
+        return RemoteRuntime(self.runtime, close)  # type: ignore[arg-type]

@@ -46,6 +46,7 @@ from hse_doc_studio.infra.db.orm.jobs import (
     RunnerRow,
 )
 from hse_doc_studio.infra.db.orm.lifecycle import LifecycleRunRow
+from hse_doc_studio.infra.db.orm.model_servers import ModelServerRow
 from hse_doc_studio.infra.db.orm.onboarding import UserOnboardingRow
 from hse_doc_studio.infra.db.orm.orgs import GroupMemberRow, GroupRow, OrgMemberRow, OrgRow
 from hse_doc_studio.infra.db.orm.passkeys import PasskeyRow
@@ -101,6 +102,7 @@ __all__ = [
     "LifecycleRunRow",
     "LoginAttemptRow",
     "MailOutboxRow",
+    "ModelServerRow",
     "NotificationRow",
     "OidcProviderRow",
     "OrgMemberRow",

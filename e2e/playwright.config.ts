@@ -80,6 +80,15 @@ export default defineConfig({
       },
     },
     {
+      // Админка, «Серверы моделей», на подменённом API (стенд server-lite без Docker): десктоп и телефон.
+      name: "model-servers",
+      testMatch: /model-servers\.spec\.ts/,
+      use: {
+        ...devices["Desktop Chrome"],
+        channel: process.env.E2E_CHANNEL || undefined,
+      },
+    },
+    {
       // Passkey на server-lite: виртуальный аутентификатор Chrome через CDP (WebAuthn.addVirtualAuthenticator).
       name: "passkeys",
       testMatch: /passkeys\.spec\.ts/,
