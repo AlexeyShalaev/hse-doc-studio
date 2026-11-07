@@ -1,7 +1,7 @@
 """update_run_downgrade: вид запуска автообновления «откат на выбранную версию»
 
 Revision ID: dg_01_update_run_downgrade
-Revises: ri_01_runner_ssh_credentials
+Revises: ms_01_model_servers
 Create Date: 2026-11-11 10:00:00
 """
 
@@ -10,7 +10,7 @@ from collections.abc import Sequence
 from alembic import op
 
 revision: str = "dg_01_update_run_downgrade"
-down_revision: str | None = "ri_01_runner_ssh_credentials"
+down_revision: str | None = "ms_01_model_servers"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
