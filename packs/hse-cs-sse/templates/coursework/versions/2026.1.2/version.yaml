@@ -31,11 +31,11 @@ breaking_changes:
 # Исправляющая версия: перечислены только отличия от 2026.1.1.
 changes:
   ru:
-    - "Заявление о выборе темы КП сверено с бланком SmartLMS «Заявление об утверждении темы курсовой работы (КП) СПИ 2026»: в колонке «Фамилия И.О.» руководители печатаются как «Шершаков С.А.», как бы ФИО ни было введено в настройках; в согласии академического руководителя колонка «Должность и уч. степень» пустая на обеих страницах; без двоеточия после «Кафедра/департамент/организация научного руководителя (ментора)»."
+    - "Заявление о выборе темы КП сверено с бланком SmartLMS «Заявление об утверждении темы курсовой работы (КП) СПИ 2026»: в колонке «Фамилия И.О.» руководители печатаются как «Шершаков С.А.», как бы ФИО ни было введено в настройках; в согласии академического руководителя колонка «Должность и уч. степень» пустая на обеих страницах; без двоеточия после «Кафедра/департамент/организация научного руководителя (ментора)» и «Research supervisor’s (mentor’s) department/organization»."
     - "Английская страница заявления: шапка жирным с дефисом и кавычками “…”, строка «Language of Coursework’s (Project’s)», «Shershakov S.A.», как в бланке."
     - "Проверка «Обзор существующих работ» ссылается на свой источник: обязательным со звёздочкой обзор делают слайды семинара наставника, а не памятка «КП и ВКР на СПИ»."
   en:
-    - "The course project topic application matches the SmartLMS form “Заявление об утверждении темы курсовой работы (КП) СПИ 2026”: the “Фамилия И.О.” column prints supervisors as “Шершаков С.А.” however the name is entered in the settings; in the academic supervisor's consent the position and degree column is blank on both pages; no colon after the supervisor's department label."
+    - "The course project topic application matches the SmartLMS form “Заявление об утверждении темы курсовой работы (КП) СПИ 2026”: the “Фамилия И.О.” column prints supervisors as “Шершаков С.А.” however the name is entered in the settings; in the academic supervisor's consent the position and degree column is blank on both pages; no colon after the supervisor's department label on either page."
     - "The English page of the application: a bold header with a hyphen and “…” quotes, the line “Language of Coursework’s (Project’s)” and “Shershakov S.A.”, as in the form."
     - "The “Related work” check cites its actual source: the review is starred as required in the mentor seminar slides, not in the «Course projects and theses at SSE» memo."
 
