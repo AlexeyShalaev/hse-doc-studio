@@ -24,7 +24,12 @@ from hse_doc_studio.core.model_servers import (
     IModelServerClient,
 )
 from hse_doc_studio.core.repositories import IAIProviderRepository, IInstanceAiProviderDirectory
-from hse_doc_studio.core.runner_install import ILocalRunnerHost, InstallTarget
+from hse_doc_studio.core.runner_install import (
+    ILocalRunnerHost,
+    InstallTarget,
+    PodResources,
+    ResourceDefaults,
+)
 from hse_doc_studio.core.signatures.key_policy import IServerKeyCounter
 from hse_doc_studio.core.storage.usage import IStorageUsageReader
 from hse_doc_studio.core.uow import IUnitOfWork
@@ -331,6 +336,22 @@ class ServerAdminOpsProvider(Provider):
                 service_account=cfg.kubernetes_service_account,
                 storage_class=cfg.kubernetes_storage_class,
                 storage_size=cfg.kubernetes_storage_size,
+                resources=ResourceDefaults(
+                    runner=PodResources(
+                        cpu_request=cfg.kubernetes_runner_cpu_request,
+                        cpu_limit=cfg.kubernetes_runner_cpu_limit,
+                        memory_request=cfg.kubernetes_runner_memory_request,
+                        memory_limit=cfg.kubernetes_runner_memory_limit,
+                    ),
+                    build=PodResources(
+                        cpu_request=cfg.kubernetes_build_cpu_request,
+                        cpu_limit=cfg.kubernetes_build_cpu_limit,
+                        memory_request=cfg.kubernetes_build_memory_request,
+                        memory_limit=cfg.kubernetes_build_memory_limit,
+                    ),
+                    max_cpu=cfg.kubernetes_resource_max_cpu,
+                    max_memory=cfg.kubernetes_resource_max_memory,
+                ),
             ),
         }
         return RunnerInstallService(

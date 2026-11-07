@@ -78,7 +78,7 @@ tags:
 `runner.installFromUi.enabled` по умолчанию `false`, и на проде, где общие раннеры включены не были, так и остаётся. Включение добавляет:
 
 - ServiceAccount и Role для самих раннеров `<релиз>-runner-ui`: только поды сборки (`pods` create, get, list, delete; `pods/log` get; `pods/exec` create, get) в namespace релиза, как у встроенного раннера;
-- ServiceAccount `<релиз>-api` и Role для Студии: Deployment (create, get, list, delete), Secret (только create и delete, без чтения) и PersistentVolumeClaim (create, delete) в namespace релиза. Role и RoleBinding Студия создавать не может, поэтому выдать себе или раннеру лишнее не способна; ClusterRole нет.
+- ServiceAccount `<релиз>-api` и Role для Студии: Deployment (create, list, delete), Secret (только create и delete, без чтения) и PersistentVolumeClaim (create, delete) в namespace релиза. Role и RoleBinding Студия создавать не может, поэтому выдать себе или раннеру лишнее не способна; ClusterRole нет.
 
 Раннер из админки живёт в namespace релиза, тома данных он получает свои (`runner.installFromUi.storageSize`, `storageClassName`), чтобы выданный раннеру токен переживал перезапуск пода. Адрес Студии для такого раннера внутренний (Service чарта).
 
@@ -264,7 +264,7 @@ spec:
 |---|---|
 | `HSE_RUNNER__K8S__NAMESPACE` | namespace подов сборки (по умолчанию namespace раннера) |
 | `HSE_RUNNER__K8S__IMAGE` | образ TeX; по умолчанию `HSE_RUNNER__TEX_IMAGE` |
-| `HSE_RUNNER__K8S__CPU_REQUEST`, `…CPU_LIMIT`, `…MEMORY_REQUEST`, `…MEMORY_LIMIT` | ресурсы пода сборки (500m/2, 1Gi/4Gi) |
+| `HSE_RUNNER__K8S__CPU_REQUEST`, `…CPU_LIMIT`, `…MEMORY_REQUEST`, `…MEMORY_LIMIT`, `…EPHEMERAL_STORAGE_REQUEST`, `…EPHEMERAL_STORAGE_LIMIT` | ресурсы пода сборки (500m/2, 1Gi/4Gi, 1Gi/4Gi); под, убитый по памяти, заканчивается кодом `build_out_of_memory` |
 | `HSE_RUNNER__K8S__ACTIVE_DEADLINE_S` | предел жизни пода, секунды (1800) |
 | `HSE_RUNNER__K8S__POD_START_TIMEOUT_S` | сколько ждать запуска пода с pull образа (300) |
 | `HSE_RUNNER__K8S__NODE_SELECTOR`, `…TOLERATIONS` | размещение подов сборки, JSON |
@@ -272,7 +272,7 @@ spec:
 | `HSE_RUNNER__K8S__TEX_CACHE_CLAIM` | необязательный PVC с кэшем шрифтов TeX |
 | `HSE_RUNNER__K8S__FONTS_CLAIM` | необязательный PVC со шрифтами (`.ttf`, `.otf`, `.ttc`), монтируется в поды сборки только для чтения |
 
-В Helm-чарте это `runner.executor: kubernetes` и блок `runner.kubernetes` (см. README чарта): чарт создаёт ServiceAccount раннера, Role только на поды своего namespace (`pods`, `pods/log`, `pods/exec`), NetworkPolicy, запрещающую подам сборки сеть, и том данных раннера. Если сборка падает с кодом `image_missing`, узел не смог скачать образ TeX; `build_backend_unavailable` значит, что Kubernetes отказал в поде (права, квота, нет подходящего узла), подробность в журнале задачи. Устройство и развилки: `docs/design/k8s-runner.md`.
+В Helm-чарте это `runner.executor: kubernetes` и блок `runner.kubernetes` (см. README чарта): чарт создаёт ServiceAccount раннера, Role только на поды своего namespace (`pods`, `pods/log`, `pods/exec`), NetworkPolicy, запрещающую подам сборки сеть, и том данных раннера. Если сборка падает с кодом `image_missing`, узел не смог скачать образ TeX; `build_backend_unavailable` значит, что Kubernetes отказал в поде (права, квота, нет подходящего узла), подробность в журнале задачи. Лимиты, сетевые политики, квота и проверка: [Изоляция и лимиты раннеров](runner-isolation.md). Устройство и развилки: `docs/design/k8s-runner.md`.
 
 ## Шрифты сборки
 

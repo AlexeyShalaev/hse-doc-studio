@@ -13,7 +13,12 @@ from pathlib import Path
 
 import structlog
 
-from hse_doc_studio.core.compile.errors import BuildBackendUnavailableError, ImageMissingError
+from hse_doc_studio.core.compile.errors import (
+    BuildBackendUnavailableError,
+    BuildOutOfMemoryError,
+    BuildStorageExceededError,
+    ImageMissingError,
+)
 from hse_doc_studio.core.jobs.artifacts import IArtifactStore, PublishPdfRequest
 from hse_doc_studio.core.jobs.protocols import ProcessHandle
 from hse_doc_studio.infra.compile.docker_image_manager import DockerStatus, ImageInfo
@@ -49,6 +54,7 @@ logger = structlog.get_logger()
 _IMAGE_FATAL = frozenset({"ImagePullBackOff", "InvalidImageName", "ErrImageNeverPull"})
 _CONFIG_FATAL = frozenset({"CreateContainerConfigError", "CreateContainerError", "RunContainerError"})
 _TS_RE = re.compile(r"^(\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d)(?:\.(\d{1,9}))?Z$")
+_SIGKILL_EXIT = 137
 _POLL_S = 0.5
 _RECONNECT_S = 1.0
 
@@ -232,9 +238,15 @@ class KubernetesTexExecutor:
                 yield SENTINEL_FAILED
                 return
             if not run.ended or run.rc is None:
+                await self._raise_if_resource_stop(spec.name)
                 yield f"[error] build pod stopped before the build finished: {await self._describe_stop(spec.name)}"
                 yield SENTINEL_FAILED
                 return
+            if run.rc == _SIGKILL_EXIT:
+                # Под жив, а latexmk убит SIGKILL: так ядро останавливает процесс по лимиту памяти cgroup.
+                raise BuildOutOfMemoryError(
+                    f"latexmk was killed (exit code {_SIGKILL_EXIT}); memory limit {self._cfg.memory_limit}"
+                )
             try:
                 await self._download(spec.name, project_folder, src.build_rel)
             except OutputTooLargeError as exc:
@@ -383,6 +395,15 @@ class KubernetesTexExecutor:
         finally:
             queue.put_nowait(None)
 
+    async def _raise_if_resource_stop(self, name: str) -> None:
+        """Под остановлен по памяти или выселен за эфемерное хранилище: сбой ресурса, а не LaTeX и не общий сбой."""
+        try:
+            state = await self._api.read_pod(self._namespace, name)
+        except KubeApiError:
+            return
+        if state is not None:
+            resource_stop_error(state, self._cfg.memory_limit)
+
     async def _describe_stop(self, name: str) -> str:
         try:
             state = await self._api.read_pod(self._namespace, name)
@@ -428,12 +449,22 @@ def _started(state: PodState, image: str) -> bool:
     if state.phase == "Running" and state.container_running:
         return True
     if state.phase in ("Succeeded", "Failed"):
+        resource_stop_error(state)
         raise BuildBackendUnavailableError(f"build pod {state.phase}: {_why(state)}")
     if state.waiting_reason in _IMAGE_FATAL:
         raise ImageMissingError(image)
     if state.waiting_reason in _CONFIG_FATAL:
         raise BuildBackendUnavailableError(f"{state.waiting_reason}: {state.waiting_message}")
     return False
+
+
+def resource_stop_error(state: PodState, memory_limit: str = "") -> None:
+    """Бросает понятную ошибку, если под убит по памяти (OOMKilled, код 137) или выселен за эфемерное хранилище."""
+    if state.terminated_reason == "OOMKilled":
+        suffix = f", memory limit {memory_limit}" if memory_limit else ""
+        raise BuildOutOfMemoryError(f"OOMKilled (exit code 137){suffix}")
+    if state.reason == "Evicted" and any(word in state.message.lower() for word in ("ephemeral", "emptydir")):
+        raise BuildStorageExceededError(state.message)
 
 
 def _why(state: PodState) -> str:

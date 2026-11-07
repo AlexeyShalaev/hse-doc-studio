@@ -11,6 +11,13 @@ from hse_doc_studio.core.runner_install.entities import (
     UnavailableReason,
 )
 from hse_doc_studio.core.runner_install.protocols import ILocalRunnerHost, ProgressReporter
+from hse_doc_studio.core.runner_install.resources import (
+    InvalidResourcesError,
+    PodResources,
+    ResourceDefaults,
+    ResourceOverrides,
+    resolve,
+)
 from hse_doc_studio.core.runner_install.ssh import (
     HostKey,
     ISshConnector,
@@ -36,10 +43,14 @@ __all__ = [
     "InstallJob",
     "InstallStepState",
     "InstallTarget",
+    "InvalidResourcesError",
     "LocalInstance",
     "LocalRunnerSpec",
+    "PodResources",
     "ProgressReporter",
     "RemoteSystem",
+    "ResourceDefaults",
+    "ResourceOverrides",
     "SavedSshCredential",
     "SshAuth",
     "SshAuthKind",
@@ -47,4 +58,5 @@ __all__ = [
     "SshResult",
     "SshTarget",
     "UnavailableReason",
+    "resolve",
 ]

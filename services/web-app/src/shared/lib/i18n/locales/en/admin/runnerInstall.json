@@ -178,5 +178,20 @@
       "register_timeout": "The runner started but did not connect to the Studio within three minutes. Check that the host can reach the Studio address and retry.",
       "input_invalid": "Check the form fields."
     }
+  },
+  "limits": {
+    "title": "Resource limits (cluster install)",
+    "hint": "Empty fields keep the Helm defaults. Allowed: runner CPU from 100m, memory from 256Mi; build pods CPU from 500m, memory from 1Gi (TeX needs it); the upper bound is set by the administrator in the chart (runner.installFromUi.maxCpu and maxMemory).",
+    "build_memory": "Build pod memory limit",
+    "build_cpu": "Build pod CPU limit",
+    "runner_memory": "Runner memory limit",
+    "runner_cpu": "Runner CPU limit",
+    "placeholder": {
+      "build_memory": "4Gi",
+      "build_cpu": "2",
+      "runner_memory": "2Gi",
+      "runner_cpu": "1"
+    },
+    "invalid": "The limits are not valid or outside the allowed bounds. Check the format (for example 500m, 2, 512Mi, 4Gi) and the bounds in the hint."
   }
 }

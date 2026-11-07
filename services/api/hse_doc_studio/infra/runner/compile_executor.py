@@ -11,7 +11,13 @@ from collections.abc import Callable
 from functools import partial
 from pathlib import PurePosixPath
 
-from hse_doc_studio.core.compile.errors import BuildBackendUnavailableError, DockerUnavailableError, ImageMissingError
+from hse_doc_studio.core.compile.errors import (
+    BuildBackendUnavailableError,
+    BuildOutOfMemoryError,
+    BuildStorageExceededError,
+    DockerUnavailableError,
+    ImageMissingError,
+)
 from hse_doc_studio.core.compile.failure import DISK_FULL, PDF_MISSING
 from hse_doc_studio.core.jobs.entities import compile_payload_of
 from hse_doc_studio.core.jobs.enums import JobErrorCategory, JobKind
@@ -74,7 +80,7 @@ class CompileJobExecutor:
         self._runner = runner
         self._cache_max_bytes = cache_max_bytes
 
-    async def execute(self, envelope: JobEnvelope, ctx: JobContext) -> JobOutcome:  # noqa: C901
+    async def execute(self, envelope: JobEnvelope, ctx: JobContext) -> JobOutcome:  # noqa: C901, PLR0912
         spec = envelope.spec
         payload = compile_payload_of(spec)
         try:
@@ -128,6 +134,10 @@ class CompileJobExecutor:
         except ImageMissingError as exc:
             # Исполнитель kubernetes узнаёт об отсутствии образа только при запуске пода.
             raise JobFailure.of(JobErrorCategory.unavailable, CODE_IMAGE_MISSING, exc.image) from exc
+        except BuildOutOfMemoryError as exc:
+            raise JobFailure.of(JobErrorCategory.unavailable, BuildOutOfMemoryError.code, str(exc)) from exc
+        except BuildStorageExceededError as exc:
+            raise JobFailure.of(JobErrorCategory.unavailable, BuildStorageExceededError.code, str(exc)) from exc
         except BuildBackendUnavailableError as exc:
             raise JobFailure.of(JobErrorCategory.unavailable, CODE_BUILD_BACKEND_UNAVAILABLE, str(exc)) from exc
         keep = frozenset(entry.sha256 for entry in envelope.manifest if entry.sha256)

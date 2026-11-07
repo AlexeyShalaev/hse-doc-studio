@@ -8,7 +8,12 @@ from pathlib import Path
 from typing import Any, cast
 
 import pytest
-from hse_doc_studio.core.compile.errors import BuildBackendUnavailableError, ImageMissingError
+from hse_doc_studio.core.compile.errors import (
+    BuildBackendUnavailableError,
+    BuildOutOfMemoryError,
+    BuildStorageExceededError,
+    ImageMissingError,
+)
 from hse_doc_studio.infra.compile.k8s.api import KubeApiError, PodState
 from hse_doc_studio.infra.compile.k8s.config import KubernetesExecutorConfig
 from hse_doc_studio.infra.compile.k8s.executor import KubernetesTexExecutor, LogCursor
@@ -242,6 +247,68 @@ async def test__run__pod_dies_before_end__reports_deadline(tmp_path: Path, proje
 
     assert lines[-1] == SENTINEL_FAILED
     assert any("activeDeadlineSeconds=1800 exceeded" in line for line in lines)
+
+
+async def test__run__oom_killed__out_of_memory_error_not_a_generic_failure(tmp_path: Path, project: Path) -> None:
+    async def cut(pod: FakePod) -> list[str]:
+        return ["This is XeTeX"]
+
+    api = FakeKubeApi(
+        tmp_path / "cluster",
+        build=cut,
+        hang_after_log=False,
+        after_log_state=PodState(phase="Failed", terminated_reason="OOMKilled", terminated_exit_code=137),
+    )
+
+    with pytest.raises(BuildOutOfMemoryError, match="OOMKilled.*memory limit 4Gi"):
+        await _run(_executor(api), project)
+
+    assert api.deleted == [api.only_pod().name]
+
+
+async def test__run__latexmk_sigkill__out_of_memory_error(tmp_path: Path, project: Path) -> None:
+    async def killed(pod: FakePod) -> list[str]:
+        return ["Running xelatex", pod.mark("exit", "137"), pod.mark("end")]
+
+    api = FakeKubeApi(tmp_path / "cluster", build=killed)
+
+    with pytest.raises(BuildOutOfMemoryError, match="exit code 137"):
+        await _run(_executor(api), project)
+
+    assert api.deleted == [api.only_pod().name]
+
+
+async def test__run__evicted_for_ephemeral_storage__storage_error(tmp_path: Path, project: Path) -> None:
+    async def cut(pod: FakePod) -> list[str]:
+        return ["started"]
+
+    api = FakeKubeApi(
+        tmp_path / "cluster",
+        build=cut,
+        hang_after_log=False,
+        after_log_state=PodState(
+            phase="Failed",
+            reason="Evicted",
+            message="Pod ephemeral local storage usage exceeds the total limit of containers 4Gi.",
+        ),
+    )
+
+    with pytest.raises(BuildStorageExceededError, match="ephemeral"):
+        await _run(_executor(api), project)
+
+
+async def test__run__pod_manifest__requests_and_limits_for_cpu_memory_and_ephemeral_storage(
+    tmp_path: Path, project: Path
+) -> None:
+    api = FakeKubeApi(tmp_path / "cluster")
+
+    await _run(_executor(api), project)
+
+    container = cast(dict[str, Any], api.only_pod().manifest["spec"])["containers"][0]
+    assert container["resources"] == {
+        "requests": {"cpu": "500m", "memory": "1Gi", "ephemeral-storage": "1Gi"},
+        "limits": {"cpu": "2", "memory": "4Gi", "ephemeral-storage": "4Gi"},
+    }
 
 
 async def test__run__log_stream_reset__reconnects_without_duplicate_lines(tmp_path: Path, project: Path) -> None:

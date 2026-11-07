@@ -20,8 +20,12 @@ from hse_doc_studio.core.runner_install import (
     InstallTarget,
     LocalInstance,
     LocalRunnerSpec,
+    PodResources,
     ProgressReporter,
+    ResourceDefaults,
+    ResourceOverrides,
     UnavailableReason,
+    resolve,
 )
 from hse_doc_studio.infra.compile.k8s.api import KubeApiError
 from hse_doc_studio.infra.compile.k8s.client import KubernetesApiClient, TokenSource
@@ -32,6 +36,16 @@ _NAME_RE = re.compile(r"^[a-z0-9]([a-z0-9-]{0,40}[a-z0-9])?$")
 _NOT_FOUND = 404
 _FORBIDDEN = 403
 _CONFLICT = 409
+
+# Умолчания, если настройки не заданы (те же, что в values.yaml чарта).
+DEFAULT_RESOURCES = ResourceDefaults(
+    runner=PodResources(cpu_request="100m", cpu_limit="1", memory_request="256Mi", memory_limit="2Gi"),
+    build=PodResources(cpu_request="500m", cpu_limit="2", memory_request="1Gi", memory_limit="4Gi"),
+)
+# Эфемерное хранилище: том данных на PVC, а /tmp раннера держит спул выгрузки (до 512 МиБ) и временные файлы.
+_RUNNER_TMP_SIZE = "1Gi"
+_RUNNER_EPHEMERAL = ("128Mi", "2Gi")
+_BUILD_EPHEMERAL = ("1Gi", "4Gi")
 
 
 class KubeLocalHost:
@@ -46,7 +60,9 @@ class KubeLocalHost:
         storage_size: str = "5Gi",
         client: KubernetesApiClient | None = None,
         namespace: str | None = None,
+        resources: ResourceDefaults = DEFAULT_RESOURCES,
     ) -> None:
+        self._resources = resources
         self._enabled = enabled
         self._service_account = service_account
         self._storage_class = storage_class
@@ -98,6 +114,9 @@ class KubeLocalHost:
                 await client.aclose()
         return Capability.yes()
 
+    def check_resources(self, overrides: ResourceOverrides | None) -> None:
+        resolve(self._resources, overrides)
+
     def steps(self) -> tuple[str, ...]:
         return ("secret", "volume", "deployment")
 
@@ -128,6 +147,7 @@ class KubeLocalHost:
         if self._storage_class:
             claim["spec"]["storageClassName"] = self._storage_class
         ns = self._ns()
+        runner_res, build_res = resolve(self._resources, spec.resources)
         env = [
             {"name": "HSE_RUNNER__API_URL", "value": spec.api_url},
             {"name": "HSE_RUNNER__DATA_DIR", "value": spec.data_dir},
@@ -138,6 +158,13 @@ class KubeLocalHost:
             {"name": "HSE_RUNNER__K8S__NAMESPACE", "value": ns},
             {"name": "HSE_RUNNER__K8S__OWNER_POD_NAME", "valueFrom": {"fieldRef": {"fieldPath": "metadata.name"}}},
             {"name": "HSE_RUNNER__K8S__OWNER_POD_UID", "valueFrom": {"fieldRef": {"fieldPath": "metadata.uid"}}},
+            # Лимиты подов сборки, которые этот раннер создаёт сам.
+            {"name": "HSE_RUNNER__K8S__CPU_REQUEST", "value": build_res.cpu_request},
+            {"name": "HSE_RUNNER__K8S__CPU_LIMIT", "value": build_res.cpu_limit},
+            {"name": "HSE_RUNNER__K8S__MEMORY_REQUEST", "value": build_res.memory_request},
+            {"name": "HSE_RUNNER__K8S__MEMORY_LIMIT", "value": build_res.memory_limit},
+            {"name": "HSE_RUNNER__K8S__EPHEMERAL_STORAGE_REQUEST", "value": _BUILD_EPHEMERAL[0]},
+            {"name": "HSE_RUNNER__K8S__EPHEMERAL_STORAGE_LIMIT", "value": _BUILD_EPHEMERAL[1]},
         ]
         deployment = {
             "apiVersion": "apps/v1",
@@ -152,6 +179,10 @@ class KubeLocalHost:
                     "spec": {
                         "serviceAccountName": self._service_account,
                         "terminationGracePeriodSeconds": 600,
+                        # Токен ServiceAccount нужен раннеру: через него он создаёт поды сборки. Его права: только
+                        # поды сборки в этом namespace (Role чарта).
+                        "automountServiceAccountToken": True,
+                        "enableServiceLinks": False,
                         "securityContext": {
                             "runAsNonRoot": True,
                             "runAsUser": 1000,
@@ -165,6 +196,10 @@ class KubeLocalHost:
                                 "image": spec.image,
                                 "command": ["hse-doc-studio", "runner"],
                                 "env": env,
+                                "resources": runner_res.as_manifest(
+                                    {"ephemeral-storage": _RUNNER_EPHEMERAL[0]},
+                                    {"ephemeral-storage": _RUNNER_EPHEMERAL[1]},
+                                ),
                                 "securityContext": {
                                     "allowPrivilegeEscalation": False,
                                     "readOnlyRootFilesystem": True,
@@ -178,7 +213,7 @@ class KubeLocalHost:
                         ],
                         "volumes": [
                             {"name": "runner-data", "persistentVolumeClaim": {"claimName": f"{name}-data"}},
-                            {"name": "tmp", "emptyDir": {}},
+                            {"name": "tmp", "emptyDir": {"sizeLimit": _RUNNER_TMP_SIZE}},
                         ],
                     },
                 },

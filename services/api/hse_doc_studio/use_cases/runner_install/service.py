@@ -6,6 +6,7 @@ import asyncio
 import contextlib
 import re
 from collections.abc import Mapping
+from dataclasses import asdict
 from datetime import timedelta
 from uuid import uuid4
 
@@ -24,6 +25,7 @@ from hse_doc_studio.core.runner_install import (
     InstallTarget,
     LocalInstance,
     LocalRunnerSpec,
+    ResourceOverrides,
 )
 from hse_doc_studio.core.runner_install.entities import InstallJobState
 from hse_doc_studio.core.uow import IUnitOfWork
@@ -90,7 +92,14 @@ class RunnerInstallService:
         return {target: await host.capability() for target, host in self._hosts.items()}
 
     async def start(
-        self, actor: Actor, target: InstallTarget, *, studio_url: str, name: str | None, concurrency: int
+        self,
+        actor: Actor,
+        target: InstallTarget,
+        *,
+        studio_url: str,
+        name: str | None,
+        concurrency: int,
+        resources: ResourceOverrides | None = None,
     ) -> InstallJob:
         actor_id = _require_admin(actor)
         host = self._hosts.get(target)
@@ -99,12 +108,19 @@ class RunnerInstallService:
         capability = await host.capability()
         if not capability.available:
             raise InstallUnavailableError(capability.reason.value if capability.reason else "disabled")
+        # Границы проверяет хост до токена и задачи: вне границ установка не начинается (InvalidResourcesError).
+        host.check_resources(resources)
         if self._jobs.running(target) is not None:
             raise InstallBusyError(target.value)
         runner_name = self._runner_name(name)
         job = self._jobs.create(target, runner_name, actor_id, ("token", *host.steps(), "register"))
-        await self._record("runner_install.local.start", actor_id, job, {"target": target.value})
-        task = asyncio.create_task(self._run(actor, host, job, studio_url, max(1, min(concurrency, MAX_CONCURRENCY))))
+        details: dict[str, object] = {"target": target.value}
+        if resources is not None and not resources.is_empty():
+            details["resources"] = {k: v for k, v in asdict(resources).items() if v}
+        await self._record("runner_install.local.start", actor_id, job, details)
+        task = asyncio.create_task(
+            self._run(actor, host, job, studio_url, max(1, min(concurrency, MAX_CONCURRENCY)), resources)
+        )
         self._tasks.add(task)
         task.add_done_callback(self._tasks.discard)
         return job
@@ -142,7 +158,13 @@ class RunnerInstallService:
             await self._audit.record(action, actor_id=actor_id, target=job.name, details={"job": job.id, **details})
 
     async def _run(
-        self, actor: Actor, host: ILocalRunnerHost, job: InstallJob, studio_url: str, concurrency: int
+        self,
+        actor: Actor,
+        host: ILocalRunnerHost,
+        job: InstallJob,
+        studio_url: str,
+        concurrency: int,
+        resources: ResourceOverrides | None = None,
     ) -> None:
         actor_id = actor.id or ""
         token_id: str | None = None
@@ -165,6 +187,7 @@ class RunnerInstallService:
                 data_dir=f"{self._data_dir}/{job.name}",
                 concurrency=concurrency,
                 token=secret,
+                resources=resources,
             )
             await host.install(spec, report)
             await self._wait_registered(job, actor, token_id)

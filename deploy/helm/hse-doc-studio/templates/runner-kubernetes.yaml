@@ -115,6 +115,9 @@ spec:
         app.kubernetes.io/component: runner
     spec:
       serviceAccountName: {{ $name }}
+      # Токен нужен: раннер создаёт поды сборки через Kubernetes API (права: Role выше, только поды сборки).
+      automountServiceAccountToken: true
+      enableServiceLinks: false
       # На SIGTERM раннер перестаёт брать задачи и дорабатывает текущие сборки.
       terminationGracePeriodSeconds: {{ $r.terminationGracePeriodSeconds }}
       {{- with .Values.imagePullSecrets }}
@@ -161,6 +164,8 @@ spec:
             - {name: HSE_RUNNER__K8S__MEMORY_REQUEST, value: {{ $k.resources.requests.memory | quote }}}
             - {name: HSE_RUNNER__K8S__CPU_LIMIT, value: {{ $k.resources.limits.cpu | quote }}}
             - {name: HSE_RUNNER__K8S__MEMORY_LIMIT, value: {{ $k.resources.limits.memory | quote }}}
+            - {name: HSE_RUNNER__K8S__EPHEMERAL_STORAGE_REQUEST, value: {{ index $k.resources.requests "ephemeral-storage" | default "1Gi" | quote }}}
+            - {name: HSE_RUNNER__K8S__EPHEMERAL_STORAGE_LIMIT, value: {{ index $k.resources.limits "ephemeral-storage" | default "4Gi" | quote }}}
             - {name: HSE_RUNNER__K8S__WORK_SIZE_LIMIT, value: {{ $k.workSizeLimit | quote }}}
             - {name: HSE_RUNNER__K8S__TMP_SIZE_LIMIT, value: {{ $k.tmpSizeLimit | quote }}}
             - {name: HSE_RUNNER__K8S__ACTIVE_DEADLINE_S, value: {{ $k.activeDeadlineSeconds | quote }}}
@@ -206,7 +211,7 @@ spec:
           emptyDir: {}
         {{- end }}
         - name: tmp
-          emptyDir: {}
+          emptyDir: {sizeLimit: {{ $r.tmpSizeLimit | quote }}}
       {{- with $r.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}

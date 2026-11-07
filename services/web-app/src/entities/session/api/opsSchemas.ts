@@ -109,9 +109,19 @@ export const LocalInstanceSchema = z.strictObject({
   state: z.string(),
   created_at: iso.nullable(),
 });
+const QUANTITY = /^[0-9]+(\.[0-9]+)?(m|Ki|Mi|Gi|Ti|k|K|M|G|T)?$/;
+const quantity = z.string().max(12).regex(QUANTITY);
+/** Лимиты раннера в кластере: пустое поле опускается и значит умолчание Helm; границы проверяет бэкенд. */
+export const ResourceLimitsRequestSchema = z.strictObject({
+  runner_cpu: quantity.optional(),
+  runner_memory: quantity.optional(),
+  build_cpu: quantity.optional(),
+  build_memory: quantity.optional(),
+});
 export const StartLocalInstallRequestSchema = z.strictObject({
   name: z.string().max(40),
   concurrency: z.number().int().min(1).max(8),
+  resources: ResourceLimitsRequestSchema.optional(),
 });
 export const SshCapabilitySchema = z.strictObject({
   enabled: z.boolean(),

@@ -35,7 +35,7 @@ helm install studio deploy/helm/hse-doc-studio -f my-values.yaml
 helm upgrade hse-doc-studio deploy/helm/hse-doc-studio --reuse-values --set image.tag=<версия> --atomic --wait
 ```
 
-**Установка раннеров из админки: `runner.installFromUi.enabled=true`.** По умолчанию выключено (на проде общие раннеры включают сознательно). Включение добавляет ServiceAccount `<релиз>-runner-ui` с Role только на поды сборки и ServiceAccount `<релиз>-api` с Role на Deployment (`create`, `get`, `list`, `delete`), Secret (`create`, `delete`) и PersistentVolumeClaim (`create`, `delete`) в namespace релиза, переключает на него api и включает кнопку «На этой же машине» на странице «Раннеры». Role и RoleBinding Студия создавать не может, ClusterRole нет. Ход установок хранится в памяти одного процесса api, поэтому функция рассчитана на одну реплику (как и сам чарт). Подробности: `docs/ru/deploy/runners.md`.
+**Установка раннеров из админки: `runner.installFromUi.enabled=true`.** По умолчанию выключено (на проде общие раннеры включают сознательно). Включение добавляет ServiceAccount `<релиз>-runner-ui` с Role только на поды сборки и ServiceAccount `<релиз>-api` с Role на Deployment (`create`, `list`, `delete`), Secret (`create`, `delete`) и PersistentVolumeClaim (`create`, `delete`) в namespace релиза, переключает на него api и включает кнопку «На этой же машине» на странице «Раннеры». Role и RoleBinding Студия создавать не может, ClusterRole нет. Ход установок хранится в памяти одного процесса api, поэтому функция рассчитана на одну реплику (как и сам чарт). Лимиты раннера задаются `runner.installFromUi.resources`, `buildResources`, `maxCpu`, `maxMemory` (их же можно выбрать в форме установки в границах). Подробности: `docs/ru/deploy/runners.md`.
 
 **Кнопки в админке: `updater.enabled=true`.** Чарт добавляет под `updater` (исполнитель `kubernetes`), его ServiceAccount и Role и переключает api на этот исполнитель:
 
@@ -76,7 +76,8 @@ helm upgrade hse-doc-studio deploy/helm/hse-doc-studio --reset-then-reuse-values
 Чарт создаёт:
 
 - ServiceAccount раннера и Role с RoleBinding в namespace подов сборки (`runner.kubernetes.namespace`, пусто значит namespace релиза): только `pods` (create, get, list, delete), `pods/log` (get) и `pods/exec` (create, get). Ни `secrets`, ни `jobs`, ни ClusterRole;
-- NetworkPolicy, которая запрещает подам сборки весь вход и выход (`runner.kubernetes.networkPolicy.enabled`; без CNI с поддержкой политик она ничего не делает);
+- NetworkPolicy, которая запрещает подам сборки весь вход и выход (`runner.kubernetes.networkPolicy.enabled`; без CNI с поддержкой политик она ничего не делает; действует и для подов сборки раннеров из админки);
+- по желанию: NetworkPolicy исходящего доступа раннеров (`runner.networkPolicy`), ResourceQuota и LimitRange отдельного namespace сборок (`runner.kubernetes.quota`, `limitRange`); у подов сборки requests и limits `cpu`, `memory`, `ephemeral-storage`. Подробно: `docs/ru/deploy/runner-isolation.md`;
 - PVC данных раннера `<release>-runner-data` (`runner.persistence`): там `identity.json` с выданным раннеру токеном, кэш блобов и рабочие папки. RWO, `local-path` подходит. Без тома (`runner.persistence.enabled=false`) положите постоянный токен раннера в Secret под ключом `runner-token`, иначе рестарт пода оставит раннер без личности;
 - Deployment раннера со стратегией `Recreate`, проходящий Pod Security restricted: `runAsNonRoot`, `seccompProfile: RuntimeDefault`, `drop: [ALL]`, корень только для чтения.
 

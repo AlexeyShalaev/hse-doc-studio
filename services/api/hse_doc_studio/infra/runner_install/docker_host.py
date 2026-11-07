@@ -18,6 +18,7 @@ from hse_doc_studio.core.runner_install import (
     LocalInstance,
     LocalRunnerSpec,
     ProgressReporter,
+    ResourceOverrides,
     UnavailableReason,
 )
 from hse_doc_studio.infra.docker.cli import docker_available, run_docker
@@ -58,6 +59,9 @@ class DockerLocalHost:
         if not await docker_available():
             return Capability.no(UnavailableReason.docker_unreachable)
         return Capability.yes()
+
+    def check_resources(self, overrides: ResourceOverrides | None) -> None:
+        """Лимиты формы относятся к Kubernetes; docker-раннер их не получает."""
 
     def steps(self) -> tuple[str, ...]:
         return ("pull", "start")

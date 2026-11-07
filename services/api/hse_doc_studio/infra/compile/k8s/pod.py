@@ -153,8 +153,16 @@ def build_pod_manifest(spec: BuildPodSpec, cfg: KubernetesExecutorConfig, namesp
                 "workingDir": "/work",
                 "env": env,
                 "resources": {
-                    "requests": {"cpu": cfg.cpu_request, "memory": cfg.memory_request},
-                    "limits": {"cpu": cfg.cpu_limit, "memory": cfg.memory_limit},
+                    "requests": {
+                        "cpu": cfg.cpu_request,
+                        "memory": cfg.memory_request,
+                        "ephemeral-storage": cfg.ephemeral_storage_request,
+                    },
+                    "limits": {
+                        "cpu": cfg.cpu_limit,
+                        "memory": cfg.memory_limit,
+                        "ephemeral-storage": cfg.ephemeral_storage_limit,
+                    },
                 },
                 "securityContext": {
                     "allowPrivilegeEscalation": False,

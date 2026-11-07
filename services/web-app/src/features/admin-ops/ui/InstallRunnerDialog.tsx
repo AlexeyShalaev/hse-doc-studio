@@ -89,6 +89,73 @@ const Row = ({
   </div>
 );
 
+type LimitsForm = {
+  runner_cpu: string;
+  runner_memory: string;
+  build_cpu: string;
+  build_memory: string;
+};
+const NO_LIMITS: LimitsForm = {
+  runner_cpu: "",
+  runner_memory: "",
+  build_cpu: "",
+  build_memory: "",
+};
+const LIMIT_FIELDS = [
+  "build_memory",
+  "build_cpu",
+  "runner_memory",
+  "runner_cpu",
+] as const;
+
+/** Только непустые поля: пусто значит умолчание Helm. */
+const limitsBody = (form: LimitsForm) => {
+  const filled = Object.fromEntries(
+    LIMIT_FIELDS.map((key) => [key, form[key].trim()]).filter(
+      ([, value]) => value !== "",
+    ),
+  ) as Partial<LimitsForm>;
+  return Object.keys(filled).length > 0 ? { resources: filled } : {};
+};
+
+/** Лимиты CPU и памяти для установки в кластер: подсказка с границами, значения проверяет бэкенд. */
+const LimitsFields = ({
+  value,
+  onChange,
+}: {
+  value: LimitsForm;
+  onChange: (next: LimitsForm) => void;
+}) => {
+  const { t } = useTranslation("adminRunnerInstall");
+  return (
+    <details data-testid="install-limits">
+      <summary className="form-label" style={{ cursor: "pointer" }}>
+        {t("limits.title")}
+      </summary>
+      <div
+        className="flex flex-col"
+        style={{ gap: "0.5rem", marginTop: "0.5rem" }}
+      >
+        <span className="form-hint">{t("limits.hint")}</span>
+        {LIMIT_FIELDS.map((key) => (
+          <Input
+            key={key}
+            label={t(`limits.${key}`)}
+            value={value[key]}
+            maxLength={12}
+            autoComplete="off"
+            placeholder={t(`limits.placeholder.${key}`)}
+            onChange={(event) => {
+              onChange({ ...value, [key]: event.target.value });
+            }}
+            data-testid={`install-limit-${key}`}
+          />
+        ))}
+      </div>
+    </details>
+  );
+};
+
 const TargetRow = ({
   target,
   capability,
@@ -219,6 +286,7 @@ export const InstallRunnerDialog = ({
   const start = useStartLocalInstall();
   const remove = useRemoveLocalInstance();
   const [name, setName] = useState("");
+  const [limits, setLimits] = useState<LimitsForm>(NO_LIMITS);
   const [jobId, setJobId] = useState<string | null>(null);
   const [last, setLast] = useState<Target | null>(null);
   const [failure, setFailure] = useState<string | null>(null);
@@ -232,13 +300,21 @@ export const InstallRunnerDialog = ({
   const close = () => {
     reset();
     setName("");
+    setLimits(NO_LIMITS);
     onClose();
   };
   const run = (target: Target) => {
     setFailure(null);
     setLast(target);
     start.mutate(
-      { target, body: { name: name.trim(), concurrency: 1 } },
+      {
+        target,
+        body: {
+          name: name.trim(),
+          concurrency: 1,
+          ...(target === "kubernetes" ? limitsBody(limits) : {}),
+        },
+      },
       {
         onSuccess: (created) => {
           setJobId(created.id);
@@ -281,6 +357,9 @@ export const InstallRunnerDialog = ({
                 }}
                 data-testid="install-name"
               />
+              {capabilities.data?.kubernetes.available && (
+                <LimitsFields value={limits} onChange={setLimits} />
+              )}
               <span className="form-label">{t("local.heading")}</span>
               {capabilities.isPending ? (
                 <Spinner size="sm" />
@@ -314,7 +393,9 @@ export const InstallRunnerDialog = ({
                     text={
                       failure === "install_busy"
                         ? t("busy")
-                        : t(failureKey(failure))
+                        : failure === "invalid_resources"
+                          ? t("limits.invalid")
+                          : t(failureKey(failure))
                     }
                   />
                 </div>

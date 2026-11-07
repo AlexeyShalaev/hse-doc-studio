@@ -35,8 +35,10 @@ from hse_doc_studio.core.runner_install import (
     InstallError,
     InstallJob,
     InstallTarget,
+    InvalidResourcesError,
     LocalInstance,
     RemoteSystem,
+    ResourceOverrides,
     SavedSshCredential,
     SshAuth,
     SshAuthKind,
@@ -121,7 +123,13 @@ async def start_local_install(
             studio_url=studio_base_url(request),
             name=body.name or None,
             concurrency=body.concurrency,
+            resources=ResourceOverrides(**body.resources.model_dump()) if body.resources else None,
         )
+    except InvalidResourcesError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail={"code": "invalid_resources", "field": exc.field, "reason": exc.reason},
+        ) from exc
     except InstallUnavailableError as exc:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT, detail={"code": "install_unavailable", "reason": exc.reason}

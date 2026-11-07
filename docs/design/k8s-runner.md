@@ -135,3 +135,13 @@ cd services/api && HSE_TEST_K8S_API_URL=$(kubectl --kubeconfig /tmp/hds.kubeconf
 - KEDA (раздел 8), podman-исполнитель.
 - Pre-pull образа TeX DaemonSet-ом в чарте.
 - Шрифты установки (`fonts_dir`) в поде: у раннера их и в docker-режиме нет.
+
+## Изоляция и лимиты (ноябрь 2026)
+
+Что добавлено поверх исходного дизайна (подробно и с проверкой на кластере: `docs/ru/deploy/runner-isolation.md`):
+
+- у пода сборки requests и limits по `ephemeral-storage` (1Gi и 4Gi) рядом с CPU и памятью; под, убитый по OOM (`OOMKilled` или SIGKILL у latexmk при живом поде), даёт код `build_out_of_memory`, выселенный за хранилище `build_storage_exceeded`, а не общий сбой;
+- раннер из админки получает requests и limits из значений чарта (`installFromUi.resources`, `buildResources`) или из формы установки; границы проверяет бэкенд до выдачи токена;
+- NetworkPolicy «всё запрещено» для подов сборки раннеров из админки; исходящая сеть самих раннеров опциональна (`runner.networkPolicy`, выключена: чарт не знает адресов API-сервера и S3);
+- ResourceQuota и LimitRange отдельного namespace сборок как опция;
+- `automountServiceAccountToken: false` у api (без установки из админки), задания миграций и docker-раннера; Role Студии без `get` на Deployment.

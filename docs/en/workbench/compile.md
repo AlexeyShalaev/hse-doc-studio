@@ -76,6 +76,7 @@ Everything available goes into the log: the latexmk output, runner lines (`[runn
 | `output_*`, `apply_failed` | The server could not accept or place the PDF | Build again; administrator: the api log and free space on the projects volume |
 | `pdf_missing` | The build finished but there is no PDF, or the runner lost the built file before the upload | Check that the document produces a PDF; if it repeats, check the runner log |
 | `disk_full` | The machine that builds is out of space | Free disk space: runner data, docker images and volumes |
+| `build_out_of_memory`, `build_storage_exceeded` | The build pod was killed for memory (OOMKilled) or evicted for exceeding scratch storage | Shrink figures and heavy TikZ; administrator: raise `runner.kubernetes.resources` (memory, ephemeral-storage), see [Runner isolation and limits](../deploy/runner-isolation.md) |
 | `staging_failed`, `manifest_*` | The server could not prepare the project (a file too large or unsafe) | Remove large files, rename a file with an unsafe path |
 | `cancelled`, `superseded`, `restarted` | The build was cancelled, replaced by a newer one or interrupted by a restart | Build again |
 

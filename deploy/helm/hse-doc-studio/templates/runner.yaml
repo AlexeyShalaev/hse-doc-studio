@@ -18,6 +18,8 @@ spec:
         {{- include "hds.selector" . | nindent 8 }}
         app.kubernetes.io/component: runner
     spec:
+      # Этот раннер работает через docker.sock, а не Kubernetes API: токен ServiceAccount ему не нужен.
+      automountServiceAccountToken: false
       {{- with .Values.imagePullSecrets }}
       imagePullSecrets:
         {{- toYaml . | nindent 8 }}
@@ -27,6 +29,7 @@ spec:
         runAsUser: {{ .Values.podSecurityContext.runAsUser }}
         runAsGroup: {{ .Values.podSecurityContext.runAsGroup }}
         supplementalGroups: [{{ .Values.runner.dockerGid }}]
+        seccompProfile: {type: RuntimeDefault}
       initContainers:
         # hostPath создаётся от root, fsGroup на него не действует: отдаём каталог пользователю раннера.
         - name: fix-data-dir
@@ -45,6 +48,9 @@ spec:
           image: {{ include "hds.image" . }}
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           command: ["hse-doc-studio", "runner"]
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities: {drop: [ALL]}
           env:
             - {name: HSE_RUNNER__API_URL, value: "http://{{ include "hds.fullname" . }}:{{ .Values.service.port }}"}
             - {name: HSE_RUNNER__DATA_DIR, value: {{ .Values.runner.dataDir | quote }}}

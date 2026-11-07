@@ -5,9 +5,11 @@ from hse_doc_studio.core.runner_install import (
     InstallError,
     InstallStepState,
     InstallTarget,
+    InvalidResourcesError,
     LocalInstance,
     LocalRunnerSpec,
     ProgressReporter,
+    ResourceOverrides,
 )
 
 
@@ -25,11 +27,18 @@ class FakeLocalHost:
         self._capability = capability or Capability.yes()
         self.fail_with = fail_with
         self.specs: list[LocalRunnerSpec] = []
+        self.checked: list[ResourceOverrides | None] = []
+        self.reject_field = ""
         self.removed: list[str] = []
         self.instances: list[LocalInstance] = []
 
     async def capability(self) -> Capability:
         return self._capability
+
+    def check_resources(self, overrides: ResourceOverrides | None) -> None:
+        self.checked.append(overrides)
+        if self.reject_field and overrides is not None:
+            raise InvalidResourcesError(self.reject_field, "max")
 
     def steps(self) -> tuple[str, ...]:
         return ("pull", "start")

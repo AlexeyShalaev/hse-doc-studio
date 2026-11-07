@@ -1,0 +1,51 @@
+{{- if and .Values.runner.enabled (eq .Values.runner.executor "kubernetes") }}
+{{- $k := .Values.runner.kubernetes }}
+{{- $buildNs := include "hds.runnerBuildNamespace" . }}
+{{- if or $k.quota.enabled $k.limitRange.enabled }}
+{{- if eq $buildNs .Release.Namespace }}
+{{- fail "runner.kubernetes.quota and limitRange need a separate build namespace: set runner.kubernetes.namespace (a quota in the release namespace would also limit the Studio itself)" }}
+{{- end }}
+{{- end }}
+{{- if $k.quota.enabled }}
+---
+# Общий потолок подов сборки (docs/en/deploy/runner-isolation.md). Поды сборки задают requests и limits сами,
+# поэтому под квоту на память и CPU они подходят.
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: {{ include "hds.fullname" . }}-builds
+  namespace: {{ $buildNs }}
+  labels:
+    {{- include "hds.labels" . | nindent 4 }}
+    app.kubernetes.io/component: runner
+spec:
+  hard:
+    pods: {{ $k.quota.pods | quote }}
+    requests.cpu: {{ $k.quota.requestsCpu | quote }}
+    requests.memory: {{ $k.quota.requestsMemory | quote }}
+    limits.cpu: {{ $k.quota.limitsCpu | quote }}
+    limits.memory: {{ $k.quota.limitsMemory | quote }}
+    requests.ephemeral-storage: {{ $k.quota.requestsEphemeralStorage | quote }}
+    limits.ephemeral-storage: {{ $k.quota.limitsEphemeralStorage | quote }}
+{{- end }}
+{{- if $k.limitRange.enabled }}
+---
+apiVersion: v1
+kind: LimitRange
+metadata:
+  name: {{ include "hds.fullname" . }}-builds
+  namespace: {{ $buildNs }}
+  labels:
+    {{- include "hds.labels" . | nindent 4 }}
+    app.kubernetes.io/component: runner
+spec:
+  limits:
+    - type: Container
+      default:
+        {{- toYaml $k.limitRange.default | nindent 8 }}
+      defaultRequest:
+        {{- toYaml $k.limitRange.defaultRequest | nindent 8 }}
+      max:
+        {{- toYaml $k.limitRange.max | nindent 8 }}
+{{- end }}
+{{- end }}

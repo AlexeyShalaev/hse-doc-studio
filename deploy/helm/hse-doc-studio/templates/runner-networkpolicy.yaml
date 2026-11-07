@@ -1,0 +1,83 @@
+{{- /*
+Сетевая изоляция раннеров (docs/en/deploy/runner-isolation.md).
+1) Поды сборки раннеров из админки (installFromUi): ни входа, ни выхода, как у chart-раннера (runner-kubernetes.yaml).
+2) Исходящая сеть самих раннеров (runner.networkPolicy.enabled): DNS, Студия, Kubernetes API, extraEgress.
+*/ -}}
+{{- $full := include "hds.fullname" . }}
+{{- $np := .Values.runner.networkPolicy }}
+{{- if and .Values.runner.installFromUi.enabled .Values.runner.kubernetes.networkPolicy.enabled }}
+---
+# Поды сборки раннеров из админки живут в namespace релиза. Сеть им не нужна: вход и выход идут через exec API.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ $full }}-runner-ui-builds-deny-all
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "hds.labels" . | nindent 4 }}
+    app.kubernetes.io/component: runner-ui
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/managed-by: hse-doc-studio-runner
+      hse-doc-studio/component: build
+  policyTypes: [Ingress, Egress]
+{{- end }}
+{{- if $np.enabled }}
+{{- $targets := list }}
+{{- if .Values.runner.enabled }}
+{{- $targets = append $targets (dict "name" (printf "%s-runner" $full) "labels" (dict "app.kubernetes.io/name" (include "hds.name" .) "app.kubernetes.io/instance" .Release.Name "app.kubernetes.io/component" "runner")) }}
+{{- end }}
+{{- if .Values.runner.installFromUi.enabled }}
+{{- $targets = append $targets (dict "name" (printf "%s-runner-ui" $full) "labels" (dict "hse-doc-studio/runner-install" "true")) }}
+{{- end }}
+{{- range $t := $targets }}
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ $t.name }}-egress
+  namespace: {{ $.Release.Namespace }}
+  labels:
+    {{- include "hds.labels" $ | nindent 4 }}
+    app.kubernetes.io/component: runner
+spec:
+  podSelector:
+    matchLabels:
+      {{- toYaml $t.labels | nindent 6 }}
+  policyTypes: [Egress]
+  egress:
+    # DNS: только порт 53 (kube-dns и node-local-dns лежат в разных namespace).
+    - to:
+        - namespaceSelector: {}
+      ports:
+        - {protocol: UDP, port: 53}
+        - {protocol: TCP, port: 53}
+    # Студия: задачи, исходники, результат.
+    - to:
+        - podSelector:
+            matchLabels:
+              {{- include "hds.selector" $ | nindent 14 }}
+              app.kubernetes.io/component: api
+      ports:
+        - {protocol: TCP, port: 8000}
+    # Kubernetes API: создание и exec подов сборки.
+    - to:
+        {{- if $np.apiServerCidrs }}
+        {{- range $np.apiServerCidrs }}
+        - ipBlock: {cidr: {{ . | quote }}}
+        {{- end }}
+        {{- else }}
+        - ipBlock:
+            cidr: 0.0.0.0/0
+            except: [169.254.0.0/16]
+        {{- end }}
+      ports:
+        {{- range $np.apiServerPorts }}
+        - {protocol: TCP, port: {{ . }}}
+        {{- end }}
+    {{- with $np.extraEgress }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+{{- end }}
+{{- end }}

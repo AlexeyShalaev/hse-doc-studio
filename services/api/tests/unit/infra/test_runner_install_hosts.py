@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import tempfile
+from dataclasses import replace
 from pathlib import Path
 
 import httpx
@@ -11,7 +12,9 @@ import pytest
 from hse_doc_studio.core.runner_install import (
     InstallError,
     InstallStepState,
+    InvalidResourcesError,
     LocalRunnerSpec,
+    ResourceOverrides,
     UnavailableReason,
 )
 from hse_doc_studio.infra.compile.k8s.client import KubernetesApiClient, TokenSource
@@ -253,6 +256,39 @@ async def test__kube_install__token_lives_only_in_the_secret_and_pod_is_restrict
     assert env["HSE_RUNNER__EXECUTOR"]["value"] == "kubernetes"
     assert env["HSE_RUNNER__K8S__NAMESPACE"]["value"] == "studio"
     assert bodies["persistentvolumeclaims"]["spec"]["resources"] == {"requests": {"storage": "8Gi"}}  # type: ignore[index]
+
+
+async def test__kube_install__runner_and_build_pods_get_limits_from_defaults_and_form() -> None:
+    cluster = _Cluster()
+    spec = replace(_spec(), resources=ResourceOverrides(build_memory="6Gi", runner_cpu="500m"))
+
+    await _kube(cluster).install(spec, _noop)
+
+    bodies = {p.rsplit("/", 1)[-1]: b for m, p, b in cluster.requests if m == "POST"}
+    pod = bodies["deployments"]["spec"]["template"]["spec"]  # type: ignore[index]
+    container = pod["containers"][0]
+    assert container["resources"] == {
+        "requests": {"cpu": "100m", "memory": "256Mi", "ephemeral-storage": "128Mi"},
+        "limits": {"cpu": "500m", "memory": "2Gi", "ephemeral-storage": "2Gi"},
+    }
+    env = {e["name"]: e.get("value") for e in container["env"]}
+    assert env["HSE_RUNNER__K8S__MEMORY_LIMIT"] == "6Gi"
+    assert env["HSE_RUNNER__K8S__MEMORY_REQUEST"] == "1Gi"
+    assert env["HSE_RUNNER__K8S__CPU_LIMIT"] == "2"
+    assert env["HSE_RUNNER__K8S__EPHEMERAL_STORAGE_LIMIT"] == "4Gi"
+    assert pod["automountServiceAccountToken"] is True
+    assert next(v for v in pod["volumes"] if v["name"] == "tmp")["emptyDir"] == {"sizeLimit": "1Gi"}
+
+
+def test__kube_check_resources__out_of_bounds_is_refused() -> None:
+    host = KubeLocalHost(enabled=True, service_account="sa")
+
+    host.check_resources(None)
+    host.check_resources(ResourceOverrides(build_memory="8Gi"))
+    with pytest.raises(InvalidResourcesError):
+        host.check_resources(ResourceOverrides(build_memory="128Mi"))
+    with pytest.raises(InvalidResourcesError):
+        host.check_resources(ResourceOverrides(runner_memory="99Gi"))
 
 
 async def test__kube_install__reinstall_replaces_secret_and_deployment_but_keeps_the_volume() -> None:

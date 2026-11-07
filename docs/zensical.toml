@@ -61,6 +61,7 @@ nav = [
         { "Приглашения и запросы доступа" = "deploy/invitations.md" },
         { "Письма сервера" = "deploy/mail.md" },
         { "Раннеры" = "deploy/runners.md" },
+        { "Изоляция и лимиты раннеров" = "deploy/runner-isolation.md" },
         { "Серверы ИИ-моделей" = "deploy/model-servers.md" },
         { "Безопасность и ПДн" = "deploy/security.md" },
         { "Бэкапы сервера" = "deploy/backups.md" },
