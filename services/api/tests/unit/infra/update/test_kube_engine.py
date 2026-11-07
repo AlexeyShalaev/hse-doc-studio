@@ -547,3 +547,51 @@ async def test__recover__run_that_never_stopped_the_api__is_cancelled(tmp_path: 
     assert run.status is RunStatus.cancelled
     assert run.error_code == "updater_restarted"
     assert kube.patches() == []
+
+
+async def test__downgrade__refuses_a_target_on_another_schema_before_stopping_the_api(
+    tmp_path: Path, kube: FakeKube
+) -> None:
+    rig = _rig(tmp_path, kube)
+    spec = {**await rig.request(), "kind": "downgrade"}  # head целевого образа r2, база на r1
+
+    rig.engine.execute(spec)
+    run = await rig.final(spec)
+
+    assert run.status is RunStatus.cancelled
+    assert run.error_code == "schema_incompatible"
+    assert "r2" in (run.error or "")
+    assert kube.patches() == []
+    assert kube.image == OLD_IMAGE
+
+
+async def test__downgrade__on_the_same_schema_swaps_the_image_and_changes_nothing_in_the_database(
+    tmp_path: Path, kube: FakeKube
+) -> None:
+    kube.new_head = "r1"
+    rig = _rig(tmp_path, kube)
+    spec = {**await rig.request(), "kind": "downgrade"}
+
+    rig.engine.execute(spec)
+    run = await rig.final(spec)
+
+    assert run.status is RunStatus.succeeded
+    assert (run.from_revision, run.to_revision) == ("r1", "r1")
+    assert kube.image == NEW_IMAGE
+    assert kube.db_rev == "r1"
+
+
+async def test__downgrade__target_that_does_not_roll_out_returns_the_previous_image(
+    tmp_path: Path, kube: FakeKube
+) -> None:
+    kube.new_head = "r1"
+    kube.broken_images.add(NEW_IMAGE)
+    rig = _rig(tmp_path, kube)
+    spec = {**await rig.request(), "kind": "downgrade"}
+
+    rig.engine.execute(spec)
+    run = await rig.final(spec)
+
+    assert run.status is RunStatus.rolled_back
+    assert kube.image == OLD_IMAGE
+    assert kube.replicas == 1

@@ -33,6 +33,14 @@ export const updatesApi = {
     adminClient
       .post("/updates/rollback", { restore_db: restoreDb }, quiet)
       .then(parseResp(UpdateRunSchema)),
+  setAuto: (enabled: boolean): Promise<UpdateStatus> =>
+    adminClient
+      .put("/updates/auto", { enabled }, quiet)
+      .then(parseResp(UpdateStatusSchema)),
+  downgrade: (version: string): Promise<UpdateRun> =>
+    adminClient
+      .post("/updates/downgrade", { version }, quiet)
+      .then(parseResp(UpdateRunSchema)),
   cancel: (id: string): Promise<UpdateRun> =>
     adminClient
       .post(`/updates/runs/${encodeURIComponent(id)}/cancel`, {}, quiet)

@@ -231,12 +231,16 @@ class KubeEngine(Reporter):
         self._j.update_run(jobs=[*run.get("jobs", []), manifest["metadata"]["name"]])
         return self._run_job(manifest, timeout_s=timeout_s)
 
-    def _db_current(self, dep: dict[str, Any], image: str, step: str) -> str | None:
+    def _db_state(self, dep: dict[str, Any], image: str, step: str) -> tuple[str | None, str | None]:
+        """Ревизия базы и head миграций образа `image` (Job `db current` на этом образе)."""
         out = self._job(dep, step, image, ["hse-doc-studio", "db", "current"], timeout_s=self._s.probe_job_timeout_s)
         current, head = plan.parse_db_current(out)
         if current is None and head is None:
             raise _JobError(f"cannot read the database revision from the Job output: {out[-200:]!r}")
-        return current
+        return current, head
+
+    def _db_current(self, dep: dict[str, Any], image: str, step: str) -> str | None:
+        return self._db_state(dep, image, step)[0]
 
     def _cleanup_jobs(self) -> None:
         try:
@@ -263,9 +267,14 @@ class KubeEngine(Reporter):
         self._j.update_run(old={"image": image, "replicas": replicas}, new_image=new_image)
         self.emit("preflight", f"checking the new image and reading the database revision ({new_image})")
         try:
-            from_rev = self._db_current(dep, new_image, "precheck")
+            from_rev, head = self._db_state(dep, new_image, "precheck")
         except _JobError as exc:
             raise AbortError("precheck_failed", f"nothing changed: {exc}") from exc
+        if spec["kind"] == "downgrade":
+            # Откат на выбранную версию: head её миграций обязан равняться ревизии базы, пока api ещё работает.
+            problem = plan.schema_mismatch(spec["to_version"], from_rev, head)
+            if problem:
+                raise AbortError("schema_incompatible", problem)
         self._j.update_run(from_rev=from_rev)
         self.emit("preflight", f"database revision {from_rev or 'none'}", from_revision=from_rev)
         self._swap(spec, dep, new_image)

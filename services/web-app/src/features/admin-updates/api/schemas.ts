@@ -28,6 +28,24 @@ export const ReleaseSchema = z.strictObject({
 });
 export type Release = z.infer<typeof ReleaseSchema>;
 
+export const SchemaVerdictSchema = z.enum([
+  "compatible",
+  "incompatible",
+  "unknown",
+]);
+export type SchemaVerdict = z.infer<typeof SchemaVerdictSchema>;
+
+/** Прежний релиз и вердикт по схеме базы: откат разрешён, запрещён или проверит апдейтер. */
+export const DowngradeTargetSchema = z.strictObject({
+  version: z.string(),
+  date: z.string(),
+  notes: z.array(z.string()),
+  has_digest: z.boolean(),
+  compat: SchemaVerdictSchema,
+  revision: z.string().nullable(),
+});
+export type DowngradeTarget = z.infer<typeof DowngradeTargetSchema>;
+
 export const RunStatusSchema = z.enum([
   "waiting_backup",
   "queued",
@@ -49,7 +67,7 @@ export const RunEventSchema = z.strictObject({
 
 export const UpdateRunSchema = z.strictObject({
   id: z.string(),
-  kind: z.enum(["update", "rollback"]),
+  kind: z.enum(["update", "rollback", "downgrade"]),
   trigger: z.enum(["auto", "manual"]),
   status: RunStatusSchema,
   phase: z.string().nullable(),
@@ -109,5 +127,10 @@ export const UpdateStatusSchema = z.strictObject({
     })
     .nullable(),
   manual_command: z.string(),
+  // Автоустановка включена (политика auto); выключенная ничего не ставит, но проверка и уведомления идут.
+  auto_update_enabled: z.boolean(),
+  db_revision: z.string().nullable(),
+  updater_can_downgrade: z.boolean(),
+  downgrade_targets: z.array(DowngradeTargetSchema),
 });
 export type UpdateStatus = z.infer<typeof UpdateStatusSchema>;

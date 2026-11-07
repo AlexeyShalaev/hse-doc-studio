@@ -19,7 +19,8 @@ KEY_NOTIFIED = P + "notified_version"
 KEY_ATTEMPT_AT = P + "attempt_at"
 KEY_UPDATER_SEEN = P + "updater_seen_at"
 KEY_UPDATER_VERSION = P + "updater_version"
-MAX_RELEASES = 12
+KEY_UPDATER_CAPS = P + "updater_capabilities"
+MAX_RELEASES = 30
 MAX_NOTES = 12
 
 

@@ -23,6 +23,9 @@ UPDATE_ERROR_STATUS: Mapping[UpdateErrorCode, int] = {
     UpdateErrorCode.unsafe_version_jump: 409,
     UpdateErrorCode.risk_not_confirmed: 422,
     UpdateErrorCode.rollback_unsafe: 409,
+    UpdateErrorCode.schema_incompatible: 409,
+    UpdateErrorCode.digest_missing: 409,
+    UpdateErrorCode.updater_outdated: 409,
 }
 
 

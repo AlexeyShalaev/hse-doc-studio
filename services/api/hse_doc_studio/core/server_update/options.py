@@ -9,6 +9,7 @@ class UpdateOptions:
 
     current_version: str
     executor_enabled: bool  # false: helm или исполнитель выключен, обновление ставит оператор
+    db_head: str | None = None  # head миграций этого образа: ревизия, на которой сейчас стоит база
     executor: str = "compose"  # вид исполнителя из настройки: compose или kubernetes (kubernetes без снимка базы)
     check_interval_s: float = 6 * 3600.0
     retry_interval_s: float = 1800.0

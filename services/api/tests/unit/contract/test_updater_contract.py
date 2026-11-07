@@ -51,7 +51,7 @@ def test__unknown_fields_are_rejected(schema: str, name: str) -> None:
         TypeAdapter(_SCHEMAS[schema]).validate_python({**_load(schema, name), "surprise": 1})
 
 
-@pytest.mark.parametrize("name", ["update", "rollback"])
+@pytest.mark.parametrize("name", ["update", "rollback", "downgrade"])
 def test__executor_reads_the_keys_the_api_sends(name: str) -> None:
     run = _load("PollResponse", name)["run"]
     for key in ("run_id", "kind", "from_version", "to_version", "verify", "digests_url", "restore_db"):

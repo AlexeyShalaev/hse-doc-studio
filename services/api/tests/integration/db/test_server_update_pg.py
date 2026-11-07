@@ -107,3 +107,21 @@ async def test__failed_targets_and_history(sessions: SessionProvider) -> None:
     assert last.kind is RunKind.rollback
     counts = await runs.counts()
     assert counts[RunStatus.succeeded] == 2
+
+
+async def test__downgrade_kind_is_stored_and_revisions_are_learned_from_history(sessions: SessionProvider) -> None:
+    runs = SqlUpdateRunRepository(sessions)
+    first = _run(RunStatus.succeeded, to="0.3.2", frm="0.3.1", minutes=0).with_(from_revision="r1", to_revision="r2")
+    down = _run(RunStatus.succeeded, kind=RunKind.downgrade, to="0.3.1", frm="0.3.2", minutes=1).with_(
+        from_revision="r2", to_revision="r2"
+    )
+    stray = _run(RunStatus.rolled_back, to="0.9.0", frm="0.3.1", minutes=2).with_(from_revision="r2", to_revision="r9")
+    for run in (first, down, stray):
+        assert await runs.add(run)
+
+    got = await runs.get(down.id)
+    assert got is not None
+    assert got.kind is RunKind.downgrade
+    assert await runs.known_revisions() == {"0.3.1": "r2", "0.3.2": "r2"}
+    # откат на выбранную версию, как и ручной, помечает версию, с которой ушли: автоустановка её не вернёт
+    assert "0.3.2" in await runs.failed_targets()

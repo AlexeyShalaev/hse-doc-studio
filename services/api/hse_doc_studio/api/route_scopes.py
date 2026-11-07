@@ -433,6 +433,8 @@ ROUTE_SCOPES: Mapping[RouteKey, RouteScope] = {
     ("POST", "/api/admin/updates/check"): _ADM,
     ("POST", "/api/admin/updates/runs"): _ADM,
     ("POST", "/api/admin/updates/rollback"): _ADM,
+    ("POST", "/api/admin/updates/downgrade"): _ADM,
+    ("PUT", "/api/admin/updates/auto"): _ADM,
     ("POST", "/api/admin/updates/runs/{run_id}/cancel"): _ADM,
     ("GET", "/api/admin/updates/runs"): _ADM,
     ("GET", "/api/admin/updates/runs/{run_id}"): _ADM,

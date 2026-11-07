@@ -250,6 +250,17 @@ def parse_db_current(output: str) -> tuple[str | None, str | None]:
     return current, head
 
 
+def schema_mismatch(version: str, current: str | None, head: str | None) -> str | None:
+    """Почему образ `version` нельзя поставить откатом на эту базу (None: схема совпадает). head == ревизия."""
+    if current is not None and current == head:
+        return None
+    return (
+        f"{version} expects database schema {head or 'unknown'}, the database is at {current or 'none'}. Rolling back "
+        "to it would break the data or the version would not start, so nothing was changed. Restore a backup taken on "
+        "that version instead."
+    )
+
+
 def set_env_tag(text: str, version: str) -> str:
     """Подставляет `TAG=<version>` в содержимое `.env`; нет строки значит дописывает. Остальное не трогает."""
     lines = text.splitlines()
