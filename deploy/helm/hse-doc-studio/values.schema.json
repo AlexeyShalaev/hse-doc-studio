@@ -249,6 +249,13 @@
           },
           "additionalProperties": false
         },
+        "isolationInfo": {
+          "type": "object",
+          "properties": {
+            "readCluster": {"type": "boolean"}
+          },
+          "additionalProperties": false
+        },
         "installFromUi": {
           "type": "object",
           "properties": {

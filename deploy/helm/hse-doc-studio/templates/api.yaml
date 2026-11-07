@@ -25,7 +25,7 @@ spec:
         {{- end }}
         checksum/secret: {{ include (print $.Template.BasePath "/secret.yaml") . | sha256sum }}
     spec:
-      {{- if .Values.runner.installFromUi.enabled }}
+      {{- if include "hds.apiNeedsKubeApi" . }}
       serviceAccountName: {{ include "hds.fullname" . }}-api
       {{- else }}
       # Студия не ходит в Kubernetes API: токен ServiceAccount в поде не нужен.
@@ -73,6 +73,12 @@ spec:
             - {name: HSE_STUDIO__RUNNER_INSTALL__KUBERNETES_RESOURCE_MAX_MEMORY, value: {{ $ui.maxMemory | quote }}}
             - {name: HSE_STUDIO__RUNNER_INSTALL__KUBERNETES_STORAGE_SIZE, value: {{ .Values.runner.installFromUi.storageSize | quote }}}
             - {name: HSE_STUDIO__RUNNER_INSTALL__KUBERNETES_STORAGE_CLASS, value: {{ .Values.runner.installFromUi.storageClassName | quote }}}
+            {{- end }}
+            # Экран изоляции раннеров в админке: что задано в чарте (не проверенное в кластере).
+            - {name: HSE_STUDIO__RUNNER_CLUSTER__DECLARED, value: {{ include "hds.runnerCluster" . | quote }}}
+            {{- if .Values.runner.isolationInfo.readCluster }}
+            # Права на чтение NetworkPolicy, ResourceQuota, LimitRange и своих namespace: runner-isolation-read.yaml.
+            - {name: HSE_STUDIO__RUNNER_CLUSTER__READ_LIVE, value: "true"}
             {{- end }}
             {{- if .Values.updater.enabled }}
             # Обновление из админки: версию ставит сервис updater (updater-kubernetes.yaml), api только решает и учитывает.

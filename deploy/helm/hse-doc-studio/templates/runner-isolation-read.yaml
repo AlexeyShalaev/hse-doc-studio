@@ -1,0 +1,84 @@
+{{- if include "hds.apiNeedsKubeApi" . }}
+# ServiceAccount Студии: нужен установке раннеров из админки (runner-install-ui.yaml) и чтению изоляции раннеров.
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: {{ include "hds.fullname" . }}-api
+  labels:
+    {{- include "hds.labels" . | nindent 4 }}
+    app.kubernetes.io/component: api
+{{- end }}
+{{- if .Values.runner.isolationInfo.readCluster }}
+{{- $full := include "hds.fullname" . }}
+{{- $apiSa := printf "%s-api" $full }}
+{{- $buildNs := include "hds.runnerBuildNamespace" . }}
+{{- $namespaces := uniq (list .Release.Namespace $buildNs) }}
+{{- range $ns := $namespaces }}
+---
+# Экран изоляции раннеров (docs/en/deploy/runner-isolation.md): только чтение политик, квоты и LimitRange.
+# Ни Secret, ни подов, ни записи.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: {{ $apiSa }}-isolation-read
+  namespace: {{ $ns }}
+  labels:
+    {{- include "hds.labels" $ | nindent 4 }}
+    app.kubernetes.io/component: api
+rules:
+  - apiGroups: [networking.k8s.io]
+    resources: [networkpolicies]
+    verbs: [get, list]
+  - apiGroups: [""]
+    resources: [resourcequotas, limitranges]
+    verbs: [get, list]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: {{ $apiSa }}-isolation-read
+  namespace: {{ $ns }}
+  labels:
+    {{- include "hds.labels" $ | nindent 4 }}
+    app.kubernetes.io/component: api
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: {{ $apiSa }}-isolation-read
+subjects:
+  - kind: ServiceAccount
+    name: {{ $apiSa }}
+    namespace: {{ $.Release.Namespace }}
+{{- end }}
+---
+# Метки Pod Security у namespace релиза и подов сборки: get только на эти имена.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: {{ $.Release.Namespace }}-{{ $apiSa }}-namespaces-read
+  labels:
+    {{- include "hds.labels" . | nindent 4 }}
+    app.kubernetes.io/component: api
+rules:
+  - apiGroups: [""]
+    resources: [namespaces]
+    resourceNames:
+      {{- toYaml $namespaces | nindent 6 }}
+    verbs: [get]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: {{ $.Release.Namespace }}-{{ $apiSa }}-namespaces-read
+  labels:
+    {{- include "hds.labels" . | nindent 4 }}
+    app.kubernetes.io/component: api
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: {{ $.Release.Namespace }}-{{ $apiSa }}-namespaces-read
+subjects:
+  - kind: ServiceAccount
+    name: {{ $apiSa }}
+    namespace: {{ .Release.Namespace }}
+{{- end }}

@@ -289,6 +289,8 @@ spec:
             - {name: HSE_STUDIO__BACKUPS__PROVISION__KEEP_DAYS, value: "60"}
             - {name: HSE_STUDIO__BACKUPS__PROVISION__ENCRYPTION_MODE, value: "installation"}
             - {name: HSE_STUDIO__BACKUPS__PROVISION__NOTIFY_ADMINS, value: "true"}
+            # Экран изоляции раннеров в админке: что задано в чарте (не проверенное в кластере).
+            - {name: HSE_STUDIO__RUNNER_CLUSTER__DECLARED, value: "{\"build\":{\"activeDeadlineSeconds\":1800,\"limitRange\":{\"default\":{\"cpu\":\"1\",\"ephemeral-storage\":\"2Gi\",\"memory\":\"2Gi\"},\"defaultRequest\":{\"cpu\":\"250m\",\"ephemeral-storage\":\"256Mi\",\"memory\":\"512Mi\"},\"enabled\":false,\"max\":{\"cpu\":\"8\",\"ephemeral-storage\":\"8Gi\",\"memory\":\"16Gi\"}},\"namespace\":\"hds-builds\",\"networkPolicy\":true,\"quota\":{\"enabled\":false,\"hard\":{\"limits.cpu\":\"40\",\"limits.ephemeral-storage\":\"80Gi\",\"limits.memory\":\"80Gi\",\"pods\":\"20\",\"requests.cpu\":\"10\",\"requests.ephemeral-storage\":\"20Gi\",\"requests.memory\":\"20Gi\"}},\"resources\":{\"limits\":{\"cpu\":\"2\",\"ephemeral-storage\":\"4Gi\",\"memory\":\"4Gi\"},\"requests\":{\"cpu\":\"500m\",\"ephemeral-storage\":\"1Gi\",\"memory\":\"1Gi\"}},\"runAsUser\":1000,\"runtimeClassName\":\"gvisor\",\"tmpSizeLimit\":\"1Gi\",\"workSizeLimit\":\"2Gi\"},\"releaseNamespace\":\"studio\",\"runner\":{\"deployment\":\"rel-hse-doc-studio-runner\",\"enabled\":true,\"executor\":\"kubernetes\",\"replicas\":1,\"resources\":{\"limits\":{\"cpu\":\"1\",\"ephemeral-storage\":\"2Gi\",\"memory\":\"2Gi\"},\"requests\":{\"cpu\":\"100m\",\"ephemeral-storage\":\"128Mi\",\"memory\":\"256Mi\"}},\"runAsUser\":10001,\"serviceAccount\":\"rel-hse-doc-studio-runner\",\"storageClass\":\"\",\"storageKind\":\"pvc\",\"storageSize\":\"10Gi\",\"tmpSizeLimit\":\"1Gi\"},\"runnerEgress\":{\"apiServerCidrs\":[],\"apiServerPorts\":[443,6443],\"enabled\":false,\"extraRules\":0,\"studioPort\":8000}}"}
             # Первая установка: схему ведёт сам api под advisory-локом. Дальше её обновляет Job pre-upgrade.
             - {name: HSE_STUDIO__DB__AUTO_MIGRATE, value: "true"}
           volumeMounts:
@@ -377,6 +379,16 @@ spec:
             - {name: HSE_RUNNER__K8S__NAMESPACE, value: "hds-builds"}
             - {name: HSE_RUNNER__K8S__OWNER_POD_NAME, valueFrom: {fieldRef: {fieldPath: metadata.name}}}
             - {name: HSE_RUNNER__K8S__OWNER_POD_UID, valueFrom: {fieldRef: {fieldPath: metadata.uid}}}
+            # Свой под из downward API: раннер сообщает в админку, как он развёрнут (на работу не влияет).
+            - {name: HSE_RUNNER__POD__NAMESPACE, valueFrom: {fieldRef: {fieldPath: metadata.namespace}}}
+            - {name: HSE_RUNNER__POD__NAME, valueFrom: {fieldRef: {fieldPath: metadata.name}}}
+            - {name: HSE_RUNNER__POD__SERVICE_ACCOUNT, valueFrom: {fieldRef: {fieldPath: spec.serviceAccountName}}}
+            - {name: HSE_RUNNER__POD__CPU_REQUEST_M, valueFrom: {resourceFieldRef: {containerName: runner, resource: requests.cpu, divisor: 1m}}}
+            - {name: HSE_RUNNER__POD__CPU_LIMIT_M, valueFrom: {resourceFieldRef: {containerName: runner, resource: limits.cpu, divisor: 1m}}}
+            - {name: HSE_RUNNER__POD__MEMORY_REQUEST_MI, valueFrom: {resourceFieldRef: {containerName: runner, resource: requests.memory, divisor: 1Mi}}}
+            - {name: HSE_RUNNER__POD__MEMORY_LIMIT_MI, valueFrom: {resourceFieldRef: {containerName: runner, resource: limits.memory, divisor: 1Mi}}}
+            - {name: HSE_RUNNER__POD__EPHEMERAL_REQUEST_MI, valueFrom: {resourceFieldRef: {containerName: runner, resource: requests.ephemeral-storage, divisor: 1Mi}}}
+            - {name: HSE_RUNNER__POD__EPHEMERAL_LIMIT_MI, valueFrom: {resourceFieldRef: {containerName: runner, resource: limits.ephemeral-storage, divisor: 1Mi}}}
             - {name: HSE_RUNNER__K8S__IMAGE, value: "registry.example.org/texlive:TL2024"}
             - {name: HSE_RUNNER__K8S__IMAGE_PULL_POLICY, value: "IfNotPresent"}
             - {name: HSE_RUNNER__K8S__IMAGE_PULL_SECRETS, value: "[\"registry-pull\"]"}

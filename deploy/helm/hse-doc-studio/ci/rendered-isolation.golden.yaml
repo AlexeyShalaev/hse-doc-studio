@@ -205,7 +205,8 @@ metadata:
     app.kubernetes.io/component: runner-ui
 
 ---
-# Source: hse-doc-studio/templates/runner-install-ui.yaml
+# Source: hse-doc-studio/templates/runner-isolation-read.yaml
+# ServiceAccount Студии: нужен установке раннеров из админки (runner-install-ui.yaml) и чтению изоляции раннеров.
 apiVersion: v1
 kind: ServiceAccount
 metadata:
@@ -324,6 +325,48 @@ spec:
       storage: 10Gi
 
 ---
+# Source: hse-doc-studio/templates/runner-isolation-read.yaml
+# Метки Pod Security у namespace релиза и подов сборки: get только на эти имена.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: studio-rel-hse-doc-studio-api-namespaces-read
+  labels:
+    app.kubernetes.io/name: hse-doc-studio
+    app.kubernetes.io/instance: rel
+    app.kubernetes.io/managed-by: Helm
+    helm.sh/chart: hse-doc-studio-0.1.0
+    app.kubernetes.io/component: api
+rules:
+  - apiGroups: [""]
+    resources: [namespaces]
+    resourceNames:
+      - studio
+      - hds-builds
+    verbs: [get]
+
+---
+# Source: hse-doc-studio/templates/runner-isolation-read.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: studio-rel-hse-doc-studio-api-namespaces-read
+  labels:
+    app.kubernetes.io/name: hse-doc-studio
+    app.kubernetes.io/instance: rel
+    app.kubernetes.io/managed-by: Helm
+    helm.sh/chart: hse-doc-studio-0.1.0
+    app.kubernetes.io/component: api
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: studio-rel-hse-doc-studio-api-namespaces-read
+subjects:
+  - kind: ServiceAccount
+    name: rel-hse-doc-studio-api
+    namespace: studio
+
+---
 # Source: hse-doc-studio/templates/runner-install-ui.yaml
 # ServiceAccount раннеров, поставленных из админки: только поды сборки в namespace релиза.
 apiVersion: rbac.authorization.k8s.io/v1
@@ -373,6 +416,52 @@ rules:
   - apiGroups: [""]
     resources: [persistentvolumeclaims]
     verbs: [create, delete]
+
+---
+# Source: hse-doc-studio/templates/runner-isolation-read.yaml
+# Экран изоляции раннеров (docs/en/deploy/runner-isolation.md): только чтение политик, квоты и LimitRange.
+# Ни Secret, ни подов, ни записи.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: rel-hse-doc-studio-api-isolation-read
+  namespace: studio
+  labels:
+    app.kubernetes.io/name: hse-doc-studio
+    app.kubernetes.io/instance: rel
+    app.kubernetes.io/managed-by: Helm
+    helm.sh/chart: hse-doc-studio-0.1.0
+    app.kubernetes.io/component: api
+rules:
+  - apiGroups: [networking.k8s.io]
+    resources: [networkpolicies]
+    verbs: [get, list]
+  - apiGroups: [""]
+    resources: [resourcequotas, limitranges]
+    verbs: [get, list]
+
+---
+# Source: hse-doc-studio/templates/runner-isolation-read.yaml
+# Экран изоляции раннеров (docs/en/deploy/runner-isolation.md): только чтение политик, квоты и LimitRange.
+# Ни Secret, ни подов, ни записи.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: rel-hse-doc-studio-api-isolation-read
+  namespace: hds-builds
+  labels:
+    app.kubernetes.io/name: hse-doc-studio
+    app.kubernetes.io/instance: rel
+    app.kubernetes.io/managed-by: Helm
+    helm.sh/chart: hse-doc-studio-0.1.0
+    app.kubernetes.io/component: api
+rules:
+  - apiGroups: [networking.k8s.io]
+    resources: [networkpolicies]
+    verbs: [get, list]
+  - apiGroups: [""]
+    resources: [resourcequotas, limitranges]
+    verbs: [get, list]
 
 ---
 # Source: hse-doc-studio/templates/runner-kubernetes.yaml
@@ -439,6 +528,50 @@ roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: Role
   name: rel-hse-doc-studio-api-runner-install
+subjects:
+  - kind: ServiceAccount
+    name: rel-hse-doc-studio-api
+    namespace: studio
+
+---
+# Source: hse-doc-studio/templates/runner-isolation-read.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: rel-hse-doc-studio-api-isolation-read
+  namespace: studio
+  labels:
+    app.kubernetes.io/name: hse-doc-studio
+    app.kubernetes.io/instance: rel
+    app.kubernetes.io/managed-by: Helm
+    helm.sh/chart: hse-doc-studio-0.1.0
+    app.kubernetes.io/component: api
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: rel-hse-doc-studio-api-isolation-read
+subjects:
+  - kind: ServiceAccount
+    name: rel-hse-doc-studio-api
+    namespace: studio
+
+---
+# Source: hse-doc-studio/templates/runner-isolation-read.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: rel-hse-doc-studio-api-isolation-read
+  namespace: hds-builds
+  labels:
+    app.kubernetes.io/name: hse-doc-studio
+    app.kubernetes.io/instance: rel
+    app.kubernetes.io/managed-by: Helm
+    helm.sh/chart: hse-doc-studio-0.1.0
+    app.kubernetes.io/component: api
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: rel-hse-doc-studio-api-isolation-read
 subjects:
   - kind: ServiceAccount
     name: rel-hse-doc-studio-api
@@ -597,6 +730,10 @@ spec:
             - {name: HSE_STUDIO__RUNNER_INSTALL__KUBERNETES_RESOURCE_MAX_MEMORY, value: "16Gi"}
             - {name: HSE_STUDIO__RUNNER_INSTALL__KUBERNETES_STORAGE_SIZE, value: "5Gi"}
             - {name: HSE_STUDIO__RUNNER_INSTALL__KUBERNETES_STORAGE_CLASS, value: ""}
+            # Экран изоляции раннеров в админке: что задано в чарте (не проверенное в кластере).
+            - {name: HSE_STUDIO__RUNNER_CLUSTER__DECLARED, value: "{\"build\":{\"activeDeadlineSeconds\":1800,\"limitRange\":{\"default\":{\"cpu\":\"1\",\"ephemeral-storage\":\"2Gi\",\"memory\":\"2Gi\"},\"defaultRequest\":{\"cpu\":\"250m\",\"ephemeral-storage\":\"256Mi\",\"memory\":\"512Mi\"},\"enabled\":true,\"max\":{\"cpu\":\"8\",\"ephemeral-storage\":\"8Gi\",\"memory\":\"16Gi\"}},\"namespace\":\"hds-builds\",\"networkPolicy\":true,\"quota\":{\"enabled\":true,\"hard\":{\"limits.cpu\":\"40\",\"limits.ephemeral-storage\":\"80Gi\",\"limits.memory\":\"80Gi\",\"pods\":\"20\",\"requests.cpu\":\"10\",\"requests.ephemeral-storage\":\"20Gi\",\"requests.memory\":\"20Gi\"}},\"resources\":{\"limits\":{\"cpu\":\"2\",\"ephemeral-storage\":\"4Gi\",\"memory\":\"4Gi\"},\"requests\":{\"cpu\":\"500m\",\"ephemeral-storage\":\"1Gi\",\"memory\":\"1Gi\"}},\"runAsUser\":1000,\"runtimeClassName\":\"\",\"tmpSizeLimit\":\"1Gi\",\"workSizeLimit\":\"2Gi\"},\"releaseNamespace\":\"studio\",\"runner\":{\"deployment\":\"rel-hse-doc-studio-runner\",\"enabled\":true,\"executor\":\"kubernetes\",\"replicas\":1,\"resources\":{\"limits\":{\"cpu\":\"1\",\"ephemeral-storage\":\"2Gi\",\"memory\":\"2Gi\"},\"requests\":{\"cpu\":\"100m\",\"ephemeral-storage\":\"128Mi\",\"memory\":\"256Mi\"}},\"runAsUser\":10001,\"serviceAccount\":\"rel-hse-doc-studio-runner\",\"storageClass\":\"\",\"storageKind\":\"pvc\",\"storageSize\":\"10Gi\",\"tmpSizeLimit\":\"1Gi\"},\"runnerEgress\":{\"apiServerCidrs\":[\"192.168.49.2/32\"],\"apiServerPorts\":[8443],\"enabled\":true,\"extraRules\":1,\"studioPort\":8000}}"}
+            # Права на чтение NetworkPolicy, ResourceQuota, LimitRange и своих namespace: runner-isolation-read.yaml.
+            - {name: HSE_STUDIO__RUNNER_CLUSTER__READ_LIVE, value: "true"}
             # Первая установка: схему ведёт сам api под advisory-локом. Дальше её обновляет Job pre-upgrade.
             - {name: HSE_STUDIO__DB__AUTO_MIGRATE, value: "true"}
           volumeMounts:
@@ -685,6 +822,16 @@ spec:
             - {name: HSE_RUNNER__K8S__NAMESPACE, value: "hds-builds"}
             - {name: HSE_RUNNER__K8S__OWNER_POD_NAME, valueFrom: {fieldRef: {fieldPath: metadata.name}}}
             - {name: HSE_RUNNER__K8S__OWNER_POD_UID, valueFrom: {fieldRef: {fieldPath: metadata.uid}}}
+            # Свой под из downward API: раннер сообщает в админку, как он развёрнут (на работу не влияет).
+            - {name: HSE_RUNNER__POD__NAMESPACE, valueFrom: {fieldRef: {fieldPath: metadata.namespace}}}
+            - {name: HSE_RUNNER__POD__NAME, valueFrom: {fieldRef: {fieldPath: metadata.name}}}
+            - {name: HSE_RUNNER__POD__SERVICE_ACCOUNT, valueFrom: {fieldRef: {fieldPath: spec.serviceAccountName}}}
+            - {name: HSE_RUNNER__POD__CPU_REQUEST_M, valueFrom: {resourceFieldRef: {containerName: runner, resource: requests.cpu, divisor: 1m}}}
+            - {name: HSE_RUNNER__POD__CPU_LIMIT_M, valueFrom: {resourceFieldRef: {containerName: runner, resource: limits.cpu, divisor: 1m}}}
+            - {name: HSE_RUNNER__POD__MEMORY_REQUEST_MI, valueFrom: {resourceFieldRef: {containerName: runner, resource: requests.memory, divisor: 1Mi}}}
+            - {name: HSE_RUNNER__POD__MEMORY_LIMIT_MI, valueFrom: {resourceFieldRef: {containerName: runner, resource: limits.memory, divisor: 1Mi}}}
+            - {name: HSE_RUNNER__POD__EPHEMERAL_REQUEST_MI, valueFrom: {resourceFieldRef: {containerName: runner, resource: requests.ephemeral-storage, divisor: 1Mi}}}
+            - {name: HSE_RUNNER__POD__EPHEMERAL_LIMIT_MI, valueFrom: {resourceFieldRef: {containerName: runner, resource: limits.ephemeral-storage, divisor: 1Mi}}}
             - {name: HSE_RUNNER__K8S__IMAGE_PULL_POLICY, value: "IfNotPresent"}
             - {name: HSE_RUNNER__K8S__CPU_REQUEST, value: "500m"}
             - {name: HSE_RUNNER__K8S__MEMORY_REQUEST, value: "1Gi"}

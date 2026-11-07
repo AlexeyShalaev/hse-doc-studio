@@ -264,6 +264,12 @@ runner:
       limits: {cpu: "2", memory: 4Gi}
     maxCpu: "8"
     maxMemory: 16Gi
+  # Экран «Изоляция раннеров» в админке. Что задано в чарте, Студия знает всегда (это не проверка кластера).
+  # readCluster=true выдаёт ServiceAccount Студии чтение (get, list) NetworkPolicy, ResourceQuota и LimitRange в
+  # namespace релиза и подов сборки и get на эти два namespace (метки Pod Security, ClusterRole с resourceNames):
+  # тогда экран показывает, что реально есть в кластере. По умолчанию выключено: прав у Студии не прибавляется.
+  isolationInfo:
+    readCluster: false
   # Только executor=kubernetes: поды сборки.
   kubernetes:
     # Namespace подов сборки; пусто значит namespace релиза. Свой namespace должен существовать; пометьте его
