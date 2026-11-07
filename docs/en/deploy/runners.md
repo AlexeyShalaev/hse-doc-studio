@@ -271,6 +271,7 @@ The `kubernetes` executor needs no `docker.sock`, no `hostPath` and no privilege
 | `HSE_RUNNER__K8S__RUNTIME_CLASS_NAME` | RuntimeClass for build pods, e.g. `gvisor` |
 | `HSE_RUNNER__K8S__TEX_CACHE_CLAIM` | optional PVC with the TeX font cache |
 | `HSE_RUNNER__K8S__FONTS_CLAIM` | optional PVC with fonts (`.ttf`, `.otf`, `.ttc`), mounted read-only into the build pods |
+| `HSE_RUNNER__POD__NAMESPACE`, `…NAME`, `…SERVICE_ACCOUNT`, `…CPU_REQUEST_M`, `…CPU_LIMIT_M`, `…MEMORY_REQUEST_MI`, `…MEMORY_LIMIT_MI`, `…EPHEMERAL_REQUEST_MI`, `…EPHEMERAL_LIMIT_MI` | the runner's own pod from the downward API (millicores and MiB); the runner only reports this to the admin area, it does not change how it works. The chart and the install from the admin area set them ([what the admin area shows](runner-isolation.md)) |
 
 In the Helm chart this is `runner.executor: kubernetes` and the `runner.kubernetes` block (see the chart README): the chart creates the runner ServiceAccount, a Role limited to pods in its namespace (`pods`, `pods/log`, `pods/exec`), a NetworkPolicy that denies build pods any network, and the runner data volume. A build failing with `image_missing` means the node could not pull the TeX image; `build_backend_unavailable` means Kubernetes refused the pod (permissions, quota, no suitable node), details are in the job log. Limits, network policies, quota and how to verify them: [Runner isolation and limits](runner-isolation.md). Design and trade-offs: `docs/design/k8s-runner.md`.
 

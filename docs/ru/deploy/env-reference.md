@@ -263,6 +263,8 @@ tags:
 | `HSE_STUDIO__RUNNER_INSTALL__SSH_ENABLED` | bool | `true` | оба | Разрешить установку раннеров по SSH из админки. |
 | `HSE_STUDIO__RUNNER_INSTALL__SSH_ALLOWLIST` | `list[str]` | пусто | оба | Внутренние узлы, на которые можно ставить раннер по SSH: имя (host.corp.local, *.corp.local), IP или CIDR. Без записи закрыты частные сети, loopback и адреса кластера; адреса метаданных облака и link-local закрыты всегда. Дополняет HSE_STUDIO__EGRESS__ALLOWLIST. |
 | `HSE_STUDIO__RUNNER_INSTALL__SSH_SAVE_CREDENTIALS` | bool | `true` | оба | Разрешить сохранять SSH-доступы зашифрованно (нужен ключ шифрования секретов). |
+| `HSE_STUDIO__RUNNER_CLUSTER__DECLARED` | DeclaredCluster | не задано | оба | Выжимка values Helm о раннерах (JSON): исполнитель, лимиты, сеть, квота, LimitRange. Её пишет чарт, руками не задаётся; пусто вне Helm. |
+| `HSE_STUDIO__RUNNER_CLUSTER__READ_LIVE` | bool | `false` | оба | Читать живое состояние кластера для экрана изоляции раннеров (NetworkPolicy, ResourceQuota, LimitRange, метки Pod Security у namespace). Включает чарт вместе с правами: runner.isolationInfo.readCluster. |
 | `HSE_STUDIO__BACKUPS__ENABLED` | bool | `true` | оба | Включает планировщик бэкапов и раздел админки; false убирает фоновый цикл целиком. |
 | `HSE_STUDIO__BACKUPS__TICK_S` | float | `30.0` | оба | Как часто планировщик проверяет, не пора ли запустить бэкап по расписанию. |
 | `HSE_STUDIO__BACKUPS__LOCAL_ROOT` | Path | не задано | оба | Корень локальных назначений: каталог бэкапа это подкаталог корня. Пусто значит data_dir/backups. Для защиты от потери диска смонтируйте сюда отдельный том. |
