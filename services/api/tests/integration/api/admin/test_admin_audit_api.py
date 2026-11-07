@@ -299,10 +299,15 @@ _AUDITED_ELSEWHERE: dict[tuple[str, str], str] = {
     ("DELETE", "/api/admin/orgs/{id}/groups/{id}"): "group.delete",
     ("POST", "/api/admin/orgs/{id}/groups/{id}/members/{id}"): "group.member.add",
     ("DELETE", "/api/admin/orgs/{id}/groups/{id}/members/{id}"): "group.member.remove",
+    # Аудит проверяет test_admin_model_servers_api.
+    ("POST", "/api/admin/model-servers"): "model_server.install",
+    ("POST", "/api/admin/model-servers/{id}/start"): "model_server.start",
+    ("POST", "/api/admin/model-servers/{id}/stop"): "model_server.stop",
+    ("DELETE", "/api/admin/model-servers/{id}"): "model_server.remove",
 }
 
 # Изменяющие ручки без записи в журнале осознанно: только проверка соединения, состояние не меняется.
-_NOT_AUDITED = {("POST", "/api/admin/ai-providers/{id}/check")}
+_NOT_AUDITED = {("POST", "/api/admin/ai-providers/{id}/check"), ("POST", "/api/admin/model-servers/estimate")}
 
 
 def _matrix_covers(route: tuple[str, str], literal: set[tuple[str, str]]) -> bool:

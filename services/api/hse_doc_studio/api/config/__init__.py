@@ -23,6 +23,7 @@ from hse_doc_studio.api.config.git import GitConfig, VCSConfig
 from hse_doc_studio.api.config.jobs import JobsConfig
 from hse_doc_studio.api.config.lifecycle import LifecycleConfig
 from hse_doc_studio.api.config.mail import MailConfig
+from hse_doc_studio.api.config.model_servers import ModelServersConfig
 from hse_doc_studio.api.config.observability import ObservabilityConfig
 from hse_doc_studio.api.config.rate_limit import RateLimitConfig
 from hse_doc_studio.api.config.runtime import CorsConfig, HttpServerConfig, LoggingConfig
@@ -63,6 +64,7 @@ __all__ = [
     "LifecycleConfig",
     "LoggingConfig",
     "MailConfig",
+    "ModelServersConfig",
     "ObservabilityConfig",
     "OfficeConvertConfig",
     "OfficeEditorConfig",

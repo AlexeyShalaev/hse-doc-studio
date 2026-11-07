@@ -514,3 +514,22 @@ async def test__server_container__relay_client_and_describer_read_personal_runne
 
     assert client._settings is personal
     assert describer._settings is personal
+
+
+async def test__server_container__resolves_model_servers_uc_and_registry() -> None:
+    from hse_doc_studio.core.model_servers import IModelProviderRegistry  # noqa: PLC0415
+    from hse_doc_studio.use_cases.admin.model_servers import ModelServersUC  # noqa: PLC0415
+    from sqlalchemy.ext.asyncio import create_async_engine  # noqa: PLC0415
+
+    engine = create_async_engine("postgresql+asyncpg://u:p@127.0.0.1:1/none")
+    container = create_container(StudioMode.server, engine=engine)
+    try:
+        async with container() as request:
+            uc = await request.get(ModelServersUC)
+            registry = await request.get(IModelProviderRegistry)
+    finally:
+        await container.close()
+        await engine.dispose()
+
+    assert isinstance(uc, ModelServersUC)
+    assert hasattr(registry, "register")

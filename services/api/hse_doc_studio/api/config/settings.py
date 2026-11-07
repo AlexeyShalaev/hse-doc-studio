@@ -24,6 +24,7 @@ from hse_doc_studio.api.config.git_remote import GitRemoteConfig
 from hse_doc_studio.api.config.jobs import JobsConfig
 from hse_doc_studio.api.config.lifecycle import LifecycleConfig
 from hse_doc_studio.api.config.mail import MailConfig
+from hse_doc_studio.api.config.model_servers import ModelServersConfig
 from hse_doc_studio.api.config.observability import ObservabilityConfig
 from hse_doc_studio.api.config.rate_limit import RateLimitConfig
 from hse_doc_studio.api.config.runner_install import RunnerInstallConfig
@@ -103,6 +104,7 @@ class Settings(BaseSettings):
     devices: DevicesConfig = Field(default_factory=DevicesConfig)
     secrets: SecretsConfig = Field(default_factory=SecretsConfig)
     jobs: JobsConfig = Field(default_factory=JobsConfig)
+    model_servers: ModelServersConfig = Field(default_factory=ModelServersConfig)
     ai_gateway: AiGatewayConfig = Field(default_factory=AiGatewayConfig)
     autoscale: AutoscaleConfig = Field(default_factory=AutoscaleConfig)
     runner_install: RunnerInstallConfig = Field(default_factory=RunnerInstallConfig)

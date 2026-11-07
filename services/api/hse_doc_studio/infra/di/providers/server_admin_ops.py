@@ -2,11 +2,12 @@
 
 from __future__ import annotations
 
-from dishka import Provider, Scope, provide
+from dishka import AsyncContainer, Provider, Scope, provide
 
 from hse_doc_studio.api.config import ServerConfig, settings
 from hse_doc_studio.api.runner_install import render_install_script
 from hse_doc_studio.core.ai import IAIModelLister
+from hse_doc_studio.core.ai_runtime import IHardwareProbe
 from hse_doc_studio.core.egress import IEgressPolicy
 from hse_doc_studio.core.git_sync.protocols import ISecretCipher
 from hse_doc_studio.core.identity.instance_settings import InstanceEnvOverrides
@@ -15,6 +16,13 @@ from hse_doc_studio.core.jobs.admin import IAdminProjectPicker, IJobAdminReader,
 from hse_doc_studio.core.jobs.queue import IJobQueue
 from hse_doc_studio.core.jobs.quotas import IQuotaOverrideRepository
 from hse_doc_studio.core.jobs.runners import IRunnerRepository
+from hse_doc_studio.core.model_servers import (
+    Engine,
+    IContainerRuntime,
+    IHostResources,
+    IModelProviderRegistry,
+    IModelServerClient,
+)
 from hse_doc_studio.core.repositories import IAIProviderRepository, IInstanceAiProviderDirectory
 from hse_doc_studio.core.runner_install import ILocalRunnerHost, InstallTarget
 from hse_doc_studio.core.signatures.key_policy import IServerKeyCounter
@@ -27,10 +35,16 @@ from hse_doc_studio.infra.db.repositories.runners import SqlRunnerAdminReader
 from hse_doc_studio.infra.db.repositories.signing_key_policy import SqlServerKeyCounter
 from hse_doc_studio.infra.db.repositories.storage_usage import SqlStorageUsageReader
 from hse_doc_studio.infra.db.session import SessionProvider
+from hse_doc_studio.infra.docker.siblings import SiblingNetwork
 from hse_doc_studio.infra.egress.policy import ResolvingEgressPolicy
+from hse_doc_studio.infra.model_servers.client import HttpModelServerClient
+from hse_doc_studio.infra.model_servers.docker_runtime import DockerContainerRuntime
+from hse_doc_studio.infra.model_servers.host_resources import LocalHostResources
+from hse_doc_studio.infra.model_servers.provider_registry import ContainerProviderRegistry
 from hse_doc_studio.infra.runner_install.docker_host import DockerLocalHost
 from hse_doc_studio.infra.runner_install.kube_host import KubeLocalHost
 from hse_doc_studio.infra.runner_install.ssh_connector import AsyncSshConnector
+from hse_doc_studio.use_cases.admin.model_servers import ModelServerService, ModelServerSettings, ModelServersUC
 from hse_doc_studio.use_cases.admin.ops_ai_providers import (
     CheckInstanceAiProviderUC,
     CreateInstanceAiProviderUC,
@@ -248,6 +262,58 @@ class ServerAdminOpsProvider(Provider):
         self, store: InstanceAiProviderStore, lister: IAIModelLister
     ) -> CheckInstanceAiProviderUC:
         return CheckInstanceAiProviderUC(store, lister)
+
+    # ── серверы ИИ-моделей ────────────────────────────────────────────────
+
+    @provide
+    def get_container_runtime(self, siblings: SiblingNetwork) -> IContainerRuntime:
+        return DockerContainerRuntime(siblings)
+
+    @provide
+    def get_model_server_client(self) -> IModelServerClient:
+        return HttpModelServerClient()
+
+    @provide
+    def get_host_resources(self) -> IHostResources:
+        return LocalHostResources(settings.data_dir)
+
+    @provide
+    def get_model_provider_registry(self, container: AsyncContainer) -> IModelProviderRegistry:
+        return ContainerProviderRegistry(container)
+
+    @provide
+    def get_model_server_service(  # noqa: PLR0913 — порты
+        self,
+        runtime: IContainerRuntime,
+        client: IModelServerClient,
+        hardware: IHardwareProbe,
+        resources: IHostResources,
+        registry: IModelProviderRegistry,
+    ) -> ModelServerService:
+        cfg = settings.model_servers
+        images = {
+            Engine.ollama: cfg.ollama_image,
+            Engine.vllm: cfg.vllm_image,
+            Engine.sglang: cfg.sglang_image,
+        }
+        return ModelServerService(
+            runtime,
+            client,
+            hardware,
+            resources,
+            registry,
+            ModelServerSettings(
+                local_enabled=cfg.local_enabled,
+                images={e: i for e, i in images.items() if i},
+                max_concurrent_installs=cfg.max_concurrent_installs,
+                startup_timeout_s=cfg.startup_timeout_s,
+                ready_timeout_s=cfg.ready_timeout_s,
+            ),
+        )
+
+    @provide
+    def get_model_servers_uc(self, service: ModelServerService, audit: IAuditLog) -> ModelServersUC:
+        return ModelServersUC(service, audit)
 
     @provide
     def get_install_job_store(self) -> InstallJobStore:
