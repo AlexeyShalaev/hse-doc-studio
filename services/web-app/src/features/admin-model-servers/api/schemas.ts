@@ -53,7 +53,13 @@ export const EstimateSchema = z.object({
 });
 export type Estimate = z.infer<typeof EstimateSchema>;
 
-export const StepStateSchema = z.enum(["pending", "running", "done", "failed"]);
+export const StepStateSchema = z.enum([
+  "pending",
+  "running",
+  "done",
+  "failed",
+  "skipped",
+]);
 export type StepState = z.infer<typeof StepStateSchema>;
 
 export const ModelServerSchema = z.object({
@@ -69,6 +75,10 @@ export const ModelServerSchema = z.object({
   percent: z.number().nullable(),
   text: z.string(),
   error: z.string().nullable(),
+  target: z.enum(["local", "ssh"]).default("local"),
+  host: z.string().default(""),
+  exposure: z.enum(["internal", "localhost", "public"]).default("internal"),
+  manageable: z.boolean().default(true),
 });
 export type ModelServer = z.infer<typeof ModelServerSchema>;
 

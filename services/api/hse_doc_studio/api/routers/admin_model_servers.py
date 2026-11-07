@@ -56,6 +56,10 @@ def _server(view: ServerView) -> ModelServerResponse:
         percent=view.percent,
         text=view.text,
         error=view.error,
+        target=view.target.value,
+        host=view.host,
+        exposure=view.exposure.value,
+        manageable=view.manageable,
     )
 
 

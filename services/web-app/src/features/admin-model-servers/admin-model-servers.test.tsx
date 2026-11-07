@@ -1,5 +1,11 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import {
+  cleanup,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { I18nextProvider } from "react-i18next";
 import {
@@ -12,6 +18,8 @@ import {
   vi,
 } from "vitest";
 import { i18n } from "@shared/lib";
+import { opsApi } from "@features/admin-ops/api/opsApi";
+import { ensureAdminOpsLocales } from "@features/admin-ops/lib/locales";
 import { modelServersApi } from "./api/modelServersApi";
 import type { Capabilities, Estimate, ModelServer } from "./api/schemas";
 import { ensureAdminModelServersLocales } from "./lib/locales";
@@ -79,6 +87,10 @@ const server = (patch: Partial<ModelServer> = {}): ModelServer => ({
   percent: 100,
   text: "",
   error: null,
+  target: "local",
+  host: "",
+  exposure: "internal",
+  manageable: true,
   ...patch,
 });
 
@@ -97,7 +109,12 @@ const view = () =>
 
 describe("страница серверов моделей", () => {
   beforeAll(async () => {
+    // Radix Select в jsdom: нет указателя и прокрутки.
+    Element.prototype.hasPointerCapture = () => false;
+    Element.prototype.releasePointerCapture = () => undefined;
+    Element.prototype.scrollIntoView = () => undefined;
     await ensureAdminModelServersLocales();
+    await ensureAdminOpsLocales();
     await i18n.changeLanguage("ru");
   });
   beforeEach(() => {
@@ -216,7 +233,9 @@ describe("страница серверов моделей", () => {
     );
     view();
     expect(await screen.findByTestId("ms-disabled")).toBeInTheDocument();
-    expect(screen.queryByTestId("ms-install")).not.toBeInTheDocument();
+    // Форма остаётся для установки по SSH, но «на этой машине» выбрать нельзя.
+    expect(await screen.findByTestId("ms-install")).toBeInTheDocument();
+    expect(screen.getByTestId("ms-install-submit")).toHaveTextContent("по SSH");
   });
 
   it("токен Hugging Face: сохраняется, значение не показывается, можно удалить", async () => {
@@ -248,6 +267,111 @@ describe("страница серверов моделей", () => {
       expect(clear).toHaveBeenCalled();
     });
     expect(settings).toHaveBeenCalled();
+  });
+
+  it("по SSH: наружу только с подтверждением, Ollama наружу нельзя, установка уходит в общий SSH-слой", async () => {
+    vi.spyOn(modelServersApi, "capabilities").mockResolvedValue(
+      caps({ docker_available: false }),
+    );
+    vi.spyOn(opsApi, "sshCapability").mockResolvedValue({
+      enabled: true,
+      can_save_credentials: true,
+    });
+    vi.spyOn(opsApi, "sshCredentials").mockResolvedValue([]);
+    const probe = vi.spyOn(opsApi, "sshProbe").mockResolvedValue({
+      session_id: "s1",
+      host_key: { key_type: "ssh-ed25519", fingerprint: "SHA256:abc" },
+      expires_in_s: 900,
+    });
+    vi.spyOn(opsApi, "sshConfirm").mockResolvedValue({
+      session_id: "s1",
+      system: {
+        os: "linux",
+        arch: "x86_64",
+        distro: "ubuntu",
+        has_docker: true,
+        docker_usable: true,
+        has_systemd: true,
+        is_root: true,
+      },
+      plan: [{ key: "docker", action: "skip" }],
+    });
+    const install = vi.spyOn(opsApi, "sshInstall").mockResolvedValue({
+      id: "j1",
+      target: "ssh",
+      name: "vllm Qwen/Qwen3-4B",
+      state: "running",
+      steps: [],
+      error_code: null,
+      error_detail: "",
+      created_at: "2026-11-07T10:00:00Z",
+    });
+    vi.spyOn(opsApi, "sshCancel").mockResolvedValue(undefined);
+    view();
+    // Локально недоступно (нет Docker), значит выбрано «по SSH»; движок vLLM.
+    await userEvent.click(await screen.findByLabelText("Движок"));
+    await userEvent.click(await screen.findByRole("option", { name: "vLLM" }));
+    await userEvent.click(await screen.findByLabelText("Доступ к серверу"));
+    await userEvent.click(
+      await screen.findByRole("option", { name: /Из сети/ }),
+    );
+    await userEvent.type(
+      await screen.findByTestId("ms-model"),
+      "Qwen/Qwen3-4B",
+    );
+    expect(screen.getByTestId("ms-install-submit")).toBeDisabled();
+    await userEvent.click(screen.getByTestId("ms-ack-public"));
+    expect(screen.getByTestId("ms-install-submit")).toBeEnabled();
+    await userEvent.click(screen.getByTestId("ms-install-submit"));
+
+    await userEvent.type(
+      await screen.findByTestId("ssh-host"),
+      "srv.example.org",
+    );
+    await userEvent.type(screen.getByTestId("ssh-username"), "deploy");
+    await userEvent.type(screen.getByTestId("ssh-password"), "s3cret");
+    expect(screen.queryByTestId("ssh-runner-name")).toBeNull();
+    await userEvent.click(screen.getByTestId("ssh-probe-submit"));
+    await waitFor(() => {
+      expect(probe).toHaveBeenCalled();
+    });
+    await userEvent.click(await screen.findByTestId("ssh-confirm"));
+    expect(await screen.findByTestId("ssh-model-summary")).toHaveTextContent(
+      "Qwen/Qwen3-4B",
+    );
+    await userEvent.click(screen.getByTestId("ssh-install"));
+    await waitFor(() => {
+      expect(install).toHaveBeenCalled();
+    });
+    expect(install.mock.calls[0]?.[1].model_server).toEqual({
+      engine: "vllm",
+      model: "Qwen/Qwen3-4B",
+      name: "",
+      exposure: "public",
+      acknowledge_public: true,
+      force: false,
+    });
+  }, 30_000);
+
+  it("сервер по SSH без сохранённого доступа: подсказка и нет кнопок запуска и остановки", async () => {
+    vi.spyOn(modelServersApi, "list").mockResolvedValue([
+      server({
+        id: "s1",
+        target: "ssh",
+        host: "srv.example.org",
+        manageable: false,
+        exposure: "localhost",
+      }),
+    ]);
+    view();
+    expect(await screen.findByTestId("ms-unmanaged-s1")).toBeInTheDocument();
+    expect(screen.getByTestId("ms-target-s1")).toHaveTextContent(
+      "srv.example.org",
+    );
+    const card = screen.getByTestId("ms-server-s1");
+    expect(
+      within(card).queryByRole("button", { name: "Остановить" }),
+    ).toBeNull();
   });
 
   it("английский словарь содержит те же ключи", async () => {

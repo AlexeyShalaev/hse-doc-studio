@@ -69,7 +69,7 @@
     "name": "Словарь админки: runnerInstall (установка раннеров)",
     "path": "dist/assets/locale-admin-runnerInstall-*.js",
     "gzip": true,
-    "limit": "8 kB"
+    "limit": "8.6 kB"
   },
   {
     "name": "Словарь админки: quotas",
@@ -129,7 +129,7 @@
     "name": "Словарь админки: modelServers",
     "path": "dist/assets/locale-admin-modelServers-*.js",
     "gzip": true,
-    "limit": "4.2 kB"
+    "limit": "6 kB"
   },
   {
     "name": "Онбординг: песочница демо-проекта (lazy)",

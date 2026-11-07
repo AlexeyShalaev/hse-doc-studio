@@ -45,7 +45,16 @@
     "name": "Provider name",
     "nameHint": "Empty: engine and model.",
     "force": "Install despite the warning",
-    "submit": "Install"
+    "submit": "Install",
+    "where": "Where",
+    "whereLocal": "On the Studio machine",
+    "whereSsh": "On another machine over SSH",
+    "submitSsh": "Install over SSH",
+    "exposure": "Access to the server",
+    "exposureHint": "By default the server listens on the machine itself only.",
+    "exposureLocalhost": "From the machine itself only",
+    "exposurePublic": "From the network (with an API key)",
+    "ackPublic": "I understand: the server will be reachable from the network, access only with a generated API key."
   },
   "fit": {
     "fits": "Fits",
@@ -74,13 +83,17 @@
     "engine": "Engine",
     "model": "Model",
     "provider": "Provider",
-    "verify": "Check"
+    "verify": "Check",
+    "connect": "SSH connection",
+    "docker": "Docker on the host",
+    "gpu": "GPU"
   },
   "stepState": {
     "pending": "waiting",
     "running": "in progress",
     "done": "done",
-    "failed": "failed"
+    "failed": "failed",
+    "skipped": "skipped"
   },
   "progress": {
     "label": "Model download progress"
@@ -93,7 +106,14 @@
     "hideLogs": "Hide log",
     "logsLoading": "Loading...",
     "registered": "Registered as a shared AI provider.",
-    "notResponding": "The server is running, but the model has not answered yet: it may still be loading into memory."
+    "notResponding": "The server is running, but the model has not answered yet: it may still be loading into memory.",
+    "notManageable": "No SSH access is saved: stop, start and the log are unavailable here. You can delete the record; the container stays on the machine.",
+    "viaSsh": "Over SSH: {{host}}",
+    "exposure": {
+      "internal": "Docker network",
+      "localhost": "loopback only",
+      "public": "open to the network"
+    }
   },
   "remove": {
     "title": "Remove server",
@@ -109,7 +129,10 @@
     "model_server_busy": "Another install is already running.",
     "model_server_start_failed": "Could not start the server.",
     "model_server_invalid_input": "Check the model name.",
-    "model_server_not_found": "Server not found."
+    "model_server_not_found": "Server not found.",
+    "model_server_not_manageable": "No SSH access is saved for this server.",
+    "model_server_public_needs_key": "Ollama has no API key, so it cannot be exposed.",
+    "model_server_public_unconfirmed": "Confirm opening the server to the network."
   },
   "hfToken": {
     "title": "Hugging Face token",
@@ -122,5 +145,14 @@
     "replace": "Replace",
     "remove": "Delete",
     "invalid": "The token is not valid."
+  },
+  "ssh": {
+    "title": "Model server over SSH",
+    "lead": "Login, host key fingerprint and install progress are the same as for runners. The password or key is needed only for the install unless you save them.",
+    "summary": "Will install: {{engine}}, model {{model}}.",
+    "exposure": {
+      "localhost": "The server will listen on that machine's loopback only. The Studio cannot reach it, so no AI provider is registered. Save the access to manage the server from here.",
+      "public": "The server will be open to the network with an API key and an AI provider will be created in the Studio. Do not open the port to the internet without need."
+    }
   }
 }

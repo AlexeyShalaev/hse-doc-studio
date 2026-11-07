@@ -9,7 +9,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 EngineName = Literal["ollama", "vllm", "sglang"]
 StatusName = Literal["installing", "running", "stopped", "failed"]
-StepStateName = Literal["pending", "running", "done", "failed"]
+StepStateName = Literal["pending", "running", "done", "failed", "skipped"]
 FitName = Literal["fits", "tight", "too_large", "unknown"]
 
 
@@ -90,6 +90,10 @@ class ModelServerResponse(BaseModel):
     percent: int | None
     text: str
     error: str | None
+    target: Literal["local", "ssh"] = "local"
+    host: str = ""
+    exposure: Literal["internal", "localhost", "public"] = "internal"
+    manageable: bool = True
 
 
 class ModelServerList(BaseModel):
