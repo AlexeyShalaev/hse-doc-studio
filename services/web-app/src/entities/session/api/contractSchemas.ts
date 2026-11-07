@@ -151,6 +151,8 @@ export const CONTRACT_SCHEMAS: Record<string, ZodType> = {
   AdminStorageThresholds: ops.StorageThresholdsSchema,
   AdminLifecycleRun: ops.LifecycleRunSchema,
   AdminRunnerSummary: ops.AdminRunnerSummarySchema,
+  AdminRunnerDeployment: ops.AdminRunnerDeploymentSchema,
+  AdminRunnerIsolation: ops.AdminRunnerIsolationSchema,
   AdminRunnerTokenList: ops.AdminRunnerTokenPageSchema,
   CreateAdminRunnerTokenRequest: ops.CreateAdminRunnerTokenRequestSchema,
   AdminRunnerTokenCreated: ops.AdminRunnerTokenCreatedSchema,

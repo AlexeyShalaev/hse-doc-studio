@@ -66,6 +66,129 @@ const versionKey = (v: string): string =>
     .map((part) => part.replace(/\D/g, "").padStart(5, "0"))
     .join(".");
 
+// С этой версии раннеры ставятся с лимитами и сообщают, как развёрнуты (как LIMITS_SINCE_VERSION сервера).
+const LIMITS_SINCE = "0.14.0";
+const beforeLimits = (version: string): boolean =>
+  versionKey(version) < versionKey(LIMITS_SINCE);
+
+/** Как развёрнут раннер в демо: docker на хосте, у старых раннеров отчёта нет. */
+const demoDeployment = (r: AdminRunner, studio: string) => {
+  const old = beforeLimits(r.version);
+  return {
+    runner_id: r.id,
+    name: r.name,
+    version: r.version,
+    studio_version: studio,
+    outdated: versionKey(r.version) < versionKey(studio),
+    limits_supported: !old,
+    reinstall: old ? ["before_limits"] : [],
+    origin: old ? null : "other",
+    report: old
+      ? null
+      : {
+          reported_at: r.last_seen_at,
+          executor: "docker",
+          platform: "host",
+          namespace: null,
+          pod_name: null,
+          service_account: null,
+          resources: {
+            cpu_request: null,
+            cpu_limit: null,
+            memory_request: null,
+            memory_limit: "8192Mi",
+            ephemeral_request: null,
+            ephemeral_limit: null,
+            source: "cgroup",
+          },
+          security: {
+            run_as_non_root: true,
+            run_as_user: 1001,
+            read_only_root: false,
+            no_privilege_escalation: false,
+            seccomp: false,
+            capabilities_dropped: true,
+            automount_token: null,
+          },
+          build: {
+            namespace: null,
+            image: "texlive/texlive:TL2024-historic",
+            resources: {
+              cpu_request: null,
+              cpu_limit: "2",
+              memory_request: null,
+              memory_limit: "4g",
+              ephemeral_request: null,
+              ephemeral_limit: null,
+              source: "config",
+            },
+            network_disabled: true,
+            pids_limit: 512,
+            work_size_limit: null,
+            tmp_size_limit: "512m",
+            active_deadline_s: null,
+            runtime_class: null,
+            security: {
+              run_as_non_root: true,
+              run_as_user: 1001,
+              read_only_root: true,
+              no_privilege_escalation: true,
+              seccomp: null,
+              capabilities_dropped: true,
+              automount_token: null,
+            },
+          },
+        },
+    live: null,
+    live_status: "not_applicable",
+  };
+};
+
+/** Изоляция в демо: Студия не из Helm, установка в кластер выключена. */
+const demoIsolation = () => {
+  const res = (
+    request: [string, string, string],
+    limit: [string, string, string],
+  ) => ({
+    cpu_request: request[0],
+    cpu_limit: limit[0],
+    memory_request: request[1],
+    memory_limit: limit[1],
+    ephemeral_request: request[2],
+    ephemeral_limit: limit[2],
+    source: "config",
+  });
+  return {
+    config: "none",
+    live_read: "off",
+    checked_at: null,
+    release_namespace: null,
+    chart_runner: null,
+    build: null,
+    install_from_ui: {
+      enabled: false,
+      namespace: null,
+      service_account: null,
+      storage_class: null,
+      storage_size: "5Gi",
+      runner: res(["100m", "256Mi", "128Mi"], ["1", "2Gi", "2Gi"]),
+      build: res(["500m", "1Gi", "1Gi"], ["2", "4Gi", "4Gi"]),
+      bounds: {
+        max_cpu: "8",
+        max_memory: "16Gi",
+        min_runner_cpu: "100m",
+        min_runner_memory: "256Mi",
+        min_build_cpu: "500m",
+        min_build_memory: "1Gi",
+      },
+    },
+    network: null,
+    quota: null,
+    limit_range: null,
+    pod_security: null,
+  };
+};
+
 const tokenStatus = (t: AdminRunnerToken): (typeof TOKEN_STATUSES)[number] =>
   t.revoked
     ? "revoked"
@@ -243,6 +366,8 @@ export const createOpsRoutes = (
     host_kind: "cli",
     ai_endpoints: [],
     last_seen_ip: null,
+    reinstall: !r.revoked && beforeLimits(r.version) ? ["before_limits"] : [],
+    deployment_reported: !beforeLimits(r.version),
   });
 
   // Личные раннеры людей: админ видит владельца и состояние, может приостановить
@@ -664,6 +789,21 @@ export const createOpsRoutes = (
           ).length,
           newest_version: newest,
         });
+      }),
+    },
+    {
+      method: "GET",
+      pattern: "/runners/isolation",
+      handler: guarded(() => demoJson(demoIsolation())),
+    },
+    {
+      // Личные раннеры людей админке не раскрываются: как у сервера, 404.
+      method: "GET",
+      pattern: "/runners/:id/deployment",
+      handler: guarded((req) => {
+        const found = state().runners.find((r) => r.id === req.params.id);
+        if (!found) return notFound();
+        return demoJson(demoDeployment(found, newestVersion() ?? LIMITS_SINCE));
       }),
     },
     {

@@ -21,6 +21,7 @@ export const ADMIN_NAMESPACES = [
   "ops",
   "runners",
   "runnerInstall",
+  "runnerIsolation",
   "quotas",
   "services",
   "storage",

@@ -35,6 +35,188 @@ export const AdminRunnerSchema = z.strictObject({
   host_kind: z.enum(["cli", "desktop"]),
   ai_endpoints: z.array(z.string()),
   last_seen_ip: z.string().nullable(),
+  /** Почему раннер стоит переустановить, чтобы применились лимиты (по версии и отчёту). */
+  reinstall: z.array(z.enum(["before_limits", "no_pod_limits"])).optional(),
+  deployment_reported: z.boolean().optional(),
+});
+
+// Как раннер развёрнут и как изолированы раннеры в кластере (api/schemas/runner_isolation.py).
+const ResourcesViewSchema = z.strictObject({
+  cpu_request: z.string().nullable(),
+  cpu_limit: z.string().nullable(),
+  memory_request: z.string().nullable(),
+  memory_limit: z.string().nullable(),
+  ephemeral_request: z.string().nullable(),
+  ephemeral_limit: z.string().nullable(),
+  source: z.enum(["pod", "cgroup", "config", "cluster"]),
+});
+const SecurityViewSchema = z.strictObject({
+  run_as_non_root: z.boolean().nullable(),
+  run_as_user: z.number().int().nullable(),
+  read_only_root: z.boolean().nullable(),
+  no_privilege_escalation: z.boolean().nullable(),
+  seccomp: z.boolean().nullable(),
+  capabilities_dropped: z.boolean().nullable(),
+  automount_token: z.boolean().nullable(),
+});
+const BuildIsolationViewSchema = z.strictObject({
+  namespace: z.string().nullable(),
+  image: z.string().nullable(),
+  resources: ResourcesViewSchema.nullable(),
+  network_disabled: z.boolean().nullable(),
+  pids_limit: z.number().int().nullable(),
+  work_size_limit: z.string().nullable(),
+  tmp_size_limit: z.string().nullable(),
+  active_deadline_s: z.number().int().nullable(),
+  runtime_class: z.string().nullable(),
+  security: SecurityViewSchema.nullable(),
+});
+export const ReinstallReasonSchema = z.enum(["before_limits", "no_pod_limits"]);
+export const AdminRunnerDeploymentSchema = z.strictObject({
+  runner_id: z.string(),
+  name: z.string(),
+  version: z.string(),
+  studio_version: z.string(),
+  outdated: z.boolean(),
+  limits_supported: z.boolean().nullable(),
+  reinstall: z.array(ReinstallReasonSchema),
+  origin: z.enum(["chart", "ui", "other"]).nullable(),
+  report: z
+    .strictObject({
+      reported_at: iso.nullable(),
+      executor: z.enum(["docker", "kubernetes"]),
+      platform: z.enum(["kubernetes", "container", "host"]),
+      namespace: z.string().nullable(),
+      pod_name: z.string().nullable(),
+      service_account: z.string().nullable(),
+      resources: ResourcesViewSchema.nullable(),
+      security: SecurityViewSchema.nullable(),
+      build: BuildIsolationViewSchema.nullable(),
+    })
+    .nullable(),
+  live: z
+    .strictObject({
+      name: z.string(),
+      namespace: z.string(),
+      image: z.string().nullable(),
+      service_account: z.string().nullable(),
+      ready: z.boolean(),
+      resources: ResourcesViewSchema.nullable(),
+      build_resources: ResourcesViewSchema.nullable(),
+      security: SecurityViewSchema.nullable(),
+    })
+    .nullable(),
+  live_status: z.enum([
+    "ok",
+    "not_found",
+    "forbidden",
+    "unavailable",
+    "not_applicable",
+  ]),
+});
+const PolicyCheckSchema = z.strictObject({
+  declared: z.boolean().nullable(),
+  live: z.boolean().nullable(),
+});
+const LimitValuesSchema = z.strictObject({
+  default: z.record(z.string(), z.string()),
+  default_request: z.record(z.string(), z.string()),
+  max: z.record(z.string(), z.string()),
+});
+export const AdminRunnerIsolationSchema = z.strictObject({
+  config: z.enum(["helm", "none"]),
+  live_read: z.enum(["off", "ok", "partial", "forbidden", "unavailable"]),
+  checked_at: iso.nullable(),
+  release_namespace: z.string().nullable(),
+  chart_runner: z
+    .strictObject({
+      enabled: z.boolean(),
+      executor: z.enum(["docker", "kubernetes"]),
+      replicas: z.number().int(),
+      namespace: z.string().nullable(),
+      service_account: z.string().nullable(),
+      resources: ResourcesViewSchema,
+      tmp_size_limit: z.string().nullable(),
+      storage: z.strictObject({
+        kind: z.enum(["pvc", "host_path", "empty_dir"]).nullable(),
+        storage_class: z.string().nullable(),
+        size: z.string().nullable(),
+      }),
+      security: SecurityViewSchema,
+      docker_socket: z.boolean(),
+    })
+    .nullable(),
+  build: z
+    .strictObject({
+      namespace: z.string().nullable(),
+      resources: ResourcesViewSchema,
+      work_size_limit: z.string().nullable(),
+      tmp_size_limit: z.string().nullable(),
+      active_deadline_s: z.number().int().nullable(),
+      runtime_class: z.string().nullable(),
+      security: SecurityViewSchema,
+    })
+    .nullable(),
+  install_from_ui: z.strictObject({
+    enabled: z.boolean(),
+    namespace: z.string().nullable(),
+    service_account: z.string().nullable(),
+    storage_class: z.string().nullable(),
+    storage_size: z.string(),
+    runner: ResourcesViewSchema,
+    build: ResourcesViewSchema,
+    bounds: z.strictObject({
+      max_cpu: z.string(),
+      max_memory: z.string(),
+      min_runner_cpu: z.string(),
+      min_runner_memory: z.string(),
+      min_build_cpu: z.string(),
+      min_build_memory: z.string(),
+    }),
+  }),
+  network: z
+    .strictObject({
+      build_deny_all: PolicyCheckSchema,
+      ui_build_deny_all: PolicyCheckSchema,
+      runner_egress: z.strictObject({
+        declared: z.boolean().nullable(),
+        live: z.boolean().nullable(),
+        dns: z.boolean(),
+        studio_port: z.number().int().nullable(),
+        api_server_cidrs: z.array(z.string()),
+        api_server_ports: z.array(z.number().int()),
+        extra_rules: z.number().int(),
+      }),
+    })
+    .nullable(),
+  quota: z
+    .strictObject({
+      namespace: z.string().nullable(),
+      declared: z.record(z.string(), z.string()).nullable(),
+      live_found: z.boolean().nullable(),
+      live_hard: z.record(z.string(), z.string()).nullable(),
+      live_used: z.record(z.string(), z.string()).nullable(),
+    })
+    .nullable(),
+  limit_range: z
+    .strictObject({
+      namespace: z.string().nullable(),
+      declared: LimitValuesSchema.nullable(),
+      live_found: z.boolean().nullable(),
+      live: LimitValuesSchema.nullable(),
+    })
+    .nullable(),
+  pod_security: z
+    .array(
+      z.strictObject({
+        namespace: z.string(),
+        enforce: z.string().nullable(),
+        enforce_version: z.string().nullable(),
+        warn: z.string().nullable(),
+        audit: z.string().nullable(),
+      }),
+    )
+    .nullable(),
 });
 export const AdminRunnerTokenSchema = z.strictObject({
   id: z.string(),
@@ -299,6 +481,12 @@ export type AdminRunnerRotated = z.infer<typeof AdminRunnerRotatedSchema>;
 export type AdminRunnerPage = z.infer<typeof AdminRunnerPageSchema>;
 export type AdminRunnerTokenPage = z.infer<typeof AdminRunnerTokenPageSchema>;
 export type AdminRunnerSummary = z.infer<typeof AdminRunnerSummarySchema>;
+export type AdminRunnerDeployment = z.infer<typeof AdminRunnerDeploymentSchema>;
+export type AdminRunnerIsolation = z.infer<typeof AdminRunnerIsolationSchema>;
+export type ReinstallReason = z.infer<typeof ReinstallReasonSchema>;
+export type RunnerResourcesView = z.infer<typeof ResourcesViewSchema>;
+export type RunnerSecurityView = z.infer<typeof SecurityViewSchema>;
+export type RunnerBuildIsolationView = z.infer<typeof BuildIsolationViewSchema>;
 
 // Хранение данных (api/schemas/lifecycle.py): источники роста, сроки хранения, тома и пороги места.
 export const LifecycleLevelSchema = z.enum(["ok", "warning", "critical"]);
