@@ -6,6 +6,10 @@ Generated from `release-notes.json` via `make changelog` — do not edit by hand
 Release notes are hand-written and bilingual (RU/EN); the app shows them in the
 selected interface language.
 
+## [0.13.0](https://github.com/AlexeyShalaev/hse-doc-studio/compare/v0.12.0...v0.13.0) - 2026-11-07
+
+- Model servers: the admin area has a new Model servers page. It installs Ollama, vLLM or SGLang on the machine that runs Studio, or on another one over SSH (one-time password or key, with an offer to save the access encrypted). It shows the API address and key. By default a server listens on the loopback interface only; vLLM and SGLang are exposed publicly only with an API key and after confirmation. For gated models a Hugging Face token is set in settings. In Helm, installing on the same machine is off by default (modelServers.local.enabled).
+
 ## [0.12.0](https://github.com/AlexeyShalaev/hse-doc-studio/compare/v0.11.0...v0.12.0) - 2026-11-07
 
 - Installing a runner with a single command: creating a token now shows a ready docker run line and a script that installs the runner as a service (systemd on Linux, launchd on macOS). The script contains no secrets and supports a dry run, status and uninstall.
