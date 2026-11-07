@@ -12,7 +12,8 @@ info:
 
     Личные раннеры и ретрансляция ИИ (версия протокола та же): новый раннер сразу после регистрации
     зовёт `/announce` и получает пересечение возможностей (`announce`, `offline`, `ai_slots`,
-    `ai_relay`). Пока раннер возможность не объявил, сервер не шлёт ему ничего нового: старый раннер
+    `ai_relay`, `deployment_info`). С `deployment_info` раннер сообщает `/deployment`, как он развёрнут
+    (исполнитель, requests и limits, securityContext), для экрана админки; старый раннер этого не шлёт. Пока раннер возможность не объявил, сервер не шлёт ему ничего нового: старый раннер
     (без `/announce`, 404 от старого сервера) работает как раньше, в том числе как личный, но без
     ретрансляции. `free_ai_slots` в опросе шлёт только раннер с `ai_slots`. Сопряжение по коду
     устройства (`/pair/start`, `/pair/poll`) публичное и выдаёт токен регистрации один раз.
@@ -144,6 +145,16 @@ paths:
         "200": {description: Принято, content: {application/json: {schema: {$ref: '#/components/schemas/RunnerAnnounceResponseBody'}}}}
         "401": {$ref: '#/components/responses/Error'}
         "403": {$ref: '#/components/responses/Error'}
+  /deployment:
+    post:
+      operationId: reportRunnerDeployment
+      summary: Как раннер развёрнут (исполнитель, лимиты, securityContext); только после согласования `deployment_info`.
+      security: [{runnerToken: []}]
+      requestBody: {content: {application/json: {schema: {$ref: '#/components/schemas/RunnerDeploymentBody'}}}, required: true}
+      responses:
+        "204": {description: Принято}
+        "401": {$ref: '#/components/responses/Error'}
+        "422": {$ref: '#/components/responses/Error'}
   /offline:
     post:
       operationId: runnerOffline
@@ -695,6 +706,129 @@ components:
       - paused
       - relay_keepalive_s
       type: object
+    RunnerBuildIsolationBody:
+      additionalProperties: false
+      properties:
+        namespace:
+          anyOf:
+          - maxLength: 253
+            minLength: 1
+            type: string
+          - type: 'null'
+        image:
+          anyOf:
+          - maxLength: 512
+            minLength: 1
+            type: string
+          - type: 'null'
+        resources:
+          anyOf:
+          - $ref: '#/components/schemas/RunnerResourcesBody'
+          - type: 'null'
+        network_disabled:
+          anyOf:
+          - type: boolean
+          - type: 'null'
+        pids_limit:
+          anyOf:
+          - maximum: 4194304
+            minimum: 1
+            type: integer
+          - type: 'null'
+        work_size_limit:
+          anyOf:
+          - maxLength: 32
+            minLength: 1
+            type: string
+          - type: 'null'
+        tmp_size_limit:
+          anyOf:
+          - maxLength: 32
+            minLength: 1
+            type: string
+          - type: 'null'
+        active_deadline_s:
+          anyOf:
+          - maximum: 604800
+            minimum: 1
+            type: integer
+          - type: 'null'
+        runtime_class:
+          anyOf:
+          - maxLength: 253
+            minLength: 1
+            type: string
+          - type: 'null'
+        security:
+          anyOf:
+          - $ref: '#/components/schemas/RunnerSecurityBody'
+          - type: 'null'
+      required:
+      - namespace
+      - image
+      - resources
+      - network_disabled
+      - pids_limit
+      - work_size_limit
+      - tmp_size_limit
+      - active_deadline_s
+      - runtime_class
+      - security
+      type: object
+    RunnerDeploymentBody:
+      additionalProperties: false
+      properties:
+        executor:
+          enum:
+          - docker
+          - kubernetes
+          type: string
+        platform:
+          enum:
+          - kubernetes
+          - container
+          - host
+          type: string
+        namespace:
+          anyOf:
+          - maxLength: 253
+            minLength: 1
+            type: string
+          - type: 'null'
+        pod_name:
+          anyOf:
+          - maxLength: 253
+            minLength: 1
+            type: string
+          - type: 'null'
+        service_account:
+          anyOf:
+          - maxLength: 253
+            minLength: 1
+            type: string
+          - type: 'null'
+        resources:
+          anyOf:
+          - $ref: '#/components/schemas/RunnerResourcesBody'
+          - type: 'null'
+        security:
+          anyOf:
+          - $ref: '#/components/schemas/RunnerSecurityBody'
+          - type: 'null'
+        build:
+          anyOf:
+          - $ref: '#/components/schemas/RunnerBuildIsolationBody'
+          - type: 'null'
+      required:
+      - executor
+      - platform
+      - namespace
+      - pod_name
+      - service_account
+      - resources
+      - security
+      - build
+      type: object
     RunnerErrorBody:
       additionalProperties: false
       properties:
@@ -826,6 +960,103 @@ components:
       - max_poll_wait_s
       type: object
 
+    RunnerResourcesBody:
+      additionalProperties: false
+      properties:
+        cpu_request:
+          anyOf:
+          - maxLength: 32
+            minLength: 1
+            type: string
+          - type: 'null'
+        cpu_limit:
+          anyOf:
+          - maxLength: 32
+            minLength: 1
+            type: string
+          - type: 'null'
+        memory_request:
+          anyOf:
+          - maxLength: 32
+            minLength: 1
+            type: string
+          - type: 'null'
+        memory_limit:
+          anyOf:
+          - maxLength: 32
+            minLength: 1
+            type: string
+          - type: 'null'
+        ephemeral_request:
+          anyOf:
+          - maxLength: 32
+            minLength: 1
+            type: string
+          - type: 'null'
+        ephemeral_limit:
+          anyOf:
+          - maxLength: 32
+            minLength: 1
+            type: string
+          - type: 'null'
+        source:
+          enum:
+          - pod
+          - cgroup
+          - config
+          - cluster
+          type: string
+      required:
+      - cpu_request
+      - cpu_limit
+      - memory_request
+      - memory_limit
+      - ephemeral_request
+      - ephemeral_limit
+      - source
+      type: object
+    RunnerSecurityBody:
+      additionalProperties: false
+      properties:
+        run_as_non_root:
+          anyOf:
+          - type: boolean
+          - type: 'null'
+        run_as_user:
+          anyOf:
+          - maximum: 2147483647
+            minimum: 0
+            type: integer
+          - type: 'null'
+        read_only_root:
+          anyOf:
+          - type: boolean
+          - type: 'null'
+        no_privilege_escalation:
+          anyOf:
+          - type: boolean
+          - type: 'null'
+        seccomp:
+          anyOf:
+          - type: boolean
+          - type: 'null'
+        capabilities_dropped:
+          anyOf:
+          - type: boolean
+          - type: 'null'
+        automount_token:
+          anyOf:
+          - type: boolean
+          - type: 'null'
+      required:
+      - run_as_non_root
+      - run_as_user
+      - read_only_root
+      - no_privilege_escalation
+      - seccomp
+      - capabilities_dropped
+      - automount_token
+      type: object
   securitySchemes:
     registrationToken: {type: http, scheme: bearer}
     runnerToken: {type: http, scheme: bearer}

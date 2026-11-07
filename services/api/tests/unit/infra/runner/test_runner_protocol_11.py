@@ -4,9 +4,11 @@ from __future__ import annotations
 
 import asyncio
 import json
+from collections.abc import Callable
 from pathlib import Path
 
 import pytest
+from hse_doc_studio.core.jobs.deployment import RunnerDeployment
 from hse_doc_studio.core.jobs.relay import AiEndpointFlavor
 from hse_doc_studio.core.jobs.runners import DeclaredAiEndpoint, RunnerHostKind
 from hse_doc_studio.core.jobs.wire import RunnerPairPollRequest, RunnerPairStartRequest
@@ -18,6 +20,7 @@ from hse_doc_studio.infra.runner.identity import RunnerIdentityStore
 from hse_doc_studio.infra.runner.loop import RunnerLoop, RunnerLoopConfig, RunnerLoopState
 from pydantic import ValidationError
 
+from tests.factories.runner_isolation import make_report
 from tests.unit.infra.runner.fake_runner_api import (
     RUNNER_TOKEN,
     TOKEN,
@@ -47,7 +50,14 @@ class _Observer:
 
 
 class Rig:
-    def __init__(self, *, ai: bool = True, gate: bool = True) -> None:
+    def __init__(
+        self,
+        *,
+        ai: bool = True,
+        gate: bool = True,
+        deployment: Callable[[], RunnerDeployment] | None = None,
+        deployment_every_s: float = 3600.0,
+    ) -> None:
         self.state = FakeRunnerState()
         self.transport = SwitchTransport(create_fake_app(self.state))
         self.executor = FakeExecutor()
@@ -79,6 +89,8 @@ class Rig:
                 ai_endpoints=_OLLAMA if ai else (),
                 gate=lambda: self.gate_open,
                 gate_recheck_s=0.02,
+                deployment=deployment,
+                deployment_every_s=deployment_every_s,
             ),
             observer=self.observer,
         )
@@ -328,3 +340,55 @@ def test__container__logged_ai_endpoint_url_has_no_credentials(url: str, logged:
     from hse_doc_studio.infra.di.containers.runner import _loggable_url  # noqa: PLC0415
 
     assert _loggable_url(url) == logged
+
+
+async def test__deployment__reported_after_announce_when_the_server_knows_it() -> None:
+    rig = Rig(ai=False, deployment=make_report)
+    rig.start()
+    await until(lambda: rig.state.polls > 0)
+    await rig.stop()
+
+    (announce,) = rig.state.announces
+    assert "deployment_info" in announce["features"]
+    (report,) = rig.state.deployments
+    assert report["executor"] == "kubernetes"
+    assert report["service_account"] == "rel-runner"
+
+
+async def test__deployment__not_sent_to_a_server_without_the_feature() -> None:
+    rig = Rig(ai=False, deployment=make_report)
+    rig.state.server_features = {"announce", "offline"}
+    rig.start()
+    await until(lambda: rig.state.polls > 1)
+    await rig.stop()
+
+    assert rig.state.deployments == []
+    assert rig.client.features == {"announce", "offline"}
+
+
+async def test__deployment__not_declared_without_a_collector() -> None:
+    rig = Rig(ai=False)
+    rig.start()
+    await until(lambda: rig.state.polls > 0)
+    await rig.stop()
+
+    assert "deployment_info" not in rig.state.announces[0]["features"]
+    assert rig.state.deployments == []
+
+
+async def test__deployment__repeated_while_polling_and_a_failing_collector_does_not_stop_the_runner() -> None:
+    calls = 0
+
+    def flaky() -> RunnerDeployment:
+        nonlocal calls
+        calls += 1
+        if calls == 1:
+            raise OSError("no /proc")
+        return make_report()
+
+    rig = Rig(ai=False, deployment=flaky, deployment_every_s=0.0)
+    rig.start()
+    await until(lambda: len(rig.state.deployments) >= 2)
+    await rig.stop()
+
+    assert calls >= 3

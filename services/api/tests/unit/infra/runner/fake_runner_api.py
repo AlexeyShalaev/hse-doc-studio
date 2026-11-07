@@ -72,6 +72,9 @@ class FakeRunnerState:
         self.supports_announce = True
         self.announce_paused = False
         self.announces: list[dict[str, Any]] = []
+        # Возможности сервера; без `deployment_info` это сервер до отчётов о развёртывании.
+        self.server_features = {"announce", "offline", "ai_slots", "ai_relay", "deployment_info"}
+        self.deployments: list[dict[str, Any]] = []
         self.poll_bodies: list[dict[str, Any]] = []
         self.offline_calls = 0
         self.deregister_calls = 0
@@ -120,11 +123,18 @@ def create_fake_app(state: FakeRunnerState) -> FastAPI:  # noqa: C901
         state.announces.append(body.model_dump())
         return schemas.RunnerAnnounceResponseBody(
             runner_id="runner-1",
-            server_features=sorted(set(body.features) & {"announce", "offline", "ai_slots", "ai_relay"}),
+            server_features=sorted(set(body.features) & state.server_features),
             owner_kind="user",
             paused=state.announce_paused,
             relay_keepalive_s=2,
         ).model_dump()
+
+    @app.post("/api/runner/v1/deployment")
+    async def deployment(body: schemas.RunnerDeploymentBody) -> Any:
+        if "deployment_info" not in state.server_features:
+            return Response(status_code=404)
+        state.deployments.append(body.model_dump(mode="json"))
+        return Response(status_code=204)
 
     @app.post("/api/runner/v1/offline")
     async def offline() -> Any:

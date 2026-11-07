@@ -33,6 +33,8 @@ from hse_doc_studio.core.jobs.admin import (
     RunnerStatus,
     RunnerSummary,
 )
+from hse_doc_studio.core.jobs.codec import decode, encode
+from hse_doc_studio.core.jobs.deployment import RunnerDeployment
 from hse_doc_studio.core.jobs.relay import AiEndpointFlavor
 from hse_doc_studio.core.jobs.runners import (
     DeclaredAiEndpoint,
@@ -74,7 +76,19 @@ def _runner(row: RunnerRow) -> Runner:
         offline_at=row.offline_at,
         renamed_at=row.renamed_at,
         paused_by=RunnerPausedBy(row.paused_by) if row.paused_by else None,
+        deployment=_deployment(row.deployment),
+        deployment_at=row.deployment_at,
     )
+
+
+def _deployment(raw: dict[str, Any] | None) -> RunnerDeployment | None:
+    # Запись пишет только `/deployment` после проверки схемой; запись другой версии формы читается как «нет данных».
+    if not raw:
+        return None
+    try:
+        return decode(RunnerDeployment, raw)
+    except (TypeError, ValueError, KeyError):
+        return None
 
 
 def _endpoints(raw: list[Any]) -> tuple[DeclaredAiEndpoint, ...]:
@@ -224,6 +238,9 @@ class SqlRunnerRepository:
 
     async def mark_offline(self, runner_id: str, now: datetime) -> None:
         await self._update(runner_id, {"offline_at": now})
+
+    async def set_deployment(self, runner_id: str, report: RunnerDeployment, now: datetime) -> bool:
+        return await self._update(runner_id, {"deployment": encode(report), "deployment_at": now}, only_active=True)
 
     async def count_active_owned(self, owner_id: str) -> int:
         stmt = select(func.count()).where(

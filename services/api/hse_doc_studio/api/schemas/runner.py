@@ -246,3 +246,55 @@ class RelayEventBatchBody(StrictModel):
 
 class RelayEventAckBody(StrictModel):
     cancel: bool
+
+
+# Отчёт раннера о том, как он развёрнут (`POST /deployment`, возможность `deployment_info`).
+_K8S_NAME = Field(min_length=1, max_length=253)
+_QUANTITY = Field(min_length=1, max_length=32)
+BuildExecutorName = Literal["docker", "kubernetes"]
+RunnerPlatformName = Literal["kubernetes", "container", "host"]
+ResourceSourceName = Literal["pod", "cgroup", "config", "cluster"]
+
+
+class RunnerResourcesBody(StrictModel):
+    cpu_request: str | None = _QUANTITY
+    cpu_limit: str | None = _QUANTITY
+    memory_request: str | None = _QUANTITY
+    memory_limit: str | None = _QUANTITY
+    ephemeral_request: str | None = _QUANTITY
+    ephemeral_limit: str | None = _QUANTITY
+    source: ResourceSourceName
+
+
+class RunnerSecurityBody(StrictModel):
+    run_as_non_root: bool | None
+    run_as_user: int | None = Field(ge=0, le=2**31 - 1)
+    read_only_root: bool | None
+    no_privilege_escalation: bool | None
+    seccomp: bool | None
+    capabilities_dropped: bool | None
+    automount_token: bool | None
+
+
+class RunnerBuildIsolationBody(StrictModel):
+    namespace: str | None = _K8S_NAME
+    image: str | None = Field(min_length=1, max_length=512)
+    resources: RunnerResourcesBody | None
+    network_disabled: bool | None
+    pids_limit: int | None = Field(ge=1, le=1 << 22)
+    work_size_limit: str | None = _QUANTITY
+    tmp_size_limit: str | None = _QUANTITY
+    active_deadline_s: int | None = Field(ge=1, le=7 * 24 * 3600)
+    runtime_class: str | None = _K8S_NAME
+    security: RunnerSecurityBody | None
+
+
+class RunnerDeploymentBody(StrictModel):
+    executor: BuildExecutorName
+    platform: RunnerPlatformName
+    namespace: str | None = _K8S_NAME
+    pod_name: str | None = _K8S_NAME
+    service_account: str | None = _K8S_NAME
+    resources: RunnerResourcesBody | None
+    security: RunnerSecurityBody | None
+    build: RunnerBuildIsolationBody | None

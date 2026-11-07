@@ -1,0 +1,10 @@
+{
+  "executor": "docker",
+  "platform": "container",
+  "namespace": null,
+  "pod_name": null,
+  "service_account": null,
+  "resources": null,
+  "security": null,
+  "build": null
+}

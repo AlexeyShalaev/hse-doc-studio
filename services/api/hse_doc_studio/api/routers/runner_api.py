@@ -29,6 +29,7 @@ from hse_doc_studio.api.schemas.runner import (
     PollResponseBody,
     RunnerAnnounceRequestBody,
     RunnerAnnounceResponseBody,
+    RunnerDeploymentBody,
     RunnerPairPollRequestBody,
     RunnerPairPollResponseBody,
     RunnerPairStartRequestBody,
@@ -36,7 +37,8 @@ from hse_doc_studio.api.schemas.runner import (
     RunnerRegisterRequestBody,
     RunnerRegisterResponseBody,
 )
-from hse_doc_studio.core.jobs.codec import encode_poll_response
+from hse_doc_studio.core.jobs.codec import decode, encode_poll_response
+from hse_doc_studio.core.jobs.deployment import RunnerDeployment
 from hse_doc_studio.core.jobs.errors import ArtifactInvalidError
 from hse_doc_studio.core.jobs.files import ArtifactRef
 from hse_doc_studio.core.jobs.relay import AiEndpointFlavor
@@ -129,6 +131,16 @@ async def announce_runner(
         paused=response.paused,
         relay_keepalive_s=response.relay_keepalive_s,
     )
+
+
+@router.post("/deployment", status_code=204)
+async def report_deployment(
+    body: RunnerDeploymentBody, request: Request, runner: Runner = Depends(authenticated_runner)
+) -> Response:
+    """Как раннер развёрнут (возможность `deployment_info`): исполнитель, лимиты, securityContext, без секретов."""
+    registry = await request.state.dishka_container.get(RunnerRegistry)
+    await registry.report_deployment(runner, decode(RunnerDeployment, body.model_dump(mode="json")))
+    return Response(status_code=204)
 
 
 @router.post("/offline", status_code=204)

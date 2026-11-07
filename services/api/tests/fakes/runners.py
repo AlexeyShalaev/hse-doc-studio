@@ -17,6 +17,7 @@ from hse_doc_studio.core.jobs.admin import (
     runner_status,
     version_key,
 )
+from hse_doc_studio.core.jobs.deployment import RunnerDeployment
 from hse_doc_studio.core.jobs.runners import (
     RegistrationToken,
     Runner,
@@ -67,6 +68,9 @@ class InMemoryRunnerRepository:
 
     async def rename(self, runner_id: str, name: str, now: datetime) -> bool:
         return self._replace(runner_id, only_active=True, name=name, renamed_at=now)
+
+    async def set_deployment(self, runner_id: str, report: RunnerDeployment, now: datetime) -> bool:
+        return self._replace(runner_id, only_active=True, deployment=report, deployment_at=now)
 
     async def apply_announcement(
         self, runner_id: str, info: RunnerAnnouncement, now: datetime, ip: str | None
