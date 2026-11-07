@@ -16,6 +16,9 @@ class UpdateErrorCode(StrEnum):
     unauthorized = "unauthorized"
     unsafe_version_jump = "unsafe_version_jump"
     risk_not_confirmed = "risk_not_confirmed"  # kubernetes без бэкапа: обновление только с явным подтверждением риска
+    schema_incompatible = "schema_incompatible"  # целевая версия работает на другой схеме базы: откат не выполняется
+    digest_missing = "digest_missing"  # у релиза нет дайджеста образа, а проверка образа включена
+    updater_outdated = "updater_outdated"  # апдейтер старой версии не умеет откат на выбранную версию
     rollback_unsafe = "rollback_unsafe"  # kubernetes: обновление меняло схему, образ без отката базы не поднимется
 
 

@@ -11,6 +11,7 @@ from hse_doc_studio.core.invitations.protocols import INotifier
 from hse_doc_studio.core.server_update.options import UpdateOptions
 from hse_doc_studio.core.server_update.protocols import IReleaseSource, IUpdateRunRepository
 from hse_doc_studio.core.uow import IUnitOfWork
+from hse_doc_studio.infra.db import migrator
 from hse_doc_studio.infra.db.repositories.server_update import SqlUpdateRunRepository
 from hse_doc_studio.infra.db.session import SessionProvider
 from hse_doc_studio.infra.update.feed import GithubUpdateFeedGateway
@@ -18,6 +19,14 @@ from hse_doc_studio.infra.update.release_source import FeedReleaseSource
 from hse_doc_studio.use_cases.backup.service import BackupService
 from hse_doc_studio.use_cases.server_update.admin import UpdateAdmin
 from hse_doc_studio.use_cases.server_update.service import UpdateService
+
+
+def _db_head() -> str | None:
+    """Head миграций этого образа: база работающего api стоит именно на нём (иначе api не стартовал бы)."""
+    try:
+        return migrator.head_revision()
+    except Exception:  # noqa: BLE001 — без head откат на выбранную версию просто проверяется только апдейтером
+        return None
 
 
 class ServerUpdatesProvider(Provider):
@@ -42,6 +51,7 @@ class ServerUpdatesProvider(Provider):
         cfg = settings.server_update
         return UpdateOptions(
             current_version=settings.get_app_version(),
+            db_head=_db_head(),
             executor_enabled=cfg.enabled
             and cfg.executor in {"compose", "kubernetes"}
             and bool(cfg.updater_token.get_secret_value()),

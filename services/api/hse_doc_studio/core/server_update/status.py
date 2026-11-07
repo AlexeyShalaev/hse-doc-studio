@@ -5,6 +5,7 @@ from datetime import datetime
 
 from hse_doc_studio.core.diagnostics.acceptance import Acceptance
 from hse_doc_studio.core.server_update.entities import ReleaseInfo, UpdateRun, UpdateSettings
+from hse_doc_studio.core.server_update.versions import DowngradeTarget
 
 
 @dataclass(frozen=True)
@@ -31,3 +32,9 @@ class UpdateStatus:
     rollback_blocked: bool = False  # kubernetes: обновление меняло схему, откат образа без отката базы невозможен
     risk_confirmation_required: bool = False  # kubernetes: бэкап не пройдёт, ручной запуск требует accept_risk
     backups_accepted: Acceptance | None = None  # «бэкапы не делаю сознательно»: подтверждение риска не спрашиваем
+    auto_update_enabled: bool = (
+        False  # политика `auto`: пока false, сам ничего не ставится, проверка и уведомления идут
+    )
+    db_revision: str | None = None  # ревизия схемы базы сейчас (head работающего образа)
+    updater_can_downgrade: bool = False  # апдейтер умеет откат на выбранную версию (сообщает в poll)
+    downgrade_targets: tuple[DowngradeTarget, ...] = ()  # прежние релизы с вердиктом по схеме базы

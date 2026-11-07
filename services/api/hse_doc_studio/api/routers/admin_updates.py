@@ -9,7 +9,10 @@ from fastapi import APIRouter, Depends, Request, Response, status
 from hse_doc_studio.api.config import settings
 from hse_doc_studio.api.schemas.admin import PageParams, page_params
 from hse_doc_studio.api.schemas.server_update import (
+    AutoUpdateBody,
     BackupsAcceptedOut,
+    DowngradeBody,
+    DowngradeTargetOut,
     ReleaseOut,
     RollbackBody,
     RunEventOut,
@@ -118,6 +121,20 @@ def _status(st: UpdateStatus) -> UpdateStatusOut:
             if st.backups_accepted
             else None
         ),
+        auto_update_enabled=st.auto_update_enabled,
+        db_revision=st.db_revision,
+        updater_can_downgrade=st.updater_can_downgrade,
+        downgrade_targets=[
+            DowngradeTargetOut(
+                version=t.release.version,
+                date=t.release.date,
+                notes=list(t.release.notes),
+                has_digest=bool(t.release.digests_url),
+                compat=t.verdict.value,
+                revision=t.revision,
+            )
+            for t in st.downgrade_targets
+        ],
         manual_command=manual_command(settings.server_update.executor, st.available.version if st.available else None),
     )
 
@@ -166,6 +183,22 @@ async def rollback(body: RollbackBody, request: Request, response: Response) -> 
     response.headers.update(_NO_STORE)
     uc = await request.state.dishka_container.get(UpdateAdmin)
     return _run(await uc.rollback(require_actor(), restore_db=body.restore_db))
+
+
+@router.put("/auto", response_model=UpdateStatusOut)
+async def put_auto(body: AutoUpdateBody, request: Request, response: Response) -> UpdateStatusOut:
+    """Переключатель автоустановки; проверка релизов и уведомления остаются."""
+    response.headers.update(_NO_STORE)
+    uc = await request.state.dishka_container.get(UpdateAdmin)
+    return _status(await uc.set_auto_update(require_actor(), enabled=body.enabled))
+
+
+@router.post("/downgrade", response_model=RunOut, status_code=status.HTTP_202_ACCEPTED)
+async def downgrade(body: DowngradeBody, request: Request, response: Response) -> RunOut:
+    """Откат на выбранную прежнюю версию; несовместимая со схемой базы версия отклоняется (409)."""
+    response.headers.update(_NO_STORE)
+    uc = await request.state.dishka_container.get(UpdateAdmin)
+    return _run(await uc.downgrade(require_actor(), body.version))
 
 
 @router.post("/runs/{run_id}/cancel", response_model=RunOut)

@@ -13,6 +13,7 @@ from hse_doc_studio.core.backup.errors import BackupError, BackupErrorCode
 from hse_doc_studio.core.listing import Found, Window
 from hse_doc_studio.core.server_update.entities import ACTIVE_STATUSES, RunKind, RunStatus, UpdateRun
 from hse_doc_studio.core.server_update.protocols import FeedAnswer
+from hse_doc_studio.core.server_update.versions import known_revisions
 
 
 class InMemoryUpdateRuns:
@@ -68,9 +69,13 @@ class InMemoryUpdateRuns:
         undone = {
             r.from_version
             for r in self.items.values()
-            if r.kind is RunKind.rollback and r.status is RunStatus.succeeded
+            if r.kind in {RunKind.rollback, RunKind.downgrade} and r.status is RunStatus.succeeded
         }
         return frozenset(failed | undone)
+
+    async def known_revisions(self) -> dict[str, str]:
+        done = [r for r in self.items.values() if r.status in {RunStatus.succeeded, RunStatus.rolled_back}]
+        return known_revisions(sorted(done, key=lambda r: r.created_at))
 
     async def counts(self) -> dict[RunStatus, int]:
         out: dict[RunStatus, int] = {}

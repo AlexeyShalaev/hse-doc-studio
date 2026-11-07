@@ -78,6 +78,24 @@ export const useRollbackUpdate = () => {
   });
 };
 
+export const useSetAutoUpdate = () => {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (enabled: boolean) => updatesApi.setAuto(enabled),
+    onSuccess: (status) => {
+      client.setQueryData(updateKeys.status, status);
+    },
+  });
+};
+
+export const useDowngradeUpdate = () => {
+  const refresh = useRefresh();
+  return useMutation({
+    mutationFn: (version: string) => updatesApi.downgrade(version),
+    onSuccess: refresh,
+  });
+};
+
 export const useCancelUpdate = () => {
   const refresh = useRefresh();
   return useMutation({

@@ -60,5 +60,9 @@
   "rollback_blocked": false,
   "risk_confirmation_required": false,
   "backups_accepted": null,
-  "manual_command": "helm upgrade hse-doc-studio deploy/helm/hse-doc-studio --reuse-values --set image.tag=0.4.0 --atomic --wait"
+  "manual_command": "helm upgrade hse-doc-studio deploy/helm/hse-doc-studio --reuse-values --set image.tag=0.4.0 --atomic --wait",
+  "auto_update_enabled": true,
+  "db_revision": null,
+  "updater_can_downgrade": false,
+  "downgrade_targets": []
 }

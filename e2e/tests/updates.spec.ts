@@ -56,6 +56,12 @@ for (const { lang, locale, title } of LANGS) {
         .getByTestId("update-banner-manual")
         .or(page.getByTestId("update-banner-offline")),
     ).toBeVisible();
+    // Переключатель автоустановки и список версий (откат на выбранную) есть на странице.
+    await expect(page.getByTestId("update-auto-switch")).toBeVisible();
+    await expect(page.getByTestId("update-versions")).toBeVisible();
+    await expect(
+      page.getByTestId("update-version-current-mark"),
+    ).toBeVisible();
     await shot(page, lang, "up-01-page");
 
     // Окно обслуживания и политика сохраняются и переживают перезагрузку.

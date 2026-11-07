@@ -19,6 +19,7 @@ from hse_doc_studio.core.server_update.entities import (
     UpdateRun,
     Verify,
 )
+from hse_doc_studio.core.server_update.versions import known_revisions
 from hse_doc_studio.infra.db.orm.server_update import UpdateRunRow
 from hse_doc_studio.infra.db.session import SessionProvider
 
@@ -177,12 +178,26 @@ class SqlUpdateRunRepository:
         )
         # Версия, с которой админ откатился вручную, автоматически не возвращается.
         undone = select(UpdateRunRow.from_version).where(
-            UpdateRunRow.kind == RunKind.rollback.value, UpdateRunRow.status == RunStatus.succeeded.value
+            UpdateRunRow.kind.in_([RunKind.rollback.value, RunKind.downgrade.value]),
+            UpdateRunRow.status == RunStatus.succeeded.value,
         )
         async with self._sessions.use() as session:
             found = (await session.execute(failed)).scalars().all()
             found = [*found, *(await session.execute(undone)).scalars().all()]
         return frozenset(found)
+
+    async def known_revisions(self) -> dict[str, str]:
+        stmt = (
+            select(UpdateRunRow)
+            .where(
+                UpdateRunRow.kind.in_([RunKind.update.value, RunKind.downgrade.value]),
+                UpdateRunRow.status.in_([RunStatus.succeeded.value, RunStatus.rolled_back.value]),
+            )
+            .order_by(UpdateRunRow.created_at)
+        )
+        async with self._sessions.use() as session:
+            rows = (await session.execute(stmt)).scalars().all()
+        return known_revisions(_run(r) for r in rows)
 
     async def counts(self) -> dict[RunStatus, int]:
         stmt = select(UpdateRunRow.status, func.count()).group_by(UpdateRunRow.status)

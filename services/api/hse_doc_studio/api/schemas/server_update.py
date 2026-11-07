@@ -11,7 +11,8 @@ from hse_doc_studio.api.schemas.common import StrictModel
 PolicyName = Literal["off", "notify", "auto"]
 MaxBumpName = Literal["patch", "minor"]
 VerifyName = Literal["none", "digest", "cosign"]
-RunKindName = Literal["update", "rollback"]
+RunKindName = Literal["update", "rollback", "downgrade"]
+SchemaVerdictName = Literal["compatible", "incompatible", "unknown"]
 RunTriggerName = Literal["auto", "manual"]
 RunStatusName = Literal["waiting_backup", "queued", "running", "succeeded", "rolled_back", "failed", "cancelled"]
 EventLevel = Literal["info", "warn", "error"]
@@ -34,6 +35,17 @@ class ReleaseOut(StrictModel):
     date: str
     notes: list[str]
     has_digest: bool
+
+
+class DowngradeTargetOut(StrictModel):
+    """Прежний релиз и вердикт по схеме: compatible разрешён, incompatible запрещён, unknown проверит апдейтер."""
+
+    version: str
+    date: str
+    notes: list[str]
+    has_digest: bool
+    compat: SchemaVerdictName
+    revision: str | None
 
 
 class RunEventOut(StrictModel):
@@ -104,6 +116,18 @@ class UpdateStatusOut(StrictModel):
     # Бэкапы отключены осознанно (самодиагностика): подтверждение риска не нужно, диалог показывает причину.
     backups_accepted: BackupsAcceptedOut | None
     manual_command: str
+    auto_update_enabled: bool
+    db_revision: str | None
+    updater_can_downgrade: bool
+    downgrade_targets: list[DowngradeTargetOut]
+
+
+class AutoUpdateBody(StrictModel):
+    enabled: bool
+
+
+class DowngradeBody(StrictModel):
+    version: str = Field(min_length=1, max_length=64)
 
 
 class StartUpdateBody(StrictModel):
@@ -124,6 +148,8 @@ class UpdaterPollBody(StrictModel):
     protocol: int = 1
     updater_version: str = Field(default="", max_length=64)
     busy: bool = False
+    # Что умеет апдейтер. Старый апдейтер поле не шлёт: откат на выбранную версию ему не поручается.
+    capabilities: list[str] = Field(default_factory=list, max_length=16)
 
 
 class UpdaterRunSpec(StrictModel):

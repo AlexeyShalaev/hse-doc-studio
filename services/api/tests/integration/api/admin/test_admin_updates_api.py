@@ -119,6 +119,8 @@ _ROUTES: list[tuple[str, str, Any]] = [
     ("POST", "/api/admin/updates/check", None),
     ("POST", "/api/admin/updates/runs", {}),
     ("POST", "/api/admin/updates/rollback", {}),
+    ("POST", "/api/admin/updates/downgrade", {"version": "0.3.0"}),
+    ("PUT", "/api/admin/updates/auto", {"enabled": False}),
     ("POST", f"/api/admin/updates/runs/{_ID}/cancel", None),
     ("GET", "/api/admin/updates/runs", None),
     ("GET", f"/api/admin/updates/runs/{_ID}", None),
@@ -318,3 +320,108 @@ async def test__kubernetes__rollback_after_schema_change_is_refused_with_409(sta
     assert (status["rollback_version"], status["rollback_blocked"]) == (None, True)
     refused = await c.post("/api/admin/updates/rollback", json={"restore_db": True}, headers=boss)
     assert (refused.status_code, refused.json()["code"]) == (409, "rollback_unsafe")
+
+
+async def _downgrade_stack(
+    stack: _Stack, caps: tuple[str, ...] = ("downgrade",)
+) -> tuple[dict[str, str], dict[str, str]]:
+    """Установка на 0.5.0 (база r2), в истории 0.4.0 жила на r1, 0.3.0 неизвестна; апдейтер умеет откат."""
+    boss = await stack.users.add("boss", admin=True)
+    updater = {"Authorization": f"Bearer {TOKEN}"}
+    c = stack.client
+    stack.service._source = StaticSource(  # noqa: SLF001
+        FeedAnswer(
+            releases=(
+                ReleaseInfo("0.5.0", digests_url="https://example.org/5.json"),
+                ReleaseInfo("0.4.0", digests_url="https://example.org/4.json"),
+                ReleaseInfo("0.4.1", digests_url="https://example.org/41.json"),
+                ReleaseInfo("0.3.0", digests_url="https://example.org/3.json"),
+            ),
+            checked=True,
+        )
+    )
+    stack.service._options = UpdateOptions(current_version="0.5.0", executor_enabled=True, db_head="r2")  # noqa: SLF001
+    now = datetime(2026, 11, 3, 3, 0, tzinfo=UTC)
+    from hse_doc_studio.core.server_update.entities import RunKind, RunStatus, RunTrigger, UpdateRun  # noqa: PLC0415
+
+    stack.runs.items["old"] = UpdateRun(
+        id="old",
+        kind=RunKind.update,
+        trigger=RunTrigger.manual,
+        status=RunStatus.succeeded,
+        from_version="0.4.0",
+        to_version="0.4.1",
+        created_at=now,
+        from_revision="r1",
+        to_revision="r1",
+    )
+    await c.put("/api/admin/updates/settings", json={**_BODY, "policy": "notify"}, headers=boss)
+    await c.post("/api/admin/updates/check", headers=boss)
+    await c.post(
+        "/api/updater/v1/poll",
+        json={"updater_version": "0.5.0", "busy": True, "capabilities": list(caps)},
+        headers=updater,
+    )
+    return boss, updater
+
+
+async def test__downgrade__status_lists_versions_with_schema_verdicts_and_the_run_goes_to_the_updater(
+    stack: _Stack,
+) -> None:
+    boss, updater = await _downgrade_stack(stack)
+    c = stack.client
+
+    status = (await c.get("/api/admin/updates/status", headers=boss)).json()
+    assert status["updater_can_downgrade"] is True
+    assert status["db_revision"] == "r2"
+    assert {t["version"]: t["compat"] for t in status["downgrade_targets"]} == {
+        "0.4.1": "incompatible",  # жила на r1
+        "0.4.0": "incompatible",
+        "0.3.0": "unknown",
+    }
+
+    refused = await c.post("/api/admin/updates/downgrade", json={"version": "0.4.0"}, headers=boss)
+    assert (refused.status_code, refused.json()["code"], refused.json()["field"]) == (
+        409,
+        "schema_incompatible",
+        "version",
+    )
+    assert [r for r in stack.runs.items if r != "old"] == []
+
+    started = await c.post("/api/admin/updates/downgrade", json={"version": "0.3.0"}, headers=boss)
+    assert started.status_code == 202
+    assert started.json()["kind"] == "downgrade"
+    spec = (await c.post("/api/updater/v1/poll", json={"capabilities": ["downgrade"]}, headers=updater)).json()["run"]
+    assert (spec["kind"], spec["to_version"], spec["digests_url"]) == (
+        "downgrade",
+        "0.3.0",
+        "https://example.org/3.json",
+    )
+    second = await c.post("/api/admin/updates/downgrade", json={"version": "0.3.0"}, headers=boss)
+    assert (second.status_code, second.json()["code"]) == (409, "already_running")
+    assert "update.downgrade_request" in [e.action for e in await stack.users.audit.list()]
+
+
+async def test__downgrade__old_updater_without_capabilities_is_refused(stack: _Stack) -> None:
+    boss, _updater = await _downgrade_stack(stack, caps=())
+
+    refused = await stack.client.post("/api/admin/updates/downgrade", json={"version": "0.3.0"}, headers=boss)
+
+    assert (refused.status_code, refused.json()["code"]) == (409, "updater_outdated")
+
+
+async def test__auto_toggle__over_http_switches_between_auto_and_notify_and_is_audited(stack: _Stack) -> None:
+    boss = await stack.users.add("boss", admin=True)
+    c = stack.client
+    await c.put("/api/admin/updates/settings", json=_BODY, headers=boss)
+
+    off = await c.put("/api/admin/updates/auto", json={"enabled": False}, headers=boss)
+    assert off.status_code == 200
+    assert (off.json()["auto_update_enabled"], off.json()["settings"]["policy"]) == (False, "notify")
+    assert off.json()["settings"]["window_minutes"] == 1440  # остальные настройки целы
+    on = await c.put("/api/admin/updates/auto", json={"enabled": True}, headers=boss)
+    assert (on.json()["auto_update_enabled"], on.json()["settings"]["policy"]) == (True, "auto")
+    toggles = [e for e in await stack.users.audit.list() if e.action == "update.auto_toggle"]
+    assert sorted(t.details["enabled"] for t in toggles) == [False, True]
+    bad = await c.put("/api/admin/updates/auto", json={}, headers=boss)
+    assert bad.status_code == 422

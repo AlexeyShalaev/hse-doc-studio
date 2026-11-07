@@ -242,6 +242,8 @@ class Engine(Reporter):
         try:
             self._snapshot(spec, api, env_file)
             self._pull_and_verify(spec, repo, target)
+            if spec["kind"] == "downgrade":
+                self._require_same_schema(spec, api, env_file, target)
             self._swap(spec, svcs, api, env_file, target)
         finally:
             env_file.unlink(missing_ok=True)
@@ -307,6 +309,15 @@ class Engine(Reporter):
             if not res.ok:
                 raise AbortError("signature_invalid", f"cosign signature check failed: {res.err.strip()[-300:]}")
         self.emit("verify", f"image digest {digest[:19]} verified")
+
+    def _require_same_schema(self, spec: dict[str, Any], api: _Svc, env_file: Path, target: str) -> None:
+        """Откат на выбранную версию: head её миграций обязан равняться ревизии базы, до остановки сервисов."""
+        self.emit("preflight", f"checking that {spec['to_version']} fits the database schema")
+        current, head = self._db_current(target, api, env_file)
+        problem = plan.schema_mismatch(spec["to_version"], current, head)
+        if problem:
+            raise AbortError("schema_incompatible", problem)
+        self.emit("preflight", f"database schema {current} matches {spec['to_version']}")
 
     def _published_digest(self, spec: dict[str, Any]) -> str:
         return published_digest(self._get, spec)
