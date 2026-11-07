@@ -6,6 +6,17 @@ Generated from `release-notes.json` via `make changelog` — do not edit by hand
 Release notes are hand-written and bilingual (RU/EN); the app shows them in the
 selected interface language.
 
+## [0.13.0](https://github.com/AlexeyShalaev/hse-doc-studio/compare/v0.12.0...v0.13.0) (2026-11-07)
+
+
+### Features
+
+* **admin:** API установки серверов ИИ-моделей рядом со Студией ([2ad1abb](https://github.com/AlexeyShalaev/hse-doc-studio/commit/2ad1abb53353e68bbe57e9bc23ae3aa5ba9aa5cf))
+* **admin:** серверы моделей по SSH поверх общего слоя установки, состояние в базе ([9cf2da3](https://github.com/AlexeyShalaev/hse-doc-studio/commit/9cf2da30c322f3594d29aaa306da73aec3e8f720))
+* **admin:** серверы моделей по SSH поверх общего слоя установки, состояние установки в базе ([512ce34](https://github.com/AlexeyShalaev/hse-doc-studio/commit/512ce341ad5b914a328a36d1ab830a1148fc717b))
+* **admin:** страница «Серверы моделей» ([c682512](https://github.com/AlexeyShalaev/hse-doc-studio/commit/c682512742e036fa6ff5ff6e3c75548570957de1))
+* **admin:** токен Hugging Face для серверов моделей ([08c5961](https://github.com/AlexeyShalaev/hse-doc-studio/commit/08c596192c08f479c0aecfdd3bb844d6cb4e1d33))
+
 ## [0.12.0](https://github.com/AlexeyShalaev/hse-doc-studio/compare/v0.11.0...v0.12.0) - 2026-11-07
 
 - Installing a runner with a single command: creating a token now shows a ready docker run line and a script that installs the runner as a service (systemd on Linux, launchd on macOS). The script contains no secrets and supports a dry run, status and uninstall.
