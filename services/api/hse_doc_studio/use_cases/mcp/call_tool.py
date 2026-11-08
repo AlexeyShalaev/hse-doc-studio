@@ -25,6 +25,7 @@ from hse_doc_studio.core.identity.errors import IdentityError, IdentityErrorCode
 from hse_doc_studio.core.mcp.entities import MCP_ADMIN_SCOPE, McpCallOutcome, McpCallRecord, McpSettings
 from hse_doc_studio.core.mcp.errors import McpError, McpErrorCode
 from hse_doc_studio.core.mcp.protocols import IMcpCallJournal, IMcpSettingsStore
+from hse_doc_studio.core.project_access import access_message
 from hse_doc_studio.core.projects.usage import ProjectQuotaExceededError
 from hse_doc_studio.core.quotas.errors import QuotaExceededError
 from hse_doc_studio.core.rate_limit import MCP_CALL, IRateLimiter, RateRule
@@ -128,7 +129,8 @@ class CallMcpToolUC:
             if entry.rule.guards_write:
                 found = await self._project_access.execute(GetProjectAccessInput(project_id=project_id))
                 if not found.access.writable:
-                    raise McpError(McpErrorCode.read_only)
+                    # Причина та же, что в ответе 423: агенту тоже нельзя советовать «обновите Студию» зря.
+                    raise McpError(McpErrorCode.read_only, access_message(found.access, found.project.lock.version))
         except (NotFoundError, ProjectForbiddenError, ProjectReadOnlyError) as exc:
             raise map_tool_error(exc) from exc
 
