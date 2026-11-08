@@ -99,7 +99,12 @@ metadata:
     helm.sh/chart: hse-doc-studio-0.1.0
     app.kubernetes.io/component: api
 spec:
-  # Одна реплика и Recreate: том проектов пишется одним процессом, две копии не должны жить одновременно.
+  # Одна реплика и Recreate: том проектов (ReadWriteOnce) пишется одним процессом, а замки сборок, комнаты
+  # совместной правки и маршрутизация раннеров живут в его памяти, так что две копии не должны жить одновременно.
+  # RollingUpdate тут невозможен, и окно недоступности при выкатке неизбежно. Оно сведено к минимуму: старый под
+  # отвечает ожидающим 503 с Retry-After и выходит сразу (graceful_shutdown.py), новый получает трафик через
+  # 1–2 с после готовности (частые проверки ниже). preStop со sleep не нужен: другого пода, на который ушёл бы
+  # трафик, при Recreate нет, и пауза только удлинила бы окно.
   replicas: 1
   strategy:
     type: Recreate
@@ -117,6 +122,7 @@ spec:
       annotations:
         checksum/secret: 3d4af20705b72dc5a7dd296489f57e02b20395a134958a3730b60e804bee7f94
     spec:
+      terminationGracePeriodSeconds: 30
       # Студия не ходит в Kubernetes API: токен ServiceAccount в поде не нужен.
       automountServiceAccountToken: false
       securityContext:
@@ -185,19 +191,21 @@ spec:
             - {name: HSE_STUDIO__BACKUPS__PROVISION__ENCRYPTION_MODE, value: "installation"}
             - {name: HSE_STUDIO__BACKUPS__PROVISION__NOTIFY_ADMINS, value: "true"}
             # Экран изоляции раннеров в админке: что задано в чарте (не проверенное в кластере).
-            - {name: HSE_STUDIO__RUNNER_CLUSTER__DECLARED, value: "{\"build\":{\"activeDeadlineSeconds\":1800,\"limitRange\":{\"default\":{\"cpu\":\"1\",\"ephemeral-storage\":\"2Gi\",\"memory\":\"2Gi\"},\"defaultRequest\":{\"cpu\":\"250m\",\"ephemeral-storage\":\"256Mi\",\"memory\":\"512Mi\"},\"enabled\":false,\"max\":{\"cpu\":\"8\",\"ephemeral-storage\":\"8Gi\",\"memory\":\"16Gi\"}},\"namespace\":\"studio\",\"networkPolicy\":true,\"quota\":{\"enabled\":false,\"hard\":{\"limits.cpu\":\"40\",\"limits.ephemeral-storage\":\"80Gi\",\"limits.memory\":\"80Gi\",\"pods\":\"20\",\"requests.cpu\":\"10\",\"requests.ephemeral-storage\":\"20Gi\",\"requests.memory\":\"20Gi\"}},\"resources\":{\"limits\":{\"cpu\":\"2\",\"ephemeral-storage\":\"4Gi\",\"memory\":\"4Gi\"},\"requests\":{\"cpu\":\"500m\",\"ephemeral-storage\":\"1Gi\",\"memory\":\"1Gi\"}},\"runAsUser\":1000,\"runtimeClassName\":\"\",\"tmpSizeLimit\":\"1Gi\",\"workSizeLimit\":\"2Gi\"},\"releaseNamespace\":\"studio\",\"runner\":{\"deployment\":\"rel-hse-doc-studio-runner\",\"enabled\":true,\"executor\":\"docker\",\"replicas\":1,\"resources\":{\"limits\":{\"cpu\":\"1\",\"ephemeral-storage\":\"2Gi\",\"memory\":\"2Gi\"},\"requests\":{\"cpu\":\"100m\",\"ephemeral-storage\":\"128Mi\",\"memory\":\"256Mi\"}},\"runAsUser\":10001,\"serviceAccount\":\"\",\"storageClass\":\"\",\"storageKind\":\"hostPath\",\"storageSize\":\"\",\"tmpSizeLimit\":\"\"},\"runnerEgress\":{\"apiServerCidrs\":[],\"apiServerPorts\":[443,6443],\"enabled\":false,\"extraRules\":0,\"studioPort\":8000}}"}
+            - {name: HSE_STUDIO__RUNNER_CLUSTER__DECLARED, value: "{\"build\":{\"activeDeadlineSeconds\":1800,\"limitRange\":{\"default\":{\"cpu\":\"1\",\"ephemeral-storage\":\"2Gi\",\"memory\":\"2Gi\"},\"defaultRequest\":{\"cpu\":\"250m\",\"ephemeral-storage\":\"256Mi\",\"memory\":\"512Mi\"},\"enabled\":false,\"max\":{\"cpu\":\"8\",\"ephemeral-storage\":\"8Gi\",\"memory\":\"16Gi\"}},\"namespace\":\"studio\",\"networkPolicy\":true,\"quota\":{\"enabled\":false,\"hard\":{\"limits.cpu\":\"40\",\"limits.ephemeral-storage\":\"80Gi\",\"limits.memory\":\"80Gi\",\"pods\":\"20\",\"requests.cpu\":\"10\",\"requests.ephemeral-storage\":\"20Gi\",\"requests.memory\":\"20Gi\"}},\"resources\":{\"limits\":{\"cpu\":\"2\",\"ephemeral-storage\":\"4Gi\",\"memory\":\"4Gi\"},\"requests\":{\"cpu\":\"500m\",\"ephemeral-storage\":\"1Gi\",\"memory\":\"1Gi\"}},\"runAsUser\":1000,\"runtimeClassName\":\"\",\"tmpSizeLimit\":\"1Gi\",\"workSizeLimit\":\"2Gi\"},\"releaseNamespace\":\"studio\",\"runner\":{\"deployment\":\"rel-hse-doc-studio-runner\",\"enabled\":true,\"executor\":\"docker\",\"replicas\":1,\"resources\":{\"limits\":{\"cpu\":\"1\",\"ephemeral-storage\":\"2Gi\",\"memory\":\"2Gi\"},\"requests\":{\"cpu\":\"100m\",\"ephemeral-storage\":\"128Mi\",\"memory\":\"256Mi\"}},\"runAsUser\":10001,\"serviceAccount\":\"\",\"storageClass\":\"\",\"storageKind\":\"hostPath\",\"storageSize\":\"\",\"tmpSizeLimit\":\"\"},\"runnerEgress\":{\"apiServerCidrs\":[],\"apiServerPorts\":[443,6443],\"enabled\":false,\"extraRules\":0,\"studioPort\":8000},\"uiBuild\":{\"enabled\":false,\"limitRange\":false,\"namespace\":\"studio\",\"networkPolicy\":false,\"quota\":false}}"}
             # Первая установка: схему ведёт сам api под advisory-локом. Дальше её обновляет Job pre-upgrade.
             - {name: HSE_STUDIO__DB__AUTO_MIGRATE, value: "true"}
           volumeMounts:
             - {name: data, mountPath: /data}
             - {name: backups, mountPath: /backups}
+          # /health отвечает только после восстановления задач при старте. Частые проверки: при выкатке каждая
+          # секунда между готовностью и включением в Service это 503 от ingress. Бюджет старта тот же, 5 минут.
           startupProbe:
             httpGet: {path: /health, port: http}
-            periodSeconds: 5
-            failureThreshold: 60
+            periodSeconds: 2
+            failureThreshold: 150
           readinessProbe:
             httpGet: {path: /health, port: http}
-            periodSeconds: 10
+            periodSeconds: 2
           livenessProbe:
             httpGet: {path: /health, port: http}
             periodSeconds: 20

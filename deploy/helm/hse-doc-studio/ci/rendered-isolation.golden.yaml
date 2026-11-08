@@ -21,7 +21,8 @@ spec:
 
 ---
 # Source: hse-doc-studio/templates/runner-networkpolicy.yaml
-# Поды сборки раннеров из админки живут в namespace релиза. Сеть им не нужна: вход и выход идут через exec API.
+# Поды сборки раннеров из админки (runner.installFromUi.buildNamespace или namespace релиза). Сеть им не нужна: вход
+# и выход идут через exec API.
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
@@ -326,7 +327,7 @@ spec:
 
 ---
 # Source: hse-doc-studio/templates/runner-isolation-read.yaml
-# Метки Pod Security у namespace релиза и подов сборки: get только на эти имена.
+# Метки Pod Security у namespace релиза и подов сборки (обоих видов раннеров): get только на эти имена.
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
@@ -368,7 +369,8 @@ subjects:
 
 ---
 # Source: hse-doc-studio/templates/runner-install-ui.yaml
-# ServiceAccount раннеров, поставленных из админки: только поды сборки в namespace релиза.
+# ServiceAccount раннеров, поставленных из админки: только поды сборки в их namespace (buildNamespace или namespace
+# релиза). Со своим buildNamespace в namespace релиза у раннеров прав нет.
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
@@ -633,7 +635,12 @@ metadata:
     helm.sh/chart: hse-doc-studio-0.1.0
     app.kubernetes.io/component: api
 spec:
-  # Одна реплика и Recreate: том проектов пишется одним процессом, две копии не должны жить одновременно.
+  # Одна реплика и Recreate: том проектов (ReadWriteOnce) пишется одним процессом, а замки сборок, комнаты
+  # совместной правки и маршрутизация раннеров живут в его памяти, так что две копии не должны жить одновременно.
+  # RollingUpdate тут невозможен, и окно недоступности при выкатке неизбежно. Оно сведено к минимуму: старый под
+  # отвечает ожидающим 503 с Retry-After и выходит сразу (graceful_shutdown.py), новый получает трафик через
+  # 1–2 с после готовности (частые проверки ниже). preStop со sleep не нужен: другого пода, на который ушёл бы
+  # трафик, при Recreate нет, и пауза только удлинила бы окно.
   replicas: 1
   strategy:
     type: Recreate
@@ -651,6 +658,7 @@ spec:
       annotations:
         checksum/secret: 3d4af20705b72dc5a7dd296489f57e02b20395a134958a3730b60e804bee7f94
     spec:
+      terminationGracePeriodSeconds: 30
       serviceAccountName: rel-hse-doc-studio-api
       securityContext:
         runAsNonRoot: true
@@ -732,7 +740,7 @@ spec:
             - {name: HSE_STUDIO__RUNNER_INSTALL__KUBERNETES_STORAGE_SIZE, value: "5Gi"}
             - {name: HSE_STUDIO__RUNNER_INSTALL__KUBERNETES_STORAGE_CLASS, value: ""}
             # Экран изоляции раннеров в админке: что задано в чарте (не проверенное в кластере).
-            - {name: HSE_STUDIO__RUNNER_CLUSTER__DECLARED, value: "{\"build\":{\"activeDeadlineSeconds\":1800,\"limitRange\":{\"default\":{\"cpu\":\"1\",\"ephemeral-storage\":\"2Gi\",\"memory\":\"2Gi\"},\"defaultRequest\":{\"cpu\":\"250m\",\"ephemeral-storage\":\"256Mi\",\"memory\":\"512Mi\"},\"enabled\":true,\"max\":{\"cpu\":\"8\",\"ephemeral-storage\":\"8Gi\",\"memory\":\"16Gi\"}},\"namespace\":\"hds-builds\",\"networkPolicy\":true,\"quota\":{\"enabled\":true,\"hard\":{\"limits.cpu\":\"40\",\"limits.ephemeral-storage\":\"80Gi\",\"limits.memory\":\"80Gi\",\"pods\":\"20\",\"requests.cpu\":\"10\",\"requests.ephemeral-storage\":\"20Gi\",\"requests.memory\":\"20Gi\"}},\"resources\":{\"limits\":{\"cpu\":\"2\",\"ephemeral-storage\":\"4Gi\",\"memory\":\"4Gi\"},\"requests\":{\"cpu\":\"500m\",\"ephemeral-storage\":\"1Gi\",\"memory\":\"1Gi\"}},\"runAsUser\":1000,\"runtimeClassName\":\"\",\"tmpSizeLimit\":\"1Gi\",\"workSizeLimit\":\"2Gi\"},\"releaseNamespace\":\"studio\",\"runner\":{\"deployment\":\"rel-hse-doc-studio-runner\",\"enabled\":true,\"executor\":\"kubernetes\",\"replicas\":1,\"resources\":{\"limits\":{\"cpu\":\"1\",\"ephemeral-storage\":\"2Gi\",\"memory\":\"2Gi\"},\"requests\":{\"cpu\":\"100m\",\"ephemeral-storage\":\"128Mi\",\"memory\":\"256Mi\"}},\"runAsUser\":10001,\"serviceAccount\":\"rel-hse-doc-studio-runner\",\"storageClass\":\"\",\"storageKind\":\"pvc\",\"storageSize\":\"10Gi\",\"tmpSizeLimit\":\"1Gi\"},\"runnerEgress\":{\"apiServerCidrs\":[\"192.168.49.2/32\"],\"apiServerPorts\":[8443],\"enabled\":true,\"extraRules\":1,\"studioPort\":8000}}"}
+            - {name: HSE_STUDIO__RUNNER_CLUSTER__DECLARED, value: "{\"build\":{\"activeDeadlineSeconds\":1800,\"limitRange\":{\"default\":{\"cpu\":\"1\",\"ephemeral-storage\":\"2Gi\",\"memory\":\"2Gi\"},\"defaultRequest\":{\"cpu\":\"250m\",\"ephemeral-storage\":\"256Mi\",\"memory\":\"512Mi\"},\"enabled\":true,\"max\":{\"cpu\":\"8\",\"ephemeral-storage\":\"8Gi\",\"memory\":\"16Gi\"}},\"namespace\":\"hds-builds\",\"networkPolicy\":true,\"quota\":{\"enabled\":true,\"hard\":{\"limits.cpu\":\"40\",\"limits.ephemeral-storage\":\"80Gi\",\"limits.memory\":\"80Gi\",\"pods\":\"20\",\"requests.cpu\":\"10\",\"requests.ephemeral-storage\":\"20Gi\",\"requests.memory\":\"20Gi\"}},\"resources\":{\"limits\":{\"cpu\":\"2\",\"ephemeral-storage\":\"4Gi\",\"memory\":\"4Gi\"},\"requests\":{\"cpu\":\"500m\",\"ephemeral-storage\":\"1Gi\",\"memory\":\"1Gi\"}},\"runAsUser\":1000,\"runtimeClassName\":\"\",\"tmpSizeLimit\":\"1Gi\",\"workSizeLimit\":\"2Gi\"},\"releaseNamespace\":\"studio\",\"runner\":{\"deployment\":\"rel-hse-doc-studio-runner\",\"enabled\":true,\"executor\":\"kubernetes\",\"replicas\":1,\"resources\":{\"limits\":{\"cpu\":\"1\",\"ephemeral-storage\":\"2Gi\",\"memory\":\"2Gi\"},\"requests\":{\"cpu\":\"100m\",\"ephemeral-storage\":\"128Mi\",\"memory\":\"256Mi\"}},\"runAsUser\":10001,\"serviceAccount\":\"rel-hse-doc-studio-runner\",\"storageClass\":\"\",\"storageKind\":\"pvc\",\"storageSize\":\"10Gi\",\"tmpSizeLimit\":\"1Gi\"},\"runnerEgress\":{\"apiServerCidrs\":[\"192.168.49.2/32\"],\"apiServerPorts\":[8443],\"enabled\":true,\"extraRules\":1,\"studioPort\":8000},\"uiBuild\":{\"enabled\":true,\"limitRange\":false,\"namespace\":\"studio\",\"networkPolicy\":true,\"quota\":false}}"}
             # Права на чтение NetworkPolicy, ResourceQuota, LimitRange и своих namespace: runner-isolation-read.yaml.
             - {name: HSE_STUDIO__RUNNER_CLUSTER__READ_LIVE, value: "true"}
             # Первая установка: схему ведёт сам api под advisory-локом. Дальше её обновляет Job pre-upgrade.
@@ -740,13 +748,15 @@ spec:
           volumeMounts:
             - {name: data, mountPath: /data}
             - {name: backups, mountPath: /backups}
+          # /health отвечает только после восстановления задач при старте. Частые проверки: при выкатке каждая
+          # секунда между готовностью и включением в Service это 503 от ingress. Бюджет старта тот же, 5 минут.
           startupProbe:
             httpGet: {path: /health, port: http}
-            periodSeconds: 5
-            failureThreshold: 60
+            periodSeconds: 2
+            failureThreshold: 150
           readinessProbe:
             httpGet: {path: /health, port: http}
-            periodSeconds: 10
+            periodSeconds: 2
           livenessProbe:
             httpGet: {path: /health, port: http}
             periodSeconds: 20

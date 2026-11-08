@@ -1,0 +1,260 @@
+{
+  "config": "helm",
+  "live_read": "ok",
+  "checked_at": "2026-11-08T09:15:00Z",
+  "release_namespace": "studio",
+  "chart_runner": {
+    "enabled": true,
+    "executor": "kubernetes",
+    "replicas": 1,
+    "namespace": "studio",
+    "service_account": "rel-runner",
+    "resources": {
+      "cpu_request": "100m",
+      "cpu_limit": "1",
+      "memory_request": "256Mi",
+      "memory_limit": "2Gi",
+      "ephemeral_request": "128Mi",
+      "ephemeral_limit": "2Gi",
+      "source": "config"
+    },
+    "tmp_size_limit": "1Gi",
+    "storage": {
+      "kind": "pvc",
+      "storage_class": null,
+      "size": "10Gi"
+    },
+    "security": {
+      "run_as_non_root": true,
+      "run_as_user": 1000,
+      "read_only_root": true,
+      "no_privilege_escalation": true,
+      "seccomp": true,
+      "capabilities_dropped": true,
+      "automount_token": true
+    },
+    "docker_socket": false
+  },
+  "build": {
+    "namespace": "studio-builds",
+    "resources": {
+      "cpu_request": "500m",
+      "cpu_limit": "2",
+      "memory_request": "1Gi",
+      "memory_limit": "4Gi",
+      "ephemeral_request": "1Gi",
+      "ephemeral_limit": "4Gi",
+      "source": "config"
+    },
+    "work_size_limit": "2Gi",
+    "tmp_size_limit": "1Gi",
+    "active_deadline_s": 1800,
+    "runtime_class": null,
+    "security": {
+      "run_as_non_root": true,
+      "run_as_user": 1000,
+      "read_only_root": true,
+      "no_privilege_escalation": true,
+      "seccomp": true,
+      "capabilities_dropped": true,
+      "automount_token": false
+    }
+  },
+  "install_from_ui": {
+    "enabled": true,
+    "namespace": "studio",
+    "build_namespace": "studio-ui-builds",
+    "service_account": "rel-runner-ui",
+    "storage_class": null,
+    "storage_size": "5Gi",
+    "runner": {
+      "cpu_request": "100m",
+      "cpu_limit": "1",
+      "memory_request": "256Mi",
+      "memory_limit": "2Gi",
+      "ephemeral_request": "128Mi",
+      "ephemeral_limit": "2Gi",
+      "source": "config"
+    },
+    "build": {
+      "cpu_request": "500m",
+      "cpu_limit": "2",
+      "memory_request": "1Gi",
+      "memory_limit": "4Gi",
+      "ephemeral_request": "1Gi",
+      "ephemeral_limit": "4Gi",
+      "source": "config"
+    },
+    "bounds": {
+      "max_cpu": "8",
+      "max_memory": "16Gi",
+      "min_runner_cpu": "100m",
+      "min_runner_memory": "256Mi",
+      "min_build_cpu": "500m",
+      "min_build_memory": "1Gi"
+    }
+  },
+  "network": {
+    "build_deny_all": {
+      "declared": true,
+      "live": true
+    },
+    "ui_build_deny_all": {
+      "declared": true,
+      "live": true
+    },
+    "runner_egress": {
+      "declared": true,
+      "live": true,
+      "dns": true,
+      "studio_port": 8000,
+      "api_server_cidrs": [
+        "10.0.0.5/32"
+      ],
+      "api_server_ports": [
+        443,
+        6443
+      ],
+      "extra_rules": 1
+    }
+  },
+  "quota": {
+    "namespace": "studio-builds",
+    "declared": {
+      "pods": "20",
+      "requests.cpu": "10",
+      "requests.memory": "20Gi",
+      "limits.cpu": "40",
+      "limits.memory": "80Gi",
+      "requests.ephemeral-storage": "20Gi",
+      "limits.ephemeral-storage": "80Gi"
+    },
+    "live_found": true,
+    "live_hard": {
+      "pods": "20",
+      "requests.cpu": "10",
+      "limits.memory": "80Gi"
+    },
+    "live_used": {
+      "pods": "2",
+      "requests.cpu": "1",
+      "limits.memory": "8Gi"
+    }
+  },
+  "limit_range": {
+    "namespace": "studio-builds",
+    "declared": {
+      "default": {
+        "cpu": "1",
+        "memory": "2Gi",
+        "ephemeral-storage": "2Gi"
+      },
+      "default_request": {
+        "cpu": "250m",
+        "memory": "512Mi",
+        "ephemeral-storage": "256Mi"
+      },
+      "max": {
+        "cpu": "8",
+        "memory": "16Gi",
+        "ephemeral-storage": "8Gi"
+      }
+    },
+    "live_found": true,
+    "live": {
+      "default": {
+        "cpu": "1",
+        "memory": "2Gi"
+      },
+      "default_request": {
+        "cpu": "250m",
+        "memory": "512Mi"
+      },
+      "max": {
+        "cpu": "8",
+        "memory": "16Gi"
+      }
+    }
+  },
+  "ui_quota": {
+    "namespace": "studio-ui-builds",
+    "declared": {
+      "pods": "20",
+      "requests.cpu": "10",
+      "requests.memory": "20Gi",
+      "limits.cpu": "40",
+      "limits.memory": "80Gi",
+      "requests.ephemeral-storage": "20Gi",
+      "limits.ephemeral-storage": "80Gi"
+    },
+    "live_found": true,
+    "live_hard": {
+      "pods": "20",
+      "requests.cpu": "10",
+      "limits.memory": "80Gi"
+    },
+    "live_used": {
+      "pods": "1",
+      "requests.cpu": "500m",
+      "limits.memory": "4Gi"
+    }
+  },
+  "ui_limit_range": {
+    "namespace": "studio-ui-builds",
+    "declared": {
+      "default": {
+        "cpu": "1",
+        "memory": "2Gi",
+        "ephemeral-storage": "2Gi"
+      },
+      "default_request": {
+        "cpu": "250m",
+        "memory": "512Mi",
+        "ephemeral-storage": "256Mi"
+      },
+      "max": {
+        "cpu": "8",
+        "memory": "16Gi",
+        "ephemeral-storage": "8Gi"
+      }
+    },
+    "live_found": true,
+    "live": {
+      "default": {
+        "cpu": "1",
+        "memory": "2Gi"
+      },
+      "default_request": {
+        "cpu": "250m",
+        "memory": "512Mi"
+      },
+      "max": {
+        "cpu": "8",
+        "memory": "16Gi"
+      }
+    }
+  },
+  "pod_security": [
+    {
+      "namespace": "studio",
+      "enforce": "restricted",
+      "enforce_version": "latest",
+      "warn": null,
+      "audit": null
+    },
+    {
+      "namespace": "studio-builds",
+      "enforce": null,
+      "enforce_version": null,
+      "warn": "restricted",
+      "audit": null
+    },
+    {
+      "namespace": "studio-ui-builds",
+      "enforce": "restricted",
+      "enforce_version": "latest",
+      "warn": null,
+      "audit": null
+    }
+  ]
+}

@@ -40,7 +40,7 @@ tags:
 
 | Что | Политика |
 |---|---|
-| Поды сборки (chart-раннер с `executor: kubernetes` и раннеры из админки) | ни входа, ни выхода: исходники и результат идут через `exec` Kubernetes API, поэтому под сборки не достанет другие поды, базу данных, metadata-сервис облака и интернет. Переключатель: `runner.kubernetes.networkPolicy.enabled` (по умолчанию включён) |
+| Поды сборки (chart-раннер с `executor: kubernetes` и раннеры из админки) | ни входа, ни выхода: исходники и результат идут через `exec` Kubernetes API, поэтому под сборки не достанет другие поды, базу данных, metadata-сервис облака и интернет. Политика стоит в namespace подов сборки: `runner.kubernetes.namespace` у chart-раннера, `runner.installFromUi.buildNamespace` у раннеров из админки (пусто значит namespace релиза). Переключатель: `runner.kubernetes.networkPolicy.enabled` (по умолчанию включён) |
 | Поды раннеров | необязательная `runner.networkPolicy.enabled` (по умолчанию выключена): исходящий доступ только к DNS (порт 53), api Студии этого релиза (порт 8000), Kubernetes API (`apiServerPorts`, по умолчанию 443 и 6443) и `extraEgress` |
 
 Политикам нужен CNI с поддержкой NetworkPolicy (Calico, Cilium и подобные); без него они молча не действуют. Политика подов сборки включена по умолчанию, потому что сломать ничего не может: сеть этим подам не нужна. Политика раннеров выключена, потому что чарт не знает двух адресов, нужных раннеру: сервер Kubernetes API и, если объектное хранилище вне кластера или не является подом релиза, адрес S3 (раннер берёт исходники и выгружает результат по presigned-ссылкам). Неверный список отрезал бы работающие раннеры.
@@ -70,7 +70,7 @@ tags:
 
 ## Квота и LimitRange (опция)
 
-Для отдельного namespace сборок (`runner.kubernetes.namespace`) чарт умеет добавить ResourceQuota (`runner.kubernetes.quota`: число подов, суммарные requests и limits CPU, памяти и эфемерного хранилища) и LimitRange (`runner.kubernetes.limitRange`: умолчания контейнера и максимум). Оба выключены по умолчанию. Поды сборки задают свои requests и limits, поэтому под квоту подходят; LimitRange страхует от чужих подов в этом namespace. Когда квота выбрана, под отклоняется и сборка падает с `build_backend_unavailable` и причиной Kubernetes в деталях. Квоту в namespace релиза чарт рендерить отказывается (она ограничила бы и саму Студию). Раннеры из админки живут в namespace релиза, поэтому квота на них не действует.
+Для отдельного namespace сборок (`runner.kubernetes.namespace` у chart-раннера, `runner.installFromUi.buildNamespace` у раннеров из админки) чарт умеет добавить ResourceQuota (`runner.kubernetes.quota`: число подов, суммарные requests и limits CPU, памяти и эфемерного хранилища) и LimitRange (`runner.kubernetes.limitRange`: умолчания контейнера и максимум). Оба выключены по умолчанию. Поды сборки задают свои requests и limits, поэтому под квоту подходят; LimitRange страхует от чужих подов в этом namespace. Когда квота выбрана, под отклоняется и сборка падает с `build_backend_unavailable` и причиной Kubernetes в деталях. Квоту в namespace релиза чарт рендерить отказывается (она ограничила бы и саму Студию). Значения квоты и LimitRange общие для обоих видов раннеров: общий namespace получает один объект и общий потолок, разные namespace получают по своему объекту с этими значениями. Раннеры из админки без `buildNamespace` создают поды сборки в namespace релиза, и квота на них не действует; как вынести их в свой namespace, описано в [раннерах](runners.md#свой-namespace-подов-сборки).
 
 ## Что видно в админке
 
@@ -91,9 +91,9 @@ tags:
 
 - chart-раннер (исполнитель, реплики, namespace, ServiceAccount, том данных, requests и limits, securityContext, предупреждение про `docker.sock`), поды сборки, умолчания и границы формы установки из админки;
 - сеть: deny-all для подов сборки (chart-раннера и раннеров из админки), egress-политика раннеров и что она разрешает (DNS, порт api Студии, адреса и порты API-сервера, число своих правил `extraEgress`);
-- ResourceQuota и LimitRange namespace сборки, метки Pod Security у namespace релиза и namespace сборки.
+- ResourceQuota и LimitRange namespace сборки, а если у раннеров из админки свой namespace подов сборки, отдельно его ResourceQuota и LimitRange; метки Pod Security у namespace релиза и всех namespace сборки.
 
-Что задано в чарте, Студия знает всегда: чарт кладёт выжимку values в `HSE_STUDIO__RUNNER_CLUSTER__DECLARED` (без секретов). Это не проверка: экран пишет «задано» и «не проверено в кластере». Чтобы Студия сверила это с кластером, включите `runner.isolationInfo.readCluster: true`. Чарт тогда даёт ServiceAccount Студии Role с `get` и `list` на NetworkPolicy, ResourceQuota и LimitRange в namespace релиза и namespace сборки, а также ClusterRole с `get` на эти два namespace (только по `resourceNames`, ради меток Pod Security). Ни Secret, ни подов, ни записи. Если части прав нет, экран говорит «проверено частично» и не выдаёт непроверенное за проверенное. Вне Helm (docker compose) блок показывает только настройки установки из админки.
+Что задано в чарте, Студия знает всегда: чарт кладёт выжимку values в `HSE_STUDIO__RUNNER_CLUSTER__DECLARED` (без секретов). Это не проверка: экран пишет «задано» и «не проверено в кластере». Чтобы Студия сверила это с кластером, включите `runner.isolationInfo.readCluster: true`. Чарт тогда даёт ServiceAccount Студии Role с `get` и `list` на NetworkPolicy, ResourceQuota и LimitRange в namespace релиза и namespace подов сборки (`runner.kubernetes.namespace` и `runner.installFromUi.buildNamespace`), а также ClusterRole с `get` на эти namespace (только по `resourceNames`, ради меток Pod Security). Ни Secret, ни подов, ни записи. Если части прав нет, экран говорит «проверено частично» и не выдаёт непроверенное за проверенное. Вне Helm (docker compose) блок показывает только настройки установки из админки.
 
 ## Проверка на кластере
 

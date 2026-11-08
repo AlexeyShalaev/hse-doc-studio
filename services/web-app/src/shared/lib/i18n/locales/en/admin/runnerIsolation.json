@@ -133,7 +133,8 @@
       "bounds": "Install form bounds",
       "cpuBounds": "CPU: runner from {{runner}}, build pods from {{build}}, at most {{max}}",
       "memoryBounds": "Memory: runner from {{runner}}, build pods from {{build}}, at most {{max}}",
-      "storage": "Data volume"
+      "storage": "Data volume",
+      "buildNamespace": "Build pods namespace"
     },
     "network": {
       "title": "Network",
@@ -151,6 +152,7 @@
     },
     "quota": {
       "title": "ResourceQuota",
+      "titleUi": "ResourceQuota of runners installed from the admin panel",
       "off": "Off",
       "key": "Resource",
       "declared": "Configured",
@@ -159,6 +161,7 @@
     },
     "limitRange": {
       "title": "LimitRange",
+      "titleUi": "LimitRange of runners installed from the admin panel",
       "off": "Off",
       "default": "default",
       "defaultRequest": "defaultRequest",

@@ -74,6 +74,9 @@ def _full() -> dict[str, Any]:
             ]
         },
         "/api/v1/namespaces/builds/limitranges": {"items": []},
+        # Поды сборки раннеров из админки по умолчанию в namespace релиза: квоты там нет.
+        "/api/v1/namespaces/studio/resourcequotas": {"items": []},
+        "/api/v1/namespaces/studio/limitranges": {"items": []},
         "/api/v1/namespaces/studio": {"metadata": {"labels": {"pod-security.kubernetes.io/enforce": "restricted"}}},
         "/api/v1/namespaces/builds": {"metadata": {"labels": {"pod-security.kubernetes.io/warn": "restricted"}}},
     }
@@ -105,6 +108,55 @@ async def test__everything_readable__policies_quota_and_labels() -> None:
         ("builds", None, "restricted"),
     ]
     assert client.closed == 1
+
+
+async def test__ui_builds_in_their_own_namespace__policies_quota_and_labels_read_there() -> None:
+    answers = _full()
+    answers["/apis/networking.k8s.io/v1/namespaces/ui-builds/networkpolicies"] = {
+        "items": [{**_DENY_BUILDS, "metadata": {"name": "rel-runner-ui-builds-deny-all"}}]
+    }
+    answers["/api/v1/namespaces/ui-builds/resourcequotas"] = {
+        "items": [
+            {"metadata": {"name": "rel-builds"}, "spec": {"hard": {"pods": "20"}}, "status": {"used": {"pods": "1"}}}
+        ]
+    }
+    answers["/api/v1/namespaces/ui-builds/limitranges"] = {
+        "items": [
+            {"metadata": {"name": "rel-builds"}, "spec": {"limits": [{"type": "Container", "max": {"cpu": "8"}}]}}
+        ]
+    }
+    answers["/api/v1/namespaces/ui-builds"] = {
+        "metadata": {"labels": {"pod-security.kubernetes.io/enforce": "restricted"}}
+    }
+    client = _Client(answers)
+    targets = ClusterTargets(release_namespace="studio", build_namespace="builds", ui_build_namespace="ui-builds")
+
+    state = await _reader(client).cluster_state(targets)
+
+    assert state.status is LiveStatus.ok
+    assert state.ui_build_deny_all is True
+    assert state.ui_quota is not None
+    assert state.ui_quota.used == {"pods": "1"}
+    assert state.ui_limit_range is not None
+    assert state.ui_limit_range.max == {"cpu": "8"}
+    assert state.quota is not None
+    assert state.quota.hard["limits.memory"] == "80Gi"
+    assert state.namespaces is not None
+    assert [n.namespace for n in state.namespaces] == ["studio", "builds", "ui-builds"]
+    assert len(client.paths) == len(set(client.paths))
+
+
+async def test__shared_build_namespace__read_once() -> None:
+    client = _Client(_full())
+    targets = ClusterTargets(release_namespace="studio", build_namespace="builds", ui_build_namespace="builds")
+
+    state = await _reader(client).cluster_state(targets)
+
+    assert state.status is LiveStatus.ok
+    assert state.ui_build_deny_all is True
+    assert state.ui_quota == state.quota
+    assert len(client.paths) == len(set(client.paths))
+    assert [n.namespace for n in state.namespaces or ()] == ["studio", "builds"]
 
 
 async def test__policy_with_rules_is_not_deny_all() -> None:

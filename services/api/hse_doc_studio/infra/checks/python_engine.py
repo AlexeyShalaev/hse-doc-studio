@@ -33,6 +33,7 @@ from hse_doc_studio.core.catalog import CheckRule
 from hse_doc_studio.core.enums import CheckSeverity
 from hse_doc_studio.core.value_objects import CheckLocation, CheckResult
 from hse_doc_studio.infra.checks.base import BaseCheckEngine
+from hse_doc_studio.infra.checks.tex_conditionals import resolve_conditionals
 from hse_doc_studio.infra.checks.utils import expand_inputs, localized_message, read_text_safe
 
 logger = structlog.get_logger()
@@ -167,9 +168,10 @@ class CheckContext:
       - `files` / `find` / `count` — по каталогу базы документа: для правил
         «во всём комплекте» (омоглифы, кроссфайловые ссылки);
       - `doc_lines` / `doc_find` / `doc_count` — по графу включений одного
-        документа: для правил «про этот документ». Правило запускается на
-        КАЖДЫЙ документ, поэтому каталожный поиск и дублирует находки соседей,
-        и платит за обход дерева столько раз, сколько документов в проекте.
+        документа и только по веткам условий, попадающим в вывод: для правил
+        «про этот документ». Правило запускается на КАЖДЫЙ документ, поэтому
+        каталожный поиск и дублирует находки соседей, и платит за обход дерева
+        столько раз, сколько документов в проекте.
     """
 
     params: dict[str, Any]
@@ -254,11 +256,16 @@ class CheckContext:
         попадают, а соседние документы проекта — нет. Для правила «про один
         документ» это и есть верная область — и заодно единственный дешёвый
         способ: обходятся ~10 файлов вместо всего проекта на каждый документ.
+
+        Ветки `\\ifX … \\else … \\fi`, которые по флагам самого документа
+        (`\\newif` + `\\Xtrue`/`\\Xfalse`, например редакция заявки в
+        `common/meta.tex`) в PDF не попадут, сюда не входят: правило видит
+        документ, а не обе редакции сразу. Условия с неизвестным значением
+        остаются целиком, как и прежде (см. `tex_conditionals`).
         """
         if self._doc_lines_cache is None:
-            self._doc_lines_cache = [
-                (line.file, line.line, line.text) for line in expand_inputs(self.project_folder, self.source_file)
-            ]
+            lines = resolve_conditionals(expand_inputs(self.project_folder, self.source_file))
+            self._doc_lines_cache = [(line.file, line.line, line.text) for line in lines]
         return self._doc_lines_cache
 
     def doc_files(self) -> list[str]:

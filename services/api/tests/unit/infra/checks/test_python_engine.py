@@ -235,6 +235,68 @@ def test__python_engine__ctx_doc_count__ignores_other_documents(tmp_path: Path) 
     assert results[0].message == "1/1"
 
 
+# Как правило placeholders-left пака hse-cs-sse: плейсхолдеры документа без meta.tex.
+_PLACEHOLDERS_CODE = (
+    "hits = [h for h in ctx.doc_find(r'\\\\hseFill\\{') if not h[0].endswith('meta.tex')]\n"
+    "for f, ln, _ in hits:\n"
+    "    ctx.violation(f'{f}:{ln}', file=f, line=ln)\n"
+)
+
+
+def _proposal(folder: Path, *, extended: bool, body: str) -> None:
+    (folder / "common").mkdir()
+    (folder / "proposal").mkdir()
+    flag = "\\hseExtendedProposaltrue" if extended else "\\hseExtendedProposalfalse"
+    _tex(folder / "common", "meta.tex", f"\\newif\\ifhseExtendedProposal\n{flag}\n")
+    _tex(folder / "proposal", "proposal.tex", f"\\input{{../common/meta}}\n{body}\n")
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize(
+    ("extended", "expected"),
+    [
+        pytest.param(False, [], id="branch-off"),
+        pytest.param(True, ["proposal/proposal.tex:3"], id="branch-on"),
+    ],
+)
+def test__python_engine__ctx_doc_find__placeholder_in_edition_branch__counted_only_when_on(
+    tmp_path: Path, extended: bool, expected: list[str]
+) -> None:
+    _proposal(tmp_path, extended=extended, body="\\ifhseExtendedProposal\n\\hseFill{аннотация}\n\\fi\nтекст")
+    rule = make_check_rule(rule_id="placeholders", engine=CheckEngine.python, params={"code": _PLACEHOLDERS_CODE})
+
+    results = engine.run(rule, CheckSeverity.warn, tmp_path, "doc1", "proposal/proposal.tex", None)
+
+    assert [r.message for r in results] == expected
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize("extended", [False, True])
+def test__python_engine__ctx_doc_find__placeholder_outside_branches__always_counted(
+    tmp_path: Path, extended: bool
+) -> None:
+    _proposal(
+        tmp_path,
+        extended=extended,
+        body="\\ifhseExtendedProposal\nаннотация\n\\else\nкратко\n\\fi\n\\hseFill{цель}",
+    )
+    rule = make_check_rule(rule_id="placeholders", engine=CheckEngine.python, params={"code": _PLACEHOLDERS_CODE})
+
+    results = engine.run(rule, CheckSeverity.warn, tmp_path, "doc1", "proposal/proposal.tex", None)
+
+    assert [r.message for r in results] == ["proposal/proposal.tex:7"]
+
+
+@pytest.mark.unit
+def test__python_engine__ctx_doc_find__placeholder_in_active_else_branch__counted(tmp_path: Path) -> None:
+    _proposal(tmp_path, extended=False, body="\\ifhseExtendedProposal\nполная\n\\else\n\\hseFill{кратко}\n\\fi")
+    rule = make_check_rule(rule_id="placeholders", engine=CheckEngine.python, params={"code": _PLACEHOLDERS_CODE})
+
+    results = engine.run(rule, CheckSeverity.warn, tmp_path, "doc1", "proposal/proposal.tex", None)
+
+    assert [r.message for r in results] == ["proposal/proposal.tex:5"]
+
+
 @pytest.mark.unit
 def test__python_engine__params_accessible_from_snippet(tmp_path: Path) -> None:
     rule = make_check_rule(
