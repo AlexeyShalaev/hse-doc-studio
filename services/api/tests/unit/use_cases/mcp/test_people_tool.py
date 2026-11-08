@@ -10,7 +10,7 @@ from uuid import UUID, uuid4
 
 import pytest
 from hse_doc_studio.core.agent.entities import AgentToolContext
-from hse_doc_studio.core.enums import EditFormat, PersonRole
+from hse_doc_studio.core.enums import EditFormat, PersonRole, ProjectStaffing
 from hse_doc_studio.core.mcp.protocols import IMcpChangeAudit
 from hse_doc_studio.core.value_objects import Author, Person
 from hse_doc_studio.use_cases.mcp.tools._base import ArgumentError
@@ -19,6 +19,7 @@ from hse_doc_studio.use_cases.mcp.tools.people import (
     SetProjectPeopleTool,
     merge_authors,
     merge_person,
+    update_author,
 )
 from hse_doc_studio.use_cases.projects.get_project import GetProjectUC
 from hse_doc_studio.use_cases.projects.update_project import UpdateProjectInput, UpdateProjectUC
@@ -45,6 +46,10 @@ def test__merge_person__new_person__needs_a_name_and_defaults_to_university() ->
 
     created = merge_person(None, {"name": "Сидоров С. С."}, "co_supervisor")
     assert created == Person(name="Сидоров С. С.", role=PersonRole.university)
+
+
+def test__merge_person__empty_name__removes_the_person() -> None:
+    assert merge_person(_SUPERVISOR, {"name": ""}, "supervisor") is None
 
 
 @pytest.mark.parametrize("raw", [{"role": "boss"}, {"name": 5}, "Петров"])
@@ -81,10 +86,66 @@ def test__merge_authors__by_slug__survives_reordering_and_new_author_gets_no_for
     ]
 
 
-@pytest.mark.parametrize("raw", [[], "Иванов", [{"group": "Г1"}], [{"name": " "}], [{"name": "x"}] * 21])
+def test__merge_authors__email__set_kept_and_cleared() -> None:
+    current = [Author(name="Иванов", email="i@hse.ru"), Author(name="Петров", email="p@hse.ru")]
+
+    merged = merge_authors(current, [{"name": "Иванов", "email": "ivanov@edu.hse.ru"}, {"name": "Петров", "email": ""}])
+
+    assert [a.email for a in merged] == ["ivanov@edu.hse.ru", None]
+    assert merge_authors(current, [{"name": "Иванов"}])[0].email == "i@hse.ru"
+
+
+@pytest.mark.parametrize(
+    "raw",
+    [[], "Иванов", [{"group": "Г1"}], [{"name": " "}], [{"name": "x"}] * 21, [{"name": "x", "email": "нет"}]],
+)
 def test__merge_authors__bad_list__rejected(raw: object) -> None:
     with pytest.raises(ArgumentError):
         merge_authors([], raw)
+
+
+def _project(staffing: ProjectStaffing, *authors: Author) -> Any:
+    return SimpleNamespace(staffing=staffing, authors=list(authors))
+
+
+def test__update_author__solo__changes_the_first_author_and_keeps_the_rest() -> None:
+    first = Author(name="Иванов И.", group="БПИ221", email="old@hse.ru")
+    second = Author(name="Петров П.")
+
+    updated = update_author(_project(ProjectStaffing.solo, first, second), {"group": "МПИ251", "email": "i@edu.hse.ru"})
+
+    assert updated == [replace(first, group="МПИ251", email="i@edu.hse.ru"), second]
+
+
+def test__update_author__solo_without_authors__creates_one() -> None:
+    assert update_author(_project(ProjectStaffing.solo), {"name": "Иванов", "group": "МПИ251"}) == [
+        Author(name="Иванов", group="МПИ251")
+    ]
+
+
+def test__update_author__team__picks_by_slug_and_empty_value_clears() -> None:
+    anna = Author(name="Анна", group="Г1", email="a@hse.ru", slug="anna", topic="A")
+    boris = Author(name="Борис", group="Г2", slug="boris")
+
+    updated = update_author(_project(ProjectStaffing.team, anna, boris), {"slug": "anna", "group": ""})
+
+    assert updated == [replace(anna, group=None), boris]
+
+
+@pytest.mark.parametrize(
+    "raw",
+    [
+        {"group": "Г3"},  # командный проект без slug
+        {"slug": "zzz", "group": "Г3"},  # нет такого автора
+        {"slug": "anna"},  # нечего менять
+        {"slug": "anna", "name": ""},  # ФИО не очищается
+        {"slug": "anna", "email": "anna"},  # не адрес
+        "anna",
+    ],
+)
+def test__update_author__team__bad_arguments__rejected(raw: object) -> None:
+    with pytest.raises(ArgumentError):
+        update_author(_project(ProjectStaffing.team, Author(name="Анна", slug="anna")), raw)
 
 
 class _Audit:
@@ -107,7 +168,7 @@ class _Store:
             self.inputs.append(inp)
             if inp.authors is not None:
                 self.project.authors = inp.authors
-            for field in ("supervisor", "co_supervisor"):
+            for field in ("supervisor", "co_supervisor", "academic_supervisor"):
                 value = getattr(inp, field)
                 if value is None or isinstance(value, Person):
                     setattr(self.project, field, value)
@@ -124,7 +185,11 @@ class _Deps:
 
 def _setup() -> tuple[SetProjectPeopleTool, _Store, _Audit, UUID]:
     project = SimpleNamespace(
-        authors=[Author(name="Иванов И.", group="БПИ221")], supervisor=_SUPERVISOR, co_supervisor=None
+        staffing=ProjectStaffing.solo,
+        authors=[Author(name="Иванов И.", group="БПИ221")],
+        supervisor=_SUPERVISOR,
+        co_supervisor=None,
+        academic_supervisor=None,
     )
     store, audit = _Store(project), _Audit()
     return SetProjectPeopleTool(_Deps(store, audit)), store, audit, uuid4()  # type: ignore[arg-type]
@@ -168,6 +233,20 @@ async def test__handle__clear__removes_the_supervisor_only() -> None:
     assert audit.events[0][2]["fields"] == ["supervisor"]
 
 
+async def test__handle__author_and_empty_supervisor_name__update_author_and_remove_supervisor() -> None:
+    tool, store, audit, project_id = _setup()
+
+    result = await tool.handle(
+        _ctx(project_id), {"supervisor": {"name": ""}, "author": {"group": "МПИ251", "email": "i@edu.hse.ru"}}
+    )
+
+    assert result.is_error is False, result.text
+    assert store.project.supervisor is None
+    assert store.project.authors == [Author(name="Иванов И.", group="МПИ251", email="i@edu.hse.ru")]
+    assert audit.events[0][2]["fields"] == ["supervisor", "authors"]
+    assert audit.events[0][2]["after"]["authors"][0]["email"] == "i@edu.hse.ru"  # type: ignore[index]
+
+
 async def test__handle__same_values__no_audit_event() -> None:
     tool, _, audit, project_id = _setup()
 
@@ -179,7 +258,13 @@ async def test__handle__same_values__no_audit_event() -> None:
 
 @pytest.mark.parametrize(
     "args",
-    [{}, {"clear": ["authors"]}, {"clear": "supervisor"}, {"clear": ["supervisor"], "supervisor": {"name": "X"}}],
+    [
+        {},
+        {"clear": ["authors"]},
+        {"clear": "supervisor"},
+        {"clear": ["supervisor"], "supervisor": {"name": "X"}},
+        {"author": {"group": "Г"}, "authors": [{"name": "X"}]},
+    ],
 )
 async def test__handle__nothing_or_contradictory__argument_error_and_no_write(args: dict[str, object]) -> None:
     tool, store, audit, project_id = _setup()

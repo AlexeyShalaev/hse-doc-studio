@@ -233,7 +233,7 @@ export const ProjectSettingsView = ({
   const authors: AuthorEntry[] = effective.authors ?? [];
   // Normalise `group` to a string: the request DTO's `group?: string` rejects
   // an explicit `undefined` under exactOptionalPropertyTypes. The team fields
-  // (slug/topic/managed/meta) MUST round-trip too — PATCH replaces the whole
+  // (slug/topic/managed/meta) and e-mail MUST round-trip too — PATCH replaces the whole
   // authors array, so omitting them would wipe the backend state. `immediate`
   // covers add/remove clicks; typing into a row stays debounced.
   const commitAuthors = (next: AuthorEntry[], immediate: boolean) => {
@@ -241,6 +241,7 @@ export const ProjectSettingsView = ({
       authors: next.map((a) => ({
         name: a.name,
         group: a.group ?? "",
+        email: a.email ?? null,
         slug: a.slug ?? null,
         topic: a.topic ?? null,
         managed: a.managed,
