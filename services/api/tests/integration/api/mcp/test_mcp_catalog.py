@@ -106,3 +106,20 @@ def test__rules__admin_tools__are_server_only() -> None:
 
 def test__rules__no_tool_is_both_server_and_local_only() -> None:
     assert not [r.name for r in MCP_TOOL_RULES if r.meta.server_only and r.meta.local_only]
+
+
+def test__rules__template_update__same_rights_as_the_routes() -> None:
+    from hse_doc_studio.api.route_actions import ROUTE_ACTIONS  # noqa: PLC0415
+
+    routes = {
+        "template_update_status": ("GET", "/projects/{project_id}/template-update"),
+        "plan_template_update": ("POST", "/projects/{project_id}/template-update/plan"),
+        "apply_template_update": ("POST", "/projects/{project_id}/template-update/apply"),
+    }
+
+    for name, key in routes.items():
+        rule = RULES_BY_NAME[name]
+        assert rule.action is ROUTE_ACTIONS[key].action, name
+        assert not rule.meta.server_only, name
+        assert not rule.meta.local_only, name
+        assert rule.guards_write is (key[0] != "GET"), name
