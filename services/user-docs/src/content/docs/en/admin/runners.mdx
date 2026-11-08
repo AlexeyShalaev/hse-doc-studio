@@ -60,8 +60,9 @@ Deployment in the cluster) is updated in place, without removing and installing 
 - Progress is shown step by step; the last step waits until the runner is online again with the new
   version.
 - If the new pod or container does not come up or the runner does not come online, the Studio
-  brings the previous version back by itself: a **Rollback to the previous version** step appears,
-  and the result says which version the runner is back on or why the rollback failed.
+  brings the previous version back by itself: a **Rollback to the previous version** step appears.
+  The Studio waits for the runner to come online with the previous version, and the result says
+  which version it is back on, whether it came online, or why the rollback failed.
 
 The same menu has **Remove install**: the Studio revokes the runner like **Revoke runner** does (the
 jobs it was running go to another runner, its token stops working) and deletes the Deployment or the
