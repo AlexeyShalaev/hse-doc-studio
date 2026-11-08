@@ -53,8 +53,9 @@ def _scrub(text: str, token: str) -> str:
 class DockerLocalHost:
     target = InstallTarget.docker
 
-    def __init__(self, *, enabled: bool = True) -> None:
+    def __init__(self, *, enabled: bool = True, office_url: str = "") -> None:
         self._enabled = enabled
+        self._office_url = office_url
 
     async def capability(self) -> Capability:
         if not self._enabled:
@@ -91,10 +92,14 @@ class DockerLocalHost:
             "HSE_RUNNER__CONCURRENCY": str(spec.concurrency),
             "HSE_RUNNER__NAME": spec.name,
         }
-        code, err = await self._run(spec.name, spec.image, spec.data_dir, env)
+        code, err = await self._run(spec.name, spec.image, spec.data_dir, self._with_office(env))
         if code != 0:
             raise InstallError("container_start_failed", _scrub(err.strip()[-400:], spec.token))
         await report("start", InstallStepState.done, "")
+
+    def _with_office(self, env: dict[str, str]) -> dict[str, str]:
+        """Нынешний адрес Gotenberg Студии (офисные задачи); без него у раннера остаётся прежний, если был."""
+        return {**env, "HSE_RUNNER__OFFICE_URL": self._office_url} if self._office_url else env
 
     async def _run(self, name: str, image: str, data_dir: str, env: dict[str, str]) -> tuple[int | None, str]:
         """`docker run` раннера; окружение с токеном идёт файлом 0600, а не аргументами, поэтому в `ps` его нет."""
@@ -150,6 +155,7 @@ class DockerLocalHost:
         data_dir = env.get("HSE_RUNNER__DATA_DIR", "")
         if not data_dir:
             raise InstallError("not_installed", "HSE_RUNNER__DATA_DIR")
+        env = self._with_office(env)
         code, _, err = await run_docker(["pull", image], timeout=_PULL_TIMEOUT_S)
         if code != 0:
             raise InstallError("image_pull_failed", _scrub(err.strip()[-400:], token))
