@@ -18,7 +18,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Callable, Mapping
+from collections.abc import Callable, Iterable, Mapping
 from datetime import UTC, datetime, timedelta
 from types import MappingProxyType
 from uuid import UUID
@@ -72,19 +72,35 @@ class QueuedJobFit:
         self._router = router
         self._settings = settings
 
-    async def personal_owner(self, job: QueuedJob) -> str | None:
-        """Чьи личные раннеры могут взять задачу: так же, как решает выдача в очереди."""
-        if job.route is JobRoute.pinned or not (await self._settings.current()).enabled:
-            return None
-        if job.route is JobRoute.personal_first:
-            return job.route_owner_id
-        if job.route is JobRoute.shared and job.route_reason is RouteReason.fallback_busy:
-            # Ушла на общие из-за занятости: без общих с тегами её берёт личный раннер владельца.
-            return await self._router.personal_owner(kind=job.kind, project_id=job.project_id, user_id=job.user_id)
-        return None
+    async def owners(self, jobs: Iterable[QueuedJob]) -> dict[UUID, str | None]:
+        """Чьи личные раннеры могут взять каждую задачу: так же, как решает выдача в очереди.
+
+        Настройки читаются один раз, ответ маршрута кэшируется по проекту и автору: проход по длинной
+        очереди не превращается в запрос на каждую задачу.
+        """
+        enabled = (await self._settings.current()).enabled
+        asked: dict[tuple[JobKind, UUID, UUID], str | None] = {}
+        found: dict[UUID, str | None] = {}
+        for job in jobs:
+            owner: str | None = None
+            if not enabled or job.route is JobRoute.pinned:
+                owner = None
+            elif job.route is JobRoute.personal_first:
+                owner = job.route_owner_id
+            elif job.route is JobRoute.shared and job.route_reason is RouteReason.fallback_busy:
+                # Ушла на общие из-за занятости: без общих с тегами её берёт личный раннер владельца.
+                key = (job.kind, job.project_id, job.user_id)
+                if key not in asked:
+                    asked[key] = await self._router.personal_owner(
+                        kind=job.kind, project_id=job.project_id, user_id=job.user_id
+                    )
+                owner = asked[key]
+            found[job.id] = owner
+        return found
 
     async def of(self, job: QueuedJob, runners: list[Runner], now: datetime) -> RunnerFit:
-        return RunnerFit.of(job.tags, runners, now, personal_owner=await self.personal_owner(job))
+        owner = (await self.owners([job]))[job.id]
+        return RunnerFit.of(job.tags, runners, now, personal_owner=owner)
 
 
 class StrandedJobSweeper:
@@ -119,10 +135,11 @@ class StrandedJobSweeper:
             return ()
         now = self._clock()
         runners = await self._runners.list()
+        owners = await self._fit.owners(queued)
         stranded: set[UUID] = set()
         failed: list[QueuedJob] = []
         for job in queued:
-            reason = (await self._fit.of(job, runners, now)).reason
+            reason = RunnerFit.of(job.tags, runners, now, personal_owner=owners[job.id]).reason
             if reason is None:
                 continue
             stranded.add(job.id)

@@ -44,8 +44,10 @@ class _Router:
 
     def __init__(self, owner: str | None) -> None:
         self.owner = owner
+        self.asked = 0
 
     async def personal_owner(self, *, kind: JobKind, project_id: UUID, user_id: UUID) -> str | None:
+        self.asked += 1
         return self.owner
 
 
@@ -56,7 +58,8 @@ class _World:
         self.queue = InMemoryJobQueue(clock=self.clock)
         self.runners = InMemoryRunnerRepository()
         self.settings = _Settings()
-        self.fit = QueuedJobFit(_Router(self.owner.hex), self.settings)
+        self.router = _Router(self.owner.hex)
+        self.fit = QueuedJobFit(self.router, self.settings)
         self.sweeper = StrandedJobSweeper(self.queue, self.runners, self.fit, clock=self.clock)
 
     async def runner(self, *tags: str, personal: bool = False, **changes: object) -> Runner:
@@ -88,9 +91,9 @@ class _World:
             }
         extra.update(changes)
         extra.setdefault("kind", JobKind.compile)
+        extra.setdefault("project_id", uuid4())
         request = EnqueueRequest(
             job_id=uuid4(),
-            project_id=uuid4(),
             user_id=self.owner,
             tags=tags,
             payload={},
@@ -230,3 +233,14 @@ async def test__sweep__relay_job__untouched(world: _World) -> None:
 
     assert await world.sweeper.sweep() == ()
     assert await world.state(pinned) == (JobState.queued, None)
+
+
+async def test__sweep__long_queue_of_one_project__route_asked_once(world: _World) -> None:
+    await world.runner("office", personal=True)
+    project = uuid4()
+    for _ in range(5):
+        await world.put(personal=False, route_reason=RouteReason.fallback_busy, project_id=project)
+
+    await world.sweeper.sweep()
+
+    assert world.router.asked == 1
