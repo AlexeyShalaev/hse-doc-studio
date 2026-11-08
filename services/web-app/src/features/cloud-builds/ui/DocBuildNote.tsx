@@ -59,6 +59,15 @@ export const DocBuildNoteView = ({
           {t("builds.local.from")}
         </span>
       )}
+      {view.fetchBlocked !== null && (
+        <span
+          className="dim"
+          style={{ fontSize: "0.6875rem" }}
+          data-testid="doc-build-blocked"
+        >
+          {t(`builds.blocked.${view.fetchBlocked}`)}
+        </span>
+      )}
       {view.canFetch && (
         <Button
           size="xs"

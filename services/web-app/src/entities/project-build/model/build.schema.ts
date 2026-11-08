@@ -59,6 +59,10 @@ export const LocalBuildSchema = z.strictObject({
 });
 export type LocalBuild = z.infer<typeof LocalBuildSchema>;
 
+/** Почему облачную сборку не получить: документ выпускается не в PDF или путь результата не известен. */
+export const FETCH_BLOCKS = ["not_pdf", "output_unknown"] as const;
+export type FetchBlocked = (typeof FETCH_BLOCKS)[number];
+
 export const DocumentBuildStatusSchema = z.strictObject({
   doc_id: z.string(),
   local: LocalBuildSchema.nullable(),
@@ -67,6 +71,8 @@ export const DocumentBuildStatusSchema = z.strictObject({
   studio: BuildSchema.nullable(),
   relation: z.enum(BUILD_RELATIONS),
   can_fetch: z.boolean(),
+  // Старая Студия поля не шлёт.
+  fetch_blocked: z.enum(FETCH_BLOCKS).nullable().optional(),
 });
 export type DocumentBuildStatus = z.infer<typeof DocumentBuildStatusSchema>;
 
@@ -88,6 +94,7 @@ export const FETCH_STATUSES = [
   "skipped_stale",
   "too_large",
   "no_cloud_build",
+  "not_pdf",
   "failed",
 ] as const;
 export type FetchStatus = (typeof FETCH_STATUSES)[number];
