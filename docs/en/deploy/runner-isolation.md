@@ -41,7 +41,8 @@ A build pod killed for memory (`OOMKilled`, or latexmk killed by SIGKILL inside 
 | What | Policy |
 |---|---|
 | Build pods (chart runner with `executor: kubernetes`, and runners installed from the admin area) | no ingress, no egress at all: sources and results travel through the Kubernetes API `exec`, so a build pod cannot reach other pods, the database, the cloud metadata service or the internet. The policy lives in the build pods namespace: `runner.kubernetes.namespace` for the chart runner, `runner.installFromUi.buildNamespace` for runners from the admin area (empty means the release namespace). Switch: `runner.kubernetes.networkPolicy.enabled` (on by default) |
-| Runner pods | optional `runner.networkPolicy.enabled` (off by default): egress only to DNS (port 53), the Studio api of the release (port 8000), the Kubernetes API (`apiServerPorts`, default 443 and 6443) and `extraEgress` |
+| Runner pods | optional `runner.networkPolicy.enabled` (off by default): egress only to DNS (port 53), the Studio api of the release (port 8000), the Kubernetes API (`apiServerPorts`, default 443 and 6443), the built-in Gotenberg (port 3000, when `services.officeConvert` is on) and `extraEgress` |
+| Built-in Gotenberg (`services.officeConvert`) | ingress only from the release runner pods (the chart runner and runners from the admin area) on port 3000, egress closed entirely. Switch: `services.officeConvert.networkPolicy.enabled` (on by default). More in [runners](runners.md#office-jobs-in-the-cluster-gotenberg) |
 
 Policies need a CNI that enforces NetworkPolicy (Calico, Cilium, and so on); without one they are silently ignored. The build pod policy is on by default because it cannot break anything: those pods need no network. The runner policy is off by default because the chart cannot know two addresses a runner needs: the Kubernetes API server and, when the object storage is outside the cluster or has an internal address that is not a pod of the release, the S3 endpoint (a runner fetches sources and uploads results by presigned links). A wrong list would cut running runners off.
 
@@ -49,7 +50,7 @@ Turning the runner policy on:
 
 1. Find the API server address: `kubectl get endpoints kubernetes -o wide`. Put it into `runner.networkPolicy.apiServerCidrs` (for example `["10.0.0.5/32"]`) and the port into `apiServerPorts`. Left empty, the policy opens the listed ports to any address except `169.254.0.0/16` (the cloud metadata service).
 2. Add the storage to `runner.networkPolicy.extraEgress`, verbatim `spec.egress` entries, for example an `ipBlock` and port 443 for external S3, or a `namespaceSelector` and `podSelector` for MinIO in the cluster. With `s3.outsideRunnerAccess: proxy` runners send results to the api and need no S3 rule.
-3. Add rules for what the runner uses besides that: an external OnlyOffice (`runner.officeUrl`), AI endpoints for the relay.
+3. Add rules for what the runner uses besides that: an external Gotenberg (`runner.officeUrl`), AI endpoints for the relay. The policy allows the built-in Gotenberg (`services.officeConvert`) by itself.
 
 If the cluster has a default-deny ingress policy in the release namespace, allow ingress to the api from runner pods yourself.
 
@@ -61,6 +62,8 @@ Build pods and chart runners pass the Pod Security Standard restricted:
 - no `privileged`, no `hostPath`, no host network and PID (the docker executor is the exception: it needs `docker.sock`, which equals root on the node; use dedicated nodes);
 - `automountServiceAccountToken: false` on build pods, the api (unless install from the admin area is on), the migration job and the docker runner; the Kubernetes runners keep the token because they create build pods, with a Role limited to pods in one namespace;
 - `enableServiceLinks: false`, `activeDeadlineSeconds` (1800) on build pods, `ephemeral-storage` requests and limits everywhere.
+
+The built-in Gotenberg pod (`services.officeConvert`) passes restricted too: the image uid 1001, a read-only root, `/tmp` and `/home/gotenberg` on `emptyDir`, no ServiceAccount token.
 
 Label the namespaces with `pod-security.kubernetes.io/enforce=restricted`: the chart cannot label the release namespace, and the check also stops anything the Studio might create there by mistake.
 
@@ -89,8 +92,9 @@ The runner reports this itself after `/announce` (protocol feature `deployment_i
 
 **"Runner isolation in the cluster"** below the runner list:
 
-- the chart runner (executor, replicas, namespace, ServiceAccount, data volume, requests and limits, securityContext, a `docker.sock` warning), build pods, defaults and bounds of the install form;
-- network: deny-all for build pods (chart runner and runners from the admin area), the runner egress policy and what it allows (DNS, Studio api port, API server addresses and ports, number of `extraEgress` rules);
+- the chart runner (executor, replicas, namespace, ServiceAccount, data volume, requests and limits, securityContext, a `docker.sock` warning, the Gotenberg address for office jobs or "no"), build pods, defaults and bounds of the install form and the Gotenberg address such runners get;
+- network: deny-all for build pods (chart runner and runners from the admin area), the runner egress policy and what it allows (DNS, Studio api port, API server addresses and ports, the built-in Gotenberg, number of `extraEgress` rules);
+- the built-in Gotenberg when it is on: address, image, replicas, requests and limits, network policy;
 - ResourceQuota and LimitRange of the build namespace and, when runners from the admin area have their own build pods namespace, its ResourceQuota and LimitRange separately; Pod Security labels of the release namespace and every build namespace.
 
 What the chart configures is always known: the chart puts a summary of the values into `HSE_STUDIO__RUNNER_CLUSTER__DECLARED` (no secrets). That is not a check, so the screen says "configured" and "not checked in the cluster". To let the Studio compare it with the cluster, set `runner.isolationInfo.readCluster: true`. The chart then gives the Studio ServiceAccount a Role with `get` and `list` on NetworkPolicy, ResourceQuota and LimitRange in the release namespace and the build pods namespaces (`runner.kubernetes.namespace` and `runner.installFromUi.buildNamespace`), and a ClusterRole with `get` on those namespaces only (by `resourceNames`, for the Pod Security labels). No Secrets, no pods, no writes. When some of these rights are missing the screen says "partly checked" and never presents unchecked values as checked. Outside Helm (docker compose) the block shows only the install-from-admin settings.
