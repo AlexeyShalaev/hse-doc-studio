@@ -1,6 +1,32 @@
 {
   "releases": [
     {
+      "version": "0.15.0",
+      "date": "2026-11-08",
+      "notes": [
+        {
+          "ru": "Сведения о раннерах в админке: где работает каждый раннер (под Kubernetes, контейнер или хост) и чем он собирает документы (Docker или Kubernetes), его лимиты по CPU, памяти и диску и панель изоляции кластера. Панель показывает заявленные в Helm политики, а при включённом runner.isolationInfo.readCluster ещё и то, что реально есть в кластере: NetworkPolicy, ResourceQuota, LimitRange и метки Pod Security.",
+          "en": "Runner details in the admin area: where each runner runs (Kubernetes pod, container or host) and how it builds documents (Docker or Kubernetes), its CPU, memory and storage limits, and a cluster isolation panel. The panel shows the policies declared in Helm and, with runner.isolationInfo.readCluster enabled, what actually exists in the cluster: NetworkPolicy, ResourceQuota, LimitRange and Pod Security labels."
+        },
+        {
+          "ru": "MCP: create_project в облаке больше не требует папку, новый инструмент set_project_people задаёт руководителя и участников проекта (с записью в журнал аудита), а clone_cloud_project в локальной Студии клонирует проект из облака.",
+          "en": "MCP: create_project no longer asks for a folder in the cloud, the new set_project_people tool sets the project supervisor and members (recorded in the audit log), and clone_cloud_project in the local Studio clones a project from the cloud."
+        },
+        {
+          "ru": "Сборки в Kubernetes больше не обрываются по idle_timeout, когда PDF уже собран: подсчёт слов и знаков ограничен по времени, а при его зависании сборка завершается успешно с предупреждением.",
+          "en": "Kubernetes builds no longer fail with idle_timeout after the PDF is ready: word and character counting is time limited, and if it hangs the build still succeeds with a warning."
+        },
+        {
+          "ru": "Локальная Студия, связанная с облаком: версия сервера обновляется при синхронизации, ссылка на последнюю сборку, которой нет в этой Студии, больше не выдаётся, а документы без PDF (например, pptx) не дают ошибку при автопубликации.",
+          "en": "Local Studio linked to the cloud: the server version is refreshed on sync, a last build id that this Studio does not have is no longer returned, and documents without a PDF (such as pptx) no longer fail PDF autopublish."
+        },
+        {
+          "ru": "Шаблон курсового проекта СПИ 2026.1.2: заявление о выборе темы совпадает с официальным бланком 2026 года, ФИО указываются в виде «Фамилия И.О.». Выпущенная версия 2026.1.1 не изменилась.",
+          "en": "SPI coursework template 2026.1.2: the topic application matches the official 2026 form, names are shown as \"Surname I.O.\". The released 2026.1.1 is unchanged."
+        }
+      ]
+    },
+    {
       "version": "0.14.0",
       "date": "2026-11-07",
       "notes": [
