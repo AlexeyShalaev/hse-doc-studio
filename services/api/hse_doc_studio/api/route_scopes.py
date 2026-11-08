@@ -405,6 +405,7 @@ ROUTE_SCOPES: Mapping[RouteKey, RouteScope] = {
     ("GET", "/api/admin/runner-install/local/instances"): _ADM,
     ("POST", "/api/admin/runner-install/local/{target}"): _ADM,
     ("DELETE", "/api/admin/runner-install/local/{target}/{name}"): _ADM,
+    ("POST", "/api/admin/runner-install/local/{target}/{name}/upgrade"): _ADM,
     ("GET", "/api/admin/runner-install/jobs/{job_id}"): _ADM,
     ("GET", "/api/admin/runner-install/ssh"): _ADM,
     ("POST", "/api/admin/runner-install/ssh/probe"): _ADM,
