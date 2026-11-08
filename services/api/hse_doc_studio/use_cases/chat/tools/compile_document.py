@@ -112,17 +112,21 @@ class CompileDocumentTool:
 
         project_result = await self._get_project.execute(GetProjectInput(project_id=ctx.project_id))
         record = await self._poll(project_result.project.folder, out.compile_id)
-        if record is None and self._shutdown.requested:
-            raise ServerRestartingError(self._restarting_text(doc_id, out.compile_id, lang))
         if record is None:
-            if self._reports_running:
-                return self._running(doc_id, out.compile_id, lang, waited=True)
-            return ToolResult.error(
-                f"build of {doc_id} did not finish within {int(_POLL_TIMEOUT_S)} s"
-                if lang == Lang.en
-                else f"сборка {doc_id} не завершилась за {int(_POLL_TIMEOUT_S)} с"
-            )
+            return self._unfinished(doc_id, out.compile_id, lang)
         return self._format(doc_id, record, lang)
+
+    def _unfinished(self, doc_id: str, compile_id: UUID, lang: Lang) -> ToolResult:
+        """Итога нет: сервер перезапускается, сборка ещё идёт (MCP) или не уложилась в ожидание (агент)."""
+        if self._shutdown.requested:
+            raise ServerRestartingError(self._restarting_text(doc_id, compile_id, lang))
+        if self._reports_running:
+            return self._running(doc_id, compile_id, lang, waited=True)
+        return ToolResult.error(
+            f"build of {doc_id} did not finish within {int(_POLL_TIMEOUT_S)} s"
+            if lang == Lang.en
+            else f"сборка {doc_id} не завершилась за {int(_POLL_TIMEOUT_S)} с"
+        )
 
     async def _poll(self, folder: Path, compile_id: UUID) -> CompileRecord | None:
         deadline = time.monotonic() + self._wait_s
