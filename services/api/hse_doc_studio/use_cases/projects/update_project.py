@@ -28,6 +28,8 @@ class UpdateProjectInput:
     name: str | None = None
     lang: Lang | None = None
     meta: dict[str, Any] | None = None
+    # Ключи project.meta, которые нужно удалить (после слияния с `meta`): поле возвращается к значению шаблона.
+    meta_unset: tuple[str, ...] = ()
     authors: list[Author] | None = None
     supervisor: Person | None = _MISSING  # type: ignore[assignment]
     co_supervisor: Person | None = _MISSING  # type: ignore[assignment]
@@ -60,8 +62,9 @@ class UpdateProjectUC:
             project.name = inp.name
         if inp.lang is not None:
             project.lang = inp.lang
-        if inp.meta is not None:
-            project.meta = {**project.meta, **inp.meta}
+        if inp.meta is not None or inp.meta_unset:
+            merged = {**project.meta, **(inp.meta or {})}
+            project.meta = {k: v for k, v in merged.items() if k not in inp.meta_unset}
         if inp.authors is not None:
             # Team: каждому автору гарантируется валидный уникальный слаг
             # (новый автор из настроек приходит без него; слаг — ключ папки,
