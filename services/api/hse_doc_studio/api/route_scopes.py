@@ -196,6 +196,7 @@ ROUTE_SCOPES: Mapping[RouteKey, RouteScope] = {
     ("GET", "/system/archive-formats"): _A,
     ("GET", "/system/info"): _A,
     ("GET", "/system/release-notes"): _A,
+    ("GET", "/system/packs"): _A,
     ("POST", "/system/check-updates"): _LOCAL,
     ("GET", "/system/versions"): _LOCAL,
     ("POST", "/system/self-update"): _LOCAL,

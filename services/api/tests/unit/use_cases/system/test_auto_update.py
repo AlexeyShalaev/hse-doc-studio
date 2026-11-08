@@ -4,7 +4,7 @@ from datetime import UTC, datetime
 from typing import Any
 
 import pytest
-from hse_doc_studio.core.update.entities import ReleaseEntry, UpdateCheckState, UpdateFeedProbe
+from hse_doc_studio.core.update.entities import ImageOverlay, ReleaseEntry, UpdateCheckState, UpdateFeedProbe
 from hse_doc_studio.use_cases.system.auto_update import (
     AUTO_UPDATE_SETTING,
     AutoUpdateOutcome,
@@ -67,6 +67,9 @@ class _Updater:
     async def start(self, target_version: str) -> bool:
         self.started.append(target_version)
         return self.starts
+
+    async def image_overlays(self) -> tuple[ImageOverlay, ...]:
+        return ()
 
 
 def _make(

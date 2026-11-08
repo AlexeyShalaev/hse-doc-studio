@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import Protocol
 
 from hse_doc_studio.core.enums import Lang
-from hse_doc_studio.core.update.entities import ReleaseEntry, UpdateCheckState, UpdateFeedProbe
+from hse_doc_studio.core.update.entities import ImageOverlay, ReleaseEntry, UpdateCheckState, UpdateFeedProbe
 
 
 class IUpdateFeedGateway(Protocol):
@@ -51,6 +51,14 @@ class ISelfUpdateGateway(Protocol):
         ...
 
     async def start(self, target_version: str) -> bool: ...
+
+    async def image_overlays(self) -> tuple[ImageOverlay, ...]:
+        """Папки хоста поверх каталогов образа и что с ними станет при обновлении.
+
+        Подключённый каталог паков после обновления остаётся прежним и отстаёт от
+        новой версии: интерфейс обновления предупреждает об этом заранее.
+        """
+        ...
 
 
 class IReleaseNotesRepository(Protocol):

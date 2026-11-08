@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import platform
 import shutil
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 from typing import Literal
 
 from dishka.integrations.fastapi import FromDishka
@@ -14,6 +14,8 @@ from hse_doc_studio.api.dishka_route import SafeDishkaRoute
 from hse_doc_studio.api.host_details import hides_host_details
 from hse_doc_studio.core.i18n import current_interface_language
 from hse_doc_studio.core.paths import PathMapping
+from hse_doc_studio.core.template_packs import ITemplatePacksSource, PacksKind, PacksSource
+from hse_doc_studio.core.update.entities import ImageOverlay
 from hse_doc_studio.core.update.repositories import IReleaseNotesRepository, ISelfUpdateGateway
 from hse_doc_studio.infra.runtime.environment import in_container
 from hse_doc_studio.infra.submission.pack_executor import available_archive_formats
@@ -31,6 +33,37 @@ OsName = Literal["windows", "macos", "linux", "other"]
 
 class RunnerHealthResponse(BaseModel):
     docker: Literal["running", "stopped"]
+
+
+class ImageOverlayResponse(BaseModel):
+    destination: str
+    source: str
+    # keep: привязка переедет в новый контейнер; drop: своя сборка уступает опубликованному образу.
+    on_update: Literal["keep", "drop"]
+
+
+class PackTemplateResponse(BaseModel):
+    pack_id: str
+    template_id: str
+    # Версии, которые лежат в каталоге шаблонов.
+    versions: list[str]
+    # Версии, вшитые в эту Студию (пусто, если описи образа нет).
+    builtin: list[str]
+    # Вшитые версии, которых нет в подключённом каталоге.
+    missing: list[str]
+
+
+class PacksSourceResponse(BaseModel):
+    # builtin: паки из образа; external: каталог подключён извне; source: запуск без описи образа.
+    kind: Literal["builtin", "external", "source"]
+    path: str
+    # Папка хоста, смонтированная поверх каталога (когда её видно через docker).
+    host_path: str | None
+    mounted: bool
+    studio_version: str
+    # В подключённом каталоге нет части версий, вшитых в эту Студию.
+    lagging: bool
+    templates: list[PackTemplateResponse]
 
 
 class SystemInfoResponse(BaseModel):
@@ -66,6 +99,9 @@ class SystemInfoResponse(BaseModel):
     # False in an air-gapped install (HSE_STUDIO__UPDATE_FEED_URL=off) — the UI
     # then hides the check button instead of offering a call that can't work.
     update_feed_enabled: bool
+    # Папки хоста поверх каталогов образа (/app/packs и т.п.) и что с ними будет при
+    # обновлении: окно обновления предупреждает, что подключённые паки останутся прежними.
+    image_overlays: list[ImageOverlayResponse] = []
 
 
 class ReleaseEntryResponse(BaseModel):
@@ -277,6 +313,7 @@ def hide_host_details(info: SystemInfoResponse) -> SystemInfoResponse:
             "docker": "stopped",
             "can_self_update": False,
             "data_dir": "",
+            "image_overlays": [],
         }
     )
 
@@ -315,8 +352,63 @@ async def system_info(
         update_feed_enabled=update.feed_enabled,
         latest_release_date=update.latest_date,
         latest_release_notes=list(update.latest_notes),
+        image_overlays=[
+            ImageOverlayResponse(destination=o.destination, source=o.source, on_update=o.on_update.value)
+            for o in await updater.image_overlays()
+        ],
     )
     return hide_host_details(info) if hides_host_details() else info
+
+
+def _host_path(path: str, overlays: tuple[ImageOverlay, ...]) -> str | None:
+    """Папка хоста, из которой смонтирован каталог `path` (сам или папка над ним)."""
+    target = PurePosixPath(path)
+    for overlay in overlays:
+        mount = PurePosixPath(overlay.destination)
+        if target == mount:
+            return overlay.source
+        if mount in target.parents and overlay.source:
+            return str(PurePosixPath(overlay.source) / target.relative_to(mount))
+    return None
+
+
+def _pack_templates(source: PacksSource) -> list[PackTemplateResponse]:
+    groups: dict[tuple[str, str], tuple[set[str], set[str]]] = {}
+    for key in source.available:
+        groups.setdefault((key.pack_id, key.template_id), (set(), set()))[0].add(key.version)
+    for key in source.builtin or ():
+        groups.setdefault((key.pack_id, key.template_id), (set(), set()))[1].add(key.version)
+    external = source.kind is PacksKind.external
+    return [
+        PackTemplateResponse(
+            pack_id=pack_id,
+            template_id=template_id,
+            versions=sorted(available),
+            builtin=sorted(builtin),
+            missing=sorted(builtin - available) if external else [],
+        )
+        for (pack_id, template_id), (available, builtin) in sorted(groups.items())
+    ]
+
+
+@router.get("/system/packs", response_model=PacksSourceResponse)
+async def packs_source(
+    packs: FromDishka[ITemplatePacksSource],
+    updater: FromDishka[ISelfUpdateGateway],
+) -> PacksSourceResponse:
+    """Откуда загружены шаблоны: вшитые в образ или подключённый извне каталог, и какие версии в нём есть."""
+    source = packs.describe()
+    hidden = hides_host_details()
+    host_path = None if hidden or not source.mounted else _host_path(source.path, await updater.image_overlays())
+    return PacksSourceResponse(
+        kind=source.kind.value,
+        path="" if hidden else source.path,
+        host_path=host_path,
+        mounted=source.mounted,
+        studio_version=settings.get_app_version(),
+        lagging=bool(source.missing_builtin),
+        templates=_pack_templates(source),
+    )
 
 
 @router.get("/system/release-notes", response_model=ReleaseNotesResponse)
