@@ -6,22 +6,11 @@ Generated from `release-notes.json` via `make changelog` — do not edit by hand
 Release notes are hand-written and bilingual (RU/EN); the app shows them in the
 selected interface language.
 
-## [0.16.0](https://github.com/AlexeyShalaev/hse-doc-studio/compare/v0.15.0...v0.16.0) (2026-11-08)
+## [0.16.0](https://github.com/AlexeyShalaev/hse-doc-studio/compare/v0.15.0...v0.16.0) - 2026-11-08
 
-
-### Features
-
-* **admin:** manage admin-installed runners from the Runners page ([e5d6242](https://github.com/AlexeyShalaev/hse-doc-studio/commit/e5d6242ee4092c8f9093265c60cb6c5b1895b65c))
-* **runner-install:** update an admin-installed runner in place ([c5f2df3](https://github.com/AlexeyShalaev/hse-doc-studio/commit/c5f2df3d0f4ac6607c82c672b2e42156887bfe26))
-* обновление раннера из админки на месте ([253ea2c](https://github.com/AlexeyShalaev/hse-doc-studio/commit/253ea2cccacd55189b53f468dd324b0af3a18ba3))
-
-
-### Bug Fixes
-
-* **access:** classify the runner upgrade route as admin-only ([9312018](https://github.com/AlexeyShalaev/hse-doc-studio/commit/931201850489fb546f4ccb4e147ca42633b71d12))
-* **api:** do not offer cloud builds of non-PDF documents ([885194d](https://github.com/AlexeyShalaev/hse-doc-studio/commit/885194db5da80acca8719e63f83ee95f15a63d1d))
-* **web:** honest texts for cloud build fetch results ([1c370dd](https://github.com/AlexeyShalaev/hse-doc-studio/commit/1c370dd8c2e604219c3f760169a4e684fa2c77e0))
-* облачные сборки документов не в PDF и честные тексты ошибок получения ([455214b](https://github.com/AlexeyShalaev/hse-doc-studio/commit/455214b089b31f9e0c915f849bc44f4315e65075))
+- In-place update of admin-installed runners: a runner installed from the admin area in Kubernetes or Docker is updated to the Studio version without removing and reinstalling it. The name, token, data volume and install limits are kept, the manifest is applied with the current isolation rules, progress is shown step by step, and the update is written to the audit log. The chart adds the update permission on Deployments.
+- Admin-installed runners are managed on the Runners page: Update and Remove install in the Actions menu, an Update to vX button for outdated runners, and a separate block for installs whose runner is already revoked.
+- The local Studio no longer offers to fetch cloud builds of documents that are not produced as PDF (such as pptx), and build fetch failures now show specific messages instead of a generic connection error.
 
 ## [0.15.0](https://github.com/AlexeyShalaev/hse-doc-studio/compare/v0.14.0...v0.15.0) - 2026-11-08
 

@@ -1,6 +1,24 @@
 {
   "releases": [
     {
+      "version": "0.16.0",
+      "date": "2026-11-08",
+      "notes": [
+        {
+          "ru": "Обновление раннера из админки на месте: раннер, поставленный из админки в Kubernetes или Docker, обновляется до версии Студии без удаления и повторной установки. Имя, токен, том данных и лимиты установки сохраняются, манифест применяется по текущим правилам изоляции, ход виден по шагам, обновление пишется в журнал аудита. В чарт добавлено право update на Deployment.",
+          "en": "In-place update of admin-installed runners: a runner installed from the admin area in Kubernetes or Docker is updated to the Studio version without removing and reinstalling it. The name, token, data volume and install limits are kept, the manifest is applied with the current isolation rules, progress is shown step by step, and the update is written to the audit log. The chart adds the update permission on Deployments."
+        },
+        {
+          "ru": "Управление раннерами из админки перенесено на страницу раннеров: «Обновить» и «Удалить установку» в меню «Действия», кнопка «Обновить до vX» у устаревших раннеров и отдельный блок для установок, чей раннер уже отозван.",
+          "en": "Admin-installed runners are managed on the Runners page: Update and Remove install in the Actions menu, an Update to vX button for outdated runners, and a separate block for installs whose runner is already revoked."
+        },
+        {
+          "ru": "Локальная Студия больше не предлагает получить облачные сборки документов, которые выпускаются не в PDF (например, pptx), а ошибки получения сборки показываются понятными текстами вместо общего «Проверьте связь с сервером».",
+          "en": "The local Studio no longer offers to fetch cloud builds of documents that are not produced as PDF (such as pptx), and build fetch failures now show specific messages instead of a generic connection error."
+        }
+      ]
+    },
+    {
       "version": "0.15.0",
       "date": "2026-11-08",
       "notes": [
