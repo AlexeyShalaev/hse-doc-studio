@@ -88,7 +88,8 @@
 | projects | `get_project` | R | PROJECT_VIEW | новый |
 | projects | `list_templates` | R | — | агент |
 | projects | `create_project` | X | — (облако: без `folder`, M16) | агент |
-| projects | `set_project_meta` | W | PROJECT_SETTINGS | агент |
+| projects | `list_project_fields` | R | PROJECT_VIEW | новый |
+| projects | `set_project_meta` | W | PROJECT_SETTINGS | агент (+ `unset`) |
 | projects | `set_project_people` | W | PROJECT_SETTINGS | новый (M17) |
 | projects | `set_language` | W | PROJECT_SETTINGS | агент |
 | projects | `delete_project` | W ! | PROJECT_DELETE | новый |

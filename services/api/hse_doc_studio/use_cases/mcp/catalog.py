@@ -21,6 +21,7 @@ from hse_doc_studio.core.rate_limit import COMPILE, GIT_SYNC, UPLOAD, RateRule
 from hse_doc_studio.use_cases.chat._registry import ToolRegistry
 from hse_doc_studio.use_cases.mcp.tools import admin, build, cloud, files, git, people, projects, review, submission
 from hse_doc_studio.use_cases.mcp.tools._base import PROJECT_ID_SCHEMA, McpTool
+from hse_doc_studio.use_cases.mcp.tools.fields import ListProjectFieldsTool
 
 # Записи, которые HTTP пропускает и в проект «только для чтения» (api/guards.py `_ALLOWED_SUFFIXES` и DELETE):
 # откат к снимку, выборка из git-remote и удаление проекта.
@@ -85,6 +86,7 @@ MCP_TOOL_RULES: tuple[McpToolRule, ...] = (
     _rule("get_project", _G.projects, _R, Action.PROJECT_VIEW),
     _rule("list_templates", _G.projects, _R),
     _rule("create_project", _G.projects, _X),
+    _rule("list_project_fields", _G.projects, _R, Action.PROJECT_VIEW),
     _rule("set_project_meta", _G.projects, _W, Action.PROJECT_SETTINGS),
     _rule("set_project_people", _G.projects, _W, Action.PROJECT_SETTINGS),
     _rule("set_language", _G.projects, _W, Action.PROJECT_SETTINGS),
@@ -150,6 +152,7 @@ MCP_TOOL_CLASSES: tuple[type[McpTool], ...] = (
     projects.GetProjectTool,
     projects.DeleteProjectTool,
     people.SetProjectPeopleTool,
+    ListProjectFieldsTool,
     cloud.CloneCloudProjectTool,
     files.ListFilesTool,
     files.WriteFileTool,
