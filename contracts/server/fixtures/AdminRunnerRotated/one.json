@@ -18,7 +18,9 @@
     "owner": null,
     "host_kind": "cli",
     "ai_endpoints": [],
-    "last_seen_ip": null
+    "last_seen_ip": null,
+    "reinstall": [],
+    "deployment_reported": false
   },
   "runner_token": "hse_rn_8d2e6b4f1a9c3075",
   "command": "HSE_RUNNER__API_URL=https://studio.example.org HSE_RUNNER__RUNNER_TOKEN=hse_rn_8d2e6b4f1a9c3075 hse-doc-studio runner",

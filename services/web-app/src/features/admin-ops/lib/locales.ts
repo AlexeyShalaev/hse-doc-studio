@@ -8,6 +8,7 @@ export const ensureAdminOpsLocales = (): Promise<void> =>
     "ops",
     "runners",
     "runnerInstall",
+    "runnerIsolation",
     "quotas",
     "services",
     "storage",

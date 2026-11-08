@@ -30,7 +30,11 @@ from hse_doc_studio.use_cases.git_sync.host_settings import (
     UpdateHostSettingsInput,
     UpdateHostSettingsUC,
 )
-from hse_doc_studio.use_cases.git_sync.provider_resolver import ProviderResolver
+from hse_doc_studio.use_cases.git_sync.provider_resolver import (
+    LOCAL_GUESS_ORDER,
+    ProviderRefreshBook,
+    ProviderResolver,
+)
 from hse_doc_studio.use_cases.git_sync.token_check import TokenChecker
 
 _NOW = datetime(2026, 10, 27, tzinfo=timezone.utc)
@@ -279,6 +283,110 @@ async def test__known__override_to_another_provider__drops_the_version_of_the_de
     info = await _resolver(settings).known("git.hse.ru", None)
 
     assert (info.id, info.detected_by, info.version) == (GitProvider.github, DetectedBy.override, None)
+
+
+# --- освежение версии сервера --------------------------------------------------------------------------------
+
+_STUDIO_URL = "https://studio.hse.ru/git/1dfc2e05-f1a8-440a-bf71-0175d22d2d5f.git"
+
+
+class _Clock:
+    def __init__(self) -> None:
+        self.now = 1000.0
+
+    def __call__(self) -> float:
+        return self.now
+
+
+def _refreshing(settings: JsonGitHostSettingsRepository, detector: _Detector, clock: _Clock) -> ProviderResolver:
+    return ProviderResolver(settings, detector, LOCAL_GUESS_ORDER, ProviderRefreshBook(900, clock))
+
+
+async def test__refresh__server_updated_after_connect__status_shows_the_new_version(
+    settings: JsonGitHostSettingsRepository,
+) -> None:
+    """Версия запомнена при подключении (0.5.0), сервер обновили до 0.14.0: удачная выборка её освежает."""
+    detector = _Detector(ApiDetection(GitProvider.hse_studio, "0.5.0"))
+    resolver = _refreshing(settings, detector, _Clock())
+    await resolver.resolve(_url(_STUDIO_URL))
+    detector.result = ApiDetection(GitProvider.hse_studio, "0.14.0")
+
+    await resolver.refresh(_url(_STUDIO_URL))
+
+    assert (await resolver.known("studio.hse.ru", None)).version == "0.14.0"
+
+
+async def test__refresh__asks_a_host_at_most_once_per_interval(settings: JsonGitHostSettingsRepository) -> None:
+    detector = _Detector(ApiDetection(GitProvider.hse_studio, "0.5.0"))
+    clock = _Clock()
+    resolver = _refreshing(settings, detector, clock)
+    await resolver.resolve(_url(_STUDIO_URL))
+    other_project = _url("https://studio.hse.ru/git/2b2632ba-0000-4000-8000-000000000000.git")
+
+    await resolver.refresh(_url(_STUDIO_URL))
+    await resolver.refresh(other_project)
+    clock.now += 899
+    await resolver.refresh(_url(_STUDIO_URL))
+    asked_within_interval = len(detector.requests)
+    clock.now += 1
+    await resolver.refresh(other_project)
+
+    assert asked_within_interval == 2  # подключение и одно освежение на весь хост
+    assert len(detector.requests) == 3
+
+
+async def test__refresh__server_did_not_answer__keeps_the_remembered_version(
+    settings: JsonGitHostSettingsRepository,
+) -> None:
+    detector = _Detector(ApiDetection(GitProvider.hse_studio, "0.5.0"))
+    resolver = _refreshing(settings, detector, _Clock())
+    await resolver.resolve(_url(_STUDIO_URL))
+    detector.result = None
+
+    await resolver.refresh(_url(_STUDIO_URL))
+
+    assert (await resolver.known("studio.hse.ru", None)).version == "0.5.0"
+
+
+async def test__refresh__failure__is_swallowed(settings: JsonGitHostSettingsRepository) -> None:
+    class _Broken(_Detector):
+        async def detect(self, request: DetectionRequest) -> ApiDetection | None:
+            raise OSError("network down")
+
+    detector = _Detector(ApiDetection(GitProvider.hse_studio, "0.5.0"))
+    await _refreshing(settings, detector, _Clock()).resolve(_url(_STUDIO_URL))
+
+    await _refreshing(settings, _Broken(), _Clock()).refresh(_url(_STUDIO_URL))
+
+    assert (await ProviderResolver(settings, detector).known("studio.hse.ru", None)).version == "0.5.0"
+
+
+@pytest.mark.parametrize(
+    "raw",
+    [
+        "https://unknown.example.org/team/paper.git",  # ответа API не запоминали: перебирать провайдеров не начинаем
+        "https://github.com/hse/paper.git",  # публичный хост: версия известна без сети
+        "git@studio.hse.ru:team/paper.git",  # ssh: API по http не спрашиваем
+    ],
+)
+async def test__refresh__host_without_remembered_answer__is_not_asked(
+    settings: JsonGitHostSettingsRepository, raw: str
+) -> None:
+    detector = _Detector(ApiDetection(GitProvider.gitlab, "17.0.0"))
+
+    await _refreshing(settings, detector, _Clock()).refresh(_url(raw))
+
+    assert detector.requests == []
+
+
+async def test__refresh__without_book__does_nothing(settings: JsonGitHostSettingsRepository) -> None:
+    detector = _Detector(ApiDetection(GitProvider.hse_studio, "0.5.0"))
+    resolver = ProviderResolver(settings, detector, LOCAL_GUESS_ORDER)
+    await resolver.resolve(_url(_STUDIO_URL))
+
+    await resolver.refresh(_url(_STUDIO_URL))
+
+    assert len(detector.requests) == 1
 
 
 # --- настройки хоста -------------------------------------------------------------------------------------------

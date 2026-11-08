@@ -63,6 +63,16 @@ spec:
             {{- end }}
             # Нужен один раз: выданный раннеру токен сохраняется в его каталоге данных.
             - {name: HSE_RUNNER__TOKEN, valueFrom: {secretKeyRef: {name: {{ include "hds.secretName" . }}, key: runner-bootstrap-token}}}
+            # Свой под из downward API: раннер сообщает в админку, как он развёрнут (на работу не влияет).
+            - {name: HSE_RUNNER__POD__NAMESPACE, valueFrom: {fieldRef: {fieldPath: metadata.namespace}}}
+            - {name: HSE_RUNNER__POD__NAME, valueFrom: {fieldRef: {fieldPath: metadata.name}}}
+            - {name: HSE_RUNNER__POD__SERVICE_ACCOUNT, valueFrom: {fieldRef: {fieldPath: spec.serviceAccountName}}}
+            - {name: HSE_RUNNER__POD__CPU_REQUEST_M, valueFrom: {resourceFieldRef: {containerName: runner, resource: requests.cpu, divisor: 1m}}}
+            - {name: HSE_RUNNER__POD__CPU_LIMIT_M, valueFrom: {resourceFieldRef: {containerName: runner, resource: limits.cpu, divisor: 1m}}}
+            - {name: HSE_RUNNER__POD__MEMORY_REQUEST_MI, valueFrom: {resourceFieldRef: {containerName: runner, resource: requests.memory, divisor: 1Mi}}}
+            - {name: HSE_RUNNER__POD__MEMORY_LIMIT_MI, valueFrom: {resourceFieldRef: {containerName: runner, resource: limits.memory, divisor: 1Mi}}}
+            - {name: HSE_RUNNER__POD__EPHEMERAL_REQUEST_MI, valueFrom: {resourceFieldRef: {containerName: runner, resource: requests.ephemeral-storage, divisor: 1Mi}}}
+            - {name: HSE_RUNNER__POD__EPHEMERAL_LIMIT_MI, valueFrom: {resourceFieldRef: {containerName: runner, resource: limits.ephemeral-storage, divisor: 1Mi}}}
           volumeMounts:
             - {name: runner-data, mountPath: {{ .Values.runner.dataDir | quote }}}
             - {name: docker-sock, mountPath: /var/run/docker.sock}

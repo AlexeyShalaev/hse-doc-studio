@@ -1,0 +1,176 @@
+{
+  "action": "Deployment details",
+  "reinstallMark": "Reinstall the runner or upgrade the Helm release to apply the limits",
+  "source": {
+    "runner": "reported by the runner",
+    "cluster": "from the cluster",
+    "config": "from configuration",
+    "declared": "configured",
+    "checked": "checked in the cluster",
+    "missing": "not found in the cluster",
+    "unchecked": "not checked"
+  },
+  "value": {
+    "none": "no data",
+    "unlimited": "no limit",
+    "yes": "yes",
+    "no": "no",
+    "default": "default",
+    "seconds": "{{count}} s"
+  },
+  "res": {
+    "title": "Resources",
+    "cpu": "CPU",
+    "memory": "Memory",
+    "ephemeral": "Ephemeral storage",
+    "pair": "{{request}} / {{limit}}",
+    "hint": "requests / limits"
+  },
+  "sec": {
+    "title": "securityContext",
+    "runAsNonRoot": "Non-root",
+    "runAsUser": "UID",
+    "readOnlyRoot": "Read-only root filesystem",
+    "noPrivilegeEscalation": "No privilege escalation",
+    "seccomp": "seccomp",
+    "capabilitiesDropped": "Capabilities dropped",
+    "automountToken": "ServiceAccount token in the pod"
+  },
+  "dialog": {
+    "title": "How {{name}} is deployed",
+    "close": "Close",
+    "loadFailed": "Could not load the runner details.",
+    "version": "Version",
+    "versionValue": "v{{version}}, Studio v{{studio}}",
+    "outdated": "Older than the Studio",
+    "reinstallTitle": "Limits are not applied to this runner",
+    "reinstallBody": "Reinstall the runner or upgrade the Helm release to apply the limits.",
+    "reason": {
+      "before_limits": "The runner is older than 0.14: its pod and build pods were set up without limits.",
+      "no_pod_limits": "The runner pod in Kubernetes has no CPU and memory limits."
+    },
+    "origin": "Origin",
+    "originValue": {
+      "chart": "Helm chart",
+      "ui": "installed from the admin area",
+      "other": "installed by hand or over SSH",
+      "unknown": "no data"
+    },
+    "executor": "Executor",
+    "platform": "Runs on",
+    "platformValue": {
+      "kubernetes": "Kubernetes pod",
+      "container": "container",
+      "host": "host"
+    },
+    "namespace": "Namespace",
+    "pod": "Pod",
+    "serviceAccount": "ServiceAccount",
+    "image": "Image",
+    "ready": "Ready",
+    "report": "Runner",
+    "reportedAt": "reported {{ago}}",
+    "noReport": "No data: the runner is older than 0.14 or has not reported yet.",
+    "build": "Build pods",
+    "buildDocker": "Build containers",
+    "network": "Network",
+    "networkOff": "disabled",
+    "networkOn": "enabled",
+    "networkPolicy": "cut by NetworkPolicy, see cluster isolation",
+    "pids": "Process limit",
+    "work": "/work",
+    "tmp": "/tmp",
+    "deadline": "activeDeadlineSeconds",
+    "runtimeClass": "RuntimeClass",
+    "live": "Deployment in the cluster",
+    "liveBuild": "Build pod limits in the manifest",
+    "liveBuildNone": "The manifest has no build pod limits: the runner was installed before 0.14.",
+    "liveStatus": {
+      "not_found": "This runner's Deployment is not in the cluster: it was not installed from the admin area or was removed.",
+      "forbidden": "The Studio may not read Deployments in the cluster.",
+      "unavailable": "The cluster is unreachable now, the Deployment was not read."
+    }
+  },
+  "panel": {
+    "title": "Runner isolation in the cluster",
+    "lead": "How runners and build pods are limited in resources, network and permissions. Configured values are marked apart from values checked in the cluster.",
+    "loadFailed": "Could not load the isolation details.",
+    "show": "Show details",
+    "hide": "Hide details",
+    "sourceHelm": "From the Helm configuration",
+    "sourceNone": "The Studio is not installed from the Helm chart: only the settings of installing runners from the admin area are known.",
+    "live": {
+      "off": "Not checked in the cluster: enable runner.isolationInfo.readCluster so the Studio compares NetworkPolicy, quota, LimitRange and Pod Security labels.",
+      "ok": "Checked in the cluster {{ago}}.",
+      "partial": "Partly checked in the cluster {{ago}}: some objects could not be read.",
+      "forbidden": "The cluster check is on, but the Studio may not read the objects. Check the chart Role.",
+      "unavailable": "The cluster check is on, but the Kubernetes API is unreachable now."
+    },
+    "releaseNamespace": "Release namespace",
+    "chart": {
+      "title": "Chart runner",
+      "disabled": "The chart runner is off (runner.enabled).",
+      "replicas": "Replicas",
+      "storage": "Data volume",
+      "storageKind": {
+        "pvc": "PVC",
+        "host_path": "hostPath",
+        "empty_dir": "emptyDir"
+      },
+      "tmp": "/tmp",
+      "dockerSocket": "The docker executor mounts the node docker.sock, which equals root on the node. Keep such a runner on dedicated nodes."
+    },
+    "build": {
+      "title": "Build pods",
+      "none": "The chart has no build pods: the chart runner uses the docker executor or is off."
+    },
+    "install": {
+      "title": "Install from the admin area",
+      "disabled": "Off (runner.installFromUi.enabled).",
+      "runner": "Runner defaults",
+      "build": "Build pod defaults",
+      "bounds": "Install form bounds",
+      "cpuBounds": "CPU: runner from {{runner}}, build pods from {{build}}, at most {{max}}",
+      "memoryBounds": "Memory: runner from {{runner}}, build pods from {{build}}, at most {{max}}",
+      "storage": "Data volume"
+    },
+    "network": {
+      "title": "Network",
+      "buildDenyAll": "Chart build pods: ingress and egress closed",
+      "uiBuildDenyAll": "Build pods of admin-installed runners: ingress and egress closed",
+      "runnerEgress": "Runner egress is restricted",
+      "allows": "Allowed",
+      "dns": "DNS, port 53",
+      "studio": "Studio, port {{port}}",
+      "apiServer": "Kubernetes API: {{cidrs}}, ports {{ports}}",
+      "anyAddress": "any address except 169.254.0.0/16",
+      "extra_one": "{{count}} more custom rule",
+      "extra_other": "{{count}} more custom rules",
+      "cni": "Policies only work with a CNI that enforces them (Calico, Cilium and the like)."
+    },
+    "quota": {
+      "title": "ResourceQuota",
+      "off": "Off",
+      "key": "Resource",
+      "declared": "Configured",
+      "hard": "In the cluster",
+      "used": "Used"
+    },
+    "limitRange": {
+      "title": "LimitRange",
+      "off": "Off",
+      "default": "default",
+      "defaultRequest": "defaultRequest",
+      "max": "max"
+    },
+    "podSecurity": {
+      "title": "Pod Security",
+      "unchecked": "Namespace labels were not checked: this needs runner.isolationInfo.readCluster.",
+      "enforce": "enforce",
+      "warn": "warn",
+      "audit": "audit",
+      "noLabel": "no label",
+      "notRestricted": "The namespace is not labelled pod-security.kubernetes.io/enforce=restricted."
+    }
+  }
+}

@@ -121,3 +121,29 @@ app.kubernetes.io/instance: {{ .Release.Name }}
 {{- define "hds.runnerBuildNamespace" -}}
 {{- default .Release.Namespace .Values.runner.kubernetes.namespace -}}
 {{- end -}}
+
+{{/*
+Выжимка values о раннерах для экрана изоляции в админке (HSE_STUDIO__RUNNER_CLUSTER__DECLARED): то, что задано
+в чарте, а не проверенное в кластере. Без секретов и без содержимого extraEgress (только число правил).
+*/}}
+{{- define "hds.runnerCluster" -}}
+{{- $r := .Values.runner -}}
+{{- $k := $r.kubernetes -}}
+{{- $full := include "hds.fullname" . -}}
+{{- $kube := eq $r.executor "kubernetes" -}}
+{{- $buildNs := include "hds.runnerBuildNamespace" . -}}
+{{- $storageKind := "hostPath" -}}
+{{- if $kube -}}{{- $storageKind = ternary "pvc" "emptyDir" $r.persistence.enabled -}}{{- end -}}
+{{- $quota := dict "enabled" (and $kube $k.quota.enabled) "hard" (dict "pods" ($k.quota.pods | toString) "requests.cpu" ($k.quota.requestsCpu | toString) "requests.memory" ($k.quota.requestsMemory | toString) "limits.cpu" ($k.quota.limitsCpu | toString) "limits.memory" ($k.quota.limitsMemory | toString) "requests.ephemeral-storage" ($k.quota.requestsEphemeralStorage | toString) "limits.ephemeral-storage" ($k.quota.limitsEphemeralStorage | toString)) -}}
+{{- $range := dict "enabled" (and $kube $k.limitRange.enabled) "default" $k.limitRange.default "defaultRequest" $k.limitRange.defaultRequest "max" $k.limitRange.max -}}
+{{- $runner := dict "enabled" $r.enabled "executor" $r.executor "replicas" $r.replicas "deployment" (printf "%s-runner" $full) "serviceAccount" (ternary (printf "%s-runner" $full) "" $kube) "resources" $r.resources "tmpSizeLimit" (ternary ($r.tmpSizeLimit | toString) "" $kube) "storageKind" $storageKind "storageClass" (ternary $r.persistence.storageClassName "" $kube) "storageSize" (ternary ($r.persistence.size | toString) "" $kube) "runAsUser" .Values.podSecurityContext.runAsUser -}}
+{{- $build := dict "namespace" $buildNs "resources" $k.resources "workSizeLimit" ($k.workSizeLimit | toString) "tmpSizeLimit" ($k.tmpSizeLimit | toString) "activeDeadlineSeconds" $k.activeDeadlineSeconds "runtimeClassName" $k.runtimeClassName "runAsUser" $k.runAsUser "networkPolicy" $k.networkPolicy.enabled "quota" $quota "limitRange" $range -}}
+{{- $np := $r.networkPolicy -}}
+{{- $egress := dict "enabled" (and $np.enabled (or $r.enabled $r.installFromUi.enabled)) "studioPort" 8000 "apiServerCidrs" $np.apiServerCidrs "apiServerPorts" $np.apiServerPorts "extraRules" (len $np.extraEgress) -}}
+{{- toJson (dict "releaseNamespace" .Release.Namespace "runner" $runner "build" $build "runnerEgress" $egress) -}}
+{{- end -}}
+
+{{/* Студии нужен ServiceAccount с токеном: установка раннеров из админки или чтение изоляции раннеров. */}}
+{{- define "hds.apiNeedsKubeApi" -}}
+{{- if or .Values.runner.installFromUi.enabled .Values.runner.isolationInfo.readCluster -}}true{{- end -}}
+{{- end -}}

@@ -19,6 +19,7 @@ from datetime import datetime
 from enum import StrEnum
 from typing import Protocol
 
+from hse_doc_studio.core.jobs.deployment import RunnerDeployment
 from hse_doc_studio.core.jobs.enums import RunnerErrorCode
 from hse_doc_studio.core.jobs.errors import RunnerAuthError
 from hse_doc_studio.core.jobs.relay import AiEndpointFlavor
@@ -129,6 +130,9 @@ class Runner:
     renamed_at: datetime | None = None
     # Кто поставил на паузу; без паузы пусто.
     paused_by: RunnerPausedBy | None = None
+    # Как раннер развёрнут, по его отчёту; у старых раннеров пусто («нет данных»).
+    deployment: RunnerDeployment | None = None
+    deployment_at: datetime | None = None
 
     @property
     def scope(self) -> RunnerScope:
@@ -180,6 +184,9 @@ class IRunnerRepository(Protocol):
         self, runner_id: str, info: RunnerAnnouncement, now: datetime, ip: str | None
     ) -> Runner | None: ...
     async def mark_offline(self, runner_id: str, now: datetime) -> None: ...
+    async def set_deployment(self, runner_id: str, report: RunnerDeployment, now: datetime) -> bool:
+        """Запоминает отчёт раннера о развёртывании; False, если раннера нет или он отозван."""
+        ...
 
 
 class IRegistrationTokenRepository(Protocol):

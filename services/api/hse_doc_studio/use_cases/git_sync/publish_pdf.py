@@ -63,6 +63,7 @@ class PdfSkipReason(StrEnum):
     no_remote = "no_remote"
     not_studio_server = "not_studio_server"
     disabled = "disabled"
+    # Документ в выбранном варианте не выпускается как PDF (презентация pptx, свой файл docx): выгружать нечего.
     no_pdf = "no_pdf"
 
 
@@ -103,8 +104,10 @@ _MESSAGES: dict[str, tuple[str, str]] = {
     ),
     StudioServerErrorCode.unreachable: ("Сервер недоступен", "The server is unreachable"),
     "no_pdf_file": ("PDF ещё не собран", "The PDF has not been built yet"),
-    "not_pdf": ("Документ не выпускается как PDF", "The document is not produced as a PDF"),
 }
+
+# Отказ «документ не выпускается как PDF» записывался до того, как такие документы стали пропускаться: его снимаем.
+_NOT_PDF_CODE = "not_pdf"
 
 
 def _message(code: str) -> str:
@@ -219,6 +222,9 @@ class PublishPdfUC:
             located = await self._locate(project, doc_id)
         except NotFoundError:
             return await self._failed(project, doc_id, StudioServerErrorCode.pdf_unknown_document, size=None)
+        if located is None:
+            await self._forget_not_pdf(project, doc_id)
+            return PdfPublishResult(PdfPublishStatus.skipped, doc_id, reason=PdfSkipReason.no_pdf)
         if isinstance(located, str):
             return await self._failed(project, doc_id, located, size=None)
         try:
@@ -240,12 +246,16 @@ class PublishPdfUC:
             built_at=datetime.fromtimestamp(located.stat().st_mtime, tz=UTC),
         )
 
-    async def _locate(self, project: Project, doc_id: str) -> Path | str:
-        """Файл PDF документа или код отказа. Свежий PDF из `.build` важнее соседнего: перенос мог не удаться."""
+    async def _locate(self, project: Project, doc_id: str) -> Path | str | None:
+        """Файл PDF документа, код отказа или None, если в выбранном варианте документ PDF не выпускает.
+
+        Свежий PDF из `.build` важнее соседнего: перенос мог не удаться. Презентация в варианте pptx собирается
+        успешно и тоже будит выгрузку, но это не отказ: выгружать просто нечего.
+        """
         info = await self._documents.execute(GetDocumentInput(project_id=project.id, doc_id=doc_id))
         output = info.output_file
         if not output or not output.lower().endswith(".pdf"):
-            return "not_pdf"
+            return None
         rel = PurePosixPath(output)
         root = project.folder.resolve()
         for candidate in (rel.parent / BUILD_DIR / doc_id / rel.name, rel):
@@ -260,6 +270,22 @@ class PublishPdfUC:
         text = detail or _message(code)
         await self._record(project, PdfUploadRecord(doc_id, _now(), ok=False, size=size, code=code, detail=text))
         return PdfPublishResult(PdfPublishStatus.failed, doc_id, code=code, detail=text, size=size)
+
+    async def _forget_not_pdf(self, project: Project, doc_id: str) -> None:
+        """Последняя запись выгрузки это прежний отказ «не PDF» по этому документу: окно не должно его показывать."""
+        state = await asyncio.to_thread(self._states.get, project.folder)
+        last = state.last_pdf_upload if state is not None else None
+        if last is None or last.doc_id != doc_id or last.code != _NOT_PDF_CODE:
+            return
+        with contextlib.suppress(Exception):
+            async with self._locks.for_folder(project.folder):
+                await asyncio.to_thread(self._clear_not_pdf, project, doc_id)
+
+    def _clear_not_pdf(self, project: Project, doc_id: str) -> None:
+        state = self._states.get(project.folder)
+        last = state.last_pdf_upload if state is not None else None
+        if state is not None and last is not None and last.doc_id == doc_id and last.code == _NOT_PDF_CODE:
+            self._states.save(project.folder, replace(state, last_pdf_upload=None))
 
     async def _record(self, project: Project, record: PdfUploadRecord) -> None:
         """Запись под блокировкой папки, как у остальных изменений состояния; сбой записи выгрузку не отменяет."""

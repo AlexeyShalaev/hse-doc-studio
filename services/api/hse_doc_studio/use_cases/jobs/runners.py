@@ -12,6 +12,7 @@ from hse_doc_studio.core.identity.errors import IdentityError, IdentityErrorCode
 from hse_doc_studio.core.identity.protocols import IAuditLog, IUserRepository
 from hse_doc_studio.core.identity.session_policy import Clock, utc_now
 from hse_doc_studio.core.jobs.admin import RunnerStatus, runner_status
+from hse_doc_studio.core.jobs.deployment import RunnerDeployment
 from hse_doc_studio.core.jobs.enums import JobState, RunnerErrorCode
 from hse_doc_studio.core.jobs.errors import RunnerAuthError, RunnerNotFoundError
 from hse_doc_studio.core.jobs.queue import IJobQueue
@@ -302,6 +303,16 @@ class RunnerRegistry:
             paused=updated.paused,
             relay_keepalive_s=RELAY_KEEPALIVE_S,
         )
+
+    async def report_deployment(self, runner: Runner, report: RunnerDeployment) -> None:
+        """Отчёт раннера о том, как он развёрнут: только для экрана админки, на маршрутизацию не влияет.
+
+        Личный раннер это машина человека: её устройство админке не показывается, поэтому и не хранится.
+        """
+        if runner.scope is RunnerScope.personal:
+            return
+        if not await self._runners.set_deployment(runner.id, report, self._clock()):
+            raise RunnerAuthError(RunnerErrorCode.runner_unauthorized)
 
     async def go_offline(self, runner: Runner) -> None:
         """Мягкая остановка: ждущие этот раннер сборки сразу идут на общие, если других раннеров хозяина нет."""

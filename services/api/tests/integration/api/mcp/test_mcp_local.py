@@ -306,3 +306,20 @@ async def test__call_tool__clone_cloud_project__server_not_connected__explains(s
 
     assert result.is_error is True
     assert result.content[0].text.startswith(("Сервер studio.example.org не подключён", "The server studio"))  # type: ignore[union-attr]
+
+
+async def test__call_tool__get_project__foreign_last_compile__is_replaced_by_a_local_one(studio: Studio) -> None:
+    """project.json пришёл из облака (git-синхронизация): ссылка облачной сборки здесь не находится get_compile."""
+    await _enable(studio)
+    project_file = studio.folder / ".hse-studio" / "project.json"
+    data = json.loads(project_file.read_text(encoding="utf-8"))
+    doc_id = data["documents"][0]["id"]
+    data["documents"][0]["last_compile_id"] = "039ea6b1-7bee-48b4-9613-589f292f779e"
+    project_file.write_text(json.dumps(data), encoding="utf-8")
+
+    async with _client(studio) as client:
+        result = await client.call_tool("get_project", {"project_id": studio.project_id})
+
+    assert result.is_error is False, result.content
+    documents = {d["id"]: d for d in json.loads(result.content[0].text)["documents"]}
+    assert documents[doc_id]["last_compile_id"] is None

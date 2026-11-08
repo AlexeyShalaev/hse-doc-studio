@@ -19,6 +19,7 @@ from hse_doc_studio.core.repositories import (
 )
 from hse_doc_studio.core.services import ProjectTemplateService
 from hse_doc_studio.core.team import author_by_slug, is_doc_active
+from hse_doc_studio.use_cases.compile.last_compile import with_effective_last_compile
 from hse_doc_studio.use_cases.projects.get_project import GetProjectInput, GetProjectUC
 
 logger = structlog.get_logger()
@@ -103,6 +104,10 @@ class ListDocumentsUC:
             roster_index = {d.id: i for i, d in enumerate(version.documents)}
             fallback = len(roster_index)
             visible_docs.sort(key=lambda doc: roster_index.get(doc.def_id or doc.id, fallback))
+        # Ссылка на сборку, пришедшая синхронизацией с другой стороны, заменяется своей (см. last_compile).
+        visible_docs = [
+            await with_effective_last_compile(self._compile_repo, project.folder, doc) for doc in visible_docs
+        ]
         entries: list[DocumentListEntry] = []
         for doc in visible_docs:
             source_file: str | None = None

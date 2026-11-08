@@ -69,6 +69,9 @@ class RunnerInfo(StrictModel):
     # Имена объявленных раннером ИИ-адресов, без URL.
     ai_endpoints: list[str] = Field(default_factory=list)
     last_seen_ip: str | None = None
+    # Почему раннер стоит переустановить, чтобы применились лимиты (по версии и его отчёту), и прислал ли он отчёт.
+    reinstall: list[Literal["before_limits", "no_pod_limits"]] = Field(default_factory=list)
+    deployment_reported: bool = False
 
 
 class UpdateRunnerRequest(StrictModel):

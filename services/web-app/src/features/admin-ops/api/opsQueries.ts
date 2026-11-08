@@ -36,6 +36,9 @@ export const opsKeys = {
     "ssh-credentials",
   ] as const,
   sshCapability: ["admin", "ops", "runner-install", "ssh"] as const,
+  runnerDeployment: (id: string) =>
+    ["admin", "ops", "runners", "deployment", id] as const,
+  runnerIsolation: ["admin", "ops", "runner-isolation"] as const,
 };
 
 /** Опрос идёт только пока вкладка видна: react-query не тикает в фоне без явного флага. */
@@ -48,6 +51,23 @@ export const useRunnerSummary = () =>
     queryFn: () => opsApi.runnerSummary(),
     staleTime: 0,
     refetchInterval: POLL_MS * 3,
+  });
+
+/** Как развёрнут раннер: читается, пока открыта его карточка. */
+export const useRunnerDeployment = (id: string | null) =>
+  useQuery({
+    queryKey: opsKeys.runnerDeployment(id ?? ""),
+    queryFn: () => opsApi.runnerDeployment(id ?? ""),
+    enabled: id !== null,
+    staleTime: 15_000,
+  });
+
+/** Изоляция раннеров в кластере: меняется только с релизом, частый опрос не нужен. */
+export const useRunnerIsolation = () =>
+  useQuery({
+    queryKey: opsKeys.runnerIsolation,
+    queryFn: () => opsApi.runnerIsolation(),
+    staleTime: 60_000,
   });
 
 // Личных раннеров на установке немного: читаются одним окном без страниц

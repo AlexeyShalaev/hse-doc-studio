@@ -1,0 +1,178 @@
+{
+  "action": "Как развёрнут",
+  "reinstallMark": "Переустановите раннер или обновите релиз Helm, чтобы применились лимиты",
+  "source": {
+    "runner": "сообщил раннер",
+    "cluster": "из кластера",
+    "config": "из конфигурации",
+    "declared": "задано",
+    "checked": "проверено в кластере",
+    "missing": "не найдено в кластере",
+    "unchecked": "не проверялось"
+  },
+  "value": {
+    "none": "нет данных",
+    "unlimited": "без лимита",
+    "yes": "да",
+    "no": "нет",
+    "default": "по умолчанию",
+    "seconds": "{{count}} с"
+  },
+  "res": {
+    "title": "Ресурсы",
+    "cpu": "CPU",
+    "memory": "Память",
+    "ephemeral": "Эфемерный диск",
+    "pair": "{{request}} / {{limit}}",
+    "hint": "requests / limits"
+  },
+  "sec": {
+    "title": "securityContext",
+    "runAsNonRoot": "Не root",
+    "runAsUser": "UID",
+    "readOnlyRoot": "Корень только для чтения",
+    "noPrivilegeEscalation": "Без повышения прав",
+    "seccomp": "seccomp",
+    "capabilitiesDropped": "Capabilities сброшены",
+    "automountToken": "Токен ServiceAccount в поде"
+  },
+  "dialog": {
+    "title": "Как развёрнут {{name}}",
+    "close": "Закрыть",
+    "loadFailed": "Не удалось загрузить сведения о раннере.",
+    "version": "Версия",
+    "versionValue": "v{{version}}, Студия v{{studio}}",
+    "outdated": "Старше Студии",
+    "reinstallTitle": "Лимиты к этому раннеру не применились",
+    "reinstallBody": "Переустановите раннер или обновите релиз Helm, чтобы применились лимиты.",
+    "reason": {
+      "before_limits": "Версия раннера старше 0.14: под и поды сборки поставлены без лимитов.",
+      "no_pod_limits": "У пода раннера в Kubernetes нет limits CPU и памяти."
+    },
+    "origin": "Откуда",
+    "originValue": {
+      "chart": "чарт Helm",
+      "ui": "установлен из админки",
+      "other": "поставлен вручную или по SSH",
+      "unknown": "нет данных"
+    },
+    "executor": "Исполнитель",
+    "platform": "Где работает",
+    "platformValue": {
+      "kubernetes": "под Kubernetes",
+      "container": "контейнер",
+      "host": "хост"
+    },
+    "namespace": "Namespace",
+    "pod": "Под",
+    "serviceAccount": "ServiceAccount",
+    "image": "Образ",
+    "ready": "Готов",
+    "report": "Раннер",
+    "reportedAt": "сообщил {{ago}}",
+    "noReport": "Нет данных: раннер старше 0.14 или ещё не сообщил о себе.",
+    "build": "Поды сборки",
+    "buildDocker": "Контейнеры сборки",
+    "network": "Сеть",
+    "networkOff": "отключена",
+    "networkOn": "есть",
+    "networkPolicy": "режет NetworkPolicy, см. изоляцию в кластере",
+    "pids": "Предел процессов",
+    "work": "/work",
+    "tmp": "/tmp",
+    "deadline": "activeDeadlineSeconds",
+    "runtimeClass": "RuntimeClass",
+    "live": "Deployment в кластере",
+    "liveBuild": "Лимиты подов сборки в манифесте",
+    "liveBuildNone": "В манифесте нет лимитов подов сборки: раннер поставлен до 0.14.",
+    "liveStatus": {
+      "not_found": "Deployment этого раннера в кластере не найден: раннер поставлен не из админки или удалён.",
+      "forbidden": "У Студии нет права читать Deployment в кластере.",
+      "unavailable": "Кластер сейчас недоступен, Deployment не прочитан."
+    }
+  },
+  "panel": {
+    "title": "Изоляция раннеров в кластере",
+    "lead": "Как раннеры и поды сборки ограничены по ресурсам, сети и правам. Значения из конфигурации отмечены отдельно от проверенных в кластере.",
+    "loadFailed": "Не удалось загрузить сведения об изоляции.",
+    "show": "Показать подробности",
+    "hide": "Скрыть подробности",
+    "sourceHelm": "Из конфигурации Helm",
+    "sourceNone": "Студия поставлена не из чарта Helm: о кластере известны только настройки установки раннеров из админки.",
+    "live": {
+      "off": "Не проверено в кластере: включите runner.isolationInfo.readCluster, чтобы Студия сверяла NetworkPolicy, квоту, LimitRange и метки Pod Security.",
+      "ok": "Проверено в кластере {{ago}}.",
+      "partial": "Проверено в кластере частично {{ago}}: часть объектов прочитать не удалось.",
+      "forbidden": "Проверка в кластере включена, но у Студии нет прав на чтение. Проверьте Role чарта.",
+      "unavailable": "Проверка в кластере включена, но Kubernetes API сейчас недоступен."
+    },
+    "releaseNamespace": "Namespace релиза",
+    "chart": {
+      "title": "Раннер чарта",
+      "disabled": "Раннер чарта выключен (runner.enabled).",
+      "replicas": "Реплик",
+      "storage": "Том данных",
+      "storageKind": {
+        "pvc": "PVC",
+        "host_path": "hostPath",
+        "empty_dir": "emptyDir"
+      },
+      "tmp": "/tmp",
+      "dockerSocket": "Исполнитель docker монтирует docker.sock узла: это равно root на узле. Держите такой раннер на выделенных узлах."
+    },
+    "build": {
+      "title": "Поды сборки",
+      "none": "Подов сборки чарта нет: раннер чарта работает с исполнителем docker или выключен."
+    },
+    "install": {
+      "title": "Установка из админки",
+      "disabled": "Выключена (runner.installFromUi.enabled).",
+      "runner": "Раннер по умолчанию",
+      "build": "Поды сборки по умолчанию",
+      "bounds": "Границы формы установки",
+      "cpuBounds": "CPU: раннер от {{runner}}, поды сборки от {{build}}, не больше {{max}}",
+      "memoryBounds": "Память: раннер от {{runner}}, поды сборки от {{build}}, не больше {{max}}",
+      "storage": "Том данных"
+    },
+    "network": {
+      "title": "Сеть",
+      "buildDenyAll": "Поды сборки чарта: вход и выход закрыты",
+      "uiBuildDenyAll": "Поды сборки раннеров из админки: вход и выход закрыты",
+      "runnerEgress": "Исходящая сеть раннеров ограничена",
+      "allows": "Разрешено",
+      "dns": "DNS, порт 53",
+      "studio": "Студия, порт {{port}}",
+      "apiServer": "Kubernetes API: {{cidrs}}, порты {{ports}}",
+      "anyAddress": "любые адреса, кроме 169.254.0.0/16",
+      "extra_one": "ещё {{count}} своё правило",
+      "extra_few": "ещё {{count}} своих правила",
+      "extra_many": "ещё {{count}} своих правил",
+      "extra_other": "ещё {{count}} своих правила",
+      "cni": "Политики работают только с CNI, который их поддерживает (Calico, Cilium и подобные)."
+    },
+    "quota": {
+      "title": "ResourceQuota",
+      "off": "Выключена",
+      "key": "Ресурс",
+      "declared": "Задано",
+      "hard": "В кластере",
+      "used": "Занято"
+    },
+    "limitRange": {
+      "title": "LimitRange",
+      "off": "Выключен",
+      "default": "default",
+      "defaultRequest": "defaultRequest",
+      "max": "max"
+    },
+    "podSecurity": {
+      "title": "Pod Security",
+      "unchecked": "Метки namespace не проверялись: для этого нужна опция runner.isolationInfo.readCluster.",
+      "enforce": "enforce",
+      "warn": "warn",
+      "audit": "audit",
+      "noLabel": "нет метки",
+      "notRestricted": "Namespace не помечен pod-security.kubernetes.io/enforce=restricted."
+    }
+  }
+}

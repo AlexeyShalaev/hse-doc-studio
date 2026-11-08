@@ -1,0 +1,108 @@
+{
+  "config": "helm",
+  "live_read": "off",
+  "checked_at": null,
+  "release_namespace": "studio",
+  "chart_runner": {
+    "enabled": true,
+    "executor": "docker",
+    "replicas": 1,
+    "namespace": "studio",
+    "service_account": null,
+    "resources": {
+      "cpu_request": "100m",
+      "cpu_limit": "1",
+      "memory_request": "256Mi",
+      "memory_limit": "2Gi",
+      "ephemeral_request": "128Mi",
+      "ephemeral_limit": "2Gi",
+      "source": "config"
+    },
+    "tmp_size_limit": "1Gi",
+    "storage": {
+      "kind": "host_path",
+      "storage_class": null,
+      "size": null
+    },
+    "security": {
+      "run_as_non_root": true,
+      "run_as_user": 1000,
+      "read_only_root": false,
+      "no_privilege_escalation": true,
+      "seccomp": true,
+      "capabilities_dropped": true,
+      "automount_token": false
+    },
+    "docker_socket": true
+  },
+  "build": null,
+  "install_from_ui": {
+    "enabled": true,
+    "namespace": "studio",
+    "service_account": "rel-runner-ui",
+    "storage_class": null,
+    "storage_size": "5Gi",
+    "runner": {
+      "cpu_request": "100m",
+      "cpu_limit": "1",
+      "memory_request": "256Mi",
+      "memory_limit": "2Gi",
+      "ephemeral_request": "128Mi",
+      "ephemeral_limit": "2Gi",
+      "source": "config"
+    },
+    "build": {
+      "cpu_request": "500m",
+      "cpu_limit": "2",
+      "memory_request": "1Gi",
+      "memory_limit": "4Gi",
+      "ephemeral_request": "1Gi",
+      "ephemeral_limit": "4Gi",
+      "source": "config"
+    },
+    "bounds": {
+      "max_cpu": "8",
+      "max_memory": "16Gi",
+      "min_runner_cpu": "100m",
+      "min_runner_memory": "256Mi",
+      "min_build_cpu": "500m",
+      "min_build_memory": "1Gi"
+    }
+  },
+  "network": {
+    "build_deny_all": {
+      "declared": false,
+      "live": null
+    },
+    "ui_build_deny_all": {
+      "declared": true,
+      "live": null
+    },
+    "runner_egress": {
+      "declared": false,
+      "live": null,
+      "dns": false,
+      "studio_port": 8000,
+      "api_server_cidrs": [],
+      "api_server_ports": [
+        443,
+        6443
+      ],
+      "extra_rules": 0
+    }
+  },
+  "quota": {
+    "namespace": "studio",
+    "declared": null,
+    "live_found": null,
+    "live_hard": null,
+    "live_used": null
+  },
+  "limit_range": {
+    "namespace": "studio",
+    "declared": null,
+    "live_found": null,
+    "live": null
+  },
+  "pod_security": null
+}

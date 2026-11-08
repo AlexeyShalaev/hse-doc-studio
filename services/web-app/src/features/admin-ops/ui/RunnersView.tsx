@@ -2,6 +2,7 @@ import { useMemo } from "react";
 import type { ColumnDef } from "@tanstack/react-table";
 import {
   ArrowRight,
+  Info,
   KeyRound,
   ListOrdered,
   LoaderCircle,
@@ -89,6 +90,8 @@ export type RunnersViewProps = {
   onCreateToken: () => void;
   onRevokeToken: (token: AdminRunnerToken) => void;
   onOpenQueue?: (() => void) | undefined;
+  /** Открыть «Как развёрнут»: отчёт раннера и Deployment из кластера. */
+  onDetails?: ((runner: AdminRunner) => void) | undefined;
 };
 
 /** Строка таблицы: всё меняющееся лежит в данных, а не в замыканиях колонок (иначе ячейки пересоздаются). */
@@ -101,6 +104,7 @@ type Row = {
   pause: () => void;
   rotate: () => void;
   revoke: () => void;
+  details: (() => void) | null;
   /** Показать раннеры с этим тегом или классом. */
   pickTag: (tag: string) => void;
   pickClass: (name: string) => void;
@@ -159,6 +163,7 @@ export const RunnersView = ({
   onCreateToken,
   onRevokeToken,
   onOpenQueue,
+  onDetails,
 }: RunnersViewProps) => {
   const { t } = useTranslation("adminRunners");
   const units = useDurationUnits();
@@ -208,21 +213,41 @@ export const RunnersView = ({
         sortDescFirst: true,
         cell: ({ row }) => {
           const { runner, newer } = row.original;
-          return newer !== null ? (
-            <Tooltip content={t("runners.newerVersion", { version: newer })}>
-              <span
-                className="ops-version"
-                data-outdated="true"
-                tabIndex={0}
-                data-testid={`runner-outdated-${runner.id}`}
-              >
-                <TriangleAlert size="0.6875rem" aria-hidden="true" />v
-                {runner.version}
+          const reinstall =
+            (runner.reinstall ?? []).length > 0 && !runner.revoked;
+          const version =
+            newer !== null ? (
+              <Tooltip content={t("runners.newerVersion", { version: newer })}>
+                <span
+                  className="ops-version"
+                  data-outdated="true"
+                  tabIndex={0}
+                  data-testid={`runner-outdated-${runner.id}`}
+                >
+                  <TriangleAlert size="0.6875rem" aria-hidden="true" />v
+                  {runner.version}
+                </span>
+              </Tooltip>
+            ) : (
+              <span className="ops-version" title={t("runners.versionOf")}>
+                v{runner.version}
               </span>
-            </Tooltip>
-          ) : (
-            <span className="ops-version" title={t("runners.versionOf")}>
-              v{runner.version}
+            );
+          if (!reinstall) return version;
+          return (
+            <span className="ops-tags" style={{ flexWrap: "nowrap" }}>
+              {version}
+              <Tooltip content={t("adminRunnerIsolation:reinstallMark")}>
+                <span
+                  className="ops-version"
+                  data-outdated="true"
+                  tabIndex={0}
+                  aria-label={t("adminRunnerIsolation:reinstallMark")}
+                  data-testid={`runner-reinstall-${runner.id}`}
+                >
+                  <TriangleAlert size="0.6875rem" aria-hidden="true" />
+                </span>
+              </Tooltip>
             </span>
           );
         },
@@ -307,7 +332,14 @@ export const RunnersView = ({
         ),
         enableSorting: false,
         cell: ({ row }) => {
-          const { runner: r, busy, pause, rotate, revoke } = row.original;
+          const {
+            runner: r,
+            busy,
+            pause,
+            rotate,
+            revoke,
+            details,
+          } = row.original;
           if (r.revoked) return null;
           return (
             <span className="ops-row-actions">
@@ -315,6 +347,17 @@ export const RunnersView = ({
                 label={t("runners.actionsLabel", { name: r.name })}
                 testId={`runner-actions-${r.id}`}
                 items={[
+                  ...(details
+                    ? [
+                        {
+                          id: "details",
+                          label: t("adminRunnerIsolation:action"),
+                          icon: <Info size="0.875rem" aria-hidden="true" />,
+                          onSelect: details,
+                          testId: `runner-details-${r.id}`,
+                        },
+                      ]
+                    : []),
                   {
                     id: "pause",
                     label: r.paused ? t("runners.resume") : t("runners.pause"),
@@ -378,6 +421,11 @@ export const RunnersView = ({
         revoke: () => {
           onRevoke(runner);
         },
+        details: onDetails
+          ? () => {
+              onDetails(runner);
+            }
+          : null,
         pickTag: (tag: string) => {
           setFilter("tag", tag);
         },
@@ -401,6 +449,7 @@ export const RunnersView = ({
       onTogglePause,
       onRotate,
       onRevoke,
+      onDetails,
       setFilter,
     ],
   );

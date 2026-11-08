@@ -35,6 +35,7 @@ import {
 } from "./RunnerDialogs";
 import { FailureNotice } from "./parts";
 import { PersonalRunners } from "./PersonalRunners";
+import { RunnerDeploymentDialog } from "./RunnerDeploymentDialog";
 import { RunnersView } from "./RunnersView";
 
 /** Раннеры: список, пауза, ротация и отзыв токена, токены регистрации. */
@@ -94,6 +95,7 @@ export const Runners = ({
   const [rotating, setRotating] = useState<AdminRunner | null>(null);
   const [rotated, setRotated] = useState<AdminRunnerRotated | null>(null);
   const [revoking, setRevoking] = useState<AdminRunner | null>(null);
+  const [inspecting, setInspecting] = useState<AdminRunner | null>(null);
   const [created, setCreated] = useState<AdminRunnerTokenCreated | null>(null);
   const [revokingToken, setRevokingToken] = useState<AdminRunnerToken | null>(
     null,
@@ -157,6 +159,7 @@ export const Runners = ({
           onCreatingChange(true);
         }}
         onOpenQueue={onOpenQueue}
+        onDetails={setInspecting}
         onRevokeToken={(token) => {
           setFailure(null);
           setRevokingToken(token);
@@ -165,6 +168,12 @@ export const Runners = ({
       <div style={{ marginTop: "1.25rem" }}>
         <PersonalRunners />
       </div>
+      <RunnerDeploymentDialog
+        runner={inspecting}
+        onClose={() => {
+          setInspecting(null);
+        }}
+      />
       <ConfirmDialog
         isOpen={rotating !== null}
         title={t("runners.rotateDialog.title", { name: rotating?.name ?? "" })}

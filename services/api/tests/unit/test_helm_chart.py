@@ -9,6 +9,8 @@ from typing import Any
 import pytest
 import yaml
 from hse_doc_studio.api.config import Settings
+from hse_doc_studio.api.routers.admin_runner_isolation import chart_runner_view as _chart_runner_view
+from hse_doc_studio.core.runner_isolation import DeclaredCluster
 from hse_doc_studio.infra.runner.config import RunnerConfig
 from pydantic import BaseModel
 
@@ -708,3 +710,92 @@ def test_no_workload_of_the_chart_uses_hostpath_in_kubernetes_mode() -> None:
     for doc in _isolation():
         if doc["kind"] in {"Deployment", "Job"}:
             assert "hostPath" not in str(doc["spec"]["template"]["spec"].get("volumes", []))
+
+
+# ---- Экран изоляции раннеров в админке ----
+
+
+def _env(deployment: dict[str, Any]) -> dict[str, Any]:
+    return {e["name"]: e for e in deployment["spec"]["template"]["spec"]["containers"][0]["env"]}
+
+
+def test_isolation_read_is_off_by_default_and_adds_no_rights() -> None:
+    docs = _render("-f", str(_INSTALL_UI_VALUES), "--namespace", "studio")
+    names = {d["metadata"]["name"] for d in docs if d["kind"] in {"Role", "ClusterRole"}}
+    assert not [n for n in names if "isolation-read" in n or "namespaces-read" in n]
+    assert "HSE_STUDIO__RUNNER_CLUSTER__READ_LIVE" not in _env(_api_deployment(docs))
+    plain = _api_deployment(_render())
+    assert plain["spec"]["template"]["spec"]["automountServiceAccountToken"] is False
+    assert not _by_kind(_render(), "ServiceAccount")
+
+
+def test_isolation_read_grants_only_reads_of_policies_quota_and_own_namespaces() -> None:
+    docs = _isolation()
+    roles = [d for d in _by_kind(docs, "Role") if d["metadata"]["name"].endswith("-isolation-read")]
+    assert {r["metadata"]["namespace"] for r in roles} == {"studio", "hds-builds"}
+    for role in roles:
+        for rule in role["rules"]:
+            assert set(rule["verbs"]) == {"get", "list"}
+            assert set(rule["resources"]) <= {"networkpolicies", "resourcequotas", "limitranges"}
+    (cluster_role,) = [d for d in _by_kind(docs, "ClusterRole") if "namespaces-read" in d["metadata"]["name"]]
+    (rule,) = cluster_role["rules"]
+    assert rule == {"apiGroups": [""], "resources": ["namespaces"], "resourceNames": ["studio", "hds-builds"],
+                    "verbs": ["get"]}  # fmt: skip
+    (binding,) = [d for d in _by_kind(docs, "ClusterRoleBinding") if "namespaces-read" in d["metadata"]["name"]]
+    assert binding["subjects"] == [{"kind": "ServiceAccount", "name": "rel-hse-doc-studio-api", "namespace": "studio"}]
+    api = _api_deployment(docs)
+    assert api["spec"]["template"]["spec"]["serviceAccountName"] == "rel-hse-doc-studio-api"
+    assert _env(api)["HSE_STUDIO__RUNNER_CLUSTER__READ_LIVE"]["value"] == "true"
+    assert len([d for d in _by_kind(docs, "ServiceAccount") if d["metadata"]["name"] == "rel-hse-doc-studio-api"]) == 1
+
+
+def test_isolation_read_alone_gives_the_api_a_service_account() -> None:
+    docs = _render("--set", "runner.isolationInfo.readCluster=true", "--namespace", "studio")
+    api = _api_deployment(docs)
+    assert api["spec"]["template"]["spec"]["serviceAccountName"] == "rel-hse-doc-studio-api"
+    assert "rel-hse-doc-studio-api" in {d["metadata"]["name"] for d in _by_kind(docs, "ServiceAccount")}
+    assert not [d for d in _by_kind(docs, "Role") if d["metadata"]["name"].endswith("-runner-install")]
+
+
+def test_declared_cluster_json_matches_the_rendered_chart() -> None:
+    docs = _isolation()
+    raw = _env(_api_deployment(docs))["HSE_STUDIO__RUNNER_CLUSTER__DECLARED"]["value"]
+    declared = DeclaredCluster.model_validate_json(raw)
+    assert declared.release_namespace == "studio"
+    assert declared.build.namespace == "hds-builds"
+    assert declared.build.network_policy is True
+    assert declared.build.quota.enabled
+    assert declared.build.quota.hard["limits.memory"] == "80Gi"
+    assert declared.build.limit_range.enabled
+    assert declared.build.limit_range.max["memory"] == "16Gi"
+    assert declared.runner_egress.enabled
+    assert declared.runner_egress.extra_rules == 1
+    assert declared.runner_egress.api_server_ports == [8443]
+    runner = _named(docs, "Deployment", declared.runner.deployment)
+    pod = runner["spec"]["template"]["spec"]
+    assert pod["serviceAccountName"] == declared.runner.service_account
+    assert pod["containers"][0]["resources"] == declared.runner.resources.model_dump()
+    assert "token" not in raw.lower()
+    assert "secret" not in raw.lower()
+
+
+@pytest.mark.parametrize("values", [(), ("-f", str(_K8S_VALUES))], ids=["docker", "kubernetes"])
+def test_declared_chart_runner_security_matches_the_rendered_runner(values: tuple[str, ...]) -> None:
+    docs = _render(*values, "--namespace", "studio")
+    declared = DeclaredCluster.model_validate_json(
+        _env(_api_deployment(docs))["HSE_STUDIO__RUNNER_CLUSTER__DECLARED"]["value"]
+    )
+    view = _chart_runner_view(declared).security
+    pod = _named(docs, "Deployment", declared.runner.deployment)["spec"]["template"]["spec"]
+    container = pod["containers"][0]
+    ctx = {**pod["securityContext"], **container["securityContext"]}
+    assert view.run_as_non_root is ctx["runAsNonRoot"]
+    assert view.run_as_user == ctx["runAsUser"]
+    assert view.read_only_root is ctx.get("readOnlyRootFilesystem", False)
+    assert view.no_privilege_escalation is (ctx["allowPrivilegeEscalation"] is False)
+    assert view.seccomp is (ctx["seccompProfile"]["type"] == "RuntimeDefault")
+    assert view.capabilities_dropped is ("ALL" in ctx["capabilities"]["drop"])
+    assert view.automount_token is pod["automountServiceAccountToken"]
+    names = {e["name"] for e in container["env"]}
+    assert {"HSE_RUNNER__POD__CPU_LIMIT_M", "HSE_RUNNER__POD__MEMORY_LIMIT_MI", "HSE_RUNNER__POD__NAMESPACE"} <= names
+    assert [n for n in names if n.removeprefix("HSE_RUNNER__") not in _paths(RunnerConfig)] == []

@@ -5,6 +5,7 @@ from __future__ import annotations
 from dishka import AsyncContainer, Provider, Scope, provide
 
 from hse_doc_studio.api.config import ServerConfig, settings
+from hse_doc_studio.api.config.runner_install import RunnerInstallConfig
 from hse_doc_studio.api.runner_install import render_install_script
 from hse_doc_studio.core.ai import IAIModelLister
 from hse_doc_studio.core.ai_runtime import IHardwareProbe
@@ -32,6 +33,8 @@ from hse_doc_studio.core.runner_install import (
     PodResources,
     ResourceDefaults,
 )
+from hse_doc_studio.core.runner_install.resources import BUILD_EPHEMERAL, RUNNER_EPHEMERAL
+from hse_doc_studio.core.runner_isolation import IClusterStateReader, InstallFromUiFacts
 from hse_doc_studio.core.signatures.key_policy import IServerKeyCounter
 from hse_doc_studio.core.storage.usage import IStorageUsageReader
 from hse_doc_studio.core.uow import IUnitOfWork
@@ -50,6 +53,7 @@ from hse_doc_studio.infra.model_servers.docker_runtime import DockerContainerRun
 from hse_doc_studio.infra.model_servers.host_resources import LocalHostResources
 from hse_doc_studio.infra.model_servers.provider_registry import ContainerProviderRegistry
 from hse_doc_studio.infra.model_servers.ssh_runtime import SshRuntimeFactory, build_remote
+from hse_doc_studio.infra.runner_install.cluster_state import KubeClusterStateReader
 from hse_doc_studio.infra.runner_install.docker_host import DockerLocalHost
 from hse_doc_studio.infra.runner_install.kube_host import KubeLocalHost
 from hse_doc_studio.infra.runner_install.ssh_connector import AsyncSshConnector
@@ -85,6 +89,11 @@ from hse_doc_studio.use_cases.admin.ops_runners import (
 from hse_doc_studio.use_cases.admin.ops_services import ServicesOverviewUC
 from hse_doc_studio.use_cases.admin.ops_signing import GetSigningPolicyUC, UpdateSigningPolicyUC
 from hse_doc_studio.use_cases.admin.ops_storage import GetStorageUsageUC, ListStorageOwnersUC
+from hse_doc_studio.use_cases.admin.runner_isolation import (
+    RunnerDeploymentUC,
+    RunnerIsolationSettings,
+    RunnerIsolationUC,
+)
 from hse_doc_studio.use_cases.identity.smtp_settings import SmtpSettingsService
 from hse_doc_studio.use_cases.jobs.personal_settings import InstancePersonalRunnerSettings
 from hse_doc_studio.use_cases.jobs.queue_service import JobQueueService
@@ -95,6 +104,26 @@ from hse_doc_studio.use_cases.runner_install import (
     SshInstallService,
     SshSessionStore,
 )
+
+
+def _install_defaults(cfg: RunnerInstallConfig) -> ResourceDefaults:
+    """Лимиты раннера из админки и его подов сборки по умолчанию (Helm `runner.installFromUi`)."""
+    return ResourceDefaults(
+        runner=PodResources(
+            cpu_request=cfg.kubernetes_runner_cpu_request,
+            cpu_limit=cfg.kubernetes_runner_cpu_limit,
+            memory_request=cfg.kubernetes_runner_memory_request,
+            memory_limit=cfg.kubernetes_runner_memory_limit,
+        ),
+        build=PodResources(
+            cpu_request=cfg.kubernetes_build_cpu_request,
+            cpu_limit=cfg.kubernetes_build_cpu_limit,
+            memory_request=cfg.kubernetes_build_memory_request,
+            memory_limit=cfg.kubernetes_build_memory_limit,
+        ),
+        max_cpu=cfg.kubernetes_resource_max_cpu,
+        max_memory=cfg.kubernetes_resource_max_memory,
+    )
 
 
 class ServerAdminOpsProvider(Provider):
@@ -365,6 +394,49 @@ class ServerAdminOpsProvider(Provider):
     ) -> ModelServersUC:
         return ModelServersUC(service, audit, vault, uow)
 
+    # ── изоляция раннеров (экран технической информации) ────────────────
+
+    @provide
+    def get_runner_isolation_settings(self) -> RunnerIsolationSettings:
+        cfg = settings.runner_install
+        cluster = settings.runner_cluster
+        declared = cluster.declared
+        return RunnerIsolationSettings(
+            declared=declared,
+            install=InstallFromUiFacts(
+                enabled=cfg.kubernetes_enabled,
+                service_account=cfg.kubernetes_service_account,
+                storage_class=cfg.kubernetes_storage_class,
+                storage_size=cfg.kubernetes_storage_size,
+                defaults=_install_defaults(cfg),
+                runner_ephemeral=RUNNER_EPHEMERAL,
+                build_ephemeral=BUILD_EPHEMERAL,
+                namespace=declared.release_namespace or None if declared is not None else None,
+            ),
+            read_live=cluster.read_live,
+            studio_version=settings.get_app_version(),
+        )
+
+    @provide
+    def get_cluster_state_reader(self, isolation: RunnerIsolationSettings) -> IClusterStateReader:
+        return KubeClusterStateReader(
+            read_live=isolation.read_live,
+            install_enabled=isolation.install.enabled,
+            namespace=isolation.install.namespace,
+        )
+
+    @provide
+    def get_runner_deployment_uc(
+        self, runners: IRunnerRepository, reader: IClusterStateReader, isolation: RunnerIsolationSettings
+    ) -> RunnerDeploymentUC:
+        return RunnerDeploymentUC(runners, reader, isolation)
+
+    @provide
+    def get_runner_isolation_uc(
+        self, reader: IClusterStateReader, isolation: RunnerIsolationSettings
+    ) -> RunnerIsolationUC:
+        return RunnerIsolationUC(reader, isolation)
+
     @provide
     def get_install_job_store(self) -> InstallJobStore:
         return InstallJobStore()
@@ -381,22 +453,7 @@ class ServerAdminOpsProvider(Provider):
                 service_account=cfg.kubernetes_service_account,
                 storage_class=cfg.kubernetes_storage_class,
                 storage_size=cfg.kubernetes_storage_size,
-                resources=ResourceDefaults(
-                    runner=PodResources(
-                        cpu_request=cfg.kubernetes_runner_cpu_request,
-                        cpu_limit=cfg.kubernetes_runner_cpu_limit,
-                        memory_request=cfg.kubernetes_runner_memory_request,
-                        memory_limit=cfg.kubernetes_runner_memory_limit,
-                    ),
-                    build=PodResources(
-                        cpu_request=cfg.kubernetes_build_cpu_request,
-                        cpu_limit=cfg.kubernetes_build_cpu_limit,
-                        memory_request=cfg.kubernetes_build_memory_request,
-                        memory_limit=cfg.kubernetes_build_memory_limit,
-                    ),
-                    max_cpu=cfg.kubernetes_resource_max_cpu,
-                    max_memory=cfg.kubernetes_resource_max_memory,
-                ),
+                resources=_install_defaults(cfg),
             ),
         }
         return RunnerInstallService(

@@ -19,7 +19,9 @@
       "owner": null,
       "host_kind": "cli",
       "ai_endpoints": [],
-      "last_seen_ip": null
+      "last_seen_ip": null,
+      "reinstall": [],
+      "deployment_reported": false
     },
     {
       "id": "4f1c2b3a5d6e47f89a0b1c2d3e4f5a6b",
@@ -47,7 +49,9 @@
       "ai_endpoints": [
         "ollama"
       ],
-      "last_seen_ip": "203.0.113.7"
+      "last_seen_ip": "203.0.113.7",
+      "reinstall": [],
+      "deployment_reported": false
     },
     {
       "id": "5a4b3c2d1e0f49382716a5b4c3d2e1f0",
@@ -72,7 +76,9 @@
       },
       "host_kind": "cli",
       "ai_endpoints": [],
-      "last_seen_ip": null
+      "last_seen_ip": null,
+      "reinstall": [],
+      "deployment_reported": false
     }
   ],
   "total": 3,

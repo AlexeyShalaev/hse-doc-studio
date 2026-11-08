@@ -255,6 +255,13 @@ async def test__kube_install__token_lives_only_in_the_secret_and_pod_is_restrict
     assert env["HSE_RUNNER__TOKEN"]["valueFrom"]["secretKeyRef"] == {"name": "hse-runner-ab12cd-token", "key": "token"}
     assert env["HSE_RUNNER__EXECUTOR"]["value"] == "kubernetes"
     assert env["HSE_RUNNER__K8S__NAMESPACE"]["value"] == "studio"
+    # Свой под из downward API для отчёта в админку: лимиты целыми милликорами и МиБ.
+    assert env["HSE_RUNNER__POD__CPU_LIMIT_M"]["valueFrom"]["resourceFieldRef"] == {
+        "containerName": "runner",
+        "resource": "limits.cpu",
+        "divisor": "1m",
+    }
+    assert env["HSE_RUNNER__POD__SERVICE_ACCOUNT"]["valueFrom"]["fieldRef"] == {"fieldPath": "spec.serviceAccountName"}
     assert bodies["persistentvolumeclaims"]["spec"]["resources"] == {"requests": {"storage": "8Gi"}}  # type: ignore[index]
 
 

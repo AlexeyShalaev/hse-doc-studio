@@ -7,6 +7,8 @@ import {
   AdminJobSchema as WireJobSchema,
   AdminQueueSummarySchema,
   AdminQuotasSchema,
+  AdminRunnerDeploymentSchema,
+  AdminRunnerIsolationSchema,
   AdminRunnerPageSchema,
   AdminRunnerRotatedSchema,
   AdminRunnerSummarySchema,
@@ -28,6 +30,8 @@ import {
   type AdminJobPage,
   type AdminQueueSummary,
   type AdminQuotas,
+  type AdminRunnerDeployment,
+  type AdminRunnerIsolation,
   type AdminRunner,
   type AdminRunnerRotated,
   type AdminRunnerSummary,
@@ -95,6 +99,16 @@ export const opsApi = {
   revokeRunner: async (id: string): Promise<void> => {
     await adminClient.delete(`/runners/${enc(id)}`, quiet);
   },
+  /** Как раннер развёрнут: его отчёт и Deployment из кластера. */
+  runnerDeployment: (id: string): Promise<AdminRunnerDeployment> =>
+    adminClient
+      .get(`/runners/${enc(id)}/deployment`, quiet)
+      .then(parseResp(AdminRunnerDeploymentSchema)),
+  /** Изоляция раннеров в кластере: конфигурация Helm и проверка в кластере. */
+  runnerIsolation: (): Promise<AdminRunnerIsolation> =>
+    adminClient
+      .get("/runners/isolation", quiet)
+      .then(parseResp(AdminRunnerIsolationSchema)),
 
   tokens: (
     params: ListRequestParams,

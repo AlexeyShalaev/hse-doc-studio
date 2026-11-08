@@ -50,6 +50,7 @@ from hse_doc_studio.core.jobs.admin import (
 from hse_doc_studio.core.jobs.errors import RunnerNotFoundError
 from hse_doc_studio.core.jobs.runners import RegistrationToken, Runner, RunnerOwnerKind
 from hse_doc_studio.core.listing import SortKey
+from hse_doc_studio.core.runner_isolation import reinstall_reasons
 from hse_doc_studio.use_cases.admin.ops_runners import (
     ListRegistrationTokensUC,
     ListRunnersUC,
@@ -104,6 +105,9 @@ def _runner_info(
         host_kind=runner.host_kind.value,
         ai_endpoints=[endpoint.name for endpoint in runner.ai_endpoints],
         last_seen_ip=runner.last_seen_ip,
+        # Без живого Deployment: в списке только версия и отчёт раннера, точнее в его карточке.
+        reinstall=[reason.value for reason in reinstall_reasons(runner, None)] if runner.revoked_at is None else [],
+        deployment_reported=runner.deployment is not None,
     )
 
 

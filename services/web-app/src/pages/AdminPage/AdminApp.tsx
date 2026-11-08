@@ -277,7 +277,7 @@ export const AdminApp = () => {
                 width={width}
                 ns={
                   part === "runners"
-                    ? ["ops", part, "runnerInstall"]
+                    ? ["ops", part, "runnerInstall", "runnerIsolation"]
                     : ["ops", part]
                 }
               >

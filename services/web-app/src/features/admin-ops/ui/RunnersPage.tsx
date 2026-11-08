@@ -8,6 +8,7 @@ import { LONG_WAIT_S } from "../lib/jobs";
 import { liveRunners } from "../lib/runnerStatus";
 import { Queue } from "./Queue";
 import { AutoscalePanel } from "./AutoscalePanel";
+import { ClusterIsolationPanel } from "./ClusterIsolationPanel";
 import { InstallRunnerDialog } from "./InstallRunnerDialog";
 import { Runners } from "./Runners";
 import { SshInstallDialog } from "./SshInstallDialog";
@@ -153,6 +154,7 @@ export const RunnersPage = ({
                 setTab("queue");
               }}
             />
+            <ClusterIsolationPanel />
             <AutoscalePanel />
           </>
         ) : (

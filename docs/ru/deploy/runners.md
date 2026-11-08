@@ -271,6 +271,7 @@ spec:
 | `HSE_RUNNER__K8S__RUNTIME_CLASS_NAME` | RuntimeClass подов сборки, например `gvisor` |
 | `HSE_RUNNER__K8S__TEX_CACHE_CLAIM` | необязательный PVC с кэшем шрифтов TeX |
 | `HSE_RUNNER__K8S__FONTS_CLAIM` | необязательный PVC со шрифтами (`.ttf`, `.otf`, `.ttc`), монтируется в поды сборки только для чтения |
+| `HSE_RUNNER__POD__NAMESPACE`, `…NAME`, `…SERVICE_ACCOUNT`, `…CPU_REQUEST_M`, `…CPU_LIMIT_M`, `…MEMORY_REQUEST_MI`, `…MEMORY_LIMIT_MI`, `…EPHEMERAL_REQUEST_MI`, `…EPHEMERAL_LIMIT_MI` | свой под из downward API (милликоры и МиБ); раннер только сообщает это в админку, на работу не влияет. Чарт и установка из админки задают их сами ([что видно в админке](runner-isolation.md)) |
 
 В Helm-чарте это `runner.executor: kubernetes` и блок `runner.kubernetes` (см. README чарта): чарт создаёт ServiceAccount раннера, Role только на поды своего namespace (`pods`, `pods/log`, `pods/exec`), NetworkPolicy, запрещающую подам сборки сеть, и том данных раннера. Если сборка падает с кодом `image_missing`, узел не смог скачать образ TeX; `build_backend_unavailable` значит, что Kubernetes отказал в поде (права, квота, нет подходящего узла), подробность в журнале задачи. Лимиты, сетевые политики, квота и проверка: [Изоляция и лимиты раннеров](runner-isolation.md). Устройство и развилки: `docs/design/k8s-runner.md`.
 

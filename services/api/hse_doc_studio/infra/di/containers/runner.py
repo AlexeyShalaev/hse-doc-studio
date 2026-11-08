@@ -16,7 +16,7 @@ from hse_doc_studio import __version__
 from hse_doc_studio.core.jobs.enums import JobKind
 from hse_doc_studio.core.jobs.outputs import IJobOutputs
 from hse_doc_studio.core.jobs.relay import RELAY_TAG
-from hse_doc_studio.core.jobs.runners import DeclaredAiEndpoint
+from hse_doc_studio.core.jobs.runners import DeclaredAiEndpoint, RunnerHostKind
 from hse_doc_studio.core.language_check import ILanguageCheckService
 from hse_doc_studio.core.office import IOfficeConvertService
 from hse_doc_studio.infra.checks.runner import CheckRunner
@@ -39,6 +39,7 @@ from hse_doc_studio.infra.runner.capabilities import detect_tags
 from hse_doc_studio.infra.runner.client import RunnerClient
 from hse_doc_studio.infra.runner.compile_executor import CompileJobExecutor, RoutingJobExecutor
 from hse_doc_studio.infra.runner.config import BuildExecutorKind, RunnerConfig
+from hse_doc_studio.infra.runner.deployment import collect_deployment
 from hse_doc_studio.infra.runner.handler_executor import HandlerJobExecutor, JobBlobFetcher
 from hse_doc_studio.infra.runner.identity import RunnerIdentityStore
 from hse_doc_studio.infra.runner.language_check import NoLanguageCheck
@@ -301,6 +302,8 @@ class RunnerProvider(Provider):
                 host_kind=config.host_kind,
                 ai_endpoints=declared,
                 gate=self._gate,
+                # Отчёт о развёртывании для админки шлёт только консольный раннер: у локальной Студии он ни к чему.
+                deployment=partial(collect_deployment, config) if config.host_kind is RunnerHostKind.cli else None,
             ),
             observer=self._observer,
         )
