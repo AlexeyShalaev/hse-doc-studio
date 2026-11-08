@@ -5,8 +5,8 @@
       "date": "2026-11-08",
       "notes": [
         {
-          "ru": "Сведения о раннерах в админке: как развёрнут каждый раннер (Docker, Kubernetes, процесс), его лимиты по CPU, памяти и диску и панель изоляции кластера. Панель показывает заявленные в Helm политики, а при включённом runner.isolationInfo.readCluster ещё и то, что реально есть в кластере: NetworkPolicy, ResourceQuota, LimitRange и метки Pod Security.",
-          "en": "Runner details in the admin area: how each runner is deployed (Docker, Kubernetes, process), its CPU, memory and storage limits, and a cluster isolation panel. The panel shows the policies declared in Helm and, with runner.isolationInfo.readCluster enabled, what actually exists in the cluster: NetworkPolicy, ResourceQuota, LimitRange and Pod Security labels."
+          "ru": "Сведения о раннерах в админке: где работает каждый раннер (под Kubernetes, контейнер или хост) и чем он собирает документы (Docker или Kubernetes), его лимиты по CPU, памяти и диску и панель изоляции кластера. Панель показывает заявленные в Helm политики, а при включённом runner.isolationInfo.readCluster ещё и то, что реально есть в кластере: NetworkPolicy, ResourceQuota, LimitRange и метки Pod Security.",
+          "en": "Runner details in the admin area: where each runner runs (Kubernetes pod, container or host) and how it builds documents (Docker or Kubernetes), its CPU, memory and storage limits, and a cluster isolation panel. The panel shows the policies declared in Helm and, with runner.isolationInfo.readCluster enabled, what actually exists in the cluster: NetworkPolicy, ResourceQuota, LimitRange and Pod Security labels."
         },
         {
           "ru": "MCP: create_project в облаке больше не требует папку, новый инструмент set_project_people задаёт руководителя и участников проекта (с записью в журнал аудита), а clone_cloud_project в локальной Студии клонирует проект из облака.",
