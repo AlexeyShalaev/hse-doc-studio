@@ -1,12 +1,12 @@
 import { useTranslation } from "react-i18next";
 import { AlertTriangle, Ban, RefreshCw } from "lucide-react";
-import { PRE_LAUNCH_CODES } from "@entities/compile";
+import { PRE_LAUNCH_CODES, isInterrupted } from "@entities/compile";
 import type { CompileError } from "@entities/document";
 
 export type CompileFailureNoticeProps = {
   /** Причина от сервера; null у записей старых версий, где причина не сохранялась. */
   error: CompileError | null;
-  /** Сборка упала или её отменили. */
+  /** Сборка упала или её отменили (в том числе прервал перезапуск сервера: код `interrupted`). */
   status: "failure" | "cancelled";
   /** Есть ли в журнале вывод самой сборки (не только служебные строки). */
   hasOutput: boolean;
@@ -27,6 +27,7 @@ export const CompileFailureNotice = ({
 }: CompileFailureNoticeProps) => {
   const { t } = useTranslation("documents");
   const cancelled = status === "cancelled";
+  const interrupted = isInterrupted(status, error?.code);
   const color = cancelled ? "var(--fg-2)" : "var(--c-err)";
   const Icon = cancelled ? Ban : AlertTriangle;
   const preLaunch = error !== null && PRE_LAUNCH_CODES.has(error.code);
@@ -47,9 +48,11 @@ export const CompileFailureNotice = ({
       <Icon size={18} style={{ color, flexShrink: 0, marginTop: 1 }} />
       <div className="flex flex-col" style={{ gap: 3, minWidth: 0, flex: 1 }}>
         <strong style={{ fontSize: "0.8125rem" }}>
-          {cancelled
-            ? t("compile.failure.cancelledTitle")
-            : t("compile.failure.title")}
+          {interrupted
+            ? t("compile.failure.interruptedTitle")
+            : cancelled
+              ? t("compile.failure.cancelledTitle")
+              : t("compile.failure.title")}
           {error && (
             <span
               className="mono"
@@ -85,7 +88,7 @@ export const CompileFailureNotice = ({
             {error.detail}
           </span>
         )}
-        {!hasOutput && (
+        {!hasOutput && !interrupted && (
           <span
             data-testid="compile-failure-no-output"
             style={{
