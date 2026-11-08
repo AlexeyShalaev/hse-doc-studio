@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router";
 import { ClipboardCheck } from "lucide-react";
@@ -13,6 +14,7 @@ import {
   useSubmissions,
 } from "@entities/submission";
 import { getFormIcon } from "@features/form-fill";
+import { SignSubmissionDialog } from "@features/signature-stamper";
 import { pickLocalized } from "@shared/lib";
 import { Spinner } from "@shared/ui/Spinner";
 import { useCheckpointReadiness } from "../lib";
@@ -69,6 +71,12 @@ export const CheckpointView = ({
   );
 
   const profile = (profiles ?? []).find((p) => p.id === profileId);
+  const [isSigning, setIsSigning] = useState(false);
+  // Свои слоты точки, которые ещё не подписаны: из плана, где сервер уже
+  // решил, какие слоты принадлежат персоне смотрящего.
+  const waitingForMe = (signaturePlan?.docs ?? [])
+    .flatMap((doc) => doc.slots)
+    .filter((slot) => slot.is_mine && slot.status !== "signed").length;
 
   if (isProfilesLoading) {
     return (
@@ -153,6 +161,47 @@ export const CheckpointView = ({
         readiness={readiness}
         isPacked={isPacked}
       />
+
+      {waitingForMe > 0 && (
+        <div
+          className="flex items-center"
+          style={{ gap: "0.75rem", marginTop: "1rem" }}
+        >
+          <span style={{ fontSize: "0.8125rem", color: "var(--accent)" }}>
+            {t("signatureStamper:signSubmission.waiting", {
+              count: waitingForMe,
+            })}
+          </span>
+          <button
+            type="button"
+            className="btn primary sm"
+            onClick={() => {
+              setIsSigning(true);
+            }}
+          >
+            {t("signatureStamper:signSubmission.title")}
+          </button>
+        </div>
+      )}
+      {isSigning && (
+        <SignSubmissionDialog
+          projectId={project.id}
+          profileId={profileId}
+          author={isTeam ? selectedAuthorSlug : null}
+          lang={lang}
+          docName={(docId) => {
+            const doc = documentsById.get(docId);
+            return getDocMeta(
+              docId,
+              doc ? { ...doc, owner_name: null } : undefined,
+              lang,
+            ).name;
+          }}
+          onClose={() => {
+            setIsSigning(false);
+          }}
+        />
+      )}
 
       {/* Точка и её упаковка — один экран. Раньше состав показывался здесь, а
           собрать пакет можно было только на отдельной странице, которая

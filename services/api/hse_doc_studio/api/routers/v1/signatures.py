@@ -13,6 +13,7 @@ from hse_doc_studio.api.dishka_route import SafeDishkaRoute
 from hse_doc_studio.api.schemas.signature import (
     AttachDetachedSignatureResponse,
     DetachedSignatureResponse,
+    EmbeddedSignatureResponse,
     FreezePdfResponse,
     FrozenPdfResponse,
     LevelRequest,
@@ -510,9 +511,51 @@ async def sign_detached_in_studio(
         )
     except NotFoundError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except PermissionError as exc:
+        raise HTTPException(status_code=403, detail=str(exc)) from exc
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     return _map_attached(AttachDetachedSignatureOutput(signature=result.signature))
+
+
+@router.post(
+    "/projects/{project_id}/docs/{doc_id}/embedded/{slot_id}/sign",
+    response_model=EmbeddedSignatureResponse,
+)
+async def sign_embedded_in_studio(
+    project_id: UUID,
+    doc_id: str,
+    slot_id: str,
+    body: SignInStudioRequest,
+    uc: FromDishka[SignInStudioUC],
+) -> EmbeddedSignatureResponse:
+    """Встроенная подпись PAdES ключом Студии: дописывается поверх зафиксированного PDF (signature-plan.md, 4)."""
+    try:
+        result = await uc.sign_pades(
+            SignInStudioInput(
+                project_id=project_id,
+                doc_id=doc_id,
+                slot_id=slot_id,
+                identity_id=body.identity_id,
+                passphrase=body.passphrase,
+            )
+        )
+    except NotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except PermissionError as exc:
+        raise HTTPException(status_code=403, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    sig = result.signature
+    return EmbeddedSignatureResponse(
+        field_name=sig.field_name,
+        verdict=sig.verdict,
+        signer=sig.signer,
+        signer_id=sig.signer_id,
+        signed_at=sig.signed_at,
+        revision_size=sig.revision_size,
+        notes=list(sig.notes),
+    )
 
 
 @router.get("/projects/{project_id}/docs/{doc_id}/detached/{slot_id}/file")

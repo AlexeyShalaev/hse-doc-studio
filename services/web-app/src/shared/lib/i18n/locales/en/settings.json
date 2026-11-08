@@ -357,7 +357,11 @@
     "forbiddenAltTitle": "How to sign a document",
     "forbiddenAlt1": "Sign in the browser with CryptoPro: the key stays with you.",
     "forbiddenAlt2": "Upload a ready signature made outside Studio.",
-    "forbiddenAsk": "Need to keep a key on the server? Ask the administrator to change the policy."
+    "forbiddenAsk": "Need to keep a key on the server? Ask the administrator to change the policy.",
+    "defaultKey": "Default key",
+    "defaultKeyAuto": "The only key (picked automatically)",
+    "defaultKeyNone": "Not chosen",
+    "defaultKeyHint": "“Sign the submission” signs your slots with it, and the plate takes the signer data from it. The passphrase is never stored."
   },
   "disk": {
     "title": "Disk",

@@ -66,7 +66,7 @@ from hse_doc_studio.core.repositories import (
 )
 from hse_doc_studio.core.services import ProjectTemplateService
 from hse_doc_studio.core.signatures.key_policy import ISigningKeyPolicy
-from hse_doc_studio.core.signatures.ports import ISignerScope
+from hse_doc_studio.core.signatures.ports import ISignatureAudit, ISignerScope
 from hse_doc_studio.core.storage import IBlobStore, IObjectStore
 from hse_doc_studio.core.storage.manifest import IBlobRegistry, IBlobUploader, ILiveBlobSource, ManifestLimits
 from hse_doc_studio.core.submission_archive import ISubmissionArchive, ISubmissionAudit
@@ -118,6 +118,7 @@ from hse_doc_studio.infra.projects.volume import LocalDiskProjectVolume
 from hse_doc_studio.infra.secrets.key_store import KeyFileStore
 from hse_doc_studio.infra.secrets.server_keys import server_key_store
 from hse_doc_studio.infra.sharing.policy_reader import PostgresSharingPolicyReader
+from hse_doc_studio.infra.signatures.audit import ServerSignatureAudit
 from hse_doc_studio.infra.signatures.signer_scope import ServerSignerScope
 from hse_doc_studio.infra.storage.blob_uploader import ManifestBlobUploader
 from hse_doc_studio.infra.storage.blobs import ObjectBlobStore
@@ -327,6 +328,10 @@ class ServerPersistenceProvider(Provider):
     @provide(override=True)
     def get_signer_scope(self, acl: PostgresProjectAclRepository) -> ISignerScope:
         return ServerSignerScope(acl)
+
+    @provide(override=True)
+    def get_signature_audit(self, audit: IAuditLog, uow: IUnitOfWork) -> ISignatureAudit:
+        return ServerSignatureAudit(audit, uow)
 
     @provide
     def get_project_browser(self, sessions: SessionProvider, acl: PostgresProjectAclRepository) -> IProjectBrowser:

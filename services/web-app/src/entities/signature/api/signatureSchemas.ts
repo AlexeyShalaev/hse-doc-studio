@@ -202,3 +202,61 @@ export const SignaturePlanSchema = z.object({
   waiting_for_me: z.number().default(0),
   docs: z.array(DocPlanSchema),
 });
+
+// «Подписать комплект»: предпросмотр (что будет зафиксировано, чьи подписи
+// сбросятся, какие свои слоты и чем подпишутся) и сама подпись.
+export const SignPreviewSchema = z.object({
+  profile_id: z.string(),
+  key: z
+    .object({
+      id: z.string(),
+      label: z.string(),
+      kind: z.string(),
+      protected: z.boolean(),
+      auto: z.boolean(),
+      signer: z.string(),
+    })
+    .nullable(),
+  needs_passphrase: z.boolean(),
+  to_sign: z.number(),
+  docs: z.array(
+    z.object({
+      doc_id: z.string(),
+      token: z.string(),
+      needs_freeze: z.boolean(),
+      can_freeze: z.boolean(),
+      resets: z.array(
+        z.object({
+          slot_id: z.string(),
+          label: z.record(z.string(), z.string()),
+          signer: z.string(),
+          method: z.string(),
+        }),
+      ),
+      slots: z.array(
+        z.object({
+          slot_id: z.string(),
+          label: z.record(z.string(), z.string()),
+          method: SignMethodSchema,
+          status: SlotStatusSchema,
+          action: z.string(),
+          blocker: z.string().default(""),
+        }),
+      ),
+      blocker: z.string().default(""),
+    }),
+  ),
+});
+
+export const SignSubmissionResultSchema = z.object({
+  frozen_docs: z.array(z.string()),
+  results: z.array(
+    z.object({
+      doc_id: z.string(),
+      slot_id: z.string(),
+      ok: z.boolean(),
+      message: z.string().default(""),
+    }),
+  ),
+  plan: SignaturePlanSchema,
+});

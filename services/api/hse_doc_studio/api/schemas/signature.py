@@ -159,3 +159,15 @@ class AttachDetachedSignatureResponse(BaseModel):
 class SignInStudioRequest(BaseModel):
     identity_id: UUID
     passphrase: str = ""
+
+
+class EmbeddedSignatureResponse(BaseModel):
+    """Встроенная подпись PAdES слота: поле в PDF и что о ней сказала проверка."""
+
+    field_name: str
+    verdict: DetachedVerdict
+    signer: str
+    signer_id: str
+    signed_at: str | None = None
+    revision_size: int
+    notes: list[str] = []

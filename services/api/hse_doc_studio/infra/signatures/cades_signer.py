@@ -59,7 +59,8 @@ def sign_detached(data_path: Path, sig_path: Path, key_dir: Path) -> None:
         pkcs7.PKCS7SignatureBuilder()
         .set_data(data)
         .add_signer(cert, private_key, hashes.SHA256())
-        .sign(serialization.Encoding.DER, [pkcs7.PKCS7Options.DetachedSignature])
+        # Binary: без него cryptography канонизирует переводы строк как в S/MIME-тексте, и подпись PDF не сходится.
+        .sign(serialization.Encoding.DER, [pkcs7.PKCS7Options.DetachedSignature, pkcs7.PKCS7Options.Binary])
     )
 
     sig_path.parent.mkdir(parents=True, exist_ok=True)

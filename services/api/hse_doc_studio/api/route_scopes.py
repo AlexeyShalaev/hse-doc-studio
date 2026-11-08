@@ -252,6 +252,8 @@ ROUTE_SCOPES: Mapping[RouteKey, RouteScope] = {
     ("POST", "/data/import"): _ADM,
     # Электронная подпись
     ("GET", "/signing-identities"): _A,
+    ("GET", "/signing-identities/default"): _A,
+    ("PUT", "/signing-identities/default"): _A,
     ("POST", "/signing-identities/self-signed"): _A,
     ("POST", "/signing-identities/import-pkcs12"): _A,
     ("DELETE", "/signing-identities/{identity_id}"): _A,
@@ -591,6 +593,8 @@ PER_USER_PENDING: frozenset[RouteKey] = frozenset(
         "/signing-identities/self-signed",
         "/signing-identities/import-pkcs12",
         "/signing-identities/{identity_id}",
+        # Ключ по умолчанию лежит в настройках пользователя (user_settings).
+        "/signing-identities/default",
         # Git-доступы лежат в Postgres у владельца; проект пользуется ими по привязке.
         "/git/credentials",
         "/git/credentials/{credential_id}",

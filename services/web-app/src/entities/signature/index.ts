@@ -1,4 +1,5 @@
 export { signatureApi, signatureDownloadUrls } from "./api/signatureApi";
+export type { SignSubmissionBody } from "./api/signatureApi";
 export {
   signatureKeys,
   useAttachDetachedSignature,
@@ -13,6 +14,8 @@ export {
   useTrustRoot,
   useSignaturesState,
   useSignaturePlan,
+  usePreviewSignSubmission,
+  useSignSubmission,
   useSignDetachedInStudio,
   useUnfreezePdf,
   useUpdateSignaturePlacement,

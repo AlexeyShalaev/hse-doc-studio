@@ -16,7 +16,13 @@ from hse_doc_studio.core.repositories import (
     ITemplateRepository,
 )
 from hse_doc_studio.core.services import SignatureSlotService
-from hse_doc_studio.core.signatures.plan import SlotModeConflictError, profile_restrictions, slot_mode_conflict
+from hse_doc_studio.core.signatures.plan import (
+    CRYPTO_METHODS,
+    SlotModeConflictError,
+    method_of,
+    profile_restrictions,
+    slot_mode_conflict,
+)
 from hse_doc_studio.core.value_objects import SignatureSlot
 from hse_doc_studio.use_cases.projects.get_project import GetProjectInput, GetProjectUC
 
@@ -104,17 +110,17 @@ class UpdateSlotConfigUC:
         state = self._signature_repo.get_state(project.folder)
         existing = state.slots.get(inp.slot_id)
 
-        keeps_mode = bool(inp.signing_identity_id) or inp.sign_mode is SignMode.detached_text
+        crypto = method_of(inp.sign_mode) in CRYPTO_METHODS
         new_slot = SignatureSlot(
             png_path=existing.png_path if existing else None,
             natural_width_px=existing.natural_width_px if existing else None,
             natural_height_px=existing.natural_height_px if existing else None,
             signing_identity_id=inp.signing_identity_id,
-            # `detached_text` needs no identity: the signature file is produced elsewhere or
-            # made later with a key chosen in the signing dialog.
-            sign_mode=inp.sign_mode if keeps_mode else SignMode.image,
-            # Reason only carries meaning for crypto modes; cleared with identity.
-            sign_reason=inp.sign_reason if inp.signing_identity_id else "",
+            # The key is chosen when signing (the default key of the signer), so no mode needs
+            # an identity here (docs/design/signature-plan.md, section 7).
+            sign_mode=inp.sign_mode,
+            # Reason only carries meaning for crypto modes (it goes into the PAdES signature).
+            sign_reason=inp.sign_reason if crypto else "",
             signer=existing.signer if existing else None,
         )
         new_slots = dict(state.slots)

@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
-from pydantic import BaseModel
+from uuid import UUID
+
+from pydantic import BaseModel, Field
 
 from hse_doc_studio.core.enums import DetachedVerdict, SignMode
 from hse_doc_studio.core.signatures.plan import (
@@ -14,6 +16,7 @@ from hse_doc_studio.core.signatures.plan import (
     SlotStatus,
     VisibleMark,
 )
+from hse_doc_studio.use_cases.signatures.sign_submission import SignSubmissionOutput, SignSubmissionPreview
 
 
 class SlotCheckResponse(BaseModel):
@@ -131,4 +134,119 @@ def map_plan(plan: SignaturePlan) -> SignaturePlanResponse:
         crypto_signed=sum(1 for s in crypto if s.status is SlotStatus.signed),
         waiting_for_me=plan.waiting_for_me,
         docs=[_map_doc(d) for d in plan.docs],
+    )
+
+
+class SignSubmissionRequest(BaseModel):
+    profile_id: str
+    author: str | None = None
+    identity_id: UUID | None = None
+    # Пароль ключа OpenPGP: только на время подписи, не сохраняется и не пишется в лог.
+    passphrase: str = Field(default="", max_length=500, repr=False)
+    confirm_reset: bool = False
+    expected: dict[str, str] | None = None
+
+
+class KeyInfoResponse(BaseModel):
+    id: UUID
+    label: str
+    kind: str
+    protected: bool
+    auto: bool
+    signer: str
+
+
+class ResetItemResponse(BaseModel):
+    slot_id: str
+    label: dict[str, str]
+    signer: str
+    method: str
+
+
+class SlotActionResponse(BaseModel):
+    slot_id: str
+    label: dict[str, str]
+    method: SignMethod
+    status: SlotStatus
+    action: str
+    blocker: str = ""
+
+
+class DocPreviewResponse(BaseModel):
+    doc_id: str
+    token: str
+    needs_freeze: bool
+    can_freeze: bool
+    resets: list[ResetItemResponse]
+    slots: list[SlotActionResponse]
+    blocker: str = ""
+
+
+class SignPreviewResponse(BaseModel):
+    profile_id: str
+    key: KeyInfoResponse | None
+    needs_passphrase: bool
+    to_sign: int
+    docs: list[DocPreviewResponse]
+
+
+class SlotResultResponse(BaseModel):
+    doc_id: str
+    slot_id: str
+    ok: bool
+    message: str = ""
+
+
+class SignSubmissionResponse(BaseModel):
+    frozen_docs: list[str]
+    results: list[SlotResultResponse]
+    plan: SignaturePlanResponse
+
+
+def map_preview(preview: SignSubmissionPreview) -> SignPreviewResponse:
+    key = preview.key
+    return SignPreviewResponse(
+        profile_id=preview.profile_id,
+        key=KeyInfoResponse(
+            id=key.id, label=key.label, kind=key.kind, protected=key.protected, auto=key.auto, signer=key.signer
+        )
+        if key is not None
+        else None,
+        needs_passphrase=preview.needs_passphrase,
+        to_sign=preview.to_sign,
+        docs=[
+            DocPreviewResponse(
+                doc_id=d.doc_id,
+                token=d.token,
+                needs_freeze=d.needs_freeze,
+                can_freeze=d.can_freeze,
+                resets=[
+                    ResetItemResponse(slot_id=r.slot_id, label=r.label, signer=r.signer, method=r.method)
+                    for r in d.resets
+                ],
+                slots=[
+                    SlotActionResponse(
+                        slot_id=s.slot_id,
+                        label=s.label,
+                        method=s.method,
+                        status=s.status,
+                        action=s.action,
+                        blocker=s.blocker,
+                    )
+                    for s in d.slots
+                ],
+                blocker=d.blocker,
+            )
+            for d in preview.docs
+        ],
+    )
+
+
+def map_results(out: SignSubmissionOutput, plan: SignaturePlan) -> SignSubmissionResponse:
+    return SignSubmissionResponse(
+        frozen_docs=list(out.frozen_docs),
+        results=[
+            SlotResultResponse(doc_id=r.doc_id, slot_id=r.slot_id, ok=r.ok, message=r.message) for r in out.results
+        ],
+        plan=map_plan(plan),
     )

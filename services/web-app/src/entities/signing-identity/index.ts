@@ -15,8 +15,11 @@ export {
   CreateSelfSignedRequestSchema,
 } from "./api/signingIdentitySchemas";
 export { signingIdentityApi, publicKeyUrl } from "./api/signingIdentityApi";
+export type { DefaultKey } from "./api/signingIdentityApi";
 export {
   useSigningIdentities,
+  useDefaultSigningKey,
+  useSetDefaultSigningKey,
   useCreateSelfSigned,
   useImportPkcs12,
   useDeleteSigningIdentity,

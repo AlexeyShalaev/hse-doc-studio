@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { UpdatePlacementRequest } from "@shared/api/types";
-import { signatureApi } from "./signatureApi";
+import { signatureApi, type SignSubmissionBody } from "./signatureApi";
 
 type SignaturesState = Awaited<ReturnType<typeof signatureApi.getState>>;
 type Placement = Awaited<ReturnType<typeof signatureApi.updatePlacement>>;
@@ -294,6 +294,35 @@ export const useTrustRoot = () => {
     onSuccess: async (_, { projectId, docId, slotId }) => {
       await signatureApi.recheckDetached(projectId, docId, slotId);
       await invalidate(projectId);
+    },
+  });
+};
+
+export const usePreviewSignSubmission = () =>
+  useMutation({
+    mutationFn: ({
+      projectId,
+      body,
+    }: {
+      projectId: string;
+      body: SignSubmissionBody;
+    }) => signatureApi.previewSignSubmission(projectId, body),
+  });
+
+export const useSignSubmission = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      projectId,
+      body,
+    }: {
+      projectId: string;
+      body: SignSubmissionBody;
+    }) => signatureApi.signSubmission(projectId, body),
+    onSettled: (_data, _error, { projectId }) => {
+      void queryClient.invalidateQueries({
+        queryKey: signatureKeys.state(projectId),
+      });
     },
   });
 };

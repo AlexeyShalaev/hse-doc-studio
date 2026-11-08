@@ -460,7 +460,9 @@ async def test__api__complete_chain__private_host__nothing_fetched_chain_stays_i
 # --- плашка подписанта -----------------------------------------------------
 
 
-async def test__api__sign_in_studio__plate_mismatch_note(test_app: AsyncClient, tmp_path: Path) -> None:
+async def test__api__sign_in_studio__plate_mismatch__refused(test_app: AsyncClient, tmp_path: Path) -> None:
+    # Ключом Студии нельзя подписать слот, на плашке которого другой подписант (signature-plan.md, раздел 5);
+    # готовую чужую подпись по-прежнему можно приложить, тогда она получает заметку (тест ниже).
     project_id, _ = await _project_with_pdf(test_app, tmp_path / "proj")
     await _enable_detached_slot(test_app, project_id)
     expected = make_identity("Кротов Владимир Николаевич")
@@ -477,13 +479,9 @@ async def test__api__sign_in_studio__plate_mismatch_note(test_app: AsyncClient, 
 
     resp = await test_app.post(_BASE.format(pid=project_id) + "/sign", json={"identity_id": resp.json()["id"]})
 
-    assert resp.status_code == 200, resp.text
-    sig = resp.json()["signature"]
-    assert sig["format"] == "cms"
-    assert sig["origin"] == "studio"
-    assert "plate_signer_mismatch" in sig["notes"]
-    stored = (await _signature_state(test_app, project_id))[_DOC][_SLOT]
-    assert "plate_signer_mismatch" in stored["notes"]
+    assert resp.status_code == 403, resp.text
+    assert "Кротов Владимир Николаевич" in resp.json()["detail"]
+    assert _SLOT not in (await _signature_state(test_app, project_id)).get(_DOC, {})
 
 
 async def test__api__attach_signature__plate_mismatch_note(test_app: AsyncClient, tmp_path: Path) -> None:

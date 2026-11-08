@@ -9,6 +9,24 @@ import { signingIdentityApi } from "./signingIdentityApi";
 export const signingIdentityKeys = {
   all: ["signing-identities"] as const,
   list: () => [...signingIdentityKeys.all, "list"] as const,
+  defaultKey: () => [...signingIdentityKeys.all, "default"] as const,
+};
+
+export const useDefaultSigningKey = () =>
+  useQuery({
+    queryKey: signingIdentityKeys.defaultKey(),
+    queryFn: () => signingIdentityApi.getDefault(),
+  });
+
+export const useSetDefaultSigningKey = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (identityId: string | null) =>
+      signingIdentityApi.setDefault(identityId),
+    onSuccess: (data) => {
+      queryClient.setQueryData(signingIdentityKeys.defaultKey(), data);
+    },
+  });
 };
 
 export const useSigningIdentities = () =>
