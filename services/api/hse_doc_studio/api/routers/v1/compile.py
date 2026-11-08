@@ -21,6 +21,7 @@ from hse_doc_studio.api.schemas.compile import (
     CancelCompileResponse,
     CompileDetailResponse,
     CompileListItemResponse,
+    TriggerCompileRequest,
     TriggerCompileResponse,
     map_compile_error,
 )
@@ -120,9 +121,11 @@ async def trigger_compile(
     project_id: UUID,
     doc_id: str,
     uc: FromDishka[TriggerCompileUC],
+    body: TriggerCompileRequest | None = None,
 ) -> TriggerCompileResponse:
+    batch_id = body.batch_id if body is not None else None
     try:
-        result = await uc.execute(TriggerCompileInput(project_id=project_id, doc_id=doc_id))
+        result = await uc.execute(TriggerCompileInput(project_id=project_id, doc_id=doc_id, batch_id=batch_id))
     except CompileSetupError as exc:
         # Environmental failure (Docker missing / image not installed) — surface
         # as a structured 409 so the UI can offer install instead of treating

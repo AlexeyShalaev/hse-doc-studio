@@ -30,6 +30,8 @@ from hse_doc_studio.api.schemas.admin_ops import (
     AdminAiProvider,
     AdminAiProviderCheck,
     AdminJob,
+    AdminJobBatch,
+    AdminJobBatchCancelled,
     AdminJobPage,
     AdminQueueSummary,
     AdminQuotas,
@@ -51,7 +53,7 @@ from hse_doc_studio.core.access.context import current_actor
 from hse_doc_studio.core.access.entities import Actor
 from hse_doc_studio.core.enums import AIProviderType
 from hse_doc_studio.core.identity.errors import IdentityError, IdentityErrorCode
-from hse_doc_studio.core.jobs.admin import JobAdminFilter, JobListing
+from hse_doc_studio.core.jobs.admin import JobAdminFilter, JobBatchSummary, JobListing
 from hse_doc_studio.core.jobs.enums import JobKind, JobPriorityClass, JobState
 from hse_doc_studio.core.jobs.errors import QueuedJobNotFoundError
 from hse_doc_studio.core.jobs.quotas import QuotaSettings, org_key
@@ -76,7 +78,13 @@ from hse_doc_studio.use_cases.admin.ops_ai_providers import (
     ListInstanceAiProvidersUC,
     UpdateInstanceAiProviderUC,
 )
-from hse_doc_studio.use_cases.admin.ops_queue import CancelJobUC, ListQueueUC, PickProjectsUC, QueueSummaryUC
+from hse_doc_studio.use_cases.admin.ops_queue import (
+    CancelJobBatchUC,
+    CancelJobUC,
+    ListQueueUC,
+    PickProjectsUC,
+    QueueSummaryUC,
+)
 from hse_doc_studio.use_cases.admin.ops_quotas import GetQuotasUC, UpdateQuotasUC
 from hse_doc_studio.use_cases.admin.ops_services import ServiceHealth, ServicesOverviewUC
 from hse_doc_studio.use_cases.admin.ops_signing import GetSigningPolicyUC, UpdateSigningPolicyUC
@@ -127,6 +135,17 @@ def _job(listing: JobListing) -> AdminJob:
         route=job.route.value,
         runner_scope=job.runner_scope.value if job.runner_scope is not None else None,
         route_reason=job.route_reason.value if job.route_reason is not None else None,
+        batch_id=str(job.batch_id) if job.batch_id is not None else None,
+        batch=_batch(listing.batch) if listing.batch is not None else None,
+    )
+
+
+def _batch(batch: JobBatchSummary) -> AdminJobBatch:
+    return AdminJobBatch(
+        id=str(batch.id),
+        total=batch.total,
+        by_state={state.value: count for state, count in sorted(batch.by_state.items())},
+        queued_at=batch.queued_at,
     )
 
 
@@ -147,6 +166,8 @@ async def list_queue(
     queued_to: Annotated[AwareDatetime | None, Query(alias="to")] = None,
     limit: Annotated[int, Query(ge=1, le=MAX_PAGE_SIZE)] = DEFAULT_PAGE_SIZE,
     q: Annotated[str | None, Depends(search_param)] = None,
+    # Задачи одного пакета «Собрать все».
+    batch_id: Annotated[UUID | None, Query()] = None,
 ) -> AdminJobPage:
     response.headers.update(_NO_STORE)
     page = await (await _uc(request, ListQueueUC)).execute(
@@ -162,6 +183,7 @@ async def list_queue(
             queued_from=queued_from,
             queued_to=queued_to,
             q=q,
+            batch_id=batch_id,
         ),
         before_seq=before_seq,
         limit=limit,
@@ -207,6 +229,14 @@ async def cancel_job(job_id: UUID, request: Request, response: Response) -> Admi
     except QueuedJobNotFoundError as exc:
         raise IdentityError(IdentityErrorCode.not_found) from exc
     return _job(job)
+
+
+@router.post("/queue/batches/{batch_id}/cancel", response_model=AdminJobBatchCancelled)
+async def cancel_job_batch(batch_id: UUID, request: Request, response: Response) -> AdminJobBatchCancelled:
+    """«Отменить все» у пакета «Собрать все»: каждая задача отменяется и пишется в аудит, как одна."""
+    response.headers.update(_NO_STORE)
+    cancelled = await (await _uc(request, CancelJobBatchUC)).execute(_actor(), batch_id)
+    return AdminJobBatchCancelled(cancelled=cancelled)
 
 
 def _quotas(quotas: QuotaSettings) -> AdminQuotas:

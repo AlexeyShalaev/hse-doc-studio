@@ -16,7 +16,11 @@ import {
 import type { BuildAvailability } from "@entities/runner";
 import { buildBlockOf } from "./buildBlock";
 import { useCompileStreamStore } from "./compileStreamStore";
-import { useStartCompile, useStartCompileAll } from "./useStartCompile";
+import {
+  newBatchId,
+  useStartCompile,
+  useStartCompileAll,
+} from "./useStartCompile";
 
 const SERVER = JSON.parse(
   readFileSync(
@@ -215,6 +219,50 @@ describe("useStartCompile / useStartCompileAll", () => {
       `/projects/${P}/documents/pdf/compile`,
     ]);
     expect(useToastStore.getState().toasts).toHaveLength(1);
+  });
+
+  it("build all: every document of one click carries the same batch id, a single build none", async () => {
+    const { post } = mockServer(FULL);
+    post.mockResolvedValue({ data: { compile_id: "c" } });
+    const all = renderHook(() => useStartCompileAll(P), {
+      wrapper: wrapper(SERVER),
+    });
+    await waitFor(() => {
+      expect(all.result.current.isRunning).toBe(false);
+    });
+
+    act(() => {
+      all.result.current.startAll(["tz", "pres"]);
+    });
+    await waitFor(() => {
+      expect(post).toHaveBeenCalledTimes(2);
+    });
+
+    const bodies = post.mock.calls.map(
+      ([, body]) => body as { batch_id: string },
+    );
+    expect(bodies[0]?.batch_id).toMatch(
+      /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/,
+    );
+    expect(bodies[1]?.batch_id).toBe(bodies[0]?.batch_id);
+  });
+
+  it("newBatchId: a v4 uuid without crypto.randomUUID (page over http)", () => {
+    const original = crypto.randomUUID.bind(crypto);
+    Object.defineProperty(crypto, "randomUUID", {
+      value: undefined,
+      configurable: true,
+    });
+    try {
+      expect(newBatchId()).toMatch(
+        /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/,
+      );
+    } finally {
+      Object.defineProperty(crypto, "randomUUID", {
+        value: original,
+        configurable: true,
+      });
+    }
   });
 
   it("build all: refused for every document gives one toast and clears 'building'", async () => {

@@ -79,6 +79,7 @@ export const CONTRACT_SCHEMAS: Record<string, ZodType> = {
   AdminInvitationCreated: s.AdminInvitationCreatedSchema,
   AdminOrgList: s.AdminOrgPageSchema,
   AdminJobPage: s.AdminJobPageSchema,
+  AdminJobBatchCancelled: s.AdminJobBatchCancelledSchema,
   AdminQueueSummary: s.AdminQueueSummarySchema,
   AdminQuotas: s.AdminQuotasSchema,
   MyUsageResponse: q.MyUsageResponseSchema,

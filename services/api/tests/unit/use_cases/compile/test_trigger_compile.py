@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import uuid
 from dataclasses import replace
 from unittest.mock import AsyncMock, MagicMock
 
@@ -222,6 +223,17 @@ async def test__trigger_compile__success__pending_record_and_building_status_bef
     assert saved.documents[0].last_compile_id == out.compile_id
     hooks = h.dispatcher.submitted[0][1]
     assert isinstance(hooks, CompileJobHooks)
+
+
+async def test__trigger_compile__build_all__spec_carries_the_batch(tmp_path) -> None:
+    h = Harness(tmp_path)
+    project = make_project(folder=tmp_path, documents=[make_document("tz")])
+    h.given(project, documents=(make_document_definition("tz"),))
+    batch = uuid.uuid4()
+
+    await h.uc.execute(TriggerCompileInput(project_id=project.id, doc_id="tz", batch_id=batch))
+
+    assert h.spec.batch_id == batch
 
 
 async def test__trigger_compile__english_request__spec_carries_the_interface_language(tmp_path) -> None:

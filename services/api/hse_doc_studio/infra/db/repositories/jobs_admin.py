@@ -9,7 +9,7 @@ from uuid import UUID
 from sqlalchemy import ColumnElement, Select, String, and_, cast, func, or_, select, text, true
 from sqlalchemy.engine import Row
 
-from hse_doc_studio.core.jobs.admin import JobAdminFilter, JobAdminPage, JobListing, QueueStats
+from hse_doc_studio.core.jobs.admin import JobAdminFilter, JobAdminPage, JobBatchSummary, JobListing, QueueStats
 from hse_doc_studio.core.jobs.enums import JobState
 from hse_doc_studio.core.jobs.routing import JobRoute
 from hse_doc_studio.core.listing import Picked, PickerItem
@@ -41,15 +41,40 @@ def _with_names() -> Select[*tuple[Any, ...]]:
     )
 
 
-def _listing(row: Row[*tuple[Any, ...]]) -> JobListing:
+def _listing(row: Row[*tuple[Any, ...]], batches: dict[UUID, JobBatchSummary]) -> JobListing:
+    job = job_from_row(row[0])
     return JobListing(
-        job=job_from_row(row[0]),
+        job=job,
         user_name=row[1],
         user_email=row[2],
         org_name=row[3],
         project_name=row[4],
         runner_name=row[5],
+        batch=batches.get(job.batch_id) if job.batch_id is not None else None,
     )
+
+
+async def _batches(session: Any, rows: list[Row[*tuple[Any, ...]]]) -> dict[UUID, JobBatchSummary]:
+    """Сводки пакетов из строк страницы по всем их задачам: пакет мог разойтись по нескольким страницам."""
+    ids = sorted({row[0].batch_id for row in rows if row[0].batch_id is not None})
+    if not ids:
+        return {}
+    stmt = (
+        select(JobRow.batch_id, JobRow.state, func.count(), func.min(JobRow.queued_at))
+        .where(JobRow.batch_id.in_(ids))
+        .group_by(JobRow.batch_id, JobRow.state)
+    )
+    found: dict[UUID, JobBatchSummary] = {}
+    for batch_id, state, count, first in (await session.execute(stmt)).all():
+        known = found.get(batch_id)
+        by_state = {**(known.by_state if known else {}), JobState(state): int(count)}
+        found[batch_id] = JobBatchSummary(
+            id=batch_id,
+            total=(known.total if known else 0) + int(count),
+            by_state=by_state,
+            queued_at=min(known.queued_at, first) if known else first,
+        )
+    return found
 
 
 def _search(flt: JobAdminFilter) -> list[ColumnElement[bool]]:
@@ -82,6 +107,7 @@ def _conditions(flt: JobAdminFilter) -> list[ColumnElement[bool]]:
         (JobRow.project_id, flt.project_id),
         (JobRow.runner_id, flt.runner_id),
         (JobRow.runner_scope, flt.runner_scope.value if flt.runner_scope is not None else None),
+        (JobRow.batch_id, flt.batch_id),
     ):
         if value is not None:
             found.append(column == value)
@@ -99,10 +125,11 @@ class SqlJobAdminReader:
         async with self._sessions.use() as session:
             rows = list((await session.execute(stmt)).all())
             estimate = await self._estimate(session) if flt.empty else None
+            batches = await _batches(session, rows[:limit])
         page = rows[:limit]
         more = len(rows) > limit
         return JobAdminPage(
-            items=tuple(_listing(r) for r in page),
+            items=tuple(_listing(r, batches) for r in page),
             next_before_seq=page[-1][0].seq if more and page else None,
             total_estimate=estimate,
         )
@@ -118,7 +145,8 @@ class SqlJobAdminReader:
     async def get(self, job_id: UUID) -> JobListing | None:
         async with self._sessions.use() as session:
             row = (await session.execute(_with_names().where(JobRow.id == job_id))).first()
-        return None if row is None else _listing(row)
+            batches = await _batches(session, [row]) if row is not None else {}
+        return None if row is None else _listing(row, batches)
 
     async def stats(self, now: datetime) -> QueueStats:
         wait = func.extract("epoch", JobRow.started_at - JobRow.queued_at)

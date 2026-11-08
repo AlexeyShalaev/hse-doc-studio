@@ -426,6 +426,16 @@ class TestJobQueueContract(PortContract):
         flagged = await port.queue.request_cancel(job.id)
         assert (flagged.state, flagged.cancel_requested) == (JobState.running, True)
 
+    async def test__enqueue__build_all_batch__kept_on_the_row(self, port: _Harness) -> None:
+        batch = uuid4()
+        queued = await port.put(uuid4(), batch_id=batch)
+        single = await port.put(uuid4())
+        assert queued.batch_id == batch
+        assert single.batch_id is None
+        stored = await port.queue.get(queued.id)
+        assert stored is not None
+        assert stored.batch_id == batch
+
     async def test__request_cancel__unknown_job__raises(self, port: _Harness) -> None:
         with pytest.raises(QueuedJobNotFoundError):
             await port.queue.request_cancel(uuid4())

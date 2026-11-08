@@ -230,6 +230,16 @@ export const useCancelJob = () => {
   });
 };
 
+export const useCancelJobBatch = () => {
+  const invalidate = useInvalidate();
+  return useMutation({
+    mutationFn: (batchId: string) => opsApi.cancelJobBatch(batchId),
+    onSettled: () => {
+      invalidate(opsKeys.queueAll, opsKeys.summary, opsKeys.running);
+    },
+  });
+};
+
 export const useUpdateQuotas = () => {
   const invalidate = useInvalidate();
   return useMutation({

@@ -43,6 +43,8 @@ logger = structlog.get_logger()
 class TriggerCompileInput:
     project_id: uuid.UUID
     doc_id: str
+    # Пакет «Собрать все»: задачи одной команды группируются в очереди админки.
+    batch_id: uuid.UUID | None = None
 
 
 @dataclass
@@ -183,6 +185,7 @@ class TriggerCompileUC:
             locale=current_interface_language(),
             payload=payload,
             local_root=project_folder,
+            batch_id=inp.batch_id,
         )
         # Образ LaTeX не установлен или Docker недоступен: отказ до записи сборки.
         # Скачивание многогигабайтного образа отдельное действие пользователя

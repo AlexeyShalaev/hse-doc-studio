@@ -96,6 +96,7 @@ def job_from_row(row: JobRow) -> QueuedJob:
         route_reason=RouteReason(row.route_reason) if row.route_reason is not None else None,
         vcost=row.vcost,
         timeout_personal_s=row.timeout_personal_s,
+        batch_id=row.batch_id,
     )
 
 
@@ -184,6 +185,7 @@ class PostgresJobQueue:
                 route_reason=request.route_reason.value if request.route_reason is not None else None,
                 vcost=vcost,
                 timeout_personal_s=request.timeout_personal_s,
+                batch_id=request.batch_id,
             )
             session.add(row)
             await session.flush()

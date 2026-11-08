@@ -1,6 +1,8 @@
-import { useCallback, useMemo } from "react";
+import { useCallback, useMemo, useState } from "react";
 import type { ColumnDef } from "@tanstack/react-table";
 import {
+  ChevronDown,
+  ChevronRight,
   CircleAlert,
   Clock,
   ListOrdered,
@@ -35,8 +37,15 @@ import {
 import {
   adminPickers,
   type AdminJob,
+  type AdminJobBatch,
   type AdminQueueSummary,
 } from "@entities/session";
+import {
+  batchActive,
+  batchStates,
+  batchTone,
+  groupQueue,
+} from "../lib/batches";
 import { formatDuration } from "../lib/format";
 import {
   JOB_KINDS,
@@ -72,6 +81,8 @@ export type QueueViewProps = {
   now: number;
   onOpen: (job: AdminJob) => void;
   onCancel: (job: AdminJob) => void;
+  /** «Отменить все» у пакета «Собрать все»; `lead` даёт проект и человека для подтверждения. */
+  onCancelBatch?: (batch: AdminJobBatch, lead: AdminJob) => void;
   onRetry?: () => void;
 };
 
@@ -86,14 +97,37 @@ const classRank = (name: string): number => {
  * Строка таблицы. Всё меняющееся лежит в данных строки, а не в замыканиях колонок:
  * TanStack Table рисует ячейки как компоненты, и новая функция ячейки пересоздаёт её DOM.
  */
-type Row = {
+type JobRow = {
+  type: "job";
+  id: string;
   job: AdminJob;
   person: PersonRef;
   wait: string;
   run: string | null;
   stuck: boolean;
+  /** Задача внутри раскрытого пакета: строка с отступом. */
+  nested: boolean;
   cancel: () => void;
 };
+
+/** Строка пакета «Собрать все»: проект, кто запустил, когда, сколько задач и в каких состояниях. */
+type BatchRow = {
+  type: "batch";
+  id: string;
+  batch: AdminJobBatch;
+  lead: AdminJob;
+  person: PersonRef;
+  /** Сколько прошло с постановки первой задачи. */
+  ago: string;
+  /** Сколько задач пакета на загруженных страницах. */
+  shown: number;
+  expanded: boolean;
+  toggle: () => void;
+  showAll: () => void;
+  cancelAll: () => void;
+};
+
+type Row = JobRow | BatchRow;
 
 /**
  * Имя выбранного в фильтре по строкам на экране: при фильтре по человеку,
@@ -126,9 +160,13 @@ export const QueueView = ({
   now,
   onOpen,
   onCancel,
+  onCancelBatch,
   onRetry,
 }: QueueViewProps) => {
   const { t } = useTranslation("adminRunners");
+  // Раскрытые пакеты; при фильтре по пакету он раскрыт сразу.
+  const [expanded, setExpanded] = useState<ReadonlySet<string>>(new Set());
+  const batchFilter = state.filter("batch_id");
   const units = useDurationUnits();
   const dur = useCallback(
     (s: number | null) => (s === null ? null : formatDuration(s, units)),
@@ -154,10 +192,89 @@ export const QueueView = ({
         header: t("queue.columns.kind"),
         enableSorting: false,
         cell: ({ row }) => {
-          const { job } = row.original;
+          const r = row.original;
+          if (r.type === "batch") {
+            const Chevron = r.expanded ? ChevronDown : ChevronRight;
+            return (
+              <span
+                className="ops-cell"
+                style={{ maxWidth: "17.5rem" }}
+                data-testid={`queue-batch-${r.batch.id}`}
+              >
+                <span className="ops-cell-title">
+                  <button
+                    type="button"
+                    className="ops-batch-toggle"
+                    aria-expanded={r.expanded}
+                    aria-label={t(
+                      r.expanded
+                        ? "queue.batch.collapse"
+                        : "queue.batch.expand",
+                    )}
+                    data-testid={`queue-batch-toggle-${r.batch.id}`}
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      r.toggle();
+                    }}
+                    style={{
+                      background: "none",
+                      border: 0,
+                      padding: 0,
+                      marginRight: "0.25rem",
+                      color: "inherit",
+                      cursor: "pointer",
+                      verticalAlign: "middle",
+                    }}
+                  >
+                    <Chevron size="0.875rem" aria-hidden="true" />
+                  </button>
+                  {t("queue.batch.title")}
+                </span>
+                <span className="ops-cell-sub">
+                  {t("queue.batch.jobs", { count: r.batch.total })}
+                  {r.lead.project_name != null && ` · ${r.lead.project_name}`}
+                  {r.expanded && r.shown < r.batch.total && (
+                    <>
+                      {" · "}
+                      {t("queue.batch.partial", {
+                        shown: r.shown,
+                        total: r.batch.total,
+                      })}{" "}
+                      <button
+                        type="button"
+                        className="linklike"
+                        data-testid={`queue-batch-all-${r.batch.id}`}
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          r.showAll();
+                        }}
+                        style={{
+                          background: "none",
+                          border: 0,
+                          padding: 0,
+                          color: "var(--accent)",
+                          cursor: "pointer",
+                          font: "inherit",
+                        }}
+                      >
+                        {t("queue.batch.showAll")}
+                      </button>
+                    </>
+                  )}
+                </span>
+              </span>
+            );
+          }
+          const { job } = r;
           // Название проекта бывает длинным: строка режется, таблица не уезжает вбок.
           return (
-            <span className="ops-cell" style={{ maxWidth: "17.5rem" }}>
+            <span
+              className="ops-cell"
+              style={{
+                maxWidth: "17.5rem",
+                ...(r.nested ? { paddingLeft: "1.25rem" } : {}),
+              }}
+            >
               <span className="ops-cell-title">
                 {t(`queue.kind.${job.kind}`, { defaultValue: job.kind })}
               </span>
@@ -193,14 +310,33 @@ export const QueueView = ({
         id: "status",
         header: t("queue.columns.status"),
         enableSorting: false,
-        cell: ({ row }) => (
-          <span data-testid={`job-status-${row.original.job.id}`}>
-            <StatusDot
-              status={JOB_TONE[row.original.job.status]}
-              label={t(`queue.status.${row.original.job.status}`)}
-            />
-          </span>
-        ),
+        cell: ({ row }) => {
+          const r = row.original;
+          if (r.type === "batch") {
+            const label = batchStates(r.batch)
+              .map(
+                ({ state: s, count }) =>
+                  `${t(`queue.status.${s}`)}: ${String(count)}`,
+              )
+              .join(" · ");
+            return (
+              <span data-testid={`batch-status-${r.batch.id}`}>
+                <StatusDot
+                  status={JOB_TONE[batchTone(r.batch)]}
+                  label={label}
+                />
+              </span>
+            );
+          }
+          return (
+            <span data-testid={`job-status-${r.job.id}`}>
+              <StatusDot
+                status={JOB_TONE[r.job.status]}
+                label={t(`queue.status.${r.job.status}`)}
+              />
+            </span>
+          );
+        },
       },
       {
         id: "wait",
@@ -208,37 +344,53 @@ export const QueueView = ({
           <span className="ops-num">{t("queue.columns.wait")}</span>
         ),
         enableSorting: false,
-        cell: ({ row }) => (
-          <span
-            className="ops-num"
-            style={
-              row.original.stuck
-                ? { color: "var(--c-warn)", fontWeight: 600 }
-                : undefined
-            }
-            data-testid={`job-wait-${row.original.job.id}`}
-          >
-            {row.original.wait}
-          </span>
-        ),
+        cell: ({ row }) => {
+          const r = row.original;
+          if (r.type === "batch") {
+            return (
+              <span
+                className="ops-num ops-muted"
+                title={r.batch.created_at}
+                data-testid={`batch-when-${r.batch.id}`}
+              >
+                {t("queue.batch.ago", { ago: r.ago })}
+              </span>
+            );
+          }
+          return (
+            <span
+              className="ops-num"
+              style={
+                r.stuck
+                  ? { color: "var(--c-warn)", fontWeight: 600 }
+                  : undefined
+              }
+              data-testid={`job-wait-${r.job.id}`}
+            >
+              {r.wait}
+            </span>
+          );
+        },
       },
       {
         id: "run",
         header: () => <span className="ops-num">{t("queue.columns.run")}</span>,
         enableSorting: false,
-        cell: ({ row }) => (
-          <span className="ops-num">
-            {row.original.run ?? (
-              <span className="ops-muted">{t("queue.notStarted")}</span>
-            )}
-          </span>
-        ),
+        cell: ({ row }) =>
+          row.original.type === "batch" ? null : (
+            <span className="ops-num">
+              {row.original.run ?? (
+                <span className="ops-muted">{t("queue.notStarted")}</span>
+              )}
+            </span>
+          ),
       },
       {
         id: "where",
         header: t("queue.columns.where"),
         enableSorting: false,
         cell: ({ row }) => {
+          if (row.original.type === "batch") return null;
           const where = jobWhere(row.original.job);
           if (where === null) {
             return <span className="ops-muted">{t("queue.where.none")}</span>;
@@ -260,7 +412,8 @@ export const QueueView = ({
         header: t("queue.columns.runner"),
         enableSorting: false,
         cell: ({ row }) =>
-          row.original.job.runner_id === null ? (
+          row.original.type === "batch" ? null : row.original.job.runner_id ===
+            null ? (
             <span className="ops-muted">{t("queue.noRunner")}</span>
           ) : row.original.job.runner_name !== null ? (
             <span className="ops-ellipsis" title={row.original.job.runner_name}>
@@ -278,8 +431,32 @@ export const QueueView = ({
           <span className="sr-only">{t("queue.columns.actions")}</span>
         ),
         enableSorting: false,
-        cell: ({ row }) =>
-          isActive(row.original.job) ? (
+        cell: ({ row }) => {
+          const r = row.original;
+          if (r.type === "batch") {
+            return batchActive(r.batch) > 0 ? (
+              <span className="ops-row-actions" data-reveal="hover">
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  type="button"
+                  style={{ gap: "0.3125rem" }}
+                  aria-label={t("queue.batch.cancelAllLabel", {
+                    project: r.lead.project_name ?? t("queue.noProject"),
+                  })}
+                  data-testid={`batch-cancel-${r.batch.id}`}
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    r.cancelAll();
+                  }}
+                >
+                  <XCircle size="0.8125rem" aria-hidden="true" />
+                  {t("queue.batch.cancelAll")}
+                </Button>
+              </span>
+            ) : null;
+          }
+          return isActive(r.job) ? (
             <span className="ops-row-actions" data-reveal="hover">
               <Button
                 size="sm"
@@ -287,41 +464,82 @@ export const QueueView = ({
                 type="button"
                 style={{ gap: "0.3125rem" }}
                 aria-label={t("queue.cancelLabel", {
-                  kind: t(`queue.kind.${row.original.job.kind}`, {
-                    defaultValue: row.original.job.kind,
+                  kind: t(`queue.kind.${r.job.kind}`, {
+                    defaultValue: r.job.kind,
                   }),
                 })}
-                data-testid={`job-cancel-${row.original.job.id}`}
+                data-testid={`job-cancel-${r.job.id}`}
                 onClick={(event) => {
                   event.stopPropagation();
-                  row.original.cancel();
+                  r.cancel();
                 }}
               >
                 <XCircle size="0.8125rem" aria-hidden="true" />
                 {t("queue.cancel")}
               </Button>
             </span>
-          ) : null,
+          ) : null;
+        },
       },
     ],
     [t],
   );
 
-  // Строки приходят с сервера уже отобранными и по порядку: здесь только подписи.
-  const rows = useMemo<Row[]>(
-    () =>
-      jobs.map((job) => ({
-        job,
-        person: personRef(job.user_id, job.user_name, job.user_email),
-        wait: dur(job.wait_s) ?? "",
-        run: dur(runSeconds(job, now)),
-        stuck: job.status === "queued" && job.wait_s >= LONG_WAIT_S,
-        cancel: () => {
-          onCancel(job);
+  // Строки приходят с сервера уже отобранными и по порядку: здесь подписи и
+  // пакеты «Собрать все» одной строкой, раскрываемой до своих задач.
+  const rows = useMemo<Row[]>(() => {
+    const jobRow = (job: AdminJob, nested: boolean): JobRow => ({
+      type: "job",
+      id: job.id,
+      job,
+      person: personRef(job.user_id, job.user_name, job.user_email),
+      wait: dur(job.wait_s) ?? "",
+      run: dur(runSeconds(job, now)),
+      stuck: job.status === "queued" && job.wait_s >= LONG_WAIT_S,
+      nested,
+      cancel: () => {
+        onCancel(job);
+      },
+    });
+    return groupQueue(jobs).flatMap((entry): Row[] => {
+      if (entry.type === "job") return [jobRow(entry.job, false)];
+      const { batch, lead } = entry;
+      const open = expanded.has(batch.id) || batchFilter === batch.id;
+      const head: BatchRow = {
+        type: "batch",
+        id: `batch:${batch.id}`,
+        batch,
+        lead,
+        person: personRef(lead.user_id, lead.user_name, lead.user_email),
+        ago:
+          dur(
+            Math.max(
+              0,
+              Math.round((now - Date.parse(batch.created_at)) / 1000),
+            ),
+          ) ?? "",
+        shown: entry.jobs.length,
+        expanded: open,
+        toggle: () => {
+          setExpanded((prev) => {
+            const next = new Set(prev);
+            if (next.has(batch.id)) next.delete(batch.id);
+            else next.add(batch.id);
+            return next;
+          });
         },
-      })),
-    [jobs, now, dur, onCancel],
-  );
+        showAll: () => {
+          state.setFilter("batch_id", batch.id);
+        },
+        cancelAll: () => {
+          onCancelBatch?.(batch, lead);
+        },
+      };
+      return open
+        ? [head, ...entry.jobs.map((job) => jobRow(job, true))]
+        : [head];
+    });
+  }, [jobs, now, dur, onCancel, onCancelBatch, expanded, batchFilter, state]);
 
   const userId = state.filter("user_id");
   const orgId = state.filter("org_id");
@@ -453,6 +671,18 @@ export const QueueView = ({
     ...picked("org_id", t("queue.filters.org"), orgId, org),
     ...picked("project_id", t("queue.filters.project"), projectId, project),
     ...picked("runner_id", t("queue.filters.runner"), runnerId, runner),
+    ...(batchFilter
+      ? [
+          {
+            id: "batch_id",
+            label: t("queue.filters.batch"),
+            value: shortRef(batchFilter),
+            onRemove: () => {
+              state.setFilter("batch_id", null);
+            },
+          },
+        ]
+      : []),
     ...(periodLabel
       ? [
           {
@@ -696,7 +926,7 @@ export const QueueView = ({
         caption={t("queue.caption")}
         columns={columns}
         data={rows}
-        getRowId={(r) => r.job.id}
+        getRowId={(r) => r.id}
         loading={status === "loading" || fetching}
         error={failed || status === "error" ? t("queue.loadFailed") : null}
         {...(onRetry ? { onRetry } : {})}
@@ -712,7 +942,8 @@ export const QueueView = ({
           onPageSizeChange: state.setPageSize,
         }}
         onRowClick={(r) => {
-          onOpen(r.job);
+          if (r.type === "batch") r.toggle();
+          else onOpen(r.job);
         }}
       />
     </div>

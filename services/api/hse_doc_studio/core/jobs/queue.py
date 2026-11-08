@@ -46,6 +46,8 @@ class EnqueueRequest:
     fair_share: bool = True
     # Предел длительности без квоты установки: применяется, если задачу взял личный раннер.
     timeout_personal_s: float | None = None
+    # Пакет «Собрать все»: задачи одной команды; у одиночной задачи пусто.
+    batch_id: UUID | None = None
 
     def __post_init__(self) -> None:
         if (self.route is JobRoute.pinned) != (self.target_runner_id is not None):
@@ -96,6 +98,7 @@ class QueuedJob:
     # Сколько метки справедливости потратила постановка: возвращается, если задачу взял личный раннер.
     vcost: float = 1.0
     timeout_personal_s: float | None = None
+    batch_id: UUID | None = None
 
 
 @dataclass(frozen=True)

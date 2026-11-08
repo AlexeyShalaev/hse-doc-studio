@@ -120,6 +120,7 @@ class InMemoryJobQueue:
             route_reason=request.route_reason,
             vcost=vcost,
             timeout_personal_s=request.timeout_personal_s,
+            batch_id=request.batch_id,
         )
         self._jobs[job.id] = job
         return EnqueueOutcome(job=job, superseded=tuple(superseded))

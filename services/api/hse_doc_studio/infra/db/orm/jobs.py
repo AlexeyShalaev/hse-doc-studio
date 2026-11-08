@@ -91,6 +91,8 @@ class JobRow(Base):
             name="route_personal",
         ),
         CheckConstraint("runner_scope IS NULL OR runner_scope IN ('shared', 'personal')", name="runner_scope"),
+        # Пакет «Собрать все»: строки группы в админке и фильтр очереди по пакету.
+        Index("ix_jobs_batch_id", "batch_id", postgresql_where=text("batch_id IS NOT NULL")),
     )
 
     id: Mapped[UUID] = mapped_column(Uuid, primary_key=True)
@@ -130,6 +132,8 @@ class JobRow(Base):
     # Сколько метки справедливости потратила постановка; возвращается при выдаче личному раннеру.
     vcost: Mapped[float] = mapped_column(Double, nullable=False, server_default="1.0")
     timeout_personal_s: Mapped[float | None] = mapped_column(Double)
+    # Задачи одной команды «Собрать все» (сборка всех документов проекта); у одиночных пусто.
+    batch_id: Mapped[UUID | None] = mapped_column(Uuid)
 
 
 class FairShareRow(Base):

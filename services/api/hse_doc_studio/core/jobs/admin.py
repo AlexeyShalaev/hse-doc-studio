@@ -165,6 +165,8 @@ class JobAdminFilter:
     queued_to: datetime | None = None
     # Поиск: id задачи целиком или подстрока в имени проекта, имени и почте человека.
     q: str | None = None
+    # Задачи одного пакета «Собрать все».
+    batch_id: UUID | None = None
 
     @property
     def empty(self) -> bool:
@@ -182,6 +184,22 @@ class JobAdminFilter:
 
 
 @dataclass(frozen=True)
+class JobBatchSummary:
+    """Пакет «Собрать все» целиком, а не только строки текущей страницы: сколько задач и в каких состояниях."""
+
+    id: UUID
+    total: int
+    by_state: dict[JobState, int]
+    # Когда команда поставила первую задачу пакета.
+    queued_at: datetime
+
+    @property
+    def active(self) -> int:
+        """Сколько задач ещё можно отменить: в очереди и идущие."""
+        return sum(n for state, n in self.by_state.items() if not state.is_terminal)
+
+
+@dataclass(frozen=True)
 class JobListing:
     """Задача с подписями для экрана: имена берутся соединением, у удалённых записей они `None`."""
 
@@ -191,6 +209,8 @@ class JobListing:
     org_name: str | None = None
     project_name: str | None = None
     runner_name: str | None = None
+    # Пакет задачи целиком (по всем страницам); у одиночной задачи `None`.
+    batch: JobBatchSummary | None = None
 
 
 @dataclass(frozen=True)
