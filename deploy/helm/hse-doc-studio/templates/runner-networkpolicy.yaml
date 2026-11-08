@@ -1,7 +1,8 @@
 {{- /*
 Сетевая изоляция раннеров (docs/en/deploy/runner-isolation.md).
 1) Поды сборки раннеров из админки (installFromUi): ни входа, ни выхода, как у chart-раннера (runner-kubernetes.yaml).
-2) Исходящая сеть самих раннеров (runner.networkPolicy.enabled): DNS, Студия, Kubernetes API, extraEgress.
+2) Исходящая сеть самих раннеров (runner.networkPolicy.enabled): DNS, Студия, Kubernetes API, встроенный Gotenberg
+   (services.officeConvert), extraEgress.
 */ -}}
 {{- $full := include "hds.fullname" . }}
 {{- $np := .Values.runner.networkPolicy }}
@@ -80,6 +81,16 @@ spec:
         {{- range $np.apiServerPorts }}
         - {protocol: TCP, port: {{ . }}}
         {{- end }}
+    {{- if $.Values.services.officeConvert.enabled }}
+    # Встроенный Gotenberg (services.officeConvert): офисные задачи.
+    - to:
+        - podSelector:
+            matchLabels:
+              {{- include "hds.selector" $ | nindent 14 }}
+              app.kubernetes.io/component: office-convert
+      ports:
+        - {protocol: TCP, port: 3000}
+    {{- end }}
     {{- with $np.extraEgress }}
     {{- toYaml . | nindent 4 }}
     {{- end }}

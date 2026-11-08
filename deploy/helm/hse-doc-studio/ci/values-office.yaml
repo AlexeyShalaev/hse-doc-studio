@@ -1,0 +1,17 @@
+# Поверх values-test.yaml: встроенный Gotenberg для офисных задач (golden-рендер rendered-office.golden.yaml). Раннер
+# чарта с исполнителем kubernetes и раннеры из админки получают его адрес, egress-политика раннеров его разрешает.
+# Тот же рендер (--show-only templates/office-convert.yaml) ставится на kind с Pod Security restricted в CI.
+services:
+  officeConvert:
+    enabled: true
+    resources:
+      requests: {cpu: 100m, memory: 256Mi, ephemeral-storage: 128Mi}
+      limits: {cpu: "1", memory: 1Gi, ephemeral-storage: 1Gi}
+    tolerations:
+      - {key: office, operator: Exists, effect: NoSchedule}
+runner:
+  executor: kubernetes
+  networkPolicy:
+    enabled: true
+  installFromUi:
+    enabled: true

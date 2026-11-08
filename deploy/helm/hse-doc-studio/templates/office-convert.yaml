@@ -1,0 +1,139 @@
+{{- /*
+Постоянный Gotenberg для офисных задач раннеров (services.officeConvert, docs/ru/deploy/runners.md).
+Pod Security restricted: uid 1001 образа, корень только для чтения. LibreOffice и Gotenberg пишут только во временный
+каталог (/tmp: загрузка, профиль LibreOffice, результат) и в домашний (кэш fontconfig): оба emptyDir.
+*/ -}}
+{{- if .Values.services.officeConvert.enabled }}
+{{- $oc := .Values.services.officeConvert }}
+{{- $name := include "hds.officeConvertName" . }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ $name }}
+  labels:
+    {{- include "hds.labels" . | nindent 4 }}
+    app.kubernetes.io/component: office-convert
+spec:
+  replicas: {{ $oc.replicas }}
+  selector:
+    matchLabels:
+      {{- include "hds.selector" . | nindent 6 }}
+      app.kubernetes.io/component: office-convert
+  template:
+    metadata:
+      labels:
+        {{- include "hds.selector" . | nindent 8 }}
+        app.kubernetes.io/component: office-convert
+      {{- with $oc.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+    spec:
+      # Gotenberg не ходит в Kubernetes API.
+      automountServiceAccountToken: false
+      enableServiceLinks: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1001
+        runAsGroup: 1001
+        fsGroup: 1001
+        seccompProfile: {type: RuntimeDefault}
+      containers:
+        - name: gotenberg
+          image: "{{ $oc.image.repository }}:{{ $oc.image.tag }}"
+          imagePullPolicy: {{ $oc.image.pullPolicy }}
+          env:
+            - {name: API_TIMEOUT, value: {{ $oc.timeout | quote }}}
+            # Gotenberg не должен ходить наружу сам: ни webhook, ни загрузки файлов по ссылке.
+            - {name: WEBHOOK_DISABLE, value: "true"}
+            - {name: API_DISABLE_DOWNLOAD_FROM, value: "true"}
+            - {name: LOG_FORMAT, value: json}
+          ports:
+            - {name: http, containerPort: 3000}
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities: {drop: [ALL]}
+          volumeMounts:
+            - {name: tmp, mountPath: /tmp}
+            - {name: home, mountPath: /home/gotenberg}
+          startupProbe:
+            httpGet: {path: /health, port: http}
+            periodSeconds: 5
+            failureThreshold: 30
+          readinessProbe:
+            httpGet: {path: /health, port: http}
+            periodSeconds: 10
+            timeoutSeconds: 5
+          livenessProbe:
+            httpGet: {path: /health, port: http}
+            periodSeconds: 20
+            timeoutSeconds: 5
+            failureThreshold: 6
+          resources:
+            {{- toYaml $oc.resources | nindent 12 }}
+      volumes:
+        - name: tmp
+          emptyDir: {sizeLimit: {{ $oc.tmpSizeLimit }}}
+        - name: home
+          emptyDir: {sizeLimit: 64Mi}
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with $oc.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with $oc.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with $oc.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ $name }}
+  labels:
+    {{- include "hds.labels" . | nindent 4 }}
+    app.kubernetes.io/component: office-convert
+spec:
+  type: ClusterIP
+  selector:
+    {{- include "hds.selector" . | nindent 4 }}
+    app.kubernetes.io/component: office-convert
+  ports:
+    - {name: http, port: 3000, targetPort: http}
+{{- if $oc.networkPolicy.enabled }}
+---
+# Вход только от раннеров релиза (раннер чарта и раннеры из админки), выход закрыт целиком.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ $name }}
+  labels:
+    {{- include "hds.labels" . | nindent 4 }}
+    app.kubernetes.io/component: office-convert
+spec:
+  podSelector:
+    matchLabels:
+      {{- include "hds.selector" . | nindent 6 }}
+      app.kubernetes.io/component: office-convert
+  policyTypes: [Ingress, Egress]
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              {{- include "hds.selector" . | nindent 14 }}
+              app.kubernetes.io/component: runner
+        - podSelector:
+            matchLabels:
+              hse-doc-studio/runner-install: "true"
+      ports:
+        - {protocol: TCP, port: 3000}
+{{- end }}
+{{- end }}

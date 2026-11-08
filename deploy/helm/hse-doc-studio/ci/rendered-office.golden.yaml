@@ -1,0 +1,922 @@
+---
+# Source: hse-doc-studio/templates/office-convert.yaml
+# Вход только от раннеров релиза (раннер чарта и раннеры из админки), выход закрыт целиком.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: rel-hse-doc-studio-office-convert
+  labels:
+    app.kubernetes.io/name: hse-doc-studio
+    app.kubernetes.io/instance: rel
+    app.kubernetes.io/managed-by: Helm
+    helm.sh/chart: hse-doc-studio-0.1.0
+    app.kubernetes.io/component: office-convert
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: hse-doc-studio
+      app.kubernetes.io/instance: rel
+      app.kubernetes.io/component: office-convert
+  policyTypes: [Ingress, Egress]
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: hse-doc-studio
+              app.kubernetes.io/instance: rel
+              app.kubernetes.io/component: runner
+        - podSelector:
+            matchLabels:
+              hse-doc-studio/runner-install: "true"
+      ports:
+        - {protocol: TCP, port: 3000}
+
+---
+# Source: hse-doc-studio/templates/runner-kubernetes.yaml
+# Подам сборки сеть не нужна: вход и выход идут через exec Kubernetes API.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: rel-hse-doc-studio-runner-builds-deny-all
+  namespace: studio
+  labels:
+    app.kubernetes.io/name: hse-doc-studio
+    app.kubernetes.io/instance: rel
+    app.kubernetes.io/managed-by: Helm
+    helm.sh/chart: hse-doc-studio-0.1.0
+    app.kubernetes.io/component: runner
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/managed-by: hse-doc-studio-runner
+      hse-doc-studio/component: build
+  policyTypes: [Ingress, Egress]
+
+---
+# Source: hse-doc-studio/templates/runner-networkpolicy.yaml
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: rel-hse-doc-studio-runner-egress
+  namespace: studio
+  labels:
+    app.kubernetes.io/name: hse-doc-studio
+    app.kubernetes.io/instance: rel
+    app.kubernetes.io/managed-by: Helm
+    helm.sh/chart: hse-doc-studio-0.1.0
+    app.kubernetes.io/component: runner
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/component: runner
+      app.kubernetes.io/instance: rel
+      app.kubernetes.io/name: hse-doc-studio
+  policyTypes: [Egress]
+  egress:
+    # DNS: только порт 53 (kube-dns и node-local-dns лежат в разных namespace).
+    - to:
+        - namespaceSelector: {}
+      ports:
+        - {protocol: UDP, port: 53}
+        - {protocol: TCP, port: 53}
+    # Студия: задачи, исходники, результат.
+    - to:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: hse-doc-studio
+              app.kubernetes.io/instance: rel
+              app.kubernetes.io/component: api
+      ports:
+        - {protocol: TCP, port: 8000}
+    # Kubernetes API: создание и exec подов сборки.
+    - to:
+        - ipBlock:
+            cidr: 0.0.0.0/0
+            except: [169.254.0.0/16]
+      ports:
+        - {protocol: TCP, port: 443}
+        - {protocol: TCP, port: 6443}
+    # Встроенный Gotenberg (services.officeConvert): офисные задачи.
+    - to:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: hse-doc-studio
+              app.kubernetes.io/instance: rel
+              app.kubernetes.io/component: office-convert
+      ports:
+        - {protocol: TCP, port: 3000}
+
+---
+# Source: hse-doc-studio/templates/runner-networkpolicy.yaml
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: rel-hse-doc-studio-runner-ui-egress
+  namespace: studio
+  labels:
+    app.kubernetes.io/name: hse-doc-studio
+    app.kubernetes.io/instance: rel
+    app.kubernetes.io/managed-by: Helm
+    helm.sh/chart: hse-doc-studio-0.1.0
+    app.kubernetes.io/component: runner
+spec:
+  podSelector:
+    matchLabels:
+      hse-doc-studio/runner-install: "true"
+  policyTypes: [Egress]
+  egress:
+    # DNS: только порт 53 (kube-dns и node-local-dns лежат в разных namespace).
+    - to:
+        - namespaceSelector: {}
+      ports:
+        - {protocol: UDP, port: 53}
+        - {protocol: TCP, port: 53}
+    # Студия: задачи, исходники, результат.
+    - to:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: hse-doc-studio
+              app.kubernetes.io/instance: rel
+              app.kubernetes.io/component: api
+      ports:
+        - {protocol: TCP, port: 8000}
+    # Kubernetes API: создание и exec подов сборки.
+    - to:
+        - ipBlock:
+            cidr: 0.0.0.0/0
+            except: [169.254.0.0/16]
+      ports:
+        - {protocol: TCP, port: 443}
+        - {protocol: TCP, port: 6443}
+    # Встроенный Gotenberg (services.officeConvert): офисные задачи.
+    - to:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: hse-doc-studio
+              app.kubernetes.io/instance: rel
+              app.kubernetes.io/component: office-convert
+      ports:
+        - {protocol: TCP, port: 3000}
+
+---
+# Source: hse-doc-studio/templates/runner-install-ui.yaml
+# Установка раннеров из админки Студии в этот кластер (docs/design/runner-install.md, раздел 4.3). Студия создаёт
+# Deployment, Secret с токеном и том данных, а ServiceAccount и права подов сборки для таких раннеров готовит этот
+# чарт заранее: Студия не получает права на Role и RoleBinding, поэтому выдать себе или раннеру лишнее не может.
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: rel-hse-doc-studio-runner-ui
+  labels:
+    app.kubernetes.io/name: hse-doc-studio
+    app.kubernetes.io/instance: rel
+    app.kubernetes.io/managed-by: Helm
+    helm.sh/chart: hse-doc-studio-0.1.0
+    app.kubernetes.io/component: runner-ui
+
+---
+# Source: hse-doc-studio/templates/runner-isolation-read.yaml
+# ServiceAccount Студии: нужен установке раннеров из админки (runner-install-ui.yaml) и чтению изоляции раннеров.
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: rel-hse-doc-studio-api
+  labels:
+    app.kubernetes.io/name: hse-doc-studio
+    app.kubernetes.io/instance: rel
+    app.kubernetes.io/managed-by: Helm
+    helm.sh/chart: hse-doc-studio-0.1.0
+    app.kubernetes.io/component: api
+
+---
+# Source: hse-doc-studio/templates/runner-kubernetes.yaml
+# Раннер с исполнителем kubernetes: сборка TeX идёт подом на задачу в studio (docs/design/k8s-runner.md).
+# Без docker.sock и hostPath: под раннера и поды сборки проходят Pod Security Standard restricted.
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: rel-hse-doc-studio-runner
+  labels:
+    app.kubernetes.io/name: hse-doc-studio
+    app.kubernetes.io/instance: rel
+    app.kubernetes.io/managed-by: Helm
+    helm.sh/chart: hse-doc-studio-0.1.0
+    app.kubernetes.io/component: runner
+
+---
+# Source: hse-doc-studio/templates/secret.yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  name: rel-hse-doc-studio-secrets
+  labels:
+    app.kubernetes.io/name: hse-doc-studio
+    app.kubernetes.io/instance: rel
+    app.kubernetes.io/managed-by: Helm
+    helm.sh/chart: hse-doc-studio-0.1.0
+type: Opaque
+stringData:
+  dsn: "postgresql://studio:pw@db.example.org:5432/studio"
+  secrets-key: "test-fernet-key"
+  s3-access-key: "AKIATEST"
+  s3-secret-key: "s3-test-secret"
+  runner-bootstrap-token: "test-runner-token"
+  smtp-password: ""
+  health-token: ""
+  metrics-token: ""
+  office-jwt-secret: ""
+  backup-access-key: "AKIABACKUP"
+  backup-secret-key: "backup-test-secret"
+  backup-passphrase: ""
+
+---
+# Source: hse-doc-studio/templates/backups-pvc.yaml
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: rel-hse-doc-studio-backups
+  labels:
+    app.kubernetes.io/name: hse-doc-studio
+    app.kubernetes.io/instance: rel
+    app.kubernetes.io/managed-by: Helm
+    helm.sh/chart: hse-doc-studio-0.1.0
+    app.kubernetes.io/component: backups
+  annotations:
+    helm.sh/resource-policy: keep
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: "slow"
+  resources:
+    requests:
+      storage: 100Gi
+
+---
+# Source: hse-doc-studio/templates/pvc.yaml
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: rel-hse-doc-studio-data
+  labels:
+    app.kubernetes.io/name: hse-doc-studio
+    app.kubernetes.io/instance: rel
+    app.kubernetes.io/managed-by: Helm
+    helm.sh/chart: hse-doc-studio-0.1.0
+  annotations:
+    helm.sh/resource-policy: keep
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 20Gi
+
+---
+# Source: hse-doc-studio/templates/runner-kubernetes.yaml
+# Данные раннера: выданный ему токен (identity.json), кэш блобов и рабочие папки. Токен регистрации одноразовый,
+# поэтому без тома рестарт пода оставил бы раннер без личности.
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: rel-hse-doc-studio-runner-data
+  labels:
+    app.kubernetes.io/name: hse-doc-studio
+    app.kubernetes.io/instance: rel
+    app.kubernetes.io/managed-by: Helm
+    helm.sh/chart: hse-doc-studio-0.1.0
+    app.kubernetes.io/component: runner
+  annotations:
+    helm.sh/resource-policy: keep
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 10Gi
+
+---
+# Source: hse-doc-studio/templates/runner-install-ui.yaml
+# ServiceAccount раннеров, поставленных из админки: только поды сборки в их namespace (buildNamespace или namespace
+# релиза). Со своим buildNamespace в namespace релиза у раннеров прав нет.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: rel-hse-doc-studio-runner-ui-builds
+  namespace: studio
+  labels:
+    app.kubernetes.io/name: hse-doc-studio
+    app.kubernetes.io/instance: rel
+    app.kubernetes.io/managed-by: Helm
+    helm.sh/chart: hse-doc-studio-0.1.0
+    app.kubernetes.io/component: runner-ui
+rules:
+  - apiGroups: [""]
+    resources: [pods]
+    verbs: [create, get, list, delete]
+  - apiGroups: [""]
+    resources: [pods/log]
+    verbs: [get]
+  - apiGroups: [""]
+    resources: [pods/exec]
+    verbs: [create, get]
+
+---
+# Source: hse-doc-studio/templates/runner-install-ui.yaml
+# Права самой Студии: создать, перечислить (по метке) и убрать Deployment, Secret с токеном и том данных раннера. `update` на
+# Deployment нужен обновлению раннера на месте (новый образ, тот же Secret и том). Secret без get, list и update, Role и
+# RoleBinding без доступа, ClusterRole нет.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: rel-hse-doc-studio-api-runner-install
+  namespace: studio
+  labels:
+    app.kubernetes.io/name: hse-doc-studio
+    app.kubernetes.io/instance: rel
+    app.kubernetes.io/managed-by: Helm
+    helm.sh/chart: hse-doc-studio-0.1.0
+    app.kubernetes.io/component: api
+rules:
+  - apiGroups: [apps]
+    resources: [deployments]
+    verbs: [create, list, update, delete]
+  - apiGroups: [""]
+    resources: [secrets]
+    verbs: [create, delete]
+  - apiGroups: [""]
+    resources: [persistentvolumeclaims]
+    verbs: [create, delete]
+
+---
+# Source: hse-doc-studio/templates/runner-kubernetes.yaml
+# Только поды сборки в своём namespace: создать, ждать, читать лог, exec для входа и выхода, удалить.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: rel-hse-doc-studio-runner-builds
+  namespace: studio
+  labels:
+    app.kubernetes.io/name: hse-doc-studio
+    app.kubernetes.io/instance: rel
+    app.kubernetes.io/managed-by: Helm
+    helm.sh/chart: hse-doc-studio-0.1.0
+    app.kubernetes.io/component: runner
+rules:
+  - apiGroups: [""]
+    resources: [pods]
+    verbs: [create, get, list, delete]
+  - apiGroups: [""]
+    resources: [pods/log]
+    verbs: [get]
+  # websocket-exec авторизуется как get в старых версиях Kubernetes и как create в новых.
+  - apiGroups: [""]
+    resources: [pods/exec]
+    verbs: [create, get]
+
+---
+# Source: hse-doc-studio/templates/runner-install-ui.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: rel-hse-doc-studio-runner-ui-builds
+  namespace: studio
+  labels:
+    app.kubernetes.io/name: hse-doc-studio
+    app.kubernetes.io/instance: rel
+    app.kubernetes.io/managed-by: Helm
+    helm.sh/chart: hse-doc-studio-0.1.0
+    app.kubernetes.io/component: runner-ui
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: rel-hse-doc-studio-runner-ui-builds
+subjects:
+  - kind: ServiceAccount
+    name: rel-hse-doc-studio-runner-ui
+    namespace: studio
+
+---
+# Source: hse-doc-studio/templates/runner-install-ui.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: rel-hse-doc-studio-api-runner-install
+  namespace: studio
+  labels:
+    app.kubernetes.io/name: hse-doc-studio
+    app.kubernetes.io/instance: rel
+    app.kubernetes.io/managed-by: Helm
+    helm.sh/chart: hse-doc-studio-0.1.0
+    app.kubernetes.io/component: api
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: rel-hse-doc-studio-api-runner-install
+subjects:
+  - kind: ServiceAccount
+    name: rel-hse-doc-studio-api
+    namespace: studio
+
+---
+# Source: hse-doc-studio/templates/runner-kubernetes.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: rel-hse-doc-studio-runner-builds
+  namespace: studio
+  labels:
+    app.kubernetes.io/name: hse-doc-studio
+    app.kubernetes.io/instance: rel
+    app.kubernetes.io/managed-by: Helm
+    helm.sh/chart: hse-doc-studio-0.1.0
+    app.kubernetes.io/component: runner
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: rel-hse-doc-studio-runner-builds
+subjects:
+  - kind: ServiceAccount
+    name: rel-hse-doc-studio-runner
+    namespace: studio
+
+---
+# Source: hse-doc-studio/templates/api.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: rel-hse-doc-studio
+  labels:
+    app.kubernetes.io/name: hse-doc-studio
+    app.kubernetes.io/instance: rel
+    app.kubernetes.io/managed-by: Helm
+    helm.sh/chart: hse-doc-studio-0.1.0
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: hse-doc-studio
+    app.kubernetes.io/instance: rel
+    app.kubernetes.io/component: api
+  ports:
+    - {name: http, port: 8000, targetPort: http}
+
+---
+# Source: hse-doc-studio/templates/office-convert.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: rel-hse-doc-studio-office-convert
+  labels:
+    app.kubernetes.io/name: hse-doc-studio
+    app.kubernetes.io/instance: rel
+    app.kubernetes.io/managed-by: Helm
+    helm.sh/chart: hse-doc-studio-0.1.0
+    app.kubernetes.io/component: office-convert
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: hse-doc-studio
+    app.kubernetes.io/instance: rel
+    app.kubernetes.io/component: office-convert
+  ports:
+    - {name: http, port: 3000, targetPort: http}
+
+---
+# Source: hse-doc-studio/templates/api.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: rel-hse-doc-studio-api
+  labels:
+    app.kubernetes.io/name: hse-doc-studio
+    app.kubernetes.io/instance: rel
+    app.kubernetes.io/managed-by: Helm
+    helm.sh/chart: hse-doc-studio-0.1.0
+    app.kubernetes.io/component: api
+spec:
+  # Одна реплика и Recreate: том проектов пишется одним процессом, две копии не должны жить одновременно.
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: hse-doc-studio
+      app.kubernetes.io/instance: rel
+      app.kubernetes.io/component: api
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: hse-doc-studio
+        app.kubernetes.io/instance: rel
+        app.kubernetes.io/component: api
+      annotations:
+        checksum/secret: 3d4af20705b72dc5a7dd296489f57e02b20395a134958a3730b60e804bee7f94
+    spec:
+      serviceAccountName: rel-hse-doc-studio-api
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        runAsGroup: 10001
+        seccompProfile: {type: RuntimeDefault}
+        fsGroup: 10001
+      containers:
+        - name: api
+          image: ghcr.io/alexeyshalaev/hse-doc-studio:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - {name: http, containerPort: 8000}
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities: {drop: [ALL]}
+          env:
+            - {name: HSE_STUDIO__MODE, value: server}
+            - {name: HSE_STUDIO__SERVER__HOST, value: "0.0.0.0"}
+            - {name: HSE_STUDIO__SERVER__PORT, value: "8000"}
+            - {name: HSE_STUDIO__DATA_DIR, value: /data}
+            - {name: HSE_STUDIO__LOGGING__USE_JSON, value: "true"}
+            - {name: HSE_STUDIO__AUTH__PUBLIC_URL, value: "https://studio.example.org"}
+            - {name: HSE_STUDIO__AUTH__TRUSTED_PROXIES, value: "[\"10.0.0.0/8\"]"}
+            - {name: HSE_STUDIO__S3__ENDPOINT, value: "https://s3.example.org"}
+            - {name: HSE_STUDIO__S3__BUCKET, value: "studio"}
+            - {name: HSE_STUDIO__S3__REGION, value: ""}
+            - {name: HSE_STUDIO__MAIL__HOST, value: ""}
+            - {name: HSE_STUDIO__MAIL__PORT, value: "587"}
+            - {name: HSE_STUDIO__MAIL__USERNAME, value: ""}
+            - {name: HSE_STUDIO__MAIL__FROM_ADDRESS, value: "no-reply@localhost"}
+            - {name: HSE_STUDIO__LANGUAGETOOL__POOL_REPLICAS, value: "[\"http://languagetool-0.lt:8010\",\"http://languagetool-1.lt:8010\"]"}
+            - {name: HSE_STUDIO__MODEL_SERVERS__LOCAL_ENABLED, value: "false"}
+            - {name: HSE_STUDIO__OFFICE_EDITOR__POOL_REPLICAS, value: "[\"http://onlyoffice.example.org\"]"}
+            - {name: HSE_STUDIO__OFFICE_EDITOR__BACKEND_INTERNAL_URL, value: "http://rel-hse-doc-studio:8000"}
+            - {name: HSE_STUDIO__DB__DSN, valueFrom: {secretKeyRef: {name: rel-hse-doc-studio-secrets, key: dsn}}}
+            - {name: HSE_STUDIO__SECRETS__KEY, valueFrom: {secretKeyRef: {name: rel-hse-doc-studio-secrets, key: secrets-key}}}
+            - {name: HSE_STUDIO__S3__ACCESS_KEY, valueFrom: {secretKeyRef: {name: rel-hse-doc-studio-secrets, key: s3-access-key}}}
+            - {name: HSE_STUDIO__S3__SECRET_KEY, valueFrom: {secretKeyRef: {name: rel-hse-doc-studio-secrets, key: s3-secret-key}}}
+            - {name: HSE_STUDIO__JOBS__RUNNER_BOOTSTRAP_TOKEN, valueFrom: {secretKeyRef: {name: rel-hse-doc-studio-secrets, key: runner-bootstrap-token, optional: true}}}
+            - {name: HSE_STUDIO__MAIL__PASSWORD, valueFrom: {secretKeyRef: {name: rel-hse-doc-studio-secrets, key: smtp-password, optional: true}}}
+            - {name: HSE_STUDIO__OBSERVABILITY__HEALTH_TOKEN, valueFrom: {secretKeyRef: {name: rel-hse-doc-studio-secrets, key: health-token, optional: true}}}
+            - {name: HSE_STUDIO__OBSERVABILITY__METRICS_TOKEN, valueFrom: {secretKeyRef: {name: rel-hse-doc-studio-secrets, key: metrics-token, optional: true}}}
+            - {name: HSE_STUDIO__OFFICE_EDITOR__JWT_SECRET, valueFrom: {secretKeyRef: {name: rel-hse-doc-studio-secrets, key: office-jwt-secret, optional: true}}}
+            
+            - {name: HSE_STUDIO__BACKUPS__LOCAL_ROOT, value: /backups}
+            - {name: HSE_STUDIO__BACKUPS__PROVISION__DESTINATION_KIND, value: "s3"}
+            - {name: HSE_STUDIO__BACKUPS__PROVISION__NAME, value: "offsite"}
+            - {name: HSE_STUDIO__BACKUPS__PROVISION__LOCAL_PATH, value: "main"}
+            - {name: HSE_STUDIO__BACKUPS__PROVISION__ENDPOINT, value: "https://backup.example.org"}
+            - {name: HSE_STUDIO__BACKUPS__PROVISION__REGION, value: "us-east-1"}
+            - {name: HSE_STUDIO__BACKUPS__PROVISION__BUCKET, value: "studio-backups"}
+            - {name: HSE_STUDIO__BACKUPS__PROVISION__PREFIX, value: "studio"}
+            - {name: HSE_STUDIO__BACKUPS__PROVISION__PATH_STYLE, value: "true"}
+            - {name: HSE_STUDIO__BACKUPS__PROVISION__ACCESS_KEY, valueFrom: {secretKeyRef: {name: rel-hse-doc-studio-secrets, key: backup-access-key, optional: true}}}
+            - {name: HSE_STUDIO__BACKUPS__PROVISION__SECRET_KEY, valueFrom: {secretKeyRef: {name: rel-hse-doc-studio-secrets, key: backup-secret-key, optional: true}}}
+            - {name: HSE_STUDIO__BACKUPS__PROVISION__SCHEDULE_ENABLED, value: "true"}
+            - {name: HSE_STUDIO__BACKUPS__PROVISION__SCHEDULE_KIND, value: "cron"}
+            - {name: HSE_STUDIO__BACKUPS__PROVISION__INTERVAL_HOURS, value: "24"}
+            - {name: HSE_STUDIO__BACKUPS__PROVISION__CRON, value: "30 2 * * *"}
+            - {name: HSE_STUDIO__BACKUPS__PROVISION__KEEP_LAST, value: "14"}
+            - {name: HSE_STUDIO__BACKUPS__PROVISION__KEEP_DAYS, value: "60"}
+            - {name: HSE_STUDIO__BACKUPS__PROVISION__ENCRYPTION_MODE, value: "installation"}
+            - {name: HSE_STUDIO__BACKUPS__PROVISION__NOTIFY_ADMINS, value: "true"}
+            # Установка раннеров из админки в этот кластер: права и ServiceAccount раннеров в runner-install-ui.yaml.
+            - {name: HSE_STUDIO__RUNNER_INSTALL__KUBERNETES_ENABLED, value: "true"}
+            - {name: HSE_STUDIO__RUNNER_INSTALL__KUBERNETES_SERVICE_ACCOUNT, value: rel-hse-doc-studio-runner-ui}
+            - {name: HSE_STUDIO__RUNNER_INSTALL__KUBERNETES_STUDIO_URL, value: "http://rel-hse-doc-studio:8000"}
+            - {name: HSE_STUDIO__RUNNER_INSTALL__KUBERNETES_RUNNER_CPU_REQUEST, value: "100m"}
+            - {name: HSE_STUDIO__RUNNER_INSTALL__KUBERNETES_RUNNER_CPU_LIMIT, value: "1"}
+            - {name: HSE_STUDIO__RUNNER_INSTALL__KUBERNETES_RUNNER_MEMORY_REQUEST, value: "256Mi"}
+            - {name: HSE_STUDIO__RUNNER_INSTALL__KUBERNETES_RUNNER_MEMORY_LIMIT, value: "2Gi"}
+            - {name: HSE_STUDIO__RUNNER_INSTALL__KUBERNETES_BUILD_CPU_REQUEST, value: "500m"}
+            - {name: HSE_STUDIO__RUNNER_INSTALL__KUBERNETES_BUILD_CPU_LIMIT, value: "2"}
+            - {name: HSE_STUDIO__RUNNER_INSTALL__KUBERNETES_BUILD_MEMORY_REQUEST, value: "1Gi"}
+            - {name: HSE_STUDIO__RUNNER_INSTALL__KUBERNETES_BUILD_MEMORY_LIMIT, value: "4Gi"}
+            - {name: HSE_STUDIO__RUNNER_INSTALL__KUBERNETES_RESOURCE_MAX_CPU, value: "8"}
+            - {name: HSE_STUDIO__RUNNER_INSTALL__KUBERNETES_RESOURCE_MAX_MEMORY, value: "16Gi"}
+            - {name: HSE_STUDIO__RUNNER_INSTALL__KUBERNETES_STORAGE_SIZE, value: "5Gi"}
+            - {name: HSE_STUDIO__RUNNER_INSTALL__KUBERNETES_STORAGE_CLASS, value: ""}
+            # Gotenberg для раннеров из админки: они получают его в HSE_RUNNER__OFFICE_URL при установке и обновлении.
+            - {name: HSE_STUDIO__RUNNER_INSTALL__OFFICE_URL, value: "http://rel-hse-doc-studio-office-convert:3000"}
+            # Экран изоляции раннеров в админке: что задано в чарте (не проверенное в кластере).
+            - {name: HSE_STUDIO__RUNNER_CLUSTER__DECLARED, value: "{\"build\":{\"activeDeadlineSeconds\":1800,\"limitRange\":{\"default\":{\"cpu\":\"1\",\"ephemeral-storage\":\"2Gi\",\"memory\":\"2Gi\"},\"defaultRequest\":{\"cpu\":\"250m\",\"ephemeral-storage\":\"256Mi\",\"memory\":\"512Mi\"},\"enabled\":false,\"max\":{\"cpu\":\"8\",\"ephemeral-storage\":\"8Gi\",\"memory\":\"16Gi\"}},\"namespace\":\"studio\",\"networkPolicy\":true,\"quota\":{\"enabled\":false,\"hard\":{\"limits.cpu\":\"40\",\"limits.ephemeral-storage\":\"80Gi\",\"limits.memory\":\"80Gi\",\"pods\":\"20\",\"requests.cpu\":\"10\",\"requests.ephemeral-storage\":\"20Gi\",\"requests.memory\":\"20Gi\"}},\"resources\":{\"limits\":{\"cpu\":\"2\",\"ephemeral-storage\":\"4Gi\",\"memory\":\"4Gi\"},\"requests\":{\"cpu\":\"500m\",\"ephemeral-storage\":\"1Gi\",\"memory\":\"1Gi\"}},\"runAsUser\":1000,\"runtimeClassName\":\"\",\"tmpSizeLimit\":\"1Gi\",\"workSizeLimit\":\"2Gi\"},\"officeConvert\":{\"enabled\":true,\"image\":\"gotenberg/gotenberg:8.39.0-libreoffice\",\"networkPolicy\":true,\"replicas\":1,\"resources\":{\"limits\":{\"cpu\":\"1\",\"ephemeral-storage\":\"1Gi\",\"memory\":\"1Gi\"},\"requests\":{\"cpu\":\"100m\",\"ephemeral-storage\":\"128Mi\",\"memory\":\"256Mi\"}},\"url\":\"http://rel-hse-doc-studio-office-convert:3000\"},\"releaseNamespace\":\"studio\",\"runner\":{\"deployment\":\"rel-hse-doc-studio-runner\",\"enabled\":true,\"executor\":\"kubernetes\",\"officeUrl\":\"http://rel-hse-doc-studio-office-convert:3000\",\"replicas\":1,\"resources\":{\"limits\":{\"cpu\":\"1\",\"ephemeral-storage\":\"2Gi\",\"memory\":\"2Gi\"},\"requests\":{\"cpu\":\"100m\",\"ephemeral-storage\":\"128Mi\",\"memory\":\"256Mi\"}},\"runAsUser\":10001,\"serviceAccount\":\"rel-hse-doc-studio-runner\",\"storageClass\":\"\",\"storageKind\":\"pvc\",\"storageSize\":\"10Gi\",\"tmpSizeLimit\":\"1Gi\"},\"runnerEgress\":{\"apiServerCidrs\":[],\"apiServerPorts\":[443,6443],\"enabled\":true,\"extraRules\":0,\"officePort\":3000,\"studioPort\":8000},\"uiBuild\":{\"enabled\":true,\"limitRange\":false,\"namespace\":\"studio\",\"networkPolicy\":true,\"quota\":false}}"}
+            # Первая установка: схему ведёт сам api под advisory-локом. Дальше её обновляет Job pre-upgrade.
+            - {name: HSE_STUDIO__DB__AUTO_MIGRATE, value: "true"}
+          volumeMounts:
+            - {name: data, mountPath: /data}
+            - {name: backups, mountPath: /backups}
+          startupProbe:
+            httpGet: {path: /health, port: http}
+            periodSeconds: 5
+            failureThreshold: 60
+          readinessProbe:
+            httpGet: {path: /health, port: http}
+            periodSeconds: 10
+          livenessProbe:
+            httpGet: {path: /health, port: http}
+            periodSeconds: 20
+            failureThreshold: 6
+          resources:
+            limits:
+              memory: 2Gi
+            requests:
+              cpu: 250m
+              memory: 512Mi
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: rel-hse-doc-studio-data
+        - name: backups
+          persistentVolumeClaim:
+            claimName: rel-hse-doc-studio-backups
+
+---
+# Source: hse-doc-studio/templates/office-convert.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: rel-hse-doc-studio-office-convert
+  labels:
+    app.kubernetes.io/name: hse-doc-studio
+    app.kubernetes.io/instance: rel
+    app.kubernetes.io/managed-by: Helm
+    helm.sh/chart: hse-doc-studio-0.1.0
+    app.kubernetes.io/component: office-convert
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: hse-doc-studio
+      app.kubernetes.io/instance: rel
+      app.kubernetes.io/component: office-convert
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: hse-doc-studio
+        app.kubernetes.io/instance: rel
+        app.kubernetes.io/component: office-convert
+    spec:
+      # Gotenberg не ходит в Kubernetes API.
+      automountServiceAccountToken: false
+      enableServiceLinks: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1001
+        runAsGroup: 1001
+        fsGroup: 1001
+        seccompProfile: {type: RuntimeDefault}
+      containers:
+        - name: gotenberg
+          image: "gotenberg/gotenberg:8.39.0-libreoffice"
+          imagePullPolicy: IfNotPresent
+          env:
+            - {name: API_TIMEOUT, value: "180s"}
+            # Gotenberg не должен ходить наружу сам: ни webhook, ни загрузки файлов по ссылке.
+            - {name: WEBHOOK_DISABLE, value: "true"}
+            - {name: API_DISABLE_DOWNLOAD_FROM, value: "true"}
+            - {name: LOG_FORMAT, value: json}
+          ports:
+            - {name: http, containerPort: 3000}
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities: {drop: [ALL]}
+          volumeMounts:
+            - {name: tmp, mountPath: /tmp}
+            - {name: home, mountPath: /home/gotenberg}
+          startupProbe:
+            httpGet: {path: /health, port: http}
+            periodSeconds: 5
+            failureThreshold: 30
+          readinessProbe:
+            httpGet: {path: /health, port: http}
+            periodSeconds: 10
+            timeoutSeconds: 5
+          livenessProbe:
+            httpGet: {path: /health, port: http}
+            periodSeconds: 20
+            timeoutSeconds: 5
+            failureThreshold: 6
+          resources:
+            limits:
+              cpu: "1"
+              ephemeral-storage: 1Gi
+              memory: 1Gi
+            requests:
+              cpu: 100m
+              ephemeral-storage: 128Mi
+              memory: 256Mi
+      volumes:
+        - name: tmp
+          emptyDir: {sizeLimit: 1Gi}
+        - name: home
+          emptyDir: {sizeLimit: 64Mi}
+      tolerations:
+        - effect: NoSchedule
+          key: office
+          operator: Exists
+
+---
+# Source: hse-doc-studio/templates/runner-kubernetes.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: rel-hse-doc-studio-runner
+  labels:
+    app.kubernetes.io/name: hse-doc-studio
+    app.kubernetes.io/instance: rel
+    app.kubernetes.io/managed-by: Helm
+    helm.sh/chart: hse-doc-studio-0.1.0
+    app.kubernetes.io/component: runner
+spec:
+  replicas: 1
+  # Том данных ReadWriteOnce: старый под отпускает его до старта нового.
+  strategy: {type: Recreate}
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: hse-doc-studio
+      app.kubernetes.io/instance: rel
+      app.kubernetes.io/component: runner
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: hse-doc-studio
+        app.kubernetes.io/instance: rel
+        app.kubernetes.io/component: runner
+    spec:
+      serviceAccountName: rel-hse-doc-studio-runner
+      # Токен нужен: раннер создаёт поды сборки через Kubernetes API (права: Role выше, только поды сборки).
+      automountServiceAccountToken: true
+      enableServiceLinks: false
+      # На SIGTERM раннер перестаёт брать задачи и дорабатывает текущие сборки.
+      terminationGracePeriodSeconds: 600
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        runAsGroup: 10001
+        fsGroup: 10001
+        seccompProfile: {type: RuntimeDefault}
+      containers:
+        - name: runner
+          image: ghcr.io/alexeyshalaev/hse-doc-studio:latest
+          imagePullPolicy: IfNotPresent
+          command: ["hse-doc-studio", "runner"]
+          env:
+            - {name: HSE_RUNNER__API_URL, value: "http://rel-hse-doc-studio:8000"}
+            - {name: HSE_RUNNER__DATA_DIR, value: "/var/lib/hse-runner"}
+            - {name: HSE_RUNNER__CONCURRENCY, value: "1"}
+            - {name: HSE_RUNNER__TAGS, value: "tex"}
+            # Gotenberg для офисных задач (тег office): runner.officeUrl или встроенный services.officeConvert.
+            - {name: HSE_RUNNER__OFFICE_URL, value: "http://rel-hse-doc-studio-office-convert:3000"}
+            # Нужен один раз: выданный раннеру токен сохраняется на его томе данных.
+            - {name: HSE_RUNNER__TOKEN, valueFrom: {secretKeyRef: {name: rel-hse-doc-studio-secrets, key: runner-bootstrap-token}}}
+            # Постоянный токен раннера (hsrn_…), если он в Secret: тогда том данных не обязателен.
+            - {name: HSE_RUNNER__RUNNER_TOKEN, valueFrom: {secretKeyRef: {name: rel-hse-doc-studio-secrets, key: runner-token, optional: true}}}
+            - {name: HSE_RUNNER__EXECUTOR, value: kubernetes}
+            - {name: HSE_RUNNER__K8S__NAMESPACE, value: "studio"}
+            - {name: HSE_RUNNER__K8S__OWNER_POD_NAME, valueFrom: {fieldRef: {fieldPath: metadata.name}}}
+            - {name: HSE_RUNNER__K8S__OWNER_POD_UID, valueFrom: {fieldRef: {fieldPath: metadata.uid}}}
+            # Свой под из downward API: раннер сообщает в админку, как он развёрнут (на работу не влияет).
+            - {name: HSE_RUNNER__POD__NAMESPACE, valueFrom: {fieldRef: {fieldPath: metadata.namespace}}}
+            - {name: HSE_RUNNER__POD__NAME, valueFrom: {fieldRef: {fieldPath: metadata.name}}}
+            - {name: HSE_RUNNER__POD__SERVICE_ACCOUNT, valueFrom: {fieldRef: {fieldPath: spec.serviceAccountName}}}
+            - {name: HSE_RUNNER__POD__CPU_REQUEST_M, valueFrom: {resourceFieldRef: {containerName: runner, resource: requests.cpu, divisor: 1m}}}
+            - {name: HSE_RUNNER__POD__CPU_LIMIT_M, valueFrom: {resourceFieldRef: {containerName: runner, resource: limits.cpu, divisor: 1m}}}
+            - {name: HSE_RUNNER__POD__MEMORY_REQUEST_MI, valueFrom: {resourceFieldRef: {containerName: runner, resource: requests.memory, divisor: 1Mi}}}
+            - {name: HSE_RUNNER__POD__MEMORY_LIMIT_MI, valueFrom: {resourceFieldRef: {containerName: runner, resource: limits.memory, divisor: 1Mi}}}
+            - {name: HSE_RUNNER__POD__EPHEMERAL_REQUEST_MI, valueFrom: {resourceFieldRef: {containerName: runner, resource: requests.ephemeral-storage, divisor: 1Mi}}}
+            - {name: HSE_RUNNER__POD__EPHEMERAL_LIMIT_MI, valueFrom: {resourceFieldRef: {containerName: runner, resource: limits.ephemeral-storage, divisor: 1Mi}}}
+            - {name: HSE_RUNNER__K8S__IMAGE_PULL_POLICY, value: "IfNotPresent"}
+            - {name: HSE_RUNNER__K8S__CPU_REQUEST, value: "500m"}
+            - {name: HSE_RUNNER__K8S__MEMORY_REQUEST, value: "1Gi"}
+            - {name: HSE_RUNNER__K8S__CPU_LIMIT, value: "2"}
+            - {name: HSE_RUNNER__K8S__MEMORY_LIMIT, value: "4Gi"}
+            - {name: HSE_RUNNER__K8S__EPHEMERAL_STORAGE_REQUEST, value: "1Gi"}
+            - {name: HSE_RUNNER__K8S__EPHEMERAL_STORAGE_LIMIT, value: "4Gi"}
+            - {name: HSE_RUNNER__K8S__WORK_SIZE_LIMIT, value: "2Gi"}
+            - {name: HSE_RUNNER__K8S__TMP_SIZE_LIMIT, value: "1Gi"}
+            - {name: HSE_RUNNER__K8S__ACTIVE_DEADLINE_S, value: "1800"}
+            - {name: HSE_RUNNER__K8S__POD_START_TIMEOUT_S, value: "300"}
+            - {name: HSE_RUNNER__K8S__RUN_AS_USER, value: "1000"}
+            - {name: HSE_RUNNER__K8S__RUN_AS_GROUP, value: "1000"}
+            - {name: HSE_RUNNER__K8S__FS_GROUP, value: "1000"}
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities: {drop: [ALL]}
+          volumeMounts:
+            - {name: runner-data, mountPath: "/var/lib/hse-runner"}
+            - {name: tmp, mountPath: /tmp}
+          resources:
+            limits:
+              cpu: "1"
+              ephemeral-storage: 2Gi
+              memory: 2Gi
+            requests:
+              cpu: 100m
+              ephemeral-storage: 128Mi
+              memory: 256Mi
+      volumes:
+        - name: runner-data
+          persistentVolumeClaim: {claimName: rel-hse-doc-studio-runner-data}
+        - name: tmp
+          emptyDir: {sizeLimit: "1Gi"}
+
+---
+# Source: hse-doc-studio/templates/ingress.yaml
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: rel-hse-doc-studio
+  labels:
+    app.kubernetes.io/name: hse-doc-studio
+    app.kubernetes.io/instance: rel
+    app.kubernetes.io/managed-by: Helm
+    helm.sh/chart: hse-doc-studio-0.1.0
+  annotations:
+    nginx.ingress.kubernetes.io/proxy-body-size: 512m
+    nginx.ingress.kubernetes.io/proxy-buffering: "off"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "75"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "75"
+spec:
+  ingressClassName: nginx
+  tls:
+    - hosts: ["studio.example.org"]
+      secretName: studio-tls
+  rules:
+    - host: "studio.example.org"
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: rel-hse-doc-studio
+                port: {number: 8000}
+---
+# Source: hse-doc-studio/templates/migrate-job.yaml
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: rel-hse-doc-studio-migrate
+  labels:
+    app.kubernetes.io/name: hse-doc-studio
+    app.kubernetes.io/instance: rel
+    app.kubernetes.io/managed-by: Helm
+    helm.sh/chart: hse-doc-studio-0.1.0
+    app.kubernetes.io/component: migrate
+  annotations:
+    helm.sh/hook: pre-upgrade
+    helm.sh/hook-weight: "0"
+    helm.sh/hook-delete-policy: before-hook-creation,hook-succeeded
+spec:
+  backoffLimit: 1
+  activeDeadlineSeconds: 600
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: hse-doc-studio
+        app.kubernetes.io/instance: rel
+        app.kubernetes.io/component: migrate
+    spec:
+      restartPolicy: Never
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        runAsGroup: 10001
+        seccompProfile: {type: RuntimeDefault}
+      containers:
+        - name: migrate
+          image: ghcr.io/alexeyshalaev/hse-doc-studio:latest
+          imagePullPolicy: IfNotPresent
+          command: ["hse-doc-studio", "db", "upgrade"]
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities: {drop: [ALL]}
+          env:
+            - {name: HSE_STUDIO__MODE, value: server}
+            - {name: HSE_STUDIO__SERVER__HOST, value: "0.0.0.0"}
+            - {name: HSE_STUDIO__SERVER__PORT, value: "8000"}
+            - {name: HSE_STUDIO__DATA_DIR, value: /data}
+            - {name: HSE_STUDIO__LOGGING__USE_JSON, value: "true"}
+            - {name: HSE_STUDIO__AUTH__PUBLIC_URL, value: "https://studio.example.org"}
+            - {name: HSE_STUDIO__AUTH__TRUSTED_PROXIES, value: "[\"10.0.0.0/8\"]"}
+            - {name: HSE_STUDIO__S3__ENDPOINT, value: "https://s3.example.org"}
+            - {name: HSE_STUDIO__S3__BUCKET, value: "studio"}
+            - {name: HSE_STUDIO__S3__REGION, value: ""}
+            - {name: HSE_STUDIO__MAIL__HOST, value: ""}
+            - {name: HSE_STUDIO__MAIL__PORT, value: "587"}
+            - {name: HSE_STUDIO__MAIL__USERNAME, value: ""}
+            - {name: HSE_STUDIO__MAIL__FROM_ADDRESS, value: "no-reply@localhost"}
+            - {name: HSE_STUDIO__LANGUAGETOOL__POOL_REPLICAS, value: "[\"http://languagetool-0.lt:8010\",\"http://languagetool-1.lt:8010\"]"}
+            - {name: HSE_STUDIO__MODEL_SERVERS__LOCAL_ENABLED, value: "false"}
+            - {name: HSE_STUDIO__OFFICE_EDITOR__POOL_REPLICAS, value: "[\"http://onlyoffice.example.org\"]"}
+            - {name: HSE_STUDIO__OFFICE_EDITOR__BACKEND_INTERNAL_URL, value: "http://rel-hse-doc-studio:8000"}
+            - {name: HSE_STUDIO__DB__DSN, valueFrom: {secretKeyRef: {name: rel-hse-doc-studio-secrets, key: dsn}}}
+            - {name: HSE_STUDIO__SECRETS__KEY, valueFrom: {secretKeyRef: {name: rel-hse-doc-studio-secrets, key: secrets-key}}}
+            - {name: HSE_STUDIO__S3__ACCESS_KEY, valueFrom: {secretKeyRef: {name: rel-hse-doc-studio-secrets, key: s3-access-key}}}
+            - {name: HSE_STUDIO__S3__SECRET_KEY, valueFrom: {secretKeyRef: {name: rel-hse-doc-studio-secrets, key: s3-secret-key}}}
+            - {name: HSE_STUDIO__JOBS__RUNNER_BOOTSTRAP_TOKEN, valueFrom: {secretKeyRef: {name: rel-hse-doc-studio-secrets, key: runner-bootstrap-token, optional: true}}}
+            - {name: HSE_STUDIO__MAIL__PASSWORD, valueFrom: {secretKeyRef: {name: rel-hse-doc-studio-secrets, key: smtp-password, optional: true}}}
+            - {name: HSE_STUDIO__OBSERVABILITY__HEALTH_TOKEN, valueFrom: {secretKeyRef: {name: rel-hse-doc-studio-secrets, key: health-token, optional: true}}}
+            - {name: HSE_STUDIO__OBSERVABILITY__METRICS_TOKEN, valueFrom: {secretKeyRef: {name: rel-hse-doc-studio-secrets, key: metrics-token, optional: true}}}
+            - {name: HSE_STUDIO__OFFICE_EDITOR__JWT_SECRET, valueFrom: {secretKeyRef: {name: rel-hse-doc-studio-secrets, key: office-jwt-secret, optional: true}}}
+          resources:
+            {}
+

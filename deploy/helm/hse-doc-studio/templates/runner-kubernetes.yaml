@@ -142,8 +142,9 @@ spec:
             {{- if $r.tags }}
             - {name: HSE_RUNNER__TAGS, value: {{ $r.tags | quote }}}
             {{- end }}
-            {{- if $r.officeUrl }}
-            - {name: HSE_RUNNER__OFFICE_URL, value: {{ $r.officeUrl | quote }}}
+            {{- with include "hds.runnerOfficeUrl" . }}
+            # Gotenberg для офисных задач (тег office): runner.officeUrl или встроенный services.officeConvert.
+            - {name: HSE_RUNNER__OFFICE_URL, value: {{ . | quote }}}
             {{- end }}
             # Нужен один раз: выданный раннеру токен сохраняется на его томе данных.
             - {name: HSE_RUNNER__TOKEN, valueFrom: {secretKeyRef: {name: {{ include "hds.secretName" . }}, key: runner-bootstrap-token}}}
