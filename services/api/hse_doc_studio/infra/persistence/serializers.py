@@ -51,6 +51,7 @@ from hse_doc_studio.core.value_objects import (
     ChecksOverride,
     CustomFileOverride,
     DetachedSignature,
+    EmbeddedSignature,
     FormState,
     FrozenPdf,
     Person,
@@ -580,6 +581,10 @@ def serialize_signatures_state(state: SignaturesState) -> dict[str, Any]:
             doc_id: {slot_id: _serialize_detached(d) for slot_id, d in slot_map.items()}
             for doc_id, slot_map in state.detached.items()
         },
+        "embedded": {
+            doc_id: {slot_id: _serialize_embedded(e) for slot_id, e in slot_map.items()}
+            for doc_id, slot_map in state.embedded.items()
+        },
     }
 
 
@@ -620,9 +625,46 @@ def _deserialize_frozen(raw: Any) -> dict[str, FrozenPdf]:
                 size=int(item["size"]),
                 frozen_at=str(item["frozen_at"]),
                 stamps_digest=str(item.get("stamps_digest", "")),
+                signed_path=str(item.get("signed_path", "")),
+                signed_sha256=str(item.get("signed_sha256", "")),
+                signed_size=int(item.get("signed_size", 0)),
             )
         except (KeyError, TypeError, ValueError):
             continue
+    return result
+
+
+def _serialize_embedded(e: EmbeddedSignature) -> dict[str, Any]:
+    data = dataclasses.asdict(e)
+    data["verdict"] = e.verdict.value
+    data["notes"] = list(e.notes)
+    return data
+
+
+def _deserialize_embedded(raw: Any) -> dict[str, dict[str, EmbeddedSignature]]:
+    result: dict[str, dict[str, EmbeddedSignature]] = {}
+    if not isinstance(raw, dict):
+        return result
+    for doc_id, slot_map in raw.items():
+        if not isinstance(slot_map, dict):
+            continue
+        for slot_id, item in slot_map.items():
+            try:
+                result.setdefault(doc_id, {})[slot_id] = EmbeddedSignature(
+                    field_name=str(item["field_name"]),
+                    base_sha256=str(item["base_sha256"]),
+                    revision_size=int(item["revision_size"]),
+                    revision_sha256=str(item["revision_sha256"]),
+                    verdict=DetachedVerdict(item["verdict"]),
+                    signer=str(item.get("signer", "")),
+                    signer_id=str(item.get("signer_id", "")),
+                    added_at=str(item.get("added_at", "")),
+                    signed_at=item.get("signed_at"),
+                    issuer=str(item.get("issuer", "")),
+                    notes=tuple(str(n) for n in item.get("notes", ())),
+                )
+            except (KeyError, TypeError, ValueError):
+                continue
     return result
 
 
@@ -704,6 +746,7 @@ def deserialize_signatures_state(data: dict[str, Any]) -> SignaturesState:  # no
         placements=placements,
         frozen=_deserialize_frozen(data.get("frozen")),
         detached=_deserialize_detached(data.get("detached")),
+        embedded=_deserialize_embedded(data.get("embedded")),
     )
 
 

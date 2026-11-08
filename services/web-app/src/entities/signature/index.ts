@@ -1,4 +1,5 @@
 export { signatureApi, signatureDownloadUrls } from "./api/signatureApi";
+export type { SignSubmissionBody } from "./api/signatureApi";
 export {
   signatureKeys,
   useAttachDetachedSignature,
@@ -12,6 +13,9 @@ export {
   useSetSlotSigner,
   useTrustRoot,
   useSignaturesState,
+  useSignaturePlan,
+  usePreviewSignSubmission,
+  useSignSubmission,
   useSignDetachedInStudio,
   useUnfreezePdf,
   useUpdateSignaturePlacement,
@@ -25,6 +29,8 @@ export {
   FrozenPdfSchema,
   PlacementSchema,
   RuntimeSignatureSlotSchema,
+  SignaturePlanSchema,
+  PlanSlotSchema,
   SignaturesStateSchema,
   SlotInfoSchema,
   UpdatePlacementRequestSchema,

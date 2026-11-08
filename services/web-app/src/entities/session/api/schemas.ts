@@ -36,6 +36,7 @@ export const TokenScopeSchema = z.enum([
   "git:write",
   "mcp",
   "mcp:admin",
+  "sign",
 ]);
 export const ProjectRoleSchema = z.enum([
   "reader",

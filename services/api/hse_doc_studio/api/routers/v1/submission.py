@@ -70,6 +70,7 @@ def _map_profile(profile: SubmissionProfile) -> SubmissionProfileResponse:
                 signatures=list(item.signatures),
                 skip_if_nda=item.skip_if_nda,
                 supported_kinds=list(item.supported_kinds),
+                methods={slot_id: list(methods) for slot_id, methods in item.methods},
             )
             for item in profile.items
         ],

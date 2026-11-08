@@ -121,6 +121,7 @@ def _map_submission_profile(profile: SubmissionProfile) -> SubmissionProfileResp
                 signatures=list(item.signatures),
                 skip_if_nda=item.skip_if_nda,
                 supported_kinds=list(item.supported_kinds),
+                methods={slot_id: list(methods) for slot_id, methods in item.methods},
             )
             for item in profile.items
         ],

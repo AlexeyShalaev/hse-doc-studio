@@ -287,5 +287,30 @@
       "trust": "Trust this root",
       "trustConfirm": "Trust the root certificate “{{subject}}”?\n\nSHA-256: {{fingerprint}}\n\nCompare the fingerprint with an official source (e.g. e-trust.gosuslugi.ru) before confirming."
     }
+  },
+  "signSubmission": {
+    "title": "Sign the submission",
+    "description": "All your signatures on the documents of this checkpoint in one go. Each signature covers exactly the PDF version you see now.",
+    "close": "Close",
+    "cancel": "Cancel",
+    "sign": "Sign",
+    "key": "Signing key",
+    "noKey": "No key: add one in the settings",
+    "passphrase": "Key passphrase (not stored)",
+    "nothing": "No signatures of yours are awaited at this checkpoint",
+    "willFreeze": "The PDF will be frozen for signing: images and plates go onto the page",
+    "method": {
+      "image": "image",
+      "detached": "detached e-signature",
+      "pades": "e-signature in PDF"
+    },
+    "action": {
+      "sign": "sign with the key",
+      "stamp": "image goes on when frozen",
+      "none": "ready"
+    },
+    "confirmReset": "Freezing again resets signatures already made: {{names}}. They will have to sign again.",
+    "done": "{{signed}} of {{total}} signed",
+    "waiting": "Awaiting your signature: {{count}}"
   }
 }

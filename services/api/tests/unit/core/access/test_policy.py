@@ -195,6 +195,18 @@ def test__sign__requires_persona_slug_equal_to_slot_owner() -> None:
     assert decide(USER, Action.SIGN, author, "author--petrov") is Decision.forbidden
 
 
+def test__sign__supervisor_slot__bound_supervisor_signs_others_do_not() -> None:
+    supervisor = _acl(Grant(Role.reviewer, persona_slug="supervisor"))
+    consultant = _acl(Grant(Role.reviewer, persona_slug="co_supervisor"))
+
+    assert can(USER, Action.SIGN, supervisor, "supervisor")
+    assert not can(USER, Action.SIGN, supervisor, "co_supervisor")
+    assert not can(USER, Action.SIGN, supervisor, "author")
+    assert can(USER, Action.SIGN, consultant, "co_supervisor")
+    assert not can(USER, Action.SIGN, _acl(Grant(Role.editor, persona_slug="ivanov")), "supervisor")
+    assert can(USER, Action.SIGN, _acl(Grant(Role.owner)), "supervisor")
+
+
 def test__sign__slot_without_owner__only_project_owner() -> None:
     assert not can(USER, Action.SIGN, _acl(Grant(Role.editor, persona_slug="ivanov")), "author")
     assert not can(USER, Action.SIGN, _acl(Grant(Role.editor, persona_slug="ivanov")))

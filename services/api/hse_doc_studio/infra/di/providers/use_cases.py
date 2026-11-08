@@ -106,7 +106,10 @@ from hse_doc_studio.core.shutdown import process_shutdown
 from hse_doc_studio.core.signatures.ports import (
     IChainFetcher,
     IOpenPgpKeyImporter,
+    IPadesSigner,
     IPublicKeyExporter,
+    ISignatureAudit,
+    ISignerScope,
     ITrustMaterialProvider,
 )
 from hse_doc_studio.core.submission_archive import ISubmissionArchive, ISubmissionAudit
@@ -407,6 +410,7 @@ from hse_doc_studio.use_cases.settings.get_settings import GetSettingsUC
 from hse_doc_studio.use_cases.settings.update_settings import UpdateSettingsUC
 from hse_doc_studio.use_cases.setup.apply_setup import ApplySetupUC
 from hse_doc_studio.use_cases.setup.inspect_setup import InspectSetupUC
+from hse_doc_studio.use_cases.signatures._studio_signer import StudioSigner
 
 # --- Signatures ---
 from hse_doc_studio.use_cases.signatures.attach_detached_signature import (
@@ -414,6 +418,7 @@ from hse_doc_studio.use_cases.signatures.attach_detached_signature import (
     CompleteDetachedChainUC,
     RecheckDetachedSignatureUC,
 )
+from hse_doc_studio.use_cases.signatures.default_key import DefaultSigningKey
 from hse_doc_studio.use_cases.signatures.delete_detached_signature import DeleteDetachedSignatureUC
 from hse_doc_studio.use_cases.signatures.delete_signature_png import DeleteSignaturePngUC
 from hse_doc_studio.use_cases.signatures.freeze_pdf import FreezePdfUC, UnfreezePdfUC
@@ -422,9 +427,11 @@ from hse_doc_studio.use_cases.signatures.get_detached_files import (
     GetDetachedSignatureFileUC,
     GetFrozenPdfUC,
 )
+from hse_doc_studio.use_cases.signatures.get_signature_plan import GetSignaturePlanUC
 from hse_doc_studio.use_cases.signatures.get_signatures import GetSignaturesUC
 from hse_doc_studio.use_cases.signatures.get_signed_doc_pdf import GetSignedDocPdfUC
 from hse_doc_studio.use_cases.signatures.sign_in_studio import SignInStudioUC
+from hse_doc_studio.use_cases.signatures.sign_submission import SignSubmissionUC
 from hse_doc_studio.use_cases.signatures.update_signature_placement import UpdateSignaturePlacementUC
 from hse_doc_studio.use_cases.signatures.update_slot_config import UpdateSlotConfigUC
 from hse_doc_studio.use_cases.signatures.update_slot_signer import UpdateSlotSignerUC
@@ -2913,6 +2920,20 @@ class UseCaseProvider(Provider):
     # ------------------------------------------------------------------ Signatures
 
     @provide
+    def get_signature_plan_uc(  # noqa: PLR0913 — порты сценария
+        self,
+        project_repo: IProjectRepository,
+        project_index_repo: IProjectIndexRepository,
+        signature_repo: ISignatureRepository,
+        template_repo: ITemplateRepository,
+        template_service: ProjectTemplateService,
+        signer_scope: ISignerScope,
+    ) -> GetSignaturePlanUC:
+        return GetSignaturePlanUC(
+            project_repo, project_index_repo, signature_repo, template_repo, template_service, signer_scope
+        )
+
+    @provide
     def get_get_signatures_uc(
         self,
         project_repo: IProjectRepository,
@@ -3020,6 +3041,7 @@ class UseCaseProvider(Provider):
         template_repo: ITemplateRepository,
         template_service: ProjectTemplateService,
         pdf_stamper: PdfStamper,
+        audit: ISignatureAudit,
     ) -> FreezePdfUC:
         return FreezePdfUC(
             project_repo=project_repo,
@@ -3028,6 +3050,7 @@ class UseCaseProvider(Provider):
             template_repo=template_repo,
             template_service=template_service,
             pdf_stamper=pdf_stamper,
+            audit=audit,
         )
 
     @provide
@@ -3036,9 +3059,10 @@ class UseCaseProvider(Provider):
         project_repo: IProjectRepository,
         project_index_repo: IProjectIndexRepository,
         signature_repo: ISignatureRepository,
+        audit: ISignatureAudit,
     ) -> UnfreezePdfUC:
         return UnfreezePdfUC(
-            project_repo=project_repo, project_index_repo=project_index_repo, signature_repo=signature_repo
+            project_repo=project_repo, project_index_repo=project_index_repo, signature_repo=signature_repo, audit=audit
         )
 
     @provide
@@ -3052,6 +3076,7 @@ class UseCaseProvider(Provider):
         dispatcher: IJobDispatcher,
         trust_provider: ITrustMaterialProvider,
         keyring: IOpenPgpKeyImporter,
+        audit: ISignatureAudit,
     ) -> AttachDetachedSignatureUC:
         return AttachDetachedSignatureUC(
             project_repo,
@@ -3062,6 +3087,7 @@ class UseCaseProvider(Provider):
             dispatcher,
             trust_provider,
             keyring,
+            audit,
         )
 
     @provide
@@ -3075,6 +3101,7 @@ class UseCaseProvider(Provider):
         dispatcher: IJobDispatcher,
         trust_provider: ITrustMaterialProvider,
         keyring: IOpenPgpKeyImporter,
+        audit: ISignatureAudit,
     ) -> RecheckDetachedSignatureUC:
         return RecheckDetachedSignatureUC(
             project_repo,
@@ -3085,6 +3112,7 @@ class UseCaseProvider(Provider):
             dispatcher,
             trust_provider,
             keyring,
+            audit,
         )
 
     @provide
@@ -3099,6 +3127,7 @@ class UseCaseProvider(Provider):
         trust_provider: ITrustMaterialProvider,
         keyring: IOpenPgpKeyImporter,
         fetcher: IChainFetcher,
+        audit: ISignatureAudit,
     ) -> CompleteDetachedChainUC:
         return CompleteDetachedChainUC(
             project_repo,
@@ -3110,6 +3139,7 @@ class UseCaseProvider(Provider):
             trust_provider,
             keyring,
             fetcher,
+            audit,
         )
 
     @provide
@@ -3124,17 +3154,56 @@ class UseCaseProvider(Provider):
         dispatcher: IJobDispatcher,
         trust_provider: ITrustMaterialProvider,
         keyring: GpgKeyring,
+        pades: IPadesSigner,
+        signer_scope: ISignerScope,
+        audit: ISignatureAudit,
     ) -> SignInStudioUC:
         return SignInStudioUC(
             project_repo=project_repo,
             project_index_repo=project_index_repo,
             signature_repo=signature_repo,
-            signing_identity_repo=signing_identity_repo,
             template_repo=template_repo,
             template_service=template_service,
-            dispatcher=dispatcher,
-            trust_provider=trust_provider,
-            keyring=keyring,
+            signer=StudioSigner(signing_identity_repo, keyring, dispatcher, trust_provider, pades, signer_scope, audit),
+        )
+
+    @provide
+    def get_default_signing_key(
+        self, settings_repo: ISettingsRepository, signing_identity_repo: ISigningIdentityRepository
+    ) -> DefaultSigningKey:
+        return DefaultSigningKey(settings_repo, signing_identity_repo)
+
+    @provide
+    def get_sign_submission_uc(  # noqa: PLR0913 — порты сценария
+        self,
+        project_repo: IProjectRepository,
+        project_index_repo: IProjectIndexRepository,
+        signature_repo: ISignatureRepository,
+        signing_identity_repo: ISigningIdentityRepository,
+        template_repo: ITemplateRepository,
+        template_service: ProjectTemplateService,
+        dispatcher: IJobDispatcher,
+        trust_provider: ITrustMaterialProvider,
+        keyring: GpgKeyring,
+        pades: IPadesSigner,
+        signer_scope: ISignerScope,
+        audit: ISignatureAudit,
+        plan_uc: GetSignaturePlanUC,
+        freeze_uc: FreezePdfUC,
+        default_key: DefaultSigningKey,
+        access: IProjectAccessChecker,
+    ) -> SignSubmissionUC:
+        return SignSubmissionUC(
+            project_repo,
+            project_index_repo,
+            signature_repo,
+            template_repo,
+            template_service,
+            plan_uc,
+            freeze_uc,
+            StudioSigner(signing_identity_repo, keyring, dispatcher, trust_provider, pades, signer_scope, audit),
+            default_key,
+            access,
         )
 
     @provide
@@ -3143,9 +3212,10 @@ class UseCaseProvider(Provider):
         project_repo: IProjectRepository,
         project_index_repo: IProjectIndexRepository,
         signature_repo: ISignatureRepository,
+        audit: ISignatureAudit,
     ) -> DeleteDetachedSignatureUC:
         return DeleteDetachedSignatureUC(
-            project_repo=project_repo, project_index_repo=project_index_repo, signature_repo=signature_repo
+            project_repo=project_repo, project_index_repo=project_index_repo, signature_repo=signature_repo, audit=audit
         )
 
     @provide

@@ -5,6 +5,7 @@ from uuid import UUID
 from dishka.integrations.fastapi import FromDishka
 from fastapi import APIRouter, File, Form, HTTPException, UploadFile
 from fastapi.responses import FileResponse, Response
+from pydantic import BaseModel
 
 from hse_doc_studio.api.config import settings
 from hse_doc_studio.api.dishka_route import SafeDishkaRoute
@@ -19,8 +20,10 @@ from hse_doc_studio.api.schemas.signing_identity import (
     map_openpgp_key,
 )
 from hse_doc_studio.core.errors import NotFoundError
+from hse_doc_studio.core.signatures.ports import ISignatureAudit
 from hse_doc_studio.infra.signatures.chain_fetcher import ChainFetcher
 from hse_doc_studio.infra.signatures.trusted_roots import TrustedRoot, TrustedRootStore
+from hse_doc_studio.use_cases.signatures.default_key import DefaultKey, DefaultSigningKey
 from hse_doc_studio.use_cases.signing_identities.create_self_signed import (
     CreateSelfSignedInput,
     CreateSelfSignedUC,
@@ -215,3 +218,42 @@ async def delete_trusted_root(fingerprint: str, store: FromDishka[TrustedRootSto
         store.delete(fingerprint)
     except NotFoundError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+
+class DefaultKeyResponse(BaseModel):
+    # Выбранный явно ключ; null, когда не выбран (тогда при единственном ключе работает он).
+    identity_id: UUID | None
+    effective_id: UUID | None
+    auto: bool
+
+
+class DefaultKeyRequest(BaseModel):
+    identity_id: UUID | None = None
+
+
+def _map_default(key: DefaultKey) -> DefaultKeyResponse:
+    return DefaultKeyResponse(
+        identity_id=key.chosen_id, effective_id=key.effective.id if key.effective else None, auto=key.auto
+    )
+
+
+@router.get("/signing-identities/default", response_model=DefaultKeyResponse)
+async def get_default_signing_key(store: FromDishka[DefaultSigningKey]) -> DefaultKeyResponse:
+    """Ключ по умолчанию: им «Подписать комплект» подписывает свои слоты и заполняет плашку."""
+    return _map_default(await store.get())
+
+
+@router.put("/signing-identities/default", response_model=DefaultKeyResponse)
+async def set_default_signing_key(
+    body: DefaultKeyRequest, store: FromDishka[DefaultSigningKey], audit: FromDishka[ISignatureAudit]
+) -> DefaultKeyResponse:
+    try:
+        key = await store.set(body.identity_id)
+    except NotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    await audit.record(
+        "signature.default_key",
+        project_id=None,
+        details={"identity_id": str(body.identity_id) if body.identity_id else None},
+    )
+    return _map_default(key)

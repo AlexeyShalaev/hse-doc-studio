@@ -23,7 +23,7 @@ from hse_doc_studio.core.catalog import (
     TemplateVersion,
 )
 from hse_doc_studio.core.entities import Document, Project
-from hse_doc_studio.core.enums import Lang, SignMode
+from hse_doc_studio.core.enums import Lang
 from hse_doc_studio.core.jobs.files import (
     InlineBlob,
     IProjectFileProbe,
@@ -41,15 +41,21 @@ from hse_doc_studio.core.jobs.pack import (
 from hse_doc_studio.core.office import CONVERTIBLE_OFFICE_EXTS, resolve_custom_doc_decision, sibling_pdf_path
 from hse_doc_studio.core.services import ProjectTemplateService, SignatureSlotService
 from hse_doc_studio.core.signatures.package_text import (
+    BASE_SUFFIX,
+    VERIFY_GUIDE_NAME,
+    GuideDocument,
+    GuideSignature,
     PackageSignature,
-    build_readme,
+    build_verify_guide,
+    detached_signature_name,
     public_key_files,
-    signature_arcname,
+    signer_display_name,
 )
+from hse_doc_studio.core.signatures.plan import SignMethod, method_of, signer_for
 from hse_doc_studio.core.signatures.ports import IPublicKeyExporter
-from hse_doc_studio.core.signatures.stamps import Stamp, stamps_for_doc
+from hse_doc_studio.core.signatures.stamps import Stamp, stamps_digest, stamps_for_doc
 from hse_doc_studio.core.team import author_by_slug
-from hse_doc_studio.core.value_objects import DetachedSignature, FrozenPdf, SignaturesState
+from hse_doc_studio.core.value_objects import DetachedSignature, EmbeddedSignature, FrozenPdf, SignaturesState
 
 logger = structlog.get_logger()
 
@@ -121,17 +127,31 @@ def _contained(rel: str) -> str | None:
     return norm
 
 
+def _method(state: SignaturesState, slot_id: str) -> SignMethod:
+    slot = state.slots.get(slot_id)
+    return method_of(slot.sign_mode) if slot is not None else SignMethod.image
+
+
 def _detached_for_item(
     item_signatures: tuple[str, ...], doc_id: str, state: SignaturesState
 ) -> list[tuple[str, DetachedSignature]]:
     attached = state.detached.get(doc_id, {})
-    result: list[tuple[str, DetachedSignature]] = []
-    for slot_id in item_signatures:
-        slot = state.slots.get(slot_id)
-        sig = attached.get(slot_id)
-        if slot is not None and slot.sign_mode is SignMode.detached_text and sig is not None:
-            result.append((slot_id, sig))
-    return result
+    return [
+        (slot_id, attached[slot_id])
+        for slot_id in item_signatures
+        if slot_id in attached and _method(state, slot_id) is SignMethod.detached
+    ]
+
+
+def _embedded_for_item(
+    item_signatures: tuple[str, ...], doc_id: str, state: SignaturesState
+) -> list[tuple[str, EmbeddedSignature]]:
+    embedded = state.embedded.get(doc_id, {})
+    return [
+        (slot_id, embedded[slot_id])
+        for slot_id in item_signatures
+        if slot_id in embedded and _method(state, slot_id) is SignMethod.pades
+    ]
 
 
 def _stamp_spec(stamp: Stamp) -> StampSpec:
@@ -166,6 +186,8 @@ class _Run:
     slot_service: SignatureSlotService
     entries: list[PackEntry] = field(default_factory=list)
     warnings: list[PackSkip] = field(default_factory=list)
+    # Разделы КАК_ПРОВЕРИТЬ.txt по документам с подписями (docs/design/signature-plan.md, раздел 8).
+    guide: list[GuideDocument] = field(default_factory=list)
 
     def warn(self, event: str, name: str, reason: str, detail: str = "", **log: str) -> None:
         logger.warning(f"assembler: {event}", **log)
@@ -194,12 +216,13 @@ class _Run:
                 "doc output_name escapes folder", arcname, REASON_ARCNAME_ESCAPES, doc_id=item.doc_id, arcname=arcname
             )
             return
-        # Документ с открепленными подписями едет как замороженные байты, которые
-        # подписи и покрывают, с отдельным файлом подписи на каждого подписанта.
+        # Документ с криптоподписями едет зафиксированными байтами, которые подписи и покрывают:
+        # итоговый файл со встроенными PAdES и отдельный файл на каждую открепленную подпись.
         detached = _detached_for_item(item.signatures, item.doc_id, self.sig_state) if is_pdf else []
+        embedded = _embedded_for_item(item.signatures, item.doc_id, self.sig_state) if is_pdf else []
         frozen = self.sig_state.frozen.get(item.doc_id)
-        if detached and frozen is not None:
-            self._add_frozen_doc(source_rel, target, frozen, detached)
+        if (detached or embedded) and frozen is not None:
+            self._add_frozen_doc(item, source_rel, target, frozen, detached, embedded)
             return
         # Не-PDF (docx/pptx как есть, неопознанный формат) не штампуем даже при
         # размещениях: парсер PDF на нем упал бы.
@@ -209,6 +232,9 @@ class _Run:
             self.entries.append(
                 PackEntry(PackEntryKind.stamp_pdf, target, source=ManifestFile(source_rel), stamps=specs)
             )
+            images = self._image_signatures(item)
+            if images:
+                self.guide.append(GuideDocument(pdf=target, sha256="", signatures=images))
         else:
             self.entries.append(PackEntry(PackEntryKind.copy, target, source=ManifestFile(source_rel)))
 
@@ -282,14 +308,19 @@ class _Run:
             logger.warning("assembler: custom doc conversion unavailable, including raw file", doc_id=doc.id)
         return custom_file.stored_path, False
 
-    def _add_frozen_doc(
-        self,
-        source_rel: str,
-        arcname: str,
-        frozen: FrozenPdf,
-        detached: list[tuple[str, DetachedSignature]],
-    ) -> None:
-        """Замороженный PDF, файлы подписей, публичные ключи и README. Ошибки до любой записи."""
+    def _slot_label(self, slot_id: str) -> str:
+        rslot = self.slot_service.find_runtime_slot(self.project, self.version, slot_id)
+        return (rslot.label.get(self.lang) or rslot.label.get("ru") or slot_id) if rslot else slot_id
+
+    def _image_signatures(self, item: SubmissionDocItem) -> tuple[GuideSignature, ...]:
+        return tuple(
+            GuideSignature("image", self._slot_label(slot_id), signer_for(self.project, slot_id).name)
+            for slot_id in item.signatures
+            if _method(self.sig_state, slot_id) is SignMethod.image
+        )
+
+    def _check_frozen_current(self, doc_id: str, source_rel: str, arcname: str, frozen: FrozenPdf) -> str:
+        """Путь зафиксированного PDF; ошибка, если документ пересобран или видимый слой изменился после фиксации."""
         frozen_rel = _contained(frozen.path)
         if frozen_rel is None or not self.probe.is_file(frozen_rel):
             raise ValueError(f"Frozen PDF is missing for {arcname}: freeze the document again")
@@ -298,46 +329,119 @@ class _Run:
                 f"{arcname}: the document was rebuilt after the PDF was frozen for signing. "
                 "Freeze it again and re-attach the signatures"
             )
-        frozen_entry = PackEntry(
-            PackEntryKind.copy,
-            arcname,
-            source=ManifestFile(frozen_rel, sha256=frozen.sha256, size=frozen.size),
-            critical=True,
-        )
-        entries = [frozen_entry]
+        folder = self.project.folder
+
+        def png_exists(path: Path) -> bool:
+            return path.is_relative_to(folder) and self._png_exists(path.relative_to(folder))
+
+        marks = stamps_digest(stamps_for_doc(self.sig_state, doc_id, folder, self.lang, png_exists=png_exists))
+        if frozen.stamps_digest and marks != frozen.stamps_digest:
+            raise ValueError(
+                f"{arcname}: images or signature plates changed after the PDF was frozen for signing. "
+                "Freeze it again and sign the new version"
+            )
+        return frozen_rel
+
+    def _add_frozen_doc(  # noqa: C901, PLR0913 — пункт, источник, имя и три части состояния
+        self,
+        item: SubmissionDocItem,
+        source_rel: str,
+        arcname: str,
+        frozen: FrozenPdf,
+        detached: list[tuple[str, DetachedSignature]],
+        embedded: list[tuple[str, EmbeddedSignature]],
+    ) -> None:
+        """Итоговый PDF, PDF для открепленных (если он другой), подписи и ключи. Ошибки до любой записи."""
+        frozen_rel = self._check_frozen_current(item.doc_id, source_rel, arcname, frozen)
         pdf_name = PurePosixPath(arcname).name
         parent = PurePosixPath(arcname).parent
-
+        final_rel, final_sha, final_size = frozen_rel, frozen.sha256, frozen.size
+        if embedded:
+            signed_rel = _contained(frozen.signed_path)
+            if signed_rel is None or self.probe.sha256(signed_rel) != frozen.signed_sha256:
+                raise ValueError(f"{arcname}: the signed PDF changed outside the Studio: freeze the document again")
+            final_rel, final_sha, final_size = signed_rel, frozen.signed_sha256, frozen.signed_size
+        entries = [
+            PackEntry(
+                PackEntryKind.copy,
+                arcname,
+                source=ManifestFile(final_rel, sha256=final_sha, size=final_size),
+                critical=True,
+            )
+        ]
+        # Открепленные подписи покрывают зафиксированные байты: при встроенных подписях это уже другой файл.
+        base_name = pdf_name
+        if embedded and detached:
+            stem = pdf_name.rsplit(".", 1)[0]
+            base_name = f"{stem}.{BASE_SUFFIX.get(self.lang, BASE_SUFFIX['ru'])}.pdf"
+            entries.append(
+                PackEntry(
+                    PackEntryKind.copy,
+                    str(parent / base_name),
+                    source=ManifestFile(frozen_rel, sha256=frozen.sha256, size=frozen.size),
+                    critical=True,
+                )
+            )
+        guide_sigs = list(self._image_signatures(item))
         sigs: list[PackageSignature] = []
+        used: set[str] = set()
         for slot_id, sig in detached:
             sig_rel = _contained(sig.file)
             if sig_rel is None or not self.probe.is_file(sig_rel):
                 raise ValueError(f"Signature file is missing for {arcname}, slot {slot_id}")
-            rslot = self.slot_service.find_runtime_slot(self.project, self.version, slot_id)
-            label = (rslot.label.get(self.lang) or rslot.label.get("ru") or slot_id) if rslot else slot_id
-            sig_name = signature_arcname(pdf_name, label, PurePosixPath(sig_rel).suffix)
+            label = self._slot_label(slot_id)
+            # Имя из самой подписи: кто подписал на деле, а не кого ждали на плашке.
+            signer = signer_display_name(sig.signer) or signer_for(self.project, slot_id).name or label
+            sig_name = detached_signature_name(base_name, signer, sig.format, PurePosixPath(sig_rel).suffix)
+            if sig_name in used:
+                sig_name = detached_signature_name(
+                    base_name, f"{signer} {label}", sig.format, PurePosixPath(sig_rel).suffix
+                )
+            used.add(sig_name)
             entries.append(
                 PackEntry(PackEntryKind.copy, str(parent / sig_name), source=ManifestFile(sig_rel), critical=True)
             )
-            sigs.append(
-                PackageSignature(
-                    slot_label=label,
-                    arcname=sig_name,
-                    format=sig.format,
-                    signer=sig.signer,
-                    signer_id=sig.signer_id,
-                )
+            sigs.append(PackageSignature(label, sig_name, sig.format, signer, sig.signer_id))
+            guide_sigs.append(
+                GuideSignature("detached", label, signer, str(parent / sig_name), sig.format, str(parent / base_name))
             )
-
+        guide_sigs += [
+            GuideSignature(
+                "pades",
+                self._slot_label(slot_id),
+                signer_display_name(emb.signer) or signer_for(self.project, slot_id).name,
+            )
+            for slot_id, emb in embedded
+        ]
         keys = public_key_files(self.key_exporter.export_public, sigs) if self.key_exporter is not None else {}
         for name, blob in keys.items():
             entries.append(
                 PackEntry(PackEntryKind.blob, str(parent / name), blob=InlineBlob.from_bytes(blob), critical=True)
             )
-        readme_name = f"{PurePosixPath(pdf_name).stem}.README.txt"
-        readme = build_readme(self.lang, pdf_name, frozen.sha256, sigs, list(keys))
-        entries.append(PackEntry(PackEntryKind.text, str(parent / readme_name), text=readme, critical=True))
         self.entries.extend(entries)
+        self.guide.append(
+            GuideDocument(
+                pdf=arcname,
+                sha256=final_sha,
+                signatures=tuple(guide_sigs),
+                base=str(parent / base_name) if base_name != pdf_name else "",
+                base_sha256=frozen.sha256 if base_name != pdf_name else "",
+                base_size=frozen.size if base_name != pdf_name else 0,
+                keys=tuple(str(parent / k) for k in keys),
+            )
+        )
+
+    def add_guide(self) -> None:
+        """Одна инструкция «как проверить» на весь комплект, если в нём есть электронные подписи.
+
+        Комплект из одних картинок инструкции не получает: проверять в нём нечего, а лишний файл в LMS мешает.
+        """
+        if not any(sig.kind != "image" for doc in self.guide for sig in doc.signatures):
+            return
+        name = VERIFY_GUIDE_NAME.get(self.lang, VERIFY_GUIDE_NAME["ru"])
+        self.entries.append(
+            PackEntry(PackEntryKind.text, name, text=build_verify_guide(self.lang, self.guide), critical=True)
+        )
 
     def add_extra(self, extra: ExtraSubmissionItem) -> None:
         # Готовый текст (например, декларация ИИ через output-шаблон формы)
@@ -473,6 +577,7 @@ class PackPlanner:
             run.add_doc(item)
         for extra in extra_items:
             run.add_extra(extra)
+        run.add_guide()
         payload = PackSubmissionPayload(
             base_name=base_name,
             profile_id=profile_id,

@@ -7,6 +7,7 @@ from enum import StrEnum
 from hse_doc_studio.core.access.actions import GUEST_DENIED, LINK_DENIED, ROLE_ACTIONS, Action
 from hse_doc_studio.core.access.entities import Actor, Grant, ProjectAcl, Role
 from hse_doc_studio.core.access.paths import classify_path, path_in_author_scope
+from hse_doc_studio.core.invitations.entities import SUPERVISOR_PERSONAS
 from hse_doc_studio.core.team import split_instance_id
 
 _ROLE_ORDER = (Role.reader, Role.reviewer, Role.editor, Role.owner)
@@ -89,11 +90,12 @@ def _extra_condition(action: Action, acl: ProjectAcl, grant: Grant, path: str | 
 def _may_sign_slot(grant: Grant, slot_id: str | None) -> bool:
     """Слот `<slot>--<slug>` подписывает только привязанный к автору `<slug>`.
 
-    Слот без суффикса не принадлежит персоне, его подписывает только владелец проекта.
+    Слот руководителя (`supervisor`, `co_supervisor`, `academic_supervisor`) подписывает привязанный к этой роли
+    и владелец проекта; прочие слоты без суффикса только владелец (docs/design/signature-plan.md, раздел 5).
     """
-    owner = split_instance_id(slot_id)[1] if slot_id else None
+    base, owner = split_instance_id(slot_id) if slot_id else ("", None)
     if owner is None:
-        return grant.role is Role.owner
+        return grant.role is Role.owner or (bool(base) and grant.persona_slug == base and base in SUPERVISOR_PERSONAS)
     return grant.persona_slug == owner
 
 

@@ -12,6 +12,8 @@ from hse_doc_studio.core.enums import ToolKind
 # Области персонального токена: пользовательские тулы и админские (docs/design/mcp.md, M5 и M7).
 MCP_SCOPE = "mcp"
 MCP_ADMIN_SCOPE = "mcp:admin"
+# Подпись комплекта своим ключом (sign_submission): отдельное право, право mcp его не включает.
+MCP_SIGN_SCOPE = "sign"
 
 
 class McpToolGroup(StrEnum):

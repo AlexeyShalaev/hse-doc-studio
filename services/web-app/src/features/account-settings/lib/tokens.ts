@@ -7,6 +7,7 @@ export const TOKEN_SCOPES: readonly TokenScope[] = [
   "git:write",
   "mcp",
   "mcp:admin",
+  "sign",
 ];
 
 /** Срок жизни при создании: дни, null это бессрочный. Больше года сервер не принимает. */
@@ -20,6 +21,7 @@ const SCOPE_KEYS: Record<TokenScope, string> = {
   "git:write": "gitWrite",
   mcp: "mcp",
   "mcp:admin": "mcpAdmin",
+  sign: "sign",
 };
 
 export const scopeKey = (scope: TokenScope): string => SCOPE_KEYS[scope];

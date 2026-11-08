@@ -178,7 +178,20 @@
     "remaining_one": "{{count}} item left",
     "remaining_other": "{{count}} items left",
     "descMore": "Show full description",
-    "descLess": "Collapse description"
+    "descLess": "Collapse description",
+    "slotStatus": {
+      "pending": "awaiting signature",
+      "signed": "signed",
+      "invalid": "invalid",
+      "stale": "out of date"
+    },
+    "method": {
+      "image": "image",
+      "detached": "detached e-signature",
+      "pades": "e-signature in PDF"
+    },
+    "cryptoHint": "Electronic signature: checked cryptographically",
+    "imageHint": "Graphic signature: an image on the page, not an electronic signature"
   },
   "doc": {
     "preview": "Preview",

@@ -63,6 +63,10 @@ ROUTE_ACTIONS: Mapping[RouteKey, RouteRule] = {
     ("GET", "/projects/{project_id}/documents/{doc_id}/checks/rules"): RouteRule(Action.OUTPUT_READ),
     ("GET", "/projects/{project_id}/normcontrol-report"): RouteRule(Action.OUTPUT_READ),
     ("GET", "/projects/{project_id}/signatures"): RouteRule(Action.OUTPUT_READ),
+    ("GET", "/projects/{project_id}/signature-plan"): RouteRule(Action.OUTPUT_READ),
+    # «Подписать комплект»: свои слоты и право SIGN на каждый проверяет сценарий (персона, плашка, ключ).
+    ("POST", "/projects/{project_id}/signature-plan/sign-preview"): RouteRule(Action.OUTPUT_READ),
+    ("POST", "/projects/{project_id}/signature-plan/sign"): RouteRule(Action.OUTPUT_READ),
     ("GET", "/projects/{project_id}/docs/{doc_id}/frozen/pdf"): RouteRule(Action.OUTPUT_READ),
     ("GET", "/projects/{project_id}/docs/{doc_id}/pdf/signed"): RouteRule(Action.OUTPUT_READ),
     ("GET", "/projects/{project_id}/docs/{doc_id}/detached/{slot_id}/file"): RouteRule(Action.OUTPUT_READ),
@@ -188,6 +192,9 @@ ROUTE_ACTIONS: Mapping[RouteKey, RouteRule] = {
         Action.SIGN, path_param="slot_id"
     ),
     ("POST", "/projects/{project_id}/docs/{doc_id}/detached/{slot_id}/sign"): RouteRule(
+        Action.SIGN, path_param="slot_id"
+    ),
+    ("POST", "/projects/{project_id}/docs/{doc_id}/embedded/{slot_id}/sign"): RouteRule(
         Action.SIGN, path_param="slot_id"
     ),
     ("PUT", "/projects/{project_id}/signatures/slots/{slot_id}/signer"): RouteRule(Action.SIGN, path_param="slot_id"),

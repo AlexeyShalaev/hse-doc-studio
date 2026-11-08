@@ -207,7 +207,7 @@ SIGNATURES_RULES = JsonRules(
         Atomic(("placements", "*", "*")),
     ),
     field_groups=(FieldGroup(("slots", "*"), ("png_path", "natural_width_px", "natural_height_px")),),
-    doc_groups=(DocGroups((), ("frozen", "detached"), "signature_groups"),),
+    doc_groups=(DocGroups((), ("frozen", "detached", "embedded"), "signature_groups"),),
     post=(_stale_signatures,),
 )
 

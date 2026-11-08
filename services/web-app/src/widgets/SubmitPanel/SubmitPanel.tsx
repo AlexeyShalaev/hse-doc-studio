@@ -3,7 +3,7 @@ import { clsx } from "clsx";
 import { useTranslation } from "react-i18next";
 import { useForms } from "@entities/form";
 import { useProject } from "@entities/project";
-import { useSignaturesState } from "@entities/signature";
+import { useSignaturePlan, useSignaturesState } from "@entities/signature";
 import { useSubmissionProfiles, useSubmissions } from "@entities/submission";
 import type { CheckpointReadiness } from "@entities/submission";
 import { getFormIcon } from "@features/form-fill";
@@ -87,6 +87,11 @@ export const SubmitPanel = ({
   const { data: submissions } = useSubmissions(projectId);
   const { data: formsData } = useForms(projectId);
   const { data: signaturesState } = useSignaturesState(projectId);
+  // План подписей по всему проекту: сколько слотов ждут подписи смотрящего
+  // (его персона в проекте — автор, руководитель). Приглашённому руководителю
+  // это главный вопрос: что от него хотят.
+  const { data: projectPlan } = useSignaturePlan(projectId, null, null);
+  const waitingForMe = projectPlan?.waiting_for_me ?? 0;
 
   // Названия профилей и анкет приходят из пака словарём {ru, en}: берём язык
   // документа, как это делают PackView и DocumentNav.
@@ -343,6 +348,18 @@ export const SubmitPanel = ({
             </span>
           )}
         </button>
+        {waitingForMe > 0 && (
+          <div
+            style={{
+              ...MUTED_NOTE_STYLE,
+              color: "var(--accent)",
+            }}
+          >
+            {t("signatureStamper:signSubmission.waiting", {
+              count: waitingForMe,
+            })}
+          </div>
+        )}
 
         {isRequirementsVisible && (
           <>

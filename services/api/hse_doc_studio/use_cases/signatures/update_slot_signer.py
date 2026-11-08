@@ -20,9 +20,9 @@ from hse_doc_studio.core.repositories import (
 from hse_doc_studio.core.services import SignatureSlotService
 from hse_doc_studio.core.signatures.errors import CmsParseError, GpgError, GpgUnavailableError
 from hse_doc_studio.core.value_objects import SignatureSlot, SignerInfo
-from hse_doc_studio.infra.signatures.cms_inspector import describe_certificate
-from hse_doc_studio.infra.signatures.openpgp import GpgKey, GpgKeyring, looks_like_openpgp_public_key
+from hse_doc_studio.infra.signatures.openpgp import GpgKeyring, looks_like_openpgp_public_key
 from hse_doc_studio.use_cases.projects.get_project import GetProjectInput, GetProjectUC
+from hse_doc_studio.use_cases.signatures._studio_signer import openpgp_signer, x509_signer
 
 logger = structlog.get_logger()
 
@@ -44,33 +44,6 @@ class UpdateSlotSignerInput:
 @dataclass
 class UpdateSlotSignerOutput:
     slot: SignatureSlot
-
-
-def _openpgp_signer(key: GpgKey) -> SignerInfo:
-    uid = key.uids[0] if key.uids else key.key_id
-    owner = uid.split("<")[0].strip() or uid
-    pretty = " ".join(key.key_id[i : i + 4] for i in range(0, len(key.key_id), 4))
-    return SignerInfo(
-        kind="openpgp",
-        owner=owner,
-        cert_id=pretty,
-        valid_from=key.created.isoformat() if key.created else None,
-        valid_to=key.expires.isoformat() if key.expires else None,
-        signer_id=key.fingerprint,
-    )
-
-
-def _x509_signer(blob: bytes) -> SignerInfo:
-    info = describe_certificate(blob)
-    return SignerInfo(
-        kind="x509",
-        owner=info.owner,
-        cert_id=info.serial,
-        valid_from=info.not_before.isoformat(),
-        valid_to=info.not_after.isoformat(),
-        signer_id=info.fingerprint_sha256,
-        level="ukep" if info.qualified_hint else "",
-    )
 
 
 class UpdateSlotSignerUC:
@@ -140,9 +113,9 @@ class UpdateSlotSignerUC:
                 raise ValueError(str(exc)) from exc
             if not keys:
                 raise ValueError(localized_error("В файле нет ключа OpenPGP", "No OpenPGP key in the file"))
-            return _openpgp_signer(keys[0])
+            return openpgp_signer(keys[0])
         try:
-            return _x509_signer(blob)
+            return x509_signer(blob)
         except CmsParseError as exc:
             raise ValueError(
                 localized_error(
@@ -158,8 +131,8 @@ class UpdateSlotSignerUC:
                 raise NotFoundError(
                     localized_error("Ключ OpenPGP не найден в связке", "OpenPGP key not in the keyring")
                 )
-            return _openpgp_signer(key)
+            return openpgp_signer(key)
         cert_pem = await self._identity_repo.read_cert(identity.id)
         if cert_pem is None:
             raise ValueError(localized_error("У ключа нет сертификата", "The key has no certificate"))
-        return _x509_signer(cert_pem)
+        return x509_signer(cert_pem)

@@ -80,6 +80,7 @@ from hse_doc_studio.core.repositories import (
     IProjectRepository,
     ISettingsRepository,
     ISignatureRepository,
+    ISigningIdentityRepository,
     ITemplateRepository,
 )
 from hse_doc_studio.core.services import (
@@ -93,7 +94,10 @@ from hse_doc_studio.core.services import (
 from hse_doc_studio.core.signatures.ports import (
     IChainFetcher,
     IOpenPgpKeyImporter,
+    IPadesSigner,
     IPublicKeyExporter,
+    ISignatureAudit,
+    ISignerScope,
     ITrustMaterialProvider,
 )
 from hse_doc_studio.core.system_capacity import ISystemCapacityProbe
@@ -189,11 +193,13 @@ from hse_doc_studio.infra.project_init.template_renderer import TemplateRenderer
 from hse_doc_studio.infra.runtime.environment import in_container
 from hse_doc_studio.infra.secrets.fernet_cipher import FernetSecretCipher
 from hse_doc_studio.infra.secrets.key_store import KeyFileStore
+from hse_doc_studio.infra.signatures.audit import LogSignatureAudit
 from hse_doc_studio.infra.signatures.chain_fetcher import ChainFetcher
 from hse_doc_studio.infra.signatures.detached_verifier import DetachedSignatureVerifier
 from hse_doc_studio.infra.signatures.openpgp import GpgKeyring
 from hse_doc_studio.infra.signatures.pdf_stamper import PdfStamper
-from hse_doc_studio.infra.signatures.pyhanko_signer import PyHankoPdfSigner
+from hse_doc_studio.infra.signatures.pyhanko_signer import PyHankoPades, PyHankoPdfSigner
+from hse_doc_studio.infra.signatures.signer_scope import LocalSignerScope
 from hse_doc_studio.infra.signatures.trust_material import LocalTrustMaterialProvider
 from hse_doc_studio.infra.signatures.trusted_roots import TrustedRootStore
 from hse_doc_studio.infra.submission.pack_executor import PackExecutor
@@ -237,6 +243,21 @@ class DomainServiceProvider(Provider):
     @provide
     def get_project_template_service(self) -> ProjectTemplateService:
         return ProjectTemplateService()
+
+    @provide
+    def get_signer_scope(
+        self, signatures: ISignatureRepository, identities: ISigningIdentityRepository
+    ) -> ISignerScope:
+        # Локально человек один: авторы и слоты с его ключом на плашке; сервер подменяет на персону из членства.
+        return LocalSignerScope(signatures, identities)
+
+    @provide
+    def get_signature_audit(self) -> ISignatureAudit:
+        return LogSignatureAudit()
+
+    @provide
+    def get_pades_signer(self) -> IPadesSigner:
+        return PyHankoPades()
 
     @provide
     def get_submission_profile_service(self) -> SubmissionProfileService:
