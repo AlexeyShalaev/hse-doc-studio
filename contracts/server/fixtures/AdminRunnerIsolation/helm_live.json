@@ -33,7 +33,8 @@
       "capabilities_dropped": true,
       "automount_token": true
     },
-    "docker_socket": false
+    "docker_socket": false,
+    "office_url": "http://rel-hse-doc-studio-office-convert:3000"
   },
   "build": {
     "namespace": "studio-builds",
@@ -92,7 +93,8 @@
       "min_runner_memory": "256Mi",
       "min_build_cpu": "500m",
       "min_build_memory": "1Gi"
-    }
+    },
+    "office_url": "http://rel-hse-doc-studio-office-convert:3000"
   },
   "network": {
     "build_deny_all": {
@@ -115,7 +117,8 @@
         443,
         6443
       ],
-      "extra_rules": 1
+      "extra_rules": 1,
+      "office_port": 3000
     }
   },
   "quota": {
@@ -193,5 +196,20 @@
       "warn": "restricted",
       "audit": null
     }
-  ]
+  ],
+  "office_convert": {
+    "url": "http://rel-hse-doc-studio-office-convert:3000",
+    "image": "gotenberg/gotenberg:8.39.0-libreoffice",
+    "replicas": 1,
+    "resources": {
+      "cpu_request": "250m",
+      "cpu_limit": "2",
+      "memory_request": "512Mi",
+      "memory_limit": "2Gi",
+      "ephemeral_request": "256Mi",
+      "ephemeral_limit": "2Gi",
+      "source": "config"
+    },
+    "network_policy": true
+  }
 }

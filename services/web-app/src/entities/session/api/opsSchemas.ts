@@ -157,6 +157,8 @@ export const AdminRunnerIsolationSchema = z.strictObject({
       }),
       security: SecurityViewSchema,
       docker_socket: z.boolean(),
+      // Адрес Gotenberg раннера чарта (офисные задачи); null — без office.
+      office_url: z.string().nullable(),
     })
     .nullable(),
   build: z
@@ -187,6 +189,7 @@ export const AdminRunnerIsolationSchema = z.strictObject({
       min_build_cpu: z.string(),
       min_build_memory: z.string(),
     }),
+    office_url: z.string().nullable(),
   }),
   network: z
     .strictObject({
@@ -200,6 +203,7 @@ export const AdminRunnerIsolationSchema = z.strictObject({
         api_server_cidrs: z.array(z.string()),
         api_server_ports: z.array(z.number().int()),
         extra_rules: z.number().int(),
+        office_port: z.number().int().nullable(),
       }),
     })
     .nullable(),
@@ -218,6 +222,16 @@ export const AdminRunnerIsolationSchema = z.strictObject({
         audit: z.string().nullable(),
       }),
     )
+    .nullable(),
+  // Встроенный Gotenberg чарта (services.officeConvert); null — выключен или не Helm.
+  office_convert: z
+    .strictObject({
+      url: z.string(),
+      image: z.string().nullable(),
+      replicas: z.number().int(),
+      resources: ResourcesViewSchema,
+      network_policy: z.boolean(),
+    })
     .nullable(),
 });
 export const AdminRunnerTokenSchema = z.strictObject({

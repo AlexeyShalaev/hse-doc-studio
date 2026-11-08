@@ -119,7 +119,8 @@
         "empty_dir": "emptyDir"
       },
       "tmp": "/tmp",
-      "dockerSocket": "Исполнитель docker монтирует docker.sock узла: это равно root на узле. Держите такой раннер на выделенных узлах."
+      "dockerSocket": "Исполнитель docker монтирует docker.sock узла: это равно root на узле. Держите такой раннер на выделенных узлах.",
+      "office": "Офисные задачи (Gotenberg)"
     },
     "build": {
       "title": "Поды сборки",
@@ -134,7 +135,8 @@
       "cpuBounds": "CPU: раннер от {{runner}}, поды сборки от {{build}}, не больше {{max}}",
       "memoryBounds": "Память: раннер от {{runner}}, поды сборки от {{build}}, не больше {{max}}",
       "storage": "Том данных",
-      "buildNamespace": "Namespace подов сборки"
+      "buildNamespace": "Namespace подов сборки",
+      "office": "Офисные задачи (Gotenberg)"
     },
     "network": {
       "title": "Сеть",
@@ -150,7 +152,17 @@
       "extra_few": "ещё {{count}} своих правила",
       "extra_many": "ещё {{count}} своих правил",
       "extra_other": "ещё {{count}} своих правила",
+      "office": "Gotenberg Студии, порт {{port}}",
       "cni": "Политики работают только с CNI, который их поддерживает (Calico, Cilium и подобные)."
+    },
+    "office": {
+      "title": "Конвертация офисных файлов",
+      "lead": "Встроенный Gotenberg (services.officeConvert): раннеры с тегом office отправляют сюда pptx, docx и другие файлы и получают PDF.",
+      "url": "Адрес",
+      "image": "Образ",
+      "replicas": "Реплик",
+      "networkPolicy": "Вход только от раннеров, выход закрыт",
+      "none": "нет: офисные задачи такой раннер не берёт"
     },
     "quota": {
       "title": "ResourceQuota",

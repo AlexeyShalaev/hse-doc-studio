@@ -6,6 +6,8 @@
 
 from __future__ import annotations
 
+from urllib.parse import urlsplit, urlunsplit
+
 from fastapi import APIRouter, HTTPException, Request, Response, status
 
 from hse_doc_studio.api.schemas.runner_isolation import (
@@ -19,6 +21,7 @@ from hse_doc_studio.api.schemas.runner_isolation import (
     LimitRangeView,
     LimitValuesView,
     NetworkView,
+    OfficeConvertView,
     PodSecurityView,
     PolicyCheckView,
     QuotaView,
@@ -142,6 +145,18 @@ async def runner_deployment(runner_id: str, request: Request, response: Response
     )
 
 
+def _public_url(url: str | None) -> str | None:
+    """Адрес без логина и пароля: экран показывает, куда ходит раннер, но не учётные данные из URL."""
+    if not url:
+        return None
+    parts = urlsplit(url)
+    host = parts.hostname or ""
+    netloc = f"[{host}]" if ":" in host else host
+    if parts.port is not None:
+        netloc += f":{parts.port}"
+    return urlunsplit((parts.scheme, netloc, parts.path, "", ""))
+
+
 def _declared_resources(values: DeclaredResources) -> ResourcesView:
     return ResourcesView(
         cpu_request=values.requests.get("cpu"),
@@ -194,6 +209,7 @@ def chart_runner_view(declared: DeclaredCluster) -> ChartRunnerView:
             automount_token=kubernetes,
         ),
         docker_socket=not kubernetes,
+        office_url=_public_url(chart.office_url),
     )
 
 
@@ -238,6 +254,7 @@ def _install(install: InstallFromUiFacts, declared: DeclaredCluster | None) -> I
             min_build_cpu=MIN_QUANTITIES["build_cpu"],
             min_build_memory=MIN_QUANTITIES["build_memory"],
         ),
+        office_url=_public_url(install.office_url),
     )
 
 
@@ -259,7 +276,21 @@ def _network(declared: DeclaredCluster, install: InstallFromUiFacts, live: LiveC
             api_server_cidrs=list(egress.api_server_cidrs),
             api_server_ports=list(egress.api_server_ports),
             extra_rules=egress.extra_rules,
+            office_port=egress.office_port,
         ),
+    )
+
+
+def _office_convert(declared: DeclaredCluster | None) -> OfficeConvertView | None:
+    office = declared.office_convert if declared is not None else None
+    if office is None or not office.enabled or not office.url:
+        return None
+    return OfficeConvertView(
+        url=office.url,
+        image=office.image or None,
+        replicas=office.replicas,
+        resources=_declared_resources(office.resources),
+        network_policy=office.network_policy,
     )
 
 
@@ -372,4 +403,5 @@ async def runners_isolation(request: Request, response: Response) -> AdminRunner
         ]
         if live.namespaces is not None
         else None,
+        office_convert=_office_convert(declared),
     )
