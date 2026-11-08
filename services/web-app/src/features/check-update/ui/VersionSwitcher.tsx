@@ -1,13 +1,20 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { useAppVersions, type VersionOption } from "@entities/system";
+import {
+  useAppVersions,
+  type ImageOverlay,
+  type VersionOption,
+} from "@entities/system";
 import { Spinner } from "@shared/ui/Spinner";
 import { useSelfUpdate } from "../model/useSelfUpdate";
+import { ImageOverlaysNotice } from "./ImageOverlaysNotice";
 
 export type VersionSwitcherProps = {
   /** Умеет ли эта установка подменять себя (all-in-one + доступный Docker). */
   canSelfUpdate: boolean;
   enabled: boolean;
+  /** Папки хоста поверх каталогов образа: что с ними станет при переключении. */
+  overlays?: ImageOverlay[];
 };
 
 /**
@@ -20,6 +27,7 @@ export type VersionSwitcherProps = {
 export const VersionSwitcher = ({
   canSelfUpdate,
   enabled,
+  overlays = [],
 }: VersionSwitcherProps) => {
   const { t } = useTranslation("checkUpdate");
   const { data, isLoading } = useAppVersions(enabled);
@@ -100,6 +108,7 @@ export const VersionSwitcher = ({
           </span>
         )
       )}
+      {canSelfUpdate && isSwitch && <ImageOverlaysNotice overlays={overlays} />}
     </div>
   );
 };

@@ -8,3 +8,4 @@ export type {
 } from "./model/useSelfUpdate";
 export { ChangelogModal } from "./ui/ChangelogModal";
 export { VersionSwitcher } from "./ui/VersionSwitcher";
+export { ImageOverlaysNotice } from "./ui/ImageOverlaysNotice";

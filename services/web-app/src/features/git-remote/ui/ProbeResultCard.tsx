@@ -2,6 +2,7 @@ import { useTranslation } from "react-i18next";
 import type { Probe } from "@entities/git-remote";
 import type { GitContents } from "@entities/git-sync";
 import { credentialExpiry } from "@entities/git-remote";
+import { useTemplateMissingText } from "@entities/system";
 import { formatFileSize } from "@shared/lib";
 import { Notice } from "@shared/ui/ConflictKit";
 import { shortVersion } from "../lib/formatDate";
@@ -199,6 +200,18 @@ export const ProbeResultCard = ({
   ...handlers
 }: ProbeResultCardProps) => {
   const { t } = useTranslation("gitRemote");
+  const remote = probe?.project ?? null;
+  const templateMissing = useTemplateMissingText(
+    t("result.warn.templateMissing"),
+    remote
+      ? {
+          pack_id: remote.pack_id,
+          template_id: remote.template_id,
+          version: remote.template_version,
+        }
+      : null,
+    probe?.template_available === false,
+  );
 
   if (outcome.kind === "error") {
     return (
@@ -416,11 +429,7 @@ export const ProbeResultCard = ({
         />
       )}
       {outcome.warnings.includes("template_missing") && (
-        <Notice
-          tone="warn"
-          role="status"
-          text={t("result.warn.templateMissing")}
-        />
+        <Notice tone="warn" role="status" text={templateMissing} />
       )}
     </ResultFrame>
   );

@@ -5,6 +5,7 @@ import {
   systemApi,
   type ArchiveFormatsResponse,
   type EditorsResponse,
+  type PacksSource,
   type ReleaseNotesResponse,
   type RunnerHealth,
   type VersionsResponse,
@@ -22,6 +23,7 @@ export const systemKeys = {
   releaseNotes: (lang: string) =>
     [...systemKeys.all, "release-notes", lang] as const,
   versions: () => [...systemKeys.all, "versions"] as const,
+  packs: () => [...systemKeys.all, "packs"] as const,
 };
 
 const RUNNER_HEALTH_POLL_MS = 30_000;
@@ -99,3 +101,13 @@ export const useReleaseNotes = (enabled = true) => {
     staleTime: Infinity,
   });
 };
+
+// Каталог шаблонов читается один раз на старте бэкенда: ответ не меняется до перезапуска.
+export const usePacksSource = (enabled = true) =>
+  useQuery<PacksSource>({
+    queryKey: systemKeys.packs(),
+    queryFn: () => systemApi.getPacksSource(),
+    enabled,
+    retry: false,
+    staleTime: Infinity,
+  });

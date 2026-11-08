@@ -107,6 +107,8 @@
     "filesOnly": "This Studio version can't read the project data — only files are available",
     "schema": "The project was saved by a newer Studio{{required}}.",
     "template": "Template version {{version}} is not available in this Studio{{required}}.",
+    "templateStale": "Template version {{version}} is missing from the template folder {{path}}: it is mounted from outside and lags behind Studio v{{studio}}. Update the folder or remove the mount.",
+    "staleHint": "Settings, About shows where the templates are loaded from. You can return the project to an earlier snapshot in Versions.",
     "updating": "The project template is being updated.",
     "requiredSuffix": " (needs {{version}} or newer)",
     "hint": "Update the Studio in Settings → About. You can return the project to an earlier snapshot in Versions."
@@ -126,5 +128,9 @@
   },
   "nav": {
     "badge": "Template update available"
+  },
+  "packs": {
+    "stale": "Template version {{version}} is missing from the template folder {{path}}: it is mounted from outside and lags behind Studio v{{studio}}. The project opens read-only until the folder is updated or the mount is removed.",
+    "lagHint": "The template folder {{path}} is mounted from outside and lags behind Studio v{{studio}}: if the Studio ships this template, update the folder or remove the mount."
   }
 }

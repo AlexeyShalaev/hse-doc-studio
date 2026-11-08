@@ -465,7 +465,15 @@
     "autoUpdateLabel": "Устанавливать обновления автоматически",
     "autoUpdateHint": "Проверка раз в несколько часов. Обновление не начнётся во время сборки или ответа ассистента, а неудачное — откатится само.",
     "autoUpdateUnsupported": "В этом режиме запуска приложение не может обновить себя само — обновляйте вручную.",
-    "switchVersion": "Версия"
+    "switchVersion": "Версия",
+    "templates": "Шаблоны",
+    "templatesBuiltin": "Встроены в Студию v{{version}}",
+    "templatesExternal": "Каталог подключён извне: {{path}}",
+    "templatesSource": "Каталог из исходников: {{path}}",
+    "templatesHost": "Папка на компьютере: {{path}}",
+    "templatesLagging": "Каталог отстаёт от Студии v{{version}}, в нём нет версий: {{missing}}. Проекты на этих версиях откроются только для чтения. Обновите каталог или уберите подключение.",
+    "templatesVersions": "Доступные версии шаблонов",
+    "templatesMissing": "нет: {{versions}}"
   },
   "search": {
     "appearance": "Внешний вид",
@@ -502,6 +510,7 @@
     "about": "О программе",
     "aboutMode": "Режим запуска",
     "aboutImage": "Образ",
+    "aboutTemplates": "Шаблоны",
     "aboutSource": "Источник",
     "aboutDataDir": "Папка конфигурации",
     "aboutUpdates": "Обновления",

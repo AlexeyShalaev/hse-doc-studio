@@ -77,6 +77,11 @@ export const ProjectResponseSchema = z.object({
       mode: z.string(),
       reasons: z.array(z.string()).default([]),
       required_studio: z.string().nullish(),
+      // Версии шаблона нет только в подключённом извне каталоге шаблонов, а в
+      // саму Студию она вшита: совет «обновите Студию» был бы неправдой.
+      stale_packs: z
+        .object({ path: z.string(), studio_version: z.string() })
+        .nullish(),
     })
     .optional(),
   // Только на сервере (GET /projects/{id}): занятое место и предупреждение с 80% предела.
