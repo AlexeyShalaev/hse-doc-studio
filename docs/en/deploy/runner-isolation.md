@@ -30,7 +30,7 @@ In "Install a runner" the "Resource limits" block takes four optional limits: ru
 - lower bounds: runner 100m and 256Mi, build pod 500m and 1Gi (below that TeX is killed on ordinary documents);
 - upper bounds: `runner.installFromUi.maxCpu` (8) and `maxMemory` (16Gi).
 
-A violation is answered with 422 `invalid_resources` (field name and reason `format`, `min` or `max` in the detail). The chosen limits are written to the audit log (`runner_install.local.start`). Runners installed earlier keep what they have until they are installed again; their build pods take the new ephemeral-storage limit from the runner image.
+A violation is answered with 422 `invalid_resources` (field name and reason `format`, `min` or `max` in the detail). The chosen limits are written to the audit log (`runner_install.local.start`). Runners installed earlier keep what they have until they are installed again; Update from the admin area carries them into the new manifest; their build pods take the new ephemeral-storage limit from the runner image.
 
 ### When a build is killed
 

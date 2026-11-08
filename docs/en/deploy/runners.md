@@ -66,7 +66,18 @@ The "Install a runner" button on the Runners page puts a runner where the Studio
 | Docker next to it | the Studio sees `docker.sock` and Docker answers (the same access the Disk page uses) | starts a `hse-runner-<name>` container from the image of its own version with `--restart unless-stopped`; the token goes through a mode-0600 environment file that is deleted right after the start |
 | Deployment in the cluster | the Studio runs in Kubernetes, the chart has `runner.installFromUi.enabled`, and the Studio ServiceAccount may create resources | creates a Secret with the token, a data volume and a Deployment with the `kubernetes` executor under a separate ServiceAccount |
 
-Progress is shown step by step (token, image, start, connection to the Studio); every error has a readable reason and a Retry button. The registration token is single-use for an hour and is revoked at once on failure; the audit log gets the start, the result and the removal, without secrets. Runners installed this way are listed in the same window and can be removed there.
+Progress is shown step by step (token, image, start, connection to the Studio); every error has a readable reason and a Retry button. The registration token is single-use for an hour and is revoked at once on failure; the audit log gets the start, the result and the removal, without secrets.
+
+Runners installed this way are managed on the Runners page itself. The Actions menu of such a runner row has Update and Remove install; the runner is matched by the pod name in its report, otherwise by the Deployment or container name. Installs whose runner is not in the table (revoked, not connected yet or unable to connect, for example a Deployment in CrashLoop) are listed in the "Installs without a runner" block below the table and can be removed there. Removing an install deletes the Deployment, the Secret and the volume (for Docker only the container, the data directory on the host stays); revoke the runner record in the Studio separately.
+
+### Updating a runner installed from the admin area
+
+Update puts the image of the current Studio version on the runner in place, without removing and installing it again. The name, the Secret with the token, the data volume and the runner record in the Studio are kept, no new token is issued. When the runner is older than the Studio, its row has an accented "Update to vX" button, and so does the "Deployment details" window next to the "Older than the Studio" mark. A runner on the Studio version can be updated too (from the menu): the settings are applied again by the current rules and the runner restarts.
+
+- **Kubernetes.** The Studio reads the live Deployment, takes the Studio address, the data directory, the slot count and the limits the runner was installed with (the `hse-doc-studio/runner-resources` annotation; for installs made before it, limits that differ from the current defaults are read from the manifest itself), and replaces the whole Deployment with a manifest built by the current rules: image, limits, securityContext, ServiceAccount. A limit beyond the current Helm bounds falls back to the default (the Manifest step says so). The strategy is `Recreate`: the old pod is gone before the new one mounts the `ReadWriteOnce` volume. Steps: image and current settings, manifest, pod restart (the Studio waits up to 15 minutes for the rollout), runner online again.
+- **Docker.** The Studio pulls the new image first, then stops the container (`docker stop`, up to 60 seconds), removes it and starts it again with the same name, runner environment (token, address, data directory) and volume. If the new container does not start, the Studio brings the previous image back with the same settings.
+
+The last step waits up to three minutes for the runner to come online with the Studio version. Builds the runner was running at the restart are finished for up to 30 seconds, the rest stop with "The runner was stopped during the build" and are built again; queued jobs wait for another runner or for this one after the restart. An update and an install of the same way never run at once (409 `install_busy`). The audit log gets `runner_install.local.upgrade`, `upgrade_succeeded` and `upgrade_failed` with the runner name, the version before and after, and the images.
 
 Why a way may be hidden:
 
@@ -78,7 +89,7 @@ Why a way may be hidden:
 `runner.installFromUi.enabled` is `false` by default, and stays so on production where shared runners were not enabled. Turning it on adds:
 
 - a ServiceAccount and Role for the runners themselves, `<release>-runner-ui`: build pods only (`pods` create, get, list, delete; `pods/log` get; `pods/exec` create, get) in the release namespace, like the built-in runner;
-- a `<release>-api` ServiceAccount and Role for the Studio: Deployment (create, list, delete), Secret (create and delete only, no reading) and PersistentVolumeClaim (create, delete) in the release namespace. The Studio cannot create Roles or RoleBindings, so it cannot grant itself or a runner anything extra; there is no ClusterRole.
+- a `<release>-api` ServiceAccount and Role for the Studio: Deployment (create, list, update, delete; `update` is for the in-place update), Secret (create and delete only, no reading) and PersistentVolumeClaim (create, delete) in the release namespace. The Studio cannot create Roles or RoleBindings, so it cannot grant itself or a runner anything extra; there is no ClusterRole.
 
 A runner installed from the admin area lives in the release namespace and gets its own data volume (`runner.installFromUi.storageSize`, `storageClassName`) so the token issued to it survives a pod restart. Its Studio address is internal (the chart Service).
 
