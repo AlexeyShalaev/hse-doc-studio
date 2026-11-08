@@ -194,6 +194,14 @@ export const opsApi = {
     adminClient
       .post(`/runner-install/ssh/credentials/${enc(id)}/run`, { action }, quiet)
       .then(parseResp(InstallJobSchema)),
+  /** Обновить раннер из админки на месте; ход читается тем же installJob. */
+  upgradeLocalInstance: (
+    target: "docker" | "kubernetes",
+    name: string,
+  ): Promise<InstallJob> =>
+    adminClient
+      .post(`/runner-install/local/${target}/${enc(name)}/upgrade`, {}, quiet)
+      .then(parseResp(InstallJobSchema)),
   removeLocalInstance: async (
     target: "docker" | "kubernetes",
     name: string,

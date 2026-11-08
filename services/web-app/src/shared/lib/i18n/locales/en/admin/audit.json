@@ -186,7 +186,14 @@
       "auth_passkey_login_failed": "Failed passkey sign-in",
       "auth_reauth": "Identity confirmed",
       "auth_reauth_failed": "Failed identity confirmation",
-      "admin_passkeys_reset": "Person's passkeys reset"
+      "admin_passkeys_reset": "Person's passkeys reset",
+      "runner_install_local_start": "Runner install from the admin area started",
+      "runner_install_local_succeeded": "Runner installed from the admin area",
+      "runner_install_local_failed": "Runner install from the admin area failed",
+      "runner_install_local_remove": "Runner install from the admin area removed",
+      "runner_install_local_upgrade": "Runner update from the admin area started",
+      "runner_install_local_upgrade_succeeded": "Runner installed from the admin area updated",
+      "runner_install_local_upgrade_failed": "Runner update from the admin area failed"
     },
     "search": "Search the log",
     "searchPlaceholder": "Person, action code or object",
@@ -240,7 +247,11 @@
       "type": "Type",
       "from": "Was",
       "ttl_days": "Valid for",
-      "size": "Size"
+      "size": "Size",
+      "from_version": "Version before",
+      "to_version": "Version after",
+      "from_image": "Image before",
+      "to_image": "Image after"
     },
     "values": {
       "password": "password",

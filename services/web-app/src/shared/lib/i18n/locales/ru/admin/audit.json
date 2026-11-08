@@ -186,7 +186,14 @@
       "auth_passkey_login_failed": "Неудачный вход по passkey",
       "auth_reauth": "Личность подтверждена",
       "auth_reauth_failed": "Неудачное подтверждение личности",
-      "admin_passkeys_reset": "Сброшены passkey человека"
+      "admin_passkeys_reset": "Сброшены passkey человека",
+      "runner_install_local_start": "Начата установка раннера из админки",
+      "runner_install_local_succeeded": "Раннер из админки установлен",
+      "runner_install_local_failed": "Установка раннера из админки не удалась",
+      "runner_install_local_remove": "Установка раннера из админки удалена",
+      "runner_install_local_upgrade": "Начато обновление раннера из админки",
+      "runner_install_local_upgrade_succeeded": "Раннер из админки обновлён",
+      "runner_install_local_upgrade_failed": "Обновление раннера из админки не удалось"
     },
     "search": "Поиск по журналу",
     "searchPlaceholder": "Человек, код действия, объект",
@@ -242,7 +249,11 @@
       "type": "Тип",
       "from": "Было",
       "ttl_days": "Срок",
-      "size": "Размер"
+      "size": "Размер",
+      "from_version": "Версия до",
+      "to_version": "Версия после",
+      "from_image": "Образ до",
+      "to_image": "Образ после"
     },
     "values": {
       "password": "пароль",

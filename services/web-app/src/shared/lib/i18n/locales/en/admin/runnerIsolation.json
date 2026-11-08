@@ -89,7 +89,8 @@
       "not_found": "This runner's Deployment is not in the cluster: it was not installed from the admin area or was removed.",
       "forbidden": "The Studio may not read Deployments in the cluster.",
       "unavailable": "The cluster is unreachable now, the Deployment was not read."
-    }
+    },
+    "upgrade": "Update to v{{version}}"
   },
   "panel": {
     "title": "Runner isolation in the cluster",

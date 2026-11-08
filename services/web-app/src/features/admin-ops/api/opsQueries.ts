@@ -1,3 +1,4 @@
+import { useCallback } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type {
   CreateAdminRunnerTokenRequest,
@@ -274,12 +275,35 @@ export const useInstallJob = (id: string | null) =>
         : false,
   });
 
-export const useLocalInstances = (enabled: boolean) =>
+/**
+ * Поставленное из админки: строки таблицы раннеров получают по нему «Обновить»
+ * и «Удалить установку», а установки без раннера идут отдельным блоком.
+ */
+export const useLocalInstances = (enabled = true) =>
   useQuery({
     queryKey: opsKeys.installInstances,
     queryFn: () => opsApi.localInstances(),
     enabled,
-    staleTime: 0,
+    refetchInterval: POLL_MS * 6,
+  });
+
+/** Перечитать установки, раннеров и сводку: после обновления меняются версия и состояние. */
+export const useRefreshRunners = () => {
+  const client = useQueryClient();
+  return useCallback(() => {
+    for (const queryKey of [
+      opsKeys.installInstances,
+      opsKeys.runners,
+      opsKeys.runnerSummary,
+    ])
+      void client.invalidateQueries({ queryKey });
+  }, [client]);
+};
+
+export const useUpgradeLocalInstance = () =>
+  useMutation({
+    mutationFn: (v: { target: "docker" | "kubernetes"; name: string }) =>
+      opsApi.upgradeLocalInstance(v.target, v.name),
     gcTime: 0,
   });
 

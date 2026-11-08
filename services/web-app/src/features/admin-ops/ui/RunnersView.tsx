@@ -2,6 +2,7 @@ import { useMemo } from "react";
 import type { ColumnDef } from "@tanstack/react-table";
 import {
   ArrowRight,
+  CircleArrowUp,
   Info,
   KeyRound,
   ListOrdered,
@@ -14,6 +15,7 @@ import {
   Tag,
   Trash2,
   TriangleAlert,
+  Unplug,
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { formatPastTime, formatRelativeTime, localeTag } from "@shared/lib";
@@ -47,6 +49,7 @@ import type {
   AdminRunner,
   AdminRunnerSummary,
   AdminRunnerToken,
+  LocalInstance,
 } from "@entities/session";
 import { formatDuration } from "../lib/format";
 import { LONG_WAIT_S } from "../lib/jobs";
@@ -92,6 +95,10 @@ export type RunnersViewProps = {
   onOpenQueue?: (() => void) | undefined;
   /** Открыть «Как развёрнут»: отчёт раннера и Deployment из кластера. */
   onDetails?: ((runner: AdminRunner) => void) | undefined;
+  /** Установки из админки по id раннера: у таких строк есть «Обновить» и «Удалить установку». */
+  installs?: ReadonlyMap<string, LocalInstance> | null;
+  onUpgrade?: ((install: LocalInstance) => void) | undefined;
+  onRemoveInstall?: ((install: LocalInstance) => void) | undefined;
 };
 
 /** Строка таблицы: всё меняющееся лежит в данных, а не в замыканиях колонок (иначе ячейки пересоздаются). */
@@ -105,6 +112,10 @@ type Row = {
   rotate: () => void;
   revoke: () => void;
   details: (() => void) | null;
+  /** Раннер поставлен из админки: обновить на месте или убрать установку. */
+  install: LocalInstance | null;
+  upgrade: (() => void) | null;
+  removeInstall: (() => void) | null;
   /** Показать раннеры с этим тегом или классом. */
   pickTag: (tag: string) => void;
   pickClass: (name: string) => void;
@@ -164,6 +175,9 @@ export const RunnersView = ({
   onRevokeToken,
   onOpenQueue,
   onDetails,
+  installs = null,
+  onUpgrade,
+  onRemoveInstall,
 }: RunnersViewProps) => {
   const { t } = useTranslation("adminRunners");
   const units = useDurationUnits();
@@ -212,9 +226,24 @@ export const RunnersView = ({
         header: t("runners.columns.version"),
         sortDescFirst: true,
         cell: ({ row }) => {
-          const { runner, newer } = row.original;
+          const { runner, newer, install, upgrade } = row.original;
           const reinstall =
             (runner.reinstall ?? []).length > 0 && !runner.revoked;
+          // Акцентная кнопка только у устаревших; на версии Студии «Обновить» есть в меню.
+          const upgradeNow =
+            install?.outdated && upgrade && !runner.revoked ? (
+              <Button
+                type="button"
+                size="sm"
+                variant="primary"
+                onClick={upgrade}
+                data-testid={`runner-upgrade-now-${runner.id}`}
+              >
+                {t("adminRunnerInstall:upgrade.actionTo", {
+                  version: install.studio_version,
+                })}
+              </Button>
+            ) : null;
           const version =
             newer !== null ? (
               <Tooltip content={t("runners.newerVersion", { version: newer })}>
@@ -233,21 +262,24 @@ export const RunnersView = ({
                 v{runner.version}
               </span>
             );
-          if (!reinstall) return version;
+          if (!reinstall && !upgradeNow) return version;
           return (
             <span className="ops-tags" style={{ flexWrap: "nowrap" }}>
               {version}
-              <Tooltip content={t("adminRunnerIsolation:reinstallMark")}>
-                <span
-                  className="ops-version"
-                  data-outdated="true"
-                  tabIndex={0}
-                  aria-label={t("adminRunnerIsolation:reinstallMark")}
-                  data-testid={`runner-reinstall-${runner.id}`}
-                >
-                  <TriangleAlert size="0.6875rem" aria-hidden="true" />
-                </span>
-              </Tooltip>
+              {reinstall && (
+                <Tooltip content={t("adminRunnerIsolation:reinstallMark")}>
+                  <span
+                    className="ops-version"
+                    data-outdated="true"
+                    tabIndex={0}
+                    aria-label={t("adminRunnerIsolation:reinstallMark")}
+                    data-testid={`runner-reinstall-${runner.id}`}
+                  >
+                    <TriangleAlert size="0.6875rem" aria-hidden="true" />
+                  </span>
+                </Tooltip>
+              )}
+              {upgradeNow}
             </span>
           );
         },
@@ -339,6 +371,9 @@ export const RunnersView = ({
             rotate,
             revoke,
             details,
+            install,
+            upgrade,
+            removeInstall,
           } = row.original;
           if (r.revoked) return null;
           return (
@@ -355,6 +390,24 @@ export const RunnersView = ({
                           icon: <Info size="0.875rem" aria-hidden="true" />,
                           onSelect: details,
                           testId: `runner-details-${r.id}`,
+                        },
+                      ]
+                    : []),
+                  ...(install && upgrade
+                    ? [
+                        {
+                          id: "upgrade",
+                          label: install.outdated
+                            ? t("adminRunnerInstall:upgrade.actionTo", {
+                                version: install.studio_version,
+                              })
+                            : t("adminRunnerInstall:upgrade.action"),
+                          icon: (
+                            <CircleArrowUp size="0.875rem" aria-hidden="true" />
+                          ),
+                          disabled: busy,
+                          onSelect: upgrade,
+                          testId: `runner-upgrade-${r.id}`,
                         },
                       ]
                     : []),
@@ -378,6 +431,19 @@ export const RunnersView = ({
                     onSelect: rotate,
                     testId: `runner-rotate-${r.id}`,
                   },
+                  ...(install && removeInstall
+                    ? [
+                        {
+                          id: "remove-install",
+                          label: t("adminRunnerInstall:instances.removeAction"),
+                          icon: <Unplug size="0.875rem" aria-hidden="true" />,
+                          danger: true,
+                          disabled: busy,
+                          onSelect: removeInstall,
+                          testId: `runner-remove-install-${r.id}`,
+                        },
+                      ]
+                    : []),
                   {
                     id: "revoke",
                     label: t("runners.revokeAction"),
@@ -401,46 +467,65 @@ export const RunnersView = ({
   // Порядок строк задаёт сервер (sort): здесь только подписи к каждой.
   const rows = useMemo<Row[]>(
     () =>
-      list.items.map((runner) => ({
-        runner,
-        status: runner.status,
-        seen:
-          runner.last_seen_at === null
-            ? t("runners.neverSeen")
-            : t("runners.seenAgo", {
-                ago: formatPastTime(runner.last_seen_at, now),
-              }),
-        used: slots ? (slots.get(runner.id) ?? 0) : null,
-        busy: busyId === runner.id,
-        pause: () => {
-          onTogglePause(runner);
-        },
-        rotate: () => {
-          onRotate(runner);
-        },
-        revoke: () => {
-          onRevoke(runner);
-        },
-        details: onDetails
-          ? () => {
-              onDetails(runner);
-            }
-          : null,
-        pickTag: (tag: string) => {
-          setFilter("tag", tag);
-        },
-        pickClass: (name: string) => {
-          setFilter("resource_class", name);
-        },
-        newer:
-          newest !== null &&
-          !runner.revoked &&
-          compareVersions(runner.version, newest) < 0
-            ? newest
+      list.items.map((runner) => {
+        const install = installs?.get(runner.id) ?? null;
+        return {
+          runner,
+          status: runner.status,
+          seen:
+            runner.last_seen_at === null
+              ? t("runners.neverSeen")
+              : t("runners.seenAgo", {
+                  ago: formatPastTime(runner.last_seen_at, now),
+                }),
+          used: slots ? (slots.get(runner.id) ?? 0) : null,
+          busy: busyId === runner.id,
+          pause: () => {
+            onTogglePause(runner);
+          },
+          rotate: () => {
+            onRotate(runner);
+          },
+          revoke: () => {
+            onRevoke(runner);
+          },
+          details: onDetails
+            ? () => {
+                onDetails(runner);
+              }
             : null,
-      })),
+          install,
+          upgrade:
+            install && onUpgrade
+              ? () => {
+                  onUpgrade(install);
+                }
+              : null,
+          removeInstall:
+            install && onRemoveInstall
+              ? () => {
+                  onRemoveInstall(install);
+                }
+              : null,
+          pickTag: (tag: string) => {
+            setFilter("tag", tag);
+          },
+          pickClass: (name: string) => {
+            setFilter("resource_class", name);
+          },
+          newer:
+            newest !== null &&
+            !runner.revoked &&
+            compareVersions(runner.version, newest) < 0
+              ? newest
+              : null,
+        };
+      }),
     [
       list.items,
+      installs,
+      onUpgrade,
+      onRemoveInstall,
       now,
       t,
       slots,

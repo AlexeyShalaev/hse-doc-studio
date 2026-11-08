@@ -4,6 +4,7 @@ import { formatPastTime } from "@shared/lib";
 import { Badge, Button, Modal, TableSkeleton } from "@shared/ui";
 import type {
   AdminRunnerDeployment,
+  LocalInstance,
   RunnerBuildIsolationView,
 } from "@entities/session";
 import { useRunnerDeployment } from "../api/opsQueries";
@@ -26,9 +27,14 @@ import { Banner, ViewState } from "./parts";
  */
 export const RunnerDeploymentDialog = ({
   runner,
+  install = null,
+  onUpgrade,
   onClose,
 }: {
   runner: { id: string; name: string } | null;
+  /** Установка из админки этого раннера: тогда устаревший можно обновить отсюда. */
+  install?: LocalInstance | null;
+  onUpgrade?: (install: LocalInstance) => void;
   onClose: () => void;
 }) => {
   const { t } = useTranslation("adminRunnerIsolation");
@@ -48,7 +54,16 @@ export const RunnerDeploymentDialog = ({
     >
       <div data-testid="runner-deployment">
         {query.data ? (
-          <RunnerDeploymentView info={query.data} />
+          <RunnerDeploymentView
+            info={query.data}
+            onUpgrade={
+              install && onUpgrade
+                ? () => {
+                    onUpgrade(install);
+                  }
+                : undefined
+            }
+          />
         ) : (
           <ViewState
             status={status}
@@ -123,8 +138,11 @@ const BuildFacts = ({
 /** Содержимое карточки без окна: его рендерят тесты и галерея. */
 export const RunnerDeploymentView = ({
   info,
+  onUpgrade,
 }: {
   info: AdminRunnerDeployment;
+  /** Раннер поставлен из админки: «Обновить до vX» рядом с пометкой «Старше Студии». */
+  onUpgrade?: (() => void) | undefined;
 }) => {
   const { t } = useTranslation("adminRunnerIsolation");
   const { text, flag } = useValue();
@@ -183,6 +201,17 @@ export const RunnerDeploymentView = ({
                     <TriangleAlert size="0.6875rem" aria-hidden="true" />
                     {t("dialog.outdated")}
                   </Badge>
+                )}
+                {info.outdated && onUpgrade && (
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="primary"
+                    onClick={onUpgrade}
+                    data-testid="runner-deployment-upgrade"
+                  >
+                    {t("dialog.upgrade", { version: info.studio_version })}
+                  </Button>
                 )}
               </span>
             ),
