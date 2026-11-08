@@ -182,7 +182,23 @@
       "skipped_stale": "The cloud build was made from another version of the project, so it was not taken.",
       "too_large": "The PDF is larger than the server accepts.",
       "no_cloud_build": "This document has no cloud build.",
-      "failed": "Could not get the build. Check the connection to the server."
+      "not_pdf": "This document is not produced as a PDF, so its cloud build cannot be fetched. Build it here.",
+      "failed": "Could not get the build."
+    },
+    "failure": {
+      "git_server_unreachable": "Could not get the build: the Studio server did not respond. Check your network connection.",
+      "network": "Could not get the build: no connection to the Studio.",
+      "auth_failed": "The Studio server did not accept this Studio's sign-in. Sign in to the server again and retry.",
+      "cloud_pdf_forbidden": "You have no right to read the sources and the result of this project in the cloud, so the build cannot be fetched.",
+      "cloud_pdf_checksum_mismatch": "The build file arrived damaged and was not saved. Try again.",
+      "cloud_pdf_write_failed": "Could not write the PDF to disk. Close it in other programs and check free space.",
+      "output_path_invalid": "The document output path points outside the project folder, so the build was not written.",
+      "output_unknown": "Could not tell where the document puts its result: it is not in the installed template. Get the project changes or build the document here.",
+      "presence_unsupported": "The Studio server did not share the project cloud builds: no right to read its sources, or the server is too old."
+    },
+    "blocked": {
+      "not_pdf": "The document is not produced as a PDF, so the cloud build cannot be fetched: build it here.",
+      "output_unknown": "The cloud build cannot be fetched: the document is not in the installed template."
     },
     "unavailable": "Cloud build status is unavailable: {{code}}",
     "fetchableCount_one": "The cloud has {{count}} build you do not have",

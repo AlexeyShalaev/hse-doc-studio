@@ -3,6 +3,10 @@
 Облачный PDF скачивается по тому же входу, что и исходники, и ложится туда, куда лёг бы локальный: документ
 открывается без пересборки. Тот же отпечаток не качается, более свежую локальную сборку без `force` не затираем,
 автоматический заход берёт только сборку из той версии, что лежит у человека сейчас.
+
+Документ, который выпускается не в PDF (вариант pptx, свой файл docx), получить нельзя: облако архивирует только
+PDF, а сам результат это файл исходников и приходит синхронизацией. Такой документ не предлагается к получению
+(`can_fetch`, получение всех), а прямой запрос отвечает `not_pdf`.
 """
 
 from __future__ import annotations
@@ -17,12 +21,21 @@ from uuid import UUID
 
 import structlog
 
-from hse_doc_studio.core.devices.builds import BuildRelation, FetchStatus, Side, decide_fetch, relate
+from hse_doc_studio.core.devices.builds import (
+    BuildRelation,
+    FetchBlocked,
+    FetchStatus,
+    Side,
+    decide_fetch,
+    fetch_blocked,
+    relate,
+)
 from hse_doc_studio.core.entities import CompileRecord, Project
 from hse_doc_studio.core.enums import CompileStatus, EngineType
 from hse_doc_studio.core.errors import NotFoundError
 from hse_doc_studio.core.git_remote.client import (
     DEVICE_ORIGIN,
+    CloudPdfReply,
     StudioServerError,
     StudioServerErrorCode,
     studio_project_id,
@@ -34,7 +47,7 @@ from hse_doc_studio.core.i18n import localized_error
 from hse_doc_studio.core.repositories import ICompileRepository, IProjectRepository
 from hse_doc_studio.core.vcs.entities import VcsSettings
 from hse_doc_studio.core.vcs.protocols import IVcsService
-from hse_doc_studio.use_cases.documents.get_document import GetDocumentInput, GetDocumentUC
+from hse_doc_studio.use_cases.documents.document_outputs import DocumentOutputs
 from hse_doc_studio.use_cases.git_sync.status import default_state
 from hse_doc_studio.use_cases.git_sync.studio_servers import StudioServersService
 from hse_doc_studio.use_cases.projects.get_project import GetProjectInput, GetProjectUC
@@ -44,6 +57,11 @@ logger = structlog.get_logger()
 # Запись локальной сборки, созданная получением облачного PDF: первая строка лога служит меткой.
 FETCHED_MARK = "# fetched-from-cloud"
 BUILD_DIR = ".build"
+
+# Коды неудачного получения, которые рождаются здесь, а не в ответе сервера (остальные: StudioServerErrorCode и
+# GitErrorCode). Интерфейс подбирает текст по коду, «нет связи» говорит только для `git_server_unreachable`.
+OUTPUT_UNKNOWN = "output_unknown"
+OUTPUT_PATH_INVALID = "output_path_invalid"
 
 
 @dataclass(frozen=True)
@@ -65,6 +83,8 @@ class DocumentBuildStatus:
     studio: CloudBuild | None
     relation: BuildRelation
     can_fetch: bool
+    # Облачная сборка есть и свежее, но получить её нельзя: почему (`can_fetch` тогда False).
+    fetch_blocked: FetchBlocked | None = None
 
 
 @dataclass(frozen=True)
@@ -93,6 +113,20 @@ class _Link:
     server_project: UUID
 
 
+@dataclass(frozen=True)
+class _Run:
+    """Общее для всех документов одного получения."""
+
+    project: Project
+    link: _Link
+    cloud: CloudBuilds
+    outputs: dict[str, str | None]
+    head: str | None
+    dirty: bool
+    force: bool
+    auto: bool
+
+
 def _side(build: LocalBuild | CloudBuild) -> Side:
     size = build.size if isinstance(build, CloudBuild) else None
     return Side(at=build.at, commit=build.commit, sha256=build.sha256, size=size)
@@ -103,7 +137,7 @@ class LocalBuildsUC:
         self,
         *,
         project_uc: GetProjectUC,
-        document_uc: GetDocumentUC,
+        outputs: DocumentOutputs,
         project_repo: IProjectRepository,
         compile_repo: ICompileRepository,
         vcs: IVcsService,
@@ -113,7 +147,7 @@ class LocalBuildsUC:
         state_repo: IGitSyncStateRepository,
     ) -> None:
         self._projects = project_uc
-        self._documents = document_uc
+        self._outputs = outputs
         self._project_repo = project_repo
         self._compiles = compile_repo
         self._vcs = vcs
@@ -132,7 +166,11 @@ class LocalBuildsUC:
         error: str | None = None
         if link is not None:
             cloud, error = await self._cloud(link)
-        documents = [await self._document(project, doc.id, head, dirty, cloud) for doc in project.documents]
+        # Путь результата нужен, только чтобы решить, предлагать ли облачную сборку.
+        outputs = self._outputs.of(project) if cloud is not None else {}
+        documents = [
+            await self._document(project, doc.id, head, dirty, cloud, outputs.get(doc.id)) for doc in project.documents
+        ]
         return LocalBuilds(
             connected=link is not None,
             cloud_error=error,
@@ -142,13 +180,21 @@ class LocalBuildsUC:
             documents=tuple(documents),
         )
 
-    async def _document(
-        self, project: Project, doc_id: str, head: str | None, dirty: bool, cloud: CloudBuilds | None
+    async def _document(  # noqa: PLR0913 — состояние одного документа
+        self,
+        project: Project,
+        doc_id: str,
+        head: str | None,
+        dirty: bool,
+        cloud: CloudBuilds | None,
+        output: str | None,
     ) -> DocumentBuildStatus:
         local = await self._local_build(project, doc_id, head, dirty)
         found = cloud.of(doc_id) if cloud is not None else None
         remote = found.cloud if found is not None else None
         relation = relate(_side(local) if local else None, _side(remote) if remote else None)
+        offered = remote is not None and relation in {BuildRelation.cloud_only, BuildRelation.cloud_newer}
+        blocked = fetch_blocked(output) if offered else None
         return DocumentBuildStatus(
             doc_id=doc_id,
             local=local,
@@ -156,7 +202,8 @@ class LocalBuildsUC:
             cloud_running=found.cloud_running if found is not None else False,
             studio=found.studio if found is not None else None,
             relation=relation,
-            can_fetch=remote is not None and relation in {BuildRelation.cloud_only, BuildRelation.cloud_newer},
+            can_fetch=offered and blocked is None,
+            fetch_blocked=blocked,
         )
 
     async def _local_build(self, project: Project, doc_id: str, head: str | None, dirty: bool) -> LocalBuild | None:
@@ -232,72 +279,47 @@ class LocalBuildsUC:
         cloud, error = await self._cloud(link)
         if cloud is None:
             raise StudioServerError(error or StudioServerErrorCode.unreachable)
-        head, dirty = await self._local_head(project)
         wanted = [d.doc_id for d in cloud.documents if doc_id is None or d.doc_id == doc_id]
         if doc_id is not None and not wanted:
             return [FetchOutcome(doc_id, FetchStatus.no_cloud_build)]
-        outcomes: list[FetchOutcome] = []
-        for wanted_doc in wanted:
-            known = cloud.of(wanted_doc)
-            if known is None or known.cloud is None:
-                if doc_id is not None:
-                    outcomes.append(FetchOutcome(wanted_doc, FetchStatus.no_cloud_build))
-                continue
-            outcomes.append(
-                await self._fetch_one(project, link, wanted_doc, known.cloud, cloud, head, dirty, force, auto)
-            )
-        return outcomes
+        head, dirty = await self._local_head(project)
+        run = _Run(project, link, cloud, self._outputs.of(project), head, dirty, force=force, auto=auto)
+        outcomes = [await self._fetch_doc(run, wanted_doc, single=doc_id is not None) for wanted_doc in wanted]
+        return [outcome for outcome in outcomes if outcome is not None]
 
-    async def _fetch_one(  # noqa: PLR0913 — состояние одного получения
-        self,
-        project: Project,
-        link: _Link,
-        doc_id: str,
-        remote: CloudBuild,
-        cloud: CloudBuilds,
-        head: str | None,
-        dirty: bool,
-        force: bool,
-        auto: bool,
-    ) -> FetchOutcome:
-        local = await self._local_build(project, doc_id, head, dirty)
+    async def _fetch_doc(self, run: _Run, doc_id: str, *, single: bool) -> FetchOutcome | None:
+        """Итог по документу; `None` при получении всех: документа без облачной сборки или не PDF и не предлагали."""
+        known = run.cloud.of(doc_id)
+        if known is None or known.cloud is None:
+            return FetchOutcome(doc_id, FetchStatus.no_cloud_build) if single else None
+        output = run.outputs.get(doc_id)
+        blocked = fetch_blocked(output)
+        if blocked is not None or output is None:
+            return _blocked(doc_id, blocked) if single else None
+        return await self._fetch_one(run, doc_id, output, known.cloud)
+
+    async def _fetch_one(self, run: _Run, doc_id: str, output: str, remote: CloudBuild) -> FetchOutcome:
+        local = await self._local_build(run.project, doc_id, run.head, run.dirty)
         relation = relate(_side(local) if local else None, _side(remote))
         skip = decide_fetch(
             relation,
             _side(remote),
-            force=force,
-            auto=auto,
-            local_head=head,
-            local_dirty=dirty,
-            max_bytes=cloud.max_pdf_bytes,
+            force=run.force,
+            auto=run.auto,
+            local_head=run.head,
+            local_dirty=run.dirty,
+            max_bytes=run.cloud.max_pdf_bytes,
         )
         if skip is not None:
             return FetchOutcome(doc_id, skip, size=remote.size)
-        try:
-            target = await self._target(project, doc_id)
-        except NotFoundError:
-            return FetchOutcome(doc_id, FetchStatus.failed, code="not_pdf")
-        part = target.parent / BUILD_DIR / doc_id / f"cloud-{uuid.uuid4().hex[:8]}.part"
-        try:
-            reply = await self._servers.download_cloud_pdf(
-                link.credential_id,
-                link.server_project,
-                doc_id,
-                part,
-                known_sha256=local.sha256 if local is not None else None,
-                max_bytes=cloud.max_pdf_bytes,
-            )
-            if reply.unchanged:
-                return FetchOutcome(doc_id, FetchStatus.unchanged)
-            await asyncio.to_thread(_install, part, target)
-        except StudioServerError as exc:
-            return self._failure(doc_id, exc.code)
-        except GitSyncError as exc:
-            return FetchOutcome(doc_id, FetchStatus.failed, code=exc.code.value)
-        finally:
-            await asyncio.to_thread(part.unlink, True)
+        target = _target(run.project, output)
+        if target is None:
+            return FetchOutcome(doc_id, FetchStatus.failed, code=OUTPUT_PATH_INVALID)
+        reply = await self._download(run, doc_id, target, local.sha256 if local is not None else None)
+        if isinstance(reply, FetchOutcome):
+            return reply
         await self._record(
-            project,
+            run.project,
             doc_id,
             reply.sha256,
             reply.size,
@@ -309,6 +331,35 @@ class LocalBuildsUC:
         )
         return FetchOutcome(doc_id, FetchStatus.downloaded, size=reply.size)
 
+    async def _download(
+        self, run: _Run, doc_id: str, target: Path, known_sha256: str | None
+    ) -> CloudPdfReply | FetchOutcome:
+        """PDF во временный файл рядом с целью и атомарно на место; итог отказа, если не вышло."""
+        part = target.parent / BUILD_DIR / doc_id / f"cloud-{uuid.uuid4().hex[:8]}.part"
+        try:
+            reply = await self._servers.download_cloud_pdf(
+                run.link.credential_id,
+                run.link.server_project,
+                doc_id,
+                part,
+                known_sha256=known_sha256,
+                max_bytes=run.cloud.max_pdf_bytes,
+            )
+            if reply.unchanged:
+                return FetchOutcome(doc_id, FetchStatus.unchanged)
+            await asyncio.to_thread(_install, part, target)
+        except StudioServerError as exc:
+            return self._failure(doc_id, exc.code)
+        except GitSyncError as exc:
+            return FetchOutcome(doc_id, FetchStatus.failed, code=exc.code.value)
+        except OSError:
+            # Связь тут ни при чём: файл не лёг на место (PDF открыт в другой программе, нет места, нет прав).
+            logger.warning("cloud build install failed", doc_id=doc_id, exc_info=True)
+            return FetchOutcome(doc_id, FetchStatus.failed, code=StudioServerErrorCode.cloud_pdf_write_failed)
+        finally:
+            await asyncio.to_thread(part.unlink, True)
+        return reply
+
     @staticmethod
     def _failure(doc_id: str, code: str) -> FetchOutcome:
         if code == StudioServerErrorCode.cloud_pdf_too_large:
@@ -316,20 +367,6 @@ class LocalBuildsUC:
         if code == StudioServerErrorCode.cloud_pdf_missing:
             return FetchOutcome(doc_id, FetchStatus.no_cloud_build, code=code)
         return FetchOutcome(doc_id, FetchStatus.failed, code=code)
-
-    async def _target(self, project: Project, doc_id: str) -> Path:
-        """Куда лёг бы локально собранный PDF документа: рядом с исходником, внутри папки проекта."""
-        info = await self._documents.execute(GetDocumentInput(project_id=project.id, doc_id=doc_id))
-        output = info.output_file
-        if not output or not output.lower().endswith(".pdf"):
-            raise NotFoundError(
-                localized_error("Документ не выпускается как PDF", "The document is not produced as a PDF")
-            )
-        root = project.folder.resolve()
-        path = (root / PurePosixPath(output)).resolve()
-        if not path.is_relative_to(root):
-            raise NotFoundError(localized_error("Недопустимый путь результата", "Invalid output path"))
-        return path
 
     async def _record(  # noqa: PLR0913 — поля одной записи
         self,
@@ -370,6 +407,20 @@ class LocalBuildsUC:
             await self._compiles.save(record)
         except Exception:  # noqa: BLE001 — файл уже на месте: сбой записи не должен отменять получение
             logger.warning("cloud build record failed", doc_id=doc_id, exc_info=True)
+
+
+def _blocked(doc_id: str, reason: FetchBlocked | None) -> FetchOutcome:
+    """Итог для документа, чью сборку получить нельзя: не PDF или путь результата не известен."""
+    if reason is FetchBlocked.not_pdf:
+        return FetchOutcome(doc_id, FetchStatus.not_pdf, code=reason.value)
+    return FetchOutcome(doc_id, FetchStatus.failed, code=OUTPUT_UNKNOWN)
+
+
+def _target(project: Project, output: str) -> Path | None:
+    """Куда лёг бы локально собранный PDF документа: рядом с исходником, внутри папки проекта; иначе None."""
+    root = project.folder.resolve()
+    path = (root / PurePosixPath(output)).resolve()
+    return path if path.is_relative_to(root) else None
 
 
 def _install(part: Path, target: Path) -> None:

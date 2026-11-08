@@ -45,7 +45,12 @@ export const shortCommit = (commit: string | null): string | null =>
 
 /** Результаты получения, о которых молчим при автоматическом заходе: ничего не изменилось или это не по правилам. */
 export const QUIET_FETCH_STATUSES: ReadonlySet<FetchStatus> =
-  new Set<FetchStatus>(["unchanged", "skipped_stale", "no_cloud_build"]);
+  new Set<FetchStatus>([
+    "unchanged",
+    "skipped_stale",
+    "no_cloud_build",
+    "not_pdf",
+  ]);
 
 /** Какие строки показывает документ в облаке: одна запись по облаку и Студии. */
 export type CloudDocState =

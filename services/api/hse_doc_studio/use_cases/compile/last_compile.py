@@ -8,6 +8,10 @@
 Ссылка исправляется при чтении, а файл не правится. Правка ушла бы следующей синхронизацией на другую сторону, та
 исправила бы ссылку по-своему, и стороны перекидывались бы коммитами без конца. Кроме того, получение облачного PDF
 записывает сборку под облачным идентификатором (`devices/local_builds.py`): пришедшая ссылка тогда оживает сама.
+
+У документа, который выпускается не в PDF (pptx), облачную сборку получить нельзя, и чужая ссылка живёт, пока одна
+из сторон не соберёт его снова. Список документов читается на каждое обновление страницы, поэтому о такой ссылке
+пишем в лог один раз за запуск (на документ и ссылку), а не на каждый запрос.
 """
 
 from __future__ import annotations
@@ -22,6 +26,10 @@ from hse_doc_studio.core.entities import Document
 from hse_doc_studio.core.repositories import ICompileRepository
 
 logger = structlog.get_logger()
+
+# Уже записанные в лог чужие ссылки: (папка проекта, документ, ссылка). Предел страхует от роста на долгом запуске.
+_REPORTED: set[tuple[Path, str, UUID]] = set()
+_REPORTED_LIMIT = 4096
 
 
 async def effective_last_compile_id(compiles: ICompileRepository | None, folder: Path, doc: Document) -> UUID | None:
@@ -40,13 +48,24 @@ async def effective_last_compile_id(compiles: ICompileRepository | None, folder:
         logger.warning("last compile pointer unreadable", doc_id=doc.id, exc_info=True)
         return pointer
     latest = max(history, key=lambda record: record.started_at, default=None)
+    _report_foreign(folder, doc.id, pointer, latest.id if latest is not None else None)
+    return latest.id if latest is not None else None
+
+
+def _report_foreign(folder: Path, doc_id: str, pointer: UUID, replaced_by: UUID | None) -> None:
+    """В лог только первая встреча чужой ссылки документа: повторы на каждом чтении списка ничего не добавляют."""
+    key = (folder, doc_id, pointer)
+    if key in _REPORTED:
+        return
+    if len(_REPORTED) >= _REPORTED_LIMIT:
+        _REPORTED.clear()
+    _REPORTED.add(key)
     logger.info(
         "last compile pointer is foreign",
-        doc_id=doc.id,
+        doc_id=doc_id,
         compile_id=str(pointer),
-        replaced_by=str(latest.id) if latest is not None else None,
+        replaced_by=str(replaced_by) if replaced_by is not None else None,
     )
-    return latest.id if latest is not None else None
 
 
 async def with_effective_last_compile(compiles: ICompileRepository | None, folder: Path, doc: Document) -> Document:

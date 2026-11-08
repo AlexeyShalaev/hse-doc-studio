@@ -9,7 +9,7 @@ from typing import Any
 from uuid import UUID, uuid4
 
 import pytest
-from hse_doc_studio.core.devices.builds import BuildRelation, FetchStatus
+from hse_doc_studio.core.devices.builds import BuildRelation, FetchBlocked, FetchStatus
 from hse_doc_studio.core.entities import CompileRecord
 from hse_doc_studio.core.enums import CompileStatus, EngineType
 from hse_doc_studio.core.errors import NotFoundError
@@ -19,7 +19,13 @@ from hse_doc_studio.core.git_remote.client import (
     StudioServerErrorCode,
 )
 from hse_doc_studio.core.git_sync.entities import CredentialStatus, GitCredential, GitCredentialKind, StoreRemoteConfig
-from hse_doc_studio.use_cases.devices.local_builds import FETCHED_MARK, LocalBuildsUC
+from hse_doc_studio.core.git_sync.errors import GitErrorCode, GitSyncError
+from hse_doc_studio.use_cases.devices.local_builds import (
+    FETCHED_MARK,
+    OUTPUT_PATH_INVALID,
+    OUTPUT_UNKNOWN,
+    LocalBuildsUC,
+)
 
 from tests.factories import make_document, make_project
 
@@ -85,7 +91,12 @@ class Compiles:
 
 
 def raw_builds(
-    *, cloud_at: datetime = T0, commit: str | None = HEAD, size: int = len(PDF), fresh: bool | None = True
+    *,
+    cloud_at: datetime = T0,
+    commit: str | None = HEAD,
+    size: int = len(PDF),
+    fresh: bool | None = True,
+    doc_id: str = "vkr",
 ) -> dict[str, Any]:
     return {
         "head": HEAD,
@@ -93,7 +104,7 @@ def raw_builds(
         "max_pdf_bytes": 100 * 1024 * 1024,
         "documents": [
             {
-                "doc_id": "vkr",
+                "doc_id": doc_id,
                 "cloud": {
                     "at": cloud_at.isoformat(),
                     "commit": commit,
@@ -136,8 +147,10 @@ def build(
     *records: CompileRecord,
     dirty: bool = False,
     connected: bool = True,
+    outputs: dict[str, str | None] | None = None,
 ) -> tuple[LocalBuildsUC, Compiles]:
-    project = make_project(folder=tmp_path, documents=[make_document("vkr")])
+    produced = outputs if outputs is not None else {"vkr": "vkr/vkr.pdf"}
+    project = make_project(folder=tmp_path, documents=[make_document(doc_id) for doc_id in produced])
     compiles = Compiles(*records)
     url = f"https://studio.example.org/git/{SERVER_PROJECT}.git" if connected else "https://github.com/a/b.git"
     credential = GitCredential(
@@ -148,9 +161,9 @@ def build(
         async def execute(self, _inp: Any) -> Any:
             return SimpleNamespace(project=project)
 
-    class Documents:
-        async def execute(self, _inp: Any) -> Any:
-            return SimpleNamespace(output_file="vkr/vkr.pdf")
+    class Outputs:
+        def of(self, _project: Any) -> dict[str, str | None]:
+            return dict(produced)
 
     class Credentials:
         async def get(self, _id: UUID) -> GitCredential:
@@ -170,7 +183,7 @@ def build(
 
     uc = LocalBuildsUC(
         project_uc=Projects(),  # type: ignore[arg-type]
-        document_uc=Documents(),  # type: ignore[arg-type]
+        outputs=Outputs(),  # type: ignore[arg-type]
         project_repo=SimpleNamespace(),  # type: ignore[arg-type]
         compile_repo=compiles,  # type: ignore[arg-type]
         vcs=Vcs(),  # type: ignore[arg-type]
@@ -376,6 +389,124 @@ async def test__fetch__server_says_unchanged__keeps_local_file(tmp_path: Path) -
 
     assert outcome.status is FetchStatus.unchanged
     assert len(compiles.records) == 1
+
+
+# --- документ выпускается не в PDF ---
+
+SLIDES = "presentation/presentation.pptx"
+
+
+def with_slides(raw: dict[str, Any]) -> dict[str, Any]:
+    slides = dict(raw_builds(doc_id="presentation")["documents"][0])
+    raw["documents"].append(slides)
+    return raw
+
+
+async def test__status__cloud_build_of_a_pptx_document__is_not_offered_and_says_why(tmp_path: Path) -> None:
+    uc, _ = build(tmp_path, Servers(with_slides(raw_builds())), outputs={"vkr": "vkr/vkr.pdf", "presentation": SLIDES})
+
+    found = {d.doc_id: d for d in (await uc.status(uuid4())).documents}
+
+    slides = found["presentation"]
+    assert (slides.relation, slides.can_fetch, slides.fetch_blocked) == (
+        BuildRelation.cloud_only,
+        False,
+        FetchBlocked.not_pdf,
+    )
+    assert (found["vkr"].can_fetch, found["vkr"].fetch_blocked) == (True, None)
+
+
+async def test__status__pptx_document_with_nothing_to_fetch__has_no_block_reason(tmp_path: Path) -> None:
+    raw = raw_builds(doc_id="presentation")
+    raw["documents"][0]["cloud"] = None
+    uc, _ = build(tmp_path, Servers(raw), outputs={"presentation": SLIDES})
+
+    (slides,) = (await uc.status(uuid4())).documents
+
+    assert (slides.relation, slides.can_fetch, slides.fetch_blocked) == (BuildRelation.none, False, None)
+
+
+async def test__status__document_output_unknown__not_offered(tmp_path: Path) -> None:
+    uc, _ = build(tmp_path, Servers(raw_builds()), outputs={"vkr": None})
+
+    (doc,) = (await uc.status(uuid4())).documents
+
+    assert (doc.can_fetch, doc.fetch_blocked) == (False, FetchBlocked.output_unknown)
+
+
+async def test__fetch__pptx_document_asked_directly__not_pdf_and_nothing_downloaded(tmp_path: Path) -> None:
+    servers = Servers(raw_builds(doc_id="presentation"))
+    uc, compiles = build(tmp_path, servers, outputs={"presentation": SLIDES})
+
+    (outcome,) = await uc.fetch(uuid4(), "presentation")
+
+    assert (outcome.status, outcome.code) == (FetchStatus.not_pdf, "not_pdf")
+    assert servers.downloads == []
+    assert compiles.records == []
+
+
+async def test__fetch__all_documents__pptx_document_is_skipped_silently(tmp_path: Path) -> None:
+    servers = Servers(with_slides(raw_builds()))
+    uc, _ = build(tmp_path, servers, outputs={"vkr": "vkr/vkr.pdf", "presentation": SLIDES})
+
+    outcomes = await uc.fetch(uuid4(), None)
+
+    assert [(o.doc_id, o.status) for o in outcomes] == [("vkr", FetchStatus.downloaded)]
+    assert [doc for doc, _sha in servers.downloads] == ["vkr"]
+
+
+async def test__fetch__document_output_unknown__fails_with_its_own_code(tmp_path: Path) -> None:
+    servers = Servers(raw_builds())
+    uc, _ = build(tmp_path, servers, outputs={"vkr": None})
+
+    (outcome,) = await uc.fetch(uuid4(), "vkr")
+    everything = await uc.fetch(uuid4(), None)
+
+    assert (outcome.status, outcome.code) == (FetchStatus.failed, OUTPUT_UNKNOWN)
+    assert everything == []
+    assert servers.downloads == []
+
+
+async def test__fetch__output_path_outside_the_project__fails_without_download(tmp_path: Path) -> None:
+    servers = Servers(raw_builds())
+    uc, _ = build(tmp_path / "p", servers, outputs={"vkr": "../escape.pdf"})
+
+    (outcome,) = await uc.fetch(uuid4(), "vkr")
+
+    assert (outcome.status, outcome.code) == (FetchStatus.failed, OUTPUT_PATH_INVALID)
+    assert servers.downloads == []
+
+
+async def test__fetch__pdf_cannot_be_put_in_place__write_failed_not_a_network_error(tmp_path: Path) -> None:
+    servers = Servers(raw_builds())
+    uc, compiles = build(tmp_path, servers)
+    blocker = tmp_path / "vkr" / "vkr.pdf"
+    (blocker / "inside").mkdir(parents=True)  # на месте PDF непустая папка: замена файла не пройдёт
+
+    (outcome,) = await uc.fetch(uuid4(), "vkr")
+
+    assert (outcome.status, outcome.code) == (FetchStatus.failed, StudioServerErrorCode.cloud_pdf_write_failed)
+    assert compiles.records == []
+    assert list((tmp_path / "vkr" / ".build" / "vkr").glob("*.part")) == []
+
+
+@pytest.mark.parametrize(
+    ("error", "code"),
+    [
+        (GitSyncError(GitErrorCode.auth_failed), "auth_failed"),
+        (StudioServerError(StudioServerErrorCode.cloud_pdf_forbidden), "cloud_pdf_forbidden"),
+        (StudioServerError(StudioServerErrorCode.cloud_pdf_checksum), "cloud_pdf_checksum_mismatch"),
+        (StudioServerError(StudioServerErrorCode.unreachable), "git_server_unreachable"),
+    ],
+)
+async def test__fetch__failures_keep_their_own_code(tmp_path: Path, error: Exception, code: str) -> None:
+    servers = Servers(raw_builds())
+    servers.error = error
+    uc, _ = build(tmp_path, servers)
+
+    (outcome,) = await uc.fetch(uuid4(), "vkr")
+
+    assert (outcome.status, outcome.code) == (FetchStatus.failed, code)
 
 
 # --- остановка облачных сборок ---

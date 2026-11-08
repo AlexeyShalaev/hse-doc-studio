@@ -35,6 +35,10 @@ class StudioServerErrorCode:
     cloud_pdf_missing = "cloud_pdf_missing"
     cloud_pdf_forbidden = "cloud_pdf_forbidden"
     cloud_pdf_too_large = "cloud_pdf_too_large"
+    # Тело облачного PDF не сошлось с объявленным SHA-256: файл испорчен по дороге, на место не кладётся.
+    cloud_pdf_checksum = "cloud_pdf_checksum_mismatch"
+    # Облачный PDF не записался на диск этой Студии (нет места, нет прав, файл занят): со связью не связано.
+    cloud_pdf_write_failed = "cloud_pdf_write_failed"
     # Остановка облачных сборок: нет права запускать сборки, старый сервер маршрута не знает.
     cancel_forbidden = "cancel_forbidden"
     cancel_unsupported = "cancel_unsupported"

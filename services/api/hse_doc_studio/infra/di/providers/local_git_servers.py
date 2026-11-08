@@ -36,6 +36,7 @@ from hse_doc_studio.infra.git_remote_client.studio_client import HttpStudioServe
 from hse_doc_studio.infra.runtime.environment import in_container
 from hse_doc_studio.use_cases.devices.local_builds import LocalBuildsUC
 from hse_doc_studio.use_cases.devices.local_presence import LocalPresenceService, PresenceBoard
+from hse_doc_studio.use_cases.documents.document_outputs import DocumentOutputs
 from hse_doc_studio.use_cases.documents.get_document import GetDocumentUC
 from hse_doc_studio.use_cases.git_sync.clone_project import CloneProjectUC, GetCloneDefaultsUC
 from hse_doc_studio.use_cases.git_sync.cloud_projects import (
@@ -203,7 +204,7 @@ class LocalGitServersProvider(Provider):
     ) -> LocalBuildsUC:
         return LocalBuildsUC(
             project_uc=GetProjectUC(project_repo, project_index),
-            document_uc=GetDocumentUC(project_repo, project_index, template_repo),
+            outputs=DocumentOutputs(template_repo),
             project_repo=project_repo,
             compile_repo=compile_repo,
             vcs=vcs,

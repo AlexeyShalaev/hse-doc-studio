@@ -2,6 +2,7 @@ import type {
   Build,
   DocumentBuildStatus,
   DocumentBuilds,
+  FetchBlocked,
 } from "../model/build.schema";
 import { RELATION_TONE } from "./buildLib";
 
@@ -20,6 +21,8 @@ export type DocBuildView = {
   fromCloud: boolean;
   /** Локальная Студия может скачать облачную сборку. */
   canFetch: boolean;
+  /** В облаке сборка свежее, но получить её нельзя: почему (документ не в PDF и т. п.). */
+  fetchBlocked: FetchBlocked | null;
   /** У облачной сборки есть более свежая локальная: «Получить» заменит её только с подтверждением. */
   localNewer: boolean;
   running: boolean;
@@ -40,6 +43,7 @@ export const describeCloudDoc = (doc: DocumentBuilds): DocBuildView => {
     commit: null,
     fromCloud: false,
     canFetch: false,
+    fetchBlocked: null,
     localNewer: false,
     running: false,
   } as const;
@@ -115,6 +119,7 @@ export const describeLocalDoc = (status: DocumentBuildStatus): DocBuildView => {
       showing?.commit ?? status.local?.commit ?? status.cloud?.commit ?? null,
     fromCloud: status.local?.from_cloud === true,
     canFetch: status.can_fetch,
+    fetchBlocked: status.fetch_blocked ?? null,
     localNewer: relation === "local_newer",
     running,
   };
