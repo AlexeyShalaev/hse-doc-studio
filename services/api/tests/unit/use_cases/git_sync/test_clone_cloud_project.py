@@ -277,3 +277,28 @@ async def test__tool__not_connected__explains_how_to_connect() -> None:
     assert result.is_error is True
     assert result.text.startswith("Сервер studio.example.org не подключён")
     assert "Подключиться к серверу" in result.text or "Connect to a server" in result.text
+
+
+async def test__tool__project_id_only__uses_the_saved_login_and_default_wait_below_client_timeout() -> None:
+    credential = _credential("studio.example.org")
+    operations = _Operations()
+    opener = _Opener(operations, has={credential.id})
+    tool = CloneCloudProjectTool(_Deps(_uc(_Servers(credential), opener, operations)))  # type: ignore[arg-type]
+
+    result = await tool.handle(_ctx(), {"project_id": ANNA})
+
+    assert result.is_error is False, result.text
+    assert opener.calls == [(credential.id, UUID(ANNA))]
+    assert '"server_url": "https://studio.example.org"' in result.text
+    assert CloneCloudProjectTool.spec.parameters["properties"]["wait_s"]["default"] < 60
+
+
+async def test__tool__no_access_on_the_server__refused_without_details() -> None:
+    credential = _credential("studio.example.org")
+    operations = _Operations()
+    tool = CloneCloudProjectTool(_Deps(_uc(_Servers(credential), _Opener(operations, has=set()), operations)))  # type: ignore[arg-type]
+
+    result = await tool.handle(_ctx(), {"project_id": ANNA})
+
+    assert result.is_error is True
+    assert result.text.startswith("Проекта нет на сервере или у вас нет к нему доступа")

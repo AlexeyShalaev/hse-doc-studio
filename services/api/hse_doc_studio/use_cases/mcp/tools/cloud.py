@@ -22,7 +22,8 @@ from hse_doc_studio.use_cases.git_sync.cloud_projects import (
 )
 from hse_doc_studio.use_cases.mcp.tools._base import McpTool, int_arg, json_result, optional_text
 
-DEFAULT_WAIT_S = 60
+# По умолчанию меньше таймаута запроса у клиентов MCP (60 с в SDK): иначе клиент оборвёт вызов раньше ответа.
+DEFAULT_WAIT_S = 45
 MAX_WAIT_S = 240
 
 
