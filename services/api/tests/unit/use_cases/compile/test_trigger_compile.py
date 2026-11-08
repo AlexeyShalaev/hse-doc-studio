@@ -13,6 +13,7 @@ from hse_doc_studio.core.jobs.entities import CompileJobPayload, JobSpec, compil
 from hse_doc_studio.core.jobs.enums import JobKind
 from hse_doc_studio.core.jobs.errors import NoRunnerAvailableError
 from hse_doc_studio.core.jobs.protocols import IJobHooks
+from hse_doc_studio.core.jobs.runner_fit import PoolState, RunnerFit, RunnerGapReason
 from hse_doc_studio.core.services import CheckResolutionService, ProjectTemplateService
 from hse_doc_studio.core.value_objects import ChecksOverride
 from hse_doc_studio.infra.persistence.project_locator import LocalProjectLocator
@@ -35,6 +36,8 @@ class FakeJobDispatcher:
     def __init__(self, events: list[str]) -> None:
         self.events = events
         self.preflight_error: Exception | None = None
+        # Отказ только для этих документов: «Собрать все», где часть документов собрать некому.
+        self.refuse_docs: dict[str, Exception] = {}
         self.preflighted: list[JobSpec] = []
         self.submitted: list[tuple[JobSpec, IJobHooks]] = []
 
@@ -43,6 +46,9 @@ class FakeJobDispatcher:
         self.preflighted.append(spec)
         if self.preflight_error is not None:
             raise self.preflight_error
+        refusal = self.refuse_docs.get(compile_payload_of(spec).doc_id)
+        if refusal is not None:
+            raise refusal
 
     def submit(self, spec: JobSpec, hooks: IJobHooks) -> None:
         self.events.append("submit")
@@ -195,6 +201,30 @@ async def test__trigger_compile__no_runner__failed_record_with_no_runners_code(t
 
     (record,) = [call.args[0] for call in h.compile_repo.save.call_args_list]
     assert (record.status, record.error_code) == (CompileStatus.failure, "no_runners")
+
+
+async def test__trigger_compile__build_all_with_paused_office_runner__only_that_document_excluded(tmp_path) -> None:
+    # «Собрать все» ставит документы по одному: презентации собрать некому (личный раннер с office на паузе),
+    # её отказ называет причину, а остальные документы встают в очередь.
+    h = Harness(tmp_path)
+    project = make_project(folder=tmp_path, documents=[make_document("tz"), make_document("pres")])
+    h.given(project, documents=(make_document_definition("tz"), make_document_definition("pres")))
+    fit = RunnerFit(tags=frozenset({"office"}), shared=PoolState.absent, personal=PoolState.paused)
+    h.dispatcher.refuse_docs["pres"] = NoRunnerAvailableError(frozenset({"office"}), any_runner=True, fit=fit)
+
+    refused: list[NoRunnerAvailableError] = []
+    for doc_id in ("tz", "pres"):
+        try:
+            await h.uc.execute(TriggerCompileInput(project_id=project.id, doc_id=doc_id))
+        except NoRunnerAvailableError as exc:
+            refused.append(exc)
+
+    assert [compile_payload_of(spec).doc_id for spec, _ in h.dispatcher.submitted] == ["tz"]
+    ((exc,),) = (refused,)
+    assert (exc.code, exc.reason) == ("no_runner_for_tags", RunnerGapReason.personal_paused)
+    failed = [call.args[0] for call in h.compile_repo.save.call_args_list if call.args[0].doc_id == "pres"]
+    assert [(r.status, r.error_code) for r in failed] == [(CompileStatus.failure, "no_runner_for_tags")]
+    assert "на паузе" in (failed[0].error_detail or "")
 
 
 async def test__trigger_compile__refusal_record_cannot_be_saved__original_refusal_still_raised(tmp_path) -> None:

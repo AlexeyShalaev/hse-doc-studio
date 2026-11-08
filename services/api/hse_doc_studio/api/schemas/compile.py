@@ -23,6 +23,9 @@ class BuildAvailabilityResponse(StrictModel):
     cloud: bool
     any_runner: bool
     tags: list[str]
+    # Для тега сборки без исполнителя: почему (`personal_paused`, `shared_paused`, `personal_offline`,
+    # `shared_offline`, `no_runner`).
+    reasons: dict[str, str] = {}
 
 
 class CompileErrorOut(StrictModel):

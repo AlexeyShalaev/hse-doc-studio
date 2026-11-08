@@ -7,8 +7,8 @@
 
 from __future__ import annotations
 
-from collections.abc import Iterable
-from dataclasses import dataclass
+from collections.abc import Iterable, Mapping
+from dataclasses import dataclass, field
 from typing import Protocol
 from uuid import UUID
 
@@ -27,11 +27,16 @@ def no_runner_code(*, any_runner: bool) -> str:
 
 @dataclass(frozen=True)
 class BuildAvailability:
-    """`cloud`: сборка идёт на раннерах; `any_runner`: есть хоть один живой раннер; `tags`: обслуживаемые теги."""
+    """`cloud`: сборка идёт на раннерах; `any_runner`: есть хоть один живой раннер; `tags`: обслуживаемые теги.
+
+    `reasons`: для необслуживаемого тега сборки, почему (`RunnerGapReason`: личный раннер на паузе, не в сети,
+    раннера с тегом нет); интерфейс называет причину, а не только «нет раннера».
+    """
 
     cloud: bool
     any_runner: bool
     tags: frozenset[str]
+    reasons: Mapping[str, str] = field(default_factory=dict)
 
     @classmethod
     def local(cls) -> BuildAvailability:

@@ -1,8 +1,19 @@
 import { useCallback, useMemo } from "react";
 import { useTranslation } from "react-i18next";
-import { useDocuments, useTriggerCompile } from "@entities/document";
+import { useQueryClient } from "@tanstack/react-query";
+import {
+  getDocMeta,
+  useDocuments,
+  useTriggerCompile,
+} from "@entities/document";
+import { runnerKeys } from "@entities/runner";
 import { toast } from "@shared/lib";
-import { useProjectBuildBlocks } from "./buildBlock";
+import {
+  blockOfRefusal,
+  kindsText,
+  useProjectBuildBlocks,
+  type BuildBlock,
+} from "./buildBlock";
 import { useCompileSlot, useCompileStreamStore } from "./compileStreamStore";
 import { useHandleCompileError } from "./handleCompileError";
 
@@ -99,8 +110,10 @@ export const useStartCompile = (projectId: string, docId: string) => {
  * React Query вызывает только у последнего вызова, и при пачке отказов
  * остальные документы навсегда оставались «в сборке».
  *
- * Документы без раннера пропускаются; `block` задан, когда собрать нельзя ни
- * один документ проекта.
+ * Документы без раннера пропускаются: и те, что погашены по доступности, и те,
+ * от которых отказался сервер (`no_runner_for_tags`). Остальные собираются, а
+ * пропущенные один тост перечисляет по именам с причиной («Презентация (личный
+ * раннер на паузе)»). `block` задан, когда собрать нельзя ни один документ проекта.
  */
 export const useStartCompileAll = (projectId: string) => {
   const { mutateAsync: triggerCompile } = useTriggerCompile();
@@ -110,7 +123,8 @@ export const useStartCompileAll = (projectId: string) => {
   const handleCompileError = useHandleCompileError();
   const isProjectBuilding = useIsProjectBuilding(projectId);
   const { documents, blockOf } = useProjectBuildBlocks(projectId);
-  const { t } = useTranslation("documents");
+  const { t, i18n } = useTranslation("documents");
+  const queryClient = useQueryClient();
 
   const isRunning = isProjectBuilding;
   const block = useMemo(() => {
@@ -120,32 +134,71 @@ export const useStartCompileAll = (projectId: string) => {
     return blocks[0] ?? null;
   }, [documents, blockOf]);
 
+  const describeExcluded = useCallback(
+    (excluded: readonly { docId: string; block: BuildBlock }[]): string => {
+      const lang = i18n.language.startsWith("en") ? "en" : "ru";
+      return excluded
+        .map(({ docId, block: why }) => {
+          const doc = documents?.find((d) => d.id === docId);
+          const name = getDocMeta(docId, doc, lang).name;
+          const kinds = kindsText(t, why.tags);
+          const reason = t(
+            `compile.unavailable.causeShort.${why.cause ?? "no_runner"}`,
+            { kinds },
+          );
+          return t("compile.unavailable.excludedItem", { name, reason });
+        })
+        .join("; ");
+    },
+    [documents, i18n.language, t],
+  );
+
   const startAll = useCallback(
     (docIds: readonly string[]) => {
       if (isRunning || docIds.length === 0) return;
-      const buildable = docIds.filter((docId) => blockOf(docId) === null);
-      const skipped = docIds.length - buildable.length;
-      if (skipped > 0) {
+      const excluded: { docId: string; block: BuildBlock }[] = [];
+      const buildable: string[] = [];
+      for (const docId of docIds) {
+        const why = blockOf(docId);
+        if (why === null) buildable.push(docId);
+        else excluded.push({ docId, block: why });
+      }
+      const report = () => {
+        if (excluded.length === 0) return;
         toast.warning(
-          t("compile.unavailable.buildAllPartial", { count: skipped }),
+          t("compile.unavailable.buildAllExcluded", {
+            count: excluded.length,
+            list: describeExcluded(excluded),
+          }),
           {
             key: "compile-build-all-skipped",
             title: t("compile.unavailable.title"),
+            duration: 12_000,
           },
         );
-      }
+      };
       // Reserve the project-wide lock synchronously for ALL docs before any
       // POST goes out. This way the button is disabled the same tick the
       // click handler runs, regardless of how the network roundtrips race.
       for (const docId of buildable) markPending(projectId, docId);
       let errorShown = false;
-      for (const docId of buildable) {
+      const posts = buildable.map((docId) =>
         triggerCompile({ projectId, docId }).then(
           (result) => {
             startStream(projectId, docId, result.compile_id);
           },
           (err: unknown) => {
             unmarkPending(projectId, docId);
+            // Сервер отказал «некому собрать»: документ в общий список пропущенных.
+            const refusal = blockOfRefusal(err);
+            if (refusal !== null) {
+              excluded.push({ docId, block: refusal });
+              // Опрос доступности отстал от жизни: перечитываем, и кнопки погаснут сами.
+              void queryClient.invalidateQueries({
+                queryKey: [...runnerKeys.all, "availability"],
+              });
+              return;
+            }
             // For a batch trigger the same setup error fires once per
             // doc; show the toast just for the first.
             if (!errorShown) {
@@ -153,8 +206,9 @@ export const useStartCompileAll = (projectId: string) => {
               handleCompileError(err);
             }
           },
-        );
-      }
+        ),
+      );
+      void Promise.allSettled(posts).then(report);
     },
     [
       isRunning,
@@ -164,6 +218,8 @@ export const useStartCompileAll = (projectId: string) => {
       triggerCompile,
       startStream,
       handleCompileError,
+      describeExcluded,
+      queryClient,
       projectId,
       t,
     ],

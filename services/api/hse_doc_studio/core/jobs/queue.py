@@ -166,6 +166,10 @@ class IJobQueue(Protocol):
         """Не начатая задача отменяется сразу, идущая получает флаг и узнаёт о нём в heartbeat."""
         ...
 
+    async def fail_queued(self, job_id: UUID, error_code: str) -> QueuedJob | None:
+        """Закончить не начатую задачу как `failed` с кодом; `None`, если её уже взяли или она закончена."""
+        ...
+
     async def requeue_expired(self) -> tuple[ExpiredOutcome, ...]:
         """Задачи с истёкшей арендой: назад в очередь, пока остались попытки, иначе `failed` с `runner_lost`."""
         ...

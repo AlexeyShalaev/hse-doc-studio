@@ -340,6 +340,14 @@ class InMemoryJobQueue:
         self._jobs[job_id] = job
         return job
 
+    async def fail_queued(self, job_id: UUID, error_code: str) -> QueuedJob | None:
+        job = self._jobs.get(job_id)
+        if job is None or job.state is not JobState.queued:
+            return None
+        job = replace(job, state=JobState.failed, finished_at=self._clock(), error_code=error_code)
+        self._jobs[job_id] = job
+        return job
+
     async def requeue_expired(self) -> tuple[ExpiredOutcome, ...]:
         now = self._clock()
         outcomes: list[ExpiredOutcome] = []

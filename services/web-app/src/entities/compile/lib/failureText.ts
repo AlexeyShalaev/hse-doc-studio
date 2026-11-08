@@ -8,6 +8,8 @@ export const PRE_LAUNCH_CODES: ReadonlySet<string> = new Set([
   "build_backend_unavailable",
   "no_runners",
   "no_runner_for_tags",
+  "runner_paused",
+  "runner_offline",
   "quota_exceeded",
   "staging_failed",
   "disk_full",

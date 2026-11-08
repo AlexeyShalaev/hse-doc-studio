@@ -426,6 +426,23 @@ class TestJobQueueContract(PortContract):
         flagged = await port.queue.request_cancel(job.id)
         assert (flagged.state, flagged.cancel_requested) == (JobState.running, True)
 
+    async def test__fail_queued__queued_job__failed_with_code(self, port: _Harness) -> None:
+        queued = await port.put(uuid4())
+        failed = await port.queue.fail_queued(queued.id, "runner_paused")
+        assert failed is not None
+        assert (failed.state, failed.error_code) == (JobState.failed, "runner_paused")
+        assert failed.finished_at is not None
+        assert await port.claim() is None
+
+    async def test__fail_queued__already_claimed__untouched(self, port: _Harness) -> None:
+        await port.put(uuid4())
+        job = await port.claim()
+        assert job is not None
+        assert await port.queue.fail_queued(job.id, "runner_paused") is None
+        current = await port.queue.get(job.id)
+        assert current is not None
+        assert current.state is JobState.running
+
     async def test__request_cancel__unknown_job__raises(self, port: _Harness) -> None:
         with pytest.raises(QueuedJobNotFoundError):
             await port.queue.request_cancel(uuid4())

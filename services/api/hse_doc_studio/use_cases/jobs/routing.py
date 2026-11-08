@@ -20,6 +20,7 @@ from hse_doc_studio.core.jobs.routing import (
     IPersonalRunnerSettings,
     IProjectRoutePolicy,
     JobRoute,
+    PersonalRunnerSettings,
     ProjectBuildRunners,
     RouteDecision,
     RouteReason,
@@ -59,20 +60,11 @@ class JobRouter:
         self._load = load
         self._clock = clock
 
-    async def decide(  # noqa: PLR0911 — шаги и их порядок закреплены спецификацией
-        self, *, kind: JobKind, tags: frozenset[str], project_id: UUID, user_id: UUID
-    ) -> RouteDecision:
+    async def decide(self, *, kind: JobKind, tags: frozenset[str], project_id: UUID, user_id: UUID) -> RouteDecision:
         settings = await self._settings.current()
-        if not settings.enabled:
-            return RouteDecision.shared(RouteReason.disabled)
-        if not job_kind_spec(kind).policy.personal_runner_allowed:
-            return RouteDecision.shared(RouteReason.kind_not_allowed)
-        project = await self._projects.get(project_id)
-        if project is None or project.deleted or project.owner_user_id is None:
-            return RouteDecision.shared(RouteReason.org_project)
-        owner = project.owner_user_id
-        if not _is_user(owner, user_id) and project.build_runners is not ProjectBuildRunners.owner:
-            return RouteDecision.shared(RouteReason.policy_shared)
+        owner, refusal = await self._owner_or_refusal(settings, kind=kind, project_id=project_id, user_id=user_id)
+        if owner is None:
+            return RouteDecision.shared(refusal)
         now = self._clock()
         candidates = await self.online_runners(owner, tags, now)
         if not candidates:
@@ -90,6 +82,29 @@ class JobRouter:
             route_owner_id=owner,
             personal_until=now + timedelta(seconds=settings.wait_s),
         )
+
+    async def personal_owner(self, *, kind: JobKind, project_id: UUID, user_id: UUID) -> str | None:
+        """Чьи личные раннеры вообще могут взять эту задачу (без оглядки на их состояние); `None`: только общие."""
+        owner, _ = await self._owner_or_refusal(
+            await self._settings.current(), kind=kind, project_id=project_id, user_id=user_id
+        )
+        return owner
+
+    async def _owner_or_refusal(
+        self, settings: PersonalRunnerSettings, *, kind: JobKind, project_id: UUID, user_id: UUID
+    ) -> tuple[str | None, RouteReason]:
+        """Шаги спецификации до проверки раннеров: владелец проекта или причина, почему только общие."""
+        if not settings.enabled:
+            return None, RouteReason.disabled
+        if not job_kind_spec(kind).policy.personal_runner_allowed:
+            return None, RouteReason.kind_not_allowed
+        project = await self._projects.get(project_id)
+        if project is None or project.deleted or project.owner_user_id is None:
+            return None, RouteReason.org_project
+        owner = project.owner_user_id
+        if not _is_user(owner, user_id) and project.build_runners is not ProjectBuildRunners.owner:
+            return None, RouteReason.policy_shared
+        return owner, RouteReason.personal
 
     async def has_live_shared(self, tags: frozenset[str], now: datetime | None = None) -> bool:
         """Есть ли живой общий раннер с нужными тегами, который подберёт задачу из общей очереди."""

@@ -4,6 +4,7 @@ import {
   Hourglass,
   Laptop,
   Layers,
+  Pause,
   RefreshCw,
   ServerOff,
   Timer,
@@ -19,6 +20,7 @@ const ICONS: Record<CompileWait["reason"], LucideIcon> = {
   runner_lost: RefreshCw,
   superseded: Layers,
   personal_runner: Laptop,
+  runner_paused: Pause,
 };
 
 const TONE: Record<WaitTone, { fg: string; bg: string; border: string }> = {

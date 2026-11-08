@@ -359,6 +359,19 @@ class PostgresJobQueue:
             await session.flush()
             return job_from_row(row)
 
+    async def fail_queued(self, job_id: UUID, error_code: str) -> QueuedJob | None:
+        # Условие на состояние в самом UPDATE: задачу, которую раннер успел взять, это не трогает.
+        stmt = (
+            update(JobRow)
+            .where(JobRow.id == job_id, JobRow.state == JobState.queued.value)
+            .values(state=JobState.failed.value, finished_at=self._clock(), error_code=error_code)
+            .returning(JobRow)
+            .execution_options(populate_existing=True)
+        )
+        async with self._sessions.use() as session:
+            row = (await session.execute(stmt)).scalar_one_or_none()
+            return job_from_row(row) if row is not None else None
+
     async def requeue_expired(self) -> tuple[ExpiredOutcome, ...]:
         now = self._clock()
         outcomes: list[ExpiredOutcome] = []

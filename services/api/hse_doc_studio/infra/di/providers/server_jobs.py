@@ -84,6 +84,7 @@ from hse_doc_studio.use_cases.jobs.routing import JobRouter
 from hse_doc_studio.use_cases.jobs.runner_io import RunnerJobIoService
 from hse_doc_studio.use_cases.jobs.runner_jobs import RunnerJobService
 from hse_doc_studio.use_cases.jobs.runners import RunnerRegistry
+from hse_doc_studio.use_cases.jobs.stranded import QueuedJobFit, StrandedJobSweeper
 from hse_doc_studio.use_cases.jobs.terminal import JobTerminalBroadcaster
 from hse_doc_studio.use_cases.jobs.wakeup import JobWakeup
 
@@ -149,6 +150,16 @@ class ServerJobsProvider(Provider):
     def get_job_router_port(self, router: JobRouter) -> IJobRouter:
         return router
 
+    @provide
+    def get_queued_job_fit(self, router: IJobRouter, personal: IPersonalRunnerSettings) -> QueuedJobFit:
+        return QueuedJobFit(router, personal)
+
+    @provide
+    def get_stranded_job_sweeper(
+        self, queue: IJobQueue, runners: IRunnerRepository, fit: QueuedJobFit, terminal: JobTerminalBroadcaster
+    ) -> StrandedJobSweeper:
+        return StrandedJobSweeper(queue, runners, fit, terminal=terminal)
+
     @provide(override=True)
     def get_compile_wait_reader(
         self,
@@ -156,8 +167,9 @@ class ServerJobsProvider(Provider):
         runners: IRunnerRepository,
         projects: IProjectRoutePolicy,
         personal: IPersonalRunnerSettings,
+        fit: QueuedJobFit,
     ) -> ICompileWaitReader:
-        return QueueCompileWaitReader(queue, runners, projects=projects, personal=personal)
+        return QueueCompileWaitReader(queue, runners, projects=projects, personal=personal, fit=fit)
 
     @provide
     def get_runner_repository(self, sessions: SessionProvider) -> IRunnerRepository:

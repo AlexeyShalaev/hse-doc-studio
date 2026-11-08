@@ -1,10 +1,14 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import TYPE_CHECKING
 
 from hse_doc_studio.core.errors import NotFoundError
 from hse_doc_studio.core.jobs.availability import no_runner_code
 from hse_doc_studio.core.jobs.enums import JobErrorCategory, RunnerErrorCode
+
+if TYPE_CHECKING:
+    from hse_doc_studio.core.jobs.runner_fit import RunnerFit, RunnerGapReason
 
 
 class JobFailedError(RuntimeError):
@@ -58,15 +62,23 @@ class NoRunnerAvailableError(Exception):
     иначе раннеров нет совсем (409 `no_runners`).
     """
 
-    def __init__(self, tags: frozenset[str] = frozenset(), *, any_runner: bool = False) -> None:
+    def __init__(
+        self, tags: frozenset[str] = frozenset(), *, any_runner: bool = False, fit: RunnerFit | None = None
+    ) -> None:
         needed = ", ".join(sorted(tags)) or "any"
-        super().__init__(f"no live runner for tags: {needed}")
+        super().__init__(fit.describe() if fit is not None else f"no live runner for tags: {needed}")
         self.tags = tags
         self.any_runner = any_runner
+        # Что с подходящими раннерами: на паузе, не в сети или их нет; `None` у старых вызовов без разбора.
+        self.fit = fit
 
     @property
     def code(self) -> str:
         return no_runner_code(any_runner=self.any_runner)
+
+    @property
+    def reason(self) -> RunnerGapReason | None:
+        return self.fit.reason if self.fit is not None else None
 
 
 class StaleAttemptError(Exception):
