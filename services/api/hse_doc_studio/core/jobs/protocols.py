@@ -135,6 +135,11 @@ class IJobDispatcher(Protocol):
     def has_any_active(self) -> bool: ...
     def has_active_for_folder(self, folder: Path) -> bool: ...
 
+    @property
+    def survives_restart(self) -> bool:
+        """Переживает ли идущая сборка перезапуск процесса: задача в очереди базы да, сборка в памяти нет."""
+        ...
+
 
 class IJobTerminalListener(Protocol):
     async def on_terminal(self, job: QueuedJob) -> None:

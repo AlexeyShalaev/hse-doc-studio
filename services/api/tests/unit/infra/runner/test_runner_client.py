@@ -135,6 +135,26 @@ async def test_job_calls_carry_job_token_and_stale_attempt_is_409(
     assert caught.value.code == "stale_attempt"
 
 
+async def test_finishing_a_job_outlasts_an_api_restart(state: FakeRunnerState, transport: SwitchTransport) -> None:
+    """Выкатка api (Recreate, одна реплика): несколько секунд отказов и 503, а готовый PDF не теряется."""
+    client = _client(transport, registered=True)
+    job = state.enqueue(envelope_body("compile", attempt=1))
+    ref = ArtifactRef(path="out/main.pdf", sha256="a" * 64, size=3)
+
+    transport.fail_next, transport.status_next = 4, 2
+    await client.announce_artifact(job.job_id, "jt", ArtifactUploadRequest(attempt=1, artifact=ref))
+    transport.fail_next = 6
+    await client.put_artifact(job.job_id, "jt", ref.sha256, b"pdf")
+    transport.fail_next = 8
+    await client.complete(
+        job.job_id, "jt", CompleteRequest(attempt=1, result=encode_result(JobResult(status=JobStatus.succeeded)))
+    )
+    await client.aclose()
+
+    assert job.artifacts[ref.sha256] == b"pdf"
+    assert transport.failures == 18
+
+
 def test_backoff_grows_caps_and_resets() -> None:
     backoff = Backoff(base_s=1.0, cap_s=5.0, jitter=0.0)
     assert [backoff.next() for _ in range(5)] == [1.0, 2.0, 4.0, 5.0, 5.0]

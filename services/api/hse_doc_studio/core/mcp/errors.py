@@ -18,6 +18,8 @@ class McpErrorCode(StrEnum):
     quota_exceeded = "quota_exceeded"
     invalid_arguments = "invalid_arguments"
     failed = "failed"
+    # Сервер останавливается (выкатка, перезапуск): повторить через `retry_after_s`.
+    server_restarting = "server_restarting"
 
 
 _MESSAGES: dict[McpErrorCode, tuple[str, str]] = {
@@ -37,6 +39,10 @@ _MESSAGES: dict[McpErrorCode, tuple[str, str]] = {
     McpErrorCode.quota_exceeded: ("Исчерпана квота.", "Quota exceeded."),
     McpErrorCode.invalid_arguments: ("Неверные аргументы.", "Invalid arguments."),
     McpErrorCode.failed: ("Не удалось выполнить.", "The call failed."),
+    McpErrorCode.server_restarting: (
+        "Сервер Студии перезапускается, повторите вызов через полминуты.",
+        "The Studio server is restarting, call again in half a minute.",
+    ),
 }
 
 

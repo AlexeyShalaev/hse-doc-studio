@@ -132,6 +132,7 @@
     "donePages": "{{count}} p.",
     "failed": "error",
     "cancelled": "cancelled",
+    "interrupted": "interrupted",
     "cancel": "Cancel",
     "rebuild": "Rebuild",
     "explain": "Explain",
@@ -234,6 +235,7 @@
     "failure": {
       "title": "Build failed",
       "cancelledTitle": "Build cancelled",
+      "interruptedTitle": "Build interrupted",
       "unknownReason": "The reason was not recorded: the build ran on a version without this diagnostics. Open the log below; if it is empty, build the document again.",
       "noOutputNotStarted": "There is no build output: LaTeX was not started, the build stopped earlier. The reason is above.",
       "noOutputEmpty": "There is no build output: the runner did not send a single log line. The reason is above; if there is none, it is a runner failure, check its log on its machine.",

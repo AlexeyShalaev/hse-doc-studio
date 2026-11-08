@@ -14,6 +14,7 @@ from fastapi.responses import PlainTextResponse
 from hse_doc_studio.api.admin_access import install_admin_access
 from hse_doc_studio.api.config import Settings, settings
 from hse_doc_studio.api.db_errors import install_db_error_handlers
+from hse_doc_studio.api.graceful_shutdown import install_graceful_shutdown
 from hse_doc_studio.api.guards import install_exception_handlers
 from hse_doc_studio.api.help_site import install_help_site
 from hse_doc_studio.api.interface_language import InterfaceLanguageMiddleware
@@ -268,6 +269,8 @@ def create_app() -> FastAPI:  # noqa: C901, PLR0915 — app-wiring factory: rout
         @app.on_event("startup")
         async def _recover_queued_jobs() -> None:
             # Хуки и применение выходов жили в памяти прошлого процесса: довершаем задачи без метки применённого.
+            # Идущие сборки подхватываются здесь же. Обязано идти раньше `_recover_stale_compiles` (порядок
+            # регистрации): иначе запись подхваченной сборки закрылась бы как прерванная.
             from hse_doc_studio.infra.jobs.queue_dispatcher import QueueJobDispatcher  # noqa: PLC0415
 
             dispatcher = await container.get(IJobDispatcher)
@@ -408,18 +411,19 @@ def create_app() -> FastAPI:  # noqa: C901, PLR0915 — app-wiring factory: rout
 
     @app.on_event("startup")
     async def _recover_stale_compiles() -> None:
-        # Mark any compile records left in `pending`/`running` from a previous
-        # process as failed, so the project-wide build lock releases the next
-        # time the UI loads. Runs once per process at startup.
+        # Записи сборок, оставшиеся `pending`/`running` от прошлого процесса: подхваченные очередью (сервер)
+        # продолжаются, остальные закрываются как прерванные (`cancelled` + `interrupted`), чтобы замок
+        # сборки проекта отпустило. Один раз при старте, после `_recover_queued_jobs`.
         try:
             async with container() as request_container:
                 uc = await request_container.get(RecoverStaleCompilesUC)
                 result = await uc.execute()
-                if result.recovered_compiles or result.unstuck_documents:
+                if result.recovered_compiles or result.unstuck_documents or result.continued_compiles:
                     logger.info(
                         "startup recovery",
                         recovered_compiles=result.recovered_compiles,
                         unstuck_documents=result.unstuck_documents,
+                        continued_compiles=result.continued_compiles,
                     )
         except Exception:
             logger.exception("startup recovery failed")
@@ -691,6 +695,9 @@ def create_app() -> FastAPI:  # noqa: C901, PLR0915 — app-wiring factory: rout
 
     if settings.static_dir is not None:
         _mount_spa(app, settings)
+
+    # Последним: звено должно оказаться снаружи остальных, чтобы видеть отмену запроса при остановке.
+    install_graceful_shutdown(app, timeout_graceful_shutdown=settings.server.timeout_graceful_shutdown)
 
     return app
 

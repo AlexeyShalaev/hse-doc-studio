@@ -33,6 +33,7 @@
         "tolerations": {"type": "array"},
         "affinity": {"type": "object"},
         "podAnnotations": {"type": "object"},
+        "terminationGracePeriodSeconds": {"type": "integer", "minimum": 15},
         "extraEnv": {
           "type": "object",
           "propertyNames": {"pattern": "^HSE_STUDIO__[A-Z0-9_]+$"},

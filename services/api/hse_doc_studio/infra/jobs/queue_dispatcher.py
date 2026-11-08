@@ -460,6 +460,11 @@ class QueueJobDispatcher:
 
     # --- activity ---
 
+    @property
+    def survives_restart(self) -> bool:
+        # Задача живёт в очереди Postgres и на раннере; новый процесс подхватывает её в `recover()`.
+        return True
+
     def is_active(self, job_id: UUID) -> bool:
         return job_id in self._in_flight
 
