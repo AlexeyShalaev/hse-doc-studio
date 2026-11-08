@@ -13,6 +13,7 @@ from hse_doc_studio.core.identity.errors import IdentityError, IdentityErrorCode
 from hse_doc_studio.core.mcp.entities import McpCallOutcome, McpCallQuery, McpCallRecord, McpSettings
 from hse_doc_studio.core.mcp.errors import McpError, McpErrorCode
 from hse_doc_studio.core.quotas.errors import QuotaExceededError
+from hse_doc_studio.core.shutdown import ServerRestartingError
 from hse_doc_studio.infra.mcp.local import MemoryMcpCallJournal
 from hse_doc_studio.use_cases.mcp.call_tool import map_tool_error, visible_to
 from hse_doc_studio.use_cases.mcp.catalog import RULES_BY_NAME, McpToolEntry, with_project_id
@@ -70,6 +71,14 @@ def test__visible_to__admin_tool__off_while_group_disabled() -> None:
 )
 def test__map_tool_error__maps_by_type(exc: Exception, code: McpErrorCode) -> None:
     assert map_tool_error(exc).code is code
+
+
+def test__map_tool_error__server_restarting__keeps_text_and_retry_after() -> None:
+    err = map_tool_error(ServerRestartingError("сборка продолжится", retry_after_s=30))
+
+    assert err.code is McpErrorCode.server_restarting
+    assert err.retry_after_s == 30
+    assert str(err) == "сборка продолжится"
 
 
 def test__map_tool_error__role__named_in_message() -> None:
