@@ -19,7 +19,18 @@ from hse_doc_studio.core.mcp.entities import McpToolGroup, McpToolMeta
 from hse_doc_studio.core.mcp.protocols import IDependencyResolver
 from hse_doc_studio.core.rate_limit import COMPILE, GIT_SYNC, UPLOAD, RateRule
 from hse_doc_studio.use_cases.chat._registry import ToolRegistry
-from hse_doc_studio.use_cases.mcp.tools import admin, build, cloud, files, git, people, projects, review, submission
+from hse_doc_studio.use_cases.mcp.tools import (
+    admin,
+    build,
+    cloud,
+    documents,
+    files,
+    git,
+    people,
+    projects,
+    review,
+    submission,
+)
 from hse_doc_studio.use_cases.mcp.tools import template as template_tools
 from hse_doc_studio.use_cases.mcp.tools._base import PROJECT_ID_SCHEMA, McpTool
 from hse_doc_studio.use_cases.mcp.tools.compile_document import CompileDocumentTool
@@ -37,6 +48,8 @@ class McpToolRule:
     action: Action | None = None
     # Аргументы с путями файлов: каждый проверяется как область права.
     path_args: tuple[str, ...] = ()
+    # Аргументы с id экземпляра `<база>--<автор>` (документ): область права слаг автора, как у HTTP.
+    instance_args: tuple[str, ...] = ()
     # Правило частоты маршрута, которому тул соответствует.
     rate: RateRule | None = None
 
@@ -60,6 +73,7 @@ def _rule(  # noqa: PLR0913 — строка таблицы
     action: Action | None = None,
     *,
     path_args: tuple[str, ...] = (),
+    instance_args: tuple[str, ...] = (),
     dangerous: bool = False,
     server_only: bool = False,
     local_only: bool = False,
@@ -75,7 +89,7 @@ def _rule(  # noqa: PLR0913 — строка таблицы
         local_only=local_only,
         admin=admin_tool,
     )
-    return McpToolRule(meta=meta, action=action, path_args=path_args, rate=rate)
+    return McpToolRule(meta=meta, action=action, path_args=path_args, instance_args=instance_args, rate=rate)
 
 
 _R, _W, _X = ToolKind.read, ToolKind.write, ToolKind.exec_
@@ -100,6 +114,7 @@ MCP_TOOL_RULES: tuple[McpToolRule, ...] = (
     _rule("apply_template_update", _G.projects, _X, Action.TEMPLATE_MANAGE),
     # Документы и файлы
     _rule("list_documents", _G.files, _R, Action.PROJECT_VIEW),
+    _rule("set_document_variant", _G.files, _W, Action.FILES_WRITE, instance_args=("doc_id",)),
     _rule("list_files", _G.files, _R, Action.SOURCES_READ),
     _rule("read_tex", _G.files, _R, Action.FILES_READ, path_args=("path",)),
     _rule("read_pdf", _G.files, _R, Action.FILES_READ, path_args=("path",)),
@@ -163,6 +178,7 @@ MCP_TOOL_CLASSES: tuple[type[McpTool], ...] = (
     template_tools.TemplateUpdateStatusTool,
     template_tools.PlanTemplateUpdateTool,
     template_tools.ApplyTemplateUpdateTool,
+    documents.SetDocumentVariantTool,
     files.ListFilesTool,
     files.WriteFileTool,
     files.MoveFileTool,

@@ -96,6 +96,10 @@ Ready-made configs with your address are in the Studio: **Settings → AI client
 
 **`git_sync`** does what the project sync button does: saves a snapshot, takes others' changes and sends yours. In the local Studio it syncs with the cloud server (a project from the cloud) or with a connected repository; in the cloud, with a connected repository. The tool waits up to `wait_s` seconds (45 by default) for the result; if that is not enough, the answer is `status: running`, and calling it again joins the same sync, just like pressing the button while a sync runs. The answer has the `outcome` (`up_to_date`, `pushed`, `fast_forwarded`, `merged`, `conflicts`), how many versions were received and sent, and the files merged automatically. On conflicts nothing is sent and files on disk do not change: the answer lists the conflicting files, and you resolve them in the Studio with the “Resolve” button. The repository address and its credentials never appear in the answer. The rights are the button's: the editor role, and in a team project the right to edit the whole project. The tool is dangerous, so it is off by default.
 
+### Documents: variant
+
+- **`set_document_variant`** picks a document variant, like the “Document formats” switch in the project settings: for example `pptx`, `beamer` or `reveal` for the presentation. Pass `doc_id` from `list_documents` and `variant`; without `variant` the tool only shows the current variant and the ones allowed for the project language. An unknown variant is rejected with the list of allowed ones. Switching resets the document status to draft; the files of the previous variant stay. The rights are those of the interface: writing to the document, and a writable project. In the cloud the switch goes to the audit as `document.variant_update`.
+
 Dangerous tools (deleting a project or a file, rewinding history, syncing with a git remote) are off by default: the administrator (cloud) or you (local) turns them on one by one. Signing documents with an electronic signature is not available over MCP.
 
 ### Builds

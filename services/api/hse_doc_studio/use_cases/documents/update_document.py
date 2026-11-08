@@ -6,7 +6,7 @@ from uuid import UUID
 
 import structlog
 
-from hse_doc_studio.core.catalog import DocumentDefinition
+from hse_doc_studio.core.catalog import DocumentDefinition, DocumentVariant
 from hse_doc_studio.core.entities import Document, Project
 from hse_doc_studio.core.enums import DocumentStatus
 from hse_doc_studio.core.errors import NotFoundError
@@ -141,6 +141,11 @@ class UpdateDocumentUC:
                 variant=effective,
                 exc=str(exc),
             )
+
+
+def selectable_variants(project: Project, doc_def: DocumentDefinition) -> list[DocumentVariant]:
+    """Варианты, которые можно выбрать в проекте: без ограничения по языку или с языком проекта (как в настройках)."""
+    return [v for v in doc_def.variants if not v.supported_langs or str(project.lang) in v.supported_langs]
 
 
 def _resolve_effective_variant(

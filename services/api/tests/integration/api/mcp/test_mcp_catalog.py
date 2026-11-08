@@ -5,6 +5,7 @@ from __future__ import annotations
 from collections.abc import AsyncIterator
 from pathlib import Path
 
+import pytest
 import pytest_asyncio
 from dishka import AsyncContainer
 from hse_doc_studio.core.access.actions import Action
@@ -65,6 +66,21 @@ async def test__catalog__set_project_people__needs_project_settings(request_cont
     assert entry.rule.action is Action.PROJECT_SETTINGS
     assert entry.rule.guards_write
     assert entry.spec.parameters["required"] == ["project_id"]
+
+
+@pytest.mark.parametrize("server_mode", [True, False])
+async def test__catalog__set_document_variant__files_write_in_the_document_author_scope(
+    request_container: AsyncContainer, server_mode: bool
+) -> None:
+    catalog = McpCatalog(await request_container.get(ToolRegistry), request_container, server_mode=server_mode)
+
+    entry = catalog.get("set_document_variant")
+
+    assert entry is not None
+    assert entry.rule.action is Action.FILES_WRITE
+    assert entry.rule.instance_args == ("doc_id",)
+    assert entry.rule.guards_write
+    assert entry.spec.parameters["required"] == ["project_id", "doc_id"]
 
 
 async def test__catalog__kinds_match_handlers(request_container: AsyncContainer) -> None:

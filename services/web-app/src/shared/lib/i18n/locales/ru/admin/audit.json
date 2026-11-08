@@ -85,6 +85,7 @@
       "project_transfer": "Проект передан",
       "project_people_update": "Руководитель или авторы проекта изменены (MCP)",
       "project_template_update": "Шаблон проекта обновлён (MCP)",
+      "document_variant_update": "Вариант документа изменён (MCP)",
       "runner_announce": "Раннер объявил возможности",
       "runner_deregister": "Раннер снял регистрацию",
       "runner_pairing_approve": "Сопряжение раннера подтверждено",
