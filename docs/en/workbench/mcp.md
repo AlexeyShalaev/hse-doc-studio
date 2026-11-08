@@ -69,7 +69,7 @@ Ready-made configs with your address are in the Studio: **Settings → AI client
 
 ## What is available
 
-- **Tools.** Projects (list, card, create, metadata, supervisor and authors), files (tree, read, search, edit, write, move), builds (run and wait for the result, history, log, cancel), checks and the normcontrol report, requirements, review comments (cloud), history and git sync, submission profiles and packages, signature status. Project tools take `project_id`; start with `list_projects`.
+- **Tools.** Projects (list, card, create, metadata, supervisor and authors, access and invitations in the cloud), files (tree, read, search, edit, write, move), builds (run and wait for the result, history, log, cancel), checks and the normcontrol report, requirements, review comments (cloud), history and git sync, submission profiles and packages, signature status. Project tools take `project_id`; start with `list_projects`.
 - **Resources.** `studio://projects`, the project card `studio://projects/<id>`, files `studio://projects/<id>/files/<path>` and build PDFs.
 - **Prompts.** `fix_build`, `normcontrol` (go through findings), `review_changes` (describe changes before a snapshot).
 
@@ -82,6 +82,15 @@ Ready-made configs with your address are in the Studio: **Settings → AI client
     - `clear: ["co_supervisor"]` removes the co-supervisor (`supervisor` works the same way).
     - Every change is audited: in the cloud as a `project.people_update` event with the old and new values; locally the call is in the MCP log.
 - **`clone_cloud_project`** (local Studio only) downloads a project from a cloud Studio, like the “Open” button of a cloud project in the list. Pass the project `url`, such as `https://studio.example.org/projects/<id>/`, or `project_id` if the server is already connected (`server` is only needed when several servers are connected). The Studio uses the saved server login ([connecting](../start/local-from-cloud.md#connecting)); no token is needed in the arguments and none appears in the answer; an address with a login or token is rejected. The project goes to the folder for cloud projects and stays linked to the server. The download runs in the background: the tool waits up to `wait_s` seconds (60 by default), and if that is not enough, calling it again with the same arguments picks up the same download. A project already on the computer is not downloaded again.
+
+### Project access (cloud)
+
+The same actions as the Access panel, with the same rights; the local Studio has none of these tools.
+
+- **`list_project_access`** shows the owner, people and groups with their roles. Whoever manages invitations (the owner or an editor allowed to share) also sees pending invitations.
+- **`invite_to_project`** invites by `email` with the role `reader`, `reviewer` or `editor` (not above your own). `persona` binds the person to a project role: a supervisor who reviews is `role: "reviewer"`, `persona: "supervisor"`. Access starts once the person accepts. If the server has no email set up, the answer has a `link`: send it yourself, as from the invite dialog in the interface. The link is single-use.
+- **`revoke_project_invitation`** revokes a pending invitation by `invitation_id`; the link from the email stops working.
+- **`remove_project_member`** removes a member's access (`member` like `user:<id>` from `list_project_access`); only the owner can do this.
 
 Dangerous tools (deleting a project or a file, rewinding history, syncing with a git remote) are off by default: the administrator (cloud) or you (local) turns them on one by one. Signing documents with an electronic signature is not available over MCP.
 

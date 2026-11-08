@@ -7,8 +7,10 @@ from pathlib import Path
 
 import pytest_asyncio
 from dishka import AsyncContainer
+from hse_doc_studio.api.route_actions import ROUTE_ACTIONS
 from hse_doc_studio.core.access.actions import Action
 from hse_doc_studio.core.mcp.entities import McpToolGroup
+from hse_doc_studio.core.rate_limit import INVITE
 from hse_doc_studio.use_cases.chat._registry import ToolRegistry
 from hse_doc_studio.use_cases.chat.tool_access import TOOL_ACCESS
 from hse_doc_studio.use_cases.mcp.catalog import MCP_TOOL_CLASSES, MCP_TOOL_RULES, RULES_BY_NAME, McpCatalog
@@ -106,3 +108,27 @@ def test__rules__admin_tools__are_server_only() -> None:
 
 def test__rules__no_tool_is_both_server_and_local_only() -> None:
     assert not [r.name for r in MCP_TOOL_RULES if r.meta.server_only and r.meta.local_only]
+
+
+_ACCESS_ROUTES = {
+    "list_project_access": ("GET", "/projects/{project_id}/members"),
+    "invite_to_project": ("POST", "/projects/{project_id}/invitations"),
+    "revoke_project_invitation": ("DELETE", "/projects/{project_id}/invitations/{invitation_id}"),
+    "remove_project_member": ("DELETE", "/projects/{project_id}/members/{principal}"),
+}
+
+
+async def test__catalog__access_tools__server_only_with_route_rights(request_container: AsyncContainer) -> None:
+    server = McpCatalog(await request_container.get(ToolRegistry), request_container, server_mode=True)
+    local = McpCatalog(await request_container.get(ToolRegistry), request_container, server_mode=False)
+
+    for name, route in _ACCESS_ROUTES.items():
+        entry = server.get(name)
+        assert entry is not None, name
+        assert entry.rule.action is ROUTE_ACTIONS[route].action, name
+        assert entry.rule.guards_write is (route[0] != "GET"), name
+        assert local.get(name) is None, name
+    invite = server.get("invite_to_project")
+    assert invite is not None
+    assert invite.rule.rate is INVITE
+    assert invite.spec.parameters["required"] == ["project_id", "email"]

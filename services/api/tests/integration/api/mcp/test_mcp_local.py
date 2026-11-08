@@ -323,3 +323,27 @@ async def test__call_tool__get_project__foreign_last_compile__is_replaced_by_a_l
     assert result.is_error is False, result.content
     documents = {d["id"]: d for d in json.loads(result.content[0].text)["documents"]}
     assert documents[doc_id]["last_compile_id"] is None
+
+
+_ACCESS_TOOLS = ("list_project_access", "invite_to_project", "revoke_project_invitation", "remove_project_member")
+
+
+async def test__list_tools__local__no_project_access_tools(studio: Studio) -> None:
+    await _enable(studio)
+
+    async with _client(studio) as client:
+        names = {t.name for t in (await client.list_tools()).tools}
+
+    assert not names & set(_ACCESS_TOOLS)
+
+
+@pytest.mark.parametrize("name", _ACCESS_TOOLS)
+async def test__call_tool__local__project_access_tool__answers_unknown_tool(studio: Studio, name: str) -> None:
+    await _enable(studio)
+
+    async with _client(studio) as client:
+        result = await client.call_tool(name, {"project_id": studio.project_id, "email": "petrov@hse.ru"})
+
+    assert result.is_error is True
+    assert result.meta is not None
+    assert result.meta["code"] == "unknown_tool"
