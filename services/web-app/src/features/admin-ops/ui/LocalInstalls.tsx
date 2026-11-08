@@ -3,7 +3,7 @@ import { useTranslation } from "react-i18next";
 import { failureCode } from "@shared/api";
 import { Button, Modal, Section, Spinner } from "@shared/ui";
 import { Notice } from "@shared/ui/ConflictKit";
-import type { LocalInstance } from "@entities/session";
+import type { InstallJob, LocalInstance } from "@entities/session";
 import {
   useInstallJob,
   useRefreshRunners,
@@ -15,8 +15,38 @@ import { InstallProgress } from "./InstallRunnerDialog";
 import { ConfirmDialog } from "./RunnerDialogs";
 
 /**
+ * Итог неудачного обновления: причина и, если установку уже заменили, чем
+ * кончился откат (на какую версию вернули или почему не вернули).
+ */
+const useUpgradeFailure = () => {
+  const { t } = useTranslation("adminRunnerInstall");
+  return (job: InstallJob): string => {
+    const reason = t(`error.${job.error_code ?? "unexpected"}`, {
+      defaultValue: t("error.unexpected"),
+    });
+    if (job.rolled_back === true) {
+      const back = job.rollback_version
+        ? t("upgrade.rolledBack", { version: job.rollback_version })
+        : t("upgrade.rolledBackPrevious");
+      return `${reason} ${back}`;
+    }
+    if (job.rolled_back === false) {
+      const why = t(
+        `upgrade.rollbackError.${job.rollback_error ?? "unexpected"}`,
+        {
+          defaultValue: t("upgrade.rollbackError.unexpected"),
+        },
+      );
+      return `${reason} ${t("upgrade.rollbackFailed", { reason: why })}`;
+    }
+    return reason;
+  };
+};
+
+/**
  * «Обновить раннер»: подтверждение с тем, что сохранится и что будет с
- * идущими сборками, затем ход по шагам (образ, манифест, перезапуск, связь).
+ * идущими сборками, затем ход по шагам (образ, манифест, перезапуск, связь,
+ * при неудаче откат на прежнюю версию).
  */
 export const RunnerUpgradeDialog = ({
   instance,
@@ -28,6 +58,7 @@ export const RunnerUpgradeDialog = ({
   const { t } = useTranslation("adminRunnerInstall");
   const upgrade = useUpgradeLocalInstance();
   const refresh = useRefreshRunners();
+  const failureText = useUpgradeFailure();
   const [jobId, setJobId] = useState<string | null>(null);
   const [failure, setFailure] = useState<string | null>(null);
   const job = useInstallJob(jobId);
@@ -96,6 +127,9 @@ export const RunnerUpgradeDialog = ({
               </p>
               <p style={{ margin: 0 }}>{t("upgrade.keeps")}</p>
               <p style={{ margin: 0 }}>{t(`upgrade.how.${instance.target}`)}</p>
+              <p style={{ margin: 0 }} data-testid="upgrade-rollback-note">
+                {t("upgrade.rollback")}
+              </p>
               <p style={{ margin: 0 }} data-testid="upgrade-restart">
                 {t("upgrade.restart")}
               </p>
@@ -158,9 +192,7 @@ export const RunnerUpgradeDialog = ({
                       <Notice
                         tone="err"
                         role="alert"
-                        text={t(`error.${current.error_code ?? "unexpected"}`, {
-                          defaultValue: t("error.unexpected"),
-                        })}
+                        text={failureText(current)}
                       />
                       {current.error_detail && (
                         <pre
@@ -211,7 +243,10 @@ export const RunnerUpgradeDialog = ({
   );
 };
 
-/** «Удалить установку»: что именно уберёт Студия и что останется. */
+/**
+ * «Удалить установку»: что именно уберёт Студия и что останется. Раннер
+ * установки отзывается тем же действием, что «Отозвать раннер».
+ */
 export const RemoveInstallDialog = ({
   instance,
   onClose,
@@ -222,21 +257,47 @@ export const RemoveInstallDialog = ({
   const { t } = useTranslation("adminRunnerInstall");
   const remove = useRemoveLocalInstance();
   const [failed, setFailed] = useState<string | null>(null);
+  const revokes = instance?.runner_id != null;
+  // Свои отказы удаления объясняются здесь, прочие общим текстом диалога.
+  const own =
+    failed === "remove_failed"
+      ? t("instances.removeFailed")
+      : failed === "install_busy"
+        ? t("instances.removeBusy")
+        : null;
   return (
     <ConfirmDialog
       isOpen={instance !== null}
       title={t("instances.removeTitle", { name: instance?.name ?? "" })}
       body={
-        instance
-          ? t(
-              `instances.removeBody.${instance.target}${instance.runner_id ? "" : "Orphan"}`,
-            )
-          : ""
+        instance ? (
+          <>
+            <p style={{ margin: 0 }} data-testid="install-remove-body">
+              {t(
+                `instances.removeBody.${instance.target}${revokes ? "" : "Orphan"}`,
+              )}
+            </p>
+            {own && (
+              <div
+                style={{ marginTop: "0.625rem" }}
+                data-testid="install-remove-failure"
+              >
+                <Notice tone="err" role="alert" text={own} />
+              </div>
+            )}
+          </>
+        ) : (
+          ""
+        )
       }
-      confirmLabel={t("instances.removeConfirm")}
+      confirmLabel={
+        revokes
+          ? t("instances.removeConfirmRevoke")
+          : t("instances.removeConfirm")
+      }
       danger
       pending={remove.isPending}
-      failure={failed ? { code: failed } : null}
+      failure={failed && !own ? { code: failed } : null}
       testId="install-remove-dialog"
       onClose={() => {
         setFailed(null);

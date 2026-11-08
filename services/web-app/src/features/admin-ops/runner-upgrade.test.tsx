@@ -158,6 +158,9 @@ describe("обновление раннера из админки", () => {
     expect(screen.getByTestId("upgrade-restart")).toHaveTextContent(
       "доделывает до 30 секунд",
     );
+    expect(screen.getByTestId("upgrade-rollback-note")).toHaveTextContent(
+      "Студия вернёт прежнюю версию",
+    );
     expect(start).not.toHaveBeenCalled();
 
     await user.click(screen.getByTestId("upgrade-confirm"));
@@ -225,7 +228,9 @@ describe("обновление раннера из админки", () => {
     const start = vi
       .spyOn(opsApi, "upgradeLocalInstance")
       .mockResolvedValue(job("running"));
-    vi.spyOn(opsApi, "installJob").mockResolvedValue(job("failed"));
+    vi.spyOn(opsApi, "installJob").mockResolvedValue(
+      job("failed", { rolled_back: null }),
+    );
     const user = userEvent.setup();
     page([install()]);
 
@@ -239,6 +244,101 @@ describe("обновление раннера из админки", () => {
     await waitFor(() => {
       expect(start).toHaveBeenCalledTimes(2);
     });
+  });
+
+  it("неудачная выкатка: шаг отката и итог говорят, на какую версию вернули раннер", async () => {
+    vi.spyOn(opsApi, "upgradeLocalInstance").mockResolvedValue(job("running"));
+    const failed = job("failed", {
+      error_code: "rollout_failed",
+      rolled_back: true,
+      rollback_version: "0.14.0",
+      rollback_error: null,
+    });
+    failed.steps = [
+      { key: "image", state: "done", detail: "" },
+      { key: "manifest", state: "done", detail: "" },
+      { key: "rollout", state: "failed", detail: "" },
+      { key: "reconnect", state: "pending", detail: "" },
+      { key: "rollback", state: "done", detail: "0.14.0" },
+    ];
+    vi.spyOn(opsApi, "installJob").mockResolvedValue(failed);
+    const user = userEvent.setup();
+    page([install()]);
+
+    await user.click(await screen.findByTestId("runner-upgrade-now-r1"));
+    await user.click(screen.getByTestId("upgrade-confirm"));
+
+    const notice = await screen.findByTestId("upgrade-failed");
+    expect(notice).toHaveTextContent("ProgressDeadlineExceeded");
+    expect(notice).toHaveTextContent("Раннер возвращён на v0.14.0.");
+    const step = screen.getByTestId("install-step-rollback");
+    expect(step).toHaveTextContent("Откат на прежнюю версию");
+    expect(step).toHaveAttribute("data-state", "done");
+  });
+
+  it("откат тоже не удался: итог называет причину", async () => {
+    vi.spyOn(opsApi, "upgradeLocalInstance").mockResolvedValue(job("running"));
+    vi.spyOn(opsApi, "installJob").mockResolvedValue(
+      job("failed", {
+        rolled_back: false,
+        rollback_version: "",
+        rollback_error: "rollout_timeout",
+      }),
+    );
+    const user = userEvent.setup();
+    page([install()]);
+
+    await user.click(await screen.findByTestId("runner-upgrade-now-r1"));
+    await user.click(screen.getByTestId("upgrade-confirm"));
+
+    const notice = await screen.findByTestId("upgrade-failed");
+    expect(notice).toHaveTextContent("не вышел на связь с версией Студии");
+    expect(notice).toHaveTextContent(
+      "Откат на прежнюю версию тоже не удался: прежний под не стал готов за 15 минут.",
+    );
+    expect(notice).not.toHaveTextContent("возвращён");
+  });
+
+  it("удаление установки с раннером честно говорит об отзыве и отзывает", async () => {
+    const remove = vi
+      .spyOn(opsApi, "removeLocalInstance")
+      .mockResolvedValue(undefined);
+    const user = userEvent.setup();
+    page([install({ runner_version: "0.15.0", outdated: false })]);
+
+    await user.click(await screen.findByTestId("runner-actions-r1"));
+    await user.click(await screen.findByTestId("runner-remove-install-r1"));
+
+    const body = await screen.findByTestId("install-remove-body");
+    expect(body).toHaveTextContent("Студия отзовёт раннер");
+    expect(body).toHaveTextContent("будут переданы другому раннеру");
+    expect(body).toHaveTextContent("Отдельно отзывать раннер не нужно");
+    expect(body).not.toHaveTextContent("отзовите её");
+    await user.click(
+      screen.getByRole("button", { name: "Отозвать и удалить" }),
+    );
+
+    await waitFor(() => {
+      expect(remove).toHaveBeenCalledWith("kubernetes", "hse-runner-ab12cd");
+    });
+  });
+
+  it("удаление сорвалось на хосте: объясняет, что раннер отозван и установку можно удалить снова", async () => {
+    vi.spyOn(opsApi, "removeLocalInstance").mockRejectedValue(
+      new ApiError("device busy", "remove_failed", 502),
+    );
+    const user = userEvent.setup();
+    page([install({ runner_version: "0.15.0", outdated: false })]);
+
+    await user.click(await screen.findByTestId("runner-actions-r1"));
+    await user.click(await screen.findByTestId("runner-remove-install-r1"));
+    await user.click(
+      await screen.findByRole("button", { name: "Отозвать и удалить" }),
+    );
+
+    expect(
+      await screen.findByTestId("install-remove-failure"),
+    ).toHaveTextContent("Раннер отозван, но установку не удалось удалить");
   });
 
   it("установка без раннера видна отдельным блоком и удаляется с подтверждением", async () => {
