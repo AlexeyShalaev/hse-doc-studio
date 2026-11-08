@@ -15,7 +15,7 @@ from hse_doc_studio.core.access.actions import Action
 from hse_doc_studio.core.agent.entities import ToolSpec
 from hse_doc_studio.core.agent.tools import ToolDefinition
 from hse_doc_studio.core.enums import ToolKind
-from hse_doc_studio.core.mcp.entities import McpToolGroup, McpToolMeta
+from hse_doc_studio.core.mcp.entities import MCP_SIGN_SCOPE, McpToolGroup, McpToolMeta
 from hse_doc_studio.core.mcp.protocols import IDependencyResolver
 from hse_doc_studio.core.rate_limit import COMPILE, GIT_SYNC, UPLOAD, RateRule
 from hse_doc_studio.use_cases.chat._registry import ToolRegistry
@@ -36,6 +36,8 @@ class McpToolRule:
     path_args: tuple[str, ...] = ()
     # Правило частоты маршрута, которому тул соответствует.
     rate: RateRule | None = None
+    # Отдельное право токена сверх `mcp` (подпись комплекта: `sign`); без него тула не видно.
+    scope: str | None = None
 
     @property
     def name(self) -> str:
@@ -61,6 +63,7 @@ def _rule(  # noqa: PLR0913 — строка таблицы
     server_only: bool = False,
     local_only: bool = False,
     rate: RateRule | None = None,
+    scope: str | None = None,
 ) -> McpToolRule:
     admin_tool = group is McpToolGroup.admin
     meta = McpToolMeta(
@@ -72,7 +75,7 @@ def _rule(  # noqa: PLR0913 — строка таблицы
         local_only=local_only,
         admin=admin_tool,
     )
-    return McpToolRule(meta=meta, action=action, path_args=path_args, rate=rate)
+    return McpToolRule(meta=meta, action=action, path_args=path_args, rate=rate, scope=scope)
 
 
 _R, _W, _X = ToolKind.read, ToolKind.write, ToolKind.exec_
@@ -132,6 +135,9 @@ MCP_TOOL_RULES: tuple[McpToolRule, ...] = (
     _rule("list_submissions", _G.submission, _R, Action.SUBMISSION_READ),
     _rule("package_project", _G.submission, _X, Action.SUBMISSION_CREATE),
     _rule("list_signatures", _G.submission, _R, Action.OUTPUT_READ),
+    _rule("get_signature_plan", _G.submission, _R, Action.OUTPUT_READ),
+    # Подпись комплекта своим ключом: право SIGN на каждый слот проверяет сценарий, а тул опасный (M6).
+    _rule("sign_submission", _G.submission, _X, Action.OUTPUT_READ, dangerous=True, scope=MCP_SIGN_SCOPE),
     # Админка (сценарии сами требуют админа установки)
     _rule("admin_list_users", _G.admin, _R),
     _rule("admin_queue_summary", _G.admin, _R),
@@ -171,6 +177,8 @@ MCP_TOOL_CLASSES: tuple[type[McpTool], ...] = (
     submission.ListSubmissionProfilesTool,
     submission.ListSubmissionsTool,
     submission.ListSignaturesTool,
+    submission.GetSignaturePlanTool,
+    submission.SignSubmissionTool,
     admin.AdminListUsersTool,
     admin.AdminQueueSummaryTool,
     admin.AdminRunnerSummaryTool,

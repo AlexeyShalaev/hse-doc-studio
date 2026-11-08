@@ -16,7 +16,7 @@ import structlog
 
 from hse_doc_studio.core.access.checker import IProjectAccessChecker, ProjectForbiddenError
 from hse_doc_studio.core.access.context import require_actor
-from hse_doc_studio.core.access.entities import Actor
+from hse_doc_studio.core.access.entities import Actor, ActorSource
 from hse_doc_studio.core.agent.entities import AgentToolContext, ToolResult
 from hse_doc_studio.core.enums import EditFormat
 from hse_doc_studio.core.errors import NotFoundError, ProjectReadOnlyError
@@ -46,9 +46,14 @@ class McpCallResult:
     retry_after_s: int | None = None
 
 
+def lacks_scope(actor: Actor, entry: McpToolEntry) -> bool:
+    """Токену не хватает отдельного права тула (подпись комплекта: `sign`); у сессии и локально прав токена нет."""
+    return entry.rule.scope is not None and actor.source is ActorSource.pat and entry.rule.scope not in actor.scopes
+
+
 def visible_to(actor: Actor, entry: McpToolEntry, settings: McpSettings) -> bool:
     """Тул виден и вызываем: включён в настройках, а админский ещё и у админа с областью `mcp:admin`."""
-    if not settings.allows(entry.meta):
+    if not settings.allows(entry.meta) or lacks_scope(actor, entry):
         return False
     if entry.meta.admin:
         return actor.is_instance_admin and (actor.scopes == frozenset() or MCP_ADMIN_SCOPE in actor.scopes)
@@ -101,6 +106,14 @@ class CallMcpToolUC:
         entry = self._catalog.get(name)
         if entry is None:
             raise McpError(McpErrorCode.unknown_tool)
+        if lacks_scope(actor, entry):
+            raise McpError(
+                McpErrorCode.forbidden,
+                localized_error(
+                    f"У токена нет права «{entry.rule.scope}»: его выдают отдельно от права mcp",
+                    f"The token has no “{entry.rule.scope}” scope: it is granted separately from mcp",
+                ),
+            )
         if not visible_to(actor, entry, settings):
             raise McpError(McpErrorCode.tool_disabled)
         return entry

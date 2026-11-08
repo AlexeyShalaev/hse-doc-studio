@@ -3076,6 +3076,7 @@ class UseCaseProvider(Provider):
         dispatcher: IJobDispatcher,
         trust_provider: ITrustMaterialProvider,
         keyring: IOpenPgpKeyImporter,
+        audit: ISignatureAudit,
     ) -> AttachDetachedSignatureUC:
         return AttachDetachedSignatureUC(
             project_repo,
@@ -3086,6 +3087,7 @@ class UseCaseProvider(Provider):
             dispatcher,
             trust_provider,
             keyring,
+            audit,
         )
 
     @provide
@@ -3099,6 +3101,7 @@ class UseCaseProvider(Provider):
         dispatcher: IJobDispatcher,
         trust_provider: ITrustMaterialProvider,
         keyring: IOpenPgpKeyImporter,
+        audit: ISignatureAudit,
     ) -> RecheckDetachedSignatureUC:
         return RecheckDetachedSignatureUC(
             project_repo,
@@ -3109,6 +3112,7 @@ class UseCaseProvider(Provider):
             dispatcher,
             trust_provider,
             keyring,
+            audit,
         )
 
     @provide
@@ -3123,6 +3127,7 @@ class UseCaseProvider(Provider):
         trust_provider: ITrustMaterialProvider,
         keyring: IOpenPgpKeyImporter,
         fetcher: IChainFetcher,
+        audit: ISignatureAudit,
     ) -> CompleteDetachedChainUC:
         return CompleteDetachedChainUC(
             project_repo,
@@ -3134,6 +3139,7 @@ class UseCaseProvider(Provider):
             trust_provider,
             keyring,
             fetcher,
+            audit,
         )
 
     @provide
@@ -3206,9 +3212,10 @@ class UseCaseProvider(Provider):
         project_repo: IProjectRepository,
         project_index_repo: IProjectIndexRepository,
         signature_repo: ISignatureRepository,
+        audit: ISignatureAudit,
     ) -> DeleteDetachedSignatureUC:
         return DeleteDetachedSignatureUC(
-            project_repo=project_repo, project_index_repo=project_index_repo, signature_repo=signature_repo
+            project_repo=project_repo, project_index_repo=project_index_repo, signature_repo=signature_repo, audit=audit
         )
 
     @provide

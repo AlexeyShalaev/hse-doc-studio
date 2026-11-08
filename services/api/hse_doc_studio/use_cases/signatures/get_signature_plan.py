@@ -27,20 +27,18 @@ from hse_doc_studio.core.services import (
     expand_slot_ids_for_doc,
 )
 from hse_doc_studio.core.signatures.plan import (
-    AUTHOR_PERSONA,
     DocFacts,
     DocPlan,
     PlanSlot,
     SignaturePlan,
-    SignerRef,
     frozen_is_current,
     method_of,
-    slot_persona,
+    signer_for,
     slot_state,
 )
 from hse_doc_studio.core.signatures.ports import ISignerScope
 from hse_doc_studio.core.signatures.stamps import stamps_digest, stamps_for_doc
-from hse_doc_studio.core.team import author_by_slug, is_doc_active
+from hse_doc_studio.core.team import is_doc_active
 from hse_doc_studio.core.value_objects import SignaturesState
 from hse_doc_studio.use_cases.projects.get_project import GetProjectInput, GetProjectUC
 from hse_doc_studio.use_cases.signatures._doc_context import sha256_file
@@ -61,22 +59,6 @@ class _Pair:
     slot_id: str
     allowed: tuple[str, ...] = ()
     required_by: list[str] = field(default_factory=list)
-
-
-def signer_for(project: Project, slot_id: str) -> SignerRef:
-    """Персона слота и имя человека из карточки проекта."""
-    persona = slot_persona(slot_id)
-    person = {
-        "supervisor": project.supervisor,
-        "co_supervisor": project.co_supervisor,
-        "academic_supervisor": project.academic_supervisor,
-    }.get(persona)
-    if person is not None:
-        return SignerRef(persona, person.name)
-    if persona == AUTHOR_PERSONA:
-        return SignerRef(persona, project.authors[0].name if project.authors else "")
-    author = author_by_slug(project, persona)
-    return SignerRef(persona, author.name if author else "")
 
 
 class GetSignaturePlanUC:

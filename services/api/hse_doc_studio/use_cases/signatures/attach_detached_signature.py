@@ -18,7 +18,12 @@ from hse_doc_studio.core.repositories import (
 )
 from hse_doc_studio.core.services import ProjectTemplateService
 from hse_doc_studio.core.signatures.errors import CmsParseError, GpgError, GpgUnavailableError
-from hse_doc_studio.core.signatures.ports import IChainFetcher, IOpenPgpKeyImporter, ITrustMaterialProvider
+from hse_doc_studio.core.signatures.ports import (
+    IChainFetcher,
+    IOpenPgpKeyImporter,
+    ISignatureAudit,
+    ITrustMaterialProvider,
+)
 from hse_doc_studio.core.signatures.verification import note_plate_mismatch
 from hse_doc_studio.core.value_objects import DetachedSignature
 from hse_doc_studio.use_cases.projects.get_project import GetProjectUC
@@ -78,6 +83,7 @@ class _DetachedUCBase:
         dispatcher: IJobDispatcher,
         trust_provider: ITrustMaterialProvider,
         keyring: IOpenPgpKeyImporter,
+        audit: ISignatureAudit | None = None,
     ) -> None:
         self._signature_repo = signature_repo
         self._template_repo = template_repo
@@ -85,6 +91,7 @@ class _DetachedUCBase:
         self._dispatcher = dispatcher
         self._trust_provider = trust_provider
         self._keyring = keyring
+        self._audit = audit
         self._get_uc = GetProjectUC(project_repo, project_index_repo)
 
     async def _attach(
@@ -125,6 +132,18 @@ class _DetachedUCBase:
             format=sig.format.value,
             verdict=sig.verdict.value,
         )
+        if self._audit is not None:
+            await self._audit.record(
+                "signature.attach",
+                project_id=project_id,
+                details={
+                    "doc_id": doc_id,
+                    "slot_id": slot_id,
+                    "format": sig.format.value,
+                    "verdict": sig.verdict.value,
+                    "signer_id": sig.signer_id,
+                },
+            )
         return AttachDetachedSignatureOutput(
             signature=sig,
             missing_key_id=verified.missing_key_id if sig.verdict is DetachedVerdict.unknown_key else None,
@@ -183,6 +202,7 @@ class CompleteDetachedChainUC(_DetachedUCBase):
         trust_provider: ITrustMaterialProvider,
         keyring: IOpenPgpKeyImporter,
         fetcher: IChainFetcher,
+        audit: ISignatureAudit | None = None,
     ) -> None:
         super().__init__(
             project_repo,
@@ -193,6 +213,7 @@ class CompleteDetachedChainUC(_DetachedUCBase):
             dispatcher,
             trust_provider,
             keyring,
+            audit,
         )
         self._fetcher = fetcher
 

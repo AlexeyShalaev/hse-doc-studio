@@ -65,3 +65,13 @@ into the PDFs and gives you an archive with the right file names.
   Build the document and come back.
 - **“NDA: signatures required”**: the project is under NDA, so the package needs signatures. Add
   them to every slot the checkpoint requires.
+- **“The PDF is frozen but has no signature file”** on a detached e-signature slot: the plate is on
+  the page, the signature itself is not. Press **Sign the submission** on the checkpoint page (a
+  Studio key signs) or attach a ready `.asc`/`.sig` file on the document **Signatures** tab.
+- **“Awaiting your signature: N”**: the slots you sign (as the author or as the invited
+  supervisor). **Sign the submission** signs all of them in one go with the default key from the
+  settings; a passphrase-protected key asks for it once.
+- **“Out of date”** on a signature: the document was rebuilt or images changed after freezing. The
+  signature belongs to the previous version, sign again.
+- An archive with electronic signatures contains **HOW_TO_VERIFY.txt**: which signatures are
+  electronic, which are graphic, and the commands to verify them (gpg, openssl, pyHanko).

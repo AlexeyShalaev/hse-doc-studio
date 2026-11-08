@@ -150,3 +150,140 @@ def build_sign_instructions(lang: str, pdf_name: str, pdf_sha256: str) -> str:
             "",
         ]
     return "\n".join(lines) + "\n"
+
+
+# --- КАК_ПРОВЕРИТЬ.txt: одна инструкция на весь комплект (docs/design/signature-plan.md, раздел 8) ---------------
+
+VERIFY_GUIDE_NAME = {"ru": "КАК_ПРОВЕРИТЬ.txt", "en": "HOW_TO_VERIFY.txt"}
+BASE_SUFFIX = {"ru": "для-открепленных-подписей", "en": "for-detached-signatures"}
+FORMAT_TOKEN = {DetachedFormat.openpgp: "openpgp", DetachedFormat.cms: "cades"}
+
+
+@dataclass(frozen=True)
+class GuideSignature:
+    kind: str  # "image" | "detached" | "pades"
+    label: str  # слот («Научный руководитель»)
+    signer: str
+    file: str = ""  # файл открепленной подписи; пусто у картинки и PAdES
+    format: DetachedFormat | None = None
+    covers: str = ""  # PDF, к которому относится открепленная подпись
+
+
+@dataclass(frozen=True)
+class GuideDocument:
+    pdf: str  # итоговый PDF в комплекте
+    sha256: str
+    signatures: tuple[GuideSignature, ...]
+    base: str = ""  # PDF для открепленных подписей, когда он отличается от итогового
+    base_sha256: str = ""
+    base_size: int = 0
+    keys: tuple[str, ...] = ()
+
+
+def signer_display_name(raw: str) -> str:
+    """Имя подписанта без адреса почты: «Иван Иванов <ivan@example.org>» → «Иван Иванов» (uid OpenPGP)."""
+    return raw.split("<", 1)[0].strip() or raw.strip()
+
+
+def signer_file_token(name: str) -> str:
+    """«Петров Пётр Петрович» → «Петров_Пётр_Петрович» для имени файла подписи."""
+    return slug(name)
+
+
+def detached_signature_name(pdf_name: str, signer: str, fmt: DetachedFormat, ext: str) -> str:
+    """`Заявка.pdf` + «Петров П. П.» + OpenPGP → `Заявка.Петров_П._П.openpgp.asc`: документ, подписант, формат."""
+    stem = pdf_name.rsplit(".", 1)[0] if "." in pdf_name else pdf_name
+    return f"{stem}.{signer_file_token(signer)}.{FORMAT_TOKEN[fmt]}{ext}"
+
+
+_GUIDE_RU = {
+    "title": "Как проверить подписи комплекта",
+    "intro": (
+        "Электронные подписи (ЭП) проверяются без Студии стандартными средствами. Графическая подпись это\n"
+        "картинка на странице: она не является электронной подписью и криптографически не проверяется.\n"
+        "Любое изменение PDF, даже пересохранение, делает электронные подписи недействительными."
+    ),
+    "sha": "SHA-256",
+    "image": "графическая подпись (картинка, не ЭП)",
+    "detached": "открепленная ЭП",
+    "pades": "встроенная ЭП (PAdES) внутри PDF",
+    "signer": "подписант",
+    "file": "файл подписи",
+    "covers": "относится к",
+    "base": (
+        "{base} это исходные байты {pdf} до встроенных подписей: открепленные подписи относятся к нему.\n"
+        "  Его содержимое совпадает с началом {pdf} (первые {size} байт):"
+    ),
+    "pgp": "Открепленные OpenPGP (.asc):",
+    "cms": "Открепленные CAdES/CMS (.p7s, .sig); ГОСТ проверяют в КриптоАРМ, КриптоПро или на Госуслугах:",
+    "pades_tools": "Встроенные подписи PAdES: панель подписей Adobe Acrobat Reader или pyHanko (pyhanko-cli):",
+}
+_GUIDE_EN = {
+    "title": "How to verify the signatures of this submission",
+    "intro": (
+        "Electronic signatures are verified without the Studio with standard tools. A graphic signature is\n"
+        "an image on the page: it is not an electronic signature and cannot be checked cryptographically.\n"
+        "Any change to a PDF, even re-saving it, invalidates its electronic signatures."
+    ),
+    "sha": "SHA-256",
+    "image": "graphic signature (image, not an e-signature)",
+    "detached": "detached e-signature",
+    "pades": "embedded e-signature (PAdES) inside the PDF",
+    "signer": "signer",
+    "file": "signature file",
+    "covers": "covers",
+    "base": (
+        "{base} holds the bytes of {pdf} before the embedded signatures: detached signatures cover it.\n"
+        "  Its content equals the beginning of {pdf} (the first {size} bytes):"
+    ),
+    "pgp": "Detached OpenPGP (.asc):",
+    "cms": "Detached CAdES/CMS (.p7s, .sig); GOST is verified in CryptoARM, CryptoPro or the Gosuslugi portal:",
+    "pades_tools": (
+        "Embedded PAdES signatures: the signature panel of Adobe Acrobat Reader or pyHanko (pip install pyhanko-cli):"
+    ),
+}
+
+
+def _doc_lines(t: dict[str, str], doc: GuideDocument) -> list[str]:
+    lines = [doc.pdf] + ([f"  {t['sha']}: {doc.sha256}"] if doc.sha256 else [])
+    if doc.base:
+        lines.append(f"  {doc.base}")
+        lines.append(f"  {t['sha']}: {doc.base_sha256}")
+    for sig in doc.signatures:
+        who = f", {t['signer']}: {sig.signer}" if sig.signer else ""
+        lines.append(f"  - {sig.label}: {t[sig.kind]}{who}")
+        if sig.file:
+            lines.append(f"    {t['file']}: {sig.file}, {t['covers']}: {sig.covers}")
+    if doc.base:
+        lines.append("  " + t["base"].format(base=doc.base, pdf=doc.pdf, size=doc.base_size))
+        lines.append(f'    cmp -n {doc.base_size} "{doc.base}" "{doc.pdf}"')
+    return lines
+
+
+def build_verify_guide(lang: str, docs: Sequence[GuideDocument]) -> str:
+    t = _GUIDE_EN if lang == "en" else _GUIDE_RU
+    lines = [t["title"], "=" * len(t["title"]), "", t["intro"], ""]
+    for doc in docs:
+        lines += [*_doc_lines(t, doc), ""]
+    sigs = [s for d in docs for s in d.signatures]
+    keys = sorted({k for d in docs for k in d.keys})
+    pgp = [s for s in sigs if s.format is DetachedFormat.openpgp]
+    if pgp:
+        lines.append(t["pgp"])
+        lines += [f'  gpg --import "{k}"' for k in keys]
+        lines += [f'  gpg --verify "{s.file}" "{s.covers}"' for s in pgp]
+        lines.append("")
+    cms = [s for s in sigs if s.format is DetachedFormat.cms]
+    if cms:
+        lines.append(t["cms"])
+        lines += [
+            f'  openssl cms -verify -inform DER -binary -noverify -in "{s.file}" -content "{s.covers}" -out /dev/null'
+            for s in cms
+        ]
+        lines.append("")
+    pades_docs = [d.pdf for d in docs if any(s.kind == "pades" for s in d.signatures)]
+    if pades_docs:
+        lines.append(t["pades_tools"])
+        lines += [f'  pyhanko sign validate --pretty-print "{pdf}"' for pdf in pades_docs]
+        lines.append("")
+    return "\n".join(lines)

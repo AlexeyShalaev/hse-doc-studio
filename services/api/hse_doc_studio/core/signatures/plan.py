@@ -307,6 +307,22 @@ class SignerRef:
     name: str = ""
 
 
+def signer_for(project: Project, slot_id: str) -> SignerRef:
+    """Персона слота и имя человека из карточки проекта."""
+    persona = slot_persona(slot_id)
+    person = {
+        "supervisor": project.supervisor,
+        "co_supervisor": project.co_supervisor,
+        "academic_supervisor": project.academic_supervisor,
+    }.get(persona)
+    if person is not None:
+        return SignerRef(persona, person.name)
+    if persona == AUTHOR_PERSONA:
+        return SignerRef(persona, project.authors[0].name if project.authors else "")
+    author = next((a for a in project.authors if a.slug == persona), None)
+    return SignerRef(persona, author.name if author else "")
+
+
 @dataclass(frozen=True)
 class PlanSlot:
     doc_id: str

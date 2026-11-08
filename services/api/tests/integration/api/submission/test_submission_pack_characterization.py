@@ -649,25 +649,34 @@ async def test__api__create_submission__frozen_detached_package_contents(
     files = _archive(record)
     pdf_name = "Аннотация.pdf" if lang == "ru" else "Annotation.pdf"
     top_name = "Презентация защиты темы.pdf" if lang == "ru" else "Topic defence presentation.pdf"
-    readme = pdf_name.replace(".pdf", ".README.txt")
+    guide_name = "КАК_ПРОВЕРИТЬ.txt" if lang == "ru" else "HOW_TO_VERIFY.txt"
+    guide = files[guide_name].decode("utf-8")
     # Подписанный документ уходит ровно теми байтами, что покрывает подпись (не штампом заново), и не равен исходнику.
     assert files[pdf_name] == frozen
     assert files[pdf_name] != sources["annotation"]
     assert files[top_name] == sources["topic_presentation"]
-    assert _sha256(frozen) in files[readme].decode("utf-8")
+    assert _sha256(frozen) in guide
+    # Подпись автора картинкой названа графической, а не ЭП.
+    assert ("графическая подпись" if lang == "ru" else "graphic signature") in guide
     if signature_format == "cms":
         signature_files = [name for name in files if name.endswith(".p7s")]
-        assert signature_files == ["Аннотация.Научный_руководитель.p7s"]
+        assert signature_files == ["Аннотация.Петрова_Анна_Сергеевна.cades.p7s"]
         assert not [name for name in files if name.startswith("public-key.")]
-        assert "openssl cms -verify" in files[readme].decode("utf-8")
-        assert set(files) == {pdf_name, top_name, readme, *signature_files}
+        assert "openssl cms -verify" in guide
+        assert set(files) == {pdf_name, top_name, guide_name, *signature_files}
     else:
         signature_files = [name for name in files if name.endswith(".asc") and not name.startswith("public-key.")]
-        assert signature_files == ["Annotation.Supervisor.asc"]
-        assert files["Annotation.Supervisor.asc"] == _PGP_SIGNATURE
+        assert signature_files == ["Annotation.Иван_Иванов.openpgp.asc"]
+        assert files["Annotation.Иван_Иванов.openpgp.asc"] == _PGP_SIGNATURE
         assert files["public-key.Иван_Иванов.asc"] == _PGP_PUBLIC_KEY
-        assert "gpg --verify" in files[readme].decode("utf-8")
-        assert set(files) == {pdf_name, top_name, readme, "Annotation.Supervisor.asc", "public-key.Иван_Иванов.asc"}
+        assert 'gpg --verify "Annotation.Иван_Иванов.openpgp.asc" "Annotation.pdf"' in guide
+        assert set(files) == {
+            pdf_name,
+            top_name,
+            guide_name,
+            "Annotation.Иван_Иванов.openpgp.asc",
+            "public-key.Иван_Иванов.asc",
+        }
 
 
 def _hse_files_with_bytes(folder: Path, data: bytes) -> list[Path]:

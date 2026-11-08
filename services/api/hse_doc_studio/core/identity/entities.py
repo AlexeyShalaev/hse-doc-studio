@@ -37,6 +37,8 @@ class TokenScope(StrEnum):
     # MCP-сервер (docs/design/mcp.md, M5 и M7): тулы пользователя и, отдельно, админские тулы.
     mcp = "mcp"
     mcp_admin = "mcp:admin"
+    # Подпись комплекта через MCP своим ключом (docs/design/signature-plan.md, раздел 9): право mcp его не включает.
+    sign = "sign"
 
 
 class ApiTokenOrigin(StrEnum):

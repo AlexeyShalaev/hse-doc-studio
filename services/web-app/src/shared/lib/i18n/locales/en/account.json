@@ -154,6 +154,10 @@
       "mcpAdmin": {
         "title": "MCP: administration",
         "hint": "Admin MCP tools; for the instance administrator only."
+      },
+      "sign": {
+        "title": "Signing via MCP",
+        "hint": "An AI client may sign the submission with your default key (a key without a passphrase only). Needs MCP as well."
       }
     },
     "expiryLabel": "Expires",
