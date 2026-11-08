@@ -11,6 +11,7 @@ from hse_doc_studio.core.runner_install import (
     InvalidResourcesError,
     LocalInstance,
     LocalRunnerSpec,
+    PreviousRelease,
     ProgressReporter,
     ResourceOverrides,
     UpgradeOutcome,
@@ -40,6 +41,11 @@ class FakeLocalHost:
         # Держит обновление «в работе», пока тест не отпустит; и что сделать, когда новый процесс поднялся.
         self.upgrade_gate: asyncio.Event | None = None
         self.on_upgraded: Callable[[], Awaitable[None]] | None = None
+        self.rolled_back: list[tuple[str, str]] = []
+        self.rollback_fail_with: InstallError | None = None
+        self.remove_fail_with: InstallError | None = None
+        # Порядок действий хоста для проверок «что раньше»: общий список можно отдать и другим подменам.
+        self.events: list[str] = []
 
     async def capability(self) -> Capability:
         return self._capability
@@ -75,7 +81,13 @@ class FakeLocalHost:
         self.upgraded.append((name, image))
         if self.on_upgraded is not None:
             await self.on_upgraded()
-        return UpgradeOutcome(old_image=old, new_image=image)
+        return UpgradeOutcome(old_image=old, new_image=image, previous=PreviousRelease(old) if old else None)
+
+    async def rollback(self, name: str, previous: PreviousRelease) -> None:
+        self.events.append(f"rollback {name}")
+        if self.rollback_fail_with is not None:
+            raise self.rollback_fail_with
+        self.rolled_back.append((name, previous.image))
 
     async def list_instances(self) -> list[LocalInstance]:
         return list(self.instances)
@@ -83,5 +95,9 @@ class FakeLocalHost:
     async def remove(self, name: str) -> bool:
         if name not in {i.name for i in self.instances}:
             return False
+        self.events.append(f"remove {name}")
+        if self.remove_fail_with is not None:
+            raise self.remove_fail_with
         self.removed.append(name)
+        self.instances = [i for i in self.instances if i.name != name]
         return True

@@ -2,9 +2,11 @@
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import StrEnum
+from typing import Any
 
 from hse_doc_studio.core.runner_install.resources import ResourceOverrides
 
@@ -73,11 +75,32 @@ class LocalInstance:
 
 
 @dataclass(frozen=True, slots=True)
+class PreviousRelease:
+    """Какой установка была до обновления: по этому хост возвращает её назад (`ILocalRunnerHost.rollback`).
+
+    `state` принадлежит хосту (spec Deployment, окружение контейнера) и может содержать токен раннера, поэтому не
+    попадает ни в repr, ни в задачу, ни в аудит.
+    """
+
+    image: str
+    state: Mapping[str, Any] = field(default_factory=dict, repr=False, compare=False)
+
+
+@dataclass(frozen=True, slots=True)
 class UpgradeOutcome:
-    """Итог обновления на месте: какой образ стоял и какой поставлен."""
+    """Итог обновления на месте: какой образ стоял и какой поставлен; `previous` нужен для отката."""
 
     old_image: str
     new_image: str
+    previous: PreviousRelease | None = None
+
+
+class UpgradeError(InstallError):
+    """Обновление не удалось, когда установка уже заменена: `previous` возвращает её к прежней версии."""
+
+    def __init__(self, code: str, detail: str = "", *, previous: PreviousRelease) -> None:
+        super().__init__(code, detail)
+        self.previous = previous
 
 
 class InstallStepState(StrEnum):
@@ -114,6 +137,10 @@ class InstallJob:
     state: InstallJobState = InstallJobState.running
     error_code: str | None = None
     error_detail: str = ""
+    # Откат неудачного обновления: None, если откатывать было нечего; версия, на которую раннер вернули.
+    rolled_back: bool | None = None
+    rollback_version: str = ""
+    rollback_error: str | None = None
 
     def step(self, key: str) -> InstallStep:
         for item in self.steps:

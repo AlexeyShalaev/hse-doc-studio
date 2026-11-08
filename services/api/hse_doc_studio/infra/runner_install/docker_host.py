@@ -17,9 +17,11 @@ from hse_doc_studio.core.runner_install import (
     InstallTarget,
     LocalInstance,
     LocalRunnerSpec,
+    PreviousRelease,
     ProgressReporter,
     ResourceOverrides,
     UnavailableReason,
+    UpgradeError,
     UpgradeOutcome,
 )
 from hse_doc_studio.infra.docker.cli import docker_available, run_docker
@@ -139,8 +141,8 @@ class DockerLocalHost:
         """Новый образ, тот же контейнер по сути: имя, окружение раннера (токен, адрес, каталог) и том данных прежние.
 
         Образ тянется до остановки, чтобы простой был только на перезапуск. Старый контейнер получает `docker stop`
-        (раннер доделывает сборки до 30 с), затем удаляется и запускается заново. Если новый не стартовал, Студия
-        поднимает прежний образ с теми же настройками.
+        (раннер доделывает сборки до 30 с), затем удаляется и запускается заново. Прежний образ и окружение
+        запоминаются до остановки: если новый не стартовал, `UpgradeError` несёт их для `rollback`.
         """
         if not _NAME_RE.fullmatch(name) or not await self._owned(name):
             raise InstallError("not_installed")
@@ -150,6 +152,7 @@ class DockerLocalHost:
         data_dir = env.get("HSE_RUNNER__DATA_DIR", "")
         if not data_dir:
             raise InstallError("not_installed", "HSE_RUNNER__DATA_DIR")
+        previous = PreviousRelease(image=old_image, state={"env": dict(env)}) if old_image else None
         code, _, err = await run_docker(["pull", image], timeout=_PULL_TIMEOUT_S)
         if code != 0:
             raise InstallError("image_pull_failed", _scrub(err.strip()[-400:], token))
@@ -158,17 +161,33 @@ class DockerLocalHost:
         await report("recreate", InstallStepState.running, name)
         await run_docker(["stop", "-t", str(_STOP_GRACE_S), name], timeout=_STOP_TIMEOUT_S)
         code, _, err = await run_docker(["rm", "-f", name], timeout=_RUN_TIMEOUT_S)
+        if code == 0:
+            code, err = await self._run(name, image, data_dir, env)
+        if code != 0:
+            detail = _scrub(err.strip()[-400:], token)
+            # Старый контейнер уже остановлен: без прежнего образа возвращать нечего.
+            if previous is None:
+                raise InstallError("container_start_failed", detail)
+            raise UpgradeError("container_start_failed", detail, previous=previous)
+        await report("recreate", InstallStepState.done, "")
+        return UpgradeOutcome(old_image=old_image, new_image=image, previous=previous)
+
+    async def rollback(self, name: str, previous: PreviousRelease) -> None:
+        """Контейнер с прежним образом и прежним окружением раннера: тем же `docker run`, что и при обновлении."""
+        raw_env = previous.state.get("env")
+        env = {str(k): str(v) for k, v in raw_env.items()} if isinstance(raw_env, dict) else {}
+        data_dir = env.get("HSE_RUNNER__DATA_DIR", "")
+        if not _NAME_RE.fullmatch(name) or not previous.image or not data_dir:
+            raise InstallError("not_installed")
+        token = env.get("HSE_RUNNER__TOKEN", "")
+        if await self._owned(name):
+            await run_docker(["stop", "-t", str(_STOP_GRACE_S), name], timeout=_STOP_TIMEOUT_S)
+            code, _, err = await run_docker(["rm", "-f", name], timeout=_RUN_TIMEOUT_S)
+            if code != 0:
+                raise InstallError("container_start_failed", _scrub(err.strip()[-400:], token))
+        code, err = await self._run(name, previous.image, data_dir, env)
         if code != 0:
             raise InstallError("container_start_failed", _scrub(err.strip()[-400:], token))
-        code, err = await self._run(name, image, data_dir, env)
-        if code != 0:
-            detail = _scrub(err.strip()[-300:], token)
-            if old_image:
-                back, _ = await self._run(name, old_image, data_dir, env)
-                detail += " (previous image restored)" if back == 0 else " (previous image did not start either)"
-            raise InstallError("container_start_failed", detail)
-        await report("recreate", InstallStepState.done, "")
-        return UpgradeOutcome(old_image=old_image, new_image=image)
 
     async def _inspect(self, name: str) -> tuple[str, dict[str, str]]:
         """Образ и окружение раннера из `docker inspect`; из окружения берутся только переменные раннера."""
@@ -221,8 +240,10 @@ class DockerLocalHost:
     async def remove(self, name: str) -> bool:
         if not _NAME_RE.fullmatch(name) or not await self._owned(name):
             return False
-        code, _, _ = await run_docker(["rm", "-f", name], timeout=_RUN_TIMEOUT_S)
-        return code == 0
+        code, _, err = await run_docker(["rm", "-f", name], timeout=_RUN_TIMEOUT_S)
+        if code != 0:
+            raise InstallError("remove_failed", err.strip()[-400:])
+        return True
 
 
 def _parse_created(raw: str) -> datetime | None:
