@@ -243,6 +243,7 @@ ROUTE_ACTIONS: Mapping[RouteKey, RouteRule] = {
     # invites
     ("GET", "/projects/{project_id}/invitations"): RouteRule(Action.ACCESS_MANAGE),
     ("POST", "/projects/{project_id}/invitations"): RouteRule(Action.ACCESS_MANAGE),
+    ("POST", "/projects/{project_id}/invitations/draft"): RouteRule(Action.ACCESS_MANAGE),
     ("POST", "/projects/{project_id}/invitations/{invitation_id}/resend"): RouteRule(Action.ACCESS_MANAGE),
     ("DELETE", "/projects/{project_id}/invitations/{invitation_id}"): RouteRule(Action.ACCESS_MANAGE),
     ("GET", "/projects/{project_id}/access-requests"): RouteRule(Action.ACCESS_MANAGE),

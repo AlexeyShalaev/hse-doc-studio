@@ -1,20 +1,26 @@
 import { useId, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { failureCode } from "@shared/api";
-import { toast } from "@shared/lib";
+import { toast, useDebouncedValue, useThemeStore } from "@shared/lib";
 import { Button, CopyField, Input, Modal, Select, Textarea } from "@shared/ui";
 import { Notice } from "@shared/ui/ConflictKit";
 import { useProjectRoleLabel } from "@entities/project";
 import {
   useCreateInvitation,
+  useInvitationDraft,
   type GrantRole,
   type ProjectInvitationCreated,
 } from "@entities/invitation";
 import { useFailureText } from "../lib/failure";
+import { invitationText } from "../lib/invitationText";
 import { usePersonaOptions } from "../lib/personas";
 
 const ROLES: readonly GrantRole[] = ["reader", "reviewer", "editor"];
 const EXPIRY_DAYS = [1, 7, 14, 30] as const;
+const EMAIL_RE = /^\S+@\S+\.\S+$/;
+const MESSAGE_MAX = 1000;
+// Пауза после ввода почты, прежде чем пересобрать текст: не дёргать сервер на каждую букву.
+const DRAFT_DEBOUNCE_MS = 400;
 
 export type InvitePreset = {
   /** Существующий человек из кандидатов; без него приглашение идёт на почту. */
@@ -34,7 +40,11 @@ export type InviteDialogProps = {
   isOwner?: boolean;
 };
 
-/** Форма приглашения (10.6): кандидат или почта, роль, персона, флаги, срок и сообщение. */
+/**
+ * Форма приглашения (10.6): кандидат или почта, роль, персона, флаги, срок и сообщение.
+ * Сообщение заранее составлено сервером из данных проекта (по шаблону, без ИИ) и пересобирается при смене
+ * адресата, роли и персоны, пока человек его не правил; «Вернуть исходный текст» снова берёт готовый.
+ */
 export const InviteDialog = (props: InviteDialogProps) => (
   // Новый ключ при каждом открытии сбрасывает форму к предустановке.
   <InviteDialogInner
@@ -57,6 +67,7 @@ const InviteDialogInner = ({
   const personas = usePersonaOptions(projectId);
   const create = useCreateInvitation(projectId);
   const formId = useId();
+  const lang = useThemeStore((s) => s.lang);
   const user = preset?.user ?? null;
   const [email, setEmail] = useState("");
   const [role, setRole] = useState<GrantRole>(preset?.role ?? "reviewer");
@@ -65,12 +76,31 @@ const InviteDialogInner = ({
   const [showSources, setShowSources] = useState(true);
   const [canEditAll, setCanEditAll] = useState(false);
   const [days, setDays] = useState<number>(7);
-  const [message, setMessage] = useState("");
+  // null: человек текст не правил, показывается готовый с сервера.
+  const [edited, setEdited] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [manual, setManual] = useState<ProjectInvitationCreated | null>(null);
+  const [manual, setManual] = useState<{
+    created: ProjectInvitationCreated;
+    message: string | null;
+  } | null>(null);
 
   const invitee = user?.name ?? email.trim();
-  const ready = user !== null || /^\S+@\S+\.\S+$/.test(email.trim());
+  const ready = user !== null || EMAIL_RE.test(email.trim());
+  const draftEmail = useDebouncedValue(email.trim(), DRAFT_DEBOUNCE_MS);
+  const draft = useInvitationDraft(
+    projectId,
+    {
+      user_id: user?.id ?? null,
+      email: user === null && EMAIL_RE.test(draftEmail) ? draftEmail : null,
+      role,
+      persona: persona === "" ? null : persona,
+    },
+    lang,
+    isOpen,
+  );
+  const original = draft.data?.message ?? "";
+  const message = edited ?? original;
+  const canReset = edited !== null && edited !== original;
 
   const submit = () => {
     setError(null);
@@ -89,7 +119,10 @@ const InviteDialogInner = ({
       {
         onSuccess: (result) => {
           if (result.delivery === "manual" && result.link) {
-            setManual(result);
+            setManual({
+              created: result,
+              message: message.trim() === "" ? null : message.trim(),
+            });
             return;
           }
           toast.success(
@@ -106,7 +139,18 @@ const InviteDialogInner = ({
     );
   };
 
-  if (manual?.link) {
+  if (manual?.created.link) {
+    const link = manual.created.link;
+    const copyInvitation = async () => {
+      try {
+        await navigator.clipboard.writeText(
+          invitationText(manual.message, link),
+        );
+        toast.success(t("form.copied"));
+      } catch {
+        toast.error(t("form.copyFailed"));
+      }
+    };
     return (
       <Modal
         isOpen={isOpen}
@@ -120,8 +164,35 @@ const InviteDialogInner = ({
       >
         <div className="flex flex-col" style={{ gap: "0.75rem" }}>
           <Notice tone="warn" text={t("form.manualHint")} />
+          {manual.message && (
+            <div
+              className="dim"
+              style={{
+                fontSize: "0.78125rem",
+                whiteSpace: "pre-line",
+                overflowWrap: "anywhere",
+                maxHeight: "12rem",
+                overflowY: "auto",
+              }}
+              data-testid="invite-manual-message"
+            >
+              {manual.message}
+            </div>
+          )}
+          <div>
+            <Button
+              type="button"
+              size="sm"
+              onClick={() => {
+                void copyInvitation();
+              }}
+              data-testid="invite-copy"
+            >
+              {t("form.copyInvitation")}
+            </Button>
+          </div>
           <div data-testid="invite-link">
-            <CopyField value={manual.link} label={t("form.linkLabel")} />
+            <CopyField value={link} label={t("form.linkLabel")} />
           </div>
         </div>
       </Modal>
@@ -273,22 +344,46 @@ const InviteDialogInner = ({
             }}
           />
         </div>
-        <label
+        <div
           className="flex flex-col"
           style={{ gap: "0.25rem", fontSize: "0.75rem" }}
         >
-          {t("form.message")}
+          <div
+            className="flex items-center"
+            style={{ gap: "0.5rem", justifyContent: "space-between" }}
+          >
+            <label htmlFor={`${formId}-message`}>{t("form.message")}</label>
+            {canReset && (
+              <Button
+                type="button"
+                size="sm"
+                variant="ghost"
+                onClick={() => {
+                  setEdited(null);
+                }}
+                data-testid="invite-message-reset"
+              >
+                {t("form.messageReset")}
+              </Button>
+            )}
+          </div>
           <Textarea
+            id={`${formId}-message`}
             value={message}
-            maxLength={1000}
-            rows={3}
+            maxLength={MESSAGE_MAX}
+            rows={7}
             placeholder={t("form.messagePlaceholder")}
             onChange={(e) => {
-              setMessage(e.target.value);
+              setEdited(e.target.value);
             }}
             data-testid="invite-message"
           />
-        </label>
+          {original !== "" && (
+            <span className="dim" data-testid="invite-message-hint">
+              {t("form.messageHint")}
+            </span>
+          )}
+        </div>
         {error && (
           <div role="alert" data-testid="invite-error">
             <Notice tone="err" text={error} />

@@ -243,3 +243,60 @@ async def test__bootstrap_carries_inbox_badge(stand: Stand) -> None:
     # Непрочитанное уведомление и ожидающее приглашение.
     assert boot["inbox"] == {"unread": 2}
     assert stand.client.get("/api/v1/session/bootstrap").json()["inbox"] is None
+
+
+async def test__draft__text_from_project_card_in_interface_language_and_needs_access_manage(stand: Stand) -> None:
+    anna, vera = await stand.person("anna"), await stand.person("vera")
+    project = await seed_shared_project(stand, anna, (vera, "reviewer"))
+    url = f"/api/v1/projects/{project}/invitations/draft"
+    body = {"user_id": None, "email": "someone@example.org", "role": "reviewer", "persona": "supervisor"}
+
+    ru = stand.client.post(url, json=body, headers={**anna.headers, "X-Interface-Language": "ru"})
+    en = stand.client.post(url, json=body, headers={**anna.headers, "X-Interface-Language": "en"})
+    refused = stand.client.post(url, json=body, headers=vera.headers)
+
+    assert ru.status_code == 200, ru.text
+    assert ru.headers["Cache-Control"] == "no-store"
+    # Папки проекта нет: только карточка (имя), роль и подпись приглашающего, без выдуманных имён.
+    assert ru.json() == {
+        "message": "Здравствуйте!\n\nПриглашаю вас в проект «Диплом» в HSE Doc Studio в роли научного руководителя. "
+        "Здесь можно смотреть документы и оставлять замечания.\n\nС уважением,\nanna"
+    }
+    assert en.json()["message"].startswith("Hello!\n\nI would like to invite you to the project “Диплом”")
+    assert refused.status_code == 403
+
+
+async def test__email_invite__message_on_the_invite_page_and_not_in_audit(stand: Stand) -> None:
+    anna = await stand.person("anna")
+    project = await seed_shared_project(stand, anna)
+    message = "Здравствуйте!\n\nПриглашаю вас <b>в проект</b>."
+
+    created = _invite(stand, project, anna.headers, email="hadi@example.org", message=message)
+    assert created.status_code == 201, created.text
+    link = created.json()["link"]
+    token = link.rsplit("/", 1)[1]
+
+    preview = stand.client.get(f"/api/v1/project-invitations/{token}").json()
+    assert preview["message"] == message.strip()
+    from hse_doc_studio.infra.db.orm.auth import AuditLogRow  # noqa: PLC0415
+    from sqlalchemy import select  # noqa: PLC0415
+
+    async with stand.sessions.use() as db:
+        rows = (
+            await db.execute(select(AuditLogRow).where(AuditLogRow.action == "project.invitation.create"))
+        ).scalars()
+        details = [row.details for row in rows]
+    assert [sorted(d) for d in details] == [["email", "invitation_id", "registration", "role"]]
+    dumped = str(details)
+    assert "в проект" not in dumped
+    assert token not in dumped
+    assert link not in dumped
+
+
+async def test__email_invite__too_long_message_is_rejected(stand: Stand) -> None:
+    anna = await stand.person("anna")
+    project = await seed_shared_project(stand, anna)
+
+    created = _invite(stand, project, anna.headers, email="hadi@example.org", message="я" * 1001)
+
+    assert created.status_code == 422

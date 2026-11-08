@@ -229,6 +229,8 @@ export const CONTRACT_SCHEMAS: Record<string, ZodType> = {
   MyInvitation: inv.MyInvitationSchema,
   MyInvitationList: inv.MyInvitationListSchema,
   ProjectInvitationPreview: inv.ProjectInvitationPreviewSchema,
+  InvitationDraftRequest: inv.InvitationDraftRequestSchema,
+  InvitationDraft: inv.InvitationDraftSchema,
   AccessRequestView: inv.AccessRequestViewSchema,
   AccessRequestPage: inv.AccessRequestPageSchema,
   ApproveAccessRequest: inv.ApproveAccessRequestSchema,

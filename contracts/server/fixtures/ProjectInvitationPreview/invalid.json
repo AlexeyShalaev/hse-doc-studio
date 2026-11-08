@@ -4,5 +4,6 @@
   "inviter_name": null,
   "role": null,
   "email_hint": null,
-  "registration_token": null
+  "registration_token": null,
+  "message": null
 }

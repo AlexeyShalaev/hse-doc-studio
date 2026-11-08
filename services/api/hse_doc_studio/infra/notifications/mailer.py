@@ -45,6 +45,8 @@ class SmtpNotificationMailer:
             to=to_email,
             server_url=self._public_url,
             values={"actor": payload.actor_name, "project": payload.project_name, "role": payload.role},
+            # Сообщение приглашающего; экранирование и предел длины на стороне `core.mail`.
+            note=payload.excerpt if kind is NotificationKind.project_invitation else None,
         )
 
     async def send_notification(

@@ -75,6 +75,20 @@ export type CreateProjectInvitationRequest = z.infer<
   typeof CreateProjectInvitationRequestSchema
 >;
 
+/** Для чего нужен готовый текст приглашения: тот же выбор, что в форме; адресат может быть ещё не введён. */
+export const InvitationDraftRequestSchema = z.strictObject({
+  user_id: z.string().nullable(),
+  email: z.string().nullable(),
+  role: GrantRoleSchema,
+  persona: z.string().nullable(),
+});
+export type InvitationDraftRequest = z.infer<
+  typeof InvitationDraftRequestSchema
+>;
+
+export const InvitationDraftSchema = z.strictObject({ message: z.string() });
+export type InvitationDraft = z.infer<typeof InvitationDraftSchema>;
+
 export const InvitationDeliverySchema = z.enum(["email", "manual", "inbox"]);
 export type InvitationDelivery = z.infer<typeof InvitationDeliverySchema>;
 
@@ -115,6 +129,7 @@ export const ProjectInvitationPreviewSchema = z.strictObject({
   role: GrantRoleSchema.nullable(),
   email_hint: z.string().nullable(),
   registration_token: z.string().nullable(),
+  message: z.string().nullable(),
 });
 export type ProjectInvitationPreview = z.infer<
   typeof ProjectInvitationPreviewSchema

@@ -244,6 +244,8 @@ _SCHEMAS: dict[str, Any] = {
     "MyInvitation": inv.MyInvitation,
     "MyInvitationList": inv.MyInvitationList,
     "ProjectInvitationPreview": inv.ProjectInvitationPreview,
+    "InvitationDraftRequest": inv.InvitationDraftRequest,
+    "InvitationDraft": inv.InvitationDraft,
     "AccessRequestView": inv.AccessRequestView,
     "AccessRequestPage": inv.AccessRequestPage,
     "ApproveAccessRequest": inv.ApproveAccessRequest,

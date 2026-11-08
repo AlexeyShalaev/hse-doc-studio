@@ -8,6 +8,7 @@ from typing import Protocol
 from uuid import UUID
 
 from hse_doc_studio.core.access.entities import Role
+from hse_doc_studio.core.enums import Lang
 from hse_doc_studio.core.invitations.entities import (
     AccessRequest,
     AccessRequestView,
@@ -23,6 +24,7 @@ from hse_doc_studio.core.invitations.entities import (
     ProjectTransfer,
     TransferView,
 )
+from hse_doc_studio.core.invitations.message import InvitationFacts
 from hse_doc_studio.core.listing import Found, Window
 
 
@@ -150,6 +152,12 @@ class IProjectCards(Protocol):
 class IProjectPersonas(Protocol):
     async def personas(self, project_id: UUID) -> frozenset[str] | None:
         """Слаги авторов и роли руководителей из `project.json`; None, если проект не прочитать."""
+        ...
+
+
+class IInvitationFacts(Protocol):
+    async def facts(self, project_id: UUID, lang: Lang) -> InvitationFacts | None:
+        """Люди, тема, вид работы и комплект документов из `project.json` и шаблона; None, если проект не прочитать."""
         ...
 
 

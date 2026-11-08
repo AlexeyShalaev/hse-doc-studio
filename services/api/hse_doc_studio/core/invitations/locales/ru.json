@@ -1,0 +1,26 @@
+{
+  "greeting": "Здравствуйте!",
+  "greeting_named": "Здравствуйте, {name}!",
+  "invite": "Приглашаю вас в проект «{project}» в HSE Doc Studio.",
+  "invite_as": "Приглашаю вас в проект «{project}» в HSE Doc Studio в роли {role}.",
+  "topic": "Тема работы: «{topic}».",
+  "work_kind": "Вид работы: {kind}.",
+  "documents": " ({documents})",
+  "access": {
+    "reader": "Здесь можно смотреть документы{documents}.",
+    "reviewer": "Здесь можно смотреть документы{documents} и оставлять замечания.",
+    "editor": "Здесь можно смотреть и править документы{documents}, оставлять замечания."
+  },
+  "role": {
+    "supervisor": "научного руководителя",
+    "co_supervisor": "соруководителя",
+    "academic_supervisor": "академического руководителя",
+    "author": "соавтора",
+    "reader": "читателя",
+    "reviewer": "рецензента",
+    "editor": "редактора"
+  },
+  "closing": "С уважением,",
+  "signature": "{name}",
+  "signature_group": "{name}, группа {group}"
+}

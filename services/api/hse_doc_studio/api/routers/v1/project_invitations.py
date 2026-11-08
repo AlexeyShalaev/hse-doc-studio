@@ -16,6 +16,7 @@ from hse_doc_studio.core.access.actions import Action
 from hse_doc_studio.core.access.entities import Role
 from hse_doc_studio.core.access.policy import can
 from hse_doc_studio.core.access.repositories import IProjectAclRepository
+from hse_doc_studio.core.i18n import current_interface_language
 from hse_doc_studio.core.identity.session_policy import utc_now
 from hse_doc_studio.core.invitations.entities import MemberTerms
 from hse_doc_studio.core.rate_limit import INVITE
@@ -24,6 +25,7 @@ from hse_doc_studio.use_cases.projects.access_requests import (
     DenyAccessRequestUC,
     ListAccessRequestsUC,
 )
+from hse_doc_studio.use_cases.projects.invitation_message import DraftInvitationMessageUC, InvitationDraftInput
 from hse_doc_studio.use_cases.projects.invitations import (
     CreateInvitationUC,
     InvitationCreated,
@@ -107,6 +109,22 @@ async def create_invitation(
         ),
     )
     return _created(result)
+
+
+@router.post("/projects/{project_id}/invitations/draft", response_model=s.InvitationDraft)
+async def draft_invitation_message(
+    project_id: UUID, body: s.InvitationDraftRequest, request: Request, response: Response
+) -> s.InvitationDraft:
+    """Готовый текст приглашения на языке интерфейса; ничего не сохраняет."""
+    response.headers["Cache-Control"] = "no-store"
+    uc = await _get(request, DraftInvitationMessageUC)
+    message = await uc.execute(
+        views.require_user(),
+        project_id,
+        InvitationDraftInput(role=Role(body.role), persona=body.persona, email=body.email, user_id=body.user_id),
+        current_interface_language(),
+    )
+    return s.InvitationDraft(message=message)
 
 
 @router.post("/projects/{project_id}/invitations/{invitation_id}/resend", response_model=s.ProjectInvitationCreated)

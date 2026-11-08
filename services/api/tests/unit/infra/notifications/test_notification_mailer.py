@@ -134,3 +134,35 @@ async def test__invitation_link__without_account_uses_the_inviter_language() -> 
         set_interface_language(None)
 
     assert sender.sent[0][1] == "Anna invites you to “Thesis”"
+
+
+async def test__notification__invitation_message_goes_into_the_letter_escaped() -> None:
+    sender = _Sender()
+    message = "Здравствуйте, Хади!\n\nПриглашаю вас <b>в проект</b> & жду."
+
+    await SmtpNotificationMailer(sender, SERVER).send_notification(
+        "hadi@example.org", NotificationKind.project_invitation, _payload(excerpt=message), locale="ru"
+    )
+
+    [(_, _, body, html)] = sender.sent
+    assert "> Здравствуйте, Хади!" in body
+    assert "> Приглашаю вас <b>в проект</b> & жду." in body
+    assert html is not None
+    assert "<b>в проект</b>" not in html
+    assert "&lt;b&gt;в проект&lt;/b&gt; &amp; жду." in html
+
+
+async def test__notification__long_invitation_message_is_cut_and_other_kinds_ignore_excerpt() -> None:
+    sender = _Sender()
+
+    await SmtpNotificationMailer(sender, SERVER).send_notification(
+        "a@x.org", NotificationKind.project_invitation, _payload(excerpt="я" * 5000), locale="ru"
+    )
+    await SmtpNotificationMailer(sender, SERVER).send_notification(
+        "a@x.org", NotificationKind.access_request, _payload(excerpt="секретная выдержка"), locale="ru"
+    )
+
+    invitation_body, request_body = sender.sent[0][2], sender.sent[1][2]
+    assert "я" * 999 in invitation_body
+    assert "я" * 1001 not in invitation_body
+    assert "секретная выдержка" not in request_body
