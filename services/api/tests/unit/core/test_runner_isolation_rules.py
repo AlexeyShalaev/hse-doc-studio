@@ -12,6 +12,7 @@ from hse_doc_studio.core.runner_isolation import (
     LiveDeployment,
     ReinstallReason,
     RunnerOrigin,
+    installed_runner,
     is_outdated,
     limits_supported,
     match_deployment,
@@ -94,3 +95,18 @@ def test__origin__chart_ui_other_and_unknown() -> None:
     assert runner_origin(other, None, declared, "rel-ui") is RunnerOrigin.other
     assert runner_origin(_runner(), None, declared, "rel-ui") is None
     assert runner_origin(_runner(), LiveDeployment(name="r1", namespace="s"), None, "") is RunnerOrigin.ui
+
+
+def test__installed_runner__by_pod_first_then_by_name_and_never_revoked() -> None:
+    report = replace(make_report(), pod_name="hse-runner-ab12cd-7d9f8c6b5-x2k4p")
+    renamed = _runner(name="Lab box", id="renamed", deployment=report)
+    same_name = _runner(name="hse-runner-ab12cd", id="by-name")
+    revoked = _runner(name="hse-runner-zz9999", id="gone", revoked_at=datetime.now(UTC))
+
+    # Переименованный в интерфейсе раннер всё равно узнаётся по поду своего Deployment.
+    assert installed_runner("hse-runner-ab12cd", [same_name, renamed]) == renamed
+    assert installed_runner("hse-runner-ab12cd", [same_name]) == same_name
+    # Отозванная запись это установка без раннера.
+    assert installed_runner("hse-runner-zz9999", [revoked]) is None
+    # Префикс имени не путает Deployment с соседним: у пода ровно два суффикса.
+    assert installed_runner("hse-runner", [renamed]) is None

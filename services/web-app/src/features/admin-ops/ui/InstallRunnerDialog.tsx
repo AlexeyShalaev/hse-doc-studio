@@ -4,16 +4,10 @@ import { useTranslation } from "react-i18next";
 import { failureCode } from "@shared/api";
 import { Button, Input, Modal, Spinner } from "@shared/ui";
 import { Notice } from "@shared/ui/ConflictKit";
-import type {
-  InstallCapability,
-  InstallJob,
-  LocalInstance,
-} from "@entities/session";
+import type { InstallCapability, InstallJob } from "@entities/session";
 import {
   useInstallJob,
   useLocalInstallCapabilities,
-  useLocalInstances,
-  useRemoveLocalInstance,
   useStartLocalInstall,
 } from "../api/opsQueries";
 import { failureKey } from "../lib/failure";
@@ -200,74 +194,10 @@ const TargetRow = ({
   );
 };
 
-const InstanceRow = ({
-  instance,
-  onRemove,
-  pending,
-}: {
-  instance: LocalInstance;
-  onRemove: (instance: LocalInstance) => void;
-  pending: boolean;
-}) => {
-  const { t } = useTranslation("adminRunnerInstall");
-  const [sure, setSure] = useState(false);
-  return (
-    <li
-      className="flex items-center"
-      style={{ gap: "0.5rem", flexWrap: "wrap", fontSize: "0.8125rem" }}
-      data-testid={`install-instance-${instance.name}`}
-    >
-      <span style={{ flex: 1, minWidth: "10rem", wordBreak: "break-all" }}>
-        {instance.name}
-        <span className="form-hint">
-          {" "}
-          {t(`target.${instance.target}`)}, {instance.state}
-        </span>
-      </span>
-      {sure ? (
-        <>
-          <Button
-            type="button"
-            size="sm"
-            variant="ghost"
-            onClick={() => {
-              setSure(false);
-            }}
-          >
-            {t("adminOps:cancel")}
-          </Button>
-          <button
-            type="button"
-            className="btn danger"
-            disabled={pending}
-            onClick={() => {
-              onRemove(instance);
-            }}
-            data-testid={`install-instance-${instance.name}-confirm`}
-          >
-            {t("instances.removeConfirm")}
-          </button>
-        </>
-      ) : (
-        <Button
-          type="button"
-          size="sm"
-          variant="ghost"
-          onClick={() => {
-            setSure(true);
-          }}
-          data-testid={`install-instance-${instance.name}-remove`}
-        >
-          {t("instances.remove")}
-        </Button>
-      )}
-    </li>
-  );
-};
-
 /**
- * «Установить раннер»: на этой же машине (docker рядом, Deployment в кластере) с ходом по шагам
- * и список поставленных отсюда; для другой машины ведёт к команде у токена.
+ * «Установить раннер»: на этой же машине (docker рядом, Deployment в кластере) с ходом по шагам;
+ * для другой машины ведёт к команде у токена. Поставленными отсюда управляют на самой странице:
+ * в меню строки раннера и в блоке «Установки без раннера».
  */
 export const InstallRunnerDialog = ({
   isOpen,
@@ -282,9 +212,7 @@ export const InstallRunnerDialog = ({
 }) => {
   const { t } = useTranslation("adminRunnerInstall");
   const capabilities = useLocalInstallCapabilities(isOpen);
-  const instances = useLocalInstances(isOpen);
   const start = useStartLocalInstall();
-  const remove = useRemoveLocalInstance();
   const [name, setName] = useState("");
   const [limits, setLimits] = useState<LimitsForm>(NO_LIMITS);
   const [jobId, setJobId] = useState<string | null>(null);
@@ -436,35 +364,6 @@ export const InstallRunnerDialog = ({
                   {t("command.open")}
                 </Button>
               </Row>
-              {instances.data && instances.data.length > 0 && (
-                <div className="flex flex-col" style={{ gap: "0.375rem" }}>
-                  <span className="form-label">{t("instances.title")}</span>
-                  <ul
-                    className="flex flex-col"
-                    style={{
-                      gap: "0.375rem",
-                      margin: 0,
-                      padding: 0,
-                      listStyle: "none",
-                    }}
-                    data-testid="install-instances"
-                  >
-                    {instances.data.map((instance) => (
-                      <InstanceRow
-                        key={`${instance.target}/${instance.name}`}
-                        instance={instance}
-                        pending={remove.isPending}
-                        onRemove={(item) => {
-                          remove.mutate({
-                            target: item.target,
-                            name: item.name,
-                          });
-                        }}
-                      />
-                    ))}
-                  </ul>
-                </div>
-              )}
             </>
           ) : (
             <div className="flex flex-col" style={{ gap: "0.75rem" }}>

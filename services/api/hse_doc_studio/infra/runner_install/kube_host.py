@@ -1,23 +1,30 @@
 """Раннер Deployment-ом в кластере Студии: Secret с токеном, том данных и Deployment под отдельным ServiceAccount.
 
-Права Студии на это ровно create/get/list/delete для Deployment, Secret и PVC в своём namespace (Role чарта). Роль
-самого раннера (поды сборки) создаёт чарт заранее, Студия её не выдаёт и поэтому не может расширить: права
-`escalate` и работа с Role ей не нужны.
+Права Студии на это (Role чарта, namespace релиза): Deployment create/list/update/delete, Secret и PVC create/delete.
+`update` нужен только обновлению на месте: Deployment заменяется целиком, Secret и том не трогаются. Роль самого
+раннера (поды сборки) создаёт чарт заранее, Студия её не выдаёт и поэтому не может расширить: права `escalate` и работа
+с Role ей не нужны.
 """
 
 from __future__ import annotations
 
+import asyncio
+import json
 import os
 import re
+from collections.abc import Callable, Mapping
+from dataclasses import asdict, dataclass, fields
 from datetime import datetime
 from typing import Any
 from urllib.parse import quote
 
+from hse_doc_studio.core.identity.session_policy import utc_now
 from hse_doc_studio.core.runner_install import (
     Capability,
     InstallError,
     InstallStepState,
     InstallTarget,
+    InvalidResourcesError,
     LocalInstance,
     LocalRunnerSpec,
     PodResources,
@@ -25,14 +32,24 @@ from hse_doc_studio.core.runner_install import (
     ResourceDefaults,
     ResourceOverrides,
     UnavailableReason,
+    UpgradeOutcome,
     resolve,
 )
-from hse_doc_studio.core.runner_install.resources import BUILD_EPHEMERAL, RUNNER_EPHEMERAL
+from hse_doc_studio.core.runner_install.resources import (
+    BUILD_EPHEMERAL,
+    RUNNER_EPHEMERAL,
+    parse_cpu_millicores,
+    parse_memory_bytes,
+)
 from hse_doc_studio.infra.compile.k8s.api import KubeApiError
 from hse_doc_studio.infra.compile.k8s.client import KubernetesApiClient, TokenSource
 from hse_doc_studio.infra.compile.k8s.config import SA_DIR, KubernetesExecutorConfig
 
 INSTALL_LABEL = "hse-doc-studio/runner-install"
+# Лимиты из формы установки (только заданные поля, JSON): обновление на месте берёт их отсюда, а не из умолчаний.
+RESOURCES_ANNOTATION = "hse-doc-studio/runner-resources"
+# Метка времени обновления в шаблоне пода: под пересоздаётся, даже если образ и манифест те же.
+RESTARTED_ANNOTATION = "hse-doc-studio/restarted-at"
 _NAME_RE = re.compile(r"^[a-z0-9]([a-z0-9-]{0,40}[a-z0-9])?$")
 _NOT_FOUND = 404
 _FORBIDDEN = 403
@@ -47,6 +64,10 @@ DEFAULT_RESOURCES = ResourceDefaults(
 _RUNNER_TMP_SIZE = "1Gi"
 _RUNNER_EPHEMERAL = RUNNER_EPHEMERAL
 _BUILD_EPHEMERAL = BUILD_EPHEMERAL
+# Старый под сначала доделывает сборки (до terminationGracePeriodSeconds), новый тянет образ: ждём с запасом.
+ROLLOUT_TIMEOUT_S = 900.0
+ROLLOUT_POLL_S = 2.0
+_UPGRADE_STEPS = ("image", "manifest", "rollout")
 
 
 _POD_FIELDS = (
@@ -92,8 +113,14 @@ class KubeLocalHost:
         client: KubernetesApiClient | None = None,
         namespace: str | None = None,
         resources: ResourceDefaults = DEFAULT_RESOURCES,
+        rollout_timeout_s: float = ROLLOUT_TIMEOUT_S,
+        rollout_poll_s: float = ROLLOUT_POLL_S,
+        clock: Callable[[], datetime] = utc_now,
     ) -> None:
         self._resources = resources
+        self._rollout_timeout_s = rollout_timeout_s
+        self._rollout_poll_s = rollout_poll_s
+        self._clock = clock
         self._enabled = enabled
         self._service_account = service_account
         self._storage_class = storage_class
@@ -116,27 +143,9 @@ class KubeLocalHost:
         if self._injected is None and not (os.environ.get("KUBERNETES_SERVICE_HOST") and (SA_DIR / "token").exists()):
             return Capability.no(UnavailableReason.not_in_cluster)
         client = self._client()
-        ns = self._ns()
         try:
             for group, resource in (("apps", "deployments"), ("", "secrets"), ("", "persistentvolumeclaims")):
-                review = await client.request_json(
-                    "POST",
-                    "/apis/authorization.k8s.io/v1/selfsubjectaccessreviews",
-                    body={
-                        "apiVersion": "authorization.k8s.io/v1",
-                        "kind": "SelfSubjectAccessReview",
-                        "spec": {
-                            "resourceAttributes": {
-                                "namespace": ns,
-                                "verb": "create",
-                                "group": group,
-                                "resource": resource,
-                            }
-                        },
-                    },
-                )
-                status = review.get("status")
-                if not (isinstance(status, dict) and status.get("allowed") is True):
+                if not await self._allowed(client, "create", group, resource):
                     return Capability.no(UnavailableReason.no_permission)
         except KubeApiError:
             return Capability.no(UnavailableReason.no_permission)
@@ -144,6 +153,21 @@ class KubeLocalHost:
             if self._injected is None:
                 await client.aclose()
         return Capability.yes()
+
+    async def _allowed(self, client: KubernetesApiClient, verb: str, group: str, resource: str) -> bool:
+        review = await client.request_json(
+            "POST",
+            "/apis/authorization.k8s.io/v1/selfsubjectaccessreviews",
+            body={
+                "apiVersion": "authorization.k8s.io/v1",
+                "kind": "SelfSubjectAccessReview",
+                "spec": {
+                    "resourceAttributes": {"namespace": self._ns(), "verb": verb, "group": group, "resource": resource}
+                },
+            },
+        )
+        status = review.get("status")
+        return isinstance(status, dict) and status.get("allowed") is True
 
     def check_resources(self, overrides: ResourceOverrides | None) -> None:
         resolve(self._resources, overrides)
@@ -177,6 +201,12 @@ class KubeLocalHost:
         }
         if self._storage_class:
             claim["spec"]["storageClassName"] = self._storage_class
+        return {"secret": secret, "volume": claim, "deployment": self.deployment_manifest(spec)}
+
+    def deployment_manifest(self, spec: LocalRunnerSpec, *, restarted_at: str | None = None) -> dict[str, Any]:
+        """Deployment раннера по текущим правилам; токен в нём только ссылкой на Secret `<имя>-token`."""
+        name = spec.name
+        labels = self._labels(name)
         ns = self._ns()
         runner_res, build_res = resolve(self._resources, spec.resources)
         env = [
@@ -199,10 +229,14 @@ class KubeLocalHost:
             # Свой под из downward API: раннер сообщает это в админку (как развёрнут), на работу не влияет.
             *pod_info_env("runner"),
         ]
-        deployment = {
+        deployment: dict[str, Any] = {
             "apiVersion": "apps/v1",
             "kind": "Deployment",
-            "metadata": {"name": name, "labels": labels},
+            "metadata": {
+                "name": name,
+                "labels": labels,
+                "annotations": {RESOURCES_ANNOTATION: _overrides_json(spec.resources)},
+            },
             "spec": {
                 "replicas": 1,
                 "strategy": {"type": "Recreate"},
@@ -252,7 +286,9 @@ class KubeLocalHost:
                 },
             },
         }
-        return {"secret": secret, "volume": claim, "deployment": deployment}
+        if restarted_at is not None:
+            deployment["spec"]["template"]["metadata"]["annotations"] = {RESTARTED_ANNOTATION: restarted_at}
+        return deployment
 
     async def install(self, spec: LocalRunnerSpec, report: ProgressReporter) -> None:
         if not _NAME_RE.fullmatch(spec.name):
@@ -298,6 +334,87 @@ class KubeLocalHost:
         code = "kube_forbidden" if exc.status == _FORBIDDEN else "kube_failed"
         text = str(exc).replace(token, "***") if token else str(exc)
         return InstallError(code, text[-400:])
+
+    # ---- обновление на месте ----
+
+    def upgrade_steps(self) -> tuple[str, ...]:
+        return _UPGRADE_STEPS
+
+    async def upgrade(self, name: str, image: str, report: ProgressReporter) -> UpgradeOutcome:
+        """Новый образ и манифест по текущим правилам; Secret с токеном и том данных не трогаются.
+
+        Deployment заменяется целиком (PUT с resourceVersion живого): так уходят и устаревшие поля, и чужие правки.
+        Стратегия Recreate: старый под доделывает сборки и уходит раньше, чем новый смонтирует RWO-том.
+        """
+        if not _NAME_RE.fullmatch(name):
+            raise InstallError("not_installed")
+        client = self._client()
+        path = f"/apis/apps/v1/namespaces/{quote(self._ns())}/deployments"
+        try:
+            await report("image", InstallStepState.running, image)
+            live = await self._live_deployment(client, name)
+            if live is None:
+                raise InstallError("not_installed")
+            if not await self._allowed(client, "update", "apps", "deployments"):
+                raise InstallError("kube_forbidden", "deployments: update")
+            current = read_installed(live, self._resources)
+            await report("image", InstallStepState.done, f"{current.image} {image}".strip())
+
+            await report("manifest", InstallStepState.running, "")
+            spec = LocalRunnerSpec(
+                name=name,
+                image=image,
+                api_url=current.api_url,
+                data_dir=current.data_dir,
+                concurrency=current.concurrency,
+                token="",
+                resources=current.resources,
+            )
+            body = self.deployment_manifest(spec, restarted_at=self._clock().isoformat())
+            body["metadata"]["resourceVersion"] = current.resource_version
+            applied = await client.request_json("PUT", f"{path}/{quote(name)}", body=body)
+            generation = _int(_obj(applied.get("metadata")).get("generation"))
+            await report("manifest", InstallStepState.done, ", ".join(current.dropped))
+
+            await report("rollout", InstallStepState.running, "")
+            await self._wait_rollout(client, name, generation)
+            await report("rollout", InstallStepState.done, "")
+        except KubeApiError as exc:
+            raise self._failure(exc, "") from exc
+        finally:
+            if self._injected is None:
+                await client.aclose()
+        return UpgradeOutcome(old_image=current.image, new_image=image)
+
+    async def _live_deployment(self, client: KubernetesApiClient, name: str) -> dict[str, Any] | None:
+        """Deployment установки по имени. Через list, а не get: у Студии на Deployment нет `get` (Role чарта)."""
+        data = await client.request_json(
+            "GET",
+            f"/apis/apps/v1/namespaces/{quote(self._ns())}/deployments",
+            params={"labelSelector": f"{INSTALL_LABEL}=true", "fieldSelector": f"metadata.name={name}"},
+        )
+        items = data.get("items")
+        for item in items if isinstance(items, list) else []:
+            if isinstance(item, dict) and _obj(item.get("metadata")).get("name") == name:
+                return item
+        return None
+
+    async def _wait_rollout(self, client: KubernetesApiClient, name: str, generation: int) -> None:
+        """Как `kubectl rollout status`: контроллер увидел новое поколение, новый под готов, старых не осталось."""
+        waited = 0.0
+        while True:
+            live = await self._live_deployment(client, name)
+            if live is None:
+                raise InstallError("not_installed")
+            state = rollout_state(live, generation)
+            if state == "done":
+                return
+            if state == "failed":
+                raise InstallError("rollout_failed", "ProgressDeadlineExceeded")
+            if waited >= self._rollout_timeout_s:
+                raise InstallError("rollout_timeout")
+            await asyncio.sleep(self._rollout_poll_s)
+            waited += self._rollout_poll_s
 
     async def list_instances(self) -> list[LocalInstance]:
         client = self._client()
@@ -352,3 +469,139 @@ class KubeLocalHost:
             if self._injected is None:
                 await client.aclose()
         return True
+
+
+def _obj(value: object) -> dict[str, Any]:
+    return value if isinstance(value, dict) else {}
+
+
+def _int(value: object) -> int:
+    return value if isinstance(value, int) else 0
+
+
+def _overrides_json(overrides: ResourceOverrides | None) -> str:
+    chosen = {k: v for k, v in asdict(overrides).items() if v} if overrides is not None else {}
+    return json.dumps(chosen, sort_keys=True, separators=(",", ":"))
+
+
+_OVERRIDE_FIELDS = tuple(f.name for f in fields(ResourceOverrides))
+
+
+@dataclass(frozen=True, slots=True)
+class InstalledDeployment:
+    """Что обновление берёт из живого Deployment: всё, кроме образа и правил манифеста, остаётся как было."""
+
+    image: str
+    api_url: str
+    data_dir: str
+    concurrency: int
+    resources: ResourceOverrides | None
+    resource_version: str
+    # Поля лимитов, которые вышли за нынешние границы Helm и поэтому заменены умолчанием.
+    dropped: tuple[str, ...] = ()
+
+
+def _same(value: str, default: str, parse: Callable[[str], int]) -> bool:
+    try:
+        return parse(value) == parse(default)
+    except ValueError:
+        return False
+
+
+def _overrides_from_annotation(meta: Mapping[str, Any]) -> ResourceOverrides | None:
+    raw = _obj(meta.get("annotations")).get(RESOURCES_ANNOTATION)
+    if not isinstance(raw, str):
+        return None
+    try:
+        data = json.loads(raw)
+    except ValueError:
+        return None
+    if not isinstance(data, dict):
+        return None
+    return ResourceOverrides(**{k: str(v) for k, v in data.items() if k in _OVERRIDE_FIELDS and v})
+
+
+def _overrides_from_live(
+    container: Mapping[str, Any], env: Mapping[str, str], defaults: ResourceDefaults
+) -> ResourceOverrides:
+    """Старые установки без аннотации: переопределением считается лимит, который отличается от нынешнего умолчания."""
+    limits = {k: str(v) for k, v in _obj(_obj(container.get("resources")).get("limits")).items()}
+
+    def pick(value: str | None, default: str, parse: Callable[[str], int]) -> str | None:
+        return value if value and not _same(value, default, parse) else None
+
+    return ResourceOverrides(
+        runner_cpu=pick(limits.get("cpu"), defaults.runner.cpu_limit, parse_cpu_millicores),
+        runner_memory=pick(limits.get("memory"), defaults.runner.memory_limit, parse_memory_bytes),
+        build_cpu=pick(env.get("HSE_RUNNER__K8S__CPU_LIMIT"), defaults.build.cpu_limit, parse_cpu_millicores),
+        build_memory=pick(env.get("HSE_RUNNER__K8S__MEMORY_LIMIT"), defaults.build.memory_limit, parse_memory_bytes),
+    )
+
+
+def _fit(overrides: ResourceOverrides, defaults: ResourceDefaults) -> tuple[ResourceOverrides, tuple[str, ...]]:
+    """Переопределения в нынешних границах: поле, которое в них не влезает, уступает умолчанию."""
+    values = asdict(overrides)
+    dropped: list[str] = []
+    for _ in _OVERRIDE_FIELDS:
+        try:
+            resolve(defaults, ResourceOverrides(**values))
+        except InvalidResourcesError as exc:
+            values[exc.field] = None
+            dropped.append(exc.field)
+            continue
+        break
+    return ResourceOverrides(**values), tuple(dropped)
+
+
+def read_installed(item: Mapping[str, Any], defaults: ResourceDefaults) -> InstalledDeployment:
+    """Настройки установки из живого Deployment. Нужные раннеру адрес и каталог данных обязательны: без них личность
+    раннера на томе не узнать (`identity.json` привязан к адресу Студии)."""
+    meta = _obj(item.get("metadata"))
+    pod = _obj(_obj(_obj(item.get("spec")).get("template")).get("spec"))
+    containers = pod.get("containers")
+    container = _obj(containers[0]) if isinstance(containers, list) and containers else {}
+    env = {
+        str(e.get("name")): str(e["value"])
+        for e in container.get("env") or []
+        if isinstance(e, dict) and isinstance(e.get("value"), str)
+    }
+    api_url = env.get("HSE_RUNNER__API_URL", "")
+    data_dir = env.get("HSE_RUNNER__DATA_DIR", "")
+    if not api_url or not data_dir:
+        raise InstallError("not_installed", "HSE_RUNNER__API_URL / HSE_RUNNER__DATA_DIR")
+    try:
+        concurrency = max(1, int(env.get("HSE_RUNNER__CONCURRENCY", "1")))
+    except ValueError:
+        concurrency = 1
+    overrides = _overrides_from_annotation(meta) or _overrides_from_live(container, env, defaults)
+    fitted, dropped = _fit(overrides, defaults)
+    image = container.get("image")
+    return InstalledDeployment(
+        image=image if isinstance(image, str) else "",
+        api_url=api_url,
+        data_dir=data_dir,
+        concurrency=concurrency,
+        resources=None if fitted.is_empty() else fitted,
+        resource_version=str(meta.get("resourceVersion") or ""),
+        dropped=dropped,
+    )
+
+
+def rollout_state(item: Mapping[str, Any], generation: int) -> str:
+    """`done`, `failed` (истёк progressDeadlineSeconds) или `pending`."""
+    meta, spec, status = _obj(item.get("metadata")), _obj(item.get("spec")), _obj(item.get("status"))
+    wanted = generation or _int(meta.get("generation"))
+    # До нового поколения условия ещё от прошлой выкатки: по ним об этой судить нельзя.
+    if _int(status.get("observedGeneration")) < wanted:
+        return "pending"
+    for condition in status.get("conditions") or []:
+        if isinstance(condition, dict) and condition.get("reason") == "ProgressDeadlineExceeded":
+            return "failed"
+    replicas = spec.get("replicas")
+    replicas = replicas if isinstance(replicas, int) else 1
+    updated = _int(status.get("updatedReplicas"))
+    total = _int(status.get("replicas"))
+    available = _int(status.get("availableReplicas"))
+    if updated >= replicas and total <= updated and available >= replicas:
+        return "done"
+    return "pending"

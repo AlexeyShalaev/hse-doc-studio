@@ -69,7 +69,7 @@
     "name": "Словарь админки: runnerInstall (установка раннеров)",
     "path": "dist/assets/locale-admin-runnerInstall-*.js",
     "gzip": true,
-    "limit": "9 kB"
+    "limit": "12 kB"
   },
   {
     "name": "Словарь админки: runnerIsolation (как развёрнуты раннеры, изоляция в кластере)",

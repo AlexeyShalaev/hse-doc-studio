@@ -8,12 +8,14 @@ import type {
   AdminRunnerRotated,
   AdminRunnerToken,
   AdminRunnerTokenCreated,
+  LocalInstance,
 } from "@entities/session";
 import { opsApi } from "../api/opsApi";
 import {
   opsKeys,
   POLL_MS,
   useCreateToken,
+  useLocalInstances,
   useQueueSummary,
   useRevokeRunner,
   useRevokeToken,
@@ -33,6 +35,11 @@ import {
   CreateTokenDialog,
   RotatedDialog,
 } from "./RunnerDialogs";
+import {
+  InstallsWithoutRunner,
+  RemoveInstallDialog,
+  RunnerUpgradeDialog,
+} from "./LocalInstalls";
 import { FailureNotice } from "./parts";
 import { PersonalRunners } from "./PersonalRunners";
 import { RunnerDeploymentDialog } from "./RunnerDeploymentDialog";
@@ -84,6 +91,26 @@ export const Runners = ({
   const slots = useMemo(
     () => (running.data ? busySlots(running.data) : null),
     [running.data],
+  );
+  // Поставленное из админки: строки раннеров получают по нему действия, а
+  // установки без раннера в Студии видны отдельным блоком под таблицей.
+  const instances = useLocalInstances();
+  const installs = useMemo(
+    () =>
+      new Map(
+        (instances.data ?? []).flatMap((item) =>
+          item.runner_id ? [[item.runner_id, item] as const] : [],
+        ),
+      ),
+    [instances.data],
+  );
+  const orphans = useMemo(
+    () => (instances.data ?? []).filter((item) => item.runner_id === null),
+    [instances.data],
+  );
+  const [upgrading, setUpgrading] = useState<LocalInstance | null>(null);
+  const [removingInstall, setRemovingInstall] = useState<LocalInstance | null>(
+    null,
   );
 
   const pause = useSetPaused();
@@ -160,18 +187,46 @@ export const Runners = ({
         }}
         onOpenQueue={onOpenQueue}
         onDetails={setInspecting}
+        installs={installs}
+        onUpgrade={setUpgrading}
+        onRemoveInstall={setRemovingInstall}
         onRevokeToken={(token) => {
           setFailure(null);
           setRevokingToken(token);
         }}
       />
+      {orphans.length > 0 && (
+        <div style={{ marginTop: "1.25rem" }}>
+          <InstallsWithoutRunner
+            instances={orphans}
+            onRemove={setRemovingInstall}
+          />
+        </div>
+      )}
       <div style={{ marginTop: "1.25rem" }}>
         <PersonalRunners />
       </div>
       <RunnerDeploymentDialog
         runner={inspecting}
+        install={inspecting ? (installs.get(inspecting.id) ?? null) : null}
+        onUpgrade={(install) => {
+          setInspecting(null);
+          setUpgrading(install);
+        }}
         onClose={() => {
           setInspecting(null);
+        }}
+      />
+      <RunnerUpgradeDialog
+        instance={upgrading}
+        onClose={() => {
+          setUpgrading(null);
+        }}
+      />
+      <RemoveInstallDialog
+        instance={removingInstall}
+        onClose={() => {
+          setRemovingInstall(null);
         }}
       />
       <ConfirmDialog

@@ -464,6 +464,7 @@ class ServerAdminOpsProvider(Provider):
             uow,
             image=f"{settings.image_base}:{settings.get_app_version()}",
             data_dir=cfg.data_dir,
+            version=settings.get_app_version(),
             internal_urls={InstallTarget.kubernetes: cfg.kubernetes_studio_url} if cfg.kubernetes_studio_url else None,
         )
 

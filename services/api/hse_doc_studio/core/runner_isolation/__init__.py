@@ -17,6 +17,7 @@ from hse_doc_studio.core.runner_isolation.entities import (
 )
 from hse_doc_studio.core.runner_isolation.protocols import IClusterStateReader
 from hse_doc_studio.core.runner_isolation.rules import (
+    installed_runner,
     is_outdated,
     limits_supported,
     match_deployment,
@@ -39,6 +40,7 @@ __all__ = [
     "NamespaceSecurity",
     "ReinstallReason",
     "RunnerOrigin",
+    "installed_runner",
     "is_outdated",
     "limits_supported",
     "match_deployment",

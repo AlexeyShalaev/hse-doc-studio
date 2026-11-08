@@ -60,11 +60,18 @@ class InstallJobInfo(StrictModel):
 
 
 class LocalInstanceInfo(StrictModel):
+    """Установка из админки. `runner_id` пуст, если раннера с ней в Студии нет (отозван или ещё не подключился)."""
+
     target: LocalTargetName
     name: str
     image: str
     state: str
     created_at: datetime | None = None
+    runner_id: str | None = None
+    runner_version: str | None = None
+    # Версия Студии: до неё ведёт «Обновить»; `outdated` значит, что раннер её старше.
+    studio_version: str
+    outdated: bool = False
 
 
 # ---- SSH ----

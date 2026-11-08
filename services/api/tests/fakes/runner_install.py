@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+import asyncio
+from collections.abc import Awaitable, Callable
+
 from hse_doc_studio.core.runner_install import (
     Capability,
     InstallError,
@@ -10,6 +13,7 @@ from hse_doc_studio.core.runner_install import (
     LocalRunnerSpec,
     ProgressReporter,
     ResourceOverrides,
+    UpgradeOutcome,
 )
 
 
@@ -31,6 +35,11 @@ class FakeLocalHost:
         self.reject_field = ""
         self.removed: list[str] = []
         self.instances: list[LocalInstance] = []
+        self.upgraded: list[tuple[str, str]] = []
+        self.upgrade_fail_with: InstallError | None = None
+        # Держит обновление «в работе», пока тест не отпустит; и что сделать, когда новый процесс поднялся.
+        self.upgrade_gate: asyncio.Event | None = None
+        self.on_upgraded: Callable[[], Awaitable[None]] | None = None
 
     async def capability(self) -> Capability:
         return self._capability
@@ -50,6 +59,23 @@ class FakeLocalHost:
             raise self.fail_with
         await report("pull", InstallStepState.done, "")
         await report("start", InstallStepState.done, "")
+
+    def upgrade_steps(self) -> tuple[str, ...]:
+        return ("pull", "recreate")
+
+    async def upgrade(self, name: str, image: str, report: ProgressReporter) -> UpgradeOutcome:
+        old = next((i.image for i in self.instances if i.name == name), "")
+        await report("pull", InstallStepState.running, image)
+        if self.upgrade_gate is not None:
+            await self.upgrade_gate.wait()
+        if self.upgrade_fail_with is not None:
+            raise self.upgrade_fail_with
+        await report("pull", InstallStepState.done, "")
+        await report("recreate", InstallStepState.done, "")
+        self.upgraded.append((name, image))
+        if self.on_upgraded is not None:
+            await self.on_upgraded()
+        return UpgradeOutcome(old_image=old, new_image=image)
 
     async def list_instances(self) -> list[LocalInstance]:
         return list(self.instances)

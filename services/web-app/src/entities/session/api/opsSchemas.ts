@@ -284,12 +284,20 @@ export const InstallJobSchema = z.strictObject({
   error_detail: z.string(),
   created_at: iso,
 });
+/**
+ * Установка из админки. `runner_id` пуст, если раннера с ней в Студии нет
+ * (отозван или ещё не подключился); `outdated` значит, что он старше Студии.
+ */
 export const LocalInstanceSchema = z.strictObject({
   target: z.enum(["docker", "kubernetes"]),
   name: z.string(),
   image: z.string(),
   state: z.string(),
   created_at: iso.nullable(),
+  runner_id: z.string().nullable(),
+  runner_version: z.string().nullable(),
+  studio_version: z.string(),
+  outdated: z.boolean(),
 });
 const QUANTITY = /^[0-9]+(\.[0-9]+)?(m|Ki|Mi|Gi|Ti|k|K|M|G|T)?$/;
 const quantity = z.string().max(12).regex(QUANTITY);

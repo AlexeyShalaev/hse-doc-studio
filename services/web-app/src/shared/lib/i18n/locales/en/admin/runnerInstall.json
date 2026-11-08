@@ -39,9 +39,19 @@
     "open": "Create a token and command"
   },
   "instances": {
-    "title": "Installed from the admin area",
+    "title": "Installs without a runner",
+    "lead": "These Deployments or containers were installed from the admin area, but their runner is not in the table above: it was revoked, has not connected yet or cannot connect. If the runner was revoked, remove the install and install a new one.",
+    "facts": "{{target}}, {{state}}, {{image}}",
     "remove": "Remove",
-    "removeConfirm": "Remove runner"
+    "removeAction": "Remove install",
+    "removeConfirm": "Remove install",
+    "removeTitle": "Remove install {{name}}",
+    "removeBody": {
+      "kubernetes": "The Studio deletes the runner Deployment, the Secret with its registration token and the data volume. The runner stops working, and its record stays in the table: revoke it if you no longer need the runner.",
+      "docker": "The Studio deletes the runner container. The data directory on the host stays. The runner stops working, and its record stays in the table: revoke it if you no longer need the runner.",
+      "kubernetesOrphan": "The Studio deletes the Deployment, the Secret with the registration token and the data volume. There is no runner with this install in the Studio, so nothing else changes.",
+      "dockerOrphan": "The Studio deletes the container. The data directory on the host stays. There is no runner with this install in the Studio, so nothing else changes."
+    }
   },
   "target": {
     "docker": "Docker",
@@ -66,7 +76,12 @@
     "gpu": "GPU",
     "container": "Server container",
     "model": "Model",
-    "provider": "AI provider in the Studio"
+    "provider": "AI provider in the Studio",
+    "image": "Image and current settings",
+    "manifest": "Manifest by the current rules",
+    "rollout": "Pod restart",
+    "recreate": "Recreating the container",
+    "reconnect": "Runner online again"
   },
   "stepState": {
     "pending": "waiting",
@@ -88,7 +103,12 @@
     "model_pull_failed": "Could not download the model.",
     "model_server_public_needs_key": "Ollama has no API key, so it cannot be exposed.",
     "model_server_public_unconfirmed": "Confirm that the server will be reachable from the network.",
-    "model_server_invalid_input": "Check the model name."
+    "model_server_invalid_input": "Check the model name.",
+    "not_installed": "Install not found: the runner Deployment or container is already gone or was not created from the admin area.",
+    "rollout_failed": "The cluster could not roll out the new pod (ProgressDeadlineExceeded). Check the Deployment and pod events.",
+    "rollout_timeout": "The new runner pod did not become ready within 15 minutes. Check the pod events and the cluster access to the image.",
+    "reconnect_timeout": "The runner restarted but did not come online with the Studio version within three minutes. Check its log; the details show the version it connected with, if it did.",
+    "runner_revoked": "The runner record was revoked during the update."
   },
   "ssh": {
     "rowTitle": "Over SSH on another machine",
@@ -213,5 +233,24 @@
       "runner_cpu": "1"
     },
     "invalid": "The limits are not valid or outside the allowed bounds. Check the format (for example 500m, 2, 512Mi, 4Gi) and the bounds in the hint."
+  },
+  "upgrade": {
+    "action": "Update",
+    "actionTo": "Update to v{{version}}",
+    "title": "Update runner {{name}}",
+    "versions": "The runner is on v{{from}} now and will be on v{{to}}, the Studio version, after the update.",
+    "versionsUnknown": "After the update the runner will be on v{{to}}, the Studio version.",
+    "same": "The runner is already on v{{to}}, the Studio version. The update applies its settings again by the current rules and restarts it.",
+    "keeps": "Kept: the runner name, its token and record in the Studio, the data volume and the limits it was installed with. No new token is issued, the runner does not need to be revoked or connected again.",
+    "how": {
+      "kubernetes": "The Deployment is applied again by the current Studio rules: the image of its version, limits, securityContext, ServiceAccount. The old pod is gone before the new one mounts the data volume.",
+      "docker": "The new image is pulled first, then the container is recreated with the same name, environment and data directory."
+    },
+    "restart": "The runner restarts for a short while. It finishes builds already running for up to 30 seconds; those that do not finish stop with “The runner was stopped during the build” and have to be built again. Queued jobs wait: another online runner picks them up, or this one after the restart.",
+    "confirm": "Update",
+    "busy": "An install or update this way is already running. Wait for it to finish.",
+    "progress": "Updating runner {{name}}",
+    "succeeded": "The runner is updated and online again, version v{{version}}.",
+    "succeededNoRunner": "The runner was restarted with the new image. There is no record of it in the Studio, so the connection was not checked."
   }
 }

@@ -51,8 +51,9 @@ subjects:
     name: {{ $runnerSa }}
     namespace: {{ .Release.Namespace }}
 ---
-# Права самой Студии: создать, перечислить (по метке) и убрать Deployment, Secret с токеном и том данных раннера. Secret без get и list,
-# Role и RoleBinding без доступа, ClusterRole нет.
+# Права самой Студии: создать, перечислить (по метке) и убрать Deployment, Secret с токеном и том данных раннера. `update` на
+# Deployment нужен обновлению раннера на месте (новый образ, тот же Secret и том). Secret без get, list и update, Role и
+# RoleBinding без доступа, ClusterRole нет.
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
@@ -64,7 +65,7 @@ metadata:
 rules:
   - apiGroups: [apps]
     resources: [deployments]
-    verbs: [create, list, delete]
+    verbs: [create, list, update, delete]
   - apiGroups: [""]
     resources: [secrets]
     verbs: [create, delete]

@@ -44,6 +44,27 @@ with a one-time registration token and then works with its own token.
 
 <Steps />
 
+## Update a runner installed from the admin area
+
+A runner installed with **Install a runner** on this same machine (Docker next to the Studio or a
+Deployment in the cluster) is updated in place, without removing and installing it again.
+
+- When the runner is older than the Studio, the **Version** column has an **Update to vX** button. The
+  same button is in the **Deployment details** window next to the "Older than the Studio" mark. A
+  runner on the Studio version can be updated from the row actions menu: **Update** applies the
+  settings again and restarts it.
+- The confirmation shows what is kept: the runner name, its token and record, the data volume and
+  the limits it was installed with. No new token is issued.
+- The runner restarts for a short while. It finishes running builds for up to 30 seconds, the rest
+  stop and have to be built again. Queued jobs wait for another runner or for this one.
+- Progress is shown step by step; the last step waits until the runner is online again with the new
+  version.
+
+The same menu has **Remove install**: the Studio deletes the Deployment or the container, and the
+runner record stays in the table, you revoke it separately. Installs whose runner is not in the table
+(for example, the runner was revoked but the Deployment stayed) are listed in the **Installs without a
+runner** block below the table.
+
 ## If something goes wrong
 
 - **“No runner is online”**: builds and checks wait in the queue. Check that the runner machines

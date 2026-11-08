@@ -9,6 +9,7 @@ from hse_doc_studio.core.runner_install.entities import (
     LocalInstance,
     LocalRunnerSpec,
     UnavailableReason,
+    UpgradeOutcome,
 )
 from hse_doc_studio.core.runner_install.protocols import ILocalRunnerHost, ProgressReporter
 from hse_doc_studio.core.runner_install.resources import (
@@ -58,5 +59,6 @@ __all__ = [
     "SshResult",
     "SshTarget",
     "UnavailableReason",
+    "UpgradeOutcome",
     "resolve",
 ]

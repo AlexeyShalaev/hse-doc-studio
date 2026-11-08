@@ -61,11 +61,23 @@ class LocalRunnerSpec:
 
 @dataclass(frozen=True, slots=True)
 class LocalInstance:
+    """Раннер, поставленный из админки, как его видит хост; `runner_*` это его запись в Студии, если она нашлась."""
+
     target: InstallTarget
     name: str
     image: str
     state: str
     created_at: datetime | None = None
+    runner_id: str | None = None
+    runner_version: str | None = None
+
+
+@dataclass(frozen=True, slots=True)
+class UpgradeOutcome:
+    """Итог обновления на месте: какой образ стоял и какой поставлен."""
+
+    old_image: str
+    new_image: str
 
 
 class InstallStepState(StrEnum):
