@@ -1078,6 +1078,43 @@ async def test__runners_isolation__config_is_not_presented_as_checked(stack: _St
     assert stack.cluster.asked == []
 
 
+async def test__runners_isolation__shows_where_runners_convert_office_files(stack: _Stack) -> None:
+    from dataclasses import replace  # noqa: PLC0415
+
+    boss = await stack.users.add("boss", admin=True)
+    url = "http://rel-office-convert:3000"
+    runner = {**make_declared().runner.model_dump(by_alias=True), "officeUrl": "http://user:pw@gotenberg.corp:3000/"}
+    egress = {**make_declared().runner_egress.model_dump(by_alias=True), "officePort": 3000}
+    office = {
+        "enabled": True,
+        "url": url,
+        "image": "gotenberg/gotenberg:8.39.0-libreoffice",
+        "replicas": 1,
+        "resources": {"requests": {"cpu": "250m", "memory": "512Mi"}, "limits": {"cpu": "2", "memory": "2Gi"}},
+        "networkPolicy": True,
+    }
+    declared = make_declared(runner=runner, runnerEgress=egress, officeConvert=office)
+    install = replace(make_install_facts(enabled=True, service_account="rel-ui"), office_url=url)
+    stack.isolation = replace(stack.isolation, declared=declared, install=install)
+
+    body = (await stack.client.get("/api/admin/runners/isolation", headers=boss)).json()
+
+    # Логин и пароль из адреса на экран не попадают.
+    assert body["chart_runner"]["office_url"] == "http://gotenberg.corp:3000/"
+    assert body["install_from_ui"]["office_url"] == url
+    assert body["network"]["runner_egress"]["office_port"] == 3000
+    assert body["office_convert"]["url"] == url
+    assert body["office_convert"]["resources"]["memory_limit"] == "2Gi"
+    assert body["office_convert"]["network_policy"] is True
+
+    stack.isolation = replace(stack.isolation, declared=make_declared(), install=make_install_facts())
+    plain = (await stack.client.get("/api/admin/runners/isolation", headers=boss)).json()
+    assert plain["office_convert"] is None
+    assert plain["chart_runner"]["office_url"] is None
+    assert plain["install_from_ui"]["office_url"] is None
+    assert plain["network"]["runner_egress"]["office_port"] is None
+
+
 async def test__runners_isolation__live_state_is_read_when_allowed(stack: _Stack) -> None:
     from dataclasses import replace  # noqa: PLC0415
 

@@ -115,6 +115,7 @@ class KubeLocalHost:
         namespace: str | None = None,
         build_namespace: str | None = None,
         resources: ResourceDefaults = DEFAULT_RESOURCES,
+        office_url: str = "",
         rollout_timeout_s: float = ROLLOUT_TIMEOUT_S,
         rollout_poll_s: float = ROLLOUT_POLL_S,
         clock: Callable[[], datetime] = utc_now,
@@ -131,6 +132,7 @@ class KubeLocalHost:
         self._cfg = KubernetesExecutorConfig()
         self._namespace = namespace
         self._build_namespace = build_namespace
+        self._office_url = office_url
 
     def _ns(self) -> str:
         return self._namespace or self._cfg.resolved_namespace()
@@ -233,6 +235,10 @@ class KubeLocalHost:
             # Свой под из downward API: раннер сообщает это в админку (как развёрнут), на работу не влияет.
             *pod_info_env("runner"),
         ]
+        if self._office_url:
+            # Gotenberg Студии (чарт: встроенный или runner.officeUrl): раннер берёт офисные задачи. Обновление
+            # строит манифест заново, поэтому раннер получает нынешний адрес и при «Обновить».
+            env.append({"name": "HSE_RUNNER__OFFICE_URL", "value": self._office_url})
         deployment: dict[str, Any] = {
             "apiVersion": "apps/v1",
             "kind": "Deployment",

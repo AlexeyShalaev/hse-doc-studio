@@ -29,6 +29,8 @@ _INSTALL_UI_BUILD_NS_VALUES = _CHART / "ci" / "values-install-ui-build-ns.yaml"
 _INSTALL_UI_BUILD_NS_GOLDEN = _CHART / "ci" / "rendered-install-ui-build-ns.golden.yaml"
 _PUBLIC_S3_VALUES = _CHART / "ci" / "values-public-s3.yaml"
 _PUBLIC_S3_GOLDEN = _CHART / "ci" / "rendered-public-s3.golden.yaml"
+_OFFICE_VALUES = _CHART / "ci" / "values-office.yaml"
+_OFFICE_GOLDEN = _CHART / "ci" / "rendered-office.golden.yaml"
 
 pytestmark = pytest.mark.skipif(shutil.which("helm") is None, reason="helm не установлен")
 
@@ -77,8 +79,9 @@ def test_lint() -> None:
         ((_VALUES, _INSTALL_UI_VALUES), _INSTALL_UI_GOLDEN),
         ((_VALUES, _ISOLATION_VALUES), _ISOLATION_GOLDEN),
         ((_VALUES, _INSTALL_UI_BUILD_NS_VALUES), _INSTALL_UI_BUILD_NS_GOLDEN),
+        ((_VALUES, _OFFICE_VALUES), _OFFICE_GOLDEN),
     ],
-    ids=["docker", "kubernetes", "updater", "public-s3", "install-ui", "isolation", "install-ui-build-ns"],
+    ids=["docker", "kubernetes", "updater", "public-s3", "install-ui", "isolation", "install-ui-build-ns", "office"],
 )
 def test_template_matches_golden(values: tuple[Path, ...], golden_path: Path) -> None:
     args = [arg for path in values for arg in ("-f", str(path))]
@@ -928,3 +931,136 @@ def test_ui_build_namespace_must_be_a_namespace_name() -> None:
         "--set", "runner.installFromUi.buildNamespace=Bad_Name",
     )  # fmt: skip
     assert bad.returncode != 0
+
+
+# ── встроенный Gotenberg (services.officeConvert) ───────────────────────
+
+_OFFICE = "rel-hse-doc-studio-office-convert"
+_OFFICE_URL = f"http://{_OFFICE}:3000"
+
+
+def _office(*extra: str) -> list[dict[str, Any]]:
+    return _render("-f", str(_OFFICE_VALUES), "--namespace", "studio", *extra)
+
+
+def test_office_convert_is_off_by_default_and_runners_get_no_office_url() -> None:
+    docs = _render("--namespace", "studio")
+    assert not [d for d in docs if d["metadata"]["name"].startswith(_OFFICE)]
+    runner = _named(docs, "Deployment", "rel-hse-doc-studio-runner")
+    assert "HSE_RUNNER__OFFICE_URL" not in _env(runner)
+    assert "HSE_STUDIO__RUNNER_INSTALL__OFFICE_URL" not in _env(_api_deployment(docs))
+
+
+def test_office_convert_pod_passes_restricted() -> None:
+    deployment = _named(_office(), "Deployment", _OFFICE)
+    pod = deployment["spec"]["template"]["spec"]
+    sec = pod["securityContext"]
+    assert sec["runAsNonRoot"] is True
+    assert (sec["runAsUser"], sec["runAsGroup"]) == (1001, 1001)
+    assert sec["seccompProfile"] == {"type": "RuntimeDefault"}
+    assert pod["automountServiceAccountToken"] is False
+    (container,) = pod["containers"]
+    assert container["securityContext"] == {
+        "allowPrivilegeEscalation": False,
+        "readOnlyRootFilesystem": True,
+        "capabilities": {"drop": ["ALL"]},
+    }
+    assert container["image"].startswith("gotenberg/gotenberg:8.")
+    mounts = {m["mountPath"] for m in container["volumeMounts"]}
+    assert mounts == {"/tmp", "/home/gotenberg"}
+    assert {v["name"]: "emptyDir" in v for v in pod["volumes"]} == {"tmp": True, "home": True}
+    for probe in ("startupProbe", "readinessProbe", "livenessProbe"):
+        assert container[probe]["httpGet"] == {"path": "/health", "port": "http"}
+    env = {e["name"]: e["value"] for e in container["env"]}
+    assert env["WEBHOOK_DISABLE"] == "true"
+    assert env["API_DISABLE_DOWNLOAD_FROM"] == "true"
+    assert container["resources"]["limits"]["memory"] == "1Gi"
+    service = _named(_office(), "Service", _OFFICE)
+    assert service["spec"]["ports"] == [{"name": "http", "port": 3000, "targetPort": "http"}]
+
+
+def test_office_convert_default_image_is_pinned() -> None:
+    values = yaml.safe_load((_CHART / "values.yaml").read_text(encoding="utf-8"))
+    image = values["services"]["officeConvert"]["image"]
+    assert image["repository"] == "gotenberg/gotenberg"
+    major, minor, patch = image["tag"].split("-")[0].split(".")
+    assert (major, minor.isdigit(), patch.isdigit()) == ("8", True, True)
+
+
+def test_office_convert_network_policy_admits_only_runners_and_closes_egress() -> None:
+    policy = _named(_office(), "NetworkPolicy", _OFFICE)
+    assert policy["spec"]["policyTypes"] == ["Ingress", "Egress"]
+    assert "egress" not in policy["spec"]
+    (rule,) = policy["spec"]["ingress"]
+    assert rule["ports"] == [{"protocol": "TCP", "port": 3000}]
+    selectors = [peer["podSelector"]["matchLabels"] for peer in rule["from"]]
+    assert selectors == [
+        {
+            "app.kubernetes.io/name": "hse-doc-studio",
+            "app.kubernetes.io/instance": "rel",
+            "app.kubernetes.io/component": "runner",
+        },
+        {"hse-doc-studio/runner-install": "true"},
+    ]
+    # Метки подов раннеров совпадают с теми, что пускает политика.
+    runner = _named(_office(), "Deployment", "rel-hse-doc-studio-runner")
+    assert selectors[0].items() <= runner["spec"]["template"]["metadata"]["labels"].items()
+    off = _office("--set", "services.officeConvert.networkPolicy.enabled=false")
+    assert not [d for d in _by_kind(off, "NetworkPolicy") if d["metadata"]["name"] == _OFFICE]
+
+
+@pytest.mark.parametrize("values", [(), ("-f", str(_K8S_VALUES))], ids=["docker", "kubernetes"])
+def test_chart_runner_gets_the_built_in_office_url_unless_its_own_is_set(values: tuple[str, ...]) -> None:
+    on = ("--set", "services.officeConvert.enabled=true")
+    runner = _named(_render(*values, *on), "Deployment", "rel-hse-doc-studio-runner")
+    assert _env(runner)["HSE_RUNNER__OFFICE_URL"]["value"] == _OFFICE_URL
+    own = ("--set", "runner.officeUrl=http://gotenberg.office:3000")
+    runner = _named(_render(*values, *on, *own), "Deployment", "rel-hse-doc-studio-runner")
+    assert _env(runner)["HSE_RUNNER__OFFICE_URL"]["value"] == "http://gotenberg.office:3000"
+
+
+def test_studio_passes_the_office_url_to_runners_installed_from_the_ui() -> None:
+    env = _env(_api_deployment(_office()))
+    assert env["HSE_STUDIO__RUNNER_INSTALL__OFFICE_URL"]["value"] == _OFFICE_URL
+    own = _env(_api_deployment(_render("--set", "runner.officeUrl=http://gotenberg.office:3000")))
+    assert own["HSE_STUDIO__RUNNER_INSTALL__OFFICE_URL"]["value"] == "http://gotenberg.office:3000"
+    fields = _paths(Settings)
+    assert "RUNNER_INSTALL__OFFICE_URL" in fields
+
+
+def test_runner_egress_allows_the_built_in_office_convert() -> None:
+    docs = _office()
+    for name in ("rel-hse-doc-studio-runner-egress", "rel-hse-doc-studio-runner-ui-egress"):
+        rules = _named(docs, "NetworkPolicy", name)["spec"]["egress"]
+        office = [r for r in rules if r.get("ports") == [{"protocol": "TCP", "port": 3000}]]
+        assert len(office) == 1
+        assert office[0]["to"][0]["podSelector"]["matchLabels"]["app.kubernetes.io/component"] == "office-convert"
+    plain = _named(_isolation(), "NetworkPolicy", "rel-hse-doc-studio-runner-egress")["spec"]["egress"]
+    assert all(r.get("ports") != [{"protocol": "TCP", "port": 3000}] for r in plain)
+
+
+def test_declared_cluster_reports_the_office_convert() -> None:
+    declared = DeclaredCluster.model_validate_json(
+        _env(_api_deployment(_office()))["HSE_STUDIO__RUNNER_CLUSTER__DECLARED"]["value"]
+    )
+    assert declared.office_convert is not None
+    assert declared.office_convert.enabled
+    assert declared.office_convert.url == _OFFICE_URL
+    assert declared.office_convert.image.startswith("gotenberg/gotenberg:8.")
+    assert declared.office_convert.network_policy
+    assert declared.runner.office_url == _OFFICE_URL
+    assert declared.runner_egress.office_port == 3000
+    plain = DeclaredCluster.model_validate_json(
+        _env(_api_deployment(_isolation()))["HSE_STUDIO__RUNNER_CLUSTER__DECLARED"]["value"]
+    )
+    assert plain.office_convert is not None
+    assert not plain.office_convert.enabled
+    assert plain.runner_egress.office_port is None
+    assert plain.runner.office_url == ""
+
+
+def test_office_convert_schema_rejects_a_floating_or_bad_value() -> None:
+    base = ("template", "rel", str(_CHART), "-f", str(_VALUES), "--set", "services.officeConvert.enabled=true")
+    assert _helm(*base, "--set", "services.officeConvert.timeout=3 minutes").returncode != 0
+    assert _helm(*base, "--set", "services.officeConvert.image.tag=").returncode != 0
+    assert _helm(*base, "--set", "runner.officeUrl=gotenberg:3000").returncode != 0

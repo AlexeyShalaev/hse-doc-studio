@@ -41,7 +41,8 @@ tags:
 | Что | Политика |
 |---|---|
 | Поды сборки (chart-раннер с `executor: kubernetes` и раннеры из админки) | ни входа, ни выхода: исходники и результат идут через `exec` Kubernetes API, поэтому под сборки не достанет другие поды, базу данных, metadata-сервис облака и интернет. Политика стоит в namespace подов сборки: `runner.kubernetes.namespace` у chart-раннера, `runner.installFromUi.buildNamespace` у раннеров из админки (пусто значит namespace релиза). Переключатель: `runner.kubernetes.networkPolicy.enabled` (по умолчанию включён) |
-| Поды раннеров | необязательная `runner.networkPolicy.enabled` (по умолчанию выключена): исходящий доступ только к DNS (порт 53), api Студии этого релиза (порт 8000), Kubernetes API (`apiServerPorts`, по умолчанию 443 и 6443) и `extraEgress` |
+| Поды раннеров | необязательная `runner.networkPolicy.enabled` (по умолчанию выключена): исходящий доступ только к DNS (порт 53), api Студии этого релиза (порт 8000), Kubernetes API (`apiServerPorts`, по умолчанию 443 и 6443), встроенный Gotenberg (порт 3000, если включён `services.officeConvert`) и `extraEgress` |
+| Встроенный Gotenberg (`services.officeConvert`) | вход только от подов раннеров релиза (раннер чарта и раннеры из админки) на порт 3000, выход закрыт целиком. Переключатель: `services.officeConvert.networkPolicy.enabled` (по умолчанию включён). Подробнее в [раннерах](runners.md#офисные-задачи-в-кластере-gotenberg) |
 
 Политикам нужен CNI с поддержкой NetworkPolicy (Calico, Cilium и подобные); без него они молча не действуют. Политика подов сборки включена по умолчанию, потому что сломать ничего не может: сеть этим подам не нужна. Политика раннеров выключена, потому что чарт не знает двух адресов, нужных раннеру: сервер Kubernetes API и, если объектное хранилище вне кластера или не является подом релиза, адрес S3 (раннер берёт исходники и выгружает результат по presigned-ссылкам). Неверный список отрезал бы работающие раннеры.
 
@@ -49,7 +50,7 @@ tags:
 
 1. Найдите адрес API-сервера: `kubectl get endpoints kubernetes -o wide`. Впишите его в `runner.networkPolicy.apiServerCidrs` (например `["10.0.0.5/32"]`), порт в `apiServerPorts`. Если оставить пусто, политика откроет перечисленные порты на любые адреса, кроме `169.254.0.0/16` (metadata-сервис облака).
 2. Добавьте хранилище в `runner.networkPolicy.extraEgress` (записи `spec.egress` дословно): например `ipBlock` и порт 443 для внешнего S3 или `namespaceSelector` с `podSelector` для MinIO в кластере. При `s3.outsideRunnerAccess: proxy` раннеры отдают результат в api, правило для S3 не нужно.
-3. Добавьте правила для остального, чем пользуется раннер: внешний OnlyOffice (`runner.officeUrl`), адреса ИИ для ретрансляции.
+3. Добавьте правила для остального, чем пользуется раннер: внешний Gotenberg (`runner.officeUrl`), адреса ИИ для ретрансляции. Встроенный Gotenberg (`services.officeConvert`) политика разрешает сама.
 
 Если в namespace релиза действует политика запрета входа по умолчанию, разрешите вход в api от подов раннеров сами.
 
@@ -61,6 +62,8 @@ tags:
 - без `privileged`, `hostPath`, сети и PID узла (исключение: исполнитель docker, ему нужен `docker.sock`, равный root на узле; ставьте его на выделенные узлы);
 - `automountServiceAccountToken: false` у подов сборки, api (если не включена установка из админки), задания миграций и docker-раннера; раннеры Kubernetes токен сохраняют, потому что создают поды сборки, с Role только на поды одного namespace;
 - `enableServiceLinks: false`, `activeDeadlineSeconds` (1800) у подов сборки, requests и limits `ephemeral-storage` везде.
+
+Под встроенного Gotenberg (`services.officeConvert`) тоже проходит restricted: uid 1001 образа, корень только для чтения, `/tmp` и `/home/gotenberg` в `emptyDir`, токен ServiceAccount не монтируется.
 
 Пометьте namespace меткой `pod-security.kubernetes.io/enforce=restricted`: чарт не может пометить namespace релиза, а проверка заодно остановит всё лишнее, что Студия создала бы там по ошибке.
 
@@ -89,8 +92,9 @@ tags:
 
 **Блок «Изоляция раннеров в кластере»** под списком раннеров:
 
-- chart-раннер (исполнитель, реплики, namespace, ServiceAccount, том данных, requests и limits, securityContext, предупреждение про `docker.sock`), поды сборки, умолчания и границы формы установки из админки;
-- сеть: deny-all для подов сборки (chart-раннера и раннеров из админки), egress-политика раннеров и что она разрешает (DNS, порт api Студии, адреса и порты API-сервера, число своих правил `extraEgress`);
+- chart-раннер (исполнитель, реплики, namespace, ServiceAccount, том данных, requests и limits, securityContext, предупреждение про `docker.sock`, адрес Gotenberg для офисных задач или «нет»), поды сборки, умолчания и границы формы установки из админки и адрес Gotenberg, который получат такие раннеры;
+- сеть: deny-all для подов сборки (chart-раннера и раннеров из админки), egress-политика раннеров и что она разрешает (DNS, порт api Студии, адреса и порты API-сервера, встроенный Gotenberg, число своих правил `extraEgress`);
+- встроенный Gotenberg, если включён: адрес, образ, реплики, requests и limits, сетевая политика;
 - ResourceQuota и LimitRange namespace сборки, а если у раннеров из админки свой namespace подов сборки, отдельно его ResourceQuota и LimitRange; метки Pod Security у namespace релиза и всех namespace сборки.
 
 Что задано в чарте, Студия знает всегда: чарт кладёт выжимку values в `HSE_STUDIO__RUNNER_CLUSTER__DECLARED` (без секретов). Это не проверка: экран пишет «задано» и «не проверено в кластере». Чтобы Студия сверила это с кластером, включите `runner.isolationInfo.readCluster: true`. Чарт тогда даёт ServiceAccount Студии Role с `get` и `list` на NetworkPolicy, ResourceQuota и LimitRange в namespace релиза и namespace подов сборки (`runner.kubernetes.namespace` и `runner.installFromUi.buildNamespace`), а также ClusterRole с `get` на эти namespace (только по `resourceNames`, ради меток Pod Security). Ни Secret, ни подов, ни записи. Если части прав нет, экран говорит «проверено частично» и не выдаёт непроверенное за проверенное. Вне Helm (docker compose) блок показывает только настройки установки из админки.

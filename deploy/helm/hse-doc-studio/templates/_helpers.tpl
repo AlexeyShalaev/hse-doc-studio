@@ -117,6 +117,23 @@ app.kubernetes.io/instance: {{ .Release.Name }}
 - {name: HSE_STUDIO__OFFICE_EDITOR__JWT_SECRET, valueFrom: {secretKeyRef: {name: {{ $secret }}, key: office-jwt-secret, optional: true}}}
 {{- end -}}
 
+{{/* Встроенный Gotenberg (services.officeConvert): имя Deployment и Service. */}}
+{{- define "hds.officeConvertName" -}}
+{{- printf "%s-office-convert" (include "hds.fullname" .) -}}
+{{- end -}}
+
+{{/* Адрес встроенного Gotenberg; пусто, если он выключен. */}}
+{{- define "hds.officeConvertUrl" -}}
+{{- if .Values.services.officeConvert.enabled -}}
+{{- printf "http://%s:3000" (include "hds.officeConvertName" .) -}}
+{{- end -}}
+{{- end -}}
+
+{{/* Адрес Gotenberg для раннеров (HSE_RUNNER__OFFICE_URL): runner.officeUrl, иначе встроенный, иначе пусто. */}}
+{{- define "hds.runnerOfficeUrl" -}}
+{{- default (include "hds.officeConvertUrl" .) .Values.runner.officeUrl -}}
+{{- end -}}
+
 {{/* Namespace подов сборки исполнителя kubernetes: свой или namespace релиза. */}}
 {{- define "hds.runnerBuildNamespace" -}}
 {{- default .Release.Namespace .Values.runner.kubernetes.namespace -}}
@@ -163,15 +180,18 @@ app.kubernetes.io/instance: {{ .Release.Name }}
 {{- if $kube -}}{{- $storageKind = ternary "pvc" "emptyDir" $r.persistence.enabled -}}{{- end -}}
 {{- $quota := dict "enabled" (and $kube $k.quota.enabled) "hard" (dict "pods" ($k.quota.pods | toString) "requests.cpu" ($k.quota.requestsCpu | toString) "requests.memory" ($k.quota.requestsMemory | toString) "limits.cpu" ($k.quota.limitsCpu | toString) "limits.memory" ($k.quota.limitsMemory | toString) "requests.ephemeral-storage" ($k.quota.requestsEphemeralStorage | toString) "limits.ephemeral-storage" ($k.quota.limitsEphemeralStorage | toString)) -}}
 {{- $range := dict "enabled" (and $kube $k.limitRange.enabled) "default" $k.limitRange.default "defaultRequest" $k.limitRange.defaultRequest "max" $k.limitRange.max -}}
-{{- $runner := dict "enabled" $r.enabled "executor" $r.executor "replicas" $r.replicas "deployment" (printf "%s-runner" $full) "serviceAccount" (ternary (printf "%s-runner" $full) "" $kube) "resources" $r.resources "tmpSizeLimit" (ternary ($r.tmpSizeLimit | toString) "" $kube) "storageKind" $storageKind "storageClass" (ternary $r.persistence.storageClassName "" $kube) "storageSize" (ternary ($r.persistence.size | toString) "" $kube) "runAsUser" .Values.podSecurityContext.runAsUser -}}
+{{- $runner := dict "enabled" $r.enabled "executor" $r.executor "replicas" $r.replicas "deployment" (printf "%s-runner" $full) "serviceAccount" (ternary (printf "%s-runner" $full) "" $kube) "resources" $r.resources "tmpSizeLimit" (ternary ($r.tmpSizeLimit | toString) "" $kube) "storageKind" $storageKind "storageClass" (ternary $r.persistence.storageClassName "" $kube) "storageSize" (ternary ($r.persistence.size | toString) "" $kube) "runAsUser" .Values.podSecurityContext.runAsUser "officeUrl" (include "hds.runnerOfficeUrl" .) -}}
 {{- $build := dict "namespace" $buildNs "resources" $k.resources "workSizeLimit" ($k.workSizeLimit | toString) "tmpSizeLimit" ($k.tmpSizeLimit | toString) "activeDeadlineSeconds" $k.activeDeadlineSeconds "runtimeClassName" $k.runtimeClassName "runAsUser" $k.runAsUser "networkPolicy" $k.networkPolicy.enabled "quota" $quota "limitRange" $range -}}
 {{- $np := $r.networkPolicy -}}
-{{- $egress := dict "enabled" (and $np.enabled (or $r.enabled $r.installFromUi.enabled)) "studioPort" 8000 "apiServerCidrs" $np.apiServerCidrs "apiServerPorts" $np.apiServerPorts "extraRules" (len $np.extraEgress) -}}
+{{- $egressOn := and $np.enabled (or $r.enabled $r.installFromUi.enabled) -}}
+{{- $egress := dict "enabled" $egressOn "studioPort" 8000 "apiServerCidrs" $np.apiServerCidrs "apiServerPorts" $np.apiServerPorts "extraRules" (len $np.extraEgress) "officePort" (ternary 3000 nil (and $egressOn .Values.services.officeConvert.enabled)) -}}
 {{- $ui := $r.installFromUi -}}
 {{- $uiNs := include "hds.uiBuildNamespace" . -}}
 {{- $uiSeparate := and $ui.enabled (ne $uiNs .Release.Namespace) -}}
 {{- $uiBuild := dict "enabled" $ui.enabled "namespace" $uiNs "networkPolicy" (and $ui.enabled $k.networkPolicy.enabled) "quota" (and $uiSeparate $k.quota.enabled) "limitRange" (and $uiSeparate $k.limitRange.enabled) -}}
-{{- toJson (dict "releaseNamespace" .Release.Namespace "runner" $runner "build" $build "uiBuild" $uiBuild "runnerEgress" $egress) -}}
+{{- $oc := .Values.services.officeConvert -}}
+{{- $office := dict "enabled" $oc.enabled "url" (include "hds.officeConvertUrl" .) "image" (ternary (printf "%s:%s" $oc.image.repository $oc.image.tag) "" $oc.enabled) "replicas" (ternary $oc.replicas 0 $oc.enabled) "resources" (ternary $oc.resources (dict) $oc.enabled) "networkPolicy" (and $oc.enabled $oc.networkPolicy.enabled) -}}
+{{- toJson (dict "releaseNamespace" .Release.Namespace "runner" $runner "build" $build "uiBuild" $uiBuild "runnerEgress" $egress "officeConvert" $office) -}}
 {{- end -}}
 
 {{/* Студии нужен ServiceAccount с токеном: установка раннеров из админки или чтение изоляции раннеров. */}}

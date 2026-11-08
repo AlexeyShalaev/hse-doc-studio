@@ -413,6 +413,7 @@ class ServerAdminOpsProvider(Provider):
                 build_ephemeral=BUILD_EPHEMERAL,
                 namespace=declared.release_namespace or None if declared is not None else None,
                 build_namespace=cfg.kubernetes_build_namespace or None,
+                office_url=cfg.office_url or None,
             ),
             read_live=cluster.read_live,
             studio_version=settings.get_app_version(),
@@ -448,7 +449,7 @@ class ServerAdminOpsProvider(Provider):
     ) -> RunnerInstallService:
         cfg = settings.runner_install
         hosts: dict[InstallTarget, ILocalRunnerHost] = {
-            InstallTarget.docker: DockerLocalHost(enabled=cfg.docker_enabled),
+            InstallTarget.docker: DockerLocalHost(enabled=cfg.docker_enabled, office_url=cfg.office_url),
             InstallTarget.kubernetes: KubeLocalHost(
                 enabled=cfg.kubernetes_enabled,
                 service_account=cfg.kubernetes_service_account,
@@ -456,6 +457,7 @@ class ServerAdminOpsProvider(Provider):
                 storage_size=cfg.kubernetes_storage_size,
                 build_namespace=cfg.kubernetes_build_namespace or None,
                 resources=_install_defaults(cfg),
+                office_url=cfg.office_url,
             ),
         }
         return RunnerInstallService(

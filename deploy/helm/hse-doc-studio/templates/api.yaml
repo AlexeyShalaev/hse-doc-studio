@@ -84,6 +84,10 @@ spec:
             - {name: HSE_STUDIO__RUNNER_INSTALL__KUBERNETES_BUILD_NAMESPACE, value: {{ $ui.buildNamespace | quote }}}
             {{- end }}
             {{- end }}
+            {{- with include "hds.runnerOfficeUrl" . }}
+            # Gotenberg для раннеров из админки: они получают его в HSE_RUNNER__OFFICE_URL при установке и обновлении.
+            - {name: HSE_STUDIO__RUNNER_INSTALL__OFFICE_URL, value: {{ . | quote }}}
+            {{- end }}
             # Экран изоляции раннеров в админке: что задано в чарте (не проверенное в кластере).
             - {name: HSE_STUDIO__RUNNER_CLUSTER__DECLARED, value: {{ include "hds.runnerCluster" . | quote }}}
             {{- if .Values.runner.isolationInfo.readCluster }}

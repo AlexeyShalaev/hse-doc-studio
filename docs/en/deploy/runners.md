@@ -29,7 +29,7 @@ tags:
    | `HSE_RUNNER__NAME` | name in the list (hostname by default) |
    | `HSE_RUNNER__CONCURRENCY` | jobs at the same time |
    | `HSE_RUNNER__DATA_DIR` | working folders and the blob cache |
-   | `HSE_RUNNER__OFFICE_URL` | Gotenberg address; without it office jobs are not taken |
+   | `HSE_RUNNER__OFFICE_URL` | Gotenberg address; without it office jobs are not taken (in a cluster: [the chart's built-in Gotenberg](#office-jobs-in-the-cluster-gotenberg)) |
 
 3. Run `hse-doc-studio runner` (the same command in the image).
 4. The runner exchanges the registration token for its own and stores it in `data_dir/identity.json`. After that `HSE_RUNNER__TOKEN` can be removed from the environment.
@@ -74,7 +74,7 @@ Runners installed this way are managed on the Runners page itself. The Actions m
 
 Update puts the image of the current Studio version on the runner in place, without removing and installing it again. The name, the Secret with the token, the data volume and the runner record in the Studio are kept, no new token is issued. When the runner is older than the Studio, its row has an accented "Update to vX" button, and so does the "Deployment details" window next to the "Older than the Studio" mark. A runner on the Studio version can be updated too (from the menu): the settings are applied again by the current rules and the runner restarts.
 
-- **Kubernetes.** The Studio reads the live Deployment, takes the Studio address, the data directory, the slot count and the limits the runner was installed with (the `hse-doc-studio/runner-resources` annotation; for installs made before it, limits that differ from the current defaults are read from the manifest itself), and replaces the whole Deployment with a manifest built by the current rules: image, limits, securityContext, ServiceAccount. A limit beyond the current Helm bounds falls back to the default (the Manifest step says so). The strategy is `Recreate`: the old pod is gone before the new one mounts the `ReadWriteOnce` volume. Steps: image and current settings, manifest, pod restart (the Studio waits up to 15 minutes for the rollout), runner online again.
+- **Kubernetes.** The Studio reads the live Deployment, takes the Studio address, the data directory, the slot count and the limits the runner was installed with (the `hse-doc-studio/runner-resources` annotation; for installs made before it, limits that differ from the current defaults are read from the manifest itself), and replaces the whole Deployment with a manifest built by the current rules: image, limits, securityContext, ServiceAccount, the Studio Gotenberg address (`HSE_STUDIO__RUNNER_INSTALL__OFFICE_URL`). A limit beyond the current Helm bounds falls back to the default (the Manifest step says so). The strategy is `Recreate`: the old pod is gone before the new one mounts the `ReadWriteOnce` volume. Steps: image and current settings, manifest, pod restart (the Studio waits up to 15 minutes for the rollout), runner online again.
 - **Docker.** The Studio pulls the new image first, then stops the container (`docker stop`, up to 60 seconds), removes it and starts it again with the same name, runner environment (token, address, data directory) and volume. If the new container does not start, the Studio brings the previous image back with the same settings.
 
 The last step waits up to three minutes for the runner to come online with the Studio version. Builds the runner was running at the restart are finished for up to 30 seconds, the rest stop with "The runner was stopped during the build" and are built again; queued jobs wait for another runner or for this one after the restart. An update and an install of the same way never run at once (409 `install_busy`). The audit log gets `runner_install.local.upgrade`, `upgrade_succeeded` and `upgrade_failed` with the runner name, the version before and after, and the images.
@@ -119,6 +119,25 @@ kubectl label namespace hds-builds \
 ```
 
 Switching a running install: wait until runners from the admin area have no builds, run `helm upgrade` with `buildNamespace`, then press "Update" on each such runner. Until it is updated, a runner creates build pods in the release namespace where it has no rights any more, and its builds fail with `build_backend_unavailable` (a Kubernetes 403 in the details).
+
+### Office jobs in the cluster (Gotenberg)
+
+Jobs with the `office` tag (pptx presentations, docx, odt, xlsx documents to PDF) go from the runner to a long-running Gotenberg at `HSE_RUNNER__OFFICE_URL`; without an address the runner does not announce the tag, and such jobs wait for a runner that has it (a personal one, for example). The chart can install Gotenberg itself:
+
+```yaml
+services:
+  officeConvert:
+    enabled: true
+```
+
+- The release namespace gets a Deployment and a Service `<release>-office-convert` (port 3000) with the `gotenberg/gotenberg:8.39.0-libreoffice` image (the LibreOffice-only variant, no Chromium). Default resources: requests 250m CPU and 512Mi, limits 2 CPU and 2Gi, ephemeral storage 256Mi/2Gi; the replica count is `services.officeConvert.replicas`, the limit of one conversion is `timeout` (180s).
+- The pod passes Pod Security restricted: the image uid 1001, `runAsNonRoot`, `drop: [ALL]`, seccomp `RuntimeDefault`, no privilege escalation and a read-only root. Gotenberg and LibreOffice write only to the temp directory (the uploaded file, the LibreOffice profile, the result) and the home directory (fontconfig cache), so `/tmp` and `/home/gotenberg` are emptyDir mounts (`tmpSizeLimit`, 1Gi). Probes hit `/health`. Gotenberg webhooks and downloads by URL are off.
+- NetworkPolicy `<release>-office-convert`: ingress only from the release runner pods (the chart runner and runners from the admin area) on port 3000, egress closed entirely. Turn it off with `services.officeConvert.networkPolicy.enabled: false`. The api itself does not convert office files in the cluster and needs no access.
+- The address reaches the chart runner (`HSE_RUNNER__OFFICE_URL` when `runner.officeUrl` is empty) and runners from the admin area: the chart passes it to the Studio in `HSE_STUDIO__RUNNER_INSTALL__OFFICE_URL`, the Studio hands it to the runner on install and on "Update". Runners already installed get the `office` tag after "Update". A set `runner.officeUrl` (an external Gotenberg) overrides the built-in one for both kinds of runners.
+- The runner egress policy (`runner.networkPolicy.enabled`) allows the built-in Gotenberg by itself; add an external `runner.officeUrl` to `extraEgress`.
+- The Docker-next-door install (not Kubernetes) uses the same `HSE_STUDIO__RUNNER_INSTALL__OFFICE_URL` when the Studio has it: the address must be reachable from the runner container. Without it, "Update" keeps the container's previous address.
+
+The admin area shows where a runner takes office jobs and where it goes: the "Runner isolation" view has an "Office jobs (Gotenberg)" row for the chart runner and for installs from the admin area, a "Studio Gotenberg" rule in the egress list and a separate block with the Gotenberg image, resources and network.
 
 ## Installing over SSH on another machine
 

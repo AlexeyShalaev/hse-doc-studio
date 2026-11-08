@@ -34,6 +34,8 @@ class DeclaredChartRunner(_Values):
     storage_class: str = ""
     storage_size: str = ""
     run_as_user: int | None = None
+    # Адрес Gotenberg раннера (HSE_RUNNER__OFFICE_URL): runner.officeUrl или встроенный; пусто значит без office.
+    office_url: str = ""
 
 
 class DeclaredQuota(_Values):
@@ -78,6 +80,19 @@ class DeclaredRunnerEgress(_Values):
     api_server_cidrs: list[str] = Field(default_factory=list)
     api_server_ports: list[int] = Field(default_factory=list)
     extra_rules: int = 0
+    # Порт встроенного Gotenberg, если политика его разрешает; None значит правила нет.
+    office_port: int | None = None
+
+
+class DeclaredOfficeConvert(_Values):
+    """Встроенный Gotenberg чарта (services.officeConvert): офисные задачи раннеров."""
+
+    enabled: bool = False
+    url: str = ""
+    image: str = ""
+    replicas: int = 0
+    resources: DeclaredResources = Field(default_factory=DeclaredResources)
+    network_policy: bool = False
 
 
 class DeclaredCluster(_Values):
@@ -87,3 +102,5 @@ class DeclaredCluster(_Values):
     # Нет у чартов до отдельного namespace подов сборки раннеров из админки: тогда они в namespace релиза.
     ui_build: DeclaredUiBuild | None = None
     runner_egress: DeclaredRunnerEgress = Field(default_factory=DeclaredRunnerEgress)
+    # Нет у чартов до встроенного Gotenberg.
+    office_convert: DeclaredOfficeConvert | None = None

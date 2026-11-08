@@ -260,6 +260,7 @@ tags:
 | `HSE_STUDIO__RUNNER_INSTALL__KUBERNETES_BUILD_MEMORY_LIMIT` | str | `4Gi` | оба | limits.memory подов сборки: TeX на обычном документе укладывается в 1-2 ГиБ. |
 | `HSE_STUDIO__RUNNER_INSTALL__KUBERNETES_RESOURCE_MAX_CPU` | str | `8` | оба | Верхняя граница CPU, которую админ может задать в форме установки. |
 | `HSE_STUDIO__RUNNER_INSTALL__KUBERNETES_RESOURCE_MAX_MEMORY` | str | `16Gi` | оба | Верхняя граница памяти, которую админ может задать в форме установки. |
+| `HSE_STUDIO__RUNNER_INSTALL__OFFICE_URL` | str | пусто | оба | Адрес Gotenberg для раннеров, поставленных из админки: они получают его в HSE_RUNNER__OFFICE_URL при установке и при обновлении и берут офисные задачи (тег office). Чарт задаёт его из runner.officeUrl или встроенного services.officeConvert; пусто значит раннеры без office. |
 | `HSE_STUDIO__RUNNER_INSTALL__DATA_DIR` | str | `/var/lib/hse-runner` | оба | Каталог данных раннера на хосте (docker) и в поде (kubernetes). |
 | `HSE_STUDIO__RUNNER_INSTALL__SSH_ENABLED` | bool | `true` | оба | Разрешить установку раннеров по SSH из админки. |
 | `HSE_STUDIO__RUNNER_INSTALL__SSH_ALLOWLIST` | `list[str]` | пусто | оба | Внутренние узлы, на которые можно ставить раннер по SSH: имя (host.corp.local, *.corp.local), IP или CIDR. Без записи закрыты частные сети, loopback и адреса кластера; адреса метаданных облака и link-local закрыты всегда. Дополняет HSE_STUDIO__EGRESS__ALLOWLIST. |

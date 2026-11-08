@@ -119,7 +119,8 @@
         "empty_dir": "emptyDir"
       },
       "tmp": "/tmp",
-      "dockerSocket": "The docker executor mounts the node docker.sock, which equals root on the node. Keep such a runner on dedicated nodes."
+      "dockerSocket": "The docker executor mounts the node docker.sock, which equals root on the node. Keep such a runner on dedicated nodes.",
+      "office": "Office jobs (Gotenberg)"
     },
     "build": {
       "title": "Build pods",
@@ -134,7 +135,8 @@
       "cpuBounds": "CPU: runner from {{runner}}, build pods from {{build}}, at most {{max}}",
       "memoryBounds": "Memory: runner from {{runner}}, build pods from {{build}}, at most {{max}}",
       "storage": "Data volume",
-      "buildNamespace": "Build pods namespace"
+      "buildNamespace": "Build pods namespace",
+      "office": "Office jobs (Gotenberg)"
     },
     "network": {
       "title": "Network",
@@ -148,7 +150,17 @@
       "anyAddress": "any address except 169.254.0.0/16",
       "extra_one": "{{count}} more custom rule",
       "extra_other": "{{count}} more custom rules",
+      "office": "Studio Gotenberg, port {{port}}",
       "cni": "Policies only work with a CNI that enforces them (Calico, Cilium and the like)."
+    },
+    "office": {
+      "title": "Office file conversion",
+      "lead": "Built-in Gotenberg (services.officeConvert): runners with the office tag send pptx, docx and other files here and get a PDF back.",
+      "url": "Address",
+      "image": "Image",
+      "replicas": "Replicas",
+      "networkPolicy": "Ingress from runners only, egress closed",
+      "none": "no: such a runner does not take office jobs"
     },
     "quota": {
       "title": "ResourceQuota",

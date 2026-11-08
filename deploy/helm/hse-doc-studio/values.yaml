@@ -140,6 +140,35 @@ services:
   officeEditorReplicas: []
   # Адрес api глазами реплик ONLYOFFICE (документ и обратный вызов); пусто значит имя Service чарта.
   backendInternalUrl: ""
+  # Постоянный Gotenberg в namespace релиза: офисные задачи раннеров (тег office, pptx, docx и другие в PDF).
+  # Адрес http://<release>-office-convert:3000 получают раннер чарта (если runner.officeUrl пуст) и раннеры, поставленные
+  # из админки (HSE_STUDIO__RUNNER_INSTALL__OFFICE_URL, при установке и при «Обновить»). Сам api в кластере не
+  # конвертирует. Под проходит Pod Security restricted: uid 1001 образа, корень только для чтения, /tmp и домашний
+  # каталог в emptyDir (там профиль LibreOffice и временные файлы).
+  officeConvert:
+    enabled: false
+    # Вариант образа только с LibreOffice: Chromium раннерам не нужен, образ меньше. Тег точный, обновляйте сознательно.
+    image:
+      repository: gotenberg/gotenberg
+      tag: 8.39.0-libreoffice
+      pullPolicy: IfNotPresent
+    replicas: 1
+    # LibreOffice на большой презентации занимает до 1 ГиБ; запросы обслуживаются по очереди.
+    resources:
+      requests: {cpu: 250m, memory: 512Mi, ephemeral-storage: 256Mi}
+      limits: {cpu: "2", memory: 2Gi, ephemeral-storage: 2Gi}
+    # Предел одной конвертации на стороне Gotenberg (у раннера свой, HSE_RUNNER__OFFICE_TIMEOUT_S, 180 с).
+    timeout: 180s
+    # emptyDir /tmp (загруженные файлы, профиль LibreOffice, результат) и домашнего каталога.
+    tmpSizeLimit: 1Gi
+    # Сеть: вход только от подов раннеров релиза (раннер чарта и раннеры из админки) на порт 3000, выход закрыт
+    # (webhook и загрузка по ссылке в Gotenberg выключены). Нужен CNI с поддержкой NetworkPolicy.
+    networkPolicy:
+      enabled: true
+    nodeSelector: {}
+    tolerations: []
+    affinity: {}
+    podAnnotations: {}
 
 # Серверы ИИ-моделей (Ollama, vLLM, SGLang), которые админ ставит из интерфейса.
 modelServers:
@@ -210,6 +239,8 @@ runner:
   replicas: 1
   concurrency: 1
   tags: ""
+  # Адрес Gotenberg для офисных задач (тег office). Пусто при services.officeConvert.enabled значит встроенный Gotenberg;
+  # заданный адрес получают и раннеры из админки.
   officeUrl: ""
   # Каталог данных раннера. В режиме docker соседние контейнеры видят пути узла, поэтому hostPath монтируется
   # по тому же пути; в режиме kubernetes это точка монтирования тома runner.persistence.
@@ -231,7 +262,8 @@ runner:
   # Исходящая сеть подов раннера (chart-раннер и раннеры из админки). По умолчанию выключено: адреса, которые нужны
   # раннеру (Kubernetes API, объектное хранилище S3, если оно вне кластера), чарт знать не может, а неверный список
   # оставит раннеры без связи. Включайте после проверки (docs/en/deploy/runner-isolation.md). Разрешено: DNS, Студия
-  # (api этого релиза), Kubernetes API по портам apiServerPorts, плюс extraEgress.
+  # (api этого релиза), Kubernetes API по портам apiServerPorts, встроенный Gotenberg (services.officeConvert), плюс
+  # extraEgress.
   networkPolicy:
     enabled: false
     # Адреса Kubernetes API (CIDR узлов control plane или `kubernetes` Service после DNAT). Пусто: порты
