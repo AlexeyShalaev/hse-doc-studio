@@ -1,10 +1,12 @@
 from __future__ import annotations
 
 import asyncio
+import json
 import socket
 from asyncio import subprocess as asubprocess
 from collections.abc import Mapping
 from contextlib import suppress
+from typing import Any
 
 import structlog
 
@@ -45,6 +47,17 @@ class UpdateManager:
         )
         ref = out.strip()
         return ref if rc == 0 and ref else None
+
+    async def inspect_self(self) -> dict[str, Any] | None:
+        """`docker inspect` своего контейнера; None — не контейнер или докер не ответил."""
+        rc, out, _err = await self._run_docker(["inspect", self.self_container_id()], timeout=_INSPECT_TIMEOUT_S)
+        if rc != 0:
+            return None
+        try:
+            data = json.loads(out)
+        except json.JSONDecodeError:
+            return None
+        return data[0] if isinstance(data, list) and data and isinstance(data[0], dict) else None
 
     async def spawn_self_update(self, new_image: str) -> bool:
         """Launch the detached updater. Returns False if it couldn't be started."""

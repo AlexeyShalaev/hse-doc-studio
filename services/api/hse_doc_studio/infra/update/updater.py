@@ -23,7 +23,7 @@ import json
 import subprocess  # noqa: S404 — this module IS a thin docker-CLI driver
 import sys
 import time
-from collections.abc import Iterable, Mapping
+from collections.abc import Collection, Iterable, Mapping
 from typing import Any
 
 _PULL_TIMEOUT_S = 900.0
@@ -53,21 +53,76 @@ def _ports_args(host_config: dict[str, Any]) -> list[str]:
     return args
 
 
+# Корень файлов, которые несёт сам образ: код, интерфейс, справка, паки шаблонов.
+# Папка хоста, привязанная поверх любого из них, закрывает файлы НОВОГО образа:
+# после обновления там остаётся то, что лежало в папке, а не то, что вышло с версией.
+IMAGE_ROOT = "/app"
+
+
+def _is_under_image_root(destination: str) -> bool:
+    return destination == IMAGE_ROOT or destination.startswith(f"{IMAGE_ROOT}/")
+
+
+def image_overlays(mounts: Iterable[dict[str, Any]] | None) -> list[dict[str, str]]:
+    """Привязки папок хоста поверх каталогов образа: [{destination, source}].
+
+    Тома (`/data`) и сокет докера сюда не попадают никогда: они не под `/app`.
+    Учитываются только bind-маунты, именованный том под `/app` образ не прячет
+    от пользователя (его содержимое и так живёт отдельно от версии).
+    """
+    found: list[dict[str, str]] = []
+    for mount in mounts or []:
+        dst = str(mount.get("Destination") or "")
+        if mount.get("Type") != "bind" or not _is_under_image_root(dst):
+            continue
+        found.append({"destination": dst, "source": str(mount.get("Source") or "")})
+    return found
+
+
+def is_local_build(ref: str | None) -> bool:
+    """Образ собран у себя (`hse-doc-studio:dev` из compose.build.yml), а не скачан из реестра.
+
+    Признак: в имени нет ни реестра, ни пространства имён (`ghcr.io/owner/...`).
+    """
+    if not ref or ref.startswith("sha256:"):
+        return False
+    name = ref.split("@", 1)[0]
+    last = name.rsplit("/", 1)[-1]
+    repository = name[: name.rfind(":")] if ":" in last else name
+    return "/" not in repository
+
+
+def drops_image_overlays(current_ref: str | None, new_ref: str | None) -> bool:
+    """Не переносить привязки поверх каталогов образа: переход со своей сборки на опубликованный образ.
+
+    Привязка из compose.build.yml нужна, чтобы правки паков в checkout подхватывались
+    без пересборки, и имеет смысл ровно рядом с образом из этого же checkout. Когда
+    Студия переезжает на опубликованный образ, папка checkout остаётся прежней и
+    начинает подменять паки новой версии старыми. Снять её безопасно: она только
+    для чтения, файлы на хосте никто не трогает, `/data` не под `/app`, а откат
+    возвращает контейнер в прежнем виде вместе с привязкой. На опубликованном
+    образе привязка поставлена сознательно (свой каталог паков), её оставляем и
+    предупреждаем.
+    """
+    return new_ref is not None and is_local_build(current_ref) and not is_local_build(new_ref)
+
+
 def _mount_args(
     mounts: Iterable[dict[str, Any]] | None,
     extra: Mapping[str, str] | None = None,
+    drop: Collection[str] = (),
 ) -> list[str]:
     """`-v` для пересоздания. `extra` — «каталог в контейнере → путь на хосте».
 
     Пункт из `extra` ЗАМЕЩАЕТ существующий маунт с той же точкой назначения:
     мастер настройки переселяет `/data` в выбранную пользователем папку, и два
-    `-v` на одну точку докер не примет.
+    `-v` на одну точку докер не примет. Точки из `drop` не переносятся.
     """
     resolved: dict[str, str] = {}
     for mount in mounts or []:
         dst = mount.get("Destination")
         src = mount.get("Name") or mount.get("Source")
-        if not dst or not src:
+        if not dst or not src or dst in drop:
             continue
         suffix = "" if mount.get("RW", True) else ":ro"
         resolved[dst] = f"{src}:{dst}{suffix}"
@@ -160,12 +215,14 @@ def build_run_command(
     *,
     mounts: Mapping[str, str] | None = None,
     env: Mapping[str, str] | None = None,
+    drop_mounts: Collection[str] = (),
 ) -> list[str]:
     """Reconstruct a `docker run -d ...` command to recreate `container` on `image_ref`.
 
     `mounts` («каталог в контейнере → путь на хосте») и `env` — точечные правки
     поверх скопированной конфигурации. Без них команда воспроизводит контейнер
-    один в один, как при обновлении версии; с ними тот же механизм применяет
+    один в один, как при обновлении версии (кроме точек из `drop_mounts`, см.
+    `drops_image_overlays`); с ними тот же механизм применяет
     выбор пользователя в мастере первоначальной настройки. Второго пути для
     этого заводить нельзя: пересоздание себя с откатом по здоровью — вещь,
     которую надо иметь ровно в одном экземпляре.
@@ -183,7 +240,7 @@ def build_run_command(
     cmd += _group_args(host_config)
     cmd += _extra_host_args(host_config)
     cmd += _ports_args(host_config)
-    cmd += _mount_args(container.get("Mounts"), mounts)
+    cmd += _mount_args(container.get("Mounts"), mounts, drop_mounts)
     cmd += _label_args(config.get("Labels"))
     cmd += _env_args(config.get("Env"), image_env, env)
     cmd += [image_ref]
@@ -331,7 +388,8 @@ def run_update(  # noqa: PLR0911 — each failure mode returns a distinct exit c
             return 3
         target_image, target_inspect = new_image, pulled
 
-    new_cmd = build_run_command(container, target_inspect, target_image, mounts=mounts, env=env)
+    drop = _plan_image_overlays(container, new_image, log)
+    new_cmd = build_run_command(container, target_inspect, target_image, mounts=mounts, env=env, drop_mounts=drop)
     if not _recreate(target, new_cmd, log):
         log("recreate failed — attempting rollback")
         return _rollback(container, old_image_id, old_image_inspect, log)
@@ -342,6 +400,32 @@ def run_update(  # noqa: PLR0911 — each failure mode returns a distinct exit c
 
     log("new container unhealthy — rolling back")
     return _rollback(container, old_image_id, old_image_inspect, log)
+
+
+def _plan_image_overlays(container: dict[str, Any], new_image: str | None, log: _Log) -> tuple[str, ...]:
+    """Что делать с папками хоста поверх каталогов образа; возвращает точки, которые не переносим.
+
+    Каждая такая привязка попадает в журнал: после обновления именно она объясняет,
+    почему у новой версии старые паки или интерфейс.
+    """
+    overlays = image_overlays(container.get("Mounts"))
+    if new_image is None or not overlays:
+        return ()
+    current_ref = (container.get("Config") or {}).get("Image")
+    if drops_image_overlays(current_ref, new_image):
+        for overlay in overlays:
+            log(
+                f"local build {current_ref} -> published {new_image}: bind mount {overlay['source']} over "
+                f"{overlay['destination']} is not carried over, the new image's own files are used "
+                "(the host folder is left untouched; rollback restores the mount)"
+            )
+        return tuple(o["destination"] for o in overlays)
+    for overlay in overlays:
+        log(
+            f"WARNING: bind mount {overlay['source']} over {overlay['destination']} is kept: it still hides "
+            f"what {new_image} ships there (for /app/packs the template packs stay as in that folder)"
+        )
+    return ()
 
 
 def _rollback(

@@ -5,6 +5,7 @@ type ProjectAccess = {
   mode: string;
   reasons: string[];
   required_studio?: string | null | undefined;
+  stale_packs?: { path: string; studio_version: string } | null | undefined;
 };
 
 export type ProjectAccessBannerProps = {
@@ -16,6 +17,10 @@ export type ProjectAccessBannerProps = {
  * Полоса «только для чтения»: данные проекта записаны более новой Студией, её
  * версии шаблона здесь нет или идёт обновление шаблона. Запись и так запрещена
  * на сервере (423) — полоса объясняет почему и что делать.
+ *
+ * Если версия шаблона вшита в эту Студию, но её нет в подключённом извне
+ * каталоге шаблонов (`stale_packs`), обновлять Студию бесполезно: полоса
+ * называет каталог, а не просит новую версию.
  */
 export const ProjectAccessBanner = ({
   access,
@@ -27,16 +32,26 @@ export const ProjectAccessBanner = ({
   const required = access.required_studio
     ? t("access.requiredSuffix", { version: access.required_studio })
     : "";
+  const stale = access.stale_packs ?? null;
+  const schemaLimited =
+    access.reasons.includes("schema_read") ||
+    access.reasons.includes("schema_write");
   const lines: string[] = [];
   if (access.reasons.includes("update_in_progress"))
     lines.push(t("access.updating"));
-  if (
-    access.reasons.includes("schema_read") ||
-    access.reasons.includes("schema_write")
-  )
-    lines.push(t("access.schema", { required }));
+  if (schemaLimited) lines.push(t("access.schema", { required }));
   if (access.reasons.includes("template_missing"))
-    lines.push(t("access.template", { version: templateVersion, required }));
+    lines.push(
+      stale
+        ? t("access.templateStale", {
+            version: templateVersion,
+            path: stale.path,
+            studio: stale.studio_version,
+          })
+        : t("access.template", { version: templateVersion, required }),
+    );
+  // Совет обновить Студию нужен, только если без новой Студии проект не открыть.
+  const hint = stale && !schemaLimited ? "access.staleHint" : "access.hint";
 
   return (
     <div
@@ -66,7 +81,7 @@ export const ProjectAccessBanner = ({
           <span key={line}>{line}</span>
         ))}
         {!access.reasons.includes("update_in_progress") && (
-          <span className="dim">{t("access.hint")}</span>
+          <span className="dim">{t(hint)}</span>
         )}
       </div>
     </div>

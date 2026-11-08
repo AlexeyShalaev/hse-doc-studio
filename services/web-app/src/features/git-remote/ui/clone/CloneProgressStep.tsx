@@ -9,6 +9,7 @@ import {
   type CloneResult,
   type GitOperation,
 } from "@entities/git-sync";
+import { useTemplateMissingText } from "@entities/system";
 import { projectKeys } from "@entities/project";
 import { Notice } from "@shared/ui/ConflictKit";
 import { Spinner } from "@shared/ui/Spinner";
@@ -63,6 +64,13 @@ export const CloneProgressStep = ({
   const cancel = useCancelOperation();
   const operation = operationQuery.data;
   const finishedRef = useRef(false);
+  const doneResult =
+    operation && isCloneResult(operation.result) ? operation.result : null;
+  const templateMissing = useTemplateMissingText(
+    t("clone.progress.warn.template_missing"),
+    null,
+    doneResult?.warnings.some((w) => w.code === "template_missing") ?? false,
+  );
 
   // Новый проект сразу виден в списке, не дожидаясь перечитывания.
   useEffect(() => {
@@ -396,11 +404,7 @@ export const CloneProgressStep = ({
           />
         )}
         {result?.warnings.some((w) => w.code === "template_missing") && (
-          <Notice
-            tone="warn"
-            role="status"
-            text={t("clone.progress.warn.template_missing")}
-          />
+          <Notice tone="warn" role="status" text={templateMissing} />
         )}
         {lfs && (
           <Notice

@@ -155,6 +155,13 @@ class Settings(BaseSettings):
         default=_DEFAULT_PACKS_DIR,
         description="Directory with template packs (auto-detected from monorepo root locally; /app/packs in docker)",
     )
+    # Опись паков, вшитых в образ (пишет Dockerfile). По ней видно, что каталог
+    # шаблонов подменён и отстаёт от Студии (core.template_packs). Нет файла
+    # (запуск из исходников) — сравнивать не с чем.
+    builtin_packs_manifest: Path | None = Field(
+        default=Path("/app/packs-manifest.json"),
+        description="Manifest of the template packs baked into the image (written by the Dockerfile)",
+    )
     # NOTE: the LanguageTool enabled flag and server URL are *runtime* settings
     # persisted in config.json (see use_cases.settings.get_settings._DEFAULTS),
     # read live by the external check engine — they are deliberately NOT here as

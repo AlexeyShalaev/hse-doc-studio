@@ -45,15 +45,13 @@ from hse_doc_studio.core.access.context import require_actor, set_current_actor
 from hse_doc_studio.core.access.entities import Actor, ActorSource, ProjectAcl, Role
 from hse_doc_studio.core.access.policy import Decision, decide, required_role
 from hse_doc_studio.core.access.repositories import IProjectAclRepository
-from hse_doc_studio.core.enums import ProjectAccessMode, ProjectAccessReason
 from hse_doc_studio.core.errors import NotFoundError, ProjectReadOnlyError
-from hse_doc_studio.core.i18n import localized_error
 from hse_doc_studio.core.identity.commit_identity import guest_commit_identity, noreply_domain
 from hse_doc_studio.core.identity.errors import IdentityError, IdentityErrorCode, message_for
 from hse_doc_studio.core.identity.protocols import IActorResolver
 from hse_doc_studio.core.mode import StudioMode
 from hse_doc_studio.core.office_tokens import OfficeTokenPurpose
-from hse_doc_studio.core.project_access import ProjectAccess
+from hse_doc_studio.core.project_access import ProjectAccess, access_message
 from hse_doc_studio.use_cases.office_editor.access import IOfficeAccess
 from hse_doc_studio.use_cases.projects.get_project_access import GetProjectAccessInput, GetProjectAccessUC
 
@@ -79,30 +77,16 @@ def _allowed(request: Request) -> bool:
     return route_path.endswith(_ALLOWED_SUFFIXES)
 
 
-def access_detail(access: ProjectAccess) -> dict[str, Any]:
-    if ProjectAccessReason.update_in_progress in access.reasons:
-        message = localized_error(
-            "Идёт обновление шаблона проекта — изменения временно недоступны.",
-            "The project template is being updated — changes are temporarily unavailable.",
-        )
-    elif access.mode == ProjectAccessMode.files_only or access.required_studio:
-        required = access.required_studio or "?"
-        message = localized_error(
-            f"Проект сохранён более новой версией Студии (нужна {required}): здесь он открыт только для чтения.",
-            f"The project was saved by a newer Studio (needs {required}): it is read-only here.",
-        )
-    else:
-        message = localized_error(
-            "Проект открыт только для чтения.",
-            "The project is read-only.",
-        )
+def access_detail(access: ProjectAccess, template_version: str = "") -> dict[str, Any]:
     # Форма как у прочих структурированных ошибок: клиент берёт `detail` и `code`.
+    stale = access.stale_packs
     return {
-        "detail": message,
+        "detail": access_message(access, template_version),
         "code": "project_read_only",
         "mode": access.mode.value,
         "reasons": [r.value for r in access.reasons],
         "required_studio": access.required_studio,
+        "stale_packs": None if stale is None else {"path": stale.path, "studio_version": stale.studio_version},
     }
 
 
@@ -307,7 +291,7 @@ async def project_write_guard(request: Request) -> None:
     except NotFoundError:
         return  # 404 отдаст сам эндпоинт
     if not result.access.writable:
-        raise HTTPException(status_code=_LOCKED, detail=access_detail(result.access))
+        raise HTTPException(status_code=_LOCKED, detail=access_detail(result.access, result.project.lock.version))
 
 
 async def _read_only_handler(_request: Request, exc: Exception) -> JSONResponse:

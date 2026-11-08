@@ -1,12 +1,42 @@
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import type { OperationWarning } from "@entities/git-sync";
+import { systemKeys, type PacksSource } from "@entities/system";
 import { i18n } from "@shared/lib/i18n";
 import { SyncWarnings } from "./SyncWarnings";
 
-const renderWarnings = (warnings: OperationWarning[]) =>
-  render(<SyncWarnings warnings={warnings} />);
+const renderWarnings = (warnings: OperationWarning[], packs?: PacksSource) => {
+  const client = new QueryClient({
+    defaultOptions: { queries: { retry: false, staleTime: Infinity } },
+  });
+  // Без сведений о каталоге шаблонов запрос не уходит в сеть: ответ «нет данных».
+  client.setQueryData(systemKeys.packs(), packs ?? null);
+  return render(
+    <QueryClientProvider client={client}>
+      <SyncWarnings warnings={warnings} />
+    </QueryClientProvider>,
+  );
+};
+
+const LAGGING: PacksSource = {
+  kind: "external",
+  path: "/app/packs",
+  host_path: "/Users/anna/hse-doc-studio/packs",
+  mounted: true,
+  studio_version: "0.16.0",
+  lagging: true,
+  templates: [
+    {
+      pack_id: "hse-cs-sse",
+      template_id: "coursework",
+      versions: ["2026.1.1"],
+      builtin: ["2026.1.1", "2026.1.2"],
+      missing: ["2026.1.2"],
+    },
+  ],
+};
 
 describe("SyncWarnings", () => {
   beforeEach(async () => {
@@ -28,6 +58,15 @@ describe("SyncWarnings", () => {
     expect(screen.getByText(/к ней можно вернуться/)).toBeInTheDocument();
     // Без путей раскрывающегося списка нет.
     expect(screen.queryByText(/Файлы:/)).toBeNull();
+  });
+
+  it("names a lagging mounted template folder next to a missing template", () => {
+    renderWarnings([{ code: "template_missing", paths: [] }], LAGGING);
+    expect(
+      screen.getByText(
+        /Каталог шаблонов \/app\/packs подключён извне и отстаёт от Студии v0\.16\.0/,
+      ),
+    ).toBeInTheDocument();
   });
 
   it("tells the signatures are stale", () => {

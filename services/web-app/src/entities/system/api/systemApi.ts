@@ -42,6 +42,16 @@ export type ArchiveFormatsResponse = z.infer<
   typeof ArchiveFormatsResponseSchema
 >;
 
+// Папка хоста, привязанная поверх каталога образа (например, /app/packs). keep:
+// после обновления останется прежней; drop: своя сборка уступит опубликованному образу.
+export const ImageOverlaySchema = z.object({
+  destination: z.string(),
+  source: z.string(),
+  on_update: z.enum(["keep", "drop"]),
+});
+
+export type ImageOverlay = z.infer<typeof ImageOverlaySchema>;
+
 export const SystemInfoSchema = z.object({
   version: z.string(),
   mode: z.enum(["local", "server"]).default("local"),
@@ -72,9 +82,33 @@ export const SystemInfoSchema = z.object({
   // update these (cached backend-side) are the only ones that exist.
   latest_release_date: z.string().default(""),
   latest_release_notes: z.array(z.string()).default([]),
+  image_overlays: z.array(ImageOverlaySchema).default([]),
 });
 
 export type SystemInfo = z.infer<typeof SystemInfoSchema>;
+
+export const PackTemplateSchema = z.object({
+  pack_id: z.string(),
+  template_id: z.string(),
+  versions: z.array(z.string()),
+  builtin: z.array(z.string()),
+  missing: z.array(z.string()),
+});
+
+// Откуда загружены шаблоны: вшитые в образ (builtin), подключённый извне каталог
+// (external) или запуск из исходников без описи образа (source).
+export const PacksSourceSchema = z.object({
+  kind: z.enum(["builtin", "external", "source"]),
+  path: z.string(),
+  host_path: z.string().nullish(),
+  mounted: z.boolean(),
+  studio_version: z.string(),
+  lagging: z.boolean(),
+  templates: z.array(PackTemplateSchema),
+});
+
+export type PackTemplate = z.infer<typeof PackTemplateSchema>;
+export type PacksSource = z.infer<typeof PacksSourceSchema>;
 
 export const ReleaseEntrySchema = z.object({
   version: z.string(),
@@ -177,6 +211,11 @@ export const systemApi = {
   getSystemInfo: async (): Promise<SystemInfo> => {
     const res = await systemClient.get("/system/info");
     return SystemInfoSchema.parse(res.data);
+  },
+
+  getPacksSource: async (): Promise<PacksSource> => {
+    const res = await systemClient.get("/system/packs");
+    return PacksSourceSchema.parse(res.data);
   },
 
   // Curated bilingual release notes — local data on the backend, no network.

@@ -55,7 +55,8 @@ from hse_doc_studio.core.submission_archive import (
     ISubmissionAudit,
     NoSubmissionAudit,
 )
-from hse_doc_studio.core.update.entities import UpdateFeedProbe
+from hse_doc_studio.core.template_packs import ITemplatePacksSource
+from hse_doc_studio.core.update.entities import ImageOverlay, UpdateFeedProbe
 from hse_doc_studio.core.update.repositories import (
     IReleaseNotesRepository,
     ISelfUpdateGateway,
@@ -84,6 +85,7 @@ from hse_doc_studio.infra.persistence.signature import JsonSignatureRepository
 from hse_doc_studio.infra.persistence.signing_identity import JsonSigningIdentityRepository
 from hse_doc_studio.infra.persistence.submission import JsonPackSubmissionRepository
 from hse_doc_studio.infra.persistence.update_check import JsonUpdateCheckRepository
+from hse_doc_studio.infra.template.packs_source import FilesystemPacksSource
 from hse_doc_studio.infra.template.yaml_template_repository import YamlTemplateRepository
 from hse_doc_studio.infra.update.release_notes_file import JsonReleaseNotesRepository
 from httpx import ASGITransport, AsyncClient
@@ -115,7 +117,15 @@ class UnsupportedSelfUpdateGateway:
     `create_test_container(self_updater=...)`.
     """
 
-    def __init__(self, *, can_update: bool = False, busy: bool = False, starts: bool = True) -> None:
+    def __init__(
+        self,
+        *,
+        can_update: bool = False,
+        busy: bool = False,
+        starts: bool = True,
+        overlays: tuple[ImageOverlay, ...] = (),
+    ) -> None:
+        self.overlays = overlays
         self.can_update = can_update
         self.busy = busy
         self.starts = starts
@@ -133,6 +143,9 @@ class UnsupportedSelfUpdateGateway:
     async def start(self, target_version: str) -> bool:
         self.started_versions.append(target_version)
         return self.starts
+
+    async def image_overlays(self) -> tuple[ImageOverlay, ...]:
+        return self.overlays
 
 
 class OfflineDockerHealthProbe:
@@ -244,6 +257,7 @@ def create_test_container(  # noqa: C901 — one @provide per repo; flat by desi
     mount_probe: IMountProbe | None = None,
     setup_applier: ISetupApplier | None = None,
     packs_dir: Path | None = None,
+    packs_source: ITemplatePacksSource | None = None,
     host_key_scanner: IHostKeyScanner | None = None,
     remote_runner: IRemoteRunnerSupervisor | None = None,
     extra_providers: Sequence[Provider] = (),
@@ -290,6 +304,13 @@ def create_test_container(  # noqa: C901 — one @provide per repo; flat by desi
             repo = YamlTemplateRepository(packs_dir or _PACKS_DIR)
             repo.load()
             return repo
+
+        @provide
+        def get_template_packs_source(self, template_repo: ITemplateRepository) -> ITemplatePacksSource:
+            # Без описи образа: тесты идут из исходников, и каталог считается своим.
+            if packs_source is not None:
+                return packs_source
+            return FilesystemPacksSource(packs_dir or _PACKS_DIR, template_repo, manifest=None)
 
         @provide
         def get_compile_repo(self) -> ICompileRepository:

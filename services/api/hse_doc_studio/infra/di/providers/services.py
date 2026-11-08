@@ -98,6 +98,7 @@ from hse_doc_studio.core.signatures.ports import (
 )
 from hse_doc_studio.core.system_capacity import ISystemCapacityProbe
 from hse_doc_studio.core.template_materializer import ITemplateMaterializer
+from hse_doc_studio.core.template_packs import ITemplatePacksSource
 from hse_doc_studio.core.template_update.protocols import (
     IMergeEngine,
     ITemplateBaseStore,
@@ -1069,9 +1070,12 @@ class DomainServiceProvider(Provider):
 
     @provide
     def get_project_access_service(
-        self, template_repo: ITemplateRepository, journal_repo: IUpdateJournalRepository
+        self,
+        template_repo: ITemplateRepository,
+        journal_repo: IUpdateJournalRepository,
+        packs: ITemplatePacksSource,
     ) -> ProjectAccessService:
-        return ProjectAccessService(template_repo, journal_repo)
+        return ProjectAccessService(template_repo, journal_repo, packs)
 
     @provide
     def get_vcs_edit_throttle(self) -> IVcsEditThrottle:

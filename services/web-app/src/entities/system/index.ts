@@ -7,6 +7,9 @@ export {
   ArchiveFormatSchema,
   ArchiveFormatsResponseSchema,
   SystemInfoSchema,
+  ImageOverlaySchema,
+  PackTemplateSchema,
+  PacksSourceSchema,
   SelfUpdateResponseSchema,
   ReleaseEntrySchema,
   ReleaseNotesResponseSchema,
@@ -22,6 +25,9 @@ export type {
   ArchiveFormatId,
   ArchiveFormatsResponse,
   SystemInfo,
+  ImageOverlay,
+  PackTemplate,
+  PacksSource,
   SelfUpdateResponse,
   ReleaseEntry,
   ReleaseNotesResponse,
@@ -37,7 +43,10 @@ export {
   useSystemInfo,
   useReleaseNotes,
   useAppVersions,
+  usePacksSource,
 } from "./api/systemQueries";
 export { buildEditorUrl, openInEditor } from "./lib/openInEditor";
 export { EditorIcon } from "./ui/EditorIcon";
 export { OpenFolderInEditor } from "./ui/OpenFolderInEditor";
+export { useTemplateMissingText } from "./model/useTemplateMissingText";
+export type { TemplateRef } from "./model/useTemplateMissingText";

@@ -40,4 +40,19 @@ export const createSystemRoutes = (
     pattern: "/system/runner-health",
     handler: () => demoJson({ docker: "running" }),
   },
+  {
+    // Шаблоны вшиты в образ: подсказки про отставший каталог в демо не нужны.
+    method: "GET",
+    pattern: "/system/packs",
+    handler: () =>
+      demoJson({
+        kind: "builtin",
+        path: "",
+        host_path: null,
+        mounted: false,
+        studio_version: getWorld().bootstrap.version,
+        lagging: false,
+        templates: [],
+      }),
+  },
 ];

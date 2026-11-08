@@ -15,6 +15,7 @@ import { useAppSettings, useUpdateAppSettings } from "@entities/app-settings";
 import { useCapabilities } from "@entities/session";
 import { i18n, toast } from "@shared/lib";
 import { Spinner } from "@shared/ui/Spinner";
+import { AboutTemplates } from "./AboutTemplates";
 import { Setting, SettingHead } from "./Setting";
 
 const MODE_LABELS: Record<SystemInfo["deployment_mode"], string> = {
@@ -178,6 +179,7 @@ const AboutUpdates = ({
         <VersionSwitcher
           canSelfUpdate={data?.can_self_update ?? false}
           enabled={data !== undefined}
+          overlays={data?.image_overlays ?? []}
         />
       </Setting>
 
@@ -191,6 +193,7 @@ const AboutUpdates = ({
         deploymentMode={update.deploymentMode}
         canSelfUpdate={data?.can_self_update ?? false}
         sourceUrl={data?.source_url ?? null}
+        overlays={data?.image_overlays ?? []}
       />
     </>
   );
@@ -272,6 +275,9 @@ export const AboutSection = () => {
           <Mono>—</Mono>
         )}
       </Setting>
+
+      {/* Пути каталога шаблонов нужны тому, кто управляет установкой: на сервере это администратор. */}
+      {selfUpdate && <AboutTemplates />}
 
       {selfUpdate && <AboutUpdates data={data} isLoading={isLoading} />}
     </div>

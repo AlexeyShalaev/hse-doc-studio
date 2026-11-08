@@ -463,7 +463,15 @@
     "autoUpdateLabel": "Install updates automatically",
     "autoUpdateHint": "Checked every few hours. An update never starts during a build or an assistant turn, and a failed one rolls itself back.",
     "autoUpdateUnsupported": "This run mode cannot replace the app itself — update manually.",
-    "switchVersion": "Version"
+    "switchVersion": "Version",
+    "templates": "Templates",
+    "templatesBuiltin": "Built into Studio v{{version}}",
+    "templatesExternal": "Folder mounted from outside: {{path}}",
+    "templatesSource": "Source folder: {{path}}",
+    "templatesHost": "Folder on this computer: {{path}}",
+    "templatesLagging": "The folder lags behind Studio v{{version}} and lacks these versions: {{missing}}. Projects on them open read-only. Update the folder or remove the mount.",
+    "templatesVersions": "Available template versions",
+    "templatesMissing": "missing: {{versions}}"
   },
   "search": {
     "appearance": "Appearance",
@@ -500,6 +508,7 @@
     "about": "About",
     "aboutMode": "Launch mode",
     "aboutImage": "Image",
+    "aboutTemplates": "Templates",
     "aboutSource": "Source",
     "aboutDataDir": "Configuration folder",
     "aboutUpdates": "Updates",
