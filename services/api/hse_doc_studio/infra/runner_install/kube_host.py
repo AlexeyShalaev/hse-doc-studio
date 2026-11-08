@@ -3,7 +3,8 @@
 Права Студии на это (Role чарта, namespace релиза): Deployment create/list/update/delete, Secret и PVC create/delete.
 `update` нужен только обновлению на месте: Deployment заменяется целиком, Secret и том не трогаются. Роль самого
 раннера (поды сборки) создаёт чарт заранее, Студия её не выдаёт и поэтому не может расширить: права `escalate` и работа
-с Role ей не нужны.
+с Role ей не нужны. Поды сборки раннер создаёт в `build_namespace` (runner.installFromUi.buildNamespace), сам раннер
+остаётся в namespace Студии.
 """
 
 from __future__ import annotations
@@ -112,6 +113,7 @@ class KubeLocalHost:
         storage_size: str = "5Gi",
         client: KubernetesApiClient | None = None,
         namespace: str | None = None,
+        build_namespace: str | None = None,
         resources: ResourceDefaults = DEFAULT_RESOURCES,
         rollout_timeout_s: float = ROLLOUT_TIMEOUT_S,
         rollout_poll_s: float = ROLLOUT_POLL_S,
@@ -128,6 +130,7 @@ class KubeLocalHost:
         self._injected = client
         self._cfg = KubernetesExecutorConfig()
         self._namespace = namespace
+        self._build_namespace = build_namespace
 
     def _ns(self) -> str:
         return self._namespace or self._cfg.resolved_namespace()
@@ -216,7 +219,8 @@ class KubeLocalHost:
             {"name": "HSE_RUNNER__NAME", "value": name},
             {"name": "HSE_RUNNER__TOKEN", "valueFrom": {"secretKeyRef": {"name": f"{name}-token", "key": "token"}}},
             {"name": "HSE_RUNNER__EXECUTOR", "value": "kubernetes"},
-            {"name": "HSE_RUNNER__K8S__NAMESPACE", "value": ns},
+            # Поды сборки: свой namespace (Role чарта там) или namespace раннера.
+            {"name": "HSE_RUNNER__K8S__NAMESPACE", "value": self._build_namespace or ns},
             {"name": "HSE_RUNNER__K8S__OWNER_POD_NAME", "valueFrom": {"fieldRef": {"fieldPath": "metadata.name"}}},
             {"name": "HSE_RUNNER__K8S__OWNER_POD_UID", "valueFrom": {"fieldRef": {"fieldPath": "metadata.uid"}}},
             # Лимиты подов сборки, которые этот раннер создаёт сам.
@@ -247,7 +251,7 @@ class KubeLocalHost:
                         "serviceAccountName": self._service_account,
                         "terminationGracePeriodSeconds": 600,
                         # Токен ServiceAccount нужен раннеру: через него он создаёт поды сборки. Его права: только
-                        # поды сборки в этом namespace (Role чарта).
+                        # поды сборки в их namespace (Role чарта).
                         "automountServiceAccountToken": True,
                         "enableServiceLinks": False,
                         "securityContext": {

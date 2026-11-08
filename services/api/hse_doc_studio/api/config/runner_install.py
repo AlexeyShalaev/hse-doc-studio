@@ -25,6 +25,13 @@ class RunnerInstallConfig(BaseModel):
             "ServiceAccount установленных из админки раннеров: его создаёт чарт, права только на поды сборки."
         ),
     )
+    kubernetes_build_namespace: str = Field(
+        default="",
+        description=(
+            "Namespace подов сборки установленных из админки раннеров (runner.installFromUi.buildNamespace); пусто "
+            "значит namespace Студии. Раннер получает его в HSE_RUNNER__K8S__NAMESPACE при установке и обновлении."
+        ),
+    )
     kubernetes_studio_url: str = Field(
         default="",
         description="Адрес Студии для раннеров в кластере (внутренний Service); пусто значит публичный адрес.",

@@ -412,6 +412,7 @@ class ServerAdminOpsProvider(Provider):
                 runner_ephemeral=RUNNER_EPHEMERAL,
                 build_ephemeral=BUILD_EPHEMERAL,
                 namespace=declared.release_namespace or None if declared is not None else None,
+                build_namespace=cfg.kubernetes_build_namespace or None,
             ),
             read_live=cluster.read_live,
             studio_version=settings.get_app_version(),
@@ -453,6 +454,7 @@ class ServerAdminOpsProvider(Provider):
                 service_account=cfg.kubernetes_service_account,
                 storage_class=cfg.kubernetes_storage_class,
                 storage_size=cfg.kubernetes_storage_size,
+                build_namespace=cfg.kubernetes_build_namespace or None,
                 resources=_install_defaults(cfg),
             ),
         }

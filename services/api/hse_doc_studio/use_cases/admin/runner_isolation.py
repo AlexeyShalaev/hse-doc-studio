@@ -107,6 +107,17 @@ class RunnerIsolationUC:
         if settings.read_live and declared is not None and declared.release_namespace:
             build_ns = declared.build.namespace or declared.release_namespace
             live = await self._reader.cluster_state(
-                ClusterTargets(release_namespace=declared.release_namespace, build_namespace=build_ns)
+                ClusterTargets(
+                    release_namespace=declared.release_namespace,
+                    build_namespace=build_ns,
+                    ui_build_namespace=ui_build_namespace(declared, settings.install),
+                )
             )
         return ClusterIsolationInfo(declared=declared, install=settings.install, live=live)
+
+
+def ui_build_namespace(declared: DeclaredCluster | None, install: InstallFromUiFacts) -> str:
+    """Namespace подов сборки раннеров из админки: из настроек установки, иначе из выжимки Helm, иначе релиза."""
+    from_chart = declared.ui_build.namespace if declared is not None and declared.ui_build is not None else ""
+    release = declared.release_namespace if declared is not None else ""
+    return install.build_namespace or from_chart or install.namespace or release

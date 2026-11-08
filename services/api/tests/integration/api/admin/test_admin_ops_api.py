@@ -1103,13 +1103,113 @@ async def test__runners_isolation__live_state_is_read_when_allowed(stack: _Stack
 
     body = (await stack.client.get("/api/admin/runners/isolation", headers=boss)).json()
 
-    assert stack.cluster.asked == [ClusterTargets(release_namespace="studio", build_namespace="builds")]
+    assert stack.cluster.asked == [
+        ClusterTargets(release_namespace="studio", build_namespace="builds", ui_build_namespace="studio")
+    ]
     assert body["live_read"] == "partial"
     assert body["checked_at"] is not None
     assert body["network"]["build_deny_all"] == {"declared": True, "live": False}
     assert body["quota"]["live_used"] == {"pods": "3"}
     assert body["limit_range"]["live_found"] is False
     assert body["pod_security"][0]["enforce"] == "restricted"
+
+
+async def test__runners_isolation__ui_builds_in_their_own_namespace(stack: _Stack) -> None:
+    from dataclasses import replace  # noqa: PLC0415
+
+    from hse_doc_studio.core.runner_isolation import (  # noqa: PLC0415
+        ClusterTargets,
+        LiveClusterState,
+        LiveLimitRange,
+        LiveQuota,
+        LiveStatus,
+    )
+
+    boss = await stack.users.add("boss", admin=True)
+    declared = make_declared(
+        uiBuild={"enabled": True, "namespace": "ui-builds", "networkPolicy": True, "quota": True, "limitRange": True}
+    )
+    stack.isolation = replace(
+        stack.isolation,
+        declared=declared,
+        install=make_install_facts(enabled=True, service_account="rel-ui", build_namespace="ui-builds"),
+        read_live=True,
+    )
+    stack.cluster.state = LiveClusterState(
+        status=LiveStatus.ok,
+        checked_at=datetime.now(UTC),
+        ui_build_deny_all=True,
+        quota_checked=True,
+        ui_quota_checked=True,
+        ui_quota=LiveQuota(name="rel-builds", hard={"pods": "20"}, used={"pods": "1"}),
+        ui_limit_range_checked=True,
+        ui_limit_range=LiveLimitRange(name="rel-builds", max={"cpu": "8"}),
+    )
+
+    body = (await stack.client.get("/api/admin/runners/isolation", headers=boss)).json()
+
+    assert stack.cluster.asked == [
+        ClusterTargets(release_namespace="studio", build_namespace="builds", ui_build_namespace="ui-builds")
+    ]
+    assert body["install_from_ui"]["namespace"] == "studio"
+    assert body["install_from_ui"]["build_namespace"] == "ui-builds"
+    assert body["network"]["ui_build_deny_all"] == {"declared": True, "live": True}
+    assert body["quota"]["namespace"] == "builds"
+    assert body["ui_quota"]["namespace"] == "ui-builds"
+    assert body["ui_quota"]["declared"] == {"pods": "20", "limits.memory": "80Gi"}
+    assert body["ui_quota"]["live_used"] == {"pods": "1"}
+    assert body["ui_limit_range"]["namespace"] == "ui-builds"
+    assert body["ui_limit_range"]["declared"] == {"default": {}, "default_request": {}, "max": {}}
+    assert body["ui_limit_range"]["live"]["max"] == {"cpu": "8"}
+
+
+async def test__runners_isolation__shared_build_namespace_shows_one_quota(stack: _Stack) -> None:
+    from dataclasses import replace  # noqa: PLC0415
+
+    boss = await stack.users.add("boss", admin=True)
+    # Раннер чарта docker: его квоты нет, но namespace подов сборки раннеров из админки тот же, и квота там одна.
+    declared = make_declared(
+        uiBuild={"enabled": True, "namespace": "builds", "networkPolicy": False, "quota": True, "limitRange": False}
+    )
+    declared = declared.model_copy(
+        update={
+            "runner": declared.runner.model_copy(update={"executor": "docker"}),
+            "build": declared.build.model_copy(
+                update={"quota": declared.build.quota.model_copy(update={"enabled": False})}
+            ),
+        }
+    )
+    stack.isolation = replace(
+        stack.isolation,
+        declared=declared,
+        install=make_install_facts(enabled=True, service_account="rel-ui", build_namespace="builds"),
+    )
+
+    body = (await stack.client.get("/api/admin/runners/isolation", headers=boss)).json()
+
+    assert body["quota"]["namespace"] == "builds"
+    assert body["quota"]["declared"] == {"pods": "20", "limits.memory": "80Gi"}
+    assert body["ui_quota"] is None
+    assert body["ui_limit_range"] is None
+    assert body["network"]["ui_build_deny_all"] == {"declared": False, "live": None}
+
+
+async def test__runners_isolation__old_chart_without_ui_build_keeps_builds_in_the_release(stack: _Stack) -> None:
+    from dataclasses import replace  # noqa: PLC0415
+
+    boss = await stack.users.add("boss", admin=True)
+    stack.isolation = replace(
+        stack.isolation,
+        declared=make_declared(),
+        install=make_install_facts(enabled=True, service_account="rel-ui"),
+    )
+
+    body = (await stack.client.get("/api/admin/runners/isolation", headers=boss)).json()
+
+    assert body["install_from_ui"]["build_namespace"] == "studio"
+    assert body["network"]["ui_build_deny_all"] == {"declared": True, "live": None}
+    assert body["ui_quota"]["namespace"] == "studio"
+    assert body["ui_quota"]["declared"] is None
 
 
 async def test__runner_isolation__answers_carry_no_secrets(stack: _Stack) -> None:

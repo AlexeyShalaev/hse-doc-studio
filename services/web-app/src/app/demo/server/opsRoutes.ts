@@ -168,6 +168,7 @@ const demoIsolation = () => {
     install_from_ui: {
       enabled: false,
       namespace: null,
+      build_namespace: null,
       service_account: null,
       storage_class: null,
       storage_size: "5Gi",
@@ -185,6 +186,8 @@ const demoIsolation = () => {
     network: null,
     quota: null,
     limit_range: null,
+    ui_quota: null,
+    ui_limit_range: null,
     pod_security: null,
   };
 };
