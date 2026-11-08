@@ -434,7 +434,12 @@ metadata:
     helm.sh/chart: hse-doc-studio-0.1.0
     app.kubernetes.io/component: api
 spec:
-  # Одна реплика и Recreate: том проектов пишется одним процессом, две копии не должны жить одновременно.
+  # Одна реплика и Recreate: том проектов (ReadWriteOnce) пишется одним процессом, а замки сборок, комнаты
+  # совместной правки и маршрутизация раннеров живут в его памяти, так что две копии не должны жить одновременно.
+  # RollingUpdate тут невозможен, и окно недоступности при выкатке неизбежно. Оно сведено к минимуму: старый под
+  # отвечает ожидающим 503 с Retry-After и выходит сразу (graceful_shutdown.py), новый получает трафик через
+  # 1–2 с после готовности (частые проверки ниже). preStop со sleep не нужен: другого пода, на который ушёл бы
+  # трафик, при Recreate нет, и пауза только удлинила бы окно.
   replicas: 1
   strategy:
     type: Recreate
@@ -452,6 +457,7 @@ spec:
       annotations:
         checksum/secret: 3d4af20705b72dc5a7dd296489f57e02b20395a134958a3730b60e804bee7f94
     spec:
+      terminationGracePeriodSeconds: 30
       serviceAccountName: rel-hse-doc-studio-api
       securityContext:
         runAsNonRoot: true
@@ -543,13 +549,15 @@ spec:
           volumeMounts:
             - {name: data, mountPath: /data}
             - {name: backups, mountPath: /backups}
+          # /health отвечает только после восстановления задач при старте. Частые проверки: при выкатке каждая
+          # секунда между готовностью и включением в Service это 503 от ingress. Бюджет старта тот же, 5 минут.
           startupProbe:
             httpGet: {path: /health, port: http}
-            periodSeconds: 5
-            failureThreshold: 60
+            periodSeconds: 2
+            failureThreshold: 150
           readinessProbe:
             httpGet: {path: /health, port: http}
-            periodSeconds: 10
+            periodSeconds: 2
           livenessProbe:
             httpGet: {path: /health, port: http}
             periodSeconds: 20
