@@ -6,6 +6,7 @@ import json
 import tempfile
 from dataclasses import replace
 from pathlib import Path
+from typing import Any
 
 import httpx
 import pytest
@@ -48,13 +49,18 @@ class _Docker:
         self.env_file: str | None = None
         self.owned = ""
         self.results: dict[str, tuple[int | None, str, str]] = {}
+        # Ответы после первого `docker run` (что на самом деле стало с контейнером).
+        self.after_run: dict[str, tuple[int | None, str, str]] = {}
 
     async def __call__(self, args: list[str], timeout: float = 30.0) -> tuple[int | None, str, str]:
+        ran = any(c[0] == "run" for c in self.calls)
         self.calls.append(args)
         if args[0] == "run" and "--env-file" in args:
             self.env_file = Path(args[args.index("--env-file") + 1]).read_text(encoding="utf-8")
         if args[0] == "ps" and "-q" in args:
             return 0, self.owned, ""
+        if ran and args[0] in self.after_run:
+            return self.after_run[args[0]]
         return self.results.get(args[0], (0, "", ""))
 
 
@@ -460,6 +466,48 @@ async def test__docker_upgrade__failed_start_hands_the_previous_image_for_rollba
     assert TOKEN not in caught.value.detail
 
 
+def _inspected(image: str, *, running: bool, env: list[str] | None = None) -> tuple[int, str, str]:
+    item = {"Config": {"Image": image, "Env": env or []}, "State": {"Running": running}}
+    return 0, json.dumps([item]), ""
+
+
+async def test__docker_upgrade__run_error_with_the_new_container_running_is_a_success(docker: _Docker) -> None:
+    docker.owned = "abc"
+    env = [f"HSE_RUNNER__TOKEN={TOKEN}", "HSE_RUNNER__DATA_DIR=/var/lib/hse-runner/x1"]
+    docker.results["inspect"] = _inspected("img:old", running=True, env=env)
+    docker.after_run["inspect"] = _inspected("img:new", running=True, env=env)
+    docker.results["run"] = (None, "", "timed out")
+
+    outcome = await DockerLocalHost().upgrade("hse-runner-ab12cd", "img:new", _noop)
+
+    # `docker run` не ответил вовремя, но контейнер с новым образом работает: замена применилась.
+    assert outcome.new_image == "img:new"
+    assert [c[-3] for c in docker.calls if c[0] == "run"] == ["img:new"]
+
+
+async def test__docker_upgrade__run_error_without_the_new_container_hands_the_previous_for_rollback(
+    docker: _Docker,
+) -> None:
+    docker.owned = "abc"
+    env = [f"HSE_RUNNER__TOKEN={TOKEN}", "HSE_RUNNER__DATA_DIR=/var/lib/hse-runner/x1"]
+    docker.results["inspect"] = _inspected("img:old", running=True, env=env)
+    docker.after_run["inspect"] = (1, "", "No such container")
+    docker.results["run"] = (None, "", "timed out")
+
+    with pytest.raises(UpgradeError) as caught:
+        await DockerLocalHost().upgrade("hse-runner-ab12cd", "img:new", _noop)
+
+    assert caught.value.previous.image == "img:old"
+
+
+async def test__docker_rollback__run_error_with_the_previous_container_running_is_a_success(docker: _Docker) -> None:
+    env = {"HSE_RUNNER__TOKEN": TOKEN, "HSE_RUNNER__DATA_DIR": "/var/lib/hse-runner/x1"}
+    docker.after_run["inspect"] = _inspected("img:old", running=True)
+    docker.results["run"] = (None, "", "timed out")
+
+    await DockerLocalHost().rollback("hse-runner-ab12cd", PreviousRelease("img:old", {"env": env}))
+
+
 async def test__docker_upgrade__pull_failure_needs_no_rollback(docker: _Docker) -> None:
     docker.owned = "abc"
     env = ["HSE_RUNNER__DATA_DIR=/var/lib/hse-runner/x1"]
@@ -523,6 +571,11 @@ class _LiveCluster(_Cluster):
         self.stuck_puts: set[int] = set()
         # Сколько PUT подряд ответить конфликтом версии (контроллер успел обновить status).
         self.put_conflicts = 0
+        # Ответы на PUT по порядку теряются (обрыв связи): True, если замена при этом применилась.
+        self.lost_puts: list[bool] = []
+        # Сколько GET подряд оборвать (Deployment не перечитать); после потерянного PUT берётся второе число.
+        self.get_failures = 0
+        self.get_failures_after_lost = 0
 
     def __call__(self, request: httpx.Request) -> httpx.Response:
         body = json.loads(request.content) if request.content else None
@@ -531,31 +584,53 @@ class _LiveCluster(_Cluster):
             verb = body["spec"]["resourceAttributes"]["verb"]  # type: ignore[index]
             return httpx.Response(201, json={"status": {"allowed": verb != "update" or self.update_allowed}})
         if request.method == "PUT":
-            if self.put_conflicts:
-                self.put_conflicts -= 1
-                return httpx.Response(409, json={"message": "the object has been modified"})
-            self.put = body
-            self.puts.append(body or {})
-            self.polls = 0
-            meta = {**body["metadata"], "generation": self._generation()}  # type: ignore[index]
-            return httpx.Response(200, json={**(body or {}), "metadata": meta})
+            return self._on_put(request, body or {})
         if request.method == "GET":
-            if self.put is None:
-                return httpx.Response(200, json={"items": [self.deployment]})
-            self.polls += 1
-            stuck = len(self.puts) in self.stuck_puts
-            done = self.polls >= self.rollout_after and not stuck
-            status: dict[str, object] = {
-                "observedGeneration": self._generation(),
-                "replicas": 1,
-                "updatedReplicas": 1 if done else 0,
-                "availableReplicas": 1 if done else 0,
-            }
-            if stuck:
-                status["conditions"] = [{"type": "Progressing", "reason": "ProgressDeadlineExceeded"}]
-            meta = {**self.put["metadata"], "resourceVersion": f"rv{len(self.puts)}-{self.polls}"}  # type: ignore[index]
-            return httpx.Response(200, json={"items": [{**self.put, "metadata": meta, "status": status}]})
+            return self._on_get(request)
         return httpx.Response(200, json={})
+
+    def _on_put(self, request: httpx.Request, body: dict[str, Any]) -> httpx.Response:
+        if self.put_conflicts:
+            self.put_conflicts -= 1
+            return httpx.Response(409, json={"message": "the object has been modified"})
+        lost = self.lost_puts.pop(0) if self.lost_puts else None
+        if lost is not None:
+            # Связь оборвалась: последующие GET тоже могут не пройти.
+            self.get_failures, self.get_failures_after_lost = self.get_failures_after_lost, 0
+        if lost is False:
+            raise httpx.ReadTimeout("connection reset", request=request)
+        self.put = body
+        self.puts.append(body)
+        self.polls = 0
+        if lost:
+            raise httpx.ReadTimeout("connection reset", request=request)
+        meta = {**body["metadata"], "generation": self._generation()}
+        return httpx.Response(200, json={**body, "metadata": meta})
+
+    def _on_get(self, request: httpx.Request) -> httpx.Response:
+        if self.get_failures:
+            self.get_failures -= 1
+            raise httpx.ConnectError("api unreachable", request=request)
+        if self.put is None:
+            return httpx.Response(200, json={"items": [self.deployment]})
+        self.polls += 1
+        stuck = len(self.puts) in self.stuck_puts
+        done = self.polls >= self.rollout_after and not stuck
+        status: dict[str, object] = {
+            "observedGeneration": self._generation(),
+            "replicas": 1,
+            "updatedReplicas": 1 if done else 0,
+            "availableReplicas": 1 if done else 0,
+        }
+        if stuck:
+            status["conditions"] = [{"type": "Progressing", "reason": "ProgressDeadlineExceeded"}]
+        put: dict[str, Any] = self.put
+        meta = {
+            **put["metadata"],
+            "resourceVersion": f"rv{len(self.puts)}-{self.polls}",
+            "generation": self._generation(),
+        }
+        return httpx.Response(200, json={"items": [{**put, "metadata": meta, "status": status}]})
 
     def _generation(self) -> int:
         return 6 + len(self.puts)
@@ -751,7 +826,13 @@ async def test__kube_rollback__puts_the_previous_deployment_back_and_waits_for_i
     assert restored["spec"] == deployment["spec"]
     assert _container(restored)["image"] == "registry.example/hds:0.9.0"
     assert restored["metadata"]["labels"] == deployment["metadata"]["labels"]  # type: ignore[index]
-    assert restored["metadata"]["annotations"] == deployment["metadata"]["annotations"]  # type: ignore[index]
+    annotations = dict(restored["metadata"]["annotations"])  # type: ignore[index]
+    # Своя метка замены у отката новая, остальное как было до обновления.
+    assert (
+        annotations.pop("hse-doc-studio/replace-id")
+        != cluster.puts[0]["metadata"]["annotations"]["hse-doc-studio/replace-id"]
+    )  # type: ignore[index]
+    assert annotations == deployment["metadata"]["annotations"]  # type: ignore[index]
     assert cluster.polls == 2
 
 
@@ -777,6 +858,68 @@ async def test__kube_replace__version_conflict_is_retried_with_the_live_version(
     puts = [b for m, _, b in cluster.requests if m == "PUT"]
     assert [p["metadata"]["resourceVersion"] for p in puts] == ["4242", "4242"]  # type: ignore[index]
     assert len(cluster.puts) == 1
+
+
+async def test__kube_upgrade__lost_put_response_that_applied_goes_on_like_a_success() -> None:
+    cluster = _LiveCluster(_installed(_upgrading(_LiveCluster({})), _spec()))
+    cluster.lost_puts = [True]
+
+    outcome = await _upgrading(cluster).upgrade("hse-runner-ab12cd", "img:new", _noop)
+
+    # Перечитанный Deployment несёт метку этой замены: она применилась, Студия дождалась выкатки.
+    assert outcome.new_image == "img:new"
+    assert len(cluster.puts) == 1
+    assert cluster.polls >= 1
+
+
+async def test__kube_upgrade__lost_put_response_that_applied_rolls_back_when_the_rollout_fails() -> None:
+    cluster = _LiveCluster(_installed(_upgrading(_LiveCluster({})), _spec()))
+    cluster.lost_puts = [True]
+    cluster.stuck_puts = {1}
+
+    with pytest.raises(UpgradeError) as caught:
+        await _upgrading(cluster).upgrade("hse-runner-ab12cd", "img:new", _noop)
+
+    assert caught.value.code == "rollout_failed"
+    assert caught.value.previous.image == "registry.example/hds:1.0.0"
+
+
+async def test__kube_upgrade__lost_put_response_that_did_not_apply_needs_no_rollback() -> None:
+    cluster = _LiveCluster(_installed(_upgrading(_LiveCluster({})), _spec()))
+    cluster.lost_puts = [False]
+
+    with pytest.raises(InstallError) as caught:
+        await _upgrading(cluster).upgrade("hse-runner-ab12cd", "img:new", _noop)
+
+    # Живой Deployment без метки этой замены: не применилась, откатывать нечего.
+    assert not isinstance(caught.value, UpgradeError)
+    assert caught.value.code == "kube_failed"
+    assert cluster.puts == []
+
+
+async def test__kube_upgrade__lost_put_response_that_cannot_be_checked_is_rolled_back_to_be_safe() -> None:
+    cluster = _LiveCluster(_installed(_upgrading(_LiveCluster({})), _spec()))
+    cluster.lost_puts = [False]
+    cluster.get_failures_after_lost = 3
+
+    with pytest.raises(UpgradeError) as caught:
+        await _upgrading(cluster).upgrade("hse-runner-ab12cd", "img:new", _noop)
+
+    assert caught.value.code == "kube_failed"
+    assert caught.value.previous.image == "registry.example/hds:1.0.0"
+
+
+async def test__kube_rollback__lost_put_response_that_applied_waits_for_the_previous_version() -> None:
+    cluster = _LiveCluster(_installed(_upgrading(_LiveCluster({})), _spec()))
+    cluster.stuck_puts = {1}
+    host = _upgrading(cluster)
+    with pytest.raises(UpgradeError) as caught:
+        await host.upgrade("hse-runner-ab12cd", "img:new", _noop)
+    cluster.lost_puts = [True]
+
+    await host.rollback("hse-runner-ab12cd", caught.value.previous)
+
+    assert _container(cluster.puts[-1])["image"] == "registry.example/hds:1.0.0"
 
 
 async def test__kube_rollback__without_a_snapshot_is_refused_before_any_call() -> None:

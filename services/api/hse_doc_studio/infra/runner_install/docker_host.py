@@ -142,7 +142,8 @@ class DockerLocalHost:
 
         Образ тянется до остановки, чтобы простой был только на перезапуск. Старый контейнер получает `docker stop`
         (раннер доделывает сборки до 30 с), затем удаляется и запускается заново. Прежний образ и окружение
-        запоминаются до остановки: если новый не стартовал, `UpgradeError` несёт их для `rollback`.
+        запоминаются до остановки: если новый не стартовал, `UpgradeError` несёт их для `rollback`. Отказ `docker`
+        не принимается на веру (ответ мог потеряться по таймауту): Студия смотрит, что на самом деле с контейнером.
         """
         if not _NAME_RE.fullmatch(name) or not await self._owned(name):
             raise InstallError("not_installed")
@@ -160,9 +161,7 @@ class DockerLocalHost:
 
         await report("recreate", InstallStepState.running, name)
         await run_docker(["stop", "-t", str(_STOP_GRACE_S), name], timeout=_STOP_TIMEOUT_S)
-        code, _, err = await run_docker(["rm", "-f", name], timeout=_RUN_TIMEOUT_S)
-        if code == 0:
-            code, err = await self._run(name, image, data_dir, env)
+        code, err = await self._recreate(name, image, data_dir, env)
         if code != 0:
             detail = _scrub(err.strip()[-400:], token)
             # Старый контейнер уже остановлен: без прежнего образа возвращать нечего.
@@ -182,12 +181,36 @@ class DockerLocalHost:
         token = env.get("HSE_RUNNER__TOKEN", "")
         if await self._owned(name):
             await run_docker(["stop", "-t", str(_STOP_GRACE_S), name], timeout=_STOP_TIMEOUT_S)
-            code, _, err = await run_docker(["rm", "-f", name], timeout=_RUN_TIMEOUT_S)
-            if code != 0:
-                raise InstallError("container_start_failed", _scrub(err.strip()[-400:], token))
-        code, err = await self._run(name, previous.image, data_dir, env)
+        code, err = await self._recreate(name, previous.image, data_dir, env)
         if code != 0:
             raise InstallError("container_start_failed", _scrub(err.strip()[-400:], token))
+
+    async def _recreate(self, name: str, image: str, data_dir: str, env: dict[str, str]) -> tuple[int | None, str]:
+        """`docker rm -f` и `docker run` с образом `image`; код ошибки сверяется с тем, что на самом деле.
+
+        `rm` сообщил об ошибке, а контейнера уже нет: идём дальше. `run` сообщил об ошибке (или не ответил вовремя),
+        а контейнер с этим образом работает: замена применилась, это успех.
+        """
+        code, _, err = await run_docker(["rm", "-f", name], timeout=_RUN_TIMEOUT_S)
+        if code != 0 and await self._actual(name) is not None:
+            return code, err
+        code, err = await self._run(name, image, data_dir, env)
+        if code != 0 and await self._actual(name) == (image, True):
+            return 0, ""
+        return code, err
+
+    async def _actual(self, name: str) -> tuple[str, bool] | None:
+        """Образ и «работает ли» контейнера `name` по `docker inspect`; нет контейнера или ответа: None."""
+        code, out, _ = await run_docker(["inspect", "--type", "container", name], timeout=_RUN_TIMEOUT_S)
+        if code != 0:
+            return None
+        try:
+            item = json.loads(out)[0]
+            image = item["Config"]["Image"]
+            running = item["State"]["Running"]
+        except (ValueError, LookupError, TypeError):
+            return None
+        return (image, running is True) if isinstance(image, str) else None
 
     async def _inspect(self, name: str) -> tuple[str, dict[str, str]]:
         """Образ и окружение раннера из `docker inspect`; из окружения берутся только переменные раннера."""
