@@ -250,6 +250,12 @@ runner:
   # права create/get/list/delete на Deployment, create/delete на Secret и PVC в namespace релиза.
   installFromUi:
     enabled: false
+    # Namespace подов сборки таких раннеров; пусто значит namespace релиза. Сам раннер (Deployment, Secret с токеном,
+    # том данных) остаётся в namespace релиза. Чарт namespace не создаёт: он должен существовать с меткой
+    # pod-security.kubernetes.io/enforce=restricted. В отдельном namespace подам сборки достаются и квота с LimitRange
+    # из runner.kubernetes.quota и limitRange (при общем namespace с runner.kubernetes.namespace по одному объекту).
+    # Права раннеров на поды сборки (Role и RoleBinding) чарт тогда ставит туда, в namespace релиза их нет.
+    buildNamespace: ""
     storageClassName: ""
     storageSize: 5Gi
     # Лимиты раннера, поставленного из админки: умолчания формы установки. В форме админ может задать свои
@@ -258,7 +264,7 @@ runner:
     resources:
       requests: {cpu: 100m, memory: 256Mi}
       limits: {cpu: "1", memory: 2Gi}
-    # Поды сборки таких раннеров (создаёт сам раннер, в namespace релиза).
+    # Поды сборки таких раннеров (создаёт сам раннер, в buildNamespace).
     buildResources:
       requests: {cpu: 500m, memory: 1Gi}
       limits: {cpu: "2", memory: 4Gi}
@@ -266,7 +272,8 @@ runner:
     maxMemory: 16Gi
   # Экран «Изоляция раннеров» в админке. Что задано в чарте, Студия знает всегда (это не проверка кластера).
   # readCluster=true выдаёт ServiceAccount Студии чтение (get, list) NetworkPolicy, ResourceQuota и LimitRange в
-  # namespace релиза и подов сборки и get на эти два namespace (метки Pod Security, ClusterRole с resourceNames):
+  # namespace релиза и подов сборки (runner.kubernetes.namespace и installFromUi.buildNamespace) и get на эти
+  # namespace (метки Pod Security, ClusterRole с resourceNames):
   # тогда экран показывает, что реально есть в кластере. По умолчанию выключено: прав у Студии не прибавляется.
   isolationInfo:
     readCluster: false
@@ -309,11 +316,14 @@ runner:
     fonts:
       existingClaim: ""
     # Запрет всей сети подам сборки (нужен CNI с поддержкой NetworkPolicy). Действует и для подов сборки раннеров,
-    # поставленных из админки (installFromUi). Подам сеть не нужна: исходники и результат идут через exec API.
+    # поставленных из админки (installFromUi, в их buildNamespace). Подам сеть не нужна: исходники и результат идут
+    # через exec API.
     networkPolicy:
       enabled: true
     # ResourceQuota на namespace подов сборки: общий потолок, чтобы шторм сборок не съел кластер. Только для
-    # отдельного namespace (runner.kubernetes.namespace не пуст и не равен namespace релиза).
+    # отдельного namespace: runner.kubernetes.namespace у раннера чарта и runner.installFromUi.buildNamespace у
+    # раннеров из админки (не пуст и не равен namespace релиза). Каждый такой namespace получает свою квоту с этими
+    # значениями; общий потолок на оба вида раннеров даёт один namespace на двоих.
     quota:
       enabled: false
       pods: "20"

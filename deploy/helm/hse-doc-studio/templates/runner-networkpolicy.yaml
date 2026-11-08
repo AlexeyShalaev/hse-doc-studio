@@ -5,14 +5,18 @@
 */ -}}
 {{- $full := include "hds.fullname" . }}
 {{- $np := .Values.runner.networkPolicy }}
-{{- if and .Values.runner.installFromUi.enabled .Values.runner.kubernetes.networkPolicy.enabled }}
+{{- $uiNs := include "hds.uiBuildNamespace" . }}
+{{- /* В общем namespace с подами сборки раннера чарта ту же политику уже ставит runner-kubernetes.yaml. */}}
+{{- $chartCovers := and (include "hds.chartRunnerKube" .) (eq (include "hds.runnerBuildNamespace" .) $uiNs) }}
+{{- if and .Values.runner.installFromUi.enabled .Values.runner.kubernetes.networkPolicy.enabled (not $chartCovers) }}
 ---
-# Поды сборки раннеров из админки живут в namespace релиза. Сеть им не нужна: вход и выход идут через exec API.
+# Поды сборки раннеров из админки (runner.installFromUi.buildNamespace или namespace релиза). Сеть им не нужна: вход
+# и выход идут через exec API.
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
   name: {{ $full }}-runner-ui-builds-deny-all
-  namespace: {{ .Release.Namespace }}
+  namespace: {{ $uiNs }}
   labels:
     {{- include "hds.labels" . | nindent 4 }}
     app.kubernetes.io/component: runner-ui
