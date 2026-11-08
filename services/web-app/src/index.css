@@ -6956,8 +6956,8 @@ a.adm-kpi:focus-visible {
 }
 
 /* ── меню действий строки ── */
+/* Слой задаёт ActionMenu (выше окна настроек и модальных окон). */
 .adm-menu {
-  z-index: 60;
   min-width: 11.875rem;
   padding: 0.25rem;
   border-radius: var(--r-3);

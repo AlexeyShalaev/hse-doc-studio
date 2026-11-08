@@ -12,6 +12,8 @@ export type TooltipProps = {
   className?: string;
 };
 
+const TOOLTIP_LAYER = 200;
+
 // eslint-disable-next-line react-refresh/only-export-components
 export const TooltipProvider = TooltipPrimitive.Provider;
 
@@ -40,17 +42,19 @@ export const Tooltip = ({
             // PostCSS engine (used with the legacy `@tailwind` directives + `@config`)
             // does not regenerate brand-new spacing utilities on HMR, so changing the
             // class had no effect. Inline style is immune to that and always applies.
+            // Слой выше окна настроек (90) и модальных окон (101-102), как у Select.
             style={
               sans
                 ? {
+                    zIndex: TOOLTIP_LAYER,
                     padding: "0.375rem 0.625rem",
                     maxWidth: "20rem",
                     lineHeight: 1.45,
                   }
-                : { padding: "0.375rem 0.75rem" }
+                : { zIndex: TOOLTIP_LAYER, padding: "0.375rem 0.75rem" }
             }
             className={clsx(
-              "z-50 overflow-hidden rounded-r-1 border shadow-elev-1",
+              "overflow-hidden rounded-r-1 border shadow-elev-1",
               sans
                 ? "border-border bg-bg-2 font-sans text-xs text-fg-1"
                 : "border-border-strong bg-bg-3 text-2xs font-mono text-fg-0",
