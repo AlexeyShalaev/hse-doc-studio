@@ -17,8 +17,9 @@ from hse_doc_studio.core.agent.tools import ToolDefinition
 from hse_doc_studio.core.enums import ToolKind
 from hse_doc_studio.core.mcp.entities import McpToolGroup, McpToolMeta
 from hse_doc_studio.core.mcp.protocols import IDependencyResolver
-from hse_doc_studio.core.rate_limit import COMPILE, GIT_SYNC, UPLOAD, RateRule
+from hse_doc_studio.core.rate_limit import COMPILE, GIT_SYNC, INVITE, UPLOAD, RateRule
 from hse_doc_studio.use_cases.chat._registry import ToolRegistry
+from hse_doc_studio.use_cases.mcp.tools import access as access_tools
 from hse_doc_studio.use_cases.mcp.tools import (
     admin,
     build,
@@ -112,6 +113,11 @@ MCP_TOOL_RULES: tuple[McpToolRule, ...] = (
     _rule("template_update_status", _G.projects, _R, Action.PROJECT_VIEW),
     _rule("plan_template_update", _G.projects, _X, Action.TEMPLATE_MANAGE),
     _rule("apply_template_update", _G.projects, _X, Action.TEMPLATE_MANAGE),
+    # Доступ к проекту: те же права, что у маршрутов панели «Доступ»; локально доступа нет
+    _rule("list_project_access", _G.projects, _R, Action.PROJECT_VIEW, server_only=True),
+    _rule("invite_to_project", _G.projects, _W, Action.ACCESS_MANAGE, server_only=True, rate=INVITE),
+    _rule("revoke_project_invitation", _G.projects, _W, Action.ACCESS_MANAGE, server_only=True),
+    _rule("remove_project_member", _G.projects, _W, Action.PROJECT_SETTINGS, server_only=True),
     # Документы и файлы
     _rule("list_documents", _G.files, _R, Action.PROJECT_VIEW),
     _rule("set_document_variant", _G.files, _W, Action.FILES_WRITE, instance_args=("doc_id",)),
@@ -179,6 +185,10 @@ MCP_TOOL_CLASSES: tuple[type[McpTool], ...] = (
     template_tools.PlanTemplateUpdateTool,
     template_tools.ApplyTemplateUpdateTool,
     documents.SetDocumentVariantTool,
+    access_tools.ListProjectAccessTool,
+    access_tools.InviteToProjectTool,
+    access_tools.RevokeProjectInvitationTool,
+    access_tools.RemoveProjectMemberTool,
     files.ListFilesTool,
     files.WriteFileTool,
     files.MoveFileTool,
