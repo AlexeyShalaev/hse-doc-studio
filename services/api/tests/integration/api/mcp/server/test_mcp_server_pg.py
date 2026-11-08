@@ -276,3 +276,48 @@ async def test__call_tool__set_project_people__reader__forbidden(stand: Stand) -
     assert result["_meta"]["code"] == "forbidden"
     events = stand.admin().get("/api/admin/audit", params={"action": "project.people_update"}).json()["items"]
     assert not [e for e in events if e["target"] == project_id]
+
+
+def _variant(stand: Stand, headers: dict[str, str], project_id: str, **extra: str) -> dict[str, Any]:
+    return _call(stand, headers, "set_document_variant", {"project_id": project_id, "doc_id": "presentation", **extra})
+
+
+async def test__call_tool__set_document_variant__owner_switches_and_audit_records(stand: Stand) -> None:
+    _enable(stand)
+    owner = await stand.person("vasilisa")
+    headers = _token(stand, owner.email, ["mcp"])
+    project_id = _created_id(_call(stand, headers, "create_project", {"name": "Защита", **_TEMPLATE}))
+
+    shown = _variant(stand, headers, project_id)
+    switched = _variant(stand, headers, project_id, variant="beamer")
+
+    assert shown["isError"] is False, shown
+    assert {"pptx", "beamer"} <= {v["id"] for v in json.loads(shown["content"][0]["text"])["variants"]}
+    assert switched["isError"] is False, switched
+    assert json.loads(switched["content"][0]["text"])["variant"] == "beamer"
+    events = stand.admin().get("/api/admin/audit", params={"action": "document.variant_update"}).json()["items"]
+    (event,) = [e for e in events if e["target"] == project_id]
+    assert event["actor_id"] == owner.id
+    assert (event["details"]["doc_id"], event["details"]["after"]) == ("presentation", "beamer")
+
+
+@pytest.mark.parametrize("role", ["reader", "reviewer"])
+async def test__call_tool__set_document_variant__without_write_right__forbidden(stand: Stand, role: str) -> None:
+    from hse_doc_studio.infra.db.orm.projects import ProjectMemberRow  # noqa: PLC0415
+
+    _enable(stand)
+    owner = await stand.person(f"owner-{role}")
+    member = await stand.person(f"member-{role}")
+    owner_headers = _token(stand, owner.email, ["mcp"])
+    project_id = _created_id(_call(stand, owner_headers, "create_project", {"name": "Общий", **_TEMPLATE}))
+    async with stand.sessions.use() as db:
+        db.add(ProjectMemberRow(project_id=UUID(project_id), principal_kind="user", principal_id=member.id, role=role))
+    before = json.loads(_variant(stand, owner_headers, project_id)["content"][0]["text"])["variant"]
+
+    result = _variant(stand, _token(stand, member.email, ["mcp"]), project_id, variant="beamer")
+
+    assert result["isError"] is True
+    assert result["_meta"]["code"] == "forbidden"
+    assert json.loads(_variant(stand, owner_headers, project_id)["content"][0]["text"])["variant"] == before
+    events = stand.admin().get("/api/admin/audit", params={"action": "document.variant_update"}).json()["items"]
+    assert not [e for e in events if e["target"] == project_id]

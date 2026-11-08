@@ -83,6 +83,10 @@ Ready-made configs with your address are in the Studio: **Settings → AI client
     - Every change is audited: in the cloud as a `project.people_update` event with the old and new values; locally the call is in the MCP log.
 - **`clone_cloud_project`** (local Studio only) downloads a project from a cloud Studio, like the “Open” button of a cloud project in the list. Pass the project `url`, such as `https://studio.example.org/projects/<id>/`, or `project_id` if the server is already connected (`server` is only needed when several servers are connected). The Studio uses the saved server login ([connecting](../start/local-from-cloud.md#connecting)); no token is needed in the arguments and none appears in the answer; an address with a login or token is rejected. The project goes to the folder for cloud projects and stays linked to the server. The download runs in the background: the tool waits up to `wait_s` seconds (60 by default), and if that is not enough, calling it again with the same arguments picks up the same download. A project already on the computer is not downloaded again.
 
+### Documents: variant
+
+- **`set_document_variant`** picks a document variant, like the “Document formats” switch in the project settings: for example `pptx`, `beamer` or `reveal` for the presentation. Pass `doc_id` from `list_documents` and `variant`; without `variant` the tool only shows the current variant and the ones allowed for the project language. An unknown variant is rejected with the list of allowed ones. Switching resets the document status to draft; the files of the previous variant stay. The rights are those of the interface: writing to the document, and a writable project. In the cloud the switch goes to the audit as `document.variant_update`.
+
 Dangerous tools (deleting a project or a file, rewinding history, syncing with a git remote) are off by default: the administrator (cloud) or you (local) turns them on one by one. Signing documents with an electronic signature is not available over MCP.
 
 ## Security

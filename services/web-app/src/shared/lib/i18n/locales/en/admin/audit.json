@@ -84,6 +84,7 @@
       "project_settings": "Project settings changed",
       "project_transfer": "Project transferred",
       "project_people_update": "Project supervisor or authors changed (MCP)",
+      "document_variant_update": "Document variant changed (MCP)",
       "runner_announce": "Runner announced its capabilities",
       "runner_deregister": "Runner deregistered",
       "runner_pairing_approve": "Runner pairing approved",

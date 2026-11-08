@@ -17,6 +17,7 @@ import structlog
 from hse_doc_studio.core.access.checker import IProjectAccessChecker, ProjectForbiddenError
 from hse_doc_studio.core.access.context import require_actor
 from hse_doc_studio.core.access.entities import Actor
+from hse_doc_studio.core.access.paths import scope_path_of_instance_id
 from hse_doc_studio.core.agent.entities import AgentToolContext, ToolResult
 from hse_doc_studio.core.enums import EditFormat
 from hse_doc_studio.core.errors import NotFoundError, ProjectReadOnlyError
@@ -123,6 +124,8 @@ class CallMcpToolUC:
             return
         try:
             paths: list[str | None] = [str(args.get(key, "")).strip() for key in entry.rule.path_args]
+            # Id экземпляра сводится к слагу автора, как `scope_for_rule` у маршрута; без автора области нет.
+            paths += [scope_path_of_instance_id(str(args.get(key, "")).strip()) for key in entry.rule.instance_args]
             for path in paths or [None]:
                 await self._access.require(project_id, action, path)
             if entry.rule.guards_write:
