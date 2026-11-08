@@ -85,6 +85,10 @@ Ready-made configs with your address are in the Studio: **Settings → AI client
 
 Dangerous tools (deleting a project or a file, rewinding history, syncing with a git remote) are off by default: the administrator (cloud) or you (local) turns them on one by one. Signing documents with an electronic signature is not available over MCP.
 
+### Builds
+
+**`compile_document`** starts a build, like the “Build” button. By default (`wait: true`) the tool waits up to 45 seconds for the result, which is less than MCP clients wait for an answer. If the build takes longer (for example, a cloud build on a personal runner), the answer is not an error: `status: in_progress` and the `compile_id`, and the build keeps running. With `wait: false` the tool returns the `compile_id` at once. `get_compile` with that `compile_id` shows the result; `cancel_compile` stops the build.
+
 ## Security
 
 - The client acts as the token owner: the same project roles, quotas and limits as in the interface. Other people's projects do not exist for it.
