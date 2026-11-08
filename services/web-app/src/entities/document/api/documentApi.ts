@@ -27,10 +27,14 @@ export const documentApi = {
       .patch(`/projects/${projectId}/documents/${docId}`, data)
       .then(parseResp(DocumentResponseSchema)),
 
-  triggerCompile: (projectId: string, docId: string) =>
-    apiClient
-      .post(`/projects/${projectId}/documents/${docId}/compile`)
-      .then(parseResp(TriggerCompileResponseSchema)),
+  /** `batchId`: пакет «Собрать все», задачи одной команды группируются в очереди админки. */
+  triggerCompile: (projectId: string, docId: string, batchId?: string) =>
+    (batchId === undefined
+      ? apiClient.post(`/projects/${projectId}/documents/${docId}/compile`)
+      : apiClient.post(`/projects/${projectId}/documents/${docId}/compile`, {
+          batch_id: batchId,
+        })
+    ).then(parseResp(TriggerCompileResponseSchema)),
 
   cancelCompile: (projectId: string, compileId: string) =>
     apiClient

@@ -286,6 +286,19 @@ async def test__submit__queue_payload_is_an_envelope_with_manifest_and_role(rig:
     assert job.max_attempts == 2
 
 
+async def test__submit__build_all_batch__reaches_the_queue_row_not_the_envelope(rig: Rig) -> None:
+    batch = uuid4()
+    spec = replace(rig.spec(), batch_id=batch)
+
+    rig.dispatcher.submit(spec, Hooks())
+    await _until(lambda: rig.queue._jobs.get(spec.id) is not None)
+
+    job = await rig.claim()
+    assert job.batch_id == batch
+    # Раннеру пакет ни к чему: в конверт он не попадает.
+    assert "batch_id" not in job.payload["spec"]
+
+
 class _Resolver:
     def __init__(self, cap: float | None) -> None:
         self.cap = cap

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from datetime import datetime
 from typing import Any
+from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict
 
@@ -40,6 +41,12 @@ def map_compile_error(code: str | None, detail: str | None) -> CompileErrorOut |
     if code is None:
         return None
     return CompileErrorOut(code=code, detail=detail, message=failure_message(code, current_interface_language()))
+
+
+class TriggerCompileRequest(StrictModel):
+    """Необязательное тело запуска сборки: `batch_id` у всех сборок одной команды «Собрать все»."""
+
+    batch_id: UUID | None = None
 
 
 class TriggerCompileResponse(BaseModel):

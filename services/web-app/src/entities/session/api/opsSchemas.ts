@@ -432,6 +432,18 @@ export type AdminJob = {
   /** Кто взял попытку: общий раннер или личный. */
   runner_scope?: "shared" | "personal" | null;
   route_reason?: string | null;
+  /** Пакет «Собрать все»: задачи одной команды; у одиночной задачи null. */
+  batch_id?: string | null;
+  batch?: AdminJobBatch | null;
+};
+/** Пакет «Собрать все» целиком (по всем страницам очереди). */
+export type AdminJobBatch = {
+  id: string;
+  total: number;
+  /** Сколько задач пакета в каждом состоянии. */
+  by_state: Partial<Record<JobState, number>>;
+  /** Когда команда поставила первую задачу. */
+  created_at: string;
 };
 /** Страница очереди: курсор непрозрачный, null на последней; оценка числа только без фильтров. */
 export type AdminJobPage = {

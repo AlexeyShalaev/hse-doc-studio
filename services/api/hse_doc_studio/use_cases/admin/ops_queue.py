@@ -15,6 +15,7 @@ from hse_doc_studio.core.jobs.admin import (
     JobListing,
     QueueStats,
 )
+from hse_doc_studio.core.jobs.enums import JobState
 from hse_doc_studio.core.jobs.errors import QueuedJobNotFoundError
 from hse_doc_studio.core.jobs.queue import IJobQueue
 from hse_doc_studio.core.listing import MAX_LIMIT, PICKER_LIMIT, Picked, PickerItem, clamp_limit
@@ -81,6 +82,51 @@ class CancelJobUC:
         if found is None:
             raise QueuedJobNotFoundError(f"job {job_id} not found")
         return found
+
+
+# Сколько задач пакета отменяется за раз: «Собрать все» ставит по задаче на документ проекта.
+MAX_BATCH_JOBS = MAX_LIMIT
+
+
+class CancelJobBatchUC:
+    """«Отменить все» у пакета «Собрать все»: те же права и та же запись аудита, что у отмены одной задачи."""
+
+    def __init__(
+        self,
+        service: JobQueueService,
+        audit: IAuditLog,
+        uow: IUnitOfWork,
+        reader: IJobAdminReader,
+    ) -> None:
+        self._service = service
+        self._audit = audit
+        self._uow = uow
+        self._reader = reader
+
+    async def execute(self, actor: Actor, batch_id: UUID) -> int:
+        """Сколько задач отменено; законченные задачи пакета остаются как есть и в журнал не пишутся."""
+        admin_id = require_admin(actor)
+        page = await self._reader.list_jobs(
+            JobAdminFilter(batch_id=batch_id, states=frozenset({JobState.queued, JobState.running})),
+            before_seq=None,
+            limit=MAX_BATCH_JOBS,
+        )
+        async with self._uow.begin():
+            for listing in page.items:
+                job = listing.job
+                await self._service.cancel(job.id)
+                await self._audit.record(
+                    "queue.job_cancel",
+                    actor_id=admin_id,
+                    target=str(job.id),
+                    details={
+                        "kind": job.kind.value,
+                        "state": job.state.value,
+                        "user_id": str(job.user_id),
+                        "batch_id": str(batch_id),
+                    },
+                )
+        return len(page.items)
 
 
 class PickProjectsUC:

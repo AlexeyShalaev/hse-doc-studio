@@ -6,7 +6,7 @@ import asyncio
 from collections.abc import AsyncIterator
 from datetime import UTC, datetime
 from typing import Any
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 import pytest
 import pytest_asyncio
@@ -34,7 +34,13 @@ from hse_doc_studio.use_cases.admin.ops_ai_providers import (
     ListInstanceAiProvidersUC,
     UpdateInstanceAiProviderUC,
 )
-from hse_doc_studio.use_cases.admin.ops_queue import CancelJobUC, ListQueueUC, PickProjectsUC, QueueSummaryUC
+from hse_doc_studio.use_cases.admin.ops_queue import (
+    CancelJobBatchUC,
+    CancelJobUC,
+    ListQueueUC,
+    PickProjectsUC,
+    QueueSummaryUC,
+)
 from hse_doc_studio.use_cases.admin.ops_quotas import GetQuotasUC, QuotaService, UpdateQuotasUC
 from hse_doc_studio.use_cases.admin.ops_runners import (
     ListRegistrationTokensUC,
@@ -228,6 +234,10 @@ class _Provider(Provider):
         )
 
     @provide
+    def cancel_batch(self) -> CancelJobBatchUC:
+        return CancelJobBatchUC(JobQueueService(self.s.queue), self.s.users.audit, NoopUow(), self.s.job_reader)
+
+    @provide
     def get_quotas(self) -> GetQuotasUC:
         return GetQuotasUC(self.s.settings)
 
@@ -297,14 +307,15 @@ async def stack(monkeypatch: pytest.MonkeyPatch) -> AsyncIterator[_Stack]:
     await container.close()
 
 
-def _enqueue(user: object = None) -> EnqueueRequest:
+def _enqueue(user: object = None, *, batch_id: UUID | None = None, project_id: UUID | None = None) -> EnqueueRequest:
     return EnqueueRequest(
         job_id=uuid4(),
         kind=JobKind.compile,
-        project_id=uuid4(),
+        project_id=project_id or uuid4(),
         user_id=user or uuid4(),  # type: ignore[arg-type]
         tags=frozenset({"tex"}),
         payload={},
+        batch_id=batch_id,
     )
 
 
@@ -312,6 +323,7 @@ _ROUTES: list[tuple[str, str, Any]] = [
     ("GET", "/api/admin/queue", None),
     ("GET", "/api/admin/queue/summary", None),
     ("POST", f"/api/admin/queue/{uuid4()}/cancel", None),
+    ("POST", f"/api/admin/queue/batches/{uuid4()}/cancel", None),
     ("GET", "/api/admin/quotas", None),
     ("PUT", "/api/admin/quotas", {"user_concurrent": 1, "org_concurrent": None, "max_duration_s": None}),
     ("GET", "/api/admin/services", None),
@@ -398,6 +410,44 @@ async def test__queue__list_summary_cancel_flow(stack: _Stack) -> None:
     assert [e.action for e in await stack.users.audit.list()] == ["queue.job_cancel"]
     assert (await c.get("/api/admin/queue?state=bogus", headers=boss)).status_code == 422
     assert (await c.get("/api/admin/queue?limit=0", headers=boss)).status_code == 422
+
+
+async def test__queue__build_all_batch__whole_batch_summary_on_each_row_and_filter(stack: _Stack) -> None:
+    boss = await stack.users.add("boss", admin=True)
+    anna, project, batch = uuid4(), uuid4(), uuid4()
+    jobs = [(await stack.queue.enqueue(_enqueue(anna, batch_id=batch, project_id=project))).job for _ in range(3)]
+    single = (await stack.queue.enqueue(_enqueue())).job
+    await stack.queue.request_cancel(jobs[0].id)
+    c = stack.client
+
+    # Первая страница видит только две задачи пакета, но сводка пакета считает все три.
+    page = (await c.get("/api/admin/queue?limit=2", headers=boss)).json()
+    only = (await c.get(f"/api/admin/queue?batch_id={batch}", headers=boss)).json()
+
+    assert [j["id"] for j in page["items"]] == [str(single.id), str(jobs[2].id)]
+    assert (page["items"][0]["batch_id"], page["items"][0]["batch"]) == (None, None)
+    row = page["items"][1]
+    assert row["batch_id"] == str(batch)
+    assert row["batch"]["total"] == 3
+    assert row["batch"]["by_state"] == {"cancelled": 1, "queued": 2}
+    assert sorted(j["id"] for j in only["items"]) == sorted(str(j.id) for j in jobs)
+
+
+async def test__queue__cancel_batch__cancels_active_jobs_and_audits_each(stack: _Stack) -> None:
+    boss = await stack.users.add("boss", admin=True)
+    batch = uuid4()
+    jobs = [(await stack.queue.enqueue(_enqueue(batch_id=batch))).job for _ in range(3)]
+    other = (await stack.queue.enqueue(_enqueue())).job
+    await stack.queue.request_cancel(jobs[0].id)
+
+    response = await stack.client.post(f"/api/admin/queue/batches/{batch}/cancel", headers=boss)
+
+    assert response.json() == {"cancelled": 2}
+    states = {j.id: (await stack.queue.get(j.id)).state.value for j in [*jobs, other]}  # type: ignore[union-attr]
+    assert states == {jobs[0].id: "cancelled", jobs[1].id: "cancelled", jobs[2].id: "cancelled", other.id: "queued"}
+    events = await stack.users.audit.list()
+    assert [e.action for e in events] == ["queue.job_cancel", "queue.job_cancel"]
+    assert {e.details["batch_id"] for e in events} == {str(batch)}
 
 
 async def test__quotas__put_validates_persists_and_audits(stack: _Stack) -> None:

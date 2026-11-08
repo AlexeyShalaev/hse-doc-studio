@@ -26,7 +26,9 @@
       "runner_name": "runner-1",
       "route": "shared",
       "runner_scope": "shared",
-      "route_reason": null
+      "route_reason": null,
+      "batch_id": null,
+      "batch": null
     }
   ],
   "next_cursor": null,

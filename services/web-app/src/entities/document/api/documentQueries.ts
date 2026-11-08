@@ -133,10 +133,10 @@ export const useTriggerCompile = () => {
   return useMutation<
     TriggerResult,
     Error,
-    { projectId: string; docId: string }
+    { projectId: string; docId: string; batchId?: string }
   >({
-    mutationFn: ({ projectId, docId }) =>
-      documentApi.triggerCompile(projectId, docId),
+    mutationFn: ({ projectId, docId, batchId }) =>
+      documentApi.triggerCompile(projectId, docId, batchId),
     onSuccess: (_, { projectId, docId }) => {
       void queryClient.invalidateQueries({
         queryKey: documentKeys.compiles(projectId, docId),

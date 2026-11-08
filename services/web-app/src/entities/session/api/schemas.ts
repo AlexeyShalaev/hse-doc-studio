@@ -776,6 +776,17 @@ const JobStateSchema = z.enum([
   "cancelled",
   "timed_out",
 ]);
+/** Пакет «Собрать все» целиком: число задач, состояния, время первой постановки. */
+export const AdminJobBatchSchema = z.strictObject({
+  id: z.string(),
+  total: z.number().int(),
+  by_state: z.record(z.string(), z.number().int()),
+  queued_at: iso,
+});
+/** Итог «Отменить все» у пакета: сколько задач получили отмену. */
+export const AdminJobBatchCancelledSchema = z.strictObject({
+  cancelled: z.number().int(),
+});
 export const AdminJobSchema = z.strictObject({
   id: z.string(),
   kind: z.enum([
@@ -822,6 +833,9 @@ export const AdminJobSchema = z.strictObject({
       "pinned",
     ])
     .nullable(),
+  // Пакет «Собрать все»: id и сводка пакета целиком (по всем страницам); у одиночной задачи null.
+  batch_id: z.string().nullable().optional(),
+  batch: AdminJobBatchSchema.nullable().optional(),
 });
 /** Журнал очереди: курсор непрозрачный, null на последней странице; оценка только без фильтров. */
 export const AdminJobPageSchema = cursorPageOf(AdminJobSchema);

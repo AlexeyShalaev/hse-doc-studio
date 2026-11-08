@@ -558,6 +558,7 @@ class QueueJobDispatcher:
                 personal_until=decision.personal_until if decision is not None else None,
                 route_reason=decision.reason if decision is not None else None,
                 timeout_personal_s=unquoted_timeout if personal and unquoted_timeout != timeout else None,
+                batch_id=spec.batch_id,
             )
         )
         if metered:

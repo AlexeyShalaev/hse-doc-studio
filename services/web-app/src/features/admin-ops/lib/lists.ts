@@ -69,7 +69,8 @@ export type QueueFilter =
   | "runner_id"
   | "runner_scope"
   | "from"
-  | "to";
+  | "to"
+  | "batch_id";
 
 const QUEUE_LIST = {
   mode: "cursor",
@@ -83,6 +84,8 @@ const QUEUE_LIST = {
     runner_scope: { values: RUNNER_SCOPES },
     from: { date: "from" },
     to: { date: "to" },
+    // Задачи одного пакета «Собрать все» (ссылка «все задачи пакета»).
+    batch_id: {},
   },
 } as const;
 

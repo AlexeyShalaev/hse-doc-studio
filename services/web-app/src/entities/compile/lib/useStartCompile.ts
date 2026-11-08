@@ -101,6 +101,18 @@ export const useStartCompile = (projectId: string, docId: string) => {
   return { start, isRunning, slot, block };
 };
 
+/** Id пакета «Собрать все»: UUID v4, и там, где нет `crypto.randomUUID` (страница по http). */
+export const newBatchId = (): string => {
+  if (typeof crypto.randomUUID === "function") return crypto.randomUUID();
+  const bytes = crypto.getRandomValues(new Uint8Array(16));
+  bytes[6] = ((bytes[6] ?? 0) & 0x0f) | 0x40;
+  bytes[8] = ((bytes[8] ?? 0) & 0x3f) | 0x80;
+  const hex = Array.from(bytes, (b) => b.toString(16).padStart(2, "0")).join(
+    "",
+  );
+  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
+};
+
 /**
  * "Собрать все документы" — fires a compile for every doc id, each wired to
  * the global SSE store. Marks all of them as pending synchronously so the
@@ -177,13 +189,15 @@ export const useStartCompileAll = (projectId: string) => {
           },
         );
       };
+      // Один пакет на команду: в очереди админки её задачи видны одной строкой.
+      const batchId = newBatchId();
       // Reserve the project-wide lock synchronously for ALL docs before any
       // POST goes out. This way the button is disabled the same tick the
       // click handler runs, regardless of how the network roundtrips race.
       for (const docId of buildable) markPending(projectId, docId);
       let errorShown = false;
       const posts = buildable.map((docId) =>
-        triggerCompile({ projectId, docId }).then(
+        triggerCompile({ projectId, docId, batchId }).then(
           (result) => {
             startStream(projectId, docId, result.compile_id);
           },

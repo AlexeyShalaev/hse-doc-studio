@@ -35,6 +35,21 @@ ServiceStateName = Literal["ok", "down", "degraded", "not_configured"]
 AiProviderTypeName = Literal["claude", "openai", "openai_compat", "ollama"]
 
 
+class AdminJobBatch(StrictModel):
+    """Пакет «Собрать все» целиком (по всем страницам): число задач, состояния, время первой постановки."""
+
+    id: str
+    total: int
+    by_state: dict[str, int]
+    queued_at: datetime
+
+
+class AdminJobBatchCancelled(StrictModel):
+    """Итог «Отменить все» у пакета: сколько задач в очереди и идущих получили отмену."""
+
+    cancelled: int
+
+
 class AdminJob(StrictModel):
     id: str
     kind: JobKindName
@@ -62,6 +77,9 @@ class AdminJob(StrictModel):
     route: JobRouteName = "shared"
     runner_scope: RunnerScopeName | None = None
     route_reason: RouteReasonName | None = None
+    # Пакет «Собрать все», к которому относится задача; у одиночной задачи оба поля `null`.
+    batch_id: str | None = None
+    batch: AdminJobBatch | None = None
 
 
 class AdminJobPage(StrictModel):

@@ -419,6 +419,7 @@ ROUTE_SCOPES: Mapping[RouteKey, RouteScope] = {
     ("GET", "/api/admin/queue"): _ADM,
     ("GET", "/api/admin/queue/summary"): _ADM,
     ("POST", "/api/admin/queue/{job_id}/cancel"): _ADM,
+    ("POST", "/api/admin/queue/batches/{batch_id}/cancel"): _ADM,
     ("GET", "/api/admin/mcp/settings"): _ADM,
     ("PUT", "/api/admin/mcp/settings"): _ADM,
     ("GET", "/api/admin/mcp/calls"): _ADM,

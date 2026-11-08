@@ -132,6 +132,7 @@ _SCHEMAS: dict[str, Any] = {
     "AdminRunnerRotated": ra.RotatedRunnerTokenResponse,
     "UpdateAdminRunnerRequest": ra.UpdateRunnerRequest,
     "AdminJobPage": ops.AdminJobPage,
+    "AdminJobBatchCancelled": ops.AdminJobBatchCancelled,
     "AdminQueueSummary": ops.AdminQueueSummary,
     "AdminQuotas": ops.AdminQuotas,
     "MyUsageResponse": qt.MyUsageResponse,

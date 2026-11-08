@@ -1016,6 +1016,22 @@ export const createOpsRoutes = (
     },
     {
       method: "POST",
+      pattern: "/queue/batches/:id/cancel",
+      handler: guarded((req) => {
+        // «Отменить все» у пакета «Собрать все»: как у сервера, законченные задачи не трогаются.
+        let cancelled = 0;
+        for (const job of state().jobs) {
+          if (job.batch_id !== req.params.id || !ACTIVE.includes(job.status))
+            continue;
+          job.status = "cancelled";
+          job.finished_at = new Date().toISOString();
+          cancelled += 1;
+        }
+        return demoJson({ cancelled });
+      }),
+    },
+    {
+      method: "POST",
       pattern: "/queue/:id/cancel",
       handler: guarded((req) => {
         const found = state().jobs.find((j) => j.id === req.params.id);

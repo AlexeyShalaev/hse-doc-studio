@@ -78,7 +78,13 @@ from hse_doc_studio.use_cases.admin.ops_install import (
     UpdateBuildSettingsUC,
     UpdateInstanceSettingsUC,
 )
-from hse_doc_studio.use_cases.admin.ops_queue import CancelJobUC, ListQueueUC, PickProjectsUC, QueueSummaryUC
+from hse_doc_studio.use_cases.admin.ops_queue import (
+    CancelJobBatchUC,
+    CancelJobUC,
+    ListQueueUC,
+    PickProjectsUC,
+    QueueSummaryUC,
+)
 from hse_doc_studio.use_cases.admin.ops_quotas import GetQuotasUC, QuotaService, UpdateQuotasUC
 from hse_doc_studio.use_cases.admin.ops_runners import (
     ListRegistrationTokensUC,
@@ -198,6 +204,12 @@ class ServerAdminOpsProvider(Provider):
         self, queue: IJobQueue, service: JobQueueService, audit: IAuditLog, uow: IUnitOfWork, reader: IJobAdminReader
     ) -> CancelJobUC:
         return CancelJobUC(queue, service, audit, uow, reader)
+
+    @provide
+    def get_cancel_job_batch_uc(
+        self, service: JobQueueService, audit: IAuditLog, uow: IUnitOfWork, reader: IJobAdminReader
+    ) -> CancelJobBatchUC:
+        return CancelJobBatchUC(service, audit, uow, reader)
 
     @provide
     def get_admin_project_picker(self, sessions: SessionProvider) -> IAdminProjectPicker:

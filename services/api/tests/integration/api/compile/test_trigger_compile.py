@@ -2,7 +2,9 @@ from __future__ import annotations
 
 from collections.abc import AsyncIterator
 from pathlib import Path
+from uuid import uuid4
 
+import pytest
 from hse_doc_studio.infra.compile.docker_compile_executor import DockerCompileExecutor
 from hse_doc_studio.infra.compile.docker_image_manager import DockerImageManager, DockerStatus, ImageInfo
 from httpx import AsyncClient
@@ -11,8 +13,10 @@ from pytest_mock import MockerFixture
 from tests.factories import project_api_payload
 
 
+# «Собрать все» шлёт `batch_id` пакета; одиночная сборка идёт без тела, как раньше.
+@pytest.mark.parametrize("body", [None, {"batch_id": str(uuid4())}], ids=["single", "build_all_batch"])
 async def test__api__post_compile__returns_compile_id(
-    test_app: AsyncClient, tmp_path: Path, mocker: MockerFixture
+    test_app: AsyncClient, tmp_path: Path, mocker: MockerFixture, body: dict[str, str] | None
 ) -> None:
     project_folder = tmp_path / "my-vkr-compile"
     project_folder.mkdir()
@@ -46,7 +50,7 @@ async def test__api__post_compile__returns_compile_id(
         yield "compile stubbed: no docker in tests"
 
     mocker.patch.object(DockerCompileExecutor, "run", return_value=_fake_logs())
-    compile_resp = await test_app.post(f"/api/v1/projects/{project_id}/documents/{doc_id}/compile")
+    compile_resp = await test_app.post(f"/api/v1/projects/{project_id}/documents/{doc_id}/compile", json=body)
 
     assert compile_resp.status_code == 202, compile_resp.text
     body = compile_resp.json()

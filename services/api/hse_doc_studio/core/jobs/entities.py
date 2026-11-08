@@ -69,10 +69,11 @@ class CompileResult(JobResultData):
 
 @dataclass(frozen=True)
 class JobSpec:
-    """Описание задачи. Проводной конверт это все поля, кроме `local_root`.
+    """Описание задачи. Проводной конверт это все поля, кроме `local_root` и `batch_id`.
 
     `local_root` (папка проекта) нужен только встроенному раннеру: в конверт он
     не попадает, а удалённый раннер получает вместо него свою рабочую папку.
+    `batch_id` (пакет «Собрать все») нужен только очереди сервера: раннеру он ни к чему.
     """
 
     id: UUID
@@ -83,6 +84,7 @@ class JobSpec:
     locale: Lang
     payload: JobPayload
     local_root: Path | None = None
+    batch_id: UUID | None = None
 
 
 @dataclass(frozen=True)
