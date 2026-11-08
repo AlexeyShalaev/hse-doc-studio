@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 from pathlib import Path
 
 import pytest
@@ -43,7 +44,8 @@ class _Docker:
             path = args[args.index("--env-file") + 1]
             self.env_files.append(path)
             assert SECRET in Path(path).read_text()
-            assert oct(Path(path).stat().st_mode & 0o777) == "0o600"
+            if os.name == "posix":  # в Windows права файла не выражаются битами POSIX
+                assert oct(Path(path).stat().st_mode & 0o777) == "0o600"
         return self.results.pop(0)
 
 
