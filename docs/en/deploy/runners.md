@@ -88,10 +88,37 @@ Why a way may be hidden:
 
 `runner.installFromUi.enabled` is `false` by default, and stays so on production where shared runners were not enabled. Turning it on adds:
 
-- a ServiceAccount and Role for the runners themselves, `<release>-runner-ui`: build pods only (`pods` create, get, list, delete; `pods/log` get; `pods/exec` create, get) in the release namespace, like the built-in runner;
+- a ServiceAccount and Role for the runners themselves, `<release>-runner-ui`: build pods only (`pods` create, get, list, delete; `pods/log` get; `pods/exec` create, get) in the build pods namespace (`runner.installFromUi.buildNamespace`, the release namespace by default), like the built-in runner;
 - a `<release>-api` ServiceAccount and Role for the Studio: Deployment (create, list, update, delete; `update` is for the in-place update), Secret (create and delete only, no reading) and PersistentVolumeClaim (create, delete) in the release namespace. The Studio cannot create Roles or RoleBindings, so it cannot grant itself or a runner anything extra; there is no ClusterRole.
 
 A runner installed from the admin area lives in the release namespace and gets its own data volume (`runner.installFromUi.storageSize`, `storageClassName`) so the token issued to it survives a pod restart. Its Studio address is internal (the chart Service).
+
+#### A separate build pods namespace
+
+By default runners installed from the admin area create build pods in the release namespace, next to the api. The chart does not put a quota there (it would also limit the Studio), so for shared runners move the build pods to a separate namespace:
+
+```yaml
+runner:
+  installFromUi:
+    enabled: true
+    buildNamespace: hds-builds   # the same as runner.kubernetes.namespace, if that is set
+  kubernetes:
+    quota: {enabled: true}
+    limitRange: {enabled: true}
+```
+
+- The runner itself (Deployment, token Secret, data volume) stays in the release namespace. It creates build pods in `buildNamespace`: the Studio passes it to the runner in `HSE_RUNNER__K8S__NAMESPACE` on install and on "Update".
+- The `<release>-runner-ui-builds` Role and RoleBinding move to `buildNamespace`; runners installed from the admin area have no rights in the release namespace any more. The Studio's own rights do not change.
+- `buildNamespace` gets the build pod network deny (`runner.kubernetes.networkPolicy`), a ResourceQuota and a LimitRange (`runner.kubernetes.quota`, `limitRange`). The values are shared with the chart runner: when both use one namespace there is one object and one shared ceiling, when they differ each namespace gets its own quota with these values.
+- The chart does not create the namespace, same as `runner.kubernetes.namespace`: it is shared by the chart runner and the runners from the admin area and must not disappear with the build pods on `helm uninstall`. Create it beforehand with the restricted label:
+
+```sh
+kubectl create namespace hds-builds
+kubectl label namespace hds-builds \
+  pod-security.kubernetes.io/enforce=restricted pod-security.kubernetes.io/enforce-version=latest
+```
+
+Switching a running install: wait until runners from the admin area have no builds, run `helm upgrade` with `buildNamespace`, then press "Update" on each such runner. Until it is updated, a runner creates build pods in the release namespace where it has no rights any more, and its builds fail with `build_backend_unavailable` (a Kubernetes 403 in the details).
 
 ## Installing over SSH on another machine
 

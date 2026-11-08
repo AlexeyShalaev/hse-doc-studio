@@ -205,6 +205,11 @@ const InstallFromUi = ({ info }: { info: Isolation }) => {
           items={[
             { label: t("dialog.namespace"), value: text(ui.namespace) },
             {
+              label: t("panel.install.buildNamespace"),
+              value: text(ui.build_namespace),
+              testId: "isolation-install-build-ns",
+            },
+            {
               label: t("dialog.serviceAccount"),
               value: text(ui.service_account),
             },
@@ -297,10 +302,20 @@ const Network = ({ info }: { info: Isolation }) => {
   );
 };
 
-const Quota = ({ info }: { info: Isolation }) => {
+type QuotaInfo = NonNullable<Isolation["quota"]>;
+type LimitRangeInfo = NonNullable<Isolation["limit_range"]>;
+
+const Quota = ({
+  quota,
+  title,
+  testId,
+}: {
+  quota: QuotaInfo | null;
+  title: string;
+  testId: string;
+}) => {
   const { t } = useTranslation("adminRunnerIsolation");
   const { text } = useValue();
-  const quota = info.quota;
   if (quota === null) return null;
   const keys = [
     ...new Set([
@@ -316,13 +331,13 @@ const Quota = ({ info }: { info: Isolation }) => {
         : "config";
   return (
     <Block
-      title={`${t("panel.quota.title")}${quota.namespace ? ` (${quota.namespace})` : ""}`}
+      title={`${title}${quota.namespace ? ` (${quota.namespace})` : ""}`}
       source={
         quota.declared !== null || quota.live_found !== null ? (
           <SourceTag kind={source} />
         ) : null
       }
-      testId="isolation-quota"
+      testId={testId}
     >
       {keys.length === 0 ? (
         <p className="iso-note">{t("panel.quota.off")}</p>
@@ -360,9 +375,16 @@ const Quota = ({ info }: { info: Isolation }) => {
   );
 };
 
-const LimitRange = ({ info }: { info: Isolation }) => {
+const LimitRange = ({
+  range,
+  title,
+  testId,
+}: {
+  range: LimitRangeInfo | null;
+  title: string;
+  testId: string;
+}) => {
   const { t } = useTranslation("adminRunnerIsolation");
-  const range = info.limit_range;
   if (range === null) return null;
   const join = (values: Record<string, string> | undefined) =>
     values && Object.keys(values).length > 0
@@ -384,8 +406,8 @@ const LimitRange = ({ info }: { info: Isolation }) => {
   ];
   return (
     <Block
-      title={`${t("panel.limitRange.title")}${range.namespace ? ` (${range.namespace})` : ""}`}
-      testId="isolation-limit-range"
+      title={`${title}${range.namespace ? ` (${range.namespace})` : ""}`}
+      testId={testId}
     >
       {range.declared === null && range.live === null ? (
         <p className="iso-note">{t("panel.limitRange.off")}</p>
@@ -490,20 +512,42 @@ export const IsolationSummary = ({
 };
 
 /** Подробности: раннер чарта, поды сборки, установка из админки, сеть, квота, Pod Security. */
-export const ClusterIsolationView = ({ info }: { info: Isolation }) => (
-  <div className="iso-stack" data-testid="isolation-details">
-    <div className="iso-grid">
-      <ChartRunner info={info} />
-      <BuildPods info={info} />
-      <InstallFromUi info={info} />
-    </div>
-    {info.config === "helm" && (
+export const ClusterIsolationView = ({ info }: { info: Isolation }) => {
+  const { t } = useTranslation("adminRunnerIsolation");
+  return (
+    <div className="iso-stack" data-testid="isolation-details">
       <div className="iso-grid">
-        <Network info={info} />
-        <Quota info={info} />
-        <LimitRange info={info} />
-        <PodSecurity info={info} />
+        <ChartRunner info={info} />
+        <BuildPods info={info} />
+        <InstallFromUi info={info} />
       </div>
-    )}
-  </div>
-);
+      {info.config === "helm" && (
+        <div className="iso-grid">
+          <Network info={info} />
+          <Quota
+            quota={info.quota}
+            title={t("panel.quota.title")}
+            testId="isolation-quota"
+          />
+          <LimitRange
+            range={info.limit_range}
+            title={t("panel.limitRange.title")}
+            testId="isolation-limit-range"
+          />
+          {/* Свой namespace подов сборки раннеров из админки: квота и LimitRange там отдельные. */}
+          <Quota
+            quota={info.ui_quota}
+            title={t("panel.quota.titleUi")}
+            testId="isolation-ui-quota"
+          />
+          <LimitRange
+            range={info.ui_limit_range}
+            title={t("panel.limitRange.titleUi")}
+            testId="isolation-ui-limit-range"
+          />
+          <PodSecurity info={info} />
+        </div>
+      )}
+    </div>
+  );
+};

@@ -228,12 +228,29 @@ def namespace_security(name: str, item: Mapping[str, Any]) -> NamespaceSecurity:
 
 
 class _Reads:
-    """Счётчик удачных и запрещённых чтений: из него получается общий статус."""
+    """GET с памятью по пути (namespace могут совпадать) и счётчик удачных и запрещённых чтений для общего статуса."""
 
-    def __init__(self) -> None:
+    def __init__(self, client: KubernetesApiClient) -> None:
+        self._client = client
+        self._seen: dict[str, Mapping[str, Any] | None] = {}
         self.ok = 0
         self.forbidden = 0
         self.failed = 0
+
+    async def get(self, path: str) -> Mapping[str, Any] | None:
+        if path in self._seen:
+            return self._seen[path]
+        found: Mapping[str, Any] | None = None
+        try:
+            found = _obj(await self._client.request_json("GET", path))
+            self.ok += 1
+        except KubeApiError as exc:
+            if exc.status == _FORBIDDEN:
+                self.forbidden += 1
+            else:
+                self.failed += 1
+        self._seen[path] = found
+        return found
 
     def status(self) -> LiveStatus:
         if self.ok and not (self.forbidden or self.failed):
@@ -241,6 +258,20 @@ class _Reads:
         if self.ok:
             return LiveStatus.partial
         return LiveStatus.forbidden if self.forbidden and not self.failed else LiveStatus.unavailable
+
+
+def _deny_all(policies: Mapping[str, Any] | None) -> bool | None:
+    return denies_all(_items(policies), _BUILD_LABELS) if policies is not None else None
+
+
+def _quota_in(listing: Mapping[str, Any] | None) -> LiveQuota | None:
+    item = _pick_named(_items(listing)) if listing is not None else None
+    return quota_of(item) if item is not None else None
+
+
+def _limit_range_in(listing: Mapping[str, Any] | None) -> LiveLimitRange | None:
+    item = _pick_named(_items(listing)) if listing is not None else None
+    return limit_range_of(item) if item is not None else None
 
 
 def _default_client() -> KubernetesApiClient:
@@ -290,53 +321,44 @@ class KubeClusterStateReader:
             return state
 
     async def _read_state(self, targets: ClusterTargets) -> LiveClusterState:
-        reads = _Reads()
         try:
             client = self._factory()
         except KubeApiError:
             return LiveClusterState(LiveStatus.unavailable, checked_at=datetime.now(UTC))
+        reads = _Reads(client)
         try:
-
-            async def get(path: str) -> Mapping[str, Any] | None:
-                try:
-                    data = await client.request_json("GET", path)
-                except KubeApiError as exc:
-                    if exc.status == _FORBIDDEN:
-                        reads.forbidden += 1
-                    else:
-                        reads.failed += 1
-                    return None
-                reads.ok += 1
-                return _obj(data)
-
             release, build = quote(targets.release_namespace), quote(targets.build_namespace)
+            ui = quote(targets.ui_namespace())
             policies_path = "/apis/networking.k8s.io/v1/namespaces/{}/networkpolicies"
-            build_policies = await get(policies_path.format(build))
-            release_policies = build_policies if build == release else await get(policies_path.format(release))
-            quotas = await get(f"/api/v1/namespaces/{build}/resourcequotas")
-            ranges = await get(f"/api/v1/namespaces/{build}/limitranges")
-            names = list(dict.fromkeys((targets.release_namespace, targets.build_namespace)))
+            build_policies = await reads.get(policies_path.format(build))
+            release_policies = await reads.get(policies_path.format(release))
+            ui_policies = await reads.get(policies_path.format(ui))
+            quotas = await reads.get(f"/api/v1/namespaces/{build}/resourcequotas")
+            ranges = await reads.get(f"/api/v1/namespaces/{build}/limitranges")
+            ui_quotas = await reads.get(f"/api/v1/namespaces/{ui}/resourcequotas")
+            ui_ranges = await reads.get(f"/api/v1/namespaces/{ui}/limitranges")
+            names = list(dict.fromkeys((targets.release_namespace, targets.build_namespace, targets.ui_namespace())))
             namespaces: list[NamespaceSecurity] = []
             for name in names:
-                found = await get(f"/api/v1/namespaces/{quote(name)}")
+                found = await reads.get(f"/api/v1/namespaces/{quote(name)}")
                 if found is not None:
                     namespaces.append(namespace_security(name, found))
         finally:
             await client.aclose()
-        quota_item = _pick_named(_items(quotas)) if quotas is not None else None
-        range_item = _pick_named(_items(ranges)) if ranges is not None else None
         return LiveClusterState(
             status=reads.status(),
             checked_at=datetime.now(UTC),
-            build_deny_all=denies_all(_items(build_policies), _BUILD_LABELS) if build_policies is not None else None,
-            ui_build_deny_all=(
-                denies_all(_items(release_policies), _BUILD_LABELS) if release_policies is not None else None
-            ),
+            build_deny_all=_deny_all(build_policies),
+            ui_build_deny_all=_deny_all(ui_policies),
             runner_egress=limits_runner_egress(_items(release_policies)) if release_policies is not None else None,
             quota_checked=quotas is not None,
-            quota=quota_of(quota_item) if quota_item is not None else None,
+            quota=_quota_in(quotas),
             limit_range_checked=ranges is not None,
-            limit_range=limit_range_of(range_item) if range_item is not None else None,
+            limit_range=_limit_range_in(ranges),
+            ui_quota_checked=ui_quotas is not None,
+            ui_quota=_quota_in(ui_quotas),
+            ui_limit_range_checked=ui_ranges is not None,
+            ui_limit_range=_limit_range_in(ui_ranges),
             namespaces=tuple(namespaces) if namespaces else None,
         )
 

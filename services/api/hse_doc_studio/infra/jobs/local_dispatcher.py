@@ -254,6 +254,11 @@ class LocalJobDispatcher:
 
     # --- activity ---
 
+    @property
+    def survives_restart(self) -> bool:
+        # Сборка идёт задачей этого процесса: с ним она и заканчивается.
+        return False
+
     def is_active(self, job_id: UUID) -> bool:
         return self._compile_registry.is_running(job_id) or job_id in self._in_flight
 

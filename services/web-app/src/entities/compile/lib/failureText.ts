@@ -18,6 +18,18 @@ export const PRE_LAUNCH_CODES: ReadonlySet<string> = new Set([
   "job_lost",
 ]);
 
+/**
+ * Сборку оборвал перезапуск Студии или сервера, а продолжить её было нечем. Запись приходит со статусом
+ * `cancelled` (не `failure`): документ тут ни при чём, и интерфейс называет её «прервана».
+ */
+export const INTERRUPTED_CODE = "interrupted";
+
+/** Сборка прервана перезапуском, а не отменена человеком и не упала. */
+export const isInterrupted = (
+  status: string | null | undefined,
+  code: string | null | undefined,
+): boolean => status === "cancelled" && code === INTERRUPTED_CODE;
+
 /** Первое предложение пояснения: короткая причина для строки списка, где полный текст не помещается. */
 export const shortReason = (message: string): string => {
   const trimmed = message.trim();

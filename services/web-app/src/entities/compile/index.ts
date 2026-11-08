@@ -31,8 +31,10 @@ export {
 } from "./lib/useCancelCompiles";
 export { useResumeProjectStreams } from "./lib/useResumeProjectStreams";
 export {
+  INTERRUPTED_CODE,
   PRE_LAUNCH_CODES,
   hasBuildOutput,
+  isInterrupted,
   shortReason,
 } from "./lib/failureText";
 export {

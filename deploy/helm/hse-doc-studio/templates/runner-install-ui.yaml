@@ -3,6 +3,7 @@
 {{- $full := include "hds.fullname" . }}
 {{- $runnerSa := printf "%s-runner-ui" $full }}
 {{- $apiSa := printf "%s-api" $full }}
+{{- $buildNs := include "hds.uiBuildNamespace" . }}
 # Установка раннеров из админки Студии в этот кластер (docs/design/runner-install.md, раздел 4.3). Студия создаёт
 # Deployment, Secret с токеном и том данных, а ServiceAccount и права подов сборки для таких раннеров готовит этот
 # чарт заранее: Студия не получает права на Role и RoleBinding, поэтому выдать себе или раннеру лишнее не может.
@@ -14,12 +15,13 @@ metadata:
     {{- include "hds.labels" . | nindent 4 }}
     app.kubernetes.io/component: runner-ui
 ---
-# ServiceAccount раннеров, поставленных из админки: только поды сборки в namespace релиза.
+# ServiceAccount раннеров, поставленных из админки: только поды сборки в их namespace (buildNamespace или namespace
+# релиза). Со своим buildNamespace в namespace релиза у раннеров прав нет.
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
   name: {{ $runnerSa }}-builds
-  namespace: {{ .Release.Namespace }}
+  namespace: {{ $buildNs }}
   labels:
     {{- include "hds.labels" . | nindent 4 }}
     app.kubernetes.io/component: runner-ui
@@ -38,7 +40,7 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
   name: {{ $runnerSa }}-builds
-  namespace: {{ .Release.Namespace }}
+  namespace: {{ $buildNs }}
   labels:
     {{- include "hds.labels" . | nindent 4 }}
     app.kubernetes.io/component: runner-ui

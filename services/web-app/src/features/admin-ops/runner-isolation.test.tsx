@@ -242,6 +242,52 @@ describe("изоляция раннеров в кластере", () => {
     expect(screen.queryByTestId("isolation-details")).not.toBeInTheDocument();
   });
 
+  it("поды сборки раннеров из админки в своём namespace: своя квота и LimitRange", () => {
+    render(
+      wrap(
+        <ClusterIsolationSection
+          info={isolation("helm_ui_build_namespace")}
+          status="ready"
+          initiallyOpen
+        />,
+      ),
+    );
+    expect(screen.getByTestId("isolation-install-build-ns")).toHaveTextContent(
+      "studio-ui-builds",
+    );
+    expect(screen.getByTestId("isolation-quota")).toHaveTextContent(
+      "ResourceQuota (studio-builds)",
+    );
+    const uiQuota = screen.getByTestId("isolation-ui-quota");
+    expect(uiQuota).toHaveTextContent(
+      "ResourceQuota раннеров из админки (studio-ui-builds)",
+    );
+    expect(uiQuota).toHaveTextContent("Занято");
+    expect(screen.getByTestId("isolation-ui-limit-range")).toHaveTextContent(
+      "LimitRange раннеров из админки (studio-ui-builds)",
+    );
+    expect(screen.getByTestId("isolation-pod-security")).toHaveTextContent(
+      "studio-ui-builds",
+    );
+  });
+
+  it("общий namespace сборки: квота и LimitRange показаны один раз", () => {
+    render(
+      wrap(
+        <ClusterIsolationSection
+          info={isolation("helm_live")}
+          status="ready"
+          initiallyOpen
+        />,
+      ),
+    );
+    expect(screen.getByTestId("isolation-quota")).toBeVisible();
+    expect(screen.queryByTestId("isolation-ui-quota")).not.toBeInTheDocument();
+    expect(
+      screen.queryByTestId("isolation-ui-limit-range"),
+    ).not.toBeInTheDocument();
+  });
+
   it("Студия не из Helm: только настройки установки из админки", () => {
     render(
       wrap(
