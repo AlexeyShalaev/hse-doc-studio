@@ -74,9 +74,37 @@ async def test__real_coursework__existing_project_is_offered_the_patch_2026_1_1(
 
     status = (await test_app.get(base)).json()
     assert status["current_version"] == "2026.1"
-    assert status["recommended"]["version"]["version"] == "2026.1.1"
+    assert status["recommended"]["version"]["version"] == "2026.1.2"
     assert status["recommended"]["update_class"] == "patch"
 
     plan = (await test_app.post(f"{base}/plan", json={"to_version": "2026.1.1"})).json()
     changed = {f["path"] for f in plan["files"] if f["action"] != "unchanged"}
     assert changed == {"topic_application/topic_application.tex", "presentation/beamer/presentation.tex"}
+
+
+async def test__real_coursework__2026_1_1_project_is_offered_the_patch_2026_1_2(
+    test_app: AsyncClient, tmp_path: Path
+) -> None:
+    """Сверка заявления с бланком СПИ 2026 — patch: из файлов проекта меняется только заявление."""
+    folder = tmp_path / "sse"
+    folder.mkdir()
+    payload = {
+        **project_api_payload(str(folder)),
+        "pack_id": "hse-cs-sse",
+        "template_id": "coursework",
+        "version": "2026.1.1",
+        "lang": "ru",
+    }
+    created = await test_app.post("/api/v1/projects", json=payload)
+    assert created.status_code == 201, created.text
+    project = created.json()
+    base = f"/api/v1/projects/{project['id']}/template-update"
+
+    status = (await test_app.get(base)).json()
+    assert status["current_version"] == "2026.1.1"
+    assert status["recommended"]["version"]["version"] == "2026.1.2"
+    assert status["recommended"]["update_class"] == "patch"
+
+    plan = (await test_app.post(f"{base}/plan", json={"to_version": "2026.1.2"})).json()
+    changed = {f["path"] for f in plan["files"] if f["action"] != "unchanged"}
+    assert changed == {"topic_application/topic_application.tex"}

@@ -1,0 +1,73 @@
+% ============================================================
+% report/title.tex — title page of the course project report, HSE MSc
+% «System and Software Engineering» (English form of the programme title
+% page, 2026). All data come from the \hse… macros (common/meta).
+% ============================================================
+\begin{titlepage}
+\thispagestyle{empty}
+\singlespacing
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{0pt}
+
+\begin{center}
+\textbf{FEDERAL STATE AUTONOMOUS EDUCATIONAL INSTITUTION}\\
+\textbf{FOR HIGHER EDUCATION}\\
+\textbf{NATIONAL RESEARCH UNIVERSITY}\\
+\textbf{«HIGHER SCHOOL OF ECONOMICS»}
+
+\vspace{0.3cm}
+Faculty of Computer Science
+\end{center}
+
+\vspace{0.4cm}
+\noindent UDC~\hseUDC
+
+\vspace{2cm}
+\begin{center}
+{\large\foreignlanguage{russian}{\hseAuthorName}}
+
+\vspace{1.2cm}
+{\large\textbf{\hseTitleEn}}
+
+\vspace{0.4cm}
+{\foreignlanguage{russian}{\hseTitleRu}}
+
+\vspace{1.2cm}
+Course Project Report
+
+\vspace{0.3cm}
+Field of study 09.04.04 «Software Engineering»\\
+Programme: System and Software Engineering
+\end{center}
+
+\vfill
+\noindent
+\begin{minipage}[t]{0.42\textwidth}
+\raggedright
+\textbf{Student}\\[0.6cm]
+\rule{5cm}{0.4pt}\\[-0.1cm]
+{\scriptsize Signature, date}
+
+\vspace{0.2cm}
+\foreignlanguage{russian}{\hseAuthorName}, group \foreignlanguage{russian}{\hseGroup}
+\end{minipage}
+\hfill
+\begin{minipage}[t]{0.5\textwidth}
+\raggedright
+\textbf{Supervisor}\\[0.6cm]
+\rule{5cm}{0.4pt}\\[-0.1cm]
+{\scriptsize Signature, date, grade}
+
+\vspace{0.2cm}
+\foreignlanguage{russian}{\hseSupervisorName\ifhseHasSupervisorTitle\\\hseSupervisorTitle\ifdefempty{\hseSupervisorDegree}{}{, \hseSupervisorDegree}\fi}
+\end{minipage}
+
+\vspace{1.6cm}
+\begin{center}
+Moscow, \hseYear
+\end{center}
+\end{titlepage}
+
+% The title page is page 1 (unnumbered); numbering starts at 2.
+\setcounter{page}{2}
+\clearpage
