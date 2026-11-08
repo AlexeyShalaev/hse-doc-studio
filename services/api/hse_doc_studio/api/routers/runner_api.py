@@ -57,6 +57,7 @@ from hse_doc_studio.core.jobs.wire import (
     RunnerRegisterRequest,
 )
 from hse_doc_studio.core.rate_limit import AUTH_IP
+from hse_doc_studio.core.shutdown import process_shutdown
 from hse_doc_studio.use_cases.jobs.pairing import RunnerPairingService
 from hse_doc_studio.use_cases.jobs.runner_io import RunnerJobIoService
 from hse_doc_studio.use_cases.jobs.runner_jobs import RunnerJobService
@@ -186,7 +187,13 @@ async def poll_runner_pairing(body: RunnerPairPollRequestBody, request: Request)
 
 
 async def _poll_gone(request: Request) -> bool:
-    """Опрос закрывается, когда клиент ушёл или api в режиме обслуживания: тогда он не должен трогать базу."""
+    """Опрос закрывается, когда клиент ушёл, api в режиме обслуживания или останавливается.
+
+    При остановке пустой ответ раннеру лучше, чем удержанный до отмены запрос: раннер спокойно повторит опрос,
+    а uvicorn не ждёт его до конца срока мягкой остановки.
+    """
+    if process_shutdown().requested:
+        return True
     maintenance = getattr(request.app.state, "maintenance", None)
     if maintenance is not None and maintenance.active:
         return True

@@ -24,6 +24,11 @@ api:
   resources:
     requests: {cpu: 250m, memory: 512Mi}
     limits: {memory: 2Gi}
+  # Срок мягкой остановки пода: api дожидается коротких запросов, закрывает потоки событий и долгие ожидания
+  # ответом 503 server_restarting, затем завершает фоновые задачи. Должен быть больше
+  # HSE_STUDIO__SERVER__TIMEOUT_GRACEFUL_SHUTDOWN (10 с) с запасом на остановку фона. При Recreate новый под
+  # стартует только после завершения старого, поэтому большой срок не удлиняет выкатку: api выходит, как закончит.
+  terminationGracePeriodSeconds: 30
   nodeSelector: {}
   tolerations: []
   affinity: {}

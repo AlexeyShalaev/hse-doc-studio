@@ -20,8 +20,11 @@ UNKNOWN = "unknown"
 # Сборку остановили руками или заменили более новой: не сбой окружения.
 CANCELLED = "cancelled"
 SUPERSEDED = "superseded"
-# Студию или сервер перезапустили, пока шла сборка: запись закрыта при старте.
+# Старые записи (до 0.17): сборку, оборванную перезапуском, закрывали как неудачную с этим кодом.
 RESTARTED = "restarted"
+# Перезапуск Студии или сервера прервал сборку, и продолжить её было нечем: запись закрыта при старте
+# статусом `cancelled` с этим кодом. Сборка на раннере, пережившая перезапуск api, получает свой итог.
+INTERRUPTED = "interrupted"
 
 _DETAIL_LIMIT = 2000
 
@@ -319,6 +322,16 @@ _TEXTS: dict[str, tuple[str, str]] = {
         (
             "The Studio or the server was restarted while the build was running, and the build was interrupted. "
             "Build the document again."
+        ),
+    ),
+    INTERRUPTED: (
+        (
+            "Сборку прервал перезапуск Студии или сервера (например, обновление), и продолжить её было нельзя. "
+            "Это не ошибка документа: соберите его снова."
+        ),
+        (
+            "A restart of the Studio or the server (for example, an update) interrupted the build, and it could "
+            "not be continued. This is not a document error: build it again."
         ),
     ),
     SUPERSEDED: (

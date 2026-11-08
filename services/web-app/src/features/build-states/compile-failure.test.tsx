@@ -90,6 +90,25 @@ describe("CompileFailureNotice", () => {
     expect(retry).toHaveBeenCalledOnce();
   });
 
+  it("calls a build interrupted by a server restart interrupted, not cancelled or failed", () => {
+    mount({
+      error: {
+        code: "interrupted",
+        message: "Сборку прервал перезапуск Студии или сервера.",
+      },
+      status: "cancelled",
+      hasOutput: false,
+    });
+
+    expect(screen.getByText("Сборка прервана")).toBeTruthy();
+    expect(screen.queryByText("Сборка отменена")).toBeNull();
+    expect(screen.getByTestId("compile-failure").dataset.code).toBe(
+      "interrupted",
+    );
+    // Пустой журнал прерванной сборки не значит, что раннер молчал: причина уже в тексте выше.
+    expect(screen.queryByTestId("compile-failure-no-output")).toBeNull();
+  });
+
   it("renders English text", async () => {
     await i18n.changeLanguage("en");
     mount({
