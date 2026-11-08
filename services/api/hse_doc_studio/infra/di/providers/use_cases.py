@@ -107,6 +107,7 @@ from hse_doc_studio.core.signatures.ports import (
     IChainFetcher,
     IOpenPgpKeyImporter,
     IPublicKeyExporter,
+    ISignerScope,
     ITrustMaterialProvider,
 )
 from hse_doc_studio.core.submission_archive import ISubmissionArchive, ISubmissionAudit
@@ -422,6 +423,7 @@ from hse_doc_studio.use_cases.signatures.get_detached_files import (
     GetDetachedSignatureFileUC,
     GetFrozenPdfUC,
 )
+from hse_doc_studio.use_cases.signatures.get_signature_plan import GetSignaturePlanUC
 from hse_doc_studio.use_cases.signatures.get_signatures import GetSignaturesUC
 from hse_doc_studio.use_cases.signatures.get_signed_doc_pdf import GetSignedDocPdfUC
 from hse_doc_studio.use_cases.signatures.sign_in_studio import SignInStudioUC
@@ -2911,6 +2913,20 @@ class UseCaseProvider(Provider):
         return InstallOfficeServiceImageUC(image_manager=image_manager)
 
     # ------------------------------------------------------------------ Signatures
+
+    @provide
+    def get_signature_plan_uc(  # noqa: PLR0913 — порты сценария
+        self,
+        project_repo: IProjectRepository,
+        project_index_repo: IProjectIndexRepository,
+        signature_repo: ISignatureRepository,
+        template_repo: ITemplateRepository,
+        template_service: ProjectTemplateService,
+        signer_scope: ISignerScope,
+    ) -> GetSignaturePlanUC:
+        return GetSignaturePlanUC(
+            project_repo, project_index_repo, signature_repo, template_repo, template_service, signer_scope
+        )
 
     @provide
     def get_get_signatures_uc(

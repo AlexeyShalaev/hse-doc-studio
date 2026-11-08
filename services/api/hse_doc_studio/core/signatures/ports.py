@@ -2,9 +2,12 @@
 
 from __future__ import annotations
 
-from typing import Protocol
+from typing import TYPE_CHECKING, Protocol
 
 from hse_doc_studio.core.jobs.verify import TrustBundle
+
+if TYPE_CHECKING:
+    from hse_doc_studio.core.entities import Project
 
 
 class IOpenPgpKeyImporter(Protocol):
@@ -37,3 +40,14 @@ class IPublicKeyExporter(Protocol):
     """Выгрузка открытого OpenPGP-ключа подписанта из связки ключей студии."""
 
     def export_public(self, fingerprint: str) -> bytes: ...
+
+
+class ISignerScope(Protocol):
+    """Чьи слоты подписывает смотрящий: его персоны в проекте (docs/design/signature-plan.md, раздел 5)."""
+
+    async def personas(self, project: Project) -> frozenset[str]:
+        """Слаги авторов и роли руководителей, к которым привязан актор; `author` у владельца solo-проекта.
+
+        Локально человек один и он автор: все персоны авторов проекта. Пустое множество: своих слотов нет.
+        """
+        ...

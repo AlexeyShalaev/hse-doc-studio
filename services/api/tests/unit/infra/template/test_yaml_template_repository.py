@@ -2,10 +2,12 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import pytest
 from hse_doc_studio.core.enums import CheckSeverity, MetaFieldAuto, RequiredAt, TemplateUpdateClass
 from hse_doc_studio.infra.template.releases import freeze
 from hse_doc_studio.infra.template.yaml_template_repository import (
     YamlTemplateRepository,
+    _parse_submission_profile,
 )
 
 # ---------------------------------------------------------------------------
@@ -419,3 +421,26 @@ def test__releases_yaml__marks_version_released(tmp_path: Path) -> None:
     assert version.is_released
     assert version.frozen_digest == entry.digest
     assert version.release_kind == TemplateUpdateClass.major
+
+
+def test__parse_submission_profile__methods_per_slot__allowed_methods() -> None:
+    profile = _parse_submission_profile(
+        {
+            "id": "topic",
+            "items": [
+                {"doc_id": "app", "signatures": ["author", "supervisor"], "methods": {"author": ["image", "detached"]}}
+            ],
+        }
+    )
+
+    item = profile.items[0]
+    assert item.allowed_methods("author") == ("image", "detached")
+    assert item.allowed_methods("author--ivanov") == ("image", "detached")
+    assert item.allowed_methods("supervisor") == ()
+
+
+def test__parse_submission_profile__unknown_method__rejected() -> None:
+    with pytest.raises(ValueError, match="unknown"):
+        _parse_submission_profile(
+            {"id": "topic", "items": [{"doc_id": "app", "signatures": ["author"], "methods": {"author": ["fax"]}}]}
+        )

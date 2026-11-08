@@ -94,6 +94,7 @@ from hse_doc_studio.core.signatures.ports import (
     IChainFetcher,
     IOpenPgpKeyImporter,
     IPublicKeyExporter,
+    ISignerScope,
     ITrustMaterialProvider,
 )
 from hse_doc_studio.core.system_capacity import ISystemCapacityProbe
@@ -193,6 +194,7 @@ from hse_doc_studio.infra.signatures.detached_verifier import DetachedSignatureV
 from hse_doc_studio.infra.signatures.openpgp import GpgKeyring
 from hse_doc_studio.infra.signatures.pdf_stamper import PdfStamper
 from hse_doc_studio.infra.signatures.pyhanko_signer import PyHankoPdfSigner
+from hse_doc_studio.infra.signatures.signer_scope import LocalSignerScope
 from hse_doc_studio.infra.signatures.trust_material import LocalTrustMaterialProvider
 from hse_doc_studio.infra.signatures.trusted_roots import TrustedRootStore
 from hse_doc_studio.infra.submission.pack_executor import PackExecutor
@@ -236,6 +238,11 @@ class DomainServiceProvider(Provider):
     @provide
     def get_project_template_service(self) -> ProjectTemplateService:
         return ProjectTemplateService()
+
+    @provide
+    def get_signer_scope(self) -> ISignerScope:
+        # Локально человек один и он автор; серверный провайдер подменяет на персону из членства.
+        return LocalSignerScope()
 
     @provide
     def get_submission_profile_service(self) -> SubmissionProfileService:

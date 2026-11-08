@@ -5,6 +5,7 @@ import {
   AttachDetachedResponseSchema,
   FreezePdfResponseSchema,
   SignaturesStateSchema,
+  SignaturePlanSchema,
   PlacementSchema,
   SlotInfoSchema,
   UploadSignatureResponseSchema,
@@ -15,6 +16,22 @@ export const signatureApi = {
     apiClient
       .get(`/projects/${projectId}/signatures`)
       .then(parseResp(SignaturesStateSchema)),
+
+  getPlan: (
+    projectId: string,
+    params: {
+      profileId?: string | null | undefined;
+      author?: string | null | undefined;
+    } = {},
+  ) =>
+    apiClient
+      .get(`/projects/${projectId}/signature-plan`, {
+        params: {
+          ...(params.profileId ? { profile_id: params.profileId } : {}),
+          ...(params.author ? { author: params.author } : {}),
+        },
+      })
+      .then(parseResp(SignaturePlanSchema)),
 
   updatePlacement: (
     projectId: string,

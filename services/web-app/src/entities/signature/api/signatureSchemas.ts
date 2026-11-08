@@ -137,3 +137,68 @@ export const UpdatePlacementRequestSchema = z.object({
   width_mm: z.number().optional(),
   sign_date: z.string().optional(),
 });
+
+// План подписей (GET /projects/{id}/signature-plan): кто, каким способом, в
+// каком статусе и чего не хватает. Счётчик точки сдачи считает по нему, а не по
+// размещениям: открепленная ЭП без файла подписи — это «нет подписи», даже если
+// плашка уже стоит на странице.
+export const SignMethodSchema = z.enum(["image", "detached", "pades"]);
+export const SlotStatusSchema = z.enum([
+  "pending",
+  "signed",
+  "invalid",
+  "stale",
+]);
+
+export const PlanSlotSchema = z.object({
+  slot_id: z.string(),
+  label: z.record(z.string(), z.string()),
+  signer: z.object({ persona: z.string(), name: z.string() }),
+  mode: SignModeSchema,
+  method: SignMethodSchema,
+  crypto: z.boolean(),
+  mark: z.enum(["png", "plate", "none"]),
+  status: SlotStatusSchema,
+  reason: z.string().nullable().default(null),
+  hint: z.string().default(""),
+  allowed_methods: z.array(z.string()).default([]),
+  required_by: z.array(z.string()).default([]),
+  is_mine: z.boolean().default(false),
+  check: z
+    .object({
+      format: z.string(),
+      verdict: DetachedVerdictSchema,
+      signer: z.string(),
+      signer_id: z.string(),
+      signed_at: z.string().nullable().default(null),
+      notes: z.array(z.string()).default([]),
+    })
+    .nullable()
+    .default(null),
+});
+
+export const DocPlanSchema = z.object({
+  doc_id: z.string(),
+  built: z.boolean(),
+  frozen: z
+    .object({
+      sha256: z.string(),
+      source_sha256: z.string(),
+      frozen_at: z.string(),
+      signed_sha256: z.string().default(""),
+      outdated: z.string().nullable().default(null),
+    })
+    .nullable()
+    .default(null),
+  slots: z.array(PlanSlotSchema),
+});
+
+export const SignaturePlanSchema = z.object({
+  profile_id: z.string().nullable().default(null),
+  total: z.number(),
+  signed: z.number(),
+  crypto_total: z.number(),
+  crypto_signed: z.number(),
+  waiting_for_me: z.number().default(0),
+  docs: z.array(DocPlanSchema),
+});

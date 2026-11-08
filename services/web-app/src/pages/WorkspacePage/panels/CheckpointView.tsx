@@ -6,7 +6,7 @@ import type { z } from "zod";
 import type { ProjectResponseSchema } from "@entities/project";
 import { getDocMeta, useDocuments } from "@entities/document";
 import { useForms } from "@entities/form";
-import { useSignaturesState } from "@entities/signature";
+import { useSignaturePlan, useSignaturesState } from "@entities/signature";
 import {
   computeCheckpointReadiness,
   useSubmissionProfiles,
@@ -60,6 +60,13 @@ export const CheckpointView = ({
   // отвечать на вопрос «можно ли сдавать» про ОДНОГО человека.
   const { authors, isTeam, selectedAuthorSlug, setSelectedAuthorSlug } =
     useCheckpointReadiness(project.id);
+  // План подписей бэкенда — единственный источник статуса слота: он знает про
+  // файл открепленной подписи, устаревшую фиксацию и картинку против ЭП.
+  const { data: signaturePlan } = useSignaturePlan(
+    project.id,
+    profileId,
+    isTeam ? selectedAuthorSlug : null,
+  );
 
   const profile = (profiles ?? []).find((p) => p.id === profileId);
 
@@ -100,6 +107,7 @@ export const CheckpointView = ({
     // нужен весь состав, а не только тот, чей пакет сейчас смотрим.
     authors.map((author) => author.slug),
     { kind: project.kind, isNda: project.meta?.nda === true },
+    signaturePlan,
   );
 
   const name = pickLocalized(profile.name, lang, profile.id);
@@ -246,34 +254,72 @@ export const CheckpointView = ({
                           {/* Чей это документ — вопрос номер один в команде: у
                               нескольких авторов строки иначе неотличимы. */}
                           {isTeam && <span>{ownerLabel}</span>}
-                          {item.signatures.map((signature) => (
-                            <span
-                              key={signature.slotId}
-                              className="flex items-center"
-                              style={{ gap: "0.3125rem" }}
-                            >
+                          {item.signatures.map((signature) => {
+                            const planSlot = signature.plan;
+                            const tone = signature.isSigned
+                              ? "ok"
+                              : planSlot?.status === "invalid"
+                                ? "err"
+                                : "warn";
+                            const statusText = planSlot
+                              ? t(`checkpoint.slotStatus.${planSlot.status}`)
+                              : signature.isSigned
+                                ? t("checkpoint.signed")
+                                : t("checkpoint.notSigned");
+                            return (
                               <span
-                                className={clsx(
-                                  "dot",
-                                  signature.isSigned ? "ok" : "warn",
-                                )}
-                              />
-                              <span
-                                style={{
-                                  color: signature.isSigned
-                                    ? "var(--fg-3)"
-                                    : "var(--fg-1)",
-                                }}
+                                key={signature.slotId}
+                                className="flex flex-col"
+                                style={{ gap: "0.125rem" }}
                               >
-                                {slotLabel(signature.slotId)}
+                                <span
+                                  className="flex items-center"
+                                  style={{ gap: "0.3125rem" }}
+                                >
+                                  <span className={clsx("dot", tone)} />
+                                  <span
+                                    style={{
+                                      color: signature.isSigned
+                                        ? "var(--fg-3)"
+                                        : "var(--fg-1)",
+                                    }}
+                                  >
+                                    {slotLabel(signature.slotId)}
+                                    {planSlot?.signer.name
+                                      ? ` (${planSlot.signer.name})`
+                                      : ""}
+                                  </span>
+                                  {/* Картинка не выдаётся за ЭП: способ
+                                      подписи виден у каждого слота. */}
+                                  {planSlot && (
+                                    <span
+                                      className="chip subtle"
+                                      title={
+                                        planSlot.crypto
+                                          ? t("checkpoint.cryptoHint")
+                                          : t("checkpoint.imageHint")
+                                      }
+                                    >
+                                      {t(
+                                        `checkpoint.method.${planSlot.method}`,
+                                      )}
+                                    </span>
+                                  )}
+                                  <span>{statusText}</span>
+                                </span>
+                                {!signature.isSigned &&
+                                  planSlot?.hint != null &&
+                                  planSlot.hint !== "" && (
+                                    <span
+                                      className="dim"
+                                      style={{ fontSize: "0.6875rem" }}
+                                    >
+                                      {planSlot.hint}
+                                    </span>
+                                  )}
                               </span>
-                              <span>
-                                {signature.isSigned
-                                  ? t("checkpoint.signed")
-                                  : t("checkpoint.notSigned")}
-                              </span>
-                            </span>
-                          ))}
+                            );
+                          })}
                         </div>
                       )}
                     </div>

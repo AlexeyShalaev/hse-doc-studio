@@ -582,6 +582,23 @@ def _parse_signature_slot(data: dict[str, Any]) -> SignatureSlotDef:
     )
 
 
+_SIGN_METHODS = ("image", "detached", "pades")
+
+
+def _parse_sign_methods(raw: Any) -> tuple[tuple[str, tuple[str, ...]], ...]:
+    """`methods: {author: [image, detached]}` пункта профиля; неизвестный способ это ошибка пака."""
+    if not isinstance(raw, dict):
+        return ()
+    result: list[tuple[str, tuple[str, ...]]] = []
+    for slot_id, values in raw.items():
+        listed = values if isinstance(values, list) else [values]
+        unknown = [v for v in listed if v not in _SIGN_METHODS]
+        if unknown:
+            raise ValueError(f"profile item methods for {slot_id!r}: unknown {unknown}, expected {list(_SIGN_METHODS)}")
+        result.append((str(slot_id), tuple(str(v) for v in listed)))
+    return tuple(result)
+
+
 def _parse_submission_profile(data: dict[str, Any]) -> SubmissionProfile:
     items = tuple(
         SubmissionDocItem(
@@ -589,6 +606,7 @@ def _parse_submission_profile(data: dict[str, Any]) -> SubmissionProfile:
             signatures=tuple(item.get("signatures", [])),
             skip_if_nda=bool(item.get("skip_if_nda", False)),
             supported_kinds=_parse_kinds_list(item.get("supported_kinds")),
+            methods=_parse_sign_methods(item.get("methods")),
         )
         for item in data.get("items", [])
     )

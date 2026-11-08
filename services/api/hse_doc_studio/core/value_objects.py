@@ -150,6 +150,12 @@ class FrozenPdf:
     # Hash of what was stamped (placements, plate data). A different current value
     # means signers or positions changed after freezing: the plate is out of date.
     stamps_digest: str = ""
+    # The frozen PDF with embedded PAdES signatures appended as incremental updates
+    # (docs/design/signature-plan.md). Empty while nobody signed with PAdES: then the
+    # final file is the frozen one. The frozen bytes are always a prefix of this file.
+    signed_path: str = ""
+    signed_sha256: str = ""
+    signed_size: int = 0
 
 
 @dataclass(frozen=True)
@@ -176,6 +182,28 @@ class DetachedSignature:
 
 
 @dataclass(frozen=True)
+class EmbeddedSignature:
+    """A PAdES signature of a (doc, slot): one incremental update on top of the frozen PDF.
+
+    `base_sha256` is the frozen PDF the chain grew from; `revision_size` and
+    `revision_sha256` describe the file right after this signature was appended, so
+    later signatures can be told apart from tampering with this one.
+    """
+
+    field_name: str
+    base_sha256: str
+    revision_size: int
+    revision_sha256: str
+    verdict: DetachedVerdict
+    signer: str
+    signer_id: str  # certificate SHA-256
+    added_at: str
+    signed_at: str | None = None
+    issuer: str = ""
+    notes: tuple[str, ...] = ()
+
+
+@dataclass(frozen=True)
 class SignaturesState:
     """Project-level signatures state.
 
@@ -189,6 +217,8 @@ class SignaturesState:
     placements: dict[str, dict[str, SignaturePlacement]]
     frozen: dict[str, FrozenPdf] = field(default_factory=dict)
     detached: dict[str, dict[str, DetachedSignature]] = field(default_factory=dict)
+    # PAdES signatures per (doc, slot), layered over the frozen PDF in signing order.
+    embedded: dict[str, dict[str, EmbeddedSignature]] = field(default_factory=dict)
 
     @classmethod
     def empty(cls) -> SignaturesState:

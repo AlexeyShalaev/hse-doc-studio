@@ -16,6 +16,7 @@ from hse_doc_studio.core.repositories import (
     ITemplateRepository,
 )
 from hse_doc_studio.core.services import SignatureSlotService
+from hse_doc_studio.core.signatures.plan import SlotModeConflictError, profile_restrictions, slot_mode_conflict
 from hse_doc_studio.core.value_objects import SignatureSlot
 from hse_doc_studio.use_cases.projects.get_project import GetProjectInput, GetProjectUC
 
@@ -83,6 +84,7 @@ class UpdateSlotConfigUC:
                 )
             )
 
+        identity_kind: str | None = None
         if inp.signing_identity_id is not None:
             identity = await self._signing_identity_repo.get(UUID(inp.signing_identity_id))
             if identity is None:
@@ -92,6 +94,12 @@ class UpdateSlotConfigUC:
                         f"Signing identity {inp.signing_identity_id!r} not found",
                     )
                 )
+            identity_kind = identity.kind.value
+        conflict = slot_mode_conflict(
+            inp.sign_mode, identity_kind, profile_restrictions(project, version, inp.slot_id, str(project.lang))
+        )
+        if conflict is not None:
+            raise SlotModeConflictError(conflict)
 
         state = self._signature_repo.get_state(project.folder)
         existing = state.slots.get(inp.slot_id)

@@ -5,6 +5,7 @@ import {
   pickActiveProfile,
   type DocumentLike,
   type FormLike,
+  type SignaturePlanLike,
   type SignaturesStateLike,
   type SubmissionProfile,
 } from "./readiness";
@@ -402,6 +403,77 @@ describe("computeCheckpointReadiness", () => {
       isUnknown: false,
       isComplete: false,
     });
+  });
+});
+
+describe("computeCheckpointReadiness with a signature plan", () => {
+  const planSlot = (
+    slotId: string,
+    status: "pending" | "signed" | "invalid" | "stale",
+    method: "image" | "detached" | "pades",
+  ) => ({
+    slot_id: slotId,
+    status,
+    method,
+    crypto: method !== "image",
+    hint: status === "signed" ? "" : "PDF зафиксирован, нет файла подписи",
+    signer: { persona: slotId, name: "" },
+  });
+
+  it("counts a frozen detached slot without a signature file as not signed", () => {
+    // Плашка стоит, PNG у автора загружен — по размещениям всё «подписано»,
+    // а по плану у руководителя нет файла открепленной подписи.
+    const placements = withUploadedSlots({
+      placements: {
+        application: {
+          author: { enabled: true },
+          supervisor: { enabled: true },
+        },
+      },
+    });
+    const plan: SignaturePlanLike = {
+      docs: [
+        {
+          doc_id: "application",
+          slots: [
+            planSlot("author", "signed", "image"),
+            planSlot("supervisor", "pending", "detached"),
+          ],
+        },
+      ],
+    };
+
+    const readiness = computeCheckpointReadiness(
+      profile([item("application", ["author", "supervisor"])]),
+      [doc("application", "ok")],
+      placements,
+      [],
+      null,
+      [],
+      {},
+      plan,
+    );
+
+    expect(readiness.breakdown.signatures).toEqual({ done: 1, total: 2 });
+    const supervisor = readiness.items[0]?.signatures[1];
+    expect(supervisor?.isSigned).toBe(false);
+    expect(supervisor?.plan?.method).toBe("detached");
+    expect(supervisor?.plan?.hint).toContain("нет файла подписи");
+  });
+
+  it("treats a slot missing from the plan as not signed", () => {
+    const readiness = computeCheckpointReadiness(
+      profile([item("application", ["author"])]),
+      [doc("application", "ok")],
+      signed("application", "author"),
+      [],
+      null,
+      [],
+      {},
+      { docs: [] },
+    );
+
+    expect(readiness.breakdown.signatures).toEqual({ done: 0, total: 1 });
   });
 });
 

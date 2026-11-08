@@ -30,6 +30,7 @@ from hse_doc_studio.core.value_objects import (
     ChecksOverride,
     CustomFileOverride,
     DetachedSignature,
+    EmbeddedSignature,
     FrozenPdf,
     Person,
     SignaturePlacement,
@@ -400,6 +401,37 @@ def test__serializers__signatures_state__detached_roundtrip_and_legacy_files() -
     broken = serialize_signatures_state(state)
     broken["detached"]["a"]["s"]["verdict"] = "nonsense"
     assert deserialize_signatures_state(broken).detached == {}
+
+
+def test__serializers__signatures_state__embedded_and_signed_file_roundtrip() -> None:
+    frozen = FrozenPdf(
+        path=".hse-studio/frozen/a.pdf",
+        sha256="a" * 64,
+        source_sha256="b" * 64,
+        size=10,
+        frozen_at="t",
+        signed_path=".hse-studio/frozen/a.signed.pdf",
+        signed_sha256="c" * 64,
+        signed_size=30,
+    )
+    embedded = EmbeddedSignature(
+        field_name="Sig_s",
+        base_sha256="a" * 64,
+        revision_size=30,
+        revision_sha256="c" * 64,
+        verdict=DetachedVerdict.valid,
+        signer="Иван",
+        signer_id="d" * 64,
+        added_at="t",
+        notes=("chain_untrusted_root",),
+    )
+    state = SignaturesState(slots={}, placements={}, frozen={"a": frozen}, embedded={"a": {"s": embedded}})
+
+    restored = deserialize_signatures_state(serialize_signatures_state(state))
+
+    assert restored.frozen == {"a": frozen}
+    assert restored.embedded == {"a": {"s": embedded}}
+    assert deserialize_signatures_state({"slots": {}, "placements": {}}).embedded == {}
 
 
 @pytest.mark.unit

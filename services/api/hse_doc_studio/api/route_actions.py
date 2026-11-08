@@ -63,6 +63,7 @@ ROUTE_ACTIONS: Mapping[RouteKey, RouteRule] = {
     ("GET", "/projects/{project_id}/documents/{doc_id}/checks/rules"): RouteRule(Action.OUTPUT_READ),
     ("GET", "/projects/{project_id}/normcontrol-report"): RouteRule(Action.OUTPUT_READ),
     ("GET", "/projects/{project_id}/signatures"): RouteRule(Action.OUTPUT_READ),
+    ("GET", "/projects/{project_id}/signature-plan"): RouteRule(Action.OUTPUT_READ),
     ("GET", "/projects/{project_id}/docs/{doc_id}/frozen/pdf"): RouteRule(Action.OUTPUT_READ),
     ("GET", "/projects/{project_id}/docs/{doc_id}/pdf/signed"): RouteRule(Action.OUTPUT_READ),
     ("GET", "/projects/{project_id}/docs/{doc_id}/detached/{slot_id}/file"): RouteRule(Action.OUTPUT_READ),

@@ -12,7 +12,33 @@ export const signatureKeys = {
   all: ["signatures"] as const,
   state: (projectId: string) =>
     [...signatureKeys.all, "state", projectId] as const,
+  // Под ключом состояния: любая мутация подписей уже сбрасывает state, и план
+  // пересчитывается вместе с ним без отдельной инвалидации в каждой мутации.
+  plan: (
+    projectId: string,
+    profileId: string | null | undefined,
+    author: string | null | undefined,
+  ) =>
+    [
+      ...signatureKeys.state(projectId),
+      "plan",
+      profileId ?? "",
+      author ?? "",
+    ] as const,
 };
+
+type SignaturePlan = Awaited<ReturnType<typeof signatureApi.getPlan>>;
+
+export const useSignaturePlan = (
+  projectId: string,
+  profileId: string | null | undefined,
+  author: string | null | undefined,
+) =>
+  useQuery<SignaturePlan>({
+    queryKey: signatureKeys.plan(projectId, profileId, author),
+    queryFn: () => signatureApi.getPlan(projectId, { profileId, author }),
+    enabled: !!projectId,
+  });
 
 export const useSignaturesState = (projectId: string) =>
   useQuery<SignaturesState>({

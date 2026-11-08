@@ -29,5 +29,7 @@ export type {
   FormLike,
   SignaturePlacementLike,
   SignaturesStateLike,
+  PlanSlotLike,
+  SignaturePlanLike,
   SubmissionProfile,
 } from "./lib";
