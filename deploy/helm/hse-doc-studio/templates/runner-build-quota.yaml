@@ -1,11 +1,10 @@
-{{- if and .Values.runner.enabled (eq .Values.runner.executor "kubernetes") }}
 {{- $k := .Values.runner.kubernetes }}
-{{- $buildNs := include "hds.runnerBuildNamespace" . }}
 {{- if or $k.quota.enabled $k.limitRange.enabled }}
-{{- if eq $buildNs .Release.Namespace }}
+{{- if and (include "hds.chartRunnerKube" .) (eq (include "hds.runnerBuildNamespace" .) .Release.Namespace) }}
 {{- fail "runner.kubernetes.quota and limitRange need a separate build namespace: set runner.kubernetes.namespace (a quota in the release namespace would also limit the Studio itself)" }}
 {{- end }}
-{{- end }}
+{{- /* Отдельные namespace подов сборки: раннера чарта и раннеров из админки, общий namespace один раз. */}}
+{{- range $ns := include "hds.buildQuotaNamespaces" . | fromJsonArray }}
 {{- if $k.quota.enabled }}
 ---
 # Общий потолок подов сборки (docs/en/deploy/runner-isolation.md). Поды сборки задают requests и limits сами,
@@ -13,10 +12,10 @@
 apiVersion: v1
 kind: ResourceQuota
 metadata:
-  name: {{ include "hds.fullname" . }}-builds
-  namespace: {{ $buildNs }}
+  name: {{ include "hds.fullname" $ }}-builds
+  namespace: {{ $ns }}
   labels:
-    {{- include "hds.labels" . | nindent 4 }}
+    {{- include "hds.labels" $ | nindent 4 }}
     app.kubernetes.io/component: runner
 spec:
   hard:
@@ -33,10 +32,10 @@ spec:
 apiVersion: v1
 kind: LimitRange
 metadata:
-  name: {{ include "hds.fullname" . }}-builds
-  namespace: {{ $buildNs }}
+  name: {{ include "hds.fullname" $ }}-builds
+  namespace: {{ $ns }}
   labels:
-    {{- include "hds.labels" . | nindent 4 }}
+    {{- include "hds.labels" $ | nindent 4 }}
     app.kubernetes.io/component: runner
 spec:
   limits:
@@ -47,5 +46,6 @@ spec:
         {{- toYaml $k.limitRange.defaultRequest | nindent 8 }}
       max:
         {{- toYaml $k.limitRange.max | nindent 8 }}
+{{- end }}
 {{- end }}
 {{- end }}

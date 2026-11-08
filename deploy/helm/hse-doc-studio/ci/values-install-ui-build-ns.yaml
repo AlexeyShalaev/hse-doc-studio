@@ -1,0 +1,14 @@
+# Поверх values-test.yaml: раннеры из админки с подами сборки в своём namespace (golden-рендер
+# rendered-install-ui-build-ns.golden.yaml): права раннеров, запрет сети, квота и LimitRange в нём, а не в namespace
+# релиза; чтение живого состояния изоляции для админки. Раннер чарта остаётся docker: его квота не касается.
+runner:
+  isolationInfo:
+    readCluster: true
+  installFromUi:
+    enabled: true
+    buildNamespace: hds-ui-builds
+  kubernetes:
+    quota:
+      enabled: true
+    limitRange:
+      enabled: true

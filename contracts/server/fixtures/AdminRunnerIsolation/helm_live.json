@@ -63,6 +63,7 @@
   "install_from_ui": {
     "enabled": true,
     "namespace": "studio",
+    "build_namespace": "studio",
     "service_account": "rel-runner-ui",
     "storage_class": null,
     "storage_size": "5Gi",
@@ -175,6 +176,8 @@
       }
     }
   },
+  "ui_quota": null,
+  "ui_limit_range": null,
   "pod_security": [
     {
       "namespace": "studio",

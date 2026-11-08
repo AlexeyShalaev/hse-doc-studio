@@ -73,6 +73,10 @@ spec:
             - {name: HSE_STUDIO__RUNNER_INSTALL__KUBERNETES_RESOURCE_MAX_MEMORY, value: {{ $ui.maxMemory | quote }}}
             - {name: HSE_STUDIO__RUNNER_INSTALL__KUBERNETES_STORAGE_SIZE, value: {{ .Values.runner.installFromUi.storageSize | quote }}}
             - {name: HSE_STUDIO__RUNNER_INSTALL__KUBERNETES_STORAGE_CLASS, value: {{ .Values.runner.installFromUi.storageClassName | quote }}}
+            {{- if $ui.buildNamespace }}
+            # Namespace подов сборки таких раннеров: раннер получает его в HSE_RUNNER__K8S__NAMESPACE.
+            - {name: HSE_STUDIO__RUNNER_INSTALL__KUBERNETES_BUILD_NAMESPACE, value: {{ $ui.buildNamespace | quote }}}
+            {{- end }}
             {{- end }}
             # Экран изоляции раннеров в админке: что задано в чарте (не проверенное в кластере).
             - {name: HSE_STUDIO__RUNNER_CLUSTER__DECLARED, value: {{ include "hds.runnerCluster" . | quote }}}

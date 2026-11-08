@@ -122,6 +122,33 @@ app.kubernetes.io/instance: {{ .Release.Name }}
 {{- default .Release.Namespace .Values.runner.kubernetes.namespace -}}
 {{- end -}}
 
+{{/* Namespace подов сборки раннеров из админки (runner.installFromUi.buildNamespace): свой или namespace релиза. */}}
+{{- define "hds.uiBuildNamespace" -}}
+{{- default .Release.Namespace .Values.runner.installFromUi.buildNamespace -}}
+{{- end -}}
+
+{{/* Раннер чарта с исполнителем kubernetes: у него есть поды сборки. */}}
+{{- define "hds.chartRunnerKube" -}}
+{{- if and .Values.runner.enabled (eq .Values.runner.executor "kubernetes") -}}true{{- end -}}
+{{- end -}}
+
+{{/*
+Отдельные namespace подов сборки (JSON-список без повторов), куда ставятся квота и LimitRange: namespace раннера чарта
+с исполнителем kubernetes и namespace подов сборки раннеров из админки, если они не namespace релиза.
+*/}}
+{{- define "hds.buildQuotaNamespaces" -}}
+{{- $list := list -}}
+{{- $chartNs := include "hds.runnerBuildNamespace" . -}}
+{{- if and (include "hds.chartRunnerKube" .) (ne $chartNs .Release.Namespace) -}}
+{{- $list = append $list $chartNs -}}
+{{- end -}}
+{{- $uiNs := include "hds.uiBuildNamespace" . -}}
+{{- if and .Values.runner.installFromUi.enabled (ne $uiNs .Release.Namespace) -}}
+{{- $list = append $list $uiNs -}}
+{{- end -}}
+{{- toJson (uniq $list) -}}
+{{- end -}}
+
 {{/*
 Выжимка values о раннерах для экрана изоляции в админке (HSE_STUDIO__RUNNER_CLUSTER__DECLARED): то, что задано
 в чарте, а не проверенное в кластере. Без секретов и без содержимого extraEgress (только число правил).
@@ -140,7 +167,11 @@ app.kubernetes.io/instance: {{ .Release.Name }}
 {{- $build := dict "namespace" $buildNs "resources" $k.resources "workSizeLimit" ($k.workSizeLimit | toString) "tmpSizeLimit" ($k.tmpSizeLimit | toString) "activeDeadlineSeconds" $k.activeDeadlineSeconds "runtimeClassName" $k.runtimeClassName "runAsUser" $k.runAsUser "networkPolicy" $k.networkPolicy.enabled "quota" $quota "limitRange" $range -}}
 {{- $np := $r.networkPolicy -}}
 {{- $egress := dict "enabled" (and $np.enabled (or $r.enabled $r.installFromUi.enabled)) "studioPort" 8000 "apiServerCidrs" $np.apiServerCidrs "apiServerPorts" $np.apiServerPorts "extraRules" (len $np.extraEgress) -}}
-{{- toJson (dict "releaseNamespace" .Release.Namespace "runner" $runner "build" $build "runnerEgress" $egress) -}}
+{{- $ui := $r.installFromUi -}}
+{{- $uiNs := include "hds.uiBuildNamespace" . -}}
+{{- $uiSeparate := and $ui.enabled (ne $uiNs .Release.Namespace) -}}
+{{- $uiBuild := dict "enabled" $ui.enabled "namespace" $uiNs "networkPolicy" (and $ui.enabled $k.networkPolicy.enabled) "quota" (and $uiSeparate $k.quota.enabled) "limitRange" (and $uiSeparate $k.limitRange.enabled) -}}
+{{- toJson (dict "releaseNamespace" .Release.Namespace "runner" $runner "build" $build "uiBuild" $uiBuild "runnerEgress" $egress) -}}
 {{- end -}}
 
 {{/* Студии нужен ServiceAccount с токеном: установка раннеров из админки или чтение изоляции раннеров. */}}

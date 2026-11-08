@@ -133,7 +133,8 @@
       "bounds": "Границы формы установки",
       "cpuBounds": "CPU: раннер от {{runner}}, поды сборки от {{build}}, не больше {{max}}",
       "memoryBounds": "Память: раннер от {{runner}}, поды сборки от {{build}}, не больше {{max}}",
-      "storage": "Том данных"
+      "storage": "Том данных",
+      "buildNamespace": "Namespace подов сборки"
     },
     "network": {
       "title": "Сеть",
@@ -153,6 +154,7 @@
     },
     "quota": {
       "title": "ResourceQuota",
+      "titleUi": "ResourceQuota раннеров из админки",
       "off": "Выключена",
       "key": "Ресурс",
       "declared": "Задано",
@@ -161,6 +163,7 @@
     },
     "limitRange": {
       "title": "LimitRange",
+      "titleUi": "LimitRange раннеров из админки",
       "off": "Выключен",
       "default": "default",
       "defaultRequest": "defaultRequest",
