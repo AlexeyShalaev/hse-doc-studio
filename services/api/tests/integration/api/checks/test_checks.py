@@ -246,3 +246,56 @@ async def test__api__apply_check_fix__nonexistent_project__returns_404(test_app:
     )
 
     assert resp.status_code == 404
+
+
+# --- real packs: edition branches -------------------------------------------
+
+_SSE_PLACEHOLDERS = "hse-sse-proposal-2026/placeholders-left"
+
+
+async def _sse_proposal_with_one_placeholder(client: AsyncClient, folder: Path, stage: str, keep: str) -> str:
+    """Проект КП СПИ, в заявке которого заполнено всё, кроме плейсхолдера `keep`."""
+    folder.mkdir()
+    payload = {
+        **project_api_payload(str(folder)),
+        "pack_id": "hse-cs-sse",
+        "template_id": "coursework",
+        "version": "2026.1.2",
+        "kind": "project",
+        "meta": {"proposal_stage": stage},
+    }
+    created = await client.post("/api/v1/projects", json=payload)
+    assert created.status_code == 201, created.text
+    source = folder / "project_proposal" / "project_proposal.tex"
+    text = source.read_text(encoding="utf-8")
+    assert f"\\hseFill{{{keep}" in text
+    text = text.replace("\\hseFill{", "\\textbf{").replace(f"\\textbf{{{keep}", f"\\hseFill{{{keep}")
+    source.write_text(text, encoding="utf-8", newline="\n")
+    return created.json()["id"]
+
+
+@pytest.mark.parametrize(
+    ("stage", "keep", "flagged"),
+    [
+        # Аннотация — только в доработанной редакции (\ifhseExtendedProposal).
+        pytest.param("Предварительная", "о чём работа", False, id="extended-branch-off"),
+        pytest.param("Доработанная", "о чём работа", True, id="extended-branch-on"),
+        # «Применяемые методы» — вне условий, в обеих редакциях.
+        pytest.param("Предварительная", "ожидаемые методы", True, id="outside-branches"),
+    ],
+)
+async def test__api__run_checks__sse_proposal__placeholders_left_follows_edition(
+    test_app: AsyncClient, tmp_path: Path, stage: str, keep: str, flagged: bool
+) -> None:
+    project_id = await _sse_proposal_with_one_placeholder(test_app, tmp_path / "kp", stage, keep)
+
+    resp = await _run_checks(test_app, project_id, "project_proposal")
+
+    assert resp.status_code == 200, resp.text
+    found = [r for r in resp.json()["results"] if r["rule_id"] == _SSE_PLACEHOLDERS]
+    if flagged:
+        assert len(found) == 1, found
+        assert "1" in found[0]["message"]
+        assert found[0]["location"]["file"] == "project_proposal/project_proposal.tex"
+    else:
+        assert found == []
