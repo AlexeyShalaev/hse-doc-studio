@@ -77,6 +77,23 @@ export const ProjectInviteView = ({
               role: preview.role ? roleLabel(preview.role) : "",
             })}
           </p>
+          {preview.message && (
+            <blockquote
+              style={{
+                margin: 0,
+                padding: "0.625rem 0.875rem",
+                borderLeft: "3px solid var(--border)",
+                fontSize: "0.84375rem",
+                lineHeight: 1.5,
+                whiteSpace: "pre-line",
+                overflowWrap: "anywhere",
+              }}
+              aria-label={t("page.message")}
+              data-testid="project-invite-message"
+            >
+              {preview.message}
+            </blockquote>
+          )}
           {dataState === "accepted" && (
             <Notice tone="info" role="status" text={t("page.accepted")} />
           )}

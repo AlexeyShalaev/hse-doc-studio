@@ -8,6 +8,7 @@ import { inboxApi, projectInvitationsApi } from "./invitationApi";
 import type {
   ApproveAccessRequest,
   CreateProjectInvitationRequest,
+  InvitationDraftRequest,
   StartProjectTransferRequest,
 } from "../model/invitation.schema";
 
@@ -19,6 +20,8 @@ export const invitationKeys = {
     [...invitationKeys.project(projectId), "list"] as const,
   requests: (projectId: string) =>
     [...invitationKeys.project(projectId), "requests"] as const,
+  draft: (projectId: string, body: InvitationDraftRequest, lang: string) =>
+    [...invitationKeys.project(projectId), "draft", lang, body] as const,
   transfer: (projectId: string) =>
     [...invitationKeys.project(projectId), "transfer"] as const,
   transferCandidates: (projectId: string, q: string) =>
@@ -61,6 +64,23 @@ export const useProjectInvitations = (projectId: string, enabled = true) =>
       projectInvitationsApi.list(projectId, "pending", signal),
     enabled,
     staleTime: 10_000,
+  });
+
+/** Готовый текст приглашения для формы: пересчитывается при смене адресата, роли, персоны и языка. */
+export const useInvitationDraft = (
+  projectId: string,
+  body: InvitationDraftRequest,
+  lang: string,
+  enabled = true,
+) =>
+  useQuery({
+    queryKey: invitationKeys.draft(projectId, body, lang),
+    queryFn: ({ signal }) =>
+      projectInvitationsApi.draft(projectId, body, signal),
+    enabled,
+    placeholderData: keepPreviousData,
+    staleTime: 60_000,
+    retry: false,
   });
 
 export const useProjectAccessRequests = (projectId: string, enabled = true) =>

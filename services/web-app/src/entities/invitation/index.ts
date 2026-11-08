@@ -15,6 +15,7 @@ export {
   useDecideInvitation,
   useDecideTransfer,
   useInboxSummary,
+  useInvitationDraft,
   useInvitationPreview,
   useMarkNotificationsRead,
   useMyAccessRequests,

@@ -177,6 +177,8 @@ export const InboxView = ({
                     margin: 0,
                     fontSize: "0.78125rem",
                     fontStyle: "italic",
+                    whiteSpace: "pre-line",
+                    overflowWrap: "anywhere",
                   }}
                 >
                   «{inv.message}»

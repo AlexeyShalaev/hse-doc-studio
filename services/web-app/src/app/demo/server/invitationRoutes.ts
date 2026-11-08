@@ -1,4 +1,5 @@
 import { demoError, demoJson, demoNoContent } from "@shared/api/demo";
+import { useThemeStore } from "@shared/lib";
 import type { DemoRequest, DemoResponse, DemoRoute } from "@shared/api/demo";
 import type { GrantRole, ProjectInvitation } from "@entities/invitation";
 import { effectiveRole } from "./projectAccess";
@@ -18,6 +19,43 @@ type Body = Record<string, unknown>;
 const bodyOf = (req: DemoRequest): Body => (req.body ?? {}) as Body;
 const str = (v: unknown): string | null =>
   typeof v === "string" && v.trim() !== "" ? v.trim() : null;
+
+const DRAFT = {
+  ru: {
+    greeting: "Здравствуйте!",
+    invite: (project: string, role: string) =>
+      `Приглашаю вас в проект «${project}» в HSE Doc Studio в роли ${role}.`,
+    role: { reader: "читателя", reviewer: "рецензента", editor: "редактора" },
+    persona: {
+      supervisor: "научного руководителя",
+      co_supervisor: "соруководителя",
+      academic_supervisor: "академического руководителя",
+    } as Record<string, string>,
+    access: {
+      reader: "Здесь можно смотреть документы.",
+      reviewer: "Здесь можно смотреть документы и оставлять замечания.",
+      editor: "Здесь можно смотреть и править документы, оставлять замечания.",
+    },
+    closing: "С уважением,",
+  },
+  en: {
+    greeting: "Hello!",
+    invite: (project: string, role: string) =>
+      `I would like to invite you to the project “${project}” in HSE Doc Studio as ${role}.`,
+    role: { reader: "a reader", reviewer: "a reviewer", editor: "an editor" },
+    persona: {
+      supervisor: "the supervisor",
+      co_supervisor: "the co-supervisor",
+      academic_supervisor: "the academic supervisor",
+    } as Record<string, string>,
+    access: {
+      reader: "Here you can view the documents.",
+      reviewer: "Here you can view the documents and leave comments.",
+      editor: "Here you can view and edit the documents and leave comments.",
+    },
+    closing: "Best regards,",
+  },
+} as const;
 
 export const createInvitationRoutes = (
   getWorld: () => ServerDemoWorld,
@@ -81,6 +119,30 @@ export const createInvitationRoutes = (
           (i) => all || i.status === "pending" || i.status === "expired",
         );
         return page(items);
+      }),
+    },
+    {
+      // Готовый текст приглашения: в демо без данных проекта, только имя проекта, роль и подпись.
+      method: "POST",
+      pattern: "/projects/:projectId/invitations/draft",
+      handler: project("manage", (req, p, _state, world) => {
+        const body = bodyOf(req);
+        const role = body.role as GrantRole;
+        if (!ROLES.includes(role)) {
+          return demoError(422, "input_invalid", "Invalid input");
+        }
+        const words =
+          DRAFT[useThemeStore.getState().lang === "en" ? "en" : "ru"];
+        const persona = str(body.persona);
+        const roleWords =
+          (persona ? words.persona[persona] : undefined) ?? words.role[role];
+        const signer = world.bootstrap.user?.name ?? null;
+        const text = [
+          words.greeting,
+          `${words.invite(p.summary.name, roleWords)} ${words.access[role]}`,
+          ...(signer ? [`${words.closing}\n${signer}`] : []),
+        ].join("\n\n");
+        return demoJson({ message: text });
       }),
     },
     {
@@ -399,6 +461,7 @@ export const createInvitationRoutes = (
             role: null,
             email_hint: null,
             registration_token: null,
+            message: null,
           },
         );
       },

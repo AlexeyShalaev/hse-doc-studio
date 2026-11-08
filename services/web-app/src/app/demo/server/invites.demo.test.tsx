@@ -131,10 +131,18 @@ describe("демо invites: панель «Доступ»", () => {
     const form = await screen.findByTestId("invite-form");
     expect(screen.getByTestId("invite-submit")).toBeDisabled();
     await user.type(within(form).getByTestId("invite-email"), "new@hse.ru");
-    await user.type(within(form).getByTestId("invite-message"), "Привет");
+    const message =
+      within(form).getByTestId<HTMLTextAreaElement>("invite-message");
+    // Текст уже составлен по проекту и роли: его можно заменить своим.
+    await waitFor(() => {
+      expect(message.value).toContain("Приглашаю вас в проект");
+    });
+    await user.clear(message);
+    await user.type(message, "Привет");
     await user.click(screen.getByTestId("invite-submit"));
     const link = await screen.findByTestId("invite-link");
     expect(within(link).getByDisplayValue(/\/project-invite\//)).toBeTruthy();
+    expect(screen.getByTestId("invite-copy")).toBeInTheDocument();
     const created = invitesOf(getServerWorld()).projectInvitations[OWN]?.[0];
     expect(created?.invitee.email_hint).toBe("new@hse.ru");
     expect(created?.message).toBe("Привет");
@@ -266,6 +274,13 @@ describe("демо invites: страницы", () => {
         state,
       );
     });
+  });
+
+  it("страница приглашения показывает сообщение приглашающего", async () => {
+    invitePage("hspi_demo_ok");
+    expect(
+      (await screen.findByTestId("project-invite-message")).textContent,
+    ).toContain("Приглашаю вас в проект «ВКР: Анализ требований»");
   });
 
   it("чужая почта: принятие показывает несовпадение", async () => {

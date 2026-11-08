@@ -24,14 +24,19 @@
     "days_other": "{{count}} days",
     "message": "Message",
     "messagePlaceholder": "For example: please take a look at chapter 2",
+    "messageHint": "The text is made from the project data. You can edit it before sending.",
+    "messageReset": "Restore original text",
     "submit": "Invite",
     "cancel": "Cancel",
     "done": "Done",
     "sentEmail": "Invitation sent by email",
     "sentInbox": "The invitation is in {{name}}'s Inbox",
     "manualTitle": "Invitation link",
-    "manualHint": "Email is not configured: send the link yourself.",
-    "linkLabel": "Invitation link"
+    "manualHint": "Email is not configured: send the invitation yourself.",
+    "linkLabel": "Invitation link",
+    "copyInvitation": "Copy invitation",
+    "copied": "Invitation copied: text and link",
+    "copyFailed": "Could not copy. Copy the link below."
   },
   "pending": {
     "title": "Pending",
@@ -92,6 +97,7 @@
       "expired": "The invitation has expired. Ask for a new one.",
       "used": "The invitation has already been accepted or declined.",
       "invalid": "The link is not valid."
-    }
+    },
+    "message": "Message from the inviter"
   }
 }
