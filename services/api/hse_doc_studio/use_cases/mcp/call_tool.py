@@ -28,6 +28,7 @@ from hse_doc_studio.core.mcp.protocols import IMcpCallJournal, IMcpSettingsStore
 from hse_doc_studio.core.projects.usage import ProjectQuotaExceededError
 from hse_doc_studio.core.quotas.errors import QuotaExceededError
 from hse_doc_studio.core.rate_limit import MCP_CALL, IRateLimiter, RateRule
+from hse_doc_studio.core.shutdown import ServerRestartingError
 from hse_doc_studio.use_cases.mcp.catalog import McpCatalog, McpToolEntry
 from hse_doc_studio.use_cases.mcp.tools._base import ArgumentError
 from hse_doc_studio.use_cases.projects.get_project_access import GetProjectAccessInput, GetProjectAccessUC
@@ -195,6 +196,8 @@ def map_tool_error(exc: Exception) -> McpError:  # noqa: C901, PLR0911 — та�
     """Отказ сценария в код MCP; текст сценария сохраняется, где он уже понятен человеку."""
     if isinstance(exc, McpError):
         return exc
+    if isinstance(exc, ServerRestartingError):
+        return McpError(McpErrorCode.server_restarting, str(exc), retry_after_s=exc.retry_after_s)
     if isinstance(exc, NotFoundError | FileNotFoundError):
         return McpError(McpErrorCode.not_found)
     if isinstance(exc, ProjectForbiddenError):

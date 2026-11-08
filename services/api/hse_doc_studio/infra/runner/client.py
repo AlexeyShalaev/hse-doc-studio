@@ -47,6 +47,11 @@ RUNNER_ID_HEADER = "X-Runner-Id"
 RELAY_SHA256_HEADER = "X-Relay-Sha256"
 
 _RETRY_STATUSES = frozenset({429, 502, 503, 504})
+# Повторы шагов, которыми раннер сдаёт готовую задачу (выходы, завершение). Пауза растёт до 5 с, десять повторов
+# это около 30 с: столько длится выкатка api с одной репликой (Recreate). Короче, и собранный PDF терялся бы
+# ошибкой `artifact_upload_failed`, хотя сервер вернулся через несколько секунд. Длиннее нельзя: пульс к этому
+# моменту остановлен, а аренда (45 с по умолчанию) отсчитывается от последнего удачного пульса.
+FINISH_RETRIES = 10
 
 
 class RunnerApiError(Exception):
@@ -261,11 +266,15 @@ class RunnerClient:
     async def announce_artifact(
         self, job_id: str, job_token: str, request: ArtifactUploadRequest
     ) -> ArtifactUploadResponse:
-        response = await self._send("POST", f"/jobs/{job_id}/artifacts", job_token=job_token, json=encode(request))
+        response = await self._send(
+            "POST", f"/jobs/{job_id}/artifacts", job_token=job_token, json=encode(request), retries=FINISH_RETRIES
+        )
         return decode(ArtifactUploadResponse, _json_object(response))
 
     async def put_artifact(self, job_id: str, job_token: str, sha256: str, data: bytes) -> None:
-        await self._send("PUT", f"/jobs/{job_id}/artifacts/{sha256}", job_token=job_token, content=data)
+        await self._send(
+            "PUT", f"/jobs/{job_id}/artifacts/{sha256}", job_token=job_token, content=data, retries=FINISH_RETRIES
+        )
 
     async def put_to_url(self, url: str, data: bytes) -> None:
         """Загрузка по подписанной ссылке хранилища: наши заголовки и токены туда не уходят."""
@@ -280,7 +289,7 @@ class RunnerClient:
 
     async def complete(self, job_id: str, job_token: str, request: CompleteRequest) -> CompleteResponse:
         response = await self._send(
-            "POST", f"/jobs/{job_id}/complete", job_token=job_token, json=encode(request), retries=5
+            "POST", f"/jobs/{job_id}/complete", job_token=job_token, json=encode(request), retries=FINISH_RETRIES
         )
         return decode(CompleteResponse, _json_object(response))
 

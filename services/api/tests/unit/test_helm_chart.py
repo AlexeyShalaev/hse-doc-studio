@@ -100,6 +100,20 @@ def test_api_single_replica_recreate() -> None:
     assert api["spec"]["strategy"] == {"type": "Recreate"}
 
 
+def test_api_rollout_window_is_short() -> None:
+    """Recreate неизбежен, но окно выкатки короткое: срок остановки больше срока uvicorn, проверки частые."""
+    api = next(d for d in _by_kind(_render(), "Deployment") if d["metadata"]["name"].endswith("-api"))
+    pod = api["spec"]["template"]["spec"]
+    (container,) = pod["containers"]
+    # uvicorn ждёт запросы 10 с (HSE_STUDIO__SERVER__TIMEOUT_GRACEFUL_SHUTDOWN), потом ещё останавливается фон.
+    assert pod["terminationGracePeriodSeconds"] >= 20
+    assert container["readinessProbe"]["periodSeconds"] <= 3
+    assert container["startupProbe"]["periodSeconds"] <= 3
+    startup = container["startupProbe"]
+    assert startup["periodSeconds"] * startup["failureThreshold"] >= 300
+    assert "lifecycle" not in container
+
+
 def test_migration_job_is_pre_upgrade_hook() -> None:
     (job,) = _by_kind(_render(), "Job")
     assert job["metadata"]["annotations"]["helm.sh/hook"] == "pre-upgrade"
