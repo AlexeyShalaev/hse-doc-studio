@@ -19,7 +19,7 @@ from hse_doc_studio.core.mcp.entities import McpToolGroup, McpToolMeta
 from hse_doc_studio.core.mcp.protocols import IDependencyResolver
 from hse_doc_studio.core.rate_limit import COMPILE, GIT_SYNC, UPLOAD, RateRule
 from hse_doc_studio.use_cases.chat._registry import ToolRegistry
-from hse_doc_studio.use_cases.mcp.tools import admin, build, files, git, projects, review, submission
+from hse_doc_studio.use_cases.mcp.tools import admin, build, cloud, files, git, people, projects, review, submission
 from hse_doc_studio.use_cases.mcp.tools._base import PROJECT_ID_SCHEMA, McpTool
 
 # Записи, которые HTTP пропускает и в проект «только для чтения» (api/guards.py `_ALLOWED_SUFFIXES` и DELETE):
@@ -59,6 +59,7 @@ def _rule(  # noqa: PLR0913 — строка таблицы
     path_args: tuple[str, ...] = (),
     dangerous: bool = False,
     server_only: bool = False,
+    local_only: bool = False,
     rate: RateRule | None = None,
 ) -> McpToolRule:
     admin_tool = group is McpToolGroup.admin
@@ -68,6 +69,7 @@ def _rule(  # noqa: PLR0913 — строка таблицы
         kind=kind,
         dangerous=dangerous,
         server_only=server_only or admin_tool,
+        local_only=local_only,
         admin=admin_tool,
     )
     return McpToolRule(meta=meta, action=action, path_args=path_args, rate=rate)
@@ -84,8 +86,10 @@ MCP_TOOL_RULES: tuple[McpToolRule, ...] = (
     _rule("list_templates", _G.projects, _R),
     _rule("create_project", _G.projects, _X),
     _rule("set_project_meta", _G.projects, _W, Action.PROJECT_SETTINGS),
+    _rule("set_project_people", _G.projects, _W, Action.PROJECT_SETTINGS),
     _rule("set_language", _G.projects, _W, Action.PROJECT_SETTINGS),
     _rule("delete_project", _G.projects, _X, Action.PROJECT_DELETE, dangerous=True),
+    _rule("clone_cloud_project", _G.projects, _X, local_only=True, rate=GIT_SYNC),
     # Документы и файлы
     _rule("list_documents", _G.files, _R, Action.PROJECT_VIEW),
     _rule("list_files", _G.files, _R, Action.SOURCES_READ),
@@ -145,6 +149,8 @@ MCP_TOOL_CLASSES: tuple[type[McpTool], ...] = (
     projects.WhoamiTool,
     projects.GetProjectTool,
     projects.DeleteProjectTool,
+    people.SetProjectPeopleTool,
+    cloud.CloneCloudProjectTool,
     files.ListFilesTool,
     files.WriteFileTool,
     files.MoveFileTool,
@@ -202,7 +208,7 @@ def with_project_id(spec: ToolSpec) -> ToolSpec:
 
 
 class McpCatalog:
-    """Все тулы MCP в порядке таблицы; `server_mode=False` убирает серверные (ревью, админку)."""
+    """Все тулы MCP в порядке таблицы; локально без серверных (ревью, админка), в облаке без локальных."""
 
     def __init__(self, registry: ToolRegistry, deps: IDependencyResolver, *, server_mode: bool) -> None:
         definitions: dict[str, ToolDefinition] = {d.spec.name: d for d in registry.all()}
@@ -213,7 +219,7 @@ class McpCatalog:
             definitions[definition.spec.name] = definition
         entries: list[McpToolEntry] = []
         for rule in MCP_TOOL_RULES:
-            if rule.meta.server_only and not server_mode:
+            if (rule.meta.server_only and not server_mode) or (rule.meta.local_only and server_mode):
                 continue
             definition = definitions.get(rule.name)
             if definition is None:

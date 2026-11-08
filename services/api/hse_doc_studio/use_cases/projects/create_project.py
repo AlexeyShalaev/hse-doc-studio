@@ -98,6 +98,11 @@ class CreateProjectUC:
         self._base_service = base_service
         self._server = server_storage
 
+    @property
+    def server_allocates_folder(self) -> bool:
+        """Общий сервер: папку проекта выделяет он сам, поле folder запроса не принимается."""
+        return self._server is not None
+
     async def execute(self, inp: CreateProjectInput) -> CreateProjectOutput:
         server = self._server
         requested = self._check_folder(inp)

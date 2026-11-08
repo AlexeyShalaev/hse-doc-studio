@@ -25,6 +25,9 @@
 | M13 | stdio: команда `hse-doc-studio mcp` это мост stdio ↔ Streamable HTTP к работающей Студии (`--url`, по умолчанию локальная; `--token` или `HSE_STUDIO_TOKEN` для облака). | Одна реализация тулов, нет второго процесса, пишущего в те же проекты. Мост работает и с облаком для клиентов, не умеющих HTTP. |
 | M14 | Имена тулов: у переиспользованных из агента сохраняются (`read_tex`, `edit_tex`, `compile_document`, ...), новые в `snake_case` по действию (`list_files`, `write_file`). Тулы проекта получают обязательный аргумент `project_id`. Описания тулов на русском, как у агента; тексты ответов и ошибок на языке из `X-Interface-Language` или `Accept-Language` клиента, по умолчанию русский. | Совместимость с подсказками агента; модели одинаково понимают оба языка, а человек читает ошибки на своём. |
 | M15 | Аннотации MCP из вида тула: `read` даёт `readOnlyHint`, `dangerous` даёт `destructiveHint`, сборка и проверки `idempotentHint=false`, всё работает с внешним миром только через Студию (`openWorldHint=false`). | Клиенты по ним решают, спрашивать ли пользователя. |
+| M16 | Тул зависит от режима, если от режима зависит сценарий. `create_project`: на общем сервере папку выделяет сервер, поэтому в облачной схеме поля `folder` нет, а присланное значение не используется; локально `folder` обязателен. Тулы только для локальной Студии помечены `local_only` (облачный каталог их не содержит), как серверные `server_only`. | Иначе облачный клиент видит обязательное поле, которое сервер отвергает, и создать проект через MCP нельзя. |
+| M17 | Изменение людей проекта (`set_project_people`) идёт через тот же `UpdateProjectUC`, что PATCH проекта в вебе, с тем же правом `PROJECT_SETTINGS` и запретом записи в проект «только для чтения». Кроме строки журнала `mcp.call` каждое изменение пишет событие аудита `project.people_update` (поля, было и стало) через порт `IMcpChangeAudit`; локально это строка лога без значений. | Руководитель и авторы попадают в заявку и заявление: кто и что поменял, должно быть видно в аудите, а журнал вызовов хранит только имена аргументов. |
+| M18 | `clone_cloud_project` (только локально) скачивает проект облака сценарием кнопки «Открыть» (`OpenCloudProjectUC`) с сохранённым входом кодом устройства. Токен из хранилища доступов в тул не попадает; адрес с логином или токеном отклоняется, не повторяясь в ответе. Скачивание фоновое: тул ждёт до `wait_s` секунд, повторный вызов подхватывает ту же операцию. | Один путь клонирования для интерфейса и MCP; вход на сервер требует подтверждения человека в браузере, поэтому MCP только использует готовый. |
 
 ## 1. Что есть
 
@@ -49,8 +52,8 @@
                          те же use cases, что у /api/v1
 ```
 
-- `core/mcp/`: `McpToolGroup`, `McpSettings`, `McpCallRecord`, протоколы `IMcpSettingsStore`, `IMcpCallJournal`, ошибки `McpError` с кодами.
-- `use_cases/mcp/`: `McpCatalog` (записи `McpToolEntry`: определение, группа, правило прав, флаги `dangerous`, `server_only`, `admin`), `ListMcpToolsUC`, `CallMcpToolUC`, ресурсы и prompts, настройки (`GetMcpSettingsUC`, `UpdateMcpSettingsUC`), журнал (`ListMcpCallsUC`).
+- `core/mcp/`: `McpToolGroup`, `McpSettings`, `McpCallRecord`, протоколы `IMcpSettingsStore`, `IMcpCallJournal`, `IMcpChangeAudit`, ошибки `McpError` с кодами.
+- `use_cases/mcp/`: `McpCatalog` (записи `McpToolEntry`: определение, группа, правило прав, флаги `dangerous`, `server_only`, `local_only`, `admin`), `ListMcpToolsUC`, `CallMcpToolUC`, ресурсы и prompts, настройки (`GetMcpSettingsUC`, `UpdateMcpSettingsUC`), журнал (`ListMcpCallsUC`).
 - `infra/mcp/`: хранилища настроек (локальное, серверное), журнал (память, аудит).
 - `api/mcp/`: сервер SDK, ASGI-обёртка с аутентификацией, монтирование и жизненный цикл менеджера сессий (вход в `run()` на старте приложения, выход на остановке).
 - `api/routers`: `/api/admin/mcp/*` (настройки, журнал), `/api/v1/mcp/*` (каталог и сведения для подключения; локальные настройки только в локальном режиме).
@@ -76,7 +79,7 @@
 
 ## 5. Тулы
 
-Обозначения: R чтение, W запись, X запуск; ! опасный; S только облако; A админ. «агент» значит обработчик встроенного агента.
+Обозначения: R чтение, W запись, X запуск; ! опасный; S только облако; L только локальная Студия; A админ. «агент» значит обработчик встроенного агента.
 
 | Группа | Тул | Вид | Действие | Источник |
 |---|---|---|---|---|
@@ -84,10 +87,12 @@
 | projects | `list_projects` | R | — | агент |
 | projects | `get_project` | R | PROJECT_VIEW | новый |
 | projects | `list_templates` | R | — | агент |
-| projects | `create_project` | X | — | агент |
+| projects | `create_project` | X | — (облако: без `folder`, M16) | агент |
 | projects | `set_project_meta` | W | PROJECT_SETTINGS | агент |
+| projects | `set_project_people` | W | PROJECT_SETTINGS | новый (M17) |
 | projects | `set_language` | W | PROJECT_SETTINGS | агент |
 | projects | `delete_project` | W ! | PROJECT_DELETE | новый |
+| projects | `clone_cloud_project` | X L | — (сохранённый вход на сервер) | новый (M18) |
 | files | `list_documents` | R | PROJECT_VIEW | агент |
 | files | `list_files` | R | SOURCES_READ | новый |
 | files | `read_tex` | R | FILES_READ (path) | агент |

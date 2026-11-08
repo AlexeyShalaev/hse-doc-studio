@@ -39,6 +39,21 @@ class ServerMcpSettingsStore:
             )
 
 
+class AuditMcpChangeAudit:
+    """Изменение через тул MCP отдельным событием аудита от имени владельца токена."""
+
+    def __init__(self, audit: IAuditLog, uow: IUnitOfWork) -> None:
+        self._audit = audit
+        self._uow = uow
+
+    async def record(self, action: str, *, target: str | None, details: Mapping[str, object]) -> None:
+        actor = current_actor()
+        async with self._uow.begin():
+            await self._audit.record(
+                action, actor_id=actor.id if actor is not None else None, target=target, details=details
+            )
+
+
 class AuditMcpCallJournal:
     def __init__(self, audit: IAuditLog, reader: IAuditReader, uow: IUnitOfWork) -> None:
         self._audit = audit

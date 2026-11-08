@@ -69,9 +69,19 @@ Ready-made configs with your address are in the Studio: **Settings → AI client
 
 ## What is available
 
-- **Tools.** Projects (list, card, create, metadata), files (tree, read, search, edit, write, move), builds (run and wait for the result, history, log, cancel), checks and the normcontrol report, requirements, review comments (cloud), history and git sync, submission profiles and packages, signature status. Project tools take `project_id`; start with `list_projects`.
+- **Tools.** Projects (list, card, create, metadata, supervisor and authors), files (tree, read, search, edit, write, move), builds (run and wait for the result, history, log, cancel), checks and the normcontrol report, requirements, review comments (cloud), history and git sync, submission profiles and packages, signature status. Project tools take `project_id`; start with `list_projects`.
 - **Resources.** `studio://projects`, the project card `studio://projects/<id>`, files `studio://projects/<id>/files/<path>` and build PDFs.
 - **Prompts.** `fix_build`, `normcontrol` (go through findings), `review_changes` (describe changes before a snapshot).
+
+### Projects: creation, people, a project from the cloud
+
+- **`create_project`** creates a project from a template (`pack_id`, `template_id`, `version` from `list_templates`). The local Studio needs `folder`, the full path to a new folder. In the cloud the server picks the folder: the schema has no `folder` field, and a value sent anyway is not used.
+- **`set_project_people`** changes the supervisor (`supervisor`), co-supervisor (`co_supervisor`) and authors (`authors`), which go to the title page, the application and the statement. The rights are those of the project settings: a role that may change settings, and a project that is writable.
+    - A supervisor or co-supervisor has `name`, `title` (position), `degree` (academic degree or rank) and `role` (`university` or `company`). Fields you pass replace the current ones, the rest stay; an empty string clears the position or degree.
+    - `authors` replaces the whole list: `name` and `group` of each author, the first one goes to the title page. To keep the topic and file set of existing authors in a team project, pass their `slug` from `get_project`.
+    - `clear: ["co_supervisor"]` removes the co-supervisor (`supervisor` works the same way).
+    - Every change is audited: in the cloud as a `project.people_update` event with the old and new values; locally the call is in the MCP log.
+- **`clone_cloud_project`** (local Studio only) downloads a project from a cloud Studio, like the “Open” button of a cloud project in the list. Pass the project `url`, such as `https://studio.example.org/projects/<id>/`, or `project_id` if the server is already connected (`server` is only needed when several servers are connected). The Studio uses the saved server login ([connecting](../start/local-from-cloud.md#connecting)); no token is needed in the arguments and none appears in the answer; an address with a login or token is rejected. The project goes to the folder for cloud projects and stays linked to the server. The download runs in the background: the tool waits up to `wait_s` seconds (60 by default), and if that is not enough, calling it again with the same arguments picks up the same download. A project already on the computer is not downloaded again.
 
 Dangerous tools (deleting a project or a file, rewinding history, syncing with a git remote) are off by default: the administrator (cloud) or you (local) turns them on one by one. Signing documents with an electronic signature is not available over MCP.
 

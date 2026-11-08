@@ -13,6 +13,7 @@ import pytest_asyncio
 from fastapi import FastAPI
 from hse_doc_studio.api.mcp_server import install_mcp
 from hse_doc_studio.core.mode import StudioMode
+from hse_doc_studio.infra.di.providers.local_git_servers import LocalGitServersProvider
 from httpx import ASGITransport, AsyncClient
 from mcp.client.client import Client
 from mcp.client.streamable_http import streamable_http_client
@@ -222,6 +223,89 @@ async def test__settings__saved__persist_in_config(studio: Studio, payload: dict
 
     assert stored["enabled"] is True
     assert stored["disabled_groups"] == ["admin"]
+
+
+async def test__list_tools__local__create_project_requires_folder_and_clone_is_offered(studio: Studio) -> None:
+    await _enable(studio)
+
+    async with _client(studio) as client:
+        tools = {t.name: t for t in (await client.list_tools()).tools}
+
+    assert "folder" in tools["create_project"].input_schema["required"]
+    assert "ask_user" not in (tools["create_project"].description or "")
+    assert "clone_cloud_project" in tools
+    assert "set_project_people" in tools
+
+
+async def test__call_tool__set_project_people__updates_the_project_like_the_web(studio: Studio) -> None:
+    await _enable(studio)
+
+    async with _client(studio) as client:
+        result = await client.call_tool(
+            "set_project_people",
+            {
+                "project_id": studio.project_id,
+                "supervisor": {"name": "Петров П. П.", "title": "доцент", "degree": "канд. техн. наук"},
+                "co_supervisor": {"name": "Сидоров С. С.", "role": "company"},
+                "authors": [{"name": "Иванов Иван Иванович", "group": "БПИ221"}, {"name": "Анна Смирнова"}],
+            },
+        )
+        cleared = await client.call_tool(
+            "set_project_people", {"project_id": studio.project_id, "clear": ["co_supervisor"]}
+        )
+
+    assert result.is_error is False, result.content
+    assert cleared.is_error is False, cleared.content
+    project = (await studio.rest.get(f"/api/v1/projects/{studio.project_id}")).json()
+    assert project["supervisor"] == {
+        "name": "Петров П. П.",
+        "role": "university",
+        "title": "доцент",
+        "degree": "канд. техн. наук",
+    }
+    assert project["co_supervisor"] is None
+    assert [(a["name"], a["group"]) for a in project["authors"]] == [
+        ("Иванов Иван Иванович", "БПИ221"),
+        ("Анна Смирнова", None),
+    ]
+    calls = (await studio.rest.get("/api/v1/mcp/calls", params={"tool": "set_project_people"})).json()
+    assert [c["outcome"] for c in calls] == ["ok", "ok"]
+
+
+async def test__call_tool__set_project_people__no_changes__invalid_arguments(studio: Studio) -> None:
+    await _enable(studio)
+
+    async with _client(studio) as client:
+        result = await client.call_tool("set_project_people", {"project_id": studio.project_id})
+
+    assert result.is_error is True
+    assert result.meta is not None
+    assert result.meta["code"] == "invalid_arguments"
+
+
+@pytest_asyncio.fixture
+async def studio_with_cloud(tmp_path: Path) -> AsyncIterator[FastAPI]:
+    data_dir = tmp_path / "data"
+    data_dir.mkdir()
+    container = create_test_container(data_dir, extra_providers=[LocalGitServersProvider()])
+    app = create_test_app(container)
+    install_mcp(app, mode=StudioMode.local)
+    async with AsyncClient(transport=ASGITransport(app=app), base_url=_BASE) as rest:
+        resp = await rest.put("/api/v1/mcp/settings", json={"enabled": True})
+        assert resp.status_code == 200, resp.text
+    yield app
+    await container.close()
+
+
+async def test__call_tool__clone_cloud_project__server_not_connected__explains(studio_with_cloud: FastAPI) -> None:
+    http = httpx2.AsyncClient(transport=httpx2.ASGITransport(app=studio_with_cloud), base_url=_BASE)
+    url = "https://studio.example.org/projects/11111111-1111-4111-8111-111111111111/"
+
+    async with Client(streamable_http_client(f"{_BASE}/mcp", http_client=http), mode="legacy") as client:
+        result = await client.call_tool("clone_cloud_project", {"url": url, "wait_s": 0})
+
+    assert result.is_error is True
+    assert result.content[0].text.startswith(("Сервер studio.example.org не подключён", "The server studio"))  # type: ignore[union-attr]
 
 
 async def test__call_tool__get_project__foreign_last_compile__is_replaced_by_a_local_one(studio: Studio) -> None:
