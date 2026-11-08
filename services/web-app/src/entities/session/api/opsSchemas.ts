@@ -299,6 +299,13 @@ export const InstallJobSchema = z.strictObject({
   error_code: z.string().nullable(),
   error_detail: z.string(),
   created_at: iso,
+  // Откат неудачного обновления: null, если откатывать было нечего; версия,
+  // на которую раннер вернули; код причины, если откат тоже не удался.
+  rolled_back: z.boolean().nullable().optional(),
+  rollback_version: z.string().optional(),
+  rollback_error: z.string().nullable().optional(),
+  // После отката раннер вышел на связь с прежней версией; null, если не ждали.
+  rollback_reconnected: z.boolean().nullable().optional(),
 });
 /**
  * Установка из админки. `runner_id` пуст, если раннера с ней в Студии нет

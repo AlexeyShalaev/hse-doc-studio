@@ -57,6 +57,13 @@ class InstallJobInfo(StrictModel):
     error_code: str | None = None
     error_detail: str = ""
     created_at: datetime
+    # Откат неудачного обновления: null, если откатывать было нечего; версия, на которую раннер вернули;
+    # код причины, если откат тоже не удался (подробности в шаге `rollback`).
+    rolled_back: bool | None = None
+    rollback_version: str = ""
+    rollback_error: str | None = None
+    # После отката раннер вышел на связь с прежней версией; null, если отката не было или раннера в Студии нет.
+    rollback_reconnected: bool | None = None
 
 
 class LocalInstanceInfo(StrictModel):

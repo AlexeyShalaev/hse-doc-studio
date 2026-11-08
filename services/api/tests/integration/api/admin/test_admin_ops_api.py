@@ -23,7 +23,7 @@ from hse_doc_studio.core.jobs.enums import JobKind
 from hse_doc_studio.core.jobs.queue import EnqueueRequest
 from hse_doc_studio.core.jobs.runners import hash_runner_secret
 from hse_doc_studio.core.mode import StudioMode
-from hse_doc_studio.core.runner_install import InstallError, InstallTarget, LocalInstance
+from hse_doc_studio.core.runner_install import InstallError, InstallTarget, LocalInstance, PreviousRelease, UpgradeError
 from hse_doc_studio.infra.identity.resolvers import ChainActorResolver, SessionCookieResolver
 from hse_doc_studio.use_cases.admin.ops_ai_providers import (
     CheckInstanceAiProviderUC,
@@ -835,6 +835,64 @@ async def test__runner_install__instances_list_and_remove_are_audited(stack: _St
     assert "runner_install.local.remove" in [e.action for e in await stack.users.audit.list()]
 
 
+async def test__runner_install__remove_revokes_the_matched_runner_and_its_pending_token(stack: _Stack) -> None:
+    boss = await stack.users.add("boss", admin=True)
+    runner_id = await _installed_runner(stack)
+    other = await _registered(stack, name="someone-else")
+    pending = await stack.registry.create_registration_token(_admin_actor(), label="install hse-runner-abc123")
+
+    removed = await stack.client.delete("/api/admin/runner-install/local/docker/hse-runner-abc123", headers=boss)
+
+    assert removed.status_code == 204
+    assert stack.install_host.removed == ["hse-runner-abc123"]
+    # Отозван тем же use case, что «Отозвать раннер»: запись отозвана, токен раннера больше не принимается.
+    revoked = {r.id: r.revoked_at is not None for r in await stack.runners.list()}
+    assert (revoked[runner_id], revoked[other]) == (True, False)
+    token = next(t for t in await stack.tokens.list() if t.id == pending.token.id)
+    assert token.revoked_at is not None
+    events = await stack.users.audit.list()
+    entry = next(e for e in events if e.action == "runner_install.local.remove")
+    assert entry.target == "hse-runner-abc123"
+    assert entry.details["revoked_runner"] == runner_id
+    assert entry.details["revoked_registrations"] == [pending.token.id]
+    assert [e.target for e in events if e.action == "runner.revoke"] == [runner_id]
+
+
+async def test__runner_install__remove_failure_is_502_and_the_install_can_be_removed_again(stack: _Stack) -> None:
+    boss = await stack.users.add("boss", admin=True)
+    runner_id = await _installed_runner(stack)
+    stack.install_host.remove_fail_with = InstallError("remove_failed", "device busy")
+    path = "/api/admin/runner-install/local/docker/hse-runner-abc123"
+
+    failed = await stack.client.delete(path, headers=boss)
+    listed = (await stack.client.get("/api/admin/runner-install/local/instances", headers=boss)).json()
+    stack.install_host.remove_fail_with = None
+    again = await stack.client.delete(path, headers=boss)
+
+    assert (failed.status_code, failed.json()["detail"]) == (502, {"code": "remove_failed", "detail": "device busy"})
+    # Раннер уже отозван, установка осталась и видна как установка без раннера.
+    assert [(i["name"], i["runner_id"]) for i in listed] == [("hse-runner-abc123", None)]
+    assert again.status_code == 204
+    actions = [(e.action, e.details.get("revoked_runner")) for e in await stack.users.audit.list()]
+    assert ("runner_install.local.remove_failed", runner_id) in actions
+    assert ("runner_install.local.remove", None) in actions
+
+
+async def test__runner_install__remove_while_this_install_is_updated_is_busy(stack: _Stack) -> None:
+    boss = await stack.users.add("boss", admin=True)
+    await _installed_runner(stack)
+    stack.install_host.upgrade_gate = asyncio.Event()
+
+    started = await stack.client.post("/api/admin/runner-install/local/docker/hse-runner-abc123/upgrade", headers=boss)
+    busy = await stack.client.delete("/api/admin/runner-install/local/docker/hse-runner-abc123", headers=boss)
+    stack.install_host.upgrade_fail_with = InstallError("image_pull_failed")
+    stack.install_host.upgrade_gate.set()
+    await _finished(stack, started.json()["id"], boss)
+
+    assert (busy.status_code, busy.json()["detail"]) == (409, {"code": "install_busy"})
+    assert stack.install_host.removed == []
+
+
 # ---- Обновление раннера из админки на месте ----
 
 
@@ -910,17 +968,70 @@ async def test__runner_upgrade__same_version_is_allowed_and_not_outdated(stack: 
 
 async def test__runner_upgrade__runner_that_does_not_come_back_is_a_timeout(stack: _Stack) -> None:
     boss = await stack.users.add("boss", admin=True)
-    await _installed_runner(stack)
+    runner_id = await _installed_runner(stack)
+
+    async def back_on_old_version() -> None:
+        await stack.runners.touch(runner_id, datetime.now(UTC), version="1.0.0")
+
+    stack.install_host.on_rolled_back = back_on_old_version
 
     started = await stack.client.post("/api/admin/runner-install/local/docker/hse-runner-abc123/upgrade", headers=boss)
     job = await _finished(stack, started.json()["id"], boss)
 
     assert job["state"] == "failed"
     assert job["error_code"] == "reconnect_timeout"
-    assert job["steps"][-1] == {"key": "reconnect", "state": "failed", "detail": ""}
+    assert job["steps"][-2:] == [
+        {"key": "reconnect", "state": "failed", "detail": ""},
+        {"key": "rollback", "state": "done", "detail": "1.0.0"},
+    ]
+    assert (job["rolled_back"], job["rollback_version"], job["rollback_error"]) == (True, "1.0.0", None)
+    assert job["rollback_reconnected"] is True
+    assert stack.install_host.rolled_back == [("hse-runner-abc123", "registry.example/hds:1.0.0")]
     failed = [e for e in await stack.users.audit.list() if e.action == "runner_install.local.upgrade_failed"]
     assert failed[0].details["code"] == "reconnect_timeout"
     assert failed[0].details["from_version"] == "1.0.0"
+    assert failed[0].details["rolled_back"] is True
+    assert failed[0].details["rollback_reconnected"] is True
+
+
+async def test__runner_upgrade__failed_rollout_is_rolled_back_and_said_so(stack: _Stack) -> None:
+    boss = await stack.users.add("boss", admin=True)
+    await _installed_runner(stack)
+    stack.install_host.upgrade_fail_with = UpgradeError(
+        "rollout_failed", "ProgressDeadlineExceeded", previous=PreviousRelease("registry.example/hds:1.0.0")
+    )
+
+    started = await stack.client.post("/api/admin/runner-install/local/docker/hse-runner-abc123/upgrade", headers=boss)
+    job = await _finished(stack, started.json()["id"], boss)
+
+    assert (job["error_code"], job["rolled_back"], job["rollback_version"]) == ("rollout_failed", True, "1.0.0")
+    # Прежняя версия выкатилась, но раннер с ней на связь не вышел: итог и аудит говорят и это.
+    assert job["rollback_reconnected"] is False
+    assert [(s["key"], s["state"]) for s in job["steps"]] == [
+        ("pull", "failed"),
+        ("recreate", "pending"),
+        ("reconnect", "pending"),
+        ("rollback", "failed"),
+    ]
+    failed = [e for e in await stack.users.audit.list() if e.action == "runner_install.local.upgrade_failed"]
+    assert (failed[0].details["rolled_back"], failed[0].details["rollback_reconnected"]) == (True, False)
+
+
+async def test__runner_upgrade__failed_rollback_is_reported_in_the_job_and_audit(stack: _Stack) -> None:
+    boss = await stack.users.add("boss", admin=True)
+    await _installed_runner(stack)
+    stack.install_host.rollback_fail_with = InstallError("container_start_failed", "no such image")
+
+    started = await stack.client.post("/api/admin/runner-install/local/docker/hse-runner-abc123/upgrade", headers=boss)
+    job = await _finished(stack, started.json()["id"], boss)
+
+    assert (job["rolled_back"], job["rollback_error"]) == (False, "container_start_failed")
+    assert job["steps"][-1] == {"key": "rollback", "state": "failed", "detail": "no such image"}
+    failed = [e for e in await stack.users.audit.list() if e.action == "runner_install.local.upgrade_failed"]
+    assert (failed[0].details["rolled_back"], failed[0].details["rollback_error"]) == (
+        False,
+        "container_start_failed",
+    )
 
 
 async def test__runner_upgrade__host_failure_is_reported(stack: _Stack) -> None:
@@ -936,7 +1047,11 @@ async def test__runner_upgrade__host_failure_is_reported(stack: _Stack) -> None:
         "image_pull_failed",
         "pull access denied",
     )
+    # До замены установки откатывать нечего: шага отката нет.
     assert [s["state"] for s in job["steps"]] == ["failed", "pending", "pending"]
+    assert job["rolled_back"] is None
+    failed = [e for e in await stack.users.audit.list() if e.action == "runner_install.local.upgrade_failed"]
+    assert failed[0].details["rolled_back"] is False
 
 
 async def test__runner_upgrade__install_without_runner_skips_the_reconnect_step(stack: _Stack) -> None:

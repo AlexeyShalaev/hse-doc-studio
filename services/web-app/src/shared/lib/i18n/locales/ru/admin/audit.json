@@ -192,7 +192,8 @@
       "runner_install_local_start": "Начата установка раннера из админки",
       "runner_install_local_succeeded": "Раннер из админки установлен",
       "runner_install_local_failed": "Установка раннера из админки не удалась",
-      "runner_install_local_remove": "Установка раннера из админки удалена",
+      "runner_install_local_remove": "Установка раннера из админки удалена, раннер отозван",
+      "runner_install_local_remove_failed": "Установку раннера из админки не удалось удалить",
       "runner_install_local_upgrade": "Начато обновление раннера из админки",
       "runner_install_local_upgrade_succeeded": "Раннер из админки обновлён",
       "runner_install_local_upgrade_failed": "Обновление раннера из админки не удалось"
@@ -255,7 +256,12 @@
       "from_version": "Версия до",
       "to_version": "Версия после",
       "from_image": "Образ до",
-      "to_image": "Образ после"
+      "to_image": "Образ после",
+      "rolled_back": "Возвращён на прежнюю версию",
+      "rollback_error": "Причина неудачи отката",
+      "revoked_runner": "Отозванный раннер",
+      "revoked_registrations": "Отозванные токены регистрации",
+      "rollback_reconnected": "Раннер вышел на связь после отката"
     },
     "values": {
       "password": "пароль",

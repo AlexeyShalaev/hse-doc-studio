@@ -59,11 +59,17 @@ Deployment in the cluster) is updated in place, without removing and installing 
   stop and have to be built again. Queued jobs wait for another runner or for this one.
 - Progress is shown step by step; the last step waits until the runner is online again with the new
   version.
+- If the new pod or container does not come up or the runner does not come online, the Studio
+  brings the previous version back by itself: a **Rollback to the previous version** step appears.
+  The Studio waits for the runner to come online with the previous version, and the result says
+  which version it is back on, whether it came online, or why the rollback failed.
 
-The same menu has **Remove install**: the Studio deletes the Deployment or the container, and the
-runner record stays in the table, you revoke it separately. Installs whose runner is not in the table
-(for example, the runner was revoked but the Deployment stayed) are listed in the **Installs without a
-runner** block below the table.
+The same menu has **Remove install**: the Studio revokes the runner like **Revoke runner** does (the
+jobs it was running go to another runner, its token stops working) and deletes the Deployment or the
+container. There is no need to revoke the runner separately. If the install could not be removed
+completely, the runner is already revoked and the install stays in the **Installs without a runner**
+block below the table: remove it again. That block also lists installs whose runner is not in the
+table, for example one that has not connected yet.
 
 ## If something goes wrong
 

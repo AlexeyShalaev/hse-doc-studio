@@ -17,9 +17,11 @@ from hse_doc_studio.core.runner_install import (
     InstallTarget,
     LocalInstance,
     LocalRunnerSpec,
+    PreviousRelease,
     ProgressReporter,
     ResourceOverrides,
     UnavailableReason,
+    UpgradeError,
     UpgradeOutcome,
 )
 from hse_doc_studio.infra.docker.cli import docker_available, run_docker
@@ -144,8 +146,9 @@ class DockerLocalHost:
         """Новый образ, тот же контейнер по сути: имя, окружение раннера (токен, адрес, каталог) и том данных прежние.
 
         Образ тянется до остановки, чтобы простой был только на перезапуск. Старый контейнер получает `docker stop`
-        (раннер доделывает сборки до 30 с), затем удаляется и запускается заново. Если новый не стартовал, Студия
-        поднимает прежний образ с теми же настройками.
+        (раннер доделывает сборки до 30 с), затем удаляется и запускается заново. Прежний образ и окружение
+        запоминаются до остановки: если новый не стартовал, `UpgradeError` несёт их для `rollback`. Отказ `docker`
+        не принимается на веру (ответ мог потеряться по таймауту): Студия смотрит, что на самом деле с контейнером.
         """
         if not _NAME_RE.fullmatch(name) or not await self._owned(name):
             raise InstallError("not_installed")
@@ -155,6 +158,8 @@ class DockerLocalHost:
         data_dir = env.get("HSE_RUNNER__DATA_DIR", "")
         if not data_dir:
             raise InstallError("not_installed", "HSE_RUNNER__DATA_DIR")
+        # Откат возвращает прежнее окружение как было, новый контейнер получает адрес Gotenberg Студии.
+        previous = PreviousRelease(image=old_image, state={"env": dict(env)}) if old_image else None
         env = self._with_office(env)
         code, _, err = await run_docker(["pull", image], timeout=_PULL_TIMEOUT_S)
         if code != 0:
@@ -163,18 +168,56 @@ class DockerLocalHost:
 
         await report("recreate", InstallStepState.running, name)
         await run_docker(["stop", "-t", str(_STOP_GRACE_S), name], timeout=_STOP_TIMEOUT_S)
-        code, _, err = await run_docker(["rm", "-f", name], timeout=_RUN_TIMEOUT_S)
+        code, err = await self._recreate(name, image, data_dir, env)
+        if code != 0:
+            detail = _scrub(err.strip()[-400:], token)
+            # Старый контейнер уже остановлен: без прежнего образа возвращать нечего.
+            if previous is None:
+                raise InstallError("container_start_failed", detail)
+            raise UpgradeError("container_start_failed", detail, previous=previous)
+        await report("recreate", InstallStepState.done, "")
+        return UpgradeOutcome(old_image=old_image, new_image=image, previous=previous)
+
+    async def rollback(self, name: str, previous: PreviousRelease) -> None:
+        """Контейнер с прежним образом и прежним окружением раннера: тем же `docker run`, что и при обновлении."""
+        raw_env = previous.state.get("env")
+        env = {str(k): str(v) for k, v in raw_env.items()} if isinstance(raw_env, dict) else {}
+        data_dir = env.get("HSE_RUNNER__DATA_DIR", "")
+        if not _NAME_RE.fullmatch(name) or not previous.image or not data_dir:
+            raise InstallError("not_installed")
+        token = env.get("HSE_RUNNER__TOKEN", "")
+        if await self._owned(name):
+            await run_docker(["stop", "-t", str(_STOP_GRACE_S), name], timeout=_STOP_TIMEOUT_S)
+        code, err = await self._recreate(name, previous.image, data_dir, env)
         if code != 0:
             raise InstallError("container_start_failed", _scrub(err.strip()[-400:], token))
+
+    async def _recreate(self, name: str, image: str, data_dir: str, env: dict[str, str]) -> tuple[int | None, str]:
+        """`docker rm -f` и `docker run` с образом `image`; код ошибки сверяется с тем, что на самом деле.
+
+        `rm` сообщил об ошибке, а контейнера уже нет: идём дальше. `run` сообщил об ошибке (или не ответил вовремя),
+        а контейнер с этим образом работает: замена применилась, это успех.
+        """
+        code, _, err = await run_docker(["rm", "-f", name], timeout=_RUN_TIMEOUT_S)
+        if code != 0 and await self._actual(name) is not None:
+            return code, err
         code, err = await self._run(name, image, data_dir, env)
+        if code != 0 and await self._actual(name) == (image, True):
+            return 0, ""
+        return code, err
+
+    async def _actual(self, name: str) -> tuple[str, bool] | None:
+        """Образ и «работает ли» контейнера `name` по `docker inspect`; нет контейнера или ответа: None."""
+        code, out, _ = await run_docker(["inspect", "--type", "container", name], timeout=_RUN_TIMEOUT_S)
         if code != 0:
-            detail = _scrub(err.strip()[-300:], token)
-            if old_image:
-                back, _ = await self._run(name, old_image, data_dir, env)
-                detail += " (previous image restored)" if back == 0 else " (previous image did not start either)"
-            raise InstallError("container_start_failed", detail)
-        await report("recreate", InstallStepState.done, "")
-        return UpgradeOutcome(old_image=old_image, new_image=image)
+            return None
+        try:
+            item = json.loads(out)[0]
+            image = item["Config"]["Image"]
+            running = item["State"]["Running"]
+        except (ValueError, LookupError, TypeError):
+            return None
+        return (image, running is True) if isinstance(image, str) else None
 
     async def _inspect(self, name: str) -> tuple[str, dict[str, str]]:
         """Образ и окружение раннера из `docker inspect`; из окружения берутся только переменные раннера."""
@@ -227,8 +270,10 @@ class DockerLocalHost:
     async def remove(self, name: str) -> bool:
         if not _NAME_RE.fullmatch(name) or not await self._owned(name):
             return False
-        code, _, _ = await run_docker(["rm", "-f", name], timeout=_RUN_TIMEOUT_S)
-        return code == 0
+        code, _, err = await run_docker(["rm", "-f", name], timeout=_RUN_TIMEOUT_S)
+        if code != 0:
+            raise InstallError("remove_failed", err.strip()[-400:])
+        return True
 
 
 def _parse_created(raw: str) -> datetime | None:

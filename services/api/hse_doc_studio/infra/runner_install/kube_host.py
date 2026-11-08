@@ -1,7 +1,7 @@
 """Раннер Deployment-ом в кластере Студии: Secret с токеном, том данных и Deployment под отдельным ServiceAccount.
 
 Права Студии на это (Role чарта, namespace релиза): Deployment create/list/update/delete, Secret и PVC create/delete.
-`update` нужен только обновлению на месте: Deployment заменяется целиком, Secret и том не трогаются. Роль самого
+`update` нужен только обновлению на месте и его откату: Deployment заменяется целиком, Secret и том не трогаются. Роль
 раннера (поды сборки) создаёт чарт заранее, Студия её не выдаёт и поэтому не может расширить: права `escalate` и работа
 с Role ей не нужны. Поды сборки раннер создаёт в `build_namespace` (runner.installFromUi.buildNamespace), сам раннер
 остаётся в namespace Студии.
@@ -10,6 +10,7 @@
 from __future__ import annotations
 
 import asyncio
+import copy
 import json
 import os
 import re
@@ -18,6 +19,7 @@ from dataclasses import asdict, dataclass, fields
 from datetime import datetime
 from typing import Any
 from urllib.parse import quote
+from uuid import uuid4
 
 from hse_doc_studio.core.identity.session_policy import utc_now
 from hse_doc_studio.core.runner_install import (
@@ -29,10 +31,12 @@ from hse_doc_studio.core.runner_install import (
     LocalInstance,
     LocalRunnerSpec,
     PodResources,
+    PreviousRelease,
     ProgressReporter,
     ResourceDefaults,
     ResourceOverrides,
     UnavailableReason,
+    UpgradeError,
     UpgradeOutcome,
     resolve,
 )
@@ -51,6 +55,22 @@ INSTALL_LABEL = "hse-doc-studio/runner-install"
 RESOURCES_ANNOTATION = "hse-doc-studio/runner-resources"
 # Метка времени обновления в шаблоне пода: под пересоздаётся, даже если образ и манифест те же.
 RESTARTED_ANNOTATION = "hse-doc-studio/restarted-at"
+# Номер ревизии ведёт контроллер Deployment; при откате его не возвращаем, контроллер выставит свой.
+_REVISION_ANNOTATION = "deployment.kubernetes.io/revision"
+# PUT с resourceVersion живого объекта: контроллер меняет status и тем самым версию, поэтому конфликт повторяем.
+_PUT_ATTEMPTS = 3
+# Метка каждой замены Deployment (свой случайный id): если ответ на PUT потерян, по ней видно, применилась ли замена.
+REPLACE_ANNOTATION = "hse-doc-studio/replace-id"
+# Ответ на PUT потерян или неясен: обрыв связи (без кода) либо ошибка шлюза или сервера после отправки.
+_LOST_FROM = 500
+# Сколько раз перечитать Deployment, чтобы узнать, применилась ли замена с потерянным ответом.
+_VERIFY_READS = 3
+
+
+class ReplaceUnknownError(Exception):
+    """Ответ на PUT потерян, и перечитать Deployment не вышло: применилась ли замена, неизвестно."""
+
+
 _NAME_RE = re.compile(r"^[a-z0-9]([a-z0-9-]{0,40}[a-z0-9])?$")
 _NOT_FOUND = 404
 _FORBIDDEN = 403
@@ -354,12 +374,13 @@ class KubeLocalHost:
         """Новый образ и манифест по текущим правилам; Secret с токеном и том данных не трогаются.
 
         Deployment заменяется целиком (PUT с resourceVersion живого): так уходят и устаревшие поля, и чужие правки.
-        Стратегия Recreate: старый под доделывает сборки и уходит раньше, чем новый смонтирует RWO-том.
+        Стратегия Recreate: старый под доделывает сборки и уходит раньше, чем новый смонтирует RWO-том. Прежний
+        Deployment (метки, аннотации, spec целиком) запоминается до замены: если выкатка не удалась, `UpgradeError`
+        несёт его для `rollback`.
         """
         if not _NAME_RE.fullmatch(name):
             raise InstallError("not_installed")
         client = self._client()
-        path = f"/apis/apps/v1/namespaces/{quote(self._ns())}/deployments"
         try:
             await report("image", InstallStepState.running, image)
             live = await self._live_deployment(client, name)
@@ -368,6 +389,7 @@ class KubeLocalHost:
             if not await self._allowed(client, "update", "apps", "deployments"):
                 raise InstallError("kube_forbidden", "deployments: update")
             current = read_installed(live, self._resources)
+            previous = PreviousRelease(image=current.image, state=deployment_snapshot(live))
             await report("image", InstallStepState.done, f"{current.image} {image}".strip())
 
             await report("manifest", InstallStepState.running, "")
@@ -381,20 +403,108 @@ class KubeLocalHost:
                 resources=current.resources,
             )
             body = self.deployment_manifest(spec, restarted_at=self._clock().isoformat())
-            body["metadata"]["resourceVersion"] = current.resource_version
-            applied = await client.request_json("PUT", f"{path}/{quote(name)}", body=body)
-            generation = _int(_obj(applied.get("metadata")).get("generation"))
+            try:
+                generation = await self._replace(client, name, body, current.resource_version)
+            except ReplaceUnknownError as exc:
+                # Замена могла примениться: вернуть прежний Deployment безопасно и тогда, когда она не применилась.
+                raise UpgradeError("kube_failed", str(exc)[-400:], previous=previous) from exc
             await report("manifest", InstallStepState.done, ", ".join(current.dropped))
 
             await report("rollout", InstallStepState.running, "")
-            await self._wait_rollout(client, name, generation)
+            await self._wait_replaced(client, name, generation, previous)
             await report("rollout", InstallStepState.done, "")
         except KubeApiError as exc:
             raise self._failure(exc, "") from exc
         finally:
             if self._injected is None:
                 await client.aclose()
-        return UpgradeOutcome(old_image=current.image, new_image=image)
+        return UpgradeOutcome(old_image=current.image, new_image=image, previous=previous)
+
+    async def _wait_replaced(
+        self, client: KubernetesApiClient, name: str, generation: int, previous: PreviousRelease
+    ) -> None:
+        """Выкатка уже заменённого Deployment; любой сбой с этого места несёт прежний Deployment для отката."""
+        try:
+            await self._wait_rollout(client, name, generation)
+        except InstallError as exc:
+            raise UpgradeError(exc.code, exc.detail, previous=previous) from exc
+        except KubeApiError as exc:
+            failure = self._failure(exc, "")
+            raise UpgradeError(failure.code, failure.detail, previous=previous) from exc
+
+    async def rollback(self, name: str, previous: PreviousRelease) -> None:
+        """Прежний Deployment тем же PUT с resourceVersion живого и ожидание его выкатки.
+
+        Шаблон пода становится прежним, поэтому контроллер поднимает прежний ReplicaSet (как `kubectl rollout undo`),
+        а Recreate сначала убирает неудачный под и освобождает том.
+        """
+        if not _NAME_RE.fullmatch(name) or not previous.state:
+            raise InstallError("not_installed")
+        client = self._client()
+        try:
+            body = restored_deployment(name, previous.state)
+            try:
+                generation = await self._replace(client, name, body, None)
+            except ReplaceUnknownError as exc:
+                raise InstallError("kube_failed", str(exc)[-400:]) from exc
+            await self._wait_rollout(client, name, generation)
+        except KubeApiError as exc:
+            raise self._failure(exc, "") from exc
+        finally:
+            if self._injected is None:
+                await client.aclose()
+
+    async def _replace(
+        self, client: KubernetesApiClient, name: str, body: dict[str, Any], resource_version: str | None
+    ) -> int:
+        """PUT Deployment с версией живого объекта; конфликт версий (контроллер обновил status) повторяется с новой.
+
+        Каждая замена несёт свою метку `REPLACE_ANNOTATION`. Если ответ потерян (обрыв связи, 5xx после отправки),
+        Deployment перечитывается: метка на месте, значит замена применилась и дальше всё как после успешного PUT;
+        метки нет, значит не применилась, и это обычная ошибка. Перечитать не вышло: `ReplaceUnknownError`.
+        Возвращает поколение, выкатку которого надо ждать.
+        """
+        path = f"/apis/apps/v1/namespaces/{quote(self._ns())}/deployments/{quote(name)}"
+        marker = uuid4().hex
+        body["metadata"].setdefault("annotations", {})[REPLACE_ANNOTATION] = marker
+        version = resource_version
+        attempts = 0
+        while True:
+            if version is None:
+                live = await self._live_deployment(client, name)
+                if live is None:
+                    raise InstallError("not_installed")
+                version = str(_obj(live.get("metadata")).get("resourceVersion") or "")
+            body["metadata"]["resourceVersion"] = version
+            try:
+                applied = await client.request_json("PUT", path, body=body)
+            except KubeApiError as exc:
+                if exc.status is None or exc.status >= _LOST_FROM:
+                    return await self._applied_generation(client, name, marker, exc)
+                attempts += 1
+                if exc.status != _CONFLICT or attempts >= _PUT_ATTEMPTS:
+                    raise
+                version = None
+                continue
+            return _int(_obj(applied.get("metadata")).get("generation"))
+
+    async def _applied_generation(self, client: KubernetesApiClient, name: str, marker: str, lost: KubeApiError) -> int:
+        """Ответ на PUT с меткой `marker` потерян: поколение живого Deployment, если замена применилась.
+
+        Не применилась: исходная ошибка. Перечитать не удалось ни разу: `ReplaceUnknownError`.
+        """
+        for attempt in range(_VERIFY_READS):
+            try:
+                live = await self._live_deployment(client, name)
+            except KubeApiError:
+                if attempt < _VERIFY_READS - 1:
+                    await asyncio.sleep(self._rollout_poll_s)
+                continue
+            meta = _obj(live.get("metadata")) if live is not None else {}
+            if _obj(meta.get("annotations")).get(REPLACE_ANNOTATION) == marker:
+                return _int(meta.get("generation"))
+            raise lost
+        raise ReplaceUnknownError(str(lost))
 
     async def _live_deployment(self, client: KubernetesApiClient, name: str) -> dict[str, Any] | None:
         """Deployment установки по имени. Через list, а не get: у Студии на Deployment нет `get` (Role чарта)."""
@@ -460,21 +570,29 @@ class KubeLocalHost:
         return found
 
     async def remove(self, name: str) -> bool:
+        """Secret и том, затем Deployment. Уже удалённое (404) пропускается: повтор после сбоя доделывает остальное.
+
+        Deployment уходит последним: по нему строится список установок, поэтому недоудалённая установка остаётся видна
+        в админке и её можно удалить снова. Том с защитой от удаления пропадёт, когда уйдёт под.
+        """
         if not _NAME_RE.fullmatch(name):
             return False
         if name not in {i.name for i in await self.list_instances()}:
             return False
         client = self._client()
         ns = quote(self._ns())
+        paths = (
+            f"/api/v1/namespaces/{ns}/secrets/{quote(f'{name}-token')}",
+            f"/api/v1/namespaces/{ns}/persistentvolumeclaims/{quote(f'{name}-data')}",
+            f"/apis/apps/v1/namespaces/{ns}/deployments/{quote(name)}",
+        )
         try:
-            await client.request_json("DELETE", f"/apis/apps/v1/namespaces/{ns}/deployments/{quote(name)}")
-            await client.request_json("DELETE", f"/api/v1/namespaces/{ns}/secrets/{quote(f'{name}-token')}")
-            await client.request_json(
-                "DELETE", f"/api/v1/namespaces/{ns}/persistentvolumeclaims/{quote(f'{name}-data')}"
-            )
-        except KubeApiError as exc:
-            if exc.status != _NOT_FOUND:
-                return False
+            for path in paths:
+                try:
+                    await client.request_json("DELETE", path)
+                except KubeApiError as exc:
+                    if exc.status != _NOT_FOUND:
+                        raise InstallError("remove_failed", str(exc)[-400:]) from exc
         finally:
             if self._injected is None:
                 await client.aclose()
@@ -595,6 +713,33 @@ def read_installed(item: Mapping[str, Any], defaults: ResourceDefaults) -> Insta
         resource_version=str(meta.get("resourceVersion") or ""),
         dropped=dropped,
     )
+
+
+def deployment_snapshot(item: Mapping[str, Any]) -> dict[str, Any]:
+    """Всё, что заменяет обновление: метки и аннотации Deployment и spec целиком (образ, env, ресурсы, шаблон)."""
+    meta = _obj(item.get("metadata"))
+    annotations = {
+        k: v for k, v in _obj(meta.get("annotations")).items() if k not in {_REVISION_ANNOTATION, REPLACE_ANNOTATION}
+    }
+    return {
+        "labels": copy.deepcopy(_obj(meta.get("labels"))),
+        "annotations": copy.deepcopy(annotations),
+        "spec": copy.deepcopy(_obj(item.get("spec"))),
+    }
+
+
+def restored_deployment(name: str, snapshot: Mapping[str, Any]) -> dict[str, Any]:
+    """Deployment из снимка `deployment_snapshot` для PUT; resourceVersion подставляет `_replace`."""
+    metadata: dict[str, Any] = {"name": name, "labels": copy.deepcopy(_obj(snapshot.get("labels")))}
+    annotations = _obj(snapshot.get("annotations"))
+    if annotations:
+        metadata["annotations"] = copy.deepcopy(annotations)
+    return {
+        "apiVersion": "apps/v1",
+        "kind": "Deployment",
+        "metadata": metadata,
+        "spec": copy.deepcopy(_obj(snapshot.get("spec"))),
+    }
 
 
 def rollout_state(item: Mapping[str, Any], generation: int) -> str:

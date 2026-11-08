@@ -83,6 +83,10 @@ def job_info(job: InstallJob) -> InstallJobInfo:
         error_code=job.error_code,
         error_detail=job.error_detail,
         created_at=job.created_at,
+        rolled_back=job.rolled_back,
+        rollback_version=job.rollback_version,
+        rollback_error=job.rollback_error,
+        rollback_reconnected=job.rollback_reconnected,
     )
 
 
@@ -171,10 +175,21 @@ async def upgrade_local_instance(
 
 @router.delete("/local/{target}/{name}", status_code=status.HTTP_204_NO_CONTENT)
 async def remove_local_instance(target: LocalTargetName, name: str, request: Request) -> Response:
+    """Удалить установку и отозвать её раннер (как «Отозвать раннер»); действующий токен регистрации тоже отзывается.
+
+    409 `install_busy`: эту установку сейчас обновляют. 502 `remove_failed`: раннер уже отозван, а хост не удалил
+    установку до конца; она остаётся в списке, повтор доделывает удаление.
+    """
     try:
         await (await _service(request)).remove(require_actor(), InstallTarget(target), name)
     except RunnerNotFoundError as exc:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Not Found") from exc
+    except InstallBusyError as exc:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail={"code": "install_busy"}) from exc
+    except InstallError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY, detail={"code": exc.code, "detail": exc.detail}
+        ) from exc
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 

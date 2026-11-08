@@ -1,6 +1,7 @@
 """Установка раннера на этой же машине: токен регистрации, шаги хоста, ожидание регистрации, аудит без секретов.
 
-Здесь же обновление поставленного отсюда раннера на месте: новый образ и манифест, тот же токен, том и запись в Студии.
+Здесь же обновление поставленного отсюда раннера на месте (новый образ и манифест, тот же токен, том и запись в Студии,
+откат на прежнюю версию при неудаче) и удаление установки вместе с отзывом её раннера.
 """
 
 from __future__ import annotations
@@ -30,9 +31,11 @@ from hse_doc_studio.core.runner_install import (
     InstallTarget,
     LocalInstance,
     LocalRunnerSpec,
+    PreviousRelease,
     ResourceOverrides,
+    UpgradeError,
 )
-from hse_doc_studio.core.runner_install.entities import InstallJobState
+from hse_doc_studio.core.runner_install.entities import InstallJobState, InstallStep
 from hse_doc_studio.core.runner_isolation import installed_runner
 from hse_doc_studio.core.uow import IUnitOfWork
 from hse_doc_studio.use_cases.jobs.runners import RunnerRegistry
@@ -46,6 +49,8 @@ REGISTER_TIMEOUT_S = 180.0
 REGISTER_POLL_S = 2.0
 _NAME_SAFE = re.compile(r"[^a-z0-9-]+")
 MAX_CONCURRENCY = 8
+# Шаг отката появляется в задаче обновления, только когда откатывать есть что.
+ROLLBACK_STEP = "rollback"
 
 
 class InstallUnavailableError(Exception):
@@ -58,6 +63,17 @@ class InstallUnavailableError(Exception):
 
 class InstallBusyError(Exception):
     """Установка этим способом уже идёт."""
+
+
+def install_token_label(name: str) -> str:
+    """Название токена регистрации, который установка выдаёт раннеру `name`: по нему удаление находит этот токен."""
+    return f"install {name}"
+
+
+def _image_tag(image: str) -> str:
+    """Тег образа как версия: у `registry/x:0.15.0` это `0.15.0`; без тега пусто."""
+    tail = image.rsplit("/", 1)[-1]
+    return tail.rpartition(":")[2] if ":" in tail and "@" not in tail else ""
 
 
 def _require_admin(actor: Actor) -> str:
@@ -164,14 +180,54 @@ class RunnerInstallService:
         return await self._registry.list_runners(actor, owner_kind=RunnerOwnerKind.instance)
 
     async def remove(self, actor: Actor, target: InstallTarget, name: str) -> None:
+        """Удалить установку из админки и отозвать её раннер тем же use case, что «Отозвать раннер».
+
+        Порядок: проверка, что установка есть; отзыв её токена регистрации, если он ещё действует; отзыв раннера;
+        удаление Deployment или контейнера; аудит. Отзыв идёт до удаления, чтобы ни на миг не было раннера, который
+        работает без установки (под Deployment после удаления ещё до 10 минут доделывает сборки). Если удаление на
+        хосте сорвалось, раннер уже отозван, а установка осталась в «Установках без раннера»: её можно удалить снова,
+        повтор отзывать уже нечего. Отзыв не удался: на хосте ничего не тронуто, повтор начнёт сначала.
+        """
         actor_id = _require_admin(actor)
         host = self._hosts.get(target)
-        if host is None or not await host.remove(name):
+        if host is None or name not in {i.name for i in await host.list_instances()}:
             raise RunnerNotFoundError(name)
+        running = self._jobs.running(target)
+        if running is not None and running.name == name:
+            raise InstallBusyError(target.value)
+        tokens = await self._revoke_install_tokens(actor, name)
+        runner = installed_runner(name, await self._instance_runners(actor))
+        if runner is not None:
+            with contextlib.suppress(RunnerNotFoundError):
+                await self._registry.revoke(actor, runner.id)
+        details: dict[str, object] = {"target": target.value, "revoked_runner": runner.id if runner else None}
+        if tokens:
+            details["revoked_registrations"] = tokens
+        try:
+            removed = await host.remove(name)
+        except InstallError as exc:
+            failed = {**details, "code": exc.code}
+            await self._remove_record("runner_install.local.remove_failed", actor_id, name, failed)
+            raise
+        if not removed:
+            raise RunnerNotFoundError(name)
+        await self._remove_record("runner_install.local.remove", actor_id, name, details)
+
+    async def _revoke_install_tokens(self, actor: Actor, name: str) -> list[str]:
+        """Токены регистрации этой установки, которыми ещё можно зарегистрироваться: после удаления они не нужны."""
+        now = utc_now()
+        label = install_token_label(name)
+        revoked: list[str] = []
+        for token in await self._registry.list_registration_tokens(actor):
+            if token.label == label and token.usable(now):
+                with contextlib.suppress(RunnerNotFoundError):
+                    await self._registry.revoke_registration_token(actor, token.id)
+                    revoked.append(token.id)
+        return revoked
+
+    async def _remove_record(self, action: str, actor_id: str, name: str, details: Mapping[str, object]) -> None:
         async with self._uow.begin():
-            await self._audit.record(
-                "runner_install.local.remove", actor_id=actor_id, target=name, details={"target": target.value}
-            )
+            await self._audit.record(action, actor_id=actor_id, target=name, details=dict(details))
 
     async def start_upgrade(self, actor: Actor, target: InstallTarget, name: str) -> InstallJob:
         """Обновить поставленный отсюда раннер на месте до версии Студии; токен новый не выпускается.
@@ -208,14 +264,18 @@ class RunnerInstallService:
     async def _run_upgrade(self, actor: Actor, host: ILocalRunnerHost, job: InstallJob, runner: Runner | None) -> None:
         actor_id = actor.id or ""
         before = runner.version if runner is not None else None
+        previous: PreviousRelease | None = None
         try:
 
             async def report(key: str, state: InstallStepState, detail: str) -> None:
                 self._jobs.set_step(job, key, state, detail)
 
             outcome = await host.upgrade(job.name, self._image, report)
+            previous = outcome.previous
             restarted = utc_now()
             after = await self._wait_reconnected(job, actor, runner, restarted)
+            # Дальше обновление удалось: сбой записи итога не повод возвращать прежнюю версию.
+            previous = None
             job.state = InstallJobState.succeeded
             await self._record(
                 "runner_install.local.upgrade_succeeded",
@@ -230,10 +290,12 @@ class RunnerInstallService:
                 },
             )
         except InstallError as exc:
-            await self._fail_upgrade(actor_id, job, before, exc.code, exc.detail)
+            if isinstance(exc, UpgradeError):
+                previous = exc.previous
+            await self._fail_upgrade(actor, host, job, runner, previous, exc.code, exc.detail)
         except Exception:
             logger.exception("runner_upgrade_failed", job=job.id, target=job.target.value)
-            await self._fail_upgrade(actor_id, job, before, "unexpected", "")
+            await self._fail_upgrade(actor, host, job, runner, previous, "unexpected", "")
 
     async def _wait_reconnected(
         self, job: InstallJob, actor: Actor, runner: Runner | None, since: datetime
@@ -247,35 +309,100 @@ class RunnerInstallService:
             self._jobs.set_step(job, "reconnect", InstallStepState.skipped, "no_runner")
             return None
         self._jobs.set_step(job, "reconnect", InstallStepState.running)
+        outcome, seen_version = await self._await_version(actor, runner.id, self._version, since)
+        if outcome == "revoked":
+            raise InstallError("runner_revoked")
+        if outcome == "timeout":
+            raise InstallError("reconnect_timeout", seen_version)
+        self._jobs.set_step(job, "reconnect", InstallStepState.done, seen_version)
+        return seen_version
+
+    async def _await_version(self, actor: Actor, runner_id: str, version: str, since: datetime) -> tuple[str, str]:
+        """Ждать сигнала раннера позже `since` с версией `version` (не дольше шага «снова на связи»).
+
+        Итог: (`ok`, версия), (`revoked`, ``) или (`timeout`, последняя замеченная версия).
+        """
         seen_version = ""
         waited = 0.0
         while waited < self._register_timeout_s:
-            current = next((r for r in await self._instance_runners(actor) if r.id == runner.id), None)
+            current = next((r for r in await self._instance_runners(actor) if r.id == runner_id), None)
             if current is None or current.revoked_at is not None:
-                raise InstallError("runner_revoked")
+                return "revoked", ""
             if current.last_seen_at is not None and current.last_seen_at >= since:
                 seen_version = current.version
-                if current.version == self._version:
-                    self._jobs.set_step(job, "reconnect", InstallStepState.done, current.version)
-                    return current.version
+                if current.version == version:
+                    return "ok", current.version
             await asyncio.sleep(self._poll_s)
             waited += self._poll_s
-        raise InstallError("reconnect_timeout", seen_version)
+        return "timeout", seen_version
 
-    async def _fail_upgrade(self, actor_id: str, job: InstallJob, before: str | None, code: str, detail: str) -> None:
+    async def _fail_upgrade(  # noqa: PLR0913
+        self,
+        actor: Actor,
+        host: ILocalRunnerHost,
+        job: InstallJob,
+        runner: Runner | None,
+        previous: PreviousRelease | None,
+        code: str,
+        detail: str,
+    ) -> None:
+        """Обновление не удалось: если установку уже заменили, вернуть прежнюю версию отдельным шагом, затем итог."""
+        before = runner.version if runner is not None else None
         for step in job.steps:
             if step.state is InstallStepState.running:
                 step.state = InstallStepState.failed
                 step.detail = detail[:400]
-        job.state = InstallJobState.failed
         job.error_code = code
         job.error_detail = detail[:400]
-        await self._record(
-            "runner_install.local.upgrade_failed",
-            actor_id,
-            job,
-            {"target": job.target.value, "code": code, "from_version": before, "to_version": self._version},
-        )
+        details: dict[str, object] = {
+            "target": job.target.value,
+            "code": code,
+            "from_version": before,
+            "to_version": self._version,
+            "rolled_back": False,
+        }
+        if previous is not None:
+            await self._rollback(actor, host, job, runner, previous)
+            details["rolled_back"] = bool(job.rolled_back)
+            if job.rollback_error is not None:
+                details["rollback_error"] = job.rollback_error
+            if job.rollback_reconnected is not None:
+                details["rollback_reconnected"] = job.rollback_reconnected
+        job.state = InstallJobState.failed
+        await self._record("runner_install.local.upgrade_failed", actor.id or "", job, details)
+
+    async def _rollback(
+        self, actor: Actor, host: ILocalRunnerHost, job: InstallJob, runner: Runner | None, previous: PreviousRelease
+    ) -> None:
+        """Шаг «Откат на прежнюю версию»: хост возвращает прежний Deployment или контейнер и ждёт, что он поднялся,
+        затем Студия ждёт, что раннер вышел на связь с прежней версией (как шаг «снова на связи»).
+
+        Не вышел: откат состоялся (`rolled_back`), но шаг помечен ошибкой и `rollback_reconnected` ложно.
+        """
+        before = runner.version if runner is not None else None
+        job.steps.append(InstallStep(ROLLBACK_STEP))
+        self._jobs.set_step(job, ROLLBACK_STEP, InstallStepState.running, previous.image)
+        version = before or _image_tag(previous.image)
+        started = utc_now()
+        try:
+            await host.rollback(job.name, previous)
+        except InstallError as exc:
+            job.rolled_back, job.rollback_error = False, exc.code
+            self._jobs.set_step(job, ROLLBACK_STEP, InstallStepState.failed, exc.detail[:400])
+            return
+        except Exception:
+            logger.exception("runner_rollback_failed", job=job.id, target=job.target.value)
+            job.rolled_back, job.rollback_error = False, "unexpected"
+            self._jobs.set_step(job, ROLLBACK_STEP, InstallStepState.failed, "")
+            return
+        job.rolled_back, job.rollback_version = True, version
+        if runner is None or not before:
+            self._jobs.set_step(job, ROLLBACK_STEP, InstallStepState.done, version)
+            return
+        outcome, _ = await self._await_version(actor, runner.id, before, started)
+        job.rollback_reconnected = outcome == "ok"
+        state = InstallStepState.done if job.rollback_reconnected else InstallStepState.failed
+        self._jobs.set_step(job, ROLLBACK_STEP, state, version)
 
     @staticmethod
     def _runner_name(requested: str | None) -> str:
@@ -302,7 +429,7 @@ class RunnerInstallService:
         try:
             self._jobs.set_step(job, "token", InstallStepState.running)
             created = await self._registry.create_registration_token(
-                actor, label=f"install {job.name}", ttl=TOKEN_TTL, max_uses=1
+                actor, label=install_token_label(job.name), ttl=TOKEN_TTL, max_uses=1
             )
             token_id, secret = created.token.id, created.secret
             self._jobs.set_step(job, "token", InstallStepState.done)
