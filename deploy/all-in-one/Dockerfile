@@ -135,6 +135,13 @@ COPY --from=help-builder --chown=app:app /app/dist /app/help
 # падает на дефолт /app/packs (см. api/config.py), поэтому кладём пак именно туда.
 COPY --chown=app:app packs /app/packs
 
+# Опись вшитых паков: какие версии шаблонов несёт именно этот образ. Лежит ВНЕ
+# /app/packs: папка, смонтированная поверх каталога (оверлей compose.build.yml),
+# закрыла бы и её. По описи Студия видит, что подключённый каталог отстаёт от её
+# версии, и говорит об этом, а не советует обновить Студию (core.template_packs).
+# Пустая опись роняет сборку: паки не прочитались.
+RUN python -m hse_doc_studio.infra.template.packs_source /app/packs /app/packs-manifest.json
+
 # Курируемые заметки о релизах («Что нового»). Лежат в корне репозитория, поэтому
 # в образ едут отдельным COPY — settings.release_notes_file вне монорепы падает на
 # дефолт /app/release-notes.json. Что файл реально доехал, проверяет смоук в publish.yml.

@@ -415,6 +415,7 @@ tags:
 | `HSE_STUDIO__DEVICE_NAME` | str | не задано | оба | Имя этого компьютера для списка подключённых Студий на сервере (по умолчанию имя машины). |
 | `HSE_STUDIO__DEVICE_OS` | str | не задано | оба | Семейство ОС машины (macos, windows, linux) для списка подключённых Студий. |
 | `HSE_STUDIO__PACKS_DIR` | Path | каталог `packs` монорепы, в образе `/app/packs` | оба | Directory with template packs (auto-detected from monorepo root locally; /app/packs in docker) |
+| `HSE_STUDIO__BUILTIN_PACKS_MANIFEST` | Path | `/app/packs-manifest.json` | оба | Manifest of the template packs baked into the image (written by the Dockerfile) |
 | `HSE_STUDIO__STATIC_DIR` | Path | не задано | оба | Serve built frontend from this directory (all-in-one mode) |
 | `HSE_STUDIO__HELP_DIR` | Path | `services/user-docs/dist` монорепы, в образе `/app/help` | оба | Built user help (services/user-docs: user/, admin/, media/) served at /help/; no dir, no help |
 | `HSE_STUDIO__DOCKER_BINARY` | str | не задано | оба | Explicit path to the docker CLI; empty means auto-discovery (PATH, then known locations). |
