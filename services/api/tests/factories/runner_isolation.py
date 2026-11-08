@@ -19,7 +19,9 @@ from hse_doc_studio.core.runner_isolation import DeclaredCluster, InstallFromUiF
 _RUNNER_FIXTURES = Path(__file__).resolve().parents[4] / "contracts" / "runner" / "fixtures" / "RunnerDeploymentBody"
 
 
-def make_install_facts(*, enabled: bool = False, service_account: str = "") -> InstallFromUiFacts:
+def make_install_facts(
+    *, enabled: bool = False, service_account: str = "", build_namespace: str | None = None
+) -> InstallFromUiFacts:
     return InstallFromUiFacts(
         enabled=enabled,
         service_account=service_account,
@@ -31,6 +33,7 @@ def make_install_facts(*, enabled: bool = False, service_account: str = "") -> I
         ),
         runner_ephemeral=RUNNER_EPHEMERAL,
         build_ephemeral=BUILD_EPHEMERAL,
+        build_namespace=build_namespace,
     )
 
 

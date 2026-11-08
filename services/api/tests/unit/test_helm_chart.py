@@ -25,6 +25,8 @@ _INSTALL_UI_VALUES = _CHART / "ci" / "values-install-ui.yaml"
 _INSTALL_UI_GOLDEN = _CHART / "ci" / "rendered-install-ui.golden.yaml"
 _ISOLATION_VALUES = _CHART / "ci" / "values-isolation.yaml"
 _ISOLATION_GOLDEN = _CHART / "ci" / "rendered-isolation.golden.yaml"
+_INSTALL_UI_BUILD_NS_VALUES = _CHART / "ci" / "values-install-ui-build-ns.yaml"
+_INSTALL_UI_BUILD_NS_GOLDEN = _CHART / "ci" / "rendered-install-ui-build-ns.golden.yaml"
 _PUBLIC_S3_VALUES = _CHART / "ci" / "values-public-s3.yaml"
 _PUBLIC_S3_GOLDEN = _CHART / "ci" / "rendered-public-s3.golden.yaml"
 
@@ -74,8 +76,9 @@ def test_lint() -> None:
         ((_VALUES, _PUBLIC_S3_VALUES), _PUBLIC_S3_GOLDEN),
         ((_VALUES, _INSTALL_UI_VALUES), _INSTALL_UI_GOLDEN),
         ((_VALUES, _ISOLATION_VALUES), _ISOLATION_GOLDEN),
+        ((_VALUES, _INSTALL_UI_BUILD_NS_VALUES), _INSTALL_UI_BUILD_NS_GOLDEN),
     ],
-    ids=["docker", "kubernetes", "updater", "public-s3", "install-ui", "isolation"],
+    ids=["docker", "kubernetes", "updater", "public-s3", "install-ui", "isolation", "install-ui-build-ns"],
 )
 def test_template_matches_golden(values: tuple[Path, ...], golden_path: Path) -> None:
     args = [arg for path in values for arg in ("-f", str(path))]
@@ -92,6 +95,20 @@ def test_api_single_replica_recreate() -> None:
     api = next(d for d in _by_kind(_render(), "Deployment") if d["metadata"]["name"].endswith("-api"))
     assert api["spec"]["replicas"] == 1
     assert api["spec"]["strategy"] == {"type": "Recreate"}
+
+
+def test_api_rollout_window_is_short() -> None:
+    """Recreate неизбежен, но окно выкатки короткое: срок остановки больше срока uvicorn, проверки частые."""
+    api = next(d for d in _by_kind(_render(), "Deployment") if d["metadata"]["name"].endswith("-api"))
+    pod = api["spec"]["template"]["spec"]
+    (container,) = pod["containers"]
+    # uvicorn ждёт запросы 10 с (HSE_STUDIO__SERVER__TIMEOUT_GRACEFUL_SHUTDOWN), потом ещё останавливается фон.
+    assert pod["terminationGracePeriodSeconds"] >= 20
+    assert container["readinessProbe"]["periodSeconds"] <= 3
+    assert container["startupProbe"]["periodSeconds"] <= 3
+    startup = container["startupProbe"]
+    assert startup["periodSeconds"] * startup["failureThreshold"] >= 300
+    assert "lifecycle" not in container
 
 
 def test_migration_job_is_pre_upgrade_hook() -> None:
@@ -800,3 +817,114 @@ def test_declared_chart_runner_security_matches_the_rendered_runner(values: tupl
     names = {e["name"] for e in container["env"]}
     assert {"HSE_RUNNER__POD__CPU_LIMIT_M", "HSE_RUNNER__POD__MEMORY_LIMIT_MI", "HSE_RUNNER__POD__NAMESPACE"} <= names
     assert [n for n in names if n.removeprefix("HSE_RUNNER__") not in _paths(RunnerConfig)] == []
+
+
+# ---- Поды сборки раннеров из админки в своём namespace (runner.installFromUi.buildNamespace) ----
+
+
+def _ui_build_ns(*extra: str) -> list[dict[str, Any]]:
+    return _render("-f", str(_INSTALL_UI_BUILD_NS_VALUES), "--namespace", "studio", *extra)
+
+
+def test_ui_build_namespace_is_off_by_default() -> None:
+    docs = _render("-f", str(_INSTALL_UI_VALUES), "--namespace", "studio")
+    role = _named(docs, "Role", "rel-hse-doc-studio-runner-ui-builds")
+    assert role["metadata"]["namespace"] == "studio"
+    assert "HSE_STUDIO__RUNNER_INSTALL__KUBERNETES_BUILD_NAMESPACE" not in _env(_api_deployment(docs))
+    declared = DeclaredCluster.model_validate_json(
+        _env(_api_deployment(docs))["HSE_STUDIO__RUNNER_CLUSTER__DECLARED"]["value"]
+    )
+    assert declared.ui_build is not None
+    assert declared.ui_build.namespace == "studio"
+    assert not declared.ui_build.quota
+
+
+def test_ui_build_namespace_moves_the_runner_rights_and_keeps_the_runner_in_the_release() -> None:
+    docs = _ui_build_ns()
+    role = _named(docs, "Role", "rel-hse-doc-studio-runner-ui-builds")
+    binding = _named(docs, "RoleBinding", "rel-hse-doc-studio-runner-ui-builds")
+    assert role["metadata"]["namespace"] == binding["metadata"]["namespace"] == "hds-ui-builds"
+    assert binding["subjects"] == [
+        {"kind": "ServiceAccount", "name": "rel-hse-doc-studio-runner-ui", "namespace": "studio"}
+    ]
+    assert {r["resources"][0] for r in role["rules"]} == {"pods", "pods/log", "pods/exec"}
+    # В namespace релиза у раннеров из админки прав нет, а права Студии на установку там же и не шире.
+    ui_roles = [d for d in _by_kind(docs, "Role") if "runner-ui" in d["metadata"]["name"]]
+    assert [r["metadata"]["namespace"] for r in ui_roles] == ["hds-ui-builds"]
+    install = _named(docs, "Role", "rel-hse-doc-studio-api-runner-install")
+    assert install["metadata"]["namespace"] == "studio"
+    assert {res for rule in install["rules"] for res in rule["resources"]} == {
+        "deployments", "secrets", "persistentvolumeclaims"
+    }  # fmt: skip
+    sa = _named(docs, "ServiceAccount", "rel-hse-doc-studio-runner-ui")
+    assert sa["metadata"].get("namespace") in {None, "studio"}
+    env = _env(_api_deployment(docs))
+    assert env["HSE_STUDIO__RUNNER_INSTALL__KUBERNETES_BUILD_NAMESPACE"]["value"] == "hds-ui-builds"
+    assert "RUNNER_INSTALL__KUBERNETES_BUILD_NAMESPACE" in _paths(Settings)
+
+
+def test_ui_build_namespace_gets_the_deny_all_quota_and_limit_range() -> None:
+    docs = _ui_build_ns()
+    policy = _named(docs, "NetworkPolicy", "rel-hse-doc-studio-runner-ui-builds-deny-all")
+    assert policy["metadata"]["namespace"] == "hds-ui-builds"
+    (quota,) = _by_kind(docs, "ResourceQuota")
+    (limits,) = _by_kind(docs, "LimitRange")
+    assert quota["metadata"]["namespace"] == limits["metadata"]["namespace"] == "hds-ui-builds"
+    declared = DeclaredCluster.model_validate_json(
+        _env(_api_deployment(docs))["HSE_STUDIO__RUNNER_CLUSTER__DECLARED"]["value"]
+    )
+    assert declared.ui_build is not None
+    assert declared.ui_build.namespace == "hds-ui-builds"
+    assert declared.ui_build.network_policy
+    assert declared.ui_build.quota
+    assert declared.ui_build.limit_range
+    # Квота раннера чарта (docker) не включена: у него подов сборки нет.
+    assert not declared.build.quota.enabled
+
+
+def test_ui_build_namespace_is_readable_for_the_isolation_screen() -> None:
+    docs = _ui_build_ns()
+    roles = [d for d in _by_kind(docs, "Role") if d["metadata"]["name"].endswith("-isolation-read")]
+    assert {r["metadata"]["namespace"] for r in roles} == {"studio", "hds-ui-builds"}
+    (cluster_role,) = [d for d in _by_kind(docs, "ClusterRole") if "namespaces-read" in d["metadata"]["name"]]
+    assert cluster_role["rules"][0]["resourceNames"] == ["studio", "hds-ui-builds"]
+
+
+def test_shared_build_namespace_gets_one_quota_and_one_deny_all() -> None:
+    docs = _isolation("--set", "runner.installFromUi.buildNamespace=hds-builds")
+    assert [d["metadata"]["namespace"] for d in _by_kind(docs, "ResourceQuota")] == ["hds-builds"]
+    assert [d["metadata"]["namespace"] for d in _by_kind(docs, "LimitRange")] == ["hds-builds"]
+    deny = [d for d in _by_kind(docs, "NetworkPolicy") if d["metadata"]["name"].endswith("-deny-all")]
+    assert [(d["metadata"]["name"], d["metadata"]["namespace"]) for d in deny] == [
+        ("rel-hse-doc-studio-runner-builds-deny-all", "hds-builds")
+    ]
+    roles = {(d["metadata"]["name"], d["metadata"]["namespace"]) for d in _by_kind(docs, "Role")}
+    assert ("rel-hse-doc-studio-runner-ui-builds", "hds-builds") in roles
+    assert ("rel-hse-doc-studio-runner-builds", "hds-builds") in roles
+    (cluster_role,) = [d for d in _by_kind(docs, "ClusterRole") if "namespaces-read" in d["metadata"]["name"]]
+    assert cluster_role["rules"][0]["resourceNames"] == ["studio", "hds-builds"]
+
+
+def test_separate_build_namespaces_get_a_quota_each() -> None:
+    docs = _isolation("--set", "runner.installFromUi.buildNamespace=hds-ui-builds")
+    assert sorted(d["metadata"]["namespace"] for d in _by_kind(docs, "ResourceQuota")) == [
+        "hds-builds", "hds-ui-builds"
+    ]  # fmt: skip
+    assert sorted(d["metadata"]["namespace"] for d in _by_kind(docs, "LimitRange")) == ["hds-builds", "hds-ui-builds"]
+
+
+def test_quota_with_ui_builds_in_the_release_namespace_is_not_rendered_there() -> None:
+    docs = _render(
+        "-f", str(_INSTALL_UI_VALUES), "--namespace", "studio", "--set", "runner.kubernetes.quota.enabled=true",
+        "--set", "runner.kubernetes.limitRange.enabled=true",
+    )  # fmt: skip
+    assert not _by_kind(docs, "ResourceQuota")
+    assert not _by_kind(docs, "LimitRange")
+
+
+def test_ui_build_namespace_must_be_a_namespace_name() -> None:
+    bad = _helm(
+        "template", "rel", str(_CHART), "-f", str(_INSTALL_UI_BUILD_NS_VALUES),
+        "--set", "runner.installFromUi.buildNamespace=Bad_Name",
+    )  # fmt: skip
+    assert bad.returncode != 0

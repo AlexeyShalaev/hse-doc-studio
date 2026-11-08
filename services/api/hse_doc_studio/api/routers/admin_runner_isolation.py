@@ -33,9 +33,16 @@ from hse_doc_studio.core.access.context import require_actor
 from hse_doc_studio.core.jobs.deployment import BuildIsolation, ResourceFigures, SecurityFacts
 from hse_doc_studio.core.jobs.errors import RunnerNotFoundError
 from hse_doc_studio.core.runner_install.resources import MIN_QUANTITIES, PodResources
-from hse_doc_studio.core.runner_isolation import DeclaredCluster, InstallFromUiFacts, LiveClusterState, LiveStatus
+from hse_doc_studio.core.runner_isolation import (
+    DeclaredCluster,
+    InstallFromUiFacts,
+    LiveClusterState,
+    LiveLimitRange,
+    LiveQuota,
+    LiveStatus,
+)
 from hse_doc_studio.core.runner_isolation.declared import DeclaredLimitRange, DeclaredResources
-from hse_doc_studio.use_cases.admin.runner_isolation import RunnerDeploymentUC, RunnerIsolationUC
+from hse_doc_studio.use_cases.admin.runner_isolation import RunnerDeploymentUC, RunnerIsolationUC, ui_build_namespace
 
 router = APIRouter()
 
@@ -217,6 +224,7 @@ def _install(install: InstallFromUiFacts, declared: DeclaredCluster | None) -> I
     return InstallFromUiView(
         enabled=install.enabled,
         namespace=install.namespace or (declared.release_namespace if declared is not None else None) or None,
+        build_namespace=ui_build_namespace(declared, install) or None,
         service_account=install.service_account or None,
         storage_class=install.storage_class or None,
         storage_size=install.storage_size,
@@ -239,7 +247,9 @@ def _network(declared: DeclaredCluster, install: InstallFromUiFacts, live: LiveC
     return NetworkView(
         build_deny_all=PolicyCheckView(declared=chart_k8s and declared.build.network_policy, live=live.build_deny_all),
         ui_build_deny_all=PolicyCheckView(
-            declared=install.enabled and declared.build.network_policy, live=live.ui_build_deny_all
+            declared=install.enabled
+            and (declared.ui_build.network_policy if declared.ui_build is not None else declared.build.network_policy),
+            live=live.ui_build_deny_all,
         ),
         runner_egress=RunnerEgressView(
             declared=egress.enabled,
@@ -259,28 +269,75 @@ def _limits(values: DeclaredLimitRange) -> LimitValuesView:
     )
 
 
-def _quota(declared: DeclaredCluster, live: LiveClusterState) -> QuotaView:
-    quota = declared.build.quota
+def _chart_build_ns(declared: DeclaredCluster) -> str:
+    return declared.build.namespace or declared.release_namespace
+
+
+def _ui_separate(declared: DeclaredCluster, install: InstallFromUiFacts) -> str | None:
+    """Namespace подов сборки раннеров из админки, если у него свои квота и LimitRange (не тот, что у раннера чарта)."""
+    ui_ns = ui_build_namespace(declared, install)
+    return ui_ns if install.enabled and ui_ns and ui_ns != _chart_build_ns(declared) else None
+
+
+def _ui_shares(declared: DeclaredCluster, install: InstallFromUiFacts, flag: str) -> bool:
+    """Квота (LimitRange) раннеров из админки стоит в том же namespace, что у раннера чарта: объект один."""
+    ui = declared.ui_build
+    return ui is not None and getattr(ui, flag) and _ui_separate(declared, install) is None
+
+
+def _quota_view(
+    namespace: str | None, declared: dict[str, str] | None, checked: bool, found: LiveQuota | None
+) -> QuotaView:
     return QuotaView(
-        namespace=declared.build.namespace or declared.release_namespace or None,
-        declared=dict(quota.hard) if quota.enabled else None,
-        live_found=(live.quota is not None) if live.quota_checked else None,
-        live_hard=dict(live.quota.hard) if live.quota is not None else None,
-        live_used=dict(live.quota.used) if live.quota is not None else None,
+        namespace=namespace or None,
+        declared=declared,
+        live_found=(found is not None) if checked else None,
+        live_hard=dict(found.hard) if found is not None else None,
+        live_used=dict(found.used) if found is not None else None,
     )
 
 
-def _limit_range(declared: DeclaredCluster, live: LiveClusterState) -> LimitRangeView:
-    ranges = declared.build.limit_range
-    found = live.limit_range
+def _range_view(
+    namespace: str | None, declared: DeclaredLimitRange | None, checked: bool, found: LiveLimitRange | None
+) -> LimitRangeView:
     return LimitRangeView(
-        namespace=declared.build.namespace or declared.release_namespace or None,
-        declared=_limits(ranges) if ranges.enabled else None,
-        live_found=(found is not None) if live.limit_range_checked else None,
+        namespace=namespace or None,
+        declared=_limits(declared) if declared is not None else None,
+        live_found=(found is not None) if checked else None,
         live=LimitValuesView(default=found.default, default_request=found.default_request, max=found.max)
         if found is not None
         else None,
     )
+
+
+def _quota(declared: DeclaredCluster, install: InstallFromUiFacts, live: LiveClusterState) -> QuotaView:
+    quota = declared.build.quota
+    on = quota.enabled or _ui_shares(declared, install, "quota")
+    return _quota_view(_chart_build_ns(declared), dict(quota.hard) if on else None, live.quota_checked, live.quota)
+
+
+def _limit_range(declared: DeclaredCluster, install: InstallFromUiFacts, live: LiveClusterState) -> LimitRangeView:
+    ranges = declared.build.limit_range
+    on = ranges.enabled or _ui_shares(declared, install, "limit_range")
+    return _range_view(_chart_build_ns(declared), ranges if on else None, live.limit_range_checked, live.limit_range)
+
+
+def _ui_quota(declared: DeclaredCluster, install: InstallFromUiFacts, live: LiveClusterState) -> QuotaView | None:
+    ns = _ui_separate(declared, install)
+    if ns is None:
+        return None
+    on = declared.ui_build is not None and declared.ui_build.quota
+    return _quota_view(ns, dict(declared.build.quota.hard) if on else None, live.ui_quota_checked, live.ui_quota)
+
+
+def _ui_limit_range(
+    declared: DeclaredCluster, install: InstallFromUiFacts, live: LiveClusterState
+) -> LimitRangeView | None:
+    ns = _ui_separate(declared, install)
+    if ns is None:
+        return None
+    on = declared.ui_build is not None and declared.ui_build.limit_range
+    return _range_view(ns, declared.build.limit_range if on else None, live.ui_limit_range_checked, live.ui_limit_range)
 
 
 @router.get("/runners/isolation", response_model=AdminRunnerIsolation)
@@ -299,8 +356,10 @@ async def runners_isolation(request: Request, response: Response) -> AdminRunner
         build=_build_pods(declared) if declared is not None and chart_k8s else None,
         install_from_ui=_install(info.install, declared),
         network=_network(declared, info.install, live) if declared is not None else None,
-        quota=_quota(declared, live) if declared is not None else None,
-        limit_range=_limit_range(declared, live) if declared is not None else None,
+        quota=_quota(declared, info.install, live) if declared is not None else None,
+        limit_range=_limit_range(declared, info.install, live) if declared is not None else None,
+        ui_quota=_ui_quota(declared, info.install, live) if declared is not None else None,
+        ui_limit_range=_ui_limit_range(declared, info.install, live) if declared is not None else None,
         pod_security=[
             PodSecurityView(
                 namespace=ns.namespace,

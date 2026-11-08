@@ -61,6 +61,17 @@ class DeclaredBuild(_Values):
     limit_range: DeclaredLimitRange = Field(default_factory=DeclaredLimitRange)
 
 
+class DeclaredUiBuild(_Values):
+    """Поды сборки раннеров из админки: их namespace и что чарт в нём ставит. Квота и LimitRange берут значения из
+    `build.quota` и `build.limit_range` (одни values на оба вида раннеров)."""
+
+    enabled: bool = False
+    namespace: str = ""
+    network_policy: bool = False
+    quota: bool = False
+    limit_range: bool = False
+
+
 class DeclaredRunnerEgress(_Values):
     enabled: bool = False
     studio_port: int | None = None
@@ -73,4 +84,6 @@ class DeclaredCluster(_Values):
     release_namespace: str = ""
     runner: DeclaredChartRunner = Field(default_factory=DeclaredChartRunner)
     build: DeclaredBuild = Field(default_factory=DeclaredBuild)
+    # Нет у чартов до отдельного namespace подов сборки раннеров из админки: тогда они в namespace релиза.
+    ui_build: DeclaredUiBuild | None = None
     runner_egress: DeclaredRunnerEgress = Field(default_factory=DeclaredRunnerEgress)

@@ -78,17 +78,22 @@ class LiveLimitRange:
 
 @dataclass(frozen=True)
 class ClusterTargets:
-    """Что проверять: namespace релиза (раннеры и поды сборки раннеров из админки) и namespace подов сборки."""
+    """Что проверять: namespace релиза (раннеры), подов сборки раннера чарта и подов сборки раннеров из админки."""
 
     release_namespace: str
     build_namespace: str
+    # Пусто значит namespace релиза (чарты без runner.installFromUi.buildNamespace).
+    ui_build_namespace: str = ""
+
+    def ui_namespace(self) -> str:
+        return self.ui_build_namespace or self.release_namespace
 
 
 @dataclass(frozen=True)
 class LiveClusterState:
     status: LiveStatus = LiveStatus.off
     checked_at: datetime | None = None
-    # NetworkPolicy: deny-all подов сборки (namespace сборки), то же для раннеров из админки (namespace релиза),
+    # NetworkPolicy: deny-all подов сборки (namespace сборки), то же для раннеров из админки (их namespace сборки),
     # и egress-политика раннеров. None значит «не проверялось».
     build_deny_all: bool | None = None
     ui_build_deny_all: bool | None = None
@@ -98,6 +103,11 @@ class LiveClusterState:
     quota: LiveQuota | None = None
     limit_range_checked: bool = False
     limit_range: LiveLimitRange | None = None
+    # То же в namespace подов сборки раннеров из админки.
+    ui_quota_checked: bool = False
+    ui_quota: LiveQuota | None = None
+    ui_limit_range_checked: bool = False
+    ui_limit_range: LiveLimitRange | None = None
     namespaces: tuple[NamespaceSecurity, ...] | None = None
 
 
@@ -134,3 +144,5 @@ class InstallFromUiFacts:
     runner_ephemeral: tuple[str, str]
     build_ephemeral: tuple[str, str]
     namespace: str | None = None
+    # Namespace подов сборки таких раннеров; None значит namespace раннера.
+    build_namespace: str | None = None

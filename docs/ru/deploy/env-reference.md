@@ -246,6 +246,7 @@ tags:
 | `HSE_STUDIO__RUNNER_INSTALL__DOCKER_ENABLED` | bool | `true` | оба | Разрешить установку раннера соседним контейнером через docker.sock Студии (если сокет доступен). |
 | `HSE_STUDIO__RUNNER_INSTALL__KUBERNETES_ENABLED` | bool | `false` | оба | Разрешить установку раннера Deployment-ом в кластере Студии. Включает чарт (runner.installFromUi.enabled) вместе с правами ServiceAccount Студии. |
 | `HSE_STUDIO__RUNNER_INSTALL__KUBERNETES_SERVICE_ACCOUNT` | str | пусто | оба | ServiceAccount установленных из админки раннеров: его создаёт чарт, права только на поды сборки. |
+| `HSE_STUDIO__RUNNER_INSTALL__KUBERNETES_BUILD_NAMESPACE` | str | пусто | оба | Namespace подов сборки установленных из админки раннеров (runner.installFromUi.buildNamespace); пусто значит namespace Студии. Раннер получает его в HSE_RUNNER__K8S__NAMESPACE при установке и обновлении. |
 | `HSE_STUDIO__RUNNER_INSTALL__KUBERNETES_STUDIO_URL` | str | пусто | оба | Адрес Студии для раннеров в кластере (внутренний Service); пусто значит публичный адрес. |
 | `HSE_STUDIO__RUNNER_INSTALL__KUBERNETES_STORAGE_CLASS` | str | пусто | оба | StorageClass тома данных установленного раннера; пусто значит по умолчанию кластера. |
 | `HSE_STUDIO__RUNNER_INSTALL__KUBERNETES_STORAGE_SIZE` | str | `5Gi` | оба | Размер тома данных установленного раннера. |

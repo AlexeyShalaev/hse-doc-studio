@@ -129,6 +129,8 @@ class InstallBoundsView(StrictModel):
 class InstallFromUiView(StrictModel):
     enabled: bool
     namespace: str | None
+    # Namespace подов сборки таких раннеров: свой (runner.installFromUi.buildNamespace) или namespace раннера.
+    build_namespace: str | None
     service_account: str | None
     storage_class: str | None
     storage_size: str
@@ -203,5 +205,8 @@ class AdminRunnerIsolation(StrictModel):
     network: NetworkView | None
     quota: QuotaView | None
     limit_range: LimitRangeView | None
+    # Квота и LimitRange namespace подов сборки раннеров из админки, если он не тот, что у `quota` и `limit_range`.
+    ui_quota: QuotaView | None
+    ui_limit_range: LimitRangeView | None
     # null: не проверялось (нет права читать namespace).
     pod_security: list[PodSecurityView] | None

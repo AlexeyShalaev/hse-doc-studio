@@ -123,6 +123,19 @@ const LimitValuesSchema = z.strictObject({
   default_request: z.record(z.string(), z.string()),
   max: z.record(z.string(), z.string()),
 });
+const QuotaViewSchema = z.strictObject({
+  namespace: z.string().nullable(),
+  declared: z.record(z.string(), z.string()).nullable(),
+  live_found: z.boolean().nullable(),
+  live_hard: z.record(z.string(), z.string()).nullable(),
+  live_used: z.record(z.string(), z.string()).nullable(),
+});
+const LimitRangeViewSchema = z.strictObject({
+  namespace: z.string().nullable(),
+  declared: LimitValuesSchema.nullable(),
+  live_found: z.boolean().nullable(),
+  live: LimitValuesSchema.nullable(),
+});
 export const AdminRunnerIsolationSchema = z.strictObject({
   config: z.enum(["helm", "none"]),
   live_read: z.enum(["off", "ok", "partial", "forbidden", "unavailable"]),
@@ -160,6 +173,7 @@ export const AdminRunnerIsolationSchema = z.strictObject({
   install_from_ui: z.strictObject({
     enabled: z.boolean(),
     namespace: z.string().nullable(),
+    build_namespace: z.string().nullable(),
     service_account: z.string().nullable(),
     storage_class: z.string().nullable(),
     storage_size: z.string(),
@@ -189,23 +203,11 @@ export const AdminRunnerIsolationSchema = z.strictObject({
       }),
     })
     .nullable(),
-  quota: z
-    .strictObject({
-      namespace: z.string().nullable(),
-      declared: z.record(z.string(), z.string()).nullable(),
-      live_found: z.boolean().nullable(),
-      live_hard: z.record(z.string(), z.string()).nullable(),
-      live_used: z.record(z.string(), z.string()).nullable(),
-    })
-    .nullable(),
-  limit_range: z
-    .strictObject({
-      namespace: z.string().nullable(),
-      declared: LimitValuesSchema.nullable(),
-      live_found: z.boolean().nullable(),
-      live: LimitValuesSchema.nullable(),
-    })
-    .nullable(),
+  quota: QuotaViewSchema.nullable(),
+  limit_range: LimitRangeViewSchema.nullable(),
+  // Свой namespace подов сборки раннеров из админки (не тот, что у quota и limit_range).
+  ui_quota: QuotaViewSchema.nullable(),
+  ui_limit_range: LimitRangeViewSchema.nullable(),
   pod_security: z
     .array(
       z.strictObject({

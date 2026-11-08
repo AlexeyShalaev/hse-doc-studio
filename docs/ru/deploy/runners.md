@@ -92,10 +92,37 @@ tags:
 
 `runner.installFromUi.enabled` по умолчанию `false`, и на проде, где общие раннеры включены не были, так и остаётся. Включение добавляет:
 
-- ServiceAccount и Role для самих раннеров `<релиз>-runner-ui`: только поды сборки (`pods` create, get, list, delete; `pods/log` get; `pods/exec` create, get) в namespace релиза, как у встроенного раннера;
+- ServiceAccount и Role для самих раннеров `<релиз>-runner-ui`: только поды сборки (`pods` create, get, list, delete; `pods/log` get; `pods/exec` create, get) в namespace подов сборки (`runner.installFromUi.buildNamespace`, по умолчанию namespace релиза), как у встроенного раннера;
 - ServiceAccount `<релиз>-api` и Role для Студии: Deployment (create, list, update, delete; `update` нужен обновлению на месте), Secret (только create и delete, без чтения) и PersistentVolumeClaim (create, delete) в namespace релиза. Role и RoleBinding Студия создавать не может, поэтому выдать себе или раннеру лишнее не способна; ClusterRole нет.
 
 Раннер из админки живёт в namespace релиза, тома данных он получает свои (`runner.installFromUi.storageSize`, `storageClassName`), чтобы выданный раннеру токен переживал перезапуск пода. Адрес Студии для такого раннера внутренний (Service чарта).
+
+#### Свой namespace подов сборки
+
+По умолчанию раннеры из админки создают поды сборки в namespace релиза, рядом с api. Квоту туда чарт не ставит (она ограничила бы и саму Студию), поэтому для общих раннеров поды сборки лучше вынести в отдельный namespace:
+
+```yaml
+runner:
+  installFromUi:
+    enabled: true
+    buildNamespace: hds-builds   # тот же, что runner.kubernetes.namespace, если он задан
+  kubernetes:
+    quota: {enabled: true}
+    limitRange: {enabled: true}
+```
+
+- Сам раннер (Deployment, Secret с токеном, том данных) остаётся в namespace релиза. Поды сборки он создаёт в `buildNamespace`: Студия передаёт его раннеру в `HSE_RUNNER__K8S__NAMESPACE` при установке и при «Обновить».
+- Role и RoleBinding `<релиз>-runner-ui-builds` переезжают в `buildNamespace`; в namespace релиза у раннеров из админки прав больше нет. Права Студии не меняются.
+- В `buildNamespace` ставятся запрет сети подов сборки (`runner.kubernetes.networkPolicy`), ResourceQuota и LimitRange (`runner.kubernetes.quota`, `limitRange`). Значения общие с раннером чарта: если namespace у обоих один, объект в нём один и потолок общий, если разные, у каждого namespace своя квота с этими значениями.
+- Namespace чарт не создаёт, как и `runner.kubernetes.namespace`: такой namespace общий для раннеров чарта и раннеров из админки и не должен пропасть вместе с подами сборки при `helm uninstall`. Создайте его заранее с меткой restricted:
+
+```sh
+kubectl create namespace hds-builds
+kubectl label namespace hds-builds \
+  pod-security.kubernetes.io/enforce=restricted pod-security.kubernetes.io/enforce-version=latest
+```
+
+Порядок переключения работающей установки: дождитесь, пока у раннеров из админки нет сборок, выполните `helm upgrade` с `buildNamespace`, затем нажмите «Обновить» у каждого такого раннера. До обновления раннер создаёт поды сборки в namespace релиза, где прав у него уже нет, и сборки на нём падают с `build_backend_unavailable` (403 Kubernetes в деталях).
 
 ## Установка по SSH на другую машину
 
