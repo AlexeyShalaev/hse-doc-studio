@@ -6,32 +6,13 @@ Generated from `release-notes.json` via `make changelog` — do not edit by hand
 Release notes are hand-written and bilingual (RU/EN); the app shows them in the
 selected interface language.
 
-## [0.15.0](https://github.com/AlexeyShalaev/hse-doc-studio/compare/v0.14.0...v0.15.0) (2026-11-08)
+## [0.15.0](https://github.com/AlexeyShalaev/hse-doc-studio/compare/v0.14.0...v0.15.0) - 2026-11-08
 
-
-### Features
-
-* **admin:** runner deployment and cluster isolation endpoints ([7a83bd0](https://github.com/AlexeyShalaev/hse-doc-studio/commit/7a83bd0afce578e40300430d44fe728e8e688260))
-* **admin:** runner deployment and isolation details ([1fc2551](https://github.com/AlexeyShalaev/hse-doc-studio/commit/1fc2551a0c168cba8a3fc1c77056071b6419afd6))
-* **helm:** declared runner isolation for the admin and opt-in cluster read ([2dd7e36](https://github.com/AlexeyShalaev/hse-doc-studio/commit/2dd7e36e42fd6bcfc0cbabe457cebd979bd860fa))
-* **mcp:** create_project by mode, set_project_people, clone_cloud_project ([cf96943](https://github.com/AlexeyShalaev/hse-doc-studio/commit/cf969437076000935a9beb42b04fd6b897b2437f))
-* **mcp:** create_project in the cloud, set_project_people, clone_cloud_project ([8bfb1fe](https://github.com/AlexeyShalaev/hse-doc-studio/commit/8bfb1feaf6e506c9a690e6401a640263ceaa5b0f))
-* **runner:** report how the runner is deployed via the deployment_info feature ([5473a4b](https://github.com/AlexeyShalaev/hse-doc-studio/commit/5473a4b791a2881a7e88d32810171b3b5d4bf4e1))
-* **web:** runner deployment details and cluster isolation panel in the admin ([7fe81e6](https://github.com/AlexeyShalaev/hse-doc-studio/commit/7fe81e65542c4c22443de0d1e1159e783b20138d))
-
-
-### Bug Fixes
-
-* **documents:** never hand out a last build id that this Studio does not have ([b8aef88](https://github.com/AlexeyShalaev/hse-doc-studio/commit/b8aef882bf5899fdbd96ad72da5867f80e3c88ed))
-* **git-sync:** refresh the remembered server version on fetch and sync ([4587ff5](https://github.com/AlexeyShalaev/hse-doc-studio/commit/4587ff50ec70301248773ef4041308cd06e2b8c6))
-* **git-sync:** skip PDF upload for documents that do not produce a PDF ([680784a](https://github.com/AlexeyShalaev/hse-doc-studio/commit/680784a298466c10a3d3ccd7b4b56367d7b6482c))
-* local Studio linked to the cloud: stale server version, dangling last build, pptx PDF upload ([cf82b7c](https://github.com/AlexeyShalaev/hse-doc-studio/commit/cf82b7c175b47bca8469f1e9b41a35c552b3ca72))
-* **mcp:** audit label for project.people_update, CodeQL-safe test assertions ([783b728](https://github.com/AlexeyShalaev/hse-doc-studio/commit/783b728bbabbe62d160996a158ab29ff20ee4e94))
-* **packs:** 2026.1.2 — без двоеточия после «department/organization» на английской странице заявления ([e84e1b2](https://github.com/AlexeyShalaev/hse-doc-studio/commit/e84e1b2ebc6c5d6b2df4b555b121ac42076f9165))
-* **packs:** версия 2026.1.2 шаблона КП СПИ: заявление о теме по бланку SmartLMS ([85f4828](https://github.com/AlexeyShalaev/hse-doc-studio/commit/85f48289d08376190dd6c11651bbf8db582ff90f))
-* **packs:** заявление о теме КП СПИ по бланку 2026 (шаблон 2026.1.2) ([2adced9](https://github.com/AlexeyShalaev/hse-doc-studio/commit/2adced90e88a080503c1624fe151fef798bb5712))
-* **runner:** Kubernetes builds no longer die on idle_timeout after latexmk finished ([f66a968](https://github.com/AlexeyShalaev/hse-doc-studio/commit/f66a968f31dcd30777c8f7f483db548e74581675))
-* **runner:** Kubernetes builds no longer die on idle_timeout after latexmk finished ([58c120c](https://github.com/AlexeyShalaev/hse-doc-studio/commit/58c120c973c8e736f1377a4a1c82f299d37458d8))
+- Runner details in the admin area: how each runner is deployed (Docker, Kubernetes, process), its CPU, memory and storage limits, and a cluster isolation panel. The panel shows the policies declared in Helm and, with runner.isolationInfo.readCluster enabled, what actually exists in the cluster: NetworkPolicy, ResourceQuota, LimitRange and Pod Security labels.
+- MCP: create_project no longer asks for a folder in the cloud, the new set_project_people tool sets the project supervisor and members (recorded in the audit log), and clone_cloud_project in the local Studio clones a project from the cloud.
+- Kubernetes builds no longer fail with idle_timeout after the PDF is ready: word and character counting is time limited, and if it hangs the build still succeeds with a warning.
+- Local Studio linked to the cloud: the server version is refreshed on sync, a last build id that this Studio does not have is no longer returned, and documents without a PDF (such as pptx) no longer fail PDF autopublish.
+- SPI coursework template 2026.1.2: the topic application matches the official 2026 form, names are shown as "Surname I.O.". The released 2026.1.1 is unchanged.
 
 ## [0.14.0](https://github.com/AlexeyShalaev/hse-doc-studio/compare/v0.13.0...v0.14.0) - 2026-11-07
 
