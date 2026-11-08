@@ -21,6 +21,7 @@ from hse_doc_studio.core.rate_limit import COMPILE, GIT_SYNC, UPLOAD, RateRule
 from hse_doc_studio.use_cases.chat._registry import ToolRegistry
 from hse_doc_studio.use_cases.mcp.tools import admin, build, cloud, files, git, people, projects, review, submission
 from hse_doc_studio.use_cases.mcp.tools._base import PROJECT_ID_SCHEMA, McpTool
+from hse_doc_studio.use_cases.mcp.tools.compile_document import CompileDocumentTool
 from hse_doc_studio.use_cases.mcp.tools.fields import ListProjectFieldsTool
 
 # Записи, которые HTTP пропускает и в проект «только для чтения» (api/guards.py `_ALLOWED_SUFFIXES` и DELETE):
@@ -158,6 +159,7 @@ MCP_TOOL_CLASSES: tuple[type[McpTool], ...] = (
     files.WriteFileTool,
     files.MoveFileTool,
     files.DeleteFileTool,
+    CompileDocumentTool,
     build.ListCompilesTool,
     build.GetCompileTool,
     build.CancelCompileTool,

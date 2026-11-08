@@ -103,7 +103,7 @@
 | files | `write_file` | W | FILES_WRITE (path) | новый |
 | files | `move_file` | W | FILES_WRITE (src, dst) | новый |
 | files | `delete_file` | W ! | FILES_WRITE (path) | новый |
-| build | `compile_document` | X | BUILD_RUN | агент |
+| build | `compile_document` | X | BUILD_RUN | агент; в MCP `wait` и ожидание до 45 с, дальше `compile_id` для `get_compile` |
 | build | `list_compiles` | R | OUTPUT_READ | новый |
 | build | `get_compile` | R | OUTPUT_READ | новый |
 | build | `cancel_compile` | X | BUILD_RUN | новый |
