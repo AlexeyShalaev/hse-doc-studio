@@ -13,6 +13,8 @@ const AuthorSchema = z.object({
   // Бэкенд (Pydantic) сериализует незаполненные поля как null; .optional()
   // пропускает только undefined — поэтому везде .nullish().
   group: z.string().nullish(),
+  // E-mail автора: в настройках не редактируется, но обязан пережить PATCH.
+  email: z.string().nullish(),
   // Team mode: folder slug of the author's personal docs ("ivanov").
   slug: z.string().nullish(),
   // Per-author topic (each team member defends their own subtopic).

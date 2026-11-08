@@ -1,9 +1,11 @@
-"""Руководитель, соруководитель и авторы проекта: тот же сценарий `UpdateProjectUC`, что у PATCH проекта в вебе.
+"""Руководители и авторы проекта: тот же сценарий `UpdateProjectUC`, что у PATCH проекта в вебе.
 
 Права те же, что у маршрута (PROJECT_SETTINGS и запрет записи в проект «только для чтения»), их проверяет
 `CallMcpToolUC` по таблице каталога. Здесь только разбор аргументов: поля человека дополняют текущие значения,
 список авторов заменяет текущий целиком, а у авторов, узнанных по slug или месту в списке, сохраняются поля,
-которых в аргументах нет (почта, тема, комплект и мета team-проекта). Каждое изменение пишется в аудит.
+которых в аргументах нет (почта, тема, комплект и мета team-проекта). `author` меняет одного автора, не трогая
+список: в командном проекте его выбирают по slug. Пустая строка очищает поле, пустое ФИО руководителя убирает
+его из проекта. Каждое изменение пишется в аудит.
 """
 
 from __future__ import annotations
@@ -16,14 +18,16 @@ from hse_doc_studio.core.agent.entities import AgentToolContext, ToolResult, Too
 from hse_doc_studio.core.entities import Project
 from hse_doc_studio.core.enums import PersonRole, ToolKind
 from hse_doc_studio.core.i18n import localized_error
+from hse_doc_studio.core.identity.normalize import is_valid_email
 from hse_doc_studio.core.mcp.protocols import IMcpChangeAudit
+from hse_doc_studio.core.team import is_team
 from hse_doc_studio.core.value_objects import Author, Person
 from hse_doc_studio.use_cases.mcp.tools._base import ArgumentError, McpTool, json_result, project_schema
 from hse_doc_studio.use_cases.projects.get_project import GetProjectInput, GetProjectUC
 from hse_doc_studio.use_cases.projects.update_project import UpdateProjectInput, UpdateProjectUC
 
 PEOPLE_AUDIT_ACTION = "project.people_update"
-_PERSON_FIELDS = ("supervisor", "co_supervisor")
+_PERSON_FIELDS = ("supervisor", "co_supervisor", "academic_supervisor")
 _MAX_AUTHORS = 20
 _MAX_TEXT = 300
 
@@ -33,10 +37,10 @@ def _person_schema(who: str) -> dict[str, Any]:
         "type": "object",
         "description": (
             f"{who}: переданные поля заменяют текущие, остальные сохраняются. Пустая строка очищает "
-            "должность или степень."
+            "должность или степень, пустое ФИО убирает человека из проекта."
         ),
         "properties": {
-            "name": {"type": "string", "description": "ФИО"},
+            "name": {"type": "string", "description": "ФИО, например «С. А. Шершаков»"},
             "title": {"type": "string", "description": "Должность, например «доцент департамента ...»"},
             "degree": {"type": "string", "description": "Учёная степень или звание, например «канд. техн. наук»"},
             "role": {
@@ -48,35 +52,42 @@ def _person_schema(who: str) -> dict[str, Any]:
     }
 
 
+_AUTHOR_FIELDS: dict[str, Any] = {
+    "name": {"type": "string", "description": "ФИО"},
+    "group": {"type": "string", "description": "Группа, например «БПИ221»; пустая строка очищает"},
+    "email": {"type": "string", "description": "E-mail; пустая строка очищает"},
+    "slug": {"type": "string", "description": "slug существующего автора из get_project"},
+}
+
 _SPEC = ToolSpec(
     name="set_project_people",
     description=(
-        "Изменить руководителя, соруководителя и авторов проекта: они попадают на титульный лист, в заявку "
-        "и заявление. Передай только то, что меняешь. authors заменяет список целиком, первый автор идёт на "
-        "титульный лист; у существующих авторов передай slug из get_project, чтобы сохранить их тему и "
-        "комплект. Убрать соруководителя или руководителя: clear."
+        "Изменить руководителей и авторов проекта: они попадают на титульный лист, в заявку и заявление. "
+        "Передай только то, что меняешь; пустая строка очищает поле. author меняет одного автора: в командном "
+        "проекте выбери его по slug из get_project, в одиночном меняется первый автор. authors заменяет список "
+        "целиком. Убрать руководителя: clear или пустое name. "
+        'Пример: {"supervisor": {"name": "С. А. Шершаков", "degree": "канд. техн. наук"}, '
+        '"author": {"group": "МПИ251", "email": "ivanov@edu.hse.ru"}}'
     ),
     parameters=project_schema(
         {
-            "supervisor": _person_schema("Руководитель"),
+            "supervisor": _person_schema("Научный руководитель"),
             "co_supervisor": _person_schema("Соруководитель"),
+            "academic_supervisor": _person_schema("Академический руководитель программы"),
+            "author": {
+                "type": "object",
+                "description": "Один автор: переданные поля заменяют текущие, остальные сохраняются",
+                "properties": _AUTHOR_FIELDS,
+            },
             "authors": {
                 "type": "array",
-                "description": "Полный список авторов по порядку",
-                "items": {
-                    "type": "object",
-                    "properties": {
-                        "name": {"type": "string", "description": "ФИО"},
-                        "group": {"type": "string", "description": "Группа, например «БПИ221»"},
-                        "slug": {"type": "string", "description": "slug существующего автора из get_project"},
-                    },
-                    "required": ["name"],
-                },
+                "description": "Полный список авторов по порядку; первый идёт на титульный лист",
+                "items": {"type": "object", "properties": _AUTHOR_FIELDS, "required": ["name"]},
             },
             "clear": {
                 "type": "array",
                 "items": {"type": "string", "enum": list(_PERSON_FIELDS)},
-                "description": "Кого убрать из проекта: supervisor, co_supervisor",
+                "description": "Кого убрать из проекта",
             },
         }
     ),
@@ -100,11 +111,22 @@ def _text(raw: Mapping[str, object], key: str, where: str) -> str | None:
     return value
 
 
-def merge_person(current: Person | None, raw: object, where: str) -> Person:
-    """Поля из аргумента поверх текущего человека; имя обязательно, роль по умолчанию university."""
+def _email(raw: Mapping[str, object], where: str) -> str | None:
+    value = _text(raw, "email", where)
+    if value and not is_valid_email(value):
+        raise ArgumentError(
+            localized_error(f"{where}.email: неверный адрес {value!r}", f"{where}.email: invalid address {value!r}")
+        )
+    return value
+
+
+def merge_person(current: Person | None, raw: object, where: str) -> Person | None:
+    """Поля из аргумента поверх текущего человека; роль по умолчанию university, пустое ФИО: человека нет."""
     if not isinstance(raw, Mapping):
         raise ArgumentError(localized_error(f"{where}: ожидается объект", f"{where}: an object is expected"))
     name = _text(raw, "name", where)
+    if name == "":
+        return None
     title = _text(raw, "title", where)
     degree = _text(raw, "degree", where)
     role_raw = _text(raw, "role", where)
@@ -125,8 +147,11 @@ def merge_person(current: Person | None, raw: object, where: str) -> Person:
     )
 
 
-def _author_items(raw: object) -> list[tuple[str, str | None, str | None]]:
-    """(ФИО, группа, slug) каждого автора из аргумента; группа None: не передана."""
+_AuthorItem = tuple[str, str | None, str | None, str | None]
+
+
+def _author_items(raw: object) -> list[_AuthorItem]:
+    """(ФИО, группа, e-mail, slug) каждого автора из аргумента; группа и e-mail None: не переданы."""
     if not isinstance(raw, list) or not raw:
         raise ArgumentError(
             localized_error("authors: нужен непустой список авторов", "authors: a non-empty list is expected")
@@ -135,7 +160,7 @@ def _author_items(raw: object) -> list[tuple[str, str | None, str | None]]:
         raise ArgumentError(
             localized_error(f"authors: не больше {_MAX_AUTHORS} авторов", f"authors: at most {_MAX_AUTHORS} authors")
         )
-    items: list[tuple[str, str | None, str | None]] = []
+    items: list[_AuthorItem] = []
     for index, item in enumerate(raw):
         where = f"authors[{index}]"
         if not isinstance(item, Mapping):
@@ -143,7 +168,7 @@ def _author_items(raw: object) -> list[tuple[str, str | None, str | None]]:
         name = _text(item, "name", where)
         if not name:
             raise ArgumentError(localized_error(f"{where}: укажите ФИО (name)", f"{where}: specify the name"))
-        items.append((name, _text(item, "group", where), _text(item, "slug", where) or None))
+        items.append((name, _text(item, "group", where), _email(item, where), _text(item, "slug", where) or None))
     return items
 
 
@@ -151,19 +176,73 @@ def merge_authors(current: Sequence[Author], raw: object) -> list[Author]:
     """Новый список авторов. Автор узнаётся по slug, а без slug по месту в списке, если там не узнанный по slug."""
     items = _author_items(raw)
     by_slug = {a.slug: a for a in current if a.slug}
-    claimed = {slug for _, _, slug in items if slug in by_slug}
+    claimed = {slug for *_, slug in items if slug in by_slug}
     result: list[Author] = []
-    for index, (name, group, slug) in enumerate(items):
+    for index, (name, group, email, slug) in enumerate(items):
         base = by_slug.get(slug) if slug else None
         if base is None and slug is None and index < len(current) and current[index].slug not in claimed:
             base = current[index]
         if base is None:
             # Новый автор: slug team-проекта выведет сценарий из фамилии, чужой slug из аргументов не берём.
-            result.append(Author(name=name, group=group or None))
+            result.append(Author(name=name, group=group or None, email=email or None))
             continue
-        kept_group = (group or None) if group is not None else base.group
-        result.append(dataclasses.replace(base, name=name, group=kept_group))
+        result.append(
+            dataclasses.replace(base, name=name, group=_replaced(group, base.group), email=_replaced(email, base.email))
+        )
     return result
+
+
+def _replaced(value: str | None, current: str | None) -> str | None:
+    """Новое значение текстового поля: None сохраняет текущее, пустая строка очищает."""
+    return current if value is None else (value or None)
+
+
+def update_author(project: Project, raw: object) -> list[Author]:
+    """Список авторов, где один изменён: по slug, а в одиночном проекте без slug первый (или новый)."""
+    where = "author"
+    if not isinstance(raw, Mapping):
+        raise ArgumentError(localized_error(f"{where}: ожидается объект", f"{where}: an object is expected"))
+    name, group, email = _text(raw, "name", where), _text(raw, "group", where), _email(raw, where)
+    slug = _text(raw, "slug", where)
+    if name is None and group is None and email is None:
+        raise ArgumentError(
+            localized_error(f"{where}: передайте name, group или email", f"{where}: pass name, group or email")
+        )
+    if name == "":
+        raise ArgumentError(localized_error(f"{where}.name: ФИО нельзя очистить", f"{where}.name: cannot be cleared"))
+    authors = list(project.authors)
+    index = _author_index(project, slug)
+    if index is None:
+        if not name:
+            raise ArgumentError(localized_error(f"{where}: укажите ФИО (name)", f"{where}: specify the name"))
+        return [Author(name=name, group=group or None, email=email or None)]
+    base = authors[index]
+    authors[index] = dataclasses.replace(
+        base, name=name or base.name, group=_replaced(group, base.group), email=_replaced(email, base.email)
+    )
+    return authors
+
+
+def _author_index(project: Project, slug: str | None) -> int | None:
+    """Место автора в списке; None: в одиночном проекте авторов ещё нет."""
+    if slug:
+        for index, author in enumerate(project.authors):
+            if author.slug == slug:
+                return index
+        known = ", ".join(a.slug for a in project.authors if a.slug) or "-"
+        raise ArgumentError(
+            localized_error(
+                f"author.slug: нет автора {slug!r}, есть: {known}", f"author.slug: no author {slug!r}, known: {known}"
+            )
+        )
+    if is_team(project):
+        raise ArgumentError(
+            localized_error(
+                "author: в командном проекте укажите slug автора из get_project",
+                "author: in a team project pass the author's slug from get_project",
+            )
+        )
+    return 0 if project.authors else None
 
 
 def _cleared(args: Mapping[str, object]) -> set[str]:
@@ -171,7 +250,8 @@ def _cleared(args: Mapping[str, object]) -> set[str]:
     if not isinstance(raw, list) or any(c not in _PERSON_FIELDS for c in raw):
         raise ArgumentError(
             localized_error(
-                "clear: список из supervisor и co_supervisor", "clear: a list of supervisor and co_supervisor"
+                "clear: список из supervisor, co_supervisor и academic_supervisor",
+                "clear: a list of supervisor, co_supervisor and academic_supervisor",
             )
         )
     for field in raw:
@@ -182,6 +262,18 @@ def _cleared(args: Mapping[str, object]) -> set[str]:
     return set(raw)
 
 
+def _authors_change(project: Project, args: Mapping[str, object]) -> list[Author] | None:
+    """Новый список авторов из `authors` (весь список) или `author` (один автор); None — авторов не меняют."""
+    whole, single = args.get("authors"), args.get("author")
+    if whole is not None and single is not None:
+        raise ArgumentError(localized_error("передайте author или authors, не оба", "pass author or authors, not both"))
+    if whole is not None:
+        return merge_authors(project.authors, whole)
+    if single is not None:
+        return update_author(project, single)
+    return None
+
+
 def _person_view(person: Person | None) -> dict[str, object] | None:
     if person is None:
         return None
@@ -189,7 +281,7 @@ def _person_view(person: Person | None) -> dict[str, object] | None:
 
 
 def _authors_view(authors: Sequence[Author]) -> list[dict[str, object]]:
-    return [{"name": a.name, "group": a.group, "slug": a.slug} for a in authors]
+    return [{"name": a.name, "group": a.group, "email": a.email, "slug": a.slug} for a in authors]
 
 
 def _view(project: Project, field: str) -> object:
@@ -232,6 +324,7 @@ class SetProjectPeopleTool(McpTool):
                 "authors": _authors_view(updated.authors),
                 "supervisor": _person_view(updated.supervisor),
                 "co_supervisor": _person_view(updated.co_supervisor),
+                "academic_supervisor": _person_view(updated.academic_supervisor),
             }
         )
 
@@ -245,13 +338,14 @@ class SetProjectPeopleTool(McpTool):
                 changes[field] = None
             elif raw is not None:
                 changes[field] = merge_person(getattr(project, field), raw, field)
-        if args.get("authors") is not None:
-            changes["authors"] = merge_authors(project.authors, args.get("authors"))
+        authors = _authors_change(project, args)
+        if authors is not None:
+            changes["authors"] = authors
         if not changes:
             raise ArgumentError(
                 localized_error(
-                    "передайте supervisor, co_supervisor, authors или clear",
-                    "pass supervisor, co_supervisor, authors or clear",
+                    "передайте supervisor, co_supervisor, academic_supervisor, author, authors или clear",
+                    "pass supervisor, co_supervisor, academic_supervisor, author, authors or clear",
                 )
             )
         return changes

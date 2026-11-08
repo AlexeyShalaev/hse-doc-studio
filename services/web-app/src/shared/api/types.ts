@@ -167,6 +167,9 @@ export type VersionDetailResponse = {
 export type AuthorDto = {
   name: string;
   group?: string;
+  // E-mail автора (заполняется через MCP); PATCH заменяет список целиком,
+  // поэтому настройки обязаны вернуть его как есть.
+  email?: string | null;
   // Team mode: folder slug the author's personal docs live under ("ivanov").
   slug?: string | null;
   // Per-author topic (each team member defends their own subtopic).
