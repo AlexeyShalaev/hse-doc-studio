@@ -4,5 +4,6 @@
   "inviter_name": "Анна Петрова",
   "role": "reviewer",
   "email_hint": "p***@hse.ru",
-  "registration_token": null
+  "registration_token": null,
+  "message": "Здравствуйте!\n\nПриглашаю вас в проект «ВКР: Анализ требований» в HSE Doc Studio в роли рецензента. Здесь можно смотреть документы и оставлять замечания.\n\nС уважением,\nАнна Петрова"
 }

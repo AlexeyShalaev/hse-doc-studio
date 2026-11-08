@@ -1,0 +1,26 @@
+{
+  "greeting": "Hello!",
+  "greeting_named": "Hello, {name}!",
+  "invite": "I would like to invite you to the project “{project}” in HSE Doc Studio.",
+  "invite_as": "I would like to invite you to the project “{project}” in HSE Doc Studio as {role}.",
+  "topic": "Topic: “{topic}”.",
+  "work_kind": "Type of work: {kind}.",
+  "documents": " ({documents})",
+  "access": {
+    "reader": "Here you can view the documents{documents}.",
+    "reviewer": "Here you can view the documents{documents} and leave comments.",
+    "editor": "Here you can view and edit the documents{documents} and leave comments."
+  },
+  "role": {
+    "supervisor": "the supervisor",
+    "co_supervisor": "the co-supervisor",
+    "academic_supervisor": "the academic supervisor",
+    "author": "a co-author",
+    "reader": "a reader",
+    "reviewer": "a reviewer",
+    "editor": "an editor"
+  },
+  "closing": "Best regards,",
+  "signature": "{name}",
+  "signature_group": "{name}, group {group}"
+}
