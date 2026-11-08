@@ -20,6 +20,7 @@ from hse_doc_studio.core.mcp.protocols import IDependencyResolver
 from hse_doc_studio.core.rate_limit import COMPILE, GIT_SYNC, UPLOAD, RateRule
 from hse_doc_studio.use_cases.chat._registry import ToolRegistry
 from hse_doc_studio.use_cases.mcp.tools import admin, build, cloud, files, git, people, projects, review, submission
+from hse_doc_studio.use_cases.mcp.tools import template as template_tools
 from hse_doc_studio.use_cases.mcp.tools._base import PROJECT_ID_SCHEMA, McpTool
 
 # Записи, которые HTTP пропускает и в проект «только для чтения» (api/guards.py `_ALLOWED_SUFFIXES` и DELETE):
@@ -90,6 +91,10 @@ MCP_TOOL_RULES: tuple[McpToolRule, ...] = (
     _rule("set_language", _G.projects, _W, Action.PROJECT_SETTINGS),
     _rule("delete_project", _G.projects, _X, Action.PROJECT_DELETE, dangerous=True),
     _rule("clone_cloud_project", _G.projects, _X, local_only=True, rate=GIT_SYNC),
+    # Обновление шаблона: статус видит участник, план и применение как у маршрутов template-update
+    _rule("template_update_status", _G.projects, _R, Action.PROJECT_VIEW),
+    _rule("plan_template_update", _G.projects, _X, Action.TEMPLATE_MANAGE),
+    _rule("apply_template_update", _G.projects, _X, Action.TEMPLATE_MANAGE),
     # Документы и файлы
     _rule("list_documents", _G.files, _R, Action.PROJECT_VIEW),
     _rule("list_files", _G.files, _R, Action.SOURCES_READ),
@@ -151,6 +156,9 @@ MCP_TOOL_CLASSES: tuple[type[McpTool], ...] = (
     projects.DeleteProjectTool,
     people.SetProjectPeopleTool,
     cloud.CloneCloudProjectTool,
+    template_tools.TemplateUpdateStatusTool,
+    template_tools.PlanTemplateUpdateTool,
+    template_tools.ApplyTemplateUpdateTool,
     files.ListFilesTool,
     files.WriteFileTool,
     files.MoveFileTool,

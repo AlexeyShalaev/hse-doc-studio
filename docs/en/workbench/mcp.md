@@ -69,7 +69,7 @@ Ready-made configs with your address are in the Studio: **Settings → AI client
 
 ## What is available
 
-- **Tools.** Projects (list, card, create, metadata, supervisor and authors), files (tree, read, search, edit, write, move), builds (run and wait for the result, history, log, cancel), checks and the normcontrol report, requirements, review comments (cloud), history and git sync, submission profiles and packages, signature status. Project tools take `project_id`; start with `list_projects`.
+- **Tools.** Projects (list, card, create, metadata, supervisor and authors, template update), files (tree, read, search, edit, write, move), builds (run and wait for the result, history, log, cancel), checks and the normcontrol report, requirements, review comments (cloud), history and git sync, submission profiles and packages, signature status. Project tools take `project_id`; start with `list_projects`.
 - **Resources.** `studio://projects`, the project card `studio://projects/<id>`, files `studio://projects/<id>/files/<path>` and build PDFs.
 - **Prompts.** `fix_build`, `normcontrol` (go through findings), `review_changes` (describe changes before a snapshot).
 
@@ -82,6 +82,11 @@ Ready-made configs with your address are in the Studio: **Settings → AI client
     - `clear: ["co_supervisor"]` removes the co-supervisor (`supervisor` works the same way).
     - Every change is audited: in the cloud as a `project.people_update` event with the old and new values; locally the call is in the MCP log.
 - **`clone_cloud_project`** (local Studio only) downloads a project from a cloud Studio, like the “Open” button of a cloud project in the list. Pass the project `url`, such as `https://studio.example.org/projects/<id>/`, or `project_id` if the server is already connected (`server` is only needed when several servers are connected). The Studio uses the saved server login ([connecting](../start/local-from-cloud.md#connecting)); no token is needed in the arguments and none appears in the answer; an address with a login or token is rejected. The project goes to the folder for cloud projects and stays linked to the server. The download runs in the background: the tool waits up to `wait_s` seconds (60 by default), and if that is not enough, calling it again with the same arguments picks up the same download. A project already on the computer is not downloaded again.
+- **Template update** works like the “Update template” dialog in the project settings.
+    - `template_update_status` shows the project template version and the available updates: class (`patch`, `minor`, `major`), what is new and what breaks, for example `2026.1.1` and the recommended `2026.1.2`.
+    - `plan_template_update` with `to_version` shows what happens to each file (`update`, `add`, `delete`, `merge`, `conflict`) and returns a `fingerprint`. Project files are not changed.
+    - `apply_template_update` with `to_version` and `fingerprint` applies exactly that plan; if the project changed meanwhile, make a new plan. `resolutions` decides conflicts (`{"path": "mine" | "theirs" | "markers"}`); by default your file is kept. The Studio takes a history snapshot first; the update can be undone in the project settings.
+    - Planning and applying need the right to manage the project template (the owner) and a writable project. In the cloud, applying is audited (`project.template_update`).
 
 Dangerous tools (deleting a project or a file, rewinding history, syncing with a git remote) are off by default: the administrator (cloud) or you (local) turns them on one by one. Signing documents with an electronic signature is not available over MCP.
 
