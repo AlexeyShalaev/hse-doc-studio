@@ -292,10 +292,10 @@ class RunnerInstallService:
         except InstallError as exc:
             if isinstance(exc, UpgradeError):
                 previous = exc.previous
-            await self._fail_upgrade(actor_id, host, job, before, previous, exc.code, exc.detail)
+            await self._fail_upgrade(actor, host, job, runner, previous, exc.code, exc.detail)
         except Exception:
             logger.exception("runner_upgrade_failed", job=job.id, target=job.target.value)
-            await self._fail_upgrade(actor_id, host, job, before, previous, "unexpected", "")
+            await self._fail_upgrade(actor, host, job, runner, previous, "unexpected", "")
 
     async def _wait_reconnected(
         self, job: InstallJob, actor: Actor, runner: Runner | None, since: datetime
@@ -309,32 +309,45 @@ class RunnerInstallService:
             self._jobs.set_step(job, "reconnect", InstallStepState.skipped, "no_runner")
             return None
         self._jobs.set_step(job, "reconnect", InstallStepState.running)
+        outcome, seen_version = await self._await_version(actor, runner.id, self._version, since)
+        if outcome == "revoked":
+            raise InstallError("runner_revoked")
+        if outcome == "timeout":
+            raise InstallError("reconnect_timeout", seen_version)
+        self._jobs.set_step(job, "reconnect", InstallStepState.done, seen_version)
+        return seen_version
+
+    async def _await_version(self, actor: Actor, runner_id: str, version: str, since: datetime) -> tuple[str, str]:
+        """Ждать сигнала раннера позже `since` с версией `version` (не дольше шага «снова на связи»).
+
+        Итог: (`ok`, версия), (`revoked`, ``) или (`timeout`, последняя замеченная версия).
+        """
         seen_version = ""
         waited = 0.0
         while waited < self._register_timeout_s:
-            current = next((r for r in await self._instance_runners(actor) if r.id == runner.id), None)
+            current = next((r for r in await self._instance_runners(actor) if r.id == runner_id), None)
             if current is None or current.revoked_at is not None:
-                raise InstallError("runner_revoked")
+                return "revoked", ""
             if current.last_seen_at is not None and current.last_seen_at >= since:
                 seen_version = current.version
-                if current.version == self._version:
-                    self._jobs.set_step(job, "reconnect", InstallStepState.done, current.version)
-                    return current.version
+                if current.version == version:
+                    return "ok", current.version
             await asyncio.sleep(self._poll_s)
             waited += self._poll_s
-        raise InstallError("reconnect_timeout", seen_version)
+        return "timeout", seen_version
 
     async def _fail_upgrade(  # noqa: PLR0913
         self,
-        actor_id: str,
+        actor: Actor,
         host: ILocalRunnerHost,
         job: InstallJob,
-        before: str | None,
+        runner: Runner | None,
         previous: PreviousRelease | None,
         code: str,
         detail: str,
     ) -> None:
         """Обновление не удалось: если установку уже заменили, вернуть прежнюю версию отдельным шагом, затем итог."""
+        before = runner.version if runner is not None else None
         for step in job.steps:
             if step.state is InstallStepState.running:
                 step.state = InstallStepState.failed
@@ -349,32 +362,47 @@ class RunnerInstallService:
             "rolled_back": False,
         }
         if previous is not None:
-            await self._rollback(host, job, before, previous)
+            await self._rollback(actor, host, job, runner, previous)
             details["rolled_back"] = bool(job.rolled_back)
             if job.rollback_error is not None:
                 details["rollback_error"] = job.rollback_error
+            if job.rollback_reconnected is not None:
+                details["rollback_reconnected"] = job.rollback_reconnected
         job.state = InstallJobState.failed
-        await self._record("runner_install.local.upgrade_failed", actor_id, job, details)
+        await self._record("runner_install.local.upgrade_failed", actor.id or "", job, details)
 
     async def _rollback(
-        self, host: ILocalRunnerHost, job: InstallJob, before: str | None, previous: PreviousRelease
+        self, actor: Actor, host: ILocalRunnerHost, job: InstallJob, runner: Runner | None, previous: PreviousRelease
     ) -> None:
-        """Шаг «Откат на прежнюю версию»: хост возвращает прежний Deployment или контейнер и ждёт, что он поднялся."""
+        """Шаг «Откат на прежнюю версию»: хост возвращает прежний Deployment или контейнер и ждёт, что он поднялся,
+        затем Студия ждёт, что раннер вышел на связь с прежней версией (как шаг «снова на связи»).
+
+        Не вышел: откат состоялся (`rolled_back`), но шаг помечен ошибкой и `rollback_reconnected` ложно.
+        """
+        before = runner.version if runner is not None else None
         job.steps.append(InstallStep(ROLLBACK_STEP))
         self._jobs.set_step(job, ROLLBACK_STEP, InstallStepState.running, previous.image)
         version = before or _image_tag(previous.image)
+        started = utc_now()
         try:
             await host.rollback(job.name, previous)
         except InstallError as exc:
             job.rolled_back, job.rollback_error = False, exc.code
             self._jobs.set_step(job, ROLLBACK_STEP, InstallStepState.failed, exc.detail[:400])
+            return
         except Exception:
             logger.exception("runner_rollback_failed", job=job.id, target=job.target.value)
             job.rolled_back, job.rollback_error = False, "unexpected"
             self._jobs.set_step(job, ROLLBACK_STEP, InstallStepState.failed, "")
-        else:
-            job.rolled_back, job.rollback_version = True, version
+            return
+        job.rolled_back, job.rollback_version = True, version
+        if runner is None or not before:
             self._jobs.set_step(job, ROLLBACK_STEP, InstallStepState.done, version)
+            return
+        outcome, _ = await self._await_version(actor, runner.id, before, started)
+        job.rollback_reconnected = outcome == "ok"
+        state = InstallStepState.done if job.rollback_reconnected else InstallStepState.failed
+        self._jobs.set_step(job, ROLLBACK_STEP, state, version)
 
     @staticmethod
     def _runner_name(requested: str | None) -> str:

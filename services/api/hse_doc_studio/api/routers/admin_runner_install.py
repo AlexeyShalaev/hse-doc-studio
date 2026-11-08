@@ -86,6 +86,7 @@ def job_info(job: InstallJob) -> InstallJobInfo:
         rolled_back=job.rolled_back,
         rollback_version=job.rollback_version,
         rollback_error=job.rollback_error,
+        rollback_reconnected=job.rollback_reconnected,
     )
 
 

@@ -141,6 +141,8 @@ class InstallJob:
     rolled_back: bool | None = None
     rollback_version: str = ""
     rollback_error: str | None = None
+    # Раннер вышел на связь с прежней версией после отката; None, если отката не было или раннера в Студии нет.
+    rollback_reconnected: bool | None = None
 
     def step(self, key: str) -> InstallStep:
         for item in self.steps:

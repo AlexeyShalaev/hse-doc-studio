@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import asyncio
 from contextlib import asynccontextmanager
-from datetime import timedelta
+from datetime import UTC, datetime, timedelta
 
 import pytest
 from hse_doc_studio.core.access.entities import Actor
@@ -217,13 +217,24 @@ async def _finished(world: World, job_id: str):  # type: ignore[no-untyped-def]
     raise AssertionError("upgrade did not finish")
 
 
+def _back_on(world: World, runner_id: str, version: str) -> None:
+    """Прежний процесс после отката: тот же раннер выходит на связь с прежней версией."""
+
+    async def announce() -> None:
+        await world.runners.touch(runner_id, datetime.now(UTC), version=version)
+
+    world.host.on_rolled_back = announce
+
+
 async def test__upgrade__runner_that_does_not_come_back_is_rolled_back(world: World) -> None:
-    await world.runner()
+    runner_id = await world.runner()
+    _back_on(world, runner_id, "1.0.0")
 
     job = await _finished(world, (await world.service.start_upgrade(ADMIN, InstallTarget.docker, NAME)).id)
 
     assert job.error_code == "reconnect_timeout"
     assert (job.rolled_back, job.rollback_version, job.rollback_error) == (True, "1.0.0", None)
+    assert job.rollback_reconnected is True
     assert [(s.key, s.state.value, s.detail) for s in job.steps][-2:] == [
         ("reconnect", "failed", ""),
         ("rollback", "done", "1.0.0"),
@@ -231,6 +242,19 @@ async def test__upgrade__runner_that_does_not_come_back_is_rolled_back(world: Wo
     assert world.host.rolled_back == [(NAME, "registry.example/hds:1.0.0")]
     failed = next(e for e in await world.audit.list() if e.action == "runner_install.local.upgrade_failed")
     assert (failed.details["rolled_back"], failed.details["code"]) == (True, "reconnect_timeout")
+    assert failed.details["rollback_reconnected"] is True
+
+
+async def test__upgrade__rollback_whose_runner_stays_offline_says_so(world: World) -> None:
+    await world.runner()
+
+    job = await _finished(world, (await world.service.start_upgrade(ADMIN, InstallTarget.docker, NAME)).id)
+
+    # Прежний Deployment или контейнер вернулся, но раннер с прежней версией на связь не вышел.
+    assert (job.rolled_back, job.rollback_version, job.rollback_reconnected) == (True, "1.0.0", False)
+    assert (job.steps[-1].key, job.steps[-1].state.value) == ("rollback", "failed")
+    failed = next(e for e in await world.audit.list() if e.action == "runner_install.local.upgrade_failed")
+    assert (failed.details["rolled_back"], failed.details["rollback_reconnected"]) == (True, False)
 
 
 async def test__upgrade__failure_after_replacement_rolls_back_to_the_image_tag(world: World) -> None:
@@ -240,9 +264,10 @@ async def test__upgrade__failure_after_replacement_rolls_back_to_the_image_tag(w
 
     job = await _finished(world, (await world.service.start_upgrade(ADMIN, InstallTarget.docker, NAME)).id)
 
-    # Раннера в Студии нет: версия берётся из тега прежнего образа.
+    # Раннера в Студии нет: версия берётся из тега прежнего образа, ждать на связи некого.
     assert (job.error_code, job.rolled_back, job.rollback_version) == ("rollout_failed", True, "0.9.1")
-    assert job.steps[-1].key == "rollback"
+    assert job.rollback_reconnected is None
+    assert (job.steps[-1].key, job.steps[-1].state.value) == ("rollback", "done")
 
 
 async def test__upgrade__failed_rollback_is_reported_with_its_reason(world: World) -> None:

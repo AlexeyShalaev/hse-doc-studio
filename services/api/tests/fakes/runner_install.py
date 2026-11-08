@@ -43,6 +43,8 @@ class FakeLocalHost:
         self.on_upgraded: Callable[[], Awaitable[None]] | None = None
         self.rolled_back: list[tuple[str, str]] = []
         self.rollback_fail_with: InstallError | None = None
+        # Что сделать, когда прежняя версия поднялась (например, раннер выходит на связь с прежней версией).
+        self.on_rolled_back: Callable[[], Awaitable[None]] | None = None
         self.remove_fail_with: InstallError | None = None
         # Порядок действий хоста для проверок «что раньше»: общий список можно отдать и другим подменам.
         self.events: list[str] = []
@@ -88,6 +90,8 @@ class FakeLocalHost:
         if self.rollback_fail_with is not None:
             raise self.rollback_fail_with
         self.rolled_back.append((name, previous.image))
+        if self.on_rolled_back is not None:
+            await self.on_rolled_back()
 
     async def list_instances(self) -> list[LocalInstance]:
         return list(self.instances)

@@ -918,7 +918,12 @@ async def test__runner_upgrade__same_version_is_allowed_and_not_outdated(stack: 
 
 async def test__runner_upgrade__runner_that_does_not_come_back_is_a_timeout(stack: _Stack) -> None:
     boss = await stack.users.add("boss", admin=True)
-    await _installed_runner(stack)
+    runner_id = await _installed_runner(stack)
+
+    async def back_on_old_version() -> None:
+        await stack.runners.touch(runner_id, datetime.now(UTC), version="1.0.0")
+
+    stack.install_host.on_rolled_back = back_on_old_version
 
     started = await stack.client.post("/api/admin/runner-install/local/docker/hse-runner-abc123/upgrade", headers=boss)
     job = await _finished(stack, started.json()["id"], boss)
@@ -930,11 +935,13 @@ async def test__runner_upgrade__runner_that_does_not_come_back_is_a_timeout(stac
         {"key": "rollback", "state": "done", "detail": "1.0.0"},
     ]
     assert (job["rolled_back"], job["rollback_version"], job["rollback_error"]) == (True, "1.0.0", None)
+    assert job["rollback_reconnected"] is True
     assert stack.install_host.rolled_back == [("hse-runner-abc123", "registry.example/hds:1.0.0")]
     failed = [e for e in await stack.users.audit.list() if e.action == "runner_install.local.upgrade_failed"]
     assert failed[0].details["code"] == "reconnect_timeout"
     assert failed[0].details["from_version"] == "1.0.0"
     assert failed[0].details["rolled_back"] is True
+    assert failed[0].details["rollback_reconnected"] is True
 
 
 async def test__runner_upgrade__failed_rollout_is_rolled_back_and_said_so(stack: _Stack) -> None:
@@ -948,12 +955,16 @@ async def test__runner_upgrade__failed_rollout_is_rolled_back_and_said_so(stack:
     job = await _finished(stack, started.json()["id"], boss)
 
     assert (job["error_code"], job["rolled_back"], job["rollback_version"]) == ("rollout_failed", True, "1.0.0")
+    # Прежняя версия выкатилась, но раннер с ней на связь не вышел: итог и аудит говорят и это.
+    assert job["rollback_reconnected"] is False
     assert [(s["key"], s["state"]) for s in job["steps"]] == [
         ("pull", "failed"),
         ("recreate", "pending"),
         ("reconnect", "pending"),
-        ("rollback", "done"),
+        ("rollback", "failed"),
     ]
+    failed = [e for e in await stack.users.audit.list() if e.action == "runner_install.local.upgrade_failed"]
+    assert (failed[0].details["rolled_back"], failed[0].details["rollback_reconnected"]) == (True, False)
 
 
 async def test__runner_upgrade__failed_rollback_is_reported_in_the_job_and_audit(stack: _Stack) -> None:

@@ -62,6 +62,8 @@ class InstallJobInfo(StrictModel):
     rolled_back: bool | None = None
     rollback_version: str = ""
     rollback_error: str | None = None
+    # После отката раннер вышел на связь с прежней версией; null, если отката не было или раннера в Студии нет.
+    rollback_reconnected: bool | None = None
 
 
 class LocalInstanceInfo(StrictModel):
