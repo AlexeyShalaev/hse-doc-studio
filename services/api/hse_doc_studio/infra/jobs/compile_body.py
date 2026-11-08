@@ -15,7 +15,7 @@ from uuid import UUID
 
 from hse_doc_studio.core.checks.protocols import ICheckRunner
 from hse_doc_studio.core.compile.failure import BUILD_FAILED, FONT_MISSING
-from hse_doc_studio.core.enums import Lang
+from hse_doc_studio.core.enums import CheckSeverity, Lang
 from hse_doc_studio.core.i18n import current_interface_language
 from hse_doc_studio.core.jobs.entities import CheckPlan, CompileJobPayload
 from hse_doc_studio.core.jobs.office import REASON_WRITE_FAILED, OfficeConvertStatus
@@ -30,7 +30,7 @@ from hse_doc_studio.core.system_capacity import (
     SystemCapacity,
     default_max_concurrent_compiles,
 )
-from hse_doc_studio.core.value_objects import CheckResult
+from hse_doc_studio.core.value_objects import CheckLocation, CheckResult
 from hse_doc_studio.infra.compile.concurrency import CompileConcurrencyLimiter
 from hse_doc_studio.infra.compile.latexmk import SENTINEL_DONE as _SENTINEL_DONE
 from hse_doc_studio.infra.compile.latexmk import SENTINEL_FAILED as _SENTINEL_FAILED
@@ -42,6 +42,11 @@ from hse_doc_studio.infra.jobs.office_convert import convert_office_to_sibling
 # (90с тишины → «похоже, зависла») сработал бы ложно. Heartbeat каждые ~25с
 # держит SSE-поток живым, сколько бы очередь ни длилась.
 QUEUE_HEARTBEAT_INTERVAL_S = 25.0
+
+# Сколько ждать фазу проверок после сборки. Не уложились: PDF уже опубликован, сборка остаётся успешной,
+# а вместо результатов проверок одно предупреждение `CHECKS_TIMEOUT_RULE`.
+CHECKS_TIMEOUT_S = 180.0
+CHECKS_TIMEOUT_RULE = "checks:TIMEOUT"
 
 
 def pdf_page_count(pdf_path: Path) -> int | None:
@@ -329,14 +334,43 @@ async def run_checks(  # noqa: PLR0913
     check_runner: ICheckRunner,
     lt_manager: ILanguageCheckService,
     resolve_lt_image: Callable[[], Awaitable[str]],
+    timeout_s: float | None = None,
 ) -> list[CheckResult]:
-    """Фаза проверок после сборки; идёт вне охраны сборки, как и раньше."""
+    """Фаза проверок после сборки; идёт вне охраны сборки и вне таймера тишины TeX, со своим пределом времени."""
     # Live heartbeat: docker-фаза закончилась, а проверки (включая HTTP-вызов
     # LanguageTool) могут идти несколько секунд при открытой шине. Строка не даёт
     # SSE-потоку замолчать, чтобы 90-секундный сторож клиента не сработал.
     log.publish_only(
         "[checks] running checks…" if current_interface_language() is Lang.en else "[checks] выполняются проверки…"
     )
+    # Модульная константа читается в момент вызова: тесты подменяют её без пересборки раннера.
+    limit = CHECKS_TIMEOUT_S if timeout_s is None else timeout_s
+    try:
+        check_results = await asyncio.wait_for(
+            _run_check_rules(
+                plan, payload, workspace, log, outcome_success, check_runner, lt_manager, resolve_lt_image
+            ),
+            timeout=limit,
+        )
+    except TimeoutError:
+        return [_checks_timeout_result(payload.source_file, limit, log)]
+    # Отдельно проигнорированные находки снимаем здесь: id вида `lt:<RULE>`
+    # в каталоге не объявлены, поэтому сопоставляем с rule_id результата.
+    if plan.ignored_rule_ids:
+        check_results = [r for r in check_results if r.rule_id not in plan.ignored_rule_ids]
+    return check_results
+
+
+async def _run_check_rules(  # noqa: PLR0913
+    plan: CheckPlan,
+    payload: CompileJobPayload,
+    workspace: Path,
+    log: JobLogSink,
+    outcome_success: bool,
+    check_runner: ICheckRunner,
+    lt_manager: ILanguageCheckService,
+    resolve_lt_image: Callable[[], Awaitable[str]],
+) -> list[CheckResult]:
     # LanguageTool управляется автоматически: если правило использует движок
     # `external`, контейнер поднимается лениво перед проверками. В custom_mode
     # `external` подавляется принудительно, поэтому там контейнер не нужен.
@@ -355,8 +389,27 @@ async def run_checks(  # noqa: PLR0913
         base_dir=payload.base_dir,
         custom_mode=payload.custom_mode,
     )
-    # Отдельно проигнорированные находки снимаем здесь: id вида `lt:<RULE>`
-    # в каталоге не объявлены, поэтому сопоставляем с rule_id результата.
-    if plan.ignored_rule_ids:
-        check_results = [r for r in check_results if r.rule_id not in plan.ignored_rule_ids]
     return check_results
+
+
+def _checks_timeout_result(source_file: str, limit: float, log: JobLogSink) -> CheckResult:
+    """Проверки не успели: строка в журнал и предупреждение вместо результатов; сборку это не роняет."""
+    en = current_interface_language() is Lang.en
+    log.emit(
+        f"[checks] checks did not finish in {limit:.0f}s and were stopped; the PDF is kept"
+        if en
+        else f"[checks] проверки не уложились в {limit:.0f} с и остановлены; PDF сохранён"
+    )
+    message = (
+        f"Checks did not finish in {limit:.0f} s and were stopped, so their results are incomplete. "
+        "The PDF was built and kept. Build again to rerun the checks."
+        if en
+        else f"Проверки не уложились в {limit:.0f} с и остановлены, их результаты неполные. "
+        "PDF собран и сохранён. Соберите ещё раз, чтобы повторить проверки."
+    )
+    return CheckResult(
+        rule_id=CHECKS_TIMEOUT_RULE,
+        severity=CheckSeverity.warn,
+        message=message,
+        location=CheckLocation(file=source_file, line=None),
+    )

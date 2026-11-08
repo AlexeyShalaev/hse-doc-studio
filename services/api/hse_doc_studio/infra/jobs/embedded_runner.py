@@ -53,6 +53,7 @@ class EmbeddedCompileRunner:
         resolve_lt_image: Callable[[], Awaitable[str]],
         resolve_office_image: Callable[[], Awaitable[str]],
         heartbeat_interval_s: float | None = None,
+        checks_timeout_s: float | None = None,
     ) -> None:
         self._executor = executor
         self._image_manager = image_manager
@@ -65,6 +66,7 @@ class EmbeddedCompileRunner:
         self._resolve_lt_image = resolve_lt_image
         self._resolve_office_image = resolve_office_image
         self._gate = CapacityGate(limiter, capacity_probe, heartbeat_interval_s)
+        self._checks_timeout_s = checks_timeout_s
 
     async def preflight(self, spec: JobSpec) -> None:
         """Не ставит сборку, если образ LaTeX не установлен локально.
@@ -145,6 +147,7 @@ class EmbeddedCompileRunner:
             self._check_runner,
             self._lt_manager,
             self._resolve_lt_image,
+            timeout_s=self._checks_timeout_s,
         )
         error = (
             JobError(JobErrorCategory.internal, outcome.failure_code, outcome.failure_detail or "")

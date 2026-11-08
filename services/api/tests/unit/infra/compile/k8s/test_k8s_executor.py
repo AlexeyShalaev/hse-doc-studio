@@ -28,7 +28,9 @@ def _config(**extra: Any) -> KubernetesExecutorConfig:
     return KubernetesExecutorConfig(namespace="builds", **extra)
 
 
-def _executor(api: FakeKubeApi, *, idle: float = 5.0, **extra: Any) -> KubernetesTexExecutor:
+def _executor(
+    api: FakeKubeApi, *, idle: float = 5.0, probe: float = 30.0, counts_timeout: float = 120.0, **extra: Any
+) -> KubernetesTexExecutor:
     return KubernetesTexExecutor(
         api,
         _config(**extra),
@@ -37,6 +39,8 @@ def _executor(api: FakeKubeApi, *, idle: float = 5.0, **extra: Any) -> Kubernete
         idle_timeout_s=idle,
         poll_s=0.001,
         reconnect_s=0.001,
+        probe_s=probe,
+        counts_timeout_s=counts_timeout,
     )
 
 
@@ -322,6 +326,125 @@ async def test__run__log_stream_reset__reconnects_without_duplicate_lines(tmp_pa
     assert [line for line in lines if line in ("one", "two", "three", "four")] == ["one", "two", "three", "four"]
     assert api.log_requests[0] is None
     assert api.log_requests[1] is not None
+
+
+async def test__run__texcount_errors_glue_end_marker__build_finishes(tmp_path: Path, project: Path) -> None:
+    # Регрессия 0.14.0: texcount с ошибками разбора кончает вывод на « (errors:N)» без перевода строки, и маркер
+    # конца приклеивался к строке счётчиков. Исполнитель не видел конца и через 300 с убивал готовую сборку.
+    async def texcount_errors(pod: FakePod) -> list[str]:
+        build = pod.work / "tz" / ".build" / "tz"
+        build.mkdir(parents=True, exist_ok=True)
+        (build / "main.pdf").write_bytes(b"%PDF-1.5 built")
+        return [
+            "Latexmk: All targets (main.xdv main.pdf) are up-to-date",
+            pod.mark("exit", "0"),
+            pod.mark("words"),
+            pod.mark("words", "344+34+0 (16/0/0/0) Total"),
+            pod.mark("words", " (errors:8)") + pod.mark("chars"),
+            pod.mark("chars", "2030+259+0 (16/0/0/0) Total"),
+            pod.mark("chars", " (errors:8)") + pod.mark("end"),
+        ]
+
+    api = FakeKubeApi(tmp_path / "cluster", build=texcount_errors)
+
+    lines = await _run(_executor(api, idle=60, probe=60), project)
+
+    assert lines[-1] == SENTINEL_DONE, lines
+    assert f"{SENTINEL_WORDS}378:2289" in lines
+    assert not any(api.only_pod().nonce in line for line in lines)
+
+
+async def test__run__log_without_trailing_newline__exit_marker_still_found(tmp_path: Path, project: Path) -> None:
+    async def glued(pod: FakePod) -> list[str]:
+        build = pod.work / "tz" / ".build" / "tz"
+        build.mkdir(parents=True, exist_ok=True)
+        (build / "main.pdf").write_bytes(b"%PDF-1.5 built")
+        return ["Latexmk: last words" + pod.mark("exit", "0"), pod.mark("end")]
+
+    api = FakeKubeApi(tmp_path / "cluster", build=glued)
+
+    lines = await _run(_executor(api, idle=60, probe=60), project)
+
+    assert lines[-1] == SENTINEL_DONE, lines
+    assert "Latexmk: last words" in lines
+
+
+async def test__run__log_stream_hangs_open__reconnects_and_finishes(tmp_path: Path, project: Path) -> None:
+    # Поток kubelet завис, не закрывшись: после `probe_s` тишины исполнитель переподключается с sinceTime.
+    api = FakeKubeApi(tmp_path / "cluster", stall_after=2)
+
+    lines = await _run(_executor(api, idle=60, probe=0.05), project)
+
+    assert lines[-1] == SENTINEL_DONE, lines
+    assert lines.count("latexmk ok") == 1
+    assert f"{SENTINEL_WORDS}6:25" in lines
+    assert len(api.log_requests) >= 2
+    assert api.log_requests[1] is not None
+
+
+async def test__run__markers_never_reach_log__result_read_from_pod_files(tmp_path: Path, project: Path) -> None:
+    # Маркеры в поток не попали, а сборка в поде закончилась: итог берётся из файлов пода через exec.
+    async def no_markers(pod: FakePod) -> list[str]:
+        build = pod.work / "tz" / ".build" / "tz"
+        build.mkdir(parents=True, exist_ok=True)
+        (build / "main.pdf").write_bytes(b"%PDF-1.5 built")
+        pod.probe = "rc:0\nend\nwords:4+1+1 (1/0/0/0) Total\nchars:20+5+0 (1/0/0/0) Total\n"
+        return ["latexmk ok"]
+
+    api = FakeKubeApi(tmp_path / "cluster", build=no_markers)
+
+    lines = await _run(_executor(api, idle=60, probe=0.05), project)
+
+    assert lines[-1] == SENTINEL_DONE, lines
+    assert f"{SENTINEL_WORDS}6:25" in lines
+    assert (project / "tz" / "main.pdf").read_bytes() == b"%PDF-1.5 built"
+
+
+async def test__run__latexmk_failed_seen_only_in_pod_files__failed_not_idle(tmp_path: Path, project: Path) -> None:
+    async def failed_quietly(pod: FakePod) -> list[str]:
+        await failing_build(pod)
+        pod.probe = "rc:12\nend\n"
+        return ["! boom"]
+
+    api = FakeKubeApi(tmp_path / "cluster", build=failed_quietly)
+
+    lines = await _run(_executor(api, idle=60, probe=0.05), project)
+
+    assert lines[-1] == SENTINEL_FAILED
+    assert any("exited with code 12" in line for line in lines)
+    assert not any("no output for" in line for line in lines)
+
+
+async def test__run__texcount_hangs__pdf_kept_without_counts(tmp_path: Path, project: Path) -> None:
+    async def slow_texcount(pod: FakePod) -> list[str]:
+        build = pod.work / "tz" / ".build" / "tz"
+        build.mkdir(parents=True, exist_ok=True)
+        (build / "main.pdf").write_bytes(b"%PDF-1.5 built")
+        pod.probe = "rc:0\n"
+        return ["latexmk ok", pod.mark("exit", "0")]
+
+    api = FakeKubeApi(tmp_path / "cluster", build=slow_texcount)
+
+    lines = await _run(_executor(api, idle=60, probe=0.05, counts_timeout=0.2), project)
+
+    assert lines[-1] == SENTINEL_DONE, lines
+    assert not any(line.startswith(SENTINEL_WORDS) for line in lines)
+    assert any("texcount did not finish" in line for line in lines)
+    assert not any("no output for" in line for line in lines)
+    assert (project / "tz" / "main.pdf").read_bytes() == b"%PDF-1.5 built"
+
+
+async def test__run__silent_latexmk__idle_timeout_despite_probes(tmp_path: Path, project: Path) -> None:
+    async def silent(pod: FakePod) -> list[str]:
+        return ["This is XeTeX"]
+
+    api = FakeKubeApi(tmp_path / "cluster", build=silent)
+
+    lines = await _run(_executor(api, idle=0.3, probe=0.05), project)
+
+    assert lines[-1] == SENTINEL_FAILED
+    assert any("no output for" in line for line in lines)
+    assert sum(1 for cmd in api.execs if cmd[:2] == ["sh", "-c"]) > 2
 
 
 async def test__run__output_over_limit__failed(tmp_path: Path, project: Path) -> None:
