@@ -1,4 +1,7 @@
-"""Установка раннера на этой же машине: токен регистрации, шаги хоста, ожидание регистрации, аудит без секретов."""
+"""Установка раннера на этой же машине: токен регистрации, шаги хоста, ожидание регистрации, аудит без секретов.
+
+Здесь же обновление поставленного отсюда раннера на месте: новый образ и манифест, тот же токен, том и запись в Студии.
+"""
 
 from __future__ import annotations
 
@@ -6,8 +9,8 @@ import asyncio
 import contextlib
 import re
 from collections.abc import Mapping
-from dataclasses import asdict
-from datetime import timedelta
+from dataclasses import asdict, replace
+from datetime import datetime, timedelta
 from uuid import uuid4
 
 import structlog
@@ -15,7 +18,9 @@ import structlog
 from hse_doc_studio.core.access.entities import Actor
 from hse_doc_studio.core.identity.errors import IdentityError, IdentityErrorCode
 from hse_doc_studio.core.identity.protocols import IAuditLog
+from hse_doc_studio.core.identity.session_policy import utc_now
 from hse_doc_studio.core.jobs.errors import RunnerNotFoundError
+from hse_doc_studio.core.jobs.runners import Runner, RunnerOwnerKind
 from hse_doc_studio.core.runner_install import (
     Capability,
     ILocalRunnerHost,
@@ -28,6 +33,7 @@ from hse_doc_studio.core.runner_install import (
     ResourceOverrides,
 )
 from hse_doc_studio.core.runner_install.entities import InstallJobState
+from hse_doc_studio.core.runner_isolation import installed_runner
 from hse_doc_studio.core.uow import IUnitOfWork
 from hse_doc_studio.use_cases.jobs.runners import RunnerRegistry
 from hse_doc_studio.use_cases.runner_install.common import wait_token_used
@@ -71,6 +77,7 @@ class RunnerInstallService:
         *,
         image: str,
         data_dir: str,
+        version: str = "",
         internal_urls: Mapping[InstallTarget, str] | None = None,
         register_timeout_s: float = REGISTER_TIMEOUT_S,
         poll_s: float = REGISTER_POLL_S,
@@ -81,11 +88,17 @@ class RunnerInstallService:
         self._audit = audit
         self._uow = uow
         self._image = image
+        # Версия Студии: её образ ставят установка и обновление. По умолчанию это тег образа.
+        self._version = version or image.rpartition(":")[2]
         self._data_dir = data_dir.rstrip("/")
         self._internal_urls = dict(internal_urls or {})
         self._register_timeout_s = register_timeout_s
         self._poll_s = poll_s
         self._tasks: set[asyncio.Task[None]] = set()
+
+    @property
+    def version(self) -> str:
+        return self._version
 
     async def capabilities(self, actor: Actor) -> dict[InstallTarget, Capability]:
         _require_admin(actor)
@@ -130,12 +143,25 @@ class RunnerInstallService:
         return self._jobs.get(job_id)
 
     async def instances(self, actor: Actor) -> list[LocalInstance]:
+        """Поставленное отсюда, каждое со своей записью раннера в Студии, если она нашлась (по поду или по имени)."""
         _require_admin(actor)
         found: list[LocalInstance] = []
         for host in self._hosts.values():
             if (await host.capability()).available:
                 found.extend(await host.list_instances())
-        return found
+        if not found:
+            return found
+        runners = await self._instance_runners(actor)
+        matched: list[LocalInstance] = []
+        for item in found:
+            runner = installed_runner(item.name, runners)
+            matched.append(
+                replace(item, runner_id=runner.id, runner_version=runner.version) if runner is not None else item
+            )
+        return matched
+
+    async def _instance_runners(self, actor: Actor) -> list[Runner]:
+        return await self._registry.list_runners(actor, owner_kind=RunnerOwnerKind.instance)
 
     async def remove(self, actor: Actor, target: InstallTarget, name: str) -> None:
         actor_id = _require_admin(actor)
@@ -146,6 +172,110 @@ class RunnerInstallService:
             await self._audit.record(
                 "runner_install.local.remove", actor_id=actor_id, target=name, details={"target": target.value}
             )
+
+    async def start_upgrade(self, actor: Actor, target: InstallTarget, name: str) -> InstallJob:
+        """Обновить поставленный отсюда раннер на месте до версии Студии; токен новый не выпускается.
+
+        Разрешено и на той же версии: манифест применяется заново по нынешним правилам. Блокировка общая с установкой
+        этим способом (`InstallBusyError`): два изменения одного хоста одновременно не идут.
+        """
+        actor_id = _require_admin(actor)
+        host = self._hosts.get(target)
+        if host is None:
+            raise InstallUnavailableError("disabled")
+        capability = await host.capability()
+        if not capability.available:
+            raise InstallUnavailableError(capability.reason.value if capability.reason else "disabled")
+        if name not in {i.name for i in await host.list_instances()}:
+            raise RunnerNotFoundError(name)
+        if self._jobs.running(target) is not None:
+            raise InstallBusyError(target.value)
+        runner = installed_runner(name, await self._instance_runners(actor))
+        job = self._jobs.create(target, name, actor_id, (*host.upgrade_steps(), "reconnect"))
+        details: dict[str, object] = {
+            "target": target.value,
+            "from_version": runner.version if runner is not None else None,
+            "to_version": self._version,
+        }
+        if runner is not None:
+            details["runner"] = runner.id
+        await self._record("runner_install.local.upgrade", actor_id, job, details)
+        task = asyncio.create_task(self._run_upgrade(actor, host, job, runner))
+        self._tasks.add(task)
+        task.add_done_callback(self._tasks.discard)
+        return job
+
+    async def _run_upgrade(self, actor: Actor, host: ILocalRunnerHost, job: InstallJob, runner: Runner | None) -> None:
+        actor_id = actor.id or ""
+        before = runner.version if runner is not None else None
+        try:
+
+            async def report(key: str, state: InstallStepState, detail: str) -> None:
+                self._jobs.set_step(job, key, state, detail)
+
+            outcome = await host.upgrade(job.name, self._image, report)
+            restarted = utc_now()
+            after = await self._wait_reconnected(job, actor, runner, restarted)
+            job.state = InstallJobState.succeeded
+            await self._record(
+                "runner_install.local.upgrade_succeeded",
+                actor_id,
+                job,
+                {
+                    "target": job.target.value,
+                    "from_version": before,
+                    "to_version": after,
+                    "from_image": outcome.old_image,
+                    "to_image": outcome.new_image,
+                },
+            )
+        except InstallError as exc:
+            await self._fail_upgrade(actor_id, job, before, exc.code, exc.detail)
+        except Exception:
+            logger.exception("runner_upgrade_failed", job=job.id, target=job.target.value)
+            await self._fail_upgrade(actor_id, job, before, "unexpected", "")
+
+    async def _wait_reconnected(
+        self, job: InstallJob, actor: Actor, runner: Runner | None, since: datetime
+    ) -> str | None:
+        """Раннер снова на связи и сообщил версию Студии; без записи в Студии ждать некого, шаг пропускается.
+
+        Старый процесс к этому времени уже остановлен (Recreate в кластере, `docker stop` рядом), поэтому сигнал позже
+        `since` с нужной версией идёт от нового.
+        """
+        if runner is None:
+            self._jobs.set_step(job, "reconnect", InstallStepState.skipped, "no_runner")
+            return None
+        self._jobs.set_step(job, "reconnect", InstallStepState.running)
+        seen_version = ""
+        waited = 0.0
+        while waited < self._register_timeout_s:
+            current = next((r for r in await self._instance_runners(actor) if r.id == runner.id), None)
+            if current is None or current.revoked_at is not None:
+                raise InstallError("runner_revoked")
+            if current.last_seen_at is not None and current.last_seen_at >= since:
+                seen_version = current.version
+                if current.version == self._version:
+                    self._jobs.set_step(job, "reconnect", InstallStepState.done, current.version)
+                    return current.version
+            await asyncio.sleep(self._poll_s)
+            waited += self._poll_s
+        raise InstallError("reconnect_timeout", seen_version)
+
+    async def _fail_upgrade(self, actor_id: str, job: InstallJob, before: str | None, code: str, detail: str) -> None:
+        for step in job.steps:
+            if step.state is InstallStepState.running:
+                step.state = InstallStepState.failed
+                step.detail = detail[:400]
+        job.state = InstallJobState.failed
+        job.error_code = code
+        job.error_detail = detail[:400]
+        await self._record(
+            "runner_install.local.upgrade_failed",
+            actor_id,
+            job,
+            {"target": job.target.value, "code": code, "from_version": before, "to_version": self._version},
+        )
 
     @staticmethod
     def _runner_name(requested: str | None) -> str:

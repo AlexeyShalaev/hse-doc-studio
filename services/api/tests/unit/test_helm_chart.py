@@ -524,7 +524,7 @@ def test_install_from_ui_is_off_by_default() -> None:
     assert not [n for n in env if "RUNNER_INSTALL" in n]
 
 
-def test_install_from_ui_gives_the_api_only_what_it_creates() -> None:
+def test_install_from_ui_gives_the_api_only_what_it_creates_and_upgrades() -> None:
     docs = _render("-f", str(_INSTALL_UI_VALUES))
     roles = {d["metadata"]["name"]: d for d in _by_kind(docs, "Role")}
     api_role = roles["rel-hse-doc-studio-api-runner-install"]
@@ -532,7 +532,8 @@ def test_install_from_ui_gives_the_api_only_what_it_creates() -> None:
         (g, r): set(rule["verbs"]) for rule in api_role["rules"] for g in rule["apiGroups"] for r in rule["resources"]
     }
 
-    assert granted[("apps", "deployments")] == {"create", "list", "delete"}
+    # update только у Deployment: обновление на месте заменяет его, Secret с токеном и том не трогает.
+    assert granted[("apps", "deployments")] == {"create", "list", "update", "delete"}
     assert granted[("", "secrets")] == {"create", "delete"}
     assert granted[("", "persistentvolumeclaims")] == {"create", "delete"}
     assert not [k for k in granted if k[1] in {"roles", "rolebindings", "serviceaccounts", "pods", "pods/exec"}]

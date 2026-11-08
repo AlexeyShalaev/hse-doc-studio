@@ -9,6 +9,7 @@ from hse_doc_studio.core.runner_install.entities import (
     InstallTarget,
     LocalInstance,
     LocalRunnerSpec,
+    UpgradeOutcome,
 )
 from hse_doc_studio.core.runner_install.resources import ResourceOverrides
 
@@ -33,6 +34,17 @@ class ILocalRunnerHost(Protocol):
     async def install(self, spec: LocalRunnerSpec, report: ProgressReporter) -> None: ...
 
     async def list_instances(self) -> list[LocalInstance]: ...
+
+    def upgrade_steps(self) -> tuple[str, ...]:
+        """Ключи шагов обновления на месте по порядку (кроме общего «раннер снова на связи»)."""
+        ...
+
+    async def upgrade(self, name: str, image: str, report: ProgressReporter) -> UpgradeOutcome:
+        """Поставить установленному отсюда раннеру образ `image`, сохранив имя, токен, том и настройки.
+
+        Нет такой установки: `InstallError("not_installed")`.
+        """
+        ...
 
     async def remove(self, name: str) -> bool:
         """Убрать установленное из админки; False, если такого нет."""

@@ -47,6 +47,7 @@ from hse_doc_studio.core.runner_install import (
     SshTarget,
     UnavailableReason,
 )
+from hse_doc_studio.core.runner_isolation import is_outdated
 from hse_doc_studio.use_cases.admin.model_servers_ssh import ModelServerSshInstaller
 from hse_doc_studio.use_cases.runner_install import (
     FingerprintMismatchError,
@@ -85,13 +86,17 @@ def job_info(job: InstallJob) -> InstallJobInfo:
     )
 
 
-def _instance(item: LocalInstance) -> LocalInstanceInfo:
+def _instance(item: LocalInstance, studio_version: str) -> LocalInstanceInfo:
     return LocalInstanceInfo(
         target=item.target.value,
         name=item.name,
         image=item.image,
         state=item.state,
         created_at=item.created_at,
+        runner_id=item.runner_id,
+        runner_version=item.runner_version,
+        studio_version=studio_version,
+        outdated=item.runner_version is not None and is_outdated(item.runner_version, studio_version),
     )
 
 
@@ -110,7 +115,8 @@ async def local_capabilities(request: Request, response: Response) -> LocalCapab
 @router.get("/local/instances", response_model=list[LocalInstanceInfo])
 async def local_instances(request: Request, response: Response) -> list[LocalInstanceInfo]:
     response.headers.update(_NO_STORE)
-    return [_instance(i) for i in await (await _service(request)).instances(require_actor())]
+    service = await _service(request)
+    return [_instance(i, service.version) for i in await service.instances(require_actor())]
 
 
 @router.post("/local/{target}", response_model=InstallJobInfo, status_code=status.HTTP_202_ACCEPTED)
@@ -132,6 +138,28 @@ async def start_local_install(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail={"code": "invalid_resources", "field": exc.field, "reason": exc.reason},
         ) from exc
+    except InstallUnavailableError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT, detail={"code": "install_unavailable", "reason": exc.reason}
+        ) from exc
+    except InstallBusyError as exc:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail={"code": "install_busy"}) from exc
+    return job_info(job)
+
+
+@router.post("/local/{target}/{name}/upgrade", response_model=InstallJobInfo, status_code=status.HTTP_202_ACCEPTED)
+async def upgrade_local_instance(
+    target: LocalTargetName, name: str, request: Request, response: Response
+) -> InstallJobInfo:
+    """Обновить раннер из админки на месте: образ версии Студии и манифест по нынешним правилам, токен и том прежние.
+
+    Ход читается тем же `/jobs/{id}`; пока идёт установка или обновление этим способом, ответ 409 `install_busy`.
+    """
+    response.headers.update(_NO_STORE)
+    try:
+        job = await (await _service(request)).start_upgrade(require_actor(), InstallTarget(target), name)
+    except RunnerNotFoundError as exc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Not Found") from exc
     except InstallUnavailableError as exc:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT, detail={"code": "install_unavailable", "reason": exc.reason}

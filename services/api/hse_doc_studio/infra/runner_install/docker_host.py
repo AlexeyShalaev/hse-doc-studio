@@ -20,6 +20,7 @@ from hse_doc_studio.core.runner_install import (
     ProgressReporter,
     ResourceOverrides,
     UnavailableReason,
+    UpgradeOutcome,
 )
 from hse_doc_studio.infra.docker.cli import docker_available, run_docker
 
@@ -27,6 +28,10 @@ INSTALL_LABEL = "hse-doc-studio.runner-install"
 DOCKER_SOCK = "/var/run/docker.sock"
 _PULL_TIMEOUT_S = 900.0
 _RUN_TIMEOUT_S = 60.0
+# Остановка при обновлении: раннер доделывает сборки до 30 с (drain), потом прерывает их; docker ждёт с запасом.
+_STOP_GRACE_S = 60
+_STOP_TIMEOUT_S = 120.0
+_ENV_PREFIX = "HSE_RUNNER__"
 _NAME_RE = re.compile(r"^[a-z0-9][a-z0-9_.-]{1,62}$")
 
 
@@ -79,21 +84,30 @@ class DockerLocalHost:
         # Старый контейнер с этим именем заменяем только если он наш.
         if await self._owned(spec.name):
             await run_docker(["rm", "-f", spec.name], timeout=_RUN_TIMEOUT_S)
-        # Токен идёт через файл с правами 0600, а не через аргументы: в `ps` и в `docker inspect` его не видно.
+        env = {
+            "HSE_RUNNER__API_URL": spec.api_url,
+            "HSE_RUNNER__TOKEN": spec.token,
+            "HSE_RUNNER__DATA_DIR": spec.data_dir,
+            "HSE_RUNNER__CONCURRENCY": str(spec.concurrency),
+            "HSE_RUNNER__NAME": spec.name,
+        }
+        code, err = await self._run(spec.name, spec.image, spec.data_dir, env)
+        if code != 0:
+            raise InstallError("container_start_failed", _scrub(err.strip()[-400:], spec.token))
+        await report("start", InstallStepState.done, "")
+
+    async def _run(self, name: str, image: str, data_dir: str, env: dict[str, str]) -> tuple[int | None, str]:
+        """`docker run` раннера; окружение с токеном идёт файлом 0600, а не аргументами, поэтому в `ps` его нет."""
         fd, path = tempfile.mkstemp(prefix="hds-runner-", suffix=".env")
         try:
             with os.fdopen(fd, "w", encoding="utf-8") as handle:
-                handle.write(f"HSE_RUNNER__API_URL={spec.api_url}\n")
-                handle.write(f"HSE_RUNNER__TOKEN={spec.token}\n")
-                handle.write(f"HSE_RUNNER__DATA_DIR={spec.data_dir}\n")
-                handle.write(f"HSE_RUNNER__CONCURRENCY={spec.concurrency}\n")
-                handle.write(f"HSE_RUNNER__NAME={spec.name}\n")
+                handle.writelines(f"{key}={value}\n" for key, value in env.items())
             os.chmod(path, 0o600)  # noqa: PTH101
             args = [
                 "run",
                 "-d",
                 "--name",
-                spec.name,
+                name,
                 "--restart",
                 "unless-stopped",
                 "--label",
@@ -104,19 +118,75 @@ class DockerLocalHost:
                 f"{DOCKER_SOCK}:/var/run/docker.sock",
                 "-v",
                 # Путь одинаков снаружи и внутри: соседние контейнеры сборки монтируют его по пути хоста.
-                f"{spec.data_dir}:{spec.data_dir}",
+                f"{data_dir}:{data_dir}",
             ]
             gid = _socket_gid()
             if gid is not None:
                 args += ["--group-add", str(gid)]
-            args += [spec.image, "hse-doc-studio", "runner"]
+            args += [image, "hse-doc-studio", "runner"]
             code, _, err = await run_docker(args, timeout=_RUN_TIMEOUT_S)
         finally:
             with contextlib.suppress(OSError):
                 Path(path).unlink()
+        return code, err
+
+    # ---- обновление на месте ----
+
+    def upgrade_steps(self) -> tuple[str, ...]:
+        return ("pull", "recreate")
+
+    async def upgrade(self, name: str, image: str, report: ProgressReporter) -> UpgradeOutcome:
+        """Новый образ, тот же контейнер по сути: имя, окружение раннера (токен, адрес, каталог) и том данных прежние.
+
+        Образ тянется до остановки, чтобы простой был только на перезапуск. Старый контейнер получает `docker stop`
+        (раннер доделывает сборки до 30 с), затем удаляется и запускается заново. Если новый не стартовал, Студия
+        поднимает прежний образ с теми же настройками.
+        """
+        if not _NAME_RE.fullmatch(name) or not await self._owned(name):
+            raise InstallError("not_installed")
+        await report("pull", InstallStepState.running, image)
+        old_image, env = await self._inspect(name)
+        token = env.get("HSE_RUNNER__TOKEN", "")
+        data_dir = env.get("HSE_RUNNER__DATA_DIR", "")
+        if not data_dir:
+            raise InstallError("not_installed", "HSE_RUNNER__DATA_DIR")
+        code, _, err = await run_docker(["pull", image], timeout=_PULL_TIMEOUT_S)
         if code != 0:
-            raise InstallError("container_start_failed", _scrub(err.strip()[-400:], spec.token))
-        await report("start", InstallStepState.done, "")
+            raise InstallError("image_pull_failed", _scrub(err.strip()[-400:], token))
+        await report("pull", InstallStepState.done, f"{old_image} {image}".strip())
+
+        await report("recreate", InstallStepState.running, name)
+        await run_docker(["stop", "-t", str(_STOP_GRACE_S), name], timeout=_STOP_TIMEOUT_S)
+        code, _, err = await run_docker(["rm", "-f", name], timeout=_RUN_TIMEOUT_S)
+        if code != 0:
+            raise InstallError("container_start_failed", _scrub(err.strip()[-400:], token))
+        code, err = await self._run(name, image, data_dir, env)
+        if code != 0:
+            detail = _scrub(err.strip()[-300:], token)
+            if old_image:
+                back, _ = await self._run(name, old_image, data_dir, env)
+                detail += " (previous image restored)" if back == 0 else " (previous image did not start either)"
+            raise InstallError("container_start_failed", detail)
+        await report("recreate", InstallStepState.done, "")
+        return UpgradeOutcome(old_image=old_image, new_image=image)
+
+    async def _inspect(self, name: str) -> tuple[str, dict[str, str]]:
+        """Образ и окружение раннера из `docker inspect`; из окружения берутся только переменные раннера."""
+        code, out, _ = await run_docker(["inspect", "--type", "container", name], timeout=_RUN_TIMEOUT_S)
+        if code != 0:
+            raise InstallError("not_installed")
+        try:
+            data = json.loads(out)
+            config = data[0]["Config"]
+        except (ValueError, LookupError, TypeError) as exc:
+            raise InstallError("not_installed") from exc
+        env: dict[str, str] = {}
+        for item in config.get("Env") or []:
+            key, sep, value = str(item).partition("=")
+            if sep and key.startswith(_ENV_PREFIX):
+                env[key] = value
+        image = config.get("Image")
+        return (image if isinstance(image, str) else ""), env
 
     async def _owned(self, name: str) -> bool:
         code, out, _ = await run_docker(

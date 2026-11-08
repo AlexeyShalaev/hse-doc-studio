@@ -149,6 +149,7 @@ class _Stack:
             verify_timeout_s=0.1,
         )
         self.cluster = FakeClusterReader()
+        self.background: set[asyncio.Task[None]] = set()
         self.isolation = RunnerIsolationSettings(
             declared=None, install=make_install_facts(), read_live=False, studio_version="0.14.0"
         )
@@ -348,6 +349,7 @@ _ROUTES: list[tuple[str, str, Any]] = [
     ("GET", "/api/admin/runner-install/local/instances", None),
     ("POST", "/api/admin/runner-install/local/docker", {}),
     ("DELETE", "/api/admin/runner-install/local/docker/hse-runner-1", None),
+    ("POST", "/api/admin/runner-install/local/docker/hse-runner-1/upgrade", None),
     ("GET", f"/api/admin/runner-install/jobs/{uuid4()}", None),
     ("GET", "/api/admin/runner-install/ssh", None),
     (
@@ -781,6 +783,146 @@ async def test__runner_install__instances_list_and_remove_are_audited(stack: _St
     assert removed.status_code == 204
     assert stack.install_host.removed == ["hse-runner-abc123"]
     assert "runner_install.local.remove" in [e.action for e in await stack.users.audit.list()]
+
+
+# ---- Обновление раннера из админки на месте ----
+
+
+async def _installed_runner(stack: _Stack, *, version: str = "1.0.0", name: str = "hse-runner-abc123") -> str:
+    """Установка из админки и её раннер в Студии (имя раннера задаёт установка)."""
+    stack.install_host.instances = [
+        LocalInstance(InstallTarget.docker, name, f"registry.example/hds:{version}", "running", None)
+    ]
+    return await _registered(stack, version=version, name=name)
+
+
+def _comes_back(stack: _Stack, runner_id: str, version: str = "1.2.3") -> None:
+    """Новый процесс раннера после перезапуска: тот же id (личность на томе), новая версия."""
+
+    async def announce() -> None:
+        await asyncio.sleep(0.02)
+        await stack.runners.touch(runner_id, datetime.now(UTC), version=version)
+
+    async def started() -> None:
+        # Новый процесс объявляется сам, уже после того как хост закончил свои шаги.
+        task = asyncio.create_task(announce())
+        stack.background.add(task)
+
+    stack.install_host.on_upgraded = started
+
+
+async def test__runner_upgrade__keeps_the_runner_and_records_versions(stack: _Stack) -> None:
+    boss = await stack.users.add("boss", admin=True)
+    runner_id = await _installed_runner(stack)
+    tokens_before = len(await stack.tokens.list())
+    _comes_back(stack, runner_id)
+
+    listed = (await stack.client.get("/api/admin/runner-install/local/instances", headers=boss)).json()
+    started = await stack.client.post("/api/admin/runner-install/local/docker/hse-runner-abc123/upgrade", headers=boss)
+    job = await _finished(stack, started.json()["id"], boss)
+
+    assert listed[0]["runner_id"] == runner_id
+    assert (listed[0]["runner_version"], listed[0]["studio_version"], listed[0]["outdated"]) == ("1.0.0", "1.2.3", True)
+    assert started.status_code == 202
+    assert started.headers["cache-control"] == "no-store"
+    assert job["state"] == "succeeded", job
+    assert [(s["key"], s["state"]) for s in job["steps"]] == [
+        ("pull", "done"),
+        ("recreate", "done"),
+        ("reconnect", "done"),
+    ]
+    assert stack.install_host.upgraded == [("hse-runner-abc123", "registry.example/hds:1.2.3")]
+    # Ни нового токена регистрации, ни новой записи раннера.
+    assert len(await stack.tokens.list()) == tokens_before
+    assert [r.id for r in await stack.runners.list()] == [runner_id]
+    events = {e.action: e for e in await stack.users.audit.list()}
+    start = events["runner_install.local.upgrade"]
+    assert start.target == "hse-runner-abc123"
+    assert (start.details["from_version"], start.details["to_version"]) == ("1.0.0", "1.2.3")
+    done = events["runner_install.local.upgrade_succeeded"]
+    assert (done.details["from_version"], done.details["to_version"]) == ("1.0.0", "1.2.3")
+    assert done.details["from_image"] == "registry.example/hds:1.0.0"
+    assert done.details["to_image"] == "registry.example/hds:1.2.3"
+
+
+async def test__runner_upgrade__same_version_is_allowed_and_not_outdated(stack: _Stack) -> None:
+    boss = await stack.users.add("boss", admin=True)
+    runner_id = await _installed_runner(stack, version="1.2.3")
+    _comes_back(stack, runner_id)
+
+    listed = (await stack.client.get("/api/admin/runner-install/local/instances", headers=boss)).json()
+    started = await stack.client.post("/api/admin/runner-install/local/docker/hse-runner-abc123/upgrade", headers=boss)
+    job = await _finished(stack, started.json()["id"], boss)
+
+    assert listed[0]["outdated"] is False
+    assert job["state"] == "succeeded"
+
+
+async def test__runner_upgrade__runner_that_does_not_come_back_is_a_timeout(stack: _Stack) -> None:
+    boss = await stack.users.add("boss", admin=True)
+    await _installed_runner(stack)
+
+    started = await stack.client.post("/api/admin/runner-install/local/docker/hse-runner-abc123/upgrade", headers=boss)
+    job = await _finished(stack, started.json()["id"], boss)
+
+    assert job["state"] == "failed"
+    assert job["error_code"] == "reconnect_timeout"
+    assert job["steps"][-1] == {"key": "reconnect", "state": "failed", "detail": ""}
+    failed = [e for e in await stack.users.audit.list() if e.action == "runner_install.local.upgrade_failed"]
+    assert failed[0].details["code"] == "reconnect_timeout"
+    assert failed[0].details["from_version"] == "1.0.0"
+
+
+async def test__runner_upgrade__host_failure_is_reported(stack: _Stack) -> None:
+    boss = await stack.users.add("boss", admin=True)
+    await _installed_runner(stack)
+    stack.install_host.upgrade_fail_with = InstallError("image_pull_failed", "pull access denied")
+
+    started = await stack.client.post("/api/admin/runner-install/local/docker/hse-runner-abc123/upgrade", headers=boss)
+    job = await _finished(stack, started.json()["id"], boss)
+
+    assert (job["state"], job["error_code"], job["error_detail"]) == (
+        "failed",
+        "image_pull_failed",
+        "pull access denied",
+    )
+    assert [s["state"] for s in job["steps"]] == ["failed", "pending", "pending"]
+
+
+async def test__runner_upgrade__install_without_runner_skips_the_reconnect_step(stack: _Stack) -> None:
+    boss = await stack.users.add("boss", admin=True)
+    stack.install_host.instances = [LocalInstance(InstallTarget.docker, "hse-runner-orphan", "img:1", "restarting")]
+
+    listed = (await stack.client.get("/api/admin/runner-install/local/instances", headers=boss)).json()
+    started = await stack.client.post("/api/admin/runner-install/local/docker/hse-runner-orphan/upgrade", headers=boss)
+    job = await _finished(stack, started.json()["id"], boss)
+
+    assert (listed[0]["runner_id"], listed[0]["outdated"]) == (None, False)
+    assert job["state"] == "succeeded"
+    assert job["steps"][-1]["state"] == "skipped"
+
+
+async def test__runner_upgrade__shares_the_lock_with_install_and_needs_an_install(stack: _Stack) -> None:
+    boss = await stack.users.add("boss", admin=True)
+    await _installed_runner(stack)
+    stack.install_host.upgrade_gate = asyncio.Event()
+    path = "/api/admin/runner-install/local/docker/hse-runner-abc123/upgrade"
+
+    first = await stack.client.post(path, headers=boss)
+    again = await stack.client.post(path, headers=boss)
+    install = await stack.client.post("/api/admin/runner-install/local/docker", json={}, headers=boss)
+    missing = await stack.client.post("/api/admin/runner-install/local/docker/nope/upgrade", headers=boss)
+    disabled = await stack.client.post(
+        "/api/admin/runner-install/local/kubernetes/hse-runner-abc123/upgrade", headers=boss
+    )
+    stack.install_host.upgrade_gate.set()
+    await _finished(stack, first.json()["id"], boss)
+
+    assert first.status_code == 202
+    assert (again.status_code, again.json()["detail"]) == (409, {"code": "install_busy"})
+    assert (install.status_code, install.json()["detail"]) == (409, {"code": "install_busy"})
+    assert missing.status_code == 404
+    assert (disabled.status_code, disabled.json()["detail"]["code"]) == (409, "install_unavailable")
 
 
 # ---- Как развёрнут раннер и изоляция раннеров в кластере ----
