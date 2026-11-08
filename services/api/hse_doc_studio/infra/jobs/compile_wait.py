@@ -28,7 +28,9 @@ from hse_doc_studio.core.jobs.routing import (
     RouteReason,
     RunnerScope,
 )
+from hse_doc_studio.core.jobs.runner_fit import RunnerGapReason
 from hse_doc_studio.core.jobs.runners import IRunnerRepository
+from hse_doc_studio.use_cases.jobs.stranded import QueuedJobFit
 
 
 class QueueCompileWaitReader:
@@ -42,12 +44,14 @@ class QueueCompileWaitReader:
         clock: Clock = utc_now,
         projects: IProjectRoutePolicy | None = None,
         personal: IPersonalRunnerSettings | None = None,
+        fit: QueuedJobFit | None = None,
     ) -> None:
         self._queue = queue
         self._runners = runners
         self._clock = clock
         self._projects = projects
         self._personal = personal
+        self._fit = fit
 
     async def placement_of(self, compile_id: UUID, viewer_id: str | None) -> CompilePlacementInfo | None:
         """Где идёт сборка для этого зрителя (таблица 9.4 спецификации личных раннеров)."""
@@ -147,8 +151,19 @@ class QueueCompileWaitReader:
         if job.route is JobRoute.personal_first and job.personal_until is not None and job.personal_until > now:
             left = math.ceil((job.personal_until - now).total_seconds())
             return CompileWaitInfo(CompileWaitReason.personal_runner, None, max(left, 0))
-        reason = CompileWaitReason.queued if await self._has_runner(job) else CompileWaitReason.no_runner
-        return CompileWaitInfo(reason, await self._position(job))
+        return CompileWaitInfo(await self._runner_reason(job), await self._position(job))
+
+    async def _runner_reason(self, job: QueuedJob) -> CompileWaitReason:
+        """Ждёт очереди, если подходящий раннер в сети (пусть занят); на паузе и «нет раннера» называются отдельно."""
+        if self._fit is None:
+            return CompileWaitReason.queued if await self._has_runner(job) else CompileWaitReason.no_runner
+        now = self._clock()
+        gap = (await self._fit.of(job, await self._runners.list(), now)).reason
+        if gap is None:
+            return CompileWaitReason.queued
+        if gap in (RunnerGapReason.personal_paused, RunnerGapReason.shared_paused):
+            return CompileWaitReason.runner_paused
+        return CompileWaitReason.no_runner
 
     async def _position(self, job: QueuedJob) -> int:
         # Порядок выдачи тот же, что у раннера: класс, виртуальное время справедливой очереди, постановка.

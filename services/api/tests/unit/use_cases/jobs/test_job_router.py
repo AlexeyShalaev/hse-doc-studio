@@ -246,3 +246,28 @@ async def test__decide__window_follows_settings(world: _World, wait_s: int) -> N
     await world.runner()
     world.settings.value = PersonalRunnerSettings(wait_s=wait_s)
     assert (await world.decide()).personal_until == NOW + timedelta(seconds=wait_s)
+
+
+async def test__personal_owner__owner_with_paused_runner__still_owner(world: _World) -> None:
+    # Доступность личных раннеров не зависит от их состояния: так отказ называет «личный раннер на паузе».
+    await world.runner(paused=True)
+
+    owner = await world.router.personal_owner(kind=JobKind.compile, project_id=world.project, user_id=world.owner)
+
+    assert owner == world.owner.hex
+
+
+@pytest.mark.parametrize(
+    ("enabled", "coauthor_policy", "expected_owner"),
+    [(False, ProjectBuildRunners.owner, False), (True, ProjectBuildRunners.shared, False)],
+    ids=["disabled", "coauthor_shared_policy"],
+)
+async def test__personal_owner__personal_not_allowed__none(
+    world: _World, enabled: bool, coauthor_policy: ProjectBuildRunners, expected_owner: bool
+) -> None:
+    world.settings.value = PersonalRunnerSettings(enabled=enabled)
+    world.policy(coauthor_policy)
+
+    owner = await world.router.personal_owner(kind=JobKind.compile, project_id=world.project, user_id=uuid4())
+
+    assert (owner is not None) is expected_owner

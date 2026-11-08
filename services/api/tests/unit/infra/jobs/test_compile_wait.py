@@ -21,9 +21,17 @@ from hse_doc_studio.core.compile.wait import (
 )
 from hse_doc_studio.core.jobs.enums import JobKind, JobPriorityClass
 from hse_doc_studio.core.jobs.queue import EnqueueRequest, RunnerRef
-from hse_doc_studio.core.jobs.routing import JobRoute, ProjectBuildRunners, ProjectRouteInfo, RouteReason, RunnerScope
+from hse_doc_studio.core.jobs.routing import (
+    JobRoute,
+    PersonalRunnerSettings,
+    ProjectBuildRunners,
+    ProjectRouteInfo,
+    RouteReason,
+    RunnerScope,
+)
 from hse_doc_studio.core.jobs.runners import Runner, RunnerOwnerKind
 from hse_doc_studio.infra.jobs.compile_wait import QueueCompileWaitReader
+from hse_doc_studio.use_cases.jobs.stranded import QueuedJobFit
 
 from tests.fakes.job_queue import InMemoryJobQueue
 from tests.fakes.runners import InMemoryRunnerRepository
@@ -412,3 +420,60 @@ async def test__merged_events__phase_is_sent_first_and_on_change(monkeypatch) ->
     assert '"phase": "queued"' in phases[0]
     assert '"phase": "running"' in phases[1]
     assert events[0][0] == "phase"
+
+
+class _Settings:
+    async def current(self) -> PersonalRunnerSettings:
+        return PersonalRunnerSettings()
+
+
+class _Router:
+    async def personal_owner(self, *, kind: JobKind, project_id: UUID, user_id: UUID) -> str | None:
+        return "u1"
+
+
+async def _personal(runners: InMemoryRunnerRepository, *, paused: bool) -> None:
+    await runners.add(
+        Runner(
+            id=uuid4().hex,
+            name="mine",
+            token_hash="h",
+            tags=frozenset({"tex"}),
+            concurrency=1,
+            resource_class="standard",
+            version="1",
+            created_at=NOW,
+            last_seen_at=NOW,
+            paused=paused,
+            owner_kind=RunnerOwnerKind.user,
+            owner_id="u1",
+        )
+    )
+
+
+def _fit_reader(queue: InMemoryJobQueue, runners: InMemoryRunnerRepository) -> QueueCompileWaitReader:
+    return QueueCompileWaitReader(queue, runners, clock=lambda: NOW, fit=QueuedJobFit(_Router(), _Settings()))
+
+
+async def test__after_window_personal_runner_paused__runner_paused() -> None:
+    # Прод: сборка ждала личный раннер (waiting_personal), а его поставили на паузу; общих с тегом нет.
+    queue, runners = InMemoryJobQueue(clock=lambda: NOW), InMemoryRunnerRepository()
+    await _personal(runners, paused=True)
+    job = uuid4()
+    await queue.enqueue(_request(job, route=JobRoute.personal_first, route_owner_id="u1", personal_until=NOW))
+
+    info = await _fit_reader(queue, runners).of(job)
+
+    assert info == CompileWaitInfo(CompileWaitReason.runner_paused, queue_position=1)
+
+
+async def test__after_window_personal_runner_online_busy__queued() -> None:
+    # Личный раннер владельца берёт задачу и после окна: занят, значит очередь, а не «нет раннера».
+    queue, runners = InMemoryJobQueue(clock=lambda: NOW), InMemoryRunnerRepository()
+    await _personal(runners, paused=False)
+    job = uuid4()
+    await queue.enqueue(_request(job, route=JobRoute.personal_first, route_owner_id="u1", personal_until=NOW))
+
+    info = await _fit_reader(queue, runners).of(job)
+
+    assert info == CompileWaitInfo(CompileWaitReason.queued, queue_position=1)

@@ -182,7 +182,9 @@ On a server, documents are built only on runners. The interface learns in advanc
 
 - No runner at all: Build, Build all and rebuild are disabled, with an explanation next to them. The document can be built locally in the desktop Studio (the project syncs, and the finished PDF is uploaded to the server), or the administrator can connect a runner; administrators get a link to Runners.
 - Runners exist but without the needed tag (for example, no runner with `office`): only those documents are blocked, Build all builds the rest.
-- If a runner disappears between the check and the click, the server answers 409 with code `no_runners` or `no_runner_for_tags` and a `tags` list, and the interface shows a single message.
+- If a runner disappears between the check and the click, the server answers 409 with code `no_runners` or `no_runner_for_tags`, a `tags` list and a `reason`, and the interface shows a single message. "Build all" queues the other documents and lists the skipped ones with the reason.
+- The reason tells "every suitable runner is busy" (the build waits in the queue as usual) from "no suitable runner": `personal_paused` and `shared_paused` (the runner with the tag is paused), `personal_offline` and `shared_offline` (offline), `no_runner` (no runner has the tag at all).
+- A queued build that nobody can take any more (the runner was revoked, paused or went away) does not hang forever: the server finishes it as `failed` with code `no_runner_for_tags` (no runner with the tag, after a minute), `runner_offline` (the suitable runner is offline, after 5 minutes) or `runner_paused` (paused, after 30 minutes; meanwhile the document shows "Waiting for a runner: it is paused"). While at least one suitable runner is online, even busy, the build waits its turn.
 
 Local mode needs no runners and never blocks the build.
 

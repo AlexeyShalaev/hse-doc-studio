@@ -68,6 +68,8 @@ Everything available goes into the log: the latexmk output, runner lines (`[runn
 | `image_missing` | The machine that builds has no TeX Live image | Settings → Compiler → Images → “Install” on that machine (for a personal runner it is your local Studio) |
 | `docker_unavailable` | Docker is not running or `docker.sock` is not accessible | Start Docker Desktop or the daemon; on Linux check the socket group (`DOCKER_GID`) |
 | `no_runners`, `no_runner_for_tags` | No live runner takes these documents | Connect a personal runner (a local Studio with Docker) or ask the administrator |
+| `runner_paused` | The server dropped the build: the only suitable runner stayed paused for 30 minutes | Resume it (Settings → My runners) and build again |
+| `runner_offline` | The server dropped the build: the suitable runner was offline for more than 5 minutes | Start the Studio with your personal runner or ask the administrator to check the shared runner |
 | `quota_exceeded` | The build quota is used up | Wait for the reset or build on a personal runner: it does not spend the quota |
 | `timed_out`, `job_timeout` | The build did not finish in time | Check the log for a LaTeX loop; the administrator can raise the build timeout |
 | `runner_lost`, `lease_lost`, `runner_shutdown` | The runner disappeared, lost connection or was stopped | Start the runner, check its network and build again |

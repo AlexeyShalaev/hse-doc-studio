@@ -963,6 +963,7 @@ export const COMPILE_WAIT_REASONS = [
   "runner_lost",
   "superseded",
   "personal_runner",
+  "runner_paused",
 ] as const;
 export const CompileWaitSchema = z.strictObject({
   reason: z.enum(COMPILE_WAIT_REASONS),

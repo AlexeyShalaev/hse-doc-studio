@@ -935,7 +935,9 @@ class UpdateAdminOidcProviderRequest(StrictModel):
     auto_provision: bool | None = None
 
 
-CompileWaitReason = Literal["queued", "no_runner", "quota_wait", "runner_lost", "superseded", "personal_runner"]
+CompileWaitReason = Literal[
+    "queued", "no_runner", "quota_wait", "runner_lost", "superseded", "personal_runner", "runner_paused"
+]
 
 
 class CompileWait(StrictModel):
@@ -943,7 +945,8 @@ class CompileWait(StrictModel):
 
     queued и quota_wait: сборка ждёт очереди (место и оценка ожидания); no_runner: свободных раннеров нет;
     runner_lost: раннер потерян, идёт повтор (попытка из максимума); superseded: сборку заменила более новая;
-    personal_runner: сборка ждёт личный раннер владельца проекта (`wait_hint_seconds` окно ожидания).
+    personal_runner: сборка ждёт личный раннер владельца проекта (`wait_hint_seconds` окно ожидания);
+    runner_paused: подходящий раннер на паузе, сборка пойдёт после снятия паузы (иначе сервер снимет её с итогом).
     """
 
     reason: CompileWaitReason

@@ -3,5 +3,8 @@
   "any_runner": true,
   "tags": [
     "tex"
-  ]
+  ],
+  "reasons": {
+    "office": "no_runner"
+  }
 }

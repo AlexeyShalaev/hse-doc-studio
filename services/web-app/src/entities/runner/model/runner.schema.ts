@@ -151,14 +151,33 @@ export const ProjectBuildRunnersSchema = z.strictObject({
 export type ProjectBuildRunners = z.infer<typeof ProjectBuildRunnersSchema>;
 
 /**
+ * Почему тег сборки сейчас никто не обслуживает: личный или облачный раннер на паузе,
+ * не в сети, или раннера с этим тегом нет совсем (`no_runner`).
+ */
+export const RUNNER_GAP_REASONS = [
+  "personal_paused",
+  "shared_paused",
+  "personal_offline",
+  "shared_offline",
+  "no_runner",
+] as const;
+export type RunnerGapReason = (typeof RUNNER_GAP_REASONS)[number];
+
+export const isRunnerGapReason = (value: unknown): value is RunnerGapReason =>
+  typeof value === "string" &&
+  (RUNNER_GAP_REASONS as readonly string[]).includes(value);
+
+/**
  * Есть ли сейчас кому собирать документы проекта (`GET /projects/{id}/build-availability`).
  * `cloud: false` в локальном режиме: собирает сама Студия, ограничений нет. `tags`: теги
- * сборки (`tex`, `office`), для которых сейчас есть живой раннер.
+ * сборки (`tex`, `office`), для которых сейчас есть живой раннер. `reasons`: для
+ * необслуживаемого тега, почему (неизвестная причина от сервера новее трактуется как `no_runner`).
  */
 export const BuildAvailabilitySchema = z.strictObject({
   cloud: z.boolean(),
   any_runner: z.boolean(),
   tags: z.array(z.string()),
+  reasons: z.record(z.string(), z.string()).optional(),
 });
 export type BuildAvailability = z.infer<typeof BuildAvailabilitySchema>;
 

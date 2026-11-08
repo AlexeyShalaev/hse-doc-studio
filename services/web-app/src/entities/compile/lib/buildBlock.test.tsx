@@ -101,6 +101,25 @@ describe("buildBlockOf", () => {
     });
   });
 
+  it("names the cause the server gave for the missing tag", () => {
+    expect(
+      buildBlockOf({ ...TEX_ONLY, reasons: { office: "personal_paused" } }, [
+        "office",
+      ]),
+    ).toEqual({
+      reason: "no_runner_for_tags",
+      tags: ["office"],
+      cause: "personal_paused",
+    });
+  });
+
+  it("an unknown cause from a newer server reads as no runner", () => {
+    expect(
+      buildBlockOf({ ...TEX_ONLY, reasons: { office: "quantum" } }, ["office"])
+        ?.cause,
+    ).toBe("no_runner");
+  });
+
   it("a document that needs no runner is never blocked", () => {
     expect(buildBlockOf(NONE, [])).toBeNull();
     expect(buildBlockOf(NONE, undefined)).toBeNull();
@@ -241,10 +260,77 @@ describe("useStartCompile / useStartCompileAll", () => {
     await waitFor(() => {
       expect(useCompileStreamStore.getState().pending).toEqual({});
     });
+    await waitFor(() => {
+      expect(useToastStore.getState().toasts).toHaveLength(1);
+    });
     const toasts = useToastStore.getState().toasts;
-    expect(toasts).toHaveLength(1);
-    expect(toasts[0]?.title).toBe("Облачная сборка недоступна");
-    expect(toasts[0]?.message).toContain("не подключён ни один раннер");
+    expect(toasts[0]?.title).toBe("Облачная сборка сейчас недоступна");
+    expect(toasts[0]?.message).toContain("Не поставлены в сборку (3)");
+    expect(toasts[0]?.message).toContain("нет раннера для LaTeX-документов");
+  });
+
+  it("build all: the office document is refused with a reason, the rest are built and the toast names it", async () => {
+    const { post } = mockServer(FULL);
+    post.mockImplementation((url: string) =>
+      url.includes("/pres/")
+        ? Promise.reject(
+            new ApiError("Нет раннера в сети…", "no_runner_for_tags", 409, {
+              tags: ["office"],
+              reason: "personal_paused",
+            }),
+          )
+        : Promise.resolve({ data: { compile_id: "c" } }),
+    );
+    const { result } = renderHook(() => useStartCompileAll(P), {
+      wrapper: wrapper(SERVER),
+    });
+    await waitFor(() => {
+      expect(result.current.isRunning).toBe(false);
+    });
+
+    act(() => {
+      result.current.startAll(["tz", "pres", "pdf"]);
+    });
+
+    await waitFor(() => {
+      expect(useToastStore.getState().toasts).toHaveLength(1);
+    });
+    expect(post).toHaveBeenCalledTimes(3);
+    const message = useToastStore.getState().toasts[0]?.message ?? "";
+    expect(message).toContain("Не поставлены в сборку (1)");
+    expect(message).toContain("(личный раннер на паузе)");
+    expect(message).toContain("Остальные документы собираются");
+    expect(Object.keys(useCompileStreamStore.getState().pending)).toEqual([
+      `${P}::tz`,
+      `${P}::pdf`,
+    ]);
+  });
+
+  it("single build refused because the personal runner is paused: the toast says so", async () => {
+    const { post } = mockServer(FULL);
+    post.mockRejectedValue(
+      new ApiError("…", "no_runner_for_tags", 409, {
+        tags: ["office"],
+        reason: "personal_paused",
+      }),
+    );
+    const { result } = renderHook(() => useStartCompile(P, "pres"), {
+      wrapper: wrapper(SERVER),
+    });
+    await waitFor(() => {
+      expect(result.current.isRunning).toBe(false);
+    });
+
+    act(() => {
+      result.current.start();
+    });
+
+    await waitFor(() => {
+      expect(useToastStore.getState().toasts).toHaveLength(1);
+    });
+    expect(useToastStore.getState().toasts[0]?.message).toContain(
+      "Личный раннер для офисных документов (Word, PowerPoint) на паузе",
+    );
   });
 });
 

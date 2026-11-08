@@ -17,6 +17,8 @@ class CompileWaitReason(StrEnum):
     superseded = "superseded"
     # Сборка ждёт личный раннер владельца проекта (окно ожидания, потом общие раннеры).
     personal_runner = "personal_runner"
+    # Подходящий раннер (личный владельца или общий) на паузе: сборка пойдёт, когда паузу снимут.
+    runner_paused = "runner_paused"
 
 
 @dataclass(frozen=True)

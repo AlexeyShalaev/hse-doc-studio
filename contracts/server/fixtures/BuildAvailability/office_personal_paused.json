@@ -1,0 +1,10 @@
+{
+  "cloud": true,
+  "any_runner": true,
+  "tags": [
+    "tex"
+  ],
+  "reasons": {
+    "office": "personal_paused"
+  }
+}

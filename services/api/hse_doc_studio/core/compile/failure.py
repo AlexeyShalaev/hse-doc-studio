@@ -268,6 +268,31 @@ _TEXTS: dict[str, tuple[str, str]] = {
             "with Docker or contact the administrator."
         ),
     ),
+    "runner_paused": (
+        (
+            "Сервер снял сборку с очереди: единственный подходящий раннер (с нужными возможностями, например "
+            "office) дольше 30 минут стоял на паузе. Снимите паузу с личного раннера в «Настройки → Мои раннеры» "
+            "(общий раннер снимает с паузы администратор) и соберите снова."
+        ),
+        (
+            "The server removed the build from the queue: the only suitable runner (with the required capabilities, "
+            "for example office) stayed paused for more than 30 minutes. Resume your personal runner in "
+            "“Settings → My runners” (a shared runner is resumed by the administrator) and build again."
+        ),
+    ),
+    "runner_offline": (
+        (
+            "Сервер снял сборку с очереди: подходящий раннер (с нужными возможностями, например office) не "
+            "выходил на связь дольше 5 минут, а другого нет. Запустите Студию на компьютере с личным раннером "
+            "или попросите администратора проверить общий раннер, затем соберите снова."
+        ),
+        (
+            "The server removed the build from the queue: the suitable runner (with the required capabilities, "
+            "for example office) has not been in touch for more than 5 minutes and there is no other. Start the "
+            "desktop Studio with your personal runner or ask the administrator to check the shared runner, then "
+            "build again."
+        ),
+    ),
     CANCELLED: (
         "Сборку отменили до завершения. Соберите снова, когда будете готовы.",
         "The build was cancelled before it finished. Build again when you are ready.",

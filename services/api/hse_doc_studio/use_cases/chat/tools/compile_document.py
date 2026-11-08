@@ -11,6 +11,7 @@ from hse_doc_studio.core.entities import CompileRecord
 from hse_doc_studio.core.enums import CompileStatus, Lang, ToolKind
 from hse_doc_studio.core.errors import NotFoundError
 from hse_doc_studio.core.i18n import current_interface_language
+from hse_doc_studio.core.jobs.errors import NoRunnerAvailableError
 from hse_doc_studio.core.repositories import ICompileRepository
 from hse_doc_studio.core.shutdown import RESTART_RETRY_AFTER_S, ServerRestartingError, ShutdownSignal
 from hse_doc_studio.use_cases.compile.trigger_compile import TriggerCompileInput, TriggerCompileUC
@@ -68,6 +69,9 @@ class CompileDocumentTool:
             out = await self._trigger.execute(TriggerCompileInput(project_id=ctx.project_id, doc_id=doc_id))
         except (ValueError, NotFoundError) as exc:
             return ToolResult.error(str(exc))
+        except NoRunnerAvailableError as exc:
+            # Сборку некому взять: причина словами (личный раннер на паузе, нет раннера с office и т. п.).
+            return ToolResult.error(f"[{exc.code}] {exc}")
 
         project_result = await self._get_project.execute(GetProjectInput(project_id=ctx.project_id))
         record = await self._poll(project_result.project.folder, out.compile_id)
