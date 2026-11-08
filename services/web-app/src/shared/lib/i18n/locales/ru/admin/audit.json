@@ -258,7 +258,8 @@
       "rolled_back": "Возвращён на прежнюю версию",
       "rollback_error": "Причина неудачи отката",
       "revoked_runner": "Отозванный раннер",
-      "revoked_registrations": "Отозванные токены регистрации"
+      "revoked_registrations": "Отозванные токены регистрации",
+      "rollback_reconnected": "Раннер вышел на связь после отката"
     },
     "values": {
       "password": "пароль",

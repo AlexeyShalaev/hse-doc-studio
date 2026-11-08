@@ -276,6 +276,27 @@ describe("обновление раннера из админки", () => {
     expect(step).toHaveAttribute("data-state", "done");
   });
 
+  it("откат прошёл, но раннер не вышел на связь: итог говорит и это", async () => {
+    vi.spyOn(opsApi, "upgradeLocalInstance").mockResolvedValue(job("running"));
+    vi.spyOn(opsApi, "installJob").mockResolvedValue(
+      job("failed", {
+        rolled_back: true,
+        rollback_version: "0.14.0",
+        rollback_error: null,
+        rollback_reconnected: false,
+      }),
+    );
+    const user = userEvent.setup();
+    page([install()]);
+
+    await user.click(await screen.findByTestId("runner-upgrade-now-r1"));
+    await user.click(screen.getByTestId("upgrade-confirm"));
+
+    expect(await screen.findByTestId("upgrade-failed")).toHaveTextContent(
+      "Раннер возвращён на v0.14.0, но не вышел на связь: проверьте под или контейнер",
+    );
+  });
+
   it("откат тоже не удался: итог называет причину", async () => {
     vi.spyOn(opsApi, "upgradeLocalInstance").mockResolvedValue(job("running"));
     vi.spyOn(opsApi, "installJob").mockResolvedValue(

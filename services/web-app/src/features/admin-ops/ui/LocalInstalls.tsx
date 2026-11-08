@@ -25,9 +25,11 @@ const useUpgradeFailure = () => {
       defaultValue: t("error.unexpected"),
     });
     if (job.rolled_back === true) {
-      const back = job.rollback_version
-        ? t("upgrade.rolledBack", { version: job.rollback_version })
-        : t("upgrade.rolledBackPrevious");
+      const back = !job.rollback_version
+        ? t("upgrade.rolledBackPrevious")
+        : job.rollback_reconnected === false
+          ? t("upgrade.rolledBackOffline", { version: job.rollback_version })
+          : t("upgrade.rolledBack", { version: job.rollback_version });
       return `${reason} ${back}`;
     }
     if (job.rolled_back === false) {

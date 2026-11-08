@@ -256,7 +256,8 @@
       "rolled_back": "Rolled back to the previous version",
       "rollback_error": "Rollback failure reason",
       "revoked_runner": "Revoked runner",
-      "revoked_registrations": "Revoked registration tokens"
+      "revoked_registrations": "Revoked registration tokens",
+      "rollback_reconnected": "Runner online after the rollback"
     },
     "values": {
       "password": "password",
