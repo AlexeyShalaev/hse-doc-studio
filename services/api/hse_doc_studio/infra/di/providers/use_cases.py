@@ -102,6 +102,7 @@ from hse_doc_studio.core.setup import (
     ISelfContainerInfo,
     ISetupApplier,
 )
+from hse_doc_studio.core.shutdown import process_shutdown
 from hse_doc_studio.core.signatures.ports import (
     IChainFetcher,
     IOpenPgpKeyImporter,
@@ -2741,11 +2742,13 @@ class UseCaseProvider(Provider):
         project_repo: IProjectRepository,
         locator: IProjectLocator,
         compile_repo: ICompileRepository,
+        dispatcher: IJobDispatcher,
     ) -> RecoverStaleCompilesUC:
         return RecoverStaleCompilesUC(
             project_repo=project_repo,
             locator=locator,
             compile_repo=compile_repo,
+            dispatcher=dispatcher,
         )
 
     # ------------------------------------------------------------------ LanguageTool
@@ -3379,6 +3382,7 @@ class UseCaseProvider(Provider):
         create_vcs_snapshot_uc: CreateVcsSnapshotUC,
         restore_vcs_uc: RestoreVcsUC,
         compile_repo: ICompileRepository,
+        dispatcher: IJobDispatcher,
     ) -> ToolRegistry:
         # ONE unified catalog: project tools (requires_project=True) + app/system
         # tools (requires_project=False). The loop filters by whether the chat has
@@ -3399,7 +3403,13 @@ class UseCaseProvider(Provider):
             EditTexTool(get_file_uc, put_file_uc, edit_applier).definition(),
             SetLanguageTool(update_project_uc).definition(),
             SetProjectMetaTool(update_project_uc).definition(),
-            CompileDocumentTool(trigger_compile_uc, get_project_uc, compile_repo).definition(),
+            CompileDocumentTool(
+                trigger_compile_uc,
+                get_project_uc,
+                compile_repo,
+                shutdown=process_shutdown(),
+                builds_survive_restart=dispatcher.survives_restart,
+            ).definition(),
             PackageProjectTool(create_submission_uc, get_submission_profiles_uc).definition(),
             # --- VCS / «Версии» (project-scoped) ---
             VcsStatusTool(get_vcs_status_uc).definition(),

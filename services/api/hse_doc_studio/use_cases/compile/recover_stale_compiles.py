@@ -5,9 +5,10 @@ from datetime import datetime, timezone
 
 import structlog
 
-from hse_doc_studio.core.compile.failure import RESTARTED
+from hse_doc_studio.core.compile.failure import INTERRUPTED
 from hse_doc_studio.core.entities import CompileRecord
 from hse_doc_studio.core.enums import CompileStatus, DocumentStatus
+from hse_doc_studio.core.jobs.protocols import IJobDispatcher
 from hse_doc_studio.core.projects.locator import IProjectLocator
 from hse_doc_studio.core.repositories import (
     ICompileRepository,
@@ -16,22 +17,26 @@ from hse_doc_studio.core.repositories import (
 
 logger = structlog.get_logger()
 
+STALE_LOG_LINE = "[stale] server restarted while build was running: the build was interrupted"
+
 
 @dataclass
 class RecoverStaleCompilesOutput:
     recovered_compiles: int
     unstuck_documents: int
+    # Сборки, которые после рестарта ведёт диспетчер (задача в очереди пережила api): их не трогаем.
+    continued_compiles: int = 0
 
 
 class RecoverStaleCompilesUC:
-    """Fix up any compile records left in `pending`/`running` after a crash.
+    """Закрывает записи сборок, оставшиеся в `pending`/`running` от прошлого процесса.
 
-    A clean shutdown wouldn't leave records in those states because the task's
-    finally-block would have written the terminal status. After SIGKILL or a
-    bare process exit, though, the in-flight task disappears with its asyncio
-    loop and the record stays mid-flight forever — and the document stays
-    `building`, which keeps every Compile button disabled. We run this once
-    at app startup.
+    Сборка, которую ведёт диспетчер (на сервере задача очереди пережила рестарт api и подхвачена
+    `QueueJobDispatcher.recover()`), продолжается: её запись и статус документа получат итог задачи. Поэтому
+    вызывать после восстановления очереди. Остальные записи продолжить нечем (локальная сборка умерла с
+    процессом, задача не успела попасть в очередь): они закрываются статусом `cancelled` с кодом `interrupted`,
+    а не `failure`, так как документ тут ни при чём. Документ без идущей сборки перестаёт быть `building`,
+    иначе кнопки сборки остались бы выключенными. Выполняется один раз при старте.
     """
 
     def __init__(
@@ -39,14 +44,17 @@ class RecoverStaleCompilesUC:
         project_repo: IProjectRepository,
         locator: IProjectLocator,
         compile_repo: ICompileRepository,
+        dispatcher: IJobDispatcher | None = None,
     ) -> None:
         self._project_repo = project_repo
         self._locator = locator
         self._compile_repo = compile_repo
+        self._dispatcher = dispatcher
 
     async def execute(self) -> RecoverStaleCompilesOutput:  # noqa: C901
         recovered_compiles = 0
         unstuck_documents = 0
+        continued_compiles = 0
 
         for folder in await self._locator.list_all():
             try:
@@ -61,35 +69,22 @@ class RecoverStaleCompilesUC:
             if project is None:
                 continue
 
+            continued_docs: set[str] = set()
             for record in await self._compile_repo.list_unfinished(folder):
-                finished_at = datetime.now(tz=timezone.utc)
-                log_tail = (record.log or "").rstrip()
-                suffix = "[stale] server restarted while build was running"
-                new_log = f"{log_tail}\n{suffix}" if log_tail else suffix
-
-                await self._compile_repo.save(
-                    CompileRecord(
-                        id=record.id,
-                        project_folder=record.project_folder,
-                        doc_id=record.doc_id,
-                        engine=record.engine,
-                        status=CompileStatus.failure,
-                        started_at=record.started_at,
-                        finished_at=finished_at,
-                        log=new_log,
-                        output_path=record.output_path,
-                        check_results=record.check_results,
-                        pages=record.pages,
-                        error_code=RESTARTED,
-                    )
-                )
+                if self._dispatcher is not None and self._dispatcher.is_active(record.id):
+                    continued_docs.add(record.doc_id)
+                    continued_compiles += 1
+                    continue
+                await self._interrupt(record)
                 recovered_compiles += 1
 
-            building_docs = [d for d in project.documents if d.status == DocumentStatus.building]
+            building_docs = [
+                d for d in project.documents if d.status == DocumentStatus.building and d.id not in continued_docs
+            ]
             if building_docs:
+                stuck_ids = {d.id for d in building_docs}
                 updated_docs = [
-                    replace(d, status=DocumentStatus.err) if d.status == DocumentStatus.building else d
-                    for d in project.documents
+                    replace(d, status=DocumentStatus.err) if d.id in stuck_ids else d for d in project.documents
                 ]
                 project.documents[:] = updated_docs
                 try:
@@ -102,14 +97,29 @@ class RecoverStaleCompilesUC:
                         exc=str(exc),
                     )
 
-        if recovered_compiles or unstuck_documents:
+        if recovered_compiles or unstuck_documents or continued_compiles:
             logger.info(
                 "startup recovery completed",
                 recovered_compiles=recovered_compiles,
                 unstuck_documents=unstuck_documents,
+                continued_compiles=continued_compiles,
             )
 
         return RecoverStaleCompilesOutput(
             recovered_compiles=recovered_compiles,
             unstuck_documents=unstuck_documents,
+            continued_compiles=continued_compiles,
+        )
+
+    async def _interrupt(self, record: CompileRecord) -> None:
+        log_tail = (record.log or "").rstrip()
+        await self._compile_repo.save(
+            replace(
+                record,
+                status=CompileStatus.cancelled,
+                finished_at=datetime.now(tz=timezone.utc),
+                log=f"{log_tail}\n{STALE_LOG_LINE}" if log_tail else STALE_LOG_LINE,
+                error_code=INTERRUPTED,
+                error_detail=None,
+            )
         )

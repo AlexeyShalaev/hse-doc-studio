@@ -3,9 +3,11 @@
 from __future__ import annotations
 
 from hse_doc_studio.core.agent.entities import AgentToolContext, ToolResult, ToolSpec
+from hse_doc_studio.core.compile.failure import failure_message
 from hse_doc_studio.core.entities import CompileRecord
 from hse_doc_studio.core.enums import ToolKind
 from hse_doc_studio.core.errors import NotFoundError
+from hse_doc_studio.core.i18n import current_interface_language
 from hse_doc_studio.use_cases.checks.get_normcontrol_report import GetNormcontrolReportInput, GetNormcontrolReportUC
 from hse_doc_studio.use_cases.checks.list_document_check_rules import (
     ListDocumentCheckRulesInput,
@@ -36,7 +38,7 @@ _COMPILE = {"type": "string", "description": "Идентификатор сбо�
 
 def _summary(record: CompileRecord) -> dict[str, object]:
     severities = [str(r.severity) for r in record.check_results]
-    return {
+    summary: dict[str, object] = {
         "id": record.id,
         "doc_id": record.doc_id,
         "status": record.status,
@@ -48,6 +50,11 @@ def _summary(record: CompileRecord) -> dict[str, object]:
         "errors": severities.count("err"),
         "warnings": severities.count("warn"),
     }
+    if record.error_code:
+        # Причина неудачи или отмены: `interrupted` значит, что сборку оборвал перезапуск сервера, а не документ.
+        summary["error_code"] = record.error_code
+        summary["error"] = failure_message(record.error_code, current_interface_language())
+    return summary
 
 
 class ListCompilesTool(McpTool):

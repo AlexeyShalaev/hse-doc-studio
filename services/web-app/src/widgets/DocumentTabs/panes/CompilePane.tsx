@@ -14,6 +14,7 @@ import type { z } from "zod";
 import { documentApi, getDocMeta } from "@entities/document";
 import {
   hasBuildOutput,
+  isInterrupted,
   shortReason,
   useCancelDocCompile,
   useStartCompile,
@@ -202,6 +203,7 @@ export const CompilePane = ({ projectId, doc }: CompilePaneProps) => {
   const isDone = status === "success";
   const isFailed = status === "failure";
   const isCancelled = status === "cancelled";
+  const isInterruptedBuild = isInterrupted(status, failure?.code);
   const isStalled = liveOwnsPane && slot.isStalled;
 
   // Ask for notification permission once a build is actually running (a real
@@ -305,7 +307,9 @@ export const CompilePane = ({ projectId, doc }: CompilePaneProps) => {
           {isCancelled && (
             <span className="sev">
               <span className="dot pending" />
-              {t("compile.cancelled")}
+              {isInterruptedBuild
+                ? t("compile.interrupted")
+                : t("compile.cancelled")}
             </span>
           )}
         </div>

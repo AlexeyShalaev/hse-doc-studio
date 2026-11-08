@@ -103,6 +103,8 @@ def _rpc_error(exc: McpError) -> MCPError:
         return MCPError(types.INVALID_PARAMS, str(exc))
     if exc.code is McpErrorCode.failed:
         return MCPError(types.INTERNAL_ERROR, str(exc))
+    if exc.code is McpErrorCode.server_restarting:
+        return MCPError(types.INTERNAL_ERROR, str(exc), {"code": exc.code.value, "retry_after_s": exc.retry_after_s})
     return MCPError(_FORBIDDEN, str(exc), {"code": exc.code.value})
 
 

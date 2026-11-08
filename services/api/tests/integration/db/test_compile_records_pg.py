@@ -9,6 +9,7 @@ from uuid import UUID, uuid4
 import pytest
 import pytest_asyncio
 from hse_doc_studio.core.access.entities import Actor
+from hse_doc_studio.core.compile.failure import INTERRUPTED
 from hse_doc_studio.core.enums import CheckSeverity, CompileStatus, DocumentStatus
 from hse_doc_studio.core.projects.volume import UnsafePathError
 from hse_doc_studio.core.value_objects import CheckLocation, CheckResult
@@ -212,7 +213,7 @@ async def test__project_removed_from_catalog__records_cascade(world: World) -> N
     assert await world.rows() == []
 
 
-async def test__recover_stale_compiles__fails_stuck_records_and_unsticks_documents(world: World) -> None:
+async def test__recover_stale_compiles__interrupts_stuck_records_and_unsticks_documents(world: World) -> None:
     folder = await world.add_project(building=True)
     stuck = make_record(folder, status=CompileStatus.running, finished_at=None, log="шаг 1")
     done = make_record(folder, minutes=5)
@@ -225,6 +226,7 @@ async def test__recover_stale_compiles__fails_stuck_records_and_unsticks_documen
     assert (result.recovered_compiles, result.unstuck_documents) == (1, 1)
     recovered = await world.repo.get_for_project(folder, stuck.id)
     assert recovered is not None
-    assert recovered.status is CompileStatus.failure
+    # Перезапуск, а не ошибка документа: «прервана», и код с причиной сохраняются в Postgres.
+    assert (recovered.status, recovered.error_code) == (CompileStatus.cancelled, INTERRUPTED)
     assert recovered.log.startswith("шаг 1\n[stale]")
     assert await world.repo.list_unfinished(folder) == []
