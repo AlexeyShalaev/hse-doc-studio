@@ -4,10 +4,19 @@ from __future__ import annotations
 
 from collections.abc import AsyncIterator
 from pathlib import Path
-from uuid import uuid4
+from typing import Any
+from uuid import UUID, uuid4
 
 import pytest_asyncio
+from dishka import Provider, Scope, provide
+from hse_doc_studio.core.devices.builds import BuildRelation, FetchBlocked, FetchStatus
 from hse_doc_studio.infra.di.providers.local_git_servers import LocalGitServersProvider
+from hse_doc_studio.use_cases.devices.local_builds import (
+    DocumentBuildStatus,
+    FetchOutcome,
+    LocalBuilds,
+    LocalBuildsUC,
+)
 from httpx import ASGITransport, AsyncClient
 
 from tests.fixtures.app import create_test_app, create_test_container
@@ -82,3 +91,51 @@ async def test__builds__unknown_project_is_not_found(test_app: AsyncClient) -> N
     assert (
         await test_app.post(f"/api/v1/projects/{uuid4()}/git/builds/cancel", json={"doc_id": None})
     ).status_code == 404
+
+
+class _SlidesBuilds:
+    """Проект с документом pptx: облачная сборка есть, получить её нельзя."""
+
+    async def status(self, _project_id: UUID) -> LocalBuilds:
+        slides = DocumentBuildStatus(
+            doc_id="presentation",
+            local=None,
+            cloud=None,
+            cloud_running=False,
+            studio=None,
+            relation=BuildRelation.cloud_only,
+            can_fetch=False,
+            fetch_blocked=FetchBlocked.not_pdf,
+        )
+        return LocalBuilds(True, None, None, False, None, (slides,))
+
+    async def fetch(self, _project_id: UUID, doc_id: str | None, **_kw: Any) -> list[FetchOutcome]:
+        return [] if doc_id is None else [FetchOutcome(doc_id, FetchStatus.not_pdf, code="not_pdf")]
+
+
+class _SlidesProvider(Provider):
+    @provide(scope=Scope.REQUEST, override=True)
+    def get_local_builds(self) -> LocalBuildsUC:
+        return _SlidesBuilds()  # type: ignore[return-value]
+
+
+@pytest_asyncio.fixture
+async def slides_app(tmp_path: Path) -> AsyncIterator[AsyncClient]:
+    data_dir = tmp_path / "data"
+    data_dir.mkdir()
+    container = create_test_container(data_dir, extra_providers=[LocalGitServersProvider(), _SlidesProvider()])
+    async with AsyncClient(transport=ASGITransport(app=create_test_app(container)), base_url="http://test") as client:
+        yield client
+    await container.close()
+
+
+async def test__builds__pptx_document_is_not_offered_and_direct_fetch_says_not_pdf(slides_app: AsyncClient) -> None:
+    project = uuid4()
+
+    (doc,) = (await slides_app.get(f"/api/v1/projects/{project}/git/builds")).json()["documents"]
+    one = await slides_app.post(f"/api/v1/projects/{project}/git/builds/fetch", json={"doc_id": "presentation"})
+    every = await slides_app.post(f"/api/v1/projects/{project}/git/builds/fetch", json={"doc_id": None})
+
+    assert (doc["can_fetch"], doc["fetch_blocked"]) == (False, "not_pdf")
+    assert one.json()["items"] == [{"doc_id": "presentation", "status": "not_pdf", "code": "not_pdf", "size": None}]
+    assert every.json()["items"] == []

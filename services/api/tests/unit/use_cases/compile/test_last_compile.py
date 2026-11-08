@@ -8,6 +8,7 @@ from pathlib import Path
 from types import SimpleNamespace
 from typing import Any
 
+import structlog
 from hse_doc_studio.core.entities import Document
 from hse_doc_studio.core.enums import DocumentStatus
 from hse_doc_studio.core.value_objects import ChecksOverride
@@ -79,3 +80,17 @@ async def test__journal_unreadable__pointer_left_as_is() -> None:
     pointer = uuid.uuid4()
 
     assert await effective_last_compile_id(_Compiles(broken=True), _FOLDER, _doc(pointer)) == pointer
+
+
+async def test__foreign_pointer__logged_once_not_on_every_read() -> None:
+    compiles = _Compiles(_record("report", 0))
+    doc = _doc(uuid.uuid4())
+    other = _doc(uuid.uuid4())
+
+    with structlog.testing.capture_logs() as logs:
+        for _ in range(3):
+            await effective_last_compile_id(compiles, _FOLDER, doc)
+        await effective_last_compile_id(compiles, _FOLDER, other)
+
+    foreign = [entry for entry in logs if entry["event"] == "last compile pointer is foreign"]
+    assert [entry["compile_id"] for entry in foreign] == [str(doc.last_compile_id), str(other.last_compile_id)]

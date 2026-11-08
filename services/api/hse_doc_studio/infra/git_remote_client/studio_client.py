@@ -10,7 +10,7 @@ import ssl
 from collections.abc import AsyncIterator
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any
+from typing import Any, BinaryIO
 from uuid import UUID
 
 import httpx
@@ -293,15 +293,20 @@ async def _save_stream(response: httpx.Response, dest: Path, max_bytes: int) -> 
         raise StudioServerError(StudioServerErrorCode.cloud_pdf_too_large)
     digest = hashlib.sha256()
     size = 0
-    dest.parent.mkdir(parents=True, exist_ok=True)
     try:
-        with dest.open("wb") as handle:
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        handle = dest.open("wb")
+    except OSError:
+        # Сбой своего диска не выдаём за «нет связи»: ниже любой OSError значит сеть или TLS.
+        raise StudioServerError(StudioServerErrorCode.cloud_pdf_write_failed) from None
+    try:
+        with handle:
             async for chunk in response.aiter_bytes(_UPLOAD_CHUNK):
                 size += len(chunk)
                 if size > max_bytes:
                     raise StudioServerError(StudioServerErrorCode.cloud_pdf_too_large)
                 digest.update(chunk)
-                handle.write(chunk)
+                _write(handle, chunk)
     except BaseException:
         dest.unlink(missing_ok=True)
         raise
@@ -309,7 +314,7 @@ async def _save_stream(response: httpx.Response, dest: Path, max_bytes: int) -> 
     claimed = response.headers.get("x-content-sha256")
     if claimed and claimed.lower() != sha256:
         dest.unlink(missing_ok=True)
-        raise StudioServerError(StudioServerErrorCode.unreachable)
+        raise StudioServerError(StudioServerErrorCode.cloud_pdf_checksum)
     pages = response.headers.get("x-pages")
     return CloudPdfReply(
         unchanged=False,
@@ -319,6 +324,13 @@ async def _save_stream(response: httpx.Response, dest: Path, max_bytes: int) -> 
         built_at=_parse_dt(response.headers.get("x-built-at")),
         pages=int(pages) if pages and pages.isdigit() else None,
     )
+
+
+def _write(handle: BinaryIO, chunk: bytes) -> None:
+    try:
+        handle.write(chunk)
+    except OSError:
+        raise StudioServerError(StudioServerErrorCode.cloud_pdf_write_failed) from None
 
 
 def _cloud_pdf_failure(status: int, body: dict[str, Any]) -> StudioServerError:

@@ -13,8 +13,9 @@ from hse_doc_studio.api.schemas.devices import DevicesOverviewResponse, ProjectS
 
 BuildRelationName = Literal["none", "cloud_only", "local_only", "same", "cloud_newer", "local_newer"]
 FetchStatusName = Literal[
-    "downloaded", "unchanged", "kept_local", "skipped_stale", "too_large", "no_cloud_build", "failed"
+    "downloaded", "unchanged", "kept_local", "skipped_stale", "too_large", "no_cloud_build", "not_pdf", "failed"
 ]
+FetchBlockedName = Literal["not_pdf", "output_unknown"]
 
 
 class LocalDeviceOut(StrictModel):
@@ -92,6 +93,9 @@ class DocumentBuildStatusOut(StrictModel):
     studio: BuildOut | None
     relation: BuildRelationName
     can_fetch: bool
+    # В облаке есть сборка свежее, но получить её нельзя: документ выпускается не в PDF или путь результата
+    # не известен. Тогда `can_fetch` false.
+    fetch_blocked: FetchBlockedName | None = None
 
 
 class LocalBuildsResponse(StrictModel):
@@ -115,6 +119,8 @@ class FetchBuildRequest(StrictModel):
 class FetchOutcomeOut(StrictModel):
     doc_id: str
     status: FetchStatusName
+    # Уточнение итога: у `failed` причина (git_server_unreachable, cloud_pdf_forbidden, auth_failed,
+    # cloud_pdf_checksum_mismatch, cloud_pdf_write_failed, output_path_invalid, output_unknown и коды GitErrorCode).
     code: str | None
     size: int | None
 

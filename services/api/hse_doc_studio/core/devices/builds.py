@@ -23,7 +23,18 @@ class FetchStatus(StrEnum):
     skipped_stale = "skipped_stale"
     too_large = "too_large"
     no_cloud_build = "no_cloud_build"
+    # Документ выпускается не в PDF (pptx и т. п.): облако хранит только PDF, результат приходит с исходниками.
+    not_pdf = "not_pdf"
     failed = "failed"
+
+
+class FetchBlocked(StrEnum):
+    """Почему облачную сборку документа нельзя получить, даже если она есть."""
+
+    # Результат документа не PDF: облако архивирует только PDF, а сам файл (pptx) и так приходит с исходниками.
+    not_pdf = "not_pdf"
+    # Путь результата не известен: определения документа нет в установленном паке.
+    output_unknown = "output_unknown"
 
 
 @dataclass(frozen=True)
@@ -48,6 +59,15 @@ def relate(local: Side | None, cloud: Side | None) -> BuildRelation:
     if same_file or same_version:
         return BuildRelation.same
     return BuildRelation.cloud_newer if cloud.at > local.at else BuildRelation.local_newer
+
+
+def fetch_blocked(output_file: str | None) -> FetchBlocked | None:
+    """Можно ли вообще положить облачный PDF на место результата документа; `None` значит «можно»."""
+    if output_file is None:
+        return FetchBlocked.output_unknown
+    if not output_file.lower().endswith(".pdf"):
+        return FetchBlocked.not_pdf
+    return None
 
 
 def decide_fetch(  # noqa: PLR0911 — правила проверяются по порядку, каждое со своим итогом

@@ -152,6 +152,7 @@ def _document(item: DocumentBuildStatus) -> DocumentBuildStatusOut:
         studio=_cloud(item.studio),
         relation=item.relation.value,
         can_fetch=item.can_fetch,
+        fetch_blocked=item.fetch_blocked.value if item.fetch_blocked is not None else None,
     )
 
 
