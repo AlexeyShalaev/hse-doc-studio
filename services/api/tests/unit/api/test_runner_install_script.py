@@ -32,6 +32,8 @@ def _script(tmp_path: Path) -> Path:
 def _run(
     tmp_path: Path, *args: str, uname: str, extra: dict[str, str] | None = None
 ) -> subprocess.CompletedProcess[str]:
+    if os.name != "posix":
+        pytest.skip("скрипт установки рассчитан на POSIX sh")
     shim = tmp_path / "bin"
     shim.mkdir(exist_ok=True)
     (shim / "uname").write_text(f"#!/bin/sh\necho {uname}\n")
