@@ -1,5 +1,5 @@
 """Маршрут подписания глазами автора (docs/design/signing-route.md, раздел 8): черновик, правка, ход, предпросмотр,
-отправка, отмена, снятие с контроля.
+отправка, отмена, снятие с контроля, «Напомнить».
 
 Только сервер: локальная Студия отвечает 404 (раздел 6.9). Права по таблице `ROUTE_ACTIONS`: чтение `OUTPUT_READ`,
 управление `SUBMISSION_CREATE`. Гостю и ссылочному праву ход маршрута не раскрывается (404, раздел 7).
@@ -36,6 +36,7 @@ from hse_doc_studio.use_cases.signing_route.author import (
     SigningRouteSending,
 )
 from hse_doc_studio.use_cases.signing_route.key_signer import KeyInfo, KeyRequest
+from hse_doc_studio.use_cases.signing_route.reminders import SigningRouteReminding
 from hse_doc_studio.use_cases.signing_route.views import PersonView, RouteDetails
 
 router = APIRouter(route_class=SafeDishkaRoute, dependencies=[Depends(require_server_mode)])
@@ -357,3 +358,22 @@ async def archive_signing_route(
     project_id: UUID, route_id: UUID, uc: FromDishka[SigningRouteControl], body: s.EmptyRequest | None = None
 ) -> s.SigningRouteResponse:
     return route_response(await uc.archive(people_views.require_user(), project_id, route_id))
+
+
+@router.post(_BASE + "/{route_id}/participants/{participant_id}/remind", response_model=s.SigningReminder)
+async def remind_signing_participant(
+    project_id: UUID,
+    route_id: UUID,
+    participant_id: str,
+    uc: FromDishka[SigningRouteReminding],
+    body: s.EmptyRequest | None = None,
+) -> s.SigningReminder:
+    """Напомнить тому, чья очередь (не чаще раза в 12 часов); приглашённому повторить приглашение."""
+    try:
+        participant = UUID(participant_id)
+    except ValueError:
+        raise _not_found() from None
+    reminder = await uc.remind(people_views.require_user(), project_id, route_id, participant)
+    return s.SigningReminder(
+        participant_id=str(reminder.participant_id), delivery=reminder.delivery, link=reminder.link
+    )

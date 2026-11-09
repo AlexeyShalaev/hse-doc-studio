@@ -533,6 +533,11 @@ _OUTCOMES = {
 }
 
 
+def request_outcome(action: NextAction) -> RequestOutcome | None:
+    """О чём просить участника с таким следующим действием (запрос и напоминание); None, если не о чем."""
+    return _OUTCOMES.get(action)
+
+
 def _notices(
     route: SigningRoute,
     infos: tuple[_Info, ...],

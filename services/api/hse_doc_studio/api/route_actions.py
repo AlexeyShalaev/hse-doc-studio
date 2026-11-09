@@ -219,6 +219,9 @@ ROUTE_ACTIONS: Mapping[RouteKey, RouteRule] = {
     ("POST", "/projects/{project_id}/signing-routes/{route_id}/send"): RouteRule(Action.SUBMISSION_CREATE),
     ("POST", "/projects/{project_id}/signing-routes/{route_id}/cancel"): RouteRule(Action.SUBMISSION_CREATE),
     ("POST", "/projects/{project_id}/signing-routes/{route_id}/archive"): RouteRule(Action.SUBMISSION_CREATE),
+    ("POST", "/projects/{project_id}/signing-routes/{route_id}/participants/{participant_id}/remind"): RouteRule(
+        Action.SUBMISSION_CREATE
+    ),
     # Панель «Доступ»: список видит любой участник проекта
     ("GET", "/projects/{project_id}/members"): RouteRule(Action.PROJECT_VIEW),
     # Настройки проекта (владелец)
