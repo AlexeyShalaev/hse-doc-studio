@@ -121,6 +121,17 @@ async def test__execute__isolation_off__runner_argv_matches_the_embedded_profile
     assert "--read-only" not in latexmk
 
 
+async def test__execute__any_profile__fixed_pdf_date_and_real_date_in_text(tmp_path: Path, docker_log: Path) -> None:
+    # Дата в свойствах PDF и `/ID` постоянные, дата в тексте настоящая: пересборка без правок даёт тот же PDF.
+    executor, _ = await _executor(_config(tmp_path))
+
+    await executor.execute(_envelope(), _ctx())
+
+    latexmk = next(call for call in recorded_calls(docker_log) if "latexmk" in call)
+    env = {latexmk[i + 1] for i, arg in enumerate(latexmk[:-1]) if arg == "-e"}
+    assert {"SOURCE_DATE_EPOCH=315532800", "FORCE_SOURCE_DATE=0"} <= env
+
+
 async def test__execute__latexmk_fails__failed_result_without_outputs(
     tmp_path: Path, docker_log: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:

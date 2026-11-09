@@ -12,6 +12,7 @@ from hse_doc_studio.infra.compile.k8s.config import KubernetesExecutorConfig
 from hse_doc_studio.infra.compile.latexmk import (
     NONROOT_FORMAT_PREPARE,
     NONROOT_TEX_ENV,
+    REPRODUCIBLE_TEX_ENV,
     TEX_SEARCH_ENV,
     TexSource,
     latexmk_argv,
@@ -121,7 +122,7 @@ def download_command(build_rel: str) -> list[str]:
 
 
 def build_pod_manifest(spec: BuildPodSpec, cfg: KubernetesExecutorConfig, namespace: str) -> dict[str, object]:
-    env = [{"name": name, "value": value} for name, value in (*TEX_SEARCH_ENV, *NONROOT_TEX_ENV)]
+    env = [{"name": name, "value": value} for name, value in (*TEX_SEARCH_ENV, *REPRODUCIBLE_TEX_ENV, *NONROOT_TEX_ENV)]
     env.append({"name": "HDS_NONCE", "value": spec.nonce})
     mounts: list[dict[str, object]] = [
         {"name": "work", "mountPath": "/work"},
