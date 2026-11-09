@@ -52,22 +52,23 @@ def _actor_id() -> UUID | None:
 class SigningRouteGate(RouteScenario):
     """`ISigningRouteGate` сервера."""
 
-    async def require_turn(self, project_id: UUID, doc_id: str, slot_id: str) -> None:
+    async def require_turn(self, project_id: UUID, doc_id: str, slot_id: str) -> UUID | None:
         route = await self._s.routes.holding(project_id, doc_id)
         pair = DocSlot(doc_id, slot_id)
         if route is None or route.status is not RouteStatus.active or pair not in route.pairs:
-            return
+            return None
         point = await self._s.points.load(project_id, route.profile_id)
         loaded = await self._s.facts.load(point, route)
         evaluation = evaluate(route, loaded.facts)
         if evaluation.status is not RouteStatus.active:
             # Маршрут по расчёту уже остановлен или завершён: очереди нет, слот подписывается как без маршрута.
-            return
+            return None
         owner = next(p for p in route.participants if pair in p.assignments)
         if owner.user_id is None or owner.user_id != _actor_id():
             raise not_your_turn()
         if evaluation.participant(owner.id).next_action is not NextAction.sign:
             raise not_your_turn()
+        return route.id
 
     async def signature_written(self, project_id: UUID, doc_id: str, slot_id: str) -> None:
         held = await self._s.routes.holding(project_id, doc_id)

@@ -132,11 +132,12 @@ class ISigningRouteGate(Protocol):
     Студия маршрутов не ведёт: там порт ничего не делает (`NoSigningRoutes`).
     """
 
-    async def require_turn(self, project_id: UUID, doc_id: str, slot_id: str) -> None:
+    async def require_turn(self, project_id: UUID, doc_id: str, slot_id: str) -> UUID | None:
         """Слот идущего маршрута подписывает только его участник, когда маршрут ждёт его подписи.
 
         Иначе `RouteConflictError` с кодом `not_your_turn` (409). Слот вне маршрута и документ без идущего
-        маршрута проходят без проверки.
+        маршрута проходят без проверки. Возвращает id маршрута, в очередь которого подписывается слот (None вне
+        маршрута): подпись под `signing_route_scope` попадает в журнал аудита с `route_id` (раздел 6.7).
         """
         ...
 
@@ -151,7 +152,7 @@ class ISigningRouteGate(Protocol):
 class NoSigningRoutes:
     """`ISigningRouteGate` там, где маршрутов нет (локальная Студия): слот подписывается как обычно."""
 
-    async def require_turn(self, project_id: UUID, doc_id: str, slot_id: str) -> None:
+    async def require_turn(self, project_id: UUID, doc_id: str, slot_id: str) -> UUID | None:
         return None
 
     async def signature_written(self, project_id: UUID, doc_id: str, slot_id: str) -> None:

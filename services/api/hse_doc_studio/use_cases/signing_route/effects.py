@@ -24,6 +24,7 @@ from hse_doc_studio.core.signatures.errors import GpgError, GpgUnavailableError
 from hse_doc_studio.core.signatures.plan import VisibleMark, mark_of
 from hse_doc_studio.core.signatures.ports import IOpenPgpKeyImporter
 from hse_doc_studio.core.signatures.signer_profile import ISignerProfileRepository, PublicKeyKind
+from hse_doc_studio.core.signing_route.audit import signing_route_scope
 from hse_doc_studio.core.signing_route.effects import Effect, FillPlate, Freeze, Release, Withhold
 from hse_doc_studio.core.signing_route.entities import SigningRoute
 from hse_doc_studio.core.value_objects import SignaturesState
@@ -61,7 +62,9 @@ class RouteFileEffects:
         for effect in effects:
             if isinstance(effect, Freeze):
                 self._save(folder, state, _date_plates(state, effect.doc_id, moment))
-                await self._freeze.execute(FreezePdfInput(project_id=point.project_id, doc_id=effect.doc_id))
+                # Фиксацию делает маршрут: запись `signature.freeze` журнала аудита получает его `route_id`.
+                with signing_route_scope(route.id):
+                    await self._freeze.execute(FreezePdfInput(project_id=point.project_id, doc_id=effect.doc_id))
                 state = self._signatures.get_state(folder)
                 frozen.append(effect.doc_id)
             else:
