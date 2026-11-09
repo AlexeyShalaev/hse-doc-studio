@@ -110,6 +110,29 @@
   white-space: nowrap;
 }
 
+/* Highlighted place on the page (the signer's own slot): an accent outline with
+   the label on top. Preview only, never part of the PDF. */
+.pdf-stamp-frame {
+  position: absolute;
+  box-sizing: border-box;
+  border: 2px solid var(--accent);
+  border-radius: 0.1875rem;
+  background: color-mix(in oklch, var(--accent) 12%, transparent);
+  box-shadow: 0 0 0 3px color-mix(in oklch, var(--accent) 22%, transparent);
+}
+.pdf-stamp-frame > span {
+  position: absolute;
+  left: -2px;
+  bottom: 100%;
+  padding: 0 0.3125rem;
+  border-radius: 0.1875rem 0.1875rem 0 0;
+  background: var(--accent);
+  color: var(--accent-ink);
+  font-size: 0.625rem;
+  line-height: 1.5;
+  white-space: nowrap;
+}
+
 /* Night / invert reading mode — flips the rasterised page; hue-rotate keeps
    coloured figures roughly true instead of colour-negated. */
 .pdf-invert {

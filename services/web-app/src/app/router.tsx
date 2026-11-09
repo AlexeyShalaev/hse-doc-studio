@@ -1,5 +1,6 @@
 import { createBrowserRouter, Navigate, type RouteObject } from "react-router";
 import { i18n } from "@shared/lib";
+import { loadSigningNamespace } from "@shared/lib/i18n/signingNamespace";
 import { AuthErrorPage } from "@pages/AuthErrorPage";
 import { DevicePage } from "@pages/DevicePage";
 import { ErrorPage } from "@pages/ErrorPage";
@@ -58,6 +59,7 @@ const devRoutes: RouteObject[] = import.meta.env.DEV
             { getGuestViewGallery },
             { getDeviceGallery },
             { getGitServerGallery },
+            { getSigningPageGallery },
             demo,
           ] = await Promise.all([
             import("@pages/DevServerScreens"),
@@ -67,7 +69,9 @@ const devRoutes: RouteObject[] = import.meta.env.DEV
             import("@pages/GuestViewPage"),
             import("@pages/DevicePage"),
             import("@features/git-server"),
+            import("@pages/SigningPage/gallery"),
             import("./demo"),
+            loadSigningNamespace(),
           ]);
           const extraSections = [
             {
@@ -94,6 +98,11 @@ const devRoutes: RouteObject[] = import.meta.env.DEV
               id: "git-server",
               title: "Клонирование с сервера Студии",
               groups: getGitServerGallery(),
+            },
+            {
+              id: "signing-page",
+              title: "Страница подписанта",
+              groups: getSigningPageGallery(),
             },
           ];
           // Серверные записи ходят в демо-мир, даже если приложение запущено без него.
@@ -188,6 +197,19 @@ export const router = createBrowserRouter([
       {
         path: "/settings/:section",
         element: <SettingsPage />,
+      },
+      // Страница подписанта из письма и «Входящих» (маршрут подписания). Своя проверка
+      // доступа: задачу сервер отдаёт только участнику, остальным 404. Страница и её
+      // словарь в отдельных ленивых чанках.
+      {
+        path: "/sign/:projectId/:routeId",
+        lazy: async () => {
+          const [{ SigningPage }] = await Promise.all([
+            import("@pages/SigningPage"),
+            loadSigningNamespace(),
+          ]);
+          return { Component: SigningPage };
+        },
       },
       // Проекты за охранником: 404 сервера на чужой проект даёт одну страницу
       // «не найден или нет доступа», а не пустую рабочую область.
