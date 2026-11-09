@@ -722,7 +722,7 @@ def _apply_failure(spec: JobSpec, exc: ApplyError) -> JobResult:
 
 
 def _artifacts_of(job: QueuedJob) -> tuple[ArtifactRef, ...]:
-    raw = (job.result or {}).get("artifacts") or ()
+    raw = (job.result or {}).get("artifacts") or []
     return decode(tuple[ArtifactRef, ...], raw)
 
 

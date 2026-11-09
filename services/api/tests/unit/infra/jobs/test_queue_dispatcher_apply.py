@@ -177,6 +177,19 @@ async def test__submit__artifacts__applied_before_hooks_then_marked_and_discarde
     assert hooks.finished[0][1].status is JobStatus.succeeded
 
 
+async def test__submit__succeeded_without_artifacts__hooks_finish_and_job_marked(rig: Rig) -> None:
+    hooks = RecordingHooks(rig.journal)
+    spec = rig.spec()
+
+    rig.dispatcher.submit(spec, hooks)
+    await _until(lambda: rig.queue._jobs.get(spec.id) is not None)
+    await rig.finish(await rig.claim(), _ok())
+    await _until(lambda: spec.id in rig.ledger.applied)
+
+    assert rig.applier.applied == [(spec.id, ())]
+    assert hooks.finished[0][1].status is JobStatus.succeeded
+
+
 async def test__submit__apply_rejected__failed_result_with_typed_code_and_job_still_marked(rig: Rig) -> None:
     rig.applier.error = ApplyError("output_unsafe_path", "tz/.build is a link")
     hooks = RecordingHooks(rig.journal)
