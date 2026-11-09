@@ -8,7 +8,8 @@
                      `updated_at` — максимум, `created_at` — минимум; `pinned`, `archived`, `meta.vcs` и
                      `documents[].last_compile_id` остаются моими
     signatures.json  слоты и размещения по ключам, `signing_identity_id` и `sign_mode` мои, картинка
-                     слота следует за новейшей, подписанный PDF с подписями — неделимая группа документа
+                     слота следует за новейшей; подписанный PDF, подписи к нему и придержанные маршрутом
+                     слоты (`withheld`) — неделимая группа документа
     forms/*.json     `completed` — «и» обеих сторон и сбрасывается, если ответы изменились после отметки
     template.json    история обновлений — объединение по id, `ignored` — множество
     остальные        словари по ключам, списки и скаляры целиком
@@ -207,7 +208,9 @@ SIGNATURES_RULES = JsonRules(
         Atomic(("placements", "*", "*")),
     ),
     field_groups=(FieldGroup(("slots", "*"), ("png_path", "natural_width_px", "natural_height_px")),),
-    doc_groups=(DocGroups((), ("frozen", "detached", "embedded"), "signature_groups"),),
+    # Придержанные слоты в группе: они задают видимый слой, который лёг в зафиксированный PDF, поэтому
+    # придержание одной стороны с фиксацией другой дало бы PDF, не совпадающий со своим отпечатком.
+    doc_groups=(DocGroups((), ("frozen", "detached", "embedded", "withheld"), "signature_groups"),),
     post=(_stale_signatures,),
 )
 

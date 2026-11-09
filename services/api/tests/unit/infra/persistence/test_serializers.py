@@ -434,6 +434,36 @@ def test__serializers__signatures_state__embedded_and_signed_file_roundtrip() ->
     assert deserialize_signatures_state({"slots": {}, "placements": {}}).embedded == {}
 
 
+def test__serializers__signatures_state__withheld_roundtrip_sorted_and_always_written() -> None:
+    state = SignaturesState(
+        slots={},
+        placements={},
+        withheld={"b": frozenset({"supervisor", "author"}), "a": frozenset({"academic_supervisor"}), "c": frozenset()},
+    )
+
+    data = serialize_signatures_state(state)
+    restored = deserialize_signatures_state(data)
+
+    assert data["withheld"] == {"a": ["academic_supervisor"], "b": ["author", "supervisor"]}
+    assert restored.withheld == {"a": frozenset({"academic_supervisor"}), "b": frozenset({"author", "supervisor"})}
+    assert restored.is_withheld("b", "author")
+    assert not restored.is_withheld("a", "author")
+    assert serialize_signatures_state(SignaturesState.empty())["withheld"] == {}
+
+
+def test__serializers__signatures_state__withheld_legacy_and_broken_entries() -> None:
+    # signatures.json written before signing routes existed still loads.
+    assert deserialize_signatures_state({"slots": {}, "placements": {}}).withheld == {}
+    # A broken entry is skipped, the rest of the state is read.
+    broken = {
+        "slots": {},
+        "placements": {},
+        "withheld": {"a": "author", "b": [1, "", None, "supervisor"], "c": [], "d": {"x": 1}},
+    }
+    assert deserialize_signatures_state(broken).withheld == {"b": frozenset({"supervisor"})}
+    assert deserialize_signatures_state({"slots": {}, "placements": {}, "withheld": ["a"]}).withheld == {}
+
+
 @pytest.mark.unit
 def test__serializers__chat_session_persona_roundtrip(tmp_path: Path) -> None:
     now = datetime.now(tz=timezone.utc)

@@ -585,6 +585,8 @@ def serialize_signatures_state(state: SignaturesState) -> dict[str, Any]:
             doc_id: {slot_id: _serialize_embedded(e) for slot_id, e in slot_map.items()}
             for doc_id, slot_map in state.embedded.items()
         },
+        # Пишется всегда, даже пустым: иначе `preserve_unknown` вернул бы снятое придержание из старого файла.
+        "withheld": {doc_id: sorted(slot_ids) for doc_id, slot_ids in sorted(state.withheld.items()) if slot_ids},
     }
 
 
@@ -747,7 +749,22 @@ def deserialize_signatures_state(data: dict[str, Any]) -> SignaturesState:  # no
         frozen=_deserialize_frozen(data.get("frozen")),
         detached=_deserialize_detached(data.get("detached")),
         embedded=_deserialize_embedded(data.get("embedded")),
+        withheld=_deserialize_withheld(data.get("withheld")),
     )
+
+
+def _deserialize_withheld(raw: Any) -> dict[str, frozenset[str]]:
+    """`{doc_id: [slot_id]}`: битая запись пропускается, а не ломает чтение всего состояния."""
+    result: dict[str, frozenset[str]] = {}
+    if not isinstance(raw, dict):
+        return result
+    for doc_id, slot_ids in raw.items():
+        if not isinstance(slot_ids, list):
+            continue
+        slots = frozenset(slot_id for slot_id in slot_ids if isinstance(slot_id, str) and slot_id)
+        if slots:
+            result[doc_id] = slots
+    return result
 
 
 # ---------------------------------------------------------------------------

@@ -583,6 +583,83 @@ def test__signatures__consistent_signatures__give_no_warning(signatures_json: Js
     assert _merge(_SIGNATURES, signatures_json, ours, signatures_json).warnings == ()
 
 
+def _withhold(doc_id: str, *slots: str) -> Callable[[Json], None]:
+    def change(data: Json) -> None:
+        if slots:
+            data["withheld"][doc_id] = sorted(slots)
+        else:
+            data["withheld"].pop(doc_id, None)
+
+    return change
+
+
+def test__signatures__withheld_is_written_by_the_repository(signatures_json: Json) -> None:
+    assert signatures_json["withheld"] == {}
+
+
+def test__signatures__withheld_changed_by_one_side__is_taken(signatures_json: Json) -> None:
+    held = _edited(signatures_json, _withhold("a", "author--anna"))
+
+    taken = _merge(_SIGNATURES, signatures_json, signatures_json, held)
+    released = _merge(_SIGNATURES, held, held, signatures_json)
+
+    assert not taken.conflict
+    assert _load(taken.content)["withheld"] == {"a": ["author--anna"]}
+    assert not released.conflict
+    assert _load(released.content)["withheld"] == {}
+
+
+def test__signatures__withheld_on_different_documents__are_united(signatures_json: Json) -> None:
+    ours = _edited(signatures_json, _withhold("a", "author--anna"))
+    theirs = _edited(signatures_json, _withhold("b", "author--petr"))
+
+    decision = _merge(_SIGNATURES, signatures_json, ours, theirs)
+
+    assert not decision.conflict
+    assert _load(decision.content)["withheld"] == {"a": ["author--anna"], "b": ["author--petr"]}
+
+
+def test__signatures__withheld_and_frozen_pdf_of_one_document__are_one_signature_group(
+    signatures_json: Json,
+) -> None:
+    ours = _edited(signatures_json, _withhold("a", "author--anna"))
+    theirs = _edited(signatures_json, _refrozen("f3", signed=True))
+
+    decision = _merge(_SIGNATURES, signatures_json, ours, theirs)
+
+    assert decision.conflict_type == ConflictType.signature_group.value
+    (group,) = decision.fields
+    assert group.pointer == "/signature_groups/a"
+    assert (group.ours["withheld"], group.theirs["withheld"]) == (["author--anna"], None)
+    mine = _STRATEGY.resolve(
+        _SIGNATURES, _enc(signatures_json), _enc(ours), _enc(theirs), MergeMeta(), {group.pointer: FieldChoice.mine}
+    )
+    other = _STRATEGY.resolve(
+        _SIGNATURES, _enc(signatures_json), _enc(ours), _enc(theirs), MergeMeta(), {group.pointer: FieldChoice.theirs}
+    )
+    assert (_load(mine.content)["withheld"], _load(mine.content)["frozen"]["a"]["sha256"]) == (
+        {"a": ["author--anna"]},
+        "f1",
+    )
+    assert (_load(other.content)["withheld"], _load(other.content)["frozen"]["a"]["sha256"]) == ({}, "f3")
+
+
+def test__signatures__file_of_a_studio_without_withheld__merges_with_one_that_has_it(signatures_json: Json) -> None:
+    def old_studio(data: Json) -> None:
+        del data["withheld"]
+
+    base = _edited(signatures_json, old_studio)
+    theirs = _edited(base, lambda d: d["slots"]["author--anna"].update(sign_reason="why"))
+    ours = _edited(signatures_json, _withhold("a", "author--anna"))
+
+    decision = _merge(_SIGNATURES, base, ours, theirs)
+
+    merged = _load(decision.content)
+    assert not decision.conflict
+    assert merged["withheld"] == {"a": ["author--anna"]}
+    assert merged["slots"]["author--anna"]["sign_reason"] == "why"
+
+
 # --- forms/*.json ------------------------------------------------------------------------------
 
 
