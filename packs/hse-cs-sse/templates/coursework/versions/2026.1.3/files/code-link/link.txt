@@ -1,0 +1,29 @@
+{% if project.lang == 'en' -%}
+Course project (MSc SSE, 1st year) — repository link
+
+Student: {{ author.name | default(project.authors[0].name) }}, group {{ author.group | default(project.authors[0].group) }}
+Topic: {{ project.meta.name_en | default(project.name, true) }}
+Year: {{ project.meta.year }}
+
+Repository: {{ answers.repo_url | default('(not provided — fill in the "Repository link" form)', true) }}
+{% if answers.branch -%}
+Branch / tag: {{ answers.branch }}
+{% endif -%}
+{% if answers.access -%}
+Access: {{ answers.access }}
+{% endif -%}
+{%- else -%}
+Курсовой проект (магистратура СПИ, 1 курс) — ссылка на репозиторий
+
+Студент: {{ author.name | default(project.authors[0].name) }}, группа {{ author.group | default(project.authors[0].group) }}
+Тема: {{ project.meta.name_ru | default(project.name, true) }}
+Год: {{ project.meta.year }}
+
+Репозиторий: {{ answers.repo_url | default('(не указана — заполните форму «Ссылка на репозиторий»)', true) }}
+{% if answers.branch -%}
+Ветка / тег: {{ answers.branch }}
+{% endif -%}
+{% if answers.access -%}
+Режим доступа: {{ answers.access }}
+{% endif -%}
+{%- endif %}

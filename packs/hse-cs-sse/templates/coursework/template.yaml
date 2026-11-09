@@ -16,7 +16,7 @@ description:
 icon: NotebookPen                  # имя иконки lucide-react
 accent_hue: 200                    # OKLCH hue для accent-color в UI
 
-default_version: "2026.1.2"
+default_version: "2026.1.3"
 
 # Подсказка в поле «Группа» у авторов (визард и настройки проекта) — формат
 # шифра группы программы: магистратура СПИ: «МСПИН» + год поступления + номер группы. Живёт здесь, а не в version.yaml: это

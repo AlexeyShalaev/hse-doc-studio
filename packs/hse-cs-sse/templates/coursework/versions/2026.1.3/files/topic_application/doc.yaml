@@ -1,0 +1,27 @@
+# Манифест документа (bundle-раскладка v2): всё про документ — в этой папке.
+# Заявление двуязычное по форме SmartLMS (русская и английская страницы в
+# одном PDF), поэтому исходник один — без языковых суффиксов.
+name:
+  ru: Заявление о выборе темы КП
+  en: Topic application
+code:
+  ru: ЗАЯВЛ
+  en: APP
+source_file: topic_application/topic_application.tex
+output_file: topic_application/topic_application.pdf
+output_name:
+  ru: Заявление о выборе темы курсового проекта.pdf
+  en: Course project topic application.pdf
+required: true
+supported_langs:
+- ru
+- en
+scope: personal
+supported_kinds:
+- project
+- research
+# Форма, а не текст работы: вёрстка и ГОСТ-проверки к ней не применяются.
+checks:
+  disabled_categories:
+  - formatting
+group: topic
