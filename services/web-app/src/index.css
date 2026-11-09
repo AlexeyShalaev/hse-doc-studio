@@ -1132,6 +1132,8 @@
       transform 0.05s;
     cursor: pointer;
     white-space: nowrap;
+    /* Кнопкой бывает и ссылка (<a class="btn">): подчёркивание ей не нужно. */
+    text-decoration: none;
   }
   .btn:hover {
     background: var(--bg-3);
