@@ -9,8 +9,9 @@ from hse_doc_studio.core.repositories import ITemplateRepository
 _SPEC = ToolSpec(
     name="list_templates",
     description=(
-        "Список доступных шаблонов для создания проекта: pack_id, template_id, название и версия "
-        "по умолчанию. Используй перед create_project, чтобы знать допустимые pack_id/template_id/version."
+        "Список доступных шаблонов для создания проекта: pack_id, template_id, название, версия "
+        "по умолчанию и staffing (solo, team: можно ли создать командный проект). Используй перед "
+        "create_project, чтобы знать допустимые pack_id/template_id/version."
     ),
     parameters={"type": "object", "properties": {}},
 )
@@ -32,8 +33,11 @@ class ListTemplatesTool:
         for pack in packs:
             for template in pack.templates:
                 name = template.name.get("ru") or template.name.get("en") or template.id
+                version = self._template_repo.get_version(pack.id, template.id, template.default_version)
+                staffing = f" staffing={','.join(version.supported_staffing)}" if version is not None else ""
                 lines.append(
-                    f"- pack_id={pack.id} template_id={template.id} version={template.default_version} — {name}"
+                    f"- pack_id={pack.id} template_id={template.id} version={template.default_version}"
+                    f"{staffing} — {name}"
                 )
         if not lines:
             return ToolResult.ok("no templates found" if lang == Lang.en else "шаблоны не найдены")

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import re
 from typing import Any
 from uuid import UUID
 
@@ -91,3 +92,42 @@ async def test__set_project_people__editor_without_settings_right__forbidden(sta
     assert result["_meta"]["code"] == "forbidden"
     events = stand.admin().get("/api/admin/audit", params={"action": "project.people_update"}).json()["items"]
     assert not [e for e in events if e["target"] == project_id]
+
+
+async def test__create_project__team_via_mcp__then_author_by_slug(stand: Stand) -> None:
+    """Командный проект через MCP в облаке: папку выбирает сервер, slug авторов как у мастера создания."""
+    _enable(stand)
+    owner = await stand.person("tanya")
+    headers = _token(stand, owner.email, ["mcp"])
+
+    created = _call(
+        stand,
+        headers,
+        "create_project",
+        {
+            "name": "Система",
+            "pack_id": "hse-cs-se",
+            "template_id": "vkr",
+            "version": "2026.1",
+            "kind": "project",
+            "authors": [{"name": "Анна Смирнова", "topic": "Сервер"}, {"name": "Борис Петров", "topic": "Клиент"}],
+            "supervisor": {"name": "Петров П. П."},
+        },
+    )
+    assert created["isError"] is False, created
+    match = re.search(r"id ([0-9a-f-]{36})", created["content"][0]["text"])
+    assert match is not None, created
+    project_id = match.group(1)
+    card = json.loads(_call(stand, headers, "get_project", {"project_id": project_id})["content"][0]["text"])
+    anna, boris = card["authors"]
+    result = _call(
+        stand,
+        headers,
+        "set_project_people",
+        {"project_id": project_id, "author": {"slug": boris["slug"], "topic": "UI"}},
+    )
+
+    assert card["staffing"] == "team"
+    assert (anna["slug"], anna["topic"], boris["slug"]) == ("anna", "Сервер", "boris")
+    assert result["isError"] is False, result
+    assert _authors(stand, headers, project_id)[1]["topic"] == "UI"

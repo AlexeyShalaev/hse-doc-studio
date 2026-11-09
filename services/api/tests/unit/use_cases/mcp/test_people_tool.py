@@ -95,6 +95,27 @@ def test__merge_authors__email__set_kept_and_cleared() -> None:
     assert merge_authors(current, [{"name": "Иванов"}])[0].email == "i@hse.ru"
 
 
+def test__merge_authors__topic__set_kept_and_cleared() -> None:
+    current = [Author(name="Анна", slug="anna", topic="Сервер"), Author(name="Борис", slug="boris", topic="Клиент")]
+
+    merged = merge_authors(
+        current, [{"name": "Анна", "slug": "anna", "topic": "Ядро"}, {"name": "Борис", "slug": "boris", "topic": ""}]
+    )
+
+    assert [a.topic for a in merged] == ["Ядро", None]
+    assert merge_authors(current, [{"name": "Анна", "slug": "anna"}])[0].topic == "Сервер"
+
+
+def test__merge_authors__team__new_author_comes_without_a_set_like_the_web_settings() -> None:
+    anna = Author(name="Анна", slug="anna", topic="Сервер")
+
+    _, vera = merge_authors([anna], [{"name": "Анна", "slug": "anna"}, {"name": "Вера", "topic": "Тесты"}], team=True)
+    (solo,) = merge_authors([], [{"name": "Вера"}])
+
+    assert vera == Author(name="Вера", topic="Тесты", managed=False)
+    assert solo.managed is True
+
+
 @pytest.mark.parametrize(
     "raw",
     [[], "Иванов", [{"group": "Г1"}], [{"name": " "}], [{"name": "x"}] * 21, [{"name": "x", "email": "нет"}]],
@@ -130,6 +151,14 @@ def test__update_author__team__picks_by_slug_and_empty_value_clears() -> None:
     updated = update_author(_project(ProjectStaffing.team, anna, boris), {"slug": "anna", "group": ""})
 
     assert updated == [replace(anna, group=None), boris]
+
+
+def test__update_author__team__topic_by_slug() -> None:
+    anna = Author(name="Анна", slug="anna", topic="A")
+
+    assert update_author(_project(ProjectStaffing.team, anna), {"slug": "anna", "topic": "Сервер"}) == [
+        replace(anna, topic="Сервер")
+    ]
 
 
 @pytest.mark.parametrize(
