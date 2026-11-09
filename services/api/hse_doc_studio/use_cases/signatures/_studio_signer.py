@@ -25,7 +25,7 @@ from hse_doc_studio.core.signatures.errors import CmsParseError, GpgError, GpgUn
 from hse_doc_studio.core.signatures.key_policy import ISigningKeyPolicy, require_server_key_storage
 from hse_doc_studio.core.signatures.plan import SignMethod, method_of, slot_persona
 from hse_doc_studio.core.signatures.ports import IPadesSigner, ISignatureAudit, ISignerScope, ITrustMaterialProvider
-from hse_doc_studio.core.signatures.stamps import stamps_digest, stamps_for_doc
+from hse_doc_studio.core.signatures.stamps import stamps_digest_matches, stamps_for_doc
 from hse_doc_studio.core.signatures.verification import note_plate_mismatch
 from hse_doc_studio.core.value_objects import (
     DetachedSignature,
@@ -124,8 +124,10 @@ async def signer_for_identity(
         raise ValueError(localized_error("Сертификат ключа не читается", "The key certificate is unreadable")) from exc
 
 
-def current_marks_digest(ctx: DocContext, state: SignaturesState) -> str:
-    return stamps_digest(stamps_for_doc(state, ctx.doc.id, ctx.project.folder, ctx.lang))
+def marks_unchanged(ctx: DocContext, state: SignaturesState, frozen: FrozenPdf) -> bool:
+    """Видимый слой тот же, что при фиксации (отпечаток прежнего вида тоже принимается)."""
+    stamps = stamps_for_doc(state, ctx.doc.id, ctx.project.folder, ctx.lang)
+    return stamps_digest_matches(frozen.stamps_digest, stamps, ctx.project.folder)
 
 
 def signed_file_of(frozen: FrozenPdf) -> str:

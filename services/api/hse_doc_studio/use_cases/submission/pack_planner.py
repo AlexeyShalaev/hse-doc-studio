@@ -53,7 +53,7 @@ from hse_doc_studio.core.signatures.package_text import (
 )
 from hse_doc_studio.core.signatures.plan import SignMethod, method_of, signer_for
 from hse_doc_studio.core.signatures.ports import IPublicKeyExporter
-from hse_doc_studio.core.signatures.stamps import Stamp, stamps_digest, stamps_for_doc
+from hse_doc_studio.core.signatures.stamps import Stamp, stamps_digest_matches, stamps_for_doc
 from hse_doc_studio.core.team import author_by_slug
 from hse_doc_studio.core.value_objects import DetachedSignature, EmbeddedSignature, FrozenPdf, SignaturesState
 
@@ -334,8 +334,8 @@ class _Run:
         def png_exists(path: Path) -> bool:
             return path.is_relative_to(folder) and self._png_exists(path.relative_to(folder))
 
-        marks = stamps_digest(stamps_for_doc(self.sig_state, doc_id, folder, self.lang, png_exists=png_exists))
-        if frozen.stamps_digest and marks != frozen.stamps_digest:
+        marks = stamps_for_doc(self.sig_state, doc_id, folder, self.lang, png_exists=png_exists)
+        if not stamps_digest_matches(frozen.stamps_digest, marks, folder):
             raise ValueError(
                 f"{arcname}: images or signature plates changed after the PDF was frozen for signing. "
                 "Freeze it again and sign the new version"

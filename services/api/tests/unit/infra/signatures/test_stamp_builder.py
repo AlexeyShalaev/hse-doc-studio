@@ -101,12 +101,12 @@ def test_stamps_digest_changes_with_signer(tmp_path: Path) -> None:
     from hse_doc_studio.infra.signatures.stamp_builder import stamps_digest  # noqa: PLC0415
 
     base = _state(SignMode.detached_text)
-    a = stamps_digest(stamps_for_doc(base, "doc", tmp_path, "ru"))
+    a = stamps_digest(stamps_for_doc(base, "doc", tmp_path, "ru"), tmp_path)
     with_signer = SignaturesState(
         slots={
             "sup": SignatureSlot(None, None, None, sign_mode=SignMode.detached_text, signer=SignerInfo("manual", "X"))
         },
         placements=base.placements,
     )
-    assert a != stamps_digest(stamps_for_doc(with_signer, "doc", tmp_path, "ru"))
-    assert a == stamps_digest(stamps_for_doc(base, "doc", tmp_path, "ru"))
+    assert a != stamps_digest(stamps_for_doc(with_signer, "doc", tmp_path, "ru"), tmp_path)
+    assert a == stamps_digest(stamps_for_doc(base, "doc", tmp_path, "ru"), tmp_path)

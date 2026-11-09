@@ -16,7 +16,7 @@ from hse_doc_studio.core.repositories import (
     ITemplateRepository,
 )
 from hse_doc_studio.core.services import ProjectTemplateService, RuntimeSlot, SignatureSlotService
-from hse_doc_studio.core.signatures.stamps import stamps_digest, stamps_for_doc
+from hse_doc_studio.core.signatures.stamps import stamps_digest_matches, stamps_for_doc
 from hse_doc_studio.core.value_objects import SignaturesState
 from hse_doc_studio.use_cases.projects.get_project import GetProjectInput, GetProjectUC
 from hse_doc_studio.use_cases.signatures._doc_context import sha256_file
@@ -122,8 +122,8 @@ class GetSignaturesUC:
         stale: set[str] = set()
         outdated: set[str] = set()
         for doc_id, frozen in state.frozen.items():
-            current = stamps_digest(stamps_for_doc(state, doc_id, project.folder, str(project.lang)))
-            if frozen.stamps_digest and current != frozen.stamps_digest:
+            current = stamps_for_doc(state, doc_id, project.folder, str(project.lang))
+            if not stamps_digest_matches(frozen.stamps_digest, current, project.folder):
                 outdated.add(doc_id)
         if version is None or self._template_service is None:
             return stale, outdated
