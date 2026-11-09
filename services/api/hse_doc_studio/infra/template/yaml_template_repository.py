@@ -191,6 +191,7 @@ def _parse_version(  # noqa: C901, PLR0915 — плоский разбор ма�
                 )
                 if slot is not None
             ),
+            route=_tolerant(parse_signing_route, sig_data.get("route"), "signatures.route", ver_yaml) or (),
         )
 
         forms = tuple(f for f in (_parse_form(fd) for fd in data.get("forms", [])) if f is not None)
@@ -625,7 +626,42 @@ def _parse_submission_profile(data: dict[str, Any]) -> SubmissionProfile:
         description=_localized(data.get("description", {})),
         items=items,
         extra_items=extra_items,
+        signing_route=_profile_signing_route(data),
     )
+
+
+def parse_signing_route(raw: Any) -> tuple[tuple[str, ...], ...]:
+    """`[[author], [supervisor, co_supervisor], academic_supervisor]` → шаги из id слотов каталога.
+
+    Шаг это список слотов (подписывают параллельно) или один id строкой. Пустые шаги отбрасываются.
+    Неизвестные и повторные id разбор не отсеивает: их пропускает `route_order`, а линтер пака
+    называет ошибкой. Рантайм-слот `author--<слаг>` ошибка: порядок пака не знает авторов проекта.
+    """
+    if raw is None:
+        return ()
+    if not isinstance(raw, list):
+        raise TypeError(f"signing route must be a list of steps, got {type(raw).__name__}")
+    steps: list[tuple[str, ...]] = []
+    for step in raw:
+        listed = [step] if isinstance(step, str) else step
+        if not isinstance(listed, list) or not all(isinstance(slot_id, str) for slot_id in listed):
+            raise TypeError(f"signing route step must be a slot id or a list of slot ids, got {step!r}")
+        slot_ids = tuple(slot_id.strip() for slot_id in listed if slot_id.strip())
+        runtime = [slot_id for slot_id in slot_ids if "--" in slot_id]
+        if runtime:
+            raise ValueError(f"signing route names runtime slot ids {runtime}: use catalog slot ids")
+        if slot_ids:
+            steps.append(slot_ids)
+    return tuple(steps)
+
+
+def _profile_signing_route(data: dict[str, Any]) -> tuple[tuple[str, ...], ...]:
+    """Порядок точки; битый ключ отбрасывается с предупреждением, сам профиль остаётся."""
+    try:
+        return parse_signing_route(data.get("signing_route"))
+    except (TypeError, ValueError) as exc:
+        logger.warning("profile signing_route ignored", profile_id=data.get("id"), exc=str(exc))
+        return ()
 
 
 # ---------------------------------------------------------------------------

@@ -16,7 +16,9 @@ r"""Линтер пака (bundle-раскладка v2): превращает �
     архив через `extra_items`, обязана быть объявлена `required_for_pack`, иначе
     приложение промолчит о незаполненной (класс бага «Ссылка на код»);
   * шапка каждого checks/*.yaml: `label` и `ref` на ru+en — подпись группы правил
-    в UI берётся из пака, приложение названий стандартов и ОП не знает.
+    в UI берётся из пака, приложение названий стандартов и ОП не знает;
+  * порядок маршрута подписания (`signatures.route`, `signing_route` профиля):
+    разбирается и называет только объявленные слоты, каждый один раз.
 
 Запуск: `python -m hse_doc_studio.infra.template.pack_lint <version_dir>…`
 (exit code 1 при ошибках). Roster ↔ doc.yaml проверяется fail-fast самим
@@ -40,6 +42,7 @@ from hse_doc_studio.infra.project_init.template_renderer import (
     _split_lang_qualifier,
     collect_sources_suffixed,
 )
+from hse_doc_studio.infra.template.yaml_template_repository import parse_signing_route
 
 _TEXT_SUFFIXES = {".tex", ".md", ".html", ".txt", ".cls", ".sty", ".bib", ".j2"}
 _INPUT_RE = re.compile(r"\\(?:input|include)\{([^}]+)\}")
@@ -173,6 +176,42 @@ def _lint_check_sources(version_dir: Path) -> list[str]:
     return errors
 
 
+def _lint_signing_routes(manifest: dict[str, Any]) -> list[str]:
+    """Порядок маршрута подписания (`signatures.route`, `signing_route` профиля) называет слоты каталога.
+
+    Лоадер терпим: битый ключ отбрасывается, неизвестный или повторный слот пропускается, и маршрут молча
+    пойдёт встроенным порядком или без шага, который автор пака имел в виду. Линтер делает это ошибкой.
+    """
+    signatures = manifest.get("signatures")
+    signatures = signatures if isinstance(signatures, dict) else {}
+    slots = {str(s["id"]) for s in signatures.get("slots", []) or [] if isinstance(s, dict) and s.get("id")}
+    routes: list[tuple[str, Any]] = [("signatures.route", signatures.get("route"))]
+    submission = manifest.get("pack_submission")
+    profiles = (submission.get("profiles", []) or []) if isinstance(submission, dict) else []
+    routes.extend(
+        (f"профиль {profile.get('id', '?')}: signing_route", profile.get("signing_route"))
+        for profile in profiles
+        if isinstance(profile, dict)
+    )
+    return [error for where, raw in routes if raw is not None for error in _route_errors(where, raw, slots)]
+
+
+def _route_errors(where: str, raw: Any, slots: set[str]) -> list[str]:
+    try:
+        steps = parse_signing_route(raw)
+    except (TypeError, ValueError) as exc:
+        return [f"{where}: {exc}"]
+    errors: list[str] = []
+    seen: set[str] = set()
+    for slot_id in (slot_id for step in steps for slot_id in step):
+        if slot_id not in slots:
+            errors.append(f"{where}: слот {slot_id!r} не объявлен в signatures.slots")
+        elif slot_id in seen:
+            errors.append(f"{where}: слот {slot_id!r} указан дважды, действует первый шаг")
+        seen.add(slot_id)
+    return errors
+
+
 def _lint_changes(manifest: dict[str, Any]) -> list[str]:
     """`changes:` — двуязычные заметки версии; списки ru и en обязаны быть параллельны.
 
@@ -239,6 +278,7 @@ def lint_version_dir(version_dir: Path) -> LintReport:  # noqa: C901, PLR0912, P
     report.errors.extend(_lint_form_extras(manifest))
     report.errors.extend(_lint_check_sources(version_dir))
     report.errors.extend(_lint_changes(manifest))
+    report.errors.extend(_lint_signing_routes(manifest))
 
     if not langs:
         report.warnings.append("v1-раскладка (нет `langs:`): проверены только Jinja-шаблоны")
