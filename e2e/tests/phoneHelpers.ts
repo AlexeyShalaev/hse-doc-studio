@@ -23,6 +23,20 @@ export const loginOnPhone = async (
 };
 
 /**
+ * Закрывает всплывшие уведомления (Toaster: «вышли исправления шаблона» и т.п.), как сделал бы человек. Они висят
+ * внизу экрана до 10 секунд поверх содержимого и перехватывают касания. Ждём тишины в сети: уведомление о шаблоне
+ * появляется, когда ответит запрос версии шаблона проекта.
+ */
+export const closeToasts = async (page: Page): Promise<void> => {
+  await page.waitForLoadState("networkidle");
+  const toasts = page.locator('[aria-live="polite"] > .card[role="alert"]');
+  for (const close of await toasts.getByRole("button", { name: /^(Закрыть|Close)$/ }).all()) {
+    await close.tap();
+  }
+  await expect(toasts).toHaveCount(0);
+};
+
+/**
  * Элементы, торчащие за правый край окна. Страница приложения не прокручивается (body: overflow hidden),
  * поэтому scrollWidth ничего не скажет: ищем сами элементы, не спрятанные внутри блока со своей прокруткой.
  */

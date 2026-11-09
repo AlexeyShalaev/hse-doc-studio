@@ -109,7 +109,10 @@ def test__source__mounted_over_the_builtin_path__external(tmp_path: Path) -> Non
     out = tmp_path / "packs-manifest.json"
     write_manifest(packs, out)
     mountinfo = tmp_path / "mountinfo"
-    mountinfo.write_text(f"1550 1259 0:52 /host/packs {packs} ro,relatime - fakeowner x rw\n", encoding="utf-8")
+    # Таблица монтирования бывает только на Linux, пути в ней всегда POSIX (и на Windows-раннере тестов тоже).
+    mountinfo.write_text(
+        f"1550 1259 0:52 /host/packs {packs.as_posix()} ro,relatime - fakeowner x rw\n", encoding="utf-8"
+    )
 
     source = FilesystemPacksSource(packs, _repo(packs), out, mountinfo).describe()
 

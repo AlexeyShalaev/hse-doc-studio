@@ -3,6 +3,7 @@ import { LANGS, USERS, shot, type Lang } from "./helpers";
 import {
   MIN_TOUCH,
   SIZES,
+  closeToasts,
   expectNoHorizontalScroll,
   expectTouchTarget,
   loginOnPhone,
@@ -386,6 +387,9 @@ for (const lang of LANGS) {
         await expect(zoom).toBeVisible();
         const pageEl = page.locator("[data-page]").first();
         await expect(pageEl).toBeVisible();
+        // Первый проект Анны зависит от прошедших сценариев; если его шаблон отстал, внизу висит уведомление
+        // «Исправления шаблона», и на 360x740 нижний палец щипка попадал в него, а не в PDF.
+        await closeToasts(page);
         const fitted = await pageEl.boundingBox();
         // Страница сразу по ширине окна, а не шире него.
         expect(fitted?.width ?? 0).toBeLessThanOrEqual(size.width);

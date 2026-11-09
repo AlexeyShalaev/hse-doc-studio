@@ -40,8 +40,10 @@ PROJECT_NAME = "ВКР: Анализ требований"
 
 
 @pytest.fixture
-def stand(pg_engine: AsyncEngine, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Iterator[TestClient]:
-    dsn = pg_engine.url.render_as_string(hide_password=False)
+def stand(pg_migrated_engine: AsyncEngine, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Iterator[TestClient]:
+    # База из шаблона с миграциями до head: auto_migrate при старте ничего не применяет, а прогон миграций с нуля на
+    # каждый тест стоил секунды. Старт на пустой базе проверяют server_lite/test_server_lite_smoke.py и db/.
+    dsn = pg_migrated_engine.url.render_as_string(hide_password=False)
     monkeypatch.setattr(settings, "mode", StudioMode.server)
     monkeypatch.setattr(settings, "data_dir", tmp_path)
     monkeypatch.setattr(settings, "host_data_dir", None)
