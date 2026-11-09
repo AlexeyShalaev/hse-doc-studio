@@ -52,10 +52,9 @@ from hse_doc_studio.use_cases.signing_route.author import (
     SigningRouteDrafts,
     SigningRouteSending,
 )
-from hse_doc_studio.use_cases.signing_route.context import ProjectRouteContext
 from hse_doc_studio.use_cases.signing_route.delivery import SigningNotifier
 from hse_doc_studio.use_cases.signing_route.effects import RouteFileEffects
-from hse_doc_studio.use_cases.signing_route.facts import RouteFactsLoader
+from hse_doc_studio.use_cases.signing_route.facts import ProjectRouteFacts, RouteFactsLoader
 from hse_doc_studio.use_cases.signing_route.invitations import SigningRouteInviteeHook
 from hse_doc_studio.use_cases.signing_route.key_signer import RouteKeySigner
 from hse_doc_studio.use_cases.signing_route.point import RoutePointLoader
@@ -79,15 +78,15 @@ class ServerSigningRoutesProvider(Provider):
         signatures: ISignatureRepository,
         template_service: ProjectTemplateService,
         plates: ISignerPlateData,
-    ) -> ProjectRouteContext:
-        return ProjectRouteContext(project_repo, project_index_repo, templates, signatures, template_service, plates)
+    ) -> ProjectRouteFacts:
+        return ProjectRouteFacts(project_repo, project_index_repo, templates, signatures, template_service, plates)
 
     @provide
-    def get_route_facts(self, context: ProjectRouteContext) -> IRouteFacts:
+    def get_route_facts(self, context: ProjectRouteFacts) -> IRouteFacts:
         return context
 
     @provide
-    def get_route_labels(self, context: ProjectRouteContext) -> IRouteLabels:
+    def get_route_labels(self, context: ProjectRouteFacts) -> IRouteLabels:
         return context
 
     @provide

@@ -259,7 +259,7 @@ class DomainServiceProvider(Provider):
 
     @provide
     def get_signer_plate_data(self) -> ISignerPlateData:
-        # До сценариев подписанта (срез R6) плашку знает только состояние подписей (docs/design/signing-route.md).
+        # Локально плашку знает только состояние подписей; сервер добавляет профиль подписанта (signing-route.md).
         return SlotSignerPlateData()
 
     @provide

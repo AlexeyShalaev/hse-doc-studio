@@ -140,6 +140,13 @@ class RouteConflictError(Exception):
         self.code = code
 
 
+def not_your_turn() -> RouteConflictError:
+    """Действие участника не в его очередь, в том числе у маршрута, который не идёт (409 `not_your_turn`)."""
+    return RouteConflictError(
+        "not_your_turn", localized_error("Сейчас не ваша очередь по маршруту", "It is not your turn in the route")
+    )
+
+
 class DocSlot(NamedTuple):
     """Пара «документ, слот»: где стоит подпись участника."""
 

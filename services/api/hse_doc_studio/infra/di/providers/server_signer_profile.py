@@ -4,12 +4,13 @@ from __future__ import annotations
 
 from dishka import Provider, Scope, provide
 
-from hse_doc_studio.core.signatures.ports import ISignatureAudit
+from hse_doc_studio.core.signatures.ports import ISignatureAudit, ISignerPlateData
 from hse_doc_studio.core.signatures.signer_profile import IPublicKeyReader, ISignerProfileRepository
 from hse_doc_studio.infra.db.repositories.signer_profiles import PostgresSignerProfileRepository
 from hse_doc_studio.infra.db.session import SessionProvider
 from hse_doc_studio.infra.signatures.openpgp import GpgKeyring
 from hse_doc_studio.infra.signatures.public_key_reader import PublicKeyReader
+from hse_doc_studio.use_cases.signer_profile.plate_data import ProfileSignerPlateData
 from hse_doc_studio.use_cases.signer_profile.profile import (
     ClearProfileImageUC,
     ClearProfilePublicKeyUC,
@@ -30,6 +31,11 @@ class ServerSignerProfileProvider(Provider):
     @provide
     def get_public_key_reader(self, keyring: GpgKeyring) -> IPublicKeyReader:
         return PublicKeyReader(keyring)
+
+    @provide
+    def get_signer_plate_data(self, repo: ISignerProfileRepository) -> ISignerPlateData:
+        # Перекрывает локальный источник: плашку участника маршрута знает ещё и его профиль (signing-route.md, 6.5).
+        return ProfileSignerPlateData(repo)
 
     @provide(scope=Scope.REQUEST)
     def get_signer_profile(self, repo: ISignerProfileRepository) -> GetSignerProfileUC:
