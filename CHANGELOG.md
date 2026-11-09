@@ -6,6 +6,59 @@ Generated from `release-notes.json` via `make changelog` — do not edit by hand
 Release notes are hand-written and bilingual (RU/EN); the app shows them in the
 selected interface language.
 
+## [0.17.0](https://github.com/AlexeyShalaev/hse-doc-studio/compare/v0.16.0...v0.17.0) (2026-11-09)
+
+
+### Features
+
+* **admin:** group build-all jobs into one batch row in the queue ([f19ef18](https://github.com/AlexeyShalaev/hse-doc-studio/commit/f19ef189d12172c1ec67ee2d59d86435a2bbd125))
+* **admin:** say that removing an install revokes the runner, show rollback ([fed9ed2](https://github.com/AlexeyShalaev/hse-doc-studio/commit/fed9ed2e80f90c876ef608941a8b83f637f42cbf))
+* **admin:** say when the runner is back on the previous version but offline ([63d6c30](https://github.com/AlexeyShalaev/hse-doc-studio/commit/63d6c305624c7214add08a2f1b5d86ba4569bb3e))
+* **admin:** офисные задачи на экране изоляции раннеров ([f4fffd8](https://github.com/AlexeyShalaev/hse-doc-studio/commit/f4fffd8056d4f14c05966d10550346c7ff98ab84))
+* **helm:** runner.installFromUi.buildNamespace for build pods of admin-installed runners ([b6dd453](https://github.com/AlexeyShalaev/hse-doc-studio/commit/b6dd453ce976c960a59a653343bd73a0a74b6a28))
+* **helm:** встроенный Gotenberg для офисных задач раннеров ([b4ccc62](https://github.com/AlexeyShalaev/hse-doc-studio/commit/b4ccc62768b41482501b76804a561c3dab8d5d26))
+* **invitations:** готовый текст приглашения из данных проекта ([7795526](https://github.com/AlexeyShalaev/hse-doc-studio/commit/7795526324de6124b48d620775c85b7c4eaa61c5))
+* **mcp:** compile_document с wait и ожиданием до 45 с вместо таймаута клиента ([c5165fc](https://github.com/AlexeyShalaev/hse-doc-studio/commit/c5165fc01bd3e3251fe283d2b6cf8ebe2b5d555c))
+* **mcp:** git_sync как кнопка синхронизации, с итогом и списком конфликтов ([b8e58ca](https://github.com/AlexeyShalaev/hse-doc-studio/commit/b8e58caca0956b9fe07278e343504872d605fa97))
+* **mcp:** list_project_fields and unset in set_project_meta ([1336298](https://github.com/AlexeyShalaev/hse-doc-studio/commit/13362988274b139cb4cb3cadb2d4a62a973a162d))
+* **mcp:** set_document_variant through the same document update as the settings ([03c5053](https://github.com/AlexeyShalaev/hse-doc-studio/commit/03c50531eda4c632f596acd886699ee10a798e56))
+* **mcp:** set_project_people edits one author by slug, author e-mail and academic supervisor ([e56e2f8](https://github.com/AlexeyShalaev/hse-doc-studio/commit/e56e2f8b7a6efd68270e4f47bc059c754915bcd1))
+* **mcp:** template update status, plan and apply tools ([d27efb6](https://github.com/AlexeyShalaev/hse-doc-studio/commit/d27efb64ba27cde74dd51e15aef4bd5d89030060))
+* **mcp:** доступ к проекту: участники, приглашение по почте, отзыв ([69c246a](https://github.com/AlexeyShalaev/hse-doc-studio/commit/69c246ad49520686f8c2104aed683d2dfefaf073))
+* **runner-install:** own namespace for build pods of admin-installed runners ([8068dc1](https://github.com/AlexeyShalaev/hse-doc-studio/commit/8068dc12e182aeeb4c94d7a496759b76afad4376))
+* **runner-install:** revoke the runner on remove, roll back failed updates ([ab022d1](https://github.com/AlexeyShalaev/hse-doc-studio/commit/ab022d1b8096973cc24bbea8542522c69cea7c84))
+* **runner-install:** wait for the runner on the previous version after a rollback ([c2e5b10](https://github.com/AlexeyShalaev/hse-doc-studio/commit/c2e5b10c42434ee3350c8d28a7aca00358860c40))
+* **runner-install:** адрес Gotenberg раннерам из админки ([64bc592](https://github.com/AlexeyShalaev/hse-doc-studio/commit/64bc592b28171f7d41baef696a16bf28a207a2dd))
+* **signatures:** комплект для LMS по плану подписей и MCP-инструменты подписи ([730bdaa](https://github.com/AlexeyShalaev/hse-doc-studio/commit/730bdaa25fd30320ac7e2e6be2f0ce82df85824f))
+* **signatures:** план подписей документа и счётчик точки сдачи по нему ([0155a16](https://github.com/AlexeyShalaev/hse-doc-studio/commit/0155a165b80da5451ac902439d852fb3ce24045b))
+* **signatures:** подписать комплект, PAdES над зафиксированным PDF и права на слоты ([6df6c77](https://github.com/AlexeyShalaev/hse-doc-studio/commit/6df6c7788f37f9b6d28bad27e3c4dbf7879b2f3e))
+* **templates:** опись вшитых паков и распознавание подключённого каталога шаблонов ([cb5c91a](https://github.com/AlexeyShalaev/hse-doc-studio/commit/cb5c91a41a88f51238d188823d5eb8e13b58c34c))
+* **web:** заранее составленное сообщение в форме приглашения ([6ab0c85](https://github.com/AlexeyShalaev/hse-doc-studio/commit/6ab0c853477cae31852f81a08be4a024a779872d))
+* **web:** сборка, прерванная перезапуском сервера, показана как «прервана» ([fceca30](https://github.com/AlexeyShalaev/hse-doc-studio/commit/fceca301bc59388f87a4983665bd811313709fef))
+* свой namespace подов сборки раннеров из админки ([611116d](https://github.com/AlexeyShalaev/hse-doc-studio/commit/611116d32c52118e27b159c7adc7366136c4da08))
+
+
+### Bug Fixes
+
+* **admin:** classify the batch cancel route as admin-only ([f3b2cb5](https://github.com/AlexeyShalaev/hse-doc-studio/commit/f3b2cb59a97da2fadcb7c9504f53b541bc5375ab))
+* **checks:** skip inactive \if branches in document-scope python checks ([5ea0d2c](https://github.com/AlexeyShalaev/hse-doc-studio/commit/5ea0d2c9e8136623e90ba581a09fe1891f4a55e5))
+* **checks:** плейсхолдеры в выключенных ветках редакции не считаются ([ed42a7e](https://github.com/AlexeyShalaev/hse-doc-studio/commit/ed42a7e34085926b198188372a017b97b5007962))
+* **compile:** облачная сборка переживает перезапуск api ([8d5d6b7](https://github.com/AlexeyShalaev/hse-doc-studio/commit/8d5d6b7947744b872c778dc64540f76f213c1969))
+* **helm:** короче окно недоступности api при выкатке ([8028c57](https://github.com/AlexeyShalaev/hse-doc-studio/commit/8028c57503eb2040734dfdea604706bbf6078475))
+* **jobs:** tell busy runners from missing ones and drop builds nobody can take ([8cec060](https://github.com/AlexeyShalaev/hse-doc-studio/commit/8cec0600246ea1460922dc106e1b193552dea58b))
+* **mcp:** clone_cloud_project ждёт по умолчанию 45 с, меньше таймаута клиента ([311b0c6](https://github.com/AlexeyShalaev/hse-doc-studio/commit/311b0c629c19ba554714e346cf2f03c70742fb4a))
+* **projects:** называть отставший каталог шаблонов вместо совета обновить Студию ([fc90134](https://github.com/AlexeyShalaev/hse-doc-studio/commit/fc90134b2889fc45847695ba3432541d5523a942))
+* **runner-install:** check whether a replacement applied when the response is lost ([e2724d9](https://github.com/AlexeyShalaev/hse-doc-studio/commit/e2724d9047e044297e2f8f2e0962817a49263528))
+* **update:** не переносить привязку паков dev-сборки на опубликованный образ ([65cc839](https://github.com/AlexeyShalaev/hse-doc-studio/commit/65cc8397df02ceb6f3663283fa706404b6cc95f9))
+* **web:** меню «⋯» и подсказки поверх окна настроек ([4f8469c](https://github.com/AlexeyShalaev/hse-doc-studio/commit/4f8469cd88b6cfc6cf01bbae32170ed27a5cb15e))
+* **web:** правдивый текст при отставшем каталоге шаблонов и предупреждение при обновлении ([43658ed](https://github.com/AlexeyShalaev/hse-doc-studio/commit/43658ed4bab472ee6636bbfffb026e467d6935fc))
+* облачная сборка переживает перезапуск api, мягкая остановка ([671b4de](https://github.com/AlexeyShalaev/hse-doc-studio/commit/671b4de65b2842b2b746a7c7c9f6a565fb4ba2ad))
+
+
+### Performance Improvements
+
+* **jobs:** read route settings once per stranded-jobs sweep ([2f6bbac](https://github.com/AlexeyShalaev/hse-doc-studio/commit/2f6bbac1ec723121d7c12d913e7210c8a48c4e84))
+
 ## [0.16.0](https://github.com/AlexeyShalaev/hse-doc-studio/compare/v0.15.0...v0.16.0) - 2026-11-08
 
 - In-place update of admin-installed runners: a runner installed from the admin area in Kubernetes or Docker is updated to the Studio version without removing and reinstalling it. The name, token, data volume and install limits are kept, the manifest is applied with the current isolation rules, progress is shown step by step, and the update is written to the audit log. The chart adds the update permission on Deployments.
