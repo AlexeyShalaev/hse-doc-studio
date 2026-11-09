@@ -6,6 +6,19 @@ Generated from `release-notes.json` via `make changelog` — do not edit by hand
 Release notes are hand-written and bilingual (RU/EN); the app shows them in the
 selected interface language.
 
+## [0.17.2](https://github.com/AlexeyShalaev/hse-doc-studio/compare/v0.17.1...v0.17.2) (2026-11-09)
+
+
+### Bug Fixes
+
+* **k8s:** no owner reference on build pods outside the runner namespace ([627ffe4](https://github.com/AlexeyShalaev/hse-doc-studio/commit/627ffe4164c8cc533a81b55941cfba8baa7c2cf9))
+* **k8s:** подам сборки в чужом namespace не ставится владелец ([954d38b](https://github.com/AlexeyShalaev/hse-doc-studio/commit/954d38bd444f8af16440f9317ddc5b1cc793511f))
+* **signatures:** проверка OpenPGP на облачном раннере видит ключи Студии ([813d640](https://github.com/AlexeyShalaev/hse-doc-studio/commit/813d640042aa47fa2569ceb0436ca88d1a475a94))
+* **signatures:** проверка OpenPGP на раннере получает открытые ключи из связки Студии ([669e9c1](https://github.com/AlexeyShalaev/hse-doc-studio/commit/669e9c196a48ce274a6affd13ed7f5cdfa2b02c4))
+* **signing:** ключ OpenPGP и пароль идут в gpg без временных файлов ([b99d4a9](https://github.com/AlexeyShalaev/hse-doc-studio/commit/b99d4a9bc89172186cffcbc09cbda96da5ade90c))
+* **signing:** политика ключей на сервере действует и на OpenPGP ([4d55c39](https://github.com/AlexeyShalaev/hse-doc-studio/commit/4d55c399dc1538a7e124a8b566a8f1c8a740dd19))
+* **signing:** политика ключей на сервере действует и на OpenPGP ([d7096a5](https://github.com/AlexeyShalaev/hse-doc-studio/commit/d7096a5be10c517b8b0e65dd427747b264499852))
+
 ## [0.17.1](https://github.com/AlexeyShalaev/hse-doc-studio/compare/v0.17.0...v0.17.1) - 2026-11-09
 
 - A successful build without output files no longer stays unfinished: previously its result was not applied and the api retried it on every restart.
