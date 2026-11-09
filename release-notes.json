@@ -1,6 +1,40 @@
 {
   "releases": [
     {
+      "version": "0.18.0",
+      "date": "2026-11-09",
+      "notes": [
+        {
+          "ru": "«С подписями» отдает готовый подписанный файл. Если PDF зафиксирован и актуален, скачивается он сам, а при подписях PAdES итоговый файл с ними. Без актуальной фиксации скачивается PDF для печати с видимыми отметками, но без электронных подписей. Подписи больше не ставятся заново при каждом скачивании.",
+          "en": "«Signed» download returns the actual signed file. If the PDF is frozen and current, you get it as is, with PAdES signatures when there are any. Without a current freeze you get a print copy with visible stamps but no electronic signatures. Signatures are no longer applied anew on every download."
+        },
+        {
+          "ru": "Пакет на подпись при подписях PAdES содержит два PDF: итоговый с подписями и исходный для открепленных подписей, с теми же именами, что в пакете для LMS.",
+          "en": "With PAdES signatures the signing package holds two PDFs: the final signed one and the original for detached signatures, named as in the LMS package."
+        },
+        {
+          "ru": "Перенос папки проекта и переход между локальной Студией и облаком больше не делают подписи устаревшими: отпечаток видимого слоя считается по путям внутри проекта. Уже поставленные подписи остаются действительными.",
+          "en": "Moving a project folder or switching between the local Studio and the cloud no longer makes signatures outdated: the visible layer fingerprint uses paths inside the project. Existing signatures stay valid."
+        },
+        {
+          "ru": "Шаблон КП СПИ 2026.1.3: на утверждении темы и финальной сдаче подписи принимаются картинкой или открепленной ЭП, PAdES там не принимается. Существующие проекты получают версию как обновление шаблона; слот, где уже выбрана PAdES, подскажет сменить способ.",
+          "en": "SSE coursework template 2026.1.3: at topic approval and final submission signatures are accepted as an image or a detached signature, not PAdES. Existing projects get it as a template update; a slot already set to PAdES asks to change the method."
+        },
+        {
+          "ru": "MCP create_project создает командные проекты: несколько авторов, руководитель, консультант и научный руководитель с теми же проверками, что в мастере создания. list_templates показывает, поддерживает ли шаблон команду, а set_project_people принимает тему автора.",
+          "en": "MCP create_project creates team projects: several authors, supervisor, co-supervisor and academic supervisor with the same checks as the creation wizard. list_templates shows whether a template supports teams, and set_project_people accepts an author topic."
+        },
+        {
+          "ru": "Локальная Студия на macOS получает шрифты документов: установщик копирует Times New Roman, Arial, Courier New и Consolas с Mac, потому что Docker Desktop не дает подключить системную папку шрифтов. Если шрифтов нет, настройки объясняют почему.",
+          "en": "The local Studio on macOS gets its document fonts: the installer copies Times New Roman, Arial, Courier New and Consolas from the Mac, since Docker Desktop cannot mount the system fonts folder. If fonts are missing, settings explain why."
+        },
+        {
+          "ru": "Диалог установки по SSH на странице серверов моделей больше не показывает ключи вместо текста.",
+          "en": "The SSH install dialog on the model servers page no longer shows raw keys instead of text."
+        }
+      ]
+    },
+    {
       "version": "0.17.2",
       "date": "2026-11-09",
       "notes": [
