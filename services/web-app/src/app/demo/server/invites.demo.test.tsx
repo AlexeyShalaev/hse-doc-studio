@@ -28,6 +28,7 @@ import { ProjectUnavailablePage } from "@pages/ProjectUnavailablePage";
 import { installServerDemo } from "../index";
 import { activateServerScenario, enableServerDemo } from "./index";
 import { getServerWorld } from "./routes";
+import { signOut } from "./world";
 import { invitesOf } from "./invitations";
 
 // Трек invites поверх демо-транспорта: те же запросы, что уйдут бэкенду, и ответы через те же zod-схемы.
@@ -272,6 +273,69 @@ describe("демо invites: страницы", () => {
       expect(screen.getByTestId("project-invite-page")).toHaveAttribute(
         "data-state",
         state,
+      );
+    });
+  });
+
+  describe("возврат по ?next= (страница подписи маршрута)", () => {
+    const Where = () => {
+      const location = useLocation();
+      return (
+        <output data-testid="where">{`${location.pathname}${location.search}`}</output>
+      );
+    };
+    const withNext = (path: string) =>
+      mountWith(
+        <Routes>
+          <Route
+            path="/project-invite/:token"
+            element={<ProjectInvitePage />}
+          />
+          <Route path="*" element={<Where />} />
+        </Routes>,
+        path,
+      );
+
+    it("«Принять» ведёт на next", async () => {
+      const user = userEvent.setup();
+      withNext(
+        `/project-invite/hspi_demo_ok?next=${encodeURIComponent("/sign/p_01hxa3k2jm/sr_demo0001")}`,
+      );
+      await user.click(await screen.findByTestId("project-invite-accept"));
+      expect(await screen.findByTestId("where")).toHaveTextContent(
+        "/sign/p_01hxa3k2jm/sr_demo0001",
+      );
+    });
+
+    it("чужой адрес в next не принимается: обычный переход в проект", async () => {
+      const user = userEvent.setup();
+      withNext(
+        `/project-invite/hspi_demo_ok?next=${encodeURIComponent("//evil.example/sign")}`,
+      );
+      await user.click(await screen.findByTestId("project-invite-accept"));
+      expect(await screen.findByTestId("where")).toHaveTextContent(
+        "/projects/p_01hxa3k2jm",
+      );
+    });
+
+    it("вход и регистрация возвращают на приглашение с тем же next", async () => {
+      const user = userEvent.setup();
+      // Не вошёл: кнопки «Войти» и «Зарегистрироваться» вместо «Принять».
+      signOut(getServerWorld());
+      const next = encodeURIComponent("/sign/p_01hxa3k2jm/sr_demo0001");
+      const back = encodeURIComponent(
+        `/project-invite/hspi_demo_signup?next=${next}`,
+      );
+      withNext(`/project-invite/hspi_demo_signup?next=${next}`);
+      await user.click(await screen.findByTestId("project-invite-signin"));
+      expect(screen.getByTestId("where")).toHaveTextContent(
+        `/login?next=${back}`,
+      );
+      cleanup();
+      withNext(`/project-invite/hspi_demo_signup?next=${next}`);
+      await user.click(await screen.findByTestId("project-invite-signup"));
+      expect(screen.getByTestId("where")).toHaveTextContent(
+        `/invite/hspi_demo_signup?next=${back}`,
       );
     });
   });

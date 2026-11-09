@@ -146,6 +146,17 @@ describe("resolveGateRedirect", () => {
     expect(resolveGateRedirect(user, at("/projects/x"))).toBeNull();
   });
 
+  it("brings the signing page link from an email back after sign-in", () => {
+    const sign = "/sign/p_01hxa1c4de/sr_01hy2b7k9q";
+    const login = resolveGateRedirect(anon, at(sign));
+    expect(login).toBe(`/login?next=${encodeURIComponent(sign)}`);
+    const back = new URLSearchParams((login ?? "").split("?")[1]).toString();
+    expect(resolveGateRedirect(user, at("/login", `?${back}`))).toBe(sign);
+    expect(resolveGateRedirect(user, at(sign))).toBeNull();
+    // Гостю по ссылке страница подписи закрыта (подписывать может только участник).
+    expect(resolveGateRedirect(fixture("guest"), at(sign))).toBe("/");
+  });
+
   it("does not redirect anything in local mode except sign-in screens", () => {
     expect(resolveGateRedirect(LOCAL_BOOTSTRAP, at("/projects/x"))).toBeNull();
     expect(resolveGateRedirect(LOCAL_BOOTSTRAP, at("/"))).toBeNull();

@@ -266,6 +266,24 @@ describe("sign-up", () => {
     expect(result).not.toHaveTextContent("Проверьте почту");
   });
 
+  it("«Войти» возвращает на next, если он есть", () => {
+    const next = `/project-invite/x?next=${encodeURIComponent("/sign/p/r")}`;
+    render(
+      wrap(
+        <RegisterResultCard
+          status="check_email"
+          link={null}
+          email="a@b.org"
+          invited
+          next={next}
+        />,
+      ),
+    );
+    expect(
+      screen.getByRole("link", { name: "Вернуться ко входу" }),
+    ).toHaveAttribute("href", `/login?next=${encodeURIComponent(next)}`);
+  });
+
   it("ждёт одобрения: свой итог без ссылки", () => {
     render(
       wrap(
