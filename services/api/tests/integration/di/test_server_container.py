@@ -544,6 +544,7 @@ async def test__server_container__resolves_model_servers_uc_and_registry(monkeyp
 async def test__server_container__resolves_postgres_signing_route_repository() -> None:
     from hse_doc_studio.core.signing_route.repositories import ISigningRouteRepository
     from hse_doc_studio.infra.db.repositories.signing_routes import SqlSigningRouteRepository
+    from hse_doc_studio.use_cases.signing_route.audit import AuditedSigningRoutes
     from sqlalchemy.ext.asyncio import create_async_engine
 
     engine = create_async_engine("postgresql+asyncpg://u:p@127.0.0.1:1/none")
@@ -555,7 +556,9 @@ async def test__server_container__resolves_postgres_signing_route_repository() -
         await container.close()
         await engine.dispose()
 
-    assert isinstance(repo, SqlSigningRouteRepository)
+    # Хранилище Postgres под аудитом: события маршрута попадают в журнал вместе с записью (signing-route.md, 6.7).
+    assert isinstance(repo, AuditedSigningRoutes)
+    assert isinstance(repo.storage, SqlSigningRouteRepository)
     assert repo is again
 
 

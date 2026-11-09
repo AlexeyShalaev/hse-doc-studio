@@ -46,6 +46,11 @@ class AuditedSigningRoutes:
         self._routes = routes
         self._audit = audit
 
+    @property
+    def storage(self) -> ISigningRouteRepository:
+        """Хранилище, записи которого сопровождает аудит."""
+        return self._routes
+
     async def add(self, route: SigningRoute, *, events: Sequence[RouteEvent] = ()) -> SigningRoute:
         saved = await self._routes.add(route, events=events)
         await self._audit.events(saved, events)
