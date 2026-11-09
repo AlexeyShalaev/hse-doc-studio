@@ -179,6 +179,20 @@ describe("Подписание: маршрута нет", () => {
     expect(screen.queryByTestId("signing-card")).toBeNull();
   });
 
+  it("гость по ссылке: маршруты не спрашиваем", async () => {
+    vi.spyOn(sessionApi, "bootstrap").mockResolvedValue({
+      ...bootstrap("server"),
+      user: null,
+    });
+    const list = vi.spyOn(signingRouteApi, "list");
+    mount({ role: "reader" });
+    await waitFor(() => {
+      expect(sessionApi.bootstrap).toHaveBeenCalled();
+    }, LOAD);
+    expect(screen.queryByTestId("signing-card")).toBeNull();
+    expect(list).not.toHaveBeenCalled();
+  });
+
   it("локальная Студия: маршрутов нет, карточки нет", async () => {
     vi.spyOn(sessionApi, "bootstrap").mockResolvedValue(bootstrap("local"));
     const list = vi.spyOn(signingRouteApi, "list");

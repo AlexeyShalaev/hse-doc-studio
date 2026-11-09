@@ -153,6 +153,20 @@ describe("плашка документа на подписании", () => {
     expect(screen.getByTestId("held")).toHaveTextContent("no");
   });
 
+  it("гость по ссылке маршрутов не спрашивает", async () => {
+    vi.spyOn(sessionApi, "bootstrap").mockResolvedValue({
+      ...bootstrap("server"),
+      user: null,
+    });
+    const list = vi.spyOn(signingRouteApi, "list");
+    mount(DOC);
+    await waitFor(() => {
+      expect(sessionApi.bootstrap).toHaveBeenCalled();
+    });
+    expect(list).not.toHaveBeenCalled();
+    expect(screen.getByTestId("held")).toHaveTextContent("no");
+  });
+
   it("по-английски", async () => {
     await i18n.changeLanguage("en");
     await startRoute();

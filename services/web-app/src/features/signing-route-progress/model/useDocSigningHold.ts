@@ -19,14 +19,16 @@ export type SigningHold = {
  * Идёт ли маршрут подписания, в который входит документ (docs/design/signing-route.md, 5.5).
  * Пока идёт, подписи документа менять нельзя, а пересборка остановит маршрут. Сводка маршрутов
  * проекта не называет документы, поэтому состав берём из хода каждого идущего маршрута: их
- * единицы, а состав идущего маршрута не меняется. Маршруты есть только на сервере.
+ * единицы, а состав идущего маршрута не меняется. Маршруты есть только на сервере и только
+ * вошедшему человеку.
  */
 export const useDocSigningHold = (
   projectId: string,
   docId: string,
 ): SigningHold | null => {
   const boot = useBootstrap().data;
-  const enabled = boot?.mode === "server" && docId !== "";
+  // Гостю по ссылке маршруты закрыты (раздел 7): без входа не спрашиваем.
+  const enabled = boot?.mode === "server" && boot.user !== null && docId !== "";
   const { data } = useSigningRoutes(projectId, null, { enabled });
   const live = enabled
     ? (data?.items ?? []).filter((r) => isRouteLive(r.status))

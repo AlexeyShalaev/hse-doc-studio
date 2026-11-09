@@ -96,7 +96,8 @@ export const SigningRouteCard = ({
 }: SigningRouteCardProps) => {
   const { t } = useTranslation("signingProgress");
   const boot = useBootstrap().data;
-  const isServer = boot?.mode === "server";
+  // Маршруты есть только на сервере и только вошедшему: гостю по ссылке они закрыты (раздел 7).
+  const isServer = boot?.mode === "server" && boot.user !== null;
   // Управлять маршрутом может тот, у кого есть право сдачи: владелец и редактор (раздел 7).
   const canManage = project.my_role === "owner" || project.my_role === "editor";
   const list = useSigningRoutes(project.id, profileId, { enabled: isServer });
