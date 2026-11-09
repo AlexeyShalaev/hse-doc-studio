@@ -1,7 +1,7 @@
 """Маршруты подписания: маршрут, документы, участники и события (docs/design/signing-route.md, раздел 5.8)
 
 Revision ID: sr_01_signing_routes
-Revises: jb_01_jobs_batch_id
+Revises: sp_01_signer_profiles
 Create Date: 2026-11-14 11:00:00
 """
 
@@ -12,7 +12,7 @@ from alembic import op
 from sqlalchemy.dialects import postgresql
 
 revision: str = "sr_01_signing_routes"
-down_revision: str | None = "jb_01_jobs_batch_id"
+down_revision: str | None = "sp_01_signer_profiles"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 

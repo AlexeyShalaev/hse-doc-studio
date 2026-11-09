@@ -9,6 +9,7 @@ from typing import TYPE_CHECKING, Protocol
 from uuid import UUID
 
 from hse_doc_studio.core.jobs.verify import TrustBundle
+from hse_doc_studio.core.value_objects import SignaturesState, SignerInfo
 
 if TYPE_CHECKING:
     from hse_doc_studio.core.entities import Project
@@ -59,6 +60,20 @@ class ISignerScope(Protocol):
 
     def single_user(self) -> bool:
         """Локальная Студия: человек один, персону из членства ему не назначить."""
+        ...
+
+
+class ISignerPlateData(Protocol):
+    """Открытые данные плашки слота, известные о его подписанте (docs/design/signing-route.md, разделы 4.2 и 6.5).
+
+    Маршрут подписания берёт их для расчёта L (плашка без данных меняет видимый слой на шаге подписанта) и для
+    заполнения плашек перед фиксацией. Полная реализация смотрит `slot.signer` из состояния подписей, затем сертификат
+    или открытый ключ из профиля подписанта, затем открытую часть его ключа по умолчанию; закрытые ключи чужих людей
+    она не читает. До сценариев подписанта (срез R6) работает заглушка, которая читает только `slot.signer`.
+    """
+
+    async def plate_for(self, state: SignaturesState, slot_id: str, user_id: str | None) -> SignerInfo | None:
+        """Данные плашки слота `slot_id` для подписанта `user_id` (None: участник ещё не принял приглашение)."""
         ...
 
 
