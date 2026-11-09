@@ -8,6 +8,7 @@ from hse_doc_studio.infra.template.releases import freeze
 from hse_doc_studio.infra.template.yaml_template_repository import (
     YamlTemplateRepository,
     _parse_submission_profile,
+    parse_signing_route,
 )
 
 # ---------------------------------------------------------------------------
@@ -444,3 +445,79 @@ def test__parse_submission_profile__unknown_method__rejected() -> None:
         _parse_submission_profile(
             {"id": "topic", "items": [{"doc_id": "app", "signatures": ["author"], "methods": {"author": ["fax"]}}]}
         )
+
+
+# ---------------------------------------------------------------------------
+# Порядок маршрута подписания: signatures.route и signing_route профиля
+# ---------------------------------------------------------------------------
+
+_ROUTE_SLOTS = """\
+  slots:
+    - {id: author, label: {ru: Автор}, applies_to: [app]}
+    - {id: supervisor, label: {ru: Научрук}, applies_to: [app]}
+    - {id: academic_supervisor, label: {ru: Академрук}, applies_to: [app]}
+"""
+
+
+def _write_route_version(tmp_path: Path, route: str, profile_route: str = "") -> None:
+    ver_dir = _write_version(tmp_path, "")
+    text = (ver_dir / "version.yaml").read_text(encoding="utf-8")
+    text = text.replace("  slots: []\n", _ROUTE_SLOTS + route)
+    profile = "  profiles:\n    - id: topic\n      items: [{doc_id: app, signatures: [author, supervisor]}]\n"
+    text = text.replace("  profiles: []\n", profile + profile_route)
+    (ver_dir / "version.yaml").write_text(text, encoding="utf-8", newline="\n")
+
+
+def test__signing_route__version_and_profile__parsed_as_steps(tmp_path: Path) -> None:
+    _write_route_version(
+        tmp_path,
+        "  route: [[author], [supervisor, academic_supervisor]]\n",
+        "      signing_route: [author, supervisor, [academic_supervisor]]\n",
+    )
+
+    version = YamlTemplateRepository(tmp_path).get_version("test-pack", "test-tmpl", "1.0")
+
+    assert version is not None
+    assert version.signatures_config.route == (("author",), ("supervisor", "academic_supervisor"))
+    assert version.pack_submission.profiles[0].signing_route == (("author",), ("supervisor",), ("academic_supervisor",))
+
+
+def test__signing_route__absent__empty(tmp_path: Path) -> None:
+    _write_route_version(tmp_path, "")
+
+    version = YamlTemplateRepository(tmp_path).get_version("test-pack", "test-tmpl", "1.0")
+
+    assert version is not None
+    assert version.signatures_config.route == ()
+    assert version.pack_submission.profiles[0].signing_route == ()
+
+
+def test__signing_route__malformed__ignored_version_and_profile_still_load(tmp_path: Path) -> None:
+    _write_route_version(tmp_path, "  route: {first: author}\n", "      signing_route: [[author--ivanov]]\n")
+
+    version = YamlTemplateRepository(tmp_path).get_version("test-pack", "test-tmpl", "1.0")
+
+    assert version is not None
+    assert [s.id for s in version.signatures_config.slots] == ["author", "supervisor", "academic_supervisor"]
+    assert version.signatures_config.route == ()
+    assert [p.id for p in version.pack_submission.profiles] == ["topic"]
+    assert version.pack_submission.profiles[0].signing_route == ()
+
+
+@pytest.mark.parametrize(
+    ("raw", "expected"),
+    [
+        (None, ()),
+        ([], ()),
+        ([["author"], [], [" supervisor ", ""]], (("author",), ("supervisor",))),
+        (["author", ["supervisor", "co_supervisor"]], (("author",), ("supervisor", "co_supervisor"))),
+    ],
+)
+def test__parse_signing_route__shapes(raw: object, expected: tuple[tuple[str, ...], ...]) -> None:
+    assert parse_signing_route(raw) == expected
+
+
+@pytest.mark.parametrize("raw", ["author", [["author", 1]], [{"slots": ["author"]}], [["author--ivanov"]]])
+def test__parse_signing_route__malformed__rejected(raw: object) -> None:
+    with pytest.raises((TypeError, ValueError)):
+        parse_signing_route(raw)
