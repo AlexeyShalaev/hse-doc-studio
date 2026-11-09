@@ -269,6 +269,55 @@ def test__slot_state__image_on_frozen_doc_after_marks_changed__stale_when_doc_us
     assert slot_state(state, _DOC, "supervisor", facts, uses_frozen=False).status is SlotStatus.signed
 
 
+_HELD = {_DOC: frozenset({"supervisor"})}
+
+
+@pytest.mark.parametrize("mode", [SignMode.image, SignMode.image_crypto, SignMode.detached, SignMode.detached_text])
+def test__slot_state__withheld_visible_mark__pending_awaiting_approval(mode: SignMode) -> None:
+    state = _state(mode, withheld=_HELD)
+
+    result = slot_state(state, _DOC, "supervisor", _FACTS)
+
+    assert (result.status, result.reason) == (SlotStatus.pending, PlanReason.awaiting_approval)
+    assert reason_hint(result.reason)
+
+
+def test__slot_state__withheld__a_signed_detached_slot_still_waits_for_approval() -> None:
+    signed = _state(SignMode.detached_text, frozen={_DOC: _frozen()}, detached={_DOC: {"supervisor": _detached()}})
+
+    result = slot_state(replace(signed, withheld=_HELD), _DOC, "supervisor", _FACTS)
+
+    assert (result.status, result.reason) == (SlotStatus.pending, PlanReason.awaiting_approval)
+
+
+def test__slot_state__withheld__checked_after_placement_off_and_before_no_image() -> None:
+    off = SignaturesState(
+        slots={"supervisor": _slot(SignMode.image)},
+        placements={_DOC: {"supervisor": _placement(False)}},
+        withheld=_HELD,
+    )
+    no_png = SignaturesState(
+        slots={"supervisor": _slot(SignMode.image, png=None)},
+        placements={_DOC: {"supervisor": _placement()}},
+        withheld=_HELD,
+    )
+
+    assert slot_state(off, _DOC, "supervisor", _FACTS).reason is PlanReason.placement_off
+    assert slot_state(no_png, _DOC, "supervisor", _FACTS).reason is PlanReason.awaiting_approval
+
+
+def test__slot_state__withheld__invisible_pades_and_other_docs_and_slots_are_not_affected() -> None:
+    invisible = SignaturesState(
+        slots={"supervisor": _slot(SignMode.crypto_invisible, png=None)}, placements={}, withheld=_HELD
+    )
+    other_doc = _state(SignMode.image, withheld={"thesis": frozenset({"supervisor"})})
+    other_slot = _state(SignMode.image, withheld={_DOC: frozenset({"author"})})
+
+    assert slot_state(invisible, _DOC, "supervisor", _FACTS).reason is PlanReason.not_frozen
+    assert slot_state(other_doc, _DOC, "supervisor", _FACTS).status is SlotStatus.signed
+    assert slot_state(other_slot, _DOC, "supervisor", _FACTS).status is SlotStatus.signed
+
+
 @pytest.mark.parametrize(
     ("slot_id", "persona"),
     [

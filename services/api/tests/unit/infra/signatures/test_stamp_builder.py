@@ -110,3 +110,51 @@ def test_stamps_digest_changes_with_signer(tmp_path: Path) -> None:
     )
     assert a != stamps_digest(stamps_for_doc(with_signer, "doc", tmp_path, "ru"), tmp_path)
     assert a == stamps_digest(stamps_for_doc(base, "doc", tmp_path, "ru"), tmp_path)
+
+
+def _picture_and_plate(tmp_path: Path, withheld: dict[str, frozenset[str]]) -> SignaturesState:
+    (tmp_path / "author.png").write_bytes(b"png")
+    place = SignaturePlacement(enabled=True, page=1, x_mm=20, y_mm=30, width_mm=70)
+    return SignaturesState(
+        slots={
+            "author": SignatureSlot(png_path="author.png", natural_width_px=10, natural_height_px=4),
+            "sup": SignatureSlot(None, None, None, sign_mode=SignMode.detached_text),
+        },
+        placements={"doc": {"author": place, "sup": place}, "other": {"author": place}},
+        withheld=withheld,
+    )
+
+
+def test_withheld_slot_is_left_out_but_the_rest_of_the_doc_is_stamped(tmp_path: Path) -> None:
+    state = _picture_and_plate(tmp_path, {"doc": frozenset({"author"})})
+
+    [plate] = stamps_for_doc(state, "doc", tmp_path, "ru")
+    [picture] = stamps_for_doc(state, "other", tmp_path, "ru")
+
+    assert plate.text == detached_caption("ru")
+    assert picture.png_path == tmp_path / "author.png"
+    assert stamps_for_doc(state, "doc", tmp_path, "ru", slot_ids=["author"]) == []
+
+
+def test_withheld_plate_is_left_out_too(tmp_path: Path) -> None:
+    state = _picture_and_plate(tmp_path, {"doc": frozenset({"sup"})})
+
+    [picture] = stamps_for_doc(state, "doc", tmp_path, "ru")
+
+    assert picture.png_path == tmp_path / "author.png"
+
+
+def test_visible_layer_fingerprint_is_counted_without_withheld_marks(tmp_path: Path) -> None:
+    from hse_doc_studio.infra.signatures.stamp_builder import stamps_digest  # noqa: PLC0415
+
+    held = _picture_and_plate(tmp_path, {"doc": frozenset({"author"})})
+    released = _picture_and_plate(tmp_path, {})
+    plate_only = SignaturesState(
+        slots=held.slots, placements={"doc": {"sup": held.placements["doc"]["sup"]}}, withheld={}
+    )
+
+    def digest(state: SignaturesState) -> str:
+        return stamps_digest(stamps_for_doc(state, "doc", tmp_path, "ru"), tmp_path)
+
+    assert digest(held) == digest(plate_only)
+    assert digest(held) != digest(released)

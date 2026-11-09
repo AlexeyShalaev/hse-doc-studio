@@ -185,14 +185,18 @@ def stamps_for_doc(
     """Stamps for every enabled placement of `doc_id` (optionally limited to `slot_ids`).
 
     A `detached_text` slot prints the caption; any other slot with an uploaded PNG
-    prints the picture. Slots with neither are skipped. `png_exists` replaces the
-    disk check (the planner looks at the project through its own probe).
+    prints the picture. Slots with neither are skipped, and so are slots withheld by
+    a signing route (`state.withheld`): the mark waits for the signer's approval and
+    is left out of the preview, the signed copy, the signer pack, the freeze and the
+    visible-layer fingerprint. `png_exists` replaces the disk check (the planner
+    looks at the project through its own probe).
     """
     exists = png_exists or Path.exists
     wanted = set(slot_ids) if slot_ids is not None else None
     result: list[Stamp] = []
     for slot_id, placement in state.placements.get(doc_id, {}).items():
-        if not placement.enabled or (wanted is not None and slot_id not in wanted):
+        skipped = not placement.enabled or (wanted is not None and slot_id not in wanted)
+        if skipped or state.is_withheld(doc_id, slot_id):
             continue
         slot = state.slots.get(slot_id)
         if slot is not None and slot.sign_mode is SignMode.detached_text:

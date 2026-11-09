@@ -55,9 +55,15 @@ from hse_doc_studio.use_cases.signatures.get_signature_plan import (
 
 logger = structlog.get_logger()
 
-# Причины, которые снимает только человек руками: способ, размещение, картинка, сборка.
+# Причины, которые снимает только человек руками: способ, размещение, картинка, сборка, согласие по маршруту.
 _MANUAL = frozenset(
-    {PlanReason.method_not_allowed, PlanReason.placement_off, PlanReason.no_image, PlanReason.not_built}
+    {
+        PlanReason.method_not_allowed,
+        PlanReason.placement_off,
+        PlanReason.awaiting_approval,
+        PlanReason.no_image,
+        PlanReason.not_built,
+    }
 )
 
 

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+from dataclasses import replace
 from pathlib import Path
 from typing import Any
 
@@ -19,9 +20,11 @@ from hse_doc_studio.core.value_objects import FormState, ProjectSchema, Signatur
 from hse_doc_studio.infra.persistence.forms import JsonFormStateRepository
 from hse_doc_studio.infra.persistence.project import JsonProjectRepository
 from hse_doc_studio.infra.persistence.project_migrations import ProjectStateBundle, migrate_project_state
+from hse_doc_studio.infra.persistence.serializers import deserialize_signatures_state, serialize_signatures_state
 from hse_doc_studio.infra.persistence.signature import JsonSignatureRepository
 from hse_doc_studio.infra.persistence.unknown_fields import (
     PROJECT_SHAPE,
+    SIGNATURES_SHAPE,
     ListOf,
     MapOf,
     Struct,
@@ -217,6 +220,39 @@ def test__signatures_and_forms__unknown_fields_survive_rewrite(tmp_path: Path) -
     rewritten_form = json.loads(form_path.read_text(encoding="utf-8"))
     assert rewritten_form["reviewed_at"] == "2027-01-01"
     assert rewritten_form["answers"] == {}
+
+
+def _held_signatures(folder: Path) -> Path:
+    state = SignaturesState(
+        slots={"author": SignatureSlot("author.png", 10, 10)},
+        placements={},
+        withheld={"annotation": frozenset({"author"})},
+    )
+    JsonSignatureRepository().save_state(folder, state)
+    return folder / ".hse-studio" / "signatures.json"
+
+
+def test__signatures__withheld_survives_a_rewrite_by_a_studio_that_does_not_know_it(tmp_path: Path) -> None:
+    on_disk = json.loads(_held_signatures(tmp_path).read_text(encoding="utf-8"))
+    # Старая Студия: её сериализатор и форма не знают `withheld`.
+    old_shape = Struct({key: shape for key, shape in SIGNATURES_SHAPE.fields.items() if key != "withheld"})
+    old_writer = serialize_signatures_state(SignaturesState.empty())
+    del old_writer["withheld"]
+
+    rewritten = preserve_unknown(old_writer, on_disk, old_shape)
+
+    assert rewritten["withheld"] == {"annotation": ["author"]}
+    assert deserialize_signatures_state(rewritten).is_withheld("annotation", "author")
+
+
+def test__signatures__released_slot_is_not_brought_back_from_the_old_file(tmp_path: Path) -> None:
+    path = _held_signatures(tmp_path)
+    repository = JsonSignatureRepository()
+
+    repository.save_state(tmp_path, replace(repository.get_state(tmp_path), withheld={}))
+
+    assert json.loads(path.read_text(encoding="utf-8"))["withheld"] == {}
+    assert repository.get_state(tmp_path).withheld == {}
 
 
 # ── миграции ─────────────────────────────────────────────────────────────────
