@@ -20,11 +20,16 @@ import pytest
 from hse_doc_studio.core.access.context import require_actor
 from hse_doc_studio.core.entities import SigningIdentity
 from hse_doc_studio.core.enums import DetachedFormat, DetachedOrigin, DetachedVerdict, SigningIdentityKind
-from hse_doc_studio.core.errors import NotFoundError
 from hse_doc_studio.core.signing_route.entities import DocSlot
 from hse_doc_studio.core.value_objects import DetachedSignature, SignerInfo
 from hse_doc_studio.use_cases.signatures._studio_signer import KeyPassphraseRequiredError
-from hse_doc_studio.use_cases.signing_route.key_signer import KeyInfo, KeyRequest, NoSigningKeyError, RouteKeySigner
+from hse_doc_studio.use_cases.signing_route.key_signer import (
+    KeyInfo,
+    KeyNotFoundError,
+    KeyRequest,
+    NoSigningKeyError,
+    RouteKeySigner,
+)
 from hse_doc_studio.use_cases.signing_route.point import RoutePoint
 from httpx2 import Response
 
@@ -92,18 +97,22 @@ def install_fake_keys(monkeypatch: pytest.MonkeyPatch) -> FakeKeys:
     async def own_key(self: RouteKeySigner, identity_id: UUID) -> SigningIdentity:
         identity = keys.mine()
         if identity is None or identity.id != identity_id:
-            raise NotFoundError(f"Ключ подписи {identity_id} не найден")
+            raise KeyNotFoundError
         return identity
 
     async def plate_of(self: RouteKeySigner, identity: SigningIdentity) -> SignerInfo:
         return keys.plate(identity)
+
+    async def default_plate(self: RouteKeySigner) -> SignerInfo | None:
+        identity = keys.mine()
+        return keys.plate(identity) if identity is not None else None
 
     async def check(self: RouteKeySigner, request: KeyRequest) -> SigningIdentity:
         identity = keys.mine()
         if identity is None:
             raise NoSigningKeyError
         if request.identity_id is not None and request.identity_id != identity.id:
-            raise NotFoundError(f"Ключ подписи {request.identity_id} не найден")
+            raise KeyNotFoundError
         if request.passphrase != PASSPHRASE:
             raise KeyPassphraseRequiredError
         return identity
@@ -138,6 +147,7 @@ def install_fake_keys(monkeypatch: pytest.MonkeyPatch) -> FakeKeys:
         "default_key_info": default_key_info,
         "own_key": own_key,
         "plate_of": plate_of,
+        "default_plate": default_plate,
         "check": check,
         "sign": sign,
     }.items():
@@ -213,6 +223,24 @@ class Trio:
         resp = self.send(sign)
         assert resp.status_code == 200, resp.text
         return resp.json()
+
+    def put(self, steps: list[list[dict[str, Any]]], extra_slots: list[dict[str, str]] | None = None) -> None:
+        body = {
+            "steps": steps,
+            "extra_slots": extra_slots or [],
+            "deadline": None,
+            "message": "Прошу подписать заявление до пятницы.",
+        }
+        updated = self.call(self.author, "PUT", self.url, json=body)
+        assert updated.status_code == 200, updated.text
+
+    def steps(self) -> list[dict[str, Any]]:
+        """Участники маршрута как люди тела PUT, по порядку шагов."""
+        return [
+            {"id": p["id"], "persona": p["persona"], "user_id": p["user_id"], "invitation_id": p["invitation_id"]}
+            for step in self.route()["steps"]
+            for p in step
+        ]
 
     def events(self) -> list[str]:
         return [e["kind"] for e in self.route()["events"]]
@@ -304,14 +332,16 @@ async def make_trio(
     images: tuple[str, ...] = ("author",),
     plates: tuple[str, ...] = (),
     profile_certs: tuple[str, ...] = (),
-    academic: bool = True,
+    academic: str = "slot",
 ) -> Trio:
     """Маршрут трёх человек до отправки.
 
     `methods` способ по персонам (по умолчанию картинка); `images` у кого картинка уже загружена автором;
     `plates` у кого подписант плашки записан в слот; `profile_certs` у кого сертификат лежит в профиле.
+    `academic`: `slot` академрук подписывает заявление (необязательный слот), `approver` только согласует
+    (участник без слотов), `none` академрука в маршруте нет.
     """
-    chosen = {persona: "image" for persona in PERSONAS} | (methods or {})
+    chosen = dict.fromkeys(PERSONAS, "image") | (methods or {})
     people = {persona: await person(stand, NAMES[persona]) for persona in PERSONAS}
     author = people["author"]
     project = make_project(
@@ -321,12 +351,12 @@ async def make_trio(
         academic_supervisor={"name": NAMES["academic_supervisor"], "role": "university"},
     )
     await project.member(people["supervisor"], "reviewer", "supervisor")
-    if academic:
+    if academic != "none":
         await project.member(people["academic_supervisor"], "reviewer", "academic_supervisor")
     trio = Trio(stand, project, people)
     for doc_id in TOPIC_DOCS:
         project.build(doc_id)
-    personas = PERSONAS if academic else PERSONAS[:2]
+    personas = PERSONAS if academic == "slot" else PERSONAS[:2]
     for persona in personas:
         if persona in images:
             project.png(author, persona)
@@ -361,24 +391,18 @@ async def make_trio(
     assert created.status_code == 201, created.text
     route = created.json()
     trio.route_id = route["id"]
-    if academic:
-        steps = [
-            [{"id": p["id"], "persona": p["persona"], "user_id": p["user_id"], "invitation_id": p["invitation_id"]}]
-            for step in route["steps"]
-            for p in step
-        ]
-        updated = project.call(
-            author,
-            "PUT",
-            trio.url,
-            json={
-                "steps": steps,
-                "extra_slots": [{"doc_id": APPLICATION, "slot_id": "academic_supervisor"}],
-                "deadline": None,
-                "message": "Прошу подписать заявление до пятницы.",
-            },
-        )
-        assert updated.status_code == 200, updated.text
+    if academic == "none":
+        return trio
+    steps = [
+        [{"id": p["id"], "persona": p["persona"], "user_id": p["user_id"], "invitation_id": p["invitation_id"]}]
+        for step in route["steps"]
+        for p in step
+    ]
+    extra = [{"doc_id": APPLICATION, "slot_id": "academic_supervisor"}] if academic == "slot" else []
+    if academic == "approver":
+        approver = {"id": None, "persona": "academic_supervisor", "user_id": people["academic_supervisor"].id}
+        steps.append([{**approver, "invitation_id": None}])
+    trio.put(steps, extra)
     return trio
 
 

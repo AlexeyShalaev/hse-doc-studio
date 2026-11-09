@@ -129,8 +129,8 @@ class RouteKeySigner:
 
     async def check(self, request: KeyRequest) -> SigningIdentity:
         """Ключ готов подписывать: найден, ключи на сервере разрешены, пароль передан и подходит."""
-        identity = await self._resolve(request.identity_id)
         await self._signer.require_key_allowed()
+        identity = await self._resolve(request.identity_id)
         if _protected(identity):
             if not request.passphrase:
                 raise KeyPassphraseRequiredError
