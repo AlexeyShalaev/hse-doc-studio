@@ -31,8 +31,17 @@ const STRANGER: SigningDemoUser = { id: "u_stranger", name: "Чужой" };
 let me: SigningDemoUser | null = AUTHOR;
 let clock = Date.parse("2026-11-10T09:00:00Z");
 
+// Данные плашки научрука неизвестны: он задаёт их сам на своём шаге (раздел 4.2, правило 2).
 const demo = createSigningRouteDemo({
   getUser: () => me,
+  members: [
+    {
+      user_id: "u_demo_petrov",
+      name: "Петров П. П.",
+      persona: "supervisor",
+      plate: null,
+    },
+  ],
   projectName: (id) => (id === PROJECT ? "Bertie: курсовой проект" : null),
   invitations: [
     {
@@ -208,25 +217,40 @@ describe("автор: черновик и отправка", () => {
           signingRouteApi.update(PROJECT, sent.id, withAcademic(sent)),
         )
       ).code,
-    ).toBe("route_not_editable");
+    ).toBe("invalid_transition");
   });
 });
 
 describe("подписант: задача", () => {
-  it("последний меняющий видимый слой согласует и подписывает одним действием", async () => {
+  it("ЭП без данных плашки: задать ключ, затем согласовать и подписать", async () => {
     const route = await sendDraft();
     as(SUPERVISOR);
-    const task = await signingTaskApi.get(PROJECT, route.id);
-    expect(task.route.project.name).toBe("Bertie: курсовой проект");
-    expect(task.me.next_action).toBe("approve_and_sign");
-    expect(task.docs[0]?.pdf_url).toMatch(
+    const before = await signingTaskApi.get(PROJECT, route.id);
+    expect(before.route.project.name).toBe("Bertie: курсовой проект");
+    // Последний, кто меняет видимый слой: согласие совмещается с фиксацией.
+    expect(before.me.next_action).toBe("approve_and_sign");
+    expect(before.me.plate).toBeNull();
+    expect(before.docs[0]?.pdf_url).toMatch(
       /\/docs\/topic_application\/pdf\/signed$/,
     );
-    expect(task.docs[0]?.token).toMatch(/^build:[0-9a-f]+:[0-9a-f]+$/);
-    expect(task.docs[0]?.mine.map((s) => s.slot_id)).toEqual(["supervisor"]);
-    expect(task.docs[0]?.others.map((s) => s.slot_id)).toEqual(["author"]);
-    expect(task.steps[1]?.[0]?.me).toBe(true);
+    expect(before.docs[0]?.token).toMatch(/^build:[0-9a-f]+:[0-9a-f]+$/);
+    expect(before.docs[0]?.mine.map((s) => s.slot_id)).toEqual(["supervisor"]);
+    expect(before.docs[0]?.others.map((s) => s.slot_id)).toEqual(["author"]);
+    expect(before.steps[1]?.[0]?.me).toBe(true);
+    const noPlate = await apiError(
+      signingTaskApi.approve(PROJECT, route.id, {
+        expected: tokens(before),
+        method: null,
+        sign: { identity_id: null, passphrase: null },
+      }),
+    );
+    expect(noPlate.code).toBe("plate_required");
 
+    // Плашка с данными это последнее изменение видимого слоя: документы фиксируются.
+    const task = await signingTaskApi.setPlateKey(PROJECT, route.id, "key-1");
+    expect(task.me.next_action).toBe("approve_and_sign");
+    expect(task.docs[0]?.frozen).toBe(true);
+    expect(task.docs[0]?.token).toMatch(/^pdf:/);
     const done = await signingTaskApi.approve(PROJECT, route.id, {
       expected: tokens(task),
       method: null,
@@ -241,8 +265,8 @@ describe("подписант: задача", () => {
     const final = await signingRouteApi.get(PROJECT, route.id);
     expect(final.events.map((e) => e.kind)).toEqual([
       "sent",
-      "approved",
       "frozen",
+      "approved",
       "signed",
       "completed",
     ]);
@@ -275,15 +299,18 @@ describe("подписант: задача", () => {
   it("ЭП до фиксации: два действия, вторая подпись после картинки академрука", async () => {
     const route = await sendDraft((r) => withAcademic(r));
     as(SUPERVISOR);
-    const task = await signingTaskApi.get(PROJECT, route.id);
+    const task = await signingTaskApi.setPlateKey(PROJECT, route.id, "key-1");
     expect(task.me.next_action).toBe("approve");
+    expect(task.docs[0]?.frozen).toBe(false);
     const approved = await signingTaskApi.approve(PROJECT, route.id, {
       expected: tokens(task),
       method: null,
       sign: null,
     });
-    expect(approved.me.state).toBe("approved");
+    // Согласовал до фиксации: ждёт её в `waiting`, согласие видно по времени.
+    expect(approved.me.state).toBe("waiting");
     expect(approved.me.next_action).toBe("wait");
+    expect(approved.steps[1]?.[0]?.at).not.toBeNull();
     expect(approved.me.plate?.owner).toBe(SUPERVISOR.name);
 
     // Академрук ещё не принял приглашение: автор повторяет его, ссылку копирует сам.
@@ -313,6 +340,14 @@ describe("подписант: задача", () => {
     const academicTask = await signingTaskApi.get(PROJECT, route.id);
     expect(academicTask.me.next_action).toBe("approve");
     expect(academicTask.docs[0]?.mine[0]?.reason).toBe("awaiting_approval");
+    const noImage = await apiError(
+      signingTaskApi.approve(PROJECT, route.id, {
+        expected: tokens(academicTask),
+        method: null,
+        sign: null,
+      }),
+    );
+    expect(noImage.code).toBe("image_required");
     const image = await signingTaskApi.uploadImage(
       PROJECT,
       route.id,
@@ -417,19 +452,19 @@ describe("возврат, остановка и повторная отправ�
   it("отмена и снятие с контроля", async () => {
     const route = await sendDraft();
     const notDone = await apiError(signingRouteApi.archive(PROJECT, route.id));
-    expect(notDone.code).toBe("route_not_active");
+    expect(notDone.code).toBe("invalid_transition");
     const cancelled = await signingRouteApi.cancel(PROJECT, route.id);
     expect(cancelled.status).toBe("cancelled");
     expect(cancelled.events.at(-1)?.kind).toBe("cancelled");
     expect(
       (await apiError(signingRouteApi.cancel(PROJECT, route.id))).code,
-    ).toBe("route_not_active");
+    ).toBe("invalid_transition");
   });
 
   it("новый маршрут точки снимает с контроля завершённый", async () => {
     const route = await sendDraft();
     as(SUPERVISOR);
-    const task = await signingTaskApi.get(PROJECT, route.id);
+    const task = await signingTaskApi.setPlateKey(PROJECT, route.id, "key-1");
     await signingTaskApi.approve(PROJECT, route.id, {
       expected: tokens(task),
       method: null,

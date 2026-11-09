@@ -35,8 +35,8 @@ export const SigningStopReasonSchema = z.enum([
 export type SigningStopReason = z.infer<typeof SigningStopReasonSchema>;
 
 /**
- * Состояние участника (раздел 5.3), вычисляется сервером. `approved`: согласовал до
- * фиксации, его ЭП попросят после неё.
+ * Состояние участника (раздел 5.3, `ParticipantState` ядра), вычисляется сервером.
+ * `waiting` и у того, кто согласовал до фиксации и ждёт её: у него есть `approved_at`.
  */
 export const ParticipantStateSchema = z.enum([
   "invited",
@@ -44,7 +44,6 @@ export const ParticipantStateSchema = z.enum([
   "to_approve",
   "to_approve_sign",
   "to_sign",
-  "approved",
   "done",
   "returned",
 ]);
@@ -102,7 +101,6 @@ export const RouteEventKindSchema = z.enum([
   "resumed",
   "cancelled",
   "completed",
-  "archived",
   "reminded",
   "invited",
   "frozen",
@@ -515,14 +513,16 @@ export const SigningTaskListSchema = z.strictObject({
 export type SigningTaskList = z.infer<typeof SigningTaskListSchema>;
 
 /**
- * Коды ошибок маршрута (тело `{detail, code}`). 404 `not_found` отдаётся и не участнику,
- * и в локальном режиме.
+ * Коды ошибок маршрута (тело `{detail, code}`), раздел 8.1. 404 `not_found` отдаётся и не
+ * участнику, и в локальном режиме. 409 и 429 ниже; 400 за неверно собранный маршрут
+ * (`no_participants`, `bad_step`, `duplicate_participant`, `duplicate_slot`, `unknown_doc`).
  */
 export const SIGNING_ROUTE_ERROR_CODES = [
   "doc_changed",
+  "invalid_transition",
   "not_your_turn",
-  "route_not_active",
-  "route_not_editable",
+  "image_required",
+  "plate_required",
   "route_blocked",
   "route_locked",
   "participant_not_waiting",

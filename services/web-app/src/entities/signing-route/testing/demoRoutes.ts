@@ -52,6 +52,8 @@ export type SigningDemoMember = {
   user_id: string;
   name: string;
   persona: string;
+  /** Известные данные плашки (открытый ключ в профиле, срез R10); без них ЭП-подписант задаёт их сам. */
+  plate?: SigningPlate | null;
 };
 
 export type SigningDemoInvitation = {
@@ -170,7 +172,16 @@ export const DEMO_SIGNING_PROFILE: SigningDemoProfile = {
 };
 
 export const DEMO_SIGNING_MEMBERS: SigningDemoMember[] = [
-  { user_id: "u_demo_petrov", name: "Петров П. П.", persona: "supervisor" },
+  {
+    user_id: "u_demo_petrov",
+    name: "Петров П. П.",
+    persona: "supervisor",
+    plate: {
+      owner: "Петров П. П.",
+      kind: "openpgp",
+      cert_id: "1A2B 3C4D 5E6F 7A8B",
+    },
+  },
 ];
 
 type Participant = {
@@ -326,7 +337,8 @@ export const createSigningRouteDemo = (
     const live = r.status === "active" || r.status === "completed";
     if (live && approved(r, p)) {
       if (signed(r, p)) return "done";
-      return r.frozen ? "to_sign" : "approved";
+      // Согласовал до фиксации и ждёт её: `waiting` с `approved_at`, как в ядре.
+      return r.frozen ? "to_sign" : "waiting";
     }
     if (r.status !== "active") return "waiting";
     const step = r.steps.findIndex((s) => s.includes(p)) + 1;
@@ -650,7 +662,7 @@ export const createSigningRouteDemo = (
     }
     if (participants(r).length === 0)
       blockers.push({
-        code: "empty_route",
+        code: "no_participants",
         doc_id: null,
         slot_id: null,
         participant_id: null,
@@ -723,8 +735,9 @@ export const createSigningRouteDemo = (
     approval: null,
     signedRound: null,
     returnedRound: null,
-    imageReady: false,
-    plate: null,
+    // Картинка автора уже стоит в его слоте проекта; данные плашки известны из профиля.
+    imageReady: who.user_id !== null && who.user_id === authors.get(r.id)?.id,
+    plate: members.find((m) => m.user_id === who.user_id)?.plate ?? null,
     notified_at: null,
     reminded_at: null,
     reminders: 0,
@@ -783,6 +796,7 @@ export const createSigningRouteDemo = (
       frozen: null,
       events: [],
     };
+    authors.set(r.id, author);
     const personas = new Set(pairsOf(r).map((pair) => pair.persona));
     const ordered = profile.order
       .map((step) => step.filter((persona) => personas.has(persona)))
@@ -821,7 +835,6 @@ export const createSigningRouteDemo = (
         );
       }),
     );
-    authors.set(r.id, author);
     return r;
   };
 
@@ -892,9 +905,7 @@ export const createSigningRouteDemo = (
     Object.fromEntries(docsOf(r, p).map((doc) => [doc, tokenFor(r, p, doc)]));
 
   const needsTurn = (r: Route, p: Participant, states: ParticipantState[]) => {
-    if (r.status !== "active")
-      return conflict("route_not_active", "The signing route is not active");
-    return states.includes(stateOf(r, p))
+    return r.status === "active" && states.includes(stateOf(r, p))
       ? null
       : conflict("not_your_turn", "It is not your turn in the signing route");
   };
@@ -943,7 +954,7 @@ export const createSigningRouteDemo = (
             r.status === "completed"
           ) {
             r.status = "archived";
-            event(r, "archived", user.name);
+            r.updated_at = now();
           }
         }
         const r = draftFromPack(projectId, profile, user);
@@ -962,7 +973,7 @@ export const createSigningRouteDemo = (
       handler: withRoute((req, r) => {
         if (!["draft", "paused", "returned", "cancelled"].includes(r.status))
           return conflict(
-            "route_not_editable",
+            "invalid_transition",
             "Cancel the signing route to change it",
           );
         const body = parse(UpdateSigningRouteRequestSchema, req.body);
@@ -981,7 +992,9 @@ export const createSigningRouteDemo = (
               const same =
                 old.user_id === who.user_id &&
                 old.invitation_id === who.invitation_id;
-              return same ? old : { ...old, ...who, approval: null };
+              return same
+                ? old
+                : makeParticipant(r, draft.persona, who, old.id);
             }
             return makeParticipant(r, draft.persona, who);
           }),
@@ -1007,7 +1020,7 @@ export const createSigningRouteDemo = (
       pattern: "/projects/:projectId/signing-routes/:routeId/send",
       handler: withRoute((req, r, { user }) => {
         if (!["draft", "paused", "returned", "cancelled"].includes(r.status))
-          return conflict("route_not_editable", "The route is already sent");
+          return conflict("invalid_transition", "The route is already sent");
         const body = parse(SendSigningRouteRequestSchema, req.body);
         if (!body) return invalid("Invalid send request");
         const blockers = blockersOf(r);
@@ -1035,6 +1048,7 @@ export const createSigningRouteDemo = (
           p.returnedRound = null;
           p.notified_at = null;
           p.reminders = 0;
+          p.reminded_at = null;
           // Согласие переносится, если документы участника не менялись.
           const carried =
             p.approval !== null &&
@@ -1071,7 +1085,7 @@ export const createSigningRouteDemo = (
       pattern: "/projects/:projectId/signing-routes/:routeId/cancel",
       handler: withRoute((_req, r, { user }) => {
         if (!["draft", "active", "paused", "returned"].includes(r.status))
-          return conflict("route_not_active", "The route is already closed");
+          return conflict("invalid_transition", "The route is already closed");
         r.status = "cancelled";
         r.stop_reason = null;
         event(r, "cancelled", user.name);
@@ -1081,14 +1095,14 @@ export const createSigningRouteDemo = (
     {
       method: "POST",
       pattern: "/projects/:projectId/signing-routes/:routeId/archive",
-      handler: withRoute((_req, r, { user }) => {
+      handler: withRoute((_req, r) => {
         if (r.status !== "completed")
           return conflict(
-            "route_not_active",
+            "invalid_transition",
             "Only a completed route can be archived",
           );
         r.status = "archived";
-        event(r, "archived", user.name);
+        r.updated_at = now();
         return demoJson(toRoute(r));
       }),
     },
@@ -1101,17 +1115,13 @@ export const createSigningRouteDemo = (
           (q) => q.id === req.params.participantId,
         );
         if (!p) return notFound();
-        if (r.status !== "active")
-          return conflict(
-            "route_not_active",
-            "The signing route is not active",
-          );
         const state = stateOf(r, p);
         const turn =
-          state === "to_approve" ||
-          state === "to_approve_sign" ||
-          state === "to_sign" ||
-          state === "invited";
+          r.status === "active" &&
+          (state === "to_approve" ||
+            state === "to_approve_sign" ||
+            state === "to_sign" ||
+            state === "invited");
         if (!turn)
           return conflict("participant_not_waiting", "Nothing to remind about");
         const last = p.reminded_at === null ? null : Date.parse(p.reminded_at);
@@ -1155,13 +1165,14 @@ export const createSigningRouteDemo = (
           p.method = body.method;
         }
         const combine = nextActionOf(r, p) === "approve_and_sign";
-        // Данные плашки известны из ключа подписанта.
+        // Как в ядре: без картинки или данных плашки согласие не сдвинуло бы маршрут.
+        if (p.method === "image" && !p.imageReady)
+          return conflict("image_required", "Upload the signature image");
         if (isCrypto(p.method) && p.plate === null)
-          p.plate = {
-            owner: user.name,
-            kind: "openpgp",
-            cert_id: sha(user.id).slice(0, 16),
-          };
+          return conflict(
+            "plate_required",
+            "Set the key or certificate for the plate",
+          );
         p.approval = {
           round: r.round,
           at: now(),
@@ -1252,6 +1263,8 @@ export const createSigningRouteDemo = (
           cert_id: sha(body.identity_id).slice(0, 16),
         };
         r.updated_at = now();
+        // Плашка с данными меняет видимый слой: возможно, менять его больше некому.
+        settle(r);
         return demoJson(toTask(r, p, user));
       }),
     },
@@ -1268,6 +1281,7 @@ export const createSigningRouteDemo = (
           cert_id: sha(user.id).slice(0, 16),
         };
         r.updated_at = now();
+        settle(r);
         return demoJson(toTask(r, p, user));
       }),
     },

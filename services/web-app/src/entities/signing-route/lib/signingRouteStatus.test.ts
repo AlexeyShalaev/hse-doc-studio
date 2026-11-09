@@ -59,7 +59,7 @@ describe("статусы маршрута (раздел 5.3)", () => {
   it("вернуть на доработку и напомнить можно только в очередь участника", () => {
     expect(canReturnForRework("to_approve")).toBe(true);
     expect(canReturnForRework("to_sign")).toBe(true);
-    expect(canReturnForRework("approved")).toBe(false);
+    expect(canReturnForRework("done")).toBe(false);
     expect(canReturnForRework("waiting")).toBe(false);
     expect(canRemind("invited")).toBe(true);
     expect(canRemind("done")).toBe(false);
