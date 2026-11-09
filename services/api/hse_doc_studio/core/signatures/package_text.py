@@ -152,6 +152,33 @@ def build_sign_instructions(lang: str, pdf_name: str, pdf_sha256: str) -> str:
     return "\n".join(lines) + "\n"
 
 
+def embedded_note(lang: str, final_name: str, final_sha256: str, base_name: str, base_size: int) -> str:
+    """Абзац README пакета, когда на PDF есть встроенные подписи PAdES: какой файл итоговый, какой для открепленных."""
+    if lang == "en":
+        lines = [
+            "Embedded signatures (PAdES)",
+            f"  {final_name}: the final PDF with embedded electronic signatures.",
+            f"  SHA-256: {final_sha256}",
+            f"  {base_name}: the same bytes before the embedded signatures (the first {base_size} bytes",
+            f"  of {final_name}); detached signatures cover this file.",
+            "  The embedded signatures are checked in the Adobe Acrobat Reader signature panel or with",
+            f'  pyhanko sign validate --pretty-print "{final_name}"',
+            f'  cmp -n {base_size} "{base_name}" "{final_name}"',
+        ]
+    else:
+        lines = [
+            "Встроенные подписи (PAdES)",
+            f"  {final_name}: итоговый PDF со встроенными электронными подписями.",
+            f"  SHA-256: {final_sha256}",
+            f"  {base_name}: те же байты до встроенных подписей (первые {base_size} байт {final_name}),",
+            "  открепленные подписи относятся к нему.",
+            "  Встроенные подписи проверяют в панели подписей Adobe Acrobat Reader или командой",
+            f'  pyhanko sign validate --pretty-print "{final_name}"',
+            f'  cmp -n {base_size} "{base_name}" "{final_name}"',
+        ]
+    return "\n".join(lines) + "\n"
+
+
 # --- КАК_ПРОВЕРИТЬ.txt: одна инструкция на весь комплект (docs/design/signature-plan.md, раздел 8) ---------------
 
 VERIFY_GUIDE_NAME = {"ru": "КАК_ПРОВЕРИТЬ.txt", "en": "HOW_TO_VERIFY.txt"}

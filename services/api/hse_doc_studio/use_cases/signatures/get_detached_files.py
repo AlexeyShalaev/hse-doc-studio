@@ -17,15 +17,18 @@ from hse_doc_studio.core.repositories import (
 )
 from hse_doc_studio.core.services import ProjectTemplateService, SignatureSlotService
 from hse_doc_studio.core.signatures.package_text import (
+    BASE_SUFFIX,
     PackageSignature,
     build_readme,
     build_sign_instructions,
+    embedded_note,
     public_key_files,
     signature_arcname,
 )
 from hse_doc_studio.core.signatures.ports import IPublicKeyExporter
 from hse_doc_studio.use_cases.projects.get_project import GetProjectUC
 from hse_doc_studio.use_cases.signatures._doc_context import DocContext, load_doc_context
+from hse_doc_studio.use_cases.signatures._final_pdf import checked_final_pdf
 
 
 @dataclass
@@ -101,7 +104,12 @@ class GetFrozenPdfUC(_DetachedFilesBase):
 
 
 class BuildDetachedPackageUC(_DetachedFilesBase):
-    """Zip of the frozen PDF with what travels with it (see `BuildDetachedPackageInput.mode`)."""
+    """Zip of the frozen PDF with what travels with it (see `BuildDetachedPackageInput.mode`).
+
+    With embedded PAdES signatures the final file F goes in as `<Документ>.pdf` byte for byte, and the frozen
+    bytes B, which detached signatures cover, as `<Документ>.для-открепленных-подписей.pdf`: the same names
+    as in the LMS package (docs/design/signature-plan.md, section 8). Without PAdES, B is the final file.
+    """
 
     def __init__(
         self,
@@ -122,7 +130,12 @@ class BuildDetachedPackageUC(_DetachedFilesBase):
         frozen = state.frozen.get(inp.doc_id)
         if frozen is None or not (folder / frozen.path).is_file():
             raise ValueError(localized_error("Сначала зафиксируйте PDF на подпись", "Freeze the PDF for signing first"))
+        final = await checked_final_pdf(folder, frozen)
         pdf_name = f"{ctx.base_name}.pdf"
+        # Открепленные подписи покрывают зафиксированные байты: при встроенных подписях это отдельный файл.
+        base_name = pdf_name
+        if final.has_embedded:
+            base_name = f"{ctx.base_name}.{BASE_SUFFIX.get(ctx.lang, BASE_SUFFIX['ru'])}.pdf"
 
         slot_service = SignatureSlotService()
         sigs: list[PackageSignature] = []
@@ -137,7 +150,7 @@ class BuildDetachedPackageUC(_DetachedFilesBase):
                 sigs.append(
                     PackageSignature(
                         slot_label=label,
-                        arcname=signature_arcname(pdf_name, label, path.suffix),
+                        arcname=signature_arcname(base_name, label, path.suffix),
                         format=sig.format,
                         signer=sig.signer,
                         signer_id=sig.signer_id,
@@ -150,18 +163,27 @@ class BuildDetachedPackageUC(_DetachedFilesBase):
         import os  # noqa: PLC0415
 
         os.close(fd)
+        note = (
+            "\n" + embedded_note(ctx.lang, pdf_name, final.sha256, base_name, frozen.size) if final.has_embedded else ""
+        )
         with zipfile.ZipFile(tmp, "w", zipfile.ZIP_DEFLATED) as zf:
-            zf.write(folder / frozen.path, pdf_name)
+            zf.write(final.path, pdf_name)
+            if final.has_embedded:
+                zf.write(final.base, base_name)
             if inp.mode == "request":
-                zf.writestr("SHA256SUMS.txt", f"{frozen.sha256}  {pdf_name}\n")
-                zf.writestr("README.txt", build_sign_instructions(ctx.lang, pdf_name, frozen.sha256))
+                sums = f"{frozen.sha256}  {base_name}\n"
+                if final.has_embedded:
+                    sums += f"{final.sha256}  {pdf_name}\n"
+                zf.writestr("SHA256SUMS.txt", sums)
+                zf.writestr("README.txt", build_sign_instructions(ctx.lang, base_name, frozen.sha256) + note)
             else:
                 keys = public_key_files(self._key_exporter.export_public, sigs)
                 for s, sig_file in zip(sigs, sig_files, strict=True):
                     zf.write(sig_file, s.arcname)
                 for name, blob in keys.items():
                     zf.writestr(name, blob)
-                zf.writestr("README.txt", build_readme(ctx.lang, pdf_name, frozen.sha256, sigs, list(keys)))
+                readme = build_readme(ctx.lang, base_name, frozen.sha256, sigs, list(keys))
+                zf.writestr("README.txt", readme + note)
         suffix = "на подпись" if inp.mode == "request" else "с подписями"
         if ctx.lang == "en":
             suffix = "to sign" if inp.mode == "request" else "signed"

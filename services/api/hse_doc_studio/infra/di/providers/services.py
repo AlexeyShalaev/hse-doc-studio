@@ -198,7 +198,7 @@ from hse_doc_studio.infra.signatures.chain_fetcher import ChainFetcher
 from hse_doc_studio.infra.signatures.detached_verifier import DetachedSignatureVerifier
 from hse_doc_studio.infra.signatures.openpgp import GpgKeyring
 from hse_doc_studio.infra.signatures.pdf_stamper import PdfStamper
-from hse_doc_studio.infra.signatures.pyhanko_signer import PyHankoPades, PyHankoPdfSigner
+from hse_doc_studio.infra.signatures.pyhanko_signer import PyHankoPades
 from hse_doc_studio.infra.signatures.signer_scope import LocalSignerScope
 from hse_doc_studio.infra.signatures.trust_material import LocalTrustMaterialProvider
 from hse_doc_studio.infra.signatures.trusted_roots import TrustedRootStore
@@ -766,10 +766,6 @@ class DomainServiceProvider(Provider):
     @provide
     def get_pdf_stamper(self) -> PdfStamper:
         return PdfStamper()
-
-    @provide
-    def get_pyhanko_signer(self) -> PyHankoPdfSigner:
-        return PyHankoPdfSigner()
 
     @provide
     def get_pack_planner(self, template_service: ProjectTemplateService) -> PackPlanner:

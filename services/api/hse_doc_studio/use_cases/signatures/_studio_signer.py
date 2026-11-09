@@ -25,7 +25,7 @@ from hse_doc_studio.core.signatures.errors import CmsParseError, GpgError, GpgUn
 from hse_doc_studio.core.signatures.key_policy import ISigningKeyPolicy, require_server_key_storage
 from hse_doc_studio.core.signatures.plan import SignMethod, method_of, slot_persona
 from hse_doc_studio.core.signatures.ports import IPadesSigner, ISignatureAudit, ISignerScope, ITrustMaterialProvider
-from hse_doc_studio.core.signatures.stamps import stamps_digest, stamps_for_doc
+from hse_doc_studio.core.signatures.stamps import stamps_digest_matches, stamps_for_doc
 from hse_doc_studio.core.signatures.verification import note_plate_mismatch
 from hse_doc_studio.core.value_objects import (
     DetachedSignature,
@@ -124,8 +124,10 @@ async def signer_for_identity(
         raise ValueError(localized_error("Сертификат ключа не читается", "The key certificate is unreadable")) from exc
 
 
-def current_marks_digest(ctx: DocContext, state: SignaturesState) -> str:
-    return stamps_digest(stamps_for_doc(state, ctx.doc.id, ctx.project.folder, ctx.lang))
+def marks_unchanged(ctx: DocContext, state: SignaturesState, frozen: FrozenPdf) -> bool:
+    """Видимый слой тот же, что при фиксации (отпечаток прежнего вида тоже принимается)."""
+    stamps = stamps_for_doc(state, ctx.doc.id, ctx.project.folder, ctx.lang)
+    return stamps_digest_matches(frozen.stamps_digest, stamps, ctx.project.folder)
 
 
 def signed_file_of(frozen: FrozenPdf) -> str:
@@ -143,6 +145,28 @@ def _prefix_sha256(path: Path, size: int) -> str:
             h.update(chunk)
             left -= len(chunk)
     return h.hexdigest()
+
+
+async def current_signed_file(folder: Path, frozen: FrozenPdf) -> Path:
+    """Текущий итоговый файл: F со встроенными подписями или, пока их нет, зафиксированный B.
+
+    Отказ, если F не тот, что записан, или не начинается с зафиксированных байтов.
+    """
+    base = folder / frozen.path
+    if not frozen.signed_path:
+        return base
+    signed = folder / frozen.signed_path
+    changed = localized_error(
+        "Подписанный PDF изменился вне Студии: зафиксируйте документ заново",
+        "The signed PDF changed outside the Studio: freeze the document again",
+    )
+    if not signed.is_file():
+        raise ValueError(changed)
+    sha = await asyncio.to_thread(sha256_file, signed)
+    prefix = await asyncio.to_thread(_prefix_sha256, signed, frozen.size)
+    if sha != frozen.signed_sha256 or prefix != frozen.sha256:
+        raise ValueError(changed)
+    return signed
 
 
 @dataclass
@@ -232,7 +256,7 @@ class StudioSigner:
                 localized_error("Этот слот уже подписан в этой версии PDF", "This slot is already signed in this PDF")
             )
         folder = ctx.project.folder
-        current = await self._current_signed_file(folder, frozen)
+        current = await current_signed_file(folder, frozen)
         signed_rel = frozen.signed_path or signed_file_of(frozen)
         target = folder / signed_rel
         tmp = target.with_suffix(".pdf.tmp")
@@ -307,24 +331,6 @@ class StudioSigner:
             reason = slot.sign_reason if slot is not None else ""
             return (await self.sign_pades(ctx, state, frozen, slot_id, identity, reason))[0]
         return state
-
-    async def _current_signed_file(self, folder: Path, frozen: FrozenPdf) -> Path:
-        """Текущий итоговый файл; отказ, если он не тот, что записан, или не начинается с зафиксированного."""
-        base = folder / frozen.path
-        if not frozen.signed_path:
-            return base
-        signed = folder / frozen.signed_path
-        changed = localized_error(
-            "Подписанный PDF изменился вне Студии: зафиксируйте документ заново",
-            "The signed PDF changed outside the Studio: freeze the document again",
-        )
-        if not signed.is_file():
-            raise ValueError(changed)
-        sha = await asyncio.to_thread(sha256_file, signed)
-        prefix = await asyncio.to_thread(_prefix_sha256, signed, frozen.size)
-        if sha != frozen.signed_sha256 or prefix != frozen.sha256:
-            raise ValueError(changed)
-        return signed
 
     async def _sign_bytes(self, identity: SigningIdentity, pdf_path: Path, passphrase: str) -> bytes:
         if identity.kind is SigningIdentityKind.openpgp:

@@ -3,10 +3,11 @@
 from __future__ import annotations
 
 import hashlib
-from collections.abc import Callable, Iterable
-from dataclasses import dataclass
+import json
+from collections.abc import Callable, Iterable, Sequence
+from dataclasses import asdict, dataclass
 from datetime import date
-from pathlib import Path
+from pathlib import Path, PurePath
 
 import structlog
 
@@ -135,9 +136,42 @@ def signer_details(signer: SignerInfo | None, lang: str) -> tuple[tuple[str, str
     return tuple(rows)
 
 
-def stamps_digest(stamps: list[Stamp]) -> str:
-    """Stable hash of what gets printed: changes when a signer, a position or a date changes."""
-    return hashlib.sha256(repr(stamps).encode()).hexdigest()
+def _project_relative(path: PurePath | None, root: PurePath) -> str | None:
+    """Путь картинки относительно папки проекта в POSIX-виде: не зависит от того, где лежит проект и на какой ОС."""
+    if path is None:
+        return None
+    return (path.relative_to(root) if path.is_relative_to(root) else path).as_posix()
+
+
+def stamps_digest(stamps: Sequence[Stamp], root: PurePath) -> str:
+    """Отпечаток видимого слоя: меняется, когда меняется подписант, положение, дата или картинка слота.
+
+    Картинка входит путём относительно `root` (папки проекта), а не абсолютным: перенос папки проекта, другой
+    каталог данных у локальной Студии и облака или другая ОС отпечаток не меняют.
+    """
+    rows = [{**asdict(stamp), "png_path": _project_relative(stamp.png_path, root)} for stamp in stamps]
+    payload = json.dumps(rows, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
+    return hashlib.sha256(payload.encode()).hexdigest()
+
+
+def legacy_stamps_digest(stamps: Sequence[Stamp]) -> str:
+    """Отпечаток прежнего вида: sha256 от `repr` меток с абсолютным путём картинки.
+
+    Такие отпечатки записаны у фиксаций, сделанных до перехода на относительные пути. Новые не пишутся,
+    функция нужна только для сверки (`stamps_digest_matches`).
+    """
+    return hashlib.sha256(repr(list(stamps)).encode()).hexdigest()
+
+
+def stamps_digest_matches(stored: str, stamps: Sequence[Stamp], root: PurePath) -> bool:
+    """Записанный при фиксации отпечаток совпадает с видимым слоем, который поставила бы фиксация сейчас.
+
+    Пустой отпечаток (фиксация до появления отпечатков) совпадает всегда. Отпечаток прежнего вида принимается,
+    если совпадает с прежней формулой на текущих метках: после обновления подписи не устаревают сами собой.
+    """
+    if not stored:
+        return True
+    return stored in (stamps_digest(stamps, root), legacy_stamps_digest(stamps))
 
 
 def stamps_for_doc(

@@ -106,7 +106,7 @@ class FreezePdfUC:
             source_sha256=source_sha,
             size=target.stat().st_size,
             frozen_at=datetime.now(timezone.utc).isoformat(timespec="seconds"),
-            stamps_digest=stamps_digest(stamps),
+            stamps_digest=stamps_digest(stamps, folder),
         )
 
         dropped: list[str] = []

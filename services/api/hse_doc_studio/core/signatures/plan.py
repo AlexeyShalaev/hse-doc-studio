@@ -122,12 +122,21 @@ class DocFacts:
     """Что известно о документе вне состояния подписей.
 
     `compiled_sha256` хэш текущей сборки (None, если PDF не собран); `marks_digest` отпечаток видимого слоя,
-    который поставила бы фиксация сейчас; `png_exists` проверяет картинку слота на диске.
+    который поставила бы фиксация сейчас; `legacy_marks_digest` тот же слой по прежней формуле с абсолютными
+    путями (`legacy_stamps_digest`), им сверяются фиксации, сделанные до её замены; `png_exists` проверяет
+    картинку слота на диске.
     """
 
     compiled_sha256: str | None
     marks_digest: str
     png_exists: Callable[[str], bool] = lambda _path: True
+    legacy_marks_digest: str = ""
+
+    def marks_match(self, stored: str) -> bool:
+        """Отпечаток фиксации совпадает с текущим видимым слоем; пустой (старые фиксации) совпадает всегда."""
+        if not stored or stored == self.marks_digest:
+            return True
+        return bool(self.legacy_marks_digest) and stored == self.legacy_marks_digest
 
 
 @dataclass(frozen=True)
@@ -181,7 +190,7 @@ def frozen_is_current(frozen: FrozenPdf, facts: DocFacts) -> PlanReason | None:
     """Почему зафиксированный PDF уже не та версия, что видят сейчас; None, если та."""
     if facts.compiled_sha256 is not None and facts.compiled_sha256 != frozen.source_sha256:
         return PlanReason.rebuilt
-    if frozen.stamps_digest and facts.marks_digest != frozen.stamps_digest:
+    if not facts.marks_match(frozen.stamps_digest):
         return PlanReason.marks_changed
     return None
 

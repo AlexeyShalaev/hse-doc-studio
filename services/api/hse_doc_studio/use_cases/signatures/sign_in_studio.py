@@ -21,7 +21,7 @@ from hse_doc_studio.use_cases.signatures._detached_store import require_fresh_fr
 from hse_doc_studio.use_cases.signatures._doc_context import DocContext, load_doc_context
 from hse_doc_studio.use_cases.signatures._studio_signer import (
     StudioSigner,
-    current_marks_digest,
+    marks_unchanged,
     project_lock,
     signer_for_identity,
 )
@@ -123,7 +123,7 @@ class SignInStudioUC:
         signer = await signer_for_identity(identity, self._signer.keyring, self._signer.identity_repo)
         await self._signer.may_sign(ctx.project, state, inp.slot_id, label, signer, explicit=True)
         frozen = await require_fresh_frozen(ctx, state)
-        if frozen.stamps_digest and current_marks_digest(ctx, state) != frozen.stamps_digest:
+        if not marks_unchanged(ctx, state, frozen):
             raise ValueError(
                 localized_error(
                     "Картинки или плашки изменились после фиксации: зафиксируйте PDF заново",

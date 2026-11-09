@@ -37,7 +37,7 @@ from hse_doc_studio.core.signatures.plan import (
     slot_state,
 )
 from hse_doc_studio.core.signatures.ports import ISignerScope
-from hse_doc_studio.core.signatures.stamps import stamps_digest, stamps_for_doc
+from hse_doc_studio.core.signatures.stamps import legacy_stamps_digest, stamps_digest, stamps_for_doc
 from hse_doc_studio.core.team import is_doc_active
 from hse_doc_studio.core.value_objects import SignaturesState
 from hse_doc_studio.use_cases.projects.get_project import GetProjectInput, GetProjectUC
@@ -183,8 +183,13 @@ async def doc_facts(
     except (NotFoundError, ValueError):
         compiled = None
     sha = await asyncio.to_thread(sha256_file, compiled) if compiled is not None and compiled.is_file() else None
-    marks = stamps_digest(stamps_for_doc(state, doc.id, folder, str(project.lang)))
-    return DocFacts(compiled_sha256=sha, marks_digest=marks, png_exists=lambda rel: (folder / rel).is_file())
+    stamps = stamps_for_doc(state, doc.id, folder, str(project.lang))
+    return DocFacts(
+        compiled_sha256=sha,
+        marks_digest=stamps_digest(stamps, folder),
+        png_exists=lambda rel: (folder / rel).is_file(),
+        legacy_marks_digest=legacy_stamps_digest(stamps),
+    )
 
 
 async def build_plan(  # noqa: PLR0913 — входы расчёта
