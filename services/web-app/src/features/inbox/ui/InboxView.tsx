@@ -3,15 +3,23 @@ import { Inbox } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { Badge, Button, EmptyState } from "@shared/ui";
 import { useProjectRoleLabel } from "@entities/project";
-import { useNotificationText } from "../lib/useNotificationText";
+import type { SigningTaskSummary } from "@entities/signing-route";
 import type {
   MyAccessRequest,
   MyInvitation,
   MyTransfer,
   Notification,
 } from "@entities/invitation";
-
-export type InboxTab = "all" | "invitations" | "requests" | "transfers";
+import { INBOX_TABS, type InboxTab } from "../lib/inboxTab";
+import { isSigningKind } from "../lib/notificationTarget";
+import {
+  useNotificationDetails,
+  useNotificationText,
+} from "../lib/useNotificationText";
+import {
+  SigningTasksSection,
+  type SigningTasksStatus,
+} from "./SigningTasksSection";
 
 export type InboxViewProps = {
   tab: InboxTab;
@@ -20,6 +28,9 @@ export type InboxViewProps = {
   transfers: MyTransfer[];
   notifications: Notification[];
   myRequests: MyAccessRequest[];
+  /** «На подпись»: задачи по всем проектам (`GET /account/signing-tasks`). */
+  signingTasks: SigningTaskSummary[];
+  signingStatus: SigningTasksStatus;
   busyId?: string | null;
   lang?: string;
   onInvitation: (inv: MyInvitation, accept: boolean) => void;
@@ -28,6 +39,8 @@ export type InboxViewProps = {
   onNotification: (n: Notification) => void;
   onMarkAll: () => void;
   onCancelRequest: (r: MyAccessRequest) => void;
+  onSigningTask: (task: SigningTaskSummary) => void;
+  onSigningRetry: () => void;
 };
 
 const CARD = {
@@ -47,7 +60,10 @@ const date = (iso: string, lang: string) =>
     year: "numeric",
   });
 
-/** Страница «Входящие» (10.9): приглашения, передачи, запросы в моих проектах и уведомления. */
+/**
+ * Страница «Входящие» (10.9): документы на подпись, приглашения, передачи, запросы в моих
+ * проектах и уведомления.
+ */
 export const InboxView = ({
   tab,
   onTab,
@@ -55,6 +71,8 @@ export const InboxView = ({
   transfers,
   notifications,
   myRequests,
+  signingTasks,
+  signingStatus,
   busyId = null,
   lang = "ru",
   onInvitation,
@@ -63,26 +81,34 @@ export const InboxView = ({
   onNotification,
   onMarkAll,
   onCancelRequest,
+  onSigningTask,
+  onSigningRetry,
 }: InboxViewProps) => {
   const { t } = useTranslation("inbox");
   const roleLabel = useProjectRoleLabel();
   const notificationText = useNotificationText();
+  const notificationDetails = useNotificationDetails();
   const [now] = useState(() => Date.now());
   const requestCards = notifications.filter(
     (n) => n.kind === "access_request" && n.read_at === null,
   );
+  // Во вкладке «На подпись» лента только о маршрутах подписания: возвраты, остановки, итоги.
   const feed = notifications.filter(
-    (n) => !(n.kind === "access_request" && n.read_at === null),
+    (n) =>
+      !(n.kind === "access_request" && n.read_at === null) &&
+      (tab === "all" || (tab === "signing" && isSigningKind(n.kind))),
   );
   const show = (what: InboxTab) => tab === "all" || tab === what;
-  const empty =
+  const nothingElse =
     invitations.length === 0 &&
     transfers.length === 0 &&
     notifications.length === 0 &&
     myRequests.length === 0;
+  const noSigning = signingTasks.length === 0 && signingStatus !== "error";
+  // У вкладки «На подпись» своё пустое состояние.
+  const empty =
+    tab !== "signing" && nothingElse && (tab !== "all" || noSigning);
   const unread = notifications.filter((n) => n.read_at === null).length;
-
-  const tabs: InboxTab[] = ["all", "invitations", "requests", "transfers"];
 
   return (
     <main
@@ -113,7 +139,7 @@ export const InboxView = ({
         )}
       </div>
       <div role="tablist" className="flex" style={{ gap: "0.25rem" }}>
-        {tabs.map((id) => (
+        {INBOX_TABS.map((id) => (
           <button
             key={id}
             type="button"
@@ -126,6 +152,14 @@ export const InboxView = ({
             }}
           >
             {t(`tabs.${id}`)}
+            {id === "signing" && signingTasks.length > 0 && (
+              <span
+                data-testid="inbox-tab-signing-count"
+                style={{ marginLeft: "0.375rem", fontWeight: 600 }}
+              >
+                {signingTasks.length}
+              </span>
+            )}
           </button>
         ))}
       </div>
@@ -134,6 +168,17 @@ export const InboxView = ({
         <div data-testid="inbox-empty">
           <EmptyState icon={<Inbox size="1.375rem" />} title={t("empty")} />
         </div>
+      )}
+
+      {show("signing") && (
+        <SigningTasksSection
+          tasks={signingTasks}
+          status={signingStatus}
+          standalone={tab === "signing"}
+          lang={lang}
+          onOpen={onSigningTask}
+          onRetry={onSigningRetry}
+        />
       )}
 
       {show("invitations") &&
@@ -349,48 +394,62 @@ export const InboxView = ({
         </section>
       )}
 
-      {tab === "all" && feed.length > 0 && (
+      {feed.length > 0 && (
         <section style={CARD} data-testid="inbox-notifications">
           <strong style={{ fontSize: "0.8125rem" }}>{t("feed")}</strong>
-          {feed.map((n) => (
-            <button
-              key={n.id}
-              type="button"
-              className="flex items-center"
-              data-testid={`inbox-notification-${n.id}`}
-              data-read={n.read_at !== null}
-              style={{
-                gap: "0.5rem",
-                textAlign: "left",
-                padding: "0.375rem 0",
-                fontSize: "0.78125rem",
-                fontWeight: n.read_at === null ? 600 : 400,
-                color: n.read_at === null ? "var(--fg-0)" : "var(--fg-1)",
-                background: "transparent",
-                border: 0,
-                borderBottom: "1px dashed var(--border)",
-              }}
-              onClick={() => {
-                onNotification(n);
-              }}
-            >
-              {n.read_at === null && (
-                <span
-                  aria-hidden="true"
-                  style={{
-                    width: "0.375rem",
-                    height: "0.375rem",
-                    borderRadius: "0.1875rem",
-                    background: "var(--accent)",
-                  }}
-                />
-              )}
-              <span style={{ flex: 1 }}>{notificationText(n)}</span>
-              <span className="dim" style={{ fontSize: "0.6875rem" }}>
-                {date(n.created_at, lang)}
-              </span>
-            </button>
-          ))}
+          {feed.map((n) => {
+            const details = notificationDetails(n);
+            return (
+              <button
+                key={n.id}
+                type="button"
+                className="flex items-center"
+                data-testid={`inbox-notification-${n.id}`}
+                data-read={n.read_at !== null}
+                style={{
+                  gap: "0.5rem",
+                  textAlign: "left",
+                  padding: "0.375rem 0",
+                  fontSize: "0.78125rem",
+                  fontWeight: n.read_at === null ? 600 : 400,
+                  color: n.read_at === null ? "var(--fg-0)" : "var(--fg-1)",
+                  background: "transparent",
+                  border: 0,
+                  borderBottom: "1px dashed var(--border)",
+                }}
+                onClick={() => {
+                  onNotification(n);
+                }}
+              >
+                {n.read_at === null && (
+                  <span
+                    aria-hidden="true"
+                    style={{
+                      width: "0.375rem",
+                      height: "0.375rem",
+                      borderRadius: "0.1875rem",
+                      background: "var(--accent)",
+                    }}
+                  />
+                )}
+                <span style={{ flex: 1 }}>
+                  {notificationText(n)}
+                  {details && (
+                    <span
+                      className="dim"
+                      style={{ fontWeight: 400, fontSize: "0.71875rem" }}
+                    >
+                      {" · "}
+                      {details}
+                    </span>
+                  )}
+                </span>
+                <span className="dim" style={{ fontSize: "0.6875rem" }}>
+                  {date(n.created_at, lang)}
+                </span>
+              </button>
+            );
+          })}
         </section>
       )}
     </main>

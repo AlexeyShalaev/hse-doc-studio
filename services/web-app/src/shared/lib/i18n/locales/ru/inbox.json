@@ -13,16 +13,18 @@
     "retry": "Повторить",
     "showAll": "Показать все",
     "unread": "Новое",
-    "decision": "нужно решение"
+    "decision": "нужно решение",
+    "signing": "Ждут вашей подписи: {{n}}"
   },
   "markAll": "Отметить всё прочитанным",
   "tabs": {
     "all": "Всё",
+    "signing": "На подпись",
     "invitations": "Приглашения",
     "requests": "Запросы",
     "transfers": "Передачи"
   },
-  "empty": "Здесь будут приглашения, запросы и уведомления",
+  "empty": "Здесь будут документы на подпись, приглашения, запросы и уведомления",
   "accept": "Принять",
   "decline": "Отклонить",
   "approve": "Одобрить",
@@ -58,6 +60,25 @@
     }
   },
   "feed": "Уведомления",
+  "signing": {
+    "title": "На подпись",
+    "from": "просит {{name}}",
+    "someone": "Участник",
+    "open": "Открыть",
+    "openLabel": "Открыть страницу подписи: {{name}}",
+    "deadline": "срок {{date}}",
+    "overdue": "срок прошёл {{date}}",
+    "action": {
+      "approve": "Согласовать",
+      "approve_and_sign": "Согласовать и подписать",
+      "sign": "Подписать итоговый PDF"
+    },
+    "empty": "Ничего не ждёт вашей подписи",
+    "emptyHint": "Когда вас попросят согласовать или подписать документы, они появятся здесь.",
+    "loading": "Загружаем документы на подпись",
+    "error": "Не удалось загрузить документы на подпись",
+    "retry": "Повторить"
+  },
   "kind": {
     "project_invitation": "{{actor}} приглашает вас в «{{project}}»",
     "invitation_accepted": "{{actor}} принял приглашение в «{{project}}»",
@@ -90,10 +111,16 @@
     "system_alert_diag_warn": "Самодиагностика: проверка «{{check}}» требует внимания",
     "system_alert_diag_recovered": "Самодиагностика: проверка «{{check}}» снова в порядке",
     "signing_request": "{{actor}} просит подписать: {{excerpt}}",
+    "signing_request_approve": "{{actor}} просит согласовать: {{excerpt}}",
     "signing_request_sign": "Подпишите итоговый PDF: {{excerpt}}",
-    "signing_reminder": "Напоминание: {{excerpt}}",
+    "signing_reminder": "Напоминание о подписи: {{excerpt}}",
+    "signing_reminder_approve": "Напоминание о согласовании: {{excerpt}}",
+    "signing_reminder_sign": "Напоминание о подписи итогового PDF: {{excerpt}}",
     "signing_returned": "{{actor}} вернул на доработку: «{{excerpt}}»",
-    "signing_paused": "Документ изменился, маршрут остановлен: {{excerpt}}",
+    "signing_paused": "Маршрут остановлен: {{excerpt}}",
+    "signing_paused_rebuilt": "Документ изменился, маршрут остановлен: {{excerpt}}",
+    "signing_paused_marks_changed": "Подписи изменились вне маршрута, маршрут остановлен: {{excerpt}}",
+    "signing_paused_frozen_changed": "Итоговый PDF изменился, маршрут остановлен: {{excerpt}}",
     "signing_paused_participant_left": "Участник маршрута ушёл из проекта, назначьте другого подписанта: {{excerpt}}",
     "signing_completed": "Все подписали: {{excerpt}}",
     "signing_cancelled": "Маршрут отменён: {{excerpt}}"

@@ -113,6 +113,8 @@ export type SigningRouteDemo = {
   rebuild: (projectId: string, docId: string) => void;
   /** Приглашение принято: участник получает аккаунт. */
   acceptInvitation: (invitationId: string, user: SigningDemoUser) => void;
+  /** Сколько задач «На подпись» у человека: для `InboxSummary.signing_tasks` демо «Входящих». */
+  taskCount: (userId: string) => number;
 };
 
 const SLOT_LABEL = {
@@ -915,6 +917,33 @@ export const createSigningRouteDemo = (
     return r;
   };
 
+  /** Задачи «На подпись»: идущие маршруты, где сейчас ждут действия человека. */
+  const tasksOf = (userId: string): SigningTaskSummary[] => {
+    const items: SigningTaskSummary[] = [];
+    for (const r of routes) {
+      if (r.status !== "active") continue;
+      for (const p of participants(r)) {
+        if (p.user_id !== userId) continue;
+        const action = nextActionOf(r, p);
+        if (action === "wait" || action === "done") continue;
+        items.push({
+          project: {
+            id: r.project_id,
+            name: projectName(r.project_id) ?? r.project_id,
+          },
+          route_id: r.id,
+          profile: { id: r.profile.id, name: r.profile.name },
+          round: r.round,
+          sender: r.sent_by?.name ?? null,
+          deadline: r.deadline,
+          next_action: action,
+          since: p.notified_at,
+        });
+      }
+    }
+    return items;
+  };
+
   // Обработчики
 
   type Ctx = { user: SigningDemoUser; projectId: string };
@@ -1379,31 +1408,9 @@ export const createSigningRouteDemo = (
     {
       method: "GET",
       pattern: "/account/signing-tasks",
-      handler: signedIn((_req, { user }) => {
-        const items: SigningTaskSummary[] = [];
-        for (const r of routes) {
-          if (r.status !== "active") continue;
-          for (const p of participants(r)) {
-            if (p.user_id !== user.id) continue;
-            const action = nextActionOf(r, p);
-            if (action === "wait" || action === "done") continue;
-            items.push({
-              project: {
-                id: r.project_id,
-                name: projectName(r.project_id) ?? r.project_id,
-              },
-              route_id: r.id,
-              profile: { id: r.profile.id, name: r.profile.name },
-              round: r.round,
-              sender: r.sent_by?.name ?? null,
-              deadline: r.deadline,
-              next_action: action,
-              since: p.notified_at,
-            });
-          }
-        }
-        return demoJson({ items });
-      }),
+      handler: signedIn((_req, { user }) =>
+        demoJson({ items: tasksOf(user.id) }),
+      ),
     },
   ];
 
@@ -1437,5 +1444,6 @@ export const createSigningRouteDemo = (
         settle(r);
       }
     },
+    taskCount: (userId) => tasksOf(userId).length,
   };
 };

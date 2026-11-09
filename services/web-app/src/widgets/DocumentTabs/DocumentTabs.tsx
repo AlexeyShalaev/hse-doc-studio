@@ -32,6 +32,10 @@ import {
 import { useStartCompile } from "@entities/compile";
 import { UploadCustomFileModal } from "@features/custom-document";
 import { BuildBlockedNotice } from "@features/build-states";
+import {
+  SigningHoldBanner,
+  useDocSigningHold,
+} from "@features/signing-route-progress";
 import { isReadOnlyRole, useProject } from "@entities/project";
 import { usePlaceStore, type DocActivity } from "@entities/connected-device";
 import { useCapabilities } from "@entities/session";
@@ -125,6 +129,8 @@ export const DocumentTabs = ({ projectId, docId }: DocumentTabsProps) => {
     block: buildBlock,
   } = useStartCompile(projectId, docId);
   const hasPriorBuild = slot !== undefined || doc?.last_compile_id != null;
+  // Документ на подписании: подписи заперты, пересборка разрешена, но остановит маршрут.
+  const signingHold = useDocSigningHold(projectId, docId);
   const { remove: removeCustomFile, isRemoving: isRevertingCustomFile } =
     useCustomFileActions(projectId, docId);
   const [uploadOpen, setUploadOpen] = useState(false);
@@ -537,6 +543,9 @@ export const DocumentTabs = ({ projectId, docId }: DocumentTabsProps) => {
       {buildBlock !== null && (
         <BuildBlockedNotice block={buildBlock} projectId={projectId} />
       )}
+      {signingHold !== null && (
+        <SigningHoldBanner projectId={projectId} hold={signingHold} />
+      )}
 
       <div
         className="tabs"
@@ -802,7 +811,11 @@ export const DocumentTabs = ({ projectId, docId }: DocumentTabsProps) => {
         }}
       >
         {activeView === "signatures" ? (
-          <DocSignaturesPane projectId={projectId} docId={docId} />
+          <DocSignaturesPane
+            projectId={projectId}
+            docId={docId}
+            locked={signingHold !== null}
+          />
         ) : activeView === "checks" ? (
           <ChecksPane projectId={projectId} docId={docId} />
         ) : activeView === "compile" ? (

@@ -59,6 +59,8 @@ const DRAFT = {
 
 export const createInvitationRoutes = (
   getWorld: () => ServerDemoWorld,
+  /** Задачи «На подпись» человека: их считает демо маршрута подписания. */
+  signingTasks: (userId: string) => number = () => 0,
 ): DemoRoute[] => {
   const signedIn =
     (
@@ -602,8 +604,7 @@ export const createInvitationRoutes = (
           access_requests: managed
             .flatMap(([, list]) => list)
             .filter((r) => r.status === "pending").length,
-          // Задачи «На подпись» показывает демо маршрута подписания (W6).
-          signing_tasks: 0,
+          signing_tasks: signingTasks(userId),
         });
       }),
     },

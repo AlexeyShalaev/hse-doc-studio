@@ -169,7 +169,7 @@ export const serverDemoRoutes: DemoRoute[] = [
   ...createProjectRoutes(() => world),
   ...createProjectAccessRoutes(() => world),
   // invites: приглашения, запросы доступа, передача владения, «Входящие».
-  ...createInvitationRoutes(() => world),
+  ...createInvitationRoutes(() => world, signingRouteDemo.taskCount),
   ...signingRouteDemo.routes,
   ...createMemberOrgRoutes(() => world),
   ...createPersonalRoutes(() => world),
