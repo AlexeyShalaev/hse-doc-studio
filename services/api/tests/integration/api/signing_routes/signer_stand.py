@@ -77,80 +77,101 @@ class FakeKeys:
     def mine(self) -> SigningIdentity | None:
         return self.identities.get(require_actor().id or "")
 
+    def find(self, identity_id: UUID | None) -> SigningIdentity:
+        """Свой ключ по id или ключ по умолчанию; чужой и несуществующий неотличимы."""
+        identity = self.mine()
+        if identity is None:
+            raise NoSigningKeyError
+        if identity_id is not None and identity_id != identity.id:
+            raise KeyNotFoundError
+        return identity
+
+    def signature(self, identity: SigningIdentity, pair: DocSlot, pdf_sha256: str) -> DetachedSignature:
+        self.signed.append((identity.subject_cn, pair))
+        return DetachedSignature(
+            file=f".hse-studio/detached/{pair.doc_id}/{pair.slot_id}.asc",
+            format=DetachedFormat.openpgp,
+            origin=DetachedOrigin.studio,
+            pdf_sha256=pdf_sha256,
+            verdict=DetachedVerdict.valid,
+            signer=identity.subject_cn,
+            signer_id=identity.fingerprint or "",
+            added_at=datetime.now(UTC).isoformat(),
+        )
+
     def plate(self, identity: SigningIdentity) -> SignerInfo:
         fingerprint = identity.fingerprint or ""
         return SignerInfo(kind="openpgp", owner=identity.subject_cn, cert_id=fingerprint[:16], signer_id=fingerprint)
 
 
-def install_fake_keys(monkeypatch: pytest.MonkeyPatch) -> FakeKeys:
+class _Installed:
+    """Ключи текущего теста: подмены методов `RouteKeySigner` ниже читают их отсюда."""
+
     keys = FakeKeys()
 
-    async def keys_allowed(self: RouteKeySigner) -> bool:
-        return True
 
-    async def default_key_info(self: RouteKeySigner) -> KeyInfo | None:
-        identity = keys.mine()
-        if identity is None:
-            return None
-        return KeyInfo(identity.id, identity.label, identity.kind.value, protected=True, signer=identity.subject_cn)
+async def _keys_allowed(self: RouteKeySigner) -> bool:
+    return True
 
-    async def own_key(self: RouteKeySigner, identity_id: UUID) -> SigningIdentity:
-        identity = keys.mine()
-        if identity is None or identity.id != identity_id:
-            raise KeyNotFoundError
-        return identity
 
-    async def plate_of(self: RouteKeySigner, identity: SigningIdentity) -> SignerInfo:
-        return keys.plate(identity)
+async def _default_key_info(self: RouteKeySigner) -> KeyInfo | None:
+    identity = _Installed.keys.mine()
+    if identity is None:
+        return None
+    return KeyInfo(identity.id, identity.label, identity.kind.value, protected=True, signer=identity.subject_cn)
 
-    async def default_plate(self: RouteKeySigner) -> SignerInfo | None:
-        identity = keys.mine()
-        return keys.plate(identity) if identity is not None else None
 
-    async def check(self: RouteKeySigner, request: KeyRequest) -> SigningIdentity:
-        identity = keys.mine()
-        if identity is None:
-            raise NoSigningKeyError
-        if request.identity_id is not None and request.identity_id != identity.id:
-            raise KeyNotFoundError
-        if request.passphrase != PASSPHRASE:
-            raise KeyPassphraseRequiredError
-        return identity
+async def _own_key(self: RouteKeySigner, identity_id: UUID) -> SigningIdentity:
+    return _Installed.keys.find(identity_id)
 
-    async def sign(
-        self: RouteKeySigner, point: RoutePoint, pairs: Any, identity: SigningIdentity, passphrase: str
-    ) -> tuple[DocSlot, ...]:
-        if keys.broken:
-            raise ValueError("gpg отказал в подписи: Bad passphrase")
-        folder = point.project.folder
-        state = self._signatures.get_state(folder)
-        for pair in pairs:
-            frozen = state.frozen[pair.doc_id]
-            signature = DetachedSignature(
-                file=f".hse-studio/detached/{pair.doc_id}/{pair.slot_id}.asc",
-                format=DetachedFormat.openpgp,
-                origin=DetachedOrigin.studio,
-                pdf_sha256=frozen.sha256,
-                verdict=DetachedVerdict.valid,
-                signer=identity.subject_cn,
-                signer_id=identity.fingerprint or "",
-                added_at=datetime.now(UTC).isoformat(),
-            )
-            detached = {**state.detached.get(pair.doc_id, {}), pair.slot_id: signature}
-            state = replace(state, detached={**state.detached, pair.doc_id: detached})
-            keys.signed.append((identity.subject_cn, pair))
-        self._signatures.save_state(folder, state)
-        return tuple(pairs)
 
-    for name, fake in {
-        "keys_allowed": keys_allowed,
-        "default_key_info": default_key_info,
-        "own_key": own_key,
-        "plate_of": plate_of,
-        "default_plate": default_plate,
-        "check": check,
-        "sign": sign,
-    }.items():
+async def _plate_of(self: RouteKeySigner, identity: SigningIdentity) -> SignerInfo:
+    return _Installed.keys.plate(identity)
+
+
+async def _default_plate(self: RouteKeySigner) -> SignerInfo | None:
+    identity = _Installed.keys.mine()
+    return _Installed.keys.plate(identity) if identity is not None else None
+
+
+async def _check(self: RouteKeySigner, request: KeyRequest) -> SigningIdentity:
+    identity = _Installed.keys.find(request.identity_id)
+    if request.passphrase != PASSPHRASE:
+        raise KeyPassphraseRequiredError
+    return identity
+
+
+async def _sign(
+    self: RouteKeySigner, point: RoutePoint, pairs: Any, identity: SigningIdentity, passphrase: str
+) -> tuple[DocSlot, ...]:
+    keys = _Installed.keys
+    if keys.broken:
+        raise ValueError("gpg отказал в подписи: Bad passphrase")
+    folder = point.project.folder
+    state = self._signatures.get_state(folder)
+    for pair in pairs:
+        signature = keys.signature(identity, pair, state.frozen[pair.doc_id].sha256)
+        detached = {**state.detached.get(pair.doc_id, {}), pair.slot_id: signature}
+        state = replace(state, detached={**state.detached, pair.doc_id: detached})
+    self._signatures.save_state(folder, state)
+    return tuple(pairs)
+
+
+_FAKES = {
+    "keys_allowed": _keys_allowed,
+    "default_key_info": _default_key_info,
+    "own_key": _own_key,
+    "plate_of": _plate_of,
+    "default_plate": _default_plate,
+    "check": _check,
+    "sign": _sign,
+}
+
+
+def install_fake_keys(monkeypatch: pytest.MonkeyPatch) -> FakeKeys:
+    keys = FakeKeys()
+    monkeypatch.setattr(_Installed, "keys", keys)
+    for name, fake in _FAKES.items():
         monkeypatch.setattr(RouteKeySigner, name, fake)
     return keys
 
@@ -356,54 +377,34 @@ async def make_trio(
     trio = Trio(stand, project, people)
     for doc_id in TOPIC_DOCS:
         project.build(doc_id)
-    personas = PERSONAS if academic == "slot" else PERSONAS[:2]
-    for persona in personas:
-        if persona in images:
-            project.png(author, persona)
-        _ok(
-            project.call(
-                author,
-                "PATCH",
-                f"{project.base}/signatures/slots/{persona}/config",
-                json={"signing_identity_id": None, "sign_mode": MODES[chosen[persona]], "sign_reason": ""},
-            )
-        )
-        if persona in plates:
-            _ok(
-                project.call(
-                    author,
-                    "PUT",
-                    f"{project.base}/signatures/slots/{persona}/signer",
-                    json={"owner": NAMES[persona], "cert_id": "1A2B 3C4D"},
-                )
-            )
+    for persona in PERSONAS if academic == "slot" else PERSONAS[:2]:
+        _prepare_slot(trio, persona, chosen[persona], image=persona in images, plate=persona in plates)
         if persona in profile_certs:
             trio.profile_cert(people[persona], NAMES[persona])
-        for doc_id in TOPIC_DOCS:
-            if persona != "supervisor" and doc_id == PROPOSAL:
-                continue
-            _ok(
-                project.call(
-                    author, "PATCH", f"{project.base}/signatures/placements/{doc_id}/{persona}", json={"enabled": True}
-                )
-            )
     created = project.call(author, "POST", project.routes, json={"profile_id": TOPIC})
     assert created.status_code == 201, created.text
-    route = created.json()
-    trio.route_id = route["id"]
-    if academic == "none":
-        return trio
-    steps = [
-        [{"id": p["id"], "persona": p["persona"], "user_id": p["user_id"], "invitation_id": p["invitation_id"]}]
-        for step in route["steps"]
-        for p in step
-    ]
-    extra = [{"doc_id": APPLICATION, "slot_id": "academic_supervisor"}] if academic == "slot" else []
-    if academic == "approver":
+    trio.route_id = created.json()["id"]
+    if academic == "slot":
+        trio.put([[p] for p in trio.steps()], [{"doc_id": APPLICATION, "slot_id": "academic_supervisor"}])
+    elif academic == "approver":
         approver = {"id": None, "persona": "academic_supervisor", "user_id": people["academic_supervisor"].id}
-        steps.append([{**approver, "invitation_id": None}])
-    trio.put(steps, extra)
+        trio.put([*([p] for p in trio.steps()), [{**approver, "invitation_id": None}]])
     return trio
+
+
+def _prepare_slot(trio: Trio, slot_id: str, method: str, *, image: bool, plate: bool) -> None:
+    """Слот автором до отправки: картинка, способ, подписант плашки и включённые размещения."""
+    project, author = trio.project, trio.author
+    slots = f"{project.base}/signatures/slots/{slot_id}"
+    if image:
+        project.png(author, slot_id)
+    config = {"signing_identity_id": None, "sign_mode": MODES[method], "sign_reason": ""}
+    _ok(project.call(author, "PATCH", f"{slots}/config", json=config))
+    if plate:
+        _ok(project.call(author, "PUT", f"{slots}/signer", json={"owner": NAMES[slot_id], "cert_id": "1A2B 3C4D"}))
+    for doc_id in TOPIC_DOCS if slot_id == "supervisor" else (APPLICATION,):
+        placement = f"{project.base}/signatures/placements/{doc_id}/{slot_id}"
+        _ok(project.call(author, "PATCH", placement, json={"enabled": True}))
 
 
 def _ok(resp: Response) -> None:

@@ -269,11 +269,12 @@ async def test__academic_detached_without_key__sets_the_key_and_signs_in_one_act
     task = trio.task(trio.academic)
     # Он последний, кто меняет видимый слой: согласие совмещается с фиксацией и подписью.
     assert my(task) == ("to_approve", "approve_and_sign")
-    assert task["me"]["plate"] is None
+    # В слоте данных плашки нет; страница показывает те, что даст его ключ по умолчанию.
+    assert trio.state()["slots"]["academic_supervisor"]["signer"] is None
+    assert task["me"]["plate"]["owner"] == "Сидоров Сидор Сидорович"
     assert task["me"]["keys"]["default_key"]["id"] == str(academic_key.id)
     assert task["docs"][0]["token"].startswith("build:")
     assert task["docs"][0]["token"].count(":") == 2
-    assert trio.approve(trio.academic).json()["code"] == "plate_required"
 
     done = trio.approved(trio.academic, sign=KEY)
 

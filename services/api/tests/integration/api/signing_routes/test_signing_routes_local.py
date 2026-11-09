@@ -20,8 +20,23 @@ async def test__local_studio__signing_routes__not_found(test_app: AsyncClient) -
         ("POST", f"{one}/send", {"expected": {}, "sign": None}),
         ("POST", f"{one}/cancel", {}),
         ("POST", f"{one}/archive", {}),
+        ("GET", f"{one}/task", None),
+        ("GET", f"{one}/task/image", None),
+        ("POST", f"{one}/task/approve", {"expected": {}, "method": None, "sign": None}),
+        ("POST", f"{one}/task/sign", {"expected": {}, "identity_id": None, "passphrase": None}),
+        ("POST", f"{one}/task/return", {"comment": "Уточните цель проекта"}),
+        ("PUT", f"{one}/task/plate", {"identity_id": ROUTE}),
     ]
 
     for method, path, body in calls:
         resp = await test_app.request(method, path, json=body)
         assert resp.status_code == 404, (method, path, resp.text)
+
+
+async def test__local_studio__signing_task_uploads__not_found(test_app: AsyncClient) -> None:
+    task = f"/api/v1/projects/{PROJECT}/signing-routes/{ROUTE}/task"
+
+    image = await test_app.post(f"{task}/image", files={"file": ("s.png", b"png", "image/png")})
+    plate = await test_app.post(f"{task}/plate/file", files={"file": ("c.pem", b"pem", "application/x-pem-file")})
+
+    assert (image.status_code, plate.status_code) == (404, 404)
