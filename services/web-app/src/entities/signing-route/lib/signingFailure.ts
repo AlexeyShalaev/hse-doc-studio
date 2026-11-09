@@ -19,6 +19,7 @@ export const SIGNING_TASK_FAILURE_CODES: readonly string[] = [
   "method_not_allowed",
   "passphrase_required",
   "passphrase_invalid",
+  "sign_failed",
   "key_not_found",
   "server_keys_forbidden",
   "route_locked",

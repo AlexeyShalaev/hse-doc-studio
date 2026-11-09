@@ -44,8 +44,8 @@ import {
 // - отпечатки документов: `build:<sha>` до фиксации, `build:<sha>:<слой>` для совмещения
 //   с фиксацией, `pdf:<sha>` после неё; несовпадение `expected` даёт 409 `doc_changed`;
 // - частота отправки не ограничивается, напоминание раз в 12 часов (429 `rate_limited`);
-// - подпись ключом Студии: ключ с паролем без пароля даёт 409 `passphrase_required`, пароль
-//   `wrong` даёт 409 `passphrase_invalid`, чужой ключ 409 `key_not_found`, при запрете
+// - подпись ключом Студии: ключ с паролем без пароля даёт 400 `passphrase_required`, пароль
+//   `wrong` даёт 400 `passphrase_invalid`, чужой ключ 409 `key_not_found`, при запрете
 //   ключей на сервере 403 `server_keys_forbidden`;
 // - готовая подпись и подпись КриптоПро приходят существующим адресом
 //   `.../docs/{doc}/detached/{slot}`: только участнику в его очередь подписывать (6.10).
@@ -621,9 +621,13 @@ export const createSigningRouteDemo = (
     const found = findKey(user, key.identity_id);
     if (!found) return conflict("key_not_found", "Signing key not found");
     if (found.protected && !key.passphrase)
-      return conflict("passphrase_required", "The key needs its passphrase");
+      return demoError(
+        400,
+        "passphrase_required",
+        "The key needs its passphrase",
+      );
     if (key.passphrase === "wrong")
-      return conflict("passphrase_invalid", "Wrong key passphrase");
+      return demoError(400, "passphrase_invalid", "Wrong key passphrase");
     return null;
   };
 

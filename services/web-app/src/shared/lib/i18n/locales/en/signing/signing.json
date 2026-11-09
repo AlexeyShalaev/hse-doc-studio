@@ -224,6 +224,7 @@
     "method_not_allowed": "This signing method is not allowed for the checkpoint. Pick another one.",
     "passphrase_required": "Enter the key password.",
     "passphrase_invalid": "The key password is wrong.",
+    "sign_failed": "Signing failed. Check the key and the password.",
     "key_not_found": "The key was not found. Pick another one.",
     "server_keys_forbidden": "This server does not store private keys. Sign with CryptoPro or upload a ready signature.",
     "route_locked": "The document is on a signing route: signatures change only in turn.",

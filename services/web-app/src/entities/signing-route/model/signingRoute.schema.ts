@@ -552,6 +552,7 @@ export const SIGNING_ROUTE_ERROR_CODES = [
   "method_not_allowed",
   "passphrase_required",
   "passphrase_invalid",
+  "sign_failed",
   "key_not_found",
   "route_blocked",
   "route_locked",
