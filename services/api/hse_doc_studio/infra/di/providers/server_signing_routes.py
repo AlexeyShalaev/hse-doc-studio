@@ -7,12 +7,15 @@
 
 from __future__ import annotations
 
+from datetime import timedelta
+
 from dishka import Provider, Scope, provide
 
+from hse_doc_studio.api.config import settings
 from hse_doc_studio.core.access.checker import IProjectAccessChecker
 from hse_doc_studio.core.access.repositories import IProjectAclRepository
 from hse_doc_studio.core.identity.protocols import IUserRepository
-from hse_doc_studio.core.invitations.protocols import IInvitationAcceptedHook, INotifier
+from hse_doc_studio.core.invitations.protocols import IInvitationAcceptedHook, INotificationMailer, INotifier
 from hse_doc_studio.core.jobs.protocols import IJobDispatcher
 from hse_doc_studio.core.repositories import (
     IProjectIndexRepository,
@@ -41,6 +44,7 @@ from hse_doc_studio.core.signing_route.ports import (
     ISigningRouteGate,
     ISigningTaskCounter,
 )
+from hse_doc_studio.core.signing_route.reminders import ReminderPolicy
 from hse_doc_studio.core.signing_route.repositories import ISigningRouteRepository
 from hse_doc_studio.core.uow import IUnitOfWork
 from hse_doc_studio.infra.db.repositories.signing_route_people import PostgresRoutePeople
@@ -49,6 +53,7 @@ from hse_doc_studio.infra.db.session import SessionProvider
 from hse_doc_studio.infra.signatures.openpgp import GpgKeyring
 from hse_doc_studio.infra.signatures.pdf_stamper import PdfStamper
 from hse_doc_studio.use_cases.projects.get_project import GetProjectUC
+from hse_doc_studio.use_cases.projects.invitations import ResendInvitationUC
 from hse_doc_studio.use_cases.signatures._studio_signer import StudioSigner
 from hse_doc_studio.use_cases.signatures.default_key import DefaultSigningKey
 from hse_doc_studio.use_cases.signatures.freeze_pdf import FreezePdfUC
@@ -66,6 +71,7 @@ from hse_doc_studio.use_cases.signing_route.gate import SigningRouteGate
 from hse_doc_studio.use_cases.signing_route.invitations import SigningRouteInviteeHook
 from hse_doc_studio.use_cases.signing_route.key_signer import RouteKeySigner
 from hse_doc_studio.use_cases.signing_route.point import RoutePointLoader
+from hse_doc_studio.use_cases.signing_route.reminders import SigningReminderSweeper, SigningRouteReminding
 from hse_doc_studio.use_cases.signing_route.scenario import RouteServices
 from hse_doc_studio.use_cases.signing_route.signer import SignerTools, SigningTaskScenario
 from hse_doc_studio.use_cases.signing_route.tasks import ListSigningTasksUC
@@ -119,6 +125,19 @@ class ServerSigningRoutesProvider(Provider):
         self, routes: ISigningRouteRepository, facts: IRouteFacts, notifier: ISigningNotifier
     ) -> IInvitationAcceptedHook:
         return SigningRouteInviteeHook(routes, facts, notifier)
+
+    @provide
+    def get_signing_reminder_sweeper(
+        self, routes: ISigningRouteRepository, facts: IRouteFacts, notifier: ISigningNotifier, uow: IUnitOfWork
+    ) -> SigningReminderSweeper:
+        """Автонапоминания (срез R11): периодическая задача лидера, правила из настроек `signing_route`."""
+        cfg = settings.signing_route
+        policy = ReminderPolicy(
+            before_deadline=timedelta(hours=cfg.reminder_before_deadline_hours),
+            waiting=timedelta(days=cfg.reminder_waiting_days),
+            max_auto=cfg.reminder_max_auto,
+        )
+        return SigningReminderSweeper(routes, facts, notifier, uow, policy)
 
     # --- сценарии автора (срез R5) ---
 
@@ -213,6 +232,16 @@ class ServerSigningRoutesProvider(Provider):
     @provide(scope=Scope.REQUEST)
     def get_route_control(self, services: RouteServices) -> SigningRouteControl:
         return SigningRouteControl(services)
+
+    @provide(scope=Scope.REQUEST)
+    def get_route_reminding(
+        self,
+        services: RouteServices,
+        invitations: ResendInvitationUC,
+        users: IUserRepository,
+        mailer: INotificationMailer,
+    ) -> SigningRouteReminding:
+        return SigningRouteReminding(services, invitations, users, mailer)
 
     # --- сценарии подписанта (срез R6) ---
 

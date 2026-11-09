@@ -279,6 +279,7 @@ export const CONTRACT_SCHEMAS: Record<string, ZodType> = {
   CreateSigningRouteRequest: srt.CreateSigningRouteRequestSchema,
   UpdateSigningRouteRequest: srt.UpdateSigningRouteRequestSchema,
   SigningRoutePreview: srt.SigningRoutePreviewSchema,
+  SigningReminder: srt.SigningReminderSchema,
   SendSigningRouteRequest: srt.SendSigningRouteRequestSchema,
   SigningTask: srt.SigningTaskSchema,
   ApproveSigningTaskRequest: srt.ApproveSigningTaskRequestSchema,

@@ -40,6 +40,7 @@ from hse_doc_studio.api.config.services import (
     OllamaConfig,
 )
 from hse_doc_studio.api.config.sharing import SharingConfig
+from hse_doc_studio.api.config.signing_route import SigningRouteConfig
 from hse_doc_studio.api.config.storage import StorageConfig
 from hse_doc_studio.core.mode import StudioMode
 from hse_doc_studio.core.update.services import feed_disabled, official_feed_url
@@ -125,6 +126,7 @@ class Settings(BaseSettings):
     observability: ObservabilityConfig = Field(default_factory=ObservabilityConfig)
     hse_persons: HsePersonsConfig = Field(default_factory=HsePersonsConfig)
     sharing: SharingConfig = Field(default_factory=SharingConfig)
+    signing_route: SigningRouteConfig = Field(default_factory=SigningRouteConfig)
 
     # Режим инстанса (HSE_STUDIO__MODE). Не путать с DeploymentMode (all-in-one/standard/native):
     # тот описывает, где запущен бэкенд, этот — одна локальная установка или общий сервер.

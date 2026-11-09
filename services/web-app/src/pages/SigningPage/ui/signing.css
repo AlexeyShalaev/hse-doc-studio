@@ -257,21 +257,27 @@
   padding: 0;
   list-style: none;
 }
+/* Имя слота не сжимается до буквы в строке: если рядом со страницей и статусом ему тесно
+   (телефон), оно встаёт своей строкой, а страница, статус и кнопка уходят под него. */
 .sgn-slot {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: 0.5rem;
+  gap: 0.125rem 0.5rem;
   min-width: 0;
   font-size: 0.78125rem;
 }
 .sgn-slot-label {
-  flex: 1;
+  flex: 1 1 12rem;
   min-width: 0;
   overflow-wrap: anywhere;
 }
 .sgn-slot-meta {
   color: var(--fg-2);
   white-space: nowrap;
+}
+.sgn-slot .btn {
+  margin-left: auto;
 }
 .sgn-slot[data-status="signed"] .sgn-slot-meta {
   color: var(--c-ok);

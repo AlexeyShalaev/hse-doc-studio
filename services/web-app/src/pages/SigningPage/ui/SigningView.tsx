@@ -10,6 +10,7 @@ import {
   type SigningTask,
   type SigningTaskDoc,
 } from "@entities/signing-route";
+import { SIGNING_INBOX_PATH } from "@features/inbox";
 import { signingStatus } from "../lib/signingState";
 import type { SigningExtension, SigningSlotContext } from "../model/extension";
 import type { SigningPageState } from "../model/useSigningPage";
@@ -120,7 +121,7 @@ export const SigningView = ({
                   style={{ gap: "0.5rem", flexWrap: "wrap" }}
                 >
                   <Button asChild size="sm">
-                    <Link to="/inbox">{t("page.inbox")}</Link>
+                    <Link to={SIGNING_INBOX_PATH}>{t("page.inbox")}</Link>
                   </Button>
                   <Button asChild size="sm" variant="secondary">
                     <Link to="/">{t("page.home")}</Link>

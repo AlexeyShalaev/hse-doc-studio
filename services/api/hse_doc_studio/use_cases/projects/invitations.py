@@ -92,6 +92,15 @@ class InvitationCreated:
 
 
 @dataclass(frozen=True)
+class RenewedInvitation:
+    """Продлённое приглашение до отправки письма. `token` новый секрет ссылки; None у приглашения аккаунту."""
+
+    invitation: ProjectInvitation
+    project_name: str
+    token: str | None
+
+
+@dataclass(frozen=True)
 class InvitationPreview:
     state: Literal["ok", "expired", "used", "invalid"]
     project_name: str | None = None
@@ -454,7 +463,19 @@ class ResendInvitationUC(_Base):
         self._mailer = mailer
         self._public_url = public_url
 
-    async def execute(self, actor: Actor, project_id: UUID, invitation_id: str) -> InvitationCreated:
+    async def execute(
+        self, actor: Actor, project_id: UUID, invitation_id: str, *, next_path: str | None = None
+    ) -> InvitationCreated:
+        """Повторить приглашение: продлить, сменить секрет ссылки и отправить письмо (или отдать ссылку)."""
+        return await self.deliver(actor, await self.renew(actor, project_id, invitation_id), next_path=next_path)
+
+    async def renew(self, actor: Actor, project_id: UUID, invitation_id: str) -> RenewedInvitation:
+        """Продлить приглашение и сменить секрет ссылки; письмо отправляет `deliver`.
+
+        Идёт в своей транзакции или во внешней (вложенный `begin()`): сценарий, которому повтор приглашения нужен
+        вместе со своей записью, вызывает `renew` внутри своей транзакции, а `deliver` после неё, чтобы письмо не
+        ушло с секретом, который не записан.
+        """
         actor_id = user_id_of(actor)
         await actor_grant(self._acl, actor, project_id)
         card = await self._card(project_id)
@@ -488,14 +509,24 @@ class ResendInvitationUC(_Base):
                     _payload(card, actor.name or await self._name(actor_id), updated),
                     dedupe_key=f"inv:{updated.id}",
                 )
-        if token is None:
+        return RenewedInvitation(updated, card.name, token)
+
+    async def deliver(
+        self, actor: Actor, renewed: RenewedInvitation, *, next_path: str | None = None
+    ) -> InvitationCreated:
+        """Письмо со ссылкой продлённого приглашения; без SMTP ссылка в ответе (`manual`).
+
+        `next_path` куда вести после принятия (относительный путь сайта, `?next=`), как при создании.
+        """
+        updated = renewed.invitation
+        if renewed.token is None:
             delivery: InvitationDelivery = "email" if self._mailer.enabled else "inbox"
             return InvitationCreated(await self._view(updated), delivery, None)
-        link = invitation_link(self._public_url, token)
+        link = invitation_link(self._public_url, renewed.token, safe_next_path(next_path))
         sent = await self._mailer.send_invitation(
             str(updated.invitee_email),
-            project_name=card.name,
-            inviter_name=actor.name or await self._name(actor_id) or "",
+            project_name=renewed.project_name,
+            inviter_name=actor.name or await self._name(user_id_of(actor)) or "",
             role=updated.terms.role.value,
             link=link,
             message=updated.message,
