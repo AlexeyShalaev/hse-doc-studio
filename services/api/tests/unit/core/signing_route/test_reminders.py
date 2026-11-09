@@ -50,11 +50,16 @@ def test__last_contact__request_of_this_round_then_later_reminder() -> None:
     assert last_contact(reminded, reminded.participant(supervisor.id)) == asked + timedelta(hours=20)
 
 
-def test__last_contact__no_request_this_round__counts_from_sending() -> None:
-    route, supervisor, _ = _sent()
-    stale = replace(supervisor, notified=replace(supervisor.notified, round=0))  # type: ignore[type-var]
+def test__no_request_this_round__nothing_to_remind_about_automatically() -> None:
+    route, supervisor, asked = _sent()
+    assert supervisor.notified is not None
+    stale = replace(supervisor, notified=replace(supervisor.notified, round=route.round - 1))
+    author = route.participants[0]  # согласовал отправкой, запроса ему не было
 
-    assert last_contact(route, stale) == route.sent_at
+    assert last_contact(route, stale) is None
+    assert last_contact(route, author) is None
+    assert due_reminder(route, stale, (), POLICY, now=asked + timedelta(days=30)) is None
+    assert not may_be_due(route.with_participant(stale), POLICY, now=asked + timedelta(days=30))
 
 
 def test__mark_reminded__sets_time_and_counts() -> None:

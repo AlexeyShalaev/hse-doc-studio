@@ -77,16 +77,17 @@ def remind_available_at(participant: Participant) -> datetime | None:
 
 
 def last_contact(route: SigningRoute, participant: Participant) -> datetime | None:
-    """Когда участнику последний раз писали в этом раунде: запрос или напоминание.
+    """Когда участнику последний раз писали в этом раунде: запрос или напоминание; None, если не писали.
 
-    Запроса раунда может не быть у того, кто уже согласовал отправкой и снова в очереди; тогда отсчёт от отправки.
+    Тот, чья очередь, запрос раунда уже получил (раздел 5.4), а `reminded_at` новый раунд обнуляет. Без запроса
+    и напоминания автонапоминать не о чем: сначала расчёт должен доставить сам запрос.
     """
     asked = participant.notified
-    since = asked.at if asked is not None and asked.round == route.round else route.sent_at
+    since = asked.at if asked is not None and asked.round == route.round else None
     reminded = participant.reminded_at
-    if since is None:
-        return reminded
-    return since if reminded is None or reminded < since else reminded
+    if since is None or reminded is None:
+        return since or reminded
+    return max(since, reminded)
 
 
 def auto_reminders(route: SigningRoute, events: Iterable[RouteEvent]) -> Mapping[UUID, tuple[ReminderTrigger, ...]]:
