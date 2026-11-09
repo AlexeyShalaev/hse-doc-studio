@@ -101,6 +101,7 @@
     "fontsMissing": "не найдены",
     "fontsHint": "Отсюда приложение возьмёт Times New Roman и другие шрифты для документов.",
     "fontsMissingHint": "Стандартные каталоги не подошли. Укажите путь, если шрифты лежат в другом месте.",
+    "fontsNotSharedHint": "Docker Desktop не пускает контейнеры в /System/Library/Fonts на macOS. Запустите установщик ещё раз (он скопирует Times New Roman и Arial в папку под домашним каталогом) или укажите здесь свою папку со шрифтами внутри /Users. Без них документы соберутся со свободными заменами.",
     "fontsEdit": "Изменить",
     "fontsCancel": "Отмена",
     "fontsPlaceholder": "C:/Windows/Fonts",

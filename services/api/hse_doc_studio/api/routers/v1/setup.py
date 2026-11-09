@@ -8,6 +8,8 @@
 
 from __future__ import annotations
 
+from typing import Literal
+
 from dishka.integrations.fastapi import FromDishka
 from fastapi import APIRouter
 from pydantic import BaseModel, Field
@@ -193,6 +195,9 @@ class HostFontsResponse(BaseModel):
     # ни одно стандартное место не подошло, и путь нужно указать руками.
     directory: str | None = None
     count: int = 0
+    # Почему каталога нет: «not_shared» — докер отказал в монтировании (Docker
+    # Desktop на macOS не отдаёт /System), «not_found» — шрифтов там нет.
+    reason: Literal["not_shared", "not_found"] | None = None
 
 
 class TexImageResponse(BaseModel):
@@ -228,6 +233,7 @@ async def setup_environment(
     # процесс — здесь это первый и единственный запуск за сеанс.
     font_dir = await fonts.source_dir()
     font_files = await fonts.list_fonts() if font_dir else []
+    font_reason = None if font_dir else await fonts.unavailable_reason()
     # Наличие образа не кэшируем: предзагрузка идёт фоном, и «скачан» обязан
     # появиться без перезапуска.
     tex_image = await resolve_active_image(settings_repo)
@@ -247,6 +253,6 @@ async def setup_environment(
             if container is not None
             else None
         ),
-        fonts=HostFontsResponse(directory=font_dir, count=len(font_files)),
+        fonts=HostFontsResponse(directory=font_dir, count=len(font_files), reason=font_reason),
         tex=TexImageResponse(image=tex_image, present=tex_present),
     )

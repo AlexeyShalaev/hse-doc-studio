@@ -60,8 +60,13 @@ export const SystemFontsSource = () => {
         <p style={{ fontSize: "0.75rem", color: "var(--fg-3)", margin: 0 }}>
           {t("fonts.systemUnavailable")}
         </p>
-        <p style={{ fontSize: "0.71875rem", color: "var(--fg-3)", margin: 0 }}>
-          {t("fonts.systemUnavailableHint")}
+        <p
+          style={{ fontSize: "0.71875rem", color: "var(--fg-3)", margin: 0 }}
+          data-testid="system-fonts-unavailable-hint"
+        >
+          {data?.reason === "not_shared"
+            ? t("fonts.systemNotSharedHint")
+            : t("fonts.systemUnavailableHint")}
         </p>
       </div>
     );

@@ -139,6 +139,9 @@ export const HostFontsSchema = z.object({
   // одно стандартное место не подошло, и путь нужно указать руками.
   directory: z.string().nullish(),
   count: z.number().default(0),
+  // Почему каталога нет: not_shared — докер отказал в монтировании (Docker
+  // Desktop на macOS не отдаёт /System), not_found — шрифтов там нет.
+  reason: z.string().nullish(),
 });
 
 export const TexImageSchema = z.object({

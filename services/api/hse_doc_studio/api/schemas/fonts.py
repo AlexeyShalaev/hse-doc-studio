@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import Literal
+
 from pydantic import BaseModel
 
 
@@ -42,6 +44,9 @@ class SystemFontsListResponse(BaseModel):
     # available=False → host exposes no font directories (e.g. containerized).
     available: bool
     fonts: list[SystemFontResponse]
+    # Почему списка нет: «not_shared» — докер не отдал каталог шрифтов машины
+    # (Docker Desktop на macOS не пускает в /System), «not_found» — их там нет.
+    reason: Literal["not_shared", "not_found"] | None = None
 
 
 class ImportSystemFontsRequest(BaseModel):

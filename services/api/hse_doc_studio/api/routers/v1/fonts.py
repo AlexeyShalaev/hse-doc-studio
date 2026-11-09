@@ -96,6 +96,7 @@ async def list_system_fonts(uc: FromDishka[ListSystemFontsUC]) -> SystemFontsLis
             SystemFontResponse(name=f.name, path=f.path, family=f.family, already_installed=f.already_installed)
             for f in result.fonts
         ],
+        reason=result.reason,
     )
 
 

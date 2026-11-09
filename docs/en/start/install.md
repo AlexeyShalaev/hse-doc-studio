@@ -35,6 +35,9 @@ tags:
 
 The script asks nothing: it checks that Docker responds, pulls the image, starts the `hse-doc-studio` container and opens the browser. Default port is 17240 (if taken, it tries 17241…17250). Re-running is safe: an existing container is not recreated, your data folder is never lost.
 
+!!! info "Fonts on macOS"
+    Templates ask for Times New Roman, Arial, Courier New and Consolas. Docker Desktop does not share the system folder `/System/Library/Fonts` with containers, so on a Mac the script copies these families from the same machine into `~/.hse-doc-studio/host-fonts` (Consolas only if Microsoft Office is installed) and hands the folder to the Studio. For a Studio that is already installed, re-running the script adds the missing fonts straight into its `<data folder>/fonts`. Microsoft fonts never go into the image or the repository. Another folder: the `HSE_STUDIO_FONTS_DIR` variable.
+
 Environment variables: `PORT`, `TAG`, `HSE_STUDIO_IMAGE`, `HSE_STUDIO_NAME`, `HSE_STUDIO_LANG` (script message language: `ru` for Russian, English without the flag), and in the sh version `DOCKER_SOCK` for Colima and Rancher Desktop:
 
 ```sh
@@ -84,6 +87,8 @@ PROJECTS_HOST_PATH=D:/study docker compose -f docker-compose.yml -f compose.proj
 # give the Studio your OS fonts (Settings → Fonts → System)
 SYSTEM_FONTS_PATH=C:/Windows/Fonts docker compose -f docker-compose.yml -f compose.system-fonts.yml up -d
 ```
+
+On macOS the overlay with `/System/Library/Fonts` will not start: Docker Desktop answers "mounts denied". Copy the fonts you need into a folder under your home and set it in `.env` as `HOST_FONTS_DIR` (the command is in `.env.example`).
 
 ## What's next
 

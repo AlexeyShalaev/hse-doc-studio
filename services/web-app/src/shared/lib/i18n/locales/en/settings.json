@@ -91,7 +91,8 @@
       "sans": "sans-serif",
       "mono": "monospace"
     },
-    "systemUnavailableHint": "Usually this means Docker is not responding or has no access to the system drive. Until then, upload font files yourself or take free ones from the catalogue."
+    "systemUnavailableHint": "Usually this means Docker is not responding or has no access to the system drive. Until then, upload font files yourself or take free ones from the catalogue.",
+    "systemNotSharedHint": "Docker Desktop does not let containers into the macOS system font folder (/System/Library/Fonts/Supplemental), so Times New Roman and Arial are not visible from here. Run the installer again: it copies these fonts into your data folder itself. Or upload them on the \"From device\" tab: in the file dialog press Cmd+Shift+G and open /System/Library/Fonts/Supplemental."
   },
   "images": {
     "title": "Docker and images",

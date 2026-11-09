@@ -8,7 +8,7 @@ from pathlib import Path
 
 import structlog
 
-from hse_doc_studio.core.fonts.entities import SystemFontFile
+from hse_doc_studio.core.fonts.entities import HostFontsUnavailable, SystemFontFile
 from hse_doc_studio.core.fonts.repositories import ISystemFontProvider
 from hse_doc_studio.infra.fonts.font_names import read_family_name
 
@@ -116,6 +116,11 @@ class OsSystemFontProvider(ISystemFontProvider):
     async def source_dir(self) -> str | None:
         roots = await asyncio.to_thread(self._roots)
         return str(roots[0]) if roots else None
+
+    async def unavailable_reason(self) -> HostFontsUnavailable | None:
+        # Каталоги читаются напрямую, отказать в доступе тут некому: либо шрифты
+        # есть, либо их нет.
+        return None if await self.list_fonts() else "not_found"
 
     async def read_font(self, path: str) -> bytes:
         p = Path(path).resolve()

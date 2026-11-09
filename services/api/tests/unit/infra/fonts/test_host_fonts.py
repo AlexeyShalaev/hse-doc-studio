@@ -12,7 +12,7 @@ import base64
 from pathlib import Path
 
 import pytest
-from hse_doc_studio.infra.fonts.host_font_provider import DockerHostFontProvider
+from hse_doc_studio.infra.fonts.host_font_provider import DockerHostFontProvider, is_mount_denied
 from hse_doc_studio.infra.fonts.host_scan import read, scan
 
 
@@ -133,3 +133,66 @@ async def test__read_font__sidecar_output__is_decoded_from_base64(monkeypatch) -
     monkeypatch.setattr(provider, "_run", fake_run)
 
     assert await provider.read_font("C:/Windows/Fonts/times.ttf") == b"TIMES"
+
+
+# ── Почему шрифтов нет: Docker Desktop на macOS не отдаёт /System ────────────
+
+_DENIED = (
+    "docker: Error response from daemon: mounts denied: \n"
+    "The path /System/Library/Fonts/Supplemental is not shared from the host and is not known to Docker.\n"
+    "You can configure shared paths from Docker -> Preferences... -> Resources -> File Sharing.\n"
+)
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize(
+    ("stderr", "expected"),
+    [
+        pytest.param(_DENIED, True, id="docker_desktop_mounts_denied"),
+        pytest.param("Error: invalid mount config for type bind", False, id="other_mount_error"),
+        pytest.param("", False, id="empty"),
+    ],
+)
+def test__is_mount_denied__daemon_answer__recognises_file_sharing_refusal(stderr: str, expected: bool) -> None:
+    assert is_mount_denied(stderr) is expected
+
+
+@pytest.mark.unit
+async def test__unavailable_reason__every_dir_denied__is_not_shared(monkeypatch) -> None:
+    # Ровно картина macOS с Docker Desktop: все каталоги шрифтов вне File Sharing.
+    provider = DockerHostFontProvider()
+
+    async def fake_run(root: str, args: list[str], timeout: float) -> tuple[int, str, str]:
+        return 125, "", _DENIED.replace("/System/Library/Fonts/Supplemental", root)
+
+    monkeypatch.setattr(provider, "_run", fake_run)
+
+    assert await provider.host_font_dir() is None
+    assert await provider.unavailable_reason() == "not_shared"
+    assert await provider.list_fonts() == []
+
+
+@pytest.mark.unit
+async def test__unavailable_reason__dirs_mount_but_are_empty__is_not_found(monkeypatch) -> None:
+    provider = DockerHostFontProvider()
+
+    async def fake_run(root: str, args: list[str], timeout: float) -> tuple[int, str, str]:
+        return 0, "[]", ""
+
+    monkeypatch.setattr(provider, "_run", fake_run)
+
+    assert await provider.unavailable_reason() == "not_found"
+
+
+@pytest.mark.unit
+async def test__unavailable_reason__fonts_found__is_none(monkeypatch) -> None:
+    # Каталог из установщика (папка под домашним, её Docker Desktop отдаёт).
+    provider = DockerHostFontProvider(root_override="/Users/me/.hse-doc-studio/host-fonts")
+
+    async def fake_run(root: str, args: list[str], timeout: float) -> tuple[int, str, str]:
+        return 0, '[{"name": "Arial.ttf", "rel": "Arial.ttf", "family": "Arial"}]', ""
+
+    monkeypatch.setattr(provider, "_run", fake_run)
+
+    assert await provider.unavailable_reason() is None
+    assert await provider.source_dir() == "/Users/me/.hse-doc-studio/host-fonts"
