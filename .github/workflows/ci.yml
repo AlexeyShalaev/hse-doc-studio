@@ -245,6 +245,30 @@ jobs:
           kubectl --kubeconfig "$KUBECONFIG" get events -n hds-office --sort-by=.lastTimestamp || true
           kubectl --kubeconfig "$KUBECONFIG" logs -n hds-office deploy/rel-hse-doc-studio-office-convert --tail=200 || true
 
+  # Воспроизводимая сборка на настоящем TeX Live (образ раннеров по умолчанию): две сборки без изменений дают один
+  # sha256, у другого раннера тоже. Образ весит гигабайты, поэтому джоба отдельная и не входит в all-checks-passed.
+  tex-reproducible:
+    name: Runner · Reproducible TeX build
+    needs: backend-lint
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: services/api
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v7
+        with:
+          python-version: "3.14"
+      - name: Sync
+        run: uv sync --frozen --extra api --extra test
+      - name: TeX Live image
+        run: docker pull texlive/texlive:TL2024-historic
+      - name: Pytest (tex)
+        env:
+          HSE_TEST_TEX_IMAGE: texlive/texlive:TL2024-historic
+        run: uv run pytest tests/integration/tex -m tex --no-cov
+
   # ── Frontend ─────────────────────────────────────────────────────────────
   # Один джоб, а не два: `pnpm install --frozen-lockfile` на этом дереве
   # зависимостей — самая дорогая операция, и разделение гоняло её дважды.
