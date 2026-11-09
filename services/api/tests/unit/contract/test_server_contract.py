@@ -289,13 +289,18 @@ _SCHEMAS: dict[str, Any] = {
     # local-sync: PDF локальной сборки на сервере
     "ProjectArtifactList": art.ProjectArtifactListResponse,
     "PdfUploadResult": art.PdfUploadResponse,
-    # Маршрут подписания, ручки автора (docs/design/signing-route.md, 8.2); схемы подписанта добавит срез R6.
+    # Маршрут подписания (docs/design/signing-route.md, 8.2): ручки автора (R5) и задача подписанта (R6).
     "SigningRoute": sr.SigningRouteResponse,
     "SigningRouteList": sr.SigningRouteList,
     "CreateSigningRouteRequest": sr.CreateSigningRouteRequest,
     "UpdateSigningRouteRequest": sr.UpdateSigningRouteRequest,
     "SigningRoutePreview": sr.SigningRoutePreview,
     "SendSigningRouteRequest": sr.SendSigningRouteRequest,
+    "SigningTask": sr.SigningTask,
+    "ApproveSigningTaskRequest": sr.ApproveSigningTaskRequest,
+    "SignSigningTaskRequest": sr.SignSigningTaskRequest,
+    "ReturnSigningTaskRequest": sr.ReturnSigningTaskRequest,
+    "SetSigningTaskPlateRequest": sr.SetSigningTaskPlateRequest,
 }
 
 

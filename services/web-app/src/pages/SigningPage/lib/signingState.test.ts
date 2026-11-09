@@ -165,6 +165,7 @@ describe("signingStatus", () => {
             id: "a",
             kind: "approved",
             who: SR_SUPERVISOR.name,
+            participant_id: "srp_supervisor",
           }),
           makeRouteEvent({ id: "b", kind: "resumed", round: 2 }),
         ],

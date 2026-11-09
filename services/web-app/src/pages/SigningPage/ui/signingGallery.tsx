@@ -23,6 +23,7 @@ import type {
   SigningTaskDoc,
   SigningTaskMe,
   SigningTaskPerson,
+  SigningTaskOtherSlot,
   SigningTaskSlot,
 } from "@entities/signing-route";
 import type { SigningPageState } from "../model/useSigningPage";
@@ -85,11 +86,21 @@ const slot = (
     slot_id: slotId,
     page: 1,
     width_mm: 40,
+    height_mm: base.mark === "plate" ? 22 : 16,
     status: "pending",
     reason: "awaiting_approval",
     ...base,
     ...overrides,
   };
+};
+
+/** Чужой слот: то же место, без причины плана. */
+const other = (
+  slotId: "author" | "supervisor" | "academic_supervisor",
+  status: SigningTaskOtherSlot["status"],
+): SigningTaskOtherSlot => {
+  const { reason: _reason, ...place } = slot(slotId);
+  return { ...place, status };
 };
 
 const doc = (overrides: Partial<SigningTaskDoc> = {}): SigningTaskDoc => ({
@@ -98,20 +109,7 @@ const doc = (overrides: Partial<SigningTaskDoc> = {}): SigningTaskDoc => ({
   frozen: false,
   token: BUILD,
   mine: [slot("supervisor")],
-  others: [
-    {
-      slot_id: "author",
-      label: { ru: "Студент", en: "Student" },
-      page: 1,
-      status: "signed",
-    },
-    {
-      slot_id: "academic_supervisor",
-      label: { ru: "Академический руководитель", en: "Academic supervisor" },
-      page: 1,
-      status: "pending",
-    },
-  ],
+  others: [other("author", "signed"), other("academic_supervisor", "pending")],
   ...overrides,
 });
 
@@ -124,6 +122,7 @@ const supervisorMe = (
   methods: ["image", "detached"],
   method: "detached",
   image_ready: false,
+  image_url: null,
   plate: {
     owner: SR_SUPERVISOR.name,
     kind: "openpgp",
@@ -186,20 +185,7 @@ const academicTask = (
     docs: [
       doc({
         mine: [slot("academic_supervisor")],
-        others: [
-          {
-            slot_id: "author",
-            label: { ru: "Студент", en: "Student" },
-            page: 1,
-            status: "signed",
-          },
-          {
-            slot_id: "supervisor",
-            label: { ru: "Научный руководитель", en: "Supervisor" },
-            page: 1,
-            status: "pending",
-          },
-        ],
+        others: [other("author", "signed"), other("supervisor", "pending")],
       }),
     ],
     events: [

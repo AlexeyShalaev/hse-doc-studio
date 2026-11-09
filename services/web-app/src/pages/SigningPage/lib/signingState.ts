@@ -72,13 +72,12 @@ export const lastReturn = (task: SigningTask): RouteEvent | null =>
  * (раздел 3.2, «После сброса»): маршрут отправлен заново, и его снова просят.
  */
 const isResent = (task: SigningTask): boolean => {
-  const me = mePerson(task);
-  if (task.route.round <= 1 || !me?.name) return false;
+  if (task.route.round <= 1) return false;
   return task.events.some(
     (e) =>
       e.round < task.route.round &&
       (e.kind === "approved" || e.kind === "signed") &&
-      e.who === me.name,
+      e.participant_id === task.me.participant_id,
   );
 };
 
@@ -135,8 +134,8 @@ export { expectedTokens } from "@entities/signing-route";
 export const pendingMine = (doc: SigningTaskDoc): SigningTaskSlot[] =>
   doc.mine.filter((slot) => slot.status !== "signed");
 
-// Высоты метки в контракте нет: рамка берёт типичную пропорцию картинки и плашки ЭП
-// (плашка из нескольких строк выше картинки той же ширины).
+// Высоту метки отдаёт сервер (`height_mm`). У слота без видимой метки её нет: рамка места
+// берёт типичную пропорцию картинки.
 const FRAME_ASPECT: Record<SigningTaskSlot["mark"], number> = {
   png: 0.4,
   plate: 0.55,
@@ -144,7 +143,7 @@ const FRAME_ASPECT: Record<SigningTaskSlot["mark"], number> = {
 };
 
 export const frameHeightMm = (slot: SigningTaskSlot): number =>
-  slot.width_mm * FRAME_ASPECT[slot.mark];
+  slot.height_mm ?? slot.width_mm * FRAME_ASPECT[slot.mark];
 
 /** Рамки своих слотов поверх страниц PDF. */
 export const myFrames = (doc: SigningTaskDoc, label: string): PdfStamp[] =>

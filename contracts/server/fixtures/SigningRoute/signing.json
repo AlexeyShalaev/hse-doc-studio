@@ -110,6 +110,7 @@
       "round": 1,
       "at": "2026-11-10T09:00:00Z",
       "who": "Иванов И. И.",
+      "participant_id": null,
       "comment": null,
       "reason": null
     },
@@ -119,6 +120,7 @@
       "round": 1,
       "at": "2026-11-10T09:00:00Z",
       "who": null,
+      "participant_id": null,
       "comment": null,
       "reason": null
     }

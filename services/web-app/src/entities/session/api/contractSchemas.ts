@@ -273,11 +273,16 @@ export const CONTRACT_SCHEMAS: Record<string, ZodType> = {
   // local-sync: PDF локальной сборки на сервере
   ProjectArtifactList: pa.ProjectArtifactListSchema,
   PdfUploadResult: pa.PdfUploadResultSchema,
-  // Маршрут подписания, ручки автора (срез R5); схемы подписанта добавит срез R6.
+  // Маршрут подписания: ручки автора (срез R5) и задача подписанта (срез R6).
   SigningRoute: srt.SigningRouteSchema,
   SigningRouteList: srt.SigningRouteListSchema,
   CreateSigningRouteRequest: srt.CreateSigningRouteRequestSchema,
   UpdateSigningRouteRequest: srt.UpdateSigningRouteRequestSchema,
   SigningRoutePreview: srt.SigningRoutePreviewSchema,
   SendSigningRouteRequest: srt.SendSigningRouteRequestSchema,
+  SigningTask: srt.SigningTaskSchema,
+  ApproveSigningTaskRequest: srt.ApproveSigningTaskRequestSchema,
+  SignSigningTaskRequest: srt.SignSigningTaskRequestSchema,
+  ReturnSigningTaskRequest: srt.ReturnSigningTaskRequestSchema,
+  SetSigningTaskPlateRequest: srt.SetSigningTaskPlateRequestSchema,
 };

@@ -197,6 +197,9 @@
     "bad_id": "Invalid identifier.",
     "message_too_long": "The message is longer than 2000 characters.",
     "passphrase_required": "The key is passphrase-protected: enter the passphrase.",
+    "passphrase_invalid": "The key passphrase is wrong.",
+    "key_not_found": "The signing key was not found. Pick another one.",
+    "server_keys_forbidden": "This server does not store private keys: you cannot sign with a Studio key here.",
     "sign_failed": "Signing failed. Check the key and the passphrase."
   }
 }

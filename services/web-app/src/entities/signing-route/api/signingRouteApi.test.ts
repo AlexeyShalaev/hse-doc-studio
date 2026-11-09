@@ -405,11 +405,27 @@ describe("подписант: задача", () => {
     expect((await accountSigningApi.tasks()).items).toEqual([]);
   });
 
-  it("данные плашки задаются ключом Студии или файлом сертификата", async () => {
+  it("данные плашки задаются ключом Студии; после фиксации их уже не сменить", async () => {
     const route = await sendDraft();
     as(SUPERVISOR);
     const byKey = await signingTaskApi.setPlateKey(PROJECT, route.id, "key-1");
     expect(byKey.me.plate?.kind).toBe("openpgp");
+    // Плашка была последним изменением видимого слоя: документы зафиксированы.
+    expect(byKey.docs[0]?.frozen).toBe(true);
+    const late = await apiError(
+      signingTaskApi.setPlateFile(
+        PROJECT,
+        route.id,
+        new File(["cert"], "petrov.cer"),
+      ),
+    );
+    expect(late.status).toBe(409);
+    expect(late.code).toBe("visible_layer_final");
+  });
+
+  it("данные плашки задаются файлом сертификата", async () => {
+    const route = await sendDraft();
+    as(SUPERVISOR);
     const byFile = await signingTaskApi.setPlateFile(
       PROJECT,
       route.id,
