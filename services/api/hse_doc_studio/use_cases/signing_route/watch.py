@@ -4,10 +4,15 @@
 `RouteWatch.on_project_changed`. Он ничего не блокирует и не считает сам, а ставит сверку маршрутов проекта в
 очередь: по одной задаче на проект, повторные изменения во время сверки дают ещё один проход, а не копятся.
 
-Отложенная сверка снимает вопрос повторного входа. Хук записи подписей срабатывает и внутри сценариев маршрута
-(они сами пишут `signatures.json`) и под `project_lock`; сверка в этот момент взяла бы строку маршрута в обратном
-порядке блокировок или остановила маршрут по его же правке. Задача сверки берёт строку маршрута сама и поэтому ждёт
-конца транзакции сценария, а затем видит снимок, который тот уже обновил.
+Повторный вход. Хук записи подписей срабатывает и внутри сценариев маршрута (они сами пишут `signatures.json`), и
+под `project_lock`; сверка в этот момент взяла бы строку маршрута в обратном порядке блокировок или остановила
+маршрут по его же правке. Защиты две:
+
+- сверка отложена: хук только ставит задачу, а та сама берёт строку маршрута, поэтому ждёт конца транзакции
+  сценария и видит снимок, который тот уже обновил;
+- свои записи маршрута хук не зовёт вовсе (`own_writes`): сценарий держит строку маршрута и сам обновляет снимок,
+  а вход подписи слота маршрута (`expect_recalculation`) следом пересчитывает маршрут с событием подписи. Иначе
+  сверка без события могла бы опередить этот пересчёт и записать завершение раньше подписи.
 
 Задача идёт в пустом контексте: без актора и без транзакции запроса, из которого её поставили.
 """
@@ -16,7 +21,8 @@ from __future__ import annotations
 
 import asyncio
 import contextvars
-from collections.abc import Awaitable, Callable
+from collections.abc import Awaitable, Callable, Iterator
+from contextlib import contextmanager
 from pathlib import Path
 from uuid import UUID
 
@@ -30,6 +36,29 @@ logger = structlog.get_logger()
 
 Reconcile = Callable[[UUID], Awaitable[object]]
 ProjectIdOf = Callable[[Path], UUID]
+
+# Запись состояния подписей в этом контексте делает сам маршрут или вход, который следом пересчитает маршрут.
+_own_writes: contextvars.ContextVar[bool] = contextvars.ContextVar("hse_signing_route_own_writes", default=False)
+
+
+@contextmanager
+def own_writes() -> Iterator[None]:
+    """Записи состояния подписей внутри блока делает сценарий маршрута: хук записи сверку не зовёт."""
+    token = _own_writes.set(True)
+    try:
+        yield
+    finally:
+        _own_writes.reset(token)
+
+
+def expect_recalculation() -> None:
+    """Вход подписи слота идущего маршрута: до конца запроса запись подписей сверку не зовёт, маршрут
+    пересчитает сам вход (`recalculation_done`)."""
+    _own_writes.set(True)
+
+
+def recalculation_done() -> None:
+    _own_writes.set(False)
 
 
 class RouteWatch:
@@ -94,7 +123,8 @@ def _running_loop() -> asyncio.AbstractEventLoop | None:
 class WatchedSignatureRepository:
     """`ISignatureRepository`, который после каждой записи состояния подписей зовёт наблюдателя маршрутов.
 
-    Запись идёт и из сценариев маршрута, и под `project_lock`: наблюдатель только ставит сверку в очередь.
+    Запись под `project_lock` безопасна: наблюдатель только ставит сверку в очередь. Записи самого маршрута
+    (`own_writes`) и входа подписи его слота (`expect_recalculation`) наблюдателя не зовут.
     `project_id_of` id проекта по его папке (на сервере это том проектов, `IProjectVolume.id_of`).
     """
 
@@ -108,6 +138,8 @@ class WatchedSignatureRepository:
 
     def save_state(self, project_folder: Path, state: SignaturesState) -> None:
         self._inner.save_state(project_folder, state)
+        if _own_writes.get():
+            return
         try:
             self._watch.on_project_changed(self._project_id_of(project_folder))
         except Exception:  # noqa: BLE001 — состояние уже записано; папка вне тома или сбой: догонит периодическая сверка

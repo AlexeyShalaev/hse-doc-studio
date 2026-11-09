@@ -58,7 +58,6 @@ from hse_doc_studio.core.signing_route.repositories import OpenRouteExistsError
 from hse_doc_studio.core.signing_route.signer import unsigned_crypto
 from hse_doc_studio.core.signing_route.transitions import archive, cancel, send
 from hse_doc_studio.core.value_objects import SignaturesState
-from hse_doc_studio.use_cases.signatures._studio_signer import project_lock
 from hse_doc_studio.use_cases.signing_route.facts import LoadedFacts
 from hse_doc_studio.use_cases.signing_route.key_signer import KeyInfo, KeyRequest, RouteKeySigner
 from hse_doc_studio.use_cases.signing_route.point import RoutePoint
@@ -68,6 +67,7 @@ from hse_doc_studio.use_cases.signing_route.scenario import (
     Settled,
     actor_uuid,
     closing_events,
+    route_files,
 )
 from hse_doc_studio.use_cases.signing_route.views import (
     Membership,
@@ -413,7 +413,7 @@ class SigningRouteSending(RouteScenario):
             _check_interval(route, at)
             point = await self._s.points.load(project_id, route.profile_id)
             identity = await self._signer.check(request.sign) if request.sign is not None else None
-            async with project_lock(point.project):
+            async with route_files(point.project):
                 settled, events = await self._send_files(point, route, actor_id, request, at)
                 if identity is not None and request.sign is not None:
                     try:

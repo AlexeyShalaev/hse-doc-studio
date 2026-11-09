@@ -6,16 +6,40 @@
 
 from __future__ import annotations
 
-from datetime import timedelta
+from dataclasses import replace
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
 import pytest
+from hse_doc_studio.api.config import settings
+from hse_doc_studio.core.entities import Project, SigningIdentity
+from hse_doc_studio.core.enums import DetachedFormat, DetachedOrigin, DetachedVerdict
+from hse_doc_studio.core.signing_route.entities import DocSlot
+from hse_doc_studio.core.value_objects import DetachedSignature
+from hse_doc_studio.use_cases.signatures._studio_signer import StudioSigner
+from hse_doc_studio.use_cases.signatures.attach_detached_signature import (
+    AttachDetachedSignatureInput,
+    AttachDetachedSignatureOutput,
+    AttachDetachedSignatureUC,
+)
+from hse_doc_studio.use_cases.signatures.default_key import DefaultKey, DefaultSigningKey
+from hse_doc_studio.use_cases.signatures.sign_submission import DocPreview, SignSubmissionUC, SlotResult
 from hse_doc_studio.use_cases.signing_route import author as author_module
 
 from tests.fakes.signer_profile import make_self_signed
-from tests.integration.api.signing_routes.signer_stand import APPLICATION, NAMES, PNG, PROPOSAL, Trio, make_trio, my
+from tests.integration.api.signing_routes.signer_stand import (
+    APPLICATION,
+    NAMES,
+    PNG,
+    PROPOSAL,
+    FakeKeys,
+    Trio,
+    install_fake_keys,
+    make_trio,
+    my,
+)
 from tests.integration.api.signing_routes.stand import TOPIC, Person, Stand
-from tests.integration.api.signing_routes.watch_stand import drain
+from tests.integration.api.signing_routes.watch_stand import drain, notifications
 
 pytestmark = [pytest.mark.pg, pytest.mark.timeout(240)]
 
@@ -220,6 +244,162 @@ async def test__sign_bundle__participant_in_turn_to_sign__slots_offered_without_
     # Чужой комплект: владелец за научрука не подписывает ни в чью очередь.
     owner = _bundle(trio, trio.author, "sign-preview").json()
     assert [s for d in owner["docs"] for s in d["slots"] if s["action"] == "sign"] == []
+
+
+def _fake_bundle_key(monkeypatch: pytest.MonkeyPatch, keys: FakeKeys) -> None:
+    """«Подписать комплект» ключом двойника: настоящую подпись на сервере проверяет раннер, здесь ход маршрута."""
+
+    async def default_key(self: DefaultSigningKey) -> DefaultKey:
+        identity = keys.mine()
+        return DefaultKey(identity.id if identity else None, identity)
+
+    async def key_allowed(self: StudioSigner) -> None:
+        return None
+
+    async def key_signer(self: SignSubmissionUC, identity: SigningIdentity | None) -> Any:
+        return keys.plate(identity) if identity is not None else None
+
+    async def sign_doc(
+        self: SignSubmissionUC, project: Project, doc: DocPreview, identity: SigningIdentity | None, _passphrase: str
+    ) -> list[SlotResult]:
+        assert identity is not None
+        state = self._signature_repo.get_state(project.folder)
+        results: list[SlotResult] = []
+        for action in doc.slots:
+            if action.action != "sign" or action.blocker:
+                results.append(SlotResult(doc.doc_id, action.slot_id, False, action.blocker))
+                continue
+            pair = DocSlot(doc.doc_id, action.slot_id)
+            signature = keys.signature(identity, pair, state.frozen[doc.doc_id].sha256)
+            detached = {**state.detached.get(doc.doc_id, {}), action.slot_id: signature}
+            state = replace(state, detached={**state.detached, doc.doc_id: detached})
+            results.append(SlotResult(doc.doc_id, action.slot_id, True))
+        self._signature_repo.save_state(project.folder, state)
+        return results
+
+    monkeypatch.setattr(DefaultSigningKey, "get", default_key)
+    monkeypatch.setattr(StudioSigner, "require_key_allowed", key_allowed)
+    monkeypatch.setattr(SignSubmissionUC, "_key_signer", key_signer)
+    monkeypatch.setattr(SignSubmissionUC, "_sign_doc", sign_doc)
+
+
+async def test__sign_bundle__in_turn_to_sign__route_slots_signed_and_route_completed(
+    stand: Stand, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    keys = install_fake_keys(monkeypatch)
+    _fake_bundle_key(monkeypatch, keys)
+    trio = await make_trio(stand, {"supervisor": "detached"}, plates=("supervisor",), academic="none")
+    keys.give(trio.supervisor, NAMES["supervisor"])
+    trio.sent()
+    trio.approved(trio.supervisor)
+    frozen = trio.frozen_sha()
+    preview = _bundle(trio, trio.supervisor, "sign-preview").json()
+    body = {
+        "profile_id": TOPIC,
+        "author": None,
+        "identity_id": None,
+        "passphrase": "any",
+        "confirm_reset": False,
+        "expected": {d["doc_id"]: d["token"] for d in preview["docs"]},
+    }
+
+    signed = trio.call(trio.supervisor, "POST", f"{trio.project.base}/signature-plan/sign", json=body)
+    drain(stand)
+
+    assert signed.status_code == 200, signed.text
+    out = signed.json()
+    assert (out["frozen_docs"], [(r["doc_id"], r["ok"]) for r in out["results"]]) == (
+        [],
+        [(PROPOSAL, True), (APPLICATION, True)],
+    )
+    # Комплект подписал поверх фиксации маршрута и маршрут пересчитан: подписи в истории, маршрут завершён.
+    assert trio.frozen_sha() == frozen
+    assert trio.signed_pdf_sha() == {doc: {"supervisor": sha} for doc, sha in frozen.items()}
+    route = trio.route()
+    assert route["status"] == "completed"
+    assert [e["kind"] for e in route["events"]] == [
+        "sent",
+        "approved",
+        "frozen",
+        "approved",
+        "signed",
+        "signed",
+        "completed",
+    ]
+    assert {e["who"] for e in route["events"] if e["kind"] == "signed"} == {NAMES["supervisor"]}
+    assert out["plan"]["route"]["status"] == "completed"
+    assert len(notifications(stand, trio, "author", "signing_completed")) == 1
+
+
+def _fake_attach(verdict: DetachedVerdict) -> Any:
+    """Двойник загрузки готовой подписи: запись открепленной подписи над текущей фиксацией с нужным вердиктом."""
+
+    async def execute(
+        self: AttachDetachedSignatureUC, inp: AttachDetachedSignatureInput
+    ) -> AttachDetachedSignatureOutput:
+        folder = settings.data_dir / "projects" / str(inp.project_id)
+        state = self._signature_repo.get_state(folder)
+        signature = DetachedSignature(
+            file=f".hse-studio/detached/{inp.doc_id}/{inp.slot_id}.asc",
+            format=DetachedFormat.openpgp,
+            origin=DetachedOrigin.uploaded,
+            pdf_sha256=state.frozen[inp.doc_id].sha256,
+            verdict=verdict,
+            signer=NAMES["supervisor"],
+            signer_id="ABCDEF",
+            added_at=datetime.now(UTC).isoformat(),
+        )
+        detached = {**state.detached.get(inp.doc_id, {}), inp.slot_id: signature}
+        self._signature_repo.save_state(folder, replace(state, detached={**state.detached, inp.doc_id: detached}))
+        return AttachDetachedSignatureOutput(signature=signature)
+
+    return execute
+
+
+async def test__ready_signature__uploaded_twice__one_signed_event(
+    stand: Stand, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(AttachDetachedSignatureUC, "execute", _fake_attach(DetachedVerdict.valid))
+    trio = await make_trio(stand, {"supervisor": "detached"}, plates=("supervisor",), academic="none")
+    trio.sent()
+    trio.approved(trio.supervisor)
+    upload = f"{trio.project.base}/docs/{PROPOSAL}/detached/supervisor"
+    file = {"file": ("signature.asc", b"-----BEGIN PGP SIGNATURE-----", "application/pgp-signature")}
+
+    first = trio.call(trio.supervisor, "POST", upload, files=file)
+    # Подписант заменил файл подписи той же заявки, пока маршрут ждёт его подпись на заявлении.
+    second = trio.call(trio.supervisor, "POST", upload, files=file)
+    drain(stand)
+
+    assert (first.status_code, second.status_code) == (200, 200)
+    assert trio.events() == ["sent", "approved", "frozen", "approved", "signed"]
+    assert trio.route()["status"] == "active"
+
+
+async def test__completed_route__detached_signature_removed__route_waits_for_that_slot_again(
+    stand: Stand, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(AttachDetachedSignatureUC, "execute", _fake_attach(DetachedVerdict.valid))
+    trio = await make_trio(stand, {"supervisor": "detached"}, plates=("supervisor",), academic="none")
+    trio.sent()
+    trio.approved(trio.supervisor)
+    file = {"file": ("signature.asc", b"-----BEGIN PGP SIGNATURE-----", "application/pgp-signature")}
+    removal = f"{trio.project.base}/docs/{PROPOSAL}/detached/supervisor"
+    for doc_id in (PROPOSAL, APPLICATION):
+        trio.call(trio.supervisor, "POST", f"{trio.project.base}/docs/{doc_id}/detached/supervisor", files=file)
+    assert trio.route()["status"] == "completed"
+
+    # Завершённый маршрут удаление подписи не запрещает: слот снова ждёт подписи, маршрут не останавливается (5.5).
+    removed = trio.call(trio.supervisor, "DELETE", removal)
+    drain(stand)
+
+    assert removed.status_code == 204, removed.text
+    route = trio.route()
+    assert (route["status"], route["phase"], route["stop_reason"]) == ("active", "signing", None)
+    assert my(trio.task(trio.supervisor)) == ("to_sign", "sign")
+    # Пока маршрут снова идёт, удалить вторую подпись мимо маршрута уже нельзя.
+    locked = trio.call(trio.supervisor, "DELETE", f"{trio.project.base}/docs/{APPLICATION}/detached/supervisor")
+    assert _code(locked) == (409, "route_locked")
 
 
 # --- маршрут в плане подписей (6.1) ---------------------------------------------------------------------------------

@@ -39,6 +39,7 @@ from hse_doc_studio.core.signatures.plan import (
     SlotStatus,
     reason_hint,
 )
+from hse_doc_studio.core.signing_route.entities import DocSlot
 from hse_doc_studio.core.signing_route.ports import ISigningRouteGate, NoSigningRoutes, RouteHold
 from hse_doc_studio.core.value_objects import SignaturesState, SignerInfo
 from hse_doc_studio.use_cases.projects.get_project import GetProjectInput, GetProjectUC
@@ -269,9 +270,9 @@ class SignSubmissionUC:
         signing = {
             (d.doc_id, s.slot_id) for d in preview.docs if d.route_id is not None for s in d.slots if s.action == "sign"
         }
-        for result in results:
-            if result.ok and (result.doc_id, result.slot_id) in signing:
-                await self._routes.signature_written(project.id, result.doc_id, result.slot_id)
+        written = [DocSlot(r.doc_id, r.slot_id) for r in results if r.ok and (r.doc_id, r.slot_id) in signing]
+        if written:
+            await self._routes.signatures_written(project.id, written)
 
     def _check_confirmations(self, inp: SignSubmissionInput, preview: SignSubmissionPreview) -> None:
         if inp.expected is not None:

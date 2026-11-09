@@ -17,6 +17,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from uuid import UUID
 
 import structlog
@@ -42,6 +43,7 @@ from hse_doc_studio.core.signing_route.signer import unsigned_crypto
 from hse_doc_studio.use_cases.signing_route.facts import LoadedFacts
 from hse_doc_studio.use_cases.signing_route.reconcile import RouteRecalculation
 from hse_doc_studio.use_cases.signing_route.scenario import actor_uuid
+from hse_doc_studio.use_cases.signing_route.watch import expect_recalculation, recalculation_done
 
 logger = structlog.get_logger()
 
@@ -74,16 +76,27 @@ class SigningRouteGate(RouteRecalculation):
             raise not_your_turn()
         if evaluation.participant(owner.id).next_action is not NextAction.sign:
             raise not_your_turn()
+        # Подпись слота маршрута: маршрут пересчитает `signature_written`, сверка по хуку записи не нужна.
+        expect_recalculation()
 
     async def signature_written(self, project_id: UUID, doc_id: str, slot_id: str) -> None:
-        held = await self._s.routes.holding(project_id, doc_id)
-        if held is None or held.status not in WATCHING_STATUSES:
-            return
-        try:
-            await self.recalculate(project_id, held.id, signed=DocSlot(doc_id, slot_id), actor_id=_actor_id())
-        except RouteConflictError:
-            # Подпись уже записана в файлы проекта; маршрут догонит её при следующем действии или сверке.
-            logger.warning("signing route not recalculated after a signature", route_id=str(held.id), exc_info=True)
+        await self.signatures_written(project_id, [DocSlot(doc_id, slot_id)])
+
+    async def signatures_written(self, project_id: UUID, slots: Sequence[DocSlot]) -> None:
+        recalculation_done()
+        signed: dict[UUID, list[DocSlot]] = {}
+        for pair in slots:
+            held = await self._s.routes.holding(project_id, pair.doc_id)
+            if held is not None and held.status in WATCHING_STATUSES:
+                signed.setdefault(held.id, []).append(pair)
+        for route_id, pairs in signed.items():
+            try:
+                await self.recalculate(project_id, route_id, signed=pairs, actor_id=_actor_id())
+            except RouteConflictError:
+                # Подписи уже записаны в файлы проекта; маршрут догонит их при следующем действии или сверке.
+                logger.warning(
+                    "signing route not recalculated after a signature", route_id=str(route_id), exc_info=True
+                )
 
     async def require_unlocked(
         self, project_id: UUID, *, doc_id: str | None = None, slot_id: str | None = None
@@ -116,6 +129,9 @@ class SigningRouteGate(RouteRecalculation):
             for pair in unsigned_crypto(p, loaded.facts)
             if pair.doc_id == doc_id
         )
+        if signable:
+            # «Подписать комплект» подпишет слоты маршрута и пересчитает его сам (`signatures_written`).
+            expect_recalculation()
         return RouteHold(route.id, route.profile_id, signable)
 
     async def plan_routes(

@@ -199,6 +199,10 @@ class ISigningRouteGate(Protocol):
         """
         ...
 
+    async def signatures_written(self, project_id: UUID, slots: Sequence[DocSlot]) -> None:
+        """То же для нескольких слотов разом («Подписать комплект»): один пересчёт на маршрут, а не на слот."""
+        ...
+
     async def require_unlocked(
         self, project_id: UUID, *, doc_id: str | None = None, slot_id: str | None = None
     ) -> None:
@@ -233,6 +237,9 @@ class NoSigningRoutes:
         return None
 
     async def signature_written(self, project_id: UUID, doc_id: str, slot_id: str) -> None:
+        return None
+
+    async def signatures_written(self, project_id: UUID, slots: Sequence[DocSlot]) -> None:
         return None
 
     async def require_unlocked(

@@ -82,7 +82,7 @@ from hse_doc_studio.core.signing_route.signer import (
 )
 from hse_doc_studio.core.signing_route.transitions import approve, refresh_snapshot, return_route
 from hse_doc_studio.core.value_objects import SignaturesState, SignerInfo
-from hse_doc_studio.use_cases.signatures._studio_signer import PlateSignerMismatchError, project_lock
+from hse_doc_studio.use_cases.signatures._studio_signer import PlateSignerMismatchError
 from hse_doc_studio.use_cases.signatures.upload_signature_png import UploadSignaturePngInput, UploadSignaturePngUC
 from hse_doc_studio.use_cases.signer_profile.profile import SaveProfileImageUC
 from hse_doc_studio.use_cases.signing_route.facts import LoadedFacts
@@ -95,6 +95,7 @@ from hse_doc_studio.use_cases.signing_route.scenario import (
     actor_uuid,
     closing_events,
     frozen_events,
+    route_files,
 )
 from hse_doc_studio.use_cases.signing_route.task_view import TaskDetails, TaskKeys, build_task
 
@@ -358,7 +359,7 @@ class SigningTaskScenario(RouteScenario):
             route = await self._get(project_id, route_id, lock=True)
             point = await self._s.points.load(project_id, route.profile_id)
             saved = route
-            async with project_lock(point.project):
+            async with route_files(point.project):
                 loaded = await self._s.facts.load(point, route)
                 evaluation = evaluate(route, loaded.facts)
                 me = acting_participant(route, evaluation, actor_id)

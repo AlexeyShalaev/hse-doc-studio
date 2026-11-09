@@ -10,12 +10,13 @@
   (периодическая задача лидера).
 
 Пересчёт идемпотентный: на тех же фактах второй проход ничего не пишет, поэтому хуки, периодическая сверка и
-сценарии маршрута друг другу не мешают. Сценарий маршрута, который сам пишет файлы проекта, держит строку
-маршрута до конца своей транзакции: сверка, вызванная его же записью, дождётся её и увидит уже обновлённый снимок.
+сценарии маршрута друг другу не мешают. Сценарий маршрута держит строку маршрута до конца своей транзакции:
+сверка, попавшая на это время, дождётся её и увидит уже обновлённый снимок.
 """
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from uuid import UUID
 
 import structlog
@@ -30,21 +31,26 @@ from hse_doc_studio.core.signing_route.entities import (
 )
 from hse_doc_studio.core.signing_route.signer import unsigned_crypto
 from hse_doc_studio.core.signing_route.transitions import apply_evaluation
-from hse_doc_studio.use_cases.signatures._studio_signer import project_lock
-from hse_doc_studio.use_cases.signing_route.scenario import RouteScenario, Settled, closing_events, frozen_events
+from hse_doc_studio.use_cases.signing_route.scenario import (
+    RouteScenario,
+    Settled,
+    closing_events,
+    frozen_events,
+    route_files,
+)
 
 logger = structlog.get_logger()
 
 
 class RouteRecalculation(RouteScenario):
     async def recalculate(
-        self, project_id: UUID, route_id: UUID, *, signed: DocSlot | None = None, actor_id: UUID | None = None
+        self, project_id: UUID, route_id: UUID, *, signed: Sequence[DocSlot] = (), actor_id: UUID | None = None
     ) -> bool:
         """Пересчитать маршрут на текущих фактах и записать итог; True, если маршрут изменился.
 
-        `signed` слот, подпись которого только что записана другим входом (раздел 6.10): в историю идёт событие
-        `signed` его участника, один раз за раунд. `actor_id` тот, чьё действие вызвало пересчёт (None у сверки
-        сервера). Вызывать вне `project_lock`: порядок блокировок строка маршрута, затем `project_lock`.
+        `signed` слоты, подписи которых только что записаны другим входом (раздел 6.10): в историю идёт событие
+        `signed` участника каждого слота, один раз за раунд. `actor_id` тот, чьё действие вызвало пересчёт (None
+        у сверки сервера). Вызывать вне `project_lock`: порядок блокировок строка маршрута, затем `project_lock`.
         """
         at = self._s.clock()
         async with self._s.uow.begin():
@@ -52,7 +58,7 @@ class RouteRecalculation(RouteScenario):
             if route is None or route.status not in WATCHING_STATUSES:
                 return False
             point = await self._s.points.load(project_id, route.profile_id)
-            async with project_lock(point.project):
+            async with route_files(point.project):
                 loaded = await self._s.facts.load(point, route)
                 if await self._stop_if_changed(point, route, loaded, at) is not None:
                     return True
@@ -73,25 +79,34 @@ class RouteRecalculation(RouteScenario):
             return True
 
     async def _signed_events(
-        self, route: SigningRoute, settled: Settled, pair: DocSlot | None, actor_id: UUID | None
+        self, route: SigningRoute, settled: Settled, pairs: Sequence[DocSlot], actor_id: UUID | None
     ) -> list[RouteEvent]:
-        """Событие подписи слота другим входом: только слот с ЭП, который теперь подписан, и не повторно."""
-        if pair is None:
+        """События подписи слотов другим входом: только слот с ЭП, который теперь подписан, и не повторно."""
+        if not pairs:
             return []
-        owner = next((p for p in route.participants if pair in p.assignments), None)
-        slot = settled.loaded.state.slots.get(pair.slot_id)
-        crypto = slot is not None and method_of(slot.sign_mode) in CRYPTO_METHODS
-        if owner is None or not crypto or pair in unsigned_crypto(owner, settled.loaded.facts):
-            return []
-        details = {"doc_id": pair.doc_id, "slot_id": pair.slot_id}
-        for earlier in await self._s.routes.list_events(route.id, round=route.round):
-            if earlier.kind is EventKind.signed and earlier.participant_id == owner.id and earlier.details == details:
-                # Повторная загрузка той же подписи: в истории раунда она уже есть.
-                return []
         at = self._s.clock()
-        return [
-            RouteEvent(route.id, route.round, at, EventKind.signed, actor_id, participant_id=owner.id, details=details)
+        recorded = [
+            (e.participant_id, dict(e.details))
+            for e in await self._s.routes.list_events(route.id, round=route.round)
+            if e.kind is EventKind.signed
         ]
+        events: list[RouteEvent] = []
+        for pair in dict.fromkeys(pairs):
+            owner = next((p for p in route.participants if pair in p.assignments), None)
+            slot = settled.loaded.state.slots.get(pair.slot_id)
+            crypto = slot is not None and method_of(slot.sign_mode) in CRYPTO_METHODS
+            if owner is None or not crypto or pair in unsigned_crypto(owner, settled.loaded.facts):
+                continue
+            details = {"doc_id": pair.doc_id, "slot_id": pair.slot_id}
+            if (owner.id, details) in recorded:
+                # Повторная загрузка подписи того же слота: в истории раунда она уже есть.
+                continue
+            events.append(
+                RouteEvent(
+                    route.id, route.round, at, EventKind.signed, actor_id, participant_id=owner.id, details=details
+                )
+            )
+        return events
 
 
 class RouteReconciler(RouteRecalculation):

@@ -196,6 +196,42 @@ async def test__participant_removed_from_the_project__route_paused_and_only_the_
     assert trio.withheld() == {APPLICATION: ["academic_supervisor"]}
 
 
+async def test__participant_lost_the_persona__route_paused(stand: Stand) -> None:
+    trio = await make_trio(stand, images=("author", "supervisor"), academic="none")
+    trio.sent()
+    member = f"{trio.project.base}/members/user:{trio.supervisor.id}"
+    grant = {"role": "reviewer", "persona": None, "can_share": False, "show_sources": True, "can_edit_all": False}
+
+    # Научрук остался рецензентом, но без персоны: слот научрука он больше не подписывает.
+    changed = trio.call(trio.author, "PUT", member, json=grant)
+    drain(stand)
+
+    assert changed.status_code == 200, changed.text
+    assert _stopped(trio) == ("paused", "participant_left")
+    assert len(notifications(stand, trio, "author", "signing_paused")) == 1
+
+
+async def test__restore_from_history__signatures_rolled_back__route_paused(stand: Stand) -> None:
+    trio = await make_trio(stand, images=("author", "supervisor"), academic="none")
+    saved = trio.call(trio.author, "POST", f"{trio.project.base}/vcs/snapshots", json={"message": "до отправки"})
+    assert saved.status_code == 200, saved.text
+    trio.sent()
+    assert trio.withheld() == {APPLICATION: ["supervisor"], PROPOSAL: ["supervisor"]}
+
+    # Откат к версии до отправки возвращает состояние подписей без придержанных картинок: видимый слой другой.
+    restored = trio.call(
+        trio.author,
+        "POST",
+        f"{trio.project.base}/vcs/restore",
+        json={"commit_id": saved.json()["id"], "mode": "snapshot"},
+    )
+    drain(stand)
+
+    assert restored.status_code == 200, restored.text
+    assert _stopped(trio) == ("paused", "marks_changed")
+    assert [(e["kind"], e["reason"]) for e in trio.route()["events"]][-1] == ("paused", "marks_changed")
+
+
 async def test__sweep__missed_hook__route_paused__second_pass_changes_nothing(stand: Stand) -> None:
     trio = await make_trio(stand, images=("author", "supervisor"), academic="none")
     other = await make_trio(stand, images=("author", "supervisor"), academic="none")
@@ -217,21 +253,21 @@ async def test__sweep__missed_hook__route_paused__second_pass_changes_nothing(st
     assert other.events() == ["sent", "approved"]
 
 
-async def test__route_scenarios_write_signatures_themselves__no_false_stop(
+async def test__route_scenarios_write_signatures_themselves__no_reconciliation_and_no_false_stop(
     stand: Stand, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    written: list[bool] = []
+    reconciled: list[bool] = []
     recalculate = RouteReconciler.recalculate
 
     async def spy(self: RouteReconciler, *args: Any, **kwargs: Any) -> bool:
         changed = await recalculate(self, *args, **kwargs)
-        written.append(changed)
+        reconciled.append(changed)
         return changed
 
     monkeypatch.setattr(RouteReconciler, "recalculate", spy)
     trio = await make_trio(stand, images=("author", "supervisor", "academic_supervisor"))
-    # Отправка придерживает картинки, согласие открывает картинку научрука: каждая такая запись состояния
-    # подписей зовёт хук прямо внутри сценария, под блокировкой строки маршрута и `project_lock`.
+    # Отправка придерживает картинки, согласие открывает картинку научрука: сценарий сам пишет состояние
+    # подписей под блокировкой строки маршрута и `project_lock` и сам обновляет снимок.
     trio.sent()
     drain(stand)
     approved = trio.approved(trio.supervisor)
@@ -239,10 +275,15 @@ async def test__route_scenarios_write_signatures_themselves__no_false_stop(
 
     assert my(approved) == ("done", "done")
     assert trio.withheld() == {APPLICATION: ["academic_supervisor"]}
-    # Сверка шла следом за сценарием (хук сработал), но ничего не записала: ни остановки, ни лишней версии.
-    assert written
-    assert not any(written)
+    # Свои записи маршрута сверку не зовут: ни встречной блокировки, ни остановки по собственной правке.
+    assert reconciled == []
     assert _stopped(trio) == ("active", None)
     assert trio.events() == ["sent", "approved", "approved"]
     assert notifications(stand, trio, "author", "signing_paused") == []
     assert my(trio.task(trio.academic)) == ("to_approve", "approve")
+
+    # А сверка, попавшая на идущий маршрут без изменений, ничего не пишет.
+    project_changed(stand, trio)
+
+    assert reconciled == [False]
+    assert trio.events() == ["sent", "approved", "approved"]
