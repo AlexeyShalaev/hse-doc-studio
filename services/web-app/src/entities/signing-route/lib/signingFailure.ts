@@ -22,6 +22,7 @@ export const SIGNING_TASK_FAILURE_CODES: readonly string[] = [
   "key_not_found",
   "server_keys_forbidden",
   "route_locked",
+  "not_found",
   "network",
 ];
 

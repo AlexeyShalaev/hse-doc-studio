@@ -146,6 +146,7 @@
     "plateCryptoPro": "Certificate from CryptoPro",
     "plateFile": "Certificate or public key file",
     "noServerKeys": "This server does not store private keys, so you cannot create or import a key here. Sign with CryptoPro or upload a ready signature.",
+    "noServerKeysPlate": "This server does not store private keys, so you cannot create or import a key here. For the plate, use a CryptoPro certificate or a public key file.",
     "padesNoKeys": "An e-signature in the PDF needs a Studio key, and this server does not store private keys. Pick another method or return the documents to the author.",
     "ways": "Sign with",
     "way": {
@@ -226,6 +227,7 @@
     "key_not_found": "The key was not found. Pick another one.",
     "server_keys_forbidden": "This server does not store private keys. Sign with CryptoPro or upload a ready signature.",
     "route_locked": "The document is on a signing route: signatures change only in turn.",
+    "not_found": "The route is closed or you are no longer part of it. Refresh the page.",
     "signature_invalid": "The signature does not match the final PDF. Sign the downloaded file unchanged.",
     "no_secret_key": "The file has no private key. A public key only works for the plate.",
     "cryptopro": "CryptoPro returned an error: {{detail}}",

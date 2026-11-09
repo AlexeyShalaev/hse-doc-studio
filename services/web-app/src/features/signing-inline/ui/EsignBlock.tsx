@@ -85,9 +85,13 @@ const NoServerKeys = ({ plan }: { plan: InlinePlan }) => {
     <div data-testid="signing-no-server-keys">
       <Notice
         tone="info"
-        text={t(
-          plan.method === "pades" ? "esign.padesNoKeys" : "esign.noServerKeys",
-        )}
+        text={
+          plan.method === "pades"
+            ? t("esign.padesNoKeys")
+            : plan.needsSign
+              ? t("esign.noServerKeys")
+              : t("esign.noServerKeysPlate")
+        }
       />
     </div>
   );

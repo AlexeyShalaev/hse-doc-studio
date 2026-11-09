@@ -19,6 +19,23 @@ export const SigningPage = () => {
     projectId: string;
     routeId: string;
   }>();
+  // Другой маршрут: выбор подписанта (способ, ключ, файлы подписи) начинается заново.
+  return (
+    <SigningRoutePage
+      key={`${projectId}/${routeId}`}
+      projectId={projectId}
+      routeId={routeId}
+    />
+  );
+};
+
+const SigningRoutePage = ({
+  projectId,
+  routeId,
+}: {
+  projectId: string;
+  routeId: string;
+}) => {
   const page = useSigningPage(projectId, routeId);
   const extension = useSigningInline();
   // Срок сверяется с моментом открытия: страница живёт недолго, тикать часами незачем.

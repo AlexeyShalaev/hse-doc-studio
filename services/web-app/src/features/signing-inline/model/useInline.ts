@@ -145,7 +145,12 @@ export const useInline = (ctx: SigningInlineContext, ui: InlineUi) => {
   const saveImage = (png: Blob | Promise<Blob>) =>
     guard(async () => {
       const remember = ui.state.remember;
-      await uploadImage.mutateAsync({ file: pngFile(await png), remember });
+      try {
+        await uploadImage.mutateAsync({ file: pngFile(await png), remember });
+      } finally {
+        // Редактор картинки это окно: отказ под ним не виден, поэтому окно закрываем.
+        if (ui.state.panel === "editor") ui.patch({ panel: null });
+      }
       if (remember)
         await client.invalidateQueries({ queryKey: signerProfileKeys.all });
       ui.patch({ panel: null });
