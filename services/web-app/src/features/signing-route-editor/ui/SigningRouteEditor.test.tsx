@@ -19,7 +19,7 @@ import {
   it,
   vi,
 } from "vitest";
-import { apiClient } from "@shared/api";
+import { ApiError, apiClient } from "@shared/api";
 import { createDemoRouter, installDemoAdapter } from "@shared/api/demo";
 import { i18n } from "@shared/lib";
 import { documentApi } from "@entities/document";
@@ -60,10 +60,80 @@ const DOC = "topic_application";
 const AUTHOR: SigningDemoUser = { id: "u_author", name: "Иванов И. И." };
 const PATH = `/projects/${PROJECT}/submit/cp/${PROFILE}`;
 
+// Места слотов на странице: демо маршрута и подписи проекта смотрят в один набор.
+let unplaced = new Set<string>();
 const demo = createSigningRouteDemo({
   getUser: () => AUTHOR,
+  // Два научрука в проекте: автор выбирает, кто подписывает.
+  members: [
+    {
+      user_id: "u_demo_petrov",
+      name: "Петров П. П.",
+      persona: "supervisor",
+      plate: { owner: "Петров П. П.", kind: "openpgp", cert_id: "1A2B" },
+    },
+    {
+      user_id: "u_demo_sidorova",
+      name: "Сидорова А. В.",
+      persona: "supervisor",
+      plate: null,
+    },
+  ],
   invitations: [
     { invitation_id: "inv_co", persona: "co_supervisor", hint: "c***@hse.ru" },
+  ],
+  isPlaced: (_project, _doc, slot) => !unplaced.has(slot),
+});
+
+/** Все подписывают ЭП с известными данными плашки: «Отправить и подписать» ключом с паролем. */
+const cryptoDemo = createSigningRouteDemo({
+  getUser: () => AUTHOR,
+  members: [
+    {
+      user_id: AUTHOR.id,
+      name: AUTHOR.name,
+      persona: "author_key",
+      plate: { owner: AUTHOR.name, kind: "openpgp", cert_id: "3C4D" },
+    },
+    {
+      user_id: "u_demo_petrov",
+      name: "Петров П. П.",
+      persona: "supervisor",
+      plate: { owner: "Петров П. П.", kind: "openpgp", cert_id: "1A2B" },
+    },
+  ],
+  profiles: [
+    {
+      id: PROFILE,
+      name: { ru: "Заявка на тему КП", en: "Topic application" },
+      order: [["author"], ["supervisor"]],
+      docs: [
+        {
+          doc_id: DOC,
+          name: { ru: "Заявление о выборе темы", en: "Topic application" },
+          slots: ["author", "supervisor"].map((persona, i) => ({
+            slot_id: persona,
+            label: { ru: persona, en: persona },
+            persona,
+            method: "detached" as const,
+            optional: false,
+            page: 1,
+            x_mm: 100,
+            y_mm: 100 + i * 30,
+            width_mm: 60,
+          })),
+        },
+      ],
+    },
+  ],
+  keysOf: (user) => [
+    {
+      id: `key-${user.id}`,
+      label: "Ключ OpenPGP",
+      kind: "openpgp",
+      protected: true,
+      signer: user.name,
+    },
   ],
 });
 
@@ -154,6 +224,7 @@ const mount = () => {
               }
             />
             <Route path={PATH} element={<p>checkpoint</p>} />
+            <Route path="/sign/:projectId/:routeId" element={<p>sign</p>} />
           </Routes>
         </MemoryRouter>
       </QueryClientProvider>
@@ -167,9 +238,32 @@ beforeAll(() => {
   installDemoAdapter(apiClient, createDemoRouter(demo.routes));
 });
 
+const signatures = () => ({
+  slots: {
+    author: slotInfo("image"),
+    supervisor: slotInfo("detached_text"),
+    academic_supervisor: slotInfo("image"),
+  },
+  placements: {
+    [DOC]: {
+      author: placement(!unplaced.has("author")),
+      supervisor: placement(!unplaced.has("supervisor")),
+    },
+  },
+  frozen: {},
+  detached: {},
+  runtime_slots: [
+    slotDef("author", "Студент"),
+    slotDef("supervisor", "Научный руководитель"),
+    slotDef("academic_supervisor", "Академический руководитель"),
+  ],
+});
+
 beforeEach(async () => {
   await i18n.changeLanguage("ru");
   demo.reset();
+  cryptoDemo.reset();
+  unplaced = new Set();
   vi.spyOn(sessionApi, "bootstrap").mockResolvedValue(bootstrap("server"));
   vi.spyOn(documentApi, "list").mockResolvedValue([]);
   vi.spyOn(buildAvailabilityApi, "get").mockReturnValue(
@@ -182,23 +276,15 @@ beforeEach(async () => {
     limit: 50,
     offset: 0,
   });
-  vi.spyOn(signatureApi, "getState").mockResolvedValue({
-    slots: {
-      author: slotInfo("image"),
-      supervisor: slotInfo("detached_text"),
-      academic_supervisor: slotInfo("image"),
+  vi.spyOn(signatureApi, "getState").mockImplementation(() =>
+    Promise.resolve(signatures()),
+  );
+  vi.spyOn(signatureApi, "updatePlacement").mockImplementation(
+    (_project, _doc, slotId, data) => {
+      if (data.enabled === true) unplaced.delete(slotId);
+      return Promise.resolve(placement(!unplaced.has(slotId)));
     },
-    placements: {
-      [DOC]: { author: placement(true), supervisor: placement(false) },
-    },
-    frozen: {},
-    detached: {},
-    runtime_slots: [
-      slotDef("author", "Студент"),
-      slotDef("supervisor", "Научный руководитель"),
-      slotDef("academic_supervisor", "Академический руководитель"),
-    ],
-  });
+  );
 });
 
 afterEach(() => {
@@ -223,9 +309,66 @@ describe("Отправка на подписание: черновик точк�
       screen.getByTestId("route-add-slot-academic_supervisor"),
     ).toHaveTextContent("Добавить подпись: Академический руководитель");
     expect(screen.getByTestId("route-slot-supervisor")).toHaveTextContent(
-      "не размещена",
+      "стр. 1",
     );
     expect(screen.getByText("Картинка подписи загружена")).toBeInTheDocument();
+  });
+
+  it("подпись без места на странице мешает отправке; помеха ведёт к размещению", async () => {
+    unplaced.add("supervisor");
+    const user = userEvent.setup();
+    mount();
+    expect(await screen.findByTestId("route-blockers")).toHaveTextContent(
+      "Научный руководитель (Заявление о выборе темы): подпись не размещена на странице",
+    );
+    expect(screen.getByTestId("route-send")).toBeDisabled();
+    const row = await screen.findByTestId("route-slot-supervisor");
+    expect(row).toHaveTextContent("не размещена");
+
+    // «К размещению» ставит фокус на кнопку места этого слота в блоке «Где подписи».
+    await user.click(screen.getByTestId("route-blocker-place-supervisor"));
+    const place = within(row).getByRole("button", { name: "На стр. 1" });
+    await waitFor(() => {
+      expect(place).toHaveFocus();
+    });
+
+    await user.click(place);
+    expect(signatureApi.updatePlacement).toHaveBeenCalledWith(
+      PROJECT,
+      DOC,
+      "supervisor",
+      expect.objectContaining({ enabled: true, page: 1 }),
+    );
+    expect(
+      await screen.findByText("Всё готово к отправке."),
+    ).toBeInTheDocument();
+    expect(screen.getByTestId("route-send")).toBeEnabled();
+  });
+
+  it("людей с персоной несколько: автор выбирает, кто подписывает", async () => {
+    const user = userEvent.setup();
+    mount();
+    expect(await step(2)).toHaveTextContent("Петров П. П.");
+    const pick = await screen.findByTestId("route-pick-supervisor");
+    expect(pick).toHaveValue("member:u_demo_petrov");
+    expect(
+      within(pick)
+        .getAllByRole("option")
+        .map((option) => option.textContent),
+    ).toEqual(["Петров П. П.", "Сидорова А. В."]);
+    // У автора кандидат один: выбирать не из кого.
+    expect(screen.queryByTestId("route-pick-author")).toBeNull();
+
+    await user.selectOptions(pick, "member:u_demo_sidorova");
+    await waitFor(async () => {
+      expect(await step(2)).toHaveTextContent("Сидорова А. В.");
+    });
+    const [summary] = (await signingRouteApi.list(PROJECT, PROFILE)).items;
+    const saved = await signingRouteApi.get(PROJECT, summary?.id ?? "");
+    expect(saved.steps[1]?.[0]?.user_id).toBe("u_demo_sidorova");
+    expect(await screen.findByTestId("route-pick-supervisor")).toHaveValue(
+      "member:u_demo_sidorova",
+    );
   });
 
   it("необязательная подпись добавляет участника; приглашение снимает помеху", async () => {
@@ -341,6 +484,49 @@ describe("Отправка на подписание: отправка", () => {
     expect(summary?.status).toBe("active");
     const route = await signingRouteApi.get(PROJECT, summary?.id ?? "");
     expect(route.message).toBe("Прошу подписать");
+  });
+
+  it("«Отправить и подписать»: подпись отказала после отправки, экран ведёт подписать", async () => {
+    installDemoAdapter(apiClient, createDemoRouter(cryptoDemo.routes));
+    try {
+      const user = userEvent.setup();
+      mount();
+      const sign = await screen.findByTestId("route-send-sign");
+      await user.type(screen.getByLabelText("Пароль ключа"), "broken");
+      await user.click(sign);
+
+      // Маршрут ушёл: это не сбой отправки, а неподписанный свой слот.
+      const notice = await screen.findByTestId("route-my-turn");
+      expect(notice).toHaveTextContent(
+        "Маршрут отправлен, ваша подпись не поставлена. Подпишите на своей странице.",
+      );
+      expect(notice).toHaveTextContent(
+        "Подписать ключом не удалось: The key refused to sign",
+      );
+      expect(screen.queryByTestId("route-send")).toBeNull();
+      expect(screen.queryByText("checkpoint")).toBeNull();
+      const [summary] = (await signingRouteApi.list(PROJECT, PROFILE)).items;
+      expect(summary?.status).toBe("active");
+      expect(within(notice).getByTestId("route-go-sign")).toHaveAttribute(
+        "href",
+        `/sign/${PROJECT}/${summary?.id ?? ""}`,
+      );
+    } finally {
+      installDemoAdapter(apiClient, createDemoRouter(demo.routes));
+    }
+  });
+
+  it("отказ до отправки остаётся ошибкой отправки", async () => {
+    const user = userEvent.setup();
+    mount();
+    await screen.findByText("Всё готово к отправке.");
+    vi.spyOn(signingRouteApi, "send").mockRejectedValue(
+      new ApiError("gpg отказал", "sign_failed", 400),
+    );
+    await user.click(screen.getByTestId("route-send"));
+    expect(await screen.findByRole("alert")).toHaveTextContent("gpg отказал");
+    expect(screen.queryByTestId("route-my-turn")).toBeNull();
+    expect(screen.getByTestId("route-send")).toBeInTheDocument();
   });
 
   it("локальная Студия: маршрутов нет, экран так и говорит", async () => {

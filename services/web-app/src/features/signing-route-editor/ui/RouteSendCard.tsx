@@ -1,8 +1,9 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Send } from "lucide-react";
+import { MapPin, Send } from "lucide-react";
 import {
   SIGNING_TEXT_MAX,
+  type RouteSlotRef,
   type SigningRoute,
   type SigningRouteBlocker,
   type SigningRoutePreview,
@@ -29,6 +30,8 @@ export type RouteSendCardProps = {
     message: string | null;
     sign: { passphrase: string | null } | null;
   }) => void;
+  /** «К размещению»: показать слот в блоке «Где подписи». */
+  onPlace: (slot: RouteSlotRef) => void;
 };
 
 /** Низ экрана: срок, сообщение подписантам, что мешает, и «Отправить на подписание». */
@@ -42,6 +45,7 @@ export const RouteSendCard = ({
   error,
   onSaveTexts,
   onSend,
+  onPlace,
 }: RouteSendCardProps) => {
   const { t, i18n } = useTranslation("signingRouteEditor");
   const [day, setDay] = useState(isoToDeadline(route.deadline));
@@ -97,6 +101,11 @@ export const RouteSendCard = ({
         return t("blocker.sender_not_ready");
       case "no_participants":
         return t("blocker.no_participants");
+      case "placement_off":
+        return t("blocker.placement_off", {
+          slot: slotName(b),
+          doc: docName(b.doc_id),
+        });
       default:
         return t("blocker.unknown", { code: b.code });
     }
@@ -193,7 +202,31 @@ export const RouteSendCard = ({
                 }}
               >
                 {blockers.map((b, i) => (
-                  <li key={`${b.code}-${String(i)}`}>{blockerText(b)}</li>
+                  <li key={`${b.code}-${String(i)}`}>
+                    {blockerText(b)}
+                    {b.code === "placement_off" &&
+                      b.doc_id !== null &&
+                      b.slot_id !== null && (
+                        <button
+                          type="button"
+                          className="btn xs"
+                          style={{
+                            marginLeft: "0.375rem",
+                            verticalAlign: "baseline",
+                          }}
+                          data-testid={`route-blocker-place-${b.slot_id}`}
+                          onClick={() => {
+                            onPlace({
+                              doc_id: b.doc_id ?? "",
+                              slot_id: b.slot_id ?? "",
+                            });
+                          }}
+                        >
+                          <MapPin size="0.625rem" aria-hidden="true" />
+                          {t("blocker.toPlacement")}
+                        </button>
+                      )}
+                  </li>
                 ))}
               </ul>
             </div>
