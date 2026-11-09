@@ -11,6 +11,13 @@ on:
 permissions:
   contents: read
 
+# PR: новый push отменяет ещё идущий анализ того же PR. Push и расписание: своя группа на прогон, без отмены.
+# Фильтра путей нет: Analyze (python) и Analyze (javascript-typescript) — required-статусы, а пропущенный
+# матричный джоб не отдаёт статус с этим именем. Анализ идёт ~1.5 минуты, экономить на нём нечего.
+concurrency:
+  group: codeql-${{ github.event_name == 'pull_request' && format('pr-{0}', github.event.pull_request.number) || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
   analyze:
     name: Analyze (${{ matrix.language }})

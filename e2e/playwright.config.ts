@@ -11,8 +11,9 @@ export default defineConfig({
   retries: process.env.CI ? 1 : 0,
   timeout: 60_000,
   expect: { timeout: 10_000 },
+  // blob в CI: шарды приёмки (e2e-server-lite.yml) сводятся в один HTML-отчёт через playwright merge-reports.
   reporter: process.env.CI
-    ? [["list"], ["html", { open: "never" }]]
+    ? [["list"], ["html", { open: "never" }], ["blob"]]
     : [["list"]],
   outputDir: "test-results",
   use: {
