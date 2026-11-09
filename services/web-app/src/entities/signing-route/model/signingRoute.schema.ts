@@ -540,7 +540,8 @@ export type SigningTaskList = z.infer<typeof SigningTaskListSchema>;
 /**
  * Коды ошибок маршрута (тело `{detail, code}`), раздел 8.1. 404 `not_found` отдаётся и не
  * участнику, и в локальном режиме. 409 и 429 ниже; 400 за неверно собранный маршрут
- * (`no_participants`, `bad_step`, `duplicate_participant`, `duplicate_slot`, `unknown_doc`).
+ * (`no_participants`, `bad_step`, `duplicate_participant`, `duplicate_slot`, `unknown_doc`);
+ * 403 `server_keys_forbidden` за подпись ключом Студии при запрете ключей на сервере.
  */
 export const SIGNING_ROUTE_ERROR_CODES = [
   "doc_changed",
@@ -548,6 +549,11 @@ export const SIGNING_ROUTE_ERROR_CODES = [
   "not_your_turn",
   "image_required",
   "plate_required",
+  "method_not_allowed",
+  "passphrase_required",
+  "passphrase_invalid",
+  "sign_failed",
+  "key_not_found",
   "route_blocked",
   "route_locked",
   "participant_not_waiting",

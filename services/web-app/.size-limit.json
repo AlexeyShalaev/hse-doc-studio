@@ -180,15 +180,15 @@
     "limit": "7 kB"
   },
   {
-    "name": "Страница подписанта (lazy, pages/SigningPage)",
+    "name": "Страница подписанта с подписью на странице (lazy, pages/SigningPage и features/signing-inline)",
     "path": "dist/assets/SigningPage-*.js",
     "gzip": true,
-    "limit": "9 kB"
+    "limit": "14.5 kB"
   },
   {
     "name": "Словарь страницы подписанта (ru и en)",
     "path": "dist/assets/locale-signing-*.js",
     "gzip": true,
-    "limit": "6 kB"
+    "limit": "8.8 kB"
   }
 ]

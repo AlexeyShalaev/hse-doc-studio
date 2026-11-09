@@ -98,6 +98,7 @@ export const signatureApi = {
     slotId: string,
     file: File,
     publicKey?: File,
+    options?: { silent?: boolean },
   ) => {
     const formData = new FormData();
     formData.append("file", file);
@@ -108,6 +109,8 @@ export const signatureApi = {
         formData,
         {
           headers: { "Content-Type": null },
+          // Страница подписи показывает отказ сама, по коду из тела.
+          ...(options?.silent ? { silentError: true } : {}),
         },
       )
       .then(parseResp(AttachDetachedResponseSchema));
@@ -165,10 +168,15 @@ export const signatureApi = {
       .delete(`/projects/${projectId}/docs/${docId}/detached/${slotId}`)
       .then(() => undefined),
 
-  downloadFrozenPdf: (projectId: string, docId: string) =>
+  downloadFrozenPdf: (
+    projectId: string,
+    docId: string,
+    options?: { silent?: boolean },
+  ) =>
     apiClient
       .get(`/projects/${projectId}/docs/${docId}/frozen/pdf`, {
         responseType: "arraybuffer",
+        ...(options?.silent ? { silentError: true } : {}),
       })
       .then((r) => new Uint8Array(r.data as ArrayBuffer)),
 
