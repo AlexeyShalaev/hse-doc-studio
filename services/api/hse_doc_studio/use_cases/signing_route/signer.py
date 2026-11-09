@@ -443,9 +443,13 @@ class SigningTaskScenario(RouteScenario):
     async def _audit_plate(self, turn: _Turn, state: SignaturesState, *, source: str) -> None:
         """Журнал аудита: данные плашки своих слотов. Только открытые сведения, напечатанные на плашке:
         вид сертификата или ключа и его номер; сам ключ, сертификат и файл в журнал не попадают."""
-        before = _plates(turn.loaded.state, own_slots(turn.me))
-        changed = {slot_id: plate for slot_id, plate in _plates(state, own_slots(turn.me)).items() if plate}
-        changed = {slot_id: plate for slot_id, plate in changed.items() if before.get(slot_id) != plate}
+        slots = own_slots(turn.me)
+        before = _plates(turn.loaded.state, slots)
+        changed = {
+            slot_id: plate
+            for slot_id, plate in _plates(state, slots).items()
+            if plate is not None and before.get(slot_id) != plate
+        }
         plate = next(iter(changed.values()), None)
         if plate is None:
             return
