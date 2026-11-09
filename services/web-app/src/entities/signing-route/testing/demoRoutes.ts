@@ -19,6 +19,7 @@ import {
   type RouteEvent,
   type RouteEventKind,
   type RouteParticipant,
+  type RoutePersonaCandidates,
   type RouteSignMethod,
   type RouteSlotRef,
   type SigningKeyInfo,
@@ -460,6 +461,41 @@ export const createSigningRouteDemo = (
     reminders: p.reminders,
   });
 
+  /** Как R5: из кого выбирать на персоны маршрута и всех его слотов (участники проекта, затем приглашения). */
+  const candidatesOf = (r: Route): RoutePersonaCandidates[] => {
+    const author = authors.get(r.id);
+    const personas = [
+      ...new Set([
+        ...participants(r).map((p) => p.persona),
+        ...r.profile.docs.flatMap((doc) =>
+          doc.slots.map((slot) => slot.persona),
+        ),
+      ]),
+    ];
+    return personas.map((persona) => ({
+      persona,
+      people: [
+        ...(persona === "author" && author
+          ? [{ kind: "member" as const, id: author.id, name: author.name }]
+          : []),
+        ...members
+          .filter((m) => m.persona === persona)
+          .map((m) => ({
+            kind: "member" as const,
+            id: m.user_id,
+            name: m.name,
+          })),
+        ...invitations
+          .filter((i) => i.persona === persona)
+          .map((i) => ({
+            kind: "invitation" as const,
+            id: i.invitation_id,
+            name: i.hint,
+          })),
+      ],
+    }));
+  };
+
   const toRoute = (r: Route): SigningRoute => ({
     id: r.id,
     project_id: r.project_id,
@@ -493,6 +529,7 @@ export const createSigningRouteDemo = (
     })),
     steps: r.steps.map((step) => step.map((p) => toParticipant(r, p))),
     events: [...r.events],
+    candidates: candidatesOf(r),
   });
 
   const waitingFor = (r: Route) =>
@@ -805,6 +842,33 @@ export const createSigningRouteDemo = (
       : { user_id: null, invitation_id: null, name: null };
   };
 
+  /** Как R5 в PUT: человек персоны, которого ещё нет среди людей правки; никого: «нет в проекте». */
+  const unusedByPersona = (
+    persona: string,
+    author: SigningDemoUser,
+    drafts: { user_id: string | null; invitation_id: string | null }[],
+  ): Pick<Participant, "user_id" | "invitation_id" | "name"> => {
+    const users = new Set(drafts.map((d) => d.user_id).filter(Boolean));
+    const invited = new Set(drafts.map((d) => d.invitation_id).filter(Boolean));
+    if (persona === "author" && !users.has(author.id))
+      return { user_id: author.id, invitation_id: null, name: author.name };
+    const member = members.find(
+      (m) => m.persona === persona && !users.has(m.user_id),
+    );
+    if (member)
+      return {
+        user_id: member.user_id,
+        invitation_id: null,
+        name: member.name,
+      };
+    const inv = invitations.find(
+      (i) => i.persona === persona && !invited.has(i.invitation_id),
+    );
+    return inv
+      ? { user_id: null, invitation_id: inv.invitation_id, name: inv.hint }
+      : { user_id: null, invitation_id: null, name: null };
+  };
+
   const draftFromPack = (
     projectId: string,
     profile: SigningDemoProfile,
@@ -1025,11 +1089,10 @@ export const createSigningRouteDemo = (
         r.steps = body.steps.map((step) =>
           step.map((draft) => {
             const old = draft.id === null ? undefined : known.get(draft.id);
-            const who = resolvePerson(
-              draft.user_id,
-              draft.invitation_id,
-              author,
-            );
+            const who =
+              draft.user_id === null && draft.invitation_id === null
+                ? unusedByPersona(draft.persona, author, body.steps.flat())
+                : resolvePerson(draft.user_id, draft.invitation_id, author);
             if (old?.persona === draft.persona) {
               const same =
                 old.user_id === who.user_id &&

@@ -166,11 +166,27 @@ describe("автор: черновик и отправка", () => {
             invitation_id: null,
           },
         ],
+        // Второй научрук («Добавить согласующего»): единственный научрук проекта уже в маршруте.
+        [
+          {
+            id: null,
+            persona: "supervisor",
+            user_id: null,
+            invitation_id: null,
+          },
+        ],
       ],
     });
-    expect(participant(updated, "academic_supervisor").membership).toBe(
-      "missing",
-    );
+    // Человек без user_id и invitation_id подбирается по персоне, как в заготовке.
+    const academic = participant(updated, "academic_supervisor");
+    expect([academic.membership, academic.invitation_id]).toEqual([
+      "invited",
+      "inv_academic",
+    ]);
+    const second = updated.steps
+      .flat()
+      .filter((p) => p.persona === "supervisor");
+    expect(second.map((p) => p.membership)).toEqual(["member", "missing"]);
     const blocked = await signingRouteApi.preview(PROJECT, route.id);
     expect(blocked.can_send).toBe(false);
     expect(blocked.blockers.map((b) => b.code)).toEqual([

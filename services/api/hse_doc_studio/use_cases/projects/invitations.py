@@ -14,6 +14,7 @@ from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, replace
 from datetime import datetime, timedelta
 from typing import Literal
+from urllib.parse import urlencode
 from uuid import UUID
 
 from hse_doc_studio.core.access.entities import Actor, Grant, Role
@@ -49,7 +50,7 @@ from hse_doc_studio.core.invitations.entities import (
     role_at_most,
     stronger,
 )
-from hse_doc_studio.core.invitations.policy import email_allowed_for_org
+from hse_doc_studio.core.invitations.policy import email_allowed_for_org, safe_next_path
 from hse_doc_studio.core.invitations.protocols import (
     IInvitationAcceptedHook,
     INotificationMailer,
@@ -79,6 +80,8 @@ class NewInvitation:
     email: str | None = None
     message: str | None = None
     expires_in_days: int = 7
+    # Куда вести после принятия (относительный путь сайта); попадает в ссылку письма как `?next=`.
+    next_path: str | None = None
 
 
 @dataclass(frozen=True)
@@ -99,8 +102,10 @@ class InvitationPreview:
     message: str | None = None
 
 
-def invitation_link(public_url: str | None, token: str) -> str:
-    return f"{(public_url or '').rstrip('/')}{INVITE_LINK_PATH}/{token}"
+def invitation_link(public_url: str | None, token: str, next_path: str | None = None) -> str:
+    """Ссылка из письма; `next_path` куда вести после принятия (относительный путь сайта, `?next=`)."""
+    link = f"{(public_url or '').rstrip('/')}{INVITE_LINK_PATH}/{token}"
+    return link if next_path is None else f"{link}?{urlencode({'next': next_path})}"
 
 
 def new_invitation_token() -> str:
@@ -336,7 +341,7 @@ class CreateInvitationUC(_Base):
                     _payload(card, actor.name or await self._name(actor_id), invitation),
                     dedupe_key=f"inv:{invitation.id}",
                 )
-        link = invitation_link(self._public_url, token)
+        link = invitation_link(self._public_url, token, safe_next_path(new.next_path))
         inviter = actor.name or await self._name(actor_id) or ""
         sent = await self._mailer.send_invitation(
             email,

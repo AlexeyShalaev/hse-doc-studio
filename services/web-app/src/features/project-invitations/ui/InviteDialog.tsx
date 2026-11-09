@@ -27,6 +27,8 @@ export type InvitePreset = {
   user?: { id: string; name: string } | null;
   role?: GrantRole;
   persona?: string | null;
+  /** Куда вести приглашённого после принятия (например, страница подписания маршрута). */
+  next?: string | null;
 };
 
 export type InviteDialogProps = {
@@ -118,6 +120,7 @@ const InviteDialogInner = ({
         can_edit_all: isTeam && role === "editor" && canEditAll,
         message: message.trim() === "" ? null : message.trim(),
         expires_in_days: days,
+        next: preset?.next ?? null,
       },
       {
         onSuccess: (result) => {

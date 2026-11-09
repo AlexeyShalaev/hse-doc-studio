@@ -129,6 +129,19 @@ export const makeSigningRoute = (
     makeRouteEvent(),
     makeRouteEvent({ id: "sre_02", kind: "frozen", who: null }),
   ],
+  candidates: [
+    {
+      persona: "author",
+      people: [{ kind: "member", id: SR_AUTHOR.id, name: SR_AUTHOR.name }],
+    },
+    {
+      persona: "supervisor",
+      people: [
+        { kind: "member", id: SR_SUPERVISOR.id, name: SR_SUPERVISOR.name },
+        { kind: "invitation", id: "inv_01hx9", name: "s***@hse.ru" },
+      ],
+    },
+  ],
   ...overrides,
 });
 
@@ -359,6 +372,19 @@ export const SIGNING_ROUTE_CONTRACT_EXAMPLES: Record<
         ],
       ],
       events: [],
+      candidates: [
+        {
+          persona: "author",
+          people: [{ kind: "member", id: SR_AUTHOR.id, name: SR_AUTHOR.name }],
+        },
+        { persona: "academic_supervisor", people: [] },
+        {
+          persona: "supervisor",
+          people: [
+            { kind: "member", id: SR_SUPERVISOR.id, name: SR_SUPERVISOR.name },
+          ],
+        },
+      ],
     }),
     returned: makeSigningRoute({
       status: "returned",

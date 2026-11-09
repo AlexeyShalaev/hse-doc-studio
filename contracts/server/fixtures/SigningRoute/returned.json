@@ -1,0 +1,153 @@
+{
+  "id": "sr_01hy2b7k9q",
+  "project_id": "p_01hxa1c4de",
+  "profile": {
+    "id": "topic-approval",
+    "name": {
+      "ru": "Заявка на тему КП",
+      "en": "Course project topic application"
+    }
+  },
+  "status": "returned",
+  "phase": null,
+  "round": 1,
+  "current_step": null,
+  "deadline": "2026-11-15T20:59:00Z",
+  "message": "Прошу подписать заявление до пятницы.",
+  "stop_reason": "returned",
+  "sent_by": {
+    "id": "u_01hx7k5ivan",
+    "name": "Иванов И. И."
+  },
+  "sent_at": "2026-11-10T09:00:00Z",
+  "completed_at": null,
+  "created_at": "2026-11-10T08:40:00Z",
+  "updated_at": "2026-11-10T09:00:00Z",
+  "docs": [
+    {
+      "doc_id": "topic_application",
+      "name": {
+        "ru": "Заявление о выборе темы",
+        "en": "Topic selection application"
+      },
+      "frozen": true,
+      "slots": [
+        {
+          "slot_id": "author",
+          "label": {
+            "ru": "Студент",
+            "en": "Student"
+          },
+          "participant_id": "srp_author",
+          "optional": false,
+          "status": "signed"
+        },
+        {
+          "slot_id": "supervisor",
+          "label": {
+            "ru": "Научный руководитель",
+            "en": "Supervisor"
+          },
+          "participant_id": "srp_supervisor",
+          "optional": false,
+          "status": "pending"
+        }
+      ]
+    }
+  ],
+  "steps": [
+    [
+      {
+        "id": "srp_author",
+        "persona": "author",
+        "user_id": "u_01hx7k5ivan",
+        "invitation_id": null,
+        "name": "Иванов И. И.",
+        "membership": "member",
+        "assignments": [
+          {
+            "doc_id": "topic_application",
+            "slot_id": "author"
+          }
+        ],
+        "method": "image",
+        "state": "done",
+        "next_action": "done",
+        "approved_at": "2026-11-10T09:00:00Z",
+        "notified_at": null,
+        "reminded_at": null,
+        "reminders": 0
+      }
+    ],
+    [
+      {
+        "id": "srp_supervisor",
+        "persona": "supervisor",
+        "user_id": "u_01hx7k5petr",
+        "invitation_id": null,
+        "name": "Петров П. П.",
+        "membership": "member",
+        "assignments": [
+          {
+            "doc_id": "topic_application",
+            "slot_id": "supervisor"
+          }
+        ],
+        "method": "detached",
+        "state": "returned",
+        "next_action": "wait",
+        "approved_at": null,
+        "notified_at": "2026-11-10T09:00:00Z",
+        "reminded_at": null,
+        "reminders": 0
+      }
+    ]
+  ],
+  "events": [
+    {
+      "id": "sre_01",
+      "kind": "sent",
+      "round": 1,
+      "at": "2026-11-10T09:00:00Z",
+      "who": "Иванов И. И.",
+      "comment": null,
+      "reason": null
+    },
+    {
+      "id": "sre_03",
+      "kind": "returned",
+      "round": 1,
+      "at": "2026-11-11T12:00:00Z",
+      "who": "Петров П. П.",
+      "comment": "Уточните цель проекта",
+      "reason": "returned"
+    }
+  ],
+  "candidates": [
+    {
+      "persona": "author",
+      "people": [
+        {
+          "kind": "member",
+          "id": "u_01hx7k5ivan",
+          "name": "Иванов И. И."
+        }
+      ]
+    },
+    {
+      "persona": "supervisor",
+      "people": [
+        {
+          "kind": "member",
+          "id": "u_01hx7k5petr",
+          "name": "Петров П. П."
+        },
+        {
+          "kind": "invitation",
+          "id": "inv_01hx9",
+          "name": "s***@hse.ru"
+        }
+      ]
+    }
+  ]
+}

@@ -1,4 +1,4 @@
-"""Порты маршрута подписания вне хранилища: уведомления, факты документов, подписи для людей, счётчик задач.
+"""Порты маршрута подписания вне хранилища: уведомления, люди проекта, факты документов, подписи, счётчик задач.
 
 Только серверный режим (раздел 6.9). Реализации читают файлы проекта и шаблон или пишут во «Входящие»
 (`use_cases/signing_route`), поэтому здесь только протоколы и значения.
@@ -6,7 +6,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Mapping, Sequence
+from collections.abc import Collection, Mapping, Sequence
 from dataclasses import dataclass, field
 from typing import Protocol
 from uuid import UUID
@@ -35,6 +35,56 @@ class ISigningNotifier(Protocol):
         actor_id: UUID | None,
         comment: str | None = None,
     ) -> None: ...
+
+
+@dataclass(frozen=True)
+class RouteCandidate:
+    """Участник проекта с персоной: кого можно поставить в шаг маршрута (раздел 6.5)."""
+
+    user_id: UUID
+    name: str
+    persona: str
+
+
+@dataclass(frozen=True)
+class RouteInvitee:
+    """Ожидающее приглашение в проект с персоной: участник маршрута ждёт его принятия как `invited`.
+
+    `name` имя аккаунта приглашённого или маска его почты (`p***@example.org`).
+    """
+
+    invitation_id: str
+    persona: str
+    name: str | None
+
+
+class IRoutePeople(Protocol):
+    """Люди проекта глазами сценариев автора: кто с какой персоной, кого пригласили, как кого зовут (6.5).
+
+    Пользователи здесь UUID, как в сущностях маршрута; в хранилище это `users.id` (32 hex-символа).
+    """
+
+    async def candidates(self, project_id: UUID) -> list[RouteCandidate]:
+        """Участники проекта с персоной: прямые записи с привязкой и владелец-человек solo-проекта как `author`.
+
+        Порядок: владелец, затем участники по времени добавления. Отключённые аккаунты не входят.
+        """
+        ...
+
+    async def invitees(self, project_id: UUID) -> list[RouteInvitee]:
+        """Ожидающие и не просроченные приглашения проекта с персоной, новые первыми."""
+        ...
+
+    async def personas(self, project_id: UUID, user_ids: Collection[UUID]) -> dict[UUID, frozenset[str]]:
+        """Персоны людей в проекте по их праву (как у подписи слота); ушедший из проекта получает пустое множество.
+
+        По ним расчёт замечает ушедшего или сменившего персону участника (`RouteFacts.personas`).
+        """
+        ...
+
+    async def names(self, user_ids: Collection[UUID]) -> dict[UUID, str]:
+        """Имена аккаунтов; удалённого человека в ответе нет."""
+        ...
 
 
 class IRouteFacts(Protocol):
