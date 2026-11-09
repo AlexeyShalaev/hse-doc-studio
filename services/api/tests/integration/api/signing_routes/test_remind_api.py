@@ -67,6 +67,7 @@ async def _sent(stand: Stand, *, invite: bool = False) -> tuple[Project, Person,
     for doc_id in TOPIC_DOCS:
         project.build(doc_id)
     project.png(author, "author")
+    project.place(author)
     preview = project.call(author, "POST", f"{project.routes}/{route['id']}/preview", json={})
     assert preview.status_code == 200, preview.text
     expected = {d["doc_id"]: d["token"] for d in preview.json()["docs"]}

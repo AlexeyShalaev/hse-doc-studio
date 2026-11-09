@@ -65,10 +65,12 @@ def _preview(project: Project, who: Person, route_id: str) -> dict[str, Any]:
     return resp.json()
 
 
-def _ready(project: Project, author: Person) -> None:
+def _ready(project: Project, author: Person, *, placed: bool = True) -> None:
     for doc_id in TOPIC_DOCS:
         project.build(doc_id)
     project.png(author, "author")
+    if placed:
+        project.place(author)
 
 
 def _send(project: Project, who: Person, route_id: str, expected: dict[str, str] | None = None) -> Any:
@@ -267,7 +269,7 @@ async def test__update__same_participant_twice__400(stand: Stand) -> None:
 async def test__preview__nothing_built_and_no_author_image__blockers(stand: Stand) -> None:
     project, author, _ = await _setup(stand)
     route = _create(project, author)
-    sender = route["steps"][0][0]["id"]
+    sender, supervisor = (step[0]["id"] for step in route["steps"])
 
     preview = _preview(project, author, route["id"])
 
@@ -278,7 +280,38 @@ async def test__preview__nothing_built_and_no_author_image__blockers(stand: Stan
         ("not_built", "project_proposal", None),
         ("not_built", "topic_application", None),
         ("sender_not_ready", None, sender),
+        ("placement_off", "project_proposal", supervisor),
+        ("placement_off", "topic_application", sender),
+        ("placement_off", "topic_application", supervisor),
     }
+
+
+async def test__preview__visible_mark_without_place__placement_off_blocks_send_until_placed(stand: Stand) -> None:
+    project, author, _ = await _setup(stand)
+    route = _create(project, author)
+    _ready(project, author, placed=False)
+    sender, supervisor = (step[0]["id"] for step in route["steps"])
+    # Место выключено у одного слота и не задано у остальных: слот с видимой меткой так не подписать.
+    project.place(author, ("topic_application", "author"))
+    off = project.call(
+        author, "PATCH", f"{project.base}/signatures/placements/topic_application/author", json={"enabled": False}
+    )
+    assert off.status_code == 200, off.text
+
+    preview = _preview(project, author, route["id"])
+    blocked = _send(project, author, route["id"])
+    project.place(author)
+    placed = _preview(project, author, route["id"])
+
+    assert preview["can_send"] is False
+    assert preview["blockers"] == [
+        {"code": "placement_off", "doc_id": "topic_application", "slot_id": "author", "participant_id": sender},
+        {"code": "placement_off", "doc_id": "project_proposal", "slot_id": "supervisor", "participant_id": supervisor},
+        {"code": "placement_off", "doc_id": "topic_application", "slot_id": "supervisor", "participant_id": supervisor},
+    ]
+    assert blocked.status_code == 409
+    assert (blocked.json()["code"], blocked.json()["blockers"]) == ("route_blocked", preview["blockers"])
+    assert (placed["blockers"], placed["can_send"]) == ([], True)
 
 
 async def test__preview__ready__tokens_order_and_actions(stand: Stand) -> None:
