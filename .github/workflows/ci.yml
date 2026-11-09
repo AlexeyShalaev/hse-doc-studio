@@ -6,15 +6,84 @@ on:
   pull_request:
     branches: [master, next]
 
+# PR: новый push отменяет ещё идущий прогон того же PR. Push в master/next: у каждого коммита своя группа (run_id),
+# ничего не отменяется и не вытесняется из очереди (одна группа без отмены всё равно выкинула бы ждущий прогон).
+concurrency:
+  group: ci-${{ github.event_name == 'pull_request' && format('pr-{0}', github.event.pull_request.number) || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 defaults:
   run:
     shell: bash
 
 jobs:
+  # ── Какие области задеты ─────────────────────────────────────────────────
+  # На PR тяжёлые джобы идут только для задетых областей; на push в master/next идёт всё. Пропущенный по фильтру
+  # джоб для all-checks-passed это успех, упавший или отменённый это провал.
+
+  changes:
+    name: Changed areas
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: read
+    outputs:
+      backend: ${{ github.event_name != 'pull_request' || steps.filter.outputs.backend == 'true' }}
+      tex: ${{ github.event_name != 'pull_request' || steps.filter.outputs.tex == 'true' }}
+      frontend: ${{ github.event_name != 'pull_request' || steps.filter.outputs.frontend == 'true' }}
+      user-docs: ${{ github.event_name != 'pull_request' || steps.filter.outputs.user_docs == 'true' }}
+    steps:
+      # Third-party actions запинены на commit-SHA (supply-chain); комментарий # vX — для Dependabot.
+      # На pull_request список файлов берётся из API, checkout не нужен.
+      - uses: dorny/paths-filter@ceb8a2b8f2d89434be7ff52d3de7ec3738c5cc9d # v4.0.3
+        id: filter
+        if: github.event_name == 'pull_request'
+        with:
+          filters: |
+            workflow: &workflow
+              - ".github/workflows/ci.yml"
+            backend:
+              - *workflow
+              - "services/api/**"
+              - "packs/**"
+              - "contracts/**"
+              - "deploy/**"
+              - "scripts/**"
+              # backend-lint сверяет заметки о релизе, CHANGELOG.md и справочник переменных окружения.
+              - "release-notes.json"
+              - "CHANGELOG.md"
+              - "docs/ru/deploy/env-reference.md"
+            # Сборка на настоящем TeX Live: код сборки и образ TeX по умолчанию (DEFAULT_IMAGE в executor).
+            tex:
+              - *workflow
+              - "services/api/hse_doc_studio/infra/compile/**"
+              - "services/api/hse_doc_studio/core/compile/**"
+              - "services/api/hse_doc_studio/infra/docker/**"
+              - "services/api/hse_doc_studio/infra/jobs/artifact_store.py"
+              - "services/api/tests/integration/tex/**"
+              - "services/api/pyproject.toml"
+              - "services/api/uv.lock"
+            frontend:
+              - *workflow
+              - "services/web-app/**"
+              # Тесты фронта читают фикстуры и коды ошибок контрактов.
+              - "contracts/**"
+            # Справка сверяется с маршрутами приложения, а verified.sources статей могут указывать на любой файл
+            # репозитория: удаление или переименование где угодно тоже повод для проверки (переименование
+            # paths-filter отдаёт как удаление старого пути).
+            user_docs:
+              - *workflow
+              - "services/user-docs/**"
+              - "services/web-app/src/**"
+              - deleted: "**"
+
   # ── Backend ──────────────────────────────────────────────────────────────
+  # Остальные backend-джобы ждут backend-lint и пропускаются вместе с ним.
 
   backend-lint:
     name: Backend · Lint & type check
+    needs: changes
+    if: needs.changes.outputs.backend == 'true'
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -44,9 +113,8 @@ jobs:
         working-directory: .
         run: python3 scripts/gen_changelog.py --check
 
-  # Быстрый (~45 с) прогон unit-тестов там, где реально исполняются платформенные ветки.
-  # Полное покрытие и порог — в отдельном джобе ниже: полный прогон идёт ~7 минут, и
-  # гонять его на трёх ОС значило бы сделать его критическим путём CI.
+  # Быстрый прогон unit-тестов там, где реально исполняются платформенные ветки и нижняя граница Python.
+  # Полный набор на ubuntu и py3.14 (с unit) идёт в backend-full, поэтому ubuntu/py3.14 здесь не повторяется.
   backend-test-unit:
     name: Backend · Unit (${{ matrix.os }}, py${{ matrix.python }})
     needs: backend-lint
@@ -56,7 +124,7 @@ jobs:
         working-directory: services/api
     strategy:
       fail-fast: false
-      # На PR — только ubuntu (нижняя и верхняя границы Python). На push в master
+      # На PR — только ubuntu с нижней границей Python. На push в master
       # добавляются windows и macos: единственное место, где исполняются
       #   infra/fonts/system_fonts.py        win32-каталоги шрифтов
       #   infra/ai/ollama/hardware_probe.py  win32 + darwin/arm64 (Apple Silicon)
@@ -67,10 +135,8 @@ jobs:
         include: >-
           ${{ github.event_name == 'pull_request'
               && fromJSON('[
-                   {"os":"ubuntu-latest","python":"3.14"},
                    {"os":"ubuntu-latest","python":"3.12"}]')
               || fromJSON('[
-                   {"os":"ubuntu-latest","python":"3.14"},
                    {"os":"ubuntu-latest","python":"3.12"},
                    {"os":"windows-latest","python":"3.14"},
                    {"os":"macos-latest","python":"3.14"}]') }}
@@ -84,17 +150,25 @@ jobs:
       - name: Pytest (unit)
         run: uv run pytest -m unit --no-cov
 
-  # Полный прогон (unit + integration) — единственный источник числа покрытия.
-  # Integration здесь дешёвая по инфраструктуре (реальный FastAPI + JSON-персистентность
-  # в tmp_path, без Docker), но по времени это ~7 минут.
-  backend-coverage:
-    name: Backend · Full suite & coverage
+  # Полный набор (unit + integration + pg на настоящем Postgres 16, включая миграции) — единственный источник
+  # числа покрытия. Последовательно это ~42 минуты, поэтому набор делится на шарды по файлам (--shard, плагин
+  # tests/fixtures/sharding.py), а внутри шарда тесты идут в 4 процесса pytest-xdist (-n auto, у раннера 4 vCPU);
+  # worksteal: освободившийся процесс забирает хвост очереди у занятого, долгие файлы не держат шард в конце.
+  # Данные покрытия шардов сводит backend-coverage, порог проверяется там.
+  backend-full:
+    name: Backend · Full suite (${{ matrix.shard }}/3)
     needs: backend-lint
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     defaults:
       run:
         working-directory: services/api
-    # Сервисы для pg и s3 тестов: без DSN pg-тесты пропускаются, но в CI они должны идти.
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3]
+    # Сервисы для pg и s3 тестов: без DSN pg-тесты пропускаются, но в CI они должны идти. Каждый процесс xdist
+    # создаёт свою шаблонную базу и свою базу на тест (tests/fixtures/pg.py), общий сервер им не мешает.
     services:
       postgres:
         image: postgres:16
@@ -117,37 +191,39 @@ jobs:
           python-version: "3.14"
       - name: Sync
         run: uv sync --frozen --all-extras
-      # pg_dump/pg_restore той же версии, что сервис postgres:16: клиент новее сервера пишет в дамп
-      # настройки (transaction_timeout), которых сервер не знает. На образе раннера свой клиент другой версии.
-      - name: Postgres 16 client tools
+      # pg_dump/pg_restore той же версии, что сервис postgres:16: клиент новее сервера пишет в дамп настройки
+      # (transaction_timeout), которых сервер не знает, а на раннере свой клиент другой версии. Берём клиент из
+      # самого контейнера сервиса через docker exec: версия совпадает по построению, и нет установки из
+      # apt.postgresql.org на каждом прогоне (curl 18/55 ронял джобу). Тест ищет клиент в /usr/lib/postgresql/<major>.
+      - name: Postgres 16 client tools from the service container
+        env:
+          PG_CONTAINER: ${{ job.services.postgres.id }}
         run: |
-          sudo install -d /usr/share/postgresql-common/pgdg
-          sudo curl -fsSL -o /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc https://www.postgresql.org/media/keys/ACCC4CF8.asc
-          . /etc/os-release
-          echo "deb [signed-by=/usr/share/postgresql-common/pgdg/apt.postgresql.org.asc] https://apt.postgresql.org/pub/repos/apt ${VERSION_CODENAME}-pgdg main" | sudo tee /etc/apt/sources.list.d/pgdg.list
-          sudo apt-get update -qq
-          sudo apt-get install -y -qq postgresql-client-16
-          ls /usr/lib/postgresql/16/bin/pg_dump
-      # Миграции на настоящем Postgres 16: upgrade head с пустой базы, откат, дрейф схемы (alembic check).
-      - name: Migrations on Postgres 16
-        run: uv run pytest tests/integration/db/test_migrations.py tests/integration/db/test_upgrade_path.py --no-cov
-      # Порог = текущий факт (замерено 80% на полном прогоне). Взят на 2 пункта ниже:
-      # часть строк — платформенные ветки win32/darwin, на ubuntu они не исполняются.
-      # Поднимать по мере добавления тестов, цель — 90.
-      - name: Pytest (unit + integration)
-        run: uv run pytest --cov-fail-under=78
-      - uses: codecov/codecov-action@v7
+          docker_bin="$(command -v docker)"
+          sudo install -d /usr/lib/postgresql/16/bin
+          for tool in pg_dump pg_restore psql; do
+            sudo rm -f "/usr/lib/postgresql/16/bin/$tool"
+            printf '#!/bin/sh\nexec %s exec -i -e PGPASSWORD %s %s "$@"\n' "$docker_bin" "$PG_CONTAINER" "$tool" \
+              | sudo tee "/usr/lib/postgresql/16/bin/$tool" >/dev/null
+            sudo chmod 755 "/usr/lib/postgresql/16/bin/$tool"
+          done
+          /usr/lib/postgresql/16/bin/pg_dump --version
+      - name: Pytest (shard ${{ matrix.shard }}/3)
+        run: uv run pytest -n auto --dist worksteal --shard=${{ matrix.shard }}/3 --durations=15
+      - name: Keep coverage data
+        run: mkdir -p coverage-data && mv .coverage "coverage-data/.coverage.shard-${{ matrix.shard }}"
+      - uses: actions/upload-artifact@v7
         with:
-          token: ${{ secrets.CODECOV_TOKEN }}
-          files: services/api/coverage.xml
-          flags: backend
-        continue-on-error: true
+          name: backend-coverage-${{ matrix.shard }}
+          path: services/api/coverage-data
+          include-hidden-files: true
+          retention-days: 1
+          if-no-files-found: error
 
-  # Локальный режим обязан работать без extra server: sqlalchemy, boto3 и прочие не установлены,
-  # серверные тесты не собираются (tests/conftest.py).
-  backend-test-no-server:
-    name: Backend · Local mode without server extra
-    needs: backend-lint
+  # Сводное покрытие полного набора и порог.
+  backend-coverage:
+    name: Backend · Coverage
+    needs: backend-full
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -158,9 +234,54 @@ jobs:
         with:
           python-version: "3.14"
       - name: Sync
+        run: uv sync --frozen --extra test
+      - uses: actions/download-artifact@v8
+        with:
+          pattern: backend-coverage-*
+          merge-multiple: true
+          path: services/api/coverage-data
+      - name: Combine
+        run: uv run coverage combine coverage-data
+      # Порог = текущий факт (замерено 80% на полном прогоне). Взят на 2 пункта ниже:
+      # часть строк — платформенные ветки win32/darwin, на ubuntu они не исполняются.
+      # Поднимать по мере добавления тестов, цель — 90.
+      - name: Report and threshold
+        run: uv run coverage report --fail-under=78
+      # Отчёт уходит и при пороге ниже нужного: в Codecov видно, где покрытие просело.
+      - name: XML for Codecov
+        if: ${{ !cancelled() }}
+        run: uv run coverage xml -o coverage.xml
+      - uses: codecov/codecov-action@v7
+        if: ${{ !cancelled() }}
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: services/api/coverage.xml
+          flags: backend
+        continue-on-error: true
+
+  # Локальный режим обязан работать без extra server: sqlalchemy, boto3 и прочие не установлены,
+  # серверные тесты не собираются (tests/conftest.py). Тот же набор без серверной части, шарды и xdist как выше.
+  backend-test-no-server:
+    name: Backend · Local mode without server extra (${{ matrix.shard }}/2)
+    needs: backend-lint
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: services/api
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2]
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v7
+        with:
+          python-version: "3.14"
+      - name: Sync
         run: uv sync --frozen --extra api --extra test
-      - name: Pytest (without server extra)
-        run: uv run pytest -m "not pg and not s3" --no-cov
+      - name: Pytest (without server extra, shard ${{ matrix.shard }}/2)
+        run: uv run pytest -n auto --dist worksteal --shard=${{ matrix.shard }}/2 -m "not pg and not s3" --no-cov --durations=15
 
   # Исполнитель kubernetes раннера на настоящем кластере (kind): RBAC и NetworkPolicy из чарта, namespace подов
   # сборки с Pod Security restricted, поддельный образ TeX. Не входит в all-checks-passed (не обязательна).
@@ -249,7 +370,8 @@ jobs:
   # sha256, у другого раннера тоже. Образ весит гигабайты, поэтому джоба отдельная и не входит в all-checks-passed.
   tex-reproducible:
     name: Runner · Reproducible TeX build
-    needs: backend-lint
+    needs: [changes, backend-lint]
+    if: needs.changes.outputs.tex == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     defaults:
@@ -270,11 +392,13 @@ jobs:
         run: uv run pytest tests/integration/tex -m tex --no-cov
 
   # ── Frontend ─────────────────────────────────────────────────────────────
-  # Один джоб, а не два: `pnpm install --frozen-lockfile` на этом дереве
-  # зависимостей — самая дорогая операция, и разделение гоняло её дважды.
+  # Два джоба параллельно: статические проверки со сборкой и vitest. `pnpm install` берёт пакеты из кэша
+  # setup-node (секунды), а vitest на 4 vCPU идёт ~6 минут, поэтому он ещё и делится на два шарда по файлам.
 
   frontend:
-    name: Frontend · Lint, types, test & build
+    name: Frontend · Lint, types & build
+    needs: changes
+    if: needs.changes.outputs.frontend == 'true'
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -302,14 +426,6 @@ jobs:
         run: pnpm lint:i18n
       - name: Type check
         run: pnpm typecheck
-      - name: Test (vitest)
-        run: pnpm test:coverage
-      - uses: codecov/codecov-action@v7
-        with:
-          token: ${{ secrets.CODECOV_TOKEN }}
-          files: services/web-app/coverage/lcov.info
-          flags: frontend
-        continue-on-error: true
       # Собираем здесь, а не только в publish.yml: иначе сломанная сборка фронта
       # обнаруживается уже на релизном теге, когда чинить поздно.
       - name: Build
@@ -321,12 +437,48 @@ jobs:
       - name: Bundle size
         run: pnpm bundlesize
 
+  frontend-test:
+    name: Frontend · Test (${{ matrix.shard }}/2)
+    needs: changes
+    if: needs.changes.outputs.frontend == 'true'
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: services/web-app
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2]
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+        with:
+          package_json_file: services/web-app/package.json
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: services/web-app/pnpm-lock.yaml
+      - name: Install
+        run: pnpm install --frozen-lockfile
+      - name: Test (vitest, shard ${{ matrix.shard }}/2)
+        run: pnpm test:coverage --shard=${{ matrix.shard }}/2
+      # Codecov сводит загрузки шардов одного коммита с одним флагом в одно покрытие.
+      - uses: codecov/codecov-action@v7
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: services/web-app/coverage/lcov.info
+          flags: frontend
+        continue-on-error: true
+
   # ── Пользовательская справка (services/user-docs) ──────────────────────
   # Сверка с приложением (маршруты help.routes, verified.sources, пары ru/en), сборка по
   # аудиториям и битые ссылки. Медиа здесь не снимаются: это ручная джоба user-docs-media.yml.
 
   user-docs:
     name: User help · Check, build & links
+    needs: changes
+    if: needs.changes.outputs.user-docs == 'true'
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -356,16 +508,30 @@ jobs:
           fi
 
   # ── Sentinel — единственный required-статус в branch protection. ──────────
-  # Список джобов правится здесь, а не в настройках репозитория.
+  # Список джобов правится здесь, а не в настройках репозитория. Джоб, пропущенный фильтром путей (или вслед
+  # за пропущенным backend-lint), это успех; упавший или отменённый это провал. Если упал сам changes, все
+  # зависимые пропускаются, но провал changes виден здесь же.
 
   all-checks-passed:
     name: All checks passed
     if: always()
-    needs: [backend-lint, backend-test-unit, backend-test-no-server, backend-coverage, frontend, user-docs]
+    needs:
+      - changes
+      - backend-lint
+      - backend-test-unit
+      - backend-full
+      - backend-coverage
+      - backend-test-no-server
+      - frontend
+      - frontend-test
+      - user-docs
     runs-on: ubuntu-latest
     steps:
       - name: Verify
+        env:
+          RESULTS: ${{ toJSON(needs.*.result) }}
         run: |
+          echo "Results: $(echo "$RESULTS" | tr -d ' \n')"
           if [[ "${{ contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled') }}" == "true" ]]; then
             echo "One or more required checks failed."
             exit 1
