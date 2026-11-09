@@ -58,3 +58,15 @@ def test__note_plate_mismatch__same_signer_or_no_expectation__returns_same_value
     assert note_plate_mismatch(_state("AAA"), "sup", original) is original
     assert note_plate_mismatch(_state(""), "sup", original) is original
     assert note_plate_mismatch(SignaturesState(slots={}, placements={}), "sup", original) is original
+
+
+def test__note_plate_mismatch__unknown_key__not_flagged() -> None:
+    unknown = VerifiedSignature(
+        format=DetachedFormat.openpgp,
+        verdict=DetachedVerdict.unknown_key,
+        signer="",
+        signer_id="A69C068EDAA6150C",
+        missing_key_id="A69C068EDAA6150C",
+    )
+
+    assert note_plate_mismatch(_state("0123456789ABCDEF01234567A69C068EDAA6150C"), "sup", unknown) is unknown

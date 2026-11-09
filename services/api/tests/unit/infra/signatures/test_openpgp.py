@@ -216,3 +216,29 @@ def test_import_key__protected_secret_with_passphrase__key_on_stdin_passphrase_t
     sig = tmp_path / "doc.asc"
     ring.sign_detached(doc, imported.fingerprint, sig, passphrase="s3cret")
     assert ring.verify_detached(sig, doc).status == "good"
+
+
+def test__signature_issuers__studio_signature__issuer_is_the_key_fingerprint(
+    ring: GpgKeyring, doc: Path, tmp_path: Path
+) -> None:
+    key = ring.generate("Иван Иванов", "ivan@example.org")
+    sig = tmp_path / "doc.asc"
+    ring.sign_detached(doc, key.fingerprint, sig)
+
+    assert ring.signature_issuers(sig.read_bytes()) == [key.fingerprint]
+    assert ring.signature_issuers(b"not a signature") == []
+
+
+def test__export_public_keys__only_matching_public_keys(ring: GpgKeyring) -> None:
+    mine = ring.generate("Иван Иванов", "ivan@example.org")
+    ring.generate("Научрук", "adv@example.org")
+
+    selected = ring.export_public_keys([mine.fingerprint])
+    everything = ring.export_public_keys()
+
+    assert looks_like_openpgp_key(selected)
+    assert b"PRIVATE KEY" not in selected
+    assert b"PRIVATE KEY" not in everything
+    assert len(everything) > len(selected)
+    assert ring.export_public_keys(["DEADBEEFDEADBEEF"]) == b""
+    assert {k.fingerprint for k in ring.import_key(selected)} == {mine.fingerprint}

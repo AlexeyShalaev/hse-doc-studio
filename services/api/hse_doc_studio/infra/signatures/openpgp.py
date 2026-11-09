@@ -11,9 +11,11 @@ from __future__ import annotations
 import contextlib
 import hashlib
 import os
+import re
 import shutil
 import subprocess
 import tempfile
+from collections.abc import Sequence
 from dataclasses import dataclass, field, replace
 from datetime import datetime, timezone
 from pathlib import Path
@@ -236,6 +238,23 @@ class GpgKeyring:
     def export_public(self, fingerprint: str) -> bytes:
         return self._run(["--armor", "--export", fingerprint]).stdout
 
+    def export_public_keys(self, specs: Sequence[str] = ()) -> bytes:
+        """Armored public keys matching `specs` (fingerprints or key ids), all keys when `specs` is empty.
+
+        `--export` never emits secret material. Empty bytes when nothing matches or the keyring is empty.
+        """
+        if not self._binary or not self._home.exists():
+            return b""
+        return self._run(["--armor", "--export", *specs], check=False).stdout
+
+    def signature_issuers(self, signature: bytes) -> list[str]:
+        """Who made `signature`: issuer fingerprints, or long key ids when a packet carries no fingerprint.
+
+        Read with `--list-packets`, which needs no keys. Empty when gpg cannot parse the input.
+        """
+        proc = self._run(["--list-packets"], stdin=signature, check=False)
+        return parse_signature_issuers(proc.stdout.decode("utf-8", "replace"))
+
     def delete(self, fingerprint: str) -> None:
         self._run(["--delete-secret-and-public-key", "--pinentry-mode", "loopback", fingerprint], check=False)
         self._run(["--delete-keys", fingerprint], check=False)
@@ -297,6 +316,35 @@ def looks_like_openpgp_key(blob: bytes) -> bool:
 def _clean_stderr(raw: bytes) -> str:
     lines = [ln for ln in raw.decode("utf-8", "replace").splitlines() if ln.strip()]
     return "; ".join(ln.removeprefix("gpg: ") for ln in lines[-3:])
+
+
+_SIG_PACKET = re.compile(r"^:signature packet: algo \d+, keyid ([0-9A-Fa-f]{16})\b")
+_ISSUER_FPR = re.compile(r"\(issuer fpr v\d+ ([0-9A-Fa-f]{40}|[0-9A-Fa-f]{64})\)")
+
+
+def parse_signature_issuers(listing: str) -> list[str]:
+    """Issuers from `gpg --list-packets`: per signature packet its fingerprint if present, else its key id."""
+    found: list[str] = []
+    key_id: str | None = None
+    fpr: str | None = None
+
+    def flush() -> None:
+        issuer = fpr or key_id
+        # An all-zero key id is a wildcard, not a key.
+        if issuer and issuer.strip("0") and issuer not in found:
+            found.append(issuer)
+
+    for line in listing.splitlines():
+        if line.startswith((":", "#")):  # the next packet starts
+            flush()
+            packet = _SIG_PACKET.match(line)
+            key_id, fpr = (packet.group(1).upper() if packet else None), None
+            continue
+        issuer_fpr = _ISSUER_FPR.search(line) if key_id else None
+        if issuer_fpr is not None:
+            fpr = issuer_fpr.group(1).upper()
+    flush()
+    return found
 
 
 def _secret_fingerprints(raw: bytes) -> set[str]:

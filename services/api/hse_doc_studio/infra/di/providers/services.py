@@ -799,9 +799,9 @@ class DomainServiceProvider(Provider):
 
     @provide
     def get_trust_material_provider(
-        self, root_store: TrustedRootStore, fetcher: ChainFetcher
+        self, root_store: TrustedRootStore, fetcher: ChainFetcher, keyring: GpgKeyring
     ) -> AnyOf[LocalTrustMaterialProvider, ITrustMaterialProvider]:
-        return LocalTrustMaterialProvider(root_store.directory, fetcher.directory)
+        return LocalTrustMaterialProvider(root_store.directory, fetcher.directory, keyring)
 
     # --- Git-синхронизация: секреты и доступы (каталог данных читается при создании, как у хранилища шрифтов) ---
 
