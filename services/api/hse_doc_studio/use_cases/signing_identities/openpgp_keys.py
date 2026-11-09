@@ -16,6 +16,11 @@ from hse_doc_studio.core.errors import NotFoundError
 from hse_doc_studio.core.i18n import localized_error
 from hse_doc_studio.core.repositories import ISigningIdentityRepository
 from hse_doc_studio.core.signatures.errors import GpgError, GpgUnavailableError
+from hse_doc_studio.core.signatures.key_policy import (
+    ISigningKeyPolicy,
+    SigningKeyStorageDeniedError,
+    require_server_key_storage,
+)
 from hse_doc_studio.infra.signatures.openpgp import GpgKey, GpgKeyring
 
 logger = structlog.get_logger()
@@ -62,16 +67,22 @@ class CreateOpenPgpKeyOutput:
 
 
 class CreateOpenPgpKeyUC:
-    """Generates an ed25519 OpenPGP signing key in the Studio keyring."""
+    """Generates an ed25519 OpenPGP signing key in the Studio keyring.
 
-    def __init__(self, repo: ISigningIdentityRepository, keyring: GpgKeyring) -> None:
+    The secret key stays on the server (the shared keyring on the data volume), so on a server it obeys the same
+    instance policy as PKCS#12 and self-signed keys; locally the policy always allows it.
+    """
+
+    def __init__(self, repo: ISigningIdentityRepository, keyring: GpgKeyring, policy: ISigningKeyPolicy) -> None:
         self._repo = repo
         self._keyring = keyring
+        self._policy = policy
 
     async def execute(self, inp: CreateOpenPgpKeyInput) -> CreateOpenPgpKeyOutput:
         name = inp.name.strip()
         if not name:
             raise ValueError(localized_error("Укажите имя владельца ключа", "Enter the key owner's name"))
+        await require_server_key_storage(self._policy)
         try:
             key = await asyncio.to_thread(self._keyring.generate, name, inp.email.strip(), inp.passphrase)
         except GpgUnavailableError as exc:
@@ -100,21 +111,22 @@ class ImportOpenPgpKeyOutput:
 
 
 class ImportOpenPgpKeyUC:
-    """Imports an armored OpenPGP key: a secret key turns into an identity, a public key just joins the keyring."""
+    """Imports an armored OpenPGP key: a secret key turns into an identity, a public key just joins the keyring.
 
-    def __init__(self, repo: ISigningIdentityRepository, keyring: GpgKeyring) -> None:
+    A file with secret key material is refused before the import when the instance forbids keys on the server,
+    so the secret part never reaches the shared keyring. Public keys (to check other people's signatures) are
+    imported regardless of the policy.
+    """
+
+    def __init__(self, repo: ISigningIdentityRepository, keyring: GpgKeyring, policy: ISigningKeyPolicy) -> None:
         self._repo = repo
         self._keyring = keyring
+        self._policy = policy
 
     async def execute(self, inp: ImportOpenPgpKeyInput) -> ImportOpenPgpKeyOutput:
         if not inp.data:
             raise ValueError(localized_error("Загружен пустой файл", "Empty file upload"))
-        try:
-            keys = await asyncio.to_thread(self._keyring.import_key, inp.data, inp.passphrase or None)
-        except GpgUnavailableError as exc:
-            raise _no_gpg() from exc
-        except GpgError as exc:
-            raise ValueError(str(exc)) from exc
+        keys = await self._import(inp)
 
         known = {i.fingerprint for i in await self._repo.list_all() if i.kind is SigningIdentityKind.openpgp}
         out = ImportOpenPgpKeyOutput()
@@ -133,6 +145,19 @@ class ImportOpenPgpKeyUC:
             "openpgp key imported", identities=len(out.identities), public=len(out.public_keys), total=len(keys)
         )
         return out
+
+    async def _import(self, inp: ImportOpenPgpKeyInput) -> list[GpgKey]:
+        """Secret material is refused before gpg imports anything, so it never lands in the shared keyring."""
+        try:
+            if not await self._policy.server_key_storage_allowed() and await asyncio.to_thread(
+                self._keyring.contains_secret_key, inp.data
+            ):
+                raise SigningKeyStorageDeniedError
+            return await asyncio.to_thread(self._keyring.import_key, inp.data, inp.passphrase or None)
+        except GpgUnavailableError as exc:
+            raise _no_gpg() from exc
+        except GpgError as exc:
+            raise ValueError(str(exc)) from exc
 
 
 @dataclass

@@ -33,6 +33,7 @@ from hse_doc_studio.core.setup import (
     ISelfContainerInfo,
     ISetupApplier,
 )
+from hse_doc_studio.core.signatures.key_policy import ISigningKeyPolicy, LocalSigningKeyPolicy
 from hse_doc_studio.core.submission_archive import (
     DisabledSubmissionArchive,
     ISubmissionArchive,
@@ -180,6 +181,10 @@ class LocalPersistenceProvider(Provider):
     @provide
     def get_signing_identity_repo(self) -> ISigningIdentityRepository:
         return JsonSigningIdentityRepository(settings.data_dir.expanduser())
+
+    @provide
+    def get_signing_key_policy(self) -> ISigningKeyPolicy:
+        return LocalSigningKeyPolicy()
 
     @provide
     def get_release_notes_repo(self) -> IReleaseNotesRepository:

@@ -109,6 +109,7 @@ class SignInStudioUC:
             raise NotFoundError(
                 localized_error(f"Ключ подписи {inp.identity_id} не найден", f"Signing key {inp.identity_id} not found")
             )
+        await self._signer.require_key_allowed()
         ctx = await load_doc_context(
             self._get_uc, self._template_repo, self._template_service, inp.project_id, inp.doc_id
         )

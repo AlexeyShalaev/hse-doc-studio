@@ -49,6 +49,7 @@ from hse_doc_studio.core.setup import (
     MountProbeStatus,
     SetupEnvironment,
 )
+from hse_doc_studio.core.signatures.key_policy import ISigningKeyPolicy, LocalSigningKeyPolicy
 from hse_doc_studio.core.submission_archive import (
     DisabledSubmissionArchive,
     ISubmissionArchive,
@@ -383,6 +384,10 @@ def create_test_container(  # noqa: C901 — one @provide per repo; flat by desi
         @provide
         def get_signing_identity_repo(self) -> ISigningIdentityRepository:
             return JsonSigningIdentityRepository(self._data_dir)
+
+        @provide
+        def get_signing_key_policy(self) -> ISigningKeyPolicy:
+            return LocalSigningKeyPolicy()
 
         @provide
         def get_update_check_repo(self) -> IUpdateCheckRepository:

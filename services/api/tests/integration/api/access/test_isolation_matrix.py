@@ -11,6 +11,8 @@ from __future__ import annotations
 
 import asyncio
 import re
+import shutil
+import sys
 import uuid
 from collections.abc import Iterator, Mapping
 from datetime import UTC, datetime
@@ -438,6 +440,41 @@ def test__user_data__settings_providers_signing_git_chats__are_private_per_user(
         assert "Токен Алисы" in client.get("/api/v1/git/credentials").text
         assert "Подпись Алисы" in client.get("/api/v1/signing-identities").text
         assert client.get("/api/v1/settings").json()["theme"] == "light"
+
+
+def test__signing_policy__forbidden_by_default__openpgp_secret_key_refused_like_a_self_signed_one(
+    world: _World,
+) -> None:
+    with world.alice as client:
+        headers = world.alice.headers
+        self_signed = client.post(
+            "/api/v1/signing-identities/self-signed", json={"label": "x", "subject_cn": "Alice"}, headers=headers
+        )
+        openpgp = client.post("/api/v1/signing-identities/openpgp/generate", json={"name": "Alice"}, headers=headers)
+        assert client.get("/api/v1/signing-identities").json() == []
+
+    assert self_signed.status_code == openpgp.status_code == 400, openpgp.text
+    assert openpgp.json()["detail"] == self_signed.json()["detail"]
+
+
+@pytest.mark.skipif(shutil.which("gpg") is None or sys.platform == "win32", reason="gpg is not installed")
+def test__signing_policy__admin_counter__counts_an_openpgp_key_held_in_the_server_keyring(world: _World) -> None:
+    with world.admin as client:
+        allowed = client.put(
+            "/api/admin/settings/signing", json={"server_keys": "allowed"}, headers=world.admin.headers
+        )
+        assert allowed.json()["stored_keys"] == 0
+    with world.alice as client:
+        created = client.post(
+            "/api/v1/signing-identities/openpgp/generate",
+            json={"name": "Alice", "passphrase": "pw"},
+            headers=world.alice.headers,
+        )
+        assert created.status_code == 201, created.text
+    with world.admin as client:
+        policy = client.get("/api/admin/settings/signing").json()
+
+    assert policy["stored_keys"] == 1
 
 
 def test__mutation__removed_rule__fails_the_matrix(world: _World, monkeypatch: pytest.MonkeyPatch) -> None:

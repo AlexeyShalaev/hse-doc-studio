@@ -144,3 +144,54 @@ def test_public_key_sniffing_rejects_private_blocks() -> None:
     assert looks_like_openpgp_public_key(b"-----BEGIN PGP PUBLIC KEY BLOCK-----\n")
     assert not looks_like_openpgp_public_key(b"-----BEGIN PGP PRIVATE KEY BLOCK-----\n")
     assert looks_like_openpgp_key(b"-----BEGIN PGP PRIVATE KEY BLOCK-----\n")
+
+
+def _exported(tmp_path: Path, *, armor: bool) -> tuple[bytes, bytes]:
+    """Secret and public export of a fresh key from a throwaway keyring."""
+    src_home = Path("/tmp") / f"hds-gpg-exp-{tmp_path.name}"
+    src = GpgKeyring(src_home)
+    try:
+        key = src.generate("Экспорт", "e@example.org")
+        flags = ["--armor"] if armor else []
+        secret = src._run(
+            [*flags, "--pinentry-mode", "loopback", "--passphrase", "", "--export-secret-keys", key.fingerprint]
+        ).stdout
+        public = src._run([*flags, "--export", key.fingerprint]).stdout
+    finally:
+        src.stop_agent()
+        shutil.rmtree(src_home, ignore_errors=True)
+    return secret, public
+
+
+@pytest.mark.parametrize("armor", [True, False], ids=["armored", "binary"])
+def test_contains_secret_key__tells_secret_from_public_and_imports_nothing(
+    ring: GpgKeyring, tmp_path: Path, *, armor: bool
+) -> None:
+    secret, public = _exported(tmp_path, armor=armor)
+
+    assert ring.contains_secret_key(secret)
+    assert not ring.contains_secret_key(public)
+    assert not ring.contains_secret_key(b"not a key")
+    assert ring.list_keys() == []
+
+
+def test_contains_secret_key__secret_block_under_a_public_header_still_counts(ring: GpgKeyring, tmp_path: Path) -> None:
+    secret, _ = _exported(tmp_path, armor=True)
+    disguised = secret.replace(b"PRIVATE KEY BLOCK", b"PUBLIC KEY BLOCK")
+
+    assert ring.contains_secret_key(disguised)
+    assert ring.list_keys() == []
+
+
+def test_import_public_key__secret_block_under_a_public_header__refused_and_keyring_stays_empty(
+    ring: GpgKeyring, tmp_path: Path
+) -> None:
+    secret, public = _exported(tmp_path, armor=True)
+    disguised = secret.replace(b"PRIVATE KEY BLOCK", b"PUBLIC KEY BLOCK")
+
+    with pytest.raises(GpgError):
+        ring.import_public_key(disguised)
+    assert ring.list_keys() == []
+
+    ring.import_public_key(public)
+    assert [k.has_secret for k in ring.list_keys()] == [False]

@@ -365,7 +365,7 @@ async def test__server_container__signing_identity_repo_is_postgres_with_default
 ) -> None:
     from cryptography.fernet import Fernet  # noqa: PLC0415
     from hse_doc_studio.core.repositories import ISigningIdentityRepository  # noqa: PLC0415
-    from hse_doc_studio.core.signatures.key_policy import ISigningKeyPolicy  # noqa: PLC0415
+    from hse_doc_studio.core.signatures.key_policy import ISigningKeyPolicy, LocalSigningKeyPolicy  # noqa: PLC0415
     from hse_doc_studio.infra.db.repositories.signing_identities import (  # noqa: PLC0415
         PostgresSigningIdentityRepository,
     )
@@ -381,6 +381,7 @@ async def test__server_container__signing_identity_repo_is_postgres_with_default
     try:
         async with local() as request:
             local_repo = await request.get(ISigningIdentityRepository)
+            local_policy = await request.get(ISigningKeyPolicy)
         async with server() as request:
             server_repo = await request.get(ISigningIdentityRepository)
             policy = await request.get(ISigningKeyPolicy)
@@ -392,6 +393,7 @@ async def test__server_container__signing_identity_repo_is_postgres_with_default
     assert isinstance(local_repo, JsonSigningIdentityRepository)
     assert isinstance(server_repo, PostgresSigningIdentityRepository)
     assert isinstance(policy, InstanceSigningKeyPolicy)
+    assert isinstance(local_policy, LocalSigningKeyPolicy)
 
 
 async def test__server_container__git_credentials_go_through_postgres_and_local_stays_json(

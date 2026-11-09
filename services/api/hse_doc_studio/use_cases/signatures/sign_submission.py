@@ -212,6 +212,9 @@ class SignSubmissionUC:
             preview = await self.preview(inp)
             self._check_confirmations(inp, preview)
             identity = await self._default_key.resolve(inp.identity_id)
+            if identity is not None:
+                # Запрет админа проверяется до фиксации: незачем фиксировать PDF заново, если подписать им нельзя.
+                await self._signer.require_key_allowed()
             signer = await self._key_signer(identity)
             frozen_docs: list[str] = []
             results: list[SlotResult] = []

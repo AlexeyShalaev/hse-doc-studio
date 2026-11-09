@@ -20,6 +20,7 @@ from typing import Literal
 
 import structlog
 
+from hse_doc_studio.core.i18n import localized_error
 from hse_doc_studio.core.signatures.errors import GpgError, GpgUnavailableError
 
 logger = structlog.get_logger()
@@ -178,10 +179,32 @@ class GpgKeyring:
             raise GpgError(_clean_stderr(proc.stderr) or "no OpenPGP key found in the file")
         return [k for k in self.list_keys() if k.fingerprint in fprs]
 
+    def contains_secret_key(self, data: bytes) -> bool:
+        """True when the file carries secret key material; nothing is imported into the keyring.
+
+        Decided by gpg itself (`--show-keys`), not by the armor header alone: a binary export or a mislabelled
+        armor block still counts. A file gpg cannot read is not secret here, its import then fails on its own.
+        """
+        if looks_like_openpgp_secret_key(data):
+            return True
+        with tempfile.TemporaryDirectory() as tmp:
+            key_file = Path(tmp) / "key.asc"
+            key_file.write_bytes(data)
+            proc = self._run(["--with-colons", "--show-keys", str(key_file)], check=False)
+        return any(ln.startswith(("sec:", "ssb:")) for ln in proc.stdout.decode("utf-8", "replace").splitlines())
+
     def looks_like_public_key(self, blob: bytes) -> bool:
         return looks_like_openpgp_public_key(blob)
 
     def import_public_key(self, blob: bytes) -> None:
+        """Public keys only: a secret block (even under a public armor header) never enters the keyring here."""
+        if self.contains_secret_key(blob):
+            raise GpgError(
+                localized_error(
+                    "В файле секретный ключ: загрузите только открытый ключ (gpg --export --armor)",
+                    "The file holds a secret key: upload only the public key (gpg --export --armor)",
+                )
+            )
         self.import_key(blob)
 
     def export_public(self, fingerprint: str) -> bytes:
@@ -231,6 +254,10 @@ def looks_like_openpgp_signature(blob: bytes) -> bool:
 
 def looks_like_openpgp_public_key(blob: bytes) -> bool:
     return blob.lstrip()[:40].startswith(b"-----BEGIN PGP PUBLIC KEY BLOCK-----")
+
+
+def looks_like_openpgp_secret_key(blob: bytes) -> bool:
+    return blob.lstrip()[:40].startswith(b"-----BEGIN PGP PRIVATE KEY BLOCK-----")
 
 
 def looks_like_openpgp_key(blob: bytes) -> bool:
