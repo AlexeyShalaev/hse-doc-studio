@@ -40,9 +40,10 @@ const note = (
   ...over,
 });
 
-const Where = () => (
-  <output data-testid="where">{useLocation().pathname}</output>
-);
+const Where = () => {
+  const { pathname, search } = useLocation();
+  return <output data-testid="where">{pathname + search}</output>;
+};
 
 const Harness = ({
   initiallyOpen = false,
@@ -246,6 +247,90 @@ describe("InboxBellView: состояния", () => {
     );
     expect(screen.getByTestId("inbox-popover-all")).toHaveTextContent(
       "Show all",
+    );
+  });
+});
+
+describe("InboxBellView: маршрут подписания", () => {
+  it("строка «Ждут вашей подписи» ведёт в раздел «На подпись» и закрывает окошко", async () => {
+    const user = userEvent.setup();
+    render(<Harness signingTasks={2} initiallyOpen />);
+    const row = screen.getByTestId("inbox-popover-signing");
+    expect(row).toHaveTextContent("Ждут вашей подписи: 2");
+    expect(row).toHaveFocus();
+    await user.click(row);
+    expect(screen.getByTestId("where")).toHaveTextContent("/inbox?tab=signing");
+    expect(screen.queryByTestId("inbox-popover")).toBeNull();
+  });
+
+  it("без задач строки нет", () => {
+    render(<Harness initiallyOpen />);
+    expect(screen.queryByTestId("inbox-popover-signing")).toBeNull();
+  });
+
+  it("стрелки ходят от строки задач к уведомлениям", async () => {
+    const user = userEvent.setup();
+    render(
+      <Harness
+        signingTasks={1}
+        notifications={[note("n1", "invitation_accepted")]}
+        initiallyOpen
+      />,
+    );
+    expect(screen.getByTestId("inbox-popover-signing")).toHaveFocus();
+    await user.keyboard("{ArrowDown}");
+    expect(screen.getByTestId("inbox-popover-item-n1")).toHaveFocus();
+  });
+
+  it("запрос подписи показывает проект и срок, итог только проект", () => {
+    render(
+      <Harness
+        initiallyOpen
+        notifications={[
+          note(
+            "s1",
+            "signing_request",
+            {},
+            {
+              actor_name: "Иванов И. И.",
+              project_name: "Bertie",
+              ref_id: "sr_1",
+              profile_id: "topic-approval",
+              excerpt: "Заявка на тему КП",
+              outcome: "approve_sign",
+              deadline: "2026-11-15T12:00:00Z",
+            },
+          ),
+          note(
+            "s2",
+            "signing_completed",
+            {},
+            {
+              project_name: "Bertie",
+              excerpt: "Заявка на тему КП",
+              deadline: "2026-11-15T12:00:00Z",
+            },
+          ),
+        ]}
+      />,
+    );
+    const request = screen.getByTestId("inbox-popover-item-s1");
+    expect(request).toHaveTextContent(
+      "Иванов И. И. просит подписать: Заявка на тему КП",
+    );
+    expect(request).toHaveTextContent(
+      /5 минут назад · Bertie · срок 15 ноября/,
+    );
+    const done = screen.getByTestId("inbox-popover-item-s2");
+    expect(done).toHaveTextContent("Все подписали: Заявка на тему КП");
+    expect(done).toHaveTextContent(/5 минут назад · Bertie$/);
+  });
+
+  it("по-английски", async () => {
+    await i18n.changeLanguage("en");
+    render(<Harness signingTasks={3} initiallyOpen />);
+    expect(screen.getByTestId("inbox-popover-signing")).toHaveTextContent(
+      "Waiting for your signature: 3",
     );
   });
 });

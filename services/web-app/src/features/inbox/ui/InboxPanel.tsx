@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { useNavigate } from "react-router";
+import { useNavigate, useSearchParams } from "react-router";
 import { failureCode } from "@shared/api";
 import { toast } from "@shared/lib";
 import {
@@ -15,19 +15,26 @@ import {
   useNotifications,
   type Notification,
 } from "@entities/invitation";
+import { signingPagePath, useMySigningTasks } from "@entities/signing-route";
 import {
   ApproveDialog,
   useInvitationFailureText,
 } from "@features/project-invitations";
 import { notificationRoute } from "../lib/notificationTarget";
-import { InboxView, type InboxTab } from "./InboxView";
+import { inboxTabOf, type InboxTab } from "../lib/inboxTab";
+import { InboxView } from "./InboxView";
 
 /** Данные и действия «Входящих». Открытие страницы ничего не отмечает прочитанным. */
 export const InboxPanel = () => {
   const { t, i18n } = useTranslation("inbox");
   const navigate = useNavigate();
   const failureText = useInvitationFailureText();
-  const [tab, setTab] = useState<InboxTab>("all");
+  // Вкладка в адресе: колокольчик ведёт прямо в «На подпись» (`/inbox?tab=signing`).
+  const [params, setParams] = useSearchParams();
+  const tab = inboxTabOf(params.get("tab"));
+  const setTab = (next: InboxTab) => {
+    setParams(next === "all" ? {} : { tab: next }, { replace: true });
+  };
   const [busyId, setBusyId] = useState<string | null>(null);
   const [approving, setApproving] = useState<{
     projectId: string;
@@ -39,6 +46,7 @@ export const InboxPanel = () => {
   const transfers = useMyTransfers();
   const notifications = useNotifications();
   const myRequests = useMyAccessRequests();
+  const signingTasks = useMySigningTasks();
   const decideInvitation = useDecideInvitation();
   const decideTransfer = useDecideTransfer();
   const markRead = useMarkNotificationsRead();
@@ -74,6 +82,14 @@ export const InboxPanel = () => {
         transfers={transfers.data ?? []}
         notifications={notifications.data?.items ?? []}
         myRequests={myRequests.data ?? []}
+        signingTasks={signingTasks.data?.items ?? []}
+        signingStatus={
+          signingTasks.data
+            ? "ready"
+            : signingTasks.isError
+              ? "error"
+              : "loading"
+        }
         busyId={busyId}
         lang={i18n.language}
         onInvitation={(inv, accept) => {
@@ -138,6 +154,12 @@ export const InboxPanel = () => {
         onCancelRequest={(r) => {
           setBusyId(r.id);
           cancel.mutate(r.id, { onError: fail, onSettled: settled });
+        }}
+        onSigningTask={(task) => {
+          void navigate(signingPagePath(task.project.id, task.route_id));
+        }}
+        onSigningRetry={() => {
+          void signingTasks.refetch();
         }}
       />
       {approving && (

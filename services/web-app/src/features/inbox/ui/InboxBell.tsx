@@ -1,5 +1,5 @@
 import { useRef, useState, type KeyboardEvent } from "react";
-import { Bell, Inbox } from "lucide-react";
+import { Bell, ChevronRight, FilePen, Inbox } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { Link, useNavigate } from "react-router";
 import { formatPastTime } from "@shared/lib";
@@ -14,8 +14,15 @@ import {
   useRecentNotifications,
   type Notification,
 } from "@entities/invitation";
-import { needsDecision, popoverAction } from "../lib/notificationTarget";
-import { useNotificationText } from "../lib/useNotificationText";
+import {
+  SIGNING_INBOX_PATH,
+  needsDecision,
+  popoverAction,
+} from "../lib/notificationTarget";
+import {
+  useNotificationDetails,
+  useNotificationText,
+} from "../lib/useNotificationText";
 import { NotificationIcon } from "./NotificationIcon";
 
 /** Сколько последних уведомлений показывает окошко; остальные на странице «Входящие». */
@@ -44,6 +51,7 @@ export const InboxBell = () => {
   return (
     <InboxBellView
       count={count}
+      signingTasks={summary.data?.signing_tasks ?? 0}
       open={open}
       onOpenChange={setOpen}
       status={status}
@@ -65,8 +73,10 @@ export const InboxBell = () => {
 };
 
 export type InboxBellViewProps = {
-  /** Число на значке: непрочитанные, ожидающие приглашения и передачи. */
+  /** Число на значке: непрочитанные, ожидающие приглашения, передачи и задачи на подпись. */
   count: number;
+  /** Задачи «На подпись»: строка над уведомлениями ведёт в этот раздел «Входящих». */
+  signingTasks?: number;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   status: "loading" | "error" | "ready";
@@ -81,6 +91,7 @@ const BADGE_MAX = 99;
 /** Колокольчик и окошко под ним: чистый вид без запросов. */
 export const InboxBellView = ({
   count,
+  signingTasks = 0,
   open,
   onOpenChange,
   status,
@@ -91,6 +102,7 @@ export const InboxBellView = ({
 }: InboxBellViewProps) => {
   const { t } = useTranslation("inbox");
   const text = useNotificationText();
+  const details = useNotificationDetails();
   const contentRef = useRef<HTMLDivElement>(null);
   const label = count > 0 ? t("bell", { count }) : t("bellNone");
   const unreadInList = notifications.filter((n) => n.read_at === null).length;
@@ -100,7 +112,7 @@ export const InboxBellView = ({
       contentRef.current?.querySelectorAll<HTMLElement>("[data-notif-item]") ??
         [],
     );
-  const onListKeyDown = (e: KeyboardEvent<HTMLUListElement>) => {
+  const onListKeyDown = (e: KeyboardEvent<HTMLElement>) => {
     const all = items();
     const at = all.indexOf(document.activeElement as HTMLElement);
     const move = (to: number) => {
@@ -199,7 +211,34 @@ export const InboxBellView = ({
           )}
         </div>
 
-        <div style={{ flex: "1 1 auto", minHeight: 0, overflowY: "auto" }}>
+        <div
+          style={{ flex: "1 1 auto", minHeight: 0, overflowY: "auto" }}
+          onKeyDown={onListKeyDown}
+        >
+          {signingTasks > 0 && (
+            <Link
+              to={SIGNING_INBOX_PATH}
+              className="notif-item"
+              data-notif-item=""
+              data-testid="inbox-popover-signing"
+              style={{ alignItems: "center", textDecoration: "none" }}
+              onClick={() => {
+                onOpenChange(false);
+              }}
+            >
+              <span className="shrink-0" style={{ color: "var(--accent)" }}>
+                <FilePen size={15} aria-hidden="true" />
+              </span>
+              <span style={{ flex: 1, fontWeight: 600, color: "var(--fg-0)" }}>
+                {t("popover.signing", { n: signingTasks })}
+              </span>
+              <ChevronRight
+                size={14}
+                aria-hidden="true"
+                style={{ color: "var(--fg-3)" }}
+              />
+            </Link>
+          )}
           {status === "loading" && (
             <div
               className="flex items-center justify-center"
@@ -248,10 +287,10 @@ export const InboxBellView = ({
               aria-label={t("popover.list")}
               data-testid="inbox-popover-list"
               style={{ listStyle: "none", margin: 0, padding: 0 }}
-              onKeyDown={onListKeyDown}
             >
               {notifications.map((n) => {
                 const unread = n.read_at === null;
+                const more = details(n);
                 return (
                   <li key={n.id}>
                     <button
@@ -301,6 +340,7 @@ export const InboxBellView = ({
                           }}
                         >
                           {formatPastTime(n.created_at)}
+                          {more && ` · ${more}`}
                           {needsDecision(n) && (
                             <>
                               {" · "}
