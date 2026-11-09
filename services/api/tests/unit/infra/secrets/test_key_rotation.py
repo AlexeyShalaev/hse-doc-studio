@@ -80,7 +80,9 @@ def test__key_ring__derive_all__lists_primary_first_then_retired() -> None:
     assert derived == [ring.derive("job-token", key=new), ring.derive("job-token", key=old)]
 
 
-@pytest.mark.parametrize("raw", ["not-a-key", f"{Fernet.generate_key().decode()},bad"])
+@pytest.mark.parametrize(
+    "raw", ["not-a-key", f"{Fernet.generate_key().decode()},bad"], ids=["not-a-key", "valid-key-then-bad"]
+)
 def test__retired_keys__invalid__make_the_store_unavailable(tmp_path: Path, raw: str) -> None:
     store = KeyFileStore(tmp_path / "k.json", env_key=Fernet.generate_key().decode(), retired_keys=raw)
 
