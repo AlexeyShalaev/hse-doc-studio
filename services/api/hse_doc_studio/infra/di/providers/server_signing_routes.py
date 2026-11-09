@@ -241,7 +241,7 @@ class ServerSigningRoutesProvider(Provider):
         users: IUserRepository,
         mailer: INotificationMailer,
     ) -> SigningRouteReminding:
-        return SigningRouteReminding(services, invitations, users, mailer)
+        return SigningRouteReminding(services, invitations, users, mailer, public_url=settings.auth.public_url)
 
     # --- сценарии подписанта (срез R6) ---
 

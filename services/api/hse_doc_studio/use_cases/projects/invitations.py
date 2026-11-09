@@ -511,6 +511,48 @@ class ResendInvitationUC(_Base):
                 )
         return RenewedInvitation(updated, card.name, token)
 
+    async def relink(self, actor: Actor, project_id: UUID, invitation_id: str) -> RenewedInvitation:
+        """Новая ссылка приглашения, которую приглашающий перешлёт сам: без письма и без счёта повторов.
+
+        Секрет ссылки хранится хэшем, показать прежнюю ссылку нельзя. Поэтому выдаётся новый секрет: прежняя
+        ссылка перестаёт работать, срок приглашения отсчитывается заново, как при повторе. Письмо не уходит, так
+        что это не повтор: `sent_count` и `last_sent_at` не меняются, пауза между повторами и их число не
+        проверяются. Ссылку собирает `link_of`.
+
+        Секрет меняется, только пока сервер писем не шлёт. С настроенной почтой ссылку несёт письмо, и её замена
+        молча сломала бы уже отправленное: приглашение возвращается как есть, `token` None (нужен повтор, `renew`).
+        У приглашения аккаунту секрета нет, `token` тоже None. Идёт в своей транзакции или во внешней, как `renew`.
+        """
+        actor_id = user_id_of(actor)
+        await actor_grant(self._acl, actor, project_id)
+        card = await self._card(project_id)
+        now = self._clock()
+        async with self._uow.begin():
+            current = await self._invitations.lock(invitation_id)
+            if current is None or current.project_id != project_id:
+                raise IdentityError(IdentityErrorCode.not_found)
+            if current.status is not InvitationStatus.pending:
+                raise IdentityError(IdentityErrorCode.invitation_not_pending)
+            if current.invitee_email is None or self._mailer.enabled:
+                return RenewedInvitation(current, card.name, None)
+            token = new_invitation_token()
+            period = current.expires_at - current.created_at
+            updated = await self._rotate(replace(current, expires_at=now + period), token, actor_id)
+            await self._invitations.update(updated)
+            await self._audit.record(
+                "project.invitation.relink",
+                actor_id=actor_id,
+                target=str(project_id),
+                details={"invitation_id": invitation_id},
+            )
+        return RenewedInvitation(updated, card.name, token)
+
+    def link_of(self, renewed: RenewedInvitation, *, next_path: str | None = None) -> str | None:
+        """Ссылка приглашения с новым секретом; None, если секрет не менялся (`token` None)."""
+        if renewed.token is None:
+            return None
+        return invitation_link(self._public_url, renewed.token, safe_next_path(next_path))
+
     async def deliver(
         self, actor: Actor, renewed: RenewedInvitation, *, next_path: str | None = None
     ) -> InvitationCreated:

@@ -1,4 +1,5 @@
-"""«Напомнить» и автонапоминания маршрута подписания на настоящем сервере (docs/design/signing-route.md, 5.7 и 8).
+"""«Напомнить», «Скопировать ссылку» и автонапоминания маршрута подписания на настоящем сервере
+(docs/design/signing-route.md, 5.7 и 8).
 
 Проект КП пака hse-cs-sse, точка «Заявка на тему КП»: автор согласует отправкой, очередь научрука. Время
 двигается правкой строк в базе (`reminded_at`, `last_sent_at`) или часами прохода автонапоминаний.
@@ -16,8 +17,9 @@ from hse_doc_studio.core.signing_route.repositories import ISigningRouteReposito
 from hse_doc_studio.core.uow import IUnitOfWork
 from hse_doc_studio.infra.db.orm.invitations import ProjectInvitationRow
 from hse_doc_studio.infra.db.orm.signing_routes import SigningRouteParticipantRow
+from hse_doc_studio.infra.notifications.mailer import SmtpNotificationMailer
 from hse_doc_studio.use_cases.signing_route.reminders import SigningReminderSweeper
-from sqlalchemy import update
+from sqlalchemy import select, update
 
 from tests.integration.api.signing_routes.stand import (
     TOPIC,
@@ -205,7 +207,45 @@ async def test__remind__only_who_manages_the_route(stand: Stand) -> None:
 # --- приглашённый ----------------------------------------------------------------------------------------------------
 
 
-async def test__remind__invited__invitation_resent_with_link_to_signing_page(stand: Stand) -> None:
+@pytest.fixture
+def smtp(monkeypatch: pytest.MonkeyPatch) -> list[str]:
+    """Почта на сервере настроена: приглашения уходят письмом; список хранит ссылки из писем."""
+    letters: list[str] = []
+
+    async def _send_invitation(self: SmtpNotificationMailer, to_email: str, *, link: str, **_kwargs: Any) -> bool:
+        letters.append(link)
+        return True
+
+    monkeypatch.setattr(SmtpNotificationMailer, "enabled", property(lambda _self: True))
+    monkeypatch.setattr(SmtpNotificationMailer, "send_invitation", _send_invitation)
+    return letters
+
+
+def _link(project: Project, who: Person, route_id: str, participant_id: str) -> Any:
+    return project.call(who, "POST", f"{project.routes}/{route_id}/participants/{participant_id}/link", json={})
+
+
+def _invite_state(stand: Stand, token: str) -> str:
+    resp = stand.client.get(f"/api/v1/project-invitations/{token}")
+    assert resp.status_code == 200, resp.text
+    return str(resp.json()["state"])
+
+
+def _token(link: str) -> str:
+    return link.split("/project-invite/", 1)[1].split("?", 1)[0]
+
+
+async def _invitation_row(stand: Stand, invitation_id: str) -> tuple[int, datetime, datetime]:
+    async with stand.sessions.use() as db:
+        row = (
+            await db.execute(select(ProjectInvitationRow).where(ProjectInvitationRow.id == invitation_id))
+        ).scalar_one()
+        return row.sent_count, row.last_sent_at, row.expires_at
+
+
+async def test__remind__invited_with_mail__invitation_resent_by_email_and_recorded(
+    stand: Stand, smtp: list[str]
+) -> None:
     project, author, _, sent = await _sent(stand, invite=True)
     invited = sent["steps"][1][0]
     assert invited["state"] == "invited"
@@ -214,10 +254,9 @@ async def test__remind__invited__invitation_resent_with_link_to_signing_page(sta
     resp = _remind(project, author, sent["id"], invited["id"])
 
     assert resp.status_code == 200, resp.text
-    body = resp.json()
-    assert (body["participant_id"], body["delivery"]) == (invited["id"], "manual")
-    assert body["link"].startswith("http://localhost:8100/project-invite/")
-    assert body["link"].endswith(f"?next=%2Fsign%2F{project.id}%2F{sent['id']}")
+    assert resp.json() == {"participant_id": invited["id"], "delivery": "email", "link": None}
+    assert smtp[-1].startswith("http://localhost:8100/project-invite/")
+    assert smtp[-1].endswith(f"?next=%2Fsign%2F{project.id}%2F{sent['id']}")
     route = _route(project, author, sent["id"])
     assert route["steps"][1][0]["reminders"] == 1
     assert [(e["kind"], e["who"]) for e in route["events"]][-1] == ("invited", "Иванов Иван Иванович")
@@ -225,15 +264,38 @@ async def test__remind__invited__invitation_resent_with_link_to_signing_page(sta
     assert (again.status_code, again.json()["code"]) == (429, "rate_limited")
 
 
-async def test__remind__invited_just_now__invitation_limit_and_nothing_recorded(stand: Stand) -> None:
+async def test__remind__invited_just_now_with_mail__invitation_limit_and_nothing_recorded(
+    stand: Stand, smtp: list[str]
+) -> None:
     project, author, _, sent = await _sent(stand, invite=True)
     invited = sent["steps"][1][0]
+    letters = len(smtp)
 
     resp = _remind(project, author, sent["id"], invited["id"])
 
     assert resp.json()["code"] == "invitation_resend_too_soon", resp.text
     waiting = _route(project, author, sent["id"])["steps"][1][0]
     assert (waiting["reminded_at"], waiting["reminders"]) == (None, 0)
+    assert len(smtp) == letters
+
+
+async def test__remind__invited_just_now_without_mail__manual_link_without_limits_or_marks(stand: Stand) -> None:
+    project, author, _, sent = await _sent(stand, invite=True)
+    invited = sent["steps"][1][0]
+    before = await _invitation_row(stand, invited["invitation_id"])
+
+    first = _remind(project, author, sent["id"], invited["id"])
+    second = _remind(project, author, sent["id"], invited["id"])
+
+    for resp in (first, second):
+        assert resp.status_code == 200, resp.text
+        assert (resp.json()["participant_id"], resp.json()["delivery"]) == (invited["id"], "manual")
+        assert resp.json()["link"].endswith(f"?next=%2Fsign%2F{project.id}%2F{sent['id']}")
+    assert first.json()["link"] != second.json()["link"]
+    route = _route(project, author, sent["id"])
+    assert (route["steps"][1][0]["reminded_at"], route["steps"][1][0]["reminders"]) == (None, 0)
+    assert [e["kind"] for e in route["events"]] == [e["kind"] for e in sent["events"]]
+    assert (await _invitation_row(stand, invited["invitation_id"]))[:2] == before[:2]
 
 
 async def test__remind__invited__editor_without_access_rights__forbidden(stand: Stand) -> None:
@@ -247,6 +309,87 @@ async def test__remind__invited__editor_without_access_rights__forbidden(stand: 
 
     assert resp.status_code == 403, resp.text
     assert _route(project, editor, sent["id"])["steps"][1][0]["reminders"] == 0
+
+
+# --- «Скопировать ссылку» --------------------------------------------------------------------------------------------
+
+
+async def test__link__member__signing_page_any_time_and_nothing_written(stand: Stand) -> None:
+    project, author, _, sent = await _sent(stand)
+    waiting = sent["steps"][1][0]
+    assert _remind(project, author, sent["id"], waiting["id"]).status_code == 200  # 12 часов ссылку не закрывают
+    before = _route(project, author, sent["id"])
+
+    first = _link(project, author, sent["id"], waiting["id"])
+    second = _link(project, author, sent["id"], waiting["id"])
+
+    page = f"http://localhost:8100/sign/{project.id}/{sent['id']}"
+    for resp in (first, second):
+        assert resp.status_code == 200, resp.text
+        assert resp.json() == {"participant_id": waiting["id"], "kind": "page", "link": page}
+        assert resp.headers["Cache-Control"] == "no-store"
+    after = _route(project, author, sent["id"])
+    assert (after["steps"], after["events"]) == (before["steps"], before["events"])
+
+
+async def test__link__invited_just_now_without_mail__new_invitation_link_each_time_not_a_resend(stand: Stand) -> None:
+    project, author, _, sent = await _sent(stand, invite=True)
+    invited = sent["steps"][1][0]
+    sent_count, last_sent_at, expires_at = await _invitation_row(stand, invited["invitation_id"])
+
+    first = _link(project, author, sent["id"], invited["id"])
+    second = _link(project, author, sent["id"], invited["id"])
+
+    for resp in (first, second):
+        assert resp.status_code == 200, resp.text
+        assert (resp.json()["participant_id"], resp.json()["kind"]) == (invited["id"], "invitation")
+        assert resp.json()["link"].startswith("http://localhost:8100/project-invite/")
+        assert resp.json()["link"].endswith(f"?next=%2Fsign%2F{project.id}%2F{sent['id']}")
+    # Секрет хранится хэшем: каждая выдача это новая ссылка, прежняя перестаёт работать.
+    assert _invite_state(stand, _token(first.json()["link"])) == "invalid"
+    assert _invite_state(stand, _token(second.json()["link"])) == "ok"
+    after = await _invitation_row(stand, invited["invitation_id"])
+    assert after[:2] == (sent_count, last_sent_at)
+    assert after[2] >= expires_at
+    route = _route(project, author, sent["id"])
+    assert (route["steps"][1][0]["reminded_at"], route["steps"][1][0]["reminders"]) == (None, 0)
+    assert [e["kind"] for e in route["events"]] == [e["kind"] for e in sent["events"]]
+    # Обычный повтор приглашения по-прежнему ограничен: ссылка его не заменяет и не сбрасывает.
+    resend = project.call(author, "POST", f"{project.base}/invitations/{invited['invitation_id']}/resend")
+    assert (resend.status_code, resend.json()["code"]) == (429, "invitation_resend_too_soon")
+
+
+async def test__link__invited_with_mail__link_stays_in_the_letter(stand: Stand, smtp: list[str]) -> None:
+    project, author, _, sent = await _sent(stand, invite=True)
+    invited = sent["steps"][1][0]
+    letter = smtp[-1]
+
+    resp = _link(project, author, sent["id"], invited["id"])
+
+    assert (resp.status_code, resp.json()["code"]) == (409, "link_by_mail"), resp.text
+    assert _invite_state(stand, _token(letter)) == "ok"
+
+
+async def test__link__who_may_take_it(stand: Stand) -> None:
+    project, author, supervisor, sent = await _sent(stand, invite=True)
+    done, invited = sent["steps"][0][0], sent["steps"][1][0]
+    editor = await person(stand, "Редактор")
+    await project.member(editor, "editor", None)
+    reader = await person(stand, "Читатель")
+    await project.member(reader, "reader", None)
+    stranger = await person(stand, "Чужой Человек")
+    path = f"{project.routes}/{sent['id']}/participants/{invited['id']}/link"
+
+    # Редактор управляет маршрутом, но приглашениями распоряжается только тот, кто решает доступ.
+    assert _link(project, editor, sent["id"], invited["id"]).status_code == 403
+    assert _link(project, editor, sent["id"], done["id"]).json()["kind"] == "page"
+    assert _link(project, reader, sent["id"], done["id"]).status_code == 403
+    assert _link(project, stranger, sent["id"], done["id"]).status_code == 404
+    assert _link(project, supervisor, sent["id"], done["id"]).status_code == 404  # приглашение ещё не принято
+    assert stand.client.post(path, json={}).status_code == 401
+    assert _link(project, author, sent["id"], "not-an-id").status_code == 404
+    assert _link(project, author, sent["id"], "00000000-0000-4000-8000-000000000001").status_code == 404
+    assert _link(project, author, "00000000-0000-4000-8000-000000000001", invited["id"]).status_code == 404
 
 
 # --- автонапоминания -------------------------------------------------------------------------------------------------

@@ -296,6 +296,7 @@ _SCHEMAS: dict[str, Any] = {
     "UpdateSigningRouteRequest": sr.UpdateSigningRouteRequest,
     "SigningRoutePreview": sr.SigningRoutePreview,
     "SigningReminder": sr.SigningReminder,
+    "SigningLink": sr.SigningLink,
     "SendSigningRouteRequest": sr.SendSigningRouteRequest,
     "SigningTask": sr.SigningTask,
     "ApproveSigningTaskRequest": sr.ApproveSigningTaskRequest,

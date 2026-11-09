@@ -103,6 +103,18 @@ class SendRequest:
     sign: KeyRequest | None = None
 
 
+class SentUnsignedError(Exception):
+    """«Отправить и подписать»: маршрут отправлен, а подпись отправителя не поставлена (`sign_failed`, раздел 8.1).
+
+    Отправка записана, документы зафиксированы: отправитель остаётся в `to_sign` и подписывает на своей странице.
+    `cause` отказ подписи; его текст уходит в ответ.
+    """
+
+    def __init__(self, cause: Exception) -> None:
+        super().__init__(str(cause))
+        self.cause = cause
+
+
 @dataclass(frozen=True)
 class RouteSummary:
     route: SigningRoute
@@ -402,7 +414,8 @@ class SigningRouteSending(RouteScenario):
 
     async def send(self, actor: Actor, project_id: UUID, route_id: UUID, request: SendRequest) -> RouteDetails:
         """Отправить или отправить заново. Ошибка подписи при «Отправить и подписать» не отменяет отправку:
-        маршрут уходит, а ошибка возвращается после записи (подписать можно на своей странице)."""
+        маршрут уходит, а ошибка возвращается после записи как `SentUnsignedError` (подписать можно на своей
+        странице). Любой другой отказ значит, что ничего не отправлено."""
         actor_id = actor_uuid(actor)
         at = self._s.clock()
         deferred: Exception | None = None
@@ -423,7 +436,7 @@ class SigningRouteSending(RouteScenario):
                         deferred = exc
             saved = await self._commit(settled, [*events, *closing_events(settled, at)], actor_id=actor_id, at=at)
         if deferred is not None:
-            raise deferred
+            raise SentUnsignedError(deferred) from deferred
         return await self._details(actor, point, saved)
 
     async def _send_files(
