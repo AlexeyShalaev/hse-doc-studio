@@ -11,10 +11,10 @@ from typing import Any
 
 import pytest
 
-from tests.integration.api.personal.conftest import Person
-from tests.integration.api.signing_routes.conftest import (
+from tests.integration.api.signing_routes.stand import (
     TOPIC,
     TOPIC_DOCS,
+    Person,
     Project,
     Stand,
     make_project,

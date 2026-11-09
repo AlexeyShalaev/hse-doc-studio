@@ -23,8 +23,7 @@ from hse_doc_studio.use_cases.signatures._studio_signer import KeyPassphraseRequ
 from hse_doc_studio.use_cases.signing_route.key_signer import KeyRequest, RouteKeySigner
 from hse_doc_studio.use_cases.signing_route.point import RoutePoint
 
-from tests.integration.api.personal.conftest import Person
-from tests.integration.api.signing_routes.conftest import Project, Stand, make_project, person
+from tests.integration.api.signing_routes.stand import Person, Project, Stand, make_project, person
 
 pytestmark = [pytest.mark.pg, pytest.mark.timeout(240)]
 
