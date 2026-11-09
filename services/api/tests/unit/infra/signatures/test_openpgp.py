@@ -146,6 +146,78 @@ def test_public_key_sniffing_rejects_private_blocks() -> None:
     assert looks_like_openpgp_key(b"-----BEGIN PGP PRIVATE KEY BLOCK-----\n")
 
 
+def _exported(tmp_path: Path, *, armor: bool) -> tuple[bytes, bytes]:
+    """Secret and public export of a fresh key from a throwaway keyring."""
+    src_home = Path("/tmp") / f"hds-gpg-exp-{tmp_path.name}"
+    src = GpgKeyring(src_home)
+    try:
+        key = src.generate("Экспорт", "e@example.org")
+        flags = ["--armor"] if armor else []
+        secret = src._run(
+            [*flags, "--pinentry-mode", "loopback", "--passphrase", "", "--export-secret-keys", key.fingerprint]
+        ).stdout
+        public = src._run([*flags, "--export", key.fingerprint]).stdout
+    finally:
+        src.stop_agent()
+        shutil.rmtree(src_home, ignore_errors=True)
+    return secret, public
+
+
+@pytest.mark.parametrize("armor", [True, False], ids=["armored", "binary"])
+def test_contains_secret_key__tells_secret_from_public_and_imports_nothing(
+    ring: GpgKeyring, tmp_path: Path, *, armor: bool
+) -> None:
+    secret, public = _exported(tmp_path, armor=armor)
+
+    assert ring.contains_secret_key(secret)
+    assert not ring.contains_secret_key(public)
+    assert not ring.contains_secret_key(b"not a key")
+    assert ring.list_keys() == []
+
+
+def test_contains_secret_key__secret_block_under_a_public_header_still_counts(ring: GpgKeyring, tmp_path: Path) -> None:
+    secret, _ = _exported(tmp_path, armor=True)
+    disguised = secret.replace(b"PRIVATE KEY BLOCK", b"PUBLIC KEY BLOCK")
+
+    assert ring.contains_secret_key(disguised)
+    assert ring.list_keys() == []
+
+
+def test_import_public_key__secret_block_under_a_public_header__refused_and_keyring_stays_empty(
+    ring: GpgKeyring, tmp_path: Path
+) -> None:
+    secret, public = _exported(tmp_path, armor=True)
+    disguised = secret.replace(b"PRIVATE KEY BLOCK", b"PUBLIC KEY BLOCK")
+
+    with pytest.raises(GpgError):
+        ring.import_public_key(disguised)
+    assert ring.list_keys() == []
+
+    ring.import_public_key(public)
+    assert [k.has_secret for k in ring.list_keys()] == [False]
+
+
+def test_import_key__protected_secret_with_passphrase__key_on_stdin_passphrase_through_a_pipe(
+    ring: GpgKeyring, doc: Path, tmp_path: Path
+) -> None:
+    src_home = Path("/tmp") / f"hds-gpg-pw-{tmp_path.name}"
+    src = GpgKeyring(src_home)
+    try:
+        key = src.generate("Пароль", "pw@example.org", passphrase="s3cret")
+        secret = src._run(["--armor", "--export-secret-keys", key.fingerprint], passphrase="s3cret").stdout
+    finally:
+        src.stop_agent()
+        shutil.rmtree(src_home, ignore_errors=True)
+
+    [imported] = ring.import_key(secret, "s3cret")
+
+    assert imported.has_secret
+    assert ring.is_protected(imported.fingerprint)
+    sig = tmp_path / "doc.asc"
+    ring.sign_detached(doc, imported.fingerprint, sig, passphrase="s3cret")
+    assert ring.verify_detached(sig, doc).status == "good"
+
+
 def test__signature_issuers__studio_signature__issuer_is_the_key_fingerprint(
     ring: GpgKeyring, doc: Path, tmp_path: Path
 ) -> None:

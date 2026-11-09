@@ -22,6 +22,7 @@ from hse_doc_studio.core.i18n import localized_error
 from hse_doc_studio.core.jobs.protocols import IJobDispatcher
 from hse_doc_studio.core.repositories import ISigningIdentityRepository
 from hse_doc_studio.core.signatures.errors import CmsParseError, GpgError, GpgUnavailableError
+from hse_doc_studio.core.signatures.key_policy import ISigningKeyPolicy, require_server_key_storage
 from hse_doc_studio.core.signatures.plan import SignMethod, method_of, slot_persona
 from hse_doc_studio.core.signatures.ports import IPadesSigner, ISignatureAudit, ISignerScope, ITrustMaterialProvider
 from hse_doc_studio.core.signatures.stamps import stamps_digest, stamps_for_doc
@@ -153,6 +154,11 @@ class StudioSigner:
     pades: IPadesSigner
     scope: ISignerScope
     audit: ISignatureAudit
+    # Ключи Студии лежат на сервере: при запрете админа они заблокированы, подписать ими нельзя.
+    key_policy: ISigningKeyPolicy
+
+    async def require_key_allowed(self) -> None:
+        await require_server_key_storage(self.key_policy)
 
     async def may_sign(
         self, project: Project, state: SignaturesState, slot_id: str, label: str, signer: SignerInfo, *, explicit: bool
@@ -182,6 +188,7 @@ class StudioSigner:
         identity: SigningIdentity,
         passphrase: str,
     ) -> tuple[SignaturesState, DetachedSignature]:
+        await self.require_key_allowed()
         pdf_path = ctx.project.folder / frozen.path
         sig_bytes = await self._sign_bytes(identity, pdf_path, passphrase)
         verified = await verify_frozen(self.dispatcher, self.trust_provider, ctx, frozen, sig_bytes)
@@ -211,6 +218,7 @@ class StudioSigner:
         reason: str = "",
     ) -> tuple[SignaturesState, EmbeddedSignature]:
         """Одна ревизия PAdES поверх текущего итогового файла; зафиксированные байты остаются его началом."""
+        await self.require_key_allowed()
         if identity.kind not in X509_KINDS:
             raise ValueError(
                 localized_error(

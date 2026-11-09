@@ -394,7 +394,7 @@ class ServerPersistenceProvider(Provider):
     def get_ai_provider_repo(self, sessions: SessionProvider, cipher: ISecretCipher) -> IAIProviderRepository:
         return PostgresAIProviderRepository(sessions, cipher)
 
-    @provide
+    @provide(override=True)
     def get_signing_key_policy(self, instance_settings: IInstanceSettingsRepository) -> ISigningKeyPolicy:
         return InstanceSigningKeyPolicy(instance_settings)
 

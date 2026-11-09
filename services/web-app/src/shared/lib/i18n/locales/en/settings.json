@@ -329,7 +329,7 @@
     "openpgp": {
       "create": "Create OpenPGP key",
       "import": "Import OpenPGP key",
-      "createHint": "An ed25519 key is created and stored on this computer (the data folder). It is fine for signing the application and the statement: the supervisor can check it with gpg or open it in any OpenPGP client.",
+      "createHint": "An ed25519 key is created and stored in the Studio data folder: on this computer locally, on the server in the web version. It is fine for signing the application and the statement: the supervisor can check it with gpg or open it in any OpenPGP client.",
       "nameField": "Owner name",
       "namePlaceholder": "Ivan Ivanov",
       "emailField": "E-mail (optional)",

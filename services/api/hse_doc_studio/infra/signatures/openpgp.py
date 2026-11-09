@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import contextlib
 import hashlib
+import os
 import re
 import shutil
 import subprocess
@@ -22,6 +23,7 @@ from typing import Literal
 
 import structlog
 
+from hse_doc_studio.core.i18n import localized_error
 from hse_doc_studio.core.signatures.errors import GpgError, GpgUnavailableError
 
 logger = structlog.get_logger()
@@ -100,16 +102,44 @@ class GpgKeyring:
         with contextlib.suppress(OSError):
             self._home.chmod(0o700)
         cmd = [self._binary, "--homedir", str(self._effective_home()), "--batch", "--no-tty", "--yes"]
-        data = stdin
-        if passphrase is not None:
+        if passphrase is None:
+            proc = subprocess.run(  # noqa: S603
+                [*cmd, *args], input=stdin, capture_output=True, timeout=_TIMEOUT, check=False
+            )
+        elif stdin is None:
             cmd += ["--pinentry-mode", "loopback", "--passphrase-fd", "0"]
-            data = passphrase.encode() + b"\n" + (stdin or b"")
-        proc = subprocess.run(  # noqa: S603
-            [*cmd, *args], input=data, capture_output=True, timeout=_TIMEOUT, check=False
-        )
+            proc = subprocess.run(  # noqa: S603
+                [*cmd, *args], input=passphrase.encode() + b"\n", capture_output=True, timeout=_TIMEOUT, check=False
+            )
+        else:
+            proc = self._run_with_passphrase_pipe(cmd, args, stdin, passphrase)
         if check and proc.returncode != 0:
             raise GpgError(_clean_stderr(proc.stderr))
         return proc
+
+    @staticmethod
+    def _run_with_passphrase_pipe(
+        cmd: list[str], args: list[str], stdin: bytes, passphrase: str
+    ) -> subprocess.CompletedProcess[bytes]:
+        """Data on stdin, passphrase through its own pipe: neither of them touches the disk."""
+        read_fd, write_fd = os.pipe()
+        try:
+            # A passphrase is far below the pipe buffer, so the write never blocks before gpg starts.
+            with os.fdopen(write_fd, "wb") as pipe:
+                write_fd = -1
+                pipe.write(passphrase.encode() + b"\n")
+            return subprocess.run(  # noqa: S603
+                [*cmd, "--pinentry-mode", "loopback", "--passphrase-fd", str(read_fd), *args],
+                input=stdin,
+                capture_output=True,
+                timeout=_TIMEOUT,
+                check=False,
+                pass_fds=(read_fd,),
+            )
+        finally:
+            os.close(read_fd)
+            if write_fd != -1:
+                os.close(write_fd)
 
     def _effective_home(self) -> Path:
         """The keyring path handed to gpg.
@@ -166,11 +196,11 @@ class GpgKeyring:
         return keys[-1]
 
     def import_key(self, data: bytes, passphrase: str | None = None) -> list[GpgKey]:
-        """Import an armored/binary public or secret key; returns the keys it contained."""
-        with tempfile.TemporaryDirectory() as tmp:
-            key_file = Path(tmp) / "key.asc"
-            key_file.write_bytes(data)
-            proc = self._run(["--status-fd", "1", "--import", str(key_file)], passphrase=passphrase, check=False)
+        """Import an armored/binary public or secret key; returns the keys it contained.
+
+        The key goes to gpg on stdin and never touches the disk outside the keyring.
+        """
+        proc = self._run(["--status-fd", "1", "--import"], stdin=data, passphrase=passphrase, check=False)
         fprs = {
             parts[3]
             for parts in (ln.split() for ln in proc.stdout.decode("utf-8", "replace").splitlines())
@@ -180,10 +210,29 @@ class GpgKeyring:
             raise GpgError(_clean_stderr(proc.stderr) or "no OpenPGP key found in the file")
         return [k for k in self.list_keys() if k.fingerprint in fprs]
 
+    def contains_secret_key(self, data: bytes) -> bool:
+        """True when the file carries secret key material; nothing is imported into the keyring.
+
+        Decided by gpg itself (`--show-keys`), not by the armor header alone: a binary export or a mislabelled
+        armor block still counts. A file gpg cannot read is not secret here, its import then fails on its own.
+        """
+        if looks_like_openpgp_secret_key(data):
+            return True
+        proc = self._run(["--with-colons", "--show-keys"], stdin=data, check=False)
+        return any(ln.startswith(("sec:", "ssb:")) for ln in proc.stdout.decode("utf-8", "replace").splitlines())
+
     def looks_like_public_key(self, blob: bytes) -> bool:
         return looks_like_openpgp_public_key(blob)
 
     def import_public_key(self, blob: bytes) -> None:
+        """Public keys only: a secret block (even under a public armor header) never enters the keyring here."""
+        if self.contains_secret_key(blob):
+            raise GpgError(
+                localized_error(
+                    "В файле секретный ключ: загрузите только открытый ключ (gpg --export --armor)",
+                    "The file holds a secret key: upload only the public key (gpg --export --armor)",
+                )
+            )
         self.import_key(blob)
 
     def export_public(self, fingerprint: str) -> bytes:
@@ -250,6 +299,10 @@ def looks_like_openpgp_signature(blob: bytes) -> bool:
 
 def looks_like_openpgp_public_key(blob: bytes) -> bool:
     return blob.lstrip()[:40].startswith(b"-----BEGIN PGP PUBLIC KEY BLOCK-----")
+
+
+def looks_like_openpgp_secret_key(blob: bytes) -> bool:
+    return blob.lstrip()[:40].startswith(b"-----BEGIN PGP PRIVATE KEY BLOCK-----")
 
 
 def looks_like_openpgp_key(blob: bytes) -> bool:

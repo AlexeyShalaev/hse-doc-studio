@@ -42,11 +42,27 @@ class SigningKeyStorageDeniedError(ValueError):
 
 class IServerKeyCounter(Protocol):
     async def count_server_keys(self) -> int:
-        """Сколько закрытых ключей подписи уже лежит на сервере (при запрете они заблокированы, но не удалены)."""
+        """Сколько закрытых ключей подписи уже лежит на сервере: в базе (PKCS#12, самоподписанные) и в связке OpenPGP.
+
+        При запрете они заблокированы, но не удалены.
+        """
         ...
 
 
 class ISigningKeyPolicy(Protocol):
     async def server_key_storage_allowed(self) -> bool:
-        """Можно ли сохранять закрытый ключ в БД сервера. По умолчанию нет."""
+        """Можно ли хранить закрытый ключ на сервере (в базе или в связке OpenPGP) и подписывать им. Обычно нет."""
         ...
+
+
+class LocalSigningKeyPolicy:
+    """Локальная Студия: человек один, ключи лежат в его папке данных, политики установки нет."""
+
+    async def server_key_storage_allowed(self) -> bool:
+        return True
+
+
+async def require_server_key_storage(policy: ISigningKeyPolicy) -> None:
+    """Отказ, если админ установки запретил хранить закрытые ключи на сервере."""
+    if not await policy.server_key_storage_allowed():
+        raise SigningKeyStorageDeniedError

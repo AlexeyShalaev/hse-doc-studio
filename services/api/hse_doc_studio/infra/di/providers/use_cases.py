@@ -103,6 +103,7 @@ from hse_doc_studio.core.setup import (
     ISetupApplier,
 )
 from hse_doc_studio.core.shutdown import process_shutdown
+from hse_doc_studio.core.signatures.key_policy import ISigningKeyPolicy
 from hse_doc_studio.core.signatures.ports import (
     IChainFetcher,
     IOpenPgpKeyImporter,
@@ -3157,6 +3158,7 @@ class UseCaseProvider(Provider):
         pades: IPadesSigner,
         signer_scope: ISignerScope,
         audit: ISignatureAudit,
+        key_policy: ISigningKeyPolicy,
     ) -> SignInStudioUC:
         return SignInStudioUC(
             project_repo=project_repo,
@@ -3164,7 +3166,9 @@ class UseCaseProvider(Provider):
             signature_repo=signature_repo,
             template_repo=template_repo,
             template_service=template_service,
-            signer=StudioSigner(signing_identity_repo, keyring, dispatcher, trust_provider, pades, signer_scope, audit),
+            signer=StudioSigner(
+                signing_identity_repo, keyring, dispatcher, trust_provider, pades, signer_scope, audit, key_policy
+            ),
         )
 
     @provide
@@ -3188,6 +3192,7 @@ class UseCaseProvider(Provider):
         pades: IPadesSigner,
         signer_scope: ISignerScope,
         audit: ISignatureAudit,
+        key_policy: ISigningKeyPolicy,
         plan_uc: GetSignaturePlanUC,
         freeze_uc: FreezePdfUC,
         default_key: DefaultSigningKey,
@@ -3201,7 +3206,9 @@ class UseCaseProvider(Provider):
             template_service,
             plan_uc,
             freeze_uc,
-            StudioSigner(signing_identity_repo, keyring, dispatcher, trust_provider, pades, signer_scope, audit),
+            StudioSigner(
+                signing_identity_repo, keyring, dispatcher, trust_provider, pades, signer_scope, audit, key_policy
+            ),
             default_key,
             access,
         )
@@ -3708,12 +3715,16 @@ class UseCaseProvider(Provider):
         return DeleteSigningIdentityUC(repo=repo, keyring=keyring)
 
     @provide
-    def get_create_openpgp_key_uc(self, repo: ISigningIdentityRepository, keyring: GpgKeyring) -> CreateOpenPgpKeyUC:
-        return CreateOpenPgpKeyUC(repo=repo, keyring=keyring)
+    def get_create_openpgp_key_uc(
+        self, repo: ISigningIdentityRepository, keyring: GpgKeyring, policy: ISigningKeyPolicy
+    ) -> CreateOpenPgpKeyUC:
+        return CreateOpenPgpKeyUC(repo=repo, keyring=keyring, policy=policy)
 
     @provide
-    def get_import_openpgp_key_uc(self, repo: ISigningIdentityRepository, keyring: GpgKeyring) -> ImportOpenPgpKeyUC:
-        return ImportOpenPgpKeyUC(repo=repo, keyring=keyring)
+    def get_import_openpgp_key_uc(
+        self, repo: ISigningIdentityRepository, keyring: GpgKeyring, policy: ISigningKeyPolicy
+    ) -> ImportOpenPgpKeyUC:
+        return ImportOpenPgpKeyUC(repo=repo, keyring=keyring, policy=policy)
 
     @provide
     def get_export_openpgp_public_key_uc(

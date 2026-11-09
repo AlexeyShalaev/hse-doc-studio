@@ -95,16 +95,31 @@ async def test__policy_default__forbids_storing_a_private_key_and_nothing_is_sav
         assert await world.repo.list_all() == []
 
 
-async def test__server_key_counter__counts_only_identities_with_a_stored_private_key(world: World) -> None:
+async def test__server_key_counter__counts_stored_private_keys_and_openpgp_keys_of_everyone(world: World) -> None:
     await _allow(world)
     material = await _material()
     with as_actor(_ANNA):
         await world.repo.create(_identity(), material)
+        # Секретный ключ OpenPGP лежит в общей связке сервера, у записи key_enc пуст, но ключ на сервере.
         await world.repo.create(_identity(SigningIdentityKind.openpgp))
     with as_actor(_BORIS):
         await world.repo.create(_identity(), material)
 
-    assert await SqlServerKeyCounter(world.sessions).count_server_keys() == 2
+    assert await SqlServerKeyCounter(world.sessions).count_server_keys() == 3
+
+
+async def test__server_key_counter__identity_without_any_secret_on_the_server_is_not_counted(world: World) -> None:
+    with as_actor(_ANNA):
+        await world.repo.create(_identity(SigningIdentityKind.pkcs11))
+
+    assert await SqlServerKeyCounter(world.sessions).count_server_keys() == 0
+
+
+async def test__server_key_counter__openpgp_key_alone__counted(world: World) -> None:
+    with as_actor(_ANNA):
+        await world.repo.create(_identity(SigningIdentityKind.openpgp))
+
+    assert await SqlServerKeyCounter(world.sessions).count_server_keys() == 1
 
 
 async def test__policy_denied__identity_without_private_key_is_still_stored(world: World) -> None:

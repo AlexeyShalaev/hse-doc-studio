@@ -32,7 +32,7 @@ class _Scope:
 
 def _signer(scope: _Scope) -> StudioSigner:
     unused = cast(Any, None)
-    return StudioSigner(unused, unused, unused, unused, unused, scope, unused)
+    return StudioSigner(unused, unused, unused, unused, unused, scope, unused, unused)
 
 
 def _team() -> Project:
