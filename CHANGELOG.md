@@ -6,6 +6,10 @@ Generated from `release-notes.json` via `make changelog` — do not edit by hand
 Release notes are hand-written and bilingual (RU/EN); the app shows them in the
 selected interface language.
 
+## [0.17.1](https://github.com/AlexeyShalaev/hse-doc-studio/compare/v0.17.0...v0.17.1) - 2026-11-09
+
+- A successful build without output files no longer stays unfinished: previously its result was not applied and the api retried it on every restart.
+
 ## [0.17.0](https://github.com/AlexeyShalaev/hse-doc-studio/compare/v0.16.0...v0.17.0) - 2026-11-09
 
 - Signatures by plan: a document has a signature plan (who signs, where and how), and the submission point counts readiness from it. Methods can be mixed in one document: a signature image, an image with a digital signature, an invisible digital signature, a detached signature. Sign bundle signs all your slots in the submission point documents in one step, PAdES is applied over the frozen PDF, and slot permissions are checked.
