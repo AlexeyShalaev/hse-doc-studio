@@ -93,21 +93,5 @@
   "passkeys_disabled",
   "passkey_invalid",
   "passkey_limit",
-  "reauth_required",
-  "invalid_transition",
-  "doc_changed",
-  "route_blocked",
-  "route_exists",
-  "doc_on_route",
-  "stale_route",
-  "no_participants",
-  "bad_step",
-  "duplicate_participant",
-  "duplicate_slot",
-  "unknown_doc",
-  "unknown_slot",
-  "bad_id",
-  "message_too_long",
-  "passphrase_required",
-  "sign_failed"
+  "reauth_required"
 ]
