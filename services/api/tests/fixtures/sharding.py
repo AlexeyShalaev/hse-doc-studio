@@ -6,7 +6,8 @@
 части не пересекаются и вместе дают весь набор; устаревшие замеры портят только баланс, но не полноту.
 Внутри шарда тесты можно раздать процессам pytest-xdist (`-n auto`): деление идёт до раздачи.
 
-Замеры обновляются полным прогоном: `uv run pytest -n auto --no-cov --store-shard-durations`.
+Замеры берутся под xdist, как в CI (тесты с тяжёлым стартом там дорожают сильнее прочих), и обновляются полным
+прогоном: `uv run --all-extras pytest -n logical --no-cov --store-shard-durations` (с HSE_TEST_PG_DSN).
 """
 
 from __future__ import annotations
