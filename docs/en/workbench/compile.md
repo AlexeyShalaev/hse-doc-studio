@@ -29,6 +29,7 @@ tags:
 - **“Fix with AI”** — the agent finds the cause, edits the `.tex` (you confirm every change) and rebuilds.
 - **Metadata is stamped in on every build** — change the supervisor once and it changes on the title pages of every document.
 - **Text counters** — after a build texcount recounts prose words and characters; visible in the preview.
+- **Repeatable builds** — rebuilding without edits on the same TeX image gives the same PDF byte for byte, on any runner, so it does not reset frozen signatures. That is why the creation date in the PDF properties is a fixed one, not the build day; the date and year in the document text (`\today`, `\the\year`) are real.
 
 The first build downloads the TeX Live image (once, a few gigabytes) — see [“First project”](../start/first-project.md). You don't have to untangle LaTeX errors yourself: “Fix with AI” does it for you, showing every diff.
 
