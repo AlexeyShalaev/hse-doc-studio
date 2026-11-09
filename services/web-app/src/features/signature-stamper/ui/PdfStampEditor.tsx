@@ -37,6 +37,8 @@ export type PdfStampEditorProps = {
       enabled?: boolean;
     },
   ) => void;
+  /** Только просмотр: рамки подписей не двигаются (документ на подписании по маршруту). */
+  readOnly?: boolean;
   onCompileRequest?: () => void;
   isCompileRunning?: boolean;
   /** Сборка сейчас невозможна (на сервере нет раннера): кнопка гаснет. */
@@ -71,6 +73,7 @@ export const PdfStampEditor = ({
   onPageChange,
   onPageCountChange,
   onPlacementChange,
+  readOnly = false,
   onCompileRequest,
   isCompileRunning,
   isCompileBlocked = false,
@@ -317,12 +320,15 @@ export const PdfStampEditor = ({
           </div>
         ) : (
           <div
+            data-readonly={readOnly || undefined}
             style={{
               position: "relative",
               lineHeight: 0,
               flexShrink: 0,
               width: displayWidthPx || undefined,
               height: displayHeightPx || undefined,
+              // Рамки слушают указатель сами; без событий их не утащить.
+              pointerEvents: readOnly ? "none" : undefined,
             }}
           >
             <canvas

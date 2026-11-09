@@ -18,11 +18,17 @@ import { useUpdateSlotConfig } from "@entities/signing-identity";
 import { useVersionDetail } from "@entities/template-catalog";
 import { DocPlacementPanel, PdfStampEditor } from "@features/signature-stamper";
 import type { SignMode, UpdatePlacementRequest } from "@shared/api/types";
+import { Notice } from "@shared/ui";
 import { Spinner } from "@shared/ui/Spinner";
 
 export type DocSignaturesPaneProps = {
   projectId: string;
   docId: string;
+  /**
+   * Документ на подписании по маршруту: подписи менять нельзя (docs/design/signing-route.md,
+   * 5.5). Панель слотов и рамки на странице только для просмотра.
+   */
+  locked?: boolean;
 };
 
 const personNameForSlot = (
@@ -46,6 +52,7 @@ const personNameForSlot = (
 export const DocSignaturesPane = ({
   projectId,
   docId,
+  locked = false,
 }: DocSignaturesPaneProps) => {
   const { t } = useTranslation("documents");
   const navigate = useNavigate();
@@ -213,27 +220,43 @@ export const DocSignaturesPane = ({
           minHeight: 0,
         }}
       >
-        <DocPlacementPanel
-          projectId={projectId}
-          docId={docId}
-          pdfAvailable={hasBuild}
-          slotDefs={allSlots}
-          state={state}
-          lang={lang}
-          currentPage={page}
-          pageCount={pageCount}
-          personNameForSlot={(slotId) =>
-            personNameForSlot(
-              slotId,
-              project,
-              ownerBySlotId.get(slotId) ?? null,
-            )
-          }
-          onPlacementChange={handlePlacementChange}
-          onJumpToPage={setPage}
-          onOpenProjectSignatures={goToProjectSignatures}
-          onSlotModeChange={handleSlotModeChange}
-        />
+        {locked && (
+          <div style={{ padding: "0.75rem 0.75rem 0" }}>
+            <Notice
+              tone="info"
+              role="status"
+              text={t("signingProgress:hold.locked")}
+            />
+          </div>
+        )}
+        {/* inert: на подписании панель видна, но ни одна правка слота недоступна. */}
+        <div
+          inert={locked}
+          data-testid="doc-signatures-panel"
+          style={locked ? { opacity: 0.6 } : undefined}
+        >
+          <DocPlacementPanel
+            projectId={projectId}
+            docId={docId}
+            pdfAvailable={hasBuild}
+            slotDefs={allSlots}
+            state={state}
+            lang={lang}
+            currentPage={page}
+            pageCount={pageCount}
+            personNameForSlot={(slotId) =>
+              personNameForSlot(
+                slotId,
+                project,
+                ownerBySlotId.get(slotId) ?? null,
+              )
+            }
+            onPlacementChange={handlePlacementChange}
+            onJumpToPage={setPage}
+            onOpenProjectSignatures={goToProjectSignatures}
+            onSlotModeChange={handleSlotModeChange}
+          />
+        </div>
       </div>
       <div className="flex flex-col" style={{ minHeight: 0, minWidth: 0 }}>
         {isCustomConvertible && !hasBuild && (
@@ -265,6 +288,7 @@ export const DocSignaturesPane = ({
           onPageChange={setPage}
           onPageCountChange={setPageCount}
           onPlacementChange={handlePlacementChange}
+          readOnly={locked}
           onCompileRequest={start}
           isCompileRunning={isRunning}
           isCompileBlocked={block !== null}

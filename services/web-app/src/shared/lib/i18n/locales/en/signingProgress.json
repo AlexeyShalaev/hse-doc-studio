@@ -1,0 +1,88 @@
+{
+  "title": "Signing",
+  "signed": "{{done}} of {{total}} signed",
+  "none": "Send the documents for signing, supervisors sign on their own page.",
+  "draft": "The route is ready but not sent yet.",
+  "step": "Step {{step}} of {{total}}",
+  "waiting": "Waiting for {{who}}",
+  "since": "since {{date}}",
+  "andMore": "{{names}} and {{count}} more",
+  "deadline": "Due {{date}}",
+  "overdue": "Overdue since {{date}}",
+  "paused": {
+    "rebuilt": "The document changed after approval: the route is stopped.",
+    "marks_changed": "Signatures on the pages changed: the route is stopped.",
+    "frozen_changed": "The frozen PDF changed: the route is stopped.",
+    "participant_left": "A participant left the project: assign someone else and send again.",
+    "returned": "The route was returned for rework."
+  },
+  "returned": "{{who}} returned it for rework: “{{comment}}”",
+  "returnedNoComment": "{{who}} returned it for rework.",
+  "someone": "A signer",
+  "completed": "Everyone has signed. You can build the package.",
+  "cancelled": "The route is cancelled.",
+  "loadFailed": "Could not load the route.",
+  "retry": "Retry",
+  "persona": {
+    "author": "author"
+  },
+  "person": {
+    "nobody": "Not assigned",
+    "you": "you",
+    "state": {
+      "invited": "has not accepted the invitation",
+      "waiting": "waiting",
+      "approved": "approved",
+      "to_approve": "to approve",
+      "to_approve_sign": "to approve and sign",
+      "to_sign": "to sign the final PDF",
+      "done": "signed",
+      "returned": "returned for rework"
+    }
+  },
+  "action": {
+    "send": "Send for signing",
+    "open": "Open route",
+    "resend": "Send again",
+    "cancel": "Cancel route",
+    "remind": "Remind",
+    "copyLink": "Copy link",
+    "openDoc": "Open document",
+    "archive": "Stop tracking",
+    "archiveHint": "The route will stop watching the documents",
+    "sign": "Go to signing",
+    "remindAfter": "You can remind after {{time}}"
+  },
+  "confirm": {
+    "title": "Cancel the route?",
+    "text": "Everyone who already got a request will be notified. Signatures already made stay.",
+    "keep": "Keep it"
+  },
+  "toast": {
+    "remindedEmail": "Reminder sent by email and to the Inbox",
+    "remindedInbox": "Reminder sent to the Inbox",
+    "inviteResent": "Invitation sent again",
+    "inviteCopied": "Invitation link copied: send it yourself",
+    "copied": "Link copied",
+    "copyFailed": "Could not copy: take the link below",
+    "cancelled": "Route cancelled",
+    "resent": "Sent again",
+    "archived": "Route no longer tracked",
+    "blocked": "Cannot send: fix what is blocking it"
+  },
+  "linkLabel": "Link for {{who}}",
+  "error": {
+    "doc_changed": "The document changed. Try again.",
+    "invalid_transition": "The route has already changed. Refresh the page.",
+    "participant_not_waiting": "It is not their turn now.",
+    "rate_limited": "Too often. Try again in {{minutes}} min.",
+    "network": "The server is unreachable. Check your connection.",
+    "generic": "Something went wrong. Try again."
+  },
+  "hold": {
+    "banner": "This document is out for signing (step {{step}} of {{total}}). Editing and rebuilding will stop the route.",
+    "signatures": "Signatures cannot be changed while the route is running.",
+    "open": "Signing progress",
+    "locked": "This document is out for signing: signatures cannot be changed. To change them, cancel the route on the submission checkpoint page."
+  }
+}
