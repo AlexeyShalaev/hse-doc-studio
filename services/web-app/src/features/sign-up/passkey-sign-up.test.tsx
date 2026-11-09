@@ -9,7 +9,7 @@ import {
 } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { I18nextProvider } from "react-i18next";
-import { MemoryRouter, Route, Routes } from "react-router";
+import { MemoryRouter, Route, Routes, useLocation } from "react-router";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ApiError } from "@shared/api";
 import { i18n } from "@shared/lib";
@@ -274,6 +274,40 @@ describe("usePasskeySignUp", () => {
       await result.current.start("Мария");
     });
     expect(result.current.failure?.code).toBe("passkey_failed");
+  });
+
+  it("после регистрации уходит на next: приглашение в проект с тем же next", async () => {
+    api.passkeyOptions.mockResolvedValue({ options: { challenge: "c" } });
+    webauthn.createPasskey.mockResolvedValue({ id: "cred" });
+    api.passkeyRegister.mockResolvedValue(LOGIN);
+    const Where = () => {
+      const location = useLocation();
+      return (
+        <output data-testid="where">{`${location.pathname}${location.search}`}</output>
+      );
+    };
+    const next = `/project-invite/x?next=${encodeURIComponent("/sign/p/r")}`;
+    const { result } = renderHook(
+      () => usePasskeySignUp("tok", { enabled: true, next }),
+      {
+        wrapper: ({ children }: { children: ReactNode }) => (
+          <I18nextProvider i18n={i18n}>
+            <QueryClientProvider client={new QueryClient()}>
+              <MemoryRouter initialEntries={["/invite/tok"]}>
+                <Routes>
+                  <Route path="/invite/:token" element={children} />
+                  <Route path="*" element={<Where />} />
+                </Routes>
+              </MemoryRouter>
+            </QueryClientProvider>
+          </I18nextProvider>
+        ),
+      },
+    );
+    await act(async () => {
+      await result.current.start("Мария");
+    });
+    expect(screen.getByTestId("where")).toHaveTextContent(next);
   });
 
   it("без поддержки в браузере недоступно", () => {

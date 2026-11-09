@@ -58,12 +58,15 @@ export const RegisterResultCard = ({
   link,
   email,
   invited = false,
+  next = "",
 }: {
   status: "check_email" | "pending_approval";
   link: string | null;
   email: string;
   // Приглашение на этот адрес само подтвердило почту: аккаунт готов, письма ждать не надо.
   invited?: boolean;
+  /** Куда вернуться после входа (проверенный путь); пусто: как обычно. */
+  next?: string;
 }) => {
   const { t } = useTranslation("auth");
   const variant =
@@ -100,7 +103,11 @@ export const RegisterResultCard = ({
           variant="secondary"
           style={{ width: "100%", justifyContent: "center" }}
         >
-          <Link to="/login">{t("links.login")}</Link>
+          <Link
+            to={next ? `/login?next=${encodeURIComponent(next)}` : "/login"}
+          >
+            {t("links.login")}
+          </Link>
         </Button>
       </div>
     </section>

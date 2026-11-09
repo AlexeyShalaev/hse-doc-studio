@@ -10,6 +10,7 @@ import {
 } from "@entities/project";
 import { ProjectPeople, StudioPresence } from "@features/connected-devices";
 import { ConflictScreen } from "@features/git-conflicts";
+import { SigningRouteEditor } from "@features/signing-route-editor";
 import { LinkAccessBanner, useGuest } from "@features/guest-session";
 import { useResumeProjectStreams, useStartCompileAll } from "@entities/compile";
 import { DocumentTabs } from "@widgets/DocumentTabs";
@@ -53,6 +54,7 @@ const CANVAS_ACTIVITY: Partial<Record<WorkspaceCanvas, WorkbenchActivity>> = {
   files: "files",
   "submit-pack": "submit",
   "submit-checkpoint": "submit",
+  "submit-route": "submit",
   "submit-signatures": "submit",
   "submit-requirements": "submit",
   "submit-form": "submit",
@@ -70,7 +72,8 @@ export type WorkspaceCanvas =
   | "submit-signatures"
   | "submit-requirements"
   | "submit-form"
-  | "submit-checkpoint";
+  | "submit-checkpoint"
+  | "submit-route";
 
 export type WorkspacePageProps = {
   canvas: WorkspaceCanvas;
@@ -212,6 +215,17 @@ export const WorkspacePage = ({ canvas }: WorkspacePageProps) => {
       case "submit-checkpoint":
         return profileId ? (
           <CheckpointView project={project} profileId={profileId} />
+        ) : (
+          <SubmitEntry project={project} />
+        );
+      case "submit-route":
+        // Отправка на подписание: экран в своём чанке, грузится по заходу на адрес.
+        return profileId ? (
+          <SigningRouteEditor
+            key={`${project.id}:${profileId}`}
+            project={project}
+            profileId={profileId}
+          />
         ) : (
           <SubmitEntry project={project} />
         );

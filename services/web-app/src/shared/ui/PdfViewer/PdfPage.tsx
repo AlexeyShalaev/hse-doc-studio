@@ -23,6 +23,11 @@ export type PdfStamp = {
   heightMm: number;
   label?: string;
   invisible?: boolean;
+  /**
+   * Non-printing frame instead of the image: an accent outline with `label` on
+   * top (the signer's page marks «Ваша подпись» this way). `src` is ignored.
+   */
+  highlight?: boolean;
 };
 
 /** Page margins (mm) for the GOST text-area guide box. */
@@ -410,6 +415,18 @@ export const PdfPage = ({
               width: s.widthMm * pxPerMm,
               height: s.heightMm * pxPerMm,
             };
+            if (s.highlight) {
+              return (
+                <div
+                  key={`hl#${String(i)}`}
+                  className="pdf-stamp-frame"
+                  style={box}
+                  data-testid="pdf-stamp-frame"
+                >
+                  {s.label && <span>{s.label}</span>}
+                </div>
+              );
+            }
             // Invisible crypto field: faint, dashed, non-printing placeholder
             // so the user can locate it even though the real PDF shows nothing.
             if (s.invisible || !s.src) {

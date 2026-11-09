@@ -30,11 +30,12 @@ const toFailure = (error: unknown): SignUpFailure | null => {
 /**
  * Регистрация по приглашению сразу с passkey, без пароля. Доступна, если на установке включён passkey,
  * браузер его умеет и приглашение выписано на конкретный адрес (почта подтверждена самим приглашением).
- * Успех открывает сессию так же, как вход; страница приглашения шлюзом не закрыта, поэтому уходим на главную сами.
+ * Успех открывает сессию так же, как вход; страница приглашения шлюзом не закрыта, поэтому уходим сами:
+ * на `next` (проверенный путь этого же сайта) или на главную.
  */
 export const usePasskeySignUp = (
   invitationToken: string,
-  { enabled }: { enabled: boolean },
+  { enabled, next = DEFAULT_NEXT_PATH }: { enabled: boolean; next?: string },
 ) => {
   const client = useQueryClient();
   const refresh = useRefreshSession();
@@ -64,7 +65,7 @@ export const usePasskeySignUp = (
         await clearUserScopedCache(client);
         setCsrfToken(res.csrf_token);
         await refresh();
-        void navigate(DEFAULT_NEXT_PATH, { replace: true });
+        void navigate(next, { replace: true });
       } catch (error) {
         const next = toFailure(error);
         setFailure(next);
@@ -73,7 +74,7 @@ export const usePasskeySignUp = (
         setPending(false);
       }
     },
-    [client, invitationToken, navigate, refresh],
+    [client, invitationToken, navigate, next, refresh],
   );
 
   return { available, start, pending, failure };

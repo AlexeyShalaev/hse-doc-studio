@@ -164,6 +164,12 @@ export default defineConfig(({ mode }) => {
             if (landing) {
               return `assets/locale-landing-${landing[1]}-[hash].js`;
             }
+            // Словарь страницы подписанта: грузится вместе с ней.
+            const signing =
+              /\/locales\/([a-z]{2})\/signing\/signing\.json$/.exec(id);
+            if (signing) {
+              return `assets/locale-signing-${signing[1] ?? ""}-[hash].js`;
+            }
             // Общие куски разделов админки (features/admin-ops и т.п.) сборщик
             // называет по папке; без префикса они совпали бы с маской admin-*.js
             // единственного чанка оболочки.

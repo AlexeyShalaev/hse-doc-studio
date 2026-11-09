@@ -642,8 +642,25 @@ export const createSigningRouteDemo = (
     };
   };
 
-  const blockersOf = (r: Route): SigningRouteBlocker[] => {
+  const blockersOf = (
+    r: Route,
+    user: SigningDemoUser,
+  ): SigningRouteBlocker[] => {
     const blockers: SigningRouteBlocker[] = [];
+    // Отправка и есть согласие отправителя: его картинка или данные плашки нужны заранее.
+    const sender = r.steps[0]?.find((p) => p.user_id === user.id);
+    if (
+      sender &&
+      assignmentsOf(r, sender).length > 0 &&
+      ((sender.method === "image" && !sender.imageReady) ||
+        (isCrypto(sender.method) && sender.plate === null))
+    )
+      blockers.push({
+        code: "sender_not_ready",
+        doc_id: null,
+        slot_id: null,
+        participant_id: sender.id,
+      });
     for (const p of participants(r)) {
       if (membershipOf(p) === "missing")
         blockers.push({
@@ -684,7 +701,7 @@ export const createSigningRouteDemo = (
   };
 
   const toPreview = (r: Route, user: SigningDemoUser): SigningRoutePreview => {
-    const blockers = blockersOf(r);
+    const blockers = blockersOf(r, user);
     const L = visualStep(r);
     const sender = r.steps[0]?.find((p) => p.user_id === user.id) ?? null;
     return {
@@ -768,6 +785,26 @@ export const createSigningRouteDemo = (
     return { user_id: null, invitation_id: null, name: null };
   };
 
+  /** Человек персоны, как `pick_person` сервера: автор, участник проекта, приглашение или никто. */
+  const byPersona = (
+    persona: string,
+    author: SigningDemoUser,
+  ): Pick<Participant, "user_id" | "invitation_id" | "name"> => {
+    if (persona === "author")
+      return { user_id: author.id, invitation_id: null, name: author.name };
+    const member = members.find((m) => m.persona === persona);
+    if (member)
+      return {
+        user_id: member.user_id,
+        invitation_id: null,
+        name: member.name,
+      };
+    const inv = invitations.find((i) => i.persona === persona);
+    return inv
+      ? { user_id: null, invitation_id: inv.invitation_id, name: inv.hint }
+      : { user_id: null, invitation_id: null, name: null };
+  };
+
   const draftFromPack = (
     projectId: string,
     profile: SigningDemoProfile,
@@ -809,33 +846,9 @@ export const createSigningRouteDemo = (
     );
     if (rest.length > 0) ordered.push(rest);
     r.steps = ordered.map((step) =>
-      step.map((persona) => {
-        if (persona === "author")
-          return makeParticipant(r, persona, {
-            user_id: author.id,
-            invitation_id: null,
-            name: author.name,
-          });
-        const member = members.find((m) => m.persona === persona);
-        if (member)
-          return makeParticipant(r, persona, {
-            user_id: member.user_id,
-            invitation_id: null,
-            name: member.name,
-          });
-        const inv = invitations.find((i) => i.persona === persona);
-        return makeParticipant(
-          r,
-          persona,
-          inv
-            ? {
-                user_id: null,
-                invitation_id: inv.invitation_id,
-                name: inv.hint,
-              }
-            : { user_id: null, invitation_id: null, name: null },
-        );
-      }),
+      step.map((persona) =>
+        makeParticipant(r, persona, byPersona(persona, author)),
+      ),
     );
     return r;
   };
@@ -1032,6 +1045,21 @@ export const createSigningRouteDemo = (
         r.deadline = body.deadline;
         r.message = body.message;
         r.updated_at = now();
+        // Как R5: необязательному слоту без участника с его персоной правка добавляет
+        // участника отдельным последним шагом, человека находит по персоне.
+        const lacking = [
+          ...new Set(
+            pairsOf(r)
+              .filter((pair) => pair.optional)
+              .map((pair) => pair.persona),
+          ),
+        ].filter(
+          (persona) => !participants(r).some((p) => p.persona === persona),
+        );
+        for (const persona of lacking)
+          r.steps.push([
+            makeParticipant(r, persona, byPersona(persona, author)),
+          ]);
         for (const p of participants(r)) {
           if (assignmentsOf(r, p).length > 0 && p.method === null)
             p.method = defaultMethod(r, p.persona);
@@ -1052,7 +1080,7 @@ export const createSigningRouteDemo = (
           return conflict("invalid_transition", "The route is already sent");
         const body = parse(SendSigningRouteRequestSchema, req.body);
         if (!body) return invalid("Invalid send request");
-        const blockers = blockersOf(r);
+        const blockers = blockersOf(r, user);
         if (blockers.length > 0)
           return conflict("route_blocked", "The route cannot be sent", {
             blockers,

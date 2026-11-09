@@ -106,6 +106,8 @@ export type PdfViewerProps = {
     heightPt: number;
     token: number;
   } | null;
+  /** Open fitted to the width when nothing is remembered (phones always are). */
+  initialFit?: boolean;
 };
 
 export const PdfViewer = ({
@@ -121,6 +123,7 @@ export const PdfViewer = ({
   jump,
   onAskAgent,
   onFindInSource,
+  initialFit = false,
 }: PdfViewerProps) => {
   const { t } = useTranslation("pdfViewer");
   const rootRef = useRef<HTMLDivElement>(null);
@@ -153,8 +156,9 @@ export const PdfViewer = ({
   const [fit, setFit] = useState(
     () =>
       readPersist(storageKey)?.fit ??
-      (typeof window.matchMedia === "function" &&
-        window.matchMedia(PHONE_QUERY).matches),
+      (initialFit ||
+        (typeof window.matchMedia === "function" &&
+          window.matchMedia(PHONE_QUERY).matches)),
   );
   const [currentPage, setCurrentPage] = useState(1);
   const [pageDraft, setPageDraft] = useState("1");
@@ -183,8 +187,9 @@ export const PdfViewer = ({
     top: number;
   } | null>(null);
 
+  // blob: адрес не принимает запрос (?v= даёт «файл не найден»), а его содержимое и так не меняется.
   const fetchUrl =
-    refreshKey != null
+    refreshKey != null && !url.startsWith("blob:")
       ? `${url}${url.includes("?") ? "&" : "?"}v=${encodeURIComponent(String(refreshKey))}`
       : url;
 
