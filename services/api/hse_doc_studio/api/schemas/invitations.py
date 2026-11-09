@@ -9,6 +9,7 @@ from uuid import UUID
 from pydantic import ConfigDict, Field, model_validator
 
 from hse_doc_studio.api.schemas.common import StrictModel
+from hse_doc_studio.core.invitations.policy import NEXT_PATH_MAX, safe_next_path
 
 GrantRoleName = Literal["reader", "reviewer", "editor"]
 InvitationStatusName = Literal["pending", "accepted", "declined", "revoked", "expired"]
@@ -110,11 +111,15 @@ class CreateProjectInvitationRequest(StrictModel):
     can_edit_all: bool = False
     message: str | None = Field(default=None, max_length=MESSAGE_MAX)
     expires_in_days: int = Field(default=7, ge=1, le=30)
+    # Куда вести после принятия: относительный путь сайта (`/sign/<проект>/<маршрут>` из редактора маршрута).
+    next: str | None = Field(default=None, max_length=NEXT_PATH_MAX)
 
     @model_validator(mode="after")
     def _one_invitee(self) -> CreateProjectInvitationRequest:
         if (self.user_id is None) == (self.email is None):
             raise ValueError("нужно ровно одно из user_id и email")
+        if self.next is not None and safe_next_path(self.next) is None:
+            raise ValueError("next: только относительный путь этого сайта")
         return self
 
 

@@ -30,3 +30,22 @@ def email_allowed_for_org(policies: Mapping[str, object], email: str) -> bool:
         return True
     domains = org_domains(policies)
     return not domains or email_domain(email) in domains
+
+
+# Куда вести после принятия приглашения (`?next=`): например, страница подписания маршрута.
+NEXT_PATH_MAX = 512
+
+
+def safe_next_path(value: str | None) -> str | None:
+    """Только относительный путь этого же сайта: `/…`, без `//`, схемы, обратной косой и управляющих символов.
+
+    Остальное отбрасывается: ссылка приглашения не должна уводить на чужой сайт.
+    """
+    if value is None:
+        return None
+    path = value.strip()
+    if not path.startswith("/") or path.startswith("//") or "\\" in path or len(path) > NEXT_PATH_MAX:
+        return None
+    if any(ord(ch) < 32 or ord(ch) == 127 for ch in path) or ":" in path.split("?", 1)[0]:
+        return None
+    return path

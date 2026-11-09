@@ -1,0 +1,28 @@
+{
+  "steps": [
+    [
+      {
+        "id": "srp_author",
+        "persona": "author",
+        "user_id": "u_01hx7k5ivan",
+        "invitation_id": null
+      }
+    ],
+    [
+      {
+        "id": null,
+        "persona": "supervisor",
+        "user_id": null,
+        "invitation_id": "pinv_01hx9"
+      }
+    ]
+  ],
+  "extra_slots": [
+    {
+      "doc_id": "topic_application",
+      "slot_id": "academic_supervisor"
+    }
+  ],
+  "deadline": "2026-11-15T20:59:00Z",
+  "message": null
+}

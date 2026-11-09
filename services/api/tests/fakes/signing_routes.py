@@ -11,6 +11,7 @@ import copy
 import itertools
 from collections.abc import Callable, Collection, Mapping, Sequence
 from dataclasses import dataclass, field, replace
+from datetime import UTC, datetime
 from uuid import UUID
 
 from hse_doc_studio.core.signing_route.effects import Notify
@@ -39,6 +40,7 @@ class InMemorySigningRouteRepository:
         self._created: dict[UUID, int] = {}
         self._events: list[RouteEvent] = []
         self._seq = itertools.count()
+        self._event_ids = itertools.count(1)
 
     async def add(self, route: SigningRoute, *, events: Sequence[RouteEvent] = ()) -> SigningRoute:
         if route.version != 0:
@@ -46,14 +48,16 @@ class InMemorySigningRouteRepository:
         if route.id in self._routes:
             raise ValueError(f"signing route {route.id} already exists")
         _check_events(route, events)
-        return self._store(replace(route, version=1), events, created=next(self._seq))
+        now = datetime.now(UTC)
+        return self._store(replace(route, version=1, created_at=now, updated_at=now), events, created=next(self._seq))
 
     async def save(self, route: SigningRoute, *, events: Sequence[RouteEvent] = ()) -> SigningRoute:
         _check_events(route, events)
         current = self._routes.get(route.id)
         if current is None or current.project_id != route.project_id or current.version != route.version:
             raise StaleRouteError(route.id)
-        return self._store(replace(route, version=route.version + 1), events, created=self._created[route.id])
+        stored = replace(route, version=route.version + 1, created_at=current.created_at, updated_at=datetime.now(UTC))
+        return self._store(stored, events, created=self._created[route.id])
 
     async def get(self, project_id: UUID, route_id: UUID, *, lock: bool = False) -> SigningRoute | None:
         found = self._routes.get(route_id)
@@ -124,7 +128,7 @@ class InMemorySigningRouteRepository:
                 raise DocumentOnRouteError(busy)
         self._routes[route.id] = copy.deepcopy(route)
         self._created[route.id] = created
-        self._events.extend(copy.deepcopy(list(events)))
+        self._events.extend(replace(copy.deepcopy(event), id=next(self._event_ids)) for event in events)
         return route
 
 

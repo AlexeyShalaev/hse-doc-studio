@@ -59,6 +59,7 @@ from hse_doc_studio.api.routers.v1 import (
     signatures,
     signer_profile,
     signing_identities,
+    signing_routes,
     studio_link,
     submission,
     synctex,
@@ -104,6 +105,8 @@ api_router.include_router(office_editor.router, tags=["office-editor"])
 api_router.include_router(office_services.router, tags=["office-services"])
 api_router.include_router(signatures.router, tags=["signatures"])
 api_router.include_router(signature_plan.router, tags=["signatures"])
+# Маршрут подписания (только сервер): сценарии автора.
+api_router.include_router(signing_routes.router, tags=["signing-routes"])
 api_router.include_router(forms.router, tags=["forms"])
 api_router.include_router(submission.router, tags=["submission"])
 api_router.include_router(changelog.router, tags=["changelog"])

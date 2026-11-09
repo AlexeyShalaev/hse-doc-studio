@@ -223,6 +223,32 @@ async def test__events__appended_in_order_and_filtered_by_round(repo: ISigningRo
     assert await repo.list_events(uuid4()) == []
 
 
+async def test__events__get_increasing_ids_in_write_order(repo: ISigningRouteRepository) -> None:
+    route = make_route(P1)
+    stored = await repo.add(route, events=[make_event(route), make_event(route, EventKind.approved)])
+    await repo.save(stored, events=[make_event(route, EventKind.cancelled)])
+
+    ids = [event.id for event in await repo.list_events(route.id)]
+
+    assert all(isinstance(event_id, int) for event_id in ids)
+    assert ids == sorted(ids)
+    assert len(set(ids)) == 3
+
+
+async def test__write_times__set_by_store_and_kept_on_read(repo: ISigningRouteRepository) -> None:
+    added = await repo.add(make_route(P1))
+    saved = await repo.save(replace(added, message="Срок пятница"))
+    read = await repo.get(P1, added.id)
+
+    assert added.created_at is not None
+    assert added.updated_at == added.created_at
+    assert saved.created_at == added.created_at
+    assert saved.updated_at is not None
+    assert saved.updated_at >= added.created_at
+    assert read is not None
+    assert (read.created_at, read.updated_at) == (saved.created_at, saved.updated_at)
+
+
 async def test__events__of_other_route__rejected(repo: ISigningRouteRepository) -> None:
     route = make_route(P1)
 

@@ -1,0 +1,12 @@
+{
+  "user_id": null,
+  "email": "petr@hse.ru",
+  "role": "reviewer",
+  "persona": "academic_supervisor",
+  "can_share": false,
+  "show_sources": true,
+  "can_edit_all": false,
+  "message": null,
+  "expires_in_days": 7,
+  "next": "/sign/0b6546a3-7a6f-4d5c-a687-1cd19978585f/958d5a27-d496-48d6-b057-12338b8d6214"
+}

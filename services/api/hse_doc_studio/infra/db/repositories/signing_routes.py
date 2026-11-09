@@ -221,6 +221,8 @@ def _route(row: SigningRouteRow, docs: Sequence[str], participants: Sequence[Par
         stop_reason=StopReason(row.stop_reason) if row.stop_reason else None,
         stopped_by=row.stopped_by,
         version=row.version,
+        created_at=row.created_at,
+        updated_at=row.updated_at,
     )
 
 
@@ -233,6 +235,7 @@ def _event(row: SigningRouteEventRow) -> RouteEvent:
         actor_id=_user_id(row.actor_id),
         participant_id=row.participant_id,
         details=dict(row.details or {}),
+        id=row.id,
     )
 
 
@@ -257,18 +260,22 @@ class SqlSigningRouteRepository:
             raise ValueError(f"signing route {route.id} is already stored (version {route.version})")
         _check_events(route, events)
         now = func.clock_timestamp()
-        insert_route = insert(_R).values(id=route.id, version=1, created_at=now, updated_at=now, **_route_values(route))
+        insert_route = (
+            insert(_R)
+            .values(id=route.id, version=1, created_at=now, updated_at=now, **_route_values(route))
+            .returning(_R.created_at)
+        )
         async with self._sessions.use() as session:
             try:
                 async with session.begin_nested():
-                    await session.execute(insert_route)
+                    created_at = (await session.execute(insert_route)).scalar_one()
                     await _write_parts(session, route, events)
             except IntegrityError as exc:
                 conflict = await _conflict(session, route, exc)
                 if conflict is None:
                     raise
                 raise conflict from exc
-        return replace(route, version=1)
+        return replace(route, version=1, created_at=created_at, updated_at=created_at)
 
     async def save(self, route: SigningRoute, *, events: Sequence[RouteEvent] = ()) -> SigningRoute:
         _check_events(route, events)
@@ -276,14 +283,14 @@ class SqlSigningRouteRepository:
             update(_R)
             .where(_R.id == route.id, _R.project_id == route.project_id, _R.version == route.version)
             .values(version=_R.version + 1, updated_at=func.clock_timestamp(), **_route_values(route))
-            .returning(_R.version)
+            .returning(_R.version, _R.created_at, _R.updated_at)
             .execution_options(synchronize_session=False)
         )
         async with self._sessions.use() as session:
             try:
                 async with session.begin_nested():
-                    version = (await session.execute(stmt)).scalar_one_or_none()
-                    if version is None:
+                    written = (await session.execute(stmt)).first()
+                    if written is None:
                         raise StaleRouteError(route.id)
                     await _write_parts(session, route, events)
             except IntegrityError as exc:
@@ -291,7 +298,7 @@ class SqlSigningRouteRepository:
                 if conflict is None:
                     raise
                 raise conflict from exc
-        return replace(route, version=version)
+        return replace(route, version=written.version, created_at=written.created_at, updated_at=written.updated_at)
 
     # --- чтение ---
 

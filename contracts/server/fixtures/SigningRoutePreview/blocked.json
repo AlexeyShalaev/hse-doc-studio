@@ -1,0 +1,66 @@
+{
+  "route_id": "sr_01hy2b7k9q",
+  "can_send": false,
+  "can_send_and_sign": false,
+  "visual_step": 2,
+  "docs": [
+    {
+      "doc_id": "topic_application",
+      "name": {
+        "ru": "Заявление о выборе темы",
+        "en": "Topic selection application"
+      },
+      "built": true,
+      "token": "build:3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f"
+    }
+  ],
+  "participants": [
+    {
+      "participant_id": "srp_author",
+      "step": 1,
+      "persona": "author",
+      "name": "Иванов И. И.",
+      "membership": "member",
+      "method": "image",
+      "methods": [
+        "image",
+        "detached"
+      ],
+      "chooses_method": false,
+      "image_ready": true,
+      "plate_ready": false,
+      "actions": 0
+    },
+    {
+      "participant_id": "srp_supervisor",
+      "step": 2,
+      "persona": "supervisor",
+      "name": "Петров П. П.",
+      "membership": "member",
+      "method": "detached",
+      "methods": [
+        "image",
+        "detached"
+      ],
+      "chooses_method": false,
+      "image_ready": false,
+      "plate_ready": true,
+      "actions": 1
+    }
+  ],
+  "blockers": [
+    {
+      "code": "participant_missing",
+      "doc_id": null,
+      "slot_id": null,
+      "participant_id": "srp_academic"
+    }
+  ],
+  "sender_key": {
+    "id": "5d1f0c3e-7d0b-4b7e-9a51-1c4c2b0b6f11",
+    "label": "Мой ключ OpenPGP",
+    "kind": "openpgp",
+    "protected": true,
+    "signer": "Иванов И. И."
+  }
+}

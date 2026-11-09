@@ -185,6 +185,7 @@ const ROUTE: SigningRoute = {
     ],
   ],
   events: [],
+  candidates: [],
 };
 
 describe("тело PUT", () => {

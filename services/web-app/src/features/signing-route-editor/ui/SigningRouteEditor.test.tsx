@@ -261,6 +261,8 @@ describe("Отправка на подписание: черновик точк�
         }),
       );
     });
+    // Ссылка приглашения ведёт на страницу подписания этого маршрута.
+    expect(create.mock.calls[0]?.[1].next).toMatch(/^\/sign\/p_demo\/sr_/);
     await waitFor(async () => {
       expect(await step(3)).toHaveTextContent("приглашение отправлено");
     });
@@ -269,7 +271,7 @@ describe("Отправка на подписание: черновик точк�
     ).toBeInTheDocument();
   });
 
-  it("согласующий из ожидающих приглашений", async () => {
+  it("согласующий подбирается по персоне из ожидающих приглашений", async () => {
     const user = userEvent.setup();
     mount();
     await step(2);
@@ -281,10 +283,7 @@ describe("Отправка на подписание: черновик точк�
     const third = await step(3);
     expect(third).toHaveTextContent("Соруководитель");
     expect(third).toHaveTextContent("только согласование");
-    await user.selectOptions(
-      within(third).getByRole("combobox", { name: "Из приглашений" }),
-      "inv_co",
-    );
+    // Сервер (R5) ставит на персону ожидающее приглашение с ней, как в заготовке.
     await waitFor(async () => {
       expect(await step(3)).toHaveTextContent("c***@hse.ru");
     });
