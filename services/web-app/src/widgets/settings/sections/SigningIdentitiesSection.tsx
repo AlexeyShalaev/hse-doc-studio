@@ -26,6 +26,7 @@ import { Spinner } from "@shared/ui/Spinner";
 import { Notice } from "@shared/ui/ConflictKit";
 import { localeTag, toast } from "@shared/lib";
 import { SettingHead } from "./Setting";
+import { SignerProfileBlock } from "./SignerProfileBlock";
 import { formatFingerprint } from "./formatFingerprint";
 import {
   OpenPgpCreateForm,
@@ -462,7 +463,15 @@ export const SigningIdentitiesSection = () => {
   const forbidden =
     bootstrap?.mode === "server" &&
     !bootstrap.capabilities.personal_signing_keys;
-  return forbidden ? <SigningForbidden /> : <SigningIdentitiesList />;
+  // Профиль подписанта живёт в аккаунте на сервере; закрытых ключей в нём нет,
+  // поэтому он нужен и при запрете ключей на сервере.
+  const withProfile = bootstrap?.mode === "server" && bootstrap.user != null;
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
+      {forbidden ? <SigningForbidden /> : <SigningIdentitiesList />}
+      {withProfile && <SignerProfileBlock />}
+    </div>
+  );
 };
 
 /**

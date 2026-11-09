@@ -178,3 +178,39 @@ async def test__signatures_json__embedded_section_round_trips(test_app: AsyncCli
     data = json.loads(path.read_text(encoding="utf-8"))
 
     assert data["embedded"] == {}
+
+
+def _withhold(folder: Path, withheld: dict[str, list[str]]) -> None:
+    path = folder / ".hse-studio" / "signatures.json"
+    data = json.loads(path.read_text(encoding="utf-8"))
+    data["withheld"] = withheld
+    path.write_text(json.dumps(data, ensure_ascii=False), encoding="utf-8")
+
+
+async def test__plan__withheld_picture__awaits_approval_and_stays_out_of_the_freeze(
+    test_app: AsyncClient, tmp_path: Path
+) -> None:
+    project_id, _ = await _project(test_app, tmp_path / "proj")
+    await _image_author_detached_supervisor(test_app, project_id)
+    folder = Path((await test_app.get(f"/api/v1/projects/{project_id}")).json()["folder"])
+    _withhold(folder, {_DOC: ["author"]})
+
+    plan = await _plan(test_app, project_id)
+
+    author = _slots(plan)["author"]
+    assert (plan["total"], plan["signed"]) == (2, 0)
+    assert (author["status"], author["reason"]) == ("pending", "awaiting_approval")
+    assert author["hint"]
+
+    # Фиксация без придержанной картинки; когда её открывают, видимый слой меняется и фиксация устаревает.
+    resp = await test_app.post(f"/api/v1/projects/{project_id}/docs/{_DOC}/frozen")
+    assert resp.status_code == 200, resp.text
+    assert _slots(await _plan(test_app, project_id))["supervisor"]["reason"] == "no_signature_file"
+    _withhold(folder, {})
+
+    released = await _plan(test_app, project_id)
+
+    # Картинки нет в зафиксированном файле: в сдаваемом PDF она устарела, как и фиксация под ЭП.
+    assert (_slots(released)["author"]["status"], _slots(released)["author"]["reason"]) == ("stale", "marks_changed")
+    assert _slots(released)["supervisor"]["reason"] == "marks_changed"
+    assert released["docs"][0]["frozen"]["outdated"] == "marks_changed"

@@ -322,6 +322,10 @@ class SubmissionProfile:
     description: dict[str, str]
     items: tuple[SubmissionDocItem, ...]
     extra_items: tuple[ExtraSubmissionItem, ...]
+    # Порядок маршрута подписания этой точки (`signing_route` профиля): шаги из id слотов каталога,
+    # внутри шага параллельно. Пусто: порядок версии `signatures.route`, а без него встроенный
+    # (core/signatures/route_order.py, docs/design/signing-route.md, раздел 5.2).
+    signing_route: tuple[tuple[str, ...], ...] = ()
 
 
 @dataclass(frozen=True)
@@ -372,6 +376,9 @@ class DynamicInclude:
 @dataclass(frozen=True)
 class SignaturesConfig:
     slots: tuple[SignatureSlotDef, ...]
+    # Порядок маршрута подписания по умолчанию (`signatures.route`): шаги из id слотов каталога,
+    # внутри шага параллельно. Пусто: встроенный порядок (core/signatures/route_order.py).
+    route: tuple[tuple[str, ...], ...] = ()
 
 
 @dataclass(frozen=True)

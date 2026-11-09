@@ -60,6 +60,8 @@ class PlanReason(StrEnum):
     """Чего не хватает слоту; клиент показывает подсказку `hint`, MCP отдаёт код как есть."""
 
     placement_off = "placement_off"
+    # Видимая метка придержана маршрутом подписания до согласия подписанта (docs/design/signing-route.md, 6.1).
+    awaiting_approval = "awaiting_approval"
     no_image = "no_image"
     not_built = "not_built"
     not_frozen = "not_frozen"
@@ -218,6 +220,9 @@ def slot_state(  # noqa: C901, PLR0911, PLR0912 — таблица статус�
         return SlotState(method, mark, SlotStatus.pending, PlanReason.method_not_allowed)
     if mark is not VisibleMark.none and (placement is None or not placement.enabled):
         return SlotState(method, mark, SlotStatus.pending, PlanReason.placement_off)
+    # Размещение остаётся включённым: слот не выпадает из плана, пока метка ждёт согласия.
+    if mark is not VisibleMark.none and state.is_withheld(doc_id, slot_id):
+        return SlotState(method, mark, SlotStatus.pending, PlanReason.awaiting_approval)
     if mark is VisibleMark.png and (slot is None or slot.png_path is None or not facts.png_exists(slot.png_path)):
         return SlotState(method, mark, SlotStatus.pending, PlanReason.no_image)
 
@@ -262,6 +267,10 @@ _HINTS: dict[PlanReason, tuple[str, str]] = {
     PlanReason.placement_off: (
         "Подпись не размещена на документе: включите её в панели «Подписи»",
         "The signature is not placed on the document: turn it on in the Signatures panel",
+    ),
+    PlanReason.awaiting_approval: (
+        "Ждёт согласования подписанта по маршруту",
+        "Waiting for the signer's approval in the signing route",
     ),
     PlanReason.no_image: ("Загрузите картинку подписи", "Upload the signature image"),
     PlanReason.not_built: ("Документ не собран: соберите его", "The document is not built: build it"),

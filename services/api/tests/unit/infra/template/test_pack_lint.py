@@ -10,6 +10,7 @@
 
 from pathlib import Path
 
+import pytest
 import yaml
 from hse_doc_studio.infra.template.pack_lint import lint_version_dir
 
@@ -159,3 +160,46 @@ def test__lint_version_dir__real_packs__carry_bilingual_release_notes() -> None:
         assert changes.get("ru"), f"{version_dir}: нет русских заметок о версии"
         assert len(changes["ru"]) == len(changes["en"]), version_dir
         assert lint_version_dir(version_dir).errors == [], version_dir
+
+
+# ── порядок маршрута подписания (`signatures.route`, `signing_route` профиля) ──
+
+
+def _manifest_with_route(route: object, profile_route: object = None) -> dict:
+    manifest = _manifest(required_for_pack=True)
+    manifest["signatures"] = {
+        "slots": [{"id": "author"}, {"id": "supervisor"}, {"id": "academic_supervisor"}],
+        "route": route,
+    }
+    if profile_route is not None:
+        manifest["pack_submission"]["profiles"][0]["signing_route"] = profile_route
+    return manifest
+
+
+def test__lint_version_dir__signing_route_of_declared_slots__reports_no_error(tmp_path: Path) -> None:
+    _write_version(tmp_path, _manifest_with_route([["author"], ["supervisor", "academic_supervisor"]], ["author"]))
+
+    assert lint_version_dir(tmp_path).errors == []
+
+
+def test__lint_version_dir__signing_route_unknown_slot__reports_error(tmp_path: Path) -> None:
+    _write_version(tmp_path, _manifest_with_route([["author"], ["dean"]]))
+
+    errors = lint_version_dir(tmp_path).errors
+
+    assert any("signatures.route" in e and "'dean'" in e for e in errors)
+
+
+def test__lint_version_dir__signing_route_repeated_slot__reports_error(tmp_path: Path) -> None:
+    _write_version(tmp_path, _manifest_with_route([["author"]], [["author"], ["supervisor", "author"]]))
+
+    errors = lint_version_dir(tmp_path).errors
+
+    assert any("final" in e and "signing_route" in e and "дважды" in e for e in errors)
+
+
+@pytest.mark.parametrize("route", [{"first": "author"}, [["author--ivanov"]], [[1]]])
+def test__lint_version_dir__signing_route_malformed__reports_error(tmp_path: Path, route: object) -> None:
+    _write_version(tmp_path, _manifest_with_route(route))
+
+    assert any(e.startswith("signatures.route:") for e in lint_version_dir(tmp_path).errors)

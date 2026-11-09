@@ -123,6 +123,7 @@ SIGNATURES_SHAPE = Struct(
         "frozen": MapOf(Struct()),
         "detached": MapOf(MapOf(Struct())),
         "embedded": MapOf(MapOf(Struct())),
+        "withheld": MapOf(),
     }
 )
 

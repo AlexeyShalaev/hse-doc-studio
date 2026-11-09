@@ -211,6 +211,10 @@ class SignaturesState:
     `placements` holds the per-(doc, slot) positioning.
     `frozen` and `detached` back the detached e-signature flow: the PDF fixed
     for signing per doc, and the signature files attached per (doc, slot).
+    `withheld` lists, per doc, the slots whose visible mark is held back until
+    the signer approves the document in a signing route
+    (docs/design/signing-route.md, 6.1): the placement stays on, the mark is
+    left out of every stamping and of the visible-layer fingerprint.
     """
 
     slots: dict[str, SignatureSlot]
@@ -219,10 +223,14 @@ class SignaturesState:
     detached: dict[str, dict[str, DetachedSignature]] = field(default_factory=dict)
     # PAdES signatures per (doc, slot), layered over the frozen PDF in signing order.
     embedded: dict[str, dict[str, EmbeddedSignature]] = field(default_factory=dict)
+    withheld: dict[str, frozenset[str]] = field(default_factory=dict)
 
     @classmethod
     def empty(cls) -> SignaturesState:
         return cls(slots={}, placements={})
+
+    def is_withheld(self, doc_id: str, slot_id: str) -> bool:
+        return slot_id in self.withheld.get(doc_id, ())
 
 
 @dataclass(frozen=True)

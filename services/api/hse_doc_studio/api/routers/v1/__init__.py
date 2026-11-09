@@ -57,6 +57,7 @@ from hse_doc_studio.api.routers.v1 import (
     share_links,
     signature_plan,
     signatures,
+    signer_profile,
     signing_identities,
     studio_link,
     submission,
@@ -126,6 +127,7 @@ api_router.include_router(ai_runtime.router, tags=["ai-runtime"])
 api_router.include_router(chat.router, tags=["chat"])
 api_router.include_router(export_import.router, tags=["data"])
 api_router.include_router(signing_identities.router, tags=["signing-identities"])
+api_router.include_router(signer_profile.router, tags=["signing-identities"])
 api_router.include_router(profile.router, tags=["profile"])
 api_router.include_router(onboarding.router, tags=["onboarding"])
 api_router.include_router(git_servers.router, tags=["git-sync"])

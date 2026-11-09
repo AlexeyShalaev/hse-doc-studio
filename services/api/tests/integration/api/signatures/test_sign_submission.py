@@ -458,6 +458,29 @@ async def test__sign_submission__supervisor_slot_without_my_key__not_mine(
     assert (await api.plan())["supervisor"]["is_mine"] is False
 
 
+async def test__sign_submission__picture_withheld_by_route__not_stamped_and_doc_not_frozen(
+    test_app: AsyncClient, tmp_path: Path
+) -> None:
+    api = await _api(test_app, tmp_path)
+    await api.png("author")
+    await api.mode("author", "image")
+    await api.mode("supervisor", "detached_text")
+    state = api.state()
+    state["withheld"] = {_DOC: ["author"]}
+    (api.folder / ".hse-studio" / "signatures.json").write_text(json.dumps(state, ensure_ascii=False), encoding="utf-8")
+
+    preview = await api.preview()
+    hint = (await api.plan())["author"]["hint"]
+    result = await api.sign()
+
+    (doc,) = preview["docs"]
+    assert doc["needs_freeze"] is False
+    assert [(s["slot_id"], s["action"], s["blocker"]) for s in doc["slots"]] == [("author", "none", hint)]
+    assert [(r["slot_id"], r["ok"], r["message"]) for r in result["results"]] == [("author", False, hint)]
+    assert result["frozen_docs"] == []
+    assert api.state()["frozen"] == {}
+
+
 # --- выгрузка «С подписями» и пакет для подписанта: итоговый файл плана ------------------------------------------
 
 

@@ -97,6 +97,7 @@ from hse_doc_studio.core.signatures.ports import (
     IPadesSigner,
     IPublicKeyExporter,
     ISignatureAudit,
+    ISignerPlateData,
     ISignerScope,
     ITrustMaterialProvider,
 )
@@ -221,6 +222,7 @@ from hse_doc_studio.use_cases.languagetool.list_languagetool_images import resol
 from hse_doc_studio.use_cases.office_editor.access import IOfficeAccess, LocalOfficeAccess
 from hse_doc_studio.use_cases.office_services.list_office_service_images import resolve_active_office_image
 from hse_doc_studio.use_cases.projects.get_project_access import ProjectAccessService
+from hse_doc_studio.use_cases.signer_profile.plate_data import SlotSignerPlateData
 from hse_doc_studio.use_cases.submission.pack_planner import PackPlanner
 from hse_doc_studio.use_cases.template_update.base_service import TemplateBaseService
 from hse_doc_studio.use_cases.template_update.planning import TemplateUpdatePlanner
@@ -254,6 +256,11 @@ class DomainServiceProvider(Provider):
     @provide
     def get_signature_audit(self) -> ISignatureAudit:
         return LogSignatureAudit()
+
+    @provide
+    def get_signer_plate_data(self) -> ISignerPlateData:
+        # До сценариев подписанта (срез R6) плашку знает только состояние подписей (docs/design/signing-route.md).
+        return SlotSignerPlateData()
 
     @provide
     def get_pades_signer(self) -> IPadesSigner:
