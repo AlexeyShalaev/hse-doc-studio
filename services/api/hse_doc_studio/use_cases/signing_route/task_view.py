@@ -164,9 +164,7 @@ def build_task(  # noqa: PLR0913 — входы одного ответа
         steps=steps,
         participant=me,
         view=view,
-        methods=available_methods(
-            me, view, facts.state, point.methods(mine), server_keys=keys.server_keys_allowed
-        ),
+        methods=available_methods(me, view, facts.state, point.methods(mine), server_keys=keys.server_keys_allowed),
         method=current_method(me, facts.state),
         image_ready=image_ready(me, facts),
         plate=known_plate(me, facts),
@@ -276,9 +274,7 @@ def _height(  # noqa: PLR0913 — входы одной метки
     """Высота метки, которую поставит маршрут: та же метка, что у фиксации, но без учёта придержания."""
     if mark is VisibleMark.none:
         return None
-    shown = replace(
-        state, withheld={}, placements={pair.doc_id: {pair.slot_id: replace(placement, enabled=True)}}
-    )
+    shown = replace(state, withheld={}, placements={pair.doc_id: {pair.slot_id: replace(placement, enabled=True)}})
     project = point.project
     stamps = stamps_for_doc(shown, pair.doc_id, project.folder, str(project.lang), png_exists=lambda _path: True)
     if stamps:

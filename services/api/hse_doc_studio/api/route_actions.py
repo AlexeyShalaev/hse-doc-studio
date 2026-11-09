@@ -210,7 +210,7 @@ ROUTE_ACTIONS: Mapping[RouteKey, RouteRule] = {
     ("POST", "/projects/{project_id}/signatures/slots/{slot_id}/png"): RouteRule(Action.SIGN, path_param="slot_id"),
     ("DELETE", "/projects/{project_id}/signatures/slots/{slot_id}/png"): RouteRule(Action.SIGN, path_param="slot_id"),
     # Маршрут подписания (только сервер): ход видит читатель результата, управляет тот, кто вправе сдавать.
-    # Гостю и ссылочному праву ход закрывает сам маршрут (404). Сценарии подписанта (`.../task`) срез R6.
+    # Гостю и ссылочному праву ход закрывает сам маршрут (404).
     ("GET", "/projects/{project_id}/signing-routes"): RouteRule(Action.OUTPUT_READ),
     ("POST", "/projects/{project_id}/signing-routes"): RouteRule(Action.SUBMISSION_CREATE),
     ("GET", "/projects/{project_id}/signing-routes/{route_id}"): RouteRule(Action.OUTPUT_READ),
@@ -219,6 +219,14 @@ ROUTE_ACTIONS: Mapping[RouteKey, RouteRule] = {
     ("POST", "/projects/{project_id}/signing-routes/{route_id}/send"): RouteRule(Action.SUBMISSION_CREATE),
     ("POST", "/projects/{project_id}/signing-routes/{route_id}/cancel"): RouteRule(Action.SUBMISSION_CREATE),
     ("POST", "/projects/{project_id}/signing-routes/{route_id}/archive"): RouteRule(Action.SUBMISSION_CREATE),
+    # Задача подписанта: только участнику маршрута (иначе 404), право SIGN на каждый свой слот проверяет сценарий.
+    ("GET", "/projects/{project_id}/signing-routes/{route_id}/task"): RouteRule(Action.OUTPUT_READ),
+    ("POST", "/projects/{project_id}/signing-routes/{route_id}/task/approve"): RouteRule(Action.OUTPUT_READ),
+    ("POST", "/projects/{project_id}/signing-routes/{route_id}/task/sign"): RouteRule(Action.OUTPUT_READ),
+    ("POST", "/projects/{project_id}/signing-routes/{route_id}/task/return"): RouteRule(Action.OUTPUT_READ),
+    ("POST", "/projects/{project_id}/signing-routes/{route_id}/task/image"): RouteRule(Action.OUTPUT_READ),
+    ("PUT", "/projects/{project_id}/signing-routes/{route_id}/task/plate"): RouteRule(Action.OUTPUT_READ),
+    ("POST", "/projects/{project_id}/signing-routes/{route_id}/task/plate/file"): RouteRule(Action.OUTPUT_READ),
     # Панель «Доступ»: список видит любой участник проекта
     ("GET", "/projects/{project_id}/members"): RouteRule(Action.PROJECT_VIEW),
     # Настройки проекта (владелец)

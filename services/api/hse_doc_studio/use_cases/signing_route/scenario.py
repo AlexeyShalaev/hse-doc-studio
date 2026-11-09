@@ -119,6 +119,17 @@ class RouteScenario:
         invitees = {i.invitation_id: i for i in await self._s.people.invitees(project_id)}
         return People(names=await self._s.people.names(users), invitees=invitees, personas=loaded.personas)
 
+    async def _people_of(
+        self, project_id: UUID, route: SigningRoute, loaded: LoadedFacts, events: Sequence[RouteEvent]
+    ) -> People:
+        """Люди маршрута и те, кто в нём действовал (акторы событий), чтобы события было кем подписать."""
+        people = await self._people(project_id, route, loaded)
+        missing = {e.actor_id for e in events if e.actor_id is not None and e.actor_id not in people.names}
+        if not missing:
+            return people
+        names = {**people.names, **await self._s.people.names(missing)}
+        return People(names=names, invitees=people.invitees, personas=people.personas)
+
     async def _manages(self, project_id: UUID) -> bool:
         """Вправе ли актор управлять маршрутом точки (`SUBMISSION_CREATE`)."""
         try:
@@ -131,13 +142,8 @@ class RouteScenario:
         loaded = await self._s.facts.load(point, route)
         evaluation = evaluate(route, loaded.facts)
         events = await self._s.routes.list_events(route.id)
-        people = await self._people(point.project_id, route, loaded)
+        people = await self._people_of(point.project_id, route, loaded, events)
         actor_id = actor_uuid(actor) if actor.kind is ActorKind.user else None
-        names = dict(people.names)
-        missing = {e.actor_id for e in events if e.actor_id is not None and e.actor_id not in names}
-        if missing:
-            names |= await self._s.people.names(missing)
-            people = People(names=names, invitees=people.invitees, personas=people.personas)
         manages = await self._manages(point.project_id)
         show = manages or any(p.user_id == actor_id for p in route.participants)
         details = build_details(point, route, loaded.facts, evaluation, people, events, show_comments=show)

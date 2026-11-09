@@ -13,7 +13,7 @@ from hse_doc_studio.core.signing_route.entities import Approval, EventKind, Part
 from hse_doc_studio.core.signing_route.ports import RouteInvitee
 from hse_doc_studio.core.value_objects import SignaturePlacement, SignatureSlot, SignaturesState, SignerInfo
 from hse_doc_studio.use_cases.signing_route.effects import _apply, _date_plates
-from hse_doc_studio.use_cases.signing_route.views import Membership, People, _event
+from hse_doc_studio.use_cases.signing_route.views import Membership, People, event_view
 
 from tests.factories.signing_routes import make_route
 
@@ -135,8 +135,8 @@ def test__event__return_comment_only_for_those_who_may_see_it() -> None:
         details={"comment": "Уточните цель", "reason": "returned"},
     )
 
-    shown = _event(event, _people(), show_comments=True)
-    hidden = _event(event, _people(), show_comments=False)
+    shown = event_view(event, _people(), show_comments=True)
+    hidden = event_view(event, _people(), show_comments=False)
 
     assert (shown.who, shown.comment, shown.reason) == ("Петров П. П.", "Уточните цель", "returned")
     assert (hidden.who, hidden.comment) == ("Петров П. П.", None)

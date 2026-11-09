@@ -1,5 +1,5 @@
 """Провайдер маршрутов подписания (серверный режим): хранилище в Postgres, факты, уведомления, задачи «На подпись»,
-люди проекта и сценарии автора.
+люди проекта, сценарии автора и подписанта.
 
 Локальная Студия маршрутов не хранит (docs/design/signing-route.md, раздел 6.9): порта там нет, сценарии маршрута
 подключаются только в `MODE=server`.
@@ -24,12 +24,15 @@ from hse_doc_studio.core.repositories import (
 from hse_doc_studio.core.services import ProjectTemplateService
 from hse_doc_studio.core.signatures.key_policy import ISigningKeyPolicy
 from hse_doc_studio.core.signatures.ports import (
+    IMarkMeasure,
+    IOpenPgpKeyImporter,
     IPadesSigner,
     ISignatureAudit,
     ISignerPlateData,
     ISignerScope,
     ITrustMaterialProvider,
 )
+from hse_doc_studio.core.signatures.signer_profile import IPublicKeyReader, ISignerProfileRepository
 from hse_doc_studio.core.signing_route.ports import (
     IRouteFacts,
     IRouteLabels,
@@ -43,10 +46,13 @@ from hse_doc_studio.infra.db.repositories.signing_route_people import PostgresRo
 from hse_doc_studio.infra.db.repositories.signing_routes import SqlSigningRouteRepository
 from hse_doc_studio.infra.db.session import SessionProvider
 from hse_doc_studio.infra.signatures.openpgp import GpgKeyring
+from hse_doc_studio.infra.signatures.pdf_stamper import PdfStamper
 from hse_doc_studio.use_cases.projects.get_project import GetProjectUC
 from hse_doc_studio.use_cases.signatures._studio_signer import StudioSigner
 from hse_doc_studio.use_cases.signatures.default_key import DefaultSigningKey
 from hse_doc_studio.use_cases.signatures.freeze_pdf import FreezePdfUC
+from hse_doc_studio.use_cases.signatures.upload_signature_png import UploadSignaturePngUC
+from hse_doc_studio.use_cases.signer_profile.profile import SaveProfileImageUC
 from hse_doc_studio.use_cases.signing_route.author import (
     SigningRouteControl,
     SigningRouteDrafts,
@@ -59,6 +65,7 @@ from hse_doc_studio.use_cases.signing_route.invitations import SigningRouteInvit
 from hse_doc_studio.use_cases.signing_route.key_signer import RouteKeySigner
 from hse_doc_studio.use_cases.signing_route.point import RoutePointLoader
 from hse_doc_studio.use_cases.signing_route.scenario import RouteServices
+from hse_doc_studio.use_cases.signing_route.signer import SignerTools, SigningTaskScenario
 from hse_doc_studio.use_cases.signing_route.tasks import ListSigningTasksUC
 
 
@@ -138,8 +145,14 @@ class ServerSigningRoutesProvider(Provider):
         return RouteFactsLoader(points, signature_repo, plate_data, people)
 
     @provide(scope=Scope.REQUEST)
-    def get_route_effects(self, signature_repo: ISignatureRepository, freeze_uc: FreezePdfUC) -> RouteFileEffects:
-        return RouteFileEffects(signature_repo, freeze_uc)
+    def get_route_effects(
+        self,
+        signature_repo: ISignatureRepository,
+        freeze_uc: FreezePdfUC,
+        profiles: ISignerProfileRepository,
+        key_importer: IOpenPgpKeyImporter,
+    ) -> RouteFileEffects:
+        return RouteFileEffects(signature_repo, freeze_uc, profiles, key_importer)
 
     @provide(scope=Scope.REQUEST)
     def get_route_services(
@@ -198,3 +211,27 @@ class ServerSigningRoutesProvider(Provider):
     @provide(scope=Scope.REQUEST)
     def get_route_control(self, services: RouteServices) -> SigningRouteControl:
         return SigningRouteControl(services)
+
+    # --- сценарии подписанта (срез R6) ---
+
+    @provide
+    def get_mark_measure(self, stamper: PdfStamper) -> IMarkMeasure:
+        return stamper
+
+    @provide(scope=Scope.REQUEST)
+    def get_signer_tools(
+        self,
+        signature_repo: ISignatureRepository,
+        upload_png: UploadSignaturePngUC,
+        profile_image: SaveProfileImageUC,
+        key_reader: IPublicKeyReader,
+        key_importer: IOpenPgpKeyImporter,
+        measure: IMarkMeasure,
+    ) -> SignerTools:
+        return SignerTools(signature_repo, upload_png, profile_image, key_reader, key_importer, measure)
+
+    @provide(scope=Scope.REQUEST)
+    def get_signing_task_scenario(
+        self, services: RouteServices, signer: RouteKeySigner, tools: SignerTools
+    ) -> SigningTaskScenario:
+        return SigningTaskScenario(services, signer, tools)

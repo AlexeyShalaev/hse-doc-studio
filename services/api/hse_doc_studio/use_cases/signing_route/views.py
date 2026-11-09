@@ -222,7 +222,7 @@ def build_details(
         sent_by_name=people.names.get(route.sent_by) if route.sent_by is not None else None,
         docs=doc_views(point, route, facts),
         steps=steps,
-        events=tuple(_event(e, people, show_comments) for e in events),
+        events=tuple(event_view(e, people, show_comments=show_comments) for e in events),
     )
 
 
@@ -279,7 +279,7 @@ def _slots(
     return tuple(views)
 
 
-def _event(event: RouteEvent, people: People, show_comments: bool) -> EventView:
+def event_view(event: RouteEvent, people: People, *, show_comments: bool) -> EventView:
     raw_comment = event.details.get("comment")
     raw_reason = event.details.get("reason")
     reason = StopReason(raw_reason) if isinstance(raw_reason, str) and raw_reason in StopReason else None

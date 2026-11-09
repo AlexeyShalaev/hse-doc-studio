@@ -86,6 +86,20 @@ class MethodNotAllowedError(RouteInputError):
         )
 
 
+class InvalidFileError(RouteInputError):
+    """Загруженный файл не подходит: не PNG, слишком большой, не сертификат или в нём закрытый ключ (400)."""
+
+    def __init__(self, message: str) -> None:
+        super().__init__("invalid_file", message)
+
+
+class KeyUnavailableError(RouteInputError):
+    """Ключ Студии не годится для плашки: ключи на сервере запрещены, у ключа нет сертификата (400)."""
+
+    def __init__(self, message: str) -> None:
+        super().__init__("key_unavailable", message)
+
+
 def acting_participant(route: SigningRoute, evaluation: Evaluation, user_id: UUID) -> Participant:
     """Участник, которым этот человек действует в маршруте; не участнику `not_participant` (ответ 404).
 
