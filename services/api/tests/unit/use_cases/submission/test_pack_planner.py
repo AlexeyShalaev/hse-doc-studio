@@ -455,6 +455,7 @@ def test__pack_planner__image_signature__stamp_entry_with_png_in_manifest() -> N
 
     plan = _plan(project, version, probe, docs=_items("tz", signatures=("author",)), state=state)
 
+    # Комплект из одних картинок без инструкции «как проверить»: электронных подписей в нём нет.
     [entry] = plan.payload.entries
     assert (entry.kind, entry.arcname, entry.source) == (PackEntryKind.stamp_pdf, "ТЗ.pdf", ManifestFile("tz/tz.pdf"))
     [stamp] = entry.stamps
@@ -551,7 +552,7 @@ def _detached_setup(
     )
 
 
-def test__pack_planner__detached__frozen_sigs_keys_readme_entries() -> None:
+def test__pack_planner__detached__frozen_sigs_keys_and_verify_guide() -> None:
     project, version, state, probe = _detached_setup()
     exporter = FakeExporter({"A" * 40: b"-----BEGIN PGP PUBLIC KEY BLOCK-----"})
 
@@ -560,20 +561,21 @@ def test__pack_planner__detached__frozen_sigs_keys_readme_entries() -> None:
     entries = plan.payload.entries
     assert [(e.kind, e.arcname) for e in entries] == [
         (PackEntryKind.copy, "ТЗ.pdf"),
-        (PackEntryKind.copy, "ТЗ.Научный_руководитель.asc"),
+        (PackEntryKind.copy, "ТЗ.Иван_Иванов.openpgp.asc"),
         (PackEntryKind.blob, "public-key.Иван_Иванов.asc"),
-        (PackEntryKind.text, "ТЗ.README.txt"),
+        (PackEntryKind.text, "КАК_ПРОВЕРИТЬ.txt"),
     ]
-    frozen_entry, sig_entry, key_entry, readme_entry = entries
+    frozen_entry, sig_entry, key_entry, guide_entry = entries
     assert all(e.critical for e in entries)
     assert frozen_entry.source == ManifestFile(".hse-studio/frozen/tz.pdf", sha256=_sha(_FROZEN), size=len(_FROZEN))
     assert sig_entry.source == ManifestFile(".hse-studio/signatures/tz.advisor.asc")
     assert key_entry.blob is not None
     assert key_entry.blob.to_bytes() == b"-----BEGIN PGP PUBLIC KEY BLOCK-----"
-    assert readme_entry.text is not None
-    assert _sha(_FROZEN) in readme_entry.text
-    assert "ТЗ.Научный_руководитель.asc (подписант: Иван Иванов)" in readme_entry.text
-    assert "public-key.Иван_Иванов.asc" in readme_entry.text
+    assert guide_entry.text is not None
+    assert _sha(_FROZEN) in guide_entry.text
+    assert "открепленная ЭП" in guide_entry.text
+    assert 'gpg --verify "ТЗ.Иван_Иванов.openpgp.asc" "ТЗ.pdf"' in guide_entry.text
+    assert 'gpg --import "public-key.Иван_Иванов.asc"' in guide_entry.text
     assert exporter.calls == ["A" * 40]
 
 
@@ -585,8 +587,8 @@ def test__pack_planner__detached_in_subfolder__companions_next_to_pdf() -> None:
 
     assert _arcnames(plan) == [
         "Бумаги/ТЗ.pdf",
-        "Бумаги/ТЗ.Научный_руководитель.asc",
-        "Бумаги/ТЗ.README.txt",
+        "Бумаги/ТЗ.Иван_Иванов.openpgp.asc",
+        "КАК_ПРОВЕРИТЬ.txt",
     ]
 
 
@@ -602,15 +604,15 @@ def test__pack_planner__detached_without_exporter_or_failing_key__no_key_entries
         assert [e.kind for e in plan.payload.entries] == [PackEntryKind.copy, PackEntryKind.copy, PackEntryKind.text]
 
 
-def test__pack_planner__detached_english__readme_and_label_in_project_language() -> None:
+def test__pack_planner__detached_english__guide_and_names_in_project_language() -> None:
     project, version, state, probe = _detached_setup()
 
     plan = _plan(project, version, probe, docs=_items("tz", signatures=("advisor",)), state=state, lang=Lang.en)
 
-    assert _arcnames(plan) == ["tz-en.pdf", "tz-en.Supervisor.asc", "tz-en.README.txt"]
-    readme = plan.payload.entries[-1].text
-    assert readme is not None
-    assert readme.startswith("Detached electronic signatures")
+    assert _arcnames(plan) == ["tz-en.pdf", "tz-en.Иван_Иванов.openpgp.asc", "HOW_TO_VERIFY.txt"]
+    guide = plan.payload.entries[-1].text
+    assert guide is not None
+    assert guide.startswith("How to verify the signatures")
 
 
 def test__pack_planner__frozen_rehash_mismatch__value_error_text_unchanged_before_any_write() -> None:

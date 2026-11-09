@@ -51,11 +51,32 @@ export type FormLike = {
   owner?: string | null | undefined;
 };
 
+/**
+ * Слот из плана подписей бэкенда (GET /signature-plan). План знает то, чего
+ * нет в размещениях: открепленная ЭП без файла подписи, подпись прежней
+ * версии документа, картинка против криптоподписи.
+ */
+export type PlanSlotLike = {
+  slot_id: string;
+  status: "pending" | "signed" | "invalid" | "stale";
+  method: "image" | "detached" | "pades";
+  crypto: boolean;
+  hint: string;
+  signer: { persona: string; name: string };
+  is_mine?: boolean | undefined;
+};
+
+export type SignaturePlanLike = {
+  docs: readonly { doc_id: string; slots: readonly PlanSlotLike[] }[];
+};
+
 export type CheckpointSignatureState = {
   // Реальный слот проекта, в который разрешился пункт профиля: в команде это
   // «<slot_id>--<slug>». По нему же ищется локализованная подпись слота.
   slotId: string;
   isSigned: boolean;
+  // Из плана подписей; без плана (он ещё грузится) — undefined.
+  plan?: PlanSlotLike | undefined;
 };
 
 export type CheckpointItemState = {
@@ -196,6 +217,7 @@ const buildItemState = (
   signatures: SignaturesStateLike | undefined,
   authorSlug: string | null | undefined,
   authorSlugs: readonly string[],
+  plan: SignaturePlanLike | undefined,
 ): CheckpointItemState => {
   if (!doc) {
     return {
@@ -215,6 +237,9 @@ const buildItemState = (
   // Состояние подписей может ещё грузиться; отсутствующее размещение читается
   // как «не подписано» — вызывающий в это время показывает загрузку.
   const docPlacements = signatures?.placements[doc.id];
+  const planSlots = plan?.docs.find(
+    (planDoc) => planDoc.doc_id === doc.id,
+  )?.slots;
 
   return {
     docId: item.doc_id,
@@ -233,15 +258,28 @@ const buildItemState = (
         signatures,
         doc,
         authorSlugs,
-      ).map((resolvedSlotId) => ({
-        slotId: resolvedSlotId,
-        // Зеркалим проверку бэкенда: размещение включено И PNG загружен.
-        // Иначе кольцо зеленеет на слоте, который студент включил лишь чтобы
-        // посмотреть, куда ляжет штамп, — а упаковка потом откажет.
-        isSigned:
-          docPlacements?.[resolvedSlotId]?.enabled === true &&
-          signatures?.slots?.[resolvedSlotId]?.png_path != null,
-      })),
+      ).map((resolvedSlotId) => {
+        // План подписей — источник истины: он считает открепленную ЭП
+        // подписанной только с файлом подписи к текущей фиксации PDF. Без
+        // плана (старый бэкенд, загрузка) — прежнее зеркало проверки упаковки:
+        // размещение включено И PNG загружен.
+        if (plan !== undefined) {
+          const planSlot = planSlots?.find(
+            (slot) => slot.slot_id === resolvedSlotId,
+          );
+          return {
+            slotId: resolvedSlotId,
+            isSigned: planSlot?.status === "signed",
+            plan: planSlot,
+          };
+        }
+        return {
+          slotId: resolvedSlotId,
+          isSigned:
+            docPlacements?.[resolvedSlotId]?.enabled === true &&
+            signatures?.slots?.[resolvedSlotId]?.png_path != null,
+        };
+      }),
     ),
   };
 };
@@ -309,6 +347,7 @@ export const computeCheckpointReadiness = (
   authorSlug?: string | null,
   authorSlugs: readonly string[] = [],
   scope: CheckpointScope = {},
+  plan?: SignaturePlanLike,
 ): CheckpointReadiness => {
   const profileItems = profile.items;
   if (profileItems == null) return UNKNOWN_READINESS;
@@ -339,6 +378,7 @@ export const computeCheckpointReadiness = (
       signatures,
       authorSlug,
       authorSlugs,
+      plan,
     ),
   );
 

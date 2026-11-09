@@ -126,6 +126,31 @@ runner:
 
 Проверка в кластере после установки: собрать документ, в журнале задачи видна строка `pod=hds-builds/hds-build-…`, а `kubectl -n hds-builds get pods -w` показывает появление и удаление пода. Устройство и развилки: `docs/design/k8s-runner.md`.
 
+## Офисные задачи (Gotenberg)
+
+Задачи с тегом `office` (pptx, docx и другие в PDF) раннер отправляет в постоянный Gotenberg. `services.officeConvert.enabled=true` ставит его в namespace релиза:
+
+```yaml
+services:
+  officeConvert:
+    enabled: true
+    image: {repository: gotenberg/gotenberg, tag: 8.39.0-libreoffice}   # точный тег, вариант без Chromium
+    replicas: 1
+    resources:
+      requests: {cpu: 250m, memory: 512Mi, ephemeral-storage: 256Mi}
+      limits: {cpu: "2", memory: 2Gi, ephemeral-storage: 2Gi}
+    timeout: 180s          # предел одной конвертации
+    tmpSizeLimit: 1Gi      # emptyDir /tmp
+    networkPolicy: {enabled: true}
+```
+
+- Deployment и Service `<релиз>-office-convert:3000`; под проходит Pod Security restricted (uid 1001 образа, корень только для чтения, `/tmp` и `/home/gotenberg` в emptyDir, пробы на `/health`), webhook и загрузка по ссылке выключены.
+- NetworkPolicy: вход только от подов раннеров релиза на порт 3000, выход закрыт.
+- Адрес получают раннер чарта (`HSE_RUNNER__OFFICE_URL`, если `runner.officeUrl` пуст) и раннеры из админки (`HSE_STUDIO__RUNNER_INSTALL__OFFICE_URL`, при установке и при «Обновить»). Свой `runner.officeUrl` перекрывает встроенный для обоих.
+- Egress-политика раннеров (`runner.networkPolicy`) разрешает встроенный Gotenberg сама.
+
+Пример значений: `ci/values-office.yaml`; в CI тот же рендер ставится на kind в namespace с restricted и конвертирует документ. Подробнее: `docs/ru/deploy/runners.md`, «Офисные задачи в кластере».
+
 ## Хранилище для раннеров и браузеров вне кластера
 
 `s3.endpoint` это внутренний адрес S3 (`http://<сервис>.<namespace>.svc`): по нему ходят api и раннеры в кластере. Личные раннеры на ноутбуках, локальные Студии и браузеры (PDF по ссылке) его не откроют. Для них задайте публичный адрес: `s3.publicEndpoint: https://files.example.org`. Ссылки подписываются сразу для этого хоста; раннер чарта по-прежнему получает внутренний адрес.

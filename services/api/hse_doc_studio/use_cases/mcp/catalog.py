@@ -15,12 +15,27 @@ from hse_doc_studio.core.access.actions import Action
 from hse_doc_studio.core.agent.entities import ToolSpec
 from hse_doc_studio.core.agent.tools import ToolDefinition
 from hse_doc_studio.core.enums import ToolKind
-from hse_doc_studio.core.mcp.entities import McpToolGroup, McpToolMeta
+from hse_doc_studio.core.mcp.entities import MCP_SIGN_SCOPE, McpToolGroup, McpToolMeta
 from hse_doc_studio.core.mcp.protocols import IDependencyResolver
-from hse_doc_studio.core.rate_limit import COMPILE, GIT_SYNC, UPLOAD, RateRule
+from hse_doc_studio.core.rate_limit import COMPILE, GIT_SYNC, INVITE, UPLOAD, RateRule
 from hse_doc_studio.use_cases.chat._registry import ToolRegistry
-from hse_doc_studio.use_cases.mcp.tools import admin, build, cloud, files, git, people, projects, review, submission
+from hse_doc_studio.use_cases.mcp.tools import access as access_tools
+from hse_doc_studio.use_cases.mcp.tools import (
+    admin,
+    build,
+    cloud,
+    documents,
+    files,
+    git,
+    people,
+    projects,
+    review,
+    submission,
+)
+from hse_doc_studio.use_cases.mcp.tools import template as template_tools
 from hse_doc_studio.use_cases.mcp.tools._base import PROJECT_ID_SCHEMA, McpTool
+from hse_doc_studio.use_cases.mcp.tools.compile_document import CompileDocumentTool
+from hse_doc_studio.use_cases.mcp.tools.fields import ListProjectFieldsTool
 
 # Записи, которые HTTP пропускает и в проект «только для чтения» (api/guards.py `_ALLOWED_SUFFIXES` и DELETE):
 # откат к снимку, выборка из git-remote и удаление проекта.
@@ -34,8 +49,12 @@ class McpToolRule:
     action: Action | None = None
     # Аргументы с путями файлов: каждый проверяется как область права.
     path_args: tuple[str, ...] = ()
+    # Аргументы с id экземпляра `<база>--<автор>` (документ): область права слаг автора, как у HTTP.
+    instance_args: tuple[str, ...] = ()
     # Правило частоты маршрута, которому тул соответствует.
     rate: RateRule | None = None
+    # Отдельное право токена сверх `mcp` (подпись комплекта: `sign`); без него тула не видно.
+    scope: str | None = None
 
     @property
     def name(self) -> str:
@@ -57,10 +76,12 @@ def _rule(  # noqa: PLR0913 — строка таблицы
     action: Action | None = None,
     *,
     path_args: tuple[str, ...] = (),
+    instance_args: tuple[str, ...] = (),
     dangerous: bool = False,
     server_only: bool = False,
     local_only: bool = False,
     rate: RateRule | None = None,
+    scope: str | None = None,
 ) -> McpToolRule:
     admin_tool = group is McpToolGroup.admin
     meta = McpToolMeta(
@@ -72,7 +93,9 @@ def _rule(  # noqa: PLR0913 — строка таблицы
         local_only=local_only,
         admin=admin_tool,
     )
-    return McpToolRule(meta=meta, action=action, path_args=path_args, rate=rate)
+    return McpToolRule(
+        meta=meta, action=action, path_args=path_args, instance_args=instance_args, rate=rate, scope=scope
+    )
 
 
 _R, _W, _X = ToolKind.read, ToolKind.write, ToolKind.exec_
@@ -85,13 +108,24 @@ MCP_TOOL_RULES: tuple[McpToolRule, ...] = (
     _rule("get_project", _G.projects, _R, Action.PROJECT_VIEW),
     _rule("list_templates", _G.projects, _R),
     _rule("create_project", _G.projects, _X),
+    _rule("list_project_fields", _G.projects, _R, Action.PROJECT_VIEW),
     _rule("set_project_meta", _G.projects, _W, Action.PROJECT_SETTINGS),
     _rule("set_project_people", _G.projects, _W, Action.PROJECT_SETTINGS),
     _rule("set_language", _G.projects, _W, Action.PROJECT_SETTINGS),
     _rule("delete_project", _G.projects, _X, Action.PROJECT_DELETE, dangerous=True),
     _rule("clone_cloud_project", _G.projects, _X, local_only=True, rate=GIT_SYNC),
+    # Обновление шаблона: статус видит участник, план и применение как у маршрутов template-update
+    _rule("template_update_status", _G.projects, _R, Action.PROJECT_VIEW),
+    _rule("plan_template_update", _G.projects, _X, Action.TEMPLATE_MANAGE),
+    _rule("apply_template_update", _G.projects, _X, Action.TEMPLATE_MANAGE),
+    # Доступ к проекту: те же права, что у маршрутов панели «Доступ»; локально доступа нет
+    _rule("list_project_access", _G.projects, _R, Action.PROJECT_VIEW, server_only=True),
+    _rule("invite_to_project", _G.projects, _W, Action.ACCESS_MANAGE, server_only=True, rate=INVITE),
+    _rule("revoke_project_invitation", _G.projects, _W, Action.ACCESS_MANAGE, server_only=True),
+    _rule("remove_project_member", _G.projects, _W, Action.PROJECT_SETTINGS, server_only=True),
     # Документы и файлы
     _rule("list_documents", _G.files, _R, Action.PROJECT_VIEW),
+    _rule("set_document_variant", _G.files, _W, Action.FILES_WRITE, instance_args=("doc_id",)),
     _rule("list_files", _G.files, _R, Action.SOURCES_READ),
     _rule("read_tex", _G.files, _R, Action.FILES_READ, path_args=("path",)),
     _rule("read_pdf", _G.files, _R, Action.FILES_READ, path_args=("path",)),
@@ -132,6 +166,9 @@ MCP_TOOL_RULES: tuple[McpToolRule, ...] = (
     _rule("list_submissions", _G.submission, _R, Action.SUBMISSION_READ),
     _rule("package_project", _G.submission, _X, Action.SUBMISSION_CREATE),
     _rule("list_signatures", _G.submission, _R, Action.OUTPUT_READ),
+    _rule("get_signature_plan", _G.submission, _R, Action.OUTPUT_READ),
+    # Подпись комплекта своим ключом: право SIGN на каждый слот проверяет сценарий, а тул опасный (M6).
+    _rule("sign_submission", _G.submission, _X, Action.OUTPUT_READ, dangerous=True, scope=MCP_SIGN_SCOPE),
     # Админка (сценарии сами требуют админа установки)
     _rule("admin_list_users", _G.admin, _R),
     _rule("admin_queue_summary", _G.admin, _R),
@@ -150,11 +187,21 @@ MCP_TOOL_CLASSES: tuple[type[McpTool], ...] = (
     projects.GetProjectTool,
     projects.DeleteProjectTool,
     people.SetProjectPeopleTool,
+    ListProjectFieldsTool,
     cloud.CloneCloudProjectTool,
+    template_tools.TemplateUpdateStatusTool,
+    template_tools.PlanTemplateUpdateTool,
+    template_tools.ApplyTemplateUpdateTool,
+    documents.SetDocumentVariantTool,
+    access_tools.ListProjectAccessTool,
+    access_tools.InviteToProjectTool,
+    access_tools.RevokeProjectInvitationTool,
+    access_tools.RemoveProjectMemberTool,
     files.ListFilesTool,
     files.WriteFileTool,
     files.MoveFileTool,
     files.DeleteFileTool,
+    CompileDocumentTool,
     build.ListCompilesTool,
     build.GetCompileTool,
     build.CancelCompileTool,
@@ -171,6 +218,8 @@ MCP_TOOL_CLASSES: tuple[type[McpTool], ...] = (
     submission.ListSubmissionProfilesTool,
     submission.ListSubmissionsTool,
     submission.ListSignaturesTool,
+    submission.GetSignaturePlanTool,
+    submission.SignSubmissionTool,
     admin.AdminListUsersTool,
     admin.AdminQueueSummaryTool,
     admin.AdminRunnerSummaryTool,

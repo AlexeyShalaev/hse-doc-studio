@@ -13,6 +13,7 @@ from hse_doc_studio.core.jobs.availability import BUILD_TAGS, BuildAvailability
 from hse_doc_studio.core.jobs.enums import JobKind
 from hse_doc_studio.core.jobs.liveness import DEFAULT_RUNNER_LIVE_WINDOW_S, is_live_shared
 from hse_doc_studio.core.jobs.routing import IJobRouter, JobRoute
+from hse_doc_studio.core.jobs.runner_fit import RunnerFit, RunnerGapReason
 from hse_doc_studio.core.jobs.runners import IRunnerRepository
 
 logger = structlog.get_logger()
@@ -66,20 +67,46 @@ class RunnerBuildAvailability:
 
     async def general(self) -> BuildAvailability:
         any_live, tags = await self._shared()
-        return BuildAvailability(cloud=True, any_runner=any_live, tags=frozenset(tags))
+        reasons = await self._reasons(BUILD_TAGS - tags, None)
+        return BuildAvailability(cloud=True, any_runner=any_live, tags=frozenset(tags), reasons=reasons)
 
     async def of(self, project_id: UUID, actor: Actor) -> BuildAvailability:
         any_live, tags = await self._shared()
-        personal = await self._personal_tags(project_id, actor, BUILD_TAGS - tags)
-        return BuildAvailability(cloud=True, any_runner=any_live or bool(personal), tags=frozenset(tags | personal))
+        user_id = await self._user_of(project_id, actor)
+        personal = await self._personal_tags(project_id, user_id, BUILD_TAGS - tags)
+        served = frozenset(tags | personal)
+        owner = await self._personal_owner(project_id, user_id) if served != BUILD_TAGS else None
+        reasons = await self._reasons(BUILD_TAGS - served, owner)
+        return BuildAvailability(cloud=True, any_runner=any_live or bool(personal), tags=served, reasons=reasons)
 
-    async def _personal_tags(self, project_id: UUID, actor: Actor, missing: frozenset[str]) -> frozenset[str]:
-        if self._router is None or not missing:
-            return frozenset()
+    async def _reasons(self, missing: frozenset[str], owner: str | None) -> dict[str, str]:
+        """Почему тег не обслуживается: личный раннер на паузе, не в сети или раннера с тегом нет."""
+        if not missing:
+            return {}
+        now = self._clock()
+        runners = await self._runners.list()
+        reasons: dict[str, str] = {}
+        for tag in sorted(missing):
+            reason = RunnerFit.of(frozenset({tag}), runners, now, personal_owner=owner).reason
+            reasons[tag] = (reason or RunnerGapReason.no_runner).value
+        return reasons
+
+    async def _user_of(self, project_id: UUID, actor: Actor) -> UUID | None:
+        if self._router is None:
+            return None
         try:
-            user_id = await self._payer(actor, project_id) if self._payer is not None else UUID(str(actor.id))
+            return await self._payer(actor, project_id) if self._payer is not None else UUID(str(actor.id))
         except Exception as exc:  # noqa: BLE001 — гостю без плательщика личные раннеры просто не в счёт
             logger.debug("build availability: no payer", project_id=str(project_id), exc=repr(exc))
+            return None
+
+    async def _personal_owner(self, project_id: UUID, user_id: UUID | None) -> str | None:
+        if self._router is None or user_id is None:
+            return None
+        return await self._router.personal_owner(kind=JobKind.compile, project_id=project_id, user_id=user_id)
+
+    async def _personal_tags(self, project_id: UUID, user_id: UUID | None, missing: frozenset[str]) -> frozenset[str]:
+        if self._router is None or user_id is None or not missing:
             return frozenset()
         served: set[str] = set()
         for tag in sorted(missing):

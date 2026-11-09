@@ -6,12 +6,9 @@ import { toast } from "@shared/lib";
 import { useInvalidateImages } from "@entities/compile-images";
 import { runnerKeys } from "@entities/runner";
 import { useCapabilities } from "@entities/session";
+import { blockOfRefusal, kindsText, NO_RUNNER_CODES } from "./buildBlock";
 
-/** Отказ сервера: для сборки сейчас нет раннера (гонка с опросом доступности). */
-export const NO_RUNNER_CODES: ReadonlySet<string> = new Set([
-  "no_runners",
-  "no_runner_for_tags",
-]);
+export { NO_RUNNER_CODES };
 
 /**
  * Centralised handler for compile-trigger errors. The axios interceptor
@@ -44,7 +41,15 @@ export const useHandleCompileError = () => {
       void queryClient.invalidateQueries({
         queryKey: [...runnerKeys.all, "availability"],
       });
-      toast.error(t(`code.${err.code}`), {
+      // Раннер с тегом есть, но на паузе или не в сети: называем именно это, а не «нет раннера».
+      const cause = blockOfRefusal(err)?.cause;
+      const message =
+        cause !== undefined && cause !== "no_runner"
+          ? t(`documents:compile.unavailable.cause.${cause}`, {
+              kinds: kindsText(t, err.data?.tags),
+            })
+          : t(`code.${err.code}`);
+      toast.error(message, {
         key: "compile-no-runners",
         title: t("compile.noRunnersTitle"),
         duration: 10_000,

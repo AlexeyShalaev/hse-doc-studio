@@ -146,3 +146,5 @@ class InstallFromUiFacts:
     namespace: str | None = None
     # Namespace подов сборки таких раннеров; None значит namespace раннера.
     build_namespace: str | None = None
+    # Адрес Gotenberg, который такие раннеры получают в HSE_RUNNER__OFFICE_URL; None значит без office.
+    office_url: str | None = None

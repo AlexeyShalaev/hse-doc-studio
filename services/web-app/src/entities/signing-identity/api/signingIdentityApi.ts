@@ -34,11 +34,32 @@ const SlotInfoResponseSchema = z.object({
 
 const SigningIdentityListSchema = z.array(SigningIdentitySchema);
 
+// Ключ по умолчанию: им «Подписать комплект» подписывает свои слоты и заполняет
+// плашку. identity_id — выбранный явно; effective_id — тот, что сработает (при
+// единственном ключе он выбирается сам, auto = true).
+const DefaultKeySchema = z.object({
+  identity_id: z.string().uuid().nullable(),
+  effective_id: z.string().uuid().nullable(),
+  auto: z.boolean(),
+});
+
+export type DefaultKey = z.infer<typeof DefaultKeySchema>;
+
 export const signingIdentityApi = {
   list: () =>
     apiClient
       .get("/signing-identities")
       .then(parseResp(SigningIdentityListSchema)),
+
+  getDefault: () =>
+    apiClient
+      .get("/signing-identities/default")
+      .then(parseResp(DefaultKeySchema)),
+
+  setDefault: (identityId: string | null) =>
+    apiClient
+      .put("/signing-identities/default", { identity_id: identityId })
+      .then(parseResp(DefaultKeySchema)),
 
   createSelfSigned: (data: CreateSelfSignedRequest) =>
     apiClient

@@ -13,6 +13,7 @@ from hse_doc_studio.core.repositories import (
     IProjectRepository,
     ISignatureRepository,
 )
+from hse_doc_studio.core.signatures.ports import ISignatureAudit
 from hse_doc_studio.use_cases.projects.get_project import GetProjectInput, GetProjectUC
 
 logger = structlog.get_logger()
@@ -31,8 +32,10 @@ class DeleteDetachedSignatureUC:
         project_repo: IProjectRepository,
         project_index_repo: IProjectIndexRepository,
         signature_repo: ISignatureRepository,
+        audit: ISignatureAudit | None = None,
     ) -> None:
         self._signature_repo = signature_repo
+        self._audit = audit
         self._get_uc = GetProjectUC(project_repo, project_index_repo)
 
     async def execute(self, inp: DeleteDetachedSignatureInput) -> None:
@@ -51,3 +54,7 @@ class DeleteDetachedSignatureUC:
             detached[inp.doc_id] = doc_sigs
         self._signature_repo.save_state(project.folder, replace(state, detached=detached))
         logger.info("detached signature deleted", project_id=str(inp.project_id), doc_id=inp.doc_id, slot=inp.slot_id)
+        if self._audit is not None:
+            await self._audit.record(
+                "signature.delete", project_id=inp.project_id, details={"doc_id": inp.doc_id, "slot_id": inp.slot_id}
+            )

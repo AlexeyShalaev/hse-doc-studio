@@ -5,16 +5,54 @@ import {
   AttachDetachedResponseSchema,
   FreezePdfResponseSchema,
   SignaturesStateSchema,
+  SignaturePlanSchema,
+  SignPreviewSchema,
+  SignSubmissionResultSchema,
   PlacementSchema,
   SlotInfoSchema,
   UploadSignatureResponseSchema,
 } from "./signatureSchemas";
+
+export type SignSubmissionBody = {
+  profile_id: string;
+  author?: string | null | undefined;
+  identity_id?: string | null | undefined;
+  passphrase?: string | undefined;
+  confirm_reset?: boolean | undefined;
+  expected?: Record<string, string> | undefined;
+};
 
 export const signatureApi = {
   getState: (projectId: string) =>
     apiClient
       .get(`/projects/${projectId}/signatures`)
       .then(parseResp(SignaturesStateSchema)),
+
+  getPlan: (
+    projectId: string,
+    params: {
+      profileId?: string | null | undefined;
+      author?: string | null | undefined;
+    } = {},
+  ) =>
+    apiClient
+      .get(`/projects/${projectId}/signature-plan`, {
+        params: {
+          ...(params.profileId ? { profile_id: params.profileId } : {}),
+          ...(params.author ? { author: params.author } : {}),
+        },
+      })
+      .then(parseResp(SignaturePlanSchema)),
+
+  previewSignSubmission: (projectId: string, body: SignSubmissionBody) =>
+    apiClient
+      .post(`/projects/${projectId}/signature-plan/sign-preview`, body)
+      .then(parseResp(SignPreviewSchema)),
+
+  signSubmission: (projectId: string, body: SignSubmissionBody) =>
+    apiClient
+      .post(`/projects/${projectId}/signature-plan/sign`, body)
+      .then(parseResp(SignSubmissionResultSchema)),
 
   updatePlacement: (
     projectId: string,

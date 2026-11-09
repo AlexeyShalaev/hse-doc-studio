@@ -283,6 +283,68 @@ async def test__call_tool__set_project_people__no_changes__invalid_arguments(stu
     assert result.meta["code"] == "invalid_arguments"
 
 
+def _presentation(studio: Studio) -> dict[str, object]:
+    data = json.loads((studio.folder / ".hse-studio" / "project.json").read_text(encoding="utf-8"))
+    return next(d for d in data["documents"] if d["id"] == "presentation")
+
+
+async def test__call_tool__set_document_variant__switches_like_the_settings(studio: Studio) -> None:
+    await _enable(studio)
+
+    async with _client(studio) as client:
+        tools = {t.name: t for t in (await client.list_tools()).tools}
+        shown = await client.call_tool(
+            "set_document_variant", {"project_id": studio.project_id, "doc_id": "presentation"}
+        )
+        switched = await client.call_tool(
+            "set_document_variant", {"project_id": studio.project_id, "doc_id": "presentation", "variant": "beamer"}
+        )
+
+    assert tools["set_document_variant"].input_schema["required"] == ["project_id", "doc_id"]
+    assert shown.is_error is False, shown.content
+    assert {v["id"] for v in json.loads(shown.content[0].text)["variants"]} >= {"pptx", "beamer"}  # type: ignore[union-attr]
+    assert switched.is_error is False, switched.content
+    assert json.loads(switched.content[0].text)["changed"] is True  # type: ignore[union-attr]
+    document = (await studio.rest.get(f"/api/v1/projects/{studio.project_id}/documents/presentation")).json()
+    assert document["chosen_variant"] == "beamer"
+
+
+async def test__call_tool__set_document_variant__unknown_variant__lists_allowed(studio: Studio) -> None:
+    await _enable(studio)
+    before = _presentation(studio)["chosen_variant"]
+
+    async with _client(studio) as client:
+        result = await client.call_tool(
+            "set_document_variant", {"project_id": studio.project_id, "doc_id": "presentation", "variant": "keynote"}
+        )
+
+    assert result.is_error is True
+    assert result.meta is not None
+    assert result.meta["code"] == "invalid_arguments"
+    assert "beamer" in result.content[0].text  # type: ignore[union-attr]
+    assert _presentation(studio)["chosen_variant"] == before
+
+
+async def test__call_tool__set_document_variant__read_only_project__refused(studio: Studio) -> None:
+    """Проект записан более новой Студией: PATCH документа в вебе отвечает 423, тул отказывает так же."""
+    await _enable(studio)
+    project_file = studio.folder / ".hse-studio" / "project.json"
+    data = json.loads(project_file.read_text(encoding="utf-8"))
+    data["schema"] = {"version": 7, "read_compat": 1, "write_compat": 7, "written_by": "9.0.0"}
+    project_file.write_text(json.dumps(data), encoding="utf-8")
+    before = _presentation(studio)["chosen_variant"]
+
+    async with _client(studio) as client:
+        result = await client.call_tool(
+            "set_document_variant", {"project_id": studio.project_id, "doc_id": "presentation", "variant": "beamer"}
+        )
+
+    assert result.is_error is True
+    assert result.meta is not None
+    assert result.meta["code"] == "read_only"
+    assert _presentation(studio)["chosen_variant"] == before
+
+
 @pytest_asyncio.fixture
 async def studio_with_cloud(tmp_path: Path) -> AsyncIterator[FastAPI]:
     data_dir = tmp_path / "data"
@@ -323,3 +385,27 @@ async def test__call_tool__get_project__foreign_last_compile__is_replaced_by_a_l
     assert result.is_error is False, result.content
     documents = {d["id"]: d for d in json.loads(result.content[0].text)["documents"]}
     assert documents[doc_id]["last_compile_id"] is None
+
+
+_ACCESS_TOOLS = ("list_project_access", "invite_to_project", "revoke_project_invitation", "remove_project_member")
+
+
+async def test__list_tools__local__no_project_access_tools(studio: Studio) -> None:
+    await _enable(studio)
+
+    async with _client(studio) as client:
+        names = {t.name for t in (await client.list_tools()).tools}
+
+    assert not names & set(_ACCESS_TOOLS)
+
+
+@pytest.mark.parametrize("name", _ACCESS_TOOLS)
+async def test__call_tool__local__project_access_tool__answers_unknown_tool(studio: Studio, name: str) -> None:
+    await _enable(studio)
+
+    async with _client(studio) as client:
+        result = await client.call_tool(name, {"project_id": studio.project_id, "email": "petrov@hse.ru"})
+
+    assert result.is_error is True
+    assert result.meta is not None
+    assert result.meta["code"] == "unknown_tool"

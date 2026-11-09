@@ -47,11 +47,19 @@ class ChecksOverrideSchema(BaseModel):
     severity_override: dict[str, str] = {}
 
 
+class StalePacksResponse(BaseModel):
+    # Каталог шаблонов подключён извне и отстаёт от этой Студии (core.template_packs).
+    path: str
+    studio_version: str
+
+
 class ProjectAccessResponse(BaseModel):
     # Режим: full, read_only или files_only (core.project_access).
     mode: str = "full"
     reasons: list[str] = []
     required_studio: str | None = None
+    # Версии шаблона нет только в подключённом каталоге, сама Студия её знает.
+    stale_packs: StalePacksResponse | None = None
 
 
 class ProjectStorageResponse(BaseModel):

@@ -120,6 +120,7 @@ class InMemoryJobQueue:
             route_reason=request.route_reason,
             vcost=vcost,
             timeout_personal_s=request.timeout_personal_s,
+            batch_id=request.batch_id,
         )
         self._jobs[job.id] = job
         return EnqueueOutcome(job=job, superseded=tuple(superseded))
@@ -337,6 +338,14 @@ class InMemoryJobQueue:
             job = replace(job, state=JobState.cancelled, finished_at=self._clock(), cancel_requested=True)
         elif job.state is JobState.running:
             job = replace(job, cancel_requested=True)
+        self._jobs[job_id] = job
+        return job
+
+    async def fail_queued(self, job_id: UUID, error_code: str) -> QueuedJob | None:
+        job = self._jobs.get(job_id)
+        if job is None or job.state is not JobState.queued:
+            return None
+        job = replace(job, state=JobState.failed, finished_at=self._clock(), error_code=error_code)
         self._jobs[job_id] = job
         return job
 

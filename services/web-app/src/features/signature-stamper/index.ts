@@ -5,3 +5,5 @@ export { SlotPanel } from "./ui/SlotPanel";
 export type { DocPlacementPanelProps } from "./ui/DocPlacementPanel";
 export type { PdfStampEditorProps } from "./ui/PdfStampEditor";
 export type { SlotPanelProps } from "./ui/SlotPanel";
+export { SignSubmissionDialog } from "./ui/SignSubmissionDialog";
+export type { SignSubmissionDialogProps } from "./ui/SignSubmissionDialog";

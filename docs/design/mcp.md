@@ -15,7 +15,7 @@
 | M3 | Слой тулов общий со встроенным агентом: `core/agent` (`ToolSpec`, `ToolDefinition`, `IToolHandler`, `ToolResult`) и обработчики `use_cases/chat/tools`. Недостающие тулы пишутся в `use_cases/mcp/tools` тем же интерфейсом и вызывают те же use cases, что маршруты `/api/v1`. | Одна реализация на действие; встроенный агент сможет подключить новые тулы без переписывания. |
 | M4 | Права: таблица «тул → действие (`Action`) и аргумент-область» по образцу `use_cases/chat/tool_access.py` и `api/route_actions.py`. Перед каждым вызовом `IProjectAccessChecker.require(project_id, action, path)`, для записи ещё проверка «проект доступен для записи» (`GetProjectAccessUC`, аналог `project_write_guard`). Тест сверяет таблицу с каталогом: новый тул без записи не собирается. | Гард маршрутов MCP не видит, а большинство use cases права не проверяют сами (их проверяет гард). |
 | M5 | Аутентификация первого среза: персональные токены доступа (PAT, `Authorization: Bearer`) с новыми областями `mcp` (пользовательские тулы) и `mcp:admin` (админские). Cookie сессии на `/mcp` не принимаются никогда. OAuth 2.1 (PKCE, динамическая регистрация клиентов, метаданные защищённого ресурса) отдельным срезом. | PAT, области и device flow в Студии уже есть, а OAuth-сервер это крупная самостоятельная работа. Заголовок `WWW-Authenticate` уже на первом срезе отвечает по RFC 6750, чтобы OAuth добавился без поломки клиентов. |
-| M6 | Опасные тулы (удаление проекта и файла, жёсткий откат истории, синхронизация с git-remote, админские изменения) помечены `dangerous`. По умолчанию выключены: админ (облако) или пользователь (локально) включает их явно. Подписи (ЭП) через MCP не выставляются вовсе. | Подпись юридически значима и требует пароля ключа: передавать его модели нельзя. Остальное обратимо, но с риском. |
+| M6 | Опасные тулы (удаление проекта и файла, жёсткий откат истории, синхронизация с git-remote, админские изменения) помечены `dangerous`. По умолчанию выключены: админ (облако) или пользователь (локально) включает их явно. Подпись ЭП через MCP только одна: `sign_submission` (комплект своим ключом по умолчанию) с отдельным правом токена `sign`; ключ с паролем через MCP не подписывает (docs/design/signature-plan.md, раздел 9). | Подпись юридически значима и требует пароля ключа: передавать его модели нельзя. Остальное обратимо, но с риском. |
 | M7 | Админские тулы: группа `admin`, выключена по умолчанию, требует одновременно `actor.is_instance_admin`, область токена `mcp:admin` и включённую группу. | HTTP-админка принимает только сессию (`admin_guard` отвергает PAT). MCP ослабляет это лишь при трёх явных согласиях. |
 | M8 | Настройки MCP: облако хранит в `instance_settings` (ключ `mcp.config`, словарь), локальная Студия в `config.json` (ключ `mcp`). Один порт `IMcpSettingsStore`, две реализации. Поля: `enabled`, `disabled_tools`, `disabled_groups`, `allow_dangerous`, `enabled_dangerous` (поимённо). | Без миграций: оба хранилища уже ключ-значение. |
 | M9 | Облако: MCP по умолчанию **выключен**, включается в админке. Локально: тоже выключен, включается переключателем в настройках. | Новая поверхность атаки включается сознательно. |
@@ -27,7 +27,10 @@
 | M15 | Аннотации MCP из вида тула: `read` даёт `readOnlyHint`, `dangerous` даёт `destructiveHint`, сборка и проверки `idempotentHint=false`, всё работает с внешним миром только через Студию (`openWorldHint=false`). | Клиенты по ним решают, спрашивать ли пользователя. |
 | M16 | Тул зависит от режима, если от режима зависит сценарий. `create_project`: на общем сервере папку выделяет сервер, поэтому в облачной схеме поля `folder` нет, а присланное значение не используется; локально `folder` обязателен. Тулы только для локальной Студии помечены `local_only` (облачный каталог их не содержит), как серверные `server_only`. | Иначе облачный клиент видит обязательное поле, которое сервер отвергает, и создать проект через MCP нельзя. |
 | M17 | Изменение людей проекта (`set_project_people`) идёт через тот же `UpdateProjectUC`, что PATCH проекта в вебе, с тем же правом `PROJECT_SETTINGS` и запретом записи в проект «только для чтения». Кроме строки журнала `mcp.call` каждое изменение пишет событие аудита `project.people_update` (поля, было и стало) через порт `IMcpChangeAudit`; локально это строка лога без значений. | Руководитель и авторы попадают в заявку и заявление: кто и что поменял, должно быть видно в аудите, а журнал вызовов хранит только имена аргументов. |
-| M18 | `clone_cloud_project` (только локально) скачивает проект облака сценарием кнопки «Открыть» (`OpenCloudProjectUC`) с сохранённым входом кодом устройства. Токен из хранилища доступов в тул не попадает; адрес с логином или токеном отклоняется, не повторяясь в ответе. Скачивание фоновое: тул ждёт до `wait_s` секунд, повторный вызов подхватывает ту же операцию. | Один путь клонирования для интерфейса и MCP; вход на сервер требует подтверждения человека в браузере, поэтому MCP только использует готовый. |
+| M18 | `clone_cloud_project` (только локально) скачивает проект облака сценарием кнопки «Открыть» (`OpenCloudProjectUC`) с сохранённым входом кодом устройства. Токен из хранилища доступов в тул не попадает; адрес с логином или токеном отклоняется, не повторяясь в ответе. Скачивание фоновое: тул ждёт до `wait_s` секунд (по умолчанию 45, меньше таймаута клиента), повторный вызов подхватывает ту же операцию. | Один путь клонирования для интерфейса и MCP; вход на сервер требует подтверждения человека в браузере, поэтому MCP только использует готовый. |
+| M19 | Обновление шаблона идёт путём окна «Обновить шаблон»: `template_update_status` (`GetTemplateUpdateStatusUC`, PROJECT_VIEW как GET `template-update`), `plan_template_update` (`PlanTemplateUpdateUC`, dry-run с отпечатком) и `apply_template_update` (`ApplyTemplateUpdateUC` с отпечатком и решениями по конфликтам), оба TEMPLATE_MANAGE и под запретом записи, как POST `plan` и `apply`. Конфликт без решения остаётся «моим», как по умолчанию в окне; снимок истории перед записью делает сценарий. Маршрут аудита не пишет, поэтому применение через MCP пишет `project.template_update` (версии и число файлов) через `IMcpChangeAudit`. Не опасный: обновление отменяется из настроек проекта. | Один сценарий для кнопки и MCP; отпечаток гарантирует, что применяется ровно показанный план. |
+| M20 | Вариант документа (`set_document_variant`, например формат презентации pptx, beamer, reveal) меняется тем же `UpdateDocumentUC`, что PATCH документа из настроек проекта («Форматы документов»), с тем же правом `FILES_WRITE`: область права слаг автора из id документа `<база>--<автор>`, как `scope_for_rule` у маршрута (поле правила `instance_args`). Допустимые варианты берутся из определения документа в шаблоне проекта с фильтром по языку проекта, как в интерфейсе; без `variant` тул только показывает текущий и допустимые. Веб смену варианта в аудит не пишет, поэтому тул пишет событие `document.variant_update` через `IMcpChangeAudit`, как M17. | Смена варианта сбрасывает статус документа и меняет то, что уйдёт в сдачу: видно, кто и что поменял. Проверки варианта одни на интерфейс и MCP. |
+| M21 | Доступ к проекту (только облако, локально доступа нет): `list_project_access`, `invite_to_project`, `revoke_project_invitation`, `remove_project_member` идут сценариями панели «Доступ» (`ListProjectAccessUC`, `CreateInvitationUC`, `RevokeInvitationUC`, `RemoveProjectMemberUC`) с правами их маршрутов: список PROJECT_VIEW, приглашения ACCESS_MANAGE и лимит `INVITE`, снятие участника PROJECT_SETTINGS. Аудит пишут сами сценарии. Приглашение только по почте; ссылка с одноразовым секретом попадает в ответ лишь при ручной доставке (почта не настроена), как в окне приглашения веба; хеш и токен отдельно не отдаются. Ожидающие приглашения в списке видит только тот, у кого есть ACCESS_MANAGE. | Агент может позвать научрука и убрать лишний доступ тем же путём и с теми же ограничениями, что человек в панели; два тула на отзыв, потому что права у отзыва приглашения и снятия участника разные. |
 
 ## 1. Что есть
 
@@ -88,12 +91,21 @@
 | projects | `get_project` | R | PROJECT_VIEW | новый |
 | projects | `list_templates` | R | — | агент |
 | projects | `create_project` | X | — (облако: без `folder`, M16) | агент |
-| projects | `set_project_meta` | W | PROJECT_SETTINGS | агент |
+| projects | `list_project_fields` | R | PROJECT_VIEW | новый |
+| projects | `set_project_meta` | W | PROJECT_SETTINGS | агент (+ `unset`) |
 | projects | `set_project_people` | W | PROJECT_SETTINGS | новый (M17) |
 | projects | `set_language` | W | PROJECT_SETTINGS | агент |
 | projects | `delete_project` | W ! | PROJECT_DELETE | новый |
 | projects | `clone_cloud_project` | X L | — (сохранённый вход на сервер) | новый (M18) |
+| projects | `template_update_status` | R | PROJECT_VIEW | новый (M19) |
+| projects | `plan_template_update` | X | TEMPLATE_MANAGE | новый (M19) |
+| projects | `apply_template_update` | X | TEMPLATE_MANAGE | новый (M19) |
+| projects | `list_project_access` | R S | PROJECT_VIEW (приглашения: ACCESS_MANAGE) | новый (M21) |
+| projects | `invite_to_project` | W S | ACCESS_MANAGE | новый (M21) |
+| projects | `revoke_project_invitation` | W S | ACCESS_MANAGE | новый (M21) |
+| projects | `remove_project_member` | W S | PROJECT_SETTINGS | новый (M21) |
 | files | `list_documents` | R | PROJECT_VIEW | агент |
+| files | `set_document_variant` | W | FILES_WRITE (doc_id: слаг автора) | новый (M20) |
 | files | `list_files` | R | SOURCES_READ | новый |
 | files | `read_tex` | R | FILES_READ (path) | агент |
 | files | `read_pdf` | R | FILES_READ (path) | агент |
@@ -102,7 +114,7 @@
 | files | `write_file` | W | FILES_WRITE (path) | новый |
 | files | `move_file` | W | FILES_WRITE (src, dst) | новый |
 | files | `delete_file` | W ! | FILES_WRITE (path) | новый |
-| build | `compile_document` | X | BUILD_RUN | агент |
+| build | `compile_document` | X | BUILD_RUN | агент; в MCP `wait` и ожидание до 45 с, дальше `compile_id` для `get_compile` |
 | build | `list_compiles` | R | OUTPUT_READ | новый |
 | build | `get_compile` | R | OUTPUT_READ | новый |
 | build | `cancel_compile` | X | BUILD_RUN | новый |
@@ -124,11 +136,13 @@
 | history | `vcs_restore` | X ! | HISTORY_REWRITE | агент |
 | history | `git_status` | R | SOURCES_READ | новый |
 | history | `git_fetch` | X | HISTORY_WRITE | новый |
-| history | `git_sync` | X ! | HISTORY_REWRITE | новый |
+| history | `git_sync` | X ! | HISTORY_REWRITE | новый: `StartSyncUC` кнопки, ждёт до `wait_s`, при `sync_busy` присоединяется, файлы конфликтов из `GetConflictsUC` |
 | submission | `list_submission_profiles` | R | PROJECT_VIEW | новый |
 | submission | `list_submissions` | R | SUBMISSION_READ | новый |
 | submission | `package_project` | X | SUBMISSION_CREATE | агент |
 | submission | `list_signatures` | R | OUTPUT_READ | новый |
+| submission | `get_signature_plan` | R | OUTPUT_READ | новый |
+| submission | `sign_submission` | X ! | OUTPUT_READ + SIGN по слоту, право токена `sign` | новый |
 | admin | `admin_list_users` | R S A | instance admin | новый |
 | admin | `admin_queue_summary` | R S A | instance admin | новый |
 | admin | `admin_runner_summary` | R S A | instance admin | новый |
@@ -137,7 +151,7 @@
 | admin | `admin_enable_user` | W S A | instance admin | новый |
 | admin | `admin_cancel_job` | X ! S A | instance admin | новый |
 
-Не выставляются: `ask_user`, `set_theme`, `set_engine` (настройки интерфейса), подписание ЭП (M6), служебные операции установки (бэкапы, обновления, раннеры: изменение).
+Не выставляются: `ask_user`, `set_theme`, `set_engine` (настройки интерфейса), подписание отдельного слота (M6; комплект подписывает `sign_submission`, docs/design/signature-plan.md, раздел 9), служебные операции установки (бэкапы, обновления, раннеры: изменение).
 
 Экспорт: отдельного экспорта проекта архивом в Студии нет. Его роль играют `package_project` (пакет сдачи) и ресурс PDF сборки; выгрузка git bundle остаётся в интерфейсе.
 
@@ -186,7 +200,7 @@
 2. Первый срез аутентификации на PAT, OAuth 2.1 позже (M5, срез 6).
 3. Админские тулы через PAT при трёх условиях (M7) против полного запрета админки через MCP.
 4. Опасные тулы включаются админом поимённо; пользователь облака сам их включить не может (M6).
-5. ЭП через MCP не выставляются совсем (M6).
+5. ЭП через MCP: только `sign_submission`, опасный тул с правом токена `sign`, без пароля ключа (M6).
 6. Журнал пишет каждый вызов, включая чтение, в общий аудит (M10): объём аудита вырастет.
 7. Лимит `MCP_CALL` 120 в минуту на пользователя (M11).
 8. Локальный MCP на порту Студии без отдельного порта (M12).

@@ -33,7 +33,8 @@
       "capabilities_dropped": true,
       "automount_token": false
     },
-    "docker_socket": true
+    "docker_socket": true,
+    "office_url": null
   },
   "build": null,
   "install_from_ui": {
@@ -68,7 +69,8 @@
       "min_runner_memory": "256Mi",
       "min_build_cpu": "500m",
       "min_build_memory": "1Gi"
-    }
+    },
+    "office_url": null
   },
   "network": {
     "build_deny_all": {
@@ -89,7 +91,8 @@
         443,
         6443
       ],
-      "extra_rules": 0
+      "extra_rules": 0,
+      "office_port": null
     }
   },
   "quota": {
@@ -107,5 +110,6 @@
   },
   "ui_quota": null,
   "ui_limit_range": null,
-  "pod_security": null
+  "pod_security": null,
+  "office_convert": null
 }

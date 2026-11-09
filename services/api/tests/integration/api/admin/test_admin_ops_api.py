@@ -6,7 +6,7 @@ import asyncio
 from collections.abc import AsyncIterator
 from datetime import UTC, datetime
 from typing import Any
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 import pytest
 import pytest_asyncio
@@ -23,7 +23,7 @@ from hse_doc_studio.core.jobs.enums import JobKind
 from hse_doc_studio.core.jobs.queue import EnqueueRequest
 from hse_doc_studio.core.jobs.runners import hash_runner_secret
 from hse_doc_studio.core.mode import StudioMode
-from hse_doc_studio.core.runner_install import InstallError, InstallTarget, LocalInstance
+from hse_doc_studio.core.runner_install import InstallError, InstallTarget, LocalInstance, PreviousRelease, UpgradeError
 from hse_doc_studio.infra.identity.resolvers import ChainActorResolver, SessionCookieResolver
 from hse_doc_studio.use_cases.admin.ops_ai_providers import (
     CheckInstanceAiProviderUC,
@@ -34,7 +34,13 @@ from hse_doc_studio.use_cases.admin.ops_ai_providers import (
     ListInstanceAiProvidersUC,
     UpdateInstanceAiProviderUC,
 )
-from hse_doc_studio.use_cases.admin.ops_queue import CancelJobUC, ListQueueUC, PickProjectsUC, QueueSummaryUC
+from hse_doc_studio.use_cases.admin.ops_queue import (
+    CancelJobBatchUC,
+    CancelJobUC,
+    ListQueueUC,
+    PickProjectsUC,
+    QueueSummaryUC,
+)
 from hse_doc_studio.use_cases.admin.ops_quotas import GetQuotasUC, QuotaService, UpdateQuotasUC
 from hse_doc_studio.use_cases.admin.ops_runners import (
     ListRegistrationTokensUC,
@@ -228,6 +234,10 @@ class _Provider(Provider):
         )
 
     @provide
+    def cancel_batch(self) -> CancelJobBatchUC:
+        return CancelJobBatchUC(JobQueueService(self.s.queue), self.s.users.audit, NoopUow(), self.s.job_reader)
+
+    @provide
     def get_quotas(self) -> GetQuotasUC:
         return GetQuotasUC(self.s.settings)
 
@@ -297,14 +307,15 @@ async def stack(monkeypatch: pytest.MonkeyPatch) -> AsyncIterator[_Stack]:
     await container.close()
 
 
-def _enqueue(user: object = None) -> EnqueueRequest:
+def _enqueue(user: object = None, *, batch_id: UUID | None = None, project_id: UUID | None = None) -> EnqueueRequest:
     return EnqueueRequest(
         job_id=uuid4(),
         kind=JobKind.compile,
-        project_id=uuid4(),
+        project_id=project_id or uuid4(),
         user_id=user or uuid4(),  # type: ignore[arg-type]
         tags=frozenset({"tex"}),
         payload={},
+        batch_id=batch_id,
     )
 
 
@@ -312,6 +323,7 @@ _ROUTES: list[tuple[str, str, Any]] = [
     ("GET", "/api/admin/queue", None),
     ("GET", "/api/admin/queue/summary", None),
     ("POST", f"/api/admin/queue/{uuid4()}/cancel", None),
+    ("POST", f"/api/admin/queue/batches/{uuid4()}/cancel", None),
     ("GET", "/api/admin/quotas", None),
     ("PUT", "/api/admin/quotas", {"user_concurrent": 1, "org_concurrent": None, "max_duration_s": None}),
     ("GET", "/api/admin/services", None),
@@ -398,6 +410,44 @@ async def test__queue__list_summary_cancel_flow(stack: _Stack) -> None:
     assert [e.action for e in await stack.users.audit.list()] == ["queue.job_cancel"]
     assert (await c.get("/api/admin/queue?state=bogus", headers=boss)).status_code == 422
     assert (await c.get("/api/admin/queue?limit=0", headers=boss)).status_code == 422
+
+
+async def test__queue__build_all_batch__whole_batch_summary_on_each_row_and_filter(stack: _Stack) -> None:
+    boss = await stack.users.add("boss", admin=True)
+    anna, project, batch = uuid4(), uuid4(), uuid4()
+    jobs = [(await stack.queue.enqueue(_enqueue(anna, batch_id=batch, project_id=project))).job for _ in range(3)]
+    single = (await stack.queue.enqueue(_enqueue())).job
+    await stack.queue.request_cancel(jobs[0].id)
+    c = stack.client
+
+    # Первая страница видит только две задачи пакета, но сводка пакета считает все три.
+    page = (await c.get("/api/admin/queue?limit=2", headers=boss)).json()
+    only = (await c.get(f"/api/admin/queue?batch_id={batch}", headers=boss)).json()
+
+    assert [j["id"] for j in page["items"]] == [str(single.id), str(jobs[2].id)]
+    assert (page["items"][0]["batch_id"], page["items"][0]["batch"]) == (None, None)
+    row = page["items"][1]
+    assert row["batch_id"] == str(batch)
+    assert row["batch"]["total"] == 3
+    assert row["batch"]["by_state"] == {"cancelled": 1, "queued": 2}
+    assert sorted(j["id"] for j in only["items"]) == sorted(str(j.id) for j in jobs)
+
+
+async def test__queue__cancel_batch__cancels_active_jobs_and_audits_each(stack: _Stack) -> None:
+    boss = await stack.users.add("boss", admin=True)
+    batch = uuid4()
+    jobs = [(await stack.queue.enqueue(_enqueue(batch_id=batch))).job for _ in range(3)]
+    other = (await stack.queue.enqueue(_enqueue())).job
+    await stack.queue.request_cancel(jobs[0].id)
+
+    response = await stack.client.post(f"/api/admin/queue/batches/{batch}/cancel", headers=boss)
+
+    assert response.json() == {"cancelled": 2}
+    states = {j.id: (await stack.queue.get(j.id)).state.value for j in [*jobs, other]}  # type: ignore[union-attr]
+    assert states == {jobs[0].id: "cancelled", jobs[1].id: "cancelled", jobs[2].id: "cancelled", other.id: "queued"}
+    events = await stack.users.audit.list()
+    assert [e.action for e in events] == ["queue.job_cancel", "queue.job_cancel"]
+    assert {e.details["batch_id"] for e in events} == {str(batch)}
 
 
 async def test__quotas__put_validates_persists_and_audits(stack: _Stack) -> None:
@@ -785,6 +835,64 @@ async def test__runner_install__instances_list_and_remove_are_audited(stack: _St
     assert "runner_install.local.remove" in [e.action for e in await stack.users.audit.list()]
 
 
+async def test__runner_install__remove_revokes_the_matched_runner_and_its_pending_token(stack: _Stack) -> None:
+    boss = await stack.users.add("boss", admin=True)
+    runner_id = await _installed_runner(stack)
+    other = await _registered(stack, name="someone-else")
+    pending = await stack.registry.create_registration_token(_admin_actor(), label="install hse-runner-abc123")
+
+    removed = await stack.client.delete("/api/admin/runner-install/local/docker/hse-runner-abc123", headers=boss)
+
+    assert removed.status_code == 204
+    assert stack.install_host.removed == ["hse-runner-abc123"]
+    # Отозван тем же use case, что «Отозвать раннер»: запись отозвана, токен раннера больше не принимается.
+    revoked = {r.id: r.revoked_at is not None for r in await stack.runners.list()}
+    assert (revoked[runner_id], revoked[other]) == (True, False)
+    token = next(t for t in await stack.tokens.list() if t.id == pending.token.id)
+    assert token.revoked_at is not None
+    events = await stack.users.audit.list()
+    entry = next(e for e in events if e.action == "runner_install.local.remove")
+    assert entry.target == "hse-runner-abc123"
+    assert entry.details["revoked_runner"] == runner_id
+    assert entry.details["revoked_registrations"] == [pending.token.id]
+    assert [e.target for e in events if e.action == "runner.revoke"] == [runner_id]
+
+
+async def test__runner_install__remove_failure_is_502_and_the_install_can_be_removed_again(stack: _Stack) -> None:
+    boss = await stack.users.add("boss", admin=True)
+    runner_id = await _installed_runner(stack)
+    stack.install_host.remove_fail_with = InstallError("remove_failed", "device busy")
+    path = "/api/admin/runner-install/local/docker/hse-runner-abc123"
+
+    failed = await stack.client.delete(path, headers=boss)
+    listed = (await stack.client.get("/api/admin/runner-install/local/instances", headers=boss)).json()
+    stack.install_host.remove_fail_with = None
+    again = await stack.client.delete(path, headers=boss)
+
+    assert (failed.status_code, failed.json()["detail"]) == (502, {"code": "remove_failed", "detail": "device busy"})
+    # Раннер уже отозван, установка осталась и видна как установка без раннера.
+    assert [(i["name"], i["runner_id"]) for i in listed] == [("hse-runner-abc123", None)]
+    assert again.status_code == 204
+    actions = [(e.action, e.details.get("revoked_runner")) for e in await stack.users.audit.list()]
+    assert ("runner_install.local.remove_failed", runner_id) in actions
+    assert ("runner_install.local.remove", None) in actions
+
+
+async def test__runner_install__remove_while_this_install_is_updated_is_busy(stack: _Stack) -> None:
+    boss = await stack.users.add("boss", admin=True)
+    await _installed_runner(stack)
+    stack.install_host.upgrade_gate = asyncio.Event()
+
+    started = await stack.client.post("/api/admin/runner-install/local/docker/hse-runner-abc123/upgrade", headers=boss)
+    busy = await stack.client.delete("/api/admin/runner-install/local/docker/hse-runner-abc123", headers=boss)
+    stack.install_host.upgrade_fail_with = InstallError("image_pull_failed")
+    stack.install_host.upgrade_gate.set()
+    await _finished(stack, started.json()["id"], boss)
+
+    assert (busy.status_code, busy.json()["detail"]) == (409, {"code": "install_busy"})
+    assert stack.install_host.removed == []
+
+
 # ---- Обновление раннера из админки на месте ----
 
 
@@ -860,17 +968,70 @@ async def test__runner_upgrade__same_version_is_allowed_and_not_outdated(stack: 
 
 async def test__runner_upgrade__runner_that_does_not_come_back_is_a_timeout(stack: _Stack) -> None:
     boss = await stack.users.add("boss", admin=True)
-    await _installed_runner(stack)
+    runner_id = await _installed_runner(stack)
+
+    async def back_on_old_version() -> None:
+        await stack.runners.touch(runner_id, datetime.now(UTC), version="1.0.0")
+
+    stack.install_host.on_rolled_back = back_on_old_version
 
     started = await stack.client.post("/api/admin/runner-install/local/docker/hse-runner-abc123/upgrade", headers=boss)
     job = await _finished(stack, started.json()["id"], boss)
 
     assert job["state"] == "failed"
     assert job["error_code"] == "reconnect_timeout"
-    assert job["steps"][-1] == {"key": "reconnect", "state": "failed", "detail": ""}
+    assert job["steps"][-2:] == [
+        {"key": "reconnect", "state": "failed", "detail": ""},
+        {"key": "rollback", "state": "done", "detail": "1.0.0"},
+    ]
+    assert (job["rolled_back"], job["rollback_version"], job["rollback_error"]) == (True, "1.0.0", None)
+    assert job["rollback_reconnected"] is True
+    assert stack.install_host.rolled_back == [("hse-runner-abc123", "registry.example/hds:1.0.0")]
     failed = [e for e in await stack.users.audit.list() if e.action == "runner_install.local.upgrade_failed"]
     assert failed[0].details["code"] == "reconnect_timeout"
     assert failed[0].details["from_version"] == "1.0.0"
+    assert failed[0].details["rolled_back"] is True
+    assert failed[0].details["rollback_reconnected"] is True
+
+
+async def test__runner_upgrade__failed_rollout_is_rolled_back_and_said_so(stack: _Stack) -> None:
+    boss = await stack.users.add("boss", admin=True)
+    await _installed_runner(stack)
+    stack.install_host.upgrade_fail_with = UpgradeError(
+        "rollout_failed", "ProgressDeadlineExceeded", previous=PreviousRelease("registry.example/hds:1.0.0")
+    )
+
+    started = await stack.client.post("/api/admin/runner-install/local/docker/hse-runner-abc123/upgrade", headers=boss)
+    job = await _finished(stack, started.json()["id"], boss)
+
+    assert (job["error_code"], job["rolled_back"], job["rollback_version"]) == ("rollout_failed", True, "1.0.0")
+    # Прежняя версия выкатилась, но раннер с ней на связь не вышел: итог и аудит говорят и это.
+    assert job["rollback_reconnected"] is False
+    assert [(s["key"], s["state"]) for s in job["steps"]] == [
+        ("pull", "failed"),
+        ("recreate", "pending"),
+        ("reconnect", "pending"),
+        ("rollback", "failed"),
+    ]
+    failed = [e for e in await stack.users.audit.list() if e.action == "runner_install.local.upgrade_failed"]
+    assert (failed[0].details["rolled_back"], failed[0].details["rollback_reconnected"]) == (True, False)
+
+
+async def test__runner_upgrade__failed_rollback_is_reported_in_the_job_and_audit(stack: _Stack) -> None:
+    boss = await stack.users.add("boss", admin=True)
+    await _installed_runner(stack)
+    stack.install_host.rollback_fail_with = InstallError("container_start_failed", "no such image")
+
+    started = await stack.client.post("/api/admin/runner-install/local/docker/hse-runner-abc123/upgrade", headers=boss)
+    job = await _finished(stack, started.json()["id"], boss)
+
+    assert (job["rolled_back"], job["rollback_error"]) == (False, "container_start_failed")
+    assert job["steps"][-1] == {"key": "rollback", "state": "failed", "detail": "no such image"}
+    failed = [e for e in await stack.users.audit.list() if e.action == "runner_install.local.upgrade_failed"]
+    assert (failed[0].details["rolled_back"], failed[0].details["rollback_error"]) == (
+        False,
+        "container_start_failed",
+    )
 
 
 async def test__runner_upgrade__host_failure_is_reported(stack: _Stack) -> None:
@@ -886,7 +1047,11 @@ async def test__runner_upgrade__host_failure_is_reported(stack: _Stack) -> None:
         "image_pull_failed",
         "pull access denied",
     )
+    # До замены установки откатывать нечего: шага отката нет.
     assert [s["state"] for s in job["steps"]] == ["failed", "pending", "pending"]
+    assert job["rolled_back"] is None
+    failed = [e for e in await stack.users.audit.list() if e.action == "runner_install.local.upgrade_failed"]
+    assert failed[0].details["rolled_back"] is False
 
 
 async def test__runner_upgrade__install_without_runner_skips_the_reconnect_step(stack: _Stack) -> None:
@@ -1076,6 +1241,43 @@ async def test__runners_isolation__config_is_not_presented_as_checked(stack: _St
     assert body["limit_range"]["declared"] is None
     assert body["pod_security"] is None
     assert stack.cluster.asked == []
+
+
+async def test__runners_isolation__shows_where_runners_convert_office_files(stack: _Stack) -> None:
+    from dataclasses import replace  # noqa: PLC0415
+
+    boss = await stack.users.add("boss", admin=True)
+    url = "http://rel-office-convert:3000"
+    runner = {**make_declared().runner.model_dump(by_alias=True), "officeUrl": "http://user:pw@gotenberg.corp:3000/"}
+    egress = {**make_declared().runner_egress.model_dump(by_alias=True), "officePort": 3000}
+    office = {
+        "enabled": True,
+        "url": url,
+        "image": "gotenberg/gotenberg:8.39.0-libreoffice",
+        "replicas": 1,
+        "resources": {"requests": {"cpu": "250m", "memory": "512Mi"}, "limits": {"cpu": "2", "memory": "2Gi"}},
+        "networkPolicy": True,
+    }
+    declared = make_declared(runner=runner, runnerEgress=egress, officeConvert=office)
+    install = replace(make_install_facts(enabled=True, service_account="rel-ui"), office_url=url)
+    stack.isolation = replace(stack.isolation, declared=declared, install=install)
+
+    body = (await stack.client.get("/api/admin/runners/isolation", headers=boss)).json()
+
+    # Логин и пароль из адреса на экран не попадают.
+    assert body["chart_runner"]["office_url"] == "http://gotenberg.corp:3000/"
+    assert body["install_from_ui"]["office_url"] == url
+    assert body["network"]["runner_egress"]["office_port"] == 3000
+    assert body["office_convert"]["url"] == url
+    assert body["office_convert"]["resources"]["memory_limit"] == "2Gi"
+    assert body["office_convert"]["network_policy"] is True
+
+    stack.isolation = replace(stack.isolation, declared=make_declared(), install=make_install_facts())
+    plain = (await stack.client.get("/api/admin/runners/isolation", headers=boss)).json()
+    assert plain["office_convert"] is None
+    assert plain["chart_runner"]["office_url"] is None
+    assert plain["install_from_ui"]["office_url"] is None
+    assert plain["network"]["runner_egress"]["office_port"] is None
 
 
 async def test__runners_isolation__live_state_is_read_when_allowed(stack: _Stack) -> None:

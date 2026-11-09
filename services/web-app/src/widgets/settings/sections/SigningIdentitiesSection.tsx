@@ -12,6 +12,8 @@ import {
 import { useTranslation } from "react-i18next";
 import {
   useSigningIdentities,
+  useDefaultSigningKey,
+  useSetDefaultSigningKey,
   useCreateSelfSigned,
   useImportPkcs12,
   useDeleteSigningIdentity,
@@ -463,6 +465,49 @@ export const SigningIdentitiesSection = () => {
   return forbidden ? <SigningForbidden /> : <SigningIdentitiesList />;
 };
 
+/**
+ * Ключ по умолчанию: им «Подписать комплект» подписывает свои слоты, и из него
+ * плашка открепленной ЭП берёт данные подписанта. Единственный ключ выбирается
+ * сам. Пароль ключа Студия не хранит: его спрашивают при подписи.
+ */
+const DefaultKeySelect = ({
+  identities,
+}: {
+  identities: readonly SigningIdentity[];
+}) => {
+  const { t } = useTranslation("settings");
+  const { data } = useDefaultSigningKey();
+  const { mutate, isPending } = useSetDefaultSigningKey();
+  if (identities.length === 0) return null;
+  return (
+    <label style={{ display: "flex", flexDirection: "column", gap: "0.25rem" }}>
+      <span style={{ fontSize: "0.75rem" }}>{t("signing.defaultKey")}</span>
+      <select
+        className="input"
+        disabled={isPending}
+        value={data?.identity_id ?? ""}
+        onChange={(event) => {
+          mutate(event.target.value === "" ? null : event.target.value);
+        }}
+      >
+        <option value="">
+          {data?.auto
+            ? t("signing.defaultKeyAuto")
+            : t("signing.defaultKeyNone")}
+        </option>
+        {identities.map((identity) => (
+          <option key={identity.id} value={identity.id}>
+            {identity.label}
+          </option>
+        ))}
+      </select>
+      <span style={{ fontSize: "0.6875rem", color: "var(--fg-3)" }}>
+        {t("signing.defaultKeyHint")}
+      </span>
+    </label>
+  );
+};
+
 const SigningIdentitiesList = () => {
   const { t } = useTranslation("settings");
   const { data: identities, isLoading } = useSigningIdentities();
@@ -492,6 +537,8 @@ const SigningIdentitiesList = () => {
           )}
         </div>
       )}
+
+      <DefaultKeySelect identities={identities ?? []} />
 
       <OpenPgpStatus />
 

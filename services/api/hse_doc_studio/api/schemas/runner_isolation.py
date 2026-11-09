@@ -105,6 +105,8 @@ class ChartRunnerView(StrictModel):
     security: SecurityView
     # Исполнитель docker монтирует docker.sock узла: это root на узле.
     docker_socket: bool
+    # Адрес Gotenberg раннера (офисные задачи, тег office); null значит без office.
+    office_url: str | None
 
 
 class BuildPodsView(StrictModel):
@@ -137,6 +139,8 @@ class InstallFromUiView(StrictModel):
     runner: ResourcesView
     build: ResourcesView
     bounds: InstallBoundsView
+    # Адрес Gotenberg, который такие раннеры получают при установке и обновлении; null значит без office.
+    office_url: str | None
 
 
 class PolicyCheckView(StrictModel):
@@ -154,6 +158,19 @@ class RunnerEgressView(StrictModel):
     api_server_cidrs: list[str]
     api_server_ports: list[int]
     extra_rules: int
+    # Порт встроенного Gotenberg, если политика его разрешает.
+    office_port: int | None
+
+
+class OfficeConvertView(StrictModel):
+    """Встроенный Gotenberg чарта (services.officeConvert): куда раннеры ходят с офисными задачами."""
+
+    url: str
+    image: str | None
+    replicas: int
+    resources: ResourcesView
+    # Вход только от раннеров, выход закрыт.
+    network_policy: bool
 
 
 class NetworkView(StrictModel):
@@ -210,3 +227,5 @@ class AdminRunnerIsolation(StrictModel):
     ui_limit_range: LimitRangeView | None
     # null: не проверялось (нет права читать namespace).
     pod_security: list[PodSecurityView] | None
+    # Встроенный Gotenberg; null, если он выключен или Студия не из чарта.
+    office_convert: OfficeConvertView | None

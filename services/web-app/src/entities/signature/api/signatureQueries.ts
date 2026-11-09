@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { UpdatePlacementRequest } from "@shared/api/types";
-import { signatureApi } from "./signatureApi";
+import { signatureApi, type SignSubmissionBody } from "./signatureApi";
 
 type SignaturesState = Awaited<ReturnType<typeof signatureApi.getState>>;
 type Placement = Awaited<ReturnType<typeof signatureApi.updatePlacement>>;
@@ -12,7 +12,33 @@ export const signatureKeys = {
   all: ["signatures"] as const,
   state: (projectId: string) =>
     [...signatureKeys.all, "state", projectId] as const,
+  // Под ключом состояния: любая мутация подписей уже сбрасывает state, и план
+  // пересчитывается вместе с ним без отдельной инвалидации в каждой мутации.
+  plan: (
+    projectId: string,
+    profileId: string | null | undefined,
+    author: string | null | undefined,
+  ) =>
+    [
+      ...signatureKeys.state(projectId),
+      "plan",
+      profileId ?? "",
+      author ?? "",
+    ] as const,
 };
+
+type SignaturePlan = Awaited<ReturnType<typeof signatureApi.getPlan>>;
+
+export const useSignaturePlan = (
+  projectId: string,
+  profileId: string | null | undefined,
+  author: string | null | undefined,
+) =>
+  useQuery<SignaturePlan>({
+    queryKey: signatureKeys.plan(projectId, profileId, author),
+    queryFn: () => signatureApi.getPlan(projectId, { profileId, author }),
+    enabled: !!projectId,
+  });
 
 export const useSignaturesState = (projectId: string) =>
   useQuery<SignaturesState>({
@@ -268,6 +294,35 @@ export const useTrustRoot = () => {
     onSuccess: async (_, { projectId, docId, slotId }) => {
       await signatureApi.recheckDetached(projectId, docId, slotId);
       await invalidate(projectId);
+    },
+  });
+};
+
+export const usePreviewSignSubmission = () =>
+  useMutation({
+    mutationFn: ({
+      projectId,
+      body,
+    }: {
+      projectId: string;
+      body: SignSubmissionBody;
+    }) => signatureApi.previewSignSubmission(projectId, body),
+  });
+
+export const useSignSubmission = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      projectId,
+      body,
+    }: {
+      projectId: string;
+      body: SignSubmissionBody;
+    }) => signatureApi.signSubmission(projectId, body),
+    onSettled: (_data, _error, { projectId }) => {
+      void queryClient.invalidateQueries({
+        queryKey: signatureKeys.state(projectId),
+      });
     },
   });
 };

@@ -23,7 +23,7 @@ async def test__api__build_availability__local_mode__not_restricted(test_app: As
     resp = await test_app.get(f"/api/v1/projects/{project_id}/build-availability")
 
     assert resp.status_code == 200, resp.text
-    assert resp.json() == {"cloud": False, "any_runner": True, "tags": ["office", "tex"]}
+    assert resp.json() == {"cloud": False, "any_runner": True, "tags": ["office", "tex"], "reasons": {}}
     assert resp.headers["cache-control"] == "no-store"
 
 
@@ -43,5 +43,5 @@ async def test__api__general_build_availability__local_mode__not_restricted(test
     resp = await test_app.get("/api/v1/build-availability")
 
     assert resp.status_code == 200, resp.text
-    assert resp.json() == {"cloud": False, "any_runner": True, "tags": ["office", "tex"]}
+    assert resp.json() == {"cloud": False, "any_runner": True, "tags": ["office", "tex"], "reasons": {}}
     assert resp.headers["cache-control"] == "no-store"

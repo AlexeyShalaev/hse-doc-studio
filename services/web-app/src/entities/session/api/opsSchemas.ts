@@ -157,6 +157,8 @@ export const AdminRunnerIsolationSchema = z.strictObject({
       }),
       security: SecurityViewSchema,
       docker_socket: z.boolean(),
+      // Адрес Gotenberg раннера чарта (офисные задачи); null — без office.
+      office_url: z.string().nullable(),
     })
     .nullable(),
   build: z
@@ -187,6 +189,7 @@ export const AdminRunnerIsolationSchema = z.strictObject({
       min_build_cpu: z.string(),
       min_build_memory: z.string(),
     }),
+    office_url: z.string().nullable(),
   }),
   network: z
     .strictObject({
@@ -200,6 +203,7 @@ export const AdminRunnerIsolationSchema = z.strictObject({
         api_server_cidrs: z.array(z.string()),
         api_server_ports: z.array(z.number().int()),
         extra_rules: z.number().int(),
+        office_port: z.number().int().nullable(),
       }),
     })
     .nullable(),
@@ -218,6 +222,16 @@ export const AdminRunnerIsolationSchema = z.strictObject({
         audit: z.string().nullable(),
       }),
     )
+    .nullable(),
+  // Встроенный Gotenberg чарта (services.officeConvert); null — выключен или не Helm.
+  office_convert: z
+    .strictObject({
+      url: z.string(),
+      image: z.string().nullable(),
+      replicas: z.number().int(),
+      resources: ResourcesViewSchema,
+      network_policy: z.boolean(),
+    })
     .nullable(),
 });
 export const AdminRunnerTokenSchema = z.strictObject({
@@ -285,6 +299,13 @@ export const InstallJobSchema = z.strictObject({
   error_code: z.string().nullable(),
   error_detail: z.string(),
   created_at: iso,
+  // Откат неудачного обновления: null, если откатывать было нечего; версия,
+  // на которую раннер вернули; код причины, если откат тоже не удался.
+  rolled_back: z.boolean().nullable().optional(),
+  rollback_version: z.string().optional(),
+  rollback_error: z.string().nullable().optional(),
+  // После отката раннер вышел на связь с прежней версией; null, если не ждали.
+  rollback_reconnected: z.boolean().nullable().optional(),
 });
 /**
  * Установка из админки. `runner_id` пуст, если раннера с ней в Студии нет
@@ -418,6 +439,18 @@ export type AdminJob = {
   /** Кто взял попытку: общий раннер или личный. */
   runner_scope?: "shared" | "personal" | null;
   route_reason?: string | null;
+  /** Пакет «Собрать все»: задачи одной команды; у одиночной задачи null. */
+  batch_id?: string | null;
+  batch?: AdminJobBatch | null;
+};
+/** Пакет «Собрать все» целиком (по всем страницам очереди). */
+export type AdminJobBatch = {
+  id: string;
+  total: number;
+  /** Сколько задач пакета в каждом состоянии. */
+  by_state: Partial<Record<JobState, number>>;
+  /** Когда команда поставила первую задачу. */
+  created_at: string;
 };
 /** Страница очереди: курсор непрозрачный, null на последней; оценка числа только без фильтров. */
 export type AdminJobPage = {

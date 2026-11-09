@@ -8,7 +8,9 @@ from hse_doc_studio.core.runner_install.entities import (
     InstallTarget,
     LocalInstance,
     LocalRunnerSpec,
+    PreviousRelease,
     UnavailableReason,
+    UpgradeError,
     UpgradeOutcome,
 )
 from hse_doc_studio.core.runner_install.protocols import ILocalRunnerHost, ProgressReporter
@@ -48,6 +50,7 @@ __all__ = [
     "LocalInstance",
     "LocalRunnerSpec",
     "PodResources",
+    "PreviousRelease",
     "ProgressReporter",
     "RemoteSystem",
     "ResourceDefaults",
@@ -59,6 +62,7 @@ __all__ = [
     "SshResult",
     "SshTarget",
     "UnavailableReason",
+    "UpgradeError",
     "UpgradeOutcome",
     "resolve",
 ]

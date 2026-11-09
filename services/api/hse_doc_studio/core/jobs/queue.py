@@ -46,6 +46,8 @@ class EnqueueRequest:
     fair_share: bool = True
     # Предел длительности без квоты установки: применяется, если задачу взял личный раннер.
     timeout_personal_s: float | None = None
+    # Пакет «Собрать все»: задачи одной команды; у одиночной задачи пусто.
+    batch_id: UUID | None = None
 
     def __post_init__(self) -> None:
         if (self.route is JobRoute.pinned) != (self.target_runner_id is not None):
@@ -96,6 +98,7 @@ class QueuedJob:
     # Сколько метки справедливости потратила постановка: возвращается, если задачу взял личный раннер.
     vcost: float = 1.0
     timeout_personal_s: float | None = None
+    batch_id: UUID | None = None
 
 
 @dataclass(frozen=True)
@@ -164,6 +167,10 @@ class IJobQueue(Protocol):
 
     async def request_cancel(self, job_id: UUID) -> QueuedJob:
         """Не начатая задача отменяется сразу, идущая получает флаг и узнаёт о нём в heartbeat."""
+        ...
+
+    async def fail_queued(self, job_id: UUID, error_code: str) -> QueuedJob | None:
+        """Закончить не начатую задачу как `failed` с кодом; `None`, если её уже взяли или она закончена."""
         ...
 
     async def requeue_expired(self) -> tuple[ExpiredOutcome, ...]:

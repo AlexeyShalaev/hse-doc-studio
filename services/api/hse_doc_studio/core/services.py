@@ -22,17 +22,16 @@ from hse_doc_studio.core.enums import (
     ChatContentKind,
     ChatMessageRole,
     CheckSeverity,
-    DetachedVerdict,
     EngineType,
     FormFieldType,
     Lang,
     ProjectStaffing,
     RequirementFormatKind,
-    SignMode,
 )
 from hse_doc_studio.core.errors import NotFoundError
 from hse_doc_studio.core.i18n import current_interface_language, localized_error
 from hse_doc_studio.core.repositories import ITemplateRepository
+from hse_doc_studio.core.signatures.plan import DocFacts, SlotStatus, reason_hint, slot_state
 from hse_doc_studio.core.team import (
     OWNER_SEPARATOR,
     doc_base_dir,
@@ -45,7 +44,6 @@ from hse_doc_studio.core.value_objects import (
     ChecksOverride,
     FormValidationError,
     RequirementsFormat,
-    SignaturePlacement,
     SignaturesState,
 )
 
@@ -758,7 +756,7 @@ class SubmissionProfileService:
             instances = self._resolve_profile_instances(item.doc_id, project, version, author_slug=author_slug)
             for doc in instances:
                 runtime_ids = self._expand_item_slots(item.signatures, slot_defs, project, doc, team=team)
-                validated = self._validated_signatures(doc, runtime_ids, sig_state)
+                validated = self._validated_signatures(doc, runtime_ids, sig_state, item)
                 result.append(SubmissionDocItem(doc_id=doc.id, signatures=tuple(validated)))
 
         return result
@@ -826,61 +824,33 @@ class SubmissionProfileService:
         return instances
 
     @staticmethod
-    def _validated_signatures(doc: Document, runtime_ids: list[str], sig_state: SignaturesState) -> list[str]:
+    def _validated_signatures(
+        doc: Document, runtime_ids: list[str], sig_state: SignaturesState, item: SubmissionDocItem | None = None
+    ) -> list[str]:
+        """Каждый слот пункта подписан по плану подписей (docs/design/signature-plan.md, раздел 3.4).
+
+        Здесь нет файлов проекта, поэтому сборка и видимый слой считаются текущими: их сверяет планировщик
+        пакета по байтам. Проверяется остальное: способ разрешён точкой, размещение и картинка на месте,
+        криптоподпись есть, относится к зафиксированному PDF, сходится и проверяема.
+        """
+        frozen = sig_state.frozen.get(doc.id)
+        facts = DocFacts(
+            compiled_sha256=frozen.source_sha256 if frozen is not None else "",
+            marks_digest=frozen.stamps_digest if frozen is not None else "",
+        )
         validated: list[str] = []
-        doc_placements = sig_state.placements.get(doc.id, {})
         for slot_id in runtime_ids:
-            placement = doc_placements.get(slot_id)
-            slot = sig_state.slots.get(slot_id)
-            if slot is not None and slot.sign_mode == SignMode.detached_text:
-                SubmissionProfileService._require_detached_signature(doc, slot_id, placement, sig_state)
-                validated.append(slot_id)
-                continue
-            if placement is None or not placement.enabled or slot is None or slot.png_path is None:
+            allowed = item.allowed_methods(slot_id) if item is not None else ()
+            state = slot_state(sig_state, doc.id, slot_id, facts, allowed=allowed)
+            if state.status is not SlotStatus.signed:
                 raise ValueError(
                     localized_error(
-                        f"Для документа {doc.id!r} требуется слот подписи {slot_id!r}, "
-                        f"но он не включён или у него нет PNG в состоянии подписей проекта",
-                        f"Signature slot {slot_id!r} required for document {doc.id!r} "
-                        f"but not enabled or missing PNG in project signatures state",
+                        f"Документ {doc.id!r}: слот подписи {slot_id!r} не подписан. {reason_hint(state.reason)}",
+                        f"Document {doc.id!r}: signature slot {slot_id!r} is not signed. {reason_hint(state.reason)}",
                     )
                 )
             validated.append(slot_id)
         return validated
-
-    @staticmethod
-    def _require_detached_signature(
-        doc: Document,
-        slot_id: str,
-        placement: SignaturePlacement | None,
-        sig_state: SignaturesState,
-    ) -> None:
-        """A `detached_text` slot counts as signed only with a signature file for the frozen PDF."""
-        if placement is None or not placement.enabled:
-            raise ValueError(
-                localized_error(
-                    f"Для документа {doc.id!r} требуется слот подписи {slot_id!r}, но он не включён",
-                    f"Signature slot {slot_id!r} required for document {doc.id!r} but not enabled",
-                )
-            )
-        frozen = sig_state.frozen.get(doc.id)
-        sig = sig_state.detached.get(doc.id, {}).get(slot_id)
-        if frozen is None or sig is None:
-            raise ValueError(
-                localized_error(
-                    f"Документ {doc.id!r}: слот {slot_id!r} требует открепленной подписи. "
-                    "Зафиксируйте PDF и приложите файл подписи",
-                    f"Document {doc.id!r}: slot {slot_id!r} needs a detached signature. "
-                    "Freeze the PDF and attach the signature file",
-                )
-            )
-        if sig.pdf_sha256 != frozen.sha256 or sig.verdict == DetachedVerdict.invalid:
-            raise ValueError(
-                localized_error(
-                    f"Документ {doc.id!r}: подпись в слоте {slot_id!r} не подходит к зафиксированному PDF",
-                    f"Document {doc.id!r}: the signature in slot {slot_id!r} does not match the frozen PDF",
-                )
-            )
 
     # Развёртка per-author слотов вынесена в модульную expand_slot_ids_for_doc:
     # ею пользуется и вывод обязательности подписи (SignatureSlotService).

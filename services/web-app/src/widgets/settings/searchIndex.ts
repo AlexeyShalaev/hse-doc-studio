@@ -795,6 +795,12 @@ export const SETTINGS_SEARCH_INDEX: readonly SettingSearchEntry[] = [
   },
   {
     sectionId: "about",
+    anchorId: "about-templates",
+    labelKey: "search.aboutTemplates",
+    keywords: ["шаблоны", "паки", "templates", "packs", "каталог"],
+  },
+  {
+    sectionId: "about",
     anchorId: "about-source",
     labelKey: "search.aboutSource",
     keywords: ["github", "исходники", "source", "репозиторий"],

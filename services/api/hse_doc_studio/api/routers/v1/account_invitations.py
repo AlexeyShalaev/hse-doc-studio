@@ -82,6 +82,7 @@ async def preview_invitation(token: str, request: Request, response: Response) -
         role=views.grant_role(preview.role) if preview.role else None,
         email_hint=preview.email_hint,
         registration_token=preview.registration_token,
+        message=preview.message,
     )
 
 

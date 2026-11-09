@@ -21,6 +21,7 @@ from hse_doc_studio.api.schemas.compile import (
     CancelCompileResponse,
     CompileDetailResponse,
     CompileListItemResponse,
+    TriggerCompileRequest,
     TriggerCompileResponse,
     map_compile_error,
 )
@@ -97,7 +98,9 @@ async def get_build_availability(
     """Для каких тегов сборки сейчас есть живой раннер; интерфейс опрашивает и гасит «Собрать» без исполнителя."""
     response.headers["Cache-Control"] = "no-store"
     result = await uc.execute(GetBuildAvailabilityInput(project_id=project_id))
-    return BuildAvailabilityResponse(cloud=result.cloud, any_runner=result.any_runner, tags=sorted(result.tags))
+    return BuildAvailabilityResponse(
+        cloud=result.cloud, any_runner=result.any_runner, tags=sorted(result.tags), reasons=dict(result.reasons)
+    )
 
 
 @router.get("/build-availability", response_model=BuildAvailabilityResponse)
@@ -108,7 +111,9 @@ async def get_general_build_availability(
     """Без проекта: есть ли на установке живые общие раннеры (локально сборка всегда доступна)."""
     response.headers["Cache-Control"] = "no-store"
     result = await uc.execute()
-    return BuildAvailabilityResponse(cloud=result.cloud, any_runner=result.any_runner, tags=sorted(result.tags))
+    return BuildAvailabilityResponse(
+        cloud=result.cloud, any_runner=result.any_runner, tags=sorted(result.tags), reasons=dict(result.reasons)
+    )
 
 
 @router.post(
@@ -120,9 +125,11 @@ async def trigger_compile(
     project_id: UUID,
     doc_id: str,
     uc: FromDishka[TriggerCompileUC],
+    body: TriggerCompileRequest | None = None,
 ) -> TriggerCompileResponse:
+    batch_id = body.batch_id if body is not None else None
     try:
-        result = await uc.execute(TriggerCompileInput(project_id=project_id, doc_id=doc_id))
+        result = await uc.execute(TriggerCompileInput(project_id=project_id, doc_id=doc_id, batch_id=batch_id))
     except CompileSetupError as exc:
         # Environmental failure (Docker missing / image not installed) — surface
         # as a structured 409 so the UI can offer install instead of treating

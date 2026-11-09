@@ -237,6 +237,8 @@ const seed = (): DemoInvites => ({
       role: "reviewer",
       email_hint: "a***@example.org",
       registration_token: null,
+      message:
+        "Здравствуйте!\n\nПриглашаю вас в проект «ВКР: Анализ требований» в HSE Doc Studio в роли рецензента. Здесь можно смотреть документы и оставлять замечания.\n\nС уважением,\nАнна Петрова",
     },
     hspi_demo_signup: {
       state: "ok",
@@ -245,6 +247,7 @@ const seed = (): DemoInvites => ({
       role: "reviewer",
       email_hint: "p***@hse.ru",
       registration_token: "hspi_demo_signup",
+      message: null,
     },
     hspi_demo_mismatch: {
       state: "ok",
@@ -253,6 +256,7 @@ const seed = (): DemoInvites => ({
       role: "editor",
       email_hint: "p***@hse.ru",
       registration_token: null,
+      message: null,
     },
     hspi_demo_expired: {
       state: "expired",
@@ -261,6 +265,7 @@ const seed = (): DemoInvites => ({
       role: null,
       email_hint: null,
       registration_token: null,
+      message: null,
     },
     hspi_demo_used: {
       state: "used",
@@ -269,6 +274,7 @@ const seed = (): DemoInvites => ({
       role: null,
       email_hint: null,
       registration_token: null,
+      message: null,
     },
   },
   seq: 0,

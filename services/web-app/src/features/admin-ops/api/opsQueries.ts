@@ -230,6 +230,16 @@ export const useCancelJob = () => {
   });
 };
 
+export const useCancelJobBatch = () => {
+  const invalidate = useInvalidate();
+  return useMutation({
+    mutationFn: (batchId: string) => opsApi.cancelJobBatch(batchId),
+    onSettled: () => {
+      invalidate(opsKeys.queueAll, opsKeys.summary, opsKeys.running);
+    },
+  });
+};
+
 export const useUpdateQuotas = () => {
   const invalidate = useInvalidate();
   return useMutation({
@@ -307,18 +317,25 @@ export const useUpgradeLocalInstance = () =>
     gcTime: 0,
   });
 
+/**
+ * Удалить установку: раннер установки отзывается, поэтому перечитываются и
+ * установки, и раннеры. При сбое на хосте раннер уже отозван, а установка
+ * осталась: таблицы тоже перечитываются.
+ */
 export const useRemoveLocalInstance = () => {
   const invalidate = useInvalidate();
+  const refresh = () => {
+    invalidate(
+      opsKeys.installInstances,
+      opsKeys.runners,
+      opsKeys.runnerSummary,
+    );
+  };
   return useMutation({
     mutationFn: (v: { target: "docker" | "kubernetes"; name: string }) =>
       opsApi.removeLocalInstance(v.target, v.name),
-    onSuccess: () => {
-      invalidate(
-        opsKeys.installInstances,
-        opsKeys.runners,
-        opsKeys.runnerSummary,
-      );
-    },
+    onSuccess: refresh,
+    onError: refresh,
   });
 };
 

@@ -33,7 +33,8 @@
       "capabilities_dropped": true,
       "automount_token": true
     },
-    "docker_socket": false
+    "docker_socket": false,
+    "office_url": null
   },
   "build": {
     "namespace": "studio-builds",
@@ -92,7 +93,8 @@
       "min_runner_memory": "256Mi",
       "min_build_cpu": "500m",
       "min_build_memory": "1Gi"
-    }
+    },
+    "office_url": null
   },
   "network": {
     "build_deny_all": {
@@ -115,7 +117,8 @@
         443,
         6443
       ],
-      "extra_rules": 1
+      "extra_rules": 1,
+      "office_port": null
     }
   },
   "quota": {
@@ -256,5 +259,6 @@
       "warn": null,
       "audit": null
     }
-  ]
+  ],
+  "office_convert": null
 }

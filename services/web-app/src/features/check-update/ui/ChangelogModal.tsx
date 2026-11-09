@@ -1,10 +1,11 @@
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { Copy, Download, ExternalLink, Sparkles, X } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import type { ReleaseEntry, SystemInfo } from "@entities/system";
+import type { ImageOverlay, ReleaseEntry, SystemInfo } from "@entities/system";
 import { toast } from "@shared/lib";
 import { Spinner } from "@shared/ui/Spinner";
 import { useSelfUpdate } from "../model/useSelfUpdate";
+import { ImageOverlaysNotice } from "./ImageOverlaysNotice";
 
 const updateCommand = (mode: SystemInfo["deployment_mode"] | null): string =>
   mode === "native"
@@ -20,6 +21,8 @@ export type ChangelogModalProps = {
   canSelfUpdate: boolean;
   /** Repo URL for the "open on GitHub" link; the tag is derived from `version`. */
   sourceUrl: string | null;
+  /** Папки хоста поверх каталогов образа: что с ними станет при обновлении. */
+  overlays?: ImageOverlay[];
 };
 
 export const ChangelogModal = ({
@@ -30,6 +33,7 @@ export const ChangelogModal = ({
   deploymentMode,
   canSelfUpdate,
   sourceUrl,
+  overlays = [],
 }: ChangelogModalProps) => {
   const { t } = useTranslation("checkUpdate");
   const command = updateCommand(deploymentMode);
@@ -167,6 +171,7 @@ export const ChangelogModal = ({
                       ? t("oneClick.busy")
                       : t("oneClick.hint")}
                 </span>
+                <ImageOverlaysNotice overlays={overlays} />
                 <button
                   type="button"
                   className="btn primary flex items-center justify-center"

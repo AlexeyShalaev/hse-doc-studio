@@ -323,7 +323,12 @@ async def test__project_written_by_a_newer_studio__is_read_only(
     project_json.write_text(json.dumps(data), encoding="utf-8", newline="\n")
 
     detail = (await update_app.get(_base(project))).json()
-    assert detail["access"] == {"mode": "read_only", "reasons": ["schema_write"], "required_studio": "9.0.0"}
+    assert detail["access"] == {
+        "mode": "read_only",
+        "reasons": ["schema_write"],
+        "required_studio": "9.0.0",
+        "stale_packs": None,
+    }
 
     resp = await update_app.patch(_base(project), json={"name": "Переименован"})
     assert resp.status_code == 423, resp.text

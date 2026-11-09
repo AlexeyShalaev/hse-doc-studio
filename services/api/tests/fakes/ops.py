@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from collections.abc import AsyncIterator
+from collections.abc import AsyncIterator, Iterable
 from contextlib import asynccontextmanager
 from dataclasses import replace
 from datetime import datetime
@@ -11,7 +11,13 @@ from uuid import UUID
 from hse_doc_studio.core.entities import AIProvider
 from hse_doc_studio.core.enums import AIProviderOwnerKind
 from hse_doc_studio.core.git_sync.secret import Secret
-from hse_doc_studio.core.jobs.admin import JobAdminFilter, JobAdminPage, JobListing, QueueStats
+from hse_doc_studio.core.jobs.admin import (
+    JobAdminFilter,
+    JobAdminPage,
+    JobBatchSummary,
+    JobListing,
+    QueueStats,
+)
 from hse_doc_studio.core.jobs.enums import JobState
 from hse_doc_studio.core.jobs.queue import QueuedJob
 from hse_doc_studio.core.listing import Found, Picked, PickerItem
@@ -33,7 +39,23 @@ def _matches(job: QueuedJob, flt: JobAdminFilter) -> bool:
         and (flt.queued_from is None or job.queued_at >= flt.queued_from)
         and (flt.queued_to is None or job.queued_at < flt.queued_to)
         and (flt.job_id is None or job.id == flt.job_id)
+        and (flt.batch_id is None or job.batch_id == flt.batch_id)
     )
+
+
+def batch_summaries(jobs: Iterable[QueuedJob]) -> dict[UUID, JobBatchSummary]:
+    """Сводки пакетов по всем их задачам (порядок задач не важен)."""
+    found: dict[UUID, tuple[int, dict[JobState, int], datetime]] = {}
+    for job in jobs:
+        if job.batch_id is None:
+            continue
+        total, states, first = found.get(job.batch_id, (0, {}, job.queued_at))
+        states[job.state] = states.get(job.state, 0) + 1
+        found[job.batch_id] = (total + 1, states, min(first, job.queued_at))
+    return {
+        batch_id: JobBatchSummary(id=batch_id, total=total, by_state=states, queued_at=first)
+        for batch_id, (total, states, first) in found.items()
+    }
 
 
 class InMemoryJobAdminReader:
@@ -43,8 +65,9 @@ class InMemoryJobAdminReader:
         self._queue = queue
         self._names = names or {}
 
-    def _listing(self, job: QueuedJob) -> JobListing:
-        return JobListing(job=job, user_name=self._names.get(job.user_id))
+    def _listing(self, job: QueuedJob, batches: dict[UUID, JobBatchSummary]) -> JobListing:
+        batch = batches.get(job.batch_id) if job.batch_id is not None else None
+        return JobListing(job=job, user_name=self._names.get(job.user_id), batch=batch)
 
     async def list_jobs(self, flt: JobAdminFilter, *, before_seq: int | None, limit: int) -> JobAdminPage:
         jobs = [
@@ -55,15 +78,16 @@ class InMemoryJobAdminReader:
             and (before_seq is None or j.seq < before_seq)
         ]
         page = jobs[:limit]
+        batches = batch_summaries(await self._queue.list())
         return JobAdminPage(
-            items=tuple(self._listing(j) for j in page),
+            items=tuple(self._listing(j, batches) for j in page),
             next_before_seq=page[-1].seq if len(jobs) > limit and page else None,
             total_estimate=len(await self._queue.list()) if flt.empty else None,
         )
 
     async def get(self, job_id: UUID) -> JobListing | None:
         found = await self._queue.get(job_id)
-        return None if found is None else self._listing(found)
+        return None if found is None else self._listing(found, batch_summaries(await self._queue.list()))
 
     async def stats(self, now: datetime) -> QueueStats:
         jobs = await self._queue.list()

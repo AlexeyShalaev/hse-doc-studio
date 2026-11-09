@@ -58,6 +58,7 @@ from hse_doc_studio.core.jobs.queue import EnqueueOutcome, EnqueueRequest, IJobQ
 from hse_doc_studio.core.jobs.quotas import IProjectOrgReader, IQuotaResolver
 from hse_doc_studio.core.jobs.registry import job_kind_spec
 from hse_doc_studio.core.jobs.routing import IJobRouter, JobRoute, RouteDecision
+from hse_doc_studio.core.jobs.runner_fit import PoolState, RunnerFit
 from hse_doc_studio.core.jobs.runners import IRunnerRepository
 from hse_doc_studio.core.jobs.storage import IJobLogReader
 from hse_doc_studio.core.jobs.verify import VerifyDetachedPayload
@@ -69,6 +70,7 @@ from hse_doc_studio.core.quotas.messages import describe_quota_exceeded
 from hse_doc_studio.core.quotas.protocols import IQuotaGate
 from hse_doc_studio.core.repositories import ISettingsRepository
 from hse_doc_studio.core.storage.manifest import IBlobUploader, ManifestError, ManifestLimits
+from hse_doc_studio.use_cases.jobs.stranded import STRANDED_CODES
 from hse_doc_studio.use_cases.jobs.wakeup import JobWakeup
 
 logger = structlog.get_logger()
@@ -179,13 +181,19 @@ class QueueJobDispatcher:
         live = [r for r in await self._runners.list() if is_live_shared(r, now, self._live_window)]
         if any(spec.tags <= runner.tags for runner in live):
             return
+        owner: str | None = None
         if self._router is not None and spec.actor.id is not None:
+            user_id = await self._payer_of(spec)
             decision = await self._router.decide(
-                kind=spec.kind, tags=spec.tags, project_id=spec.project_id, user_id=await self._payer_of(spec)
+                kind=spec.kind, tags=spec.tags, project_id=spec.project_id, user_id=user_id
             )
             if decision.route is JobRoute.personal_first:
                 return
-        raise NoRunnerAvailableError(spec.tags, any_runner=bool(live))
+            owner = await self._router.personal_owner(kind=spec.kind, project_id=spec.project_id, user_id=user_id)
+        # Почему некому: личный раннер на паузе, раннер с тегом не в сети или такого раннера нет совсем.
+        fit = RunnerFit.of(spec.tags, await self._runners.list(), now, personal_owner=owner)
+        any_runner = bool(live) or fit.shared is not PoolState.absent or fit.personal not in (None, PoolState.absent)
+        raise NoRunnerAvailableError(spec.tags, any_runner=any_runner, fit=fit)
 
     # --- compile ---
 
@@ -550,6 +558,7 @@ class QueueJobDispatcher:
                 personal_until=decision.personal_until if decision is not None else None,
                 route_reason=decision.reason if decision is not None else None,
                 timeout_personal_s=unquoted_timeout if personal and unquoted_timeout != timeout else None,
+                batch_id=spec.batch_id,
             )
         )
         if metered:
@@ -639,7 +648,7 @@ class QueueJobDispatcher:
             case JobState.succeeded:
                 return _unfinished(spec, JobStatus.failed, ERROR_CODE_JOB_LOST)
             case _:
-                return _unfinished(spec, JobStatus.failed, code or ERROR_CODE_JOB_LOST)
+                return _failed_unfinished(spec, job, code)
 
 
 class _LogPump:
@@ -688,6 +697,15 @@ def _unfinished(spec: JobSpec, status: JobStatus, code: str | None) -> JobResult
     data = CompileResult(build_ok=False, finished_at=_utc_now()) if spec.kind is JobKind.compile else None
     error = _error_of(status, code)
     return JobResult(status=status, data=data, error=error)
+
+
+def _failed_unfinished(spec: JobSpec, job: QueuedJob, code: str | None) -> JobResult:
+    """Упавшая без результата раннера; снятая сервером без подходящего раннера называет теги в детали."""
+    if code is None or code not in STRANDED_CODES.values():
+        return _unfinished(spec, JobStatus.failed, code or ERROR_CODE_JOB_LOST)
+    data = CompileResult(build_ok=False, finished_at=_utc_now()) if spec.kind is JobKind.compile else None
+    error = JobError(JobErrorCategory.unavailable, code, "tags: " + ", ".join(sorted(job.tags)))
+    return JobResult(status=JobStatus.failed, data=data, error=error)
 
 
 def _error_of(status: JobStatus, code: str | None) -> JobError | None:

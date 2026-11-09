@@ -288,6 +288,46 @@ describe("изоляция раннеров в кластере", () => {
     ).not.toBeInTheDocument();
   });
 
+  it("встроенный Gotenberg: адрес у раннеров, правило egress и свой блок", () => {
+    render(
+      wrap(
+        <ClusterIsolationSection
+          info={isolation("helm_live")}
+          status="ready"
+          initiallyOpen
+        />,
+      ),
+    );
+    const url = "http://rel-hse-doc-studio-office-convert:3000";
+    expect(screen.getByTestId("isolation-chart-office")).toHaveTextContent(url);
+    expect(screen.getByTestId("isolation-install-office")).toHaveTextContent(
+      url,
+    );
+    expect(screen.getByTestId("isolation-egress-allows")).toHaveTextContent(
+      "Gotenberg Студии, порт 3000",
+    );
+    const office = screen.getByTestId("isolation-office");
+    expect(screen.getByTestId("isolation-office-url")).toHaveTextContent(url);
+    expect(office).toHaveTextContent("gotenberg/gotenberg:8.39.0-libreoffice");
+    expect(office).toHaveTextContent("Вход только от раннеров, выход закрыт");
+  });
+
+  it("без Gotenberg: раннеры без офисных задач, блока нет", () => {
+    render(
+      wrap(
+        <ClusterIsolationSection
+          info={isolation("helm_config_only")}
+          status="ready"
+          initiallyOpen
+        />,
+      ),
+    );
+    expect(screen.getByTestId("isolation-chart-office")).toHaveTextContent(
+      "нет: офисные задачи такой раннер не берёт",
+    );
+    expect(screen.queryByTestId("isolation-office")).not.toBeInTheDocument();
+  });
+
   it("Студия не из Helm: только настройки установки из админки", () => {
     render(
       wrap(

@@ -163,7 +163,9 @@
       "quotaNoPlace": "Waiting for your turn",
       "quotaBody": "You already have the maximum number of builds running. This one starts by itself when one of them finishes.",
       "noRunner": "No runners available",
-      "noRunnerBody": "No build runner is connected right now. Contact the server administrator. The build starts by itself once a runner appears.",
+      "noRunnerBody": "No online runner can build this document right now. The build starts by itself once a runner appears; if none shows up for several minutes, the server removes the build from the queue and names the reason.",
+      "runnerPaused": "Waiting for a runner: it is paused",
+      "runnerPausedBody": "Only a runner that is paused right now can build this document. Resume it (a personal runner: “Settings → My runners”, a shared one: the administrator) and the build will run. If it stays paused for 30 minutes, the server removes the build from the queue.",
       "runnerLost": "Runner lost, retrying ({{attempt}}/{{max}})",
       "runnerLostNoCount": "Runner lost, retrying",
       "runnerLostBody": "The runner building this document went away. The build was handed to another runner, no action needed.",
@@ -214,7 +216,21 @@
       "admin": "Or ask the administrator to connect a runner.",
       "adminSelf": "Connect a runner in the admin area.",
       "openRunners": "Open Runners",
-      "buildAllPartial": "Documents not built: {{count}}. No runner can build them right now."
+      "buildAllExcluded": "Not queued ({{count}}): {{list}}. The other documents are building.",
+      "excludedItem": "{{name}} ({{reason}})",
+      "cause": {
+        "personal_paused": "The personal runner for {{kinds}} is paused: resume it in “Settings → My runners” and the build will run.",
+        "shared_paused": "The shared runner for {{kinds}} is paused.",
+        "personal_offline": "The personal runner for {{kinds}} is offline: start the desktop Studio.",
+        "shared_offline": "The shared runner for {{kinds}} is offline."
+      },
+      "causeShort": {
+        "personal_paused": "personal runner paused",
+        "shared_paused": "shared runner paused",
+        "personal_offline": "personal runner offline",
+        "shared_offline": "shared runner offline",
+        "no_runner": "no runner for {{kinds}}"
+      }
     },
     "failure": {
       "title": "Build failed",

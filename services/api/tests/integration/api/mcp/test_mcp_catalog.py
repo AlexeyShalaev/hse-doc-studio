@@ -5,10 +5,13 @@ from __future__ import annotations
 from collections.abc import AsyncIterator
 from pathlib import Path
 
+import pytest
 import pytest_asyncio
 from dishka import AsyncContainer
+from hse_doc_studio.api.route_actions import ROUTE_ACTIONS
 from hse_doc_studio.core.access.actions import Action
 from hse_doc_studio.core.mcp.entities import McpToolGroup
+from hse_doc_studio.core.rate_limit import INVITE
 from hse_doc_studio.use_cases.chat._registry import ToolRegistry
 from hse_doc_studio.use_cases.chat.tool_access import TOOL_ACCESS
 from hse_doc_studio.use_cases.mcp.catalog import MCP_TOOL_CLASSES, MCP_TOOL_RULES, RULES_BY_NAME, McpCatalog
@@ -67,6 +70,21 @@ async def test__catalog__set_project_people__needs_project_settings(request_cont
     assert entry.spec.parameters["required"] == ["project_id"]
 
 
+@pytest.mark.parametrize("server_mode", [True, False])
+async def test__catalog__set_document_variant__files_write_in_the_document_author_scope(
+    request_container: AsyncContainer, server_mode: bool
+) -> None:
+    catalog = McpCatalog(await request_container.get(ToolRegistry), request_container, server_mode=server_mode)
+
+    entry = catalog.get("set_document_variant")
+
+    assert entry is not None
+    assert entry.rule.action is Action.FILES_WRITE
+    assert entry.rule.instance_args == ("doc_id",)
+    assert entry.rule.guards_write
+    assert entry.spec.parameters["required"] == ["project_id", "doc_id"]
+
+
 async def test__catalog__kinds_match_handlers(request_container: AsyncContainer) -> None:
     catalog = McpCatalog(await request_container.get(ToolRegistry), request_container, server_mode=True)
 
@@ -106,3 +124,42 @@ def test__rules__admin_tools__are_server_only() -> None:
 
 def test__rules__no_tool_is_both_server_and_local_only() -> None:
     assert not [r.name for r in MCP_TOOL_RULES if r.meta.server_only and r.meta.local_only]
+
+
+def test__rules__template_update__same_rights_as_the_routes() -> None:
+    routes = {
+        "template_update_status": ("GET", "/projects/{project_id}/template-update"),
+        "plan_template_update": ("POST", "/projects/{project_id}/template-update/plan"),
+        "apply_template_update": ("POST", "/projects/{project_id}/template-update/apply"),
+    }
+
+    for name, key in routes.items():
+        rule = RULES_BY_NAME[name]
+        assert rule.action is ROUTE_ACTIONS[key].action, name
+        assert not rule.meta.server_only, name
+        assert not rule.meta.local_only, name
+        assert rule.guards_write is (key[0] != "GET"), name
+
+
+_ACCESS_ROUTES = {
+    "list_project_access": ("GET", "/projects/{project_id}/members"),
+    "invite_to_project": ("POST", "/projects/{project_id}/invitations"),
+    "revoke_project_invitation": ("DELETE", "/projects/{project_id}/invitations/{invitation_id}"),
+    "remove_project_member": ("DELETE", "/projects/{project_id}/members/{principal}"),
+}
+
+
+async def test__catalog__access_tools__server_only_with_route_rights(request_container: AsyncContainer) -> None:
+    server = McpCatalog(await request_container.get(ToolRegistry), request_container, server_mode=True)
+    local = McpCatalog(await request_container.get(ToolRegistry), request_container, server_mode=False)
+
+    for name, route in _ACCESS_ROUTES.items():
+        entry = server.get(name)
+        assert entry is not None, name
+        assert entry.rule.action is ROUTE_ACTIONS[route].action, name
+        assert entry.rule.guards_write is (route[0] != "GET"), name
+        assert local.get(name) is None, name
+    invite = server.get("invite_to_project")
+    assert invite is not None
+    assert invite.rule.rate is INVITE
+    assert invite.spec.parameters["required"] == ["project_id", "email"]

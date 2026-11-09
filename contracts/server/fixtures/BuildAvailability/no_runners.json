@@ -1,5 +1,9 @@
 {
   "cloud": true,
   "any_runner": false,
-  "tags": []
+  "tags": [],
+  "reasons": {
+    "office": "no_runner",
+    "tex": "no_runner"
+  }
 }

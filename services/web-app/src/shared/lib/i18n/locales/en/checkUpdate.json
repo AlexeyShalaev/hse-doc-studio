@@ -29,5 +29,10 @@
     "hintUp": "The app will restart on the selected version.",
     "hintDown": "An earlier version: the app restarts, your projects and settings stay where they are.",
     "manualOnly": "Switching versions from the UI needs all-in-one mode with a reachable Docker."
+  },
+  "overlays": {
+    "packsKeep": "The template folder is mounted from {{source}} and stays the same after the update, so it may lag behind the new version. Update it along with the Studio or remove the mount.",
+    "otherKeep": "The folder {{source}} is mounted over {{destination}} and stays the same after the update: the new version will not replace its files.",
+    "drop": "The mount of {{source}} over {{destination}} is removed on update: the new version uses its own files. The folder on your computer is not changed, and a rollback brings the mount back."
   }
 }

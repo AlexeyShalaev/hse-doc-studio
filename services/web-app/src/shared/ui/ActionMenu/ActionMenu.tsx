@@ -6,6 +6,11 @@ import { useIsPhoneWidth } from "../../lib/viewport";
 // Действия строки таблицы, свёрнутые в «⋯». Опасные пункты отделены чертой и
 // окрашены; подтверждение (ConfirmByName, Modal) показывает вызывающий.
 
+// Меню уходит порталом в body: слой выше окна настроек (.settings-modal-overlay, 90)
+// и модальных окон (101-102), как у Select. Иначе в «Моих раннерах» меню
+// открывалось под окном настроек. Шторку на телефоне ставит index.css (120).
+const ACTION_MENU_LAYER = 200;
+
 export type ActionMenuItem = {
   id: string;
   label: string;
@@ -71,6 +76,7 @@ export const ActionMenu = ({
           align={align}
           sideOffset={4}
           collisionPadding={8}
+          style={{ zIndex: ACTION_MENU_LAYER }}
         >
           {safe.map(render)}
           {safe.length > 0 && danger.length > 0 && (

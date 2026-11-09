@@ -19,7 +19,8 @@ from hse_doc_studio.core.jobs.errors import NoRunnerAvailableError
 from hse_doc_studio.core.jobs.files import ManifestFile
 from hse_doc_studio.core.jobs.queue import EnqueueOutcome, EnqueueRequest, QueuedJob, RunnerRef
 from hse_doc_studio.core.jobs.routing import JobRoute, RouteDecision, RouteReason
-from hse_doc_studio.core.jobs.runners import Runner
+from hse_doc_studio.core.jobs.runner_fit import RunnerGapReason
+from hse_doc_studio.core.jobs.runners import Runner, RunnerOwnerKind
 from hse_doc_studio.core.storage.manifest import ManifestFileTooLargeError, ManifestLimits
 from hse_doc_studio.infra.jobs.queue_dispatcher import QueueJobDispatcher
 
@@ -135,6 +136,61 @@ def rig(tmp_path: Path) -> Rig:
     return Rig(dispatcher, queue, runners, uploader, folder)
 
 
+class _OwnerPausedRouter:
+    """Личный раннер владельца не в сети для маршрута (на паузе), но задаче он доступен."""
+
+    async def decide(self, *, kind: JobKind, tags: frozenset[str], project_id: UUID, user_id: UUID) -> RouteDecision:
+        return RouteDecision.shared(RouteReason.fallback_offline)
+
+    async def personal_owner(self, *, kind: JobKind, project_id: UUID, user_id: UUID) -> str | None:
+        return _USER.hex
+
+
+async def test__preflight__owner_personal_runner_paused__reason_personal_paused(rig: Rig) -> None:
+    # Прод: у облачного раннера нет нужного тега, единственный раннер с ним (личный владельца) на паузе.
+    await rig.add_runner("office")
+    await rig.runners.add(
+        Runner(
+            id=uuid4().hex,
+            name="mine",
+            token_hash="h2",
+            tags=frozenset({"tex"}),
+            concurrency=1,
+            resource_class="standard",
+            version="1",
+            created_at=_NOW,
+            last_seen_at=datetime.now(UTC),
+            paused=True,
+            owner_kind=RunnerOwnerKind.user,
+            owner_id=_USER.hex,
+        )
+    )
+    dispatcher = QueueJobDispatcher(rig.queue, rig.uploader, rig.runners, router=_OwnerPausedRouter())
+
+    with pytest.raises(NoRunnerAvailableError) as caught:
+        await dispatcher.preflight(rig.spec())
+
+    assert caught.value.code == "no_runner_for_tags"
+    assert caught.value.reason is RunnerGapReason.personal_paused
+    assert "личный раннер владельца на паузе" in str(caught.value)
+
+
+async def test__compile__dropped_for_no_suitable_runner__failed_with_code_and_tags(rig: Rig) -> None:
+    await rig.add_runner("tex")
+    hooks = Hooks()
+    spec = rig.spec()
+
+    rig.dispatcher.submit(spec, hooks)
+    await _until(lambda: spec.id in rig.queue._jobs)
+    await rig.queue.fail_queued(spec.id, "runner_paused")
+    await _until(lambda: not rig.dispatcher.is_active(spec.id))
+
+    ((result, _log),) = hooks.finished
+    assert result.status is JobStatus.failed
+    assert result.error is not None
+    assert (result.error.code, result.error.detail) == ("runner_paused", "tags: tex")
+
+
 def _ok_compile() -> JobResult:
     return JobResult(status=JobStatus.succeeded, data=CompileResult(build_ok=True, pages=3))
 
@@ -228,6 +284,19 @@ async def test__submit__queue_payload_is_an_envelope_with_manifest_and_role(rig:
     assert envelope.timeout_s == 600.0
     assert job.user_id == _USER
     assert job.max_attempts == 2
+
+
+async def test__submit__build_all_batch__reaches_the_queue_row_not_the_envelope(rig: Rig) -> None:
+    batch = uuid4()
+    spec = replace(rig.spec(), batch_id=batch)
+
+    rig.dispatcher.submit(spec, Hooks())
+    await _until(lambda: rig.queue._jobs.get(spec.id) is not None)
+
+    job = await rig.claim()
+    assert job.batch_id == batch
+    # Раннеру пакет ни к чему: в конверт он не попадает.
+    assert "batch_id" not in job.payload["spec"]
 
 
 class _Resolver:

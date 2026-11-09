@@ -21,6 +21,7 @@ from hse_doc_studio.core.repositories import (
     ITemplateRepository,
 )
 from hse_doc_studio.core.review.protocols import IReviewEvents, IReviewRepository
+from hse_doc_studio.core.template_packs import ITemplatePacksSource
 from hse_doc_studio.core.template_update.protocols import IUpdateJournalRepository
 from hse_doc_studio.core.uow import IUnitOfWork
 from hse_doc_studio.core.vcs.protocols import IVcsEditThrottle, IVcsFolderLocks, IVcsService
@@ -91,9 +92,10 @@ class ServerCollabProvider(Provider):
         project_index_repo: IProjectIndexRepository,
         template_repo: ITemplateRepository,
         journal_repo: IUpdateJournalRepository,
+        packs: ITemplatePacksSource,
     ) -> AuthorizeCollabUC:
         project_access = GetProjectAccessUC(
-            project_repo, project_index_repo, ProjectAccessService(template_repo, journal_repo)
+            project_repo, project_index_repo, ProjectAccessService(template_repo, journal_repo, packs)
         )
         return AuthorizeCollabUC(access, project_access)
 

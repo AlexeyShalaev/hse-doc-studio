@@ -55,6 +55,7 @@ from hse_doc_studio.api.routers.v1 import (
     setup,
     share_link_public,
     share_links,
+    signature_plan,
     signatures,
     signing_identities,
     studio_link,
@@ -101,6 +102,7 @@ api_router.include_router(languagetool.router, tags=["languagetool"])
 api_router.include_router(office_editor.router, tags=["office-editor"])
 api_router.include_router(office_services.router, tags=["office-services"])
 api_router.include_router(signatures.router, tags=["signatures"])
+api_router.include_router(signature_plan.router, tags=["signatures"])
 api_router.include_router(forms.router, tags=["forms"])
 api_router.include_router(submission.router, tags=["submission"])
 api_router.include_router(changelog.router, tags=["changelog"])

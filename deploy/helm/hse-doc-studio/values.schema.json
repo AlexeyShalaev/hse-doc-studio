@@ -157,7 +157,44 @@
       "properties": {
         "languagetoolReplicas": {"type": "array", "items": {"type": "string", "pattern": "^https?://.+"}},
         "officeEditorReplicas": {"type": "array", "items": {"type": "string", "pattern": "^https?://.+"}},
-        "backendInternalUrl": {"type": "string", "pattern": "^$|^https?://.+"}
+        "backendInternalUrl": {"type": "string", "pattern": "^$|^https?://.+"},
+        "officeConvert": {
+          "type": "object",
+          "properties": {
+            "enabled": {"type": "boolean"},
+            "image": {
+              "type": "object",
+              "required": ["repository", "tag"],
+              "properties": {
+                "repository": {"type": "string", "minLength": 1},
+                "tag": {"type": "string", "minLength": 1},
+                "pullPolicy": {"enum": ["Always", "IfNotPresent", "Never"]}
+              },
+              "additionalProperties": false
+            },
+            "replicas": {"type": "integer", "minimum": 0},
+            "resources": {
+              "type": "object",
+              "properties": {
+                "requests": {"$ref": "#/definitions/podQuantities"},
+                "limits": {"$ref": "#/definitions/podQuantities"}
+              },
+              "additionalProperties": false
+            },
+            "timeout": {"type": "string", "pattern": "^[0-9]+(ms|s|m)$"},
+            "tmpSizeLimit": {"type": ["string", "number"]},
+            "networkPolicy": {
+              "type": "object",
+              "properties": {"enabled": {"type": "boolean"}},
+              "additionalProperties": false
+            },
+            "nodeSelector": {"type": "object"},
+            "tolerations": {"type": "array"},
+            "affinity": {"type": "object"},
+            "podAnnotations": {"type": "object"}
+          },
+          "additionalProperties": false
+        }
       },
       "additionalProperties": false
     },
@@ -230,7 +267,7 @@
         "replicas": {"type": "integer", "minimum": 0, "maximum": 1},
         "concurrency": {"type": "integer", "minimum": 1, "maximum": 64},
         "tags": {"type": "string"},
-        "officeUrl": {"type": "string"},
+        "officeUrl": {"type": "string", "pattern": "^$|^https?://.+"},
         "dataDir": {"type": "string", "pattern": "^/.+"},
         "dockerSocket": {"type": "string", "pattern": "^/.+"},
         "dockerGid": {"type": "integer", "minimum": 0},

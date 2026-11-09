@@ -65,11 +65,20 @@ describe("CompileWaitNotice", () => {
     );
   });
 
-  it("no_runner: tells to contact the administrator, no retry while waiting", () => {
+  it("runner_paused: says the runner is paused and how long the build waits", () => {
+    mount(<CompileWaitNotice wait={wait("runner_paused")} onRetry={vi.fn()} />);
+    const box = screen.getByTestId("compile-wait-runner_paused");
+    expect(box.textContent).toContain("Ждём раннер: он на паузе");
+    expect(box.textContent).toContain("Снимите паузу");
+    expect(box.textContent).toContain("30 минут");
+    expect(screen.queryByRole("button")).toBeNull();
+  });
+
+  it("no_runner: says the build waits and may be dropped, no retry while waiting", () => {
     mount(<CompileWaitNotice wait={wait("no_runner")} onRetry={vi.fn()} />);
     const box = screen.getByTestId("compile-wait-no_runner");
     expect(box.textContent).toContain("Нет доступных раннеров");
-    expect(box.textContent).toContain("Обратитесь к администратору");
+    expect(box.textContent).toContain("сервер снимет сборку с очереди");
     expect(screen.queryByRole("button")).toBeNull();
   });
 

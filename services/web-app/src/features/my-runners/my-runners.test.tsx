@@ -1,8 +1,10 @@
-import { cleanup, render, screen, within } from "@testing-library/react";
+import { readFileSync } from "node:fs";
+import { act, cleanup, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { i18n } from "@shared/lib";
+import { installViewport } from "@shared/lib/viewport/testing";
 import type { MyRunner } from "@entities/runner";
 import { MyRunnersView, type MyRunnersViewProps } from "./ui/MyRunnersView";
 import { ConnectRunnerDialog } from "./ui/ConnectRunnerDialog";
@@ -170,6 +172,135 @@ describe("«Мои раннеры»: вид", () => {
     expect(screen.queryByTestId("my-runner-rotate-r1")).toBeNull();
     await userEvent.click(await screen.findByTestId("my-runner-reconnect-r1"));
     expect(onReconnect).toHaveBeenCalledWith(RUNNER);
+  });
+});
+
+// «Мои раннеры» открываются в окне настроек: его затемнение .settings-modal-overlay лежит
+// поверх страницы. Меню «⋯» и подсказки уходят порталом в body и должны быть выше него,
+// иначе на десктопе меню открывается под окном и кнопка будто не нажимается.
+const SETTINGS_OVERLAY_LAYER = (() => {
+  const css = readFileSync("src/index.css", "utf8");
+  const start = css.indexOf(".settings-modal-overlay {");
+  const rule = css.slice(start, css.indexOf("}", start));
+  const z = /z-index:\s*(\d+)/.exec(rule);
+  if (start < 0 || z === null) throw new Error("нет слоя окна настроек");
+  return Number(z[1]);
+})();
+
+const layerOf = (el: HTMLElement): number => {
+  const wrapper = el.closest<HTMLElement>(
+    "[data-radix-popper-content-wrapper]",
+  );
+  const z = Number.parseInt(getComputedStyle(wrapper ?? el).zIndex, 10);
+  return Number.isNaN(z) ? 0 : z;
+};
+
+describe("«Мои раннеры»: меню «⋯» в окне настроек", () => {
+  beforeEach(async () => {
+    await i18n.changeLanguage("ru");
+  });
+  afterEach(cleanup);
+
+  const RUNNERS: MyRunner[] = [
+    { ...RUNNER, id: "online", running_jobs: 0 },
+    { ...RUNNER, id: "busy", running_jobs: 2, concurrency: 2 },
+    {
+      ...RUNNER,
+      id: "paused",
+      state: "paused",
+      paused: true,
+      paused_by: "owner",
+      running_jobs: 2,
+    },
+  ];
+
+  it.each([
+    ["десктоп", 1360],
+    ["телефон", 390],
+  ])(
+    "%s: меню открывается в любом состоянии раннера, пункт срабатывает",
+    async (_, width) => {
+      const viewport = installViewport(width);
+      try {
+        const onRename = vi.fn();
+        renderView({ runners: RUNNERS, onRename });
+        for (const runner of RUNNERS) {
+          await userEvent.click(
+            screen.getByTestId(`my-runner-actions-${runner.id}`),
+          );
+          const rename = await screen.findByTestId(
+            `my-runner-rename-${runner.id}`,
+          );
+          const menu = rename.closest<HTMLElement>(".adm-menu");
+          if (menu === null) throw new Error("меню не открылось");
+          expect(menu).toHaveAttribute(
+            "data-form",
+            width < 768 ? "sheet" : "menu",
+          );
+          if (width >= 768) {
+            // На телефоне шторку поднимает index.css (z-index: 120 !important).
+            expect(layerOf(menu)).toBeGreaterThan(SETTINGS_OVERLAY_LAYER);
+          }
+          await userEvent.click(rename);
+          expect(onRename).toHaveBeenLastCalledWith(runner);
+        }
+        expect(onRename).toHaveBeenCalledTimes(RUNNERS.length);
+      } finally {
+        viewport.restore();
+      }
+    },
+  );
+
+  it("меню неиспользованного токена тоже над окном настроек", async () => {
+    const viewport = installViewport(1360);
+    try {
+      renderView({
+        tokens: [
+          {
+            id: "t1",
+            label: "Сервер на даче",
+            created_at: "2026-10-30T09:00:00Z",
+            expires_at: "2026-10-31T09:00:00Z",
+            used: false,
+            revoked: false,
+          },
+        ],
+      });
+      await userEvent.click(screen.getByTestId("my-runner-token-actions-t1"));
+      const revoke = await screen.findByTestId("my-runner-token-revoke-t1");
+      expect(layerOf(revoke)).toBeGreaterThan(SETTINGS_OVERLAY_LAYER);
+    } finally {
+      viewport.restore();
+    }
+  });
+
+  it("подсказка «Устарел» не прячется под окном настроек", async () => {
+    // Radix меряет подсказку через ResizeObserver; в jsdom его нет.
+    const noop = vi.fn();
+    vi.stubGlobal(
+      "ResizeObserver",
+      class {
+        observe = noop;
+        unobserve = noop;
+        disconnect = noop;
+      },
+    );
+    try {
+      renderView();
+      act(() => {
+        screen.getByTestId("my-runner-outdated-r1").focus();
+      });
+      const hints = await screen.findAllByText(
+        "Сервер новее (0.3.0): обновите раннер.",
+      );
+      const hint = hints.find((el) =>
+        el.closest("[data-radix-popper-content-wrapper]"),
+      );
+      if (hint === undefined) throw new Error("подсказка не открылась");
+      expect(layerOf(hint)).toBeGreaterThan(SETTINGS_OVERLAY_LAYER);
+    } finally {
+      vi.unstubAllGlobals();
+    }
   });
 });
 

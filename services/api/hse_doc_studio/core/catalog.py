@@ -295,6 +295,14 @@ class SubmissionDocItem:
     # входит только в одном (напр. thesis на КТ2 ВКР — только проектный:
     # research сдаёт вместо глав 1–2 «Отчёт ВКР»).
     supported_kinds: tuple[str, ...] = ("research", "project")
+    # Допустимые способы подписи по слоту каталога («картинка или открепленная ЭП»):
+    # (slot_id, ("image", "detached")). Слот без записи принимает любой способ.
+    methods: tuple[tuple[str, tuple[str, ...]], ...] = ()
+
+    def allowed_methods(self, slot_id: str) -> tuple[str, ...]:
+        """Способы для слота каталога или рантайм-слота `<slot>--<slug>`; пусто значит любой."""
+        base = slot_id.split("--", 1)[0]
+        return next((methods for sid, methods in self.methods if sid == base), ())
 
 
 @dataclass(frozen=True)

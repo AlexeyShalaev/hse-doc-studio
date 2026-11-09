@@ -1,6 +1,7 @@
 import { CircleCheck, TriangleAlert } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import type { Probe } from "@entities/git-remote";
+import { useTemplateMissingText } from "@entities/system";
 import { Notice } from "@shared/ui/ConflictKit";
 import type { ParsedRemoteUrl } from "../../lib/parseRemoteUrl";
 import type { CloneVerdict } from "../../model/cloneVerdict";
@@ -38,6 +39,18 @@ export const CloneVerdictCard = ({
   issueHandlers,
 }: CloneVerdictCardProps) => {
   const { t } = useTranslation("gitRemote");
+  const remote = probe?.project ?? null;
+  const templateMissing = useTemplateMissingText(
+    t("result.warn.templateMissing"),
+    remote
+      ? {
+          pack_id: remote.pack_id,
+          template_id: remote.template_id,
+          version: remote.template_version,
+        }
+      : null,
+    verdict.kind === "ready" && verdict.reasons.includes("template_missing"),
+  );
 
   if (verdict.kind === "error") {
     return (
@@ -210,11 +223,7 @@ export const CloneVerdictCard = ({
           />
         )}
         {verdict.reasons.includes("template_missing") && (
-          <Notice
-            tone="warn"
-            role="status"
-            text={t("result.warn.templateMissing")}
-          />
+          <Notice tone="warn" role="status" text={templateMissing} />
         )}
       </div>
     </ResultFrame>

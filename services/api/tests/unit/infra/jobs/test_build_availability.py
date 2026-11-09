@@ -10,7 +10,7 @@ from hse_doc_studio.core.access.entities import Actor
 from hse_doc_studio.core.jobs.availability import BuildAvailability
 from hse_doc_studio.core.jobs.enums import JobKind
 from hse_doc_studio.core.jobs.routing import JobRoute, RouteDecision, RouteReason
-from hse_doc_studio.core.jobs.runners import Runner
+from hse_doc_studio.core.jobs.runners import Runner, RunnerOwnerKind
 from hse_doc_studio.infra.jobs.availability import LocalBuildAvailability, RunnerBuildAvailability
 
 from tests.fakes.runners import InMemoryRunnerRepository
@@ -21,8 +21,10 @@ _PROJECT = uuid4()
 _ACTOR = Actor.user(str(_USER), "Иван")
 
 
-def _runner(*tags: str, seen: datetime | None = _NOW, paused: bool = False) -> Runner:
+def _runner(*tags: str, seen: datetime | None = _NOW, paused: bool = False, personal: bool = False) -> Runner:
     return Runner(
+        owner_kind=RunnerOwnerKind.user if personal else RunnerOwnerKind.instance,
+        owner_id=_USER.hex if personal else None,
         id=uuid4().hex,
         name="r",
         token_hash="h",
@@ -39,10 +41,16 @@ def _runner(*tags: str, seen: datetime | None = _NOW, paused: bool = False) -> R
 class _PersonalRouter:
     """Личный раннер владельца берёт только перечисленные теги."""
 
-    def __init__(self, tags: frozenset[str], reason: RouteReason = RouteReason.waiting_personal) -> None:
+    def __init__(
+        self, tags: frozenset[str], reason: RouteReason = RouteReason.waiting_personal, *, owner: str | None = None
+    ) -> None:
         self.tags = tags
         self.reason = reason
+        self.owner = owner
         self.asked: list[frozenset[str]] = []
+
+    async def personal_owner(self, *, kind: JobKind, project_id: UUID, user_id: UUID) -> str | None:
+        return self.owner
 
     async def decide(self, *, kind: JobKind, tags: frozenset[str], project_id: UUID, user_id: UUID) -> RouteDecision:
         self.asked.append(tags)
@@ -68,7 +76,8 @@ async def _availability(*runners: Runner, router: _PersonalRouter | None = None)
 async def test__of__no_runners__nothing_served() -> None:
     result = await _availability()
 
-    assert result == BuildAvailability(cloud=True, any_runner=False, tags=frozenset())
+    assert (result.cloud, result.any_runner, result.tags) == (True, False, frozenset())
+    assert result.reasons == {"office": "no_runner", "tex": "no_runner"}
     assert not result.serves({"tex"})
     assert result.serves(set())
 
@@ -142,7 +151,7 @@ async def test__general__only_live_shared_runners_count(
 ) -> None:
     result = await _general(*runners)
 
-    assert result == BuildAvailability(cloud=True, any_runner=any_runner, tags=tags)
+    assert (result.cloud, result.any_runner, result.tags) == (True, any_runner, tags)
 
 
 async def test__local__general__everything_served() -> None:
@@ -150,3 +159,37 @@ async def test__local__general__everything_served() -> None:
 
     assert not result.cloud
     assert result.serves({"tex"})
+
+
+async def test__of__owner_personal_runner_paused__reason_personal_paused() -> None:
+    # Прод: у облачного раннера нет office, единственный раннер с office (личный) на паузе.
+    router = _PersonalRouter(frozenset(), owner=_USER.hex)
+
+    result = await _availability(_runner("tex"), _runner("tex", "office", personal=True, paused=True), router=router)
+
+    assert result.tags == frozenset({"tex"})
+    assert result.reasons == {"office": "personal_paused"}
+
+
+async def test__of__owner_personal_runner_offline__reason_personal_offline() -> None:
+    router = _PersonalRouter(frozenset(), owner=_USER.hex)
+    gone = _runner("office", personal=True, seen=_NOW - timedelta(minutes=30))
+
+    result = await _availability(_runner("tex"), gone, router=router)
+
+    assert result.reasons == {"office": "personal_offline"}
+
+
+async def test__of__personal_runners_not_allowed__paused_one_not_a_reason() -> None:
+    # Соавтор при политике «общие»: личный раннер владельца ему не помощник, причина «нет раннера».
+    router = _PersonalRouter(frozenset(), owner=None)
+
+    result = await _availability(_runner("tex"), _runner("office", personal=True, paused=True), router=router)
+
+    assert result.reasons == {"office": "no_runner"}
+
+
+async def test__general__paused_shared_runner__reason_shared_paused() -> None:
+    result = await _general(_runner("tex"), _runner("office", paused=True))
+
+    assert result.reasons == {"office": "shared_paused"}

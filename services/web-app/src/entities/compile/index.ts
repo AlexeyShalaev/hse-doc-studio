@@ -19,7 +19,9 @@ export {
   useHandleCompileError,
 } from "./lib/handleCompileError";
 export {
+  blockOfRefusal,
   buildBlockOf,
+  kindsText,
   useBuildAvailabilityOf,
   useProjectBuildBlocks,
 } from "./lib/buildBlock";

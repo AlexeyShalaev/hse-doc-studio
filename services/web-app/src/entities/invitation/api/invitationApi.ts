@@ -4,6 +4,7 @@ import {
   AccessRequestPageSchema,
   AccessRequestViewSchema,
   InboxSummarySchema,
+  InvitationDraftSchema,
   MyAccessRequestListSchema,
   MyInvitationListSchema,
   MyInvitationSchema,
@@ -19,6 +20,8 @@ import {
   type ApproveAccessRequest,
   type CreateProjectInvitationRequest,
   type InboxSummary,
+  type InvitationDraft,
+  type InvitationDraftRequest,
   type MyAccessRequest,
   type MyInvitation,
   type MyTransfer,
@@ -63,6 +66,18 @@ export const projectInvitationsApi = {
     apiClient
       .post(`${project(projectId)}/invitations`, body, quiet)
       .then(parseResp(ProjectInvitationCreatedSchema)),
+  /** Готовый текст приглашения на языке интерфейса (заголовок X-Interface-Language). */
+  draft: (
+    projectId: string,
+    body: InvitationDraftRequest,
+    signal?: AbortSignal,
+  ): Promise<InvitationDraft> =>
+    apiClient
+      .post(`${project(projectId)}/invitations/draft`, body, {
+        ...quiet,
+        ...(signal ? { signal } : {}),
+      })
+      .then(parseResp(InvitationDraftSchema)),
   resend: (
     projectId: string,
     invitationId: string,

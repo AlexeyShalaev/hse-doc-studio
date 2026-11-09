@@ -62,12 +62,10 @@ def _referenced(raw: bytes | None, doc_id: str) -> frozenset[str]:
         return frozenset()
     frozen = _entry(data, "frozen", doc_id)
     detached = _entry(data, "detached", doc_id)
-    items = [frozen] + (list(detached.values()) if isinstance(detached, dict) else [])
-    key_of = [("path" if item is frozen else "file") for item in items]
+    pairs: list[tuple[object, str]] = [(frozen, "path"), (frozen, "signed_path")]
+    pairs += [(item, "file") for item in (detached.values() if isinstance(detached, dict) else ())]
     return frozenset(
-        value
-        for item, key in zip(items, key_of, strict=True)
-        if isinstance(item, dict) and isinstance(value := item.get(key), str) and value
+        value for item, key in pairs if isinstance(item, dict) and isinstance(value := item.get(key), str) and value
     )
 
 

@@ -12,6 +12,7 @@ import type {
   AdminStorageUsageSchema,
 } from "@entities/session";
 import type { z } from "zod";
+import { JOB_STATES } from "../lib/jobs";
 
 // Сервер отдаёт очередь, квоты, сервисы и место в формах api/schemas/admin_ops.py. Экранам нужны
 // имена вместо идентификаторов и готовые числа, поэтому ответы пересобираются здесь.
@@ -53,6 +54,19 @@ export const jobFromWire = (job: WireJob, now: number): AdminJob => ({
   ...(job.route !== undefined ? { route: job.route } : {}),
   ...(job.runner_scope !== undefined ? { runner_scope: job.runner_scope } : {}),
   ...(job.route_reason !== undefined ? { route_reason: job.route_reason } : {}),
+  ...(job.batch_id != null ? { batch_id: job.batch_id } : {}),
+  ...(job.batch != null
+    ? {
+        batch: {
+          id: job.batch.id,
+          total: job.batch.total,
+          by_state: Object.fromEntries(
+            JOB_STATES.map((state) => [state, job.batch?.by_state[state] ?? 0]),
+          ),
+          created_at: job.batch.queued_at,
+        },
+      }
+    : {}),
 });
 
 export const jobPageFromWire = (

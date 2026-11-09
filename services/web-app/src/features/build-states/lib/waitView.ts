@@ -44,6 +44,12 @@ const VIEWS: Record<CompileWait["reason"], WaitView> = {
     tone: "info",
     live: true,
   },
+  runner_paused: {
+    titleKey: "runnerPaused",
+    bodyKey: "runnerPausedBody",
+    tone: "warn",
+    live: true,
+  },
   superseded: {
     titleKey: "superseded",
     bodyKey: "supersededBody",

@@ -72,6 +72,32 @@ describe("BuildBlockedNotice", () => {
     );
   });
 
+  it("personal runner paused: names the pause instead of a missing runner", () => {
+    mount(
+      {
+        reason: "no_runner_for_tags",
+        tags: ["office"],
+        cause: "personal_paused",
+      },
+      false,
+    );
+    const text = screen.getByTestId("build-blocked-notice").textContent;
+    expect(text).toContain(
+      "Личный раннер для офисных документов (Word, PowerPoint) на паузе",
+    );
+    expect(text).not.toContain("Нет подключённого раннера");
+  });
+
+  it("no runner with the tag at all: the usual text", () => {
+    mount(
+      { reason: "no_runner_for_tags", tags: ["office"], cause: "no_runner" },
+      false,
+    );
+    expect(screen.getByTestId("build-blocked-notice").textContent).toContain(
+      "Нет подключённого раннера для офисных документов",
+    );
+  });
+
   it("administrator gets a link to the Runners page", () => {
     mount({ reason: "no_runners", tags: ["tex"] }, true);
     expect(screen.getByTestId("build-blocked-runners-link")).toHaveAttribute(

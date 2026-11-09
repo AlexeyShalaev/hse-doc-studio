@@ -284,6 +284,8 @@ _AUDITED_ELSEWHERE: dict[tuple[str, str], str] = {
     ("PUT", "/api/admin/updates/auto"): "update.auto_toggle",
     ("POST", "/api/admin/updates/runs/{id}/cancel"): "update.run_cancel",
     ("POST", "/api/admin/queue/{id}/cancel"): "queue.job_cancel",
+    # «Отменить все» у пакета «Собрать все»: проверяет test_admin_ops_api, запись на каждую задачу.
+    ("POST", "/api/admin/queue/batches/{id}/cancel"): "queue.job_cancel",
     ("POST", "/api/admin/runner-tokens"): "runner.registration_token_create",
     ("DELETE", "/api/admin/runner-tokens/{id}"): "runner.registration_token_revoke",
     ("PATCH", "/api/admin/runners/{id}"): "runner.pause",

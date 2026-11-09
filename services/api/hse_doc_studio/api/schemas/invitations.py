@@ -104,6 +104,19 @@ class CreateProjectInvitationRequest(StrictModel):
         return self
 
 
+class InvitationDraftRequest(StrictModel):
+    """Для чего нужен готовый текст: тот же выбор, что в форме приглашения; адресат может быть ещё не введён."""
+
+    user_id: str | None = Field(default=None, max_length=64)
+    email: str | None = Field(default=None, max_length=EMAIL_MAX)
+    role: GrantRoleName
+    persona: str | None = Field(default=None, max_length=PERSONA_MAX)
+
+
+class InvitationDraft(StrictModel):
+    message: str
+
+
 class ProjectInvitationCreated(StrictModel):
     invitation: ProjectInvitation
     delivery: Literal["email", "manual", "inbox"]
@@ -141,6 +154,8 @@ class ProjectInvitationPreview(StrictModel):
     email_hint: str | None
     # S12: регистрационное приглашение для адреса без аккаунта в режиме «только по приглашению».
     registration_token: str | None
+    # Сообщение приглашающего, как в письме; только у действующего приглашения.
+    message: str | None
 
 
 class AccessRequester(StrictModel):

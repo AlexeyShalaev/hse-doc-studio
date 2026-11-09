@@ -95,6 +95,7 @@ class InvitationPreview:
     role: Role | None = None
     email_hint: str | None = None
     registration_token: str | None = None
+    message: str | None = None
 
 
 def invitation_link(public_url: str | None, token: str) -> str:
@@ -139,6 +140,7 @@ async def check_persona(personas: IProjectPersonas, project_id: UUID, persona: s
 def _payload(
     card: ProjectCard, actor_name: str | None, invitation: ProjectInvitation, outcome: str | None = None
 ) -> NotificationPayload:
+    """Подписи уведомления. У самого приглашения в `excerpt` сообщение приглашающего: оно уходит и в письмо."""
     return NotificationPayload(
         project_id=str(card.id),
         project_name=card.name,
@@ -146,6 +148,7 @@ def _payload(
         role=invitation.terms.role.value,
         ref_id=invitation.id,
         outcome=outcome,
+        excerpt=invitation.message if outcome is None else None,
     )
 
 
@@ -738,4 +741,5 @@ class PreviewInvitationTokenUC(_Base):
             role=invitation.terms.role,
             email_hint=mask_email(invitation.invitee_email),
             registration_token=token if needs_signup else None,
+            message=invitation.message,
         )

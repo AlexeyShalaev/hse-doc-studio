@@ -2,17 +2,19 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { failureCode } from "@shared/api";
 import { useCursorList } from "@shared/lib";
-import type { AdminJob } from "@entities/session";
+import type { AdminJob, AdminJobBatch } from "@entities/session";
 import { opsApi } from "../api/opsApi";
 import {
   opsKeys,
   POLL_MS,
   useCancelJob,
+  useCancelJobBatch,
   usePersonalRunnersEnabled,
   usePersonalRunningJobs,
   useQueueSummary,
 } from "../api/opsQueries";
 import type { Failure } from "../lib/failure";
+import { batchActive } from "../lib/batches";
 import { useQueueListState } from "../lib/lists";
 import { personRef } from "../lib/people";
 import { useNow } from "../lib/useNow";
@@ -40,6 +42,7 @@ export const Queue = () => {
   });
   const summary = useQueueSummary();
   const cancel = useCancelJob();
+  const cancelBatch = useCancelJobBatch();
   const now = useNow(5000);
   // Сколько задач сейчас на личных раннерах: отдельной сводки сервер не отдаёт.
   // Плитку не показываем, пока личные раннеры выключены на установке.
@@ -49,6 +52,10 @@ export const Queue = () => {
   const [opened, setOpened] = useState<AdminJob | null>(null);
   const [cancelling, setCancelling] = useState<AdminJob | null>(null);
   const [failure, setFailure] = useState<Failure | null>(null);
+  const [cancellingBatch, setCancellingBatch] = useState<{
+    batch: AdminJobBatch;
+    lead: AdminJob;
+  } | null>(null);
 
   // Открытую задачу берём из свежего ответа, чтобы статус в панели не отставал.
   const fresh = opened
@@ -56,6 +63,10 @@ export const Queue = () => {
     : null;
   const cancellingWho = cancelling
     ? personRef(cancelling.user_id, cancelling.user_name, cancelling.user_email)
+    : null;
+  const batchLead = cancellingBatch?.lead ?? null;
+  const batchWho = batchLead
+    ? personRef(batchLead.user_id, batchLead.user_name, batchLead.user_email)
     : null;
 
   return (
@@ -79,6 +90,10 @@ export const Queue = () => {
         onCancel={(job) => {
           setFailure(null);
           setCancelling(job);
+        }}
+        onCancelBatch={(batch, lead) => {
+          setFailure(null);
+          setCancellingBatch({ batch, lead });
         }}
         onRetry={() => void jobs.refetch()}
       />
@@ -126,6 +141,45 @@ export const Queue = () => {
           cancel.mutate(cancelling.id, {
             onSuccess: () => {
               setCancelling(null);
+            },
+            onError: (error) => {
+              setFailure({ code: failureCode(error) });
+            },
+          });
+        }}
+      />
+      <ConfirmDialog
+        isOpen={cancellingBatch !== null}
+        title={t("queue.batchCancelDialog.title")}
+        body={
+          <>
+            <p style={{ margin: 0 }}>
+              {t("queue.batchCancelDialog.body", {
+                count: cancellingBatch ? batchActive(cancellingBatch.batch) : 0,
+                project: batchLead?.project_name ?? t("queue.noProject"),
+                user: batchWho?.name ?? t("queue.unknownPerson"),
+              })}
+            </p>
+            <p style={{ margin: "0.5rem 0 0", color: "var(--fg-2)" }}>
+              {t("queue.batchCancelDialog.running")}
+            </p>
+          </>
+        }
+        confirmLabel={t("queue.batchCancelDialog.confirm")}
+        danger
+        pending={cancelBatch.isPending}
+        failure={failure}
+        testId="batch-cancel-dialog"
+        onClose={() => {
+          setCancellingBatch(null);
+          setFailure(null);
+        }}
+        onConfirm={() => {
+          if (!cancellingBatch) return;
+          setFailure(null);
+          cancelBatch.mutate(cancellingBatch.batch.id, {
+            onSuccess: () => {
+              setCancellingBatch(null);
             },
             onError: (error) => {
               setFailure({ code: failureCode(error) });

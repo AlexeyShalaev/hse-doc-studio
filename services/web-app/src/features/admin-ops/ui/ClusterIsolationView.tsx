@@ -138,6 +138,11 @@ const ChartRunner = ({ info }: { info: Isolation }) => {
                 label: t("panel.chart.tmp"),
                 value: text(chart.tmp_size_limit),
               },
+              {
+                label: t("panel.chart.office"),
+                value: chart.office_url ?? t("panel.office.none"),
+                testId: "isolation-chart-office",
+              },
             ]}
           />
           <PodFacts resources={chart.resources} security={chart.security} />
@@ -220,6 +225,11 @@ const InstallFromUi = ({ info }: { info: Isolation }) => {
                 ui.storage_size,
               ].join(", "),
             },
+            {
+              label: t("panel.install.office"),
+              value: ui.office_url ?? t("panel.office.none"),
+              testId: "isolation-install-office",
+            },
           ]}
         />
       )}
@@ -291,6 +301,9 @@ const Network = ({ info }: { info: Isolation }) => {
                 ports: egress.api_server_ports.join(", "),
               })}
             </li>
+            {egress.office_port !== null && (
+              <li>{t("panel.network.office", { port: egress.office_port })}</li>
+            )}
             {egress.extra_rules > 0 && (
               <li>{t("panel.network.extra", { count: egress.extra_rules })}</li>
             )}
@@ -298,6 +311,40 @@ const Network = ({ info }: { info: Isolation }) => {
         </>
       )}
       <p className="iso-note">{t("panel.network.cni")}</p>
+    </Block>
+  );
+};
+
+/** Встроенный Gotenberg: куда раннеры ходят с офисными задачами. */
+const OfficeConvert = ({ info }: { info: Isolation }) => {
+  const { t } = useTranslation("adminRunnerIsolation");
+  const { flag, text } = useValue();
+  const office = info.office_convert;
+  if (office === null) return null;
+  return (
+    <Block
+      title={t("panel.office.title")}
+      source={<SourceTag kind="config" />}
+      testId="isolation-office"
+    >
+      <p className="iso-note">{t("panel.office.lead")}</p>
+      <FactList
+        items={[
+          {
+            label: t("panel.office.url"),
+            value: office.url,
+            testId: "isolation-office-url",
+          },
+          { label: t("panel.office.image"), value: text(office.image) },
+          { label: t("panel.office.replicas"), value: office.replicas },
+          {
+            label: t("panel.office.networkPolicy"),
+            value: flag(office.network_policy),
+            tone: office.network_policy ? undefined : "warning",
+          },
+        ]}
+      />
+      <ResourceFacts resources={office.resources} />
     </Block>
   );
 };
@@ -524,6 +571,7 @@ export const ClusterIsolationView = ({ info }: { info: Isolation }) => {
       {info.config === "helm" && (
         <div className="iso-grid">
           <Network info={info} />
+          <OfficeConvert info={info} />
           <Quota
             quota={info.quota}
             title={t("panel.quota.title")}

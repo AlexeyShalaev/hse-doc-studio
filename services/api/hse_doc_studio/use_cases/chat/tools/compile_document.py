@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import time
+from copy import copy
 from pathlib import Path
 from uuid import UUID
 
@@ -11,6 +12,7 @@ from hse_doc_studio.core.entities import CompileRecord
 from hse_doc_studio.core.enums import CompileStatus, Lang, ToolKind
 from hse_doc_studio.core.errors import NotFoundError
 from hse_doc_studio.core.i18n import current_interface_language
+from hse_doc_studio.core.jobs.errors import NoRunnerAvailableError
 from hse_doc_studio.core.repositories import ICompileRepository
 from hse_doc_studio.core.shutdown import RESTART_RETRY_AFTER_S, ServerRestartingError, ShutdownSignal
 from hse_doc_studio.use_cases.compile.trigger_compile import TriggerCompileInput, TriggerCompileUC
@@ -37,6 +39,11 @@ _SPEC = ToolSpec(
 
 
 class CompileDocumentTool:
+    # Сколько ждать итога в одном вызове. Клиенту MCP отвечаем раньше его таймаута, и сборку он досматривает
+    # через get_compile: копия с `with_wait_limit` вместо ошибки по таймауту отвечает «ещё идёт» с compile_id.
+    _wait_s: float = _POLL_TIMEOUT_S
+    _reports_running = False
+
     def __init__(
         self,
         trigger_compile_uc: TriggerCompileUC,
@@ -59,6 +66,35 @@ class CompileDocumentTool:
         # guards each run, so an unreliable model can't build without a confirm.
         return ToolDefinition(spec=_SPEC, kind=ToolKind.exec_, handler=self, weak_model_safe=True)
 
+    def with_wait_limit(self, seconds: float) -> CompileDocumentTool:
+        """Копия для клиента MCP: ждёт не дольше `seconds`, понимает `wait=false`, долгую сборку не считает ошибкой."""
+        tool = copy(self)
+        tool._wait_s = seconds
+        tool._reports_running = True
+        return tool
+
+    def _running(self, doc_id: str, compile_id: UUID, lang: Lang, *, waited: bool) -> ToolResult:
+        """Сборка идёт дальше без этого вызова: не ошибка, а compile_id, по которому смотреть итог."""
+        if lang == Lang.en:
+            head = (
+                f"Build {doc_id} is still running after {int(self._wait_s)} s"
+                if waited
+                else f"Build {doc_id} started and runs in the background"
+            )
+            return ToolResult.ok(
+                f"{head}.\nstatus: in_progress\ncompile_id: {compile_id}\n"
+                f"Result: get_compile with this compile_id; stop: cancel_compile. Do not start the build again."
+            )
+        head = (
+            f"Сборка {doc_id} ещё идёт после {int(self._wait_s)} с ожидания"
+            if waited
+            else f"Сборка {doc_id} запущена и идёт в фоне"
+        )
+        return ToolResult.ok(
+            f"{head}.\nstatus: in_progress\ncompile_id: {compile_id}\n"
+            f"Итог: get_compile с этим compile_id; остановить: cancel_compile. Запускать сборку заново не нужно."
+        )
+
     async def handle(self, ctx: AgentToolContext, args: dict[str, object]) -> ToolResult:
         lang = current_interface_language()
         doc_id = str(args.get("doc_id", "")).strip()
@@ -68,21 +104,32 @@ class CompileDocumentTool:
             out = await self._trigger.execute(TriggerCompileInput(project_id=ctx.project_id, doc_id=doc_id))
         except (ValueError, NotFoundError) as exc:
             return ToolResult.error(str(exc))
+        except NoRunnerAvailableError as exc:
+            # Сборку некому взять: причина словами (личный раннер на паузе, нет раннера с office и т. п.).
+            return ToolResult.error(f"[{exc.code}] {exc}")
+        if self._reports_running and args.get("wait") is False:
+            return self._running(doc_id, out.compile_id, lang, waited=False)
 
         project_result = await self._get_project.execute(GetProjectInput(project_id=ctx.project_id))
         record = await self._poll(project_result.project.folder, out.compile_id)
-        if record is None and self._shutdown.requested:
-            raise ServerRestartingError(self._restarting_text(doc_id, out.compile_id, lang))
         if record is None:
-            return ToolResult.error(
-                f"build of {doc_id} did not finish within {int(_POLL_TIMEOUT_S)} s"
-                if lang == Lang.en
-                else f"сборка {doc_id} не завершилась за {int(_POLL_TIMEOUT_S)} с"
-            )
+            return self._unfinished(doc_id, out.compile_id, lang)
         return self._format(doc_id, record, lang)
 
+    def _unfinished(self, doc_id: str, compile_id: UUID, lang: Lang) -> ToolResult:
+        """Итога нет: сервер перезапускается, сборка ещё идёт (MCP) или не уложилась в ожидание (агент)."""
+        if self._shutdown.requested:
+            raise ServerRestartingError(self._restarting_text(doc_id, compile_id, lang))
+        if self._reports_running:
+            return self._running(doc_id, compile_id, lang, waited=True)
+        return ToolResult.error(
+            f"build of {doc_id} did not finish within {int(_POLL_TIMEOUT_S)} s"
+            if lang == Lang.en
+            else f"сборка {doc_id} не завершилась за {int(_POLL_TIMEOUT_S)} с"
+        )
+
     async def _poll(self, folder: Path, compile_id: UUID) -> CompileRecord | None:
-        deadline = time.monotonic() + _POLL_TIMEOUT_S
+        deadline = time.monotonic() + self._wait_s
         while time.monotonic() < deadline:
             record = await self._compile_repo.get_for_project(folder, compile_id)
             if record is not None and record.status in _TERMINAL:

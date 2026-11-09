@@ -61,3 +61,17 @@ describe("ProjectResponseSchema: детали проекта", () => {
     expect(parsed.my_role ?? null).toBeNull();
   });
 });
+
+describe("ProjectResponseSchema: авторы", () => {
+  // PATCH заменяет список авторов целиком: e-mail, отброшенный при разборе,
+  // стёрся бы при первой правке ФИО или группы в настройках.
+  it("сохраняют e-mail автора", () => {
+    const parsed = ProjectResponseSchema.parse({
+      ...DETAIL,
+      authors: [
+        { name: "Иван Иванов", group: "МПИ251", email: "i@edu.hse.ru" },
+      ],
+    });
+    expect(parsed.authors?.[0]?.email).toBe("i@edu.hse.ru");
+  });
+});

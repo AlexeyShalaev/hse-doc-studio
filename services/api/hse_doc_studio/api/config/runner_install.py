@@ -56,6 +56,14 @@ class RunnerInstallConfig(BaseModel):
     kubernetes_resource_max_memory: str = Field(
         default="16Gi", description="Верхняя граница памяти, которую админ может задать в форме установки."
     )
+    office_url: str = Field(
+        default="",
+        description=(
+            "Адрес Gotenberg для раннеров, поставленных из админки: они получают его в HSE_RUNNER__OFFICE_URL при "
+            "установке и при обновлении и берут офисные задачи (тег office). Чарт задаёт его из runner.officeUrl или "
+            "встроенного services.officeConvert; пусто значит раннеры без office."
+        ),
+    )
     data_dir: str = Field(
         default="/var/lib/hse-runner", description="Каталог данных раннера на хосте (docker) и в поде (kubernetes)."
     )
@@ -72,6 +80,13 @@ class RunnerInstallConfig(BaseModel):
         default=True,
         description="Разрешить сохранять SSH-доступы зашифрованно (нужен ключ шифрования секретов).",
     )
+
+    @field_validator("office_url")
+    @classmethod
+    def _http_office_url(cls, value: str) -> str:
+        if value and not value.startswith(("http://", "https://")):
+            raise ValueError("office_url must be http(s)://host")
+        return value
 
     @field_validator("ssh_allowlist")
     @classmethod

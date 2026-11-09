@@ -1,4 +1,7 @@
-"""compile_document: ждёт итог сборки, а при остановке сервера отвечает сразу и говорит, что будет со сборкой."""
+"""compile_document: ждёт итог сборки, а при остановке сервера отвечает сразу и говорит, что будет со сборкой.
+
+Сборку некому взять (нет раннера с тегом, личный раннер на паузе): инструмент называет причину, а не падает.
+"""
 
 from __future__ import annotations
 
@@ -7,6 +10,7 @@ from dataclasses import replace
 from pathlib import Path
 from types import SimpleNamespace
 from typing import Any
+from unittest.mock import AsyncMock, MagicMock
 from uuid import UUID, uuid4
 
 import pytest
@@ -14,6 +18,8 @@ from hse_doc_studio.core.agent.entities import AgentToolContext
 from hse_doc_studio.core.compile.failure import INTERRUPTED
 from hse_doc_studio.core.enums import CompileStatus, EditFormat
 from hse_doc_studio.core.i18n import set_interface_language
+from hse_doc_studio.core.jobs.errors import NoRunnerAvailableError
+from hse_doc_studio.core.jobs.runner_fit import PoolState, RunnerFit
 from hse_doc_studio.core.shutdown import ServerRestartingError, ShutdownSignal
 from hse_doc_studio.use_cases.chat.tools.compile_document import CompileDocumentTool
 from tests.contract.test_compile_contract import make_record
@@ -110,3 +116,16 @@ async def test__finished_build__result_returned_as_before(tmp_path: Path) -> Non
 
     assert not result.is_error
     assert result.text.startswith("Сборка tz: success")
+
+
+async def test__compile_document__no_suitable_runner__error_names_the_reason() -> None:
+    trigger = MagicMock()
+    fit = RunnerFit(tags=frozenset({"office"}), shared=PoolState.absent, personal=PoolState.paused)
+    trigger.execute = AsyncMock(side_effect=NoRunnerAvailableError(frozenset({"office"}), any_runner=True, fit=fit))
+    tool = CompileDocumentTool(trigger, MagicMock(), MagicMock())
+
+    result = await tool.handle(_ctx(), {"doc_id": "presentation"})
+
+    assert result.is_error
+    assert result.text.startswith("[no_runner_for_tags] Нет раннера в сети, который умеет office")
+    assert "личный раннер владельца на паузе" in result.text

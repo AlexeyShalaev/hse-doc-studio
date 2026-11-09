@@ -112,6 +112,8 @@ class SubmissionDocItemResponse(BaseModel):
     # показывает блокер, которого при сборке пакета не будет.
     skip_if_nda: bool = False
     supported_kinds: list[str] = ["research", "project"]
+    # Допустимые способы подписи по слоту каталога; слота нет в словаре, значит любой способ.
+    methods: dict[str, list[str]] = {}
 
 
 class SubmissionExtraItemResponse(BaseModel):

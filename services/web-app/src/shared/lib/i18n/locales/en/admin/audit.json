@@ -84,6 +84,8 @@
       "project_settings": "Project settings changed",
       "project_transfer": "Project transferred",
       "project_people_update": "Project supervisor or authors changed (MCP)",
+      "project_template_update": "Project template updated (MCP)",
+      "document_variant_update": "Document variant changed (MCP)",
       "runner_announce": "Runner announced its capabilities",
       "runner_deregister": "Runner deregistered",
       "runner_pairing_approve": "Runner pairing approved",
@@ -190,7 +192,8 @@
       "runner_install_local_start": "Runner install from the admin area started",
       "runner_install_local_succeeded": "Runner installed from the admin area",
       "runner_install_local_failed": "Runner install from the admin area failed",
-      "runner_install_local_remove": "Runner install from the admin area removed",
+      "runner_install_local_remove": "Runner install from the admin area removed, runner revoked",
+      "runner_install_local_remove_failed": "Runner install from the admin area could not be removed",
       "runner_install_local_upgrade": "Runner update from the admin area started",
       "runner_install_local_upgrade_succeeded": "Runner installed from the admin area updated",
       "runner_install_local_upgrade_failed": "Runner update from the admin area failed"
@@ -251,7 +254,12 @@
       "from_version": "Version before",
       "to_version": "Version after",
       "from_image": "Image before",
-      "to_image": "Image after"
+      "to_image": "Image after",
+      "rolled_back": "Rolled back to the previous version",
+      "rollback_error": "Rollback failure reason",
+      "revoked_runner": "Revoked runner",
+      "revoked_registrations": "Revoked registration tokens",
+      "rollback_reconnected": "Runner online after the rollback"
     },
     "values": {
       "password": "password",

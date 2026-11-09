@@ -271,7 +271,7 @@ async def test__api__submission__detached_slot_requires_signature_then_packages_
         sigs = [n for n in names if n.endswith(".p7s")]
         assert len(sigs) == 1
         assert any(zf.read(n) == frozen_bytes for n in pdfs)
-        assert any(n.endswith(".README.txt") for n in names)
+        assert "КАК_ПРОВЕРИТЬ.txt" in names
 
 
 async def test__api__refreeze_of_unchanged_document__keeps_signature(test_app: AsyncClient, tmp_path: Path) -> None:

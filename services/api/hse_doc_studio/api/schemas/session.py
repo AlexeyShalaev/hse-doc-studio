@@ -27,7 +27,7 @@ SetupState = Literal["needs_admin", "ready"]
 RegistrationMode = Literal["open", "domains", "invite", "closed"]
 OrgRoleName = Literal["owner", "admin", "member"]
 AccountStatus = Literal["active", "pending_verification", "pending_approval", "disabled"]
-TokenScope = Literal["api", "git:read", "git:write", "mcp", "mcp:admin"]
+TokenScope = Literal["api", "git:read", "git:write", "mcp", "mcp:admin", "sign"]
 ProjectRoleName = Literal["reader", "reviewer", "editor", "owner"]
 
 
@@ -333,7 +333,7 @@ class ApiToken(StrictModel):
 
 class CreateApiTokenRequest(StrictModel):
     name: str = Field(min_length=1, max_length=80)
-    scopes: list[TokenScope] = Field(min_length=1, max_length=5)
+    scopes: list[TokenScope] = Field(min_length=1, max_length=6)
     expires_in_days: int | None = Field(ge=1, le=365)
 
 
@@ -935,7 +935,9 @@ class UpdateAdminOidcProviderRequest(StrictModel):
     auto_provision: bool | None = None
 
 
-CompileWaitReason = Literal["queued", "no_runner", "quota_wait", "runner_lost", "superseded", "personal_runner"]
+CompileWaitReason = Literal[
+    "queued", "no_runner", "quota_wait", "runner_lost", "superseded", "personal_runner", "runner_paused"
+]
 
 
 class CompileWait(StrictModel):
@@ -943,7 +945,8 @@ class CompileWait(StrictModel):
 
     queued и quota_wait: сборка ждёт очереди (место и оценка ожидания); no_runner: свободных раннеров нет;
     runner_lost: раннер потерян, идёт повтор (попытка из максимума); superseded: сборку заменила более новая;
-    personal_runner: сборка ждёт личный раннер владельца проекта (`wait_hint_seconds` окно ожидания).
+    personal_runner: сборка ждёт личный раннер владельца проекта (`wait_hint_seconds` окно ожидания);
+    runner_paused: подходящий раннер на паузе, сборка пойдёт после снятия паузы (иначе сервер снимет её с итогом).
     """
 
     reason: CompileWaitReason

@@ -136,6 +136,10 @@ class IJobRouter(Protocol):
         self, *, kind: JobKind, tags: frozenset[str], project_id: UUID, user_id: UUID
     ) -> RouteDecision: ...
 
+    async def personal_owner(self, *, kind: JobKind, project_id: UUID, user_id: UUID) -> str | None:
+        """Чьи личные раннеры могут взять задачу при любом их состоянии; `None`, если только общие."""
+        ...
+
 
 def may_feed_shared_cache(job: QueuedJob) -> bool:
     """Только выход общего раннера может попасть в кэш, разделяемый между проектами."""

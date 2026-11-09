@@ -260,6 +260,7 @@ tags:
 | `HSE_STUDIO__RUNNER_INSTALL__KUBERNETES_BUILD_MEMORY_LIMIT` | str | `4Gi` | оба | limits.memory подов сборки: TeX на обычном документе укладывается в 1-2 ГиБ. |
 | `HSE_STUDIO__RUNNER_INSTALL__KUBERNETES_RESOURCE_MAX_CPU` | str | `8` | оба | Верхняя граница CPU, которую админ может задать в форме установки. |
 | `HSE_STUDIO__RUNNER_INSTALL__KUBERNETES_RESOURCE_MAX_MEMORY` | str | `16Gi` | оба | Верхняя граница памяти, которую админ может задать в форме установки. |
+| `HSE_STUDIO__RUNNER_INSTALL__OFFICE_URL` | str | пусто | оба | Адрес Gotenberg для раннеров, поставленных из админки: они получают его в HSE_RUNNER__OFFICE_URL при установке и при обновлении и берут офисные задачи (тег office). Чарт задаёт его из runner.officeUrl или встроенного services.officeConvert; пусто значит раннеры без office. |
 | `HSE_STUDIO__RUNNER_INSTALL__DATA_DIR` | str | `/var/lib/hse-runner` | оба | Каталог данных раннера на хосте (docker) и в поде (kubernetes). |
 | `HSE_STUDIO__RUNNER_INSTALL__SSH_ENABLED` | bool | `true` | оба | Разрешить установку раннеров по SSH из админки. |
 | `HSE_STUDIO__RUNNER_INSTALL__SSH_ALLOWLIST` | `list[str]` | пусто | оба | Внутренние узлы, на которые можно ставить раннер по SSH: имя (host.corp.local, *.corp.local), IP или CIDR. Без записи закрыты частные сети, loopback и адреса кластера; адреса метаданных облака и link-local закрыты всегда. Дополняет HSE_STUDIO__EGRESS__ALLOWLIST. |
@@ -416,6 +417,7 @@ tags:
 | `HSE_STUDIO__DEVICE_NAME` | str | не задано | оба | Имя этого компьютера для списка подключённых Студий на сервере (по умолчанию имя машины). |
 | `HSE_STUDIO__DEVICE_OS` | str | не задано | оба | Семейство ОС машины (macos, windows, linux) для списка подключённых Студий. |
 | `HSE_STUDIO__PACKS_DIR` | Path | каталог `packs` монорепы, в образе `/app/packs` | оба | Directory with template packs (auto-detected from monorepo root locally; /app/packs in docker) |
+| `HSE_STUDIO__BUILTIN_PACKS_MANIFEST` | Path | `/app/packs-manifest.json` | оба | Manifest of the template packs baked into the image (written by the Dockerfile) |
 | `HSE_STUDIO__STATIC_DIR` | Path | не задано | оба | Serve built frontend from this directory (all-in-one mode) |
 | `HSE_STUDIO__HELP_DIR` | Path | `services/user-docs/dist` монорепы, в образе `/app/help` | оба | Built user help (services/user-docs: user/, admin/, media/) served at /help/; no dir, no help |
 | `HSE_STUDIO__DOCKER_BINARY` | str | не задано | оба | Explicit path to the docker CLI; empty means auto-discovery (PATH, then known locations). |

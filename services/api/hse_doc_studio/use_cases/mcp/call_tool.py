@@ -16,7 +16,8 @@ import structlog
 
 from hse_doc_studio.core.access.checker import IProjectAccessChecker, ProjectForbiddenError
 from hse_doc_studio.core.access.context import require_actor
-from hse_doc_studio.core.access.entities import Actor
+from hse_doc_studio.core.access.entities import Actor, ActorSource
+from hse_doc_studio.core.access.paths import scope_path_of_instance_id
 from hse_doc_studio.core.agent.entities import AgentToolContext, ToolResult
 from hse_doc_studio.core.enums import EditFormat
 from hse_doc_studio.core.errors import NotFoundError, ProjectReadOnlyError
@@ -25,6 +26,7 @@ from hse_doc_studio.core.identity.errors import IdentityError, IdentityErrorCode
 from hse_doc_studio.core.mcp.entities import MCP_ADMIN_SCOPE, McpCallOutcome, McpCallRecord, McpSettings
 from hse_doc_studio.core.mcp.errors import McpError, McpErrorCode
 from hse_doc_studio.core.mcp.protocols import IMcpCallJournal, IMcpSettingsStore
+from hse_doc_studio.core.project_access import access_message
 from hse_doc_studio.core.projects.usage import ProjectQuotaExceededError
 from hse_doc_studio.core.quotas.errors import QuotaExceededError
 from hse_doc_studio.core.rate_limit import MCP_CALL, IRateLimiter, RateRule
@@ -46,9 +48,14 @@ class McpCallResult:
     retry_after_s: int | None = None
 
 
+def lacks_scope(actor: Actor, entry: McpToolEntry) -> bool:
+    """Токену не хватает отдельного права тула (подпись комплекта: `sign`); у сессии и локально прав токена нет."""
+    return entry.rule.scope is not None and actor.source is ActorSource.pat and entry.rule.scope not in actor.scopes
+
+
 def visible_to(actor: Actor, entry: McpToolEntry, settings: McpSettings) -> bool:
     """Тул виден и вызываем: включён в настройках, а админский ещё и у админа с областью `mcp:admin`."""
-    if not settings.allows(entry.meta):
+    if not settings.allows(entry.meta) or lacks_scope(actor, entry):
         return False
     if entry.meta.admin:
         return actor.is_instance_admin and (actor.scopes == frozenset() or MCP_ADMIN_SCOPE in actor.scopes)
@@ -101,6 +108,14 @@ class CallMcpToolUC:
         entry = self._catalog.get(name)
         if entry is None:
             raise McpError(McpErrorCode.unknown_tool)
+        if lacks_scope(actor, entry):
+            raise McpError(
+                McpErrorCode.forbidden,
+                localized_error(
+                    f"У токена нет права «{entry.rule.scope}»: его выдают отдельно от права mcp",
+                    f"The token has no “{entry.rule.scope}” scope: it is granted separately from mcp",
+                ),
+            )
         if not visible_to(actor, entry, settings):
             raise McpError(McpErrorCode.tool_disabled)
         return entry
@@ -124,12 +139,15 @@ class CallMcpToolUC:
             return
         try:
             paths: list[str | None] = [str(args.get(key, "")).strip() for key in entry.rule.path_args]
+            # Id экземпляра сводится к слагу автора, как `scope_for_rule` у маршрута; без автора области нет.
+            paths += [scope_path_of_instance_id(str(args.get(key, "")).strip()) for key in entry.rule.instance_args]
             for path in paths or [None]:
                 await self._access.require(project_id, action, path)
             if entry.rule.guards_write:
                 found = await self._project_access.execute(GetProjectAccessInput(project_id=project_id))
                 if not found.access.writable:
-                    raise McpError(McpErrorCode.read_only)
+                    # Причина та же, что в ответе 423: агенту тоже нельзя советовать «обновите Студию» зря.
+                    raise McpError(McpErrorCode.read_only, access_message(found.access, found.project.lock.version))
         except (NotFoundError, ProjectForbiddenError, ProjectReadOnlyError) as exc:
             raise map_tool_error(exc) from exc
 

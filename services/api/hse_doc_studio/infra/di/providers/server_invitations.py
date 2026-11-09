@@ -29,6 +29,7 @@ from hse_doc_studio.core.identity.protocols import (
 from hse_doc_studio.core.invitations.protocols import (
     IAccessRequestRepository,
     IEmailVerifiedHook,
+    IInvitationFacts,
     INotificationMailer,
     INotificationRepository,
     INotifier,
@@ -41,7 +42,7 @@ from hse_doc_studio.core.invitations.protocols import (
 from hse_doc_studio.core.jobs.queue import IJobQueue
 from hse_doc_studio.core.orgs.protocols import IOrgRepository
 from hse_doc_studio.core.quotas.protocols import IQuotaGate
-from hse_doc_studio.core.repositories import IProjectIndexRepository
+from hse_doc_studio.core.repositories import IProjectIndexRepository, ITemplateRepository
 from hse_doc_studio.core.uow import IUnitOfWork
 from hse_doc_studio.infra.db.repositories.access_requests import PostgresAccessRequestRepository
 from hse_doc_studio.infra.db.repositories.notifications import PostgresNotificationRepository
@@ -51,6 +52,7 @@ from hse_doc_studio.infra.db.repositories.project_invitations import PostgresPro
 from hse_doc_studio.infra.db.repositories.project_members import PostgresProjectMemberRepository
 from hse_doc_studio.infra.db.repositories.project_transfers import PostgresProjectTransferRepository
 from hse_doc_studio.infra.db.session import SessionProvider
+from hse_doc_studio.infra.invitations.facts import ProjectFileInvitationFacts
 from hse_doc_studio.infra.invitations.personas import ProjectFilePersonas
 from hse_doc_studio.infra.invitations.signup_setting import ProjectInviteSignupSetting
 from hse_doc_studio.infra.notifications.mailer import SmtpNotificationMailer
@@ -75,6 +77,7 @@ from hse_doc_studio.use_cases.projects.access_requests import (
     ListAccessRequestsUC,
     ListMyAccessRequestsUC,
 )
+from hse_doc_studio.use_cases.projects.invitation_message import DraftInvitationMessageUC
 from hse_doc_studio.use_cases.projects.invitations import (
     AcceptInvitationTokenUC,
     AcceptInvitationUC,
@@ -133,6 +136,10 @@ class ServerInvitationsProvider(Provider):
     @provide
     def get_personas(self, index: IProjectIndexRepository) -> IProjectPersonas:
         return ProjectFilePersonas(index)
+
+    @provide
+    def get_invitation_facts(self, index: IProjectIndexRepository, templates: ITemplateRepository) -> IInvitationFacts:
+        return ProjectFileInvitationFacts(index, templates)
 
     @provide
     def get_signup_setting(
@@ -205,6 +212,16 @@ class ServerInvitationsProvider(Provider):
             auth_settings=auth_settings, registration_invites=registration_invites, notifier=notifier,
             mailer=mailer, signup_allowed=signup, public_url=settings.auth.public_url,
         )  # fmt: skip
+
+    @provide
+    def get_draft_invitation_message_uc(
+        self,
+        acl: PostgresProjectAclRepository,
+        cards: IProjectCards,
+        users: IUserRepository,
+        facts: IInvitationFacts,
+    ) -> DraftInvitationMessageUC:
+        return DraftInvitationMessageUC(acl, cards, users, facts)
 
     @provide
     def get_resend_invitation_uc(

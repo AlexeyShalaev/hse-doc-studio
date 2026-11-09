@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import datetime
+from enum import StrEnum
 
 
 @dataclass(frozen=True)
@@ -60,3 +61,19 @@ class UpdateCheckState:
     @property
     def latest(self) -> str:
         return self.releases[0].version if self.releases else ""
+
+
+class OverlayOnUpdate(StrEnum):
+    # Привязка переедет в новый контейнер и продолжит закрывать файлы новой версии.
+    keep = "keep"
+    # Привязку не переносим: своя сборка уступает место опубликованному образу.
+    drop = "drop"
+
+
+@dataclass(frozen=True)
+class ImageOverlay:
+    """Папка хоста, привязанная поверх каталога, который несёт сам образ (например, `/app/packs`)."""
+
+    destination: str
+    source: str
+    on_update: OverlayOnUpdate

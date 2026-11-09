@@ -39,6 +39,7 @@ from hse_doc_studio.core.submission_archive import (
     ISubmissionAudit,
     NoSubmissionAudit,
 )
+from hse_doc_studio.core.template_packs import ITemplatePacksSource
 from hse_doc_studio.core.update.repositories import (
     IReleaseNotesRepository,
     ISelfUpdateGateway,
@@ -68,6 +69,7 @@ from hse_doc_studio.infra.persistence.signing_identity import JsonSigningIdentit
 from hse_doc_studio.infra.persistence.submission import JsonPackSubmissionRepository
 from hse_doc_studio.infra.persistence.update_check import JsonUpdateCheckRepository
 from hse_doc_studio.infra.setup.applier import ContainerSetupApplier
+from hse_doc_studio.infra.template.packs_source import FilesystemPacksSource
 from hse_doc_studio.infra.template.yaml_template_repository import YamlTemplateRepository
 from hse_doc_studio.infra.update.deployment import deployment_mode
 from hse_doc_studio.infra.update.feed import GithubUpdateFeedGateway
@@ -102,6 +104,10 @@ class LocalPersistenceProvider(Provider):
         repo = YamlTemplateRepository(settings.packs_dir)
         repo.load()
         return repo
+
+    @provide
+    def get_template_packs_source(self, template_repo: ITemplateRepository) -> ITemplatePacksSource:
+        return FilesystemPacksSource(settings.packs_dir, template_repo, settings.builtin_packs_manifest)
 
     @provide
     def get_compile_repo(self) -> ICompileRepository:

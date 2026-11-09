@@ -13,6 +13,8 @@ const AuthorSchema = z.object({
   // Бэкенд (Pydantic) сериализует незаполненные поля как null; .optional()
   // пропускает только undefined — поэтому везде .nullish().
   group: z.string().nullish(),
+  // E-mail автора: в настройках не редактируется, но обязан пережить PATCH.
+  email: z.string().nullish(),
   // Team mode: folder slug of the author's personal docs ("ivanov").
   slug: z.string().nullish(),
   // Per-author topic (each team member defends their own subtopic).
@@ -77,6 +79,11 @@ export const ProjectResponseSchema = z.object({
       mode: z.string(),
       reasons: z.array(z.string()).default([]),
       required_studio: z.string().nullish(),
+      // Версии шаблона нет только в подключённом извне каталоге шаблонов, а в
+      // саму Студию она вшита: совет «обновите Студию» был бы неправдой.
+      stale_packs: z
+        .object({ path: z.string(), studio_version: z.string() })
+        .nullish(),
     })
     .optional(),
   // Только на сервере (GET /projects/{id}): занятое место и предупреждение с 80% предела.

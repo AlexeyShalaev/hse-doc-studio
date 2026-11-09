@@ -4,6 +4,7 @@ import type { ListPage, ListRequestParams } from "@shared/lib";
 import {
   AdminBuildSettingsSchema,
   AdminJobPageSchema,
+  AdminJobBatchCancelledSchema,
   AdminJobSchema as WireJobSchema,
   AdminQueueSummarySchema,
   AdminQuotasSchema,
@@ -236,6 +237,14 @@ export const opsApi = {
         .then(parseResp(WireJobSchema)),
       Date.now(),
     ),
+
+  /** «Отменить все» у пакета «Собрать все»: сколько задач получили отмену. */
+  cancelJobBatch: async (batchId: string): Promise<number> =>
+    (
+      await adminClient
+        .post(`/queue/batches/${enc(batchId)}/cancel`, {}, quiet)
+        .then(parseResp(AdminJobBatchCancelledSchema))
+    ).cancelled,
 
   quotas: async (): Promise<AdminQuotas> =>
     quotasFromWire(

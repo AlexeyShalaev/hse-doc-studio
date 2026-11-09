@@ -51,12 +51,19 @@ async def _no_runner_handler(_request: Request, exc: Exception) -> JSONResponse:
     # 409, как у прочих «окружение сборки не готово» (`image_missing`, `docker_unavailable`): клиент
     # показывает свой текст по коду, а не общий тост 5xx. Коды из каталога `contracts/server/error_codes.json`.
     assert isinstance(exc, NoRunnerAvailableError)  # noqa: S101 — обработчик зарегистрирован только на этот тип
+    # `reason` уточняет код: личный раннер на паузе, раннер не в сети или раннера с тегом нет совсем;
+    # тогда и `detail` называет именно эту причину, а не общий текст кода.
+    reason = exc.reason
+    detail = message_for(IdentityErrorCode(exc.code))
+    if exc.fit is not None:
+        detail = f"{exc.fit.describe()} {detail}"
     return JSONResponse(
         status_code=409,
         content={
-            "detail": message_for(IdentityErrorCode(exc.code)),
+            "detail": detail,
             "code": exc.code,
             "tags": sorted(exc.tags),
+            "reason": reason.value if reason is not None else None,
         },
     )
 

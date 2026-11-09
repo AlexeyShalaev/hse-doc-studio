@@ -25,6 +25,7 @@ from hse_doc_studio.api.schemas.project import (
     ProjectListItemResponse,
     ProjectStorageResponse,
     ProjectSuggestionsResponse,
+    StalePacksResponse,
     UpdateProjectRequest,
     UpdateTeamSetRequest,
 )
@@ -370,8 +371,12 @@ async def get_project(
         response.via_link = result.membership.via_link
         response.link_label = result.membership.link_label
     access = access_service.evaluate(result.project)
+    stale = access.stale_packs
     response.access = ProjectAccessResponse(
-        mode=access.mode.value, reasons=[r.value for r in access.reasons], required_studio=access.required_studio
+        mode=access.mode.value,
+        reasons=[r.value for r in access.reasons],
+        required_studio=access.required_studio,
+        stale_packs=None if stale is None else StalePacksResponse(path=stale.path, studio_version=stale.studio_version),
     )
     storage = await quota.status(project_id)
     if storage is not None:
