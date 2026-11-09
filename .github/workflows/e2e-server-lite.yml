@@ -35,9 +35,10 @@ concurrency:
 
 env:
   # Телефонные файлы, закреплённые за шардами core и phone; остальные идут в rest. Длительности по прогону CI:
-  # mobile-admin ~4.5 мин, mobile ~3.6, mobile-rare ~3.2, sidebar-overflow ~2.5, text-scale и stale-build по ~1.1.
-  PHONE_CORE: "/text-scale.spec.ts /stale-build.spec.ts"
-  PHONE_A: "/mobile-admin.spec.ts /sidebar-overflow.spec.ts"
+  # mobile-admin ~4.5 мин, mobile ~3.6, mobile-rare ~3.2, sidebar-overflow ~2.5, text-scale и stale-build по ~1.1;
+  # core ещё несёт десктопные сценарии (~2.2 мин сверх M1), а M1 (~1.3 мин) идёт в каждом шарде.
+  PHONE_CORE: "/text-scale.spec.ts /sidebar-overflow.spec.ts"
+  PHONE_A: "/mobile-admin.spec.ts /stale-build.spec.ts"
 
 jobs:
   e2e:
@@ -47,7 +48,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # core: десктопные сценарии (~3.5 мин) и короткие телефонные; phone и rest: по ~7 минут телефона.
+        # core: десктопные сценарии и короткие телефонные; phone и rest: телефон. По ~7 минут сценариев на шард.
         shard: [core, phone, rest]
     env:
       BLOB_DIR: ${{ github.workspace }}/e2e/blob-report
@@ -92,11 +93,13 @@ jobs:
         run: pnpm typecheck
         working-directory: e2e
 
+      # Порядок как у прежнего последовательного прогона: M1, лендинг, телефон, затем остальные десктопные сценарии.
+      # Телефонные сценарии рассчитаны на стенд после M1 (например, первым проектом Анны идёт созданный M1), поэтому
+      # M1 идёт и в шардах phone и rest; там его отчёт не попадает в сводный, чтобы не дублировать результаты.
       # Каждый запуск пишет blob-отчёт в свой каталог: reporter чистит каталог перед записью.
       - name: Run scenarios
-        if: matrix.shard == 'core'
         env:
-          PLAYWRIGHT_BLOB_OUTPUT_DIR: ${{ env.BLOB_DIR }}/m1
+          PLAYWRIGHT_BLOB_OUTPUT_DIR: ${{ matrix.shard == 'core' && format('{0}/m1', env.BLOB_DIR) || format('{0}/m1-prep', runner.temp) }}
         run: make e2e-m1
 
       - name: Landing page
@@ -104,24 +107,6 @@ jobs:
         env:
           PLAYWRIGHT_BLOB_OUTPUT_DIR: ${{ env.BLOB_DIR }}/landing
         run: make e2e-landing
-
-      - name: Model servers admin page (mocked API)
-        if: matrix.shard == 'core'
-        env:
-          PLAYWRIGHT_BLOB_OUTPUT_DIR: ${{ env.BLOB_DIR }}/model-servers
-        run: make e2e-model-servers
-
-      - name: Passkeys (virtual authenticator)
-        if: matrix.shard == 'core'
-        env:
-          PLAYWRIGHT_BLOB_OUTPUT_DIR: ${{ env.BLOB_DIR }}/passkeys
-        run: make e2e-passkeys
-
-      - name: Runner install commands
-        if: matrix.shard == 'core'
-        env:
-          PLAYWRIGHT_BLOB_OUTPUT_DIR: ${{ env.BLOB_DIR }}/runner-install
-        run: make e2e-runner-install
 
       # Файлы телефонного проекта для этого шарда; rest берёт всё, что не закреплено за core и phone.
       - name: Phone layout files
@@ -147,6 +132,24 @@ jobs:
         env:
           PLAYWRIGHT_BLOB_OUTPUT_DIR: ${{ env.BLOB_DIR }}/mobile
         run: make e2e-mobile E2E_MOBILE_FILES="${{ steps.phone.outputs.files }}"
+
+      - name: Model servers admin page (mocked API)
+        if: matrix.shard == 'core'
+        env:
+          PLAYWRIGHT_BLOB_OUTPUT_DIR: ${{ env.BLOB_DIR }}/model-servers
+        run: make e2e-model-servers
+
+      - name: Passkeys (virtual authenticator)
+        if: matrix.shard == 'core'
+        env:
+          PLAYWRIGHT_BLOB_OUTPUT_DIR: ${{ env.BLOB_DIR }}/passkeys
+        run: make e2e-passkeys
+
+      - name: Runner install commands
+        if: matrix.shard == 'core'
+        env:
+          PLAYWRIGHT_BLOB_OUTPUT_DIR: ${{ env.BLOB_DIR }}/runner-install
+        run: make e2e-runner-install
 
       - name: Stand logs on failure
         if: failure()
