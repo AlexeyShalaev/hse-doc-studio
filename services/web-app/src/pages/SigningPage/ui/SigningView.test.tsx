@@ -130,9 +130,6 @@ describe("SigningView: его очередь", () => {
     expect(screen.getByTestId("signing-method")).toHaveTextContent(
       "Ключ: Петров П. П., OpenPGP 1A2B 3C4D 5E6F 7A8B",
     );
-    expect(
-      screen.queryByTestId("signing-method-placeholder"),
-    ).not.toBeInTheDocument();
     await user.click(screen.getByTestId("signing-approve"));
     expect(onApprove).toHaveBeenCalledOnce();
   });
@@ -154,7 +151,7 @@ describe("SigningView: его очередь", () => {
     );
   });
 
-  it("картинкой без картинки: «Согласовать» ждёт, место блока W5 отмечено", () => {
+  it("картинкой без картинки: «Согласовать» ждёт", () => {
     mount({
       task: approveTask({
         me: {
@@ -171,20 +168,21 @@ describe("SigningView: его очередь", () => {
     expect(screen.getByTestId("signing-approve-blocked")).toHaveTextContent(
       "Сначала добавьте картинку подписи.",
     );
-    expect(screen.getByTestId("signing-method-placeholder")).toBeTruthy();
+    expect(screen.getByTestId("signing-method")).toHaveTextContent(
+      "Нужна картинка подписи.",
+    );
   });
 
-  it("«Согласовать и подписать» без W5: заглушка, только возврат", () => {
+  it("«Согласовать и подписать» без блока подписи: только возврат", () => {
     mount({ task: base });
     expect(screen.queryByTestId("signing-approve")).not.toBeInTheDocument();
-    expect(screen.getByTestId("signing-method-placeholder")).toBeTruthy();
     expect(screen.getByTestId("signing-return")).toBeEnabled();
     expect(screen.getByTestId("signing-status")).toHaveTextContent(
       "Ваша очередь: согласуйте и подпишите",
     );
   });
 
-  it("расширение W5 заменяет блок способа и главную кнопку", () => {
+  it("расширение заменяет блок способа и главную кнопку", () => {
     const approve = vi.fn();
     mount({
       task: base,
@@ -193,6 +191,7 @@ describe("SigningView: его очередь", () => {
         routeId: task.route.id,
         task,
         busy: false,
+        failure: null,
         expected: {},
         approve,
         sign: vi.fn(),
@@ -205,7 +204,9 @@ describe("SigningView: его очередь", () => {
           <button
             type="button"
             onClick={() => {
-              ctx.approve({ sign: { identity_id: "k", passphrase: null } });
+              void ctx.approve({
+                sign: { identity_id: "k", passphrase: null },
+              });
             }}
           >
             W5
@@ -216,9 +217,6 @@ describe("SigningView: его очередь", () => {
     expect(screen.getByTestId("w5-method")).toHaveTextContent(
       "approve_and_sign",
     );
-    expect(
-      screen.queryByTestId("signing-method-placeholder"),
-    ).not.toBeInTheDocument();
     screen.getByRole("button", { name: "W5" }).click();
     expect(approve).toHaveBeenCalledWith({
       sign: { identity_id: "k", passphrase: null },

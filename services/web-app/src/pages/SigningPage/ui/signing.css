@@ -215,12 +215,6 @@
   color: var(--fg-1);
   overflow-wrap: anywhere;
 }
-.sgn-placeholder {
-  padding: 0.5rem 0.625rem;
-  border: 1px dashed var(--border-strong, var(--border));
-  border-radius: var(--r-2);
-  color: var(--fg-2) !important;
-}
 
 /* ── документы ── */
 .sgn-docs {

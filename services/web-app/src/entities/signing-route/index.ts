@@ -26,12 +26,18 @@ export {
   useUploadSigningTaskImage,
 } from "./api/signingRouteQueries";
 export {
+  SIGNING_TASK_FAILURE_CODES,
+  signingFailureOf,
+} from "./lib/signingFailure";
+export type { SigningFailure } from "./lib/signingFailure";
+export {
   REMIND_INTERVAL_MS,
   canArchiveRoute,
   canCancelRoute,
   canRemind,
   canReturnForRework,
   canSendRoute,
+  expectedTokens,
   isActionable,
   isResend,
   isRouteEditable,

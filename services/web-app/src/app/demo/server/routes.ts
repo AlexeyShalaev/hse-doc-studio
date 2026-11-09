@@ -1,5 +1,7 @@
 import { demoError, demoJson, demoNoContent } from "@shared/api/demo";
 import type { DemoRoute } from "@shared/api/demo";
+import { createSignerProfileDemo } from "@entities/signer-profile/testing";
+import { createSigningIdentityDemo } from "@entities/signing-identity/testing";
 import { createSigningRouteDemo } from "@entities/signing-route/testing";
 import { useServerDemoScenarioStore } from "./scenarioStore";
 import { createAccountRoutes } from "./accountRoutes";
@@ -32,14 +34,39 @@ let world = createServerWorld(useServerDemoScenarioStore.getState().scenarioId);
 export const getServerWorld = () => world;
 // Маршрут подписания (docs/design/signing-route.md): бэкенда ещё нет, демо отвечает по
 // контракту раздела 8 моками сущности. Проект виден, если он есть в мире демо.
+// Подписант подписывает прямо на странице: ключи Студии (по политике установки) и
+// сохранённая в профиле картинка тоже живут в памяти демо.
+const serverKeysAllowed = (): boolean =>
+  world.bootstrap.capabilities.personal_signing_keys;
+export const signingIdentityDemo = createSigningIdentityDemo({
+  getUser: () => world.bootstrap.user,
+  allowed: serverKeysAllowed,
+});
+export const signerProfileDemo = createSignerProfileDemo({
+  getUser: () => world.bootstrap.user,
+});
 export const signingRouteDemo = createSigningRouteDemo({
   getUser: () => world.bootstrap.user,
   projectName: (id) =>
     world.projects.find((p) => p.summary.id === id)?.summary.name ?? null,
+  serverKeysAllowed,
+  keysOf: (user) =>
+    signingIdentityDemo.keysOf(user.id).map((key) => ({
+      id: key.id,
+      label: key.label,
+      kind: key.kind,
+      protected: key.protected,
+      signer: key.subject_cn,
+    })),
+  onRememberImage: (user, image) => {
+    signerProfileDemo.saveImage(user.id, image);
+  },
 });
 export const resetServerWorld = (scenarioId: string): void => {
   world = createServerWorld(scenarioId);
   signingRouteDemo.reset();
+  signingIdentityDemo.reset();
+  signerProfileDemo.reset();
 };
 
 const guarded =
@@ -171,6 +198,8 @@ export const serverDemoRoutes: DemoRoute[] = [
   // invites: приглашения, запросы доступа, передача владения, «Входящие».
   ...createInvitationRoutes(() => world),
   ...signingRouteDemo.routes,
+  ...signingIdentityDemo.routes,
+  ...signerProfileDemo.routes,
   ...createMemberOrgRoutes(() => world),
   ...createPersonalRoutes(() => world),
   ...createUsageRoutes(() => world),

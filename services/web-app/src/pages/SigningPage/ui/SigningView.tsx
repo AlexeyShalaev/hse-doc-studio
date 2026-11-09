@@ -32,6 +32,8 @@ export type SigningViewProps = {
   approving?: boolean;
   /** Код отказа последнего действия (`doc_changed`, `not_your_turn`, ..., `unknown`). */
   failure?: string | null;
+  /** Пояснение сервера к отказу без своего текста (`unknown`). */
+  failureDetail?: string | null;
   onDismissFailure?: () => void;
   onApprove: () => void;
   /** Вернуть на доработку; true закрывает окно. */
@@ -46,7 +48,7 @@ export type SigningViewProps = {
 
 const defaultPdfUrl = (doc: SigningTaskDoc) => signingPdfUrl(doc.pdf_url);
 
-const noop = () => undefined;
+const noop = () => Promise.resolve(null);
 
 /** Контекст без действий: галерея и тесты вида. */
 const idleSlot = (task: SigningTask): SigningSlotContext => ({
@@ -54,6 +56,7 @@ const idleSlot = (task: SigningTask): SigningSlotContext => ({
   routeId: task.route.id,
   task,
   busy: false,
+  failure: null,
   expected: {},
   approve: noop,
   sign: noop,
@@ -70,6 +73,7 @@ export const SigningView = ({
   busy = false,
   approving = false,
   failure = null,
+  failureDetail = null,
   onDismissFailure,
   onApprove,
   onReturn,
@@ -141,9 +145,7 @@ export const SigningView = ({
   const ctx = slot(task);
   const action = status.kind === "turn" ? status.action : null;
   const method = action
-    ? (extension?.method?.(ctx) ?? (
-        <MethodSummary task={task} action={action} />
-      ))
+    ? (extension?.method?.(ctx) ?? <MethodSummary task={task} />)
     : null;
   const actions = action ? (
     <SigningActions
@@ -176,7 +178,11 @@ export const SigningView = ({
             <Notice
               tone="err"
               role="alert"
-              text={t(`failure.${failure}`)}
+              text={
+                failure === "unknown" && failureDetail
+                  ? t("failure.unknownDetail", { detail: failureDetail })
+                  : t(`failure.${failure}`)
+              }
               action={
                 onDismissFailure && (
                   <Button

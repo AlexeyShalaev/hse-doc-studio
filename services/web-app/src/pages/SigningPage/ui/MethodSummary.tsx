@@ -1,24 +1,14 @@
 import { useTranslation } from "react-i18next";
-import type { SigningTask, SigningTaskAction } from "@entities/signing-route";
-import { approveBlocker } from "../lib/signingState";
+import type { SigningTask } from "@entities/signing-route";
 
 /**
- * «Как подписать» без подписи на странице: способ своих слотов и готовность картинки или
- * ключа для плашки. Где нужна подпись на самой странице (картинка, ключ, «Согласовать и
- * подписать», «Подписать»), стоит заглушка: её место займёт блок среза W5
- * (`SigningExtension.method`).
+ * «Как подписать» без блока подписи: способ своих слотов и готовность картинки или ключа
+ * для плашки. Страница показывает его согласующему без слотов и там, где расширение
+ * (`SigningExtension.method`) не подключено.
  */
-export const MethodSummary = ({
-  task,
-  action,
-}: {
-  task: SigningTask;
-  action: SigningTaskAction;
-}) => {
+export const MethodSummary = ({ task }: { task: SigningTask }) => {
   const { t } = useTranslation("signing");
   const { me } = task;
-  const blocker = approveBlocker(me);
-  const needsPage = action !== "approve" || blocker !== null;
   return (
     <section className="sgn-card" data-testid="signing-method">
       <h3>{t("method.title")}</h3>
@@ -45,11 +35,6 @@ export const MethodSummary = ({
             <p>{t("method.plateMissing")}</p>
           )}
         </>
-      )}
-      {needsPage && (
-        <p className="sgn-placeholder" data-testid="signing-method-placeholder">
-          {t("method.soon")}
-        </p>
       )}
     </section>
   );

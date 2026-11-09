@@ -3,6 +3,7 @@ import type {
   ParticipantState,
   SigningNextAction,
   SigningRouteStatus,
+  SigningTask,
   SigningTaskAction,
 } from "../model/signingRoute.schema";
 
@@ -76,3 +77,11 @@ export const signingRouteEditorPath = (
 /** Адрес PDF документа задачи: `pdf_url` бэкенда уже начинается с `/api/v1`. */
 export const signingPdfUrl = (pdfUrl: string): string =>
   `${env.VITE_API_BASE_URL}${pdfUrl}`;
+
+/** Отпечатки последнего показа для `expected`: только документы, где сервер их дал. */
+export const expectedTokens = (task: SigningTask): Record<string, string> =>
+  Object.fromEntries(
+    task.docs.flatMap((doc) =>
+      doc.token === null ? [] : [[doc.doc_id, doc.token] as const],
+    ),
+  );

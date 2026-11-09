@@ -19,6 +19,12 @@ export const signerProfileApi = {
   saveImage: (file: Blob, name = "signature.png") =>
     upload(`${PATH}/image`, file, name),
 
+  /** Сама сохранённая картинка (PNG): страница подписи ставит её в слот маршрута. */
+  downloadImage: (): Promise<Blob> =>
+    apiClient
+      .get(`${PATH}/image`, { responseType: "blob", silentError: true })
+      .then((r) => r.data as Blob),
+
   clearImage: () =>
     apiClient.delete(`${PATH}/image`).then(parseResp(SignerProfileSchema)),
 

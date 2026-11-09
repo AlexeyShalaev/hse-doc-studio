@@ -136,7 +136,7 @@ describe("страница подписанта на моках контракт
     expect(screen.getByTestId("pdf-viewer").getAttribute("data-url")).toMatch(
       /\/api\/v1\/projects\/p_01hxa1c4de\/docs\/topic_application\/pdf\/signed$/,
     );
-    await user.click(screen.getByTestId("signing-approve"));
+    await user.click(screen.getByTestId("signing-primary"));
     await waitFor(() => {
       expect(pageState()).toBe("approved");
     });
@@ -169,8 +169,11 @@ describe("страница подписанта на моках контракт
     await waitFor(() => {
       expect(pageState()).toBe("turn");
     });
-    // Картинки ещё нет: «Согласовать» ждёт её (загрузка картинки появится в W5).
-    expect(screen.getByTestId("signing-approve")).toBeDisabled();
+    // Картинки ещё нет: «Согласовать» ждёт её.
+    expect(screen.getByTestId("signing-primary")).toHaveAttribute(
+      "data-blocked",
+      "image",
+    );
     second.unmount();
 
     await signingTaskApi.uploadImage(
@@ -181,9 +184,12 @@ describe("страница подписанта на моках контракт
     );
     open(routeId, ACADEMIC);
     await waitFor(() => {
-      expect(screen.getByTestId("signing-approve")).toBeEnabled();
+      expect(screen.getByTestId("signing-primary")).toHaveAttribute(
+        "data-blocked",
+        "",
+      );
     });
-    await user.click(screen.getByTestId("signing-approve"));
+    await user.click(screen.getByTestId("signing-primary"));
     await waitFor(() => {
       expect(pageState()).toBe("done");
     });
@@ -225,7 +231,7 @@ describe("страница подписанта на моках контракт
     me = AUTHOR;
     await signingRouteApi.cancel(PROJECT, routeId);
     me = SUPERVISOR;
-    await user.click(screen.getByTestId("signing-approve"));
+    await user.click(screen.getByTestId("signing-primary"));
     await waitFor(() => {
       expect(pageState()).toBe("cancelled");
     });
