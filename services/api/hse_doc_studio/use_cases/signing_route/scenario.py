@@ -23,7 +23,9 @@ from hse_doc_studio.core.signatures.plan import slot_persona
 from hse_doc_studio.core.signing_route.effects import Notify
 from hse_doc_studio.core.signing_route.engine import Evaluation, evaluate
 from hse_doc_studio.core.signing_route.entities import (
+    EventKind,
     RouteEvent,
+    RouteStatus,
     SigningRoute,
 )
 from hse_doc_studio.core.signing_route.notices import mark_requests
@@ -68,6 +70,22 @@ class Settled:
     @property
     def notices(self) -> tuple[Notify, ...]:
         return tuple(e for e in self.evaluation.effects if isinstance(e, Notify))
+
+
+def closing_events(settled: Settled, at: datetime) -> list[RouteEvent]:
+    """Событие завершения, если после действия всё уже сделано."""
+    route = settled.route
+    if settled.evaluation.status is RouteStatus.completed and route.status is not RouteStatus.completed:
+        return [RouteEvent(route.id, route.round, at, EventKind.completed)]
+    return []
+
+
+def frozen_events(settled: Settled, at: datetime) -> list[RouteEvent]:
+    """Событие фиксации документов маршрутом (без актора: фиксирует сервер)."""
+    route = settled.route
+    if not settled.frozen:
+        return []
+    return [RouteEvent(route.id, route.round, at, EventKind.frozen, details={"docs": list(settled.frozen)})]
 
 
 @dataclass(frozen=True)
@@ -159,6 +177,25 @@ class RouteScenario:
             route = refresh_snapshot(route, loaded.facts)
             evaluation = evaluate(route, loaded.facts)
         return Settled(route, loaded, evaluation, tuple(frozen))
+
+    async def _stop_if_changed(
+        self, point: RoutePoint, route: SigningRoute, loaded: LoadedFacts, at: datetime
+    ) -> SigningRoute | None:
+        """Остановить маршрут, если расчёт на текущих фактах его останавливает (таблица 5.5, уход участника).
+
+        Возвращает записанный остановленный маршрут или None, если маршрут идёт дальше. Вызывать под блокировкой
+        строки маршрута и `project_lock`, в транзакции сценария. Эффекты остановки (придержать картинки, чьё
+        согласие относится к прежней сборке) выполняются без обновления снимка: расхождение со снимком это и есть
+        причина остановки, а «Отправить заново» снимет новый.
+        """
+        evaluation = evaluate(route, loaded.facts)
+        if evaluation.stop is None:
+            return None
+        files = [e for e in evaluation.effects if not isinstance(e, Notify)]
+        if files:
+            await self._s.effects.apply(point, route, files, at=at)
+        event = RouteEvent(route.id, route.round, at, EventKind.paused, details={"reason": evaluation.stop.value})
+        return await self._commit(Settled(route, loaded, evaluation), [event], actor_id=None, at=at)
 
     async def _commit(
         self,

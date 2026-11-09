@@ -82,6 +82,22 @@ class RouteKeySigner:
         identity = (await self._default_key.get()).effective
         return await self._info(identity) if identity is not None else None
 
+    async def keys_allowed(self) -> bool:
+        """Разрешены ли на установке ключи Студии (закрытые ключи на сервере): иначе подписать ими нельзя."""
+        return await self._signer.key_policy.server_key_storage_allowed()
+
+    async def plate_of(self, identity: SigningIdentity) -> SignerInfo:
+        """Данные плашки из открытой части своего ключа Студии."""
+        return await signer_for_identity(identity, self._signer.keyring, self._signer.identity_repo)
+
+    async def own_key(self, identity_id: UUID) -> SigningIdentity:
+        """Свой ключ Студии по id для плашки; чужой ключ неотличим от несуществующего (`NotFoundError`)."""
+        await self._signer.require_key_allowed()
+        identity = await self._default_key.resolve(identity_id)
+        if identity is None:
+            raise NoSigningKeyError
+        return identity
+
     async def check(self, request: KeyRequest) -> SigningIdentity:
         """Ключ готов подписывать: найден, ключи на сервере разрешены, пароль передан, если нужен."""
         identity = await self._default_key.resolve(request.identity_id)

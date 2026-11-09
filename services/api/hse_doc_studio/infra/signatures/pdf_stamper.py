@@ -50,6 +50,13 @@ class PdfStamper:
     untouched (no re-encoding, no quality loss).
     """
 
+    def mark_height_mm(self, stamp: Stamp) -> float:
+        """Высота метки на странице (`IMarkMeasure`): картинка по своим пропорциям, плашка по вёрстке её строк."""
+        if stamp.text is None:
+            return stamp.width_mm * stamp.aspect_ratio
+        caption, body = _mark_lines(stamp, _ensure_text_font(), stamp.width_mm * mm)
+        return ((len(caption) + len(body)) * _TEXT_SIZE_PT * _TEXT_LEADING + 2 * _TEXT_PAD_PT) / mm
+
     def stamp(  # noqa: C901
         self,
         source_pdf: Path,

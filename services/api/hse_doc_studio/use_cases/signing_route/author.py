@@ -20,14 +20,11 @@ from hse_doc_studio.core.errors import NotFoundError
 from hse_doc_studio.core.i18n import localized_error
 from hse_doc_studio.core.identity.errors import IdentityError, IdentityErrorCode
 from hse_doc_studio.core.signatures.plan import (
-    CRYPTO_METHODS,
     SignMethod,
-    SlotStatus,
     VisibleMark,
     mark_of,
     method_of,
     slot_persona,
-    slot_state,
 )
 from hse_doc_studio.core.signatures.route_order import default_route
 from hse_doc_studio.core.signing_route.drafting import (
@@ -58,13 +55,20 @@ from hse_doc_studio.core.signing_route.entities import (
 )
 from hse_doc_studio.core.signing_route.readiness import Blocker, BlockerCode, DocChangedError, RouteBlockedError
 from hse_doc_studio.core.signing_route.repositories import OpenRouteExistsError
+from hse_doc_studio.core.signing_route.signer import unsigned_crypto
 from hse_doc_studio.core.signing_route.transitions import archive, cancel, send
 from hse_doc_studio.core.value_objects import SignaturesState
 from hse_doc_studio.use_cases.signatures._studio_signer import project_lock
 from hse_doc_studio.use_cases.signing_route.facts import LoadedFacts
 from hse_doc_studio.use_cases.signing_route.key_signer import KeyInfo, KeyRequest, RouteKeySigner
 from hse_doc_studio.use_cases.signing_route.point import RoutePoint
-from hse_doc_studio.use_cases.signing_route.scenario import RouteScenario, RouteServices, Settled, actor_uuid
+from hse_doc_studio.use_cases.signing_route.scenario import (
+    RouteScenario,
+    RouteServices,
+    Settled,
+    actor_uuid,
+    closing_events,
+)
 from hse_doc_studio.use_cases.signing_route.views import (
     Membership,
     People,
@@ -417,7 +421,7 @@ class SigningRouteSending(RouteScenario):
                         events += signed
                     except (ValueError, PermissionError, NotFoundError, ProjectForbiddenError) as exc:
                         deferred = exc
-            saved = await self._commit(settled, [*events, *_closing(settled, at)], actor_id=actor_id, at=at)
+            saved = await self._commit(settled, [*events, *closing_events(settled, at)], actor_id=actor_id, at=at)
         if deferred is not None:
             raise deferred
         return await self._details(actor, point, saved)
@@ -463,7 +467,7 @@ class SigningRouteSending(RouteScenario):
         )
         if me is None:
             return settled, []
-        pairs = _unsigned_crypto(me, settled.loaded.facts)
+        pairs = unsigned_crypto(me, settled.loaded.facts)
         signed = await self._signer.sign(point, pairs, identity, key.passphrase)
         events = [
             RouteEvent(
@@ -539,26 +543,6 @@ def _check_expected(route: SigningRoute, facts: RouteFacts, expected: Mapping[st
     changed = [doc_id for doc_id in route.docs if expected.get(doc_id) != approval_token(facts.doc(doc_id))]
     if changed:
         raise DocChangedError(changed)
-
-
-def _unsigned_crypto(p: Participant, facts: RouteFacts) -> list[DocSlot]:
-    pairs: list[DocSlot] = []
-    for pair in p.assignments:
-        slot = facts.state.slots.get(pair.slot_id)
-        if slot is None or method_of(slot.sign_mode) not in CRYPTO_METHODS:
-            continue
-        state = slot_state(facts.state, pair.doc_id, pair.slot_id, facts.doc(pair.doc_id))
-        if state.status is not SlotStatus.signed:
-            pairs.append(pair)
-    return pairs
-
-
-def _closing(settled: Settled, at: datetime) -> list[RouteEvent]:
-    """Событие завершения, если после отправки и подписи всё уже сделано."""
-    route = settled.route
-    if settled.evaluation.status is RouteStatus.completed and route.status is not RouteStatus.completed:
-        return [RouteEvent(route.id, route.round, at, EventKind.completed)]
-    return []
 
 
 def _preview_people(

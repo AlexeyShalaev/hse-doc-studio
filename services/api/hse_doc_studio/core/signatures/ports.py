@@ -9,6 +9,7 @@ from typing import TYPE_CHECKING, Protocol
 from uuid import UUID
 
 from hse_doc_studio.core.jobs.verify import TrustBundle
+from hse_doc_studio.core.signatures.stamps import Stamp
 from hse_doc_studio.core.value_objects import SignaturesState, SignerInfo
 
 if TYPE_CHECKING:
@@ -74,6 +75,14 @@ class ISignerPlateData(Protocol):
 
     async def plate_for(self, state: SignaturesState, slot_id: str, user_id: str | None) -> SignerInfo | None:
         """Данные плашки слота `slot_id` для подписанта `user_id` (None: участник ещё не принял приглашение)."""
+        ...
+
+
+class IMarkMeasure(Protocol):
+    """Размер видимой метки на странице: странице подписи нужна рамка места подписи той же высоты, что у метки."""
+
+    def mark_height_mm(self, stamp: Stamp) -> float:
+        """Высота картинки по её пропорциям или плашки по вёрстке её строк, в миллиметрах."""
         ...
 
 
