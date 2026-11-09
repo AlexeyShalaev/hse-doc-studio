@@ -38,6 +38,8 @@ export type InviteDialogProps = {
   isTeam?: boolean;
   /** Смотрящий владелец: только он выдаёт «Может делиться» и «Правит всё» без своих флагов. */
   isOwner?: boolean;
+  /** Приглашение создано (до показа ссылки): например, редактор маршрута ставит его в шаг. */
+  onCreated?: (created: ProjectInvitationCreated) => void;
 };
 
 /**
@@ -60,6 +62,7 @@ const InviteDialogInner = ({
   preset = null,
   isTeam = false,
   isOwner = true,
+  onCreated,
 }: InviteDialogProps) => {
   const { t } = useTranslation("invitations");
   const roleLabel = useProjectRoleLabel();
@@ -118,6 +121,7 @@ const InviteDialogInner = ({
       },
       {
         onSuccess: (result) => {
+          onCreated?.(result);
           if (result.delivery === "manual" && result.link) {
             setManual({
               created: result,
