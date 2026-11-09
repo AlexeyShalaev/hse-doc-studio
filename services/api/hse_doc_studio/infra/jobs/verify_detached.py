@@ -10,9 +10,7 @@ from hse_doc_studio.core.jobs.errors import JobFailure
 from hse_doc_studio.core.jobs.protocols import JobContext
 from hse_doc_studio.core.jobs.verify import (
     CODE_GPG_UNAVAILABLE,
-    CODE_OPENPGP_INLINE_UNSUPPORTED,
     CODE_UNKNOWN_SIGNATURE_FORMAT,
-    OpenPgpTrustMode,
     VerifyDetachedPayload,
     VerifyDetachedResult,
 )
@@ -25,14 +23,16 @@ class VerifyDetachedHandler:
 
     Отвечает кодами, текст для пользователя собирает use case. Подписи с вердиктом
     invalid и unknown_key штатный результат, а не сбой.
+
+    Встроенный раннер живет в процессе api, поэтому OpenPGP сверяет с постоянной связкой
+    `data_dir/gnupg` в обоих режимах: ключи `inline` api выгрузил из этой же связки, она их
+    надмножество, и вердикт совпадает с вердиктом удаленного раннера.
     """
 
     def __init__(self, verifier: DetachedSignatureVerifier) -> None:
         self._verifier = verifier
 
     async def handle(self, payload: VerifyDetachedPayload, ctx: JobContext) -> JobResultData:
-        if payload.trust.openpgp.mode is not OpenPgpTrustMode.runner_home:
-            raise JobFailure.of(JobErrorCategory.internal, CODE_OPENPGP_INLINE_UNSUPPORTED)
         pdf_path = ctx.path_of(payload.pdf)
         roots = [blob.to_bytes() for blob in payload.trust.roots]
         intermediates = [blob.to_bytes() for blob in payload.trust.intermediates]

@@ -1,21 +1,29 @@
 from __future__ import annotations
 
+import os
+import shutil
+import sys
+import tempfile
+from collections.abc import Iterator
 from pathlib import Path
 
 import httpx
 import pytest
+from hse_doc_studio.core.enums import DetachedVerdict
 from hse_doc_studio.core.jobs.files import InlineBlob, ManifestFile
 from hse_doc_studio.core.jobs.verify import (
     OpenPgpTrust,
     OpenPgpTrustMode,
     TrustBundle,
     VerifyDetachedPayload,
+    VerifyDetachedResult,
 )
 from hse_doc_studio.infra.runner.capabilities import detect_tags
 from hse_doc_studio.infra.runner.config import RunnerConfig
 from hse_doc_studio.infra.runner.office import GotenbergConverter
 from hse_doc_studio.infra.runner.verify import EphemeralVerifyHandler
 from hse_doc_studio.infra.signatures.openpgp import GpgKeyring
+from hse_doc_studio.infra.signatures.trust_material import LocalTrustMaterialProvider
 
 from tests.unit.infra.signatures.gost_fixture import make_detached_cms, make_identity
 
@@ -110,6 +118,62 @@ async def test_verify_missing_pdf_is_a_typed_failure(tmp_path: Path) -> None:
 
     assert caught.value.error.code == "pdf_missing"
     assert _SpyKeyring.homes == []
+
+
+_needs_gpg = pytest.mark.skipif(
+    shutil.which("gpg") is None or sys.platform == "win32",
+    reason="gpg is not installed (or Windows, where gpg-agent does not start in CI)",
+)
+
+
+@pytest.fixture
+def studio_ring() -> Iterator[GpgKeyring]:
+    # Короткий /tmp ради длины пути сокета gpg-agent на macOS.
+    home = Path(tempfile.mkdtemp(prefix="hds-rs-", dir="/tmp" if os.name == "posix" else None))
+    keyring = GpgKeyring(home)
+    yield keyring
+    keyring.stop_agent()
+    shutil.rmtree(home, ignore_errors=True)
+
+
+def _studio_signed(tmp_path: Path, ring: GpgKeyring) -> tuple[str, bytes]:
+    key = ring.generate("Иван Иванов", "ivan@example.org")
+    ring.generate("Научрук", "adv@example.org")
+    (tmp_path / "f.pdf").write_bytes(b"%PDF body")
+    ring.sign_detached(tmp_path / "f.pdf", key.fingerprint, tmp_path / "f.asc")
+    return key.fingerprint, (tmp_path / "f.asc").read_bytes()
+
+
+@_needs_gpg
+async def test__ephemeral_verify__studio_key_sent_inline__valid_with_signer_fingerprint(
+    tmp_path: Path, studio_ring: GpgKeyring
+) -> None:
+    fingerprint, signature = _studio_signed(tmp_path, studio_ring)
+    trust = LocalTrustMaterialProvider(tmp_path / "roots", None, studio_ring).snapshot(signature)
+    payload = VerifyDetachedPayload(pdf=ManifestFile("f.pdf"), signature=InlineBlob.from_bytes(signature), trust=trust)
+
+    result = await EphemeralVerifyHandler().handle(payload, _ctx(tmp_path))
+
+    assert isinstance(result, VerifyDetachedResult)
+    assert result.signature.verdict is DetachedVerdict.valid
+    assert result.signature.signer_id == fingerprint
+    assert result.signature.missing_key_id is None
+
+
+@_needs_gpg
+async def test__ephemeral_verify__runner_home_without_keys__unknown_key(
+    tmp_path: Path, studio_ring: GpgKeyring
+) -> None:
+    fingerprint, signature = _studio_signed(tmp_path, studio_ring)
+    payload = VerifyDetachedPayload(
+        pdf=ManifestFile("f.pdf"), signature=InlineBlob.from_bytes(signature), trust=TrustBundle()
+    )
+
+    result = await EphemeralVerifyHandler().handle(payload, _ctx(tmp_path))
+
+    assert isinstance(result, VerifyDetachedResult)
+    assert result.signature.verdict is DetachedVerdict.unknown_key
+    assert result.signature.missing_key_id == fingerprint[-16:]
 
 
 def test_tags_follow_the_environment() -> None:
