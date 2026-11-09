@@ -58,6 +58,12 @@ def _actor_id() -> UUID | None:
         return None
 
 
+def _reads_routes() -> bool:
+    """Ход маршрута видит вошедший участник проекта: гостю и открывшему проект по ссылке маршрута нет (раздел 7)."""
+    actor = current_actor()
+    return actor is not None and actor.kind is ActorKind.user and actor.link_id is None
+
+
 class SigningRouteGate(RouteRecalculation):
     """`ISigningRouteGate` сервера."""
 
@@ -137,6 +143,8 @@ class SigningRouteGate(RouteRecalculation):
     async def plan_routes(
         self, project_id: UUID, *, profile_id: str | None = None, doc_id: str | None = None
     ) -> PlanRoutes:
+        if not _reads_routes():
+            return PlanRoutes()
         shown: PlanRoute | None = None
         states: dict[DocSlot, ParticipantState] = {}
         for route in await self._s.routes.list_for_project(project_id, statuses=HOLDING_STATUSES):

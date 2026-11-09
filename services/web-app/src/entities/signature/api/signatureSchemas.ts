@@ -175,6 +175,21 @@ export const PlanSlotSchema = z.object({
     })
     .nullable()
     .default(null),
+  // Состояние участника маршрута подписания, чей это слот (signing-route.md, 6.1).
+  route_state: z.string().nullable().default(null),
+});
+
+// Маршрут подписания, который держит документы точки сдачи или документ: состояние
+// сервер считает на текущих файлах, поэтому остановка видна раньше, чем записана.
+export const PlanRouteSchema = z.object({
+  id: z.string(),
+  profile_id: z.string(),
+  status: z.string(),
+  phase: z.string().nullable().default(null),
+  round: z.number(),
+  current_step: z.number().nullable().default(null),
+  steps_total: z.number(),
+  stop_reason: z.string().nullable().default(null),
 });
 
 export const DocPlanSchema = z.object({
@@ -201,6 +216,7 @@ export const SignaturePlanSchema = z.object({
   crypto_signed: z.number(),
   waiting_for_me: z.number().default(0),
   docs: z.array(DocPlanSchema),
+  route: PlanRouteSchema.nullable().default(null),
 });
 
 // «Подписать комплект»: предпросмотр (что будет зафиксировано, чьи подписи
@@ -244,6 +260,9 @@ export const SignPreviewSchema = z.object({
         }),
       ),
       blocker: z.string().default(""),
+      // Документ держит идущий маршрут подписания: комплект его не фиксирует
+      // (signing-route.md, 6.10), подписывают на странице `/sign/...`.
+      route_id: z.string().nullable().default(null),
     }),
   ),
 });

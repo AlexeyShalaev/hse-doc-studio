@@ -75,6 +75,8 @@ if importlib.util.find_spec("sqlalchemy") is None:
         "integration/api/personal",
         "integration/api/personal/*",
         "integration/api/signing_routes/test_remind_api.py",
+        "integration/api/signing_routes/test_route_guards.py",
+        "integration/api/signing_routes/test_route_triggers.py",
         "integration/api/signing_routes/test_send_and_sign.py",
         "integration/api/signing_routes/test_signing_routes_api.py",
         "integration/api/signing_routes/test_signer_task_api.py",

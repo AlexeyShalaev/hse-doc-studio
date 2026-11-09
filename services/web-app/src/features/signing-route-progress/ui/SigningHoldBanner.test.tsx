@@ -15,6 +15,7 @@ import { apiClient } from "@shared/api";
 import { createDemoRouter, installDemoAdapter } from "@shared/api/demo";
 import { i18n } from "@shared/lib";
 import { LOCAL_BOOTSTRAP, sessionApi } from "@entities/session";
+import { signatureApi } from "@entities/signature";
 import { signingRouteApi } from "@entities/signing-route";
 import {
   createSigningRouteDemo,
@@ -73,7 +74,7 @@ const mount = (docId: string) =>
     </I18nextProvider>,
   );
 
-// Сессия, список и ход маршрута идут друг за другом: под нагрузкой это дольше секунды.
+// Сессия и план подписей документа идут друг за другом: под нагрузкой это дольше секунды.
 const LOAD = { timeout: 5000 };
 
 const startRoute = async (): Promise<string> => {
@@ -119,37 +120,56 @@ describe("плашка документа на подписании", () => {
     );
   });
 
+  it("маршрут документа приходит с его планом подписей: одним запросом", async () => {
+    await startRoute();
+    const plan = vi.spyOn(signatureApi, "getPlan");
+    const list = vi.spyOn(signingRouteApi, "list");
+    const get = vi.spyOn(signingRouteApi, "get");
+    mount(DOC);
+    await screen.findByTestId("signing-hold-banner", {}, LOAD);
+    expect(plan).toHaveBeenCalledTimes(1);
+    expect(plan.mock.calls[0]?.slice(0, 2)).toEqual([PROJECT, { docId: DOC }]);
+    expect(list).not.toHaveBeenCalled();
+    expect(get).not.toHaveBeenCalled();
+  });
+
   it("другой документ маршрут не держит", async () => {
     await startRoute();
-    const get = vi.spyOn(signingRouteApi, "get");
+    const plan = vi.spyOn(signatureApi, "getPlan");
     mount("vkr");
     await waitFor(() => {
-      expect(get).toHaveBeenCalled();
+      expect(plan.mock.results[0]?.type).toBe("return");
     });
+    await plan.mock.results[0]?.value;
     expect(screen.getByTestId("held")).toHaveTextContent("no");
   });
 
   it("остановленный маршрут подписи не держит", async () => {
     await startRoute();
     demo.rebuild(PROJECT, DOC);
-    const list = vi.spyOn(signingRouteApi, "list");
-    const get = vi.spyOn(signingRouteApi, "get");
+    const plan = vi.spyOn(signatureApi, "getPlan");
     mount(DOC);
     await waitFor(() => {
-      expect(list).toHaveBeenCalled();
+      expect(plan.mock.results[0]?.type).toBe("return");
     });
-    expect(get).not.toHaveBeenCalled();
+    const loaded = (await plan.mock.results[0]?.value) as {
+      route: { status: string; stop_reason: string | null } | null;
+    };
+    expect(loaded.route).toMatchObject({
+      status: "paused",
+      stop_reason: "rebuilt",
+    });
     expect(screen.queryByTestId("signing-hold-banner")).toBeNull();
   });
 
   it("локальная Студия маршрутов не спрашивает", async () => {
     vi.spyOn(sessionApi, "bootstrap").mockResolvedValue(bootstrap("local"));
-    const list = vi.spyOn(signingRouteApi, "list");
+    const plan = vi.spyOn(signatureApi, "getPlan");
     mount(DOC);
     await waitFor(() => {
       expect(sessionApi.bootstrap).toHaveBeenCalled();
     });
-    expect(list).not.toHaveBeenCalled();
+    expect(plan).not.toHaveBeenCalled();
     expect(screen.getByTestId("held")).toHaveTextContent("no");
   });
 
@@ -158,12 +178,12 @@ describe("плашка документа на подписании", () => {
       ...bootstrap("server"),
       user: null,
     });
-    const list = vi.spyOn(signingRouteApi, "list");
+    const plan = vi.spyOn(signatureApi, "getPlan");
     mount(DOC);
     await waitFor(() => {
       expect(sessionApi.bootstrap).toHaveBeenCalled();
     });
-    expect(list).not.toHaveBeenCalled();
+    expect(plan).not.toHaveBeenCalled();
     expect(screen.getByTestId("held")).toHaveTextContent("no");
   });
 
