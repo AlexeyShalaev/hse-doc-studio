@@ -223,6 +223,9 @@ class SigningRoute:
     `version` номер записи в хранилище: 0 у ещё не сохранённого, каждое сохранение его увеличивает. Хранилище
     принимает маршрут, только если с момента чтения его никто не перезаписал (`ISigningRouteRepository.save`),
     поэтому одновременные действия подписантов не затирают друг друга. Переходы его не трогают.
+
+    `created_at` и `updated_at` время записи в хранилище (None у ещё не сохранённого): их ставит хранилище, в
+    сравнении маршрутов они не участвуют.
     """
 
     id: UUID
@@ -243,6 +246,8 @@ class SigningRoute:
     stop_reason: StopReason | None = None
     stopped_by: UUID | None = None
     version: int = 0
+    created_at: datetime | None = field(default=None, compare=False)
+    updated_at: datetime | None = field(default=None, compare=False)
 
     @property
     def steps(self) -> tuple[int, ...]:
@@ -278,7 +283,8 @@ class SigningRoute:
 class RouteEvent:
     """Событие маршрута: история для страницы подписания и автора (раздел 5.1).
 
-    Комментарий возврата хранится здесь (`details["comment"]`), а не в аудите.
+    Комментарий возврата хранится здесь (`details["comment"]`), а не в аудите. `id` номер записи в хранилище
+    (None у ещё не сохранённого), в сравнении событий не участвует.
     """
 
     route_id: UUID
@@ -288,3 +294,4 @@ class RouteEvent:
     actor_id: UUID | None = None
     participant_id: UUID | None = None
     details: Mapping[str, object] = field(default_factory=dict)
+    id: int | None = field(default=None, compare=False)

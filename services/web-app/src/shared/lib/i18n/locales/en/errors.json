@@ -181,6 +181,22 @@
     "passkeys_disabled": "Passkey sign-in is not available on this server.",
     "passkey_invalid": "The passkey didn't work. Try again or use another way to sign in.",
     "passkey_limit": "An account can have at most 20 passkeys. Remove one you no longer use.",
-    "reauth_required": "Confirm it's you: enter your password or use a passkey."
+    "reauth_required": "Confirm it's you: enter your password or use a passkey.",
+    "invalid_transition": "The signing route cannot be changed this way in its current state. Reload the page.",
+    "doc_changed": "The document has changed since you viewed it. Open it again.",
+    "route_blocked": "The route cannot be sent: fix what blocks it.",
+    "route_exists": "This checkpoint already has an unfinished signing route.",
+    "doc_on_route": "The document is already on another signing route.",
+    "stale_route": "The signing route has changed. Open it again.",
+    "no_participants": "The signing route has no participants.",
+    "bad_step": "A route step is empty or numbered incorrectly.",
+    "duplicate_participant": "A participant is listed twice in the route.",
+    "duplicate_slot": "A document slot is assigned to two participants.",
+    "unknown_doc": "The document is not part of the checkpoint.",
+    "unknown_slot": "This signature does not apply to this document.",
+    "bad_id": "Invalid identifier.",
+    "message_too_long": "The message is longer than 2000 characters.",
+    "passphrase_required": "The key is passphrase-protected: enter the passphrase.",
+    "sign_failed": "Signing failed. Check the key and the passphrase."
   }
 }
