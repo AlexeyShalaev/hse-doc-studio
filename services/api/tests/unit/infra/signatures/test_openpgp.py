@@ -242,3 +242,15 @@ def test__export_public_keys__only_matching_public_keys(ring: GpgKeyring) -> Non
     assert len(everything) > len(selected)
     assert ring.export_public_keys(["DEADBEEFDEADBEEF"]) == b""
     assert {k.fingerprint for k in ring.import_key(selected)} == {mine.fingerprint}
+
+
+def test_show_keys__lists_the_keys_of_the_file_and_imports_nothing(ring: GpgKeyring, tmp_path: Path) -> None:
+    _, public = _exported(tmp_path, armor=True)
+
+    (key,) = ring.show_keys(public)
+
+    assert key.uids == ["Экспорт <e@example.org>"]
+    assert len(key.fingerprint) == 40
+    assert not key.has_secret
+    assert ring.show_keys(b"not a key") == []
+    assert ring.list_keys() == []

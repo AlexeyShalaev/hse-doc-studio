@@ -262,6 +262,13 @@ ROUTE_SCOPES: Mapping[RouteKey, RouteScope] = {
     ("POST", "/signing-identities/openpgp/import"): _A,
     ("GET", "/signing-identities/openpgp/keys"): _A,
     ("GET", "/signing-identities/{identity_id}/public-key"): _A,
+    # Профиль подписанта: только свой, путь без id пользователя (только сервер)
+    ("GET", "/account/signer-profile"): _A,
+    ("GET", "/account/signer-profile/image"): _A,
+    ("PUT", "/account/signer-profile/image"): _A,
+    ("DELETE", "/account/signer-profile/image"): _A,
+    ("PUT", "/account/signer-profile/public-key"): _A,
+    ("DELETE", "/account/signer-profile/public-key"): _A,
     ("GET", "/crypto/cadesplugin_api.js"): _A,
     ("GET", "/trusted-roots"): _A,
     ("POST", "/trusted-roots"): _ADM,
