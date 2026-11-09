@@ -224,6 +224,7 @@ ROUTE_ACTIONS: Mapping[RouteKey, RouteRule] = {
     ("POST", "/projects/{project_id}/signing-routes/{route_id}/task/approve"): RouteRule(Action.OUTPUT_READ),
     ("POST", "/projects/{project_id}/signing-routes/{route_id}/task/sign"): RouteRule(Action.OUTPUT_READ),
     ("POST", "/projects/{project_id}/signing-routes/{route_id}/task/return"): RouteRule(Action.OUTPUT_READ),
+    ("GET", "/projects/{project_id}/signing-routes/{route_id}/task/image"): RouteRule(Action.OUTPUT_READ),
     ("POST", "/projects/{project_id}/signing-routes/{route_id}/task/image"): RouteRule(Action.OUTPUT_READ),
     ("PUT", "/projects/{project_id}/signing-routes/{route_id}/task/plate"): RouteRule(Action.OUTPUT_READ),
     ("POST", "/projects/{project_id}/signing-routes/{route_id}/task/plate/file"): RouteRule(Action.OUTPUT_READ),

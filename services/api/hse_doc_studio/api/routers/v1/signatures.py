@@ -30,6 +30,7 @@ from hse_doc_studio.api.schemas.signature import (
     UploadSignatureResponse,
 )
 from hse_doc_studio.core.errors import NotFoundError
+from hse_doc_studio.core.signing_route.ports import ISigningRouteGate
 from hse_doc_studio.core.value_objects import (
     DetachedSignature,
     FrozenPdf,
@@ -418,11 +419,13 @@ async def attach_detached_signature(
     doc_id: str,
     slot_id: str,
     uc: FromDishka[AttachDetachedSignatureUC],
+    gate: FromDishka[ISigningRouteGate],
     file: UploadFile = File(...),
     public_key: UploadFile | None = File(default=None),
 ) -> AttachDetachedSignatureResponse:
     content = await file.read()
     key = await public_key.read() if public_key is not None else None
+    await gate.require_turn(project_id, doc_id, slot_id)
     try:
         result = await uc.execute(
             AttachDetachedSignatureInput(
@@ -433,6 +436,7 @@ async def attach_detached_signature(
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
+    await gate.signature_written(project_id, doc_id, slot_id)
     return _map_attached(result)
 
 
@@ -488,7 +492,9 @@ async def sign_detached_in_studio(
     slot_id: str,
     body: SignInStudioRequest,
     uc: FromDishka[SignInStudioUC],
+    gate: FromDishka[ISigningRouteGate],
 ) -> AttachDetachedSignatureResponse:
+    await gate.require_turn(project_id, doc_id, slot_id)
     try:
         result = await uc.execute(
             SignInStudioInput(
@@ -505,6 +511,7 @@ async def sign_detached_in_studio(
         raise HTTPException(status_code=403, detail=str(exc)) from exc
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
+    await gate.signature_written(project_id, doc_id, slot_id)
     return _map_attached(AttachDetachedSignatureOutput(signature=result.signature))
 
 
@@ -518,8 +525,10 @@ async def sign_embedded_in_studio(
     slot_id: str,
     body: SignInStudioRequest,
     uc: FromDishka[SignInStudioUC],
+    gate: FromDishka[ISigningRouteGate],
 ) -> EmbeddedSignatureResponse:
     """Встроенная подпись PAdES ключом Студии: дописывается поверх зафиксированного PDF (signature-plan.md, 4)."""
+    await gate.require_turn(project_id, doc_id, slot_id)
     try:
         result = await uc.sign_pades(
             SignInStudioInput(
@@ -536,6 +545,7 @@ async def sign_embedded_in_studio(
         raise HTTPException(status_code=403, detail=str(exc)) from exc
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
+    await gate.signature_written(project_id, doc_id, slot_id)
     sig = result.signature
     return EmbeddedSignatureResponse(
         field_name=sig.field_name,

@@ -23,6 +23,7 @@ from hse_doc_studio.core.access.checker import ProjectForbiddenError
 from hse_doc_studio.core.access.entities import Actor
 from hse_doc_studio.core.errors import NotFoundError
 from hse_doc_studio.core.i18n import localized_error
+from hse_doc_studio.core.signatures.key_policy import SigningKeyStorageDeniedError
 from hse_doc_studio.core.signing_route.drafting import PersonDraft
 from hse_doc_studio.core.signing_route.entities import DocSlot, RouteConflictError, RouteInputError
 from hse_doc_studio.use_cases.signatures._studio_signer import KeyPassphraseRequiredError
@@ -35,7 +36,12 @@ from hse_doc_studio.use_cases.signing_route.author import (
     SigningRouteDrafts,
     SigningRouteSending,
 )
-from hse_doc_studio.use_cases.signing_route.key_signer import KeyInfo, KeyRequest
+from hse_doc_studio.use_cases.signing_route.key_signer import (
+    KeyInfo,
+    KeyNotFoundError,
+    KeyPassphraseInvalidError,
+    KeyRequest,
+)
 from hse_doc_studio.use_cases.signing_route.views import EventView, PersonView, RouteDetails
 
 router = APIRouter(route_class=SafeDishkaRoute, dependencies=[Depends(require_server_mode)])
@@ -266,15 +272,21 @@ def key_id(value: str | None) -> UUID | None:
     try:
         return UUID(value)
     except ValueError:
-        raise NotFoundError(
-            localized_error(f"Ключ подписи {value} не найден", f"Signing key {value} not found")
+        raise SigningKeyError(
+            409, "key_not_found", localized_error(f"Ключ подписи {value} не найден", f"Signing key {value} not found")
         ) from None
 
 
 def key_failure(exc: Exception) -> NoReturn:
-    """Отказ подписи ключом Студии в ответе: нужен пароль, чужой слот или ошибка подписи."""
+    """Отказ подписи ключом Студии в ответе (раздел 8.1): пароль, ключ, политика, чужой слот или ошибка подписи."""
     if isinstance(exc, KeyPassphraseRequiredError):
         raise SigningKeyError(400, "passphrase_required", str(exc)) from exc
+    if isinstance(exc, KeyPassphraseInvalidError):
+        raise SigningKeyError(400, "passphrase_invalid", str(exc)) from exc
+    if isinstance(exc, KeyNotFoundError):
+        raise SigningKeyError(409, "key_not_found", str(exc)) from exc
+    if isinstance(exc, SigningKeyStorageDeniedError):
+        raise SigningKeyError(403, "server_keys_forbidden", str(exc)) from exc
     if isinstance(exc, PermissionError | ProjectForbiddenError):
         raise SigningKeyError(403, "forbidden", str(exc)) from exc
     raise SigningKeyError(400, "sign_failed", str(exc)) from exc

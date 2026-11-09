@@ -38,6 +38,7 @@ from hse_doc_studio.core.signing_route.ports import (
     IRouteLabels,
     IRoutePeople,
     ISigningNotifier,
+    ISigningRouteGate,
     ISigningTaskCounter,
 )
 from hse_doc_studio.core.signing_route.repositories import ISigningRouteRepository
@@ -61,6 +62,7 @@ from hse_doc_studio.use_cases.signing_route.author import (
 from hse_doc_studio.use_cases.signing_route.delivery import SigningNotifier
 from hse_doc_studio.use_cases.signing_route.effects import RouteFileEffects
 from hse_doc_studio.use_cases.signing_route.facts import ProjectRouteFacts, RouteFactsLoader
+from hse_doc_studio.use_cases.signing_route.gate import SigningRouteGate
 from hse_doc_studio.use_cases.signing_route.invitations import SigningRouteInviteeHook
 from hse_doc_studio.use_cases.signing_route.key_signer import RouteKeySigner
 from hse_doc_studio.use_cases.signing_route.point import RoutePointLoader
@@ -235,3 +237,8 @@ class ServerSigningRoutesProvider(Provider):
         self, services: RouteServices, signer: RouteKeySigner, tools: SignerTools
     ) -> SigningTaskScenario:
         return SigningTaskScenario(services, signer, tools)
+
+    @provide(scope=Scope.REQUEST)
+    def get_signing_route_gate(self, services: RouteServices) -> ISigningRouteGate:
+        # Перекрывает локальный `NoSigningRoutes`: КриптоПро и готовая подпись идут в очередь маршрута (6.10).
+        return SigningRouteGate(services)

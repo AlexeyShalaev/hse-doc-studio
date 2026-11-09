@@ -73,8 +73,8 @@ class VisibleLayerFinalError(RouteConflictError):
         )
 
 
-class MethodNotAllowedError(RouteInputError):
-    """Способ подписи сейчас выбрать нельзя: его не принимает точка или он изменил бы зафиксированный PDF."""
+class MethodNotAllowedError(RouteConflictError):
+    """Способ подписи сейчас выбрать нельзя: его не принимает точка или он изменил бы зафиксированный PDF (409)."""
 
     def __init__(self, message: str | None = None) -> None:
         super().__init__(
@@ -91,13 +91,6 @@ class InvalidFileError(RouteInputError):
 
     def __init__(self, message: str) -> None:
         super().__init__("invalid_file", message)
-
-
-class KeyUnavailableError(RouteInputError):
-    """Ключ Студии не годится для плашки: ключи на сервере запрещены, у ключа нет сертификата (400)."""
-
-    def __init__(self, message: str) -> None:
-        super().__init__("key_unavailable", message)
 
 
 def acting_participant(route: SigningRoute, evaluation: Evaluation, user_id: UUID) -> Participant:

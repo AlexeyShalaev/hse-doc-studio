@@ -18,7 +18,7 @@ from __future__ import annotations
 
 import asyncio
 from collections.abc import Awaitable, Callable, Mapping, Sequence
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from datetime import datetime
 from uuid import UUID
 
@@ -31,6 +31,7 @@ from hse_doc_studio.core.errors import NotFoundError
 from hse_doc_studio.core.i18n import localized_error
 from hse_doc_studio.core.repositories import ISignatureRepository
 from hse_doc_studio.core.signatures.errors import GpgUnavailableError
+from hse_doc_studio.core.signatures.key_policy import SigningKeyStorageDeniedError
 from hse_doc_studio.core.signatures.plan import (
     SignMethod,
     VisibleMark,
@@ -64,7 +65,6 @@ from hse_doc_studio.core.signing_route.signer import (
     APPROVE_ACTIONS,
     SIGN_ACTIONS,
     InvalidFileError,
-    KeyUnavailableError,
     MethodNotAllowedError,
     acting_participant,
     available_methods,
@@ -86,7 +86,7 @@ from hse_doc_studio.use_cases.signatures._studio_signer import PlateSignerMismat
 from hse_doc_studio.use_cases.signatures.upload_signature_png import UploadSignaturePngInput, UploadSignaturePngUC
 from hse_doc_studio.use_cases.signer_profile.profile import SaveProfileImageUC
 from hse_doc_studio.use_cases.signing_route.facts import LoadedFacts
-from hse_doc_studio.use_cases.signing_route.key_signer import KeyRequest, RouteKeySigner
+from hse_doc_studio.use_cases.signing_route.key_signer import KeyNotFoundError, KeyRequest, RouteKeySigner
 from hse_doc_studio.use_cases.signing_route.point import RoutePoint
 from hse_doc_studio.use_cases.signing_route.scenario import (
     RouteScenario,
@@ -187,6 +187,19 @@ class SigningTaskScenario(RouteScenario):
         point = await self._s.points.load(project_id, route.profile_id)
         return await self._task(actor_uuid(actor), point, route)
 
+    async def image(self, actor: Actor, project_id: UUID, route_id: UUID) -> bytes | None:
+        """Своя картинка подписи, как она лежит в слоте (PNG); None, пока не загружена. Не участнику 404."""
+        route = await self._get(project_id, route_id)
+        point = await self._s.points.load(project_id, route.profile_id)
+        loaded = await self._s.facts.load(point, route)
+        me = acting_participant(route, evaluate(route, loaded.facts), actor_uuid(actor))
+        for slot_id in own_slots(me):
+            slot = loaded.state.slots.get(slot_id)
+            path = point.project.folder / slot.png_path if slot is not None and slot.png_path else None
+            if path is not None and path.is_file():
+                return await asyncio.to_thread(path.read_bytes)
+        return None
+
     async def _task(self, actor_id: UUID, point: RoutePoint, route: SigningRoute) -> TaskDetails:
         loaded = await self._s.facts.load(point, route)
         evaluation = evaluate(route, loaded.facts)
@@ -195,7 +208,11 @@ class SigningTaskScenario(RouteScenario):
         people = await self._people_of(point.project_id, route, loaded, events)
         allowed = await self._signer.keys_allowed()
         keys = TaskKeys(allowed, await self._signer.default_key_info() if allowed else None)
-        return build_task(point, route, loaded.facts, evaluation, me, people, events, keys, self._tools.measure)
+        task = build_task(point, route, loaded.facts, evaluation, me, people, events, keys, self._tools.measure)
+        if task.plate is None and me.assignments:
+            # Данных плашки нет ни в слоте, ни в профиле: их даст ключ по умолчанию при согласии.
+            task = replace(task, plate=await self._signer.default_plate())
+        return task
 
     # --- действия ---------------------------------------------------------------------------------------------------
 
@@ -300,10 +317,12 @@ class SigningTaskScenario(RouteScenario):
             await self._require_sign(turn)
             try:
                 signer = await self._signer.plate_of(await self._signer.own_key(identity_id))
-            except NotFoundError:
+            except (KeyNotFoundError, SigningKeyStorageDeniedError):
                 raise
             except ValueError as exc:
-                raise KeyUnavailableError(str(exc)) from exc
+                # Ключ есть, но плашку из него не собрать (нет сертификата, нет в связке): для страницы это
+                # тот же отказ, что и чужой ключ.
+                raise KeyNotFoundError(str(exc)) from exc
             return await self._write_plate(turn, signer)
 
         return await self._act(actor, project_id, route_id, step)
@@ -414,7 +433,7 @@ class SigningTaskScenario(RouteScenario):
                 raise MethodNotAllowedError(conflict)
             state = with_method(state, me, method)
         if identity is None:
-            return state
+            return await self._with_default_plate(turn, state)
         signer = await self._signer.plate_of(identity)
         for slot_id in own_slots(me):
             slot = state.slots.get(slot_id)
@@ -424,6 +443,19 @@ class SigningTaskScenario(RouteScenario):
         # Плашка без подписанта бывает только до фиксации: перед ней расчёт заполняет плашки сам (`FillPlate`).
         missing = plates_without_signer(me, state)
         return with_signer(state, missing, signer) if missing else state
+
+    async def _with_default_plate(self, turn: _Turn, state: SignaturesState) -> SignaturesState:
+        """Согласие без подписи ключом: плашки без подписанта получают данные ключа по умолчанию участника.
+
+        Только если серверу нечем их заполнить иначе (в профиле подписанта ключа нет): страница показывает ключ
+        по умолчанию как известные данные плашки (`me.plate`), и согласие обязано с этим совпасть.
+        """
+        me = turn.me
+        missing = plates_without_signer(me, state)
+        if not missing or (me.user_id is not None and me.user_id in turn.loaded.facts.plates):
+            return state
+        signer = await self._signer.default_plate()
+        return with_signer(state, missing, signer) if signer is not None else state
 
     async def _sign_mine(
         self, turn: _Turn, settled: Settled, identity: SigningIdentity, passphrase: str

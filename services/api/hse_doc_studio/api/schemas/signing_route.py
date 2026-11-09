@@ -314,6 +314,8 @@ class SigningTaskMe(StrictModel):
     methods: list[RouteSignMethodName]
     method: RouteSignMethodName | None
     image_ready: bool
+    # Путь API от корня сайта к своей загруженной картинке (PNG) для предпросмотра; null, пока её нет.
+    image_url: str | None
     plate: SigningPlate | None
     keys: SigningTaskKeys
 

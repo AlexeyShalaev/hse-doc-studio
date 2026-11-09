@@ -1,23 +1,29 @@
 """Подпись слотов участника маршрута ключом Студии: «Отправить и подписать», «Согласовать и подписать», «Подписать».
 
-Ключ проверяется до любых записей файлов (`check`): нет ключа, ключи на сервере запрещены или нужен пароль. Затем
+Ключ проверяется до любых записей файлов (`check`): нет ключа, ключи на сервере запрещены, нужен пароль или пароль
+не подходит (пробная подпись ключом OpenPGP: неверный пароль не должен оставить после себя согласие). Затем
 каждый слот подписывается над текущей фиксацией тем же путём, что «Подписать комплект»: право SIGN на слот,
 персона актора и подписант плашки (`StudioSigner.may_sign`). Пароль живёт только в аргументах.
 """
 
 from __future__ import annotations
 
+import asyncio
+import tempfile
 from collections.abc import Sequence
 from dataclasses import dataclass, field
+from pathlib import Path
 from uuid import UUID
 
 from hse_doc_studio.core.access.actions import Action
 from hse_doc_studio.core.access.checker import IProjectAccessChecker
 from hse_doc_studio.core.entities import SigningIdentity
 from hse_doc_studio.core.enums import SigningIdentityKind
+from hse_doc_studio.core.errors import NotFoundError
 from hse_doc_studio.core.i18n import localized_error
 from hse_doc_studio.core.repositories import ISignatureRepository, ITemplateRepository
 from hse_doc_studio.core.services import ProjectTemplateService
+from hse_doc_studio.core.signatures.errors import GpgError, GpgUnavailableError
 from hse_doc_studio.core.signing_route.entities import DocSlot
 from hse_doc_studio.core.value_objects import SignerInfo
 from hse_doc_studio.use_cases.projects.get_project import GetProjectUC
@@ -48,7 +54,14 @@ class KeyInfo:
     signer: str
 
 
-class NoSigningKeyError(ValueError):
+class KeyNotFoundError(ValueError):
+    """`identity_id` не ключ актора: чужой ключ неотличим от несуществующего (ответ 409 `key_not_found`)."""
+
+    def __init__(self, message: str | None = None) -> None:
+        super().__init__(message or localized_error("Ключ подписи не найден", "Signing key not found"))
+
+
+class NoSigningKeyError(KeyNotFoundError):
     def __init__(self) -> None:
         super().__init__(
             localized_error(
@@ -56,6 +69,13 @@ class NoSigningKeyError(ValueError):
                 "No signing key: add a key in your profile and make it the default",
             )
         )
+
+
+class KeyPassphraseInvalidError(ValueError):
+    """Пароль ключа не подошёл (ответ 400 `passphrase_invalid`); ничего не подписано и не записано."""
+
+    def __init__(self) -> None:
+        super().__init__(localized_error("Пароль ключа не подошёл", "The key passphrase is wrong"))
 
 
 class RouteKeySigner:
@@ -91,22 +111,56 @@ class RouteKeySigner:
         return await signer_for_identity(identity, self._signer.keyring, self._signer.identity_repo)
 
     async def own_key(self, identity_id: UUID) -> SigningIdentity:
-        """Свой ключ Студии по id для плашки; чужой ключ неотличим от несуществующего (`NotFoundError`)."""
+        """Свой ключ Студии по id для плашки: `KeyNotFoundError`, если это не ключ актора."""
         await self._signer.require_key_allowed()
-        identity = await self._default_key.resolve(identity_id)
+        return await self._resolve(identity_id)
+
+    async def default_plate(self) -> SignerInfo | None:
+        """Данные плашки из ключа по умолчанию актора; None, если ключа нет или ключи на сервере запрещены."""
+        if not await self.keys_allowed():
+            return None
+        identity = (await self._default_key.get()).effective
+        if identity is None:
+            return None
+        try:
+            return await self.plate_of(identity)
+        except ValueError:
+            return None
+
+    async def check(self, request: KeyRequest) -> SigningIdentity:
+        """Ключ готов подписывать: найден, ключи на сервере разрешены, пароль передан и подходит."""
+        identity = await self._resolve(request.identity_id)
+        await self._signer.require_key_allowed()
+        if _protected(identity):
+            if not request.passphrase:
+                raise KeyPassphraseRequiredError
+            await asyncio.to_thread(self._try_passphrase, identity, request.passphrase)
+        return identity
+
+    async def _resolve(self, identity_id: UUID | None) -> SigningIdentity:
+        try:
+            identity = await self._default_key.resolve(identity_id)
+        except NotFoundError as exc:
+            raise KeyNotFoundError(str(exc)) from exc
         if identity is None:
             raise NoSigningKeyError
         return identity
 
-    async def check(self, request: KeyRequest) -> SigningIdentity:
-        """Ключ готов подписывать: найден, ключи на сервере разрешены, пароль передан, если нужен."""
-        identity = await self._default_key.resolve(request.identity_id)
-        if identity is None:
-            raise NoSigningKeyError
-        await self._signer.require_key_allowed()
-        if _protected(identity) and not request.passphrase:
-            raise KeyPassphraseRequiredError
-        return identity
+    def _try_passphrase(self, identity: SigningIdentity, passphrase: str) -> None:
+        """Пробная подпись ключом OpenPGP: неверный пароль виден до фиксации и записи согласия."""
+        if not identity.fingerprint:
+            return
+        with tempfile.TemporaryDirectory() as tmp:
+            probe = Path(tmp) / "probe"
+            probe.write_bytes(b"hse-doc-studio passphrase probe")
+            try:
+                self._signer.keyring.sign_detached(
+                    probe, identity.fingerprint, Path(tmp) / "probe.asc", passphrase=passphrase
+                )
+            except GpgUnavailableError as exc:
+                raise ValueError(localized_error("В системе нет gpg", "gpg is not installed")) from exc
+            except GpgError as exc:
+                raise KeyPassphraseInvalidError from exc
 
     async def sign(
         self, point: RoutePoint, pairs: Sequence[DocSlot], identity: SigningIdentity, passphrase: str

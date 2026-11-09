@@ -8,6 +8,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Awaitable
 from typing import cast
 from urllib.parse import quote
 from uuid import UUID
@@ -107,6 +108,11 @@ def task_response(task: TaskDetails) -> s.SigningTask:
             methods=[m.value for m in task.methods],
             method=task.method.value if task.method is not None else None,
             image_ready=task.image_ready,
+            image_url=(
+                f"{API_PREFIX}/projects/{route.project_id}/signing-routes/{route.id}/task/image"
+                if task.image_ready
+                else None
+            ),
             plate=_plate(task.plate),
             keys=s.SigningTaskKeys(
                 server_keys_allowed=task.keys.server_keys_allowed, default_key=key_info(task.keys.default_key)
@@ -140,6 +146,16 @@ async def _upload(file: UploadFile, limit: int) -> bytes:
     return content
 
 
+async def _keyed(action: Awaitable[TaskDetails]) -> TaskDetails:
+    """Действие с ключом Студии: отказ ключа или подписи уходит своим кодом (`key_failure`), остальное как есть."""
+    try:
+        return await action
+    except (RouteInputError, RouteConflictError, NotFoundError):
+        raise
+    except (ValueError, PermissionError, ProjectForbiddenError) as exc:
+        key_failure(exc)
+
+
 # --- маршруты -------------------------------------------------------------------------------------------------------
 
 
@@ -164,13 +180,7 @@ async def approve_signing_task(
     request = ApproveRequest(
         expected=dict(body.expected), method=SignMethod(body.method) if body.method is not None else None, sign=sign
     )
-    try:
-        task = await uc.approve(actor, project_id, route_id, request)
-    except (RouteInputError, RouteConflictError, NotFoundError):
-        raise
-    except (ValueError, PermissionError, ProjectForbiddenError) as exc:
-        key_failure(exc)
-    return task_response(task)
+    return task_response(await _keyed(uc.approve(actor, project_id, route_id, request)))
 
 
 @router.post(_TASK + "/sign", response_model=s.SigningTask)
@@ -180,13 +190,8 @@ async def sign_signing_task(
     """Подписать свои слоты ЭП над зафиксированным PDF ключом Студии."""
     actor = reader()
     key = KeyRequest(identity_id=key_id(body.identity_id), passphrase=body.passphrase or "")
-    try:
-        task = await uc.sign(actor, project_id, route_id, SignRequest(expected=dict(body.expected), key=key))
-    except (RouteInputError, RouteConflictError, NotFoundError):
-        raise
-    except (ValueError, PermissionError, ProjectForbiddenError) as exc:
-        key_failure(exc)
-    return task_response(task)
+    request = SignRequest(expected=dict(body.expected), key=key)
+    return task_response(await _keyed(uc.sign(actor, project_id, route_id, request)))
 
 
 @router.post(_TASK + "/return", response_model=s.SigningTask)
@@ -195,6 +200,15 @@ async def return_signing_task(
 ) -> s.SigningTask:
     """Вернуть на доработку с обязательным комментарием."""
     return task_response(await uc.return_for_rework(reader(), project_id, route_id, body.comment))
+
+
+@router.get(_TASK + "/image")
+async def get_signing_task_image(project_id: UUID, route_id: UUID, uc: FromDishka[SigningTaskScenario]) -> Response:
+    """Своя загруженная картинка подписи: страница показывает её, пока на документе она придержана."""
+    png = await uc.image(reader(), project_id, route_id)
+    if png is None:
+        raise NotFoundError(localized_error("Картинка подписи не загружена", "No signature image uploaded"))
+    return Response(content=png, media_type="image/png", headers={"Cache-Control": "no-store"})
 
 
 @router.post(_TASK + "/image", response_model=s.SigningTask)
@@ -219,7 +233,7 @@ async def set_signing_task_plate(
     actor = reader()
     identity_id = key_id(body.identity_id)
     assert identity_id is not None  # noqa: S101 — поле обязательное, None не приходит
-    return task_response(await uc.set_plate_key(actor, project_id, route_id, identity_id))
+    return task_response(await _keyed(uc.set_plate_key(actor, project_id, route_id, identity_id)))
 
 
 @router.post(_TASK + "/plate/file", response_model=s.SigningTask)
