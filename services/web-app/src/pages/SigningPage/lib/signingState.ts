@@ -129,13 +129,7 @@ export const approveBlocker = (me: SigningTaskMe): ApproveBlocker | null => {
   return null;
 };
 
-/** Отпечатки последнего показа для `expected`: только документы, где сервер их дал. */
-export const expectedTokens = (task: SigningTask): Record<string, string> =>
-  Object.fromEntries(
-    task.docs.flatMap((doc) =>
-      doc.token === null ? [] : [[doc.doc_id, doc.token] as const],
-    ),
-  );
+export { expectedTokens } from "@entities/signing-route";
 
 /** Свои слоты документа, которые ещё ждут подписи. */
 export const pendingMine = (doc: SigningTaskDoc): SigningTaskSlot[] =>

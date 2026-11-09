@@ -29,10 +29,11 @@ export const useSetDefaultSigningKey = () => {
   });
 };
 
-export const useSigningIdentities = () =>
+export const useSigningIdentities = (enabled = true) =>
   useQuery({
     queryKey: signingIdentityKeys.list(),
     queryFn: () => signingIdentityApi.list(),
+    enabled,
   });
 
 export const useCreateSelfSigned = () => {

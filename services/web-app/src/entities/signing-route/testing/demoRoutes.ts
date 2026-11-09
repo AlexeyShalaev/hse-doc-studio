@@ -43,7 +43,12 @@ import {
 //   когда таких нет, документы фиксируются, подписанты ЭП шагов до L подписывают параллельно;
 // - отпечатки документов: `build:<sha>` до фиксации, `build:<sha>:<слой>` для совмещения
 //   с фиксацией, `pdf:<sha>` после неё; несовпадение `expected` даёт 409 `doc_changed`;
-// - частота отправки не ограничивается, напоминание раз в 12 часов (429 `rate_limited`).
+// - частота отправки не ограничивается, напоминание раз в 12 часов (429 `rate_limited`);
+// - подпись ключом Студии: ключ с паролем без пароля даёт 400 `passphrase_required`, пароль
+//   `wrong` даёт 400 `passphrase_invalid`, чужой ключ 409 `key_not_found`, при запрете
+//   ключей на сервере 403 `server_keys_forbidden`;
+// - готовая подпись и подпись КриптоПро приходят существующим адресом
+//   `.../docs/{doc}/detached/{slot}`: только участнику в его очередь подписывать (6.10).
 
 type Localized = Record<string, string>;
 
@@ -101,7 +106,14 @@ export type SigningRouteDemoOptions = {
   invitations?: SigningDemoInvitation[];
   profiles?: SigningDemoProfile[];
   /** Ключи на сервере разрешены: у подписанта есть ключ Студии по умолчанию. */
-  serverKeysAllowed?: boolean;
+  serverKeysAllowed?: boolean | (() => boolean);
+  /**
+   * Ключи Студии подписанта, ключ по умолчанию первым. Без функции у каждого один ключ
+   * без пароля (пока ключи на сервере разрешены).
+   */
+  keysOf?: (user: SigningDemoUser) => SigningKeyInfo[];
+  /** «Запомнить для других проектов»: картинка уходит в профиль подписанта. */
+  onRememberImage?: (user: SigningDemoUser, image: Blob) => void;
   now?: () => number;
 };
 
@@ -258,7 +270,11 @@ export const createSigningRouteDemo = (
   const invitations = options.invitations ?? [];
   const projectName = options.projectName ?? (() => "Демо-проект");
   const clock = options.now ?? (() => Date.now());
-  const serverKeys = options.serverKeysAllowed ?? true;
+  const serverKeysOption = options.serverKeysAllowed ?? true;
+  const serverKeysAllowed = (): boolean =>
+    typeof serverKeysOption === "function"
+      ? serverKeysOption()
+      : serverKeysOption;
   const now = () => new Date(clock()).toISOString();
 
   let routes: Route[] = [];
@@ -562,16 +578,58 @@ export const createSigningRouteDemo = (
     waiting_for: waitingFor(r),
   });
 
+  const keysOf = (user: SigningDemoUser): SigningKeyInfo[] => {
+    if (!serverKeysAllowed()) return [];
+    return options.keysOf
+      ? options.keysOf(user)
+      : [
+          {
+            id: `key-${user.id}`,
+            label: "Ключ OpenPGP",
+            kind: "openpgp",
+            protected: false,
+            signer: user.name,
+          },
+        ];
+  };
+
   const defaultKey = (user: SigningDemoUser): SigningKeyInfo | null =>
-    serverKeys
-      ? {
-          id: `key-${user.id}`,
-          label: "Ключ OpenPGP",
-          kind: "openpgp",
-          protected: false,
-          signer: user.name,
-        }
-      : null;
+    keysOf(user)[0] ?? null;
+
+  /** Ключ актора по id. Без своего списка ключей (`keysOf`) подходит любой id. */
+  const findKey = (
+    user: SigningDemoUser,
+    identityId: string | null,
+  ): SigningKeyInfo | null => {
+    const fallback = defaultKey(user);
+    if (identityId === null) return fallback;
+    if (!options.keysOf) return fallback && { ...fallback, id: identityId };
+    return keysOf(user).find((item) => item.id === identityId) ?? null;
+  };
+
+  /** Можно ли подписать этим ключом Студии; null: можно. */
+  const refuseKey = (
+    user: SigningDemoUser,
+    key: { identity_id: string | null; passphrase: string | null },
+  ): DemoResponse | null => {
+    if (!serverKeysAllowed())
+      return demoError(
+        403,
+        "server_keys_forbidden",
+        "Private keys are not stored on this server",
+      );
+    const found = findKey(user, key.identity_id);
+    if (!found) return conflict("key_not_found", "Signing key not found");
+    if (found.protected && !key.passphrase)
+      return demoError(
+        400,
+        "passphrase_required",
+        "The key needs its passphrase",
+      );
+    if (key.passphrase === "wrong")
+      return demoError(400, "passphrase_invalid", "Wrong key passphrase");
+    return null;
+  };
 
   const allowedMethods = (r: Route, p: Participant): RouteSignMethod[] => {
     if (assignmentsOf(r, p).length === 0) return [];
@@ -624,7 +682,7 @@ export const createSigningRouteDemo = (
         image_ready: p.imageReady,
         plate: p.plate,
         keys: {
-          server_keys_allowed: serverKeys,
+          server_keys_allowed: serverKeysAllowed(),
           default_key: defaultKey(user),
         },
       },
@@ -1293,6 +1351,11 @@ export const createSigningRouteDemo = (
             "plate_required",
             "Set the key or certificate for the plate",
           );
+        // Ключ и пароль проверяются до согласия: отказ подписи ничего не меняет.
+        if (combine && body.sign !== null && isCrypto(p.method)) {
+          const refusedKey = refuseKey(user, body.sign);
+          if (refusedKey) return refusedKey;
+        }
         p.approval = {
           round: r.round,
           at: now(),
@@ -1328,6 +1391,8 @@ export const createSigningRouteDemo = (
         if (!body) return invalid("Invalid signature request");
         const mismatch = checkExpected(r, body.expected, myTokens(r, p));
         if (mismatch) return mismatch;
+        const refusedKey = refuseKey(user, body);
+        if (refusedKey) return refusedKey;
         p.signedRound = r.round;
         event(r, "signed", user.name);
         settle(r);
@@ -1364,6 +1429,10 @@ export const createSigningRouteDemo = (
         const refused = needsTurn(r, p, ["to_approve", "to_approve_sign"]);
         if (refused) return refused;
         if (!formFile(req.body)) return invalid("Image file is required");
+        const form = req.body as FormData;
+        const image = form.get("file");
+        if (form.get("remember") === "true" && image instanceof Blob)
+          options.onRememberImage?.(user, image);
         p.imageReady = true;
         r.updated_at = now();
         return demoJson(toTask(r, p, user));
@@ -1377,10 +1446,12 @@ export const createSigningRouteDemo = (
         if (refused) return refused;
         const body = parse(SetSigningTaskPlateRequestSchema, req.body);
         if (!body) return invalid("identity_id is required");
+        const key = findKey(user, body.identity_id);
+        if (!key) return conflict("key_not_found", "Signing key not found");
         p.plate = {
-          owner: user.name,
-          kind: "openpgp",
-          cert_id: sha(body.identity_id).slice(0, 16),
+          owner: key.signer,
+          kind: key.kind === "openpgp" ? "openpgp" : "x509",
+          cert_id: sha(body.identity_id).slice(0, 16).toUpperCase(),
         };
         r.updated_at = now();
         // Плашка с данными меняет видимый слой: возможно, менять его больше некому.
@@ -1398,11 +1469,92 @@ export const createSigningRouteDemo = (
         p.plate = {
           owner: user.name,
           kind: "x509",
-          cert_id: sha(user.id).slice(0, 16),
+          cert_id: sha(user.id).slice(0, 16).toUpperCase(),
         };
         r.updated_at = now();
         settle(r);
         return demoJson(toTask(r, p, user));
+      }),
+    },
+    {
+      // Итоговый PDF для подписи у себя или плагином КриптоПро.
+      method: "GET",
+      pattern: "/projects/:projectId/docs/:docId/frozen/pdf",
+      handler: signedIn((req, { projectId }) => {
+        const docId = req.params.docId ?? "";
+        const r = routes.find(
+          (item) =>
+            item.project_id === projectId &&
+            item.frozen !== null &&
+            docId in item.frozen,
+        );
+        if (!r?.frozen) return notFound();
+        const text = `%PDF-1.7 demo ${r.frozen[docId] ?? ""}`;
+        return demoJson(new TextEncoder().encode(text).buffer);
+      }),
+    },
+    {
+      // Готовая открепленная подпись или подпись КриптоПро (существующий адрес плана
+      // подписей): слот маршрута принимает её только от участника в его очередь (6.10).
+      method: "POST",
+      pattern: "/projects/:projectId/docs/:docId/detached/:slotId",
+      handler: signedIn((req, { user, projectId }) => {
+        const pair = {
+          doc_id: req.params.docId ?? "",
+          slot_id: req.params.slotId ?? "",
+        };
+        const owned = (r: Route, p: Participant) =>
+          assignmentsOf(r, p).some(
+            (a) => a.doc_id === pair.doc_id && a.slot_id === pair.slot_id,
+          );
+        const r = routes.find(
+          (item) =>
+            item.project_id === projectId &&
+            item.status === "active" &&
+            participants(item).some((p) => owned(item, p)),
+        );
+        if (!r) return notFound();
+        const p = participants(r).find(
+          (q) => q.user_id === user.id && owned(r, q),
+        );
+        if (!p || stateOf(r, p) !== "to_sign" || !isCrypto(p.method))
+          return conflict(
+            "not_your_turn",
+            "It is not your turn in the signing route",
+          );
+        const form = req.body;
+        const file =
+          typeof FormData !== "undefined" && form instanceof FormData
+            ? form.get("file")
+            : null;
+        if (!(file instanceof File))
+          return invalid("Signature file is required");
+        // Имя с «bad»: подпись сделана над другим файлом, слот остаётся без подписи.
+        const valid = !/bad/i.test(file.name);
+        if (valid) {
+          p.signedRound = r.round;
+          event(r, "signed", user.name);
+          settle(r);
+        }
+        return demoJson({
+          signature: {
+            format: /\.asc$/i.test(file.name) ? "openpgp" : "cms",
+            origin: "uploaded",
+            verdict: valid ? "valid" : "invalid",
+            signer: p.plate?.owner ?? user.name,
+            signer_id: sha(user.id),
+            issuer: "",
+            algorithm: "",
+            signed_at: now(),
+            not_before: null,
+            not_after: null,
+            chain: null,
+            notes: [],
+            added_at: now(),
+            file_name: file.name,
+            current: valid,
+          },
+        });
       }),
     },
     {

@@ -45,6 +45,11 @@ const DefaultKeySchema = z.object({
 
 export type DefaultKey = z.infer<typeof DefaultKeySchema>;
 
+/** `silent`: ошибку показывает сам экран (по коду из тела), общий тост клиента лишний. */
+type CallOptions = { silent?: boolean };
+const quiet = (options?: CallOptions) =>
+  options?.silent ? { silentError: true } : {};
+
 export const signingIdentityApi = {
   list: () =>
     apiClient
@@ -70,6 +75,7 @@ export const signingIdentityApi = {
     label: string,
     file: File,
     passphrase?: string,
+    options?: CallOptions,
   ): Promise<z.infer<typeof SigningIdentitySchema>> => {
     const formData = new FormData();
     formData.append("label", label);
@@ -78,16 +84,22 @@ export const signingIdentityApi = {
     return apiClient
       .post("/signing-identities/import-pkcs12", formData, {
         headers: { "Content-Type": null },
+        ...quiet(options),
       })
       .then(parseResp(SigningIdentitySchema));
   },
 
-  generateOpenPgp: (data: GenerateOpenPgpKeyRequest) =>
+  generateOpenPgp: (data: GenerateOpenPgpKeyRequest, options?: CallOptions) =>
     apiClient
-      .post("/signing-identities/openpgp/generate", data)
+      .post("/signing-identities/openpgp/generate", data, quiet(options))
       .then(parseResp(SigningIdentitySchema)),
 
-  importOpenPgp: (file: File, passphrase?: string, label?: string) => {
+  importOpenPgp: (
+    file: File,
+    passphrase?: string,
+    label?: string,
+    options?: CallOptions,
+  ) => {
     const formData = new FormData();
     formData.append("file", file);
     if (passphrase) formData.append("passphrase", passphrase);
@@ -95,6 +107,7 @@ export const signingIdentityApi = {
     return apiClient
       .post("/signing-identities/openpgp/import", formData, {
         headers: { "Content-Type": null },
+        ...quiet(options),
       })
       .then(parseResp(ImportOpenPgpKeyResponseSchema));
   },

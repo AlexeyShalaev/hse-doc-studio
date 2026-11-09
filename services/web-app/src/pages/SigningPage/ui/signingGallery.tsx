@@ -1,5 +1,15 @@
 import type { ReactNode } from "react";
+import type { QueryClient } from "@tanstack/react-query";
 import type { GalleryEntry, GalleryGroup } from "@shared/lib/stateGallery";
+import {
+  signerProfileKeys,
+  type SignerProfile,
+} from "@entities/signer-profile";
+import {
+  signingIdentityKeys,
+  type SigningIdentity,
+} from "@entities/signing-identity";
+import type { InlineUiState } from "@features/signing-inline";
 import {
   SR_AUTHOR,
   SR_DOC,
@@ -17,10 +27,13 @@ import type {
 } from "@entities/signing-route";
 import type { SigningPageState } from "../model/useSigningPage";
 import { galleryPdfUrl } from "./galleryPdf";
-import { SigningView, type SigningViewProps } from "./SigningView";
+import { GalleryInlineView } from "./GalleryInlineView";
+import type { SigningViewProps } from "./SigningView";
 
 // Галерея страницы подписанта: «Заявка на тему КП», автор картинкой, научрук открепленной
 // ЭП, академрук картинкой. PDF настоящий (образец), рамки «Ваша подпись» на своих местах.
+// Блок «Как подписать» и главная кнопка настоящие (features/signing-inline): профиль
+// подписанта и ключи Студии лежат в кэше запросов записи, сервер не нужен.
 
 const ACADEMIC = "Сидоров С. С.";
 const BUILD = `build:${"3f".repeat(32)}`;
@@ -220,37 +233,205 @@ const noop = () => undefined;
 const view = (
   state: SigningPageState,
   extra: Partial<SigningViewProps> = {},
+  initial: Partial<InlineUiState> = {},
 ) => (
   <div style={{ height: 980, display: "flex", flexDirection: "column" }}>
-    <SigningView
+    <GalleryInlineView
       state={state}
       now={BEFORE_DEADLINE}
       onApprove={noop}
       onReturn={() => Promise.resolve(true)}
       onRetry={noop}
       pdfUrlOf={galleryPdfUrl}
+      initial={initial}
       {...extra}
     />
   </div>
 );
+
+// Сохранённая в профиле подпись: росчерк, как его показал бы сервер.
+const SAVED_SHA = "5a".repeat(32);
+const SAVED_SVG =
+  "<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 60'><path d='M8 44c14-30 22-32 24-8s10 6 18-10 10 22 22 14 12-26 20-8 22 6 34-6 28 4 46-2' fill='none' stroke='%230a1e78' stroke-width='2.4' stroke-linecap='round'/></svg>";
+const SAVED_PROFILE: SignerProfile = {
+  image: {
+    sha256: SAVED_SHA,
+    size: 4096,
+    width_px: 540,
+    height_px: 180,
+    updated_at: "2026-11-01T10:00:00Z",
+  },
+  public_key: null,
+};
+
+const identity = (
+  n: number,
+  label: string,
+  extra: Partial<SigningIdentity> = {},
+): SigningIdentity => ({
+  id: `00000000-0000-4000-8000-00000000000${String(n)}`,
+  label,
+  kind: "openpgp",
+  subject_cn: SR_SUPERVISOR.name,
+  not_after: "2028-11-01T10:00:00Z",
+  trusted: false,
+  created_at: "2026-11-01T10:00:00Z",
+  fingerprint: null,
+  protected: false,
+  ...extra,
+});
+
+const KEY_WORK = identity(1, "Рабочий OpenPGP", { protected: true });
+const KEY_P12 = identity(2, "Сертификат .p12", { kind: "pkcs12" });
+
+/** Что блок подписи читает с сервера: профиль подписанта и его ключи Студии. */
+const seedSigner =
+  (kit: { saved?: boolean; keys?: SigningIdentity[] } = {}) =>
+  (client: QueryClient): void => {
+    client.setQueryData(
+      signerProfileKeys.all,
+      kit.saved ? SAVED_PROFILE : { image: null, public_key: null },
+    );
+    if (kit.saved)
+      client.setQueryData([...signerProfileKeys.all, "image", SAVED_SHA], {
+        blob: new Blob([SAVED_SVG], { type: "image/svg+xml" }),
+        url: `data:image/svg+xml;utf8,${SAVED_SVG}`,
+      });
+    client.setQueryData(signingIdentityKeys.list(), kit.keys ?? []);
+  };
+
+const keyInfo = (key: SigningIdentity) => ({
+  id: key.id,
+  label: key.label,
+  kind: key.kind,
+  protected: key.protected,
+  signer: key.subject_cn,
+});
 
 const entry = (
   id: string,
   title: string,
   render: () => ReactNode,
   note?: string,
+  seed: (client: QueryClient) => void = seedSigner(),
 ): GalleryEntry => ({
   id,
   title,
   frame: "window",
   width: 1120,
   render,
+  seed,
   ...(note ? { note } : {}),
 });
 
 const RETURN_COMMENT = "Уточните цель проекта во втором абзаце.";
 
-/** Страница подписанта /sign/:projectId/:routeId (срез W4). */
+/** Научрук после фиксации: «Согласовать и подписать» открепленной ЭП. */
+const approveSignTask = (me: Partial<SigningTaskMe> = {}): SigningTask =>
+  makeSigningTask({
+    steps: [
+      [person(SR_AUTHOR.name, "author", "done", { at: SENT })],
+      [
+        person(SR_SUPERVISOR.name, "supervisor", "to_approve_sign", {
+          me: true,
+        }),
+      ],
+    ],
+    me: { ...makeSigningTask().me, ...me },
+  });
+
+/** Научрук до фиксации без данных плашки: ключ или сертификат задаётся тут же. */
+const plateMissingTask = (allowed: boolean, keys: SigningIdentity[] = []) =>
+  supervisorTurn({
+    me: supervisorMe({
+      plate: null,
+      keys: {
+        server_keys_allowed: allowed,
+        default_key: keys[0] ? keyInfo(keys[0]) : null,
+      },
+    }),
+  });
+
+/** Блок «Как подписать»: картинка, ключ, КриптоПро, готовая подпись (срез W5). */
+const inlineGroup = (): GalleryGroup => ({
+  id: "signing-inline",
+  title: "Подписант: как подписать",
+  description:
+    "Картинка (сохранённая, нарисованная, загруженная) и ЭП: ключ Студии, создание и импорт по политике сервера, КриптоПро, готовая подпись.",
+  entries: [
+    entry(
+      "signing_image_saved",
+      "Картинкой: в профиле есть сохранённая подпись",
+      () => view(ready(academicTask("to_approve"))),
+      "«Взять сохранённую» ставит её в слот одним нажатием.",
+      seedSigner({ saved: true }),
+    ),
+    entry("signing_image_draw", "Картинкой: рисует подпись", () =>
+      view(ready(academicTask("to_approve")), {}, { panel: "draw" }),
+    ),
+    entry("signing_image_ready", "Картинкой: подпись готова", () =>
+      view(
+        ready(
+          academicTask("to_approve", {
+            me: { ...academicTask("to_approve").me, image_ready: true },
+          }),
+        ),
+      ),
+    ),
+    entry(
+      "signing_plate_missing_keys",
+      "ЭП: нет данных плашки, ключи на сервере разрешены",
+      () => view(ready(plateMissingTask(true, [KEY_WORK]))),
+      "Ключ Студии, новый ключ OpenPGP, импорт, сертификат КриптоПро или файл.",
+      seedSigner({ keys: [KEY_WORK] }),
+    ),
+    entry(
+      "signing_plate_missing_forbidden",
+      "ЭП: нет данных плашки, ключи на сервере запрещены",
+      () => view(ready(plateMissingTask(false))),
+      "Создать и импортировать ключ не предлагаем: объясняем и оставляем КриптоПро и файл.",
+    ),
+    entry(
+      "signing_key_create",
+      "ЭП: ключа ещё нет, форма нового ключа OpenPGP",
+      () =>
+        view(
+          ready(
+            approveSignTask({
+              keys: { server_keys_allowed: true, default_key: null },
+            }),
+          ),
+          {},
+          { panel: "key-create" },
+        ),
+    ),
+    entry(
+      "signing_sign_keys",
+      "Согласовать и подписать: выбор из ключей Студии",
+      () =>
+        view(
+          ready(
+            approveSignTask({
+              keys: {
+                server_keys_allowed: true,
+                default_key: keyInfo(KEY_WORK),
+              },
+            }),
+          ),
+        ),
+      "У ключа с паролем кнопка спросит пароль.",
+      seedSigner({ keys: [KEY_WORK, KEY_P12] }),
+    ),
+    entry(
+      "signing_sign_file",
+      "Согласовать и подписать: готовая подпись",
+      () => view(ready(approveSignTask()), {}, { way: "file" }),
+      "Скачать итоговый PDF, подписать у себя, загрузить .asc, .sig или .p7s.",
+    ),
+  ],
+});
+
+/** Страница подписанта /sign/:projectId/:routeId (срезы W4 и W5). */
 export const getSigningPageGallery = (): GalleryGroup[] => [
   {
     id: "signing-turn",
@@ -267,30 +448,13 @@ export const getSigningPageGallery = (): GalleryGroup[] => [
         "signing_turn_image_missing",
         "Согласовать картинкой: картинки ещё нет",
         () => view(ready(academicTask("to_approve"))),
-        "Кнопка ждёт картинку; место блока загрузки (срез W5) отмечено заглушкой.",
+        "Нарисовать или загрузить тут же; способ можно сменить на ЭП.",
       ),
       entry(
         "signing_turn_approve_sign",
         "Согласовать и подписать (документы зафиксированы)",
-        () =>
-          view(
-            ready(
-              makeSigningTask({
-                steps: [
-                  [person(SR_AUTHOR.name, "author", "done", { at: SENT })],
-                  [
-                    person(
-                      SR_SUPERVISOR.name,
-                      "supervisor",
-                      "to_approve_sign",
-                      { me: true },
-                    ),
-                  ],
-                ],
-              }),
-            ),
-          ),
-        "Главная кнопка и блок ЭП появятся в срезе W5.",
+        () => view(ready(approveSignTask())),
+        "Ключи на сервере запрещены: КриптоПро в браузере или готовая подпись.",
       ),
       entry("signing_turn_sign", "Подписать итоговый PDF", () =>
         view(
@@ -315,6 +479,10 @@ export const getSigningPageGallery = (): GalleryGroup[] => [
                 state: "to_sign",
                 next_action: "sign",
                 methods: ["detached"],
+                keys: {
+                  server_keys_allowed: true,
+                  default_key: keyInfo(KEY_WORK),
+                },
               }),
               docs: [
                 doc({
@@ -395,6 +563,7 @@ export const getSigningPageGallery = (): GalleryGroup[] => [
       ),
     ],
   },
+  inlineGroup(),
   {
     id: "signing-wait",
     title: "Подписант: ждёт или уже сделал",

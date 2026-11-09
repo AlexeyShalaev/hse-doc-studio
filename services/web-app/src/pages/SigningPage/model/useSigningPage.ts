@@ -1,10 +1,12 @@
 import { useState } from "react";
-import { ApiError, failureCode } from "@shared/api";
+import { ApiError } from "@shared/api";
 import {
+  signingFailureOf,
   useApproveSigningTask,
   useReturnSigningTask,
   useSignSigningTask,
   useSigningTask,
+  type SigningFailure,
   type SigningKeyRequest,
   type SigningTask,
 } from "@entities/signing-route";
@@ -18,20 +20,6 @@ export type SigningPageState =
   | { kind: "error" }
   | { kind: "ready"; task: SigningTask };
 
-/** Коды отказов действий, у которых на странице свой текст; остальное `unknown`. */
-const KNOWN_FAILURES = new Set([
-  "doc_changed",
-  "not_your_turn",
-  "image_required",
-  "plate_required",
-  "network",
-]);
-
-const failureOf = (error: unknown): string => {
-  const code = failureCode(error);
-  return KNOWN_FAILURES.has(code) ? code : "unknown";
-};
-
 /**
  * Данные и действия страницы подписанта. Ответ действия сразу ложится в кэш задачи
  * (хуки сущности), отказ перечитывает её: после 409 страница уже показывает новую версию.
@@ -41,7 +29,7 @@ export const useSigningPage = (projectId: string, routeId: string) => {
   const approveTask = useApproveSigningTask(projectId, routeId);
   const signTask = useSignSigningTask(projectId, routeId);
   const returnTask = useReturnSigningTask(projectId, routeId);
-  const [failure, setFailure] = useState<string | null>(null);
+  const [failure, setFailure] = useState<SigningFailure | null>(null);
 
   // Фоновое перечитывание с ошибкой не прячет уже показанную задачу.
   const state: SigningPageState = task.data
@@ -56,32 +44,37 @@ export const useSigningPage = (projectId: string, routeId: string) => {
     approveTask.isPending || signTask.isPending || returnTask.isPending;
   const expected = task.data ? expectedTokens(task.data) : {};
 
-  const approve = (options: ApproveOptions = {}) => {
+  const approve = async (
+    options: ApproveOptions = {},
+  ): Promise<SigningTask | null> => {
     setFailure(null);
-    approveTask.mutate(
-      {
-        expected,
+    try {
+      return await approveTask.mutateAsync({
+        expected: options.expected ?? expected,
         method: options.method ?? null,
         sign: options.sign ?? null,
-      },
-      {
-        onError: (error) => {
-          setFailure(failureOf(error));
-        },
-      },
-    );
+      });
+    } catch (error) {
+      setFailure(signingFailureOf(error));
+      return null;
+    }
   };
 
-  const sign = (key: SigningKeyRequest) => {
+  const sign = async (
+    key: SigningKeyRequest,
+    fresh?: Record<string, string>,
+  ): Promise<SigningTask | null> => {
     setFailure(null);
-    signTask.mutate(
-      { expected, identity_id: key.identity_id, passphrase: key.passphrase },
-      {
-        onError: (error) => {
-          setFailure(failureOf(error));
-        },
-      },
-    );
+    try {
+      return await signTask.mutateAsync({
+        expected: fresh ?? expected,
+        identity_id: key.identity_id,
+        passphrase: key.passphrase,
+      });
+    } catch (error) {
+      setFailure(signingFailureOf(error));
+      return null;
+    }
   };
 
   /** Вернуть на доработку; true, если сервер принял (окно закрывается). */
@@ -91,7 +84,7 @@ export const useSigningPage = (projectId: string, routeId: string) => {
       await returnTask.mutateAsync(comment.trim());
       return true;
     } catch (error) {
-      setFailure(failureOf(error));
+      setFailure(signingFailureOf(error));
       return false;
     }
   };
@@ -101,6 +94,7 @@ export const useSigningPage = (projectId: string, routeId: string) => {
     routeId,
     task: ready,
     busy,
+    failure: failure?.code ?? null,
     expected,
     approve,
     sign,
@@ -110,7 +104,8 @@ export const useSigningPage = (projectId: string, routeId: string) => {
     state,
     busy,
     approving: approveTask.isPending,
-    failure,
+    failure: failure?.code ?? null,
+    failureDetail: failure?.detail ?? null,
     dismissFailure: () => {
       setFailure(null);
     },

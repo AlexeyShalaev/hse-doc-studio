@@ -117,7 +117,90 @@
       "openpgp": "OpenPGP",
       "manual": "manual"
     },
-    "soon": "Signing right on this page is coming in the next update."
+    "choose": "Signing method",
+    "pick": {
+      "image": "Image",
+      "detached": "Detached e-signature",
+      "pades": "E-signature in the PDF"
+    }
+  },
+  "image": {
+    "ready": "Your signature image is ready. It appears in the document once you approve.",
+    "missing": "A signature image is needed.",
+    "saved": "Saved signature",
+    "useSaved": "Use the saved one",
+    "draw": "Draw",
+    "upload": "Upload",
+    "replace": "Replace:",
+    "remember": "Remember for other projects",
+    "drawHint": "Sign with your finger or mouse.",
+    "clear": "Clear",
+    "done": "Done",
+    "cancel": "Cancel",
+    "editorTitle": "Your signature"
+  },
+  "esign": {
+    "plateMissing": "The signature plate needs a key or certificate.",
+    "plateChange": "Another key or certificate",
+    "plateFromKey": "Use the key “{{label}}”",
+    "plateCryptoPro": "Certificate from CryptoPro",
+    "plateFile": "Certificate or public key file",
+    "noServerKeys": "This server does not store private keys, so you cannot create or import a key here. Sign with CryptoPro or upload a ready signature.",
+    "noServerKeysPlate": "This server does not store private keys, so you cannot create or import a key here. For the plate, use a CryptoPro certificate or a public key file.",
+    "padesNoKeys": "An e-signature in the PDF needs a Studio key, and this server does not store private keys. Pick another method or return the documents to the author.",
+    "ways": "Sign with",
+    "way": {
+      "studio": "Studio key",
+      "cryptopro": "CryptoPro in the browser",
+      "file": "Ready signature"
+    },
+    "wayHint": {
+      "studio": "The server signs. It does not store the key password.",
+      "cryptopro": "The key stays on the token. You pick the certificate next.",
+      "file": "An .asc, .sig or .p7s file made on your side."
+    },
+    "noKey": "No Studio key yet.",
+    "key": "Key: {{label}}",
+    "keySelect": "Key",
+    "keyProtected": "password-protected",
+    "otherKey": "Another key",
+    "create": "Create an OpenPGP key",
+    "import": "Import a key",
+    "fileAfterFreeze": "The final PDF appears after you approve. You sign it in the next step.",
+    "fileHint": "Download the PDF, sign it on your side and upload the signature file.",
+    "download": "Download PDF",
+    "pick": "Choose signature",
+    "nudge": {
+      "way": "Choose how to sign.",
+      "files": "Upload a signature file for every document."
+    }
+  },
+  "key": {
+    "name": "Name on the plate",
+    "email": "Email (optional)",
+    "passphrase": "Key password (optional)",
+    "passphraseHint": "Studio does not store the password: it is asked when you sign.",
+    "file": "OpenPGP (.asc, .gpg) or .p12, .pfx",
+    "filePass": "File password, if any",
+    "choose": "Choose file",
+    "create": "Create",
+    "import": "Import",
+    "cancel": "Cancel"
+  },
+  "passphrase": {
+    "title": "Key password",
+    "lead": "The key “{{label}}” is password-protected. Studio does not store the password.",
+    "label": "Password",
+    "cancel": "Cancel"
+  },
+  "cryptopro": {
+    "title": "CryptoPro",
+    "loading": "Connecting to the CryptoPro Browser plug-in…",
+    "pick": "Pick a certificate. The private key stays on the token, CryptoPro asks for the PIN.",
+    "usePlate": "Use certificate",
+    "signing": "Sign on the token: CryptoPro may ask for the PIN.",
+    "retry": "Retry",
+    "cancel": "Cancel"
   },
   "actions": {
     "approve": "Approve",
@@ -126,7 +209,10 @@
     "blocked": {
       "image": "Add your signature image first.",
       "plate": "Set a key or certificate for the signature plate first."
-    }
+    },
+    "approveAndSign": "Approve and sign",
+    "sign": "Sign",
+    "working": "Sending…"
   },
   "failure": {
     "doc_changed": "The document changed while this page was open. Review the new version and try again.",
@@ -135,6 +221,18 @@
     "plate_required": "Set a key or certificate for the signature plate first.",
     "network": "The server is unreachable. Check your connection and try again.",
     "unknown": "Something went wrong. Try again later.",
+    "method_not_allowed": "This signing method is not allowed for the checkpoint. Pick another one.",
+    "passphrase_required": "Enter the key password.",
+    "passphrase_invalid": "The key password is wrong.",
+    "sign_failed": "Signing failed. Check the key and the password.",
+    "key_not_found": "The key was not found. Pick another one.",
+    "server_keys_forbidden": "This server does not store private keys. Sign with CryptoPro or upload a ready signature.",
+    "route_locked": "The document is on a signing route: signatures change only in turn.",
+    "not_found": "The route is closed or you are no longer part of it. Refresh the page.",
+    "signature_invalid": "The signature does not match the final PDF. Sign the downloaded file unchanged.",
+    "no_secret_key": "The file has no private key. A public key only works for the plate.",
+    "cryptopro": "CryptoPro returned an error: {{detail}}",
+    "unknownDetail": "Something went wrong: {{detail}}",
     "dismiss": "Dismiss"
   },
   "return": {
