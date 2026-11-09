@@ -1,6 +1,48 @@
 {
   "releases": [
     {
+      "version": "0.17.0",
+      "date": "2026-11-09",
+      "notes": [
+        {
+          "ru": "Подписи по плану: у документа есть план подписей (кто, где и каким способом подписывает), а точка сдачи считает готовность по нему. Можно смешивать способы в одном документе: картинка подписи, картинка с ЭП, невидимая ЭП, открепленная подпись. Кнопка «Подписать комплект» подписывает все ваши слоты в документах точки сдачи за один шаг, PAdES ставится поверх зафиксированного PDF, права на слоты проверяются.",
+          "en": "Signatures by plan: a document has a signature plan (who signs, where and how), and the submission point counts readiness from it. Methods can be mixed in one document: a signature image, an image with a digital signature, an invisible digital signature, a detached signature. Sign bundle signs all your slots in the submission point documents in one step, PAdES is applied over the frozen PDF, and slot permissions are checked."
+        },
+        {
+          "ru": "Комплект для LMS собирается по плану подписей. В MCP добавлены get_signature_plan и sign_submission: подписание через MCP требует отдельного права «подписание» у токена, ключ с паролем через MCP не используется, пароли и ключи в ответ не попадают.",
+          "en": "The LMS bundle is built from the signature plan. MCP gains get_signature_plan and sign_submission: signing over MCP needs a separate sign permission on the token, a password-protected key is not used over MCP, and passwords and keys never appear in responses."
+        },
+        {
+          "ru": "MCP расширен: обновление шаблона (статус, план, применение), выбор варианта документа, поля проекта и их сброс, правка одного автора, почты автора и научного руководителя, участники проекта, приглашение по почте и отзыв доступа, git_sync как кнопка синхронизации с итогом и списком конфликтов. Все изменения идут через те же права и журнал аудита, что и интерфейс. compile_document и clone_cloud_project ждут результат до 45 с, чтобы не упираться в таймаут клиента.",
+          "en": "MCP is extended: template update (status, plan, apply), document variant selection, project fields and clearing them, editing one author, the author e-mail and the academic supervisor, project members, invitations by e-mail and access revocation, and git_sync as the sync button with a summary and a list of conflicts. All changes go through the same permissions and audit log as the web interface. compile_document and clone_cloud_project wait up to 45 s so they stay within the client timeout."
+        },
+        {
+          "ru": "Приглашение руководителя или соавтора открывается с готовым текстом письма, собранным из данных проекта: имя, тема работы, роль. Текст можно поправить перед отправкой.",
+          "en": "Inviting a supervisor or co-author opens with a ready message built from the project data: name, topic, role. The text can be edited before sending."
+        },
+        {
+          "ru": "Очередь сборок: документы, которые не может взять ни один раннер, не ставятся в очередь при «Собрать все» и перечисляются отдельно, а занятые раннеры отличаются от отсутствующих. В админке задачи одного «Собрать все» сгруппированы в одну строку, которую можно отменить целиком.",
+          "en": "Build queue: documents that no runner can take are not queued by Build all and are listed separately, and busy runners are told apart from missing ones. In the admin queue, the jobs of one Build all are grouped into one row that can be cancelled as a whole."
+        },
+        {
+          "ru": "Облачная сборка переживает перезапуск api: задачи не теряются при выкатке, остановка сервера мягкая, а сборка, прерванная перезапуском, показывается как «прервана», а не висит. Окно недоступности api при выкатке стало короче.",
+          "en": "Cloud builds survive an api restart: jobs are not lost during a rollout, the server stops gracefully, and a build interrupted by a restart is shown as interrupted instead of hanging. The api downtime window during a rollout is shorter."
+        },
+        {
+          "ru": "Раннеры из админки: свой namespace для подов сборки (runner.installFromUi.buildNamespace), встроенный Gotenberg для офисных задач (pptx, docx) и передача его адреса раннерам, офисные задачи на экране изоляции. Удаление установки отзывает раннер, неудачное обновление откатывается на прежнюю версию, и админка показывает, вернулся ли раннер на связь.",
+          "en": "Admin-installed runners: a separate namespace for build pods (runner.installFromUi.buildNamespace), a built-in Gotenberg for office jobs (pptx, docx) with its address passed to runners, and office jobs on the isolation screen. Removing an install revokes the runner, a failed update rolls back to the previous version, and the admin area shows whether the runner came back online."
+        },
+        {
+          "ru": "Шаблоны: Студия знает опись вшитых паков и распознаёт подключенный каталог шаблонов. Если каталог отстал, сообщение называет именно его, а не советует обновить Студию, и обновление предупреждает об этом. Привязка паков dev-сборки больше не переносится на опубликованный образ.",
+          "en": "Templates: the Studio knows the inventory of built-in packs and recognises a mounted template catalog. If the catalog is behind, the message names it instead of suggesting a Studio update, and updating warns about it. The pack binding of a dev build is no longer carried over to the published image."
+        },
+        {
+          "ru": "Исправления: плейсхолдеры в выключенных ветках редакции (\\if) больше не считаются в проверках; меню «⋯» и подсказки на десктопе снова нажимаются поверх окна настроек.",
+          "en": "Fixes: placeholders in disabled edition branches (\\if) no longer count in checks; the ⋯ menu and tooltips on desktop are clickable again over the settings dialog."
+        }
+      ]
+    },
+    {
       "version": "0.16.0",
       "date": "2026-11-08",
       "notes": [
