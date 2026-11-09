@@ -113,6 +113,7 @@ from hse_doc_studio.core.signatures.ports import (
     ISignerScope,
     ITrustMaterialProvider,
 )
+from hse_doc_studio.core.signing_route.ports import IRouteWatch, ISigningRouteGate
 from hse_doc_studio.core.submission_archive import ISubmissionArchive, ISubmissionAudit
 from hse_doc_studio.core.system_capacity import ISystemCapacityProbe
 from hse_doc_studio.core.template_materializer import ITemplateMaterializer
@@ -1094,8 +1095,9 @@ class UseCaseProvider(Provider):
         vcs_service: IVcsService,
         changelog_repo: IChangeLogRepository,
         vcs_locks: IVcsFolderLocks,
+        route_watch: IRouteWatch,
     ) -> RestoreVcsUC:
-        return RestoreVcsUC(project_repo, project_index_repo, vcs_service, changelog_repo, vcs_locks)
+        return RestoreVcsUC(project_repo, project_index_repo, vcs_service, changelog_repo, vcs_locks, route_watch)
 
     # ------------------------------------------------------------------ Git-синхронизация: сборка в CI
 
@@ -1828,6 +1830,7 @@ class UseCaseProvider(Provider):
         policy: GitSyncPolicy,
         book: FetchBook,
         providers: ProviderResolver,
+        route_watch: IRouteWatch,
     ) -> SyncProjectUC:
         return SyncProjectUC(
             get_project=GetProjectUC(project_repo, project_index_repo),
@@ -1842,6 +1845,7 @@ class UseCaseProvider(Provider):
             policy=policy,
             fetch_book=book,
             providers=providers,
+            route_watch=route_watch,
         )
 
     @provide
@@ -3192,6 +3196,7 @@ class UseCaseProvider(Provider):
         freeze_uc: FreezePdfUC,
         default_key: DefaultSigningKey,
         access: IProjectAccessChecker,
+        routes: ISigningRouteGate,
     ) -> SignSubmissionUC:
         return SignSubmissionUC(
             project_repo,
@@ -3206,6 +3211,7 @@ class UseCaseProvider(Provider):
             ),
             default_key,
             access,
+            routes,
         )
 
     @provide

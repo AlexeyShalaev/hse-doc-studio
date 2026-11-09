@@ -1,4 +1,5 @@
-"""Фоновые задачи маршрутов подписания: автонапоминания подписантам (docs/design/signing-route.md, 5.7)."""
+"""Фоновые задачи маршрутов подписания (docs/design/signing-route.md): автонапоминания подписантам (5.7) и
+периодическая сверка маршрутов с проектами (5.5)."""
 
 from __future__ import annotations
 
@@ -16,6 +17,7 @@ if TYPE_CHECKING:
 logger = structlog.get_logger()
 
 SIGNING_REMINDERS_TASK = "signing_reminders"
+SIGNING_ROUTE_SWEEP_TASK = "signing_route_sweep"
 
 
 def install_signing_reminders(app: FastAPI, container: AsyncContainer, cfg: Settings) -> None:
@@ -33,4 +35,24 @@ def install_signing_reminders(app: FastAPI, container: AsyncContainer, cfg: Sett
 
     app.state.background.register(
         PeriodicTask(name=SIGNING_REMINDERS_TASK, interval_s=cfg.signing_route.reminder_interval_s, run=_remind)
+    )
+
+
+def install_signing_route_sweep(app: FastAPI, container: AsyncContainer, cfg: Settings) -> None:
+    """Сверка идущих и завершённых маршрутов с документами проектов; идёт только у лидера.
+
+    Страховка для хуков (сборка, запись подписей, синхронизация, восстановление, уход участника): пропущенный хук,
+    гибрид с локальной Студией, рестарт между записью файлов и транзакцией. Сверка идемпотентна: маршрут, у
+    которого ничего не изменилось, не переписывается, поэтому перезапуск и смена лидера ничего не повторяют.
+    """
+    from hse_doc_studio.use_cases.signing_route.reconcile import RouteReconciler  # noqa: PLC0415
+
+    async def _sweep() -> None:
+        async with container() as scope:
+            changed = await (await scope.get(RouteReconciler)).sweep()
+        if changed:
+            logger.info("signing_routes_reconciled", count=changed)
+
+    app.state.background.register(
+        PeriodicTask(name=SIGNING_ROUTE_SWEEP_TASK, interval_s=cfg.signing_route.sweep_interval_s, run=_sweep)
     )

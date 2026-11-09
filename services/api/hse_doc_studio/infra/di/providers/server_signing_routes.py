@@ -1,5 +1,5 @@
 """Провайдер маршрутов подписания (серверный режим): хранилище в Postgres, факты, уведомления, задачи «На подпись»,
-люди проекта, сценарии автора и подписанта.
+люди проекта, сценарии автора и подписанта, сторожа и сверка с проектом.
 
 Локальная Студия маршрутов не хранит (docs/design/signing-route.md, раздел 6.9): порта там нет, сценарии маршрута
 подключаются только в `MODE=server`.
@@ -8,15 +8,18 @@
 from __future__ import annotations
 
 from datetime import timedelta
+from uuid import UUID
 
-from dishka import Provider, Scope, provide
+from dishka import AsyncContainer, Provider, Scope, provide
 
 from hse_doc_studio.api.config import settings
 from hse_doc_studio.core.access.checker import IProjectAccessChecker
 from hse_doc_studio.core.access.repositories import IProjectAclRepository
+from hse_doc_studio.core.git_remote.pdf_observer import IBuiltPdfObserver
 from hse_doc_studio.core.identity.protocols import IUserRepository
 from hse_doc_studio.core.invitations.protocols import IInvitationAcceptedHook, INotificationMailer, INotifier
 from hse_doc_studio.core.jobs.protocols import IJobDispatcher
+from hse_doc_studio.core.projects.volume import IProjectVolume
 from hse_doc_studio.core.repositories import (
     IProjectIndexRepository,
     IProjectRepository,
@@ -40,6 +43,7 @@ from hse_doc_studio.core.signing_route.ports import (
     IRouteFacts,
     IRouteLabels,
     IRoutePeople,
+    IRouteWatch,
     ISigningNotifier,
     ISigningRouteGate,
     ISigningTaskCounter,
@@ -50,6 +54,7 @@ from hse_doc_studio.core.uow import IUnitOfWork
 from hse_doc_studio.infra.db.repositories.signing_route_people import PostgresRoutePeople
 from hse_doc_studio.infra.db.repositories.signing_routes import SqlSigningRouteRepository
 from hse_doc_studio.infra.db.session import SessionProvider
+from hse_doc_studio.infra.persistence.signature import JsonSignatureRepository
 from hse_doc_studio.infra.signatures.openpgp import GpgKeyring
 from hse_doc_studio.infra.signatures.pdf_stamper import PdfStamper
 from hse_doc_studio.use_cases.projects.get_project import GetProjectUC
@@ -71,10 +76,12 @@ from hse_doc_studio.use_cases.signing_route.gate import SigningRouteGate
 from hse_doc_studio.use_cases.signing_route.invitations import SigningRouteInviteeHook
 from hse_doc_studio.use_cases.signing_route.key_signer import RouteKeySigner
 from hse_doc_studio.use_cases.signing_route.point import RoutePointLoader
+from hse_doc_studio.use_cases.signing_route.reconcile import RouteReconciler
 from hse_doc_studio.use_cases.signing_route.reminders import SigningReminderSweeper, SigningRouteReminding
 from hse_doc_studio.use_cases.signing_route.scenario import RouteServices
 from hse_doc_studio.use_cases.signing_route.signer import SignerTools, SigningTaskScenario
 from hse_doc_studio.use_cases.signing_route.tasks import ListSigningTasksUC
+from hse_doc_studio.use_cases.signing_route.watch import RouteWatch, WatchedSignatureRepository
 
 
 class ServerSigningRoutesProvider(Provider):
@@ -271,3 +278,33 @@ class ServerSigningRoutesProvider(Provider):
     def get_signing_route_gate(self, services: RouteServices) -> ISigningRouteGate:
         # Перекрывает локальный `NoSigningRoutes`: КриптоПро и готовая подпись идут в очередь маршрута (6.10).
         return SigningRouteGate(services)
+
+    # --- сторожа и сверка с проектом (срез R7) ---
+
+    @provide(scope=Scope.REQUEST)
+    def get_route_reconciler(self, services: RouteServices) -> RouteReconciler:
+        return RouteReconciler(services)
+
+    @provide
+    def get_route_watch_scheduler(self, container: AsyncContainer) -> RouteWatch:
+        """Очередь сверок: по задаче на проект, каждая в своём запросном окружении и своей транзакции."""
+
+        async def reconcile(project_id: UUID) -> None:
+            async with container() as scope:
+                await (await scope.get(RouteReconciler)).project(project_id)
+
+        return RouteWatch(reconcile)
+
+    @provide(override=True)
+    def get_route_watch(self, watch: RouteWatch) -> IRouteWatch:
+        return watch
+
+    @provide(override=True)
+    def get_built_pdf_observer(self, watch: RouteWatch) -> IBuiltPdfObserver:
+        # Хук успешной сборки: другой PDF документа маршрута останавливает маршрут (раздел 5.5).
+        return watch
+
+    @provide(override=True)
+    def get_signature_repo(self, volume: IProjectVolume, watch: IRouteWatch) -> ISignatureRepository:
+        # Хук записи состояния подписей: кто бы ни записал `signatures.json`, маршруты проекта сверяются.
+        return WatchedSignatureRepository(JsonSignatureRepository(), volume.id_of, watch)

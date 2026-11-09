@@ -11,6 +11,7 @@ from hse_doc_studio.core.git_sync.protocols import IGitOperationRegistry, ISecre
 from hse_doc_studio.core.identity.protocols import IActorResolver, IApiTokenRepository, IAuditLog
 from hse_doc_studio.core.projects.browse import IProjectBrowser
 from hse_doc_studio.core.repositories import IProjectIndexRepository, IProjectRepository
+from hse_doc_studio.core.signing_route.ports import IRouteWatch
 from hse_doc_studio.core.uow import IUnitOfWork
 from hse_doc_studio.core.vcs.protocols import IVcsFolderLocks, IVcsService
 from hse_doc_studio.infra.db.repositories.device_authorizations import SqlDeviceAuthorizationRepository
@@ -80,10 +81,11 @@ class ServerGitRemoteProvider(Provider):
         runtime: IPushRuntime,
         reconciler: IExternalChangeReconciler,
         audit: IAuditLog,
+        route_watch: IRouteWatch,
     ) -> ReceivePushUC:
         cfg = settings.git_remote
         limits = PushLimits(max_push_bytes=cfg.max_push_bytes, lock_wait_s=cfg.lock_wait_s)
-        return ReceivePushUC(project_access, operations, locks, vcs, runtime, reconciler, audit, limits)
+        return ReceivePushUC(project_access, operations, locks, vcs, runtime, reconciler, audit, limits, route_watch)
 
     @provide(scope=Scope.REQUEST)
     def get_list_git_projects(self, browser: IProjectBrowser, acl: IProjectAclRepository) -> ListGitProjectsUC:
