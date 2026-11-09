@@ -195,3 +195,24 @@ def test_import_public_key__secret_block_under_a_public_header__refused_and_keyr
 
     ring.import_public_key(public)
     assert [k.has_secret for k in ring.list_keys()] == [False]
+
+
+def test_import_key__protected_secret_with_passphrase__key_on_stdin_passphrase_through_a_pipe(
+    ring: GpgKeyring, doc: Path, tmp_path: Path
+) -> None:
+    src_home = Path("/tmp") / f"hds-gpg-pw-{tmp_path.name}"
+    src = GpgKeyring(src_home)
+    try:
+        key = src.generate("Пароль", "pw@example.org", passphrase="s3cret")
+        secret = src._run(["--armor", "--export-secret-keys", key.fingerprint], passphrase="s3cret").stdout
+    finally:
+        src.stop_agent()
+        shutil.rmtree(src_home, ignore_errors=True)
+
+    [imported] = ring.import_key(secret, "s3cret")
+
+    assert imported.has_secret
+    assert ring.is_protected(imported.fingerprint)
+    sig = tmp_path / "doc.asc"
+    ring.sign_detached(doc, imported.fingerprint, sig, passphrase="s3cret")
+    assert ring.verify_detached(sig, doc).status == "good"
