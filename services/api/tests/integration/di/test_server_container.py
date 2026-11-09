@@ -539,3 +539,32 @@ async def test__server_container__resolves_model_servers_uc_and_registry(monkeyp
 
     assert isinstance(uc, ModelServersUC)
     assert hasattr(registry, "register")
+
+
+async def test__server_container__resolves_postgres_signing_route_repository() -> None:
+    from hse_doc_studio.core.signing_route.repositories import ISigningRouteRepository
+    from hse_doc_studio.infra.db.repositories.signing_routes import SqlSigningRouteRepository
+    from sqlalchemy.ext.asyncio import create_async_engine
+
+    engine = create_async_engine("postgresql+asyncpg://u:p@127.0.0.1:1/none")
+    container = create_container(StudioMode.server, engine=engine)
+    try:
+        repo = await container.get(ISigningRouteRepository)
+        again = await container.get(ISigningRouteRepository)
+    finally:
+        await container.close()
+        await engine.dispose()
+
+    assert isinstance(repo, SqlSigningRouteRepository)
+    assert repo is again
+
+
+async def test__local_container__has_no_signing_route_repository() -> None:
+    from hse_doc_studio.core.signing_route.repositories import ISigningRouteRepository
+
+    container = create_container(StudioMode.local)
+    try:
+        with pytest.raises(NoFactoryError):
+            await container.get(ISigningRouteRepository)
+    finally:
+        await container.close()
