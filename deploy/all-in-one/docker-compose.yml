@@ -40,6 +40,10 @@ services:
       # Как облако называет этот компьютер в списке подключённых Студий (пусто: имя Студии по умолчанию).
       HSE_STUDIO__DEVICE_NAME: "${DEVICE_NAME:-}"
       HSE_STUDIO__DEVICE_OS: "${DEVICE_OS:-}"
+      # Папка на хосте со шрифтами для документов (Times New Roman, Arial и т.д.).
+      # Пусто: перебор стандартных каталогов ОС. На macOS с Docker Desktop он не
+      # работает (/System не отдаётся контейнерам), см. HOST_FONTS_DIR в .env.example.
+      HSE_STUDIO__FONTS__HOST_DIR: "${HOST_FONTS_DIR:-}"
     volumes:
       - ${DATA_DIR:-./data}:/data
       # Lets the backend spawn a sibling "updater" container for one-click

@@ -14,6 +14,13 @@
 Какая это ОС, приложение не спрашивает ни у кого: оно перебирает известные
 каталоги и берёт первый, который смонтировался и оказался непустым. Ответ
 кэшируется на процесс — переустановка Windows посреди сеанса не предполагается.
+
+На macOS этот перебор с Docker Desktop не срабатывает: в его File Sharing по
+умолчанию только /Users, /Volumes, /private, /tmp и /var/folders, а монтировать
+/System демон отказывается («mounts denied»). Поэтому установщик на Mac копирует
+нужные семейства в папку под домашним каталогом и передаёт её в
+`HSE_STUDIO__FONTS__HOST_DIR`. Если же каталог всё-таки не дали, провайдер
+запоминает это и сообщает причину (`unavailable_reason`), а не молчит.
 """
 
 from __future__ import annotations
@@ -24,7 +31,7 @@ from pathlib import PurePosixPath
 
 import structlog
 
-from hse_doc_studio.core.fonts.entities import SystemFontFile
+from hse_doc_studio.core.fonts.entities import HostFontsUnavailable, SystemFontFile
 from hse_doc_studio.infra.docker.cli import run_docker
 from hse_doc_studio.infra.runtime.environment import self_container_ref
 
@@ -49,6 +56,23 @@ HOST_FONT_DIRS: tuple[str, ...] = (
 )
 
 
+# Как демон отвечает на бинд каталога, который ему не разрешено отдавать
+# контейнерам. Docker Desktop (macOS, Windows) пишет «mounts denied ... is not
+# shared from the host and is not known to Docker», Colima и Rancher Desktop при
+# несмонтированном в ВМ пути ругаются похоже.
+_NOT_SHARED_MARKERS: tuple[str, ...] = (
+    "mounts denied",
+    "is not shared from the host",
+    "not known to docker",
+)
+
+
+def is_mount_denied(stderr: str) -> bool:
+    """Отказ демона в бинде каталога, а не просто пустой или битый каталог."""
+    lowered = stderr.lower()
+    return any(marker in lowered for marker in _NOT_SHARED_MARKERS)
+
+
 class DockerHostFontProvider:
     """`ISystemFontProvider` поверх docker-сокета — для запуска в контейнере."""
 
@@ -61,6 +85,9 @@ class DockerHostFontProvider:
         self._root: str | None = None
         self._root_resolved = False
         self._cache: list[SystemFontFile] | None = None
+        # Каталоги, бинд которых демон отклонил: по ним и видно, что шрифты есть,
+        # но докер их не отдаёт.
+        self._denied: list[str] = []
 
     async def host_font_dir(self) -> str | None:
         """Каталог шрифтов этой машины; None — ни один не подошёл."""
@@ -74,8 +101,29 @@ class DockerHostFontProvider:
                 self._cache = fonts
                 logger.info("host fonts found", directory=candidate, count=len(fonts))
                 return candidate
-        logger.info("host fonts not found in any known directory")
+        if self._denied:
+            logger.warning(
+                "host fonts not shared with docker",
+                directories=self._denied,
+                hint=(
+                    "Docker Desktop refuses to mount these folders into containers. On macOS run the "
+                    "installer again (it copies Times New Roman, Arial and Courier New into a shared "
+                    "folder), set HSE_STUDIO__FONTS__HOST_DIR to a folder under your home with the "
+                    "fonts, or upload them in Settings -> Fonts. Until then documents use free "
+                    "substitutes."
+                ),
+            )
+        else:
+            logger.warning(
+                "host fonts not found in any known directory",
+                hint="Documents use free substitutes; upload the fonts in Settings -> Fonts.",
+            )
         return None
+
+    async def unavailable_reason(self) -> HostFontsUnavailable | None:
+        if await self.host_font_dir() is not None:
+            return None
+        return "not_shared" if self._denied else "not_found"
 
     async def source_dir(self) -> str | None:
         return await self.host_font_dir()
@@ -115,8 +163,10 @@ class DockerHostFontProvider:
         return str(PurePosixPath(normalised[len(prefix) :]))
 
     async def _scan(self, root: str) -> list[SystemFontFile]:
-        rc, out, _err = await self._run(root, ["scan", _MOUNT_POINT], _SCAN_TIMEOUT_S)
+        rc, out, err = await self._run(root, ["scan", _MOUNT_POINT], _SCAN_TIMEOUT_S)
         if rc != 0:
+            if is_mount_denied(err) and root not in self._denied:
+                self._denied.append(root)
             return []
         try:
             payload = json.loads(out or "[]")

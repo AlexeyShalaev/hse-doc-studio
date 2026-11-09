@@ -1,6 +1,14 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import Literal
+
+# Почему шрифтов машины пользователя не видно. `not_shared`: докер отказал в
+# монтировании каталога шрифтов. Так ведёт себя Docker Desktop на macOS: в его
+# File Sharing по умолчанию только /Users, /Volumes, /private, /tmp и
+# /var/folders, а Arial и Times New Roman лежат в /System/Library/Fonts/Supplemental.
+# `not_found`: каталоги смонтировались, но шрифтов в них нет.
+HostFontsUnavailable = Literal["not_shared", "not_found"]
 
 
 @dataclass(frozen=True)

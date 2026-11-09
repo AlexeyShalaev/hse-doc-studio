@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+from hse_doc_studio.core.fonts.entities import HostFontsUnavailable
 from hse_doc_studio.core.fonts.repositories import IFontStore, ISystemFontProvider
 
 
@@ -19,6 +20,9 @@ class ListSystemFontsOutput:
     # runs in a container without the host fonts mounted) — the UI hides the picker.
     available: bool
     fonts: list[SystemFontView]
+    # Почему списка нет: «not_shared» — докер не отдал каталог шрифтов (Docker
+    # Desktop на macOS), «not_found» — шрифтов там нет. None, когда они есть.
+    reason: HostFontsUnavailable | None = None
 
 
 class ListSystemFontsUC:
@@ -33,4 +37,7 @@ class ListSystemFontsUC:
             SystemFontView(name=f.name, path=f.path, family=f.family, already_installed=f.name in present)
             for f in system
         ]
-        return ListSystemFontsOutput(available=len(fonts) > 0, fonts=fonts)
+        if fonts:
+            return ListSystemFontsOutput(available=True, fonts=fonts)
+        reason = await self._provider.unavailable_reason()
+        return ListSystemFontsOutput(available=False, fonts=[], reason=reason or "not_found")

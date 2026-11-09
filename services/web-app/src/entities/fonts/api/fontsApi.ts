@@ -52,6 +52,9 @@ export type SystemFont = z.infer<typeof SystemFontSchema>;
 export const SystemFontsListResponseSchema = z.object({
   available: z.boolean(),
   fonts: z.array(SystemFontSchema),
+  // Почему списка нет: not_shared — докер не отдал каталог шрифтов (Docker
+  // Desktop на macOS), not_found — шрифтов там нет.
+  reason: z.string().nullish(),
 });
 
 export type SystemFontsListResponse = z.infer<

@@ -99,7 +99,88 @@ socket_group() {
     echo 0
 }
 
-# ── 2. Запуск ───────────────────────────────────────────────────────────────
+# ── 2. Шрифты macOS ─────────────────────────────────────────────────────────
+
+# Шаблоны просят Times New Roman, Arial, Courier New и Consolas: так выглядят
+# документы по ГОСТ. Студия забирает их с машины сама, одноразовым контейнером с
+# биндом системного каталога шрифтов. На macOS это не работает: Docker Desktop
+# отдаёт контейнерам только /Users, /Volumes, /private, /tmp и /var/folders, а
+# на бинд /System/Library/Fonts/Supplemental отвечает «mounts denied». Без шрифтов
+# TeX долго ищет Arial (mktextfm) и ставит свободные замены.
+#
+# Поэтому здесь, на хосте, копируем ТОЛЬКО эти семейства с этой же машины в папку
+# под домашним каталогом (её Docker Desktop отдаёт) и называем её Студии через
+# HSE_STUDIO__FONTS__HOST_DIR. В образ и в репозиторий шрифты не попадают.
+FONTS_STAGE="${HSE_STUDIO_FONTS_DIR:-$HOME/.hse-doc-studio/host-fonts}"
+FONTS_HOST_DIR=""
+
+# Файл шрифта в папку FONTS_STAGE (или в $2), если его там ещё нет.
+copy_font() {
+    [ -f "$1" ] || return 0
+    _to="${2:-$FONTS_STAGE}"
+    [ -e "$_to/${1##*/}" ] && return 0
+    cp "$1" "$_to/" 2>/dev/null || true
+}
+
+# Сколько файлов шрифтов в каталоге $1.
+count_fonts() {
+    find "$1" -maxdepth 1 -type f \( -iname '*.ttf' -o -iname '*.otf' -o -iname '*.ttc' \) 2>/dev/null | wc -l | tr -d ' '
+}
+
+stage_mac_fonts() {
+    [ "$OS" = "Darwin" ] || return 0
+    mkdir -p "$FONTS_STAGE" 2>/dev/null || return 0
+    # Сначала системные, потом общие и пользовательские: первым найденный файл и остаётся.
+    for _dir in /System/Library/Fonts/Supplemental /Library/Fonts "$HOME/Library/Fonts"; do
+        [ -d "$_dir" ] || continue
+        for _font in "$_dir"/"Times New Roman"*.ttf "$_dir/Arial.ttf" "$_dir/Arial Bold.ttf" \
+            "$_dir/Arial Italic.ttf" "$_dir/Arial Bold Italic.ttf" "$_dir"/"Courier New"*.ttf \
+            "$_dir"/[Cc]onsola*.ttf; do
+            copy_font "$_font"
+        done
+    done
+    # Consolas в macOS нет, его приносит Microsoft Office: шрифты лежат внутри приложений.
+    for _font in /Applications/Microsoft*.app/Contents/Resources/DFonts/[Cc]onsola*.ttf; do
+        copy_font "$_font"
+    done
+    _count="$(count_fonts "$FONTS_STAGE")"
+    if [ "$_count" -gt 0 ]; then
+        FONTS_HOST_DIR="$FONTS_STAGE"
+        say "$(loc "шрифты для документов (Times New Roman, Arial, Courier New, Consolas, что нашлось: $_count): $FONTS_STAGE" \
+            "fonts for documents (Times New Roman, Arial, Courier New, Consolas, found: $_count): $FONTS_STAGE")"
+    else
+        say "$(loc 'Times New Roman и Arial на этой машине не нашлись: документы соберутся со свободными заменами.
+  Шрифты можно загрузить потом: Настройки → Шрифты.' \
+            'Times New Roman and Arial were not found on this machine: documents will build with free substitutes.
+  You can upload fonts later: Settings → Fonts.')"
+    fi
+}
+
+# Уже установленная Студия: env контейнера не поменять без пересоздания, поэтому
+# недостающие шрифты кладём прямо в её папку шрифтов (<папка данных>/fonts), ту
+# самую, что монтируется в сборку. Только добавляем: свои шрифты человека не трогаем.
+adopt_into_existing() {
+    [ -n "$FONTS_HOST_DIR" ] || return 0
+    _data="$(docker inspect -f '{{range .Config.Env}}{{println .}}{{end}}' "$NAME" 2>/dev/null |
+        sed -n 's/^HSE_STUDIO__HOST_DATA_DIR=//p' | head -n 1)"
+    if [ -z "$_data" ] || [ ! -d "$_data" ]; then
+        say "$(loc "папка данных $NAME ещё не выбрана или не найдена: шрифты Студия возьмёт после мастера настройки, если контейнер поставлен этим скриптом заново." \
+            "the data folder of $NAME is not chosen yet or not found: the Studio picks the fonts up after the setup wizard if the container is installed by this script anew.")"
+        return 0
+    fi
+    mkdir -p "$_data/fonts" 2>/dev/null || return 0
+    _before="$(count_fonts "$_data/fonts")"
+    for _font in "$FONTS_STAGE"/*; do
+        copy_font "$_font" "$_data/fonts"
+    done
+    _added=$(($(count_fonts "$_data/fonts") - _before))
+    if [ "$_added" -gt 0 ]; then
+        say "$(loc "добавил шрифтов в $_data/fonts: $_added. Следующие сборки возьмут их сами." \
+            "added fonts to $_data/fonts: $_added. Next builds pick them up by themselves.")"
+    fi
+}
+
+# ── 3. Запуск ───────────────────────────────────────────────────────────────
 
 # Семейство ОС для списка подключённых Студий в облаке (внутри контейнера оно неизвестно).
 device_os() {
@@ -123,6 +204,7 @@ start_container() {
         -e HSE_STUDIO__SERVER__PORT=8000 \
         -e "HSE_STUDIO__DEVICE_NAME=$(hostname -s 2>/dev/null || hostname)" \
         -e "HSE_STUDIO__DEVICE_OS=$(device_os)" \
+        -e "HSE_STUDIO__FONTS__HOST_DIR=$FONTS_HOST_DIR" \
         $GROUP_ARGS \
         "$IMAGE" 2>&1 >/dev/null
 }
@@ -133,7 +215,7 @@ published_port() {
     docker port "$NAME" 8000/tcp 2>/dev/null | head -n 1 | sed 's/.*://'
 }
 
-# ── 3. Здоровье и браузер ───────────────────────────────────────────────────
+# ── 4. Здоровье и браузер ───────────────────────────────────────────────────
 
 pick_http_tool() {
     if command -v curl >/dev/null 2>&1; then
@@ -237,6 +319,7 @@ itself — keep the tab open, it will wait.')"
 
 check_docker
 pick_http_tool
+stage_mac_fonts
 
 if [ ! -e "$DOCKER_SOCK" ]; then
     # Смонтировать несуществующий путь докер не откажется — он молча создаст
@@ -269,6 +352,7 @@ if docker inspect "$NAME" >/dev/null 2>&1; then
             "container $NAME runs without a published port — it is unreachable from outside.
   Recreate it: docker rm -f $NAME && re-run this script.")"
     fi
+    adopt_into_existing
     say "$(loc "чтобы поставить заново с нуля: docker rm -f $NAME, затем повторите скрипт." \
         "to reinstall from scratch: docker rm -f $NAME, then re-run the script.")"
     finish "$RUNNING_PORT"

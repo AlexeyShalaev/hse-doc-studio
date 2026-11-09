@@ -98,6 +98,7 @@
     "fontsMissing": "not found",
     "fontsHint": "This is where the app will take Times New Roman and the other document fonts from.",
     "fontsMissingHint": "None of the standard locations matched. Enter the path if your fonts live elsewhere.",
+    "fontsNotSharedHint": "Docker Desktop does not let containers into /System/Library/Fonts on macOS. Run the installer again (it copies Times New Roman and Arial into a folder under your home) or enter your own font folder inside /Users here. Without them documents build with free substitutes.",
     "fontsEdit": "Change",
     "fontsCancel": "Cancel",
     "fontsPlaceholder": "C:/Windows/Fonts",

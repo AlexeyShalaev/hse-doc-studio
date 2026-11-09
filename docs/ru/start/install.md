@@ -35,6 +35,9 @@ description: Скрипт одной командой, ручной docker run �
 
 Скрипт ничего не спрашивает: проверяет, что Docker отвечает, скачивает образ, запускает контейнер `hse-doc-studio` и открывает браузер. Порт по умолчанию 17240 (занят — переберёт 17241…17250). Повторный запуск безопасен: существующий контейнер не пересоздаётся, папка данных не теряется.
 
+!!! info "Шрифты на macOS"
+    Шаблоны просят Times New Roman, Arial, Courier New и Consolas. Docker Desktop не отдаёт контейнерам системную папку `/System/Library/Fonts`, поэтому на Mac скрипт сам копирует эти семейства со своей же машины в `~/.hse-doc-studio/host-fonts` (Consolas есть, только если стоит Microsoft Office) и передаёт папку Студии. Для уже установленной Студии повторный запуск скрипта добавит недостающие шрифты прямо в её `<папка данных>/fonts`. В образ и в репозиторий шрифты Microsoft не попадают. Другая папка: переменная `HSE_STUDIO_FONTS_DIR`.
+
 Переменные окружения: `PORT`, `TAG`, `HSE_STUDIO_IMAGE`, `HSE_STUDIO_NAME`, `HSE_STUDIO_LANG` (язык сообщений скрипта: `ru` — русский, без флага — английский), в sh-версии — `DOCKER_SOCK` для Colima и Rancher Desktop:
 
 ```sh
@@ -84,6 +87,8 @@ PROJECTS_HOST_PATH=D:/study docker compose -f docker-compose.yml -f compose.proj
 # отдать Студии установленные в ОС шрифты (Настройки → Шрифты → Системные)
 SYSTEM_FONTS_PATH=C:/Windows/Fonts docker compose -f docker-compose.yml -f compose.system-fonts.yml up -d
 ```
+
+На macOS оверлей с `/System/Library/Fonts` не поднимется: Docker Desktop отвечает «mounts denied». Скопируйте нужные шрифты в папку под домашним каталогом и укажите её в `.env` как `HOST_FONTS_DIR` (команда есть в `.env.example`).
 
 ## Что дальше
 

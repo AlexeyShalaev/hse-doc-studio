@@ -5,6 +5,7 @@ from typing import Protocol
 
 from hse_doc_studio.core.fonts.entities import (
     FontCatalogFile,
+    HostFontsUnavailable,
     InstalledFont,
     MarketplaceSearchResult,
     SystemFontFile,
@@ -52,6 +53,10 @@ class ISystemFontProvider(Protocol):
     # Показывается пользователю: автоопределение может промахнуться, и тогда
     # он должен видеть, ЧТО именно приложение сочло каталогом шрифтов.
     async def source_dir(self) -> str | None: ...
+
+    # Почему шрифтов нет; None — они нашлись. Нужен, чтобы человек увидел
+    # настоящую причину и способ её обойти, а не общее «не удалось».
+    async def unavailable_reason(self) -> HostFontsUnavailable | None: ...
 
     # Reads a system font's bytes. MUST reject any path that is not inside a
     # known system font directory (and not a font file) to keep the import

@@ -191,7 +191,9 @@ export const MachineCard = ({
         >
           {fonts?.directory
             ? t("machine.fontsHint")
-            : t("machine.fontsMissingHint")}
+            : fonts?.reason === "not_shared"
+              ? t("machine.fontsNotSharedHint")
+              : t("machine.fontsMissingHint")}
         </div>
       </div>
 

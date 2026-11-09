@@ -7,8 +7,12 @@
 #
 # Путь зависит от ОС:
 #   Windows  SYSTEM_FONTS_PATH=C:/Windows/Fonts
-#   macOS    SYSTEM_FONTS_PATH=/System/Library/Fonts
 #   Linux    SYSTEM_FONTS_PATH=/usr/share/fonts
+#   macOS    /System Docker Desktop контейнерам не отдаёт («mounts denied», контейнер
+#            не стартует), а Arial и Times New Roman лежат в /System/Library/Fonts/Supplemental.
+#            Скопируйте их в папку под домашним каталогом и укажите её:
+#            SYSTEM_FONTS_PATH=/Users/<вы>/.hse-doc-studio/host-fonts
+#            (проще задать HOST_FONTS_DIR в .env без этого оверлея, см. .env.example).
 #
 #   SYSTEM_FONTS_PATH=C:/Windows/Fonts docker compose \
 #     -f deploy/all-in-one/docker-compose.yml \

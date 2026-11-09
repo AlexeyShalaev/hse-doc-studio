@@ -3,7 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 
 import pytest
-from hse_doc_studio.core.fonts.entities import SystemFontFile
+from hse_doc_studio.core.fonts.entities import HostFontsUnavailable, SystemFontFile
 from hse_doc_studio.infra.fonts.font_store import LocalFontStore
 from hse_doc_studio.use_cases.fonts.import_system_fonts import ImportSystemFontsInput, ImportSystemFontsUC
 from hse_doc_studio.use_cases.fonts.list_system_fonts import ListSystemFontsUC
@@ -12,9 +12,18 @@ pytestmark = pytest.mark.unit
 
 
 class _FakeSystemProvider:
-    def __init__(self, fonts: list[SystemFontFile], data: dict[str, bytes]) -> None:
+    def __init__(
+        self,
+        fonts: list[SystemFontFile],
+        data: dict[str, bytes],
+        reason: HostFontsUnavailable | None = None,
+    ) -> None:
         self._fonts = fonts
         self._data = data
+        self._reason = reason
+
+    async def unavailable_reason(self) -> HostFontsUnavailable | None:
+        return self._reason
 
     async def list_fonts(self) -> list[SystemFontFile]:
         return list(self._fonts)
@@ -42,6 +51,17 @@ async def test__list_system_fonts_uc__execute_no_system_fonts__reports_unavailab
     out = await ListSystemFontsUC(_FakeSystemProvider([], {}), LocalFontStore(tmp_path / "fonts")).execute()
     assert out.available is False
     assert out.fonts == []
+    assert out.reason == "not_found"
+
+
+async def test__list_system_fonts_uc__execute_docker_refused_the_dir__reports_not_shared(tmp_path: Path) -> None:
+    # macOS + Docker Desktop: шрифты на машине есть, но /System не отдан контейнерам.
+    provider = _FakeSystemProvider([], {}, reason="not_shared")
+
+    out = await ListSystemFontsUC(provider, LocalFontStore(tmp_path / "fonts")).execute()
+
+    assert out.available is False
+    assert out.reason == "not_shared"
 
 
 async def test__import_system_fonts_uc__execute_selected_paths__copies_them_into_store(tmp_path: Path) -> None:
