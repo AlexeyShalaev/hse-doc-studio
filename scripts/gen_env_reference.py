@@ -19,7 +19,7 @@ import re
 import sys
 import types
 from enum import Enum
-from pathlib import Path
+from pathlib import Path, PurePath
 from typing import Any, Literal, Union, get_args, get_origin
 
 from pydantic import BaseModel, SecretStr
@@ -94,6 +94,9 @@ def _type_name(annotation: Any) -> str:
 def _scalar(value: Any) -> str:
     if isinstance(value, Enum):
         return str(value.value)
+    if isinstance(value, PurePath):
+        # Пути по умолчанию описывают образ и Linux-сервер: на Windows str() дал бы обратные косые.
+        return value.as_posix()
     if isinstance(value, bool):
         return "true" if value else "false"
     return str(value)

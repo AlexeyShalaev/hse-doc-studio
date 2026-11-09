@@ -75,9 +75,9 @@ RUN apt-get update && apt-get upgrade -y && apt-get install -y --no-install-reco
 # Клиенты PostgreSQL 16 и 17 (pg_dump, pg_restore) для бэкапов сервера. Берутся из репозитория PGDG, а не из Debian
 # (там 15): pg_dump не снимает дамп с сервера новее себя, а клиент новее сервера пишет в дамп настройки, которых
 # сервер не знает. Студия выбирает клиент той же мажорной версии, что и сервер (compose держит Postgres 16).
-# Повторы: postgresql.org временами рвёт соединение (curl 18/55), а образ собирают несколько джобов CI на каждый PR.
+# Повторы: postgresql.org временами рвёт соединение (curl 18/55 после минуты ожидания), а образ собирают несколько джобов CI на каждый PR.
 RUN install -d /usr/share/postgresql-common/pgdg \
-  && curl -fsSL --retry 5 --retry-all-errors --retry-delay 3 \
+  && curl -fsSL --retry 5 --retry-all-errors --retry-delay 3 --max-time 60 \
        -o /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc https://www.postgresql.org/media/keys/ACCC4CF8.asc \
   && echo "deb [signed-by=/usr/share/postgresql-common/pgdg/apt.postgresql.org.asc] https://apt.postgresql.org/pub/repos/apt bookworm-pgdg main" \
      > /etc/apt/sources.list.d/pgdg.list \

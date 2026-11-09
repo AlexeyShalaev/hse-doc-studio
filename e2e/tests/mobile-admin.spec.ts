@@ -170,8 +170,11 @@ for (const lang of LANGS) {
         await loginAdmin(page);
         await page.goto("/admin/users");
         await expect(page.locator("table")).toHaveCount(0);
-        const cards = page.locator(".dt-card");
+        // Пока список грузится, на месте карточек стоят три заглушки .dt-card-skeleton без обработчика нажатия:
+        // считаем, проверяем и нажимаем только настоящие карточки людей.
+        const cards = page.locator(".dt-card:not(.dt-card-skeleton)");
         await expect(cards.first()).toBeVisible();
+        await expect(page.locator(".dt-card-skeleton")).toHaveCount(0);
         expect(await cards.count()).toBeGreaterThanOrEqual(3);
         expect(await smallTargets(page)).toEqual([]);
 
