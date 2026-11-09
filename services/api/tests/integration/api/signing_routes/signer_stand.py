@@ -1,0 +1,386 @@
+"""Стенд сценариев подписанта: маршрут «автор, научрук, академрук» точки «Заявка на тему КП» на настоящем сервере.
+
+Автор владелец проекта, научрук и академрук рецензенты с персонами. У научрука слоты на заявке и заявлении, у
+автора и академрука (необязательный слот, включён автором) на заявлении. Способ каждого задаётся до отправки.
+
+Подпись ключом Студии заменена двойником, как в тестах отправки: настоящую подпись на сервере проверяет раннер,
+а здесь проверяется ход маршрута. Двойник ведёт себя как ключи людей: у каждого свой ключ с паролем, плашка из
+него, подпись это запись открепленной подписи над текущей фиксацией.
+"""
+
+from __future__ import annotations
+
+import json
+from dataclasses import dataclass, field, replace
+from datetime import UTC, datetime
+from typing import Any
+from uuid import UUID, uuid4
+
+import pytest
+from hse_doc_studio.core.access.context import require_actor
+from hse_doc_studio.core.entities import SigningIdentity
+from hse_doc_studio.core.enums import DetachedFormat, DetachedOrigin, DetachedVerdict, SigningIdentityKind
+from hse_doc_studio.core.errors import NotFoundError
+from hse_doc_studio.core.signing_route.entities import DocSlot
+from hse_doc_studio.core.value_objects import DetachedSignature, SignerInfo
+from hse_doc_studio.use_cases.signatures._studio_signer import KeyPassphraseRequiredError
+from hse_doc_studio.use_cases.signing_route.key_signer import KeyInfo, KeyRequest, NoSigningKeyError, RouteKeySigner
+from hse_doc_studio.use_cases.signing_route.point import RoutePoint
+from httpx2 import Response
+
+from tests.fakes.signer_profile import make_png, make_self_signed
+from tests.integration.api.signing_routes.stand import TOPIC, TOPIC_DOCS, Person, Project, Stand, make_project, person
+
+PASSPHRASE = "correct horse"  # noqa: S105 — тестовое значение
+PROPOSAL, APPLICATION = TOPIC_DOCS
+PERSONAS = ("author", "supervisor", "academic_supervisor")
+MODES = {"image": "image", "detached": "detached_text", "pades": "crypto_invisible"}
+NAMES = {
+    "author": "Иванов Иван Иванович",
+    "supervisor": "Петров Пётр Петрович",
+    "academic_supervisor": "Сидоров Сидор Сидорович",
+}
+PNG = make_png(120, 40)
+
+
+# --- двойник ключей Студии -------------------------------------------------------------------------------------------
+
+
+@dataclass
+class FakeKeys:
+    """Ключи людей: у кого есть ключ, тот подписывает им с паролем `PASSPHRASE`."""
+
+    identities: dict[str, SigningIdentity] = field(default_factory=dict)
+    broken: bool = False
+    signed: list[tuple[str, DocSlot]] = field(default_factory=list)
+
+    def give(self, who: Person, name: str) -> SigningIdentity:
+        identity = SigningIdentity(
+            id=uuid4(),
+            label=f"Ключ {name}",
+            kind=SigningIdentityKind.openpgp,
+            subject_cn=name,
+            not_after=datetime(2030, 1, 1, tzinfo=UTC),
+            trusted=False,
+            created_at=datetime(2026, 1, 1, tzinfo=UTC),
+            fingerprint=who.id.upper(),
+            protected=True,
+        )
+        self.identities[who.id] = identity
+        return identity
+
+    def mine(self) -> SigningIdentity | None:
+        return self.identities.get(require_actor().id or "")
+
+    def plate(self, identity: SigningIdentity) -> SignerInfo:
+        fingerprint = identity.fingerprint or ""
+        return SignerInfo(kind="openpgp", owner=identity.subject_cn, cert_id=fingerprint[:16], signer_id=fingerprint)
+
+
+def install_fake_keys(monkeypatch: pytest.MonkeyPatch) -> FakeKeys:
+    keys = FakeKeys()
+
+    async def keys_allowed(self: RouteKeySigner) -> bool:
+        return True
+
+    async def default_key_info(self: RouteKeySigner) -> KeyInfo | None:
+        identity = keys.mine()
+        if identity is None:
+            return None
+        return KeyInfo(identity.id, identity.label, identity.kind.value, protected=True, signer=identity.subject_cn)
+
+    async def own_key(self: RouteKeySigner, identity_id: UUID) -> SigningIdentity:
+        identity = keys.mine()
+        if identity is None or identity.id != identity_id:
+            raise NotFoundError(f"Ключ подписи {identity_id} не найден")
+        return identity
+
+    async def plate_of(self: RouteKeySigner, identity: SigningIdentity) -> SignerInfo:
+        return keys.plate(identity)
+
+    async def check(self: RouteKeySigner, request: KeyRequest) -> SigningIdentity:
+        identity = keys.mine()
+        if identity is None:
+            raise NoSigningKeyError
+        if request.identity_id is not None and request.identity_id != identity.id:
+            raise NotFoundError(f"Ключ подписи {request.identity_id} не найден")
+        if request.passphrase != PASSPHRASE:
+            raise KeyPassphraseRequiredError
+        return identity
+
+    async def sign(
+        self: RouteKeySigner, point: RoutePoint, pairs: Any, identity: SigningIdentity, passphrase: str
+    ) -> tuple[DocSlot, ...]:
+        if keys.broken:
+            raise ValueError("gpg отказал в подписи: Bad passphrase")
+        folder = point.project.folder
+        state = self._signatures.get_state(folder)
+        for pair in pairs:
+            frozen = state.frozen[pair.doc_id]
+            signature = DetachedSignature(
+                file=f".hse-studio/detached/{pair.doc_id}/{pair.slot_id}.asc",
+                format=DetachedFormat.openpgp,
+                origin=DetachedOrigin.studio,
+                pdf_sha256=frozen.sha256,
+                verdict=DetachedVerdict.valid,
+                signer=identity.subject_cn,
+                signer_id=identity.fingerprint or "",
+                added_at=datetime.now(UTC).isoformat(),
+            )
+            detached = {**state.detached.get(pair.doc_id, {}), pair.slot_id: signature}
+            state = replace(state, detached={**state.detached, pair.doc_id: detached})
+            keys.signed.append((identity.subject_cn, pair))
+        self._signatures.save_state(folder, state)
+        return tuple(pairs)
+
+    for name, fake in {
+        "keys_allowed": keys_allowed,
+        "default_key_info": default_key_info,
+        "own_key": own_key,
+        "plate_of": plate_of,
+        "check": check,
+        "sign": sign,
+    }.items():
+        monkeypatch.setattr(RouteKeySigner, name, fake)
+    return keys
+
+
+# --- маршрут трёх человек --------------------------------------------------------------------------------------------
+
+
+@dataclass
+class Trio:
+    stand: Stand
+    project: Project
+    people: dict[str, Person]
+    route_id: str = ""
+
+    @property
+    def author(self) -> Person:
+        return self.people["author"]
+
+    @property
+    def supervisor(self) -> Person:
+        return self.people["supervisor"]
+
+    @property
+    def academic(self) -> Person:
+        return self.people["academic_supervisor"]
+
+    @property
+    def url(self) -> str:
+        return f"{self.project.routes}/{self.route_id}"
+
+    # --- файлы проекта ---
+
+    def state(self) -> dict[str, Any]:
+        path = self.project.folder / ".hse-studio" / "signatures.json"
+        return json.loads(path.read_text(encoding="utf-8"))
+
+    def withheld(self) -> dict[str, list[str]]:
+        return {doc: sorted(slots) for doc, slots in self.state().get("withheld", {}).items() if slots}
+
+    def frozen_sha(self) -> dict[str, str]:
+        return {doc: frozen["sha256"] for doc, frozen in self.state().get("frozen", {}).items()}
+
+    def signed_pdf_sha(self) -> dict[str, dict[str, str]]:
+        """К какой фиксации относится каждая открепленная подпись: `документ -> слот -> sha`."""
+        return {
+            doc: {slot: sig["pdf_sha256"] for slot, sig in sigs.items()}
+            for doc, sigs in self.state().get("detached", {}).items()
+        }
+
+    # --- автор ---
+
+    def call(self, who: Person, method: str, path: str, **kwargs: Any) -> Response:
+        return self.project.call(who, method, path, **kwargs)
+
+    def route(self, who: Person | None = None) -> dict[str, Any]:
+        resp = self.call(who or self.author, "GET", self.url)
+        assert resp.status_code == 200, resp.text
+        return resp.json()
+
+    def preview(self) -> dict[str, Any]:
+        resp = self.call(self.author, "POST", f"{self.url}/preview", json={})
+        assert resp.status_code == 200, resp.text
+        return resp.json()
+
+    def send(self, sign: dict[str, Any] | None = None) -> Response:
+        expected = {d["doc_id"]: d["token"] for d in self.preview()["docs"]}
+        return self.call(self.author, "POST", f"{self.url}/send", json={"expected": expected, "sign": sign})
+
+    def sent(self, sign: dict[str, Any] | None = None) -> dict[str, Any]:
+        resp = self.send(sign)
+        assert resp.status_code == 200, resp.text
+        return resp.json()
+
+    def events(self) -> list[str]:
+        return [e["kind"] for e in self.route()["events"]]
+
+    # --- подписант ---
+
+    def task(self, who: Person) -> dict[str, Any]:
+        resp = self.call(who, "GET", f"{self.url}/task")
+        assert resp.status_code == 200, resp.text
+        return resp.json()
+
+    def tokens(self, who: Person) -> dict[str, str]:
+        return {d["doc_id"]: d["token"] for d in self.task(who)["docs"] if d["token"] is not None}
+
+    def approve(
+        self,
+        who: Person,
+        *,
+        method: str | None = None,
+        sign: dict[str, Any] | None = None,
+        expected: dict[str, str] | None = None,
+    ) -> Response:
+        body = {"expected": self.tokens(who) if expected is None else expected, "method": method, "sign": sign}
+        return self.call(who, "POST", f"{self.url}/task/approve", json=body)
+
+    def approved(self, who: Person, **kwargs: Any) -> dict[str, Any]:
+        resp = self.approve(who, **kwargs)
+        assert resp.status_code == 200, resp.text
+        return resp.json()
+
+    def sign(
+        self, who: Person, *, passphrase: str | None = PASSPHRASE, expected: dict[str, str] | None = None
+    ) -> Response:
+        body = {
+            "expected": self.tokens(who) if expected is None else expected,
+            "identity_id": None,
+            "passphrase": passphrase,
+        }
+        return self.call(who, "POST", f"{self.url}/task/sign", json=body)
+
+    def signed(self, who: Person) -> dict[str, Any]:
+        resp = self.sign(who)
+        assert resp.status_code == 200, resp.text
+        return resp.json()
+
+    def give_back(self, who: Person, comment: str = "Уточните цель проекта") -> Response:
+        return self.call(who, "POST", f"{self.url}/task/return", json={"comment": comment})
+
+    def image(self, who: Person, png: bytes = PNG, *, remember: bool = False) -> Response:
+        return self.call(
+            who,
+            "POST",
+            f"{self.url}/task/image",
+            files={"file": ("signature.png", png, "image/png")},
+            data={"remember": "true" if remember else "false"},
+        )
+
+    def plate_key(self, who: Person, identity_id: str) -> Response:
+        return self.call(who, "PUT", f"{self.url}/task/plate", json={"identity_id": identity_id})
+
+    def plate_file(self, who: Person, blob: bytes) -> Response:
+        return self.call(
+            who, "POST", f"{self.url}/task/plate/file", files={"file": ("cert.pem", blob, "application/x-pem-file")}
+        )
+
+    def profile_cert(self, who: Person, owner: str) -> None:
+        """Сертификат в профиле подписанта: маршрут знает данные его плашки заранее (раздел 6.5)."""
+        resp = self.stand.client.put(
+            "/api/v1/account/signer-profile/public-key",
+            headers=who.headers,
+            files={"file": ("cert.pem", make_self_signed(owner).cert_pem, "application/x-pem-file")},
+        )
+        assert resp.status_code == 200, resp.text
+
+
+def states(body: dict[str, Any]) -> list[str]:
+    """Состояния участников по шагам, из хода маршрута или задачи."""
+    return [p["state"] for step in body["steps"] for p in step]
+
+
+def my(task: dict[str, Any]) -> tuple[str, str]:
+    return task["me"]["state"], task["me"]["next_action"]
+
+
+async def make_trio(
+    stand: Stand,
+    methods: dict[str, str] | None = None,
+    *,
+    images: tuple[str, ...] = ("author",),
+    plates: tuple[str, ...] = (),
+    profile_certs: tuple[str, ...] = (),
+    academic: bool = True,
+) -> Trio:
+    """Маршрут трёх человек до отправки.
+
+    `methods` способ по персонам (по умолчанию картинка); `images` у кого картинка уже загружена автором;
+    `plates` у кого подписант плашки записан в слот; `profile_certs` у кого сертификат лежит в профиле.
+    """
+    chosen = {persona: "image" for persona in PERSONAS} | (methods or {})
+    people = {persona: await person(stand, NAMES[persona]) for persona in PERSONAS}
+    author = people["author"]
+    project = make_project(
+        stand,
+        author,
+        supervisor={"name": NAMES["supervisor"], "role": "university"},
+        academic_supervisor={"name": NAMES["academic_supervisor"], "role": "university"},
+    )
+    await project.member(people["supervisor"], "reviewer", "supervisor")
+    if academic:
+        await project.member(people["academic_supervisor"], "reviewer", "academic_supervisor")
+    trio = Trio(stand, project, people)
+    for doc_id in TOPIC_DOCS:
+        project.build(doc_id)
+    personas = PERSONAS if academic else PERSONAS[:2]
+    for persona in personas:
+        if persona in images:
+            project.png(author, persona)
+        _ok(
+            project.call(
+                author,
+                "PATCH",
+                f"{project.base}/signatures/slots/{persona}/config",
+                json={"signing_identity_id": None, "sign_mode": MODES[chosen[persona]], "sign_reason": ""},
+            )
+        )
+        if persona in plates:
+            _ok(
+                project.call(
+                    author,
+                    "PUT",
+                    f"{project.base}/signatures/slots/{persona}/signer",
+                    json={"owner": NAMES[persona], "cert_id": "1A2B 3C4D"},
+                )
+            )
+        if persona in profile_certs:
+            trio.profile_cert(people[persona], NAMES[persona])
+        for doc_id in TOPIC_DOCS:
+            if persona != "supervisor" and doc_id == PROPOSAL:
+                continue
+            _ok(
+                project.call(
+                    author, "PATCH", f"{project.base}/signatures/placements/{doc_id}/{persona}", json={"enabled": True}
+                )
+            )
+    created = project.call(author, "POST", project.routes, json={"profile_id": TOPIC})
+    assert created.status_code == 201, created.text
+    route = created.json()
+    trio.route_id = route["id"]
+    if academic:
+        steps = [
+            [{"id": p["id"], "persona": p["persona"], "user_id": p["user_id"], "invitation_id": p["invitation_id"]}]
+            for step in route["steps"]
+            for p in step
+        ]
+        updated = project.call(
+            author,
+            "PUT",
+            trio.url,
+            json={
+                "steps": steps,
+                "extra_slots": [{"doc_id": APPLICATION, "slot_id": "academic_supervisor"}],
+                "deadline": None,
+                "message": "Прошу подписать заявление до пятницы.",
+            },
+        )
+        assert updated.status_code == 200, updated.text
+    return trio
+
+
+def _ok(resp: Response) -> None:
+    assert resp.status_code == 200, resp.text
