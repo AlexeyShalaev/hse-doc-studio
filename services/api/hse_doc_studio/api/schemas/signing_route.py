@@ -251,5 +251,13 @@ class SendSigningRouteRequest(StrictModel):
     sign: SigningKeyRequest | None = None
 
 
+class SigningReminder(StrictModel):
+    """Ответ «Напомнить». `link` только при `manual`: ссылку приглашения пересылает сам автор (без SMTP)."""
+
+    participant_id: str
+    delivery: Literal["email", "inbox", "manual"]
+    link: str | None
+
+
 class EmptyRequest(StrictModel):
     """Тело действий без параметров (`{}`): предпросмотр, отмена, снятие с контроля."""
