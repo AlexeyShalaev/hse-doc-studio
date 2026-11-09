@@ -152,7 +152,8 @@ jobs:
 
   # Полный набор (unit + integration + pg на настоящем Postgres 16, включая миграции) — единственный источник
   # числа покрытия. Последовательно это ~42 минуты, поэтому набор делится на шарды по файлам (--shard, плагин
-  # tests/fixtures/sharding.py), а внутри шарда тесты идут в 4 процесса pytest-xdist (-n auto, у раннера 4 vCPU);
+  # tests/fixtures/sharding.py), а внутри шарда тесты идут в 4 процесса pytest-xdist по числу vCPU раннера
+  # (-n logical: -n auto считает физические ядра через psutil и на этом раннере даёт только 2);
   # worksteal: освободившийся процесс забирает хвост очереди у занятого, долгие файлы не держат шард в конце.
   # Данные покрытия шардов сводит backend-coverage, порог проверяется там.
   backend-full:
@@ -209,7 +210,7 @@ jobs:
           done
           /usr/lib/postgresql/16/bin/pg_dump --version
       - name: Pytest (shard ${{ matrix.shard }}/3)
-        run: uv run pytest -n auto --dist worksteal --shard=${{ matrix.shard }}/3 --durations=15
+        run: uv run pytest -n logical --dist worksteal --shard=${{ matrix.shard }}/3 --durations=15
       - name: Keep coverage data
         run: mkdir -p coverage-data && mv .coverage "coverage-data/.coverage.shard-${{ matrix.shard }}"
       - uses: actions/upload-artifact@v7
@@ -281,7 +282,7 @@ jobs:
       - name: Sync
         run: uv sync --frozen --extra api --extra test
       - name: Pytest (without server extra, shard ${{ matrix.shard }}/2)
-        run: uv run pytest -n auto --dist worksteal --shard=${{ matrix.shard }}/2 -m "not pg and not s3" --no-cov --durations=15
+        run: uv run pytest -n logical --dist worksteal --shard=${{ matrix.shard }}/2 -m "not pg and not s3" --no-cov --durations=15
 
   # Исполнитель kubernetes раннера на настоящем кластере (kind): RBAC и NetworkPolicy из чарта, namespace подов
   # сборки с Pod Security restricted, поддельный образ TeX. Не входит в all-checks-passed (не обязательна).
