@@ -3,22 +3,34 @@
 Придержать и открыть картинку слота, заполнить плашку данными ключа участника, зафиксировать документ. Вызывающий
 держит `project_lock` проекта и после эффектов перечитывает факты и обновляет снимок (`refresh_snapshot`).
 Уведомления (`Notify`) здесь не выполняются: их рассылает сценарий в своей транзакции.
+
+Плашка, заполненная открытым ключом OpenPGP из профиля подписанта, кладёт этот ключ в связку ключей: иначе
+открепленную подпись `.asc`, которую подписант загрузит после фиксации, нечем было бы проверить (`unknown_key`).
+Сертификату X.509 это не нужно: он приходит внутри самой подписи.
 """
 
 from __future__ import annotations
 
+import asyncio
 from collections.abc import Sequence
 from dataclasses import replace
 from datetime import UTC, datetime
 from pathlib import Path
 
+import structlog
+
 from hse_doc_studio.core.repositories import ISignatureRepository
+from hse_doc_studio.core.signatures.errors import GpgError, GpgUnavailableError
 from hse_doc_studio.core.signatures.plan import VisibleMark, mark_of
+from hse_doc_studio.core.signatures.ports import IOpenPgpKeyImporter
+from hse_doc_studio.core.signatures.signer_profile import ISignerProfileRepository, PublicKeyKind
 from hse_doc_studio.core.signing_route.effects import Effect, FillPlate, Freeze, Release, Withhold
 from hse_doc_studio.core.signing_route.entities import SigningRoute
 from hse_doc_studio.core.value_objects import SignaturesState
 from hse_doc_studio.use_cases.signatures.freeze_pdf import FreezePdfInput, FreezePdfUC
 from hse_doc_studio.use_cases.signing_route.point import RoutePoint
+
+logger = structlog.get_logger()
 
 
 def _now() -> datetime:
@@ -26,9 +38,17 @@ def _now() -> datetime:
 
 
 class RouteFileEffects:
-    def __init__(self, signature_repo: ISignatureRepository, freeze_uc: FreezePdfUC) -> None:
+    def __init__(
+        self,
+        signature_repo: ISignatureRepository,
+        freeze_uc: FreezePdfUC,
+        profiles: ISignerProfileRepository | None = None,
+        key_importer: IOpenPgpKeyImporter | None = None,
+    ) -> None:
         self._signatures = signature_repo
         self._freeze = freeze_uc
+        self._profiles = profiles
+        self._key_importer = key_importer
 
     async def apply(
         self, point: RoutePoint, route: SigningRoute, effects: Sequence[Effect], *, at: datetime | None = None
@@ -45,8 +65,28 @@ class RouteFileEffects:
                 state = self._signatures.get_state(folder)
                 frozen.append(effect.doc_id)
             else:
-                state = self._save(folder, state, _apply(state, route, effect))
+                changed = _apply(state, route, effect)
+                if isinstance(effect, FillPlate) and changed != state:
+                    await self._import_profile_key(route, effect)
+                state = self._save(folder, state, changed)
         return tuple(frozen)
+
+    async def _import_profile_key(self, route: SigningRoute, effect: FillPlate) -> None:
+        """Открытый ключ OpenPGP из профиля участника в связку, если плашка заполнена именно им."""
+        if self._profiles is None or self._key_importer is None or effect.signer.kind != PublicKeyKind.openpgp.value:
+            return
+        user_id = route.participant(effect.participant_id).user_id
+        if user_id is None:
+            return
+        key = (await self._profiles.get(user_id.hex)).public_key
+        if key is None or key.kind is not PublicKeyKind.openpgp or key.plate.signer_id != effect.signer.signer_id:
+            return
+        try:
+            await asyncio.to_thread(self._key_importer.import_public_key, key.data)
+        except (GpgUnavailableError, GpgError) as exc:
+            # Плашка всё равно заполнена: подпись без ключа в связке получит вердикт «ключ неизвестен», и план
+            # попросит загрузить открытый ключ.
+            logger.warning("signing route: profile key not imported", route_id=str(route.id), error=str(exc))
 
     def _save(self, folder: Path, before: SignaturesState, after: SignaturesState) -> SignaturesState:
         if after != before:

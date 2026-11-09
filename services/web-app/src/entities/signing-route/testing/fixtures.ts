@@ -44,6 +44,7 @@ export const makeRouteEvent = (
   round: 1,
   at: "2026-11-10T09:00:00Z",
   who: SR_AUTHOR.name,
+  participant_id: null,
   comment: null,
   reason: null,
   ...overrides,
@@ -249,6 +250,7 @@ export const makeSigningTask = (
     methods: ["detached"],
     method: "detached",
     image_ready: false,
+    image_url: null,
     plate: {
       owner: SR_SUPERVISOR.name,
       kind: "openpgp",
@@ -270,6 +272,7 @@ export const makeSigningTask = (
           x_mm: 110,
           y_mm: 130,
           width_mm: 40,
+          height_mm: 22,
           mark: "plate",
           status: "pending",
           reason: "no_signature_file",
@@ -280,6 +283,11 @@ export const makeSigningTask = (
           slot_id: "author",
           label: { ru: "Студент", en: "Student" },
           page: 1,
+          x_mm: 160,
+          y_mm: 208,
+          width_mm: 30,
+          height_mm: 12,
+          mark: "png",
           status: "signed",
         },
       ],
@@ -407,6 +415,7 @@ export const SIGNING_ROUTE_CONTRACT_EXAMPLES: Record<
           kind: "returned",
           at: "2026-11-11T12:00:00Z",
           who: SR_SUPERVISOR.name,
+          participant_id: "srp_supervisor",
           comment: "Уточните цель проекта",
           reason: "returned",
         }),
@@ -492,7 +501,113 @@ export const SIGNING_ROUTE_CONTRACT_EXAMPLES: Record<
       link: "https://studio.example.org/project-invite/hspi_x",
     } satisfies SigningReminder,
   },
-  SigningTask: { approve_sign: makeSigningTask() },
+  SigningTask: {
+    approve_sign: makeSigningTask(),
+    // Научрук картинкой до фиксации: картинка загружена и придержана до согласия.
+    approve_image: makeSigningTask({
+      route: { ...makeSigningTask().route, phase: "approval" },
+      steps: [
+        makeSigningTask().steps[0] ?? [],
+        [
+          {
+            name: SR_SUPERVISOR.name,
+            persona: "supervisor",
+            state: "to_approve",
+            at: null,
+            me: true,
+          },
+        ],
+      ],
+      me: {
+        participant_id: "srp_supervisor",
+        state: "to_approve",
+        next_action: "approve",
+        methods: ["image", "detached"],
+        method: "image",
+        image_ready: true,
+        image_url: `/api/v1/projects/${SR_PROJECT_ID}/signing-routes/${SR_ROUTE_ID}/task/image`,
+        plate: null,
+        keys: {
+          server_keys_allowed: true,
+          default_key: {
+            id: "5d1f0c3e-7d0b-4b7e-9a51-1c4c2b0b6f11",
+            label: "Мой ключ OpenPGP",
+            kind: "openpgp",
+            protected: true,
+            signer: SR_SUPERVISOR.name,
+          },
+        },
+      },
+      docs: [
+        {
+          ...SR_DOC,
+          pdf_url: `/api/v1/projects/${SR_PROJECT_ID}/docs/${SR_DOC.doc_id}/pdf/signed`,
+          frozen: false,
+          token: `build:${BUILD_SHA}`,
+          mine: [
+            {
+              slot_id: "supervisor",
+              label: { ru: "Научный руководитель", en: "Supervisor" },
+              page: 1,
+              x_mm: 110,
+              y_mm: 130,
+              width_mm: 40,
+              height_mm: 13.33,
+              mark: "png",
+              status: "pending",
+              reason: "awaiting_approval",
+            },
+          ],
+          others: makeSigningTask().docs[0]?.others ?? [],
+        },
+      ],
+      events: [
+        makeRouteEvent(),
+        makeRouteEvent({
+          id: "sre_02",
+          kind: "approved",
+          participant_id: "srp_author",
+        }),
+      ],
+    }),
+    // Согласующий без слотов видит все документы маршрута, своих мест на них нет.
+    approver: makeSigningTask({
+      me: {
+        participant_id: "srp_academic",
+        state: "waiting",
+        next_action: "wait",
+        methods: [],
+        method: null,
+        image_ready: false,
+        image_url: null,
+        plate: null,
+        keys: { server_keys_allowed: false, default_key: null },
+      },
+      docs: [
+        {
+          ...SR_DOC,
+          pdf_url: `/api/v1/projects/${SR_PROJECT_ID}/docs/${SR_DOC.doc_id}/frozen/pdf`,
+          frozen: true,
+          token: null,
+          mine: [],
+          others: [
+            ...(makeSigningTask().docs[0]?.others ?? []),
+            {
+              slot_id: "supervisor",
+              label: { ru: "Научный руководитель", en: "Supervisor" },
+              page: 1,
+              x_mm: 110,
+              y_mm: 130,
+              width_mm: 40,
+              height_mm: 22,
+              mark: "plate",
+              status: "pending",
+            },
+          ],
+        },
+      ],
+    }),
+  },
   ApproveSigningTaskRequest: {
     approve: {
       expected: { [SR_DOC.doc_id]: `build:${BUILD_SHA}` },

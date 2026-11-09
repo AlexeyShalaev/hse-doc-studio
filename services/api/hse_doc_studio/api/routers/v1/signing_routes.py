@@ -23,6 +23,7 @@ from hse_doc_studio.core.access.checker import ProjectForbiddenError
 from hse_doc_studio.core.access.entities import Actor
 from hse_doc_studio.core.errors import NotFoundError
 from hse_doc_studio.core.i18n import localized_error
+from hse_doc_studio.core.signatures.key_policy import SigningKeyStorageDeniedError
 from hse_doc_studio.core.signing_route.drafting import PersonDraft
 from hse_doc_studio.core.signing_route.entities import DocSlot, RouteConflictError, RouteInputError
 from hse_doc_studio.use_cases.signatures._studio_signer import KeyPassphraseRequiredError
@@ -35,9 +36,14 @@ from hse_doc_studio.use_cases.signing_route.author import (
     SigningRouteDrafts,
     SigningRouteSending,
 )
-from hse_doc_studio.use_cases.signing_route.key_signer import KeyInfo, KeyRequest
+from hse_doc_studio.use_cases.signing_route.key_signer import (
+    KeyInfo,
+    KeyNotFoundError,
+    KeyPassphraseInvalidError,
+    KeyRequest,
+)
 from hse_doc_studio.use_cases.signing_route.reminders import SigningRouteReminding
-from hse_doc_studio.use_cases.signing_route.views import PersonView, RouteDetails
+from hse_doc_studio.use_cases.signing_route.views import EventView, PersonView, RouteDetails
 
 router = APIRouter(route_class=SafeDishkaRoute, dependencies=[Depends(require_server_mode)])
 
@@ -48,7 +54,7 @@ def _not_found() -> NotFoundError:
     return NotFoundError(localized_error("Маршрут подписания не найден", "Signing route not found"))
 
 
-def _reader() -> Actor:
+def reader() -> Actor:
     """Вошедший участник проекта: гостю и тому, кто открыл проект по ссылке, маршрута нет (404)."""
     actor = people_views.require_user()
     if actor.is_guest or actor.link_id is not None:
@@ -124,18 +130,7 @@ def route_response(details: RouteDetails) -> s.SigningRouteResponse:
             for doc in details.docs
         ],
         steps=[[_participant(details, person) for person in step] for step in details.steps],
-        events=[
-            s.RouteEvent(
-                id=str(e.event.id),
-                kind=e.event.kind.value,
-                round=e.event.round,
-                at=e.event.at,
-                who=e.who,
-                comment=e.comment,
-                reason=e.reason.value if e.reason is not None else None,
-            )
-            for e in details.events
-        ],
+        events=[event_response(e) for e in details.events],
         candidates=[
             s.RoutePersonaCandidates(
                 persona=group.persona,
@@ -146,6 +141,20 @@ def route_response(details: RouteDetails) -> s.SigningRouteResponse:
             )
             for group in details.candidates
         ],
+    )
+
+
+def event_response(e: EventView) -> s.RouteEvent:
+    event = e.event
+    return s.RouteEvent(
+        id=str(event.id),
+        kind=event.kind.value,
+        round=event.round,
+        at=event.at,
+        who=e.who,
+        participant_id=str(event.participant_id) if event.participant_id is not None else None,
+        comment=e.comment,
+        reason=e.reason.value if e.reason is not None else None,
     )
 
 
@@ -189,7 +198,7 @@ def _summary(item: RouteSummary) -> s.SigningRouteSummary:
     )
 
 
-def _key(info: KeyInfo | None) -> s.SigningKeyInfo | None:
+def key_info(info: KeyInfo | None) -> s.SigningKeyInfo | None:
     if info is None:
         return None
     return s.SigningKeyInfo(
@@ -224,7 +233,7 @@ def _preview(preview: RoutePreview) -> s.SigningRoutePreview:
             for person in preview.participants
         ],
         blockers=[s.SigningRouteBlocker(**blocker_body(b)) for b in preview.blockers],
-        sender_key=_key(preview.sender_key),
+        sender_key=key_info(preview.sender_key),
     )
 
 
@@ -254,25 +263,31 @@ def _update(body: s.UpdateSigningRouteRequest) -> RouteUpdate:
 def _send(body: s.SendSigningRouteRequest) -> SendRequest:
     sign = None
     if body.sign is not None:
-        sign = KeyRequest(identity_id=_key_id(body.sign.identity_id), passphrase=body.sign.passphrase or "")
+        sign = KeyRequest(identity_id=key_id(body.sign.identity_id), passphrase=body.sign.passphrase or "")
     return SendRequest(expected=dict(body.expected), sign=sign)
 
 
-def _key_id(value: str | None) -> UUID | None:
+def key_id(value: str | None) -> UUID | None:
     if value is None:
         return None
     try:
         return UUID(value)
     except ValueError:
-        raise NotFoundError(
-            localized_error(f"Ключ подписи {value} не найден", f"Signing key {value} not found")
+        raise SigningKeyError(
+            409, "key_not_found", localized_error(f"Ключ подписи {value} не найден", f"Signing key {value} not found")
         ) from None
 
 
-def _key_failure(exc: Exception) -> NoReturn:
-    """Отказ подписи ключом Студии в ответе: нужен пароль, чужой слот или ошибка подписи."""
+def key_failure(exc: Exception) -> NoReturn:
+    """Отказ подписи ключом Студии в ответе (раздел 8.1): пароль, ключ, политика, чужой слот или ошибка подписи."""
     if isinstance(exc, KeyPassphraseRequiredError):
         raise SigningKeyError(400, "passphrase_required", str(exc)) from exc
+    if isinstance(exc, KeyPassphraseInvalidError):
+        raise SigningKeyError(400, "passphrase_invalid", str(exc)) from exc
+    if isinstance(exc, KeyNotFoundError):
+        raise SigningKeyError(409, "key_not_found", str(exc)) from exc
+    if isinstance(exc, SigningKeyStorageDeniedError):
+        raise SigningKeyError(403, "server_keys_forbidden", str(exc)) from exc
     if isinstance(exc, PermissionError | ProjectForbiddenError):
         raise SigningKeyError(403, "forbidden", str(exc)) from exc
     raise SigningKeyError(400, "sign_failed", str(exc)) from exc
@@ -288,7 +303,7 @@ async def list_signing_routes(
     uc: FromDishka[SigningRouteDrafts],
     profile_id: str | None = Query(default=None, max_length=128),
 ) -> s.SigningRouteList:
-    _reader()
+    reader()
     response.headers["Cache-Control"] = "no-store"
     return s.SigningRouteList(items=[_summary(item) for item in await uc.list_routes(project_id, profile_id)])
 
@@ -307,7 +322,7 @@ async def create_signing_route(
 async def get_signing_route(
     project_id: UUID, route_id: UUID, response: Response, uc: FromDishka[SigningRouteDrafts]
 ) -> s.SigningRouteResponse:
-    actor = _reader()
+    actor = reader()
     response.headers["Cache-Control"] = "no-store"
     return route_response(await uc.get(actor, project_id, route_id))
 
@@ -342,7 +357,7 @@ async def send_signing_route(
     except (RouteInputError, RouteConflictError, NotFoundError):
         raise
     except (ValueError, PermissionError, ProjectForbiddenError) as exc:
-        _key_failure(exc)
+        key_failure(exc)
     return route_response(details)
 
 

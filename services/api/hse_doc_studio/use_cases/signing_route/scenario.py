@@ -23,7 +23,9 @@ from hse_doc_studio.core.signatures.plan import slot_persona
 from hse_doc_studio.core.signing_route.effects import Notify
 from hse_doc_studio.core.signing_route.engine import Evaluation, evaluate
 from hse_doc_studio.core.signing_route.entities import (
+    EventKind,
     RouteEvent,
+    RouteStatus,
     SigningRoute,
 )
 from hse_doc_studio.core.signing_route.notices import mark_requests
@@ -70,6 +72,22 @@ class Settled:
         return tuple(e for e in self.evaluation.effects if isinstance(e, Notify))
 
 
+def closing_events(settled: Settled, at: datetime) -> list[RouteEvent]:
+    """Событие завершения, если после действия всё уже сделано."""
+    route = settled.route
+    if settled.evaluation.status is RouteStatus.completed and route.status is not RouteStatus.completed:
+        return [RouteEvent(route.id, route.round, at, EventKind.completed)]
+    return []
+
+
+def frozen_events(settled: Settled, at: datetime) -> list[RouteEvent]:
+    """Событие фиксации документов маршрутом (без актора: фиксирует сервер)."""
+    route = settled.route
+    if not settled.frozen:
+        return []
+    return [RouteEvent(route.id, route.round, at, EventKind.frozen, details={"docs": list(settled.frozen)})]
+
+
 @dataclass(frozen=True)
 class RouteServices:
     """Порты, нужные любому сценарию маршрута."""
@@ -101,6 +119,17 @@ class RouteScenario:
         invitees = {i.invitation_id: i for i in await self._s.people.invitees(project_id)}
         return People(names=await self._s.people.names(users), invitees=invitees, personas=loaded.personas)
 
+    async def _people_of(
+        self, project_id: UUID, route: SigningRoute, loaded: LoadedFacts, events: Sequence[RouteEvent]
+    ) -> People:
+        """Люди маршрута и те, кто в нём действовал (акторы событий), чтобы события было кем подписать."""
+        people = await self._people(project_id, route, loaded)
+        missing = {e.actor_id for e in events if e.actor_id is not None and e.actor_id not in people.names}
+        if not missing:
+            return people
+        names = {**people.names, **await self._s.people.names(missing)}
+        return People(names=names, invitees=people.invitees, personas=people.personas)
+
     async def _manages(self, project_id: UUID) -> bool:
         """Вправе ли актор управлять маршрутом точки (`SUBMISSION_CREATE`)."""
         try:
@@ -113,13 +142,8 @@ class RouteScenario:
         loaded = await self._s.facts.load(point, route)
         evaluation = evaluate(route, loaded.facts)
         events = await self._s.routes.list_events(route.id)
-        people = await self._people(point.project_id, route, loaded)
+        people = await self._people_of(point.project_id, route, loaded, events)
         actor_id = actor_uuid(actor) if actor.kind is ActorKind.user else None
-        names = dict(people.names)
-        missing = {e.actor_id for e in events if e.actor_id is not None and e.actor_id not in names}
-        if missing:
-            names |= await self._s.people.names(missing)
-            people = People(names=names, invitees=people.invitees, personas=people.personas)
         manages = await self._manages(point.project_id)
         show = manages or any(p.user_id == actor_id for p in route.participants)
         details = build_details(point, route, loaded.facts, evaluation, people, events, show_comments=show)
@@ -159,6 +183,25 @@ class RouteScenario:
             route = refresh_snapshot(route, loaded.facts)
             evaluation = evaluate(route, loaded.facts)
         return Settled(route, loaded, evaluation, tuple(frozen))
+
+    async def _stop_if_changed(
+        self, point: RoutePoint, route: SigningRoute, loaded: LoadedFacts, at: datetime
+    ) -> SigningRoute | None:
+        """Остановить маршрут, если расчёт на текущих фактах его останавливает (таблица 5.5, уход участника).
+
+        Возвращает записанный остановленный маршрут или None, если маршрут идёт дальше. Вызывать под блокировкой
+        строки маршрута и `project_lock`, в транзакции сценария. Эффекты остановки (придержать картинки, чьё
+        согласие относится к прежней сборке) выполняются без обновления снимка: расхождение со снимком это и есть
+        причина остановки, а «Отправить заново» снимет новый.
+        """
+        evaluation = evaluate(route, loaded.facts)
+        if evaluation.stop is None:
+            return None
+        files = [e for e in evaluation.effects if not isinstance(e, Notify)]
+        if files:
+            await self._s.effects.apply(point, route, files, at=at)
+        event = RouteEvent(route.id, route.round, at, EventKind.paused, details={"reason": evaluation.stop.value})
+        return await self._commit(Settled(route, loaded, evaluation), [event], actor_id=None, at=at)
 
     async def _commit(
         self,

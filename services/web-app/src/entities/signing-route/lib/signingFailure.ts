@@ -17,6 +17,8 @@ export const SIGNING_TASK_FAILURE_CODES: readonly string[] = [
   "image_required",
   "plate_required",
   "method_not_allowed",
+  "visible_layer_final",
+  "stale_route",
   "passphrase_required",
   "passphrase_invalid",
   "sign_failed",

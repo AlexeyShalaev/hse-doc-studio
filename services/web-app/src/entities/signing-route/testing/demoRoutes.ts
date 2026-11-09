@@ -408,7 +408,9 @@ export const createSigningRouteDemo = (
     r: Route,
     kind: RouteEventKind,
     who: string | null,
-    extra: Partial<Pick<RouteEvent, "comment" | "reason">> = {},
+    extra: Partial<
+      Pick<RouteEvent, "comment" | "reason" | "participant_id">
+    > = {},
   ) => {
     r.events.push({
       id: nextId("sre"),
@@ -416,6 +418,7 @@ export const createSigningRouteDemo = (
       round: r.round,
       at: now(),
       who,
+      participant_id: extra.participant_id ?? null,
       comment: extra.comment ?? null,
       reason: extra.reason ?? null,
     });
@@ -638,6 +641,33 @@ export const createSigningRouteDemo = (
     return ["image", "detached"];
   };
 
+  /** Место слота и его метка: высота как у сервера, по способу (картинка 0.4 ширины, плашка 0.55). */
+  const slotPlace = (
+    pair: ReturnType<typeof pairsOf>[number],
+    method: RouteSignMethod | null,
+  ) => {
+    const mark =
+      method === "image"
+        ? ("png" as const)
+        : method === "detached"
+          ? ("plate" as const)
+          : ("none" as const);
+    const aspect = { png: 0.4, plate: 0.55 } as const;
+    return {
+      slot_id: pair.slot_id,
+      label: pair.label,
+      page: pair.page,
+      x_mm: pair.x_mm,
+      y_mm: pair.y_mm,
+      width_mm: pair.width_mm,
+      height_mm:
+        mark === "none"
+          ? null
+          : Math.round(pair.width_mm * aspect[mark] * 100) / 100,
+      mark,
+    };
+  };
+
   const toTask = (
     r: Route,
     p: Participant,
@@ -680,6 +710,9 @@ export const createSigningRouteDemo = (
         methods: allowedMethods(r, p),
         method: mine.length > 0 ? p.method : null,
         image_ready: p.imageReady,
+        image_url: p.imageReady
+          ? `/api/v1/projects/${encodeURIComponent(r.project_id)}/signing-routes/${encodeURIComponent(r.id)}/task/image`
+          : null,
         plate: p.plate,
         keys: {
           server_keys_allowed: serverKeysAllowed(),
@@ -702,18 +735,7 @@ export const createSigningRouteDemo = (
             .map((pair) => {
               const status = slotStatus(r, pair);
               return {
-                slot_id: pair.slot_id,
-                label: pair.label,
-                page: pair.page,
-                x_mm: pair.x_mm,
-                y_mm: pair.y_mm,
-                width_mm: pair.width_mm,
-                mark:
-                  p.method === "image"
-                    ? ("png" as const)
-                    : p.method === "detached"
-                      ? ("plate" as const)
-                      : ("none" as const),
+                ...slotPlace(pair, p.method),
                 status,
                 reason:
                   status === "signed"
@@ -726,9 +748,11 @@ export const createSigningRouteDemo = (
           others: pairs
             .filter((pair) => pair.persona !== p.persona)
             .map((pair) => ({
-              slot_id: pair.slot_id,
-              label: pair.label,
-              page: pair.page,
+              ...slotPlace(
+                pair,
+                participants(r).find((q) => q.persona === pair.persona)
+                  ?.method ?? pair.method,
+              ),
               status: slotStatus(r, pair),
             })),
         };
@@ -1074,6 +1098,13 @@ export const createSigningRouteDemo = (
       : conflict("not_your_turn", "It is not your turn in the signing route");
   };
 
+  /** После фиксации картинку и данные плашки менять нельзя: это изменило бы зафиксированный PDF. */
+  const layerFinal = () =>
+    conflict(
+      "visible_layer_final",
+      "The documents are already frozen: the image and the plate cannot be changed",
+    );
+
   const formFile = (body: unknown): boolean =>
     typeof FormData !== "undefined" &&
     body instanceof FormData &&
@@ -1250,7 +1281,7 @@ export const createSigningRouteDemo = (
           for (const p of r.steps[0] ?? []) {
             if (p.user_id === user.id && isCrypto(p.method)) {
               p.signedRound = r.round;
-              event(r, "signed", user.name);
+              event(r, "signed", user.name, { participant_id: p.id });
             }
           }
           settle(r);
@@ -1366,7 +1397,7 @@ export const createSigningRouteDemo = (
             ]),
           ),
         };
-        event(r, "approved", user.name);
+        event(r, "approved", user.name, { participant_id: p.id });
         settle(r);
         if (
           combine &&
@@ -1375,7 +1406,7 @@ export const createSigningRouteDemo = (
           isCrypto(p.method)
         ) {
           p.signedRound = r.round;
-          event(r, "signed", user.name);
+          event(r, "signed", user.name, { participant_id: p.id });
           settle(r);
         }
         return demoJson(toTask(r, p, user));
@@ -1394,7 +1425,7 @@ export const createSigningRouteDemo = (
         const refusedKey = refuseKey(user, body);
         if (refusedKey) return refusedKey;
         p.signedRound = r.round;
-        event(r, "signed", user.name);
+        event(r, "signed", user.name, { participant_id: p.id });
         settle(r);
         return demoJson(toTask(r, p, user));
       }),
@@ -1416,6 +1447,7 @@ export const createSigningRouteDemo = (
         r.stop_reason = "returned";
         p.returnedRound = r.round;
         event(r, "returned", user.name, {
+          participant_id: p.id,
           comment: body.comment,
           reason: "returned",
         });
@@ -1428,6 +1460,7 @@ export const createSigningRouteDemo = (
       handler: withTask((req, r, p, { user }) => {
         const refused = needsTurn(r, p, ["to_approve", "to_approve_sign"]);
         if (refused) return refused;
+        if (isFrozen(r)) return layerFinal();
         if (!formFile(req.body)) return invalid("Image file is required");
         const form = req.body as FormData;
         const image = form.get("file");
@@ -1444,6 +1477,7 @@ export const createSigningRouteDemo = (
       handler: withTask((req, r, p, { user }) => {
         const refused = needsTurn(r, p, ["to_approve", "to_approve_sign"]);
         if (refused) return refused;
+        if (isFrozen(r)) return layerFinal();
         const body = parse(SetSigningTaskPlateRequestSchema, req.body);
         if (!body) return invalid("identity_id is required");
         const key = findKey(user, body.identity_id);
@@ -1465,6 +1499,7 @@ export const createSigningRouteDemo = (
       handler: withTask((req, r, p, { user }) => {
         const refused = needsTurn(r, p, ["to_approve", "to_approve_sign"]);
         if (refused) return refused;
+        if (isFrozen(r)) return layerFinal();
         if (!formFile(req.body)) return invalid("Certificate file is required");
         p.plate = {
           owner: user.name,
@@ -1533,7 +1568,7 @@ export const createSigningRouteDemo = (
         const valid = !/bad/i.test(file.name);
         if (valid) {
           p.signedRound = r.round;
-          event(r, "signed", user.name);
+          event(r, "signed", user.name, { participant_id: p.id });
           settle(r);
         }
         return demoJson({

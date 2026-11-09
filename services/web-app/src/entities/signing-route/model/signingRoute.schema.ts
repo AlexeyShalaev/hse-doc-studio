@@ -139,6 +139,8 @@ export const RouteEventSchema = z.strictObject({
   round: z.number().int().min(0),
   at: iso,
   who: z.string().nullable(),
+  /** Участник маршрута, к которому относится событие (согласие, подпись, возврат); null у событий автора и сервера. */
+  participant_id: z.string().nullable(),
   comment: z.string().nullable(),
   reason: SigningStopReasonSchema.nullable(),
 });
@@ -426,6 +428,9 @@ export const SigningTaskMeSchema = z.strictObject({
   methods: z.array(RouteSignMethodSchema),
   method: RouteSignMethodSchema.nullable(),
   image_ready: z.boolean(),
+  /** Путь API от корня сайта к своей загруженной картинке (PNG) для предпросмотра; null, пока её нет. */
+  image_url: z.string().nullable(),
+  /** Данные плашки, известные серверу: из слота, профиля подписанта или его ключа по умолчанию. */
   plate: SigningPlateSchema.nullable(),
   keys: z.strictObject({
     server_keys_allowed: z.boolean(),
@@ -434,27 +439,28 @@ export const SigningTaskMeSchema = z.strictObject({
 });
 export type SigningTaskMe = z.infer<typeof SigningTaskMeSchema>;
 
-export const SigningTaskSlotSchema = z.strictObject({
+/** Чужой слот на документе: место и статус, без причины плана. */
+export const SigningTaskOtherSlotSchema = z.strictObject({
   slot_id: z.string(),
   label: LocalizedSchema,
   page: z.number().int().min(1),
   x_mm: z.number(),
   y_mm: z.number(),
   width_mm: z.number(),
+  /** Высота метки: картинка по своим пропорциям, плашка по вёрстке; null у слота без видимой метки. */
+  height_mm: z.number().nullable(),
   mark: RouteVisibleMarkSchema,
   status: RouteSlotStatusSchema,
+});
+export type SigningTaskOtherSlot = z.infer<typeof SigningTaskOtherSlotSchema>;
+
+/** Свой слот: ещё и причина плана. */
+export const SigningTaskSlotSchema = z.strictObject({
+  ...SigningTaskOtherSlotSchema.shape,
   /** Причина плана (`PlanReason`, в том числе `awaiting_approval`); null у подписанного. */
   reason: z.string().nullable(),
 });
 export type SigningTaskSlot = z.infer<typeof SigningTaskSlotSchema>;
-
-export const SigningTaskOtherSlotSchema = z.strictObject({
-  slot_id: z.string(),
-  label: LocalizedSchema,
-  page: z.number().int().min(1),
-  status: RouteSlotStatusSchema,
-});
-export type SigningTaskOtherSlot = z.infer<typeof SigningTaskOtherSlotSchema>;
 
 export const SigningTaskDocSchema = z.strictObject({
   doc_id: z.string(),
@@ -550,10 +556,14 @@ export const SIGNING_ROUTE_ERROR_CODES = [
   "image_required",
   "plate_required",
   "method_not_allowed",
+  "visible_layer_final",
+  "invalid_file",
   "passphrase_required",
   "passphrase_invalid",
   "sign_failed",
   "key_not_found",
+  "server_keys_forbidden",
+  "forbidden",
   "route_blocked",
   "route_locked",
   "participant_not_waiting",

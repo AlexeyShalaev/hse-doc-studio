@@ -2,7 +2,7 @@
 
 Статус: принято 09.11.2026, внедряется срезами раздела 10. Модель и расчёт описаны так, как их реализует
 `core/signing_route` (срез R1); уточнения по итогам R1 внесены в разделы 4, 5 и 6, по итогам R8 в раздел 6.6, по
-итогам R11 в раздел 5.7.
+итогам R6 (сценарии подписанта) в разделы 5.5, 6.3, 6.5, 6.10 и 8, по итогам R11 в раздел 5.7.
 
 Основа: `docs/design/signature-plan.md` (план подписей, слои L0, L1, L2, L3, «Подписать комплект»),
 `docs/design/collaboration.md` (раздел 7.2 «Привязка к персонам», 8.1 «Приглашения»), `docs/ru/deploy/invitations.md`.
@@ -408,6 +408,12 @@ stateDiagram-v2
 даёт `rebuilt`. PDF из office-документов (конвертация Gotenberg) по-прежнему невоспроизводим: там свои дата и `/ID`,
 и его пересборка без изменений тоже даёт `rebuilt`.
 
+Действие подписанта тоже сверка (срез R6): под блокировками оно сначала считает маршрут на текущих фактах. Если
+документы изменились вне маршрута (или участник ушёл), действие записывает остановку (событие `paused`, уведомления,
+картинки с недействительным согласием снова придержаны) и отвечает 409 `doc_changed` со списком разошедшихся документов
+(при уходе участника `not_your_turn`). Общий шаг сценариев: `RouteScenario._stop_if_changed`, им же пользуются
+триггеры R7.
+
 Как замечаем изменения: хук успешной сборки (`IBuiltPdfObserver.on_pdf_built`), хуки после записи состояния подписей,
 применения синхронизации и восстановления (`IRouteWatch.on_project_changed`), и периодическая сверка активных
 маршрутов (`PeriodicTask` лидера, раз в 5 минут) как страховка для гибрида. Чтение маршрута ничего не пишет, но
@@ -550,7 +556,13 @@ stateDiagram-v2
 - Подписант выбирает способ на своей странице из пересечения `methods` всех пунктов точки, где его слот обязателен
   (`SubmissionDocItem.allowed_methods`). Запрещённые комбинации проверяются тем же `slot_mode_conflict`.
 - Смена способа своего слота это действие маршрута (запись `sign_mode` от его имени), а не общая правка настройки
-  слота: во время маршрута общая правка запрещена.
+  слота: во время маршрута общая правка запрещена. Способ приходит в `task/approve` (`method`) и записывается вместе
+  с согласием: «картинка» это режим `image`, «открепленная ЭП» плашка (`detached_text`), «PAdES» подпись без видимой
+  метки (`crypto_invisible`); слот, который уже подписывается выбранным способом, не меняется. Слот, переставший
+  быть картинкой, снимается с придержания. Отказ согласия (нет картинки, нет данных плашки) способ не записывает.
+- Выбирать можно только на своём шаге до фиксации (состояние `to_approve`): `me.methods` это способы точки, без
+  PAdES при запрете ключей на сервере (его ставит только ключ Студии). В остальных состояниях `me.methods` это
+  один текущий способ, другой отклоняется (409 `method_not_allowed`).
 - `method_not_allowed` у слота подписанта не мешает отправке: подписант выберет способ сам. Редактор маршрута
   показывает: «Петров выберет способ при подписании».
 
@@ -583,9 +595,15 @@ stateDiagram-v2
 - Без SMTP «Скопировать ссылку» у приглашённого повторно отправляет приглашение способом `manual` и отдаёт новую
   ссылку, как сейчас в блоке «Ожидают».
 - Режим регистрации «закрыта»: пригласить человека без аккаунта нельзя, редактор маршрута так и пишет.
-- Известные данные плашки (для расчёта L и автозаполнения): `slot.signer` из состояния подписей; публичная часть ключа
-  по умолчанию участника и сертификат или открытый ключ из его профиля (порт публичных данных подписанта, срез R10).
-  Закрытые ключи чужих людей маршрут не читает.
+- Известные данные плашки (для расчёта L и автозаполнения): `slot.signer` из состояния подписей, иначе сертификат
+  или открытый ключ из профиля участника (порт `ISignerPlateData`, на сервере `ProfileSignerPlateData`; срезы R10
+  и R6). Закрытые ключи чужих людей маршрут не читает. Ключи Студии видит только их владелец, поэтому открытая
+  часть его ключа по умолчанию попадает в плашку его же действием: `task/plate`, «Согласовать и подписать» (плашку
+  без подписанта заполняет ключ подписи) или согласие без ключа, если в профиле ключа нет (плашку заполняет ключ по
+  умолчанию). До этого действия такой участник для расчёта ещё меняет видимый слой.
+- Плашка, заполненная перед фиксацией открытым ключом OpenPGP из профиля, кладёт этот ключ в связку ключей сервера:
+  иначе открепленную подпись `.asc`, загруженную после фиксации, нечем проверить (`unknown_key`). То же делает
+  `task/plate/file` с ключом OpenPGP. Сертификат X.509 приходит внутри самой подписи.
 
 ### 6.6 Уведомления и почта
 
@@ -681,6 +699,13 @@ stateDiagram-v2
   их слоты только в очередь актора на подпись. Иначе у документа причина «Документ на подписании по маршруту» и
   ссылка на страницу подписи.
 - После каждой записи подписи слота маршрута вызывается пересчёт маршрута.
+- Срез R6 закрыл очередь и пересчёт у трёх входов (порт `ISigningRouteGate`, локально `NoSigningRoutes`):
+  `POST .../docs/{doc}/detached/{slot}` (готовая подпись и КриптоПро), `.../detached/{slot}/sign` и
+  `.../embedded/{slot}/sign` («Подписать в Студии»). Слот идущего маршрута принимает подпись только от своего
+  участника в состоянии `to_sign`; после записи маршрут пересчитывается (событие `signed` с участником, запрос
+  следующему шагу, завершение), подпись с вердиктом `invalid` слот подписанным не делает. Остановленный по расчёту
+  маршрут очередь не держит. «Подписать комплект», `sign_submission`, удаление подписи и прочие правки (`route_locked`)
+  остаются срезу R7.
 - Существующие компоненты на странице подписания: `PdfStampEditor` и `usePdfPage` (просмотр), `SignatureEditorModal`
   (загрузка картинки), `CryptoProSignDialog` и `lib/cades.ts`, блоки загрузки открепленной подписи
   (`DetachedSignatureBlocks`), формы `OpenPgpCreateForm` и импорта из настроек подписи, пакет для подписанта (zip).
@@ -731,7 +756,8 @@ stateDiagram-v2
 | `POST /projects/{id}/signing-routes/{route_id}/task/approve` | `OUTPUT_READ` + участник + `SIGN` | согласовать; `method` сменить способ своих слотов; `sign` «Согласовать и подписать» | `ApproveSigningTaskRequest`, `SigningTask` |
 | `POST /projects/{id}/signing-routes/{route_id}/task/sign` | `OUTPUT_READ` + участник + `SIGN` | подписать свои криптослоты ключом Студии | `SignSigningTaskRequest`, `SigningTask` |
 | `POST /projects/{id}/signing-routes/{route_id}/task/return` | `OUTPUT_READ` + участник | вернуть на доработку | `ReturnSigningTaskRequest`, `SigningTask` |
-| `POST /projects/{id}/signing-routes/{route_id}/task/image` | `OUTPUT_READ` + участник + `SIGN` | своя картинка (загруженная или нарисованная), в очередь | multipart: `file` (PNG), `remember` (`true`, `false`); `SigningTask` |
+| `GET /projects/{id}/signing-routes/{route_id}/task/image` | `OUTPUT_READ` + участник | своя загруженная картинка для предпросмотра (на документе она придержана до согласия); 404, пока её нет | `image/png` |
+| `POST /projects/{id}/signing-routes/{route_id}/task/image` | `OUTPUT_READ` + участник + `SIGN` | своя картинка (загруженная или нарисованная) во все свои слоты, в очередь; `remember` кладёт её и в профиль подписанта | multipart: `file` (PNG до 2 МБ), `remember` (`true`, `false`); `SigningTask` |
 | `PUT /projects/{id}/signing-routes/{route_id}/task/plate` | `OUTPUT_READ` + участник + `SIGN` | данные плашки из своего ключа Студии, в очередь | `SetSigningTaskPlateRequest`, `SigningTask` |
 | `POST /projects/{id}/signing-routes/{route_id}/task/plate/file` | `OUTPUT_READ` + участник + `SIGN` | данные плашки из сертификата или открытого ключа файлом, в очередь | multipart: `file`; `SigningTask` |
 
@@ -757,7 +783,18 @@ stateDiagram-v2
 - Отпечатки: каждое действие с документами передаёт `expected`, для каждого `doc_id` отпечаток из последнего показа.
   Отправка берёт `docs[].token` предпросмотра (`build:<sha>`); подписант берёт `docs[].token` задачи, где сервер уже
   положил отпечаток для его следующего действия: `build:<sha>` для согласия, `build:<sha>:<видимый слой>` для согласия
-  с фиксацией, `pdf:<sha>` для подписи; `null`, когда действовать нечего.
+  с фиксацией, `pdf:<sha>` для подписи; `null`, когда действовать нечего. `pdf:<sha>` это байты фиксации B, а не файла
+  со встроенными подписями: после фиксации подписывают параллельно, и чужая PAdES поверх того же B не отменяет
+  открытую страницу. `approve_and_sign` у уже зафиксированного документа тоже `pdf:<sha>`; документ без ЭП не
+  фиксируется, у него остаётся отпечаток сборки. Сверяются только документы участника (у согласующего без слотов
+  все документы маршрута); лишние ключи `expected` не мешают.
+- Очередь действий подписанта: согласовать при `approve` и `approve_and_sign`; `task/sign` при `sign`; вернуть в
+  состояниях `to_approve`, `to_approve_sign`, `to_sign`; картинка, данные плашки и смена способа только в
+  `to_approve`, то есть до фиксации. После неё (`to_approve_sign`) такая правка изменила бы зафиксированный PDF и
+  сбросила чужие ЭП, поэтому 409 `visible_layer_final`; согласующему без слотов и не в свою очередь `not_your_turn`.
+- Всё, что можно проверить, действие подписанта проверяет до записи файлов и маршрута: очередь, отпечатки, право
+  `SIGN` на свои слоты, ключ (политика, свой ли, пароль пробной подписью), совпадение ключа с подписантом плашки,
+  способ, картинку и данные плашки. Отказ на этом этапе ничего не меняет.
 - Значения `next_action`, состояний участника, событий и причин остановки совпадают с перечислениями ядра
   (`core/signing_route/entities.py`: `NextAction`, `ParticipantState`, `EventKind`, `StopReason`). Уведомление
   `signing_request` хранит своё `outcome` (`approve`, `approve_sign`, `sign`).
@@ -771,8 +808,11 @@ stateDiagram-v2
 | `no_participants`, `bad_step`, `duplicate_participant`, `duplicate_slot`, `unknown_doc` | 400 | маршрут собран неверно (`RouteInputError` ядра, `check_route`) |
 | `unknown_slot` | 400 | необязательный слот из `extra_slots` не ставится на этот документ точки |
 | `bad_id` | 400 | `id` или `user_id` человека в PUT не идентификатор |
-| `passphrase_required`, `sign_failed` | 400 | «Отправить и подписать»: ключ с паролем без пароля (ничего не отправлено) или подпись не удалась; если ошибка после фиксации, маршрут уже отправлен и подписать можно на своей странице |
-| `forbidden` | 403 | «Отправить и подписать»: слот ЭП отправителю не принадлежит |
+| `passphrase_required`, `passphrase_invalid` | 400 | подпись ключом Студии («Отправить и подписать», `task/approve` с `sign`, `task/sign`): у ключа с паролем нет пароля или пароль не подошёл (пробная подпись ключом OpenPGP); ничего не отправлено, согласие не записано |
+| `sign_failed` | 400 | сама подпись не удалась, хотя ключ прошёл проверку. Если это случилось после отправки или согласия (документы уже зафиксированы), они записаны: отправитель и подписант остаются в `to_sign` и подписывают на своей странице; `task/sign` при отказе ничего не меняет |
+| `key_not_found` | 409 | `identity_id` не ключ актора или подписывать нечем (нет ключа по умолчанию): подпись и `task/plate` |
+| `server_keys_forbidden` | 403 | подпись ключом Студии и `task/plate` при запрете ключей на сервере; проверяется раньше поиска ключа |
+| `forbidden` | 403 | слот ЭП актору не принадлежит, на плашке указан другой подписант, чем ключ подписи (до записи согласия), или у участника отнято право `SIGN` |
 | `doc_changed` | 409 | `expected` не совпал с текущим отпечатком; `docs`: какие документы |
 | `invalid_transition` | 409 | действие автора не подходит к статусу маршрута: PUT или отправка активного, отмена закрытого, архив незавершённого |
 | `not_your_turn` | 409 | действие подписанта не в его очередь, в том числе у неактивного маршрута (и сторож 6.10) |
@@ -781,10 +821,10 @@ stateDiagram-v2
 | `route_blocked` | 409 | отправка, когда предпросмотр называет помехи; `blockers` как в предпросмотре |
 | `route_locked` | 409 | правка подписей документа активного маршрута (5.5, срез R7) |
 | `route_exists`, `doc_on_route`, `stale_route` | 409 | хранилище (R4): у точки уже есть незавершённый маршрут, документ держит другой маршрут (`docs`), маршрут перезаписан параллельно и его надо перечитать |
-| `method_not_allowed` | 409 | `approve.method` не входит в разрешённые сейчас способы (`me.methods`) |
-| `passphrase_required`, `passphrase_invalid`, `sign_failed` | 400 | подпись ключом Студии на странице подписанта (`task/approve` с `sign`, `task/sign`): у ключа с паролем нет пароля, пароль не подошёл, подпись не удалась; согласие и подпись не записаны |
-| `key_not_found` | 409 | `identity_id` не ключ актора (подпись и `task/plate`) |
-| `server_keys_forbidden` | 403 | подпись ключом Студии при запрете ключей на сервере |
+| `method_not_allowed` | 409 | `approve.method` не входит в разрешённые сейчас способы (`me.methods`) или несовместим в принципе (`slot_mode_conflict`) |
+| `visible_layer_final` | 409 | картинка или данные плашки после фиксации (`to_approve_sign`): видимый слой уже окончателен |
+| `invalid_file` | 400 | `task/image`: не PNG, пусто или больше 2 МБ; `task/plate/file`: не сертификат и не открытый ключ, больше 128 КБ или в файле закрытый ключ |
+| `bad_comment` | 400 | `task/return` без комментария или длиннее 2000 символов (тело мимо схемы даёт 422) |
 | `participant_not_waiting` | 409 | напомнить тому, чья очередь не настала или кто уже закончил, или у неактивного маршрута |
 | `rate_limited` | 429 | напоминание чаще раза в 12 часов, отправка раньше чем через минуту после прошлой отправки маршрута; `retry_after` в секундах, у напоминания ещё `available_at` (ISO 8601) |
 | `invitation_resend_too_soon`, `invitation_not_pending`, `forbidden` | 429, 409, 403 | «Напомнить» приглашённому: отказ повтора приглашения (5.7), коды общие с блоком «Ожидают» |
@@ -816,7 +856,9 @@ RouteParticipant
   state, next_action, approved_at (согласие текущего раунда), notified_at, reminded_at, reminders
 
 RouteEvent
-  id, kind, round, at, who (имя актора; null у событий сервера), comment (возврат), reason (остановка)
+  id, kind, round, at, who (имя актора; null у событий сервера),
+  participant_id (участник маршрута, к которому относится событие: согласие, подпись, возврат; null у событий
+  автора и сервера), comment (возврат), reason (остановка)
 
 SigningRouteList: {items: [SigningRouteSummary]}
 SigningRouteSummary
@@ -844,13 +886,22 @@ SigningTask
   route: {id, project: {id, name}, profile, status, phase, round, current_step, deadline, message, sender,
           sent_at, stop_reason},
   steps: [[{name, persona, state, at (последнее действие), me}]],
-  me: {participant_id, state, next_action, methods (сейчас разрешённые), method, image_ready,
-       plate: {owner, kind: x509 | openpgp | manual, cert_id} | null,
-       keys: {server_keys_allowed, default_key: {id, label, kind, protected, signer} | null}},
+  me: {participant_id, state, next_action, methods (сейчас разрешённые, 6.3), method,
+       image_ready (у каждого своего слота есть картинка, каким бы способом он ни подписывался),
+       image_url (GET .../task/image для предпросмотра; null, пока картинки нет),
+       plate: {owner, kind: x509 | openpgp | manual, cert_id} | null
+         (данные, известные серверу: слот, профиль подписанта, иначе его ключ по умолчанию, 6.5),
+       keys: {server_keys_allowed, default_key: {id, label, kind, protected, signer} | null
+                (действующий ключ по умолчанию; null и при запрете ключей на сервере)}},
   docs: [{doc_id, name, pdf_url, frozen, token,
-          mine: [{slot_id, label, page, x_mm, y_mm, width_mm, mark: png | plate | none, status, reason}],
-          others: [{slot_id, label, page, status}]}],
-  events: [RouteEvent]
+          mine: [{slot_id, label, page, x_mm, y_mm, width_mm, height_mm, mark: png | plate | none, status,
+                  reason}],
+          others: [{slot_id, label, page, x_mm, y_mm, width_mm, height_mm, mark, status}]}],
+    (документы, где у участника есть слоты; у согласующего без слотов все документы маршрута с пустым `mine`;
+     место слота это размещение автора, а пока его нет, место из пака; `height_mm` высота метки: картинка по своим
+     пропорциям, а пока её нет 0.4 ширины, плашка по вёрстке её строк, null у слота без видимой метки)
+  steps[].at: последнее действие участника в текущем раунде (согласие, подпись или возврат)
+  events: [RouteEvent] (участник видит и комментарии возврата)
 
 ApproveSigningTaskRequest: {expected, method | null, sign: {identity_id, passphrase} | null}
 SignSigningTaskRequest: {expected, identity_id, passphrase}
@@ -876,18 +927,20 @@ SigningTaskList: {items: [{project: {id, name}, route_id, profile, round, sender
   "steps": [[{"name": "Иванов И. И.", "persona": "author", "state": "done", "at": "2026-11-10T09:00:00Z", "me": false}],
             [{"name": "Петров П. П.", "persona": "supervisor", "state": "to_approve_sign", "at": null, "me": true}]],
   "me": {"participant_id": "srp_supervisor", "state": "to_approve_sign", "next_action": "approve_and_sign",
-         "methods": ["detached"], "method": "detached", "image_ready": false,
+         "methods": ["detached"], "method": "detached", "image_ready": false, "image_url": null,
          "plate": {"owner": "Петров П. П.", "kind": "openpgp", "cert_id": "1A2B 3C4D 5E6F 7A8B"},
          "keys": {"server_keys_allowed": false, "default_key": null}},
   "docs": [{"doc_id": "topic_application", "name": {"ru": "Заявление о выборе темы", "en": "Topic selection application"},
             "pdf_url": "/api/v1/projects/p_01hxa1c4de/docs/topic_application/frozen/pdf", "frozen": true,
             "token": "pdf:9c9c…",
             "mine": [{"slot_id": "supervisor", "label": {"ru": "Научный руководитель", "en": "Supervisor"}, "page": 1,
-                      "x_mm": 110, "y_mm": 130, "width_mm": 40, "mark": "plate", "status": "pending",
-                      "reason": "no_signature_file"}],
-            "others": [{"slot_id": "author", "label": {"ru": "Студент", "en": "Student"}, "page": 1, "status": "signed"}]}],
+                      "x_mm": 110, "y_mm": 130, "width_mm": 40, "height_mm": 22, "mark": "plate",
+                      "status": "pending", "reason": "no_signature_file"}],
+            "others": [{"slot_id": "author", "label": {"ru": "Студент", "en": "Student"}, "page": 1,
+                        "x_mm": 160, "y_mm": 208, "width_mm": 30, "height_mm": 12, "mark": "png",
+                        "status": "signed"}]}],
   "events": [{"id": "sre_01", "kind": "sent", "round": 1, "at": "2026-11-10T09:00:00Z", "who": "Иванов И. И.",
-              "comment": null, "reason": null}]
+              "participant_id": null, "comment": null, "reason": null}]
 }
 ```
 
@@ -920,8 +973,13 @@ SigningTaskList: {items: [{project: {id, name}, route_id, profile, round, sender
 - Сохранённую подпись профиля (`GET /account/signer-profile/image`) страница ставит обычным `task/image` без
   `remember`; с `remember: true` сервер кладёт картинку в профиль подписанта (R10).
 - Отказы подписи ключом Студии приходят с кодами из таблицы 8.1 (`passphrase_required`, `passphrase_invalid`,
-  `sign_failed`, `key_not_found`, `server_keys_forbidden`) до записи согласия: неверный пароль ничего не меняет в
-  маршруте.
+  `key_not_found`, `server_keys_forbidden`, `forbidden`) до записи согласия: неверный пароль ничего не меняет в
+  маршруте. `sign_failed` после успешной проверки ключа согласие не отменяет (8.1): страница перечитывает задачу и
+  показывает «Подписать».
+
+Как это сделал срез R6: всё перечисленное выше работает так, как описано; `task/plate` и `task/image` после
+фиксации отвечают 409 `visible_layer_final` (страница и так не предлагает их при `frozen`), `me.image_url` отдаёт
+уже загруженную картинку для предпросмотра.
 
 Моки W5: ключи Студии в `entities/signing-identity/testing`, профиль подписанта в `entities/signer-profile/testing`,
 адреса `detached` и `frozen/pdf` в `demoRoutes.ts`.
@@ -930,10 +988,12 @@ R5 и R6 переносят эталоны в `contracts/server/fixtures/<Схе
 `test_server_contract.py` и схемы из `SIGNING_ROUTE_CONTRACT_SCHEMAS` в `CONTRACT_SCHEMAS`
 (`entities/session/api/contractSchemas.ts`). R5 перенёс схемы автора (`SigningRoute`, `SigningRouteList`,
 `CreateSigningRouteRequest`, `UpdateSigningRouteRequest`, `SigningRoutePreview`, `SendSigningRouteRequest`; модели
-`api/schemas/signing_route.py`), `SigningReminder` перенёс R11, схемы подписанта переносит R6. Сообщения кодов
-маршрута лежат в `errors.json` фронтенда (`code.<код>`, ru и en); в `contracts/server/error_codes.json` их нет:
-этот каталог равен `IdentityErrorCode` (тест `test_error_codes_match_contract`). Расхождение с этим разделом правят
-в обе стороны одним PR: сначала эталоны, затем схемы.
+`api/schemas/signing_route.py`), `SigningReminder` перенёс R11, R6 схемы подписанта (`SigningTask`,
+`ApproveSigningTaskRequest`, `SignSigningTaskRequest`, `ReturnSigningTaskRequest`, `SetSigningTaskPlateRequest`).
+Сообщения кодов маршрута лежат в `errors.json` фронтенда (`code.<код>`, ru и en), отказы страницы подписанта в
+словаре `signing` (`failure.<код>`); в `contracts/server/error_codes.json` их нет: этот каталог равен `IdentityErrorCode`
+(тест `test_error_codes_match_contract`). Расхождение с этим разделом правят в обе стороны одним PR: сначала
+эталоны, затем схемы.
 
 ## 9. Решения
 
@@ -984,8 +1044,8 @@ R5 и R6 переносят эталоны в `contracts/server/fixtures/<Схе
 | R3 | `withheld` в `SignaturesState`, сериализация с `preserve_unknown`, `stamps_for_doc` его пропускает, причина плана `awaiting_approval`, правило git-слияния | нет |
 | R4 | Postgres: ORM, миграция `sr_01_signing_routes`, `ISigningRouteRepository` и in-memory двойник для тестов | R1 |
 | R5 | сценарии автора и API: черновик, изменение, предпросмотр, отправка («Отправить и подписать»), отмена, архив, список; разрешение участников по персонам и приглашениям; `ROUTE_ACTIONS`; только `MODE=server` | R1, R2, R3, R4 |
-| R6 | сценарии подписанта и API `task`: согласие, картинка, плашка, способ, подпись ключом Студии, возврат; автоматическая фиксация и совмещение; придержать и открыть слоты | R5 |
-| R7 | сторожа и триггеры: 409 на правки подписей и чужую очередь (6.10), «Подписать комплект» для документов маршрута, хук сборки, хук записи подписей, синхронизации и восстановления, периодическая сверка; `route` в ответе плана | R6 |
+| R6 | сценарии подписанта и API `task`: согласие, картинка, плашка, способ, подпись ключом Студии, возврат; автоматическая фиксация и совмещение; придержать и открыть слоты; плашка из профиля подписанта; очередь и пересчёт у входов подписи слота (`detached`, `sign`, 6.10) | R5 |
+| R7 | сторожа и триггеры: 409 на правки подписей (`route_locked`), «Подписать комплект» и `sign_submission` для документов маршрута, хук сборки, хук записи подписей, синхронизации и восстановления, периодическая сверка; `route` в ответе плана. Очередь и пересчёт у `detached` и «Подписать в Студии» уже есть (R6, `ISigningRouteGate`) | R6 |
 | R8 | уведомления: виды, `profile_id` в payload, `MAILED_KINDS`, шаблоны писем ru и en, `GET /account/signing-tasks`, `InboxSummary.signing_tasks`, хук принятия приглашения | R1, R4 (вызовы из R5, R6 подключаются по мере слияния) |
 | R9 | аудит и MCP: события `signing_route.*`, `route_id` в `signature.*`, тулы `get_signing_route`, `list_signing_tasks`, `send_for_signing` | R6 |
 | R10 | профиль подписанта: сохранённая картинка и сертификат или открытый ключ без закрытой части; порт публичных данных плашки (до слияния R6 работает заглушка, читающая только `slot.signer`) | нет |

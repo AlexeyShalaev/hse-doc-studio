@@ -1,0 +1,10 @@
+{
+  "expected": {
+    "topic_application": "pdf:9c9c9c9c9c9c9c9c9c9c9c9c9c9c9c9c9c9c9c9c9c9c9c9c9c9c9c9c9c9c9c9c"
+  },
+  "method": "detached",
+  "sign": {
+    "identity_id": null,
+    "passphrase": null
+  }
+}

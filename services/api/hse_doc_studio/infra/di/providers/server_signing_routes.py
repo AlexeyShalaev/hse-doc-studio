@@ -1,5 +1,5 @@
 """Провайдер маршрутов подписания (серверный режим): хранилище в Postgres, факты, уведомления, задачи «На подпись»,
-люди проекта и сценарии автора.
+люди проекта, сценарии автора и подписанта.
 
 Локальная Студия маршрутов не хранит (docs/design/signing-route.md, раздел 6.9): порта там нет, сценарии маршрута
 подключаются только в `MODE=server`.
@@ -27,17 +27,21 @@ from hse_doc_studio.core.repositories import (
 from hse_doc_studio.core.services import ProjectTemplateService
 from hse_doc_studio.core.signatures.key_policy import ISigningKeyPolicy
 from hse_doc_studio.core.signatures.ports import (
+    IMarkMeasure,
+    IOpenPgpKeyImporter,
     IPadesSigner,
     ISignatureAudit,
     ISignerPlateData,
     ISignerScope,
     ITrustMaterialProvider,
 )
+from hse_doc_studio.core.signatures.signer_profile import IPublicKeyReader, ISignerProfileRepository
 from hse_doc_studio.core.signing_route.ports import (
     IRouteFacts,
     IRouteLabels,
     IRoutePeople,
     ISigningNotifier,
+    ISigningRouteGate,
     ISigningTaskCounter,
 )
 from hse_doc_studio.core.signing_route.reminders import ReminderPolicy
@@ -47,25 +51,29 @@ from hse_doc_studio.infra.db.repositories.signing_route_people import PostgresRo
 from hse_doc_studio.infra.db.repositories.signing_routes import SqlSigningRouteRepository
 from hse_doc_studio.infra.db.session import SessionProvider
 from hse_doc_studio.infra.signatures.openpgp import GpgKeyring
+from hse_doc_studio.infra.signatures.pdf_stamper import PdfStamper
 from hse_doc_studio.use_cases.projects.get_project import GetProjectUC
 from hse_doc_studio.use_cases.projects.invitations import ResendInvitationUC
 from hse_doc_studio.use_cases.signatures._studio_signer import StudioSigner
 from hse_doc_studio.use_cases.signatures.default_key import DefaultSigningKey
 from hse_doc_studio.use_cases.signatures.freeze_pdf import FreezePdfUC
+from hse_doc_studio.use_cases.signatures.upload_signature_png import UploadSignaturePngUC
+from hse_doc_studio.use_cases.signer_profile.profile import SaveProfileImageUC
 from hse_doc_studio.use_cases.signing_route.author import (
     SigningRouteControl,
     SigningRouteDrafts,
     SigningRouteSending,
 )
-from hse_doc_studio.use_cases.signing_route.context import ProjectRouteContext
 from hse_doc_studio.use_cases.signing_route.delivery import SigningNotifier
 from hse_doc_studio.use_cases.signing_route.effects import RouteFileEffects
-from hse_doc_studio.use_cases.signing_route.facts import RouteFactsLoader
+from hse_doc_studio.use_cases.signing_route.facts import ProjectRouteFacts, RouteFactsLoader
+from hse_doc_studio.use_cases.signing_route.gate import SigningRouteGate
 from hse_doc_studio.use_cases.signing_route.invitations import SigningRouteInviteeHook
 from hse_doc_studio.use_cases.signing_route.key_signer import RouteKeySigner
 from hse_doc_studio.use_cases.signing_route.point import RoutePointLoader
 from hse_doc_studio.use_cases.signing_route.reminders import SigningReminderSweeper, SigningRouteReminding
 from hse_doc_studio.use_cases.signing_route.scenario import RouteServices
+from hse_doc_studio.use_cases.signing_route.signer import SignerTools, SigningTaskScenario
 from hse_doc_studio.use_cases.signing_route.tasks import ListSigningTasksUC
 
 
@@ -85,15 +93,15 @@ class ServerSigningRoutesProvider(Provider):
         signatures: ISignatureRepository,
         template_service: ProjectTemplateService,
         plates: ISignerPlateData,
-    ) -> ProjectRouteContext:
-        return ProjectRouteContext(project_repo, project_index_repo, templates, signatures, template_service, plates)
+    ) -> ProjectRouteFacts:
+        return ProjectRouteFacts(project_repo, project_index_repo, templates, signatures, template_service, plates)
 
     @provide
-    def get_route_facts(self, context: ProjectRouteContext) -> IRouteFacts:
+    def get_route_facts(self, context: ProjectRouteFacts) -> IRouteFacts:
         return context
 
     @provide
-    def get_route_labels(self, context: ProjectRouteContext) -> IRouteLabels:
+    def get_route_labels(self, context: ProjectRouteFacts) -> IRouteLabels:
         return context
 
     @provide
@@ -158,8 +166,14 @@ class ServerSigningRoutesProvider(Provider):
         return RouteFactsLoader(points, signature_repo, plate_data, people)
 
     @provide(scope=Scope.REQUEST)
-    def get_route_effects(self, signature_repo: ISignatureRepository, freeze_uc: FreezePdfUC) -> RouteFileEffects:
-        return RouteFileEffects(signature_repo, freeze_uc)
+    def get_route_effects(
+        self,
+        signature_repo: ISignatureRepository,
+        freeze_uc: FreezePdfUC,
+        profiles: ISignerProfileRepository,
+        key_importer: IOpenPgpKeyImporter,
+    ) -> RouteFileEffects:
+        return RouteFileEffects(signature_repo, freeze_uc, profiles, key_importer)
 
     @provide(scope=Scope.REQUEST)
     def get_route_services(
@@ -228,3 +242,32 @@ class ServerSigningRoutesProvider(Provider):
         mailer: INotificationMailer,
     ) -> SigningRouteReminding:
         return SigningRouteReminding(services, invitations, users, mailer)
+
+    # --- сценарии подписанта (срез R6) ---
+
+    @provide
+    def get_mark_measure(self, stamper: PdfStamper) -> IMarkMeasure:
+        return stamper
+
+    @provide(scope=Scope.REQUEST)
+    def get_signer_tools(
+        self,
+        signature_repo: ISignatureRepository,
+        upload_png: UploadSignaturePngUC,
+        profile_image: SaveProfileImageUC,
+        key_reader: IPublicKeyReader,
+        key_importer: IOpenPgpKeyImporter,
+        measure: IMarkMeasure,
+    ) -> SignerTools:
+        return SignerTools(signature_repo, upload_png, profile_image, key_reader, key_importer, measure)
+
+    @provide(scope=Scope.REQUEST)
+    def get_signing_task_scenario(
+        self, services: RouteServices, signer: RouteKeySigner, tools: SignerTools
+    ) -> SigningTaskScenario:
+        return SigningTaskScenario(services, signer, tools)
+
+    @provide(scope=Scope.REQUEST)
+    def get_signing_route_gate(self, services: RouteServices) -> ISigningRouteGate:
+        # Перекрывает локальный `NoSigningRoutes`: КриптоПро и готовая подпись идут в очередь маршрута (6.10).
+        return SigningRouteGate(services)

@@ -27,6 +27,7 @@ from hse_doc_studio.core.signing_route.entities import (
     RouteStatus,
     SigningRoute,
     StopReason,
+    not_your_turn,
 )
 
 _S = RouteStatus
@@ -135,7 +136,7 @@ def approve(route: SigningRoute, facts: RouteFacts, participant_id: UUID, *, at:
         NextAction.approve,
         NextAction.approve_and_sign,
     ):
-        raise _not_your_turn()
+        raise not_your_turn()
     if view.needs_image:
         raise RouteConflictError(
             "image_required", localized_error("Загрузите картинку подписи", "Upload the signature image")
@@ -159,7 +160,7 @@ def return_route(route: SigningRoute, facts: RouteFacts, participant_id: UUID) -
     route.participant(participant_id)
     evaluation = evaluate(route, facts)
     if evaluation.status is not RouteStatus.active or evaluation.participant(participant_id).state not in TURN_STATES:
-        raise _not_your_turn()
+        raise not_your_turn()
     return replace(
         route, status=RouteStatus.returned, phase=None, stop_reason=StopReason.returned, stopped_by=participant_id
     )
@@ -219,10 +220,4 @@ def _invalid_transition(source: RouteStatus, target: RouteStatus) -> RouteConfli
             f"Маршрут в состоянии «{source}» нельзя перевести в «{target}»",
             f"A signing route in “{source}” cannot become “{target}”",
         ),
-    )
-
-
-def _not_your_turn() -> RouteConflictError:
-    return RouteConflictError(
-        "not_your_turn", localized_error("Сейчас не ваша очередь по маршруту", "It is not your turn in the route")
     )

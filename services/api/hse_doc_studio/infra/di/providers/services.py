@@ -101,6 +101,7 @@ from hse_doc_studio.core.signatures.ports import (
     ISignerScope,
     ITrustMaterialProvider,
 )
+from hse_doc_studio.core.signing_route.ports import ISigningRouteGate, NoSigningRoutes
 from hse_doc_studio.core.system_capacity import ISystemCapacityProbe
 from hse_doc_studio.core.template_materializer import ITemplateMaterializer
 from hse_doc_studio.core.template_packs import ITemplatePacksSource
@@ -258,8 +259,13 @@ class DomainServiceProvider(Provider):
         return LogSignatureAudit()
 
     @provide
+    def get_signing_route_gate(self) -> ISigningRouteGate:
+        # Локально маршрутов подписания нет; сервер подменяет на сторожа очереди (signing-route.md, 6.10).
+        return NoSigningRoutes()
+
+    @provide
     def get_signer_plate_data(self) -> ISignerPlateData:
-        # До сценариев подписанта (срез R6) плашку знает только состояние подписей (docs/design/signing-route.md).
+        # Локально плашку знает только состояние подписей; сервер добавляет профиль подписанта (signing-route.md).
         return SlotSignerPlateData()
 
     @provide

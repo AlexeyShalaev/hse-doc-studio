@@ -201,10 +201,12 @@ async def test__send_and_sign__signing_fails__route_is_sent_and_waits_for_signat
     assert [(p["state"], p["next_action"]) for step in after["steps"] for p in step] == [("to_sign", "sign")]
 
 
-async def test__send_and_sign__unknown_key_id__404(stand: Stand) -> None:
+async def test__send_and_sign__server_keys_forbidden__403_and_nothing_sent(stand: Stand) -> None:
     project, author, route = await _route(stand)
 
     resp = _send(project, author, route, {"identity_id": str(UUID(int=7)), "passphrase": None})
 
-    assert resp.status_code == 404
+    # На установке закрытые ключи на сервере запрещены (по умолчанию): ключ даже не ищется.
+    assert resp.status_code == 403
+    assert resp.json()["code"] == "server_keys_forbidden"
     assert project.call(author, "GET", f"{project.routes}/{route['id']}").json()["status"] == "draft"

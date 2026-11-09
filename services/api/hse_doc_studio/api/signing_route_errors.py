@@ -3,8 +3,9 @@
 - `RouteInputError` (маршрут собран неверно) 400;
 - `RouteConflictError` 409, кроме `not_participant`: не участнику маршрут не раскрывается (404 `not_found`);
   `doc_changed` и `doc_on_route` несут `docs`, `route_blocked` несёт `blockers`;
-- `SigningKeyError` отказ подписи ключом при «Отправить и подписать»: 400 (`passphrase_required`,
-  `sign_failed`) или 403 (`forbidden`, чужой слот).
+- `SigningKeyError` отказ подписи ключом Студии («Отправить и подписать», «Согласовать и подписать», «Подписать»,
+  плашка из ключа): 400 (`passphrase_required`, `passphrase_invalid`, `sign_failed`), 409 (`key_not_found`) или 403
+  (`server_keys_forbidden`, `forbidden` за чужой слот или другого подписанта на плашке).
 """
 
 from __future__ import annotations
