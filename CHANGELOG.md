@@ -6,6 +6,27 @@ Generated from `release-notes.json` via `make changelog` — do not edit by hand
 Release notes are hand-written and bilingual (RU/EN); the app shows them in the
 selected interface language.
 
+## [0.18.0](https://github.com/AlexeyShalaev/hse-doc-studio/compare/v0.17.2...v0.18.0) (2026-11-09)
+
+
+### Features
+
+* **mcp:** create team projects through create_project ([316e508](https://github.com/AlexeyShalaev/hse-doc-studio/commit/316e50899c44c2f395a25e8cb33ea2cb9eb1f073))
+* **mcp:** create team projects through create_project ([a96a22d](https://github.com/AlexeyShalaev/hse-doc-studio/commit/a96a22d97f98fa21078d5bdfc79905c5ad988162))
+* **packs:** версия 2026.1.3 шаблона КП СПИ: подпись картинкой или открепленной ЭП ([fcbad50](https://github.com/AlexeyShalaev/hse-doc-studio/commit/fcbad50bb1f5c487ae0f9e71d018cfd1734cfc49))
+* **packs:** КП СПИ 2026.1.3 — подпись картинкой или открепленной ЭП ([ced6052](https://github.com/AlexeyShalaev/hse-doc-studio/commit/ced605222dd09a53c7149c6944e9934b9aeae8eb))
+
+
+### Bug Fixes
+
+* **fonts:** give a default macOS local install its document fonts ([dca2fe4](https://github.com/AlexeyShalaev/hse-doc-studio/commit/dca2fe4329c9da347c0cea328b63049c1cfe2273))
+* **fonts:** give a default macOS local install its document fonts ([10f0a2e](https://github.com/AlexeyShalaev/hse-doc-studio/commit/10f0a2e0dcb93acd974004566e9aedd66d28906d))
+* **signatures:** «С подписями» и пакет для подписанта отдают итоговый файл плана ([52645c4](https://github.com/AlexeyShalaev/hse-doc-studio/commit/52645c418e7a4244eb56df81aeb4a8c0f6f597f9))
+* **signatures:** итоговый PAdES в «С подписями» и пакете, отпечаток слоя без абсолютных путей ([fc21be3](https://github.com/AlexeyShalaev/hse-doc-studio/commit/fc21be3f75c581f2af3278f393a03420178f5fda))
+* **signatures:** отпечаток видимого слоя не зависит от расположения проекта ([bb1e710](https://github.com/AlexeyShalaev/hse-doc-studio/commit/bb1e71086c891463c68b7e6ec64ce9a04fb84868))
+* **web:** split SSH install texts into a lazy runnerSsh dictionary ([d136ba2](https://github.com/AlexeyShalaev/hse-doc-studio/commit/d136ba2ab21d2576e20a708da85b801f86d5b810))
+* **web:** split SSH install texts into a lazy runnerSsh dictionary ([7638033](https://github.com/AlexeyShalaev/hse-doc-studio/commit/7638033abb7fec0307a33b44f6fb3ebddf1aa48a))
+
 ## [0.17.2](https://github.com/AlexeyShalaev/hse-doc-studio/compare/v0.17.1...v0.17.2) - 2026-11-09
 
 - Cloud builds in a separate namespace work again: a build pod no longer gets the runner pod from another namespace as its owner, which made Kubernetes delete it at once and the build failed with a Kubernetes executor error. This affects runner.installFromUi.buildNamespace and runner.kubernetes.namespace.
