@@ -216,6 +216,11 @@
       "project_invitation_link": "Project invitation (by link)",
       "access_request": "Project access request",
       "transfer_request": "Project transfer",
+      "signing_request": "Signing route: request to sign",
+      "signing_request_sign": "Signing route: sign the final PDF",
+      "signing_reminder": "Signing route: reminder",
+      "signing_returned": "Signing route: returned for revision",
+      "signing_completed": "Signing route: everyone has signed",
       "smtp_test": "Test email"
     }
   }

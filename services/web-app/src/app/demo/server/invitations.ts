@@ -178,6 +178,8 @@ const seed = (): DemoInvites => ({
         outcome: null,
         path: null,
         excerpt: null,
+        profile_id: null,
+        deadline: null,
       },
     },
     {
@@ -194,6 +196,8 @@ const seed = (): DemoInvites => ({
         outcome: "accepted",
         path: null,
         excerpt: null,
+        profile_id: null,
+        deadline: null,
       },
     },
     {
@@ -210,6 +214,8 @@ const seed = (): DemoInvites => ({
         outcome: "approved",
         path: null,
         excerpt: null,
+        profile_id: null,
+        deadline: null,
       },
     },
     {
@@ -226,6 +232,8 @@ const seed = (): DemoInvites => ({
         outcome: null,
         path: null,
         excerpt: null,
+        profile_id: null,
+        deadline: null,
       },
     },
   ],

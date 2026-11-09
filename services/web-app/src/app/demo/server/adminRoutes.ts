@@ -43,6 +43,11 @@ const DEMO_MAIL_TEMPLATES = [
   "project_invitation_link",
   "access_request",
   "transfer_request",
+  "signing_request",
+  "signing_request_sign",
+  "signing_reminder",
+  "signing_returned",
+  "signing_completed",
   "smtp_test",
 ];
 

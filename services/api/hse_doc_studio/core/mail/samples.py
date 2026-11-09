@@ -2,11 +2,12 @@
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 
 from hse_doc_studio.core.enums import Lang
-from hse_doc_studio.core.mail.compose import MailTemplate, RenderedMail, compose
+from hse_doc_studio.core.mail.compose import MailTemplate, RenderedMail, compose, format_moment
 
 SAMPLE_RECIPIENT = "anna.petrova@example.org"
 SAMPLE_SERVER = "https://studio.example.org"
@@ -16,8 +17,20 @@ _NOTES = {
     Lang.ru: "Добавил вас в проект, посмотрите, пожалуйста, введение до пятницы.",
     Lang.en: "Added you to the project, please take a look at the introduction by Friday.",
 }
+_PROFILES = {
+    Lang.ru: "Заявка на тему КП (SmartLMS)",
+    Lang.en: "Course project topic application (SmartLMS)",
+}
+_COMMENTS = {
+    Lang.ru: "Уточните цель проекта во введении, после этого подпишу.",
+    Lang.en: "Please clarify the project goal in the introduction, then I will sign.",
+}
 _EXPIRES = datetime(2026, 11, 10, 14, 30, tzinfo=UTC)
+_DEADLINE = datetime(2026, 11, 15, 20, 59, tzinfo=UTC)
 _TOKEN = "sampletoken0000"  # noqa: S105 — образец, не секрет
+# Страница подписи и точка сдачи: адреса без токена, как в настоящих письмах маршрута.
+_SIGN_PATH = "/sign/5b0c1d2e-3f40-4152-8364-758697a8b9c0/0d1e2f30-4152-4637-8899-aabbccddeeff"
+_CHECKPOINT_PATH = "/projects/5b0c1d2e-3f40-4152-8364-758697a8b9c0/submit/cp/topic-approval"
 
 
 @dataclass(frozen=True)
@@ -26,10 +39,13 @@ class _Sample:
     ttl: timedelta | None = None
     expires_at: datetime | None = None
     values: tuple[str, ...] = ()
-    note: bool = False
+    note: Mapping[Lang, str] | None = None
+    # Ссылка с токеном (`<path>/<token>`) или готовый адрес страницы.
+    token: bool = True
 
 
 _PROJECT = ("actor", "project", "role")
+_SIGNING = ("actor", "project", "profile", "deadline")
 
 _SAMPLES: dict[MailTemplate, _Sample] = {
     MailTemplate.verify_email: _Sample("/verify", ttl=timedelta(hours=48)),
@@ -40,9 +56,14 @@ _SAMPLES: dict[MailTemplate, _Sample] = {
     MailTemplate.passkey_added: _Sample(values=("name",)),
     MailTemplate.passkey_reset: _Sample(values=("count",)),
     MailTemplate.project_invitation: _Sample(values=_PROJECT),
-    MailTemplate.project_invitation_link: _Sample("/invitation", expires_at=_EXPIRES, values=_PROJECT, note=True),
+    MailTemplate.project_invitation_link: _Sample("/invitation", expires_at=_EXPIRES, values=_PROJECT, note=_NOTES),
     MailTemplate.access_request: _Sample(values=_PROJECT),
     MailTemplate.transfer_request: _Sample(values=_PROJECT),
+    MailTemplate.signing_request: _Sample(_SIGN_PATH, values=_SIGNING, token=False),
+    MailTemplate.signing_request_sign: _Sample(_SIGN_PATH, values=_SIGNING, token=False),
+    MailTemplate.signing_reminder: _Sample(_SIGN_PATH, values=_SIGNING, token=False),
+    MailTemplate.signing_returned: _Sample(_CHECKPOINT_PATH, values=("actor", "project"), note=_COMMENTS, token=False),
+    MailTemplate.signing_completed: _Sample(_CHECKPOINT_PATH, values=("project", "profile"), token=False),
     MailTemplate.smtp_test: _Sample(),
 }
 
@@ -58,8 +79,11 @@ def sample_mail(template: MailTemplate, lang: Lang, *, server_url: str | None = 
         "role": "editor",
         "name": "MacBook, Touch ID",
         "count": 2,
+        "profile": _PROFILES[lang],
+        "deadline": format_moment(lang, _DEADLINE),
     }
-    link = f"{(server_url or '').rstrip('/')}{sample.path}/{_TOKEN}" if sample.path else None
+    suffix = f"/{_TOKEN}" if sample.token else ""
+    link = f"{(server_url or '').rstrip('/')}{sample.path}{suffix}" if sample.path else None
     return compose(
         template,
         lang,
@@ -69,5 +93,5 @@ def sample_mail(template: MailTemplate, lang: Lang, *, server_url: str | None = 
         ttl=sample.ttl,
         expires_at=sample.expires_at,
         values={key: available[key] for key in sample.values},
-        note=_NOTES[lang] if sample.note else None,
+        note=sample.note[lang] if sample.note else None,
     )

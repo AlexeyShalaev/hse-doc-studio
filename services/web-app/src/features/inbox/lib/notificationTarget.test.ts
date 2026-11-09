@@ -26,6 +26,8 @@ const note = (
     outcome: null,
     path: null,
     excerpt: null,
+    profile_id: null,
+    deadline: null,
     ...payload,
   },
 });

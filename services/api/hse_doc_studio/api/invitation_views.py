@@ -135,6 +135,15 @@ def my_transfer(view: TransferView, now: datetime) -> s.MyTransfer:
 _OUTCOMES = frozenset(get_args(s.NotificationOutcome))
 
 
+def _moment(value: str | None) -> datetime | None:
+    if not value:
+        return None
+    try:
+        return datetime.fromisoformat(value)
+    except ValueError:
+        return None
+
+
 def notification(item: Notification) -> s.NotificationModel:
     p = item.payload
     outcome = p.outcome if p.outcome in _OUTCOMES else None
@@ -152,6 +161,8 @@ def notification(item: Notification) -> s.NotificationModel:
             path=p.path,
             excerpt=p.excerpt,
             outcome=cast(s.NotificationOutcome | None, outcome),
+            profile_id=p.profile_id,
+            deadline=_moment(p.deadline),
         ),
     )
 

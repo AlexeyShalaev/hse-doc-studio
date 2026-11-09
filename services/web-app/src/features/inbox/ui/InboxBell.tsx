@@ -22,7 +22,7 @@ import { NotificationIcon } from "./NotificationIcon";
 export const BELL_POPOVER_LIMIT = 10;
 
 /**
- * Колокольчик «Входящих» в шапке: число непрочитанных плюс ожидающие приглашения и передачи.
+ * Колокольчик «Входящих» в шапке: число непрочитанных плюс ожидающие приглашения, передачи и задачи на подпись.
  * Нажатие открывает окошко с последними уведомлениями, страница «Входящие» остаётся для полного списка.
  */
 export const InboxBell = () => {
@@ -35,7 +35,10 @@ export const InboxBell = () => {
   const markRead = useMarkNotificationsRead();
   if (!signedIn) return null;
   const count = summary.data
-    ? summary.data.unread + summary.data.invitations + summary.data.transfers
+    ? summary.data.unread +
+      summary.data.invitations +
+      summary.data.transfers +
+      summary.data.signing_tasks
     : (boot.inbox?.unread ?? 0);
   const status = recent.data ? "ready" : recent.isError ? "error" : "loading";
   return (

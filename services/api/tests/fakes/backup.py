@@ -241,5 +241,7 @@ class RecordingNotifier:
     def __init__(self) -> None:
         self.sent: list[tuple[str, str, object, str | None]] = []
 
-    async def notify(self, user_id: str, kind: object, payload: object, *, dedupe_key: str | None = None) -> None:
+    async def notify(
+        self, user_id: str, kind: object, payload: object, *, dedupe_key: str | None = None, mail: bool = True
+    ) -> None:
         self.sent.append((user_id, getattr(kind, "value", str(kind)), payload, dedupe_key))

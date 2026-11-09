@@ -1,8 +1,8 @@
-"""Адресат приглашений и передач, запросы доступа просящего, ссылка из письма и «Входящие»."""
+"""Адресат приглашений и передач, запросы доступа просящего, ссылка из письма, «Входящие» и «На подпись»."""
 
 from __future__ import annotations
 
-from typing import Annotated
+from typing import Annotated, cast
 
 from fastapi import APIRouter, Depends, Query, Request, Response, status
 
@@ -10,6 +10,7 @@ from hse_doc_studio.api import invitation_views as views
 from hse_doc_studio.api.actor import require_server_mode
 from hse_doc_studio.api.rate_limit import enforce, enforce_ip
 from hse_doc_studio.api.schemas import invitations as s
+from hse_doc_studio.api.schemas import signing_tasks as st
 from hse_doc_studio.api.schemas.admin import PageParams, page_params
 from hse_doc_studio.core.access.entities import ActorSource
 from hse_doc_studio.core.identity.errors import IdentityError, IdentityErrorCode
@@ -33,6 +34,7 @@ from hse_doc_studio.use_cases.projects.invitations import (
     PreviewInvitationTokenUC,
 )
 from hse_doc_studio.use_cases.projects.transfer import AcceptTransferUC, DeclineTransferUC, ListMyTransfersUC
+from hse_doc_studio.use_cases.signing_route.tasks import ListSigningTasksUC, SigningTask
 
 router = APIRouter(dependencies=[Depends(require_server_mode)])
 
@@ -180,4 +182,29 @@ async def inbox_summary(request: Request, response: Response) -> s.InboxSummary:
         invitations=summary.invitations,
         transfers=summary.transfers,
         access_requests=summary.access_requests,
+        signing_tasks=summary.signing_tasks,
     )
+
+
+# «На подпись»: маршруты подписания, где сейчас нужно действие человека (docs/design/signing-route.md, 6.6).
+
+
+def _signing_task(task: SigningTask) -> st.SigningTaskSummary:
+    return st.SigningTaskSummary(
+        project=st.SigningProjectRef(id=str(task.project_id), name=task.project_name),
+        route_id=str(task.route_id),
+        profile=st.SigningProfileRef(id=task.profile_id, name=dict(task.profile_name)),
+        round=task.round,
+        sender=task.sender,
+        deadline=task.deadline,
+        next_action=cast(st.SigningTaskActionName, task.next_action.value),
+        since=task.since,
+    )
+
+
+@router.get("/account/signing-tasks", response_model=st.SigningTaskList)
+async def signing_tasks(request: Request, response: Response) -> st.SigningTaskList:
+    _no_store(response)
+    actor = views.require_user()
+    tasks = await (await _get(request, ListSigningTasksUC)).execute(actor.id or "")
+    return st.SigningTaskList(items=[_signing_task(t) for t in tasks])

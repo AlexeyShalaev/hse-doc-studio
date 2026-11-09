@@ -71,11 +71,30 @@ class NotificationKind(StrEnum):
     backup_failed = "backup_failed"
     # Сообщение установки администраторам (место на диске, сбой очистки): код в outcome, пояснение в excerpt.
     system_alert = "system_alert"
+    # Маршрут подписания (docs/design/signing-route.md, раздел 6.6): значения совпадают с `signing_route.Notice`.
+    # Запрос подписанту (ход в outcome: approve, approve_sign, sign) и напоминание ему же.
+    signing_request = "signing_request"
+    signing_reminder = "signing_reminder"
+    # Автору и согласовавшим: вернули на доработку (комментарий в excerpt), маршрут остановлен (причина в outcome).
+    signing_returned = "signing_returned"
+    signing_paused = "signing_paused"
+    # Автору и участникам: все подписали; тем, кому приходил запрос: маршрут отменён.
+    signing_completed = "signing_completed"
+    signing_cancelled = "signing_cancelled"
 
 
-# Письмо уходит только для этих видов (S15), и только если SMTP настроен.
+# Письмо уходит только для этих видов (S15), и только если SMTP настроен. Возврат и завершение маршрута
+# подписания письмом получает только автор: остальным адресатам сценарий передаёт `mail=False`.
 MAILED_KINDS = frozenset(
-    {NotificationKind.project_invitation, NotificationKind.access_request, NotificationKind.transfer_request}
+    {
+        NotificationKind.project_invitation,
+        NotificationKind.access_request,
+        NotificationKind.transfer_request,
+        NotificationKind.signing_request,
+        NotificationKind.signing_reminder,
+        NotificationKind.signing_returned,
+        NotificationKind.signing_completed,
+    }
 )
 
 InvitationDelivery = Literal["email", "manual", "inbox"]
@@ -95,6 +114,10 @@ class NotificationPayload:
     # Ревью: файл и выдержка из комментария.
     path: str | None = None
     excerpt: str | None = None
+    # Маршрут подписания: точка сдачи (`ref_id` id маршрута, `excerpt` название точки или комментарий возврата)
+    # и срок маршрута в ISO 8601, если автор его поставил.
+    profile_id: str | None = None
+    deadline: str | None = None
 
 
 @dataclass(frozen=True)
@@ -243,6 +266,8 @@ class InboxSummary:
     invitations: int
     transfers: int
     access_requests: int
+    # Задачи «На подпись»: маршруты подписания, где сейчас нужно действие человека.
+    signing_tasks: int = 0
 
 
 def mask_email(email: str | None) -> str | None:
