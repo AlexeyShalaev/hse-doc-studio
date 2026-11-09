@@ -6,8 +6,8 @@
 
 - `RouteRecalculation.recalculate` один пересчёт одного маршрута под блокировкой его строки и `project_lock`.
   Им пользуются сторож других входов подписи (`SigningRouteGate`) и сверка.
-- `RouteReconciler` сверяет маршруты проекта (хуки изменений, `RouteWatch`) и все маршруты сервера
-  (периодическая задача лидера).
+- `RouteReconciler` сверяет маршруты проекта, идущие и завершённые (хуки изменений, `RouteWatch`), и все идущие
+  маршруты сервера (периодическая задача лидера).
 
 Пересчёт идемпотентный: на тех же фактах второй проход ничего не пишет, поэтому хуки, периодическая сверка и
 сценарии маршрута друг другу не мешают. Сценарий маршрута держит строку маршрута до конца своей транзакции:
@@ -27,6 +27,7 @@ from hse_doc_studio.core.signing_route.entities import (
     DocSlot,
     EventKind,
     RouteEvent,
+    RouteStatus,
     SigningRoute,
 )
 from hse_doc_studio.core.signing_route.signer import unsigned_crypto
@@ -117,8 +118,13 @@ class RouteReconciler(RouteRecalculation):
         return await self._reconcile(await self._s.routes.list_watching(project_id))
 
     async def sweep(self) -> int:
-        """Сверить все маршруты сервера: страховка на случай пропущенного хука (гибрид, сбой, рестарт)."""
-        return await self._reconcile(await self._s.routes.list_watching())
+        """Сверить идущие маршруты сервера: страховка на случай пропущенного хука (гибрид, сбой, рестарт).
+
+        Завершённые маршруты проход не трогает: их со временем становится много, а сверка читает PDF каждого
+        документа. За ними следят хуки, а чтение маршрута и плана и так показывает вычисленное состояние.
+        """
+        watching = await self._s.routes.list_watching()
+        return await self._reconcile([route for route in watching if route.status is RouteStatus.active])
 
     async def _reconcile(self, routes: list[SigningRoute]) -> int:
         changed = 0

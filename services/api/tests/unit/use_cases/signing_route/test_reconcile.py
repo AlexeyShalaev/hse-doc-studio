@@ -332,6 +332,24 @@ async def test__reconcile__stopped_and_cancelled_routes__not_watched() -> None:
     assert (await stand.stored()).status is RouteStatus.cancelled
 
 
+async def test__sweep__completed_routes__left_to_the_hooks() -> None:
+    stand = await _sent()
+    stand.driver.run()
+    await stand.store()
+    assert (await stand.stored()).status is RouteStatus.completed
+    stand.world.compiled[DOC] = "c" * 64
+
+    # Периодический проход читает PDF каждого документа, а завершённых маршрутов со временем много.
+    swept = await stand.reconciler.sweep()
+    hooked = await stand.reconciler.project(stand.project_id)
+
+    assert (swept, hooked) == (0, 1)
+    assert ((await stand.stored()).status, (await stand.stored()).stop_reason) == (
+        RouteStatus.paused,
+        StopReason.rebuilt,
+    )
+
+
 async def test__sweep__every_project__broken_one_does_not_stop_the_rest() -> None:
     first = await _sent()
     second = await _sent(projects=first.projects, routes=first.routes, notifier=first.notifier)

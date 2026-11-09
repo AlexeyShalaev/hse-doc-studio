@@ -140,6 +140,17 @@ def route_hold_message() -> str:
     return localized_error("Документ на подписании по маршруту", "The document is on a signing route")
 
 
+def _route_slots(preview: SignSubmissionPreview) -> list[DocSlot]:
+    """Слоты документов идущего маршрута, которые комплект сейчас подпишет."""
+    return [
+        DocSlot(doc.doc_id, slot.slot_id)
+        for doc in preview.docs
+        if doc.route_id is not None and not doc.blocker
+        for slot in doc.slots
+        if slot.action == "sign" and not slot.blocker
+    ]
+
+
 @dataclass(frozen=True)
 class SignSubmissionPreview:
     profile_id: str
@@ -229,25 +240,32 @@ class SignSubmissionUC:
 
     async def execute(self, inp: SignSubmissionInput) -> SignSubmissionOutput:
         project = (await self._get_uc.execute(GetProjectInput(project_id=inp.project_id))).project
-        async with project_lock(project):
-            preview = await self.preview(inp)
-            self._check_confirmations(inp, preview)
-            identity = await self._default_key.resolve(inp.identity_id)
-            if identity is not None:
-                # Запрет админа проверяется до фиксации: незачем фиксировать PDF заново, если подписать им нельзя.
-                await self._signer.require_key_allowed()
-            signer = await self._key_signer(identity)
-            frozen_docs: list[str] = []
-            results: list[SlotResult] = []
-            for doc in preview.docs:
-                if doc.blocker:
-                    results.extend(SlotResult(doc.doc_id, s.slot_id, False, doc.blocker) for s in doc.slots)
-                    continue
-                if doc.needs_freeze:
-                    await self._freeze(project, doc, signer)
-                    frozen_docs.append(doc.doc_id)
-                results.extend(await self._sign_doc(project, doc, identity, inp.passphrase))
-        await self._recalculate_routes(project, preview, results)
+        # Слоты документов идущего маршрута, которые комплект подписывает: маршрут пересчитывается после них,
+        # вне `project_lock` (пересчёт берёт его сам) и при сбое посреди подписи тоже.
+        on_route: list[DocSlot] = []
+        try:
+            async with project_lock(project):
+                preview = await self.preview(inp)
+                self._check_confirmations(inp, preview)
+                identity = await self._default_key.resolve(inp.identity_id)
+                if identity is not None:
+                    # Запрет админа проверяется до фиксации: незачем фиксировать PDF заново, если подписать нельзя.
+                    await self._signer.require_key_allowed()
+                signer = await self._key_signer(identity)
+                frozen_docs: list[str] = []
+                results: list[SlotResult] = []
+                on_route += _route_slots(preview)
+                for doc in preview.docs:
+                    if doc.blocker:
+                        results.extend(SlotResult(doc.doc_id, s.slot_id, False, doc.blocker) for s in doc.slots)
+                        continue
+                    if doc.needs_freeze:
+                        await self._freeze(project, doc, signer)
+                        frozen_docs.append(doc.doc_id)
+                    results.extend(await self._sign_doc(project, doc, identity, inp.passphrase))
+        finally:
+            if on_route:
+                await self._routes.signatures_written(project.id, on_route)
         signed = sum(1 for r in results if r.ok)
         await self._signer.audit.record(
             "signature.submission_sign",
@@ -262,17 +280,6 @@ class SignSubmissionUC:
         )
         logger.info("submission signed", project_id=str(inp.project_id), profile_id=inp.profile_id, signed=signed)
         return SignSubmissionOutput(preview=preview, frozen_docs=tuple(frozen_docs), results=tuple(results))
-
-    async def _recalculate_routes(
-        self, project: Project, preview: SignSubmissionPreview, results: list[SlotResult]
-    ) -> None:
-        """Подписанные слоты документов маршрута: пересчитать маршрут. Вне `project_lock`: пересчёт берёт его сам."""
-        signing = {
-            (d.doc_id, s.slot_id) for d in preview.docs if d.route_id is not None for s in d.slots if s.action == "sign"
-        }
-        written = [DocSlot(r.doc_id, r.slot_id) for r in results if r.ok and (r.doc_id, r.slot_id) in signing]
-        if written:
-            await self._routes.signatures_written(project.id, written)
 
     def _check_confirmations(self, inp: SignSubmissionInput, preview: SignSubmissionPreview) -> None:
         if inp.expected is not None:
