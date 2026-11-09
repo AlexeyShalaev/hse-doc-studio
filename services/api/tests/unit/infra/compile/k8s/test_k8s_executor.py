@@ -175,6 +175,18 @@ async def test__run__tex_cache_claim__mounted_with_font_cache_env(tmp_path: Path
     assert env["TEXMFVAR"].startswith("/tmp/")
 
 
+async def test__run__any_build__fixed_pdf_date_and_real_date_in_text(tmp_path: Path, project: Path) -> None:
+    # Те же переменные, что у docker: PDF пода совпадает байт в байт с PDF локальной Студии и личного раннера.
+    api = FakeKubeApi(tmp_path / "cluster")
+
+    await _run(_executor(api), project)
+
+    spec = cast(dict[str, Any], api.only_pod().manifest["spec"])
+    env = {e["name"]: e["value"] for e in spec["containers"][0]["env"]}
+    assert env["SOURCE_DATE_EPOCH"] == "315532800"
+    assert env["FORCE_SOURCE_DATE"] == "0"
+
+
 async def test__run__fonts_claim__mounted_read_only_where_fontconfig_scans(tmp_path: Path, project: Path) -> None:
     api = FakeKubeApi(tmp_path / "cluster")
 

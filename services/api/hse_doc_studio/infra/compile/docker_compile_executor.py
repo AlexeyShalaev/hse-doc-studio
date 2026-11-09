@@ -15,6 +15,7 @@ from hse_doc_studio.core.jobs.artifacts import IArtifactStore, PublishPdfRequest
 from hse_doc_studio.infra.compile.host_path_resolver import HostPathResolver
 from hse_doc_studio.infra.compile.latexmk import ENGINE_FLAG as _ENGINE_FLAG
 from hse_doc_studio.infra.compile.latexmk import NONROOT_TEX_ENV as _NONROOT_TEX_ENV
+from hse_doc_studio.infra.compile.latexmk import REPRODUCIBLE_TEX_ENV as _REPRODUCIBLE_TEX_ENV
 from hse_doc_studio.infra.compile.latexmk import SENTINEL_DONE as _SENTINEL_DONE
 from hse_doc_studio.infra.compile.latexmk import SENTINEL_FAILED as _SENTINEL_FAILED
 from hse_doc_studio.infra.compile.latexmk import SENTINEL_PAGES as _SENTINEL_PAGES
@@ -252,6 +253,8 @@ class DockerCompileExecutor:
             # also unwraps the log as a fallback; kept for older images.
             "-e",
             "max_print_line=10000",
+            # Дата в свойствах PDF и `/ID` постоянные: пересборка без правок даёт тот же PDF (см. latexmk.py).
+            *(arg for name, value in _REPRODUCIBLE_TEX_ENV for arg in ("-e", f"{name}={value}")),
             "-v",
             f"{host_project_path}:/work:z",
             "-v",
