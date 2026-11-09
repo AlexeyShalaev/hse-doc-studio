@@ -22,6 +22,7 @@ import * as ops from "./opsSchemas";
 import * as pk from "./passkeySchemas";
 import * as s from "./schemas";
 import * as sh from "@entities/share-link/model/shareLink.schema";
+import * as srt from "@entities/signing-route/model/signingRoute.schema";
 
 // Каталог эталонов contracts/server/fixtures -> схема zod. Каталог без схемы считается ошибкой.
 export const CONTRACT_SCHEMAS: Record<string, ZodType> = {
@@ -270,4 +271,11 @@ export const CONTRACT_SCHEMAS: Record<string, ZodType> = {
   // local-sync: PDF локальной сборки на сервере
   ProjectArtifactList: pa.ProjectArtifactListSchema,
   PdfUploadResult: pa.PdfUploadResultSchema,
+  // Маршрут подписания, ручки автора (срез R5); схемы подписанта добавит срез R6.
+  SigningRoute: srt.SigningRouteSchema,
+  SigningRouteList: srt.SigningRouteListSchema,
+  CreateSigningRouteRequest: srt.CreateSigningRouteRequestSchema,
+  UpdateSigningRouteRequest: srt.UpdateSigningRouteRequestSchema,
+  SigningRoutePreview: srt.SigningRoutePreviewSchema,
+  SendSigningRouteRequest: srt.SendSigningRouteRequestSchema,
 };

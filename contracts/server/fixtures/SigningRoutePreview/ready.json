@@ -1,0 +1,53 @@
+{
+  "route_id": "sr_01hy2b7k9q",
+  "can_send": true,
+  "can_send_and_sign": false,
+  "visual_step": 0,
+  "docs": [
+    {
+      "doc_id": "topic_application",
+      "name": {
+        "ru": "Заявление о выборе темы",
+        "en": "Topic selection application"
+      },
+      "built": true,
+      "token": "build:3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f"
+    }
+  ],
+  "participants": [
+    {
+      "participant_id": "srp_author",
+      "step": 1,
+      "persona": "author",
+      "name": "Иванов И. И.",
+      "membership": "member",
+      "method": "image",
+      "methods": [
+        "image",
+        "detached"
+      ],
+      "chooses_method": false,
+      "image_ready": true,
+      "plate_ready": false,
+      "actions": 0
+    },
+    {
+      "participant_id": "srp_supervisor",
+      "step": 2,
+      "persona": "supervisor",
+      "name": "Петров П. П.",
+      "membership": "member",
+      "method": "detached",
+      "methods": [
+        "image",
+        "detached"
+      ],
+      "chooses_method": false,
+      "image_ready": false,
+      "plate_ready": true,
+      "actions": 1
+    }
+  ],
+  "blockers": [],
+  "sender_key": null
+}

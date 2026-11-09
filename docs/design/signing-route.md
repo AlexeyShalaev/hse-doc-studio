@@ -694,6 +694,10 @@ stateDiagram-v2
 |---|---|---|
 | `not_found` | 404 | нет маршрута или проекта, `task` не участнику (`not_participant` ядра), неизвестная точка, локальный режим |
 | `no_participants`, `bad_step`, `duplicate_participant`, `duplicate_slot`, `unknown_doc` | 400 | маршрут собран неверно (`RouteInputError` ядра, `check_route`) |
+| `unknown_slot` | 400 | необязательный слот из `extra_slots` не ставится на этот документ точки |
+| `bad_id` | 400 | `id` или `user_id` человека в PUT не идентификатор |
+| `passphrase_required`, `sign_failed` | 400 | «Отправить и подписать»: ключ с паролем без пароля (ничего не отправлено) или подпись не удалась; если ошибка после фиксации, маршрут уже отправлен и подписать можно на своей странице |
+| `forbidden` | 403 | «Отправить и подписать»: слот ЭП отправителю не принадлежит |
 | `doc_changed` | 409 | `expected` не совпал с текущим отпечатком; `docs`: какие документы |
 | `invalid_transition` | 409 | действие автора не подходит к статусу маршрута: PUT или отправка активного, отмена закрытого, архив незавершённого |
 | `not_your_turn` | 409 | действие подписанта не в его очередь, в том числе у неактивного маршрута (и сторож 6.10) |
@@ -701,8 +705,9 @@ stateDiagram-v2
 | `plate_required` | 409 | согласие ЭП, пока данные плашки неизвестны (`task/plate`) |
 | `route_blocked` | 409 | отправка, когда предпросмотр называет помехи; `blockers` как в предпросмотре |
 | `route_locked` | 409 | правка подписей документа активного маршрута (5.5, срез R7) |
+| `route_exists`, `doc_on_route`, `stale_route` | 409 | хранилище (R4): у точки уже есть незавершённый маршрут, документ держит другой маршрут (`docs`), маршрут перезаписан параллельно и его надо перечитать |
 | `participant_not_waiting` | 409 | напомнить тому, чья очередь не настала или кто уже закончил, или у неактивного маршрута |
-| `rate_limited` | 429 | напоминание чаще раза в 12 часов, отправка чаще раза в минуту; `retry_after` в секундах |
+| `rate_limited` | 429 | напоминание чаще раза в 12 часов, отправка раньше чем через минуту после прошлой отправки маршрута; `retry_after` в секундах |
 
 Коды помех предпросмотра (`blockers[].code`): `not_built` (документ не собран), `participant_missing` (человека нет в
 проекте), `slot_unassigned` (у слота маршрута нет участника с его персоной), `sender_not_ready` (картинка или данные
@@ -814,9 +819,13 @@ SigningTaskList: {items: [{project: {id, name}, route_id, profile, round, sender
   W2, W3, W4, W5 и W6 работают на них до слияния R5 и R6.
 
 R5 и R6 переносят эталоны в `contracts/server/fixtures/<Схема>/<вариант>.json`, добавляют модели pydantic в
-`test_server_contract.py` и карту `SIGNING_ROUTE_CONTRACT_SCHEMAS` в `CONTRACT_SCHEMAS`
-(`entities/session/api/contractSchemas.ts`), коды ошибок в `contracts/server/error_codes.json` с сообщениями ru и en.
-Расхождение с этим разделом правят в обе стороны одним PR: сначала эталоны, затем схемы.
+`test_server_contract.py` и схемы из `SIGNING_ROUTE_CONTRACT_SCHEMAS` в `CONTRACT_SCHEMAS`
+(`entities/session/api/contractSchemas.ts`). R5 перенёс схемы автора (`SigningRoute`, `SigningRouteList`,
+`CreateSigningRouteRequest`, `UpdateSigningRouteRequest`, `SigningRoutePreview`, `SendSigningRouteRequest`; модели
+`api/schemas/signing_route.py`), схемы подписанта переносит R6. Сообщения кодов маршрута лежат в `errors.json`
+фронтенда (`code.<код>`, ru и en); в `contracts/server/error_codes.json` их нет: этот каталог равен `IdentityErrorCode`
+(тест `test_error_codes_match_contract`). Расхождение с этим разделом правят в обе стороны одним PR: сначала
+эталоны, затем схемы.
 
 ## 9. Решения
 

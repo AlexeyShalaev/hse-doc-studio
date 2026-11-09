@@ -1,0 +1,104 @@
+{
+  "id": "sr_01hy2b7k9q",
+  "project_id": "p_01hxa1c4de",
+  "profile": {
+    "id": "topic-approval",
+    "name": {
+      "ru": "Заявка на тему КП",
+      "en": "Course project topic application"
+    }
+  },
+  "status": "draft",
+  "phase": null,
+  "round": 0,
+  "current_step": null,
+  "deadline": null,
+  "message": null,
+  "stop_reason": null,
+  "sent_by": null,
+  "sent_at": null,
+  "completed_at": null,
+  "created_at": "2026-11-10T08:40:00Z",
+  "updated_at": "2026-11-10T09:00:00Z",
+  "docs": [
+    {
+      "doc_id": "topic_application",
+      "name": {
+        "ru": "Заявление о выборе темы",
+        "en": "Topic selection application"
+      },
+      "frozen": false,
+      "slots": [
+        {
+          "slot_id": "author",
+          "label": {
+            "ru": "Студент",
+            "en": "Student"
+          },
+          "participant_id": "srp_author",
+          "optional": false,
+          "status": "pending"
+        },
+        {
+          "slot_id": "academic_supervisor",
+          "label": {
+            "ru": "Академический руководитель",
+            "en": "Academic supervisor"
+          },
+          "participant_id": "srp_academic",
+          "optional": true,
+          "status": "pending"
+        }
+      ]
+    }
+  ],
+  "steps": [
+    [
+      {
+        "id": "srp_author",
+        "persona": "author",
+        "user_id": "u_01hx7k5ivan",
+        "invitation_id": null,
+        "name": "Иванов И. И.",
+        "membership": "member",
+        "assignments": [
+          {
+            "doc_id": "topic_application",
+            "slot_id": "author"
+          }
+        ],
+        "method": "image",
+        "state": "waiting",
+        "next_action": "wait",
+        "approved_at": null,
+        "notified_at": null,
+        "reminded_at": null,
+        "reminders": 0
+      }
+    ],
+    [
+      {
+        "id": "srp_academic",
+        "persona": "academic_supervisor",
+        "user_id": null,
+        "invitation_id": null,
+        "name": null,
+        "membership": "missing",
+        "assignments": [
+          {
+            "doc_id": "topic_application",
+            "slot_id": "academic_supervisor"
+          }
+        ],
+        "method": "image",
+        "state": "waiting",
+        "next_action": "wait",
+        "approved_at": null,
+        "notified_at": null,
+        "reminded_at": null,
+        "reminders": 0
+      }
+    ]
+  ],
+  "events": []
+}

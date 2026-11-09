@@ -1,0 +1,9 @@
+{
+  "expected": {
+    "topic_application": "build:3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f"
+  },
+  "sign": {
+    "identity_id": "5d1f0c3e-7d0b-4b7e-9a51-1c4c2b0b6f11",
+    "passphrase": "correct horse"
+  }
+}

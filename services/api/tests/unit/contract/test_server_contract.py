@@ -31,6 +31,7 @@ from hse_doc_studio.api.schemas import runner_isolation as ri
 from hse_doc_studio.api.schemas import server_update as upd
 from hse_doc_studio.api.schemas import session as s
 from hse_doc_studio.api.schemas import sharing as sh
+from hse_doc_studio.api.schemas import signing_route as sr
 from pydantic import TypeAdapter, ValidationError
 
 _REPO = Path(__file__).resolve().parents[5]
@@ -285,6 +286,13 @@ _SCHEMAS: dict[str, Any] = {
     # local-sync: PDF локальной сборки на сервере
     "ProjectArtifactList": art.ProjectArtifactListResponse,
     "PdfUploadResult": art.PdfUploadResponse,
+    # Маршрут подписания, ручки автора (docs/design/signing-route.md, 8.2); схемы подписанта добавит срез R6.
+    "SigningRoute": sr.SigningRouteResponse,
+    "SigningRouteList": sr.SigningRouteList,
+    "CreateSigningRouteRequest": sr.CreateSigningRouteRequest,
+    "UpdateSigningRouteRequest": sr.UpdateSigningRouteRequest,
+    "SigningRoutePreview": sr.SigningRoutePreview,
+    "SendSigningRouteRequest": sr.SendSigningRouteRequest,
 }
 
 
