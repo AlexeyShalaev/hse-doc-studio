@@ -80,7 +80,7 @@ from hse_doc_studio.core.signing_route.signer import (
     with_method,
     with_signer,
 )
-from hse_doc_studio.core.signing_route.transitions import approve, return_route
+from hse_doc_studio.core.signing_route.transitions import approve, refresh_snapshot, return_route
 from hse_doc_studio.core.value_objects import SignaturesState, SignerInfo
 from hse_doc_studio.use_cases.signatures._studio_signer import PlateSignerMismatchError, project_lock
 from hse_doc_studio.use_cases.signatures.upload_signature_png import UploadSignaturePngInput, UploadSignaturePngUC
@@ -215,8 +215,10 @@ class SigningTaskScenario(RouteScenario):
             state = await self._approval_state(turn, request.method, identity)
             changed = state != turn.loaded.state
             # Расчёт на ещё не записанном состоянии: отказ (нет картинки, нет данных плашки) ничего не меняет.
+            # Способ и плашка это его собственная правка видимого слоя: снимок маршрута её принимает (раздел 5.5).
             loaded = await self._s.facts.load(turn.point, turn.route, state) if changed else turn.loaded
-            approved = approve(turn.route, loaded.facts, turn.me.id, at=turn.at)
+            route = refresh_snapshot(turn.route, loaded.facts) if changed else turn.route
+            approved = approve(route, loaded.facts, turn.me.id, at=turn.at)
             if changed:
                 self._tools.signatures.save_state(turn.point.project.folder, state)
             settled = await self._settle(turn.point, approved, turn.at, None if changed else loaded)
