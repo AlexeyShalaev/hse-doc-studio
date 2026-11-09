@@ -1,7 +1,9 @@
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import type { TFunction } from "i18next";
 import { useTranslation } from "react-i18next";
 import { ApiError, failureCode } from "@shared/api";
+import { loadAdminNamespaces, reportIfChunkError } from "@shared/lib";
+import type { AdminNamespace } from "@shared/lib";
 import { Button, Input, Modal, Spinner, Textarea } from "@shared/ui";
 import { Switch } from "@shared/ui/Switch";
 import { Notice } from "@shared/ui/ConflictKit";
@@ -64,13 +66,13 @@ const Field = ({ children }: { children: React.ReactNode }) => (
 /** Сообщение об отказе: код каталога SSH, причина политики адреса либо общий отказ. */
 const errorText = (t: TFunction, code: string, reason?: string): string => {
   if (code === "address_blocked") {
-    return t("ssh.error.address_blocked", {
-      reason: t(`ssh.blocked.${reason ?? "private"}`, {
+    return t("adminRunnerSsh:error.address_blocked", {
+      reason: t(`adminRunnerSsh:blocked.${reason ?? "private"}`, {
         defaultValue: reason ?? "",
       }),
     });
   }
-  const key = `ssh.error.${code}`;
+  const key = `adminRunnerSsh:error.${code}`;
   const text = t(key, { defaultValue: "" });
   return text !== "" ? text : t(failureKey(code));
 };
@@ -90,9 +92,9 @@ const SavedList = ({
   const [confirm, setConfirm] = useState<string | null>(null);
   return (
     <div className="flex flex-col" style={{ gap: "0.5rem" }}>
-      <span className="form-label">{t("ssh.saved.title")}</span>
+      <span className="form-label">{t("adminRunnerSsh:saved.title")}</span>
       <p className="form-hint" style={{ margin: 0 }}>
-        {t("ssh.saved.lead")}
+        {t("adminRunnerSsh:saved.lead")}
       </p>
       <ul
         className="flex flex-col"
@@ -117,9 +119,12 @@ const SavedList = ({
             </span>
             <span className="form-hint" style={{ wordBreak: "break-all" }}>
               {item.username}@{item.host}:{item.port},{" "}
-              {t(`ssh.saved.auth.${item.auth_kind}`)}, {item.fingerprint}
+              {t(`adminRunnerSsh:saved.auth.${item.auth_kind}`)},{" "}
+              {item.fingerprint}
             </span>
-            <span className="form-hint">{t("ssh.saved.present")}</span>
+            <span className="form-hint">
+              {t("adminRunnerSsh:saved.present")}
+            </span>
             <div className="flex" style={{ gap: "0.375rem", flexWrap: "wrap" }}>
               <Button
                 type="button"
@@ -131,7 +136,7 @@ const SavedList = ({
                 }}
                 data-testid={`ssh-saved-update-${item.id}`}
               >
-                {t("ssh.saved.update")}
+                {t("adminRunnerSsh:saved.update")}
               </Button>
               <Button
                 type="button"
@@ -142,7 +147,7 @@ const SavedList = ({
                 }}
                 data-testid={`ssh-saved-reinstall-${item.id}`}
               >
-                {t("ssh.saved.reinstall")}
+                {t("adminRunnerSsh:saved.reinstall")}
               </Button>
               {confirm === item.id ? (
                 <button
@@ -154,7 +159,7 @@ const SavedList = ({
                   }}
                   data-testid={`ssh-saved-delete-confirm-${item.id}`}
                 >
-                  {t("ssh.saved.deleteConfirm")}
+                  {t("adminRunnerSsh:saved.deleteConfirm")}
                 </button>
               ) : (
                 <Button
@@ -166,7 +171,7 @@ const SavedList = ({
                   }}
                   data-testid={`ssh-saved-delete-${item.id}`}
                 >
-                  {t("ssh.saved.delete")}
+                  {t("adminRunnerSsh:saved.delete")}
                 </Button>
               )}
             </div>
@@ -177,20 +182,21 @@ const SavedList = ({
   );
 };
 
-/**
- * Установка раннера по SSH: данные хоста, подтверждение отпечатка ключа, план по найденному на хосте, ход установки.
- * Пароль и ключ живут только в состоянии формы и уходят одним запросом; сервер не возвращает их никогда.
- */
-export const SshInstallDialog = ({
-  isOpen,
-  onClose,
-  modelServer = null,
-}: {
+type SshInstallDialogProps = {
   isOpen: boolean;
   onClose: () => void;
   /** Поставить сервер ИИ-модели вместо раннера: тот же вход, отпечаток и ход, другая полезная нагрузка. */
   modelServer?: ModelServerInstall | null;
-}) => {
+};
+
+/**
+ * Пароль и ключ живут только в состоянии формы и уходят одним запросом; сервер не возвращает их никогда.
+ */
+const SshInstallDialogBody = ({
+  isOpen,
+  onClose,
+  modelServer = null,
+}: SshInstallDialogProps) => {
   const { t } = useTranslation("adminRunnerInstall");
   const capability = useSshCapability(isOpen);
   const saved = useSshCredentials(isOpen);
@@ -349,9 +355,13 @@ export const SshInstallDialog = ({
     <Modal
       isOpen={isOpen}
       onClose={close}
-      title={modelServer ? t("adminModelServers:ssh.title") : t("ssh.title")}
+      title={
+        modelServer
+          ? t("adminModelServers:ssh.title")
+          : t("adminRunnerSsh:title")
+      }
       description={
-        modelServer ? t("adminModelServers:ssh.lead") : t("ssh.lead")
+        modelServer ? t("adminModelServers:ssh.lead") : t("adminRunnerSsh:lead")
       }
       width={640}
     >
@@ -368,7 +378,7 @@ export const SshInstallDialog = ({
           )}
 
           {capability.data && !capability.data.enabled && (
-            <Notice tone="info" text={t("ssh.disabled")} />
+            <Notice tone="info" text={t("adminRunnerSsh:disabled")} />
           )}
 
           {stage === "form" && capability.data?.enabled && (
@@ -399,7 +409,7 @@ export const SshInstallDialog = ({
                   }}
                 >
                   <Input
-                    label={t("ssh.host")}
+                    label={t("adminRunnerSsh:host")}
                     value={form.host}
                     autoComplete="off"
                     spellCheck={false}
@@ -409,7 +419,7 @@ export const SshInstallDialog = ({
                     data-testid="ssh-host"
                   />
                   <Input
-                    label={t("ssh.port")}
+                    label={t("adminRunnerSsh:port")}
                     type="number"
                     min={1}
                     max={65535}
@@ -420,7 +430,7 @@ export const SshInstallDialog = ({
                     data-testid="ssh-port"
                   />
                   <Input
-                    label={t("ssh.username")}
+                    label={t("adminRunnerSsh:username")}
                     value={form.username}
                     autoComplete="off"
                     spellCheck={false}
@@ -432,7 +442,7 @@ export const SshInstallDialog = ({
                 </div>
                 <Field>
                   <span className="form-label" id="ssh-auth-label">
-                    {t("ssh.auth")}
+                    {t("adminRunnerSsh:auth")}
                   </span>
                   <div
                     className="seg seg-fill"
@@ -453,14 +463,14 @@ export const SshInstallDialog = ({
                         }}
                         data-testid={`ssh-auth-${kind}`}
                       >
-                        {t(`ssh.authKind.${kind}`)}
+                        {t(`adminRunnerSsh:authKind.${kind}`)}
                       </button>
                     ))}
                   </div>
                 </Field>
                 {form.authKind === "password" ? (
                   <Input
-                    label={t("ssh.password")}
+                    label={t("adminRunnerSsh:password")}
                     type="password"
                     value={form.password}
                     autoComplete="new-password"
@@ -472,8 +482,8 @@ export const SshInstallDialog = ({
                 ) : (
                   <>
                     <Textarea
-                      label={t("ssh.privateKey")}
-                      hint={t("ssh.privateKeyHint")}
+                      label={t("adminRunnerSsh:privateKey")}
+                      hint={t("adminRunnerSsh:privateKeyHint")}
                       isMono
                       rows={5}
                       value={form.privateKey}
@@ -485,8 +495,8 @@ export const SshInstallDialog = ({
                       data-testid="ssh-private-key"
                     />
                     <Input
-                      label={t("ssh.passphrase")}
-                      hint={t("ssh.passphraseHint")}
+                      label={t("adminRunnerSsh:passphrase")}
+                      hint={t("adminRunnerSsh:passphraseHint")}
                       type="password"
                       value={form.passphrase}
                       autoComplete="new-password"
@@ -503,16 +513,16 @@ export const SshInstallDialog = ({
                     onChange={(v) => {
                       set("sudo", v);
                     }}
-                    label={t("ssh.sudo")}
+                    label={t("adminRunnerSsh:sudo")}
                     describedBy="ssh-sudo-hint"
                     testId="ssh-sudo"
                   />
                   <div className="flex flex-col">
                     <span style={{ fontSize: "0.8125rem" }}>
-                      {t("ssh.sudo")}
+                      {t("adminRunnerSsh:sudo")}
                     </span>
                     <span className="form-hint" id="ssh-sudo-hint">
-                      {t("ssh.sudoHint")}
+                      {t("adminRunnerSsh:sudoHint")}
                     </span>
                   </div>
                 </div>
@@ -548,24 +558,24 @@ export const SshInstallDialog = ({
                       onChange={(v) => {
                         set("save", v);
                       }}
-                      label={t("ssh.save")}
+                      label={t("adminRunnerSsh:save")}
                       describedBy="ssh-save-hint"
                       testId="ssh-save"
                     />
                     <span style={{ fontSize: "0.8125rem" }}>
-                      {t("ssh.save")}
+                      {t("adminRunnerSsh:save")}
                     </span>
                   </div>
                   <span className="form-hint" id="ssh-save-hint">
                     {capability.data.can_save_credentials
                       ? form.save
-                        ? t("ssh.saveOn")
-                        : t("ssh.saveOff")
-                      : t("ssh.saveUnavailable")}
+                        ? t("adminRunnerSsh:saveOn")
+                        : t("adminRunnerSsh:saveOff")
+                      : t("adminRunnerSsh:saveUnavailable")}
                   </span>
                   {form.save && (
                     <Input
-                      label={t("ssh.label")}
+                      label={t("adminRunnerSsh:label")}
                       value={form.label}
                       maxLength={80}
                       autoComplete="off"
@@ -589,7 +599,7 @@ export const SshInstallDialog = ({
                     data-testid="ssh-probe-submit"
                   >
                     {probe.isPending && <Spinner size="sm" />}
-                    {t("ssh.connect")}
+                    {t("adminRunnerSsh:connect")}
                   </Button>
                 </div>
               </form>
@@ -599,7 +609,7 @@ export const SshInstallDialog = ({
           {stage === "fingerprint" && hostKey && (
             <div className="flex flex-col" style={{ gap: "0.75rem" }}>
               <p style={{ margin: 0, fontSize: "0.8125rem" }}>
-                {t("ssh.fingerprintLead", {
+                {t("adminRunnerSsh:fingerprintLead", {
                   host: form.host.trim(),
                   port: form.port,
                 })}
@@ -608,11 +618,11 @@ export const SshInstallDialog = ({
                 className="flex flex-col"
                 style={{ gap: "0.25rem", margin: 0, fontSize: "0.8125rem" }}
               >
-                <dt className="form-hint">{t("ssh.keyType")}</dt>
+                <dt className="form-hint">{t("adminRunnerSsh:keyType")}</dt>
                 <dd style={{ margin: 0 }} data-testid="ssh-key-type">
                   {hostKey.key_type}
                 </dd>
-                <dt className="form-hint">{t("ssh.fingerprint")}</dt>
+                <dt className="form-hint">{t("adminRunnerSsh:fingerprint")}</dt>
                 <dd
                   className="mono"
                   style={{ margin: 0, wordBreak: "break-all" }}
@@ -622,14 +632,14 @@ export const SshInstallDialog = ({
                 </dd>
               </dl>
               <p className="form-hint" style={{ margin: 0 }}>
-                {t("ssh.fingerprintHint")}
+                {t("adminRunnerSsh:fingerprintHint")}
               </p>
               <div
                 className="flex items-center"
                 style={{ gap: "0.5rem", justifyContent: "flex-end" }}
               >
                 <Button type="button" variant="ghost" onClick={close}>
-                  {t("ssh.reject")}
+                  {t("adminRunnerSsh:reject")}
                 </Button>
                 <Button
                   type="button"
@@ -639,7 +649,7 @@ export const SshInstallDialog = ({
                   data-testid="ssh-confirm"
                 >
                   {confirm.isPending && <Spinner size="sm" />}
-                  {t("ssh.trust")}
+                  {t("adminRunnerSsh:trust")}
                 </Button>
               </div>
             </div>
@@ -651,12 +661,12 @@ export const SshInstallDialog = ({
                 style={{ margin: 0, fontSize: "0.8125rem" }}
                 data-testid="ssh-system"
               >
-                {t("ssh.system", {
+                {t("adminRunnerSsh:system", {
                   os: plan.system.distro || plan.system.os,
                   arch: plan.system.arch,
                   docker: plan.system.has_docker
-                    ? t("ssh.dockerYes")
-                    : t("ssh.dockerNo"),
+                    ? t("adminRunnerSsh:dockerYes")
+                    : t("adminRunnerSsh:dockerNo"),
                 })}
               </p>
               {modelServer && (
@@ -692,7 +702,7 @@ export const SshInstallDialog = ({
                   >
                     {t(`step.${step.key}`)}{" "}
                     <span className="form-hint">
-                      {t(`ssh.action.${step.action}`)}
+                      {t(`adminRunnerSsh:action.${step.action}`)}
                     </span>
                   </li>
                 ))}
@@ -702,15 +712,15 @@ export const SshInstallDialog = ({
                   <Switch
                     checked={installDocker}
                     onChange={setInstallDocker}
-                    label={t("ssh.installDocker")}
+                    label={t("adminRunnerSsh:installDocker")}
                     testId="ssh-install-docker"
                   />
                   <div className="flex flex-col">
                     <span style={{ fontSize: "0.8125rem" }}>
-                      {t("ssh.installDocker")}
+                      {t("adminRunnerSsh:installDocker")}
                     </span>
                     <span className="form-hint">
-                      {t("ssh.installDockerHint")}
+                      {t("adminRunnerSsh:installDockerHint")}
                     </span>
                   </div>
                 </div>
@@ -720,8 +730,8 @@ export const SshInstallDialog = ({
                   <Notice
                     tone="err"
                     role="alert"
-                    text={t(`ssh.blockedStep.${blocked.key}`, {
-                      defaultValue: t("ssh.blockedStep.default"),
+                    text={t(`adminRunnerSsh:blockedStep.${blocked.key}`, {
+                      defaultValue: t("adminRunnerSsh:blockedStep.default"),
                     })}
                   />
                 </div>
@@ -818,5 +828,119 @@ export const SshInstallDialog = ({
         </div>
       )}
     </Modal>
+  );
+};
+
+// Словари мастера. Тексты формы, отпечатка и плана лежат в своём чанке runnerSsh
+// и грузятся только при первом открытии окна. ops и runnerInstall (шаги, ход
+// установки, общие отказы) нужны тоже: страница серверов моделей сама их не
+// подключает, поэтому окно подтягивает весь набор.
+const SSH_NAMESPACES: readonly AdminNamespace[] = [
+  "ops",
+  "runnerInstall",
+  "runnerSsh",
+];
+
+type LocalesState = "loading" | "ready" | "failed";
+
+const useSshLocales = (isOpen: boolean) => {
+  const [state, setState] = useState<LocalesState>("loading");
+  const [attempt, setAttempt] = useState(0);
+  const wanted = isOpen && state !== "ready";
+  useEffect(() => {
+    if (!wanted) return;
+    let live = true;
+    loadAdminNamespaces(SSH_NAMESPACES).then(
+      () => {
+        if (live) setState("ready");
+      },
+      (error: unknown) => {
+        reportIfChunkError(error);
+        if (live) setState("failed");
+      },
+    );
+    return () => {
+      live = false;
+    };
+  }, [wanted, attempt]);
+  const retry = () => {
+    setState("loading");
+    setAttempt((n) => n + 1);
+  };
+  return { state, retry };
+};
+
+/** Пока словари мастера не пришли: крутилка, а при провале сообщение и повтор. */
+const LocalesGate = ({
+  isOpen,
+  onClose,
+  failed,
+  onRetry,
+}: {
+  isOpen: boolean;
+  onClose: () => void;
+  failed: boolean;
+  onRetry: () => void;
+}) => {
+  const { t } = useTranslation("uiPrimitives");
+  return (
+    <Modal
+      isOpen={isOpen}
+      onClose={onClose}
+      title={
+        failed
+          ? t("uiPrimitives:chunkError.title")
+          : t("uiPrimitives:spinner.loading")
+      }
+      width={640}
+    >
+      {failed ? (
+        <div
+          className="flex flex-col items-start"
+          style={{ gap: "0.75rem" }}
+          data-testid="ssh-locales-error"
+        >
+          <Notice
+            tone="err"
+            role="alert"
+            text={t("uiPrimitives:chunkError.text")}
+          />
+          <Button
+            size="sm"
+            variant="ghost"
+            type="button"
+            data-testid="ssh-locales-retry"
+            onClick={onRetry}
+          >
+            {t("uiPrimitives:dataTable.retry")}
+          </Button>
+        </div>
+      ) : (
+        <div
+          className="flex justify-center"
+          style={{ padding: "2rem" }}
+          data-testid="ssh-locales-loading"
+        >
+          <Spinner />
+        </div>
+      )}
+    </Modal>
+  );
+};
+
+/**
+ * Установка раннера по SSH: данные хоста, подтверждение отпечатка ключа, план по найденному на хосте, ход установки.
+ * Окно само подключает свои словари, поэтому его можно открыть с любой страницы админки.
+ */
+export const SshInstallDialog = (props: SshInstallDialogProps) => {
+  const locales = useSshLocales(props.isOpen);
+  if (locales.state === "ready") return <SshInstallDialogBody {...props} />;
+  return (
+    <LocalesGate
+      isOpen={props.isOpen}
+      onClose={props.onClose}
+      failed={locales.state === "failed"}
+      onRetry={locales.retry}
+    />
   );
 };
