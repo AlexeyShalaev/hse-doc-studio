@@ -15,6 +15,7 @@ import {
 } from "@entities/submission";
 import { getFormIcon } from "@features/form-fill";
 import { SignSubmissionDialog } from "@features/signature-stamper";
+import { SigningRouteCard } from "@features/signing-route-progress";
 import { pickLocalized } from "@shared/lib";
 import { Spinner } from "@shared/ui/Spinner";
 import { useCheckpointReadiness } from "../lib";
@@ -217,6 +218,12 @@ export const CheckpointView = ({
         }}
       >
         <div className="flex flex-col" style={{ gap: "1rem" }}>
+          {/* Маршрут подписания точки: только на сервере, локально карточки нет. */}
+          <SigningRouteCard
+            project={project}
+            profileId={profile.id}
+            signatures={readiness.breakdown.signatures}
+          />
           {items.length > 0 && (
             <SectionCard title={t("checkpoint.sectionDocs")}>
               <div className="flex flex-col">
