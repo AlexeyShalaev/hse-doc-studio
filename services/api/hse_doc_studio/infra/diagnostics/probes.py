@@ -266,8 +266,11 @@ class SchedulerProbe:
         self._runner = runner
 
     async def read(self, now: datetime) -> SchedulerFacts:
+        # pg_locks показывает локи всего кластера, а advisory-лок живёт в своей базе: без фильтра по базе лидер
+        # другой Студии на том же сервере Postgres (или соседний тест) выглядел бы своим.
         stmt = text(
             "SELECT EXISTS (SELECT 1 FROM pg_locks WHERE locktype = 'advisory' AND granted "
+            "AND database = (SELECT oid FROM pg_database WHERE datname = current_database()) "
             "AND classid = 0 AND objid = :key AND objsubid = 1)"
         )
         async with self._sessions.use() as db:

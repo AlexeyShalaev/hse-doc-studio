@@ -1,0 +1,78 @@
+import { env } from "@shared/config";
+import type {
+  ParticipantState,
+  SigningNextAction,
+  SigningRouteStatus,
+  SigningTaskAction,
+} from "../model/signingRoute.schema";
+
+// Правила статусов маршрута из раздела 5 дизайна: какие действия доступны в каком статусе.
+
+/** Незавершённый маршрут точки: такой может быть только один (уникальный индекс). */
+export const isRouteOpen = (status: SigningRouteStatus): boolean =>
+  status === "draft" ||
+  status === "active" ||
+  status === "paused" ||
+  status === "returned";
+
+/** PUT разрешён: шаги, люди, срок и сообщение меняются только вне активного маршрута. */
+export const isRouteEditable = (status: SigningRouteStatus): boolean =>
+  status === "draft" ||
+  status === "paused" ||
+  status === "returned" ||
+  status === "cancelled";
+
+/** «Отправить» из черновика или «Отправить заново» после остановки, возврата или отмены. */
+export const canSendRoute = isRouteEditable;
+
+/** Повторная отправка: маршрут уже уходил подписантам. */
+export const isResend = (status: SigningRouteStatus): boolean =>
+  status === "paused" || status === "returned" || status === "cancelled";
+
+export const canCancelRoute = (status: SigningRouteStatus): boolean =>
+  status === "draft" ||
+  status === "active" ||
+  status === "paused" ||
+  status === "returned";
+
+export const canArchiveRoute = (status: SigningRouteStatus): boolean =>
+  status === "completed";
+
+/** Маршрут ещё меняется сам (чужие действия, фиксация): его стоит перечитывать. */
+export const isRouteLive = (status: SigningRouteStatus): boolean =>
+  status === "active";
+
+/** Подписанту сейчас есть что сделать. */
+export const isActionable = (
+  action: SigningNextAction,
+): action is SigningTaskAction =>
+  action === "approve" || action === "approve_and_sign" || action === "sign";
+
+/** «Вернуть на доработку» доступно участнику только в его очередь (раздел 5.6). */
+export const canReturnForRework = (state: ParticipantState): boolean =>
+  state === "to_approve" || state === "to_approve_sign" || state === "to_sign";
+
+/** «Напомнить» имеет смысл тем, чья очередь, и приглашённым. */
+export const canRemind = (state: ParticipantState): boolean =>
+  canReturnForRework(state) || state === "invited";
+
+/** Ручное напоминание не чаще раза в 12 часов на человека (раздел 5.7). */
+export const REMIND_INTERVAL_MS = 12 * 60 * 60 * 1000;
+
+export const nextRemindAt = (remindedAt: string | null): number | null =>
+  remindedAt === null ? null : Date.parse(remindedAt) + REMIND_INTERVAL_MS;
+
+/** Страница подписанта (раздел 3.2); адрес без токена, нужна авторизация. */
+export const signingPagePath = (projectId: string, routeId: string): string =>
+  `/sign/${encodeURIComponent(projectId)}/${encodeURIComponent(routeId)}`;
+
+/** Экран автора «Отправка на подписание» для точки сдачи (раздел 3.1). */
+export const signingRouteEditorPath = (
+  projectId: string,
+  profileId: string,
+): string =>
+  `/projects/${encodeURIComponent(projectId)}/submit/cp/${encodeURIComponent(profileId)}/route`;
+
+/** Адрес PDF документа задачи: `pdf_url` бэкенда уже начинается с `/api/v1`. */
+export const signingPdfUrl = (pdfUrl: string): string =>
+  `${env.VITE_API_BASE_URL}${pdfUrl}`;

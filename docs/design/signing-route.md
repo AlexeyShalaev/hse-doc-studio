@@ -335,7 +335,7 @@ stateDiagram-v2
 | Состояние | Когда |
 |---|---|
 | `invited` | приглашение не принято; шаг ждёт его |
-| `waiting` | его шаг ещё не настал, или он согласовал до фиксации и ждёт её, или маршрут не идёт |
+| `waiting` | его шаг ещё не настал, или он согласовал до фиксации и ждёт её (у него есть `approved_at`), или маршрут не идёт |
 | `to_approve` | его очередь согласовать (до фиксации) |
 | `to_approve_sign` | его очередь, документы зафиксированы: согласовать и подписать |
 | `to_sign` | согласовал до фиксации, документы зафиксированы, ждём его ЭП |
@@ -450,10 +450,21 @@ stateDiagram-v2
 
 | Таблица | Поля |
 |---|---|
-| `signing_routes` | `id`, `project_id` (каскад), `profile_id`, `status`, `phase`, `round`, `snapshot` jsonb, `deadline`, `message`, `stop_reason`, `created_by`, `sent_by`, времена; уникальный частичный индекс `(project_id, profile_id)` для `draft`, `active`, `paused`, `returned` |
-| `signing_route_docs` | `route_id`, `project_id`, `doc_id`, `active` (маршрут в `active`, `paused`, `returned` или `completed`); уникальный частичный индекс `(project_id, doc_id)` где `active`: документ под одним маршрутом |
-| `signing_route_participants` | `id`, `route_id`, `step`, `persona`, `user_id`, `invitation_id`, `assignments` jsonb, `approval` jsonb, `notified_at`, `reminded_at`, `reminders` |
+| `signing_routes` | `id`, `project_id` (каскад), `profile_id`, `status`, `phase`, `round`, `snapshot` jsonb, `deadline`, `message`, `stop_reason`, `stopped_by`, `created_by`, `sent_by`, времена, `version`; уникальный частичный индекс `(project_id, profile_id)` для `draft`, `active`, `paused`, `returned` |
+| `signing_route_docs` | `route_id`, `project_id`, `doc_id`, `position`, `active` (маршрут в `active`, `paused`, `returned` или `completed`); уникальный частичный индекс `(project_id, doc_id)` где `active`: документ под одним маршрутом |
+| `signing_route_participants` | `id`, `route_id`, `position`, `step`, `persona`, `user_id`, `invitation_id`, `assignments` jsonb, `approval` jsonb, `notified` jsonb, `reminded_at`, `reminders` |
 | `signing_route_events` | `id`, `route_id`, `round`, `at`, `actor_id`, `participant_id`, `kind`, `details` jsonb |
+
+Хранилище (`ISigningRouteRepository` в `core/signing_route/repositories.py`, срез R4):
+
+- `version` защищает от гонки подписантов: сохранение идёт только поверх прочитанной версии, иначе `stale_route`
+  (409), сценарий перечитывает маршрут и повторяет расчёт. Блокировка строки (`lock=True`) держит её до конца
+  транзакции сценария.
+- Нарушение правил точки (`route_exists`) и документа (`doc_on_route`) откатывает только эту запись (точка
+  сохранения), транзакция сценария продолжается.
+- `position` хранит порядок документов и участников; снимок и отпечатки согласий лежат списками, потому что jsonb не
+  держит порядок ключей. Пользователи хранятся как `users.id` (32 hex-символа) без внешнего ключа: маршрут это
+  история, ушедшего участника расчёт замечает по персонам. `invitation_id` это id приглашения (`inv_…`).
 
 Переходы идут под блокировкой строки маршрута (`SELECT … FOR UPDATE`), запись файлов под `project_lock` проекта.
 Порядок: сначала файлы (придержать, открыть, зафиксировать, подписать), затем транзакция с маршрутом, событиями и
@@ -618,49 +629,184 @@ stateDiagram-v2
 
 ## 8. API
 
-Проектные маршруты (все в `ROUTE_ACTIONS`, тест сверки таблицы с приложением):
+Проектные маршруты (все в `ROUTE_ACTIONS`, тест сверки таблицы с приложением). В колонке «Тело и ответ» имена схем
+из 8.2:
 
-| Метод и путь (`/api/v1`) | Правило | Что |
-|---|---|---|
-| `GET /projects/{id}/signing-routes?profile_id=` | `OUTPUT_READ` | маршруты точки (сводка) |
-| `POST /projects/{id}/signing-routes` | `SUBMISSION_CREATE` | черновик точки (`profile_id`): существующий незавершённый или новый из пака |
-| `GET /projects/{id}/signing-routes/{route_id}` | `OUTPUT_READ` | ход маршрута |
-| `PUT /projects/{id}/signing-routes/{route_id}` | `SUBMISSION_CREATE` | шаги, люди, доп. слоты, срок, сообщение (в `draft`, `paused`, `returned`, `cancelled`) |
-| `POST /projects/{id}/signing-routes/{route_id}/preview` | `SUBMISSION_CREATE` | что будет: отпечатки документов, по каждому человеку готовность и число действий, что мешает |
-| `POST /projects/{id}/signing-routes/{route_id}/send` | `SUBMISSION_CREATE` | отправить (`expected`, необязательно `sign` с ключом и паролем для «Отправить и подписать») |
-| `POST /projects/{id}/signing-routes/{route_id}/cancel` | `SUBMISSION_CREATE` | отменить |
-| `POST /projects/{id}/signing-routes/{route_id}/archive` | `SUBMISSION_CREATE` | снять завершённый с контроля |
-| `POST /projects/{id}/signing-routes/{route_id}/participants/{pid}/remind` | `SUBMISSION_CREATE` | напомнить; у приглашённого повторить приглашение (ссылка при `manual`) |
-| `GET /projects/{id}/signing-routes/{route_id}/task` | `OUTPUT_READ` + участник | моя задача |
-| `POST /projects/{id}/signing-routes/{route_id}/task/approve` | `OUTPUT_READ` + участник + `SIGN` | согласовать (`expected`, `method?`, `sign?`) |
-| `POST /projects/{id}/signing-routes/{route_id}/task/sign` | `OUTPUT_READ` + участник + `SIGN` | подписать свои криптослоты ключом Студии (`expected`, `identity_id?`, `passphrase?`) |
-| `POST /projects/{id}/signing-routes/{route_id}/task/return` | `OUTPUT_READ` + участник | вернуть (`comment`) |
-| `POST /projects/{id}/signing-routes/{route_id}/task/image` | `OUTPUT_READ` + участник + `SIGN` | своя картинка (загрузить или нарисованная), в очередь |
-| `PUT /projects/{id}/signing-routes/{route_id}/task/plate` | `OUTPUT_READ` + участник + `SIGN` | данные плашки: свой ключ Студии или сертификат файлом |
+| Метод и путь (`/api/v1`) | Правило | Что | Тело и ответ |
+|---|---|---|---|
+| `GET /projects/{id}/signing-routes?profile_id=` | `OUTPUT_READ` | маршруты точки (сводка), новые первыми; без `profile_id` все маршруты проекта | `SigningRouteList` |
+| `POST /projects/{id}/signing-routes` | `SUBMISSION_CREATE` | черновик точки: существующий незавершённый (200) или новый из пака (201); новый снимает с контроля завершённый и отменённый | `CreateSigningRouteRequest`, `SigningRoute` |
+| `GET /projects/{id}/signing-routes/{route_id}` | `OUTPUT_READ` | ход маршрута | `SigningRoute` |
+| `PUT /projects/{id}/signing-routes/{route_id}` | `SUBMISSION_CREATE` | шаги, люди, доп. слоты, срок, сообщение целиком (в `draft`, `paused`, `returned`, `cancelled`) | `UpdateSigningRouteRequest`, `SigningRoute` |
+| `POST /projects/{id}/signing-routes/{route_id}/preview` | `SUBMISSION_CREATE` | что будет при отправке сохранённого маршрута; ничего не меняет | `{}`, `SigningRoutePreview` |
+| `POST /projects/{id}/signing-routes/{route_id}/send` | `SUBMISSION_CREATE` | отправить или отправить заново; `sign` для «Отправить и подписать» | `SendSigningRouteRequest`, `SigningRoute` |
+| `POST /projects/{id}/signing-routes/{route_id}/cancel` | `SUBMISSION_CREATE` | отменить | `{}`, `SigningRoute` |
+| `POST /projects/{id}/signing-routes/{route_id}/archive` | `SUBMISSION_CREATE` | снять завершённый с контроля | `{}`, `SigningRoute` |
+| `POST /projects/{id}/signing-routes/{route_id}/participants/{pid}/remind` | `SUBMISSION_CREATE` | напомнить; у приглашённого повторить приглашение (ссылка при `manual`) | `{}`, `SigningReminder` |
+| `GET /projects/{id}/signing-routes/{route_id}/task` | `OUTPUT_READ` + участник | моя задача | `SigningTask` |
+| `POST /projects/{id}/signing-routes/{route_id}/task/approve` | `OUTPUT_READ` + участник + `SIGN` | согласовать; `method` сменить способ своих слотов; `sign` «Согласовать и подписать» | `ApproveSigningTaskRequest`, `SigningTask` |
+| `POST /projects/{id}/signing-routes/{route_id}/task/sign` | `OUTPUT_READ` + участник + `SIGN` | подписать свои криптослоты ключом Студии | `SignSigningTaskRequest`, `SigningTask` |
+| `POST /projects/{id}/signing-routes/{route_id}/task/return` | `OUTPUT_READ` + участник | вернуть на доработку | `ReturnSigningTaskRequest`, `SigningTask` |
+| `POST /projects/{id}/signing-routes/{route_id}/task/image` | `OUTPUT_READ` + участник + `SIGN` | своя картинка (загруженная или нарисованная), в очередь | multipart: `file` (PNG), `remember` (`true`, `false`); `SigningTask` |
+| `PUT /projects/{id}/signing-routes/{route_id}/task/plate` | `OUTPUT_READ` + участник + `SIGN` | данные плашки из своего ключа Студии, в очередь | `SetSigningTaskPlateRequest`, `SigningTask` |
+| `POST /projects/{id}/signing-routes/{route_id}/task/plate/file` | `OUTPUT_READ` + участник + `SIGN` | данные плашки из сертификата или открытого ключа файлом, в очередь | multipart: `file`; `SigningTask` |
 
 Подпись КриптоПро и загрузка готовой подписи идут существующими `POST /projects/{id}/docs/{doc}/detached/{slot}` и
-`.../sign`, с проверкой очереди (6.10).
+`.../sign`, с проверкой очереди (6.10). PDF документа подписант смотрит существующими адресами (`OUTPUT_READ`): до
+фиксации `GET /projects/{id}/docs/{doc}/pdf/signed` (без придержанных картинок, раздел 6.1), после фиксации
+`GET /projects/{id}/docs/{doc}/frozen/pdf`; задача отдаёт нужный в `pdf_url`.
 
-Пользовательский: `GET /account/signing-tasks` (мои задачи: проект, точка, от кого, срок, следующее действие).
+Пользовательский: `GET /account/signing-tasks` (`SigningTaskList`): мои задачи по всем проектам, только те, где сейчас
+нужно моё действие (`approve`, `approve_and_sign`, `sign`).
 
-Ответ `task` (сокращённо):
+### 8.1 Общие правила
+
+- Схемы строгие, как остальной контракт сервера: лишнее поле это ошибка (`extra=forbid`, `z.strictObject`), все поля
+  приходят явно, пустое значение `null`. Время в ISO 8601 UTC.
+- Названия из пака (точка, документ, слот) это словари `{ru, en}`, как в плане подписей и профилях сдачи; имена людей
+  строкой.
+- Шаги это массив массивов: номер шага равен индексу плюс 1, внутри шага параллельно.
+- Пары «документ, слот» назначает сервер по персоне: слот принадлежит участнику с персоной владельца слота. PUT
+  передаёт только людей (`id` участника или `null` для нового, `persona`, `user_id` или `invitation_id`); человек без
+  обоих полей «нет в проекте» и мешает отправке. Необязательные слоты включаются через `extra_slots`.
+- Отпечатки: каждое действие с документами передаёт `expected`, для каждого `doc_id` отпечаток из последнего показа.
+  Отправка берёт `docs[].token` предпросмотра (`build:<sha>`); подписант берёт `docs[].token` задачи, где сервер уже
+  положил отпечаток для его следующего действия: `build:<sha>` для согласия, `build:<sha>:<видимый слой>` для согласия
+  с фиксацией, `pdf:<sha>` для подписи; `null`, когда действовать нечего.
+- Значения `next_action`, состояний участника, событий и причин остановки совпадают с перечислениями ядра
+  (`core/signing_route/entities.py`: `NextAction`, `ParticipantState`, `EventKind`, `StopReason`). Уведомление
+  `signing_request` хранит своё `outcome` (`approve`, `approve_sign`, `sign`).
+- Действия автора отвечают ходом маршрута (`SigningRoute`), действия подписанта его задачей (`SigningTask`): клиент
+  кладёт ответ в кэш без повторного чтения.
+- Ошибки телом `{detail, code}`, дополнительные поля рядом с `code`:
+
+| Код | Статус | Когда |
+|---|---|---|
+| `not_found` | 404 | нет маршрута или проекта, `task` не участнику (`not_participant` ядра), неизвестная точка, локальный режим |
+| `no_participants`, `bad_step`, `duplicate_participant`, `duplicate_slot`, `unknown_doc` | 400 | маршрут собран неверно (`RouteInputError` ядра, `check_route`) |
+| `doc_changed` | 409 | `expected` не совпал с текущим отпечатком; `docs`: какие документы |
+| `invalid_transition` | 409 | действие автора не подходит к статусу маршрута: PUT или отправка активного, отмена закрытого, архив незавершённого |
+| `not_your_turn` | 409 | действие подписанта не в его очередь, в том числе у неактивного маршрута (и сторож 6.10) |
+| `image_required` | 409 | согласие картинкой, пока картинка не загружена |
+| `plate_required` | 409 | согласие ЭП, пока данные плашки неизвестны (`task/plate`) |
+| `route_blocked` | 409 | отправка, когда предпросмотр называет помехи; `blockers` как в предпросмотре |
+| `route_locked` | 409 | правка подписей документа активного маршрута (5.5, срез R7) |
+| `participant_not_waiting` | 409 | напомнить тому, чья очередь не настала или кто уже закончил, или у неактивного маршрута |
+| `rate_limited` | 429 | напоминание чаще раза в 12 часов, отправка чаще раза в минуту; `retry_after` в секундах |
+
+Коды помех предпросмотра (`blockers[].code`): `not_built` (документ не собран), `participant_missing` (человека нет в
+проекте), `slot_unassigned` (у слота маршрута нет участника с его персоной), `sender_not_ready` (картинка или данные
+плашки отправителя не готовы), `doc_in_other_route` (документ под другим активным маршрутом), `no_participants`.
+
+### 8.2 Схемы
+
+```text
+SigningRoute (ход маршрута)
+  id, project_id, profile: {id, name}, status, phase (null вне active и completed), round,
+  current_step (первый шаг, где не все согласовали; null вне active),
+  deadline, message, stop_reason, sent_by: {id, name}, sent_at, completed_at, created_at, updated_at,
+  docs: [{doc_id, name, frozen, slots: [{slot_id, label, participant_id, optional, status}]}],
+  steps: [[RouteParticipant]],
+  events: [RouteEvent]
+
+RouteParticipant
+  id, persona, user_id, invitation_id,
+  name (имя; у приглашённого подсказка адреса; null, если человека нет),
+  membership: member | invited | missing, assignments: [{doc_id, slot_id}],
+  method: image | detached | pades (null у согласующего без слотов),
+  state, next_action, approved_at (согласие текущего раунда), notified_at, reminded_at, reminders
+
+RouteEvent
+  id, kind, round, at, who (имя актора; null у событий сервера), comment (возврат), reason (остановка)
+
+SigningRouteList: {items: [SigningRouteSummary]}
+SigningRouteSummary
+  id, profile, status, phase, round, current_step, steps_total, deadline, stop_reason, sent_at, completed_at,
+  updated_at, waiting_for: [{name, persona}] (чья очередь сейчас)
+
+CreateSigningRouteRequest: {profile_id}
+UpdateSigningRouteRequest
+  steps: [[{id, persona, user_id, invitation_id}]] (шаг не пустой; user_id и invitation_id не вместе),
+  extra_slots: [{doc_id, slot_id}], deadline, message (до 2000)
+
+SigningRoutePreview
+  route_id, can_send, can_send_and_sign (L = 0 и отправитель подписывает ЭП), visual_step (L),
+  docs: [{doc_id, name, built, token}],
+  participants: [{participant_id, step, persona, name, membership, method, methods (разрешены точкой),
+                  chooses_method (выберет при подписании), image_ready, plate_ready,
+                  actions (0..2, `ParticipantView.remaining_actions`, раздел 4.4)}],
+  blockers: [{code, doc_id, slot_id, participant_id}],
+  sender_key: {id, label, kind, protected, signer} | null
+
+SendSigningRouteRequest: {expected: {doc_id: token}, sign: {identity_id, passphrase} | null}
+SigningReminder: {participant_id, delivery: email | inbox | manual, link (только при manual)}
+
+SigningTask
+  route: {id, project: {id, name}, profile, status, phase, round, current_step, deadline, message, sender,
+          sent_at, stop_reason},
+  steps: [[{name, persona, state, at (последнее действие), me}]],
+  me: {participant_id, state, next_action, methods (сейчас разрешённые), method, image_ready,
+       plate: {owner, kind: x509 | openpgp | manual, cert_id} | null,
+       keys: {server_keys_allowed, default_key: {id, label, kind, protected, signer} | null}},
+  docs: [{doc_id, name, pdf_url, frozen, token,
+          mine: [{slot_id, label, page, x_mm, y_mm, width_mm, mark: png | plate | none, status, reason}],
+          others: [{slot_id, label, page, status}]}],
+  events: [RouteEvent]
+
+ApproveSigningTaskRequest: {expected, method | null, sign: {identity_id, passphrase} | null}
+SignSigningTaskRequest: {expected, identity_id, passphrase}
+ReturnSigningTaskRequest: {comment} (без пробелов по краям, 1..2000)
+SetSigningTaskPlateRequest: {identity_id}
+
+SigningTaskList: {items: [{project: {id, name}, route_id, profile, round, sender, deadline,
+                           next_action: approve | approve_and_sign | sign, since (уведомление раунда)}]}
+```
+
+`reason` у своего слота это причина плана (`PlanReason`, в том числе `awaiting_approval`), строкой: набор причин
+растёт вместе с планом.
+
+Ответ `task`, научрук ЭП после фиксации:
 
 ```json
 {
-  "route": {"id": "…", "status": "active", "phase": "approval", "round": 2, "deadline": "2026-11-15T20:59:00Z",
-            "message": "…", "sender": "Иванов И. И.", "profile": {"id": "topic-approval", "name": "Заявка на тему КП"}},
-  "steps": [[{"name": "Иванов И. И.", "persona": "author", "state": "done", "at": "…"}],
-            [{"name": "Петров П. П.", "persona": "supervisor", "state": "to_approve", "me": true}]],
-  "me": {"participant_id": "…", "next_action": "approve", "methods": ["image", "detached"], "method": "detached",
-         "image_ready": true, "plate": {"owner": "Петров П. П.", "kind": "openpgp", "cert_id": "1A2B …"},
+  "route": {"id": "sr_01hy2b7k9q", "project": {"id": "p_01hxa1c4de", "name": "Bertie: курсовой проект"},
+            "profile": {"id": "topic-approval", "name": {"ru": "Заявка на тему КП", "en": "Course project topic application"}},
+            "status": "active", "phase": "signing", "round": 1, "current_step": 2,
+            "deadline": "2026-11-15T20:59:00Z", "message": "Прошу подписать заявление до пятницы.",
+            "sender": "Иванов И. И.", "sent_at": "2026-11-10T09:00:00Z", "stop_reason": null},
+  "steps": [[{"name": "Иванов И. И.", "persona": "author", "state": "done", "at": "2026-11-10T09:00:00Z", "me": false}],
+            [{"name": "Петров П. П.", "persona": "supervisor", "state": "to_approve_sign", "at": null, "me": true}]],
+  "me": {"participant_id": "srp_supervisor", "state": "to_approve_sign", "next_action": "approve_and_sign",
+         "methods": ["detached"], "method": "detached", "image_ready": false,
+         "plate": {"owner": "Петров П. П.", "kind": "openpgp", "cert_id": "1A2B 3C4D 5E6F 7A8B"},
          "keys": {"server_keys_allowed": false, "default_key": null}},
-  "docs": [{"doc_id": "topic_application", "name": "Заявление о выборе темы", "pdf_url": "…", "token": "build:…",
-            "mine": [{"slot_id": "supervisor", "label": "Научный руководитель", "page": 1, "x_mm": 110, "y_mm": 130,
-                      "width_mm": 40, "mark": "plate", "status": "pending", "reason": "not_frozen"}],
-            "others": [{"slot_id": "author", "page": 1, "status": "signed"}]}],
-  "events": [{"kind": "returned", "at": "…", "who": "Сидоров С. С.", "comment": "…", "round": 1}]
+  "docs": [{"doc_id": "topic_application", "name": {"ru": "Заявление о выборе темы", "en": "Topic selection application"},
+            "pdf_url": "/api/v1/projects/p_01hxa1c4de/docs/topic_application/frozen/pdf", "frozen": true,
+            "token": "pdf:9c9c…",
+            "mine": [{"slot_id": "supervisor", "label": {"ru": "Научный руководитель", "en": "Supervisor"}, "page": 1,
+                      "x_mm": 110, "y_mm": 130, "width_mm": 40, "mark": "plate", "status": "pending",
+                      "reason": "no_signature_file"}],
+            "others": [{"slot_id": "author", "label": {"ru": "Студент", "en": "Student"}, "page": 1, "status": "signed"}]}],
+  "events": [{"id": "sre_01", "kind": "sent", "round": 1, "at": "2026-11-10T09:00:00Z", "who": "Иванов И. И.",
+              "comment": null, "reason": null}]
 }
 ```
+
+### 8.3 Схемы, эталоны и моки на фронтенде
+
+Срез W1 держит контракт в коде, пока бэкенда нет:
+
+- zod-схемы `services/web-app/src/entities/signing-route/model/signingRoute.schema.ts`, карта
+  `SIGNING_ROUTE_CONTRACT_SCHEMAS` (схема zod по имени);
+- эталоны `entities/signing-route/testing/fixtures.ts`, `SIGNING_ROUTE_CONTRACT_EXAMPLES` (тела по имени схемы и варианту);
+- моки `entities/signing-route/testing/demoRoutes.ts` (`createSigningRouteDemo`) поверх демо-транспорта: правила
+  разделов 4 и 5 в упрощённом виде, те же коды ошибок. Подключены к серверному демо (`VITE_SERVER_DEMO=1`), экраны
+  W2, W3, W4, W5 и W6 работают на них до слияния R5 и R6.
+
+R5 и R6 переносят эталоны в `contracts/server/fixtures/<Схема>/<вариант>.json`, добавляют модели pydantic в
+`test_server_contract.py` и карту `SIGNING_ROUTE_CONTRACT_SCHEMAS` в `CONTRACT_SCHEMAS`
+(`entities/session/api/contractSchemas.ts`), коды ошибок в `contracts/server/error_codes.json` с сообщениями ru и en.
+Расхождение с этим разделом правят в обе стороны одним PR: сначала эталоны, затем схемы.
 
 ## 9. Решения
 

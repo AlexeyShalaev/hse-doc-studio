@@ -1,5 +1,6 @@
 import { demoError, demoJson, demoNoContent } from "@shared/api/demo";
 import type { DemoRoute } from "@shared/api/demo";
+import { createSigningRouteDemo } from "@entities/signing-route/testing";
 import { useServerDemoScenarioStore } from "./scenarioStore";
 import { createAccountRoutes } from "./accountRoutes";
 import { createAdminRoutes } from "./adminRoutes";
@@ -29,8 +30,16 @@ export const isServerDemoActive = (): boolean => active;
 
 let world = createServerWorld(useServerDemoScenarioStore.getState().scenarioId);
 export const getServerWorld = () => world;
+// Маршрут подписания (docs/design/signing-route.md): бэкенда ещё нет, демо отвечает по
+// контракту раздела 8 моками сущности. Проект виден, если он есть в мире демо.
+export const signingRouteDemo = createSigningRouteDemo({
+  getUser: () => world.bootstrap.user,
+  projectName: (id) =>
+    world.projects.find((p) => p.summary.id === id)?.summary.name ?? null,
+});
 export const resetServerWorld = (scenarioId: string): void => {
   world = createServerWorld(scenarioId);
+  signingRouteDemo.reset();
 };
 
 const guarded =
@@ -161,6 +170,7 @@ export const serverDemoRoutes: DemoRoute[] = [
   ...createProjectAccessRoutes(() => world),
   // invites: приглашения, запросы доступа, передача владения, «Входящие».
   ...createInvitationRoutes(() => world),
+  ...signingRouteDemo.routes,
   ...createMemberOrgRoutes(() => world),
   ...createPersonalRoutes(() => world),
   ...createUsageRoutes(() => world),

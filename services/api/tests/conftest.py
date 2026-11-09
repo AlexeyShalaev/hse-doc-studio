@@ -19,6 +19,7 @@ pytest_plugins = [
     "tests.fixtures.pg",
     "tests.fixtures.s3",
     "tests.fixtures.server_app",
+    "tests.fixtures.sharding",
 ]
 
 
