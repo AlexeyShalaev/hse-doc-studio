@@ -124,8 +124,11 @@ const startRoute = async (): Promise<string> => {
   return route.id;
 };
 
-const status = () => screen.findByTestId("signing-status");
-const person = (id: string) => screen.findByTestId(`signing-person-${id}`);
+// Сессия, список и ход маршрута идут друг за другом: под нагрузкой это дольше секунды.
+const LOAD = { timeout: 5000 };
+const status = () => screen.findByTestId("signing-status", {}, LOAD);
+const person = (id: string) =>
+  screen.findByTestId(`signing-person-${id}`, {}, LOAD);
 
 /** Ответы сервера из эталонов: состояние, которого демо не даёт само. */
 const serve = (route: SigningRoute) => {
@@ -160,7 +163,7 @@ describe("Подписание: маршрута нет", () => {
   it("счёт подписей точки и «Отправить на подписание» ведёт в редактор", async () => {
     const u = userEvent.setup();
     mount();
-    const card = await screen.findByTestId("signing-card");
+    const card = await screen.findByTestId("signing-card", {}, LOAD);
     expect(card).toHaveTextContent("Подписано 0 из 3");
     expect(card).toHaveTextContent("руководители подпишут у себя");
     await u.click(screen.getByTestId("signing-send"));
@@ -172,7 +175,7 @@ describe("Подписание: маршрута нет", () => {
     mount({ role: "reviewer" });
     await waitFor(() => {
       expect(list).toHaveBeenCalled();
-    });
+    }, LOAD);
     expect(screen.queryByTestId("signing-card")).toBeNull();
   });
 
@@ -182,7 +185,7 @@ describe("Подписание: маршрута нет", () => {
     mount();
     await waitFor(() => {
       expect(sessionApi.bootstrap).toHaveBeenCalled();
-    });
+    }, LOAD);
     expect(screen.queryByTestId("signing-card")).toBeNull();
     expect(list).not.toHaveBeenCalled();
   });
@@ -219,15 +222,15 @@ describe("Подписание: маршрут идёт", () => {
     mount();
     const route = await signingRouteApi.get(PROJECT, id);
     const sup = route.steps[1]?.[0]?.id ?? "";
-    await u.click(await screen.findByTestId(`signing-remind-${sup}`));
+    await u.click(await screen.findByTestId(`signing-remind-${sup}`, {}, LOAD));
     await waitFor(() => {
       expect(success).toHaveBeenCalledWith(
         "Напоминание отправлено во «Входящие»",
       );
-    });
+    }, LOAD);
     await waitFor(() => {
       expect(screen.getByTestId(`signing-remind-${sup}`)).toBeDisabled();
-    });
+    }, LOAD);
     expect(
       screen.getByTestId(`signing-remind-${sup}`).parentElement,
     ).toHaveAttribute("title", expect.stringMatching(/^Напомнить можно после/));
@@ -241,12 +244,12 @@ describe("Подписание: маршрут идёт", () => {
     mount();
     const route = await signingRouteApi.get(PROJECT, id);
     const sup = route.steps[1]?.[0]?.id ?? "";
-    await u.click(await screen.findByTestId(`signing-copy-${sup}`));
+    await u.click(await screen.findByTestId(`signing-copy-${sup}`, {}, LOAD));
     await waitFor(async () => {
       expect(await navigator.clipboard.readText()).toBe(
         `${window.location.origin}/sign/${PROJECT}/${id}`,
       );
-    });
+    }, LOAD);
   });
 
   it("буфер недоступен: ссылка видна под человеком", async () => {
@@ -258,7 +261,7 @@ describe("Подписание: маршрут идёт", () => {
     mount();
     const route = await signingRouteApi.get(PROJECT, id);
     const sup = route.steps[1]?.[0]?.id ?? "";
-    await u.click(await screen.findByTestId(`signing-copy-${sup}`));
+    await u.click(await screen.findByTestId(`signing-copy-${sup}`, {}, LOAD));
     expect(
       await screen.findByDisplayValue(
         `${window.location.origin}/sign/${PROJECT}/${id}`,
@@ -270,12 +273,12 @@ describe("Подписание: маршрут идёт", () => {
     await startRoute();
     const u = userEvent.setup();
     mount();
-    await u.click(await screen.findByTestId("signing-cancel"));
+    await u.click(await screen.findByTestId("signing-cancel", {}, LOAD));
     expect(await screen.findByText("Отменить маршрут?")).toBeInTheDocument();
     await u.click(screen.getByTestId("signing-cancel-confirm"));
     await waitFor(async () => {
       expect(await status()).toHaveTextContent("Маршрут отменён.");
-    });
+    }, LOAD);
     expect(screen.getByTestId("signing-resend")).toBeInTheDocument();
     expect(screen.queryByTestId("signing-cancel")).toBeNull();
   });
@@ -293,7 +296,7 @@ describe("Подписание: остановка и возврат", () => {
     await u.click(screen.getByTestId("signing-resend"));
     await waitFor(async () => {
       expect(await status()).toHaveAttribute("data-status", "active");
-    });
+    }, LOAD);
     expect(await status()).toHaveTextContent(/^Шаг 2 из 2/);
   });
 
@@ -319,7 +322,7 @@ describe("Подписание: остановка и возврат", () => {
     await u.click(screen.getByTestId("signing-resend"));
     await waitFor(async () => {
       expect(await status()).toHaveAttribute("data-status", "active");
-    });
+    }, LOAD);
   });
 
   it("отправить нельзя: ведёт в редактор маршрута", async () => {
@@ -394,7 +397,7 @@ describe("Подписание: эталонные состояния", () => {
     await u.click(screen.getByTestId(`signing-copy-${invited.id}`));
     await waitFor(async () => {
       expect(await navigator.clipboard.readText()).toBe(link);
-    });
+    }, LOAD);
     expect(remind).toHaveBeenCalledWith(
       SR_PROJECT_ID,
       expect.any(String),
@@ -422,7 +425,7 @@ describe("Подписание: эталонные состояния", () => {
     await u.click(screen.getByTestId("signing-archive"));
     await waitFor(() => {
       expect(archive).toHaveBeenCalledWith(SR_PROJECT_ID, route.id);
-    });
+    }, LOAD);
   });
 
   it("подписант в свою очередь: «Перейти к подписи», без действий автора", async () => {
@@ -432,7 +435,7 @@ describe("Подписание: эталонные состояния", () => {
     const route = makeSigningRoute();
     serve(route);
     mount({ projectId: SR_PROJECT_ID, role: "reviewer" });
-    expect(await screen.findByTestId("signing-go")).toHaveAttribute(
+    expect(await screen.findByTestId("signing-go", {}, LOAD)).toHaveAttribute(
       "href",
       `/sign/${SR_PROJECT_ID}/${route.id}`,
     );

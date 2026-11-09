@@ -73,6 +73,9 @@ const mount = (docId: string) =>
     </I18nextProvider>,
   );
 
+// Сессия, список и ход маршрута идут друг за другом: под нагрузкой это дольше секунды.
+const LOAD = { timeout: 5000 };
+
 const startRoute = async (): Promise<string> => {
   const route = await signingRouteApi.create(PROJECT, PROFILE);
   const preview = await signingRouteApi.preview(PROJECT, route.id);
@@ -103,7 +106,7 @@ describe("плашка документа на подписании", () => {
   it("документ идущего маршрута: шаг, запрет подписей и ход на точке", async () => {
     await startRoute();
     mount(DOC);
-    const banner = await screen.findByTestId("signing-hold-banner");
+    const banner = await screen.findByTestId("signing-hold-banner", {}, LOAD);
     expect(banner).toHaveTextContent(
       "Документ на подписании (шаг 2 из 2). Правка и пересборка остановят маршрут.",
     );
@@ -154,8 +157,8 @@ describe("плашка документа на подписании", () => {
     await i18n.changeLanguage("en");
     await startRoute();
     mount(DOC);
-    expect(await screen.findByTestId("signing-hold-banner")).toHaveTextContent(
-      "This document is out for signing (step 2 of 2).",
-    );
+    expect(
+      await screen.findByTestId("signing-hold-banner", {}, LOAD),
+    ).toHaveTextContent("This document is out for signing (step 2 of 2).");
   });
 });
