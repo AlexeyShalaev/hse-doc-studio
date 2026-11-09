@@ -59,6 +59,13 @@ describe("locale parity", () => {
     expect(keysOf("ru", "landing/landing.json").length).toBeGreaterThan(40);
   });
 
+  it("signing page dictionary has the same keys in ru and en", () => {
+    expect(keysOf("en", "signing/signing.json")).toEqual(
+      keysOf("ru", "signing/signing.json"),
+    );
+    expect(keysOf("ru", "signing/signing.json").length).toBeGreaterThan(40);
+  });
+
   it.each(NEW_NAMESPACES)("%s exists and is not empty", (ns) => {
     expect(namespaces).toContain(`${ns}.json`);
     expect(keysOf("ru", `${ns}.json`).length).toBeGreaterThan(5);

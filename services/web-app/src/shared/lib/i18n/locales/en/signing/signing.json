@@ -1,0 +1,196 @@
+{
+  "page": {
+    "loading": "Loading the signing page",
+    "notFoundTitle": "Signing page not found",
+    "notFoundBody": "The link is out of date, the route is closed, or you are not on this route.",
+    "errorTitle": "Could not load the signing page",
+    "home": "Home",
+    "inbox": "Inbox"
+  },
+  "head": {
+    "from": "{{name}} asks you to sign",
+    "sentAt": "sent {{date}}",
+    "deadline": "due {{date}}",
+    "overdue": "was due {{date}}",
+    "message": "Message from the author",
+    "openProject": "Open project"
+  },
+  "progress": {
+    "title": "Signing progress",
+    "step": "Step {{n}}",
+    "you": "You",
+    "nobody": "not assigned",
+    "state": {
+      "invited": "invitation sent",
+      "waiting": "waiting",
+      "approved": "approved",
+      "to_approve": "approving",
+      "to_approve_sign": "signing",
+      "to_sign": "signing",
+      "done": "done",
+      "returned": "returned for rework"
+    },
+    "mine": {
+      "invited": "invitation sent",
+      "waiting": "waiting",
+      "approved": "approved",
+      "to_approve": "your turn",
+      "to_approve_sign": "your turn",
+      "to_sign": "your turn",
+      "done": "done",
+      "returned": "returned for rework"
+    }
+  },
+  "persona": {
+    "author": "Author",
+    "supervisor": "Supervisor",
+    "co_supervisor": "Co-supervisor",
+    "academic_supervisor": "Academic supervisor"
+  },
+  "status": {
+    "turn": {
+      "approve": "Your turn: approve the documents",
+      "approve_and_sign": "Your turn: approve and sign",
+      "sign": "Documents are final: sign the final PDF"
+    },
+    "resent": "The document changed after you approved it: please approve again.",
+    "notYetTitle": "Not your turn yet",
+    "notYetNow": "Now: {{names}}. You will be notified when it is your turn.",
+    "notYetLater": "You will be notified when it is your turn.",
+    "approvedTitle": "Approved",
+    "approvedBody": "Once everyone has placed their visible signatures, you will be asked to sign the final PDF.",
+    "doneTitle": "Done",
+    "doneNext_one": "{{names}} signs next.",
+    "doneNext_other": "Next to sign: {{names}}.",
+    "doneWait": "Waiting for the other participants.",
+    "completedTitle": "Everyone has signed",
+    "completedBody": "The documents are signed. Nothing else is needed from you.",
+    "returnedMine": "You returned the documents for rework",
+    "returnedOther": "The documents were returned for rework",
+    "returnedComment": "{{who}}: “{{comment}}”",
+    "returnedBody": "You will be notified when the author sends them again.",
+    "pausedTitle": "Route stopped",
+    "paused": {
+      "rebuilt": "The document changed after it was sent. The author will check it and send it again.",
+      "marks_changed": "Signatures in the document changed outside the route. The author will send the documents again.",
+      "frozen_changed": "The final PDF changed outside the route. The author will send the documents again.",
+      "participant_left": "The signers changed. The author will assign another signer.",
+      "returned": "The documents were returned for rework. The author will send them again.",
+      "unknown": "The author will send the documents again."
+    },
+    "cancelledTitle": "Route cancelled",
+    "closedTitle": "Route closed",
+    "nothingToDo": "Nothing needs to be signed.",
+    "draftTitle": "Route not sent yet",
+    "draftBody": "You will be notified when the author sends the documents."
+  },
+  "need": {
+    "approve_one": "Approve {{count}} document",
+    "approve_other": "Approve {{count}} documents",
+    "approve_and_sign_one": "Approve and sign {{count}} document",
+    "approve_and_sign_other": "Approve and sign {{count}} documents",
+    "sign_one": "Sign {{count}} document",
+    "sign_other": "Sign {{count}} documents",
+    "withMethods": "{{need}}: {{methods}}",
+    "or": "or",
+    "via": {
+      "image": "with an image",
+      "detached": "with a detached e-signature",
+      "pades": "with an e-signature in the PDF"
+    }
+  },
+  "method": {
+    "title": "How to sign",
+    "current": "Method: {{method}}",
+    "name": {
+      "image": "image",
+      "detached": "detached e-signature",
+      "pades": "e-signature in the PDF"
+    },
+    "approveOnly": "No signature in the document, approval only.",
+    "imageReady": "Your signature image is uploaded. It appears in the document once you approve.",
+    "imageMissing": "A signature image is needed.",
+    "plateReady": "Key: {{owner}}, {{kind}} {{id}}",
+    "plateMissing": "A key or certificate for the signature plate is needed.",
+    "plateKind": {
+      "x509": "certificate",
+      "openpgp": "OpenPGP",
+      "manual": "manual"
+    },
+    "soon": "Signing right on this page is coming in the next update."
+  },
+  "actions": {
+    "approve": "Approve",
+    "approving": "Approving…",
+    "return": "Return for rework",
+    "blocked": {
+      "image": "Add your signature image first.",
+      "plate": "Set a key or certificate for the signature plate first."
+    }
+  },
+  "failure": {
+    "doc_changed": "The document changed while this page was open. Review the new version and try again.",
+    "not_your_turn": "It is not your turn right now. The page has been refreshed.",
+    "image_required": "Add your signature image first.",
+    "plate_required": "Set a key or certificate for the signature plate first.",
+    "network": "The server is unreachable. Check your connection and try again.",
+    "unknown": "Something went wrong. Try again later.",
+    "dismiss": "Dismiss"
+  },
+  "return": {
+    "title": "Return for rework",
+    "lead": "The author gets your comment and sends the documents again.",
+    "label": "What to fix",
+    "placeholder": "For example: clarify the project goal",
+    "counter": "{{n}} of {{max}}",
+    "notes": "Detailed comments on the text can be left in the project.",
+    "openProject": "Open project",
+    "cancel": "Cancel",
+    "submit": "Return",
+    "sending": "Sending…"
+  },
+  "docs": {
+    "title": "Documents",
+    "tabs": "Route documents",
+    "yourSlot": "Your signature",
+    "toPlace": "Go to signature",
+    "openPdf": "Open PDF",
+    "final": "final PDF",
+    "mine": "Your signatures",
+    "others": "Other signatures",
+    "page": "p. {{page}}",
+    "show": "Show on the page",
+    "empty": "The route has no documents with your signatures.",
+    "slot": {
+      "pending": "waiting",
+      "awaiting": "after approval",
+      "signed": "signed",
+      "invalid": "invalid",
+      "stale": "outdated"
+    }
+  },
+  "history": {
+    "title": "History",
+    "server": "Studio",
+    "kind": {
+      "sent": "sent for signing",
+      "approved": "approved",
+      "signed": "signed",
+      "returned": "returned for rework",
+      "paused": "route stopped",
+      "resumed": "sent again",
+      "cancelled": "route cancelled",
+      "completed": "everyone signed",
+      "reminded": "reminder",
+      "invited": "invitation",
+      "frozen": "documents finalized"
+    },
+    "reason": {
+      "rebuilt": "document changed",
+      "marks_changed": "signatures changed",
+      "frozen_changed": "final PDF changed",
+      "participant_left": "signers changed",
+      "returned": "returned"
+    }
+  }
+}

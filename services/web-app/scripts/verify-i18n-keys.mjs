@@ -7,21 +7,21 @@ import path from "node:path";
 const ROOT = path.resolve(import.meta.dirname, "..", "src");
 const LOC = path.join(ROOT, "shared/lib/i18n/locales/ru");
 const cache = {};
+const LAZY_PAGE_NAMESPACES = ["landing", "signing"];
 const load = (ns) => {
   if (ns in cache) return cache[ns];
   // Словари админки: admin<Name> живёт в locales/ru/admin/<name>.json.
   const admin = /^admin([A-Z][A-Za-z]*)$/.exec(ns);
-  // Словарь лендинга: locales/ru/landing/landing.json.
-  const file =
-    ns === "landing"
-      ? path.join(LOC, "landing", "landing.json")
-      : admin
-        ? path.join(
-            LOC,
-            "admin",
-            admin[1].charAt(0).toLowerCase() + admin[1].slice(1) + ".json",
-          )
-        : path.join(LOC, ns + ".json");
+  // Ленивые словари страниц: locales/ru/<ns>/<ns>.json (лендинг, страница подписанта).
+  const file = LAZY_PAGE_NAMESPACES.includes(ns)
+    ? path.join(LOC, ns, ns + ".json")
+    : admin
+      ? path.join(
+          LOC,
+          "admin",
+          admin[1].charAt(0).toLowerCase() + admin[1].slice(1) + ".json",
+        )
+      : path.join(LOC, ns + ".json");
   try {
     return (cache[ns] = JSON.parse(fs.readFileSync(file, "utf8")));
   } catch {
