@@ -229,6 +229,7 @@ markers = [
     "s3: needs S3 (moto in process, or MinIO via HSE_TEST_S3_ENDPOINT); skipped without the server extra.",
     "requires_sshd: needs a local sshd and ssh-keygen; skipped when they are missing.",
     "k8s: needs a Kubernetes cluster (kind) and HSE_TEST_K8S_*; skipped without them.",
+    "tex: needs Docker and a local TeX Live image in HSE_TEST_TEX_IMAGE; skipped without it.",
 ]
 
 filterwarnings = [
