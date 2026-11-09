@@ -567,11 +567,12 @@ stateDiagram-v2
   тот, чьё действие вызвало уведомление; `outcome` ход запроса или причина остановки (`StopReason`); `excerpt`
   название точки на языке аккаунта получателя или комментарий возврата. Кроме `profile_id` в `NotificationPayload`
   есть `deadline` (срок маршрута, ISO 8601): письмо собирается только из подписей уведомления, а в нём есть срок.
-- Порт доставки `ISigningNotifier.deliver(route, notices, *, actor_id, comment)` (`core/signing_route/notices.py`),
+- Порт доставки `ISigningNotifier.notify(route, notices, *, actor_id, comment)` (`core/signing_route/ports.py`),
   реализация `SigningNotifier` пишет через `INotifier` в транзакции сценария. Сценарий в одном `uow.begin()`:
-  `mark_requests` (это `mark_notified` для каждого запроса), сохранение маршрута, `deliver`. Один человек в двух
-  ролях получает одно уведомление; вернувший и отменивший о своём действии не уведомляются; автор, который не
-  участник, в ключе повтора записан как `sender`.
+  `mark_notified` для каждого запроса (для набора уведомлений `notices.mark_requests`), сохранение маршрута,
+  `notify`. Адресатов, ключ повтора и письма считает `core/signing_route/notices.py`: один человек в двух ролях
+  получает одно уведомление; вернувший и отменивший о своём действии не уведомляются; автор, который не участник,
+  в ключе повтора записан как `sender`.
 - Письмо адресату решает `mails()`: запрос и напоминание всем, возврат и завершение только автору
   (`INotifier.notify(..., mail=False)` остальным). Шаблоны `signing_request`, `signing_request_sign` (ход `sign`),
   `signing_reminder`, `signing_returned` (комментарий отдельным блоком), `signing_completed`; подписанту ссылка

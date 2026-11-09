@@ -136,7 +136,7 @@ def _check_events(route: SigningRoute, events: Sequence[RouteEvent]) -> None:
 
 @dataclass(frozen=True)
 class Delivered:
-    """Один вызов `ISigningNotifier.deliver`: маршрут в момент доставки и что доставлено."""
+    """Один вызов `ISigningNotifier.notify`: маршрут в момент доставки и что доставлено."""
 
     route: SigningRoute
     notices: tuple[Notify, ...]
@@ -150,7 +150,7 @@ class RecordingSigningNotifier:
 
     delivered: list[Delivered] = field(default_factory=list)
 
-    async def deliver(
+    async def notify(
         self,
         route: SigningRoute,
         notices: Sequence[Notify],

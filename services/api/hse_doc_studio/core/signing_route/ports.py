@@ -1,17 +1,40 @@
-"""Порты маршрута подписания вне хранилища: факты документов, подписи для экранов и писем, счётчик задач.
+"""Порты маршрута подписания вне хранилища: уведомления, факты документов, подписи для людей, счётчик задач.
 
-Реализации читают файлы проекта и шаблон (`use_cases/signing_route`), поэтому здесь только протоколы и значения.
+Только серверный режим (раздел 6.9). Реализации читают файлы проекта и шаблон или пишут во «Входящие»
+(`use_cases/signing_route`), поэтому здесь только протоколы и значения.
 """
 
 from __future__ import annotations
 
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
 from typing import Protocol
 from uuid import UUID
 
+from hse_doc_studio.core.signing_route.effects import Notify
 from hse_doc_studio.core.signing_route.engine import RouteFacts
 from hse_doc_studio.core.signing_route.entities import SigningRoute
+
+
+class ISigningNotifier(Protocol):
+    """Доставка уведомлений маршрута во «Входящие» и письмом (раздел 6.6).
+
+    Сценарий вызывает `notify` внутри своей транзакции, сразу после сохранения маршрута и событий, с уведомлениями
+    расчёта и своими (`Notify`: вид, участники, отправитель, ход запроса). Запросы (`Notice.request`) сценарий уже
+    отметил у участников (`mark_notified`, `notices.mark_requests`), поэтому реализация доставляет каждое
+    уведомление один раз и маршрут не меняет. `actor_id` тот, чьё действие вызвало уведомления (None у сверки
+    сервера); `comment` текст возврата на доработку для `signing_returned`. Откат транзакции откатывает и
+    уведомления; письма уходят отдельной задачей, как у `INotifier`.
+    """
+
+    async def notify(
+        self,
+        route: SigningRoute,
+        notices: Sequence[Notify],
+        *,
+        actor_id: UUID | None,
+        comment: str | None = None,
+    ) -> None: ...
 
 
 class IRouteFacts(Protocol):

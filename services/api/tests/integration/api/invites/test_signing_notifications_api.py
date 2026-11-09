@@ -15,8 +15,8 @@ from uuid import UUID, uuid4
 import pytest
 from hse_doc_studio.core.signing_route.engine import evaluate
 from hse_doc_studio.core.signing_route.entities import Participant, SigningRoute
-from hse_doc_studio.core.signing_route.notices import ISigningNotifier, mark_requests, notices_in
-from hse_doc_studio.core.signing_route.ports import IRouteFacts
+from hse_doc_studio.core.signing_route.notices import mark_requests, notices_in
+from hse_doc_studio.core.signing_route.ports import IRouteFacts, ISigningNotifier
 from hse_doc_studio.core.signing_route.repositories import ISigningRouteRepository
 from hse_doc_studio.core.signing_route.transitions import send
 from hse_doc_studio.core.uow import IUnitOfWork
@@ -95,7 +95,7 @@ def _send(stand: Stand, route: SigningRoute, by: UUID) -> SigningRoute:
         async with (await container.get(IUnitOfWork)).begin():
             sent = mark_requests(sent, notices, at=NOW)
             sent = await routes.add(sent)
-            await (await container.get(ISigningNotifier)).deliver(sent, notices, actor_id=by)
+            await (await container.get(ISigningNotifier)).notify(sent, notices, actor_id=by)
         return sent
 
     return stand.client.portal.call(_run)  # type: ignore[no-any-return]

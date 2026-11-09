@@ -18,8 +18,8 @@ from hse_doc_studio.core.identity.session_policy import Clock, utc_now
 from hse_doc_studio.core.signing_route.effects import Notify
 from hse_doc_studio.core.signing_route.engine import evaluate
 from hse_doc_studio.core.signing_route.entities import Notice, RouteConflictError, RouteStatus, SigningRoute
-from hse_doc_studio.core.signing_route.notices import ISigningNotifier, mark_requests, notices_in
-from hse_doc_studio.core.signing_route.ports import IRouteFacts
+from hse_doc_studio.core.signing_route.notices import mark_requests, notices_in
+from hse_doc_studio.core.signing_route.ports import IRouteFacts, ISigningNotifier
 from hse_doc_studio.core.signing_route.repositories import ISigningRouteRepository
 
 _log = logging.getLogger(__name__)
@@ -68,7 +68,7 @@ class SigningRouteInviteeHook:
         now = self._clock()
         route = mark_requests(route, notices, at=now)
         route = await self._routes.save(route)
-        await self._notifier.deliver(route, notices)
+        await self._notifier.notify(route, notices, actor_id=None)
 
     async def _requests(self, route: SigningRoute, bound: tuple[UUID, ...]) -> tuple[Notify, ...]:
         """Запросы тем, кто только что получил аккаунт, если у идущего маршрута их очередь."""

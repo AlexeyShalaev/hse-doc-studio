@@ -1,9 +1,9 @@
 """Уведомления маршрута подписания: кому, с каким ключом повтора, с письмом или без (docs/design/signing-route.md, 6.6).
 
 Расчёт называет уведомления эффектом `Notify` (запросы, остановка, завершение), сценарии добавляют свои через
-`notice_for` (возврат, отмена) и напоминание. Доставку делает `ISigningNotifier` в той же транзакции, что и запись
-маршрута с событиями (раздел 5.8). Запросы до сохранения маршрута помечаются у участников (`mark_requests`):
-иначе следующий расчёт повторил бы их в этом раунде (5.4).
+`notice_for` (возврат, отмена) и напоминание. Доставку делает порт `ISigningNotifier` (`ports.py`) в той же
+транзакции, что и запись маршрута с событиями (раздел 5.8). Запросы до сохранения маршрута помечаются у участников
+(`mark_notified`, для набора уведомлений `mark_requests`): иначе следующий расчёт повторил бы их в этом раунде (5.4).
 
 Порядок в сценарии:
 
@@ -12,16 +12,15 @@ notices = notices_in(evaluation.effects) + (notice_for(route, Notice.returned),)
 async with uow.begin():
     route = mark_requests(route, notices, at=now)
     route = await routes.save(route, events=events)
-    await signing_notifier.deliver(route, notices, actor_id=actor, comment=comment)
+    await signing_notifier.notify(route, notices, actor_id=actor, comment=comment)
 ```
 """
 
 from __future__ import annotations
 
-from collections.abc import Iterable, Sequence
+from collections.abc import Iterable
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Protocol
 from uuid import UUID
 
 from hse_doc_studio.core.signing_route.effects import Effect, Notify
@@ -100,7 +99,7 @@ def mails(notify: Notify, recipient: Recipient) -> bool:
 def mark_requests(route: SigningRoute, notices: Iterable[Notify], *, at: datetime) -> SigningRoute:
     """Запомнить у участников отправленные запросы (`mark_notified`), чтобы расчёт их не повторял.
 
-    Вызывается до сохранения маршрута в той же транзакции, что и `ISigningNotifier.deliver`. Запрос без исхода
+    Вызывается до сохранения маршрута в той же транзакции, что и `ISigningNotifier.notify`. Запрос без исхода
     и прочие уведомления не помечаются.
     """
     for notify in notices:
@@ -109,28 +108,3 @@ def mark_requests(route: SigningRoute, notices: Iterable[Notify], *, at: datetim
         for participant_id in notify.participant_ids:
             route = mark_notified(route, participant_id, notify.outcome, at=at)
     return route
-
-
-class ISigningNotifier(Protocol):
-    """Доставка уведомлений маршрута во «Входящие» и письмом (только сервер, раздел 6.6).
-
-    Пишет уведомления в текущей транзакции сценария (`IUnitOfWork.begin()`), как `INotifier`: откат транзакции
-    откатывает и их. Письма уходят по `mails` и только при настроенном SMTP. Повтор того же уведомления (ключ
-    `dedupe_key`) не плодит строк. Помечать запросы у участников (`mark_requests`) должен сценарий до сохранения
-    маршрута: доставка маршрут не меняет.
-    """
-
-    async def deliver(
-        self,
-        route: SigningRoute,
-        notices: Sequence[Notify],
-        *,
-        actor_id: UUID | None = None,
-        comment: str | None = None,
-    ) -> None:
-        """Уведомить по каждому `Notify` маршрута в его текущем раунде.
-
-        `actor_id` тот, чьё действие вызвало уведомление (отменивший, вернувший); `comment` комментарий возврата
-        для `signing_returned`. От кого запрос и напоминание, берётся из маршрута (`sent_by`).
-        """
-        ...

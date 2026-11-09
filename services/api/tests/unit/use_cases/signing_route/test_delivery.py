@@ -10,7 +10,7 @@ from hse_doc_studio.core.signing_route.effects import Notify
 from hse_doc_studio.core.signing_route.engine import notice_for
 from hse_doc_studio.core.signing_route.entities import Notice, RequestOutcome, RouteStatus, StopReason
 from hse_doc_studio.core.signing_route.notices import notices_in
-from hse_doc_studio.use_cases.signing_route.notifier import SigningNotifier
+from hse_doc_studio.use_cases.signing_route.delivery import SigningNotifier
 
 from tests.unit.core.signing_route.world import T0
 from tests.unit.use_cases.signing_route.helpers import Inbox, context, people, three_steps
@@ -23,7 +23,7 @@ async def test__send__request_goes_to_the_next_step_with_sender_point_and_deadli
     evaluation = driver.send(author.user_id)  # type: ignore[arg-type]
     inbox = Inbox()
 
-    await SigningNotifier(inbox, people(driver.route), context(driver)).deliver(
+    await SigningNotifier(inbox, people(driver.route), context(driver)).notify(
         driver.route, notices_in(evaluation.effects)
     )
 
@@ -48,7 +48,7 @@ async def test__request__point_name_in_the_recipient_language() -> None:
     driver.send(author.user_id)  # type: ignore[arg-type]
     inbox = Inbox()
 
-    await SigningNotifier(inbox, people(driver.route), context(driver)).deliver(
+    await SigningNotifier(inbox, people(driver.route), context(driver)).notify(
         driver.route, [Notify(Notice.request, (academic.id,), outcome=RequestOutcome.sign)]
     )
 
@@ -66,7 +66,7 @@ async def test__returned__comment_to_author_and_approvers_letter_only_to_the_aut
     route = replace(driver.route, status=RouteStatus.returned, stop_reason=StopReason.returned, stopped_by=academic.id)
     inbox = Inbox()
 
-    await SigningNotifier(inbox, people(route), context(driver)).deliver(
+    await SigningNotifier(inbox, people(route), context(driver)).notify(
         route, [notice_for(route, Notice.returned)], actor_id=academic.user_id, comment="  Уточните цель  "
     )
 
@@ -86,8 +86,8 @@ async def test__paused__reason_in_outcome_no_letter_and_completed_letter_to_auth
     inbox = Inbox()
     notifier = SigningNotifier(inbox, people(paused), context(driver))
 
-    await notifier.deliver(paused, [notice_for(paused, Notice.paused)])
-    await notifier.deliver(driver.route, [notice_for(driver.route, Notice.completed)])
+    await notifier.notify(paused, [notice_for(paused, Notice.paused)])
+    await notifier.notify(driver.route, [notice_for(driver.route, Notice.completed)])
 
     [pause, *done] = inbox.sent
     assert (pause.kind, pause.user_id, pause.payload.outcome, pause.mail) == (
@@ -112,7 +112,7 @@ async def test__reminder__outcome_of_the_last_request_and_unknown_project_still_
     ctx = context(driver)
     ctx.projects = {}
 
-    await SigningNotifier(inbox, people(driver.route), ctx).deliver(
+    await SigningNotifier(inbox, people(driver.route), ctx).notify(
         driver.route, [Notify(Notice.reminder, (supervisor.id,))]
     )
 
@@ -129,8 +129,8 @@ async def test__cancelled__not_to_the_one_who_cancelled_and_nothing_for_no_notic
     inbox = Inbox()
     notifier = SigningNotifier(inbox, people(cancelled), context(driver))
 
-    await notifier.deliver(cancelled, [notice_for(cancelled, Notice.cancelled)], actor_id=author.user_id)
-    await notifier.deliver(cancelled, [])
+    await notifier.notify(cancelled, [notice_for(cancelled, Notice.cancelled)], actor_id=author.user_id)
+    await notifier.notify(cancelled, [])
 
     assert [(s.user_id, s.kind, s.mail, s.payload.actor_name) for s in inbox.sent] == [
         (supervisor.user_id.hex, NotificationKind.signing_cancelled, False, "Иван")  # type: ignore[union-attr]

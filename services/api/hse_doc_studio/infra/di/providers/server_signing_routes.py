@@ -18,14 +18,13 @@ from hse_doc_studio.core.repositories import (
 )
 from hse_doc_studio.core.services import ProjectTemplateService
 from hse_doc_studio.core.signatures.ports import ISignerPlateData
-from hse_doc_studio.core.signing_route.notices import ISigningNotifier
-from hse_doc_studio.core.signing_route.ports import IRouteFacts, IRouteLabels, ISigningTaskCounter
+from hse_doc_studio.core.signing_route.ports import IRouteFacts, IRouteLabels, ISigningNotifier, ISigningTaskCounter
 from hse_doc_studio.core.signing_route.repositories import ISigningRouteRepository
 from hse_doc_studio.infra.db.repositories.signing_routes import SqlSigningRouteRepository
 from hse_doc_studio.infra.db.session import SessionProvider
 from hse_doc_studio.use_cases.signing_route.context import ProjectRouteContext
+from hse_doc_studio.use_cases.signing_route.delivery import SigningNotifier
 from hse_doc_studio.use_cases.signing_route.invitations import SigningRouteInviteeHook
-from hse_doc_studio.use_cases.signing_route.notifier import SigningNotifier
 from hse_doc_studio.use_cases.signing_route.tasks import ListSigningTasksUC
 
 

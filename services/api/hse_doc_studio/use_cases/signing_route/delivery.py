@@ -40,7 +40,7 @@ class SigningNotifier:
         self._users = users
         self._labels = labels
 
-    async def deliver(
+    async def notify(
         self,
         route: SigningRoute,
         notices: Sequence[Notify],
