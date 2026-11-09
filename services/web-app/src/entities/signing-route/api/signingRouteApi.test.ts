@@ -459,6 +459,12 @@ describe("возврат, остановка и повторная отправ�
     expect(
       (await apiError(signingRouteApi.cancel(PROJECT, route.id))).code,
     ).toBe("invalid_transition");
+    // Новый маршрут точки снимает отменённый с контроля.
+    const next = await signingRouteApi.create(PROJECT, PROFILE);
+    expect(next.id).not.toBe(route.id);
+    expect((await signingRouteApi.get(PROJECT, route.id)).status).toBe(
+      "archived",
+    );
   });
 
   it("новый маршрут точки снимает с контроля завершённый", async () => {

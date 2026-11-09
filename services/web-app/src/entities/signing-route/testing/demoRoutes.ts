@@ -946,12 +946,12 @@ export const createSigningRouteDemo = (
             ["draft", "active", "paused", "returned"].includes(r.status),
         );
         if (open) return demoJson(toRoute(open));
-        // Новый маршрут точки снимает с контроля завершённый.
+        // Новый маршрут точки снимает с контроля завершённый и отменённый (5.3).
         for (const r of routes) {
           if (
             r.project_id === projectId &&
             r.profile.id === profile.id &&
-            r.status === "completed"
+            (r.status === "completed" || r.status === "cancelled")
           ) {
             r.status = "archived";
             r.updated_at = now();

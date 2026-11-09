@@ -624,7 +624,7 @@ stateDiagram-v2
 | Метод и путь (`/api/v1`) | Правило | Что | Тело и ответ |
 |---|---|---|---|
 | `GET /projects/{id}/signing-routes?profile_id=` | `OUTPUT_READ` | маршруты точки (сводка), новые первыми; без `profile_id` все маршруты проекта | `SigningRouteList` |
-| `POST /projects/{id}/signing-routes` | `SUBMISSION_CREATE` | черновик точки: существующий незавершённый (200) или новый из пака (201); новый снимает с контроля завершённый | `CreateSigningRouteRequest`, `SigningRoute` |
+| `POST /projects/{id}/signing-routes` | `SUBMISSION_CREATE` | черновик точки: существующий незавершённый (200) или новый из пака (201); новый снимает с контроля завершённый и отменённый | `CreateSigningRouteRequest`, `SigningRoute` |
 | `GET /projects/{id}/signing-routes/{route_id}` | `OUTPUT_READ` | ход маршрута | `SigningRoute` |
 | `PUT /projects/{id}/signing-routes/{route_id}` | `SUBMISSION_CREATE` | шаги, люди, доп. слоты, срок, сообщение целиком (в `draft`, `paused`, `returned`, `cancelled`) | `UpdateSigningRouteRequest`, `SigningRoute` |
 | `POST /projects/{id}/signing-routes/{route_id}/preview` | `SUBMISSION_CREATE` | что будет при отправке сохранённого маршрута; ничего не меняет | `{}`, `SigningRoutePreview` |
@@ -722,7 +722,8 @@ SigningRoutePreview
   route_id, can_send, can_send_and_sign (L = 0 и отправитель подписывает ЭП), visual_step (L),
   docs: [{doc_id, name, built, token}],
   participants: [{participant_id, step, persona, name, membership, method, methods (разрешены точкой),
-                  chooses_method (выберет при подписании), image_ready, plate_ready, actions (0..2, раздел 4.4)}],
+                  chooses_method (выберет при подписании), image_ready, plate_ready,
+                  actions (0..2, `ParticipantView.remaining_actions`, раздел 4.4)}],
   blockers: [{code, doc_id, slot_id, participant_id}],
   sender_key: {id, label, kind, protected, signer} | null
 
