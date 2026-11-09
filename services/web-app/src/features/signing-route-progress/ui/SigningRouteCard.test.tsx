@@ -13,7 +13,7 @@ import {
   it,
   vi,
 } from "vitest";
-import { apiClient } from "@shared/api";
+import { ApiError, apiClient } from "@shared/api";
 import { createDemoRouter, installDemoAdapter } from "@shared/api/demo";
 import { i18n, toast } from "@shared/lib";
 import type { ProjectResponseSchema } from "@entities/project";
@@ -24,6 +24,7 @@ import {
   type SigningRoute,
 } from "@entities/signing-route";
 import {
+  SR_AUTHOR,
   SR_PROJECT_ID,
   SR_SUPERVISOR,
   createSigningRouteDemo,
@@ -377,8 +378,10 @@ describe("Подписание: остановка и возврат", () => {
 });
 
 describe("Подписание: эталонные состояния", () => {
-  it("приглашённому «Скопировать ссылку» повторяет приглашение и берёт его ссылку", async () => {
-    const invited = makeRouteParticipant({
+  const invitedPerson = (
+    overrides: Partial<SigningRoute["steps"][0][0]> = {},
+  ) =>
+    makeRouteParticipant({
       id: "srp_academic",
       persona: "academic_supervisor",
       user_id: null,
@@ -389,34 +392,129 @@ describe("Подписание: эталонные состояния", () => {
       state: "invited",
       next_action: "wait",
       approved_at: null,
+      ...overrides,
     });
+  const serveInvited = (invited: SigningRoute["steps"][0][0]) => {
     serve(
       makeSigningRoute({
         current_step: 2,
         steps: [[makeRouteParticipant()], [invited]],
       }),
     );
+  };
+
+  it("приглашённому «Скопировать ссылку» берёт ссылку приглашения без напоминания и его паузы", async () => {
+    // Приглашён только что: «Напомнить» по правилу 12 часов было бы закрыто, но почты на
+    // сервере нет, и обе кнопки отдают ссылку.
+    const invited = invitedPerson({ reminded_at: new Date().toISOString() });
+    serveInvited(invited);
     const link = "https://studio.example.org/project-invite/hspi_x";
-    const remind = vi.spyOn(signingRouteApi, "remind").mockResolvedValue({
+    const getLink = vi.spyOn(signingRouteApi, "link").mockResolvedValue({
       participant_id: invited.id,
-      delivery: "manual",
+      kind: "invitation",
       link,
     });
+    const remind = vi.spyOn(signingRouteApi, "remind");
+    const success = vi.spyOn(toast, "success");
     const u = userEvent.setup();
     mount({ projectId: SR_PROJECT_ID });
     expect(await status()).toHaveTextContent(
       "Очередь: k***@hse.ru (академический руководитель)",
     );
     expect(await person(invited.id)).toHaveTextContent("не принял приглашение");
+    expect(screen.getByTestId(`signing-remind-${invited.id}`)).toBeEnabled();
     await u.click(screen.getByTestId(`signing-copy-${invited.id}`));
     await waitFor(async () => {
       expect(await navigator.clipboard.readText()).toBe(link);
     }, LOAD);
-    expect(remind).toHaveBeenCalledWith(
+    expect(getLink).toHaveBeenCalledWith(
       SR_PROJECT_ID,
       expect.any(String),
       invited.id,
     );
+    expect(remind).not.toHaveBeenCalled();
+    expect(success).toHaveBeenCalledWith(
+      "Ссылка-приглашение скопирована: отправьте её сами",
+    );
+  });
+
+  it("приглашённый без имени назван приглашённым, а не «не назначен»", async () => {
+    serveInvited(invitedPerson({ name: null }));
+    mount({ projectId: SR_PROJECT_ID });
+    expect(await person("srp_academic")).toHaveTextContent("Приглашённый");
+    expect(
+      screen.getByTestId("signing-person-srp_academic"),
+    ).not.toHaveTextContent("Не назначен");
+  });
+
+  it("с почтой на сервере ссылку несёт письмо: копировать нечего, «Напомнить» раз в 12 часов", async () => {
+    const boot = bootstrap("server");
+    vi.spyOn(sessionApi, "bootstrap").mockResolvedValue({
+      ...boot,
+      auth: { ...boot.auth, smtp_enabled: true },
+    });
+    const invited = invitedPerson({ reminded_at: new Date().toISOString() });
+    serveInvited(invited);
+    mount({ projectId: SR_PROJECT_ID });
+    await person(invited.id);
+    expect(screen.queryByTestId(`signing-copy-${invited.id}`)).toBeNull();
+    expect(screen.getByTestId(`signing-remind-${invited.id}`)).toBeDisabled();
+  });
+
+  it("сервер не дал ссылку приглашения: причина в тосте", async () => {
+    const invited = invitedPerson();
+    serveInvited(invited);
+    vi.spyOn(signingRouteApi, "link").mockRejectedValue(
+      new ApiError("by mail", "link_by_mail", 409),
+    );
+    const failure = vi.spyOn(toast, "error");
+    const u = userEvent.setup();
+    mount({ projectId: SR_PROJECT_ID });
+    await u.click(
+      await screen.findByTestId(`signing-copy-${invited.id}`, {}, LOAD),
+    );
+    await waitFor(() => {
+      expect(failure).toHaveBeenCalledWith(
+        "Ссылка приглашения уходит письмом. Чтобы отправить его ещё раз, нажмите «Напомнить».",
+      );
+    }, LOAD);
+  });
+
+  it("отправитель ещё не подписал сам: «подпись не поставлена» и переход к подписи", async () => {
+    vi.spyOn(sessionApi, "bootstrap").mockResolvedValue(
+      bootstrap("server", SR_AUTHOR),
+    );
+    const route = makeSigningRoute({
+      current_step: 1,
+      steps: [
+        [
+          makeRouteParticipant({
+            method: "detached",
+            state: "to_sign",
+            next_action: "sign",
+          }),
+        ],
+      ],
+    });
+    serve(route);
+    mount({ projectId: SR_PROJECT_ID });
+    expect(
+      await screen.findByTestId("signing-unsigned", {}, LOAD),
+    ).toHaveTextContent("Маршрут отправлен, ваша подпись ещё не поставлена.");
+    expect(screen.getByTestId("signing-go")).toHaveAttribute(
+      "href",
+      `/sign/${SR_PROJECT_ID}/${route.id}`,
+    );
+  });
+
+  it("подписанту, который не отправлял маршрут, про «не поставлена» не пишем", async () => {
+    vi.spyOn(sessionApi, "bootstrap").mockResolvedValue(
+      bootstrap("server", SR_SUPERVISOR),
+    );
+    serve(makeSigningRoute());
+    mount({ projectId: SR_PROJECT_ID, role: "reviewer" });
+    await screen.findByTestId("signing-go", {}, LOAD);
+    expect(screen.queryByTestId("signing-unsigned")).toBeNull();
   });
 
   it("завершён: «Все подписали», снять с контроля", async () => {

@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import { ApiError, failureCode } from "@shared/api";
 
 const KNOWN = new Set([
+  "link_by_mail",
   "doc_changed",
   "invalid_transition",
   "participant_not_waiting",
