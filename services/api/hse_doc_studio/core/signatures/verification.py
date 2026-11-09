@@ -42,7 +42,13 @@ class VerifiedSignature:
 
 
 def note_plate_mismatch(state: SignaturesState, slot_id: str, verified: VerifiedSignature) -> VerifiedSignature:
-    """Flag a signature made by somebody else than the signer printed on the plate."""
+    """Flag a signature made by somebody else than the signer printed on the plate.
+
+    An unknown key proves nothing about the signer: its `signer_id` is a bare key id, not the
+    fingerprint the plate carries, so comparing them would flag the right person too.
+    """
+    if verified.verdict is DetachedVerdict.unknown_key:
+        return verified
     slot = state.slots.get(slot_id)
     expected = slot.signer if slot else None
     if expected and expected.signer_id and verified.signer_id and expected.signer_id != verified.signer_id:

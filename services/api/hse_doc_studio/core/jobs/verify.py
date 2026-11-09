@@ -1,10 +1,11 @@
 """Нагрузка и результат задачи signature.verify_detached: проверка открепленной подписи замороженного PDF.
 
 Исходник PDF едет ссылкой (`ManifestFile` с хешем замороженной копии), подпись и
-доверенный материал внутри нагрузки. Нулевой этап проверяет OpenPGP по постоянной
-связке `data_dir/gnupg` (`OpenPgpTrustMode.runner_home`): единственный непереносимый
-вход. Режим `inline` (ключи в нагрузке, временная связка у раннера) нужен диспетчеру
-второго этапа и без него не выпускается, пока обработчик отвечает на него отказом.
+доверенный материал внутри нагрузки. Для OpenPGP-подписи api выгружает из связки
+`data_dir/gnupg` открытые ключи ее издателей (`OpenPgpTrustMode.inline`): удаленный
+раннер строит из них временную связку, встроенный сверяет с той же связкой Студии.
+`runner_home` остается для CMS и для api без gpg: удаленный раннер в этом режиме
+проверяет по пустой связке и отвечает `unknown_key`.
 """
 
 from __future__ import annotations
@@ -19,11 +20,11 @@ from hse_doc_studio.core.signatures.verification import VerifiedSignature
 # Коды сбоев JobError; текст для пользователя собирает use case по коду.
 CODE_UNKNOWN_SIGNATURE_FORMAT = "unknown_signature_format"
 CODE_GPG_UNAVAILABLE = "gpg_unavailable"
-CODE_OPENPGP_INLINE_UNSUPPORTED = "openpgp_inline_not_supported"
 
 
 class OpenPgpTrustMode(StrEnum):
-    # Раннер сверяет подпись с постоянной связкой Студии (data_dir/gnupg).
+    # Встроенный раннер сверяет подпись с постоянной связкой Студии (data_dir/gnupg),
+    # удаленный с пустой: ключей у него нет.
     runner_home = "runner_home"
     # Открытые ключи едут в `OpenPgpTrust.keys`; раннер строит временную связку.
     inline = "inline"
@@ -34,7 +35,7 @@ class OpenPgpTrust:
     mode: OpenPgpTrustMode = OpenPgpTrustMode.runner_home
     # Armored-блоки открытых ключей; только при mode=inline.
     keys: tuple[InlineBlob, ...] = ()
-    # Адрес содержимого `keys` для кеша временных связок у раннера.
+    # Адрес содержимого `keys` (sha256 от sha256 блоков по порядку) для кеша временных связок у раннера.
     digest: str = ""
 
 

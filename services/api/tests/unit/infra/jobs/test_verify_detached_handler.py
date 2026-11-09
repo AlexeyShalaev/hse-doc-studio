@@ -18,7 +18,6 @@ from hse_doc_studio.core.jobs.files import InlineBlob, ManifestFile
 from hse_doc_studio.core.jobs.protocols import JobContext
 from hse_doc_studio.core.jobs.verify import (
     CODE_GPG_UNAVAILABLE,
-    CODE_OPENPGP_INLINE_UNSUPPORTED,
     CODE_UNKNOWN_SIGNATURE_FORMAT,
     OpenPgpTrust,
     OpenPgpTrustMode,
@@ -31,6 +30,7 @@ from hse_doc_studio.infra.jobs.verify_detached import VerifyDetachedHandler
 from hse_doc_studio.infra.signatures import openpgp
 from hse_doc_studio.infra.signatures.detached_verifier import DetachedSignatureVerifier
 from hse_doc_studio.infra.signatures.openpgp import GpgKeyring
+from hse_doc_studio.infra.signatures.trust_material import LocalTrustMaterialProvider
 
 from tests.unit.core.jobs.samples import JOB_ID, PROJECT_ID
 from tests.unit.infra.signatures.gost_fixture import make_detached_cms, make_identity
@@ -176,17 +176,34 @@ async def test__verify_handler__openpgp_known_key_good_and_unknown_key(
     assert unknown.signature.missing_key_id
 
 
-async def test__verify_handler__inline_openpgp_mode__rejected(
+@_needs_gpg
+async def test__verify_handler__inline_openpgp_mode__verified_against_studio_keyring(
+    workspace: Path, tmp_path: Path, ring: GpgKeyring
+) -> None:
+    key = ring.generate("Иван", "i@example.org")
+    sig_path = tmp_path / "doc.asc"
+    ring.sign_detached(workspace / _PDF, key.fingerprint, sig_path)
+    signature = sig_path.read_bytes()
+    trust = LocalTrustMaterialProvider(tmp_path / "r", None, ring).snapshot(signature)
+    assert trust.openpgp.mode is OpenPgpTrustMode.inline
+
+    result = await _handler(ring, tmp_path).handle(_payload(signature, trust), _ctx(workspace))
+
+    assert isinstance(result, VerifyDetachedResult)
+    assert result.signature.verdict is DetachedVerdict.valid
+    assert result.signature.signer_id == key.fingerprint
+
+
+async def test__verify_handler__inline_mode_for_cms__accepted(
     workspace: Path, tmp_path: Path, ring: GpgKeyring
 ) -> None:
     sig = make_detached_cms(make_identity(), (workspace / _PDF).read_bytes())
     trust = TrustBundle(openpgp=OpenPgpTrust(mode=OpenPgpTrustMode.inline, digest="ab12"))
 
-    with pytest.raises(JobFailure) as caught:
-        await _handler(ring, tmp_path).handle(_payload(sig, trust), _ctx(workspace))
+    result = await _handler(ring, tmp_path).handle(_payload(sig, trust), _ctx(workspace))
 
-    assert caught.value.error.category is JobErrorCategory.internal
-    assert caught.value.error.code == CODE_OPENPGP_INLINE_UNSUPPORTED
+    assert isinstance(result, VerifyDetachedResult)
+    assert result.signature.verdict is DetachedVerdict.valid
 
 
 async def test__verify_handler__pdf_outside_workspace__rejected(
