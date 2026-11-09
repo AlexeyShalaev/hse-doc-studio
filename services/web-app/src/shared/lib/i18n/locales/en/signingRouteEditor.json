@@ -1,0 +1,153 @@
+{
+  "title": "Send for signing",
+  "back": "Back to checkpoint",
+  "localOnly": "Sending for signing works on a Studio server. Locally, sign the set yourself on the checkpoint page.",
+  "loadFailed": "Could not open the signing route",
+  "retry": "Retry",
+  "newRoute": "New route",
+  "status": {
+    "active": "The route is already out for signing: step {{step}} of {{total}}. To change it, cancel the route on the checkpoint page.",
+    "paused": "The route is stopped: {{reason}}. Check and send again.",
+    "returned": "{{who}} returned it for rework: “{{comment}}”. Fix it and send again.",
+    "returnedNoComment": "The route was returned for rework. Fix it and send again.",
+    "someone": "A signer",
+    "cancelled": "The route is cancelled. You can change it and send again.",
+    "completed": "Everyone has signed. You can build the pack.",
+    "archived": "The route is no longer tracked."
+  },
+  "stopReason": {
+    "rebuilt": "the document was rebuilt",
+    "marks_changed": "the marks on the pages changed",
+    "frozen_changed": "the frozen PDF changed",
+    "participant_left": "a participant left the project, assign someone else",
+    "returned": "returned for rework"
+  },
+  "persona": {
+    "author": "Author"
+  },
+  "method": {
+    "image": "Image",
+    "detached": "E-signature",
+    "pades": "E-signature in PDF"
+  },
+  "docs": {
+    "title": "Checkpoint documents",
+    "built": "built",
+    "notBuilt": "not built",
+    "frozen": "frozen",
+    "building": "building",
+    "elsewhere": "out for signing in another route",
+    "build": "Build",
+    "noRunner": "Cannot build now: no runner",
+    "open": "Open"
+  },
+  "steps": {
+    "title": "Who signs and in what order",
+    "hint": "Steps go in order; people in one step sign in parallel. Drag people and steps to reorder.",
+    "hintReadOnly": "Steps go in order; people in one step sign in parallel.",
+    "step": "Step {{n}}",
+    "parallel": "in parallel",
+    "freezeAfter": "freeze after this step",
+    "freezeAfterTitle": "After this step the documents are frozen; later signers sign the final PDF",
+    "dropNew": "Drop here: separate step",
+    "up": "Move step {{n}} earlier",
+    "down": "Move step {{n}} later",
+    "personActions": "Actions: {{name}}",
+    "joinPrevious": "Same step as previous",
+    "separate": "Separate step",
+    "remove": "Remove",
+    "imageFirst": "Image signatures before e-signatures mean fewer actions.",
+    "approverPersona": "Who approves",
+    "addApprover": "Add approver"
+  },
+  "person": {
+    "nobody": "No one assigned",
+    "you": "you",
+    "membership": {
+      "member": "member",
+      "invited": "invitation sent",
+      "missing": "not in project"
+    },
+    "approverOnly": "approval only",
+    "choosesMethod": "will choose the method when signing",
+    "imageReady": "signature uploaded",
+    "imageMissing": "signature not uploaded",
+    "imageLater": "will upload a signature when signing",
+    "plateReady": "key known",
+    "plateMissing": "key not set",
+    "plateLater": "will set a key when signing",
+    "actionsZero": "sending is the approval",
+    "actionsOne": "1 action",
+    "actionsTwo": "2 actions: approve, then sign the final PDF",
+    "invite": "Invite",
+    "pickInvitation": "From invitations",
+    "registrationClosed": "Registration is closed: you can only invite people who already have an account."
+  },
+  "placements": {
+    "title": "Where the signatures go",
+    "noState": "Placements are unavailable: could not load the project signatures.",
+    "nobody": "no signer assigned",
+    "optional": "optional",
+    "notPlaced": "not placed",
+    "place": "To page {{page}}",
+    "page": "p. {{page}}",
+    "jump": "Go",
+    "moveHere": "Here",
+    "add": "Add signature: {{label}}",
+    "removeOptional": "Remove signature from route"
+  },
+  "mine": {
+    "title": "Your signature",
+    "notInRoute": "You do not sign in this route.",
+    "approverOnly": "You only approve: sending is the approval.",
+    "laterStep": "You approve in your turn, at step {{n}}.",
+    "imageReady": "Signature image uploaded",
+    "imageMissing": "Upload or draw your signature: you cannot send without it.",
+    "upload": "Upload or draw",
+    "replace": "Replace",
+    "uploadFailed": "Could not upload the signature",
+    "plateReady": "E-signature plate details known",
+    "plateMissing": "Set a key or certificate for the e-signature plate: you cannot send without it.",
+    "key": "Key: {{label}} ({{signer}})",
+    "noKey": "No Studio key: sign later on your page or create a key.",
+    "keySettings": "Signing settings"
+  },
+  "send": {
+    "title": "Sending",
+    "deadline": "Deadline (optional)",
+    "message": "Message to signers (optional)",
+    "messagePlaceholder": "For example: please sign by Friday",
+    "previewFailed": "Could not check the route before sending",
+    "freezeAtSend": "The documents are frozen right when you send.",
+    "freezeAfter": "The documents are frozen after step {{n}}, then e-signatures go on the final PDF.",
+    "choosesMethod": "{{who}} will choose the method when signing.",
+    "blockers": "What blocks sending",
+    "ready": "Ready to send.",
+    "signWith": "Sign right away with: {{label}} ({{signer}})",
+    "passphrase": "Key passphrase",
+    "send": "Send for signing",
+    "resend": "Send again",
+    "sendAndSign": "Send and sign",
+    "sent": "Sent for signing",
+    "sentSigned": "Sent and signed"
+  },
+  "blocker": {
+    "not_built": "{{doc}}: the document is not built",
+    "doc_in_other_route": "{{doc}}: already out for signing in another route",
+    "participant_missing": "{{who}}: not in the project, invite them",
+    "slot_unassigned": "{{slot}} ({{doc}}): no one to sign",
+    "sender_not_ready": "Your signature is not ready",
+    "no_participants": "The route has no people",
+    "unknown": "Blocked: {{code}}"
+  },
+  "error": {
+    "save": "Route not saved",
+    "doc_changed": "A document changed. Check and send again.",
+    "route_blocked": "Cannot send: fix what blocks it.",
+    "invalid_transition": "The route is already sent or closed. Reload the page.",
+    "passphrase_required": "Enter the key passphrase.",
+    "rate_limited": "Too often. Retry in {{seconds}} s.",
+    "network": "The server is unreachable. Check the connection.",
+    "generic": "Something went wrong. Retry."
+  }
+}

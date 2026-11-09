@@ -247,6 +247,11 @@ export const router = createBrowserRouter([
             path: "/projects/:projectId/submit/cp/:profileId",
             element: <WorkspacePage canvas="submit-checkpoint" />,
           },
+          // Отправка на подписание точки (docs/design/signing-route.md, 3.1).
+          {
+            path: "/projects/:projectId/submit/cp/:profileId/route",
+            element: <WorkspacePage canvas="submit-route" />,
+          },
           {
             path: "/projects/:projectId/submit/signatures",
             element: <WorkspacePage canvas="submit-signatures" />,

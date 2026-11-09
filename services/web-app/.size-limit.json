@@ -162,6 +162,12 @@
     "limit": "4.5 kB"
   },
   {
+    "name": "Отправка на подписание (lazy, features/signing-route-editor)",
+    "path": "dist/assets/SigningRouteEditor-*.js",
+    "gzip": true,
+    "limit": "12.5 kB"
+  },
+  {
     "name": "Лендинг (lazy, страница гостя)",
     "path": "dist/assets/LandingPage-*.js",
     "gzip": true,
