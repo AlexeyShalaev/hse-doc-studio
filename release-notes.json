@@ -1,6 +1,28 @@
 {
   "releases": [
     {
+      "version": "0.17.2",
+      "date": "2026-11-09",
+      "notes": [
+        {
+          "ru": "Облачные сборки в отдельном namespace снова работают: под сборки больше не получает владельцем под раннера из другого namespace, из-за чего Kubernetes сразу его удалял и сборка падала с «Исполнитель сборки (Kubernetes) отказал». Касается runner.installFromUi.buildNamespace и runner.kubernetes.namespace.",
+          "en": "Cloud builds in a separate namespace work again: a build pod no longer gets the runner pod from another namespace as its owner, which made Kubernetes delete it at once and the build failed with a Kubernetes executor error. This affects runner.installFromUi.buildNamespace and runner.kubernetes.namespace."
+        },
+        {
+          "ru": "Открепленная подпись OpenPGP, сделанная ключом из Студии, проверяется и на облачном раннере: Студия передает раннеру открытый ключ подписанта. Раньше такая подпись показывалась как «Ключ подписанта неизвестен» и «Подписал не тот, кто указан на плашке». Секретная часть ключа сервер не покидает.",
+          "en": "A detached OpenPGP signature made with a Studio key is now verified on cloud runners too: the Studio passes the signer's public key to the runner. Previously such a signature showed as an unknown signer key and a signer mismatch. The secret part of the key never leaves the server."
+        },
+        {
+          "ru": "Ключи OpenPGP подчиняются политике хранения ключей на сервере: при запрете их нельзя создать или импортировать, а сохраненными ключами нельзя подписывать, как и сертификатами .p12. Открытые ключи для проверки чужих подписей загружаются всегда. Счетчик «Ключи на сервере» в админке учитывает ключи OpenPGP, а секретный ключ под видом открытого больше не попадает в связку.",
+          "en": "OpenPGP keys follow the server key storage policy: when storage is forbidden they cannot be created or imported, and stored keys cannot be used to sign, the same as .p12 certificates. Public keys for checking other people's signatures can always be uploaded. The Keys on the server counter in the admin area counts OpenPGP keys, and a secret key disguised as a public one no longer gets into the keyring."
+        },
+        {
+          "ru": "Ключ OpenPGP и его пароль передаются в gpg без временных файлов на диске.",
+          "en": "An OpenPGP key and its passphrase are passed to gpg without temporary files on disk."
+        }
+      ]
+    },
+    {
       "version": "0.17.1",
       "date": "2026-11-09",
       "notes": [

@@ -6,6 +6,13 @@ Generated from `release-notes.json` via `make changelog` — do not edit by hand
 Release notes are hand-written and bilingual (RU/EN); the app shows them in the
 selected interface language.
 
+## [0.17.2](https://github.com/AlexeyShalaev/hse-doc-studio/compare/v0.17.1...v0.17.2) - 2026-11-09
+
+- Cloud builds in a separate namespace work again: a build pod no longer gets the runner pod from another namespace as its owner, which made Kubernetes delete it at once and the build failed with a Kubernetes executor error. This affects runner.installFromUi.buildNamespace and runner.kubernetes.namespace.
+- A detached OpenPGP signature made with a Studio key is now verified on cloud runners too: the Studio passes the signer's public key to the runner. Previously such a signature showed as an unknown signer key and a signer mismatch. The secret part of the key never leaves the server.
+- OpenPGP keys follow the server key storage policy: when storage is forbidden they cannot be created or imported, and stored keys cannot be used to sign, the same as .p12 certificates. Public keys for checking other people's signatures can always be uploaded. The Keys on the server counter in the admin area counts OpenPGP keys, and a secret key disguised as a public one no longer gets into the keyring.
+- An OpenPGP key and its passphrase are passed to gpg without temporary files on disk.
+
 ## [0.17.1](https://github.com/AlexeyShalaev/hse-doc-studio/compare/v0.17.0...v0.17.1) - 2026-11-09
 
 - A successful build without output files no longer stays unfinished: previously its result was not applied and the api retried it on every restart.
