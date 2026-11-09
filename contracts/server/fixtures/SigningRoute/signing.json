@@ -122,5 +122,32 @@
       "comment": null,
       "reason": null
     }
+  ],
+  "candidates": [
+    {
+      "persona": "author",
+      "people": [
+        {
+          "kind": "member",
+          "id": "u_01hx7k5ivan",
+          "name": "Иванов И. И."
+        }
+      ]
+    },
+    {
+      "persona": "supervisor",
+      "people": [
+        {
+          "kind": "member",
+          "id": "u_01hx7k5petr",
+          "name": "Петров П. П."
+        },
+        {
+          "kind": "invitation",
+          "id": "inv_01hx9",
+          "name": "s***@hse.ru"
+        }
+      ]
+    }
   ]
 }

@@ -7,5 +7,6 @@
   "show_sources": true,
   "can_edit_all": false,
   "message": "Посмотрите, пожалуйста, главу 2",
-  "expires_in_days": 7
+  "expires_in_days": 7,
+  "next": null
 }

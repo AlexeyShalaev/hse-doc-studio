@@ -69,6 +69,8 @@ export const CreateProjectInvitationRequestSchema = z
     can_edit_all: z.boolean(),
     message: z.string().max(1000).nullable(),
     expires_in_days: z.number().int().min(1).max(30),
+    /** Куда вести после принятия: относительный путь сайта (`?next=` в ссылке письма); null: никуда. */
+    next: z.string().max(512).nullable(),
   })
   .refine((v) => (v.user_id === null) !== (v.email === null));
 export type CreateProjectInvitationRequest = z.infer<

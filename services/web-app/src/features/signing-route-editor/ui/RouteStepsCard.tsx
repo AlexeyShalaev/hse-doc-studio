@@ -356,8 +356,13 @@ export const RouteStepsCard = ({
           onClose={() => {
             setInviting(null);
           }}
-          // Заготовка как у «Пригласить научрука»: роль Рецензент и персона шага.
-          preset={{ role: "reviewer", persona: inviting.persona }}
+          // Заготовка как у «Пригласить научрука»: роль Рецензент и персона шага. После принятия
+          // приглашённый попадает на страницу подписания этого маршрута (id черновика не меняется при отправке).
+          preset={{
+            role: "reviewer",
+            persona: inviting.persona,
+            next: `/sign/${projectId}/${route.id}`,
+          }}
           onCreated={(created) => {
             onChange(
               setPerson(steps, inviting.id, {

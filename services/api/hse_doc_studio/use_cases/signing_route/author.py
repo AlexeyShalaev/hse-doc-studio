@@ -36,7 +36,7 @@ from hse_doc_studio.core.signing_route.drafting import (
     assign_pairs,
     draft_participants,
     inherit_participants,
-    pick_person,
+    resolve_unassigned,
 )
 from hse_doc_studio.core.signing_route.engine import Evaluation, RouteFacts, approval_token, evaluate, notice_for
 from hse_doc_studio.core.signing_route.entities import (
@@ -301,7 +301,7 @@ class SigningRouteDrafts(RouteScenario):
             point = await self._s.points.load(project_id, route.profile_id)
             extras = _extras(point, update.extra_slots)
             participants = apply_people(route.participants, update.steps)
-            participants = await self._owners_for(point, participants, extras)
+            participants = await self._people_for(point, participants, extras, actor_uuid(actor))
             pairs = [*point.required, *extras]
             participants, _ = assign_pairs(participants, pairs)
             changed = replace(
@@ -314,25 +314,32 @@ class SigningRouteDrafts(RouteScenario):
             saved = await self._s.routes.save(changed)
         return await self._details(actor, point, saved)
 
-    async def _owners_for(
-        self, point: RoutePoint, participants: tuple[Participant, ...], extras: Sequence[DocSlot]
+    async def _people_for(
+        self,
+        point: RoutePoint,
+        participants: tuple[Participant, ...],
+        extras: Sequence[DocSlot],
+        actor_id: UUID,
     ) -> tuple[Participant, ...]:
-        """Необязательному слоту без участника с его персоной заводится участник отдельным последним шагом."""
+        """Люди по персонам: необязательному слоту без участника с его персоной заводится участник отдельным
+        последним шагом; участнику без человека (новому или очищенному) человек подбирается, как в заготовке."""
         personas = {p.persona for p in participants}
-        lacking = list(dict.fromkeys(slot_persona(pair.slot_id) for pair in extras))
-        lacking = [persona for persona in lacking if persona not in personas]
-        if not lacking:
-            return participants
+        lacking = [
+            persona
+            for persona in dict.fromkeys(slot_persona(pair.slot_id) for pair in extras)
+            if persona not in personas
+        ]
+        last = max((p.step for p in participants), default=0)
+        added = tuple(
+            Participant(id=uuid4(), step=number, persona=persona)
+            for number, persona in enumerate(lacking, start=last + 1)
+        )
+        everyone = (*participants, *added)
+        if all(p.user_id is not None or p.invitation_id is not None for p in everyone):
+            return everyone
         candidates = await self._s.people.candidates(point.project_id)
         invitees = await self._s.people.invitees(point.project_id)
-        last = max((p.step for p in participants), default=0)
-        added: list[Participant] = []
-        for number, persona in enumerate(lacking, start=last + 1):
-            user_id, invitation_id = pick_person(persona, candidates, invitees)
-            added.append(
-                Participant(id=uuid4(), step=number, persona=persona, user_id=user_id, invitation_id=invitation_id)
-            )
-        return (*participants, *added)
+        return resolve_unassigned(everyone, candidates, invitees, prefer=actor_id)
 
 
 def _extras(point: RoutePoint, pairs: Iterable[DocSlot]) -> list[DocSlot]:

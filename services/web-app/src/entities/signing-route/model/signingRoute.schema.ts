@@ -186,6 +186,24 @@ export const RouteDocSchema = z.strictObject({
 });
 export type RouteDoc = z.infer<typeof RouteDocSchema>;
 
+/** Кого можно поставить на персону: участник проекта с ней или ожидающее приглашение с ней (раздел 6.5). */
+export const RoutePersonOptionSchema = z.strictObject({
+  kind: z.enum(["member", "invitation"]),
+  /** `user_id` участника проекта или `invitation_id` приглашения: то, что передать в PUT. */
+  id: z.string(),
+  /** Имя; у приглашения имя аккаунта или подсказка адреса. */
+  name: z.string().nullable(),
+});
+export type RoutePersonOption = z.infer<typeof RoutePersonOptionSchema>;
+
+export const RoutePersonaCandidatesSchema = z.strictObject({
+  persona: z.string(),
+  people: z.array(RoutePersonOptionSchema),
+});
+export type RoutePersonaCandidates = z.infer<
+  typeof RoutePersonaCandidatesSchema
+>;
+
 export const SigningRouteSchema = z.strictObject({
   id: z.string(),
   project_id: z.string(),
@@ -207,6 +225,11 @@ export const SigningRouteSchema = z.strictObject({
   /** Шаги по порядку; номер шага это индекс + 1, внутри шага параллельно. */
   steps: z.array(z.array(RouteParticipantSchema)),
   events: z.array(RouteEventSchema),
+  /**
+   * Из кого выбирать по персонам маршрута и его слотов (участники проекта, затем приглашения);
+   * только тому, кто управляет маршрутом, остальным пусто.
+   */
+  candidates: z.array(RoutePersonaCandidatesSchema),
 });
 export type SigningRoute = z.infer<typeof SigningRouteSchema>;
 
@@ -248,7 +271,9 @@ export type CreateSigningRouteRequest = z.infer<
 
 /**
  * Человек в шаге при правке маршрута. Пары «документ, слот» сервер назначает сам по
- * персоне; без `user_id` и `invitation_id` человек «нет в проекте» (мешает отправке).
+ * персоне. Без `user_id` и `invitation_id` сервер подбирает человека по персоне, как в
+ * заготовке (ещё не занятого в маршруте участника проекта, иначе приглашение); никого нет:
+ * «нет в проекте» (мешает отправке).
  */
 export const RouteParticipantDraftSchema = z
   .strictObject({

@@ -106,6 +106,7 @@ async def create_invitation(
             email=body.email,
             message=body.message,
             expires_in_days=body.expires_in_days,
+            next_path=body.next,
         ),
     )
     return _created(result)

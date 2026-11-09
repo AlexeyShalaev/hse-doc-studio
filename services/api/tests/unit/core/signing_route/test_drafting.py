@@ -13,6 +13,7 @@ from hse_doc_studio.core.signing_route.drafting import (
     draft_participants,
     inherit_participants,
     pick_person,
+    resolve_unassigned,
 )
 from hse_doc_studio.core.signing_route.entities import (
     Approval,
@@ -191,3 +192,33 @@ def test__apply_people__same_participant_twice__duplicate_participant() -> None:
         apply_people([author], [[twice], [twice]])
 
     assert exc.value.code == "duplicate_participant"
+
+
+def test__resolve_unassigned__free_people_first_then_invitations_never_twice() -> None:
+    supervisors = [
+        Participant(id=uuid4(), step=2, persona="supervisor", user_id=PETROV),
+        Participant(id=uuid4(), step=2, persona="supervisor"),
+        Participant(id=uuid4(), step=3, persona="supervisor"),
+        Participant(id=uuid4(), step=4, persona="academic_supervisor"),
+        Participant(id=uuid4(), step=4, persona="academic_supervisor"),
+        Participant(id=uuid4(), step=1, persona="author", invitation_id="inv_kept"),
+    ]
+
+    people = resolve_unassigned(supervisors, CANDIDATES, INVITEES, prefer=AUTHOR)
+
+    assert [(p.user_id, p.invitation_id) for p in people] == [
+        (PETROV, None),
+        (SIDOROV, None),
+        (None, None),
+        (None, "inv_academic"),
+        (None, None),
+        (None, "inv_kept"),
+    ]
+
+
+def test__resolve_unassigned__prefers_actor_with_the_persona() -> None:
+    people = resolve_unassigned(
+        [Participant(id=uuid4(), step=1, persona="supervisor")], CANDIDATES, INVITEES, prefer=SIDOROV
+    )
+
+    assert people[0].user_id == SIDOROV

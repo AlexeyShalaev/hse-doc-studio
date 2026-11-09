@@ -8,7 +8,7 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import NoReturn, cast
+from typing import Literal, NoReturn, cast
 from uuid import UUID
 
 from dishka.integrations.fastapi import FromDishka
@@ -134,6 +134,16 @@ def route_response(details: RouteDetails) -> s.SigningRouteResponse:
                 reason=e.reason.value if e.reason is not None else None,
             )
             for e in details.events
+        ],
+        candidates=[
+            s.RoutePersonaCandidates(
+                persona=group.persona,
+                people=[
+                    s.RoutePersonOption(kind=cast(Literal["member", "invitation"], o.kind), id=o.id, name=o.name)
+                    for o in group.people
+                ],
+            )
+            for group in details.candidates
         ],
     )
 

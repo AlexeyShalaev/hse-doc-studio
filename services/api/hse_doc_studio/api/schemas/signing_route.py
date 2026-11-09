@@ -97,6 +97,19 @@ class RouteDoc(StrictModel):
     slots: list[RouteDocSlot]
 
 
+class RoutePersonOption(StrictModel):
+    """Кого можно поставить на персону: `id` это `user_id` участника проекта или `invitation_id` приглашения."""
+
+    kind: Literal["member", "invitation"]
+    id: str
+    name: str | None
+
+
+class RoutePersonaCandidates(StrictModel):
+    persona: str
+    people: list[RoutePersonOption]
+
+
 class SigningRouteResponse(StrictModel):
     """Ход маршрута глазами автора: ответ чтения и всех действий автора."""
 
@@ -118,6 +131,8 @@ class SigningRouteResponse(StrictModel):
     docs: list[RouteDoc]
     steps: list[list[RouteParticipant]]
     events: list[RouteEvent]
+    # Из кого выбирать на персоны маршрута и его слотов; только тому, кто управляет маршрутом, иначе пусто.
+    candidates: list[RoutePersonaCandidates]
 
 
 class SigningWaitingFor(StrictModel):

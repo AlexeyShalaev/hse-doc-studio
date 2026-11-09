@@ -9,7 +9,7 @@
 from __future__ import annotations
 
 from collections.abc import Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import datetime
 from uuid import UUID
 
@@ -19,6 +19,7 @@ from hse_doc_studio.core.access.entities import Actor, ActorKind
 from hse_doc_studio.core.errors import NotFoundError
 from hse_doc_studio.core.i18n import localized_error
 from hse_doc_studio.core.identity.session_policy import Clock, utc_now
+from hse_doc_studio.core.signatures.plan import slot_persona
 from hse_doc_studio.core.signing_route.effects import Notify
 from hse_doc_studio.core.signing_route.engine import Evaluation, evaluate
 from hse_doc_studio.core.signing_route.entities import (
@@ -34,7 +35,13 @@ from hse_doc_studio.use_cases.orgs.access import user_id_of
 from hse_doc_studio.use_cases.signing_route.effects import RouteFileEffects
 from hse_doc_studio.use_cases.signing_route.facts import LoadedFacts, RouteFactsLoader
 from hse_doc_studio.use_cases.signing_route.point import RoutePoint, RoutePointLoader
-from hse_doc_studio.use_cases.signing_route.views import People, RouteDetails, build_details
+from hse_doc_studio.use_cases.signing_route.views import (
+    People,
+    PersonaCandidates,
+    RouteDetails,
+    build_details,
+    persona_candidates,
+)
 
 # Сколько раз доводить расчёт: эффекты одного прохода (картинки, плашки, фиксация) дают новый, обычно пустой.
 _MAX_PASSES = 3
@@ -113,8 +120,22 @@ class RouteScenario:
         if missing:
             names |= await self._s.people.names(missing)
             people = People(names=names, invitees=people.invitees, personas=people.personas)
-        show = any(p.user_id == actor_id for p in route.participants) or await self._manages(point.project_id)
-        return build_details(point, route, loaded.facts, evaluation, people, events, show_comments=show)
+        manages = await self._manages(point.project_id)
+        show = manages or any(p.user_id == actor_id for p in route.participants)
+        details = build_details(point, route, loaded.facts, evaluation, people, events, show_comments=show)
+        if not manages:
+            return details
+        return replace(details, candidates=await self._candidates(point, route))
+
+    async def _candidates(self, point: RoutePoint, route: SigningRoute) -> tuple[PersonaCandidates, ...]:
+        """Персоны участников, слотов точки и необязательных слотов её документов, с людьми проекта на каждую."""
+        personas = [
+            *(p.persona for p in route.participants),
+            *(slot_persona(pair.slot_id) for pair in (*point.required, *point.optional_pairs())),
+        ]
+        candidates = await self._s.people.candidates(point.project_id)
+        invitees = await self._s.people.invitees(point.project_id)
+        return persona_candidates(personas, candidates, invitees)
 
     async def _settle(
         self, point: RoutePoint, route: SigningRoute, at: datetime, loaded: LoadedFacts | None = None

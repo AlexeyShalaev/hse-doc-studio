@@ -63,6 +63,16 @@ class RoutePoint:
             return False
         return pair.doc_id in self.docs_of(self.required) and SignatureSlotService().slot_applies_to_doc(slot, doc)
 
+    def optional_pairs(self) -> tuple[DocSlot, ...]:
+        """Необязательные пары точки: слоты, применимые к её документам, которых она не требует."""
+        docs = self.docs_of(self.required)
+        return tuple(
+            DocSlot(doc_id, slot_id)
+            for doc_id in docs
+            for slot_id in self.runtime
+            if self.is_optional(DocSlot(doc_id, slot_id))
+        )
+
     def doc_name(self, doc_id: str) -> dict[str, str]:
         return dict(self.doc_names.get(doc_id) or {"ru": doc_id, "en": doc_id})
 

@@ -524,3 +524,83 @@ async def test__route_of_other_project__404(stand: Stand) -> None:
 
     assert resp.status_code == 404
     assert resp.json()["code"] == "not_found"
+
+
+# --- люди по персонам и выбор из нескольких --------------------------------------------------------------------
+
+
+async def test__update__person_without_ids__resolved_by_persona_but_not_twice(stand: Stand) -> None:
+    project, author, supervisor = await _setup(stand)
+    route = _create(project, author)
+    cleared = _draft(route)
+    cleared[1][0] = {**cleared[1][0], "user_id": None}
+    second = {"id": None, "persona": "supervisor", "user_id": None, "invitation_id": None}
+
+    resp = _put(project, author, route["id"], steps=[*cleared, [second]])
+
+    assert resp.status_code == 200, resp.text
+    people = _people(resp.json())
+    assert people == [
+        [("author", author.id, "member")],
+        [("supervisor", supervisor.id, "member")],
+        [("supervisor", None, "missing")],
+    ]
+    # Второй научрук только согласует: слоты научрука у первого.
+    assert resp.json()["steps"][2][0]["assignments"] == []
+
+
+async def test__get__candidates_per_persona__only_for_who_manages(stand: Stand) -> None:
+    project, author, supervisor = await _setup(stand)
+    other = await person(stand, "Сидоров Сидор Сидорович")
+    await project.member(other, "reviewer", "supervisor")
+    invited = project.call(
+        author,
+        "POST",
+        f"{project.base}/invitations",
+        json={"email": "academic@hse.ru", "role": "reviewer", "persona": "academic_supervisor"},
+    )
+    assert invited.status_code == 201, invited.text
+    route = _create(project, author)
+
+    mine = project.call(author, "GET", f"{project.routes}/{route['id']}").json()["candidates"]
+    theirs = project.call(supervisor, "GET", f"{project.routes}/{route['id']}").json()["candidates"]
+
+    by_persona = {group["persona"]: group["people"] for group in mine}
+    assert by_persona["author"] == [{"kind": "member", "id": author.id, "name": "Иванов Иван Иванович"}]
+    assert [(p["kind"], p["id"]) for p in by_persona["supervisor"]] == [
+        ("member", supervisor.id),
+        ("member", other.id),
+    ]
+    assert [(p["kind"], p["id"], p["name"]) for p in by_persona["academic_supervisor"]] == [
+        ("invitation", invited.json()["invitation"]["id"], "a***@hse.ru")
+    ]
+    assert by_persona["co_supervisor"] == []
+    assert theirs == []
+    picked = _draft(route)
+    picked[1][0] = {**picked[1][0], "user_id": other.id}
+    resp = _put(project, author, route["id"], steps=picked)
+    assert _people(resp.json())[1] == [("supervisor", other.id, "member")]
+
+
+async def test__invitation_from_route_editor__link_leads_to_signing_page(stand: Stand) -> None:
+    project, author, supervisor = await _setup(stand, supervisor_member=False)
+    route = _create(project, author)
+    next_path = f"/sign/{project.id}/{route['id']}"
+
+    created = project.call(
+        author,
+        "POST",
+        f"{project.base}/invitations",
+        json={"email": supervisor.email, "role": "reviewer", "persona": "supervisor", "next": next_path},
+    )
+    foreign = project.call(
+        author,
+        "POST",
+        f"{project.base}/invitations",
+        json={"email": "other@hse.ru", "role": "reviewer", "persona": "supervisor", "next": "//evil.example"},
+    )
+
+    assert created.status_code == 201, created.text
+    assert created.json()["delivery"] == "manual"
+    assert created.json()["link"].endswith(f"?next=%2Fsign%2F{project.id}%2F{route['id']}")
+    assert foreign.status_code == 422

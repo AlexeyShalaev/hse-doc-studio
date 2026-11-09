@@ -32,7 +32,7 @@ from hse_doc_studio.core.signing_route.entities import (
     SigningRoute,
     StopReason,
 )
-from hse_doc_studio.core.signing_route.ports import RouteInvitee
+from hse_doc_studio.core.signing_route.ports import RouteCandidate, RouteInvitee
 from hse_doc_studio.use_cases.signing_route.point import RoutePoint
 
 
@@ -109,6 +109,37 @@ class EventView:
 
 
 @dataclass(frozen=True)
+class PersonOption:
+    """Кого можно поставить на персону: участник проекта (`member`, id это `users.id`) или приглашение."""
+
+    kind: str  # "member" | "invitation"
+    id: str
+    name: str | None
+
+
+@dataclass(frozen=True)
+class PersonaCandidates:
+    persona: str
+    people: tuple[PersonOption, ...]
+
+
+def persona_candidates(
+    personas: Sequence[str], candidates: Sequence[RouteCandidate], invitees: Sequence[RouteInvitee]
+) -> tuple[PersonaCandidates, ...]:
+    """По каждой персоне участники проекта с ней, затем ожидающие приглашения с ней (раздел 6.5)."""
+    return tuple(
+        PersonaCandidates(
+            persona=persona,
+            people=(
+                *(PersonOption("member", c.user_id.hex, c.name) for c in candidates if c.persona == persona),
+                *(PersonOption("invitation", i.invitation_id, i.name) for i in invitees if i.persona == persona),
+            ),
+        )
+        for persona in dict.fromkeys(personas)
+    )
+
+
+@dataclass(frozen=True)
 class RouteDetails:
     route: SigningRoute
     profile_name: dict[str, str]
@@ -120,6 +151,8 @@ class RouteDetails:
     docs: tuple[DocView, ...]
     steps: tuple[tuple[PersonView, ...], ...]
     events: tuple[EventView, ...]
+    # Из кого выбирать на персоны маршрута и его слотов; только тому, кто управляет маршрутом.
+    candidates: tuple[PersonaCandidates, ...] = ()
 
     @property
     def people(self) -> tuple[PersonView, ...]:

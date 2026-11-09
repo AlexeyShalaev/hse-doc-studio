@@ -90,6 +90,37 @@ def draft_participants(
     return tuple(people)
 
 
+def resolve_unassigned(
+    participants: Sequence[Participant],
+    candidates: Sequence[RouteCandidate],
+    invitees: Sequence[RouteInvitee],
+    *,
+    prefer: UUID | None = None,
+) -> tuple[Participant, ...]:
+    """Человек участникам без `user_id` и `invitation_id`, как в заготовке, но без повторов.
+
+    На персону ставится ещё не занятый в маршруте участник проекта (`prefer` первым), иначе ещё не занятое
+    приглашение с этой персоной. Если все заняты, участник остаётся «нет в проекте»: например, второй научрук
+    из «Добавить согласующего», когда в проекте научрук один.
+    """
+    users = {p.user_id for p in participants if p.user_id is not None}
+    invited = {p.invitation_id for p in participants if p.invitation_id is not None}
+    result: list[Participant] = []
+    for p in participants:
+        if p.user_id is not None or p.invitation_id is not None:
+            result.append(p)
+            continue
+        free_people = [c for c in candidates if c.user_id not in users]
+        free_invites = [i for i in invitees if i.invitation_id not in invited]
+        user_id, invitation_id = pick_person(
+            p.persona, free_people, free_invites, prefer=prefer if prefer not in users else None
+        )
+        result.append(replace(p, user_id=user_id, invitation_id=invitation_id))
+        users |= {user_id} if user_id is not None else set()
+        invited |= {invitation_id} if invitation_id is not None else set()
+    return tuple(result)
+
+
 def inherit_participants(previous: SigningRoute) -> tuple[Participant, ...]:
     """Состав прежнего маршрута точки для нового: люди, шаги и id те же, согласий и запросов нет."""
     return tuple(replace(p, approval=None, notified=None, reminded_at=None, reminders=0) for p in previous.participants)
