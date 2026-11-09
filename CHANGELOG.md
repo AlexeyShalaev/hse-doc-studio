@@ -6,6 +6,18 @@ Generated from `release-notes.json` via `make changelog` — do not edit by hand
 Release notes are hand-written and bilingual (RU/EN); the app shows them in the
 selected interface language.
 
+## [0.17.0](https://github.com/AlexeyShalaev/hse-doc-studio/compare/v0.16.0...v0.17.0) - 2026-11-09
+
+- Signatures by plan: a document has a signature plan (who signs, where and how), and the submission point counts readiness from it. Methods can be mixed in one document: a signature image, an image with a digital signature, an invisible digital signature, a detached signature. Sign bundle signs all your slots in the submission point documents in one step, PAdES is applied over the frozen PDF, and slot permissions are checked.
+- The LMS bundle is built from the signature plan. MCP gains get_signature_plan and sign_submission: signing over MCP needs a separate sign permission on the token, a password-protected key is not used over MCP, and passwords and keys never appear in responses.
+- MCP is extended: template update (status, plan, apply), document variant selection, project fields and clearing them, editing one author, the author e-mail and the academic supervisor, project members, invitations by e-mail and access revocation, and git_sync as the sync button with a summary and a list of conflicts. All changes go through the same permissions and audit log as the web interface. compile_document and clone_cloud_project wait up to 45 s so they stay within the client timeout.
+- Inviting a supervisor or co-author opens with a ready message built from the project data: name, topic, role. The text can be edited before sending.
+- Build queue: documents that no runner can take are not queued by Build all and are listed separately, and busy runners are told apart from missing ones. In the admin queue, the jobs of one Build all are grouped into one row that can be cancelled as a whole.
+- Cloud builds survive an api restart: jobs are not lost during a rollout, the server stops gracefully, and a build interrupted by a restart is shown as interrupted instead of hanging. The api downtime window during a rollout is shorter.
+- Admin-installed runners: a separate namespace for build pods (runner.installFromUi.buildNamespace), a built-in Gotenberg for office jobs (pptx, docx) with its address passed to runners, and office jobs on the isolation screen. Removing an install revokes the runner, a failed update rolls back to the previous version, and the admin area shows whether the runner came back online.
+- Templates: the Studio knows the inventory of built-in packs and recognises a mounted template catalog. If the catalog is behind, the message names it instead of suggesting a Studio update, and updating warns about it. The pack binding of a dev build is no longer carried over to the published image.
+- Fixes: placeholders in disabled edition branches (\if) no longer count in checks; the ⋯ menu and tooltips on desktop are clickable again over the settings dialog.
+
 ## [0.16.0](https://github.com/AlexeyShalaev/hse-doc-studio/compare/v0.15.0...v0.16.0) - 2026-11-08
 
 - In-place update of admin-installed runners: a runner installed from the admin area in Kubernetes or Docker is updated to the Studio version without removing and reinstalling it. The name, token, data volume and install limits are kept, the manifest is applied with the current isolation rules, progress is shown step by step, and the update is written to the audit log. The chart adds the update permission on Deployments.
