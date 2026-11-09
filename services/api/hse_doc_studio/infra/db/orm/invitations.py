@@ -28,6 +28,13 @@ NOTIFICATION_KINDS = (
     "review_resolved",
     "backup_failed",
     "system_alert",
+    # Маршрут подписания (docs/design/signing-route.md, 6.6), миграция sr_08_notification_kinds.
+    "signing_request",
+    "signing_reminder",
+    "signing_returned",
+    "signing_paused",
+    "signing_completed",
+    "signing_cancelled",
 )
 
 

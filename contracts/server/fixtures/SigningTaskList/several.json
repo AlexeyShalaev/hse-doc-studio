@@ -1,0 +1,42 @@
+{
+  "items": [
+    {
+      "project": {
+        "id": "5b0c1d2e-3f40-4152-8364-758697a8b9c0",
+        "name": "Bertie: курсовой проект"
+      },
+      "route_id": "0d1e2f30-4152-4637-8899-aabbccddeeff",
+      "profile": {
+        "id": "topic-approval",
+        "name": {
+          "ru": "Заявка на тему КП (SmartLMS)",
+          "en": "Topic application (SmartLMS)"
+        }
+      },
+      "round": 2,
+      "sender": "Иванов И. И.",
+      "deadline": "2026-11-15T20:59:00Z",
+      "next_action": "approve",
+      "since": "2026-11-10T09:00:00Z"
+    },
+    {
+      "project": {
+        "id": "6c1d2e3f-4051-4263-9475-8697a8b9c0d1",
+        "name": "ВКР: анализ требований"
+      },
+      "route_id": "1e2f3041-5263-4748-899a-bbccddeeff00",
+      "profile": {
+        "id": "final",
+        "name": {
+          "ru": "Итоговая сдача",
+          "en": "Final submission"
+        }
+      },
+      "round": 1,
+      "sender": null,
+      "deadline": null,
+      "next_action": "sign",
+      "since": null
+    }
+  ]
+}

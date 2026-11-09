@@ -11,6 +11,8 @@
     "ref_id": "arq_1a2b3c4d5e6f47089a0b1c2d3e4f5a6b",
     "outcome": "approved",
     "path": null,
-    "excerpt": null
+    "excerpt": null,
+    "profile_id": null,
+    "deadline": null
   }
 }

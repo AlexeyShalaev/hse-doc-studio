@@ -275,6 +275,13 @@ export const NOTIFICATION_KINDS = [
   "review_resolved",
   "backup_failed",
   "system_alert",
+  // Маршрут подписания (docs/design/signing-route.md, раздел 6.6).
+  "signing_request",
+  "signing_reminder",
+  "signing_returned",
+  "signing_paused",
+  "signing_completed",
+  "signing_cancelled",
 ] as const;
 export const NotificationKindSchema = z.enum(NOTIFICATION_KINDS);
 export type NotificationKind = z.infer<typeof NotificationKindSchema>;
@@ -303,10 +310,21 @@ export const NotificationSchema = z.strictObject({
         "diag_fail",
         "diag_warn",
         "diag_recovered",
+        // Маршрут подписания: ход запроса и причина остановки.
+        "approve",
+        "approve_sign",
+        "sign",
+        "rebuilt",
+        "marks_changed",
+        "frozen_changed",
+        "participant_left",
       ])
       .nullable(),
     path: z.string().nullable(),
     excerpt: z.string().nullable(),
+    // Маршрут подписания: точка сдачи (ref_id это id маршрута) и срок.
+    profile_id: z.string().nullable(),
+    deadline: iso.nullable(),
   }),
 });
 export type Notification = z.infer<typeof NotificationSchema>;
@@ -328,6 +346,8 @@ export const InboxSummarySchema = z.strictObject({
   invitations: z.number().int(),
   transfers: z.number().int(),
   access_requests: z.number().int(),
+  /** Задачи «На подпись»: маршруты подписания, где сейчас нужно действие человека. */
+  signing_tasks: z.number().int(),
 });
 export type InboxSummary = z.infer<typeof InboxSummarySchema>;
 

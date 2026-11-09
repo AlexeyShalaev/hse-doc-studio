@@ -262,6 +262,140 @@
         "If you did not expect the transfer, decline it in your Inbox: until you accept, the current owner stays the owner."
       ]
     },
+    "signing_request": {
+      "subject": "{actor} asks you to sign: {profile}",
+      "preheader": "The signing page shows only your documents and the places for your signature.",
+      "title": "Documents to sign",
+      "lead": "{actor} asks you to sign the documents “{profile}” in the project “{project}”.",
+      "action": "Open the signing page",
+      "details": [
+        [
+          "Project",
+          "{project}"
+        ],
+        [
+          "Submission checkpoint",
+          "{profile}"
+        ],
+        [
+          "Requested by",
+          "{actor}"
+        ],
+        [
+          "Deadline",
+          "{deadline}"
+        ]
+      ],
+      "context": [
+        "You are on the signing route of a project on the server {server}. This email was sent to {email}."
+      ],
+      "security": [
+        "The signing page opens only after you sign in to your account: a forwarded email does not let anyone sign for you."
+      ]
+    },
+    "signing_request_sign": {
+      "subject": "Sign the final PDF: {profile}",
+      "preheader": "The documents are frozen, only your electronic signature is left.",
+      "title": "Sign the final PDF",
+      "lead": "The documents “{profile}” in the project “{project}” are frozen. Only your electronic signature on the final PDF is left.",
+      "action": "Open the signing page",
+      "details": [
+        [
+          "Project",
+          "{project}"
+        ],
+        [
+          "Submission checkpoint",
+          "{profile}"
+        ],
+        [
+          "Requested by",
+          "{actor}"
+        ],
+        [
+          "Deadline",
+          "{deadline}"
+        ]
+      ],
+      "context": [
+        "You are on the signing route of a project on the server {server}. This email was sent to {email}."
+      ],
+      "security": [
+        "The signing page opens only after you sign in to your account: a forwarded email does not let anyone sign for you."
+      ]
+    },
+    "signing_reminder": {
+      "subject": "Reminder: {profile}",
+      "preheader": "The documents are waiting for your signature.",
+      "title": "Documents are waiting for your signature",
+      "lead": "The documents “{profile}” in the project “{project}” are still waiting for your signature.",
+      "action": "Open the signing page",
+      "details": [
+        [
+          "Project",
+          "{project}"
+        ],
+        [
+          "Submission checkpoint",
+          "{profile}"
+        ],
+        [
+          "Requested by",
+          "{actor}"
+        ],
+        [
+          "Deadline",
+          "{deadline}"
+        ]
+      ],
+      "context": [
+        "You are on the signing route of a project on the server {server}. This email was sent to {email}."
+      ],
+      "security": [
+        "The signing page opens only after you sign in to your account: a forwarded email does not let anyone sign for you."
+      ]
+    },
+    "signing_returned": {
+      "subject": "{actor} returned the documents for revision",
+      "preheader": "The signing route is stopped: read the comment and send the documents again.",
+      "title": "Documents returned for revision",
+      "lead": "{actor} returned the documents of the project “{project}” for revision. The signing route is stopped.",
+      "action": "Open the submission checkpoint",
+      "note_title": "Comment",
+      "details": [
+        [
+          "Project",
+          "{project}"
+        ],
+        [
+          "Returned by",
+          "{actor}"
+        ]
+      ],
+      "context": [
+        "You sent these documents for signing on the server {server}. This email was sent to {email}."
+      ]
+    },
+    "signing_completed": {
+      "subject": "Everyone has signed: {profile}",
+      "preheader": "All signatures are in, you can build the submission package.",
+      "title": "Documents signed",
+      "lead": "All route participants signed the documents “{profile}” in the project “{project}”. You can build the package now.",
+      "action": "Open the submission checkpoint",
+      "details": [
+        [
+          "Project",
+          "{project}"
+        ],
+        [
+          "Submission checkpoint",
+          "{profile}"
+        ]
+      ],
+      "context": [
+        "You sent these documents for signing on the server {server}. This email was sent to {email}."
+      ]
+    },
     "smtp_test": {
       "subject": "HSE Doc Studio: mail check",
       "preheader": "This is a test message: mail sending is set up correctly.",

@@ -173,6 +173,12 @@ class _Mailer:
         (NotificationKind.invitation_accepted, True, True, False),
         (NotificationKind.project_invitation, False, True, False),
         (NotificationKind.project_invitation, True, False, False),
+        (NotificationKind.signing_request, True, True, True),
+        (NotificationKind.signing_reminder, True, True, True),
+        (NotificationKind.signing_returned, True, True, True),
+        (NotificationKind.signing_completed, True, True, True),
+        (NotificationKind.signing_paused, True, True, False),
+        (NotificationKind.signing_cancelled, True, True, False),
     ],
 )
 async def test__notifier__writes_always_mails_only_s15_kinds(
@@ -185,3 +191,13 @@ async def test__notifier__writes_always_mails_only_s15_kinds(
 
     assert repo.added == [("petr", kind, "k")]
     assert bool(mailer.sent) is mailed
+
+
+async def test__notifier__mail_false__writes_the_notification_without_a_letter() -> None:
+    repo, mailer = _Repo(), _Mailer(True)
+    notifier = Notifier(repo, _Users(True), mailer, background=False)  # type: ignore[arg-type]
+
+    await notifier.notify("petr", NotificationKind.signing_returned, NotificationPayload(), mail=False)
+
+    assert repo.added == [("petr", NotificationKind.signing_returned, None)]
+    assert mailer.sent == []

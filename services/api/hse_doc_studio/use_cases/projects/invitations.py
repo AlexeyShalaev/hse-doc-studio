@@ -51,6 +51,7 @@ from hse_doc_studio.core.invitations.entities import (
 )
 from hse_doc_studio.core.invitations.policy import email_allowed_for_org
 from hse_doc_studio.core.invitations.protocols import (
+    IInvitationAcceptedHook,
     INotificationMailer,
     INotifier,
     IProjectCards,
@@ -628,12 +629,14 @@ class _Decide(_Base):
         members: IProjectMemberRepository,
         member_roles: IProjectMemberLookup,
         notifier: INotifier,
+        accepted_hooks: tuple[IInvitationAcceptedHook, ...] = (),
         clock: Clock = utc_now,
     ) -> None:
         super().__init__(invitations, cards, users, audit, uow, clock)
         self._members = members
         self._member_roles = member_roles
         self._notifier = notifier
+        self._accepted_hooks = accepted_hooks
 
     async def _decide(self, actor: Actor, invitation_id: str, accept: bool, *, by_token: bool) -> MyInvitationView:
         user_id = user_id_of(actor)
@@ -653,6 +656,7 @@ class _Decide(_Base):
             await self._invitations.update(decided)
             if accept:
                 await self._grant(card, user_id, current.terms)
+                await self._accepted(card.id, invitation_id, user_id)
             await self._audit.record(
                 f"project.invitation.{'accept' if accept else 'decline'}",
                 actor_id=user_id,
@@ -670,6 +674,11 @@ class _Decide(_Base):
         if view is None:
             raise IdentityError(IdentityErrorCode.not_found)
         return view
+
+    async def _accepted(self, project_id: UUID, invitation_id: str, user_id: str) -> None:
+        """Хуки принятия: приглашённый подписант маршрута получает аккаунт в маршруте и, если его очередь, запрос."""
+        for hook in self._accepted_hooks:
+            await hook.on_invitation_accepted(project_id, invitation_id, user_id)
 
     async def _claim(self, invitation: ProjectInvitation, user_id: str, *, by_token: bool) -> ProjectInvitation:
         """Чужое приглашение: 404 по id; по ссылке из письма 403 с подсказкой адреса (S11)."""

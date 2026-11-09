@@ -35,6 +35,13 @@ class MailTemplate(StrEnum):
     project_invitation_link = "project_invitation_link"
     access_request = "access_request"
     transfer_request = "transfer_request"
+    # Маршрут подписания (docs/design/signing-route.md, 6.6): запрос подписанту, «подпишите итоговый PDF»,
+    # напоминание; автору возврат на доработку и «все подписали». Ссылку строит отправитель уведомления.
+    signing_request = "signing_request"
+    signing_request_sign = "signing_request_sign"
+    signing_reminder = "signing_reminder"
+    signing_returned = "signing_returned"
+    signing_completed = "signing_completed"
     smtp_test = "smtp_test"
 
 
@@ -130,15 +137,18 @@ def _row(label: str, template: str, values: Mapping[str, str]) -> Row | None:
     return Row(fill_text(label, values), fill_text(template, values))
 
 
+def format_moment(lang: Lang, moment: datetime) -> str:
+    """Дата и время в письме: в UTC, формат словаря (`layout.date_format`)."""
+    return moment.astimezone(UTC).strftime(catalog(lang)["layout"]["date_format"])
+
+
 def _expiry(lang: Lang, ttl: timedelta | None, expires_at: datetime | None, *, code: bool) -> str | None:
     layout = catalog(lang)["layout"]
     if ttl is not None:
         duration = format_duration(lang, int(ttl.total_seconds()))
         return fill_text(layout["code_valid_for" if code else "link_valid_for"], {"duration": duration})
     if expires_at is not None:
-        return fill_text(
-            layout["link_valid_until"], {"date": expires_at.astimezone(UTC).strftime(layout["date_format"])}
-        )
+        return fill_text(layout["link_valid_until"], {"date": format_moment(lang, expires_at)})
     return None
 
 
@@ -187,7 +197,7 @@ def build_content(
         plain_link=plain_link,
         code=one_line(code, 64) if code else None,
         expiry=_expiry(lang, ttl, expires_at, code=bool(code)) if has_secret else None,
-        note=Block(fill_text(layout["note_title"], vals), message) if message else None,
+        note=Block(fill_text(texts.get("note_title", layout["note_title"]), vals), message) if message else None,
         context_title=layout["context_title"],
         context=tuple(text(t) for t in texts.get("context", [])),
         security_title=layout["security_title"],
