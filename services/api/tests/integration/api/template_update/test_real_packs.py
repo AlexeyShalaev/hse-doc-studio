@@ -74,7 +74,7 @@ async def test__real_coursework__existing_project_is_offered_the_patch_2026_1_1(
 
     status = (await test_app.get(base)).json()
     assert status["current_version"] == "2026.1"
-    assert status["recommended"]["version"]["version"] == "2026.1.2"
+    assert status["recommended"]["version"]["version"] == "2026.1.3"
     assert status["recommended"]["update_class"] == "patch"
 
     plan = (await test_app.post(f"{base}/plan", json={"to_version": "2026.1.1"})).json()
@@ -102,9 +102,61 @@ async def test__real_coursework__2026_1_1_project_is_offered_the_patch_2026_1_2(
 
     status = (await test_app.get(base)).json()
     assert status["current_version"] == "2026.1.1"
-    assert status["recommended"]["version"]["version"] == "2026.1.2"
+    assert status["recommended"]["version"]["version"] == "2026.1.3"
     assert status["recommended"]["update_class"] == "patch"
 
     plan = (await test_app.post(f"{base}/plan", json={"to_version": "2026.1.2"})).json()
     changed = {f["path"] for f in plan["files"] if f["action"] != "unchanged"}
     assert changed == {"topic_application/topic_application.tex"}
+
+
+async def test__real_coursework__2026_1_2_project_gets_sign_methods_in_patch_2026_1_3(
+    test_app: AsyncClient, tmp_path: Path
+) -> None:
+    """2026.1.3 меняет только профили сдачи: файлы проекта не трогаются, PAdES-слот потом ждёт смены способа."""
+    folder = tmp_path / "sse"
+    folder.mkdir()
+    payload = {
+        **project_api_payload(str(folder)),
+        "pack_id": "hse-cs-sse",
+        "template_id": "coursework",
+        "version": "2026.1.2",
+        "lang": "ru",
+    }
+    created = await test_app.post("/api/v1/projects", json=payload)
+    assert created.status_code == 201, created.text
+    project = created.json()
+    base = f"/api/v1/projects/{project['id']}/template-update"
+    config = f"/api/v1/projects/{project['id']}/signatures/slots/author/config"
+    signature_plan = f"/api/v1/projects/{project['id']}/signature-plan"
+
+    # На 2026.1.2 ограничений нет: автор подписывает встроенной ЭП.
+    resp = await test_app.patch(config, json={"sign_mode": "image_crypto"})
+    assert resp.status_code == 200, resp.text
+
+    status = (await test_app.get(base)).json()
+    assert status["current_version"] == "2026.1.2"
+    assert status["recommended"]["version"]["version"] == "2026.1.3"
+    assert status["recommended"]["update_class"] == "patch"
+
+    plan = (await test_app.post(f"{base}/plan", json={"to_version": "2026.1.3"})).json()
+    assert {f["path"] for f in plan["files"] if f["action"] != "unchanged"} == set()
+    applied = await test_app.post(
+        f"{base}/apply", json={"to_version": "2026.1.3", "fingerprint": plan["fingerprint"], "resolutions": {}}
+    )
+    assert applied.status_code == 200, applied.text
+
+    # Настройка слота сохранилась, но точка её не принимает и объясняет почему.
+    resp = await test_app.get(signature_plan, params={"profile_id": "topic-approval"})
+    assert resp.status_code == 200, resp.text
+    doc = next(d for d in resp.json()["docs"] if d["doc_id"] == "topic_application")
+    author = next(s for s in doc["slots"] if s["slot_id"] == "author")
+    assert (author["status"], author["reason"]) == ("pending", "method_not_allowed")
+    assert author["allowed_methods"] == ["image", "detached"]
+
+    # Снова выбрать PAdES нельзя: его не принимает ни одна точка с этим слотом. Открепленную ЭП можно.
+    resp = await test_app.patch(config, json={"sign_mode": "image_crypto"})
+    assert resp.status_code == 400, resp.text
+    assert "не принимает ни одна точка" in resp.text
+    resp = await test_app.patch(config, json={"sign_mode": "detached_text"})
+    assert resp.status_code == 200, resp.text
