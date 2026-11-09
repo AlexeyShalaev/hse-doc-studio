@@ -221,6 +221,14 @@ class GpgKeyring:
         proc = self._run(["--with-colons", "--show-keys"], stdin=data, check=False)
         return any(ln.startswith(("sec:", "ssb:")) for ln in proc.stdout.decode("utf-8", "replace").splitlines())
 
+    def show_keys(self, data: bytes) -> list[GpgKey]:
+        """Keys carried by the file, read by gpg without importing anything into the keyring.
+
+        `has_secret` is always False here: ask `contains_secret_key` first. Empty when gpg cannot read the file.
+        """
+        proc = self._run(["--with-colons", "--fixed-list-mode", "--show-keys"], stdin=data, check=False)
+        return _keys_from_colons(proc.stdout)
+
     def looks_like_public_key(self, blob: bytes) -> bool:
         return looks_like_openpgp_public_key(blob)
 

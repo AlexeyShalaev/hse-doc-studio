@@ -63,6 +63,7 @@ from hse_doc_studio.infra.db.orm.sharing import (
     ShareLinkRow,
     ShareLinkVisitRow,
 )
+from hse_doc_studio.infra.db.orm.signer_profiles import SignerProfileRow
 from hse_doc_studio.infra.db.orm.signing_identities import SigningIdentityRow
 from hse_doc_studio.infra.db.orm.submission import SubmissionRow
 
@@ -127,6 +128,7 @@ __all__ = [
     "ShareLinkGrantRow",
     "ShareLinkRow",
     "ShareLinkVisitRow",
+    "SignerProfileRow",
     "SigningIdentityRow",
     "SubmissionRow",
     "UpdateRunRow",
