@@ -385,6 +385,18 @@ export const SigningReminderSchema = z.strictObject({
 });
 export type SigningReminder = z.infer<typeof SigningReminderSchema>;
 
+/**
+ * «Скопировать ссылку»: что автор сам перешлёт подписанту. `page` страница подписи участника с
+ * аккаунтом; `invitation` новая ссылка приглашения (прежняя перестаёт работать); `inbox`
+ * «Входящие» приглашённого как аккаунт.
+ */
+export const SigningLinkSchema = z.strictObject({
+  participant_id: z.string(),
+  kind: z.enum(["page", "invitation", "inbox"]),
+  link: z.string().min(1),
+});
+export type SigningLink = z.infer<typeof SigningLinkSchema>;
+
 // Задача подписанта: GET .../task и ответы действий task/*.
 
 export const SigningTaskRouteSchema = z.strictObject({
@@ -584,6 +596,7 @@ export const SIGNING_ROUTE_CONTRACT_SCHEMAS: Record<string, ZodType> = {
   SigningRoutePreview: SigningRoutePreviewSchema,
   SendSigningRouteRequest: SendSigningRouteRequestSchema,
   SigningReminder: SigningReminderSchema,
+  SigningLink: SigningLinkSchema,
   SigningTask: SigningTaskSchema,
   ApproveSigningTaskRequest: ApproveSigningTaskRequestSchema,
   SignSigningTaskRequest: SignSigningTaskRequestSchema,
