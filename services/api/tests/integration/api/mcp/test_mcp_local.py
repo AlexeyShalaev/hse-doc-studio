@@ -409,3 +409,141 @@ async def test__call_tool__local__project_access_tool__answers_unknown_tool(stud
     assert result.is_error is True
     assert result.meta is not None
     assert result.meta["code"] == "unknown_tool"
+
+
+_TEAM_TEMPLATE = {"pack_id": "hse-cs-se", "template_id": "vkr", "version": "2026.1", "kind": "project", "lang": "ru"}
+_TEAM_AUTHORS = [
+    {"name": "Смирнова Анна", "group": "БПИ221", "topic": "Серверная часть"},
+    {"name": "Петров Борис", "topic": "Клиент", "email": "boris@edu.hse.ru"},
+    {"name": "Козлова Вера", "slug": "vera", "managed": False},
+]
+
+
+async def _project_state(studio: Studio, project_id: str) -> dict[str, object]:
+    project = (await studio.rest.get(f"/api/v1/projects/{project_id}")).json()
+    documents = (await studio.rest.get(f"/api/v1/projects/{project_id}/documents")).json()
+    return {
+        "staffing": project["staffing"],
+        "shared_enabled": project["shared_enabled"],
+        "authors": [
+            (a["name"], a["slug"], a["topic"], a["managed"], a["group"], a["email"]) for a in project["authors"]
+        ],
+        "supervisor": project["supervisor"],
+        "meta_group": project["meta"].get("group"),
+        "documents": sorted(d["id"] for d in documents),
+    }
+
+
+async def test__call_tool__create_project__team__same_project_as_the_web_wizard(studio: Studio, tmp_path: Path) -> None:
+    """Командный проект через MCP и через POST /projects (как его шлёт мастер) получается одинаковым."""
+    await _enable(studio)
+    supervisor = {"name": "Петров П. П.", "title": "доцент", "role": "university"}
+
+    async with _client(studio) as client:
+        result = await client.call_tool(
+            "create_project",
+            {
+                "name": "Система",
+                "folder": str(tmp_path / "team-mcp"),
+                **_TEAM_TEMPLATE,
+                "authors": _TEAM_AUTHORS,
+                "supervisor": supervisor,
+                "shared_enabled": False,
+            },
+        )
+    web = await studio.rest.post(
+        "/api/v1/projects",
+        json={
+            "name": "Система",
+            "folder": str(tmp_path / "team-web"),
+            **_TEAM_TEMPLATE,
+            "engine": "xelatex",
+            "staffing": "team",
+            "authors": [{"managed": True, **a} for a in _TEAM_AUTHORS],
+            "supervisor": supervisor,
+            "shared_enabled": False,
+            "meta": {"group": "БПИ221"},
+        },
+    )
+
+    assert result.is_error is False, result.content
+    text = result.content[0].text  # type: ignore[union-attr]
+    assert "комплекты авторов: smirnova (Смирнова Анна), petrov (Петров Борис)" in text
+    project_id = text.split("id ", 1)[1].split(",", 1)[0]
+    assert web.status_code == 201, web.text
+    via_mcp, via_web = await _project_state(studio, project_id), await _project_state(studio, web.json()["id"])
+    assert via_mcp == via_web
+    assert via_mcp["staffing"] == "team"
+    assert [a[1] for a in via_mcp["authors"]] == ["smirnova", "petrov", "vera"]  # type: ignore[union-attr]
+    assert "pdp_assignment--smirnova" in via_mcp["documents"]  # type: ignore[operator]
+    assert not any(d.endswith("--vera") for d in via_mcp["documents"])  # type: ignore[union-attr]
+    assert (tmp_path / "team-mcp" / "smirnova").is_dir()
+    assert not (tmp_path / "team-mcp" / "shared").exists()
+
+
+async def test__call_tool__create_project__team_on_solo_only_template__refused_like_the_web(
+    studio: Studio, tmp_path: Path
+) -> None:
+    await _enable(studio)
+    folder = tmp_path / "coursework"
+
+    async with _client(studio) as client:
+        result = await client.call_tool(
+            "create_project",
+            {
+                "name": "КП",
+                "folder": str(folder),
+                "pack_id": "hse-cs-sse",
+                "template_id": "coursework",
+                "version": "2026.1.2",
+                "authors": _TEAM_AUTHORS[:2],
+            },
+        )
+
+    assert result.is_error is True
+    assert "командный режим" in result.content[0].text  # type: ignore[union-attr]
+    assert not folder.exists()
+
+
+async def test__call_tool__list_templates__shows_whether_team_is_supported(studio: Studio) -> None:
+    await _enable(studio)
+
+    async with _client(studio) as client:
+        result = await client.call_tool("list_templates", {})
+
+    text = result.content[0].text  # type: ignore[union-attr]
+    assert "template_id=vkr version=2026.1 staffing=solo,team" in text
+
+
+async def test__call_tool__set_project_people__team__new_author_comes_without_a_set(
+    studio: Studio, tmp_path: Path
+) -> None:
+    """Как «Добавить автора» в настройках командного проекта: новый автор без комплекта, тему можно задать."""
+    await _enable(studio)
+
+    async with _client(studio) as client:
+        created = await client.call_tool(
+            "create_project",
+            {"name": "Система", "folder": str(tmp_path / "team"), **_TEAM_TEMPLATE, "authors": _TEAM_AUTHORS[:2]},
+        )
+        project_id = created.content[0].text.split("id ", 1)[1].split(",", 1)[0]  # type: ignore[union-attr]
+        result = await client.call_tool(
+            "set_project_people",
+            {
+                "project_id": project_id,
+                "authors": [
+                    {"name": "Смирнова Анна", "slug": "smirnova", "topic": "Ядро"},
+                    {"name": "Петров Борис", "slug": "petrov"},
+                    {"name": "Новикова Галина", "topic": "Тесты"},
+                ],
+            },
+        )
+
+    assert created.is_error is False, created.content
+    assert result.is_error is False, result.content
+    project = (await studio.rest.get(f"/api/v1/projects/{project_id}")).json()
+    assert [(a["slug"], a["topic"], a["managed"]) for a in project["authors"]] == [
+        ("smirnova", "Ядро", True),
+        ("petrov", "Клиент", True),
+        ("novikova", "Тесты", False),
+    ]
