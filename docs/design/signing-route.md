@@ -382,10 +382,21 @@ stateDiagram-v2
 
 | Таблица | Поля |
 |---|---|
-| `signing_routes` | `id`, `project_id` (каскад), `profile_id`, `status`, `phase`, `round`, `snapshot` jsonb, `deadline`, `message`, `stop_reason`, `created_by`, `sent_by`, времена; уникальный частичный индекс `(project_id, profile_id)` для `draft`, `active`, `paused`, `returned` |
-| `signing_route_docs` | `route_id`, `project_id`, `doc_id`, `active` (маршрут в `active`, `paused`, `returned` или `completed`); уникальный частичный индекс `(project_id, doc_id)` где `active`: документ под одним маршрутом |
-| `signing_route_participants` | `id`, `route_id`, `step`, `persona`, `user_id`, `invitation_id`, `assignments` jsonb, `approval` jsonb, `notified_at`, `reminded_at`, `reminders` |
+| `signing_routes` | `id`, `project_id` (каскад), `profile_id`, `status`, `phase`, `round`, `snapshot` jsonb, `deadline`, `message`, `stop_reason`, `stopped_by`, `created_by`, `sent_by`, времена, `version`; уникальный частичный индекс `(project_id, profile_id)` для `draft`, `active`, `paused`, `returned` |
+| `signing_route_docs` | `route_id`, `project_id`, `doc_id`, `position`, `active` (маршрут в `active`, `paused`, `returned` или `completed`); уникальный частичный индекс `(project_id, doc_id)` где `active`: документ под одним маршрутом |
+| `signing_route_participants` | `id`, `route_id`, `position`, `step`, `persona`, `user_id`, `invitation_id`, `assignments` jsonb, `approval` jsonb, `notified` jsonb, `reminded_at`, `reminders` |
 | `signing_route_events` | `id`, `route_id`, `round`, `at`, `actor_id`, `participant_id`, `kind`, `details` jsonb |
+
+Хранилище (`ISigningRouteRepository` в `core/signing_route/repositories.py`, срез R4):
+
+- `version` защищает от гонки подписантов: сохранение идёт только поверх прочитанной версии, иначе `stale_route`
+  (409), сценарий перечитывает маршрут и повторяет расчёт. Блокировка строки (`lock=True`) держит её до конца
+  транзакции сценария.
+- Нарушение правил точки (`route_exists`) и документа (`doc_on_route`) откатывает только эту запись (точка
+  сохранения), транзакция сценария продолжается.
+- `position` хранит порядок документов и участников; снимок и отпечатки согласий лежат списками, потому что jsonb не
+  держит порядок ключей. Пользователи хранятся как `users.id` (32 hex-символа) без внешнего ключа: маршрут это
+  история, ушедшего участника расчёт замечает по персонам. `invitation_id` это id приглашения (`inv_…`).
 
 Переходы идут под блокировкой строки маршрута (`SELECT … FOR UPDATE`), запись файлов под `project_lock` проекта.
 Порядок: сначала файлы (придержать, открыть, зафиксировать, подписать), затем транзакция с маршрутом, событиями и

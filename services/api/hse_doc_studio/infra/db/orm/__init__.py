@@ -64,6 +64,12 @@ from hse_doc_studio.infra.db.orm.sharing import (
     ShareLinkVisitRow,
 )
 from hse_doc_studio.infra.db.orm.signing_identities import SigningIdentityRow
+from hse_doc_studio.infra.db.orm.signing_routes import (
+    SigningRouteDocRow,
+    SigningRouteEventRow,
+    SigningRouteParticipantRow,
+    SigningRouteRow,
+)
 from hse_doc_studio.infra.db.orm.submission import SubmissionRow
 
 __all__ = [
@@ -128,6 +134,10 @@ __all__ = [
     "ShareLinkRow",
     "ShareLinkVisitRow",
     "SigningIdentityRow",
+    "SigningRouteDocRow",
+    "SigningRouteEventRow",
+    "SigningRouteParticipantRow",
+    "SigningRouteRow",
     "SubmissionRow",
     "UpdateRunRow",
     "UsageCounterRow",

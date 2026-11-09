@@ -189,15 +189,16 @@ class Notified:
 class Participant:
     """Участник маршрута: человек с персоной на своём шаге.
 
-    `user_id` пусто, пока приглашение не принято. `assignments` его пары «документ, слот»; пусто у согласующего
-    без подписи. Способ подписи берётся из слота (`SignatureSlot.sign_mode`), маршрут его не хранит.
+    `user_id` пусто, пока приглашение не принято. `invitation_id` id приглашения в проект (`inv_…`, как у
+    `ProjectInvitation.id`). `assignments` его пары «документ, слот»; пусто у согласующего без подписи. Способ
+    подписи берётся из слота (`SignatureSlot.sign_mode`), маршрут его не хранит.
     """
 
     id: UUID
     step: int
     persona: str
     user_id: UUID | None = None
-    invitation_id: UUID | None = None
+    invitation_id: str | None = None
     assignments: tuple[DocSlot, ...] = ()
     approval: Approval | None = None
     notified: Notified | None = None
@@ -218,6 +219,10 @@ class SigningRoute:
     `participants` в порядке редактора; шаги это их номера `step`, внутри шага параллельно. `phase` задан только
     у идущего (`active`) и завершённого (`completed`) маршрута. `stopped_by` участник, чей возврат или уход
     остановил маршрут.
+
+    `version` номер записи в хранилище: 0 у ещё не сохранённого, каждое сохранение его увеличивает. Хранилище
+    принимает маршрут, только если с момента чтения его никто не перезаписал (`ISigningRouteRepository.save`),
+    поэтому одновременные действия подписантов не затирают друг друга. Переходы его не трогают.
     """
 
     id: UUID
@@ -237,6 +242,7 @@ class SigningRoute:
     completed_at: datetime | None = None
     stop_reason: StopReason | None = None
     stopped_by: UUID | None = None
+    version: int = 0
 
     @property
     def steps(self) -> tuple[int, ...]:
