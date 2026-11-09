@@ -30,6 +30,7 @@ from hse_doc_studio.api.schemas import runner_admin as ra
 from hse_doc_studio.api.schemas import runner_isolation as ri
 from hse_doc_studio.api.schemas import server_update as upd
 from hse_doc_studio.api.schemas import session as s
+from hse_doc_studio.api.schemas import signing_tasks as st
 from hse_doc_studio.api.schemas import sharing as sh
 from pydantic import TypeAdapter, ValidationError
 
@@ -266,6 +267,8 @@ _SCHEMAS: dict[str, Any] = {
     "NotificationPage": inv.NotificationPage,
     "MarkNotificationsReadRequest": inv.MarkNotificationsReadRequest,
     "InboxSummary": inv.InboxSummary,
+    # Маршрут подписания: «На подпись» (R8)
+    "SigningTaskList": st.SigningTaskList,
     # gitremote: git по HTTPS, вход устройства, адрес клонирования, вход локальной Студии на сервер
     "GitServerInfo": gr.GitServerInfo,
     "GitWhoami": gr.GitWhoami,

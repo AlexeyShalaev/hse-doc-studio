@@ -22,6 +22,7 @@ import * as ops from "./opsSchemas";
 import * as pk from "./passkeySchemas";
 import * as s from "./schemas";
 import * as sh from "@entities/share-link/model/shareLink.schema";
+import { SigningTaskListSchema } from "@entities/signing-route/model/signingRoute.schema";
 
 // Каталог эталонов contracts/server/fixtures -> схема zod. Каталог без схемы считается ошибкой.
 export const CONTRACT_SCHEMAS: Record<string, ZodType> = {
@@ -251,6 +252,8 @@ export const CONTRACT_SCHEMAS: Record<string, ZodType> = {
   NotificationPage: inv.NotificationPageSchema,
   MarkNotificationsReadRequest: inv.MarkNotificationsReadRequestSchema,
   InboxSummary: inv.InboxSummarySchema,
+  // Маршрут подписания: «На подпись» (R8); остальные схемы раздела 8.3 добавляют R5 и R6.
+  SigningTaskList: SigningTaskListSchema,
   // gitremote
   GitServerInfo: gs.GitServerInfoSchema,
   GitWhoami: gs.GitWhoamiSchema,
