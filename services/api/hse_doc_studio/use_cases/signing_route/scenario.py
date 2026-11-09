@@ -22,13 +22,13 @@ from hse_doc_studio.core.identity.session_policy import Clock, utc_now
 from hse_doc_studio.core.signing_route.effects import Notify
 from hse_doc_studio.core.signing_route.engine import Evaluation, evaluate
 from hse_doc_studio.core.signing_route.entities import (
-    Notice,
     RouteEvent,
     SigningRoute,
 )
+from hse_doc_studio.core.signing_route.notices import mark_requests
 from hse_doc_studio.core.signing_route.ports import IRoutePeople, ISigningNotifier
 from hse_doc_studio.core.signing_route.repositories import ISigningRouteRepository
-from hse_doc_studio.core.signing_route.transitions import apply_evaluation, mark_notified, refresh_snapshot
+from hse_doc_studio.core.signing_route.transitions import apply_evaluation, refresh_snapshot
 from hse_doc_studio.core.uow import IUnitOfWork
 from hse_doc_studio.use_cases.orgs.access import user_id_of
 from hse_doc_studio.use_cases.signing_route.effects import RouteFileEffects
@@ -149,12 +149,8 @@ class RouteScenario:
         comment: str | None = None,
     ) -> SigningRoute:
         """Статус по расчёту, отметки запросов, запись маршрута с событиями и уведомления в одной транзакции."""
-        route = apply_evaluation(settled.route, settled.evaluation, at=at)
         notices = settled.notices
-        for notice in notices:
-            if notice.notice is Notice.request and notice.outcome is not None:
-                for participant_id in notice.participant_ids:
-                    route = mark_notified(route, participant_id, notice.outcome, at=at)
+        route = mark_requests(apply_evaluation(settled.route, settled.evaluation, at=at), notices, at=at)
         saved = await self._s.routes.save(route, events=events)
         await self.notify(saved, notices, actor_id=actor_id, comment=comment)
         return saved

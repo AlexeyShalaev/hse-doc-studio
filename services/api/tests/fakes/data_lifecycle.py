@@ -65,7 +65,13 @@ class FakeNotifier:
         self.sent: list[tuple[str, NotificationKind, NotificationPayload, str | None]] = []
 
     async def notify(
-        self, user_id: str, kind: NotificationKind, payload: NotificationPayload, *, dedupe_key: str | None = None
+        self,
+        user_id: str,
+        kind: NotificationKind,
+        payload: NotificationPayload,
+        *,
+        dedupe_key: str | None = None,
+        mail: bool = True,
     ) -> None:
         self.sent.append((user_id, kind, payload, dedupe_key))
 

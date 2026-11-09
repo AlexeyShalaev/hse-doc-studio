@@ -29,6 +29,12 @@ NotificationKindName = Literal[
     "review_resolved",
     "backup_failed",
     "system_alert",
+    "signing_request",
+    "signing_reminder",
+    "signing_returned",
+    "signing_paused",
+    "signing_completed",
+    "signing_cancelled",
 ]
 NotificationOutcome = Literal[
     "accepted",
@@ -42,6 +48,14 @@ NotificationOutcome = Literal[
     "diag_fail",
     "diag_warn",
     "diag_recovered",
+    # Маршрут подписания: ход запроса (`signing_request`, `signing_reminder`) и причина остановки (`signing_paused`).
+    "approve",
+    "approve_sign",
+    "sign",
+    "rebuilt",
+    "marks_changed",
+    "frozen_changed",
+    "participant_left",
 ]
 OwnerKindName = Literal["user", "org"]
 MESSAGE_MAX = 1000
@@ -291,6 +305,9 @@ class NotificationPayloadModel(StrictModel):
     outcome: NotificationOutcome | None
     path: str | None = None
     excerpt: str | None = None
+    # Маршрут подписания: точка сдачи и срок маршрута.
+    profile_id: str | None = None
+    deadline: datetime | None = None
 
 
 class NotificationModel(StrictModel):
@@ -318,6 +335,8 @@ class InboxSummary(StrictModel):
     invitations: int
     transfers: int
     access_requests: int
+    # Задачи «На подпись» (GET /account/signing-tasks): где сейчас нужно действие человека.
+    signing_tasks: int
 
 
 class InboxBadge(StrictModel):

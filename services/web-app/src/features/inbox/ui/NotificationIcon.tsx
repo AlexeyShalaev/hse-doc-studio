@@ -1,11 +1,17 @@
 import {
   ArrowRightLeft,
   AtSign,
+  BellRing,
   CircleCheck,
+  CirclePause,
+  CircleX,
   DatabaseBackup,
+  FileCheck,
+  FilePen,
   KeyRound,
   MessageSquare,
   Reply,
+  Undo2,
   TriangleAlert,
   UserCheck,
   UserMinus,
@@ -30,6 +36,12 @@ const ICONS: Record<NotificationKind, LucideIcon> = {
   review_resolved: CircleCheck,
   backup_failed: DatabaseBackup,
   system_alert: TriangleAlert,
+  signing_request: FilePen,
+  signing_reminder: BellRing,
+  signing_returned: Undo2,
+  signing_paused: CirclePause,
+  signing_completed: FileCheck,
+  signing_cancelled: CircleX,
 };
 
 /** Значок типа уведомления; чисто декоративный, смысл несёт текст. */

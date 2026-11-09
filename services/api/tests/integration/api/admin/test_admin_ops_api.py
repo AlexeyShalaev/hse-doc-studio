@@ -319,11 +319,14 @@ def _enqueue(user: object = None, *, batch_id: UUID | None = None, project_id: U
     )
 
 
+# Постоянный id в путях: имена параметров должны совпадать между процессами pytest-xdist.
+_ANY_ID = UUID("0f5c6d2e-8a41-4c3b-9e7f-1d2a3b4c5d6e")
+
 _ROUTES: list[tuple[str, str, Any]] = [
     ("GET", "/api/admin/queue", None),
     ("GET", "/api/admin/queue/summary", None),
-    ("POST", f"/api/admin/queue/{uuid4()}/cancel", None),
-    ("POST", f"/api/admin/queue/batches/{uuid4()}/cancel", None),
+    ("POST", f"/api/admin/queue/{_ANY_ID}/cancel", None),
+    ("POST", f"/api/admin/queue/batches/{_ANY_ID}/cancel", None),
     ("GET", "/api/admin/quotas", None),
     ("PUT", "/api/admin/quotas", {"user_concurrent": 1, "org_concurrent": None, "max_duration_s": None}),
     ("GET", "/api/admin/services", None),
@@ -332,7 +335,7 @@ _ROUTES: list[tuple[str, str, Any]] = [
     ("GET", "/api/admin/runners", None),
     ("GET", "/api/admin/runners/summary", None),
     ("GET", "/api/admin/runners/isolation", None),
-    ("GET", f"/api/admin/runners/{uuid4().hex}/deployment", None),
+    ("GET", f"/api/admin/runners/{_ANY_ID.hex}/deployment", None),
     ("GET", "/api/admin/runner-tokens", None),
     ("GET", "/api/admin/pickers/runners", None),
     ("GET", "/api/admin/pickers/projects", None),
@@ -353,16 +356,16 @@ _ROUTES: list[tuple[str, str, Any]] = [
             "request_timeout_s": 60,
         },
     ),
-    ("GET", f"/api/admin/ai-providers/{uuid4()}", None),
-    ("DELETE", f"/api/admin/ai-providers/{uuid4()}", None),
-    ("POST", f"/api/admin/ai-providers/{uuid4()}/check", None),
+    ("GET", f"/api/admin/ai-providers/{_ANY_ID}", None),
+    ("DELETE", f"/api/admin/ai-providers/{_ANY_ID}", None),
+    ("POST", f"/api/admin/ai-providers/{_ANY_ID}/check", None),
     ("POST", "/api/admin/runner-tokens", {"label": "t"}),
     ("GET", "/api/admin/runner-install/local", None),
     ("GET", "/api/admin/runner-install/local/instances", None),
     ("POST", "/api/admin/runner-install/local/docker", {}),
     ("DELETE", "/api/admin/runner-install/local/docker/hse-runner-1", None),
     ("POST", "/api/admin/runner-install/local/docker/hse-runner-1/upgrade", None),
-    ("GET", f"/api/admin/runner-install/jobs/{uuid4()}", None),
+    ("GET", f"/api/admin/runner-install/jobs/{_ANY_ID}", None),
     ("GET", "/api/admin/runner-install/ssh", None),
     (
         "POST",

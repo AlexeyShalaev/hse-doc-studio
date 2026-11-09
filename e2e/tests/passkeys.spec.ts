@@ -82,11 +82,35 @@ const closeSettings = async (page: Page): Promise<void> => {
 const keyRows = (page: Page) =>
   page.getByTestId("account-passkeys").locator("[data-testid^=passkey-item-]");
 
+/** Подтверждает ли аутентификатор присутствие человека сам, без задержки. */
+const setPresence = async (key: VirtualKey, enabled: boolean): Promise<void> => {
+  await key.cdp.send("WebAuthn.setAutomaticPresenceSimulation", {
+    authenticatorId: key.authenticatorId,
+    enabled,
+  });
+};
+
 /**
- * Вход по ключу. Виртуальный аутентификатор сам отвечает на ожидающий запрос автозаполнения поля логина
- * (conditional UI), поэтому вход нередко случается без кнопки; иначе жмём «Войти с passkey».
+ * Выход при сохранённом ключе. Экран входа сразу ставит запрос автозаполнения поля логина (conditional UI), и
+ * аутентификатор с автоматическим присутствием отвечает на него за доли секунды: человек входил обратно раньше,
+ * чем проверка успевала увидеть форму входа. Настоящий браузер ждёт, пока человек выберет ключ в подсказке,
+ * поэтому на время выхода присутствие выключено; signInWithPasskey включает его снова.
  */
-const signInWithPasskey = async (page: Page): Promise<void> => {
+const logoutHoldingKey = async (page: Page, key: VirtualKey): Promise<void> => {
+  await setPresence(key, false);
+  await logout(page);
+  await expect(page.locator("input[type=email]")).toHaveAttribute(
+    "autocomplete",
+    "username webauthn",
+  );
+};
+
+/**
+ * Вход по ключу. Ожидающий запрос автозаполнения после включения присутствия может ответить сам, поэтому вход
+ * нередко случается без кнопки; иначе жмём «Войти с passkey».
+ */
+const signInWithPasskey = async (page: Page, key: VirtualKey): Promise<void> => {
+  await setPresence(key, true);
   const menu = page.getByTestId("account-menu-trigger");
   const button = page.getByTestId("login-passkey");
   await expect(menu.or(button)).toBeVisible();
@@ -127,13 +151,9 @@ for (const lang of LANGS) {
     expect(await storedKeys(key)).toHaveLength(1);
 
     await closeSettings(page);
-    await logout(page);
-    await expect(page.locator("input[type=email]")).toHaveAttribute(
-      "autocomplete",
-      "username webauthn",
-    );
+    await logoutHoldingKey(page, key);
     await shot(page, lang, "passkeys-02-login");
-    await signInWithPasskey(page);
+    await signInWithPasskey(page, key);
     await shot(page, lang, "passkeys-03-signed-in");
 
     await openPasskeys(page);
@@ -184,7 +204,8 @@ for (const lang of LANGS) {
 
       // Ключ остался в аутентификаторе, но сервер его больше не знает: вход отклоняется.
       await closeSettings(page);
-      await logout(page);
+      await logoutHoldingKey(page, key);
+      await setPresence(key, true);
       await page.getByTestId("login-passkey").click();
       await expect(page.getByTestId("login-error")).toBeVisible();
       await expect(page.getByTestId("account-menu-trigger")).toHaveCount(0);
@@ -236,8 +257,8 @@ for (const lang of LANGS) {
     await expect(keyRows(page)).toHaveCount(1);
     await shot(page, lang, "passkeys-11-invite-account");
     await closeSettings(page);
-    await logout(page);
-    await signInWithPasskey(page);
+    await logoutHoldingKey(page, key);
+    await signInWithPasskey(page, key);
 
     // Повторно по той же ссылке аккаунт не создаётся.
     const again = await page.request.post(

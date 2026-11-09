@@ -252,6 +252,8 @@ export const CONTRACT_SCHEMAS: Record<string, ZodType> = {
   NotificationPage: inv.NotificationPageSchema,
   MarkNotificationsReadRequest: inv.MarkNotificationsReadRequestSchema,
   InboxSummary: inv.InboxSummarySchema,
+  // Маршрут подписания: «На подпись» (R8); остальные схемы раздела 8.3 добавляют R5 и R6.
+  SigningTaskList: srt.SigningTaskListSchema,
   // gitremote
   GitServerInfo: gs.GitServerInfoSchema,
   GitWhoami: gs.GitWhoamiSchema,

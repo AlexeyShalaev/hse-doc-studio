@@ -1,6 +1,8 @@
 export { DocPlacementPanel } from "./ui/DocPlacementPanel";
 export { PdfStampEditor } from "./ui/PdfStampEditor";
 export { SignatureOverlay } from "./ui/SignatureOverlay";
+export { SignatureEditorModal } from "./ui/SignatureEditorModal";
+export { SignerPlateEditor } from "./ui/DetachedSignatureBlocks";
 export { SlotPanel } from "./ui/SlotPanel";
 export type { DocPlacementPanelProps } from "./ui/DocPlacementPanel";
 export type { PdfStampEditorProps } from "./ui/PdfStampEditor";

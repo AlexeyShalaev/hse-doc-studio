@@ -1,0 +1,23 @@
+{
+  "items": [
+    {
+      "project": {
+        "id": "p_01hxa1c4de",
+        "name": "Bertie: курсовой проект"
+      },
+      "route_id": "sr_01hy2b7k9q",
+      "profile": {
+        "id": "topic-approval",
+        "name": {
+          "ru": "Заявка на тему КП",
+          "en": "Course project topic application"
+        }
+      },
+      "round": 1,
+      "sender": "Иванов И. И.",
+      "deadline": "2026-11-15T20:59:00Z",
+      "next_action": "approve_and_sign",
+      "since": "2026-11-10T09:00:00Z"
+    }
+  ]
+}

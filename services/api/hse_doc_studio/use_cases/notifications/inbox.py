@@ -14,6 +14,7 @@ from hse_doc_studio.core.invitations.protocols import (
     IProjectTransferRepository,
 )
 from hse_doc_studio.core.listing import Found, Window, clamp_limit
+from hse_doc_studio.core.signing_route.ports import ISigningTaskCounter
 from hse_doc_studio.use_cases.orgs.access import user_id_of
 
 
@@ -42,12 +43,14 @@ class InboxSummaryUC:
         invitations: IProjectInvitationRepository,
         transfers: IProjectTransferRepository,
         requests: IAccessRequestRepository,
+        signing_tasks: ISigningTaskCounter | None = None,
         clock: Clock = utc_now,
     ) -> None:
         self._notifications = notifications
         self._invitations = invitations
         self._transfers = transfers
         self._requests = requests
+        self._signing_tasks = signing_tasks
         self._clock = clock
 
     async def execute(self, actor: Actor) -> InboxSummary:
@@ -58,16 +61,21 @@ class InboxSummaryUC:
             invitations=await self._invitations.count_pending_for_user(user_id, now),
             transfers=await self._transfers.count_pending_for_user(user_id, now),
             access_requests=await self._requests.count_pending_managed(user_id),
+            signing_tasks=await self._count_signing_tasks(user_id),
         )
 
     async def badge(self, user_id: str) -> int:
-        """Число на колокольчике: непрочитанные уведомления плюс ожидающие приглашения и передачи."""
+        """Число на колокольчике: непрочитанные уведомления, ожидающие приглашения и передачи, задачи на подпись."""
         now = self._clock()
         return (
             await self._notifications.unread_count(user_id)
             + await self._invitations.count_pending_for_user(user_id, now)
             + await self._transfers.count_pending_for_user(user_id, now)
+            + await self._count_signing_tasks(user_id)
         )
+
+    async def _count_signing_tasks(self, user_id: str) -> int:
+        return await self._signing_tasks.count_for_user(user_id) if self._signing_tasks is not None else 0
 
 
 class PurgeNotificationsUC:

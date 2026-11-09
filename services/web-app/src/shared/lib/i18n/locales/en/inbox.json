@@ -87,7 +87,15 @@
     "system_alert_update_cancelled": "Updating to {{path}} was cancelled before any change: {{excerpt}}",
     "system_alert_diag_fail": "Self-diagnostics: check “{{check}}” has failed",
     "system_alert_diag_warn": "Self-diagnostics: check “{{check}}” needs attention",
-    "system_alert_diag_recovered": "Self-diagnostics: check “{{check}}” is back to normal"
+    "system_alert_diag_recovered": "Self-diagnostics: check “{{check}}” is back to normal",
+    "signing_request": "{{actor}} asks you to sign: {{excerpt}}",
+    "signing_request_sign": "Sign the final PDF: {{excerpt}}",
+    "signing_reminder": "Reminder: {{excerpt}}",
+    "signing_returned": "{{actor}} returned the documents for revision: “{{excerpt}}”",
+    "signing_paused": "A document changed, the signing route is stopped: {{excerpt}}",
+    "signing_paused_participant_left": "A route participant left the project, assign another signer: {{excerpt}}",
+    "signing_completed": "Everyone has signed: {{excerpt}}",
+    "signing_cancelled": "The signing route was cancelled: {{excerpt}}"
   },
   "diagCheck": {
     "database": "Database",

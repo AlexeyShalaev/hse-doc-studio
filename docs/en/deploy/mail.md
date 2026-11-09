@@ -27,7 +27,14 @@ Without SMTP nothing changes: no emails are sent and the links are shown on scre
 | Project invitation (by link) | an address without an account is invited, resending | button with the invitation link, the inviter's message, expiry |
 | Project access request | someone asks for access to a closed project | “Open Inbox” button |
 | Project transfer | a project is being transferred to you | “Open Inbox” button |
+| Signing route: request to sign | it is the signer's turn on a “Send for signing” route | who asks, project, submission checkpoint, deadline, “Open the signing page” button |
+| Signing route: sign the final PDF | the documents are frozen, only the signer's electronic signature is left | project, submission checkpoint, deadline, “Open the signing page” button |
+| Signing route: reminder | the author pressed “Remind” or the deadline is near | the same as the request to sign |
+| Signing route: returned for revision | a signer returned the documents; only the route author gets the email | who returned, the comment, “Open the submission checkpoint” button |
+| Signing route: everyone has signed | the route is complete; only the route author gets the email | project, submission checkpoint, “Open the submission checkpoint” button |
 | Test email | the “Send” button in the “Mail (SMTP)” block | confirmation that sending works |
+
+Links in signing route emails carry no tokens: the signing page opens only after sign-in, so a forwarded email does not let anyone sign. Other route events (stopped, cancelled) arrive only in the Inbox.
 
 The Studio does not send numeric confirmation codes today: every action is confirmed by a link. The template can show a code in a large monospace font with its validity period once such an email appears.
 

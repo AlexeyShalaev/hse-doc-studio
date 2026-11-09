@@ -538,6 +538,7 @@ ROUTE_SCOPES: Mapping[RouteKey, RouteScope] = {
     ("GET", "/account/notifications"): _A,
     ("POST", "/account/notifications/read"): _A,
     ("GET", "/account/inbox/summary"): _A,
+    ("GET", "/account/signing-tasks"): _A,
     ("GET", "/usage"): _A,
     ("GET", "/orgs/{slug}/usage"): _A,
     # gitremote: git по HTTPS вне /api/v1, ключ это полный шаблон маршрута (`{repo}` это `<project_id>.git`)

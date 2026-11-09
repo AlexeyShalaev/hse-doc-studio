@@ -40,9 +40,10 @@ class Notifier:
         payload: NotificationPayload,
         *,
         dedupe_key: str | None = None,
+        mail: bool = True,
     ) -> None:
         await self._notifications.add(user_id, kind, payload, dedupe_key=dedupe_key, now=self._clock())
-        if kind not in MAILED_KINDS or not self._mailer.enabled:
+        if not mail or kind not in MAILED_KINDS or not self._mailer.enabled:
             return
         if self._background:
             task = asyncio.create_task(self._mail(user_id, kind, payload))

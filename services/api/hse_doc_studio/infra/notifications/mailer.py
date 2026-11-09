@@ -1,18 +1,22 @@
-"""Письма трека invites: приглашение в проект, запрос доступа, передача владения (ru и en).
+"""Письма уведомлений: приглашение в проект, запрос доступа, передача владения, маршрут подписания (ru и en).
 
-В письме только подписи из уведомления и ссылка на «Входящие» или на страницу приглашения: секретов там нет,
-кроме токена ссылки приглашения, который адресат и должен получить. Сбой SMTP действию не мешает.
-Тексты и вёрстка лежат в `core.mail`.
+В письме только подписи из уведомления и ссылка на «Входящие», страницу приглашения, страницу подписи или точку
+сдачи: секретов там нет, кроме токена ссылки приглашения, который адресат и должен получить. Ссылки маршрута
+подписания без токенов: страница открывается только после входа (docs/design/signing-route.md, 6.6). Сбой SMTP
+действию не мешает. Тексты и вёрстка лежат в `core.mail`.
 """
 
 from __future__ import annotations
 
 import logging
 from datetime import datetime
+from urllib.parse import quote
 
+from hse_doc_studio.core.enums import Lang
 from hse_doc_studio.core.identity.protocols import IMailSender
 from hse_doc_studio.core.invitations.entities import NotificationKind, NotificationPayload
 from hse_doc_studio.core.mail import MailTemplate, RenderedMail, compose, resolve_lang
+from hse_doc_studio.core.mail.compose import format_moment, server_origin
 
 _log = logging.getLogger(__name__)
 
@@ -20,7 +24,46 @@ _TEMPLATES: dict[NotificationKind, MailTemplate] = {
     NotificationKind.project_invitation: MailTemplate.project_invitation,
     NotificationKind.access_request: MailTemplate.access_request,
     NotificationKind.transfer_request: MailTemplate.transfer_request,
+    NotificationKind.signing_request: MailTemplate.signing_request,
+    NotificationKind.signing_reminder: MailTemplate.signing_reminder,
+    NotificationKind.signing_returned: MailTemplate.signing_returned,
+    NotificationKind.signing_completed: MailTemplate.signing_completed,
 }
+# Подписанту письмо ведёт на страницу подписи, автору на точку сдачи.
+_TO_SIGNING_PAGE = frozenset({NotificationKind.signing_request, NotificationKind.signing_reminder})
+_TO_CHECKPOINT = frozenset({NotificationKind.signing_returned, NotificationKind.signing_completed})
+
+
+def _template(kind: NotificationKind, payload: NotificationPayload) -> MailTemplate | None:
+    if kind is NotificationKind.signing_request and payload.outcome == "sign":
+        return MailTemplate.signing_request_sign
+    return _TEMPLATES.get(kind)
+
+
+def _segment(value: str | None) -> str:
+    return quote(value or "", safe="")
+
+
+def _signing_link(kind: NotificationKind, payload: NotificationPayload, public_url: str | None) -> str | None:
+    """Адрес страницы подписи или точки сдачи на публичном адресе установки; без адреса письмо без кнопки."""
+    origin = server_origin(public_url)
+    if origin is None or not payload.project_id:
+        return None
+    project = _segment(payload.project_id)
+    if kind in _TO_SIGNING_PAGE and payload.ref_id:
+        return f"{origin}/sign/{project}/{_segment(payload.ref_id)}"
+    if kind in _TO_CHECKPOINT and payload.profile_id:
+        return f"{origin}/projects/{project}/submit/cp/{_segment(payload.profile_id)}"
+    return None
+
+
+def _deadline(payload: NotificationPayload, lang: Lang) -> str | None:
+    if not payload.deadline:
+        return None
+    try:
+        return format_moment(lang, datetime.fromisoformat(payload.deadline))
+    except ValueError:
+        return None
 
 
 class SmtpNotificationMailer:
@@ -36,12 +79,30 @@ class SmtpNotificationMailer:
         self, to_email: str, kind: NotificationKind, payload: NotificationPayload, *, locale: str | None
     ) -> RenderedMail | None:
         """Письмо уведомления; None для видов, о которых письмо не шлют."""
-        template = _TEMPLATES.get(kind)
+        template = _template(kind, payload)
         if template is None:
             return None
+        lang = resolve_lang(locale)
+        if kind in _TO_SIGNING_PAGE or kind in _TO_CHECKPOINT:
+            returned = kind is NotificationKind.signing_returned
+            return compose(
+                template,
+                lang,
+                to=to_email,
+                server_url=self._public_url,
+                link=_signing_link(kind, payload, self._public_url),
+                values={
+                    "actor": payload.actor_name,
+                    "project": payload.project_name,
+                    # Название точки в `excerpt`; у возврата там комментарий, он идёт отдельным блоком.
+                    "profile": None if returned else (payload.excerpt or payload.profile_id or ""),
+                    "deadline": _deadline(payload, lang),
+                },
+                note=payload.excerpt if returned else None,
+            )
         return compose(
             template,
-            resolve_lang(locale),
+            lang,
             to=to_email,
             server_url=self._public_url,
             values={"actor": payload.actor_name, "project": payload.project_name, "role": payload.role},

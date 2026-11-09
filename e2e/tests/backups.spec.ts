@@ -345,14 +345,28 @@ test.describe("Бэкапы сервера", () => {
   }) => {
     await resetRestore();
     const path = `/data/backups/${DEST_PATH}/${secondBackup}/db.pgdump.enc`;
-    compose(
+    // Инвертируем байт шифртекста, а не пишем постоянный: запись 'X' поверх случайного байта
+    // в 1 случае из 256 ничего не меняла, и verify честно говорил «verified». Нет файла: падаем здесь.
+    const flipped = compose(
       "exec",
       "-T",
       "api",
-      "sh",
+      "python",
       "-c",
-      `printf 'X' | dd of=${path} bs=1 seek=40 conv=notrunc 2>/dev/null`,
+      [
+        "import sys",
+        "f = open(sys.argv[1], 'r+b')",
+        "f.seek(40)",
+        "old = f.read(1)[0]",
+        "f.seek(40)",
+        "f.write(bytes([old ^ 0xFF]))",
+        "f.close()",
+        "print(old, old ^ 0xFF)",
+      ].join("; "),
+      path,
     );
+    const [before, after] = flipped.trim().split(" ").map(Number);
+    expect(after).not.toBe(before);
     const p = await adminPage(browser, "ru");
     await p.getByTestId(`backup-dest-open-${destId}`).click();
     await p.getByTestId(`backup-stored-restore-${secondBackup}`).click();

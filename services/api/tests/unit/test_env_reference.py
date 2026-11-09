@@ -1,7 +1,7 @@
 """Генератор справочника env: имена, секреты, проверка актуальности и описаний."""
 
 import importlib.util
-from pathlib import Path
+from pathlib import Path, PureWindowsPath
 from types import ModuleType
 
 import pytest
@@ -32,6 +32,10 @@ class _Model(BaseModel):
     db: _Inner = Field(default_factory=_Inner)
 
 
+class _WithPath(BaseModel):
+    manifest: Path = Field(default=PureWindowsPath("/app/packs-manifest.json"), description="Manifest.")
+
+
 class _NoDescription(BaseModel):
     bare: int = 1
 
@@ -46,6 +50,11 @@ def test_secret_default_is_not_printed() -> None:
     text = gen.render(_Model)
     assert "hunter2" not in text
     assert "`HSE_STUDIO__DB__TOKEN` 🔒" in text
+
+
+def test_path_default_is_posix_on_any_os() -> None:
+    # Справочник один для всех: на Windows str(Path("/app/...")) дал бы обратные косые.
+    assert "| `HSE_STUDIO__MANIFEST` | Path | `/app/packs-manifest.json` | оба | Manifest. |" in gen.render(_WithPath)
 
 
 def test_field_without_description_fails() -> None:

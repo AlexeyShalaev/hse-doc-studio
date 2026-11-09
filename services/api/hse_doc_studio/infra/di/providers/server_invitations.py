@@ -29,6 +29,7 @@ from hse_doc_studio.core.identity.protocols import (
 from hse_doc_studio.core.invitations.protocols import (
     IAccessRequestRepository,
     IEmailVerifiedHook,
+    IInvitationAcceptedHook,
     IInvitationFacts,
     INotificationMailer,
     INotificationRepository,
@@ -43,6 +44,7 @@ from hse_doc_studio.core.jobs.queue import IJobQueue
 from hse_doc_studio.core.orgs.protocols import IOrgRepository
 from hse_doc_studio.core.quotas.protocols import IQuotaGate
 from hse_doc_studio.core.repositories import IProjectIndexRepository, ITemplateRepository
+from hse_doc_studio.core.signing_route.ports import ISigningTaskCounter
 from hse_doc_studio.core.uow import IUnitOfWork
 from hse_doc_studio.infra.db.repositories.access_requests import PostgresAccessRequestRepository
 from hse_doc_studio.infra.db.repositories.notifications import PostgresNotificationRepository
@@ -182,8 +184,9 @@ class ServerInvitationsProvider(Provider):
         invitations: IProjectInvitationRepository,
         transfers: IProjectTransferRepository,
         requests: IAccessRequestRepository,
+        signing_tasks: ISigningTaskCounter,
     ) -> InboxSummaryUC:
-        return InboxSummaryUC(notifications, invitations, transfers, requests)
+        return InboxSummaryUC(notifications, invitations, transfers, requests, signing_tasks)
 
     # Приглашения
 
@@ -294,6 +297,7 @@ class ServerInvitationsProvider(Provider):
         member_roles: IProjectMemberLookup,
         notifier: INotifier,
         gate: IQuotaGate,
+        route_invitee: IInvitationAcceptedHook,
     ) -> AcceptInvitationUC:
         return AcceptInvitationUC(
             invitations,
@@ -304,6 +308,7 @@ class ServerInvitationsProvider(Provider):
             members=QuotaGuardedMemberRepository(members, gate),
             member_roles=member_roles,
             notifier=notifier,
+            accepted_hooks=(route_invitee,),
         )
 
     @provide
@@ -334,6 +339,7 @@ class ServerInvitationsProvider(Provider):
         member_roles: IProjectMemberLookup,
         notifier: INotifier,
         gate: IQuotaGate,
+        route_invitee: IInvitationAcceptedHook,
     ) -> AcceptInvitationTokenUC:
         return AcceptInvitationTokenUC(
             invitations,
@@ -344,6 +350,7 @@ class ServerInvitationsProvider(Provider):
             members=QuotaGuardedMemberRepository(members, gate),
             member_roles=member_roles,
             notifier=notifier,
+            accepted_hooks=(route_invitee,),
         )
 
     @provide

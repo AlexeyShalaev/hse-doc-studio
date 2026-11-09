@@ -37,7 +37,7 @@ async def test__invite_user__inbox_then_accept_makes_a_member(stand: Stand) -> N
     mine = stand.client.get("/api/v1/account/invitations", headers=petr.headers).json()["items"]
     assert [(i["id"], i["project"]["name"], i["status"]) for i in mine] == [(invitation_id, "Диплом", "pending")]
     summary = stand.client.get("/api/v1/account/inbox/summary", headers=petr.headers).json()
-    assert summary == {"unread": 1, "invitations": 1, "transfers": 0, "access_requests": 0}
+    assert summary == {"unread": 1, "invitations": 1, "transfers": 0, "access_requests": 0, "signing_tasks": 0}
     kinds = [n["kind"] for n in stand.client.get("/api/v1/account/notifications", headers=petr.headers).json()["items"]]
     assert kinds == ["project_invitation"]
 

@@ -1,14 +1,21 @@
-"""InMemory-реализация хранилища маршрутов подписания: те же правила, что у Postgres (контракт в tests/contract)."""
+"""Двойники маршрутов подписания для тестов сценариев.
+
+- `InMemorySigningRouteRepository`: хранилище с теми же правилами, что у Postgres (контракт в tests/contract);
+- `RecordingSigningNotifier`: доставка уведомлений, которая только запоминает вызовы (`ISigningNotifier`);
+- `StaticRouteContext`: факты документов и подписи маршрута из словарей (`IRouteFacts`, `IRouteLabels`).
+"""
 
 from __future__ import annotations
 
 import copy
 import itertools
-from collections.abc import Callable, Collection, Sequence
-from dataclasses import replace
+from collections.abc import Callable, Collection, Mapping, Sequence
+from dataclasses import dataclass, field, replace
 from datetime import UTC, datetime
 from uuid import UUID
 
+from hse_doc_studio.core.signing_route.effects import Notify
+from hse_doc_studio.core.signing_route.engine import RouteFacts
 from hse_doc_studio.core.signing_route.entities import (
     HOLDING_STATUSES,
     OPEN_STATUSES,
@@ -17,6 +24,7 @@ from hse_doc_studio.core.signing_route.entities import (
     RouteStatus,
     SigningRoute,
 )
+from hse_doc_studio.core.signing_route.ports import RouteLabels
 from hse_doc_studio.core.signing_route.repositories import (
     DocumentOnRouteError,
     OpenRouteExistsError,
@@ -128,3 +136,52 @@ def _check_events(route: SigningRoute, events: Sequence[RouteEvent]) -> None:
     strangers = [event for event in events if event.route_id != route.id]
     if strangers:
         raise ValueError(f"events of route {strangers[0].route_id} cannot be stored with route {route.id}")
+
+
+@dataclass(frozen=True)
+class Delivered:
+    """Один вызов `ISigningNotifier.notify`: маршрут в момент доставки и что доставлено."""
+
+    route: SigningRoute
+    notices: tuple[Notify, ...]
+    actor_id: UUID | None = None
+    comment: str | None = None
+
+
+@dataclass
+class RecordingSigningNotifier:
+    """`ISigningNotifier` без «Входящих» и писем: запоминает, что сценарий попросил доставить."""
+
+    delivered: list[Delivered] = field(default_factory=list)
+
+    async def notify(
+        self,
+        route: SigningRoute,
+        notices: Sequence[Notify],
+        *,
+        actor_id: UUID | None = None,
+        comment: str | None = None,
+    ) -> None:
+        if notices:
+            self.delivered.append(Delivered(copy.deepcopy(route), tuple(notices), actor_id, comment))
+
+    @property
+    def notices(self) -> list[Notify]:
+        return [notify for call in self.delivered for notify in call.notices]
+
+
+@dataclass
+class StaticRouteContext:
+    """Факты маршрута по его id (или общая функция) и подписи проекта; нет фактов: проект не прочитать."""
+
+    facts_of: Callable[[SigningRoute], RouteFacts | None] = lambda _route: None
+    projects: Mapping[UUID, RouteLabels] = field(default_factory=dict)
+    failing: bool = False
+
+    async def facts(self, route: SigningRoute) -> RouteFacts | None:
+        if self.failing:
+            raise OSError("project unreadable")
+        return self.facts_of(route)
+
+    async def labels(self, project_id: UUID, profile_id: str) -> RouteLabels | None:
+        return self.projects.get(project_id)

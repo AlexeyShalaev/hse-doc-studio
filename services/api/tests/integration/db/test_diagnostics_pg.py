@@ -30,6 +30,8 @@ from hse_doc_studio.infra.diagnostics.probes import (
 from hse_doc_studio.infra.storage.fs import FsObjectStore
 from sqlalchemy.ext.asyncio import AsyncEngine
 
+from tests.fixtures.pg import PgDbFactory
+
 pytestmark = pytest.mark.pg
 
 NOW = datetime(2026, 11, 5, 12, tzinfo=UTC)
@@ -96,6 +98,19 @@ async def test__scheduler_probe__sees_leader_lock_from_any_connection(pg_migrate
         facts = await probe.read(NOW)
         assert facts.leader_present is True
         assert facts.leader_here is False  # раннер этого процесса лидером не стал
+    finally:
+        await lock.release()
+
+
+async def test__scheduler_probe__ignores_leader_lock_of_another_database(pg_db_factory: PgDbFactory) -> None:
+    """Advisory-лок живёт в своей базе, а pg_locks показывает весь кластер: чужая Студия на том же сервере не лидер."""
+    ours, theirs = await pg_db_factory(), await pg_db_factory()
+    probe = SchedulerProbe(_sessions(ours), lambda: BackgroundTaskRunner())
+
+    lock = PgAdvisoryLeaderLock(theirs)
+    assert await lock.acquire()
+    try:
+        assert (await probe.read(NOW)).leader_present is False
     finally:
         await lock.release()
 

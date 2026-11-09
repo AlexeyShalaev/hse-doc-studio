@@ -51,7 +51,11 @@ class INotificationRepository(Protocol):
 
 
 class INotifier(Protocol):
-    """Уведомление в Студии и письмо, если SMTP есть и вид письма предусмотрен (S15)."""
+    """Уведомление в Студии и письмо, если SMTP есть и вид письма предусмотрен (S15).
+
+    `mail=False` оставляет только уведомление: вид письма предусмотрен, но не этому адресату (например, возврат
+    маршрута подписания письмом получает только автор).
+    """
 
     async def notify(
         self,
@@ -60,6 +64,7 @@ class INotifier(Protocol):
         payload: NotificationPayload,
         *,
         dedupe_key: str | None = None,
+        mail: bool = True,
     ) -> None: ...
 
 
@@ -189,6 +194,16 @@ class IProjectMemberLookup(Protocol):
     async def direct_user_role(self, project_id: UUID, user_id: str) -> Role | None:
         """Роль прямой записи человека в проекте; None, если записи нет (группы не считаются)."""
         ...
+
+
+class IInvitationAcceptedHook(Protocol):
+    """Вызывается сценарием принятия приглашения в его транзакции, когда человек стал участником проекта.
+
+    Маршрут подписания (docs/design/signing-route.md, раздел 6.5) так узнаёт аккаунт приглашённого подписанта.
+    Сбой хука принятие не отменяет: хук сам решает, что можно пропустить.
+    """
+
+    async def on_invitation_accepted(self, project_id: UUID, invitation_id: str, user_id: str) -> None: ...
 
 
 class IEmailVerifiedHook(Protocol):
