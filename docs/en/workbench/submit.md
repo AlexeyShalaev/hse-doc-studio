@@ -40,7 +40,8 @@ Forms are declared by the template — for example, an AI usage declaration. The
 
 - **The signature library** — one PNG per slot (author, supervisor…) for the whole project; a built-in editor: “Remove background”, eraser, crop, ink colour.
 - **Placement** — drag the signature to the right spot on the document page, with a date if needed.
-- **Stamping** — at packaging time and via the “With signatures” download the PNG is stamped into the PDF; there is a cryptographic layer too — a PAdES electronic signature with a certificate from Settings.
+- **Stamping** — when the PDF is frozen and packaged the PNG is stamped into it; there is a cryptographic layer too — a PAdES electronic signature with a certificate from Settings, appended to the frozen PDF.
+- **“With signatures”** — if the document is frozen and unchanged since, the button returns the final file byte for byte, with embedded PAdES signatures if there are any. Otherwise it is a PDF for printing with images and plates, without electronic signatures.
 
 ### Detached electronic signature { #detached-signatures }
 

@@ -41,9 +41,7 @@ signatures/_studio_signer.py hse_doc_studio.infra.signatures.cades_signer
 signatures/_studio_signer.py hse_doc_studio.infra.signatures.cms_inspector
 signatures/_studio_signer.py hse_doc_studio.infra.signatures.openpgp
 signatures/freeze_pdf.py hse_doc_studio.infra.signatures.pdf_stamper
-signatures/get_signed_doc_pdf.py hse_doc_studio.infra.signatures.cades_signer
 signatures/get_signed_doc_pdf.py hse_doc_studio.infra.signatures.pdf_stamper
-signatures/get_signed_doc_pdf.py hse_doc_studio.infra.signatures.pyhanko_signer
 signatures/update_slot_signer.py hse_doc_studio.infra.signatures.openpgp
 signatures/upload_signature_png.py hse_doc_studio.infra.signatures.png_metadata
 signing_identities/delete_signing_identity.py hse_doc_studio.infra.signatures.openpgp

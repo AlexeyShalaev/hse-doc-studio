@@ -3,7 +3,6 @@ import { Link, useSearchParams } from "react-router";
 import { useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import {
-  Archive,
   Download,
   ExternalLink,
   File as FileIcon,
@@ -192,19 +191,22 @@ export const PreviewPane = ({ project, doc }: PreviewPaneProps) => {
   const artifactHref = fileUrl(project.id, artifactRelPath);
   const isPdfArtifact = /\.pdf$/i.test(artifactRelPath);
   const signedHref = signedPdfDownloadUrl(project.id, doc.id);
-  // Only surface the "signed PDF" button when at least one slot is wired up
-  // and enabled on *this* doc. Otherwise the signed download would be byte-
-  // identical to the regular one and the button would be pure noise.
+  // Only surface the "signed PDF" button when this doc has something to show:
+  // an enabled image or plate, or a frozen PDF. Otherwise the signed download
+  // would be byte-identical to the regular one and the button would be noise.
   const docPlacements = signaturesState?.placements[doc.id] ?? {};
   const hasEnabledSignature = Object.entries(docPlacements).some(
-    ([slotId, p]) => p.enabled && signaturesState?.slots[slotId]?.png_path,
-  );
-  // Detached mode: at least one enabled slot uses CAdES → download is a zip.
-  const hasDetachedSlot = Object.entries(docPlacements).some(
     ([slotId, p]) =>
       p.enabled &&
-      signaturesState?.slots[slotId]?.png_path &&
-      signaturesState?.slots[slotId]?.sign_mode === "detached",
+      (signaturesState?.slots[slotId]?.png_path ||
+        signaturesState?.slots[slotId]?.sign_mode === "detached_text"),
+  );
+  // A current frozen PDF: the server returns the final file of the signing
+  // plan byte for byte (with embedded PAdES signatures, if any). Otherwise the
+  // download is a print preview without electronic signatures.
+  const frozen = signaturesState?.frozen[doc.id];
+  const hasFinalPdf = Boolean(
+    frozen && !frozen.stale && !frozen.plate_outdated,
   );
 
   // Paint the signatures straight onto the preview pages — same placement the
@@ -619,25 +621,19 @@ export const PreviewPane = ({ project, doc }: PreviewPaneProps) => {
             <Download size="0.6875rem" />
             PDF
           </a>
-          {hasEnabledSignature && (
+          {(hasEnabledSignature || hasFinalPdf) && (
             <a
               href={signedHref}
               className="btn xs shrink-0"
               download
               title={
-                hasDetachedSlot
-                  ? t("preview.downloadArchiveTitle")
+                hasFinalPdf
+                  ? t("preview.downloadFinalTitle")
                   : t("preview.downloadSignedTitle")
               }
             >
-              {hasDetachedSlot ? (
-                <Archive size="0.6875rem" />
-              ) : (
-                <PenTool size="0.6875rem" />
-              )}
-              {hasDetachedSlot
-                ? t("preview.pdfWithSig")
-                : t("preview.withSignatures")}
+              <PenTool size="0.6875rem" />
+              {t("preview.withSignatures")}
             </a>
           )}
         </>

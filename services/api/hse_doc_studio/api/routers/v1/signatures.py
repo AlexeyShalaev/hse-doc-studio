@@ -312,16 +312,6 @@ async def get_signed_doc_pdf(
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
     background = BackgroundTask(result.temp_path.unlink, missing_ok=True) if result.temp_path is not None else None
-
-    # Detached mode: UC packed the PDF + .sig files into a zip.
-    if result.zip_path is not None:
-        return FileResponse(
-            path=str(result.zip_path),
-            media_type="application/zip",
-            filename=result.download_name,
-            background=background,
-        )
-
     return FileResponse(
         path=str(result.pdf_path),
         media_type="application/pdf",

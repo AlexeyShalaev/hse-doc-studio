@@ -7,15 +7,20 @@
 from __future__ import annotations
 
 import base64
+import hashlib
+import io
 import json
 import shutil
 import subprocess
 import tempfile
+import zipfile
 from collections.abc import Iterator
 from pathlib import Path
 
 import pytest
 from asn1crypto import cms
+from hse_doc_studio.core.signatures.stamps import legacy_stamps_digest, stamps_for_doc
+from hse_doc_studio.infra.persistence.signature import JsonSignatureRepository
 from httpx import AsyncClient
 from pyhanko.pdf_utils.reader import PdfFileReader
 from pyhanko.sign.validation import async_validate_detached_cms, async_validate_pdf_signature
@@ -451,3 +456,170 @@ async def test__sign_submission__supervisor_slot_without_my_key__not_mine(
     assert preview["docs"] == []
     assert preview["to_sign"] == 0
     assert (await api.plan())["supervisor"]["is_mine"] is False
+
+
+# --- выгрузка «С подписями» и пакет для подписанта: итоговый файл плана ------------------------------------------
+
+
+def _zip_files(content: bytes) -> dict[str, bytes]:
+    with zipfile.ZipFile(io.BytesIO(content)) as zf:
+        return {name: zf.read(name) for name in zf.namelist()}
+
+
+async def _signed_pdf(api: Api) -> bytes:
+    resp = await api.client.get(f"{api.base}/docs/{_DOC}/pdf/signed")
+    assert resp.status_code == 200, resp.text
+    assert resp.headers["content-type"] == "application/pdf"
+    return resp.content
+
+
+async def _mixed_detached_and_pades(api: Api) -> None:
+    student = await _x509_key(api.client, "Ivan Ivanov")
+    supervisor = await _x509_key(api.client, "Petr Petrov")
+    await api.mode("author", "detached_text")
+    await api.png("supervisor")
+    await api.mode("supervisor", "image_crypto")
+    await api.plate_from_key("supervisor", supervisor)
+    await api.plate_from_key("author", student)
+    await api.sign(identity_id=supervisor)
+    await api.sign(identity_id=student)
+
+
+async def test__signed_pdf__final_pades_file__served_byte_for_byte(test_app: AsyncClient, tmp_path: Path) -> None:
+    api = await _api(test_app, tmp_path)
+    await _mixed_detached_and_pades(api)
+
+    served = await _signed_pdf(api)
+
+    assert served == api.final_bytes()
+    assert served != api.frozen_bytes()
+    assert await _pades_fields(served, tmp_path) == [("Sig_supervisor", True)]
+    plan = await api.plan()
+    assert (plan["author"]["status"], plan["supervisor"]["status"]) == ("signed", "signed")
+
+
+async def test__signed_pdf__frozen_without_pades__serves_frozen_bytes(test_app: AsyncClient, tmp_path: Path) -> None:
+    api = await _api(test_app, tmp_path)
+    student = await _x509_key(test_app, "Ivan Ivanov")
+    await api.mode("author", "detached_text")
+    await api.plate_from_key("author", student)
+    await api.sign(identity_id=student)
+
+    assert await _signed_pdf(api) == api.frozen_bytes()
+
+
+async def test__signed_pdf__not_frozen__print_preview_without_on_the_fly_signatures(
+    test_app: AsyncClient, tmp_path: Path
+) -> None:
+    api = await _api(test_app, tmp_path)
+    key = await _x509_key(test_app, "Ivan Ivanov")
+    await api.png("author")
+    await api.mode("author", "image_crypto", identity_id=key)
+
+    served = await _signed_pdf(api)
+
+    assert served != api.pdf.read_bytes()  # картинка поставлена
+    assert await _pades_fields(served, tmp_path) == []
+    assert (await api.plan())["author"]["status"] == "pending"
+    assert "frozen" not in api.state() or not api.state()["frozen"]
+
+
+async def test__signed_pdf__rebuilt_after_pades__serves_preview_of_current_build(
+    test_app: AsyncClient, tmp_path: Path
+) -> None:
+    api = await _api(test_app, tmp_path)
+    key = await _x509_key(test_app, "Ivan Ivanov")
+    await api.png("author")
+    await api.mode("author", "image_crypto")
+    await api.sign(identity_id=key)
+    _make_pdf(api.pdf, "annotation, second edition")
+
+    served = await _signed_pdf(api)
+
+    assert served != api.final_bytes()
+    assert await _pades_fields(served, tmp_path) == []
+    assert (await api.plan())["author"]["status"] == "stale"
+
+
+async def test__signed_pdf__final_file_changed_outside_studio__400(test_app: AsyncClient, tmp_path: Path) -> None:
+    api = await _api(test_app, tmp_path)
+    key = await _x509_key(test_app, "Ivan Ivanov")
+    await api.png("author")
+    await api.mode("author", "image_crypto")
+    await api.sign(identity_id=key)
+    signed = api.folder / api.state()["frozen"][_DOC]["signed_path"]
+    signed.write_bytes(signed.read_bytes() + b"\n%tampered\n")
+
+    resp = await test_app.get(f"{api.base}/docs/{_DOC}/pdf/signed")
+
+    assert resp.status_code == 400, resp.text
+
+
+async def test__signing_package__with_pades__has_final_file_and_base_for_detached(
+    test_app: AsyncClient, tmp_path: Path
+) -> None:
+    api = await _api(test_app, tmp_path)
+    await _mixed_detached_and_pades(api)
+    final, base = api.final_bytes(), api.frozen_bytes()
+
+    for mode in ("request", "signed"):
+        resp = await test_app.get(f"{api.base}/docs/{_DOC}/signing-package", params={"mode": mode})
+        assert resp.status_code == 200, resp.text
+        files = _zip_files(resp.content)
+        pdfs = {name: blob for name, blob in files.items() if name.endswith(".pdf")}
+        (base_name,) = [name for name in pdfs if name.endswith(".для-открепленных-подписей.pdf")]
+        (final_name,) = [name for name in pdfs if name != base_name]
+        assert (pdfs[final_name], pdfs[base_name]) == (final, base)
+        readme = files["README.txt"].decode()
+        assert final_name in readme
+        assert base_name in readme
+        if mode == "request":
+            assert f"{hashlib.sha256(base).hexdigest()}  {base_name}" in files["SHA256SUMS.txt"].decode()
+        else:
+            (sig_name,) = [name for name in files if name.endswith(".p7s") or name.endswith(".sig")]
+            assert sig_name.startswith(base_name.removesuffix(".pdf"))
+            assert await _cms_intact(files[sig_name], pdfs[base_name])
+
+
+async def test__signing_package__without_pades__unchanged_single_pdf(test_app: AsyncClient, tmp_path: Path) -> None:
+    api = await _api(test_app, tmp_path)
+    student = await _x509_key(test_app, "Ivan Ivanov")
+    await api.mode("author", "detached_text")
+    await api.plate_from_key("author", student)
+    await api.sign(identity_id=student)
+
+    resp = await test_app.get(f"{api.base}/docs/{_DOC}/signing-package", params={"mode": "request"})
+
+    files = _zip_files(resp.content)
+    (pdf,) = [blob for name, blob in files.items() if name.endswith(".pdf")]
+    assert pdf == api.frozen_bytes()
+    assert "PAdES" not in files["README.txt"].decode()
+
+
+# --- отпечаток видимого слоя прежнего вида ------------------------------------------------------------------------
+
+
+async def test__legacy_stamps_digest__frozen_before_upgrade__stays_current(
+    test_app: AsyncClient, tmp_path: Path
+) -> None:
+    api = await _api(test_app, tmp_path)
+    student = await _x509_key(test_app, "Ivan Ivanov")
+    await api.png("supervisor")
+    await api.mode("supervisor", "image")
+    await api.mode("author", "detached_text")
+    await api.plate_from_key("author", student)
+    await api.sign(identity_id=student)
+    # Фиксация, сделанная прежней Студией: отпечаток считан по repr меток с абсолютным путём картинки.
+    state = JsonSignatureRepository().get_state(api.folder)
+    legacy = legacy_stamps_digest(stamps_for_doc(state, _DOC, api.folder, "ru"))
+    raw = api.state()
+    assert raw["frozen"][_DOC]["stamps_digest"] != legacy
+    raw["frozen"][_DOC]["stamps_digest"] = legacy
+    (api.folder / ".hse-studio" / "signatures.json").write_text(json.dumps(raw, ensure_ascii=False), encoding="utf-8")
+
+    plan = await api.plan()
+    frozen = (await test_app.get(f"{api.base}/signatures")).json()["frozen"][_DOC]
+
+    assert (plan["author"]["status"], plan["supervisor"]["status"]) == ("signed", "signed")
+    assert (frozen["stale"], frozen["plate_outdated"]) == (False, False)
+    assert await _signed_pdf(api) == api.frozen_bytes()

@@ -270,9 +270,8 @@
     "compareWithPrevious": "Compare with the previous build",
     "compare": "Compare",
     "wordCountTooltip": "Words · characters of the document text (excluding commands, comments and the table of contents; imports included) — texcount",
-    "downloadArchiveTitle": "Download archive: PDF + detached .sig files (CAdES)",
-    "downloadSignedTitle": "Download PDF with signatures (sources on disk are unchanged)",
-    "pdfWithSig": "PDF + .sig",
+    "downloadFinalTitle": "Download the final PDF: the frozen file, with embedded PAdES signatures if there are any",
+    "downloadSignedTitle": "Download a PDF for printing: signature images and plates, no electronic signatures (sources on disk are unchanged)",
     "withSignatures": "With signatures"
   },
   "source": {

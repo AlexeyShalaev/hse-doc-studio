@@ -148,7 +148,6 @@ from hse_doc_studio.infra.project_init.template_renderer import TemplateRenderer
 from hse_doc_studio.infra.runtime.environment import in_container
 from hse_doc_studio.infra.signatures.openpgp import GpgKeyring
 from hse_doc_studio.infra.signatures.pdf_stamper import PdfStamper
-from hse_doc_studio.infra.signatures.pyhanko_signer import PyHankoPdfSigner
 
 # --- Agent Personas (custom roles) ---
 from hse_doc_studio.use_cases.agent_personas.create_agent_persona import CreateAgentPersonaUC
@@ -3000,21 +2999,17 @@ class UseCaseProvider(Provider):
         project_repo: IProjectRepository,
         project_index_repo: IProjectIndexRepository,
         signature_repo: ISignatureRepository,
-        signing_identity_repo: ISigningIdentityRepository,
         template_repo: ITemplateRepository,
         template_service: ProjectTemplateService,
         pdf_stamper: PdfStamper,
-        pyhanko_signer: PyHankoPdfSigner,
     ) -> GetSignedDocPdfUC:
         return GetSignedDocPdfUC(
             project_repo=project_repo,
             project_index_repo=project_index_repo,
             signature_repo=signature_repo,
-            signing_identity_repo=signing_identity_repo,
             template_repo=template_repo,
             template_service=template_service,
             pdf_stamper=pdf_stamper,
-            pyhanko_signer=pyhanko_signer,
         )
 
     # ------------------------------------------------------- Detached e-signatures
