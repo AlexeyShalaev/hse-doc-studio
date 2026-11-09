@@ -297,7 +297,7 @@ describe("SigningView: другие состояния", () => {
     expect(screen.getByText("Страница подписи не найдена")).toBeTruthy();
     expect(screen.getByRole("link", { name: "Входящие" })).toHaveAttribute(
       "href",
-      "/inbox",
+      "/inbox?tab=signing",
     );
   });
 
