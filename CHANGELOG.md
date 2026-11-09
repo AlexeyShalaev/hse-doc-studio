@@ -6,6 +6,16 @@ Generated from `release-notes.json` via `make changelog` — do not edit by hand
 Release notes are hand-written and bilingual (RU/EN); the app shows them in the
 selected interface language.
 
+## [0.18.0](https://github.com/AlexeyShalaev/hse-doc-studio/compare/v0.17.2...v0.18.0) - 2026-11-09
+
+- «Signed» download returns the actual signed file. If the PDF is frozen and current, you get it as is, with PAdES signatures when there are any. Without a current freeze you get a print copy with visible stamps but no electronic signatures. Signatures are no longer applied anew on every download.
+- With PAdES signatures the signing package holds two PDFs: the final signed one and the original for detached signatures, named as in the LMS package.
+- Moving a project folder or switching between the local Studio and the cloud no longer makes signatures outdated: the visible layer fingerprint uses paths inside the project. Existing signatures stay valid.
+- SSE coursework template 2026.1.3: at topic approval and final submission signatures are accepted as an image or a detached signature, not PAdES. Existing projects get it as a template update; a slot already set to PAdES asks to change the method.
+- MCP create_project creates team projects: several authors, supervisor, co-supervisor and academic supervisor with the same checks as the creation wizard. list_templates shows whether a template supports teams, and set_project_people accepts an author topic.
+- The local Studio on macOS gets its document fonts: the installer copies Times New Roman, Arial, Courier New and Consolas from the Mac, since Docker Desktop cannot mount the system fonts folder. If fonts are missing, settings explain why.
+- The SSH install dialog on the model servers page no longer shows raw keys instead of text.
+
 ## [0.17.2](https://github.com/AlexeyShalaev/hse-doc-studio/compare/v0.17.1...v0.17.2) - 2026-11-09
 
 - Cloud builds in a separate namespace work again: a build pod no longer gets the runner pod from another namespace as its owner, which made Kubernetes delete it at once and the build failed with a Kubernetes executor error. This affects runner.installFromUi.buildNamespace and runner.kubernetes.namespace.
