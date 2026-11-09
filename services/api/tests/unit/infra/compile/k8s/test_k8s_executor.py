@@ -105,6 +105,7 @@ async def test__run__pod_manifest__restricted_without_network_identity_or_host_p
         runtime_class_name="gvisor",
         owner_pod_name="runner-0",
         owner_pod_uid="uid-1",
+        owner_pod_namespace="builds",
         cpu_limit="3",
     )
 
@@ -137,6 +138,29 @@ async def test__run__pod_manifest__restricted_without_network_identity_or_host_p
     assert meta["labels"]["hse-doc-studio/runner"] == "runner-uid"
     assert meta["labels"]["hse-doc-studio/job"] == str(_COMPILE_ID)
     assert "$max_repeat=5;" in container["command"][2]
+
+
+async def test__run__build_namespace_differs_from_runner_namespace__no_owner_reference(
+    tmp_path: Path, project: Path
+) -> None:
+    # Владелец из другого namespace недействителен: сборщик мусора Kubernetes сразу удалил бы под сборки.
+    api = FakeKubeApi(tmp_path / "cluster")
+    executor = _executor(api, owner_pod_name="runner-0", owner_pod_uid="uid-1", owner_pod_namespace="studio")
+
+    await _run(executor, project)
+
+    meta = cast(dict[str, Any], api.only_pod().manifest["metadata"])
+    assert meta["namespace"] == "builds"
+    assert "ownerReferences" not in meta
+    assert meta["labels"]["hse-doc-studio/runner"] == "runner-uid"
+
+
+def test__owns_builds_in__only_own_namespace_with_known_owner() -> None:
+    owner = {"owner_pod_name": "runner-0", "owner_pod_uid": "uid-1"}
+
+    assert _config(**owner, owner_pod_namespace="builds").owns_builds_in("builds")
+    assert not _config(**owner, owner_pod_namespace="studio").owns_builds_in("builds")
+    assert not _config(owner_pod_namespace="builds").owns_builds_in("builds")
 
 
 async def test__run__tex_cache_claim__mounted_with_font_cache_env(tmp_path: Path, project: Path) -> None:

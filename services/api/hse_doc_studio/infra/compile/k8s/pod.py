@@ -152,8 +152,10 @@ def build_pod_manifest(spec: BuildPodSpec, cfg: KubernetesExecutorConfig, namesp
             LABEL_JOB: str(spec.compile_id),
         },
     }
-    if cfg.owner_pod_name and cfg.owner_pod_uid:
-        # Удалили под раннера: сборщик мусора Kubernetes удалит и его поды сборки.
+    if cfg.owns_builds_in(namespace):
+        # Удалили под раннера: сборщик мусора Kubernetes удалит и его поды сборки. В чужом namespace владельца
+        # не ставим: такую ссылку Kubernetes считает недействительной и сразу удаляет под; там поды без
+        # раннера убирает его же уборка при старте (sweep) и activeDeadlineSeconds.
         metadata["ownerReferences"] = [
             {"apiVersion": "v1", "kind": "Pod", "name": cfg.owner_pod_name, "uid": cfg.owner_pod_uid}
         ]

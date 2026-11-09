@@ -26,6 +26,14 @@ class KubernetesExecutorConfig(BaseModel):
     owner_pod_uid: str = Field(
         default="", description="UID пода раннера (downward API): метка и владелец подов сборки."
     )
+    owner_pod_namespace: str = Field(
+        default="",
+        description=(
+            "Namespace пода раннера; пусто значит namespace его ServiceAccount. Владелец ставится подам сборки "
+            "только в этом же namespace: ссылка на владельца из другого namespace недействительна, и сборщик "
+            "мусора Kubernetes сразу удаляет такой под."
+        ),
+    )
     image: str = Field(default="", description="Образ TeX для подов; пусто значит HSE_RUNNER__TEX_IMAGE.")
     image_pull_policy: str = Field(default="IfNotPresent", pattern=r"^(Always|IfNotPresent|Never)$")
     image_pull_secrets: list[str] = Field(default_factory=list, description="Имена Secret для pull образа.")
@@ -68,6 +76,19 @@ class KubernetesExecutorConfig(BaseModel):
             return (SA_DIR / "namespace").read_text(encoding="utf-8").strip() or "default"
         except OSError:
             return "default"
+
+    def own_namespace(self) -> str:
+        """Namespace пода раннера; пусто, если его не узнать (раннер вне кластера)."""
+        if self.owner_pod_namespace:
+            return self.owner_pod_namespace
+        try:
+            return (SA_DIR / "namespace").read_text(encoding="utf-8").strip()
+        except OSError:
+            return ""
+
+    def owns_builds_in(self, namespace: str) -> bool:
+        """Можно ли сделать под раннера владельцем подов сборки в namespace: только в его собственном."""
+        return bool(self.owner_pod_name and self.owner_pod_uid) and self.own_namespace() == namespace
 
     def resolved_api_url(self) -> str:
         if self.api_url:
