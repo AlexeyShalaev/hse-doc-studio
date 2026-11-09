@@ -1,3 +1,4 @@
+import { signingPagePath } from "@entities/signing-route";
 import type { Notification } from "@entities/invitation";
 
 /** Куда ведёт уведомление: ревью открывает файл и тред в панели комментариев, остальное проект. */
@@ -11,6 +12,39 @@ export const notificationTarget = (n: Notification): string => {
   return project;
 };
 
+/** Раздел «На подпись» на странице «Входящие». */
+export const SIGNING_INBOX_PATH = "/inbox?tab=signing";
+
+/** Точка сдачи: там автор видит ход маршрута подписания. */
+export const checkpointPath = (projectId: string, profileId: string): string =>
+  `/projects/${encodeURIComponent(projectId)}/submit/cp/${encodeURIComponent(profileId)}`;
+
+/** Уведомления маршрута подписания, которые зовут подписанта действовать. */
+const SIGNER_KINDS: ReadonlySet<Notification["kind"]> = new Set([
+  "signing_request",
+  "signing_reminder",
+]);
+
+export const isSigningKind = (kind: Notification["kind"]): boolean =>
+  kind.startsWith("signing_");
+
+/** Запрос и напоминание несут срок, его стоит показать рядом с текстом. */
+export const showsDeadline = (kind: Notification["kind"]): boolean =>
+  SIGNER_KINDS.has(kind);
+
+/**
+ * Маршрут подписания (6.6): запрос и напоминание ведут подписанта на его страницу; возврат,
+ * остановка, завершение и отмена ведут на точку сдачи, где автор видит ход маршрута.
+ * `ref_id` это id маршрута, `profile_id` точка.
+ */
+const signingTarget = (n: Notification): string | null => {
+  const { project_id: project, ref_id: route, profile_id: profile } = n.payload;
+  if (!project) return null;
+  if (SIGNER_KINDS.has(n.kind) && route) return signingPagePath(project, route);
+  if (profile) return checkpointPath(project, profile);
+  return `/projects/${encodeURIComponent(project)}`;
+};
+
 /** Маршрут по клику на уведомление; null, если идти некуда (например, «вас убрали из проекта»). */
 export const notificationRoute = (n: Notification): string | null => {
   if (n.kind === "backup_failed") return "/admin/backups";
@@ -21,6 +55,7 @@ export const notificationRoute = (n: Notification): string | null => {
         ? "/admin/diagnostics"
         : "/admin/data";
   }
+  if (isSigningKind(n.kind)) return signingTarget(n);
   if (n.payload.project_id && n.kind !== "member_removed") {
     return notificationTarget(n);
   }

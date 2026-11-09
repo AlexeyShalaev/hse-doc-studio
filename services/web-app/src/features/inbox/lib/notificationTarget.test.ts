@@ -7,7 +7,11 @@ vi.mock("pdfjs-dist", () => ({
   version: "0",
 }));
 
-import { notificationTarget, popoverAction } from "./notificationTarget";
+import {
+  notificationRoute,
+  notificationTarget,
+  popoverAction,
+} from "./notificationTarget";
 
 const note = (
   kind: Notification["kind"],
@@ -92,5 +96,55 @@ describe("popoverAction", () => {
       popoverAction(note("system_alert", { outcome: "diag_fail" })).route,
     ).toBe("/admin/diagnostics");
     expect(popoverAction(note("member_removed", {})).route).toBeNull();
+  });
+});
+
+describe("маршрут подписания", () => {
+  const signing = (kind: Notification["kind"]) =>
+    note(kind, {
+      project_id: "p 1",
+      ref_id: "sr_1",
+      profile_id: "topic-approval",
+      excerpt: "Заявка на тему КП",
+    });
+
+  it("запрос и напоминание ведут подписанта на его страницу", () => {
+    expect(notificationRoute(signing("signing_request"))).toBe(
+      "/sign/p%201/sr_1",
+    );
+    expect(notificationRoute(signing("signing_reminder"))).toBe(
+      "/sign/p%201/sr_1",
+    );
+  });
+
+  it("возврат, остановка, завершение и отмена ведут на точку сдачи", () => {
+    for (const kind of [
+      "signing_returned",
+      "signing_paused",
+      "signing_completed",
+      "signing_cancelled",
+    ] as const) {
+      expect(notificationRoute(signing(kind))).toBe(
+        "/projects/p%201/submit/cp/topic-approval",
+      );
+    }
+  });
+
+  it("без маршрута или точки ведёт в проект, без проекта никуда", () => {
+    expect(
+      notificationRoute(
+        note("signing_request", { ref_id: null, profile_id: null }),
+      ),
+    ).toBe("/projects/p1");
+    expect(
+      notificationRoute(note("signing_completed", { project_id: null })),
+    ).toBeNull();
+  });
+
+  it("в окошке запрос открывает страницу подписи и отмечается прочитанным", () => {
+    expect(popoverAction(signing("signing_request"))).toEqual({
+      route: "/sign/p%201/sr_1",
+      markRead: true,
+    });
   });
 });
