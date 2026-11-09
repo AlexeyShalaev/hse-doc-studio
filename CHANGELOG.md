@@ -6,13 +6,9 @@ Generated from `release-notes.json` via `make changelog` — do not edit by hand
 Release notes are hand-written and bilingual (RU/EN); the app shows them in the
 selected interface language.
 
-## [0.17.1](https://github.com/AlexeyShalaev/hse-doc-studio/compare/v0.17.0...v0.17.1) (2026-11-09)
+## [0.17.1](https://github.com/AlexeyShalaev/hse-doc-studio/compare/v0.17.0...v0.17.1) - 2026-11-09
 
-
-### Bug Fixes
-
-* **jobs:** a succeeded job without output files no longer fails to apply ([01dc7e8](https://github.com/AlexeyShalaev/hse-doc-studio/commit/01dc7e894b1d3642104edb30eca50cdfc6af4cd5))
-* **jobs:** успешная задача без выходных файлов больше не падает при применении ([3d9b184](https://github.com/AlexeyShalaev/hse-doc-studio/commit/3d9b184c00b4c3cc97639fa5a82b2b0d50a9b190))
+- A successful build without output files no longer stays unfinished: previously its result was not applied and the api retried it on every restart.
 
 ## [0.17.0](https://github.com/AlexeyShalaev/hse-doc-studio/compare/v0.16.0...v0.17.0) - 2026-11-09
 

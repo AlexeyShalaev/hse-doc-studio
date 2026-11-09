@@ -1,6 +1,16 @@
 {
   "releases": [
     {
+      "version": "0.17.1",
+      "date": "2026-11-09",
+      "notes": [
+        {
+          "ru": "Успешная сборка без выходных файлов больше не застревает незавершённой: раньше её итог не применялся, а api пытался довершить её при каждом перезапуске.",
+          "en": "A successful build without output files no longer stays unfinished: previously its result was not applied and the api retried it on every restart."
+        }
+      ]
+    },
+    {
       "version": "0.17.0",
       "date": "2026-11-09",
       "notes": [
