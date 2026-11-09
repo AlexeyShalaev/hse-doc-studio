@@ -178,5 +178,17 @@
     "path": "dist/assets/locale-landing-*.js",
     "gzip": true,
     "limit": "7 kB"
+  },
+  {
+    "name": "Страница подписанта (lazy, pages/SigningPage)",
+    "path": "dist/assets/SigningPage-*.js",
+    "gzip": true,
+    "limit": "9 kB"
+  },
+  {
+    "name": "Словарь страницы подписанта (ru и en)",
+    "path": "dist/assets/locale-signing-*.js",
+    "gzip": true,
+    "limit": "6 kB"
   }
 ]
