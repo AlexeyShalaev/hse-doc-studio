@@ -54,6 +54,8 @@ export type DocPlacementPanelProps = {
    * (docs/design/signing-route.md, 5.6). Без обработчика пометка видна, кнопки нет.
    */
   onReleaseWithheld?: (slotId: string) => void;
+  /** Документ держит идущий маршрут подписания: фиксирует его только маршрут. */
+  routeHeld?: boolean;
 };
 
 const MIN_CAPTION_WIDTH_MM = 70;
@@ -73,6 +75,7 @@ export const DocPlacementPanel = ({
   onOpenProjectSignatures,
   onSlotModeChange,
   onReleaseWithheld,
+  routeHeld = false,
 }: DocPlacementPanelProps) => {
   const { t } = useTranslation("signatureStamper");
   const docSlots = slotDefs.filter((slot) => slot.applies_to.includes(docId));
@@ -128,6 +131,7 @@ export const DocPlacementPanel = ({
           frozen={frozen}
           signatureCount={Object.keys(docSignatures).length}
           pdfAvailable={pdfAvailable}
+          routeHeld={routeHeld}
         />
       )}
       {docSlots.map((slot, i) => {

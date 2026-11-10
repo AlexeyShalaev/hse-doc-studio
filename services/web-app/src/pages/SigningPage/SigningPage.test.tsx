@@ -140,8 +140,9 @@ describe("страница подписанта на моках контракт
     await waitFor(() => {
       expect(pageState()).toBe("approved");
     });
+    // Его ЭП попросят после фиксации, а зафиксируют, когда согласует академрук (он ещё ставит картинку).
     expect(screen.getByTestId("signing-status")).toHaveTextContent(
-      "вас попросят подписать итоговый PDF",
+      "Вы уже согласовали. Электронную подпись Студия попросит поставить после фиксации PDF, когда согласуют: Академический руководитель Сидоров С. С. (шаг 3 из 3).",
     );
   });
 
@@ -153,7 +154,10 @@ describe("страница подписанта на моках контракт
       expect(pageState()).toBe("not_yet");
     });
     expect(screen.getByTestId("signing-status")).toHaveTextContent(
-      "Сейчас: Петров П. П.",
+      "Ваш шаг 3 из 3. Сначала согласуют: Научный руководитель Петров П. П. (шаг 2 из 3).",
+    );
+    expect(screen.getByTestId("signing-status")).toHaveTextContent(
+      "Сейчас ждём: Научный руководитель Петров П. П.",
     );
     view.unmount();
 

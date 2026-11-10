@@ -119,7 +119,7 @@
     "freezeByRoute": "The route freezes the PDF once everyone approves.",
     "heldMine": "Your signatures at this checkpoint go through the signing route: see the “Signing” card.",
     "slot": {
-      "invited": "Waiting for {{who}}: the project invitation is not accepted.",
+      "invited": "{{who}}: the project invitation is not accepted yet.",
       "to_approve": "{{who}} is approving now.",
       "to_approve_sign": "{{who}} is approving and signing now.",
       "to_sign": "{{who}} is signing the final PDF.",

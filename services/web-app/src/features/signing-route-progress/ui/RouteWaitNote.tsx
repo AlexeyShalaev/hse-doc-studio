@@ -16,7 +16,7 @@ import { useParticipantLink } from "../model/useParticipantLink";
 export type RouteWaitNoteProps = {
   projectId: string;
   routeId: string;
-  /** Не показывать строку о своём состоянии: её уже показывает экран (страница подписанта). */
+  /** Не показывать строку о своём состоянии и переход к подписи: их уже показывает экран (страница подписанта). */
   hideLead?: boolean;
   /** Не показывать «Сейчас ждём»: экран называет очередь сам. */
   hideNow?: boolean;
@@ -79,7 +79,8 @@ const WaitBody = ({
   const now = hideNow ? null : text.now(wait);
   const invited = text.invited(wait);
   const canCopy = canManage && !mailEnabled;
-  const act = wait.mine?.kind === "act";
+  // Кнопка на страницу подписи идёт вместе со строкой о себе: на самой странице её нет.
+  const act = !hideLead && wait.mine?.kind === "act";
   if (lead === null && now === null && invited === null) return null;
 
   return (

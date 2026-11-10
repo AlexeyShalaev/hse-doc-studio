@@ -281,6 +281,7 @@ export const DocSignaturesPane = ({
             onOpenProjectSignatures={goToProjectSignatures}
             onSlotModeChange={handleSlotModeChange}
             onReleaseWithheld={handleReleaseWithheld}
+            routeHeld={locked}
           />
         </div>
       </div>

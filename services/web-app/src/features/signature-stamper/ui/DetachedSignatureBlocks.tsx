@@ -8,6 +8,7 @@ import {
   FileKey,
   FileUp,
   HelpCircle,
+  Info,
   KeyRound,
   Link2,
   Lock,
@@ -97,6 +98,12 @@ export type FreezeCardProps = {
   frozen: FrozenPdfResponse | undefined;
   signatureCount: number;
   pdfAvailable: boolean;
+  /**
+   * Документ держит идущий маршрут подписания: фиксирует его только маршрут, сервер правку
+   * отклонит (409 `route_locked`). Кнопок фиксации нет, вместо «пересобран, зафиксируйте заново»
+   * сказано, что PDF зафиксирует маршрут.
+   */
+  routeHeld?: boolean;
 };
 
 export const FreezeCard = ({
@@ -105,6 +112,7 @@ export const FreezeCard = ({
   frozen,
   signatureCount,
   pdfAvailable,
+  routeHeld = false,
 }: FreezeCardProps) => {
   const { t } = useTranslation("signatureStamper");
   const freeze = useFreezePdf();
@@ -152,6 +160,10 @@ export const FreezeCard = ({
   };
 
   const busy = freeze.isPending || unfreeze.isPending;
+  // Маршрут ещё зафиксирует PDF: фиксации нет, она устарела или устарела плашка.
+  const routeWillFreeze =
+    routeHeld &&
+    (frozen === undefined || frozen.stale || frozen.plate_outdated);
 
   return (
     <div
@@ -170,7 +182,28 @@ export const FreezeCard = ({
         </strong>
       </div>
 
-      {!frozen && (
+      {routeWillFreeze && (
+        <div
+          className="flex items-start gap-2"
+          style={{
+            padding: "0.5rem 0.625rem",
+            borderRadius: "0.375rem",
+            background: "var(--c-info-soft)",
+            color: "var(--fg-1)",
+            fontSize: "0.6875rem",
+            lineHeight: 1.45,
+          }}
+          data-testid="freeze-by-route"
+        >
+          <Info
+            size="0.8125rem"
+            style={{ flexShrink: 0, marginTop: 1, color: "var(--c-info)" }}
+          />
+          <span>{t("signingProgress:wait.freezeByRoute")}</span>
+        </div>
+      )}
+
+      {!frozen && !routeHeld && (
         <>
           <div
             style={{
@@ -202,7 +235,7 @@ export const FreezeCard = ({
 
       {frozen && (
         <>
-          {!frozen.stale && frozen.plate_outdated && (
+          {!routeHeld && !frozen.stale && frozen.plate_outdated && (
             <div
               className="flex items-start gap-2"
               style={{
@@ -221,7 +254,7 @@ export const FreezeCard = ({
               <span>{t("detached.freeze.plateOutdated")}</span>
             </div>
           )}
-          {frozen.stale && (
+          {!routeHeld && frozen.stale && (
             <div
               className="flex items-start gap-2"
               style={{
@@ -273,19 +306,21 @@ export const FreezeCard = ({
             className="flex items-center"
             style={{ gap: "0.375rem", flexWrap: "wrap" }}
           >
-            <button
-              type="button"
-              className="btn xs"
-              disabled={busy || !pdfAvailable}
-              onClick={handleFreeze}
-            >
-              {freeze.isPending ? (
-                <Spinner size="sm" />
-              ) : (
-                <RefreshCw size="0.625rem" />
-              )}
-              {t("detached.freeze.refreeze")}
-            </button>
+            {!routeHeld && (
+              <button
+                type="button"
+                className="btn xs"
+                disabled={busy || !pdfAvailable}
+                onClick={handleFreeze}
+              >
+                {freeze.isPending ? (
+                  <Spinner size="sm" />
+                ) : (
+                  <RefreshCw size="0.625rem" />
+                )}
+                {t("detached.freeze.refreeze")}
+              </button>
+            )}
             <button
               type="button"
               className="btn xs"
@@ -331,16 +366,18 @@ export const FreezeCard = ({
                 {t("detached.freeze.signedZip")}
               </button>
             )}
-            <button
-              type="button"
-              className="btn xs ghost"
-              disabled={busy}
-              style={{ color: "var(--c-err)" }}
-              onClick={handleUnfreeze}
-            >
-              <Trash2 size="0.625rem" />
-              {t("detached.freeze.unfreeze")}
-            </button>
+            {!routeHeld && (
+              <button
+                type="button"
+                className="btn xs ghost"
+                disabled={busy}
+                style={{ color: "var(--c-err)" }}
+                onClick={handleUnfreeze}
+              >
+                <Trash2 size="0.625rem" />
+                {t("detached.freeze.unfreeze")}
+              </button>
+            )}
           </div>
         </>
       )}

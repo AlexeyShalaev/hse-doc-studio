@@ -15,7 +15,10 @@ import {
 } from "@entities/submission";
 import { getFormIcon } from "@features/form-fill";
 import { SignSubmissionDialog } from "@features/signature-stamper";
-import { SigningRouteCard } from "@features/signing-route-progress";
+import {
+  SigningRouteCard,
+  useRouteSlotHints,
+} from "@features/signing-route-progress";
 import { pickLocalized } from "@shared/lib";
 import { Spinner } from "@shared/ui/Spinner";
 import { useCheckpointReadiness } from "../lib";
@@ -73,11 +76,15 @@ export const CheckpointView = ({
 
   const profile = (profiles ?? []).find((p) => p.id === profileId);
   const [isSigning, setIsSigning] = useState(false);
-  // Свои слоты точки, которые ещё не подписаны: из плана, где сервер уже
-  // решил, какие слоты принадлежат персоне смотрящего.
-  const waitingForMe = (signaturePlan?.docs ?? [])
-    .flatMap((doc) => doc.slots)
-    .filter((slot) => slot.is_mine && slot.status !== "signed").length;
+  // Сколько своих слотов можно сделать сейчас: считает сервер, тем же правилом, что и счётчик
+  // панели «Сдача». Слот документа идущего маршрута ждёт человека, только когда маршрут ждёт его.
+  const waitingForMe = signaturePlan?.waiting_for_me ?? 0;
+  // Слоты документов, которые держит идущий маршрут: почему и когда, вместо «устарело».
+  const {
+    heldDocs,
+    heldMine,
+    hint: routeHint,
+  } = useRouteSlotHints(project.id, signaturePlan);
 
   if (isProfilesLoading) {
     return (
@@ -163,6 +170,15 @@ export const CheckpointView = ({
         isPacked={isPacked}
       />
 
+      {waitingForMe === 0 && heldMine && (
+        <p
+          className="dim"
+          style={{ fontSize: "0.8125rem", marginTop: "1rem" }}
+          data-testid="checkpoint-held-mine"
+        >
+          {t("signingProgress:wait.heldMine")}
+        </p>
+      )}
       {waitingForMe > 0 && (
         <div
           className="flex items-center"
@@ -312,16 +328,32 @@ export const CheckpointView = ({
                           {isTeam && <span>{ownerLabel}</span>}
                           {item.signatures.map((signature) => {
                             const planSlot = signature.plan;
+                            const docId = item.resolvedDocId ?? item.docId;
+                            // Документ держит идущий маршрут: старая фиксация не беда, маршрут
+                            // зафиксирует PDF заново сам, когда все согласуют.
+                            const held = heldDocs.has(docId);
+                            const refreeze =
+                              held && planSlot?.status === "stale";
                             const tone = signature.isSigned
                               ? "ok"
                               : planSlot?.status === "invalid"
                                 ? "err"
-                                : "warn";
-                            const statusText = planSlot
-                              ? t(`checkpoint.slotStatus.${planSlot.status}`)
-                              : signature.isSigned
-                                ? t("checkpoint.signed")
-                                : t("checkpoint.notSigned");
+                                : refreeze
+                                  ? "pending"
+                                  : "warn";
+                            const statusText = refreeze
+                              ? t("signingProgress:wait.refreeze")
+                              : planSlot
+                                ? t(`checkpoint.slotStatus.${planSlot.status}`)
+                                : signature.isSigned
+                                  ? t("checkpoint.signed")
+                                  : t("checkpoint.notSigned");
+                            const hint =
+                              (held
+                                ? routeHint(docId, signature.slotId)
+                                : null) ??
+                              planSlot?.hint ??
+                              "";
                             return (
                               <span
                                 key={signature.slotId}
@@ -363,16 +395,15 @@ export const CheckpointView = ({
                                   )}
                                   <span>{statusText}</span>
                                 </span>
-                                {!signature.isSigned &&
-                                  planSlot?.hint != null &&
-                                  planSlot.hint !== "" && (
-                                    <span
-                                      className="dim"
-                                      style={{ fontSize: "0.6875rem" }}
-                                    >
-                                      {planSlot.hint}
-                                    </span>
-                                  )}
+                                {!signature.isSigned && hint !== "" && (
+                                  <span
+                                    className="dim"
+                                    style={{ fontSize: "0.6875rem" }}
+                                    data-testid={`checkpoint-slot-hint-${docId}-${signature.slotId}`}
+                                  >
+                                    {hint}
+                                  </span>
+                                )}
                               </span>
                             );
                           })}

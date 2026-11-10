@@ -128,8 +128,36 @@ export const useWaitText = () => {
     [t, who],
   );
 
+  /**
+   * Подсказка к слоту плана подписей, который держит маршрут: что с его подписантом. Свой слот
+   * объясняется как `lead`; у сделавшего своё подсказки нет (null).
+   */
+  const slot = useCallback(
+    (person: WaitPerson, wait: RouteWait): string | null => {
+      if (person.me) return lead(wait);
+      const args = {
+        who: who(person),
+        step: person.step,
+        total: wait.stepsTotal,
+      };
+      switch (person.state) {
+        case "done":
+        case "returned":
+          return null;
+        case "waiting":
+          return t(
+            person.approved ? "wait.slot.approved" : "wait.slot.waiting",
+            args,
+          );
+        default:
+          return t(`wait.slot.${person.state}`, args);
+      }
+    },
+    [t, who, lead],
+  );
+
   return useMemo(
-    () => ({ who, lead, now, invited }),
-    [who, lead, now, invited],
+    () => ({ who, lead, now, invited, slot }),
+    [who, lead, now, invited, slot],
   );
 };

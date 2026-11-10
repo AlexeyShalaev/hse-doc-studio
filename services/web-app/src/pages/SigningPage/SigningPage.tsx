@@ -3,6 +3,7 @@ import { useParams } from "react-router";
 import { AppStatusBar } from "@widgets/AppStatusBar";
 import { AppTitlebar } from "@widgets/AppTitlebar";
 import { useSigningInline } from "@features/signing-inline";
+import { RouteWaitNote } from "@features/signing-route-progress";
 import { useSigningPage } from "./model/useSigningPage";
 import { SigningView } from "./ui/SigningView";
 
@@ -58,6 +59,16 @@ const SigningRoutePage = ({
         onRetry={page.retry}
         extension={extension}
         slot={page.slot}
+        note={
+          page.state.kind === "ready" ? (
+            <RouteWaitNote
+              projectId={projectId}
+              routeId={routeId}
+              hideLead
+              hideNow
+            />
+          ) : null
+        }
       />
       <AppStatusBar />
     </div>
