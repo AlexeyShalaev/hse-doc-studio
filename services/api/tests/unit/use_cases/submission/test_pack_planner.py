@@ -35,6 +35,7 @@ from hse_doc_studio.core.enums import (
     TemplateVersionStatus,
 )
 from hse_doc_studio.core.errors import NotFoundError
+from hse_doc_studio.core.i18n import set_interface_language
 from hse_doc_studio.core.jobs.codec import decode, encode
 from hse_doc_studio.core.jobs.files import ManifestFile
 from hse_doc_studio.core.jobs.pack import ArchiveFormat, PackEntryKind, PackSubmissionPayload
@@ -44,6 +45,7 @@ from hse_doc_studio.core.value_objects import (
     ChecksOverride,
     DetachedSignature,
     FrozenPdf,
+    PinnedPdf,
     ProjectLock,
     SignaturePlacement,
     SignatureSlot,
@@ -52,9 +54,11 @@ from hse_doc_studio.core.value_objects import (
 )
 from hse_doc_studio.infra.signatures.openpgp import GpgKeyring
 from hse_doc_studio.use_cases.submission.pack_planner import (
+    NOTICE_CHANGED_AFTER_SENT,
     REASON_ARCNAME_ESCAPES,
     REASON_EXTRA_SOURCE_ESCAPES,
     REASON_SOURCE_MISSING,
+    PackNotice,
     PackPlan,
     PackPlanner,
 )
@@ -799,3 +803,188 @@ def test__gpg_keyring__is_a_public_key_exporter(tmp_path: Path) -> None:
     exporter: IPublicKeyExporter = GpgKeyring(tmp_path / "gnupg", binary="gpg")
 
     assert callable(exporter.export_public)
+
+
+# Версия на подписи как источник пакета (docs/design/signing-route.md, 12.8).
+
+_SENT = b"%PDF-1.4 sent for signing"
+_PINNED_REL = ".hse-studio/frozen/tz.source.pdf"
+
+
+def _pinned(path: str = _PINNED_REL, data: bytes = _SENT) -> PinnedPdf:
+    return PinnedPdf(
+        path=path,
+        sha256=_sha(data),
+        size=len(data),
+        pinned_at="2026-11-10T14:32:00+00:00",
+        route_id="00000000-0000-4000-8000-000000000001",
+        round=2,
+    )
+
+
+def _with_pinned(state: SignaturesState, pinned: PinnedPdf | None = None) -> SignaturesState:
+    return replace(state, pinned={"tz": pinned or _pinned()})
+
+
+def test__pack_planner__pinned_and_working_same__version_goes_in_without_notice() -> None:
+    version = _version((_def("tz", "ТЗ.pdf"),))
+    project = make_project(documents=[make_document("tz")])
+    probe = MemoryProbe({"tz/tz.pdf": _SENT, _PINNED_REL: _SENT})
+
+    plan = _plan(project, version, probe, docs=_items("tz"), state=_with_pinned(_empty()))
+
+    [entry] = plan.payload.entries
+    assert (entry.kind, entry.arcname, entry.source) == (PackEntryKind.copy, "ТЗ.pdf", ManifestFile(_PINNED_REL))
+    assert (plan.warnings, plan.notices) == ((), ())
+
+
+def test__pack_planner__working_build_moved_ahead__version_goes_in_with_notice_not_skip() -> None:
+    version = _version((_def("tz", "ТЗ.pdf"),))
+    project = make_project(documents=[make_document("tz")])
+    probe = MemoryProbe({"tz/tz.pdf": _PDF, _PINNED_REL: _SENT})
+
+    set_interface_language(Lang.ru)
+    try:
+        plan = _plan(project, version, probe, docs=_items("tz"), state=_with_pinned(_empty()))
+    finally:
+        set_interface_language(None)
+
+    [entry] = plan.payload.entries
+    assert entry.source == ManifestFile(_PINNED_REL)
+    assert plan.warnings == ()
+    assert plan.notices == (
+        PackNotice(
+            code=NOTICE_CHANGED_AFTER_SENT,
+            doc_id="tz",
+            arcname="ТЗ.pdf",
+            message="Документ «ТЗ» изменён после отправки на подпись: в пакет попала версия на подписи от 10.11.2026",
+            pinned_at="2026-11-10T14:32:00+00:00",
+            route_id="00000000-0000-4000-8000-000000000001",
+            round=2,
+            source_sha256=_sha(_SENT),
+            working_sha256=_sha(_PDF),
+        ),
+    )
+
+
+def test__pack_planner__changed_after_sent__message_in_interface_language() -> None:
+    version = _version((_def("tz", "ТЗ.pdf"),))
+    project = make_project(documents=[make_document("tz")])
+    probe = MemoryProbe({"tz/tz.pdf": _PDF, _PINNED_REL: _SENT})
+
+    set_interface_language(Lang.en)
+    try:
+        plan = _plan(project, version, probe, docs=_items("tz"), state=_with_pinned(_empty()))
+    finally:
+        set_interface_language(None)
+
+    [notice] = plan.notices
+    assert notice.message == (
+        "The document «ТЗ» changed after it was sent for signing: the package holds the version sent for signing "
+        "on 10.11.2026"
+    )
+
+
+def test__pack_planner__working_build_missing__version_goes_in_without_notice() -> None:
+    version = _version((_def("tz", "ТЗ.pdf"),))
+    project = make_project(documents=[make_document("tz")])
+    probe = MemoryProbe({_PINNED_REL: _SENT})
+
+    plan = _plan(project, version, probe, docs=_items("tz"), state=_with_pinned(_empty()))
+
+    [entry] = plan.payload.entries
+    assert entry.source == ManifestFile(_PINNED_REL)
+    assert (plan.warnings, plan.notices) == ((), ())
+
+
+@pytest.mark.parametrize("path", [_PINNED_REL, "tz/tz.pdf", ".hse-studio/frozen/../../tz/tz.pdf"])
+def test__pack_planner__pinned_file_missing_or_outside_frozen__skipped_not_replaced_by_working_build(
+    path: str,
+) -> None:
+    version = _version((_def("tz", "ТЗ.pdf"),))
+    project = make_project(documents=[make_document("tz")])
+    probe = MemoryProbe({"tz/tz.pdf": _PDF})
+
+    plan = _plan(project, version, probe, docs=_items("tz"), state=_with_pinned(_empty(), _pinned(path)))
+
+    assert plan.payload.entries == ()
+    [skip] = plan.warnings
+    assert (skip.arcname, skip.reason, skip.detail) == ("ТЗ.pdf", REASON_SOURCE_MISSING, path)
+    assert plan.notices == ()
+
+
+def test__pack_planner__image_signature_on_pinned__stamped_version_and_version_line_kept_for_guide() -> None:
+    state, slot_def = _stamped_state()
+    version = _version((_def("tz", "ТЗ.pdf"),), slots=(slot_def,))
+    project = make_project(documents=[make_document("tz")])
+    probe = MemoryProbe({"tz/tz.pdf": _PDF, _PINNED_REL: _SENT, ".hse-studio/signatures/author.png": b"png"})
+
+    plan = _plan(project, version, probe, docs=_items("tz", signatures=("author",)), state=_with_pinned(state))
+
+    [entry] = plan.payload.entries
+    assert (entry.kind, entry.source) == (PackEntryKind.stamp_pdf, ManifestFile(_PINNED_REL))
+    assert [n.code for n in plan.notices] == [NOTICE_CHANGED_AFTER_SENT]
+
+
+def _detached_on_pinned() -> tuple[Project, TemplateVersion, SignaturesState, MemoryProbe]:
+    """Фиксация и открепленная подпись над версией на подписи, рабочая сборка после отправки пересобрана."""
+    project, version, state, probe = _detached_setup(frozen_source=_SENT)
+    probe.files[_PINNED_REL] = _SENT
+    return project, version, _with_pinned(state), probe
+
+
+def test__pack_planner__detached_on_pinned_and_working_rebuilt__no_error_guide_has_version_line() -> None:
+    project, version, state, probe = _detached_on_pinned()
+
+    plan = _plan(project, version, probe, docs=_items("tz", signatures=("advisor",)), state=state)
+
+    assert _arcnames(plan) == ["ТЗ.pdf", "ТЗ.Иван_Иванов.openpgp.asc", "КАК_ПРОВЕРИТЬ.txt"]
+    pdf_entry, guide_entry = plan.payload.entries[0], plan.payload.entries[-1]
+    assert pdf_entry.source == ManifestFile(".hse-studio/frozen/tz.pdf", sha256=_sha(_FROZEN), size=len(_FROZEN))
+    assert guide_entry.text is not None
+    assert f"  Версия от 10.11.2026, SHA-256 исходного PDF {_sha(_SENT)}" in guide_entry.text.splitlines()
+    assert [n.code for n in plan.notices] == [NOTICE_CHANGED_AFTER_SENT]
+
+
+def test__pack_planner__detached_on_pinned_english__version_line_in_project_language() -> None:
+    project, version, state, probe = _detached_on_pinned()
+
+    plan = _plan(project, version, probe, docs=_items("tz", signatures=("advisor",)), state=state, lang=Lang.en)
+
+    guide = plan.payload.entries[-1].text
+    assert guide is not None
+    assert f"  Version of 10.11.2026, SHA-256 of the source PDF {_sha(_SENT)}" in guide.splitlines()
+
+
+def test__pack_planner__new_version_sent_after_freeze__error_names_the_version_not_a_rebuild() -> None:
+    project, version, state, probe = _detached_setup(frozen_source=_PDF)
+    probe.files[_PINNED_REL] = _SENT
+
+    expected = "ТЗ.pdf: the version sent for signing is not the one that was frozen. Freeze the new version and sign it"
+    with pytest.raises(ValueError, match=f"^{re.escape(expected)}$"):
+        _plan(project, version, probe, docs=_items("tz", signatures=("advisor",)), state=_with_pinned(state))
+
+
+def test__pack_planner__without_pinned_version__guide_has_no_version_line() -> None:
+    project, version, state, probe = _detached_setup()
+
+    plan = _plan(project, version, probe, docs=_items("tz", signatures=("advisor",)), state=state)
+
+    guide = plan.payload.entries[-1].text
+    assert guide is not None
+    assert "Версия от" not in guide
+    assert plan.notices == ()
+
+
+def test__pack_planner__custom_docx_with_pinned_version__pdf_name_and_version_bytes() -> None:
+    custom = make_custom_file_override("ТЗ.docx", "tz/_custom/ТЗ.docx", ".docx")
+    version = _version((_def("tz", "ТЗ.pdf"),))
+    project = make_project(documents=[make_document("tz", custom_file=custom)])
+    probe = MemoryProbe({"tz/_custom/ТЗ.docx": b"docx", _PINNED_REL: _SENT})
+
+    plan = _plan(project, version, probe, docs=_items("tz"), decisions={"tz": False}, state=_with_pinned(_empty()))
+
+    [entry] = plan.payload.entries
+    assert (entry.arcname, entry.source) == ("ТЗ.pdf", ManifestFile(_PINNED_REL))
+    # Рабочий файл не PDF: сравнивать его с версией на подписи нечем.
+    assert plan.notices == ()
