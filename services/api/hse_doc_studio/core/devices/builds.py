@@ -76,15 +76,14 @@ def decide_fetch(  # noqa: PLR0911 — правила проверяются п�
     *,
     force: bool,
     auto: bool,
-    local_head: str | None,
-    local_dirty: bool,
+    cloud_current: bool | None,
     max_bytes: int,
 ) -> FetchStatus | None:
     """Почему сборку качать не надо; `None` значит «можно качать».
 
     Ручной запуск скачивает любую облачную сборку, если она не затрёт более свежую локальную (`force` разрешает и
-    это). Автоматический берёт только сборку из версии, которая сейчас лежит у человека: чужая более новая или
-    старая версия подменила бы PDF тем, чего нет в его исходниках.
+    это). Автоматический берёт только сборку из тех входов, что сейчас лежат у человека (`cloud_current`, правило
+    `core.builds.inputs`): чужая более новая или старая версия подменила бы PDF тем, чего нет в его исходниках.
     """
     if cloud is None:
         return FetchStatus.no_cloud_build
@@ -94,6 +93,6 @@ def decide_fetch(  # noqa: PLR0911 — правила проверяются п�
         return FetchStatus.too_large
     if relation is BuildRelation.local_newer and not force:
         return FetchStatus.kept_local
-    if auto and (cloud.commit is None or cloud.commit != local_head or local_dirty):
+    if auto and cloud_current is not True:
         return FetchStatus.skipped_stale
     return None

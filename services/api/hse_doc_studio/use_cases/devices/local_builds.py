@@ -2,7 +2,7 @@
 
 Облачный PDF скачивается по тому же входу, что и исходники, и ложится туда, куда лёг бы локальный: документ
 открывается без пересборки. Тот же отпечаток не качается, более свежую локальную сборку без `force` не затираем,
-автоматический заход берёт только сборку из той версии, что лежит у человека сейчас.
+автоматический заход берёт только сборку из тех входов, что лежат у человека сейчас (`BuildFreshness`).
 
 Документ, который выпускается не в PDF (вариант pptx, свой файл docx), получить нельзя: облако архивирует только
 PDF, а сам результат это файл исходников и приходит синхронизацией. Такой документ не предлагается к получению
@@ -45,12 +45,12 @@ from hse_doc_studio.core.git_sync.errors import GitSyncError
 from hse_doc_studio.core.git_sync.protocols import IGitCredentialRepository, IGitStoreRemotes, IGitSyncStateRepository
 from hse_doc_studio.core.i18n import localized_error
 from hse_doc_studio.core.repositories import ICompileRepository, IProjectRepository
-from hse_doc_studio.core.vcs.entities import VcsSettings
 from hse_doc_studio.core.vcs.protocols import IVcsService
 from hse_doc_studio.use_cases.documents.document_outputs import DocumentOutputs
 from hse_doc_studio.use_cases.git_sync.status import default_state
 from hse_doc_studio.use_cases.git_sync.studio_servers import StudioServersService
 from hse_doc_studio.use_cases.projects.get_project import GetProjectInput, GetProjectUC
+from hse_doc_studio.use_cases.vcs.build_freshness import BuildFreshness
 
 logger = structlog.get_logger()
 
@@ -121,8 +121,7 @@ class _Run:
     link: _Link
     cloud: CloudBuilds
     outputs: dict[str, str | None]
-    head: str | None
-    dirty: bool
+    freshness: BuildFreshness
     force: bool
     auto: bool
 
@@ -160,7 +159,7 @@ class LocalBuildsUC:
 
     async def status(self, project_id: UUID) -> LocalBuilds:
         project = (await self._projects.execute(GetProjectInput(project_id=project_id))).project
-        head, dirty = await self._local_head(project)
+        freshness = await BuildFreshness.load(self._vcs, project)
         link = await self._link(project)
         cloud: CloudBuilds | None = None
         error: str | None = None
@@ -169,27 +168,26 @@ class LocalBuildsUC:
         # Путь результата нужен, только чтобы решить, предлагать ли облачную сборку.
         outputs = self._outputs.of(project) if cloud is not None else {}
         documents = [
-            await self._document(project, doc.id, head, dirty, cloud, outputs.get(doc.id)) for doc in project.documents
+            await self._document(project, doc.id, freshness, cloud, outputs.get(doc.id)) for doc in project.documents
         ]
         return LocalBuilds(
             connected=link is not None,
             cloud_error=error,
-            local_head=head,
-            local_dirty=dirty,
+            local_head=freshness.head,
+            local_dirty=freshness.dirty,
             cloud_head=cloud.head if cloud is not None else None,
             documents=tuple(documents),
         )
 
-    async def _document(  # noqa: PLR0913 — состояние одного документа
+    async def _document(
         self,
         project: Project,
         doc_id: str,
-        head: str | None,
-        dirty: bool,
+        freshness: BuildFreshness,
         cloud: CloudBuilds | None,
         output: str | None,
     ) -> DocumentBuildStatus:
-        local = await self._local_build(project, doc_id, head, dirty)
+        local = await self._local_build(project, doc_id, freshness)
         found = cloud.of(doc_id) if cloud is not None else None
         remote = found.cloud if found is not None else None
         relation = relate(_side(local) if local else None, _side(remote) if remote else None)
@@ -206,7 +204,7 @@ class LocalBuildsUC:
             fetch_blocked=blocked,
         )
 
-    async def _local_build(self, project: Project, doc_id: str, head: str | None, dirty: bool) -> LocalBuild | None:
+    async def _local_build(self, project: Project, doc_id: str, freshness: BuildFreshness) -> LocalBuild | None:
         records = await self._compiles.list_for_document(project.folder, doc_id)
         done = [r for r in records if r.status is CompileStatus.success and r.finished_at is not None]
         if not done:
@@ -216,18 +214,11 @@ class LocalBuildsUC:
         return LocalBuild(
             at=last.finished_at or last.started_at,
             commit=commit,
-            fresh=None if not commit or not head else commit == head and not dirty,
+            fresh=await freshness.of(commit),
             sha256=last.output_sha256,
             pages=last.pages,
             from_cloud=last.log.startswith(FETCHED_MARK),
         )
-
-    async def _local_head(self, project: Project) -> tuple[str | None, bool]:
-        try:
-            state = await asyncio.to_thread(self._vcs.status, project, VcsSettings.from_meta(project.meta))
-        except Exception:  # noqa: BLE001 — без истории версия неизвестна
-            return None, False
-        return (state.head, state.dirty) if state.available and state.initialized else (None, False)
 
     async def _link(self, project: Project) -> _Link | None:
         config = await asyncio.to_thread(self._remotes.read, project)
@@ -282,8 +273,8 @@ class LocalBuildsUC:
         wanted = [d.doc_id for d in cloud.documents if doc_id is None or d.doc_id == doc_id]
         if doc_id is not None and not wanted:
             return [FetchOutcome(doc_id, FetchStatus.no_cloud_build)]
-        head, dirty = await self._local_head(project)
-        run = _Run(project, link, cloud, self._outputs.of(project), head, dirty, force=force, auto=auto)
+        freshness = await BuildFreshness.load(self._vcs, project)
+        run = _Run(project, link, cloud, self._outputs.of(project), freshness, force=force, auto=auto)
         outcomes = [await self._fetch_doc(run, wanted_doc, single=doc_id is not None) for wanted_doc in wanted]
         return [outcome for outcome in outcomes if outcome is not None]
 
@@ -299,15 +290,14 @@ class LocalBuildsUC:
         return await self._fetch_one(run, doc_id, output, known.cloud)
 
     async def _fetch_one(self, run: _Run, doc_id: str, output: str, remote: CloudBuild) -> FetchOutcome:
-        local = await self._local_build(run.project, doc_id, run.head, run.dirty)
+        local = await self._local_build(run.project, doc_id, run.freshness)
         relation = relate(_side(local) if local else None, _side(remote))
         skip = decide_fetch(
             relation,
             _side(remote),
             force=run.force,
             auto=run.auto,
-            local_head=run.head,
-            local_dirty=run.dirty,
+            cloud_current=await run.freshness.of(remote.commit) if run.auto else None,
             max_bytes=run.cloud.max_pdf_bytes,
         )
         if skip is not None:

@@ -29,6 +29,7 @@ import structlog
 
 from hse_doc_studio.core.access.context import ActorRequired, set_current_actor
 from hse_doc_studio.core.access.entities import Actor, ActorKind, ActorSource, Role
+from hse_doc_studio.core.builds.inputs import RUNNER_EXCLUDED_DIRS
 from hse_doc_studio.core.events import IJobLogStream
 from hse_doc_studio.core.i18n import set_interface_language
 from hse_doc_studio.core.jobs.applier import (
@@ -87,7 +88,8 @@ _BUS_KEEP_S = 120.0
 DEFAULT_TIMEOUT_S = 600.0
 
 # Папки, которые в манифест сборки не попадают: служебные, выходы и чужая история.
-EXCLUDED_DIRS = frozenset({".git", ".hse-studio", ".build", "submissions", "node_modules", "__pycache__"})
+# Служебные папки не уходят раннеру; то же определение решает, устарела ли сборка (`core.builds.inputs`).
+EXCLUDED_DIRS = RUNNER_EXCLUDED_DIRS
 
 RoleSource = Callable[[Actor, UUID], Awaitable[Role | None]]
 

@@ -1,8 +1,9 @@
 """Статус сборок проекта и выдача PDF облачной сборки локальной Студии (docs/design/connected-devices.md, часть 3).
 
 По документу видно, где и когда он собран в последний раз (облако, Студия), из какого коммита и свежий ли PDF
-относительно текущей версии проекта. Версия «текущая» это вершина истории проекта на сервере без несохранённых
-правок; PDF без записанного коммита свежим не объявляется.
+относительно текущего проекта. Свежий значит, что входы сборки (`core.builds.inputs`) с того коммита не менялись:
+запись состояния подписей, статус документа и коммиты сборок соседних документов сборку не старят. PDF без
+записанного коммита свежим не объявляется.
 """
 
 from __future__ import annotations
@@ -12,8 +13,6 @@ from dataclasses import dataclass
 from datetime import datetime
 from uuid import UUID
 
-import structlog
-
 from hse_doc_studio.core.access.actions import Action
 from hse_doc_studio.core.access.entities import Actor
 from hse_doc_studio.core.access.policy import Decision, decide
@@ -21,16 +20,13 @@ from hse_doc_studio.core.access.repositories import IProjectAclRepository
 from hse_doc_studio.core.artifacts.entities import ArtifactError, ArtifactErrorCode, ArtifactKind, ProjectArtifact
 from hse_doc_studio.core.artifacts.protocols import IProjectArtifactRepository
 from hse_doc_studio.core.builds.entities import BuildStamp, DocumentCloudState, IBuildStampRepository
-from hse_doc_studio.core.entities import Project
 from hse_doc_studio.core.i18n import localized_error
 from hse_doc_studio.core.jobs.artifacts import IArtifactStore
 from hse_doc_studio.core.projects.locator import IProjectLocator
 from hse_doc_studio.core.repositories import ICompileRepository
-from hse_doc_studio.core.vcs.entities import VcsSettings
 from hse_doc_studio.core.vcs.protocols import IVcsService
 from hse_doc_studio.use_cases.compile.cancel_compile import CancelCompileInput, CancelCompileUC
-
-logger = structlog.get_logger()
+from hse_doc_studio.use_cases.vcs.build_freshness import BuildFreshness
 
 
 @dataclass(frozen=True)
@@ -38,7 +34,7 @@ class BuildInfo:
     at: datetime
     commit: str | None
     pages: int | None
-    # True: собран из текущей версии проекта; False: версия с тех пор изменилась; None: коммит неизвестен.
+    # True: собран из текущих входов сборки; False: входы с тех пор изменились; None: коммит неизвестен.
     fresh: bool | None
     sha256: str | None
     size: int | None
@@ -66,12 +62,6 @@ class ProjectBuilds:
     head: str | None
     dirty: bool
     documents: tuple[DocumentBuilds, ...]
-
-
-def _fresh(commit: str | None, head: str | None, dirty: bool) -> bool | None:
-    if not commit or not head:
-        return None
-    return commit == head and not dirty
 
 
 def _not_found() -> ArtifactError:
@@ -154,31 +144,26 @@ class ProjectBuildsUC:
         if located is None:
             raise _not_found()
         _folder, project = located
-        head, dirty = self._head(project)
+        freshness = await BuildFreshness.load(self._vcs, project)
         cloud = {s.doc_id: s for s in await self._stamps.states(project_id)}
         latest = self._latest_uploads(await self._artifacts.list_for_project(project_id))
         documents: list[DocumentBuilds] = []
         for doc in project.documents:
             state: DocumentCloudState | None = cloud.get(doc.id)
             uploaded = latest.get(doc.id)
+            last_ok = state.last_ok if state else None
             documents.append(
                 DocumentBuilds(
                     doc_id=doc.id,
-                    cloud=_cloud_info(state.last_ok, head, dirty) if state and state.last_ok else None,
+                    cloud=None if last_ok is None else _cloud_info(last_ok, await freshness.of(last_ok.source_commit)),
                     cloud_running=bool(state and state.running),
                     cloud_failed_at=state.last_failed_at if state else None,
-                    studio=None if uploaded is None else _studio_info(uploaded, head, dirty),
+                    studio=(
+                        None if uploaded is None else _studio_info(uploaded, await freshness.of(uploaded.source_commit))
+                    ),
                 )
             )
-        return ProjectBuilds(head=head, dirty=dirty, documents=tuple(documents))
-
-    def _head(self, project: Project) -> tuple[str | None, bool]:
-        try:
-            status = self._vcs.status(project, VcsSettings.from_meta(project.meta))
-        except Exception:  # noqa: BLE001 — без истории статус показывает «версия неизвестна», а не падает
-            logger.warning("project head unavailable", exc_info=True)
-            return None, False
-        return (status.head, status.dirty) if status.available and status.initialized else (None, False)
+        return ProjectBuilds(head=freshness.head, dirty=freshness.dirty, documents=tuple(documents))
 
     @staticmethod
     def _latest_uploads(items: list[ProjectArtifact]) -> dict[str, ProjectArtifact]:
@@ -189,25 +174,25 @@ class ProjectBuildsUC:
         return found
 
 
-def _cloud_info(stamp: BuildStamp, head: str | None, dirty: bool) -> BuildInfo:
+def _cloud_info(stamp: BuildStamp, fresh: bool | None) -> BuildInfo:
     return BuildInfo(
         at=stamp.finished_at,
         commit=stamp.source_commit,
         pages=stamp.pages,
-        fresh=_fresh(stamp.source_commit, head, dirty),
+        fresh=fresh,
         sha256=stamp.sha256,
         size=stamp.size,
         compile_id=stamp.compile_id,
     )
 
 
-def _studio_info(artifact: ProjectArtifact, head: str | None, dirty: bool) -> StudioBuildInfo:
+def _studio_info(artifact: ProjectArtifact, fresh: bool | None) -> StudioBuildInfo:
     return StudioBuildInfo(
         build=BuildInfo(
             at=artifact.built_at or artifact.uploaded_at,
             commit=artifact.source_commit,
             pages=artifact.pages,
-            fresh=_fresh(artifact.source_commit, head, dirty),
+            fresh=fresh,
             sha256=artifact.sha256,
             size=artifact.size,
         ),

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 import shutil
 import subprocess
 from collections.abc import Sequence
@@ -10,6 +11,7 @@ from uuid import UUID
 
 import structlog
 
+from hse_doc_studio.core.builds.inputs import PROJECT_FILE, changed_build_inputs, same_project_inputs
 from hse_doc_studio.core.entities import Project
 from hse_doc_studio.core.enums import (
     VcsChange,
@@ -66,6 +68,8 @@ _LOG_FMT = _UNIT.join(["%H", "%h", "%P", "%an", "%ae", "%aI", "%D", "%B"]) + _RE
 _FACETS_FMT = _UNIT.join(["%an", "%ae", "%B"]) + _REC
 
 _PDF_EXCLUDE = ":(exclude)*.pdf"
+# Коммит сборки: полный или сокращённый хэш SHA-1 или SHA-256, а не произвольная ревизия.
+_COMMIT_ID = re.compile(r"[0-9a-f]{7,64}")
 _MAX_DIFF_FILES = 80
 # git's well-known empty-tree object — used to diff a root commit (no parent).
 _EMPTY_TREE = "4b825dc642cb6eb9a060e54bf8d69288fbee4904"
@@ -587,6 +591,36 @@ class GitVcsService:
             store_path=str(git_dir),
             tracking_enabled=settings.tracking_enabled,
         )
+
+    def build_inputs_changed(self, project: Project, settings: VcsSettings, since: str) -> bool:
+        """Входы сборки (`core.builds.inputs`) в рабочей папке отличаются от коммита `since`.
+
+        Сравниваются файлы в области истории: изменённые и удалённые относительно коммита, новые неотслеживаемые.
+        PDF вне истории (`track_pdf` выключен) не сравниваются, как и в `status`. Коммит, которого в истории нет,
+        считается другой версией: доказать, что сборка из него совпадает с текущими исходниками, нечем.
+        """
+        if not self.is_initialized(project):
+            raise VcsNotInitializedError(str(project.folder))
+        if not _COMMIT_ID.fullmatch(since):
+            return True
+        known = self._run(project, ["rev-parse", "--verify", "--quiet", f"{since}^{{commit}}"])
+        if known.returncode != 0:
+            return True
+        scope = ["--", "."] if settings.track_pdf else ["--", ".", _PDF_EXCLUDE]
+        tracked = self._run(project, ["diff", "--no-ext-diff", "--name-only", "--no-renames", "-z", since, *scope])
+        if tracked.returncode != 0:
+            raise VcsCommandError("diff", tracked.stderr or tracked.stdout)
+        untracked = self._run(project, ["ls-files", "--others", "--exclude-standard", "-z", *scope], check=True)
+        paths = {p for p in (tracked.stdout + untracked.stdout).split("\0") if p}
+        changed = changed_build_inputs(paths)
+        if any(path != PROJECT_FILE for path in changed):
+            return True
+        if not changed:
+            return False
+        before = self._run(project, ["show", f"{since}:{PROJECT_FILE}"])
+        current = project.folder / PROJECT_FILE
+        after = current.read_bytes() if current.is_file() else None
+        return not same_project_inputs(before.stdout.encode("utf-8") if before.returncode == 0 else None, after)
 
     def diff(  # noqa: C901
         self,
