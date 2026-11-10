@@ -562,8 +562,8 @@ async def test__get__rebuilt_after_send__shows_computed_pause_without_writing(st
     shown = project.call(author, "GET", f"{project.routes}/{route['id']}").json()
     listed = project.call(author, "GET", project.routes).json()["items"][0]
 
-    assert (shown["status"], shown["stop_reason"], shown["current_step"]) == ("paused", "rebuilt", None)
-    assert (listed["status"], listed["stop_reason"]) == ("paused", "rebuilt")
+    assert (shown["status"], shown["stop_reason"], shown["current_step"]) == ("paused", "sent_changed", None)
+    assert (listed["status"], listed["stop_reason"]) == ("paused", "sent_changed")
     assert [e["kind"] for e in shown["events"]] == ["sent", "approved"]
 
 

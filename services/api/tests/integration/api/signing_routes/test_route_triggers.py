@@ -77,13 +77,14 @@ async def test__rebuild__pdf_changed__route_paused_once_and_people_notified(stan
     pdf_built(stand, trio, PROPOSAL)
 
     route = trio.route()
-    assert (route["status"], route["stop_reason"], route["phase"]) == ("paused", "rebuilt", None)
-    assert [(e["kind"], e["reason"], e["who"]) for e in route["events"]][-1] == ("paused", "rebuilt", None)
-    # Согласие научрука относилось к прежней сборке заявки: его картинки снова придержаны; картинка автора
-    # стоит на заявлении, а оно не менялось.
-    assert trio.withheld() == {APPLICATION: ["academic_supervisor", "supervisor"], PROPOSAL: ["supervisor"]}
+    assert (route["status"], route["stop_reason"], route["phase"]) == ("paused", "sent_changed", None)
+    assert [(e["kind"], e["reason"], e["who"]) for e in route["events"]][-1] == ("paused", "sent_changed", None)
+    # Пока отправка не снимает версию на подписи (R16), источник это сборка, и её подмена останавливает маршрут.
+    # Согласие действует по документам (12.6): картинка научрука придержана только на заявке, на заявлении она
+    # остаётся, как и картинка автора: заявление не менялось.
+    assert trio.withheld() == {APPLICATION: ["academic_supervisor"], PROPOSAL: ["supervisor"]}
     # Автору и тем, кто уже согласовал; академрук ещё не согласовывал.
-    assert [n["payload"]["outcome"] for n in notifications(stand, trio, "author", "signing_paused")] == ["rebuilt"]
+    assert [n["payload"]["outcome"] for n in notifications(stand, trio, "author", "signing_paused")] == ["sent_changed"]
     assert len(notifications(stand, trio, "supervisor", "signing_paused")) == 1
     assert notifications(stand, trio, "academic_supervisor", "signing_paused") == []
     assert my(trio.task(trio.academic)) == ("waiting", "wait")
@@ -242,7 +243,7 @@ async def test__sweep__missed_hook__route_paused__second_pass_changes_nothing(st
     trio.project.build(APPLICATION, "v2")
 
     assert sweep(stand) == 1
-    assert _stopped(trio) == ("paused", "rebuilt")
+    assert _stopped(trio) == ("paused", "sent_changed")
     assert len(notifications(stand, trio, "author", "signing_paused")) == 1
     # Идемпотентно: второй проход ничего не пишет, чужой маршрут не тронут.
     assert sweep(stand) == 0

@@ -235,19 +235,21 @@ async def test__reconcile__nothing_changed__route_not_rewritten() -> None:
     assert stand.projects.applied == []
 
 
-async def test__reconcile__document_rebuilt__paused_once_with_notice_and_images_withheld() -> None:
+async def test__reconcile__pinned_version_replaced__paused_once_with_notice_and_images_withheld() -> None:
     stand = await _sent()
-    stand.world.compiled[DOC] = "c" * 64
+    stand.world.pinned[DOC] = "c" * 64
 
     first = await stand.reconciler.project(stand.project_id)
     second = await stand.reconciler.project(stand.project_id)
 
     route = await stand.stored()
     assert (first, second) == (1, 0)
-    assert (route.status, route.stop_reason, route.phase) == (RouteStatus.paused, StopReason.rebuilt, None)
+    assert (route.status, route.stop_reason, route.phase) == (RouteStatus.paused, StopReason.sent_changed, None)
     events = await stand.routes.list_events(route.id)
-    assert [(e.kind, e.actor_id, dict(e.details)) for e in events] == [(EventKind.paused, None, {"reason": "rebuilt"})]
-    # Согласие автора относилось к прежней сборке: его картинка снова придержана.
+    assert [(e.kind, e.actor_id, dict(e.details)) for e in events] == [
+        (EventKind.paused, None, {"reason": "sent_changed"})
+    ]
+    # Согласие автора относилось к прежней версии на подписи: его картинка снова придержана.
     assert stand.world.withheld[DOC] == {"author", "supervisor"}
     assert [(n.notice, n.sender) for n in stand.notifier.notices] == [(Notice.paused, True)]
     assert stand.notifier.delivered[0].actor_id is None
@@ -325,7 +327,7 @@ async def test__reconcile__stopped_and_cancelled_routes__not_watched() -> None:
     stand = await _sent()
     stand.driver.route = cancel(await stand.stored())
     await stand.store()
-    stand.world.compiled[DOC] = "c" * 64
+    stand.world.pinned[DOC] = "c" * 64
 
     assert await stand.reconciler.project(stand.project_id) == 0
     assert await stand.reconciler.sweep() == 0
@@ -337,7 +339,7 @@ async def test__sweep__completed_routes__left_to_the_hooks() -> None:
     stand.driver.run()
     await stand.store()
     assert (await stand.stored()).status is RouteStatus.completed
-    stand.world.compiled[DOC] = "c" * 64
+    stand.world.pinned[DOC] = "c" * 64
 
     # Периодический проход читает PDF каждого документа, а завершённых маршрутов со временем много.
     swept = await stand.reconciler.sweep()
@@ -346,7 +348,7 @@ async def test__sweep__completed_routes__left_to_the_hooks() -> None:
     assert (swept, hooked) == (0, 1)
     assert ((await stand.stored()).status, (await stand.stored()).stop_reason) == (
         RouteStatus.paused,
-        StopReason.rebuilt,
+        StopReason.sent_changed,
     )
 
 
@@ -355,7 +357,7 @@ async def test__sweep__every_project__broken_one_does_not_stop_the_rest() -> Non
     second = await _sent(projects=first.projects, routes=first.routes, notifier=first.notifier)
     third = await _sent(projects=first.projects, routes=first.routes, notifier=first.notifier)
     first.projects.by_id[first.project_id].broken = True
-    second.world.compiled[DOC] = "c" * 64
+    second.world.pinned[DOC] = "c" * 64
 
     changed = await first.reconciler.sweep()
     again = await first.reconciler.sweep()
@@ -364,7 +366,7 @@ async def test__sweep__every_project__broken_one_does_not_stop_the_rest() -> Non
     assert (await first.stored()).status is RouteStatus.active
     assert ((await second.stored()).status, (await second.stored()).stop_reason) == (
         RouteStatus.paused,
-        StopReason.rebuilt,
+        StopReason.sent_changed,
     )
     assert (await third.stored()).status is RouteStatus.active
 
@@ -468,15 +470,15 @@ async def test__require_unlocked__slot_placed_on_a_route_document__locked_only_w
     assert (enabled, disabled) == ("route_locked", None)
 
 
-@pytest.mark.parametrize("how", ["cancelled", "rebuilt", "completed", "broken"])
+@pytest.mark.parametrize("how", ["cancelled", "sent_changed", "completed", "broken"])
 async def test__require_unlocked__route_not_going__edits_allowed(how: str) -> None:
     stand = await _sent()
     if how == "cancelled":
         stand.driver.route = cancel(await stand.stored())
         await stand.store()
-    elif how == "rebuilt":
+    elif how == "sent_changed":
         # В хранилище маршрут ещё идёт, по расчёту уже остановлен.
-        stand.world.compiled[DOC] = "c" * 64
+        stand.world.pinned[DOC] = "c" * 64
     elif how == "completed":
         stand.driver.run()
         await stand.store()
@@ -528,7 +530,7 @@ async def test__hold__before_the_participant_approved__nothing_signable() -> Non
 
 async def test__hold__route_stopped_by_calculation__document_free() -> None:
     stand = await _to_sign()
-    stand.world.compiled[DOC] = "c" * 64
+    stand.world.pinned[DOC] = "c" * 64
 
     assert await stand.gate.hold(stand.project_id, DOC) is None
 
@@ -571,7 +573,7 @@ async def test__plan_routes__route_of_the_checkpoint_or_document__and_slot_state
 
 async def test__plan_routes__calculated_state__stop_shown_before_it_is_recorded() -> None:
     stand = await _sent()
-    stand.world.compiled[DOC] = "c" * 64
+    stand.world.pinned[DOC] = "c" * 64
     _as(uuid4())
 
     shown = (await stand.gate.plan_routes(stand.project_id, profile_id=PROFILE)).route
@@ -579,7 +581,7 @@ async def test__plan_routes__calculated_state__stop_shown_before_it_is_recorded(
     assert shown is not None
     assert (shown.status, shown.stop_reason, shown.phase, shown.current_step) == (
         RouteStatus.paused,
-        StopReason.rebuilt,
+        StopReason.sent_changed,
         None,
         None,
     )

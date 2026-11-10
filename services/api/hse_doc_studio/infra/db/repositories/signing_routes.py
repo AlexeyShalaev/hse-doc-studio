@@ -83,17 +83,20 @@ def _snapshot_json(snapshot: Mapping[str, DocSnapshot]) -> list[dict[str, Any]]:
             "compiled_sha256": seen.compiled_sha256,
             "marks_digest": seen.marks_digest,
             "frozen_sha256": seen.frozen_sha256,
+            "sent_at": seen.sent_at.isoformat() if seen.sent_at is not None else None,
         }
         for doc_id, seen in snapshot.items()
     ]
 
 
 def _snapshot(raw: Any) -> dict[str, DocSnapshot]:
+    # `sent_at` нет у снимков маршрутов 0.20.0: тогда время версии это `sent_at` маршрута (12.11).
     return {
         str(item["doc_id"]): DocSnapshot(
             compiled_sha256=item.get("compiled_sha256"),
             marks_digest=str(item.get("marks_digest", "")),
             frozen_sha256=item.get("frozen_sha256"),
+            sent_at=datetime.fromisoformat(item["sent_at"]) if item.get("sent_at") else None,
         )
         for item in raw or ()
     }

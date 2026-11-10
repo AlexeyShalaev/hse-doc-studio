@@ -1,4 +1,4 @@
-"""Таблица 5.5: что сбрасывает маршрут, и уход участника (раздел 5.4)."""
+"""Таблица 12.5 (заменила 5.5): что останавливает маршрут, и уход участника (раздел 5.4)."""
 
 from __future__ import annotations
 
@@ -60,28 +60,28 @@ def _signed_route() -> Driver:
     return driver
 
 
-def test__evaluate__route_doc_rebuilt__paused_rebuilt() -> None:
+def test__evaluate__pinned_version_replaced__paused_sent_changed() -> None:
     driver = _images_route()
-    driver.world.compiled[DOC] = "c" * 64
+    driver.world.pinned[DOC] = "c" * 64
 
     evaluation = driver.evaluate()
 
-    assert (evaluation.status, evaluation.stop) == (RouteStatus.paused, StopReason.rebuilt)
+    assert (evaluation.status, evaluation.stop) == (RouteStatus.paused, StopReason.sent_changed)
 
 
-def test__evaluate__route_doc_rebuilt__withholds_images_again() -> None:
+def test__evaluate__pinned_version_replaced__withholds_images_again() -> None:
     driver = _images_route()
-    driver.world.compiled[DOC] = "c" * 64
+    driver.world.pinned[DOC] = "c" * 64
 
     evaluation = driver.evaluate()
 
     assert set(evaluation.effects) >= {Withhold(DOC, "author"), Withhold(DOC, "supervisor")}
 
 
-def test__evaluate__route_doc_rebuilt__notifies_sender_and_who_approved() -> None:
+def test__evaluate__pinned_version_replaced__notifies_sender_and_who_approved() -> None:
     driver = _images_route()
     people = by_persona(driver.route)
-    driver.world.compiled[DOC] = "c" * 64
+    driver.world.pinned[DOC] = "c" * 64
 
     evaluation = driver.evaluate()
 
@@ -89,13 +89,13 @@ def test__evaluate__route_doc_rebuilt__notifies_sender_and_who_approved() -> Non
     assert notices == [Notify(Notice.paused, (people["author"].id, people["supervisor"].id), sender=True)]
 
 
-def test__evaluate__completed_route_doc_rebuilt__paused() -> None:
+def test__evaluate__completed_route_pinned_version_replaced__paused() -> None:
     driver = _signed_route()
-    driver.world.compiled[DOC] = "c" * 64
+    driver.world.pinned[DOC] = "c" * 64
 
     evaluation = driver.evaluate()
 
-    assert (evaluation.status, evaluation.stop) == (RouteStatus.paused, StopReason.rebuilt)
+    assert (evaluation.status, evaluation.stop) == (RouteStatus.paused, StopReason.sent_changed)
 
 
 @pytest.mark.parametrize("removed", [False, True], ids=["другой", "удалён"])
@@ -157,9 +157,9 @@ def test__evaluate__signature_lost_in_active_route__no_stop_and_no_refreeze() ->
     assert evaluation.participant(people[0].id).state is ParticipantState.to_sign
 
 
-def test__evaluate__other_documents_rebuilt_or_restamped__nothing() -> None:
+def test__evaluate__other_documents_repinned_or_restamped__nothing() -> None:
     driver = _images_route()
-    driver.world.compiled[DOC2] = "c" * 64
+    driver.world.pinned[DOC2] = "c" * 64
     driver.world.withheld[DOC2].add("author")
 
     evaluation = driver.evaluate()
@@ -193,16 +193,16 @@ def test__evaluate__members_unknown__does_not_check_who_left() -> None:
 
 def test__apply_evaluation__stop__route_paused_with_reason() -> None:
     driver = _images_route()
-    driver.world.compiled[DOC] = "c" * 64
+    driver.world.pinned[DOC] = "c" * 64
 
     route = apply_evaluation(driver.route, driver.evaluate(), at=T0)
 
-    assert (route.status, route.phase, route.stop_reason) == (RouteStatus.paused, None, StopReason.rebuilt)
+    assert (route.status, route.phase, route.stop_reason) == (RouteStatus.paused, None, StopReason.sent_changed)
 
 
 def test__evaluate__paused_route_same_facts__no_more_effects() -> None:
     driver = _images_route()
-    driver.world.compiled[DOC] = "c" * 64
+    driver.world.pinned[DOC] = "c" * 64
     driver.settle()
 
     evaluation = evaluate(driver.route, driver.world.facts())

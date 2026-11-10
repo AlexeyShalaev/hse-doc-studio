@@ -20,7 +20,9 @@ PERSONA_MAX = 64
 
 SigningRouteStatusName = Literal["draft", "active", "paused", "returned", "completed", "cancelled", "archived"]
 SigningRoutePhaseName = Literal["approval", "signing", "done"]
-SigningStopReasonName = Literal["rebuilt", "marks_changed", "frozen_changed", "participant_left", "returned"]
+SigningStopReasonName = Literal[
+    "rebuilt", "sent_changed", "marks_changed", "frozen_changed", "participant_left", "returned"
+]
 ParticipantStateName = Literal["invited", "waiting", "to_approve", "to_approve_sign", "to_sign", "done", "returned"]
 SigningNextActionName = Literal["wait", "approve", "approve_and_sign", "sign", "done"]
 ParticipantMembershipName = Literal["member", "invited", "missing"]

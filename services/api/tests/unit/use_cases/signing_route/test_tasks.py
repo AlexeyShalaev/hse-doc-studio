@@ -55,12 +55,12 @@ async def test__after_approval__task_moves_to_the_next_step() -> None:
     assert [t.next_action for t in await uc.execute(academic.user_id.hex)] == [NextAction.approve]  # type: ignore[union-attr]
 
 
-async def test__document_rebuilt__reading_already_sees_the_stop_and_no_task() -> None:
+async def test__pinned_version_replaced__reading_already_sees_the_stop_and_no_task() -> None:
     driver = three_steps()
     author, supervisor, _ = driver.route.participants
     driver.send(author.user_id)  # type: ignore[arg-type]
     uc = await _uc(driver)
-    driver.world.compiled["topic_application"] = "c" * 64
+    driver.world.pinned["topic_application"] = "c" * 64
 
     assert await uc.execute(supervisor.user_id.hex) == []  # type: ignore[union-attr]
 

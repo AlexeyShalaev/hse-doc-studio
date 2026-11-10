@@ -162,7 +162,8 @@ def event_response(e: EventView) -> s.RouteEvent:
 
 def _participant(details: RouteDetails, person: PersonView) -> s.RouteParticipant:
     p = person.participant
-    approval = p.approval if p.approval is not None and p.approval.round == details.route.round else None
+    # Согласие переносится в новый раунд всегда (12.6); согласовавшим он считается, пока оно действует.
+    approval = p.approval if person.view.approved else None
     return s.RouteParticipant(
         id=str(p.id),
         persona=p.persona,

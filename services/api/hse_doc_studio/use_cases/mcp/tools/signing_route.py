@@ -25,7 +25,7 @@ from hse_doc_studio.core.errors import NotFoundError
 from hse_doc_studio.core.i18n import localized_error
 from hse_doc_studio.core.identity.errors import IdentityError, IdentityErrorCode
 from hse_doc_studio.core.mcp.errors import McpError, McpErrorCode
-from hse_doc_studio.core.signing_route.entities import SENDABLE_STATUSES, RouteConflictError, RouteStatus
+from hse_doc_studio.core.signing_route.entities import EDITABLE_STATUSES, RouteConflictError, RouteStatus
 from hse_doc_studio.core.signing_route.readiness import Blocker, BlockerCode, OtherRoute, RouteBlockedError
 from hse_doc_studio.use_cases.mcp.tools._base import McpTool, json_result, optional_text, project_schema, text_arg
 from hse_doc_studio.use_cases.signing_route.author import (
@@ -56,9 +56,10 @@ def _page(project_id: UUID, route_id: UUID) -> str:
     return signing_page_path(project_id, route_id)
 
 
-def _person(person: PersonView, *, round: int) -> dict[str, object]:
+def _person(person: PersonView) -> dict[str, object]:
     p = person.participant
-    approval = p.approval if p.approval is not None and p.approval.round == round else None
+    # Согласие переносится в новый раунд всегда (12.6); согласовавшим он считается, пока оно действует.
+    approval = p.approval if person.view.approved else None
     return {
         "participant_id": str(p.id),
         "name": person.name,
@@ -116,7 +117,7 @@ def route_view(details: RouteDetails) -> dict[str, object]:
         "sent_at": route.sent_at,
         "completed_at": route.completed_at,
         "waiting_for": [_waiting(person) for person in details.waiting_for],
-        "steps": [[_person(person, round=route.round) for person in step] for step in details.steps],
+        "steps": [[_person(person) for person in step] for step in details.steps],
         "docs": [
             {
                 "doc_id": doc.doc_id,
@@ -355,7 +356,7 @@ class SendForSigningTool(McpTool):
         sending = await self._deps.get(SigningRouteSending)
         details, _ = await drafts.create(actor, project_id, profile_id)
         route = details.route
-        if route.status not in SENDABLE_STATUSES:
+        if route.status not in EDITABLE_STATUSES:
             return _refusal(
                 [
                     localized_error(

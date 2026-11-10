@@ -30,10 +30,10 @@ from sqlalchemy.orm import Mapped, mapped_column
 
 from hse_doc_studio.infra.db.base import Base
 
-# Значения перечислений `core.signing_route.entities`; миграция sr_01 повторяет их литералами.
+# Значения перечислений `core.signing_route.entities`; миграции sr_01 и sr_09 повторяют их литералами.
 ROUTE_STATUSES = ("draft", "active", "paused", "returned", "completed", "cancelled", "archived")
 ROUTE_PHASES = ("approval", "signing", "done")
-STOP_REASONS = ("rebuilt", "frozen_changed", "marks_changed", "participant_left", "returned")
+STOP_REASONS = ("rebuilt", "frozen_changed", "marks_changed", "participant_left", "returned", "sent_changed")
 # OPEN_STATUSES: незавершённый маршрут точки сдачи один.
 OPEN_WHERE = "status IN ('draft', 'active', 'paused', 'returned')"
 # WATCHING_STATUSES: маршруты, которые сверяют документы со снимком.
@@ -57,7 +57,7 @@ class SigningRouteRow(Base):
     status: Mapped[str] = mapped_column(String(16), nullable=False)
     phase: Mapped[str | None] = mapped_column(String(16))
     round: Mapped[int] = mapped_column(Integer, nullable=False, server_default="0")
-    # Снимок отпечатков: список объектов doc_id, compiled_sha256, marks_digest, frozen_sha256 по документам.
+    # Снимок отпечатков: список объектов doc_id, compiled_sha256, marks_digest, frozen_sha256, sent_at по документам.
     snapshot: Mapped[Any] = mapped_column(JSONB, nullable=False, server_default="[]")
     deadline: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     message: Mapped[str | None] = mapped_column(Text)

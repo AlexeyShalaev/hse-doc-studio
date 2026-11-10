@@ -14,9 +14,11 @@ from uuid import UUID
 from hse_doc_studio.core.i18n import localized_error
 from hse_doc_studio.core.signing_route.engine import Evaluation, RouteFacts, evaluate
 from hse_doc_studio.core.signing_route.entities import (
+    NEW_VERSION_STATUSES,
     SENDABLE_STATUSES,
     TURN_STATES,
     Approval,
+    DocSnapshot,
     NextAction,
     Notified,
     Participant,
@@ -28,16 +30,19 @@ from hse_doc_studio.core.signing_route.entities import (
     SigningRoute,
     StopReason,
     not_your_turn,
+    nothing_changed,
 )
+from hse_doc_studio.core.signing_route.versions import DocChange, version_changes
 
 _S = RouteStatus
 
 # Переходы статусов (раздел 5.3). Сверх диаграммы: отменить можно и остановленный маршрут («в любой момент»,
 # раздел 9); отменённый снимается с контроля, когда у точки появляется новый маршрут; завершённый снова идёт,
-# если пропала подпись слота (таблица 5.5: ждёт только этот слот, маршрут не останавливается).
+# если пропала подпись слота (таблица 5.5: ждёт только этот слот, маршрут не останавливается). «Отправить новую
+# версию» (12.6): идущий остаётся идущим с новым раундом, завершённый снова идёт.
 TRANSITIONS: dict[RouteStatus, frozenset[RouteStatus]] = {
     _S.draft: frozenset({_S.active, _S.cancelled}),
-    _S.active: frozenset({_S.completed, _S.paused, _S.returned, _S.cancelled}),
+    _S.active: frozenset({_S.active, _S.completed, _S.paused, _S.returned, _S.cancelled}),
     _S.paused: frozenset({_S.active, _S.cancelled}),
     _S.returned: frozenset({_S.active, _S.cancelled}),
     _S.completed: frozenset({_S.paused, _S.active, _S.archived}),
@@ -79,29 +84,50 @@ def check_route(route: SigningRoute) -> None:
         )
 
 
-def send(route: SigningRoute, facts: RouteFacts, *, by: UUID, at: datetime) -> SigningRoute:
-    """«Отправить на подписание» и «Отправить заново» (разделы 5.4 и 5.6).
+def send(route: SigningRoute, candidate: RouteFacts, *, by: UUID, at: datetime) -> SigningRoute:
+    """«Отправить на подписание», «Отправить заново» и «Отправить новую версию» (разделы 5.4, 5.6 и 12.6).
 
-    Новый раунд, снимок отпечатков документов. Согласие участника переносится, если отпечатки всех его документов
-    те же. Отправка это согласие отправителя, если он участник первого шага. Готовность его картинки и плашки,
-    приглашённых и сборку документов сценарий проверяет по расчёту отправленного маршрута (`ParticipantView`).
+    `candidate` факты кандидата (`RouteFacts.candidate()`): источник каждого документа это его текущая сборка, а
+    у несобранного прежняя версия на подписи. Новый раунд, снимок по кандидату: сценарий после перехода снимает
+    версию на подписи у документов `version_changes(route, candidate).to_pin`, и факты сверки совпадают со
+    снимком. У документа без изменений снимок сохраняет время его отправки (`DocSnapshot.sent_at`), у
+    изменившегося и нового это `at`.
+
+    Из `active` и `completed` только новая версия: без изменений 409 `nothing_changed`. Люди и порядок те же.
+
+    Согласие каждого участника переносится в новый раунд всегда, с прежними отпечатками (12.6): оно действует по
+    документам, поэтому на документах без изменений картинки, B и ЭП остаются, а изменившиеся документы участник
+    согласует заново в свою очередь. Отправка это согласие отправителя, если он участник первого шага. Готовность
+    его картинки и плашки, приглашённых и сборку документов сценарий проверяет по расчёту отправленного маршрута
+    на кандидате (`ParticipantView`).
     """
     if route.status not in SENDABLE_STATUSES:
         raise _invalid_transition(route.status, RouteStatus.active)
     check_route(route)
+    changes = version_changes(route, candidate)
+    if route.status in NEW_VERSION_STATUSES and not changes.any:
+        raise nothing_changed()
     round_ = route.round + 1
     first = route.steps[0]
     participants = tuple(
-        _resend(p, facts.tokens(p.doc_ids(route.docs)), round_, sender=p.user_id == by and p.step == first, at=at)
+        _resend(p, candidate.tokens(p.doc_ids(route.docs)), round_, sender=p.user_id == by and p.step == first, at=at)
         for p in route.participants
     )
+    now = candidate.snapshot(route.docs)
+    snapshot = {
+        doc_id: replace(
+            now[doc_id],
+            sent_at=route.doc_sent_at(doc_id) if changes.docs[doc_id] is DocChange.same else at,
+        )
+        for doc_id in route.docs
+    }
     return replace(
         route,
         status=RouteStatus.active,
         phase=RoutePhase.approval,
         round=round_,
         participants=participants,
-        snapshot=facts.snapshot(route.docs),
+        snapshot=snapshot,
         sent_by=by,
         sent_at=at,
         completed_at=None,
@@ -114,10 +140,9 @@ def _resend(p: Participant, tokens: dict[str, str], round_: int, *, sender: bool
     approval = p.approval
     if sender:
         approval = Approval(round=round_, tokens=tokens, at=at)
-    elif approval is not None and dict(approval.tokens) == tokens:
+    elif approval is not None:
+        # Переносится всегда: что из него ещё действует, решают отпечатки по документам (`engine.approved_docs`).
         approval = replace(approval, round=round_, phase=RoutePhase.approval)
-    else:
-        approval = None
     return replace(p, approval=approval, notified=None, reminded_at=None, reminders=0)
 
 
@@ -193,13 +218,13 @@ def apply_evaluation(route: SigningRoute, evaluation: Evaluation, *, at: datetim
 def refresh_snapshot(route: SigningRoute, facts: RouteFacts) -> SigningRoute:
     """Снимок после эффектов маршрута и действий подписанта на своей странице (картинка, плашка, способ, ЭП).
 
-    Видимый слой и фиксация становятся текущими; сборка остаётся той, что отправлена: маршрут сам не
-    пересобирает. Вызывается под `project_lock` сразу после записи файлов, иначе чужая правка между записью и
-    снимком не будет замечена.
+    Видимый слой и фиксация становятся текущими; версия на подписи и время её отправки остаются теми, что
+    отправлены: маршрут сам их не меняет до следующей отправки. Вызывается под `project_lock` сразу после записи
+    файлов, иначе чужая правка между записью и снимком не будет замечена.
     """
     now = facts.snapshot(route.docs)
-    snapshot = {
-        doc_id: replace(now[doc_id], compiled_sha256=seen.compiled_sha256)
+    snapshot: dict[str, DocSnapshot] = {
+        doc_id: replace(seen, marks_digest=now[doc_id].marks_digest, frozen_sha256=now[doc_id].frozen_sha256)
         if (seen := route.snapshot.get(doc_id)) is not None
         else now[doc_id]
         for doc_id in route.docs

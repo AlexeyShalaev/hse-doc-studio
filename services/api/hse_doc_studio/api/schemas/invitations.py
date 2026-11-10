@@ -54,6 +54,7 @@ NotificationOutcome = Literal[
     "approve_sign",
     "sign",
     "rebuilt",
+    "sent_changed",
     "marks_changed",
     "frozen_changed",
     "participant_left",
