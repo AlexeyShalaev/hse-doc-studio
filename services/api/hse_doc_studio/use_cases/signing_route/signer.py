@@ -212,7 +212,18 @@ class SigningTaskScenario(RouteScenario):
         people = await self._people_of(point.project_id, route, loaded, events)
         allowed = await self._signer.keys_allowed()
         keys = TaskKeys(allowed, await self._signer.default_key_info() if allowed else None)
-        task = build_task(point, route, loaded.facts, evaluation, me, people, events, keys, self._tools.measure)
+        task = build_task(
+            point,
+            route,
+            loaded.facts,
+            evaluation,
+            me,
+            people,
+            events,
+            keys,
+            self._tools.measure,
+            manages=await self._manages(point.project_id),
+        )
         if task.plate is None and me.assignments:
             # Данных плашки нет ни в слоте, ни в профиле: их даст ключ по умолчанию при согласии.
             task = replace(task, plate=await self._signer.default_plate())
@@ -230,7 +241,7 @@ class SigningTaskScenario(RouteScenario):
 
         async def step(turn: _Turn) -> _Outcome:
             ensure_turn(turn.evaluation, turn.view, APPROVE_ACTIONS)
-            check_expected(task_tokens(turn.route, turn.me, turn.view.next_action, turn.loaded.facts), request.expected)
+            check_expected(task_tokens(turn.route, turn.me, turn.view, turn.loaded.facts), request.expected)
             await self._require_sign(turn)
             identity = await self._signer.check(request.sign) if request.sign is not None else None
             state = await self._approval_state(turn, request.method, identity)
@@ -258,7 +269,7 @@ class SigningTaskScenario(RouteScenario):
 
         async def step(turn: _Turn) -> _Outcome:
             ensure_turn(turn.evaluation, turn.view, SIGN_ACTIONS)
-            check_expected(task_tokens(turn.route, turn.me, turn.view.next_action, turn.loaded.facts), request.expected)
+            check_expected(task_tokens(turn.route, turn.me, turn.view, turn.loaded.facts), request.expected)
             await self._require_sign(turn)
             identity = await self._signer.check(request.key)
             before = Settled(turn.route, turn.loaded, turn.evaluation)

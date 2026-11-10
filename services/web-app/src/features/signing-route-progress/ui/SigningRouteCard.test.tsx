@@ -167,6 +167,8 @@ const approvedAuthorRoute = ({ optional = true } = {}): SigningRoute => {
           slot("consultant", "srp_cons"),
           ...(optional ? [slot("academic_supervisor", null, true)] : []),
         ],
+        sent: null,
+        changed: false,
       },
     ],
     steps: [
@@ -988,11 +990,11 @@ describe("Подписание: версия на подписи (12.2)", () => 
     expect(screen.queryByTestId("signing-new-version")).toBeNull();
   });
 
-  it("сервер до R16: ни версий, ни изменений", async () => {
-    const { changed_docs: _changed, ...route } = makeSigningRoute();
+  it("версии на подписи нет: ни версий, ни изменений", async () => {
+    const route = makeSigningRoute();
     serve({
       ...route,
-      docs: route.docs.map(({ sent: _s, changed: _c, ...doc }) => doc),
+      docs: route.docs.map((doc) => ({ ...doc, sent: null })),
     });
     mount({ projectId: SR_PROJECT_ID });
     await status();

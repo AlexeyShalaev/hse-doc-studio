@@ -12,9 +12,12 @@ docs/design/signing-route.md, раздел 6.6.
 | `signing_paused` | чьё действие остановило (если известно) | причина остановки (`StopReason`) | точка |
 | `signing_completed` | нет | нет | точка |
 | `signing_cancelled` | отменивший | нет | точка |
+| `signing_new_version` | отправивший маршрут | нет | точка |
 
-Во всех: `project_id`, `project_name`, `ref_id` (id маршрута), `profile_id`, `deadline` (срок, ISO 8601).
-Название точки берётся на языке аккаунта получателя.
+Во всех: `project_id`, `project_name`, `ref_id` (id маршрута), `profile_id`, `deadline` (срок, ISO 8601) и
+`new_version` (12.6): true только у запроса раунда новой версии, в котором изменился документ получателя. Письму
+такого запроса нужны ещё сообщение маршрута («Что изменилось» его заменяет) и названия изменившихся документов
+(`message`, `changed_names`). Названия точки и документов берутся на языке аккаунта получателя.
 """
 
 from __future__ import annotations
@@ -69,6 +72,7 @@ class SigningNotifier:
         user = await self._users.get(user_id)
         locale = user.locale if user is not None else None
         returned = notify.notice is Notice.returned
+        changed = self._changed_docs(route, notify, recipient)
         payload = NotificationPayload(
             project_id=str(route.project_id),
             project_name=labels.project_name or None,
@@ -78,6 +82,9 @@ class SigningNotifier:
             excerpt=_clip(comment) if returned else labels.profile(locale, route.profile_id),
             profile_id=route.profile_id,
             deadline=route.deadline.isoformat() if route.deadline is not None else None,
+            new_version=bool(changed),
+            message=_clip(route.message) if changed else None,
+            changed_names=", ".join(f"«{labels.doc(locale, doc_id)}»" for doc_id in changed) or None,
         )
         await self._notifier.notify(
             user_id,
@@ -88,9 +95,18 @@ class SigningNotifier:
         )
 
     @staticmethod
+    def _changed_docs(route: SigningRoute, notify: Notify, recipient: Recipient) -> tuple[str, ...]:
+        """Документы получателя, которые раунд новой версии изменил; только у запроса (12.6)."""
+        if notify.notice is not Notice.request or recipient.participant_id is None:
+            return ()
+        mine = set(route.participant(recipient.participant_id).doc_ids(route.docs))
+        return tuple(doc_id for doc_id in route.round_changed_docs if doc_id in mine)
+
+    @staticmethod
     def _actor(route: SigningRoute, notify: Notify, actor_id: UUID | None) -> UUID | None:
-        """Запрос и напоминание идут от отправившего маршрут; возврат от вернувшего; прочее от `actor_id`."""
-        if notify.notice in (Notice.request, Notice.reminder):
+        """Запрос, напоминание и новая версия идут от отправившего маршрут; возврат от вернувшего; прочее от
+        `actor_id`."""
+        if notify.notice in (Notice.request, Notice.reminder, Notice.new_version):
             return route.sent_by
         if notify.notice is Notice.returned and route.stopped_by is not None:
             stopped = next((p for p in route.participants if p.id == route.stopped_by), None)

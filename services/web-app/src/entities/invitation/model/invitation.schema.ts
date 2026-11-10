@@ -331,9 +331,8 @@ export const NotificationSchema = z.strictObject({
     // Маршрут подписания: точка сдачи (ref_id это id маршрута) и срок.
     profile_id: z.string().nullable(),
     deadline: iso.nullable(),
-    // Запрос раунда новой версии (12.6): «{автор} просит подписать новую версию». Пока срез R16
-    // не добавил поле в ответ, его может не быть; отсутствие значит false.
-    new_version: z.boolean().optional(),
+    // Запрос раунда новой версии (12.6): «{автор} просит подписать новую версию»; у остальных false.
+    new_version: z.boolean(),
   }),
 });
 export type Notification = z.infer<typeof NotificationSchema>;

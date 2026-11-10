@@ -74,7 +74,7 @@ export const lastReturn = (task: SigningTask): RouteEvent | null =>
 const isResent = (task: SigningTask): boolean => {
   if (task.route.round <= 1) return false;
   // Раунд новой версии объясняет плашка «Новая версия» (раздел 12.2), строка не повторяет её.
-  if (task.route.new_version === true) return false;
+  if (task.route.new_version) return false;
   return task.events.some(
     (e) =>
       e.round < task.route.round &&
@@ -147,7 +147,7 @@ const changedInRound = (task: SigningTask): Set<string> => {
   return new Set([
     ...(sent?.changed_docs ?? []),
     ...task.docs
-      .filter((doc) => doc.changed_since_mine === true)
+      .filter((doc) => doc.changed_since_mine)
       .map((doc) => doc.doc_id),
   ]);
 };
@@ -157,7 +157,7 @@ const changedInRound = (task: SigningTask): Set<string> => {
  * хотя бы один документ участника; null в обычном раунде.
  */
 export const newVersionDocs = (task: SigningTask): SigningTaskDoc[] | null => {
-  if (task.route.new_version !== true) return null;
+  if (!task.route.new_version) return null;
   const changed = changedInRound(task);
   const docs = task.docs.filter((doc) => changed.has(doc.doc_id));
   return docs.length > 0 ? docs : null;
@@ -174,7 +174,7 @@ export const keptMark = (
   task: SigningTask,
   doc: SigningTaskDoc,
 ): KeptMark | null => {
-  if (task.route.new_version !== true) return null;
+  if (!task.route.new_version) return null;
   if (changedInRound(task).has(doc.doc_id)) return null;
   const kept = isActionable(task.me.next_action)
     ? doc.token === null
@@ -191,8 +191,8 @@ export type VersionLineKind =
 /**
  * Строка версии над документом: «Вы подписываете версию от …»; своё сделано: «Вы подписали
  * (согласовали) версию от …»; документ без изменений в новой версии: «Версия на подписи от …»;
- * маршрут завершён: «Подписана версия от …». null, пока версии на подписи нет (до R16,
- * черновик, отмена).
+ * маршрут завершён: «Подписана версия от …». null, пока версии на подписи нет (черновик,
+ * отмена, перенос маршрута 0.20.0 не восстановил версию).
  */
 export const versionLine = (
   task: SigningTask,

@@ -96,3 +96,11 @@ def test__verify_guide__document_without_pinned_version__no_version_line() -> No
 def test__version_date__iso_utc_to_day_and_unparsable_kept() -> None:
     assert version_date("2026-11-10T14:32:00Z") == "10.11.2026"
     assert version_date("10 ноября") == "10 ноября"
+
+
+def test__version_date__moscow_day_not_utc_day() -> None:
+    """Версия, снятая в 23:30 по Москве (20:30 UTC), и снятая после полуночи по Москве (21:30 UTC прошлого дня
+    по UTC): дата как в интерфейсе, по московскому времени."""
+    assert version_date("2026-11-10T20:30:00+00:00") == "10.11.2026"
+    assert version_date("2026-11-10T21:30:00+00:00") == "11.11.2026"
+    assert version_date("2026-11-10T21:30:00") == "11.11.2026"

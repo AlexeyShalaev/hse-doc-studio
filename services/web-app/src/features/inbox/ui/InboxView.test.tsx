@@ -54,6 +54,7 @@ const note = (
     excerpt: "Заявка на тему КП",
     profile_id: "topic-approval",
     deadline: null,
+    new_version: false,
     ...payload,
   },
 });

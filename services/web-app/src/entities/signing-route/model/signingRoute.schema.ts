@@ -2,21 +2,13 @@ import type { ZodType } from "zod";
 import { z } from "zod";
 
 // Маршрут подписания «Отправить на подписание» (docs/design/signing-route.md, раздел 8).
-// Только серверный режим: локальная Студия отвечает 404. Бэкенда пока нет (срезы R5, R6),
-// поэтому источник истины здесь контракт раздела 8. strictObject повторяет extra=forbid
-// будущих моделей api/schemas/signing_route.py: лишнее поле значит расхождение сторон.
+// Только серверный режим: локальная Студия отвечает 404. Контракт раздела 8 и уточнения 12.9;
+// эталоны тел лежат в contracts/server/fixtures. strictObject повторяет extra=forbid моделей
+// api/schemas/signing_route.py: лишнее поле значит расхождение сторон.
 // Все поля приходят явно, пустое значение это null.
 
 const iso = z.string().min(1);
 const LocalizedSchema = z.record(z.string(), z.string());
-
-/**
- * Поле «версии на подписи» (раздел 12.9). Фронтенд описал его раньше сервера (срез W7), поэтому
- * пока срез R16 не добавил поле в ответы и эталоны contracts/server, его может не быть. R16
- * убирает эту обёртку: поле становится обязательным, как остальные. Отсутствие читать как
- * «ничего не менялось»: `false`, пустой список, null.
- */
-const untilR16 = <T extends ZodType>(schema: T) => schema.optional();
 
 export const SigningRouteStatusSchema = z.enum([
   "draft",
@@ -162,7 +154,7 @@ export const RouteEventSchema = z.strictObject({
    * Только у `sent` новой версии (12.6): документы, у которых сменилась версия на подписи;
    * остальные документы маршрута остались прежними. null у остальных событий и у первой отправки.
    */
-  changed_docs: untilR16(z.array(z.string()).nullable()),
+  changed_docs: z.array(z.string()).nullable(),
 });
 export type RouteEvent = z.infer<typeof RouteEventSchema>;
 
@@ -225,12 +217,12 @@ export const RouteDocSchema = z.strictObject({
    * Версия на подписи; null у черновика, после отмены и у маршрута 0.20.0, версию которого
    * перенос не восстановил (тогда маршрут стоит с `sent_changed`).
    */
-  sent: untilR16(RouteDocVersionSchema.nullable()),
+  sent: RouteDocVersionSchema.nullable(),
   /**
    * Рабочая сборка отличается от отправленной: от версии на подписи, а без неё (маршрут 0.20.0)
    * от отпечатка снимка. Несобранные правки не считаются; у черновика и отменённого false.
    */
-  changed: untilR16(z.boolean()),
+  changed: z.boolean(),
 });
 export type RouteDoc = z.infer<typeof RouteDocSchema>;
 
@@ -279,7 +271,7 @@ export const SigningRouteSchema = z.strictObject({
    */
   candidates: z.array(RoutePersonaCandidatesSchema),
   /** Документы с `changed`, по порядку `docs`: есть что отправить новой версией (12.6). */
-  changed_docs: untilR16(z.array(z.string())),
+  changed_docs: z.array(z.string()),
 });
 export type SigningRoute = z.infer<typeof SigningRouteSchema>;
 
@@ -307,9 +299,9 @@ export const SigningRouteSummarySchema = z.strictObject({
    * Документы маршрута: по ним мягкое предупреждение правки (12.7) узнаёт документы на
    * подписании одним запросом на проект.
    */
-  docs: untilR16(z.array(z.string())),
+  docs: z.array(z.string()),
   /** Документы, рабочая сборка которых ушла от версии на подписи. */
-  changed_docs: untilR16(z.array(z.string())),
+  changed_docs: z.array(z.string()),
 });
 export type SigningRouteSummary = z.infer<typeof SigningRouteSummarySchema>;
 
@@ -390,9 +382,9 @@ export const SigningRoutePreviewDocSchema = z.strictObject({
    * версией на подписи её отпечаток; null, если нет ни сборки, ни версии.
    */
   token: z.string().nullable(),
-  change: untilR16(RouteDocChangeSchema),
+  change: RouteDocChangeSchema,
   /** Нынешняя версия на подписи; null, если её нет. */
-  sent: untilR16(RouteDocVersionSchema.nullable()),
+  sent: RouteDocVersionSchema.nullable(),
 });
 
 export const SigningRoutePreviewParticipantSchema = z.strictObject({
@@ -415,7 +407,7 @@ export const SigningRoutePreviewParticipantSchema = z.strictObject({
    * его документам (у согласующего без слотов по всем документам маршрута). false, если он ещё
    * не согласовывал.
    */
-  keeps_approval: untilR16(z.boolean()),
+  keeps_approval: z.boolean(),
 });
 
 /** Маршрут, который держит документ (`doc_in_other_route`): его точка и статус. */
@@ -458,7 +450,7 @@ export const SendSigningRouteRequestSchema = z.strictObject({
   sign: SigningKeyRequestSchema.nullable(),
   /**
    * «Что изменилось» (12.6): заменяет сообщение маршрута и уходит подписантам с запросом.
-   * Можно не передавать; клиент не шлёт пустое, пока сервер (R16) его не принимает.
+   * Можно не передавать; пустое клиент не шлёт, сервер обрезает пробелы и пустое считает null.
    */
   note: z.string().max(SIGNING_TEXT_MAX).nullable().optional(),
 });
@@ -505,7 +497,7 @@ export const SigningTaskRouteSchema = z.strictObject({
   sent_at: iso.nullable(),
   stop_reason: SigningStopReasonSchema.nullable(),
   /** Раунд новой версии, в которой изменился хотя бы один документ участника (12.6). */
-  new_version: untilR16(z.boolean()),
+  new_version: z.boolean(),
 });
 export type SigningTaskRoute = z.infer<typeof SigningTaskRouteSchema>;
 
@@ -586,14 +578,14 @@ export const SigningTaskDocSchema = z.strictObject({
   mine: z.array(SigningTaskSlotSchema),
   others: z.array(SigningTaskOtherSlotSchema),
   /** Дата версии на подписи: «Вы подписываете версию от …»; null, если версии нет. */
-  sent_at: untilR16(iso.nullable()),
+  sent_at: iso.nullable(),
   /** Документ изменился с прошлого согласия участника: согласовать заново (12.2). */
-  changed_since_mine: untilR16(z.boolean()),
+  changed_since_mine: z.boolean(),
   /**
    * Рабочая сборка ушла от версии на подписи. Видят автор и управляющие маршрутом, у
    * остальных null: подписант рабочих правок не видит.
    */
-  changed: untilR16(z.boolean().nullable()),
+  changed: z.boolean().nullable(),
 });
 export type SigningTaskDoc = z.infer<typeof SigningTaskDocSchema>;
 
@@ -692,9 +684,12 @@ export const SIGNING_ROUTE_ERROR_CODES = [
 export type SigningRouteErrorCode = (typeof SIGNING_ROUTE_ERROR_CODES)[number];
 
 /**
- * Будущие каталоги contracts/server/fixtures -> схема. Срезы R5 и R6 кладут эталоны
- * (testing/fixtures: SIGNING_ROUTE_CONTRACT_EXAMPLES) в contracts/server и добавляют эту
- * карту в CONTRACT_SCHEMAS вместе с моделями pydantic.
+ * Каталоги contracts/server/fixtures маршрута подписания -> схема; те же пары есть в
+ * CONTRACT_SCHEMAS. Эталоны версии на подписи (12.9) лежат там же: SigningRoute (diverged,
+ * new_version, completed_changed, migration_lost), SigningRouteList/changed,
+ * SigningRoutePreview/new_version, SendSigningRouteRequest/new_version, SigningTask/new_version,
+ * Notification (signing_request_new_version, signing_new_version). Локальная копия для тестов
+ * и галерей: testing/fixtures, SIGNING_ROUTE_CONTRACT_EXAMPLES.
  */
 export const SIGNING_ROUTE_CONTRACT_SCHEMAS: Record<string, ZodType> = {
   SigningRoute: SigningRouteSchema,

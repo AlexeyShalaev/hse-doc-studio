@@ -89,6 +89,8 @@ const ROUTE = makeSigningRoute({
           status: "pending",
         },
       ],
+      sent: null,
+      changed: false,
     },
   ],
   steps: [

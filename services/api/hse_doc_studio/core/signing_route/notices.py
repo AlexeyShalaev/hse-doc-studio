@@ -30,8 +30,8 @@ from hse_doc_studio.core.signing_route.transitions import mark_notified
 # Письмо по виду уведомления: запрос и напоминание подписанту, возврат и завершение только автору (6.6).
 _MAILED_TO_ANYONE = frozenset({Notice.request, Notice.reminder})
 _MAILED_TO_SENDER = frozenset({Notice.returned, Notice.completed})
-# О своём же действии человек не уведомляется: вернувший на доработку и отменивший маршрут.
-_SKIP_ACTOR = frozenset({Notice.returned, Notice.cancelled})
+# О своём же действии человек не уведомляется: вернувший на доработку, отменивший маршрут, отправивший новую версию.
+_SKIP_ACTOR = frozenset({Notice.returned, Notice.cancelled, Notice.new_version})
 
 
 @dataclass(frozen=True)

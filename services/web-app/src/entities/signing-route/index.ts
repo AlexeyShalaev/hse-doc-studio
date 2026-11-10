@@ -48,7 +48,6 @@ export {
   isRouteLive,
   isRouteOpen,
   nextRemindAt,
-  routeChangedDocs,
   routeSendKind,
   signingPagePath,
   signingCardPath,

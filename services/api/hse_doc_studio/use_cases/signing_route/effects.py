@@ -51,6 +51,11 @@ class RouteFileEffects:
         self._profiles = profiles
         self._key_importer = key_importer
 
+    @property
+    def signatures(self) -> ISignatureRepository:
+        """Состояние подписей проекта: им же пишет версию на подписи сценарий отправки (`RoutePinning`)."""
+        return self._signatures
+
     async def apply(
         self, point: RoutePoint, route: SigningRoute, effects: Sequence[Effect], *, at: datetime | None = None
     ) -> tuple[str, ...]:

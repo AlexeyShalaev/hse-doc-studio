@@ -41,7 +41,7 @@ export type DocRouteVersion = {
   routeId: string;
   profileId: string;
   status: string;
-  /** Когда снята версия на подписи; null, если её нет (сервер до R16, перенос не удался). */
+  /** Когда снята версия на подписи; null, если её нет (перенос маршрута 0.20.0 не удался). */
   pinnedAt: string | null;
   /** Рабочая сборка документа ушла от версии на подписи. */
   changed: boolean;

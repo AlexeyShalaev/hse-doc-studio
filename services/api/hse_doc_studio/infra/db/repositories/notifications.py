@@ -16,12 +16,15 @@ from hse_doc_studio.core.listing import Found, Window
 from hse_doc_studio.infra.db.orm.invitations import NotificationRow
 from hse_doc_studio.infra.db.session import SessionProvider
 
-_PAYLOAD_FIELDS = tuple(NotificationPayload.__dataclass_fields__)
+# Флаги подписи; остальные поля строки (или None).
+_FLAG_FIELDS = frozenset({"new_version"})
+_PAYLOAD_FIELDS = tuple(name for name in NotificationPayload.__dataclass_fields__ if name not in _FLAG_FIELDS)
 
 
 def _payload(raw: Any) -> NotificationPayload:
     data = raw if isinstance(raw, dict) else {}
-    return NotificationPayload(**{k: (str(data[k]) if data.get(k) is not None else None) for k in _PAYLOAD_FIELDS})
+    texts = {k: (str(data[k]) if data.get(k) is not None else None) for k in _PAYLOAD_FIELDS}
+    return NotificationPayload(**texts, new_version=data.get("new_version") is True)
 
 
 def _to_entity(row: NotificationRow) -> Notification:

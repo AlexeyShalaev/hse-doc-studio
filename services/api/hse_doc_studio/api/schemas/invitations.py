@@ -36,6 +36,7 @@ NotificationKindName = Literal[
     "signing_paused",
     "signing_completed",
     "signing_cancelled",
+    "signing_new_version",
 ]
 NotificationOutcome = Literal[
     "accepted",
@@ -314,6 +315,8 @@ class NotificationPayloadModel(StrictModel):
     # Маршрут подписания: точка сдачи и срок маршрута.
     profile_id: str | None = None
     deadline: datetime | None = None
+    # Запрос раунда новой версии (12.6): «{автор} просит подписать новую версию»; у остальных false.
+    new_version: bool = False
 
 
 class NotificationModel(StrictModel):
