@@ -95,7 +95,13 @@ def task_response(task: TaskDetails) -> s.SigningTask:
         steps=[
             [
                 s.SigningTaskPerson(
-                    name=person.name, persona=person.persona, state=person.state.value, at=person.at, me=person.me
+                    name=person.name,
+                    persona=person.persona,
+                    state=person.state.value,
+                    at=person.at,
+                    me=person.me,
+                    card_name=person.card_name,
+                    changes_visible=person.changes_visible,
                 )
                 for person in step
             ]

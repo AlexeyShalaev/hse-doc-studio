@@ -156,12 +156,16 @@ export const RouteParticipantSchema = z.strictObject({
   /** Имя участника; у приглашённого подсказка адреса; null, если человека ещё нет. */
   name: z.string().nullable(),
   membership: ParticipantMembershipSchema,
+  /** Имя персоны по карточке проекта: у приглашённого `name` только маска почты. */
+  card_name: z.string().nullable(),
   /** Пары маршрута этого участника; пусто: только согласование. */
   assignments: z.array(RouteSlotRefSchema),
   /** Способ его слотов; null у согласующего без слотов. */
   method: RouteSignMethodSchema.nullable(),
   state: ParticipantStateSchema,
   next_action: SigningNextActionSchema,
+  /** Его согласие ещё меняет видимый слой: пока такие есть, PDF не фиксируется и ЭП не запрашивается. */
+  changes_visible: z.boolean(),
   /** Согласие текущего раунда. */
   approved_at: iso.nullable(),
   notified_at: iso.nullable(),
@@ -434,6 +438,9 @@ export const SigningTaskPersonSchema = z.strictObject({
   /** Время последнего действия (согласие или подпись). */
   at: iso.nullable(),
   me: z.boolean(),
+  /** Имя персоны по карточке проекта и меняет ли его согласие видимый слой, как у участника маршрута. */
+  card_name: z.string().nullable(),
+  changes_visible: z.boolean(),
 });
 export type SigningTaskPerson = z.infer<typeof SigningTaskPersonSchema>;
 

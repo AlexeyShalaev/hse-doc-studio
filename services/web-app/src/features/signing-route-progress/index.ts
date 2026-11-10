@@ -6,3 +6,7 @@ export { SigningHoldBanner } from "./ui/SigningHoldBanner";
 export type { SigningHoldBannerProps } from "./ui/SigningHoldBanner";
 export { useDocSigningHold } from "./model/useDocSigningHold";
 export type { SigningHold } from "./model/useDocSigningHold";
+export { RouteWaitNote } from "./ui/RouteWaitNote";
+export type { RouteWaitNoteProps } from "./ui/RouteWaitNote";
+export { displayName, useWaitText } from "./lib/useWaitText";
+export { useRouteSlotHints } from "./model/useRouteSlotHints";

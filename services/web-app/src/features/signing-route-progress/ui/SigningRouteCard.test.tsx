@@ -211,7 +211,7 @@ describe("Подписание: маршрут идёт", () => {
     const id = await startRoute();
     mount();
     expect(await status()).toHaveTextContent(
-      /^Шаг 2 из 2\. Очередь: Петров П\. П\. \(научный руководитель\), с \d\d\.\d\dПодписано 1 из 2$/,
+      /^Шаг 2 из 2\. Очередь: Научный руководитель Петров П\. П\., с \d\d\.\d\dПодписано 1 из 2$/,
     );
     expect(await screen.findByTestId("signing-step-2")).toHaveAttribute(
       "data-current",
@@ -388,6 +388,7 @@ describe("Подписание: эталонные состояния", () => {
       user_id: null,
       invitation_id: "pinv_1",
       name: "k***@hse.ru",
+      card_name: null,
       membership: "invited",
       assignments: [{ doc_id: "topic_application", slot_id: "academic" }],
       state: "invited",
@@ -420,7 +421,7 @@ describe("Подписание: эталонные состояния", () => {
     const u = userEvent.setup();
     mount({ projectId: SR_PROJECT_ID });
     expect(await status()).toHaveTextContent(
-      "Очередь: k***@hse.ru (академический руководитель)",
+      "Очередь: Академический руководитель k***@hse.ru",
     );
     expect(await person(invited.id)).toHaveTextContent(
       "приглашение не принято",
@@ -494,6 +495,72 @@ describe("Подписание: эталонные состояния", () => {
     expect(
       screen.getByTestId("signing-person-srp_academic"),
     ).not.toHaveTextContent("Не назначен");
+  });
+
+  it("приглашённый назван по карточке проекта, маска почты только подсказка", async () => {
+    serveInvited(invitedPerson({ card_name: "Салех Х. М." }));
+    mount({ projectId: SR_PROJECT_ID });
+    const row = await person("srp_academic");
+    expect(row).toHaveTextContent("Салех Х. М.");
+    expect(
+      screen.getByTestId("signing-person-hint-srp_academic"),
+    ).toHaveTextContent("k***@hse.ru");
+    expect(await status()).toHaveTextContent(
+      "Очередь: Академический руководитель Салех Х. М.",
+    );
+  });
+
+  it("автор согласовал раньше: когда попросят ЭП и кто не принял приглашение", async () => {
+    // Случай с сервера: автор с открепленной ЭП согласовал при отправке, научрук и академрук
+    // (картинки) ещё не приняли приглашение, почты на сервере нет.
+    const supervisor = invitedPerson({
+      id: "srp_supervisor",
+      persona: "supervisor",
+      name: "h***@hse.ru",
+      card_name: "Салех Х. М.",
+      changes_visible: true,
+      assignments: [{ doc_id: "topic_application", slot_id: "supervisor" }],
+      method: "image",
+    });
+    const academic = invitedPerson({
+      changes_visible: true,
+      name: "s***@hse.ru",
+      card_name: null,
+      method: "image",
+    });
+    serve(
+      makeSigningRoute({
+        phase: "approval",
+        current_step: 2,
+        steps: [
+          [
+            makeRouteParticipant({
+              method: "detached",
+              state: "waiting",
+              next_action: "wait",
+            }),
+          ],
+          [supervisor],
+          [academic],
+        ],
+      }),
+    );
+    vi.spyOn(sessionApi, "bootstrap").mockResolvedValue(
+      bootstrap("server", { id: SR_AUTHOR.id, name: SR_AUTHOR.name }),
+    );
+    mount({ projectId: SR_PROJECT_ID });
+    expect(
+      await screen.findByTestId("signing-my-wait", {}, LOAD),
+    ).toHaveTextContent(
+      "Вы уже согласовали. Электронную подпись Студия попросит поставить после фиксации PDF, когда согласуют: Научный руководитель Салех Х. М. (шаг 2 из 3, приглашение не принято), Академический руководитель s***@hse.ru (шаг 3 из 3, приглашение не принято).",
+    );
+    expect(screen.getByTestId("signing-invited")).toHaveTextContent(
+      "Не приняли приглашение в проект: Научный руководитель Салех Х. М., Академический руководитель s***@hse.ru. Сервер не отправляет письма: нажмите «Скопировать ссылку» рядом с человеком и перешлите её сами.",
+    );
+    // У приглашённых ссылка есть, у себя нет: свою страницу открывают кнопкой карточки.
+    expect(screen.getByTestId("signing-copy-srp_supervisor")).toBeEnabled();
+    expect(screen.getByTestId("signing-copy-srp_academic")).toBeEnabled();
+    expect(screen.queryByTestId("signing-copy-srp_author")).toBeNull();
   });
 
   it("с почтой на сервере ссылку несёт письмо: копировать нечего, «Напомнить» раз в 12 часов", async () => {
@@ -618,7 +685,7 @@ describe("Подписание: эталонные состояния", () => {
     serve(makeSigningRoute());
     mount({ projectId: SR_PROJECT_ID });
     expect(await status()).toHaveTextContent(
-      /^Step 2 of 2\. Waiting for Петров П\. П\. \(supervisor\), since/,
+      /^Step 2 of 2\. Waiting for Supervisor Петров П\. П\., since/,
     );
     expect(screen.getByTestId("signing-cancel")).toHaveTextContent(
       "Cancel route",

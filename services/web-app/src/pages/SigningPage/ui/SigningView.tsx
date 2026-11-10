@@ -45,6 +45,8 @@ export type SigningViewProps = {
   slot?: (task: SigningTask) => SigningSlotContext;
   /** Адрес PDF документа; галерея подставляет образец. */
   pdfUrlOf?: (doc: SigningTaskDoc) => string;
+  /** Под карточкой состояния: кто не принял приглашение и ссылки для них (страница берёт из маршрута). */
+  note?: React.ReactNode;
 };
 
 const defaultPdfUrl = (doc: SigningTaskDoc) => signingPdfUrl(doc.pdf_url);
@@ -82,6 +84,7 @@ export const SigningView = ({
   extension,
   slot = idleSlot,
   pdfUrlOf = defaultPdfUrl,
+  note,
 }: SigningViewProps) => {
   const { t } = useTranslation("signing");
   const compact = useIsCompactWidth();
@@ -174,6 +177,7 @@ export const SigningView = ({
         <SigningHeader task={task} now={now} />
         <RouteProgress task={task} />
         <StatusCard task={task} status={status} />
+        {note}
         {failure && !returning && (
           <div data-testid="signing-failure" data-code={failure}>
             <Notice

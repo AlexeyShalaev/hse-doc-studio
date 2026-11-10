@@ -49,6 +49,8 @@ const person = (
   state,
   at: null,
   me: false,
+  card_name: null,
+  changes_visible: false,
   ...extra,
 });
 
@@ -341,10 +343,54 @@ describe("SigningView: другие состояния", () => {
       }),
     });
     expect(screen.getByTestId("signing-status")).toHaveTextContent(
-      "Сейчас: Петров П. П.",
+      "Сейчас ждём: Научный руководитель Петров П. П.",
     );
     expect(screen.queryByTestId("signing-actions")).not.toBeInTheDocument();
     expect(screen.queryByTestId("signing-method")).not.toBeInTheDocument();
+  });
+
+  it("автор согласовал раньше: когда попросят ЭП и кто не принял приглашение", () => {
+    // Случай с сервера: автор с открепленной ЭП согласовал при отправке, руководители (картинки)
+    // ещё не приняли приглашение. Их ссылки страница показывает под карточкой (`note`).
+    mount({
+      task: approveTask({
+        steps: [
+          [
+            person(SR_AUTHOR.name, "author", "waiting", {
+              me: true,
+              at: "2026-11-10T09:00:00Z",
+            }),
+          ],
+          [
+            person("h***@hse.ru", "supervisor", "invited", {
+              card_name: "Салех Х. М.",
+              changes_visible: true,
+            }),
+          ],
+          [
+            person("s***@hse.ru", "academic_supervisor", "invited", {
+              changes_visible: true,
+            }),
+          ],
+        ],
+        me: {
+          ...base.me,
+          state: "waiting",
+          next_action: "wait",
+          method: "detached",
+        },
+      }),
+      note: <p data-testid="note">ссылки</p>,
+    });
+    const card = screen.getByTestId("signing-status");
+    expect(card).toHaveAttribute("data-kind", "approved");
+    expect(card).toHaveTextContent(
+      "Вы уже согласовали. Электронную подпись Студия попросит поставить после фиксации PDF, когда согласуют: Научный руководитель Салех Х. М. (шаг 2 из 3, приглашение не принято), Академический руководитель s***@hse.ru (шаг 3 из 3, приглашение не принято).",
+    );
+    expect(card).toHaveTextContent(
+      "Сейчас ждём: Научный руководитель Салех Х. М., приглашение не принято.",
+    );
+    expect(screen.getByTestId("note")).toBeInTheDocument();
   });
 
   it("возврат другим участником: кто и комментарий", () => {

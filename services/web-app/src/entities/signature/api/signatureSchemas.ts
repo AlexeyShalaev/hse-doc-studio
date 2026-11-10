@@ -208,6 +208,8 @@ export const DocPlanSchema = z.object({
     .nullable()
     .default(null),
   slots: z.array(PlanSlotSchema),
+  /** Документ держит идущий маршрут подписания: фиксирует его только маршрут. */
+  held_by_route: z.boolean().default(false),
 });
 
 export const SignaturePlanSchema = z.object({

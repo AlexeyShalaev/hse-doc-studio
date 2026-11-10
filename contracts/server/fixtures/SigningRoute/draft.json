@@ -61,6 +61,7 @@
         "invitation_id": null,
         "name": "Иванов И. И.",
         "membership": "member",
+        "card_name": "Иванов И. И.",
         "assignments": [
           {
             "doc_id": "topic_application",
@@ -70,6 +71,7 @@
         "method": "image",
         "state": "waiting",
         "next_action": "wait",
+        "changes_visible": false,
         "approved_at": null,
         "notified_at": null,
         "reminded_at": null,
@@ -84,6 +86,7 @@
         "invitation_id": null,
         "name": null,
         "membership": "missing",
+        "card_name": null,
         "assignments": [
           {
             "doc_id": "topic_application",
@@ -93,6 +96,7 @@
         "method": "image",
         "state": "waiting",
         "next_action": "wait",
+        "changes_visible": false,
         "approved_at": null,
         "notified_at": null,
         "reminded_at": null,

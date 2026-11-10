@@ -14,6 +14,7 @@ import {
   type PersonTone,
 } from "../lib/routeView";
 import { usePersonaLabel } from "../lib/usePersonaLabel";
+import { displayName } from "../lib/useWaitText";
 
 const DOT: Record<PersonTone, string> = {
   ok: "ok",
@@ -127,8 +128,11 @@ export const RouteSteps = ({
                 // и доступно не только тому, чья очередь: ссылку можно разослать заранее.
                 const remindLocked =
                   lockedUntil !== null && (!invited || mailEnabled);
+                const isMe = person.user_id !== null && person.user_id === meId;
+                // Себе ссылку не копируют: страница подписи и так открывается кнопкой карточки.
                 const canCopy =
                   canManage &&
+                  !isMe &&
                   isLinkable(route, person) &&
                   !(invited && mailEnabled);
                 const lockTitle =
@@ -137,8 +141,13 @@ export const RouteSteps = ({
                     : t("action.remindAfter", {
                         time: formatMoment(lockedUntil),
                       });
+                // Приглашённого называем по карточке проекта, маска почты только подсказка.
+                const shownName = displayName({
+                  ...person,
+                  cardName: person.card_name,
+                });
                 const name =
-                  person.name ??
+                  shownName.name ??
                   (invited ? t("person.invitee") : t("person.nobody"));
                 return (
                   <div
@@ -166,7 +175,16 @@ export const RouteSteps = ({
                       <span style={{ color: "var(--fg-0)", fontWeight: 500 }}>
                         {name}
                       </span>
-                      {person.user_id !== null && person.user_id === meId && (
+                      {shownName.hint !== null && (
+                        <span
+                          className="dim mono"
+                          style={{ fontSize: "0.6875rem" }}
+                          data-testid={`signing-person-hint-${person.id}`}
+                        >
+                          {shownName.hint}
+                        </span>
+                      )}
+                      {isMe && (
                         <span className="chip subtle">{t("person.you")}</span>
                       )}
                       {role !== null && <span className="dim">{role}</span>}

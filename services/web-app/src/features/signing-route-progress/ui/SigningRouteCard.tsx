@@ -18,9 +18,9 @@ import {
   signingRouteKeys,
   useArchiveSigningRoute,
   useCancelSigningRoute,
+  routeWaitOf,
   useRemindSigningParticipant,
   useSendSigningRoute,
-  useSigningParticipantLink,
   useSigningRoute,
   useSigningRoutes,
   type RouteParticipant,
@@ -28,7 +28,7 @@ import {
 } from "@entities/signing-route";
 import { toast } from "@shared/lib";
 import { Modal, Spinner } from "@shared/ui";
-import { absoluteUrl, copyText, formatDay } from "../lib/format";
+import { absoluteUrl, formatDay } from "../lib/format";
 import {
   earliest,
   lastReturn,
@@ -39,8 +39,9 @@ import {
   waitingFor,
 } from "../lib/routeView";
 import { useNow } from "../lib/useNow";
-import { usePersonaLabel } from "../lib/usePersonaLabel";
+import { useWaitText } from "../lib/useWaitText";
 import { useErrorText } from "../model/useErrorText";
+import { useParticipantLink } from "../model/useParticipantLink";
 import { RouteSteps } from "./RouteSteps";
 
 type Project = z.infer<typeof ProjectResponseSchema>;
@@ -207,20 +208,16 @@ const RouteBody = ({
   const { t } = useTranslation("signingProgress");
   const navigate = useNavigate();
   const client = useQueryClient();
-  const personaLabel = usePersonaLabel();
+  const waitText = useWaitText();
   const errorText = useErrorText();
   const remind = useRemindSigningParticipant(projectId, route.id);
-  const link = useSigningParticipantLink(projectId, route.id);
+  const { pendingId, setPendingId, shown, deliver, copyLink } =
+    useParticipantLink(projectId, route.id);
   const cancel = useCancelSigningRoute(projectId, route.id);
   const archive = useArchiveSigningRoute(projectId, route.id);
   const send = useSendSigningRoute(projectId, route.id);
   const [isConfirming, setIsConfirming] = useState(false);
   const [isResending, setIsResending] = useState(false);
-  const [pendingId, setPendingId] = useState<string | null>(null);
-  const [shown, setShown] = useState<{
-    participantId: string;
-    url: string;
-  } | null>(null);
 
   const people = route.steps.flat();
   const now = useNow(people.some((p) => p.reminded_at !== null));
@@ -229,23 +226,9 @@ const RouteBody = ({
   const me = meIn(route, meId);
   const signingPath = signingPagePath(projectId, route.id);
 
-  const who = (person: RouteParticipant): string => {
-    const name = person.name ?? t("someone");
-    const role =
-      person.persona === "author" ? null : personaLabel(person.persona);
-    return role === null ? name : `${name} (${role})`;
-  };
-
-  /** Ссылка в буфер; не вышло: показываем её под человеком, чтобы скопировать руками. */
-  const deliver = async (person: RouteParticipant, url: string, ok: string) => {
-    if (await copyText(url)) {
-      setShown(null);
-      toast.success(ok);
-    } else {
-      setShown({ participantId: person.id, url });
-      toast.error(t("toast.copyFailed"));
-    }
-  };
+  const wait = routeWaitOf(route, meId);
+  const who = (person: RouteParticipant): string =>
+    waitText.who({ ...person, cardName: person.card_name });
 
   // «Напомнить»; у приглашённого это повтор приглашения, без почты сервер отдаёт ссылку (6.5).
   const requestReminder = (person: RouteParticipant) => {
@@ -266,36 +249,6 @@ const RouteBody = ({
             : reply.delivery === "email"
               ? t("toast.remindedEmail")
               : t("toast.remindedInbox"),
-        );
-      },
-      onError: (error) => {
-        toast.error(errorText(error));
-      },
-      onSettled: () => {
-        setPendingId(null);
-      },
-    });
-  };
-
-  // Участнику ссылка на его страницу подписи: адрес известен и так, запрос не нужен.
-  // Приглашённому нужна ссылка приглашения: её даёт сервер, каждый раз новую (секрет хранится
-  // хэшем). Это не напоминание: пауз нет, в маршруте ничего не меняется (5.7).
-  const copyLink = (person: RouteParticipant) => {
-    if (person.state !== "invited") {
-      void deliver(person, absoluteUrl(signingPath), t("toast.copied"));
-      return;
-    }
-    setPendingId(person.id);
-    link.mutate(person.id, {
-      onSuccess: (reply) => {
-        void deliver(
-          person,
-          absoluteUrl(reply.link),
-          reply.kind === "invitation"
-            ? t("toast.inviteCopied")
-            : reply.kind === "inbox"
-              ? t("toast.inboxCopied")
-              : t("toast.copied"),
         );
       },
       onError: (error) => {
@@ -414,8 +367,10 @@ const RouteBody = ({
   })();
 
   const facts: string[] = [];
-  if (route.status !== "draft" && tally.total > 0)
-    facts.push(t("signed", tally));
+  if (route.status !== "draft" && tally.total + tally.optionalTotal > 0)
+    facts.push(
+      tally.optionalTotal > 0 ? t("signedOptional", tally) : t("signed", tally),
+    );
   if (route.deadline !== null && route.status === "active") {
     const date = formatDay(route.deadline);
     facts.push(
@@ -435,6 +390,15 @@ const RouteBody = ({
     me !== null &&
     me.next_action === "sign" &&
     route.sent_by?.id === meId;
+  // Почему смотрящий ждёт и когда до него дойдёт (своя очередь видна кнопкой «Перейти к подписи»).
+  const myLead =
+    wait !== null &&
+    (wait.mine?.kind === "approved" || wait.mine?.kind === "later")
+      ? waitText.lead(wait)
+      : null;
+  // Не принявших приглашение показываем заметно: без их согласия маршрут не сдвинется.
+  const invitedLine =
+    canManage && wait !== null ? waitText.invited(wait) : null;
 
   return (
     <Shell>
@@ -476,6 +440,39 @@ const RouteBody = ({
               style={{ flexShrink: 0 }}
             />
             {t("unsigned")}
+          </span>
+        )}
+        {myLead !== null && (
+          <span
+            className="dim"
+            style={{ fontSize: "0.75rem", lineHeight: 1.45 }}
+            data-testid="signing-my-wait"
+          >
+            {myLead}
+          </span>
+        )}
+        {invitedLine !== null && (
+          <span
+            className="flex items-start"
+            style={{
+              gap: "0.375rem",
+              fontSize: "0.75rem",
+              color: "var(--c-warn)",
+              lineHeight: 1.45,
+            }}
+            data-testid="signing-invited"
+          >
+            <TriangleAlert
+              size="0.8125rem"
+              aria-hidden="true"
+              style={{ flexShrink: 0, marginTop: "0.125rem" }}
+            />
+            <span>
+              {invitedLine}{" "}
+              {mailEnabled
+                ? t("wait.invitedMail")
+                : t("wait.invitedNoMailRows")}
+            </span>
           </span>
         )}
       </div>

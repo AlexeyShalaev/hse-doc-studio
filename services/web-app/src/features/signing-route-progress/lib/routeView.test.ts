@@ -146,7 +146,39 @@ describe("напоминание раз в 12 часов", () => {
 
 describe("сводки маршрута", () => {
   it("подписано слотов из скольких", () => {
-    expect(signedTally(makeSigningRoute())).toEqual({ done: 1, total: 2 });
+    expect(signedTally(makeSigningRoute())).toEqual({
+      done: 1,
+      total: 2,
+      optionalDone: 0,
+      optionalTotal: 0,
+    });
+    // Необязательный слот, который автор добавил сам, считается отдельно: шапка точки его не знает.
+    const route = makeSigningRoute();
+    const doc = route.docs[0];
+    if (doc === undefined) throw new Error("fixture");
+    const withOptional = makeSigningRoute({
+      docs: [
+        {
+          ...doc,
+          slots: [
+            ...doc.slots,
+            {
+              slot_id: "academic_supervisor",
+              label: { ru: "Академический руководитель" },
+              participant_id: null,
+              optional: true,
+              status: "pending",
+            },
+          ],
+        },
+      ],
+    });
+    expect(signedTally(withOptional)).toEqual({
+      done: 1,
+      total: 2,
+      optionalDone: 0,
+      optionalTotal: 1,
+    });
   });
 
   it("самый ранний момент", () => {

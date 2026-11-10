@@ -489,6 +489,13 @@ export const createSigningRouteDemo = (
     return signed(r, owner) ? ("signed" as const) : ("pending" as const);
   };
 
+  /** Как `changes_visible` расчёта: не согласовал, а видимый слой (картинка, плашка) ещё ставит. */
+  const changesVisible = (r: Route, p: Participant): boolean =>
+    !r.frozen &&
+    !approved(r, p) &&
+    assignmentsOf(r, p).length > 0 &&
+    p.method !== "pades";
+
   const toParticipant = (r: Route, p: Participant): RouteParticipant => ({
     id: p.id,
     persona: p.persona,
@@ -496,10 +503,12 @@ export const createSigningRouteDemo = (
     invitation_id: p.invitation_id,
     name: p.name,
     membership: membershipOf(p),
+    card_name: p.name,
     assignments: assignmentsOf(r, p),
     method: assignmentsOf(r, p).length > 0 ? p.method : null,
     state: stateOf(r, p),
     next_action: nextActionOf(r, p),
+    changes_visible: changesVisible(r, p),
     approved_at: approved(r, p) ? (p.approval?.at ?? null) : null,
     notified_at: p.notified_at,
     reminded_at: p.reminded_at,
@@ -732,6 +741,8 @@ export const createSigningRouteDemo = (
           state: stateOf(r, q),
           at: approved(r, q) ? (q.approval?.at ?? null) : null,
           me: q === p,
+          card_name: q.name,
+          changes_visible: changesVisible(r, q),
         })),
       ),
       me: {

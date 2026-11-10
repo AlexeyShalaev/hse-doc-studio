@@ -11,8 +11,10 @@ from dataclasses import dataclass
 from enum import StrEnum
 from uuid import UUID
 
+from hse_doc_studio.core.entities import Project
 from hse_doc_studio.core.enums import SignMode
 from hse_doc_studio.core.signatures.plan import (
+    AUTHOR_PERSONA,
     CRYPTO_METHODS,
     PlanReason,
     SignMethod,
@@ -69,11 +71,32 @@ class People:
         return None
 
 
+def card_name(project: Project, persona: str) -> str | None:
+    """Имя человека персоны из карточки проекта («Научный руководитель: ФИО»); None, если его там нет.
+
+    Приглашённого Студия знает только по маске почты, а автор маршрута знает его по карточке проекта: это имя и
+    показывается рядом с маской, чтобы человек не оставался безымянным адресом.
+    """
+    person = {
+        "supervisor": project.supervisor,
+        "co_supervisor": project.co_supervisor,
+        "academic_supervisor": project.academic_supervisor,
+    }.get(persona)
+    if person is not None:
+        return person.name or None
+    if persona == AUTHOR_PERSONA:
+        return (project.authors[0].name or None) if project.authors else None
+    author = next((a for a in project.authors if a.slug == persona), None)
+    return (author.name or None) if author is not None else None
+
+
 @dataclass(frozen=True)
 class PersonView:
     participant: Participant
     step: int  # номер шага по порядку, с 1
     name: str | None
+    # Имя персоны по карточке проекта: у приглашённого, кроме маски почты, только оно и известно.
+    card_name: str | None
     membership: Membership
     method: SignMethod | None
     view: ParticipantView
@@ -205,6 +228,7 @@ def build_details(
             participant=p,
             step=positions[p.step],
             name=people.name(p),
+            card_name=card_name(point.project, p.persona),
             membership=people.membership(p),
             method=method_of_participant(p, facts),
             view=evaluation.participant(p.id),

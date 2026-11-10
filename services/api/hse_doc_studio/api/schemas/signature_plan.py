@@ -69,6 +69,8 @@ class DocPlanResponse(BaseModel):
     built: bool
     frozen: PlanFrozenResponse | None = None
     slots: list[PlanSlotResponse]
+    # Документ держит идущий маршрут подписания: фиксирует его только маршрут, сам по себе он не «устарел».
+    held_by_route: bool = False
 
 
 class PlanRouteResponse(BaseModel):
@@ -155,6 +157,7 @@ def _map_doc(doc: DocPlan, routes: PlanRoutes) -> DocPlanResponse:
         if frozen is not None
         else None,
         slots=[_map_slot(s, routes) for s in doc.slots],
+        held_by_route=doc.doc_id in routes.held_docs,
     )
 
 
@@ -167,7 +170,13 @@ def map_plan(plan: SignaturePlan, routes: PlanRoutes | None = None) -> Signature
         signed=plan.signed,
         crypto_total=len(crypto),
         crypto_signed=sum(1 for s in crypto if s.status is SlotStatus.signed),
-        waiting_for_me=plan.waiting_for_me,
+        # Слот документа идущего маршрута ждёт человека, только когда маршрут ждёт его самого: иначе счётчик
+        # звал бы подписать то, что сейчас подписать нельзя.
+        waiting_for_me=sum(
+            1
+            for s in plan.slots
+            if s.is_mine and s.status is not SlotStatus.signed and routes.is_turn(s.doc_id, s.slot_id)
+        ),
         docs=[_map_doc(d, routes) for d in plan.docs],
         route=_map_route(routes.route) if routes.route is not None else None,
     )

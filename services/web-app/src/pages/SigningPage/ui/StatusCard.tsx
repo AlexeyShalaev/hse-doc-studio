@@ -8,7 +8,12 @@ import {
   PenLine,
   Undo2,
 } from "lucide-react";
-import type { RouteSignMethod, SigningTask } from "@entities/signing-route";
+import {
+  taskWaitOf,
+  type RouteSignMethod,
+  type SigningTask,
+} from "@entities/signing-route";
+import { useWaitText } from "@features/signing-route-progress";
 import type { SigningPerson, SigningStatus } from "../lib/signingState";
 
 type Tone = "turn" | "ok" | "warn" | "idle";
@@ -72,6 +77,11 @@ export const StatusCard = ({
   const { t } = useTranslation("signing");
   const need = useNeedLine(task, status);
   const { tone, icon } = look(status);
+  // Почему ждём и кого: согласие идёт по шагам, ЭП после фиксации PDF (раздел 4.2).
+  const waitText = useWaitText();
+  const wait = taskWaitOf(task);
+  const lead = wait ? waitText.lead(wait) : null;
+  const waitingNow = wait ? waitText.now(wait) : null;
 
   const body = ((): { title: string; lines: string[] } => {
     switch (status.kind) {
@@ -84,6 +94,15 @@ export const StatusCard = ({
           ],
         };
       case "not_yet": {
+        if (lead !== null)
+          return {
+            title: t("status.notYetTitle"),
+            lines: [
+              lead,
+              ...(waitingNow ? [waitingNow] : []),
+              t("status.notYetLater"),
+            ],
+          };
         const now = names(status.now);
         return {
           title: t("status.notYetTitle"),
@@ -97,7 +116,10 @@ export const StatusCard = ({
       case "approved":
         return {
           title: t("status.approvedTitle"),
-          lines: [t("status.approvedBody")],
+          lines:
+            lead !== null
+              ? [lead, ...(waitingNow ? [waitingNow] : [])]
+              : [t("status.approvedBody")],
         };
       case "done": {
         const next = names(status.next);
