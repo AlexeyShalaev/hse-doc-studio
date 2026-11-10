@@ -11,6 +11,8 @@ name: E2E server-lite
 # три шарда, у каждого свой стенд. Телефонный проект (~16 минут из ~20) делится по файлам по замеренной
 # длительности; файл, не закреплённый ни за одним шардом, уходит в rest, так что новый сценарий не потеряется.
 # Отчёты шардов сводит джоб report: один HTML-отчёт e2e-report и общий артефакт e2e-screenshots.
+# Маршрут подписания (signing-route.spec.ts, ~1.5 мин) идёт в rest последним: ему нужен общий раннер с поддельным
+# TeX, а M1 проверяет стенд без раннеров.
 
 on:
   push:
@@ -151,9 +153,17 @@ jobs:
           PLAYWRIGHT_BLOB_OUTPUT_DIR: ${{ env.BLOB_DIR }}/runner-install
         run: make e2e-runner-install
 
+      # Последним в rest: цель поднимает общий раннер с поддельным TeX и гасит его после прогона. gpg для
+      # готовой открепленной подписи академрука есть на раннере GitHub.
+      - name: Signing route (fake-TeX runner, gpg)
+        if: matrix.shard == 'rest'
+        env:
+          PLAYWRIGHT_BLOB_OUTPUT_DIR: ${{ env.BLOB_DIR }}/signing-route
+        run: make e2e-signing-route
+
       - name: Stand logs on failure
         if: failure()
-        run: docker compose -p hse-doc-studio-server-lite -f scripts/dev/server-lite/compose.yml --env-file scripts/dev/server-lite/.env logs --no-color --tail 300
+        run: docker compose -p hse-doc-studio-server-lite -f scripts/dev/server-lite/compose.yml --env-file scripts/dev/server-lite/.env --profile runner logs --no-color --tail 300
 
       - uses: actions/upload-artifact@v7
         if: ${{ !cancelled() }}
@@ -182,7 +192,7 @@ jobs:
 
       - name: Stand down
         if: always()
-        run: docker compose -p hse-doc-studio-server-lite -f scripts/dev/server-lite/compose.yml --env-file scripts/dev/server-lite/.env --profile seed down --volumes --remove-orphans
+        run: docker compose -p hse-doc-studio-server-lite -f scripts/dev/server-lite/compose.yml --env-file scripts/dev/server-lite/.env --profile seed --profile runner down --volumes --remove-orphans
 
   # Сводка шардов: один HTML-отчёт по всем сценариям и все скриншоты одним артефактом, как до деления.
   report:

@@ -28,11 +28,6 @@ from collections.abc import AsyncGenerator, AsyncIterator, Callable
 from pathlib import Path
 
 from dishka import make_async_container, provide
-from pydantic import SecretStr
-from reportlab.lib.pagesizes import A4
-from reportlab.lib.units import mm
-from reportlab.pdfgen import canvas
-
 from hse_doc_studio.core.jobs.protocols import ProcessHandle
 from hse_doc_studio.core.mode import StudioMode
 from hse_doc_studio.infra.compile.backend import BuildBackend
@@ -43,6 +38,10 @@ from hse_doc_studio.infra.di.containers.runner import RunnerProvider
 from hse_doc_studio.infra.runner.config import RunnerConfig
 from hse_doc_studio.infra.runner.loop import RunnerLoop
 from hse_doc_studio.use_cases.jobs.runners import RunnerRegistry
+from pydantic import SecretStr
+from reportlab.lib.pagesizes import A4
+from reportlab.lib.units import mm
+from reportlab.pdfgen import canvas
 
 logger = logging.getLogger("fake-tex-runner")
 
@@ -122,7 +121,7 @@ class FakeTexRunnerProvider(RunnerProvider):
     """Настоящий раннер, у которого исполнитель TeX поддельный."""
 
     @provide
-    async def get_build_backend(self, config: RunnerConfig) -> AsyncIterator[BuildBackend]:  # type: ignore[override]
+    async def get_build_backend(self, config: RunnerConfig) -> AsyncIterator[BuildBackend]:
         yield BuildBackend(
             executor=FakeTexExecutor(),
             environment=FakeTexEnvironment(),

@@ -148,7 +148,7 @@ server-lite-down: $(SERVER_LITE_ENV)
 # Общий раннер с поддельным TeX (fake_tex_runner.py): собранный PDF и проверка подписей без образа TeX Live.
 # Пока он запущен, сборки всех людей стенда идут на нём, поэтому сценарии «стенд без раннеров» идут до него.
 server-lite-runner-up: $(SERVER_LITE_ENV)
-	$(SERVER_LITE_COMPOSE) --profile runner up --build -d runner
+	$(SERVER_LITE_COMPOSE) --profile runner up --build -d --no-deps runner
 
 server-lite-runner-down: $(SERVER_LITE_ENV)
 	$(SERVER_LITE_COMPOSE) --profile runner stop runner

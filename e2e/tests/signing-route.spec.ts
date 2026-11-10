@@ -28,16 +28,18 @@ import { Client, type Json } from "./stack";
  *    нарисованной подписью. Академрук задаёт плашку открытым ключом OpenPGP, согласует (документы фиксируются) и
  *    подписывает итоговый PDF готовой открепленной подписью gpg. Маршрут завершён: «Все подписали»; в итоговом PDF
  *    картинки автора и научрука и плашка академрука, подпись действительна и относится к этому PDF.
- * 2. Возврат и повторная отправка: научрук согласовал, академрук вернул на доработку с комментарием; автор видит
+ *    По дороге: неразмещённая подпись мешает отправке, «Скопировать ссылку» даёт адрес страницы подписи.
+ * 2. Сторож и сброс пересборкой: пока маршрут идёт, подписи документа маршрута менять нельзя (в интерфейсе панель
+ *    подписей закрыта с пояснением «Документ на подписании», правка размещения мимо интерфейса получает 409
+ *    `route_locked`); сборка без правок маршрут не останавливает (тот же PDF), а сборка после правки
+ *    останавливает: «Документ изменился после согласования».
+ * 3. Возврат и повторная отправка: научрук согласовал, академрук вернул на доработку с комментарием; автор видит
  *    комментарий на карточке, правит и пересобирает документ, «Отправить заново»: новый раунд, согласие научрука
  *    сброшено (его документ изменился), его картинка на месте, повторное согласие одним нажатием.
- * 3. Сброс пересборкой: пока маршрут идёт, сборка без правок маршрут не останавливает (тот же PDF), а сборка после
- *    правки останавливает: «Документ изменился после согласования».
- * 4. Сторож: пока маршрут идёт, подписи документа маршрута менять нельзя: в интерфейсе панель подписей закрыта
- *    с пояснением «Документ на подписании», правка размещения мимо интерфейса получает 409 `route_locked`.
  *
- * Сценарии 2-4 готовят маршрут через API в начале прогона: отправлять заново можно не раньше чем через минуту.
- * Скриншоты: screenshots/ru/sr-*.png.
+ * Маршруты сценариев 2 и 3 отправляются через API в начале прогона: отправлять заново можно не раньше чем через
+ * минуту после прошлой отправки, остаток этой минуты сценарий 3 ждёт по времени отправки. Скриншоты:
+ * screenshots/ru/sr-*.png.
  */
 
 const baseURL = process.env.E2E_BASE_URL ?? "http://localhost:8100";
@@ -258,6 +260,10 @@ const register = async (
     headers: { Origin: ORIGIN },
   });
   expect(login.status(), await login.text()).toBe(200);
+  // «Скопировать ссылку» кладёт адрес в буфер обмена.
+  await context.grantPermissions(["clipboard-read", "clipboard-write"], {
+    origin: ORIGIN,
+  });
   return { ...who, client, id: String(user.id), context };
 };
 
@@ -454,13 +460,34 @@ const sendRouteViaApi = async (
   return route.id;
 };
 
-/** Отправлять заново можно через минуту после прошлой отправки: ждём остаток этой минуты по времени сервера. */
-const waitResendAllowed = async (route: Route, page: Page): Promise<void> => {
+/**
+ * «Отправить заново» на карточке точки. Отправлять заново можно через минуту после прошлой отправки: сначала ждём
+ * остаток этой минуты от времени отправки, а если часы хоста и сервера разошлись и сервер ответил 429, ждём столько,
+ * сколько он назвал (`retry_after`), и нажимаем ещё раз.
+ */
+const resendFromCard = async (page: Page, route: Route): Promise<void> => {
   const left = Date.parse(route.sent_at ?? "") + RESEND_INTERVAL_MS - Date.now();
   if (left > 0) {
     log(`до повторной отправки ${Math.ceil(left / 1000)} с`);
     await page.waitForTimeout(left);
   }
+  const press = async () => {
+    const reply = page.waitForResponse(
+      (r) =>
+        r.request().method() === "POST" &&
+        r.url().endsWith(`/signing-routes/${route.id}/send`),
+    );
+    await page.getByTestId("signing-resend").click();
+    return reply;
+  };
+  let reply = await press();
+  if (reply.status() === 429) {
+    const retry = Number(((await reply.json()) as { retry_after?: number }).retry_after ?? 1);
+    log(`сервер просит подождать ещё ${retry} с`);
+    await page.waitForTimeout((retry + 1) * 1000);
+    reply = await press();
+  }
+  expect(reply.status(), await reply.text()).toBe(200);
 };
 
 // ---------------------------------------------------------------- страница подписанта
@@ -589,7 +616,7 @@ test.describe("маршрут подписания: отправка, подпи
       )
       .toBe(true);
 
-    // Маршруты сценариев 2 и 3 отправлены заранее: к повторной отправке минута уже пройдёт.
+    // Маршруты сценариев 2 и 3 отправлены заранее: минута до повторной отправки идёт, пока работают сценарии 1 и 2.
     returnedRoute = await sendRouteViaApi(student, returned);
     resetRoute = await sendRouteViaApi(student, reset);
     log("маршруты отправлены", { returnedRoute, resetRoute });
@@ -642,6 +669,13 @@ test.describe("маршрут подписания: отправка, подпи
     ).toBeVisible();
     await expect(steps.getByTestId("route-step-3")).toContainText(ACADEMIC.name);
 
+    // Неразмещённая подпись мешает отправке: иначе её слот никогда не станет подписанным.
+    const sendCard = page.getByTestId("route-send-card");
+    await expect(sendCard.getByTestId("route-blockers")).toContainText(
+      "подпись не размещена на странице",
+    );
+    await expect(sendCard.getByTestId("route-send")).toBeDisabled();
+
     // Размещение: каждая подпись маршрута на первой странице своего документа.
     for (const doc of [
       { name: "Заявление о выборе темы КП", slots: ["author", "supervisor", "academic_supervisor"] },
@@ -673,7 +707,6 @@ test.describe("маршрут подписания: отправка, подпи
     await expect(mine).toContainText("Картинка подписи загружена");
 
     // Отправка: помех нет, после отправки автор на точке видит ход маршрута.
-    const sendCard = page.getByTestId("route-send-card");
     await expect(sendCard.getByTestId("route-blockers")).toHaveCount(0);
     await expect(sendCard.getByTestId("route-send")).toBeEnabled();
     await sendCard.getByTestId("route-send").click();
@@ -695,6 +728,13 @@ test.describe("маршрут подписания: отправка, подпи
     expect(person(route, "author").approved_at).not.toBeNull();
     // Академрук ещё не в очереди: задачи у него нет.
     expect(await signingTasks(academic.client)).not.toContain(routeId);
+
+    // «Скопировать ссылку» у того, чья очередь (почты на стенде нет): адрес его страницы подписи.
+    await card.getByTestId(`signing-copy-${person(route, "supervisor").id}`).click();
+    await expect(page.getByText("Ссылка скопирована")).toBeVisible();
+    expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(
+      `${ORIGIN}${signingPath(happy, routeId)}`,
+    );
 
     // Научрук: «Входящие → На подпись», страница подписи, нарисованная подпись, «Согласовать».
     const sup = await supervisor.context.newPage();
@@ -785,68 +825,7 @@ test.describe("маршрут подписания: отправка, подпи
     expect(signature?.signer).toContain(ACADEMIC.name);
   });
 
-  test("2. возврат на доработку и повторная отправка: согласие научрука сброшено, картинка на месте", async () => {
-    test.setTimeout(180_000);
-    // Научрук согласует нарисованной подписью.
-    const sup = await supervisor.context.newPage();
-    await openFromInbox(sup, returned, returnedRoute);
-    await drawSignature(sup);
-    await approveOnPage(sup);
-
-    // Академрук возвращает на доработку с комментарием.
-    const aca = await academic.context.newPage();
-    await openFromInbox(aca, returned, returnedRoute);
-    await aca.getByTestId("signing-return").click();
-    await aca.getByTestId("signing-return-comment").fill(RETURN_COMMENT);
-    await aca.getByTestId("signing-return-submit").click();
-    await expect(aca.getByTestId("signing-page")).toHaveAttribute("data-state", "returned");
-    expect(await signingTasks(academic.client)).not.toContain(returnedRoute);
-
-    // Автор видит комментарий на карточке точки.
-    const page = await student.context.newPage();
-    await page.goto(checkpointPath(returned));
-    const status = page.getByTestId("signing-status");
-    await expect(status).toHaveAttribute("data-status", "returned");
-    await expect(status).toContainText(ACADEMIC.name);
-    await expect(status).toContainText(RETURN_COMMENT);
-    await shot(page, "ru", "sr-07-returned");
-
-    // «Открыть документ»: правка и пересборка заявления.
-    await page.getByTestId("signing-open-doc").click();
-    await expect(page).toHaveURL(new RegExp(`/projects/${returned}/documents/${APPLICATION}`));
-    const before = sha256(await fileBytes(student.client, returned, APPLICATION_PDF));
-    await editApplication(student.client, returned, `уточнена цель проекта ${RUN}`);
-    await buildInUi(page, student.client, returned, APPLICATION);
-    expect(sha256(await fileBytes(student.client, returned, APPLICATION_PDF))).not.toBe(before);
-
-    // «Отправить заново»: новый раунд с шага 1, автор согласовал отправкой, научрук снова в очереди.
-    await page.goto(checkpointPath(returned));
-    await expect(status).toHaveAttribute("data-status", "returned");
-    await waitResendAllowed(await routeOf(student.client, returned, returnedRoute), page);
-    await page.getByTestId("signing-resend").click();
-    await expect(status).toHaveAttribute("data-status", "active");
-    await expect(status).toContainText("Шаг 2 из 3");
-    await shot(page, "ru", "sr-08-resent");
-    let route = await routeOf(student.client, returned, returnedRoute);
-    expect(route.round).toBe(2);
-    expect(person(route, "author").approved_at).not.toBeNull();
-    // Документ научрука изменился: прежнее согласие не перенесено.
-    expect(person(route, "supervisor").approved_at).toBeNull();
-    expect(person(route, "supervisor").state).toBe("to_approve");
-    expect(person(route, "academic_supervisor").state).toBe("waiting");
-
-    // Научрук: картинка уже на месте, повторное согласие одним нажатием.
-    await openFromInbox(sup, returned, returnedRoute);
-    await expect(sup.getByTestId("signing-image-ready")).toBeVisible();
-    await shot(sup, "ru", "sr-09-supervisor-again");
-    await approveOnPage(sup);
-    route = await routeOf(student.client, returned, returnedRoute);
-    expect(route.current_step).toBe(3);
-    expect(person(route, "academic_supervisor").state).toBe("to_approve");
-    expect(await signingTasks(academic.client)).toContain(returnedRoute);
-  });
-
-  test("3-4. пока маршрут идёт: подписи закрыты, сборка без правок не мешает, правка останавливает", async () => {
+  test("2. пока маршрут идёт: подписи закрыты, сборка без правок не мешает, правка останавливает", async () => {
     test.setTimeout(180_000);
     const page = await student.context.newPage();
 
@@ -859,7 +838,7 @@ test.describe("маршрут подписания: отправка, подпи
       page.getByText("Документ на подписании: подписи менять нельзя", { exact: false }),
     ).toBeVisible();
     await expect(page.getByTestId("doc-signatures-panel")).toHaveAttribute("inert", "");
-    await shot(page, "ru", "sr-10-locked");
+    await shot(page, "ru", "sr-07-locked");
     // Мимо интерфейса правка размещения тоже отклоняется.
     const refused = await student.client.patch(
       `/api/v1/projects/${reset}/signatures/placements/${APPLICATION}/author`,
@@ -893,7 +872,7 @@ test.describe("маршрут подписания: отправка, подпи
     await expect(status).toHaveAttribute("data-status", "paused");
     await expect(status).toContainText("Документ изменился после согласования");
     await expect(page.getByTestId("signing-resend")).toBeVisible();
-    await shot(page, "ru", "sr-11-paused");
+    await shot(page, "ru", "sr-08-paused");
 
     // Подписи снова можно менять: маршрут их больше не держит.
     const allowed = await student.client.patch(
@@ -901,5 +880,66 @@ test.describe("маршрут подписания: отправка, подпи
       { x_mm: 120 },
     );
     expect(allowed.status(), await allowed.text()).toBe(200);
+  });
+
+  test("3. возврат на доработку и «Отправить заново»: согласие научрука сброшено, картинка на месте", async () => {
+    test.setTimeout(180_000);
+    // Научрук согласует нарисованной подписью.
+    const sup = await supervisor.context.newPage();
+    await openFromInbox(sup, returned, returnedRoute);
+    await drawSignature(sup);
+    await approveOnPage(sup);
+
+    // Академрук возвращает на доработку с комментарием.
+    const aca = await academic.context.newPage();
+    await openFromInbox(aca, returned, returnedRoute);
+    await aca.getByTestId("signing-return").click();
+    await aca.getByTestId("signing-return-comment").fill(RETURN_COMMENT);
+    await aca.getByTestId("signing-return-submit").click();
+    await expect(aca.getByTestId("signing-page")).toHaveAttribute("data-state", "returned");
+    expect(await signingTasks(academic.client)).not.toContain(returnedRoute);
+
+    // Автор видит комментарий на карточке точки.
+    const page = await student.context.newPage();
+    await page.goto(checkpointPath(returned));
+    const status = page.getByTestId("signing-status");
+    await expect(status).toHaveAttribute("data-status", "returned");
+    await expect(status).toContainText(ACADEMIC.name);
+    await expect(status).toContainText(RETURN_COMMENT);
+    await shot(page, "ru", "sr-09-returned");
+
+    // «Открыть документ»: правка и пересборка заявления.
+    await page.getByTestId("signing-open-doc").click();
+    await expect(page).toHaveURL(new RegExp(`/projects/${returned}/documents/${APPLICATION}`));
+    const before = sha256(await fileBytes(student.client, returned, APPLICATION_PDF));
+    await editApplication(student.client, returned, `уточнена цель проекта ${RUN}`);
+    await buildInUi(page, student.client, returned, APPLICATION);
+    expect(sha256(await fileBytes(student.client, returned, APPLICATION_PDF))).not.toBe(before);
+
+    // «Отправить заново»: новый раунд с шага 1, автор согласовал отправкой, научрук снова в очереди.
+    await page.goto(checkpointPath(returned));
+    await expect(status).toHaveAttribute("data-status", "returned");
+    await resendFromCard(page, await routeOf(student.client, returned, returnedRoute));
+    await expect(page.getByText("Отправлено заново")).toBeVisible();
+    await expect(status).toHaveAttribute("data-status", "active");
+    await expect(status).toContainText("Шаг 2 из 3");
+    await shot(page, "ru", "sr-10-resent");
+    let route = await routeOf(student.client, returned, returnedRoute);
+    expect(route.round).toBe(2);
+    expect(person(route, "author").approved_at).not.toBeNull();
+    // Документ научрука изменился: прежнее согласие не перенесено.
+    expect(person(route, "supervisor").approved_at).toBeNull();
+    expect(person(route, "supervisor").state).toBe("to_approve");
+    expect(person(route, "academic_supervisor").state).toBe("waiting");
+
+    // Научрук: картинка уже на месте, повторное согласие одним нажатием.
+    await openFromInbox(sup, returned, returnedRoute);
+    await expect(sup.getByTestId("signing-image-ready")).toBeVisible();
+    await shot(sup, "ru", "sr-11-supervisor-again");
+    await approveOnPage(sup);
+    route = await routeOf(student.client, returned, returnedRoute);
+    expect(route.current_step).toBe(3);
+    expect(person(route, "academic_supervisor").state).toBe("to_approve");
+    expect(await signingTasks(academic.client)).toContain(returnedRoute);
   });
 });
