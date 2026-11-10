@@ -3,6 +3,11 @@
 Два шага. Предпросмотр говорит, что будет сделано: какие PDF зафиксировать, чьи подписи это сбросит, какие слоты
 актора подписать и каким ключом, что мешает. Подпись повторяет расчёт и сверяет отпечатки документов с теми, что
 видел человек: пересборка между шагами даёт отказ, а не подпись новой версии.
+
+Документ идущего маршрута подписания (docs/design/signing-route.md, раздел 6.10) комплект не фиксирует: это делает
+только маршрут. Слоты такого документа подписываются, только когда маршрут ждёт подписи актора; иначе у документа
+причина «Документ на подписании по маршруту» и id маршрута для ссылки на страницу подписи. После подписи слота
+маршрута маршрут пересчитывается.
 """
 
 from __future__ import annotations
@@ -34,6 +39,8 @@ from hse_doc_studio.core.signatures.plan import (
     SlotStatus,
     reason_hint,
 )
+from hse_doc_studio.core.signing_route.entities import DocSlot
+from hse_doc_studio.core.signing_route.ports import ISigningRouteGate, NoSigningRoutes, RouteHold
 from hse_doc_studio.core.value_objects import SignaturesState, SignerInfo
 from hse_doc_studio.use_cases.projects.get_project import GetProjectInput, GetProjectUC
 from hse_doc_studio.use_cases.signatures._doc_context import load_doc_context
@@ -125,6 +132,23 @@ class DocPreview:
     resets: tuple[ResetItem, ...]
     slots: tuple[SlotAction, ...]
     blocker: str = ""
+    # Идущий маршрут подписания, который держит документ: комплект его не фиксирует (signing-route.md, 6.10).
+    route_id: UUID | None = None
+
+
+def route_hold_message() -> str:
+    return localized_error("Документ на подписании по маршруту", "The document is on a signing route")
+
+
+def _route_slots(preview: SignSubmissionPreview) -> list[DocSlot]:
+    """Слоты документов идущего маршрута, которые комплект сейчас подпишет."""
+    return [
+        DocSlot(doc.doc_id, slot.slot_id)
+        for doc in preview.docs
+        if doc.route_id is not None and not doc.blocker
+        for slot in doc.slots
+        if slot.action == "sign" and not slot.blocker
+    ]
 
 
 @dataclass(frozen=True)
@@ -174,7 +198,9 @@ class SignSubmissionUC:
         signer: StudioSigner,
         default_key: DefaultSigningKey,
         access: IProjectAccessChecker,
+        routes: ISigningRouteGate | None = None,
     ) -> None:
+        self._routes: ISigningRouteGate = routes or NoSigningRoutes()
         self._signature_repo = signature_repo
         self._template_repo = template_repo
         self._template_service = template_service
@@ -214,24 +240,32 @@ class SignSubmissionUC:
 
     async def execute(self, inp: SignSubmissionInput) -> SignSubmissionOutput:
         project = (await self._get_uc.execute(GetProjectInput(project_id=inp.project_id))).project
-        async with project_lock(project):
-            preview = await self.preview(inp)
-            self._check_confirmations(inp, preview)
-            identity = await self._default_key.resolve(inp.identity_id)
-            if identity is not None:
-                # Запрет админа проверяется до фиксации: незачем фиксировать PDF заново, если подписать им нельзя.
-                await self._signer.require_key_allowed()
-            signer = await self._key_signer(identity)
-            frozen_docs: list[str] = []
-            results: list[SlotResult] = []
-            for doc in preview.docs:
-                if doc.blocker:
-                    results.extend(SlotResult(doc.doc_id, s.slot_id, False, doc.blocker) for s in doc.slots)
-                    continue
-                if doc.needs_freeze:
-                    await self._freeze(project, doc, signer)
-                    frozen_docs.append(doc.doc_id)
-                results.extend(await self._sign_doc(project, doc, identity, inp.passphrase))
+        # Слоты документов идущего маршрута, которые комплект подписывает: маршрут пересчитывается после них,
+        # вне `project_lock` (пересчёт берёт его сам) и при сбое посреди подписи тоже.
+        on_route: list[DocSlot] = []
+        try:
+            async with project_lock(project):
+                preview = await self.preview(inp)
+                self._check_confirmations(inp, preview)
+                identity = await self._default_key.resolve(inp.identity_id)
+                if identity is not None:
+                    # Запрет админа проверяется до фиксации: незачем фиксировать PDF заново, если подписать нельзя.
+                    await self._signer.require_key_allowed()
+                signer = await self._key_signer(identity)
+                frozen_docs: list[str] = []
+                results: list[SlotResult] = []
+                on_route += _route_slots(preview)
+                for doc in preview.docs:
+                    if doc.blocker:
+                        results.extend(SlotResult(doc.doc_id, s.slot_id, False, doc.blocker) for s in doc.slots)
+                        continue
+                    if doc.needs_freeze:
+                        await self._freeze(project, doc, signer)
+                        frozen_docs.append(doc.doc_id)
+                    results.extend(await self._sign_doc(project, doc, identity, inp.passphrase))
+        finally:
+            if on_route:
+                await self._routes.signatures_written(project.id, on_route)
         signed = sum(1 for r in results if r.ok)
         await self._signer.audit.record(
             "signature.submission_sign",
@@ -289,6 +323,9 @@ class SignSubmissionUC:
         mine = [s for s in doc.slots if s.is_mine and s.status is not SlotStatus.signed]
         if not mine:
             return None
+        hold = await self._routes.hold(project.id, doc.doc_id)
+        if hold is not None:
+            return await self._held_preview(project, state, doc, mine, hold, identity, signer)
         crypto_pending = any(s.state.method in CRYPTO_METHODS for s in mine)
         uses_frozen = doc.has_crypto
         needs_freeze = (crypto_pending or uses_frozen) and (doc.frozen is None or doc.frozen_outdated is not None)
@@ -310,6 +347,28 @@ class SignSubmissionUC:
                 "The PDF has to be frozen again, which only the project author can do: ask them",
             )
         return DocPreview(doc.doc_id, token, needs_freeze, can_freeze, resets, actions, blocker)
+
+    async def _held_preview(  # noqa: PLR0913 — те же входы, что у разбора свободного документа
+        self,
+        project: Project,
+        state: SignaturesState,
+        doc: DocPlan,
+        mine: list[PlanSlot],
+        hold: RouteHold,
+        identity: SigningIdentity | None,
+        signer: SignerInfo | None,
+    ) -> DocPreview:
+        """Документ идущего маршрута: без фиксации, слоты только в очередь актора на подпись (раздел 6.10)."""
+        waiting = route_hold_message()
+        actions = tuple(
+            self._slot_action(state, s, identity, signer)
+            if s.slot_id in hold.signable and s.state.method in CRYPTO_METHODS
+            else SlotAction(s.slot_id, s.label, s.state.method, s.status, "none", blocker=waiting)
+            for s in mine
+        )
+        token = await self._token(project, state, doc, needs_freeze=False)
+        blocker = "" if any(a.action == "sign" for a in actions) else waiting
+        return DocPreview(doc.doc_id, token, False, True, (), actions, blocker, route_id=hold.route_id)
 
     @staticmethod
     def _slot_action(

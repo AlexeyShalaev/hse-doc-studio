@@ -415,6 +415,7 @@ tags:
 | `HSE_STUDIO__SIGNING_ROUTE__REMINDER_BEFORE_DEADLINE_HOURS` | float | `24.0` | server | За сколько часов до срока маршрута подписант, чья очередь, получает автонапоминание. |
 | `HSE_STUDIO__SIGNING_ROUTE__REMINDER_WAITING_DAYS` | float | `3.0` | server | Через сколько суток без запросов и напоминаний подписанту в очереди уходит автонапоминание. |
 | `HSE_STUDIO__SIGNING_ROUTE__REMINDER_MAX_AUTO` | int | `3` | server | Сколько автонапоминаний получает один подписант за одну отправку маршрута; 0 выключает их. |
+| `HSE_STUDIO__SIGNING_ROUTE__SWEEP_INTERVAL_S` | float | `300.0` | server | Как часто сервер сверяет идущие маршруты подписания с документами проектов, в секундах. |
 | `HSE_STUDIO__MODE` | local / server | `local` | оба | Instance mode: 'local' (single-user install) or 'server' (shared; not supported yet). |
 | `HSE_STUDIO__DATA_DIR` | Path | `~/.config/hse-studio` | оба | Local data storage directory |
 | `HSE_STUDIO__HOST_DATA_DIR` | str | не задано | оба | Host path of data_dir for sibling-container mounts; None when backend runs natively. |

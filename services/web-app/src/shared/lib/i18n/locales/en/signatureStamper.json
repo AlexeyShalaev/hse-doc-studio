@@ -299,6 +299,7 @@
     "passphrase": "Key passphrase (not stored)",
     "nothing": "No signatures of yours are awaited at this checkpoint",
     "willFreeze": "The PDF will be frozen for signing: images and plates go onto the page",
+    "openSigningPage": "Open the signing page",
     "method": {
       "image": "image",
       "detached": "detached e-signature",

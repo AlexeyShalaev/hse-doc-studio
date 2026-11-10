@@ -2,11 +2,13 @@ import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { AlertTriangle, Check, X } from "lucide-react";
 import { isAxiosError } from "axios";
+import { Link } from "react-router";
 import {
   usePreviewSignSubmission,
   useSignSubmission,
 } from "@entities/signature";
 import { useSigningIdentities } from "@entities/signing-identity";
+import { signingPagePath } from "@entities/signing-route";
 import { pickLocalized } from "@shared/lib";
 import { Modal } from "@shared/ui";
 import { Spinner } from "@shared/ui/Spinner";
@@ -190,6 +192,16 @@ export const SignSubmissionDialog = ({
                 <span style={{ fontSize: "0.71875rem", color: "var(--c-err)" }}>
                   {doc.blocker}
                 </span>
+              )}
+              {/* Документ на подписании по маршруту: комплект его не трогает, подписывают на странице подписи. */}
+              {doc.route_id != null && doc.blocker !== "" && (
+                <Link
+                  to={signingPagePath(projectId, doc.route_id)}
+                  style={{ fontSize: "0.71875rem" }}
+                  data-testid={`sign-submission-route-${doc.doc_id}`}
+                >
+                  {t("signSubmission.openSigningPage")}
+                </Link>
               )}
               {doc.slots.map((slot) => (
                 <span

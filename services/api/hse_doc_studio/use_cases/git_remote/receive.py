@@ -28,6 +28,7 @@ from hse_doc_studio.core.git_sync.protocols import IGitOperationRegistry
 from hse_doc_studio.core.i18n import current_interface_language, localized_error
 from hse_doc_studio.core.identity.protocols import IAuditLog
 from hse_doc_studio.core.project_schema import PROJECT_SCHEMA_VERSION
+from hse_doc_studio.core.signing_route.ports import IRouteWatch, NoRouteWatch
 from hse_doc_studio.core.vcs.protocols import IVcsFolderLocks, IVcsService
 from hse_doc_studio.use_cases.git_remote.auth import GitAccess
 from hse_doc_studio.use_cases.projects.get_project_access import GetProjectAccessInput, GetProjectAccessUC
@@ -79,6 +80,7 @@ class ReceivePushUC:
         reconciler: IExternalChangeReconciler,
         audit: IAuditLog,
         limits: PushLimits,
+        route_watch: IRouteWatch | None = None,
     ) -> None:
         self._project_access = project_access
         self._operations = operations
@@ -88,6 +90,8 @@ class ReceivePushUC:
         self._reconciler = reconciler
         self._audit = audit
         self._limits = limits
+        # Принятый push меняет файлы проекта мимо маршрута подписания: маршруты проекта сверяются.
+        self._route_watch: IRouteWatch = route_watch or NoRouteWatch()
 
     async def advertise(self, access: GitAccess) -> None:
         """Перед рекламой ссылок для push: снимок веб-правок под коротким замком.
@@ -181,6 +185,7 @@ class ReceivePushUC:
                     await self._reconciler.after_external_change(
                         access.project.id, access.project.folder, project_json_changed=PROJECT_JSON_PATH in paths
                     )
+                self._route_watch.on_project_changed(access.project.id)
             await self._audit.record(
                 "git.push",
                 actor_id=access.principal.user_id,

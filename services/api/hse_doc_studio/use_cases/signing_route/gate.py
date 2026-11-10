@@ -1,47 +1,56 @@
-"""Другие входы подписи слота маршрута (docs/design/signing-route.md, раздел 6.10).
+"""Маршрут у входов мимо страницы подписи (docs/design/signing-route.md, разделы 5.5, 6.1 и 6.10).
 
 Подписант ставит ЭП не только на своей странице ключом Студии: КриптоПро в браузере и готовая подпись идут
 существующими адресами плана подписей (`.../docs/{doc}/detached/{slot}`, `.../detached/{slot}/sign`,
-`.../embedded/{slot}/sign`). Для них маршрут делает две вещи:
+`.../embedded/{slot}/sign`), а ещё есть «Подписать комплект» и `sign_submission`. Для них маршрут:
 
 - до записи пускает к слоту идущего маршрута только его участника и только когда маршрут ждёт его подписи
-  (`to_sign`), иначе 409 `not_your_turn`;
+  (`to_sign`), иначе 409 `not_your_turn`; «Подписать комплект» спрашивает то же про документ целиком (`hold`);
 - после записи пересчитывает маршрут: событие `signed`, запрос следующему шагу, завершение.
 
-Правки подписей документов маршрута (`route_locked`), «Подписать комплект» и хуки сборки и синхронизации это
-сторожа и триггеры среза R7; пересчёт для них тот же (`signature_written` без слота тоже годится как сверка).
+Правки подписей документа идущего маршрута (размещения, настройка и картинка слота, подписант плашки, фиксация и
+её снятие, удаление открепленной подписи) закрыты: 409 `route_locked`. Маршрут, который по расчёту уже остановлен
+или завершён, ни очередь, ни правки не держит: остановку запишет сверка (`reconcile.py`).
+
+План подписей получает отсюда маршрут и состояния участников (`plan_routes`); чтение ничего не пишет.
 """
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from uuid import UUID
 
 import structlog
 
-from hse_doc_studio.core.access.context import require_actor
+from hse_doc_studio.core.access.context import current_actor
 from hse_doc_studio.core.access.entities import ActorKind
-from hse_doc_studio.core.signatures.plan import CRYPTO_METHODS, method_of
-from hse_doc_studio.core.signing_route.engine import evaluate
+from hse_doc_studio.core.errors import NotFoundError
+from hse_doc_studio.core.signing_route.engine import Evaluation, evaluate
 from hse_doc_studio.core.signing_route.entities import (
+    HOLDING_STATUSES,
     WATCHING_STATUSES,
     DocSlot,
-    EventKind,
     NextAction,
+    ParticipantState,
     RouteConflictError,
-    RouteEvent,
     RouteStatus,
+    SigningRoute,
     not_your_turn,
+    route_locked,
 )
+from hse_doc_studio.core.signing_route.ports import PlanRoute, PlanRoutes, RouteHold
 from hse_doc_studio.core.signing_route.signer import unsigned_crypto
-from hse_doc_studio.use_cases.signatures._studio_signer import project_lock
-from hse_doc_studio.use_cases.signing_route.scenario import RouteScenario, actor_uuid, closing_events
+from hse_doc_studio.use_cases.signing_route.facts import LoadedFacts
+from hse_doc_studio.use_cases.signing_route.reconcile import RouteRecalculation
+from hse_doc_studio.use_cases.signing_route.scenario import actor_uuid
+from hse_doc_studio.use_cases.signing_route.watch import expect_recalculation, recalculation_done
 
 logger = structlog.get_logger()
 
 
 def _actor_id() -> UUID | None:
-    actor = require_actor()
-    if actor.kind is not ActorKind.user or not actor.id:
+    actor = current_actor()
+    if actor is None or actor.kind is not ActorKind.user or not actor.id:
         return None
     try:
         return actor_uuid(actor)
@@ -49,7 +58,13 @@ def _actor_id() -> UUID | None:
         return None
 
 
-class SigningRouteGate(RouteScenario):
+def _reads_routes() -> bool:
+    """Ход маршрута видит вошедший участник проекта: гостю и открывшему проект по ссылке маршрута нет (раздел 7)."""
+    actor = current_actor()
+    return actor is not None and actor.kind is ActorKind.user and actor.link_id is None
+
+
+class SigningRouteGate(RouteRecalculation):
     """`ISigningRouteGate` сервера."""
 
     async def require_turn(self, project_id: UUID, doc_id: str, slot_id: str) -> None:
@@ -57,50 +72,131 @@ class SigningRouteGate(RouteScenario):
         pair = DocSlot(doc_id, slot_id)
         if route is None or route.status is not RouteStatus.active or pair not in route.pairs:
             return
-        point = await self._s.points.load(project_id, route.profile_id)
-        loaded = await self._s.facts.load(point, route)
-        evaluation = evaluate(route, loaded.facts)
-        if evaluation.status is not RouteStatus.active:
+        calc = await self._going(route)
+        if calc is None:
             # Маршрут по расчёту уже остановлен или завершён: очереди нет, слот подписывается как без маршрута.
             return
+        _, evaluation = calc
         owner = next(p for p in route.participants if pair in p.assignments)
         if owner.user_id is None or owner.user_id != _actor_id():
             raise not_your_turn()
         if evaluation.participant(owner.id).next_action is not NextAction.sign:
             raise not_your_turn()
+        # Подпись слота маршрута: маршрут пересчитает `signature_written`, сверка по хуку записи не нужна.
+        expect_recalculation()
 
     async def signature_written(self, project_id: UUID, doc_id: str, slot_id: str) -> None:
-        held = await self._s.routes.holding(project_id, doc_id)
-        if held is None or held.status not in WATCHING_STATUSES:
-            return
-        try:
-            await self._recalculate(project_id, held.id, DocSlot(doc_id, slot_id))
-        except RouteConflictError:
-            # Подпись уже записана в файлы проекта; маршрут догонит её при следующем действии или сверке.
-            logger.warning("signing route not recalculated after a signature", route_id=str(held.id), exc_info=True)
+        await self.signatures_written(project_id, [DocSlot(doc_id, slot_id)])
 
-    async def _recalculate(self, project_id: UUID, route_id: UUID, pair: DocSlot) -> None:
-        at = self._s.clock()
-        actor_id = _actor_id()
-        async with self._s.uow.begin():
-            route = await self._s.routes.get(project_id, route_id, lock=True)
-            if route is None or route.status not in WATCHING_STATUSES:
-                return
-            point = await self._s.points.load(project_id, route.profile_id)
-            async with project_lock(point.project):
-                loaded = await self._s.facts.load(point, route)
-                if await self._stop_if_changed(point, route, loaded, at) is not None:
-                    return
-                settled = await self._settle(point, route, at, loaded)
-            events: list[RouteEvent] = []
-            owner = next((p for p in route.participants if pair in p.assignments), None)
-            slot = settled.loaded.state.slots.get(pair.slot_id)
-            crypto = slot is not None and method_of(slot.sign_mode) in CRYPTO_METHODS
-            if owner is not None and crypto and pair not in unsigned_crypto(owner, settled.loaded.facts):
-                details = {"doc_id": pair.doc_id, "slot_id": pair.slot_id}
-                events.append(
-                    RouteEvent(
-                        route.id, route.round, at, EventKind.signed, actor_id, participant_id=owner.id, details=details
-                    )
+    async def signatures_written(self, project_id: UUID, slots: Sequence[DocSlot]) -> None:
+        recalculation_done()
+        signed: dict[UUID, list[DocSlot]] = {}
+        for pair in slots:
+            held = await self._s.routes.holding(project_id, pair.doc_id)
+            if held is not None and held.status in WATCHING_STATUSES:
+                signed.setdefault(held.id, []).append(pair)
+        for route_id, pairs in signed.items():
+            try:
+                await self.recalculate(project_id, route_id, signed=pairs, actor_id=_actor_id())
+            except RouteConflictError:
+                # Подписи уже записаны в файлы проекта; маршрут догонит их при следующем действии или сверке.
+                logger.warning(
+                    "signing route not recalculated after a signature", route_id=str(route_id), exc_info=True
                 )
-            await self._commit(settled, [*events, *closing_events(settled, at)], actor_id=actor_id, at=at)
+
+    async def require_unlocked(
+        self, project_id: UUID, *, doc_id: str | None = None, slot_id: str | None = None
+    ) -> None:
+        if doc_id is not None:
+            held = await self._s.routes.holding(project_id, doc_id)
+            if held is not None and held.status is RouteStatus.active and await self._going(held) is not None:
+                raise route_locked()
+        if slot_id is None:
+            return
+        for route in await self._s.routes.list_for_project(project_id, statuses={RouteStatus.active}):
+            calc = await self._going(route)
+            if calc is not None and _slot_on_route(route, calc[0], slot_id):
+                raise route_locked()
+
+    async def hold(self, project_id: UUID, doc_id: str) -> RouteHold | None:
+        route = await self._s.routes.holding(project_id, doc_id)
+        if route is None or route.status is not RouteStatus.active:
+            return None
+        calc = await self._going(route)
+        if calc is None:
+            return None
+        loaded, evaluation = calc
+        actor_id = _actor_id()
+        signable = frozenset(
+            pair.slot_id
+            for p in route.participants
+            if actor_id is not None and p.user_id == actor_id
+            if evaluation.participant(p.id).next_action is NextAction.sign
+            for pair in unsigned_crypto(p, loaded.facts)
+            if pair.doc_id == doc_id
+        )
+        if signable:
+            # «Подписать комплект» подпишет слоты маршрута и пересчитает его сам (`signatures_written`).
+            expect_recalculation()
+        return RouteHold(route.id, route.profile_id, signable)
+
+    async def plan_routes(
+        self, project_id: UUID, *, profile_id: str | None = None, doc_id: str | None = None
+    ) -> PlanRoutes:
+        if not _reads_routes():
+            return PlanRoutes()
+        shown: PlanRoute | None = None
+        states: dict[DocSlot, ParticipantState] = {}
+        for route in await self._s.routes.list_for_project(project_id, statuses=HOLDING_STATUSES):
+            calc = await self._evaluated(route)
+            if calc is None:
+                continue
+            _, evaluation = calc
+            for p in route.participants:
+                for pair in p.assignments:
+                    states[pair] = evaluation.participant(p.id).state
+            wanted = route.profile_id == profile_id if profile_id is not None else doc_id in route.docs
+            if shown is None and wanted:
+                shown = _plan_route(route, evaluation)
+        return PlanRoutes(route=shown, slot_states=states)
+
+    async def _evaluated(self, route: SigningRoute) -> tuple[LoadedFacts, Evaluation] | None:
+        """Расчёт маршрута на текущих фактах; None, если точку сдачи уже не прочитать (проект или пак сняты)."""
+        try:
+            point = await self._s.points.load(route.project_id, route.profile_id)
+        except NotFoundError:
+            return None
+        loaded = await self._s.facts.load(point, route)
+        return loaded, evaluate(route, loaded.facts)
+
+    async def _going(self, route: SigningRoute) -> tuple[LoadedFacts, Evaluation] | None:
+        """Расчёт идущего маршрута; None, если по расчёту он уже не идёт (остановлен, завершён)."""
+        calc = await self._evaluated(route)
+        if calc is None or calc[1].status is not RouteStatus.active:
+            return None
+        return calc
+
+
+def _slot_on_route(route: SigningRoute, loaded: LoadedFacts, slot_id: str) -> bool:
+    """Слот входит в маршрут или стоит на его документе: правка слота меняет видимый слой документа маршрута."""
+    if any(pair.slot_id == slot_id for pair in route.pairs):
+        return True
+    placements = loaded.state.placements
+    return any(
+        (placement := placements.get(doc_id, {}).get(slot_id)) is not None and placement.enabled
+        for doc_id in route.docs
+    )
+
+
+def _plan_route(route: SigningRoute, evaluation: Evaluation) -> PlanRoute:
+    active = evaluation.status is RouteStatus.active
+    return PlanRoute(
+        id=route.id,
+        profile_id=route.profile_id,
+        status=evaluation.status,
+        phase=evaluation.phase,
+        round=route.round,
+        current_step=evaluation.step_position if active else None,
+        steps_total=len(route.steps),
+        stop_reason=evaluation.stop or route.stop_reason,
+    )

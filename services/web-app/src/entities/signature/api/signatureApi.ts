@@ -33,14 +33,18 @@ export const signatureApi = {
     params: {
       profileId?: string | null | undefined;
       author?: string | null | undefined;
+      docId?: string | null | undefined;
     } = {},
+    signal?: AbortSignal,
   ) =>
     apiClient
       .get(`/projects/${projectId}/signature-plan`, {
         params: {
           ...(params.profileId ? { profile_id: params.profileId } : {}),
           ...(params.author ? { author: params.author } : {}),
+          ...(params.docId ? { doc_id: params.docId } : {}),
         },
+        ...(signal ? { signal } : {}),
       })
       .then(parseResp(SignaturePlanSchema)),
 

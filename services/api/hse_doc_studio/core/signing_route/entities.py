@@ -132,7 +132,8 @@ class RouteInputError(ValueError):
 class RouteConflictError(Exception):
     """Действие несовместимо с состоянием маршрута (ответ 409, `not_participant` это 404).
 
-    Коды: `invalid_transition`, `not_participant`, `not_your_turn`, `image_required`, `plate_required`.
+    Коды: `invalid_transition`, `not_participant`, `not_your_turn`, `image_required`, `plate_required`,
+    `route_locked`.
     """
 
     def __init__(self, code: str, message: str) -> None:
@@ -144,6 +145,17 @@ def not_your_turn() -> RouteConflictError:
     """Действие участника не в его очередь, в том числе у маршрута, который не идёт (409 `not_your_turn`)."""
     return RouteConflictError(
         "not_your_turn", localized_error("Сейчас не ваша очередь по маршруту", "It is not your turn in the route")
+    )
+
+
+def route_locked() -> RouteConflictError:
+    """Правка подписей документа идущего маршрута мимо маршрута (409 `route_locked`, раздел 5.5)."""
+    return RouteConflictError(
+        "route_locked",
+        localized_error(
+            "Документ на подписании: отмените маршрут, чтобы изменить подписи",
+            "The document is out for signing: cancel the signing route to change its signatures",
+        ),
     )
 
 
