@@ -5,7 +5,7 @@ from __future__ import annotations
 import hashlib
 import json
 from collections.abc import Callable, Iterable, Sequence
-from dataclasses import asdict, dataclass, replace
+from dataclasses import asdict, dataclass, field, replace
 from datetime import date
 from pathlib import Path, PurePath
 
@@ -81,6 +81,9 @@ class Stamp:
     # Signing date rendered as text to the right of the PNG («12.05.2026»).
     # ASCII-only by design so the built-in Helvetica suffices.
     date_text: str | None = None
+    # Slot the mark belongs to, for error messages only: not part of the visible layer, so it stays out of
+    # equality, `repr` and the fingerprints (`stamps_digest`, `legacy_stamps_digest`).
+    slot_id: str | None = field(default=None, repr=False, compare=False)
 
 
 # What the memo «КП и ВКР на СПИ» asks to print in the signature field when the
@@ -168,13 +171,19 @@ def _project_relative(path: PurePath | None, root: PurePath) -> str | None:
     return (path.relative_to(root) if path.is_relative_to(root) else path).as_posix()
 
 
+def _digest_row(stamp: Stamp, root: PurePath) -> dict[str, object]:
+    row = {**asdict(stamp), "png_path": _project_relative(stamp.png_path, root)}
+    del row["slot_id"]
+    return row
+
+
 def stamps_digest(stamps: Sequence[Stamp], root: PurePath) -> str:
     """Отпечаток видимого слоя: меняется, когда меняется подписант, положение, дата или картинка слота.
 
     Картинка входит путём относительно `root` (папки проекта), а не абсолютным: перенос папки проекта, другой
     каталог данных у локальной Студии и облака или другая ОС отпечаток не меняют.
     """
-    rows = [{**asdict(stamp), "png_path": _project_relative(stamp.png_path, root)} for stamp in stamps]
+    rows = [_digest_row(stamp, root) for stamp in stamps]
     payload = json.dumps(rows, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
     return hashlib.sha256(payload.encode()).hexdigest()
 
@@ -238,6 +247,7 @@ def stamps_for_doc(
                     subtitle=level_subtitle(slot.signer, lang),
                     date_label=date_row_label(lang),
                     date_text=format_sign_date(placement.sign_date),
+                    slot_id=slot_id,
                 )
             )
             continue
@@ -259,6 +269,7 @@ def stamps_for_doc(
                 png_path=png_path,
                 aspect_ratio=aspect,
                 date_text=format_sign_date(placement.sign_date),
+                slot_id=slot_id,
             )
         )
     return result
