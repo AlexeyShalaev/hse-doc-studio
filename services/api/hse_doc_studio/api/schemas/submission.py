@@ -6,6 +6,7 @@ from typing import Literal
 from pydantic import BaseModel, ConfigDict
 
 from hse_doc_studio.api.schemas.catalog import SubmissionProfileResponse
+from hse_doc_studio.api.schemas.signature_plan import PlanPinnedResponse
 
 ArchiveFormat = Literal["zip", "targz", "7z", "rar"]
 
@@ -49,6 +50,26 @@ class CustomDocPreviewItemResponse(BaseModel):
     default_decision: bool | None = None
 
 
+class SubmissionWarningResponse(BaseModel):
+    """Предупреждение пакета без пропуска: файл в пакете есть (signing-route.md, 12.8).
+
+    `changed_after_sent`: рабочая сборка документа разошлась с версией на подписи, в пакет попала версия на
+    подписи. `pinned` та же версия, что у документа в плане подписей (`sha256` хэш файла версии, по которому
+    собран пакет), `working_sha256` хэш рабочей сборки. Рядом интерфейс предлагает «Отправить новую версию».
+    """
+
+    code: Literal["changed_after_sent"]
+    doc_id: str
+    # Дата версии на подписи (ISO 8601, UTC), поле контракта W7 (12.9); то же, что `pinned.pinned_at`.
+    sent_at: str
+    # Имя файла документа в пакете.
+    file: str
+    # Готовый текст на языке интерфейса.
+    message: str
+    pinned: PlanPinnedResponse
+    working_sha256: str
+
+
 class SubmissionRecordResponse(BaseModel):
     model_config = ConfigDict(json_encoders={datetime: lambda v: v.isoformat()})
 
@@ -63,3 +84,5 @@ class SubmissionRecordResponse(BaseModel):
     size_bytes: int | None = None
     archive_format: str = "zip"
     doc_count: int = 0
+    # Только в ответе на создание пакета; список сдач их не хранит.
+    warnings: list[SubmissionWarningResponse] = []

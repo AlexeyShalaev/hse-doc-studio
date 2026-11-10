@@ -50,7 +50,7 @@ from hse_doc_studio.core.team import (
 )
 from hse_doc_studio.core.template_materializer import ITemplateMaterializer
 from hse_doc_studio.use_cases.forms.render_form import RenderFormInput, RenderFormUC
-from hse_doc_studio.use_cases.submission.pack_planner import PackPlanner
+from hse_doc_studio.use_cases.submission.pack_planner import PackNotice, PackPlanner
 
 logger = structlog.get_logger()
 
@@ -94,6 +94,8 @@ class CreateSubmissionInput:
 @dataclass
 class CreateSubmissionOutput:
     submission: PackSubmissionRecord
+    # Предупреждения без пропуска (например, `changed_after_sent`): пакет собран, автору стоит о них знать.
+    notices: tuple[PackNotice, ...] = ()
 
 
 class CreateSubmissionUC:
@@ -339,7 +341,7 @@ class CreateSubmissionUC:
             output=str(output_path),
         )
 
-        return CreateSubmissionOutput(submission=record)
+        return CreateSubmissionOutput(submission=record, notices=plan.notices)
 
     async def _place_archive(
         self, project_id: UUID, submission_id: UUID, project_folder: Path, packed: PackResult

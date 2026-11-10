@@ -8,10 +8,13 @@ import type {
   SigningTaskDoc,
   SigningTaskSlot,
 } from "@entities/signing-route";
+import { formatMoment } from "../lib/format";
 import {
   jumpToSlot,
+  keptMark,
   myFrames,
   pendingMine,
+  versionLine,
   type PdfJumpTarget,
 } from "../lib/signingState";
 
@@ -62,6 +65,8 @@ export const SigningDocs = ({ task, pdfUrlOf }: SigningDocsProps) => {
   };
   const targets = pendingMine(doc).length > 0 ? pendingMine(doc) : doc.mine;
   const panelId = "signing-doc-panel";
+  const version = versionLine(task, doc);
+  const kept = keptMark(task, doc);
 
   return (
     <section
@@ -130,6 +135,22 @@ export const SigningDocs = ({ task, pdfUrlOf }: SigningDocsProps) => {
             </a>
           </Button>
         </div>
+        {(version !== null || kept !== null) && (
+          <div className="sgn-doc-version">
+            {version && (
+              <span data-testid="signing-doc-version" data-kind={version.kind}>
+                {t(`docs.version.${version.kind}`, {
+                  date: formatMoment(version.at),
+                })}
+              </span>
+            )}
+            {kept && (
+              <Badge variant="success" data-testid="signing-doc-kept">
+                {t(`docs.kept.${kept}`)}
+              </Badge>
+            )}
+          </div>
+        )}
         <div className="sgn-viewer" ref={viewerRef}>
           <PdfViewer
             key={doc.doc_id}

@@ -14,7 +14,11 @@ import {
   type SigningTask,
 } from "@entities/signing-route";
 import { useWaitText } from "@features/signing-route-progress";
-import type { SigningPerson, SigningStatus } from "../lib/signingState";
+import {
+  actionDocs,
+  type SigningPerson,
+  type SigningStatus,
+} from "../lib/signingState";
 
 type Tone = "turn" | "ok" | "warn" | "idle";
 
@@ -45,7 +49,8 @@ const look = (status: SigningStatus): { tone: Tone; icon: ReactNode } => {
 const useNeedLine = (task: SigningTask, status: SigningStatus) => {
   const { t } = useTranslation("signing");
   if (status.kind !== "turn") return null;
-  const count = task.docs.length;
+  // Документы без изменений в новой версии (без отпечатка) не считаются: по ним делать нечего.
+  const count = actionDocs(task).length || task.docs.length;
   const need = t(`need.${status.action}`, { count });
   const methods: RouteSignMethod[] =
     task.me.methods.length > 0

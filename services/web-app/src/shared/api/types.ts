@@ -598,6 +598,28 @@ export type CustomFilePreflightItemDto = {
 // wrapped `{items: [...]}` envelope.
 export type CustomFilePreflightResponse = CustomFilePreflightItemDto[];
 
+/**
+ * Предупреждение пакета без пропуска файла (signing-route.md, 12.8): `changed_after_sent`, рабочая
+ * сборка документа ушла от версии на подписи, в пакет попала версия на подписи.
+ */
+export type SubmissionWarningResponse = {
+  code: "changed_after_sent";
+  doc_id: string;
+  /** Дата версии на подписи, то же, что `pinned.pinned_at`. */
+  sent_at: string;
+  /** Имя файла документа в пакете. */
+  file: string;
+  /** Готовый текст на языке интерфейса. */
+  message: string;
+  pinned: {
+    sha256: string;
+    pinned_at: string;
+    route_id: string;
+    round: number;
+  };
+  working_sha256: string;
+};
+
 export type SubmissionRecordResponse = {
   id: string;
   profile_id?: string;
@@ -608,6 +630,8 @@ export type SubmissionRecordResponse = {
   size_bytes?: number | null;
   archive_format?: string;
   doc_count?: number;
+  /** Только в ответе на создание пакета; список сдач их не хранит. */
+  warnings?: SubmissionWarningResponse[];
 };
 
 // ──────────────────────────────────────────────────────────────────────────────

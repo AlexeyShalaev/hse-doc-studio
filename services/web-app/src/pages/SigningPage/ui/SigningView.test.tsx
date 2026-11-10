@@ -10,11 +10,13 @@ import { installViewport } from "@shared/lib/viewport/testing";
 import type { PdfStamp } from "@shared/ui";
 import type { SigningTask, SigningTaskPerson } from "@entities/signing-route";
 import {
+  SIGNING_ROUTE_CONTRACT_EXAMPLES,
   SR_AUTHOR,
   SR_SUPERVISOR,
   makeRouteEvent,
   makeSigningTask,
 } from "@entities/signing-route/testing";
+import { formatMoment } from "../lib/format";
 
 vi.mock("@shared/ui", async () => ({
   ...(await vi.importActual<Record<string, unknown>>("@shared/ui")),
@@ -504,5 +506,111 @@ describe("SigningView: телефон", () => {
       "Your turn: approve the documents",
     );
     expect(screen.getByTestId("signing-approve")).toHaveTextContent("Approve");
+  });
+});
+
+/** Эталон W7: заявление изменилось, отзыв без изменений (подпись научрука на нём осталась). */
+const newVersion = SIGNING_ROUTE_CONTRACT_EXAMPLES.SigningTask
+  ?.new_version as SigningTask;
+
+/** Автор открыл свою страницу подписи, а рабочая сборка ушла от версии на подписи. */
+const authorDiverged = (status: SigningTask["route"]["status"] = "active") =>
+  makeSigningTask({
+    route: { ...base.route, status },
+    docs: base.docs.map((d) => ({ ...d, changed: true })),
+  });
+
+describe("SigningView: версия на подписи", () => {
+  it("над документом дата версии, которую подписывают", () => {
+    mount({});
+    const version = screen.getByTestId("signing-doc-version");
+    expect(version).toHaveAttribute("data-kind", "signing");
+    expect(version).toHaveTextContent(
+      `Вы подписываете версию от ${formatMoment("2026-11-10T09:00:00Z")}`,
+    );
+  });
+
+  it("новая версия: что изменилось, сообщение автора и действие только по нему", async () => {
+    const user = userEvent.setup();
+    mount({ task: newVersion });
+    const notice = screen.getByTestId("signing-new-version");
+    expect(notice).toHaveTextContent(
+      "Новая версия: изменился документ «Заявление о выборе темы». Согласуйте его заново.",
+    );
+    // Сообщение автора в плашке, в шапке не повторяется.
+    expect(within(notice).getByTestId("signing-message")).toHaveTextContent(
+      "Исправил формулировку темы.",
+    );
+    expect(screen.getAllByTestId("signing-message")).toHaveLength(1);
+    // Строки «документ изменился после вашего согласования» нет: её заменяет плашка.
+    const status = screen.getByTestId("signing-status");
+    expect(status).not.toHaveTextContent("Документ изменился");
+    expect(status).toHaveTextContent("Согласовать 1 документ");
+    expect(screen.queryByTestId("signing-doc-kept")).toBeNull();
+
+    await user.click(screen.getByTestId("signing-doc-tab-supervisor_review"));
+    expect(screen.getByTestId("signing-doc-kept")).toHaveTextContent(
+      "Без изменений: вы уже подписали",
+    );
+    expect(screen.getByTestId("signing-doc-version")).toHaveTextContent(
+      `Версия на подписи от ${formatMoment("2026-11-10T09:00:00Z")}`,
+    );
+  });
+
+  it("вне своей очереди плашка новой версии без призыва действовать", () => {
+    mount({
+      task: {
+        ...newVersion,
+        me: { ...newVersion.me, state: "waiting", next_action: "wait" },
+        docs: newVersion.docs.map((d) => ({ ...d, token: null })),
+      },
+    });
+    const notice = screen.getByTestId("signing-new-version");
+    expect(notice).toHaveTextContent(
+      "Новая версия: изменился документ «Заявление о выборе темы».",
+    );
+    expect(notice).not.toHaveTextContent("заново");
+  });
+
+  it("подписанту расхождение не показывается", () => {
+    mount({ task: newVersion });
+    expect(screen.queryByTestId("signing-divergence")).toBeNull();
+  });
+
+  it("автор видит расхождение и ссылку на карточку", () => {
+    mount({ task: authorDiverged() });
+    const banner = screen.getByTestId("signing-divergence");
+    expect(banner).toHaveTextContent(
+      `Есть изменения после отправки на подпись. Подписывают версию от ${formatMoment("2026-11-10T09:00:00Z")}.`,
+    );
+    expect(screen.getByTestId("signing-doc-version")).toHaveAttribute(
+      "data-kind",
+      "signing",
+    );
+    expect(
+      within(banner).getByTestId("signing-send-new-version"),
+    ).toHaveAttribute(
+      "href",
+      "/projects/p_01hxa1c4de/submit/cp/topic-approval",
+    );
+    expect(banner).toHaveTextContent("Отправить новую версию");
+  });
+
+  it("завершённый маршрут: все подписали прежнюю версию", () => {
+    mount({ task: authorDiverged("completed") });
+    expect(screen.getByTestId("signing-divergence")).toHaveTextContent(
+      `Все подписали версию от ${formatMoment("2026-11-10T09:00:00Z")}. Есть изменения после подписания.`,
+    );
+    expect(screen.getByTestId("signing-doc-version")).toHaveTextContent(
+      "Подписана версия от",
+    );
+  });
+
+  it("на английском", async () => {
+    await i18n.changeLanguage("en");
+    mount({ task: newVersion });
+    expect(screen.getByTestId("signing-new-version")).toHaveTextContent(
+      "New version: the document “Topic selection application” has changed. Approve it again.",
+    );
   });
 });

@@ -5,12 +5,21 @@ import type { Notification } from "@entities/invitation";
 import { isSigningKind, showsDeadline } from "./notificationTarget";
 import { formatDeadline } from "./signingTasks";
 
+/**
+ * Ключ текста: запрос раунда новой версии (signing-route.md, 12.6, `payload.new_version`) говорит
+ * «просит подписать новую версию», остальные по виду уведомления.
+ */
+const textKind = (n: Notification): string =>
+  n.kind === "signing_request" && n.payload.new_version === true
+    ? "signing_request_new_version"
+    : n.kind;
+
 /** Текст уведомления на языке интерфейса: общий для страницы «Входящие» и окошка колокольчика. */
 export const useNotificationText = () => {
   const { t } = useTranslation("inbox");
   const roleLabel = useProjectRoleLabel();
   return (n: Notification): string =>
-    t(`kind.${n.kind}`, {
+    t(`kind.${textKind(n)}`, {
       actor:
         n.payload.actor_name ??
         (isSigningKind(n.kind) ? t("signing.someone") : ""),

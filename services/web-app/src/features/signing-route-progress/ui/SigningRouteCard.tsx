@@ -11,13 +11,14 @@ import {
   canArchiveRoute,
   canCancelRoute,
   isActionable,
-  isResend,
   signingPagePath,
   signingRouteApi,
   signingRouteEditorPath,
   signingRouteKeys,
   useArchiveSigningRoute,
   useCancelSigningRoute,
+  routeChangedDocs,
+  routeSendKind,
   routeWaitOf,
   useRemindSigningParticipant,
   useSendSigningRoute,
@@ -39,11 +40,14 @@ import {
   waitingFor,
 } from "../lib/routeView";
 import { progressText } from "../lib/progressText";
+import { routeVersionView } from "../lib/routeVersion";
 import { useNow } from "../lib/useNow";
 import { useWaitText } from "../lib/useWaitText";
 import { useErrorText } from "../model/useErrorText";
 import { useParticipantLink } from "../model/useParticipantLink";
+import { NewVersionAction } from "./NewVersionAction";
 import { RouteSteps } from "./RouteSteps";
+import { RouteVersions } from "./RouteVersions";
 
 type Project = z.infer<typeof ProjectResponseSchema>;
 
@@ -228,6 +232,10 @@ const RouteBody = ({
   const signingPath = signingPagePath(projectId, route.id);
 
   const wait = routeWaitOf(route, meId);
+  // Версия на подписи (12.2): что подписывают и есть ли изменения после отправки.
+  const version = routeVersionView(route);
+  const sendKind = routeSendKind(route.status, routeChangedDocs(route));
+  const sentDay = version.sentAt === null ? null : formatDay(version.sentAt);
   const who = (person: RouteParticipant): string =>
     waitText.who({ ...person, cardName: person.card_name });
 
@@ -343,7 +351,10 @@ const RouteBody = ({
       }
       case "paused":
         return {
-          text: t(`paused.${route.stop_reason ?? "rebuilt"}`),
+          // Перенос 0.20.0 не нашёл отправленную версию (12.11): только новая версия.
+          text: version.lost
+            ? t("version.lost")
+            : t(`paused.${route.stop_reason ?? "rebuilt"}`),
           tone: "var(--c-warn)",
         };
       case "returned": {
@@ -360,7 +371,13 @@ const RouteBody = ({
         };
       }
       case "completed":
-        return { text: t("completed"), tone: "var(--c-ok)" };
+        return {
+          text:
+            canManage && version.changed.length > 0 && sentDay !== null
+              ? t("version.completed", { date: sentDay })
+              : t("completed"),
+          tone: "var(--c-ok)",
+        };
       case "cancelled":
       case "archived":
         return { text: t("cancelled"), tone: "var(--fg-2)" };
@@ -395,6 +412,16 @@ const RouteBody = ({
     (wait.mine?.kind === "approved" || wait.mine?.kind === "later")
       ? waitText.lead(wait)
       : null;
+  // Рабочая сборка ушла от версии на подписи: маршрут идёт, подписанты ничего не замечают, автор
+  // сам решает, когда отправить новую версию. Видят те, кто управляет маршрутом.
+  const changedLine =
+    !canManage || version.changed.length === 0 || version.lost
+      ? null
+      : route.status === "completed"
+        ? t("version.changedAfterSigned")
+        : sentDay === null
+          ? t("version.changedNoDate")
+          : t("version.changed", { date: sentDay });
   // Не принявших приглашение показываем заметно: без их согласия маршрут не сдвинется.
   const invitedLine =
     canManage && wait !== null ? waitText.invited(wait) : null;
@@ -439,6 +466,25 @@ const RouteBody = ({
               style={{ flexShrink: 0 }}
             />
             {t("unsigned")}
+          </span>
+        )}
+        {changedLine !== null && (
+          <span
+            className="flex items-start"
+            style={{
+              gap: "0.375rem",
+              fontSize: "0.75rem",
+              color: "var(--c-warn)",
+              lineHeight: 1.45,
+            }}
+            data-testid="signing-changed"
+          >
+            <TriangleAlert
+              size="0.8125rem"
+              aria-hidden="true"
+              style={{ flexShrink: 0, marginTop: "0.125rem" }}
+            />
+            <span>{changedLine}</span>
           </span>
         )}
         {myLead !== null && (
@@ -488,6 +534,12 @@ const RouteBody = ({
         onCopyLink={copyLink}
       />
 
+      <RouteVersions
+        projectId={projectId}
+        docs={version.docs}
+        showChanges={canManage}
+      />
+
       {(mine || canManage) && (
         <Actions>
           {mine && (
@@ -500,7 +552,17 @@ const RouteBody = ({
               {t("action.sign")}
             </Link>
           )}
-          {canManage && isResend(route.status) && (
+          {canManage && sendKind === "new_version" && (
+            <NewVersionAction
+              projectId={projectId}
+              routeId={route.id}
+              editorPath={editorPath}
+              meId={meId}
+              primary={!mine}
+              disabled={busy}
+            />
+          )}
+          {canManage && sendKind === "resend" && (
             <button
               type="button"
               className={mine ? "btn sm" : "btn sm primary"}

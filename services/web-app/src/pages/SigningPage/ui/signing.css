@@ -178,6 +178,37 @@
   overflow-wrap: anywhere;
 }
 
+/* «Новая версия» у подписанта и расхождение у автора (раздел 12.2). */
+.sgn-notice {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--accent-line);
+  border-radius: var(--r-3);
+  background: var(--bg-1);
+}
+.sgn-notice[data-tone="warn"] {
+  border-color: color-mix(in oklch, var(--c-warn) 45%, transparent);
+  background: var(--c-warn-soft);
+}
+.sgn-notice p {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  margin: 0;
+  font-size: 0.8125rem;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+.sgn-notice p svg {
+  flex-shrink: 0;
+  margin-top: 0.1875rem;
+}
+.sgn-notice .sgn-message {
+  margin: 0;
+}
+
 /* ── раскладка ── */
 .sgn-grid {
   display: grid;
@@ -237,6 +268,15 @@
   font-size: 0.875rem;
   font-weight: 600;
   overflow-wrap: anywhere;
+}
+/* «Вы подписываете версию от …» и «Без изменений» над документом (раздел 12.2). */
+.sgn-doc-version {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.25rem 0.625rem;
+  font-size: 0.78125rem;
+  color: var(--fg-1);
 }
 .sgn-viewer {
   scroll-margin-top: 0.5rem;

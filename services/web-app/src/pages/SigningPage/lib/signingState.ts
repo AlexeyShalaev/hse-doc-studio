@@ -73,6 +73,8 @@ export const lastReturn = (task: SigningTask): RouteEvent | null =>
  */
 const isResent = (task: SigningTask): boolean => {
   if (task.route.round <= 1) return false;
+  // Раунд новой версии объясняет плашка «Новая версия» (раздел 12.2), строка не повторяет её.
+  if (task.route.new_version === true) return false;
   return task.events.some(
     (e) =>
       e.round < task.route.round &&
@@ -129,6 +131,106 @@ export const approveBlocker = (me: SigningTaskMe): ApproveBlocker | null => {
 };
 
 export { expectedTokens } from "@entities/signing-route";
+
+/**
+ * Документы, по которым действует главная кнопка: с отпечатком для `expected`. У документа без
+ * изменений в раунде новой версии отпечатка нет, согласие и подпись по нему остались (12.9).
+ */
+export const actionDocs = (task: SigningTask): SigningTaskDoc[] =>
+  task.docs.filter((doc) => doc.token !== null);
+
+/** Документы, изменившиеся в новой версии: `changed_since_mine` или `changed_docs` события `sent` раунда. */
+const changedInRound = (task: SigningTask): Set<string> => {
+  const sent = task.events
+    .filter((e) => e.kind === "sent" && e.round === task.route.round)
+    .at(-1);
+  return new Set([
+    ...(sent?.changed_docs ?? []),
+    ...task.docs
+      .filter((doc) => doc.changed_since_mine === true)
+      .map((doc) => doc.doc_id),
+  ]);
+};
+
+/**
+ * «Новая версия: изменился документ …» (раздел 12.2): раунд новой версии, в котором изменился
+ * хотя бы один документ участника; null в обычном раунде.
+ */
+export const newVersionDocs = (task: SigningTask): SigningTaskDoc[] | null => {
+  if (task.route.new_version !== true) return null;
+  const changed = changedInRound(task);
+  const docs = task.docs.filter((doc) => changed.has(doc.doc_id));
+  return docs.length > 0 ? docs : null;
+};
+
+export type KeptMark = "approved" | "signed";
+
+/**
+ * Пометка «Без изменений» у документа раунда новой версии: он не менялся, согласие и подпись
+ * участника по нему остались, делать ничего не нужно. В свою очередь это документ без отпечатка;
+ * до и после неё участник уже действовал (время действия есть).
+ */
+export const keptMark = (
+  task: SigningTask,
+  doc: SigningTaskDoc,
+): KeptMark | null => {
+  if (task.route.new_version !== true) return null;
+  if (changedInRound(task).has(doc.doc_id)) return null;
+  const kept = isActionable(task.me.next_action)
+    ? doc.token === null
+    : Boolean(mePerson(task)?.at);
+  if (!kept) return null;
+  return doc.mine.length > 0 && doc.mine.every((s) => s.status === "signed")
+    ? "signed"
+    : "approved";
+};
+
+export type VersionLineKind =
+  "signing" | "signedMine" | "approvedMine" | "kept" | "signed";
+
+/**
+ * Строка версии над документом: «Вы подписываете версию от …»; своё сделано: «Вы подписали
+ * (согласовали) версию от …»; документ без изменений в новой версии: «Версия на подписи от …»;
+ * маршрут завершён: «Подписана версия от …». null, пока версии на подписи нет (до R16,
+ * черновик, отмена).
+ */
+export const versionLine = (
+  task: SigningTask,
+  doc: SigningTaskDoc,
+): { kind: VersionLineKind; at: string } | null => {
+  if (!doc.sent_at) return null;
+  const kind = ((): VersionLineKind => {
+    if (task.route.status === "completed" || task.route.status === "archived")
+      return "signed";
+    // Документ без изменений в новой версии: рядом пометка «Без изменений: вы уже …».
+    if (keptMark(task, doc)) return "kept";
+    if (task.me.state !== "done") return "signing";
+    return doc.mine.length > 0 ? "signedMine" : "approvedMine";
+  })();
+  return { kind, at: doc.sent_at };
+};
+
+/**
+ * Плашка расхождения у автора и управляющего (12.2, п. 3 и 5): рабочая сборка документов ушла
+ * от версии на подписи. `changed` у остальных null, поэтому плашку видят только они.
+ * `sentAt`: дата версии на подписи первого изменившегося документа.
+ */
+export type Divergence = {
+  docs: SigningTaskDoc[];
+  completed: boolean;
+  sentAt: string | null;
+};
+
+export const divergenceOf = (task: SigningTask): Divergence | null => {
+  if (task.route.status === "archived") return null;
+  const docs = task.docs.filter((doc) => doc.changed === true);
+  if (docs.length === 0) return null;
+  return {
+    docs,
+    completed: task.route.status === "completed",
+    sentAt: docs.find((doc) => doc.sent_at)?.sent_at ?? null,
+  };
+};
 
 /** Свои слоты документа, которые ещё ждут подписи. */
 export const pendingMine = (doc: SigningTaskDoc): SigningTaskSlot[] =>

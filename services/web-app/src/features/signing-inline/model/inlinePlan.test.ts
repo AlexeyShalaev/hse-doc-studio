@@ -260,4 +260,11 @@ describe("ключи и слоты", () => {
     });
     expect(pendingSlots(signed)).toEqual([]);
   });
+
+  it("документ без отпечатка (без изменений в новой версии) действие не трогает", () => {
+    const kept = makeSigningTask({
+      docs: base.docs.map((d) => ({ ...d, token: null })),
+    });
+    expect(pendingSlots(kept)).toEqual([]);
+  });
 });

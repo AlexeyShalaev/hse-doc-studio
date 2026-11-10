@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { SigningTask, SigningTaskPerson } from "@entities/signing-route";
 import {
+  SIGNING_ROUTE_CONTRACT_EXAMPLES,
   SR_AUTHOR,
   SR_SUPERVISOR,
   makeRouteEvent,
@@ -8,12 +9,17 @@ import {
 } from "@entities/signing-route/testing";
 import {
   actingNow,
+  actionDocs,
   approveBlocker,
+  divergenceOf,
   expectedTokens,
   isOverdue,
   jumpToSlot,
+  keptMark,
   myFrames,
+  newVersionDocs,
   signingStatus,
+  versionLine,
 } from "./signingState";
 
 const person = (
@@ -234,5 +240,132 @@ describe("документы", () => {
     expect(isOverdue(base, after)).toBe(true);
     expect(isOverdue(base, Date.parse("2026-11-14T00:00:00Z"))).toBe(false);
     expect(isOverdue(withRoute({ status: "completed" }), after)).toBe(false);
+  });
+});
+
+/** Эталон W7: заявление изменилось (согласовать заново), отзыв без изменений (подпись осталась). */
+const newVersion = SIGNING_ROUTE_CONTRACT_EXAMPLES.SigningTask
+  ?.new_version as SigningTask;
+
+const docOf = (task: SigningTask, id: string) => {
+  const doc = task.docs.find((d) => d.doc_id === id);
+  if (!doc) throw new Error(`fixture without ${id}`);
+  return doc;
+};
+
+describe("версия на подписи (раздел 12)", () => {
+  it("новая версия: изменившиеся документы участника", () => {
+    expect(newVersionDocs(base)).toBeNull();
+    expect(newVersionDocs(newVersion)?.map((d) => d.doc_id)).toEqual([
+      "topic_application",
+    ]);
+    // Изменения нет ни в задаче, ни в событии раунда: плашки нет.
+    const quiet = makeSigningTask({
+      route: { ...base.route, new_version: true },
+      events: [],
+    });
+    expect(newVersionDocs(quiet)).toBeNull();
+  });
+
+  it("после повторного согласия документ остаётся изменившимся по событию `sent`", () => {
+    const after: SigningTask = {
+      ...newVersion,
+      me: { ...newVersion.me, state: "done", next_action: "done" },
+      docs: newVersion.docs.map((d) => ({
+        ...d,
+        token: null,
+        changed_since_mine: false,
+      })),
+    };
+    expect(newVersionDocs(after)?.map((d) => d.doc_id)).toEqual([
+      "topic_application",
+    ]);
+  });
+
+  it("действуют только документы с отпечатком; повторное согласие не отдельной строкой", () => {
+    expect(actionDocs(newVersion).map((d) => d.doc_id)).toEqual([
+      "topic_application",
+    ]);
+    expect(signingStatus(newVersion)).toEqual({
+      kind: "turn",
+      action: "approve",
+      resent: false,
+    });
+  });
+
+  it("«Без изменений»: подписал или согласовал, только в раунде новой версии", () => {
+    expect(keptMark(newVersion, docOf(newVersion, "supervisor_review"))).toBe(
+      "signed",
+    );
+    expect(
+      keptMark(newVersion, docOf(newVersion, "topic_application")),
+    ).toBeNull();
+    const approver: SigningTask = {
+      ...newVersion,
+      docs: newVersion.docs.map((d) => ({ ...d, mine: [] })),
+    };
+    expect(keptMark(approver, docOf(approver, "supervisor_review"))).toBe(
+      "approved",
+    );
+    const review = docOf(base, "topic_application");
+    expect(keptMark(base, { ...review, token: null })).toBeNull();
+  });
+
+  it("«Без изменений» вне своей очереди: только если участник уже действовал", () => {
+    const waiting = (at: string | null): SigningTask => ({
+      ...newVersion,
+      steps: newVersion.steps.map((step) =>
+        step.map((p) => (p.me ? { ...p, state: "waiting" as const, at } : p)),
+      ),
+      me: { ...newVersion.me, state: "waiting", next_action: "wait" },
+      docs: newVersion.docs.map((d) => ({ ...d, token: null })),
+    });
+    const review = (task: SigningTask) => docOf(task, "supervisor_review");
+    expect(keptMark(waiting(null), review(waiting(null)))).toBeNull();
+    const acted = waiting("2026-11-12T11:00:00Z");
+    expect(keptMark(acted, review(acted))).toBe("signed");
+  });
+
+  it("строка версии над документом", () => {
+    const doc = docOf(base, "topic_application");
+    expect(versionLine(base, doc)).toEqual({
+      kind: "signing",
+      at: doc.sent_at,
+    });
+    const done = withRoute({ status: "completed" });
+    expect(versionLine(done, doc)?.kind).toBe("signed");
+    const mineDone = makeSigningTask({
+      me: { ...base.me, state: "done", next_action: "done" },
+    });
+    expect(versionLine(mineDone, doc)?.kind).toBe("signedMine");
+    expect(versionLine(mineDone, { ...doc, mine: [] })?.kind).toBe(
+      "approvedMine",
+    );
+    const review = docOf(newVersion, "supervisor_review");
+    expect(versionLine(newVersion, review)?.kind).toBe("kept");
+    expect(versionLine(base, { ...doc, sent_at: null })).toBeNull();
+    // До R16 поля нет: строки тоже нет.
+    expect(versionLine(base, { ...doc, sent_at: undefined })).toBeNull();
+  });
+
+  it("расхождение видно, только когда сервер отдал `changed`", () => {
+    expect(divergenceOf(base)).toBeNull();
+    const changed = (status: SigningTask["route"]["status"]) =>
+      withRoute(
+        { status },
+        {
+          docs: base.docs.map((d) => ({ ...d, changed: true })),
+        },
+      );
+    expect(divergenceOf(changed("active"))).toMatchObject({
+      completed: false,
+      sentAt: base.docs[0]?.sent_at,
+    });
+    expect(divergenceOf(changed("completed"))?.completed).toBe(true);
+    expect(divergenceOf(changed("archived"))).toBeNull();
+    const notChanged = makeSigningTask({
+      docs: base.docs.map((d) => ({ ...d, changed: false })),
+    });
+    expect(divergenceOf(notChanged)).toBeNull();
   });
 });

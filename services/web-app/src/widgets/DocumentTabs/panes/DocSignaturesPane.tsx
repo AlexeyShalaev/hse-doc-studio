@@ -18,6 +18,7 @@ import {
 import { useUpdateSlotConfig } from "@entities/signing-identity";
 import { useVersionDetail } from "@entities/template-catalog";
 import { DocPlacementPanel, PdfStampEditor } from "@features/signature-stamper";
+import { SignedVersionPanel } from "@features/signing-version";
 import type { SignMode, UpdatePlacementRequest } from "@shared/api/types";
 import { toast } from "@shared/lib";
 import { Notice } from "@shared/ui";
@@ -245,6 +246,8 @@ export const DocSignaturesPane = ({
           minHeight: 0,
         }}
       >
+        {/* Версия на подписи (signing-route.md, 12.8): что подписывают и как вернуться к сборке. */}
+        <SignedVersionPanel projectId={projectId} docId={docId} />
         {locked && (
           <div style={{ padding: "0.75rem 0.75rem 0" }}>
             <Notice

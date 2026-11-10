@@ -75,19 +75,25 @@ export const chosenMethod = (
 export const slotKey = (docId: string, slotId: string): string =>
   `${docId}/${slotId}`;
 
+/**
+ * Свои слоты, которые ждут подписи, на документах с отпечатком: документ без изменений в раунде
+ * новой версии (`token` null) остаётся как был, действие его не трогает (12.9).
+ */
 export const pendingSlots = (task: SigningTask): PendingSlot[] =>
-  task.docs.flatMap((doc) =>
-    doc.mine
-      .filter((slot) => slot.status !== "signed")
-      .map((slot) => ({
-        key: slotKey(doc.doc_id, slot.slot_id),
-        docId: doc.doc_id,
-        slotId: slot.slot_id,
-        docName: doc.name,
-        frozen: doc.frozen,
-        pdfUrl: doc.pdf_url,
-      })),
-  );
+  task.docs
+    .filter((doc) => doc.token !== null)
+    .flatMap((doc) =>
+      doc.mine
+        .filter((slot) => slot.status !== "signed")
+        .map((slot) => ({
+          key: slotKey(doc.doc_id, slot.slot_id),
+          docId: doc.doc_id,
+          slotId: slot.slot_id,
+          docName: doc.name,
+          frozen: doc.frozen,
+          pdfUrl: doc.pdf_url,
+        })),
+    );
 
 /** Ключи Студии: ключ по умолчанию первым. Без списка (ещё грузится) только он. */
 export const keyOptions = (
