@@ -37,7 +37,7 @@ What a signer sees is described in [How to sign](how-to-sign.md).
 
 A signer is a project member with the “Reviewer” role and a persona: “Supervisor”, “Co-supervisor” or “Academic supervisor”. The persona tells the Studio which signature slots are theirs.
 
-- If the person is not in the project yet, the route shows “not in project” next to them and an “Invite” button. It opens the usual invitation form with the “Reviewer” role and the right persona already chosen: enter the email and click “Invite”. After accepting the invitation from the link, the person lands right on the signing page. Someone who already has an account gets the invitation in the Inbox and finds the documents there too, on the “To sign” tab.
+- If the person is not in the project yet, the route shows “not in project” next to them and an “Invite” button. It opens the usual invitation form with the “Reviewer” role and the right persona already chosen: enter the email and click “Invite”. After accepting the invitation from the link, the person lands right on the signing page. Someone who already has an account gets the invitation in the Inbox: if it is already their turn after “Accept”, the Studio opens the signing page right away, otherwise the documents appear on the “To sign” tab when their turn comes.
 - You can also invite people in advance in the project settings, “People” section. More: [Invitations and access requests](../deploy/invitations.md).
 - If several people have the persona, pick one in the “Who signs” list.
 - You can send while an invitation is still pending: that person's step will wait.

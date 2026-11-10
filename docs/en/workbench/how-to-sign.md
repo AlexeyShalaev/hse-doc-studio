@@ -19,7 +19,7 @@ This page is for supervisors. How a student sends the documents is described in 
 - **The bell** in the header shows “Waiting for your signature: N”, which leads to the same tab.
 - **In the project**: on the checkpoint page, the “Signing” card has a “Go to signing” button.
 
-If you do not have an account on the server yet, a project invitation comes first. Sign up with the address it was sent to, click “Accept”, and the Studio opens the signing page right away. If you already have an account, the invitation arrives in the Inbox: accept it, and the documents appear on the “To sign” tab. More: [Invitations and access requests](../deploy/invitations.md#accept).
+If you do not have an account on the server yet, a project invitation comes first. Sign up with the address it was sent to, click “Accept”, and the Studio opens the signing page right away. If you already have an account, the invitation arrives in the Inbox: click “Accept”. If it is already your turn, the Studio opens the signing page right away. If not, the documents appear on the “To sign” tab when your turn comes, and you get a notification. More: [Invitations and access requests](../deploy/invitations.md#accept).
 
 ## The signing page { #page }
 

@@ -33,6 +33,7 @@
     "expired": "The invitation has expired. Ask for a new one.",
     "until": "until {{date}}",
     "accepted": "You joined “{{project}}”",
+    "acceptedSign": "You joined “{{project}}”: opening the signing page",
     "declined": "Invitation declined"
   },
   "transfer": {
