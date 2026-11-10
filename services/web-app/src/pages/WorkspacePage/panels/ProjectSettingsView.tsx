@@ -1,3 +1,4 @@
+import { useRouteEditGuard } from "@entities/signing-route";
 import { Fragment, useState } from "react";
 import { Settings } from "lucide-react";
 import { useNavigate } from "react-router";
@@ -106,6 +107,7 @@ export const ProjectSettingsView = ({
   // variant files losslessly and resets the document to draft.
   const { data: projectDocuments } = useDocuments(project.id);
   const updateDocument = useUpdateDocument();
+  const routeGuard = useRouteEditGuard(project.id);
   // Team projects get extra author fields (topic, slug, managed toggle), the
   // shared-docs indicator, the «Название системы» wording and the per-block
   // metadata switcher; solo keeps the old look untouched.
@@ -422,10 +424,13 @@ export const ProjectSettingsView = ({
             groups={variantGroups}
             isPending={updateDocument.isPending}
             onSelectVariant={(docId, variantId) => {
-              updateDocument.mutate({
-                projectId: project.id,
-                docId,
-                data: { chosen_variant: variantId },
+              // Смена формата пересоздаёт файлы документа: на подписании сначала вопрос.
+              routeGuard.run({ docIds: [docId] }, () => {
+                updateDocument.mutate({
+                  projectId: project.id,
+                  docId,
+                  data: { chosen_variant: variantId },
+                });
               });
             }}
           />
