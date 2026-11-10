@@ -22,11 +22,13 @@ import {
   Scan,
   Search,
   Sparkles,
+  X,
 } from "lucide-react";
 import * as pdfjsLib from "pdfjs-dist";
 // Vite resolves this to a hashed asset URL for the worker bundle (kept out of
 // the main chunk); pdfjs finds it at runtime via GlobalWorkerOptions.workerSrc.
 import workerUrl from "pdfjs-dist/build/pdf.worker.min.mjs?url";
+import { ActionMenu, type ActionMenuItem } from "../ActionMenu";
 import { Spinner } from "../Spinner";
 import {
   PdfPage,
@@ -37,7 +39,7 @@ import {
 import { PdfThumbnails } from "./PdfThumbnails";
 import { PdfOutline, type OutlineEntry } from "./PdfOutline";
 import { countOccurrences, getOutlineFor, loadPageDims } from "./pdfDoc";
-import { PHONE_QUERY } from "../../lib/viewport";
+import { PHONE_QUERY, useIsPhoneWidth } from "../../lib/viewport";
 import "./pdfViewer.css";
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = workerUrl;
@@ -179,6 +181,11 @@ export const PdfViewer = ({
   const [submittedQuery, setSubmittedQuery] = useState("");
   const [matchPages, setMatchPages] = useState<number[]>([]);
   const [matchIdx, setMatchIdx] = useState(0);
+  // Телефон: вторичные инструменты в меню «Ещё», поиск отдельной строкой по запросу.
+  const phone = useIsPhoneWidth();
+  const [searchOpen, setSearchOpen] = useState(false);
+  const focusSearchRef = useRef(false);
+  const showSearch = !phone || searchOpen;
 
   // Floating action bar shown above a non-empty text selection in the PDF.
   const [selAction, setSelAction] = useState<{
@@ -499,6 +506,9 @@ export const PdfViewer = ({
         if (input) {
           input.focus();
           input.select();
+        } else {
+          focusSearchRef.current = true;
+          setSearchOpen(true);
         }
       } else {
         // Ctrl/Cmd+G — jump to the page-number box.
@@ -543,6 +553,109 @@ export const PdfViewer = ({
       document.removeEventListener("keydown", onNav);
     };
   }, []);
+
+  // Строка поиска на телефоне открылась из меню или по Ctrl+F: фокус в поле. Таймер нужен, потому что
+  // закрывшееся меню возвращает фокус на свою кнопку уже после этого эффекта.
+  useEffect(() => {
+    if (!searchOpen || !focusSearchRef.current) return;
+    focusSearchRef.current = false;
+    const id = window.setTimeout(() => {
+      searchInputRef.current?.focus();
+    }, 0);
+    return () => {
+      window.clearTimeout(id);
+    };
+  }, [searchOpen]);
+
+  const closeSearch = (): void => {
+    setSearchOpen(false);
+    setQuery("");
+    setSubmittedQuery("");
+    setMatchPages([]);
+    setMatchIdx(0);
+  };
+
+  const toggleSidebar = (tab: "outline" | "thumbs"): void => {
+    setSidebarOpen((v) => !(v && sidebarTab === tab));
+    setSidebarTab(tab);
+  };
+
+  const printPdf = (): void => {
+    window.open(fetchUrl, "_blank", "noopener");
+  };
+
+  const moreItems: ActionMenuItem[] = [
+    {
+      id: "outline",
+      label: t("sidebar.outline"),
+      icon: <List size="1rem" aria-hidden="true" />,
+      checked: sidebarOpen && sidebarTab === "outline",
+      disabled: outline.length === 0,
+      onSelect: () => {
+        toggleSidebar("outline");
+      },
+    },
+    {
+      id: "thumbs",
+      label: t("sidebar.thumbnails"),
+      icon: <Images size="1rem" aria-hidden="true" />,
+      checked: sidebarOpen && sidebarTab === "thumbs",
+      onSelect: () => {
+        toggleSidebar("thumbs");
+      },
+    },
+    {
+      id: "search",
+      label: t("search.aria"),
+      icon: <Search size="1rem" aria-hidden="true" />,
+      checked: searchOpen,
+      onSelect: () => {
+        if (searchOpen) {
+          closeSearch();
+        } else {
+          focusSearchRef.current = true;
+          setSearchOpen(true);
+        }
+      },
+    },
+    ...(marginGuideMm
+      ? [
+          {
+            id: "margins",
+            label: t("tools.gostMargins"),
+            icon: <Frame size="1rem" aria-hidden="true" />,
+            checked: guidesOn,
+            onSelect: () => {
+              setGuidesOn((v) => !v);
+            },
+          },
+        ]
+      : []),
+    {
+      id: "ruler",
+      label: t("tools.ruler"),
+      icon: <Ruler size="1rem" aria-hidden="true" />,
+      checked: measureMode,
+      onSelect: () => {
+        setMeasureMode((v) => !v);
+      },
+    },
+    {
+      id: "night",
+      label: t("tools.nightMode"),
+      icon: <Moon size="1rem" aria-hidden="true" />,
+      checked: invert,
+      onSelect: () => {
+        setInvert((v) => !v);
+      },
+    },
+    {
+      id: "print",
+      label: t("tools.print"),
+      icon: <Printer size="1rem" aria-hidden="true" />,
+      onSelect: printPdf,
+    },
+  ];
 
   // Remember page/zoom per document, and restore the page on the first open.
   useEffect(() => {
@@ -590,37 +703,37 @@ export const PdfViewer = ({
           flexWrap: "wrap",
         }}
       >
-        <div className="seg">
-          <button
-            type="button"
-            className={
-              sidebarOpen && sidebarTab === "outline" ? "active" : undefined
-            }
-            aria-label={t("sidebar.outline")}
-            title={t("sidebar.outline")}
-            disabled={outline.length === 0}
-            onClick={() => {
-              setSidebarOpen((v) => !(v && sidebarTab === "outline"));
-              setSidebarTab("outline");
-            }}
-          >
-            <List size="0.8125rem" />
-          </button>
-          <button
-            type="button"
-            className={
-              sidebarOpen && sidebarTab === "thumbs" ? "active" : undefined
-            }
-            aria-label={t("sidebar.thumbnails")}
-            title={t("sidebar.thumbnailsTitle")}
-            onClick={() => {
-              setSidebarOpen((v) => !(v && sidebarTab === "thumbs"));
-              setSidebarTab("thumbs");
-            }}
-          >
-            <Images size="0.8125rem" />
-          </button>
-        </div>
+        {!phone && (
+          <div className="seg">
+            <button
+              type="button"
+              className={
+                sidebarOpen && sidebarTab === "outline" ? "active" : undefined
+              }
+              aria-label={t("sidebar.outline")}
+              title={t("sidebar.outline")}
+              disabled={outline.length === 0}
+              onClick={() => {
+                toggleSidebar("outline");
+              }}
+            >
+              <List size="0.8125rem" />
+            </button>
+            <button
+              type="button"
+              className={
+                sidebarOpen && sidebarTab === "thumbs" ? "active" : undefined
+              }
+              aria-label={t("sidebar.thumbnails")}
+              title={t("sidebar.thumbnailsTitle")}
+              onClick={() => {
+                toggleSidebar("thumbs");
+              }}
+            >
+              <Images size="0.8125rem" />
+            </button>
+          </div>
+        )}
 
         <div className="flex items-center gap-1">
           <button
@@ -752,120 +865,144 @@ export const PdfViewer = ({
           </button>
         </div>
 
-        <div className="seg">
-          {marginGuideMm && (
-            <button
-              type="button"
-              className={guidesOn ? "active" : ""}
-              aria-label={t("tools.gostMargins")}
-              title={t("tools.gostMarginsTitle")}
-              onClick={() => {
-                setGuidesOn((v) => !v);
-              }}
-            >
-              <Frame size="0.75rem" />
-            </button>
-          )}
-          <button
-            type="button"
-            className={measureMode ? "active" : ""}
-            aria-label={t("tools.ruler")}
-            title={t("tools.rulerTitle")}
-            onClick={() => {
-              setMeasureMode((v) => !v);
-            }}
-          >
-            <Ruler size="0.75rem" />
-          </button>
-          <button
-            type="button"
-            className={invert ? "active" : ""}
-            aria-label={t("tools.nightMode")}
-            title={t("tools.nightModeTitle")}
-            onClick={() => {
-              setInvert((v) => !v);
-            }}
-          >
-            <Moon size="0.75rem" />
-          </button>
-          <button
-            type="button"
-            aria-label={t("tools.print")}
-            title={t("tools.printTitle")}
-            onClick={() => {
-              window.open(fetchUrl, "_blank", "noopener");
-            }}
-          >
-            <Printer size="0.75rem" />
-          </button>
-        </div>
-
-        <form
-          className="flex items-center gap-1"
-          onSubmit={(e) => {
-            e.preventDefault();
-            void runSearch();
-          }}
-        >
-          <div
-            className="flex items-center gap-1"
-            style={{
-              background: "var(--bg-0)",
-              border: "1px solid var(--border)",
-              borderRadius: "0.375rem",
-              padding: "0.1875rem 0.5rem",
-            }}
-          >
-            <Search size="0.8125rem" style={{ color: "var(--fg-3)" }} />
-            <input
-              ref={searchInputRef}
-              value={query}
-              onChange={(e) => {
-                setQuery(e.target.value);
-              }}
-              placeholder={t("search.placeholderWithShortcut")}
-              aria-label={t("search.aria")}
-              style={{
-                width: "13.125rem",
-                fontSize: "0.78125rem",
-                background: "transparent",
-                border: 0,
-                outline: "none",
-                color: "var(--fg-0)",
-              }}
+        {phone ? (
+          <div style={{ marginLeft: "auto" }}>
+            <ActionMenu
+              items={moreItems}
+              label={t("toolbar.more")}
+              testId="pdf-toolbar-more"
             />
           </div>
-          {matchPages.length > 0 && (
-            <>
-              <span className="dim mono" style={{ whiteSpace: "nowrap" }}>
-                {matchIdx + 1}/{matchPages.length}
-              </span>
+        ) : (
+          <div className="seg">
+            {marginGuideMm && (
+              <button
+                type="button"
+                className={guidesOn ? "active" : ""}
+                aria-label={t("tools.gostMargins")}
+                title={t("tools.gostMarginsTitle")}
+                onClick={() => {
+                  setGuidesOn((v) => !v);
+                }}
+              >
+                <Frame size="0.75rem" />
+              </button>
+            )}
+            <button
+              type="button"
+              className={measureMode ? "active" : ""}
+              aria-label={t("tools.ruler")}
+              title={t("tools.rulerTitle")}
+              onClick={() => {
+                setMeasureMode((v) => !v);
+              }}
+            >
+              <Ruler size="0.75rem" />
+            </button>
+            <button
+              type="button"
+              className={invert ? "active" : ""}
+              aria-label={t("tools.nightMode")}
+              title={t("tools.nightModeTitle")}
+              onClick={() => {
+                setInvert((v) => !v);
+              }}
+            >
+              <Moon size="0.75rem" />
+            </button>
+            <button
+              type="button"
+              aria-label={t("tools.print")}
+              title={t("tools.printTitle")}
+              onClick={printPdf}
+            >
+              <Printer size="0.75rem" />
+            </button>
+          </div>
+        )}
+
+        {showSearch && (
+          <form
+            className="pdf-toolbar-search flex items-center gap-1"
+            onSubmit={(e) => {
+              e.preventDefault();
+              void runSearch();
+            }}
+          >
+            <div
+              className="flex items-center gap-1"
+              style={{
+                background: "var(--bg-0)",
+                border: "1px solid var(--border)",
+                borderRadius: "0.375rem",
+                padding: "0.1875rem 0.5rem",
+              }}
+            >
+              <Search size="0.8125rem" style={{ color: "var(--fg-3)" }} />
+              <input
+                ref={searchInputRef}
+                value={query}
+                onChange={(e) => {
+                  setQuery(e.target.value);
+                }}
+                placeholder={
+                  phone
+                    ? t("search.placeholder")
+                    : t("search.placeholderWithShortcut")
+                }
+                aria-label={t("search.aria")}
+                style={{
+                  width: "13.125rem",
+                  fontSize: "0.78125rem",
+                  background: "transparent",
+                  border: 0,
+                  outline: "none",
+                  color: "var(--fg-0)",
+                }}
+              />
+            </div>
+            {matchPages.length > 0 && (
+              <>
+                <span className="dim mono" style={{ whiteSpace: "nowrap" }}>
+                  {matchIdx + 1}/{matchPages.length}
+                </span>
+                <button
+                  type="button"
+                  className="icon-btn sm"
+                  aria-label={t("search.prevMatch")}
+                  onClick={() => {
+                    stepMatch(-1);
+                  }}
+                >
+                  <ChevronLeft size="0.75rem" />
+                </button>
+                <button
+                  type="button"
+                  className="icon-btn sm"
+                  aria-label={t("search.nextMatch")}
+                  onClick={() => {
+                    stepMatch(1);
+                  }}
+                >
+                  <ChevronRight size="0.75rem" />
+                </button>
+              </>
+            )}
+            {phone && (
               <button
                 type="button"
                 className="icon-btn sm"
-                aria-label={t("search.prevMatch")}
-                onClick={() => {
-                  stepMatch(-1);
-                }}
+                aria-label={t("search.close")}
+                onClick={closeSearch}
               >
-                <ChevronLeft size="0.75rem" />
+                <X size="0.875rem" />
               </button>
-              <button
-                type="button"
-                className="icon-btn sm"
-                aria-label={t("search.nextMatch")}
-                onClick={() => {
-                  stepMatch(1);
-                }}
-              >
-                <ChevronRight size="0.75rem" />
-              </button>
-            </>
-          )}
-        </form>
+            )}
+          </form>
+        )}
 
         <div
-          className="flex items-center gap-2 shrink-0"
+          className="pdf-toolbar-extras flex items-center gap-2 shrink-0"
           style={{ marginLeft: "auto" }}
         >
           {toolbarExtras}

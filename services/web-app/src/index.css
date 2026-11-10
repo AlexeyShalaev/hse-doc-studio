@@ -6991,6 +6991,12 @@ a.adm-kpi:focus-visible {
 .adm-menu-item[data-danger="true"] > svg {
   color: var(--c-err);
 }
+.adm-menu-check {
+  display: inline-flex;
+  margin-left: auto;
+  padding-left: 0.75rem;
+  color: var(--accent);
+}
 .adm-menu-item[data-disabled] {
   opacity: 0.45;
   cursor: not-allowed;
@@ -8065,21 +8071,51 @@ a.adm-row:hover .adm-row-chevron {
     align-items: center;
   }
 
-  /* ── PDF: панель инструментов одной прокручиваемой строкой, оглавление поверх страниц ── */
+  /* ── PDF: панель инструментов в две строки без прокрутки вбок, оглавление поверх страниц ──
+     Строки: страницы; масштаб и «Ещё» (оглавление, миниатюры, линейка, печать, поиск);
+     поиск, когда открыт, отдельной строкой во всю ширину. Кнопки не уже зоны касания. */
   .pdf-toolbar {
-    flex-wrap: nowrap !important;
-    overflow-x: auto;
-    scrollbar-width: none;
-  }
-  .pdf-toolbar::-webkit-scrollbar {
-    display: none;
+    row-gap: 0.375rem !important;
   }
   .pdf-toolbar > * {
-    flex-shrink: 0;
+    min-width: 0;
+    max-width: 100%;
+  }
+  .pdf-toolbar button {
+    min-width: var(--touch-min);
+    min-height: var(--touch-min);
   }
   .pdf-toolbar input[aria-label] {
     min-height: var(--touch-min);
     min-width: 2.75rem;
+  }
+  .pdf-toolbar .pdf-toolbar-search {
+    flex: 1 1 100%;
+  }
+  .pdf-toolbar .pdf-toolbar-search > div {
+    flex: 1;
+    min-width: 0;
+  }
+  .pdf-toolbar .pdf-toolbar-search input {
+    flex: 1;
+    min-width: 0;
+    width: auto !important;
+    font-size: var(--field-fs) !important;
+  }
+  /* Дополнения страницы (путь, «PDF», «С подписями») своей строкой справа; путь сжимается первым. */
+  .pdf-toolbar .pdf-toolbar-extras {
+    flex: 1 1 100%;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    min-width: 0;
+  }
+  .pdf-toolbar .pdf-toolbar-extras:empty {
+    display: none;
+  }
+  .pdf-toolbar .pdf-toolbar-extras > .truncate {
+    flex: 1 1 0;
+    min-width: 3rem;
+    text-align: right;
   }
   .pdf-sidebar {
     position: absolute;
