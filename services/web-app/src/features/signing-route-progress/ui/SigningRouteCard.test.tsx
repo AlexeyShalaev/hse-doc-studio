@@ -438,6 +438,52 @@ describe("Подписание: эталонные состояния", () => {
     );
   });
 
+  it("«Скопировать ссылку» и у того, чья очередь ещё не дошла: ссылку можно разослать заранее", async () => {
+    const later = makeRouteParticipant({
+      id: "srp_academic",
+      persona: "academic_supervisor",
+      user_id: "u_academic",
+      name: "Сидоров С. С.",
+      assignments: [{ doc_id: "topic_application", slot_id: "academic" }],
+      state: "waiting",
+      next_action: "wait",
+      approved_at: null,
+    });
+    serve(
+      makeSigningRoute({
+        current_step: 2,
+        steps: [
+          [makeRouteParticipant()],
+          [
+            makeRouteParticipant({
+              id: "srp_supervisor",
+              persona: "supervisor",
+              user_id: SR_SUPERVISOR.id,
+              name: SR_SUPERVISOR.name,
+              state: "to_approve",
+              next_action: "approve",
+              approved_at: null,
+            }),
+          ],
+          [later],
+        ],
+      }),
+    );
+    const u = userEvent.setup();
+    mount({ projectId: SR_PROJECT_ID });
+    expect(await person(later.id)).toHaveTextContent("ждёт");
+    // Напоминать ему рано, а ссылку на его страницу подписи отправить уже можно.
+    expect(screen.queryByTestId(`signing-remind-${later.id}`)).toBeNull();
+    await u.click(screen.getByTestId(`signing-copy-${later.id}`));
+    await waitFor(async () => {
+      expect(await navigator.clipboard.readText()).toMatch(
+        new RegExp(`/sign/${SR_PROJECT_ID}/[^/]+$`),
+      );
+    }, LOAD);
+    // Тому, кто уже всё сделал, ссылка не нужна.
+    expect(screen.queryByTestId("signing-copy-srp_author")).toBeNull();
+  });
+
   it("приглашённый без имени назван приглашённым, а не «не назначен»", async () => {
     serveInvited(invitedPerson({ name: null }));
     mount({ projectId: SR_PROJECT_ID });

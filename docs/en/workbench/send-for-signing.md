@@ -117,10 +117,10 @@ Under the sending form the Studio says when the final PDF is frozen: “The docu
 
 The “Signing” card on the checkpoint page shows the step and whose turn it is, for example “Step 2 of 3. Waiting for Petrov P. P. (supervisor)”, since when they have been waiting, how many signatures are in place and the deadline. Each person shows their state: “waiting”, “to approve”, “approved”, “to sign the final PDF”, “signed”, “has not accepted the invitation”, “returned for revision”.
 
-The person whose turn it is has two buttons:
+People on the route have two buttons:
 
-- **“Remind”** sends a reminder to the Inbox and by email, if email is configured. At most once every 12 hours per person; the hint on the button says when you can remind again. For someone who has not accepted the invitation yet, “Remind” sends the invitation again.
-- **“Copy link”** is for sending the link yourself, for example in a messenger. For a member it is the link to their signing page, which opens after signing in. For an invitee on a server without email it is a new invitation link: every click makes a new one and the previous one stops working, so send the latest. If the invitee already has an account, it is a link to the Inbox, where the invitation is waiting. If the server has email, invitees have no such button: the invitation goes by email, and “Remind” sends it again.
+- **“Remind”** is there for the person whose turn it is and for anyone who has not accepted the invitation yet. It sends a reminder to the Inbox and by email, if email is configured. At most once every 12 hours per person; the hint on the button says when you can remind again. For someone who has not accepted the invitation yet, “Remind” sends the invitation again.
+- **“Copy link”** is there for everyone who has not signed yet, even before their turn: you can send the links in advance. It is for sending the link yourself, for example in a messenger. For a member it is the link to their signing page, which opens after signing in. Until their turn comes, the page says “Not your turn yet”, and when it comes, they get a notification. For an invitee on a server without email it is a new invitation link: every click makes a new one and the previous one stops working, so send the latest. If the invitee already has an account, it is a link to the Inbox, where the invitation is waiting. If the server has email, invitees have no such button: the invitation goes by email, and “Remind” sends it again.
 
 The server also reminds the person whose turn it is on its own: a day before the deadline and after three days of waiting, at most three times per sending.
 
