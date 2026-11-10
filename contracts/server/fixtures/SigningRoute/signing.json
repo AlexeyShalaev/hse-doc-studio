@@ -52,7 +52,13 @@
           "optional": false,
           "status": "pending"
         }
-      ]
+      ],
+      "sent": {
+        "sha256": "3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f",
+        "at": "2026-11-10T09:00:00Z",
+        "round": 1
+      },
+      "changed": false
     }
   ],
   "steps": [
@@ -116,7 +122,8 @@
       "who": "Иванов И. И.",
       "participant_id": null,
       "comment": null,
-      "reason": null
+      "reason": null,
+      "changed_docs": null
     },
     {
       "id": "sre_02",
@@ -126,7 +133,8 @@
       "who": null,
       "participant_id": null,
       "comment": null,
-      "reason": null
+      "reason": null,
+      "changed_docs": null
     }
   ],
   "candidates": [
@@ -155,5 +163,6 @@
         }
       ]
     }
-  ]
+  ],
+  "changed_docs": []
 }

@@ -180,6 +180,7 @@ const seed = (): DemoInvites => ({
         excerpt: null,
         profile_id: null,
         deadline: null,
+        new_version: false,
       },
     },
     {
@@ -198,6 +199,7 @@ const seed = (): DemoInvites => ({
         excerpt: null,
         profile_id: null,
         deadline: null,
+        new_version: false,
       },
     },
     {
@@ -216,6 +218,7 @@ const seed = (): DemoInvites => ({
         excerpt: null,
         profile_id: null,
         deadline: null,
+        new_version: false,
       },
     },
     {
@@ -234,6 +237,7 @@ const seed = (): DemoInvites => ({
         excerpt: null,
         profile_id: null,
         deadline: null,
+        new_version: false,
       },
     },
   ],

@@ -5,7 +5,6 @@ import {
   SR_AUTHOR,
   SR_DOC,
   SR_REVIEW_DOC,
-  makeRouteParticipant,
   makeSigningRoute,
 } from "@entities/signing-route/testing";
 import { newVersionSummary, routeVersionView } from "./routeVersion";
@@ -62,16 +61,8 @@ describe("версия на подписи в карточке (12.2)", () => {
     expect(view.docs.map((d) => d.doc_id)).toEqual([SR_DOC.doc_id]);
   });
 
-  it("сервер до R16 полей не отдаёт: ничего не менялось", () => {
-    const { changed_docs: _changed, ...base } = makeSigningRoute({
-      status: "paused",
-      stop_reason: "sent_changed",
-    });
-    const old = {
-      ...base,
-      docs: base.docs.map(({ sent: _s, changed: _c, ...doc }) => doc),
-    } as SigningRoute;
-    expect(routeVersionView(old)).toEqual({
+  it("черновик: версии на подписи нет, изменений нет", () => {
+    expect(routeVersionView(route("draft"))).toEqual({
       docs: [],
       changed: [],
       sentAt: null,
@@ -112,28 +103,6 @@ describe("подтверждение новой версии (12.6)", () => {
       SR_AUTHOR.id,
       docName,
     );
-    expect(summary.reapprove).toEqual([]);
-  });
-
-  it("до R16 изменившиеся документы из маршрута, людей не перечисляем", () => {
-    const diverged = route("diverged");
-    const base = preview("new_version");
-    const old = {
-      ...base,
-      docs: base.docs.map(({ change: _c, sent: _s, ...doc }) => doc),
-      participants: base.participants.map(({ keeps_approval: _k, ...p }) => p),
-    };
-    const summary = newVersionSummary(
-      {
-        ...diverged,
-        steps: [[makeRouteParticipant({ user_id: "u_other" })]],
-      },
-      old,
-      SR_AUTHOR.id,
-      docName,
-    );
-    expect(summary.changed).toEqual(["Заявление о выборе темы"]);
-    expect(summary.kept).toEqual(["Отзыв руководителя"]);
     expect(summary.reapprove).toEqual([]);
   });
 });

@@ -9,9 +9,11 @@ import pytest
 from hse_doc_studio.core.enums import SignMode
 from hse_doc_studio.core.signatures.plan import DocFacts, SignMethod
 from hse_doc_studio.core.signatures.stamps import PLATE_MIN_WIDTH_MM
+from hse_doc_studio.core.signing_route.engine import ParticipantView
 from hse_doc_studio.core.signing_route.entities import (
     DocSlot,
     NextAction,
+    Participant,
     ParticipantState,
     RouteConflictError,
     RouteStatus,
@@ -123,11 +125,30 @@ def test__task_tokens__own_documents_only__approver_gets_every_route_document() 
     approver = participant(2, "academic_supervisor")
     route = make_route([author, approver], docs=(DOC, DOC2))
 
-    mine = task_tokens(route, author, NextAction.approve, world.facts())
-    everything = task_tokens(route, approver, NextAction.approve, world.facts())
+    mine = task_tokens(route, author, _view(author, NextAction.approve), world.facts())
+    everything = task_tokens(route, approver, _view(approver, NextAction.approve), world.facts())
 
     assert mine == {DOC: f"build:{BUILD}"}
     assert everything == {DOC: f"build:{BUILD}", DOC2: f"build:{BUILD}"}
+
+
+def _view(p: Participant, action: NextAction, approved: frozenset[str] = frozenset()) -> ParticipantView:
+    return ParticipantView(p.id, p.step, ParticipantState.to_approve, action, 1, False, approved_docs=approved)
+
+
+def test__task_tokens__carried_document__no_token() -> None:
+    """12.9: по документу, где согласие осталось и ЭП не ждут, действовать нечего."""
+    world = World({"author": SignMode.image, "supervisor": SignMode.image}, docs=(DOC, DOC2))
+    approver = participant(2, "academic_supervisor")
+    route = make_route([participant(1, "author", ["author"], docs=(DOC,)), approver], docs=(DOC, DOC2))
+
+    tokens = task_tokens(route, approver, _view(approver, NextAction.approve, frozenset({DOC2})), world.facts())
+
+    assert tokens == {DOC: f"build:{BUILD}", DOC2: None}
+
+
+def test__check_expected__document_without_token__not_checked() -> None:
+    check_expected({DOC: "build:a", DOC2: None}, {DOC: "build:a", DOC2: "build:old"})
 
 
 def test__check_expected__mismatch_and_missing__doc_changed_with_documents() -> None:
@@ -141,11 +162,6 @@ def test__check_expected__mismatch_and_missing__doc_changed_with_documents() -> 
 
     assert stale.value.doc_ids == (DOC2,)
     assert missing.value.doc_ids == (DOC, DOC2)
-
-
-def test__check_expected__nothing_to_act_on__any_expected_is_stale() -> None:
-    with pytest.raises(DocChangedError):
-        check_expected({DOC: None}, {DOC: "build:a"})
 
 
 def test__changed_docs__replaced_pinned_version_differs_from_the_snapshot_a_new_build_does_not() -> None:

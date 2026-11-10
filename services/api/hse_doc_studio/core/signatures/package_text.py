@@ -6,7 +6,8 @@ import contextlib
 import re
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import UTC, datetime, timedelta, timezone, tzinfo
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from hse_doc_studio.core.enums import DetachedFormat
 
@@ -211,12 +212,32 @@ class GuideDocument:
     version_sha256: str = ""
 
 
-def version_date(pinned_at: str) -> str:
-    """Дата версии на подписи для текстов пакета: ISO «2026-11-10T14:32:00Z» → «10.11.2026» (UTC)."""
+def _display_zone() -> tzinfo:
+    """Пояс дат в текстах пакета: московское время, как у людей в интерфейсе (у установки своего пояса нет).
+
+    Без базы поясов (нет tzdata в образе) берётся постоянное смещение UTC+3: переходов на летнее время в Москве нет.
+    """
     try:
-        return datetime.fromisoformat(pinned_at).strftime("%d.%m.%Y")
+        return ZoneInfo("Europe/Moscow")
+    except ZoneInfoNotFoundError:
+        return timezone(timedelta(hours=3), "MSK")
+
+
+DISPLAY_ZONE = _display_zone()
+
+
+def version_date(pinned_at: str) -> str:
+    """Дата версии на подписи для текстов пакета: ISO «2026-11-10T21:32:00Z» → «11.11.2026» (по Москве).
+
+    Время без пояса считается UTC: так его пишет `PinnedPdf.pinned_at`. Неразборчивое значение остаётся как есть.
+    """
+    try:
+        moment = datetime.fromisoformat(pinned_at)
     except ValueError:
         return pinned_at
+    if moment.tzinfo is None:
+        moment = moment.replace(tzinfo=UTC)
+    return moment.astimezone(DISPLAY_ZONE).strftime("%d.%m.%Y")
 
 
 def signer_display_name(raw: str) -> str:

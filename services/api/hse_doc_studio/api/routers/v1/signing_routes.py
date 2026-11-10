@@ -45,7 +45,7 @@ from hse_doc_studio.use_cases.signing_route.key_signer import (
     KeyRequest,
 )
 from hse_doc_studio.use_cases.signing_route.reminders import SigningRouteReminding
-from hse_doc_studio.use_cases.signing_route.views import EventView, PersonView, RouteDetails
+from hse_doc_studio.use_cases.signing_route.views import EventView, PersonView, RouteDetails, SentVersion
 
 router = APIRouter(route_class=SafeDishkaRoute, dependencies=[Depends(require_server_mode)])
 
@@ -128,6 +128,8 @@ def route_response(details: RouteDetails) -> s.SigningRouteResponse:
                     )
                     for slot in doc.slots
                 ],
+                sent=sent_response(doc.sent),
+                changed=doc.changed,
             )
             for doc in details.docs
         ],
@@ -143,7 +145,14 @@ def route_response(details: RouteDetails) -> s.SigningRouteResponse:
             )
             for group in details.candidates
         ],
+        changed_docs=list(details.changed_docs),
     )
+
+
+def sent_response(sent: SentVersion | None) -> s.RouteDocVersion | None:
+    if sent is None:
+        return None
+    return s.RouteDocVersion(sha256=sent.sha256, at=sent.at, round=max(sent.round, 1))
 
 
 def event_response(e: EventView) -> s.RouteEvent:
@@ -157,6 +166,7 @@ def event_response(e: EventView) -> s.RouteEvent:
         participant_id=str(event.participant_id) if event.participant_id is not None else None,
         comment=e.comment,
         reason=e.reason.value if e.reason is not None else None,
+        changed_docs=list(e.changed_docs) if e.changed_docs is not None else None,
     )
 
 
@@ -200,6 +210,8 @@ def _summary(item: RouteSummary) -> s.SigningRouteSummary:
         completed_at=route.completed_at,
         updated_at=_written(route.created_at, route.updated_at)[1],
         waiting_for=[s.SigningWaitingFor(name=name, persona=persona) for name, persona in item.waiting_for],
+        docs=list(route.docs),
+        changed_docs=list(item.changed_docs),
     )
 
 
@@ -218,8 +230,15 @@ def _preview(preview: RoutePreview) -> s.SigningRoutePreview:
         can_send_and_sign=preview.can_send_and_sign,
         visual_step=preview.visual_step,
         docs=[
-            s.SigningRoutePreviewDoc(doc_id=doc_id, name=name, built=built, token=token)
-            for doc_id, name, built, token in preview.docs
+            s.SigningRoutePreviewDoc(
+                doc_id=doc.doc_id,
+                name=doc.name,
+                built=doc.built,
+                token=doc.token,
+                change=doc.change.value,
+                sent=sent_response(doc.sent),
+            )
+            for doc in preview.docs
         ],
         participants=[
             s.SigningRoutePreviewParticipant(
@@ -234,6 +253,7 @@ def _preview(preview: RoutePreview) -> s.SigningRoutePreview:
                 image_ready=person.image_ready,
                 plate_ready=person.plate_ready,
                 actions=min(person.actions, 2),
+                keeps_approval=person.keeps_approval,
             )
             for person in preview.participants
         ],
@@ -269,7 +289,7 @@ def _send(body: s.SendSigningRouteRequest) -> SendRequest:
     sign = None
     if body.sign is not None:
         sign = KeyRequest(identity_id=key_id(body.sign.identity_id), passphrase=body.sign.passphrase or "")
-    return SendRequest(expected=dict(body.expected), sign=sign)
+    return SendRequest(expected=dict(body.expected), sign=sign, note=body.note)
 
 
 def key_id(value: str | None) -> UUID | None:

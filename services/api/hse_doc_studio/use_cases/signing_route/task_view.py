@@ -23,7 +23,7 @@ from hse_doc_studio.core.signatures.plan import (
 )
 from hse_doc_studio.core.signatures.ports import IMarkMeasure
 from hse_doc_studio.core.signatures.stamps import stamps_for_doc
-from hse_doc_studio.core.signing_route.engine import Evaluation, ParticipantView, RouteFacts
+from hse_doc_studio.core.signing_route.engine import Evaluation, ParticipantView, RouteFacts, approval_token
 from hse_doc_studio.core.signing_route.entities import (
     DocSlot,
     EventKind,
@@ -45,7 +45,15 @@ from hse_doc_studio.core.signing_route.signer import (
 from hse_doc_studio.core.value_objects import SignaturePlacement, SignaturesState, SignerInfo
 from hse_doc_studio.use_cases.signing_route.key_signer import KeyInfo
 from hse_doc_studio.use_cases.signing_route.point import RoutePoint
-from hse_doc_studio.use_cases.signing_route.views import EventView, People, card_name, displayed, event_view
+from hse_doc_studio.use_cases.signing_route.views import (
+    EventView,
+    People,
+    card_name,
+    displayed,
+    doc_changed,
+    event_view,
+    sent_version,
+)
 
 # Пропорция рамки под картинку, которой ещё нет: как у метки без известных размеров (`stamps._DEFAULT_ASPECT`).
 _IMAGE_ASPECT = 0.4
@@ -80,6 +88,12 @@ class TaskDoc:
     token: str | None
     mine: tuple[TaskSlot, ...]
     others: tuple[TaskSlot, ...]
+    # Дата версии на подписи (12.9); None, если её нет.
+    sent_at: datetime | None = None
+    # Документ изменился с прошлого согласия участника: согласовать заново.
+    changed_since_mine: bool = False
+    # Рабочая сборка ушла от версии на подписи; только автору и управляющим маршрутом, остальным None.
+    changed: bool | None = None
 
 
 @dataclass(frozen=True)
@@ -123,6 +137,8 @@ class TaskDetails:
     keys: TaskKeys
     docs: tuple[TaskDoc, ...]
     events: tuple[EventView, ...]
+    # Раунд новой версии, в котором изменился хотя бы один документ участника (12.6).
+    new_version: bool = False
 
 
 def build_task(  # noqa: PLR0913 — входы одного ответа
@@ -135,7 +151,11 @@ def build_task(  # noqa: PLR0913 — входы одного ответа
     events: Sequence[RouteEvent],
     keys: TaskKeys,
     measure: IMarkMeasure,
+    *,
+    manages: bool = False,
 ) -> TaskDetails:
+    """Задача участника `me`. `manages` вправе ли смотрящий управлять маршрутом: только ему видно, что рабочая
+    сборка ушла от версии на подписи (12.9), подписант рабочих правок не видит."""
     status, phase, stop = displayed(route, evaluation)
     view = evaluation.participant(me.id)
     positions = {step: i for i, step in enumerate(route.steps, start=1)}
@@ -174,8 +194,9 @@ def build_task(  # noqa: PLR0913 — входы одного ответа
         image_ready=image_ready(me, facts),
         plate=known_plate(me, facts),
         keys=keys,
-        docs=_docs(point, route, facts, me, view, measure),
+        docs=_docs(point, route, facts, me, view, measure, manages=manages),
         events=tuple(event_view(e, people, show_comments=True) for e in events),
+        new_version=bool(set(route.round_changed_docs) & set(me.doc_ids(route.docs))),
     )
 
 
@@ -200,8 +221,10 @@ def _docs(  # noqa: PLR0913 — входы одного списка
     me: Participant,
     view: ParticipantView,
     measure: IMarkMeasure,
+    *,
+    manages: bool,
 ) -> tuple[TaskDoc, ...]:
-    tokens = task_tokens(route, me, view.next_action, facts)
+    tokens = task_tokens(route, me, view, facts)
     owned = {pair for p in route.participants for pair in p.assignments}
     pairs = list(dict.fromkeys([*point.required, *owned]))
     result: list[TaskDoc] = []
@@ -213,6 +236,7 @@ def _docs(  # noqa: PLR0913 — входы одного списка
             if (slot := facts.state.slots.get(pair.slot_id)) is not None
         )
         slots = {pair: _slot(point, facts, pair, measure, uses_frozen=uses_frozen) for pair in doc_pairs}
+        sent = sent_version(route, facts.state, doc_id)
         result.append(
             TaskDoc(
                 doc_id=doc_id,
@@ -221,9 +245,20 @@ def _docs(  # noqa: PLR0913 — входы одного списка
                 token=tokens.get(doc_id),
                 mine=tuple(slot for pair, slot in slots.items() if pair in me.assignments),
                 others=tuple(slot for pair, slot in slots.items() if pair not in me.assignments),
+                sent_at=sent.at if sent is not None else None,
+                changed_since_mine=_changed_since(me, facts, doc_id),
+                changed=doc_changed(route, facts, doc_id, sent) if manages else None,
             )
         )
     return tuple(result)
+
+
+def _changed_since(me: Participant, facts: RouteFacts, doc_id: str) -> bool:
+    """Документ изменился с прошлого согласия участника: отпечаток его согласия другой (12.6)."""
+    approval = me.approval
+    if approval is None or doc_id not in approval.tokens:
+        return False
+    return approval.tokens[doc_id] != approval_token(facts.doc(doc_id))
 
 
 def _slot(point: RoutePoint, facts: RouteFacts, pair: DocSlot, measure: IMarkMeasure, *, uses_frozen: bool) -> TaskSlot:

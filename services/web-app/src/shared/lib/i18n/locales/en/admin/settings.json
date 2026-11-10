@@ -218,6 +218,7 @@
       "transfer_request": "Project transfer",
       "signing_request": "Signing route: request to sign",
       "signing_request_sign": "Signing route: sign the final PDF",
+      "signing_request_new_version": "Signing route: new version",
       "signing_reminder": "Signing route: reminder",
       "signing_returned": "Signing route: returned for revision",
       "signing_completed": "Signing route: everyone has signed",

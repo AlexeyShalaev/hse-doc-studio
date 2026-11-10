@@ -113,6 +113,9 @@ const doc = (overrides: Partial<SigningTaskDoc> = {}): SigningTaskDoc => ({
   token: BUILD,
   mine: [slot("supervisor")],
   others: [other("author", "signed"), other("academic_supervisor", "pending")],
+  sent_at: null,
+  changed_since_mine: false,
+  changed: null,
   ...overrides,
 });
 

@@ -222,6 +222,7 @@
       "transfer_request": "Передача проекта",
       "signing_request": "Маршрут подписания: просьба подписать",
       "signing_request_sign": "Маршрут подписания: подписать итоговый PDF",
+      "signing_request_new_version": "Маршрут подписания: новая версия",
       "signing_reminder": "Маршрут подписания: напоминание",
       "signing_returned": "Маршрут подписания: вернули на доработку",
       "signing_completed": "Маршрут подписания: все подписали",

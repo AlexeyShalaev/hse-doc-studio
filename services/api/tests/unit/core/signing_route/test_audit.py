@@ -61,7 +61,37 @@ def test__audit_of_event__sent__composition_of_the_route_and_who_sent() -> None:
         "participants": 3,
         "deadline": (T0 + timedelta(days=3)).isoformat(),
         "resend": True,
+        "new_version": False,
+        "changed_docs": [],
+        "versions": [],
     }
+
+
+def test__audit_of_event__sent_new_version__changed_docs_and_versions() -> None:
+    """12.10: `signing_route.send` новой версии называет изменившиеся документы и снятые версии (sha256, размер)."""
+    route = _route()
+    versions = [{"doc_id": DOC, "sha256": "a" * 64, "size": 1024}]
+    details = {"new_version": True, "changed": [DOC], "kept": [], "versions": versions, "comment": "x"}
+
+    record = audit_of_event(
+        route, _event(route, EventKind.sent, actor_id=route.participants[0].user_id, details=details)
+    )
+
+    assert record is not None
+    assert (record.details["new_version"], record.details["changed_docs"]) == (True, [DOC])
+    assert record.details["versions"] == versions
+    assert "comment" not in record.details
+
+
+def test__audit_of_event__cancelled__unpinned_documents() -> None:
+    route = _route()
+
+    record = audit_of_event(
+        route, _event(route, EventKind.cancelled, actor_id=route.participants[0].user_id, details={"unpinned": [DOC]})
+    )
+
+    assert record is not None
+    assert record.details["unpinned"] == [DOC]
 
 
 def test__audit_of_event__approved__participant_step_by_position_and_own_slots() -> None:

@@ -38,7 +38,7 @@ from hse_doc_studio.core.team import is_doc_active
 from hse_doc_studio.core.value_objects import SignaturesState, SignerInfo
 from hse_doc_studio.use_cases.projects.get_project import GetProjectInput, GetProjectUC
 from hse_doc_studio.use_cases.signatures.get_signature_plan import doc_facts
-from hse_doc_studio.use_cases.signing_route.point import RoutePoint, RoutePointLoader
+from hse_doc_studio.use_cases.signing_route.point import RoutePoint, RoutePointLoader, doc_display_name
 
 
 async def known_plates(
@@ -173,7 +173,14 @@ class ProjectRouteFacts:
         if loaded is None:
             return None
         profile = self._profiles.get_profile(loaded.version, profile_id) if loaded.version is not None else None
-        return RouteLabels(project_name=loaded.project.name, profile_name=dict(profile.name) if profile else {})
+        version = loaded.version
+        docs = {
+            doc.id: doc_display_name(self._template_service, version, doc) if version is not None else {}
+            for doc in loaded.project.documents
+        }
+        return RouteLabels(
+            project_name=loaded.project.name, profile_name=dict(profile.name) if profile else {}, doc_names=docs
+        )
 
     async def _load(self, project_id: UUID) -> _Loaded | None:
         try:

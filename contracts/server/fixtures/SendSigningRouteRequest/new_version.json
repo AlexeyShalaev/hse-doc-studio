@@ -1,0 +1,8 @@
+{
+  "expected": {
+    "topic_application": "build:a7a7a7a7a7a7a7a7a7a7a7a7a7a7a7a7a7a7a7a7a7a7a7a7a7a7a7a7a7a7a7a7",
+    "supervisor_review": "build:5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e"
+  },
+  "sign": null,
+  "note": "Исправил формулировку темы."
+}

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from dataclasses import replace
 from datetime import UTC, datetime
 
 from hse_doc_studio.core.invitations.entities import NotificationKind, NotificationPayload
@@ -210,6 +211,27 @@ async def test__signing_request__sign_turn_asks_for_the_final_pdf_and_no_deadlin
     assert mail is not None
     assert mail.subject == "Sign the final PDF: Заявка на тему КП"
     assert "Deadline" not in mail.text
+
+
+async def test__signing_request__new_version__changed_documents_and_sender_message() -> None:
+    """12.6: письмо запроса новой версии называет изменившиеся документы и несёт сообщение автора."""
+    mailer = SmtpNotificationMailer(_Sender(), SERVER)
+    payload = replace(_signing(message="Исправил тему", changed_names="«Заявление о выборе темы»"), new_version=True)
+
+    mail = mailer.render_notification("p@x.org", NotificationKind.signing_request, payload, locale="ru")
+
+    assert mail is not None
+    assert mail.subject == "Иван Иванов просит подписать новую версию: Заявка на тему КП"
+    assert "Изменились: «Заявление о выборе темы»" in mail.text
+    assert "Сообщение автора" in mail.text
+    assert "Исправил тему" in mail.text
+    assert f'href="{SERVER}/sign/{PROJECT}/{ROUTE}"' in mail.html
+
+
+async def test__signing_new_version__inbox_only() -> None:
+    mailer = SmtpNotificationMailer(_Sender(), SERVER)
+
+    assert mailer.render_notification("p@x.org", NotificationKind.signing_new_version, _signing(), locale="ru") is None
 
 
 async def test__signing_returned__comment_in_a_block_and_link_to_the_checkpoint() -> None:

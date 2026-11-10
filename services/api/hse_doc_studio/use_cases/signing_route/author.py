@@ -36,10 +36,14 @@ from hse_doc_studio.core.signing_route.drafting import (
     inherit_participants,
     resolve_unassigned,
 )
+from hse_doc_studio.core.signing_route.effects import Notify
 from hse_doc_studio.core.signing_route.engine import Evaluation, RouteFacts, approval_token, evaluate, notice_for
 from hse_doc_studio.core.signing_route.entities import (
     EDITABLE_STATUSES,
+    HOLDING_STATUSES,
+    NEW_VERSION_STATUSES,
     RETURN_COMMENT_MAX,
+    SENDABLE_STATUSES,
     WATCHING_STATUSES,
     DocSlot,
     EventKind,
@@ -53,6 +57,7 @@ from hse_doc_studio.core.signing_route.entities import (
     RouteStatus,
     SigningRoute,
     StopReason,
+    nothing_changed,
 )
 from hse_doc_studio.core.signing_route.readiness import (
     Blocker,
@@ -64,9 +69,16 @@ from hse_doc_studio.core.signing_route.readiness import (
 from hse_doc_studio.core.signing_route.repositories import OpenRouteExistsError
 from hse_doc_studio.core.signing_route.signer import unsigned_crypto
 from hse_doc_studio.core.signing_route.transitions import archive, cancel, send
+from hse_doc_studio.core.signing_route.versions import (
+    DocChange,
+    VersionChanges,
+    keeps_approval,
+    losing_approval,
+    version_changes,
+)
 from hse_doc_studio.core.value_objects import SignaturesState
-from hse_doc_studio.use_cases.signing_route.facts import LoadedFacts
 from hse_doc_studio.use_cases.signing_route.key_signer import KeyInfo, KeyRequest, RouteKeySigner
+from hse_doc_studio.use_cases.signing_route.pinning import PinnedVersion, RoutePinning
 from hse_doc_studio.use_cases.signing_route.point import RoutePoint
 from hse_doc_studio.use_cases.signing_route.scenario import (
     RouteScenario,
@@ -80,9 +92,10 @@ from hse_doc_studio.use_cases.signing_route.views import (
     Membership,
     People,
     RouteDetails,
+    SentVersion,
     build_details,
-    doc_views,
     method_of_participant,
+    sent_version,
 )
 
 # «Отправить» не чаще раза в минуту на маршрут (раздел 7).
@@ -104,10 +117,17 @@ class RouteUpdate:
 
 @dataclass(frozen=True)
 class SendRequest:
-    """Отправка: отпечатки документов из предпросмотра и, для «Отправить и подписать», ключ Студии."""
+    """Отправка: отпечатки документов из предпросмотра и, для «Отправить и подписать», ключ Студии.
+
+    `note` «Что изменилось» (12.6): заменяет сообщение маршрута и уходит подписантам с запросом; пустое не меняет.
+    `new_version` можно ли отправить новую версию идущего или завершённого маршрута: MCP не может (12.10), это
+    решение человека, потому что новая версия сбрасывает чужие согласия.
+    """
 
     expected: Mapping[str, str]
     sign: KeyRequest | None = None
+    note: str | None = None
+    new_version: bool = True
 
 
 class SentUnsignedError(Exception):
@@ -132,6 +152,8 @@ class RouteSummary:
     current_step: int | None
     # Чья очередь: имя (None, если человека нет) и персона.
     waiting_for: tuple[tuple[str | None, str], ...] = ()
+    # Документы, рабочая сборка которых ушла от версии на подписи (12.9); считаются у маршрутов, держащих документы.
+    changed_docs: tuple[str, ...] = ()
 
     @property
     def steps_total(self) -> int:
@@ -150,6 +172,24 @@ class PreviewPerson:
     image_ready: bool
     plate_ready: bool
     actions: int
+    # Согласие переносится по всем его документам: после отправки он остаётся согласовавшим (12.9).
+    keeps_approval: bool = False
+
+
+@dataclass(frozen=True)
+class PreviewDoc:
+    """Документ предпросмотра: кандидат против версии на подписи (12.9).
+
+    `built` и `token` по кандидату: `build:<sha>` текущей сборки, у несобранного документа с версией на подписи
+    её отпечаток. `sent` нынешняя версия на подписи этого маршрута.
+    """
+
+    doc_id: str
+    name: dict[str, str]
+    built: bool
+    token: str | None
+    change: DocChange
+    sent: SentVersion | None
 
 
 @dataclass(frozen=True)
@@ -158,7 +198,7 @@ class RoutePreview:
     can_send: bool
     can_send_and_sign: bool
     visual_step: int
-    docs: tuple[tuple[str, dict[str, str], bool, str | None], ...]  # doc_id, название, собран, отпечаток
+    docs: tuple[PreviewDoc, ...]
     participants: tuple[PreviewPerson, ...]
     blockers: tuple[Blocker, ...]
     sender_key: KeyInfo | None
@@ -303,9 +343,12 @@ class SigningRouteDrafts(RouteScenario):
             stop_reason=route.stop_reason,
             current_step=None,
         )
-        if route.status not in WATCHING_STATUSES:
+        if route.status not in HOLDING_STATUSES:
             return base
         details = await self._details_light(point, route)
+        base = replace(base, changed_docs=details.changed_docs)
+        if route.status not in WATCHING_STATUSES:
+            return base
         return replace(
             base,
             status=details.status,
@@ -423,70 +466,97 @@ class SigningRouteSending(RouteScenario):
         self._signer = signer
 
     async def preview(self, actor: Actor, project_id: UUID, route_id: UUID) -> RoutePreview:
+        """Что будет при отправке сохранённого маршрута; ничего не меняет.
+
+        Считается на кандидате (12.6): источник каждого документа заменён текущей сборкой. У идущего и
+        завершённого маршрута без изменений отправлять нечего: `can_send` ложно, помеха `nothing_changed`.
+        """
         actor_id = actor_uuid(actor)
         route = await self._get(project_id, route_id)
         point = await self._s.points.load(project_id, route.profile_id)
         loaded = await self._s.facts.load(point, route)
+        candidate = loaded.facts.candidate()
         people = await self._people(project_id, route, loaded)
-        readiness = await self._readiness(point, route, loaded, people, actor_id, self._s.clock())
+        readiness = await self._readiness(point, route, candidate, people, actor_id, self._s.clock())
+        changes = version_changes(route, candidate)
         return RoutePreview(
             route=route,
             can_send=readiness.can_send,
             can_send_and_sign=readiness.can_send_and_sign,
             visual_step=readiness.evaluation.last_visible_step,
-            docs=tuple((d.doc_id, d.name, d.built, d.token) for d in doc_views(point, route, loaded.facts)),
-            participants=_preview_people(point, readiness, loaded.facts, people),
+            docs=_preview_docs(point, route, loaded.state, candidate, changes),
+            participants=_preview_people(point, readiness, candidate, people, route),
             blockers=readiness.blockers,
             sender_key=await self._signer.default_key_info(),
         )
 
     async def send(self, actor: Actor, project_id: UUID, route_id: UUID, request: SendRequest) -> RouteDetails:
-        """Отправить или отправить заново. Ошибка подписи при «Отправить и подписать» не отменяет отправку:
-        маршрут уходит, а ошибка возвращается после записи как `SentUnsignedError` (подписать можно на своей
-        странице). Любой другой отказ значит, что ничего не отправлено."""
+        """Отправить, отправить заново или отправить новую версию (5.6, 12.6). Ошибка подписи при «Отправить и
+        подписать» не отменяет отправку: маршрут уходит, а ошибка возвращается после записи как
+        `SentUnsignedError` (подписать можно на своей странице). Любой другой отказ значит, что ничего не
+        отправлено."""
         actor_id = actor_uuid(actor)
         at = self._s.clock()
         deferred: Exception | None = None
+        note = _message(request.note)
         async with self._s.uow.begin():
             route = await self._get(project_id, route_id, lock=True)
-            # Новую версию из `active` и `completed` (12.6) сценарий откроет вместе со снятием версии на подписи.
-            if route.status not in EDITABLE_STATUSES:
+            if route.status not in SENDABLE_STATUSES or (
+                route.status in NEW_VERSION_STATUSES and not request.new_version
+            ):
                 raise _invalid(route.status, "отправить")
             _check_interval(route, at)
+            if note is not None:
+                route = replace(route, message=note)
             point = await self._s.points.load(project_id, route.profile_id)
             identity = await self._signer.check(request.sign) if request.sign is not None else None
             async with route_files(point.project):
-                settled, events = await self._send_files(point, route, actor_id, request, at)
+                sending = await self._send_files(point, route, actor_id, request, at)
+                settled, events = sending.settled, sending.events
                 if identity is not None and request.sign is not None:
                     try:
                         settled, signed = await self._sign_own(point, settled, actor_id, identity, request.sign, at)
                         events += signed
                     except (ValueError, PermissionError, NotFoundError, ProjectForbiddenError) as exc:
                         deferred = exc
-            saved = await self._commit(settled, [*events, *closing_events(settled, at)], actor_id=actor_id, at=at)
+            extra = _new_version_notice(route, sending.losing, settled, actor_id)
+            saved = await self._commit(
+                settled, [*events, *closing_events(settled, at)], actor_id=actor_id, at=at, extra=extra
+            )
         if deferred is not None:
             raise SentUnsignedError(deferred) from deferred
         return await self._details(actor, point, saved)
 
     async def _send_files(
         self, point: RoutePoint, route: SigningRoute, actor_id: UUID, request: SendRequest, at: datetime
-    ) -> tuple[Settled, list[RouteEvent]]:
+    ) -> _Sending:
+        """Порядок 12.6: кандидат, изменения, сверка `expected` по кандидату, переход, снятие версий на подписи,
+        затем расчёт по фактам с диска (они совпадают с кандидатом) и эффекты."""
         loaded = await self._s.facts.load(point, route)
+        candidate = loaded.facts.candidate()
+        changes = version_changes(route, candidate)
+        if route.status in NEW_VERSION_STATUSES and not changes.any:
+            raise nothing_changed()
         people = await self._people(point.project_id, route, loaded)
-        readiness = await self._readiness(point, route, loaded, people, actor_id, at)
+        readiness = await self._readiness(point, route, candidate, people, actor_id, at)
         if readiness.blockers:
             raise RouteBlockedError(readiness.blockers)
-        _check_expected(route, loaded.facts, request.expected)
-        sent = send(route, loaded.facts, by=actor_id, at=at)
-        settled = await self._settle(point, sent, at, loaded)
-        events = [RouteEvent(sent.id, sent.round, at, EventKind.sent, actor_id=actor_id)]
+        _check_expected(route, candidate, request.expected)
+        sent = send(route, candidate, by=actor_id, at=at)
+        pinning = RoutePinning(self._s.effects.signatures, self._s.points.template_service)
+        to_pin = _to_pin(route, loaded.state, changes)
+        expected = {doc_id: candidate.doc(doc_id).compiled_sha256 or "" for doc_id in to_pin}
+        versions = await pinning.pin(point, sent, expected, at=at)
+        settled = await self._settle(point, sent, at)
+        details = _sent_details(changes, versions)
+        events = [RouteEvent(sent.id, sent.round, at, EventKind.sent, actor_id=actor_id, details=details)]
         if readiness.sender is not None:
             events.append(
                 RouteEvent(sent.id, sent.round, at, EventKind.approved, actor_id, participant_id=readiness.sender.id)
             )
         if settled.frozen:
             events.append(RouteEvent(sent.id, sent.round, at, EventKind.frozen, details={"docs": list(settled.frozen)}))
-        return settled, events
+        return _Sending(settled, events, losing_approval(route, candidate))
 
     async def _sign_own(
         self,
@@ -526,25 +596,29 @@ class SigningRouteSending(RouteScenario):
         ]
         return await self._settle(point, route, at), events
 
-    async def _readiness(
+    async def _readiness(  # noqa: PLR0913 — входы одного расчёта
         self,
         point: RoutePoint,
         route: SigningRoute,
-        loaded: LoadedFacts,
+        candidate: RouteFacts,
         people: People,
         actor_id: UUID,
         at: datetime,
     ) -> _Readiness:
-        facts = loaded.facts
+        """Помехи и расчёт отправленного маршрута на кандидате (12.6)."""
         blockers = [
-            *await self._doc_blockers(point, route, facts),
+            *await self._doc_blockers(point, route, candidate),
             *_people_blockers(point, route, people),
-            *_placement_blockers(point, route, facts.state),
+            *_placement_blockers(point, route, candidate.state),
         ]
-        if route.status not in EDITABLE_STATUSES or not route.participants:
-            return _Readiness(tuple(blockers), evaluate(route, facts), route)
-        sent = send(route, facts, by=actor_id, at=at)
-        evaluation = evaluate(sent, facts)
+        if route.status not in SENDABLE_STATUSES or not route.participants:
+            return _Readiness(tuple(blockers), evaluate(route, candidate), route)
+        if route.status in NEW_VERSION_STATUSES and not version_changes(route, candidate).any:
+            # Новая версия без изменений: кнопку отправки не показывают, а не ловят 409 (12.9).
+            blockers.append(Blocker(BlockerCode.nothing_changed))
+            return _Readiness(tuple(blockers), evaluate(route, candidate), route)
+        sent = send(route, candidate, by=actor_id, at=at)
+        evaluation = evaluate(sent, candidate)
         first = sent.steps[0]
         sender = next((p for p in sent.participants if p.user_id == actor_id and p.step == first), None)
         if sender is not None:
@@ -565,6 +639,70 @@ class SigningRouteSending(RouteScenario):
                 other = OtherRoute(holder.id, holder.profile_id, point.profile_name(holder.profile_id), holder.status)
                 blockers.append(Blocker(BlockerCode.doc_in_other_route, doc_id=doc_id, other_route=other))
         return blockers
+
+
+@dataclass(frozen=True)
+class _Sending:
+    """Итог отправки под `project_lock`: расчёт, события и кто потерял согласие (до перехода)."""
+
+    settled: Settled
+    events: list[RouteEvent]
+    losing: tuple[UUID, ...]
+
+
+def _to_pin(route: SigningRoute, state: SignaturesState, changes: VersionChanges) -> tuple[str, ...]:
+    """У кого отправка снимает версию на подписи: изменившиеся и новые, а ещё документы без версии этого маршрута
+    (маршрут 0.20.0 до переноса, версия снята мимо маршрута): после отправки она есть у каждого документа."""
+    own = str(route.id)
+    return tuple(
+        doc_id
+        for doc_id in route.docs
+        if changes.docs[doc_id] is not DocChange.same
+        or (pinned := state.pinned.get(doc_id)) is None
+        or pinned.route_id != own
+    )
+
+
+def _sent_details(changes: VersionChanges, versions: Sequence[PinnedVersion]) -> dict[str, object]:
+    """`details` события `sent` (12.6): новая ли версия, что изменилось, что осталось, что снято (sha256, размер)."""
+    return {
+        "new_version": changes.new_version,
+        "changed": list(changes.changed),
+        "kept": list(changes.kept),
+        "versions": [{"doc_id": v.doc_id, "sha256": v.sha256, "size": v.size} for v in versions],
+    }
+
+
+def _new_version_notice(
+    route: SigningRoute, losing: Sequence[UUID], settled: Settled, actor_id: UUID
+) -> tuple[Notify, ...]:
+    """`signing_new_version` (12.6) тем, кто согласовал или подписал изменившийся документ, кроме отправителя и
+    тех, кому сейчас уходит запрос: их очередь ещё не настала, запрос придёт в неё."""
+    requested = {pid for n in settled.notices if n.notice is Notice.request for pid in n.participant_ids}
+    wanted = tuple(
+        pid for pid in losing if pid not in requested and route.participant(pid).user_id not in (None, actor_id)
+    )
+    return (Notify(Notice.new_version, wanted),) if wanted else ()
+
+
+def _preview_docs(
+    point: RoutePoint, route: SigningRoute, state: SignaturesState, candidate: RouteFacts, changes: VersionChanges
+) -> tuple[PreviewDoc, ...]:
+    result: list[PreviewDoc] = []
+    for doc_id in route.docs:
+        facts = candidate.doc(doc_id)
+        built = facts.compiled_sha256 is not None
+        result.append(
+            PreviewDoc(
+                doc_id=doc_id,
+                name=point.doc_name(doc_id),
+                built=built,
+                token=approval_token(facts) if built else None,
+                change=changes.docs[doc_id],
+                sent=sent_version(route, state, doc_id),
+            )
+        )
+    return tuple(result)
 
 
 def _people_blockers(point: RoutePoint, route: SigningRoute, people: People) -> list[Blocker]:
@@ -623,9 +761,11 @@ def _check_expected(route: SigningRoute, facts: RouteFacts, expected: Mapping[st
 
 
 def _preview_people(
-    point: RoutePoint, readiness: _Readiness, facts: RouteFacts, people: People
+    point: RoutePoint, readiness: _Readiness, facts: RouteFacts, people: People, before: SigningRoute
 ) -> tuple[PreviewPerson, ...]:
+    """Люди отправленного маршрута; `keeps_approval` по согласию до отправки (`before`) против кандидата."""
     route = readiness.route
+    previous = {p.id: p for p in before.participants}
     positions = {step: i for i, step in enumerate(route.steps, start=1)}
     return tuple(
         PreviewPerson(
@@ -639,6 +779,7 @@ def _preview_people(
             image_ready=_image_ready(p, facts),
             plate_ready=_plate_ready(p, facts),
             actions=readiness.evaluation.participant(p.id).remaining_actions,
+            keeps_approval=keeps_approval(before, facts, previous.get(p.id, p)),
         )
         for p in route.participants
     )
@@ -682,17 +823,24 @@ class SigningRouteControl(RouteScenario):
     """«Отменить маршрут» и «Снять с контроля»."""
 
     async def cancel(self, actor: Actor, project_id: UUID, route_id: UUID) -> RouteDetails:
-        """Отменить из `draft`, `active`, `paused`, `returned`: подписи и придержанные картинки остаются (5.6)."""
+        """Отменить из `draft`, `active`, `paused`, `returned`: подписи и придержанные картинки остаются (5.6),
+        версии на подписи снимаются (12.4)."""
         actor_id = actor_uuid(actor)
         at = self._s.clock()
         async with self._s.uow.begin():
             route = await self._get(project_id, route_id, lock=True)
             notice = notice_for(route, Notice.cancelled)
             cancelled = cancel(route)
-            event = RouteEvent(route.id, route.round, at, EventKind.cancelled, actor_id=actor_id)
+            point = await self._s.points.load(project_id, route.profile_id)
+            # Отмена снимает версии на подписи этого маршрута (12.4): документ снова подписывается по текущей
+            # сборке, ЭП над B остаются в состоянии подписей.
+            async with route_files(point.project):
+                unpinned = RoutePinning(self._s.effects.signatures, self._s.points.template_service).unpin(point, route)
+            event = RouteEvent(
+                route.id, route.round, at, EventKind.cancelled, actor_id=actor_id, details={"unpinned": list(unpinned)}
+            )
             saved = await self._s.routes.save(cancelled, events=[event])
             await self.notify(saved, [notice], actor_id=actor_id)
-        point = await self._s.points.load(project_id, saved.profile_id)
         return await self._details(actor, point, saved)
 
     async def archive(self, actor: Actor, project_id: UUID, route_id: UUID) -> RouteDetails:
