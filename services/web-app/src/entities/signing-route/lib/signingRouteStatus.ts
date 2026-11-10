@@ -67,12 +67,15 @@ export const nextRemindAt = (remindedAt: string | null): number | null =>
 export const signingPagePath = (projectId: string, routeId: string): string =>
   `/sign/${encodeURIComponent(projectId)}/${encodeURIComponent(routeId)}`;
 
-/** Экран автора «Отправка на подписание» для точки сдачи (раздел 3.1). */
+/** Страница контрольной точки: там карточка «Подписание» с ходом её маршрута. */
+export const checkpointPath = (projectId: string, profileId: string): string =>
+  `/projects/${encodeURIComponent(projectId)}/submit/cp/${encodeURIComponent(profileId)}`;
+
+/** Экран автора «Отправка на подписание» для контрольной точки (раздел 3.1). */
 export const signingRouteEditorPath = (
   projectId: string,
   profileId: string,
-): string =>
-  `/projects/${encodeURIComponent(projectId)}/submit/cp/${encodeURIComponent(profileId)}/route`;
+): string => `${checkpointPath(projectId, profileId)}/route`;
 
 /** Адрес PDF документа задачи: `pdf_url` бэкенда уже начинается с `/api/v1`. */
 export const signingPdfUrl = (pdfUrl: string): string =>

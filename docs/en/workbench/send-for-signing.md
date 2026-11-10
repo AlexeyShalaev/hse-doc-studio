@@ -49,7 +49,7 @@ Open the Submission mode and the checkpoint, and in the “Signing” card click
 
 ### Checkpoint documents
 
-Every document has to be built: a document that is not built has a “Build” button. A document that is already being signed on another route is marked “out for signing in another route”.
+Every document has to be built: a document that is not built has a “Build” button. A document held by the route of another checkpoint is marked with that checkpoint's name: “out for signing on the route “…”” or “held by the completed route “…””.
 
 ### Who signs and in what order
 
@@ -87,7 +87,8 @@ The bottom of the screen lists “What blocks sending”. While the list is not 
 | Blocker | What to do |
 |---|---|
 | the document is not built | click “Build” in “Checkpoint documents” |
-| already out for signing in another route | a route of another checkpoint holds the document: open that checkpoint and cancel its route, or click “Stop tracking” if it is completed |
+| out for signing on the route of the checkpoint “…” | a document is signed on one route at a time: “Open that checkpoint” takes you to its page, cancel that route there |
+| held by the completed route of the checkpoint “…” | a completed route watches its documents until it stops being tracked: open that checkpoint with “Open that checkpoint” and click “Stop tracking” |
 | not in the project, invite them | click “Invite” next to the person |
 | no one to sign | no person has the slot's persona: invite or pick someone |
 | the signature is not placed on the page | click “Go to placement” and place the frame |

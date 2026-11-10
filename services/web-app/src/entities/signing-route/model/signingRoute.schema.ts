@@ -343,11 +343,23 @@ export const SigningRoutePreviewParticipantSchema = z.strictObject({
   actions: z.number().int().min(0).max(2),
 });
 
+/** Маршрут, который держит документ (`doc_in_other_route`): его точка и статус. */
+export const SigningRouteBlockerRouteSchema = z.strictObject({
+  id: z.string(),
+  profile: SigningProfileRefSchema,
+  status: SigningRouteStatusSchema,
+});
+export type SigningRouteBlockerRoute = z.infer<
+  typeof SigningRouteBlockerRouteSchema
+>;
+
 export const SigningRouteBlockerSchema = z.strictObject({
   code: z.string(),
   doc_id: z.string().nullable(),
   slot_id: z.string().nullable(),
   participant_id: z.string().nullable(),
+  /** Только у `doc_in_other_route`: какой маршрут держит документ. */
+  other_route: SigningRouteBlockerRouteSchema.nullable(),
 });
 export type SigningRouteBlocker = z.infer<typeof SigningRouteBlockerSchema>;
 

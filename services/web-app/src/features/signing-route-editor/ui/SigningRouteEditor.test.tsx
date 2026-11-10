@@ -224,6 +224,10 @@ const mount = () => {
               }
             />
             <Route path={PATH} element={<p>checkpoint</p>} />
+            <Route
+              path={`/projects/${PROJECT}/submit/cp/pre-defense`}
+              element={<p>other checkpoint</p>}
+            />
             <Route path="/sign/:projectId/:routeId" element={<p>sign</p>} />
           </Routes>
         </MemoryRouter>
@@ -343,6 +347,76 @@ describe("Отправка на подписание: черновик точк�
       await screen.findByText("Всё готово к отправке."),
     ).toBeInTheDocument();
     expect(screen.getByTestId("route-send")).toBeEnabled();
+  });
+
+  it("документ держит маршрут другой точки: помеха называет её, что сделать, и ведёт туда", async () => {
+    const original = signingRouteApi.preview.bind(signingRouteApi);
+    vi.spyOn(signingRouteApi, "preview").mockImplementation(
+      async (...args) => ({
+        ...(await original(...args)),
+        can_send: false,
+        blockers: [
+          {
+            code: "doc_in_other_route",
+            doc_id: DOC,
+            slot_id: null,
+            participant_id: null,
+            other_route: {
+              id: "sr_other",
+              profile: {
+                id: "pre-defense",
+                name: { ru: "Предзащита", en: "Pre-defence" },
+              },
+              status: "completed",
+            },
+          },
+        ],
+      }),
+    );
+    const user = userEvent.setup();
+    mount();
+    expect(await screen.findByTestId("route-blockers")).toHaveTextContent(
+      "Заявление о выборе темы: документ держит завершённый маршрут контрольной точки «Предзащита». Чтобы отправить его здесь, нажмите «Снять с контроля» на странице той точки.",
+    );
+    expect(screen.getByTestId(`route-doc-${DOC}`)).toHaveTextContent(
+      "держит завершённый маршрут «Предзащита»",
+    );
+    expect(screen.getByTestId("route-send")).toBeDisabled();
+    await user.click(screen.getByTestId(`route-blocker-point-${DOC}`));
+    expect(await screen.findByText("other checkpoint")).toBeInTheDocument();
+  });
+
+  it("идущий маршрут другой точки: отменить его там", async () => {
+    const original = signingRouteApi.preview.bind(signingRouteApi);
+    vi.spyOn(signingRouteApi, "preview").mockImplementation(
+      async (...args) => ({
+        ...(await original(...args)),
+        can_send: false,
+        blockers: [
+          {
+            code: "doc_in_other_route",
+            doc_id: DOC,
+            slot_id: null,
+            participant_id: null,
+            other_route: {
+              id: "sr_other",
+              profile: {
+                id: "pre-defense",
+                name: { ru: "Предзащита", en: "Pre-defence" },
+              },
+              status: "active",
+            },
+          },
+        ],
+      }),
+    );
+    mount();
+    expect(await screen.findByTestId("route-blockers")).toHaveTextContent(
+      "отмените тот маршрут на странице его точки",
+    );
+    expect(screen.getByTestId(`route-doc-${DOC}`)).toHaveTextContent(
+      "на подписании в маршруте «Предзащита»",
+    );
   });
 
   it("людей с персоной несколько: автор выбирает, кто подписывает", async () => {

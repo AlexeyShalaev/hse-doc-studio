@@ -985,9 +985,17 @@ stateDiagram-v2
 
 Коды помех предпросмотра (`blockers[].code`): `not_built` (документ не собран), `participant_missing` (человека нет в
 проекте), `slot_unassigned` (у слота маршрута нет участника с его персоной), `sender_not_ready` (картинка или данные
-плашки отправителя не готовы), `doc_in_other_route` (документ под другим активным маршрутом), `no_participants`,
+плашки отправителя не готовы), `doc_in_other_route` (документ держит другой маршрут: идущий, остановленный,
+возвращённый или завершённый; `other_route` называет его `id`, точку `profile: {id, name}` и `status`, у остальных
+помех `other_route: null`), `no_participants`,
 `placement_off` (у слота маршрута с видимой меткой нет включённого места на странице; `doc_id`, `slot_id` и
 `participant_id` владельца слота).
+
+`doc_in_other_route` с `other_route` говорит, что делать: идущий, остановленный и возвращённый маршрут отменяют,
+завершённый снимают с контроля, оба на странице его точки; редактор маршрута ведёт туда кнопкой «Открыть ту точку».
+Завершённый маршрут другой точки продолжает держать документ: он следит за подписями (5.3, раздел 9 «Завершённый
+маршрут»), а новый маршрут снимает с контроля только завершённый маршрут своей же точки. Иначе вторая точка молча
+отняла бы у первой слежку за подписанным документом; автор решает это явно, «Снять с контроля».
 
 `placement_off` повторяет причину плана: слот с картинкой или плашкой без включённого размещения план считает ждущим
 при любой подписи, поэтому слот ЭП с плашкой не стал бы подписанным и маршрут не завершился бы, а картинка после
@@ -1039,7 +1047,8 @@ SigningRoutePreview
   participants: [{participant_id, step, persona, name, membership, method, methods (разрешены точкой),
                   chooses_method (выберет при подписании), image_ready, plate_ready,
                   actions (0..2, `ParticipantView.remaining_actions`, раздел 4.4)}],
-  blockers: [{code, doc_id, slot_id, participant_id}],
+  blockers: [{code, doc_id, slot_id, participant_id,
+              other_route: {id, profile: {id, name}, status} | null (только у doc_in_other_route)}],
   sender_key: {id, label, kind, protected, signer} | null
 
 SendSigningRouteRequest: {expected: {doc_id: token}, sign: {identity_id, passphrase} | null}

@@ -54,7 +54,13 @@ from hse_doc_studio.core.signing_route.entities import (
     SigningRoute,
     StopReason,
 )
-from hse_doc_studio.core.signing_route.readiness import Blocker, BlockerCode, DocChangedError, RouteBlockedError
+from hse_doc_studio.core.signing_route.readiness import (
+    Blocker,
+    BlockerCode,
+    DocChangedError,
+    OtherRoute,
+    RouteBlockedError,
+)
 from hse_doc_studio.core.signing_route.repositories import OpenRouteExistsError
 from hse_doc_studio.core.signing_route.signer import unsigned_crypto
 from hse_doc_studio.core.signing_route.transitions import archive, cancel, send
@@ -553,7 +559,10 @@ class SigningRouteSending(RouteScenario):
                 blockers.append(Blocker(BlockerCode.not_built, doc_id=doc_id))
             holder = await self._s.routes.holding(point.project_id, doc_id)
             if holder is not None and holder.id != route.id:
-                blockers.append(Blocker(BlockerCode.doc_in_other_route, doc_id=doc_id))
+                # Какой маршрут держит документ: помеха называет его точку и говорит, отменить его или снять с
+                # контроля. Завершённый держит документ, пока следит за ним (раздел 5.3), и это по дизайну.
+                other = OtherRoute(holder.id, holder.profile_id, point.profile_name(holder.profile_id), holder.status)
+                blockers.append(Blocker(BlockerCode.doc_in_other_route, doc_id=doc_id, other_route=other))
         return blockers
 
 

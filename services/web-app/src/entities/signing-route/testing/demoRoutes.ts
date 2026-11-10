@@ -810,6 +810,7 @@ export const createSigningRouteDemo = (
         doc_id: null,
         slot_id: null,
         participant_id: sender.id,
+        other_route: null,
       });
     for (const p of participants(r)) {
       if (membershipOf(p) === "missing")
@@ -818,6 +819,7 @@ export const createSigningRouteDemo = (
           doc_id: null,
           slot_id: null,
           participant_id: p.id,
+          other_route: null,
         });
     }
     for (const pair of pairsOf(r)) {
@@ -827,6 +829,7 @@ export const createSigningRouteDemo = (
           doc_id: pair.doc_id,
           slot_id: pair.slot_id,
           participant_id: null,
+          other_route: null,
         });
     }
     if (participants(r).length === 0)
@@ -835,6 +838,7 @@ export const createSigningRouteDemo = (
         doc_id: null,
         slot_id: null,
         participant_id: null,
+        other_route: null,
       });
     // Картинке и плашке нужно место на странице: без него слот не подписать.
     for (const p of participants(r)) {
@@ -846,6 +850,7 @@ export const createSigningRouteDemo = (
             doc_id: pair.doc_id,
             slot_id: pair.slot_id,
             participant_id: p.id,
+            other_route: null,
           });
       }
     }

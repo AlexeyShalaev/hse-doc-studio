@@ -37,6 +37,7 @@ export {
   canCancelRoute,
   canRemind,
   canReturnForRework,
+  checkpointPath,
   canSendRoute,
   expectedTokens,
   isActionable,

@@ -26,7 +26,7 @@ from hse_doc_studio.core.i18n import localized_error
 from hse_doc_studio.core.identity.errors import IdentityError, IdentityErrorCode
 from hse_doc_studio.core.mcp.errors import McpError, McpErrorCode
 from hse_doc_studio.core.signing_route.entities import SENDABLE_STATUSES, RouteConflictError, RouteStatus
-from hse_doc_studio.core.signing_route.readiness import Blocker, BlockerCode, RouteBlockedError
+from hse_doc_studio.core.signing_route.readiness import Blocker, BlockerCode, OtherRoute, RouteBlockedError
 from hse_doc_studio.use_cases.mcp.tools._base import McpTool, json_result, optional_text, project_schema, text_arg
 from hse_doc_studio.use_cases.signing_route.author import (
     RoutePreview,
@@ -232,6 +232,30 @@ class ListSigningTasksTool(McpTool):
         )
 
 
+def _other_route_text(doc: str, other: OtherRoute | None) -> str:
+    """Документ держит маршрут другой точки: какой точки и что с ним сделать (отменить или снять с контроля)."""
+    if other is None:
+        return localized_error(
+            f"документ {doc} уже на подписании по другому маршруту",
+            f"document {doc} is already on another signing route",
+        )
+    ru = other.profile_name.get("ru") or other.profile_id
+    en = other.profile_name.get("en") or other.profile_id
+    if other.status is RouteStatus.completed:
+        return localized_error(
+            f"документ {doc} держит завершённый маршрут контрольной точки «{ru}» ({other.profile_id}): снимите его "
+            "с контроля («Снять с контроля» на странице той точки)",
+            f"document {doc} is held by the completed route of the checkpoint “{en}” ({other.profile_id}): stop "
+            "tracking it (“Stop tracking” on that checkpoint page)",
+        )
+    return localized_error(
+        f"документ {doc} на подписании в маршруте контрольной точки «{ru}» ({other.profile_id}): отмените тот "
+        "маршрут на странице его точки",
+        f"document {doc} is out for signing on the route of the checkpoint “{en}” ({other.profile_id}): cancel that "
+        "route on its checkpoint page",
+    )
+
+
 def _blocker_text(blocker: Blocker, preview: RoutePreview) -> str:
     """Помеха отправки словами: что не готово и чем это исправить."""
     doc, slot = blocker.doc_id or "", blocker.slot_id or ""
@@ -256,10 +280,7 @@ def _blocker_text(blocker: Blocker, preview: RoutePreview) -> str:
             "ваша подпись не готова: загрузите картинку подписи или укажите ключ для плашки в интерфейсе",
             "your signature is not ready: upload a signature image or set the plate key in the interface",
         ),
-        BlockerCode.doc_in_other_route: localized_error(
-            f"документ {doc} уже на подписании по другому маршруту",
-            f"document {doc} is already on another signing route",
-        ),
+        BlockerCode.doc_in_other_route: _other_route_text(doc, blocker.other_route),
         BlockerCode.placement_off: localized_error(
             f"у слота {slot} документа {doc} не включено место на странице: включите размещение в интерфейсе",
             f"slot {slot} of document {doc} has no place on the page: turn its placement on in the interface",

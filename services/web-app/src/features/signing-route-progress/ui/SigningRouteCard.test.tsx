@@ -361,6 +361,7 @@ describe("Подписание: остановка и возврат", () => {
           doc_id: null,
           slot_id: null,
           participant_id: "srp_supervisor",
+          other_route: null,
         },
       ],
       sender_key: null,

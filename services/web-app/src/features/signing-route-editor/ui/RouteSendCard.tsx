@@ -1,8 +1,10 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { MapPin, Send } from "lucide-react";
+import { Link } from "react-router";
+import { ArrowRight, MapPin, Send } from "lucide-react";
 import {
   SIGNING_TEXT_MAX,
+  checkpointPath,
   type RouteSlotRef,
   type SigningRoute,
   type SigningRouteBlocker,
@@ -86,8 +88,24 @@ export const RouteSendCard = ({
     switch (b.code) {
       case "not_built":
         return t("blocker.not_built", { doc: docName(b.doc_id) });
-      case "doc_in_other_route":
-        return t("blocker.doc_in_other_route", { doc: docName(b.doc_id) });
+      case "doc_in_other_route": {
+        // Чей маршрут держит документ и что с ним сделать: идущий, остановленный и возвращённый
+        // отменяют, завершённый снимают с контроля, оба на странице его точки (раздел 5.3).
+        const other = b.other_route;
+        if (other === null)
+          return t("blocker.doc_in_other_route", { doc: docName(b.doc_id) });
+        const point = pickLocalized(
+          other.profile.name,
+          i18n.language,
+          other.profile.id,
+        );
+        return other.status === "completed"
+          ? t("blocker.doc_in_completed_route", {
+              doc: docName(b.doc_id),
+              point,
+            })
+          : t("blocker.doc_in_open_route", { doc: docName(b.doc_id), point });
+      }
       case "participant_missing":
         return t("blocker.participant_missing", {
           who: who ? personaLabel(who.persona) : "",
@@ -225,6 +243,24 @@ export const RouteSendCard = ({
                           <MapPin size="0.625rem" aria-hidden="true" />
                           {t("blocker.toPlacement")}
                         </button>
+                      )}
+                    {b.code === "doc_in_other_route" &&
+                      b.other_route !== null && (
+                        <Link
+                          className="btn xs"
+                          style={{
+                            marginLeft: "0.375rem",
+                            verticalAlign: "baseline",
+                          }}
+                          data-testid={`route-blocker-point-${b.doc_id ?? ""}`}
+                          to={checkpointPath(
+                            route.project_id,
+                            b.other_route.profile.id,
+                          )}
+                        >
+                          <ArrowRight size="0.625rem" aria-hidden="true" />
+                          {t("blocker.toOtherPoint")}
+                        </Link>
                       )}
                   </li>
                 ))}
