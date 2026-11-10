@@ -19,10 +19,13 @@ from hse_doc_studio.core.services import SignatureSlotService
 from hse_doc_studio.core.signatures.plan import (
     CRYPTO_METHODS,
     SlotModeConflictError,
+    VisibleMark,
+    mark_of,
     method_of,
     profile_restrictions,
     slot_mode_conflict,
 )
+from hse_doc_studio.core.signatures.stamps import widen_for_plate
 from hse_doc_studio.core.value_objects import SignatureSlot
 from hse_doc_studio.use_cases.projects.get_project import GetProjectInput, GetProjectUC
 
@@ -126,6 +129,12 @@ class UpdateSlotConfigUC:
         new_slots = dict(state.slots)
         new_slots[inp.slot_id] = new_slot
         new_state = replace(state, slots=new_slots)
+        if mark_of(new_slot) is VisibleMark.plate and mark_of(existing) is not VisibleMark.plate:
+            # Слот стал плашкой: рамка картинки для неё узка, места слота на документах растут до ширины плашки,
+            # как при смене способа подписантом на его странице (signing-route.md, 6.3).
+            new_state = widen_for_plate(
+                new_state, [(doc_id, inp.slot_id) for doc_id, slots in state.placements.items() if inp.slot_id in slots]
+            )
         self._signature_repo.save_state(project.folder, new_state)
 
         logger.info(

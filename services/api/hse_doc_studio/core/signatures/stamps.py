@@ -5,7 +5,7 @@ from __future__ import annotations
 import hashlib
 import json
 from collections.abc import Callable, Iterable, Sequence
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, replace
 from datetime import date
 from pathlib import Path, PurePath
 
@@ -15,6 +15,31 @@ from hse_doc_studio.core.enums import SignMode
 from hse_doc_studio.core.value_objects import SignaturesState, SignerInfo
 
 logger = structlog.get_logger()
+
+
+# Плашка открепленной ЭП на рамке картинки (около 30 мм) переносится на 7-8 строк. Столько же даёт редактор размещения,
+# когда автор включает место слота с ЭП (`MIN_CAPTION_WIDTH_MM` на фронтенде).
+PLATE_MIN_WIDTH_MM = 70.0
+
+
+def widen_for_plate(state: SignaturesState, pairs: Iterable[tuple[str, str]]) -> SignaturesState:
+    """Места пар «документ, слот» не уже плашки: узкое место расширяется до `PLATE_MIN_WIDTH_MM`.
+
+    Правый край рамки остаётся на месте, левый уходит влево (не левее края страницы): подписи обычно стоят у правого
+    поля, и рамка, растущая вправо, вышла бы за страницу. Выключенные и уже широкие места не трогаются.
+    """
+    placements = {doc_id: dict(slot_map) for doc_id, slot_map in state.placements.items()}
+    touched = False
+    for doc_id, slot_id in pairs:
+        placement = placements.get(doc_id, {}).get(slot_id)
+        if placement is None or not placement.enabled or placement.width_mm >= PLATE_MIN_WIDTH_MM:
+            continue
+        right = placement.x_mm + placement.width_mm
+        placements[doc_id][slot_id] = replace(
+            placement, x_mm=max(0.0, right - PLATE_MIN_WIDTH_MM), width_mm=PLATE_MIN_WIDTH_MM
+        )
+        touched = True
+    return replace(state, placements=placements) if touched else state
 
 
 def format_sign_date(iso_date: str | None) -> str | None:

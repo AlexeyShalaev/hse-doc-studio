@@ -461,6 +461,8 @@ async def test__approve__method_changed_to_detached__plate_from_the_signing_key(
     keys.give(trio.supervisor, "Петров Пётр Петрович")
     trio.sent()
     assert trio.withheld() == {APPLICATION: ["supervisor"], PROPOSAL: ["supervisor"]}
+    placed = {doc_id: trio.state()["placements"][doc_id]["supervisor"] for doc_id in (PROPOSAL, APPLICATION)}
+    assert all(p["width_mm"] < 70 for p in placed.values())
 
     not_accepted = trio.approve(trio.supervisor, method="pades")
     done = trio.approved(trio.supervisor, method="detached", sign=KEY)
@@ -472,6 +474,11 @@ async def test__approve__method_changed_to_detached__plate_from_the_signing_key(
     state = trio.state()
     assert state["slots"]["supervisor"]["sign_mode"] == "detached_text"
     assert state["slots"]["supervisor"]["signer"]["owner"] == "Петров Пётр Петрович"
+    # Рамка картинки узка для плашки: место выросло до 70 мм до фиксации, правый край на месте.
+    for doc_id in (PROPOSAL, APPLICATION):
+        before, after = placed[doc_id], state["placements"][doc_id]["supervisor"]
+        assert after["width_mm"] == 70
+        assert after["x_mm"] + after["width_mm"] == pytest.approx(before["x_mm"] + before["width_mm"])
     # Слот больше не картинка: придерживать нечего, плашка вошла в фиксацию.
     assert trio.withheld() == {}
     assert trio.events() == ["sent", "approved", "approved", "frozen", "signed", "signed", "completed"]

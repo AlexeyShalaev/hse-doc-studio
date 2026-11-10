@@ -8,6 +8,7 @@ from uuid import uuid4
 import pytest
 from hse_doc_studio.core.enums import SignMode
 from hse_doc_studio.core.signatures.plan import DocFacts, SignMethod
+from hse_doc_studio.core.signatures.stamps import PLATE_MIN_WIDTH_MM
 from hse_doc_studio.core.signing_route.entities import (
     DocSlot,
     NextAction,
@@ -40,7 +41,13 @@ from hse_doc_studio.core.signing_route.signer import (
     with_method,
     with_signer,
 )
-from hse_doc_studio.core.value_objects import FrozenPdf, SignatureSlot, SignaturesState, SignerInfo
+from hse_doc_studio.core.value_objects import (
+    FrozenPdf,
+    SignaturePlacement,
+    SignatureSlot,
+    SignaturesState,
+    SignerInfo,
+)
 
 from tests.unit.core.signing_route.world import (
     BUILD,
@@ -384,6 +391,47 @@ def test__with_method__image_to_plate__own_slots_change_and_leave_the_withheld_l
     # Плашку не придерживают: иначе расчёт её уже не открыл бы. Чужая картинка остаётся придержанной.
     assert changed.withheld == {DOC: frozenset({"author"})}
     assert changed.slots["supervisor"].png_path == state.slots["supervisor"].png_path
+
+
+def test__with_method__image_to_plate__narrow_place_widened_keeping_its_right_edge() -> None:
+    """Рамка картинки узка для плашки: её текст переносился бы на 8 строк. Место растёт влево до 70 мм."""
+    world = World({"author": SignMode.image, "supervisor": SignMode.image}, docs=(DOC, DOC2))
+    supervisor = participant(2, "supervisor", ["supervisor"], docs=(DOC, DOC2))
+    base = world.state()
+    narrow = SignaturePlacement(enabled=True, page=1, x_mm=150, y_mm=200, width_mm=28)
+    near_left = SignaturePlacement(enabled=True, page=2, x_mm=20, y_mm=200, width_mm=28)
+    off = SignaturePlacement(enabled=False, page=1, x_mm=150, y_mm=200, width_mm=28)
+    placements = {
+        DOC: {**base.placements[DOC], "supervisor": narrow, "author": narrow},
+        DOC2: {**base.placements[DOC2], "supervisor": near_left},
+    }
+    state = replace(base, placements=placements)
+
+    changed = with_method(state, supervisor, SignMethod.detached)
+
+    assert changed.placements[DOC]["supervisor"] == replace(narrow, x_mm=150 + 28 - PLATE_MIN_WIDTH_MM, width_mm=70)
+    # У левого поля рамка не уходит за край страницы.
+    assert changed.placements[DOC2]["supervisor"] == replace(near_left, x_mm=0.0, width_mm=70)
+    # Чужой слот не трогаем.
+    assert changed.placements[DOC]["author"] == narrow
+    # Выключенное место, уже широкое место и слот, который и был плашкой, не меняются.
+    assert (
+        with_method(replace(state, placements={DOC: {"supervisor": off}}), supervisor, SignMethod.detached).placements[
+            DOC
+        ]["supervisor"]
+        == off
+    )
+    wide = replace(narrow, width_mm=90)
+    assert (
+        with_method(replace(state, placements={DOC: {"supervisor": wide}}), supervisor, SignMethod.detached).placements[
+            DOC
+        ]["supervisor"]
+        == wide
+    )
+    plate = with_method(changed, supervisor, SignMethod.detached)
+    assert plate == changed
+    # Обратно в картинку место не сужаем: это решает автор.
+    assert with_method(changed, supervisor, SignMethod.image).placements == changed.placements
 
 
 def test__with_method__same_method__state_unchanged() -> None:

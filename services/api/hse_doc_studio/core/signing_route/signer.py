@@ -33,6 +33,7 @@ from hse_doc_studio.core.signatures.plan import (
     method_of,
     slot_state,
 )
+from hse_doc_studio.core.signatures.stamps import widen_for_plate
 from hse_doc_studio.core.signing_route.engine import Evaluation, ParticipantView, RouteFacts, approval_token
 from hse_doc_studio.core.signing_route.entities import (
     DocSlot,
@@ -305,9 +306,11 @@ def with_method(state: SignaturesState, p: Participant, method: SignMethod) -> S
     """Состояние подписей, где слоты участника подписываются способом `method`.
 
     Слот, у которого больше нет картинки на странице, снимается с придержания: придерживаются только картинки
-    (раздел 6.1), а придержанную плашку расчёт уже не открыл бы.
+    (раздел 6.1), а придержанную плашку расчёт уже не открыл бы. Слот, который стал плашкой, получает на своих
+    документах место не уже плашки (`widen_for_plate`): рамка картинки для неё узка.
     """
     slots = dict(state.slots)
+    to_plate: set[str] = set()
     for slot_id in own_slots(p):
         slot = slots.get(slot_id) or SignatureSlot(None, None, None)
         mode = mode_for(method, slot.sign_mode)
@@ -315,7 +318,11 @@ def with_method(state: SignaturesState, p: Participant, method: SignMethod) -> S
             slots[slot_id] = replace(
                 slot, sign_mode=mode, sign_reason=slot.sign_reason if method in CRYPTO_METHODS else ""
             )
-    changed = replace(state, slots=slots)
+            if mark_of(slots[slot_id]) is VisibleMark.plate and mark_of(slot) is not VisibleMark.plate:
+                to_plate.add(slot_id)
+    changed = widen_for_plate(
+        replace(state, slots=slots), [(pair.doc_id, pair.slot_id) for pair in p.assignments if pair.slot_id in to_plate]
+    )
     withheld = {
         doc_id: frozenset(
             slot_id
