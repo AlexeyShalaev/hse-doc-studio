@@ -431,6 +431,7 @@ from hse_doc_studio.use_cases.signatures.get_detached_files import (
 from hse_doc_studio.use_cases.signatures.get_signature_plan import GetSignaturePlanUC
 from hse_doc_studio.use_cases.signatures.get_signatures import GetSignaturesUC
 from hse_doc_studio.use_cases.signatures.get_signed_doc_pdf import GetSignedDocPdfUC
+from hse_doc_studio.use_cases.signatures.release_withheld import ReleaseWithheldUC
 from hse_doc_studio.use_cases.signatures.sign_in_studio import SignInStudioUC
 from hse_doc_studio.use_cases.signatures.sign_submission import SignSubmissionUC
 from hse_doc_studio.use_cases.signatures.update_signature_placement import UpdateSignaturePlacementUC
@@ -3223,6 +3224,18 @@ class UseCaseProvider(Provider):
         audit: ISignatureAudit,
     ) -> DeleteDetachedSignatureUC:
         return DeleteDetachedSignatureUC(
+            project_repo=project_repo, project_index_repo=project_index_repo, signature_repo=signature_repo, audit=audit
+        )
+
+    @provide
+    def get_release_withheld_uc(
+        self,
+        project_repo: IProjectRepository,
+        project_index_repo: IProjectIndexRepository,
+        signature_repo: ISignatureRepository,
+        audit: ISignatureAudit,
+    ) -> ReleaseWithheldUC:
+        return ReleaseWithheldUC(
             project_repo=project_repo, project_index_repo=project_index_repo, signature_repo=signature_repo, audit=audit
         )
 

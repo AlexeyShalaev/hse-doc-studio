@@ -18,7 +18,14 @@
     "uploadPromptPrefix": "Загрузите PNG в",
     "toolsSignatures": "Инструменты → Подписи",
     "requiredAt": "нужна к {{checkpoints}}",
-    "requiredAtTitle": "Подпись входит в комплект сдачи: {{checkpoints}}"
+    "requiredAtTitle": "Подпись входит в комплект сдачи: {{checkpoints}}",
+    "withheld": "Придержано маршрутом",
+    "withheldTitle": "Маршрут подписания скрыл картинку до согласия подписанта. Она появится в документе, когда он согласует.",
+    "withheldShow": "Показать",
+    "withheldShowTitle": "Показать картинку в документе без согласования подписанта",
+    "withheldConfirm": "Показать картинку подписи в документе без согласования подписанта по маршруту?",
+    "withheldShown": "Картинка подписи показана",
+    "withheldFailed": "Не удалось показать картинку: {{reason}}"
   },
   "overlay": {
     "invisibleTitle": "{{label}} — невидимая крипто-подпись",

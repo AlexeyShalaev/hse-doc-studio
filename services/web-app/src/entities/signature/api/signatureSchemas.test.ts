@@ -30,6 +30,16 @@ describe("SignaturesStateSchema", () => {
     });
     expect(parsed.frozen).toEqual({});
     expect(parsed.detached).toEqual({});
+    expect(parsed.withheld).toEqual({});
+  });
+
+  it("parses slots held back by a signing route", () => {
+    const parsed = SignaturesStateSchema.parse({
+      slots: {},
+      placements: {},
+      withheld: { topic_application: ["supervisor"] },
+    });
+    expect(parsed.withheld).toEqual({ topic_application: ["supervisor"] });
   });
 
   it("parses frozen PDFs and detached signatures", () => {

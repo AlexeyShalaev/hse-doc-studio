@@ -529,6 +529,8 @@ export type SignaturesStateResponse = {
   frozen?: Record<string, FrozenPdfResponse>;
   detached?: Record<string, Record<string, DetachedSignatureResponse>>;
   runtime_slots?: RuntimeSignatureSlotResponse[];
+  // Слоты документов, чью картинку придержал маршрут подписания до согласия подписанта (`doc_id -> [slot_id]`).
+  withheld?: Record<string, string[]>;
 };
 
 export type UpdatePlacementRequest = {

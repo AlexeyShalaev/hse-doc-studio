@@ -18,7 +18,14 @@
     "uploadPromptPrefix": "Upload a PNG in",
     "toolsSignatures": "Tools → Signatures",
     "requiredAt": "needed for {{checkpoints}}",
-    "requiredAtTitle": "The signature is part of the submission package: {{checkpoints}}"
+    "requiredAtTitle": "The signature is part of the submission package: {{checkpoints}}",
+    "withheld": "Held back by the route",
+    "withheldTitle": "The signing route hid the image until the signer approves. It appears in the document once they approve.",
+    "withheldShow": "Show",
+    "withheldShowTitle": "Show the image in the document without the signer's approval",
+    "withheldConfirm": "Show the signature image in the document without the signer's approval on the route?",
+    "withheldShown": "Signature image shown",
+    "withheldFailed": "Could not show the image: {{reason}}"
   },
   "overlay": {
     "invisibleTitle": "{{label}} — invisible crypto signature",

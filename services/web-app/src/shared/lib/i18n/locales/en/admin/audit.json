@@ -218,6 +218,7 @@
       "signature_sign": "Document signed with a Studio key",
       "signature_attach": "Ready-made signature attached",
       "signature_delete": "Signature deleted",
+      "signature_release": "Signature image held back by a route was shown",
       "signature_submission_sign": "Bundle signed",
       "signature_default_key": "Default signing key chosen",
       "signature_profile_image": "Signature image saved to the profile",

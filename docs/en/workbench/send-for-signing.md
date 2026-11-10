@@ -129,7 +129,7 @@ The server also reminds the person whose turn it is on its own: a day before the
 Other buttons on the card:
 
 - **“Open route”** shows the route. While it is running it cannot be changed.
-- **“Cancel route”**, after a confirmation, stops the signing. Everyone who already got a request is notified, electronic signatures already made stay. You can fix the route and click “Send again”.
+- **“Cancel route”**, after a confirmation, stops the signing. Everyone who already got a request is notified, electronic signatures already made stay. Signature images of people who have not approved yet stay hidden: cancelling is not their approval. You can fix the route and click “Send again”.
 - **“Go to signing”** shows when it is your turn. If you sign with an electronic signature, the card reminds you: “The route is sent, your signature is not in place yet”.
 
 While the route is running, the editor of its documents shows the banner “This document is out for signing (step k of n). Editing and rebuilding will stop the route”. The signatures of these documents cannot be changed on the “Signatures” tab.
@@ -169,6 +169,7 @@ A completed route keeps watching the documents. If you edit and rebuild a docume
 
 - **The server has no email.** Requests and reminders still arrive in the Inbox, on the “To sign” tab; there are no emails. Send the person the link yourself with “Copy link” on the card. If they have not accepted the invitation yet, the button makes a new invitation link and the previous one stops working. Automatic reminders do not go to an invitee without an account.
 - **The supervisor has no account.** Invite them by email from the route with “Invite”. Using the invitation link they sign up with that same address, click “Accept” and land on the signing page. If registration on the server is closed, first ask the administrator to create an account for them.
+- **The supervisor's image is gone after cancelling the route.** The route hides a signer's image until they approve, and cancelling does not reveal it. On the document's “Signatures” tab such a signature is marked “Held back by the route”. If you still want to put the image in without approval, click “Show” there and confirm: anyone who can edit signature placements can do it, and it goes to the audit log. While a route is running the button is unavailable. If you send the route again, the image is hidden again until approval.
 - **The order is wrong.** While the route is not sent, drag the steps. If it is already sent, click “Cancel route”, fix the order on the route screen and click “Send again”. Approvals of people whose documents did not change are kept.
 - **A signer left the project.** The route stops with “A participant left the project: assign someone else and send again”. Open the route, pick or invite another person with the same persona and click “Send again”. A route that is already completed does not care: the signatures are in place.
 - **The “out for signing” banner.** The document was sent for signing and the route is running. You can still edit the text and build, but a rebuild with changes stops the route and you will have to send it again. The signatures of this document cannot be changed on the “Signatures” tab: cancel the route on the checkpoint page first.

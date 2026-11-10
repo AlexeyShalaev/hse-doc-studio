@@ -1,5 +1,13 @@
 import { useTranslation } from "react-i18next";
-import { ArrowRight, ExternalLink, ImageOff, MapPin, User } from "lucide-react";
+import {
+  ArrowRight,
+  Eye,
+  EyeOff,
+  ExternalLink,
+  ImageOff,
+  MapPin,
+  User,
+} from "lucide-react";
 import { pickLocalized } from "@shared/lib";
 import {
   FreezeCard,
@@ -41,6 +49,11 @@ export type DocPlacementPanelProps = {
   onOpenProjectSignatures: () => void;
   // Переключает слот между картинкой и открепленной ЭП (надпись + файл подписи).
   onSlotModeChange: (slotId: string, mode: SignMode) => void;
+  /**
+   * «Показать» картинку, которую придержал маршрут подписания до согласия подписанта
+   * (docs/design/signing-route.md, 5.6). Без обработчика пометка видна, кнопки нет.
+   */
+  onReleaseWithheld?: (slotId: string) => void;
 };
 
 const MIN_CAPTION_WIDTH_MM = 70;
@@ -59,11 +72,13 @@ export const DocPlacementPanel = ({
   onJumpToPage,
   onOpenProjectSignatures,
   onSlotModeChange,
+  onReleaseWithheld,
 }: DocPlacementPanelProps) => {
   const { t } = useTranslation("signatureStamper");
   const docSlots = slotDefs.filter((slot) => slot.applies_to.includes(docId));
   const frozen = state.frozen?.[docId];
   const docSignatures = state.detached?.[docId] ?? {};
+  const withheld = new Set(state.withheld?.[docId] ?? []);
   const hasDetachedSlot =
     docSlots.some(
       (slot) => state.slots[slot.id]?.sign_mode === "detached_text",
@@ -246,6 +261,44 @@ export const DocPlacementPanel = ({
                 </span>
               )}
             </div>
+
+            {withheld.has(slot.id) && (
+              // Маршрут подписания придержал картинку до согласия подписанта. После отмены маршрута
+              // она так и остаётся скрытой: отмена не согласие. Показать можно только явно.
+              <div
+                className="flex items-center"
+                style={{
+                  gap: "0.375rem",
+                  paddingLeft: "2.625rem",
+                  fontSize: "0.65625rem",
+                  flexWrap: "wrap",
+                }}
+                data-testid={`doc-withheld-${slot.id}`}
+              >
+                <span
+                  className="flex items-center gap-1"
+                  style={{ color: "var(--c-warn)" }}
+                  title={t("docPlacement.withheldTitle")}
+                >
+                  <EyeOff size="0.6875rem" aria-hidden="true" />
+                  {t("docPlacement.withheld")}
+                </span>
+                {onReleaseWithheld && (
+                  <button
+                    type="button"
+                    className="btn xs"
+                    title={t("docPlacement.withheldShowTitle")}
+                    data-testid={`doc-withheld-show-${slot.id}`}
+                    onClick={() => {
+                      onReleaseWithheld(slot.id);
+                    }}
+                  >
+                    <Eye size="0.625rem" aria-hidden="true" />
+                    {t("docPlacement.withheldShow")}
+                  </button>
+                )}
+              </div>
+            )}
 
             <div
               className="flex items-center"

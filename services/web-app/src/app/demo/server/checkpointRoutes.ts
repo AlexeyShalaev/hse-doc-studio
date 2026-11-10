@@ -172,6 +172,8 @@ export const createCheckpointDemo = (
           frozen: {},
           detached: {},
           runtime_slots: RUNTIME_SLOTS,
+          // Демо картинок не придерживает: маршрут демо их не прячет.
+          withheld: {},
         }),
       ),
     },

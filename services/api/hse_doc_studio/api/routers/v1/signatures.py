@@ -81,6 +81,7 @@ from hse_doc_studio.use_cases.signatures.get_signed_doc_pdf import (
     GetSignedDocPdfInput,
     GetSignedDocPdfUC,
 )
+from hse_doc_studio.use_cases.signatures.release_withheld import ReleaseWithheldInput, ReleaseWithheldUC
 from hse_doc_studio.use_cases.signatures.sign_in_studio import SignInStudioInput, SignInStudioUC
 from hse_doc_studio.use_cases.signatures.update_signature_placement import (
     UpdateSignaturePlacementInput,
@@ -200,6 +201,7 @@ def _map_state(
             for doc_id, slot_map in state.placements.items()
         },
         runtime_slots=[_map_runtime_slot(item) for item in runtime_slots],
+        withheld={doc_id: sorted(slots) for doc_id, slots in sorted(state.withheld.items()) if slots},
     )
 
 
@@ -252,6 +254,27 @@ async def update_placement(
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     return _map_placement(result.placement)
+
+
+@router.delete(
+    "/projects/{project_id}/signatures/withheld/{doc_id}/{slot_id}",
+    status_code=204,
+)
+async def release_withheld(
+    project_id: UUID,
+    doc_id: str,
+    slot_id: str,
+    uc: FromDishka[ReleaseWithheldUC],
+    gate: FromDishka[ISigningRouteGate],
+) -> None:
+    """«Показать» картинку, которую придержал маршрут подписания (signing-route.md, 5.6): после отмены маршрута
+    картинка не согласовавшего остаётся придержанной, показать её можно только явно. Пока документ держит идущий
+    маршрут, правка закрыта (409 `route_locked`). Слот, который не придержан, ничего не меняет."""
+    await gate.require_unlocked(project_id, doc_id=doc_id)
+    try:
+        await uc.execute(ReleaseWithheldInput(project_id=project_id, doc_id=doc_id, slot_id=slot_id))
+    except NotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
 
 
 @router.post(

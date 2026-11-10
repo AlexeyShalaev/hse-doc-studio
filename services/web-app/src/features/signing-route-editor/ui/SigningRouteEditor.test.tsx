@@ -256,6 +256,7 @@ const signatures = () => ({
   },
   frozen: {},
   detached: {},
+  withheld: {},
   runtime_slots: [
     slotDef("author", "Студент"),
     slotDef("supervisor", "Научный руководитель"),

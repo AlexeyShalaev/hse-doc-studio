@@ -121,6 +121,8 @@ export const SignaturesStateSchema = z.object({
     .record(z.string(), z.record(z.string(), DetachedSignatureSchema))
     .default({}),
   runtime_slots: z.array(RuntimeSignatureSlotSchema).default([]),
+  /** Слоты документов, чью картинку придержал маршрут подписания до согласия подписанта. */
+  withheld: z.record(z.string(), z.array(z.string())).default({}),
 });
 
 export const UploadSignatureResponseSchema = z.object({
