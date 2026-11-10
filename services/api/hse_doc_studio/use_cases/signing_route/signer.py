@@ -387,6 +387,7 @@ class SigningTaskScenario(RouteScenario):
             point = await self._s.points.load(project_id, route.profile_id)
             saved = route
             async with route_files(point.project):
+                await self._migrate(point, route, at)
                 loaded = await self._s.facts.load(point, route)
                 evaluation = evaluate(route, loaded.facts)
                 me = acting_participant(route, evaluation, actor_id)

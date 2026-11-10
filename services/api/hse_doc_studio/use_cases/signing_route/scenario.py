@@ -219,6 +219,21 @@ class RouteScenario:
             evaluation = evaluate(route, loaded.facts)
         return Settled(route, loaded, evaluation, tuple(frozen))
 
+    async def _migrate(self, point: RoutePoint, route: SigningRoute, at: datetime) -> bool:
+        """Перенести маршрут 0.20.0 на версию на подписи (12.11) до чтения фактов; True, если перенос что-то изменил.
+
+        Вызывать под блокировкой строки маршрута и `route_files`. Без переноса источником подписи маршрута 0.20.0
+        была бы текущая сборка, и первое же действие после пересборки остановило бы маршрут. Аудит
+        `signing_route.migrate` без актора: переносит сервер, а не тот, чьё действие пришлось на перенос.
+        """
+        if self._s.migration is None:
+            return False
+        migration = await self._s.migration.migrate(point, route, at=at)
+        if migration is None:
+            return False
+        await self._audit(RouteAuditAction.migrate, route, actor_id=None, details=migration.audit_details())
+        return True
+
     async def _stop_if_changed(
         self, point: RoutePoint, route: SigningRoute, loaded: LoadedFacts, at: datetime
     ) -> SigningRoute | None:

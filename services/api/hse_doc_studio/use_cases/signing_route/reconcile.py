@@ -20,13 +20,11 @@
 from __future__ import annotations
 
 from collections.abc import Sequence
-from datetime import datetime
 from uuid import UUID
 
 import structlog
 
 from hse_doc_studio.core.signatures.plan import CRYPTO_METHODS, method_of
-from hse_doc_studio.core.signing_route.audit import RouteAuditAction
 from hse_doc_studio.core.signing_route.entities import (
     HOLDING_STATUSES,
     WATCHING_STATUSES,
@@ -38,8 +36,6 @@ from hse_doc_studio.core.signing_route.entities import (
 )
 from hse_doc_studio.core.signing_route.signer import unsigned_crypto
 from hse_doc_studio.core.signing_route.transitions import apply_evaluation
-from hse_doc_studio.use_cases.signing_route.migration import Migration
-from hse_doc_studio.use_cases.signing_route.point import RoutePoint
 from hse_doc_studio.use_cases.signing_route.scenario import (
     RouteScenario,
     Settled,
@@ -88,19 +84,6 @@ class RouteRecalculation(RouteScenario):
                 return migrated
             await self._commit(settled, events, actor_id=actor_id, at=at)
             return True
-
-    async def _migrate(self, point: RoutePoint, route: SigningRoute, at: datetime) -> bool:
-        """Перенести маршрут 0.20.0 (12.11) под `route_files`; True, если перенос что-то изменил."""
-        if self._s.migration is None:
-            return False
-        migration = await self._s.migration.migrate(point, route, at=at)
-        if migration is None:
-            return False
-        await self._audit_migration(route, migration)
-        return True
-
-    async def _audit_migration(self, route: SigningRoute, migration: Migration) -> None:
-        await self._audit(RouteAuditAction.migrate, route, actor_id=None, details=migration.audit_details())
 
     async def _signed_events(
         self, route: SigningRoute, settled: Settled, pairs: Sequence[DocSlot], actor_id: UUID | None
