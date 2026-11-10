@@ -401,16 +401,26 @@ const VerdictBadge = ({
   verdict,
   current,
   stale,
+  routeHeld,
 }: {
   verdict: DetachedVerdict;
   current: boolean;
   stale: boolean;
+  routeHeld: boolean;
 }) => {
   const { t } = useTranslation("signatureStamper");
   let kind: BadgeKind;
   let text: string;
   let icon: React.ReactNode;
-  if (stale) {
+  if (routeHeld && (stale || !current)) {
+    // Старая подпись документа, который держит маршрут: это не ошибка, маршрут сам зафиксирует
+    // PDF заново и попросит подписать.
+    kind = "dim";
+    text = t(
+      stale ? "detached.verdict.routeStale" : "detached.verdict.routeOutdated",
+    );
+    icon = <Info size="0.6875rem" style={{ flexShrink: 0 }} />;
+  } else if (stale) {
     kind = "err";
     text = t("detached.verdict.stale");
     icon = <XCircle size="0.6875rem" />;
@@ -695,6 +705,11 @@ export type SlotDetachedSignatureProps = {
   personName: string | null;
   frozen: FrozenPdfResponse | undefined;
   signature: DetachedSignatureResponse | undefined;
+  /**
+   * Документ держит идущий маршрут: подпись к прежней версии PDF показана спокойно, без «недействительна»,
+   * повторная проверка такой подписи скрыта, удаление скрыто всегда (сервер его отклонит, `route_locked`).
+   */
+  routeHeld?: boolean;
 };
 
 const Field = ({ name, value }: { name: string; value: React.ReactNode }) => (
@@ -716,6 +731,7 @@ export const SlotDetachedSignature = ({
   personName,
   frozen,
   signature,
+  routeHeld = false,
 }: SlotDetachedSignatureProps) => {
   const { t } = useTranslation("signatureStamper");
   const attach = useAttachDetachedSignature();
@@ -810,6 +826,9 @@ export const SlotDetachedSignature = ({
 
   const stale = frozen.stale;
   const current = signature?.current ?? true;
+  // Подпись к прежней версии PDF документа, который держит маршрут: проверять её снова незачем,
+  // маршрут попросит подписать заново.
+  const routeRenew = routeHeld && (stale || !current);
 
   return (
     <div
@@ -876,6 +895,7 @@ export const SlotDetachedSignature = ({
             verdict={signature.verdict}
             current={current}
             stale={stale}
+            routeHeld={routeHeld}
           />
           {signature.verdict === "unknown_key" ? (
             <div
@@ -1109,30 +1129,34 @@ export const SlotDetachedSignature = ({
             >
               <FileUp size="0.625rem" />
             </button>
-            <button
-              type="button"
-              className="btn xs ghost"
-              disabled={busy || stale}
-              onClick={() => {
-                recheck.mutate(
-                  { projectId, docId, slotId },
-                  { onError: (err) => toast.error(err.message) },
-                );
-              }}
-              title={t("detached.slot.recheck")}
-            >
-              <RefreshCw size="0.625rem" />
-            </button>
-            <button
-              type="button"
-              className="btn xs ghost"
-              disabled={busy}
-              style={{ color: "var(--c-err)" }}
-              onClick={handleDelete}
-              title={t("detached.slot.delete")}
-            >
-              <Trash2 size="0.625rem" />
-            </button>
+            {!routeRenew && (
+              <button
+                type="button"
+                className="btn xs ghost"
+                disabled={busy || stale}
+                onClick={() => {
+                  recheck.mutate(
+                    { projectId, docId, slotId },
+                    { onError: (err) => toast.error(err.message) },
+                  );
+                }}
+                title={t("detached.slot.recheck")}
+              >
+                <RefreshCw size="0.625rem" />
+              </button>
+            )}
+            {!routeHeld && (
+              <button
+                type="button"
+                className="btn xs ghost"
+                disabled={busy}
+                style={{ color: "var(--c-err)" }}
+                onClick={handleDelete}
+                title={t("detached.slot.delete")}
+              >
+                <Trash2 size="0.625rem" />
+              </button>
+            )}
           </>
         )}
       </div>

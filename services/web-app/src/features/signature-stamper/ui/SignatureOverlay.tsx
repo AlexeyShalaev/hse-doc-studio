@@ -2,6 +2,11 @@ import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Lock } from "lucide-react";
 import { clampWidthMm } from "../lib/coords";
+import {
+  FRAME_LABEL_LINE_HEIGHT,
+  FRAME_LABEL_PAD_PX,
+  fitFrameLabel,
+} from "../lib/frameLabel";
 
 export type SignatureOverlayProps = {
   pngUrl: string | null;
@@ -88,6 +93,13 @@ export const SignatureOverlay = ({
   // The stamper sets the caption in 8 pt with 3 pt padding (1 pt = 0.3528 mm).
   const captionFontPx = 8 * 0.3528 * pxPerMm;
   const captionPadPx = 3 * 0.3528 * pxPerMm;
+  // Пустая рамка подписывается названием слота: перенос, мельче шрифт, многоточие. Интервал строк
+  // задан явно: страница PDF ставит lineHeight: 0, и перенесённые строки ложились друг на друга.
+  const labelFit = fitFrameLabel(
+    label,
+    localWidth * pxPerMm,
+    heightMm * pxPerMm,
+  );
 
   const handlePointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
     const g = gestureRef.current;
@@ -207,6 +219,9 @@ export const SignatureOverlay = ({
             justifyContent: "center",
             gap: "0.125rem",
             fontSize: "0.5625rem",
+            // Страница PDF задаёт lineHeight: 0 (холст без зазора), подписи свой интервал нужен явно.
+            lineHeight: FRAME_LABEL_LINE_HEIGHT,
+            overflow: "hidden",
             textAlign: "center",
             pointerEvents: "none",
             color: "var(--fg-2)",
@@ -237,12 +252,31 @@ export const SignatureOverlay = ({
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
-            fontSize: "0.625rem",
-            textTransform: "uppercase",
+            padding: FRAME_LABEL_PAD_PX,
+            boxSizing: "border-box",
+            overflow: "hidden",
             pointerEvents: "none",
           }}
         >
-          {label}
+          <span
+            data-testid="signature-frame-label"
+            style={{
+              display: "-webkit-box",
+              WebkitBoxOrient: "vertical",
+              WebkitLineClamp: labelFit.lines,
+              overflow: "hidden",
+              maxWidth: "100%",
+              fontSize: labelFit.fontPx,
+              lineHeight: FRAME_LABEL_LINE_HEIGHT,
+              letterSpacing: 0,
+              textAlign: "center",
+              textTransform: "uppercase",
+              overflowWrap: "anywhere",
+              wordBreak: "break-word",
+            }}
+          >
+            {label}
+          </span>
         </div>
       )}
       <div

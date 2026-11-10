@@ -441,6 +441,7 @@ export const DocPlacementPanel = ({
                 personName={personName}
                 frozen={frozen}
                 signature={docSignatures[slot.id]}
+                routeHeld={routeHeld}
               />
             )}
 

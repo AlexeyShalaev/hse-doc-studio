@@ -89,7 +89,15 @@
     "locked": "Документ на подписании: подписи менять нельзя. Чтобы изменить их, отмените маршрут на странице контрольной точки."
   },
   "unsigned": "Маршрут отправлен, ваша подпись ещё не поставлена.",
-  "signedOptional": "Подписано {{done}} из {{total}} обязательных, необязательных {{optionalDone}} из {{optionalTotal}}",
+  "progress": "Согласовано {{approved}} из {{total}} · подписано {{done}} из {{total}}",
+  "progressOptional_one": "+ необязательная {{done}} из {{count}}",
+  "progressOptional_few": "+ необязательные {{done}} из {{count}}",
+  "progressOptional_many": "+ необязательные {{done}} из {{count}}",
+  "progressOptional_other": "+ необязательные {{done}} из {{count}}",
+  "progressOnlyOptional": "Необязательные: согласовано {{approved}} из {{total}} · подписано {{done}} из {{total}}",
+  "headerApproved": "{{approved}}/{{total}} согласовано",
+  "headerTitle": "Подписано {{done}} из {{total}}, согласовано {{approved}} из {{total}}",
+  "slotApproved": "согласовано, подпись после фиксации",
   "wait": {
     "approvedEsign": "Вы уже согласовали. Электронную подпись Студия попросит поставить после фиксации PDF, когда согласуют: {{who}}.",
     "approvedEsignNext": "Вы уже согласовали. Электронную подпись Студия попросит поставить после фиксации PDF.",

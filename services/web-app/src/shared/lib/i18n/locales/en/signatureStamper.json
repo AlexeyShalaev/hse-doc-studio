@@ -176,7 +176,9 @@
       "unverified": "Signer shown, signature not verified",
       "unknown_key": "Signer key unknown",
       "stale": "Invalid: the PDF was rebuilt",
-      "outdated": "Invalid: signature is for another file version"
+      "outdated": "Invalid: signature is for another file version",
+      "routeStale": "Signature for an earlier PDF version. The route will ask to sign again after the freeze.",
+      "routeOutdated": "Signature for an earlier PDF version. The route will ask to sign again."
     },
     "field": {
       "signer": "Signer",
