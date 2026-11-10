@@ -22,7 +22,7 @@ export const useNewVersionLink = (
     project?.my_role === "owner" || project?.my_role === "editor";
   // Все маршруты проекта одним запросом: версия могла уйти по маршруту другой точки.
   const list = useSigningRoutes(project?.id ?? "", null, {
-    enabled: isServer && canManage && project !== undefined,
+    enabled: isServer && canManage,
   });
   return (routeId) => {
     if (!project || !routeId) return null;
