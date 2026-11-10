@@ -211,7 +211,7 @@ Before sending, the Studio shows what will happen:
 - “Approve again: …”: people who already approved the changed documents;
 - “Unchanged: …, its signatures stay”: documents that did not change.
 
-The “What changed” field is optional. The text goes to the signers together with the request, for example “The topic wording is fixed”. The buttons are “Send new version” and “Don't send”.
+The “What changed” field is optional. The text goes to the signers together with the request, for example “The topic wording is fixed”: on the signing page it is the author's message, and in the email it is under “Message from the sender”. The buttons are “Send new version” and “Don't send”.
 
 <figure class="hds-fig hds-wide">
   <div class="hds-shot">
