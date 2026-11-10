@@ -38,6 +38,9 @@ Forms are declared by the template — for example, an AI usage declaration. The
 
 ## Signatures { #signatures }
 
+!!! tip "Supervisors' signatures on a server"
+    On a shared server you can [send the checkpoint's documents for signing](send-for-signing.md): the supervisors sign in turn on their own page. While the route is running, the signatures of its documents cannot be changed on the “Signatures” tab, and “Sign the submission” skips them with an “Open the signing page” link.
+
 - **The signature library** — one PNG per slot (author, supervisor…) for the whole project; a built-in editor: “Remove background”, eraser, crop, ink colour.
 - **Placement** — drag the signature to the right spot on the document page, with a date if needed.
 - **Stamping** — when the PDF is frozen and packaged the PNG is stamped into it; there is a cryptographic layer too — a PAdES electronic signature with a certificate from Settings, appended to the frozen PDF.
@@ -52,7 +55,7 @@ For documents signed with an enhanced electronic signature or through GnuPG (a t
 3. Attach a signature in one of three ways:
     - **upload a ready file**: `.asc` or `.sig` (OpenPGP) and `.sig` or `.p7s` (CMS/CAdES, including GOST R 34.10-2012 from CryptoARM and CryptoPro). The format is detected automatically; you can drop the file on the slot. The Studio shows the signer (name, CA, certificate validity, algorithm) and checks the signature against the frozen PDF. For OpenPGP with an unknown key it asks for the signer's public key;
     - **sign in the Studio**: with an OpenPGP key or a `.p12` certificate from “Settings → Signatures”. A key can be created right in the signing window, the name comes from the project. In the web version this works only if the administrator allows keys on the server (admin, “Signing keys”): otherwise a key cannot be created or uploaded, and keys already stored cannot sign. A signer's public key for checking a signature can be uploaded under any policy;
-    - **send for signing**: “Files for the signer (zip)” holds the PDF, its SHA-256 and instructions; the supervisor returns the signature file.
+    - **send for signing**: “Files for the signer (zip)” holds the PDF, its SHA-256 and instructions; the supervisor returns the signature file. On a server it is easier to [send for signing](send-for-signing.md): the supervisor uploads the signature themselves.
 4. The submission package gets the frozen PDF unchanged, one signature file per signer, the OpenPGP public keys and a README with verification commands. A package with such a slot is not built without an attached signature.
 
 What is checked and what is not: file integrity and the signature itself (RSA, ECDSA, GOST R 34.10-2012 with Streebog, OpenPGP), the certificate validity at signing time. The chain to a CA root counts as trusted only after the root certificate is added in “Settings → Signatures”. Revocation lists (CRL, OCSP) are not checked. A qualified signature on a token cannot be made inside the Studio: sign the file in CryptoARM or CryptoPro and upload the result.

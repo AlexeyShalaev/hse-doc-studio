@@ -11,7 +11,7 @@ tags:
 
 <p class="hds-lede">On a shared server you can send a checkpoint's documents to your supervisors for signing. The Studio keeps the order itself: each person gets a request in their turn and signs on their own page, and you see who has the documents now.</p>
 
-## When to use it
+## When to use it { #when }
 
 When other people have to sign the checkpoint's documents: the supervisor, a co-supervisor, the academic supervisor. You do not have to explain to everyone where their signature goes or make sure the academic supervisor does not sign before the supervisor.
 
@@ -19,7 +19,7 @@ When other people have to sign the checkpoint's documents: the supervisor, a co-
 - The project owner and editors can send. In a team project there is one route for the whole team, and the authors sign in parallel.
 - Only a person signed in to their own account can sign. The link in the email opens nothing without signing in.
 
-## How signing goes
+## How signing goes { #how-it-goes }
 
 1. You prepare the route: who signs, in what order and where the signatures go.
 2. You click “Send for signing”.
@@ -33,7 +33,7 @@ What a signer sees is described in [How to sign](how-to-sign.md).
 !!! note "Why electronic signatures come last"
     An electronic signature covers the exact bytes of the PDF. Signature images and the plates of electronic signatures are printed in that same PDF. If another image is added to a page after an electronic signature, the file changes and the signature already made becomes invalid. So first everyone approves the document in turn, and the visible signatures appear as they do. Then the Studio freezes the final PDF once, and electronic signatures go on that file. This way no signature breaks another.
 
-## Invite the signers
+## Invite the signers { #invite }
 
 A signer is a project member with the “Reviewer” role and a persona: “Supervisor”, “Co-supervisor” or “Academic supervisor”. The persona tells the Studio which signature slots are theirs.
 
@@ -43,7 +43,7 @@ A signer is a project member with the “Reviewer” role and a persona: “Supe
 - You can send while an invitation is still pending: that person's step will wait.
 - Inviting from the route needs the right to share the project: the owner or an editor with “Can share”. If registration on the server is closed, you can only invite people who already have an account.
 
-## Prepare the route
+## Prepare the route { #prepare }
 
 Open the Submission mode and the checkpoint, and in the “Signing” card click “Send for signing”. The “Send for signing” screen opens. Changes are saved automatically, there is no separate save button.
 
@@ -96,7 +96,7 @@ When you see “Ready to send.”, click “Send for signing”.
 
 If the documents are frozen right when you send and you sign with a Studio key, there is also a “Send and sign” button: it sends the route and adds your electronic signature at once (asking for the key passphrase if it has one). If the signature fails at that point, the route is still sent: the Studio says “The route is sent, but your signature is not in place” and offers to sign on your page.
 
-## How many actions each person has
+## How many actions each person has { #actions }
 
 Next to each person the Studio says what they will have to do:
 
@@ -113,7 +113,7 @@ Under the sending form the Studio says when the final PDF is frozen: “The docu
 !!! tip "Fewer actions"
     Image signatures before e-signatures mean fewer actions. If the people who sign with an electronic signature come after everyone who signs with an image, each of them approves and signs with one click.
 
-## Follow the progress
+## Follow the progress { #progress }
 
 The “Signing” card on the checkpoint page shows the step and whose turn it is, for example “Step 2 of 3. Waiting for Petrov P. P. (supervisor)”, since when they have been waiting, how many signatures are in place and the deadline. Each person shows their state: “waiting”, “to approve”, “approved”, “to sign the final PDF”, “signed”, “has not accepted the invitation”, “returned for rework”.
 
@@ -132,7 +132,7 @@ Other buttons on the card:
 
 While the route is running, the editor of its documents shows the banner “This document is out for signing (step k of n). Editing and rebuilding will stop the route”. The signatures of these documents cannot be changed on the “Signatures” tab.
 
-## What stops the route
+## What stops the route { #stops }
 
 The route makes sure the supervisors sign exactly the version they saw. If a document changes, the route stops, and you and those who already approved get a notification.
 
@@ -147,17 +147,17 @@ The route makes sure the supervisors sign exactly the version they saw. If a doc
 - Comments, other documents and their builds do not affect the route.
 - If one electronic signature is deleted or becomes invalid, the route does not stop: it waits for that slot again.
 
-### Send again
+### Send again { #resend }
 
 Fix the document, build it and click “Send again” on the card. The people and steps stay the same. If something blocks sending, the Studio opens the route screen, where you can see it.
 
 The route starts again from the first step, but people whose documents did not change do not have to approve again. A signer's image and key are kept, so approving again is one click for them.
 
-## Returned for rework
+## Returned for rework { #returned }
 
 Instead of signing, a signer can return the documents with a comment. You get a notification and an email, and the card shows, for example, “Petrov P. P. returned it for rework: “Clarify the project goal””. Under it are “Open document” and “Send again”. Detailed remarks on the text are left as comments in the project itself.
 
-## Everyone has signed
+## Everyone has signed { #completed }
 
 The card says “Everyone has signed. You can build the package.”, and you get a notification and an email. Build the package with “Package” on the same checkpoint page: it gets the signed PDFs and the electronic signature files ([Submission and packaging](submit.md)).
 
@@ -183,7 +183,7 @@ The document was sent for signing and the route is running. You can still edit t
 **“Sign the submission” says “The document is on a signing route”.**
 Route documents are signed only in turn, on the signing page. Click “Open the signing page” in the submission dialog.
 
-## For the administrator
+## For the administrator { #admin }
 
 Route emails go out only when email is configured ([Server emails](../deploy/mail.md)). What a signer can do with an electronic signature depends on whether keys may be stored on the server (admin, “Signing keys”): without that, CryptoPro and a ready signature file remain.
 

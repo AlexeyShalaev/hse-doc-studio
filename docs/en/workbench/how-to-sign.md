@@ -12,7 +12,7 @@ tags:
 
 This page is for supervisors. How a student sends the documents is described in [Send for signing](send-for-signing.md).
 
-## Where to find the request
+## Where to find the request { #request }
 
 - **An email** “… asks you to sign: …” with an “Open the signing page” button, if the server sends email. The page opens after you sign in to your account, so a forwarded email does not let anyone sign for you.
 - **The Inbox, “To sign” tab**: everything waiting for you, across all projects. Each task shows the checkpoint, the project, who asks, what is needed (“Approve”, “Approve and sign”, “Sign the final PDF”) and the deadline. Overdue tasks come first and are marked red. “Open” takes you to the signing page.
@@ -21,7 +21,7 @@ This page is for supervisors. How a student sends the documents is described in 
 
 If you do not have an account on the server yet, a project invitation comes first. Sign up with the address it was sent to, click “Accept”, and the Studio opens the signing page right away. More: [Invitations and access requests](../deploy/invitations.md#accept).
 
-## The signing page
+## The signing page { #page }
 
 - **The header**: who asks, when it was sent, the deadline, the “Message from the author” and an “Open project” link.
 - **“Signing progress”**: the steps in order and each person's state. You are marked “You”.
@@ -33,7 +33,7 @@ If you do not have an account on the server yet, a project invitation comes firs
 
 To approve means to confirm that you have read this version and agree with it. If the document has no place for your signature, the page says so: “No signature in the document, approval only”. Then clicking “Approve” is enough.
 
-## Sign with an image
+## Sign with an image { #image }
 
 1. In “How to sign”, choose the “Image” method if the checkpoint allows several.
 2. Add your signature in one of these ways:
@@ -45,14 +45,14 @@ To approve means to confirm that you have read this version and agree with it. I
 
 The image appears in the document only at the moment you approve; before that nobody sees it. After the click the page says who signs next.
 
-## Sign with an electronic signature
+## Sign with an electronic signature { #esign }
 
 An electronic signature goes on the final PDF, when all visible signatures are already in it. So there are two cases:
 
 - **One action**: the documents are already frozen. “Approve and sign” approves and signs at once.
 - **Two actions**: someone after you still adds a visible signature. Click “Approve” first. When the final PDF is ready, a “Sign the final PDF” request arrives; open the page again and click “Sign”.
 
-Why it works this way is explained in [Send for signing](send-for-signing.md).
+Why it works this way is explained in [Send for signing](send-for-signing.md#how-it-goes).
 
 ### Plate details
 
@@ -74,20 +74,20 @@ You can keep the certificate in your signer profile (settings, “Signing certif
 
 If the server does not store private keys, the page says so: you cannot create or import a key; sign with CryptoPro or upload a ready signature. The “E-signature in the PDF” method works only with a Studio key, so on such a server you cannot choose it: pick another method or return the documents to the author.
 
-## Return for rework
+## Return for rework { #return }
 
 If something in the document needs fixing, click “Return for rework”, write what exactly in “What to fix” (required, up to 2000 characters) and click “Return”. The author gets your comment and the route stops. When the author fixes it and sends it again, you get a notification.
 
 Detailed remarks on the text are easier to leave as comments in the project itself: the return dialog has an “Open project” link.
 
-## If the document changed
+## If the document changed { #changed }
 
 - “The document changed while the page was open”: the author rebuilt the document in the meantime. Look at the new version and click the button again.
 - “The document changed after you approved it: please approve again”: the author fixed the document and sent it again. Your image and key are still there, so this is one click.
 - “Route stopped”: the author is editing the document or changing the signers. There is nothing to do; you will be notified when they send it again.
 - “Signing page not found”: the route is closed, the link is out of date, or you are signed in to another account. Open the Inbox and check the “To sign” tab.
 
-## From a phone
+## From a phone { #phone }
 
 The signing page works in a phone browser, and the buttons stick to the bottom of the screen.
 
