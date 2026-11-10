@@ -87,6 +87,40 @@ services:
     command: ["python", "/seed/seed.py"]
     restart: "no"
 
+  # Общий раннер с поддельным TeX (fake_tex_runner.py) для e2e маршрута подписания: собранный PDF без образа
+  # TeX Live и проверка открепленных подписей gpg. Запускается отдельно (make server-lite-runner-up) и только после
+  # сценариев, которые проверяют стенд без раннеров.
+  runner:
+    profiles: [runner]
+    build:
+      context: ../../..
+      dockerfile: deploy/all-in-one/Dockerfile
+      target: production
+      args:
+        BACKEND_EXTRAS: "--extra server"
+    depends_on:
+      api:
+        condition: service_healthy
+    healthcheck:
+      disable: true
+    # База и ключ секретов нужны только чтобы положить токен регистрации (как bootstrap-токен api).
+    environment:
+      HSE_STUDIO__MODE: server
+      HSE_STUDIO__DATA_DIR: /data
+      HSE_STUDIO__LOGGING__USE_JSON: "true"
+      HSE_STUDIO__DB__DSN: postgresql://studio:${SERVER_LITE_PG_PASSWORD:?}@postgres:5432/studio
+      HSE_STUDIO__SECRETS__KEY: ${SERVER_LITE_SECRETS_KEY:?}
+      HSE_STUDIO__AUTH__PUBLIC_URL: http://localhost:${SERVER_LITE_PORT:-8100}
+      HSE_RUNNER__API_URL: http://api:8000
+      HSE_RUNNER__NAME: fake-tex
+      HSE_RUNNER__TAGS: tex,verify,pack
+      HSE_RUNNER__CONCURRENCY: "2"
+      HSE_RUNNER__DATA_DIR: /tmp/hse-runner
+    volumes:
+      - ./fake_tex_runner.py:/runner/fake_tex_runner.py:ro
+    command: ["python", "/runner/fake_tex_runner.py"]
+    restart: "no"
+
 volumes:
   server-lite-pg:
   server-lite-data:
