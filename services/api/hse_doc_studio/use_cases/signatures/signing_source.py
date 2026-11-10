@@ -27,15 +27,21 @@ def pinned_rel(doc_id: str) -> str:
     return str(PurePosixPath(FROZEN_DIR) / f"{safe_name(doc_id)}{PINNED_SUFFIX}")
 
 
-def pinned_file(folder: Path, pinned: PinnedPdf) -> Path | None:
-    """Файл версии на подписи; None, если путь из состояния ведёт за пределы `.hse-studio/frozen`.
+def pinned_file_rel(pinned: PinnedPdf) -> str | None:
+    """Путь файла версии на подписи относительно папки проекта; None, если он ведёт за пределы `.hse-studio/frozen`.
 
     Состояние подписей приходит и через git: путь из него не должен указывать на произвольный файл проекта.
     """
     rel = PurePosixPath(pinned.path)
     if rel.is_absolute() or ".." in rel.parts or not rel.is_relative_to(FROZEN_DIR):
         return None
-    return folder / rel
+    return rel.as_posix()
+
+
+def pinned_file(folder: Path, pinned: PinnedPdf) -> Path | None:
+    """Файл версии на подписи; None, если путь из состояния ведёт за пределы `.hse-studio/frozen`."""
+    rel = pinned_file_rel(pinned)
+    return folder / rel if rel is not None else None
 
 
 @dataclass(frozen=True)
