@@ -8,6 +8,7 @@ import {
   makeSigningRouteSummary,
 } from "@entities/signing-route/testing";
 import { makeGuardHarness } from "@entities/signing-route/testing/guard";
+import type * as DocumentModule from "@entities/document";
 
 // The `@shared/ui` barrel eagerly loads pdfjs-dist, which needs DOMMatrix.
 vi.mock("pdfjs-dist", () => ({
@@ -19,7 +20,7 @@ vi.mock("pdfjs-dist", () => ({
 const upload = vi.fn<(file: File) => Promise<void>>();
 
 vi.mock("@entities/document", async (importOriginal) => ({
-  ...(await importOriginal<typeof import("@entities/document")>()),
+  ...(await importOriginal<typeof DocumentModule>()),
   useCustomFileActions: () => ({
     upload,
     remove: vi.fn(),
@@ -49,9 +50,8 @@ const renderModal = (docId: string) => {
 };
 
 const pickAndUpload = async (user: ReturnType<typeof userEvent.setup>) => {
-  const input = document.body.querySelector<HTMLInputElement>(
-    'input[type="file"]',
-  );
+  const input =
+    document.body.querySelector<HTMLInputElement>('input[type="file"]');
   if (!input) throw new Error("no file input");
   await user.upload(input, new File(["%PDF"], "signed.pdf"));
   await user.click(screen.getByRole("button", { name: "Загрузить" }));

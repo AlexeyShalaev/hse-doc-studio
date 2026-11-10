@@ -48,7 +48,11 @@ export const RouteEditGuardProvider = ({
   memory = routeGuardMemory,
 }: RouteEditGuardProviderProps) => {
   const list = useSigningRoutes(projectId, null, { enabled });
-  const held = useMemo(() => heldDocsOf(list.data?.items ?? []), [list.data]);
+  // Выключенный запрос всё равно отдаёт кэш: без права на маршруты документов на подписании нет.
+  const held = useMemo(
+    () => (enabled ? heldDocsOf(list.data?.items ?? []) : []),
+    [enabled, list.data],
+  );
   const ready = !enabled || list.isFetched;
   const [queue, setQueue] = useState<GuardRequest[]>([]);
   // Ушли со страницы с открытым вопросом: ждущие места правки получают «Отмена».

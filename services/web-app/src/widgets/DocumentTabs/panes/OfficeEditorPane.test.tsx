@@ -74,9 +74,7 @@ describe("OfficeEditorPane and the signing guard", () => {
     expect(sessionCalls()).toHaveLength(0);
 
     await user.click(screen.getByRole("button", { name: "Открыть редактор" }));
-    await user.click(
-      await screen.findByRole("button", { name: "Продолжить" }),
-    );
+    await user.click(await screen.findByRole("button", { name: "Продолжить" }));
     await waitFor(() => {
       expect(sessionCalls()).toHaveLength(1);
     });

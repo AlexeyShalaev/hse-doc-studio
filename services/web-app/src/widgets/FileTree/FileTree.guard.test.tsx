@@ -37,7 +37,9 @@ const file = (path: string) => ({
 
 const renderTree = () => {
   const del = vi.spyOn(apiClient, "delete").mockResolvedValue({ data: null });
-  vi.spyOn(apiClient, "get").mockImplementation(() => new Promise(() => {}));
+  vi.spyOn(apiClient, "get").mockImplementation(
+    () => new Promise(() => undefined),
+  );
   const harness = makeGuardHarness({
     routes: [makeSigningRouteSummary({ docs: [SR_DOC.doc_id] })],
   });

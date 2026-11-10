@@ -21,7 +21,11 @@ const DOCS: GuardDoc[] = [
 describe("heldDocsOf", () => {
   it("takes the documents of active routes with their round", () => {
     const held = heldDocsOf([
-      makeSigningRouteSummary({ id: "r1", round: 2, docs: ["topic", "review"] }),
+      makeSigningRouteSummary({
+        id: "r1",
+        round: 2,
+        docs: ["topic", "review"],
+      }),
     ]);
     expect(held).toEqual([
       { docId: "topic", routeId: "r1", round: 2 },
@@ -90,9 +94,9 @@ describe("affectedHeld and isOwnTarget", () => {
   });
 
   it("a file of a document not on signing touches nothing", () => {
-    expect(
-      affectedHeld({ paths: ["ivanov/vkr/vkr.tex"] }, held, DOCS),
-    ).toEqual([]);
+    expect(affectedHeld({ paths: ["ivanov/vkr/vkr.tex"] }, held, DOCS)).toEqual(
+      [],
+    );
   });
 
   it("shared files and project fields touch every held document", () => {

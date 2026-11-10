@@ -163,10 +163,9 @@ describe("RouteEditGuardProvider", () => {
     expect(action).toHaveBeenCalledTimes(1);
 
     act(() => {
-      harness.client.setQueryData(
-        signingRouteKeys.list(SR_PROJECT_ID, null),
-        { items: [makeSigningRouteSummary({ round: 2, docs: [TOPIC] })] },
-      );
+      harness.client.setQueryData(signingRouteKeys.list(SR_PROJECT_ID, null), {
+        items: [makeSigningRouteSummary({ round: 2, docs: [TOPIC] })],
+      });
     });
     await user.click(screen.getByRole("button", { name: "edit" }));
     expect(await screen.findByRole("dialog")).toBeInTheDocument();
@@ -196,7 +195,10 @@ describe("RouteEditGuardProvider", () => {
     first.view.unmount();
 
     // Тот же сеанс: правка файла одного из перечисленных документов уже не спрашивает.
-    const second = renderEditor({ target: { paths: ["supervisor_review/a.tex"] }, memory });
+    const second = renderEditor({
+      target: { paths: ["supervisor_review/a.tex"] },
+      memory,
+    });
     await user.click(screen.getByRole("button", { name: "edit" }));
     expect(second.action).toHaveBeenCalledTimes(1);
     expect(dialog()).toBeNull();
@@ -231,7 +233,9 @@ describe("RouteEditGuardProvider", () => {
         <button
           type="button"
           onClick={() => {
-            void guard.confirm({ docIds: [TOPIC] }).then((ok) => answers.push(ok));
+            void guard
+              .confirm({ docIds: [TOPIC] })
+              .then((ok) => answers.push(ok));
             void guard
               .confirm({ paths: [`${TOPIC}/x.tex`] })
               .then((ok) => answers.push(ok));
@@ -250,7 +254,9 @@ describe("RouteEditGuardProvider", () => {
 
   it("names the documents for the template update line", async () => {
     const user = userEvent.setup();
-    renderEditor({ target: { paths: ["topic_application/a.tex", "README.md"] } });
+    renderEditor({
+      target: { paths: ["topic_application/a.tex", "README.md"] },
+    });
     await user.click(screen.getByRole("button", { name: "names" }));
     expect(screen.getByRole("status")).toHaveTextContent(
       "Заявление о выборе темы|Отзыв руководителя",
@@ -268,7 +274,9 @@ describe("RouteEditGuardProvider", () => {
     expect(modal).toHaveTextContent(
       "Out for signing: Заявление о выборе темы, Отзыв руководителя. Changes will not reach the versions being signed. Continue?",
     );
-    expect(screen.getByRole("button", { name: "Continue" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Continue" }),
+    ).toBeInTheDocument();
   });
 
   it("runs at once outside the provider of the project", async () => {
