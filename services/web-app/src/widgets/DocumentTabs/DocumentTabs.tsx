@@ -550,9 +550,7 @@ export const DocumentTabs = ({ projectId, docId }: DocumentTabsProps) => {
         docId={docId}
         hold={signingHold}
         version={signingVersion}
-        canManage={
-          project?.my_role === "owner" || project?.my_role === "editor"
-        }
+        canManage={project.my_role === "owner" || project.my_role === "editor"}
       />
 
       <div

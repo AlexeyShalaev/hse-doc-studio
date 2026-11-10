@@ -135,7 +135,7 @@ export const SigningHoldBanner = ({
             primary
           />
         )}
-        {diverged !== null && diverged.pinnedAt !== null && (
+        {diverged?.pinnedAt != null && (
           <a
             href={signatureDownloadUrls.signedPdf(projectId, docId)}
             target="_blank"

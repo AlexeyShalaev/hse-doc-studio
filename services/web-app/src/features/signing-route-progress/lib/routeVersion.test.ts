@@ -121,9 +121,7 @@ describe("подтверждение новой версии (12.6)", () => {
     const old = {
       ...base,
       docs: base.docs.map(({ change: _c, sent: _s, ...doc }) => doc),
-      participants: base.participants.map(
-        ({ keeps_approval: _k, ...p }) => p,
-      ),
+      participants: base.participants.map(({ keeps_approval: _k, ...p }) => p),
     };
     const summary = newVersionSummary(
       {
