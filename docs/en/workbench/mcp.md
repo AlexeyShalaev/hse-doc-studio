@@ -118,7 +118,7 @@ Dangerous tools (deleting a project or a file, rewinding history, syncing with a
 
 ### Signing route (cloud)
 
-Only the server runs the “Send for signing” route, so the local Studio has none of these tools. Over MCP you can read the progress of a route and send documents; approving, signing or returning for rework is done only on the signing page in the interface: that is a person's decision.
+Only the server runs the [“Send for signing”](send-for-signing.md) route, so the local Studio has none of these tools. Over MCP you can read the progress of a route and send documents; approving, signing or returning for rework is done only on the signing page in the interface: that is a person's decision.
 
 - **`get_signing_route`** shows the progress of the route of a submission checkpoint (`profile_id` from `list_submission_profiles`): status and phase, steps with people and their states, whose turn it is now (`waiting_for`), the deadline, the stop reason (`stop_reason`: document rebuilt, signatures changed outside the route, a participant left, returned for rework), who stopped it and the latest events. Without `profile_id` it gives a summary of every route in the project. Available to whoever can see build results; the return comment is visible to those who manage the route and to its participants.
 - **`list_signing_tasks`** shows your signing tasks across all projects: where your action is needed now (`approve`, `approve_and_sign`, `sign`), who asks, for which checkpoint and by what deadline. `signing_page` is the address of the signing page: open it in the Studio.
