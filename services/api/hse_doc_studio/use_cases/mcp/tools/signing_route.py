@@ -56,9 +56,10 @@ def _page(project_id: UUID, route_id: UUID) -> str:
     return signing_page_path(project_id, route_id)
 
 
-def _person(person: PersonView, *, round: int) -> dict[str, object]:
+def _person(person: PersonView) -> dict[str, object]:
     p = person.participant
-    approval = p.approval if p.approval is not None and p.approval.round == round else None
+    # Согласие переносится в новый раунд всегда (12.6); согласовавшим он считается, пока оно действует.
+    approval = p.approval if person.view.approved else None
     return {
         "participant_id": str(p.id),
         "name": person.name,
@@ -116,7 +117,7 @@ def route_view(details: RouteDetails) -> dict[str, object]:
         "sent_at": route.sent_at,
         "completed_at": route.completed_at,
         "waiting_for": [_waiting(person) for person in details.waiting_for],
-        "steps": [[_person(person, round=route.round) for person in step] for step in details.steps],
+        "steps": [[_person(person) for person in step] for step in details.steps],
         "docs": [
             {
                 "doc_id": doc.doc_id,

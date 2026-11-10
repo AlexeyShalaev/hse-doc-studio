@@ -130,7 +130,9 @@ class ParticipantView:
     `remaining_actions` сколько ещё нажатий от него нужно (таблица 4.4; 2 значит «согласовать, затем подписать
     итоговый PDF», а при равных шансах в параллельном шаге это верхняя граница). `changes_visible` он ещё меняет
     видимый слой (входит в L). `needs_image` и `needs_plate` до согласия нужно загрузить картинку или задать ключ
-    для плашки.
+    для плашки. `approved` согласие этого раунда действует по всем его документам (его показывают как
+    `approved_at`); `approved_docs` документы, по которым оно действует (12.6): после новой версии согласие
+    перенесено, но на изменившемся документе уже не действует.
     """
 
     participant_id: UUID
@@ -141,6 +143,8 @@ class ParticipantView:
     changes_visible: bool
     needs_image: bool = False
     needs_plate: bool = False
+    approved: bool = False
+    approved_docs: frozenset[str] = frozenset()
 
 
 @dataclass(frozen=True)
@@ -431,6 +435,8 @@ def _view(route: SigningRoute, info: _Info, status: RouteStatus, progress: _Prog
         changes_visible=info.changer,
         needs_image=bool(info.missing_image),
         needs_plate=bool(info.missing_plate),
+        approved=info.approval_valid,
+        approved_docs=info.approved_docs,
     )
 
 

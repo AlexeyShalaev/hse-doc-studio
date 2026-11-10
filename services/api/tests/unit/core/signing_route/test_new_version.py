@@ -282,6 +282,16 @@ def test__new_version__reapproval_starts_from_step_one_in_order_unchanged_partic
         "academic_supervisor": ParticipantState.waiting,
     }
     assert evaluation.current_step == 2
+    shown = {
+        p.persona: (evaluation.participant(p.id).approved, evaluation.participant(p.id).approved_docs)
+        for p in driver.route.participants
+    }
+    assert shown == {
+        "author": (True, {DOC, DOC2}),
+        "supervisor": (False, frozenset()),
+        "reviewer": (True, {DOC2}),
+        "academic_supervisor": (False, {DOC2}),
+    }
     requests = [e for e in evaluation.effects if isinstance(e, Notify)]
     assert requests == [Notify(Notice.request, (_pid(driver, "supervisor"),), outcome=RequestOutcome.approve)]
 
