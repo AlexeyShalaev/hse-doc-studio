@@ -10,7 +10,7 @@ import { useNavigate } from "react-router";
 import { RefreshCw } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useQueryClient } from "@tanstack/react-query";
-import { yCollab, ySyncAnnotation } from "y-codemirror.next";
+import { yCollab } from "y-codemirror.next";
 import { useDebouncedCallback } from "use-debounce";
 import { clsx } from "clsx";
 import {
@@ -42,7 +42,6 @@ import {
 import {
   CodeEditor,
   Spinner,
-  createEditGate,
   type CodeEditorController,
   type DiagnosticClickInfo,
   type EditorDiagnostic,
@@ -56,6 +55,7 @@ import { applyQuickFix } from "../lib/applyQuickFix";
 import { findingsToDiagnostics } from "../lib/findingsToDiagnostics";
 import { insertSuppression } from "../lib/insertSuppression";
 import { languageForPath } from "../lib/languageForPath";
+import { useRouteEditGate } from "../lib/useRouteEditGate";
 import {
   parseMacroDefinitions,
   resolveMacroAliases,
@@ -347,19 +347,8 @@ const SourceEditorBody = ({
     () => (provider ? yCollab(provider.text, provider.awareness) : undefined),
     [provider],
   );
-  // Мягкое предупреждение (signing-route.md, 12.7): первая правка файла документа на подписании
-  // ждёт ответа до применения. Фильтр создаётся с редактором, вопрос привязывается к нему здесь.
   const routeGuard = useRouteEditGuard(projectId);
-  const [routeGate] = useState(() =>
-    createEditGate({ exempt: [ySyncAnnotation] }),
-  );
-  useEffect(() => {
-    const target = { paths: [relativePath] };
-    routeGate.bind({
-      shouldAsk: () => routeGuard.pending(target).length > 0,
-      ask: () => routeGuard.confirm(target),
-    });
-  }, [routeGate, routeGuard, relativePath]);
+  const routeGateExtension = useRouteEditGate(projectId, relativePath);
   const reviewUi = useEditorReview({
     projectId,
     path: relativePath,
@@ -373,8 +362,8 @@ const SourceEditorBody = ({
     docRevision,
   });
   const editorExtensions = useMemo(
-    () => [...reviewUi.extensions, routeGate.extension],
-    [reviewUi.extensions, routeGate],
+    () => [...reviewUi.extensions, routeGateExtension],
+    [reviewUi.extensions, routeGateExtension],
   );
 
   // A pane-local "focus" action becomes a true distraction-free writing
