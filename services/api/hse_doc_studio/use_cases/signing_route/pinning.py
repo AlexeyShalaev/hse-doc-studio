@@ -27,7 +27,7 @@ from hse_doc_studio.core.repositories import ISignatureRepository
 from hse_doc_studio.core.services import ProjectTemplateService
 from hse_doc_studio.core.signing_route.entities import SigningRoute
 from hse_doc_studio.core.signing_route.readiness import DocChangedError
-from hse_doc_studio.core.value_objects import PinnedPdf
+from hse_doc_studio.core.value_objects import PinnedPdf, SignaturesState
 from hse_doc_studio.use_cases.signatures._doc_context import sha256_file
 from hse_doc_studio.use_cases.signatures.signing_source import pinned_file, pinned_rel
 from hse_doc_studio.use_cases.signing_route.point import RoutePoint
@@ -58,22 +58,33 @@ class RoutePinning:
         self._signatures = signatures
         self._template_service = template_service
 
+    def state(self, folder: Path) -> SignaturesState:
+        return self._signatures.get_state(folder)
+
     async def pin(
-        self, point: RoutePoint, route: SigningRoute, expected: Mapping[str, str], *, at: datetime
+        self,
+        point: RoutePoint,
+        route: SigningRoute,
+        expected: Mapping[str, str],
+        *,
+        at: datetime,
+        sources: Mapping[str, Path] | None = None,
     ) -> tuple[PinnedVersion, ...]:
         """Снять версию на подписи у документов `expected` (документ: sha256 кандидата) для раунда `route.round`.
 
         Источник копии это текущая сборка; у документа без сборки прежняя версия на подписи (кандидат её и
-        оставил, 12.6). Сначала копии всех документов и сверка, потом переименования и одна запись состояния.
+        оставил, 12.6). `sources` другой источник документа (перенос 0.20.0 из архива сборок, 12.11). Сначала
+        копии всех документов и сверка, потом переименования и одна запись состояния.
         """
         if not expected:
             return ()
         folder = point.project.folder
         state = self._signatures.get_state(folder)
+        given = sources or {}
         staged: list[_Staged] = []
         try:
             for doc_id, sha256 in expected.items():
-                staged.append(await self._stage(point, state.pinned.get(doc_id), doc_id, sha256))
+                staged.append(await self._stage(point, state.pinned.get(doc_id), doc_id, sha256, given.get(doc_id)))
             for item in staged:
                 await asyncio.to_thread(os.replace, item.temp, item.target)
         finally:
@@ -94,9 +105,11 @@ class RoutePinning:
         self._signatures.save_state(folder, replace(state, pinned=pinned))
         return tuple(PinnedVersion(item.doc_id, item.sha256, item.size) for item in staged)
 
-    async def _stage(self, point: RoutePoint, previous: PinnedPdf | None, doc_id: str, sha256: str) -> _Staged:
+    async def _stage(
+        self, point: RoutePoint, previous: PinnedPdf | None, doc_id: str, sha256: str, given: Path | None
+    ) -> _Staged:
         folder = point.project.folder
-        source = self._working(point, doc_id)
+        source = given if given is not None else self.working(point, doc_id)
         if (source is None or not source.is_file()) and previous is not None:
             source = pinned_file(folder, previous)
         if source is None or not source.is_file():
@@ -118,7 +131,7 @@ class RoutePinning:
             raise DocChangedError([doc_id])
         return _Staged(doc_id, temp, target, copied, temp.stat().st_size)
 
-    def _working(self, point: RoutePoint, doc_id: str) -> Path | None:
+    def working(self, point: RoutePoint, doc_id: str) -> Path | None:
         """Путь текущей сборки документа; None, если документа нет или сборки у него не бывает."""
         doc = point.documents.get(doc_id)
         if doc is None:

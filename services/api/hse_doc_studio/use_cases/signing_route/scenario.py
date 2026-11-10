@@ -42,6 +42,7 @@ from hse_doc_studio.use_cases.signatures._studio_signer import project_lock
 from hse_doc_studio.use_cases.signing_route.audit import SigningRouteAudit
 from hse_doc_studio.use_cases.signing_route.effects import RouteFileEffects
 from hse_doc_studio.use_cases.signing_route.facts import LoadedFacts, RouteFactsLoader
+from hse_doc_studio.use_cases.signing_route.migration import RouteMigration
 from hse_doc_studio.use_cases.signing_route.point import RoutePoint, RoutePointLoader
 from hse_doc_studio.use_cases.signing_route.views import (
     People,
@@ -119,6 +120,8 @@ class RouteServices:
     clock: Clock = utc_now
     # Журнал аудита сервера; события истории маршрута пишет в него само хранилище (`AuditedSigningRoutes`).
     audit: SigningRouteAudit | None = None
+    # Перенос маршрутов 0.20.0 на версию на подписи (12.11); без него сверка маршруты не переносит.
+    migration: RouteMigration | None = None
 
 
 class RouteScenario:

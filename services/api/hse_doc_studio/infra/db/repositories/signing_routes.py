@@ -336,6 +336,9 @@ class SqlSigningRouteRepository:
             stmt = stmt.where(_R.project_id == project_id)
         return await self._fetch(stmt)
 
+    async def list_holding(self) -> list[SigningRoute]:
+        return await self._fetch(select(_R).where(_R.status.in_(_values(HOLDING_STATUSES))))
+
     async def list_for_user(
         self, user_id: UUID, *, project_id: UUID | None = None, statuses: Collection[RouteStatus] | None = None
     ) -> list[SigningRoute]:

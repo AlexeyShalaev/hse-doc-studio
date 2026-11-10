@@ -89,6 +89,9 @@ class InMemorySigningRouteRepository:
             lambda r: r.status in WATCHING_STATUSES and (project_id is None or r.project_id == project_id)
         )
 
+    async def list_holding(self) -> list[SigningRoute]:
+        return self._select(lambda r: r.status in HOLDING_STATUSES)
+
     async def list_for_user(
         self, user_id: UUID, *, project_id: UUID | None = None, statuses: Collection[RouteStatus] | None = None
     ) -> list[SigningRoute]:

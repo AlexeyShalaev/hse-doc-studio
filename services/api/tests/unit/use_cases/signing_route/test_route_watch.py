@@ -17,7 +17,10 @@ import pytest
 from fastapi import FastAPI
 from hse_doc_studio.api.config import Settings
 from hse_doc_studio.api.config.signing_route import SigningRouteConfig
-from hse_doc_studio.api.observability.install_signing import install_signing_route_sweep
+from hse_doc_studio.api.observability.install_signing import (
+    install_signing_route_migration,
+    install_signing_route_sweep,
+)
 from hse_doc_studio.core.background import PeriodicTask
 from hse_doc_studio.core.enums import VcsRestoreMode
 from hse_doc_studio.core.projects.volume import UnsafePathError
@@ -99,12 +102,12 @@ async def test__route_watch__changes_during_reconciliation__one_more_pass_not_a_
     watch.on_project_changed(PROJECT)
     await asyncio.sleep(0)
     for _ in range(5):
-        watch.on_pdf_built(PROJECT, "report", 12)
+        watch.on_project_changed(PROJECT)
     watch.on_project_changed(OTHER)
     reconcile.gate.set()
     await watch.drain()
 
-    # Пять сборок за время сверки дали один повторный проход; другой проект сверяется сам по себе.
+    # Пять изменений за время сверки дали один повторный проход; другой проект сверяется сам по себе.
     assert sorted(reconcile.calls, key=str) == sorted([PROJECT, PROJECT, OTHER], key=str)
 
 
@@ -334,12 +337,18 @@ class _Runner:
 
 
 class _Reconciler:
-    def __init__(self) -> None:
+    def __init__(self, migrations: list[int | None] | None = None) -> None:
         self.sweeps = 0
+        self.migrations = list(migrations or [])
+        self.migrated = 0
 
     async def sweep(self) -> int:
         self.sweeps += 1
         return 1
+
+    async def migrate_all(self) -> int | None:
+        self.migrated += 1
+        return self.migrations.pop(0) if self.migrations else 0
 
 
 class _Container:
@@ -379,6 +388,28 @@ async def test__install_signing_route_sweep__registers_periodic_task_that_sweeps
     await task.run()
     await task.run()
     assert (reconciler.sweeps, container.scopes, container.open) == (2, 2, 0)
+
+
+async def test__install_signing_route_migration__runs_on_start_until_one_pass_without_failures() -> None:
+    app = FastAPI()
+    app.state.background = _Runner()
+    cfg = Settings(signing_route=SigningRouteConfig(sweep_interval_s=60))
+    # Первый проход со сбоем одного маршрута (None), второй удачный, дальше задача ничего не делает.
+    reconciler = _Reconciler(migrations=[None, 1])
+    container = _Container(reconciler)
+
+    install_signing_route_migration(app, container, cfg)  # type: ignore[arg-type]
+
+    (task,) = app.state.background.tasks
+    assert (task.name, task.interval_s, task.run_on_start) == ("signing_route_migrate", 60.0, True)
+    for _ in range(4):
+        await task.run()
+    assert (reconciler.migrated, container.scopes, container.open) == (2, 2, 0)
+
+
+def test__route_watch__is_not_a_build_observer() -> None:
+    # Пересборка маршрут не касается (12.5): у сервера хука сборки у наблюдателя нет.
+    assert not hasattr(RouteWatch, "on_pdf_built")
 
 
 def test__signing_route_settings__sweep_every_five_minutes_by_default() -> None:

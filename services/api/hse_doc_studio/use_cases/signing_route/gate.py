@@ -44,6 +44,7 @@ from hse_doc_studio.core.signing_route.signer import unsigned_crypto
 from hse_doc_studio.use_cases.signing_route.facts import LoadedFacts
 from hse_doc_studio.use_cases.signing_route.reconcile import RouteRecalculation
 from hse_doc_studio.use_cases.signing_route.scenario import actor_uuid
+from hse_doc_studio.use_cases.signing_route.views import doc_changed, sent_version
 from hse_doc_studio.use_cases.signing_route.watch import expect_recalculation, recalculation_done
 
 logger = structlog.get_logger()
@@ -158,13 +159,13 @@ class SigningRouteGate(RouteRecalculation):
             calc = await self._evaluated(route)
             if calc is None:
                 continue
-            _, evaluation = calc
+            loaded, evaluation = calc
             states.update(_slot_states(route, evaluation))
             if route.status is RouteStatus.active and evaluation.status is RouteStatus.active:
                 held.update(route.docs)
             wanted = route.profile_id == profile_id if profile_id is not None else doc_id in route.docs
             if shown is None and wanted:
-                shown = _plan_route(route, evaluation)
+                shown = _plan_route(route, evaluation, loaded)
         return PlanRoutes(route=shown, slot_states=states, held_docs=frozenset(held))
 
     async def _evaluated(self, route: SigningRoute) -> tuple[LoadedFacts, Evaluation] | None:
@@ -200,8 +201,13 @@ def _slot_on_route(route: SigningRoute, loaded: LoadedFacts, slot_id: str) -> bo
     )
 
 
-def _plan_route(route: SigningRoute, evaluation: Evaluation) -> PlanRoute:
+def _plan_route(route: SigningRoute, evaluation: Evaluation, loaded: LoadedFacts) -> PlanRoute:
     active = evaluation.status is RouteStatus.active
+    changed = tuple(
+        doc_id
+        for doc_id in route.docs
+        if doc_changed(route, loaded.facts, doc_id, sent_version(route, loaded.state, doc_id))
+    )
     return PlanRoute(
         id=route.id,
         profile_id=route.profile_id,
@@ -211,4 +217,5 @@ def _plan_route(route: SigningRoute, evaluation: Evaluation) -> PlanRoute:
         current_step=evaluation.step_position if active else None,
         steps_total=len(route.steps),
         stop_reason=evaluation.stop or route.stop_reason,
+        changed_docs=changed,
     )

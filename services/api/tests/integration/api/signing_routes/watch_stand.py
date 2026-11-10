@@ -43,10 +43,16 @@ def drain(stand: Stand) -> None:
 
 
 def pdf_built(stand: Stand, trio: Trio, doc_id: str) -> None:
-    """Хук успешной сборки документа, как его зовут хуки задачи сборки."""
+    """Сборка документа и сверка после неё.
+
+    Хук сборки маршрут больше не слушает (12.5): сверку после сборки тест зовёт сам, как её позвал бы любой
+    другой хук или периодическая сверка. Так видно, что и сверка на новой сборке маршрут не останавливает.
+    """
 
     async def notify() -> None:
-        (await container(stand).get(IBuiltPdfObserver)).on_pdf_built(UUID(trio.project.id), doc_id, 1)
+        project_id = UUID(trio.project.id)
+        (await container(stand).get(IBuiltPdfObserver)).on_pdf_built(project_id, doc_id, 1)
+        (await container(stand).get(RouteWatch)).on_project_changed(project_id)
 
     in_app(stand, notify)
     drain(stand)

@@ -50,7 +50,7 @@ def _edit_state(trio: Trio, change: Any) -> None:
     path.write_text(json.dumps(state, ensure_ascii=False), encoding="utf-8")
 
 
-async def test__server__build_and_signature_hooks_lead_to_the_route_watch(stand: Stand) -> None:
+async def test__server__signature_hook_leads_to_the_route_watch_and_build_hook_does_not(stand: Stand) -> None:
     async def wired() -> tuple[Any, Any, Any, Any]:
         app = container(stand)
         return (
@@ -63,7 +63,8 @@ async def test__server__build_and_signature_hooks_lead_to_the_route_watch(stand:
     watch, port, observer, signatures = in_app(stand, wired)
 
     assert port is watch
-    assert observer is watch
+    # Пересборка маршрут не касается (12.5): хук сборки сервера сверку не зовёт.
+    assert observer is not watch
     assert isinstance(signatures, WatchedSignatureRepository)
 
 

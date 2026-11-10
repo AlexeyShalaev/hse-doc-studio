@@ -470,6 +470,7 @@ async def test__plan__route_of_the_checkpoint_and_of_the_document__with_particip
         "current_step": 2,
         "steps_total": 2,
         "stop_reason": None,
+        "changed_docs": [],
     }
     assert by_point["route"] == expected
     assert by_doc["route"] == expected

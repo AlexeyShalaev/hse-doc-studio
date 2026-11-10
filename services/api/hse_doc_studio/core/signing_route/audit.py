@@ -43,6 +43,8 @@ class RouteAuditAction(StrEnum):
     signer_method = "signing_route.signer_method"
     signer_plate = "signing_route.signer_plate"
     signer_image = "signing_route.signer_image"
+    # Перенос маршрута 0.20.0 (12.11): версия на подписи из сборки или архива сборок; актора нет.
+    migrate = "signing_route.migrate"
 
 
 # Событие истории маршрута и его запись в журнале. `frozen` в журнале уже есть: `signature.freeze` с `route_id`

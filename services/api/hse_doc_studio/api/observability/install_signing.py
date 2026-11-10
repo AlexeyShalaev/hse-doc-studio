@@ -1,5 +1,5 @@
-"""Фоновые задачи маршрутов подписания (docs/design/signing-route.md): автонапоминания подписантам (5.7) и
-периодическая сверка маршрутов с проектами (5.5)."""
+"""Фоновые задачи маршрутов подписания (docs/design/signing-route.md): автонапоминания подписантам (5.7),
+периодическая сверка маршрутов с проектами (5.5) и разовый перенос маршрутов 0.20.0 (12.11)."""
 
 from __future__ import annotations
 
@@ -18,6 +18,7 @@ logger = structlog.get_logger()
 
 SIGNING_REMINDERS_TASK = "signing_reminders"
 SIGNING_ROUTE_SWEEP_TASK = "signing_route_sweep"
+SIGNING_ROUTE_MIGRATE_TASK = "signing_route_migrate"
 
 
 def install_signing_reminders(app: FastAPI, container: AsyncContainer, cfg: Settings) -> None:
@@ -55,4 +56,38 @@ def install_signing_route_sweep(app: FastAPI, container: AsyncContainer, cfg: Se
 
     app.state.background.register(
         PeriodicTask(name=SIGNING_ROUTE_SWEEP_TASK, interval_s=cfg.signing_route.sweep_interval_s, run=_sweep)
+    )
+
+
+def install_signing_route_migration(app: FastAPI, container: AsyncContainer, cfg: Settings) -> None:
+    """Перенос маршрутов 0.20.0 на версию на подписи (12.11): у лидера сразу после старта, один раз за процесс.
+
+    Задача периодическая только ради повтора: пока проход не прошёл без сбоев, она повторяется с шагом сверки, после
+    удачного прохода ничего не делает. Перенос идемпотентный, поэтому смена лидера и рестарт ничего не повторяют, а
+    маршрут, который задача не успела перенести, перенесёт ленивый путь в сверке.
+    """
+    from hse_doc_studio.use_cases.signing_route.reconcile import RouteReconciler  # noqa: PLC0415
+
+    done = False
+
+    async def _migrate() -> None:
+        nonlocal done
+        if done:
+            return
+        async with container() as scope:
+            changed = await (await scope.get(RouteReconciler)).migrate_all()
+        if changed is None:
+            logger.warning("signing_routes_migration_incomplete")
+            return
+        done = True
+        if changed:
+            logger.info("signing_routes_migrated", count=changed)
+
+    app.state.background.register(
+        PeriodicTask(
+            name=SIGNING_ROUTE_MIGRATE_TASK,
+            interval_s=cfg.signing_route.sweep_interval_s,
+            run=_migrate,
+            run_on_start=True,
+        )
     )

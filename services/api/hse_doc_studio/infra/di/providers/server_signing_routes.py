@@ -15,12 +15,13 @@ from dishka import AsyncContainer, Provider, Scope, provide
 from hse_doc_studio.api.config import settings
 from hse_doc_studio.core.access.checker import IProjectAccessChecker
 from hse_doc_studio.core.access.repositories import IProjectAclRepository
-from hse_doc_studio.core.git_remote.pdf_observer import IBuiltPdfObserver
 from hse_doc_studio.core.identity.protocols import IAuditLog, IUserRepository
 from hse_doc_studio.core.invitations.protocols import IInvitationAcceptedHook, INotificationMailer, INotifier
+from hse_doc_studio.core.jobs.artifacts import IArtifactStore
 from hse_doc_studio.core.jobs.protocols import IJobDispatcher
 from hse_doc_studio.core.projects.volume import IProjectVolume
 from hse_doc_studio.core.repositories import (
+    ICompileRepository,
     IProjectIndexRepository,
     IProjectRepository,
     ISignatureRepository,
@@ -76,6 +77,8 @@ from hse_doc_studio.use_cases.signing_route.facts import ProjectRouteFacts, Rout
 from hse_doc_studio.use_cases.signing_route.gate import SigningRouteGate
 from hse_doc_studio.use_cases.signing_route.invitations import SigningRouteInviteeHook
 from hse_doc_studio.use_cases.signing_route.key_signer import RouteKeySigner
+from hse_doc_studio.use_cases.signing_route.migration import BuildArchive, RouteMigration
+from hse_doc_studio.use_cases.signing_route.pinning import RoutePinning
 from hse_doc_studio.use_cases.signing_route.point import RoutePointLoader
 from hse_doc_studio.use_cases.signing_route.reconcile import RouteReconciler
 from hse_doc_studio.use_cases.signing_route.reminders import SigningReminderSweeper, SigningRouteReminding
@@ -202,8 +205,31 @@ class ServerSigningRoutesProvider(Provider):
         uow: IUnitOfWork,
         access: IProjectAccessChecker,
         audit: SigningRouteAudit,
+        migration: RouteMigration,
     ) -> RouteServices:
-        return RouteServices(routes, points, facts, effects, people, notifier, uow, access, audit=audit)
+        return RouteServices(
+            routes,
+            points,
+            facts,
+            effects,
+            people,
+            notifier,
+            uow,
+            access,
+            audit=audit,
+            migration=migration,
+        )
+
+    @provide(scope=Scope.REQUEST)
+    def get_route_migration(
+        self,
+        signature_repo: ISignatureRepository,
+        template_service: ProjectTemplateService,
+        compiles: ICompileRepository,
+        artifacts: IArtifactStore,
+    ) -> RouteMigration:
+        # Перенос маршрутов 0.20.0 (12.11): согласованная сборка из текущей или из архива сборок.
+        return RouteMigration(RoutePinning(signature_repo, template_service), BuildArchive(compiles, artifacts))
 
     @provide(scope=Scope.REQUEST)
     def get_route_key_signer(
@@ -306,11 +332,6 @@ class ServerSigningRoutesProvider(Provider):
 
     @provide(override=True)
     def get_route_watch(self, watch: RouteWatch) -> IRouteWatch:
-        return watch
-
-    @provide(override=True)
-    def get_built_pdf_observer(self, watch: RouteWatch) -> IBuiltPdfObserver:
-        # Хук успешной сборки: другой PDF документа маршрута останавливает маршрут (раздел 5.5).
         return watch
 
     @provide(override=True)

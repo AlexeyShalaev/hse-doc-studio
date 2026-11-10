@@ -9,6 +9,7 @@ from __future__ import annotations
 
 from collections.abc import Collection, Mapping, Sequence
 from dataclasses import dataclass, field
+from pathlib import Path
 from typing import Protocol
 from uuid import UUID
 
@@ -23,6 +24,14 @@ from hse_doc_studio.core.signing_route.entities import (
     SigningRoute,
     StopReason,
 )
+
+
+class IBuildArchive(Protocol):
+    """Архив прежних сборок документа: перенос маршрутов 0.20.0 ищет в нём согласованную сборку (12.11)."""
+
+    async def find(self, project_id: UUID, folder: Path, doc_id: str, sha256: str) -> bytes | None:
+        """PDF прежней сборки документа с этим sha256; None, если его в архиве нет."""
+        ...
 
 
 class ISigningNotifier(Protocol):
@@ -160,6 +169,7 @@ class PlanRoute:
     """Маршрут в ответе плана подписей (раздел 6.1): состояние по расчёту на текущих фактах, а не из хранилища.
 
     `current_step` номер текущего шага по порядку (с 1), None вне идущего маршрута; `steps_total` число шагов.
+    `changed_docs` документы маршрута, рабочая сборка которых ушла от версии на подписи (12.9), в порядке маршрута.
     """
 
     id: UUID
@@ -170,6 +180,7 @@ class PlanRoute:
     current_step: int | None
     steps_total: int
     stop_reason: StopReason | None = None
+    changed_docs: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)
