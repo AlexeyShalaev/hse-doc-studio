@@ -26,6 +26,7 @@ import {
   useWorkspaceStore,
 } from "@shared/lib";
 import { Notice } from "@shared/ui/ConflictKit";
+import { RouteGuardScope } from "./RouteGuardScope";
 import { WorkbenchShell } from "./WorkbenchShell";
 import {
   CheckpointView,
@@ -79,7 +80,17 @@ export type WorkspacePageProps = {
   canvas: WorkspaceCanvas;
 };
 
-export const WorkspacePage = ({ canvas }: WorkspacePageProps) => {
+/** Рабочая область проекта внутри одного окна предупреждения о документах на подписании. */
+export const WorkspacePage = (props: WorkspacePageProps) => {
+  const { projectId = "" } = useParams<{ projectId: string }>();
+  return (
+    <RouteGuardScope projectId={projectId}>
+      <WorkspaceBody {...props} />
+    </RouteGuardScope>
+  );
+};
+
+const WorkspaceBody = ({ canvas }: WorkspacePageProps) => {
   const {
     projectId = "",
     docId = "",

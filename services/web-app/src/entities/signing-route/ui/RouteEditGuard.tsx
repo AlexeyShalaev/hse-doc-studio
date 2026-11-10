@@ -15,6 +15,7 @@ import {
   affectedHeld,
   guardKey,
   heldDocsOf,
+  isOwnTarget,
   routeGuardMemory,
   type GuardDoc,
   type GuardMemory,
@@ -36,6 +37,11 @@ export type RouteEditGuard = {
   heldNames: (target: GuardTarget) => string[];
   /** Спросить, если нужно: true, когда можно менять. */
   confirm: (target: GuardTarget) => Promise<boolean>;
+  /**
+   * Выполнить действие: сразу, если спрашивать не о чем (синхронно, как без предупреждения),
+   * иначе после «Продолжить». «Отмена» действие не выполняет.
+   */
+  run: (target: GuardTarget, action: () => void) => void;
   /** Запомнить ответ без окна: автор видел предупреждение в другом месте (план обновления). */
   acknowledge: (target: GuardTarget) => void;
 };
@@ -47,6 +53,9 @@ const NO_GUARD: RouteEditGuard = {
   pending: () => [],
   heldNames: () => [],
   confirm: () => Promise.resolve(true),
+  run: (_target, action) => {
+    action();
+  },
   acknowledge: () => undefined,
 };
 
@@ -141,15 +150,25 @@ export const RouteEditGuardProvider = ({
     (target: GuardTarget): Promise<boolean> => {
       const entries = pending(target);
       if (entries.length === 0) return Promise.resolve(true);
-      const own =
-        target.project !== true &&
-        (target.paths ?? []).length === 0 &&
-        new Set(entries.map((e) => e.docId)).size === 1;
+      const own = isOwnTarget(target, stateRef.current.docs);
       return new Promise<boolean>((resolve) => {
         setQueue((current) => [...current, { entries, own, resolve }]);
       });
     },
     [pending],
+  );
+
+  const run = useCallback(
+    (target: GuardTarget, action: () => void) => {
+      if (pending(target).length === 0) {
+        action();
+        return;
+      }
+      void confirm(target).then((ok) => {
+        if (ok) action();
+      });
+    },
+    [pending, confirm],
   );
 
   const acknowledge = useCallback(
@@ -179,8 +198,16 @@ export const RouteEditGuardProvider = ({
   };
 
   const value = useMemo<GuardScope>(
-    () => ({ projectId, ready, pending, heldNames, confirm, acknowledge }),
-    [projectId, ready, pending, heldNames, confirm, acknowledge],
+    () => ({
+      projectId,
+      ready,
+      pending,
+      heldNames,
+      confirm,
+      run,
+      acknowledge,
+    }),
+    [projectId, ready, pending, heldNames, confirm, run, acknowledge],
   );
 
   const head = queue[0] ?? null;

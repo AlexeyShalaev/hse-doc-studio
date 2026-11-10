@@ -93,6 +93,24 @@ export const affectedHeld = (
   return wholeProject ? [...held] : held.filter((h) => ids.has(h.docId));
 };
 
+/**
+ * Действие касается одного документа (его файл, его сборка): окно без перечня. Общий файл,
+ * поля проекта и «Собрать всё» перечисляют документы.
+ */
+export const isOwnTarget = (
+  target: GuardTarget,
+  docs: readonly GuardDoc[],
+): boolean => {
+  if (target.project === true) return false;
+  const ids = new Set(target.docIds ?? []);
+  for (const path of target.paths ?? []) {
+    const docId = docOfPath(path, docs);
+    if (docId === null) return false;
+    ids.add(docId);
+  }
+  return ids.size === 1;
+};
+
 /** Память ответов на сеанс: `sessionStorage`, а без доступа к нему до перезагрузки страницы. */
 export type GuardMemory = {
   has: (key: string) => boolean;

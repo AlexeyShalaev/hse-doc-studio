@@ -54,3 +54,5 @@ export type {
   VisualEditorOptions,
   VisualHeadingAlignment,
 } from "./types";
+export { editGate } from "./editGate";
+export type { EditGate, EditGateOptions } from "./editGate";

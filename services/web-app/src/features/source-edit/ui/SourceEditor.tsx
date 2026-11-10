@@ -10,7 +10,7 @@ import { useNavigate } from "react-router";
 import { RefreshCw } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useQueryClient } from "@tanstack/react-query";
-import { yCollab } from "y-codemirror.next";
+import { yCollab, ySyncAnnotation } from "y-codemirror.next";
 import { useDebouncedCallback } from "use-debounce";
 import { clsx } from "clsx";
 import {
@@ -27,6 +27,7 @@ import {
   useUploadFile,
 } from "@entities/document";
 import { nudgePeople } from "@entities/connected-device";
+import { useRouteEditGuard } from "@entities/signing-route";
 import { isReadOnlyRole, useProject } from "@entities/project";
 import { useBootstrap } from "@entities/session";
 import { apiClient } from "@shared/api/client";
@@ -41,6 +42,7 @@ import {
 import {
   CodeEditor,
   Spinner,
+  editGate,
   type CodeEditorController,
   type DiagnosticClickInfo,
   type EditorDiagnostic,
@@ -345,6 +347,30 @@ const SourceEditorBody = ({
     () => (provider ? yCollab(provider.text, provider.awareness) : undefined),
     [provider],
   );
+  // Мягкое предупреждение (signing-route.md, 12.7): первая правка файла документа на подписании
+  // ждёт ответа до применения. Фильтр создаётся с редактором, свежий ответ читает через ref.
+  const routeGuard = useRouteEditGuard(projectId);
+  const routeGuardRef = useRef({ guard: routeGuard, path: relativePath });
+  useEffect(() => {
+    routeGuardRef.current = { guard: routeGuard, path: relativePath };
+  }, [routeGuard, relativePath]);
+  const routeGateExtension = useMemo(
+    () =>
+      editGate(
+        {
+          shouldAsk: () => {
+            const { guard, path } = routeGuardRef.current;
+            return guard.pending({ paths: [path] }).length > 0;
+          },
+          ask: () => {
+            const { guard, path } = routeGuardRef.current;
+            return guard.confirm({ paths: [path] });
+          },
+        },
+        { exempt: [ySyncAnnotation] },
+      ),
+    [],
+  );
   const reviewUi = useEditorReview({
     projectId,
     path: relativePath,
@@ -356,7 +382,11 @@ const SourceEditorBody = ({
     live: provider !== undefined,
     controller: controllerRef,
     docRevision,
-  });
+  });  const editorExtensions = useMemo(
+    () => [...reviewUi.extensions, routeGateExtension],
+    [reviewUi.extensions, routeGateExtension],
+  );
+
 
   // A pane-local "focus" action becomes a true distraction-free writing
   // surface by covering the workspace chrome. Escape exits focus first, or
@@ -548,6 +578,7 @@ const SourceEditorBody = ({
         const docRelative = `img/paste-${stamp}-${unique}.${ext}`;
         const docDir = relativePath.split("/").slice(0, -1).join("/");
         const projectPath = docDir ? `${docDir}/${docRelative}` : docRelative;
+        if (!(await routeGuard.confirm({ paths: [projectPath] }))) return null;
         await uploadFile({
           projectId,
           path: projectPath,
@@ -561,7 +592,7 @@ const SourceEditorBody = ({
         return null;
       }
     },
-    [relativePath, projectId, uploadFile, t],
+    [relativePath, projectId, uploadFile, routeGuard, t],
   );
   const handleImageInsertSkipped = useCallback(() => {
     toast.info(t("paste.imageInsertSkipped"));
@@ -1230,7 +1261,7 @@ const SourceEditorBody = ({
               : {})}
             {...(docId ? { onModClick: handleModClick } : {})}
             {...(collabExtension ? { collab: collabExtension } : {})}
-            extraExtensions={reviewUi.extensions}
+            extraExtensions={editorExtensions}
           />
         </div>
         {reviewUi.panel}

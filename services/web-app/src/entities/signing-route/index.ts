@@ -67,6 +67,7 @@ export {
   folderOf,
   guardKey,
   heldDocsOf,
+  isOwnTarget,
 } from "./lib/editGuard";
 export type {
   GuardDoc,
