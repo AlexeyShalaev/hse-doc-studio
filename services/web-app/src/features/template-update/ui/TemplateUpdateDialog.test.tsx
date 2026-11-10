@@ -47,6 +47,17 @@ vi.mock("@entities/template-update", () => ({
   },
 }));
 
+import {
+  SR_DOC,
+  SR_PROJECT_ID,
+  SR_REVIEW_DOC,
+  makeSigningRouteSummary,
+} from "@entities/signing-route/testing";
+import { guardKey } from "@entities/signing-route";
+import {
+  GUARD_DOCS,
+  makeGuardHarness,
+} from "@entities/signing-route/testing/guard";
 import { TemplateUpdateDialog } from "./TemplateUpdateDialog";
 
 const op = (
@@ -205,5 +216,75 @@ describe("TemplateUpdateDialog (list rendering)", () => {
         resolutions: { "b/main.tex": "mine" },
       },
     });
+  });
+});
+
+describe("TemplateUpdateDialog (documents out for signing)", () => {
+  beforeEach(() => {
+    cleanup();
+    applyMutate.mockReset();
+    plan = makePlan();
+  });
+
+  const renderHeld = (files: TemplateFileOp[]) => {
+    plan = { ...makePlan(), files };
+    const route = makeSigningRouteSummary({
+      docs: [SR_DOC.doc_id, SR_REVIEW_DOC.doc_id],
+    });
+    // Третий документ проекта не на подписании: его файлы никого не задевают.
+    const harness = makeGuardHarness({
+      routes: [route],
+      docs: [...GUARD_DOCS, { id: "other", name: "Другой", folder: "other" }],
+    });
+    render(
+      <TemplateUpdateDialog
+        projectId={SR_PROJECT_ID}
+        update={update}
+        onClose={vi.fn()}
+      />,
+      { wrapper: harness.wrapper },
+    );
+    return { harness, route };
+  };
+
+  it("names the held documents the plan touches in one line, without a separate window", async () => {
+    const user = userEvent.setup();
+    const { harness, route } = renderHeld([
+      op(`${SR_DOC.doc_id}/title.tex`, "update"),
+      op("other/x.tex", "update"),
+    ]);
+    expect(
+      screen.getByText(
+        "Документ на подписании: Заявление о выборе темы. Изменения не попадут в подписываемую версию.",
+      ),
+    ).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: /Обновить/ }));
+    expect(applyMutate).toHaveBeenCalledTimes(1);
+    expect(screen.getAllByRole("dialog")).toHaveLength(1);
+    // Строку видели: правка этого документа потом уже не спрашивает.
+    expect(
+      harness.memory.has(
+        guardKey(SR_PROJECT_ID, {
+          docId: SR_DOC.doc_id,
+          routeId: route.id,
+          round: route.round,
+        }),
+      ),
+    ).toBe(true);
+  });
+
+  it("lists every held document when shared files change", () => {
+    renderHeld([op("common/preamble.tex", "update")]);
+    expect(
+      screen.getByText(
+        "Документы на подписании: Заявление о выборе темы, Отзыв руководителя. Изменения не попадут в подписываемые версии.",
+      ),
+    ).toBeInTheDocument();
+  });
+
+  it("says nothing when the plan touches no held document", () => {
+    renderHeld([op("other/x.tex", "update")]);
+    expect(screen.queryByText(/на подписании/)).toBeNull();
   });
 });
