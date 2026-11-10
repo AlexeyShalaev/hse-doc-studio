@@ -38,8 +38,8 @@ from hse_doc_studio.core.signing_route.drafting import (
 )
 from hse_doc_studio.core.signing_route.engine import Evaluation, RouteFacts, approval_token, evaluate, notice_for
 from hse_doc_studio.core.signing_route.entities import (
+    EDITABLE_STATUSES,
     RETURN_COMMENT_MAX,
-    SENDABLE_STATUSES,
     WATCHING_STATUSES,
     DocSlot,
     EventKind,
@@ -324,7 +324,7 @@ class SigningRouteDrafts(RouteScenario):
         """Шаги, люди, необязательные слоты, срок и сообщение; только у неотправленного или остановленного."""
         async with self._s.uow.begin():
             route = await self._get(project_id, route_id, lock=True)
-            if route.status not in SENDABLE_STATUSES:
+            if route.status not in EDITABLE_STATUSES:
                 raise _invalid(route.status, "изменить")
             point = await self._s.points.load(project_id, route.profile_id)
             extras = _extras(point, update.extra_slots)
@@ -449,7 +449,8 @@ class SigningRouteSending(RouteScenario):
         deferred: Exception | None = None
         async with self._s.uow.begin():
             route = await self._get(project_id, route_id, lock=True)
-            if route.status not in SENDABLE_STATUSES:
+            # Новую версию из `active` и `completed` (12.6) сценарий откроет вместе со снятием версии на подписи.
+            if route.status not in EDITABLE_STATUSES:
                 raise _invalid(route.status, "отправить")
             _check_interval(route, at)
             point = await self._s.points.load(project_id, route.profile_id)
@@ -540,7 +541,7 @@ class SigningRouteSending(RouteScenario):
             *_people_blockers(point, route, people),
             *_placement_blockers(point, route, facts.state),
         ]
-        if route.status not in SENDABLE_STATUSES or not route.participants:
+        if route.status not in EDITABLE_STATUSES or not route.participants:
             return _Readiness(tuple(blockers), evaluate(route, facts), route)
         sent = send(route, facts, by=actor_id, at=at)
         evaluation = evaluate(sent, facts)

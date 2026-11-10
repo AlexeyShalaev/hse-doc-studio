@@ -25,7 +25,7 @@ from hse_doc_studio.core.errors import NotFoundError
 from hse_doc_studio.core.i18n import localized_error
 from hse_doc_studio.core.identity.errors import IdentityError, IdentityErrorCode
 from hse_doc_studio.core.mcp.errors import McpError, McpErrorCode
-from hse_doc_studio.core.signing_route.entities import SENDABLE_STATUSES, RouteConflictError, RouteStatus
+from hse_doc_studio.core.signing_route.entities import EDITABLE_STATUSES, RouteConflictError, RouteStatus
 from hse_doc_studio.core.signing_route.readiness import Blocker, BlockerCode, OtherRoute, RouteBlockedError
 from hse_doc_studio.use_cases.mcp.tools._base import McpTool, json_result, optional_text, project_schema, text_arg
 from hse_doc_studio.use_cases.signing_route.author import (
@@ -355,7 +355,7 @@ class SendForSigningTool(McpTool):
         sending = await self._deps.get(SigningRouteSending)
         details, _ = await drafts.create(actor, project_id, profile_id)
         route = details.route
-        if route.status not in SENDABLE_STATUSES:
+        if route.status not in EDITABLE_STATUSES:
             return _refusal(
                 [
                     localized_error(

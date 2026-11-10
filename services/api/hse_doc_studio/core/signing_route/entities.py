@@ -38,8 +38,13 @@ OPEN_STATUSES = frozenset({RouteStatus.draft, RouteStatus.active, RouteStatus.pa
 HOLDING_STATUSES = frozenset({RouteStatus.active, RouteStatus.paused, RouteStatus.returned, RouteStatus.completed})
 # Маршрут сверяет документы со снимком и останавливается по таблице 5.5.
 WATCHING_STATUSES = frozenset({RouteStatus.active, RouteStatus.completed})
-# Откуда можно отправить (первый раз или заново, раздел 5.6).
-SENDABLE_STATUSES = frozenset({RouteStatus.draft, RouteStatus.paused, RouteStatus.returned, RouteStatus.cancelled})
+# Где автор правит людей, порядок и слоты и откуда «Отправить заново» без изменений документов (раздел 5.6).
+EDITABLE_STATUSES = frozenset({RouteStatus.draft, RouteStatus.paused, RouteStatus.returned, RouteStatus.cancelled})
+# Откуда «Отправить новую версию» (раздел 12.6): только если у документа кандидат не равен версии на подписи
+# (иначе 409 `nothing_changed`), с теми же людьми и порядком.
+NEW_VERSION_STATUSES = frozenset({RouteStatus.active, RouteStatus.completed})
+# Откуда можно отправить: первый раз, заново или новую версию (разделы 5.6 и 12.6).
+SENDABLE_STATUSES = EDITABLE_STATUSES | NEW_VERSION_STATUSES
 
 
 class RoutePhase(StrEnum):
@@ -51,9 +56,14 @@ class RoutePhase(StrEnum):
 
 
 class StopReason(StrEnum):
-    """Почему маршрут остановлен (разделы 5.4 и 5.5)."""
+    """Почему маршрут остановлен (разделы 5.4 и 12.5).
 
-    rebuilt = "rebuilt"  # собранный PDF другой
+    `rebuilt` расчёт больше не ставит (12.5): значение остаётся для маршрутов, остановленных на 0.20.0, и истории
+    событий.
+    """
+
+    rebuilt = "rebuilt"  # собранный PDF другой (0.20.0)
+    sent_changed = "sent_changed"  # версия на подписи другая или удалена, документ убран из проекта
     frozen_changed = "frozen_changed"  # зафиксированный PDF другой или удалён вне маршрута
     marks_changed = "marks_changed"  # видимый слой другой, а маршрут его не менял
     participant_left = "participant_left"  # участник ушёл из проекта или сменил персону
@@ -133,7 +143,7 @@ class RouteConflictError(Exception):
     """Действие несовместимо с состоянием маршрута (ответ 409, `not_participant` это 404).
 
     Коды: `invalid_transition`, `not_participant`, `not_your_turn`, `image_required`, `plate_required`,
-    `route_locked`.
+    `route_locked`, `nothing_changed`.
     """
 
     def __init__(self, code: str, message: str) -> None:
@@ -171,6 +181,17 @@ def route_holds_doc() -> RouteConflictError:
     )
 
 
+def nothing_changed() -> RouteConflictError:
+    """«Отправить новую версию» у идущего или завершённого маршрута без изменений (409 `nothing_changed`, 12.6)."""
+    return RouteConflictError(
+        "nothing_changed",
+        localized_error(
+            "Документы не менялись после отправки на подпись: новую версию отправлять нечего",
+            "The documents have not changed since they were sent for signing: there is no new version to send",
+        ),
+    )
+
+
 class DocSlot(NamedTuple):
     """Пара «документ, слот»: где стоит подпись участника."""
 
@@ -180,25 +201,33 @@ class DocSlot(NamedTuple):
 
 @dataclass(frozen=True)
 class DocSnapshot:
-    """Отпечатки документа, которые маршрут видел последними (раздел 5.5).
+    """Отпечатки документа, которые маршрут видел последними (разделы 5.5 и 12.5).
 
-    `compiled_sha256` сборка, отправленная на подписание: маршрут сам не пересобирает, поэтому за раунд она не
-    меняется. `marks_digest` и `frozen_sha256` маршрут меняет сам (открывает картинки, фиксирует) и обновляет
-    снимок после своих эффектов (`transitions.refresh_snapshot`); иное отличие это изменение вне маршрута.
+    `compiled_sha256` sha256 версии на подписи (источника подписи, `DocFacts.compiled_sha256`), снятой отправкой:
+    маршрут сам её не меняет до следующей отправки, поэтому иное значение это подмена мимо маршрута
+    (`sent_changed`). `marks_digest` и `frozen_sha256` маршрут меняет сам (открывает картинки, фиксирует) и
+    обновляет снимок после своих эффектов (`transitions.refresh_snapshot`); иное отличие это изменение вне маршрута.
+
+    `sent_at` когда отправлена эта версия документа (12.6): у документа без изменений новая версия маршрута его не
+    трогает. None у маршрутов 0.20.0, тогда берётся `SigningRoute.sent_at` (`SigningRoute.doc_sent_at`). Это не
+    отпечаток: в сравнении снимков не участвует.
     """
 
     compiled_sha256: str | None
     marks_digest: str
     frozen_sha256: str | None = None
+    sent_at: datetime | None = field(default=None, compare=False)
 
 
 @dataclass(frozen=True)
 class Approval:
     """Согласие участника: какую версию документов он согласовал.
 
-    `tokens` отпечаток сборки каждого его документа (`build:<sha>`, `engine.approval_token`). `phase` фаза
-    маршрута в момент согласия: согласившие до фиксации (`approval`) подписывают ЭП после неё параллельно и не
-    задерживают следующие шаги (раздел 4.2).
+    `tokens` отпечаток версии на подписи каждого его документа (`build:<sha>`, `engine.approval_token`). Согласие
+    действует по каждому документу отдельно (12.6): документ согласован, пока его отпечаток совпадает; участник
+    согласовал (для хода шагов), только если совпали отпечатки всех его документов. Отправка переносит согласие
+    в новый раунд всегда, с прежними отпечатками. `phase` фаза маршрута в момент согласия: согласившие до
+    фиксации (`approval`) подписывают ЭП после неё параллельно и не задерживают следующие шаги (раздел 4.2).
     """
 
     round: int
@@ -289,6 +318,13 @@ class SigningRoute:
     def pairs(self) -> tuple[DocSlot, ...]:
         """Все пары «документ, слот» маршрута."""
         return tuple(pair for p in self.participants for pair in p.assignments)
+
+    def doc_sent_at(self, doc_id: str) -> datetime | None:
+        """Когда отправлена версия документа, которую подписывают (12.6); у маршрута 0.20.0 время отправки."""
+        seen = self.snapshot.get(doc_id)
+        if seen is not None and seen.sent_at is not None:
+            return seen.sent_at
+        return self.sent_at
 
     def participant(self, participant_id: UUID) -> Participant:
         for p in self.participants:

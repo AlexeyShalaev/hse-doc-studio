@@ -8,6 +8,9 @@
 Термины раздела 4.2:
 - участник меняет видимый слой, пока его картинка не встала (нет согласия текущей версии) или у его плашки нет
   данных подписанта; L это последний шаг с таким участником, 0 если таких нет;
+- согласие действует по документам (раздел 12.6): картинка участника на документе открыта, пока совпадает
+  отпечаток этого документа, а для хода шагов участник согласовал, только если совпали отпечатки всех его
+  документов;
 - пока они есть, фаза `approval`: согласия строго по шагам, картинка встаёт при согласии;
 - когда их не осталось, видимый слой окончателен: фаза `signing`, документы с ЭП фиксируются, согласившие до
   фиксации подписывают параллельно, следующие шаги согласуют и подписывают по порядку одним действием.
@@ -16,7 +19,7 @@
 from __future__ import annotations
 
 from collections.abc import Collection, Iterable, Mapping
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from uuid import UUID
 
 from hse_doc_studio.core.enums import SignMode
@@ -52,7 +55,11 @@ _UNBUILT = DocFacts(compiled_sha256=None, marks_digest="")
 
 
 def approval_token(facts: DocFacts) -> str:
-    """Отпечаток версии документа, которую согласует человек: `build:<хэш сборки>` (раздел 7)."""
+    """Отпечаток версии документа, которую согласует человек: `build:<sha256 источника подписи>` (разделы 7 и 12.4).
+
+    Источник подписи это версия на подписи, если она есть, иначе текущая сборка (`DocFacts.compiled_sha256`); у
+    кандидата новой версии (`RouteFacts.candidate`) текущая сборка.
+    """
     return f"build:{facts.compiled_sha256 or ''}"
 
 
@@ -60,8 +67,9 @@ def approval_token(facts: DocFacts) -> str:
 class RouteFacts:
     """Что известно о документах маршрута сейчас.
 
-    - `docs`: факты сборки каждого документа маршрута (`DocFacts` плана подписей). `marks_digest` отпечаток
-      видимого слоя без придержанных слотов, то есть того, что поставила бы фиксация сейчас;
+    - `docs`: факты каждого документа маршрута (`DocFacts` плана подписей). `compiled_sha256` sha256 источника
+      подписи (версии на подписи, если она есть, 12.4), `working_sha256` текущей сборки. `marks_digest`
+      отпечаток видимого слоя без придержанных слотов, то есть того, что поставила бы фиксация сейчас;
     - `state`: состояние подписей проекта (способы и плашки слотов, фиксации, открепленные и встроенные ЭП);
     - `withheld`: придержанные слоты по документам (`SignaturesState.withheld`, раздел 6.1);
     - `plates`: известные данные плашки по пользователям: открытая часть ключа по умолчанию или сертификат из
@@ -78,6 +86,19 @@ class RouteFacts:
     def doc(self, doc_id: str) -> DocFacts:
         """Факты документа; документ без фактов считается несобранным."""
         return self.docs.get(doc_id, _UNBUILT)
+
+    def candidate(self) -> RouteFacts:
+        """Кандидат новой версии (раздел 12.6): источник каждого документа заменён его текущей сборкой.
+
+        На кандидате считают предпросмотр и отправку: `compiled_sha256 = working_sha256`. Документ без сборки
+        остаётся со своей версией на подписи; несобранным (`not_built`) кандидат считает только документ без
+        того и другого. Остальное (видимый слой, состояние подписей, придержанные, плашки, персоны) то же.
+        """
+        docs = {
+            doc_id: replace(doc, compiled_sha256=doc.working_sha256) if doc.working_sha256 is not None else doc
+            for doc_id, doc in self.docs.items()
+        }
+        return replace(self, docs=docs)
 
     def frozen_sha256(self, doc_id: str) -> str | None:
         frozen = self.state.frozen.get(doc_id)
@@ -166,7 +187,8 @@ class _Info:
     crypto_docs: frozenset[str]
     missing_plate: tuple[str, ...]  # слоты плашек без данных подписанта
     missing_image: tuple[str, ...]  # слоты картинок без загруженной картинки
-    approval_valid: bool  # согласие этого раунда на текущие сборки его документов
+    approved_docs: frozenset[str]  # его документы, чей отпечаток совпал с согласием этого раунда (12.6)
+    approval_valid: bool  # согласие этого раунда на версии на подписи всех его документов
 
     @property
     def approved(self) -> bool:
@@ -241,6 +263,7 @@ def notice_for(route: SigningRoute, notice: Notice) -> Notify:
 
 def _info(route: SigningRoute, p: Participant, facts: RouteFacts) -> _Info:
     png, plates, crypto = _classify(p.assignments, facts.state)
+    approved = approved_docs(route, p, facts)
     return _Info(
         participant=p,
         png=png,
@@ -249,7 +272,8 @@ def _info(route: SigningRoute, p: Participant, facts: RouteFacts) -> _Info:
         crypto_docs=frozenset(pair.doc_id for pair in crypto),
         missing_plate=tuple(dict.fromkeys(pair.slot_id for pair in plates if not _plate_known(pair, p, facts))),
         missing_image=tuple(dict.fromkeys(pair.slot_id for pair in png if not _image_ready(pair, facts))),
-        approval_valid=_approval_valid(route, p, facts),
+        approved_docs=approved,
+        approval_valid=all(doc_id in approved for doc_id in p.doc_ids(route.docs)),
     )
 
 
@@ -289,21 +313,30 @@ def _image_ready(pair: DocSlot, facts: RouteFacts) -> bool:
     return slot is not None and slot.png_path is not None and facts.doc(pair.doc_id).png_exists(slot.png_path)
 
 
-def _approval_valid(route: SigningRoute, p: Participant, facts: RouteFacts) -> bool:
+def approved_docs(route: SigningRoute, p: Participant, facts: RouteFacts) -> frozenset[str]:
+    """Документы участника, которые он согласовал в этом раунде: отпечаток согласия совпал с источником (12.6).
+
+    Картинка участника на документе открыта, только пока документ здесь; для хода шагов нужны все его документы.
+    """
     approval = p.approval
     if approval is None or approval.round != route.round:
-        return False
-    return all(approval.tokens.get(doc_id) == approval_token(facts.doc(doc_id)) for doc_id in p.doc_ids(route.docs))
+        return frozenset()
+    return frozenset(
+        doc_id for doc_id in p.doc_ids(route.docs) if approval.tokens.get(doc_id) == approval_token(facts.doc(doc_id))
+    )
 
 
 # --- остановка и статус -------------------------------------------------------------------------------------------
 
-_STOP_PRIORITY = (StopReason.rebuilt, StopReason.frozen_changed, StopReason.marks_changed)
+_STOP_PRIORITY = (StopReason.sent_changed, StopReason.frozen_changed, StopReason.marks_changed)
 
 
 def _stop(route: SigningRoute, facts: RouteFacts) -> tuple[StopReason | None, UUID | None]:
-    """Что останавливает маршрут: изменение документа (таблица 5.5) у идущего и завершённого, уход участника
-    только у идущего: завершённому подписи уже поставлены."""
+    """Что останавливает маршрут: изменение документа (таблица 12.5) у идущего и завершённого, уход участника
+    только у идущего: завершённому подписи уже поставлены.
+
+    Документ сверяется со снимком по источнику подписи, то есть по версии на подписи: правка и пересборка меняют
+    только рабочую сборку (`working_sha256`) и маршрут не останавливают. `rebuilt` расчёт больше не ставит."""
     if route.status not in WATCHING_STATUSES:
         return None, None
     now = facts.snapshot(route.docs)
@@ -316,8 +349,9 @@ def _stop(route: SigningRoute, facts: RouteFacts) -> tuple[StopReason | None, UU
 
 
 def _doc_change(seen: DocSnapshot | None, now: DocSnapshot) -> StopReason | None:
+    # Версия на подписи подменена или удалена, документ убран из проекта (нет фактов): подписывать нечего.
     if seen is None or seen.compiled_sha256 != now.compiled_sha256:
-        return StopReason.rebuilt
+        return StopReason.sent_changed
     if seen.frozen_sha256 != now.frozen_sha256:
         return StopReason.frozen_changed
     if seen.marks_digest != now.marks_digest:
@@ -475,14 +509,16 @@ def _effects(
 
 
 def _image_effects(infos: tuple[_Info, ...], facts: RouteFacts) -> list[Withhold | Release]:
-    """Картинка участника видна, только пока его согласие относится к текущей сборке (инвариант 2)."""
+    """Картинка участника на документе видна, только пока он согласовал версию на подписи этого документа
+    (инвариант 2, раздел 12.6): на документе без изменений новая версия маршрута картинку не трогает."""
     effects: list[Withhold | Release] = []
     for info in infos:
         for pair in info.png:
             held = facts.is_withheld(pair)
-            if info.approval_valid and held:
+            approved = pair.doc_id in info.approved_docs
+            if approved and held:
                 effects.append(Release(pair.doc_id, pair.slot_id, info.participant.id))
-            elif not info.approval_valid and not held:
+            elif not approved and not held:
                 effects.append(Withhold(pair.doc_id, pair.slot_id))
     return effects
 
