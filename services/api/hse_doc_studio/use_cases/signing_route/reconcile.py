@@ -1,13 +1,16 @@
-"""Сверка маршрута с проектом (docs/design/signing-route.md, раздел 5.5).
+"""Сверка маршрута с проектом (docs/design/signing-route.md, разделы 5.5, 12.5 и 12.11).
 
-Маршрут хранит снимок отпечатков документов. Если проект изменился мимо маршрута (пересборка, правка подписей,
-синхронизация, восстановление из истории, уход участника), пересчёт на текущих фактах это замечает и записывает
-итог: остановку с уведомлениями или следующий ход, если подпись слота появилась другим путём.
+Маршрут хранит снимок отпечатков документов: версии на подписи, B и видимого слоя. Если проект изменился мимо
+маршрута (подмена версии на подписи, B или видимого слоя через git, восстановление, синхронизацию, правку подписей;
+уход участника), пересчёт на текущих фактах это замечает и записывает итог: остановку с уведомлениями
+(`sent_changed`, `frozen_changed`, `marks_changed`, `participant_left`) или следующий ход, если подпись слота
+появилась другим путём. Пересборка и правка исходников меняют только рабочую сборку и маршрут не трогают.
 
 - `RouteRecalculation.recalculate` один пересчёт одного маршрута под блокировкой его строки и `project_lock`.
-  Им пользуются сторож других входов подписи (`SigningRouteGate`) и сверка.
-- `RouteReconciler` сверяет маршруты проекта, идущие и завершённые (хуки изменений, `RouteWatch`), и все идущие
-  маршруты сервера (периодическая задача лидера).
+  Им пользуются сторож других входов подписи (`SigningRouteGate`) и сверка. Маршрут 0.20.0 без версии на подписи
+  пересчёт сначала переносит (`RouteMigration`, 12.11): иначе источником была бы текущая сборка.
+- `RouteReconciler` сверяет маршруты проекта, идущие и завершённые (хуки изменений, `RouteWatch`), все идущие
+  маршруты сервера (периодическая задача лидера) и переносит все маршруты 0.20.0 (разовая задача лидера).
 
 Пересчёт идемпотентный: на тех же фактах второй проход ничего не пишет, поэтому хуки, периодическая сверка и
 сценарии маршрута друг другу не мешают. Сценарий маршрута держит строку маршрута до конца своей транзакции:
@@ -23,6 +26,7 @@ import structlog
 
 from hse_doc_studio.core.signatures.plan import CRYPTO_METHODS, method_of
 from hse_doc_studio.core.signing_route.entities import (
+    HOLDING_STATUSES,
     WATCHING_STATUSES,
     DocSlot,
     EventKind,
@@ -60,6 +64,7 @@ class RouteRecalculation(RouteScenario):
                 return False
             point = await self._s.points.load(project_id, route.profile_id)
             async with route_files(point.project):
+                migrated = await self._migrate(point, route, at)
                 loaded = await self._s.facts.load(point, route)
                 if await self._stop_if_changed(point, route, loaded, at) is not None:
                     return True
@@ -74,8 +79,9 @@ class RouteRecalculation(RouteScenario):
                 and not settled.notices
                 and apply_evaluation(settled.route, settled.evaluation, at=at) == route
             ):
-                # Ничего не изменилось: повторная сверка маршрут не трогает (версия записи не растёт).
-                return False
+                # Ничего не изменилось: повторная сверка маршрут не трогает (версия записи не растёт). Перенос
+                # 0.20.0 пишет только файлы и аудит: маршрут и его снимок те же.
+                return migrated
             await self._commit(settled, events, actor_id=actor_id, at=at)
             return True
 
@@ -125,6 +131,38 @@ class RouteReconciler(RouteRecalculation):
         """
         watching = await self._s.routes.list_watching()
         return await self._reconcile([route for route in watching if route.status is RouteStatus.active])
+
+    async def migrate_all(self) -> int | None:
+        """Разовый перенос маршрутов 0.20.0 сервера (12.11); сколько маршрутов изменилось, None при сбое.
+
+        Идущие и завершённые переносит пересчёт (тот же путь, что ленивый перенос в сверке): маршрут без
+        восстановимой версии он сразу останавливает. Остановленным и возвращённым снимается только версия на
+        подписи. Повтор ничего не меняет, поэтому задачу можно запускать на каждом старте лидера.
+        """
+        changed, failed = 0, False
+        for route in await self._s.routes.list_holding():
+            try:
+                if route.status in WATCHING_STATUSES:
+                    changed += await self.recalculate(route.project_id, route.id)
+                else:
+                    changed += await self._migrate_held(route.project_id, route.id)
+            except Exception:  # noqa: BLE001 — сбой одного маршрута (битый проект, снятый пак) остальным не мешает
+                failed = True
+                logger.warning("signing route not migrated", route_id=str(route.id), exc_info=True)
+        return None if failed else changed
+
+    async def _migrate_held(self, project_id: UUID, route_id: UUID) -> bool:
+        """Перенос остановленного или возвращённого маршрута: версия на подписи без пересчёта."""
+        at = self._s.clock()
+        async with self._s.uow.begin():
+            route = await self._s.routes.get(project_id, route_id, lock=True)
+            # Пока ждали строку, маршрут могли отправить заново: отправка сама снимает версию на подписи, и
+            # переносить уже нечего.
+            if route is None or route.status not in HOLDING_STATUSES:
+                return False
+            point = await self._s.points.load(project_id, route.profile_id)
+            async with route_files(point.project):
+                return await self._migrate(point, route, at)
 
     async def _reconcile(self, routes: list[SigningRoute]) -> int:
         changed = 0

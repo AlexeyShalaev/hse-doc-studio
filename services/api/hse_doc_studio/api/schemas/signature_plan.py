@@ -100,6 +100,8 @@ class PlanRouteResponse(BaseModel):
     current_step: int | None = None
     steps_total: int
     stop_reason: StopReason | None = None
+    # Документы маршрута, рабочая сборка которых ушла от версии на подписи (12.9): «Есть изменения после отправки».
+    changed_docs: list[str] = Field(default_factory=list)
 
 
 class SignaturePlanResponse(BaseModel):
@@ -124,6 +126,7 @@ def _map_route(route: PlanRoute) -> PlanRouteResponse:
         current_step=route.current_step,
         steps_total=route.steps_total,
         stop_reason=route.stop_reason,
+        changed_docs=list(route.changed_docs),
     )
 
 

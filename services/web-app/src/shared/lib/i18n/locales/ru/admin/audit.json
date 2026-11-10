@@ -213,6 +213,7 @@
       "signing_route_signer_method": "Способ подписи изменён подписантом",
       "signing_route_signer_plate": "Данные плашки указаны подписантом",
       "signing_route_signer_image": "Картинка подписи загружена подписантом",
+      "signing_route_migrate": "Маршрут перенесён на версию на подписи",
       "signature_freeze": "PDF зафиксирован для подписи",
       "signature_unfreeze": "Фиксация PDF снята",
       "signature_unpin": "Снята версия на подписи: подписывается текущая сборка",

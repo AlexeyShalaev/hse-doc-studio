@@ -1,6 +1,6 @@
-"""Наблюдатель за изменениями проекта мимо маршрута (docs/design/signing-route.md, раздел 5.5).
+"""Наблюдатель за изменениями проекта мимо маршрута (docs/design/signing-route.md, разделы 5.5 и 12.5).
 
-Хуки (сборка, запись состояния подписей, синхронизация, восстановление из истории, уход участника) зовут
+Хуки (запись состояния подписей, синхронизация, восстановление из истории, уход участника) зовут
 `RouteWatch.on_project_changed`. Он ничего не блокирует и не считает сам, а ставит сверку маршрутов проекта в
 очередь: по одной задаче на проект, повторные изменения во время сверки дают ещё один проход, а не копятся.
 
@@ -62,7 +62,10 @@ def recalculation_done() -> None:
 
 
 class RouteWatch:
-    """`IRouteWatch` и `IBuiltPdfObserver` сервера."""
+    """`IRouteWatch` сервера.
+
+    Хука сборки нет (12.5): маршрут подписывает версию на подписи, и пересборка его не касается.
+    """
 
     def __init__(self, reconcile: Reconcile) -> None:
         self._reconcile = reconcile
@@ -79,10 +82,6 @@ class RouteWatch:
         # Вызов из рабочего потока (`asyncio.to_thread`): задачу ставит цикл приложения.
         if self._loop is not None and not self._loop.is_closed():
             self._loop.call_soon_threadsafe(self._schedule, project_id)
-
-    def on_pdf_built(self, project_id: UUID, doc_id: str, pages: int | None) -> None:
-        """Сборка документа удалась: другой PDF останавливает маршрут, тот же (сборка воспроизводима) нет."""
-        self.on_project_changed(project_id)
 
     def _schedule(self, project_id: UUID) -> None:
         if project_id in self._tasks:

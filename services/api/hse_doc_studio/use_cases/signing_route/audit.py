@@ -78,6 +78,9 @@ class AuditedSigningRoutes:
     async def list_watching(self, project_id: UUID | None = None) -> list[SigningRoute]:
         return await self._routes.list_watching(project_id)
 
+    async def list_holding(self) -> list[SigningRoute]:
+        return await self._routes.list_holding()
+
     async def list_for_user(
         self, user_id: UUID, *, project_id: UUID | None = None, statuses: Collection[RouteStatus] | None = None
     ) -> list[SigningRoute]:
