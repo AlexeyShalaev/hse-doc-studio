@@ -6,6 +6,7 @@ import {
   type ProjectResponseSchema,
   useUpdateProject,
 } from "@entities/project";
+import { useRouteEditGuard } from "@entities/signing-route";
 import type { UpdateProjectRequest } from "@shared/api/types";
 
 type Project = z.infer<typeof ProjectResponseSchema>;
@@ -21,6 +22,27 @@ type MutateOptions = Parameters<UpdateProjectMutate>[1];
 // The overlay is reset by remounting (the panel is keyed on project.id), so the
 // hook itself never has to reconcile against a different project.
 const AUTOSAVE_DELAY_MS = 800;
+
+// Поля, из которых собираются документы: их правка задевает документы на подписании.
+const DOC_FIELDS: readonly (keyof UpdateProjectRequest)[] = [
+  "meta",
+  "authors",
+  "supervisor",
+  "co_supervisor",
+  "academic_supervisor",
+  "lang",
+];
+
+const touchesDocs = (data: UpdateProjectRequest): boolean =>
+  DOC_FIELDS.some((field) => field in data);
+
+const WHOLE_PROJECT = { project: true } as const;
+
+type HeldEdit = {
+  data: UpdateProjectRequest;
+  now: boolean;
+  options?: MutateOptions;
+};
 
 export type UseProjectAutosave = {
   // The server project with the user's not-yet-flushed edits applied on top.
@@ -52,14 +74,14 @@ export const useProjectAutosave = (project: Project): UseProjectAutosave => {
     send(pendingRef.current);
   }, AUTOSAVE_DELAY_MS);
 
-  const patch = (data: UpdateProjectRequest): void => {
+  const applyPatch = (data: UpdateProjectRequest): void => {
     const next = { ...pendingRef.current, ...data };
     pendingRef.current = next;
     setPending(next);
     debouncedSave();
   };
 
-  const saveNow = (
+  const applySaveNow = (
     data: UpdateProjectRequest,
     options?: MutateOptions,
   ): void => {
@@ -68,6 +90,46 @@ export const useProjectAutosave = (project: Project): UseProjectAutosave => {
     pendingRef.current = next;
     setPending(next);
     send(next, options);
+  };
+
+  // Мягкое предупреждение (signing-route.md, 12.7): первая правка полей, из которых собираются
+  // документы, ждёт ответа, пока у проекта есть документы на подписании. Правки, сделанные до
+  // ответа, применяются по порядку после «Продолжить» и отбрасываются после «Отмена».
+  const routeGuard = useRouteEditGuard(project.id);
+  const heldRef = useRef<HeldEdit[] | null>(null);
+  const gated = (edit: HeldEdit): void => {
+    const apply = ({ data, now, options }: HeldEdit) => {
+      if (now) applySaveNow(data, options);
+      else applyPatch(data);
+    };
+    if (heldRef.current !== null) {
+      heldRef.current.push(edit);
+      return;
+    }
+    if (
+      !touchesDocs(edit.data) ||
+      routeGuard.pending(WHOLE_PROJECT).length === 0
+    ) {
+      apply(edit);
+      return;
+    }
+    heldRef.current = [edit];
+    void routeGuard.confirm(WHOLE_PROJECT).then((ok) => {
+      const held = heldRef.current ?? [];
+      heldRef.current = null;
+      if (ok) held.forEach(apply);
+    });
+  };
+
+  const patch = (data: UpdateProjectRequest): void => {
+    gated({ data, now: false });
+  };
+
+  const saveNow = (
+    data: UpdateProjectRequest,
+    options?: MutateOptions,
+  ): void => {
+    gated({ data, now: true, ...(options ? { options } : {}) });
   };
 
   const flush = (): void => {

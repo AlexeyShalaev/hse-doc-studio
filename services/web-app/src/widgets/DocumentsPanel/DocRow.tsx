@@ -6,6 +6,7 @@ import { useTranslation } from "react-i18next";
 import { useCustomFileActions } from "@entities/document";
 import type { DocStatus, getDocMeta } from "@entities/document";
 import { shortReason, useCompileSlot } from "@entities/compile";
+import { useRouteEditGuard } from "@entities/signing-route";
 import { DocBuildSubline } from "@features/cloud-builds";
 import { UploadCustomFileModal } from "@features/custom-document";
 import { env } from "@shared/config";
@@ -100,6 +101,7 @@ export const DocRow = ({
   const slot = useCompileSlot(projectId, doc.id);
   const hasLiveSlot = slot?.status === "running";
   const { remove, isRemoving } = useCustomFileActions(projectId, doc.id);
+  const routeGuard = useRouteEditGuard(projectId);
   const isCustom = doc.custom_file != null;
   const sev = isBuilding ? "building" : STATUS_TO_DOT[doc.status];
   const errors = doc.errors ?? 0;
@@ -111,14 +113,16 @@ export const DocRow = ({
   const isKebabVisible = isHovered || isFocusWithin || isMenuOpen;
 
   const handleRevert = () => {
-    remove(false)
-      .then(() => {
-        toast.success(t("customFile.revertedToast"));
-        setRevertConfirmOpen(false);
-      })
-      .catch(() => {
-        // per-request error toast already shown by the axios interceptor
-      });
+    routeGuard.run({ docIds: [doc.id] }, () => {
+      remove(false)
+        .then(() => {
+          toast.success(t("customFile.revertedToast"));
+          setRevertConfirmOpen(false);
+        })
+        .catch(() => {
+          // per-request error toast already shown by the axios interceptor
+        });
+    });
   };
 
   const handleBlur = (event: FocusEvent<HTMLDivElement>) => {

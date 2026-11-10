@@ -27,6 +27,7 @@ import {
   useUploadFile,
 } from "@entities/document";
 import { nudgePeople } from "@entities/connected-device";
+import { useRouteEditGuard } from "@entities/signing-route";
 import { isReadOnlyRole, useProject } from "@entities/project";
 import { useBootstrap } from "@entities/session";
 import { apiClient } from "@shared/api/client";
@@ -54,6 +55,7 @@ import { applyQuickFix } from "../lib/applyQuickFix";
 import { findingsToDiagnostics } from "../lib/findingsToDiagnostics";
 import { insertSuppression } from "../lib/insertSuppression";
 import { languageForPath } from "../lib/languageForPath";
+import { useRouteEditGate } from "../lib/useRouteEditGate";
 import {
   parseMacroDefinitions,
   resolveMacroAliases,
@@ -345,6 +347,8 @@ const SourceEditorBody = ({
     () => (provider ? yCollab(provider.text, provider.awareness) : undefined),
     [provider],
   );
+  const routeGuard = useRouteEditGuard(projectId);
+  const routeGateExtension = useRouteEditGate(projectId, relativePath);
   const reviewUi = useEditorReview({
     projectId,
     path: relativePath,
@@ -357,6 +361,10 @@ const SourceEditorBody = ({
     controller: controllerRef,
     docRevision,
   });
+  const editorExtensions = useMemo(
+    () => [...reviewUi.extensions, routeGateExtension],
+    [reviewUi.extensions, routeGateExtension],
+  );
 
   // A pane-local "focus" action becomes a true distraction-free writing
   // surface by covering the workspace chrome. Escape exits focus first, or
@@ -548,6 +556,7 @@ const SourceEditorBody = ({
         const docRelative = `img/paste-${stamp}-${unique}.${ext}`;
         const docDir = relativePath.split("/").slice(0, -1).join("/");
         const projectPath = docDir ? `${docDir}/${docRelative}` : docRelative;
+        if (!(await routeGuard.confirm({ paths: [projectPath] }))) return null;
         await uploadFile({
           projectId,
           path: projectPath,
@@ -561,7 +570,7 @@ const SourceEditorBody = ({
         return null;
       }
     },
-    [relativePath, projectId, uploadFile, t],
+    [relativePath, projectId, uploadFile, routeGuard, t],
   );
   const handleImageInsertSkipped = useCallback(() => {
     toast.info(t("paste.imageInsertSkipped"));
@@ -1230,7 +1239,7 @@ const SourceEditorBody = ({
               : {})}
             {...(docId ? { onModClick: handleModClick } : {})}
             {...(collabExtension ? { collab: collabExtension } : {})}
-            extraExtensions={reviewUi.extensions}
+            extraExtensions={editorExtensions}
           />
         </div>
         {reviewUi.panel}
