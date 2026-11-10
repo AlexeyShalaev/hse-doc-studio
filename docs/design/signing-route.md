@@ -525,8 +525,8 @@ stateDiagram-v2
   с документом и слотом.
 - **Отправить заново**: из `paused`, `returned`, `cancelled`. Те же шаги и люди, можно изменить до отправки
   (`EDITABLE_STATUSES`). Согласие переносится всегда и действует по каждому документу отдельно (12.6, ядро R15).
-  Меняется разделом 12 (12.6): «Отправить новую версию» ещё и из `active` и `completed` (ядро это уже умеет,
-  сценарий откроет R16); отмена снимает версию на подписи.
+  «Отправить новую версию» ещё и из `active` и `completed` (`SENDABLE_STATUSES`, 12.6); отмена снимает версии на
+  подписи этого маршрута (R16).
 
 ### 5.7 Сроки и напоминания
 
@@ -1612,6 +1612,56 @@ W1. Критический путь: R1, R4, R5, R6, R7 и W1, W4, W5, зате�
   расчёт по фактам с диска (они совпадут с кандидатом) и эффекты.
 - Миграция `sr_09_sent_changed` добавляет `sent_changed` в проверку `stop_reason`; `sent_changed` есть в схемах API
   (`SigningStopReasonName`, `NotificationOutcome`); zod и тексты интерфейса добавил W7.
+
+Как это сделал срез R16 (сценарии автора и подписанта, что берут R17 и R18):
+
+- Снятие версии на подписи: `use_cases/signing_route/pinning.py`, `RoutePinning.pin(point, route, {doc: sha256}, at=)`
+  под `route_files` (`project_lock`). Копия текущей сборки (у несобранного документа прежней версии на подписи) во
+  временный файл рядом с `pinned_rel(doc)`, sha256 копии против кандидата (`expected` предпросмотра), не совпало:
+  409 `doc_changed`, ничего не записано и временные файлы убраны; затем переименования и одна запись
+  `replace(state, pinned=...)`: `PinnedPdf(path, sha256, size, pinned_at=at в UTC, route_id, round)`.
+  `RoutePinning.unpin(point, route)` снимает только версии с `route_id` этого маршрута (сначала состояние, потом
+  файлы). R17 для переноса может звать `pin` с sha256 снимка.
+- Отправка (`SigningRouteSending.send`) из `SENDABLE_STATUSES`; `SendRequest.new_version=False` (MCP) отказывает
+  у `active` и `completed` как `invalid_transition` (текст `new_version_in_ui` даст R18). Порядок R15, у `active` и
+  `completed` без изменений 409 `nothing_changed` до проверки помех. Снимаются `to_pin` и ещё документы без версии
+  этого маршрута (маршрут 0.20.0 до переноса, версия чужого маршрута точки): после отправки версия есть у каждого
+  документа. `note` («Что изменилось», до 2000, пробелы обрезаются, пустое это null) заменяет `message`.
+- Отмена (`transitions.cancel`) очищает снимок маршрута: версии сняты, следующая отправка считает документы `new`
+  и снимает их заново; согласия переносятся по отпечаткам, как всегда. Событие `cancelled` с `details.unpinned`,
+  аудит `signing_route.cancel` с `unpinned`.
+- `DocSnapshot.replaced` (jsonb снимка, без миграции, не отпечаток): версия заменила прежнюю. `SigningRoute.
+  round_changed_docs` документы, которые сменил текущий раунд (`replaced` и `sent_at` равен `sent_at` маршрута); по
+  нему `SigningTask.route.new_version` (пересечение с документами участника) и `payload.new_version` запроса.
+- Событие `sent`: `details` `new_version`, `changed`, `kept`, `versions` (`[{doc_id, sha256, size}]` снятых в этом
+  раунде), у первой отправки тоже (`new_version: false`). «Отправить заново» без изменений пишет `sent`, как и
+  раньше (`resumed` никто не пишет, вопреки уточнению W7). Аудит `signing_route.send`: `new_version`,
+  `changed_docs`, `versions`.
+- Поля 12.9: `RouteDoc.sent` из `SignaturesState.pinned` только если версию снял этот маршрут и он не черновик и не
+  отменён (`views.sent_version`); `changed` (`views.doc_changed`): рабочая сборка против `sent.sha256`, без версии
+  против `snapshot.compiled_sha256`. Сводка считает `changed_docs` у маршрутов в `HOLDING_STATUSES`.
+  `RouteEvent.changed_docs` из `details.changed` только у `sent` с `new_version`. Предпросмотр на кандидате:
+  `change`, `sent`, `token` кандидата, `keeps_approval` по согласию до отправки, помеха `nothing_changed` (без
+  `doc_id`). Задача: `sent_at` (дата версии на подписи), `changed_since_mine` (отпечаток согласия участника не
+  совпал), `changed` только при праве `SUBMISSION_CREATE`, иначе null; `token` null у документа, где согласие
+  действует и ЭП участника не ждут (`signer.task_tokens` берёт `ParticipantView`), `check_expected` сверяет только
+  документы с отпечатком.
+- Уведомления: `Notice.new_version` (`signing_new_version`, без письма, от отправившего маршрут) тем из
+  `losing_approval`, у кого есть аккаунт, кроме отправителя и тех, кому этот же расчёт шлёт запрос.
+  `NotificationPayload.new_version` (в API у всех видов), для письма ещё `message` и `changed_names` (в API не
+  отдаются). Письмо `signing_request_new_version` (ru, en): строка «Изменились» и блок «Сообщение автора» с
+  сообщением маршрута (отличие от 12.6: блок не «Что изменилось», потому что запросы следующих шагов не знают,
+  заполнил ли автор поле в этом раунде). Миграция `sr_10_new_version_kind` добавляет вид в проверку
+  `notifications.kind`.
+- Контракт: эталоны W7 перенесены в `contracts/server/fixtures` (новые варианты `SigningRoute/diverged`,
+  `new_version`, `completed_changed`, `migration_lost`, `SigningRouteList/changed`, `SigningRoutePreview/new_version`,
+  `SendSigningRouteRequest/new_version`, `SigningTask/new_version`, `Notification/signing_request_new_version`,
+  `Notification/signing_new_version`), обёртка `untilR16` убрана, поля обязательные (`note` в запросе
+  по-прежнему можно не передавать).
+- Даты версии в пакете (`КАК_ПРОВЕРИТЬ.txt`, текст `changed_after_sent`) по московскому времени
+  (`package_text.DISPLAY_ZONE`, без tzdata постоянное UTC+3), как в интерфейсе.
+- Сверка (`RouteWatch`, хук сборки) не менялась: это R17. Пока хук есть, пересборка зовёт сверку, но снимок уже по
+  версии на подписи, и маршрут идёт.
 
 ### 12.7 Мягкое предупреждение вместо запрета
 
