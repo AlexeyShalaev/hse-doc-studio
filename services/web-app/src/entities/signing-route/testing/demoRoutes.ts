@@ -156,11 +156,7 @@ export type SigningDemoSeed = {
 };
 
 export type SigningDemoSeedState =
-  | "sent"
-  | "diverged"
-  | "new_version"
-  | "migrated"
-  | "migration_lost";
+  "sent" | "diverged" | "new_version" | "migrated" | "migration_lost";
 
 export type SigningRouteDemo = {
   routes: DemoRoute[];
@@ -372,6 +368,12 @@ export const createSigningRouteDemo = (
   const participants = (r: Route): Participant[] => r.steps.flat();
   const routeDocs = (r: Route): string[] => r.profile.docs.map((d) => d.doc_id);
   const isDocFrozen = (r: Route, docId: string): boolean => docId in r.frozen;
+  /** Снять B документа: его подписывают заново после новой фиксации. */
+  const unfreeze = (r: Route, docId: string): void => {
+    r.frozen = Object.fromEntries(
+      Object.entries(r.frozen).filter(([doc]) => doc !== docId),
+    );
+  };
   /** Все документы маршрута зафиксированы: фаза подписи. */
   const isFrozen = (r: Route): boolean =>
     routeDocs(r).every((doc) => isDocFrozen(r, doc));
@@ -571,7 +573,8 @@ export const createSigningRouteDemo = (
   /** Слот по своему документу: картинка открыта после согласия, ЭП над текущим B (12.6). */
   const slotStatus = (r: Route, pair: { persona: string; doc_id: string }) => {
     const owner = participants(r).find((p) => p.persona === pair.persona);
-    if (!owner || !approvedDoc(r, owner, pair.doc_id)) return "pending" as const;
+    if (!owner || !approvedDoc(r, owner, pair.doc_id))
+      return "pending" as const;
     if (!isCrypto(owner.method)) return "signed" as const;
     return signedDoc(r, owner, pair.doc_id)
       ? ("signed" as const)
@@ -1248,7 +1251,7 @@ export const createSigningRouteDemo = (
     for (const doc of routeDocs(r)) {
       if (r.pinned[doc]?.sha256 === r.build[doc]) continue;
       r.pinned[doc] = { sha256: r.build[doc] ?? "", at: now(), round: r.round };
-      delete r.frozen[doc];
+      unfreeze(r, doc);
     }
     r.legacy = {};
     r.lastChanged = changed;
@@ -1325,7 +1328,10 @@ export const createSigningRouteDemo = (
     r.legacy = Object.fromEntries(
       Object.entries(r.legacy).filter(([doc]) => lost.includes(doc)),
     );
-    if (lost.length > 0 && (r.status === "active" || r.status === "completed")) {
+    if (
+      lost.length > 0 &&
+      (r.status === "active" || r.status === "completed")
+    ) {
       r.status = "paused";
       r.stop_reason = "sent_changed";
       r.frozen = {};
@@ -2030,7 +2036,8 @@ export const createSigningRouteDemo = (
     },
     rebuild: (projectId, docId) => {
       for (const r of routes) {
-        if (r.project_id === projectId && docId in r.build) rebuildDoc(r, docId);
+        if (r.project_id === projectId && docId in r.build)
+          rebuildDoc(r, docId);
       }
     },
     tamper: (projectId, docId) => {
@@ -2041,7 +2048,7 @@ export const createSigningRouteDemo = (
         if (r.status !== "active" && r.status !== "completed") continue;
         r.status = "paused";
         r.stop_reason = "sent_changed";
-        delete r.frozen[docId];
+        unfreeze(r, docId);
         event(r, "paused", null, { reason: "sent_changed" });
       }
     },

@@ -1,4 +1,12 @@
-import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import {
+  afterEach,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+} from "vitest";
 import { ApiError, apiClient } from "@shared/api";
 import { createDemoRouter, installDemoAdapter } from "@shared/api/demo";
 import { signatureApi } from "@entities/signature";
@@ -25,11 +33,7 @@ const AUTHOR: SigningDemoUser = { id: "u_author", name: "Иванов И. И." }
 const PETROV: SigningDemoUser = { id: "u_petrov", name: "Петров П. П." };
 const SIDOROV: SigningDemoUser = { id: "u_sidorov", name: "Сидоров С. С." };
 
-const slot = (
-  persona: string,
-  method: "image" | "detached",
-  y: number,
-) => ({
+const slot = (persona: string, method: "image" | "detached", y: number) => ({
   slot_id: persona,
   label: { ru: persona, en: persona },
   persona,
@@ -49,7 +53,10 @@ const PROFILE: SigningDemoProfile = {
     {
       doc_id: TOPIC,
       name: { ru: "Заявление о выборе темы", en: "Topic application" },
-      slots: [slot("author", "image", 230), slot("supervisor", "detached", 130)],
+      slots: [
+        slot("author", "image", 230),
+        slot("supervisor", "detached", 130),
+      ],
     },
     {
       doc_id: REVIEW,
@@ -254,7 +261,7 @@ describe("версия на подписи: новая версия", () => {
     expect(route.status).toBe("active");
     expect(route.round).toBe(2);
     expect(route.message).toBe("Исправил формулировку темы.");
-    expect(route.events.filter((e) => e.round === 2)[0]).toMatchObject({
+    expect(route.events.find((e) => e.round === 2)).toMatchObject({
       kind: "sent",
       changed_docs: [TOPIC],
     });
