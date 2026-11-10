@@ -207,7 +207,7 @@ e2e-runner-install: $(SERVER_LITE_ENV)
 	  E2E_ADMIN_PASSWORD=$$SERVER_LITE_ADMIN_PASSWORD E2E_ADMIN_EMAIL=$${SERVER_LITE_ADMIN_EMAIL:-admin@example.org} \
 	  pnpm exec playwright test --project=runner-install
 
-# Маршрут подписания (автор, научрук картинкой, академрук готовой подписью gpg; возврат; сброс пересборкой):
+# Маршрут подписания (автор, научрук картинкой, академрук готовой подписью gpg; возврат; версия на подписи):
 # поднимает общий раннер с поддельным TeX и гасит его после прогона, чем бы тот ни кончился. Нужен gpg на хосте.
 e2e-signing-route: $(SERVER_LITE_ENV)
 	@$(MAKE) --no-print-directory server-lite-runner-up

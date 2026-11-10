@@ -1,19 +1,41 @@
-import { execFileSync } from "node:child_process";
-import { createHash } from "node:crypto";
-import { existsSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { crc32, deflateSync } from "node:zlib";
-import {
-  expect,
-  request as pwRequest,
-  test,
-  type Browser,
-  type BrowserContext,
-  type Page,
-} from "@playwright/test";
+import { expect, test } from "@playwright/test";
 import { shot } from "./helpers";
-import { Client, type Json } from "./stack";
+import type { Client } from "./stack";
+import {
+  APPLICATION,
+  APPLICATION_PDF,
+  Gpg,
+  type Member,
+  ORIGIN,
+  PROFILE,
+  PROPOSAL,
+  RUN,
+  approveOnPage,
+  buildInUi,
+  checkpointPath,
+  createProject,
+  drawSignature,
+  editApplication,
+  fileBytes,
+  imageCount,
+  log,
+  newClient,
+  newVersionFromCard,
+  openFromInbox,
+  order,
+  person,
+  register,
+  required,
+  routeOf,
+  sendRouteViaApi,
+  sha256,
+  signaturePng,
+  signingPath,
+  signingTasks,
+} from "./signingRouteKit";
 
 /**
  * Маршрут подписания «Отправить на подписание» (docs/design/signing-route.md, срез E1) на стенде server-lite.
@@ -29,10 +51,10 @@ import { Client, type Json } from "./stack";
  *    подписывает итоговый PDF готовой открепленной подписью gpg. Маршрут завершён: «Все подписали»; в итоговом PDF
  *    картинки автора и научрука и плашка академрука, подпись действительна и относится к этому PDF.
  *    По дороге: неразмещённая подпись мешает отправке, «Скопировать ссылку» даёт адрес страницы подписи.
- * 2. Сторож и сброс пересборкой: пока маршрут идёт, подписи документа маршрута менять нельзя (в интерфейсе панель
- *    подписей закрыта с пояснением «Документ на подписании», правка размещения мимо интерфейса получает 409
- *    `route_locked`); сборка без правок маршрут не останавливает (тот же PDF), а сборка после правки
- *    останавливает: «Документ изменился после согласования».
+ * 2. Сторож и правка во время маршрута: пока маршрут идёт, подписи документа маршрута менять нельзя (в интерфейсе
+ *    панель подписей закрыта с пояснением «Документ на подписании», правка размещения мимо интерфейса получает 409
+ *    `route_locked`); сборка без правок даёт тот же PDF, а сборка после правки маршрут тоже не останавливает
+ *    (подписывают версию, снятую при отправке, 12.5): на карточке «Есть изменения после отправки на подпись».
  * 3. Возврат и повторная отправка: научрук согласовал, академрук вернул на доработку с комментарием; автор видит
  *    комментарий на карточке, правит и пересобирает документ, «Отправить заново»: новый раунд, согласие научрука
  *    сброшено (его документ изменился), его картинка на месте, повторное согласие одним нажатием.
@@ -42,23 +64,6 @@ import { Client, type Json } from "./stack";
  * screenshots/ru/sr-*.png.
  */
 
-const baseURL = process.env.E2E_BASE_URL ?? "http://localhost:8100";
-const ORIGIN = new URL(baseURL).origin;
-const RUN = Date.now().toString(36);
-const PASSWORD = `Sr-${RUN}-passw0rd`;
-const PACK = {
-  pack_id: "hse-cs-sse",
-  template_id: "coursework",
-  version: "2026.1.3",
-};
-const PROFILE = "topic-approval";
-const PROPOSAL = "project_proposal";
-const APPLICATION = "topic_application";
-const APPLICATION_TEX = "topic_application/topic_application.tex";
-const APPLICATION_PDF = "topic_application/topic_application.pdf";
-const RETURN_COMMENT = "Уточните цель проекта в заявлении";
-/** Отправлять маршрут заново можно не чаще раза в минуту (SEND_INTERVAL в use_cases/signing_route/author.py). */
-const RESEND_INTERVAL_MS = 61_000;
 
 const STUDENT = { name: "Иван Студентов", email: `student.${RUN}@sr.test` };
 const SUPERVISOR = {
@@ -69,497 +74,7 @@ const ACADEMIC = {
   name: "Ольга Академова",
   email: `academic.${RUN}@sr.test`,
 };
-
-type Person = { name: string; email: string };
-type Member = Person & { client: Client; id: string; context: BrowserContext };
-
-type Participant = {
-  id: string;
-  persona: string;
-  user_id: string | null;
-  invitation_id: string | null;
-  name: string | null;
-  membership: string;
-  method: string | null;
-  state: string;
-  next_action: string;
-  approved_at: string | null;
-};
-type Route = {
-  id: string;
-  status: string;
-  phase: string | null;
-  round: number;
-  current_step: number | null;
-  stop_reason: string | null;
-  sent_at: string | null;
-  docs: {
-    doc_id: string;
-    frozen: boolean;
-    slots: { slot_id: string; status: string; participant_id: string | null }[];
-  }[];
-  steps: Participant[][];
-  events: { kind: string; round: number; comment: string | null }[];
-  changed_docs: string[];
-};
-type Preview = {
-  can_send: boolean;
-  docs: { doc_id: string; built: boolean; token: string | null }[];
-  blockers: { code: string; doc_id: string | null; slot_id: string | null }[];
-};
-
-const log = (...parts: unknown[]): void => {
-  console.log(`[sr ${new Date().toISOString().slice(11, 19)}]`, ...parts);
-};
-
-const required = (name: string): string => {
-  const value = process.env[name];
-  if (!value)
-    throw new Error(
-      `${name} не задан: запускайте через make e2e-signing-route (пароль админа из server-lite/.env)`,
-    );
-  return value;
-};
-
-const sha256 = (data: Buffer): string =>
-  createHash("sha256").update(data).digest("hex");
-
-// ---------------------------------------------------------------- картинка подписи
-
-/** PNG RGBA без фона с росчерком: картинка подписи для загрузки (как скан подписи с удалённым фоном). */
-const signaturePng = (): Buffer => {
-  const width = 240;
-  const height = 80;
-  const rows: Buffer[] = [];
-  for (let y = 0; y < height; y += 1) {
-    const row = Buffer.alloc(1 + width * 4);
-    for (let x = 0; x < width; x += 1) {
-      const curve = 40 + Math.round(22 * Math.sin(x / 18));
-      if (Math.abs(y - curve) <= 2 && x > 12 && x < width - 12)
-        row.writeUInt32BE(0x1a2a6cff, 1 + x * 4);
-    }
-    rows.push(row);
-  }
-  const chunk = (type: string, data: Buffer): Buffer => {
-    const head = Buffer.alloc(8);
-    head.writeUInt32BE(data.length, 0);
-    head.write(type, 4, "ascii");
-    const crc = Buffer.alloc(4);
-    crc.writeUInt32BE(crc32(Buffer.concat([head.subarray(4), data])) >>> 0, 0);
-    return Buffer.concat([head, data, crc]);
-  };
-  const ihdr = Buffer.alloc(13);
-  ihdr.writeUInt32BE(width, 0);
-  ihdr.writeUInt32BE(height, 4);
-  ihdr.writeUInt8(8, 8); // глубина
-  ihdr.writeUInt8(6, 9); // RGBA
-  return Buffer.concat([
-    Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
-    chunk("IHDR", ihdr),
-    chunk("IDAT", deflateSync(Buffer.concat(rows))),
-    chunk("IEND", Buffer.alloc(0)),
-  ]);
-};
-
-// ---------------------------------------------------------------- OpenPGP академрука
-
-/**
- * Ключ и подписи академрука делает настоящий gpg хоста (на раннерах GitHub он есть): так подписывает человек,
- * у которого ключ только на своём компьютере. Каталог ключей короткий, иначе сокет gpg-agent не помещается в путь.
- */
-class Gpg {
-  readonly home: string;
-
-  constructor(private readonly uid: string) {
-    this.home = mkdtempSync(join(existsSync("/tmp") ? "/tmp" : tmpdir(), "sr-gpg-"));
-    this.run(
-      "--pinentry-mode",
-      "loopback",
-      "--passphrase",
-      "",
-      "--quick-gen-key",
-      uid,
-      "ed25519",
-      "sign",
-      "never",
-    );
-  }
-
-  private run(...args: string[]): Buffer {
-    return execFileSync("gpg", ["--batch", "--homedir", this.home, ...args], {
-      stdio: ["ignore", "pipe", "pipe"],
-    });
-  }
-
-  publicKey(): Buffer {
-    return this.run("--armor", "--export", this.uid.replace(/^.*<|>$/g, ""));
-  }
-
-  /** Открепленная подпись .asc над байтами файла. */
-  detachSign(file: string): Buffer {
-    return this.run(
-      "--pinentry-mode",
-      "loopback",
-      "--passphrase",
-      "",
-      "--armor",
-      "--detach-sign",
-      "--output",
-      "-",
-      file,
-    );
-  }
-
-  dispose(): void {
-    try {
-      execFileSync("gpgconf", ["--homedir", this.home, "--kill", "gpg-agent"], {
-        stdio: "ignore",
-      });
-    } catch {
-      // gpgconf может не быть: агент уйдёт сам вместе с каталогом.
-    }
-    rmSync(this.home, { recursive: true, force: true });
-  }
-}
-
-// ---------------------------------------------------------------- люди и проекты
-
-const newClient = async (): Promise<Client> =>
-  new Client(await pwRequest.newContext({ baseURL }), ORIGIN);
-
-const register = async (
-  admin: Client,
-  browser: Browser,
-  who: Person,
-): Promise<Member> => {
-  const invitation = await admin.json<{ link: string }>(
-    await admin.post("/api/admin/invitations", {
-      email: who.email,
-      ttl_days: null,
-    }),
-    201,
-  );
-  const client = await newClient();
-  await client.json(
-    await client.post("/api/v1/auth/register", {
-      email: who.email,
-      name: who.name,
-      password: PASSWORD,
-      invitation_token: invitation.link.split("/invite/")[1],
-    }),
-    200,
-  );
-  const user = await client.login(who.email, PASSWORD);
-  // Браузер того же человека: вход через API, cookie остаётся в контексте.
-  const context = await browser.newContext({
-    baseURL,
-    locale: "ru-RU",
-    viewport: { width: 1440, height: 960 },
-  });
-  const login = await context.request.post("/api/v1/auth/login", {
-    data: { email: who.email, password: PASSWORD },
-    headers: { Origin: ORIGIN },
-  });
-  expect(login.status(), await login.text()).toBe(200);
-  // «Скопировать ссылку» кладёт адрес в буфер обмена.
-  await context.grantPermissions(["clipboard-read", "clipboard-write"], {
-    origin: ORIGIN,
-  });
-  return { ...who, client, id: String(user.id), context };
-};
-
-/** Проект студента с научруком и академруком: приглашения с персонами, оба принимают. */
-const createProject = async (
-  student: Member,
-  name: string,
-  signers: { member: Member; persona: string }[],
-): Promise<string> => {
-  const project = await student.client.json(
-    await student.client.post("/api/v1/projects", {
-      name,
-      ...PACK,
-      lang: "ru",
-      authors: [{ name: student.name }],
-    }),
-    201,
-  );
-  const id = String(project.id);
-  for (const { member, persona } of signers) {
-    const created = await student.client.json<{ invitation: { id: string } }>(
-      await student.client.post(`/api/v1/projects/${id}/invitations`, {
-        email: member.email,
-        role: "reviewer",
-        persona,
-      }),
-      201,
-    );
-    await member.client.json(
-      await member.client.post(
-        `/api/v1/account/invitations/${created.invitation.id}/accept`,
-      ),
-      200,
-    );
-  }
-  return id;
-};
-
-const compile = async (
-  client: Client,
-  projectId: string,
-  docId: string,
-): Promise<void> => {
-  const started = await client.json<{ compile_id: string }>(
-    await client.post(`/api/v1/projects/${projectId}/documents/${docId}/compile`),
-    202,
-  );
-  await waitCompiled(client, projectId, docId, started.compile_id);
-};
-
-const waitCompiled = async (
-  client: Client,
-  projectId: string,
-  docId: string,
-  compileId: string,
-): Promise<void> => {
-  await expect
-    .poll(
-      async () =>
-        String(
-          (
-            await client.json<Json>(
-              await client.get(
-                `/api/v1/projects/${projectId}/documents/${docId}/compiles/${compileId}`,
-              ),
-              200,
-            )
-          ).status,
-        ),
-      { timeout: 60_000, intervals: [500, 1_000] },
-    )
-    .toBe("success");
-};
-
-const fileBytes = async (
-  client: Client,
-  projectId: string,
-  path: string,
-): Promise<Buffer> => {
-  const res = await client.get(`/api/v1/projects/${projectId}/files/${path}`);
-  expect(res.status(), path).toBe(200);
-  return res.body();
-};
-
-/** Правка исходника заявления: строка-комментарий в конце, PDF после сборки другой. */
-const editApplication = async (
-  client: Client,
-  projectId: string,
-  note: string,
-): Promise<void> => {
-  const source = (await fileBytes(client, projectId, APPLICATION_TEX)).toString("utf8");
-  const res = await client.putText(
-    `/api/v1/projects/${projectId}/files/${APPLICATION_TEX}`,
-    `${source}\n% ${note}\n`,
-  );
-  expect(res.status(), await res.text()).toBe(204);
-};
-
-// ---------------------------------------------------------------- маршрут через API
-
-const routeOf = async (
-  client: Client,
-  projectId: string,
-  routeId: string,
-): Promise<Route> =>
-  client.json<Route>(
-    await client.get(`/api/v1/projects/${projectId}/signing-routes/${routeId}`),
-    200,
-  );
-
-const person = (route: Route, persona: string): Participant => {
-  const found = route.steps.flat().find((p) => p.persona === persona);
-  if (!found) throw new Error(`в маршруте нет ${persona}: ${JSON.stringify(route.steps)}`);
-  return found;
-};
-
-/** Шаги маршрута как список персон: [[author], [supervisor], ...]. */
-const order = (route: Route): string[][] =>
-  route.steps.map((step) => step.map((p) => p.persona));
-
-const uploadPng = async (
-  client: Client,
-  url: string,
-  extra: Record<string, string> = {},
-): Promise<Json> =>
-  client.json<Json>(
-    await client.postForm(url, {
-      file: { name: "signature.png", mimeType: "image/png", buffer: signaturePng() },
-      ...extra,
-    }),
-    200,
-  );
-
-/**
- * Маршрут точки через API, как его отправил бы редактор: документы собраны, академрук добавлен необязательным
- * слотом заявления, все подписи размещены, картинка автора загружена, отправлен. Возвращает id маршрута.
- */
-const sendRouteViaApi = async (
-  student: Member,
-  projectId: string,
-): Promise<string> => {
-  const client = student.client;
-  await compile(client, projectId, PROPOSAL);
-  await compile(client, projectId, APPLICATION);
-  const draft = await client.json<Route>(
-    await client.post(`/api/v1/projects/${projectId}/signing-routes`, {
-      profile_id: PROFILE,
-    }),
-    201,
-  );
-  const steps = draft.steps.map((step) =>
-    step.map((p) => ({
-      id: p.id,
-      persona: p.persona,
-      user_id: p.user_id,
-      invitation_id: p.invitation_id,
-    })),
-  );
-  const route = await client.json<Route>(
-    await client.put(`/api/v1/projects/${projectId}/signing-routes/${draft.id}`, {
-      steps,
-      extra_slots: [{ doc_id: APPLICATION, slot_id: "academic_supervisor" }],
-      deadline: null,
-      message: null,
-    }),
-    200,
-  );
-  expect(order(route)).toEqual([["author"], ["supervisor"], ["academic_supervisor"]]);
-  for (const doc of route.docs)
-    for (const slot of doc.slots)
-      await client.json(
-        await client.patch(
-          `/api/v1/projects/${projectId}/signatures/placements/${doc.doc_id}/${slot.slot_id}`,
-          { enabled: true, page: 1 },
-        ),
-        200,
-      );
-  await uploadPng(client, `/api/v1/projects/${projectId}/signatures/slots/author/png`);
-  const preview = await client.json<Preview>(
-    await client.post(`/api/v1/projects/${projectId}/signing-routes/${route.id}/preview`, {}),
-    200,
-  );
-  expect(preview.blockers, JSON.stringify(preview.blockers)).toEqual([]);
-  expect(preview.can_send).toBe(true);
-  const sent = await client.json<Route>(
-    await client.post(`/api/v1/projects/${projectId}/signing-routes/${route.id}/send`, {
-      expected: Object.fromEntries(preview.docs.map((d) => [d.doc_id, d.token ?? ""])),
-      sign: null,
-    }),
-    200,
-  );
-  expect(sent.status).toBe("active");
-  expect(sent.current_step).toBe(2);
-  return route.id;
-};
-
-/** «Отправить новую версию» на карточке: подтверждение со следствиями и полем «Что изменилось» (12.6). */
-const newVersionFromCard = async (page: Page, route: Route, note: string): Promise<void> => {
-  const left = Date.parse(route.sent_at ?? "") + RESEND_INTERVAL_MS - Date.now();
-  if (left > 0) {
-    log(`до новой версии ${Math.ceil(left / 1000)} с`);
-    await page.waitForTimeout(left);
-  }
-  await page.getByTestId("signing-new-version").click();
-  await expect(page.getByTestId("signing-new-version-summary")).toBeVisible();
-  await page.getByTestId("signing-new-version-note").fill(note);
-  const reply = page.waitForResponse(
-    (r) => r.request().method() === "POST" && r.url().endsWith(`/signing-routes/${route.id}/send`),
-  );
-  await page.getByTestId("signing-new-version-confirm").click();
-  const res = await reply;
-  expect(res.status(), await res.text()).toBe(200);
-};
-
-// ---------------------------------------------------------------- страница подписанта
-
-const checkpointPath = (projectId: string): string =>
-  `/projects/${projectId}/submit/cp/${PROFILE}`;
-
-const signingPath = (projectId: string, routeId: string): string =>
-  `/sign/${projectId}/${routeId}`;
-
-/** «Входящие → На подпись»: задача маршрута, «Открыть» ведёт на страницу подписи. */
-const openFromInbox = async (page: Page, projectId: string, routeId: string) => {
-  await page.goto("/inbox?tab=signing");
-  const task = page.getByTestId(`inbox-signing-task-${routeId}`);
-  await expect(task).toBeVisible();
-  await page.getByTestId(`inbox-signing-open-${routeId}`).click();
-  await expect(page).toHaveURL(new RegExp(`${signingPath(projectId, routeId)}$`));
-  await expect(page.getByTestId("signing-page")).toHaveAttribute("data-state", "turn");
-};
-
-/** Подпись пальцем или мышью на листе страницы подписанта. */
-const drawSignature = async (page: Page): Promise<void> => {
-  await page.getByTestId("signing-image-draw").click();
-  const canvas = page.getByTestId("signing-draw-canvas");
-  await expect(canvas).toBeVisible();
-  const box = await canvas.boundingBox();
-  if (!box) throw new Error("лист подписи без размеров");
-  await page.mouse.move(box.x + box.width * 0.15, box.y + box.height * 0.6);
-  await page.mouse.down();
-  for (let i = 1; i <= 24; i += 1)
-    await page.mouse.move(
-      box.x + box.width * (0.15 + i * 0.03),
-      box.y + box.height * (0.6 - 0.25 * Math.sin(i / 3)),
-    );
-  await page.mouse.up();
-  await page.getByTestId("signing-draw-done").click();
-  await expect(page.getByTestId("signing-image-ready")).toBeVisible();
-};
-
-const approveOnPage = async (page: Page): Promise<void> => {
-  const primary = page.getByTestId("signing-primary");
-  await expect(primary).toHaveAttribute("data-label", "approve");
-  await expect(primary).toHaveAttribute("data-blocked", "");
-  await primary.click();
-  await expect(page.getByTestId("signing-page")).not.toHaveAttribute("data-state", "turn");
-};
-
-const signingTasks = async (client: Client): Promise<string[]> =>
-  (
-    await client.json<{ items: { route_id: string }[] }>(
-      await client.get("/api/v1/account/signing-tasks"),
-      200,
-    )
-  ).items.map((t) => t.route_id);
-
-/** Сборка кнопкой документа: ждём ответ на запуск и итог сборки. */
-const buildInUi = async (
-  page: Page,
-  client: Client,
-  projectId: string,
-  docId: string,
-): Promise<void> => {
-  const started = page.waitForResponse(
-    (r) =>
-      r.request().method() === "POST" &&
-      r.url().endsWith(`/projects/${projectId}/documents/${docId}/compile`),
-  );
-  await page.getByTestId("document-build-button").click();
-  // Документ идущего маршрута: мягкое предупреждение спрашивает один раз за сеанс (12.7).
-  const proceed = page.getByRole("dialog").getByRole("button", { name: "Продолжить" });
-  if (await proceed.waitFor({ state: "visible", timeout: 3_000 }).then(() => true, () => false)) {
-    await proceed.click();
-  }
-  const res = await started;
-  expect(res.status(), await res.text()).toBe(202);
-  const { compile_id } = (await res.json()) as { compile_id: string };
-  await waitCompiled(client, projectId, docId, compile_id);
-};
-
-/** Сколько картинок (XObject /Image) в PDF: штампы-картинки добавляют свои. */
-const imageCount = (pdf: Buffer): number =>
-  (pdf.toString("latin1").match(/\/Subtype\s*\/Image/g) ?? []).length;
-
+const RETURN_COMMENT = "Уточните цель проекта в заявлении";
 // ---------------------------------------------------------------- сценарии
 
 test.describe.configure({ mode: "serial" });
