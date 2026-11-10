@@ -858,19 +858,20 @@ test.describe("маршрут подписания: отправка, подпи
     expect(route.current_step).toBe(2);
     expect(await signingTasks(supervisor.client)).toContain(resetRoute);
 
-    // Правка и сборка: другой PDF, маршрут остановлен.
+    // Правка и сборка: другой PDF. Пока отправка не снимает версию на подписи (R16), источник подписи это
+    // текущая сборка, и сверка видит её подмену как `sent_changed` (12.5).
     await editApplication(student.client, reset, `правка во время маршрута ${RUN}`);
     await buildInUi(page, student.client, reset, APPLICATION);
     expect(sha256(await fileBytes(student.client, reset, APPLICATION_PDF))).not.toBe(before);
     route = await routeOf(student.client, reset, resetRoute);
     expect(route.status).toBe("paused");
-    expect(route.stop_reason).toBe("rebuilt");
+    expect(route.stop_reason).toBe("sent_changed");
     expect(await signingTasks(supervisor.client)).not.toContain(resetRoute);
 
     await page.goto(checkpointPath(reset));
     const status = page.getByTestId("signing-status");
     await expect(status).toHaveAttribute("data-status", "paused");
-    await expect(status).toContainText("Документ изменился после согласования");
+    await expect(status).toContainText("Версия на подписи изменилась вне маршрута");
     await expect(page.getByTestId("signing-resend")).toBeVisible();
     await shot(page, "ru", "sr-08-paused");
 

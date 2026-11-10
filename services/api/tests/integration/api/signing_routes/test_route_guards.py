@@ -225,7 +225,7 @@ async def test__route_stopped_by_calculation__edits_allowed_before_the_stop_is_r
     assert moved.status_code == 200, moved.text
     # Запись состояния подписей позвала сверку, и она записала остановку по главной причине.
     route = trio.route()
-    assert (route["status"], route["stop_reason"]) == ("paused", "rebuilt")
+    assert (route["status"], route["stop_reason"]) == ("paused", "sent_changed")
 
 
 # --- «Подписать комплект» (6.10) ------------------------------------------------------------------------------------
@@ -498,7 +498,7 @@ async def test__plan__state_is_calculated__stop_and_completion_visible_before_th
 
     assert (stopped["status"], stopped["stop_reason"], stopped["phase"], stopped["current_step"]) == (
         "paused",
-        "rebuilt",
+        "sent_changed",
         None,
         None,
     )

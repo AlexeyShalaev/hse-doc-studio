@@ -369,7 +369,7 @@ async def test__document_rebuilt__pause_recorded_by_the_server(stand: Stand) -> 
 
     assert refused.status_code == 409
     pause = _one(_route_audit(trio), "signing_route.pause")
-    assert (pause["actor_id"], pause["actor"], pause["details"]["reason"]) == (None, None, "rebuilt")
+    assert (pause["actor_id"], pause["actor"], pause["details"]["reason"]) == (None, None, "sent_changed")
 
 
 async def test__new_draft_of_the_point__previous_cancelled_route_archived_with_a_reference(stand: Stand) -> None:

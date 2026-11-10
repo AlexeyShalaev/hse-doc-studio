@@ -299,12 +299,12 @@ async def test__approve__document_rebuilt_after_the_page_was_opened__doc_changed
     assert resp.json()["docs"] == [PROPOSAL]
     # Действие подписанта заметило изменение: маршрут остановлен и записан остановленным.
     route = trio.route()
-    assert (route["status"], route["stop_reason"]) == ("paused", "rebuilt")
-    assert [(e["kind"], e["reason"]) for e in route["events"]][-1] == ("paused", "rebuilt")
+    assert (route["status"], route["stop_reason"]) == ("paused", "sent_changed")
+    assert [(e["kind"], e["reason"]) for e in route["events"]][-1] == ("paused", "sent_changed")
     task = trio.task(trio.supervisor)
     assert (task["route"]["status"], task["route"]["stop_reason"], my(task)) == (
         "paused",
-        "rebuilt",
+        "sent_changed",
         ("waiting", "wait"),
     )
     assert _code(trio.approve(trio.supervisor, expected=trio.tokens(trio.supervisor))) == (409, "not_your_turn")
