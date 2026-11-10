@@ -60,6 +60,7 @@ async def test__pinned_pack__working_build_moved_ahead__version_packed_and_warni
     assert warning == {
         "code": "changed_after_sent",
         "doc_id": "annotation",
+        "sent_at": "2026-11-10T14:32:00+00:00",
         "file": _PDF,
         "message": (
             "Документ «Аннотация» изменён после отправки на подпись: в пакет попала версия на подписи от 10.11.2026"

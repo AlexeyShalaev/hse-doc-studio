@@ -111,6 +111,7 @@ def _map_notice(notice: PackNotice) -> SubmissionWarningResponse:
     return SubmissionWarningResponse(
         code=notice.code,
         doc_id=notice.doc_id,
+        sent_at=notice.pinned_at,
         file=notice.arcname,
         message=notice.message,
         pinned=PlanPinnedResponse(

@@ -60,6 +60,8 @@ class SubmissionWarningResponse(BaseModel):
 
     code: Literal["changed_after_sent"]
     doc_id: str
+    # Дата версии на подписи (ISO 8601, UTC), поле контракта W7 (12.9); то же, что `pinned.pinned_at`.
+    sent_at: str
     # Имя файла документа в пакете.
     file: str
     # Готовый текст на языке интерфейса.
