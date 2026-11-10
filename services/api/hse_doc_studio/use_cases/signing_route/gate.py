@@ -148,18 +148,19 @@ class SigningRouteGate(RouteRecalculation):
             return PlanRoutes()
         shown: PlanRoute | None = None
         states: dict[DocSlot, ParticipantState] = {}
+        held: set[str] = set()
         for route in await self._s.routes.list_for_project(project_id, statuses=HOLDING_STATUSES):
             calc = await self._evaluated(route)
             if calc is None:
                 continue
             _, evaluation = calc
-            for p in route.participants:
-                for pair in p.assignments:
-                    states[pair] = evaluation.participant(p.id).state
+            states.update(_slot_states(route, evaluation))
+            if route.status is RouteStatus.active and evaluation.status is RouteStatus.active:
+                held.update(route.docs)
             wanted = route.profile_id == profile_id if profile_id is not None else doc_id in route.docs
             if shown is None and wanted:
                 shown = _plan_route(route, evaluation)
-        return PlanRoutes(route=shown, slot_states=states)
+        return PlanRoutes(route=shown, slot_states=states, held_docs=frozenset(held))
 
     async def _evaluated(self, route: SigningRoute) -> tuple[LoadedFacts, Evaluation] | None:
         """Расчёт маршрута на текущих фактах; None, если точку сдачи уже не прочитать (проект или пак сняты)."""
@@ -176,6 +177,11 @@ class SigningRouteGate(RouteRecalculation):
         if calc is None or calc[1].status is not RouteStatus.active:
             return None
         return calc
+
+
+def _slot_states(route: SigningRoute, evaluation: Evaluation) -> dict[DocSlot, ParticipantState]:
+    """Состояние участника маршрута по каждой его паре «документ, слот»."""
+    return {pair: evaluation.participant(p.id).state for p in route.participants for pair in p.assignments}
 
 
 def _slot_on_route(route: SigningRoute, loaded: LoadedFacts, slot_id: str) -> bool:

@@ -77,10 +77,14 @@ class RouteParticipant(StrictModel):
     invitation_id: str | None
     name: str | None
     membership: ParticipantMembershipName
+    # Имя персоны по карточке проекта: у приглашённого `name` только маска почты.
+    card_name: str | None
     assignments: list[RouteSlotRef]
     method: RouteSignMethodName | None
     state: ParticipantStateName
     next_action: SigningNextActionName
+    # Его согласие ещё меняет видимый слой: пока таких не осталось, PDF не фиксируется и ЭП не запрашивается.
+    changes_visible: bool
     approved_at: datetime | None
     notified_at: datetime | None
     reminded_at: datetime | None
@@ -321,6 +325,9 @@ class SigningTaskPerson(StrictModel):
     # Последнее действие участника в этом раунде: согласие, подпись или возврат.
     at: datetime | None
     me: bool
+    # Имя персоны по карточке проекта и меняет ли его согласие видимый слой, как у `RouteParticipant`.
+    card_name: str | None
+    changes_visible: bool
 
 
 class SigningPlate(StrictModel):

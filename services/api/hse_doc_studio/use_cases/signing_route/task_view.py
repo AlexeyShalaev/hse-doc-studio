@@ -45,7 +45,7 @@ from hse_doc_studio.core.signing_route.signer import (
 from hse_doc_studio.core.value_objects import SignaturePlacement, SignaturesState, SignerInfo
 from hse_doc_studio.use_cases.signing_route.key_signer import KeyInfo
 from hse_doc_studio.use_cases.signing_route.point import RoutePoint
-from hse_doc_studio.use_cases.signing_route.views import EventView, People, displayed, event_view
+from hse_doc_studio.use_cases.signing_route.views import EventView, People, card_name, displayed, event_view
 
 # Пропорция рамки под картинку, которой ещё нет: как у метки без известных размеров (`stamps._DEFAULT_ASPECT`).
 _IMAGE_ASPECT = 0.4
@@ -90,6 +90,9 @@ class TaskPerson:
     # Последнее действие участника в этом раунде: согласие, подпись или возврат.
     at: datetime | None
     me: bool
+    # Имя персоны по карточке проекта; его согласие ещё меняет видимый слой (до него PDF не зафиксируют).
+    card_name: str | None = None
+    changes_visible: bool = False
 
 
 @dataclass(frozen=True)
@@ -145,6 +148,8 @@ def build_task(  # noqa: PLR0913 — входы одного ответа
                 state=evaluation.participant(p.id).state,
                 at=acted.get(p.id),
                 me=p.id == me.id,
+                card_name=card_name(point.project, p.persona),
+                changes_visible=evaluation.participant(p.id).changes_visible,
             )
             for p in route.participants
             if positions[p.step] == number

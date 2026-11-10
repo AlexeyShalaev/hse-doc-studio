@@ -64,6 +64,7 @@
         "invitation_id": null,
         "name": "Иванов И. И.",
         "membership": "member",
+        "card_name": "Иванов И. И.",
         "assignments": [
           {
             "doc_id": "topic_application",
@@ -73,6 +74,7 @@
         "method": "image",
         "state": "done",
         "next_action": "done",
+        "changes_visible": false,
         "approved_at": "2026-11-10T09:00:00Z",
         "notified_at": null,
         "reminded_at": null,
@@ -87,6 +89,7 @@
         "invitation_id": null,
         "name": "Петров П. П.",
         "membership": "member",
+        "card_name": "Петров П. П.",
         "assignments": [
           {
             "doc_id": "topic_application",
@@ -96,6 +99,7 @@
         "method": "detached",
         "state": "to_approve_sign",
         "next_action": "approve_and_sign",
+        "changes_visible": false,
         "approved_at": null,
         "notified_at": "2026-11-10T09:00:00Z",
         "reminded_at": null,

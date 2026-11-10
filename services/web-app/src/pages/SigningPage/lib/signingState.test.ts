@@ -27,6 +27,8 @@ const person = (
   state,
   at: null,
   me: false,
+  card_name: null,
+  changes_visible: false,
   ...extra,
 });
 

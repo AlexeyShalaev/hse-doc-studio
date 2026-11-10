@@ -15,6 +15,7 @@ from uuid import UUID
 from hse_doc_studio.core.signing_route.effects import Notify
 from hse_doc_studio.core.signing_route.engine import RouteFacts
 from hse_doc_studio.core.signing_route.entities import (
+    TURN_STATES,
     DocSlot,
     ParticipantState,
     RoutePhase,
@@ -164,10 +165,21 @@ class PlanRoute:
 
 @dataclass(frozen=True)
 class PlanRoutes:
-    """Маршруты для плана подписей: маршрут точки или документа и состояния участников по их слотам."""
+    """Маршруты для плана подписей: маршрут точки или документа и состояния участников по их слотам.
+
+    `held_docs` документы, которые держит идущий по расчёту маршрут: их фиксирует и подписывает только он, поэтому
+    слот такого документа ждёт человека, лишь когда маршрут ждёт его самого (`is_turn`).
+    """
 
     route: PlanRoute | None = None
     slot_states: Mapping[DocSlot, ParticipantState] = field(default_factory=dict)
+    held_docs: frozenset[str] = frozenset()
+
+    def is_turn(self, doc_id: str, slot_id: str) -> bool:
+        """Слот можно делать сейчас: документ свободен или маршрут ждёт участника этого слота."""
+        if doc_id not in self.held_docs:
+            return True
+        return self.slot_states.get(DocSlot(doc_id, slot_id)) in TURN_STATES
 
 
 class ISigningRouteGate(Protocol):

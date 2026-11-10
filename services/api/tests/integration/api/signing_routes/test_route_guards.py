@@ -516,3 +516,39 @@ async def test__plan__completed_route__kept_until_archived(stand: Stand) -> None
     )
     assert set(_route_states(done).values()) == {"done"}
     assert (archived["route"], set(_route_states(archived).values())) == (None, {None})
+
+
+async def test__plan__early_approver_waits_for_the_freeze__not_counted_until_their_turn(stand: Stand) -> None:
+    trio = await make_trio(stand, {"author": "detached"}, plates=("author",), images=("supervisor",), academic="none")
+    trio.sent()
+    # Автор согласовал до фиксации: его ЭП маршрут попросит после согласия научрука, сейчас звать его нечего.
+    assert my(trio.task(trio.author)) == ("waiting", "wait")
+
+    waiting = _plan(trio, trio.author, profile_id=TOPIC)
+    whole = _plan(trio, trio.author)
+    trio.approved(trio.supervisor)
+    turn = _plan(trio, trio.author, profile_id=TOPIC)
+
+    mine = {(d["doc_id"], s["slot_id"]): d["held_by_route"] for d in whole["docs"] for s in d["slots"] if s["is_mine"]}
+    # Во всём проекте ждёт только слот документа вне маршрута (отчёт): его можно подписать сейчас.
+    assert mine == {(APPLICATION, "author"): True, ("report", "author"): False}
+    assert (waiting["waiting_for_me"], whole["waiting_for_me"]) == (0, 1)
+    assert my(trio.task(trio.author)) == ("to_sign", "sign")
+    assert turn["waiting_for_me"] == 1
+
+
+async def test__route__card_name_and_who_still_changes_the_visible_layer(stand: Stand) -> None:
+    trio = await make_trio(stand, {"author": "detached"}, plates=("author",), images=("supervisor",), academic="none")
+    trio.sent()
+
+    people = {p["persona"]: p for step in trio.route()["steps"] for p in step}
+    task = {p["persona"]: p for step in trio.task(trio.author)["steps"] for p in step}
+
+    assert {k: (p["card_name"], p["changes_visible"]) for k, p in people.items()} == {
+        "author": (NAMES["author"], False),
+        "supervisor": (NAMES["supervisor"], True),
+    }
+    assert {k: (p["card_name"], p["changes_visible"]) for k, p in task.items()} == {
+        "author": (NAMES["author"], False),
+        "supervisor": (NAMES["supervisor"], True),
+    }

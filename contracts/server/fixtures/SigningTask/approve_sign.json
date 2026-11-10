@@ -29,7 +29,9 @@
         "persona": "author",
         "state": "done",
         "at": "2026-11-10T09:00:00Z",
-        "me": false
+        "me": false,
+        "card_name": "Иванов И. И.",
+        "changes_visible": false
       }
     ],
     [
@@ -38,7 +40,9 @@
         "persona": "supervisor",
         "state": "to_approve_sign",
         "at": null,
-        "me": true
+        "me": true,
+        "card_name": "Петров П. П.",
+        "changes_visible": false
       }
     ]
   ],
