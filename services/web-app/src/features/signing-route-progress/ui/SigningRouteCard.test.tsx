@@ -20,8 +20,10 @@ import type { ProjectResponseSchema } from "@entities/project";
 import { LOCAL_BOOTSTRAP, sessionApi } from "@entities/session";
 import {
   signingRouteApi,
+  expectedTokens,
   signingTaskApi,
   type SigningRoute,
+  type SigningRoutePreview,
 } from "@entities/signing-route";
 import {
   SR_AUTHOR,
@@ -31,8 +33,10 @@ import {
   makeRouteParticipant,
   makeSigningRoute,
   makeSigningRouteSummary,
+  SIGNING_ROUTE_CONTRACT_EXAMPLES,
   type SigningDemoUser,
 } from "@entities/signing-route/testing";
+import { formatDay, formatMoment } from "../lib/format";
 import { SigningRouteCard } from "./SigningRouteCard";
 
 type Project = z.infer<typeof ProjectResponseSchema>;
@@ -353,15 +357,18 @@ describe("Подписание: маршрут идёт", () => {
 });
 
 describe("Подписание: остановка и возврат", () => {
-  it("версию на подписи подменили: причина и «Отправить заново» одним нажатием", async () => {
+  it("версию на подписи подменили: причина и новая версия из рабочей сборки", async () => {
     await startRoute();
     demo.tamper(PROJECT, DOC);
     const u = userEvent.setup();
     mount();
     expect(await status()).toHaveTextContent(
-      "Версия на подписи изменилась вне маршрута или её не удалось восстановить: маршрут остановлен.",
+      "Версия на подписи изменилась вне маршрута: маршрут остановлен.",
     );
-    await u.click(screen.getByTestId("signing-resend"));
+    expect(screen.queryByTestId("signing-resend")).toBeNull();
+    await u.click(screen.getByTestId("signing-new-version"));
+    const dialog = await screen.findByRole("dialog", {}, LOAD);
+    await u.click(within(dialog).getByTestId("signing-new-version-confirm"));
     await waitFor(async () => {
       expect(await status()).toHaveAttribute("data-status", "active");
     }, LOAD);
@@ -762,6 +769,251 @@ describe("Подписание: эталонные состояния", () => {
     );
     expect(screen.getByTestId("signing-cancel")).toHaveTextContent(
       "Cancel route",
+    );
+  });
+});
+
+const example = (name: string): SigningRoute =>
+  SIGNING_ROUTE_CONTRACT_EXAMPLES.SigningRoute?.[name] as SigningRoute;
+
+describe("Подписание: версия на подписи (12.2)", () => {
+  const today = () => formatDay(new Date().toISOString());
+
+  it("у каждого документа версия на подписи и «Открыть версию на подписи»", async () => {
+    await startRoute();
+    mount();
+    const row = await screen.findByTestId("signing-version", {}, LOAD);
+    const route = await signingRouteApi.get(
+      PROJECT,
+      (await signingRouteApi.list(PROJECT, PROFILE)).items[0]?.id ?? "",
+    );
+    const sent = route.docs[0]?.sent?.at ?? "";
+    expect(row).toHaveTextContent("Заявление о выборе темы");
+    expect(row).toHaveTextContent(
+      `Версия на подписи от ${formatMoment(Date.parse(sent))}`,
+    );
+    expect(row).toHaveAttribute("data-changed", "false");
+    expect(within(row).getByTestId("signing-version-open")).toHaveAttribute(
+      "href",
+      expect.stringMatching(
+        new RegExp(`/api/v1/projects/${PROJECT}/docs/${DOC}/pdf/signed$`),
+      ),
+    );
+    // Изменений нет: отправлять нечего, маршрут идёт.
+    expect(screen.queryByTestId("signing-changed")).toBeNull();
+    expect(screen.queryByTestId("signing-new-version")).toBeNull();
+    expect(screen.queryByTestId("signing-resend")).toBeNull();
+  });
+
+  it("пересобран после отправки: маршрут идёт, автор видит изменения и отправляет новую версию с пояснением", async () => {
+    await startRoute();
+    demo.rebuild(PROJECT, DOC);
+    const send = vi.spyOn(signingRouteApi, "send");
+    const success = vi.spyOn(toast, "success");
+    const u = userEvent.setup();
+    mount();
+    expect(await status()).toHaveAttribute("data-status", "active");
+    expect(
+      await screen.findByTestId("signing-changed", {}, LOAD),
+    ).toHaveTextContent(
+      `Есть изменения после отправки на подпись. Подписывают версию от ${today()}.`,
+    );
+    expect(screen.getByTestId("signing-version")).toHaveAttribute(
+      "data-changed",
+      "true",
+    );
+    expect(screen.getByTestId("signing-version")).toHaveTextContent(
+      "есть изменения",
+    );
+
+    await u.click(screen.getByTestId("signing-new-version"));
+    const dialog = await screen.findByRole("dialog", {}, LOAD);
+    expect(dialog).toHaveTextContent("Отправить новую версию?");
+    expect(
+      within(dialog).getByTestId("signing-new-version-changed"),
+    ).toHaveTextContent("Изменились: Заявление о выборе темы.");
+    // Научрук ещё не согласовывал: заново согласовывать некому.
+    expect(
+      within(dialog).queryByTestId("signing-new-version-reapprove"),
+    ).toBeNull();
+    expect(within(dialog).queryByTestId("signing-new-version-kept")).toBeNull();
+    await u.type(
+      within(dialog).getByLabelText("Что изменилось"),
+      "Исправил формулировку темы",
+    );
+    await u.click(within(dialog).getByTestId("signing-new-version-confirm"));
+    await waitFor(() => {
+      expect(screen.queryByTestId("signing-changed")).toBeNull();
+    }, LOAD);
+    expect(send.mock.calls[0]?.[2]).toMatchObject({
+      sign: null,
+      note: "Исправил формулировку темы",
+    });
+    expect(success).toHaveBeenCalledWith("Новая версия отправлена");
+    expect(screen.queryByRole("dialog")).toBeNull();
+    expect(screen.queryByTestId("signing-new-version")).toBeNull();
+  });
+
+  it("«Не отправлять» закрывает подтверждение без отправки", async () => {
+    await startRoute();
+    demo.rebuild(PROJECT, DOC);
+    const send = vi.spyOn(signingRouteApi, "send");
+    const u = userEvent.setup();
+    mount();
+    await u.click(await screen.findByTestId("signing-new-version", {}, LOAD));
+    const dialog = await screen.findByRole("dialog", {}, LOAD);
+    await u.click(
+      within(dialog).getByRole("button", { name: "Не отправлять" }),
+    );
+    await waitFor(() => {
+      expect(screen.queryByRole("dialog")).toBeNull();
+    });
+    expect(send).not.toHaveBeenCalled();
+  });
+
+  it("согласовавший научрук в подтверждении: согласует заново", async () => {
+    const id = await startRoute();
+    user = PETROV;
+    const task = await signingTaskApi.get(PROJECT, id);
+    await signingTaskApi.approve(PROJECT, id, {
+      expected: expectedTokens(task),
+      method: null,
+      sign: null,
+    });
+    user = AUTHOR;
+    demo.rebuild(PROJECT, DOC);
+    const u = userEvent.setup();
+    mount();
+    await u.click(await screen.findByTestId("signing-new-version", {}, LOAD));
+    const dialog = await screen.findByRole("dialog", {}, LOAD);
+    expect(
+      within(dialog).getByTestId("signing-new-version-reapprove"),
+    ).toHaveTextContent(/^Согласуют заново: .*Петров П\. П\.\.$/);
+  });
+
+  it("без изменений документы и подписи на них останутся", async () => {
+    const route = example("diverged");
+    const two: SigningRoute = {
+      ...route,
+      docs: [
+        ...route.docs,
+        {
+          doc_id: "supervisor_review",
+          name: { ru: "Отзыв руководителя", en: "Supervisor's review" },
+          frozen: true,
+          slots: [],
+          sent: route.docs[0]?.sent ?? null,
+          changed: false,
+        },
+      ],
+    };
+    serve(two);
+    const preview = SIGNING_ROUTE_CONTRACT_EXAMPLES.SigningRoutePreview
+      ?.new_version as SigningRoutePreview;
+    vi.spyOn(signingRouteApi, "preview").mockResolvedValue(preview);
+    const u = userEvent.setup();
+    mount({ projectId: SR_PROJECT_ID });
+    expect(
+      await screen.findAllByTestId("signing-version", {}, LOAD),
+    ).toHaveLength(2);
+    await u.click(screen.getByTestId("signing-new-version"));
+    const dialog = await screen.findByRole("dialog", {}, LOAD);
+    expect(
+      within(dialog).getByTestId("signing-new-version-kept"),
+    ).toHaveTextContent(
+      "Без изменений: Отзыв руководителя, подписи на нём останутся.",
+    );
+  });
+
+  it("изменения успели отправить: подтверждения нет, маршрут перечитан", async () => {
+    serve(example("diverged"));
+    vi.spyOn(signingRouteApi, "preview").mockResolvedValue({
+      ...(SIGNING_ROUTE_CONTRACT_EXAMPLES.SigningRoutePreview
+        ?.new_version as SigningRoutePreview),
+      can_send: false,
+      blockers: [
+        {
+          code: "nothing_changed",
+          doc_id: null,
+          slot_id: null,
+          participant_id: null,
+          other_route: null,
+        },
+      ],
+    });
+    const info = vi.spyOn(toast, "info");
+    const u = userEvent.setup();
+    mount({ projectId: SR_PROJECT_ID });
+    await u.click(await screen.findByTestId("signing-new-version", {}, LOAD));
+    await waitFor(() => {
+      expect(info).toHaveBeenCalledWith(
+        "Изменений после отправки нет: отправлять нечего.",
+      );
+    }, LOAD);
+    expect(screen.queryByRole("dialog")).toBeNull();
+  });
+
+  it("все подписали, потом правка: «Есть изменения после подписания» и новая версия", async () => {
+    serve(example("completed_changed"));
+    mount({ projectId: SR_PROJECT_ID });
+    const day = formatDay("2026-11-10T09:00:00Z");
+    expect(await status()).toHaveTextContent(`Все подписали версию от ${day}.`);
+    expect(screen.getByTestId("signing-changed")).toHaveTextContent(
+      "Есть изменения после подписания.",
+    );
+    expect(screen.getByTestId("signing-new-version")).toBeInTheDocument();
+    expect(screen.getByTestId("signing-archive")).toBeInTheDocument();
+  });
+
+  it("перенос 0.20.0 не нашёл версию: восстановить нельзя, отправьте новую", async () => {
+    serve(example("migration_lost"));
+    mount({ projectId: SR_PROJECT_ID });
+    expect(await status()).toHaveTextContent(
+      "Версию, отправленную на подпись, восстановить нельзя: отправьте новую версию.",
+    );
+    expect(screen.queryByTestId("signing-changed")).toBeNull();
+    const row = screen.getByTestId("signing-version");
+    expect(row).toHaveTextContent("Версии на подписи нет");
+    expect(within(row).queryByTestId("signing-version-open")).toBeNull();
+    expect(screen.getByTestId("signing-new-version")).toBeInTheDocument();
+    expect(screen.queryByTestId("signing-resend")).toBeNull();
+  });
+
+  it("читателю версия видна, а изменения и новая версия нет", async () => {
+    serve(example("diverged"));
+    mount({ projectId: SR_PROJECT_ID, role: "reviewer" });
+    const row = await screen.findByTestId("signing-version", {}, LOAD);
+    expect(row).toHaveAttribute("data-changed", "false");
+    expect(screen.queryByTestId("signing-changed")).toBeNull();
+    expect(screen.queryByTestId("signing-new-version")).toBeNull();
+  });
+
+  it("сервер до R16: ни версий, ни изменений", async () => {
+    const { changed_docs: _changed, ...route } = makeSigningRoute();
+    serve({
+      ...route,
+      docs: route.docs.map(({ sent: _s, changed: _c, ...doc }) => doc),
+    });
+    mount({ projectId: SR_PROJECT_ID });
+    await status();
+    expect(screen.queryByTestId("signing-versions")).toBeNull();
+    expect(screen.queryByTestId("signing-changed")).toBeNull();
+  });
+
+  it("по-английски", async () => {
+    await i18n.changeLanguage("en");
+    serve(example("diverged"));
+    mount({ projectId: SR_PROJECT_ID });
+    expect(
+      await screen.findByTestId("signing-changed", {}, LOAD),
+    ).toHaveTextContent(
+      `There are changes since it was sent for signing. Signers sign the version from ${formatDay("2026-11-10T09:00:00Z")}.`,
+    );
+    expect(screen.getByTestId("signing-new-version")).toHaveTextContent(
+      "Send new version",
+    );
+    expect(screen.getByTestId("signing-version-open")).toHaveTextContent(
+      "Open the version for signing",
     );
   });
 });

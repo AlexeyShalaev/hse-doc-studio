@@ -5,14 +5,20 @@
 планировщик не касается (только через `IProjectFileProbe`), файлы не пишет и
 не конвертирует: готовый соседний PDF custom-файла он берет, а если его нет,
 кладет исходный файл как есть.
+
+Документ берется из источника подписи (docs/design/signing-route.md, 12.4 и 12.8):
+версии на подписи, если маршрут ее снял, иначе текущей сборки. Рабочая сборка,
+ушедшая вперед версии на подписи, это предупреждение `changed_after_sent` без
+пропуска: в пакет все равно едет версия на подписи.
 """
 
 from __future__ import annotations
 
 import json
 import posixpath
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from pathlib import Path, PurePosixPath
+from typing import Literal
 
 import structlog
 
@@ -24,6 +30,7 @@ from hse_doc_studio.core.catalog import (
 )
 from hse_doc_studio.core.entities import Document, Project
 from hse_doc_studio.core.enums import Lang
+from hse_doc_studio.core.i18n import localized_error
 from hse_doc_studio.core.jobs.files import (
     InlineBlob,
     IProjectFileProbe,
@@ -50,12 +57,20 @@ from hse_doc_studio.core.signatures.package_text import (
     detached_signature_name,
     public_key_files,
     signer_display_name,
+    version_date,
 )
 from hse_doc_studio.core.signatures.plan import SignMethod, method_of, signer_for
 from hse_doc_studio.core.signatures.ports import IPublicKeyExporter
 from hse_doc_studio.core.signatures.stamps import Stamp, stamps_digest_matches, stamps_for_doc
 from hse_doc_studio.core.team import author_by_slug
-from hse_doc_studio.core.value_objects import DetachedSignature, EmbeddedSignature, FrozenPdf, SignaturesState
+from hse_doc_studio.core.value_objects import (
+    DetachedSignature,
+    EmbeddedSignature,
+    FrozenPdf,
+    PinnedPdf,
+    SignaturesState,
+)
+from hse_doc_studio.use_cases.signatures.signing_source import pinned_file_rel
 
 logger = structlog.get_logger()
 
@@ -68,12 +83,38 @@ REASON_EXTRA_SOURCE_ESCAPES = "extra_source_escapes"
 REASON_EXTRA_SOURCE_MISSING = "extra_source_missing"
 REASON_EXTRA_UNREADABLE = "extra_unreadable"
 
+# Коды PackNotice: файл в пакете есть, но автору стоит о нем знать.
+NoticeCode = Literal["changed_after_sent"]
+NOTICE_CHANGED_AFTER_SENT: NoticeCode = "changed_after_sent"
+
+
+@dataclass(frozen=True)
+class PackNotice:
+    """Предупреждение без пропуска (signing-route.md, 12.8): документ в пакете, но не тот, что в рабочей сборке.
+
+    `changed_after_sent`: рабочая сборка разошлась с версией на подписи, в пакет попала версия на подписи.
+    Поля версии те же, что у `pinned` в плане подписей; `source_sha256` хэш файла версии, по которому
+    собран пакет, `working_sha256` хэш рабочей сборки.
+    """
+
+    code: NoticeCode
+    doc_id: str
+    arcname: str
+    message: str
+    pinned_at: str
+    route_id: str
+    round: int
+    source_sha256: str
+    working_sha256: str
+
 
 @dataclass(frozen=True)
 class PackPlan:
     payload: PackSubmissionPayload
     # Пропущенные пункты, в порядке обхода; то же самое пишется в лог.
     warnings: tuple[PackSkip, ...] = ()
+    # Предупреждения без пропуска, в порядке документов.
+    notices: tuple[PackNotice, ...] = ()
 
 
 def _resolve_output_name(doc_def: DocumentDefinition, chosen_variant: str | None) -> dict[str, str]:
@@ -170,6 +211,19 @@ def _stamp_spec(stamp: Stamp) -> StampSpec:
     )
 
 
+@dataclass(frozen=True)
+class _Version:
+    """Версия на подписи, из которой собран документ пакета: дата для текстов и sha256 файла версии."""
+
+    date: str
+    sha256: str
+
+
+def _with_version(doc: GuideDocument, version: _Version | None) -> GuideDocument:
+    """Раздел КАК_ПРОВЕРИТЬ.txt со строкой версии на подписи, если документ собран из нее."""
+    return replace(doc, version_date=version.date, version_sha256=version.sha256) if version is not None else doc
+
+
 @dataclass
 class _Run:
     """Состояние одного вызова build: входы и накопленные записи и предупреждения."""
@@ -186,6 +240,7 @@ class _Run:
     slot_service: SignatureSlotService
     entries: list[PackEntry] = field(default_factory=list)
     warnings: list[PackSkip] = field(default_factory=list)
+    notices: list[PackNotice] = field(default_factory=list)
     # Разделы КАК_ПРОВЕРИТЬ.txt по документам с подписями (docs/design/signature-plan.md, раздел 8).
     guide: list[GuideDocument] = field(default_factory=list)
 
@@ -198,14 +253,25 @@ class _Run:
         if resolved is None:
             return
         output_file, arcname, is_pdf = resolved
-        source_rel = _contained(output_file)
+        pinned = self.sig_state.pinned.get(item.doc_id)
+        working_rel = _contained(output_file) if is_pdf else None
+        if pinned is not None:
+            # Версия на подписи всегда PDF: документ едет ею, даже если рабочий файл другого формата.
+            if not is_pdf:
+                arcname, is_pdf = str(PurePosixPath(arcname).with_suffix(".pdf")), True
+            pinned_rel = pinned_file_rel(pinned)
+            source_rel = _contained(pinned_rel) if pinned_rel is not None else None
+            missing = pinned.path
+        else:
+            source_rel = _contained(output_file)
+            missing = output_file
         if source_rel is None or not self.probe.is_file(source_rel):
             self.warn(
-                "compiled PDF not found",
+                "compiled PDF not found" if pinned is None else "PDF sent for signing not found",
                 arcname,
                 REASON_SOURCE_MISSING,
-                output_file,
-                path=output_file,
+                missing,
+                path=missing,
                 doc_id=item.doc_id,
             )
             return
@@ -216,13 +282,14 @@ class _Run:
                 "doc output_name escapes folder", arcname, REASON_ARCNAME_ESCAPES, doc_id=item.doc_id, arcname=arcname
             )
             return
+        version = self._pinned_version(item.doc_id, target, source_rel, working_rel, pinned) if pinned else None
         # Документ с криптоподписями едет зафиксированными байтами, которые подписи и покрывают:
         # итоговый файл со встроенными PAdES и отдельный файл на каждую открепленную подпись.
         detached = _detached_for_item(item.signatures, item.doc_id, self.sig_state) if is_pdf else []
         embedded = _embedded_for_item(item.signatures, item.doc_id, self.sig_state) if is_pdf else []
         frozen = self.sig_state.frozen.get(item.doc_id)
         if (detached or embedded) and frozen is not None:
-            self._add_frozen_doc(item, source_rel, target, frozen, detached, embedded)
+            self._add_frozen_doc(item, source_rel, target, frozen, detached, embedded, version)
             return
         # Не-PDF (docx/pptx как есть, неопознанный формат) не штампуем даже при
         # размещениях: парсер PDF на нем упал бы.
@@ -234,9 +301,45 @@ class _Run:
             )
             images = self._image_signatures(item)
             if images:
-                self.guide.append(GuideDocument(pdf=target, sha256="", signatures=images))
+                self.guide.append(_with_version(GuideDocument(pdf=target, sha256="", signatures=images), version))
         else:
             self.entries.append(PackEntry(PackEntryKind.copy, target, source=ManifestFile(source_rel)))
+
+    def _pinned_version(
+        self, doc_id: str, arcname: str, source_rel: str, working_rel: str | None, pinned: PinnedPdf
+    ) -> _Version:
+        """Версия на подписи документа для КАК_ПРОВЕРИТЬ.txt и предупреждение, если рабочая сборка ушла вперед.
+
+        Хэш версии считается по файлу, а не берется из записи, как у источника подписи (`source_and_working`).
+        Несобранная рабочая сборка расхождением не считается: показывать нечего.
+        """
+        source_sha = self.probe.sha256(source_rel)
+        working_sha = (
+            self.probe.sha256(working_rel) if working_rel is not None and self.probe.is_file(working_rel) else None
+        )
+        version = _Version(date=version_date(pinned.pinned_at), sha256=source_sha)
+        if working_sha is not None and working_sha != source_sha:
+            name = PurePosixPath(arcname).stem
+            logger.info("assembler: document changed after it was sent for signing", doc_id=doc_id)
+            self.notices.append(
+                PackNotice(
+                    code=NOTICE_CHANGED_AFTER_SENT,
+                    doc_id=doc_id,
+                    arcname=arcname,
+                    message=localized_error(
+                        f"Документ «{name}» изменён после отправки на подпись: в пакет попала версия на подписи "
+                        f"от {version.date}",
+                        f"The document «{name}» changed after it was sent for signing: the package holds the "
+                        f"version sent for signing on {version.date}",
+                    ),
+                    pinned_at=pinned.pinned_at,
+                    route_id=pinned.route_id,
+                    round=pinned.round,
+                    source_sha256=source_sha,
+                    working_sha256=working_sha,
+                )
+            )
+        return version
 
     def _stamps(self, item: SubmissionDocItem) -> list[Stamp]:
         # Только слоты, которые просил профиль, с включенным размещением и PNG на
@@ -319,12 +422,22 @@ class _Run:
             if _method(self.sig_state, slot_id) is SignMethod.image
         )
 
-    def _check_frozen_current(self, doc_id: str, source_rel: str, arcname: str, frozen: FrozenPdf) -> str:
-        """Путь зафиксированного PDF; ошибка, если документ пересобран или видимый слой изменился после фиксации."""
+    def _check_frozen_current(
+        self, doc_id: str, source_rel: str, arcname: str, frozen: FrozenPdf, *, pinned: bool
+    ) -> str:
+        """Путь зафиксированного PDF; ошибка, если источник подписи или видимый слой изменились после фиксации.
+
+        Источник это версия на подписи, если она есть: пересборка рабочей сборки фиксацию не старит (12.8).
+        """
         frozen_rel = _contained(frozen.path)
         if frozen_rel is None or not self.probe.is_file(frozen_rel):
             raise ValueError(f"Frozen PDF is missing for {arcname}: freeze the document again")
         if self.probe.sha256(source_rel) != frozen.source_sha256:
+            if pinned:
+                raise ValueError(
+                    f"{arcname}: the version sent for signing is not the one that was frozen. "
+                    "Freeze the new version and sign it"
+                )
             raise ValueError(
                 f"{arcname}: the document was rebuilt after the PDF was frozen for signing. "
                 "Freeze it again and re-attach the signatures"
@@ -342,7 +455,7 @@ class _Run:
             )
         return frozen_rel
 
-    def _add_frozen_doc(  # noqa: C901, PLR0913 — пункт, источник, имя и три части состояния
+    def _add_frozen_doc(  # noqa: C901, PLR0913 — пункт, источник, имя, три части состояния и версия
         self,
         item: SubmissionDocItem,
         source_rel: str,
@@ -350,9 +463,10 @@ class _Run:
         frozen: FrozenPdf,
         detached: list[tuple[str, DetachedSignature]],
         embedded: list[tuple[str, EmbeddedSignature]],
+        version: _Version | None,
     ) -> None:
         """Итоговый PDF, PDF для открепленных (если он другой), подписи и ключи. Ошибки до любой записи."""
-        frozen_rel = self._check_frozen_current(item.doc_id, source_rel, arcname, frozen)
+        frozen_rel = self._check_frozen_current(item.doc_id, source_rel, arcname, frozen, pinned=version is not None)
         pdf_name = PurePosixPath(arcname).name
         parent = PurePosixPath(arcname).parent
         final_rel, final_sha, final_size = frozen_rel, frozen.sha256, frozen.size
@@ -420,14 +534,17 @@ class _Run:
             )
         self.entries.extend(entries)
         self.guide.append(
-            GuideDocument(
-                pdf=arcname,
-                sha256=final_sha,
-                signatures=tuple(guide_sigs),
-                base=str(parent / base_name) if base_name != pdf_name else "",
-                base_sha256=frozen.sha256 if base_name != pdf_name else "",
-                base_size=frozen.size if base_name != pdf_name else 0,
-                keys=tuple(str(parent / k) for k in keys),
+            _with_version(
+                GuideDocument(
+                    pdf=arcname,
+                    sha256=final_sha,
+                    signatures=tuple(guide_sigs),
+                    base=str(parent / base_name) if base_name != pdf_name else "",
+                    base_sha256=frozen.sha256 if base_name != pdf_name else "",
+                    base_size=frozen.size if base_name != pdf_name else 0,
+                    keys=tuple(str(parent / k) for k in keys),
+                ),
+                version,
             )
         )
 
@@ -587,4 +704,4 @@ class PackPlanner:
             entries=tuple(run.entries),
             verify_manifest=verify_manifest,
         )
-        return PackPlan(payload=payload, warnings=tuple(run.warnings))
+        return PackPlan(payload=payload, warnings=tuple(run.warnings), notices=tuple(run.notices))

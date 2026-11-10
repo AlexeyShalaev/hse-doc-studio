@@ -35,6 +35,7 @@ import { UploadCustomFileModal } from "@features/custom-document";
 import { BuildBlockedNotice } from "@features/build-states";
 import {
   SigningHoldBanner,
+  useDocRouteVersion,
   useDocSigningHold,
 } from "@features/signing-route-progress";
 import { isReadOnlyRole, useProject } from "@entities/project";
@@ -132,6 +133,7 @@ export const DocumentTabs = ({ projectId, docId }: DocumentTabsProps) => {
   const hasPriorBuild = slot !== undefined || doc?.last_compile_id != null;
   // Документ на подписании: подписи заперты, пересборка разрешена, но остановит маршрут.
   const signingHold = useDocSigningHold(projectId, docId);
+  const signingVersion = useDocRouteVersion(projectId, docId);
   const { remove: removeCustomFile, isRemoving: isRevertingCustomFile } =
     useCustomFileActions(projectId, docId);
   const [uploadOpen, setUploadOpen] = useState(false);
@@ -547,9 +549,13 @@ export const DocumentTabs = ({ projectId, docId }: DocumentTabsProps) => {
       {buildBlock !== null && (
         <BuildBlockedNotice block={buildBlock} projectId={projectId} />
       )}
-      {signingHold !== null && (
-        <SigningHoldBanner projectId={projectId} hold={signingHold} />
-      )}
+      <SigningHoldBanner
+        projectId={projectId}
+        docId={docId}
+        hold={signingHold}
+        version={signingVersion}
+        canManage={project.my_role === "owner" || project.my_role === "editor"}
+      />
 
       <div
         className="tabs"

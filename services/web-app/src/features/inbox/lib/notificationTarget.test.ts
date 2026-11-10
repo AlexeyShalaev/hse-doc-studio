@@ -108,16 +108,36 @@ describe("маршрут подписания", () => {
       excerpt: "Заявка на тему КП",
     });
 
-  it("запрос и напоминание ведут подписанта на его страницу", () => {
+  it("запрос, напоминание и новая версия ведут подписанта на его страницу", () => {
     expect(notificationRoute(signing("signing_request"))).toBe(
       "/sign/p%201/sr_1",
     );
     expect(notificationRoute(signing("signing_reminder"))).toBe(
       "/sign/p%201/sr_1",
     );
+    expect(notificationRoute(signing("signing_new_version"))).toBe(
+      "/sign/p%201/sr_1",
+    );
+    expect(popoverAction(signing("signing_new_version"))).toEqual({
+      route: "/sign/p%201/sr_1",
+      markRead: true,
+    });
   });
 
-  it("возврат, остановка, завершение и отмена ведут на точку сдачи", () => {
+  it("остановка из-за подмены версии на подписи ведёт к карточке «Подписание»", () => {
+    expect(
+      notificationRoute(
+        note("signing_paused", {
+          project_id: "p 1",
+          ref_id: "sr_1",
+          profile_id: "topic-approval",
+          outcome: "sent_changed",
+        }),
+      ),
+    ).toBe("/projects/p%201/submit/cp/topic-approval#signing-route");
+  });
+
+  it("возврат, остановка, завершение и отмена ведут к карточке на точке сдачи", () => {
     for (const kind of [
       "signing_returned",
       "signing_paused",
@@ -125,7 +145,7 @@ describe("маршрут подписания", () => {
       "signing_cancelled",
     ] as const) {
       expect(notificationRoute(signing(kind))).toBe(
-        "/projects/p%201/submit/cp/topic-approval",
+        "/projects/p%201/submit/cp/topic-approval#signing-route",
       );
     }
   });

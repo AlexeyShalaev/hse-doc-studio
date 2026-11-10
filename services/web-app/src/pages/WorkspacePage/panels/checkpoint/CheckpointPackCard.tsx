@@ -12,10 +12,15 @@ import type { ProjectResponseSchema } from "@entities/project";
 import {
   useCreateSubmission,
   useSubmissionCustomFilePreflight,
+  type PackWarning,
 } from "@entities/submission";
 import { useArchiveFormats, type ArchiveFormatId } from "@entities/system";
 import { useVersionDetail } from "@entities/template-catalog";
 import { CustomFileDecisionsModal } from "@features/custom-document";
+import {
+  PackVersionPreflight,
+  PackVersionWarnings,
+} from "@features/signing-version";
 import type { CustomFilePreflightItemDto } from "@shared/api/types";
 import { Spinner } from "@shared/ui/Spinner";
 import { isMetaValueBlank, pickLocalized, toast } from "@shared/lib";
@@ -109,6 +114,9 @@ export const CheckpointPackCard = ({
   const [customDecisionsItems, setCustomDecisionsItems] = useState<
     CustomFilePreflightItemDto[] | null
   >(null);
+  // Предупреждения последней сборки без пропуска файла (signing-route.md, 12.8): живут до
+  // следующей сборки на этом экране, список сдач их не хранит.
+  const [packWarnings, setPackWarnings] = useState<PackWarning[]>([]);
 
   const formatList = archiveFormats?.formats ?? [];
   const firstAvailableFormat = formatList.find((f) => f.available)?.id ?? "zip";
@@ -152,9 +160,12 @@ export const CheckpointPackCard = ({
         },
       },
       {
-        onSuccess: () => {
+        onSuccess: (record) => {
           setCustomDecisionsItems(null);
-          toast.success(t("pack.submissionCreated"));
+          setPackWarnings(record.warnings);
+          if (record.warnings.length > 0)
+            toast.warning(t("signingVersion:pack.afterTitle"));
+          else toast.success(t("pack.submissionCreated"));
         },
       },
     );
@@ -310,6 +321,13 @@ export const CheckpointPackCard = ({
                 : t("pack.preflightNdaNotRequired")
             }
           />
+          {/* Документ изменён после отправки на подпись: в пакет поедет версия на подписи. */}
+          <PackVersionPreflight
+            project={project}
+            lang={lang}
+            profileId={profileId}
+            author={isTeam ? selectedAuthorSlug : null}
+          />
         </div>
 
         <button
@@ -326,6 +344,11 @@ export const CheckpointPackCard = ({
           )}
           {t("pack.pack")}
         </button>
+        <PackVersionWarnings
+          project={project}
+          lang={lang}
+          warnings={packWarnings}
+        />
       </div>
 
       {customDecisionsItems && (

@@ -11,6 +11,7 @@ import {
 } from "@entities/signing-identity";
 import type { InlineUiState } from "@features/signing-inline";
 import {
+  SIGNING_ROUTE_CONTRACT_EXAMPLES,
   SR_AUTHOR,
   SR_DOC,
   SR_PROJECT_ID,
@@ -204,6 +205,51 @@ const academicTask = (
           ]),
     ],
     ...overrides,
+  });
+
+/** Эталон W7: научрук согласует заново заявление, отзыв без изменений (его ЭП осталась). */
+const newVersionTask = (): SigningTask =>
+  SIGNING_ROUTE_CONTRACT_EXAMPLES.SigningTask?.new_version as SigningTask;
+
+/** Автор на своей странице: своё сделал, рабочая сборка ушла от версии на подписи. */
+const divergedTask = (status: "active" | "completed"): SigningTask =>
+  supervisorTurn({
+    route: {
+      ...supervisorTurn().route,
+      status,
+      ...(status === "completed" ? { phase: null, current_step: null } : {}),
+    },
+    steps: [
+      [person(SR_AUTHOR.name, "author", "done", { at: SENT, me: true })],
+      [
+        person(
+          SR_SUPERVISOR.name,
+          "supervisor",
+          status === "completed" ? "done" : "to_approve",
+          status === "completed" ? { at: APPROVED } : {},
+        ),
+      ],
+    ],
+    me: supervisorMe({
+      participant_id: "srp_author",
+      state: "done",
+      next_action: "done",
+      methods: ["image"],
+      method: "image",
+      image_ready: true,
+    }),
+    docs: [
+      doc({
+        token: null,
+        mine: [slot("author", { status: "signed", reason: null })],
+        others: [
+          other("supervisor", status === "completed" ? "signed" : "pending"),
+        ],
+        sent_at: SENT,
+        changed_since_mine: false,
+        changed: true,
+      }),
+    ],
   });
 
 const route = (patch: Partial<SigningTask["route"]>) => ({
@@ -811,6 +857,28 @@ export const getSigningPageGallery = (): GalleryGroup[] => [
             }),
           ),
         ),
+      ),
+    ],
+  },
+  {
+    id: "signing-version",
+    title: "Подписант: версия на подписи",
+    description:
+      "Раздел 12: подписывают версию от даты отправки; в новой версии действуют только по изменившимся документам; автор видит, что рабочая сборка ушла вперёд.",
+    entries: [
+      entry(
+        "signing_new_version",
+        "Новая версия: заявление изменилось, отзыв без изменений",
+        () => view(ready(newVersionTask())),
+        "Вкладка «Отзыв руководителя»: «Без изменений: вы уже подписали».",
+      ),
+      entry("signing_diverged", "Автор: есть изменения после отправки", () =>
+        view(ready(divergedTask("active"))),
+      ),
+      entry(
+        "signing_diverged_completed",
+        "Автор: все подписали, потом правка",
+        () => view(ready(divergedTask("completed"))),
       ),
     ],
   },

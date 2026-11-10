@@ -374,7 +374,10 @@ async def test__api__create_submission__record_changelog_and_response_shape(
         "size_bytes",
         "archive_format",
         "doc_count",
+        "warnings",
     }
+    # Без версии на подписи предупреждений пакета нет (signing-route.md, 12.8).
+    assert record["warnings"] == []
     assert record["profile_name"] is None
     assert record["size_bytes"] is None
     assert record["archive_format"] == archive_format

@@ -45,6 +45,21 @@ export const PackWarningSchema = z.object({
   doc_id: z.string().nullable().default(null),
   /** Дата версии на подписи у `changed_after_sent`, у остальных null. */
   sent_at: z.string().nullable().default(null),
+  // Сверх контракта W7 (срез R14): имя файла в пакете, готовый текст на языке интерфейса,
+  // версия на подписи той же формы, что `DocPlan.pinned` (по `route_id` интерфейс находит
+  // маршрут для «Отправить новую версию»), и sha256 рабочей сборки.
+  file: z.string().nullable().default(null),
+  message: z.string().default(""),
+  pinned: z
+    .object({
+      sha256: z.string(),
+      pinned_at: z.string(),
+      route_id: z.string(),
+      round: z.number(),
+    })
+    .nullable()
+    .default(null),
+  working_sha256: z.string().nullable().default(null),
 });
 export type PackWarning = z.infer<typeof PackWarningSchema>;
 

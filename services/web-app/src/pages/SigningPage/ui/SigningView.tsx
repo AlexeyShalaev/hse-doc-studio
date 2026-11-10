@@ -11,7 +11,7 @@ import {
   type SigningTaskDoc,
 } from "@entities/signing-route";
 import { SIGNING_INBOX_PATH } from "@features/inbox";
-import { signingStatus } from "../lib/signingState";
+import { newVersionDocs, signingStatus } from "../lib/signingState";
 import type { SigningExtension, SigningSlotContext } from "../model/extension";
 import type { SigningPageState } from "../model/useSigningPage";
 import { MethodSummary } from "./MethodSummary";
@@ -22,6 +22,7 @@ import { SigningActions } from "./SigningActions";
 import { SigningDocs } from "./SigningDocs";
 import { SigningHeader } from "./SigningHeader";
 import { StatusCard } from "./StatusCard";
+import { DivergenceBanner, NewVersionNotice } from "./VersionNotices";
 import "./signing.css";
 
 export type SigningViewProps = {
@@ -174,9 +175,16 @@ export const SigningView = ({
       data-state={status.kind}
     >
       <div className="sgn-page">
-        <SigningHeader task={task} now={now} />
+        {/* В раунде новой версии сообщение автора стоит в плашке «Новая версия». */}
+        <SigningHeader
+          task={task}
+          now={now}
+          hideMessage={newVersionDocs(task) !== null}
+        />
         <RouteProgress task={task} />
         <StatusCard task={task} status={status} />
+        <DivergenceBanner task={task} />
+        <NewVersionNotice task={task} status={status} />
         {note}
         {failure && !returning && (
           <div data-testid="signing-failure" data-code={failure}>

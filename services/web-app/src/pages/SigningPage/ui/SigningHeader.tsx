@@ -9,9 +9,12 @@ import { isOverdue } from "../lib/signingState";
 export const SigningHeader = ({
   task,
   now,
+  hideMessage = false,
 }: {
   task: SigningTask;
   now: number;
+  /** Сообщение показывает плашка «Новая версия» (раздел 12.2). */
+  hideMessage?: boolean;
 }) => {
   const { t, i18n } = useTranslation("signing");
   const { route } = task;
@@ -40,7 +43,7 @@ export const SigningHeader = ({
           </span>
         )}
       </p>
-      {route.message && (
+      {route.message && !hideMessage && (
         <blockquote
           className="sgn-message"
           aria-label={t("head.message")}
