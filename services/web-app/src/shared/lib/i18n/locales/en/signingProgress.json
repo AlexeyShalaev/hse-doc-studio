@@ -11,7 +11,7 @@
   "overdue": "Overdue since {{date}}",
   "paused": {
     "rebuilt": "The document changed after approval: the route is stopped.",
-    "sent_changed": "The version out for signing changed outside the route or could not be restored: the route is stopped.",
+    "sent_changed": "The version out for signing changed outside the route: the route is stopped.",
     "marks_changed": "Signatures on the pages changed: the route is stopped.",
     "frozen_changed": "The frozen PDF changed: the route is stopped.",
     "participant_left": "A participant left the project: assign someone else and send again.",
@@ -81,10 +81,12 @@
     "rate_limited": "Too often. Try again in {{minutes}} min.",
     "network": "The server is unreachable. Check your connection.",
     "generic": "Something went wrong. Try again.",
-    "link_by_mail": "The invitation link is sent by email. Press “Remind” to send it again."
+    "link_by_mail": "The invitation link is sent by email. Press “Remind” to send it again.",
+    "nothing_changed": "Nothing changed since sending: there is nothing to send."
   },
   "hold": {
     "banner": "This document is out for signing (step {{step}} of {{total}}). Editing and rebuilding will stop the route.",
+    "bannerVersion": "This document is out for signing (step {{step}} of {{total}}). Signers sign the version from {{date}}; your edits do not go into it.",
     "signatures": "Signatures cannot be changed while the route is running.",
     "open": "Signing progress",
     "locked": "This document is out for signing: signatures cannot be changed. To change them, cancel the route on the checkpoint page."
@@ -133,5 +135,30 @@
       "waiting": "{{who}} approves in turn (step {{step}} of {{total}}).",
       "approved": "{{who}} has approved: the e-signature is requested after the PDF is frozen."
     }
+  },
+  "version": {
+    "line": "Version for signing from {{date}}",
+    "none": "No version for signing",
+    "changedTag": "changed since sending",
+    "open": "Open the version for signing",
+    "openDoc": "Open the version for signing: {{doc}}",
+    "changed": "There are changes since it was sent for signing. Signers sign the version from {{date}}.",
+    "changedNoDate": "There are changes since it was sent for signing.",
+    "completed": "Everyone signed the version from {{date}}.",
+    "changedAfterSigned": "There are changes since it was signed.",
+    "lost": "The version sent for signing cannot be restored: send a new version."
+  },
+  "newVersion": {
+    "action": "Send new version",
+    "title": "Send a new version?",
+    "changed": "Changed: {{docs}}.",
+    "reapprove": "Approve again: {{people}}.",
+    "kept_one": "Unchanged: {{docs}}, its signatures stay.",
+    "kept_other": "Unchanged: {{docs}}, their signatures stay.",
+    "note": "What changed",
+    "notePlaceholder": "For example: the topic wording is fixed",
+    "noteHint": "Optional. Signers get it together with the request.",
+    "keep": "Don't send",
+    "sent": "New version sent"
   }
 }
