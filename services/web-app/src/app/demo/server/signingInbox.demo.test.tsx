@@ -7,13 +7,15 @@ import { afterEach, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { i18n } from "@shared/lib";
 import { InboxPanel } from "@features/inbox";
 import { inboxApi } from "@entities/invitation";
+import { signatureApi } from "@entities/signature";
 import { signingRouteApi } from "@entities/signing-route";
 import { installServerDemo } from "../index";
 import { activateServerScenario, enableServerDemo } from "./index";
 import { getServerWorld } from "./routes";
 
 // «На подпись» поверх демо-транспорта (срез W6): автор отправляет маршрут, научрук видит задачу
-// во «Входящих» и счётчике колокольчика.
+// во «Входящих» и счётчике колокольчика. Студента демо уже просят подписать в двух чужих
+// проектах (`seedSigningTasks`), а место подписи научрука на его точке ещё не включено.
 
 const OWN = "p_01hxa1c4de";
 const PROFILE = "topic-approval";
@@ -45,7 +47,16 @@ const mountInbox = (path: string) =>
 /** Автор (студент сценария) отправляет черновик точки; возвращает id маршрута. */
 const sendAsAuthor = async (): Promise<string> => {
   const route = await signingRouteApi.create(OWN, PROFILE);
+  // Без места на странице подпись научрука мешает отправке: автор ставит её на страницу.
+  const blocked = await signingRouteApi.preview(OWN, route.id);
+  expect(blocked.blockers.map((b) => [b.code, b.slot_id])).toEqual([
+    ["placement_off", "supervisor"],
+  ]);
+  await signatureApi.updatePlacement(OWN, "topic_application", "supervisor", {
+    enabled: true,
+  });
   const preview = await signingRouteApi.preview(OWN, route.id);
+  expect(preview.blockers).toEqual([]);
   const expected = Object.fromEntries(
     preview.docs.map((d) => [d.doc_id, d.token ?? ""]),
   );
@@ -74,10 +85,10 @@ beforeEach(async () => {
 afterEach(cleanup);
 
 describe("демо «Входящие»: на подпись", () => {
-  it("сводка считает задачи подписанта, у автора их нет", async () => {
-    expect((await inboxApi.summary()).signing_tasks).toBe(0);
+  it("сводка считает задачи подписанта; свой отправленный маршрут автору задач не добавляет", async () => {
+    expect((await inboxApi.summary()).signing_tasks).toBe(2);
     await sendAsAuthor();
-    expect((await inboxApi.summary()).signing_tasks).toBe(0);
+    expect((await inboxApi.summary()).signing_tasks).toBe(2);
     signInAsSupervisor();
     expect((await inboxApi.summary()).signing_tasks).toBe(1);
   });
@@ -107,9 +118,13 @@ describe("демо «Входящие»: на подпись", () => {
     mountInbox("/inbox");
     await user.click(screen.getByTestId("inbox-tab-signing"));
     expect(screen.getByTestId("where")).toHaveTextContent("/inbox?tab=signing");
-    expect(
-      await screen.findByTestId("inbox-signing-empty"),
-    ).toBeInTheDocument();
+    // Две задачи студента из чужих проектов: просроченная первой.
+    const tasks = await screen.findAllByTestId(/^inbox-signing-task-/);
+    expect(tasks.map((task) => task.getAttribute("data-overdue"))).toEqual([
+      "true",
+      "false",
+    ]);
+    expect(tasks[0]).toHaveTextContent("Анализ нагрузки на очередь задач");
     await user.click(screen.getByTestId("inbox-tab-all"));
     expect(screen.getByTestId("where").textContent).toBe("/inbox");
   });

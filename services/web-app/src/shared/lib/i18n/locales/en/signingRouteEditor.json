@@ -80,8 +80,12 @@
     "actionsOne": "1 action",
     "actionsTwo": "2 actions: approve, then sign the final PDF",
     "invite": "Invite",
-    "pickInvitation": "From invitations",
-    "registrationClosed": "Registration is closed: you can only invite people who already have an account."
+    "registrationClosed": "Registration is closed: you can only invite people who already have an account.",
+    "invitee": "Invitee",
+    "unnamed": "No name",
+    "optionInvited": "{{name}} (invited)",
+    "pick": "Who signs: {{persona}}",
+    "pickPlaceholder": "Choose a person"
   },
   "placements": {
     "title": "Where the signatures go",
@@ -110,7 +114,12 @@
     "plateMissing": "Set a key or certificate for the e-signature plate: you cannot send without it.",
     "key": "Key: {{label}} ({{signer}})",
     "noKey": "No Studio key: sign later on your page or create a key.",
-    "keySettings": "Signing settings"
+    "keySettings": "Signing settings",
+    "sentUnsigned": "The route is sent, but your signature is not in place. Sign on your page.",
+    "yourTurn": "The route is sent, and it is your turn now.",
+    "signFailed": "Signing with the key failed: {{reason}}",
+    "goSign": "Sign",
+    "goApprove": "Approve"
   },
   "send": {
     "title": "Sending",
@@ -138,7 +147,9 @@
     "slot_unassigned": "{{slot}} ({{doc}}): no one to sign",
     "sender_not_ready": "Your signature is not ready",
     "no_participants": "The route has no people",
-    "unknown": "Blocked: {{code}}"
+    "unknown": "Blocked: {{code}}",
+    "placement_off": "{{slot}} ({{doc}}): the signature is not placed on the page",
+    "toPlacement": "Go to placement"
   },
   "error": {
     "save": "Route not saved",

@@ -238,12 +238,22 @@ export const PdfStampEditor = ({
           fontSize: "0.71875rem",
         }}
       >
-        <span className="mono dim" style={{ fontSize: "0.625rem" }}>
+        {/* Путь уступает место листанию: в узкой колонке он обрезается, а не ломается по буквам. */}
+        <span
+          className="mono dim truncate"
+          style={{ fontSize: "0.625rem", flex: "1 1 0", minWidth: 0 }}
+          title={pdfRelPath}
+        >
           {pdfRelPath}
         </span>
         <div
           className="flex items-center"
-          style={{ gap: "0.375rem", marginLeft: "auto" }}
+          style={{
+            gap: "0.375rem",
+            marginLeft: "auto",
+            flexShrink: 0,
+            whiteSpace: "nowrap",
+          }}
         >
           <button
             type="button"
@@ -258,7 +268,7 @@ export const PdfStampEditor = ({
           </button>
           <div
             className="flex items-center"
-            style={{ gap: "0.25rem", fontSize: "0.6875rem" }}
+            style={{ gap: "0.25rem", fontSize: "0.6875rem", flexShrink: 0 }}
           >
             <span className="dim">{t("pdfEditor.pageShort")}</span>
             <input

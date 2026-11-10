@@ -7,6 +7,7 @@ import type {
   SendSigningRouteRequest,
   SetSigningTaskPlateRequest,
   SignSigningTaskRequest,
+  SigningLink,
   SigningReminder,
   SigningRoute,
   SigningRouteList,
@@ -500,6 +501,18 @@ export const SIGNING_ROUTE_CONTRACT_EXAMPLES: Record<
       delivery: "manual",
       link: "https://studio.example.org/project-invite/hspi_x",
     } satisfies SigningReminder,
+  },
+  SigningLink: {
+    page: {
+      participant_id: "srp_supervisor",
+      kind: "page",
+      link: "https://studio.example.org/sign/p_01hxa1c4de/sr_01hy2b7k9q",
+    } satisfies SigningLink,
+    invitation: {
+      participant_id: "srp_academic",
+      kind: "invitation",
+      link: "https://studio.example.org/project-invite/hspi_x?next=%2Fsign%2Fp_01hxa1c4de%2Fsr_01hy2b7k9q",
+    } satisfies SigningLink,
   },
   SigningTask: {
     approve_sign: makeSigningTask(),

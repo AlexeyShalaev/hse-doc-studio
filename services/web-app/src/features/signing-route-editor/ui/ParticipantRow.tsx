@@ -1,8 +1,8 @@
 import { useTranslation } from "react-i18next";
 import { GripVertical, MailPlus } from "lucide-react";
-import type { ProjectInvitation } from "@entities/invitation";
 import type {
   RouteParticipant,
+  RoutePersonOption,
   SigningRoutePreview,
 } from "@entities/signing-route";
 import { ActionMenu, type ActionMenuItem } from "@shared/ui";
@@ -17,18 +17,21 @@ export type ParticipantRowProps = {
   isMe: boolean;
   editable: boolean;
   busy: boolean;
-  /** Ожидающие приглашения с той же персоной: человека можно взять из них. */
-  invitations: readonly ProjectInvitation[];
+  /**
+   * Из кого выбрать человека на эту персону: участники проекта с ней и ожидающие приглашения
+   * (`candidates` хода маршрута), без тех, кто уже стоит в маршруте на этой персоне.
+   */
+  options: readonly RoutePersonOption[];
   registrationClosed: boolean;
   menu: readonly ActionMenuItem[];
   onDragStart: () => void;
   onDragEnd: () => void;
   onInvite: () => void;
-  onPickInvitation: (invitationId: string) => void;
+  onPick: (option: RoutePersonOption) => void;
 };
 
-const invitee = (inv: ProjectInvitation): string =>
-  inv.invitee.name ?? inv.invitee.email_hint ?? inv.id;
+const optionValue = (option: RoutePersonOption): string =>
+  `${option.kind}:${option.id}`;
 
 /** Человек в шаге: кто он, есть ли в проекте, чем подпишет, готов ли и сколько у него действий. */
 export const ParticipantRow = ({
@@ -38,16 +41,32 @@ export const ParticipantRow = ({
   isMe,
   editable,
   busy,
-  invitations,
+  options,
   registrationClosed,
   menu,
   onDragStart,
   onDragEnd,
   onInvite,
-  onPickInvitation,
+  onPick,
 }: ParticipantRowProps) => {
   const { t } = useTranslation("signingRouteEditor");
   const membership = preview?.membership ?? p.membership;
+  const current =
+    p.user_id !== null
+      ? `member:${p.user_id}`
+      : p.invitation_id !== null
+        ? `invitation:${p.invitation_id}`
+        : "";
+  // Выбор нужен, когда людей на персону несколько или человека ещё нет, а взять есть из кого.
+  const canPick =
+    editable &&
+    (membership === "missing" ? options.length > 0 : options.length > 1);
+  const optionLabel = (option: RoutePersonOption): string => {
+    const name = option.name ?? t("person.unnamed");
+    return option.kind === "invitation"
+      ? t("person.optionInvited", { name })
+      : name;
+  };
   const method = preview?.method ?? p.method;
   const actions = preview?.actions;
 
@@ -114,12 +133,16 @@ export const ParticipantRow = ({
           className="flex items-center"
           style={{ gap: "0.375rem", flexWrap: "wrap" }}
         >
-          <strong style={{ fontSize: "0.8125rem" }}>
-            {p.name ?? (
-              <span style={{ color: "var(--c-warn)" }}>
-                {t("person.nobody")}
-              </span>
-            )}
+          <strong style={{ fontSize: "0.8125rem", overflowWrap: "anywhere" }}>
+            {p.name ??
+              (membership === "invited" ? (
+                // Приглашение без имени и адреса: человек назначен, просто ещё не принял.
+                t("person.invitee")
+              ) : (
+                <span style={{ color: "var(--c-warn)" }}>
+                  {t("person.nobody")}
+                </span>
+              ))}
             {isMe && <span className="dim"> ({t("person.you")})</span>}
           </strong>
           <span className="dim" style={{ fontSize: "0.71875rem" }}>
@@ -153,45 +176,57 @@ export const ParticipantRow = ({
             </span>
           )}
         </div>
-        {editable && membership === "missing" && (
+        {(canPick || (editable && membership === "missing")) && (
           <div
             className="flex items-center"
             style={{ gap: "0.5rem", flexWrap: "wrap", marginTop: "0.125rem" }}
           >
-            <button
-              type="button"
-              className="btn xs primary"
-              disabled={busy}
-              onClick={onInvite}
-              data-testid="route-invite"
-            >
-              <MailPlus size="0.6875rem" aria-hidden="true" />
-              {t("person.invite")}
-            </button>
-            {invitations.length > 0 && (
+            {canPick && (
               <select
                 className="input"
                 style={{
                   width: "auto",
+                  maxWidth: "100%",
+                  minWidth: 0,
                   fontSize: "0.6875rem",
                   padding: "0.125rem 0.375rem",
                 }}
-                aria-label={t("person.pickInvitation")}
-                value=""
+                aria-label={t("person.pick", { persona: personaLabel })}
+                value={
+                  options.some((o) => optionValue(o) === current) ? current : ""
+                }
                 disabled={busy}
                 onChange={(e) => {
-                  if (e.target.value !== "") onPickInvitation(e.target.value);
+                  const picked = options.find(
+                    (o) => optionValue(o) === e.target.value,
+                  );
+                  if (picked && e.target.value !== current) onPick(picked);
                 }}
+                data-testid={`route-pick-${p.persona}`}
               >
-                <option value="">{t("person.pickInvitation")}</option>
-                {invitations.map((inv) => (
-                  <option key={inv.id} value={inv.id}>
-                    {invitee(inv)}
+                {!options.some((o) => optionValue(o) === current) && (
+                  <option value="">{t("person.pickPlaceholder")}</option>
+                )}
+                {options.map((option) => (
+                  <option key={optionValue(option)} value={optionValue(option)}>
+                    {optionLabel(option)}
                   </option>
                 ))}
               </select>
             )}
-            {registrationClosed && (
+            {membership === "missing" && (
+              <button
+                type="button"
+                className="btn xs primary"
+                disabled={busy}
+                onClick={onInvite}
+                data-testid="route-invite"
+              >
+                <MailPlus size="0.6875rem" aria-hidden="true" />
+                {t("person.invite")}
+              </button>
+            )}
+            {membership === "missing" && registrationClosed && (
               <span className="dim" style={{ fontSize: "0.65625rem" }}>
                 {t("person.registrationClosed")}
               </span>

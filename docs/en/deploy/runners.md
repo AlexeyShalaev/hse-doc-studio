@@ -312,7 +312,7 @@ A shared runner located outside the server network (another VM) counts as intern
 
 ## Connected Studios and presence
 
-Once a minute a local Studio sends the server a presence signal over its device-code sign-in: the computer name, the version, what it is doing, the runner and model state, and the sync of cloud projects. The server keeps the fresh time in memory and writes a database row when the state changed or once every two minutes; "online" means a signal not older than three minutes. A device is forgotten after 60 days of silence and a person has at most 20 devices. The intervals are `HSE_STUDIO__DEVICES__INTERVAL_S`, `ONLINE_WINDOW_S`, `PERSIST_INTERVAL_S` and `RETENTION_DAYS` ([reference](env-reference.md)). A person sees their own devices in full, other project members only "working locally", and an instance administrator sees as much as any person. Decisions: `docs/design/connected-devices.md`.
+Once a minute a local Studio sends the server a presence signal over its device-code sign-in: the computer name, the version, what it is doing, the runner and model state, and the sync of cloud projects. The server keeps the fresh time in memory and writes a database row when the state changed or once every two minutes; "online" means a signal not older than three minutes. A device is forgotten after 60 days of silence and a person has at most 20 devices. The intervals are `HSE_STUDIO__DEVICES__INTERVAL_S`, `ONLINE_WINDOW_S`, `PERSIST_INTERVAL_S` and `RETENTION_DAYS` ([reference](https://github.com/AlexeyShalaev/hse-doc-studio/blob/master/docs/ru/deploy/env-reference.md)). A person sees their own devices in full, other project members only "working locally", and an instance administrator sees as much as any person. Decisions: `docs/design/connected-devices.md`.
 
 ## Build executors
 
@@ -339,6 +339,19 @@ The `kubernetes` executor needs no `docker.sock`, no `hostPath` and no privilege
 | `HSE_RUNNER__POD__NAMESPACE`, `…NAME`, `…SERVICE_ACCOUNT`, `…CPU_REQUEST_M`, `…CPU_LIMIT_M`, `…MEMORY_REQUEST_MI`, `…MEMORY_LIMIT_MI`, `…EPHEMERAL_REQUEST_MI`, `…EPHEMERAL_LIMIT_MI` | the runner's own pod from the downward API (millicores and MiB); the runner only reports this to the admin area, it does not change how it works. The chart and the install from the admin area set them ([what the admin area shows](runner-isolation.md)) |
 
 In the Helm chart this is `runner.executor: kubernetes` and the `runner.kubernetes` block (see the chart README): the chart creates the runner ServiceAccount, a Role limited to pods in its namespace (`pods`, `pods/log`, `pods/exec`), a NetworkPolicy that denies build pods any network, and the runner data volume. A build failing with `image_missing` means the node could not pull the TeX image; `build_backend_unavailable` means Kubernetes refused the pod (permissions, quota, no suitable node), details are in the job log. Limits, network policies, quota and how to verify them: [Runner isolation and limits](runner-isolation.md). Design and trade-offs: `docs/design/k8s-runner.md`.
+
+## Fonts for builds
+
+The GOST templates ask for Times New Roman, Arial and Consolas. The TeX Live image does not contain them, and the Studio ships them neither in images nor in the repository (the Microsoft licence). Without them, templates with `\IfFontExistsTF` take a free substitute and build, while a template with a plain `\setmainfont{Arial}` fails with the `font_missing` code and the font name in the details. Lines like `kpathsea: Running mktextfm Arial` in the log are not an error by themselves: this is how XeTeX looks a font up by name.
+
+To let builds on a runner see your fonts, put the licensed files into a folder and attach it:
+
+| Executor | How |
+|---|---|
+| `docker` | `HSE_RUNNER__FONTS_DIR` points to the folder (with `.ttf`, `.otf`, `.ttc` files); the runner mounts it read-only into the build container at `HSE_RUNNER__FONTS_MOUNT_TARGET` (`/usr/local/share/fonts/hse` by default), where fontconfig sees it. If the runner itself runs in a container with the host `docker.sock`, the folder must be on the host: `HSE_RUNNER__FONTS_HOST_DIR` sets the host path (without it the path is translated the same way as the projects folder). An empty folder or an unset variable mounts nothing |
+| `kubernetes` | `HSE_RUNNER__K8S__FONTS_CLAIM` names a PVC with fonts in the build pods namespace; it is mounted into the pods read-only (`HSE_RUNNER__K8S__FONTS_MOUNT_TARGET`) |
+
+Another way: build your own TeX Live image with the fonts (`FROM texlive/texlive`, `COPY fonts/ /usr/local/share/fonts/hse/`, `RUN fc-cache -f`) and set it in `HSE_RUNNER__TEX_IMAGE`. A personal runner (a local Studio) needs no setup: it takes the fonts from “Settings, Fonts” of your Studio, see [Fonts in cloud builds](../workbench/compile.md#fonts-in-cloud-builds).
 
 ## Scaling
 

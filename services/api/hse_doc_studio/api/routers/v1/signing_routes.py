@@ -1,5 +1,5 @@
 """Маршрут подписания глазами автора (docs/design/signing-route.md, раздел 8): черновик, правка, ход, предпросмотр,
-отправка, отмена, снятие с контроля, «Напомнить».
+отправка, отмена, снятие с контроля, «Напомнить», «Скопировать ссылку».
 
 Только сервер: локальная Студия отвечает 404 (раздел 6.9). Права по таблице `ROUTE_ACTIONS`: чтение `OUTPUT_READ`,
 управление `SUBMISSION_CREATE`. Гостю и ссылочному праву ход маршрута не раскрывается (404, раздел 7).
@@ -32,6 +32,7 @@ from hse_doc_studio.use_cases.signing_route.author import (
     RouteSummary,
     RouteUpdate,
     SendRequest,
+    SentUnsignedError,
     SigningRouteControl,
     SigningRouteDrafts,
     SigningRouteSending,
@@ -354,6 +355,9 @@ async def send_signing_route(
     """Отправить или отправить заново; `sign` для «Отправить и подписать»."""
     try:
         details = await uc.send(people_views.require_user(), project_id, route_id, _send(body))
+    except SentUnsignedError as exc:
+        # Маршрут уже отправлен: клиент отличает это от отказа, после которого ничего не отправлено.
+        raise SigningKeyError(400, "sign_failed", str(exc), extra={"sent": True}) from exc
     except (RouteInputError, RouteConflictError, NotFoundError):
         raise
     except (ValueError, PermissionError, ProjectForbiddenError) as exc:
@@ -392,3 +396,25 @@ async def remind_signing_participant(
     return s.SigningReminder(
         participant_id=str(reminder.participant_id), delivery=reminder.delivery, link=reminder.link
     )
+
+
+@router.post(_BASE + "/{route_id}/participants/{participant_id}/link", response_model=s.SigningLink)
+async def signing_participant_link(
+    project_id: UUID,
+    route_id: UUID,
+    participant_id: str,
+    response: Response,
+    uc: FromDishka[SigningRouteReminding],
+    body: s.EmptyRequest | None = None,
+) -> s.SigningLink:
+    """Ссылка, которую автор сам перешлёт подписанту: его страница подписи или новая ссылка приглашения.
+
+    POST, а не GET: у приглашённого по почте секрет ссылки хранится хэшем, поэтому выдаётся новый.
+    """
+    try:
+        participant = UUID(participant_id)
+    except ValueError:
+        raise _not_found() from None
+    response.headers["Cache-Control"] = "no-store"
+    link = await uc.link(people_views.require_user(), project_id, route_id, participant)
+    return s.SigningLink(participant_id=str(link.participant_id), kind=link.kind, link=link.link)

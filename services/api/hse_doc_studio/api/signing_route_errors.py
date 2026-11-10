@@ -5,7 +5,8 @@
   `doc_changed` и `doc_on_route` несут `docs`, `route_blocked` несёт `blockers`;
 - `SigningKeyError` отказ подписи ключом Студии («Отправить и подписать», «Согласовать и подписать», «Подписать»,
   плашка из ключа): 400 (`passphrase_required`, `passphrase_invalid`, `sign_failed`), 409 (`key_not_found`) или 403
-  (`server_keys_forbidden`, `forbidden` за чужой слот или другого подписанта на плашке).
+  (`server_keys_forbidden`, `forbidden` за чужой слот или другого подписанта на плашке). У `sign_failed` отправки
+  поле `sent: true`: маршрут отправлен, не поставлена только подпись отправителя.
 """
 
 from __future__ import annotations
@@ -23,10 +24,12 @@ from hse_doc_studio.core.signing_route.repositories import DocumentOnRouteError
 class SigningKeyError(Exception):
     """Подпись ключом Студии не удалась: код и статус для ответа, текст уже на языке интерфейса."""
 
-    def __init__(self, status: int, code: str, message: str) -> None:
+    def __init__(self, status: int, code: str, message: str, *, extra: dict[str, Any] | None = None) -> None:
         super().__init__(message)
         self.status = status
         self.code = code
+        # Поля ответа рядом с `code` (например, `sent` у отказа подписи после отправки).
+        self.extra = dict(extra or {})
 
 
 def blocker_body(blocker: Blocker) -> dict[str, Any]:
@@ -57,7 +60,7 @@ async def _conflict_handler(_request: Request, exc: Exception) -> JSONResponse:
 
 async def _key_handler(_request: Request, exc: Exception) -> JSONResponse:
     assert isinstance(exc, SigningKeyError)  # noqa: S101 — обработчик зарегистрирован только на этот тип
-    return JSONResponse(status_code=exc.status, content={"detail": str(exc), "code": exc.code})
+    return JSONResponse(status_code=exc.status, content={"detail": str(exc), "code": exc.code, **exc.extra})
 
 
 def install_signing_route_error_handlers(app: FastAPI) -> None:

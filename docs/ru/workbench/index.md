@@ -49,4 +49,4 @@ tags:
 
 ## Куда дальше
 
-[Документы](documents.md) · [Сборка и лог](compile.md) · [Замечания](checks.md) · [Сдача и упаковка](submit.md) · [Git-синхронизация](git-sync.md) · [Превью PDF](preview.md) · [Визуальный редактор](editor-visual.md) · [ИИ-агент](agent.md)
+[Документы](documents.md) · [Сборка и лог](compile.md) · [Замечания](checks.md) · [Сдача и упаковка](submit.md) · [Отправить на подписание](send-for-signing.md) · [Как подписать](how-to-sign.md) · [Git-синхронизация](git-sync.md) · [Превью PDF](preview.md) · [Визуальный редактор](editor-visual.md) · [ИИ-агент](agent.md)
