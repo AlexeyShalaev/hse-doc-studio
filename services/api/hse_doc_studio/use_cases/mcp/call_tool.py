@@ -32,7 +32,8 @@ from hse_doc_studio.core.quotas.errors import QuotaExceededError
 from hse_doc_studio.core.rate_limit import MCP_CALL, IRateLimiter, RateRule
 from hse_doc_studio.core.shutdown import ServerRestartingError
 from hse_doc_studio.core.signatures.errors import StampingError
-from hse_doc_studio.use_cases.mcp.catalog import McpCatalog, McpToolEntry
+from hse_doc_studio.use_cases.mcp.catalog import McpCatalog, McpToolEntry, Touch
+from hse_doc_studio.use_cases.mcp.signing_note import EditTarget, SigningNotes, with_note
 from hse_doc_studio.use_cases.mcp.tools._base import ArgumentError
 from hse_doc_studio.use_cases.projects.get_project_access import GetProjectAccessInput, GetProjectAccessUC
 
@@ -71,12 +72,14 @@ class CallMcpToolUC:
         journal: IMcpCallJournal,
         access: IProjectAccessChecker,
         project_access: GetProjectAccessUC,
+        notes: SigningNotes | None = None,
     ) -> None:
         self._catalog = catalog
         self._settings = settings
         self._journal = journal
         self._access = access
         self._project_access = project_access
+        self._notes = notes
 
     async def execute(
         self,
@@ -96,6 +99,8 @@ class CallMcpToolUC:
             await self._authorize(entry, project_id, args)
             await self._rate(actor, entry, limiter)
             result = await self._run(entry, project_id, dict(args))
+            if not result.is_error and project_id is not None:
+                result = await self._signing_note(entry, project_id, args, result)
             outcome = McpCallResult(result=result, error_code=McpErrorCode.failed if result.is_error else None)
         except McpError as exc:
             outcome = McpCallResult(ToolResult.error(str(exc)), exc.code, exc.retry_after_s)
@@ -176,6 +181,23 @@ class CallMcpToolUC:
         except Exception as exc:  # noqa: BLE001 — любой отказ сценария становится ответом тула, не 500
             raise map_tool_error(exc) from exc
 
+    async def _signing_note(
+        self, entry: McpToolEntry, project_id: UUID, args: Mapping[str, object], result: ToolResult
+    ) -> ToolResult:
+        """Правка или сборка документа на подписании: пометка `signing_note` в ответе (signing-route.md, 12.10).
+
+        Пометка только сообщает: правка уже сделана, поэтому сбой её расчёта ответ тула не портит."""
+        touches = entry.rule.touches
+        if self._notes is None or touches is None:
+            return result
+        target = _edit_target(touches, entry.rule.path_args, args)
+        try:
+            note = await self._notes.note(project_id, target)
+        except Exception:
+            logger.warning("mcp_signing_note_failed", tool=entry.rule.name, exc_info=True)
+            return result
+        return with_note(result, note) if note is not None else result
+
     async def _record(  # noqa: PLR0913 — поля записи журнала
         self,
         actor: Actor,
@@ -209,6 +231,16 @@ class CallMcpToolUC:
             await self._journal.record(record)
         except Exception:
             logger.exception("mcp_journal_failed", tool=name)
+
+
+def _edit_target(touches: Touch, path_args: tuple[str, ...], args: Mapping[str, object]) -> EditTarget:
+    if touches is Touch.project:
+        return EditTarget(project=True)
+    if touches is Touch.doc:
+        doc_id = str(args.get("doc_id") or "").strip()
+        return EditTarget(doc_ids=(doc_id,) if doc_id else ())
+    paths = tuple(path for key in path_args if (path := str(args.get(key) or "").strip()))
+    return EditTarget(paths=paths)
 
 
 def map_tool_error(exc: Exception) -> McpError:  # noqa: C901, PLR0911 — таблица соответствий
