@@ -76,9 +76,12 @@ class PdfStamper:
         for s in stamps:
             by_page[s.page].append(s)
 
-        for i, page in enumerate(reader.pages):
+        for i, source_page in enumerate(reader.pages):
             page_num = i + 1
             page_stamps = by_page.get(page_num, [])
+            # Merge into the writer's own copy of the page: pypdf 7 refuses to
+            # rewrite the content stream of a page that has no writer.
+            page = writer.add_page(source_page)
             if page_stamps:
                 page_width_pt = float(page.mediabox.width)
                 page_height_pt = float(page.mediabox.height)
@@ -96,7 +99,6 @@ class PdfStamper:
                         page=page_num,
                         exc=str(exc),
                     )
-            writer.add_page(page)
 
         # Pages requested by stamps but missing from the PDF: log and skip
         # rather than crash. The user's pdf may be shorter than they expect
