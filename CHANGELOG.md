@@ -6,6 +6,16 @@ Generated from `release-notes.json` via `make changelog` — do not edit by hand
 Release notes are hand-written and bilingual (RU/EN); the app shows them in the
 selected interface language.
 
+## [0.20.0](https://github.com/AlexeyShalaev/hse-doc-studio/compare/v0.19.0...v0.20.0) - 2026-11-10
+
+- The signing route explains what it is waiting for. “Sign the set”, the “Signing” card and the signing page say who approves now, who has not accepted the invitation yet and when the Studio will ask for your e-signature. People who have not accepted get a “Copy link” button.
+- The “Waiting for your signature” counters no longer count signatures that are on a signing route and agree with each other. The card shows names from the project card instead of masked emails and counts required and optional signatures separately. A document on a route no longer shows a false “Signatures are invalid” warning or freeze buttons.
+- A build is no longer marked outdated after signature actions or after building another document: freshness depends only on sources and title data.
+- If a signature image or plate cannot be placed, freezing, “With signatures”, packages and routes stop with a clear error and no PDF without the mark is created. Stamping works with pypdf 7.
+- Gender-neutral Russian texts in notifications, emails and the interface; “checkpoint” is used consistently.
+- The PDF toolbar fits on phones: paging and zoom stay visible, the rest is in the “⋯” menu, search opens as its own row.
+- Docs: screenshots for “Send for signing” and “How to sign”, in-app help articles for the route screens. Dependencies updated.
+
 ## [0.19.0](https://github.com/AlexeyShalaev/hse-doc-studio/compare/v0.18.0...v0.19.0) - 2026-11-10
 
 - Signing route “Send for signing”. The author prepares a route on a checkpoint: who signs, in which order, where the signatures go on the pages, a deadline and a message. Signers get the request in the Inbox (and by email if the server has mail set up) and sign on their own page with an image (draw, upload or use a saved one) or an e-signature (a Studio key, CryptoPro in the browser, or a ready signature file). A key can be created or imported right there.
