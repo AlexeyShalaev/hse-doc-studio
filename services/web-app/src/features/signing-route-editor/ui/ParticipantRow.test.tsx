@@ -65,7 +65,11 @@ describe("человек шага: выбор из кандидатов", () => 
       within(pick)
         .getAllByRole("option")
         .map((option) => option.textContent),
-    ).toEqual(["Выбрать человека", "Петров П. П.", "k***@hse.ru (приглашение отправлено)"]);
+    ).toEqual([
+      "Выбрать человека",
+      "Петров П. П.",
+      "k***@hse.ru (приглашение отправлено)",
+    ]);
     const user = userEvent.setup();
     await user.selectOptions(pick, "invitation:inv_1");
     expect(onPick).toHaveBeenCalledWith(INVITED);

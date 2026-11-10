@@ -422,7 +422,9 @@ describe("Подписание: эталонные состояния", () => {
     expect(await status()).toHaveTextContent(
       "Очередь: k***@hse.ru (академический руководитель)",
     );
-    expect(await person(invited.id)).toHaveTextContent("приглашение не принято");
+    expect(await person(invited.id)).toHaveTextContent(
+      "приглашение не принято",
+    );
     expect(screen.getByTestId(`signing-remind-${invited.id}`)).toBeEnabled();
     await u.click(screen.getByTestId(`signing-copy-${invited.id}`));
     await waitFor(async () => {
