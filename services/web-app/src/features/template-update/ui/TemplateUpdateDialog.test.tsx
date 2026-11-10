@@ -153,13 +153,9 @@ describe("TemplateUpdateDialog (list rendering)", () => {
     renderDialog();
     const badge = screen.getByText("1 · конфликты");
     expect(badge).toHaveClass("badge");
-    expect(badge).toHaveStyle({ color: "var(--c-err)" });
-    expect(screen.getByText("2 · обновятся")).toHaveStyle({
-      color: "var(--fg-2)",
-    });
-    expect(screen.getByText("1 · новые")).toHaveStyle({
-      color: "var(--c-ok)",
-    });
+    expect(badge.style.color).toBe("var(--c-err)");
+    expect(screen.getByText("2 · обновятся").style.color).toBe("var(--fg-2)");
+    expect(screen.getByText("1 · новые").style.color).toBe("var(--c-ok)");
   });
 
   it("offers a resolution select only for conflicts, defaulting to mine", () => {
