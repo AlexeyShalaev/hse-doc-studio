@@ -29,6 +29,8 @@ export type ActionMenuProps = {
   label: string;
   testId?: string | undefined;
   align?: "start" | "end" | undefined;
+  /** Куда вернуть фокус после закрытия: preventDefault оставляет его там, куда увёл пункт. */
+  onCloseAutoFocus?: ((event: Event) => void) | undefined;
 };
 
 export const ActionMenu = ({
@@ -36,6 +38,7 @@ export const ActionMenu = ({
   label,
   testId,
   align = "end",
+  onCloseAutoFocus,
 }: ActionMenuProps) => {
   // Телефон: длинное меню - шторка снизу с крупными строками (index.css, .adm-menu).
   const isSheet = useIsPhoneWidth();
@@ -94,6 +97,7 @@ export const ActionMenu = ({
           align={align}
           sideOffset={4}
           collisionPadding={8}
+          onCloseAutoFocus={onCloseAutoFocus}
           style={{ zIndex: ACTION_MENU_LAYER }}
         >
           {safe.map(render)}

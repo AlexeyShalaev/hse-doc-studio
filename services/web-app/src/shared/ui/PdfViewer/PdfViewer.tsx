@@ -185,6 +185,7 @@ export const PdfViewer = ({
   const phone = useIsPhoneWidth();
   const [searchOpen, setSearchOpen] = useState(false);
   const focusSearchRef = useRef(false);
+  const searchFromMenuRef = useRef(false);
   const showSearch = !phone || searchOpen;
 
   // Floating action bar shown above a non-empty text selection in the PDF.
@@ -554,18 +555,20 @@ export const PdfViewer = ({
     };
   }, []);
 
-  // Строка поиска на телефоне открылась из меню или по Ctrl+F: фокус в поле. Таймер нужен, потому что
-  // закрывшееся меню возвращает фокус на свою кнопку уже после этого эффекта.
+  // Строка поиска на телефоне открылась по Ctrl+F: фокус в поле. Из меню фокус ставит
+  // onCloseAutoFocus меню, иначе закрывшееся меню вернёт его на свою кнопку.
   useEffect(() => {
     if (!searchOpen || !focusSearchRef.current) return;
     focusSearchRef.current = false;
-    const id = window.setTimeout(() => {
-      searchInputRef.current?.focus();
-    }, 0);
-    return () => {
-      window.clearTimeout(id);
-    };
+    searchInputRef.current?.focus();
   }, [searchOpen]);
+
+  const focusSearchAfterMenu = (event: Event): void => {
+    if (!searchFromMenuRef.current) return;
+    searchFromMenuRef.current = false;
+    event.preventDefault();
+    searchInputRef.current?.focus();
+  };
 
   const closeSearch = (): void => {
     setSearchOpen(false);
@@ -613,7 +616,7 @@ export const PdfViewer = ({
         if (searchOpen) {
           closeSearch();
         } else {
-          focusSearchRef.current = true;
+          searchFromMenuRef.current = true;
           setSearchOpen(true);
         }
       },
@@ -871,6 +874,7 @@ export const PdfViewer = ({
               items={moreItems}
               label={t("toolbar.more")}
               testId="pdf-toolbar-more"
+              onCloseAutoFocus={focusSearchAfterMenu}
             />
           </div>
         ) : (
