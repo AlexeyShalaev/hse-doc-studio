@@ -7,14 +7,14 @@ tags:
 
 # Reference map
 
-<p class="hds-lede">The reference explains the entities the product is built from. The concrete contents — which documents, rules and submission points exactly — are declared by the installed template pack; here are the ideas themselves.</p>
+<p class="hds-lede">The reference explains the entities the product is built from. The concrete contents — which documents, rules and checkpoints exactly — are declared by the installed template pack; here are the ideas themselves.</p>
 
 ## Entities
 
 - **[Packs and templates](pack.md)** — where the requirements come from: pack → template → version.
 - **[Documents](documents.md)** — what a document set is made of and what the Studio knows about a document.
 - **[Checks and rules](checks-rules.md)** — how normcontrol works.
-- **[Submission profiles](checkpoints.md)** — what a submission point is and how the package is built.
+- **[Submission profiles](checkpoints.md)**: what a checkpoint is and how the package is built.
 
 ## In practice
 
