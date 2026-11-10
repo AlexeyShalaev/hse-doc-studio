@@ -85,10 +85,13 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 /**
  * Студента демо просят подписать в двух чужих проектах: так во «Входящих» есть раздел
  * «На подпись» (одна задача со сроком, одна просроченная) и работает страница подписанта.
+ * В первом проекте автор уже разместил подпись научрука: подписанту доступны и картинка, и ЭП.
+ * Во втором места нет, поэтому остаётся только способ точки (открепленная ЭП).
  */
 const seedSigningTasks = (): void => {
   if (world.bootstrap.user?.id !== DEMO_STUDENT.id) return;
   const signer = { id: DEMO_STUDENT.id, name: DEMO_STUDENT.name };
+  checkpointDemo.place("p_01hxa2f8gh", "topic_application", "supervisor");
   signingRouteDemo.seed({
     projectId: "p_01hxa2f8gh",
     sender: { id: DEMO_ADMIN.id, name: DEMO_ADMIN.name },

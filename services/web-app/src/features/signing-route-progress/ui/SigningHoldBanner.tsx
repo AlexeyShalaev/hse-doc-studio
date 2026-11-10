@@ -1,6 +1,7 @@
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router";
 import { PenLine } from "lucide-react";
+import { HelpAnchor } from "@entities/help";
 import type { SigningHold } from "../model/useDocSigningHold";
 
 export type SigningHoldBannerProps = {
@@ -47,6 +48,8 @@ export const SigningHoldBanner = ({
             step: hold.step ?? hold.total,
             total: hold.total,
           })}
+          {/* «?» плашки: шаг статьи о ходе подписания про правку документа на подписании. */}
+          <HelpAnchor article="runbooks/signing-progress" step={4} />
         </span>
         <span className="dim">{t("hold.signatures")}</span>
       </div>

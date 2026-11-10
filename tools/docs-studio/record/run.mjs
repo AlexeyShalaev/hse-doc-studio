@@ -18,6 +18,7 @@ import {Director} from './lib/director.mjs'
 import {saveShot} from './lib/media.mjs'
 import {LOCAL_BASE, PROJECTS_HOME, SERVER_BASE, seedLocal, serverPersonas, signIn, waitFor} from './lib/stands.mjs'
 import {assertNoPersonalData} from './lib/privacy.mjs'
+import {prepareServerDemoContext, serverDemoContextOptions, startServerDemo} from '../stand/server-demo.mjs'
 
 const HERE = import.meta.dirname
 const ROOT = resolve(HERE, '../../..')
@@ -49,6 +50,8 @@ const articleOf = (key) => {
 
 const browser = await chromium.launch({args: ['--hide-scrollbars', '--font-render-hinting=none']})
 let local = null
+// Стенд серверного демо (маршрут подписания): поднимается здесь же, при первом сценарии 'demo'.
+let demo = null
 let failures = 0
 
 for (const key of keys) {
@@ -58,9 +61,10 @@ for (const key of keys) {
   if (scenario.steps.length !== steps.length) {
     throw new Error(`${key}: в сценарии ${scenario.steps.length} шаг(ов), в статье ${steps.length}`)
   }
-  const base = scenario.stand === 'server' ? SERVER_BASE : LOCAL_BASE
   if (scenario.stand === 'server') await waitFor(SERVER_BASE)
+  else if (scenario.stand === 'demo') demo ??= await startServerDemo()
   else local ??= await seedLocal()
+  const base = scenario.stand === 'server' ? SERVER_BASE : scenario.stand === 'demo' ? demo.base : LOCAL_BASE
 
   for (const lang of LANGS) {
     for (const theme of THEMES) {
@@ -71,7 +75,9 @@ for (const key of keys) {
         colorScheme: theme,
         locale: lang === 'ru' ? 'ru-RU' : 'en-US',
         reducedMotion: 'no-preference',
+        ...(scenario.stand === 'demo' ? {...serverDemoContextOptions(), permissions: ['clipboard-read', 'clipboard-write']} : {}),
       })
+      if (scenario.stand === 'demo') await prepareServerDemoContext(context, {lang})
       // Тема и язык до загрузки приложения: загрузочный скрипт index.html читает их синхронно.
       await context.addInitScript(
         ([theme, lang]) => {
@@ -141,6 +147,7 @@ for (const key of keys) {
 }
 
 await browser.close()
+if (demo) await demo.close()
 if (failures) {
   console.error(`дублей с ошибкой: ${failures} (кадры ошибок в tools/docs-studio/.build/record)`)
   process.exit(1)

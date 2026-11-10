@@ -1,0 +1,57 @@
+---
+title: 'Sign documents'
+description: 'For supervisors: the signing page. Look at the PDF, approve, sign with an image or an electronic signature, return for revision.'
+sidebar:
+  order: 12
+access: user
+help:
+  routes:
+    - '/sign/:projectId/:routeId'
+  summary: 'A student has sent you documents for signing. Everything happens on this page: look at the PDF, approve and add your signature. You do not have to set anything up in the project.'
+  steps:
+    - text: 'At the top you see who asks, when it was sent, the deadline and the author’s message. Below is **Signing progress**: you are marked “You”, and next to it is what is needed from you now.'
+      hint: 'If it says “Not your turn yet”, wait for the notification: there is nothing to do now.'
+      shot: runbooks/sign-documents/step-01
+    - text: 'Click **Go to signature**: the PDF scrolls to the **Your signature** frame. **Open PDF** opens the whole file.'
+      shot: runbooks/sign-documents/step-02
+    - text: 'For an electronic signature, in **How to sign** choose **Detached e-signature** and a way in **Sign with**: **Studio key**, **CryptoPro in the browser** or **Ready signature**.'
+      hint: 'No Studio key yet: **Create an OpenPGP key** or **Import a key**. For a ready signature click **Download PDF**, sign it on your side and upload the file with **Choose signature**.'
+      shot: runbooks/sign-documents/step-03
+    - text: 'To sign with an image, choose **Image**, then **Draw**, sign with the mouse or a finger and click **Done**.'
+      hint: 'You can also **Upload** a signature file or **Use the saved one**. **Remember for other projects** keeps the image in your profile.'
+      shot: runbooks/sign-documents/step-04
+    - text: 'Click **Approve** (or **Approve and sign** for an electronic signature). The page says who signs next.'
+      hint: 'The image appears in the document only when you approve. If someone after you still adds a visible signature, you add the electronic signature as a second action: a “Sign the final PDF” request will come.'
+      shot: runbooks/sign-documents/step-05
+    - text: 'If the document needs fixing, click **Return for revision**, write what exactly in **What to fix** and click **Return**.'
+      hint: 'The author gets your comment and the route stops. Detailed remarks on the text are easier to leave as comments in the project: the dialog has an **Open project** link.'
+verified:
+  at: 2026-11-10
+  app_version: '0.19.0'
+  sources:
+    - services/web-app/src/pages/SigningPage
+    - services/web-app/src/features/signing-inline
+---
+
+import Steps from '~/components/Steps.astro'
+
+A link to this page comes by email and in the Inbox on the **To sign** tab. The page opens only
+after you sign in to your account, so a forwarded email does not let anyone sign for you. It also
+works in a phone browser: the buttons stick to the bottom of the screen.
+
+<Steps />
+
+## If something goes wrong
+
+- **“The document changed while the page was open”**: the author rebuilt the document. Look at the
+  new version and click the button again.
+- **“The document changed after your approval: approve again”**: the author fixed the document and
+  sent it again. Your image and key are in place, so it is one click.
+- **“The route has stopped”**: the author is editing the document or changing the signers. You get
+  a notification when they send again.
+- **“Signing page not found”**: the route is closed, the link is outdated or you signed in to
+  another account. Open the Inbox, **To sign** tab.
+- **No “Image” method**: the author did not place your signature on the document page, so only the
+  checkpoint’s method is left.
+- **CryptoPro on a phone** does not work: the browser plug-in exists only on a computer. On a phone,
+  sign with an image or a Studio key.

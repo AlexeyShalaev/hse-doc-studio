@@ -1,0 +1,55 @@
+---
+title: 'Send for signing'
+description: 'Studio server: the signing route of a checkpoint. Who signs, in what order, where the signatures go, and sending.'
+sidebar:
+  order: 10
+access: user
+help:
+  routes:
+    - '/projects/:projectId/submit/cp/:profileId/route'
+  summary: 'On a server you can send a checkpoint’s documents to your supervisors for signing in turn. On this screen you set who signs, in what order and where the signatures go. Changes are saved on their own.'
+  steps:
+    - text: 'Open **Submission**, the checkpoint you need, and in the **Signing** card click **Send for signing**.'
+      hint: 'The button exists only on a Studio server. Locally, sign your own slots with **Sign the set**.'
+      shot: runbooks/signing-route/step-01
+    - text: 'In **Checkpoint documents** every document should say “built”. Build the others with **Build**.'
+    - text: 'In **Who signs and in what order** check the steps. Steps go in turn, people in one step sign in parallel. You can drag people and steps.'
+      hint: 'The person menu has **Same step as previous**, **Separate step** and **Remove**. If a person is not in the project, click **Invite**. If several people share a role, pick one in the list.'
+      shot: runbooks/signing-route/step-03
+    - text: 'In **Where the signatures go**, for a signature marked “not placed” click **To page N** and drag the frame if needed.'
+      hint: '**Go to placement** in **What blocks sending** leads here too. An optional signature is turned on with **Add signature: …**.'
+      shot: runbooks/signing-route/step-04
+    - text: 'If you sign yourself, get your signature ready in **Your signature**: an image with **Upload or draw**, or a key for an electronic signature.'
+      hint: 'If you are in the first step, sending counts as your approval.'
+    - text: 'Optionally set a **Deadline** and a **Message to signers**. Signers see them on the signing page and in the Inbox.'
+    - text: 'When **What blocks sending** is empty and you see **Ready to send.**, click **Send for signing**.'
+      hint: 'The first person in line gets a request in the Inbox and an email, if the server sends email. Follow the progress in the **Signing** card: [Signing progress](/help/en/runbooks/signing-progress/).'
+      shot: runbooks/signing-route/step-07
+verified:
+  at: 2026-11-10
+  app_version: '0.19.0'
+  sources:
+    - services/web-app/src/features/signing-route-editor
+    - services/web-app/src/entities/signing-route
+---
+
+import Steps from '~/components/Steps.astro'
+
+A signing route is for when other people have to sign the checkpoint’s documents: the
+supervisor, a co-supervisor, the academic supervisor. The Studio keeps the order itself: everyone
+gets the request in their turn and signs on their own page.
+
+<Steps />
+
+## If something goes wrong
+
+- **“document not built”** in **What blocks sending**: click **Build** in **Checkpoint documents**.
+- **“signature not placed on the page”**: click **Go to placement** and place the frame with
+  **To page N**.
+- **“person is not in the project, invite them”**: click **Invite** next to the person. You can
+  send before they accept: their step will wait.
+- **“document is on the signing route of checkpoint “…””**: one document is signed by one route.
+  Click **Open that checkpoint** and cancel the route there.
+- **“your signature is not ready”**: upload an image or set a key in **Your signature**.
+- There is no **Send for signing** button: the route works only on a Studio server, and only the
+  project owner or an editor can send.

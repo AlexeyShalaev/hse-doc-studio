@@ -50,5 +50,5 @@ docs-record:
 docs-media:
 	FRONT_BUILD=1 HELP_BUILD=1 $(DOCS_STUDIO_DIR)/stand/local.sh start
 	$(DOCS_STUDIO_DIR)/stand/server.sh up
-	$(MAKE) --no-print-directory docs-record SCENARIO="$(SCENARIO)"; status=$$?; \
+	SERVER_DEMO_BUILD=1 $(MAKE) --no-print-directory docs-record SCENARIO="$(SCENARIO)"; status=$$?; \
 	  $(DOCS_STUDIO_DIR)/stand/local.sh stop; exit $$status
