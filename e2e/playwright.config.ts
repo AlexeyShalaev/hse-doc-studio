@@ -73,9 +73,11 @@ export default defineConfig({
     },
     {
       // Маршрут подписания на server-lite с общим раннером поддельного TeX (make e2e-signing-route): автор,
-      // научрук картинкой, академрук готовой подписью gpg; возврат и повторная отправка; сброс пересборкой; сторож.
+      // научрук картинкой, академрук готовой подписью gpg; возврат и повторная отправка; правка во время маршрута;
+      // сторож (signing-route.spec.ts). Версия на подписи: правка с предупреждением, страница подписанта, новая
+      // версия по документам, пакет из подписанной версии (signing-snapshot.spec.ts).
       name: "signing-route",
-      testMatch: /signing-route\.spec\.ts/,
+      testMatch: /signing-(route|snapshot)\.spec\.ts/,
       timeout: 4 * 60_000,
       use: {
         ...devices["Desktop Chrome"],
