@@ -273,6 +273,7 @@
       "signing": "You are signing the version of {{date}}",
       "signedMine": "You signed the version of {{date}}",
       "approvedMine": "You approved the version of {{date}}",
+      "kept": "Version out for signing: {{date}}",
       "signed": "Signed version of {{date}}"
     },
     "kept": {

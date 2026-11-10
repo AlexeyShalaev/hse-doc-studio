@@ -553,7 +553,7 @@ describe("SigningView: версия на подписи", () => {
       "Без изменений: вы уже подписали",
     );
     expect(screen.getByTestId("signing-doc-version")).toHaveTextContent(
-      `Вы подписываете версию от ${formatMoment("2026-11-10T09:00:00Z")}`,
+      `Версия на подписи от ${formatMoment("2026-11-10T09:00:00Z")}`,
     );
   });
 

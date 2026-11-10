@@ -186,12 +186,13 @@ export const keptMark = (
 };
 
 export type VersionLineKind =
-  "signing" | "signedMine" | "approvedMine" | "signed";
+  "signing" | "signedMine" | "approvedMine" | "kept" | "signed";
 
 /**
  * Строка версии над документом: «Вы подписываете версию от …»; своё сделано: «Вы подписали
- * (согласовали) версию от …»; маршрут завершён: «Подписана версия от …». null, пока версии на
- * подписи нет (до R16, черновик, отмена).
+ * (согласовали) версию от …»; документ без изменений в новой версии: «Версия на подписи от …»;
+ * маршрут завершён: «Подписана версия от …». null, пока версии на подписи нет (до R16,
+ * черновик, отмена).
  */
 export const versionLine = (
   task: SigningTask,
@@ -201,6 +202,8 @@ export const versionLine = (
   const kind = ((): VersionLineKind => {
     if (task.route.status === "completed" || task.route.status === "archived")
       return "signed";
+    // Документ без изменений в новой версии: рядом пометка «Без изменений: вы уже …».
+    if (keptMark(task, doc)) return "kept";
     if (task.me.state !== "done") return "signing";
     return doc.mine.length > 0 ? "signedMine" : "approvedMine";
   })();

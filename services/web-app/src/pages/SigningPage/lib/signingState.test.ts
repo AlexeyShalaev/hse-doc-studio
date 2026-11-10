@@ -341,6 +341,8 @@ describe("версия на подписи (раздел 12)", () => {
     expect(versionLine(mineDone, { ...doc, mine: [] })?.kind).toBe(
       "approvedMine",
     );
+    const review = docOf(newVersion, "supervisor_review");
+    expect(versionLine(newVersion, review)?.kind).toBe("kept");
     expect(versionLine(base, { ...doc, sent_at: null })).toBeNull();
     // До R16 поля нет: строки тоже нет.
     expect(versionLine(base, { ...doc, sent_at: undefined })).toBeNull();
