@@ -107,44 +107,32 @@ def _event(view: EventView) -> dict[str, object]:
         "reason": view.reason.value if view.reason is not None else None,
         "comment": view.comment,
         # Только у `sent` новой версии: документы, у которых сменилась версия на подписи (12.9).
-        "changed_docs": _optional_ids(getattr(view, "changed_docs", None)),
+        "changed_docs": list(view.changed_docs) if view.changed_docs is not None else None,
     }
 
 
-def _optional_ids(raw: object) -> list[str] | None:
-    return [item for item in raw if isinstance(item, str)] if isinstance(raw, list | tuple) else None
-
-
-def _day(at: object) -> str | None:
+def _day(at: datetime) -> str:
     """Дата версии на подписи для текста: «10.11.2026» (UTC)."""
-    if not isinstance(at, datetime):
-        return None
     moment = at if at.tzinfo is not None else at.replace(tzinfo=UTC)
     return moment.astimezone(UTC).strftime("%d.%m.%Y")
 
 
 def _sent(doc: DocView) -> dict[str, object] | None:
     """Версия на подписи документа (`sent` 12.9): sha256, когда снята и каким раундом; None без неё."""
-    sent = getattr(doc, "sent", None)
+    sent = doc.sent
     if sent is None:
         return None
     return {"sha256": sent.sha256, "at": sent.at, "round": sent.round}
 
 
-def _changed(doc: DocView) -> bool:
-    """Рабочая сборка есть и ушла от версии на подписи (12.9)."""
-    return getattr(doc, "changed", False) is True
-
-
 def _changed_hint(docs: Sequence[DocView]) -> str | None:
     """Подсказка при изменениях после отправки: что подписывают и кто отправляет новую версию (12.10)."""
-    changed = [doc for doc in docs if _changed(doc)]
+    changed = [doc for doc in docs if doc.changed]
     if not changed:
         return None
     ru_items, en_items = [], []
     for doc in changed:
-        sent = getattr(doc, "sent", None)
-        day = _day(sent.at) if sent is not None else None
+        day = _day(doc.sent.at) if doc.sent is not None else None
         ru_items.append(f"{doc.doc_id} (подписывают версию от {day})" if day else doc.doc_id)
         en_items.append(f"{doc.doc_id} (the version sent on {day} is being signed)" if day else doc.doc_id)
     return localized_error(
@@ -195,7 +183,7 @@ def _stop_reason_text(reason: StopReason) -> str:
 def _stop_text(reason: StopReason | None, docs: Sequence[DocView]) -> str | None:
     if reason is None:
         return None
-    if reason is StopReason.sent_changed and any(_changed(doc) and getattr(doc, "sent", None) is None for doc in docs):
+    if reason is StopReason.sent_changed and any(doc.changed and doc.sent is None for doc in docs):
         # Маршрут 0.20.0, перенос которого не нашёл прежнюю сборку (12.11).
         return localized_error(
             "Версию, отправленную на подпись, восстановить нельзя: человек отправляет новую версию в интерфейсе",
@@ -233,7 +221,7 @@ def route_view(details: RouteDetails) -> dict[str, object]:
                 "built": doc.built,
                 "frozen": doc.frozen,
                 "sent": _sent(doc),
-                "changed": _changed(doc),
+                "changed": doc.changed,
                 "slots": [
                     {
                         "slot_id": slot.slot_id,
@@ -247,7 +235,7 @@ def route_view(details: RouteDetails) -> dict[str, object]:
             }
             for doc in details.docs
         ],
-        "changed_docs": [doc.doc_id for doc in details.docs if _changed(doc)],
+        "changed_docs": list(details.changed_docs),
         "changed_hint": _changed_hint(details.docs),
         "events": [_event(e) for e in details.events[-_EVENTS:]],
         "signing_page": _page(route.project_id, route.id),
@@ -270,7 +258,7 @@ def _summary(item: RouteSummary) -> dict[str, object]:
         "completed_at": route.completed_at,
         "waiting_for": [{"name": name, "persona": persona} for name, persona in item.waiting_for],
         "docs": list(route.docs),
-        "changed_docs": _optional_ids(getattr(item, "changed_docs", None)) or [],
+        "changed_docs": list(item.changed_docs),
     }
 
 

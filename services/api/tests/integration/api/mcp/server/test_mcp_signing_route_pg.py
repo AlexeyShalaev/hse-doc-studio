@@ -457,3 +457,30 @@ async def test__write_file__route_returned__no_note(stand: Stand) -> None:
 
     # Автор правит после возврата: это ожидаемо, пометка только у идущего маршрута.
     assert "signing_note" not in body
+
+
+async def test__get_signing_route__rebuilt_after_sending__changed_and_who_sends_the_new_version(stand: Stand) -> None:
+    _enable(stand)
+    trio = await make_trio(stand, academic="none")
+    trio.sent()
+    trio.project.build(PROPOSAL, "v2")
+    headers = _mcp(stand, trio.author)
+    args = {"project_id": trio.project.id}
+
+    route = _body(_call(stand, headers, "get_signing_route", {**args, "profile_id": TOPIC}))["route"]
+    [summary] = _body(_call(stand, headers, "get_signing_route", args))["routes"]
+    path = f"{_folder(trio, PROPOSAL)}/notes.tex"
+    note = _body(_call(stand, headers, "write_file", {**args, "path": path, "content": "x"}))["signing_note"]
+
+    # Пересборка маршрут не останавливает: подписывают версию на подписи (12.5).
+    assert (route["status"], route["stop_reason"], route["stop_text"]) == ("active", None, None)
+    docs = {d["doc_id"]: d for d in route["docs"]}
+    assert (docs[PROPOSAL]["changed"], docs[APPLICATION]["changed"]) == (True, False)
+    assert docs[PROPOSAL]["sent"]["round"] == 1
+    assert len(docs[PROPOSAL]["sent"]["sha256"]) == 64
+    assert route["changed_docs"] == summary["changed_docs"] == [PROPOSAL]
+    assert route["changed_hint"].startswith(
+        f"Есть изменения после отправки на подпись: {PROPOSAL} (подписывают версию от "
+    )
+    day = route["changed_hint"].split("от ", 1)[1][:10]
+    assert note.startswith(f"Документ на подписании ({PROPOSAL}): изменения не попадут в подписываемую версию от {day}")
