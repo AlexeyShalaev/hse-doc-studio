@@ -72,6 +72,18 @@ export default defineConfig({
       },
     },
     {
+      // Маршрут подписания на server-lite с общим раннером поддельного TeX (make e2e-signing-route): автор,
+      // научрук картинкой, академрук готовой подписью gpg; возврат и повторная отправка; сброс пересборкой; сторож.
+      name: "signing-route",
+      testMatch: /signing-route\.spec\.ts/,
+      timeout: 4 * 60_000,
+      use: {
+        ...devices["Desktop Chrome"],
+        actionTimeout: 20_000,
+        channel: process.env.E2E_CHANNEL || undefined,
+      },
+    },
+    {
       // Команды установки раннера у токена (docker, скрипт-служба): копирование и скрипт без секретов.
       name: "runner-install",
       testMatch: /runner-install\.spec\.ts/,

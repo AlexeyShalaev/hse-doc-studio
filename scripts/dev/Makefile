@@ -23,7 +23,7 @@ else
 	DEV_NULL = /dev/null
 endif
 
-.PHONY: dev-help ensure-network run-services stop-all-services clean-volumes dev server-lite-up server-lite-seed server-lite-down server-lite-reset server-lite-credentials e2e-install e2e-m1 e2e-landing e2e-mobile e2e-passkeys e2e-runner-install e2e-model-servers server-stack-build server-stack-up server-stack-down e2e-full
+.PHONY: dev-help ensure-network run-services stop-all-services clean-volumes dev server-lite-up server-lite-seed server-lite-down server-lite-reset server-lite-credentials e2e-install e2e-m1 e2e-landing e2e-mobile e2e-passkeys e2e-runner-install e2e-model-servers server-lite-runner-up server-lite-runner-down e2e-signing-route server-stack-build server-stack-up server-stack-down e2e-full
 
 dev-help:
 	@echo.
@@ -43,6 +43,7 @@ dev-help:
 	@echo   make e2e-landing       - Run the landing page e2e (guest, phone, links, Open Graph, switch-off) against the same stand
 	@echo   make e2e-mobile        - Run the phone layout e2e (360/390 px, sheets, touch targets, no horizontal scroll) against the same stand
 	@echo   make e2e-passkeys      - Run the passkey e2e (virtual WebAuthn authenticator) against the same stand
+	@echo   make e2e-signing-route - Run the signing route e2e (starts a shared fake-TeX runner, stops it afterwards)
 	@echo   make server-stack-build - Build the image with the server extra for the full stack
 	@echo   make server-stack-up   - Full server stack (deploy/server: api, runner, Postgres, MinIO) on 127.0.0.1:17251
 	@echo   make e2e-full          - Run the full smoke e2e against that stack (wizard, builds, queue, runner loss)
@@ -115,7 +116,9 @@ endif
 # ---- Стенд server-lite: api в режиме server (experimental) + Postgres, без раннера и S3 ----
 SERVER_LITE_DIR = $(DEV_SCRIPTS_DIR)/server-lite
 SERVER_LITE_ENV = $(SERVER_LITE_DIR)/.env
-SERVER_LITE_COMPOSE = $(DOCKER_COMPOSE) -p hse-doc-studio-server-lite -f $(SERVER_LITE_DIR)/compose.yml --env-file $(SERVER_LITE_ENV)
+# Имя проекта compose можно сменить, чтобы держать рядом второй стенд (порт задаёт SERVER_LITE_PORT в .env).
+SERVER_LITE_PROJECT ?= hse-doc-studio-server-lite
+SERVER_LITE_COMPOSE = $(DOCKER_COMPOSE) -p $(SERVER_LITE_PROJECT) -f $(SERVER_LITE_DIR)/compose.yml --env-file $(SERVER_LITE_ENV)
 
 # Секреты стенда создаются один раз и лежат в server-lite/.env (не коммитится); ключ Fernet: 32 случайных байта base64url.
 $(SERVER_LITE_ENV):
@@ -140,13 +143,21 @@ server-lite-credentials: $(SERVER_LITE_ENV)
 	  echo "Demo users (after server-lite-seed): anna@example.org, boris@example.org, victor@example.org / $$SERVER_LITE_SEED_PASSWORD"
 
 server-lite-down: $(SERVER_LITE_ENV)
-	$(SERVER_LITE_COMPOSE) --profile seed down
+	$(SERVER_LITE_COMPOSE) --profile seed --profile runner down
+
+# Общий раннер с поддельным TeX (fake_tex_runner.py): собранный PDF и проверка подписей без образа TeX Live.
+# Пока он запущен, сборки всех людей стенда идут на нём, поэтому сценарии «стенд без раннеров» идут до него.
+server-lite-runner-up: $(SERVER_LITE_ENV)
+	$(SERVER_LITE_COMPOSE) --profile runner up --build -d --no-deps runner
+
+server-lite-runner-down: $(SERVER_LITE_ENV)
+	$(SERVER_LITE_COMPOSE) --profile runner stop runner
 
 server-lite-reset: $(SERVER_LITE_ENV)
 	@echo WARNING: This will remove the stand data and its secrets!
 	@echo Type 'yes' to confirm:
 	@$(SHELL) -c 'read confirm && [ "$$confirm" = "yes" ]' || (echo "Cancelled." && exit 1)
-	$(SERVER_LITE_COMPOSE) --profile seed down --volumes --remove-orphans
+	$(SERVER_LITE_COMPOSE) --profile seed --profile runner down --volumes --remove-orphans
 	rm -f $(SERVER_LITE_ENV)
 
 # ---- Приёмочные e2e M1 (Playwright) против поднятого и залитого стенда ----
@@ -195,6 +206,16 @@ e2e-runner-install: $(SERVER_LITE_ENV)
 	  E2E_BASE_URL=http://localhost:$${SERVER_LITE_PORT:-8100} \
 	  E2E_ADMIN_PASSWORD=$$SERVER_LITE_ADMIN_PASSWORD E2E_ADMIN_EMAIL=$${SERVER_LITE_ADMIN_EMAIL:-admin@example.org} \
 	  pnpm exec playwright test --project=runner-install
+
+# Маршрут подписания (автор, научрук картинкой, академрук готовой подписью gpg; возврат; сброс пересборкой):
+# поднимает общий раннер с поддельным TeX и гасит его после прогона, чем бы тот ни кончился. Нужен gpg на хосте.
+e2e-signing-route: $(SERVER_LITE_ENV)
+	@$(MAKE) --no-print-directory server-lite-runner-up
+	@. $(SERVER_LITE_ENV); cd e2e && \
+	  E2E_BASE_URL=http://localhost:$${SERVER_LITE_PORT:-8100} \
+	  E2E_ADMIN_PASSWORD=$$SERVER_LITE_ADMIN_PASSWORD E2E_ADMIN_EMAIL=$${SERVER_LITE_ADMIN_EMAIL:-admin@example.org} \
+	  pnpm exec playwright test --project=signing-route; \
+	  status=$$?; cd .. && $(MAKE) --no-print-directory server-lite-runner-down; exit $$status
 
 # ---- Полный смоук на стенде deploy/server (api, раннер, Postgres, MinIO) ----
 # Образ с extra server собирает make server-stack-build (тег ci), затем server-stack-up и e2e-full.

@@ -133,6 +133,17 @@ export class Client {
     return this.request.patch(url, { data, headers: this.headers() });
   }
 
+  /** Форма multipart (файлы и поля), как её шлёт браузер: картинка подписи, файл ключа. */
+  postForm(
+    url: string,
+    multipart: Record<
+      string,
+      string | { name: string; mimeType: string; buffer: Buffer }
+    >,
+  ): Promise<APIResponse> {
+    return this.request.post(url, { multipart, headers: this.headers() });
+  }
+
   delete(url: string): Promise<APIResponse> {
     return this.request.delete(url, { headers: this.headers() });
   }
