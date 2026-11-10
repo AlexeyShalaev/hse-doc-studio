@@ -22,6 +22,7 @@ from hse_doc_studio.core.value_objects import (
     DetachedSignature,
     EmbeddedSignature,
     FrozenPdf,
+    PinnedPdf,
     SignatureSlot,
     SignaturesState,
 )
@@ -123,16 +124,25 @@ def grant_personas(project: Project, grant: Grant | None) -> frozenset[str]:
 class DocFacts:
     """Что известно о документе вне состояния подписей.
 
-    `compiled_sha256` хэш текущей сборки (None, если PDF не собран); `marks_digest` отпечаток видимого слоя,
-    который поставила бы фиксация сейчас; `legacy_marks_digest` тот же слой по прежней формуле с абсолютными
-    путями (`legacy_stamps_digest`), им сверяются фиксации, сделанные до её замены; `png_exists` проверяет
-    картинку слота на диске.
+    `compiled_sha256` хэш источника подписи (signing-route.md, 12.4): версии на подписи, если она есть, иначе
+    текущей сборки; None, если файла нет. Это «что подписывают»: по нему сверяется фиксация и считается отпечаток
+    согласия маршрута. `working_sha256` хэш текущей сборки (None, если PDF не собран); он нужен только для показа
+    «есть изменения после отправки на подпись». `marks_digest` отпечаток видимого слоя, который поставила бы
+    фиксация сейчас; `legacy_marks_digest` тот же слой по прежней формуле с абсолютными путями
+    (`legacy_stamps_digest`), им сверяются фиксации, сделанные до её замены; `png_exists` проверяет картинку
+    слота на диске.
     """
 
     compiled_sha256: str | None
     marks_digest: str
     png_exists: Callable[[str], bool] = lambda _path: True
     legacy_marks_digest: str = ""
+    working_sha256: str | None = None
+
+    @property
+    def working_differs(self) -> bool:
+        """Рабочая сборка разошлась с источником подписи: собрана и не равна ему (12.4)."""
+        return self.working_sha256 is not None and self.working_sha256 != self.compiled_sha256
 
     def marks_match(self, stored: str) -> bool:
         """Отпечаток фиксации совпадает с текущим видимым слоем; пустой (старые фиксации) совпадает всегда."""
@@ -309,11 +319,18 @@ _HINTS: dict[PlanReason, tuple[str, str]] = {
 }
 
 
-def reason_hint(reason: PlanReason | None) -> str:
-    """Что сделать человеку, на языке интерфейса."""
+# Подсказки документа с версией на подписи (signing-route.md, 12.9): `rebuilt` там значит, что отправлена новая
+# версия, а зафиксированный PDF сделан из прежней.
+_PINNED_HINTS: dict[PlanReason, tuple[str, str]] = {
+    PlanReason.rebuilt: ("Ждёт фиксации новой версии", "Waiting for the new version to be frozen"),
+}
+
+
+def reason_hint(reason: PlanReason | None, *, pinned: bool = False) -> str:
+    """Что сделать человеку, на языке интерфейса. `pinned` у документа есть версия на подписи."""
     if reason is None:
         return ""
-    ru, en = _HINTS[reason]
+    ru, en = (_PINNED_HINTS.get(reason) if pinned else None) or _HINTS[reason]
     return localized_error(ru, en)
 
 
@@ -352,6 +369,8 @@ class PlanSlot:
     allowed_methods: tuple[str, ...] = ()
     required_by: tuple[str, ...] = ()
     is_mine: bool = False
+    # У документа есть версия на подписи: подсказка `rebuilt` другая (12.9).
+    pinned: bool = False
 
     @property
     def status(self) -> SlotStatus:
@@ -359,16 +378,21 @@ class PlanSlot:
 
     @property
     def hint(self) -> str:
-        return reason_hint(self.state.reason)
+        return reason_hint(self.state.reason, pinned=self.pinned)
 
 
 @dataclass(frozen=True)
 class DocPlan:
+    """План документа. `built` есть источник подписи (версия на подписи или сборка); `pinned` версия на
+    подписи (signing-route.md, 12.3), `working_differs` рабочая сборка разошлась с ней (12.4)."""
+
     doc_id: str
     built: bool
     frozen: FrozenPdf | None
     frozen_outdated: PlanReason | None
     slots: tuple[PlanSlot, ...]
+    pinned: PinnedPdf | None = None
+    working_differs: bool = False
 
     @property
     def has_crypto(self) -> bool:

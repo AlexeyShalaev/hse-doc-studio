@@ -83,6 +83,7 @@ from hse_doc_studio.use_cases.signatures.get_signed_doc_pdf import (
 )
 from hse_doc_studio.use_cases.signatures.release_withheld import ReleaseWithheldInput, ReleaseWithheldUC
 from hse_doc_studio.use_cases.signatures.sign_in_studio import SignInStudioInput, SignInStudioUC
+from hse_doc_studio.use_cases.signatures.unpin_pdf import UnpinPdfInput, UnpinPdfUC
 from hse_doc_studio.use_cases.signatures.update_signature_placement import (
     UpdateSignaturePlacementInput,
     UpdateSignaturePlacementUC,
@@ -408,6 +409,18 @@ async def unfreeze_pdf(
     await gate.require_unlocked(project_id, doc_id=doc_id)
     try:
         await uc.execute(UnfreezePdfInput(project_id=project_id, doc_id=doc_id))
+    except NotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+
+@router.delete("/projects/{project_id}/docs/{doc_id}/pinned", status_code=204)
+async def unpin_pdf(project_id: UUID, doc_id: str, uc: FromDishka[UnpinPdfUC]) -> None:
+    """«Подписывать текущую сборку»: снять версию на подписи (signing-route.md, 12.4).
+
+    404, если её нет; 409 `route_locked`, пока документ держит маршрут (в том числе завершённый).
+    """
+    try:
+        await uc.execute(UnpinPdfInput(project_id=project_id, doc_id=doc_id))
     except NotFoundError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
 

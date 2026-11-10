@@ -6,6 +6,8 @@
 
 from __future__ import annotations
 
+import hashlib
+import shutil
 from dataclasses import replace
 from datetime import UTC, datetime, timedelta
 from typing import Any
@@ -15,7 +17,8 @@ from hse_doc_studio.api.config import settings
 from hse_doc_studio.core.entities import Project, SigningIdentity
 from hse_doc_studio.core.enums import DetachedFormat, DetachedOrigin, DetachedVerdict
 from hse_doc_studio.core.signing_route.entities import DocSlot
-from hse_doc_studio.core.value_objects import DetachedSignature
+from hse_doc_studio.core.value_objects import DetachedSignature, PinnedPdf
+from hse_doc_studio.infra.persistence.signature import JsonSignatureRepository
 from hse_doc_studio.use_cases.signatures._studio_signer import StudioSigner
 from hse_doc_studio.use_cases.signatures.attach_detached_signature import (
     AttachDetachedSignatureInput,
@@ -24,6 +27,7 @@ from hse_doc_studio.use_cases.signatures.attach_detached_signature import (
 )
 from hse_doc_studio.use_cases.signatures.default_key import DefaultKey, DefaultSigningKey
 from hse_doc_studio.use_cases.signatures.sign_submission import DocPreview, SignSubmissionUC, SlotResult
+from hse_doc_studio.use_cases.signatures.signing_source import pinned_rel
 from hse_doc_studio.use_cases.signing_route import author as author_module
 
 from tests.fakes.signer_profile import make_self_signed
@@ -552,3 +556,44 @@ async def test__route__card_name_and_who_still_changes_the_visible_layer(stand: 
         "author": (NAMES["author"], False),
         "supervisor": (NAMES["supervisor"], True),
     }
+
+
+def _pin_current_build(trio: Trio, doc_id: str) -> str:
+    """Версия на подписи, как её сняла бы отправка (signing-route.md, 12.3): копия текущей сборки документа."""
+    doc = trio.call(trio.author, "GET", f"{trio.project.base}/documents/{doc_id}").json()
+    folder = trio.project.folder
+    source = folder / pinned_rel(doc_id)
+    source.parent.mkdir(parents=True, exist_ok=True)
+    shutil.copyfile(folder / doc["output_file"], source)
+    sha = hashlib.sha256(source.read_bytes()).hexdigest()
+    repo = JsonSignatureRepository()
+    pinned = PinnedPdf(pinned_rel(doc_id), sha, source.stat().st_size, "2026-11-10T14:32:00+00:00", trio.route_id, 1)
+    repo.save_state(folder, replace(repo.get_state(folder), pinned={**repo.get_state(folder).pinned, doc_id: pinned}))
+    return sha
+
+
+async def test__sign_the_current_build__held_by_a_route__409_then_after_cancel__unpinned(stand: Stand) -> None:
+    """«Подписывать текущую сборку» (12.4): пока маршрут держит документ, нельзя; после отмены можно."""
+    trio = await make_trio(stand, images=("author", "supervisor"), academic="none")
+    trio.sent()
+    sha = _pin_current_build(trio, APPLICATION)
+    unpin = f"{trio.project.base}/docs/{APPLICATION}/pinned"
+
+    locked = trio.call(trio.author, "DELETE", unpin)
+    cancelled = trio.call(trio.author, "POST", f"{trio.url}/cancel", json={})
+    by_reviewer = trio.call(trio.supervisor, "DELETE", unpin)
+    unpinned = trio.call(trio.author, "DELETE", unpin)
+    drain(stand)
+
+    assert _code(locked) == (409, "route_locked")
+    assert cancelled.status_code == 200, cancelled.text
+    assert by_reviewer.status_code == 403
+    assert unpinned.status_code == 204, unpinned.text
+    assert trio.state()["pinned"] == {}
+    assert not (trio.project.folder / pinned_rel(APPLICATION)).exists()
+    resp = stand.admin().get(
+        "/api/admin/audit", params={"target": trio.project.id, "action": "signature.unpin", "limit": 10}
+    )
+    assert resp.status_code == 200, resp.text
+    [entry] = resp.json()["items"]
+    assert (entry["details"]["doc_id"], entry["details"]["sha256"]) == (APPLICATION, sha)

@@ -32,6 +32,7 @@ from hse_doc_studio.use_cases.signatures._doc_context import (
     sha256_file,
 )
 from hse_doc_studio.use_cases.signatures._studio_signer import drop_signed_file
+from hse_doc_studio.use_cases.signatures.signing_source import missing_source_message, signing_source
 
 logger = structlog.get_logger()
 
@@ -52,9 +53,10 @@ class FreezePdfOutput:
 class FreezePdfUC:
     """Fixes the document for signing.
 
-    Stamps the compiled PDF once (picture slots, text marks for detached e-signatures)
-    and keeps that file untouched: detached signatures cover exactly these bytes. Signatures
-    made for an earlier frozen copy of different content are dropped.
+    Stamps the signing source once (picture slots, text marks for detached e-signatures) and keeps that file
+    untouched: detached signatures cover exactly these bytes. The source is the version sent for signing by a
+    signing route, or the current build when there is none (docs/design/signing-route.md, 12.4).
+    Signatures made for an earlier frozen copy of different content are dropped.
     """
 
     def __init__(
@@ -79,15 +81,10 @@ class FreezePdfUC:
             self._get_uc, self._template_repo, self._template_service, inp.project_id, inp.doc_id
         )
         folder = ctx.project.folder
-        if not ctx.compiled_path.is_file():
-            raise ValueError(
-                localized_error(
-                    f"Собранный PDF не найден: {ctx.compiled_path.name}. Сначала соберите документ",
-                    f"Compiled PDF not found: {ctx.compiled_path.name}. Build the document first",
-                )
-            )
-
         state = self._signature_repo.get_state(folder)
+        source = await signing_source(ctx, state)
+        if source.path is None or not source.exists:
+            raise ValueError(missing_source_message(ctx, source))
         require_slot_images(state, inp.doc_id, folder)
         stamps = stamps_for_doc(state, inp.doc_id, folder, ctx.lang)
 
@@ -97,14 +94,14 @@ class FreezePdfUC:
         tmp = target.with_suffix(".pdf.tmp")
         try:
             # Штамповщик не пишет файл без всех меток (`StampingError`): прежняя фиксация и состояние не трогаются.
-            await asyncio.to_thread(self._pdf_stamper.stamp, ctx.compiled_path, tmp, stamps)
+            await asyncio.to_thread(self._pdf_stamper.stamp, source.path, tmp, stamps)
         except Exception:
             tmp.unlink(missing_ok=True)
             raise
         tmp.replace(target)
 
         sha, source_sha = await asyncio.gather(
-            asyncio.to_thread(sha256_file, target), asyncio.to_thread(sha256_file, ctx.compiled_path)
+            asyncio.to_thread(sha256_file, target), asyncio.to_thread(sha256_file, source.path)
         )
         frozen = FrozenPdf(
             path=rel,

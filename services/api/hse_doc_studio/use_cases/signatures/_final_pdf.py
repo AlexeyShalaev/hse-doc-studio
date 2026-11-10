@@ -6,15 +6,15 @@
 
 from __future__ import annotations
 
-import asyncio
 from dataclasses import dataclass
 from pathlib import Path
 
 from hse_doc_studio.core.signatures.plan import DocFacts, frozen_is_current
 from hse_doc_studio.core.signatures.stamps import legacy_stamps_digest, stamps_digest, stamps_for_doc
 from hse_doc_studio.core.value_objects import FrozenPdf, SignaturesState
-from hse_doc_studio.use_cases.signatures._doc_context import DocContext, sha256_file
+from hse_doc_studio.use_cases.signatures._doc_context import DocContext
 from hse_doc_studio.use_cases.signatures._studio_signer import current_signed_file
+from hse_doc_studio.use_cases.signatures.signing_source import source_and_working
 
 
 @dataclass(frozen=True)
@@ -37,22 +37,24 @@ async def checked_final_pdf(folder: Path, frozen: FrozenPdf) -> FinalPdf:
 
 
 async def doc_facts_of(ctx: DocContext, state: SignaturesState) -> DocFacts:
-    """Сборка и видимый слой документа сейчас: то же, что план считает для этого документа."""
+    """Источник подписи, рабочая сборка и видимый слой документа сейчас: то же, что план считает для документа."""
     folder = ctx.project.folder
-    compiled = await asyncio.to_thread(sha256_file, ctx.compiled_path) if ctx.compiled_path.is_file() else None
+    source, working = await source_and_working(folder, ctx.compiled_path, state, ctx.doc.id)
     stamps = stamps_for_doc(state, ctx.doc.id, folder, ctx.lang)
     return DocFacts(
-        compiled_sha256=compiled,
+        compiled_sha256=source.sha256,
         marks_digest=stamps_digest(stamps, folder),
         legacy_marks_digest=legacy_stamps_digest(stamps),
+        working_sha256=working,
     )
 
 
 async def current_final_pdf(ctx: DocContext, state: SignaturesState) -> FinalPdf | None:
     """Итоговый файл актуальной фиксации.
 
-    None, если фиксации нет или она устарела по плану: документ пересобран или видимый слой изменился
-    (`frozen_is_current`). Тогда в плане все криптослоты ждут новой фиксации, и итогового файла у документа нет.
+    None, если фиксации нет или она устарела по плану: источник подписи (версия на подписи или сборка) не тот,
+    из которого она сделана, или видимый слой изменился (`frozen_is_current`). Тогда в плане все криптослоты
+    ждут новой фиксации, и итогового файла у документа нет.
     """
     frozen = state.frozen.get(ctx.doc.id)
     if frozen is None or not (ctx.project.folder / frozen.path).is_file():

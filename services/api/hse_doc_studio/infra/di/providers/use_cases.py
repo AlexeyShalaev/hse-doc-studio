@@ -434,6 +434,7 @@ from hse_doc_studio.use_cases.signatures.get_signed_doc_pdf import GetSignedDocP
 from hse_doc_studio.use_cases.signatures.release_withheld import ReleaseWithheldUC
 from hse_doc_studio.use_cases.signatures.sign_in_studio import SignInStudioUC
 from hse_doc_studio.use_cases.signatures.sign_submission import SignSubmissionUC
+from hse_doc_studio.use_cases.signatures.unpin_pdf import UnpinPdfUC
 from hse_doc_studio.use_cases.signatures.update_signature_placement import UpdateSignaturePlacementUC
 from hse_doc_studio.use_cases.signatures.update_slot_config import UpdateSlotConfigUC
 from hse_doc_studio.use_cases.signatures.update_slot_signer import UpdateSlotSignerUC
@@ -3064,6 +3065,23 @@ class UseCaseProvider(Provider):
     ) -> UnfreezePdfUC:
         return UnfreezePdfUC(
             project_repo=project_repo, project_index_repo=project_index_repo, signature_repo=signature_repo, audit=audit
+        )
+
+    @provide
+    def get_unpin_pdf_uc(
+        self,
+        project_repo: IProjectRepository,
+        project_index_repo: IProjectIndexRepository,
+        signature_repo: ISignatureRepository,
+        routes: ISigningRouteGate,
+        audit: ISignatureAudit,
+    ) -> UnpinPdfUC:
+        return UnpinPdfUC(
+            project_repo=project_repo,
+            project_index_repo=project_index_repo,
+            signature_repo=signature_repo,
+            routes=routes,
+            audit=audit,
         )
 
     @provide

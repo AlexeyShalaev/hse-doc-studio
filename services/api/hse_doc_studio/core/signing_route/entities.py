@@ -159,6 +159,18 @@ def route_locked() -> RouteConflictError:
     )
 
 
+def route_holds_doc() -> RouteConflictError:
+    """«Подписывать текущую сборку» у документа, который держит маршрут (409 `route_locked`, раздел 12.4)."""
+    return RouteConflictError(
+        "route_locked",
+        localized_error(
+            "Документ держит маршрут подписания: отмените маршрут или снимите его с контроля, чтобы подписывать "
+            "текущую сборку",
+            "A signing route holds the document: cancel the route or stop tracking it to sign the current build",
+        ),
+    )
+
+
 class DocSlot(NamedTuple):
     """Пара «документ, слот»: где стоит подпись участника."""
 

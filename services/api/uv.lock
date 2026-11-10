@@ -1152,7 +1152,7 @@ wheels = [
 
 [[package]]
 name = "hse-doc-studio"
-version = "0.19.0"
+version = "0.20.1"
 source = { editable = "." }
 dependencies = [
     { name = "anthropic" },

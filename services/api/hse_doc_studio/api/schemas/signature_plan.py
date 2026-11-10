@@ -64,13 +64,28 @@ class PlanFrozenResponse(BaseModel):
     outdated: PlanReason | None = None
 
 
+class PlanPinnedResponse(BaseModel):
+    """Версия на подписи документа (signing-route.md, 12.3): что подписывают вместо текущей сборки."""
+
+    sha256: str
+    pinned_at: str
+    # Какой маршрут и раунд сняли версию; пустая строка и 0, если неизвестно.
+    route_id: str
+    round: int
+
+
 class DocPlanResponse(BaseModel):
     doc_id: str
+    # Есть источник подписи: версия на подписи или собранный PDF.
     built: bool
     frozen: PlanFrozenResponse | None = None
     slots: list[PlanSlotResponse]
     # Документ держит идущий маршрут подписания: фиксирует его только маршрут, сам по себе он не «устарел».
     held_by_route: bool = False
+    # Версия на подписи; null, если документ подписывается по текущей сборке (12.4).
+    pinned: PlanPinnedResponse | None = None
+    # Рабочая сборка собрана и отличается от версии на подписи: «Есть изменения после отправки на подпись».
+    working_differs: bool = False
 
 
 class PlanRouteResponse(BaseModel):
@@ -158,6 +173,12 @@ def _map_doc(doc: DocPlan, routes: PlanRoutes) -> DocPlanResponse:
         else None,
         slots=[_map_slot(s, routes) for s in doc.slots],
         held_by_route=doc.doc_id in routes.held_docs,
+        pinned=PlanPinnedResponse(
+            sha256=pinned.sha256, pinned_at=pinned.pinned_at, route_id=pinned.route_id, round=pinned.round
+        )
+        if (pinned := doc.pinned) is not None
+        else None,
+        working_differs=doc.working_differs,
     )
 
 

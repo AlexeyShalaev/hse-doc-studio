@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import asyncio
 from collections.abc import Iterable
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -41,7 +40,7 @@ from hse_doc_studio.core.signatures.stamps import legacy_stamps_digest, stamps_d
 from hse_doc_studio.core.team import is_doc_active
 from hse_doc_studio.core.value_objects import SignaturesState
 from hse_doc_studio.use_cases.projects.get_project import GetProjectInput, GetProjectUC
-from hse_doc_studio.use_cases.signatures._doc_context import sha256_file
+from hse_doc_studio.use_cases.signatures.signing_source import source_and_working
 
 
 @dataclass
@@ -177,6 +176,7 @@ def pairs_by_doc(pairs: Iterable[_Pair]) -> dict[str, list[_Pair]]:
 async def doc_facts(
     project: Project, version: TemplateVersion, doc: Document, state: SignaturesState, ts: ProjectTemplateService
 ) -> DocFacts:
+    """Факты документа для плана: источник подписи (версия на подписи или сборка), рабочая сборка, видимый слой."""
     folder = project.folder
     compiled: Path | None = None
     try:
@@ -184,13 +184,14 @@ async def doc_facts(
         compiled = folder / output_file if output_file else None
     except (NotFoundError, ValueError):
         compiled = None
-    sha = await asyncio.to_thread(sha256_file, compiled) if compiled is not None and compiled.is_file() else None
+    source, working = await source_and_working(folder, compiled, state, doc.id)
     stamps = stamps_for_doc(state, doc.id, folder, str(project.lang))
     return DocFacts(
-        compiled_sha256=sha,
+        compiled_sha256=source.sha256,
         marks_digest=stamps_digest(stamps, folder),
         png_exists=lambda rel: (folder / rel).is_file(),
         legacy_marks_digest=legacy_stamps_digest(stamps),
+        working_sha256=working,
     )
 
 
@@ -213,6 +214,7 @@ async def build_plan(  # noqa: PLR0913 — входы расчёта
             for p in pairs
         )
         frozen = state.frozen.get(doc_id)
+        pinned = state.pinned.get(doc_id)
         slots = tuple(
             PlanSlot(
                 doc_id=doc_id,
@@ -224,6 +226,7 @@ async def build_plan(  # noqa: PLR0913 — входы расчёта
                 allowed_methods=p.allowed,
                 required_by=tuple(p.required_by),
                 is_mine=personas is not None and signer.persona in personas,
+                pinned=pinned is not None,
             )
             for p in pairs
         )
@@ -234,6 +237,8 @@ async def build_plan(  # noqa: PLR0913 — входы расчёта
                 frozen=frozen,
                 frozen_outdated=frozen_is_current(frozen, facts) if frozen is not None else None,
                 slots=slots,
+                pinned=pinned,
+                working_differs=facts.working_differs,
             )
         )
     return SignaturePlan(docs=tuple(docs), profile_id=profile_id, personas=personas)

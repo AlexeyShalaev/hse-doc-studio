@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import asyncio
 from dataclasses import dataclass, field
 from uuid import UUID
 
@@ -19,7 +18,7 @@ from hse_doc_studio.core.services import ProjectTemplateService, RuntimeSlot, Si
 from hse_doc_studio.core.signatures.stamps import stamps_digest_matches, stamps_for_doc
 from hse_doc_studio.core.value_objects import SignaturesState
 from hse_doc_studio.use_cases.projects.get_project import GetProjectInput, GetProjectUC
-from hse_doc_studio.use_cases.signatures._doc_context import sha256_file
+from hse_doc_studio.use_cases.signatures.signing_source import source_of
 
 logger = structlog.get_logger()
 
@@ -53,7 +52,7 @@ class RuntimeSlotItem:
 class GetSignaturesOutput:
     state: SignaturesState
     runtime_slots: list[RuntimeSlotItem]
-    # Docs whose compiled PDF changed after the PDF was frozen for signing.
+    # Docs whose signing source (the version sent for signing, else the build) changed after freezing.
     stale_frozen: set[str] = field(default_factory=set)
     # Docs whose signature plates or positions changed after the PDF was frozen.
     plate_outdated: set[str] = field(default_factory=set)
@@ -135,7 +134,8 @@ class GetSignaturesUC:
                 _, output_file = self._template_service.resolve_instance_source(project, doc, version)
             except NotFoundError:
                 continue
-            compiled = project.folder / output_file
-            if compiled.is_file() and await asyncio.to_thread(sha256_file, compiled) != frozen.source_sha256:
+            # Сверка с источником подписи: версией на подписи маршрута, иначе текущей сборкой (signing-route.md, 12.4).
+            source = await source_of(project.folder, project.folder / output_file, state, doc_id)
+            if source.sha256 is not None and source.sha256 != frozen.source_sha256:
                 stale.add(doc_id)
         return stale, outdated

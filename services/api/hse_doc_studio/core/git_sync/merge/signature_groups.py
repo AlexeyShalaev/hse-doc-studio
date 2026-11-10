@@ -1,9 +1,10 @@
 """Группы подписей: замороженный PDF и откреплённые подписи к нему берутся целиком с одной стороны.
 
 Конфликт группы записан в `signatures.json` указателем `/signature_groups/<документ>`. Сами файлы группы
-(`frozen[документ].path` и `detached[документ][слот].file`) планировщик видит как обычные бинарники и решил бы
-по новизне, то есть мог бы смешать PDF одной стороны с подписями другой. Здесь по плану определяется, какие
-файлы принадлежат спорной группе, чтобы они следовали за решением по группе, а не за новизной.
+(`frozen[документ].path`, `detached[документ][слот].file`, версия на подписи `pinned[документ].path`) планировщик
+видит как обычные бинарники и решил бы по новизне, то есть мог бы смешать PDF одной стороны с подписями другой.
+Здесь по плану определяется, какие файлы принадлежат спорной группе, чтобы они следовали за решением по группе,
+а не за новизной.
 """
 
 from __future__ import annotations
@@ -62,7 +63,8 @@ def _referenced(raw: bytes | None, doc_id: str) -> frozenset[str]:
         return frozenset()
     frozen = _entry(data, "frozen", doc_id)
     detached = _entry(data, "detached", doc_id)
-    pairs: list[tuple[object, str]] = [(frozen, "path"), (frozen, "signed_path")]
+    pinned = _entry(data, "pinned", doc_id)
+    pairs: list[tuple[object, str]] = [(frozen, "path"), (frozen, "signed_path"), (pinned, "path")]
     pairs += [(item, "file") for item in (detached.values() if isinstance(detached, dict) else ())]
     return frozenset(
         value for item, key in pairs if isinstance(item, dict) and isinstance(value := item.get(key), str) and value

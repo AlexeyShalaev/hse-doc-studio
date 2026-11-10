@@ -660,6 +660,91 @@ def test__signatures__file_of_a_studio_without_withheld__merges_with_one_that_ha
     assert merged["slots"]["author--anna"]["sign_reason"] == "why"
 
 
+def _pin(doc_id: str, sha: str | None) -> Callable[[Json], None]:
+    def change(data: Json) -> None:
+        if sha is None:
+            data["pinned"].pop(doc_id, None)
+            return
+        data["pinned"][doc_id] = {
+            "path": f".hse-studio/frozen/{doc_id}.source.pdf",
+            "sha256": sha,
+            "size": 10,
+            "pinned_at": "2026-11-10T14:32:00+00:00",
+            "route_id": "r",
+            "round": 1,
+        }
+
+    return change
+
+
+def test__signatures__pinned_is_written_by_the_repository(signatures_json: Json) -> None:
+    assert signatures_json["pinned"] == {}
+
+
+def test__signatures__pinned_changed_by_one_side__is_taken(signatures_json: Json) -> None:
+    pinned = _edited(signatures_json, _pin("a", "p1"))
+
+    taken = _merge(_SIGNATURES, signatures_json, signatures_json, pinned)
+    unpinned = _merge(_SIGNATURES, pinned, pinned, signatures_json)
+
+    assert not taken.conflict
+    assert _load(taken.content)["pinned"]["a"]["sha256"] == "p1"
+    assert not unpinned.conflict
+    assert _load(unpinned.content)["pinned"] == {}
+
+
+def test__signatures__pinned_version_and_frozen_pdf_of_one_document__are_one_signature_group(
+    signatures_json: Json,
+) -> None:
+    """B сделан из версии на подписи: новая версия одной стороны с фиксацией другой не смешиваются (12.3)."""
+    ours = _edited(signatures_json, _pin("a", "p2"))
+    theirs = _edited(signatures_json, _refrozen("f3", signed=True))
+
+    decision = _merge(_SIGNATURES, signatures_json, ours, theirs)
+
+    assert decision.conflict_type == ConflictType.signature_group.value
+    (group,) = decision.fields
+    assert group.pointer == "/signature_groups/a"
+    assert (group.ours["pinned"]["sha256"], group.theirs["pinned"]) == ("p2", None)
+    mine = _STRATEGY.resolve(
+        _SIGNATURES, _enc(signatures_json), _enc(ours), _enc(theirs), MergeMeta(), {group.pointer: FieldChoice.mine}
+    )
+    other = _STRATEGY.resolve(
+        _SIGNATURES, _enc(signatures_json), _enc(ours), _enc(theirs), MergeMeta(), {group.pointer: FieldChoice.theirs}
+    )
+    assert (_load(mine.content)["pinned"]["a"]["sha256"], _load(mine.content)["frozen"]["a"]["sha256"]) == (
+        "p2",
+        "f1",
+    )
+    assert (_load(other.content)["pinned"], _load(other.content)["frozen"]["a"]["sha256"]) == ({}, "f3")
+
+
+def test__signatures__pinned_on_different_documents__are_united(signatures_json: Json) -> None:
+    ours = _edited(signatures_json, _pin("a", "p1"))
+    theirs = _edited(signatures_json, _pin("b", "p2"))
+
+    decision = _merge(_SIGNATURES, signatures_json, ours, theirs)
+
+    assert not decision.conflict
+    assert {doc: item["sha256"] for doc, item in _load(decision.content)["pinned"].items()} == {"a": "p1", "b": "p2"}
+
+
+def test__signatures__file_of_a_studio_without_pinned__merges_with_one_that_has_it(signatures_json: Json) -> None:
+    def old_studio(data: Json) -> None:
+        del data["pinned"]
+
+    base = _edited(signatures_json, old_studio)
+    theirs = _edited(base, lambda d: d["slots"]["author--anna"].update(sign_reason="why"))
+    ours = _edited(signatures_json, _pin("a", "p1"))
+
+    decision = _merge(_SIGNATURES, base, ours, theirs)
+
+    merged = _load(decision.content)
+    assert not decision.conflict
+    assert merged["pinned"]["a"]["sha256"] == "p1"
+    assert merged["slots"]["author--anna"]["sign_reason"] == "why"
+
+
 # --- forms/*.json ------------------------------------------------------------------------------
 
 

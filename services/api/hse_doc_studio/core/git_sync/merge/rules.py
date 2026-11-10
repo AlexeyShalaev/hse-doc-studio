@@ -9,7 +9,7 @@
                      `documents[].last_compile_id` остаются моими
     signatures.json  слоты и размещения по ключам, `signing_identity_id` и `sign_mode` мои, картинка
                      слота следует за новейшей; подписанный PDF, подписи к нему и придержанные маршрутом
-                     слоты (`withheld`) — неделимая группа документа
+                     слоты (`withheld`) и версия на подписи (`pinned`) — неделимая группа документа
     forms/*.json     `completed` — «и» обеих сторон и сбрасывается, если ответы изменились после отметки
     template.json    история обновлений — объединение по id, `ignored` — множество
     остальные        словари по ключам, списки и скаляры целиком
@@ -209,8 +209,10 @@ SIGNATURES_RULES = JsonRules(
     ),
     field_groups=(FieldGroup(("slots", "*"), ("png_path", "natural_width_px", "natural_height_px")),),
     # Придержанные слоты в группе: они задают видимый слой, который лёг в зафиксированный PDF, поэтому
-    # придержание одной стороны с фиксацией другой дало бы PDF, не совпадающий со своим отпечатком.
-    doc_groups=(DocGroups((), ("frozen", "detached", "embedded", "withheld"), "signature_groups"),),
+    # придержание одной стороны с фиксацией другой дало бы PDF, не совпадающий со своим отпечатком. Версия на
+    # подписи тоже: из неё сделан зафиксированный PDF (`frozen.source_sha256`), и смешать её с фиксацией другой
+    # стороны значило бы подписывать не то, что согласовали (signing-route.md, 12.3).
+    doc_groups=(DocGroups((), ("frozen", "detached", "embedded", "withheld", "pinned"), "signature_groups"),),
     post=(_stale_signatures,),
 )
 
