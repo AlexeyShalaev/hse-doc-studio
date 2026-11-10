@@ -141,6 +141,20 @@ def local_record(
     )
 
 
+class Vcs:
+    """История проекта на вершине `HEAD`; `same_inputs` коммиты с теми же входами сборки, что в рабочей папке."""
+
+    def __init__(self, dirty: bool, same_inputs: frozenset[str]) -> None:
+        self.dirty = dirty
+        self.same_inputs = same_inputs
+
+    def status(self, _project: Any, _settings: Any) -> Any:
+        return SimpleNamespace(available=True, initialized=True, head=HEAD, dirty=self.dirty)
+
+    def build_inputs_changed(self, _project: Any, _settings: Any, since: str) -> bool:
+        return since not in self.same_inputs and (since != HEAD or self.dirty)
+
+
 def build(
     tmp_path: Path,
     servers: Servers,
@@ -148,7 +162,9 @@ def build(
     dirty: bool = False,
     connected: bool = True,
     outputs: dict[str, str | None] | None = None,
+    same_inputs: frozenset[str] = frozenset(),
 ) -> tuple[LocalBuildsUC, Compiles]:
+    """`same_inputs` коммиты, входы сборки которых совпадают с рабочей папкой (служебные коммиты, подписи)."""
     produced = outputs if outputs is not None else {"vkr": "vkr/vkr.pdf"}
     project = make_project(folder=tmp_path, documents=[make_document(doc_id) for doc_id in produced])
     compiles = Compiles(*records)
@@ -177,16 +193,12 @@ def build(
         def get(self, _folder: Path) -> None:
             return None
 
-    class Vcs:
-        def status(self, _project: Any, _settings: Any) -> Any:
-            return SimpleNamespace(available=True, initialized=True, head=HEAD, dirty=dirty)
-
     uc = LocalBuildsUC(
         project_uc=Projects(),  # type: ignore[arg-type]
         outputs=Outputs(),  # type: ignore[arg-type]
         project_repo=SimpleNamespace(),  # type: ignore[arg-type]
         compile_repo=compiles,  # type: ignore[arg-type]
-        vcs=Vcs(),  # type: ignore[arg-type]
+        vcs=Vcs(dirty, same_inputs),  # type: ignore[arg-type]
         servers=servers,  # type: ignore[arg-type]
         credentials=Credentials(),  # type: ignore[arg-type]
         store_remotes=Remotes(),  # type: ignore[arg-type]
@@ -239,6 +251,24 @@ async def test__status__local_build_of_older_version_or_dirty_tree__is_not_fresh
     assert stale.local is not None
     assert unsaved.local is not None
     assert (stale.local.fresh, unsaved.local.fresh) == (False, False)
+
+
+async def test__status__older_commit_or_dirty_tree_with_the_same_build_inputs__is_fresh(tmp_path: Path) -> None:
+    """Вершину сдвинул служебный коммит (сборка соседа, статус в project.json), дерево пачкают записи подписей."""
+    older = "b" * 40
+    uc, _ = build(
+        tmp_path, Servers(raw_builds()), local_record(tmp_path, at=T0, commit=older), same_inputs=frozenset({older})
+    )
+    dirty_uc, _ = build(
+        tmp_path, Servers(raw_builds()), local_record(tmp_path, at=T0), dirty=True, same_inputs=frozenset({HEAD})
+    )
+
+    (behind,) = (await uc.status(uuid4())).documents
+    (signed,) = (await dirty_uc.status(uuid4())).documents
+
+    assert behind.local is not None
+    assert signed.local is not None
+    assert (behind.local.fresh, signed.local.fresh) == (True, True)
 
 
 async def test__status__no_connection_to_the_server__local_side_is_still_shown_with_the_reason(tmp_path: Path) -> None:
@@ -328,6 +358,15 @@ async def test__fetch__auto_mode__takes_only_the_build_of_the_version_the_person
     assert auto.status is FetchStatus.skipped_stale
     assert manual.status is FetchStatus.downloaded
     assert len(servers.downloads) == 1
+
+
+async def test__fetch__auto_mode__takes_a_build_of_another_commit_with_the_same_build_inputs(tmp_path: Path) -> None:
+    servers = Servers(raw_builds(commit="b" * 40))
+    uc, _ = build(tmp_path, servers, same_inputs=frozenset({"b" * 40}))
+
+    (auto,) = await uc.fetch(uuid4(), "vkr", auto=True)
+
+    assert auto.status is FetchStatus.downloaded
 
 
 async def test__fetch__auto_mode_with_unsaved_edits__is_skipped(tmp_path: Path) -> None:

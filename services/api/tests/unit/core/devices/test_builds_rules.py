@@ -33,11 +33,10 @@ def decide(
     *,
     force: bool = False,
     auto: bool = False,
-    head: str | None = "c1",
-    dirty: bool = False,
+    current: bool | None = True,
     limit: int = 100 * MB,
 ) -> FetchStatus | None:
-    return decide_fetch(relation, cloud, force=force, auto=auto, local_head=head, local_dirty=dirty, max_bytes=limit)
+    return decide_fetch(relation, cloud, force=force, auto=auto, cloud_current=current, max_bytes=limit)
 
 
 def test__decide_fetch__nothing_to_fetch_cases() -> None:
@@ -55,14 +54,11 @@ def test__decide_fetch__respects_size_limit() -> None:
     assert decide(BuildRelation.cloud_only, side(size=100 * MB)) is None
 
 
-def test__decide_fetch__auto_takes_only_the_build_of_the_version_the_person_has() -> None:
-    assert decide(BuildRelation.cloud_only, side(commit="c1"), auto=True, head="c1") is None
-    assert decide(BuildRelation.cloud_only, side(commit="c0"), auto=True, head="c1") is FetchStatus.skipped_stale
-    assert decide(BuildRelation.cloud_only, side(commit=None), auto=True, head="c1") is FetchStatus.skipped_stale
-    assert decide(BuildRelation.cloud_only, side(commit="c1"), auto=True, head="c1", dirty=True) is (
-        FetchStatus.skipped_stale
-    )
+def test__decide_fetch__auto_takes_only_the_build_of_the_inputs_the_person_has() -> None:
+    assert decide(BuildRelation.cloud_only, side(commit="c1"), auto=True, current=True) is None
+    assert decide(BuildRelation.cloud_only, side(commit="c0"), auto=True, current=False) is FetchStatus.skipped_stale
+    assert decide(BuildRelation.cloud_only, side(commit=None), auto=True, current=None) is FetchStatus.skipped_stale
 
 
 def test__decide_fetch__manual_takes_any_cloud_build_even_of_another_version() -> None:
-    assert decide(BuildRelation.cloud_newer, side(commit="c0"), head="c1") is None
+    assert decide(BuildRelation.cloud_newer, side(commit="c0"), current=False) is None
