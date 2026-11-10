@@ -30,6 +30,7 @@ import {
   useDocument,
 } from "@entities/document";
 import { useStartCompile } from "@entities/compile";
+import { useRouteEditGuard } from "@entities/signing-route";
 import { UploadCustomFileModal } from "@features/custom-document";
 import { BuildBlockedNotice } from "@features/build-states";
 import {
@@ -134,6 +135,7 @@ export const DocumentTabs = ({ projectId, docId }: DocumentTabsProps) => {
   const { remove: removeCustomFile, isRemoving: isRevertingCustomFile } =
     useCustomFileActions(projectId, docId);
   const [uploadOpen, setUploadOpen] = useState(false);
+  const routeGuard = useRouteEditGuard(projectId);
   const [revertConfirmOpen, setRevertConfirmOpen] = useState(false);
 
   // Единственный сегмент «Редактор» показывает либо исходник, либо офисный
@@ -381,14 +383,16 @@ export const DocumentTabs = ({ projectId, docId }: DocumentTabsProps) => {
   };
 
   const handleRevertCustomFile = () => {
-    removeCustomFile(false)
-      .then(() => {
-        toast.success(t("customFile.revertedToast"));
-        setRevertConfirmOpen(false);
-      })
-      .catch(() => {
-        // per-request error toast already shown by the axios interceptor
-      });
+    routeGuard.run({ docIds: [docId] }, () => {
+      removeCustomFile(false)
+        .then(() => {
+          toast.success(t("customFile.revertedToast"));
+          setRevertConfirmOpen(false);
+        })
+        .catch(() => {
+          // per-request error toast already shown by the axios interceptor
+        });
+    });
   };
 
   const editors = editorsData?.editors ?? [];
