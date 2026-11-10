@@ -20,7 +20,7 @@ import type {
   UpdateSigningRouteRequest,
 } from "../model/signingRoute.schema";
 
-// Данные для тестов, галерей и будущих эталонов contracts/server: «Заявка на тему КП»,
+// Данные для тестов и галерей по образцу эталонов contracts/server: «Заявка на тему КП»,
 // автор картинкой, научрук открепленной ЭП, шаг 2 из 2. Все поля явно, как в контракте.
 
 export const SR_PROJECT_ID = "p_01hxa1c4de";
@@ -683,7 +683,7 @@ const SNAPSHOT_TASK_EXAMPLES = {
 } satisfies Record<string, SigningTask>;
 
 /**
- * Эталоны тел по будущим каталогам contracts/server/fixtures/<Схема>/<вариант>.json.
+ * Эталоны тел по каталогам contracts/server/fixtures/<Схема>/<вариант>.json.
  * Ключи совпадают с SIGNING_ROUTE_CONTRACT_SCHEMAS.
  */
 export const SIGNING_ROUTE_CONTRACT_EXAMPLES: Record<

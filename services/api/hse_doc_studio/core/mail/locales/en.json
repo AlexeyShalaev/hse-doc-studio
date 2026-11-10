@@ -324,6 +324,42 @@
         "The signing page opens only after you sign in to your account: a forwarded email does not let anyone sign for you."
       ]
     },
+    "signing_request_new_version": {
+      "subject": "{actor} asks you to sign a new version: {profile}",
+      "preheader": "The documents changed after they were sent for signing: approve the changed ones again.",
+      "title": "A new version to sign",
+      "lead": "{actor} asks you to sign a new version of the documents “{profile}” in the project “{project}”. Approve the changed documents again; your approvals and signatures on the others stay.",
+      "action": "Open the signing page",
+      "note_title": "Message from the sender",
+      "details": [
+        [
+          "Project",
+          "{project}"
+        ],
+        [
+          "Checkpoint",
+          "{profile}"
+        ],
+        [
+          "Changed",
+          "{changed}"
+        ],
+        [
+          "Requested by",
+          "{actor}"
+        ],
+        [
+          "Deadline",
+          "{deadline}"
+        ]
+      ],
+      "context": [
+        "You are on the signing route of a project on the server {server}. This email was sent to {email}."
+      ],
+      "security": [
+        "The signing page opens only after you sign in to your account: a forwarded email does not let anyone sign for you."
+      ]
+    },
     "signing_reminder": {
       "subject": "Reminder: {profile}",
       "preheader": "The documents are waiting for your signature.",

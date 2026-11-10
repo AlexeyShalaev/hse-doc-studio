@@ -67,19 +67,24 @@ async def test__server__build_and_signature_hooks_lead_to_the_route_watch(stand:
     assert isinstance(signatures, WatchedSignatureRepository)
 
 
-async def test__rebuild__pdf_changed__route_paused_once_and_people_notified(stand: Stand) -> None:
+async def test__sent_version_replaced__route_paused_once_and_people_notified(stand: Stand) -> None:
     trio = await make_trio(stand, images=("author", "supervisor", "academic_supervisor"))
     trio.sent()
     trio.approved(trio.supervisor)
     assert trio.withheld() == {APPLICATION: ["academic_supervisor"]}
 
+    # Пересборка маршрут не трогает (12.5): у документа только «есть изменения после отправки».
     trio.project.build(PROPOSAL, "v2")
+    pdf_built(stand, trio, PROPOSAL)
+    assert (trio.route()["status"], trio.route()["changed_docs"]) == ("active", [PROPOSAL])
+
+    # Подмена версии на подписи мимо маршрута (git, восстановление): сверка останавливает маршрут.
+    trio.project.replace_sent(PROPOSAL)
     pdf_built(stand, trio, PROPOSAL)
 
     route = trio.route()
     assert (route["status"], route["stop_reason"], route["phase"]) == ("paused", "sent_changed", None)
     assert [(e["kind"], e["reason"], e["who"]) for e in route["events"]][-1] == ("paused", "sent_changed", None)
-    # Пока отправка не снимает версию на подписи (R16), источник это сборка, и её подмена останавливает маршрут.
     # Согласие действует по документам (12.6): картинка научрука придержана только на заявке, на заявлении она
     # остаётся, как и картинка автора: заявление не менялось.
     assert trio.withheld() == {APPLICATION: ["academic_supervisor"], PROPOSAL: ["supervisor"]}
@@ -239,8 +244,8 @@ async def test__sweep__missed_hook__route_paused__second_pass_changes_nothing(st
     trio.sent()
     untouched = other.sent()
 
-    # Пересборка без хука (гибрид, рестарт между записью файла и хуком): маршрут в хранилище ещё идёт.
-    trio.project.build(APPLICATION, "v2")
+    # Подмена версии на подписи без хука (git, восстановление `.hse-studio`): маршрут в хранилище ещё идёт.
+    trio.project.replace_sent(APPLICATION)
 
     assert sweep(stand) == 1
     assert _stopped(trio) == ("paused", "sent_changed")

@@ -360,10 +360,10 @@ async def test__reminder__manual_reminder_in_the_audit_log(stand: Stand) -> None
     assert (details["trigger"], details["delivery"]) == ("manual", reminded.json()["delivery"])
 
 
-async def test__document_rebuilt__pause_recorded_by_the_server(stand: Stand) -> None:
+async def test__sent_version_replaced__pause_recorded_by_the_server(stand: Stand) -> None:
     trio = await make_trio(stand, academic="none")
     trio.sent()
-    trio.project.build(PROPOSAL, "v2")
+    trio.project.replace_sent(PROPOSAL)
 
     refused = trio.approve(trio.supervisor, expected={})
 

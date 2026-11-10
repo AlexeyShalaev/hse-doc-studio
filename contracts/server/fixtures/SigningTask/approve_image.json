@@ -20,7 +20,8 @@
     "message": "Прошу подписать заявление до пятницы.",
     "sender": "Иванов И. И.",
     "sent_at": "2026-11-10T09:00:00Z",
-    "stop_reason": null
+    "stop_reason": null,
+    "new_version": false
   },
   "steps": [
     [
@@ -111,7 +112,10 @@
           "mark": "png",
           "status": "signed"
         }
-      ]
+      ],
+      "sent_at": "2026-11-10T09:00:00Z",
+      "changed_since_mine": false,
+      "changed": null
     }
   ],
   "events": [
@@ -123,7 +127,8 @@
       "who": "Иванов И. И.",
       "participant_id": null,
       "comment": null,
-      "reason": null
+      "reason": null,
+      "changed_docs": null
     },
     {
       "id": "sre_02",
@@ -133,7 +138,8 @@
       "who": "Иванов И. И.",
       "participant_id": "srp_author",
       "comment": null,
-      "reason": null
+      "reason": null,
+      "changed_docs": null
     }
   ]
 }

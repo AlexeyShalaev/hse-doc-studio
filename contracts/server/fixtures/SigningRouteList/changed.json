@@ -1,0 +1,36 @@
+{
+  "items": [
+    {
+      "id": "sr_01hy2b7k9q",
+      "profile": {
+        "id": "topic-approval",
+        "name": {
+          "ru": "Заявка на тему КП",
+          "en": "Course project topic application"
+        }
+      },
+      "status": "active",
+      "phase": "signing",
+      "round": 1,
+      "current_step": 2,
+      "steps_total": 2,
+      "deadline": "2026-11-15T20:59:00Z",
+      "stop_reason": null,
+      "sent_at": "2026-11-10T09:00:00Z",
+      "completed_at": null,
+      "updated_at": "2026-11-10T09:00:00Z",
+      "waiting_for": [
+        {
+          "name": "Петров П. П.",
+          "persona": "supervisor"
+        }
+      ],
+      "docs": [
+        "topic_application"
+      ],
+      "changed_docs": [
+        "topic_application"
+      ]
+    }
+  ]
+}

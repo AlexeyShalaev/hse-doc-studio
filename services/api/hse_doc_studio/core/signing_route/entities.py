@@ -113,6 +113,8 @@ class Notice(StrEnum):
     paused = "signing_paused"
     completed = "signing_completed"
     cancelled = "signing_cancelled"
+    # Новая версия (12.6): тем, кто согласовал или подписал изменившийся документ, но чья очередь ещё не настала.
+    new_version = "signing_new_version"
 
 
 class EventKind(StrEnum):
@@ -211,12 +213,17 @@ class DocSnapshot:
     `sent_at` когда отправлена эта версия документа (12.6): у документа без изменений новая версия маршрута его не
     трогает. None у маршрутов 0.20.0, тогда берётся `SigningRoute.sent_at` (`SigningRoute.doc_sent_at`). Это не
     отпечаток: в сравнении снимков не участвует.
+
+    `replaced` эта версия заменила прежнюю версию на подписи (документ изменился, «Отправить новую версию»), а не
+    отправлена впервые. Вместе с `sent_at` это говорит, какие документы изменил текущий раунд
+    (`SigningRoute.round_changed_docs`). Тоже не отпечаток.
     """
 
     compiled_sha256: str | None
     marks_digest: str
     frozen_sha256: str | None = None
     sent_at: datetime | None = field(default=None, compare=False)
+    replaced: bool = field(default=False, compare=False)
 
 
 @dataclass(frozen=True)
@@ -325,6 +332,21 @@ class SigningRoute:
         if seen is not None and seen.sent_at is not None:
             return seen.sent_at
         return self.sent_at
+
+    @property
+    def round_changed_docs(self) -> tuple[str, ...]:
+        """Документы, у которых текущий раунд отправил новую версию взамен прежней (12.6), в порядке маршрута.
+
+        Пусто у первой отправки, после отмены (версия снята, документы отправлены заново) и у маршрута без новой
+        версии. Раунд это определяет по снимку: время отправки документа равно времени отправки маршрута.
+        """
+        if self.sent_at is None:
+            return ()
+        return tuple(
+            doc_id
+            for doc_id in self.docs
+            if (seen := self.snapshot.get(doc_id)) is not None and seen.replaced and seen.sent_at == self.sent_at
+        )
 
     def participant(self, participant_id: UUID) -> Participant:
         for p in self.participants:

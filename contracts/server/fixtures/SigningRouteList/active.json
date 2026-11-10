@@ -24,7 +24,11 @@
           "name": "Петров П. П.",
           "persona": "supervisor"
         }
-      ]
+      ],
+      "docs": [
+        "topic_application"
+      ],
+      "changed_docs": []
     }
   ]
 }

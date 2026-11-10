@@ -25,6 +25,11 @@ _COMMENTS = {
     Lang.ru: "Уточните цель проекта во введении, после этого подпишу.",
     Lang.en: "Please clarify the project goal in the introduction, then I will sign.",
 }
+_CHANGES = {
+    Lang.ru: "Исправил формулировку темы по замечанию руководителя.",
+    Lang.en: "Rephrased the topic after the supervisor's comment.",
+}
+_CHANGED = {Lang.ru: "«Заявление о выборе темы»", Lang.en: "«Topic application»"}
 _EXPIRES = datetime(2026, 11, 10, 14, 30, tzinfo=UTC)
 _DEADLINE = datetime(2026, 11, 15, 20, 59, tzinfo=UTC)
 _TOKEN = "sampletoken0000"  # noqa: S105 — образец, не секрет
@@ -61,6 +66,9 @@ _SAMPLES: dict[MailTemplate, _Sample] = {
     MailTemplate.transfer_request: _Sample(values=_PROJECT),
     MailTemplate.signing_request: _Sample(_SIGN_PATH, values=_SIGNING, token=False),
     MailTemplate.signing_request_sign: _Sample(_SIGN_PATH, values=_SIGNING, token=False),
+    MailTemplate.signing_request_new_version: _Sample(
+        _SIGN_PATH, values=(*_SIGNING, "changed"), note=_CHANGES, token=False
+    ),
     MailTemplate.signing_reminder: _Sample(_SIGN_PATH, values=_SIGNING, token=False),
     MailTemplate.signing_returned: _Sample(_CHECKPOINT_PATH, values=("actor", "project"), note=_COMMENTS, token=False),
     MailTemplate.signing_completed: _Sample(_CHECKPOINT_PATH, values=("project", "profile"), token=False),
@@ -81,6 +89,7 @@ def sample_mail(template: MailTemplate, lang: Lang, *, server_url: str | None = 
         "count": 2,
         "profile": _PROFILES[lang],
         "deadline": format_moment(lang, _DEADLINE),
+        "changed": _CHANGED[lang],
     }
     suffix = f"/{_TOKEN}" if sample.token else ""
     link = f"{(server_url or '').rstrip('/')}{sample.path}{suffix}" if sample.path else None

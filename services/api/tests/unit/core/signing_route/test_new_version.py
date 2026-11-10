@@ -373,6 +373,32 @@ def test__send__after_cancel_with_changes__kept_document_and_its_approvals_stay(
 
     sent = send(driver.route, candidate, by=_id(driver, "author"), at=T0)
 
-    assert version_changes(driver.route, candidate).docs == {DOC: DocChange.changed, DOC2: DocChange.same}
+    # Отмена сняла версии на подписи (12.4): прежней версии нет, документы отправляются заново, а согласия
+    # переносятся по отпечаткам, как всегда.
+    assert driver.route.snapshot == {}
+    assert version_changes(driver.route, candidate).docs == {DOC: DocChange.new, DOC2: DocChange.new}
     assert evaluate(sent, candidate).stop is None
     assert approved_docs(sent, sent.participant(_pid(driver, "reviewer")), candidate) == {DOC2}
+
+
+def test__send__new_version__round_changed_docs_names_only_replaced_documents() -> None:
+    """Раунд новой версии знает, какие документы он сменил (`DocSnapshot.replaced` и время отправки), R16."""
+    driver = _completed()
+    assert driver.route.round_changed_docs == ()
+    driver.world.compiled[DOC] = _NEW
+
+    sent = send(driver.route, driver.world.facts().candidate(), by=_id(driver, "author"), at=T0 + timedelta(hours=1))
+
+    assert sent.round_changed_docs == (DOC,)
+    assert (sent.snapshot[DOC].replaced, sent.snapshot[DOC2].replaced) == (True, False)
+    assert sent.snapshot[DOC2].sent_at == driver.route.doc_sent_at(DOC2)
+
+
+def test__cancel__forgets_the_sent_versions() -> None:
+    driver = _completed()
+    driver.world.compiled[DOC] = _NEW
+    driver.send(by=_id(driver, "author"))
+
+    cancelled = cancel(driver.route)
+
+    assert (cancelled.snapshot, cancelled.round_changed_docs) == ({}, ())

@@ -37,6 +37,8 @@ _TO_CHECKPOINT = frozenset({NotificationKind.signing_returned, NotificationKind.
 def _template(kind: NotificationKind, payload: NotificationPayload) -> MailTemplate | None:
     if kind is NotificationKind.signing_request and payload.outcome == "sign":
         return MailTemplate.signing_request_sign
+    if kind is NotificationKind.signing_request and payload.new_version:
+        return MailTemplate.signing_request_new_version
     return _TEMPLATES.get(kind)
 
 
@@ -85,6 +87,7 @@ class SmtpNotificationMailer:
         lang = resolve_lang(locale)
         if kind in _TO_SIGNING_PAGE or kind in _TO_CHECKPOINT:
             returned = kind is NotificationKind.signing_returned
+            new_version = template is MailTemplate.signing_request_new_version
             return compose(
                 template,
                 lang,
@@ -97,8 +100,11 @@ class SmtpNotificationMailer:
                     # Название точки в `excerpt`; у возврата там комментарий, он идёт отдельным блоком.
                     "profile": None if returned else (payload.excerpt or payload.profile_id or ""),
                     "deadline": _deadline(payload, lang),
+                    # Новая версия (12.6): изменившиеся документы получателя.
+                    "changed": payload.changed_names if new_version else None,
                 },
-                note=payload.excerpt if returned else None,
+                # У возврата комментарий, у новой версии сообщение автора («Что изменилось» его заменяет).
+                note=payload.excerpt if returned else payload.message if new_version else None,
             )
         return compose(
             template,

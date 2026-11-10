@@ -1,9 +1,8 @@
-import {
-  routeChangedDocs,
-  type RouteDoc,
-  type RouteParticipant,
-  type SigningRoute,
-  type SigningRoutePreview,
+import type {
+  RouteDoc,
+  RouteParticipant,
+  SigningRoute,
+  SigningRoutePreview,
 } from "@entities/signing-route";
 
 // Версия на подписи в карточке «Подписание» и плашке редактора (docs/design/signing-route.md,
@@ -16,7 +15,7 @@ export type RouteVersionView = {
   changed: readonly RouteDoc[];
   /**
    * Дата версии, которую подписывают: самая поздняя у изменившихся документов, без изменений
-   * у всех. null, если версий на подписи нет (сервер до R16, черновик, отмена).
+   * у всех. null, если версий на подписи нет (черновик, отмена, перенос не восстановил версию).
    */
   sentAt: string | null;
   /**
@@ -34,19 +33,18 @@ const latest = (dates: readonly string[]): string | null =>
   );
 
 export const routeVersionView = (route: SigningRoute): RouteVersionView => {
-  const changedIds = new Set(routeChangedDocs(route));
+  const changedIds = new Set(route.changed_docs);
   const changed = route.docs.filter(
-    (doc) => changedIds.has(doc.doc_id) || doc.changed === true,
+    (doc) => changedIds.has(doc.doc_id) || doc.changed,
   );
   const docs = route.docs.filter(
-    (doc) => (doc.sent ?? null) !== null || changed.includes(doc),
+    (doc) => doc.sent !== null || changed.includes(doc),
   );
   const dated = changed.some((doc) => doc.sent) ? changed : route.docs;
   return {
     docs,
     changed,
     sentAt: latest(dated.flatMap((doc) => (doc.sent ? [doc.sent.at] : []))),
-    // `sent` строго null: поля нет до R16, отсутствие значит «ничего не менялось».
     lost:
       route.status === "paused" &&
       route.stop_reason === "sent_changed" &&
@@ -66,27 +64,22 @@ export type NewVersionSummary = {
   reapprove: readonly RouteParticipant[];
 };
 
-/**
- * Следствия «Отправить новую версию» из предпросмотра (12.6). Пока сервер не отдаёт `change` и
- * `keeps_approval` (до R16), изменившиеся документы берутся из маршрута, а людей не перечисляем.
- */
+/** Следствия «Отправить новую версию» из предпросмотра (12.6). */
 export const newVersionSummary = (
   route: SigningRoute,
   preview: SigningRoutePreview,
   meId: string | null,
   docName: (doc: { doc_id: string; name: Record<string, string> }) => string,
 ): NewVersionSummary => {
-  const known = preview.docs.some((doc) => doc.change !== undefined);
-  const changedIds = new Set(routeChangedDocs(route));
   const isChanged = (doc: SigningRoutePreview["docs"][number]): boolean =>
-    known ? doc.change !== "same" : changedIds.has(doc.doc_id);
+    doc.change !== "same";
   const people = new Map(route.steps.flat().map((p) => [p.id, p]));
   return {
     changed: preview.docs.filter(isChanged).map(docName),
     kept: preview.docs.filter((doc) => !isChanged(doc)).map(docName),
     reapprove: preview.participants.flatMap((p) => {
       const person = people.get(p.participant_id);
-      if (p.keeps_approval !== false || !person) return [];
+      if (p.keeps_approval || !person) return [];
       if (person.approved_at === null || person.user_id === meId) return [];
       return [person];
     }),

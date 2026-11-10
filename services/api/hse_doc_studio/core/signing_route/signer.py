@@ -164,16 +164,28 @@ def doc_token(action: NextAction, doc: DocFacts, frozen: FrozenPdf | None) -> st
     return approval_token(doc)
 
 
-def task_tokens(route: SigningRoute, p: Participant, action: NextAction, facts: RouteFacts) -> dict[str, str | None]:
-    """Отпечатки документов участника для его следующего действия."""
+def task_tokens(route: SigningRoute, p: Participant, view: ParticipantView, facts: RouteFacts) -> dict[str, str | None]:
+    """Отпечатки документов участника для его следующего действия.
+
+    Документ, по которому его согласие действует и его ЭП на нём не ждут (12.9: документ без изменений в раунде
+    новой версии), отпечатка не получает: действовать на нём нечего. Согласие всё равно запишет отпечатки всех его
+    документов (`transitions.approve`).
+    """
+    pending = {pair.doc_id for pair in unsigned_crypto(p, facts)}
     return {
-        doc_id: doc_token(action, facts.doc(doc_id), facts.state.frozen.get(doc_id)) for doc_id in p.doc_ids(route.docs)
+        doc_id: None
+        if doc_id in view.approved_docs and doc_id not in pending
+        else doc_token(view.next_action, facts.doc(doc_id), facts.state.frozen.get(doc_id))
+        for doc_id in p.doc_ids(route.docs)
     }
 
 
 def check_expected(tokens: Mapping[str, str | None], expected: Mapping[str, str]) -> None:
-    """Человек видел то, что есть сейчас; иначе `doc_changed` с документами, которые разошлись."""
-    changed = [doc_id for doc_id, token in tokens.items() if expected.get(doc_id) != token]
+    """Человек видел то, что есть сейчас; иначе `doc_changed` с документами, которые разошлись.
+
+    Сверяются только документы с отпечатком: на остальных действовать нечего (`task_tokens`).
+    """
+    changed = [doc_id for doc_id, token in tokens.items() if token is not None and expected.get(doc_id) != token]
     if changed:
         raise DocChangedError(changed)
 

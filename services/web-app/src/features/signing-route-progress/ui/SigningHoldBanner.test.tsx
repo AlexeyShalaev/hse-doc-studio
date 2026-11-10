@@ -175,7 +175,7 @@ describe("плашка документа на подписании", () => {
     expect(screen.getByTestId("held")).toHaveTextContent("no");
   });
 
-  it("сервер ещё не снимает версию на подписи (до R16): прежний текст", async () => {
+  it("версии на подписи у документа нет: текст без даты", async () => {
     await startRoute();
     const real = signatureApi.getPlan.bind(signatureApi);
     vi.spyOn(signatureApi, "getPlan").mockImplementation(async (...args) => {

@@ -87,6 +87,8 @@ const esignRoute = (o: EsignOptions = {}): SigningRoute => {
           slot("supervisor", o.supervisorSlot),
           slot("consultant"),
         ],
+        sent: null,
+        changed: false,
       },
     ],
     steps: [

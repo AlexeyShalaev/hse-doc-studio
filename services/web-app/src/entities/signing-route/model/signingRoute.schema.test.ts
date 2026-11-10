@@ -14,8 +14,8 @@ import {
   makeSigningTask,
 } from "../testing";
 
-// Те же проверки, что у contracts/server (entities/session/api/contract.test.ts): срезы R5 и R6
-// перенесут эталоны в contracts/server/fixtures, и проверка станет общей с бэкендом.
+// Те же проверки, что у contracts/server (entities/session/api/contract.test.ts), над локальной
+// копией эталонов: тестам и галереям нужны фабрики, а не JSON из contracts/server/fixtures.
 
 const examples = Object.entries(SIGNING_ROUTE_CONTRACT_EXAMPLES).flatMap(
   ([schema, variants]) =>

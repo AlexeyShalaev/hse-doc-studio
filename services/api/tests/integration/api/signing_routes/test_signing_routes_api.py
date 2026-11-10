@@ -7,6 +7,7 @@
 from __future__ import annotations
 
 import json
+from datetime import timedelta
 from types import SimpleNamespace
 from typing import Any, cast
 from uuid import UUID
@@ -16,6 +17,7 @@ from hse_doc_studio.core.signing_route.entities import RouteStatus
 from hse_doc_studio.core.signing_route.readiness import Blocker, BlockerCode, OtherRoute
 from hse_doc_studio.infra.db.orm.signing_routes import SigningRouteRow
 from hse_doc_studio.use_cases.mcp.tools.signing_route import _blocker_text
+from hse_doc_studio.use_cases.signing_route import author as author_module
 from hse_doc_studio.use_cases.signing_route.author import RoutePreview
 from sqlalchemy import update
 
@@ -404,17 +406,21 @@ async def test__send__document_rebuilt_after_preview__doc_changed(stand: Stand) 
     assert project.call(author, "GET", f"{project.routes}/{route['id']}").json()["status"] == "draft"
 
 
-async def test__send__active_route__invalid_transition_for_send_and_update(stand: Stand) -> None:
+async def test__send__active_route__nothing_changed__update_and_archive_invalid(
+    stand: Stand, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(author_module, "SEND_INTERVAL", timedelta(0))
     project, author, _ = await _setup(stand)
     route = _create(project, author)
     _ready(project, author)
     assert _send(project, author, route["id"]).status_code == 200
 
+    # Идущий маршрут отправляется только новой версией (12.6): без изменений отправлять нечего.
     again = _send(project, author, route["id"])
     changed = _put(project, author, route["id"], steps=_draft(route))
     archived = project.call(author, "POST", f"{project.routes}/{route['id']}/archive", json={})
 
-    assert (again.status_code, again.json()["code"]) == (409, "invalid_transition")
+    assert (again.status_code, again.json()["code"]) == (409, "nothing_changed")
     assert (changed.status_code, changed.json()["code"]) == (409, "invalid_transition")
     assert (archived.status_code, archived.json()["code"]) == (409, "invalid_transition")
 
@@ -552,12 +558,25 @@ async def test__list__active_route__summary_with_waiting_for(stand: Stand) -> No
     assert project.call(author, "GET", project.routes, params={"profile_id": "final"}).json() == {"items": []}
 
 
-async def test__get__rebuilt_after_send__shows_computed_pause_without_writing(stand: Stand) -> None:
+async def test__get__rebuilt_after_send__route_goes_on_with_changes(stand: Stand) -> None:
+    """Пересборка маршрут не останавливает (12.5): у документа «есть изменения после отправки»."""
     project, author, _ = await _setup(stand)
     route = _create(project, author)
     _ready(project, author)
     assert _send(project, author, route["id"]).status_code == 200
     project.build("project_proposal", "v2")
+
+    shown = project.call(author, "GET", f"{project.routes}/{route['id']}").json()
+
+    assert (shown["status"], shown["stop_reason"], shown["changed_docs"]) == ("active", None, ["project_proposal"])
+
+
+async def test__get__sent_version_replaced__shows_computed_pause_without_writing(stand: Stand) -> None:
+    project, author, _ = await _setup(stand)
+    route = _create(project, author)
+    _ready(project, author)
+    assert _send(project, author, route["id"]).status_code == 200
+    project.replace_sent("project_proposal")
 
     shown = project.call(author, "GET", f"{project.routes}/{route['id']}").json()
     listed = project.call(author, "GET", project.routes).json()["items"][0]

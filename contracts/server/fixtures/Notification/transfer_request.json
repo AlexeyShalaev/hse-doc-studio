@@ -13,6 +13,7 @@
     "path": null,
     "excerpt": null,
     "profile_id": null,
-    "deadline": null
+    "deadline": null,
+    "new_version": false
   }
 }

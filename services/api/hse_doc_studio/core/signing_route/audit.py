@@ -141,7 +141,14 @@ def _kind_details(route: SigningRoute, event: RouteEvent, participant: Participa
             "participants": len(route.participants),
             "deadline": route.deadline.isoformat() if route.deadline is not None else None,
             "resend": event.round > 1,
+            # Новая версия (12.6): какие документы сменили версию на подписи и что именно ушло подписантам.
+            "new_version": bool(event.details.get("new_version", False)),
+            "changed_docs": list(_strings(event.details.get("changed"))),
+            "versions": _versions(event.details.get("versions")),
         }
+    if event.kind is EventKind.cancelled:
+        # Документы, с которых отмена сняла версию на подписи (12.4).
+        return {"unpinned": list(_strings(event.details.get("unpinned")))}
     if event.kind is EventKind.approved and participant is not None:
         return {"slots": slots_details(participant)}
     if event.kind is EventKind.completed:
@@ -150,6 +157,21 @@ def _kind_details(route: SigningRoute, event: RouteEvent, participant: Participa
         left = _participant(route, route.stopped_by)
         return participant_details(route, left) if left is not None else {}
     return {}
+
+
+def _strings(raw: object) -> tuple[str, ...]:
+    return tuple(item for item in raw if isinstance(item, str)) if isinstance(raw, list | tuple) else ()
+
+
+def _versions(raw: object) -> list[dict[str, object]]:
+    """Версии на подписи, снятые отправкой: документ, sha256 и размер; ни содержимого, ни путей."""
+    if not isinstance(raw, list | tuple):
+        return []
+    return [
+        {"doc_id": item.get("doc_id"), "sha256": item.get("sha256"), "size": item.get("size")}
+        for item in raw
+        if isinstance(item, Mapping)
+    ]
 
 
 def _participant(route: SigningRoute, participant_id: UUID | None) -> Participant | None:

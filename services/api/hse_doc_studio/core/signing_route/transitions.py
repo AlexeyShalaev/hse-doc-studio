@@ -114,13 +114,7 @@ def send(route: SigningRoute, candidate: RouteFacts, *, by: UUID, at: datetime) 
         for p in route.participants
     )
     now = candidate.snapshot(route.docs)
-    snapshot = {
-        doc_id: replace(
-            now[doc_id],
-            sent_at=route.doc_sent_at(doc_id) if changes.docs[doc_id] is DocChange.same else at,
-        )
-        for doc_id in route.docs
-    }
+    snapshot = {doc_id: _sent_snapshot(route, doc_id, now[doc_id], changes.docs[doc_id], at) for doc_id in route.docs}
     return replace(
         route,
         status=RouteStatus.active,
@@ -134,6 +128,15 @@ def send(route: SigningRoute, candidate: RouteFacts, *, by: UUID, at: datetime) 
         stop_reason=None,
         stopped_by=None,
     )
+
+
+def _sent_snapshot(route: SigningRoute, doc_id: str, now: DocSnapshot, change: DocChange, at: datetime) -> DocSnapshot:
+    """Снимок документа после отправки (12.6): у документа без изменений время его версии и пометка `replaced`
+    прежние, у изменившегося `at` и `replaced`, у нового (первая отправка, после отмены) `at`."""
+    if change is DocChange.same:
+        seen = route.snapshot.get(doc_id)
+        return replace(now, sent_at=route.doc_sent_at(doc_id), replaced=seen.replaced if seen is not None else False)
+    return replace(now, sent_at=at, replaced=change is DocChange.changed)
 
 
 def _resend(p: Participant, tokens: dict[str, str], round_: int, *, sender: bool, at: datetime) -> Participant:
@@ -192,9 +195,13 @@ def return_route(route: SigningRoute, facts: RouteFacts, participant_id: UUID) -
 
 
 def cancel(route: SigningRoute) -> SigningRoute:
-    """«Отменить маршрут». Поставленные ЭП и придержанные картинки остаются как есть (раздел 5.6)."""
+    """«Отменить маршрут». Поставленные ЭП и придержанные картинки остаются как есть (раздел 5.6).
+
+    Отмена снимает версии на подписи (12.4), поэтому снимок отправленных версий пуст: следующая отправка снимает
+    документы заново (`DocChange.new`). Согласия участников с их отпечатками остаются и переносятся, как всегда.
+    """
     ensure_transition(route.status, RouteStatus.cancelled)
-    return replace(route, status=RouteStatus.cancelled, phase=None, stop_reason=None, stopped_by=None)
+    return replace(route, status=RouteStatus.cancelled, phase=None, stop_reason=None, stopped_by=None, snapshot={})
 
 
 def archive(route: SigningRoute) -> SigningRoute:

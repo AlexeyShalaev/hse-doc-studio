@@ -17,7 +17,6 @@ import {
   signingRouteKeys,
   useArchiveSigningRoute,
   useCancelSigningRoute,
-  routeChangedDocs,
   routeSendKind,
   routeWaitOf,
   useRemindSigningParticipant,
@@ -234,7 +233,7 @@ const RouteBody = ({
   const wait = routeWaitOf(route, meId);
   // Версия на подписи (12.2): что подписывают и есть ли изменения после отправки.
   const version = routeVersionView(route);
-  const sendKind = routeSendKind(route.status, routeChangedDocs(route));
+  const sendKind = routeSendKind(route.status, route.changed_docs);
   const sentDay = version.sentAt === null ? null : formatDay(version.sentAt);
   const who = (person: RouteParticipant): string =>
     waitText.who({ ...person, cardName: person.card_name });

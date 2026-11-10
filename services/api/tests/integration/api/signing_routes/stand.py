@@ -100,6 +100,17 @@ class Project:
         c.drawString(100, 700, f"{doc_id} {text}")
         c.save()
 
+    def replace_sent(self, doc_id: str, text: str = "replaced") -> None:
+        """Подменить версию на подписи мимо маршрута (git, восстановление, ручная правка): `sent_changed` (12.5).
+
+        Пересборка маршрут больше не останавливает, остановку по документу даёт только подмена версии на подписи.
+        """
+        path = self.folder / ".hse-studio" / "frozen" / f"{doc_id}.source.pdf"
+        assert path.is_file(), f"no version on signature for {doc_id}"
+        c = canvas.Canvas(str(path))
+        c.drawString(100, 700, f"{doc_id} {text}")
+        c.save()
+
     def png(self, who: Person, slot_id: str) -> None:
         resp = self.call(
             who, "POST", f"{self.base}/signatures/slots/{slot_id}/png", files={"file": ("s.png", PNG, "image/png")}

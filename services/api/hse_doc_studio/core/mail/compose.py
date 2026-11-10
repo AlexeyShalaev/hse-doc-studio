@@ -39,6 +39,8 @@ class MailTemplate(StrEnum):
     # напоминание; автору возврат на доработку и «все подписали». Ссылку строит отправитель уведомления.
     signing_request = "signing_request"
     signing_request_sign = "signing_request_sign"
+    # Запрос раунда новой версии (12.6): какие документы изменились и сообщение автора.
+    signing_request_new_version = "signing_request_new_version"
     signing_reminder = "signing_reminder"
     signing_returned = "signing_returned"
     signing_completed = "signing_completed"

@@ -172,6 +172,8 @@ const ROUTE: SigningRoute = {
           status: "pending",
         },
       ],
+      sent: null,
+      changed: false,
     },
   ],
   steps: [
@@ -188,6 +190,7 @@ const ROUTE: SigningRoute = {
   ],
   events: [],
   candidates: [],
+  changed_docs: [],
 };
 
 describe("тело PUT", () => {
@@ -249,6 +252,8 @@ describe("какой маршрут открыть", () => {
     completed_at: null,
     updated_at: "2026-11-09T10:00:00Z",
     waiting_for: [],
+    docs: [],
+    changed_docs: [],
   });
 
   it("открытый, отменённый для повторной отправки, иначе новый черновик", () => {
