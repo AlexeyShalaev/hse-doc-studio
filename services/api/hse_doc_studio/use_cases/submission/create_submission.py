@@ -17,7 +17,7 @@ from hse_doc_studio.core.entities import ChangeLogEntry, PackSubmissionRecord, P
 from hse_doc_studio.core.enums import ChangeLogKind
 from hse_doc_studio.core.errors import NotFoundError
 from hse_doc_studio.core.i18n import current_interface_language, localized_error
-from hse_doc_studio.core.jobs.entities import JobSpec, job_tags
+from hse_doc_studio.core.jobs.entities import JobResult, JobSpec, job_tags
 from hse_doc_studio.core.jobs.enums import JobKind, JobStatus
 from hse_doc_studio.core.jobs.files import IProjectFileProbeFactory, ManifestFile
 from hse_doc_studio.core.jobs.office import (
@@ -38,6 +38,7 @@ from hse_doc_studio.core.repositories import (
     ITemplateRepository,
 )
 from hse_doc_studio.core.services import SubmissionProfileService
+from hse_doc_studio.core.signatures.errors import stamping_error_of
 from hse_doc_studio.core.signatures.ports import IPublicKeyExporter
 from hse_doc_studio.core.submission_archive import DisabledSubmissionArchive, ISubmissionArchive, archive_media_type
 from hse_doc_studio.core.team import (
@@ -299,7 +300,7 @@ class CreateSubmissionUC:
             local_root=project_folder,
         )
         job = await self._dispatcher.run(spec)
-        job.raise_for_error()
+        _raise_for_pack_error(job)
         packed = job.data_as(PackResult)
         output_path, output_dir, artifact_key = await self._place_archive(
             project.id, submission_id, project_folder, packed
@@ -435,3 +436,12 @@ class CreateSubmissionUC:
                 self._project_repo.save(project)
         except Exception as exc:  # noqa: BLE001 — remembering the default must never fail packaging
             logger.warning("create_submission: failed to remember custom doc decisions", exc=str(exc))
+
+
+def _raise_for_pack_error(job: JobResult) -> None:
+    """Отказ задачи пакета как исключение; отказ штамповки остается `StampingError` со своим текстом."""
+    if job.error is not None:
+        stamping = stamping_error_of(job.error.code, job.error.detail or job.error.code)
+        if stamping is not None:
+            raise stamping
+    job.raise_for_error()

@@ -14,6 +14,7 @@ from hse_doc_studio.core.jobs.errors import JobFailure
 from hse_doc_studio.core.jobs.files import ArtifactRef
 from hse_doc_studio.core.jobs.pack import PackResult, PackSkip, PackSubmissionPayload
 from hse_doc_studio.core.jobs.protocols import JobContext
+from hse_doc_studio.core.signatures.errors import StampingError
 from hse_doc_studio.infra.submission.pack_executor import (
     SUBMISSIONS_DIR,
     PackExecutor,
@@ -74,6 +75,10 @@ class PackHandler:
             self._verify_manifest(payload, workspace)
         try:
             executed = self._executor.execute(workspace, payload)
+        except StampingError as exc:
+            # Метка подписи не легла на PDF: пакета без нее не бывает, папку убираем, текст идет пользователю.
+            shutil.rmtree(self._archive_base(payload, workspace), ignore_errors=True)
+            raise JobFailure.of(JobErrorCategory.invalid_input, exc.code, str(exc)) from exc
         except ValueError as exc:
             # Недопустимое имя записи (NUL, лишний символ) это ошибка входа, а не падение обработчика:
             # так же, как раньше, запрос получает 400, а не 500. Недоделанную папку убираем.

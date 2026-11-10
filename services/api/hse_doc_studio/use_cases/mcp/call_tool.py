@@ -31,6 +31,7 @@ from hse_doc_studio.core.projects.usage import ProjectQuotaExceededError
 from hse_doc_studio.core.quotas.errors import QuotaExceededError
 from hse_doc_studio.core.rate_limit import MCP_CALL, IRateLimiter, RateRule
 from hse_doc_studio.core.shutdown import ServerRestartingError
+from hse_doc_studio.core.signatures.errors import StampingError
 from hse_doc_studio.use_cases.mcp.catalog import McpCatalog, McpToolEntry
 from hse_doc_studio.use_cases.mcp.tools._base import ArgumentError
 from hse_doc_studio.use_cases.projects.get_project_access import GetProjectAccessInput, GetProjectAccessUC
@@ -235,6 +236,9 @@ def map_tool_error(exc: Exception) -> McpError:  # noqa: C901, PLR0911 — та�
         return McpError(McpErrorCode.forbidden if hidden else McpErrorCode.failed, None if hidden else str(exc))
     if isinstance(exc, PermissionError):
         return McpError(McpErrorCode.forbidden, str(exc) or None)
+    if isinstance(exc, StampingError):
+        # Метка подписи не легла на PDF: это не неверные аргументы, а отказ с понятным человеку текстом.
+        return McpError(McpErrorCode.failed, str(exc) or None)
     if isinstance(exc, ArgumentError | ValueError | FileExistsError):
         return McpError(McpErrorCode.invalid_arguments, str(exc) or None)
     logger.exception("mcp_tool_failed", exc_info=exc)

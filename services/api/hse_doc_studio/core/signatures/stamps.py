@@ -12,6 +12,8 @@ from pathlib import Path, PurePath
 import structlog
 
 from hse_doc_studio.core.enums import SignMode
+from hse_doc_studio.core.i18n import localized_error
+from hse_doc_studio.core.signatures.errors import StampImageError
 from hse_doc_studio.core.value_objects import SignaturesState, SignerInfo
 
 logger = structlog.get_logger()
@@ -273,3 +275,36 @@ def stamps_for_doc(
             )
         )
     return result
+
+
+def slots_with_missing_png(state: SignaturesState, doc_id: str, folder: Path) -> list[str]:
+    """Включенные слоты документа с загруженной картинкой, файла которой нет на диске.
+
+    Такие слоты `stamps_for_doc` пропускает молча; придержанные маршрутом и плашки открепленных ЭП (им картинка
+    не нужна) сюда не входят.
+    """
+    missing: list[str] = []
+    for slot_id, placement in state.placements.get(doc_id, {}).items():
+        slot = state.slots.get(slot_id)
+        if not placement.enabled or slot is None or slot.sign_mode is SignMode.detached_text:
+            continue
+        if state.is_withheld(doc_id, slot_id):
+            continue
+        if slot.png_path is not None and not (folder / slot.png_path).exists():
+            missing.append(slot_id)
+    return missing
+
+
+def require_slot_images(state: SignaturesState, doc_id: str, folder: Path) -> None:
+    """Отказ, если картинка включенного слота пропала с диска: PDF без нее не фиксируется и не печатается."""
+    missing = slots_with_missing_png(state, doc_id, folder)
+    if not missing:
+        return
+    names = ", ".join(f"«{slot_id}»" for slot_id in missing)
+    raise StampImageError(
+        localized_error(
+            f"Картинка подписи не найдена на диске для слотов: {names}. Загрузите картинку подписи заново.",
+            f"The signature image is missing on disk for slots: {names}. Upload the signature image again.",
+        ),
+        slot_id=missing[0],
+    )

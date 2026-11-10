@@ -48,3 +48,11 @@ class StampPageMissingError(StampingError):
     """Место подписи стоит на странице, которой нет в собранном PDF: место нужно передвинуть."""
 
     code = "stamp_page_missing"
+
+
+def stamping_error_of(code: str, message: str) -> StampingError | None:
+    """Ошибка штамповки по коду отказа задачи (`StampingError.code`), иначе None: тип переживает задачу пакета."""
+    for cls in (StampingError, StampImageError, StampPageMissingError):
+        if cls.code == code:
+            return cls(message)
+    return None

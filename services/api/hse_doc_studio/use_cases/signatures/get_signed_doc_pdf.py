@@ -9,7 +9,6 @@ from uuid import UUID
 
 import structlog
 
-from hse_doc_studio.core.enums import SignMode
 from hse_doc_studio.core.i18n import localized_error
 from hse_doc_studio.core.repositories import (
     IProjectIndexRepository,
@@ -18,7 +17,7 @@ from hse_doc_studio.core.repositories import (
     ITemplateRepository,
 )
 from hse_doc_studio.core.services import ProjectTemplateService
-from hse_doc_studio.core.signatures.stamps import stamps_for_doc
+from hse_doc_studio.core.signatures.stamps import require_slot_images, stamps_for_doc
 from hse_doc_studio.core.value_objects import SignaturesState
 from hse_doc_studio.infra.signatures.pdf_stamper import PdfStamper
 from hse_doc_studio.use_cases.projects.get_project import GetProjectUC
@@ -99,18 +98,9 @@ class GetSignedDocPdfUC:
                     f"Compiled PDF not found: {source.name}. Build the document first",
                 )
             )
+        require_slot_images(state, ctx.doc.id, ctx.project.folder)
         stamps = stamps_for_doc(state, ctx.doc.id, ctx.project.folder, ctx.lang)
         if not stamps:
-            missing = _slots_with_missing_png(state, ctx.doc.id, ctx.project.folder)
-            if missing:
-                raise ValueError(
-                    localized_error(
-                        f"PNG-файлы не найдены на диске для слотов: {', '.join(missing)}. "
-                        "Возможно, изображение подписи было удалено или папка проекта перемещена.",
-                        f"PNG files not found on disk for slots: {', '.join(missing)}. "
-                        "The signature image may have been deleted or the project folder moved.",
-                    )
-                )
             return GetSignedDocPdfOutput(pdf_path=source, temp_path=None, download_name=download_name)
 
         fd, name = tempfile.mkstemp(suffix=".pdf")
@@ -123,15 +113,3 @@ class GetSignedDocPdfUC:
             raise
         logger.info("signed pdf: print preview", project_id=str(ctx.project.id), doc_id=ctx.doc.id, stamps=len(stamps))
         return GetSignedDocPdfOutput(pdf_path=out, temp_path=out, download_name=download_name)
-
-
-def _slots_with_missing_png(state: SignaturesState, doc_id: str, folder: Path) -> list[str]:
-    """Включенные слоты с картинкой, файла которой нет на диске (плашке открепленной ЭП картинка не нужна)."""
-    missing: list[str] = []
-    for slot_id, placement in state.placements.get(doc_id, {}).items():
-        slot = state.slots.get(slot_id)
-        if not placement.enabled or slot is None or slot.sign_mode is SignMode.detached_text:
-            continue
-        if slot.png_path is not None and not (folder / slot.png_path).exists():
-            missing.append(slot_id)
-    return missing
