@@ -41,10 +41,16 @@ def test__inline_blob__bytes_round_trip() -> None:
 
 
 def test__stamp_spec__mirrors_stamp_field_for_field_with_png_instead_of_png_path() -> None:
-    stamp_fields = [f.name for f in dataclasses.fields(Stamp)]
+    # `slot_id` метки только для текста ошибок, на PDF его нет: по проводу не едет (раннер отверг бы лишнее поле),
+    # штамповщик пакета берет слот из имени картинки.
+    stamp_fields = [f.name for f in dataclasses.fields(Stamp) if f.name != "slot_id"]
     spec_fields = [f.name for f in dataclasses.fields(StampSpec)]
 
     assert [("png" if n == "png_path" else n) for n in stamp_fields] == spec_fields
-    stamp_defaults = {f.name: f.default for f in dataclasses.fields(Stamp) if f.default is not dataclasses.MISSING}
+    stamp_defaults = {
+        f.name: f.default
+        for f in dataclasses.fields(Stamp)
+        if f.default is not dataclasses.MISSING and f.name != "slot_id"
+    }
     spec_defaults = {f.name: f.default for f in dataclasses.fields(StampSpec) if f.default is not dataclasses.MISSING}
     assert stamp_defaults == spec_defaults
