@@ -1,4 +1,4 @@
-import { signingPagePath } from "@entities/signing-route";
+import { signingCardPath, signingPagePath } from "@entities/signing-route";
 import type { Notification } from "@entities/invitation";
 
 /** Куда ведёт уведомление: ревью открывает файл и тред в панели комментариев, остальное проект. */
@@ -14,10 +14,6 @@ export const notificationTarget = (n: Notification): string => {
 
 /** Раздел «На подпись» на странице «Входящие». */
 export const SIGNING_INBOX_PATH = "/inbox?tab=signing";
-
-/** Точка сдачи: там автор видит ход маршрута подписания. */
-export const checkpointPath = (projectId: string, profileId: string): string =>
-  `/projects/${encodeURIComponent(projectId)}/submit/cp/${encodeURIComponent(profileId)}`;
 
 /**
  * Уведомления маршрута подписания для подписанта: зовут действовать или предупреждают о новой
@@ -37,15 +33,16 @@ export const showsDeadline = (kind: Notification["kind"]): boolean =>
   SIGNER_KINDS.has(kind);
 
 /**
- * Маршрут подписания (6.6): запрос и напоминание ведут подписанта на его страницу; возврат,
- * остановка, завершение и отмена ведут на точку сдачи, где автор видит ход маршрута.
- * `ref_id` это id маршрута, `profile_id` точка.
+ * Маршрут подписания (6.6): запрос, напоминание и новая версия (12.6) ведут подписанта на его
+ * страницу; возврат, остановка (в том числе `sent_changed`, когда автору нужно отправить новую
+ * версию), завершение и отмена ведут к карточке «Подписание» на точке сдачи, где автор видит ход
+ * маршрута и отправляет заново. `ref_id` это id маршрута, `profile_id` точка.
  */
 const signingTarget = (n: Notification): string | null => {
   const { project_id: project, ref_id: route, profile_id: profile } = n.payload;
   if (!project) return null;
   if (SIGNER_KINDS.has(n.kind) && route) return signingPagePath(project, route);
-  if (profile) return checkpointPath(project, profile);
+  if (profile) return signingCardPath(project, profile);
   return `/projects/${encodeURIComponent(project)}`;
 };
 

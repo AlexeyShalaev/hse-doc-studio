@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { useNavigate } from "react-router";
+import { useLocation, useNavigate } from "react-router";
 import { ClipboardCheck } from "lucide-react";
 import { clsx } from "clsx";
 import type { z } from "zod";
@@ -8,6 +8,7 @@ import type { ProjectResponseSchema } from "@entities/project";
 import { getDocMeta, useDocuments } from "@entities/document";
 import { useForms } from "@entities/form";
 import { useSignaturePlan, useSignaturesState } from "@entities/signature";
+import { SIGNING_CARD_ANCHOR } from "@entities/signing-route";
 import {
   computeCheckpointReadiness,
   useSubmissionProfiles,
@@ -87,6 +88,19 @@ export const CheckpointView = ({
     approvedSlot,
     tally: routeTally,
   } = useRouteSlotHints(project.id, signaturePlan);
+
+  // «Отправить новую версию» у пакета, вкладка «Подписи» документа и уведомления автору ведут к
+  // карточке «Подписание» (якорь SIGNING_CARD_ANCHOR): прокручиваем к колонке, где она стоит.
+  const location = useLocation();
+  const anchored = location.hash === `#${SIGNING_CARD_ANCHOR}`;
+  const shown = profile !== undefined;
+  useEffect(() => {
+    if (!anchored || !shown) return;
+    const target = document.getElementById(SIGNING_CARD_ANCHOR);
+    // В тестовом окружении (jsdom) прокрутки нет.
+    if (target && typeof target.scrollIntoView === "function")
+      target.scrollIntoView({ block: "start", behavior: "smooth" });
+  }, [anchored, shown, location.key]);
 
   if (isProfilesLoading) {
     return (
@@ -236,7 +250,11 @@ export const CheckpointView = ({
           alignItems: "start",
         }}
       >
-        <div className="flex flex-col" style={{ gap: "1rem" }}>
+        <div
+          id={SIGNING_CARD_ANCHOR}
+          className="flex flex-col"
+          style={{ gap: "1rem", scrollMarginTop: "1rem" }}
+        >
           {/* Маршрут подписания точки: только на сервере, локально карточки нет. */}
           <SigningRouteCard
             project={project}

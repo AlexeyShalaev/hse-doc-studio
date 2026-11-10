@@ -103,6 +103,13 @@ export const signingRouteEditorPath = (
   profileId: string,
 ): string => `${checkpointPath(projectId, profileId)}/route`;
 
+/** Якорь карточки «Подписание» на странице точки: туда ведут «Отправить новую версию» и уведомления автору. */
+export const SIGNING_CARD_ANCHOR = "signing-route";
+
+/** Карточка «Подписание» точки: страница точки с прокруткой к карточке. */
+export const signingCardPath = (projectId: string, profileId: string): string =>
+  `${checkpointPath(projectId, profileId)}#${SIGNING_CARD_ANCHOR}`;
+
 /** Адрес PDF документа задачи: `pdf_url` бэкенда уже начинается с `/api/v1`. */
 export const signingPdfUrl = (pdfUrl: string): string =>
   `${env.VITE_API_BASE_URL}${pdfUrl}`;
