@@ -74,7 +74,8 @@ class VisibleLayerFinalError(RouteConflictError):
 
 
 class MethodNotAllowedError(RouteConflictError):
-    """Способ подписи сейчас выбрать нельзя: его не принимает точка или он изменил бы зафиксированный PDF (409)."""
+    """Способ подписи сейчас выбрать нельзя: его не принимает точка, он изменил бы зафиксированный PDF или для его
+    метки нет места на странице (409)."""
 
     def __init__(self, message: str | None = None) -> None:
         super().__init__(
@@ -84,6 +85,18 @@ class MethodNotAllowedError(RouteConflictError):
                 "Этот способ подписи сейчас выбрать нельзя", "This signing method cannot be chosen right now"
             ),
         )
+
+
+def no_place_for_method() -> MethodNotAllowedError:
+    """Способ ставит картинку или плашку, а места для неё на странице автор не разместил (раздел 6.3)."""
+    return MethodNotAllowedError(
+        localized_error(
+            "Для этого способа нет места подписи на странице: автор его не разместил. Выберите другой способ или "
+            "верните документы на доработку",
+            "There is no place on the page for this signing method: the author did not place it. Choose another "
+            "method or return the documents for revision",
+        )
+    )
 
 
 class InvalidFileError(RouteInputError):
@@ -233,19 +246,41 @@ def plates_without_signer(p: Participant, state: SignaturesState) -> tuple[str, 
 # --- способ ---------------------------------------------------------------------------------------------------------
 
 
-def available_methods(
+def has_place_for(p: Participant, state: SignaturesState, method: SignMethod) -> bool:
+    """Способ `method` можно поставить на страницу: у каждого слота участника, где он даёт видимую метку (картинку
+    или плашку), есть включённое место автора.
+
+    Без места план считает такой слот ждущим при любой подписи (`placement_off`): картинка после согласия не попала
+    бы в документ, плашка ЭП не стала бы подписанной, и маршрут не завершился бы. Место из пака без размещения
+    автора не ставится, как и в помехе отправки.
+    """
+    for pair in p.assignments:
+        slot = state.slots.get(pair.slot_id) or SignatureSlot(None, None, None)
+        if mark_of(replace(slot, sign_mode=mode_for(method, slot.sign_mode))) is VisibleMark.none:
+            continue
+        placement = state.placements.get(pair.doc_id, {}).get(pair.slot_id)
+        if placement is None or not placement.enabled:
+            return False
+    return True
+
+
+def available_methods(  # noqa: PLR0913 — правила выбора перечислены явно
     p: Participant,
     view: ParticipantView,
     state: SignaturesState,
     point_methods: Sequence[str],
     *,
     server_keys: bool = True,
+    need_place: bool = True,
 ) -> tuple[SignMethod, ...]:
     """Способы, которые участник может выбрать сейчас (раздел 6.3).
 
     `point_methods` способы, которые точка разрешает его слотам. Выбирать можно только на своём шаге до фиксации
     (`to_approve`): после неё любой другой способ изменил бы видимый слой, остаётся текущий. PAdES ставит только
-    ключ Студии на сервере, поэтому при запрете серверных ключей (`server_keys`) его не предлагаем.
+    ключ Студии на сервере, поэтому при запрете серверных ключей (`server_keys`) его не предлагаем. Способ с
+    видимой меткой без места на странице (`has_place_for`) тоже не предлагаем: автор не разместил подпись, значит,
+    рассчитывал на подпись без метки, а помеха отправки проверяла только текущий способ. `need_place=False`
+    отключает эту проверку, чтобы назвать причину отказа.
     """
     current = current_method(p, state)
     if current is None:
@@ -253,7 +288,12 @@ def available_methods(
     if view.state is not ParticipantState.to_approve:
         return (current,)
     allowed = [SignMethod(m) for m in point_methods]
-    return tuple(m for m in allowed if server_keys or m is not SignMethod.pades or m is current)
+    return tuple(
+        m
+        for m in allowed
+        if (server_keys or m is not SignMethod.pades or m is current)
+        and (not need_place or m is current or has_place_for(p, state, m))
+    )
 
 
 def mode_for(method: SignMethod, current: SignMode) -> SignMode:

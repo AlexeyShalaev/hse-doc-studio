@@ -477,6 +477,40 @@ async def test__approve__method_changed_to_detached__plate_from_the_signing_key(
     assert trio.events() == ["sent", "approved", "approved", "frozen", "signed", "signed", "completed"]
 
 
+async def test__approve__visible_method_without_place__not_offered_and_refused(stand: Stand) -> None:
+    """Академрук подписывает заявление PAdES без метки, места его подписи автор не разместил (помехи нет). Картинку
+    и плашку ставить некуда: их не предлагают, а смена на них отказ с понятной причиной (раздел 6.3)."""
+    trio = await make_trio(stand, {"academic_supervisor": "pades"})
+    placement = f"{trio.project.base}/signatures/placements/{APPLICATION}/academic_supervisor"
+    assert trio.call(trio.author, "PATCH", placement, json={"enabled": False}).status_code == 200
+    # Научрук картинкой после академрука: пока он не согласовал, фиксации нет, академрук выбирает способ.
+    people = {p["persona"]: p for p in trio.steps()}
+    trio.put(
+        [[people["author"]], [people["academic_supervisor"]], [people["supervisor"]]],
+        [{"doc_id": APPLICATION, "slot_id": "academic_supervisor"}],
+    )
+    trio.sent()
+
+    task = trio.task(trio.academic)
+    refused = trio.approve(trio.academic, method="image")
+    plate = trio.approve(trio.academic, method="detached")
+
+    assert my(task) == ("to_approve", "approve")
+    # Необязательный слот точка не ограничивает, но из трёх способов места не нужно только PAdES без метки.
+    assert (task["me"]["method"], task["me"]["methods"]) == ("pades", ["pades"])
+    assert _code(refused) == (409, "method_not_allowed")
+    assert _code(plate) == (409, "method_not_allowed")
+    detail = refused.json()["detail"]
+    assert "места" in detail or "place" in detail
+    assert trio.state()["slots"]["academic_supervisor"]["sign_mode"] == "crypto_invisible"
+    assert trio.events() == ["sent", "approved"]
+
+    # Своим способом, без метки, согласовать можно.
+    done = trio.approved(trio.academic)
+    assert my(done)[0] != "to_approve"
+    assert trio.events() == ["sent", "approved", "approved"]
+
+
 async def test__approve__method_changed_without_plate_data__plate_required_and_nothing_written(stand: Stand) -> None:
     trio = await make_trio(stand, academic="none")
     trio.sent()

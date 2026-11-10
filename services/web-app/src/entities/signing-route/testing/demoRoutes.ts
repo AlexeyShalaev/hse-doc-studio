@@ -664,6 +664,11 @@ export const createSigningRouteDemo = (
     if (assignmentsOf(r, p).length === 0) return [];
     // После фиксации только способы без новой видимой метки.
     if (r.frozen) return isCrypto(p.method) && p.method ? [p.method] : [];
+    // Картинке и плашке нужно место на странице: без него остаётся только текущий способ (6.3).
+    const placed = assignmentsOf(r, p).every((pair) =>
+      isPlaced(r.project_id, pair.doc_id, pair.slot_id),
+    );
+    if (!placed) return p.method ? [p.method] : [];
     return ["image", "detached"];
   };
 

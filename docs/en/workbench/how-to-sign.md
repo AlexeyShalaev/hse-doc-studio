@@ -27,7 +27,7 @@ If you do not have an account on the server yet, a project invitation comes firs
 - **“Signing progress”**: the steps in order and each person's state. You are marked “You”.
 - **What is needed from you**: for example “Your turn: approve the documents” or “Not your turn yet”. If your turn has not come, wait for the notification, there is nothing to do now.
 - **“Documents”**: document tabs and the PDF. “Go to signature” scrolls to your frame, “Open PDF” opens the whole file. “Your signatures” and “Other signatures” show what is already in place.
-- **“How to sign”**: the signing method and everything it needs.
+- **“How to sign”**: the signing method and everything it needs. You choose among the methods the checkpoint allows. An image and an electronic signature with a plate are offered only if the author placed your signature on the document page.
 - **Buttons** at the bottom: the main one (“Approve”, “Approve and sign” or “Sign”) and “Return for revision”.
 - **“History”**: who sent, approved, signed or returned, and when.
 

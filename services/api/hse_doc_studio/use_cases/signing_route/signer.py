@@ -75,6 +75,7 @@ from hse_doc_studio.core.signing_route.signer import (
     ensure_layer_open,
     ensure_turn,
     mode_for,
+    no_place_for_method,
     own_slots,
     plates_without_signer,
     task_tokens,
@@ -474,15 +475,15 @@ class SigningTaskScenario(RouteScenario):
         me = turn.me
         state = turn.loaded.state
         if method is not None:
-            allowed = available_methods(
-                me,
-                turn.view,
-                state,
-                turn.point.methods(pair for pair in me.assignments if pair in turn.point.allowed),
-                server_keys=await self._signer.keys_allowed(),
-            )
+            point_methods = turn.point.methods(pair for pair in me.assignments if pair in turn.point.allowed)
+            server_keys = await self._signer.keys_allowed()
+            allowed = available_methods(me, turn.view, state, point_methods, server_keys=server_keys)
             if method not in allowed:
-                raise MethodNotAllowedError
+                # Способ годился бы, но для его картинки или плашки нет места на странице: называем причину.
+                unplaced = available_methods(
+                    me, turn.view, state, point_methods, server_keys=server_keys, need_place=False
+                )
+                raise no_place_for_method() if method in unplaced else MethodNotAllowedError
             conflict = _method_conflict(turn.point, me, state, method, identity)
             if conflict is not None:
                 raise MethodNotAllowedError(conflict)
