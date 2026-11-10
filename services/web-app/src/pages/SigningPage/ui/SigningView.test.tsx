@@ -583,6 +583,10 @@ describe("SigningView: версия на подписи", () => {
     expect(banner).toHaveTextContent(
       `Есть изменения после отправки на подпись. Подписывают версию от ${formatMoment("2026-11-10T09:00:00Z")}.`,
     );
+    expect(screen.getByTestId("signing-doc-version")).toHaveAttribute(
+      "data-kind",
+      "signing",
+    );
     expect(
       within(banner).getByTestId("signing-send-new-version"),
     ).toHaveAttribute(

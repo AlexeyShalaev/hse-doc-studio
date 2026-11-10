@@ -334,6 +334,13 @@ describe("версия на подписи (раздел 12)", () => {
     });
     const done = withRoute({ status: "completed" });
     expect(versionLine(done, doc)?.kind).toBe("signed");
+    const mineDone = makeSigningTask({
+      me: { ...base.me, state: "done", next_action: "done" },
+    });
+    expect(versionLine(mineDone, doc)?.kind).toBe("signedMine");
+    expect(versionLine(mineDone, { ...doc, mine: [] })?.kind).toBe(
+      "approvedMine",
+    );
     expect(versionLine(base, { ...doc, sent_at: null })).toBeNull();
     // До R16 поля нет: строки тоже нет.
     expect(versionLine(base, { ...doc, sent_at: undefined })).toBeNull();
