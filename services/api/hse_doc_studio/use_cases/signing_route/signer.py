@@ -17,6 +17,7 @@
 from __future__ import annotations
 
 import asyncio
+import hashlib
 from collections.abc import Awaitable, Callable, Mapping, Sequence
 from dataclasses import dataclass, field, replace
 from datetime import datetime
@@ -46,6 +47,7 @@ from hse_doc_studio.core.signatures.signer_profile import (
     PublicKeyKind,
     png_size,
 )
+from hse_doc_studio.core.signing_route.audit import RouteAuditAction, signing_route_scope
 from hse_doc_studio.core.signing_route.engine import Evaluation, ParticipantView, evaluate, notice_for
 from hse_doc_studio.core.signing_route.entities import (
     RETURN_COMMENT_MAX,
@@ -239,6 +241,7 @@ class SigningTaskScenario(RouteScenario):
             approved = approve(route, loaded.facts, turn.me.id, at=turn.at)
             if changed:
                 self._tools.signatures.save_state(turn.point.project.folder, state)
+                await self._audit_own_change(turn, state, request.method)
             settled = await self._settle(turn.point, approved, turn.at, None if changed else loaded)
             events = [self._event(turn, EventKind.approved), *frozen_events(settled, turn.at)]
             deferred: Exception | None = None
@@ -306,6 +309,18 @@ class SigningTaskScenario(RouteScenario):
                         project_id=turn.project_id, slot_id=slot_id, filename=f"{slot_id}.png", content=png
                     )
                 )
+            await self._audit(
+                RouteAuditAction.signer_image,
+                turn.route,
+                actor_id=turn.actor_id,
+                participant=turn.me,
+                details={
+                    "slot_ids": list(own_slots(turn.me)),
+                    "sha256": hashlib.sha256(png).hexdigest(),
+                    "size": len(png),
+                    "remember": remember,
+                },
+            )
             return await self._after_own_change(turn)
 
         return await self._act(actor, project_id, route_id, step)
@@ -324,7 +339,7 @@ class SigningTaskScenario(RouteScenario):
                 # Ключ есть, но плашку из него не собрать (нет сертификата, нет в связке): для страницы это
                 # тот же отказ, что и чужой ключ.
                 raise KeyNotFoundError(str(exc)) from exc
-            return await self._write_plate(turn, signer)
+            return await self._write_plate(turn, signer, source="studio")
 
         return await self._act(actor, project_id, route_id, step)
 
@@ -344,7 +359,7 @@ class SigningTaskScenario(RouteScenario):
                     await asyncio.to_thread(self._tools.key_importer.import_public_key, parsed.data)
             except (ValueError, GpgUnavailableError) as exc:
                 raise InvalidFileError(str(exc)) from exc
-            return await self._write_plate(turn, parsed.plate)
+            return await self._write_plate(turn, parsed.plate, source="file")
 
         return await self._act(actor, project_id, route_id, step)
 
@@ -369,7 +384,9 @@ class SigningTaskScenario(RouteScenario):
                     docs = changed_docs(route, loaded.facts)
                     refusal = DocChangedError(docs) if docs else not_your_turn()
                 else:
-                    outcome = await step(_Turn(actor, actor_id, at, point, route, loaded, evaluation, me))
+                    # Всё, что действие делает с подписями (фиксация, подпись, картинка в профиль), сделано в маршруте.
+                    with signing_route_scope(route.id):
+                        outcome = await step(_Turn(actor, actor_id, at, point, route, loaded, evaluation, me))
             if outcome is not None:
                 saved = await self._commit(
                     outcome.settled, outcome.events, actor_id=actor_id, at=at, comment=outcome.comment
@@ -400,13 +417,50 @@ class SigningTaskScenario(RouteScenario):
         settled = await self._settle(turn.point, turn.route, turn.at)
         return _Outcome(settled, [*frozen_events(settled, turn.at), *closing_events(settled, turn.at)])
 
-    async def _write_plate(self, turn: _Turn, signer: SignerInfo) -> _Outcome:
+    async def _write_plate(self, turn: _Turn, signer: SignerInfo, *, source: str) -> _Outcome:
         folder = turn.point.project.folder
         state = with_signer(turn.loaded.state, own_slots(turn.me), signer)
         if state != turn.loaded.state:
             self._tools.signatures.save_state(folder, state)
+            await self._audit_plate(turn, state, source=source)
         # Плашка с данными меняет видимый слой; возможно, менять его больше некому, и расчёт зафиксирует документы.
         return await self._after_own_change(turn)
+
+    async def _audit_own_change(self, turn: _Turn, state: SignaturesState, method: SignMethod | None) -> None:
+        """Журнал аудита: что согласие изменило в своих слотах, способ подписи и данные плашки."""
+        before = turn.loaded.state
+        slots = own_slots(turn.me)
+        if method is not None and _modes(before, slots) != _modes(state, slots):
+            await self._audit(
+                RouteAuditAction.signer_method,
+                turn.route,
+                actor_id=turn.actor_id,
+                participant=turn.me,
+                details={"slot_ids": list(slots), "method": method.value},
+            )
+        if _plates(before, slots) != _plates(state, slots):
+            await self._audit_plate(turn, state, source="approval")
+
+    async def _audit_plate(self, turn: _Turn, state: SignaturesState, *, source: str) -> None:
+        """Журнал аудита: данные плашки своих слотов. Только открытые сведения, напечатанные на плашке:
+        вид сертификата или ключа и его номер; сам ключ, сертификат и файл в журнал не попадают."""
+        slots = own_slots(turn.me)
+        before = _plates(turn.loaded.state, slots)
+        changed = {
+            slot_id: plate
+            for slot_id, plate in _plates(state, slots).items()
+            if plate is not None and before.get(slot_id) != plate
+        }
+        plate = next(iter(changed.values()), None)
+        if plate is None:
+            return
+        await self._audit(
+            RouteAuditAction.signer_plate,
+            turn.route,
+            actor_id=turn.actor_id,
+            participant=turn.me,
+            details={"slot_ids": list(changed), "source": source, "plate_kind": plate.kind, "cert_id": plate.cert_id},
+        )
 
     async def _approval_state(
         self, turn: _Turn, method: SignMethod | None, identity: SigningIdentity | None
@@ -480,6 +534,14 @@ class SigningTaskScenario(RouteScenario):
             if pair not in left
         ]
         return after, events, error
+
+
+def _modes(state: SignaturesState, slots: Sequence[str]) -> dict[str, SignMode | None]:
+    return {slot_id: slot.sign_mode if (slot := state.slots.get(slot_id)) is not None else None for slot_id in slots}
+
+
+def _plates(state: SignaturesState, slots: Sequence[str]) -> dict[str, SignerInfo | None]:
+    return {slot_id: slot.signer if (slot := state.slots.get(slot_id)) is not None else None for slot_id in slots}
 
 
 def _check_png(png: bytes) -> None:

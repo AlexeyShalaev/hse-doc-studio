@@ -411,6 +411,36 @@ async def test__call_tool__local__project_access_tool__answers_unknown_tool(stud
     assert result.meta["code"] == "unknown_tool"
 
 
+_SIGNING_ROUTE_TOOLS = ("get_signing_route", "list_signing_tasks", "send_for_signing")
+
+
+async def test__list_tools__local__no_signing_route_tools(studio: Studio) -> None:
+    """Локальная Студия маршрутов подписания не ведёт (docs/design/signing-route.md, 6.9): тулов нет вовсе."""
+    await _enable(studio)
+
+    async with _client(studio) as client:
+        names = {t.name for t in (await client.list_tools()).tools}
+    # Опасную отправку локально нельзя даже включить: настройки такого тула не знают.
+    enabling = await studio.rest.put(
+        "/api/v1/mcp/settings", json={"enabled": True, "enabled_dangerous": ["send_for_signing"]}
+    )
+
+    assert not names & set(_SIGNING_ROUTE_TOOLS)
+    assert enabling.status_code == 400
+
+
+@pytest.mark.parametrize("name", _SIGNING_ROUTE_TOOLS)
+async def test__call_tool__local__signing_route_tool__answers_unknown_tool(studio: Studio, name: str) -> None:
+    await _enable(studio)
+
+    async with _client(studio) as client:
+        result = await client.call_tool(name, {"project_id": studio.project_id, "profile_id": "topic-approval"})
+
+    assert result.is_error is True
+    assert result.meta is not None
+    assert result.meta["code"] == "unknown_tool"
+
+
 _TEAM_TEMPLATE = {"pack_id": "hse-cs-se", "template_id": "vkr", "version": "2026.1", "kind": "project", "lang": "ru"}
 _TEAM_AUTHORS = [
     {"name": "Смирнова Анна", "group": "БПИ221", "topic": "Серверная часть"},

@@ -16,7 +16,7 @@ from hse_doc_studio.api.config import settings
 from hse_doc_studio.core.access.checker import IProjectAccessChecker
 from hse_doc_studio.core.access.repositories import IProjectAclRepository
 from hse_doc_studio.core.git_remote.pdf_observer import IBuiltPdfObserver
-from hse_doc_studio.core.identity.protocols import IUserRepository
+from hse_doc_studio.core.identity.protocols import IAuditLog, IUserRepository
 from hse_doc_studio.core.invitations.protocols import IInvitationAcceptedHook, INotificationMailer, INotifier
 from hse_doc_studio.core.jobs.protocols import IJobDispatcher
 from hse_doc_studio.core.projects.volume import IProjectVolume
@@ -64,6 +64,7 @@ from hse_doc_studio.use_cases.signatures.default_key import DefaultSigningKey
 from hse_doc_studio.use_cases.signatures.freeze_pdf import FreezePdfUC
 from hse_doc_studio.use_cases.signatures.upload_signature_png import UploadSignaturePngUC
 from hse_doc_studio.use_cases.signer_profile.profile import SaveProfileImageUC
+from hse_doc_studio.use_cases.signing_route.audit import AuditedSigningRoutes, SigningRouteAudit
 from hse_doc_studio.use_cases.signing_route.author import (
     SigningRouteControl,
     SigningRouteDrafts,
@@ -88,8 +89,15 @@ class ServerSigningRoutesProvider(Provider):
     scope = Scope.APP
 
     @provide
-    def get_signing_route_repository(self, sessions: SessionProvider) -> ISigningRouteRepository:
-        return SqlSigningRouteRepository(sessions)
+    def get_signing_route_audit(self, audit: IAuditLog) -> SigningRouteAudit:
+        return SigningRouteAudit(audit)
+
+    @provide
+    def get_signing_route_repository(
+        self, sessions: SessionProvider, audit: SigningRouteAudit
+    ) -> ISigningRouteRepository:
+        # События истории маршрута попадают в журнал аудита вместе с записью маршрута (раздел 6.7).
+        return AuditedSigningRoutes(SqlSigningRouteRepository(sessions), audit)
 
     @provide
     def get_route_context(  # noqa: PLR0913 — порты перечислены явно
@@ -193,8 +201,9 @@ class ServerSigningRoutesProvider(Provider):
         notifier: ISigningNotifier,
         uow: IUnitOfWork,
         access: IProjectAccessChecker,
+        audit: SigningRouteAudit,
     ) -> RouteServices:
-        return RouteServices(routes, points, facts, effects, people, notifier, uow, access)
+        return RouteServices(routes, points, facts, effects, people, notifier, uow, access, audit=audit)
 
     @provide(scope=Scope.REQUEST)
     def get_route_key_signer(

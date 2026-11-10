@@ -67,15 +67,15 @@ def _reads_routes() -> bool:
 class SigningRouteGate(RouteRecalculation):
     """`ISigningRouteGate` сервера."""
 
-    async def require_turn(self, project_id: UUID, doc_id: str, slot_id: str) -> None:
+    async def require_turn(self, project_id: UUID, doc_id: str, slot_id: str) -> UUID | None:
         route = await self._s.routes.holding(project_id, doc_id)
         pair = DocSlot(doc_id, slot_id)
         if route is None or route.status is not RouteStatus.active or pair not in route.pairs:
-            return
+            return None
         calc = await self._going(route)
         if calc is None:
             # Маршрут по расчёту уже остановлен или завершён: очереди нет, слот подписывается как без маршрута.
-            return
+            return None
         _, evaluation = calc
         owner = next(p for p in route.participants if pair in p.assignments)
         if owner.user_id is None or owner.user_id != _actor_id():
@@ -84,6 +84,7 @@ class SigningRouteGate(RouteRecalculation):
             raise not_your_turn()
         # Подпись слота маршрута: маршрут пересчитает `signature_written`, сверка по хуку записи не нужна.
         expect_recalculation()
+        return route.id
 
     async def signature_written(self, project_id: UUID, doc_id: str, slot_id: str) -> None:
         await self.signatures_written(project_id, [DocSlot(doc_id, slot_id)])
