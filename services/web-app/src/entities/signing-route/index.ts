@@ -34,6 +34,7 @@ export type { SigningFailure } from "./lib/signingFailure";
 export type { RouteSendKind } from "./lib/signingRouteStatus";
 export {
   REMIND_INTERVAL_MS,
+  SIGNING_CARD_ANCHOR,
   canArchiveRoute,
   canCancelRoute,
   canRemind,
@@ -50,6 +51,7 @@ export {
   routeChangedDocs,
   routeSendKind,
   signingPagePath,
+  signingCardPath,
   signingPdfUrl,
   signingRouteEditorPath,
 } from "./lib/signingRouteStatus";

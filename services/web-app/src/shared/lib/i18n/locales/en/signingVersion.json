@@ -1,0 +1,29 @@
+{
+  "tab": {
+    "signing": "Being signed: the version of {{date}}",
+    "signed": "Signed: the version of {{date}}",
+    "pinned": "Version for signing of {{date}}",
+    "signingServer": "Being signed: the version of {{date}} (route on the server)",
+    "hint": "Signers see this version, not the current build. Editing and rebuilding the document do not change it.",
+    "sha": "SHA-256 {{sha}}",
+    "differs": "There are changes since the document was sent for signing. Signers sign the version of {{date}}, which does not include the current build.",
+    "open": "Open the version for signing",
+    "unpin": "Sign the current build",
+    "heldActive": "While the document is on a signing route, the current build cannot be signed. Send a new version or cancel the route on the Signing card.",
+    "heldCompleted": "The route is complete and still tracks the document. Send a new version or stop tracking the route on the Signing card.",
+    "openCard": "Open the Signing card",
+    "confirmTitle": "Sign the current build?",
+    "confirmText": "Signatures placed on the version of {{date}} will no longer match the document.",
+    "confirmLocal": "If the route on the server is still running, it will stop.",
+    "confirmKeep": "Keep the version",
+    "done": "The document is now signed from the current build",
+    "failed": "Could not remove the version for signing: {{reason}}"
+  },
+  "pack": {
+    "before": "“{{name}}” changed after it was sent for signing: the package will get the version for signing of {{date}}",
+    "after": "“{{name}}” changed after it was sent for signing: the package got the version for signing of {{date}}",
+    "afterTitle": "Package built with warnings",
+    "sendNewVersion": "Send a new version",
+    "sendNewVersionHint": "Opens the Signing card with this document's route"
+  }
+}
