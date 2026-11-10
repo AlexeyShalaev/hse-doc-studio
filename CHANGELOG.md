@@ -6,6 +6,16 @@ Generated from `release-notes.json` via `make changelog` — do not edit by hand
 Release notes are hand-written and bilingual (RU/EN); the app shows them in the
 selected interface language.
 
+## [0.20.1](https://github.com/AlexeyShalaev/hse-doc-studio/compare/v0.20.0...v0.20.1) (2026-11-10)
+
+
+### Bug Fixes
+
+* **web:** fit the slot label inside narrow signature frames ([00e54c8](https://github.com/AlexeyShalaev/hse-doc-studio/commit/00e54c895d7156180c1d7560c099a4935b8d2354))
+* **web:** show an old detached signature calmly while a route holds the document ([49b6175](https://github.com/AlexeyShalaev/hse-doc-studio/commit/49b6175a2077c77d1aa9f8e9d57691a0e1506207))
+* **web:** show route approvals next to signatures ([c61fa6b](https://github.com/AlexeyShalaev/hse-doc-studio/commit/c61fa6b94358b090a048cae9d8f70f955b271ce0))
+* **web:** show route approvals next to signatures on the checkpoint ([a79e993](https://github.com/AlexeyShalaev/hse-doc-studio/commit/a79e993eea391d93f3ad4a3330003d30314a6be7))
+
 ## [0.20.0](https://github.com/AlexeyShalaev/hse-doc-studio/compare/v0.19.0...v0.20.0) - 2026-11-10
 
 - The signing route explains what it is waiting for. “Sign the set”, the “Signing” card and the signing page say who approves now, who has not accepted the invitation yet and when the Studio will ask for your e-signature. People who have not accepted get a “Copy link” button.
