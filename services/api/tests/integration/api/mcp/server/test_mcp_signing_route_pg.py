@@ -240,6 +240,7 @@ async def test__send_for_signing__no_route_yet__draft_from_the_pack_is_sent(stan
     for doc_id in (PROPOSAL, APPLICATION):
         project.build(doc_id)
     project.png(author, "author")
+    project.place(author)
 
     sent = _body(_call(stand, _mcp(stand, author), _SEND, {"project_id": project.id, "profile_id": TOPIC}))
 
