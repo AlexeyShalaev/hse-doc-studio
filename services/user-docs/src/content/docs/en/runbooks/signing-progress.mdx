@@ -26,7 +26,7 @@ help:
       hint: 'A completed route keeps watching the documents. To stop it, click **Stop tracking**.'
 verified:
   at: 2026-11-10
-  app_version: '0.19.0'
+  app_version: '0.20.0'
   sources:
     - services/web-app/src/features/signing-route-progress
     - services/web-app/src/pages/WorkspacePage/panels/CheckpointView.tsx
@@ -45,6 +45,10 @@ documents are returned for revision.
 - **“The route has stopped”** with a reason: a document changed after approval, signatures on the
   pages were changed outside the route, or a signer left the project. Fix the reason on the route
   screen (**Open route**) and click **Send again**.
+- **“0 of 3 signed” although you have approved**: this is expected. Sending the route counts as
+  your approval, and the Studio asks for your e-signature after the PDF is frozen, once everyone
+  has approved. The card shows both counts, “1 of 3 approved · 0 of 3 signed”, and your slot in the
+  document list says “approved, signature after freeze”.
 - **The order is wrong** after sending: click **Cancel route**, fix the steps and click **Send
   again**.
 - **No “Remind” button**: you can remind only the person whose turn it is, or someone who has not
