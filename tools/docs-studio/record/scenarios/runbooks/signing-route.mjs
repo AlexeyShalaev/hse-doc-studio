@@ -6,7 +6,7 @@ export default {
   stand: 'demo',
   start: CHECKPOINT,
   steps: [
-    async (d) => d.click(d.role('button', d.s('signingProgress', 'action.send'))),
+    async (d) => d.click(d.page.getByTestId('signing-card').getByRole('button', {name: d.s('signingProgress', 'action.send')})),
     async (d) => d.point(d.text(d.s('signingRouteEditor', 'docs.title'), {exact: true})),
     async (d, w) => d.point(editor.steps(d.page, w.lang)),
     async (d, w) => {

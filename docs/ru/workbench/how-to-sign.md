@@ -19,6 +19,15 @@ tags:
 - **Колокольчик** в шапке показывает строку «Ждут вашей подписи: N», она ведёт в ту же вкладку.
 - **В проекте**: на странице контрольной точки в карточке «Подписание» кнопка «Перейти к подписи».
 
+<figure class="hds-fig hds-wide">
+  <div class="hds-shot">
+    <div class="hds-shot__bar"><span class="hds-shot__brand">HSE DOC STUDIO</span><span class="hds-shot__route">/inbox?tab=signing</span></div>
+    <img src="../assets/shots/signing-inbox.ru.light.webp#only-light" alt="Входящие, На подпись">
+    <img src="../assets/shots/signing-inbox.ru.dark.webp#only-dark" alt="Входящие, На подпись">
+  </div>
+  <figcaption>«Входящие», вкладка «На подпись», и колокольчик со строкой «Ждут вашей подписи»</figcaption>
+</figure>
+
 Если у вас ещё нет аккаунта на сервере, сначала придёт приглашение в проект. Зарегистрируйтесь на ту же почту, на которую оно пришло, нажмите «Принять», и Студия сразу откроет страницу подписи. Если аккаунт у вас есть, приглашение придёт во «Входящие»: нажмите «Принять». Если ваша очередь уже настала, Студия сразу откроет страницу подписи. Если нет, документы появятся на вкладке «На подпись», когда очередь дойдёт, и придёт уведомление. Подробнее: [Приглашения и запросы доступа](../deploy/invitations.md#accept).
 
 ## Страница подписи { #page }
@@ -30,6 +39,15 @@ tags:
 - **«Как подписать»**: способ подписи и всё, что для него нужно. Выбрать можно из способов, которые разрешает точка. Картинку и электронную подпись с плашкой страница предлагает, только если автор разместил вашу подпись на странице документа.
 - **Кнопки** внизу: главная («Согласовать», «Согласовать и подписать» или «Подписать») и «Вернуть на доработку».
 - **«История»**: кто и когда отправил, согласовал, подписал или вернул.
+
+<figure class="hds-fig hds-wide">
+  <div class="hds-shot">
+    <div class="hds-shot__bar"><span class="hds-shot__brand">HSE DOC STUDIO</span><span class="hds-shot__route">/sign/kp/…</span></div>
+    <img src="../assets/shots/signing-page.ru.light.webp#only-light" alt="Страница подписи">
+    <img src="../assets/shots/signing-page.ru.dark.webp#only-dark" alt="Страница подписи">
+  </div>
+  <figcaption>страница подписи: кто просит и срок, сообщение автора, ход подписания, PDF и «Как подписать»</figcaption>
+</figure>
 
 Согласовать значит подтвердить, что вы прочитали эту версию и согласны с ней. Если в документе нет места для вашей подписи, страница так и пишет: «Подпись в документе не нужна, только согласование». Тогда достаточно нажать «Согласовать».
 
@@ -43,7 +61,25 @@ tags:
 3. Отметьте «Запомнить для других проектов», чтобы в следующий раз взять подпись одной кнопкой.
 4. Нажмите «Согласовать».
 
+<figure class="hds-fig hds-wide">
+  <div class="hds-shot">
+    <div class="hds-shot__bar"><span class="hds-shot__brand">HSE DOC STUDIO</span><span class="hds-shot__route">/sign/kp/…</span></div>
+    <img src="../assets/shots/signing-image.ru.light.webp#only-light" alt="Подпись картинкой">
+    <img src="../assets/shots/signing-image.ru.dark.webp#only-dark" alt="Подпись картинкой">
+  </div>
+  <figcaption>«Картинка»: подпись рисуется прямо на странице, рамка показывает, где она встанет</figcaption>
+</figure>
+
 Картинка появляется в документе только в момент согласования, до этого её никто не видит. После нажатия страница напишет, кто подписывает следующим.
+
+<figure class="hds-fig hds-wide">
+  <div class="hds-shot">
+    <div class="hds-shot__bar"><span class="hds-shot__brand">HSE DOC STUDIO</span><span class="hds-shot__route">/sign/kp/…</span></div>
+    <img src="../assets/shots/signing-approved.ru.light.webp#only-light" alt="После согласования">
+    <img src="../assets/shots/signing-approved.ru.dark.webp#only-dark" alt="После согласования">
+  </div>
+  <figcaption>после согласования последним в маршруте: «Все подписали», от вас больше ничего не нужно</figcaption>
+</figure>
 
 ## Подписать электронной подписью { #esign }
 
@@ -72,11 +108,29 @@ tags:
 - **«КриптоПро в браузере»**: ключ остаётся на токене, сертификат выберете следующим шагом, PIN спросит КриптоПро. Нужны КриптоПро CSP, ЭЦП Browser plug-in и расширение браузера Chrome или Edge на компьютере. Подробнее: [подпись УКЭП с токена](submit.md#cryptopro).
 - **«Готовая подпись»**: нажмите «Скачать PDF», подпишите файл у себя (КриптоАРМ, КриптоПро, gpg) и загрузите подпись кнопкой «Выбрать подпись»: `.asc`, `.sig` или `.p7s`, к каждому документу свою. Если документы ещё не зафиксированы, страница напишет «Итоговый PDF появится после согласования»: сначала согласуйте, файл подпишете следующим шагом.
 
+<figure class="hds-fig hds-wide">
+  <div class="hds-shot">
+    <div class="hds-shot__bar"><span class="hds-shot__brand">HSE DOC STUDIO</span><span class="hds-shot__route">/sign/kp/…</span></div>
+    <img src="../assets/shots/signing-esign.ru.light.webp#only-light" alt="Электронная подпись">
+    <img src="../assets/shots/signing-esign.ru.dark.webp#only-dark" alt="Электронная подпись">
+  </div>
+  <figcaption>«Открепленная ЭП»: ваша рамка на странице, «Чем подписать» и «Согласовать и подписать»</figcaption>
+</figure>
+
 Если сервер не хранит закрытые ключи, страница так и пишет: создать или импортировать ключ нельзя, подпишите в КриптоПро или загрузите готовую подпись. Способ «ЭП в PDF» работает только с ключом Студии, поэтому на таком сервере его не выбрать: выберите другой способ или верните документы автору.
 
 ## Вернуть на доработку { #return }
 
 Если в документе что-то нужно поправить, нажмите «Вернуть на доработку», напишите в поле «Что поправить», что именно (обязательно, до 2000 символов), и нажмите «Вернуть». Автор получит комментарий, маршрут остановится. Когда автор поправит и отправит заново, вам придёт уведомление.
+
+<figure class="hds-fig hds-wide">
+  <div class="hds-shot">
+    <div class="hds-shot__bar"><span class="hds-shot__brand">HSE DOC STUDIO</span><span class="hds-shot__route">/sign/kp/…</span></div>
+    <img src="../assets/shots/signing-return.ru.light.webp#only-light" alt="Вернуть на доработку">
+    <img src="../assets/shots/signing-return.ru.dark.webp#only-dark" alt="Вернуть на доработку">
+  </div>
+  <figcaption>окно «Вернуть на доработку»: комментарий обязателен</figcaption>
+</figure>
 
 Подробные замечания к тексту удобнее оставить комментариями в самом проекте: ссылка «Открыть проект» есть в окне возврата.
 
@@ -95,5 +149,14 @@ tags:
 - Ключом Студии тоже можно подписать с телефона.
 - КриптоПро на телефоне нет: плагин браузера есть только на компьютере.
 - Готовую подпись можно загрузить, если файл подписи есть на телефоне.
+
+<figure class="hds-fig" style="max-width: 22rem">
+  <div class="hds-shot">
+    <div class="hds-shot__bar"><span class="hds-shot__brand">HSE DOC STUDIO</span><span class="hds-shot__route">/sign/kp/…</span></div>
+    <img src="../assets/shots/signing-phone.ru.light.webp#only-light" alt="С телефона">
+    <img src="../assets/shots/signing-phone.ru.dark.webp#only-dark" alt="С телефона">
+  </div>
+  <figcaption>с телефона: кнопки внизу экрана</figcaption>
+</figure>
 
 Что ещё работает на телефоне: [Мобильная версия](../start/mobile.md).

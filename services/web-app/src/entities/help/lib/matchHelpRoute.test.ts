@@ -62,4 +62,47 @@ describe("справка экрана: подбор статьи по маршр
   it("экран без статьи даёт пустой список", () => {
     expect(rankHelpKeys(help, "/inbox", "")).toEqual([]);
   });
+
+  describe("маршрут подписания (статьи runbooks/signing-*)", () => {
+    // Те же маршруты и порядок статей, что во frontmatter services/user-docs (order 8, 10, 11).
+    const signing = map([
+      article("runbooks/submit-sign", [
+        "/projects/:projectId/submit",
+        "/projects/:projectId/submit/cp/:profileId",
+      ]),
+      article("runbooks/signing-route", [
+        "/projects/:projectId/submit/cp/:profileId/route",
+      ]),
+      article("runbooks/signing-progress", [
+        "/projects/:projectId/submit/cp/:profileId/route",
+        "/projects/:projectId/submit/cp/:profileId",
+      ]),
+      article("runbooks/sign-documents", ["/sign/:projectId/:routeId"]),
+      article("runbooks/signing-inbox", ["/inbox?tab=signing", "/inbox"]),
+    ]);
+
+    it("экран маршрута: статья о нём первой, ход подписания рядом", () => {
+      expect(
+        rankHelpKeys(signing, "/projects/p1/submit/cp/topic/route", ""),
+      ).toEqual(["runbooks/signing-route", "runbooks/signing-progress"]);
+    });
+
+    it("точка сдачи: общая статья первой, ход подписания рядом", () => {
+      expect(rankHelpKeys(signing, "/projects/p1/submit/cp/topic", "")).toEqual(
+        ["runbooks/submit-sign", "runbooks/signing-progress"],
+      );
+    });
+
+    it("страница подписанта и «Входящие → На подпись»", () => {
+      expect(rankHelpKeys(signing, "/sign/p1/sr1", "")).toEqual([
+        "runbooks/sign-documents",
+      ]);
+      expect(rankHelpKeys(signing, "/inbox", "?tab=signing")).toEqual([
+        "runbooks/signing-inbox",
+      ]);
+      expect(rankHelpKeys(signing, "/inbox", "")).toEqual([
+        "runbooks/signing-inbox",
+      ]);
+    });
+  });
 });

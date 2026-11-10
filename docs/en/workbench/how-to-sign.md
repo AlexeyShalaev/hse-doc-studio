@@ -19,6 +19,15 @@ This page is for supervisors. How a student sends the documents is described in 
 - **The bell** in the header shows “Waiting for your signature: N”, which leads to the same tab.
 - **In the project**: on the checkpoint page, the “Signing” card has a “Go to signing” button.
 
+<figure class="hds-fig hds-wide">
+  <div class="hds-shot">
+    <div class="hds-shot__bar"><span class="hds-shot__brand">HSE DOC STUDIO</span><span class="hds-shot__route">/inbox?tab=signing</span></div>
+    <img src="../assets/shots/signing-inbox.en.light.webp#only-light" alt="Inbox, To sign">
+    <img src="../assets/shots/signing-inbox.en.dark.webp#only-dark" alt="Inbox, To sign">
+  </div>
+  <figcaption>the Inbox “To sign” tab and the bell with the “Waiting for your signature” row</figcaption>
+</figure>
+
 If you do not have an account on the server yet, a project invitation comes first. Sign up with the address it was sent to, click “Accept”, and the Studio opens the signing page right away. If you already have an account, the invitation arrives in the Inbox: click “Accept”. If it is already your turn, the Studio opens the signing page right away. If not, the documents appear on the “To sign” tab when your turn comes, and you get a notification. More: [Invitations and access requests](../deploy/invitations.md#accept).
 
 ## The signing page { #page }
@@ -30,6 +39,15 @@ If you do not have an account on the server yet, a project invitation comes firs
 - **“How to sign”**: the signing method and everything it needs. You choose among the methods the checkpoint allows. An image and an electronic signature with a plate are offered only if the author placed your signature on the document page.
 - **Buttons** at the bottom: the main one (“Approve”, “Approve and sign” or “Sign”) and “Return for revision”.
 - **“History”**: who sent, approved, signed or returned, and when.
+
+<figure class="hds-fig hds-wide">
+  <div class="hds-shot">
+    <div class="hds-shot__bar"><span class="hds-shot__brand">HSE DOC STUDIO</span><span class="hds-shot__route">/sign/kp/…</span></div>
+    <img src="../assets/shots/signing-page.en.light.webp#only-light" alt="Signing page">
+    <img src="../assets/shots/signing-page.en.dark.webp#only-dark" alt="Signing page">
+  </div>
+  <figcaption>the signing page: who asks and the deadline, the author’s message, signing progress, the PDF and “How to sign”</figcaption>
+</figure>
 
 To approve means to confirm that you have read this version and agree with it. If the document has no place for your signature, the page says so: “No signature in the document, approval only”. Then clicking “Approve” is enough.
 
@@ -43,7 +61,25 @@ To approve means to confirm that you have read this version and agree with it. I
 3. Tick “Remember for other projects” to use the signature with one click next time.
 4. Click “Approve”.
 
+<figure class="hds-fig hds-wide">
+  <div class="hds-shot">
+    <div class="hds-shot__bar"><span class="hds-shot__brand">HSE DOC STUDIO</span><span class="hds-shot__route">/sign/kp/…</span></div>
+    <img src="../assets/shots/signing-image.en.light.webp#only-light" alt="Image signature">
+    <img src="../assets/shots/signing-image.en.dark.webp#only-dark" alt="Image signature">
+  </div>
+  <figcaption>“Image”: the signature is drawn right on the page, the frame shows where it goes</figcaption>
+</figure>
+
 The image appears in the document only at the moment you approve; before that nobody sees it. After the click the page says who signs next.
+
+<figure class="hds-fig hds-wide">
+  <div class="hds-shot">
+    <div class="hds-shot__bar"><span class="hds-shot__brand">HSE DOC STUDIO</span><span class="hds-shot__route">/sign/kp/…</span></div>
+    <img src="../assets/shots/signing-approved.en.light.webp#only-light" alt="After approving">
+    <img src="../assets/shots/signing-approved.en.dark.webp#only-dark" alt="After approving">
+  </div>
+  <figcaption>after the last person on the route approves: “Everyone has signed”, nothing more is needed from you</figcaption>
+</figure>
 
 ## Sign with an electronic signature { #esign }
 
@@ -72,11 +108,29 @@ You can keep the certificate in your signer profile (settings, “Signing certif
 - **“CryptoPro in the browser”**: the key stays on the token, you pick the certificate next, and CryptoPro asks for the PIN. You need CryptoPro CSP, the CryptoPro Browser plug-in and the Chrome or Edge extension on a computer. More: [token e-signature](submit.md#cryptopro).
 - **“Ready signature”**: click “Download PDF”, sign the file on your side (CryptoARM, CryptoPro, gpg) and upload the signature with “Choose signature”: `.asc`, `.sig` or `.p7s`, one per document. If the documents are not frozen yet, the page says “The final PDF appears after you approve”: approve first, you sign the file in the next step.
 
+<figure class="hds-fig hds-wide">
+  <div class="hds-shot">
+    <div class="hds-shot__bar"><span class="hds-shot__brand">HSE DOC STUDIO</span><span class="hds-shot__route">/sign/kp/…</span></div>
+    <img src="../assets/shots/signing-esign.en.light.webp#only-light" alt="Electronic signature">
+    <img src="../assets/shots/signing-esign.en.dark.webp#only-dark" alt="Electronic signature">
+  </div>
+  <figcaption>“Detached e-signature”: your frame on the page, “Sign with” and “Approve and sign”</figcaption>
+</figure>
+
 If the server does not store private keys, the page says so: you cannot create or import a key; sign with CryptoPro or upload a ready signature. The “E-signature in the PDF” method works only with a Studio key, so on such a server you cannot choose it: pick another method or return the documents to the author.
 
 ## Return for revision { #return }
 
 If something in the document needs fixing, click “Return for revision”, write what exactly in “What to fix” (required, up to 2000 characters) and click “Return”. The author gets your comment and the route stops. When the author fixes it and sends it again, you get a notification.
+
+<figure class="hds-fig hds-wide">
+  <div class="hds-shot">
+    <div class="hds-shot__bar"><span class="hds-shot__brand">HSE DOC STUDIO</span><span class="hds-shot__route">/sign/kp/…</span></div>
+    <img src="../assets/shots/signing-return.en.light.webp#only-light" alt="Return for revision">
+    <img src="../assets/shots/signing-return.en.dark.webp#only-dark" alt="Return for revision">
+  </div>
+  <figcaption>the “Return for revision” dialog: a comment is required</figcaption>
+</figure>
 
 Detailed remarks on the text are easier to leave as comments in the project itself: the return dialog has an “Open project” link.
 
@@ -95,5 +149,14 @@ The signing page works in a phone browser, and the buttons stick to the bottom o
 - You can sign with a Studio key from a phone too.
 - There is no CryptoPro on a phone: the browser plug-in exists only on a computer.
 - You can upload a ready signature if the signature file is on your phone.
+
+<figure class="hds-fig" style="max-width: 22rem">
+  <div class="hds-shot">
+    <div class="hds-shot__bar"><span class="hds-shot__brand">HSE DOC STUDIO</span><span class="hds-shot__route">/sign/kp/…</span></div>
+    <img src="../assets/shots/signing-phone.en.light.webp#only-light" alt="From a phone">
+    <img src="../assets/shots/signing-phone.en.dark.webp#only-dark" alt="From a phone">
+  </div>
+  <figcaption>on a phone: the buttons at the bottom of the screen</figcaption>
+</figure>
 
 What else works on a phone: [Mobile version](../start/mobile.md).
