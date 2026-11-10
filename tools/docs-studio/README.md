@@ -16,6 +16,7 @@ LANGS=ru THEMES=dark make docs-record SCENARIO=runbooks/build   # один ва�
 |---|---|---|
 | локальный (`stand/local.sh`) | http://127.0.0.1:17790 | Студия в режиме local на изолированном каталоге `.build/local/data`; проекты в `~/Documents/hse-studio-docs` (путь виден в кадрах). Сид (`record/lib/stands.mjs`) создаёт через API русскую и английскую ВКР и собирает тезис (Docker + TeX Live). |
 | серверный (`stand/server.sh`) | http://localhost:8110 | compose стенда server-lite (`scripts/dev/server-lite`) под проектом `hse-doc-studio-docs`: образ из текущих исходников в режиме server, Postgres, админ и три демо-пользователя. Секреты в `.build/server.env`. |
+| серверное демо (`stand/server-demo.mjs`) | свободный порт, поднимает сам рекордер | интерфейс, собранный с `VITE_SERVER_DEMO=1` (`.build/server-demo/web`): ответы API даёт память вкладки, бэкенд, Docker и TeX не нужны. Сценарии со `stand: 'demo'`: маршрут подписания (`runbooks/signing-*`, `runbooks/sign-documents`). Чего нет в демо, отдаёт заглушка: PDF заявления (страница A4, строки подписей под слотами демо), картинка подписи, форматы архива; часы браузера пущены с 10.11.2026 10:00 МСК, поэтому сроки и даты в кадрах одни и те же. Свежая сборка: `SERVER_DEMO_BUILD=1`. |
 
 Реальные данные (`~/.config/hse-studio`) не затрагиваются. `stand/local.sh reset`,
 `stand/server.sh reset` стирают стенды.
@@ -36,6 +37,17 @@ export default {
 
 Каждый вариант (ru/en × light/dark) идёт с нуля в новом контексте браузера 1280×800 @2x:
 тема и язык ставятся в `localStorage` до загрузки приложения.
+
+Состояние серверного демо живёт в памяти вкладки: внутри сценария ходят кнопками приложения или
+`spaGo` из `lib/signing.mjs`, а не `d.goto`, иначе отправленный маршрут пропадёт.
+
+## Кадры сайта документации
+
+`make shots-signing` (`record/site-shots.mjs`) снимает со стенда серверного демо экраны маршрута
+подписания для `docs/{ru,en}/workbench/send-for-signing.md` и `how-to-sign.md`:
+`docs/ru/assets/shots/signing-*.<lang>.<theme>.webp`, окно 1440×900 @2x, телефон 390×844.
+Остальные кадры сайта снимает `make shots` (tools/demo) с локального демо-стенда.
+`ONLY=signing-card LANGS=ru THEMES=dark` сужает прогон.
 
 ## Выход
 
