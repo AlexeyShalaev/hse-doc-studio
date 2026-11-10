@@ -14,7 +14,7 @@ SAMPLE_SERVER = "https://studio.example.org"
 
 _PEOPLE = {Lang.ru: ("Анна Петрова", "Курсовая работа по ГОСТ"), Lang.en: ("Anna Petrova", "Coursework draft")}
 _NOTES = {
-    Lang.ru: "Добавил вас в проект, посмотрите, пожалуйста, введение до пятницы.",
+    Lang.ru: "Добавляю вас в проект, посмотрите, пожалуйста, введение до пятницы.",
     Lang.en: "Added you to the project, please take a look at the introduction by Friday.",
 }
 _PROFILES = {

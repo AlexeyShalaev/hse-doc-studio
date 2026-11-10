@@ -157,6 +157,6 @@ async def test__real_coursework__2026_1_2_project_gets_sign_methods_in_patch_202
     # Снова выбрать PAdES нельзя: его не принимает ни одна точка с этим слотом. Открепленную ЭП можно.
     resp = await test_app.patch(config, json={"sign_mode": "image_crypto"})
     assert resp.status_code == 400, resp.text
-    assert "не принимает ни одна точка" in resp.text
+    assert "не принимает ни одна контрольная точка" in resp.text
     resp = await test_app.patch(config, json={"sign_mode": "detached_text"})
     assert resp.status_code == 200, resp.text
