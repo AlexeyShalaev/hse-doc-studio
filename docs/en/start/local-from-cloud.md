@@ -61,7 +61,7 @@ Once connected, the local Studio fetches your projects from the server on its ow
 
 The list shows only what the server returns to you: other people's projects never appear. The search on the "Projects" screen covers cloud projects too. If something is wrong with the cloud, a line appears above the list: access expired or revoked ("Sign in again" button) or the server is unreachable ("Retry" button). Local projects stay where they are, and working offline does not change.
 
-A project opened from the cloud is already connected to the server: your edits go to the server on their own after a pause, others' edits come in, and the PDF is uploaded to the project after each build (more in [Git sync](../workbench/git-sync.md)).
+A project opened from the cloud is already connected to the server: your edits go to the server on their own after a pause, others' edits come in, and the PDF is uploaded to the project after each build (more in [Git sync](https://alexeyshalaev.github.io/hse-doc-studio/workbench/git-sync/), in Russian).
 
 ## Open one particular project
 
