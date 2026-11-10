@@ -20,6 +20,7 @@ export {
   useSignSubmission,
   useSignDetachedInStudio,
   useUnfreezePdf,
+  useUnpinSignedVersion,
   useUpdateSignaturePlacement,
   useUploadSignaturePng,
 } from "./api/signatureQueries";
@@ -29,6 +30,7 @@ export {
   DetachedVerdictSchema,
   FreezePdfResponseSchema,
   FrozenPdfSchema,
+  PinnedPdfSchema,
   PlacementSchema,
   RuntimeSignatureSlotSchema,
   SignaturePlanSchema,

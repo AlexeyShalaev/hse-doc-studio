@@ -8,6 +8,11 @@ import {
   LoginResponseSchema,
   ServerSetupStatusSchema,
 } from "@entities/session";
+import {
+  SigningRouteListSchema,
+  SigningRouteSchema,
+  SigningTaskSchema,
+} from "@entities/signing-route";
 import { activateServerScenario } from "./index";
 import { serverDemoRoutes, setServerDemoActive } from "./routes";
 import { SERVER_SCENARIOS } from "./scenarios";
@@ -179,5 +184,50 @@ describe("демо входа: особые адреса", () => {
     });
     expect(res.status).toBe(status);
     expect((res.data as { code: string }).code).toBe(code);
+  });
+});
+
+describe("серверное демо: версия на подписи", () => {
+  beforeEach(() => {
+    setServerDemoActive(true);
+  });
+
+  const routeOf = async (projectId: string) => {
+    const list = await call("GET", `/projects/${projectId}/signing-routes`);
+    const [summary] = SigningRouteListSchema.parse(list.data).items;
+    if (!summary) throw new Error(`no route in ${projectId}`);
+    const route = await call(
+      "GET",
+      `/projects/${projectId}/signing-routes/${summary.id}`,
+    );
+    return SigningRouteSchema.parse(route.data);
+  };
+
+  it("версии: свой маршрут с изменениями после отправки, чужой с новой версией", async () => {
+    activateServerScenario("student_signing_versions");
+    const own = await routeOf("p_01hxa1c4de");
+    expect(own.status).toBe("active");
+    expect(own.changed_docs).toEqual(["topic_application"]);
+    const foreign = await routeOf("p_01hxa2f8gh");
+    expect(foreign.round).toBe(2);
+    const task = await call(
+      "GET",
+      `/projects/p_01hxa2f8gh/signing-routes/${foreign.id}/task`,
+    );
+    expect(SigningTaskSchema.parse(task.data).route.new_version).toBe(true);
+  });
+
+  it("перенос 0.20.0: версию не восстановить, маршрут стоит", async () => {
+    activateServerScenario("student_signing_migration");
+    const own = await routeOf("p_01hxa1c4de");
+    expect(own.status).toBe("paused");
+    expect(own.stop_reason).toBe("sent_changed");
+    expect(own.docs[0]?.sent).toBeNull();
+  });
+
+  it("у обычного студента своего маршрута нет", async () => {
+    activateServerScenario("student_ready");
+    const list = await call("GET", "/projects/p_01hxa1c4de/signing-routes");
+    expect(SigningRouteListSchema.parse(list.data).items).toEqual([]);
   });
 });

@@ -168,6 +168,16 @@ export const useUnfreezePdf = () => {
   });
 };
 
+/** «Подписывать текущую сборку»: план и состояние подписей перечитываются под ключом state. */
+export const useUnpinSignedVersion = () => {
+  const invalidate = useInvalidateSignatures();
+  return useMutation({
+    mutationFn: ({ projectId, docId }: { projectId: string; docId: string }) =>
+      signatureApi.unpinVersion(projectId, docId),
+    onSuccess: (_, { projectId }) => void invalidate(projectId),
+  });
+};
+
 export const useAttachDetachedSignature = () => {
   const invalidate = useInvalidateSignatures();
   return useMutation<
