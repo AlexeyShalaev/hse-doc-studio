@@ -219,6 +219,31 @@ def test__signature_groups__collects_files_of_both_sides_and_their_copies(engine
     assert {pdf_ours, pdf_theirs, ".hse-studio/detached/main/a.sig"} <= group_paths(plan)
 
 
+def test__signature_groups__the_pinned_version_follows_its_group(engine: GitMergeFileEngine) -> None:
+    """Версия на подписи (signing-route.md, 12.3) тоже файл группы: она следует решению по группе, а не новизне."""
+    path = ".hse-studio/signatures.json"
+    pdf, source = ".hse-studio/frozen/main.pdf", ".hse-studio/frozen/main.source.pdf"
+
+    def with_pin(sha: str) -> bytes:
+        data = json.loads(_signatures(sha, pdf))
+        data["pinned"] = {"main": {"path": source, "sha256": sha, "size": 1, "pinned_at": "t"}}
+        return json.dumps(data).encode()
+
+    inp = MergeInput(
+        base={path: _signatures("0", pdf)},
+        ours={path: with_pin("1"), source: b"%PDF-mine"},
+        theirs={path: with_pin("2"), source: b"%PDF-theirs"},
+        base_commit="b" * 40,
+        theirs_commit="c" * 40,
+    )
+    plan = plan_merge(inp, engine, StateFileMerge())
+
+    [group] = conflicting_groups(plan)
+
+    assert group.ours == {pdf, source}
+    assert source in group_paths(plan)
+
+
 def test__signature_groups__no_signatures_file__no_groups(engine: GitMergeFileEngine) -> None:
     plan, _ = _text_plan(engine)
     assert conflicting_groups(plan) == []

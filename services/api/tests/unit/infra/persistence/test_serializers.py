@@ -32,6 +32,7 @@ from hse_doc_studio.core.value_objects import (
     DetachedSignature,
     EmbeddedSignature,
     FrozenPdf,
+    PinnedPdf,
     Person,
     SignaturePlacement,
     SignatureSlot,
@@ -462,6 +463,51 @@ def test__serializers__signatures_state__withheld_legacy_and_broken_entries() ->
     }
     assert deserialize_signatures_state(broken).withheld == {"b": frozenset({"supervisor"})}
     assert deserialize_signatures_state({"slots": {}, "placements": {}, "withheld": ["a"]}).withheld == {}
+
+
+def test__serializers__signatures_state__pinned_roundtrip_and_always_written() -> None:
+    pinned = PinnedPdf(
+        path=".hse-studio/frozen/a.source.pdf",
+        sha256="ab" * 32,
+        size=1234,
+        pinned_at="2026-11-10T14:32:00+00:00",
+        route_id="00000000-0000-4000-8000-000000000001",
+        round=2,
+    )
+    state = SignaturesState(slots={}, placements={}, pinned={"a": pinned})
+
+    data = serialize_signatures_state(state)
+
+    assert data["pinned"] == {
+        "a": {
+            "path": ".hse-studio/frozen/a.source.pdf",
+            "sha256": "ab" * 32,
+            "size": 1234,
+            "pinned_at": "2026-11-10T14:32:00+00:00",
+            "route_id": "00000000-0000-4000-8000-000000000001",
+            "round": 2,
+        }
+    }
+    assert deserialize_signatures_state(data).pinned == {"a": pinned}
+    # Пустой пишется тоже: иначе слияние со старым файлом вернуло бы снятую версию на подписи.
+    assert serialize_signatures_state(SignaturesState.empty())["pinned"] == {}
+
+
+def test__serializers__signatures_state__pinned_legacy_and_broken_entries() -> None:
+    # signatures.json, записанный до версии на подписи, читается.
+    assert deserialize_signatures_state({"slots": {}, "placements": {}}).pinned == {}
+    broken = {
+        "slots": {},
+        "placements": {},
+        "pinned": {
+            "no_sha": {"path": "p", "size": 1, "pinned_at": "t"},
+            "bad_size": {"path": "p", "sha256": "s", "size": "big", "pinned_at": "t"},
+            "not_a_dict": "p",
+            "minimal": {"path": "p", "sha256": "s", "size": 1, "pinned_at": "t"},
+        },
+    }
+    assert deserialize_signatures_state(broken).pinned == {"minimal": PinnedPdf("p", "s", 1, "t")}
+    assert deserialize_signatures_state({"slots": {}, "placements": {}, "pinned": ["a"]}).pinned == {}
 
 
 @pytest.mark.unit

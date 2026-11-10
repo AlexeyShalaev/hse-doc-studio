@@ -16,7 +16,7 @@ from hse_doc_studio.core.project_schema import (
     schema_access,
     schema_to_write,
 )
-from hse_doc_studio.core.value_objects import FormState, ProjectSchema, SignatureSlot, SignaturesState
+from hse_doc_studio.core.value_objects import FormState, PinnedPdf, ProjectSchema, SignatureSlot, SignaturesState
 from hse_doc_studio.infra.persistence.forms import JsonFormStateRepository
 from hse_doc_studio.infra.persistence.project import JsonProjectRepository
 from hse_doc_studio.infra.persistence.project_migrations import ProjectStateBundle, migrate_project_state
@@ -253,6 +253,37 @@ def test__signatures__released_slot_is_not_brought_back_from_the_old_file(tmp_pa
 
     assert json.loads(path.read_text(encoding="utf-8"))["withheld"] == {}
     assert repository.get_state(tmp_path).withheld == {}
+
+
+def _pinned_signatures(folder: Path) -> Path:
+    pinned = PinnedPdf(".hse-studio/frozen/annotation.source.pdf", "ab", 3, "2026-11-10T14:32:00+00:00", "r", 1)
+    JsonSignatureRepository().save_state(
+        folder, SignaturesState(slots={}, placements={}, pinned={"annotation": pinned})
+    )
+    return folder / ".hse-studio" / "signatures.json"
+
+
+def test__signatures__pinned_survives_a_rewrite_by_a_studio_that_does_not_know_it(tmp_path: Path) -> None:
+    """Старая Студия сохраняет версию на подписи, хотя и не учитывает её (signing-route.md, 12.3)."""
+    on_disk = json.loads(_pinned_signatures(tmp_path).read_text(encoding="utf-8"))
+    old_shape = Struct({key: shape for key, shape in SIGNATURES_SHAPE.fields.items() if key != "pinned"})
+    old_writer = serialize_signatures_state(SignaturesState.empty())
+    del old_writer["pinned"]
+
+    rewritten = preserve_unknown(old_writer, on_disk, old_shape)
+
+    assert rewritten["pinned"] == on_disk["pinned"]
+    assert deserialize_signatures_state(rewritten).pinned["annotation"].sha256 == "ab"
+
+
+def test__signatures__unpinned_version_is_not_brought_back_from_the_old_file(tmp_path: Path) -> None:
+    path = _pinned_signatures(tmp_path)
+    repository = JsonSignatureRepository()
+
+    repository.save_state(tmp_path, replace(repository.get_state(tmp_path), pinned={}))
+
+    assert json.loads(path.read_text(encoding="utf-8"))["pinned"] == {}
+    assert repository.get_state(tmp_path).pinned == {}
 
 
 # ── миграции ─────────────────────────────────────────────────────────────────
