@@ -9,6 +9,7 @@ export {
   useDeleteSignaturePng,
   useFreezePdf,
   useRecheckDetachedSignature,
+  useReleaseWithheld,
   useSetSignerLevel,
   useSetSlotSigner,
   useTrustRoot,

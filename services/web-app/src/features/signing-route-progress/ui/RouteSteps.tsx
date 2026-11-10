@@ -5,6 +5,7 @@ import type { RouteParticipant, SigningRoute } from "@entities/signing-route";
 import { CopyField } from "@shared/ui";
 import { formatDay, formatMoment } from "../lib/format";
 import {
+  isLinkable,
   isRemindable,
   personMoment,
   personStateKey,
@@ -32,7 +33,10 @@ export type RouteStepsProps = {
   route: SigningRoute;
   meId: string | null;
   now: number;
-  /** Автор управляет маршрутом: у тех, чья очередь, «Напомнить» и «Скопировать ссылку». */
+  /**
+   * Автор управляет маршрутом: у тех, чья очередь, «Напомнить»; «Скопировать ссылку» у каждого
+   * человека идущего маршрута, кто ещё не закончил.
+   */
   canManage: boolean;
   /**
    * На сервере настроена почта. Тогда ссылку приглашённому несёт письмо, и копировать нечего:
@@ -119,10 +123,14 @@ export const RouteSteps = ({
                 const busy = pendingId === person.id;
                 const invited = person.state === "invited";
                 // Без почты приглашённому напомнить нечем: «Напомнить» отдаёт ту же ссылку, что
-                // и «Скопировать ссылку», и 12 часов её не закрывают. Копирование не закрыто никогда.
+                // и «Скопировать ссылку», и 12 часов её не закрывают. Копирование не закрыто никогда
+                // и доступно не только тому, чья очередь: ссылку можно разослать заранее.
                 const remindLocked =
                   lockedUntil !== null && (!invited || mailEnabled);
-                const canCopy = !(invited && mailEnabled);
+                const canCopy =
+                  canManage &&
+                  isLinkable(route, person) &&
+                  !(invited && mailEnabled);
                 const lockTitle =
                   lockedUntil === null
                     ? undefined
@@ -173,7 +181,7 @@ export const RouteSteps = ({
                             }`}
                         </span>
                       )}
-                      {remindable && (
+                      {(remindable || canCopy) && (
                         // На узком экране кнопки уходят на свою строку и не ломаются внутри.
                         <span
                           className="flex items-center"
@@ -184,22 +192,24 @@ export const RouteSteps = ({
                             justifyContent: "flex-end",
                           }}
                         >
-                          {/* Подсказка на обёртке: у погашенной кнопки нет наведения. */}
-                          <span title={remindLocked ? lockTitle : undefined}>
-                            <button
-                              type="button"
-                              className="btn xs ghost"
-                              style={{ whiteSpace: "nowrap" }}
-                              data-testid={`signing-remind-${person.id}`}
-                              disabled={busy || remindLocked}
-                              onClick={() => {
-                                onRemind(person);
-                              }}
-                            >
-                              <Bell size="0.6875rem" aria-hidden="true" />
-                              {t("action.remind")}
-                            </button>
-                          </span>
+                          {remindable && (
+                            // Подсказка на обёртке: у погашенной кнопки нет наведения.
+                            <span title={remindLocked ? lockTitle : undefined}>
+                              <button
+                                type="button"
+                                className="btn xs ghost"
+                                style={{ whiteSpace: "nowrap" }}
+                                data-testid={`signing-remind-${person.id}`}
+                                disabled={busy || remindLocked}
+                                onClick={() => {
+                                  onRemind(person);
+                                }}
+                              >
+                                <Bell size="0.6875rem" aria-hidden="true" />
+                                {t("action.remind")}
+                              </button>
+                            </span>
+                          )}
                           {canCopy && (
                             <button
                               type="button"

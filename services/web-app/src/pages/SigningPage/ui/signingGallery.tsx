@@ -693,7 +693,7 @@ export const getSigningPageGallery = (): GalleryGroup[] => [
     id: "signing-stopped",
     title: "Подписант: маршрут остановлен или закрыт",
     entries: [
-      entry("signing_returned_mine", "Он вернул на доработку", () =>
+      entry("signing_returned_mine", "Возврат на доработку подписантом", () =>
         view(
           ready(
             supervisorTurn({

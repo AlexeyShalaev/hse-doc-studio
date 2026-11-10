@@ -228,6 +228,16 @@ export const signatureApi = {
     apiClient
       .delete(`/projects/${projectId}/signatures/slots/${slotId}/png`)
       .then(() => undefined),
+
+  /** «Показать» картинку, которую придержал маршрут подписания (docs/design/signing-route.md, 5.6). */
+  releaseWithheld: (
+    projectId: string,
+    docId: string,
+    slotId: string,
+  ): Promise<void> =>
+    apiClient
+      .delete(`/projects/${projectId}/signatures/withheld/${docId}/${slotId}`)
+      .then(() => undefined),
 };
 
 // Прямые ссылки для скачивания (браузер сам ставит имя файла из заголовка).

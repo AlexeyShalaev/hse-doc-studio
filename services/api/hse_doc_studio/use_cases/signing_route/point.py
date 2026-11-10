@@ -80,6 +80,17 @@ class RoutePoint:
         slot = self.runtime.get(slot_id)
         return dict(slot.label) if slot is not None else {"ru": slot_id, "en": slot_id}
 
+    def profile_name(self, profile_id: str) -> dict[str, str]:
+        """Название контрольной точки того же пака (другой маршрут проекта); неизвестная называется своим id."""
+        if profile_id == self.profile.id:
+            return dict(self.profile.name)
+        profile = (
+            SubmissionProfileService().get_profile(self.version, profile_id)
+            if self.version.pack_submission is not None
+            else None
+        )
+        return dict(profile.name) if profile is not None else {"ru": profile_id, "en": profile_id}
+
     def methods(self, pairs: Iterable[DocSlot]) -> tuple[str, ...]:
         """Способы, которые точка разрешает для всех этих пар (пересечение; без ограничений любой)."""
         allowed = set(ALL_METHODS)
@@ -120,7 +131,7 @@ class RoutePointLoader:
         )
         if version is None or profile is None:
             raise NotFoundError(
-                localized_error(f"Точка сдачи {profile_id!r} не найдена", f"Checkpoint {profile_id!r} not found")
+                localized_error(f"Контрольная точка {profile_id!r} не найдена", f"Checkpoint {profile_id!r} not found")
             )
         pairs = profile_pairs(project, version, profile, None)
         documents = {doc.id: doc for doc in project.documents if is_doc_active(project, doc)}

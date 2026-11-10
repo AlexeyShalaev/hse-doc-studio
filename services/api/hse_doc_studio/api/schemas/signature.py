@@ -127,6 +127,9 @@ class SignaturesStateResponse(BaseModel):
     # Пустой список у старых клиентов не ломает ничего: фронт падает обратно
     # на слоты каталога, когда рантайм-список отсутствует.
     runtime_slots: list[RuntimeSlotResponse] = []
+    # Слоты документов, чью картинку придержал маршрут подписания до согласия подписанта (signing-route.md, 6.1):
+    # на вкладке «Подписи» у них пометка «Придержано маршрутом» и «Показать» (5.6).
+    withheld: dict[str, list[str]] = {}
 
 
 class UpdatePlacementRequest(BaseModel):

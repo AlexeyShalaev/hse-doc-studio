@@ -16,7 +16,14 @@ from hse_doc_studio.core.signing_route.entities import StopReason
 _REPO = Path(__file__).resolve().parents[5]
 _LOCALES = _REPO / "services" / "web-app" / "src" / "shared" / "lib" / "i18n" / "locales"
 # Записи подписей, которые маршрут помечает своим `route_id` (docs/design/signing-route.md, 6.7).
-_SIGNATURE_ACTIONS = ("signature.freeze", "signature.sign", "signature.attach", "signature.profile_image")
+# «Показать» придержанную маршрутом картинку (5.6): картинка встаёт без согласия подписанта, это видно в журнале.
+_SIGNATURE_ACTIONS = (
+    "signature.freeze",
+    "signature.sign",
+    "signature.attach",
+    "signature.profile_image",
+    "signature.release",
+)
 
 
 def _audit(lng: str) -> dict[str, dict[str, str]]:

@@ -11,6 +11,7 @@ import {
 } from "@entities/document";
 import { useProject } from "@entities/project";
 import {
+  useReleaseWithheld,
   useSignaturesState,
   useUpdateSignaturePlacement,
 } from "@entities/signature";
@@ -18,6 +19,7 @@ import { useUpdateSlotConfig } from "@entities/signing-identity";
 import { useVersionDetail } from "@entities/template-catalog";
 import { DocPlacementPanel, PdfStampEditor } from "@features/signature-stamper";
 import type { SignMode, UpdatePlacementRequest } from "@shared/api/types";
+import { toast } from "@shared/lib";
 import { Notice } from "@shared/ui";
 import { Spinner } from "@shared/ui/Spinner";
 
@@ -67,6 +69,7 @@ export const DocSignaturesPane = ({
     useSignaturesState(projectId);
   const { mutate: updatePlacement } = useUpdateSignaturePlacement();
   const { mutate: updateSlotConfig } = useUpdateSlotConfig();
+  const { mutate: releaseWithheld } = useReleaseWithheld();
   const { start, isRunning, slot, block } = useStartCompile(projectId, docId);
 
   // The signature preview needs a PDF, which exists iff the most recent build
@@ -194,6 +197,28 @@ export const DocSignaturesPane = ({
     });
   };
 
+  // «Показать» картинку, придержанную маршрутом (docs/design/signing-route.md, 5.6): картинка
+  // встанет в документ без согласия подписанта, поэтому спрашиваем.
+  const handleReleaseWithheld = (slotId: string) => {
+    if (!window.confirm(t("signatureStamper:docPlacement.withheldConfirm")))
+      return;
+    releaseWithheld(
+      { projectId, docId, slotId },
+      {
+        onSuccess: () => {
+          toast.success(t("signatureStamper:docPlacement.withheldShown"));
+        },
+        onError: (err) => {
+          toast.error(
+            t("signatureStamper:docPlacement.withheldFailed", {
+              reason: err.message,
+            }),
+          );
+        },
+      },
+    );
+  };
+
   const goToProjectSignatures = () => {
     void navigate(`/projects/${projectId}/submit/signatures`);
   };
@@ -255,6 +280,7 @@ export const DocSignaturesPane = ({
             onJumpToPage={setPage}
             onOpenProjectSignatures={goToProjectSignatures}
             onSlotModeChange={handleSlotModeChange}
+            onReleaseWithheld={handleReleaseWithheld}
           />
         </div>
       </div>

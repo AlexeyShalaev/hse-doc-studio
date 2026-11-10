@@ -4,6 +4,7 @@ import { clsx } from "clsx";
 import { useStartCompile } from "@entities/compile";
 import type {
   SigningRoute,
+  SigningRouteBlocker,
   SigningRoutePreview,
 } from "@entities/signing-route";
 import { pickLocalized } from "@shared/lib";
@@ -33,7 +34,7 @@ export const RouteDocsCard = ({
           name={doc.name}
           built={shown?.built ?? null}
           frozen={doc.frozen}
-          elsewhere={(preview?.blockers ?? []).some(
+          elsewhere={(preview?.blockers ?? []).find(
             (b) => b.code === "doc_in_other_route" && b.doc_id === doc.doc_id,
           )}
           editable={editable}
@@ -58,7 +59,8 @@ const DocRow = ({
   /** null: предпросмотр ещё не пришёл. */
   built: boolean | null;
   frozen: boolean;
-  elsewhere: boolean;
+  /** Помеха `doc_in_other_route` этого документа: его держит маршрут другой точки. */
+  elsewhere: SigningRouteBlocker | undefined;
   editable: boolean;
 }) => {
   const { t, i18n } = useTranslation("signingRouteEditor");
@@ -66,10 +68,19 @@ const DocRow = ({
   const { start, isRunning, slot, block } = useStartCompile(projectId, docId);
   const building = slot?.status === "running";
   const tone = elsewhere || built === false ? "warn" : built ? "ok" : "pending";
+  const other = elsewhere?.other_route ?? null;
+  const point =
+    other === null
+      ? ""
+      : pickLocalized(other.profile.name, i18n.language, other.profile.id);
   const status = building
     ? t("docs.building")
     : elsewhere
-      ? t("docs.elsewhere")
+      ? other === null
+        ? t("docs.elsewhere")
+        : other.status === "completed"
+          ? t("docs.heldByCompleted", { point })
+          : t("docs.elsewhereAt", { point })
       : built === null
         ? ""
         : built

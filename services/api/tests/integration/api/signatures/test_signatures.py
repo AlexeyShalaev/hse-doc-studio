@@ -204,6 +204,31 @@ async def test__api__update_slot_config__with_signing_identity__persists_mode_an
     assert resp.json()["sign_reason"] == "Автор работы"
 
 
+async def test__api__update_slot_config__to_plate__narrow_places_widened_for_the_plate(
+    test_app: AsyncClient, tmp_path: Path
+) -> None:
+    """Рамка картинки узка для плашки открепленной ЭП: при смене режима место растёт до 70 мм, правый край на месте."""
+    project = await _create_project(test_app, tmp_path / "proj")
+    base = f"/api/v1/projects/{project['id']}/signatures"
+    placed = await test_app.patch(
+        f"{base}/placements/thesis/author", json={"enabled": True, "x_mm": 150, "y_mm": 200, "width_mm": 28}
+    )
+    assert placed.status_code == 200, placed.text
+
+    to_plate = await test_app.patch(
+        f"{base}/slots/author/config", json={"sign_mode": "detached_text", "sign_reason": ""}
+    )
+    widened = (await test_app.get(base)).json()["placements"]["thesis"]["author"]
+    back = await test_app.patch(f"{base}/slots/author/config", json={"sign_mode": "image", "sign_reason": ""})
+    kept = (await test_app.get(base)).json()["placements"]["thesis"]["author"]
+
+    assert to_plate.status_code == 200, to_plate.text
+    assert (widened["x_mm"], widened["width_mm"]) == (108, 70)
+    # Обратно в картинку место не сужаем: размер дальше выбирает автор.
+    assert back.status_code == 200, back.text
+    assert kept == widened
+
+
 async def test__api__delete_signature_png__removes_slot_from_state(test_app: AsyncClient, tmp_path: Path) -> None:
     project = await _create_project(test_app, tmp_path / "proj")
     project_id = project["id"]

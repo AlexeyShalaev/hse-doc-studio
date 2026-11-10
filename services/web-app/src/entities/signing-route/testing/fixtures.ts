@@ -466,6 +466,21 @@ export const SIGNING_ROUTE_CONTRACT_EXAMPLES: Record<
           doc_id: null,
           slot_id: null,
           participant_id: "srp_academic",
+          other_route: null,
+        },
+        {
+          code: "doc_in_other_route",
+          doc_id: SR_DOC.doc_id,
+          slot_id: null,
+          participant_id: null,
+          other_route: {
+            id: "sr_01hy0a1b2c",
+            profile: {
+              id: "pre-defense",
+              name: { ru: "Предзащита", en: "Pre-defence" },
+            },
+            status: "completed",
+          },
         },
       ],
       sender_key: {

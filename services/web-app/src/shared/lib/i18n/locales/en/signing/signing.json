@@ -28,7 +28,7 @@
       "to_approve_sign": "signing",
       "to_sign": "signing",
       "done": "done",
-      "returned": "returned for rework"
+      "returned": "returned for revision"
     },
     "mine": {
       "invited": "invitation sent",
@@ -38,7 +38,7 @@
       "to_approve_sign": "your turn",
       "to_sign": "your turn",
       "done": "done",
-      "returned": "returned for rework"
+      "returned": "returned for revision"
     }
   },
   "persona": {
@@ -65,8 +65,8 @@
     "doneWait": "Waiting for the other participants.",
     "completedTitle": "Everyone has signed",
     "completedBody": "The documents are signed. Nothing else is needed from you.",
-    "returnedMine": "You returned the documents for rework",
-    "returnedOther": "The documents were returned for rework",
+    "returnedMine": "You returned the documents for revision",
+    "returnedOther": "The documents were returned for revision",
     "returnedComment": "{{who}}: “{{comment}}”",
     "returnedBody": "You will be notified when the author sends them again.",
     "pausedTitle": "Route stopped",
@@ -75,7 +75,7 @@
       "marks_changed": "Signatures in the document changed outside the route. The author will send the documents again.",
       "frozen_changed": "The final PDF changed outside the route. The author will send the documents again.",
       "participant_left": "The signers changed. The author will assign another signer.",
-      "returned": "The documents were returned for rework. The author will send them again.",
+      "returned": "The documents were returned for revision. The author will send them again.",
       "unknown": "The author will send the documents again."
     },
     "cancelledTitle": "Route cancelled",
@@ -205,7 +205,7 @@
   "actions": {
     "approve": "Approve",
     "approving": "Approving…",
-    "return": "Return for rework",
+    "return": "Return for revision",
     "blocked": {
       "image": "Add your signature image first.",
       "plate": "Set a key or certificate for the signature plate first."
@@ -221,7 +221,7 @@
     "plate_required": "Set a key or certificate for the signature plate first.",
     "network": "The server is unreachable. Check your connection and try again.",
     "unknown": "Something went wrong. Try again later.",
-    "method_not_allowed": "This signing method cannot be chosen right now. Pick another one.",
+    "method_not_allowed": "This signing method cannot be chosen right now: the checkpoint does not accept it or there is no place for the signature on the page. Pick another one.",
     "visible_layer_final": "The documents are already frozen: the image, the method and the plate cannot be changed.",
     "stale_route": "The route changed while you were acting. The page has been refreshed, try again.",
     "passphrase_required": "Enter the key password.",
@@ -238,7 +238,7 @@
     "dismiss": "Dismiss"
   },
   "return": {
-    "title": "Return for rework",
+    "title": "Return for revision",
     "lead": "The author gets your comment and sends the documents again.",
     "label": "What to fix",
     "placeholder": "For example: clarify the project goal",
@@ -276,7 +276,7 @@
       "sent": "sent for signing",
       "approved": "approved",
       "signed": "signed",
-      "returned": "returned for rework",
+      "returned": "returned for revision",
       "paused": "route stopped",
       "resumed": "sent again",
       "cancelled": "route cancelled",

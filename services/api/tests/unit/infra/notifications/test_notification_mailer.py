@@ -197,7 +197,7 @@ async def test__signing_request__links_to_the_signing_page_with_point_and_deadli
     assert mail.subject == "Иван Иванов просит подписать: Заявка на тему КП"
     assert f'href="{SERVER}/sign/{PROJECT}/{ROUTE}"' in mail.html
     assert "Срок: 15.11.2026 20:59 UTC" in mail.text
-    assert "Точка сдачи: Заявка на тему КП" in mail.text
+    assert "Контрольная точка: Заявка на тему КП" in mail.text
 
 
 async def test__signing_request__sign_turn_asks_for_the_final_pdf_and_no_deadline_row_without_deadline() -> None:
@@ -219,7 +219,7 @@ async def test__signing_returned__comment_in_a_block_and_link_to_the_checkpoint(
     mail = mailer.render_notification("a@x.org", NotificationKind.signing_returned, payload, locale="ru")
 
     assert mail is not None
-    assert mail.subject == "Пётр Петров вернул документы на доработку"
+    assert mail.subject == "Документы возвращены на доработку: Пётр Петров"
     assert "Комментарий" in mail.text
     assert "Уточните <цель>" in mail.text
     assert "&lt;цель&gt;" in mail.html

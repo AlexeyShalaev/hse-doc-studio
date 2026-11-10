@@ -7,9 +7,17 @@
 from __future__ import annotations
 
 import json
-from typing import Any
+from types import SimpleNamespace
+from typing import Any, cast
+from uuid import UUID
 
 import pytest
+from hse_doc_studio.core.signing_route.entities import RouteStatus
+from hse_doc_studio.core.signing_route.readiness import Blocker, BlockerCode, OtherRoute
+from hse_doc_studio.infra.db.orm.signing_routes import SigningRouteRow
+from hse_doc_studio.use_cases.mcp.tools.signing_route import _blocker_text
+from hse_doc_studio.use_cases.signing_route.author import RoutePreview
+from sqlalchemy import update
 
 from tests.integration.api.signing_routes.stand import (
     TOPIC,
@@ -77,6 +85,16 @@ def _send(project: Project, who: Person, route_id: str, expected: dict[str, str]
     if expected is None:
         expected = {d["doc_id"]: d["token"] for d in _preview(project, who, route_id)["docs"]}
     return project.call(who, "POST", f"{project.routes}/{route_id}/send", json={"expected": expected, "sign": None})
+
+
+def _placement_off(doc_id: str, slot_id: str, participant_id: str) -> dict[str, Any]:
+    return {
+        "code": "placement_off",
+        "doc_id": doc_id,
+        "slot_id": slot_id,
+        "participant_id": participant_id,
+        "other_route": None,
+    }
 
 
 def _signatures(project: Project) -> dict[str, Any]:
@@ -167,7 +185,13 @@ async def test__create__nobody_with_persona__participant_missing_blocks_send(sta
     )
     assert preview["can_send"] is False
     assert preview["blockers"] == [
-        {"code": "participant_missing", "doc_id": None, "slot_id": None, "participant_id": missing["id"]}
+        {
+            "code": "participant_missing",
+            "doc_id": None,
+            "slot_id": None,
+            "participant_id": missing["id"],
+            "other_route": None,
+        }
     ]
     blocked = _send(project, author, route["id"])
     assert blocked.status_code == 409
@@ -305,9 +329,9 @@ async def test__preview__visible_mark_without_place__placement_off_blocks_send_u
 
     assert preview["can_send"] is False
     assert preview["blockers"] == [
-        {"code": "placement_off", "doc_id": "topic_application", "slot_id": "author", "participant_id": sender},
-        {"code": "placement_off", "doc_id": "project_proposal", "slot_id": "supervisor", "participant_id": supervisor},
-        {"code": "placement_off", "doc_id": "topic_application", "slot_id": "supervisor", "participant_id": supervisor},
+        _placement_off("topic_application", "author", sender),
+        _placement_off("project_proposal", "supervisor", supervisor),
+        _placement_off("topic_application", "supervisor", supervisor),
     ]
     assert blocked.status_code == 409
     assert (blocked.json()["code"], blocked.json()["blockers"]) == ("route_blocked", preview["blockers"])
@@ -439,6 +463,61 @@ async def test__cancel_archive_then_new_route__inherits_people_and_lists_newest_
     items = listing.json()["items"]
     assert [(i["id"], i["status"]) for i in items] == [(fresh.json()["id"], "draft"), (route["id"], "archived")]
     assert items[1]["steps_total"] == 2
+
+
+async def _move_to_checkpoint(stand: Stand, route_id: str, profile_id: str, **values: Any) -> None:
+    """Как будто маршрут отправлен с другой точки: в паке КП нет двух точек с подписями на одних документах."""
+    async with stand.sessions.use() as db:
+        await db.execute(
+            update(SigningRouteRow).where(SigningRouteRow.id == UUID(route_id)).values(profile_id=profile_id, **values)
+        )
+
+
+@pytest.mark.parametrize(
+    ("status", "phase", "hint"),
+    [
+        ("active", "approval", "отмените тот маршрут на странице его точки"),
+        ("completed", "done", "снимите его с контроля"),
+    ],
+    ids=["active", "completed"],
+)
+async def test__preview__document_held_by_route_of_another_checkpoint__blocker_names_it(
+    stand: Stand, status: str, phase: str, hint: str
+) -> None:
+    project, author, _ = await _setup(stand)
+    first = _create(project, author)
+    _ready(project, author)
+    assert _send(project, author, first["id"]).status_code == 200
+    # Тот маршрут держит документы, но уже от точки «Предзащита КП»; у «Заявки на тему» новый черновик.
+    await _move_to_checkpoint(stand, first["id"], "pre-defence", status=status, phase=phase)
+    second = _create(project, author)
+
+    preview = _preview(project, author, second["id"])
+    blocked = _send(project, author, second["id"])
+
+    held = [b for b in preview["blockers"] if b["code"] == "doc_in_other_route"]
+    other = {
+        "id": first["id"],
+        "profile": {"id": "pre-defence", "name": {"ru": "Предзащита КП", "en": "Course project pre-defence"}},
+        "status": status,
+    }
+    assert held == [
+        {"code": "doc_in_other_route", "doc_id": doc_id, "slot_id": None, "participant_id": None, "other_route": other}
+        for doc_id in TOPIC_DOCS
+    ]
+    assert (blocked.status_code, blocked.json()["code"]) == (409, "route_blocked")
+    assert [b for b in blocked.json()["blockers"] if b["code"] == "doc_in_other_route"] == held
+    # Тот же текст у MCP: какая точка и что сделать.
+    mcp = _blocker_text(
+        Blocker(
+            BlockerCode.doc_in_other_route,
+            doc_id="topic_application",
+            other_route=OtherRoute(UUID(first["id"]), "pre-defence", other["profile"]["name"], RouteStatus(status)),
+        ),
+        cast(RoutePreview, SimpleNamespace(participants=())),
+    )
+    assert "Предзащита КП" in mcp or "Course project pre-defence" in mcp
+    assert hint in mcp or ("Stop tracking" if status == "completed" else "cancel that route") in mcp
 
 
 async def test__create__after_cancel__new_draft_archives_cancelled(stand: Stand) -> None:

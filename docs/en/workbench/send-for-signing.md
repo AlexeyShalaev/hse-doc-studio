@@ -37,7 +37,7 @@ What a signer sees is described in [How to sign](how-to-sign.md).
 
 A signer is a project member with the “Reviewer” role and a persona: “Supervisor”, “Co-supervisor” or “Academic supervisor”. The persona tells the Studio which signature slots are theirs.
 
-- If the person is not in the project yet, the route shows “not in project” next to them and an “Invite” button. It opens the usual invitation form with the “Reviewer” role and the right persona already chosen: enter the email and click “Invite”. After accepting the invitation from the link, the person lands right on the signing page. Someone who already has an account gets the invitation in the Inbox and finds the documents there too, on the “To sign” tab.
+- If the person is not in the project yet, the route shows “not in project” next to them and an “Invite” button. It opens the usual invitation form with the “Reviewer” role and the right persona already chosen: enter the email and click “Invite”. After accepting the invitation from the link, the person lands right on the signing page. Someone who already has an account gets the invitation in the Inbox: if it is already their turn after “Accept”, the Studio opens the signing page right away, otherwise the documents appear on the “To sign” tab when their turn comes.
 - You can also invite people in advance in the project settings, “People” section. More: [Invitations and access requests](../deploy/invitations.md).
 - If several people have the persona, pick one in the “Who signs” list.
 - You can send while an invitation is still pending: that person's step will wait.
@@ -49,7 +49,7 @@ Open the Submission mode and the checkpoint, and in the “Signing” card click
 
 ### Checkpoint documents
 
-Every document has to be built: a document that is not built has a “Build” button. A document that is already being signed on another route is marked “out for signing in another route”.
+Every document has to be built: a document that is not built has a “Build” button. A document held by the route of another checkpoint is marked with that checkpoint's name: “out for signing on the route “…”” or “held by the completed route “…””.
 
 ### Who signs and in what order
 
@@ -65,6 +65,7 @@ Document tabs and a PDF page with signature frames, just like on a document's �
 
 - A signature marked “not placed” goes on the open page with “To page N”. A signature on another page can be shown with “Go” or moved to the open page with “Here”.
 - A signature the checkpoint does not require (for example, the academic supervisor on an application) is added with “Add signature: …” and removed with the cross “Remove signature from route”.
+- A signer may change the method on their step, but an image and an electronic signature with a plate are offered only if their signature is placed on the page. Without a place they are left with “E-signature in PDF” without a mark. If they switch from an image to an e-signature and the place is narrow, the Studio widens it to 70 mm leftwards from its right edge so the e-signature plate fits.
 
 ### Your signature
 
@@ -86,7 +87,8 @@ The bottom of the screen lists “What blocks sending”. While the list is not 
 | Blocker | What to do |
 |---|---|
 | the document is not built | click “Build” in “Checkpoint documents” |
-| already out for signing in another route | a route of another checkpoint holds the document: open that checkpoint and cancel its route, or click “Stop tracking” if it is completed |
+| out for signing on the route of the checkpoint “…” | a document is signed on one route at a time: “Open that checkpoint” takes you to its page, cancel that route there |
+| held by the completed route of the checkpoint “…” | a completed route watches its documents until it stops being tracked: open that checkpoint with “Open that checkpoint” and click “Stop tracking” |
 | not in the project, invite them | click “Invite” next to the person |
 | no one to sign | no person has the slot's persona: invite or pick someone |
 | the signature is not placed on the page | click “Go to placement” and place the frame |
@@ -115,19 +117,19 @@ Under the sending form the Studio says when the final PDF is frozen: “The docu
 
 ## Follow the progress { #progress }
 
-The “Signing” card on the checkpoint page shows the step and whose turn it is, for example “Step 2 of 3. Waiting for Petrov P. P. (supervisor)”, since when they have been waiting, how many signatures are in place and the deadline. Each person shows their state: “waiting”, “to approve”, “approved”, “to sign the final PDF”, “signed”, “has not accepted the invitation”, “returned for rework”.
+The “Signing” card on the checkpoint page shows the step and whose turn it is, for example “Step 2 of 3. Waiting for Petrov P. P. (supervisor)”, since when they have been waiting, how many signatures are in place and the deadline. Each person shows their state: “waiting”, “to approve”, “approved”, “to sign the final PDF”, “signed”, “has not accepted the invitation”, “returned for revision”.
 
-The person whose turn it is has two buttons:
+People on the route have two buttons:
 
-- **“Remind”** sends a reminder to the Inbox and by email, if email is configured. At most once every 12 hours per person; the hint on the button says when you can remind again. For someone who has not accepted the invitation yet, “Remind” sends the invitation again.
-- **“Copy link”** is for sending the link yourself, for example in a messenger. For a member it is the link to their signing page, which opens after signing in. For an invitee on a server without email it is a new invitation link: every click makes a new one and the previous one stops working, so send the latest. If the invitee already has an account, it is a link to the Inbox, where the invitation is waiting. If the server has email, invitees have no such button: the invitation goes by email, and “Remind” sends it again.
+- **“Remind”** is there for the person whose turn it is and for anyone who has not accepted the invitation yet. It sends a reminder to the Inbox and by email, if email is configured. At most once every 12 hours per person; the hint on the button says when you can remind again. For someone who has not accepted the invitation yet, “Remind” sends the invitation again.
+- **“Copy link”** is there for everyone who has not signed yet, even before their turn: you can send the links in advance. It is for sending the link yourself, for example in a messenger. For a member it is the link to their signing page, which opens after signing in. Until their turn comes, the page says “Not your turn yet”, and when it comes, they get a notification. For an invitee on a server without email it is a new invitation link: every click makes a new one and the previous one stops working, so send the latest. If the invitee already has an account, it is a link to the Inbox, where the invitation is waiting. If the server has email, invitees have no such button: the invitation goes by email, and “Remind” sends it again.
 
 The server also reminds the person whose turn it is on its own: a day before the deadline and after three days of waiting, at most three times per sending.
 
 Other buttons on the card:
 
 - **“Open route”** shows the route. While it is running it cannot be changed.
-- **“Cancel route”**, after a confirmation, stops the signing. Everyone who already got a request is notified, electronic signatures already made stay. You can fix the route and click “Send again”.
+- **“Cancel route”**, after a confirmation, stops the signing. Everyone who already got a request is notified, electronic signatures already made stay. Signature images of people who have not approved yet stay hidden: cancelling is not their approval. You can fix the route and click “Send again”.
 - **“Go to signing”** shows when it is your turn. If you sign with an electronic signature, the card reminds you: “The route is sent, your signature is not in place yet”.
 
 While the route is running, the editor of its documents shows the banner “This document is out for signing (step k of n). Editing and rebuilding will stop the route”. The signatures of these documents cannot be changed on the “Signatures” tab.
@@ -153,13 +155,13 @@ Fix the document, build it and click “Send again” on the card. The people an
 
 The route starts again from the first step, but people whose documents did not change do not have to approve again. A signer's image and key are kept, so approving again is one click for them.
 
-## Returned for rework { #returned }
+## Returned for revision { #returned }
 
-Instead of signing, a signer can return the documents with a comment. The route stops, you get a notification (and an email, if email is configured), and the card shows, for example, “Petrov P. P. returned it for rework: “Clarify the project goal””. Under it are “Open document” and “Send again”. Detailed remarks on the text are left as comments in the project itself.
+Instead of signing, a signer can return the documents with a comment. The route stops, you get a notification (and an email, if email is configured), and the card shows, for example, “Petrov P. P. returned it for revision: “Clarify the project goal””. Under it are “Open document” and “Send again”. Detailed remarks on the text are left as comments in the project itself.
 
 ## Everyone has signed { #completed }
 
-The card says “Everyone has signed. You can build the package.”, and you get a notification (and an email, if email is configured). Build the package with “Package” on the same checkpoint page: it gets the signed PDFs and the electronic signature files ([Submission and packaging](submit.md)).
+The card says “Everyone has signed. You can build the package.”, and you get a notification (and an email, if email is configured). Build the package with “Pack” on the same checkpoint page: it gets the signed PDFs and the electronic signature files ([Submission and packaging](submit.md)).
 
 A completed route keeps watching the documents. If you edit and rebuild a document, the route stops and asks you to send again. If someone's signature disappears, the route waits for that one again. To make the route stop watching, click “Stop tracking”. A new route for the same checkpoint starts with “New route” on the route screen.
 
@@ -167,6 +169,7 @@ A completed route keeps watching the documents. If you edit and rebuild a docume
 
 - **The server has no email.** Requests and reminders still arrive in the Inbox, on the “To sign” tab; there are no emails. Send the person the link yourself with “Copy link” on the card. If they have not accepted the invitation yet, the button makes a new invitation link and the previous one stops working. Automatic reminders do not go to an invitee without an account.
 - **The supervisor has no account.** Invite them by email from the route with “Invite”. Using the invitation link they sign up with that same address, click “Accept” and land on the signing page. If registration on the server is closed, first ask the administrator to create an account for them.
+- **The supervisor's image is gone after cancelling the route.** The route hides a signer's image until they approve, and cancelling does not reveal it. On the document's “Signatures” tab such a signature is marked “Held back by the route”. If you still want to put the image in without approval, click “Show” there and confirm: anyone who can edit signature placements can do it, and it goes to the audit log. While a route is running the button is unavailable. If you send the route again, the image is hidden again until approval.
 - **The order is wrong.** While the route is not sent, drag the steps. If it is already sent, click “Cancel route”, fix the order on the route screen and click “Send again”. Approvals of people whose documents did not change are kept.
 - **A signer left the project.** The route stops with “A participant left the project: assign someone else and send again”. Open the route, pick or invite another person with the same persona and click “Send again”. A route that is already completed does not care: the signatures are in place.
 - **The “out for signing” banner.** The document was sent for signing and the route is running. You can still edit the text and build, but a rebuild with changes stops the route and you will have to send it again. The signatures of this document cannot be changed on the “Signatures” tab: cancel the route on the checkpoint page first.

@@ -73,6 +73,7 @@ def _edits(trio: Trio, who: Person, *, doc_id: str = APPLICATION, slot_id: str =
         "freeze": lambda: trio.call(who, "POST", f"{base}/docs/{doc_id}/frozen"),
         "unfreeze": lambda: trio.call(who, "DELETE", f"{base}/docs/{doc_id}/frozen"),
         "detached signature removal": lambda: trio.call(who, "DELETE", f"{base}/docs/{doc_id}/detached/{slot_id}"),
+        "withheld image shown": lambda: trio.call(who, "DELETE", f"{base}/signatures/withheld/{doc_id}/{slot_id}"),
     }
 
 
@@ -89,6 +90,39 @@ async def test__active_route__every_signature_edit__409_route_locked_and_nothing
     assert trio.state() == before
     route = trio.route()
     assert (route["status"], [e["kind"] for e in route["events"]]) == ("active", ["sent", "approved"])
+
+
+async def test__cancelled_route__withheld_image_stays__author_shows_it_explicitly(stand: Stand) -> None:
+    """Отмена не согласие: картинка научрука остаётся придержанной, пока автор сам не нажмёт «Показать» (5.6)."""
+    trio = await make_trio(stand, images=("author", "supervisor"), academic="none")
+    trio.sent()
+    held = {APPLICATION: ["supervisor"], PROPOSAL: ["supervisor"]}
+    release = f"{trio.project.base}/signatures/withheld/{APPLICATION}/supervisor"
+    locked = trio.call(trio.author, "DELETE", release)
+
+    cancelled = trio.call(trio.author, "POST", f"{trio.url}/cancel", json={})
+    listed = trio.call(trio.author, "GET", f"{trio.project.base}/signatures").json()["withheld"]
+    # Показать может тот, кто правит размещения: рецензенту (подписанту) нельзя.
+    by_reviewer = trio.call(trio.supervisor, "DELETE", release)
+    shown = trio.call(trio.author, "DELETE", release)
+    again = trio.call(trio.author, "DELETE", release)
+    drain(stand)
+
+    assert _code(locked) == (409, "route_locked")
+    assert cancelled.status_code == 200, cancelled.text
+    assert listed == held
+    assert by_reviewer.status_code == 403
+    assert (shown.status_code, again.status_code) == (204, 204)
+    assert trio.withheld() == {PROPOSAL: ["supervisor"]}
+    plan = trio.call(trio.author, "GET", f"{trio.project.base}/signature-plan", params={"profile_id": TOPIC}).json()
+    reasons = {(d["doc_id"], s["slot_id"]): s["reason"] for d in plan["docs"] for s in d["slots"]}
+    assert reasons[(APPLICATION, "supervisor")] != "awaiting_approval"
+    assert reasons[(PROPOSAL, "supervisor")] == "awaiting_approval"
+    audit = trio.stand.admin().get("/api/admin/audit", params={"target": trio.project.id, "limit": 200}).json()
+    released = [e for e in audit["items"] if e["action"] == "signature.release"]
+    assert [(e["actor_id"], e["details"]["doc_id"], e["details"]["slot_id"]) for e in released] == [
+        (trio.author.id, APPLICATION, "supervisor")
+    ]
 
 
 async def test__active_route__english_interface__message_in_english(stand: Stand) -> None:

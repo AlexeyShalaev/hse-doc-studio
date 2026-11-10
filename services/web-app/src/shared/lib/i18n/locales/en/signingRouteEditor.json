@@ -8,11 +8,11 @@
   "status": {
     "active": "The route is already out for signing: step {{step}} of {{total}}. To change it, cancel the route on the checkpoint page.",
     "paused": "The route is stopped: {{reason}}. Check and send again.",
-    "returned": "{{who}} returned it for rework: “{{comment}}”. Fix it and send again.",
-    "returnedNoComment": "The route was returned for rework. Fix it and send again.",
+    "returned": "{{who}} returned it for revision: “{{comment}}”. Fix it and send again.",
+    "returnedNoComment": "The route was returned for revision. Fix it and send again.",
     "someone": "A signer",
     "cancelled": "The route is cancelled. You can change it and send again.",
-    "completed": "Everyone has signed. You can build the pack.",
+    "completed": "Everyone has signed. You can build the package.",
     "archived": "The route is no longer tracked."
   },
   "stopReason": {
@@ -20,7 +20,7 @@
     "marks_changed": "the marks on the pages changed",
     "frozen_changed": "the frozen PDF changed",
     "participant_left": "a participant left the project, assign someone else",
-    "returned": "returned for rework"
+    "returned": "returned for revision"
   },
   "persona": {
     "author": "Author"
@@ -37,6 +37,8 @@
     "frozen": "frozen",
     "building": "building",
     "elsewhere": "out for signing in another route",
+    "elsewhereAt": "out for signing on the route “{{point}}”",
+    "heldByCompleted": "held by the completed route “{{point}}”",
     "build": "Build",
     "noRunner": "Cannot build now: no runner",
     "open": "Open"
@@ -143,13 +145,16 @@
   "blocker": {
     "not_built": "{{doc}}: the document is not built",
     "doc_in_other_route": "{{doc}}: already out for signing in another route",
+    "doc_in_open_route": "{{doc}}: out for signing on the route of the checkpoint “{{point}}”. To send it here, cancel that route on its checkpoint page.",
+    "doc_in_completed_route": "{{doc}}: held by the completed route of the checkpoint “{{point}}”. To send it here, click “Stop tracking” on that checkpoint page.",
     "participant_missing": "{{who}}: not in the project, invite them",
     "slot_unassigned": "{{slot}} ({{doc}}): no one to sign",
     "sender_not_ready": "Your signature is not ready",
     "no_participants": "The route has no people",
     "unknown": "Blocked: {{code}}",
     "placement_off": "{{slot}} ({{doc}}): the signature is not placed on the page",
-    "toPlacement": "Go to placement"
+    "toPlacement": "Go to placement",
+    "toOtherPoint": "Open that checkpoint"
   },
   "error": {
     "save": "Route not saved",

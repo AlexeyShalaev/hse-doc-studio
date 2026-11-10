@@ -7,6 +7,7 @@ import {
 } from "@entities/signing-route/testing";
 import {
   earliest,
+  isLinkable,
   isRemindable,
   lastReturn,
   meIn,
@@ -77,6 +78,30 @@ describe("waitingFor", () => {
     expect(waitingFor(route)).toEqual([]);
     const sup = route.steps[1]?.[0];
     expect(sup && isRemindable(route, sup)).toBe(false);
+    expect(sup && isLinkable(route, sup)).toBe(false);
+  });
+
+  it("ссылку можно скопировать любому, кто ещё не закончил, и раньше его очереди", () => {
+    const waiting = makeRouteParticipant({
+      id: "p_wait",
+      state: "waiting",
+      approved_at: null,
+    });
+    const done = makeRouteParticipant({ id: "p_done", state: "done" });
+    const missing = makeRouteParticipant({
+      id: "p_missing",
+      state: "waiting",
+      membership: "missing",
+      user_id: null,
+      name: null,
+    });
+    const route = makeSigningRoute({
+      steps: [[done], [waiting], [missing]],
+    });
+    expect(isRemindable(route, waiting)).toBe(false);
+    expect(isLinkable(route, waiting)).toBe(true);
+    expect(isLinkable(route, done)).toBe(false);
+    expect(isLinkable(route, missing)).toBe(false);
   });
 });
 

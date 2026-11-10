@@ -121,6 +121,27 @@ export const useDeleteSignaturePng = () => {
   });
 };
 
+/** «Показать» придержанную маршрутом картинку: план и предпросмотр сбрасываются вместе с состоянием. */
+export const useReleaseWithheld = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      projectId,
+      docId,
+      slotId,
+    }: {
+      projectId: string;
+      docId: string;
+      slotId: string;
+    }) => signatureApi.releaseWithheld(projectId, docId, slotId),
+    onSuccess: (_, { projectId }) => {
+      void queryClient.invalidateQueries({
+        queryKey: signatureKeys.state(projectId),
+      });
+    },
+  });
+};
+
 const useInvalidateSignatures = () => {
   const queryClient = useQueryClient();
   return (projectId: string) =>

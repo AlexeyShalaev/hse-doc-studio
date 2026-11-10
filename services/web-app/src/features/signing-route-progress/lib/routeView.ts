@@ -35,11 +35,24 @@ export const waitingFor = (route: SigningRoute): RouteParticipant[] => {
   );
 };
 
-/** Кому можно напомнить или скопировать ссылку: идущий маршрут, его очередь или приглашение. */
+/** Кому можно напомнить: идущий маршрут, его очередь или приглашение. */
 export const isRemindable = (
   route: SigningRoute,
   person: RouteParticipant,
 ): boolean => isRouteLive(route.status) && canRemind(person.state);
+
+/**
+ * Кому автор может скопировать ссылку: любому человеку идущего маршрута, не только тому, чья
+ * очередь. Ссылку можно разослать заранее: тому, чья очередь ещё не дошла, страница подписи
+ * пишет «Пока не ваша очередь». Кроме тех, кто уже всё сделал, и шага без человека.
+ */
+export const isLinkable = (
+  route: SigningRoute,
+  person: RouteParticipant,
+): boolean =>
+  isRouteLive(route.status) &&
+  person.membership !== "missing" &&
+  person.state !== "done";
 
 /** До какого момента «Напомнить» закрыто (раз в 12 часов); null: можно сейчас. */
 export const remindLockedUntil = (

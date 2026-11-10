@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { useNavigate, useSearchParams } from "react-router";
 import { failureCode } from "@shared/api";
@@ -13,21 +14,30 @@ import {
   useMyInvitations,
   useMyTransfers,
   useNotifications,
+  type MyInvitation,
   type Notification,
 } from "@entities/invitation";
-import { signingPagePath, useMySigningTasks } from "@entities/signing-route";
+import {
+  accountSigningApi,
+  signingPagePath,
+  signingRouteKeys,
+  useMySigningTasks,
+  type SigningTaskSummary,
+} from "@entities/signing-route";
 import {
   ApproveDialog,
   useInvitationFailureText,
 } from "@features/project-invitations";
 import { notificationRoute } from "../lib/notificationTarget";
 import { inboxTabOf, type InboxTab } from "../lib/inboxTab";
+import { sortSigningTasks } from "../lib/signingTasks";
 import { InboxView } from "./InboxView";
 
 /** Данные и действия «Входящих». Открытие страницы ничего не отмечает прочитанным. */
 export const InboxPanel = () => {
   const { t, i18n } = useTranslation("inbox");
   const navigate = useNavigate();
+  const client = useQueryClient();
   const failureText = useInvitationFailureText();
   // Вкладка в адресе: колокольчик ведёт прямо в «На подпись» (`/inbox?tab=signing`).
   const [params, setParams] = useSearchParams();
@@ -56,6 +66,37 @@ export const InboxPanel = () => {
   };
   const settled = () => {
     setBusyId(null);
+  };
+
+  /**
+   * Куда вести после «Принять». Приглашение подписанта маршрута: принятие уже поставило его в
+   * маршрут (docs/design/signing-route.md, 6.5 и 6.6), и если сейчас его очередь, задача есть в
+   * «На подпись». Тогда сразу на страницу подписи, как ссылка приглашения с `?next=`. Иначе в
+   * проект, как раньше: очередь не дошла, и о ней придёт уведомление.
+   */
+  const openAccepted = async (inv: MyInvitation) => {
+    let task: SigningTaskSummary | undefined;
+    try {
+      const tasks = await client.fetchQuery({
+        queryKey: signingRouteKeys.myTasks(),
+        queryFn: ({ signal }) => accountSigningApi.tasks(signal),
+        staleTime: 0,
+      });
+      task = sortSigningTasks(
+        tasks.items.filter((item) => item.project.id === inv.project.id),
+      )[0];
+    } catch {
+      // Задачи не прочитались: принятие уже состоялось, ведём в проект.
+    }
+    if (task) {
+      toast.success(
+        t("invitation.acceptedSign", { project: inv.project.name }),
+      );
+      void navigate(signingPagePath(task.project.id, task.route_id));
+      return;
+    }
+    toast.success(t("invitation.accepted", { project: inv.project.name }));
+    void navigate(`/projects/${inv.project.id}`);
   };
 
   const denyRequest = (n: Notification) => {
@@ -99,10 +140,7 @@ export const InboxPanel = () => {
             {
               onSuccess: () => {
                 if (accept) {
-                  toast.success(
-                    t("invitation.accepted", { project: inv.project.name }),
-                  );
-                  void navigate(`/projects/${inv.project.id}`);
+                  void openAccepted(inv);
                 } else {
                   toast.info(t("invitation.declined"));
                 }

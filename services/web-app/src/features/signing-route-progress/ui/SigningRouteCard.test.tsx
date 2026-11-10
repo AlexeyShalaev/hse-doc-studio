@@ -219,7 +219,7 @@ describe("Подписание: маршрут идёт", () => {
     );
     const author = within(await screen.findByTestId("signing-step-1"));
     expect(author.getByText("Иванов И. И.")).toBeInTheDocument();
-    expect(author.getByText(/^подписал/)).toBeInTheDocument();
+    expect(author.getByText(/^подписано/)).toBeInTheDocument();
     const step2 = await screen.findByTestId("signing-step-2");
     expect(step2).toHaveTextContent("согласует и подпишет с");
     // Автор уже всё сделал: напоминать ему нечего.
@@ -325,11 +325,11 @@ describe("Подписание: остановка и возврат", () => {
     const u = userEvent.setup();
     mount();
     expect(await status()).toHaveTextContent(
-      "Петров П. П. вернул на доработку: «Уточните цель проекта»",
+      "Возвращено на доработку (Петров П. П.): «Уточните цель проекта»",
     );
     const route = await signingRouteApi.get(PROJECT, id);
     const sup = route.steps[1]?.[0]?.id ?? "";
-    expect(await person(sup)).toHaveTextContent("вернул на доработку");
+    expect(await person(sup)).toHaveTextContent("возвращено на доработку");
     expect(screen.getByTestId("signing-open-doc")).toHaveAttribute(
       "href",
       `/projects/${PROJECT}/documents/${DOC}`,
@@ -361,6 +361,7 @@ describe("Подписание: остановка и возврат", () => {
           doc_id: null,
           slot_id: null,
           participant_id: "srp_supervisor",
+          other_route: null,
         },
       ],
       sender_key: null,
@@ -421,7 +422,9 @@ describe("Подписание: эталонные состояния", () => {
     expect(await status()).toHaveTextContent(
       "Очередь: k***@hse.ru (академический руководитель)",
     );
-    expect(await person(invited.id)).toHaveTextContent("не принял приглашение");
+    expect(await person(invited.id)).toHaveTextContent(
+      "приглашение не принято",
+    );
     expect(screen.getByTestId(`signing-remind-${invited.id}`)).toBeEnabled();
     await u.click(screen.getByTestId(`signing-copy-${invited.id}`));
     await waitFor(async () => {
@@ -436,6 +439,52 @@ describe("Подписание: эталонные состояния", () => {
     expect(success).toHaveBeenCalledWith(
       "Ссылка-приглашение скопирована: отправьте её сами",
     );
+  });
+
+  it("«Скопировать ссылку» и у того, чья очередь ещё не дошла: ссылку можно разослать заранее", async () => {
+    const later = makeRouteParticipant({
+      id: "srp_academic",
+      persona: "academic_supervisor",
+      user_id: "u_academic",
+      name: "Сидоров С. С.",
+      assignments: [{ doc_id: "topic_application", slot_id: "academic" }],
+      state: "waiting",
+      next_action: "wait",
+      approved_at: null,
+    });
+    serve(
+      makeSigningRoute({
+        current_step: 2,
+        steps: [
+          [makeRouteParticipant()],
+          [
+            makeRouteParticipant({
+              id: "srp_supervisor",
+              persona: "supervisor",
+              user_id: SR_SUPERVISOR.id,
+              name: SR_SUPERVISOR.name,
+              state: "to_approve",
+              next_action: "approve",
+              approved_at: null,
+            }),
+          ],
+          [later],
+        ],
+      }),
+    );
+    const u = userEvent.setup();
+    mount({ projectId: SR_PROJECT_ID });
+    expect(await person(later.id)).toHaveTextContent("ждёт");
+    // Напоминать ему рано, а ссылку на его страницу подписи отправить уже можно.
+    expect(screen.queryByTestId(`signing-remind-${later.id}`)).toBeNull();
+    await u.click(screen.getByTestId(`signing-copy-${later.id}`));
+    await waitFor(async () => {
+      expect(await navigator.clipboard.readText()).toMatch(
+        new RegExp(`/sign/${SR_PROJECT_ID}/[^/]+$`),
+      );
+    }, LOAD);
+    // Тому, кто уже всё сделал, ссылка не нужна.
+    expect(screen.queryByTestId("signing-copy-srp_author")).toBeNull();
   });
 
   it("приглашённый без имени назван приглашённым, а не «не назначен»", async () => {

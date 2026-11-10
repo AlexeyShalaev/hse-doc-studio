@@ -33,11 +33,19 @@ class SigningKeyError(Exception):
 
 
 def blocker_body(blocker: Blocker) -> dict[str, Any]:
+    other = blocker.other_route
     return {
         "code": blocker.code.value,
         "doc_id": blocker.doc_id,
         "slot_id": blocker.slot_id,
         "participant_id": str(blocker.participant_id) if blocker.participant_id is not None else None,
+        "other_route": None
+        if other is None
+        else {
+            "id": str(other.route_id),
+            "profile": {"id": other.profile_id, "name": dict(other.profile_name)},
+            "status": other.status.value,
+        },
     }
 
 

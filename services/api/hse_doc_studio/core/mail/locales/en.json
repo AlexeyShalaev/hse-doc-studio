@@ -274,7 +274,7 @@
           "{project}"
         ],
         [
-          "Submission checkpoint",
+          "Checkpoint",
           "{profile}"
         ],
         [
@@ -305,7 +305,7 @@
           "{project}"
         ],
         [
-          "Submission checkpoint",
+          "Checkpoint",
           "{profile}"
         ],
         [
@@ -336,7 +336,7 @@
           "{project}"
         ],
         [
-          "Submission checkpoint",
+          "Checkpoint",
           "{profile}"
         ],
         [
@@ -360,7 +360,7 @@
       "preheader": "The signing route is stopped: read the comment and send the documents again.",
       "title": "Documents returned for revision",
       "lead": "{actor} returned the documents of the project “{project}” for revision. The signing route is stopped.",
-      "action": "Open the submission checkpoint",
+      "action": "Open the checkpoint",
       "note_title": "Comment",
       "details": [
         [
@@ -381,14 +381,14 @@
       "preheader": "All signatures are in, you can build the submission package.",
       "title": "Documents signed",
       "lead": "All route participants signed the documents “{profile}” in the project “{project}”. You can build the package now.",
-      "action": "Open the submission checkpoint",
+      "action": "Open the checkpoint",
       "details": [
         [
           "Project",
           "{project}"
         ],
         [
-          "Submission checkpoint",
+          "Checkpoint",
           "{profile}"
         ]
       ],

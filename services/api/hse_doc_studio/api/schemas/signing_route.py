@@ -233,11 +233,21 @@ class SigningRoutePreviewParticipant(StrictModel):
     actions: int = Field(ge=0, le=2)
 
 
+class SigningRouteBlockerRoute(StrictModel):
+    """Маршрут, который держит документ (`doc_in_other_route`): его точка и статус, чтобы назвать, что делать."""
+
+    id: str
+    profile: SigningProfileRef
+    status: SigningRouteStatusName
+
+
 class SigningRouteBlocker(StrictModel):
     code: str
     doc_id: str | None
     slot_id: str | None
     participant_id: str | None
+    # Только у `doc_in_other_route`, иначе null.
+    other_route: SigningRouteBlockerRoute | None
 
 
 class SigningRoutePreview(StrictModel):

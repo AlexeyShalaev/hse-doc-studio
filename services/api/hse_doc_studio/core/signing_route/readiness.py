@@ -6,13 +6,13 @@
 
 from __future__ import annotations
 
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from enum import StrEnum
 from uuid import UUID
 
 from hse_doc_studio.core.i18n import localized_error
-from hse_doc_studio.core.signing_route.entities import RouteConflictError
+from hse_doc_studio.core.signing_route.entities import RouteConflictError, RouteStatus
 
 
 class BlockerCode(StrEnum):
@@ -29,11 +29,27 @@ class BlockerCode(StrEnum):
 
 
 @dataclass(frozen=True)
+class OtherRoute:
+    """Маршрут, который держит документ (`doc_in_other_route`): его контрольная точка и статус.
+
+    По ним помеха говорит, где и что сделать: идущий, остановленный и возвращённый маршрут отменяют на странице его
+    точки, завершённый снимают с контроля там же (раздел 5.3). Документ держит один маршрут (5.8).
+    """
+
+    route_id: UUID
+    profile_id: str
+    profile_name: Mapping[str, str]
+    status: RouteStatus
+
+
+@dataclass(frozen=True)
 class Blocker:
     code: BlockerCode
     doc_id: str | None = None
     slot_id: str | None = None
     participant_id: UUID | None = None
+    # Только у `doc_in_other_route`: какой маршрут держит документ.
+    other_route: OtherRoute | None = None
 
 
 class RouteBlockedError(RouteConflictError):

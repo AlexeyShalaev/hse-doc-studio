@@ -256,6 +256,7 @@ describe("автор: что мешает отправке и что после 
         doc_id: DOC,
         slot_id: "supervisor",
         participant_id: participant(route, "supervisor").id,
+        other_route: null,
       },
     ]);
     const expected = Object.fromEntries(

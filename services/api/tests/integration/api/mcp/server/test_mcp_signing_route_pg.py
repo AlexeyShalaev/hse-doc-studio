@@ -288,7 +288,7 @@ async def test__send_for_signing__invited_signer_has_not_joined__not_sent(stand:
     text = _refused(_call(stand, _mcp(stand, author), _SEND, args), "failed")
 
     # API такой маршрут отправил бы (приглашённый ждёт в нём), MCP отправляет только готовый состав (раздел 6.8).
-    assert "ещё не принял приглашение" in text
+    assert "приглашение в проект ещё не принято" in text
     assert [r["status"] for r in project.call(author, "GET", project.routes).json()["items"]] == ["draft"]
 
 

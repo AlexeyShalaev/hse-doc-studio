@@ -8,6 +8,7 @@ from uuid import uuid4
 import pytest
 from hse_doc_studio.core.enums import SignMode
 from hse_doc_studio.core.signatures.plan import DocFacts, SignMethod
+from hse_doc_studio.core.signatures.stamps import PLATE_MIN_WIDTH_MM
 from hse_doc_studio.core.signing_route.entities import (
     DocSlot,
     NextAction,
@@ -29,6 +30,7 @@ from hse_doc_studio.core.signing_route.signer import (
     doc_token,
     ensure_layer_open,
     ensure_turn,
+    has_place_for,
     image_ready,
     known_plate,
     mode_for,
@@ -39,7 +41,13 @@ from hse_doc_studio.core.signing_route.signer import (
     with_method,
     with_signer,
 )
-from hse_doc_studio.core.value_objects import FrozenPdf, SignatureSlot, SignerInfo
+from hse_doc_studio.core.value_objects import (
+    FrozenPdf,
+    SignaturePlacement,
+    SignatureSlot,
+    SignaturesState,
+    SignerInfo,
+)
 
 from tests.unit.core.signing_route.world import (
     BUILD,
@@ -281,6 +289,70 @@ def test__available_methods__before_freeze_checkpoint_methods__after_it_only_the
     assert available_methods(supervisor, after, driver.world.state(), point_methods) == (SignMethod.detached,)
 
 
+def _unplaced(state: SignaturesState, slot_id: str, *, docs: tuple[str, ...] = (DOC,)) -> SignaturesState:
+    """Состояние, где у слота нет включённого места на документах `docs`."""
+    placements = {doc_id: dict(slots) for doc_id, slots in state.placements.items()}
+    for doc_id in docs:
+        placements[doc_id] = {sid: p for sid, p in placements.get(doc_id, {}).items() if sid != slot_id}
+    return replace(state, placements=placements)
+
+
+def test__available_methods__visible_method_without_place__not_offered() -> None:
+    """Автор не разместил подпись: PAdES без метки остаётся, картинку и плашку ставить некуда (раздел 6.3)."""
+    # Академрук картинкой после научрука: до его согласия фиксации нет, научрук выбирает способ (`to_approve`).
+    driver = _driver(
+        {"author": SignMode.image, "supervisor": SignMode.crypto_invisible, "academic_supervisor": SignMode.image}
+    )
+    people = by_persona(driver.route)
+    supervisor = people["supervisor"]
+    point_methods = ("image", "detached", "pades")
+    driver.send(people["author"].user_id or uuid4())
+    view = driver.evaluate().participant(supervisor.id)
+    state = _unplaced(driver.world.state(), "supervisor")
+
+    assert view.state is ParticipantState.to_approve
+    assert available_methods(supervisor, view, state, point_methods) == (SignMethod.pades,)
+    # Без проверки места сценарий узнаёт, что отказ именно из-за места.
+    assert available_methods(supervisor, view, state, point_methods, need_place=False) == (
+        SignMethod.image,
+        SignMethod.detached,
+        SignMethod.pades,
+    )
+    assert has_place_for(supervisor, state, SignMethod.pades)
+    assert not has_place_for(supervisor, state, SignMethod.image)
+    assert not has_place_for(supervisor, state, SignMethod.detached)
+
+
+def test__available_methods__place_missing_on_one_document__visible_methods_not_offered() -> None:
+    driver = _driver(
+        {"author": SignMode.image, "supervisor": SignMode.crypto_invisible, "academic_supervisor": SignMode.image},
+        docs=(DOC, DOC2),
+    )
+    people = by_persona(driver.route)
+    supervisor = people["supervisor"]
+    driver.send(people["author"].user_id or uuid4())
+    view = driver.evaluate().participant(supervisor.id)
+    state = _unplaced(driver.world.state(), "supervisor", docs=(DOC2,))
+
+    assert available_methods(supervisor, view, state, ("image", "pades")) == (SignMethod.pades,)
+    assert available_methods(supervisor, view, driver.world.state(), ("image", "pades")) == (
+        SignMethod.image,
+        SignMethod.pades,
+    )
+
+
+def test__available_methods__current_method_stays_even_without_place() -> None:
+    """Текущий способ не прячем: список не должен опустеть, а помеху отправки ловит предпросмотр."""
+    driver = _driver({"author": SignMode.image, "supervisor": SignMode.image})
+    people = by_persona(driver.route)
+    supervisor = people["supervisor"]
+    driver.send(people["author"].user_id or uuid4())
+    view = driver.evaluate().participant(supervisor.id)
+    state = _unplaced(driver.world.state(), "supervisor")
+
+    assert available_methods(supervisor, view, state, ("image", "detached")) == (SignMethod.image,)
+
+
 def test__available_methods__approver_without_slots__nothing_to_choose() -> None:
     world = World({"author": SignMode.image})
     approver = participant(2, "academic_supervisor")
@@ -319,6 +391,47 @@ def test__with_method__image_to_plate__own_slots_change_and_leave_the_withheld_l
     # Плашку не придерживают: иначе расчёт её уже не открыл бы. Чужая картинка остаётся придержанной.
     assert changed.withheld == {DOC: frozenset({"author"})}
     assert changed.slots["supervisor"].png_path == state.slots["supervisor"].png_path
+
+
+def test__with_method__image_to_plate__narrow_place_widened_keeping_its_right_edge() -> None:
+    """Рамка картинки узка для плашки: её текст переносился бы на 8 строк. Место растёт влево до 70 мм."""
+    world = World({"author": SignMode.image, "supervisor": SignMode.image}, docs=(DOC, DOC2))
+    supervisor = participant(2, "supervisor", ["supervisor"], docs=(DOC, DOC2))
+    base = world.state()
+    narrow = SignaturePlacement(enabled=True, page=1, x_mm=150, y_mm=200, width_mm=28)
+    near_left = SignaturePlacement(enabled=True, page=2, x_mm=20, y_mm=200, width_mm=28)
+    off = SignaturePlacement(enabled=False, page=1, x_mm=150, y_mm=200, width_mm=28)
+    placements = {
+        DOC: {**base.placements[DOC], "supervisor": narrow, "author": narrow},
+        DOC2: {**base.placements[DOC2], "supervisor": near_left},
+    }
+    state = replace(base, placements=placements)
+
+    changed = with_method(state, supervisor, SignMethod.detached)
+
+    assert changed.placements[DOC]["supervisor"] == replace(narrow, x_mm=150 + 28 - PLATE_MIN_WIDTH_MM, width_mm=70)
+    # У левого поля рамка не уходит за край страницы.
+    assert changed.placements[DOC2]["supervisor"] == replace(near_left, x_mm=0.0, width_mm=70)
+    # Чужой слот не трогаем.
+    assert changed.placements[DOC]["author"] == narrow
+    # Выключенное место, уже широкое место и слот, который и был плашкой, не меняются.
+    assert (
+        with_method(replace(state, placements={DOC: {"supervisor": off}}), supervisor, SignMethod.detached).placements[
+            DOC
+        ]["supervisor"]
+        == off
+    )
+    wide = replace(narrow, width_mm=90)
+    assert (
+        with_method(replace(state, placements={DOC: {"supervisor": wide}}), supervisor, SignMethod.detached).placements[
+            DOC
+        ]["supervisor"]
+        == wide
+    )
+    plate = with_method(changed, supervisor, SignMethod.detached)
+    assert plate == changed
+    # Обратно в картинку место не сужаем: это решает автор.
+    assert with_method(changed, supervisor, SignMethod.image).placements == changed.placements
 
 
 def test__with_method__same_method__state_unchanged() -> None:
