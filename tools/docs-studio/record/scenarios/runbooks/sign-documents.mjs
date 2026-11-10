@@ -6,7 +6,7 @@ export default {
   stand: 'demo',
   start: SIGNER_TASK,
   steps: [
-    async (d) => d.point(d.text(d.s('signing/signing', 'progress.title'), {exact: true})),
+    async (d) => d.point(d.page.getByTestId('signing-progress')),
     async (d, w) => d.click(signer.toPlace(d.page, w.lang), {shot: false}),
     async (d, w) => {
       await d.click(signer.method(d.page, 'detached'), {shot: false})
