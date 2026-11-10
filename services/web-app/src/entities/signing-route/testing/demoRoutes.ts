@@ -1404,8 +1404,9 @@ export const createSigningRouteDemo = (
     expected: Record<string, string>,
     tokens: Record<string, string | null>,
   ): DemoResponse | null => {
+    // Документ без отпечатка (делать по нему нечего) не сверяется.
     const changed = Object.entries(tokens)
-      .filter(([doc, token]) => expected[doc] !== token)
+      .filter(([doc, token]) => token !== null && expected[doc] !== token)
       .map(([doc]) => doc);
     return changed.length > 0
       ? conflict("doc_changed", "Document changed, open it again", {

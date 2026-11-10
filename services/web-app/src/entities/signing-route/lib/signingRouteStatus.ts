@@ -30,6 +30,32 @@ export const canSendRoute = isRouteEditable;
 export const isResend = (status: SigningRouteStatus): boolean =>
   status === "paused" || status === "returned" || status === "cancelled";
 
+/**
+ * Документы, рабочая сборка которых ушла от версии на подписи (раздел 12.9). Поля нет в ответах
+ * сервера до среза R16: тогда изменений нет.
+ */
+export const routeChangedDocs = (route: {
+  changed_docs?: readonly string[] | undefined;
+}): readonly string[] => route.changed_docs ?? [];
+
+export type RouteSendKind = "send" | "resend" | "new_version";
+
+/**
+ * Какую отправку предлагать (раздел 12.6): «Отправить» у черновика; «Отправить новую версию»,
+ * когда у документов есть изменения (из идущего, остановленного, возвращённого и завершённого);
+ * «Отправить заново» без изменений после остановки, возврата или отмены; null: отправлять нечего
+ * (идущий и завершённый без изменений, снятый с контроля). Все три это `POST .../send`.
+ */
+export const routeSendKind = (
+  status: SigningRouteStatus,
+  changedDocs: readonly string[],
+): RouteSendKind | null => {
+  if (status === "draft") return "send";
+  if (status === "archived") return null;
+  if (changedDocs.length > 0) return "new_version";
+  return isResend(status) ? "resend" : null;
+};
+
 export const canCancelRoute = (status: SigningRouteStatus): boolean =>
   status === "draft" ||
   status === "active" ||
