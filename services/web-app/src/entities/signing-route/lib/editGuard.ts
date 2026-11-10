@@ -28,9 +28,7 @@ export type GuardDoc = {
  * Документы идущих маршрутов. Спрашивает только `active`: у остановленного, возвращённого и
  * завершённого вместо вопроса плашка. Сводка без `docs` (сервер до R16) ничего не держит.
  */
-export const heldDocsOf = (
-  routes: readonly SigningRouteSummary[],
-): HeldDoc[] =>
+export const heldDocsOf = (routes: readonly SigningRouteSummary[]): HeldDoc[] =>
   routes
     .filter((route) => route.status === "active")
     .flatMap((route) =>

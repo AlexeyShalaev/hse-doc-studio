@@ -5,6 +5,7 @@ import { Copy, FileEdit, RefreshCw, Settings } from "lucide-react";
 import { z } from "zod";
 import { EditorBusyView } from "@features/build-states";
 import { OfficeEditorBusySchema } from "@entities/session";
+import { useRouteEditGuard } from "@entities/signing-route";
 import { apiClient, ApiError, parseResp } from "@shared/api";
 import { env } from "@shared/config";
 import { toast } from "@shared/lib";
@@ -110,11 +111,38 @@ export const OfficeEditorPane = ({
   downloadName,
 }: OfficeEditorPaneProps) => {
   const { t } = useTranslation("documents");
+  const { t: tGuard } = useTranslation("routeEditGuard");
   const navigate = useNavigate();
   const [state, setState] = useState<PaneState>({ kind: "loading" });
   const [attempt, setAttempt] = useState(0);
   const hostRef = useRef<HTMLDivElement | null>(null);
   const editorRef = useRef<DocEditorInstance | null>(null);
+
+  // Мягкое предупреждение (signing-route.md, 12.7): сохранение ONLYOFFICE уходит на сервер
+  // мимо страницы, поэтому документ на подписании спрашивает до открытия редактора. Открытый
+  // редактор остаётся открытым, даже если маршрут отправили позже.
+  const routeGuard = useRouteEditGuard(projectId);
+  const routeGuardRef = useRef(routeGuard);
+  useEffect(() => {
+    routeGuardRef.current = routeGuard;
+  }, [routeGuard]);
+  const [answer, setAnswer] = useState<"open" | "cancel" | null>(null);
+  const askedRef = useRef(false);
+  const needsAnswer =
+    answer === null && routeGuard.pending({ docIds: [docId] }).length > 0;
+  if (answer === null && routeGuard.ready && !needsAnswer) setAnswer("open");
+  const gate = answer ?? (routeGuard.ready && needsAnswer ? "ask" : "wait");
+  useEffect(() => {
+    if (gate !== "ask" || askedRef.current) return;
+    askedRef.current = true;
+    void routeGuardRef.current.confirm({ docIds: [docId] }).then((ok) => {
+      setAnswer(ok ? "open" : "cancel");
+    });
+  }, [gate, docId]);
+  const askAgain = () => {
+    askedRef.current = false;
+    setAnswer(null);
+  };
 
   // 1) Ask the backend for the editor session config (boots the ONLYOFFICE
   //    container on demand — hence the long timeout + the spinner state).
@@ -122,6 +150,7 @@ export const OfficeEditorPane = ({
   //    (an event handler), and the parent keys this pane by doc, so
   //    projectId/docId never change within a mounted instance.
   useEffect(() => {
+    if (gate !== "open") return;
     let cancelled = false;
     apiClient
       .get(`/projects/${projectId}/documents/${docId}/office-editor`, {
@@ -157,7 +186,7 @@ export const OfficeEditorPane = ({
     return () => {
       cancelled = true;
     };
-  }, [projectId, docId, attempt]);
+  }, [projectId, docId, attempt, gate]);
 
   // 2) Once ready: load api.js from the container and instantiate the editor
   //    into an imperatively-created child div. DocsAPI replaces that div with
@@ -217,6 +246,37 @@ export const OfficeEditorPane = ({
     setState({ kind: "loading" });
     setAttempt((n) => n + 1);
   };
+
+  if (gate === "cancel") {
+    return (
+      <div
+        className="flex flex-col items-center justify-center"
+        style={{ flex: 1, padding: "2.5rem", gap: "0.875rem", minHeight: 0 }}
+        data-testid="office-editor-guarded"
+      >
+        <FileEdit size="1.625rem" style={{ color: "var(--fg-3)" }} />
+        <div className="flex flex-col items-center" style={{ gap: "0.25rem" }}>
+          <span style={{ fontSize: "0.84375rem", fontWeight: 600 }}>
+            {tGuard("office.title")}
+          </span>
+          <span
+            className="dim"
+            style={{
+              fontSize: "0.75rem",
+              textAlign: "center",
+              maxWidth: "27.5rem",
+            }}
+          >
+            {tGuard("office.body")}
+          </span>
+        </div>
+        <button type="button" className="btn" onClick={askAgain}>
+          <FileEdit size="0.75rem" />
+          {tGuard("office.open")}
+        </button>
+      </div>
+    );
+  }
 
   if (state.kind === "loading") {
     return (

@@ -122,3 +122,28 @@ export const editGate = (
 
   return [filter, owner];
 };
+
+/** Фильтр, вопрос к которому привязывают позже: расширение создаётся с редактором один раз. */
+export type BoundEditGate = {
+  extension: Extension;
+  /** Новый вопрос; null: не спрашивать. */
+  bind: (gate: EditGate | null) => void;
+};
+
+export const createEditGate = (
+  options: EditGateOptions = {},
+): BoundEditGate => {
+  let current: EditGate | null = null;
+  return {
+    extension: editGate(
+      {
+        shouldAsk: () => current?.shouldAsk() ?? false,
+        ask: () => current?.ask() ?? Promise.resolve(true),
+      },
+      options,
+    ),
+    bind: (gate) => {
+      current = gate;
+    },
+  };
+};

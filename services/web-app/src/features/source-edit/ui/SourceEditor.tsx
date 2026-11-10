@@ -42,7 +42,7 @@ import {
 import {
   CodeEditor,
   Spinner,
-  editGate,
+  createEditGate,
   type CodeEditorController,
   type DiagnosticClickInfo,
   type EditorDiagnostic,
@@ -348,29 +348,18 @@ const SourceEditorBody = ({
     [provider],
   );
   // Мягкое предупреждение (signing-route.md, 12.7): первая правка файла документа на подписании
-  // ждёт ответа до применения. Фильтр создаётся с редактором, свежий ответ читает через ref.
+  // ждёт ответа до применения. Фильтр создаётся с редактором, вопрос привязывается к нему здесь.
   const routeGuard = useRouteEditGuard(projectId);
-  const routeGuardRef = useRef({ guard: routeGuard, path: relativePath });
-  useEffect(() => {
-    routeGuardRef.current = { guard: routeGuard, path: relativePath };
-  }, [routeGuard, relativePath]);
-  const routeGateExtension = useMemo(
-    () =>
-      editGate(
-        {
-          shouldAsk: () => {
-            const { guard, path } = routeGuardRef.current;
-            return guard.pending({ paths: [path] }).length > 0;
-          },
-          ask: () => {
-            const { guard, path } = routeGuardRef.current;
-            return guard.confirm({ paths: [path] });
-          },
-        },
-        { exempt: [ySyncAnnotation] },
-      ),
-    [],
+  const [routeGate] = useState(() =>
+    createEditGate({ exempt: [ySyncAnnotation] }),
   );
+  useEffect(() => {
+    const target = { paths: [relativePath] };
+    routeGate.bind({
+      shouldAsk: () => routeGuard.pending(target).length > 0,
+      ask: () => routeGuard.confirm(target),
+    });
+  }, [routeGate, routeGuard, relativePath]);
   const reviewUi = useEditorReview({
     projectId,
     path: relativePath,
@@ -382,11 +371,11 @@ const SourceEditorBody = ({
     live: provider !== undefined,
     controller: controllerRef,
     docRevision,
-  });  const editorExtensions = useMemo(
-    () => [...reviewUi.extensions, routeGateExtension],
-    [reviewUi.extensions, routeGateExtension],
+  });
+  const editorExtensions = useMemo(
+    () => [...reviewUi.extensions, routeGate.extension],
+    [reviewUi.extensions, routeGate],
   );
-
 
   // A pane-local "focus" action becomes a true distraction-free writing
   // surface by covering the workspace chrome. Escape exits focus first, or

@@ -75,11 +75,7 @@ export type {
   GuardTarget,
   HeldDoc,
 } from "./lib/editGuard";
-export {
-  RouteEditGuardProvider,
-  useRouteEditGuard,
-} from "./ui/RouteEditGuard";
-export type {
-  RouteEditGuard,
-  RouteEditGuardProviderProps,
-} from "./ui/RouteEditGuard";
+export { RouteEditGuardProvider } from "./ui/RouteEditGuard";
+export type { RouteEditGuardProviderProps } from "./ui/RouteEditGuard";
+export { useRouteEditGuard } from "./ui/routeEditGuardContext";
+export type { RouteEditGuard } from "./ui/routeEditGuardContext";
