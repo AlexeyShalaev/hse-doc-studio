@@ -49,7 +49,7 @@ If you do not have an account on the server yet, a project invitation comes firs
   <figcaption>the signing page: who asks and the deadline, the author’s message, signing progress, the PDF and “How to sign”</figcaption>
 </figure>
 
-You always see and sign the version sent for signing. The author may keep editing the text, but those edits do not go into it, and you get no notifications about them. If the author wants you to sign the corrected text, they send a new version ([below](#new-version)).
+You always see and sign the version sent for signing. The author may keep editing the text, but those edits do not go into it, and you get no notifications about them. To have you sign the corrected text, the author sends a new version ([below](#new-version)).
 
 To approve means to confirm that you have read this version and agree with it. If the document has no place for your signature, the page says so: “No signature in the document, approval only”. Then clicking “Approve” is enough.
 
@@ -138,13 +138,13 @@ Detailed remarks on the text are easier to leave as comments in the project itse
 
 ## A new version { #new-version }
 
-If the author fixed a document after sending, they can send a new version. Then:
+If a document was fixed after sending, the author can send a new version. Then:
 
 - If it is your turn now, you get the request “… asks you to sign a new version: …” (or “approve a new version”).
 - If you already approved or signed the changed document but your turn has not come yet, the Inbox gets “A new version is out for signing: …”: the request comes in your turn. There is no email in this case.
 - If the documents you sign did not change, nothing comes: your approvals and signatures stay.
 
-At the top of the signing page you see what changed, for example “New version: the document “Topic application” has changed. Approve it again.” Below is the author's text from the “What changed” field, if they filled it in. Unchanged documents are marked “No changes: you already approved” or “No changes: you already signed”: there is nothing to do for them.
+At the top of the signing page you see what changed, for example “New version: the document “Topic selection application” has changed. Approve it again.” Below is the author's text from the “What changed” field, if they filled it in. Unchanged documents are marked “No changes: you already approved” or “No changes: you already signed”: there is nothing to do for them.
 
 <figure class="hds-fig hds-wide">
   <div class="hds-shot">
