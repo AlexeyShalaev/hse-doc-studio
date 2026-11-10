@@ -20,6 +20,7 @@ export {
   useSignSigningTask,
   useSigningRoute,
   useSigningRoutePreview,
+  useSigningParticipantLink,
   useSigningRoutes,
   useSigningTask,
   useUpdateSigningRoute,

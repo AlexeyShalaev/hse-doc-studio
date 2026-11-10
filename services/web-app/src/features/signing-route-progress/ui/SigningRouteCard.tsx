@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, useNavigate } from "react-router";
 import { useQueryClient } from "@tanstack/react-query";
-import { FileText, PenLine, Route, Send, X } from "lucide-react";
+import { FileText, PenLine, Route, Send, TriangleAlert, X } from "lucide-react";
 import type { z } from "zod";
 import type { ProjectResponseSchema } from "@entities/project";
 import { useBootstrap } from "@entities/session";
@@ -19,6 +19,7 @@ import {
   useCancelSigningRoute,
   useRemindSigningParticipant,
   useSendSigningRoute,
+  useSigningParticipantLink,
   useSigningRoute,
   useSigningRoutes,
   type RouteParticipant,
@@ -175,6 +176,7 @@ export const SigningRouteCard = ({
       editorPath={`${editorPath}?route=${encodeURIComponent(route.id)}`}
       canManage={canManage}
       meId={boot.user?.id ?? null}
+      mailEnabled={boot.auth.smtp_enabled}
     />
   );
 };
@@ -185,6 +187,8 @@ type RouteBodyProps = {
   editorPath: string;
   canManage: boolean;
   meId: string | null;
+  /** На сервере настроена почта: приглашения и напоминания уходят письмом. */
+  mailEnabled: boolean;
 };
 
 const RouteBody = ({
@@ -193,6 +197,7 @@ const RouteBody = ({
   editorPath,
   canManage,
   meId,
+  mailEnabled,
 }: RouteBodyProps) => {
   const { t } = useTranslation("signingProgress");
   const navigate = useNavigate();
@@ -200,6 +205,7 @@ const RouteBody = ({
   const personaLabel = usePersonaLabel();
   const errorText = useErrorText();
   const remind = useRemindSigningParticipant(projectId, route.id);
+  const link = useSigningParticipantLink(projectId, route.id);
   const cancel = useCancelSigningRoute(projectId, route.id);
   const archive = useArchiveSigningRoute(projectId, route.id);
   const send = useSendSigningRoute(projectId, route.id);
@@ -242,7 +248,11 @@ const RouteBody = ({
     remind.mutate(person.id, {
       onSuccess: (reply) => {
         if (reply.link !== null) {
-          void deliver(person, reply.link, t("toast.inviteCopied"));
+          void deliver(
+            person,
+            absoluteUrl(reply.link),
+            t("toast.inviteCopied"),
+          );
           return;
         }
         toast.success(
@@ -262,13 +272,34 @@ const RouteBody = ({
     });
   };
 
-  // Участнику ссылка на его страницу подписи; приглашённому нужна ссылка приглашения.
+  // Участнику ссылка на его страницу подписи: адрес известен и так, запрос не нужен.
+  // Приглашённому нужна ссылка приглашения: её даёт сервер, каждый раз новую (секрет хранится
+  // хэшем). Это не напоминание: пауз нет, в маршруте ничего не меняется (5.7).
   const copyLink = (person: RouteParticipant) => {
-    if (person.state === "invited") {
-      requestReminder(person);
+    if (person.state !== "invited") {
+      void deliver(person, absoluteUrl(signingPath), t("toast.copied"));
       return;
     }
-    void deliver(person, absoluteUrl(signingPath), t("toast.copied"));
+    setPendingId(person.id);
+    link.mutate(person.id, {
+      onSuccess: (reply) => {
+        void deliver(
+          person,
+          absoluteUrl(reply.link),
+          reply.kind === "invitation"
+            ? t("toast.inviteCopied")
+            : reply.kind === "inbox"
+              ? t("toast.inboxCopied")
+              : t("toast.copied"),
+        );
+      },
+      onError: (error) => {
+        toast.error(errorText(error));
+      },
+      onSettled: () => {
+        setPendingId(null);
+      },
+    });
   };
 
   const onCancel = () => {
@@ -392,6 +423,13 @@ const RouteBody = ({
   const docId = route.status === "returned" ? returnedDocId(route) : null;
   const busy = isResending || cancel.isPending || archive.isPending;
   const mine = me !== null && isActionable(me.next_action);
+  // Отправитель ещё не подписал сам: так бывает после «Отправить на подписание» с ЭП и когда
+  // подпись в «Отправить и подписать» отказала уже после отправки.
+  const unsigned =
+    route.status === "active" &&
+    me !== null &&
+    me.next_action === "sign" &&
+    route.sent_by?.id === meId;
 
   return (
     <Shell>
@@ -416,6 +454,25 @@ const RouteBody = ({
             {facts.join(" · ")}
           </span>
         )}
+        {unsigned && (
+          <span
+            className="flex items-center"
+            style={{
+              gap: "0.375rem",
+              fontSize: "0.75rem",
+              color: "var(--c-warn)",
+              lineHeight: 1.45,
+            }}
+            data-testid="signing-unsigned"
+          >
+            <TriangleAlert
+              size="0.8125rem"
+              aria-hidden="true"
+              style={{ flexShrink: 0 }}
+            />
+            {t("unsigned")}
+          </span>
+        )}
       </div>
 
       <RouteSteps
@@ -423,6 +480,7 @@ const RouteBody = ({
         meId={meId}
         now={now}
         canManage={canManage}
+        mailEnabled={mailEnabled}
         pendingId={pendingId}
         shown={shown}
         onRemind={requestReminder}

@@ -30,6 +30,9 @@ const STRANGER: SigningDemoUser = { id: "u_stranger", name: "Чужой" };
 
 let me: SigningDemoUser | null = AUTHOR;
 let clock = Date.parse("2026-11-10T09:00:00Z");
+// Почта на сервере и места слотов на странице: по умолчанию почты нет, места есть у всех.
+let mail = false;
+let unplaced = new Set<string>();
 
 // Данные плашки научрука неизвестны: он задаёт их сам на своём шаге (раздел 4.2, правило 2).
 const demo = createSigningRouteDemo({
@@ -50,6 +53,8 @@ const demo = createSigningRouteDemo({
       hint: "s***@hse.ru",
     },
   ],
+  mailEnabled: () => mail,
+  isPlaced: (_project, doc, slot) => !unplaced.has(`${doc}:${slot}`),
   now: () => clock,
 });
 
@@ -124,6 +129,8 @@ beforeEach(() => {
   demo.reset();
   as(AUTHOR);
   clock = Date.parse("2026-11-10T09:00:00Z");
+  mail = false;
+  unplaced = new Set();
 });
 
 describe("автор: черновик и отправка", () => {
@@ -237,6 +244,196 @@ describe("автор: черновик и отправка", () => {
   });
 });
 
+describe("автор: что мешает отправке и что после неё", () => {
+  it("слот без места на странице мешает отправке, пока его не разместят", async () => {
+    unplaced.add(`${DOC}:supervisor`);
+    const route = await signingRouteApi.create(PROJECT, PROFILE);
+    const preview = await signingRouteApi.preview(PROJECT, route.id);
+    expect(preview.can_send).toBe(false);
+    expect(preview.blockers).toEqual([
+      {
+        code: "placement_off",
+        doc_id: DOC,
+        slot_id: "supervisor",
+        participant_id: participant(route, "supervisor").id,
+      },
+    ]);
+    const expected = Object.fromEntries(
+      preview.docs.map((d) => [d.doc_id, d.token ?? ""]),
+    );
+    const refused = await apiError(
+      signingRouteApi.send(PROJECT, route.id, { expected, sign: null }),
+    );
+    expect(refused.code).toBe("route_blocked");
+    expect(refused.data?.blockers).toEqual(preview.blockers);
+
+    unplaced.clear();
+    expect((await signingRouteApi.preview(PROJECT, route.id)).blockers).toEqual(
+      [],
+    );
+  });
+
+  it("«Отправить и подписать»: подпись отказала после отправки, маршрут ушёл без неё", async () => {
+    // Все подписывают ЭП с известными данными плашки: фиксация при отправке (L = 0).
+    const crypto = createSigningRouteDemo({
+      getUser: () => me,
+      members: [
+        {
+          user_id: SUPERVISOR.id,
+          name: SUPERVISOR.name,
+          persona: "supervisor",
+          plate: { owner: SUPERVISOR.name, kind: "openpgp", cert_id: "1A2B" },
+        },
+        {
+          user_id: AUTHOR.id,
+          name: AUTHOR.name,
+          persona: "author",
+          plate: { owner: AUTHOR.name, kind: "openpgp", cert_id: "3C4D" },
+        },
+      ],
+      profiles: [
+        {
+          id: "all-crypto",
+          name: { ru: "ЭП у всех", en: "All e-signatures" },
+          order: [["author"], ["supervisor"]],
+          docs: [
+            {
+              doc_id: DOC,
+              name: { ru: "Заявление", en: "Application" },
+              slots: ["author", "supervisor"].map((persona, i) => ({
+                slot_id: persona,
+                label: { ru: persona, en: persona },
+                persona,
+                method: "detached" as const,
+                optional: false,
+                page: 1,
+                x_mm: 100,
+                y_mm: 100 + i * 30,
+                width_mm: 60,
+              })),
+            },
+          ],
+        },
+      ],
+      keysOf: (user) => [
+        {
+          id: `key-${user.id}`,
+          label: "Ключ OpenPGP",
+          kind: "openpgp",
+          protected: true,
+          signer: user.name,
+        },
+      ],
+    });
+    installDemoAdapter(apiClient, createDemoRouter(crypto.routes));
+    try {
+      const route = await signingRouteApi.create(PROJECT, "all-crypto");
+      const preview = await signingRouteApi.preview(PROJECT, route.id);
+      expect(preview.can_send_and_sign).toBe(true);
+      const expected = Object.fromEntries(
+        preview.docs.map((d) => [d.doc_id, d.token ?? ""]),
+      );
+      const key = preview.sender_key?.id ?? null;
+
+      // Неверный пароль проверяется до отправки: ничего не ушло, признака `sent` нет.
+      const wrong = await apiError(
+        signingRouteApi.send(PROJECT, route.id, {
+          expected,
+          sign: { identity_id: key, passphrase: "wrong" },
+        }),
+      );
+      expect(wrong.code).toBe("passphrase_invalid");
+      expect(wrong.data?.sent).toBeUndefined();
+      expect((await signingRouteApi.get(PROJECT, route.id)).status).toBe(
+        "draft",
+      );
+
+      const failed = await apiError(
+        signingRouteApi.send(PROJECT, route.id, {
+          expected,
+          sign: { identity_id: key, passphrase: "broken" },
+        }),
+      );
+      expect(failed.code).toBe("sign_failed");
+      expect(failed.data?.sent).toBe(true);
+      const sent = await signingRouteApi.get(PROJECT, route.id);
+      expect(sent.status).toBe("active");
+      expect(participant(sent, "author").next_action).toBe("sign");
+    } finally {
+      installDemoAdapter(apiClient, createDemoRouter(demo.routes));
+    }
+  });
+});
+
+describe("автор: ссылка подписанту", () => {
+  it("участнику отдаёт его страницу подписи и ничего не меняет", async () => {
+    const route = await sendDraft();
+    const supervisor = participant(route, "supervisor");
+    const link = await signingRouteApi.link(PROJECT, route.id, supervisor.id);
+    expect(link).toEqual({
+      participant_id: supervisor.id,
+      kind: "page",
+      link: `${window.location.origin}/sign/${PROJECT}/${route.id}`,
+    });
+    const after = await signingRouteApi.get(PROJECT, route.id);
+    expect(participant(after, "supervisor").reminders).toBe(0);
+    expect(after.events).toEqual(route.events);
+  });
+
+  it("приглашённому без почты каждый раз новая ссылка приглашения, без пауз", async () => {
+    const route = await sendDraft((r) => withAcademic(r));
+    const academic = participant(route, "academic_supervisor");
+    const first = await signingRouteApi.link(PROJECT, route.id, academic.id);
+    const second = await signingRouteApi.link(PROJECT, route.id, academic.id);
+    expect(first.kind).toBe("invitation");
+    expect(first.link).toContain(
+      `?next=${encodeURIComponent(`/sign/${PROJECT}/${route.id}`)}`,
+    );
+    expect(second.link).not.toBe(first.link);
+    const after = await signingRouteApi.get(PROJECT, route.id);
+    expect(participant(after, "academic_supervisor").reminded_at).toBeNull();
+  });
+
+  it("с почтой ссылку несёт письмо: копировать нечего, «Напомнить» повторяет письмо раз в 12 часов", async () => {
+    mail = true;
+    const route = await sendDraft((r) => withAcademic(r));
+    const academic = participant(route, "academic_supervisor");
+    const refused = await apiError(
+      signingRouteApi.link(PROJECT, route.id, academic.id),
+    );
+    expect(refused.status).toBe(409);
+    expect(refused.code).toBe("link_by_mail");
+
+    const reminder = await signingRouteApi.remind(
+      PROJECT,
+      route.id,
+      academic.id,
+    );
+    expect(reminder).toEqual({
+      participant_id: academic.id,
+      delivery: "email",
+      link: null,
+    });
+    const tooSoon = await apiError(
+      signingRouteApi.remind(PROJECT, route.id, academic.id),
+    );
+    expect(tooSoon.status).toBe(429);
+    expect(tooSoon.code).toBe("rate_limited");
+    clock += 12 * 60 * 60 * 1000;
+    await signingRouteApi.remind(PROJECT, route.id, academic.id);
+    const after = await signingRouteApi.get(PROJECT, route.id);
+    expect(participant(after, "academic_supervisor").reminders).toBe(2);
+  });
+
+  it("неизвестному участнику 404", async () => {
+    const route = await sendDraft();
+    const missing = await apiError(
+      signingRouteApi.link(PROJECT, route.id, "srp_nobody"),
+    );
+    expect(missing.status).toBe(404);
+  });
+});
+
 describe("подписант: задача", () => {
   it("ЭП без данных плашки: задать ключ, затем согласовать и подписать", async () => {
     const route = await sendDraft();
@@ -329,7 +526,8 @@ describe("подписант: задача", () => {
     expect(approved.steps[1]?.[0]?.at).not.toBeNull();
     expect(approved.me.plate?.owner).toBe(SUPERVISOR.name);
 
-    // Академрук ещё не принял приглашение: автор повторяет его, ссылку копирует сам.
+    // Академрук ещё не принял приглашение. Почты на сервере нет: напомнить нечем, автор берёт
+    // ссылку приглашения и пересылает сам, сколько угодно раз и без отметок в маршруте.
     as(AUTHOR);
     let state = await signingRouteApi.get(PROJECT, route.id);
     const academic = participant(state, "academic_supervisor");
@@ -340,16 +538,12 @@ describe("подписант: задача", () => {
       academic.id,
     );
     expect(reminder.delivery).toBe("manual");
-    expect(reminder.link).toMatch(/\/project-invite\//);
-    const tooSoon = await apiError(
-      signingRouteApi.remind(PROJECT, route.id, academic.id),
-    );
-    expect(tooSoon.status).toBe(429);
-    expect(tooSoon.code).toBe("rate_limited");
-    clock += 12 * 60 * 60 * 1000;
-    await signingRouteApi.remind(PROJECT, route.id, academic.id);
+    expect(reminder.link).toMatch(/\/project-invite\/.+\?next=%2Fsign%2F/);
+    const again = await signingRouteApi.remind(PROJECT, route.id, academic.id);
+    expect(again.link).not.toBe(reminder.link);
     state = await signingRouteApi.get(PROJECT, route.id);
-    expect(participant(state, "academic_supervisor").reminders).toBe(2);
+    expect(participant(state, "academic_supervisor").reminders).toBe(0);
+    expect(participant(state, "academic_supervisor").reminded_at).toBeNull();
 
     demo.acceptInvitation("inv_academic", ACADEMIC);
     as(ACADEMIC);

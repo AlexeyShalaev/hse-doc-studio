@@ -1,8 +1,8 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ChevronDown, ChevronUp, GripVertical, Plus } from "lucide-react";
-import type { ProjectInvitation } from "@entities/invitation";
 import type {
+  RoutePersonOption,
   SigningRoute,
   SigningRoutePreview,
 } from "@entities/signing-route";
@@ -31,7 +31,6 @@ export type RouteStepsCardProps = {
   personaLabel: (persona: string) => string;
   /** Персоны, которые можно взять в согласующие (без уже стоящих в маршруте). */
   approverPersonas: readonly string[];
-  invitations: readonly ProjectInvitation[];
   registrationClosed: boolean;
   onChange: (steps: DraftSteps) => void;
 };
@@ -51,7 +50,6 @@ export const RouteStepsCard = ({
   meId,
   personaLabel,
   approverPersonas,
-  invitations,
   registrationClosed,
   onChange,
 }: RouteStepsCardProps) => {
@@ -69,6 +67,27 @@ export const RouteStepsCard = ({
   );
   const visualStep = preview?.visual_step ?? null;
   const canEdit = editable && !busy;
+  const everyone = route.steps.flat();
+  /** Кого можно поставить на персону человека: кандидаты без тех, кто уже занят ею у других. */
+  const optionsFor = (
+    personId: string,
+    persona: string,
+  ): RoutePersonOption[] => {
+    const taken = new Set(
+      everyone
+        .filter((q) => q.id !== personId && q.persona === persona)
+        .flatMap((q) => [q.user_id, q.invitation_id]),
+    );
+    const seen = new Set<string>();
+    return (
+      route.candidates.find((group) => group.persona === persona)?.people ?? []
+    ).filter((option) => {
+      const key = `${option.kind}:${option.id}`;
+      if (taken.has(option.id) || seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+  };
 
   const endDrag = () => {
     setDrag(null);
@@ -167,7 +186,10 @@ export const RouteStepsCard = ({
                 background: over === key ? "var(--accent-soft)" : "var(--bg-1)",
               }}
             >
-              <div className="flex items-center" style={{ gap: "0.375rem" }}>
+              <div
+                className="flex items-center"
+                style={{ gap: "0.375rem", flexWrap: "wrap", minWidth: 0 }}
+              >
                 {editable && (
                   <span
                     draggable={canEdit}
@@ -241,9 +263,7 @@ export const RouteStepsCard = ({
                   isMe={meId !== null && p.user_id === meId}
                   editable={editable}
                   busy={busy}
-                  invitations={invitations.filter(
-                    (inv) => inv.persona === p.persona,
-                  )}
+                  options={optionsFor(p.id, p.persona)}
                   registrationClosed={registrationClosed}
                   menu={[
                     {
@@ -283,12 +303,15 @@ export const RouteStepsCard = ({
                   onInvite={() => {
                     setInviting({ id: p.id, persona: p.persona });
                   }}
-                  onPickInvitation={(invitationId) => {
+                  onPick={(option) => {
                     onChange(
-                      setPerson(steps, p.id, {
-                        user_id: null,
-                        invitation_id: invitationId,
-                      }),
+                      setPerson(
+                        steps,
+                        p.id,
+                        option.kind === "member"
+                          ? { user_id: option.id, invitation_id: null }
+                          : { user_id: null, invitation_id: option.id },
+                      ),
                     );
                   }}
                 />

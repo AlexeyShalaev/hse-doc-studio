@@ -313,6 +313,18 @@ const DOCS = [
     last_compile_id: null,
     pages: null,
   },
+  // Документ точки «Заявка на тему КП»: по нему идёт демо маршрута подписания.
+  {
+    id: "topic_application",
+    def_id: "topic_application",
+    name: {
+      ru: "Заявление о выборе темы",
+      en: "Topic selection application",
+    },
+    status: "ok" as const,
+    last_compile_id: "c_demo_topic",
+    pages: 1,
+  },
 ];
 
 export const createShareLinkRoutes = (

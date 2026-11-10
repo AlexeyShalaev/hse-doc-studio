@@ -104,6 +104,18 @@ class SendRequest:
     sign: KeyRequest | None = None
 
 
+class SentUnsignedError(Exception):
+    """«Отправить и подписать»: маршрут отправлен, а подпись отправителя не поставлена (`sign_failed`, раздел 8.1).
+
+    Отправка записана, документы зафиксированы: отправитель остаётся в `to_sign` и подписывает на своей странице.
+    `cause` отказ подписи; его текст уходит в ответ.
+    """
+
+    def __init__(self, cause: Exception) -> None:
+        super().__init__(str(cause))
+        self.cause = cause
+
+
 @dataclass(frozen=True)
 class RouteSummary:
     route: SigningRoute
@@ -424,7 +436,8 @@ class SigningRouteSending(RouteScenario):
 
     async def send(self, actor: Actor, project_id: UUID, route_id: UUID, request: SendRequest) -> RouteDetails:
         """Отправить или отправить заново. Ошибка подписи при «Отправить и подписать» не отменяет отправку:
-        маршрут уходит, а ошибка возвращается после записи (подписать можно на своей странице)."""
+        маршрут уходит, а ошибка возвращается после записи как `SentUnsignedError` (подписать можно на своей
+        странице). Любой другой отказ значит, что ничего не отправлено."""
         actor_id = actor_uuid(actor)
         at = self._s.clock()
         deferred: Exception | None = None
@@ -445,7 +458,7 @@ class SigningRouteSending(RouteScenario):
                         deferred = exc
             saved = await self._commit(settled, [*events, *closing_events(settled, at)], actor_id=actor_id, at=at)
         if deferred is not None:
-            raise deferred
+            raise SentUnsignedError(deferred) from deferred
         return await self._details(actor, point, saved)
 
     async def _send_files(
@@ -516,7 +529,11 @@ class SigningRouteSending(RouteScenario):
         at: datetime,
     ) -> _Readiness:
         facts = loaded.facts
-        blockers = [*await self._doc_blockers(point, route, facts), *_people_blockers(point, route, people)]
+        blockers = [
+            *await self._doc_blockers(point, route, facts),
+            *_people_blockers(point, route, people),
+            *_placement_blockers(point, route, facts.state),
+        ]
         if route.status not in SENDABLE_STATUSES or not route.participants:
             return _Readiness(tuple(blockers), evaluate(route, facts), route)
         sent = send(route, facts, by=actor_id, at=at)
@@ -551,6 +568,33 @@ def _people_blockers(point: RoutePoint, route: SigningRoute, people: People) -> 
     _, unassigned = assign_pairs(route.participants, point.required)
     blockers += [Blocker(BlockerCode.slot_unassigned, doc_id=pair.doc_id, slot_id=pair.slot_id) for pair in unassigned]
     return blockers
+
+
+def _placement_blockers(point: RoutePoint, route: SigningRoute, state: SignaturesState) -> list[Blocker]:
+    """Слоты маршрута, которые нельзя подписать: метка видна на странице, а места у неё нет.
+
+    План считает такой слот ждущим (`placement_off`) при любой подписи: слот ЭП с плашкой не станет подписанным,
+    и маршрут не завершится, а картинка после согласия в документ не попадёт. Место это включённое размещение
+    автора: место из пака без него не ставится.
+    """
+    blockers: list[Blocker] = []
+    for p in route.participants:
+        for pair in p.assignments:
+            placement = state.placements.get(pair.doc_id, {}).get(pair.slot_id)
+            if (placement is None or not placement.enabled) and _mark_may_show(point, pair, state):
+                blockers.append(Blocker(BlockerCode.placement_off, pair.doc_id, pair.slot_id, p.id))
+    return blockers
+
+
+def _mark_may_show(point: RoutePoint, pair: DocSlot, state: SignaturesState) -> bool:
+    """Будет ли у слота видимая метка. Если способ слота точка не принимает, его выберет подписант (6.3): место
+    нужно, когда хотя бы один разрешённый способ ставит картинку или плашку (все, кроме PAdES без метки)."""
+    slot = state.slots.get(pair.slot_id)
+    allowed = point.allowed.get(pair, ())
+    method = method_of(slot.sign_mode) if slot is not None else SignMethod.image
+    if allowed and method.value not in allowed:
+        return any(name != SignMethod.pades.value for name in allowed)
+    return mark_of(slot) is not VisibleMark.none
 
 
 def _check_interval(route: SigningRoute, at: datetime) -> None:

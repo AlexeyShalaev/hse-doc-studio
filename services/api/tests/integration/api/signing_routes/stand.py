@@ -25,7 +25,7 @@ from reportlab.pdfgen import canvas
 
 from tests.integration.api.personal.conftest import ORIGIN, PASSWORD, Person, Stand
 
-__all__ = ["PNG", "Person", "Project", "Stand", "make_project", "person"]
+__all__ = ["PNG", "TOPIC_PAIRS", "Person", "Project", "Stand", "make_project", "person"]
 
 PNG = base64.b64decode(
     "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg=="
@@ -33,6 +33,8 @@ PNG = base64.b64decode(
 PACK = {"pack_id": "hse-cs-sse", "template_id": "coursework", "version": "2026.1.3"}
 TOPIC = "topic-approval"
 TOPIC_DOCS = ("project_proposal", "topic_application")
+# Пары «документ, слот» точки: без места на странице слот не подписать (помеха отправки `placement_off`).
+TOPIC_PAIRS = (("project_proposal", "supervisor"), ("topic_application", "author"), ("topic_application", "supervisor"))
 
 
 async def person(stand: Stand, name: str) -> Person:
@@ -103,6 +105,14 @@ class Project:
             who, "POST", f"{self.base}/signatures/slots/{slot_id}/png", files={"file": ("s.png", PNG, "image/png")}
         )
         assert resp.status_code == 200, resp.text
+
+    def place(self, who: Person, *pairs: tuple[str, str]) -> None:
+        """Включить место слотов на странице (по умолчанию всех пар точки «Заявка на тему КП»)."""
+        for doc_id, slot_id in pairs or TOPIC_PAIRS:
+            placed = self.call(
+                who, "PATCH", f"{self.base}/signatures/placements/{doc_id}/{slot_id}", json={"enabled": True}
+            )
+            assert placed.status_code == 200, placed.text
 
     async def member(self, who: Person, role: str, persona: str | None) -> None:
         async with self.stand.sessions.use() as db:

@@ -6,7 +6,8 @@
 напоминать не о чем.
 
 Приглашённому, который ещё не принял приглашение, «Напомнить» повторяет приглашение (раздел 6.5): секрет ссылки
-меняется в той же транзакции, письмо уходит после неё; без SMTP ссылка с `?next=/sign/...` возвращается автору.
+меняется в той же транзакции, письмо уходит после неё. Без SMTP напомнить нечем: автор получает ссылку приглашения
+с `?next=/sign/...` и пересылает её сам, это не повтор и не напоминание (`SigningRouteReminding.link`).
 Автонапоминания приглашённых не трогают: писать некуда, а повтор приглашения ломает прежнюю ссылку.
 """
 
@@ -35,6 +36,7 @@ from hse_doc_studio.core.signing_route.entities import (
     Participant,
     ParticipantState,
     RequestOutcome,
+    RouteConflictError,
     RouteEvent,
     RouteStatus,
     SigningRoute,
@@ -60,6 +62,9 @@ from hse_doc_studio.use_cases.signing_route.scenario import RouteScenario, Route
 _log = logging.getLogger(__name__)
 
 ReminderDelivery = Literal["inbox", "email", "manual"]
+# Куда ведёт ссылка подписанту: его страница подписи, приглашение в проект или «Входящие» с приглашением.
+SignerLinkKind = Literal["page", "invitation", "inbox"]
+INBOX_PATH = "/inbox"
 
 
 @dataclass(frozen=True)
@@ -69,6 +74,25 @@ class Reminder:
     participant_id: UUID
     delivery: ReminderDelivery
     link: str | None = None
+
+
+@dataclass(frozen=True)
+class SignerLink:
+    """Ответ «Скопировать ссылку»: ссылка, которую автор сам перешлёт подписанту."""
+
+    participant_id: UUID
+    kind: SignerLinkKind
+    link: str
+
+
+def link_by_mail() -> RouteConflictError:
+    return RouteConflictError(
+        "link_by_mail",
+        localized_error(
+            "Ссылка приглашения уходит письмом: нажмите «Напомнить», чтобы отправить его ещё раз",
+            "The invitation link is sent by email: press “Remind” to send it again",
+        ),
+    )
 
 
 def signing_page_path(project_id: UUID, route_id: UUID) -> str:
@@ -101,11 +125,13 @@ class SigningRouteReminding(RouteScenario):
         invitations: ResendInvitationUC,
         users: IUserRepository,
         mailer: INotificationMailer,
+        public_url: str | None = None,
     ) -> None:
         super().__init__(services)
         self._invitations = invitations
         self._users = users
         self._mailer = mailer
+        self._public_url = public_url
 
     async def remind(self, actor: Actor, project_id: UUID, route_id: UUID, participant_id: UUID) -> Reminder:
         actor_id = actor_uuid(actor)
@@ -118,6 +144,12 @@ class SigningRouteReminding(RouteScenario):
             if p is None:
                 raise _participant_not_found()
             outcome = await self._turn(route, p)
+            if outcome is None and not self._mailer.enabled:
+                # Письмо не уйдёт, напомнить нечем: автору нужна только ссылка, без пауз и отметок в маршруте.
+                # У приглашения аккаунту ссылки нет: ему, как раньше, повторяется уведомление во «Входящих».
+                _, manual = await self._relink(actor, route, p)
+                if manual is not None:
+                    return Reminder(p.id, "manual", manual)
             _check_interval(p, at)
             if outcome is None:
                 renewed = await self._reinvite(actor, route, p, at)
@@ -130,6 +162,45 @@ class SigningRouteReminding(RouteScenario):
             return Reminder(p.id, delivery)
         sent = await self._invitations.deliver(actor, renewed, next_path=signing_page_path(project_id, route_id))
         return Reminder(p.id, sent.delivery, sent.link)
+
+    async def link(self, actor: Actor, project_id: UUID, route_id: UUID, participant_id: UUID) -> SignerLink:
+        """Ссылка, которую автор сам перешлёт подписанту («Скопировать ссылку»).
+
+        Участнику с аккаунтом это адрес его страницы подписи: ничего не пишется. Приглашённому по почте нужна
+        ссылка приглашения, а её секрет хранится хэшем, поэтому выдаётся новая (`ResendInvitationUC.relink`).
+        Письмо при этом не уходит, так что это не повтор приглашения и не напоминание: их паузы (10 минут и
+        12 часов) и счётчики не действуют, в маршрут ничего не пишется. Пока почта на сервере настроена, ссылку
+        несёт письмо, и её замена сломала бы отправленное: 409 `link_by_mail`, автору остаётся «Напомнить».
+        Нужно право решать доступ (иначе 403), как у повтора приглашения.
+        """
+        route = await self._get(project_id, route_id)
+        p = next((x for x in route.participants if x.id == participant_id), None)
+        if p is None:
+            raise _participant_not_found()
+        return await self._link(actor, route, p)
+
+    async def _link(self, actor: Actor, route: SigningRoute, p: Participant) -> SignerLink:
+        if p.user_id is not None:
+            return SignerLink(p.id, "page", self._site(signing_page_path(route.project_id, route.id)))
+        renewed, link = await self._relink(actor, route, p)
+        if link is not None:
+            return SignerLink(p.id, "invitation", link)
+        if renewed.invitation.invitee_email is not None:
+            raise link_by_mail()
+        # Приглашение аккаунту без ссылки: оно ждёт человека во «Входящих».
+        return SignerLink(p.id, "inbox", self._site(INBOX_PATH))
+
+    async def _relink(self, actor: Actor, route: SigningRoute, p: Participant) -> tuple[RenewedInvitation, str | None]:
+        """Новая ссылка приглашения участника с переходом на его страницу подписи; None, если секрет не менялся."""
+        if p.invitation_id is None:
+            # Человека на этот шаг ещё не пригласили: ссылку слать некому.
+            raise not_waiting()
+        renewed = await self._invitations.relink(actor, route.project_id, p.invitation_id)
+        page = signing_page_path(route.project_id, route.id)
+        return renewed, self._invitations.link_of(renewed, next_path=page)
+
+    def _site(self, path: str) -> str:
+        return f"{(self._public_url or '').rstrip('/')}{path}"
 
     async def _turn(self, route: SigningRoute, p: Participant) -> RequestOutcome | None:
         """О чём напомнить участнику по расчёту; None у приглашённого. Не его очередь: `participant_not_waiting`."""

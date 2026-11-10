@@ -264,6 +264,18 @@ class SigningReminder(StrictModel):
     link: str | None
 
 
+class SigningLink(StrictModel):
+    """Ответ «Скопировать ссылку»: что автор сам перешлёт подписанту.
+
+    `kind`: `page` страница подписи участника с аккаунтом, `invitation` новая ссылка приглашения (прежняя перестаёт
+    работать), `inbox` «Входящие» того, кого пригласили как аккаунт.
+    """
+
+    participant_id: str
+    kind: Literal["page", "invitation", "inbox"]
+    link: str
+
+
 class EmptyRequest(StrictModel):
     """Тело действий без параметров (`{}`): предпросмотр, отмена, снятие с контроля."""
 

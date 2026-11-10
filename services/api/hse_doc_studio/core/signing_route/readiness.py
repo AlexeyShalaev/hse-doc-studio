@@ -23,6 +23,8 @@ class BlockerCode(StrEnum):
     slot_unassigned = "slot_unassigned"  # у слота точки нет участника с персоной владельца слота
     sender_not_ready = "sender_not_ready"  # картинка или данные плашки отправителя не готовы
     doc_in_other_route = "doc_in_other_route"  # документ держит другой маршрут
+    # У слота с видимой меткой (картинка, плашка ЭП) нет включённого места на странице: его нельзя подписать.
+    placement_off = "placement_off"
     no_participants = "no_participants"
 
 

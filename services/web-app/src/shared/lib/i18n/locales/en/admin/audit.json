@@ -146,6 +146,7 @@
       "link_password_failed": "Wrong link password",
       "project_invitation_create": "Project invitation sent",
       "project_invitation_resend": "Project invitation resent",
+      "project_invitation_relink": "New invitation link issued",
       "project_invitation_revoke": "Project invitation revoked",
       "project_invitation_accept": "Project invitation accepted",
       "project_invitation_decline": "Project invitation declined",

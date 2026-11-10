@@ -123,7 +123,7 @@ export const InboxView = ({
     >
       <div
         className="flex items-center justify-between"
-        style={{ gap: "0.75rem" }}
+        style={{ gap: "0.5rem 0.75rem", flexWrap: "wrap" }}
       >
         <h1 style={{ margin: 0, fontSize: "1.25rem" }}>{t("title")}</h1>
         {unread > 0 && (
@@ -138,7 +138,12 @@ export const InboxView = ({
           </Button>
         )}
       </div>
-      <div role="tablist" className="flex" style={{ gap: "0.25rem" }}>
+      {/* На телефоне вкладки переносятся на вторую строку, а не наезжают друг на друга. */}
+      <div
+        role="tablist"
+        className="flex"
+        style={{ gap: "0.25rem", flexWrap: "wrap" }}
+      >
         {INBOX_TABS.map((id) => (
           <button
             key={id}
@@ -146,6 +151,7 @@ export const InboxView = ({
             role="tab"
             aria-selected={tab === id}
             className={`btn sm ${tab === id ? "primary" : "ghost"}`}
+            style={{ flexShrink: 0 }}
             data-testid={`inbox-tab-${id}`}
             onClick={() => {
               onTab(id);
@@ -367,7 +373,7 @@ export const InboxView = ({
               style={{ gap: "0.5rem", fontSize: "0.78125rem" }}
               data-testid={`inbox-my-request-${r.id}`}
             >
-              <span>
+              <span style={{ minWidth: 0, overflowWrap: "anywhere" }}>
                 {r.project.name ?? t("myRequests.hidden")}
                 {" · "}
                 <span className="dim">
@@ -380,6 +386,7 @@ export const InboxView = ({
                   type="button"
                   size="xs"
                   variant="ghost"
+                  className="shrink-0"
                   disabled={busyId === r.id}
                   data-testid={`inbox-my-request-cancel-${r.id}`}
                   onClick={() => {

@@ -260,6 +260,10 @@ def _blocker_text(blocker: Blocker, preview: RoutePreview) -> str:
             f"документ {doc} уже на подписании по другому маршруту",
             f"document {doc} is already on another signing route",
         ),
+        BlockerCode.placement_off: localized_error(
+            f"у слота {slot} документа {doc} не включено место на странице: включите размещение в интерфейсе",
+            f"slot {slot} of document {doc} has no place on the page: turn its placement on in the interface",
+        ),
         BlockerCode.no_participants: localized_error("в маршруте нет участников", "the route has no participants"),
     }
     return texts[blocker.code]

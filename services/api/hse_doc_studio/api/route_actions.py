@@ -222,6 +222,9 @@ ROUTE_ACTIONS: Mapping[RouteKey, RouteRule] = {
     ("POST", "/projects/{project_id}/signing-routes/{route_id}/participants/{participant_id}/remind"): RouteRule(
         Action.SUBMISSION_CREATE
     ),
+    ("POST", "/projects/{project_id}/signing-routes/{route_id}/participants/{participant_id}/link"): RouteRule(
+        Action.SUBMISSION_CREATE
+    ),
     # Задача подписанта: только участнику маршрута (иначе 404), право SIGN на каждый свой слот проверяет сценарий.
     ("GET", "/projects/{project_id}/signing-routes/{route_id}/task"): RouteRule(Action.OUTPUT_READ),
     ("POST", "/projects/{project_id}/signing-routes/{route_id}/task/approve"): RouteRule(Action.OUTPUT_READ),

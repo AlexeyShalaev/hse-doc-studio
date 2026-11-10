@@ -34,6 +34,11 @@ export type RouteStepsProps = {
   now: number;
   /** Автор управляет маршрутом: у тех, чья очередь, «Напомнить» и «Скопировать ссылку». */
   canManage: boolean;
+  /**
+   * На сервере настроена почта. Тогда ссылку приглашённому несёт письмо, и копировать нечего:
+   * новая ссылка сломала бы отправленную. Остаётся «Напомнить» (повтор письма).
+   */
+  mailEnabled: boolean;
   /** Чьё напоминание или ссылка сейчас запрашиваются. */
   pendingId: string | null;
   /** Ссылка, которую не удалось положить в буфер: показываем её под человеком. */
@@ -48,6 +53,7 @@ export const RouteSteps = ({
   meId,
   now,
   canManage,
+  mailEnabled,
   pendingId,
   shown,
   onRemind,
@@ -111,16 +117,21 @@ export const RouteSteps = ({
                 const remindable = canManage && isRemindable(route, person);
                 const lockedUntil = remindLockedUntil(person, now);
                 const busy = pendingId === person.id;
-                // Приглашённому ссылку даёт повтор приглашения: он тоже раз в 12 часов.
-                const copyLocked =
-                  person.state === "invited" && lockedUntil !== null;
+                const invited = person.state === "invited";
+                // Без почты приглашённому напомнить нечем: «Напомнить» отдаёт ту же ссылку, что
+                // и «Скопировать ссылку», и 12 часов её не закрывают. Копирование не закрыто никогда.
+                const remindLocked =
+                  lockedUntil !== null && (!invited || mailEnabled);
+                const canCopy = !(invited && mailEnabled);
                 const lockTitle =
                   lockedUntil === null
                     ? undefined
                     : t("action.remindAfter", {
                         time: formatMoment(lockedUntil),
                       });
-                const name = person.name ?? t("person.nobody");
+                const name =
+                  person.name ??
+                  (invited ? t("person.invitee") : t("person.nobody"));
                 return (
                   <div
                     key={person.id}
@@ -163,17 +174,24 @@ export const RouteSteps = ({
                         </span>
                       )}
                       {remindable && (
+                        // На узком экране кнопки уходят на свою строку и не ломаются внутри.
                         <span
                           className="flex items-center"
-                          style={{ gap: "0.25rem", marginLeft: "auto" }}
+                          style={{
+                            gap: "0.25rem",
+                            marginLeft: "auto",
+                            flexWrap: "wrap",
+                            justifyContent: "flex-end",
+                          }}
                         >
                           {/* Подсказка на обёртке: у погашенной кнопки нет наведения. */}
-                          <span title={lockTitle}>
+                          <span title={remindLocked ? lockTitle : undefined}>
                             <button
                               type="button"
                               className="btn xs ghost"
+                              style={{ whiteSpace: "nowrap" }}
                               data-testid={`signing-remind-${person.id}`}
-                              disabled={busy || lockedUntil !== null}
+                              disabled={busy || remindLocked}
                               onClick={() => {
                                 onRemind(person);
                               }}
@@ -182,12 +200,13 @@ export const RouteSteps = ({
                               {t("action.remind")}
                             </button>
                           </span>
-                          <span title={copyLocked ? lockTitle : undefined}>
+                          {canCopy && (
                             <button
                               type="button"
                               className="btn xs ghost"
+                              style={{ whiteSpace: "nowrap" }}
                               data-testid={`signing-copy-${person.id}`}
-                              disabled={busy || copyLocked}
+                              disabled={busy}
                               onClick={() => {
                                 onCopyLink(person);
                               }}
@@ -195,7 +214,7 @@ export const RouteSteps = ({
                               <Link2 size="0.6875rem" aria-hidden="true" />
                               {t("action.copyLink")}
                             </button>
-                          </span>
+                          )}
                         </span>
                       )}
                     </div>
