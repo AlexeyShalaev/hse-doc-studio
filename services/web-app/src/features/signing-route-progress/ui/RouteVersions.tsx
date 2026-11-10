@@ -32,7 +32,7 @@ export const RouteVersions = ({
     >
       {docs.map((doc) => {
         const name = pickLocalized(doc.name, i18n.language, doc.doc_id);
-        const changed = showChanges && doc.changed === true;
+        const changed = showChanges && doc.changed;
         return (
           <li
             key={doc.doc_id}

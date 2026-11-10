@@ -10,10 +10,12 @@ from hse_doc_studio.core.signing_route.effects import Notify
 from hse_doc_studio.core.signing_route.engine import notice_for
 from hse_doc_studio.core.signing_route.entities import Notice, RequestOutcome, RouteStatus, StopReason
 from hse_doc_studio.core.signing_route.notices import notices_in
+from hse_doc_studio.core.signing_route.ports import RouteLabels
 from hse_doc_studio.use_cases.signing_route.delivery import SigningNotifier
 
+from tests.fakes.signing_routes import StaticRouteContext
 from tests.unit.core.signing_route.world import T0
-from tests.unit.use_cases.signing_route.helpers import Inbox, context, people, three_steps
+from tests.unit.use_cases.signing_route.helpers import PROFILE_NAME, Inbox, context, people, three_steps
 
 
 async def test__send__request_goes_to_the_next_step_with_sender_point_and_deadline() -> None:
@@ -135,3 +137,42 @@ async def test__cancelled__not_to_the_one_who_cancelled_and_nothing_for_no_notic
     assert [(s.user_id, s.kind, s.mail, s.payload.actor_name) for s in inbox.sent] == [
         (supervisor.user_id.hex, NotificationKind.signing_cancelled, False, "Иван")  # type: ignore[union-attr]
     ]
+
+
+async def test__request__new_version_round__flag_message_and_changed_names_for_the_mail() -> None:
+    """12.6: запрос раунда новой версии помечен `new_version`, письму нужны сообщение и изменившиеся документы."""
+    driver = three_steps()
+    author, supervisor, _ = driver.route.participants
+    driver.send(author.user_id)  # type: ignore[arg-type]
+    doc_id = driver.route.docs[0]
+    seen = driver.route.snapshot[doc_id]
+    driver.route = replace(
+        driver.route,
+        message="Исправил тему",
+        snapshot={**driver.route.snapshot, doc_id: replace(seen, replaced=True, sent_at=driver.route.sent_at)},
+    )
+    names = RouteLabels("Bertie", PROFILE_NAME, doc_names={doc_id: {"ru": "Заявление", "en": "Application"}})
+    labels = StaticRouteContext(projects={driver.route.project_id: names})
+    inbox = Inbox()
+
+    await SigningNotifier(inbox, people(driver.route), labels).notify(
+        driver.route,
+        [
+            Notify(Notice.request, (supervisor.id,), outcome=RequestOutcome.approve),
+            Notify(Notice.new_version, (author.id,)),
+        ],
+        actor_id=None,
+    )
+
+    request, new_version = inbox.sent
+    assert (request.payload.new_version, request.payload.message, request.payload.changed_names) == (
+        True,
+        "Исправил тему",
+        "«Заявление»",
+    )
+    assert (new_version.kind, new_version.mail, new_version.payload.new_version) == (
+        NotificationKind.signing_new_version,
+        False,
+        False,
+    )
+    assert new_version.payload.actor_name == "Иван"

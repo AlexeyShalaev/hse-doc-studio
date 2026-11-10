@@ -25,6 +25,7 @@ const note = (
     excerpt: "Утверждение темы",
     profile_id: "topic",
     deadline: null,
+    new_version: false,
     ...payload,
   },
 });
@@ -62,7 +63,7 @@ describe("тексты уведомлений о версии на подпис�
     ).toBe("Иванов И. И. просит подписать новую версию: Утверждение темы");
   });
 
-  it("обычный запрос и запрос без поля остаются прежними", () => {
+  it("обычный запрос (new_version false) остаётся прежним", () => {
     expect(
       textOf(note("signing_request", { new_version: false, outcome: "sign" })),
     ).toBe("Подпишите итоговый PDF: Утверждение темы");

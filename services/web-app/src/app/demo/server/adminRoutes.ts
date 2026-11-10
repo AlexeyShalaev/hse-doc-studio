@@ -45,6 +45,7 @@ const DEMO_MAIL_TEMPLATES = [
   "transfer_request",
   "signing_request",
   "signing_request_sign",
+  "signing_request_new_version",
   "signing_reminder",
   "signing_returned",
   "signing_completed",

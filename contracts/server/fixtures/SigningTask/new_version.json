@@ -1,0 +1,212 @@
+{
+  "route": {
+    "id": "sr_01hy2b7k9q",
+    "project": {
+      "id": "p_01hxa1c4de",
+      "name": "Bertie: курсовой проект"
+    },
+    "profile": {
+      "id": "topic-approval",
+      "name": {
+        "ru": "Заявка на тему КП",
+        "en": "Course project topic application"
+      }
+    },
+    "status": "active",
+    "phase": "approval",
+    "round": 2,
+    "current_step": 2,
+    "deadline": "2026-11-15T20:59:00Z",
+    "message": "Исправил формулировку темы.",
+    "sender": "Иванов И. И.",
+    "sent_at": "2026-11-12T10:30:00Z",
+    "stop_reason": null,
+    "new_version": true
+  },
+  "steps": [
+    [
+      {
+        "name": "Иванов И. И.",
+        "persona": "author",
+        "state": "done",
+        "at": "2026-11-10T09:00:00Z",
+        "me": false,
+        "card_name": null,
+        "changes_visible": false
+      }
+    ],
+    [
+      {
+        "name": "Петров П. П.",
+        "persona": "supervisor",
+        "state": "to_approve",
+        "at": null,
+        "me": true,
+        "card_name": null,
+        "changes_visible": true
+      }
+    ],
+    [
+      {
+        "name": "Сидоров С. С.",
+        "persona": "academic_supervisor",
+        "state": "done",
+        "at": "2026-11-11T15:00:00Z",
+        "me": false,
+        "card_name": null,
+        "changes_visible": false
+      }
+    ]
+  ],
+  "me": {
+    "participant_id": "srp_supervisor",
+    "state": "to_approve",
+    "next_action": "approve",
+    "methods": [
+      "detached"
+    ],
+    "method": "detached",
+    "image_ready": false,
+    "image_url": null,
+    "plate": {
+      "owner": "Петров П. П.",
+      "kind": "openpgp",
+      "cert_id": "1A2B 3C4D 5E6F 7A8B"
+    },
+    "keys": {
+      "server_keys_allowed": false,
+      "default_key": null
+    }
+  },
+  "docs": [
+    {
+      "doc_id": "topic_application",
+      "name": {
+        "ru": "Заявление о выборе темы",
+        "en": "Topic selection application"
+      },
+      "pdf_url": "/api/v1/projects/p_01hxa1c4de/docs/topic_application/pdf/signed",
+      "frozen": false,
+      "token": "build:a7a7a7a7a7a7a7a7a7a7a7a7a7a7a7a7a7a7a7a7a7a7a7a7a7a7a7a7a7a7a7a7",
+      "mine": [
+        {
+          "slot_id": "supervisor",
+          "label": {
+            "ru": "Научный руководитель",
+            "en": "Supervisor"
+          },
+          "page": 1,
+          "x_mm": 110,
+          "y_mm": 130,
+          "width_mm": 40,
+          "height_mm": 22,
+          "mark": "plate",
+          "status": "pending",
+          "reason": "awaiting_approval"
+        }
+      ],
+      "others": [
+        {
+          "slot_id": "author",
+          "label": {
+            "ru": "Студент",
+            "en": "Student"
+          },
+          "page": 1,
+          "x_mm": 160,
+          "y_mm": 208,
+          "width_mm": 30,
+          "height_mm": 12,
+          "mark": "png",
+          "status": "signed"
+        }
+      ],
+      "sent_at": "2026-11-12T10:30:00Z",
+      "changed_since_mine": true,
+      "changed": null
+    },
+    {
+      "doc_id": "supervisor_review",
+      "name": {
+        "ru": "Отзыв руководителя",
+        "en": "Supervisor's review"
+      },
+      "pdf_url": "/api/v1/projects/p_01hxa1c4de/docs/supervisor_review/frozen/pdf",
+      "frozen": true,
+      "token": null,
+      "mine": [
+        {
+          "slot_id": "supervisor",
+          "label": {
+            "ru": "Научный руководитель",
+            "en": "Supervisor"
+          },
+          "page": 2,
+          "x_mm": 110,
+          "y_mm": 240,
+          "width_mm": 40,
+          "height_mm": 22,
+          "mark": "plate",
+          "status": "signed",
+          "reason": null
+        }
+      ],
+      "others": [
+        {
+          "slot_id": "academic_supervisor",
+          "label": {
+            "ru": "Академический руководитель",
+            "en": "Academic supervisor"
+          },
+          "page": 2,
+          "x_mm": 110,
+          "y_mm": 260,
+          "width_mm": 40,
+          "height_mm": 16,
+          "mark": "png",
+          "status": "signed"
+        }
+      ],
+      "sent_at": "2026-11-10T09:00:00Z",
+      "changed_since_mine": false,
+      "changed": null
+    }
+  ],
+  "events": [
+    {
+      "id": "sre_01",
+      "kind": "sent",
+      "round": 1,
+      "at": "2026-11-10T09:00:00Z",
+      "who": "Иванов И. И.",
+      "participant_id": null,
+      "comment": null,
+      "reason": null,
+      "changed_docs": null
+    },
+    {
+      "id": "sre_02",
+      "kind": "frozen",
+      "round": 1,
+      "at": "2026-11-10T09:00:00Z",
+      "who": null,
+      "participant_id": null,
+      "comment": null,
+      "reason": null,
+      "changed_docs": null
+    },
+    {
+      "id": "sre_05",
+      "kind": "sent",
+      "round": 2,
+      "at": "2026-11-12T10:30:00Z",
+      "who": "Иванов И. И.",
+      "participant_id": null,
+      "comment": null,
+      "reason": null,
+      "changed_docs": [
+        "topic_application"
+      ]
+    }
+  ]
+}

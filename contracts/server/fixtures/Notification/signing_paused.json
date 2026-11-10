@@ -13,6 +13,7 @@
     "path": null,
     "excerpt": "Заявка на тему КП (SmartLMS)",
     "profile_id": "topic-approval",
-    "deadline": null
+    "deadline": null,
+    "new_version": false
   }
 }

@@ -91,6 +91,7 @@ def task_response(task: TaskDetails) -> s.SigningTask:
             sender=task.sender_name,
             sent_at=route.sent_at,
             stop_reason=task.stop_reason.value if task.stop_reason is not None else None,
+            new_version=task.new_version,
         ),
         steps=[
             [
@@ -133,6 +134,9 @@ def task_response(task: TaskDetails) -> s.SigningTask:
                 token=doc.token,
                 mine=[_own_slot(slot) for slot in doc.mine],
                 others=[_other_slot(slot) for slot in doc.others],
+                sent_at=doc.sent_at,
+                changed_since_mine=doc.changed_since_mine,
+                changed=doc.changed,
             )
             for doc in task.docs
         ],

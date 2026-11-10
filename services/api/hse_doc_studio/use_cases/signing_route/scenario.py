@@ -243,9 +243,12 @@ class RouteScenario:
         actor_id: UUID | None,
         at: datetime,
         comment: str | None = None,
+        extra: Sequence[Notify] = (),
     ) -> SigningRoute:
-        """Статус по расчёту, отметки запросов, запись маршрута с событиями и уведомления в одной транзакции."""
-        notices = settled.notices
+        """Статус по расчёту, отметки запросов, запись маршрута с событиями и уведомления в одной транзакции.
+
+        `extra` уведомления сценария сверх расчёта (новая версия, 12.6)."""
+        notices = (*settled.notices, *extra)
         route = mark_requests(apply_evaluation(settled.route, settled.evaluation, at=at), notices, at=at)
         saved = await self._s.routes.save(route, events=events)
         await self.notify(saved, notices, actor_id=actor_id, comment=comment)

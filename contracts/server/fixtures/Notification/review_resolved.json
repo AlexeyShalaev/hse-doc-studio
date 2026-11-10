@@ -13,6 +13,7 @@
     "path": "chapters/intro.tex",
     "excerpt": "Уточните термин",
     "profile_id": null,
-    "deadline": null
+    "deadline": null,
+    "new_version": false
   }
 }

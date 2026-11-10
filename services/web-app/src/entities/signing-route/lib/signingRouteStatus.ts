@@ -30,14 +30,6 @@ export const canSendRoute = isRouteEditable;
 export const isResend = (status: SigningRouteStatus): boolean =>
   status === "paused" || status === "returned" || status === "cancelled";
 
-/**
- * Документы, рабочая сборка которых ушла от версии на подписи (раздел 12.9). Поля нет в ответах
- * сервера до среза R16: тогда изменений нет.
- */
-export const routeChangedDocs = (route: {
-  changed_docs?: readonly string[] | undefined;
-}): readonly string[] => route.changed_docs ?? [];
-
 export type RouteSendKind = "send" | "resend" | "new_version";
 
 /**

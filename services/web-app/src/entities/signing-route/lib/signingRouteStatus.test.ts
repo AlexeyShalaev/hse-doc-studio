@@ -12,7 +12,6 @@ import {
   isRouteLive,
   isRouteOpen,
   nextRemindAt,
-  routeChangedDocs,
   routeSendKind,
   signingPagePath,
   signingPdfUrl,
@@ -121,10 +120,5 @@ describe("версия на подписи: какую отправку пред
     ]);
     expect(routeSendKind("draft", ["doc"])).toBe("send");
     expect(routeSendKind("archived", ["doc"])).toBeNull();
-  });
-
-  it("пока сервер не отдаёт changed_docs, изменений нет", () => {
-    expect(routeChangedDocs({})).toEqual([]);
-    expect(routeChangedDocs({ changed_docs: ["a"] })).toEqual(["a"]);
   });
 });

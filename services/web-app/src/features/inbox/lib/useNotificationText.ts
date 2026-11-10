@@ -10,7 +10,7 @@ import { formatDeadline } from "./signingTasks";
  * «просит подписать новую версию», остальные по виду уведомления.
  */
 const textKind = (n: Notification): string =>
-  n.kind === "signing_request" && n.payload.new_version === true
+  n.kind === "signing_request" && n.payload.new_version
     ? "signing_request_new_version"
     : n.kind;
 

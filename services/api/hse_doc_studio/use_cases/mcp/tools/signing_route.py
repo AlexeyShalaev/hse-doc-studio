@@ -403,6 +403,10 @@ def _blocker_text(blocker: Blocker, preview: RoutePreview) -> str:
             f"slot {slot} of document {doc} has no place on the page: turn its placement on in the interface",
         ),
         BlockerCode.no_participants: localized_error("в маршруте нет участников", "the route has no participants"),
+        BlockerCode.nothing_changed: localized_error(
+            "документы не менялись после отправки на подпись: новую версию отправлять нечего",
+            "the documents have not changed since they were sent for signing: there is no new version to send",
+        ),
     }
     return texts[blocker.code]
 
@@ -514,6 +518,7 @@ class SendForSigningTool(McpTool):
         if reasons:
             return _refusal(reasons)
         # Уходит ровно то, что показал этот предпросмотр: пересборка между ним и отправкой даёт отказ.
-        expected = {doc_id: token for doc_id, _name, _built, token in preview.docs if token is not None}
-        sent = await sending.send(actor, project_id, route.id, SendRequest(expected=expected))
+        expected = {doc.doc_id: doc.token for doc in preview.docs if doc.token is not None}
+        # Новую версию идущего или завершённого маршрута MCP не отправляет: она сбрасывает чужие согласия (12.10).
+        sent = await sending.send(actor, project_id, route.id, SendRequest(expected=expected, new_version=False))
         return json_result({"sent": True, "route": route_view(sent)})

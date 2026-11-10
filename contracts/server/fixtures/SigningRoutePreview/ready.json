@@ -11,7 +11,9 @@
         "en": "Topic selection application"
       },
       "built": true,
-      "token": "build:3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f"
+      "token": "build:3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f",
+      "change": "new",
+      "sent": null
     }
   ],
   "participants": [
@@ -29,7 +31,8 @@
       "chooses_method": false,
       "image_ready": true,
       "plate_ready": false,
-      "actions": 0
+      "actions": 0,
+      "keeps_approval": false
     },
     {
       "participant_id": "srp_supervisor",
@@ -45,7 +48,8 @@
       "chooses_method": false,
       "image_ready": false,
       "plate_ready": true,
-      "actions": 1
+      "actions": 1,
+      "keeps_approval": false
     }
   ],
   "blockers": [],

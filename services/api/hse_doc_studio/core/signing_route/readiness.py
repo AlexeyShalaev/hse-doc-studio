@@ -26,6 +26,8 @@ class BlockerCode(StrEnum):
     # У слота с видимой меткой (картинка, плашка ЭП) нет включённого места на странице: его нельзя подписать.
     placement_off = "placement_off"
     no_participants = "no_participants"
+    # Идущий или завершённый маршрут без изменений после отправки: новую версию отправлять нечего (12.6).
+    nothing_changed = "nothing_changed"
 
 
 @dataclass(frozen=True)

@@ -70,6 +70,8 @@ class RouteEvent(StrictModel):
     participant_id: str | None
     comment: str | None
     reason: SigningStopReasonName | None
+    # Только у `sent` новой версии (12.6): документы, у которых сменилась версия на подписи; иначе null.
+    changed_docs: list[str] | None
 
 
 class RouteParticipant(StrictModel):
@@ -101,11 +103,26 @@ class RouteDocSlot(StrictModel):
     status: RouteSlotStatusName
 
 
+class RouteDocVersion(StrictModel):
+    """Версия на подписи документа (12.3): sha256 копии, когда снята, каким раундом."""
+
+    sha256: str = Field(min_length=1)
+    at: datetime
+    round: int = Field(ge=1)
+
+
+RouteDocChangeName = Literal["same", "changed", "new"]
+
+
 class RouteDoc(StrictModel):
     doc_id: str
     name: dict[str, str]
     frozen: bool
     slots: list[RouteDocSlot]
+    # Версия на подписи; null у черновика, после отмены и у маршрута 0.20.0 без перенесённой версии.
+    sent: RouteDocVersion | None
+    # Рабочая сборка отличается от версии на подписи (без неё от снимка); у черновика и отменённого false.
+    changed: bool
 
 
 class RoutePersonOption(StrictModel):
@@ -144,6 +161,8 @@ class SigningRouteResponse(StrictModel):
     events: list[RouteEvent]
     # Из кого выбирать на персоны маршрута и его слотов; только тому, кто управляет маршрутом, иначе пусто.
     candidates: list[RoutePersonaCandidates]
+    # Документы с `changed`, в порядке `docs`: есть что отправить новой версией (12.6).
+    changed_docs: list[str]
 
 
 class SigningWaitingFor(StrictModel):
@@ -165,6 +184,9 @@ class SigningRouteSummary(StrictModel):
     completed_at: datetime | None
     updated_at: datetime
     waiting_for: list[SigningWaitingFor]
+    # Документы маршрута (мягкое предупреждение правки, 12.7) и те, чья рабочая сборка ушла от версии на подписи.
+    docs: list[str]
+    changed_docs: list[str]
 
 
 class SigningRouteList(StrictModel):
@@ -222,7 +244,11 @@ class SigningRoutePreviewDoc(StrictModel):
     doc_id: str
     name: dict[str, str]
     built: bool
+    # `build:<sha>` кандидата (текущей сборки, у несобранного документа его версии на подписи).
     token: str | None
+    # Кандидат против версии на подписи (12.6).
+    change: RouteDocChangeName
+    sent: RouteDocVersion | None
 
 
 class SigningRoutePreviewParticipant(StrictModel):
@@ -237,6 +263,8 @@ class SigningRoutePreviewParticipant(StrictModel):
     image_ready: bool
     plate_ready: bool
     actions: int = Field(ge=0, le=2)
+    # Согласие переносится по всем его документам; false, если он ещё не согласовывал.
+    keeps_approval: bool
 
 
 class SigningRouteBlockerRoute(StrictModel):
@@ -270,6 +298,8 @@ class SigningRoutePreview(StrictModel):
 class SendSigningRouteRequest(StrictModel):
     expected: dict[str, str]
     sign: SigningKeyRequest | None = None
+    # «Что изменилось» (12.6): заменяет сообщение маршрута; пробелы по краям обрезаются, пустое это null.
+    note: str | None = Field(default=None, max_length=SIGNING_TEXT_MAX)
 
 
 class SigningReminder(StrictModel):
@@ -318,6 +348,8 @@ class SigningTaskRoute(StrictModel):
     sender: str | None
     sent_at: datetime | None
     stop_reason: SigningStopReasonName | None
+    # Раунд новой версии, в котором изменился хотя бы один документ участника (12.6).
+    new_version: bool
 
 
 class SigningTaskPerson(StrictModel):
@@ -390,6 +422,12 @@ class SigningTaskDoc(StrictModel):
     token: str | None
     mine: list[SigningTaskSlot]
     others: list[SigningTaskOtherSlot]
+    # Дата версии на подписи («Вы подписываете версию от …»); null, если версии нет.
+    sent_at: datetime | None
+    # Документ изменился с прошлого согласия участника: согласовать заново.
+    changed_since_mine: bool
+    # Рабочая сборка ушла от версии на подписи; только автору и управляющим, остальным null.
+    changed: bool | None
 
 
 class SigningTask(StrictModel):

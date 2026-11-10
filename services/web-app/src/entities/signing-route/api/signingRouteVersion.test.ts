@@ -183,9 +183,7 @@ describe("версия на подписи: отправка и правка", (
     expect(doc(draft, TOPIC).sent).toBeNull();
     const first = await signingRouteApi.preview(PROJECT, draft.id);
     expect(first.docs.map((d) => d.change)).toEqual(["new", "new"]);
-    expect(first.participants.every((p) => p.keeps_approval === false)).toBe(
-      true,
-    );
+    expect(first.participants.some((p) => p.keeps_approval)).toBe(false);
 
     const sent = await send(draft.id);
     expect(doc(sent, TOPIC).sent).toMatchObject({

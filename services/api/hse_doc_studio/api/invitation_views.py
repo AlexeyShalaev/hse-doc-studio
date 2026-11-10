@@ -163,6 +163,7 @@ def notification(item: Notification) -> s.NotificationModel:
             outcome=cast(s.NotificationOutcome | None, outcome),
             profile_id=p.profile_id,
             deadline=_moment(p.deadline),
+            new_version=p.new_version,
         ),
     )
 

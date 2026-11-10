@@ -8,6 +8,7 @@ from __future__ import annotations
 
 from collections.abc import Collection, Mapping, Sequence
 from dataclasses import dataclass
+from datetime import datetime
 from enum import StrEnum
 from uuid import UUID
 
@@ -26,6 +27,7 @@ from hse_doc_studio.core.signing_route.engine import Evaluation, ParticipantView
 from hse_doc_studio.core.signing_route.entities import (
     TURN_STATES,
     DocSlot,
+    EventKind,
     Participant,
     ParticipantState,
     RouteEvent,
@@ -35,6 +37,7 @@ from hse_doc_studio.core.signing_route.entities import (
     StopReason,
 )
 from hse_doc_studio.core.signing_route.ports import RouteCandidate, RouteInvitee
+from hse_doc_studio.core.value_objects import SignaturesState
 from hse_doc_studio.use_cases.signing_route.point import RoutePoint
 
 
@@ -113,6 +116,15 @@ class SlotView:
 
 
 @dataclass(frozen=True)
+class SentVersion:
+    """Версия на подписи документа маршрута (`RouteDoc.sent`, 12.9): sha256, когда снята и каким раундом."""
+
+    sha256: str
+    at: datetime
+    round: int
+
+
+@dataclass(frozen=True)
 class DocView:
     doc_id: str
     name: dict[str, str]
@@ -121,6 +133,10 @@ class DocView:
     # Отпечаток для `expected` отправки (`build:<sha>`); None, пока документ не собран.
     token: str | None
     slots: tuple[SlotView, ...]
+    # Версия на подписи этого маршрута; None у черновика, после отмены и у маршрута без неё (12.9).
+    sent: SentVersion | None = None
+    # Рабочая сборка ушла от версии на подписи: есть что отправить новой версией.
+    changed: bool = False
 
 
 @dataclass(frozen=True)
@@ -129,6 +145,8 @@ class EventView:
     who: str | None
     comment: str | None
     reason: StopReason | None
+    # Только у `sent` новой версии: документы, у которых сменилась версия на подписи (12.9).
+    changed_docs: tuple[str, ...] | None = None
 
 
 @dataclass(frozen=True)
@@ -182,6 +200,11 @@ class RouteDetails:
         return tuple(person for step in self.steps for person in step)
 
     @property
+    def changed_docs(self) -> tuple[str, ...]:
+        """Документы с изменениями после отправки, в порядке маршрута (`SigningRoute.changed_docs`)."""
+        return tuple(doc.doc_id for doc in self.docs if doc.changed)
+
+    @property
     def waiting_for(self) -> tuple[PersonView, ...]:
         """Чья очередь сейчас: кто должен действовать и приглашённые текущего шага."""
         if self.status is not RouteStatus.active:
@@ -192,6 +215,44 @@ class RouteDetails:
             if person.view.state in TURN_STATES
             or (person.view.state is ParticipantState.invited and person.step == self.current_step)
         )
+
+
+# Версии на подписи у черновика нет, а отмена её снимает (12.4): такой маршрут ничего не показывает.
+_UNSENT = frozenset({RouteStatus.draft, RouteStatus.cancelled})
+
+
+def sent_version(route: SigningRoute, state: SignaturesState, doc_id: str) -> SentVersion | None:
+    """Версия на подписи документа, которую снял этот маршрут; None у черновика, отменённого и без версии.
+
+    Версия чужого маршрута (прежнего маршрута точки, снятого с контроля) этому маршруту не принадлежит.
+    """
+    if route.status in _UNSENT:
+        return None
+    pinned = state.pinned.get(doc_id)
+    if pinned is None or pinned.route_id != str(route.id):
+        return None
+    try:
+        at = datetime.fromisoformat(pinned.pinned_at)
+    except ValueError:
+        fallback = route.doc_sent_at(doc_id)
+        if fallback is None:
+            return None
+        at = fallback
+    return SentVersion(sha256=pinned.sha256, at=at, round=pinned.round)
+
+
+def doc_changed(route: SigningRoute, facts: RouteFacts, doc_id: str, sent: SentVersion | None) -> bool:
+    """Рабочая сборка есть и отличается от версии на подписи, а без неё (маршрут 0.20.0, перенос не удался) от
+    отпечатка снимка (12.9). Несобранные правки не считаются; у черновика и отменённого всегда False."""
+    if route.status in _UNSENT:
+        return False
+    working = facts.doc(doc_id).working_sha256
+    if working is None:
+        return False
+    if sent is not None:
+        return working != sent.sha256
+    seen = route.snapshot.get(doc_id)
+    return seen is not None and seen.compiled_sha256 is not None and seen.compiled_sha256 != working
 
 
 def method_of_participant(p: Participant, facts: RouteFacts) -> SignMethod | None:
@@ -259,6 +320,7 @@ def doc_views(point: RoutePoint, route: SigningRoute, facts: RouteFacts) -> tupl
         doc_pairs = [pair for pair in pairs if pair.doc_id == doc_id]
         doc_facts = facts.doc(doc_id)
         built = doc_facts.compiled_sha256 is not None
+        sent = sent_version(route, facts.state, doc_id)
         result.append(
             DocView(
                 doc_id=doc_id,
@@ -267,6 +329,8 @@ def doc_views(point: RoutePoint, route: SigningRoute, facts: RouteFacts) -> tupl
                 frozen=doc_id in facts.state.frozen,
                 token=approval_token(doc_facts) if built else None,
                 slots=_slots(point, facts, doc_pairs, owners),
+                sent=sent,
+                changed=doc_changed(route, facts, doc_id, sent),
             )
         )
     return tuple(result)
@@ -312,4 +376,13 @@ def event_view(event: RouteEvent, people: People, *, show_comments: bool) -> Eve
         who=people.names.get(event.actor_id) if event.actor_id is not None else None,
         comment=raw_comment if show_comments and isinstance(raw_comment, str) else None,
         reason=reason,
+        changed_docs=_changed_docs(event),
     )
+
+
+def _changed_docs(event: RouteEvent) -> tuple[str, ...] | None:
+    """`details.changed` события `sent` новой версии (12.6); None у остальных событий и у первой отправки."""
+    if event.kind is not EventKind.sent or event.details.get("new_version") is not True:
+        return None
+    raw = event.details.get("changed")
+    return tuple(item for item in raw if isinstance(item, str)) if isinstance(raw, list | tuple) else ()

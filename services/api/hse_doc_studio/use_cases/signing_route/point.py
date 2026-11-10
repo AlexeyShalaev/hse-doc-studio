@@ -143,12 +143,18 @@ class RoutePointLoader:
             allowed={DocSlot(p.doc.id, p.slot_id): tuple(p.allowed) for p in pairs},
             runtime={slot.id: slot for slot in SignatureSlotService().runtime_slots(project, version)},
             documents=documents,
-            doc_names={doc_id: self._doc_name(version, doc) for doc_id, doc in documents.items()},
+            doc_names={
+                doc_id: doc_display_name(self._template_service, version, doc) for doc_id, doc in documents.items()
+            },
         )
 
-    def _doc_name(self, version: TemplateVersion, doc: Document) -> dict[str, str]:
-        definition = self._template_service.find_definition(version, doc)
-        name = dict(definition.name) if definition is not None else {"ru": doc.id, "en": doc.id}
-        if doc.owner:
-            return {lang: f"{text} ({doc.owner})" for lang, text in name.items()}
-        return name
+
+def doc_display_name(
+    template_service: ProjectTemplateService, version: TemplateVersion, doc: Document
+) -> dict[str, str]:
+    """Название документа `{ru, en}` из пака; у личного документа команды с владельцем в скобках."""
+    definition = template_service.find_definition(version, doc)
+    name = dict(definition.name) if definition is not None else {"ru": doc.id, "en": doc.id}
+    if doc.owner:
+        return {lang: f"{text} ({doc.owner})" for lang, text in name.items()}
+    return name

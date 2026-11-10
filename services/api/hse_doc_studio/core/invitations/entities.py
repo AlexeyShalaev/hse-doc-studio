@@ -81,6 +81,9 @@ class NotificationKind(StrEnum):
     # Автору и участникам: все подписали; тем, кому приходил запрос: маршрут отменён.
     signing_completed = "signing_completed"
     signing_cancelled = "signing_cancelled"
+    # Новая версия на подписи (12.6): тем, кто согласовал или подписал изменившийся документ, но чья очередь ещё не
+    # настала. Только «Входящие», без письма; ведёт на страницу подписи.
+    signing_new_version = "signing_new_version"
 
 
 # Письмо уходит только для этих видов (S15), и только если SMTP настроен. Возврат и завершение маршрута
@@ -118,6 +121,12 @@ class NotificationPayload:
     # и срок маршрута в ISO 8601, если автор его поставил.
     profile_id: str | None = None
     deadline: str | None = None
+    # Запрос (`signing_request`) раунда новой версии, где изменился документ получателя (12.6).
+    new_version: bool = False
+    # Только для письма запроса новой версии: сообщение маршрута («Что изменилось» заменяет его) и названия
+    # изменившихся документов на языке получателя. В API уведомления не отдаются.
+    message: str | None = None
+    changed_names: str | None = None
 
 
 @dataclass(frozen=True)

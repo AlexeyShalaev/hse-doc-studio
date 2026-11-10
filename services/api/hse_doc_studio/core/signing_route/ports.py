@@ -115,11 +115,20 @@ class RouteLabels:
 
     project_name: str
     profile_name: Mapping[str, str] = field(default_factory=dict)
+    # Названия документов проекта `{doc_id: {ru, en}}`: письмо о новой версии называет изменившиеся (12.6).
+    doc_names: Mapping[str, Mapping[str, str]] = field(default_factory=dict)
 
     def profile(self, lang: str | None, fallback: str) -> str:
         """Название точки на языке `lang`, иначе по-русски, иначе любое, иначе `fallback` (id точки)."""
-        names = self.profile_name
-        return names.get(lang or "ru") or names.get("ru") or next(iter(names.values()), None) or fallback
+        return _pick(self.profile_name, lang) or fallback
+
+    def doc(self, lang: str | None, doc_id: str) -> str:
+        """Название документа на языке `lang`, иначе по-русски, иначе любое, иначе его id."""
+        return _pick(self.doc_names.get(doc_id, {}), lang) or doc_id
+
+
+def _pick(names: Mapping[str, str], lang: str | None) -> str | None:
+    return names.get(lang or "ru") or names.get("ru") or next(iter(names.values()), None)
 
 
 class IRouteLabels(Protocol):
