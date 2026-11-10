@@ -60,3 +60,25 @@ export {
   taskWaitOf,
 } from "./lib/routeWait";
 export type { MyWait, RouteWait, WaitPerson } from "./lib/routeWait";
+export {
+  affectedHeld,
+  createGuardMemory,
+  docOfPath,
+  folderOf,
+  guardKey,
+  heldDocsOf,
+} from "./lib/editGuard";
+export type {
+  GuardDoc,
+  GuardMemory,
+  GuardTarget,
+  HeldDoc,
+} from "./lib/editGuard";
+export {
+  RouteEditGuardProvider,
+  useRouteEditGuard,
+} from "./ui/RouteEditGuard";
+export type {
+  RouteEditGuard,
+  RouteEditGuardProviderProps,
+} from "./ui/RouteEditGuard";

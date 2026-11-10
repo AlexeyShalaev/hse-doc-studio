@@ -1,0 +1,17 @@
+{
+  "title_one": "Document out for signing",
+  "title_other": "Documents out for signing",
+  "single": "Changes will not reach the version being signed. Continue?",
+  "list_one": "Out for signing: {{names}}. Changes will not reach the version being signed. Continue?",
+  "list_other": "Out for signing: {{names}}. Changes will not reach the versions being signed. Continue?",
+  "hint": "To have the new version signed, click \"Send new version\" on the \"Signing\" card after editing.",
+  "continue": "Continue",
+  "cancel": "Cancel",
+  "office": {
+    "title": "Editor not opened",
+    "body": "The document is out for signing. Changes will not reach the version being signed.",
+    "open": "Open editor"
+  },
+  "planLine_one": "Out for signing: {{names}}. Changes will not reach the version being signed.",
+  "planLine_other": "Out for signing: {{names}}. Changes will not reach the versions being signed."
+}
