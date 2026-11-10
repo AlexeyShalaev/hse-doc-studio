@@ -180,9 +180,9 @@ async def test__invited_without_account__skipped() -> None:
     assert stand.notifier.delivered == []
 
 
-async def test__document_rebuilt__route_is_about_to_pause__no_reminder() -> None:
+async def test__pinned_version_replaced__route_is_about_to_pause__no_reminder() -> None:
     stand = await _stand()
-    stand.driver.world.compiled[DOC] = "c" * 64
+    stand.driver.world.pinned[DOC] = "c" * 64
 
     assert await stand.run_at(_asked(stand.driver) + 5 * DAY) == 0
     assert stand.notifier.delivered == []
