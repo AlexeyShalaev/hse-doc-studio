@@ -65,7 +65,7 @@ Document tabs and a PDF page with signature frames, just like on a document's �
 
 - A signature marked “not placed” goes on the open page with “To page N”. A signature on another page can be shown with “Go” or moved to the open page with “Here”.
 - A signature the checkpoint does not require (for example, the academic supervisor on an application) is added with “Add signature: …” and removed with the cross “Remove signature from route”.
-- A signer may change the method on their step, but an image and an electronic signature with a plate are offered only if their signature is placed on the page. Without a place they are left with “E-signature in PDF” without a mark.
+- A signer may change the method on their step, but an image and an electronic signature with a plate are offered only if their signature is placed on the page. Without a place they are left with “E-signature in PDF” without a mark. If they switch from an image to an e-signature and the place is narrow, the Studio widens it to 70 mm leftwards from its right edge so the e-signature plate fits.
 
 ### Your signature
 

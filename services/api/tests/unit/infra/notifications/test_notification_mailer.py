@@ -219,7 +219,7 @@ async def test__signing_returned__comment_in_a_block_and_link_to_the_checkpoint(
     mail = mailer.render_notification("a@x.org", NotificationKind.signing_returned, payload, locale="ru")
 
     assert mail is not None
-    assert mail.subject == "Пётр Петров вернул документы на доработку"
+    assert mail.subject == "Документы возвращены на доработку: Пётр Петров"
     assert "Комментарий" in mail.text
     assert "Уточните <цель>" in mail.text
     assert "&lt;цель&gt;" in mail.html

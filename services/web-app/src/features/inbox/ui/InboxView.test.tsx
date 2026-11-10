@@ -220,7 +220,7 @@ describe("«Входящие»: раздел «На подпись»", () => {
     expect(screen.getByTestId("inbox-notification-n2")).toBeInTheDocument();
     await user.click(screen.getByTestId("inbox-tab-signing"));
     expect(screen.getByTestId("inbox-notification-n1")).toHaveTextContent(
-      "Иванов И. И. вернул на доработку: «Поправьте тему» · Bertie",
+      "Возвращено на доработку (Иванов И. И.): «Поправьте тему» · Bertie",
     );
     expect(screen.queryByTestId("inbox-notification-n2")).toBeNull();
   });
@@ -302,7 +302,7 @@ describe("«Входящие»: тексты уведомлений маршру
           excerpt: "Нет подписи",
         }),
       ),
-    ).toMatch(/^Участник вернул на доработку: «Нет подписи»/);
+    ).toMatch(/^Возвращено на доработку \(Участник\): «Нет подписи»/);
   });
 });
 

@@ -117,7 +117,7 @@
     "signing_reminder": "Напоминание о подписи: {{excerpt}}",
     "signing_reminder_approve": "Напоминание о согласовании: {{excerpt}}",
     "signing_reminder_sign": "Напоминание о подписи итогового PDF: {{excerpt}}",
-    "signing_returned": "{{actor}} вернул на доработку: «{{excerpt}}»",
+    "signing_returned": "Возвращено на доработку ({{actor}}): «{{excerpt}}»",
     "signing_paused": "Маршрут остановлен: {{excerpt}}",
     "signing_paused_rebuilt": "Документ изменился, маршрут остановлен: {{excerpt}}",
     "signing_paused_marks_changed": "Подписи изменились вне маршрута, маршрут остановлен: {{excerpt}}",

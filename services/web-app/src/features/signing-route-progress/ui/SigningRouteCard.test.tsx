@@ -219,7 +219,7 @@ describe("Подписание: маршрут идёт", () => {
     );
     const author = within(await screen.findByTestId("signing-step-1"));
     expect(author.getByText("Иванов И. И.")).toBeInTheDocument();
-    expect(author.getByText(/^подписал/)).toBeInTheDocument();
+    expect(author.getByText(/^подписано/)).toBeInTheDocument();
     const step2 = await screen.findByTestId("signing-step-2");
     expect(step2).toHaveTextContent("согласует и подпишет с");
     // Автор уже всё сделал: напоминать ему нечего.
@@ -325,11 +325,11 @@ describe("Подписание: остановка и возврат", () => {
     const u = userEvent.setup();
     mount();
     expect(await status()).toHaveTextContent(
-      "Петров П. П. вернул на доработку: «Уточните цель проекта»",
+      "Возвращено на доработку (Петров П. П.): «Уточните цель проекта»",
     );
     const route = await signingRouteApi.get(PROJECT, id);
     const sup = route.steps[1]?.[0]?.id ?? "";
-    expect(await person(sup)).toHaveTextContent("вернул на доработку");
+    expect(await person(sup)).toHaveTextContent("возвращено на доработку");
     expect(screen.getByTestId("signing-open-doc")).toHaveAttribute(
       "href",
       `/projects/${PROJECT}/documents/${DOC}`,
@@ -422,7 +422,7 @@ describe("Подписание: эталонные состояния", () => {
     expect(await status()).toHaveTextContent(
       "Очередь: k***@hse.ru (академический руководитель)",
     );
-    expect(await person(invited.id)).toHaveTextContent("не принял приглашение");
+    expect(await person(invited.id)).toHaveTextContent("приглашение не принято");
     expect(screen.getByTestId(`signing-remind-${invited.id}`)).toBeEnabled();
     await u.click(screen.getByTestId(`signing-copy-${invited.id}`));
     await waitFor(async () => {

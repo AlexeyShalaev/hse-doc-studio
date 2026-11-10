@@ -294,7 +294,7 @@ def _invited_text(preview: RoutePreview) -> list[str]:
     """Участники, которые ещё не приняли приглашение: через MCP маршрут с ними не уходит (раздел 6.8)."""
     return [
         localized_error(
-            f"{p.name or p.participant.persona} ({p.participant.persona}) ещё не принял приглашение в проект: "
+            f"приглашение в проект ещё не принято: {p.name or p.participant.persona} ({p.participant.persona}); "
             "дождитесь принятия или отправьте маршрут из интерфейса",
             f"{p.name or p.participant.persona} ({p.participant.persona}) has not accepted the project invitation "
             "yet: wait for it or send the route from the interface",
