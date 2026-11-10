@@ -2,6 +2,7 @@ import type { ZodType } from "zod";
 import {
   demoError,
   demoJson,
+  demoNoContent,
   queryString,
   type DemoRequest,
   type DemoResponse,
@@ -16,6 +17,8 @@ import {
   UpdateSigningRouteRequestSchema,
   type ParticipantMembership,
   type ParticipantState,
+  type RouteDocChange,
+  type RouteDocVersion,
   type RouteEvent,
   type RouteEventKind,
   type RouteParticipant,
@@ -53,7 +56,12 @@ import {
 //   ключей на сервере 403 `server_keys_forbidden`; пароль `broken` в «Отправить и подписать»
 //   отправляет маршрут и отвечает 400 `sign_failed` с `sent: true`;
 // - готовая подпись и подпись КриптоПро приходят существующим адресом
-//   `.../docs/{doc}/detached/{slot}`: только участнику в его очередь подписывать (6.10).
+//   `.../docs/{doc}/detached/{slot}`: только участнику в его очередь подписывать (6.10);
+// - версия на подписи (раздел 12): отправка снимает её с рабочей сборки, пересборка маршрут не
+//   останавливает, а только даёт «есть изменения»; новая версия из `active` и `completed`
+//   (без изменений 409 `nothing_changed`) меняет версию только у изменившихся документов, согласия
+//   и ЭП по остальным остаются; отмена снимает версии; «Подписывать текущую сборку»
+//   (`DELETE .../docs/{doc}/pinned`) только у документа, который маршрут не держит.
 
 type Localized = Record<string, string>;
 
@@ -137,14 +145,37 @@ export type SigningDemoSeed = {
   persona: string;
   deadline?: string | null;
   message?: string | null;
+  /**
+   * В каком виде маршрут (раздел 12): `sent` только что отправлен; `diverged` автор потом
+   * пересобрал документы, рабочая сборка ушла от версии на подписи; `new_version` подписант уже
+   * согласовал, затем автор отправил новую версию; `migrated` маршрут 0.20.0, перенос нашёл
+   * сборку (версия от `sent_at`, снаружи не отличить); `migration_lost` маршрут 0.20.0, версию не
+   * восстановить: стоит с `sent_changed`, нужна новая версия.
+   */
+  state?: SigningDemoSeedState;
 };
+
+export type SigningDemoSeedState =
+  | "sent"
+  | "diverged"
+  | "new_version"
+  | "migrated"
+  | "migration_lost";
 
 export type SigningRouteDemo = {
   routes: DemoRoute[];
   /** Сбросить все маршруты. */
   reset: () => void;
-  /** Пересборка документа: активный маршрут встаёт на паузу (`rebuilt`). */
+  /**
+   * Пересборка документа с другим PDF: маршрут идёт дальше, у документа «есть изменения после
+   * отправки» (раздел 12.5).
+   */
   rebuild: (projectId: string, docId: string) => void;
+  /**
+   * Версию на подписи подменили мимо маршрута (git, восстановление `.hse-studio`): идущий или
+   * завершённый маршрут встаёт с `sent_changed` (12.5).
+   */
+  tamper: (projectId: string, docId: string) => void;
   /** Приглашение принято: участник получает аккаунт. */
   acceptInvitation: (invitationId: string, user: SigningDemoUser) => void;
   /** Сколько задач «На подпись» у человека: для `InboxSummary.signing_tasks` демо «Входящих». */
@@ -230,12 +261,17 @@ type Participant = {
   invitation_id: string | null;
   name: string | null;
   method: RouteSignMethod | null;
+  /**
+   * Согласие: отпечатки `build:<sha>` версии на подписи по документам. Новая версия переносит
+   * его в новый раунд всегда, а действует оно по каждому документу отдельно (12.6).
+   */
   approval: {
     round: number;
     at: string;
     tokens: Record<string, string>;
   } | null;
-  signedRound: number | null;
+  /** ЭП по документам: отпечаток B, над которым поставлена. */
+  signed: Record<string, string>;
   returnedRound: number | null;
   imageReady: boolean;
   plate: SigningPlate | null;
@@ -260,10 +296,16 @@ type Route = {
   updated_at: string;
   steps: Participant[][];
   extra: RouteSlotRef[];
-  /** Отпечаток сборки каждого документа точки. */
+  /** Рабочая сборка каждого документа точки. */
   build: Record<string, string>;
-  /** Отпечаток зафиксированного PDF; null до фиксации. */
-  frozen: Record<string, string> | null;
+  /** Версия на подписи по документам (12.3); пусто у черновика и после отмены. */
+  pinned: Record<string, RouteDocVersion>;
+  /** Снимок маршрута 0.20.0 без перенесённой версии (12.11): с ним сравнивается рабочая сборка. */
+  legacy: Record<string, string>;
+  /** Документы, у которых последняя отправка сменила версию на подписи (новая версия). */
+  lastChanged: string[];
+  /** Зафиксированный PDF (B) по документам; документа нет, пока он не зафиксирован. */
+  frozen: Record<string, string>;
   events: RouteEvent[];
 };
 
@@ -328,8 +370,21 @@ export const createSigningRouteDemo = (
     );
 
   const participants = (r: Route): Participant[] => r.steps.flat();
-  // Функция, а не поле: обработчики меняют фиксацию через settle(), сужение типа тут мешает.
-  const isFrozen = (r: Route): boolean => r.frozen !== null;
+  const routeDocs = (r: Route): string[] => r.profile.docs.map((d) => d.doc_id);
+  const isDocFrozen = (r: Route, docId: string): boolean => docId in r.frozen;
+  /** Все документы маршрута зафиксированы: фаза подписи. */
+  const isFrozen = (r: Route): boolean =>
+    routeDocs(r).every((doc) => isDocFrozen(r, doc));
+  const sentToken = (r: Route, docId: string): string =>
+    `build:${r.pinned[docId]?.sha256 ?? r.build[docId] ?? ""}`;
+  /** Рабочая сборка ушла от отправленного: от версии на подписи, а без неё от снимка 0.20.0. */
+  const isChanged = (r: Route, docId: string): boolean => {
+    if (r.status === "draft" || r.status === "cancelled") return false;
+    const sent = r.pinned[docId]?.sha256 ?? r.legacy[docId];
+    return sent !== undefined && r.build[docId] !== sent;
+  };
+  const changedDocs = (r: Route): string[] =>
+    routeDocs(r).filter((doc) => isChanged(r, doc));
 
   const assignmentsOf = (r: Route, p: Participant): RouteSlotRef[] => {
     const owner = participants(r).find((q) => q.persona === p.persona);
@@ -343,15 +398,36 @@ export const createSigningRouteDemo = (
     ...new Set(assignmentsOf(r, p).map((a) => a.doc_id)),
   ];
 
+  /** Документы, которые участник согласует: свои, у согласующего без слотов все документы маршрута. */
+  const approvalDocs = (r: Route, p: Participant): string[] => {
+    const own = docsOf(r, p);
+    return own.length > 0 ? own : routeDocs(r);
+  };
+
   const defaultMethod = (r: Route, persona: string): RouteSignMethod | null =>
     pairsOf(r).find((pair) => pair.persona === persona)?.method ?? null;
 
   // Расчёт состояния (упрощённый evaluate)
 
+  /** Согласие по документу действует, пока его отпечаток равен версии на подписи (12.6). */
+  const approvedDoc = (r: Route, p: Participant, docId: string) =>
+    p.approval !== null &&
+    p.approval.round === r.round &&
+    p.approval.tokens[docId] === sentToken(r, docId);
+  /** Согласовал для хода шагов: совпали отпечатки всех его документов. */
   const approved = (r: Route, p: Participant) =>
-    p.approval !== null && p.approval.round === r.round;
+    approvalDocs(r, p).every((doc) => approvedDoc(r, p, doc));
+  const signedDoc = (r: Route, p: Participant, docId: string) =>
+    isDocFrozen(r, docId) && p.signed[docId] === r.frozen[docId];
   const signed = (r: Route, p: Participant) =>
-    !isCrypto(p.method) || p.signedRound === r.round;
+    !isCrypto(p.method) || docsOf(r, p).every((doc) => signedDoc(r, p, doc));
+  /** ЭП участника над текущими B всех его документов. */
+  const signAll = (r: Route, p: Participant) => {
+    for (const doc of docsOf(r, p)) {
+      const frozen = r.frozen[doc];
+      if (frozen !== undefined) p.signed[doc] = frozen;
+    }
+  };
 
   /** Картинка или ЭП без данных плашки: его действие меняет видимый слой. */
   const canChangeVisual = (p: Participant) =>
@@ -383,12 +459,12 @@ export const createSigningRouteDemo = (
     if (live && approved(r, p)) {
       if (signed(r, p)) return "done";
       // Согласовал до фиксации и ждёт её: `waiting` с `approved_at`, как в ядре.
-      return r.frozen ? "to_sign" : "waiting";
+      return isFrozen(r) ? "to_sign" : "waiting";
     }
     if (r.status !== "active") return "waiting";
     const step = r.steps.findIndex((s) => s.includes(p)) + 1;
     if (step !== currentStep(r)) return "waiting";
-    return r.frozen && isCrypto(p.method) ? "to_approve_sign" : "to_approve";
+    return isFrozen(r) && isCrypto(p.method) ? "to_approve_sign" : "to_approve";
   };
 
   const nextActionOf = (r: Route, p: Participant): SigningNextAction => {
@@ -419,12 +495,19 @@ export const createSigningRouteDemo = (
         .join(","),
     ).slice(0, 16);
 
-  /** Отпечаток, который участник должен вернуть в `expected` следующего действия. */
+  /**
+   * Отпечаток, который участник должен вернуть в `expected` следующего действия; null у
+   * документа, где делать нечего (в раунде новой версии: согласие и подпись по нему остались).
+   */
   const tokenFor = (r: Route, p: Participant, docId: string): string | null => {
     const action = nextActionOf(r, p);
     if (action === "wait" || action === "done") return null;
-    if (r.frozen) return `pdf:${r.frozen[docId] ?? ""}`;
-    const build = `build:${r.build[docId] ?? ""}`;
+    if (isFrozen(r))
+      return signedDoc(r, p, docId) && approvedDoc(r, p, docId)
+        ? null
+        : `pdf:${r.frozen[docId] ?? ""}`;
+    if (approvedDoc(r, p, docId)) return null;
+    const build = sentToken(r, docId);
     return action === "approve_and_sign"
       ? `${build}:${visibleLayer(r)}`
       : build;
@@ -435,7 +518,7 @@ export const createSigningRouteDemo = (
     kind: RouteEventKind,
     who: string | null,
     extra: Partial<
-      Pick<RouteEvent, "comment" | "reason" | "participant_id">
+      Pick<RouteEvent, "comment" | "reason" | "participant_id" | "changed_docs">
     > = {},
   ) => {
     r.events.push({
@@ -447,6 +530,7 @@ export const createSigningRouteDemo = (
       participant_id: extra.participant_id ?? null,
       comment: extra.comment ?? null,
       reason: extra.reason ?? null,
+      changed_docs: extra.changed_docs ?? null,
     });
     r.updated_at = now();
   };
@@ -454,13 +538,14 @@ export const createSigningRouteDemo = (
   /** Фиксация, напоминания очереди и завершение: повторный вызов ничего не меняет. */
   const settle = (r: Route) => {
     if (r.status !== "active") return;
-    if (!r.frozen && visualChangers(r).length === 0) {
-      r.frozen = Object.fromEntries(
-        Object.entries(r.build).map(([doc, value]) => [
-          doc,
-          sha(`${value}:frozen:${String(r.round)}`),
-        ]),
-      );
+    // Фиксируются документы без B из версии на подписи; B документов без изменений остаются.
+    if (!isFrozen(r) && visualChangers(r).length === 0) {
+      for (const doc of routeDocs(r)) {
+        if (isDocFrozen(r, doc)) continue;
+        r.frozen[doc] = sha(
+          `${r.pinned[doc]?.sha256 ?? ""}:frozen:${String(r.round)}`,
+        );
+      }
       event(r, "frozen", null);
     }
     for (const p of participants(r)) {
@@ -480,18 +565,22 @@ export const createSigningRouteDemo = (
   const phaseOf = (r: Route): SigningRoute["phase"] => {
     if (r.status === "completed") return "done";
     if (r.status !== "active") return null;
-    return r.frozen ? "signing" : "approval";
+    return isFrozen(r) ? "signing" : "approval";
   };
 
-  const slotStatus = (r: Route, pair: { persona: string }) => {
+  /** Слот по своему документу: картинка открыта после согласия, ЭП над текущим B (12.6). */
+  const slotStatus = (r: Route, pair: { persona: string; doc_id: string }) => {
     const owner = participants(r).find((p) => p.persona === pair.persona);
-    if (!owner || !approved(r, owner)) return "pending" as const;
-    return signed(r, owner) ? ("signed" as const) : ("pending" as const);
+    if (!owner || !approvedDoc(r, owner, pair.doc_id)) return "pending" as const;
+    if (!isCrypto(owner.method)) return "signed" as const;
+    return signedDoc(r, owner, pair.doc_id)
+      ? ("signed" as const)
+      : ("pending" as const);
   };
 
   /** Как `changes_visible` расчёта: не согласовал, а видимый слой (картинка, плашка) ещё ставит. */
   const changesVisible = (r: Route, p: Participant): boolean =>
-    !r.frozen &&
+    !isFrozen(r) &&
     !approved(r, p) &&
     assignmentsOf(r, p).length > 0 &&
     p.method !== "pades";
@@ -569,7 +658,9 @@ export const createSigningRouteDemo = (
     docs: r.profile.docs.map((doc) => ({
       doc_id: doc.doc_id,
       name: doc.name,
-      frozen: r.frozen !== null,
+      frozen: isDocFrozen(r, doc.doc_id),
+      sent: r.pinned[doc.doc_id] ?? null,
+      changed: isChanged(r, doc.doc_id),
       slots: pairsOf(r)
         .filter((pair) => pair.doc_id === doc.doc_id)
         .map((pair) => ({
@@ -584,6 +675,7 @@ export const createSigningRouteDemo = (
     steps: r.steps.map((step) => step.map((p) => toParticipant(r, p))),
     events: [...r.events],
     candidates: candidatesOf(r),
+    changed_docs: changedDocs(r),
   });
 
   const waitingFor = (r: Route) =>
@@ -614,6 +706,8 @@ export const createSigningRouteDemo = (
     completed_at: r.completed_at,
     updated_at: r.updated_at,
     waiting_for: waitingFor(r),
+    docs: routeDocs(r),
+    changed_docs: changedDocs(r),
   });
 
   const keysOf = (user: SigningDemoUser): SigningKeyInfo[] => {
@@ -672,7 +766,7 @@ export const createSigningRouteDemo = (
   const allowedMethods = (r: Route, p: Participant): RouteSignMethod[] => {
     if (assignmentsOf(r, p).length === 0) return [];
     // После фиксации только способы без новой видимой метки.
-    if (r.frozen) return isCrypto(p.method) && p.method ? [p.method] : [];
+    if (isFrozen(r)) return isCrypto(p.method) && p.method ? [p.method] : [];
     // Картинке и плашке нужно место на странице: без него остаётся только текущий способ (6.3).
     const placed = assignmentsOf(r, p).every((pair) =>
       isPlaced(r.project_id, pair.doc_id, pair.slot_id),
@@ -714,6 +808,9 @@ export const createSigningRouteDemo = (
     user: SigningDemoUser,
   ): SigningTask => {
     const mine = assignmentsOf(r, p);
+    // Изменившиеся документы видят автор и тот, кто отправил маршрут; остальным null.
+    const manages =
+      authors.get(r.id)?.id === user.id || r.sent_by?.id === user.id;
     const pdfBase = (docId: string) =>
       `/api/v1/projects/${encodeURIComponent(r.project_id)}/docs/${encodeURIComponent(docId)}`;
     return {
@@ -733,6 +830,9 @@ export const createSigningRouteDemo = (
         sender: r.sent_by?.name ?? null,
         sent_at: r.sent_at,
         stop_reason: r.stop_reason,
+        new_version: r.lastChanged.some((doc) =>
+          approvalDocs(r, p).includes(doc),
+        ),
       },
       steps: r.steps.map((step) =>
         step.map((q) => ({
@@ -767,10 +867,10 @@ export const createSigningRouteDemo = (
         return {
           doc_id: docId,
           name: doc?.name ?? {},
-          pdf_url: r.frozen
+          pdf_url: isDocFrozen(r, docId)
             ? `${pdfBase(docId)}/frozen/pdf`
             : `${pdfBase(docId)}/pdf/signed`,
-          frozen: r.frozen !== null,
+          frozen: isDocFrozen(r, docId),
           token: tokenFor(r, p, docId),
           mine: pairs
             .filter((pair) => pair.persona === p.persona)
@@ -782,7 +882,7 @@ export const createSigningRouteDemo = (
                 reason:
                   status === "signed"
                     ? null
-                    : approved(r, p)
+                    : approvedDoc(r, p, docId)
                       ? "no_signature_file"
                       : "awaiting_approval",
               };
@@ -797,6 +897,11 @@ export const createSigningRouteDemo = (
               ),
               status: slotStatus(r, pair),
             })),
+          sent_at: r.pinned[docId]?.at ?? null,
+          changed_since_mine:
+            p.approval?.tokens[docId] !== undefined &&
+            p.approval.tokens[docId] !== sentToken(r, docId),
+          changed: manages ? isChanged(r, docId) : null,
         };
       }),
       events: [...r.events],
@@ -879,8 +984,34 @@ export const createSigningRouteDemo = (
     return 2;
   };
 
+  /** Кандидат отправки (12.6): рабочая сборка каждого документа. */
+  const candidateOf = (r: Route): Record<string, string> =>
+    Object.fromEntries(
+      routeDocs(r).map((doc) => [doc, `build:${r.build[doc] ?? ""}`]),
+    );
+
+  const changeOf = (r: Route, docId: string): RouteDocChange => {
+    const sent = r.pinned[docId];
+    if (!sent) return "new";
+    return sent.sha256 === r.build[docId] ? "same" : "changed";
+  };
+
+  /** Идущий и завершённый маршрут отправляют только новую версию: без изменений нечего. */
+  const nothingToSend = (r: Route): boolean =>
+    (r.status === "active" || r.status === "completed") &&
+    changedDocs(r).length === 0;
+
   const toPreview = (r: Route, user: SigningDemoUser): SigningRoutePreview => {
+    const candidate = candidateOf(r);
     const blockers = blockersOf(r, user);
+    if (nothingToSend(r))
+      blockers.push({
+        code: "nothing_changed",
+        doc_id: null,
+        slot_id: null,
+        participant_id: null,
+        other_route: null,
+      });
     const L = visualStep(r);
     const sender = r.steps[0]?.find((p) => p.user_id === user.id) ?? null;
     return {
@@ -896,7 +1027,9 @@ export const createSigningRouteDemo = (
         doc_id: doc.doc_id,
         name: doc.name,
         built: true,
-        token: `build:${r.build[doc.doc_id] ?? ""}`,
+        token: candidate[doc.doc_id] ?? null,
+        change: changeOf(r, doc.doc_id),
+        sent: r.pinned[doc.doc_id] ?? null,
       })),
       participants: r.steps.flatMap((step, index) =>
         step.map((p) => ({
@@ -911,6 +1044,11 @@ export const createSigningRouteDemo = (
           image_ready: p.imageReady,
           plate_ready: p.plate !== null,
           actions: actionsOf(r, p, L),
+          keeps_approval:
+            p.approval !== null &&
+            approvalDocs(r, p).every(
+              (doc) => p.approval?.tokens[doc] === candidate[doc],
+            ),
         })),
       ),
       blockers,
@@ -931,7 +1069,7 @@ export const createSigningRouteDemo = (
     ...who,
     method: defaultMethod(r, persona),
     approval: null,
-    signedRound: null,
+    signed: {},
     returnedRound: null,
     // Картинка автора уже стоит в его слоте проекта; данные плашки известны из профиля.
     imageReady: who.user_id !== null && who.user_id === authors.get(r.id)?.id,
@@ -1038,7 +1176,10 @@ export const createSigningRouteDemo = (
           sha(`${projectId}:${doc.doc_id}:1`),
         ]),
       ),
-      frozen: null,
+      pinned: {},
+      legacy: {},
+      lastChanged: [],
+      frozen: {},
       events: [],
     };
     authors.set(r.id, author);
@@ -1086,48 +1227,63 @@ export const createSigningRouteDemo = (
     return items;
   };
 
-  const buildsOf = (r: Route): Record<string, string> =>
-    Object.fromEntries(
-      Object.entries(r.build).map(([doc, value]) => [doc, `build:${value}`]),
-    );
-
-  /** Отправить или отправить заново; `sign`: отправитель сразу подписывает свои слоты ЭП. */
-  const sendRoute = (r: Route, user: SigningDemoUser, sign: boolean): void => {
-    const builds = buildsOf(r);
+  /**
+   * Отправить, отправить заново или отправить новую версию (12.6); `sign`: отправитель сразу
+   * подписывает свои слоты ЭП, `note`: «Что изменилось» вместо сообщения маршрута.
+   */
+  const sendRoute = (
+    r: Route,
+    user: SigningDemoUser,
+    sign: boolean,
+    note: string | null = null,
+  ): void => {
     const previous = r.round;
+    // Версия на подписи снимается только у изменившихся документов; у остальных остаются
+    // `pinned_at`, B и подписи над ним.
+    const changed = routeDocs(r).filter(
+      (doc) =>
+        r.pinned[doc] !== undefined && r.pinned[doc].sha256 !== r.build[doc],
+    );
     r.round += 1;
+    for (const doc of routeDocs(r)) {
+      if (r.pinned[doc]?.sha256 === r.build[doc]) continue;
+      r.pinned[doc] = { sha256: r.build[doc] ?? "", at: now(), round: r.round };
+      delete r.frozen[doc];
+    }
+    r.legacy = {};
+    r.lastChanged = changed;
     r.status = "active";
     r.stop_reason = null;
-    r.frozen = null;
     r.sent_by = user;
     r.sent_at = now();
     r.completed_at = null;
+    if (note !== null) r.message = note;
     for (const p of participants(r)) {
       p.returnedRound = null;
       p.notified_at = null;
       p.reminders = 0;
       p.reminded_at = null;
-      // Согласие переносится, если документы участника не менялись.
-      const carried =
-        p.approval !== null &&
-        p.approval.round === previous &&
-        docsOf(r, p).every((doc) => p.approval?.tokens[doc] === builds[doc]);
-      p.approval =
-        carried && p.approval ? { ...p.approval, round: r.round } : null;
-      p.signedRound = null;
+      // Согласие переносится всегда, действует по документам с прежними отпечатками.
+      if (p.approval) p.approval = { ...p.approval, round: r.round };
     }
     // Отправка и есть согласие отправителя.
+    const tokens = Object.fromEntries(
+      routeDocs(r).map((doc) => [doc, sentToken(r, doc)]),
+    );
     for (const p of r.steps[0] ?? []) {
       if (p.user_id === user.id)
-        p.approval = { round: r.round, at: now(), tokens: builds };
+        p.approval = { round: r.round, at: now(), tokens };
     }
-    // «Отправить заново» пишет `resumed`, первая отправка `sent`.
-    event(r, previous === 0 ? "sent" : "resumed", user.name);
+    // Первая отправка и новая версия пишут `sent`, «Отправить заново» без изменений `resumed`.
+    if (previous === 0) event(r, "sent", user.name);
+    else if (changed.length > 0)
+      event(r, "sent", user.name, { changed_docs: changed });
+    else event(r, "resumed", user.name);
     settle(r);
     if (sign && isFrozen(r)) {
       for (const p of r.steps[0] ?? []) {
         if (p.user_id === user.id && isCrypto(p.method)) {
-          p.signedRound = r.round;
+          signAll(r, p);
           event(r, "signed", user.name, { participant_id: p.id });
         }
       }
@@ -1141,6 +1297,60 @@ export const createSigningRouteDemo = (
     const next = encodeURIComponent(`/sign/${r.project_id}/${r.id}`);
     return `${window.location.origin}/project-invite/hspi_demo_ok${String(seq)}?next=${next}`;
   };
+
+  /** Пересборка с другим PDF: маршрут идёт дальше, версия на подписи та же (12.5). */
+  const rebuildDoc = (r: Route, docId: string): void => {
+    r.build[docId] = sha(`${r.build[docId] ?? ""}:rebuilt`);
+    r.updated_at = now();
+  };
+
+  /**
+   * Перенос маршрута 0.20.0 (12.11): сборка с отпечатком снимка становится версией на подписи от
+   * `sent_at`; иначе версию не восстановить (архива сборок в демо нет), идущий маршрут встаёт
+   * с `sent_changed`.
+   */
+  const migrate = (r: Route): void => {
+    const lost: string[] = [];
+    for (const [doc, snapshot] of Object.entries(r.legacy)) {
+      if (r.build[doc] !== snapshot) {
+        lost.push(doc);
+        continue;
+      }
+      r.pinned[doc] = {
+        sha256: snapshot,
+        at: r.sent_at ?? now(),
+        round: Math.max(r.round, 1),
+      };
+    }
+    r.legacy = Object.fromEntries(
+      Object.entries(r.legacy).filter(([doc]) => lost.includes(doc)),
+    );
+    if (lost.length > 0 && (r.status === "active" || r.status === "completed")) {
+      r.status = "paused";
+      r.stop_reason = "sent_changed";
+      r.frozen = {};
+      event(r, "paused", null, { reason: "sent_changed" });
+    }
+  };
+
+  /** Последняя версия на подписи документа в проекте: её отдаёт план и снимает «Подписывать текущую сборку». */
+  const pinnedOf = (
+    projectId: string,
+    docId: string,
+  ): { route: Route; version: RouteDocVersion } | null => {
+    const holder = routes
+      .filter((r) => r.project_id === projectId && r.pinned[docId])
+      .sort((a, b) => b.created_at.localeCompare(a.created_at))[0];
+    const version = holder?.pinned[docId];
+    return holder && version ? { route: holder, version } : null;
+  };
+
+  const HOLDING: SigningRouteStatus[] = [
+    "active",
+    "paused",
+    "returned",
+    "completed",
+  ];
 
   // Обработчики
 
@@ -1239,9 +1449,11 @@ export const createSigningRouteDemo = (
         const holder = routes.find(
           (r) =>
             r.project_id === projectId &&
-            ["active", "paused", "returned", "completed"].includes(r.status) &&
-            toRoute(r).docs.some((doc) => doc.doc_id === docId),
+            HOLDING.includes(r.status) &&
+            routeDocs(r).includes(docId),
         );
+        // Версия на подписи переживает маршрут (12.4): план документа отдаёт её и без него.
+        const pinned = pinnedOf(projectId, docId);
         return demoJson({
           profile_id: null,
           total: 0,
@@ -1249,7 +1461,25 @@ export const createSigningRouteDemo = (
           crypto_total: 0,
           crypto_signed: 0,
           waiting_for_me: 0,
-          docs: [],
+          docs: pinned
+            ? [
+                {
+                  doc_id: docId,
+                  built: true,
+                  frozen: null,
+                  slots: [],
+                  held_by_route: holder?.status === "active",
+                  pinned: {
+                    sha256: pinned.version.sha256,
+                    pinned_at: pinned.version.at,
+                    route_id: pinned.route.id,
+                    round: pinned.version.round,
+                  },
+                  working_differs:
+                    pinned.route.build[docId] !== pinned.version.sha256,
+                },
+              ]
+            : [],
           route: holder
             ? {
                 id: holder.id,
@@ -1260,9 +1490,35 @@ export const createSigningRouteDemo = (
                 current_step: currentStep(holder),
                 steps_total: holder.steps.length,
                 stop_reason: holder.stop_reason,
+                changed_docs: changedDocs(holder),
               }
             : null,
         });
+      }),
+    },
+    {
+      // «Подписывать текущую сборку» (12.4): только пока документ не держит маршрут.
+      method: "DELETE",
+      pattern: "/projects/:projectId/docs/:docId/pinned",
+      handler: signedIn((req, { projectId }) => {
+        const docId = req.params.docId ?? "";
+        const held = routes.some(
+          (r) =>
+            r.project_id === projectId &&
+            HOLDING.includes(r.status) &&
+            routeDocs(r).includes(docId),
+        );
+        if (held)
+          return conflict(
+            "route_locked",
+            "The document is held by a signing route",
+          );
+        for (const r of routes) {
+          if (r.project_id !== projectId) continue;
+          const { [docId]: _dropped, ...rest } = r.pinned;
+          r.pinned = rest;
+        }
+        return demoNoContent();
       }),
     },
     {
@@ -1382,23 +1638,29 @@ export const createSigningRouteDemo = (
       method: "POST",
       pattern: "/projects/:projectId/signing-routes/:routeId/send",
       handler: withRoute((req, r, { user }) => {
-        if (!["draft", "paused", "returned", "cancelled"].includes(r.status))
-          return conflict("invalid_transition", "The route is already sent");
+        if (r.status === "archived")
+          return conflict("invalid_transition", "The route is archived");
         const body = parse(SendSigningRouteRequestSchema, req.body);
         if (!body) return invalid("Invalid send request");
+        if (nothingToSend(r))
+          return conflict(
+            "nothing_changed",
+            "The documents have not changed since they were sent",
+          );
         const blockers = blockersOf(r, user);
         if (blockers.length > 0)
           return conflict("route_blocked", "The route cannot be sent", {
             blockers,
           });
-        const mismatch = checkExpected(r, body.expected, buildsOf(r));
+        const mismatch = checkExpected(r, body.expected, candidateOf(r));
         if (mismatch) return mismatch;
         // Ключ проверяется до отправки: отказ на этом этапе ничего не меняет.
         const refused = body.sign === null ? null : refuseKey(user, body.sign);
         if (refused) return refused;
         // Подпись отказала уже после отправки: маршрут ушёл, подписи отправителя нет.
         const broken = body.sign?.passphrase === "broken";
-        sendRoute(r, user, body.sign !== null && !broken);
+        const note = body.note?.trim() ? body.note.trim() : null;
+        sendRoute(r, user, body.sign !== null && !broken, note);
         if (broken && isFrozen(r))
           return demoError(400, "sign_failed", "The key refused to sign", {
             sent: true,
@@ -1414,6 +1676,10 @@ export const createSigningRouteDemo = (
           return conflict("invalid_transition", "The route is already closed");
         r.status = "cancelled";
         r.stop_reason = null;
+        // Отмена снимает версии на подписи (12.4): документ снова подписывается по текущей сборке.
+        r.pinned = {};
+        r.legacy = {};
+        r.frozen = {};
         event(r, "cancelled", user.name);
         return demoJson(toRoute(r));
       }),
@@ -1549,10 +1815,7 @@ export const createSigningRouteDemo = (
           round: r.round,
           at: now(),
           tokens: Object.fromEntries(
-            Object.entries(r.build).map(([doc, value]) => [
-              doc,
-              `build:${value}`,
-            ]),
+            routeDocs(r).map((doc) => [doc, sentToken(r, doc)]),
           ),
         };
         event(r, "approved", user.name, { participant_id: p.id });
@@ -1563,7 +1826,7 @@ export const createSigningRouteDemo = (
           isFrozen(r) &&
           isCrypto(p.method)
         ) {
-          p.signedRound = r.round;
+          signAll(r, p);
           event(r, "signed", user.name, { participant_id: p.id });
           settle(r);
         }
@@ -1582,7 +1845,7 @@ export const createSigningRouteDemo = (
         if (mismatch) return mismatch;
         const refusedKey = refuseKey(user, body);
         if (refusedKey) return refusedKey;
-        p.signedRound = r.round;
+        signAll(r, p);
         event(r, "signed", user.name, { participant_id: p.id });
         settle(r);
         return demoJson(toTask(r, p, user));
@@ -1676,12 +1939,9 @@ export const createSigningRouteDemo = (
       handler: signedIn((req, { projectId }) => {
         const docId = req.params.docId ?? "";
         const r = routes.find(
-          (item) =>
-            item.project_id === projectId &&
-            item.frozen !== null &&
-            docId in item.frozen,
+          (item) => item.project_id === projectId && isDocFrozen(item, docId),
         );
-        if (!r?.frozen) return notFound();
+        if (!r) return notFound();
         const text = `%PDF-1.7 demo ${r.frozen[docId] ?? ""}`;
         return demoJson(new TextEncoder().encode(text).buffer);
       }),
@@ -1725,7 +1985,8 @@ export const createSigningRouteDemo = (
         // Имя с «bad»: подпись сделана над другим файлом, слот остаётся без подписи.
         const valid = !/bad/i.test(file.name);
         if (valid) {
-          p.signedRound = r.round;
+          const frozen = r.frozen[pair.doc_id];
+          if (frozen !== undefined) p.signed[pair.doc_id] = frozen;
           event(r, "signed", user.name, { participant_id: p.id });
           settle(r);
         }
@@ -1768,14 +2029,19 @@ export const createSigningRouteDemo = (
     },
     rebuild: (projectId, docId) => {
       for (const r of routes) {
-        if (r.project_id !== projectId || !(docId in r.build)) continue;
-        r.build[docId] = sha(`${r.build[docId] ?? ""}:rebuilt`);
-        if (r.status === "active" || r.status === "completed") {
-          r.status = "paused";
-          r.stop_reason = "rebuilt";
-          r.frozen = null;
-          event(r, "paused", null, { reason: "rebuilt" });
-        }
+        if (r.project_id === projectId && docId in r.build) rebuildDoc(r, docId);
+      }
+    },
+    tamper: (projectId, docId) => {
+      for (const r of routes) {
+        const version = r.pinned[docId];
+        if (r.project_id !== projectId || !version) continue;
+        r.pinned[docId] = { ...version, sha256: sha(`${version.sha256}:git`) };
+        if (r.status !== "active" && r.status !== "completed") continue;
+        r.status = "paused";
+        r.stop_reason = "sent_changed";
+        delete r.frozen[docId];
+        event(r, "paused", null, { reason: "sent_changed" });
       }
     },
     acceptInvitation: (invitationId, user) => {
@@ -1798,6 +2064,7 @@ export const createSigningRouteDemo = (
       persona,
       deadline,
       message,
+      state = "sent",
     }) => {
       const profile =
         profiles.find((item) => item.id === profileId) ?? profiles[0];
@@ -1815,6 +2082,40 @@ export const createSigningRouteDemo = (
       r.message = message ?? null;
       routes.push(r);
       sendRoute(r, sender, false);
+      if (state === "diverged") {
+        for (const doc of routeDocs(r)) rebuildDoc(r, doc);
+      } else if (state === "new_version") {
+        // Подписант согласовал (данные плашки уже известны), затем автор поправил документы и
+        // отправил новую версию: подписант согласует заново изменившиеся документы.
+        const p = participants(r).find((q) => q.user_id === signer.id);
+        if (p) {
+          p.plate = {
+            owner: signer.name,
+            kind: "openpgp",
+            cert_id: sha(signer.id).slice(0, 16).toUpperCase(),
+          };
+          p.approval = {
+            round: r.round,
+            at: now(),
+            tokens: Object.fromEntries(
+              routeDocs(r).map((doc) => [doc, sentToken(r, doc)]),
+            ),
+          };
+          event(r, "approved", signer.name, { participant_id: p.id });
+          settle(r);
+        }
+        for (const doc of routeDocs(r)) rebuildDoc(r, doc);
+        sendRoute(r, sender, false, message ?? null);
+      } else if (state === "migrated" || state === "migration_lost") {
+        // Маршрут 0.20.0: снимок вместо версии на подписи, затем перенос (12.11).
+        r.legacy = Object.fromEntries(
+          routeDocs(r).map((doc) => [doc, r.pinned[doc]?.sha256 ?? ""]),
+        );
+        r.pinned = {};
+        if (state === "migration_lost")
+          for (const doc of routeDocs(r)) rebuildDoc(r, doc);
+        migrate(r);
+      }
       return r.id;
     },
   };
