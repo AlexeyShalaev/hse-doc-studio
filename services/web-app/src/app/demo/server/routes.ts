@@ -87,10 +87,19 @@ const DAY_MS = 24 * 60 * 60 * 1000;
  * «На подпись» (одна задача со сроком, одна просроченная) и работает страница подписанта.
  * В первом проекте автор уже разместил подпись научрука: подписанту доступны и картинка, и ЭП.
  * Во втором места нет, поэтому остаётся только способ точки (открепленная ЭП).
+ *
+ * Сценарии версии на подписи (docs/design/signing-route.md, раздел 12):
+ * - `student_signing_versions`: свой маршрут студента в «Bertie» уже у научрука, а заявление
+ *   потом пересобрано (есть изменения после отправки, «Отправить новую версию»); в первом чужом
+ *   проекте студент согласовал, и автор прислал новую версию; второй чужой маршрут перенесён
+ *   с 0.20.0 молча;
+ * - `student_signing_migration`: свой маршрут студента с 0.20.0, версию не восстановить: стоит
+ *   с `sent_changed`.
  */
-const seedSigningTasks = (): void => {
+const seedSigningTasks = (scenarioId: string): void => {
   if (world.bootstrap.user?.id !== DEMO_STUDENT.id) return;
   const signer = { id: DEMO_STUDENT.id, name: DEMO_STUDENT.name };
+  const versions = scenarioId === "student_signing_versions";
   checkpointDemo.place("p_01hxa2f8gh", "topic_application", "supervisor");
   signingRouteDemo.seed({
     projectId: "p_01hxa2f8gh",
@@ -98,7 +107,10 @@ const seedSigningTasks = (): void => {
     signer,
     persona: "supervisor",
     deadline: new Date(Date.now() + 2 * DAY_MS).toISOString(),
-    message: "Прошу согласовать тему до пятницы.",
+    message: versions
+      ? "Исправил формулировку темы, согласуйте, пожалуйста, ещё раз."
+      : "Прошу согласовать тему до пятницы.",
+    state: versions ? "new_version" : "sent",
   });
   signingRouteDemo.seed({
     projectId: "p_01hxa3k2jm",
@@ -106,16 +118,31 @@ const seedSigningTasks = (): void => {
     signer,
     persona: "supervisor",
     deadline: new Date(Date.now() - DAY_MS).toISOString(),
+    state: versions ? "migrated" : "sent",
   });
+  if (versions || scenarioId === "student_signing_migration") {
+    // Свой маршрут: место подписи научрука уже стоит, иначе новую версию не отправить.
+    checkpointDemo.place("p_01hxa1c4de", "topic_application", "supervisor");
+    const petrov = DEMO_SIGNING_MEMBERS[0];
+    signingRouteDemo.seed({
+      projectId: "p_01hxa1c4de",
+      sender: signer,
+      signer: { id: petrov?.user_id ?? "", name: petrov?.name ?? "" },
+      persona: "supervisor",
+      deadline: new Date(Date.now() + 3 * DAY_MS).toISOString(),
+      message: "Прошу подписать заявление до пятницы.",
+      state: versions ? "diverged" : "migration_lost",
+    });
+  }
 };
-seedSigningTasks();
+seedSigningTasks(useServerDemoScenarioStore.getState().scenarioId);
 export const resetServerWorld = (scenarioId: string): void => {
   world = createServerWorld(scenarioId);
   signingRouteDemo.reset();
   checkpointDemo.reset();
   signingIdentityDemo.reset();
   signerProfileDemo.reset();
-  seedSigningTasks();
+  seedSigningTasks(scenarioId);
 };
 
 const guarded =

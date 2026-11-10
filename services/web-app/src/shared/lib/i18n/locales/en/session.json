@@ -110,6 +110,14 @@
         "title": "Student, password and SSO",
         "hint": "A student is signed in with a password and linked HSE SSO; Google can be linked."
       },
+      "student_signing_versions": {
+        "title": "Signing: versions",
+        "hint": "The student sent the application for signing and rebuilt it afterwards: there are changes after sending. In another project they are asked to sign a new version."
+      },
+      "student_signing_migration": {
+        "title": "Signing: 0.20.0 migration",
+        "hint": "The student's route was sent before versions on signature and its version cannot be restored: the route is stopped and needs a new version."
+      },
       "runners_ready": {
         "title": "Personal runners: all states",
         "hint": "Anna: runners online, paused, stale, offline and revoked; a token, a runner-relayed provider, pairing codes."
