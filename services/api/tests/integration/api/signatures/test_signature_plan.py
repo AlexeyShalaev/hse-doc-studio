@@ -93,6 +93,27 @@ async def test__plan__frozen_without_signature_file__counts_and_explains(test_ap
     assert supervisor["required_by"] == [_PROFILE]
 
 
+async def test__plan__local_studio__no_signing_route_and_signatures_stay_editable(
+    test_app: AsyncClient, tmp_path: Path
+) -> None:
+    project_id, _ = await _project(test_app, tmp_path / "proj")
+    await _image_author_detached_supervisor(test_app, project_id)
+
+    plan = await _plan(test_app, project_id)
+    frozen = await test_app.post(f"/api/v1/projects/{project_id}/docs/{_DOC}/frozen")
+    unfrozen = await test_app.delete(f"/api/v1/projects/{project_id}/docs/{_DOC}/frozen")
+    preview = await test_app.post(
+        f"/api/v1/projects/{project_id}/signature-plan/sign-preview", json={"profile_id": _PROFILE}
+    )
+
+    # Локально маршрутов нет (signing-route.md, 6.9): план без маршрута, правки подписей ничем не закрыты.
+    assert plan["route"] is None
+    assert {slot["route_state"] for slot in _slots(plan).values()} == {None}
+    assert (frozen.status_code, unfrozen.status_code) == (200, 204)
+    assert preview.status_code == 200, preview.text
+    assert {doc["route_id"] for doc in preview.json()["docs"]} <= {None}
+
+
 async def test__plan__signature_attached__all_signed_with_check(test_app: AsyncClient, tmp_path: Path) -> None:
     project_id, _ = await _project(test_app, tmp_path / "proj")
     await _image_author_detached_supervisor(test_app, project_id)

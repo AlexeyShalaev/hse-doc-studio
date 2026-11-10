@@ -16,6 +16,8 @@ from hse_doc_studio.core.signatures.plan import (
     SlotStatus,
     VisibleMark,
 )
+from hse_doc_studio.core.signing_route.entities import DocSlot, ParticipantState, RoutePhase, RouteStatus, StopReason
+from hse_doc_studio.core.signing_route.ports import PlanRoute, PlanRoutes
 from hse_doc_studio.use_cases.signatures.sign_submission import SignSubmissionOutput, SignSubmissionPreview
 
 
@@ -49,6 +51,8 @@ class PlanSlotResponse(BaseModel):
     required_by: list[str] = []
     is_mine: bool = False
     check: SlotCheckResponse | None = None
+    # Состояние участника маршрута подписания, которому принадлежит слот (signing-route.md, 6.1); без маршрута null.
+    route_state: ParticipantState | None = None
 
 
 class PlanFrozenResponse(BaseModel):
@@ -67,6 +71,20 @@ class DocPlanResponse(BaseModel):
     slots: list[PlanSlotResponse]
 
 
+class PlanRouteResponse(BaseModel):
+    """Маршрут подписания точки сдачи или документа: состояние по расчёту на текущих файлах (signing-route.md, 6.1)."""
+
+    id: UUID
+    profile_id: str
+    status: RouteStatus
+    phase: RoutePhase | None = None
+    round: int
+    # Номер текущего шага по порядку (с 1); null вне идущего маршрута.
+    current_step: int | None = None
+    steps_total: int
+    stop_reason: StopReason | None = None
+
+
 class SignaturePlanResponse(BaseModel):
     profile_id: str | None = None
     total: int
@@ -75,9 +93,24 @@ class SignaturePlanResponse(BaseModel):
     crypto_signed: int
     waiting_for_me: int
     docs: list[DocPlanResponse]
+    # Маршрут, который держит документы точки (`profile_id`) или документ (`doc_id`); иначе и без маршрутов null.
+    route: PlanRouteResponse | None = None
 
 
-def _map_slot(slot: PlanSlot) -> PlanSlotResponse:
+def _map_route(route: PlanRoute) -> PlanRouteResponse:
+    return PlanRouteResponse(
+        id=route.id,
+        profile_id=route.profile_id,
+        status=route.status,
+        phase=route.phase,
+        round=route.round,
+        current_step=route.current_step,
+        steps_total=route.steps_total,
+        stop_reason=route.stop_reason,
+    )
+
+
+def _map_slot(slot: PlanSlot, routes: PlanRoutes) -> PlanSlotResponse:
     check = slot.state.check
     return PlanSlotResponse(
         slot_id=slot.slot_id,
@@ -103,10 +136,11 @@ def _map_slot(slot: PlanSlot) -> PlanSlotResponse:
         )
         if check is not None
         else None,
+        route_state=routes.slot_states.get(DocSlot(slot.doc_id, slot.slot_id)),
     )
 
 
-def _map_doc(doc: DocPlan) -> DocPlanResponse:
+def _map_doc(doc: DocPlan, routes: PlanRoutes) -> DocPlanResponse:
     frozen = doc.frozen
     return DocPlanResponse(
         doc_id=doc.doc_id,
@@ -120,11 +154,12 @@ def _map_doc(doc: DocPlan) -> DocPlanResponse:
         )
         if frozen is not None
         else None,
-        slots=[_map_slot(s) for s in doc.slots],
+        slots=[_map_slot(s, routes) for s in doc.slots],
     )
 
 
-def map_plan(plan: SignaturePlan) -> SignaturePlanResponse:
+def map_plan(plan: SignaturePlan, routes: PlanRoutes | None = None) -> SignaturePlanResponse:
+    routes = routes or PlanRoutes()
     crypto = [s for s in plan.slots if s.state.crypto]
     return SignaturePlanResponse(
         profile_id=plan.profile_id,
@@ -133,7 +168,8 @@ def map_plan(plan: SignaturePlan) -> SignaturePlanResponse:
         crypto_total=len(crypto),
         crypto_signed=sum(1 for s in crypto if s.status is SlotStatus.signed),
         waiting_for_me=plan.waiting_for_me,
-        docs=[_map_doc(d) for d in plan.docs],
+        docs=[_map_doc(d, routes) for d in plan.docs],
+        route=_map_route(routes.route) if routes.route is not None else None,
     )
 
 
@@ -180,6 +216,8 @@ class DocPreviewResponse(BaseModel):
     resets: list[ResetItemResponse]
     slots: list[SlotActionResponse]
     blocker: str = ""
+    # Идущий маршрут подписания держит документ: ссылка на страницу подписи `/sign/{project}/{route}`.
+    route_id: UUID | None = None
 
 
 class SignPreviewResponse(BaseModel):
@@ -236,17 +274,20 @@ def map_preview(preview: SignSubmissionPreview) -> SignPreviewResponse:
                     for s in d.slots
                 ],
                 blocker=d.blocker,
+                route_id=d.route_id,
             )
             for d in preview.docs
         ],
     )
 
 
-def map_results(out: SignSubmissionOutput, plan: SignaturePlan) -> SignSubmissionResponse:
+def map_results(
+    out: SignSubmissionOutput, plan: SignaturePlan, routes: PlanRoutes | None = None
+) -> SignSubmissionResponse:
     return SignSubmissionResponse(
         frozen_docs=list(out.frozen_docs),
         results=[
             SlotResultResponse(doc_id=r.doc_id, slot_id=r.slot_id, ok=r.ok, message=r.message) for r in out.results
         ],
-        plan=map_plan(plan),
+        plan=map_plan(plan, routes),
     )

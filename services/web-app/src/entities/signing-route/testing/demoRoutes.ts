@@ -1112,6 +1112,44 @@ export const createSigningRouteDemo = (
 
   const handlers: DemoRoute[] = [
     {
+      // Маршрут документа в его плане подписей (раздел 6.1): по нему редактор документа
+      // показывает плашку «на подписании». Сам план демо маршрутов не считает, поэтому
+      // отвечает только на запрос по документу.
+      method: "GET",
+      pattern: "/projects/:projectId/signature-plan",
+      handler: signedIn((req, { projectId }) => {
+        const docId = queryString(req, "doc_id");
+        if (docId === null) return notFound();
+        const holder = routes.find(
+          (r) =>
+            r.project_id === projectId &&
+            ["active", "paused", "returned", "completed"].includes(r.status) &&
+            toRoute(r).docs.some((doc) => doc.doc_id === docId),
+        );
+        return demoJson({
+          profile_id: null,
+          total: 0,
+          signed: 0,
+          crypto_total: 0,
+          crypto_signed: 0,
+          waiting_for_me: 0,
+          docs: [],
+          route: holder
+            ? {
+                id: holder.id,
+                profile_id: holder.profile.id,
+                status: holder.status,
+                phase: toRoute(holder).phase,
+                round: holder.round,
+                current_step: currentStep(holder),
+                steps_total: holder.steps.length,
+                stop_reason: holder.stop_reason,
+              }
+            : null,
+        });
+      }),
+    },
+    {
       method: "GET",
       pattern: "/projects/:projectId/signing-routes",
       handler: signedIn((req, { projectId }) => {

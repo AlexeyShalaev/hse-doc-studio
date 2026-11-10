@@ -49,6 +49,7 @@ from hse_doc_studio.core.git_sync.protocols import (
 )
 from hse_doc_studio.core.git_sync.url import parse_remote_url
 from hse_doc_studio.core.jobs.protocols import IJobDispatcher
+from hse_doc_studio.core.signing_route.ports import IRouteWatch, NoRouteWatch
 from hse_doc_studio.core.template_update.text import is_binary
 from hse_doc_studio.core.vcs.protocols import IVcsFolderLocks
 from hse_doc_studio.use_cases.git_sync.health import with_failure, with_success
@@ -132,6 +133,7 @@ class SyncProjectUC:
         policy: GitSyncPolicy,
         fetch_book: FetchBook,
         providers: ProviderResolver | None = None,
+        route_watch: IRouteWatch | None = None,
     ) -> None:
         self._get_project = get_project
         self._applier = applier
@@ -145,6 +147,8 @@ class SyncProjectUC:
         self._policy = policy
         self._fetch_book = fetch_book
         self._providers = providers
+        # Применённая синхронизация меняет файлы проекта мимо маршрута подписания: маршруты проекта сверяются.
+        self._route_watch: IRouteWatch = route_watch or NoRouteWatch()
 
     async def run(self, project: Project, operation_id: str, resolve: ResolveRequest | None = None) -> None:
         """Итог (успех, сбой, отмена) записывается в операцию. Наружу выходит только CancelledError.
@@ -317,9 +321,11 @@ class SyncProjectUC:
                 if self._dispatcher.has_active_for_folder(project.folder):
                     continue
                 try:
-                    return await asyncio.to_thread(self._apply_locked, project, sync_id, resolve, theirs_ref)
+                    applied = await asyncio.to_thread(self._apply_locked, project, sync_id, resolve, theirs_ref)
                 except HeadMovedError:
                     continue
+                self._route_watch.on_project_changed(project.id)
+                return applied
         raise git_error(GitErrorCode.sync_busy)
 
     def _apply_locked(

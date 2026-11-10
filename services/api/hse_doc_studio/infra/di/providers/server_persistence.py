@@ -67,6 +67,7 @@ from hse_doc_studio.core.repositories import (
 from hse_doc_studio.core.services import ProjectTemplateService
 from hse_doc_studio.core.signatures.key_policy import ISigningKeyPolicy
 from hse_doc_studio.core.signatures.ports import ISignatureAudit, ISignerScope
+from hse_doc_studio.core.signing_route.ports import IRouteWatch
 from hse_doc_studio.core.storage import IBlobStore, IObjectStore
 from hse_doc_studio.core.storage.manifest import IBlobRegistry, IBlobUploader, ILiveBlobSource, ManifestLimits
 from hse_doc_studio.core.submission_archive import ISubmissionArchive, ISubmissionAudit
@@ -310,16 +311,25 @@ class ServerPersistenceProvider(Provider):
         uow: IUnitOfWork,
         member_roles: IProjectMemberLookup,
         gate: IQuotaGate,
+        route_watch: IRouteWatch,
     ) -> SetProjectMemberUC:
         return SetProjectMemberUC(
-            QuotaGuardedMemberRepository(members, gate), users, groups, orgs, directory, audit, uow, member_roles
+            QuotaGuardedMemberRepository(members, gate),
+            users,
+            groups,
+            orgs,
+            directory,
+            audit,
+            uow,
+            member_roles,
+            route_watch,
         )
 
     @provide
     def get_remove_project_member_uc(
-        self, members: IProjectMemberRepository, audit: IAuditLog, uow: IUnitOfWork
+        self, members: IProjectMemberRepository, audit: IAuditLog, uow: IUnitOfWork, route_watch: IRouteWatch
     ) -> RemoveProjectMemberUC:
-        return RemoveProjectMemberUC(members, audit, uow)
+        return RemoveProjectMemberUC(members, audit, uow, route_watch=route_watch)
 
     @provide(override=True)
     def get_project_access_checker(self, acl: PostgresProjectAclRepository) -> IProjectAccessChecker:

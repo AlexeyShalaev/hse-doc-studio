@@ -8,6 +8,7 @@ import {
 } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { I18nextProvider } from "react-i18next";
+import { MemoryRouter } from "react-router";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { i18n } from "@shared/lib";
 import type * as SignatureApiModule from "../../../entities/signature/api/signatureApi";
@@ -77,7 +78,9 @@ const renderDialog = (): void => {
   });
   const wrapper = ({ children }: { children: ReactNode }) => (
     <I18nextProvider i18n={i18n}>
-      <QueryClientProvider client={client}>{children}</QueryClientProvider>
+      <QueryClientProvider client={client}>
+        <MemoryRouter>{children}</MemoryRouter>
+      </QueryClientProvider>
     </I18nextProvider>
   );
   render(
@@ -99,6 +102,31 @@ afterEach(() => {
 });
 
 describe("SignSubmissionDialog", () => {
+  it("документ на подписании по маршруту: причина и ссылка на страницу подписи", async () => {
+    const reason = "Документ на подписании по маршруту";
+    api.previewSignSubmission.mockResolvedValue({
+      ...PREVIEW,
+      to_sign: 0,
+      docs: [
+        {
+          ...PREVIEW.docs[0],
+          needs_freeze: false,
+          resets: [],
+          blocker: reason,
+          route_id: "sr_1",
+          slots: [
+            { ...PREVIEW.docs[0]?.slots[0], action: "none", blocker: reason },
+          ],
+        },
+      ],
+    });
+    renderDialog();
+    const link = await screen.findByTestId("sign-submission-route-application");
+    expect(link).toHaveAttribute("href", "/sign/p1/sr_1");
+    expect(link).toHaveTextContent("Открыть страницу подписи");
+    expect(screen.getAllByText(reason).length).toBeGreaterThan(0);
+  });
+
   it("asks to confirm the reset and sends the tokens from the preview", async () => {
     api.previewSignSubmission.mockResolvedValue(PREVIEW);
     api.signSubmission.mockResolvedValue({

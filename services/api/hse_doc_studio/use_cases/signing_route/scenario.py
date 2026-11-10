@@ -8,7 +8,8 @@
 
 from __future__ import annotations
 
-from collections.abc import Mapping, Sequence
+from collections.abc import AsyncIterator, Mapping, Sequence
+from contextlib import asynccontextmanager
 from dataclasses import dataclass, replace
 from datetime import datetime
 from uuid import UUID
@@ -16,6 +17,7 @@ from uuid import UUID
 from hse_doc_studio.core.access.actions import Action
 from hse_doc_studio.core.access.checker import IProjectAccessChecker, ProjectForbiddenError
 from hse_doc_studio.core.access.entities import Actor, ActorKind
+from hse_doc_studio.core.entities import Project
 from hse_doc_studio.core.errors import NotFoundError
 from hse_doc_studio.core.i18n import localized_error
 from hse_doc_studio.core.identity.session_policy import Clock, utc_now
@@ -36,6 +38,7 @@ from hse_doc_studio.core.signing_route.repositories import ISigningRouteReposito
 from hse_doc_studio.core.signing_route.transitions import apply_evaluation, refresh_snapshot
 from hse_doc_studio.core.uow import IUnitOfWork
 from hse_doc_studio.use_cases.orgs.access import user_id_of
+from hse_doc_studio.use_cases.signatures._studio_signer import project_lock
 from hse_doc_studio.use_cases.signing_route.audit import SigningRouteAudit
 from hse_doc_studio.use_cases.signing_route.effects import RouteFileEffects
 from hse_doc_studio.use_cases.signing_route.facts import LoadedFacts, RouteFactsLoader
@@ -47,9 +50,19 @@ from hse_doc_studio.use_cases.signing_route.views import (
     build_details,
     persona_candidates,
 )
+from hse_doc_studio.use_cases.signing_route.watch import own_writes
 
 # Сколько раз доводить расчёт: эффекты одного прохода (картинки, плашки, фиксация) дают новый, обычно пустой.
 _MAX_PASSES = 3
+
+
+@asynccontextmanager
+async def route_files(project: Project) -> AsyncIterator[None]:
+    """`project_lock` сценария маршрута: файлы проекта пишутся по очереди, а свои записи состояния подписей
+    сверку маршрутов не зовут (сценарий держит строку маршрута и сам обновляет снимок, раздел 5.5)."""
+    async with project_lock(project):
+        with own_writes():
+            yield
 
 
 def actor_uuid(actor: Actor) -> UUID:

@@ -29,6 +29,23 @@ export const signatureKeys = {
 
 type SignaturePlan = Awaited<ReturnType<typeof signatureApi.getPlan>>;
 
+/**
+ * План подписей одного документа. Вместе с ним приходит маршрут подписания, который держит
+ * документ (`route`), поэтому редактору документа хватает одного запроса.
+ */
+export const useDocSignaturePlan = (
+  projectId: string,
+  docId: string,
+  options: { enabled?: boolean } = {},
+) =>
+  useQuery<SignaturePlan>({
+    queryKey: [...signatureKeys.state(projectId), "doc-plan", docId] as const,
+    queryFn: ({ signal }) => signatureApi.getPlan(projectId, { docId }, signal),
+    enabled: (options.enabled ?? true) && !!projectId && !!docId,
+    staleTime: 60_000,
+    retry: false,
+  });
+
 export const useSignaturePlan = (
   projectId: string,
   profileId: string | null | undefined,
