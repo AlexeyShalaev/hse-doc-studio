@@ -285,13 +285,28 @@ async def test__approve__stale_or_missing_expected__doc_changed_with_documents(s
     assert trio.events() == ["sent", "approved"]
 
 
-async def test__approve__document_rebuilt_after_the_page_was_opened__doc_changed_and_route_paused(
+async def test__approve__rebuilt_after_the_page_was_opened__approval_of_the_sent_version_goes_through(
+    stand: Stand,
+) -> None:
+    """Пересборка версию на подписи не меняет (12.5): согласие того, что видел подписант, проходит."""
+    trio = await make_trio(stand, images=("author", "supervisor"), academic="none")
+    trio.sent()
+    seen = trio.tokens(trio.supervisor)
+    trio.project.build(PROPOSAL, "v2")
+
+    resp = trio.approve(trio.supervisor, expected=seen)
+
+    assert resp.status_code == 200, resp.text
+    assert resp.json()["route"]["status"] == "completed"
+
+
+async def test__approve__sent_version_replaced_after_the_page_was_opened__doc_changed_and_route_paused(
     stand: Stand,
 ) -> None:
     trio = await make_trio(stand, images=("author", "supervisor"), academic="none")
     trio.sent()
     seen = trio.tokens(trio.supervisor)
-    trio.project.build(PROPOSAL, "v2")
+    trio.project.replace_sent(PROPOSAL)
 
     resp = trio.approve(trio.supervisor, expected=seen)
 

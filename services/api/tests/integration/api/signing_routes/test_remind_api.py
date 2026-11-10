@@ -173,7 +173,7 @@ async def test__remind__not_waiting__conflict(stand: Stand) -> None:
     done, waiting = sent["steps"][0][0], sent["steps"][1][0]
 
     finished = _remind(project, author, sent["id"], done["id"])
-    project.build("topic_application", "v2")  # документ изменился: по расчёту маршрут уже остановлен
+    project.replace_sent("topic_application")  # версию на подписи подменили: по расчёту маршрут уже остановлен
     rebuilt = _remind(project, author, sent["id"], waiting["id"])
     assert project.call(author, "POST", f"{project.routes}/{sent['id']}/cancel", json={}).status_code == 200
     cancelled = _remind(project, author, sent["id"], waiting["id"])

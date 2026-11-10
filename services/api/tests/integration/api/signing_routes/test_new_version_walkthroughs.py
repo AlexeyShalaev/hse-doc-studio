@@ -9,9 +9,7 @@ from __future__ import annotations
 
 import hashlib
 import io
-import zipfile
 from datetime import timedelta
-from pathlib import Path
 from typing import Any
 
 import pytest
@@ -230,22 +228,22 @@ async def test__cancel__removes_pins__resend_pins_again(stand: Stand) -> None:
     assert [e["changed_docs"] for e in resent["events"] if e["kind"] == "sent"] == [None, None]
 
 
-async def test__pack__built_from_the_signed_version_after_an_edit(stand: Stand) -> None:
+async def test__signed_pdf_and_plan__from_the_signed_version_after_an_edit(stand: Stand) -> None:
+    """Пакет и «С подписями» собираются из источника подписи (12.8): после завершения и правки это подписанная
+    версия, а план показывает её и расхождение. Сам архив пакета из версии на подписи проверяет
+    `tests/integration/api/submission/test_pinned_pack.py` (стенд маршрутов пакеты не собирает)."""
     trio = await _all_approved(stand)
     trio.project.build(PROPOSAL, "v2")
 
-    resp = trio.call(
-        trio.author,
-        "POST",
-        f"{trio.project.base}/submissions",
-        json={"profile_id": TOPIC, "items": [], "extra_items": [], "archive_format": "zip"},
-    )
+    signed = trio.call(trio.author, "GET", f"{trio.project.base}/docs/{PROPOSAL}/pdf/signed")
+    plan = trio.call(trio.author, "GET", f"{trio.project.base}/signature-plan", params={"profile_id": TOPIC})
 
-    assert resp.status_code == 201, resp.text
-    record = resp.json()
-    assert [(w["code"], w["doc_id"]) for w in record["warnings"]] == [("changed_after_sent", PROPOSAL)]
-    with zipfile.ZipFile(io.BytesIO(Path(record["output_path"]).read_bytes())) as zf:
-        texts = [_pdf_text(zf.read(name)) for name in zf.namelist() if name.endswith(".pdf")]
-    proposal = [text for text in texts if PROPOSAL in text]
-    assert proposal
-    assert all("v1" in text and "v2" not in text for text in proposal)
+    assert signed.status_code == 200, signed.text
+    assert "v1" in _pdf_text(signed.content)
+    assert "v2" not in _pdf_text(signed.content)
+    assert plan.status_code == 200, plan.text
+    proposal = _doc(plan.json(), PROPOSAL)
+    assert proposal["working_differs"] is True
+    assert proposal["pinned"]["sha256"] == _pinned(trio)[PROPOSAL]["sha256"]
+    assert proposal["pinned"]["route_id"] == trio.route_id
+    assert trio.route()["status"] == "completed"

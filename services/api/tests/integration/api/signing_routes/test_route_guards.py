@@ -6,8 +6,6 @@
 
 from __future__ import annotations
 
-import hashlib
-import shutil
 from dataclasses import replace
 from datetime import UTC, datetime, timedelta
 from typing import Any
@@ -17,8 +15,7 @@ from hse_doc_studio.api.config import settings
 from hse_doc_studio.core.entities import Project, SigningIdentity
 from hse_doc_studio.core.enums import DetachedFormat, DetachedOrigin, DetachedVerdict
 from hse_doc_studio.core.signing_route.entities import DocSlot
-from hse_doc_studio.core.value_objects import DetachedSignature, PinnedPdf
-from hse_doc_studio.infra.persistence.signature import JsonSignatureRepository
+from hse_doc_studio.core.value_objects import DetachedSignature
 from hse_doc_studio.use_cases.signatures._studio_signer import StudioSigner
 from hse_doc_studio.use_cases.signatures.attach_detached_signature import (
     AttachDetachedSignatureInput,
@@ -214,8 +211,8 @@ async def test__route_not_going__signature_edits_allowed_again(stand: Stand, mon
 async def test__route_stopped_by_calculation__edits_allowed_before_the_stop_is_recorded(stand: Stand) -> None:
     trio = await make_trio(stand, images=("author", "supervisor"), academic="none")
     trio.sent()
-    # Пересборка без хука: в хранилище маршрут ещё идёт, по расчёту уже остановлен и правки не держит.
-    trio.project.build(APPLICATION, "v2")
+    # Подмена версии на подписи без хука: в хранилище маршрут ещё идёт, по расчёту уже остановлен и правки не держит.
+    trio.project.replace_sent(APPLICATION)
 
     moved = trio.call(
         trio.author, "PATCH", f"{trio.project.base}/signatures/placements/{APPLICATION}/author", json={"x_mm": 42}
@@ -491,8 +488,8 @@ async def test__plan__state_is_calculated__stop_and_completion_visible_before_th
 ) -> None:
     trio = await make_trio(stand, images=("author", "supervisor"), academic="none")
     trio.sent()
-    # Пересборка без хука: маршрут в хранилище идёт, план показывает вычисленную остановку.
-    trio.project.build(PROPOSAL, "v2")
+    # Подмена версии на подписи без хука: маршрут в хранилище идёт, план показывает вычисленную остановку.
+    trio.project.replace_sent(PROPOSAL)
 
     stopped = _plan(trio, trio.author, profile_id=TOPIC)["route"]
 
@@ -558,38 +555,28 @@ async def test__route__card_name_and_who_still_changes_the_visible_layer(stand: 
     }
 
 
-def _pin_current_build(trio: Trio, doc_id: str) -> str:
-    """Версия на подписи, как её сняла бы отправка (signing-route.md, 12.3): копия текущей сборки документа."""
-    doc = trio.call(trio.author, "GET", f"{trio.project.base}/documents/{doc_id}").json()
-    folder = trio.project.folder
-    source = folder / pinned_rel(doc_id)
-    source.parent.mkdir(parents=True, exist_ok=True)
-    shutil.copyfile(folder / doc["output_file"], source)
-    sha = hashlib.sha256(source.read_bytes()).hexdigest()
-    repo = JsonSignatureRepository()
-    pinned = PinnedPdf(pinned_rel(doc_id), sha, source.stat().st_size, "2026-11-10T14:32:00+00:00", trio.route_id, 1)
-    repo.save_state(folder, replace(repo.get_state(folder), pinned={**repo.get_state(folder).pinned, doc_id: pinned}))
-    return sha
-
-
-async def test__sign_the_current_build__held_by_a_route__409_then_after_cancel__unpinned(stand: Stand) -> None:
-    """«Подписывать текущую сборку» (12.4): пока маршрут держит документ, нельзя; после отмены можно."""
+async def test__sign_the_current_build__held_by_a_route__409_then_after_archive__unpinned(stand: Stand) -> None:
+    """«Подписывать текущую сборку» (12.4): пока маршрут держит документ, нельзя; снятый с контроля не держит, а его
+    версия на подписи остаётся, пока её не снимут."""
     trio = await make_trio(stand, images=("author", "supervisor"), academic="none")
     trio.sent()
-    sha = _pin_current_build(trio, APPLICATION)
+    trio.approved(trio.supervisor)
+    sha = trio.state()["pinned"][APPLICATION]["sha256"]
     unpin = f"{trio.project.base}/docs/{APPLICATION}/pinned"
 
     locked = trio.call(trio.author, "DELETE", unpin)
-    cancelled = trio.call(trio.author, "POST", f"{trio.url}/cancel", json={})
+    archived = trio.call(trio.author, "POST", f"{trio.url}/archive", json={})
+    kept = trio.state()["pinned"]
     by_reviewer = trio.call(trio.supervisor, "DELETE", unpin)
     unpinned = trio.call(trio.author, "DELETE", unpin)
     drain(stand)
 
     assert _code(locked) == (409, "route_locked")
-    assert cancelled.status_code == 200, cancelled.text
+    assert archived.status_code == 200, archived.text
+    assert set(kept) == {APPLICATION, PROPOSAL}
     assert by_reviewer.status_code == 403
     assert unpinned.status_code == 204, unpinned.text
-    assert trio.state()["pinned"] == {}
+    assert set(trio.state()["pinned"]) == {PROPOSAL}
     assert not (trio.project.folder / pinned_rel(APPLICATION)).exists()
     resp = stand.admin().get(
         "/api/admin/audit", params={"target": trio.project.id, "action": "signature.unpin", "limit": 10}
