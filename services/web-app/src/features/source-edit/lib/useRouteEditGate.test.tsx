@@ -23,6 +23,13 @@ vi.mock("pdfjs-dist", () => ({
 
 const views: EditorView[] = [];
 
+// CodeMirror меряет текст в кадре анимации: у Range в jsdom нет геометрии.
+const rangeProto = Range.prototype as Partial<
+  Pick<Range, "getClientRects" | "getBoundingClientRect">
+>;
+rangeProto.getClientRects ??= () => [] as unknown as DOMRectList;
+rangeProto.getBoundingClientRect ??= () => new DOMRect();
+
 /** Редактор исходников с фильтром, как его собирает SourceEditor. */
 const mountEditor = (path: string, doc = "\\section{Введение}") => {
   const harness = makeGuardHarness({

@@ -6,6 +6,13 @@ import { externalDocumentSync } from "./visual/effects";
 
 const remote = Annotation.define<boolean>();
 
+// CodeMirror меряет текст в кадре анимации: у Range в jsdom нет геометрии.
+const rangeProto = Range.prototype as Partial<
+  Pick<Range, "getClientRects" | "getBoundingClientRect">
+>;
+rangeProto.getClientRects ??= () => [] as unknown as DOMRectList;
+rangeProto.getBoundingClientRect ??= () => new DOMRect();
+
 /** Вопрос, на который тест отвечает сам. */
 const deferredGate = (ask = true) => {
   let answer: (ok: boolean) => void = () => undefined;
