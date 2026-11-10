@@ -25,6 +25,7 @@ from hse_doc_studio.core.jobs.pack import (
     PackSubmissionPayload,
 )
 from hse_doc_studio.core.jobs.protocols import JobContext
+from hse_doc_studio.core.signatures.errors import StampImageError
 from hse_doc_studio.infra.jobs.outputs import LocalJobOutputs
 from hse_doc_studio.infra.jobs.pack_handler import (
     CODE_ARCHIVE_FAILED,
@@ -272,6 +273,21 @@ async def test__pack_handler__caller_cancelled__artifacts_removed_after_thread_s
     assert executor.settled.is_set()
     assert not (tmp_path / "submissions" / _BASE).exists()
     assert not (tmp_path / "submissions" / f"{_BASE}.zip").exists()
+
+
+def test__pack_handler__broken_signature_png__stamping_failure_and_no_leftover_folder(tmp_path: Path) -> None:
+    (tmp_path / "doc.pdf").write_bytes(_pdf(1))
+    (tmp_path / "author.png").write_bytes(b"not a png")
+    stamp = StampSpec(page=1, x_mm=20, y_mm=30, width_mm=40, png=ManifestFile("author.png"), aspect_ratio=0.4)
+    payload = _payload(PackEntry(PackEntryKind.stamp_pdf, "doc.pdf", source=ManifestFile("doc.pdf"), stamps=(stamp,)))
+
+    with pytest.raises(JobFailure) as raised:
+        PackHandler()._build(payload, _ctx(tmp_path))
+
+    assert raised.value.error.category is JobErrorCategory.invalid_input
+    assert raised.value.error.code == StampImageError.code
+    assert "«author»" in raised.value.error.detail
+    assert not (tmp_path / "submissions" / _BASE).exists()
 
 
 @pytest.mark.unit

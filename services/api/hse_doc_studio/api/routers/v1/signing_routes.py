@@ -23,6 +23,7 @@ from hse_doc_studio.core.access.checker import ProjectForbiddenError
 from hse_doc_studio.core.access.entities import Actor
 from hse_doc_studio.core.errors import NotFoundError
 from hse_doc_studio.core.i18n import localized_error
+from hse_doc_studio.core.signatures.errors import StampingError
 from hse_doc_studio.core.signatures.key_policy import SigningKeyStorageDeniedError
 from hse_doc_studio.core.signing_route.drafting import PersonDraft
 from hse_doc_studio.core.signing_route.entities import DocSlot, RouteConflictError, RouteInputError
@@ -281,6 +282,9 @@ def key_id(value: str | None) -> UUID | None:
 
 def key_failure(exc: Exception) -> NoReturn:
     """Отказ подписи ключом Студии в ответе (раздел 8.1): пароль, ключ, политика, чужой слот или ошибка подписи."""
+    if isinstance(exc, StampingError):
+        # Не ключ и не подпись: метка не легла при фиксации маршрутом, ответ со своим кодом (`stamping_errors`).
+        raise exc
     if isinstance(exc, KeyPassphraseRequiredError):
         raise SigningKeyError(400, "passphrase_required", str(exc)) from exc
     if isinstance(exc, KeyPassphraseInvalidError):
