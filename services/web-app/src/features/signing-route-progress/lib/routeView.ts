@@ -4,6 +4,7 @@ import {
   isRouteLive,
   isRouteOpen,
   nextRemindAt,
+  type RouteDocSlot,
   type RouteEvent,
   type RouteParticipant,
   type SigningRoute,
@@ -114,29 +115,76 @@ export const personMoment = (
   return null;
 };
 
-/**
- * Слоты маршрута: сколько подписано из скольких. Обязательные отдельно от необязательных, которые
- * автор добавил сам: шапка точки считает только обязательные, и числа должны сходиться.
- */
-export const signedTally = (
-  route: SigningRoute,
-): {
+export type RouteTally = {
+  /** Обязательные слоты: согласовано, подписано, всего. */
+  approved: number;
   done: number;
   total: number;
+  /** Необязательные слоты, которые автор добавил в маршрут сам. */
+  optionalApproved: number;
   optionalDone: number;
   optionalTotal: number;
-} => {
+};
+
+/** Согласовал ли участник в текущем раунде: сервер отдаёт `approved_at` только этого раунда. */
+const approvedNow = (person: RouteParticipant): boolean =>
+  person.approved_at !== null ||
+  person.state === "done" ||
+  person.state === "to_sign";
+
+/**
+ * Слоты маршрута: сколько согласовано и сколько подписано из скольких. Слот согласован, когда его
+ * подписант согласовал в этом раунде или слот уже подписан. Подписан картинкой, когда она попала в
+ * PDF, ЭП, когда подпись проверена: это статус слота плана. Обязательные отдельно от необязательных,
+ * которые автор добавил сам: шапка точки считает только обязательные, и числа должны сходиться.
+ */
+export const routeTally = (route: SigningRoute): RouteTally => {
+  const approvedIds = new Set(
+    route.steps
+      .flat()
+      .filter(approvedNow)
+      .map((p) => p.id),
+  );
   const slots = route.docs.flatMap((doc) => doc.slots);
+  const signed = (slot: RouteDocSlot) => slot.status === "signed";
+  const approved = (slot: RouteDocSlot) =>
+    signed(slot) ||
+    (slot.participant_id !== null && approvedIds.has(slot.participant_id));
+  const count = (list: RouteDocSlot[], test: (slot: RouteDocSlot) => boolean) =>
+    list.filter(test).length;
   const required = slots.filter((slot) => !slot.optional);
   const optional = slots.filter((slot) => slot.optional);
-  const signed = (list: typeof slots) =>
-    list.filter((slot) => slot.status === "signed").length;
   return {
-    done: signed(required),
+    approved: count(required, approved),
+    done: count(required, signed),
     total: required.length,
-    optionalDone: signed(optional),
+    optionalApproved: count(optional, approved),
+    optionalDone: count(optional, signed),
     optionalTotal: optional.length,
   };
+};
+
+/**
+ * Слот ЭП, который согласован и ждёт фиксации PDF: подписант согласовал, а подпись Студия попросит
+ * после фиксации. Пока так, слот не подписан, но и не «ждёт подписи».
+ */
+export const awaitsFreeze = (
+  route: SigningRoute,
+  docId: string,
+  slotId: string,
+): boolean => {
+  if (route.status !== "active") return false;
+  const slot = route.docs
+    .find((doc) => doc.doc_id === docId)
+    ?.slots.find((s) => s.slot_id === slotId);
+  if (slot === undefined || slot.status === "signed") return false;
+  const person = route.steps.flat().find((p) => p.id === slot.participant_id);
+  return (
+    person !== undefined &&
+    person.state === "waiting" &&
+    person.approved_at !== null &&
+    (person.method === "detached" || person.method === "pades")
+  );
 };
 
 /** Последний возврат на доработку: кто вернул и с каким комментарием. */

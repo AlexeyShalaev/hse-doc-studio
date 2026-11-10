@@ -5,6 +5,11 @@ import {
   makeSigningRoute,
   makeSigningRouteSummary,
 } from "@entities/signing-route/testing";
+import type {
+  RouteParticipant,
+  RouteSlotStatus,
+  SigningRoute,
+} from "@entities/signing-route";
 import {
   earliest,
   isLinkable,
@@ -16,11 +21,90 @@ import {
   pickCurrentRoute,
   remindLockedUntil,
   returnedDocId,
-  signedTally,
+  awaitsFreeze,
+  routeTally,
   waitingFor,
 } from "./routeView";
 
 const HOUR = 60 * 60 * 1000;
+
+const doc = () => {
+  const first = makeSigningRoute().docs[0];
+  if (first === undefined) throw new Error("fixture");
+  return first;
+};
+
+type EsignOptions = {
+  round?: number;
+  status?: SigningRoute["status"];
+  author?: Partial<RouteParticipant>;
+  supervisor?: Partial<RouteParticipant>;
+  consultant?: Partial<RouteParticipant>;
+  authorSlot?: RouteSlotStatus;
+  supervisorSlot?: RouteSlotStatus;
+};
+
+/**
+ * Три обязательных слота ЭП: автор на шаге 1, научрук и консультант параллельно на шаге 2. Автор
+ * согласовал отправкой и ждёт фиксации PDF, остальные ещё не согласовали.
+ */
+const esignRoute = (o: EsignOptions = {}): SigningRoute => {
+  const person = (
+    id: string,
+    slot: string,
+    extra: Partial<RouteParticipant> | undefined,
+  ) =>
+    makeRouteParticipant({
+      id,
+      persona: slot,
+      user_id: `u_${slot}`,
+      assignments: [{ doc_id: "vkr", slot_id: slot }],
+      method: "detached",
+      state: "to_approve_sign",
+      next_action: "approve_and_sign",
+      approved_at: null,
+      ...extra,
+    });
+  const slot = (id: string, status: RouteSlotStatus = "pending") => ({
+    slot_id: id,
+    label: { ru: id },
+    participant_id: `p_${id}`,
+    optional: false,
+    status,
+  });
+  return makeSigningRoute({
+    status: o.status ?? "active",
+    phase: "approval",
+    round: o.round ?? 1,
+    current_step: 2,
+    docs: [
+      {
+        doc_id: "vkr",
+        name: { ru: "ВКР" },
+        frozen: false,
+        slots: [
+          slot("author", o.authorSlot),
+          slot("supervisor", o.supervisorSlot),
+          slot("consultant"),
+        ],
+      },
+    ],
+    steps: [
+      [
+        person("p_author", "author", {
+          state: "waiting",
+          next_action: "wait",
+          approved_at: "2026-11-10T09:00:00Z",
+          ...o.author,
+        }),
+      ],
+      [
+        person("p_supervisor", "supervisor", o.supervisor),
+        person("p_consultant", "consultant", o.consultant),
+      ],
+    ],
+  });
+};
 
 describe("pickCurrentRoute", () => {
   it("незавершённый важнее более нового завершённого", () => {
@@ -145,23 +229,25 @@ describe("напоминание раз в 12 часов", () => {
 });
 
 describe("сводки маршрута", () => {
-  it("подписано слотов из скольких", () => {
-    expect(signedTally(makeSigningRoute())).toEqual({
+  it("подписано и согласовано слотов из скольких", () => {
+    // Автор подписал картинкой (картинка в PDF), научрук ещё не согласовал.
+    expect(routeTally(makeSigningRoute())).toEqual({
+      approved: 1,
       done: 1,
       total: 2,
+      optionalApproved: 0,
       optionalDone: 0,
       optionalTotal: 0,
     });
-    // Необязательный слот, который автор добавил сам, считается отдельно: шапка точки его не знает.
-    const route = makeSigningRoute();
-    const doc = route.docs[0];
-    if (doc === undefined) throw new Error("fixture");
+  });
+
+  it("необязательный слот считается отдельно: шапка точки его не знает", () => {
     const withOptional = makeSigningRoute({
       docs: [
         {
-          ...doc,
+          ...doc(),
           slots: [
-            ...doc.slots,
+            ...doc().slots,
             {
               slot_id: "academic_supervisor",
               label: { ru: "Академический руководитель" },
@@ -173,12 +259,66 @@ describe("сводки маршрута", () => {
         },
       ],
     });
-    expect(signedTally(withOptional)).toEqual({
+    expect(routeTally(withOptional)).toEqual({
+      approved: 1,
       done: 1,
       total: 2,
+      optionalApproved: 0,
       optionalDone: 0,
       optionalTotal: 1,
     });
+  });
+
+  it("ЭП: согласовано после согласия, подписано после проверки подписи", () => {
+    // Случай с прода: автор отправил маршрут (это его согласие), его ЭП ждёт фиксации PDF.
+    const route = esignRoute();
+    expect(routeTally(route)).toMatchObject({ approved: 1, done: 0, total: 3 });
+    expect(awaitsFreeze(route, "vkr", "author")).toBe(true);
+    expect(awaitsFreeze(route, "vkr", "supervisor")).toBe(false);
+    // PDF зафиксирован, автор подписывает: согласие остаётся, подписи ещё нет.
+    const signing = esignRoute({ author: { state: "to_sign" } });
+    expect(routeTally(signing)).toMatchObject({ approved: 1, done: 0 });
+    expect(awaitsFreeze(signing, "vkr", "author")).toBe(false);
+    // Подпись проверена: слот подписан.
+    const signed = esignRoute({ author: { state: "done" }, authorSlot: "signed" });
+    expect(routeTally(signed)).toMatchObject({ approved: 1, done: 1 });
+    expect(awaitsFreeze(signed, "vkr", "author")).toBe(false);
+  });
+
+  it("картинка: согласие выпускает её в PDF, слот сразу подписан", () => {
+    const route = esignRoute({
+      supervisor: {
+        method: "image",
+        state: "done",
+        approved_at: "2026-11-10T10:00:00Z",
+      },
+      supervisorSlot: "signed",
+    });
+    expect(routeTally(route)).toMatchObject({ approved: 2, done: 1, total: 3 });
+    expect(awaitsFreeze(route, "vkr", "supervisor")).toBe(false);
+  });
+
+  it("параллельный шаг: каждый согласовавший считается сам", () => {
+    const route = esignRoute({
+      supervisor: { state: "waiting", approved_at: "2026-11-10T10:00:00Z" },
+      consultant: { state: "to_approve_sign" },
+    });
+    expect(route.steps[1]).toHaveLength(2);
+    expect(routeTally(route)).toMatchObject({ approved: 2, done: 0, total: 3 });
+    expect(awaitsFreeze(route, "vkr", "supervisor")).toBe(true);
+    expect(awaitsFreeze(route, "vkr", "consultant")).toBe(false);
+  });
+
+  it("новый раунд после пересборки: согласия прежнего раунда не считаются", () => {
+    // Сервер отдаёт `approved_at` только текущего раунда, слоты ЭП к прежнему PDF устарели.
+    const route = esignRoute({
+      round: 2,
+      status: "paused",
+      author: { state: "waiting", approved_at: null },
+      authorSlot: "stale",
+    });
+    expect(routeTally(route)).toMatchObject({ approved: 0, done: 0, total: 3 });
+    expect(awaitsFreeze(route, "vkr", "author")).toBe(false);
   });
 
   it("самый ранний момент", () => {

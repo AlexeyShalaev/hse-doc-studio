@@ -10,3 +10,5 @@ export { RouteWaitNote } from "./ui/RouteWaitNote";
 export type { RouteWaitNoteProps } from "./ui/RouteWaitNote";
 export { displayName, useWaitText } from "./lib/useWaitText";
 export { useRouteSlotHints } from "./model/useRouteSlotHints";
+export { routeTally } from "./lib/routeView";
+export type { RouteTally } from "./lib/routeView";

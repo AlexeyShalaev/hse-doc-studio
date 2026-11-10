@@ -125,6 +125,59 @@ const startRoute = async (): Promise<string> => {
   return route.id;
 };
 
+/**
+ * Маршрут с прода: три обязательных слота ЭП и необязательный «Академический руководитель». Автор
+ * согласовал отправкой и ждёт фиксации PDF, научрук и консультант согласуют параллельно.
+ */
+const approvedAuthorRoute = ({ optional = true } = {}): SigningRoute => {
+  const slot = (id: string, participant: string | null, opt = false) => ({
+    slot_id: id,
+    label: { ru: id },
+    participant_id: participant,
+    optional: opt,
+    status: "pending" as const,
+  });
+  const esign = (id: string, slotId: string) =>
+    makeRouteParticipant({
+      id,
+      persona: slotId,
+      user_id: `u_${slotId}`,
+      name: slotId,
+      card_name: slotId,
+      assignments: [{ doc_id: DOC, slot_id: slotId }],
+      method: "detached",
+      state: "to_approve_sign",
+      next_action: "approve_and_sign",
+      approved_at: null,
+    });
+  return makeSigningRoute({
+    phase: "approval",
+    docs: [
+      {
+        doc_id: DOC,
+        name: { ru: "Заявление" },
+        frozen: false,
+        slots: [
+          slot("author", "srp_author"),
+          slot("supervisor", "srp_sup"),
+          slot("consultant", "srp_cons"),
+          ...(optional ? [slot("academic_supervisor", null, true)] : []),
+        ],
+      },
+    ],
+    steps: [
+      [
+        makeRouteParticipant({
+          method: "detached",
+          state: "waiting",
+          next_action: "wait",
+        }),
+      ],
+      [esign("srp_sup", "supervisor"), esign("srp_cons", "consultant")],
+    ],
+  });
+};
+
 // Сессия, список и ход маршрута идут друг за другом: под нагрузкой это дольше секунды.
 const LOAD = { timeout: 5000 };
 const status = () => screen.findByTestId("signing-status", {}, LOAD);
@@ -211,7 +264,7 @@ describe("Подписание: маршрут идёт", () => {
     const id = await startRoute();
     mount();
     expect(await status()).toHaveTextContent(
-      /^Шаг 2 из 2\. Очередь: Научный руководитель Петров П\. П\., с \d\d\.\d\dПодписано 1 из 2$/,
+      /^Шаг 2 из 2\. Очередь: Научный руководитель Петров П\. П\., с \d\d\.\d\dСогласовано 1 из 2 · подписано 1 из 2$/,
     );
     expect(await screen.findByTestId("signing-step-2")).toHaveAttribute(
       "data-current",
@@ -677,7 +730,27 @@ describe("Подписание: эталонные состояния", () => {
     serve(makeSigningRoute({ deadline: "2020-01-01T00:00:00Z" }));
     mount({ projectId: SR_PROJECT_ID });
     expect(await status()).toHaveTextContent("Срок прошёл 01.01");
-    expect(await status()).toHaveTextContent("Подписано 1 из 2");
+    expect(await status()).toHaveTextContent(
+      "Согласовано 1 из 2 · подписано 1 из 2",
+    );
+  });
+
+  it("автор согласовал отправкой, его ЭП ждёт фиксации: согласование видно отдельно", async () => {
+    // Случай с прода: «Подписано 0 из 3» без согласований автор читал как ошибку.
+    serve(approvedAuthorRoute());
+    mount({ projectId: SR_PROJECT_ID });
+    expect(await status()).toHaveTextContent(
+      "Согласовано 1 из 3 · подписано 0 из 3 + необязательная 0 из 1",
+    );
+  });
+
+  it("без необязательных слотов хвоста нет; по-английски", async () => {
+    await i18n.changeLanguage("en");
+    serve(approvedAuthorRoute({ optional: false }));
+    mount({ projectId: SR_PROJECT_ID });
+    expect(await status()).toHaveTextContent(
+      /consultant1 of 3 approved · 0 of 3 signed · Due/,
+    );
   });
 
   it("по-английски", async () => {

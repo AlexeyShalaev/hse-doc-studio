@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import { clsx } from "clsx";
 import { Check, ChevronDown } from "lucide-react";
 import type { CheckpointReadiness, ReadinessTally } from "@entities/submission";
+import type { RouteTally } from "@features/signing-route-progress";
 import { ReadinessRing } from "@shared/ui";
 import { splitDescription } from "../../lib/splitDescription";
 
@@ -14,18 +15,23 @@ export type CheckpointHeroProps = {
   description: string;
   readiness: CheckpointReadiness;
   isPacked: boolean;
+  /** Идущий маршрут подписания: сколько согласовано рядом со счётом подписей; null без маршрута. */
+  routeTally?: RouteTally | null;
 };
 
 type StatProps = {
   tally: ReadinessTally;
   label: string;
+  /** Вторая строка под подписью оси (согласования маршрута). */
+  note?: string | null;
+  title?: string | undefined;
 };
 
-const Stat = ({ tally, label }: StatProps) => {
+const Stat = ({ tally, label, note = null, title }: StatProps) => {
   if (tally.total === 0) return null;
   const isDone = tally.done === tally.total;
   return (
-    <div className="flex flex-col" style={{ gap: "0.125rem" }}>
+    <div className="flex flex-col" style={{ gap: "0.125rem" }} title={title}>
       <span
         className="cp-stat-value"
         style={{ color: isDone ? "var(--c-ok)" : "var(--fg-0)" }}
@@ -45,6 +51,15 @@ const Stat = ({ tally, label }: StatProps) => {
       >
         {label}
       </span>
+      {note !== null && (
+        <span
+          className="dim"
+          style={{ fontSize: "0.65625rem", whiteSpace: "nowrap" }}
+          data-testid="checkpoint-route-approved"
+        >
+          {note}
+        </span>
+      )}
     </div>
   );
 };
@@ -62,6 +77,7 @@ export const CheckpointHero = ({
   description,
   readiness,
   isPacked,
+  routeTally = null,
 }: CheckpointHeroProps) => {
   const { t } = useTranslation("workbench");
   const [isRestOpen, setIsRestOpen] = useState(false);
@@ -74,6 +90,22 @@ export const CheckpointHero = ({
   // прочитает как «ничего не готово», хотя состав точки просто не описан.
   const hasFigure = !readiness.isUnknown && readiness.total > 0;
   const ratio = hasFigure ? readiness.done / readiness.total : 0;
+  // Маршрут идёт: согласование видно рядом с подписями, иначе согласовавший видит «0 подписей»
+  // без объяснения (ЭП ставят после фиксации PDF). Кольцо по-прежнему считает подписи.
+  const route =
+    routeTally !== null && routeTally.total > 0
+      ? {
+          note: t("signingProgress:headerApproved", {
+            approved: routeTally.approved,
+            total: routeTally.total,
+          }),
+          title: t("signingProgress:headerTitle", {
+            approved: routeTally.approved,
+            done: routeTally.done,
+            total: routeTally.total,
+          }),
+        }
+      : null;
   const readinessLabel = t("checkpoint.readiness", {
     done: readiness.done,
     total: readiness.total,
@@ -146,6 +178,8 @@ export const CheckpointHero = ({
               <Stat
                 tally={readiness.breakdown.signatures}
                 label={t("checkpoint.sectionSignatures")}
+                note={route?.note ?? null}
+                title={route?.title}
               />
               <Stat
                 tally={readiness.breakdown.forms}

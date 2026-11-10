@@ -35,9 +35,10 @@ import {
   meIn,
   pickCurrentRoute,
   returnedDocId,
-  signedTally,
+  routeTally,
   waitingFor,
 } from "../lib/routeView";
+import { progressText } from "../lib/progressText";
 import { useNow } from "../lib/useNow";
 import { useWaitText } from "../lib/useWaitText";
 import { useErrorText } from "../model/useErrorText";
@@ -222,7 +223,7 @@ const RouteBody = ({
   const people = route.steps.flat();
   const now = useNow(people.some((p) => p.reminded_at !== null));
   const waiting = waitingFor(route);
-  const tally = signedTally(route);
+  const tally = routeTally(route);
   const me = meIn(route, meId);
   const signingPath = signingPagePath(projectId, route.id);
 
@@ -368,9 +369,7 @@ const RouteBody = ({
 
   const facts: string[] = [];
   if (route.status !== "draft" && tally.total + tally.optionalTotal > 0)
-    facts.push(
-      tally.optionalTotal > 0 ? t("signedOptional", tally) : t("signed", tally),
-    );
+    facts.push(progressText(t, tally));
   if (route.deadline !== null && route.status === "active") {
     const date = formatDay(route.deadline);
     facts.push(

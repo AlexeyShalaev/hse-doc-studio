@@ -84,6 +84,8 @@ export const CheckpointView = ({
     heldDocs,
     heldMine,
     hint: routeHint,
+    approvedSlot,
+    tally: routeTally,
   } = useRouteSlotHints(project.id, signaturePlan);
 
   if (isProfilesLoading) {
@@ -168,6 +170,7 @@ export const CheckpointView = ({
         description={description}
         readiness={readiness}
         isPacked={isPacked}
+        routeTally={routeTally}
       />
 
       {waitingForMe === 0 && heldMine && (
@@ -334,14 +337,21 @@ export const CheckpointView = ({
                             const held = heldDocs.has(docId);
                             const refreeze =
                               held && planSlot?.status === "stale";
+                            // Подписант согласовал, его ЭП маршрут попросит после фиксации PDF:
+                            // это не «ждёт подписи» без причины и не ошибка старой подписи.
+                            const approved =
+                              !signature.isSigned &&
+                              approvedSlot(docId, signature.slotId);
                             const tone = signature.isSigned
                               ? "ok"
-                              : planSlot?.status === "invalid"
-                                ? "err"
-                                : refreeze
-                                  ? "pending"
+                              : approved || refreeze
+                                ? "pending"
+                                : planSlot?.status === "invalid"
+                                  ? "err"
                                   : "warn";
-                            const statusText = refreeze
+                            const statusText = approved
+                              ? t("signingProgress:slotApproved")
+                              : refreeze
                               ? t("signingProgress:wait.refreeze")
                               : planSlot
                                 ? t(`checkpoint.slotStatus.${planSlot.status}`)

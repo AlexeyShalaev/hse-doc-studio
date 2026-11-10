@@ -7,6 +7,7 @@ import {
   useSigningRoute,
 } from "@entities/signing-route";
 import type { z } from "zod";
+import { awaitsFreeze, routeTally } from "../lib/routeView";
 import { useWaitText } from "../lib/useWaitText";
 
 type SignaturePlan = z.infer<typeof SignaturePlanSchema>;
@@ -15,7 +16,8 @@ type SignaturePlan = z.infer<typeof SignaturePlanSchema>;
  * Подсказки плана подписей для документов, которые держит идущий маршрут (signing-route.md, 6.1).
  * План говорит «зафиксируйте заново и подпишите», а это делает сам маршрут: вместо этого сказано,
  * что с подписантом слота и когда до него дойдёт. Маршрут точки берётся из плана (`route`), его
- * ход из ответа маршрута; пока он грузится, сказано только, что PDF зафиксирует маршрут.
+ * ход из ответа маршрута; пока он грузится, сказано только, что PDF зафиксирует маршрут. Оттуда же
+ * счёт согласований для шапки и статус «согласовано, подпись после фиксации» у слота ЭП.
  */
 export const useRouteSlotHints = (
   projectId: string,
@@ -53,5 +55,12 @@ export const useRouteSlotHints = (
     return t("wait.freezeByRoute");
   };
 
-  return { heldDocs, heldMine, hint };
+  /** Слот ЭП согласован и ждёт фиксации PDF: «согласовано, подпись после фиксации». */
+  const approvedSlot = (docId: string, slotId: string): boolean =>
+    heldDocs.has(docId) && !!route && awaitsFreeze(route, docId, slotId);
+
+  /** Согласования и подписи идущего маршрута для шапки точки; null без идущего маршрута. */
+  const tally = route?.status === "active" ? routeTally(route) : null;
+
+  return { heldDocs, heldMine, hint, approvedSlot, tally };
 };

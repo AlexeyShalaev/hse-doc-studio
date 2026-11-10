@@ -174,11 +174,36 @@ describe("useRouteSlotHints", () => {
     );
   });
 
+  it("свой слот ЭП согласован и ждёт фиксации; счёт согласований для шапки", async () => {
+    const { result } = renderHook(() => useRouteSlotHints("p1", plan(true)), {
+      wrapper,
+    });
+    // Пока ход маршрута не пришёл, ни статуса «согласовано», ни счёта.
+    expect(result.current.approvedSlot(DOC, "author")).toBe(false);
+    expect(result.current.tally).toBeNull();
+    await waitFor(() => {
+      expect(result.current.approvedSlot(DOC, "author")).toBe(true);
+    });
+    expect(result.current.approvedSlot(DOC, "supervisor")).toBe(false);
+    expect(result.current.tally).toMatchObject({
+      approved: 1,
+      done: 0,
+      total: 2,
+    });
+    expect(i18n.t("signingProgress:slotApproved")).toBe(
+      "согласовано, подпись после фиксации",
+    );
+    expect(i18n.t("signingProgress:slotApproved", { lng: "en" })).toBe(
+      "approved, signature after freeze",
+    );
+  });
+
   it("документ свободен: подсказка плана в силе", () => {
     const { result } = renderHook(() => useRouteSlotHints("p1", plan(false)), {
       wrapper,
     });
     expect(result.current.heldMine).toBe(false);
     expect(result.current.hint(DOC, "author")).toBeNull();
+    expect(result.current.approvedSlot(DOC, "author")).toBe(false);
   });
 });

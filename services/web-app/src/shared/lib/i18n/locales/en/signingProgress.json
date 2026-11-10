@@ -89,7 +89,13 @@
     "locked": "This document is out for signing: signatures cannot be changed. To change them, cancel the route on the checkpoint page."
   },
   "unsigned": "The route is sent, your signature is not in place yet.",
-  "signedOptional": "{{done}} of {{total}} required signed, optional {{optionalDone}} of {{optionalTotal}}",
+  "progress": "{{approved}} of {{total}} approved · {{done}} of {{total}} signed",
+  "progressOptional_one": "+ optional {{done}} of {{count}}",
+  "progressOptional_other": "+ optional {{done}} of {{count}}",
+  "progressOnlyOptional": "Optional: {{approved}} of {{total}} approved · {{done}} of {{total}} signed",
+  "headerApproved": "{{approved}}/{{total}} approved",
+  "headerTitle": "{{done}} of {{total}} signed, {{approved}} of {{total}} approved",
+  "slotApproved": "approved, signature after freeze",
   "wait": {
     "approvedEsign": "You have already approved. The Studio will ask for your e-signature after the PDF is frozen, once these people approve: {{who}}.",
     "approvedEsignNext": "You have already approved. The Studio will ask for your e-signature after the PDF is frozen.",
