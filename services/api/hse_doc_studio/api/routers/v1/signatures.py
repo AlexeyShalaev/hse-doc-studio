@@ -30,6 +30,7 @@ from hse_doc_studio.api.schemas.signature import (
     UploadSignatureResponse,
 )
 from hse_doc_studio.core.errors import NotFoundError
+from hse_doc_studio.core.signing_route.audit import signing_route_scope
 from hse_doc_studio.core.signing_route.ports import ISigningRouteGate
 from hse_doc_studio.core.value_objects import (
     DetachedSignature,
@@ -229,7 +230,9 @@ async def update_placement(
     slot_id: str,
     body: UpdatePlacementRequest,
     uc: FromDishka[UpdateSignaturePlacementUC],
+    gate: FromDishka[ISigningRouteGate],
 ) -> PlacementResponse:
+    await gate.require_unlocked(project_id, doc_id=doc_id)
     try:
         result = await uc.execute(
             UpdateSignaturePlacementInput(
@@ -259,8 +262,10 @@ async def upload_signature_png(
     project_id: UUID,
     slot_id: str,
     uc: FromDishka[UploadSignaturePngUC],
+    gate: FromDishka[ISigningRouteGate],
     file: UploadFile = File(...),
 ) -> UploadSignatureResponse:
+    await gate.require_unlocked(project_id, slot_id=slot_id)
     content = await file.read()
     try:
         result = await uc.execute(
@@ -290,7 +295,9 @@ async def delete_signature_png(
     project_id: UUID,
     slot_id: str,
     uc: FromDishka[DeleteSignaturePngUC],
+    gate: FromDishka[ISigningRouteGate],
 ) -> None:
+    await gate.require_unlocked(project_id, slot_id=slot_id)
     try:
         await uc.execute(DeleteSignaturePngInput(project_id=project_id, slot_id=slot_id))
     except NotFoundError as exc:
@@ -330,7 +337,9 @@ async def update_slot_config(
     slot_id: str,
     body: UpdateSlotConfigRequest,
     uc: FromDishka[UpdateSlotConfigUC],
+    gate: FromDishka[ISigningRouteGate],
 ) -> SlotInfoResponse:
+    await gate.require_unlocked(project_id, slot_id=slot_id)
     try:
         result = await uc.execute(
             UpdateSlotConfigInput(
@@ -356,7 +365,10 @@ def _file_response(result: DetachedFileOutput, media_type: str) -> FileResponse:
 
 
 @router.post("/projects/{project_id}/docs/{doc_id}/frozen", response_model=FreezePdfResponse)
-async def freeze_pdf(project_id: UUID, doc_id: str, uc: FromDishka[FreezePdfUC]) -> FreezePdfResponse:
+async def freeze_pdf(
+    project_id: UUID, doc_id: str, uc: FromDishka[FreezePdfUC], gate: FromDishka[ISigningRouteGate]
+) -> FreezePdfResponse:
+    await gate.require_unlocked(project_id, doc_id=doc_id)
     try:
         result = await uc.execute(FreezePdfInput(project_id=project_id, doc_id=doc_id))
     except NotFoundError as exc:
@@ -367,7 +379,10 @@ async def freeze_pdf(project_id: UUID, doc_id: str, uc: FromDishka[FreezePdfUC])
 
 
 @router.delete("/projects/{project_id}/docs/{doc_id}/frozen", status_code=204)
-async def unfreeze_pdf(project_id: UUID, doc_id: str, uc: FromDishka[UnfreezePdfUC]) -> None:
+async def unfreeze_pdf(
+    project_id: UUID, doc_id: str, uc: FromDishka[UnfreezePdfUC], gate: FromDishka[ISigningRouteGate]
+) -> None:
+    await gate.require_unlocked(project_id, doc_id=doc_id)
     try:
         await uc.execute(UnfreezePdfInput(project_id=project_id, doc_id=doc_id))
     except NotFoundError as exc:
@@ -425,13 +440,14 @@ async def attach_detached_signature(
 ) -> AttachDetachedSignatureResponse:
     content = await file.read()
     key = await public_key.read() if public_key is not None else None
-    await gate.require_turn(project_id, doc_id, slot_id)
+    route_id = await gate.require_turn(project_id, doc_id, slot_id)
     try:
-        result = await uc.execute(
-            AttachDetachedSignatureInput(
-                project_id=project_id, doc_id=doc_id, slot_id=slot_id, content=content, public_key=key or None
+        with signing_route_scope(route_id):
+            result = await uc.execute(
+                AttachDetachedSignatureInput(
+                    project_id=project_id, doc_id=doc_id, slot_id=slot_id, content=content, public_key=key or None
+                )
             )
-        )
     except NotFoundError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except ValueError as exc:
@@ -494,17 +510,18 @@ async def sign_detached_in_studio(
     uc: FromDishka[SignInStudioUC],
     gate: FromDishka[ISigningRouteGate],
 ) -> AttachDetachedSignatureResponse:
-    await gate.require_turn(project_id, doc_id, slot_id)
+    route_id = await gate.require_turn(project_id, doc_id, slot_id)
     try:
-        result = await uc.execute(
-            SignInStudioInput(
-                project_id=project_id,
-                doc_id=doc_id,
-                slot_id=slot_id,
-                identity_id=body.identity_id,
-                passphrase=body.passphrase,
+        with signing_route_scope(route_id):
+            result = await uc.execute(
+                SignInStudioInput(
+                    project_id=project_id,
+                    doc_id=doc_id,
+                    slot_id=slot_id,
+                    identity_id=body.identity_id,
+                    passphrase=body.passphrase,
+                )
             )
-        )
     except NotFoundError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except PermissionError as exc:
@@ -528,17 +545,18 @@ async def sign_embedded_in_studio(
     gate: FromDishka[ISigningRouteGate],
 ) -> EmbeddedSignatureResponse:
     """Встроенная подпись PAdES ключом Студии: дописывается поверх зафиксированного PDF (signature-plan.md, 4)."""
-    await gate.require_turn(project_id, doc_id, slot_id)
+    route_id = await gate.require_turn(project_id, doc_id, slot_id)
     try:
-        result = await uc.sign_pades(
-            SignInStudioInput(
-                project_id=project_id,
-                doc_id=doc_id,
-                slot_id=slot_id,
-                identity_id=body.identity_id,
-                passphrase=body.passphrase,
+        with signing_route_scope(route_id):
+            result = await uc.sign_pades(
+                SignInStudioInput(
+                    project_id=project_id,
+                    doc_id=doc_id,
+                    slot_id=slot_id,
+                    identity_id=body.identity_id,
+                    passphrase=body.passphrase,
+                )
             )
-        )
     except NotFoundError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except PermissionError as exc:
@@ -578,7 +596,9 @@ async def delete_detached_signature(
     doc_id: str,
     slot_id: str,
     uc: FromDishka[DeleteDetachedSignatureUC],
+    gate: FromDishka[ISigningRouteGate],
 ) -> None:
+    await gate.require_unlocked(project_id, doc_id=doc_id)
     try:
         await uc.execute(DeleteDetachedSignatureInput(project_id=project_id, doc_id=doc_id, slot_id=slot_id))
     except NotFoundError as exc:
@@ -598,8 +618,10 @@ async def set_slot_signer(
     slot_id: str,
     body: ManualSignerRequest,
     uc: FromDishka[UpdateSlotSignerUC],
+    gate: FromDishka[ISigningRouteGate],
 ) -> SlotInfoResponse:
     """Signer for the plate: one of the Studio's keys (`identity_id`) or typed-in fields."""
+    await gate.require_unlocked(project_id, slot_id=slot_id)
     manual = None
     if body.identity_id is None:
         manual = SignerInfo(
@@ -628,7 +650,9 @@ async def set_slot_signer_level(
     slot_id: str,
     body: LevelRequest,
     uc: FromDishka[UpdateSlotSignerUC],
+    gate: FromDishka[ISigningRouteGate],
 ) -> SlotInfoResponse:
+    await gate.require_unlocked(project_id, slot_id=slot_id)
     try:
         result = await uc.execute(UpdateSlotSignerInput(project_id=project_id, slot_id=slot_id, level=body.level))
     except (NotFoundError, ValueError) as exc:
@@ -644,9 +668,11 @@ async def set_slot_signer_from_file(
     project_id: UUID,
     slot_id: str,
     uc: FromDishka[UpdateSlotSignerUC],
+    gate: FromDishka[ISigningRouteGate],
     file: UploadFile = File(...),
 ) -> SlotInfoResponse:
     """Signer for the plate from the signer's public certificate (.cer/.pem) or OpenPGP public key (.asc)."""
+    await gate.require_unlocked(project_id, slot_id=slot_id)
     try:
         result = await uc.execute(
             UpdateSlotSignerInput(project_id=project_id, slot_id=slot_id, certificate=await file.read())
@@ -657,7 +683,10 @@ async def set_slot_signer_from_file(
 
 
 @router.delete("/projects/{project_id}/signatures/slots/{slot_id}/signer", response_model=SlotInfoResponse)
-async def clear_slot_signer(project_id: UUID, slot_id: str, uc: FromDishka[UpdateSlotSignerUC]) -> SlotInfoResponse:
+async def clear_slot_signer(
+    project_id: UUID, slot_id: str, uc: FromDishka[UpdateSlotSignerUC], gate: FromDishka[ISigningRouteGate]
+) -> SlotInfoResponse:
+    await gate.require_unlocked(project_id, slot_id=slot_id)
     try:
         result = await uc.execute(UpdateSlotSignerInput(project_id=project_id, slot_id=slot_id))
     except NotFoundError as exc:

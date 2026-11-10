@@ -14,6 +14,7 @@ export {
   useTrustRoot,
   useSignaturesState,
   useSignaturePlan,
+  useDocSignaturePlan,
   usePreviewSignSubmission,
   useSignSubmission,
   useSignDetachedInStudio,

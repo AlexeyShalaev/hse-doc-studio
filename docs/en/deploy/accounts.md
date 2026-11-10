@@ -121,7 +121,7 @@ Users reset their own password by mail. If mail is unavailable, the administrato
 
 ## Audit
 
-The Audit section keeps sign-in events (including passkey sign-ins with the refusal reason), passkey additions, removals and resets, permission changes, reset links, runner actions and settings changes. Retention: `HSE_STUDIO__SERVER__AUDIT_RETENTION_DAYS` (365 by default, 0 means forever).
+The Audit section keeps sign-in events (including passkey sign-ins with the refusal reason), passkey additions, removals and resets, permission changes, reset links, runner actions and settings changes, as well as document signatures and the progress of “Send for signing” routes: sending, approvals, signatures, returns for rework, stops and reminders (without comment text, passwords or keys). Events of a project are found with the object filter. Retention: `HSE_STUDIO__SERVER__AUDIT_RETENTION_DAYS` (365 by default, 0 means forever).
 
 ## Access tokens
 

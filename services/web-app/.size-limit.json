@@ -51,7 +51,7 @@
     "name": "Словарь админки: audit",
     "path": "dist/assets/locale-admin-audit-*.js",
     "gzip": true,
-    "limit": "7.8 kB"
+    "limit": "9.7 kB"
   },
   {
     "name": "Словарь админки: ops",

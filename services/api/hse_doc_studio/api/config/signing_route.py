@@ -1,4 +1,4 @@
-"""Маршрут подписания (docs/design/signing-route.md, раздел 5.7): автонапоминания подписантам."""
+"""Маршрут подписания (docs/design/signing-route.md): автонапоминания подписантам (5.7) и сверка с проектом (5.5)."""
 
 from __future__ import annotations
 
@@ -31,4 +31,10 @@ class SigningRouteConfig(BaseModel):
         ge=0,
         le=20,
         description="Сколько автонапоминаний получает один подписант за одну отправку маршрута; 0 выключает их.",
+    )
+    sweep_interval_s: float = Field(
+        default=300.0,
+        ge=30,
+        le=86400,
+        description="Как часто сервер сверяет идущие маршруты подписания с документами проектов, в секундах.",
     )

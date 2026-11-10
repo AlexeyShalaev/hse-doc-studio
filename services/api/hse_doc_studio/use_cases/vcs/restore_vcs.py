@@ -16,6 +16,7 @@ from hse_doc_studio.core.repositories import (
     IProjectIndexRepository,
     IProjectRepository,
 )
+from hse_doc_studio.core.signing_route.ports import IRouteWatch, NoRouteWatch
 from hse_doc_studio.core.vcs.entities import VcsRestoreResult, VcsSettings
 from hse_doc_studio.core.vcs.errors import VcsUnavailableError
 from hse_doc_studio.core.vcs.protocols import IVcsFolderLocks, IVcsService
@@ -51,10 +52,13 @@ class RestoreVcsUC:
         vcs_service: IVcsService,
         changelog_repo: IChangeLogRepository,
         locks: IVcsFolderLocks,
+        route_watch: IRouteWatch | None = None,
     ) -> None:
         self._vcs = vcs_service
         self._changelog_repo = changelog_repo
         self._locks = locks
+        # Откат меняет собранные PDF и состояние подписей мимо маршрута подписания: маршруты проекта сверяются.
+        self._route_watch: IRouteWatch = route_watch or NoRouteWatch()
         self._get_uc = GetProjectUC(project_repo, project_index_repo)
 
     async def execute(self, inp: RestoreVcsInput) -> RestoreVcsOutput:
@@ -84,6 +88,7 @@ class RestoreVcsUC:
                 )
             )
 
+        self._route_watch.on_project_changed(project.id)
         self._changelog_repo.append(
             project.folder,
             ChangeLogEntry(

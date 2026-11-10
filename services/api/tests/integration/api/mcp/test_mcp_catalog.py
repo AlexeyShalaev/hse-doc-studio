@@ -163,3 +163,36 @@ async def test__catalog__access_tools__server_only_with_route_rights(request_con
     assert invite is not None
     assert invite.rule.rate is INVITE
     assert invite.spec.parameters["required"] == ["project_id", "email"]
+
+
+_SIGNING_ROUTE_ROUTES = {
+    "get_signing_route": ("GET", "/projects/{project_id}/signing-routes/{route_id}"),
+    "send_for_signing": ("POST", "/projects/{project_id}/signing-routes/{route_id}/send"),
+}
+
+
+async def test__catalog__signing_route_tools__server_only_with_route_rights(request_container: AsyncContainer) -> None:
+    server = McpCatalog(await request_container.get(ToolRegistry), request_container, server_mode=True)
+    local = McpCatalog(await request_container.get(ToolRegistry), request_container, server_mode=False)
+
+    for name, route in _SIGNING_ROUTE_ROUTES.items():
+        entry = server.get(name)
+        assert entry is not None, name
+        assert entry.rule.action is ROUTE_ACTIONS[route].action, name
+        assert entry.rule.guards_write is (route[0] != "GET"), name
+        assert local.get(name) is None, name
+    tasks, send = server.get("list_signing_tasks"), server.get("send_for_signing")
+    assert tasks is not None
+    assert send is not None
+    # Свои задачи читаются без проекта; отправка опасная, как подпись комплекта (docs/design/mcp.md, M6).
+    assert (tasks.rule.action, tasks.meta.read_only, local.get("list_signing_tasks")) == (None, True, None)
+    assert (send.meta.dangerous, send.meta.group) == (True, McpToolGroup.submission)
+    assert send.spec.parameters["required"] == ["project_id", "profile_id"]
+
+
+def test__rules__signing_route__read_and_send_only() -> None:
+    """Согласовать, подписать задачу и вернуть на доработку через MCP нельзя (signing-route.md, 6.8)."""
+    names = {r.name for r in MCP_TOOL_RULES if "signing" in r.name}
+
+    assert names == {"get_signing_route", "list_signing_tasks", "send_for_signing"}
+    assert not [r.name for r in MCP_TOOL_RULES if "approve" in r.name or "return" in r.name]

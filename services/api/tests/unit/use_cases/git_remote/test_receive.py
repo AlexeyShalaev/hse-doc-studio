@@ -127,6 +127,36 @@ async def test__begin_finish__snapshot_lock_reconcile_and_audit(tmp_path: Path) 
     assert parts["runtime"].cleaned == 1
 
 
+class _RouteWatch:
+    def __init__(self) -> None:
+        self.projects: list[Any] = []
+
+    def on_project_changed(self, project_id: Any) -> None:
+        self.projects.append(project_id)
+
+
+async def test__finish__branch_moved__signing_routes_of_the_project_are_reconciled(tmp_path: Path) -> None:
+    watch = _RouteWatch()
+    uc, _ = _uc(VcsFolderLocks(), route_watch=watch)
+    access = _access(tmp_path)
+
+    await uc.finish(await uc.begin(access), GitRpcOutcome(0, ""))
+
+    # Принятый push меняет файлы проекта мимо маршрута подписания (signing-route.md, 5.5).
+    assert watch.projects == [access.project.id]
+
+
+async def test__finish__push_rejected__signing_routes_left_alone(tmp_path: Path) -> None:
+    watch = _RouteWatch()
+    runtime = _Runtime()
+    runtime.heads = ["a" * 40, "a" * 40]
+    uc, _ = _uc(VcsFolderLocks(), route_watch=watch, runtime=runtime)
+
+    await uc.finish(await uc.begin(_access(tmp_path)), GitRpcOutcome(1, "rejected"))
+
+    assert watch.projects == []
+
+
 @pytest.mark.parametrize(
     "override",
     [{"operations": _Operations(busy=True)}, {"project_access": _ProjectAccess(ProjectAccessMode.read_only)}],

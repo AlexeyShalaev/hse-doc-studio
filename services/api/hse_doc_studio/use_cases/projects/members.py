@@ -26,6 +26,7 @@ from hse_doc_studio.core.invitations.entities import NotificationKind, Notificat
 from hse_doc_studio.core.invitations.protocols import INotifier, IProjectCards, IProjectMemberLookup
 from hse_doc_studio.core.orgs.entities import OrgRole
 from hse_doc_studio.core.orgs.protocols import IGroupRepository, IOrgRepository
+from hse_doc_studio.core.signing_route.ports import IRouteWatch, NoRouteWatch
 from hse_doc_studio.core.uow import IUnitOfWork
 from hse_doc_studio.use_cases.orgs.access import user_id_of
 
@@ -54,7 +55,10 @@ class SetProjectMemberUC:
         audit: IAuditLog,
         uow: IUnitOfWork,
         member_roles: IProjectMemberLookup,
+        route_watch: IRouteWatch | None = None,
     ) -> None:
+        # Смена роли или персоны участника может снять его с маршрута подписания: маршруты проекта сверяются.
+        self._route_watch: IRouteWatch = route_watch or NoRouteWatch()
         self._members = members
         self._member_roles = member_roles
         self._directory = directory
@@ -80,6 +84,8 @@ class SetProjectMemberUC:
                 target=str(project_id),
                 details={"kind": grant.principal_kind, "principal_id": grant.principal_id, "role": grant.role.value},
             )
+        # После транзакции: сверка идёт своей транзакцией и должна увидеть уже записанное членство.
+        self._route_watch.on_project_changed(project_id)
         return ProjectMemberView(grant, name)
 
     async def _principal_name(
@@ -138,7 +144,10 @@ class RemoveProjectMemberUC:
         users: IUserRepository | None = None,
         links: IShareLinkStore | None = None,
         clock: Callable[[], datetime] = _utc_now,
+        route_watch: IRouteWatch | None = None,
     ) -> None:
+        # Ушедший участник останавливает идущий маршрут подписания: маршруты проекта сверяются.
+        self._route_watch: IRouteWatch = route_watch or NoRouteWatch()
         self._members = members
         self._audit = audit
         self._uow = uow
@@ -168,6 +177,8 @@ class RemoveProjectMemberUC:
                 await self._revoke_links(actor_id, project_id, principal_id)
             if principal_kind == "user" and principal_id != actor_id:
                 await self._notify_removed(actor_id, project_id, principal_id)
+        # После транзакции: сверка идёт своей транзакцией и должна увидеть уже записанное членство.
+        self._route_watch.on_project_changed(project_id)
 
     async def _revoke_links(self, actor_id: str, project_id: UUID, user_id: str) -> None:
         """Ссылки, созданные убранным человеком, иначе пускали бы его (как гостя) в проект и после удаления."""

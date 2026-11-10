@@ -18,6 +18,7 @@ from hse_doc_studio.api.schemas.signature_plan import (
     map_results,
 )
 from hse_doc_studio.core.errors import NotFoundError
+from hse_doc_studio.core.signing_route.ports import ISigningRouteGate
 from hse_doc_studio.use_cases.signatures.get_signature_plan import GetSignaturePlanInput, GetSignaturePlanUC
 from hse_doc_studio.use_cases.signatures.sign_submission import (
     SigningConflictError,
@@ -32,6 +33,7 @@ router = APIRouter(route_class=SafeDishkaRoute)
 async def get_signature_plan(
     project_id: UUID,
     uc: FromDishka[GetSignaturePlanUC],
+    routes: FromDishka[ISigningRouteGate],
     profile_id: str | None = Query(default=None),
     author: str | None = Query(default=None),
     doc_id: str | None = Query(default=None),
@@ -44,7 +46,7 @@ async def get_signature_plan(
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
-    return map_plan(plan)
+    return map_plan(plan, await routes.plan_routes(project_id, profile_id=profile_id, doc_id=doc_id))
 
 
 def _sign_input(project_id: UUID, body: SignSubmissionRequest) -> SignSubmissionInput:
@@ -78,6 +80,7 @@ async def sign_submission(
     body: SignSubmissionRequest,
     uc: FromDishka[SignSubmissionUC],
     plan_uc: FromDishka[GetSignaturePlanUC],
+    routes: FromDishka[ISigningRouteGate],
 ) -> SignSubmissionResponse:
     """«Подписать комплект»: фиксирует нужные PDF и подписывает все слоты актора его ключом, пароль один раз."""
     try:
@@ -93,4 +96,4 @@ async def sign_submission(
         raise HTTPException(status_code=403, detail=str(exc)) from exc
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
-    return map_results(out, plan)
+    return map_results(out, plan, await routes.plan_routes(project_id, profile_id=body.profile_id))

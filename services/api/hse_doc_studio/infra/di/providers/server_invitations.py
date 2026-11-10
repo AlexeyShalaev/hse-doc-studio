@@ -44,7 +44,7 @@ from hse_doc_studio.core.jobs.queue import IJobQueue
 from hse_doc_studio.core.orgs.protocols import IOrgRepository
 from hse_doc_studio.core.quotas.protocols import IQuotaGate
 from hse_doc_studio.core.repositories import IProjectIndexRepository, ITemplateRepository
-from hse_doc_studio.core.signing_route.ports import ISigningTaskCounter
+from hse_doc_studio.core.signing_route.ports import IRouteWatch, ISigningTaskCounter
 from hse_doc_studio.core.uow import IUnitOfWork
 from hse_doc_studio.infra.db.repositories.access_requests import PostgresAccessRequestRepository
 from hse_doc_studio.infra.db.repositories.notifications import PostgresNotificationRepository
@@ -538,8 +538,11 @@ class ServerInvitationsProvider(Provider):
         cards: IProjectCards,
         users: IUserRepository,
         links: IShareLinkStore,
+        route_watch: IRouteWatch,
     ) -> RemoveProjectMemberUC:
-        return RemoveProjectMemberUC(members, audit, uow, notifier=notifier, cards=cards, users=users, links=links)
+        return RemoveProjectMemberUC(
+            members, audit, uow, notifier=notifier, cards=cards, users=users, links=links, route_watch=route_watch
+        )
 
     @provide(override=True)
     def get_register_uc(

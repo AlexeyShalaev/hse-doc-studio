@@ -27,6 +27,7 @@ from hse_doc_studio.core.signatures.plan import (
     slot_persona,
 )
 from hse_doc_studio.core.signatures.route_order import default_route
+from hse_doc_studio.core.signing_route.audit import RouteAuditAction, signing_route_scope
 from hse_doc_studio.core.signing_route.drafting import (
     PersonDraft,
     apply_people,
@@ -58,7 +59,6 @@ from hse_doc_studio.core.signing_route.repositories import OpenRouteExistsError
 from hse_doc_studio.core.signing_route.signer import unsigned_crypto
 from hse_doc_studio.core.signing_route.transitions import archive, cancel, send
 from hse_doc_studio.core.value_objects import SignaturesState
-from hse_doc_studio.use_cases.signatures._studio_signer import project_lock
 from hse_doc_studio.use_cases.signing_route.facts import LoadedFacts
 from hse_doc_studio.use_cases.signing_route.key_signer import KeyInfo, KeyRequest, RouteKeySigner
 from hse_doc_studio.use_cases.signing_route.point import RoutePoint
@@ -68,6 +68,7 @@ from hse_doc_studio.use_cases.signing_route.scenario import (
     Settled,
     actor_uuid,
     closing_events,
+    route_files,
 )
 from hse_doc_studio.use_cases.signing_route.views import (
     Membership,
@@ -226,15 +227,20 @@ class SigningRouteDrafts(RouteScenario):
         route = await self._new_route(point, actor_id, previous[0] if previous else None)
         for old in previous:
             if old.status in _SUPERSEDED:
-                await self._s.routes.save(archive(old))
+                archived = await self._s.routes.save(archive(old))
+                await self._audit(
+                    RouteAuditAction.archive, archived, actor_id=actor_id, details={"superseded_by": str(route.id)}
+                )
         try:
-            return await self._s.routes.add(route)
+            added = await self._s.routes.add(route)
         except OpenRouteExistsError:
             # Черновик точки только что создал другой запрос: отдаём его.
             found = await self._s.routes.get_open(point.project_id, point.profile.id)
             if found is None:
                 raise
             return found
+        await self._audit(RouteAuditAction.create, added, actor_id=actor_id, details=_composition(added))
+        return added
 
     async def _new_route(self, point: RoutePoint, actor_id: UUID, previous: SigningRoute | None) -> SigningRoute:
         extras: list[DocSlot] = []
@@ -328,6 +334,17 @@ class SigningRouteDrafts(RouteScenario):
                 message=_message(update.message),
             )
             saved = await self._s.routes.save(changed)
+            await self._audit(
+                RouteAuditAction.update,
+                saved,
+                actor_id=actor_uuid(actor),
+                details={
+                    **_composition(saved),
+                    "extra_slots": [{"doc_id": pair.doc_id, "slot_id": pair.slot_id} for pair in extras],
+                    "deadline": saved.deadline.isoformat() if saved.deadline is not None else None,
+                    "has_message": saved.message is not None,
+                },
+            )
         return await self._details(actor, point, saved)
 
     async def _people_for(
@@ -356,6 +373,11 @@ class SigningRouteDrafts(RouteScenario):
         candidates = await self._s.people.candidates(point.project_id)
         invitees = await self._s.people.invitees(point.project_id)
         return resolve_unassigned(everyone, candidates, invitees, prefer=actor_id)
+
+
+def _composition(route: SigningRoute) -> dict[str, object]:
+    """Состав маршрута для журнала аудита: документы, число шагов и участников."""
+    return {"docs": list(route.docs), "steps": len(route.steps), "participants": len(route.participants)}
 
 
 def _extras(point: RoutePoint, pairs: Iterable[DocSlot]) -> list[DocSlot]:
@@ -426,7 +448,7 @@ class SigningRouteSending(RouteScenario):
             _check_interval(route, at)
             point = await self._s.points.load(project_id, route.profile_id)
             identity = await self._signer.check(request.sign) if request.sign is not None else None
-            async with project_lock(point.project):
+            async with route_files(point.project):
                 settled, events = await self._send_files(point, route, actor_id, request, at)
                 if identity is not None and request.sign is not None:
                     try:
@@ -481,7 +503,8 @@ class SigningRouteSending(RouteScenario):
         if me is None:
             return settled, []
         pairs = unsigned_crypto(me, settled.loaded.facts)
-        signed = await self._signer.sign(point, pairs, identity, key.passphrase)
+        with signing_route_scope(route.id):
+            signed = await self._signer.sign(point, pairs, identity, key.passphrase)
         events = [
             RouteEvent(
                 route.id,
@@ -667,5 +690,6 @@ class SigningRouteControl(RouteScenario):
         async with self._s.uow.begin():
             route = await self._get(project_id, route_id, lock=True)
             saved = await self._s.routes.save(archive(route))
+            await self._audit(RouteAuditAction.archive, saved, actor_id=actor_uuid(actor))
         point = await self._s.points.load(project_id, saved.profile_id)
         return await self._details(actor, point, saved)
