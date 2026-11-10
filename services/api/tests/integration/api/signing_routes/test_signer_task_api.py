@@ -24,6 +24,8 @@ from hse_doc_studio.use_cases.signatures.attach_detached_signature import (
     AttachDetachedSignatureUC,
 )
 from hse_doc_studio.use_cases.signing_route import author as author_module
+from pypdf import PageObject
+from pytest_mock import MockerFixture
 from sqlalchemy import update
 
 from tests.fakes.signer_profile import make_png, make_self_signed
@@ -404,6 +406,23 @@ async def test__plate_key__last_visible_change__documents_freeze_and_the_plate_i
     assert done["route"]["status"] == "completed"
     assert trio.events() == ["sent", "approved", "frozen", "approved", "signed", "signed", "completed"]
     assert trio.frozen_sha() == frozen
+
+
+async def test__plate_key__freeze_cannot_stamp__400_stamping_failed_and_nothing_frozen(
+    stand: Stand, keys: FakeKeys, mocker: MockerFixture
+) -> None:
+    """Маршрут фиксирует документы, а метка не ложится: отказ с текстом, фиксации и события «frozen» нет."""
+    trio = await make_trio(stand, {"supervisor": "detached"}, academic="none")
+    key = keys.give(trio.supervisor, "Петров Пётр Петрович")
+    trio.sent()
+    mocker.patch.object(PageObject, "merge_page", side_effect=RuntimeError("content stream is read-only"))
+
+    resp = trio.plate_key(trio.supervisor, str(key.id))
+
+    assert _code(resp) == (400, "stamping_failed")
+    assert "content stream is read-only" in resp.json()["detail"]
+    assert trio.frozen_sha() == {}
+    assert "frozen" not in trio.events()
 
 
 async def test__plate_file__certificate_sets_the_plate__private_key_and_garbage_rejected(stand: Stand) -> None:

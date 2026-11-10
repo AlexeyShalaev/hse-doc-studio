@@ -5,13 +5,15 @@ from __future__ import annotations
 import hashlib
 import json
 from collections.abc import Callable, Iterable, Sequence
-from dataclasses import asdict, dataclass, replace
+from dataclasses import asdict, dataclass, field, replace
 from datetime import date
 from pathlib import Path, PurePath
 
 import structlog
 
 from hse_doc_studio.core.enums import SignMode
+from hse_doc_studio.core.i18n import localized_error
+from hse_doc_studio.core.signatures.errors import StampImageError
 from hse_doc_studio.core.value_objects import SignaturesState, SignerInfo
 
 logger = structlog.get_logger()
@@ -81,6 +83,9 @@ class Stamp:
     # Signing date rendered as text to the right of the PNG («12.05.2026»).
     # ASCII-only by design so the built-in Helvetica suffices.
     date_text: str | None = None
+    # Slot the mark belongs to, for error messages only: not part of the visible layer, so it stays out of
+    # equality, `repr` and the fingerprints (`stamps_digest`, `legacy_stamps_digest`).
+    slot_id: str | None = field(default=None, repr=False, compare=False)
 
 
 # What the memo «КП и ВКР на СПИ» asks to print in the signature field when the
@@ -168,13 +173,19 @@ def _project_relative(path: PurePath | None, root: PurePath) -> str | None:
     return (path.relative_to(root) if path.is_relative_to(root) else path).as_posix()
 
 
+def _digest_row(stamp: Stamp, root: PurePath) -> dict[str, object]:
+    row = {**asdict(stamp), "png_path": _project_relative(stamp.png_path, root)}
+    del row["slot_id"]
+    return row
+
+
 def stamps_digest(stamps: Sequence[Stamp], root: PurePath) -> str:
     """Отпечаток видимого слоя: меняется, когда меняется подписант, положение, дата или картинка слота.
 
     Картинка входит путём относительно `root` (папки проекта), а не абсолютным: перенос папки проекта, другой
     каталог данных у локальной Студии и облака или другая ОС отпечаток не меняют.
     """
-    rows = [{**asdict(stamp), "png_path": _project_relative(stamp.png_path, root)} for stamp in stamps]
+    rows = [_digest_row(stamp, root) for stamp in stamps]
     payload = json.dumps(rows, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
     return hashlib.sha256(payload.encode()).hexdigest()
 
@@ -238,6 +249,7 @@ def stamps_for_doc(
                     subtitle=level_subtitle(slot.signer, lang),
                     date_label=date_row_label(lang),
                     date_text=format_sign_date(placement.sign_date),
+                    slot_id=slot_id,
                 )
             )
             continue
@@ -259,6 +271,40 @@ def stamps_for_doc(
                 png_path=png_path,
                 aspect_ratio=aspect,
                 date_text=format_sign_date(placement.sign_date),
+                slot_id=slot_id,
             )
         )
     return result
+
+
+def slots_with_missing_png(state: SignaturesState, doc_id: str, folder: Path) -> list[str]:
+    """Включенные слоты документа с загруженной картинкой, файла которой нет на диске.
+
+    Такие слоты `stamps_for_doc` пропускает молча; придержанные маршрутом и плашки открепленных ЭП (им картинка
+    не нужна) сюда не входят.
+    """
+    missing: list[str] = []
+    for slot_id, placement in state.placements.get(doc_id, {}).items():
+        slot = state.slots.get(slot_id)
+        if not placement.enabled or slot is None or slot.sign_mode is SignMode.detached_text:
+            continue
+        if state.is_withheld(doc_id, slot_id):
+            continue
+        if slot.png_path is not None and not (folder / slot.png_path).exists():
+            missing.append(slot_id)
+    return missing
+
+
+def require_slot_images(state: SignaturesState, doc_id: str, folder: Path) -> None:
+    """Отказ, если картинка включенного слота пропала с диска: PDF без нее не фиксируется и не печатается."""
+    missing = slots_with_missing_png(state, doc_id, folder)
+    if not missing:
+        return
+    names = ", ".join(f"«{slot_id}»" for slot_id in missing)
+    raise StampImageError(
+        localized_error(
+            f"Картинка подписи не найдена на диске для слотов: {names}. Загрузите картинку подписи заново.",
+            f"The signature image is missing on disk for slots: {names}. Upload the signature image again.",
+        ),
+        slot_id=missing[0],
+    )

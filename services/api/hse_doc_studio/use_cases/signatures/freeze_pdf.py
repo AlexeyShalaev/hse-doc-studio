@@ -20,7 +20,7 @@ from hse_doc_studio.core.repositories import (
 )
 from hse_doc_studio.core.services import ProjectTemplateService
 from hse_doc_studio.core.signatures.ports import ISignatureAudit
-from hse_doc_studio.core.signatures.stamps import stamps_digest, stamps_for_doc
+from hse_doc_studio.core.signatures.stamps import require_slot_images, stamps_digest, stamps_for_doc
 from hse_doc_studio.core.value_objects import DetachedSignature, FrozenPdf
 from hse_doc_studio.infra.signatures.pdf_stamper import PdfStamper
 from hse_doc_studio.use_cases.projects.get_project import GetProjectUC
@@ -88,13 +88,19 @@ class FreezePdfUC:
             )
 
         state = self._signature_repo.get_state(folder)
+        require_slot_images(state, inp.doc_id, folder)
         stamps = stamps_for_doc(state, inp.doc_id, folder, ctx.lang)
 
         rel = str(PurePosixPath(FROZEN_DIR) / f"{safe_name(inp.doc_id)}.pdf")
         target = folder / rel
         target.parent.mkdir(parents=True, exist_ok=True)
         tmp = target.with_suffix(".pdf.tmp")
-        await asyncio.to_thread(self._pdf_stamper.stamp, ctx.compiled_path, tmp, stamps)
+        try:
+            # Штамповщик не пишет файл без всех меток (`StampingError`): прежняя фиксация и состояние не трогаются.
+            await asyncio.to_thread(self._pdf_stamper.stamp, ctx.compiled_path, tmp, stamps)
+        except Exception:
+            tmp.unlink(missing_ok=True)
+            raise
         tmp.replace(target)
 
         sha, source_sha = await asyncio.gather(

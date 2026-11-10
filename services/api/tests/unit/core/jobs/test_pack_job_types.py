@@ -136,7 +136,8 @@ def test__pack_payload__same_path_with_different_hash__rejected() -> None:
 
 
 def test__stamp_spec__field_parity_with_core_stamp() -> None:
-    stamp_fields = [f.name for f in dataclasses.fields(Stamp)]
+    # `slot_id` только для текста ошибок и по проводу не едет (см. test_job_files).
+    stamp_fields = [f.name for f in dataclasses.fields(Stamp) if f.name != "slot_id"]
     spec_fields = [f.name for f in dataclasses.fields(StampSpec)]
 
     assert [("png" if name == "png_path" else name) for name in stamp_fields] == spec_fields

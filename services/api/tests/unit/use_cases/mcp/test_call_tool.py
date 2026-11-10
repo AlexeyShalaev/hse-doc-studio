@@ -14,6 +14,7 @@ from hse_doc_studio.core.mcp.entities import McpCallOutcome, McpCallQuery, McpCa
 from hse_doc_studio.core.mcp.errors import McpError, McpErrorCode
 from hse_doc_studio.core.quotas.errors import QuotaExceededError
 from hse_doc_studio.core.shutdown import ServerRestartingError
+from hse_doc_studio.core.signatures.errors import StampImageError
 from hse_doc_studio.infra.mcp.local import MemoryMcpCallJournal
 from hse_doc_studio.use_cases.mcp.call_tool import map_tool_error, visible_to
 from hse_doc_studio.use_cases.mcp.catalog import RULES_BY_NAME, McpToolEntry, with_project_id
@@ -79,6 +80,13 @@ def test__map_tool_error__server_restarting__keeps_text_and_retry_after() -> Non
     assert err.code is McpErrorCode.server_restarting
     assert err.retry_after_s == 30
     assert str(err) == "сборка продолжится"
+
+
+def test__map_tool_error__stamping_failed__failed_with_the_slot_text() -> None:
+    err = map_tool_error(StampImageError("картинка слота «author» не читается", slot_id="author"))
+
+    assert err.code is McpErrorCode.failed
+    assert "«author»" in str(err)
 
 
 def test__map_tool_error__role__named_in_message() -> None:

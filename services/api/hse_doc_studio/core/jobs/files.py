@@ -66,7 +66,7 @@ class ArtifactRef:
 
 @dataclass(frozen=True)
 class StampSpec:
-    """Проводная копия `Stamp` поле в поле; вместо `png_path` стоит `png`."""
+    """Проводная копия `Stamp` поле в поле; вместо `png_path` стоит `png`, `slot_id` (только для ошибок) не едет."""
 
     page: int
     x_mm: float
