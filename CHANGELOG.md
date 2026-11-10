@@ -6,6 +6,53 @@ Generated from `release-notes.json` via `make changelog` — do not edit by hand
 Release notes are hand-written and bilingual (RU/EN); the app shows them in the
 selected interface language.
 
+## [0.21.0](https://github.com/AlexeyShalaev/hse-doc-studio/compare/v0.20.1...v0.21.0) (2026-11-10)
+
+
+### Features
+
+* **mcp:** signing route versions in get_signing_route, no new version from MCP, signing_note on edits ([f6df6ba](https://github.com/AlexeyShalaev/hse-doc-studio/commit/f6df6baff24c33d1f78658f2fed96312f3085098))
+* **mcp:** version sent for signing in MCP tools (R18) ([8cd89bf](https://github.com/AlexeyShalaev/hse-doc-studio/commit/8cd89bff26998c31663213ae4c7fd724d8fb9bad))
+* **signatures:** pinned version as the signing source (R13) ([83d38db](https://github.com/AlexeyShalaev/hse-doc-studio/commit/83d38dbab9c8cf40e4169cbee14e80521fb8e966))
+* **signatures:** signing source with the version pinned by a signing route ([2d76d75](https://github.com/AlexeyShalaev/hse-doc-studio/commit/2d76d75655bd65772c8927922d9b9bb5b4648b80))
+* **signatures:** version on signature in the plan, unpin call, pack warning and notifications ([fe737d6](https://github.com/AlexeyShalaev/hse-doc-studio/commit/fe737d60bac57b24a0032e9b26ddac64ba8ed24f))
+* **signing-page:** neutral version line on unchanged documents ([83ed3b1](https://github.com/AlexeyShalaev/hse-doc-studio/commit/83ed3b171d56bda6668a695f650ad094160ce830))
+* **signing-page:** own signed version line and gallery states for versions ([51b9746](https://github.com/AlexeyShalaev/hse-doc-studio/commit/51b9746922310c142818b5a8a685affb3a635cd9))
+* **signing-page:** signed version, new version notice and divergence banner ([ec8916c](https://github.com/AlexeyShalaev/hse-doc-studio/commit/ec8916c4d5f7c7d8edac91ccd7b1b95525e44180))
+* **signing-page:** version on signature for signers (W10) ([2937e30](https://github.com/AlexeyShalaev/hse-doc-studio/commit/2937e3026bf48ccdacbc99683f7ba865d843fb43))
+* **signing-route:** contract fields for the version on signature (12.9) ([ee51e7d](https://github.com/AlexeyShalaev/hse-doc-studio/commit/ee51e7d7c2015b8bc1e4cd8d102fbe2f7c09f0c1))
+* **signing-route:** demo signs the version taken at send ([b6b129e](https://github.com/AlexeyShalaev/hse-doc-studio/commit/b6b129e9f8be4dda995beb3edcb196e6c51f3a0a))
+* **signing-route:** migrate 0.20.0 routes to the pinned version, drop the build hook, changed_docs in the plan route ([dea35c6](https://github.com/AlexeyShalaev/hse-doc-studio/commit/dea35c6d089c82b1551d3f1f62c5fb027618702c))
+* **signing-route:** R16 pin the version on send, send a new version, 12.9 fields and notifications ([7f42b91](https://github.com/AlexeyShalaev/hse-doc-studio/commit/7f42b9155c4b0080719d29aa1ee355727b0741eb))
+* **signing-route:** R17 reconcile and migration of 0.20.0 routes to the version on signature ([efda20f](https://github.com/AlexeyShalaev/hse-doc-studio/commit/efda20f0becb6168a2cde4c5bdbe85b9ebaebee2))
+* **signing-route:** route core signs the pinned version (R15) ([6ee606c](https://github.com/AlexeyShalaev/hse-doc-studio/commit/6ee606cafcf0a5eb2c3ffd0af05e39cfa06ffd38))
+* **signing-route:** route core signs the pinned version: sent_changed, per-document approvals, new version ([a435bd2](https://github.com/AlexeyShalaev/hse-doc-studio/commit/a435bd2ec3f06da02b6b795b0e0398a76950c6c7))
+* **signing-route:** send-kind helpers and tests for the version on signature ([63a5ad0](https://github.com/AlexeyShalaev/hse-doc-studio/commit/63a5ad0670a2dfebf77a8b298c998491251d56c5))
+* **signing-route:** soft edit guard for documents held by an active route (12.7) ([2e1bef0](https://github.com/AlexeyShalaev/hse-doc-studio/commit/2e1bef02710aa084edc642a0926403e79c82eac3))
+* **signing-route:** version on signature contract, clients and demo (W7) ([5cea2f8](https://github.com/AlexeyShalaev/hse-doc-studio/commit/5cea2f811570b77418809b6c133c7fa7487bf602))
+* **signing-route:** version on signature in the Signing card and editor banner ([3287f81](https://github.com/AlexeyShalaev/hse-doc-studio/commit/3287f815fcd02e974e2cc09b9b1f15c76b65821a))
+* **signing-route:** version on signature in the Signing card and editor banner (W8) ([5e3e612](https://github.com/AlexeyShalaev/hse-doc-studio/commit/5e3e612e95d72520b1477017ababa16cd7bfe8b3))
+* **submission:** pack from the version on signature (R14) ([8481270](https://github.com/AlexeyShalaev/hse-doc-studio/commit/84812709663c65a21989eaf31f13de58510b8a32))
+* **submission:** pack takes documents from the signing source, warns changed_after_sent ([0ab78ed](https://github.com/AlexeyShalaev/hse-doc-studio/commit/0ab78edb03798b1f57417569e96086f97770b50a))
+* **submission:** sent_at in the pack warning, as the W7 contract settled ([7a3eb8f](https://github.com/AlexeyShalaev/hse-doc-studio/commit/7a3eb8fa44b6d4535da9b78052f20462dc63d13e))
+* **web:** ask before opening the office editor of a document out for signing ([5dd64b0](https://github.com/AlexeyShalaev/hse-doc-studio/commit/5dd64b0bccd51b85691f8c6f0b3bdbdbd8a501af))
+* **web:** ask before the first change of project fields while documents are out for signing ([9030b3d](https://github.com/AlexeyShalaev/hse-doc-studio/commit/9030b3df4e83e698072dbb275129546847d097c3))
+* **web:** ask before the first source edit and build of a document out for signing ([7e5ca9a](https://github.com/AlexeyShalaev/hse-doc-studio/commit/7e5ca9ac7b901896a03ef73d08fad4b70c5c8fa1))
+* **web:** ask before uploading, reverting, moving or deleting files of a document out for signing ([bde8ce8](https://github.com/AlexeyShalaev/hse-doc-studio/commit/bde8ce8d0d290cb70c1b694a3e8a35217f854080))
+* **web:** documents out for signing line in the template update plan ([b2913d4](https://github.com/AlexeyShalaev/hse-doc-studio/commit/b2913d4c97f487c6ddd5027f00363f7f10c2d756))
+* **web:** server demo scenarios for versions on signature ([091ced5](https://github.com/AlexeyShalaev/hse-doc-studio/commit/091ced58b6e3333f8835a1c583ca19cccbc7e80e))
+* **web:** soft edit guard for documents out for signing (W9) ([d03eb94](https://github.com/AlexeyShalaev/hse-doc-studio/commit/d03eb947a4698ae9d8202ef53ee41426bcca9b46))
+* **web:** version on signature in the Signatures tab, pack and inbox (W11) ([ff40884](https://github.com/AlexeyShalaev/hse-doc-studio/commit/ff40884401e6156afb14de2975e35d9b870c4789))
+* **web:** version on signature in the Signatures tab, pack and inbox (W11) ([884139a](https://github.com/AlexeyShalaev/hse-doc-studio/commit/884139a405adb190cf8965bada32cca27e17db9e))
+
+
+### Bug Fixes
+
+* **signing-route:** approved_at shows only an approval that still holds for every document ([d27e35d](https://github.com/AlexeyShalaev/hse-doc-studio/commit/d27e35de4187c43e60d1f91c8d63c82d4d6376db))
+* **signing-route:** audit label for signing_route.migrate, migration test needs the server extra ([58e8049](https://github.com/AlexeyShalaev/hse-doc-studio/commit/58e80491fdb733a2069b39994fe686006b0e1f90))
+* **signing-route:** banner names the version date once and wraps its buttons on phones ([cf600c3](https://github.com/AlexeyShalaev/hse-doc-studio/commit/cf600c34286d11dca742197345144a1faf1279a5))
+* **web:** audit dictionary size limit for the migrate label ([b6c27c4](https://github.com/AlexeyShalaev/hse-doc-studio/commit/b6c27c41c0e266cc708702ab9e5a970f57acd2e7))
+
 ## [0.20.1](https://github.com/AlexeyShalaev/hse-doc-studio/compare/v0.20.0...v0.20.1) - 2026-11-10
 
 - The signing route shows both stages: “1 of 3 approved · 0 of 3 signed” on the card and “1/3 approved” in the checkpoint header. An e-signature waiting for the freeze is marked “approved, signature after freeze”.
