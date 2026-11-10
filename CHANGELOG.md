@@ -6,6 +6,17 @@ Generated from `release-notes.json` via `make changelog` — do not edit by hand
 Release notes are hand-written and bilingual (RU/EN); the app shows them in the
 selected interface language.
 
+## [0.19.0](https://github.com/AlexeyShalaev/hse-doc-studio/compare/v0.18.0...v0.19.0) - 2026-11-10
+
+- Signing route “Send for signing”. The author prepares a route on a checkpoint: who signs, in which order, where the signatures go on the pages, a deadline and a message. Signers get the request in the Inbox (and by email if the server has mail set up) and sign on their own page with an image (draw, upload or use a saved one) or an e-signature (a Studio key, CryptoPro in the browser, or a ready signature file). A key can be created or imported right there.
+- The order is kept: the next person gets the request after the previous one approves. A signature image goes into the PDF only after approval, and e-signatures come last over the frozen PDF, so a later signature never breaks earlier ones. The PDF is frozen automatically.
+- If a document changes, the route stops and the author sends it again; approving again takes one click. A signer can return the documents for revision with a comment. While a route runs, the signatures of its documents cannot be changed.
+- The “Signing” card on a checkpoint shows the route progress, “Remind” and “Copy link” for each signer (useful while the server has no mail). The Inbox has a new “To sign” tab and the bell counts these tasks. Reminders go out automatically a day before the deadline and after three days of waiting.
+- Signer profile in settings: a saved signature image and a public key or certificate for the plate. The server never accepts private keys.
+- Reproducible builds: rebuilding LaTeX without changes gives a byte-identical PDF, so signatures and routes are not reset by it.
+- MCP: get_signing_route and list_signing_tasks show route progress and your tasks; the dangerous send_for_signing sends for signing. Approving and signing over MCP is not possible. Route actions appear in the audit log.
+- Docs: new pages “Send for signing” and “How to sign”. The scheduler leader probe no longer confuses locks from other databases on the same Postgres.
+
 ## [0.18.0](https://github.com/AlexeyShalaev/hse-doc-studio/compare/v0.17.2...v0.18.0) - 2026-11-09
 
 - «Signed» download returns the actual signed file. If the PDF is frozen and current, you get it as is, with PAdES signatures when there are any. Without a current freeze you get a print copy with visible stamps but no electronic signatures. Signatures are no longer applied anew on every download.

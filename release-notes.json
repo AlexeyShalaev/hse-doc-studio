@@ -1,6 +1,44 @@
 {
   "releases": [
     {
+      "version": "0.19.0",
+      "date": "2026-11-10",
+      "notes": [
+        {
+          "ru": "Маршрут подписания «Отправить на подписание». Автор готовит маршрут на контрольной точке: кто подписывает, в каком порядке, где на страницах стоят подписи, срок и сообщение. Подписанты получают просьбу во «Входящих» (и письмом, если на сервере настроена почта) и подписывают на своей странице: картинкой (нарисовать, загрузить или взять сохранённую) или ЭП (ключ Студии, КриптоПро в браузере, готовый файл подписи). Ключ можно создать или импортировать прямо там.",
+          "en": "Signing route “Send for signing”. The author prepares a route on a checkpoint: who signs, in which order, where the signatures go on the pages, a deadline and a message. Signers get the request in the Inbox (and by email if the server has mail set up) and sign on their own page with an image (draw, upload or use a saved one) or an e-signature (a Studio key, CryptoPro in the browser, or a ready signature file). A key can be created or imported right there."
+        },
+        {
+          "ru": "Порядок соблюдается: следующий получает просьбу, когда предыдущий согласовал. Картинка подписи попадает в PDF только после согласия, а электронные подписи ставятся в конце над зафиксированным PDF, поэтому поздняя подпись не ломает ранние. PDF фиксируется сам.",
+          "en": "The order is kept: the next person gets the request after the previous one approves. A signature image goes into the PDF only after approval, and e-signatures come last over the frozen PDF, so a later signature never breaks earlier ones. The PDF is frozen automatically."
+        },
+        {
+          "ru": "Если документ изменился, маршрут останавливается, и автор отправляет его заново; повторное согласие занимает одно нажатие. Подписант может вернуть документы на доработку с комментарием. Пока маршрут идёт, подписи его документов не меняются.",
+          "en": "If a document changes, the route stops and the author sends it again; approving again takes one click. A signer can return the documents for revision with a comment. While a route runs, the signatures of its documents cannot be changed."
+        },
+        {
+          "ru": "Карточка «Подписание» на контрольной точке показывает ход маршрута, «Напомнить» и «Скопировать ссылку» для каждого подписанта (пригодится, пока на сервере нет почты). Во «Входящих» новая вкладка «На подпись», колокольчик считает задачи. Напоминания приходят сами за сутки до срока и после трёх дней ожидания.",
+          "en": "The “Signing” card on a checkpoint shows the route progress, “Remind” and “Copy link” for each signer (useful while the server has no mail). The Inbox has a new “To sign” tab and the bell counts these tasks. Reminders go out automatically a day before the deadline and after three days of waiting."
+        },
+        {
+          "ru": "Профиль подписанта в настройках: сохранённая картинка подписи и открытый ключ или сертификат для плашки. Закрытые ключи сервер не принимает.",
+          "en": "Signer profile in settings: a saved signature image and a public key or certificate for the plate. The server never accepts private keys."
+        },
+        {
+          "ru": "Повторяемая сборка: пересборка LaTeX без изменений даёт тот же PDF до байта, поэтому подписи и маршрут из-за неё не сбрасываются.",
+          "en": "Reproducible builds: rebuilding LaTeX without changes gives a byte-identical PDF, so signatures and routes are not reset by it."
+        },
+        {
+          "ru": "MCP: get_signing_route и list_signing_tasks показывают ход маршрута и ваши задачи, опасный send_for_signing отправляет на подписание. Согласовать и подписать через MCP нельзя. Действия маршрута видны в аудите.",
+          "en": "MCP: get_signing_route and list_signing_tasks show route progress and your tasks; the dangerous send_for_signing sends for signing. Approving and signing over MCP is not possible. Route actions appear in the audit log."
+        },
+        {
+          "ru": "Документация: страницы «Отправить на подписание» и «Как подписать». Проверка лидера планировщика больше не путает блокировки других баз на том же Postgres.",
+          "en": "Docs: new pages “Send for signing” and “How to sign”. The scheduler leader probe no longer confuses locks from other databases on the same Postgres."
+        }
+      ]
+    },
+    {
       "version": "0.18.0",
       "date": "2026-11-09",
       "notes": [
