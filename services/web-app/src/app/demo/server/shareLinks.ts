@@ -592,6 +592,21 @@ export const createShareLinkRoutes = (
       },
     },
     {
+      // Документ по адресу: без него редактор документа в демо пишет «Документ не найден», а
+      // плашка маршрута подписания (заявление на подписании) живёт именно там.
+      method: "GET",
+      pattern: "/projects/:projectId/documents/:docId",
+      handler: (req) => {
+        const world = getWorld();
+        const projectId = req.params.projectId ?? "";
+        const link = guestLinkOf(world, projectId);
+        const { role } = projectRole(world, projectId);
+        const doc = DOCS.find((d) => d.id === req.params.docId);
+        if ((!link && !role) || !doc) return notFound();
+        return demoJson(doc);
+      },
+    },
+    {
       method: "GET",
       pattern: "/orgs/:slug/sharing-policy",
       handler: (req) => {

@@ -4,8 +4,13 @@ export { SigningRouteCard } from "./ui/SigningRouteCard";
 export type { SigningRouteCardProps } from "./ui/SigningRouteCard";
 export { SigningHoldBanner } from "./ui/SigningHoldBanner";
 export type { SigningHoldBannerProps } from "./ui/SigningHoldBanner";
-export { useDocSigningHold } from "./model/useDocSigningHold";
-export type { SigningHold } from "./model/useDocSigningHold";
+export {
+  useDocRouteVersion,
+  useDocSigningHold,
+} from "./model/useDocSigningHold";
+export type { DocRouteVersion, SigningHold } from "./model/useDocSigningHold";
+export { NewVersionAction } from "./ui/NewVersionAction";
+export type { NewVersionActionProps } from "./ui/NewVersionAction";
 export { RouteWaitNote } from "./ui/RouteWaitNote";
 export type { RouteWaitNoteProps } from "./ui/RouteWaitNote";
 export { displayName, useWaitText } from "./lib/useWaitText";

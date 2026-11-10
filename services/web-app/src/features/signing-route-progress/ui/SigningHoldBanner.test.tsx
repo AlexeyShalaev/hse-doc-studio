@@ -1,5 +1,6 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { I18nextProvider } from "react-i18next";
 import { MemoryRouter } from "react-router";
 import {
@@ -16,20 +17,30 @@ import { createDemoRouter, installDemoAdapter } from "@shared/api/demo";
 import { i18n } from "@shared/lib";
 import { LOCAL_BOOTSTRAP, sessionApi } from "@entities/session";
 import { signatureApi } from "@entities/signature";
-import { signingRouteApi } from "@entities/signing-route";
+import {
+  expectedTokens,
+  signingRouteApi,
+  signingTaskApi,
+} from "@entities/signing-route";
 import {
   createSigningRouteDemo,
   type SigningDemoUser,
 } from "@entities/signing-route/testing";
-import { useDocSigningHold } from "../model/useDocSigningHold";
+import { formatDay } from "../lib/format";
+import {
+  useDocRouteVersion,
+  useDocSigningHold,
+} from "../model/useDocSigningHold";
 import { SigningHoldBanner } from "./SigningHoldBanner";
 
 const PROJECT = "p_demo";
 const PROFILE = "topic-approval";
 const DOC = "topic_application";
 const AUTHOR: SigningDemoUser = { id: "u_author", name: "Иванов И. И." };
+const PETROV: SigningDemoUser = { id: "u_demo_petrov", name: "Петров П. П." };
 
-const demo = createSigningRouteDemo({ getUser: () => AUTHOR });
+let user: SigningDemoUser = AUTHOR;
+const demo = createSigningRouteDemo({ getUser: () => user });
 
 const bootstrap = (mode: "server" | "local") => ({
   ...LOCAL_BOOTSTRAP,
@@ -46,18 +57,34 @@ const bootstrap = (mode: "server" | "local") => ({
   },
 });
 
-/** Как в редакторе документа: плашка, если документ держит идущий маршрут. */
-const Harness = ({ docId }: { docId: string }) => {
+/**
+ * Как в редакторе документа: плашка, если документ держит идущий маршрут или у него есть
+ * изменения после отправки на подпись.
+ */
+const Harness = ({
+  docId,
+  canManage,
+}: {
+  docId: string;
+  canManage: boolean;
+}) => {
   const hold = useDocSigningHold(PROJECT, docId);
+  const version = useDocRouteVersion(PROJECT, docId);
   return (
     <>
       <span data-testid="held">{hold === null ? "no" : "yes"}</span>
-      {hold && <SigningHoldBanner projectId={PROJECT} hold={hold} />}
+      <SigningHoldBanner
+        projectId={PROJECT}
+        docId={docId}
+        hold={hold}
+        version={version}
+        canManage={canManage}
+      />
     </>
   );
 };
 
-const mount = (docId: string) =>
+const mount = (docId: string, { canManage = true } = {}) =>
   render(
     <I18nextProvider i18n={i18n}>
       <QueryClientProvider
@@ -68,7 +95,7 @@ const mount = (docId: string) =>
         }
       >
         <MemoryRouter>
-          <Harness docId={docId} />
+          <Harness docId={docId} canManage={canManage} />
         </MemoryRouter>
       </QueryClientProvider>
     </I18nextProvider>,
@@ -96,6 +123,7 @@ beforeAll(() => {
 beforeEach(async () => {
   await i18n.changeLanguage("ru");
   demo.reset();
+  user = AUTHOR;
   vi.spyOn(sessionApi, "bootstrap").mockResolvedValue(bootstrap("server"));
 });
 
@@ -104,13 +132,16 @@ afterEach(() => {
 });
 
 describe("плашка документа на подписании", () => {
-  it("документ идущего маршрута: шаг, запрет подписей и ход на точке", async () => {
+  it("документ идущего маршрута: шаг, версия на подписи, запрет подписей и ход на точке", async () => {
     await startRoute();
     mount(DOC);
     const banner = await screen.findByTestId("signing-hold-banner", {}, LOAD);
     expect(banner).toHaveTextContent(
-      "Документ на подписании (шаг 2 из 2). Правка и пересборка остановят маршрут.",
+      `Документ на подписании (шаг 2 из 2). Подписывают версию от ${formatDay(new Date().toISOString())}, ваши правки в неё не попадут.`,
     );
+    expect(banner).toHaveAttribute("data-changed", "false");
+    expect(screen.queryByTestId("signing-new-version")).toBeNull();
+    expect(screen.queryByTestId("signing-hold-version")).toBeNull();
     expect(banner).toHaveTextContent(
       "Подписи менять нельзя, пока маршрут идёт.",
     );
@@ -144,6 +175,115 @@ describe("плашка документа на подписании", () => {
     expect(screen.getByTestId("held")).toHaveTextContent("no");
   });
 
+  it("сервер ещё не снимает версию на подписи (до R16): прежний текст", async () => {
+    await startRoute();
+    const real = signatureApi.getPlan.bind(signatureApi);
+    vi.spyOn(signatureApi, "getPlan").mockImplementation(async (...args) => {
+      const plan = await real(...args);
+      return {
+        ...plan,
+        docs: plan.docs.map((doc) => ({
+          ...doc,
+          pinned: null,
+          working_differs: false,
+        })),
+      };
+    });
+    mount(DOC);
+    expect(
+      await screen.findByTestId("signing-hold-banner", {}, LOAD),
+    ).toHaveTextContent(
+      "Документ на подписании (шаг 2 из 2). Правка и пересборка остановят маршрут.",
+    );
+  });
+
+  it("пересобран после отправки: маршрут идёт, плашка про изменения и новая версия", async () => {
+    await startRoute();
+    demo.rebuild(PROJECT, DOC);
+    const u = userEvent.setup();
+    mount(DOC);
+    const changed = await screen.findByTestId("signing-hold-changed", {}, LOAD);
+    const day = formatDay(new Date().toISOString());
+    expect(changed).toHaveTextContent(
+      `Есть изменения после отправки на подпись. Подписывают версию от ${day}.`,
+    );
+    expect(screen.getByTestId("held")).toHaveTextContent("yes");
+    const banner = screen.getByTestId("signing-hold-banner");
+    expect(banner).toHaveAttribute("data-changed", "true");
+    // Дату версии называет строка про изменения, шаг идёт без неё.
+    expect(banner).toHaveTextContent("Документ на подписании (шаг 2 из 2).");
+    expect(banner).not.toHaveTextContent("ваши правки в неё не попадут");
+    expect(screen.getByTestId("signing-hold-version")).toHaveAttribute(
+      "href",
+      expect.stringMatching(
+        new RegExp(`/api/v1/projects/${PROJECT}/docs/${DOC}/pdf/signed$`),
+      ),
+    );
+
+    await u.click(screen.getByTestId("signing-new-version"));
+    const dialog = await screen.findByRole("dialog", {}, LOAD);
+    expect(
+      within(dialog).getByTestId("signing-new-version-changed"),
+    ).toHaveTextContent("Изменились: Заявление о выборе темы.");
+    await u.click(within(dialog).getByTestId("signing-new-version-confirm"));
+    await waitFor(() => {
+      expect(screen.queryByTestId("signing-hold-changed")).toBeNull();
+    }, LOAD);
+    expect(screen.getByTestId("signing-hold-banner")).toHaveAttribute(
+      "data-changed",
+      "false",
+    );
+  });
+
+  it("читателю изменения видны, а «Отправить новую версию» нет", async () => {
+    await startRoute();
+    demo.rebuild(PROJECT, DOC);
+    mount(DOC, { canManage: false });
+    await screen.findByTestId("signing-hold-changed", {}, LOAD);
+    expect(screen.queryByTestId("signing-new-version")).toBeNull();
+    expect(screen.getByTestId("signing-hold-version")).toBeInTheDocument();
+  });
+
+  it("все подписали, потом правка: подписи свободны, плашка про изменения после подписания", async () => {
+    const id = await startRoute();
+    user = PETROV;
+    const task = await signingTaskApi.get(PROJECT, id);
+    await signingTaskApi.approve(PROJECT, id, {
+      expected: expectedTokens(task),
+      method: null,
+      sign: { identity_id: null, passphrase: null },
+    });
+    user = AUTHOR;
+    expect((await signingRouteApi.get(PROJECT, id)).status).toBe("completed");
+    demo.rebuild(PROJECT, DOC);
+    mount(DOC);
+    const changed = await screen.findByTestId("signing-hold-changed", {}, LOAD);
+    expect(changed).toHaveTextContent(
+      `Все подписали версию от ${formatDay(new Date().toISOString())}. Есть изменения после подписания.`,
+    );
+    expect(screen.getByTestId("held")).toHaveTextContent("no");
+    expect(screen.getByTestId("signing-new-version")).toBeInTheDocument();
+  });
+
+  it("перенос 0.20.0 не нашёл версию: восстановить нельзя, только новая версия", async () => {
+    demo.seed({
+      projectId: PROJECT,
+      profileId: PROFILE,
+      sender: AUTHOR,
+      signer: PETROV,
+      persona: "supervisor",
+      state: "migration_lost",
+    });
+    mount(DOC);
+    const changed = await screen.findByTestId("signing-hold-changed", {}, LOAD);
+    expect(changed).toHaveTextContent(
+      "Версию, отправленную на подпись, восстановить нельзя: отправьте новую версию.",
+    );
+    expect(screen.getByTestId("held")).toHaveTextContent("no");
+    expect(screen.getByTestId("signing-new-version")).toBeInTheDocument();
+    expect(screen.queryByTestId("signing-hold-version")).toBeNull();
+  });
+
   it("остановленный маршрут подписи не держит", async () => {
     await startRoute();
     demo.tamper(PROJECT, DOC);
@@ -159,7 +299,11 @@ describe("плашка документа на подписании", () => {
       status: "paused",
       stop_reason: "sent_changed",
     });
-    expect(screen.queryByTestId("signing-hold-banner")).toBeNull();
+    // Подписи свободны; версию подменили, поэтому рабочая сборка от неё отличается.
+    expect(screen.getByTestId("held")).toHaveTextContent("no");
+    expect(
+      await screen.findByTestId("signing-hold-banner", {}, LOAD),
+    ).toHaveAttribute("data-changed", "true");
   });
 
   it("локальная Студия маршрутов не спрашивает", async () => {

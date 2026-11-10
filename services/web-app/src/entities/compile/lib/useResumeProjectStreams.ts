@@ -1,6 +1,8 @@
 import { useEffect, useRef } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { documentKeys, useDocuments } from "@entities/document";
+import { signatureKeys } from "@entities/signature";
+import { signingRouteKeys } from "@entities/signing-route";
 import { useCompileStreamStore } from "./compileStreamStore";
 
 /**
@@ -15,7 +17,9 @@ import { useCompileStreamStore } from "./compileStreamStore";
  *   2. Subscribes to the store and, whenever a previously-running slot for
  *      this project transitions out of "running" (build finished), invalidates
  *      the documents query so the dot/status refreshes from "building" to
- *      "ok"/"warn"/"err".
+ *      "ok"/"warn"/"err". Сборка меняет и то, что считается по рабочей сборке: план
+ *      подписей и маршруты подписания («Есть изменения после отправки на подпись»,
+ *      docs/design/signing-route.md, 12.9), поэтому их перечитываем тоже.
  *
  * Called once per workspace mount.
  */
@@ -72,6 +76,12 @@ export const useResumeProjectStreams = (projectId: string): void => {
       if (anyFinished) {
         void queryClient.invalidateQueries({
           queryKey: documentKeys.lists(projectId),
+        });
+        void queryClient.invalidateQueries({
+          queryKey: signatureKeys.state(projectId),
+        });
+        void queryClient.invalidateQueries({
+          queryKey: signingRouteKeys.project(projectId),
         });
       }
     });
