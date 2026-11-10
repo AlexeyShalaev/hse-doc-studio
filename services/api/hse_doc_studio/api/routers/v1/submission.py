@@ -13,10 +13,12 @@ from hse_doc_studio.api.schemas.catalog import (
     SubmissionExtraItemResponse,
     SubmissionProfileResponse,
 )
+from hse_doc_studio.api.schemas.signature_plan import PlanPinnedResponse
 from hse_doc_studio.api.schemas.submission import (
     CreateSubmissionRequest,
     CustomDocPreviewItemResponse,
     SubmissionRecordResponse,
+    SubmissionWarningResponse,
 )
 from hse_doc_studio.core.catalog import ExtraSubmissionItem, SubmissionDocItem, SubmissionProfile
 from hse_doc_studio.core.entities import PackSubmissionRecord
@@ -39,6 +41,7 @@ from hse_doc_studio.use_cases.submission.list_submissions import (
     ListSubmissionsInput,
     ListSubmissionsUC,
 )
+from hse_doc_studio.use_cases.submission.pack_planner import PackNotice
 from hse_doc_studio.use_cases.submission.preview_custom_docs import (
     CustomDocPreviewItem,
     PreviewSubmissionCustomDocsInput,
@@ -101,6 +104,20 @@ def _map_record(
         size_bytes=size_bytes,
         archive_format=record.archive_format,
         doc_count=len(record.doc_items),
+    )
+
+
+def _map_notice(notice: PackNotice) -> SubmissionWarningResponse:
+    return SubmissionWarningResponse(
+        code=notice.code,
+        doc_id=notice.doc_id,
+        sent_at=notice.pinned_at,
+        file=notice.arcname,
+        message=notice.message,
+        pinned=PlanPinnedResponse(
+            sha256=notice.source_sha256, pinned_at=notice.pinned_at, route_id=notice.route_id, round=notice.round
+        ),
+        working_sha256=notice.working_sha256,
     )
 
 
@@ -180,7 +197,9 @@ async def create_submission(
 
     # size_bytes is left unset here: the UI invalidates and refetches the list
     # right after this returns, and the list endpoint stats the archive for size.
-    return _map_record(result.submission)
+    response = _map_record(result.submission)
+    response.warnings = [_map_notice(n) for n in result.notices]
+    return response
 
 
 @router.get(
