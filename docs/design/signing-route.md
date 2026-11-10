@@ -1595,8 +1595,10 @@ W1. Критический путь: R1, R4, R5, R6, R7 и W1, W4, W5, зате�
   `SigningRoute.doc_sent_at(doc_id)` (без `sent_at` время отправки маршрута). Сценарии автора и MCP пока проверяют
   `EDITABLE_STATUSES`: новую версию из `active` и `completed` откроет R16 вместе со снятием версии на подписи.
 - `engine`: `RouteFacts.candidate()` кандидат (`compiled_sha256 = working_sha256`, у несобранного прежняя версия);
-  `approved_docs(route, p, facts)` документы, согласие которых действует; картинки (`Withhold`, `Release`) по
-  документу; сверка снимка по источнику подписи, первая причина `sent_changed`.
+  `approved_docs(route, p, facts)` документы, согласие которых действует; `ParticipantView.approved` (действует по
+  всем его документам) и `approved_docs`; картинки (`Withhold`, `Release`) по документу; сверка снимка по источнику
+  подписи, первая причина `sent_changed`. Раз согласие переносится всегда, «согласие этого раунда» больше не
+  значит «согласовал»: `approved_at` в API и MCP показывается только при `ParticipantView.approved`.
 - `transitions.send(route, candidate, by=, at=)`: из `SENDABLE_STATUSES`, у `active` и `completed` без изменений
   `nothing_changed`; согласие переносится всегда с прежними отпечатками, а отправка остаётся согласием
   отправителя первого шага на кандидат; снимок по кандидату, `sent_at` у изменившихся и новых `at`, у прежних своё. `TRANSITIONS`: `active` в
