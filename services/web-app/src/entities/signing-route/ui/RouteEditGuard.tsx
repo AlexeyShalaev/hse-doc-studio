@@ -63,30 +63,22 @@ export const RouteEditGuardProvider = ({
     [],
   );
 
-  // Фильтр редактора читает состояние синхронно и создаётся один раз: свежие данные через ref.
-  const stateRef = useRef({ held, docs });
-  useEffect(() => {
-    stateRef.current = { held, docs };
-  }, [held, docs]);
-
   const unanswered = useCallback(
     (entries: readonly HeldDoc[]) =>
       entries.filter((entry) => !memory.has(guardKey(projectId, entry))),
     [memory, projectId],
   );
 
+  // Новые маршруты или документы дают новое значение контекста: места правки перечитывают его.
   const pending = useCallback(
-    (target: GuardTarget) => {
-      const { held: current, docs: known } = stateRef.current;
-      return unanswered(affectedHeld(target, current, known));
-    },
-    [unanswered],
+    (target: GuardTarget) => unanswered(affectedHeld(target, held, docs)),
+    [unanswered, held, docs],
   );
 
-  const heldNames = useCallback((target: GuardTarget) => {
-    const { held: current, docs: known } = stateRef.current;
-    return namesOf(affectedHeld(target, current, known), known);
-  }, []);
+  const heldNames = useCallback(
+    (target: GuardTarget) => namesOf(affectedHeld(target, held, docs), docs),
+    [held, docs],
+  );
 
   const remember = useCallback(
     (entries: readonly HeldDoc[]) => {
@@ -99,12 +91,12 @@ export const RouteEditGuardProvider = ({
     (target: GuardTarget): Promise<boolean> => {
       const entries = pending(target);
       if (entries.length === 0) return Promise.resolve(true);
-      const own = isOwnTarget(target, stateRef.current.docs);
+      const own = isOwnTarget(target, docs);
       return new Promise<boolean>((resolve) => {
         setQueue((current) => [...current, { entries, own, resolve }]);
       });
     },
-    [pending],
+    [pending, docs],
   );
 
   const run = useCallback(

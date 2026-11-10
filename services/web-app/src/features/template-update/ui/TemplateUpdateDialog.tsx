@@ -12,6 +12,7 @@ import {
   ViewTabs,
 } from "@shared/ui/ConflictKit";
 import { ApiError } from "@shared/api";
+import { useRouteEditGuard } from "@entities/signing-route";
 import { toast } from "@shared/lib";
 import {
   type AvailableUpdate,
@@ -56,6 +57,8 @@ export const TemplateUpdateDialog = ({
   onClose,
 }: TemplateUpdateDialogProps) => {
   const { t, i18n } = useTranslation("templateUpdate");
+  const { t: tGuard } = useTranslation("routeEditGuard");
+  const routeGuard = useRouteEditGuard(projectId);
   const toVersion = update?.version.version ?? null;
   const plan = useTemplateUpdatePlan(projectId, toVersion);
   const apply = useApplyTemplateUpdate();
@@ -79,12 +82,17 @@ export const TemplateUpdateDialog = ({
   const ops = useMemo(() => sortOps(plan.data?.files ?? []), [plan.data]);
   const selectedOp = ops.find((op) => op.path === selected) ?? null;
   const notes = update ? notesOf(update, i18n.language) : [];
+  // Мягкое предупреждение (signing-route.md, 12.7): строка в плане вместо отдельного окна.
+  const guardTarget = { paths: ops.map((op) => op.path) };
+  const heldNames = ops.length > 0 ? routeGuard.heldNames(guardTarget) : [];
 
   const resolutionOf = (op: TemplateFileOp): ConflictResolution =>
     resolutions[op.path] ?? defaultResolution(op);
 
   const handleApply = () => {
     if (!plan.data) return;
+    // Строку о документах на подписании автор видел в плане: отдельно потом не спрашиваем.
+    routeGuard.acknowledge(guardTarget);
     const chosen: Record<string, ConflictResolution> = {};
     for (const op of ops) {
       if (op.action === "conflict") chosen[op.path] = resolutionOf(op);
@@ -208,6 +216,15 @@ export const TemplateUpdateDialog = ({
                 ))}
               </ul>
             </div>
+          )}
+          {heldNames.length > 0 && (
+            <Notice
+              role="status"
+              text={tGuard("planLine", {
+                count: heldNames.length,
+                names: heldNames.join(", "),
+              })}
+            />
           )}
           {provenanceNote && <Notice text={provenanceNote} />}
           {plan.data.warnings
