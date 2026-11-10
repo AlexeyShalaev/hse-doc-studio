@@ -17,6 +17,7 @@ from uuid import UUID, uuid4
 import pytest
 from hse_doc_studio.core.entities import SigningIdentity
 from hse_doc_studio.core.enums import DetachedFormat, DetachedOrigin, DetachedVerdict, SigningIdentityKind
+from hse_doc_studio.core.errors import NotFoundError
 from hse_doc_studio.core.signing_route.entities import DocSlot
 from hse_doc_studio.core.value_objects import DetachedSignature
 from hse_doc_studio.use_cases.signatures._studio_signer import KeyPassphraseRequiredError
@@ -180,6 +181,7 @@ async def test__send_and_sign__passphrase_missing__nothing_sent(stand: Stand, fa
 
     assert resp.status_code == 400
     assert resp.json()["code"] == "passphrase_required"
+    assert "sent" not in resp.json()
     after = project.call(author, "GET", f"{project.routes}/{route['id']}").json()
     assert after["status"] == "draft"
     assert "report" not in _state(project).get("frozen", {})
@@ -194,11 +196,28 @@ async def test__send_and_sign__signing_fails__route_is_sent_and_waits_for_signat
     resp = _send(project, author, route, {"identity_id": None, "passphrase": "correct horse"})
 
     assert resp.status_code == 400
-    assert resp.json()["code"] == "sign_failed"
+    assert (resp.json()["code"], resp.json()["sent"]) == ("sign_failed", True)
     assert "Bad passphrase" in resp.json()["detail"]
     after = project.call(author, "GET", f"{project.routes}/{route['id']}").json()
     assert (after["status"], after["phase"]) == ("active", "signing")
     assert [(p["state"], p["next_action"]) for step in after["steps"] for p in step] == [("to_sign", "sign")]
+
+
+@pytest.mark.parametrize("failure", [PermissionError("слот чужой"), NotFoundError("ключ пропал")], ids=["403", "404"])
+async def test__send_and_sign__any_failure_after_sending__sign_failed_with_sent_flag(
+    stand: Stand, fake_key: pytest.MonkeyPatch, failure: Exception
+) -> None:
+    async def _refused(self: RouteKeySigner, *_args: Any) -> tuple[DocSlot, ...]:
+        raise failure
+
+    fake_key.setattr(RouteKeySigner, "sign", _refused)
+    project, author, route = await _route(stand)
+
+    resp = _send(project, author, route, {"identity_id": None, "passphrase": "correct horse"})
+
+    # Отправка уже записана: каким бы ни был отказ подписи, клиент видит «отправлено, не подписано».
+    assert (resp.status_code, resp.json()["code"], resp.json()["sent"]) == (400, "sign_failed", True)
+    assert project.call(author, "GET", f"{project.routes}/{route['id']}").json()["status"] == "active"
 
 
 async def test__send_and_sign__server_keys_forbidden__403_and_nothing_sent(stand: Stand) -> None:

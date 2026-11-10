@@ -2,12 +2,16 @@ import { demoError, demoJson, demoNoContent } from "@shared/api/demo";
 import type { DemoRoute } from "@shared/api/demo";
 import { createSignerProfileDemo } from "@entities/signer-profile/testing";
 import { createSigningIdentityDemo } from "@entities/signing-identity/testing";
-import { createSigningRouteDemo } from "@entities/signing-route/testing";
+import {
+  DEMO_SIGNING_MEMBERS,
+  createSigningRouteDemo,
+} from "@entities/signing-route/testing";
 import { useServerDemoScenarioStore } from "./scenarioStore";
 import { createAccountRoutes } from "./accountRoutes";
 import { createAdminRoutes } from "./adminRoutes";
 import { createAuthRoutes } from "./authRoutes";
 import { catalogRoutes } from "./catalogRoutes";
+import { createCheckpointDemo } from "./checkpointRoutes";
 import { createSharedProviderUserRoutes } from "./installRoutes";
 import { createInvitationRoutes } from "./invitationRoutes";
 import { createMemberOrgRoutes } from "./memberOrgRoutes";
@@ -20,6 +24,7 @@ import { cloudDeviceDemoRoutes } from "../deviceRoutes";
 import { createSetupRoutes } from "./setupRoutes";
 import { createShareLinkRoutes, createSharingAdminRoutes } from "./shareLinks";
 import { createSystemRoutes } from "./systemRoutes";
+import { DEMO_ADMIN, DEMO_STUDENT } from "./scenarios";
 import { createServerWorld, signIn, signOut } from "./world";
 
 // Серверное демо включается явно (VITE_SERVER_DEMO=1 или галерея /dev/server-screens).
@@ -45,11 +50,25 @@ export const signingIdentityDemo = createSigningIdentityDemo({
 export const signerProfileDemo = createSignerProfileDemo({
   getUser: () => world.bootstrap.user,
 });
+// Точка сдачи с подписями и местами слотов: без неё не открыть карточку «Подписание».
+export const checkpointDemo = createCheckpointDemo(() => world);
 export const signingRouteDemo = createSigningRouteDemo({
   getUser: () => world.bootstrap.user,
   projectName: (id) =>
     world.projects.find((p) => p.summary.id === id)?.summary.name ?? null,
   serverKeysAllowed,
+  // Второй научрук: в редакторе маршрута видно, как выбирают одного из нескольких людей персоны.
+  members: [
+    ...DEMO_SIGNING_MEMBERS,
+    {
+      user_id: "u_demo_sidorova",
+      name: "Сидорова А. В.",
+      persona: "supervisor",
+      plate: null,
+    },
+  ],
+  isPlaced: checkpointDemo.isPlaced,
+  mailEnabled: () => world.bootstrap.auth.smtp_enabled,
   keysOf: (user) =>
     signingIdentityDemo.keysOf(user.id).map((key) => ({
       id: key.id,
@@ -62,11 +81,38 @@ export const signingRouteDemo = createSigningRouteDemo({
     signerProfileDemo.saveImage(user.id, image);
   },
 });
+const DAY_MS = 24 * 60 * 60 * 1000;
+/**
+ * Студента демо просят подписать в двух чужих проектах: так во «Входящих» есть раздел
+ * «На подпись» (одна задача со сроком, одна просроченная) и работает страница подписанта.
+ */
+const seedSigningTasks = (): void => {
+  if (world.bootstrap.user?.id !== DEMO_STUDENT.id) return;
+  const signer = { id: DEMO_STUDENT.id, name: DEMO_STUDENT.name };
+  signingRouteDemo.seed({
+    projectId: "p_01hxa2f8gh",
+    sender: { id: DEMO_ADMIN.id, name: DEMO_ADMIN.name },
+    signer,
+    persona: "supervisor",
+    deadline: new Date(Date.now() + 2 * DAY_MS).toISOString(),
+    message: "Прошу согласовать тему до пятницы.",
+  });
+  signingRouteDemo.seed({
+    projectId: "p_01hxa3k2jm",
+    sender: { id: "u_01hx7k5pavel", name: "Павел Орлов" },
+    signer,
+    persona: "supervisor",
+    deadline: new Date(Date.now() - DAY_MS).toISOString(),
+  });
+};
+seedSigningTasks();
 export const resetServerWorld = (scenarioId: string): void => {
   world = createServerWorld(scenarioId);
   signingRouteDemo.reset();
+  checkpointDemo.reset();
   signingIdentityDemo.reset();
   signerProfileDemo.reset();
+  seedSigningTasks();
 };
 
 const guarded =
@@ -198,6 +244,7 @@ export const serverDemoRoutes: DemoRoute[] = [
   // invites: приглашения, запросы доступа, передача владения, «Входящие».
   ...createInvitationRoutes(() => world, signingRouteDemo.taskCount),
   ...signingRouteDemo.routes,
+  ...checkpointDemo.routes,
   ...signingIdentityDemo.routes,
   ...signerProfileDemo.routes,
   ...createMemberOrgRoutes(() => world),

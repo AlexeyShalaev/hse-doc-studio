@@ -38,7 +38,8 @@
       "to_sign": "to sign the final PDF",
       "done": "signed",
       "returned": "returned for rework"
-    }
+    },
+    "invitee": "Invitee"
   },
   "action": {
     "send": "Send for signing",
@@ -68,7 +69,8 @@
     "cancelled": "Route cancelled",
     "resent": "Sent again",
     "archived": "Route no longer tracked",
-    "blocked": "Cannot send: fix what is blocking it"
+    "blocked": "Cannot send: fix what is blocking it",
+    "inboxCopied": "Inbox link copied: the invitation is waiting for the person there"
   },
   "linkLabel": "Link for {{who}}",
   "error": {
@@ -77,12 +79,14 @@
     "participant_not_waiting": "It is not their turn now.",
     "rate_limited": "Too often. Try again in {{minutes}} min.",
     "network": "The server is unreachable. Check your connection.",
-    "generic": "Something went wrong. Try again."
+    "generic": "Something went wrong. Try again.",
+    "link_by_mail": "The invitation link is sent by email. Press “Remind” to send it again."
   },
   "hold": {
     "banner": "This document is out for signing (step {{step}} of {{total}}). Editing and rebuilding will stop the route.",
     "signatures": "Signatures cannot be changed while the route is running.",
     "open": "Signing progress",
     "locked": "This document is out for signing: signatures cannot be changed. To change them, cancel the route on the submission checkpoint page."
-  }
+  },
+  "unsigned": "The route is sent, your signature is not in place yet."
 }

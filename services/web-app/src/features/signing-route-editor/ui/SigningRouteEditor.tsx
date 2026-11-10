@@ -2,17 +2,18 @@ import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, useNavigate, useSearchParams } from "react-router";
 import { useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, Send } from "lucide-react";
+import { ArrowLeft, PenLine, Send } from "lucide-react";
 import type { z } from "zod";
 import { useIsProjectBuilding } from "@entities/compile";
 import { useDocuments } from "@entities/document";
-import { useProjectInvitations } from "@entities/invitation";
 import type { ProjectResponseSchema } from "@entities/project";
 import { useBootstrap } from "@entities/session";
 import { useSignaturesState } from "@entities/signature";
 import {
+  isActionable,
   isResend,
   isRouteEditable,
+  signingPagePath,
   signingRouteKeys,
   useCreateSigningRoute,
   useSendSigningRoute,
@@ -152,9 +153,14 @@ export const SigningRouteEditor = ({
   const send = useSendSigningRoute(project.id, routeId);
   const signatures = useSignaturesState(project.id);
   const documents = useDocuments(project.id);
-  const invitations = useProjectInvitations(project.id, editable);
   const personaLabel = usePersonaLabel(project.authors);
   const [sendError, setSendError] = useState<string | null>(null);
+  // «Отправить и подписать»: маршрут ушёл, а подпись отправителя не поставлена (причина отказа).
+  const [unsigned, setUnsigned] = useState<string | null>(null);
+  // Помеха «подпись не размещена» ведёт к слоту в блоке «Где подписи».
+  const [placeFocus, setPlaceFocus] = useState<
+    (RouteSlotRef & { n: number }) | null
+  >(null);
 
   const building = useIsProjectBuilding(project.id);
   // Ссылка на данные меняется только вместе с содержимым (structural sharing запросов).
@@ -282,6 +288,16 @@ export const SigningRouteEditor = ({
       toast.success(input.sign ? t("send.sentSigned") : t("send.sent"));
       void navigate(pointPath);
     } catch (error) {
+      // Отказ подписи после записи отправки (`sent: true`): маршрут уже у подписантов, это не
+      // сбой отправки. Экран остаётся на маршруте и ведёт отправителя на его страницу подписи.
+      if (
+        error instanceof ApiError &&
+        error.code === "sign_failed" &&
+        error.data?.sent === true
+      ) {
+        setUnsigned(error.detail);
+        return;
+      }
       setSendError(errorText(error));
       void preview.refetch();
     }
@@ -308,9 +324,6 @@ export const SigningRouteEditor = ({
       meId={meId}
       personaLabel={personaLabel}
       approverPersonas={APPROVER_PERSONAS.filter((p) => !present.has(p))}
-      invitations={(invitations.data?.items ?? []).filter(
-        (inv) => inv.status === "pending",
-      )}
       registrationClosed={boot?.auth.registration_mode === "closed"}
       onChange={onSteps}
     />
@@ -330,6 +343,36 @@ export const SigningRouteEditor = ({
         }}
         isCreating={isCreating}
       />
+      {route.status === "active" && me && isActionable(me.next_action) && (
+        <div style={{ marginTop: "0.75rem" }} data-testid="route-my-turn">
+          <Notice
+            tone="warn"
+            role={unsigned === null ? "status" : "alert"}
+            text={[
+              me.next_action === "sign"
+                ? t("mine.sentUnsigned")
+                : t("mine.yourTurn"),
+              unsigned === null || unsigned === ""
+                ? null
+                : t("mine.signFailed", { reason: unsigned }),
+            ]
+              .filter((part) => part !== null)
+              .join(" ")}
+            action={
+              <Link
+                to={signingPagePath(project.id, route.id)}
+                className="btn xs primary"
+                data-testid="route-go-sign"
+              >
+                <PenLine size="0.6875rem" aria-hidden="true" />
+                {me.next_action === "approve"
+                  ? t("mine.goApprove")
+                  : t("mine.goSign")}
+              </Link>
+            }
+          />
+        </div>
+      )}
 
       {editable ? (
         <>
@@ -386,6 +429,12 @@ export const SigningRouteEditor = ({
                   onSend={(input) => {
                     void onSend(input);
                   }}
+                  onPlace={(slot) => {
+                    setPlaceFocus((prev) => ({
+                      ...slot,
+                      n: (prev?.n ?? 0) + 1,
+                    }));
+                  }}
                 />
               </Card>
             </div>
@@ -403,6 +452,7 @@ export const SigningRouteEditor = ({
                 personaLabel={personaLabel}
                 onAddExtra={onAddExtra}
                 onRemoveExtra={onRemoveExtra}
+                focus={placeFocus}
               />
             </Card>
           </div>
@@ -445,9 +495,10 @@ const Head = ({
       >
         <Send size="1.125rem" aria-hidden="true" />
       </div>
+      {/* На узком экране ссылка «К точке сдачи» уходит на свою строку, заголовок не сжимается. */}
       <div
         className="flex flex-col"
-        style={{ gap: "0.125rem", flex: 1, minWidth: 0 }}
+        style={{ gap: "0.125rem", flex: "1 1 12rem", minWidth: 0 }}
       >
         <h2
           style={{

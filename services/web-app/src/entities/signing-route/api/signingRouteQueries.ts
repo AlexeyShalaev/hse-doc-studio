@@ -221,6 +221,13 @@ export const useRemindSigningParticipant = (
   });
 };
 
+/** «Скопировать ссылку» приглашённому: новая ссылка приглашения, маршрут не меняется. */
+export const useSigningParticipantLink = (projectId: string, routeId: string) =>
+  useMutation({
+    mutationFn: (participantId: string) =>
+      signingRouteApi.link(projectId, routeId, participantId),
+  });
+
 // Подписант
 
 export const useSigningTask = (

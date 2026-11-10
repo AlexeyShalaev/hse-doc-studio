@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { MapPin, Plus, X } from "lucide-react";
 import { getDocMeta, type DocDefLike } from "@entities/document";
@@ -24,6 +24,11 @@ export type RoutePlacementsCardProps = {
   personaLabel: (persona: string) => string;
   onAddExtra: (slot: RouteSlotRef) => void;
   onRemoveExtra: (slot: RouteSlotRef) => void;
+  /**
+   * Слот, к которому привела помеха «подпись не размещена»: открыть его документ, прокрутить
+   * к нему и подсветить. `n` растёт с каждым переходом, чтобы повторный переход тоже сработал.
+   */
+  focus?: (RouteSlotRef & { n: number }) | null;
 };
 
 // Надпись открепленной ЭП шире картинки: на узкой рамке она переносится на 4-5 строк.
@@ -44,6 +49,7 @@ export const RoutePlacementsCard = ({
   personaLabel,
   onAddExtra,
   onRemoveExtra,
+  focus = null,
 }: RoutePlacementsCardProps) => {
   const { t, i18n } = useTranslation("signingRouteEditor");
   const lang = i18n.language;
@@ -51,6 +57,29 @@ export const RoutePlacementsCard = ({
   const [page, setPage] = useState(1);
   const [pageCount, setPageCount] = useState(0);
   const { mutate: updatePlacement } = useUpdateSignaturePlacement();
+  // Переход от помехи: документ слота выбирается при рендере (без эффекта), прокрутка после него.
+  const [seenFocus, setSeenFocus] = useState(0);
+  if (focus !== null && focus.n !== seenFocus) {
+    setSeenFocus(focus.n);
+    setDocId(focus.doc_id);
+    setPage(1);
+  }
+  const rootRef = useRef<HTMLDivElement>(null);
+  const focusN = focus?.n ?? 0;
+  const focusSlot = focus?.slot_id ?? null;
+  useEffect(() => {
+    if (focusN === 0 || focusSlot === null) return;
+    const row = rootRef.current?.querySelector<HTMLElement>(
+      `[data-slot-row="${CSS.escape(focusSlot)}"]`,
+    );
+    const target = row ?? rootRef.current;
+    // В тестовом окружении (jsdom) прокрутки нет.
+    if (target && typeof target.scrollIntoView === "function")
+      target.scrollIntoView({ block: "center", behavior: "smooth" });
+    row
+      ?.querySelector<HTMLElement>("[data-place]")
+      ?.focus({ preventScroll: true });
+  }, [focusN, focusSlot]);
   const doc = route.docs.find((d) => d.doc_id === docId) ?? route.docs[0];
   if (!doc) return null;
 
@@ -77,7 +106,7 @@ export const RoutePlacementsCard = ({
     state?.placements[doc.doc_id]?.[slotId];
 
   return (
-    <div className="flex flex-col" style={{ gap: "0.75rem" }}>
+    <div ref={rootRef} className="flex flex-col" style={{ gap: "0.75rem" }}>
       {route.docs.length > 1 && (
         <ViewTabs
           views={route.docs.map((d) => ({
@@ -137,8 +166,17 @@ export const RoutePlacementsCard = ({
                     padding: "0.625rem 0.75rem",
                     borderBottom: "1px solid var(--border)",
                     fontSize: "0.71875rem",
+                    // Слот, к которому привела помеха отправки.
+                    boxShadow:
+                      focus !== null &&
+                      focus.doc_id === doc.doc_id &&
+                      focus.slot_id === slot.slot_id &&
+                      !placement?.enabled
+                        ? "inset 0.1875rem 0 0 var(--c-warn)"
+                        : undefined,
                   }}
                   data-testid={`route-slot-${slot.slot_id}`}
+                  data-slot-row={slot.slot_id}
                 >
                   <div
                     className="flex items-center"
@@ -228,6 +266,7 @@ export const RoutePlacementsCard = ({
                           <button
                             type="button"
                             className="btn xs"
+                            data-place
                             onClick={() => {
                               updatePlacement({
                                 projectId,
@@ -269,14 +308,26 @@ export const RoutePlacementsCard = ({
                     key={slot.id}
                     type="button"
                     className="btn xs ghost"
-                    style={{ justifyContent: "flex-start" }}
+                    // Длинное название слота переносится, а не обрезается краем колонки.
+                    style={{
+                      justifyContent: "flex-start",
+                      height: "auto",
+                      minHeight: "1.5rem",
+                      padding: "0.25rem 0.5rem",
+                      whiteSpace: "normal",
+                      textAlign: "left",
+                    }}
                     disabled={busy}
                     onClick={() => {
                       onAddExtra({ doc_id: doc.doc_id, slot_id: slot.id });
                     }}
                     data-testid={`route-add-slot-${slot.id}`}
                   >
-                    <Plus size="0.6875rem" aria-hidden="true" />
+                    <Plus
+                      size="0.6875rem"
+                      aria-hidden="true"
+                      style={{ flexShrink: 0 }}
+                    />
                     {t("placements.add", {
                       label: pickLocalized(slot.label, lang, slot.id),
                     })}

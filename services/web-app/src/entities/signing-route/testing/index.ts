@@ -7,6 +7,7 @@ export {
   type SigningDemoInvitation,
   type SigningDemoMember,
   type SigningDemoProfile,
+  type SigningDemoSeed,
   type SigningDemoSlot,
   type SigningDemoUser,
   type SigningRouteDemo,

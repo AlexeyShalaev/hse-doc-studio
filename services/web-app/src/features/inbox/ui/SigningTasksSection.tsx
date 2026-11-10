@@ -32,7 +32,9 @@ const CARD = {
   background: "var(--bg-1)",
   display: "flex",
   alignItems: "flex-start",
-  gap: "0.75rem",
+  // На телефоне кнопка «Открыть» уходит под текст, а не вылезает за край карточки.
+  flexWrap: "wrap",
+  gap: "0.5rem 0.75rem",
 } as const;
 
 /** «На подпись» (раздел 3.2): где сейчас ждут действия человека, по всем проектам. */
@@ -134,7 +136,7 @@ export const SigningTasksSection = ({
             </span>
             <div
               className="flex flex-col min-w-0"
-              style={{ flex: 1, gap: "0.3125rem" }}
+              style={{ flex: "1 1 12rem", gap: "0.3125rem" }}
             >
               <strong
                 style={{ fontSize: "0.84375rem", overflowWrap: "anywhere" }}
@@ -176,6 +178,7 @@ export const SigningTasksSection = ({
               type="button"
               size="sm"
               className="shrink-0"
+              style={{ marginLeft: "auto" }}
               aria-label={t("signing.openLabel", { name })}
               data-testid={`inbox-signing-open-${task.route_id}`}
               onClick={() => {

@@ -146,6 +146,7 @@
       "link_password_failed": "Неверный пароль ссылки",
       "project_invitation_create": "Приглашение в проект",
       "project_invitation_resend": "Приглашение отправлено повторно",
+      "project_invitation_relink": "Выдана новая ссылка приглашения",
       "project_invitation_revoke": "Приглашение отозвано",
       "project_invitation_accept": "Приглашение принято",
       "project_invitation_decline": "Приглашение отклонено",

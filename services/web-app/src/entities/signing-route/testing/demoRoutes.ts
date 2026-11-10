@@ -23,6 +23,7 @@ import {
   type RouteSignMethod,
   type RouteSlotRef,
   type SigningKeyInfo,
+  type SigningLink,
   type SigningNextAction,
   type SigningPlate,
   type SigningReminder,
@@ -44,9 +45,13 @@ import {
 // - отпечатки документов: `build:<sha>` до фиксации, `build:<sha>:<слой>` для совмещения
 //   с фиксацией, `pdf:<sha>` после неё; несовпадение `expected` даёт 409 `doc_changed`;
 // - частота отправки не ограничивается, напоминание раз в 12 часов (429 `rate_limited`);
+// - приглашённому без почты на сервере (`mailEnabled`) «Напомнить» и «Скопировать ссылку» отдают
+//   новую ссылку приглашения без пауз и отметок; с почтой ссылка уходит письмом (409 `link_by_mail`);
+// - слот с видимой меткой без места на странице (`isPlaced`) мешает отправке: `placement_off`;
 // - подпись ключом Студии: ключ с паролем без пароля даёт 400 `passphrase_required`, пароль
 //   `wrong` даёт 400 `passphrase_invalid`, чужой ключ 409 `key_not_found`, при запрете
-//   ключей на сервере 403 `server_keys_forbidden`;
+//   ключей на сервере 403 `server_keys_forbidden`; пароль `broken` в «Отправить и подписать»
+//   отправляет маршрут и отвечает 400 `sign_failed` с `sent: true`;
 // - готовая подпись и подпись КриптоПро приходят существующим адресом
 //   `.../docs/{doc}/detached/{slot}`: только участнику в его очередь подписывать (6.10).
 
@@ -114,7 +119,24 @@ export type SigningRouteDemoOptions = {
   keysOf?: (user: SigningDemoUser) => SigningKeyInfo[];
   /** «Запомнить для других проектов»: картинка уходит в профиль подписанта. */
   onRememberImage?: (user: SigningDemoUser, image: Blob) => void;
+  /** Включено ли место слота на странице документа; без функции места есть у всех слотов. */
+  isPlaced?: (projectId: string, docId: string, slotId: string) => boolean;
+  /** На сервере настроена почта: приглашения и напоминания уходят письмом. По умолчанию нет. */
+  mailEnabled?: () => boolean;
   now?: () => number;
+};
+
+/** Чужой маршрут, в котором вошедший подписант: чтобы в демо были задачи «На подпись». */
+export type SigningDemoSeed = {
+  projectId: string;
+  profileId?: string;
+  /** Кто отправил маршрут: автор проекта. */
+  sender: SigningDemoUser;
+  /** Кто подписывает вторым шагом и в какой роли. */
+  signer: SigningDemoUser;
+  persona: string;
+  deadline?: string | null;
+  message?: string | null;
 };
 
 export type SigningRouteDemo = {
@@ -127,6 +149,8 @@ export type SigningRouteDemo = {
   acceptInvitation: (invitationId: string, user: SigningDemoUser) => void;
   /** Сколько задач «На подпись» у человека: для `InboxSummary.signing_tasks` демо «Входящих». */
   taskCount: (userId: string) => number;
+  /** Отправленный маршрут чужого проекта с подписантом `signer`; возвращает id маршрута. */
+  seed: (input: SigningDemoSeed) => string | null;
 };
 
 const SLOT_LABEL = {
@@ -276,6 +300,8 @@ export const createSigningRouteDemo = (
       ? serverKeysOption()
       : serverKeysOption;
   const now = () => new Date(clock()).toISOString();
+  const isPlaced = options.isPlaced ?? (() => true);
+  const mailEnabled = options.mailEnabled ?? (() => false);
 
   let routes: Route[] = [];
   let seq = 0;
@@ -805,6 +831,19 @@ export const createSigningRouteDemo = (
         slot_id: null,
         participant_id: null,
       });
+    // Картинке и плашке нужно место на странице: без него слот не подписать.
+    for (const p of participants(r)) {
+      if (p.method === "pades") continue;
+      for (const pair of assignmentsOf(r, p)) {
+        if (!isPlaced(r.project_id, pair.doc_id, pair.slot_id))
+          blockers.push({
+            code: "placement_off",
+            doc_id: pair.doc_id,
+            slot_id: pair.slot_id,
+            participant_id: p.id,
+          });
+      }
+    }
     return blockers;
   };
 
@@ -1024,6 +1063,62 @@ export const createSigningRouteDemo = (
       }
     }
     return items;
+  };
+
+  const buildsOf = (r: Route): Record<string, string> =>
+    Object.fromEntries(
+      Object.entries(r.build).map(([doc, value]) => [doc, `build:${value}`]),
+    );
+
+  /** Отправить или отправить заново; `sign`: отправитель сразу подписывает свои слоты ЭП. */
+  const sendRoute = (r: Route, user: SigningDemoUser, sign: boolean): void => {
+    const builds = buildsOf(r);
+    const previous = r.round;
+    r.round += 1;
+    r.status = "active";
+    r.stop_reason = null;
+    r.frozen = null;
+    r.sent_by = user;
+    r.sent_at = now();
+    r.completed_at = null;
+    for (const p of participants(r)) {
+      p.returnedRound = null;
+      p.notified_at = null;
+      p.reminders = 0;
+      p.reminded_at = null;
+      // Согласие переносится, если документы участника не менялись.
+      const carried =
+        p.approval !== null &&
+        p.approval.round === previous &&
+        docsOf(r, p).every((doc) => p.approval?.tokens[doc] === builds[doc]);
+      p.approval =
+        carried && p.approval ? { ...p.approval, round: r.round } : null;
+      p.signedRound = null;
+    }
+    // Отправка и есть согласие отправителя.
+    for (const p of r.steps[0] ?? []) {
+      if (p.user_id === user.id)
+        p.approval = { round: r.round, at: now(), tokens: builds };
+    }
+    // «Отправить заново» пишет `resumed`, первая отправка `sent`.
+    event(r, previous === 0 ? "sent" : "resumed", user.name);
+    settle(r);
+    if (sign && isFrozen(r)) {
+      for (const p of r.steps[0] ?? []) {
+        if (p.user_id === user.id && isCrypto(p.method)) {
+          p.signedRound = r.round;
+          event(r, "signed", user.name, { participant_id: p.id });
+        }
+      }
+      settle(r);
+    }
+  };
+
+  /** Ссылка приглашения с переходом на страницу подписи; каждый раз новая, как у сервера. */
+  const invitationLink = (r: Route): string => {
+    seq += 1;
+    const next = encodeURIComponent(`/sign/${r.project_id}/${r.id}`);
+    return `${window.location.origin}/project-invite/hspi_demo_ok${String(seq)}?next=${next}`;
   };
 
   // Обработчики
@@ -1275,55 +1370,18 @@ export const createSigningRouteDemo = (
           return conflict("route_blocked", "The route cannot be sent", {
             blockers,
           });
-        const builds = Object.fromEntries(
-          Object.entries(r.build).map(([doc, value]) => [
-            doc,
-            `build:${value}`,
-          ]),
-        );
-        const mismatch = checkExpected(r, body.expected, builds);
+        const mismatch = checkExpected(r, body.expected, buildsOf(r));
         if (mismatch) return mismatch;
-        const previous = r.round;
-        r.round += 1;
-        r.status = "active";
-        r.stop_reason = null;
-        r.frozen = null;
-        r.sent_by = user;
-        r.sent_at = now();
-        r.completed_at = null;
-        for (const p of participants(r)) {
-          p.returnedRound = null;
-          p.notified_at = null;
-          p.reminders = 0;
-          p.reminded_at = null;
-          // Согласие переносится, если документы участника не менялись.
-          const carried =
-            p.approval !== null &&
-            p.approval.round === previous &&
-            docsOf(r, p).every(
-              (doc) => p.approval?.tokens[doc] === builds[doc],
-            );
-          p.approval =
-            carried && p.approval ? { ...p.approval, round: r.round } : null;
-          p.signedRound = null;
-        }
-        // Отправка и есть согласие отправителя.
-        for (const p of r.steps[0] ?? []) {
-          if (p.user_id === user.id)
-            p.approval = { round: r.round, at: now(), tokens: builds };
-        }
-        // «Отправить заново» пишет `resumed`, первая отправка `sent`.
-        event(r, previous === 0 ? "sent" : "resumed", user.name);
-        settle(r);
-        if (body.sign !== null && isFrozen(r)) {
-          for (const p of r.steps[0] ?? []) {
-            if (p.user_id === user.id && isCrypto(p.method)) {
-              p.signedRound = r.round;
-              event(r, "signed", user.name, { participant_id: p.id });
-            }
-          }
-          settle(r);
-        }
+        // Ключ проверяется до отправки: отказ на этом этапе ничего не меняет.
+        const refused = body.sign === null ? null : refuseKey(user, body.sign);
+        if (refused) return refused;
+        // Подпись отказала уже после отправки: маршрут ушёл, подписи отправителя нет.
+        const broken = body.sign?.passphrase === "broken";
+        sendRoute(r, user, body.sign !== null && !broken);
+        if (broken && isFrozen(r))
+          return demoError(400, "sign_failed", "The key refused to sign", {
+            sent: true,
+          });
         return demoJson(toRoute(r));
       }),
     },
@@ -1371,6 +1429,15 @@ export const createSigningRouteDemo = (
             state === "invited");
         if (!turn)
           return conflict("participant_not_waiting", "Nothing to remind about");
+        // Без почты приглашённому напомнить нечем: автор получает ссылку, без пауз и отметок.
+        if (state === "invited" && !mailEnabled()) {
+          const manual: SigningReminder = {
+            participant_id: p.id,
+            delivery: "manual",
+            link: invitationLink(r),
+          };
+          return demoJson(manual);
+        }
         const last = p.reminded_at === null ? null : Date.parse(p.reminded_at);
         const interval = 12 * 60 * 60 * 1000;
         if (last !== null && clock() - last < interval)
@@ -1380,15 +1447,47 @@ export const createSigningRouteDemo = (
         p.reminded_at = now();
         p.reminders += 1;
         event(r, state === "invited" ? "invited" : "reminded", user.name);
-        const reminder: SigningReminder =
-          state === "invited"
-            ? {
-                participant_id: p.id,
-                delivery: "manual",
-                link: `${window.location.origin}/project-invite/hspi_demo_ok`,
-              }
-            : { participant_id: p.id, delivery: "inbox", link: null };
+        const reminder: SigningReminder = {
+          participant_id: p.id,
+          delivery: state === "invited" || mailEnabled() ? "email" : "inbox",
+          link: null,
+        };
         return demoJson(reminder);
+      }),
+    },
+    {
+      method: "POST",
+      pattern:
+        "/projects/:projectId/signing-routes/:routeId/participants/:participantId/link",
+      handler: withRoute((req, r) => {
+        const p = participants(r).find(
+          (q) => q.id === req.params.participantId,
+        );
+        if (!p) return notFound();
+        if (p.user_id !== null) {
+          const page: SigningLink = {
+            participant_id: p.id,
+            kind: "page",
+            link: `${window.location.origin}/sign/${r.project_id}/${r.id}`,
+          };
+          return demoJson(page);
+        }
+        if (p.invitation_id === null)
+          return conflict(
+            "participant_not_waiting",
+            "Nobody to send a link to",
+          );
+        if (mailEnabled())
+          return conflict(
+            "link_by_mail",
+            "The invitation link is sent by email: press “Remind” to send it again",
+          );
+        const invitation: SigningLink = {
+          participant_id: p.id,
+          kind: "invitation",
+          link: invitationLink(r),
+        };
+        return demoJson(invitation);
       }),
     },
     {
@@ -1670,5 +1769,32 @@ export const createSigningRouteDemo = (
       }
     },
     taskCount: (userId) => tasksOf(userId).length,
+    seed: ({
+      projectId,
+      profileId,
+      sender,
+      signer,
+      persona,
+      deadline,
+      message,
+    }) => {
+      const profile =
+        profiles.find((item) => item.id === profileId) ?? profiles[0];
+      if (!profile) return null;
+      const r = draftFromPack(projectId, profile, sender);
+      // Подписант встаёт на свою персону вместо человека из заготовки.
+      for (const p of participants(r)) {
+        if (p.persona !== persona) continue;
+        p.user_id = signer.id;
+        p.invitation_id = null;
+        p.name = signer.name;
+        p.plate = null;
+      }
+      r.deadline = deadline ?? null;
+      r.message = message ?? null;
+      routes.push(r);
+      sendRoute(r, sender, false);
+      return r.id;
+    },
   };
 };

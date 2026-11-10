@@ -1,5 +1,6 @@
 import { apiClient, parseResp } from "@shared/api";
 import {
+  SigningLinkSchema,
   SigningReminderSchema,
   SigningRouteListSchema,
   SigningRoutePreviewSchema,
@@ -10,6 +11,7 @@ import {
   type ReturnSigningTaskRequest,
   type SendSigningRouteRequest,
   type SignSigningTaskRequest,
+  type SigningLink,
   type SigningReminder,
   type SigningRoute,
   type SigningRouteList,
@@ -109,6 +111,22 @@ export const signingRouteApi = {
         quiet,
       )
       .then(parseResp(SigningReminderSchema)),
+  /**
+   * Ссылка, которую автор сам перешлёт подписанту: страница подписи или новая ссылка
+   * приглашения. Не напоминание: пауз нет, в маршрут ничего не пишется.
+   */
+  link: (
+    projectId: string,
+    routeId: string,
+    participantId: string,
+  ): Promise<SigningLink> =>
+    apiClient
+      .post(
+        `${route(projectId, routeId)}/participants/${enc(participantId)}/link`,
+        {},
+        quiet,
+      )
+      .then(parseResp(SigningLinkSchema)),
 };
 
 /** Задача подписанта на странице `/sign/:projectId/:routeId`: только участнику маршрута. */
