@@ -2,6 +2,7 @@ import type {
   ApproveSigningTaskRequest,
   CreateSigningRouteRequest,
   ReturnSigningTaskRequest,
+  RouteDocVersion,
   RouteEvent,
   RouteParticipant,
   SendSigningRouteRequest,
@@ -34,8 +35,28 @@ export const SR_DOC = {
 };
 export const SR_AUTHOR = { id: "u_01hx7k5ivan", name: "Иванов И. И." };
 export const SR_SUPERVISOR = { id: "u_01hx7k5petr", name: "Петров П. П." };
+/** Второй документ для новой версии (12.6): научрук подписывает оба, меняется один. */
+export const SR_REVIEW_DOC = {
+  doc_id: "supervisor_review",
+  name: { ru: "Отзыв руководителя", en: "Supervisor's review" },
+};
 
 const BUILD_SHA = "3f".repeat(32);
+/** Рабочая сборка после правки: ушла от версии на подписи. */
+const WORKING_SHA = "a7".repeat(32);
+const REVIEW_SHA = "5e".repeat(32);
+const SENT_AT = "2026-11-10T09:00:00Z";
+const NEW_VERSION_AT = "2026-11-12T10:30:00Z";
+
+/** Версия на подписи (12.3), снятая первой отправкой. */
+export const makeRouteDocVersion = (
+  overrides: Partial<RouteDocVersion> = {},
+): RouteDocVersion => ({
+  sha256: BUILD_SHA,
+  at: SENT_AT,
+  round: 1,
+  ...overrides,
+});
 
 export const makeRouteEvent = (
   overrides: Partial<RouteEvent> = {},
@@ -48,6 +69,7 @@ export const makeRouteEvent = (
   participant_id: null,
   comment: null,
   reason: null,
+  changed_docs: null,
   ...overrides,
 });
 
@@ -127,6 +149,8 @@ export const makeSigningRoute = (
           status: "pending",
         },
       ],
+      sent: makeRouteDocVersion(),
+      changed: false,
     },
   ],
   steps: [[makeRouteParticipant()], [supervisor()]],
@@ -147,6 +171,7 @@ export const makeSigningRoute = (
       ],
     },
   ],
+  changed_docs: [],
   ...overrides,
 });
 
@@ -166,6 +191,8 @@ export const makeSigningRouteSummary = (
   completed_at: null,
   updated_at: "2026-11-10T09:00:00Z",
   waiting_for: [{ name: SR_SUPERVISOR.name, persona: "supervisor" }],
+  docs: [SR_DOC.doc_id],
+  changed_docs: [],
   ...overrides,
 });
 
@@ -176,7 +203,15 @@ export const makeSigningRoutePreview = (
   can_send: true,
   can_send_and_sign: false,
   visual_step: 0,
-  docs: [{ ...SR_DOC, built: true, token: `build:${BUILD_SHA}` }],
+  docs: [
+    {
+      ...SR_DOC,
+      built: true,
+      token: `build:${BUILD_SHA}`,
+      change: "new",
+      sent: null,
+    },
+  ],
   participants: [
     {
       participant_id: "srp_author",
@@ -190,6 +225,7 @@ export const makeSigningRoutePreview = (
       image_ready: true,
       plate_ready: false,
       actions: 0,
+      keeps_approval: false,
     },
     {
       participant_id: "srp_supervisor",
@@ -203,6 +239,7 @@ export const makeSigningRoutePreview = (
       image_ready: false,
       plate_ready: true,
       actions: 1,
+      keeps_approval: false,
     },
   ],
   blockers: [],
@@ -226,6 +263,7 @@ export const makeSigningTask = (
     sender: SR_AUTHOR.name,
     sent_at: "2026-11-10T09:00:00Z",
     stop_reason: null,
+    new_version: false,
   },
   steps: [
     [
@@ -299,6 +337,9 @@ export const makeSigningTask = (
           status: "signed",
         },
       ],
+      sent_at: SENT_AT,
+      changed_since_mine: false,
+      changed: null,
     },
   ],
   events: [makeRouteEvent()],
@@ -318,6 +359,328 @@ export const makeSigningTaskSummary = (
   since: "2026-11-10T09:00:00Z",
   ...overrides,
 });
+
+// Версия на подписи (раздел 12): маршрут подписывает снимок PDF, снятый при отправке.
+
+const SUPERVISOR_LABEL = { ru: "Научный руководитель", en: "Supervisor" };
+const ACADEMIC_LABEL = {
+  ru: "Академический руководитель",
+  en: "Academic supervisor",
+};
+
+/** Рабочая сборка заявления ушла вперёд, маршрут идёт дальше: подписанты ничего не замечают. */
+const divergedRoute = makeSigningRoute({
+  docs: makeSigningRoute().docs.map((doc) => ({
+    ...doc,
+    changed: true,
+  })),
+  changed_docs: [SR_DOC.doc_id],
+});
+
+const academic = (overrides: Partial<RouteParticipant> = {}) =>
+  makeRouteParticipant({
+    id: "srp_academic",
+    persona: "academic_supervisor",
+    user_id: "u_01hx7k5sido",
+    name: "Сидоров С. С.",
+    card_name: "Сидоров С. С.",
+    assignments: [
+      { doc_id: SR_REVIEW_DOC.doc_id, slot_id: "academic_supervisor" },
+    ],
+    ...overrides,
+  });
+
+/**
+ * Новая версия (12.6), раунд 2: изменилось заявление, отзыв нет. Научрук согласует заново только
+ * заявление: его ЭП на отзыве осталась, B отзыва тот же. Академрук подписывает только отзыв и
+ * остаётся `done`.
+ */
+const newVersionRoute = makeSigningRoute({
+  phase: "approval",
+  round: 2,
+  current_step: 2,
+  sent_at: NEW_VERSION_AT,
+  updated_at: NEW_VERSION_AT,
+  message: "Исправил формулировку темы.",
+  docs: [
+    {
+      ...SR_DOC,
+      frozen: false,
+      slots: [
+        {
+          slot_id: "author",
+          label: { ru: "Студент", en: "Student" },
+          participant_id: "srp_author",
+          optional: false,
+          status: "signed",
+        },
+        {
+          slot_id: "supervisor",
+          label: SUPERVISOR_LABEL,
+          participant_id: "srp_supervisor",
+          optional: false,
+          status: "pending",
+        },
+      ],
+      sent: makeRouteDocVersion({
+        sha256: WORKING_SHA,
+        at: NEW_VERSION_AT,
+        round: 2,
+      }),
+      changed: false,
+    },
+    {
+      ...SR_REVIEW_DOC,
+      frozen: true,
+      slots: [
+        {
+          slot_id: "supervisor",
+          label: SUPERVISOR_LABEL,
+          participant_id: "srp_supervisor",
+          optional: false,
+          status: "signed",
+        },
+        {
+          slot_id: "academic_supervisor",
+          label: ACADEMIC_LABEL,
+          participant_id: "srp_academic",
+          optional: false,
+          status: "signed",
+        },
+      ],
+      sent: makeRouteDocVersion({ sha256: REVIEW_SHA }),
+      changed: false,
+    },
+  ],
+  steps: [
+    [makeRouteParticipant({ approved_at: NEW_VERSION_AT })],
+    [
+      supervisor({
+        assignments: [
+          { doc_id: SR_DOC.doc_id, slot_id: "supervisor" },
+          { doc_id: SR_REVIEW_DOC.doc_id, slot_id: "supervisor" },
+        ],
+        state: "to_approve",
+        next_action: "approve",
+        changes_visible: true,
+        notified_at: NEW_VERSION_AT,
+      }),
+    ],
+    [academic({ approved_at: "2026-11-11T15:00:00Z" })],
+  ],
+  events: [
+    makeRouteEvent(),
+    makeRouteEvent({ id: "sre_02", kind: "frozen", who: null }),
+    makeRouteEvent({
+      id: "sre_05",
+      kind: "sent",
+      round: 2,
+      at: NEW_VERSION_AT,
+      changed_docs: [SR_DOC.doc_id],
+    }),
+  ],
+  changed_docs: [],
+});
+
+const SNAPSHOT_ROUTE_EXAMPLES = {
+  diverged: divergedRoute,
+  new_version: newVersionRoute,
+  // Все подписали версию от 10.11, потом правка: «Есть изменения после подписания».
+  completed_changed: makeSigningRoute({
+    status: "completed",
+    phase: "done",
+    current_step: null,
+    completed_at: "2026-11-11T12:00:00Z",
+    docs: divergedRoute.docs.map((doc) => ({
+      ...doc,
+      slots: doc.slots.map((slot) => ({ ...slot, status: "signed" as const })),
+    })),
+    steps: [
+      [makeRouteParticipant()],
+      [
+        supervisor({
+          state: "done",
+          next_action: "done",
+          approved_at: "2026-11-11T12:00:00Z",
+        }),
+      ],
+    ],
+    changed_docs: [SR_DOC.doc_id],
+  }),
+  // Маршрут 0.20.0, версию которого перенос не восстановил (12.11): стоит, версии на подписи нет.
+  migration_lost: makeSigningRoute({
+    status: "paused",
+    phase: null,
+    current_step: null,
+    stop_reason: "sent_changed",
+    docs: divergedRoute.docs.map((doc) => ({
+      ...doc,
+      frozen: false,
+      sent: null,
+    })),
+    events: [
+      makeRouteEvent(),
+      makeRouteEvent({
+        id: "sre_04",
+        kind: "paused",
+        at: "2026-11-12T03:00:00Z",
+        who: null,
+        reason: "sent_changed",
+      }),
+    ],
+    changed_docs: [SR_DOC.doc_id],
+  }),
+} satisfies Record<string, SigningRoute>;
+
+/** Предпросмотр новой версии: заявление изменилось, отзыв нет; академрук сохраняет согласие. */
+const SNAPSHOT_PREVIEW_EXAMPLES = {
+  new_version: makeSigningRoutePreview({
+    visual_step: 2,
+    docs: [
+      {
+        ...SR_DOC,
+        built: true,
+        token: `build:${WORKING_SHA}`,
+        change: "changed",
+        sent: makeRouteDocVersion(),
+      },
+      {
+        ...SR_REVIEW_DOC,
+        built: true,
+        token: `build:${REVIEW_SHA}`,
+        change: "same",
+        sent: makeRouteDocVersion({ sha256: REVIEW_SHA }),
+      },
+    ],
+    participants: [
+      ...makeSigningRoutePreview().participants,
+      {
+        participant_id: "srp_academic",
+        step: 3,
+        persona: "academic_supervisor",
+        name: "Сидоров С. С.",
+        membership: "member",
+        method: "image",
+        methods: ["image", "detached"],
+        chooses_method: false,
+        image_ready: true,
+        plate_ready: false,
+        actions: 0,
+        keeps_approval: true,
+      },
+    ],
+  }),
+} satisfies Record<string, SigningRoutePreview>;
+
+/**
+ * Задача научрука в раунде новой версии: заявление согласовать заново, отзыв без изменений
+ * (его согласие и ЭП остались, отпечатка для действия нет).
+ */
+const SNAPSHOT_TASK_EXAMPLES = {
+  new_version: makeSigningTask({
+    route: {
+      ...makeSigningTask().route,
+      phase: "approval",
+      round: 2,
+      message: "Исправил формулировку темы.",
+      sent_at: NEW_VERSION_AT,
+      new_version: true,
+    },
+    steps: [
+      makeSigningTask().steps[0] ?? [],
+      [
+        {
+          name: SR_SUPERVISOR.name,
+          persona: "supervisor",
+          state: "to_approve",
+          at: null,
+          me: true,
+          card_name: null,
+          changes_visible: true,
+        },
+      ],
+      [
+        {
+          name: "Сидоров С. С.",
+          persona: "academic_supervisor",
+          state: "done",
+          at: "2026-11-11T15:00:00Z",
+          me: false,
+          card_name: null,
+          changes_visible: false,
+        },
+      ],
+    ],
+    me: {
+      ...makeSigningTask().me,
+      state: "to_approve",
+      next_action: "approve",
+    },
+    docs: [
+      {
+        ...SR_DOC,
+        pdf_url: `/api/v1/projects/${SR_PROJECT_ID}/docs/${SR_DOC.doc_id}/pdf/signed`,
+        frozen: false,
+        token: `build:${WORKING_SHA}`,
+        mine: [
+          {
+            slot_id: "supervisor",
+            label: SUPERVISOR_LABEL,
+            page: 1,
+            x_mm: 110,
+            y_mm: 130,
+            width_mm: 40,
+            height_mm: 22,
+            mark: "plate",
+            status: "pending",
+            reason: "awaiting_approval",
+          },
+        ],
+        others: makeSigningTask().docs[0]?.others ?? [],
+        sent_at: NEW_VERSION_AT,
+        changed_since_mine: true,
+        changed: null,
+      },
+      {
+        ...SR_REVIEW_DOC,
+        pdf_url: `/api/v1/projects/${SR_PROJECT_ID}/docs/${SR_REVIEW_DOC.doc_id}/frozen/pdf`,
+        frozen: true,
+        token: null,
+        mine: [
+          {
+            slot_id: "supervisor",
+            label: SUPERVISOR_LABEL,
+            page: 2,
+            x_mm: 110,
+            y_mm: 240,
+            width_mm: 40,
+            height_mm: 22,
+            mark: "plate",
+            status: "signed",
+            reason: null,
+          },
+        ],
+        others: [
+          {
+            slot_id: "academic_supervisor",
+            label: ACADEMIC_LABEL,
+            page: 2,
+            x_mm: 110,
+            y_mm: 260,
+            width_mm: 40,
+            height_mm: 16,
+            mark: "png",
+            status: "signed",
+          },
+        ],
+        sent_at: SENT_AT,
+        changed_since_mine: false,
+        changed: null,
+      },
+    ],
+    events: newVersionRoute.events,
+  }),
+} satisfies Record<string, SigningTask>;
 
 /**
  * Эталоны тел по будущим каталогам contracts/server/fixtures/<Схема>/<вариант>.json.
@@ -361,6 +724,8 @@ export const SIGNING_ROUTE_CONTRACT_EXAMPLES: Record<
               status: "pending",
             },
           ],
+          sent: null,
+          changed: false,
         },
       ],
       steps: [
@@ -429,9 +794,14 @@ export const SIGNING_ROUTE_CONTRACT_EXAMPLES: Record<
         }),
       ],
     }),
+    ...SNAPSHOT_ROUTE_EXAMPLES,
   },
   SigningRouteList: {
     active: { items: [makeSigningRouteSummary()] } satisfies SigningRouteList,
+    // Рабочая сборка ушла от версии на подписи: сводка называет документы маршрута и изменившиеся.
+    changed: {
+      items: [makeSigningRouteSummary({ changed_docs: [SR_DOC.doc_id] })],
+    } satisfies SigningRouteList,
     empty: { items: [] } satisfies SigningRouteList,
   },
   CreateSigningRouteRequest: {
@@ -498,6 +868,7 @@ export const SIGNING_ROUTE_CONTRACT_EXAMPLES: Record<
         signer: SR_AUTHOR.name,
       },
     }),
+    ...SNAPSHOT_PREVIEW_EXAMPLES,
   },
   SendSigningRouteRequest: {
     plain: {
@@ -510,6 +881,15 @@ export const SIGNING_ROUTE_CONTRACT_EXAMPLES: Record<
         identity_id: "5d1f0c3e-7d0b-4b7e-9a51-1c4c2b0b6f11",
         passphrase: "correct horse",
       },
+    } satisfies SendSigningRouteRequest,
+    // «Отправить новую версию» с полем «Что изменилось» (12.6).
+    new_version: {
+      expected: {
+        [SR_DOC.doc_id]: `build:${WORKING_SHA}`,
+        [SR_REVIEW_DOC.doc_id]: `build:${REVIEW_SHA}`,
+      },
+      sign: null,
+      note: "Исправил формулировку темы.",
     } satisfies SendSigningRouteRequest,
   },
   SigningReminder: {
@@ -596,6 +976,9 @@ export const SIGNING_ROUTE_CONTRACT_EXAMPLES: Record<
             },
           ],
           others: makeSigningTask().docs[0]?.others ?? [],
+          sent_at: SENT_AT,
+          changed_since_mine: false,
+          changed: null,
         },
       ],
       events: [
@@ -641,9 +1024,13 @@ export const SIGNING_ROUTE_CONTRACT_EXAMPLES: Record<
               status: "pending",
             },
           ],
+          sent_at: SENT_AT,
+          changed_since_mine: false,
+          changed: null,
         },
       ],
     }),
+    ...SNAPSHOT_TASK_EXAMPLES,
   },
   ApproveSigningTaskRequest: {
     approve: {
