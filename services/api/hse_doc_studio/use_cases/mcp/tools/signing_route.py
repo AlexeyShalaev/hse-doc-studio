@@ -186,7 +186,7 @@ class GetSigningRouteTool(McpTool):
                 {
                     "route": None,
                     "hint": localized_error(
-                        "У точки сдачи нет маршрута подписания: его отправляет автор кнопкой «Отправить на "
+                        "У контрольной точки нет маршрута подписания: его отправляет автор кнопкой «Отправить на "
                         "подписание» или тулом send_for_signing",
                         "The checkpoint has no signing route: the author sends one with “Send for signing” or "
                         "the send_for_signing tool",

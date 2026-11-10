@@ -1,6 +1,6 @@
 ---
 title: How to sign
-description: For supervisors and academic supervisors. Where to find documents to sign, how to approve, sign with an image or an electronic signature and return for rework, including from a phone.
+description: For supervisors and academic supervisors. Where to find documents to sign, how to approve, sign with an image or an electronic signature and return for revision, including from a phone.
 tags:
   - Workbench
   - Signatures
@@ -28,7 +28,7 @@ If you do not have an account on the server yet, a project invitation comes firs
 - **What is needed from you**: for example “Your turn: approve the documents” or “Not your turn yet”. If your turn has not come, wait for the notification, there is nothing to do now.
 - **“Documents”**: document tabs and the PDF. “Go to signature” scrolls to your frame, “Open PDF” opens the whole file. “Your signatures” and “Other signatures” show what is already in place.
 - **“How to sign”**: the signing method and everything it needs.
-- **Buttons** at the bottom: the main one (“Approve”, “Approve and sign” or “Sign”) and “Return for rework”.
+- **Buttons** at the bottom: the main one (“Approve”, “Approve and sign” or “Sign”) and “Return for revision”.
 - **“History”**: who sent, approved, signed or returned, and when.
 
 To approve means to confirm that you have read this version and agree with it. If the document has no place for your signature, the page says so: “No signature in the document, approval only”. Then clicking “Approve” is enough.
@@ -74,9 +74,9 @@ You can keep the certificate in your signer profile (settings, “Signing certif
 
 If the server does not store private keys, the page says so: you cannot create or import a key; sign with CryptoPro or upload a ready signature. The “E-signature in the PDF” method works only with a Studio key, so on such a server you cannot choose it: pick another method or return the documents to the author.
 
-## Return for rework { #return }
+## Return for revision { #return }
 
-If something in the document needs fixing, click “Return for rework”, write what exactly in “What to fix” (required, up to 2000 characters) and click “Return”. The author gets your comment and the route stops. When the author fixes it and sends it again, you get a notification.
+If something in the document needs fixing, click “Return for revision”, write what exactly in “What to fix” (required, up to 2000 characters) and click “Return”. The author gets your comment and the route stops. When the author fixes it and sends it again, you get a notification.
 
 Detailed remarks on the text are easier to leave as comments in the project itself: the return dialog has an “Open project” link.
 

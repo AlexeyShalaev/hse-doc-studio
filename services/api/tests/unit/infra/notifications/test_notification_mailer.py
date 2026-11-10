@@ -197,7 +197,7 @@ async def test__signing_request__links_to_the_signing_page_with_point_and_deadli
     assert mail.subject == "Иван Иванов просит подписать: Заявка на тему КП"
     assert f'href="{SERVER}/sign/{PROJECT}/{ROUTE}"' in mail.html
     assert "Срок: 15.11.2026 20:59 UTC" in mail.text
-    assert "Точка сдачи: Заявка на тему КП" in mail.text
+    assert "Контрольная точка: Заявка на тему КП" in mail.text
 
 
 async def test__signing_request__sign_turn_asks_for_the_final_pdf_and_no_deadline_row_without_deadline() -> None:

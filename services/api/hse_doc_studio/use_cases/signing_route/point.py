@@ -120,7 +120,7 @@ class RoutePointLoader:
         )
         if version is None or profile is None:
             raise NotFoundError(
-                localized_error(f"Точка сдачи {profile_id!r} не найдена", f"Checkpoint {profile_id!r} not found")
+                localized_error(f"Контрольная точка {profile_id!r} не найдена", f"Checkpoint {profile_id!r} not found")
             )
         pairs = profile_pairs(project, version, profile, None)
         documents = {doc.id: doc for doc in project.documents if is_doc_active(project, doc)}

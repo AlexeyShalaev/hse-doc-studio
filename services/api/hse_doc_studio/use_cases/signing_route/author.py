@@ -390,7 +390,7 @@ def _extras(point: RoutePoint, pairs: Iterable[DocSlot]) -> list[DocSlot]:
             raise RouteInputError(
                 "unknown_doc",
                 localized_error(
-                    f"Документ {pair.doc_id!r} не входит в точку сдачи",
+                    f"Документ {pair.doc_id!r} не входит в контрольную точку",
                     f"Document {pair.doc_id!r} is not part of the checkpoint",
                 ),
             )

@@ -40,7 +40,7 @@ class OpenRouteExistsError(RouteConflictError):
         super().__init__(
             "route_exists",
             localized_error(
-                "У этой точки сдачи уже есть незавершённый маршрут подписания",
+                "У этой контрольной точки уже есть незавершённый маршрут подписания",
                 "This submission checkpoint already has an unfinished signing route",
             ),
         )

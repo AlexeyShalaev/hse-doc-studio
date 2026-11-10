@@ -14,10 +14,10 @@
     "marks_changed": "Signatures on the pages changed: the route is stopped.",
     "frozen_changed": "The frozen PDF changed: the route is stopped.",
     "participant_left": "A participant left the project: assign someone else and send again.",
-    "returned": "The route was returned for rework."
+    "returned": "The route was returned for revision."
   },
-  "returned": "{{who}} returned it for rework: “{{comment}}”",
-  "returnedNoComment": "{{who}} returned it for rework.",
+  "returned": "{{who}} returned it for revision: “{{comment}}”",
+  "returnedNoComment": "{{who}} returned it for revision.",
   "someone": "A signer",
   "completed": "Everyone has signed. You can build the package.",
   "cancelled": "The route is cancelled.",
@@ -37,7 +37,7 @@
       "to_approve_sign": "to approve and sign",
       "to_sign": "to sign the final PDF",
       "done": "signed",
-      "returned": "returned for rework"
+      "returned": "returned for revision"
     },
     "invitee": "Invitee"
   },
@@ -86,7 +86,7 @@
     "banner": "This document is out for signing (step {{step}} of {{total}}). Editing and rebuilding will stop the route.",
     "signatures": "Signatures cannot be changed while the route is running.",
     "open": "Signing progress",
-    "locked": "This document is out for signing: signatures cannot be changed. To change them, cancel the route on the submission checkpoint page."
+    "locked": "This document is out for signing: signatures cannot be changed. To change them, cancel the route on the checkpoint page."
   },
   "unsigned": "The route is sent, your signature is not in place yet."
 }

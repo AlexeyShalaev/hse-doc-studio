@@ -193,7 +193,7 @@
       "signature_expired": "The signature has expired.",
       "multiple_signers": "The file has several signers; the first is shown.",
       "cert_not_valid_at_signing": "The certificate was not valid at signing time.",
-      "chain_untrusted_root": "The chain does not reach a trusted root. Add the CA root certificate in Settings → Signatures.",
+      "chain_untrusted_root": "The chain does not reach a trusted root. Add the CA root certificate in Settings → Signing certificates.",
       "chain_incomplete": "The certificate chain is incomplete: the issuer certificate is missing.",
       "chain_broken": "A certificate signature in the chain does not match.",
       "no_revocation_check": "Revocation lists (CRL, OCSP) are not checked.",

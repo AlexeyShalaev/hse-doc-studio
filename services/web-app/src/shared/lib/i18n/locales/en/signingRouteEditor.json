@@ -8,11 +8,11 @@
   "status": {
     "active": "The route is already out for signing: step {{step}} of {{total}}. To change it, cancel the route on the checkpoint page.",
     "paused": "The route is stopped: {{reason}}. Check and send again.",
-    "returned": "{{who}} returned it for rework: “{{comment}}”. Fix it and send again.",
-    "returnedNoComment": "The route was returned for rework. Fix it and send again.",
+    "returned": "{{who}} returned it for revision: “{{comment}}”. Fix it and send again.",
+    "returnedNoComment": "The route was returned for revision. Fix it and send again.",
     "someone": "A signer",
     "cancelled": "The route is cancelled. You can change it and send again.",
-    "completed": "Everyone has signed. You can build the pack.",
+    "completed": "Everyone has signed. You can build the package.",
     "archived": "The route is no longer tracked."
   },
   "stopReason": {
@@ -20,7 +20,7 @@
     "marks_changed": "the marks on the pages changed",
     "frozen_changed": "the frozen PDF changed",
     "participant_left": "a participant left the project, assign someone else",
-    "returned": "returned for rework"
+    "returned": "returned for revision"
   },
   "persona": {
     "author": "Author"

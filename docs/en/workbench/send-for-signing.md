@@ -115,7 +115,7 @@ Under the sending form the Studio says when the final PDF is frozen: “The docu
 
 ## Follow the progress { #progress }
 
-The “Signing” card on the checkpoint page shows the step and whose turn it is, for example “Step 2 of 3. Waiting for Petrov P. P. (supervisor)”, since when they have been waiting, how many signatures are in place and the deadline. Each person shows their state: “waiting”, “to approve”, “approved”, “to sign the final PDF”, “signed”, “has not accepted the invitation”, “returned for rework”.
+The “Signing” card on the checkpoint page shows the step and whose turn it is, for example “Step 2 of 3. Waiting for Petrov P. P. (supervisor)”, since when they have been waiting, how many signatures are in place and the deadline. Each person shows their state: “waiting”, “to approve”, “approved”, “to sign the final PDF”, “signed”, “has not accepted the invitation”, “returned for revision”.
 
 The person whose turn it is has two buttons:
 
@@ -153,13 +153,13 @@ Fix the document, build it and click “Send again” on the card. The people an
 
 The route starts again from the first step, but people whose documents did not change do not have to approve again. A signer's image and key are kept, so approving again is one click for them.
 
-## Returned for rework { #returned }
+## Returned for revision { #returned }
 
-Instead of signing, a signer can return the documents with a comment. The route stops, you get a notification (and an email, if email is configured), and the card shows, for example, “Petrov P. P. returned it for rework: “Clarify the project goal””. Under it are “Open document” and “Send again”. Detailed remarks on the text are left as comments in the project itself.
+Instead of signing, a signer can return the documents with a comment. The route stops, you get a notification (and an email, if email is configured), and the card shows, for example, “Petrov P. P. returned it for revision: “Clarify the project goal””. Under it are “Open document” and “Send again”. Detailed remarks on the text are left as comments in the project itself.
 
 ## Everyone has signed { #completed }
 
-The card says “Everyone has signed. You can build the package.”, and you get a notification (and an email, if email is configured). Build the package with “Package” on the same checkpoint page: it gets the signed PDFs and the electronic signature files ([Submission and packaging](submit.md)).
+The card says “Everyone has signed. You can build the package.”, and you get a notification (and an email, if email is configured). Build the package with “Pack” on the same checkpoint page: it gets the signed PDFs and the electronic signature files ([Submission and packaging](submit.md)).
 
 A completed route keeps watching the documents. If you edit and rebuild a document, the route stops and asks you to send again. If someone's signature disappears, the route waits for that one again. To make the route stop watching, click “Stop tracking”. A new route for the same checkpoint starts with “New route” on the route screen.
 
