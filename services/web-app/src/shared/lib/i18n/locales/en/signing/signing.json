@@ -268,6 +268,14 @@
       "signed": "signed",
       "invalid": "invalid",
       "stale": "outdated"
+    },
+    "version": {
+      "signing": "You are signing the version of {{date}}",
+      "signed": "Signed version of {{date}}"
+    },
+    "kept": {
+      "approved": "No changes: you already approved",
+      "signed": "No changes: you already signed"
     }
   },
   "history": {
@@ -294,5 +302,29 @@
       "participant_left": "signers changed",
       "returned": "returned"
     }
+  },
+  "newVersion": {
+    "label": "New version",
+    "quote": "“{{name}}”",
+    "changed_one": "New version: the document {{names}} has changed.",
+    "changed_other": "New version: the documents {{names}} have changed.",
+    "again": {
+      "approve_one": "Approve it again.",
+      "approve_other": "Approve them again.",
+      "approve_and_sign_one": "Approve and sign it again.",
+      "approve_and_sign_other": "Approve and sign them again.",
+      "sign_one": "Sign it again.",
+      "sign_other": "Sign them again."
+    }
+  },
+  "divergence": {
+    "label": "Changes",
+    "active": "There are changes after sending for signing. The version of {{date}} is being signed.",
+    "activeNoDate": "There are changes after sending for signing.",
+    "completed": "Everyone signed the version of {{date}}. There are changes after signing.",
+    "completedNoDate": "There are changes after signing.",
+    "docs_one": "Changed document: {{names}}.",
+    "docs_other": "Changed documents: {{names}}.",
+    "send": "Send new version"
   }
 }
