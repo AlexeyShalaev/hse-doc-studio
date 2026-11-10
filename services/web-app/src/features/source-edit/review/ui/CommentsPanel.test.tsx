@@ -131,7 +131,7 @@ describe("CommentsPanel", () => {
     cleanup();
     mount(baseProps({ threads: [thread(), resolved], showResolved: true }));
     expect(screen.getByTestId("review-thread-rvt_2").textContent).toContain(
-      "Решил Анна",
+      "Решено: Анна",
     );
   });
 

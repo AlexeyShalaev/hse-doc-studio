@@ -374,7 +374,7 @@ describe("ConflictScreen", () => {
     await screen.findByRole("group", { name: "Конфликт 1 из 3" });
     await openFile("appendix.tex");
     expect(
-      await screen.findByText("В репозитории файл удалили, а ты его изменил."),
+      await screen.findByText("В репозитории файл удалён, а у тебя изменён."),
     ).toBeInTheDocument();
     expect(screen.getAllByText("Файла нет").length).toBeGreaterThan(0);
     expect(
@@ -441,7 +441,7 @@ describe("ConflictScreen", () => {
       await user.click(completeButton());
 
       expect(
-        await screen.findByText(/Пока ты разбирал, проект или репозиторий/),
+        await screen.findByText(/Пока шёл разбор, проект или репозиторий/),
       ).toBeInTheDocument();
       // Выборы не потеряны: кнопка снова доступна, новый отпечаток уйдёт в запрос.
       await waitFor(() => {
@@ -476,7 +476,7 @@ describe("ConflictScreen", () => {
       };
       fake.rebuildPlan("fp-2", files);
       await user.click(completeButton());
-      await screen.findByText(/Пока ты разбирал/);
+      await screen.findByText(/Пока шёл разбор/);
       await waitFor(() => {
         expect(screen.getByText("Решено файлов: 4 из 4")).toBeInTheDocument();
       });
@@ -953,7 +953,7 @@ describe("ConflictScreen", () => {
       renderScreen();
       await user.click(await screen.findByTitle("appendix.tex"));
       expect(
-        await screen.findByText(/Изменил: Иван Смирнов/),
+        await screen.findByText(/Кто изменил: Иван Смирнов/),
       ).toBeInTheDocument();
       await user.click(screen.getByRole("button", { name: "Моё" }));
       expect(

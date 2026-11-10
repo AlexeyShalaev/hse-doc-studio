@@ -19,7 +19,7 @@
     "expired": "Истекла",
     "revoked": "Отозвана",
     "noExpiry": "Без срока",
-    "author": "Создал(а) {{name}}",
+    "author": "Автор: {{name}}",
     "visitsNone": "Переходов пока не было",
     "visits_one": "{{count}} переход",
     "visits_few": "{{count}} перехода",
