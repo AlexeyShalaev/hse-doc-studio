@@ -215,6 +215,7 @@
       "signing_route_signer_image": "Картинка подписи загружена подписантом",
       "signature_freeze": "PDF зафиксирован для подписи",
       "signature_unfreeze": "Фиксация PDF снята",
+      "signature_unpin": "Снята версия на подписи: подписывается текущая сборка",
       "signature_sign": "Документ подписан ключом Студии",
       "signature_attach": "Приложена готовая подпись",
       "signature_delete": "Подпись удалена",

@@ -36,6 +36,7 @@ from hse_doc_studio.core.signing_route.entities import (
     RouteStatus,
     SigningRoute,
     not_your_turn,
+    route_holds_doc,
     route_locked,
 )
 from hse_doc_studio.core.signing_route.ports import PlanRoute, PlanRoutes, RouteHold
@@ -118,6 +119,10 @@ class SigningRouteGate(RouteRecalculation):
             calc = await self._going(route)
             if calc is not None and _slot_on_route(route, calc[0], slot_id):
                 raise route_locked()
+
+    async def require_not_held(self, project_id: UUID, doc_id: str) -> None:
+        if await self._s.routes.holding(project_id, doc_id) is not None:
+            raise route_holds_doc()
 
     async def hold(self, project_id: UUID, doc_id: str) -> RouteHold | None:
         route = await self._s.routes.holding(project_id, doc_id)

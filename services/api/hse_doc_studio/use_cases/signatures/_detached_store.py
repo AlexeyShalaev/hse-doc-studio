@@ -28,7 +28,8 @@ from hse_doc_studio.core.services import SignatureSlotService
 from hse_doc_studio.core.signatures.ports import ITrustMaterialProvider
 from hse_doc_studio.core.signatures.verification import VerifiedSignature
 from hse_doc_studio.core.value_objects import DetachedSignature, FrozenPdf, SignaturesState
-from hse_doc_studio.use_cases.signatures._doc_context import DETACHED_DIR, DocContext, safe_name, sha256_file
+from hse_doc_studio.use_cases.signatures._doc_context import DETACHED_DIR, DocContext, safe_name
+from hse_doc_studio.use_cases.signatures.signing_source import signing_source
 
 
 def require_slot(ctx: DocContext, slot_id: str) -> None:
@@ -44,7 +45,7 @@ def require_slot(ctx: DocContext, slot_id: str) -> None:
 
 
 async def require_fresh_frozen(ctx: DocContext, state: SignaturesState) -> FrozenPdf:
-    """The frozen PDF of the document, which must exist and match the current build."""
+    """The frozen PDF of the document, which must exist and match the signing source (signing-route.md, 12.4)."""
     frozen = state.frozen.get(ctx.doc.id)
     if frozen is None or not (ctx.project.folder / frozen.path).is_file():
         raise ValueError(
@@ -53,16 +54,22 @@ async def require_fresh_frozen(ctx: DocContext, state: SignaturesState) -> Froze
                 "Freeze the PDF for signing first",
             )
         )
-    if ctx.compiled_path.is_file():
-        current = await asyncio.to_thread(sha256_file, ctx.compiled_path)
-        if current != frozen.source_sha256:
-            raise ValueError(
-                localized_error(
-                    "Документ пересобран после фиксации: зафиксируйте PDF заново, прежние подписи к нему не подходят",
-                    "The document was rebuilt after freezing: freeze the PDF again, earlier signatures no longer fit",
-                )
+    source = await signing_source(ctx, state)
+    if source.sha256 is None or source.sha256 == frozen.source_sha256:
+        return frozen
+    if source.pinned is not None:
+        raise ValueError(
+            localized_error(
+                "Отправлена новая версия документа: она ещё не зафиксирована, прежние подписи к ней не подходят",
+                "A new version of the document was sent: it is not frozen yet, earlier signatures do not fit it",
             )
-    return frozen
+        )
+    raise ValueError(
+        localized_error(
+            "Документ пересобран после фиксации: зафиксируйте PDF заново, прежние подписи к нему не подходят",
+            "The document was rebuilt after freezing: freeze the PDF again, earlier signatures no longer fit",
+        )
+    )
 
 
 def no_gpg_message() -> str:

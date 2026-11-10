@@ -215,6 +215,7 @@
       "signing_route_signer_image": "Signer uploaded a signature image",
       "signature_freeze": "PDF frozen for signing",
       "signature_unfreeze": "PDF freeze removed",
+      "signature_unpin": "Version sent for signing removed: the current build is signed",
       "signature_sign": "Document signed with a Studio key",
       "signature_attach": "Ready-made signature attached",
       "signature_delete": "Signature deleted",

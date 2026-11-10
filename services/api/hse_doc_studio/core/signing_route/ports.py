@@ -230,6 +230,12 @@ class ISigningRouteGate(Protocol):
         """
         ...
 
+    async def require_not_held(self, project_id: UUID, doc_id: str) -> None:
+        """«Подписывать текущую сборку» (раздел 12.4): `RouteConflictError` с кодом `route_locked` (409), если
+        документ держит маршрут (`HOLDING_STATUSES`, в том числе остановленный и завершённый). Документ освобождают
+        отмена маршрута или «Снять с контроля». Только читает: под `project_lock` вызывать можно."""
+        ...
+
     async def hold(self, project_id: UUID, doc_id: str) -> RouteHold | None:
         """Идущий маршрут, который держит документ, и слоты, которые актор вправе подписать сейчас; None, если
         документ свободен. Только читает: под `project_lock` вызывать можно."""
@@ -259,6 +265,9 @@ class NoSigningRoutes:
     async def require_unlocked(
         self, project_id: UUID, *, doc_id: str | None = None, slot_id: str | None = None
     ) -> None:
+        return None
+
+    async def require_not_held(self, project_id: UUID, doc_id: str) -> None:
         return None
 
     async def hold(self, project_id: UUID, doc_id: str) -> RouteHold | None:

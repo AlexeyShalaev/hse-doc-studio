@@ -127,6 +127,7 @@ ROUTE_ACTIONS: Mapping[RouteKey, RouteRule] = {
     ),
     ("POST", "/projects/{project_id}/docs/{doc_id}/frozen"): RouteRule(Action.FILES_WRITE, path_param="doc_id"),
     ("DELETE", "/projects/{project_id}/docs/{doc_id}/frozen"): RouteRule(Action.FILES_WRITE, path_param="doc_id"),
+    ("DELETE", "/projects/{project_id}/docs/{doc_id}/pinned"): RouteRule(Action.FILES_WRITE, path_param="doc_id"),
     ("POST", "/projects/{project_id}/docs/{doc_id}/detached/{slot_id}/recheck"): RouteRule(
         Action.FILES_WRITE, path_param="slot_id"
     ),

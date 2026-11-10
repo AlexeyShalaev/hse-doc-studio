@@ -84,6 +84,9 @@ def _plan_json(plan: SignaturePlan) -> dict[str, object]:
                 "doc_id": doc.doc_id,
                 "frozen_sha256": doc.frozen.sha256 if doc.frozen else None,
                 "signed_sha256": doc.frozen.signed_sha256 if doc.frozen and doc.frozen.signed_sha256 else None,
+                # Версия на подписи маршрута (signing-route.md, 12.4) и расхождение с ней рабочей сборки.
+                "pinned": {"sha256": doc.pinned.sha256, "pinned_at": doc.pinned.pinned_at} if doc.pinned else None,
+                "working_differs": doc.working_differs,
                 "slots": [
                     {
                         "slot_id": s.slot_id,

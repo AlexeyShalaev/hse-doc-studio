@@ -124,6 +124,7 @@ SIGNATURES_SHAPE = Struct(
         "detached": MapOf(MapOf(Struct())),
         "embedded": MapOf(MapOf(Struct())),
         "withheld": MapOf(),
+        "pinned": MapOf(Struct()),
     }
 )
 

@@ -9,7 +9,6 @@ from uuid import UUID
 
 import structlog
 
-from hse_doc_studio.core.i18n import localized_error
 from hse_doc_studio.core.repositories import (
     IProjectIndexRepository,
     IProjectRepository,
@@ -23,6 +22,7 @@ from hse_doc_studio.infra.signatures.pdf_stamper import PdfStamper
 from hse_doc_studio.use_cases.projects.get_project import GetProjectUC
 from hse_doc_studio.use_cases.signatures._doc_context import DocContext, load_doc_context
 from hse_doc_studio.use_cases.signatures._final_pdf import current_final_pdf
+from hse_doc_studio.use_cases.signatures.signing_source import missing_source_message, signing_source
 
 logger = structlog.get_logger()
 
@@ -45,11 +45,12 @@ class GetSignedDocPdfOutput:
 class GetSignedDocPdfUC:
     """PDF документа «С подписями» (docs/design/signature-plan.md, раздел 10).
 
-    - Есть актуальная фиксация (сборка и видимый слой те же, что при фиксации): отдаётся итоговый файл плана
+    - Есть актуальная фиксация (источник подписи и видимый слой те же, что при фиксации): отдаётся итоговый файл плана
       байт в байт. Это F со встроенными подписями PAdES, если они есть, иначе зафиксированный B; тот же файл
       уходит в пакет для подписанта и в комплект LMS.
-    - Актуальной фиксации нет: предпросмотр для печати. Текущая сборка с тем видимым слоем, который поставила бы
-      фиксация (картинки и плашки открепленных ЭП, `stamps_for_doc`), без электронных подписей. В плане такие
+    - Актуальной фиксации нет: предпросмотр для печати. Источник подписи (версия на подписи маршрута, иначе
+      текущая сборка, signing-route.md, 12.4) с тем видимым слоем, который поставила бы фиксация (картинки и
+      плашки открепленных ЭП, `stamps_for_doc`), без электронных подписей. В плане такие
       криптослоты ждут фиксации, и подпись «на лету» при скачивании противоречила бы ему: ЭП ставятся только
       через план (фиксация, «Подписать в Студии», «Подписать комплект»).
     """
@@ -89,15 +90,11 @@ class GetSignedDocPdfUC:
         return await self._preview(ctx, state, download_name)
 
     async def _preview(self, ctx: DocContext, state: SignaturesState, download_name: str) -> GetSignedDocPdfOutput:
-        """Сборка с видимым слоем будущей фиксации; без меток отдаётся как есть."""
-        source = ctx.compiled_path
-        if not source.is_file():
-            raise ValueError(
-                localized_error(
-                    f"Собранный PDF не найден: {source.name}. Сначала соберите документ",
-                    f"Compiled PDF not found: {source.name}. Build the document first",
-                )
-            )
+        """Источник подписи с видимым слоем будущей фиксации; без меток отдаётся как есть."""
+        found = await signing_source(ctx, state)
+        if found.path is None or not found.exists:
+            raise ValueError(missing_source_message(ctx, found))
+        source = found.path
         require_slot_images(state, ctx.doc.id, ctx.project.folder)
         stamps = stamps_for_doc(state, ctx.doc.id, ctx.project.folder, ctx.lang)
         if not stamps:

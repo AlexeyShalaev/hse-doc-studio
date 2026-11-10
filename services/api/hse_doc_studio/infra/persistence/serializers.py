@@ -55,6 +55,7 @@ from hse_doc_studio.core.value_objects import (
     FormState,
     FrozenPdf,
     Person,
+    PinnedPdf,
     ProjectLock,
     ProjectSchema,
     RequirementsFormat,
@@ -587,6 +588,8 @@ def serialize_signatures_state(state: SignaturesState) -> dict[str, Any]:
         },
         # Пишется всегда, даже пустым: иначе `preserve_unknown` вернул бы снятое придержание из старого файла.
         "withheld": {doc_id: sorted(slot_ids) for doc_id, slot_ids in sorted(state.withheld.items()) if slot_ids},
+        # Тоже всегда, даже пустым: снятая версия на подписи не должна вернуться из старого файла.
+        "pinned": {doc_id: dataclasses.asdict(p) for doc_id, p in sorted(state.pinned.items())},
     }
 
 
@@ -630,6 +633,28 @@ def _deserialize_frozen(raw: Any) -> dict[str, FrozenPdf]:
                 signed_path=str(item.get("signed_path", "")),
                 signed_sha256=str(item.get("signed_sha256", "")),
                 signed_size=int(item.get("signed_size", 0)),
+            )
+        except (KeyError, TypeError, ValueError):
+            continue
+    return result
+
+
+def _deserialize_pinned(raw: Any) -> dict[str, PinnedPdf]:
+    """`{doc_id: PinnedPdf}`: битая запись пропускается, а не ломает чтение всего состояния."""
+    result: dict[str, PinnedPdf] = {}
+    if not isinstance(raw, dict):
+        return result
+    for doc_id, item in raw.items():
+        if not isinstance(item, dict):
+            continue
+        try:
+            result[doc_id] = PinnedPdf(
+                path=str(item["path"]),
+                sha256=str(item["sha256"]),
+                size=int(item["size"]),
+                pinned_at=str(item["pinned_at"]),
+                route_id=str(item.get("route_id") or ""),
+                round=int(item.get("round") or 0),
             )
         except (KeyError, TypeError, ValueError):
             continue
@@ -750,6 +775,7 @@ def deserialize_signatures_state(data: dict[str, Any]) -> SignaturesState:  # no
         detached=_deserialize_detached(data.get("detached")),
         embedded=_deserialize_embedded(data.get("embedded")),
         withheld=_deserialize_withheld(data.get("withheld")),
+        pinned=_deserialize_pinned(data.get("pinned")),
     )
 
 

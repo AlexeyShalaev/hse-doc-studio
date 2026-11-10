@@ -159,6 +159,24 @@ class FrozenPdf:
 
 
 @dataclass(frozen=True)
+class PinnedPdf:
+    """Версия на подписи: копия собранного PDF, которую сняла отправка маршрута (signing-route.md, 12.3).
+
+    Пока она есть, это источник подписи документа: фиксация штампует её, план и «С подписями» считаются по ней,
+    а рабочая сборка живёт отдельно. Пишут её только сценарии маршрута; снимает отмена маршрута или явное
+    «Подписывать текущую сборку». `pinned_at` время снятия: у документа, который не менялся, новая версия
+    маршрута его не трогает. `route_id` и `round` какой маршрут и раунд её сняли.
+    """
+
+    path: str  # relative to the project folder: .hse-studio/frozen/<doc>.source.pdf
+    sha256: str
+    size: int
+    pinned_at: str  # ISO 8601, UTC
+    route_id: str = ""
+    round: int = 0
+
+
+@dataclass(frozen=True)
 class DetachedSignature:
     """A detached e-signature attached to a (doc, slot): the file plus what we learned from it."""
 
@@ -215,6 +233,8 @@ class SignaturesState:
     the signer approves the document in a signing route
     (docs/design/signing-route.md, 6.1): the placement stays on, the mark is
     left out of every stamping and of the visible-layer fingerprint.
+    `pinned` holds the signing-route snapshot of each document (docs/design/signing-route.md, 12.3): while it
+    is there, it is the signing source of the document instead of the current build.
     """
 
     slots: dict[str, SignatureSlot]
@@ -224,6 +244,8 @@ class SignaturesState:
     # PAdES signatures per (doc, slot), layered over the frozen PDF in signing order.
     embedded: dict[str, dict[str, EmbeddedSignature]] = field(default_factory=dict)
     withheld: dict[str, frozenset[str]] = field(default_factory=dict)
+    # Версия на подписи по документам (signing-route.md, 12.3): источник подписи вместо текущей сборки.
+    pinned: dict[str, PinnedPdf] = field(default_factory=dict)
 
     @classmethod
     def empty(cls) -> SignaturesState:
