@@ -213,6 +213,7 @@
       "signing_route_signer_method": "Signer changed the signing method",
       "signing_route_signer_plate": "Signer set the plate data",
       "signing_route_signer_image": "Signer uploaded a signature image",
+      "signing_route_migrate": "0.20.0 signing route moved to the version sent for signing",
       "signature_freeze": "PDF frozen for signing",
       "signature_unfreeze": "PDF freeze removed",
       "signature_unpin": "Version sent for signing removed: the current build is signed",
