@@ -47,7 +47,9 @@ describe("PdfPage: метки", () => {
     const frame = screen.getByTestId("pdf-stamp-frame");
     expect(frame).toHaveClass("pdf-stamp-frame");
     expect(frame).toHaveTextContent("Ваша подпись");
-    expect(frame.style.left).toBe(`${String(110 * PX_PER_MM)}px`);
+    // jsdom 31 сериализует длины с округлением до 6 значащих цифр.
+    expect(frame.style.left).toMatch(/px$/);
+    expect(parseFloat(frame.style.left)).toBeCloseTo(110 * PX_PER_MM, 3);
     expect(frame.querySelector("img")).toBeNull();
     // Обычная метка рисуется картинкой, как раньше.
     expect(screen.getByAltText("Студент")).toHaveAttribute("src", "sig.png");
