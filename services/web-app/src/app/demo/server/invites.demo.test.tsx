@@ -398,7 +398,9 @@ describe("демо invites: колокольчик", () => {
     const list = await screen.findByTestId("inbox-popover-list");
     expect(
       within(list).getByTestId("inbox-popover-item-ntf_demo_accepted"),
-    ).toHaveTextContent("Дмитрий Кузнецов принял приглашение");
+    ).toHaveTextContent(
+      "Приглашение в «Bertie: курсовой проект» принято: Дмитрий Кузнецов",
+    );
     expect(screen.getByTestId("where")).toHaveTextContent("/");
   });
 

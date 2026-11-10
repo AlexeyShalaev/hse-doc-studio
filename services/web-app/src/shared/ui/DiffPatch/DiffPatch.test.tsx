@@ -63,8 +63,8 @@ describe("DiffPatch", () => {
     );
     expect(screen.getByTitle("изменён")).toHaveTextContent("M");
     expect(screen.getByTitle("a.tex")).toBeVisible();
-    expect(screen.getByText("+3")).toHaveStyle({ color: "var(--c-ok)" });
-    expect(screen.getByText("−2")).toHaveStyle({ color: "var(--c-err)" });
+    expect(screen.getByText("+3").style.color).toBe("var(--c-ok)");
+    expect(screen.getByText("−2").style.color).toBe("var(--c-err)");
     expect(screen.getByText("new line")).toBeInTheDocument();
     expect(container.querySelectorAll('[data-kind="add"]')).toHaveLength(3);
     expect(container.querySelectorAll('[data-kind="del"]')).toHaveLength(2);

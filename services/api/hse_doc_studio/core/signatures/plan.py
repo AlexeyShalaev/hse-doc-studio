@@ -261,7 +261,7 @@ def slot_state(  # noqa: C901, PLR0911, PLR0912 — таблица статус�
 
 _HINTS: dict[PlanReason, tuple[str, str]] = {
     PlanReason.method_not_allowed: (
-        "Этот способ подписи не принимается на этой точке: выберите другой в настройках слота",
+        "Этот способ подписи не принимается на этой контрольной точке: выберите другой в настройках слота",
         "This signing method is not accepted at this checkpoint: pick another one in the slot settings",
     ),
     PlanReason.placement_off: (
@@ -434,7 +434,7 @@ def slot_mode_conflict(
         points = "; ".join(f"{name}: {_names(allowed, 0)}" for name, allowed in restrictions)
         points_en = "; ".join(f"{name}: {_names(allowed, 1)}" for name, allowed in restrictions)
         return localized_error(
-            f"Способ «{_names([method.value], 0)}» не принимает ни одна точка сдачи с этим слотом ({points})",
+            f"Способ «{_names([method.value], 0)}» не принимает ни одна контрольная точка с этим слотом ({points})",
             f"No checkpoint with this slot accepts “{_names([method.value], 1)}” ({points_en})",
         )
     return None

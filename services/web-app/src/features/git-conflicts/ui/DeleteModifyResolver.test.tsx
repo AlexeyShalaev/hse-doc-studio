@@ -95,8 +95,8 @@ describe("DeleteModifyResolver", () => {
 
   it("names who changed the file and who deleted it", () => {
     renderResolver(deletedByThem);
-    expect(screen.getByText(/Изменил: Иван Смирнов/)).toBeInTheDocument();
-    expect(screen.getByText("Удалил: Анна Петрова")).toBeInTheDocument();
+    expect(screen.getByText(/Кто изменил: Иван Смирнов/)).toBeInTheDocument();
+    expect(screen.getByText("Кто удалил: Анна Петрова")).toBeInTheDocument();
     expect(screen.getByText(/2 кБ/)).toBeInTheDocument();
   });
 
@@ -112,8 +112,8 @@ describe("DeleteModifyResolver", () => {
       }),
     );
     expect(onChoose).toHaveBeenLastCalledWith("theirs");
-    expect(screen.getByText(/Изменил: Анна Петрова/)).toBeInTheDocument();
-    expect(screen.getByText("Удалил: Иван Смирнов")).toBeInTheDocument();
+    expect(screen.getByText(/Кто изменил: Анна Петрова/)).toBeInTheDocument();
+    expect(screen.getByText("Кто удалил: Иван Смирнов")).toBeInTheDocument();
     expect(
       screen.getByText(
         "Файл вернётся в проект вместе с правками из репозитория.",

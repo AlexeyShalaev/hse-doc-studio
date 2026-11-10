@@ -102,7 +102,9 @@ class GetSignaturePlanUC:
         profile = self._profiles.get_profile(version, inp.profile_id or "")
         if profile is None:
             raise NotFoundError(
-                localized_error(f"Профиль сдачи {inp.profile_id!r} не найден", f"Profile {inp.profile_id!r} not found")
+                localized_error(
+                    f"Контрольная точка {inp.profile_id!r} не найдена", f"Checkpoint {inp.profile_id!r} not found"
+                )
             )
         return profile_pairs(project, version, profile, inp.author)
 

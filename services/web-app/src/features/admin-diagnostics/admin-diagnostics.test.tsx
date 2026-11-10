@@ -534,7 +534,7 @@ describe("принятие предупреждений: страница, ди�
     expect(within(row).getByText("Принято")).toBeInTheDocument();
     expect(within(row).queryByText("Предупреждение")).toBeNull();
     expect(screen.getByTestId("diag-accepted-note-backups")).toHaveTextContent(
-      /Принято осознанно, причина: Бэкапы делает хостер.*Принял Анна Админова.*бессрочно/,
+      /Принято осознанно, причина: Бэкапы делает хостер.*Принято: Анна Админова.*бессрочно/,
     );
     expect(screen.queryByTestId("diag-hint-backups")).toBeNull();
     expect(screen.queryByTestId("diag-accept-backups")).toBeNull();

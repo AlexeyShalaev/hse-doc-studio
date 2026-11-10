@@ -60,7 +60,7 @@ def test__sse_2026_1_3__pades__rejected_by_every_checkpoint(templates: YamlTempl
     for mode in _PADES:
         message = slot_mode_conflict(mode, "pkcs12", restrictions)
         assert message is not None
-        assert "не принимает ни одна точка" in message
+        assert "не принимает ни одна контрольная точка" in message
     for mode in _ACCEPTED:
         assert slot_mode_conflict(mode, None, restrictions) is None
 

@@ -23,10 +23,9 @@ describe("ConflictKit", () => {
 
   it("colours an action tag by tone", () => {
     render(<ActionTag label="конфликт" tone="err" />);
-    expect(screen.getByText("конфликт")).toHaveStyle({
-      color: "var(--c-err)",
-      minWidth: "74px",
-    });
+    const tag = screen.getByText("конфликт");
+    expect(tag.style.color).toBe("var(--c-err)");
+    expect(tag).toHaveStyle({ minWidth: "74px" });
   });
 
   describe("FileRowShell", () => {
@@ -136,8 +135,8 @@ describe("ConflictKit", () => {
     );
     const badge = screen.getByText("3 · конфликты");
     expect(badge).toHaveClass("badge");
-    expect(badge).toHaveStyle({ color: "var(--c-err)" });
-    expect(screen.getByText("1 · новые")).toHaveStyle({ color: "var(--c-ok)" });
+    expect(badge.style.color).toBe("var(--c-err)");
+    expect(screen.getByText("1 · новые").style.color).toBe("var(--c-ok)");
   });
 
   it("switches views with ViewTabs and highlights the active one", async () => {

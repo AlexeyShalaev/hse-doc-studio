@@ -47,7 +47,9 @@ describe("страница ссылки", () => {
     const onOpen = mount({});
     expect(state()).toBe("ok");
     expect(
-      screen.getByText("Анна Петрова открыл(а) вам «ВКР: Анализ требований»"),
+      screen.getByText(
+        "Анна Петрова делится с вами проектом «ВКР: Анализ требований»",
+      ),
     ).toBeTruthy();
     expect(screen.getByText("Просмотр PDF")).toBeTruthy();
     expect(screen.queryByTestId("share-link-guest-name")).toBeNull();
