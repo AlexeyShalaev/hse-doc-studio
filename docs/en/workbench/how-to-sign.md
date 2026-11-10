@@ -35,7 +35,7 @@ If you do not have an account on the server yet, a project invitation comes firs
 - **The header**: who asks, when it was sent, the deadline, the “Message from the author” and an “Open project” link.
 - **“Signing progress”**: the steps in order and each person's state. You are marked “You”.
 - **What is needed from you**: for example “Your turn: approve the documents” or “Not your turn yet”. If your turn has not come, wait for the notification, there is nothing to do now.
-- **“Documents”**: document tabs and the PDF. “Go to signature” scrolls to your frame, “Open PDF” opens the whole file. “Your signatures” and “Other signatures” show what is already in place.
+- **“Documents”**: document tabs and the PDF. Above each document is the line “You are signing the version of …”: the version the author sent for signing. “Go to signature” scrolls to your frame, “Open PDF” opens the whole file. “Your signatures” and “Other signatures” show what is already in place.
 - **“How to sign”**: the signing method and everything it needs. You choose among the methods the checkpoint allows. An image and an electronic signature with a plate are offered only if the author placed your signature on the document page.
 - **Buttons** at the bottom: the main one (“Approve”, “Approve and sign” or “Sign”) and “Return for revision”.
 - **“History”**: who sent, approved, signed or returned, and when.
@@ -48,6 +48,8 @@ If you do not have an account on the server yet, a project invitation comes firs
   </div>
   <figcaption>the signing page: who asks and the deadline, the author’s message, signing progress, the PDF and “How to sign”</figcaption>
 </figure>
+
+You always see and sign the version sent for signing. The author may keep editing the text, but those edits do not go into it, and you get no notifications about them. To have you sign the corrected text, the author sends a new version ([below](#new-version)).
 
 To approve means to confirm that you have read this version and agree with it. If the document has no place for your signature, the page says so: “No signature in the document, approval only”. Then clicking “Approve” is enough.
 
@@ -134,11 +136,34 @@ If something in the document needs fixing, click “Return for revision”, writ
 
 Detailed remarks on the text are easier to leave as comments in the project itself: the return dialog has an “Open project” link.
 
+## A new version { #new-version }
+
+If a document was fixed after sending, the author can send a new version. Then:
+
+- If it is your turn now, you get the request “… asks you to sign a new version: …” (or “approve a new version”).
+- If you already approved or signed the changed document but your turn has not come yet, the Inbox gets “A new version is out for signing: …”: the request comes in your turn. There is no email in this case.
+- If the documents you sign did not change, nothing comes: your approvals and signatures stay.
+
+At the top of the signing page you see what changed, for example “New version: the document “Topic selection application” has changed. Approve it again.” Below is the author's text from the “What changed” field, if they filled it in. In the email it is under “Message from the sender”. Unchanged documents are marked “No changes: you already approved” or “No changes: you already signed”: there is nothing to do for them.
+
+<figure class="hds-fig hds-wide">
+  <div class="hds-shot">
+    <div class="hds-shot__bar"><span class="hds-shot__brand">HSE DOC STUDIO</span><span class="hds-shot__route">/sign/kp/…</span></div>
+    <img src="../assets/shots/signing-version-page.en.light.webp#only-light" alt="A new version">
+    <img src="../assets/shots/signing-version-page.en.dark.webp#only-dark" alt="A new version">
+  </div>
+  <figcaption>a new version: what changed, the author's message and “You are signing the version of …”</figcaption>
+</figure>
+
+Your image and key are kept, so approving again is one click. If you add an electronic signature, it has to be made again on a changed document: the old one belonged to the old version.
+
+If you are the route's author or manage it, the signing page also shows you what signers do not see: “There are changes after sending for signing. The version of … is being signed.” and the “Send new version” button.
+
 ## If the document changed { #changed }
 
-- “The document changed while the page was open”: the author rebuilt the document in the meantime. Look at the new version and click the button again.
-- “The document changed after you approved it: please approve again”: the author fixed the document and sent it again. Your image and key are still there, so this is one click.
-- “Route stopped”: the author is editing the document or changing the signers. There is nothing to do; you will be notified when they send it again.
+- “The document changed while the page was open”: while you were looking, the author sent a new version. Look at it and click the button again.
+- “The document changed after you approved it: please approve again”: the author sent a new version of this document. Your image and key are still there, so this is one click.
+- “Route stopped”: the author is changing the signers, the documents were returned for revision, or signatures changed outside the route. There is nothing to do; you will be notified when the author sends it again.
 - “Signing page not found”: the route is closed, the link is out of date, or you are signed in to another account. Open the Inbox and check the “To sign” tab.
 
 ## From a phone { #phone }
