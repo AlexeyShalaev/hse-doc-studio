@@ -7,6 +7,7 @@ import {
   useTriggerCompile,
 } from "@entities/document";
 import { runnerKeys } from "@entities/runner";
+import { useRouteEditGuard } from "@entities/signing-route";
 import { toast } from "@shared/lib";
 import {
   blockOfRefusal,
@@ -71,24 +72,29 @@ export const useStartCompile = (projectId: string, docId: string) => {
   const isProjectBuilding = useIsProjectBuilding(projectId);
   const { blockOf } = useProjectBuildBlocks(projectId);
   const block = blockOf(docId);
+  const routeGuard = useRouteEditGuard(projectId);
 
   const isRunning = isProjectBuilding;
 
   const start = useCallback(() => {
     if (isRunning || block !== null) return;
-    markPending(projectId, docId);
-    triggerCompile({ projectId, docId }).then(
-      (result) => {
-        startStream(projectId, docId, result.compile_id);
-      },
-      (err: unknown) => {
-        unmarkPending(projectId, docId);
-        handleCompileError(err);
-      },
-    );
+    // Документ на подписании: «Собрать» сначала спрашивает (signing-route.md, 12.7).
+    routeGuard.run({ docIds: [docId] }, () => {
+      markPending(projectId, docId);
+      triggerCompile({ projectId, docId }).then(
+        (result) => {
+          startStream(projectId, docId, result.compile_id);
+        },
+        (err: unknown) => {
+          unmarkPending(projectId, docId);
+          handleCompileError(err);
+        },
+      );
+    });
   }, [
     isRunning,
     block,
+    routeGuard,
     markPending,
     unmarkPending,
     triggerCompile,
@@ -137,6 +143,7 @@ export const useStartCompileAll = (projectId: string) => {
   const { documents, blockOf } = useProjectBuildBlocks(projectId);
   const { t, i18n } = useTranslation("documents");
   const queryClient = useQueryClient();
+  const routeGuard = useRouteEditGuard(projectId);
 
   const isRunning = isProjectBuilding;
   const block = useMemo(() => {
@@ -165,9 +172,8 @@ export const useStartCompileAll = (projectId: string) => {
     [documents, i18n.language, t],
   );
 
-  const startAll = useCallback(
+  const build = useCallback(
     (docIds: readonly string[]) => {
-      if (isRunning || docIds.length === 0) return;
       const excluded: { docId: string; block: BuildBlock }[] = [];
       const buildable: string[] = [];
       for (const docId of docIds) {
@@ -225,7 +231,6 @@ export const useStartCompileAll = (projectId: string) => {
       void Promise.allSettled(posts).then(report);
     },
     [
-      isRunning,
       blockOf,
       markPending,
       unmarkPending,
@@ -237,6 +242,18 @@ export const useStartCompileAll = (projectId: string) => {
       projectId,
       t,
     ],
+  );
+
+  // Одно окно на всю команду с перечнем документов на подписании (signing-route.md, 12.7).
+  const startAll = useCallback(
+    (docIds: readonly string[]) => {
+      if (isRunning || docIds.length === 0) return;
+      const buildable = docIds.filter((docId) => blockOf(docId) === null);
+      routeGuard.run({ docIds: buildable }, () => {
+        build(docIds);
+      });
+    },
+    [isRunning, blockOf, routeGuard, build],
   );
 
   return { startAll, isRunning, block };

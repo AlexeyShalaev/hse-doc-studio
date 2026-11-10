@@ -15,6 +15,7 @@ import {
   useMoveFile,
   useUploadFile,
 } from "@entities/document";
+import { useRouteEditGuard } from "@entities/signing-route";
 import { Modal, Spinner } from "@shared/ui";
 import {
   ancestorFolders,
@@ -221,6 +222,8 @@ export const FileTree = ({
   const moveFile = useMoveFile();
   const uploadFile = useUploadFile();
   const createDir = useCreateDir();
+  // Файл документа на подписании или общий файл: первое изменение спрашивает (signing-route.md, 12.7).
+  const routeGuard = useRouteEditGuard(projectId);
 
   const tree = useMemo(
     () => buildFileTree(items ?? [], showHidden),
@@ -286,15 +289,17 @@ export const FileTree = ({
       if (kind === "folder") {
         createDir.mutate({ projectId, path });
       } else {
-        uploadFile.mutate({
-          projectId,
-          path,
-          data: new Blob([""]),
-          contentType: "text/plain; charset=utf-8",
+        routeGuard.run({ paths: [path] }, () => {
+          uploadFile.mutate({
+            projectId,
+            path,
+            data: new Blob([""]),
+            contentType: "text/plain; charset=utf-8",
+          });
         });
       }
     },
-    [projectId, uploadFile, createDir],
+    [projectId, uploadFile, createDir, routeGuard],
   );
 
   const onRenameSubmit = useCallback(
@@ -302,10 +307,12 @@ export const FileTree = ({
       setEditingPath(null);
       const parent = parentOf(node.path);
       const dst = parent ? `${parent}/${newName}` : newName;
-      if (dst !== node.path)
+      if (dst === node.path) return;
+      routeGuard.run({ paths: [node.path, dst] }, () => {
         moveFile.mutate({ projectId, src: node.path, dst });
+      });
     },
-    [projectId, moveFile],
+    [projectId, moveFile, routeGuard],
   );
 
   const onMove = useCallback(
@@ -317,9 +324,11 @@ export const FileTree = ({
       const dst = destFolder
         ? `${destFolder}/${basenameOf(src)}`
         : basenameOf(src);
-      moveFile.mutate({ projectId, src, dst });
+      routeGuard.run({ paths: [src, dst] }, () => {
+        moveFile.mutate({ projectId, src, dst });
+      });
     },
-    [projectId, moveFile],
+    [projectId, moveFile, routeGuard],
   );
 
   const onEditCancel = useCallback((): void => {
@@ -334,15 +343,18 @@ export const FileTree = ({
 
   const confirmDelete = useCallback((): void => {
     if (!deleteTarget) return;
-    deleteFile.mutate(
-      { projectId, path: deleteTarget.path },
-      {
-        onSettled: () => {
-          setDeleteTarget(null);
+    const { path } = deleteTarget;
+    routeGuard.run({ paths: [path] }, () => {
+      deleteFile.mutate(
+        { projectId, path },
+        {
+          onSettled: () => {
+            setDeleteTarget(null);
+          },
         },
-      },
-    );
-  }, [deleteTarget, projectId, deleteFile]);
+      );
+    });
+  }, [deleteTarget, projectId, deleteFile, routeGuard]);
 
   const ctx: TreeNodeContext = useMemo(
     () => ({

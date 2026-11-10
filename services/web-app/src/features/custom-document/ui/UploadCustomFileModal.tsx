@@ -2,6 +2,7 @@ import { useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { FileText, Info, UploadCloud } from "lucide-react";
 import { classifyCustomFile, useCustomFileActions } from "@entities/document";
+import { useRouteEditGuard } from "@entities/signing-route";
 import { toast } from "@shared/lib";
 import { Modal, Spinner } from "@shared/ui";
 
@@ -22,6 +23,7 @@ export const UploadCustomFileModal = ({
 }: UploadCustomFileModalProps) => {
   const { t } = useTranslation("documents");
   const { upload, isUploading } = useCustomFileActions(projectId, docId);
+  const routeGuard = useRouteEditGuard(projectId);
   const fileRef = useRef<HTMLInputElement>(null);
   const [dragging, setDragging] = useState(false);
   const [selected, setSelected] = useState<File | null>(null);
@@ -40,15 +42,18 @@ export const UploadCustomFileModal = ({
 
   const handleUpload = () => {
     if (!selected) return;
-    upload(selected)
-      .then(() => {
-        toast.success(t("customFile.uploadedToast", { name: selected.name }));
-        setSelected(null);
-        onClose();
-      })
-      .catch(() => {
-        // per-request error toast already shown by the axios interceptor
-      });
+    // Документ на подписании: загрузка своего файла сначала спрашивает (signing-route.md, 12.7).
+    routeGuard.run({ docIds: [docId] }, () => {
+      upload(selected)
+        .then(() => {
+          toast.success(t("customFile.uploadedToast", { name: selected.name }));
+          setSelected(null);
+          onClose();
+        })
+        .catch(() => {
+          // per-request error toast already shown by the axios interceptor
+        });
+    });
   };
 
   const cls = selected ? classifyCustomFile(selected.name) : null;
