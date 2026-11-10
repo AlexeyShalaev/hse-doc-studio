@@ -82,13 +82,21 @@ export const signingRouteApi = {
         { ...quiet, ...withSignal(signal) },
       )
       .then(parseResp(SigningRoutePreviewSchema)),
+  /**
+   * «Отправить», «Отправить заново» и «Отправить новую версию» (12.6). Пустое «Что изменилось»
+   * не уходит вовсе: сервер до среза R16 поля `note` не знает и отверг бы запрос.
+   */
   send: (
     projectId: string,
     routeId: string,
-    body: SendSigningRouteRequest,
+    { note, ...body }: SendSigningRouteRequest,
   ): Promise<SigningRoute> =>
     apiClient
-      .post(`${route(projectId, routeId)}/send`, body, quiet)
+      .post(
+        `${route(projectId, routeId)}/send`,
+        note?.trim() ? { ...body, note: note.trim() } : body,
+        quiet,
+      )
       .then(parseResp(SigningRouteSchema)),
   cancel: (projectId: string, routeId: string): Promise<SigningRoute> =>
     apiClient

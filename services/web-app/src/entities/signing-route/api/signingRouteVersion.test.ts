@@ -1,4 +1,4 @@
-import { beforeAll, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { ApiError, apiClient } from "@shared/api";
 import { createDemoRouter, installDemoAdapter } from "@shared/api/demo";
 import { signatureApi } from "@entities/signature";
@@ -327,6 +327,34 @@ describe("версия на подписи: новая версия", () => {
     const resent = await send(draft.id);
     expect(resent.events.at(-1)?.kind).toBe("resumed");
     expect(doc(resent, TOPIC).sent).toMatchObject({ round: 2 });
+  });
+});
+
+describe("версия на подписи: клиент отправки", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("пустое «Что изменилось» не уходит, заполненное уходит без пробелов по краям", async () => {
+    const draft = await signingRouteApi.create(PROJECT, PROFILE.id);
+    const post = vi.spyOn(apiClient, "post");
+    const preview = await signingRouteApi.preview(PROJECT, draft.id);
+    await signingRouteApi.send(PROJECT, draft.id, {
+      expected: expectedOf(preview),
+      sign: null,
+      note: "   ",
+    });
+    expect(post.mock.calls.at(-1)?.[1]).not.toHaveProperty("note");
+    demo.rebuild(PROJECT, TOPIC);
+    const next = await signingRouteApi.preview(PROJECT, draft.id);
+    await signingRouteApi.send(PROJECT, draft.id, {
+      expected: expectedOf(next),
+      sign: null,
+      note: " Исправил тему ",
+    });
+    expect(post.mock.calls.at(-1)?.[1]).toMatchObject({
+      note: "Исправил тему",
+    });
   });
 });
 
