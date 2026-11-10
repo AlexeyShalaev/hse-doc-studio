@@ -14,12 +14,12 @@ help:
       hint: 'If the server sends email, the request also comes by email with an “Open the signing page” button.'
       shot: runbooks/signing-inbox/step-01
     - text: 'On the **To sign** tab each task shows the checkpoint, the project, who asks, what is needed and the deadline.'
-      hint: 'Overdue tasks come first and are marked red.'
+      hint: 'Overdue tasks come first and are marked red. If the author fixed a document, the request says “… asks you to sign a new version: …”.'
       shot: runbooks/signing-inbox/step-02
     - text: 'Click **Open**: the signing page opens, where you look at the PDF, approve and sign. How: [Sign documents](/help/en/runbooks/sign-documents/).'
 verified:
-  at: 2026-11-10
-  app_version: '0.19.0'
+  at: 2026-11-11
+  app_version: '0.20.1'
   sources:
     - services/web-app/src/features/inbox
     - services/web-app/src/pages/InboxPage
@@ -39,4 +39,8 @@ turn comes the tab is empty: the task appears together with a notification.
   tab when your turn comes.
 - **The task disappeared**: the route was cancelled or stopped, or you have already signed. You get
   a notification when the author sends again.
+- **“A new version is out for signing” came, but no task**: the author changed a document you
+  already approved or signed. The request comes when your turn does.
+- **The author edits the document, but no notifications come**: this is expected. You sign the
+  version sent for signing, and working edits send no notifications.
 - **No “To sign” tab**: signing by route works only on a Studio server.

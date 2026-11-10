@@ -1,6 +1,6 @@
 ---
 title: Send for signing
-description: How to send a checkpoint's documents to supervisors for signing in order on a shared server, follow the progress, send again after an edit and build the package.
+description: How to send a checkpoint's documents to supervisors for signing in order on a shared server, follow the progress, edit documents while they are being signed, send a new version and build the package.
 tags:
   - Workbench
   - Submission
@@ -22,11 +22,13 @@ When other people have to sign the checkpoint's documents: the supervisor, a co-
 ## How signing goes { #how-it-goes }
 
 1. You prepare the route: who signs, in what order and where the signatures go.
-2. You click “Send for signing”.
+2. You click “Send for signing”. The Studio keeps the built PDF of each document: this is the version for signing. Signers see and sign exactly that version.
 3. The first person in line gets a request in the Inbox and by email, if the server sends email. They open the signing page, look at the PDF and approve or sign.
 4. The next step gets its request once the previous one is done. People in one step sign in parallel.
 5. When all visible signatures are in place, the Studio freezes the final PDF, and those who sign with an electronic signature add it.
-6. Everyone has signed: build the package.
+6. Everyone has signed: build the package. It gets the signed version.
+
+While the documents are out for signing you can still edit and build them: the route goes on, and your edits do not reach the version being signed. To have the corrected text signed, send a new version ([below](#new-version)).
 
 What a signer sees is described in [How to sign](how-to-sign.md).
 
@@ -137,13 +139,15 @@ Under the sending form the Studio says when the final PDF is frozen: “The docu
 
 The “Signing” card on the checkpoint page shows the step and whose turn it is, for example “Step 2 of 3. Waiting for Petrov P. P. (supervisor)”, since when they have been waiting, how many signatures are in place and the deadline. Each person shows their state: “waiting”, “to approve”, “approved”, “to sign the final PDF”, “signed”, “has not accepted the invitation”, “returned for revision”.
 
+Below the people is the list of route documents. Each has the line “Version for signing from …”: when the version being signed was taken. The “Open the version for signing” link shows exactly that version, not the current build.
+
 <figure class="hds-fig hds-wide">
   <div class="hds-shot">
     <div class="hds-shot__bar"><span class="hds-shot__brand">HSE DOC STUDIO</span><span class="hds-shot__route">/projects/kp/submit/cp/topic-approval</span></div>
     <img src="../assets/shots/signing-card.en.light.webp#only-light" alt="The “Signing” card">
     <img src="../assets/shots/signing-card.en.dark.webp#only-dark" alt="The “Signing” card">
   </div>
-  <figcaption>the “Signing” card: the step, whose turn it is and each person’s state</figcaption>
+  <figcaption>the “Signing” card: the step, whose turn it is, each person’s state and the version for signing</figcaption>
 </figure>
 
 People on the route have two buttons:
@@ -165,50 +169,152 @@ The server also reminds the person whose turn it is on its own: a day before the
 Other buttons on the card:
 
 - **“Open route”** shows the route. While it is running it cannot be changed.
-- **“Cancel route”**, after a confirmation, stops the signing. Everyone who already got a request is notified, electronic signatures already made stay. Signature images of people who have not approved yet stay hidden: cancelling is not their approval. You can fix the route and click “Send again”.
+- **“Cancel route”**, after a confirmation, stops the signing. Everyone who already got a request is notified, electronic signatures already made stay. Signature images of people who have not approved yet stay hidden: cancelling is not their approval. The version for signing is removed, and the documents are signed from the current build again. You can fix the route and click “Send again”.
 - **“Go to signing”** shows when it is your turn. If you sign with an electronic signature, the card reminds you: “The route is sent, your signature is not in place yet”.
 
-While the route is running, the editor of its documents shows the banner “This document is out for signing (step k of n). Editing and rebuilding will stop the route”. The signatures of these documents cannot be changed on the “Signatures” tab.
+While the route is running, the editor of its documents shows the banner “This document is out for signing (step k of n). Signers sign the version from …; your edits do not go into it.” The signatures of these documents cannot be changed on the “Signatures” tab.
+
+## Editing while signing { #editing }
+
+The route signs the version taken when it was sent. The working build lives separately, so you can edit and build a document while it is being signed: the route goes on, the signers notice nothing and get no notifications about your edits.
+
+Before the first edit of a document out for signing the Studio asks: “Document out for signing. Changes will not reach the version being signed. Continue?” The buttons are “Continue” and “Cancel”. “Cancel” leaves everything as it was.
+
+- The question comes on the first text edit in the editor, on “Build”, when opening the office editor, when uploading or replacing the document's file and when changing files in the tree.
+- Shared files (`common/`, the bibliography) and project fields (metadata, authors, supervisors, language) affect several documents at once. Then there is one question with a list: “Out for signing: …”.
+- A template update plan shows the same line if the update touches documents out for signing.
+- The question is asked once per session per document. After a new sending it is asked again.
+- Only a running route asks. If the route is stopped, returned or completed, edits are expected and there is no question.
+- Edits from a local Studio, git sync and MCP go through without the question. They do not touch the version being signed either.
+
+When the built PDF differs from the version for signing, the “Signing” card says “There are changes since it was sent for signing. Signers sign the version from …”, and the document is marked “changed since sending”. Signers still sign the version that was sent. To have them sign the corrected text, send a new version.
+
+<figure class="hds-fig hds-wide">
+  <div class="hds-shot">
+    <div class="hds-shot__bar"><span class="hds-shot__brand">HSE DOC STUDIO</span><span class="hds-shot__route">/projects/kp/submit/cp/topic-approval</span></div>
+    <img src="../assets/shots/signing-version-card.en.light.webp#only-light" alt="Changes since sending">
+    <img src="../assets/shots/signing-version-card.en.dark.webp#only-dark" alt="Changes since sending">
+  </div>
+  <figcaption>the application was rebuilt after sending: the route goes on, the card offers “Send new version”</figcaption>
+</figure>
+
+- Unbuilt edits do not count: the changes show up after a build.
+- A LaTeX document rebuilt without edits gives the same PDF, so there is no mark. A document from Word or PowerPoint comes out different on every rebuild, so after any rebuild the card shows changes. You do not have to send a new version in that case.
+
+## Send a new version { #new-version }
+
+The “Send new version” button appears on the card when at least one route document has changed since sending. It works for a running, stopped, returned and completed route.
+
+Before sending, the Studio shows what will happen:
+
+- “Changed: …”: for these documents the current build becomes the new version for signing;
+- “Approve again: …”: people who already approved the changed documents;
+- “Unchanged: …, its signatures stay”: documents that did not change.
+
+The “What changed” field is optional. The text goes to the signers together with the request, for example “The topic wording is fixed”. The buttons are “Send new version” and “Don't send”.
+
+<figure class="hds-fig hds-wide">
+  <div class="hds-shot">
+    <div class="hds-shot__bar"><span class="hds-shot__brand">HSE DOC STUDIO</span><span class="hds-shot__route">/projects/kp/submit/cp/topic-approval</span></div>
+    <img src="../assets/shots/signing-new-version.en.light.webp#only-light" alt="Send a new version">
+    <img src="../assets/shots/signing-new-version.en.dark.webp#only-dark" alt="Send a new version">
+  </div>
+  <figcaption>the “Send a new version?” confirmation: what changed and a note for the signers</figcaption>
+</figure>
+
+What happens after sending:
+
+- **Unchanged documents** keep their version for signing, approvals, signature images and electronic signatures. People who sign only those do nothing and get no notification.
+- **Changed documents** are approved again in order, from the first step. Whoever already approved or signed such a document but whose turn has not come yet gets “A new version is out for signing: …” in the Inbox; the request comes in their turn. The person whose turn it is gets “… asks you to sign a new version: …”.
+- **Electronic signatures** on a changed document are made again: the final PDF is frozen from the new version once all visible signatures are on it.
+- The people and the order stay the same. To change them, cancel the route first.
+
+If no document changed, there is nothing to send: there is no button, and a stopped, returned or cancelled route shows “Send again” instead.
 
 ## What stops the route { #stops }
 
-The route makes sure the supervisors sign exactly the version they saw. If a document changes, the route stops, and you and those who already approved get a notification.
+Text edits, builds, template updates, restoring sources from history and sync do not stop the route: the document just shows changes. The route is stopped by people and by signature changes made outside the route. Then you and those who already approved get a notification.
 
 | What happened | What the card says |
 |---|---|
-| the document was rebuilt with changes: a text edit, a template update, a restore from history, a sync | “The document changed after approval: the route is stopped.” |
+| a signer returned the documents for revision | “… returned it for revision: “…”” |
+| you cancelled the route | “The route is cancelled.” |
+| a signer left the project or their role or persona changed | “A participant left the project: assign someone else and send again.” |
+| the version for signing changed outside the route, for example through git or by restoring the service folder | “The version out for signing changed outside the route: the route is stopped.” |
 | signatures on the pages were changed outside the route | “Signatures on the pages changed: the route is stopped.” |
 | the final PDF changed outside the route, for example through git | “The frozen PDF changed: the route is stopped.” |
-| a signer left the project or their role or persona changed | “A participant left the project: assign someone else and send again.” |
 
-- Rebuilding a LaTeX document without edits does not stop the route: the PDF comes out the same. A document built from Word or PowerPoint comes out different on every rebuild, so rebuilding it stops the route.
-- Comments, other documents and their builds do not affect the route.
+- The last three stops cannot be caused through the server interface: during the route only the route itself changes the version for signing, the final PDF and the signatures on the pages.
+- Comments and documents outside the route do not affect it.
 - If one electronic signature is deleted or becomes invalid, the route does not stop: it waits for that slot again.
 
 ### Send again { #resend }
 
-Fix the document, build it and click “Send again” on the card. The people and steps stay the same. If something blocks sending, the Studio opens the route screen, where you can see it.
+Remove the reason for the stop and click the button on the card. If the documents changed, it is “Send new version” ([above](#new-version)). If not, for example you replaced a participant who left, it is “Send again”: the version for signing stays the same. If something blocks sending, the Studio opens the route screen, where you can see it.
 
-The route starts again from the first step, but people whose documents did not change do not have to approve again. A signer's image and key are kept, so approving again is one click for them.
+The route starts again from the first step, but approvals of documents that did not change are kept. A signer's image and key are kept, so approving again is one click for them.
 
 ## Returned for revision { #returned }
 
-Instead of signing, a signer can return the documents with a comment. The route stops, you get a notification (and an email, if email is configured), and the card shows, for example, “Petrov P. P. returned it for revision: “Clarify the project goal””. Under it are “Open document” and “Send again”. Detailed remarks on the text are left as comments in the project itself.
+Instead of signing, a signer can return the documents with a comment. The route stops, you get a notification (and an email, if email is configured), and the card shows, for example, “Petrov P. P. returned it for revision: “Clarify the project goal””. Under it is “Open document”. Fix the document, build it and click “Send new version”: only the changed documents are approved again. Detailed remarks on the text are left as comments in the project itself.
 
 ## Everyone has signed { #completed }
 
 The card says “Everyone has signed. You can build the package.”, and you get a notification (and an email, if email is configured). Build the package with “Pack” on the same checkpoint page: it gets the signed PDFs and the electronic signature files ([Submission and packaging](submit.md)).
 
-A completed route keeps watching the documents. If you edit and rebuild a document, the route stops and asks you to send again. If someone's signature disappears, the route waits for that one again. To make the route stop watching, click “Stop tracking”. A new route for the same checkpoint starts with “New route” on the route screen.
+A completed route keeps watching the signatures. Edits and rebuilds do not stop it: the signed version stays, and the card says “Everyone signed the version from …. There are changes since it was signed.” and offers “Send new version”. If someone's signature disappears, the route waits for that one again. To make the route stop watching, click “Stop tracking”. A new route for the same checkpoint starts with “New route” on the route screen.
+
+### The package from the signed version { #pack }
+
+The package and the “With signatures” PDF are built from the version for signing, even if the working build is newer. This way the package gets exactly what was signed.
+
+If a document changed after sending, the package card warns before the build: ““…” changed after it was sent for signing: the package will get the version for signing of …”. After the build the same line stands under “Package built with warnings”. This is not an error: the package is built. If the package needs the corrected text, click “Send a new version” next to it: the button leads to the “Signing” card of this document's route. The owner and editors see it while the route is running or completed.
+
+In the `КАК_ПРОВЕРИТЬ.txt` guide such a document has the line “Версия от …, SHA-256 исходного PDF …” (version date and the SHA-256 of the source PDF): it tells the reviewer which version was signed.
+
+### The document's “Signatures” tab { #signatures-tab }
+
+The top of the “Signatures” tab shows which version is signed: “Being signed: the version of …” for a running route, “Signed: the version of …” for a completed one, “Version for signing of …” after “Stop tracking”. Below are the start of the SHA-256, the “There are changes since the document was sent for signing” note when it applies, and the “Open the version for signing” button.
+
+The version for signing stays after the route is completed and after “Stop tracking”: the signatures belong to it, however much you edit the text. If you no longer need the signatures on it and the document has to be signed from the current build, click “Sign the current build” and confirm. Signatures placed on the old version will no longer match the document.
+
+- The button is available to whoever can edit the document's files.
+- While a route holds the document (running, stopped, returned, or completed and still tracked), the button is disabled. First send a new version, cancel the route or stop tracking it.
+- Cancelling the route removes the version for signing by itself.
+
+## Routes sent earlier { #migration }
+
+A route sent on an earlier Studio version had no version for signing yet. The Studio restores it on its own the first time it checks such a route:
+
+- if the current build matches the one that was sent, it becomes the version for signing;
+- otherwise the Studio looks for the same PDF among the document's recent builds.
+
+If the version is found, the route goes on and the signers notice nothing. If not, a running route stops, and the card says “The version sent for signing cannot be restored: send a new version.” Click “Send new version”: the current build becomes the version for signing, and the signers approve it again in order.
+
+<figure class="hds-fig hds-wide">
+  <div class="hds-shot">
+    <div class="hds-shot__bar"><span class="hds-shot__brand">HSE DOC STUDIO</span><span class="hds-shot__route">/projects/kp/submit/cp/topic-approval</span></div>
+    <img src="../assets/shots/signing-migration.en.light.webp#only-light" alt="The version cannot be restored">
+    <img src="../assets/shots/signing-migration.en.dark.webp#only-dark" alt="The version cannot be restored">
+  </div>
+  <figcaption>a route from an earlier Studio version whose sent version cannot be restored</figcaption>
+</figure>
+
+A route that an earlier Studio version stopped because of a rebuild (“The document changed after approval: the route is stopped.”) stays stopped. Its button is also “Send new version”.
 
 ## Questions and answers { #faq }
 
 - **The server has no email.** Requests and reminders still arrive in the Inbox, on the “To sign” tab; there are no emails. Send the person the link yourself with “Copy link” on the card. If they have not accepted the invitation yet, the button makes a new invitation link and the previous one stops working. Automatic reminders do not go to an invitee without an account.
 - **The supervisor has no account.** Invite them by email from the route with “Invite”. Using the invitation link they sign up with that same address, click “Accept” and land on the signing page. If registration on the server is closed, first ask the administrator to create an account for them.
 - **The supervisor's image is gone after cancelling the route.** The route hides a signer's image until they approve, and cancelling does not reveal it. On the document's “Signatures” tab such a signature is marked “Held back by the route”. If you still want to put the image in without approval, click “Show” there and confirm: anyone who can edit signature placements can do it, and it goes to the audit log. While a route is running the button is unavailable. If you send the route again, the image is hidden again until approval.
-- **The order is wrong.** While the route is not sent, drag the steps. If it is already sent, click “Cancel route”, fix the order on the route screen and click “Send again”. Approvals of people whose documents did not change are kept.
+- **The order is wrong.** While the route is not sent, drag the steps. If it is already sent, click “Cancel route”, fix the order on the route screen and click “Send again”. Approvals of documents that did not change are kept.
 - **A signer left the project.** The route stops with “A participant left the project: assign someone else and send again”. Open the route, pick or invite another person with the same persona and click “Send again”. A route that is already completed does not care: the signatures are in place.
-- **The “out for signing” banner.** The document was sent for signing and the route is running. You can still edit the text and build, but a rebuild with changes stops the route and you will have to send it again. The signatures of this document cannot be changed on the “Signatures” tab: cancel the route on the checkpoint page first.
+- **The “out for signing” banner.** The document was sent for signing and the route is running. You can edit the text and build: the route does not stop, it signs the version taken at sending. The signatures of this document cannot be changed on the “Signatures” tab: cancel the route on the checkpoint page first.
+- **You found a typo while the document is being signed.** Fix and build the document. The route goes on with the old version. When you are ready, click “Send new version”: only this document is approved again, the other signatures stay.
+- **You edited the text after everyone signed.** The signed version does not disappear: the package is built from it with a warning. If you need the corrected text, send a new version, and the changed document is signed again.
+- **You rebuilt without edits, and the card shows changes.** This happens with documents from Word or PowerPoint: their PDF differs on every build. If the text did not change, you do not need to send a new version.
+- **A document has to be signed from the current build without a route.** On the document's “Signatures” tab click “Sign the current build”. Signatures on the old version will no longer match the document.
+- **In a local Studio.** There are no routes there, but the version for signing arrives with the project through git sync. The “Signatures” tab says “Being signed: the version of … (route on the server)”. Local edits and builds do not stop the server route.
 - **“Sign the submission” says “The document is on a signing route”.** Route documents are signed only in turn, on the signing page. Click “Open the signing page” in the submission dialog.
 
 ## For the administrator { #admin }

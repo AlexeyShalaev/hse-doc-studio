@@ -13,6 +13,7 @@ help:
       hint: 'If it says “Not your turn yet”, wait for the notification: there is nothing to do now.'
       shot: runbooks/sign-documents/step-01
     - text: 'Click **Go to signature**: the PDF scrolls to the **Your signature** frame. **Open PDF** opens the whole file.'
+      hint: 'Above the document is the line “You are signing the version of …”: the version the author sent for signing. Their edits after sending do not go into it.'
       shot: runbooks/sign-documents/step-02
     - text: 'For an electronic signature, in **How to sign** choose **Detached e-signature** and a way in **Sign with**: **Studio key**, **CryptoPro in the browser** or **Ready signature**.'
       hint: 'No Studio key yet: **Create an OpenPGP key** or **Import a key**. For a ready signature click **Download PDF**, sign it on your side and upload the file with **Choose signature**.'
@@ -26,8 +27,8 @@ help:
     - text: 'If the document needs fixing, click **Return for revision**, write what exactly in **What to fix** and click **Return**.'
       hint: 'The author gets your comment and the route stops. Detailed remarks on the text are easier to leave as comments in the project: the dialog has an **Open project** link.'
 verified:
-  at: 2026-11-10
-  app_version: '0.19.0'
+  at: 2026-11-11
+  app_version: '0.20.1'
   sources:
     - services/web-app/src/pages/SigningPage
     - services/web-app/src/features/signing-inline
@@ -43,12 +44,17 @@ works in a phone browser: the buttons stick to the bottom of the screen.
 
 ## If something goes wrong
 
-- **“The document changed while the page was open”**: the author rebuilt the document. Look at the
-  new version and click the button again.
-- **“The document changed after your approval: approve again”**: the author fixed the document and
-  sent it again. Your image and key are in place, so it is one click.
-- **“The route has stopped”**: the author is editing the document or changing the signers. You get
-  a notification when they send again.
+- **“New version: the document “…” has changed”**: the author fixed the document and sent a new
+  version. Approve or sign it again; the author’s text from “What changed” is shown below.
+  Documents marked “No changes: you already approved” or “No changes: you already signed” need
+  nothing.
+- **“The document changed while the page was open”**: while you were looking, the author sent a
+  new version. Look at it and click the button again.
+- **“The document changed after you approved it: please approve again”**: the author sent a new version of
+  this document. Your image and key are in place, so it is one click.
+- **“The route has stopped”**: the author is changing the signers, the documents were returned for
+  revision, or signatures changed outside the route. You get a notification when the author sends
+  again.
 - **“Signing page not found”**: the route is closed, the link is outdated or you signed in to
   another account. Open the Inbox, **To sign** tab.
 - **No “Image” method**: the author did not place your signature on the document page, so only the

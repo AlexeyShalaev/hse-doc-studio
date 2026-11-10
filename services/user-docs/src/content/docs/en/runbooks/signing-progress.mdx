@@ -1,6 +1,6 @@
 ---
 title: 'Signing progress'
-description: 'The “Signing” card on the checkpoint page: whose turn it is, reminders, a link for a signer, returns for revision and sending again.'
+description: 'The “Signing” card on the checkpoint page: whose turn it is, reminders, a link for a signer, editing while signing, a new version, returns for revision and the package.'
 sidebar:
   order: 11
 access: user
@@ -11,40 +11,50 @@ help:
   summary: 'Once sent, the route is followed in the “Signing” card on the checkpoint page: which step is running, whose turn it is and what to do if the documents come back.'
   steps:
     - text: 'Open **Submission** and the checkpoint. The **Signing** card shows the step, whose turn it is and since when, and each person’s state.'
-      hint: 'States: “waiting”, “approving”, “approved”, “signed”, “invitation not accepted”, “returned for revision”.'
+      hint: 'States: “waiting”, “approving”, “approved”, “signed”, “invitation not accepted”, “returned for revision”. Each document has the line “Version for signing from …”: signers see exactly that version, and **Open the version for signing** shows it in full.'
       shot: runbooks/signing-progress/step-01
     - text: 'To hurry up the person whose turn it is, click **Remind**. The reminder goes to the Inbox and by email, if the server sends email.'
       hint: 'At most once every 12 hours per person. The server also reminds on its own a day before the deadline and after three days of waiting.'
     - text: 'To send a link yourself, for example in a messenger, click **Copy link** next to the person.'
       hint: 'For a member it is a link to their signing page, which opens after sign-in. For an invited person on a server without email, every click gives a new invitation link and the previous one stops working.'
       shot: runbooks/signing-progress/step-03
-    - text: 'While the route is running, the editor of its documents shows the **This document is out for signing** banner. You can edit and build, but a rebuild with changes stops the route.'
-      hint: 'The signatures of these documents on the **Signatures** tab cannot be changed until the route is cancelled. **Signing progress** on the banner leads to this card.'
-    - text: 'If the documents come back, the card shows the comment. Fix the document, build it and click **Send again**.'
-      hint: 'People whose documents did not change do not have to approve again: their image and key are kept.'
+    - text: 'While the route is running, you can edit and build the document: the route does not stop. Signers sign the version taken at sending, and your edits do not go into it.'
+      hint: 'Before the first edit the Studio asks: “Document out for signing. Changes will not reach the version being signed. Continue?” Once per session per document. The signatures of these documents on the **Signatures** tab cannot be changed until the route is cancelled. **Signing progress** on the editor banner leads to this card.'
+    - text: 'If after a build the card says **There are changes since it was sent for signing**, and the corrected text has to be signed, click **Send new version**.'
+      hint: 'The confirmation shows which documents changed, who approves again and what stays unchanged. The **What changed** field is optional; the text goes to the signers with the request. Unchanged documents keep their approvals and signatures.'
+    - text: 'If the documents come back, the card shows the comment. Fix the document, build it and click **Send new version**.'
+      hint: 'Only the changed documents are approved again: signers keep their image and key. If the documents did not change, for example you replaced a signer, the button is **Send again**.'
     - text: 'When the card says **Everyone has signed. You can build the package.**, build the package with **Pack** on the same page.'
-      hint: 'A completed route keeps watching the documents. To stop it, click **Stop tracking**.'
+      hint: 'The package is built from the signed version, even if you edited the text after signing: then it warns that the document “changed after it was sent for signing”. To make the route stop watching the documents, click **Stop tracking**.'
 verified:
-  at: 2026-11-10
-  app_version: '0.20.0'
+  at: 2026-11-11
+  app_version: '0.20.1'
   sources:
     - services/web-app/src/features/signing-route-progress
+    - services/web-app/src/features/signing-version
     - services/web-app/src/pages/WorkspacePage/panels/CheckpointView.tsx
 ---
 
 import Steps from '~/components/Steps.astro'
 
 The route moves the documents from one signer to the next on its own. All you do is keep an eye on
-the **Signing** card: hurry someone up if they are holding things up, and send again if the
-documents are returned for revision.
+the **Signing** card: hurry someone up if they are holding things up, and send a new version if you
+fixed a document or it was returned for revision.
 
 <Steps />
 
 ## If something goes wrong
 
-- **“The route has stopped”** with a reason: a document changed after approval, signatures on the
-  pages were changed outside the route, or a signer left the project. Fix the reason on the route
-  screen (**Open route**) and click **Send again**.
+- **“The route has stopped”** with a reason: a signer left the project, or the version for
+  signing or the signatures on the pages changed outside the route (for example through git).
+  Edits and rebuilds do not stop the route. Fix the reason on the route screen (**Open route**)
+  and click **Send again** or **Send new version**.
+- **“The version sent for signing cannot be restored: send a new version.”**: the route was sent
+  on an earlier Studio version, and the sent PDF was not kept. Click **Send new version**: the
+  current build becomes the version for signing.
+- **Changes after a rebuild without edits**: this happens with documents from Word or PowerPoint,
+  their PDF differs on every build. If the text did not change, you do not need to send a new
+  version.
 - **“0 of 3 signed” although you have approved**: this is expected. Sending the route counts as
   your approval, and the Studio asks for your e-signature after the PDF is frozen, once everyone
   has approved. The card shows both counts, “1 of 3 approved · 0 of 3 signed”, and your slot in the
