@@ -7,7 +7,7 @@ import {
   type ReactNode,
 } from "react";
 import { useTranslation } from "react-i18next";
-import { Modal } from "@shared/ui";
+import { Modal } from "@shared/ui/Modal";
 import { useSigningRoutes } from "../api/signingRouteQueries";
 import {
   affectedHeld,
