@@ -180,8 +180,7 @@ export const awaitsFreeze = (
   if (slot === undefined || slot.status === "signed") return false;
   const person = route.steps.flat().find((p) => p.id === slot.participant_id);
   return (
-    person !== undefined &&
-    person.state === "waiting" &&
+    person?.state === "waiting" &&
     person.approved_at !== null &&
     (person.method === "detached" || person.method === "pades")
   );

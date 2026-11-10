@@ -352,12 +352,14 @@ export const CheckpointView = ({
                             const statusText = approved
                               ? t("signingProgress:slotApproved")
                               : refreeze
-                              ? t("signingProgress:wait.refreeze")
-                              : planSlot
-                                ? t(`checkpoint.slotStatus.${planSlot.status}`)
-                                : signature.isSigned
-                                  ? t("checkpoint.signed")
-                                  : t("checkpoint.notSigned");
+                                ? t("signingProgress:wait.refreeze")
+                                : planSlot
+                                  ? t(
+                                      `checkpoint.slotStatus.${planSlot.status}`,
+                                    )
+                                  : signature.isSigned
+                                    ? t("checkpoint.signed")
+                                    : t("checkpoint.notSigned");
                             const hint =
                               (held
                                 ? routeHint(docId, signature.slotId)

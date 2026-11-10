@@ -43,7 +43,8 @@ export const fitFrameLabel = (
   const words = label.trim().split(/\s+/).filter(Boolean);
   const width = Math.max(1, widthPx - 2 * FRAME_LABEL_PAD_PX);
   const height = Math.max(1, heightPx - 2 * FRAME_LABEL_PAD_PX);
-  const fits = (font: number) => Math.floor(height / (font * FRAME_LABEL_LINE_HEIGHT));
+  const fits = (font: number) =>
+    Math.floor(height / (font * FRAME_LABEL_LINE_HEIGHT));
   for (let font = MAX_FONT_PX; font >= MIN_FONT_PX; font -= STEP_PX) {
     const perLine = Math.max(1, Math.floor(width / (font * CHAR_EM)));
     const longest = Math.max(0, ...words.map((w) => w.length));

@@ -1130,32 +1130,32 @@ export const SlotDetachedSignature = ({
               <FileUp size="0.625rem" />
             </button>
             {!routeRenew && (
-            <button
-              type="button"
-              className="btn xs ghost"
-              disabled={busy || stale}
-              onClick={() => {
-                recheck.mutate(
-                  { projectId, docId, slotId },
-                  { onError: (err) => toast.error(err.message) },
-                );
-              }}
-              title={t("detached.slot.recheck")}
-            >
-              <RefreshCw size="0.625rem" />
-            </button>
+              <button
+                type="button"
+                className="btn xs ghost"
+                disabled={busy || stale}
+                onClick={() => {
+                  recheck.mutate(
+                    { projectId, docId, slotId },
+                    { onError: (err) => toast.error(err.message) },
+                  );
+                }}
+                title={t("detached.slot.recheck")}
+              >
+                <RefreshCw size="0.625rem" />
+              </button>
             )}
             {!routeHeld && (
-            <button
-              type="button"
-              className="btn xs ghost"
-              disabled={busy}
-              style={{ color: "var(--c-err)" }}
-              onClick={handleDelete}
-              title={t("detached.slot.delete")}
-            >
-              <Trash2 size="0.625rem" />
-            </button>
+              <button
+                type="button"
+                className="btn xs ghost"
+                disabled={busy}
+                style={{ color: "var(--c-err)" }}
+                onClick={handleDelete}
+                title={t("detached.slot.delete")}
+              >
+                <Trash2 size="0.625rem" />
+              </button>
             )}
           </>
         )}

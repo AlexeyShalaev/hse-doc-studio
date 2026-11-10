@@ -280,7 +280,10 @@ describe("сводки маршрута", () => {
     expect(routeTally(signing)).toMatchObject({ approved: 1, done: 0 });
     expect(awaitsFreeze(signing, "vkr", "author")).toBe(false);
     // Подпись проверена: слот подписан.
-    const signed = esignRoute({ author: { state: "done" }, authorSlot: "signed" });
+    const signed = esignRoute({
+      author: { state: "done" },
+      authorSlot: "signed",
+    });
     expect(routeTally(signed)).toMatchObject({ approved: 1, done: 1 });
     expect(awaitsFreeze(signed, "vkr", "author")).toBe(false);
   });
