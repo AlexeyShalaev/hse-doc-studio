@@ -6,6 +6,7 @@ import contextlib
 import re
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass
+from datetime import datetime
 
 from hse_doc_studio.core.enums import DetachedFormat
 
@@ -205,6 +206,17 @@ class GuideDocument:
     base_sha256: str = ""
     base_size: int = 0
     keys: tuple[str, ...] = ()
+    # Версия на подписи, из которой собран PDF (signing-route.md, 12.8): дата снятия и sha256 до штампов и подписей.
+    version_date: str = ""
+    version_sha256: str = ""
+
+
+def version_date(pinned_at: str) -> str:
+    """Дата версии на подписи для текстов пакета: ISO «2026-11-10T14:32:00Z» → «10.11.2026» (UTC)."""
+    try:
+        return datetime.fromisoformat(pinned_at).strftime("%d.%m.%Y")
+    except ValueError:
+        return pinned_at
 
 
 def signer_display_name(raw: str) -> str:
@@ -241,6 +253,7 @@ _GUIDE_RU = {
         "{base} это исходные байты {pdf} до встроенных подписей: открепленные подписи относятся к нему.\n"
         "  Его содержимое совпадает с началом {pdf} (первые {size} байт):"
     ),
+    "version": "Версия от {date}, SHA-256 исходного PDF {sha}",
     "pgp": "Открепленные OpenPGP (.asc):",
     "cms": "Открепленные CAdES/CMS (.p7s, .sig); ГОСТ проверяют в КриптоАРМ, КриптоПро или на Госуслугах:",
     "pades_tools": "Встроенные подписи PAdES: панель подписей Adobe Acrobat Reader или pyHanko (pyhanko-cli):",
@@ -263,6 +276,7 @@ _GUIDE_EN = {
         "{base} holds the bytes of {pdf} before the embedded signatures: detached signatures cover it.\n"
         "  Its content equals the beginning of {pdf} (the first {size} bytes):"
     ),
+    "version": "Version of {date}, SHA-256 of the source PDF {sha}",
     "pgp": "Detached OpenPGP (.asc):",
     "cms": "Detached CAdES/CMS (.p7s, .sig); GOST is verified in CryptoARM, CryptoPro or the Gosuslugi portal:",
     "pades_tools": (
@@ -273,6 +287,8 @@ _GUIDE_EN = {
 
 def _doc_lines(t: dict[str, str], doc: GuideDocument) -> list[str]:
     lines = [doc.pdf] + ([f"  {t['sha']}: {doc.sha256}"] if doc.sha256 else [])
+    if doc.version_date:
+        lines.append("  " + t["version"].format(date=doc.version_date, sha=doc.version_sha256))
     if doc.base:
         lines.append(f"  {doc.base}")
         lines.append(f"  {t['sha']}: {doc.base_sha256}")

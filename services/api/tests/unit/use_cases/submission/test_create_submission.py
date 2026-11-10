@@ -23,7 +23,7 @@ from hse_doc_studio.core.jobs.office import (
     OfficeConvertStatus,
 )
 from hse_doc_studio.core.jobs.pack import PackResult, PackSubmissionPayload
-from hse_doc_studio.core.value_objects import Author
+from hse_doc_studio.core.value_objects import Author, SignaturesState
 from hse_doc_studio.infra.identity.project_access import LocalProjectAccessChecker
 from hse_doc_studio.infra.persistence.project_locator import LocalProjectLocator
 from hse_doc_studio.infra.template.yaml_template_repository import YamlTemplateRepository
@@ -121,6 +121,7 @@ class Harness:
         profiles.get_profile.return_value = MagicMock(extra_items=[])
         profiles.build_item_list.return_value = self.items
         signatures = MagicMock()
+        signatures.get_state.return_value = SignaturesState(slots={}, placements={})
         self.submission_repo = MagicMock(save=AsyncMock())
         self.submission_repo.save.side_effect = lambda *_: self.events.append("save")
         self.changelog_repo = MagicMock()
