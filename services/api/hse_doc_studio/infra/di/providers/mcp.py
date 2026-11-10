@@ -10,11 +10,13 @@ from hse_doc_studio.core.identity.protocols import IAuditLog, IAuditReader, IIns
 from hse_doc_studio.core.mcp.protocols import IMcpCallJournal, IMcpChangeAudit, IMcpSettingsStore
 from hse_doc_studio.core.mode import StudioMode
 from hse_doc_studio.core.repositories import ISettingsRepository
+from hse_doc_studio.core.signing_route.ports import ISigningRouteGate
 from hse_doc_studio.core.uow import IUnitOfWork
 from hse_doc_studio.infra.mcp.local import LocalMcpSettingsStore, LogMcpChangeAudit, MemoryMcpCallJournal
 from hse_doc_studio.infra.mcp.server import AuditMcpCallJournal, AuditMcpChangeAudit, ServerMcpSettingsStore
 from hse_doc_studio.use_cases.chat._registry import ToolRegistry
 from hse_doc_studio.use_cases.compile.get_archived_pdf import GetArchivedPdfUC
+from hse_doc_studio.use_cases.documents.list_documents import ListDocumentsUC
 from hse_doc_studio.use_cases.files.get_file import GetFileUC
 from hse_doc_studio.use_cases.mcp.call_tool import CallMcpToolUC
 from hse_doc_studio.use_cases.mcp.catalog import McpCatalog
@@ -22,6 +24,7 @@ from hse_doc_studio.use_cases.mcp.journal import ListMcpCallsUC
 from hse_doc_studio.use_cases.mcp.list_tools import ListMcpToolsUC
 from hse_doc_studio.use_cases.mcp.resources import ReadMcpResourceUC
 from hse_doc_studio.use_cases.mcp.settings import GetMcpSettingsUC, UpdateMcpSettingsUC
+from hse_doc_studio.use_cases.mcp.signing_note import SigningNotes
 from hse_doc_studio.use_cases.projects.get_project_access import GetProjectAccessUC
 
 
@@ -47,15 +50,21 @@ class McpProvider(Provider):
         return McpCatalog(registry, container, server_mode=settings.mode is StudioMode.server)
 
     @provide
-    def get_call_mcp_tool_uc(
+    def get_signing_notes(self, gate: ISigningRouteGate, documents: ListDocumentsUC) -> SigningNotes:
+        # Локально сторож маршрутов пустой (`NoSigningRoutes`): документов на подписании нет, пометки тоже.
+        return SigningNotes(gate, documents)
+
+    @provide
+    def get_call_mcp_tool_uc(  # noqa: PLR0913 — порты вызова перечислены явно
         self,
         catalog: McpCatalog,
         store: IMcpSettingsStore,
         journal: IMcpCallJournal,
         access: IProjectAccessChecker,
         project_access: GetProjectAccessUC,
+        notes: SigningNotes,
     ) -> CallMcpToolUC:
-        return CallMcpToolUC(catalog, store, journal, access, project_access)
+        return CallMcpToolUC(catalog, store, journal, access, project_access, notes)
 
     @provide
     def get_list_mcp_tools_uc(self, catalog: McpCatalog, store: IMcpSettingsStore) -> ListMcpToolsUC:

@@ -8,6 +8,10 @@
 - `send_for_signing`: отправить маршрут точки, как кнопка «Отправить на подписание»: тот же предпросмотр, те же
   помехи и отпечатки документов, что у `POST .../send`. Опасный: по умолчанию выключен (docs/design/mcp.md, M6).
 
+Маршрут подписывает версию на подписи, снятую при отправке (раздел 12): `get_signing_route` показывает её у каждого
+документа (`sent`) и изменения после отправки (`changed`, `changed_docs`). Новую версию идущего или завершённого
+маршрута `send_for_signing` не отправляет (отказ `new_version_in_ui`, 12.10): она сбрасывает чужие согласия.
+
 Согласовать, подписать и вернуть на доработку через MCP нельзя: это решение человека на странице подписи. Ключ
 подписи в отправку не передаётся («Отправить и подписать» остаётся в интерфейсе), приглашённого без аккаунта тул не
 ждёт: маршрут уходит, только когда все его участники уже в проекте.
@@ -15,6 +19,8 @@
 
 from __future__ import annotations
 
+from collections.abc import Sequence
+from datetime import UTC, datetime
 from uuid import UUID
 
 from hse_doc_studio.core.access.context import require_actor
@@ -25,7 +31,13 @@ from hse_doc_studio.core.errors import NotFoundError
 from hse_doc_studio.core.i18n import localized_error
 from hse_doc_studio.core.identity.errors import IdentityError, IdentityErrorCode
 from hse_doc_studio.core.mcp.errors import McpError, McpErrorCode
-from hse_doc_studio.core.signing_route.entities import EDITABLE_STATUSES, RouteConflictError, RouteStatus
+from hse_doc_studio.core.signing_route.entities import (
+    EDITABLE_STATUSES,
+    NEW_VERSION_STATUSES,
+    RouteConflictError,
+    RouteStatus,
+    StopReason,
+)
 from hse_doc_studio.core.signing_route.readiness import Blocker, BlockerCode, OtherRoute, RouteBlockedError
 from hse_doc_studio.use_cases.mcp.tools._base import McpTool, json_result, optional_text, project_schema, text_arg
 from hse_doc_studio.use_cases.signing_route.author import (
@@ -37,7 +49,7 @@ from hse_doc_studio.use_cases.signing_route.author import (
 )
 from hse_doc_studio.use_cases.signing_route.reminders import signing_page_path
 from hse_doc_studio.use_cases.signing_route.tasks import ListSigningTasksUC
-from hse_doc_studio.use_cases.signing_route.views import EventView, Membership, PersonView, RouteDetails
+from hse_doc_studio.use_cases.signing_route.views import DocView, EventView, Membership, PersonView, RouteDetails
 
 # Сколько последних событий истории маршрута отдавать модели.
 _EVENTS = 30
@@ -94,7 +106,102 @@ def _event(view: EventView) -> dict[str, object]:
         "participant_id": str(event.participant_id) if event.participant_id is not None else None,
         "reason": view.reason.value if view.reason is not None else None,
         "comment": view.comment,
+        # Только у `sent` новой версии: документы, у которых сменилась версия на подписи (12.9).
+        "changed_docs": _optional_ids(getattr(view, "changed_docs", None)),
     }
+
+
+def _optional_ids(raw: object) -> list[str] | None:
+    return [item for item in raw if isinstance(item, str)] if isinstance(raw, list | tuple) else None
+
+
+def _day(at: object) -> str | None:
+    """Дата версии на подписи для текста: «10.11.2026» (UTC)."""
+    if not isinstance(at, datetime):
+        return None
+    moment = at if at.tzinfo is not None else at.replace(tzinfo=UTC)
+    return moment.astimezone(UTC).strftime("%d.%m.%Y")
+
+
+def _sent(doc: DocView) -> dict[str, object] | None:
+    """Версия на подписи документа (`sent` 12.9): sha256, когда снята и каким раундом; None без неё."""
+    sent = getattr(doc, "sent", None)
+    if sent is None:
+        return None
+    return {"sha256": sent.sha256, "at": sent.at, "round": sent.round}
+
+
+def _changed(doc: DocView) -> bool:
+    """Рабочая сборка есть и ушла от версии на подписи (12.9)."""
+    return getattr(doc, "changed", False) is True
+
+
+def _changed_hint(docs: Sequence[DocView]) -> str | None:
+    """Подсказка при изменениях после отправки: что подписывают и кто отправляет новую версию (12.10)."""
+    changed = [doc for doc in docs if _changed(doc)]
+    if not changed:
+        return None
+    ru_items, en_items = [], []
+    for doc in changed:
+        sent = getattr(doc, "sent", None)
+        day = _day(sent.at) if sent is not None else None
+        ru_items.append(f"{doc.doc_id} (подписывают версию от {day})" if day else doc.doc_id)
+        en_items.append(f"{doc.doc_id} (the version sent on {day} is being signed)" if day else doc.doc_id)
+    return localized_error(
+        f"Есть изменения после отправки на подпись: {', '.join(ru_items)}. Подписывают версию на подписи, а не "
+        "текущую сборку. Новую версию отправляет человек в интерфейсе («Отправить новую версию» в карточке "
+        "«Подписание»), send_for_signing её не отправляет",
+        f"There are changes since the documents were sent for signing: {', '.join(en_items)}. The signers sign the "
+        "version sent for signing, not the current build. A person sends the new version in the interface (“Send "
+        "new version” on the “Signing” card); send_for_signing does not send it",
+    )
+
+
+def _stop_reason_text(reason: StopReason) -> str:
+    """Причина остановки словами: что случилось и что делать (разделы 5.5 и 12.5)."""
+    texts = {
+        StopReason.rebuilt: localized_error(
+            "документ пересобран после отправки (маршрут остановлен до перехода на версию на подписи): человек "
+            "отправляет новую версию в интерфейсе",
+            "a document was rebuilt after sending (the route stopped before versions sent for signing existed): "
+            "a person sends the new version in the interface",
+        ),
+        StopReason.sent_changed: localized_error(
+            "версия на подписи изменилась или удалена вне маршрута (git, восстановление, ручная правка) или "
+            "документ убран из проекта: маршрут остановлен, человек отправляет новую версию в интерфейсе",
+            "the version sent for signing changed or was removed outside the route (git, restore, a manual edit) "
+            "or the document left the project: the route stopped, a person sends the new version in the interface",
+        ),
+        StopReason.frozen_changed: localized_error(
+            "зафиксированный PDF изменён или удалён вне маршрута: маршрут остановлен",
+            "the frozen PDF changed or was removed outside the route: the route stopped",
+        ),
+        StopReason.marks_changed: localized_error(
+            "видимый слой подписей изменён вне маршрута: маршрут остановлен",
+            "the visible signature layer changed outside the route: the route stopped",
+        ),
+        StopReason.participant_left: localized_error(
+            "участник ушёл из проекта или сменил персону: замените его в интерфейсе и отправьте заново",
+            "a participant left the project or changed persona: replace them in the interface and send again",
+        ),
+        StopReason.returned: localized_error(
+            "подписант вернул на доработку: исправьте и отправьте заново",
+            "a signer returned the documents for rework: fix them and send again",
+        ),
+    }
+    return texts.get(reason, reason.value)
+
+
+def _stop_text(reason: StopReason | None, docs: Sequence[DocView]) -> str | None:
+    if reason is None:
+        return None
+    if reason is StopReason.sent_changed and any(_changed(doc) and getattr(doc, "sent", None) is None for doc in docs):
+        # Маршрут 0.20.0, перенос которого не нашёл прежнюю сборку (12.11).
+        return localized_error(
+            "Версию, отправленную на подпись, восстановить нельзя: человек отправляет новую версию в интерфейсе",
+            "The version sent for signing cannot be restored: a person sends the new version in the interface",
+        )
+    return _stop_reason_text(reason)
 
 
 def route_view(details: RouteDetails) -> dict[str, object]:
@@ -112,6 +219,7 @@ def route_view(details: RouteDetails) -> dict[str, object]:
         "deadline": route.deadline,
         "message": route.message,
         "stop_reason": details.stop_reason.value if details.stop_reason is not None else None,
+        "stop_text": _stop_text(details.stop_reason, details.docs),
         "stopped_by": {"name": stopped.name, "persona": stopped.participant.persona} if stopped is not None else None,
         "sent_by": details.sent_by_name,
         "sent_at": route.sent_at,
@@ -124,6 +232,8 @@ def route_view(details: RouteDetails) -> dict[str, object]:
                 "name": doc.name,
                 "built": doc.built,
                 "frozen": doc.frozen,
+                "sent": _sent(doc),
+                "changed": _changed(doc),
                 "slots": [
                     {
                         "slot_id": slot.slot_id,
@@ -137,6 +247,8 @@ def route_view(details: RouteDetails) -> dict[str, object]:
             }
             for doc in details.docs
         ],
+        "changed_docs": [doc.doc_id for doc in details.docs if _changed(doc)],
+        "changed_hint": _changed_hint(details.docs),
         "events": [_event(e) for e in details.events[-_EVENTS:]],
         "signing_page": _page(route.project_id, route.id),
     }
@@ -157,6 +269,8 @@ def _summary(item: RouteSummary) -> dict[str, object]:
         "sent_at": route.sent_at,
         "completed_at": route.completed_at,
         "waiting_for": [{"name": name, "persona": persona} for name, persona in item.waiting_for],
+        "docs": list(route.docs),
+        "changed_docs": _optional_ids(getattr(item, "changed_docs", None)) or [],
     }
 
 
@@ -166,8 +280,10 @@ class GetSigningRouteTool(McpTool):
         description=(
             "Ход маршрута подписания контрольной точки («Отправить на подписание»): статус и фаза, шаги с людьми и их "
             "состояниями, чья очередь сейчас, срок, причина остановки (документ изменился, вернули на доработку, "
-            "участник ушёл) и последние события. Без profile_id сводка по всем маршрутам проекта. Только чтение: "
-            "согласовать, подписать или вернуть на доработку можно только на странице подписи в интерфейсе."
+            "участник ушёл) и последние события. У документов версия на подписи (sent) и есть ли изменения после "
+            "отправки (changed): правка и пересборка маршрут не останавливают, подписывают версию на подписи. Без "
+            "profile_id сводка по всем маршрутам проекта. Только чтение: согласовать, подписать или вернуть на "
+            "доработку можно только на странице подписи в интерфейсе."
         ),
         parameters=project_schema({"profile_id": _PROFILE_ARG}),
     )
@@ -305,6 +421,34 @@ def _invited_text(preview: RoutePreview) -> list[str]:
     ]
 
 
+def _new_version_text(status: RouteStatus) -> str:
+    """Отказ `new_version_in_ui` (12.10): маршрут идёт или завершён, а новая версия сбрасывает чужие согласия и
+    подписи изменившихся документов. Это решение человека, MCP её не отправляет."""
+    if status is RouteStatus.completed:
+        ru = (
+            "маршрут точки завершён. Отправить новую версию можно только в интерфейсе («Отправить новую версию» в "
+            "карточке «Подписание»): она сбрасывает согласия и подписи изменившихся документов, это решение "
+            "человека. Новый маршрут вместо этого начинается после «Снять с контроля» в интерфейсе"
+        )
+        en = (
+            "the checkpoint route is completed. A new version can only be sent in the interface (“Send new "
+            "version” on the “Signing” card): it resets approvals and signatures of the changed documents, which "
+            "is a person's decision. A fresh route starts after “Stop tracking” in the interface instead"
+        )
+    else:
+        ru = (
+            "маршрут точки уже отправлен и идёт: его ход показывает get_signing_route. Отправить новую версию "
+            "можно только в интерфейсе («Отправить новую версию» в карточке «Подписание»): она сбрасывает "
+            "согласия и подписи изменившихся документов, это решение человека"
+        )
+        en = (
+            "the checkpoint route is already sent and running: get_signing_route shows its progress. A new version "
+            "can only be sent in the interface (“Send new version” on the “Signing” card): it resets approvals and "
+            "signatures of the changed documents, which is a person's decision"
+        )
+    return localized_error(f"{ru} (new_version_in_ui)", f"{en} (new_version_in_ui)")
+
+
 def _refusal(reasons: list[str]) -> ToolResult:
     head = localized_error("Маршрут не отправлен:", "The route was not sent:")
     return ToolResult.error("\n".join([head, *(f"- {reason}" for reason in reasons)]))
@@ -320,7 +464,9 @@ class SendForSigningTool(McpTool):
             "из прежнего маршрута или порядка пака. Отправляет, только если ничего не мешает: документы собраны, "
             "все участники уже в проекте, подпись отправителя готова; иначе отвечает списком помех и ничего не "
             "отправляет. Если отправитель участник первого шага, отправка считается его согласованием. Ключом "
-            "не подписывает и за других не согласует: это делается на странице подписи в интерфейсе."
+            "не подписывает и за других не согласует: это делается на странице подписи в интерфейсе. Новую версию "
+            "идущего или завершённого маршрута не отправляет: её отправляет человек в интерфейсе, потому что она "
+            "сбрасывает чужие согласия."
         ),
         parameters=project_schema({"profile_id": _PROFILE_ARG}, required=("profile_id",)),
     )
@@ -354,19 +500,15 @@ class SendForSigningTool(McpTool):
     async def _send(self, actor: Actor, project_id: UUID, profile_id: str) -> ToolResult:
         drafts = await self._deps.get(SigningRouteDrafts)
         sending = await self._deps.get(SigningRouteSending)
+        # Завершённый маршрут черновик точки снял бы с контроля и начал заново: сначала смотрим текущий маршрут.
+        summaries = await drafts.list_routes(project_id, profile_id)
+        current = next((item.route for item in summaries if item.route.status is not RouteStatus.archived), None)
+        if current is not None and current.status in NEW_VERSION_STATUSES:
+            return _refusal([_new_version_text(current.status)])
         details, _ = await drafts.create(actor, project_id, profile_id)
         route = details.route
         if route.status not in EDITABLE_STATUSES:
-            return _refusal(
-                [
-                    localized_error(
-                        "маршрут точки уже отправлен и идёт: его ход показывает get_signing_route, отменить "
-                        "его можно в интерфейсе",
-                        "the checkpoint route is already sent and running: get_signing_route shows its "
-                        "progress, it can be cancelled in the interface",
-                    )
-                ]
-            )
+            return _refusal([_new_version_text(route.status)])
         preview = await sending.preview(actor, project_id, route.id)
         reasons = [*(_blocker_text(b, preview) for b in preview.blockers), *_invited_text(preview)]
         if reasons:

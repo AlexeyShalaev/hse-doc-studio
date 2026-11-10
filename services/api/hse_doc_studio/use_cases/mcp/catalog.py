@@ -9,6 +9,7 @@ from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, replace
+from enum import StrEnum
 from typing import Any
 
 from hse_doc_studio.core.access.actions import Action
@@ -43,6 +44,15 @@ from hse_doc_studio.use_cases.mcp.tools.fields import ListProjectFieldsTool
 _WRITE_GUARD_EXEMPT = frozenset({"vcs_restore", "git_fetch", "delete_project"})
 
 
+class Touch(StrEnum):
+    """Что меняет тул правки или сборки: по этому к ответу добавляется `signing_note`, если задет документ идущего
+    маршрута подписания (docs/design/signing-route.md, 12.10)."""
+
+    paths = "paths"  # файлы из `path_args`: файл в папке документа задевает его, общий файл все документы
+    doc = "doc"  # документ из аргумента `doc_id`
+    project = "project"  # проект целиком: поля, обновление шаблона, история и git
+
+
 @dataclass(frozen=True, slots=True)
 class McpToolRule:
     meta: McpToolMeta
@@ -56,6 +66,8 @@ class McpToolRule:
     rate: RateRule | None = None
     # Отдельное право токена сверх `mcp` (подпись комплекта: `sign`); без него тула не видно.
     scope: str | None = None
+    # Что тул правит или собирает: пометка `signing_note` о документах на подписании; None у остальных.
+    touches: Touch | None = None
 
     @property
     def name(self) -> str:
@@ -83,6 +95,7 @@ def _rule(  # noqa: PLR0913 — строка таблицы
     local_only: bool = False,
     rate: RateRule | None = None,
     scope: str | None = None,
+    touches: Touch | None = None,
 ) -> McpToolRule:
     admin_tool = group is McpToolGroup.admin
     meta = McpToolMeta(
@@ -95,12 +108,19 @@ def _rule(  # noqa: PLR0913 — строка таблицы
         admin=admin_tool,
     )
     return McpToolRule(
-        meta=meta, action=action, path_args=path_args, instance_args=instance_args, rate=rate, scope=scope
+        meta=meta,
+        action=action,
+        path_args=path_args,
+        instance_args=instance_args,
+        rate=rate,
+        scope=scope,
+        touches=touches,
     )
 
 
 _R, _W, _X = ToolKind.read, ToolKind.write, ToolKind.exec_
 _G = McpToolGroup
+_PATHS, _DOC, _PROJECT = Touch.paths, Touch.doc, Touch.project
 
 MCP_TOOL_RULES: tuple[McpToolRule, ...] = (
     _rule("whoami", _G.account, _R),
@@ -110,33 +130,34 @@ MCP_TOOL_RULES: tuple[McpToolRule, ...] = (
     _rule("list_templates", _G.projects, _R),
     _rule("create_project", _G.projects, _X),
     _rule("list_project_fields", _G.projects, _R, Action.PROJECT_VIEW),
-    _rule("set_project_meta", _G.projects, _W, Action.PROJECT_SETTINGS),
-    _rule("set_project_people", _G.projects, _W, Action.PROJECT_SETTINGS),
-    _rule("set_language", _G.projects, _W, Action.PROJECT_SETTINGS),
+    _rule("set_project_meta", _G.projects, _W, Action.PROJECT_SETTINGS, touches=_PROJECT),
+    _rule("set_project_people", _G.projects, _W, Action.PROJECT_SETTINGS, touches=_PROJECT),
+    _rule("set_language", _G.projects, _W, Action.PROJECT_SETTINGS, touches=_PROJECT),
     _rule("delete_project", _G.projects, _X, Action.PROJECT_DELETE, dangerous=True),
     _rule("clone_cloud_project", _G.projects, _X, local_only=True, rate=GIT_SYNC),
     # Обновление шаблона: статус видит участник, план и применение как у маршрутов template-update
     _rule("template_update_status", _G.projects, _R, Action.PROJECT_VIEW),
     _rule("plan_template_update", _G.projects, _X, Action.TEMPLATE_MANAGE),
-    _rule("apply_template_update", _G.projects, _X, Action.TEMPLATE_MANAGE),
+    _rule("apply_template_update", _G.projects, _X, Action.TEMPLATE_MANAGE, touches=_PROJECT),
     # Доступ к проекту: те же права, что у маршрутов панели «Доступ»; локально доступа нет
     _rule("list_project_access", _G.projects, _R, Action.PROJECT_VIEW, server_only=True),
     _rule("invite_to_project", _G.projects, _W, Action.ACCESS_MANAGE, server_only=True, rate=INVITE),
     _rule("revoke_project_invitation", _G.projects, _W, Action.ACCESS_MANAGE, server_only=True),
     _rule("remove_project_member", _G.projects, _W, Action.PROJECT_SETTINGS, server_only=True),
-    # Документы и файлы
+    # Документы и файлы. `touches`: к ответу правки и сборки документа на подписании добавляется `signing_note`
+    # (docs/design/signing-route.md, 12.10); это не отказ.
     _rule("list_documents", _G.files, _R, Action.PROJECT_VIEW),
-    _rule("set_document_variant", _G.files, _W, Action.FILES_WRITE, instance_args=("doc_id",)),
+    _rule("set_document_variant", _G.files, _W, Action.FILES_WRITE, instance_args=("doc_id",), touches=_DOC),
     _rule("list_files", _G.files, _R, Action.SOURCES_READ),
     _rule("read_tex", _G.files, _R, Action.FILES_READ, path_args=("path",)),
     _rule("read_pdf", _G.files, _R, Action.FILES_READ, path_args=("path",)),
     _rule("grep_project", _G.files, _R, Action.SOURCES_READ),
-    _rule("edit_tex", _G.files, _W, Action.FILES_WRITE, path_args=("path",), rate=UPLOAD),
-    _rule("write_file", _G.files, _W, Action.FILES_WRITE, path_args=("path",), rate=UPLOAD),
-    _rule("move_file", _G.files, _W, Action.FILES_WRITE, path_args=("src", "dst")),
-    _rule("delete_file", _G.files, _W, Action.FILES_WRITE, path_args=("path",), dangerous=True),
+    _rule("edit_tex", _G.files, _W, Action.FILES_WRITE, path_args=("path",), rate=UPLOAD, touches=_PATHS),
+    _rule("write_file", _G.files, _W, Action.FILES_WRITE, path_args=("path",), rate=UPLOAD, touches=_PATHS),
+    _rule("move_file", _G.files, _W, Action.FILES_WRITE, path_args=("src", "dst"), touches=_PATHS),
+    _rule("delete_file", _G.files, _W, Action.FILES_WRITE, path_args=("path",), dangerous=True, touches=_PATHS),
     # Сборка
-    _rule("compile_document", _G.build, _X, Action.BUILD_RUN, rate=COMPILE),
+    _rule("compile_document", _G.build, _X, Action.BUILD_RUN, rate=COMPILE, touches=_DOC),
     _rule("list_compiles", _G.build, _R, Action.OUTPUT_READ),
     _rule("get_compile", _G.build, _R, Action.OUTPUT_READ),
     _rule("cancel_compile", _G.build, _X, Action.BUILD_RUN),
@@ -158,10 +179,10 @@ MCP_TOOL_RULES: tuple[McpToolRule, ...] = (
     _rule("vcs_list_history", _G.history, _R, Action.SOURCES_READ),
     _rule("vcs_diff", _G.history, _R, Action.SOURCES_READ),
     _rule("vcs_save_snapshot", _G.history, _W, Action.HISTORY_WRITE),
-    _rule("vcs_restore", _G.history, _X, Action.HISTORY_REWRITE, dangerous=True),
+    _rule("vcs_restore", _G.history, _X, Action.HISTORY_REWRITE, dangerous=True, touches=_PROJECT),
     _rule("git_status", _G.history, _R, Action.SOURCES_READ),
     _rule("git_fetch", _G.history, _X, Action.HISTORY_WRITE, rate=GIT_SYNC),
-    _rule("git_sync", _G.history, _X, Action.HISTORY_REWRITE, dangerous=True, rate=GIT_SYNC),
+    _rule("git_sync", _G.history, _X, Action.HISTORY_REWRITE, dangerous=True, rate=GIT_SYNC, touches=_PROJECT),
     # Сдача и подписи
     _rule("list_submission_profiles", _G.submission, _R, Action.PROJECT_VIEW),
     _rule("list_submissions", _G.submission, _R, Action.SUBMISSION_READ),
