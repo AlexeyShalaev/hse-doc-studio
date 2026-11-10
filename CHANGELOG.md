@@ -6,15 +6,11 @@ Generated from `release-notes.json` via `make changelog` — do not edit by hand
 Release notes are hand-written and bilingual (RU/EN); the app shows them in the
 selected interface language.
 
-## [0.20.1](https://github.com/AlexeyShalaev/hse-doc-studio/compare/v0.20.0...v0.20.1) (2026-11-10)
+## [0.20.1](https://github.com/AlexeyShalaev/hse-doc-studio/compare/v0.20.0...v0.20.1) - 2026-11-10
 
-
-### Bug Fixes
-
-* **web:** fit the slot label inside narrow signature frames ([00e54c8](https://github.com/AlexeyShalaev/hse-doc-studio/commit/00e54c895d7156180c1d7560c099a4935b8d2354))
-* **web:** show an old detached signature calmly while a route holds the document ([49b6175](https://github.com/AlexeyShalaev/hse-doc-studio/commit/49b6175a2077c77d1aa9f8e9d57691a0e1506207))
-* **web:** show route approvals next to signatures ([c61fa6b](https://github.com/AlexeyShalaev/hse-doc-studio/commit/c61fa6b94358b090a048cae9d8f70f955b271ce0))
-* **web:** show route approvals next to signatures on the checkpoint ([a79e993](https://github.com/AlexeyShalaev/hse-doc-studio/commit/a79e993eea391d93f3ad4a3330003d30314a6be7))
+- The signing route shows both stages: “1 of 3 approved · 0 of 3 signed” on the card and “1/3 approved” in the checkpoint header. An e-signature waiting for the freeze is marked “approved, signature after freeze”.
+- An old detached signature for an earlier PDF of a document on a route is no longer shown as a red “Invalid”: a neutral note explains that the route will ask to sign again.
+- Slot frame labels on the PDF preview no longer overlap in narrow frames.
 
 ## [0.20.0](https://github.com/AlexeyShalaev/hse-doc-studio/compare/v0.19.0...v0.20.0) - 2026-11-10
 
