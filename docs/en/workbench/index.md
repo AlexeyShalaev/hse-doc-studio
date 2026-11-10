@@ -49,4 +49,4 @@ On macOS use ++cmd++ instead of ++ctrl++.
 
 ## Where next
 
-[Documents](documents.md) · [Build and log](compile.md) · [Findings](checks.md) · [Submission and packaging](submit.md) · [PDF preview](preview.md) · [Visual editor](editor-visual.md) · [AI agent](agent.md)
+[Documents](documents.md) · [Build and log](compile.md) · [Findings](checks.md) · [Submission and packaging](submit.md) · [Send for signing](send-for-signing.md) · [How to sign](how-to-sign.md) · [PDF preview](preview.md) · [Visual editor](editor-visual.md) · [AI agent](agent.md)

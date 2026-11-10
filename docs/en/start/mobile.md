@@ -23,6 +23,7 @@ tags:
 - the landing page of the cloud and invitations (to the installation and to a project);
 - the project list: search, filters and sorting in a sheet, the "New project" button, opening a project;
 - the inbox and the bell with notifications;
+- the signing page: approve, sign with an image (you can draw it with your finger) or a Studio key, return for rework ([How to sign](../workbench/how-to-sign.md));
 - the account menu: settings, help, the AI assistant, theme and language, sign-out;
 - the "Connect Studio" and "Local version" screens;
 - the project workbench: a bottom tab bar (documents, issues, submission, files and "More" with project settings, history and the agent), the document list, the overview, project settings, submission, history, files;

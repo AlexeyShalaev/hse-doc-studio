@@ -29,7 +29,7 @@ tags:
    | `HSE_RUNNER__NAME` | имя в списке (по умолчанию имя хоста) |
    | `HSE_RUNNER__CONCURRENCY` | сколько задач одновременно |
    | `HSE_RUNNER__DATA_DIR` | рабочие папки и кэш блобов |
-   | `HSE_RUNNER__OFFICE_URL` | адрес Gotenberg; без него офисные задачи не берутся (в кластере: [встроенный Gotenberg чарта](#офисные-задачи-в-кластере-gotenberg)) |
+   | `HSE_RUNNER__OFFICE_URL` | адрес Gotenberg; без него офисные задачи не берутся (в кластере: [встроенный Gotenberg чарта](#office-gotenberg)) |
 
 3. Запустите `hse-doc-studio runner` (в образе это та же команда).
 4. Раннер меняет токен регистрации на собственный и сохраняет его в `data_dir/identity.json`. После этого `HSE_RUNNER__TOKEN` можно убрать из окружения.
@@ -99,7 +99,7 @@ tags:
 
 Раннер из админки живёт в namespace релиза, тома данных он получает свои (`runner.installFromUi.storageSize`, `storageClassName`), чтобы выданный раннеру токен переживал перезапуск пода. Адрес Студии для такого раннера внутренний (Service чарта).
 
-#### Свой namespace подов сборки
+#### Свой namespace подов сборки { #build-namespace }
 
 По умолчанию раннеры из админки создают поды сборки в namespace релиза, рядом с api. Квоту туда чарт не ставит (она ограничила бы и саму Студию), поэтому для общих раннеров поды сборки лучше вынести в отдельный namespace:
 
@@ -126,7 +126,7 @@ kubectl label namespace hds-builds \
 
 Порядок переключения работающей установки: дождитесь, пока у раннеров из админки нет сборок, выполните `helm upgrade` с `buildNamespace`, затем нажмите «Обновить» у каждого такого раннера. До обновления раннер создаёт поды сборки в namespace релиза, где прав у него уже нет, и сборки на нём падают с `build_backend_unavailable` (403 Kubernetes в деталях).
 
-### Офисные задачи в кластере (Gotenberg)
+### Офисные задачи в кластере (Gotenberg) { #office-gotenberg }
 
 Задачи с тегом `office` (презентации pptx, документы docx, odt, xlsx в PDF) раннер отправляет в постоянный Gotenberg по адресу `HSE_RUNNER__OFFICE_URL`; без адреса раннер этот тег не объявляет, и такие задачи ждут раннер, у которого он есть (например, личный). Чарт может поставить Gotenberg сам:
 
@@ -340,7 +340,7 @@ spec:
 
 В Helm-чарте это `runner.executor: kubernetes` и блок `runner.kubernetes` (см. README чарта): чарт создаёт ServiceAccount раннера, Role только на поды своего namespace (`pods`, `pods/log`, `pods/exec`), NetworkPolicy, запрещающую подам сборки сеть, и том данных раннера. Если сборка падает с кодом `image_missing`, узел не смог скачать образ TeX; `build_backend_unavailable` значит, что Kubernetes отказал в поде (права, квота, нет подходящего узла), подробность в журнале задачи. Лимиты, сетевые политики, квота и проверка: [Изоляция и лимиты раннеров](runner-isolation.md). Устройство и развилки: `docs/design/k8s-runner.md`.
 
-## Шрифты сборки
+## Шрифты сборки { #build-fonts }
 
 Шаблоны по ГОСТ просят Times New Roman, Arial и Consolas, а в образе TeX Live их нет, и Studio не поставляет их ни в образах, ни в репозитории (лицензия Microsoft). Без них шаблоны с `\IfFontExistsTF` берут свободную замену и собираются, а шаблон с прямым `\setmainfont{Arial}` падает с кодом `font_missing` и именем шрифта в подробностях. Строки `kpathsea: Running mktextfm Arial` в журнале сами не ошибка: так XeTeX ищет шрифт по имени.
 
@@ -351,7 +351,7 @@ spec:
 | `docker` | `HSE_RUNNER__FONTS_DIR` указывает на папку (в ней `.ttf`, `.otf`, `.ttc`); раннер монтирует её в контейнер сборки только для чтения в `HSE_RUNNER__FONTS_MOUNT_TARGET` (по умолчанию `/usr/local/share/fonts/hse`), где её видит fontconfig. Если раннер сам работает в контейнере, а `docker.sock` хостовый, папка должна лежать на хосте: путь на хосте задаёт `HSE_RUNNER__FONTS_HOST_DIR` (без него путь переводится так же, как путь папок проектов). Пустая папка или переменная не заданы: ничего не монтируется |
 | `kubernetes` | `HSE_RUNNER__K8S__FONTS_CLAIM` называет PVC со шрифтами в namespace подов сборки; он монтируется в поды только для чтения (`HSE_RUNNER__K8S__FONTS_MOUNT_TARGET`) |
 
-Другой путь: собрать свой образ TeX Live со шрифтами (`FROM texlive/texlive`, `COPY fonts/ /usr/local/share/fonts/hse/`, `RUN fc-cache -f`) и указать его в `HSE_RUNNER__TEX_IMAGE`. Личный раннер (локальная Студия) настраивать не нужно: он берёт шрифты из «Настройки, Шрифты» вашей Студии, см. [Шрифты в облачных сборках](../workbench/compile.md#шрифты-в-облачных-сборках).
+Другой путь: собрать свой образ TeX Live со шрифтами (`FROM texlive/texlive`, `COPY fonts/ /usr/local/share/fonts/hse/`, `RUN fc-cache -f`) и указать его в `HSE_RUNNER__TEX_IMAGE`. Личный раннер (локальная Студия) настраивать не нужно: он берёт шрифты из «Настройки, Шрифты» вашей Студии, см. [Шрифты в облачных сборках](../workbench/compile.md#cloud-fonts).
 
 ## Масштабирование
 

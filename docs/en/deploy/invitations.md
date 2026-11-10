@@ -26,13 +26,16 @@ The project owner and editors with “Can share” can invite. The invitation ca
 
 Pending invitations are listed under **Pending**, where you can resend them (at most once every 10 minutes) or revoke them.
 
+You can also invite a signer right from a [Send for signing](../workbench/send-for-signing.md) route: the form opens with the “Reviewer” role and the right persona, and after accepting the invitation from the link the person lands right on the signing page.
+
 !!! note "Direct add"
     An organization admin can add a member of that organization to an organization project right away with **Add now**. Changing the role of someone already added is immediate too.
 
-## Accept an invitation
+## Accept an invitation { #accept }
 
 - Invitations arrive in the **Inbox**. The bell in the header shows the number of unread notifications and pending invitations; clicking it opens a popover under the icon with the 10 latest notifications (clicking one marks it read and opens the place it is about, **Mark all as read** clears them all). The full list, invitations and transfers with **Accept** and **Decline** buttons live on the **Inbox** page: open it with **Show all** in the popover or at `/inbox`. **Accept** opens the project.
 - The email link opens without signing in. Only an account with the confirmed address the invitation was sent to can accept it, so a forwarded link does not work for someone else.
+- An invitation link from a signing route opens the signing page after **Accept**. Documents waiting for your signature are collected in the **Inbox** on the **To sign** tab: [How to sign](../workbench/how-to-sign.md).
 - In the “invite only” registration mode the email link lets the person sign up (unless the administrator turned this off); with registration closed, a person without an account cannot be invited.
 
 ## Request access
@@ -49,4 +52,4 @@ When a project is not available, the page offers **Request access** with a messa
 |---|---|---|---|
 | `registration.project_invites_allow_signup` | `HSE_STUDIO__AUTH__PROJECT_INVITES_ALLOW_SIGNUP` | `true` | in the “invite only” mode a project invitation lets the person sign up |
 
-Inbox notifications are kept for 90 days. Emails go out only for invitations, access requests and transfers, when SMTP is configured.
+Inbox notifications are kept for 90 days. Emails go out for invitations, access requests, transfers and signing routes, when SMTP is configured ([Server emails](mail.md)).

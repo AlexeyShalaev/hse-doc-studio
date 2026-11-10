@@ -34,7 +34,7 @@ Without SMTP nothing changes: no emails are sent and the links are shown on scre
 | Signing route: everyone has signed | the route is complete; only the route author gets the email | project, submission checkpoint, “Open the submission checkpoint” button |
 | Test email | the “Send” button in the “Mail (SMTP)” block | confirmation that sending works |
 
-Links in signing route emails carry no tokens: the signing page opens only after sign-in, so a forwarded email does not let anyone sign. Other route events (stopped, cancelled) arrive only in the Inbox.
+Links in signing route emails carry no tokens: the signing page opens only after sign-in, so a forwarded email does not let anyone sign. Other route events (stopped, cancelled) arrive only in the Inbox. How a route goes: [Send for signing](../workbench/send-for-signing.md) and [How to sign](../workbench/how-to-sign.md).
 
 The Studio does not send numeric confirmation codes today: every action is confirmed by a link. The template can show a code in a large monospace font with its validity period once such an email appears.
 

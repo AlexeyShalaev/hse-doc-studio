@@ -105,6 +105,12 @@ Form
 Signature slot
 :   A named signature placeholder (author, supervisor) with one PNG per project and per-document placement.
 
+Signing route
+:   The order in which supervisors approve and sign a checkpoint's documents on a server: [Send for signing](../workbench/send-for-signing.md).
+
+Final PDF
+:   The frozen PDF with all visible signatures: electronic signatures go on it.
+
 Requirements traceability
 :   The “requirement → where referenced” matrix built from `\req` / `\reqref`.
 

@@ -39,4 +39,4 @@ When you and a collaborator have the same file open, in source or in visual mode
 
 ## For administrators
 
-The people list uses the same signals and “online” window as connected Studios: `HSE_STUDIO__DEVICES__INTERVAL_S` and `HSE_STUDIO__DEVICES__ONLINE_WINDOW_S` ([reference](../deploy/env-reference.md)). A tab sends one short request a minute; the server keeps the signal in process memory and writes nothing to the database or the audit log. Details and the load estimate: `docs/design/connected-devices.md`, section 15.
+The people list uses the same signals and “online” window as connected Studios: `HSE_STUDIO__DEVICES__INTERVAL_S` and `HSE_STUDIO__DEVICES__ONLINE_WINDOW_S` ([reference](https://github.com/AlexeyShalaev/hse-doc-studio/blob/master/docs/ru/deploy/env-reference.md)). A tab sends one short request a minute; the server keeps the signal in process memory and writes nothing to the database or the audit log. Details and the load estimate: `docs/design/connected-devices.md`, section 15.
