@@ -397,6 +397,11 @@ for (const lang of LANGS) {
         const fitPercent = Number(await zoom.inputValue());
         await shot(page, L, name("22-project-pdf"));
 
+        // Панель PDF без прокрутки вбок: страницы и масштаб на виду, остальное в меню «Ещё».
+        const toolbar = page.locator(".pdf-toolbar");
+        expect(await toolbar.evaluate((el) => el.scrollWidth - el.clientWidth)).toBeLessThanOrEqual(1);
+        await expect(page.getByTestId("pdf-toolbar-more")).toBeVisible();
+
         await page.getByRole("button", { name: /Увеличить|Zoom in/ }).tap();
         await expect.poll(async () => Number(await zoom.inputValue())).toBeGreaterThan(fitPercent);
 

@@ -93,7 +93,7 @@ export const clippedContent = (page: Page): Promise<string[]> =>
   page.evaluate(() => {
     const viewport = document.documentElement.clientWidth;
     const ignore =
-      ".tabs, .pdf-toolbar, .visual-format-toolbar, .source-editor-toolbar, .cm-scroller, .pdf-scroll, .tbl-cards thead, [data-hscroll]";
+      ".tabs, .visual-format-toolbar, .source-editor-toolbar, .cm-scroller, .pdf-scroll, .tbl-cards thead, [data-hscroll]";
     const name = (el: Element): string =>
       `${el.tagName.toLowerCase()}.${String(el.className).split(" ").filter(Boolean).slice(0, 2).join(".")}`;
     const found = new Set<string>();

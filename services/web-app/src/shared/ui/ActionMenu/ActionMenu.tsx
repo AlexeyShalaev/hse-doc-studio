@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
-import { MoreHorizontal } from "lucide-react";
+import { Check, MoreHorizontal } from "lucide-react";
 import { useIsPhoneWidth } from "../../lib/viewport";
 
 // Действия строки таблицы, свёрнутые в «⋯». Опасные пункты отделены чертой и
@@ -19,6 +19,8 @@ export type ActionMenuItem = {
   danger?: boolean | undefined;
   disabled?: boolean | undefined;
   testId?: string | undefined;
+  /** Переключатель: пункт с галочкой (menuitemcheckbox), галочка видна, пока он включён. */
+  checked?: boolean | undefined;
 };
 
 export type ActionMenuProps = {
@@ -27,6 +29,8 @@ export type ActionMenuProps = {
   label: string;
   testId?: string | undefined;
   align?: "start" | "end" | undefined;
+  /** Куда вернуть фокус после закрытия: preventDefault оставляет его там, куда увёл пункт. */
+  onCloseAutoFocus?: ((event: Event) => void) | undefined;
 };
 
 export const ActionMenu = ({
@@ -34,24 +38,41 @@ export const ActionMenu = ({
   label,
   testId,
   align = "end",
+  onCloseAutoFocus,
 }: ActionMenuProps) => {
   // Телефон: длинное меню - шторка снизу с крупными строками (index.css, .adm-menu).
   const isSheet = useIsPhoneWidth();
   const safe = items.filter((i) => !i.danger);
   const danger = items.filter((i) => i.danger);
-  const render = (item: ActionMenuItem) => (
-    <DropdownMenu.Item
-      key={item.id}
-      className="adm-menu-item"
-      data-danger={item.danger ? "true" : undefined}
-      disabled={item.disabled}
-      data-testid={item.testId}
-      onSelect={item.onSelect}
-    >
-      {item.icon}
-      {item.label}
-    </DropdownMenu.Item>
-  );
+  const render = (item: ActionMenuItem) =>
+    item.checked !== undefined ? (
+      <DropdownMenu.CheckboxItem
+        key={item.id}
+        className="adm-menu-item"
+        checked={item.checked}
+        disabled={item.disabled}
+        data-testid={item.testId}
+        onSelect={item.onSelect}
+      >
+        {item.icon}
+        {item.label}
+        <DropdownMenu.ItemIndicator className="adm-menu-check">
+          <Check size="0.875rem" aria-hidden="true" />
+        </DropdownMenu.ItemIndicator>
+      </DropdownMenu.CheckboxItem>
+    ) : (
+      <DropdownMenu.Item
+        key={item.id}
+        className="adm-menu-item"
+        data-danger={item.danger ? "true" : undefined}
+        disabled={item.disabled}
+        data-testid={item.testId}
+        onSelect={item.onSelect}
+      >
+        {item.icon}
+        {item.label}
+      </DropdownMenu.Item>
+    );
   return (
     <DropdownMenu.Root modal={false}>
       <DropdownMenu.Trigger asChild>
@@ -76,6 +97,7 @@ export const ActionMenu = ({
           align={align}
           sideOffset={4}
           collisionPadding={8}
+          onCloseAutoFocus={onCloseAutoFocus}
           style={{ zIndex: ACTION_MENU_LAYER }}
         >
           {safe.map(render)}
