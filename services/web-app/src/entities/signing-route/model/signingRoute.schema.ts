@@ -10,6 +10,14 @@ import { z } from "zod";
 const iso = z.string().min(1);
 const LocalizedSchema = z.record(z.string(), z.string());
 
+/**
+ * Поле «версии на подписи» (раздел 12.9). Фронтенд описал его раньше сервера (срез W7), поэтому
+ * пока срез R16 не добавил поле в ответы и эталоны contracts/server, его может не быть. R16
+ * убирает эту обёртку: поле становится обязательным, как остальные. Отсутствие читать как
+ * «ничего не менялось»: `false`, пустой список, null.
+ */
+const untilR16 = <T extends ZodType>(schema: T) => schema.optional();
+
 export const SigningRouteStatusSchema = z.enum([
   "draft",
   "active",
@@ -25,8 +33,15 @@ export type SigningRouteStatus = z.infer<typeof SigningRouteStatusSchema>;
 export const SigningRoutePhaseSchema = z.enum(["approval", "signing", "done"]);
 export type SigningRoutePhase = z.infer<typeof SigningRoutePhaseSchema>;
 
+/**
+ * Причина остановки. `rebuilt` больше не появляется (раздел 12.5): маршрут подписывает версию на
+ * подписи, а пересборка его не трогает; значение остаётся у маршрутов, остановленных на 0.20.0.
+ * `sent_changed`: версия на подписи другая или удалена мимо маршрута (git, восстановление) или
+ * её не удалось восстановить при переносе маршрута 0.20.0 (12.11).
+ */
 export const SigningStopReasonSchema = z.enum([
   "rebuilt",
+  "sent_changed",
   "marks_changed",
   "frozen_changed",
   "participant_left",
@@ -143,6 +158,11 @@ export const RouteEventSchema = z.strictObject({
   participant_id: z.string().nullable(),
   comment: z.string().nullable(),
   reason: SigningStopReasonSchema.nullable(),
+  /**
+   * Только у `sent` новой версии (12.6): документы, у которых сменилась версия на подписи;
+   * остальные документы маршрута остались прежними. null у остальных событий и у первой отправки.
+   */
+  changed_docs: untilR16(z.array(z.string()).nullable()),
 });
 export type RouteEvent = z.infer<typeof RouteEventSchema>;
 
@@ -184,11 +204,33 @@ export const RouteDocSlotSchema = z.strictObject({
 });
 export type RouteDocSlot = z.infer<typeof RouteDocSlotSchema>;
 
+/**
+ * Версия на подписи документа (раздел 12.3): копия собранного PDF, снятая при отправке. Её видят
+ * подписанты, её фиксирует маршрут. `at` время снятия: у документа без изменений новая версия
+ * маршрута его не меняет; `round` раунд, который её снял.
+ */
+export const RouteDocVersionSchema = z.strictObject({
+  sha256: z.string().min(1),
+  at: iso,
+  round: z.number().int().min(1),
+});
+export type RouteDocVersion = z.infer<typeof RouteDocVersionSchema>;
+
 export const RouteDocSchema = z.strictObject({
   doc_id: z.string(),
   name: LocalizedSchema,
   frozen: z.boolean(),
   slots: z.array(RouteDocSlotSchema),
+  /**
+   * Версия на подписи; null у черновика, после отмены и у маршрута 0.20.0, версию которого
+   * перенос не восстановил (тогда маршрут стоит с `sent_changed`).
+   */
+  sent: untilR16(RouteDocVersionSchema.nullable()),
+  /**
+   * Рабочая сборка отличается от отправленной: от версии на подписи, а без неё (маршрут 0.20.0)
+   * от отпечатка снимка. Несобранные правки не считаются; у черновика и отменённого false.
+   */
+  changed: untilR16(z.boolean()),
 });
 export type RouteDoc = z.infer<typeof RouteDocSchema>;
 
@@ -236,6 +278,8 @@ export const SigningRouteSchema = z.strictObject({
    * только тому, кто управляет маршрутом, остальным пусто.
    */
   candidates: z.array(RoutePersonaCandidatesSchema),
+  /** Документы с `changed`, по порядку `docs`: есть что отправить новой версией (12.6). */
+  changed_docs: untilR16(z.array(z.string())),
 });
 export type SigningRoute = z.infer<typeof SigningRouteSchema>;
 
@@ -259,6 +303,13 @@ export const SigningRouteSummarySchema = z.strictObject({
   updated_at: iso,
   /** Чья очередь сейчас. */
   waiting_for: z.array(SigningWaitingForSchema),
+  /**
+   * Документы маршрута: по ним мягкое предупреждение правки (12.7) узнаёт документы на
+   * подписании одним запросом на проект.
+   */
+  docs: untilR16(z.array(z.string())),
+  /** Документы, рабочая сборка которых ушла от версии на подписи. */
+  changed_docs: untilR16(z.array(z.string())),
 });
 export type SigningRouteSummary = z.infer<typeof SigningRouteSummarySchema>;
 
@@ -322,12 +373,26 @@ export const SigningKeyInfoSchema = z.strictObject({
 });
 export type SigningKeyInfo = z.infer<typeof SigningKeyInfoSchema>;
 
+/**
+ * Документ кандидата против версии на подписи (12.6): `same` версия остаётся вместе с B и
+ * подписями над ним, `changed` снимается новая, `new` прежней версии нет (первая отправка,
+ * после отмены, маршрут 0.20.0 без перенесённой версии).
+ */
+export const RouteDocChangeSchema = z.enum(["same", "changed", "new"]);
+export type RouteDocChange = z.infer<typeof RouteDocChangeSchema>;
+
 export const SigningRoutePreviewDocSchema = z.strictObject({
   doc_id: z.string(),
   name: LocalizedSchema,
   built: z.boolean(),
-  /** `build:<sha>`: что вернуть в `expected` отправки; null, пока документ не собран. */
+  /**
+   * `build:<sha>` кандидата: что вернуть в `expected` отправки. У несобранного документа с
+   * версией на подписи её отпечаток; null, если нет ни сборки, ни версии.
+   */
   token: z.string().nullable(),
+  change: untilR16(RouteDocChangeSchema),
+  /** Нынешняя версия на подписи; null, если её нет. */
+  sent: untilR16(RouteDocVersionSchema.nullable()),
 });
 
 export const SigningRoutePreviewParticipantSchema = z.strictObject({
@@ -345,6 +410,12 @@ export const SigningRoutePreviewParticipantSchema = z.strictObject({
   plate_ready: z.boolean(),
   /** Сколько действий на своей странице после отправки (раздел 4.4). */
   actions: z.number().int().min(0).max(2),
+  /**
+   * Согласие участника переносится в новый раунд: его отпечатки совпали с кандидатом по всем
+   * его документам (у согласующего без слотов по всем документам маршрута). false, если он ещё
+   * не согласовывал.
+   */
+  keeps_approval: untilR16(z.boolean()),
 });
 
 /** Маршрут, который держит документ (`doc_in_other_route`): его точка и статус. */
@@ -385,6 +456,11 @@ export type SigningRoutePreview = z.infer<typeof SigningRoutePreviewSchema>;
 export const SendSigningRouteRequestSchema = z.strictObject({
   expected: z.record(z.string(), z.string()),
   sign: SigningKeyRequestSchema.nullable(),
+  /**
+   * «Что изменилось» (12.6): заменяет сообщение маршрута и уходит подписантам с запросом.
+   * Можно не передавать; клиент не шлёт пустое, пока сервер (R16) его не принимает.
+   */
+  note: z.string().max(SIGNING_TEXT_MAX).nullable().optional(),
 });
 export type SendSigningRouteRequest = z.infer<
   typeof SendSigningRouteRequestSchema
@@ -428,6 +504,8 @@ export const SigningTaskRouteSchema = z.strictObject({
   sender: z.string().nullable(),
   sent_at: iso.nullable(),
   stop_reason: SigningStopReasonSchema.nullable(),
+  /** Раунд новой версии, в которой изменился хотя бы один документ участника (12.6). */
+  new_version: untilR16(z.boolean()),
 });
 export type SigningTaskRoute = z.infer<typeof SigningTaskRouteSchema>;
 
@@ -507,6 +585,15 @@ export const SigningTaskDocSchema = z.strictObject({
   token: z.string().nullable(),
   mine: z.array(SigningTaskSlotSchema),
   others: z.array(SigningTaskOtherSlotSchema),
+  /** Дата версии на подписи: «Вы подписываете версию от …»; null, если версии нет. */
+  sent_at: untilR16(iso.nullable()),
+  /** Документ изменился с прошлого согласия участника: согласовать заново (12.2). */
+  changed_since_mine: untilR16(z.boolean()),
+  /**
+   * Рабочая сборка ушла от версии на подписи. Видят автор и управляющие маршрутом, у
+   * остальных null: подписант рабочих правок не видит.
+   */
+  changed: untilR16(z.boolean().nullable()),
 });
 export type SigningTaskDoc = z.infer<typeof SigningTaskDocSchema>;
 
@@ -579,6 +666,7 @@ export type SigningTaskList = z.infer<typeof SigningTaskListSchema>;
  * участнику, и в локальном режиме. 409 и 429 ниже; 400 за неверно собранный маршрут
  * (`no_participants`, `bad_step`, `duplicate_participant`, `duplicate_slot`, `unknown_doc`);
  * 403 `server_keys_forbidden` за подпись ключом Студии при запрете ключей на сервере.
+ * 409 `nothing_changed`: отправка идущего или завершённого маршрута без изменений (12.6).
  */
 export const SIGNING_ROUTE_ERROR_CODES = [
   "doc_changed",
@@ -599,6 +687,7 @@ export const SIGNING_ROUTE_ERROR_CODES = [
   "route_locked",
   "participant_not_waiting",
   "rate_limited",
+  "nothing_changed",
 ] as const;
 export type SigningRouteErrorCode = (typeof SIGNING_ROUTE_ERROR_CODES)[number];
 

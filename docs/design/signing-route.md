@@ -1242,6 +1242,14 @@ SigningTaskList: {items: [{project: {id, name}, route_id, profile, round, sender
 Моки W5: ключи Студии в `entities/signing-identity/testing`, профиль подписанта в `entities/signer-profile/testing`,
 адреса `detached` и `frozen/pdf` в `demoRoutes.ts`.
 
+Срез W7 (версия на подписи, раздел 12) переводит моки на снимок: отправка снимает версию на подписи, `rebuild()` больше
+не останавливает маршрут, а даёт «есть изменения»; новая версия из `active` и `completed` меняет версию только у
+изменившихся документов, согласия, B и ЭП остальных остаются; отмена снимает версии; `DELETE .../docs/{doc}/pinned`
+и документ в плане (`pinned`, `working_differs`) тоже в `demoRoutes.ts`. `tamper()` подменяет версию мимо маршрута
+(`sent_changed`), `seed({state})` заготавливает расхождение, новую версию у подписанта и перенос 0.20.0 (удачный и
+нет). Серверное демо показывает их сценариями «Подписание: версии» и «Подписание: перенос 0.20.0». Контракт и
+переходный период описаны в 12.9.
+
 R5 и R6 переносят эталоны в `contracts/server/fixtures/<Схема>/<вариант>.json`, добавляют модели pydantic в
 `test_server_contract.py` и схемы из `SIGNING_ROUTE_CONTRACT_SCHEMAS` в `CONTRACT_SCHEMAS`
 (`entities/session/api/contractSchemas.ts`). R5 перенёс схемы автора (`SigningRoute`, `SigningRouteList`,
@@ -1623,24 +1631,66 @@ W1. Критический путь: R1, R4, R5, R6, R7 и W1, W4, W5, зате�
 - Причина плана `rebuilt` у документа с версией на подписи значит, что B старше новой версии (новая версия
   отправлена, фиксация ещё впереди), текст «Ждёт фиксации новой версии».
 
-Поля API (схемы раздела 8.2; в эталонах и zod одним PR со срезом сервера):
+Поля API (схемы раздела 8.2). Срез W7 описал их в zod и эталонах фронтенда раньше сервера, R16 переносит эталоны в
+`contracts/server` (см. ниже):
 
 | Схема | Новое |
 |---|---|
 | `SigningRoute.docs[]` | `sent: {sha256, at, round} \| null` (версия на подписи), `changed: bool` (рабочая сборка другая) |
 | `SigningRoute` | `changed_docs: [doc_id]` |
 | `SigningRouteSummary` | `docs: [doc_id]`, `changed_docs: [doc_id]` |
-| `SigningRoutePreview.docs[]` | `change: same \| changed \| new` (кандидат против версии на подписи; `new` при первой отправке), `sent` |
+| `RouteEvent` | `changed_docs: [doc_id] \| null` (только у `sent` новой версии) |
+| `SigningRoutePreview.docs[]` | `change: same \| changed \| new` (кандидат против версии на подписи), `sent: {sha256, at, round} \| null` |
 | `SigningRoutePreview.participants[]` | `keeps_approval: bool` (согласие переносится по всем его документам) |
-| `SendSigningRouteRequest` | `note: string \| null` («Что изменилось») |
+| `SendSigningRouteRequest` | `note: string \| null` («Что изменилось», можно не передавать) |
 | `SigningTask.route` | `new_version: bool` (раунд с изменившимися документами участника) |
-| `SigningTask.docs[]` | `sent_at` (дата версии на подписи), `changed_since_mine: bool` (изменился с прошлого согласия участника); автору и управляющему ещё `changed` |
+| `SigningTask.docs[]` | `sent_at: ISO \| null` (дата версии на подписи), `changed_since_mine: bool` (изменился с прошлого согласия участника), `changed: bool \| null` (только автору и управляющему, остальным null) |
 | план, `DocPlan` | `pinned: {sha256, pinned_at, route_id, round} \| null`, `working_differs: bool` |
 | план, `route` (`PlanRoute`) | `changed_docs: [doc_id]` |
-| уведомление `signing_request` | `new_version` в подписях уведомления |
+| `Notification.payload` | `new_version: bool` (true только у `signing_request` раунда новой версии) |
+| `SubmissionRecord` | `warnings: [{code, doc_id, sent_at}]` (предупреждения пакета без пропуска) |
 
-Новые коды: причина остановки `sent_changed`, ошибка `nothing_changed` (409), вид уведомления
-`signing_new_version`, причина предупреждения пакета `changed_after_sent`.
+Новые коды: причина остановки `sent_changed` (и `outcome` уведомления `signing_paused`), ошибка и помеха
+предпросмотра `nothing_changed` (409), вид уведомления `signing_new_version`, предупреждение пакета
+`changed_after_sent`.
+
+Уточнения контракта (срез W7; R16 и R14 делают так же):
+
+- **Переходный период.** До R16 сервер этих полей не отдаёт, поэтому в zod они пока необязательные (обёртка `untilR16`
+  в `signingRoute.schema.ts`, у `Notification.payload.new_version` просто `optional`). Отсутствие читается как «ничего
+  не менялось». Эталоны с новыми полями лежат в `SIGNING_ROUTE_CONTRACT_EXAMPLES`: `SigningRoute` (`diverged`,
+  `new_version`, `completed_changed`, `migration_lost`), `SigningRouteList/changed`, `SigningRoutePreview/new_version`,
+  `SendSigningRouteRequest/new_version`, `SigningTask/new_version`; новые поля есть и у всех прежних вариантов. R16
+  кладёт их в `contracts/server/fixtures`, добавляет поля в существующие эталоны и модели pydantic и убирает обёртку:
+  поля становятся обязательными. Пустое «Что изменилось» клиент не передаёт вовсе (запрос строгий), сервер обрезает
+  пробелы по краям и пустое считает null.
+- **`changed`** у документа маршрута: рабочая сборка есть и отличается от версии на подписи, а у маршрута без неё
+  (0.20.0, перенос не удался) от отпечатка снимка. У черновика и отменённого false. Поэтому маршрут, остановленный
+  переносом или по `rebuilt` на 0.20.0, получает «Отправить новую версию». **`sent`** null у черновика, после отмены
+  и у маршрута 0.20.0 без перенесённой версии: карточка по `sent_changed` и `sent: null` пишет «Версию, отправленную
+  на подпись, восстановить нельзя».
+- **Предпросмотр.** `change: new`, когда прежней версии нет (первая отправка, после отмены, маршрут 0.20.0 без
+  версии). `token` кандидата это `build:<sha>` рабочей сборки, а у несобранного документа с версией на подписи её
+  отпечаток. `keeps_approval` false у того, кто ещё не согласовывал. У идущего и завершённого маршрута без изменений
+  `can_send: false` и помеха `nothing_changed` (без `doc_id`): кнопку отправки не показывают, а не ловят 409.
+- **Задача подписанта в раунде новой версии.** По документу, где согласие и подпись участника остались, `token`
+  null: действовать нечего. `approve` и `sign` сверяют только документы с отпечатком, а согласие записывает
+  отпечатки всех документов участника.
+- **`RouteEvent.changed_docs`** отдаёт `details.changed` события `sent` (12.6): история показывает «Отправлена новая
+  версия: изменилось …». `kept` выводится из документов маршрута, отдельным полем не нужен. «Отправить заново» без
+  изменений по-прежнему пишет `resumed`.
+- **Уведомления.** `new_version` есть в `payload` любого уведомления (как остальные поля, явно), true только у
+  `signing_request` раунда новой версии. `signing_new_version` ведёт на страницу подписи, как запрос и напоминание
+  (`ref_id` маршрут, `profile_id` точка, `deadline` срок). Новый вид нужно добавить и в ограничение вида уведомления
+  в базе (миграция R16).
+- **Пакет.** `SubmissionRecord.warnings` только в ответе `POST .../submissions` (предупреждения плана пакета), в списке
+  пусто. `sent_at` дата версии на подписи у `changed_after_sent`, у остальных null. До сборки диалог берёт то же из
+  плана: `DocPlan.pinned` и `working_differs`.
+- **«Открыть версию на подписи»** это существующий `GET .../docs/{doc}/pdf/signed`: он отдаёт источник подписи с видимым
+  слоем, после фиксации сам B (12.4). Отдельного адреса нет.
+- **`DELETE .../docs/{doc}/pinned`**: 204 и без версии на подписи (повтор безопасен); 409 `route_locked`, пока документ
+  держит маршрут в `HOLDING_STATUSES`, даже если версии у него нет (перенос не удался). `pinned.route_id` у версии
+  есть всегда, в том числе пришедшей в локальную Студию через git.
 
 ### 12.10 Команды, локальная Студия, MCP, аудит
 

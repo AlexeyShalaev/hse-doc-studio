@@ -333,6 +333,7 @@
       "unknown_email": "unknown email",
       "disabled": "account disabled",
       "rebuilt": "document rebuilt",
+      "sent_changed": "version out for signing changed outside the route",
       "marks_changed": "document signatures changed outside the route",
       "frozen_changed": "frozen PDF changed",
       "participant_left": "participant left the project",
