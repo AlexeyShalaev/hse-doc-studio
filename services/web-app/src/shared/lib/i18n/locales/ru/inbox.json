@@ -120,11 +120,12 @@
     "signing_returned": "Возвращено на доработку ({{actor}}): «{{excerpt}}»",
     "signing_paused": "Маршрут остановлен: {{excerpt}}",
     "signing_paused_rebuilt": "Документ изменился, маршрут остановлен: {{excerpt}}",
-    "signing_paused_sent_changed": "Версия на подписи изменилась, маршрут остановлен: {{excerpt}}",
+    "signing_paused_sent_changed": "Версия на подписи изменилась вне маршрута, маршрут остановлен: {{excerpt}}",
     "signing_paused_marks_changed": "Подписи изменились вне маршрута, маршрут остановлен: {{excerpt}}",
     "signing_paused_frozen_changed": "Итоговый PDF изменился, маршрут остановлен: {{excerpt}}",
     "signing_paused_participant_left": "Участник маршрута ушёл из проекта, назначьте другого подписанта: {{excerpt}}",
     "signing_completed": "Все подписали: {{excerpt}}",
+    "signing_new_version": "Новая версия на подпись: {{excerpt}}. Запрос придёт в вашу очередь",
     "signing_cancelled": "Маршрут отменён: {{excerpt}}"
   },
   "diagCheck": {

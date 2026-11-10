@@ -353,13 +353,13 @@ describe("Подписание: маршрут идёт", () => {
 });
 
 describe("Подписание: остановка и возврат", () => {
-  it("документ пересобран: причина и «Отправить заново» одним нажатием", async () => {
+  it("версию на подписи подменили: причина и «Отправить заново» одним нажатием", async () => {
     await startRoute();
-    demo.rebuild(PROJECT, DOC);
+    demo.tamper(PROJECT, DOC);
     const u = userEvent.setup();
     mount();
     expect(await status()).toHaveTextContent(
-      "Документ изменился после согласования: маршрут остановлен.",
+      "Версия на подписи изменилась вне маршрута или её не удалось восстановить: маршрут остановлен.",
     );
     await u.click(screen.getByTestId("signing-resend"));
     await waitFor(async () => {

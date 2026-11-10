@@ -13,7 +13,9 @@ export {
   CreateSubmissionRequestSchema,
   CustomFilePreflightItemSchema,
   CustomFilePreflightResponseSchema,
+  PackWarningSchema,
 } from "./api/submissionSchemas";
+export type { PackWarning } from "./api/submissionSchemas";
 export {
   computeCheckpointReadiness,
   pickActiveProfile,

@@ -12,6 +12,8 @@ import {
   isRouteLive,
   isRouteOpen,
   nextRemindAt,
+  routeChangedDocs,
+  routeSendKind,
   signingPagePath,
   signingPdfUrl,
   signingRouteEditorPath,
@@ -93,5 +95,36 @@ describe("адреса маршрута", () => {
     expect(signingPdfUrl("/api/v1/projects/p/docs/d/frozen/pdf")).toMatch(
       /\/api\/v1\/projects\/p\/docs\/d\/frozen\/pdf$/,
     );
+  });
+});
+
+describe("версия на подписи: какую отправку предлагать (12.6)", () => {
+  it("без изменений: черновик отправляют, остановленный отправляют заново", () => {
+    expect(ALL.map((s) => [s, routeSendKind(s, [])])).toEqual([
+      ["draft", "send"],
+      ["active", null],
+      ["paused", "resend"],
+      ["returned", "resend"],
+      ["completed", null],
+      ["cancelled", "resend"],
+      ["archived", null],
+    ]);
+  });
+
+  it("с изменениями новая версия откуда угодно, кроме черновика и снятого с контроля", () => {
+    expect(where((s) => routeSendKind(s, ["doc"]) === "new_version")).toEqual([
+      "active",
+      "paused",
+      "returned",
+      "completed",
+      "cancelled",
+    ]);
+    expect(routeSendKind("draft", ["doc"])).toBe("send");
+    expect(routeSendKind("archived", ["doc"])).toBeNull();
+  });
+
+  it("пока сервер не отдаёт changed_docs, изменений нет", () => {
+    expect(routeChangedDocs({})).toEqual([]);
+    expect(routeChangedDocs({ changed_docs: ["a"] })).toEqual(["a"]);
   });
 });

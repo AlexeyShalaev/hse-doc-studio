@@ -284,6 +284,9 @@ export const NOTIFICATION_KINDS = [
   "signing_paused",
   "signing_completed",
   "signing_cancelled",
+  // Новая версия на подпись тем, кто уже согласовал или подписал изменившийся документ, но чья
+  // очередь ещё не настала: только «Входящие», без письма (раздел 12.6).
+  "signing_new_version",
 ] as const;
 export const NotificationKindSchema = z.enum(NOTIFICATION_KINDS);
 export type NotificationKind = z.infer<typeof NotificationKindSchema>;
@@ -328,6 +331,9 @@ export const NotificationSchema = z.strictObject({
     // Маршрут подписания: точка сдачи (ref_id это id маршрута) и срок.
     profile_id: z.string().nullable(),
     deadline: iso.nullable(),
+    // Запрос раунда новой версии (12.6): «{автор} просит подписать новую версию». Пока срез R16
+    // не добавил поле в ответ, его может не быть; отсутствие значит false.
+    new_version: z.boolean().optional(),
   }),
 });
 export type Notification = z.infer<typeof NotificationSchema>;

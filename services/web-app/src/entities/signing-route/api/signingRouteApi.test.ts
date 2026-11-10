@@ -657,13 +657,14 @@ describe("возврат, остановка и повторная отправ�
     expect(resent.events.at(-1)?.kind).toBe("resumed");
   });
 
-  it("пересборка ставит маршрут на паузу, старые отпечатки не принимаются", async () => {
+  it("пересборка маршрут не останавливает, подмена версии на подписи останавливает", async () => {
     const route = await sendDraft();
     const before = await signingRouteApi.preview(PROJECT, route.id);
     demo.rebuild(PROJECT, DOC);
-    const paused = await signingRouteApi.get(PROJECT, route.id);
-    expect(paused.status).toBe("paused");
-    expect(paused.stop_reason).toBe("rebuilt");
+    const going = await signingRouteApi.get(PROJECT, route.id);
+    expect(going.status).toBe("active");
+    expect(going.changed_docs).toEqual([DOC]);
+    // Отпечаток прежнего кандидата больше не подходит: новая версия идёт с текущей сборкой.
     const stale = await apiError(
       signingRouteApi.send(PROJECT, route.id, {
         expected: { [DOC]: before.docs[0]?.token ?? "" },
@@ -671,9 +672,15 @@ describe("возврат, остановка и повторная отправ�
       }),
     );
     expect(stale.code).toBe("doc_changed");
+
+    demo.tamper(PROJECT, DOC);
+    const paused = await signingRouteApi.get(PROJECT, route.id);
+    expect(paused.status).toBe("paused");
+    expect(paused.stop_reason).toBe("sent_changed");
     const resent = await sendDraft();
     expect(resent.status).toBe("active");
     expect(resent.round).toBe(2);
+    expect(resent.changed_docs).toEqual([]);
   });
 
   it("отмена и снятие с контроля", async () => {

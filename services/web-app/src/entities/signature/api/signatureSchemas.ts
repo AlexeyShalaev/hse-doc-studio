@@ -192,6 +192,18 @@ export const PlanRouteSchema = z.object({
   current_step: z.number().nullable().default(null),
   steps_total: z.number(),
   stop_reason: z.string().nullable().default(null),
+  /** Документы маршрута, рабочая сборка которых ушла от версии на подписи (signing-route.md, 12.9). */
+  changed_docs: z.array(z.string()).default([]),
+});
+
+// Версия на подписи (signing-route.md, 12.3): копия собранного PDF, которую снял маршрут при
+// отправке. Пока она есть, план, фиксация и пакет берут её, а не текущую сборку. Остаётся после
+// завершения маршрута, снимается при отмене и кнопкой «Подписывать текущую сборку».
+export const PinnedPdfSchema = z.object({
+  sha256: z.string(),
+  pinned_at: z.string(),
+  route_id: z.string(),
+  round: z.number(),
 });
 
 export const DocPlanSchema = z.object({
@@ -210,6 +222,10 @@ export const DocPlanSchema = z.object({
   slots: z.array(PlanSlotSchema),
   /** Документ держит идущий маршрут подписания: фиксирует его только маршрут. */
   held_by_route: z.boolean().default(false),
+  /** Версия на подписи; null, если документ подписывается по текущей сборке. */
+  pinned: PinnedPdfSchema.nullable().default(null),
+  /** Рабочая сборка есть и отличается от версии на подписи: «Есть изменения после отправки». */
+  working_differs: z.boolean().default(false),
 });
 
 export const SignaturePlanSchema = z.object({

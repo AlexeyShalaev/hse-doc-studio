@@ -19,10 +19,14 @@ export const SIGNING_INBOX_PATH = "/inbox?tab=signing";
 export const checkpointPath = (projectId: string, profileId: string): string =>
   `/projects/${encodeURIComponent(projectId)}/submit/cp/${encodeURIComponent(profileId)}`;
 
-/** Уведомления маршрута подписания, которые зовут подписанта действовать. */
+/**
+ * Уведомления маршрута подписания для подписанта: зовут действовать или предупреждают о новой
+ * версии (запрос придёт в его очередь, страница подписи пока пишет «Пока не ваша очередь»).
+ */
 const SIGNER_KINDS: ReadonlySet<Notification["kind"]> = new Set([
   "signing_request",
   "signing_reminder",
+  "signing_new_version",
 ]);
 
 export const isSigningKind = (kind: Notification["kind"]): boolean =>

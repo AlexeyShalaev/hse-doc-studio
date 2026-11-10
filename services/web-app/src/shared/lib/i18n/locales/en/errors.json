@@ -189,6 +189,7 @@
     "doc_on_route": "The document is already on another signing route.",
     "stale_route": "The signing route has changed. Open it again.",
     "route_locked": "The document is out for signing: cancel the signing route to change its signatures.",
+    "nothing_changed": "The documents have not changed since they were sent for signing: there is no new version to send.",
     "no_participants": "The signing route has no participants.",
     "bad_step": "A route step is empty or numbered incorrectly.",
     "duplicate_participant": "A participant is listed twice in the route.",

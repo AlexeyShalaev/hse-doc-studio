@@ -146,7 +146,7 @@ describe("плашка документа на подписании", () => {
 
   it("остановленный маршрут подписи не держит", async () => {
     await startRoute();
-    demo.rebuild(PROJECT, DOC);
+    demo.tamper(PROJECT, DOC);
     const plan = vi.spyOn(signatureApi, "getPlan");
     mount(DOC);
     await waitFor(() => {
@@ -157,7 +157,7 @@ describe("плашка документа на подписании", () => {
     };
     expect(loaded.route).toMatchObject({
       status: "paused",
-      stop_reason: "rebuilt",
+      stop_reason: "sent_changed",
     });
     expect(screen.queryByTestId("signing-hold-banner")).toBeNull();
   });
