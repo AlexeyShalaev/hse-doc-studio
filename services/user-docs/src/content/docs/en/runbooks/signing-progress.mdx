@@ -1,0 +1,54 @@
+---
+title: 'Signing progress'
+description: 'The “Signing” card on the checkpoint page: whose turn it is, reminders, a link for a signer, returns for revision and sending again.'
+sidebar:
+  order: 11
+access: user
+help:
+  routes:
+    - '/projects/:projectId/submit/cp/:profileId/route'
+    - '/projects/:projectId/submit/cp/:profileId'
+  summary: 'Once sent, the route is followed in the “Signing” card on the checkpoint page: which step is running, whose turn it is and what to do if the documents come back.'
+  steps:
+    - text: 'Open **Submission** and the checkpoint. The **Signing** card shows the step, whose turn it is and since when, and each person’s state.'
+      hint: 'States: “waiting”, “approving”, “approved”, “signed”, “invitation not accepted”, “returned for revision”.'
+      shot: runbooks/signing-progress/step-01
+    - text: 'To hurry up the person whose turn it is, click **Remind**. The reminder goes to the Inbox and by email, if the server sends email.'
+      hint: 'At most once every 12 hours per person. The server also reminds on its own a day before the deadline and after three days of waiting.'
+    - text: 'To send a link yourself, for example in a messenger, click **Copy link** next to the person.'
+      hint: 'For a member it is a link to their signing page, which opens after sign-in. For an invited person on a server without email, every click gives a new invitation link and the previous one stops working.'
+      shot: runbooks/signing-progress/step-03
+    - text: 'While the route is running, the editor of its documents shows the **This document is out for signing** banner. You can edit and build, but a rebuild with changes stops the route.'
+      hint: 'The signatures of these documents on the **Signatures** tab cannot be changed until the route is cancelled. **Signing progress** on the banner leads to this card.'
+    - text: 'If the documents come back, the card shows the comment. Fix the document, build it and click **Send again**.'
+      hint: 'People whose documents did not change do not have to approve again: their image and key are kept.'
+    - text: 'When the card says **Everyone has signed. You can build the package.**, build the package with **Pack** on the same page.'
+      hint: 'A completed route keeps watching the documents. To stop it, click **Stop tracking**.'
+verified:
+  at: 2026-11-10
+  app_version: '0.19.0'
+  sources:
+    - services/web-app/src/features/signing-route-progress
+    - services/web-app/src/pages/WorkspacePage/panels/CheckpointView.tsx
+---
+
+import Steps from '~/components/Steps.astro'
+
+The route moves the documents from one signer to the next on its own. All you do is keep an eye on
+the **Signing** card: hurry someone up if they are holding things up, and send again if the
+documents are returned for revision.
+
+<Steps />
+
+## If something goes wrong
+
+- **“The route has stopped”** with a reason: a document changed after approval, signatures on the
+  pages were changed outside the route, or a signer left the project. Fix the reason on the route
+  screen (**Open route**) and click **Send again**.
+- **The order is wrong** after sending: click **Cancel route**, fix the steps and click **Send
+  again**.
+- **No “Remind” button**: you can remind only the person whose turn it is, or someone who has not
+  accepted the invitation yet, and at most once every 12 hours. The button tooltip says when you
+  can remind again.
+- **The server does not send email**: requests still arrive in the Inbox. Send the link yourself
+  with **Copy link**.

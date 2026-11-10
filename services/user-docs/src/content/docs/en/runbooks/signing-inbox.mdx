@@ -1,0 +1,42 @@
+---
+title: 'Inbox: to sign'
+description: 'Where to find documents waiting for your signature: the bell, the Inbox, the “To sign” tab.'
+sidebar:
+  order: 13
+access: user
+help:
+  routes:
+    - '/inbox?tab=signing'
+    - '/inbox'
+  summary: 'Everything waiting for your signature across all projects is in the Inbox on the “To sign” tab. The bell row leads there too.'
+  steps:
+    - text: 'Click the bell in the header. The **Waiting for your signature: N** row leads straight to the **To sign** tab.'
+      hint: 'If the server sends email, the request also comes by email with an “Open the signing page” button.'
+      shot: runbooks/signing-inbox/step-01
+    - text: 'On the **To sign** tab each task shows the checkpoint, the project, who asks, what is needed and the deadline.'
+      hint: 'Overdue tasks come first and are marked red.'
+      shot: runbooks/signing-inbox/step-02
+    - text: 'Click **Open**: the signing page opens, where you look at the PDF, approve and sign. How: [Sign documents](/help/en/runbooks/sign-documents/).'
+verified:
+  at: 2026-11-10
+  app_version: '0.19.0'
+  sources:
+    - services/web-app/src/features/inbox
+    - services/web-app/src/pages/InboxPage
+---
+
+import Steps from '~/components/Steps.astro'
+
+When a student sends documents for signing, the request goes to whoever’s turn it is. Until your
+turn comes the tab is empty: the task appears together with a notification.
+
+<Steps />
+
+## If something goes wrong
+
+- **A project invitation came, but no task**: accept the invitation with **Accept** first. If it is
+  already your turn, the Studio opens the signing page right away; otherwise the task appears on the
+  tab when your turn comes.
+- **The task disappeared**: the route was cancelled or stopped, or you have already signed. You get
+  a notification when the author sends again.
+- **No “To sign” tab**: signing by route works only on a Studio server.

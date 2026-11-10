@@ -5,6 +5,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { FileText, PenLine, Route, Send, TriangleAlert, X } from "lucide-react";
 import type { z } from "zod";
 import type { ProjectResponseSchema } from "@entities/project";
+import { HelpAnchor } from "@entities/help";
 import { useBootstrap } from "@entities/session";
 import {
   canArchiveRoute,
@@ -66,9 +67,13 @@ const Shell = ({ children }: { children: React.ReactNode }) => {
         gap: "0.75rem",
       }}
     >
-      <h3 style={{ margin: 0, fontSize: "0.8125rem", fontWeight: 600 }}>
-        {t("title")}
-      </h3>
+      <div className="flex items-center" style={{ gap: "0.375rem" }}>
+        <h3 style={{ margin: 0, fontSize: "0.8125rem", fontWeight: 600 }}>
+          {t("title")}
+        </h3>
+        {/* «?» карточки: статья про ход подписания, а не общая статья экрана точки. */}
+        <HelpAnchor article="runbooks/signing-progress" />
+      </div>
       {children}
     </section>
   );

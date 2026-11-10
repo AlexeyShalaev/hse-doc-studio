@@ -47,6 +47,15 @@ A signer is a project member with the “Reviewer” role and a persona: “Supe
 
 Open the Submission mode and the checkpoint, and in the “Signing” card click “Send for signing”. The “Send for signing” screen opens. Changes are saved automatically, there is no separate save button.
 
+<figure class="hds-fig hds-wide">
+  <div class="hds-shot">
+    <div class="hds-shot__bar"><span class="hds-shot__brand">HSE DOC STUDIO</span><span class="hds-shot__route">/projects/kp/submit/cp/topic-approval/route</span></div>
+    <img src="../assets/shots/signing-route.en.light.webp#only-light" alt="Route screen">
+    <img src="../assets/shots/signing-route.en.dark.webp#only-dark" alt="Route screen">
+  </div>
+  <figcaption>the “Send for signing” screen: checkpoint documents, steps in order and the “What blocks sending” list</figcaption>
+</figure>
+
 ### Checkpoint documents
 
 Every document has to be built: a document that is not built has a “Build” button. A document held by the route of another checkpoint is marked with that checkpoint's name: “out for signing on the route “…”” or “held by the completed route “…””.
@@ -66,6 +75,15 @@ Document tabs and a PDF page with signature frames, just like on a document's �
 - A signature marked “not placed” goes on the open page with “To page N”. A signature on another page can be shown with “Go” or moved to the open page with “Here”.
 - A signature the checkpoint does not require (for example, the academic supervisor on an application) is added with “Add signature: …” and removed with the cross “Remove signature from route”.
 - A signer may change the method on their step, but an image and an electronic signature with a plate are offered only if their signature is placed on the page. Without a place they are left with “E-signature in PDF” without a mark. If they switch from an image to an e-signature and the place is narrow, the Studio widens it to 70 mm leftwards from its right edge so the e-signature plate fits.
+
+<figure class="hds-fig hds-wide">
+  <div class="hds-shot">
+    <div class="hds-shot__bar"><span class="hds-shot__brand">HSE DOC STUDIO</span><span class="hds-shot__route">/projects/kp/submit/cp/topic-approval/route</span></div>
+    <img src="../assets/shots/signing-placement.en.light.webp#only-light" alt="Where the signatures go">
+    <img src="../assets/shots/signing-placement.en.dark.webp#only-dark" alt="Where the signatures go">
+  </div>
+  <figcaption>“Where the signatures go”: frames on the PDF page, the supervisor signature is placed, “Ready to send.”</figcaption>
+</figure>
 
 ### Your signature
 
@@ -119,10 +137,28 @@ Under the sending form the Studio says when the final PDF is frozen: “The docu
 
 The “Signing” card on the checkpoint page shows the step and whose turn it is, for example “Step 2 of 3. Waiting for Petrov P. P. (supervisor)”, since when they have been waiting, how many signatures are in place and the deadline. Each person shows their state: “waiting”, “to approve”, “approved”, “to sign the final PDF”, “signed”, “has not accepted the invitation”, “returned for revision”.
 
+<figure class="hds-fig hds-wide">
+  <div class="hds-shot">
+    <div class="hds-shot__bar"><span class="hds-shot__brand">HSE DOC STUDIO</span><span class="hds-shot__route">/projects/kp/submit/cp/topic-approval</span></div>
+    <img src="../assets/shots/signing-card.en.light.webp#only-light" alt="The “Signing” card">
+    <img src="../assets/shots/signing-card.en.dark.webp#only-dark" alt="The “Signing” card">
+  </div>
+  <figcaption>the “Signing” card: the step, whose turn it is and each person’s state</figcaption>
+</figure>
+
 People on the route have two buttons:
 
 - **“Remind”** is there for the person whose turn it is and for anyone who has not accepted the invitation yet. It sends a reminder to the Inbox and by email, if email is configured. At most once every 12 hours per person; the hint on the button says when you can remind again. For someone who has not accepted the invitation yet, “Remind” sends the invitation again.
 - **“Copy link”** is there for everyone who has not signed yet, even before their turn: you can send the links in advance. It is for sending the link yourself, for example in a messenger. For a member it is the link to their signing page, which opens after signing in. Until their turn comes, the page says “Not your turn yet”, and when it comes, they get a notification. For an invitee on a server without email it is a new invitation link: every click makes a new one and the previous one stops working, so send the latest. If the invitee already has an account, it is a link to the Inbox, where the invitation is waiting. If the server has email, invitees have no such button: the invitation goes by email, and “Remind” sends it again.
+
+<figure class="hds-fig hds-wide">
+  <div class="hds-shot">
+    <div class="hds-shot__bar"><span class="hds-shot__brand">HSE DOC STUDIO</span><span class="hds-shot__route">/projects/kp/submit/cp/topic-approval</span></div>
+    <img src="../assets/shots/signing-link.en.light.webp#only-light" alt="Copy link">
+    <img src="../assets/shots/signing-link.en.dark.webp#only-dark" alt="Copy link">
+  </div>
+  <figcaption>“Copy link”: the signing page address is in the clipboard</figcaption>
+</figure>
 
 The server also reminds the person whose turn it is on its own: a day before the deadline and after three days of waiting, at most three times per sending.
 

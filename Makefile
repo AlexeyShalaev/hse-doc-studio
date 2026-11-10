@@ -62,6 +62,7 @@ help:
 	@echo   make demo-up               - Isolated demo backend on :17777 (synthetic data)
 	@echo   make demo-git              - Two real Studios + local git remotes with every sync state (:17800)
 	@echo   make shots                 - Screenshot matrix ru/en x light/dark to docs/ru/assets/shots
+	@echo   make shots-signing         - Signing route screens (server demo, no backend) to docs/ru/assets/shots
 	@echo   make reel                  - Promo reel x4 variants to docs/ru/assets/reel
 	@echo.
 
@@ -139,7 +140,7 @@ docs-build: docs-gen
 	uv run --group docs zensical build -f docs/zensical.en.toml
 
 # Демо-материалы сайта: изолированный стенд + скриншоты/ролик (tools/demo/README.md).
-.PHONY: demo-up demo-git shots reel
+.PHONY: demo-up demo-git shots shots-signing reel
 
 demo-up:
 	bash tools/demo/run-demo.sh
@@ -151,6 +152,11 @@ demo-git:
 
 shots:
 	cd tools/demo && node screenshots/capture.mjs
+
+# Маршрут подписания есть только на сервере: его экраны снимаются со стенда серверного демо
+# (tools/docs-studio/stand/server-demo.mjs), бэкенд и `make demo-up` не нужны. ONLY/LANGS/THEMES как у shots.
+shots-signing:
+	cd tools/docs-studio/record && pnpm install --frozen-lockfile >/dev/null && pnpm exec playwright install chromium >/dev/null && SERVER_DEMO_BUILD=1 node site-shots.mjs
 
 reel:
 	cd tools/demo && node reel/gen-assets.mjs && node reel/record.mjs && bash reel/compose.sh

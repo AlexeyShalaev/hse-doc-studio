@@ -109,6 +109,8 @@ export type CheckpointDemo = {
   routes: DemoRoute[];
   /** Включено ли место слота на странице документа (помеха отправки `placement_off`). */
   isPlaced: (projectId: string, docId: string, slotId: string) => boolean;
+  /** Включить место слота заранее, как будто автор уже разместил подпись. */
+  place: (projectId: string, docId: string, slotId: string) => void;
   reset: () => void;
 };
 
@@ -203,6 +205,10 @@ export const createCheckpointDemo = (
     routes,
     isPlaced: (projectId, docId, slotId) =>
       placementsOf(projectId)[docId]?.[slotId]?.enabled === true,
+    place: (projectId, docId, slotId) => {
+      const current = placementsOf(projectId)[docId]?.[slotId];
+      if (current) current.enabled = true;
+    },
     reset: () => {
       placements = new Map();
     },

@@ -2,6 +2,7 @@
 //  - у каждой статьи есть пара ru/en с тем же числом шагов, теми же кадрами и роликом;
 //  - help.routes существуют в маршрутах приложения (router.tsx и разделы админки);
 //  - verified.sources существуют;
+//  - значки «?» приложения (<HelpAnchor article="…" step={N} />) ведут на статью с help и таким шагом;
 //  - медиа на месте (строго при CHECK_MEDIA=1, иначе только сводка: съёмка — отдельная ручная джоба).
 import {existsSync, readFileSync, readdirSync, statSync} from 'node:fs'
 import {dirname, join, relative, resolve} from 'node:path'
@@ -93,6 +94,16 @@ for (const [key, {file, fm}] of articles.ru) {
   }
 }
 for (const key of articles.en.keys()) if (!articles.ru.has(key)) fail(`en/${key}: нет русской пары`)
+
+// Значок «?» у поля знает ключ статьи и номер шага: статья с help.steps должна существовать.
+for (const file of walk(join(REPO, 'services/web-app/src')).filter((f) => /\.tsx$/.test(f) && !/\.test\.tsx$/.test(f))) {
+  for (const m of readFileSync(file, 'utf-8').matchAll(/<HelpAnchor\s+article="([^"]+)"(?:\s+step=\{(\d+)\})?/g)) {
+    const where = relative(REPO, file)
+    const article = articles.ru.get(m[1])
+    if (!article?.fm.help) fail(`${where}: значок «?» ведёт на статью ${m[1]} без help`)
+    else if (m[2] && Number(m[2]) > (article.fm.help.steps ?? []).length) fail(`${where}: в статье ${m[1]} нет шага ${m[2]}`)
+  }
+}
 
 if (missingMedia.length) {
   const msg = `медиа не снято: ${missingMedia.length} файл(ов), например ${missingMedia.slice(0, 3).join(', ')} (make docs-media)`
