@@ -1,14 +1,13 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { AlertTriangle, Check, X } from "lucide-react";
+import { AlertTriangle, Check, Clock, X } from "lucide-react";
 import { isAxiosError } from "axios";
-import { Link } from "react-router";
 import {
   usePreviewSignSubmission,
   useSignSubmission,
 } from "@entities/signature";
 import { useSigningIdentities } from "@entities/signing-identity";
-import { signingPagePath } from "@entities/signing-route";
+import { RouteWaitNote } from "@features/signing-route-progress";
 import { pickLocalized } from "@shared/lib";
 import { Modal } from "@shared/ui";
 import { Spinner } from "@shared/ui/Spinner";
@@ -69,6 +68,17 @@ export const SignSubmissionDialog = ({
     doc.needs_freeze ? doc.resets : [],
   );
   const result = sign.data;
+  // Документы, которые держит идущий маршрут и которые сейчас не подписать: почему и когда,
+  // объясняет пояснение маршрута, одно на маршрут.
+  const isHeld = (doc: { route_id: string | null; blocker: string }) =>
+    doc.route_id != null && doc.blocker !== "";
+  const heldRoutes = [
+    ...new Set(
+      (data?.docs ?? []).flatMap((doc) =>
+        isHeld(doc) && doc.route_id != null ? [doc.route_id] : [],
+      ),
+    ),
+  ];
   const canSign =
     data != null &&
     data.to_sign + data.docs.filter((d) => d.needs_freeze).length > 0 &&
@@ -188,20 +198,22 @@ export const SignSubmissionDialog = ({
                   {t("signSubmission.willFreeze")}
                 </span>
               )}
+              {/* Документ на подписании по маршруту: комплект его не трогает, почему и когда, сказано ниже. */}
               {doc.blocker !== "" && (
-                <span style={{ fontSize: "0.71875rem", color: "var(--c-err)" }}>
+                <span
+                  className={isHeld(doc) ? "dim" : undefined}
+                  style={{
+                    fontSize: "0.71875rem",
+                    color: isHeld(doc) ? undefined : "var(--c-err)",
+                  }}
+                  data-testid={
+                    isHeld(doc)
+                      ? `sign-submission-route-${doc.doc_id}`
+                      : undefined
+                  }
+                >
                   {doc.blocker}
                 </span>
-              )}
-              {/* Документ на подписании по маршруту: комплект его не трогает, подписывают на странице подписи. */}
-              {doc.route_id != null && doc.blocker !== "" && (
-                <Link
-                  to={signingPagePath(projectId, doc.route_id)}
-                  style={{ fontSize: "0.71875rem" }}
-                  data-testid={`sign-submission-route-${doc.doc_id}`}
-                >
-                  {t("signSubmission.openSigningPage")}
-                </Link>
               )}
               {doc.slots.map((slot) => (
                 <span
@@ -211,6 +223,8 @@ export const SignSubmissionDialog = ({
                 >
                   {slot.blocker === "" ? (
                     <Check size="0.75rem" style={{ color: "var(--c-ok)" }} />
+                  ) : isHeld(doc) ? (
+                    <Clock size="0.75rem" style={{ color: "var(--fg-3)" }} />
                   ) : (
                     <AlertTriangle
                       size="0.75rem"
@@ -222,13 +236,23 @@ export const SignSubmissionDialog = ({
                     {t(`signSubmission.method.${slot.method}`)}
                   </span>
                   <span className="dim">
-                    {slot.blocker !== ""
-                      ? slot.blocker
-                      : t(`signSubmission.action.${slot.action}`)}
+                    {isHeld(doc) && slot.blocker !== ""
+                      ? t("signingProgress:wait.heldSlot")
+                      : slot.blocker !== ""
+                        ? slot.blocker
+                        : t(`signSubmission.action.${slot.action}`)}
                   </span>
                 </span>
               ))}
             </div>
+          ))}
+
+          {heldRoutes.map((routeId) => (
+            <RouteWaitNote
+              key={routeId}
+              projectId={projectId}
+              routeId={routeId}
+            />
           ))}
 
           {resets.length > 0 && (

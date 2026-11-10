@@ -88,5 +88,43 @@
     "open": "Signing progress",
     "locked": "This document is out for signing: signatures cannot be changed. To change them, cancel the route on the checkpoint page."
   },
-  "unsigned": "The route is sent, your signature is not in place yet."
+  "unsigned": "The route is sent, your signature is not in place yet.",
+  "signedOptional": "{{done}} of {{total}} required signed, optional {{optionalDone}} of {{optionalTotal}}",
+  "wait": {
+    "approvedEsign": "You have already approved. The Studio will ask for your e-signature after the PDF is frozen, once these people approve: {{who}}.",
+    "approvedEsignNext": "You have already approved. The Studio will ask for your e-signature after the PDF is frozen.",
+    "approved": "You have already approved. Next to approve: {{who}}.",
+    "approvedNext": "You have already approved.",
+    "later": "Your step is {{step}} of {{total}}. First to approve: {{who}}.",
+    "laterNext": "Your step is {{step}} of {{total}}: your turn is coming.",
+    "act": {
+      "approve": "It is your turn: approve the documents.",
+      "approve_and_sign": "It is your turn: approve and sign the documents.",
+      "sign": "The PDF is frozen: add your e-signature."
+    },
+    "done": "You have done your part.",
+    "person": "{{who}} (step {{step}} of {{total}})",
+    "personInvited": "{{who}} (step {{step}} of {{total}}, invitation not accepted)",
+    "now": "Now waiting for: {{who}}",
+    "nowInvited": "{{who}}, invitation not accepted",
+    "invitedTitle": "Have not accepted the project invitation: {{who}}",
+    "invitedNoMail": "The server does not send email: copy the link and send it yourself.",
+    "invitedNoMailRows": "The server does not send email: press “Copy link” next to the person and send it yourself.",
+    "invitedMail": "The invitation was sent by email. If it did not arrive, press “Remind”.",
+    "invitedOther": "The route author sends the invitation link.",
+    "openSigningPage": "Open the signing page",
+    "noteLabel": "Why signing is not available yet",
+    "heldSlot": "signed via the route",
+    "refreeze": "will be frozen again by the route",
+    "freezeByRoute": "The route freezes the PDF once everyone approves.",
+    "heldMine": "Your signatures at this checkpoint go through the signing route: see the “Signing” card.",
+    "slot": {
+      "invited": "Waiting for {{who}}: the project invitation is not accepted.",
+      "to_approve": "{{who}} is approving now.",
+      "to_approve_sign": "{{who}} is approving and signing now.",
+      "to_sign": "{{who}} is signing the final PDF.",
+      "waiting": "{{who}} approves in turn (step {{step}} of {{total}}).",
+      "approved": "{{who}} has approved: the e-signature is requested after the PDF is frozen."
+    }
+  }
 }

@@ -11,6 +11,14 @@ import { I18nextProvider } from "react-i18next";
 import { MemoryRouter } from "react-router";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { i18n } from "@shared/lib";
+import { projectApi } from "@entities/project";
+import { LOCAL_BOOTSTRAP, sessionApi } from "@entities/session";
+import { signingRouteApi } from "@entities/signing-route";
+import {
+  SR_AUTHOR,
+  makeRouteParticipant,
+  makeSigningRoute,
+} from "@entities/signing-route/testing";
 import type * as SignatureApiModule from "../../../entities/signature/api/signatureApi";
 import type * as IdentityModule from "@entities/signing-identity";
 import { SignSubmissionDialog } from "./SignSubmissionDialog";
@@ -99,12 +107,76 @@ const renderDialog = (): void => {
 afterEach(() => {
   cleanup();
   vi.clearAllMocks();
+  vi.restoreAllMocks();
 });
 
+/** Сервер без почты, вошёл автор маршрута, он же владелец проекта. */
+const serveRoute = (route: ReturnType<typeof makeSigningRoute>) => {
+  vi.spyOn(sessionApi, "bootstrap").mockResolvedValue({
+    ...LOCAL_BOOTSTRAP,
+    mode: "server",
+    user: {
+      id: SR_AUTHOR.id,
+      name: SR_AUTHOR.name,
+      email: "author@edu.hse.ru",
+      avatar_initials: "ИИ",
+      is_instance_admin: false,
+      email_verified: true,
+      locale: null,
+      org_roles: [],
+    },
+  });
+  vi.spyOn(projectApi, "get").mockResolvedValue({
+    id: "p1",
+    my_role: "owner",
+  } as unknown as Awaited<ReturnType<typeof projectApi.get>>);
+  vi.spyOn(signingRouteApi, "get").mockResolvedValue(route);
+};
+
+/** Случай с сервера: автор с ЭП согласовал при отправке, два руководителя не приняли приглашение. */
+const earlyApproverRoute = (
+  author: Partial<Parameters<typeof makeRouteParticipant>[0]> = {},
+) => {
+  const invited = (id: string, persona: string, step: string) =>
+    makeRouteParticipant({
+      id,
+      persona,
+      user_id: null,
+      invitation_id: `inv_${id}`,
+      name: `${step}***@hse.ru`,
+      card_name: null,
+      membership: "invited",
+      assignments: [{ doc_id: "application", slot_id: persona }],
+      method: "image",
+      state: "invited",
+      next_action: "wait",
+      changes_visible: true,
+      approved_at: null,
+    });
+  return makeSigningRoute({
+    id: "sr_1",
+    project_id: "p1",
+    phase: "approval",
+    current_step: 2,
+    steps: [
+      [
+        makeRouteParticipant({
+          method: "detached",
+          state: "waiting",
+          next_action: "wait",
+          ...author,
+        }),
+      ],
+      [invited("srp_sup", "supervisor", "h")],
+      [invited("srp_acad", "academic_supervisor", "s")],
+    ],
+  });
+};
+
 describe("SignSubmissionDialog", () => {
-  it("документ на подписании по маршруту: причина и ссылка на страницу подписи", async () => {
+  const heldPreview = () => {
     const reason = "Документ на подписании по маршруту";
-    api.previewSignSubmission.mockResolvedValue({
+    return {
       ...PREVIEW,
       to_sign: 0,
       docs: [
@@ -119,12 +191,52 @@ describe("SignSubmissionDialog", () => {
           ],
         },
       ],
-    });
+    };
+  };
+
+  it("документ на подписании по маршруту: почему и когда, кого ждём, ссылки приглашённым", async () => {
+    api.previewSignSubmission.mockResolvedValue(heldPreview());
+    serveRoute(earlyApproverRoute());
     renderDialog();
-    const link = await screen.findByTestId("sign-submission-route-application");
-    expect(link).toHaveAttribute("href", "/sign/p1/sr_1");
-    expect(link).toHaveTextContent("Открыть страницу подписи");
-    expect(screen.getAllByText(reason).length).toBeGreaterThan(0);
+    expect(
+      await screen.findByTestId("route-wait-lead", {}, { timeout: 5000 }),
+    ).toHaveTextContent(
+      "Вы уже согласовали. Электронную подпись Студия попросит поставить после фиксации PDF, когда согласуют: Научный руководитель h***@hse.ru (шаг 2 из 3, приглашение не принято), Академический руководитель s***@hse.ru (шаг 3 из 3, приглашение не принято).",
+    );
+    expect(screen.getByTestId("route-wait-now")).toHaveTextContent(
+      "Сейчас ждём: Научный руководитель h***@hse.ru, приглашение не принято.",
+    );
+    expect(screen.getByTestId("route-wait-invited")).toHaveTextContent(
+      "Сервер не отправляет письма: скопируйте ссылку и перешлите её сами.",
+    );
+    expect(screen.getByTestId("route-wait-copy-srp_sup")).toBeEnabled();
+    expect(screen.getByTestId("route-wait-copy-srp_acad")).toBeEnabled();
+    // Не своя очередь: на страницу подписи не зовём, слот назван подписью по маршруту.
+    expect(screen.queryByTestId("route-wait-go")).toBeNull();
+    expect(screen.getByText("подпись по маршруту")).toBeInTheDocument();
+    expect(
+      screen.getByTestId("sign-submission-route-application"),
+    ).toHaveTextContent("Документ на подписании по маршруту");
+    expect(screen.getByRole("button", { name: /Подписать$/ })).toBeDisabled();
+  });
+
+  it("своя очередь по маршруту: сказано и есть переход на страницу подписи", async () => {
+    api.previewSignSubmission.mockResolvedValue(heldPreview());
+    serveRoute(
+      earlyApproverRoute({
+        state: "to_approve",
+        next_action: "approve",
+        approved_at: null,
+      }),
+    );
+    renderDialog();
+    expect(
+      await screen.findByTestId("route-wait-lead", {}, { timeout: 5000 }),
+    ).toHaveTextContent("Сейчас ваша очередь: согласуйте документы.");
+    expect(screen.getByTestId("route-wait-go")).toHaveAttribute(
+      "href",
+      "/sign/p1/sr_1",
+    );
   });
 
   it("asks to confirm the reset and sends the tokens from the preview", async () => {

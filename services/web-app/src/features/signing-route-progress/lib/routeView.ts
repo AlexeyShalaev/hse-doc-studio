@@ -114,14 +114,28 @@ export const personMoment = (
   return null;
 };
 
-/** Слоты маршрута: сколько подписано из скольких. */
+/**
+ * Слоты маршрута: сколько подписано из скольких. Обязательные отдельно от необязательных, которые
+ * автор добавил сам: шапка точки считает только обязательные, и числа должны сходиться.
+ */
 export const signedTally = (
   route: SigningRoute,
-): { done: number; total: number } => {
+): {
+  done: number;
+  total: number;
+  optionalDone: number;
+  optionalTotal: number;
+} => {
   const slots = route.docs.flatMap((doc) => doc.slots);
+  const required = slots.filter((slot) => !slot.optional);
+  const optional = slots.filter((slot) => slot.optional);
+  const signed = (list: typeof slots) =>
+    list.filter((slot) => slot.status === "signed").length;
   return {
-    done: slots.filter((slot) => slot.status === "signed").length,
-    total: slots.length,
+    done: signed(required),
+    total: required.length,
+    optionalDone: signed(optional),
+    optionalTotal: optional.length,
   };
 };
 
