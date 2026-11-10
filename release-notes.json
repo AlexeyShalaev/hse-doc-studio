@@ -1,6 +1,24 @@
 {
   "releases": [
     {
+      "version": "0.20.1",
+      "date": "2026-11-10",
+      "notes": [
+        {
+          "ru": "Маршрут подписания показывает оба этапа: «Согласовано 1 из 3 · подписано 0 из 3» в карточке и «1/3 согласовано» в шапке контрольной точки. Подпись ЭП, которая ждёт фиксации, помечена «согласовано, подпись после фиксации».",
+          "en": "The signing route shows both stages: “1 of 3 approved · 0 of 3 signed” on the card and “1/3 approved” in the checkpoint header. An e-signature waiting for the freeze is marked “approved, signature after freeze”."
+        },
+        {
+          "ru": "Старая открепленная подпись к прежней версии PDF у документа на маршруте больше не показана красным «Недействительна»: нейтральная пометка объясняет, что маршрут попросит подписать заново.",
+          "en": "An old detached signature for an earlier PDF of a document on a route is no longer shown as a red “Invalid”: a neutral note explains that the route will ask to sign again."
+        },
+        {
+          "ru": "Подписи рамок на превью PDF больше не накладываются друг на друга в узких рамках.",
+          "en": "Slot frame labels on the PDF preview no longer overlap in narrow frames."
+        }
+      ]
+    },
+    {
       "version": "0.20.0",
       "date": "2026-11-10",
       "notes": [

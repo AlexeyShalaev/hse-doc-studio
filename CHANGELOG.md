@@ -6,6 +6,12 @@ Generated from `release-notes.json` via `make changelog` — do not edit by hand
 Release notes are hand-written and bilingual (RU/EN); the app shows them in the
 selected interface language.
 
+## [0.20.1](https://github.com/AlexeyShalaev/hse-doc-studio/compare/v0.20.0...v0.20.1) - 2026-11-10
+
+- The signing route shows both stages: “1 of 3 approved · 0 of 3 signed” on the card and “1/3 approved” in the checkpoint header. An e-signature waiting for the freeze is marked “approved, signature after freeze”.
+- An old detached signature for an earlier PDF of a document on a route is no longer shown as a red “Invalid”: a neutral note explains that the route will ask to sign again.
+- Slot frame labels on the PDF preview no longer overlap in narrow frames.
+
 ## [0.20.0](https://github.com/AlexeyShalaev/hse-doc-studio/compare/v0.19.0...v0.20.0) - 2026-11-10
 
 - The signing route explains what it is waiting for. “Sign the set”, the “Signing” card and the signing page say who approves now, who has not accepted the invitation yet and when the Studio will ask for your e-signature. People who have not accepted get a “Copy link” button.
