@@ -17,13 +17,13 @@ When other people have to sign the checkpoint's documents: the supervisor, a co-
 
 - It works only on a Studio server. A local Studio has no such button: sign your own slots with “Sign the submission” or send the supervisor the [files for signing](submit.md#detached-signatures).
 - The project owner and editors can send. In a team project there is one route for the whole team, and the authors sign in parallel.
-- Only a person signed in to their own account can sign. The link in the email opens nothing without signing in.
+- Only a person signed in to their own account can sign: the link in the email opens the signing page after signing in.
 
 ## How signing goes { #how-it-goes }
 
 1. You prepare the route: who signs, in what order and where the signatures go.
 2. You click “Send for signing”.
-3. The first person in line gets a request in the Inbox and by email. They open the signing page, look at the PDF and approve or sign.
+3. The first person in line gets a request in the Inbox and by email, if the server sends email. They open the signing page, look at the PDF and approve or sign.
 4. The next step gets its request once the previous one is done. People in one step sign in parallel.
 5. When all visible signatures are in place, the Studio freezes the final PDF, and those who sign with an electronic signature add it.
 6. Everyone has signed: build the package.
@@ -37,7 +37,7 @@ What a signer sees is described in [How to sign](how-to-sign.md).
 
 A signer is a project member with the “Reviewer” role and a persona: “Supervisor”, “Co-supervisor” or “Academic supervisor”. The persona tells the Studio which signature slots are theirs.
 
-- If the person is not in the project yet, the route shows “not in project” next to them and an “Invite” button. It opens the usual invitation form with the “Reviewer” role and the right persona already chosen: enter the email and click “Invite”. After accepting the invitation the person lands right on the signing page.
+- If the person is not in the project yet, the route shows “not in project” next to them and an “Invite” button. It opens the usual invitation form with the “Reviewer” role and the right persona already chosen: enter the email and click “Invite”. After accepting the invitation from the link, the person lands right on the signing page. Someone who already has an account gets the invitation in the Inbox and finds the documents there too, on the “To sign” tab.
 - You can also invite people in advance in the project settings, “People” section. More: [Invitations and access requests](../deploy/invitations.md).
 - If several people have the persona, pick one in the “Who signs” list.
 - You can send while an invitation is still pending: that person's step will wait.
@@ -86,7 +86,7 @@ The bottom of the screen lists “What blocks sending”. While the list is not 
 | Blocker | What to do |
 |---|---|
 | the document is not built | click “Build” in “Checkpoint documents” |
-| already out for signing in another route | wait for it to finish or cancel that route |
+| already out for signing in another route | a route of another checkpoint holds the document: open that checkpoint and cancel its route, or click “Stop tracking” if it is completed |
 | not in the project, invite them | click “Invite” next to the person |
 | no one to sign | no person has the slot's persona: invite or pick someone |
 | the signature is not placed on the page | click “Go to placement” and place the frame |
@@ -120,7 +120,7 @@ The “Signing” card on the checkpoint page shows the step and whose turn it i
 The person whose turn it is has two buttons:
 
 - **“Remind”** sends a reminder to the Inbox and by email, if email is configured. At most once every 12 hours per person; the hint on the button says when you can remind again. For someone who has not accepted the invitation yet, “Remind” sends the invitation again.
-- **“Copy link”** is for sending the link yourself, for example in a messenger. For a member it is the link to their signing page, which opens after signing in. For an invitee on a server without email it is a new invitation link: every click makes a new one and the previous one stops working, so send the latest. If the server has email, invitees have no such button: the invitation goes by email, and “Remind” sends it again.
+- **“Copy link”** is for sending the link yourself, for example in a messenger. For a member it is the link to their signing page, which opens after signing in. For an invitee on a server without email it is a new invitation link: every click makes a new one and the previous one stops working, so send the latest. If the invitee already has an account, it is a link to the Inbox, where the invitation is waiting. If the server has email, invitees have no such button: the invitation goes by email, and “Remind” sends it again.
 
 The server also reminds the person whose turn it is on its own: a day before the deadline and after three days of waiting, at most three times per sending.
 
@@ -155,33 +155,22 @@ The route starts again from the first step, but people whose documents did not c
 
 ## Returned for rework { #returned }
 
-Instead of signing, a signer can return the documents with a comment. You get a notification and an email, and the card shows, for example, “Petrov P. P. returned it for rework: “Clarify the project goal””. Under it are “Open document” and “Send again”. Detailed remarks on the text are left as comments in the project itself.
+Instead of signing, a signer can return the documents with a comment. The route stops, you get a notification (and an email, if email is configured), and the card shows, for example, “Petrov P. P. returned it for rework: “Clarify the project goal””. Under it are “Open document” and “Send again”. Detailed remarks on the text are left as comments in the project itself.
 
 ## Everyone has signed { #completed }
 
-The card says “Everyone has signed. You can build the package.”, and you get a notification and an email. Build the package with “Package” on the same checkpoint page: it gets the signed PDFs and the electronic signature files ([Submission and packaging](submit.md)).
+The card says “Everyone has signed. You can build the package.”, and you get a notification (and an email, if email is configured). Build the package with “Package” on the same checkpoint page: it gets the signed PDFs and the electronic signature files ([Submission and packaging](submit.md)).
 
 A completed route keeps watching the documents. If you edit and rebuild a document, the route stops and asks you to send again. If someone's signature disappears, the route waits for that one again. To make the route stop watching, click “Stop tracking”. A new route for the same checkpoint starts with “New route” on the route screen.
 
 ## Questions and answers { #faq }
 
-**The server has no email.**
-Requests and reminders still arrive in the Inbox, on the “To sign” tab; there are no emails. Send the person the link yourself with “Copy link” on the card. If they have not accepted the invitation yet, the button makes a new invitation link and the previous one stops working. Automatic reminders do not go to an invitee without an account.
-
-**The supervisor has no account.**
-Invite them by email from the route with “Invite”. Using the invitation link they sign up with that same address, click “Accept” and land on the signing page. If registration on the server is closed, first ask the administrator to create an account for them.
-
-**The order is wrong.**
-While the route is not sent, drag the steps. If it is already sent, click “Cancel route”, fix the order on the route screen and click “Send again”. Approvals of people whose documents did not change are kept.
-
-**A signer left the project.**
-The route stops with “A participant left the project: assign someone else and send again”. Open the route, pick or invite another person with the same persona and click “Send again”. A route that is already completed does not care: the signatures are in place.
-
-**The “out for signing” banner.**
-The document was sent for signing and the route is running. You can still edit the text and build, but a rebuild with changes stops the route and you will have to send it again. The signatures of this document cannot be changed on the “Signatures” tab: cancel the route on the checkpoint page first.
-
-**“Sign the submission” says “The document is on a signing route”.**
-Route documents are signed only in turn, on the signing page. Click “Open the signing page” in the submission dialog.
+- **The server has no email.** Requests and reminders still arrive in the Inbox, on the “To sign” tab; there are no emails. Send the person the link yourself with “Copy link” on the card. If they have not accepted the invitation yet, the button makes a new invitation link and the previous one stops working. Automatic reminders do not go to an invitee without an account.
+- **The supervisor has no account.** Invite them by email from the route with “Invite”. Using the invitation link they sign up with that same address, click “Accept” and land on the signing page. If registration on the server is closed, first ask the administrator to create an account for them.
+- **The order is wrong.** While the route is not sent, drag the steps. If it is already sent, click “Cancel route”, fix the order on the route screen and click “Send again”. Approvals of people whose documents did not change are kept.
+- **A signer left the project.** The route stops with “A participant left the project: assign someone else and send again”. Open the route, pick or invite another person with the same persona and click “Send again”. A route that is already completed does not care: the signatures are in place.
+- **The “out for signing” banner.** The document was sent for signing and the route is running. You can still edit the text and build, but a rebuild with changes stops the route and you will have to send it again. The signatures of this document cannot be changed on the “Signatures” tab: cancel the route on the checkpoint page first.
+- **“Sign the submission” says “The document is on a signing route”.** Route documents are signed only in turn, on the signing page. Click “Open the signing page” in the submission dialog.
 
 ## For the administrator { #admin }
 
