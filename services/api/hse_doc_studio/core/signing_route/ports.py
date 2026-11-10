@@ -9,6 +9,7 @@ from __future__ import annotations
 
 from collections.abc import Collection, Mapping, Sequence
 from dataclasses import dataclass, field
+from datetime import datetime
 from pathlib import Path
 from typing import Protocol
 from uuid import UUID
@@ -165,6 +166,16 @@ class RouteHold:
 
 
 @dataclass(frozen=True)
+class SigningDoc:
+    """Документ идущего маршрута для пометки правки (раздел 12.10): правка и сборка его не останавливают, но в
+    подписываемую версию не попадут. `sent_at` когда отправлена его версия на подписи (`doc_sent_at`)."""
+
+    doc_id: str
+    route_id: UUID
+    sent_at: datetime | None
+
+
+@dataclass(frozen=True)
 class PlanRoute:
     """Маршрут в ответе плана подписей (раздел 6.1): состояние по расчёту на текущих фактах, а не из хранилища.
 
@@ -261,6 +272,11 @@ class ISigningRouteGate(Protocol):
         документ свободен. Только читает: под `project_lock` вызывать можно."""
         ...
 
+    async def on_signing(self, project_id: UUID) -> tuple[SigningDoc, ...]:
+        """Документы проекта, которые держит идущий маршрут (`active`), в порядке маршрутов и их документов: для
+        пометки `signing_note` у тулов MCP, которые правят и собирают (раздел 12.10). Только читает."""
+        ...
+
     async def plan_routes(
         self, project_id: UUID, *, profile_id: str | None = None, doc_id: str | None = None
     ) -> PlanRoutes:
@@ -292,6 +308,9 @@ class NoSigningRoutes:
 
     async def hold(self, project_id: UUID, doc_id: str) -> RouteHold | None:
         return None
+
+    async def on_signing(self, project_id: UUID) -> tuple[SigningDoc, ...]:
+        return ()
 
     async def plan_routes(
         self, project_id: UUID, *, profile_id: str | None = None, doc_id: str | None = None

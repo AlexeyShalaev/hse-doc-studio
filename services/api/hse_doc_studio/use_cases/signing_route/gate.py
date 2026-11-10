@@ -39,7 +39,7 @@ from hse_doc_studio.core.signing_route.entities import (
     route_holds_doc,
     route_locked,
 )
-from hse_doc_studio.core.signing_route.ports import PlanRoute, PlanRoutes, RouteHold
+from hse_doc_studio.core.signing_route.ports import PlanRoute, PlanRoutes, RouteHold, SigningDoc
 from hse_doc_studio.core.signing_route.signer import unsigned_crypto
 from hse_doc_studio.use_cases.signing_route.facts import LoadedFacts
 from hse_doc_studio.use_cases.signing_route.reconcile import RouteRecalculation
@@ -146,6 +146,15 @@ class SigningRouteGate(RouteRecalculation):
             # «Подписать комплект» подпишет слоты маршрута и пересчитает его сам (`signatures_written`).
             expect_recalculation()
         return RouteHold(route.id, route.profile_id, signable)
+
+    async def on_signing(self, project_id: UUID) -> tuple[SigningDoc, ...]:
+        # По хранимому статусу, без расчёта: пометка только сообщает, а остановку запишет сверка.
+        routes = await self._s.routes.list_for_project(project_id, statuses={RouteStatus.active})
+        return tuple(
+            SigningDoc(doc_id=doc_id, route_id=route.id, sent_at=route.doc_sent_at(doc_id))
+            for route in routes
+            for doc_id in route.docs
+        )
 
     async def plan_routes(
         self, project_id: UUID, *, profile_id: str | None = None, doc_id: str | None = None

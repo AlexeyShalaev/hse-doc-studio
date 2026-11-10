@@ -13,6 +13,7 @@ from hse_doc_studio.use_cases.submission.get_submission_profiles import (
     GetSubmissionProfilesInput,
     GetSubmissionProfilesUC,
 )
+from hse_doc_studio.use_cases.submission.pack_planner import NOTICE_CHANGED_AFTER_SENT, PackNotice
 
 _SPEC = ToolSpec(
     name="package_project",
@@ -112,8 +113,26 @@ class PackageProjectTool:
         except (ValueError, NotFoundError) as exc:
             return ToolResult.error(str(exc))
         archive = out.submission.output_path.name
-        return ToolResult.ok(
+        text = (
             f"package assembled for profile «{profile_id}»: archive {archive}"
             if lang == Lang.en
             else f"комплект собран по профилю «{profile_id}»: архив {archive}"
         )
+        return ToolResult.ok(text + _notices_text(out.notices, lang))
+
+
+def _notices_text(notices: Sequence[PackNotice], lang: Lang) -> str:
+    """Предупреждения пакета без пропуска (signing-route.md, 12.8): `changed_after_sent` значит, что в пакет попала
+    версия на подписи, а рабочая сборка новее. Новую версию на подпись отправляет человек в интерфейсе."""
+    if not notices:
+        return ""
+    head = "\nWarnings:" if lang == Lang.en else "\nПредупреждения:"
+    lines = [f"- {notice.code} ({notice.doc_id}): {notice.message}" for notice in notices]
+    if any(notice.code == NOTICE_CHANGED_AFTER_SENT for notice in notices):
+        lines.append(
+            "- to sign the current build, a person sends the new version in the interface (“Send new version”)"
+            if lang == Lang.en
+            else "- чтобы подписали текущую сборку, человек отправляет новую версию в интерфейсе («Отправить новую "
+            "версию»)"
+        )
+    return "\n".join([head, *lines])
