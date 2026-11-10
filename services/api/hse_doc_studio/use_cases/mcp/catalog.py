@@ -30,6 +30,7 @@ from hse_doc_studio.use_cases.mcp.tools import (
     people,
     projects,
     review,
+    signing_route,
     submission,
 )
 from hse_doc_studio.use_cases.mcp.tools import template as template_tools
@@ -169,6 +170,11 @@ MCP_TOOL_RULES: tuple[McpToolRule, ...] = (
     _rule("get_signature_plan", _G.submission, _R, Action.OUTPUT_READ),
     # Подпись комплекта своим ключом: право SIGN на каждый слот проверяет сценарий, а тул опасный (M6).
     _rule("sign_submission", _G.submission, _X, Action.OUTPUT_READ, dangerous=True, scope=MCP_SIGN_SCOPE),
+    # Маршрут подписания (только сервер): ход и свои задачи читаются, отправка опасная; согласовать, подписать и
+    # вернуть на доработку через MCP нельзя (docs/design/signing-route.md, 6.8).
+    _rule("get_signing_route", _G.submission, _R, Action.OUTPUT_READ, server_only=True),
+    _rule("list_signing_tasks", _G.submission, _R, server_only=True),
+    _rule("send_for_signing", _G.submission, _X, Action.SUBMISSION_CREATE, dangerous=True, server_only=True),
     # Админка (сценарии сами требуют админа установки)
     _rule("admin_list_users", _G.admin, _R),
     _rule("admin_queue_summary", _G.admin, _R),
@@ -220,6 +226,9 @@ MCP_TOOL_CLASSES: tuple[type[McpTool], ...] = (
     submission.ListSignaturesTool,
     submission.GetSignaturePlanTool,
     submission.SignSubmissionTool,
+    signing_route.GetSigningRouteTool,
+    signing_route.ListSigningTasksTool,
+    signing_route.SendForSigningTool,
     admin.AdminListUsersTool,
     admin.AdminQueueSummaryTool,
     admin.AdminRunnerSummaryTool,

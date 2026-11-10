@@ -30,6 +30,7 @@ from hse_doc_studio.api.schemas.signature import (
     UploadSignatureResponse,
 )
 from hse_doc_studio.core.errors import NotFoundError
+from hse_doc_studio.core.signing_route.audit import signing_route_scope
 from hse_doc_studio.core.signing_route.ports import ISigningRouteGate
 from hse_doc_studio.core.value_objects import (
     DetachedSignature,
@@ -439,13 +440,14 @@ async def attach_detached_signature(
 ) -> AttachDetachedSignatureResponse:
     content = await file.read()
     key = await public_key.read() if public_key is not None else None
-    await gate.require_turn(project_id, doc_id, slot_id)
+    route_id = await gate.require_turn(project_id, doc_id, slot_id)
     try:
-        result = await uc.execute(
-            AttachDetachedSignatureInput(
-                project_id=project_id, doc_id=doc_id, slot_id=slot_id, content=content, public_key=key or None
+        with signing_route_scope(route_id):
+            result = await uc.execute(
+                AttachDetachedSignatureInput(
+                    project_id=project_id, doc_id=doc_id, slot_id=slot_id, content=content, public_key=key or None
+                )
             )
-        )
     except NotFoundError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except ValueError as exc:
@@ -508,17 +510,18 @@ async def sign_detached_in_studio(
     uc: FromDishka[SignInStudioUC],
     gate: FromDishka[ISigningRouteGate],
 ) -> AttachDetachedSignatureResponse:
-    await gate.require_turn(project_id, doc_id, slot_id)
+    route_id = await gate.require_turn(project_id, doc_id, slot_id)
     try:
-        result = await uc.execute(
-            SignInStudioInput(
-                project_id=project_id,
-                doc_id=doc_id,
-                slot_id=slot_id,
-                identity_id=body.identity_id,
-                passphrase=body.passphrase,
+        with signing_route_scope(route_id):
+            result = await uc.execute(
+                SignInStudioInput(
+                    project_id=project_id,
+                    doc_id=doc_id,
+                    slot_id=slot_id,
+                    identity_id=body.identity_id,
+                    passphrase=body.passphrase,
+                )
             )
-        )
     except NotFoundError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except PermissionError as exc:
@@ -542,17 +545,18 @@ async def sign_embedded_in_studio(
     gate: FromDishka[ISigningRouteGate],
 ) -> EmbeddedSignatureResponse:
     """Встроенная подпись PAdES ключом Студии: дописывается поверх зафиксированного PDF (signature-plan.md, 4)."""
-    await gate.require_turn(project_id, doc_id, slot_id)
+    route_id = await gate.require_turn(project_id, doc_id, slot_id)
     try:
-        result = await uc.sign_pades(
-            SignInStudioInput(
-                project_id=project_id,
-                doc_id=doc_id,
-                slot_id=slot_id,
-                identity_id=body.identity_id,
-                passphrase=body.passphrase,
+        with signing_route_scope(route_id):
+            result = await uc.sign_pades(
+                SignInStudioInput(
+                    project_id=project_id,
+                    doc_id=doc_id,
+                    slot_id=slot_id,
+                    identity_id=body.identity_id,
+                    passphrase=body.passphrase,
+                )
             )
-        )
     except NotFoundError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except PermissionError as exc:

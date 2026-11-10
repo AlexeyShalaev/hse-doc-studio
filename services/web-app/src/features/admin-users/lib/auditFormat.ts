@@ -28,6 +28,9 @@ const CATEGORY_OF: Record<string, AuditCategory> = {
   oidc: "settings",
   runner: "runner",
   project: "project",
+  // Маршрут подписания и подписи документов это события проекта.
+  signing_route: "project",
+  signature: "project",
 };
 
 export const auditCategory = (action: string): AuditCategory =>

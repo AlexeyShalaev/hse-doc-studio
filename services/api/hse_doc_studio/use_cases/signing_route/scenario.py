@@ -8,7 +8,7 @@
 
 from __future__ import annotations
 
-from collections.abc import AsyncIterator, Sequence
+from collections.abc import AsyncIterator, Mapping, Sequence
 from contextlib import asynccontextmanager
 from dataclasses import dataclass, replace
 from datetime import datetime
@@ -22,10 +22,12 @@ from hse_doc_studio.core.errors import NotFoundError
 from hse_doc_studio.core.i18n import localized_error
 from hse_doc_studio.core.identity.session_policy import Clock, utc_now
 from hse_doc_studio.core.signatures.plan import slot_persona
+from hse_doc_studio.core.signing_route.audit import RouteAuditAction, record_of
 from hse_doc_studio.core.signing_route.effects import Notify
 from hse_doc_studio.core.signing_route.engine import Evaluation, evaluate
 from hse_doc_studio.core.signing_route.entities import (
     EventKind,
+    Participant,
     RouteEvent,
     RouteStatus,
     SigningRoute,
@@ -37,6 +39,7 @@ from hse_doc_studio.core.signing_route.transitions import apply_evaluation, refr
 from hse_doc_studio.core.uow import IUnitOfWork
 from hse_doc_studio.use_cases.orgs.access import user_id_of
 from hse_doc_studio.use_cases.signatures._studio_signer import project_lock
+from hse_doc_studio.use_cases.signing_route.audit import SigningRouteAudit
 from hse_doc_studio.use_cases.signing_route.effects import RouteFileEffects
 from hse_doc_studio.use_cases.signing_route.facts import LoadedFacts, RouteFactsLoader
 from hse_doc_studio.use_cases.signing_route.point import RoutePoint, RoutePointLoader
@@ -114,6 +117,8 @@ class RouteServices:
     uow: IUnitOfWork
     access: IProjectAccessChecker
     clock: Clock = utc_now
+    # Журнал аудита сервера; события истории маршрута пишет в него само хранилище (`AuditedSigningRoutes`).
+    audit: SigningRouteAudit | None = None
 
 
 class RouteScenario:
@@ -125,6 +130,20 @@ class RouteScenario:
         if route is None:
             raise route_not_found()
         return route
+
+    async def _audit(
+        self,
+        action: RouteAuditAction,
+        route: SigningRoute,
+        *,
+        actor_id: UUID | None,
+        participant: Participant | None = None,
+        details: Mapping[str, object] | None = None,
+    ) -> None:
+        """Запись журнала аудита о действии, у которого нет события истории маршрута (раздел 6.7)."""
+        if self._s.audit is not None:
+            record = record_of(action, route, actor_id=actor_id, participant=participant, details=details)
+            await self._s.audit.write(route, record)
 
     async def _people(self, project_id: UUID, route: SigningRoute, loaded: LoadedFacts) -> People:
         users = {p.user_id for p in route.participants if p.user_id is not None}
