@@ -36,6 +36,18 @@ export const SubmissionProfileSchema = z.object({
     .nullish(),
 });
 
+/**
+ * Предупреждение пакета без пропуска файла. `changed_after_sent` (signing-route.md, 12.8): рабочая
+ * сборка документа ушла от версии на подписи, в пакет попала подписанная версия от `sent_at`.
+ */
+export const PackWarningSchema = z.object({
+  code: z.string(),
+  doc_id: z.string().nullable().default(null),
+  /** Дата версии на подписи у `changed_after_sent`, у остальных null. */
+  sent_at: z.string().nullable().default(null),
+});
+export type PackWarning = z.infer<typeof PackWarningSchema>;
+
 export const SubmissionRecordSchema = z.object({
   id: z.string(),
   profile_id: z.string().nullish(),
@@ -46,6 +58,8 @@ export const SubmissionRecordSchema = z.object({
   size_bytes: z.number().nullable().optional(),
   archive_format: z.string().nullish(),
   doc_count: z.number().nullish(),
+  // Предупреждения плана пакета: только в ответе на создание, в списке пусто.
+  warnings: z.array(PackWarningSchema).default([]),
 });
 
 export const CreateSubmissionRequestSchema = z.object({

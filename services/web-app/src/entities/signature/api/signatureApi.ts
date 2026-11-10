@@ -96,6 +96,16 @@ export const signatureApi = {
       .delete(`/projects/${projectId}/docs/${docId}/frozen`)
       .then(() => undefined),
 
+  /**
+   * «Подписывать текущую сборку» (signing-route.md, 12.4): снять версию на подписи. Подписи,
+   * поставленные на неё, перестают подходить к документу. Пока документ держит маршрут,
+   * 409 `route_locked`; без версии на подписи тоже 204.
+   */
+  unpinVersion: (projectId: string, docId: string): Promise<void> =>
+    apiClient
+      .delete(`/projects/${projectId}/docs/${docId}/pinned`)
+      .then(() => undefined),
+
   attachDetached: (
     projectId: string,
     docId: string,
@@ -247,6 +257,12 @@ const docBase = (projectId: string, docId: string): string =>
 export const signatureDownloadUrls = {
   frozenPdf: (projectId: string, docId: string): string =>
     `${docBase(projectId, docId)}/frozen/pdf`,
+  /**
+   * «С подписями»: источник подписи с видимым слоем, после фиксации сам B. У документа с версией
+   * на подписи это она, а не текущая сборка: так «Открыть версию на подписи» (signing-route.md, 12.4).
+   */
+  signedPdf: (projectId: string, docId: string): string =>
+    `${docBase(projectId, docId)}/pdf/signed`,
   signingPackage: (
     projectId: string,
     docId: string,

@@ -42,6 +42,7 @@ const ICONS: Record<NotificationKind, LucideIcon> = {
   signing_paused: CirclePause,
   signing_completed: FileCheck,
   signing_cancelled: CircleX,
+  signing_new_version: FilePen,
 };
 
 /** Значок типа уведомления; чисто декоративный, смысл несёт текст. */

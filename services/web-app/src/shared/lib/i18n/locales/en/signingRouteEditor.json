@@ -17,6 +17,7 @@
   },
   "stopReason": {
     "rebuilt": "the document was rebuilt",
+    "sent_changed": "the version out for signing changed outside the route",
     "marks_changed": "the marks on the pages changed",
     "frozen_changed": "the frozen PDF changed",
     "participant_left": "a participant left the project, assign someone else",
