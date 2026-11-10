@@ -1,6 +1,40 @@
 {
   "releases": [
     {
+      "version": "0.20.0",
+      "date": "2026-11-10",
+      "notes": [
+        {
+          "ru": "Маршрут подписания объясняет, чего ждёт. «Подписать комплект», карточка «Подписание» и страница подписи говорят, кто согласует сейчас, кто ещё не принял приглашение и когда Студия попросит вашу ЭП. Рядом с теми, кто не принял приглашение, есть «Скопировать ссылку».",
+          "en": "The signing route explains what it is waiting for. “Sign the set”, the “Signing” card and the signing page say who approves now, who has not accepted the invitation yet and when the Studio will ask for your e-signature. People who have not accepted get a “Copy link” button."
+        },
+        {
+          "ru": "Счётчики «Ждут вашей подписи» больше не считают подписи, которые сейчас идут по маршруту, и совпадают между собой. Карточка показывает имена людей из карточки проекта вместо скрытой почты и отдельно считает обязательные и необязательные подписи. На странице документа в маршруте нет ложного «Подписи недействительны» и кнопок фиксации.",
+          "en": "The “Waiting for your signature” counters no longer count signatures that are on a signing route and agree with each other. The card shows names from the project card instead of masked emails and counts required and optional signatures separately. A document on a route no longer shows a false “Signatures are invalid” warning or freeze buttons."
+        },
+        {
+          "ru": "Сборка больше не помечается «устарела: проект изменился» после действий с подписями или сборки соседнего документа: свежесть считается только по исходникам и данным титула.",
+          "en": "A build is no longer marked outdated after signature actions or after building another document: freshness depends only on sources and title data."
+        },
+        {
+          "ru": "Если картинку или плашку подписи не удалось нанести, фиксация, «С подписями», пакет и маршрут останавливаются с понятной ошибкой, а PDF без отметки не создаётся. Наложение подписей работает с pypdf 7.",
+          "en": "If a signature image or plate cannot be placed, freezing, “With signatures”, packages and routes stop with a clear error and no PDF without the mark is created. Stamping works with pypdf 7."
+        },
+        {
+          "ru": "Тексты без рода: «Приглашение принято: …», «Новый комментарий от …» и подобные. Везде «контрольная точка» вместо «точка сдачи».",
+          "en": "Gender-neutral Russian texts in notifications, emails and the interface; “checkpoint” is used consistently."
+        },
+        {
+          "ru": "Панель PDF на телефоне помещается на экран: листание и масштаб на виду, остальное в меню «⋯», поиск отдельной строкой.",
+          "en": "The PDF toolbar fits on phones: paging and zoom stay visible, the rest is in the “⋯” menu, search opens as its own row."
+        },
+        {
+          "ru": "Документация: скриншоты страниц «Отправить на подписание» и «Как подписать», статьи справки «?» для экранов маршрута. Обновлены зависимости.",
+          "en": "Docs: screenshots for “Send for signing” and “How to sign”, in-app help articles for the route screens. Dependencies updated."
+        }
+      ]
+    },
+    {
       "version": "0.19.0",
       "date": "2026-11-10",
       "notes": [

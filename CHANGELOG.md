@@ -6,32 +6,15 @@ Generated from `release-notes.json` via `make changelog` — do not edit by hand
 Release notes are hand-written and bilingual (RU/EN); the app shows them in the
 selected interface language.
 
-## [0.20.0](https://github.com/AlexeyShalaev/hse-doc-studio/compare/v0.19.0...v0.20.0) (2026-11-10)
+## [0.20.0](https://github.com/AlexeyShalaev/hse-doc-studio/compare/v0.19.0...v0.20.0) - 2026-11-10
 
-
-### Features
-
-* **docs-studio:** стенд серверного демо для съёмки маршрута подписания ([21b975b](https://github.com/AlexeyShalaev/hse-doc-studio/commit/21b975be88c08ee04c86ed391af037b67f958d3b))
-* **signing-route:** card names, visible-layer flag and route-aware signature counter ([2029b61](https://github.com/AlexeyShalaev/hse-doc-studio/commit/2029b61a693d94f134f1d809e28e0960de003c31))
-
-
-### Bug Fixes
-
-* **api:** neutral inviter label in mails, «контрольная точка» in server messages ([7e4d2c1](https://github.com/AlexeyShalaev/hse-doc-studio/commit/7e4d2c1775e492caec1cc620000fa27bc098863d))
-* **builds:** judge build staleness by build inputs, not by the history head ([68a53b8](https://github.com/AlexeyShalaev/hse-doc-studio/commit/68a53b8c95d524865f0a0ef1d20e8a8777d9b328))
-* **builds:** judge build staleness by build inputs, not by the history head ([1dbba37](https://github.com/AlexeyShalaev/hse-doc-studio/commit/1dbba37457fcf37476ca3e27f455ca5531bcde98))
-* **signatures:** fail loudly when a signature mark cannot be stamped ([5941271](https://github.com/AlexeyShalaev/hse-doc-studio/commit/5941271f3611d8b5703a6cede00ab2d1fe976bd3))
-* **signatures:** fail loudly when a signature mark cannot be stamped ([b8b523a](https://github.com/AlexeyShalaev/hse-doc-studio/commit/b8b523ace5ed51088f074169fb64ac8f0a4d888a))
-* **signatures:** surface stamping failures from freeze, print copy, pack and MCP ([3038cc9](https://github.com/AlexeyShalaev/hse-doc-studio/commit/3038cc979a19957bb9f8397db8a5a383d7823a4f))
-* **signing-route:** answer 400 stamping_failed when a route freeze cannot stamp ([13da968](https://github.com/AlexeyShalaev/hse-doc-studio/commit/13da968309ee2f4db58bf28bec138c534ab313f0))
-* **signing-route:** explain route waits, route-aware counters and names ([db09ccf](https://github.com/AlexeyShalaev/hse-doc-studio/commit/db09ccfa5d3acf7b3855fb3f0d124fb3e89a2a11))
-* **signing-route:** explain why and when a route-held signature is requested ([de08c88](https://github.com/AlexeyShalaev/hse-doc-studio/commit/de08c88d130d5a47c9a9f76a25943494f5fe2289))
-* **signing-route:** route-aware counters, plan hints, freeze card and signer page ([75bda77](https://github.com/AlexeyShalaev/hse-doc-studio/commit/75bda7717db65e17371897121f96a460db59d6a0))
-* **web-app:** fit the PDF viewer toolbar on phones ([bbcb92e](https://github.com/AlexeyShalaev/hse-doc-studio/commit/bbcb92e850be577c036bfc2d50f3dcc28026ab31))
-* **web-app:** fit the PDF viewer toolbar on phones ([cb93a5c](https://github.com/AlexeyShalaev/hse-doc-studio/commit/cb93a5c50d79d2a26f26720730d30ece5897979f))
-* **web-app:** focus the PDF search row opened from the phone menu ([7313f33](https://github.com/AlexeyShalaev/hse-doc-studio/commit/7313f33618bafb6b2379781e8e14bf9861bbb1d4))
-* **web-app:** gender-neutral notification, review, git and audit texts ([5b488b8](https://github.com/AlexeyShalaev/hse-doc-studio/commit/5b488b81aa3ad31010eff77c9122d6b10e349df6))
-* тексты без рода и «контрольная точка» вместо «точка сдачи» ([fb27399](https://github.com/AlexeyShalaev/hse-doc-studio/commit/fb27399f75ad1f99f7a8c76a2a1535201596621c))
+- The signing route explains what it is waiting for. “Sign the set”, the “Signing” card and the signing page say who approves now, who has not accepted the invitation yet and when the Studio will ask for your e-signature. People who have not accepted get a “Copy link” button.
+- The “Waiting for your signature” counters no longer count signatures that are on a signing route and agree with each other. The card shows names from the project card instead of masked emails and counts required and optional signatures separately. A document on a route no longer shows a false “Signatures are invalid” warning or freeze buttons.
+- A build is no longer marked outdated after signature actions or after building another document: freshness depends only on sources and title data.
+- If a signature image or plate cannot be placed, freezing, “With signatures”, packages and routes stop with a clear error and no PDF without the mark is created. Stamping works with pypdf 7.
+- Gender-neutral Russian texts in notifications, emails and the interface; “checkpoint” is used consistently.
+- The PDF toolbar fits on phones: paging and zoom stay visible, the rest is in the “⋯” menu, search opens as its own row.
+- Docs: screenshots for “Send for signing” and “How to sign”, in-app help articles for the route screens. Dependencies updated.
 
 ## [0.19.0](https://github.com/AlexeyShalaev/hse-doc-studio/compare/v0.18.0...v0.19.0) - 2026-11-10
 
