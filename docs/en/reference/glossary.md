@@ -88,7 +88,7 @@ Submission
 :   The rail mode covering everything needed to hand work in.
 
 Checkpoint
-:   A submission point — a [profile](checkpoints.md) declared by the pack: the package contents, signatures, forms.
+:   A submission stage a package is assembled for: the package contents, signatures, forms. Declared by the pack; the reference and MCP call it a [submission profile](checkpoints.md), which is the same thing.
 
 Readiness ring
 :   The “N of M ready” indicator on a checkpoint.

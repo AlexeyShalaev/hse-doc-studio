@@ -91,7 +91,7 @@ class PreviewSubmissionCustomDocsUC:
         if profile is None:
             raise NotFoundError(
                 localized_error(
-                    f"Профиль сдачи {inp.profile_id!r} не найден", f"Submission profile {inp.profile_id!r} not found"
+                    f"Контрольная точка {inp.profile_id!r} не найдена", f"Checkpoint {inp.profile_id!r} not found"
                 )
             )
 

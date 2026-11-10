@@ -132,9 +132,9 @@ def test__invite__names_the_inviter_when_known_and_skips_the_row_when_not() -> N
     )  # fmt: skip
 
     assert "Анна приглашает вас в Студию" in with_name.text
-    assert "Пригласил: Анна" in with_name.text
+    assert "Кто пригласил: Анна" in with_name.text
     assert "Вас пригласили в Студию" in without.text
-    assert "Пригласил" not in without.text
+    assert "Кто пригласил" not in without.text
 
 
 @pytest.mark.parametrize("lang", list(Lang))
@@ -160,7 +160,7 @@ def test__project_invitation_link__shows_message_role_and_expiry_date() -> None:
     mail = sample_mail(MailTemplate.project_invitation_link, Lang.ru)
 
     assert "Редактор" in mail.text
-    assert "> Добавил вас в проект" in mail.text
+    assert "> Добавляю вас в проект" in mail.text
     assert "до 10.11.2026 14:30 UTC" in mail.text
     assert "10.11.2026 14:30 UTC" in mail.html
     en = sample_mail(MailTemplate.project_invitation_link, Lang.en)

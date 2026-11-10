@@ -47,7 +47,7 @@
   "page": {
     "title": "Ссылка на проект",
     "loading": "Проверяем ссылку…",
-    "offered": "{{owner}} открыл(а) вам «{{project}}»",
+    "offered": "{{owner}} делится с вами проектом «{{project}}»",
     "role": {
       "reader": "Просмотр PDF",
       "readerSources": "Просмотр исходников",

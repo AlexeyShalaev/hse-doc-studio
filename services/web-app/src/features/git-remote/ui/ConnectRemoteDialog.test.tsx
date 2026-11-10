@@ -932,7 +932,7 @@ describe("ConnectRemoteDialog: шаг «Проверка»", () => {
     );
     await user.click(
       await screen.findByRole("button", {
-        name: /Я добавил\(а\) ключ, проверить/,
+        name: /Ключ добавлен, проверить/,
       }),
     );
     const host = await screen.findByRole("dialog", {
@@ -1898,7 +1898,7 @@ describe("ConnectRemoteDialog: способы доступа вкладками"
     // Запись разрешают отдельно: без неё отправить версии не получится.
     expect(screen.getAllByText(/Allow write access/).length).toBeGreaterThan(0);
     await user.click(
-      screen.getByRole("button", { name: "Я добавил(а) ключ, проверить" }),
+      screen.getByRole("button", { name: "Ключ добавлен, проверить" }),
     );
     await waitFor(() => {
       expect(vi.mocked(gitRemoteApi.probe)).toHaveBeenCalledWith({

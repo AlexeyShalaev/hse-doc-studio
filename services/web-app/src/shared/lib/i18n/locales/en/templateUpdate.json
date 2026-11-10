@@ -48,7 +48,7 @@
     "title": "Template update {{from}} → {{to}}",
     "loading": "Comparing your project with the new template version…",
     "notes": "What's new",
-    "nothing": "The update changes no project files: only the new template version applies (checks, submission profiles).",
+    "nothing": "The update changes no project files: only the new template version applies (checks, checkpoints).",
     "files": "Files",
     "cancel": "Cancel",
     "apply": "Update",

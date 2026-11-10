@@ -8,10 +8,10 @@ tags:
 
 # Submission profiles
 
-<p class="hds-lede">A submission profile is a pack-declared point that a package is assembled for: the list of items, the signatures and the forms. It is exactly what the Package button sees.</p>
+<p class="hds-lede">A submission profile is a pack-declared checkpoint that a package is assembled for: the list of items, the signatures and the forms. The app calls it a checkpoint; it is exactly what the Package button sees.</p>
 
 Profile
-:   A named submission point with a description and a list of items. How many there are and which — the template decides; in the app these are the stations of the Submission rail.
+:   A named checkpoint with a description and a list of items. How many there are and which ones, the template decides; in the app these are the checkpoints of the Submission mode.
 
 Item
 :   A document in the package plus its inclusion conditions: “team projects only”, “one track only”, “skipped when NDA is on”. The Studio switches items on and off by the project's properties itself — the conditions are not fine print but the package's logic.

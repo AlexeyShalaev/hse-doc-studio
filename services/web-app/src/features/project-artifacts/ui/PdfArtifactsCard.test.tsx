@@ -105,7 +105,7 @@ describe("PdfArtifactsCard", () => {
     const first = within(top);
     expect(first.getByText("coursework.pdf")).toBeTruthy();
     expect(first.getByText(/42 стр\./)).toBeTruthy();
-    expect(first.getByText(/выгрузил Анна Петрова/)).toBeTruthy();
+    expect(first.getByText(/кто выгрузил: Анна Петрова/)).toBeTruthy();
     expect(first.getByText(/из «Студия на MacBook»/)).toBeTruthy();
     expect(screen.getByText("Предыдущие версии: 1")).toBeTruthy();
   });

@@ -152,7 +152,7 @@ describe("InboxBellView: список", () => {
     const items = screen.getByRole("list", { name: "Последние уведомления" });
     expect(items.querySelectorAll("li")).toHaveLength(3);
     const first = screen.getByTestId("inbox-popover-item-n1");
-    expect(first).toHaveTextContent("Дмитрий принял приглашение в «ВКР»");
+    expect(first).toHaveTextContent("Приглашение в «ВКР» принято: Дмитрий");
     expect(first).toHaveTextContent("5 минут назад");
     expect(first).toHaveAttribute("data-unread", "true");
     expect(first).toHaveTextContent("Новое");

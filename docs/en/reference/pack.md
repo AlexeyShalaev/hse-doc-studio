@@ -14,7 +14,7 @@ Pack
 :   A set of templates for an institution or a programme. A pack declares documents, metadata fields, check rules, forms and submission profiles — the app and this site read the same manifests.
 
 Template
-:   A type of academic work inside a pack — a graduation thesis or a course project, for instance. Each template has its own document set and its own submission points.
+:   A type of academic work inside a pack — a graduation thesis or a course project, for instance. Each template has its own document set and its own checkpoints.
 
 Version
 :   A snapshot of the template's requirements. It is pinned in the project at creation: the requirements never shift under you mid-year, and moving to a newer version is a deliberate action.

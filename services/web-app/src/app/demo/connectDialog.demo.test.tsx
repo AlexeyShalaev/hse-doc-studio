@@ -193,7 +193,7 @@ describe("окно подключения поверх демо-транспор
     await user.click(screen.getByRole("button", { name: "Далее" }));
     // Для gitlab.hse.ru в демо ключ уже создан и выбран.
     await user.click(
-      await screen.findByRole("button", { name: /Я добавил\(а\) ключ/ }),
+      await screen.findByRole("button", { name: /Ключ добавлен/ }),
     );
     const hostDialog = await screen.findByRole("dialog", {
       name: /gitlab.hse.ru подключается впервые/,
@@ -219,7 +219,7 @@ describe("окно подключения поверх демо-транспор
       await screen.findByRole("button", { name: "Создать ключ" }),
     );
     await user.click(
-      await screen.findByRole("button", { name: /Я добавил\(а\) ключ/ }),
+      await screen.findByRole("button", { name: /Ключ добавлен/ }),
     );
     const hostDialog = await screen.findByRole("dialog", {
       name: /Ключ сервера github.com изменился/,
@@ -499,9 +499,7 @@ describe("окно подключения поверх демо-транспор
       "href",
       "https://github.com/hse/empty-paper/settings/keys/new",
     );
-    await user.click(
-      screen.getByRole("button", { name: /Я добавил\(а\) ключ/ }),
-    );
+    await user.click(screen.getByRole("button", { name: /Ключ добавлен/ }));
     const card = await screen.findByTestId("probe-result-ready-empty");
     await user.click(
       within(card).getByRole("button", { name: "Только подключить" }),

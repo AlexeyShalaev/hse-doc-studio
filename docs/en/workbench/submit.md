@@ -1,6 +1,6 @@
 ---
 title: Submission and packaging
-description: Submission profiles from the template, the readiness ring, forms, signatures and packaging archives with canonical names.
+description: Checkpoints from the template, the readiness ring, forms, signatures and packaging archives with canonical names.
 tags:
   - Workbench
   - Submission
@@ -9,28 +9,28 @@ tags:
 
 # Submission and packaging
 
-<p class="hds-lede">Submission mode gathers everything needed to hand the work in: the submission profiles from the template, forms, signatures and packaging an archive with canonical file names.</p>
+<p class="hds-lede">Submission mode gathers everything needed to hand the work in: the checkpoints from the template, forms, signatures and packaging an archive with canonical file names.</p>
 
 <figure class="hds-fig hds-wide">
   <div class="hds-shot">
     <div class="hds-shot__bar"><span class="hds-shot__brand">HSE DOC STUDIO</span><span class="hds-shot__route">/projects/vkr/submit</span></div>
-    <img src="../assets/shots/submit.en.light.png#only-light" alt="Submission point">
-    <img src="../assets/shots/submit.en.dark.png#only-dark" alt="Submission point">
+    <img src="../assets/shots/submit.en.light.png#only-light" alt="Checkpoint">
+    <img src="../assets/shots/submit.en.dark.png#only-dark" alt="Checkpoint">
   </div>
-  <figcaption>a submission point: the readiness ring, documents, signatures and forms</figcaption>
+  <figcaption>a checkpoint: the readiness ring, documents, signatures and forms</figcaption>
 </figure>
 
 
-## Submission profiles { #checkpoints }
+## Checkpoints { #checkpoints }
 
-A submission profile is a package composition declared by the template: which documents, forms and signatures a particular submission needs.
+A checkpoint is a package composition declared by the template: which documents, forms and signatures a particular submission needs. The reference calls it a submission profile.
 
-- **The readiness ring** “N of M ready” on every profile; “Pin” it — and badges across the Workbench count blockers towards that profile.
+- **The readiness ring** “N of M ready” on every checkpoint; once you “Pin” it, badges across the Workbench count blockers towards that checkpoint.
 - **Item statuses** — “built”, “not built”, “with errors”, signed or not; “Open document” goes off to fix it.
 - **“Package”** — an archive (zip, tar.gz and more) with canonical names: “Technical specification.pdf”, not `technical_specification.pdf`; preflight checks run before packaging.
 - **“Past builds”** — package history: contents, “Download”, “Copy path”.
 
-Each template's profile composition is in the [reference](../reference/checkpoints.md).
+The checkpoints of each template are described in the [reference](../reference/checkpoints.md).
 
 ## Forms { #forms }
 

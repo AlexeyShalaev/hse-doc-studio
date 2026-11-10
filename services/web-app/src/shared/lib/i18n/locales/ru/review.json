@@ -17,7 +17,7 @@
   "reply": "Ответить",
   "resolve": "Решить",
   "reopen": "Открыть снова",
-  "resolvedBy": "Решил {{name}}",
+  "resolvedBy": "Решено: {{name}}",
   "edit": "Изменить",
   "delete": "Удалить",
   "deleteConfirm": "Удалить комментарий?",
