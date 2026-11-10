@@ -72,6 +72,7 @@
     "pausedTitle": "Route stopped",
     "paused": {
       "rebuilt": "The document changed after it was sent. The author will check it and send it again.",
+      "sent_changed": "The version out for signing changed outside the route. The author will send the documents again.",
       "marks_changed": "Signatures in the document changed outside the route. The author will send the documents again.",
       "frozen_changed": "The final PDF changed outside the route. The author will send the documents again.",
       "participant_left": "The signers changed. The author will assign another signer.",
@@ -287,6 +288,7 @@
     },
     "reason": {
       "rebuilt": "document changed",
+      "sent_changed": "version out for signing changed",
       "marks_changed": "signatures changed",
       "frozen_changed": "final PDF changed",
       "participant_left": "signers changed",

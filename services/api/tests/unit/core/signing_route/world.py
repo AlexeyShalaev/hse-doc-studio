@@ -1,10 +1,12 @@
 """Проект в памяти для тестов маршрута: слоты, придержанные, фиксации и подписи, и прогон маршрута.
 
-`World` держит то, что в настоящем проекте лежит в `.hse-studio/signatures.json` и собранных PDF, и выполняет
-эффекты расчёта так, как их выполнят сценарии. `Driver` ведёт маршрут: отправка, действия участников по
-`next_action`, после каждого шага эффекты, снимок, применение расчёта и проверка, что повторный расчёт ничего не
-делает. Попутно проверяются инварианты раздела 2: согласия по порядку шагов, картинка только после согласия,
-фиксация не сбрасывает поставленные подписи.
+`World` держит то, что в настоящем проекте лежит в `.hse-studio/signatures.json`, собранных PDF и версиях на
+подписи, и выполняет эффекты расчёта так, как их выполнят сценарии. `compiled` рабочая сборка («Собрать»),
+`pinned` версия на подписи (раздел 12.3): пока она есть, это источник подписи. `Driver` ведёт маршрут: отправка на
+кандидате со снятием версии на подписи, действия участников по `next_action`, после каждого шага эффекты, снимок,
+применение расчёта и проверка, что повторный расчёт ничего не делает. Попутно проверяются инварианты раздела 2:
+согласия по порядку шагов, картинка только после согласия этого документа, фиксация не сбрасывает поставленные
+подписи.
 """
 
 from __future__ import annotations
@@ -26,7 +28,7 @@ from hse_doc_studio.core.signatures.plan import (
     method_of,
 )
 from hse_doc_studio.core.signing_route.effects import Effect, FillPlate, Freeze, Notify, Release, Withhold
-from hse_doc_studio.core.signing_route.engine import Evaluation, RouteFacts, evaluate
+from hse_doc_studio.core.signing_route.engine import Evaluation, RouteFacts, approved_docs, evaluate
 from hse_doc_studio.core.signing_route.entities import (
     DocSlot,
     NextAction,
@@ -42,6 +44,7 @@ from hse_doc_studio.core.signing_route.transitions import (
     refresh_snapshot,
     send,
 )
+from hse_doc_studio.core.signing_route.versions import version_changes
 from hse_doc_studio.core.value_objects import (
     DetachedSignature,
     EmbeddedSignature,
@@ -74,6 +77,7 @@ class World:
     docs: tuple[str, ...] = (DOC,)
     slots: dict[str, SignatureSlot] = field(default_factory=dict)
     compiled: dict[str, str | None] = field(default_factory=dict)
+    pinned: dict[str, str | None] = field(default_factory=dict)
     withheld: dict[str, set[str]] = field(default_factory=dict)
     frozen: dict[str, FrozenPdf] = field(default_factory=dict)
     detached: dict[str, dict[str, DetachedSignature]] = field(default_factory=dict)
@@ -113,9 +117,22 @@ class World:
             embedded={doc_id: dict(sigs) for doc_id, sigs in self.embedded.items()},
         )
 
+    def source(self, doc_id: str) -> str | None:
+        """Источник подписи (12.4): версия на подписи, если она есть (None: запись есть, файла нет), иначе сборка."""
+        return self.pinned[doc_id] if doc_id in self.pinned else self.compiled[doc_id]
+
+    def pin(self, doc_ids: Iterable[str]) -> None:
+        """Снять версию на подписи из рабочей сборки, как сценарий отправки (12.3)."""
+        for doc_id in doc_ids:
+            if self.compiled[doc_id] is not None:
+                self.pinned[doc_id] = self.compiled[doc_id]
+
+    def doc_facts(self, doc_id: str) -> DocFacts:
+        return DocFacts(self.source(doc_id), self.marks(doc_id), working_sha256=self.compiled[doc_id])
+
     def facts(self) -> RouteFacts:
         return RouteFacts(
-            docs={doc_id: DocFacts(self.compiled[doc_id], self.marks(doc_id)) for doc_id in self.docs},
+            docs={doc_id: self.doc_facts(doc_id) for doc_id in self.docs},
             state=self.state(),
             withheld={doc_id: frozenset(slots) for doc_id, slots in self.withheld.items()},
             plates=dict(self.plates),
@@ -141,7 +158,7 @@ class World:
         if self.detached.pop(doc_id, None) or self.embedded.pop(doc_id, None):
             self.resets += 1
         marks = self.marks(doc_id)
-        build = self.compiled[doc_id] or ""
+        build = self.source(doc_id) or ""
         self.frozen[doc_id] = FrozenPdf(
             path=f".hse-studio/frozen/{doc_id}.pdf",
             sha256=sha(f"B:{build}:{marks}"),
@@ -239,7 +256,11 @@ class Driver:
         return evaluation
 
     def send(self, by: UUID) -> Evaluation:
-        self.route = send(self.route, self.world.facts(), by=by, at=self.tick())
+        """Отправка, как сценарий R16: расчёт на кандидате, затем снятие версии на подписи изменившихся."""
+        candidate = self.world.facts().candidate()
+        changes = version_changes(self.route, candidate)
+        self.route = send(self.route, candidate, by=by, at=self.tick())
+        self.world.pin(changes.to_pin)
         return self.settle()
 
     def act(self, participant_id: UUID) -> NextAction:
@@ -286,18 +307,21 @@ class Driver:
         self.settle()
 
     def _check_order(self, p: Participant) -> None:
-        """Инвариант 1: шаг k согласует только после всех шагов до k."""
+        """Инвариант 1: шаг k согласует только после всех шагов до k, на текущие версии их документов."""
+        facts = self.world.facts()
         for other in self.route.participants:
             if other.step < p.step:
-                assert other.approval is not None, "согласие вне очереди"
-                assert other.approval.round == self.route.round, "согласие вне очереди"
+                docs = other.doc_ids(self.route.docs)
+                assert approved_docs(self.route, other, facts) == frozenset(docs), "согласие вне очереди"
 
     def _check_images(self) -> None:
-        """Инвариант 2: картинка видна только у согласовавшего текущий раунд."""
+        """Инвариант 2: картинка на документе видна только у согласовавшего версию на подписи этого документа."""
+        facts = self.world.facts()
         for p in self.route.participants:
-            approved = p.approval is not None and p.approval.round == self.route.round
+            approved = approved_docs(self.route, p, facts)
             for pair in p.assignments:
-                assert approved or not self.world.image_visible(pair), f"картинка {pair} видна до согласия"
+                visible = self.world.image_visible(pair)
+                assert pair.doc_id in approved or not visible, f"картинка {pair} видна до согласия"
 
 
 _ACTING = frozenset({NextAction.approve, NextAction.approve_and_sign, NextAction.sign})

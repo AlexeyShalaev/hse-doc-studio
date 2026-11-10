@@ -8,7 +8,7 @@ from uuid import UUID, uuid4
 
 import pytest
 from hse_doc_studio.core.enums import SignMode
-from hse_doc_studio.core.signing_route.engine import approval_token
+from hse_doc_studio.core.signing_route.engine import approval_token, approved_docs
 from hse_doc_studio.core.signing_route.entities import (
     DocSlot,
     RouteConflictError,
@@ -63,6 +63,7 @@ def _author_id(route: SigningRoute) -> UUID:
     ("source", "target", "allowed"),
     [
         (_S.draft, _S.active, True),
+        (_S.active, _S.active, True),
         (_S.active, _S.returned, True),
         (_S.paused, _S.active, True),
         (_S.completed, _S.paused, True),
@@ -117,9 +118,19 @@ def test__send__sender_in_later_step__approves_in_turn_like_everyone() -> None:
     assert route.participant(supervisor.id).approval is None
 
 
-def test__send__active_route__invalid_transition() -> None:
+def test__send__active_route_nothing_changed__nothing_changed() -> None:
     driver = _images()
     route = send(driver.route, driver.world.facts(), by=uuid4(), at=T0)
+
+    with pytest.raises(RouteConflictError) as error:
+        send(route, driver.world.facts().candidate(), by=uuid4(), at=T0)
+
+    assert error.value.code == "nothing_changed"
+
+
+def test__send__archived_route__invalid_transition() -> None:
+    driver = _images()
+    route = archive(cancel(send(driver.route, driver.world.facts(), by=uuid4(), at=T0)))
 
     with pytest.raises(RouteConflictError) as error:
         send(route, driver.world.facts(), by=uuid4(), at=T0)
@@ -141,17 +152,23 @@ def test__send__again_after_return_doc_unchanged__approval_carried_over() -> Non
     assert (approval.round, approval.phase) == (2, RoutePhase.approval)
 
 
-def test__send__again_after_rebuild__approval_dropped() -> None:
+def test__send__again_after_rebuild__approval_carried_with_old_tokens_and_no_longer_valid() -> None:
     driver = _images()
     driver.send(by=_author_id(driver.route))
     supervisor = by_persona(driver.route)["supervisor"]
     driver.act(supervisor.id)
+    old = driver.route.participant(supervisor.id).approval
     driver.world.compiled[DOC] = "c" * 64
     driver.settle()
+    candidate = driver.world.facts().candidate()
 
-    route = send(driver.route, driver.world.facts(), by=uuid4(), at=T0)
+    route = send(driver.route, candidate, by=uuid4(), at=T0)
 
-    assert route.participant(supervisor.id).approval is None
+    approval = route.participant(supervisor.id).approval
+    assert approval is not None
+    assert old is not None
+    assert (approval.round, dict(approval.tokens)) == (2, dict(old.tokens))
+    assert approved_docs(route, route.participant(supervisor.id), candidate) == frozenset()
 
 
 def test__send__again_one_of_two_docs_rebuilt__only_its_signers_lose_approval() -> None:
@@ -168,11 +185,14 @@ def test__send__again_one_of_two_docs_rebuilt__only_its_signers_lose_approval() 
         driver.act(p.id)
     world.compiled[DOC] = "c" * 64
     driver.settle()
+    candidate = world.facts().candidate()
 
-    route = send(driver.route, world.facts(), by=uuid4(), at=T0)
+    route = send(driver.route, candidate, by=uuid4(), at=T0)
 
-    kept = {p.persona for p in route.participants if p.approval is not None}
+    kept = {p.persona for p in route.participants if approved_docs(route, p, candidate) == set(p.doc_ids(route.docs))}
     assert kept == {"academic_supervisor"}
+    author = by_persona(route)["author"]
+    assert approved_docs(route, author, candidate) == {DOC2}
 
 
 @pytest.mark.parametrize(
@@ -316,14 +336,15 @@ def test__apply_evaluation__completed_route_lost_signature__active_again_without
     assert (route.status, route.phase, route.completed_at) == (_S.active, RoutePhase.signing, None)
 
 
-def test__refresh_snapshot__keeps_build_that_was_sent() -> None:
+def test__refresh_snapshot__keeps_version_that_was_sent_and_when() -> None:
     driver = _images()
     driver.send(by=_author_id(driver.route))
-    driver.world.compiled[DOC] = "c" * 64
+    driver.world.pinned[DOC] = "c" * 64
     driver.world.withheld[DOC].add("author")
 
     route = refresh_snapshot(driver.route, driver.world.facts())
 
     snapshot = route.snapshot[DOC]
     assert snapshot.compiled_sha256 == driver.route.snapshot[DOC].compiled_sha256
+    assert snapshot.sent_at == driver.route.snapshot[DOC].sent_at is not None
     assert snapshot.marks_digest == driver.world.marks(DOC)

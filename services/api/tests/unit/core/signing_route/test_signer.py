@@ -148,12 +148,13 @@ def test__check_expected__nothing_to_act_on__any_expected_is_stale() -> None:
         check_expected({DOC: None}, {DOC: "build:a"})
 
 
-def test__changed_docs__rebuilt_document_differs_from_the_snapshot() -> None:
+def test__changed_docs__replaced_pinned_version_differs_from_the_snapshot_a_new_build_does_not() -> None:
     driver = _driver({"author": SignMode.image, "supervisor": SignMode.image}, docs=(DOC, DOC2))
     driver.send(by_persona(driver.route)["author"].user_id or uuid4())
+    driver.world.compiled[DOC] = "c" * 64
     assert changed_docs(driver.route, driver.world.facts()) == ()
 
-    driver.world.compiled[DOC2] = "c" * 64
+    driver.world.pinned[DOC2] = "c" * 64
 
     assert changed_docs(driver.route, driver.world.facts()) == (DOC2,)
 

@@ -27,6 +27,7 @@ export type SigningRoutePhase = z.infer<typeof SigningRoutePhaseSchema>;
 
 export const SigningStopReasonSchema = z.enum([
   "rebuilt",
+  "sent_changed",
   "marks_changed",
   "frozen_changed",
   "participant_left",
