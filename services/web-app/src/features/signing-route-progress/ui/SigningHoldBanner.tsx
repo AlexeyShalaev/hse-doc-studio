@@ -97,16 +97,22 @@ export const SigningHoldBanner = ({
       >
         {hold !== null && (
           <span style={{ color: "var(--fg-0)" }}>
-            {pinnedDay === null
-              ? t("hold.banner", {
+            {/* С изменениями дату версии называет строка ниже: здесь только шаг. */}
+            {changed
+              ? t("hold.bannerStep", {
                   step: hold.step ?? hold.total,
                   total: hold.total,
                 })
-              : t("hold.bannerVersion", {
-                  step: hold.step ?? hold.total,
-                  total: hold.total,
-                  date: pinnedDay,
-                })}
+              : pinnedDay === null
+                ? t("hold.banner", {
+                    step: hold.step ?? hold.total,
+                    total: hold.total,
+                  })
+                : t("hold.bannerVersion", {
+                    step: hold.step ?? hold.total,
+                    total: hold.total,
+                    date: pinnedDay,
+                  })}
             {/* «?» плашки: шаг статьи о ходе подписания про правку документа на подписании. */}
             <HelpAnchor article="runbooks/signing-progress" step={4} />
           </span>
@@ -123,7 +129,8 @@ export const SigningHoldBanner = ({
       </div>
       <div
         className="flex items-center"
-        style={{ gap: "0.375rem", flexWrap: "wrap", flexShrink: 0 }}
+        // На телефоне кнопки уходят под текст и переносятся, а не вылезают за край.
+        style={{ gap: "0.375rem", flexWrap: "wrap", maxWidth: "100%" }}
       >
         {canSendNew && (
           <NewVersionAction

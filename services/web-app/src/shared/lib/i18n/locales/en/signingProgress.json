@@ -87,6 +87,7 @@
   "hold": {
     "banner": "This document is out for signing (step {{step}} of {{total}}). Editing and rebuilding will stop the route.",
     "bannerVersion": "This document is out for signing (step {{step}} of {{total}}). Signers sign the version from {{date}}; your edits do not go into it.",
+    "bannerStep": "This document is out for signing (step {{step}} of {{total}}).",
     "signatures": "Signatures cannot be changed while the route is running.",
     "open": "Signing progress",
     "locked": "This document is out for signing: signatures cannot be changed. To change them, cancel the route on the checkpoint page."

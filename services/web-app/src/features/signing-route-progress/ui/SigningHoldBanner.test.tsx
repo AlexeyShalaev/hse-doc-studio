@@ -208,10 +208,11 @@ describe("плашка документа на подписании", () => {
       `Есть изменения после отправки на подпись. Подписывают версию от ${day}.`,
     );
     expect(screen.getByTestId("held")).toHaveTextContent("yes");
-    expect(screen.getByTestId("signing-hold-banner")).toHaveAttribute(
-      "data-changed",
-      "true",
-    );
+    const banner = screen.getByTestId("signing-hold-banner");
+    expect(banner).toHaveAttribute("data-changed", "true");
+    // Дату версии называет строка про изменения, шаг идёт без неё.
+    expect(banner).toHaveTextContent("Документ на подписании (шаг 2 из 2).");
+    expect(banner).not.toHaveTextContent("ваши правки в неё не попадут");
     expect(screen.getByTestId("signing-hold-version")).toHaveAttribute(
       "href",
       expect.stringMatching(
