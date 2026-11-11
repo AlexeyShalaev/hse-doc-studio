@@ -82,6 +82,8 @@ class FakeRunnerState:
         self.progress: dict[str, list[dict[str, Any]]] = {}
         self.cancel_commands: set[str] = set()
         self.progress_errors: dict[str, tuple[int, str]] = {}
+        # Сколько ходов подряд ответить 503 (сервер выкатывается): итог раннер повторяет.
+        self.progress_unavailable = 0
         self.disks: list[dict[str, Any]] = []
         self.disk_status: int | None = None
         # Порядок вызовов канала и `/offline`: итог очистки должен уйти раньше `/offline`.
@@ -171,6 +173,9 @@ def create_fake_app(state: FakeRunnerState) -> FastAPI:  # noqa: C901
         if "control" not in state.server_features:
             return Response(status_code=404)
         state.events.append(f"progress:{body.state}")
+        if state.progress_unavailable > 0:
+            state.progress_unavailable -= 1
+            return _error(503, "unavailable")
         if command_id in state.progress_errors:
             status, code = state.progress_errors[command_id]
             return _error(status, code)

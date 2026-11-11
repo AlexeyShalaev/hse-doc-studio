@@ -96,9 +96,7 @@ def _empty(error: str | None = None) -> CommandProgress:
 class RunnerControlLoop:
     """Опрос команд, исполнение `disk.*` и отчёт о диске; `start` после согласования, `stop` при остановке раннера."""
 
-    def __init__(
-        self, client: RunnerClient, disk: RunnerDiskService, config: ControlLoopConfig | None = None
-    ) -> None:
+    def __init__(self, client: RunnerClient, disk: RunnerDiskService, config: ControlLoopConfig | None = None) -> None:
         self._client = client
         self._disk = disk
         self._config = config or ControlLoopConfig()
@@ -171,21 +169,13 @@ class RunnerControlLoop:
                 response = await self._client.control_poll(ControlPollRequest(wait_s=self._config.wait_s))
             except RunnerCommandRejected as exc:
                 backoff.reset()
-                logger.warning("runner command rejected: %s", exc.reason)
-                if exc.command_id is not None:
-                    self._spawn(self._reject(exc.command_id, exc.reason))
+                self._on_rejected(exc)
                 continue
-            except RunnerApiError as exc:
-                if exc.status in (404, 405) or exc.code in _CHANNEL_GONE_CODES:
-                    logger.info("server closed the command channel (%s), waiting for the next announce", exc)
-                    if self._report_task is not None:
-                        self._report_task.cancel()
+            except (RunnerApiError, RunnerUnreachable) as exc:
+                if _channel_gone(exc):
+                    self._close_channel(exc)
                     return
-                logger.warning("control poll rejected: %s", exc)
-                await self._sleep_or_stop(backoff.next())
-                continue
-            except RunnerUnreachable as exc:
-                logger.debug("control poll: api unreachable (%s)", exc)
+                _log_poll_failure(exc)
                 await self._sleep_or_stop(backoff.next())
                 continue
             backoff.reset()
@@ -195,6 +185,17 @@ class RunnerControlLoop:
             idle = self._config.min_poll_interval_s - (time.monotonic() - started)
             if idle > 0:
                 await self._sleep_or_stop(idle)
+
+    def _on_rejected(self, exc: RunnerCommandRejected) -> None:
+        logger.warning("runner command rejected: %s", exc.reason)
+        if exc.command_id is not None:
+            self._spawn(self._reject(exc.command_id, exc.reason))
+
+    def _close_channel(self, exc: Exception) -> None:
+        """Сервер больше не знает канала: опрос и отчёты прекращаются до следующего `/announce`."""
+        logger.info("server closed the command channel (%s), waiting for the next announce", exc)
+        if self._report_task is not None:
+            self._report_task.cancel()
 
     def _accept(self, envelope: RunnerCommandEnvelope) -> None:
         if envelope.id in self._seen:
@@ -376,7 +377,9 @@ class _ProgressReporter:
             )
         except RunnerApiError as exc:
             if exc.code in _COMMAND_GONE_CODES:
-                logger.warning("command %s is closed on the server (%s), stopping after the current step", self._id, exc)
+                logger.warning(
+                    "command %s is closed on the server (%s), stopping after the current step", self._id, exc
+                )
                 self._abandoned = True
                 self._cancel_run()
             else:
@@ -393,6 +396,18 @@ class _ProgressReporter:
     def _cancel_run(self) -> None:
         if self._run is not None:
             self._run.cancel()
+
+
+def _channel_gone(exc: RunnerApiError | RunnerUnreachable) -> bool:
+    return isinstance(exc, RunnerApiError) and (exc.status in (404, 405) or exc.code in _CHANNEL_GONE_CODES)
+
+
+def _log_poll_failure(exc: RunnerApiError | RunnerUnreachable) -> None:
+    # Обрыв сети уже виден по опросу задач и предупреждениям клиента: здесь только для отладки.
+    if isinstance(exc, RunnerUnreachable):
+        logger.debug("control poll: api unreachable (%s)", exc)
+    else:
+        logger.warning("control poll rejected: %s", exc)
 
 
 async def _cancel_all(tasks: Iterable[asyncio.Task[None]]) -> None:

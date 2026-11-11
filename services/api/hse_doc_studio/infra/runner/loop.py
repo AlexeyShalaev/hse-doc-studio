@@ -230,7 +230,7 @@ class RunnerLoop:
         control = self._control
         if control is None or self._stop.is_set():
             return
-        if _CONTROL_FEATURES <= self._client.features:
+        if self._client.features >= _CONTROL_FEATURES:
             if control.running:
                 control.request_report()
             else:
