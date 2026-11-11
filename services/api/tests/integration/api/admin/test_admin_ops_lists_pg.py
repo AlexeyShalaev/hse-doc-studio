@@ -52,6 +52,7 @@ from hse_doc_studio.use_cases.admin.ops_runners import (
     RunnerSummaryUC,
 )
 from hse_doc_studio.use_cases.admin.ops_storage import ListStorageOwnersUC
+from hse_doc_studio.use_cases.jobs.runner_disk import RunnerDiskUC
 from hse_doc_studio.use_cases.jobs.runners import RunnerRegistry
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy import insert
@@ -59,6 +60,7 @@ from sqlalchemy.ext.asyncio import AsyncEngine
 
 from tests.fakes.auth import InMemoryAuditLog
 from tests.fakes.ops import NoopUow, ReversingCipher
+from tests.fakes.runner_commands import in_memory_runner_disk_uc
 
 pytestmark = pytest.mark.pg
 
@@ -280,6 +282,10 @@ class _Provider(Provider):
             InMemoryAuditLog(),
             NoopUow(),
         )
+
+    @provide
+    def runner_disk(self, registry: RunnerRegistry) -> RunnerDiskUC:
+        return in_memory_runner_disk_uc(registry, SqlRunnerRepository(self.sessions))
 
     @provide
     def runner_summary(self) -> RunnerSummaryUC:
