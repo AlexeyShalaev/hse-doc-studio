@@ -12,8 +12,8 @@ from hse_doc_studio.core.git_sync.protocols import ISecretCipher
 from hse_doc_studio.core.git_sync.secret import Secret
 from hse_doc_studio.core.i18n import localized_error
 from hse_doc_studio.core.identity.errors import IdentityError, IdentityErrorCode, message_for
-from hse_doc_studio.core.identity.normalize import is_valid_email
-from hse_doc_studio.core.identity.protocols import IAuditLog, IInstanceSettingsRepository, IMailSender, IUserRepository
+from hse_doc_studio.core.identity.normalize import is_valid_email, normalize_email
+from hse_doc_studio.core.identity.protocols import IAuditLog, IInstanceSettingsRepository, IUserRepository
 from hse_doc_studio.core.identity.setting_source import SettingDescription, describe_setting
 from hse_doc_studio.core.identity.smtp_settings import (
     KEY_FROM_ADDRESS,
@@ -32,11 +32,13 @@ from hse_doc_studio.core.identity.smtp_settings import (
     smtp_config_from,
     smtp_config_of,
 )
-from hse_doc_studio.core.mail import MailTemplate, compose, resolve_lang
+from hse_doc_studio.core.mail import MailTemplate, resolve_lang
+from hse_doc_studio.core.mail.journal import MailOrigin, MailRequest
 from hse_doc_studio.core.secrets import column_aad
 from hse_doc_studio.core.uow import IUnitOfWork
 from hse_doc_studio.use_cases.admin.users import require_admin
 from hse_doc_studio.use_cases.identity.auth_settings import SOURCE_ADMIN
+from hse_doc_studio.use_cases.mail.dispatch import MailDispatcher
 
 _log = logging.getLogger(__name__)
 
@@ -214,34 +216,41 @@ class SmtpTestResult:
 
 class SendTestMailUC:
     def __init__(
-        self, sender: IMailSender, users: IUserRepository, audit: IAuditLog, public_url: str | None = None
+        self, mail: MailDispatcher, users: IUserRepository, audit: IAuditLog, public_url: str | None = None
     ) -> None:
-        self._sender = sender
+        self._mail = mail
         self._users = users
         self._audit = audit
         self._public_url = public_url
 
     async def execute(self, actor: Actor, to: str | None) -> SmtpTestResult:
-        """Письмо уходит по сохранённым настройкам; сбой возвращается как результат, а не как ошибка запроса."""
+        """Письмо уходит по сохранённым настройкам; сбой возвращается как результат, а не как ошибка запроса.
+
+        Попытка пишется в журнал писем (P15); без SMTP письма нет, как и строки журнала.
+        """
         admin_id = require_admin(actor)
         # Актор несёт подпись коммитов, а не почту аккаунта: по умолчанию пишем на адрес самого админа из аккаунта.
         account = await self._users.get(admin_id)
         recipient = (to or (account.email if account else "")).strip()
         if not is_valid_email(recipient):
             raise _invalid("Укажите адрес получателя.", "Enter a recipient address.")
-        if not self._sender.enabled:
+        if not self._mail.enabled:
             raise _invalid("SMTP не настроен.", "SMTP is not configured.")
+        # Получатель в журнале: человек установки с этим адресом (обычно сам админ), если он есть.
+        own = account is not None and normalize_email(recipient) == normalize_email(account.email)
+        addressee = account if own else await self._users.get_by_email(normalize_email(recipient))
         # Язык письма: язык аккаунта администратора, иначе язык интерфейса его запроса.
-        mail = compose(
-            MailTemplate.smtp_test,
-            resolve_lang(account.locale if account else None),
-            to=recipient,
-            server_url=self._public_url,
+        outcome = await self._mail.send(
+            MailRequest(
+                template=MailTemplate.smtp_test,
+                lang=resolve_lang(account.locale if account else None),
+                to=recipient,
+                to_user_id=addressee.id if addressee else None,
+                server_url=self._public_url,
+                origin=MailOrigin.smtp_test,
+            )
         )
-        try:
-            await self._sender.send(recipient, mail.subject, mail.text, html=mail.html)
-        except Exception as exc:
-            await self._audit.record("settings.smtp_test", actor_id=admin_id, details={"ok": False})
-            return SmtpTestResult(False, f"{type(exc).__name__}: {str(exc)[:200]}")
-        await self._audit.record("settings.smtp_test", actor_id=admin_id, details={"ok": True})
-        return SmtpTestResult(True)
+        await self._audit.record("settings.smtp_test", actor_id=admin_id, details={"ok": outcome.sent})
+        if outcome.sent:
+            return SmtpTestResult(True)
+        return SmtpTestResult(False, outcome.failure.describe() if outcome.failure else outcome.reason)

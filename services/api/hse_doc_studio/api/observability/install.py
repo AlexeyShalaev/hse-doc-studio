@@ -12,10 +12,12 @@ from fastapi import FastAPI
 
 from hse_doc_studio.api.config import Settings
 from hse_doc_studio.api.observability.health import HealthRegistry, build_health_router, build_metrics_router
+from hse_doc_studio.api.observability.mail_metrics import mail_collector
 from hse_doc_studio.api.observability.metrics import MetricsMiddleware, MetricsRegistry, background_collector
 from hse_doc_studio.api.observability.request_id import RequestIdMiddleware
 from hse_doc_studio.core.background import BackgroundTaskRunner, PeriodicTask
 from hse_doc_studio.core.jobs.control import COMMANDS_REAPER_INTERVAL_S
+from hse_doc_studio.use_cases.mail.dispatch import MAIL_COUNTERS
 
 if TYPE_CHECKING:
     from collections.abc import Awaitable, Callable
@@ -39,6 +41,7 @@ def install_server_observability(app: FastAPI, cfg: Settings, health: HealthRegi
     app.include_router(build_metrics_router(metrics, metrics_token=token.get_secret_value() if token else None))
     app.add_middleware(MetricsMiddleware, registry=metrics)
     app.add_middleware(RequestIdMiddleware)
+    metrics.add_collector(mail_collector(MAIL_COUNTERS))
     return metrics
 
 

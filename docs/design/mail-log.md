@@ -453,7 +453,13 @@ the log]».
 - `core/mail/compose.py`: `build_content(..., links: Literal["live", "redacted"] = "live")`. В режиме `redacted`
   кнопка остаётся с подписью, но `href=None`, `plain_link` это «[ссылка скрыта]» для `token` и `link_path` для
   `page`, блок сообщения это `note_hidden`. `render.py` рисует кнопку без `href` как `<span>` того же вида.
-- `core/mail/cause.py`: `contextvar` текущей фоновой задачи; `BackgroundTaskRunner` ставит его вокруг каждого тика.
+- `core/mail/cause.py`: `current_caller() -> MailCaller` (`cause`, `actor_user_id`, `task`, `request_id`) из
+  контекста процесса. Уточнено в B3: сами `contextvar` лежат не здесь, а там, где их ставят: имя фоновой задачи в
+  `core/background.py` (`current_background_task()`, `BackgroundTaskRunner` ставит его вокруг каждого прогона, задачи
+  прогона его наследуют), `request_id` в `core/request_id.py` (`RequestIdMiddleware` api ставит его там же; из
+  `api` его не прочитал бы слой `use_cases`). Порядок: прогон фоновой задачи даёт `system`, даже если внутри стоит
+  актор; иначе актор-человек (`ActorKind.user` с id) даёт `user`; всё остальное, включая гостя по ссылке,
+  `anonymous`.
 - `core/identity/protocols.py`: `IMailSender.send(...) -> str` (Message-ID); `IMailLogRepository` (`add`, `page`,
   `get`, `summary`). Как сделал B2: удаления в порту нет. Срок хранения держит источник `mail_log` движка
   (`DeleteBatchesSource` с `_MAIL_LOG_WHERE`, 8.1), стирание и выгрузку человека `SqlUserLifecycle` в той же
@@ -462,10 +468,26 @@ the log]».
   `total_estimate` по `query.filtered` (оценка по `pg_class.reltuples`, None до первого `ANALYZE`);
   `summary(since)` даёт `MailLogCounts` за окно от `since`.
 - `use_cases/mail/dispatch.py`: `MailDispatcher.send(request) -> MailOutcome` и `MailDispatcher.skip(request,
-  status, reason)`; `use_cases/mail/log.py`: `ListMailLogUC`, `GetMailLogEntryUC`, `MailLogSummaryUC`.
+  reason) -> MailOutcome`; `use_cases/mail/log.py`: `ListMailLogUC`, `GetMailLogEntryUC`, `MailLogSummaryUC`.
+  Уточнено в B3: у `skip` нет параметра `status`, он следует из причины (`smtp_off` даёт `not_sent`, остальные
+  `suppressed`), так что неверную пару не передать. `send` без SMTP (`enabled=False`) сам пишет `not_sent/smtp_off`
+  и отправителя не зовёт, поэтому пути, которым не нужно ветвиться, просто зовут `send`. `MailOutcome`: `status`,
+  `reason` (причина пропуска или класс сбоя), `message_id`, `failure` (`MailFailure`), `entry_id` (None, если
+  запись журнала не удалась) и `sent`. Диспетчер не бросает из-за почты и журнала; исключение возможно только из
+  `MailRequest.render()` у `send` (ошибка в коде письма, до отправки). Он же режет поля под колонки: `subject` до
+  200, `error_text` до 300, `message_id` до 255, `to_user_id`, `task`, `request_id`, `ref_id` до 64; `project_id`
+  приводится к виду UUID, не-UUID отбрасывается. Если отправитель не вернул Message-ID, в строке `<unknown>`.
 - `infra/identity/smtp_errors.py`: `classify(exc, *, secrets) -> MailFailure` по классам `aiosmtplib`
   (`SMTPAuthenticationError`, `SMTPConnectError`, `SMTPConnectTimeoutError`, `SMTPTimeoutError`,
   `SMTPRecipientsRefused`, `SMTPSenderRefused`, `SMTPDataError`, `SMTPServerDisconnected`, `ssl.SSLError`).
+  Уточнено в B3: `classify` зовёт сам `SmtpMailSender`, потому что только он знает логин и пароль, и бросает
+  `MailSendError(failure)` (`core/mail/journal.py`); без SMTP `ConfiguredMailSender` и `LinkOnlyMailSender` бросают
+  её же с `smtp_off`. Диспетчер в `use_cases` не импортирует `infra`: он берёт `exc.failure`, а любое другое
+  исключение пишет как `other` с текстом `Тип: сообщение`. Секреты скрываются и в base64 (`AUTH PLAIN`, `AUTH
+  LOGIN`), без учёта регистра; общая очистка текста `clean_error_text` лежит в `core/mail/journal.py`.
+  `SMTPNotSupported` про STARTTLS это `tls`, про AUTH это `auth`; `SMTPConnectResponseError` (ответ при соединении)
+  это `connect` с кодом; ошибка TLS внутри `SMTPConnectError` (причина в цепочке) это `tls`; `OSError` (отказ в
+  соединении, неизвестный хост) это `connect`; `SMTPHeloError` и прочие ответы это `other` с кодом.
 - `infra/db/repositories/mail_log.py` (`SqlMailLogRepository`), ORM `infra/db/orm/mail_log.py`, in-memory
   `tests/fakes/mail_log.py` (как остальные фейки; `fail_with` роняет следующую `add` для тестов L15);
   `SessionProvider.own()`: короткая своя транзакция на отдельном соединении даже при живой ambient (L15).
@@ -478,7 +500,7 @@ the log]».
 | P5..P7 (`LinkDelivery.notify`) | без SMTP молча `False` | `skip(not_sent, smtp_off)`, иначе `send`; возвращаемое значение то же |
 | P8..P13 (`Notifier._mail`) | без SMTP выход до загрузки человека; неподтверждённая почта и закрытый вход молча | человек загружается всегда (одна выборка в фоновой задаче); без SMTP `not_sent`, почта не подтверждена `suppressed/email_unverified`, вход закрыт `suppressed/account_blocked`; удалённый человек без строки (адреса нет) |
 | P14 (`send_invitation`) | без SMTP `False`, сбой `False` | `skip` или `send`; ответ (`email` или `manual`) тот же |
-| P15 (`SendTestMailUC`) | свой `try/except` | `send`; без SMTP по-прежнему `422` без строки, текст ошибки из L16 |
+| P15 (`SendTestMailUC`) | свой `try/except` | `send`; без SMTP по-прежнему `422` без строки, текст ошибки из L16 (`MailFailure.describe()`: `auth 535: текст`); получатель в журнале это человек установки с этим адресом, если он есть |
 
 ## 6. API
 
@@ -647,7 +669,11 @@ LifecyclePolicy(
 ### 8.2 Метрики
 
 `/metrics`: `hse_mail_sent_total{kind,status}` (L19) и `hse_mail_log_write_failures_total` (L15). Счётчики в
-процессе, считает `MailDispatcher`, по одному разу на попытку. Меток по получателю и проекту нет.
+процессе, считает `MailDispatcher`, по одному разу на попытку. Меток по получателю и проекту нет. Как сделал B3:
+счётчики `MAIL_COUNTERS` в `use_cases/mail/dispatch.py` (один набор на процесс, сколько бы диспетчеров ни было),
+экспозиция `api/observability/mail_metrics.py`, подключается в `install_server_observability`. Строка
+`hse_mail_sent_total` появляется с первой попыткой этого вида и итога, `hse_mail_log_write_failures_total` есть
+всегда, даже с нулём.
 
 ## 9. Миграции
 
@@ -675,8 +701,12 @@ LifecyclePolicy(
 - Пути 2.2 таблицей: для P1..P15 при SMTP, без SMTP и при сбое ровно одна строка с ожидаемыми `template`, `status`,
   `reason`, `origin`, `cause`; у `Notifier` `suppressed` для неподтверждённой почты и закрытого входа; ответы
   вызывающим (`manual`, ссылка на экране) не изменились.
-- Тест архитектуры: `IMailSender.send` вызывается только в `use_cases/mail/dispatch.py` (обход AST, как
-  `test_runner_isolation`).
+- Тест архитектуры: `IMailSender.send` вызывается только в `use_cases/mail/dispatch.py` (обход AST,
+  `tests/unit/architecture/test_mail_dispatch_only.py`). Как сделал B3: вызовом почты считается `.send(...)` в
+  файле, который упоминает `IMailSender` или его реализации, и любой `.send(..., html=...)`; кроме диспетчера
+  разрешён сам транспорт (`infra/identity/smtp_mailer.py`, `configured_mailer.py`, `mail.py`). Временные
+  исключения `_PENDING` (`use_cases/identity/mail.py` до B4, `infra/notifications/mailer.py` до B5) проверяются на
+  устаревание: срез, переведший путь, обязан удалить свою строку.
 - Репозиторий (контракт на памяти и Postgres, `tests/contract/test_mail_log_contract.py`): курсор, фильтры по И,
   поиск, период, `total_estimate`, сводка за сутки; на Postgres (`test_mail_log_pg.py`) `SessionProvider.own()`
   пишет при откате внешней транзакции, CHECK таблицы, источник `mail_log` движка (счёт и удаление пачками).

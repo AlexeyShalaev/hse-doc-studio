@@ -13,6 +13,7 @@ import pytest
 from aiosmtpd.controller import Controller
 from aiosmtpd.smtp import AuthResult, LoginPassword
 from hse_doc_studio.core.identity.entities import MailKind
+from hse_doc_studio.core.mail.journal import MailFailureClass, MailSendError
 from hse_doc_studio.infra.identity.smtp_mailer import SmtpMailSender, SmtpSettings
 from hse_doc_studio.use_cases.identity.mail import LinkDelivery
 
@@ -82,10 +83,13 @@ async def test_sends_a_plain_text_message(inbox: tuple[_Inbox, int]) -> None:
     handler, port = inbox
     sender = SmtpMailSender(_settings(port, from_address="studio@example.org", from_name="Студия"))
 
-    await sender.send("anna@example.org", "Сброс пароля", "Откройте ссылку: https://studio.test/reset/abc")
+    message_id = await sender.send("anna@example.org", "Сброс пароля", "Откройте ссылку: https://studio.test/reset/abc")
 
     assert sender.enabled
     (envelope,) = handler.messages
+    assert message_id.startswith("<")
+    assert message_id.endswith("@example.org>")
+    assert _parse(envelope.content)["Message-ID"] == message_id
     assert envelope.mail_from == "studio@example.org"
     assert envelope.rcpt_tos == ["anna@example.org"]
     text = envelope.content.decode("utf-8")
@@ -105,20 +109,25 @@ async def test_authenticates_with_login_and_password(auth_inbox: tuple[_Inbox, i
 
 async def test_wrong_password_raises(auth_inbox: tuple[_Inbox, int]) -> None:
     handler, port = auth_inbox
-    sender = SmtpMailSender(_settings(port, username="mailer", password="wrong"))
+    sender = SmtpMailSender(_settings(port, username="mailer", password="wrong-pass"))
 
-    with pytest.raises(aiosmtplib.SMTPException):
+    with pytest.raises(MailSendError) as exc:
         await sender.send("anna@example.org", "Тема", "Текст")
 
     assert handler.messages == []
+    failure = exc.value.failure
+    assert (failure.reason, failure.smtp_code) == (MailFailureClass.auth, 535)
+    assert isinstance(exc.value.__cause__, aiosmtplib.SMTPAuthenticationError)
+    assert "wrong-pass" not in (failure.text or "")
 
 
 async def test_missing_credentials_are_refused_by_a_server_that_requires_them(
     auth_inbox: tuple[_Inbox, int],
 ) -> None:
     _, port = auth_inbox
-    with pytest.raises(aiosmtplib.SMTPException):
+    with pytest.raises(MailSendError) as exc:
         await SmtpMailSender(_settings(port)).send("anna@example.org", "Тема", "Текст")
+    assert exc.value.failure.smtp_code == 530
 
 
 async def test_silent_server_times_out() -> None:
@@ -129,15 +138,17 @@ async def test_silent_server_times_out() -> None:
     port = server.sockets[0].getsockname()[1]
     sender = SmtpMailSender(_settings(port, timeout_s=0.3))
     try:
-        with pytest.raises((aiosmtplib.SMTPException, TimeoutError)):
+        with pytest.raises(MailSendError) as exc:
             await sender.send("anna@example.org", "Тема", "Текст")
+        assert exc.value.failure.reason is MailFailureClass.timeout
     finally:
         server.close()
 
 
 async def test_refused_connection_raises() -> None:
-    with pytest.raises((aiosmtplib.SMTPException, OSError)):
+    with pytest.raises(MailSendError) as exc:
         await SmtpMailSender(_settings(_free_port(), timeout_s=1)).send("anna@example.org", "Тема", "Текст")
+    assert exc.value.failure.reason is MailFailureClass.connect
 
 
 def _parse(raw: bytes) -> EmailMessage:
