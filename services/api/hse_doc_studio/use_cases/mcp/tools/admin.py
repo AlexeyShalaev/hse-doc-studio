@@ -2,18 +2,24 @@
 
 from __future__ import annotations
 
+import re
+from datetime import UTC, datetime
 from uuid import UUID
 
 from hse_doc_studio.core.access.context import require_actor
 from hse_doc_studio.core.agent.entities import AgentToolContext, ToolResult, ToolSpec
 from hse_doc_studio.core.enums import ToolKind
+from hse_doc_studio.core.i18n import localized_error
 from hse_doc_studio.core.identity.entities import AuditQuery, User, UserQuery
 from hse_doc_studio.core.listing import Window
+from hse_doc_studio.core.mail.journal import TEMPLATE_MAX, MailLogQuery, MailStatus
 from hse_doc_studio.use_cases.admin.audit import ListAuditUC
 from hse_doc_studio.use_cases.admin.ops_queue import CancelJobUC, QueueSummaryUC
 from hse_doc_studio.use_cases.admin.ops_runners import RunnerSummaryUC
 from hse_doc_studio.use_cases.admin.users import DisableUserUC, EnableUserUC, ListUsersUC
+from hse_doc_studio.use_cases.mail.log import ListMailLogUC, MailLogView
 from hse_doc_studio.use_cases.mcp.tools._base import (
+    ArgumentError,
     McpTool,
     int_arg,
     json_result,
@@ -124,6 +130,111 @@ class AdminListAuditTool(_AdminTool):
                 for v in page.items
             ]
         )
+
+
+# Журнал писем через MCP короче, чем в админке (docs/design/mail-log.md, 6.4): без курсора и превью.
+MAIL_LOG_LIMIT = 50
+_MAIL_LOG_DEFAULT = 20
+_TEMPLATE = re.compile(rf"^[a-z_]{{1,{TEMPLATE_MAX}}}$")
+# Адрес почты не длиннее 320 символов (RFC 5321), как у фильтра `recipient` в API.
+_RECIPIENT_MAX = 320
+
+
+def _bad(ru: str, en: str) -> ArgumentError:
+    return ArgumentError(localized_error(ru, en))
+
+
+def _mail_status(args: dict[str, object]) -> tuple[MailStatus, ...]:
+    raw = optional_text(args, "status")
+    if raw is None:
+        return ()
+    try:
+        return (MailStatus(raw),)
+    except ValueError:
+        allowed = ", ".join(MailStatus)
+        raise _bad(f"status: одно из {allowed}", f"status: one of {allowed}") from None
+
+
+def _mail_template(args: dict[str, object]) -> tuple[str, ...]:
+    raw = optional_text(args, "template")
+    if raw is None:
+        return ()
+    if not _TEMPLATE.fullmatch(raw):
+        raise _bad("template: вид письма вроде invite", "template: a mail kind such as invite")
+    return (raw,)
+
+
+def _mail_recipient(args: dict[str, object]) -> str | None:
+    raw = optional_text(args, "recipient")
+    if raw is not None and len(raw) > _RECIPIENT_MAX:
+        raise _bad("recipient: слишком длинный адрес", "recipient: the address is too long")
+    return raw
+
+
+def _since(args: dict[str, object]) -> datetime | None:
+    """Начало периода в ISO 8601; без часового пояса считается UTC, дата без времени это полночь."""
+    raw = optional_text(args, "since")
+    if raw is None:
+        return None
+    try:
+        at = datetime.fromisoformat(raw)
+    except ValueError:
+        raise _bad(
+            f"since: ожидается дата ISO 8601, получено {raw!r}", f"since: an ISO 8601 date is expected, got {raw!r}"
+        ) from None
+    return at if at.tzinfo is not None else at.replace(tzinfo=UTC)
+
+
+def _mail_row(view: MailLogView) -> dict[str, object]:
+    """Сведения строки без имён, превью, ссылок и текста сбоя: люди и проект только id (L18)."""
+    entry = view.entry
+    return {
+        "id": entry.id,
+        "at": entry.at,
+        "template": entry.template,
+        "to": entry.to_email,
+        "to_user_id": entry.to_user_id,
+        "subject": entry.subject,
+        "status": entry.status,
+        "reason": entry.reason,
+        "smtp_code": entry.smtp_code,
+        "cause": entry.cause,
+        "actor_id": entry.actor_user_id,
+        "project_id": entry.project_id,
+    }
+
+
+class AdminListMailLogTool(_AdminTool):
+    spec = ToolSpec(
+        name="admin_list_mail_log",
+        description=(
+            "Админ: журнал писем установки, новые первыми. Фильтры: recipient (точный адрес без учёта регистра), "
+            "template (вид письма), status (sent, failed, not_sent, suppressed), since (ISO 8601). "
+            "Строка: время, вид, получатель, тема, итог, причина, код SMTP, кто вызвал (cause и actor_id)."
+        ),
+        parameters={
+            "type": "object",
+            "properties": {
+                "recipient": {"type": "string", "description": "Адрес получателя, точное совпадение"},
+                "template": {"type": "string", "description": "Вид письма, например invite"},
+                "status": {"type": "string", "enum": [s.value for s in MailStatus]},
+                "since": {"type": "string", "description": "Не раньше этого момента, ISO 8601"},
+                "limit": {"type": "integer", "default": _MAIL_LOG_DEFAULT, "maximum": MAIL_LOG_LIMIT},
+            },
+        },
+    )
+    kind = ToolKind.read
+
+    async def handle(self, ctx: AgentToolContext, args: dict[str, object]) -> ToolResult:
+        query = MailLogQuery(
+            templates=_mail_template(args),
+            statuses=_mail_status(args),
+            recipient=_mail_recipient(args),
+            since=_since(args),
+            limit=int_arg(args, "limit", _MAIL_LOG_DEFAULT, lo=1, hi=MAIL_LOG_LIMIT),
+        )
+        page = await (await self._deps.get(ListMailLogUC)).execute(require_actor(), query)
+        return json_result([_mail_row(view) for view in page.items])
 
 
 class AdminDisableUserTool(_AdminTool):

@@ -4,10 +4,13 @@ from __future__ import annotations
 
 import json
 import re
+from datetime import UTC, datetime
 from typing import Any
 from uuid import UUID
 
 import pytest
+from hse_doc_studio.core.mail.journal import MailCause, MailLogEntry, MailParams, MailStatus
+from hse_doc_studio.infra.db.repositories.mail_log import SqlMailLogRepository
 
 from tests.integration.api.personal.conftest import ORIGIN, PASSWORD, Person, Stand, seed_shared_project
 
@@ -145,6 +148,49 @@ async def test__admin_tools__need_admin_group_and_scope(stand: Stand) -> None:
     assert hidden["_meta"]["code"] == "tool_disabled"
     assert shown["isError"] is False, shown
     assert "stand-admin@example.org" in shown["content"][0]["text"]
+
+
+async def test__admin_list_mail_log__compact_rows_filtered_by_recipient(stand: Stand) -> None:
+    log = SqlMailLogRepository(stand.sessions)
+    for email in ("Anna@Example.org", "boris@example.org"):
+        await log.add(
+            MailLogEntry(
+                at=datetime.now(UTC),
+                duration_ms=3,
+                template="invite",
+                lang="ru",
+                to_email=email,
+                subject="Приглашение в Студию",
+                status=MailStatus.failed,
+                reason="recipient_refused",
+                smtp_code=550,
+                error_text="550 mailbox unavailable",
+                cause=MailCause.system,
+                origin="admin_invite",
+                params=MailParams(),
+                template_digest="0000000000000000",
+            )
+        )
+    _enable(stand, disabled_groups=[])
+    headers = _token(stand, "stand-admin@example.org", ["mcp", "mcp:admin"])
+
+    result = _call(
+        stand,
+        headers,
+        "admin_list_mail_log",
+        {"recipient": "anna@example.org", "status": "failed", "since": "2020-01-01", "limit": 50},
+    )
+
+    assert result["isError"] is False, result
+    (row,) = json.loads(result["content"][0]["text"])
+    assert (row["to"], row["status"], row["reason"], row["smtp_code"]) == (
+        "Anna@Example.org",
+        "failed",
+        "recipient_refused",
+        550,
+    )
+    assert (row["cause"], row["actor_id"]) == ("system", None)
+    assert "mailbox unavailable" not in result["content"][0]["text"]
 
 
 async def test__admin_tools__non_admin_with_scope__hidden(stand: Stand) -> None:
