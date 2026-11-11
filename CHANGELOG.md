@@ -6,6 +6,16 @@ Generated from `release-notes.json` via `make changelog` — do not edit by hand
 Release notes are hand-written and bilingual (RU/EN); the app shows them in the
 selected interface language.
 
+## [0.23.0](https://github.com/AlexeyShalaev/hse-doc-studio/compare/v0.22.0...v0.23.0) - 2026-11-11
+
+- New admin section “Mail”: every email the Studio sent or tried to send, with its outcome (sent, failed, not sent), recipient, subject and who triggered it. Filters by kind, outcome, recipient, project and period, plus search.
+- The “Last 24 hours” band and the menu counter show how many emails failed; on a sign-in, connection or TLS failure a hint links to the mail settings. If mail is not configured, the section says so plainly.
+- The email card shows the message as the recipient saw it. Token links (password reset, confirmation, invitation) and people's messages are not stored in the log and are hidden in the preview. Failures show the class, the SMTP code and “What you can do”.
+- Emails no longer disappear silently: if the recipient's address is unverified, sign-in is closed or SMTP is not configured, the log keeps a row with the reason. The SMTP login and password are hidden in error texts.
+- The log is kept for 90 days; the period is set in Data retention and is part of “Free up space”. Deleting a person erases emails to them, and their data export lists them.
+- MCP: a new read-only admin_list_mail_log tool for administrators.
+- Admin help gains a “Mail” article. The docs no longer promise a mail queue: each email is attempted once and its outcome is in the log.
+
 ## [0.22.0](https://github.com/AlexeyShalaev/hse-doc-studio/compare/v0.21.1...v0.22.0) - 2026-11-11
 
 - Runner disk in the admin: the runner menu shows how much space Studio images, the build cache and the runner cache take and what can be freed. Clean block by block or with “Clean all”; the current and previous versions and volumes are never touched. Progress and the result show right in the window.

@@ -1,6 +1,40 @@
 {
   "releases": [
     {
+      "version": "0.23.0",
+      "date": "2026-11-11",
+      "notes": [
+        {
+          "ru": "Новый раздел админки «Письма»: каждое письмо, которое Студия отправила или пыталась отправить, с итогом (отправлено, не ушло, не отправлялось), получателем, темой и тем, кто его вызвал. Фильтры по виду, итогу, получателю, проекту и периоду, поиск.",
+          "en": "New admin section “Mail”: every email the Studio sent or tried to send, with its outcome (sent, failed, not sent), recipient, subject and who triggered it. Filters by kind, outcome, recipient, project and period, plus search."
+        },
+        {
+          "ru": "Полоса «За сутки» и счётчик в меню показывают, сколько писем не ушло; при сбое входа, соединения или TLS появляется подсказка со ссылкой в настройки почты. Если почта не настроена, раздел говорит об этом прямо.",
+          "en": "The “Last 24 hours” band and the menu counter show how many emails failed; on a sign-in, connection or TLS failure a hint links to the mail settings. If mail is not configured, the section says so plainly."
+        },
+        {
+          "ru": "Карточка письма показывает его так, как увидел получатель. Ссылки с токенами (сброс пароля, подтверждение, приглашение) и сообщения людей в журнале не хранятся и в превью скрыты. Для сбоя видны класс, код SMTP и подсказка «Что можно сделать».",
+          "en": "The email card shows the message as the recipient saw it. Token links (password reset, confirmation, invitation) and people's messages are not stored in the log and are hidden in the preview. Failures show the class, the SMTP code and “What you can do”."
+        },
+        {
+          "ru": "Письма больше не пропадают молча: если почта получателя не подтверждена, вход закрыт или SMTP не настроен, в журнале остаётся строка с причиной. Логин и пароль SMTP в текстах ошибок скрыты.",
+          "en": "Emails no longer disappear silently: if the recipient's address is unverified, sign-in is closed or SMTP is not configured, the log keeps a row with the reason. The SMTP login and password are hidden in error texts."
+        },
+        {
+          "ru": "Журнал хранится 90 дней, срок меняется в «Хранении данных» и входит в «Освободить место». При удалении человека письма ему стираются, выгрузка его данных включает список писем.",
+          "en": "The log is kept for 90 days; the period is set in Data retention and is part of “Free up space”. Deleting a person erases emails to them, and their data export lists them."
+        },
+        {
+          "ru": "MCP: новый инструмент только для чтения admin_list_mail_log для администраторов.",
+          "en": "MCP: a new read-only admin_list_mail_log tool for administrators."
+        },
+        {
+          "ru": "Справка администратора дополнена статьёй «Письма». В документации исправлено неверное обещание очереди писем: попытка отправки одна, её итог виден в журнале.",
+          "en": "Admin help gains a “Mail” article. The docs no longer promise a mail queue: each email is attempted once and its outcome is in the log."
+        }
+      ]
+    },
+    {
       "version": "0.22.0",
       "date": "2026-11-11",
       "notes": [
