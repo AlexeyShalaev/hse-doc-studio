@@ -144,7 +144,8 @@ describe("«Освободить место»: окно", () => {
       "около 12 файлов",
     );
     const excluded = screen.getByTestId("sweep-excluded");
-    expect(excluded).toHaveTextContent("Журнал аудита: вручную не чистится");
+    expect(excluded).toHaveTextContent("«Журнал аудита»: вручную не чистится");
+    expect(excluded).toHaveTextContent("«Удалённые проекты»");
     expect(excluded).toHaveTextContent("своя фоновая задача по расписанию");
     expect(screen.getByTestId("sweep-confirm")).toBeEnabled();
     expect(screen.queryByTestId("sweep-nothing")).toBeNull();
