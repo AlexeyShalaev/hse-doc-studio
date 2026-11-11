@@ -11,6 +11,7 @@ import type {
   AdminService,
   AdminStorage,
   AdminStorageOwnerRow,
+  LocalInstance,
 } from "@entities/session";
 import type { ListQueryState } from "@shared/lib";
 import type { GalleryEntry, GalleryGroup } from "@shared/lib/stateGallery";
@@ -627,6 +628,35 @@ export const getAdminOpsGallery = (): GalleryGroup[] => [
           tokensStatus: "error",
           tokens: [],
         }),
+      ),
+      entry(
+        "admin_runners_upgrade",
+        "Раннер отстал от Студии",
+        () =>
+          runnersView({
+            extra: {
+              installs: new Map<string, LocalInstance>([
+                [
+                  "rn3",
+                  {
+                    target: "kubernetes",
+                    name: "hse-runner-10a566",
+                    image: "ghcr.io/alexeyshalaev/hse-doc-studio:0.2.4",
+                    state: "running",
+                    created_at: ago(86400),
+                    runner_id: "rn3",
+                    runner_version: "0.2.4",
+                    studio_version: "0.3.0",
+                    outdated: true,
+                  },
+                ],
+              ]),
+              onUpgrade: noop,
+            },
+          }),
+        {
+          note: "Под версией короткая кнопка обновления, полный текст в подсказке.",
+        },
       ),
       entry("admin_runners_busy", "Меняется раннер", () =>
         runnersView({ extra: { busyId: "rn1" } }),

@@ -230,19 +230,28 @@ export const RunnersView = ({
           const reinstall =
             (runner.reinstall ?? []).length > 0 && !runner.revoked;
           // Акцентная кнопка только у устаревших; на версии Студии «Обновить» есть в меню.
+          // Столбец узкий: под версией короткая кнопка «↑ vX», полный текст в подсказке.
+          const upgradeLabel = install?.outdated
+            ? t("adminRunnerInstall:upgrade.actionTo", {
+                version: install.studio_version,
+              })
+            : "";
           const upgradeNow =
             install?.outdated && upgrade && !runner.revoked ? (
-              <Button
-                type="button"
-                size="sm"
-                variant="primary"
-                onClick={upgrade}
-                data-testid={`runner-upgrade-now-${runner.id}`}
-              >
-                {t("adminRunnerInstall:upgrade.actionTo", {
-                  version: install.studio_version,
-                })}
-              </Button>
+              <Tooltip content={upgradeLabel}>
+                <Button
+                  type="button"
+                  size="xs"
+                  variant="primary"
+                  className="ops-upgrade-now"
+                  onClick={upgrade}
+                  aria-label={upgradeLabel}
+                  data-testid={`runner-upgrade-now-${runner.id}`}
+                >
+                  <CircleArrowUp size="0.75rem" aria-hidden="true" />v
+                  {install.studio_version}
+                </Button>
+              </Tooltip>
             ) : null;
           const version =
             newer !== null ? (
@@ -263,7 +272,7 @@ export const RunnersView = ({
               </span>
             );
           if (!reinstall && !upgradeNow) return version;
-          return (
+          const versionLine = (
             <span className="ops-tags" style={{ flexWrap: "nowrap" }}>
               {version}
               {reinstall && (
@@ -279,6 +288,12 @@ export const RunnersView = ({
                   </span>
                 </Tooltip>
               )}
+            </span>
+          );
+          if (!upgradeNow) return versionLine;
+          return (
+            <span className="ops-version-cell">
+              {versionLine}
               {upgradeNow}
             </span>
           );
@@ -864,7 +879,7 @@ export const RunnersView = ({
             searchQuery={state.searchOnly}
             onResetFilters={state.reset}
             columnWidths={{
-              version: 96,
+              version: 112,
               status: 210,
               load: 120,
               actions: 56,

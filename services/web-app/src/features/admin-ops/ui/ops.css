@@ -189,6 +189,18 @@
   align-items: center;
   gap: 0.25rem;
 }
+/* Версия раннера и кнопка обновления столбиком: в строку они не помещаются в столбец. */
+.ops-version-cell {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.25rem;
+  min-width: 0;
+}
+.ops-upgrade-now {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
 .ops-version[data-outdated] {
   gap: 0.1875rem;
   background: var(--c-warn-soft);
