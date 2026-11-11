@@ -1,8 +1,15 @@
 import { formatBytes, localeTag } from "@shared/lib";
 
-/** Размер как в локальном «Диске» (GB и MB от 1024), только ноль пишется числом. */
-export const diskSize = (bytes: number): string =>
-  bytes > 0 ? formatBytes(bytes) : "0 MB";
+/**
+ * Размер как в локальном «Диске» (GB и MB от 1024), только ноль пишется числом,
+ * а меньше мегабайта в KB: иначе «Освобождено 0 MB» после очистки на 140 КБ.
+ */
+export const diskSize = (bytes: number): string => {
+  if (bytes <= 0) return "0 MB";
+  if (bytes < 1024 ** 2)
+    return `${String(Math.max(1, Math.round(bytes / 1024)))} KB`;
+  return formatBytes(bytes);
+};
 
 /** Время замера и запуска: день, месяц и время на языке интерфейса. */
 export const diskWhen = (iso: string | null): string => {
