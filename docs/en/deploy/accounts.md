@@ -29,7 +29,9 @@ The administrator enters an address and the Studio sends a mail with a link. An 
 
 ## Mail (SMTP)
 
-The Mail section in the admin area, or `HSE_STUDIO__MAIL__*`. The SMTP password is accepted on write and never returned. The test mail button sends a message to the administrator's account address. Mail goes through an outbox queue, so an SMTP failure does not lose a message. Which emails are sent, in which language and how they look: [Server emails](mail.md).
+The “Mail (SMTP)” block in the “Sign-in and registration” admin section, or `HSE_STUDIO__MAIL__*`. The SMTP password is accepted on write and never returned. The “Send” button in the “Test email” row sends a message to the administrator's account address or to the address you enter. Which emails are sent, in which language and how they look: [Server emails](mail.md).
+
+Every email is sent in a single attempt at the moment of the action; there is no queue and no retries. If the SMTP server is unreachable or refuses, the email is not sent and will not go out later by itself: the result and reason are visible in the admin area, the Mail section ([Mail log](mail.md#mail-log)). Repeat the action, for example issue a new reset link or resend the invitation.
 
 Mail is needed for invitations, address confirmation and password reset.
 

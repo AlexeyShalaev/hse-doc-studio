@@ -89,6 +89,16 @@ export async function startServerDemo({port = Number(process.env.DOCS_DEMO_PORT 
   return {base, close: () => new Promise((done) => server.close(done))}
 }
 
+const SWITCH_KEY = 'docs-studio.serverDemoScenario'
+
+/**
+ * Сменить сценарий демо посреди дубля, например показать тот же раздел без почты. Мир строится
+ * заново со следующей загрузки страницы (d.goto), до конца дубля остаётся этот сценарий.
+ */
+export async function switchServerDemo(page, scenario) {
+  await page.evaluate(([key, id]) => sessionStorage.setItem(key, id), [SWITCH_KEY, scenario])
+}
+
 /** Параметры контекста браузера: часовой пояс один на все кадры. */
 export const serverDemoContextOptions = () => ({timezoneId: DEMO_TIMEZONE})
 
@@ -97,11 +107,13 @@ export const serverDemoContextOptions = () => ({timezoneId: DEMO_TIMEZONE})
  * `lang` нужен PDF: заявление напечатано на языке кадра.
  */
 export async function prepareServerDemoContext(context, {lang, scenario = DEMO_SCENARIO}) {
-  await context.addInitScript((scenarioId) => {
+  await context.addInitScript(([scenarioId, key]) => {
     try {
-      localStorage.setItem('hse-studio.serverDemoScenario', JSON.stringify({state: {scenarioId}, version: 0}))
+      // Сценарий, выбранный посреди дубля (switchServerDemo), живёт в sessionStorage вкладки.
+      const chosen = sessionStorage.getItem(key) ?? scenarioId
+      localStorage.setItem('hse-studio.serverDemoScenario', JSON.stringify({state: {scenarioId: chosen}, version: 0}))
     } catch {}
-  }, scenario)
+  }, [scenario, SWITCH_KEY])
   // Переключатель сценариев демо в кадр не попадает.
   await context.addInitScript(() => {
     const hide = () => {

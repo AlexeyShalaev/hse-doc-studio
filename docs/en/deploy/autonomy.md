@@ -16,6 +16,7 @@ Everything that grows on its own has a retention period and a background cleanup
 | AI call log | 90 days | 30 days to 5 years |
 | jobs and build logs | 30 days | 1 to 365 |
 | inbox | 90 days | 14 to 730 |
+| mail log ([Server emails](mail.md#mail-log)) | 90 days | 14 to 730 |
 | invitations, access requests, transfers | 90 days | 30 to 730 |
 | revoked and expired share links | 180 days | 30 to 1095 |
 | co-editing state on disk | 90 days idle | 7 to 365 |
@@ -25,7 +26,7 @@ The audit and AI logs are split into monthly Postgres partitions: old partitions
 
 ## Free up space now { #free-up-space }
 
-The **Free up space** button in the header of the **Storage** page (`/admin/storage`) runs every manual cleanup of **Data retention** in a row without waiting for the hourly tick: the AI call log, build jobs and logs, the inbox, invitations and access requests, share links, guest sessions and the co-editing state. Every source is cleaned by its own period with the same run as on schedule and on **Clean now**, with the same time budget.
+The **Free up space** button in the header of the **Storage** page (`/admin/storage`) runs every manual cleanup of **Data retention** in a row without waiting for the hourly tick: the AI call log, build jobs and logs, the inbox, the mail log, invitations and access requests, share links, guest sessions and the co-editing state. Every source is cleaned by its own period with the same run as on schedule and on **Clean now**, with the same time budget.
 
 <figure class="hds-fig hds-wide">
   <div class="hds-shot">
