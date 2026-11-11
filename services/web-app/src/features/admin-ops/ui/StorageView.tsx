@@ -3,6 +3,7 @@ import type { ColumnDef } from "@tanstack/react-table";
 import {
   Archive,
   Building2,
+  Eraser,
   FolderOpen,
   HardDrive,
   Package,
@@ -10,6 +11,7 @@ import {
 import { useTranslation } from "react-i18next";
 import { formatFileSize, formatPastTime, localeTag } from "@shared/lib";
 import {
+  Button,
   DataTable,
   EmptyState,
   FilterBar,
@@ -22,7 +24,11 @@ import {
   Tooltip,
   type KpiTone,
 } from "@shared/ui";
-import type { AdminStorage, AdminStorageOwnerRow } from "@entities/session";
+import type {
+  AdminStorage,
+  AdminStorageOwnerRow,
+  LifecycleSweep,
+} from "@entities/session";
 import { percent } from "../lib/format";
 import {
   OWNER_KINDS,
@@ -32,8 +38,24 @@ import {
   type OwnerSort,
 } from "../lib/lists";
 import { diskTone as toneOf, isLowSpace } from "../lib/storage";
+import { isSweepRecent } from "../lib/sweep";
 import type { ViewStatus } from "../lib/viewStatus";
 import { Banner, ViewState } from "./parts";
+import { SweepBanner } from "./StorageFreeSpace";
+import {
+  StorageMoreSpace,
+  type StorageMoreSpaceProps,
+} from "./StorageMoreSpace";
+
+/** «Освободить место» на странице: кнопка в шапке и плашка идущего или прошлого прогона. */
+export type StorageFreeSpaceProps = {
+  /** Идущий или последний прогон; null, если прогонов не было или итог скрыт. */
+  sweep: LifecycleSweep | null;
+  onFreeSpace: () => void;
+  /** Открыть ход или итог прогона из плашки. */
+  onDetails: () => void;
+  onHide?: ((id: string) => void) | undefined;
+};
 
 export type StorageViewProps = {
   status: ViewStatus;
@@ -42,6 +64,10 @@ export type StorageViewProps = {
   owners: ListView<AdminStorageOwnerRow, OwnerFilter, OwnerSort>;
   now: number;
   onRetry?: () => void;
+  /** Без него кнопки «Освободить место» и плашки прогона нет. */
+  freeSpace?: StorageFreeSpaceProps | undefined;
+  /** Блок «Где ещё освободить место»; без него блока нет. */
+  moreSpace?: Omit<StorageMoreSpaceProps, "now"> | undefined;
 };
 
 type OwnerRow = {
@@ -127,9 +153,13 @@ export const StorageView = ({
   owners,
   now,
   onRetry,
+  freeSpace,
+  moreSpace,
 }: StorageViewProps) => {
   const { t } = useTranslation("adminStorage");
   const { state } = owners;
+  const sweep = freeSpace?.sweep ?? null;
+  const showSweep = sweep !== null && isSweepRecent(sweep, now);
 
   const low = storage ? isLowSpace(storage) : false;
   const total = storage?.volume_total_bytes ?? null;
@@ -251,7 +281,36 @@ export const StorageView = ({
 
   return (
     <div className="ops-stack" data-testid="storage-view">
-      <PageHeader title={t("storage.title")} description={t("storage.lead")} />
+      <PageHeader
+        title={t("storage.title")}
+        description={t("storage.lead")}
+        actions={
+          freeSpace && (
+            <Button
+              type="button"
+              onClick={freeSpace.onFreeSpace}
+              data-testid="storage-free-space"
+            >
+              <Eraser size="0.875rem" aria-hidden="true" />
+              {t("storage.free.action")}
+            </Button>
+          )
+        }
+      />
+      {freeSpace && sweep && showSweep && (
+        <SweepBanner
+          sweep={sweep}
+          now={now}
+          onDetails={freeSpace.onDetails}
+          onHide={
+            freeSpace.onHide
+              ? () => {
+                  freeSpace.onHide?.(sweep.id);
+                }
+              : undefined
+          }
+        />
+      )}
       <ViewState
         status={status}
         errorText={t("storage.loadFailed")}
@@ -330,6 +389,8 @@ export const StorageView = ({
           >
             <DiskUsage storage={storage} tone={diskTone} />
           </Section>
+
+          {moreSpace && <StorageMoreSpace {...moreSpace} now={now} />}
 
           {/* Таблицы админки одного вида: заголовок над ней, таблица в своей рамке. */}
           <Section
