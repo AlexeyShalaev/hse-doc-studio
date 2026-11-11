@@ -1,0 +1,86 @@
+---
+title: 'Storage and space'
+description: 'Free up space with one button by retention periods, clean runner disks and see what else takes space.'
+sidebar:
+  order: 6
+access: admin
+help:
+  routes: ['/admin/storage']
+  summary: '“Free up space” deletes everything past its retention period in every source at once. Images and caches on runner machines are cleaned separately, in the “Disk” window of each runner.'
+  steps:
+    - text: 'In the admin menu open **Storage** and click **Free up space**.'
+      shot: admin/storage/step-01
+    - text: 'Check what will be deleted: every source shows its retention period and how many records or files are older. Click **Free up space**.'
+      hint: 'Counting stops at 100,000, beyond that it says “more than”. When there is nothing to delete, the button is disabled. The audit log is never cleaned manually; retention periods are changed in **Data retention**.'
+      shot: admin/storage/step-02
+    - text: 'Wait for the result: **Done: N records deleted, M freed on disk**.'
+      hint: 'You can close the window: the cleanup runs on the server, its progress and result show in a banner under the header. **Stop after the current source** stops it between sources.'
+      shot: admin/storage/step-03
+    - text: 'Further down the page, in **Where else to free up space**, click a runner name to open its disk.'
+      hint: 'The block lists up to three shared runners that can free the most. Others open from the runner row menu in **Runners and queue**, item **Disk**.'
+      shot: admin/storage/step-04
+    - text: 'In the **Disk of runner** window see what takes space: Studio and service images, the Docker build cache, the runner file cache and working copies.'
+      hint: 'The runner sends a measurement by itself every 6 hours and after every cleanup. To measure now, click **Refresh**.'
+      shot: admin/storage/step-05
+    - text: 'Click the button of the block you need or **Clean up everything**, check the list in the confirmation and click **Clean up**.'
+      hint: 'The current and previous versions, volumes and images that are not the Studio’s are not removed. Builds running now are not affected.'
+      shot: admin/storage/step-06
+    - text: 'Wait for the result **N freed**. After it the runner sends a new measurement by itself.'
+      hint: 'Until the runner picks up the command you see “Waiting for the runner”. **Stop after the current step** stops the cleanup between steps.'
+      shot: admin/storage/step-07
+verified:
+  at: 2026-11-11
+  app_version: '0.22.0'
+  sources:
+    - services/web-app/src/features/admin-ops/ui/StorageFreeSpace.tsx
+    - services/web-app/src/features/admin-ops/ui/StorageMoreSpace.tsx
+    - services/web-app/src/entities/runner/ui/RunnerDiskPanel.tsx
+    - services/api/hse_doc_studio/api/routers/admin_lifecycle.py
+    - services/api/hse_doc_studio/api/routers/admin_runners.py
+    - docs/design/storage-cleanup.md
+---
+
+import Steps from '~/components/Steps.astro'
+
+Space on the server is taken by logs, build jobs, notifications and other data with a retention
+period. Scheduled cleanup removes it every hour anyway; **Free up space** runs it right away for every
+source. Images and caches pile up on runner machines: the runner cleans them itself, and you start
+it from the **Disk** window.
+
+<Steps />
+
+## What “Free up space” covers
+
+- The AI call log, build jobs and logs, the inbox, invitations and access requests, share links,
+  guest sessions and the co-editing state. Every source is cleaned by its own period from **Data
+  retention**.
+- The result shows deleted records and space freed on disk separately. Records deleted from tables
+  free space inside the database for new records; database files shrink only when a whole monthly log
+  partition is dropped.
+- One cleanup runs at a time. Every start and result goes to the audit log.
+
+## What it leaves out
+
+- The audit log: it is never cleaned manually.
+- Background cleanups: unreferenced files, orphans, the project bin, expired sessions and tokens.
+  They run on their own schedule.
+- Runner disks: they are cleaned one at a time in the **Disk** window, because they are separate
+  machines.
+- Images on Kubernetes nodes: Kubernetes removes them itself when a node runs low on space.
+
+## Where else to free up space
+
+- **Data retention**: the period of every source and **Clean now** for a single source.
+- **Runners and queue**: under a shared runner's name a link “N can be freed” appears when the last
+  measurement can free 1 GB or more. What the **Disk** window shows and what it never touches:
+  [Connect build runners](/help/en/admin/runners/#runner-disk).
+- If runners say “Update the runner to see its disk”, their version is below 0.22.0: update them.
+
+## If something goes wrong
+
+- **“The run was interrupted: the server restarted”**: what was deleted before that is gone,
+  scheduled cleanup removes the rest. Run **Free up space** again if you need it now.
+- **“Could not count”** for a source: the table is too large for a quick count. The cleanup still
+  goes by the period.
+- **“Some records will be deleted by the next scheduled cleanup”**: the source ran out of its time
+  budget for one run. The rest goes within an hour.

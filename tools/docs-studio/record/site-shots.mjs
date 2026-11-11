@@ -1,5 +1,6 @@
-// Кадры маршрута подписания для сайта документации (docs/{ru,en}/workbench/send-for-signing.md
-// и how-to-sign.md). Тот же стенд серверного демо, что у справки (stand/server-demo.mjs), та же
+// Кадры сайта документации со стенда серверного демо: маршрут подписания
+// (docs/{ru,en}/workbench/send-for-signing.md и how-to-sign.md) и очистка места
+// (docs/{ru,en}/deploy/runners.md и autonomy.md). Тот же стенд серверного демо, что у справки (stand/server-demo.mjs), та же
 // матрица, что у `make shots`: ru/en × light/dark, окно 1440×900 @2x.
 //
 //   node site-shots.mjs                          # все кадры
@@ -157,6 +158,34 @@ const SCREENS = [
   ['signing-version-page', SIGNER_TASK, null, DESKTOP, 'student_signing_versions'],
   // Сценарий «Подписание: перенос 0.20.0»: версию не восстановить, маршрут ждёт новую версию.
   ['signing-migration', CHECKPOINT, null, DESKTOP, 'student_signing_migration'],
+  // Очистка места (docs/{ru,en}/deploy/runners.md и autonomy.md), сценарий admin_ready: те же экраны,
+  // что живые записи галереи «Раннеры: диск» и «Хранилище: освободить место» (free_live).
+  // Окно «Диск раннера»: Docker-раннер с полным замером, открыт ссылкой «можно освободить» под именем.
+  [
+    'runner-disk',
+    '/admin/runners',
+    async (page, lang) => {
+      await dismissToasts(page)
+      await page.getByTitle(s(lang, 'admin/runners', 'runners.diskCleanableHint', {name: 'runner-1'}), {exact: true}).first().click()
+      await page.getByRole('dialog').waitFor()
+      await page.waitForTimeout(1200)
+      await dismissToasts(page)
+    },
+    DESKTOP,
+    'admin_ready',
+  ],
+  // «Освободить место сейчас?»: предпросмотр по источникам и что в очистку не входит.
+  [
+    'storage-free',
+    '/admin/storage',
+    async (page, lang) => {
+      await page.getByRole('button', {name: s(lang, 'admin/storage', 'storage.free.action'), exact: true}).first().click()
+      await page.getByRole('dialog').waitFor()
+      await page.waitForTimeout(1200)
+    },
+    DESKTOP,
+    'admin_ready',
+  ],
 ]
 
 /** Прокрутить PDF в окне просмотра: рамки подписей ниже текста заявления. */

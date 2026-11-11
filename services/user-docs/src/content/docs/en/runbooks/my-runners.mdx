@@ -1,0 +1,64 @@
+---
+title: 'My runners: disk'
+description: 'How much space images and caches take on your runner, how to clean them, and what the notice about a cleanup by an administrator means.'
+sidebar:
+  order: 14
+access: user
+help:
+  routes: ['/settings/runners']
+  summary: 'A runner builds your projects on your machine, and images and caches pile up there. The “Disk” window shows what takes space and lets you clean what is not needed.'
+  steps:
+    - text: 'Open **Settings**, **My runners**.'
+      shot: runbooks/my-runners/step-01
+    - text: 'In the runner row click **⋯** and choose **Disk**.'
+      hint: 'Every runner that is not revoked has it, paused and offline ones too.'
+      shot: runbooks/my-runners/step-02
+    - text: 'See what takes space: Studio and service images, the Docker build cache, the runner file cache and working copies.'
+      hint: 'The runner sends a measurement by itself every 6 hours and after every cleanup. To measure now, click **Refresh**.'
+      shot: runbooks/my-runners/step-03
+    - text: 'Click the button of the block you need, for example **Remove old versions**, or **Clean up everything**. Check the list and confirm.'
+      hint: 'The previous version is needed for rollback and is kept. Only you can remove it: tick **Also remove the previous version**.'
+      shot: runbooks/my-runners/step-04
+    - text: 'Wait for the result **N freed**. After it the runner sends a new measurement by itself.'
+      shot: runbooks/my-runners/step-05
+    - text: 'If an administrator cleaned your runner’s disk, the **Inbox** gets a notice “An administrator cleaned up the disk of your runner”. Click it to open **Disk** with the result.'
+      hint: 'An instance administrator can clean a personal runner’s disk but cannot remove its previous version.'
+      shot: runbooks/my-runners/step-06
+verified:
+  at: 2026-11-11
+  app_version: '0.22.0'
+  sources:
+    - services/web-app/src/features/my-runners/ui/MyRunnersView.tsx
+    - services/web-app/src/features/my-runners/ui/OpenedFromNotice.tsx
+    - services/web-app/src/entities/runner/ui/RunnerDiskPanel.tsx
+    - services/api/hse_doc_studio/api/routers/v1/account_runners.py
+---
+
+import Steps from '~/components/Steps.astro'
+
+A runner is your computer or server that builds your projects. Images of earlier Studio versions,
+the Docker build cache and project copies pile up on that machine. The runner measures and cleans
+them itself, and you decide what to remove.
+
+<Steps />
+
+## What is never removed
+
+- The current version and the previous one kept for rollback (only the box in the confirmation
+  removes it).
+- Volumes: the TeX Live cache and downloaded models. Without them the next builds take noticeably
+  longer.
+- Anything that is not the Studio’s: other images and containers on the machine are neither shown
+  nor touched.
+- Files that running builds need: those builds do not fail.
+
+## If something goes wrong
+
+- **“Update the runner to see its disk”**: a runner older than 0.22.0 cannot report its disk.
+  Update it and the disk appears.
+- **“The runner is offline”**: you see the last measurement; you can clean up once the runner is
+  back.
+- **The runner is a desktop Studio**: the window shows only the runner cache. Images on that
+  computer are cleaned in the Studio itself: **Settings**, **Disk**.
+- **“The runner did not pick up the command within 10 minutes”**: check that the runner is running
+  and online, and try again.

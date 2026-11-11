@@ -31,6 +31,7 @@ verified:
     - services/web-app/src/features/admin-ops
     - services/web-app/src/pages/AdminPage/AdminOpsPage.tsx
     - services/api/hse_doc_studio/api/routers/admin_runners.py
+    - services/web-app/src/entities/runner/ui/RunnerDiskPanel.tsx
 ---
 
 import Steps from '~/components/Steps.astro'
@@ -70,6 +71,42 @@ container. There is no need to revoke the runner separately. If the install coul
 completely, the runner is already revoked and the install stays in the **Installs without a runner**
 block below the table: remove it again. That block also lists installs whose runner is not in the
 table, for example one that has not connected yet.
+
+## Runner disk
+
+Images of earlier Studio versions, old TeX Live and service tags and the Docker build cache pile up
+on a runner machine. Choose **Disk** in the runner row actions menu: the window shows how much space
+is used and what can be freed. Shared and personal runners both have it. Under a shared runner's
+name a link “N can be freed” appears when the last measurement can free 1 GB or more.
+
+- **What you see.** A bar by category (LaTeX, LanguageTool, the app itself, build cache, the runner
+  file cache and working copies), free space on the runner data volume and the measurement time. The
+  runner sends a measurement by itself every 6 hours and after every cleanup; **Refresh** measures
+  right away.
+- **What can be cleaned.** **Remove old versions**, **Remove unused**, **Clear build cache**,
+  **Remove dangling images**, **Clear runner cache**, or everything at once with **Clean up
+  everything**. Every button asks for confirmation with a list and sizes.
+- **What is never touched.** The current version and the previous one kept for rollback; volumes
+  (the TeX Live cache and downloaded models); images and containers that are not the Studio's, such
+  as Postgres and MinIO on the same host. The runner cache keeps files touched in the last 10 minutes
+  and working copies used by running builds.
+- **The previous version.** It is removed only with the **Also remove the previous version** box in
+  the **Remove old versions** confirmation. After that the runner cannot go back to the previous
+  version without downloading it again.
+- **Kubernetes.** For a runner in a cluster the window shows only the runner cache and the data
+  volume. Kubernetes removes images on the nodes itself when a node runs low on space.
+- **Local Studio.** When the runner is a desktop Studio, the window shows only the runner cache.
+  Images on that computer are cleaned in the Studio itself: **Settings**, **Disk**.
+- **Personal runners.** You can view and clean someone else's personal runner, but only the owner can
+  remove its previous version. The owner gets an **Inbox** notice about a cleanup you started.
+- **“Update the runner to see its disk”.** A runner below 0.22.0 does not report its disk. A runner
+  installed from the admin area has an **Update runner** button in the window; update the others with
+  a new image.
+
+The cleanup runs on the runner itself: until it picks up the command you see “Waiting for the
+runner”, then the steps and the result **N freed**. It can be stopped after the current step. Every
+cleanup goes to the audit log. Cleaning everything past its retention period on the server itself:
+[Storage and space](/help/en/admin/storage/).
 
 ## If something goes wrong
 

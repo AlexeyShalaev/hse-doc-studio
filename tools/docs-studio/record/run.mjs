@@ -77,7 +77,7 @@ for (const key of keys) {
         reducedMotion: 'no-preference',
         ...(scenario.stand === 'demo' ? {...serverDemoContextOptions(), permissions: ['clipboard-read', 'clipboard-write']} : {}),
       })
-      if (scenario.stand === 'demo') await prepareServerDemoContext(context, {lang})
+      if (scenario.stand === 'demo') await prepareServerDemoContext(context, {lang, scenario: scenario.demo})
       // Тема и язык до загрузки приложения: загрузочный скрипт index.html читает их синхронно.
       await context.addInitScript(
         ([theme, lang]) => {
