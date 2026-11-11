@@ -13,6 +13,7 @@ from typing import Literal
 from pydantic import Field
 
 from hse_doc_studio.api.schemas.common import StrictModel
+from hse_doc_studio.api.schemas.runner_disk import RunnerDiskBrief
 
 MyRunnerStateName = Literal["online", "stale", "offline", "paused", "revoked", "disabled"]
 RunnerHostKindName = Literal["cli", "desktop"]
@@ -48,6 +49,8 @@ class MyRunner(StrictModel):
     running_jobs: int
     ai_endpoints: list[MyRunnerAiEndpoint]
     features: list[str]
+    # Диск кратко (storage-cleanup.md, 9.1); `null` у отозванного.
+    disk: RunnerDiskBrief | None
 
 
 class UpdateMyRunnerRequest(StrictModel):

@@ -55,6 +55,8 @@ const runner = (
   host_kind: "cli",
   ai_endpoints: [],
   last_seen_ip: null,
+  // Диск подставляют маршруты демо (storageCleanup.ts): он живёт в мире, а не в раннере.
+  disk: null,
   ...extra,
 });
 

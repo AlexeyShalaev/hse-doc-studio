@@ -14,6 +14,7 @@
     "excerpt": "Уточните цель проекта во введении",
     "profile_id": "topic-approval",
     "deadline": "2026-11-15T20:59:00Z",
-    "new_version": false
+    "new_version": false,
+    "freed_bytes": null
   }
 }

@@ -16,7 +16,8 @@
         "excerpt": null,
         "profile_id": null,
         "deadline": null,
-        "new_version": false
+        "new_version": false,
+        "freed_bytes": null
       }
     },
     {
@@ -35,7 +36,8 @@
         "excerpt": null,
         "profile_id": null,
         "deadline": null,
-        "new_version": false
+        "new_version": false,
+        "freed_bytes": null
       }
     },
     {
@@ -54,7 +56,8 @@
         "excerpt": null,
         "profile_id": null,
         "deadline": null,
-        "new_version": false
+        "new_version": false,
+        "freed_bytes": null
       }
     }
   ],

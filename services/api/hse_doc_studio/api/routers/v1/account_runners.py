@@ -18,6 +18,7 @@ from hse_doc_studio.api.runner_commands import (
     runner_token_command,
     studio_base_url,
 )
+from hse_doc_studio.api.runner_disk_views import NO_STORE, disk_brief, disk_command, disk_view, runner_disk_uc
 from hse_doc_studio.api.schemas.personal_runners import (
     CreateMyRunnerTokenRequest,
     MyRunner,
@@ -29,6 +30,7 @@ from hse_doc_studio.api.schemas.personal_runners import (
     RunnerPairingInfo,
     UpdateMyRunnerRequest,
 )
+from hse_doc_studio.api.schemas.runner_disk import RunnerDiskCleanupRequest, RunnerDiskCommand, RunnerDiskView
 from hse_doc_studio.core.access.context import current_actor
 from hse_doc_studio.core.access.entities import Actor, ActorSource
 from hse_doc_studio.core.identity.errors import IdentityError, IdentityErrorCode
@@ -38,6 +40,7 @@ from hse_doc_studio.core.jobs.pairing import RunnerPairing
 from hse_doc_studio.core.jobs.runners import RegistrationToken, Runner
 from hse_doc_studio.core.rate_limit import RUNNER_PAIRING
 from hse_doc_studio.use_cases.jobs.pairing import RunnerPairingService
+from hse_doc_studio.use_cases.jobs.runner_disk import RunnerDiskBrief
 from hse_doc_studio.use_cases.jobs.runners import RunnerRegistry
 
 router = APIRouter(dependencies=[Depends(require_server_mode)])
@@ -63,7 +66,9 @@ def _not_found() -> HTTPException:
     return HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Not Found")
 
 
-def my_runner_view(runner: Runner, *, running_jobs: int, personal_enabled: bool, now: datetime) -> MyRunner:
+def my_runner_view(
+    runner: Runner, *, running_jobs: int, personal_enabled: bool, now: datetime, disk: RunnerDiskBrief | None = None
+) -> MyRunner:
     return MyRunner(
         id=runner.id,
         name=runner.name,
@@ -82,14 +87,19 @@ def my_runner_view(runner: Runner, *, running_jobs: int, personal_enabled: bool,
         running_jobs=running_jobs,
         ai_endpoints=[MyRunnerAiEndpoint(name=e.name, flavor=e.flavor.value) for e in runner.ai_endpoints],
         features=sorted(runner.features),
+        disk=disk_brief(disk),
     )
 
 
-async def _views(registry: RunnerRegistry, runners: list[Runner]) -> list[MyRunner]:
+async def _views(request: Request, registry: RunnerRegistry, runners: list[Runner]) -> list[MyRunner]:
     counts = await registry.running_jobs({r.id for r in runners})
     enabled = (await registry.personal_settings()).enabled
+    disks = await (await runner_disk_uc(request)).briefs(runners)
     now = datetime.now(UTC)
-    return [my_runner_view(r, running_jobs=counts[r.id], personal_enabled=enabled, now=now) for r in runners]
+    return [
+        my_runner_view(r, running_jobs=counts[r.id], personal_enabled=enabled, now=now, disk=disks[r.id])
+        for r in runners
+    ]
 
 
 def _token_view(token: RegistrationToken) -> MyRunnerToken:
@@ -107,7 +117,7 @@ def _token_view(token: RegistrationToken) -> MyRunnerToken:
 async def list_my_runners(request: Request, response: Response) -> list[MyRunner]:
     response.headers.update(_NO_STORE)
     registry = await _registry(request)
-    return await _views(registry, await registry.list_my_runners(_account_actor()))
+    return await _views(request, registry, await registry.list_my_runners(_account_actor()))
 
 
 @router.patch("/account/runners/{runner_id}", response_model=MyRunner)
@@ -117,7 +127,7 @@ async def update_my_runner(runner_id: str, body: UpdateMyRunnerRequest, request:
         runner = await registry.update_my_runner(_account_actor(), runner_id, name=body.name, paused=body.paused)
     except RunnerNotFoundError as exc:
         raise _not_found() from exc
-    (view,) = await _views(registry, [runner])
+    (view,) = await _views(request, registry, [runner])
     return view
 
 
@@ -129,7 +139,7 @@ async def rotate_my_runner_token(runner_id: str, request: Request, response: Res
         rotated = await registry.rotate_my_token(_account_actor(), runner_id)
     except RunnerNotFoundError as exc:
         raise _not_found() from exc
-    (view,) = await _views(registry, [rotated.runner])
+    (view,) = await _views(request, registry, [rotated.runner])
     return MyRunnerRotated(
         runner=view,
         runner_token=rotated.secret,
@@ -144,6 +154,47 @@ async def revoke_my_runner(runner_id: str, request: Request) -> Response:
     except RunnerNotFoundError as exc:
         raise _not_found() from exc
     return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+# «Диск» своего раннера (storage-cleanup.md, 9.1): те же ответы, что в админке, без плашки владельца.
+
+
+@router.get("/account/runners/{runner_id}/disk", response_model=RunnerDiskView)
+async def my_runner_disk(runner_id: str, request: Request, response: Response) -> RunnerDiskView:
+    response.headers.update(NO_STORE)
+    return disk_view(await (await runner_disk_uc(request)).view(_account_actor(), runner_id, scope="account"))
+
+
+@router.post(
+    "/account/runners/{runner_id}/disk/refresh", response_model=RunnerDiskCommand, status_code=status.HTTP_202_ACCEPTED
+)
+async def refresh_my_runner_disk(runner_id: str, request: Request, response: Response) -> RunnerDiskCommand:
+    response.headers.update(NO_STORE)
+    uc = await runner_disk_uc(request)
+    return disk_command(await uc.refresh(_account_actor(), runner_id, scope="account"))
+
+
+@router.post(
+    "/account/runners/{runner_id}/disk/cleanup", response_model=RunnerDiskCommand, status_code=status.HTTP_202_ACCEPTED
+)
+async def clean_my_runner_disk(
+    runner_id: str, body: RunnerDiskCleanupRequest, request: Request, response: Response
+) -> RunnerDiskCommand:
+    response.headers.update(NO_STORE)
+    uc = await runner_disk_uc(request)
+    command = await uc.cleanup(
+        _account_actor(), runner_id, body.targets, include_rollback=body.include_rollback, scope="account"
+    )
+    return disk_command(command)
+
+
+@router.post("/account/runners/{runner_id}/disk/commands/{command_id}/cancel", response_model=RunnerDiskCommand)
+async def cancel_my_runner_disk_command(
+    runner_id: str, command_id: str, request: Request, response: Response
+) -> RunnerDiskCommand:
+    response.headers.update(NO_STORE)
+    uc = await runner_disk_uc(request)
+    return disk_command(await uc.cancel(_account_actor(), runner_id, command_id, scope="account"))
 
 
 @router.get("/account/runner-tokens", response_model=list[MyRunnerToken])

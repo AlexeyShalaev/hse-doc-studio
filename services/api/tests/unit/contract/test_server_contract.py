@@ -27,6 +27,7 @@ from hse_doc_studio.api.schemas import quotas as qt
 from hse_doc_studio.api.schemas import remote_runner as rr
 from hse_doc_studio.api.schemas import review
 from hse_doc_studio.api.schemas import runner_admin as ra
+from hse_doc_studio.api.schemas import runner_disk as rd
 from hse_doc_studio.api.schemas import runner_isolation as ri
 from hse_doc_studio.api.schemas import server_update as upd
 from hse_doc_studio.api.schemas import session as s
@@ -136,6 +137,11 @@ _SCHEMAS: dict[str, Any] = {
     "AdminRunnerTokenCreated": ra.CreatedRegistrationTokenResponse,
     "AdminRunnerRotated": ra.RotatedRunnerTokenResponse,
     "UpdateAdminRunnerRequest": ra.UpdateRunnerRequest,
+    # «Диск» раннера (storage-cleanup.md, 9.1): одни формы у админки и «Моих раннеров».
+    "RunnerDiskView": rd.RunnerDiskView,
+    "RunnerDiskCommand": rd.RunnerDiskCommand,
+    "RunnerDiskCleanupRequest": rd.RunnerDiskCleanupRequest,
+    "RunnerDiskSummary": rd.RunnerDiskSummary,
     "AdminJobPage": ops.AdminJobPage,
     "AdminJobBatchCancelled": ops.AdminJobBatchCancelled,
     "AdminQueueSummary": ops.AdminQueueSummary,

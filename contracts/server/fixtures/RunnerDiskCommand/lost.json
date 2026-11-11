@@ -1,0 +1,89 @@
+{
+  "id": "rdc_01hz4m2k7q",
+  "kind": "disk.cleanup",
+  "state": "lost",
+  "targets": [
+    "old_versions",
+    "unused_images",
+    "build_cache",
+    "dangling_images",
+    "stopped_containers",
+    "runner_cache"
+  ],
+  "include_rollback": false,
+  "created_at": "2026-11-11T09:50:00Z",
+  "finished_at": "2026-11-11T09:54:00Z",
+  "created_by": {
+    "id": "u_01hx7k0adm",
+    "name": "Алексей Шалаев"
+  },
+  "progress": {
+    "steps": [
+      {
+        "kind": "container",
+        "ref": "hse-runner-0.19.0",
+        "status": "done",
+        "freed_bytes": 50331648,
+        "error": null
+      },
+      {
+        "kind": "image",
+        "ref": "ghcr.io/alexeyshalaev/hse-doc-studio:0.20.3",
+        "status": "running",
+        "freed_bytes": 0,
+        "error": null
+      },
+      {
+        "kind": "image",
+        "ref": "ghcr.io/alexeyshalaev/hse-doc-studio:0.19.0",
+        "status": "pending",
+        "freed_bytes": 0,
+        "error": null
+      },
+      {
+        "kind": "image",
+        "ref": "texlive/texlive:TL2024-historic",
+        "status": "pending",
+        "freed_bytes": 0,
+        "error": null
+      },
+      {
+        "kind": "image",
+        "ref": "erikvl87/languagetool:6.4",
+        "status": "pending",
+        "freed_bytes": 0,
+        "error": null
+      },
+      {
+        "kind": "dangling_images",
+        "ref": null,
+        "status": "pending",
+        "freed_bytes": 0,
+        "error": null
+      },
+      {
+        "kind": "build_cache",
+        "ref": null,
+        "status": "pending",
+        "freed_bytes": 0,
+        "error": null
+      },
+      {
+        "kind": "runner_blobs",
+        "ref": null,
+        "status": "pending",
+        "freed_bytes": 0,
+        "error": null
+      },
+      {
+        "kind": "runner_workspaces",
+        "ref": null,
+        "status": "pending",
+        "freed_bytes": 0,
+        "error": null
+      }
+    ],
+    "freed_bytes": 50331648,
+    "error": null
+  }
+}

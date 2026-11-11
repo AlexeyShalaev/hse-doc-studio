@@ -11,6 +11,7 @@ from typing import Literal
 from pydantic import Field
 
 from hse_doc_studio.api.schemas.common import StrictModel
+from hse_doc_studio.api.schemas.runner_disk import RunnerDiskBrief
 
 
 class CreateRegistrationTokenRequest(StrictModel):
@@ -72,6 +73,8 @@ class RunnerInfo(StrictModel):
     # Почему раннер стоит переустановить, чтобы применились лимиты (по версии и его отчёту), и прислал ли он отчёт.
     reinstall: list[Literal["before_limits", "no_pod_limits"]] = Field(default_factory=list)
     deployment_reported: bool = False
+    # Диск кратко (storage-cleanup.md, 9.1): по нему меню решает, как показать «Диск»; `null` у отозванного.
+    disk: RunnerDiskBrief | None
 
 
 class UpdateRunnerRequest(StrictModel):

@@ -1,0 +1,230 @@
+{
+  "runner_id": "rn_01hxb1",
+  "supported": true,
+  "reason": null,
+  "min_version": "0.22.0",
+  "online": true,
+  "last_seen_at": "2026-11-11T09:59:54Z",
+  "report": {
+    "measured_at": "2026-11-11T09:20:00Z",
+    "targets": [
+      "old_versions",
+      "unused_images",
+      "build_cache",
+      "dangling_images",
+      "stopped_containers",
+      "runner_cache"
+    ],
+    "docker": {
+      "available": true,
+      "categories": [
+        {
+          "key": "compile",
+          "bytes": 9556302233
+        },
+        {
+          "key": "languagetool",
+          "bytes": 1213328261
+        },
+        {
+          "key": "office",
+          "bytes": 450971566
+        },
+        {
+          "key": "app",
+          "bytes": 4670776934
+        },
+        {
+          "key": "cache",
+          "bytes": 2576980378
+        },
+        {
+          "key": "runtime",
+          "bytes": 7235174400
+        }
+      ],
+      "total_bytes": 25703533772,
+      "cleanable_bytes": 10542299217,
+      "build_cache": {
+        "bytes": 2576980378,
+        "reclaimable_bytes": 2254857830,
+        "count": 37
+      },
+      "dangling": {
+        "bytes": 641728512,
+        "count": 5
+      },
+      "stopped_containers": {
+        "bytes": 100663296,
+        "count": 2
+      },
+      "unused_images": [
+        {
+          "ref": "texlive/texlive:TL2024-historic",
+          "category": "compile",
+          "size_bytes": 4617089843
+        },
+        {
+          "ref": "erikvl87/languagetool:6.4",
+          "category": "languagetool",
+          "size_bytes": 590558003
+        }
+      ],
+      "unused_truncated": false,
+      "old_versions": {
+        "current_version": "0.22.1",
+        "rollback": {
+          "kind": "studio_image",
+          "ref": "ghcr.io/alexeyshalaev/hse-doc-studio:0.21.4",
+          "version": "0.21.4",
+          "size_bytes": 1181116006
+        },
+        "items": [
+          {
+            "kind": "studio_image",
+            "ref": "ghcr.io/alexeyshalaev/hse-doc-studio:0.20.3",
+            "version": "0.20.3",
+            "size_bytes": 1159641170
+          },
+          {
+            "kind": "studio_image",
+            "ref": "ghcr.io/alexeyshalaev/hse-doc-studio:0.19.0",
+            "version": "0.19.0",
+            "size_bytes": 1127428915
+          },
+          {
+            "kind": "container",
+            "ref": "hse-runner-0.19.0",
+            "version": "0.19.0",
+            "size_bytes": 50331648
+          }
+        ],
+        "reclaimable_bytes": 2337401733,
+        "rollback_bytes": 1181116006
+      },
+      "volumes": [
+        {
+          "name": "hse-texlive-cache",
+          "size_bytes": 1395864371
+        },
+        {
+          "name": "hse-ollama-models",
+          "size_bytes": 5046586573
+        }
+      ]
+    },
+    "docker_reason": null,
+    "cache": {
+      "blobs": {
+        "bytes": 1503238554,
+        "count": 2318,
+        "limit_bytes": 2147483648
+      },
+      "workspaces": {
+        "bytes": 6657199309,
+        "count": 41,
+        "limit_bytes": 21474836480,
+        "busy": 1
+      }
+    },
+    "volume": {
+      "total_bytes": 214748364800,
+      "free_bytes": 25232932864
+    }
+  },
+  "received_at": "2026-11-11T09:20:02Z",
+  "stale": false,
+  "command": {
+    "id": "rdc_01hz4m2k7q",
+    "kind": "disk.cleanup",
+    "state": "error",
+    "targets": [
+      "old_versions",
+      "unused_images",
+      "build_cache",
+      "dangling_images",
+      "stopped_containers",
+      "runner_cache"
+    ],
+    "include_rollback": false,
+    "created_at": "2026-11-11T09:50:00Z",
+    "finished_at": "2026-11-11T09:53:00Z",
+    "created_by": {
+      "id": "u_01hx7k0adm",
+      "name": "Алексей Шалаев"
+    },
+    "progress": {
+      "steps": [
+        {
+          "kind": "container",
+          "ref": "hse-runner-0.19.0",
+          "status": "done",
+          "freed_bytes": 50331648,
+          "error": null
+        },
+        {
+          "kind": "image",
+          "ref": "ghcr.io/alexeyshalaev/hse-doc-studio:0.20.3",
+          "status": "done",
+          "freed_bytes": 1159641170,
+          "error": null
+        },
+        {
+          "kind": "image",
+          "ref": "ghcr.io/alexeyshalaev/hse-doc-studio:0.19.0",
+          "status": "error",
+          "freed_bytes": 0,
+          "error": "Error response from daemon: conflict: unable to remove repository reference (must force) - container 3f1a is using its referenced image"
+        },
+        {
+          "kind": "image",
+          "ref": "texlive/texlive:TL2024-historic",
+          "status": "done",
+          "freed_bytes": 4617089843,
+          "error": null
+        },
+        {
+          "kind": "image",
+          "ref": "erikvl87/languagetool:6.4",
+          "status": "done",
+          "freed_bytes": 590558003,
+          "error": null
+        },
+        {
+          "kind": "dangling_images",
+          "ref": null,
+          "status": "done",
+          "freed_bytes": 641728512,
+          "error": null
+        },
+        {
+          "kind": "build_cache",
+          "ref": null,
+          "status": "error",
+          "freed_bytes": 0,
+          "error": "Error response from daemon: a prune operation is already running"
+        },
+        {
+          "kind": "runner_blobs",
+          "ref": null,
+          "status": "done",
+          "freed_bytes": 1503238554,
+          "error": null
+        },
+        {
+          "kind": "runner_workspaces",
+          "ref": null,
+          "status": "done",
+          "freed_bytes": 6335076762,
+          "error": null
+        }
+      ],
+      "freed_bytes": 14897664492,
+      "error": null
+    }
+  },
+  "measuring": false,
+  "can_clean": true,
+  "can_include_rollback": true,
+  "personal_owner": null
+}

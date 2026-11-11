@@ -120,6 +120,10 @@ class IdentityErrorCode(StrEnum):
     # Очистка места из админки (storage-cleanup.md): «Освободить место» и команды раннерам.
     lifecycle_sweep_busy = "lifecycle_sweep_busy"
     command_finished = "command_finished"
+    runner_disk_unsupported = "runner_disk_unsupported"
+    runner_offline = "runner_offline"
+    runner_disk_busy = "runner_disk_busy"
+    disk_target_unavailable = "disk_target_unavailable"
 
 
 MESSAGES: dict[IdentityErrorCode, tuple[str, str]] = {
@@ -466,6 +470,22 @@ MESSAGES: dict[IdentityErrorCode, tuple[str, str]] = {
     IdentityErrorCode.command_finished: (
         "Это уже завершилось, останавливать нечего.",
         "This has already finished, there is nothing to stop.",
+    ),
+    IdentityErrorCode.runner_disk_unsupported: (
+        "Раннер не умеет сообщать о диске: обновите его.",
+        "This runner cannot report its disk. Update it.",
+    ),
+    IdentityErrorCode.runner_offline: (
+        "Раннер не на связи. Очистить диск можно, когда он вернётся.",
+        "The runner is offline. You can clean its disk when it is back.",
+    ),
+    IdentityErrorCode.runner_disk_busy: (
+        "На раннере уже идёт очистка. Дождитесь итога.",
+        "A cleanup is already running on this runner. Wait for it to finish.",
+    ),
+    IdentityErrorCode.disk_target_unavailable: (
+        "Раннер сейчас не может очистить это. Обновите замер и попробуйте снова.",
+        "The runner cannot clean this right now. Refresh the measurement and try again.",
     ),
 }
 

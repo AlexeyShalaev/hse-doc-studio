@@ -104,6 +104,7 @@ const runner = (
     host_kind: "cli",
     ai_endpoints: [],
     last_seen_ip: null,
+    disk: null,
     ...extra,
   };
   // Состояние строки считает сервер; здесь по тем же правилам.
@@ -514,6 +515,7 @@ const personalRunner = (
   host_kind: "desktop",
   ai_endpoints: [],
   last_seen_ip: "203.0.113.7",
+  disk: null,
   ...extra,
 });
 

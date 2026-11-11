@@ -95,5 +95,9 @@
   "passkey_limit",
   "reauth_required",
   "lifecycle_sweep_busy",
-  "command_finished"
+  "command_finished",
+  "runner_disk_unsupported",
+  "runner_offline",
+  "runner_disk_busy",
+  "disk_target_unavailable"
 ]

@@ -1,0 +1,40 @@
+{
+  "runner_id": "rn_01hxb1",
+  "supported": true,
+  "reason": null,
+  "min_version": "0.22.0",
+  "online": true,
+  "last_seen_at": "2026-11-11T09:59:54Z",
+  "report": {
+    "measured_at": "2026-11-11T09:20:00Z",
+    "targets": [
+      "runner_cache"
+    ],
+    "docker": null,
+    "docker_reason": "kubernetes",
+    "cache": {
+      "blobs": {
+        "bytes": 1503238554,
+        "count": 2318,
+        "limit_bytes": 2147483648
+      },
+      "workspaces": {
+        "bytes": 6657199309,
+        "count": 41,
+        "limit_bytes": 21474836480,
+        "busy": 1
+      }
+    },
+    "volume": {
+      "total_bytes": 21474836480,
+      "free_bytes": 12670153523
+    }
+  },
+  "received_at": "2026-11-11T09:20:02Z",
+  "stale": false,
+  "command": null,
+  "measuring": false,
+  "can_clean": true,
+  "can_include_rollback": false,
+  "personal_owner": null
+}
