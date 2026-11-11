@@ -7,7 +7,7 @@ from dataclasses import replace
 from datetime import datetime
 from uuid import UUID
 
-from hse_doc_studio.core.jobs.control import COMMANDS_KEPT_PER_RUNNER, StoredDiskReport
+from hse_doc_studio.core.jobs.control import COMMANDS_KEPT_PER_RUNNER, StoredDiskBrief, StoredDiskReport
 from hse_doc_studio.core.jobs.disk import (
     COMMAND_OPEN_STATES,
     CommandProgress,
@@ -15,6 +15,7 @@ from hse_doc_studio.core.jobs.disk import (
     RunnerCommandKind,
     RunnerCommandState,
     RunnerDiskReport,
+    disk_cleanable_bytes,
 )
 
 from tests.fakes.runners import InMemoryRunnerRepository
@@ -145,3 +146,14 @@ class InMemoryRunnerDiskStore:
 
     async def list_disks(self) -> dict[str, StoredDiskReport]:
         return dict(self._items)
+
+    async def list_disk_briefs(self, runner_ids: Collection[str] | None = None) -> dict[str, StoredDiskBrief]:
+        return {
+            runner_id: StoredDiskBrief(
+                cleanable_bytes=disk_cleanable_bytes(stored.report),
+                measured_at=stored.report.measured_at,
+                received_at=stored.received_at,
+            )
+            for runner_id, stored in self._items.items()
+            if runner_ids is None or runner_id in runner_ids
+        }

@@ -39,6 +39,18 @@ class StoredDiskReport:
     received_at: datetime
 
 
+@dataclass(frozen=True)
+class StoredDiskBrief:
+    """Проекция последнего замера для списков и сводки: сколько можно освободить (9.3) и когда мерили.
+
+    Читается без разбора всего отчёта (до 64 КБ на раннер), поэтому годится для списка из сотен раннеров.
+    """
+
+    cleanable_bytes: int
+    measured_at: datetime
+    received_at: datetime
+
+
 class IRunnerCommandRepository(Protocol):
     async def add(self, command: RunnerCommand, *, keep: int = COMMANDS_KEPT_PER_RUNNER) -> bool:
         """Вставляет команду и стирает завершённые команды раннера сверх `keep` последних.
@@ -99,7 +111,12 @@ class IRunnerDiskStore(Protocol):
 
     async def get_disk(self, runner_id: str) -> StoredDiskReport | None: ...
     async def list_disks(self) -> dict[str, StoredDiskReport]:
-        """Последние замеры всех раннеров, приславших `/disk` (сводка «Хранилища» и списки раннеров)."""
+        """Последние замеры всех раннеров, приславших `/disk`, целиком."""
+        ...
+
+    async def list_disk_briefs(self, runner_ids: Collection[str] | None = None) -> dict[str, StoredDiskBrief]:
+        """Проекция замеров (`disk_cleanable_bytes`, время замера и приёма) раннеров из `runner_ids` или всех:
+        списки раннеров, сводка «Хранилища» и метрика читают её, а не отчёты целиком."""
         ...
 
 

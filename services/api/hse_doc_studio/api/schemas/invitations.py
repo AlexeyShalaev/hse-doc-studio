@@ -60,6 +60,11 @@ NotificationOutcome = Literal[
     "marks_changed",
     "frozen_changed",
     "participant_left",
+    # Очистка диска личного раннера (`runner_disk_cleaned`): итог команды.
+    "done",
+    "cancelled",
+    "error",
+    "lost",
 ]
 OwnerKindName = Literal["user", "org"]
 MESSAGE_MAX = 1000
@@ -318,6 +323,8 @@ class NotificationPayloadModel(StrictModel):
     deadline: datetime | None = None
     # Запрос раунда новой версии (12.6): «{автор} просит подписать новую версию»; у остальных false.
     new_version: bool = False
+    # Очистка диска личного раннера (`runner_disk_cleaned`): освобождено байт; у остальных видов null.
+    freed_bytes: int | None = None
 
 
 class NotificationModel(StrictModel):

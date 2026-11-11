@@ -16,15 +16,24 @@ from hse_doc_studio.core.listing import Found, Window
 from hse_doc_studio.infra.db.orm.invitations import NotificationRow
 from hse_doc_studio.infra.db.session import SessionProvider
 
-# Флаги подписи; остальные поля строки (или None).
+# Флаги подписи и числа; остальные поля строки (или None).
 _FLAG_FIELDS = frozenset({"new_version"})
-_PAYLOAD_FIELDS = tuple(name for name in NotificationPayload.__dataclass_fields__ if name not in _FLAG_FIELDS)
+_NUMBER_FIELDS = frozenset({"freed_bytes"})
+_PAYLOAD_FIELDS = tuple(
+    name for name in NotificationPayload.__dataclass_fields__ if name not in _FLAG_FIELDS | _NUMBER_FIELDS
+)
+
+
+def _number(value: Any) -> int | None:
+    return value if isinstance(value, int) and not isinstance(value, bool) and value >= 0 else None
 
 
 def _payload(raw: Any) -> NotificationPayload:
     data = raw if isinstance(raw, dict) else {}
     texts = {k: (str(data[k]) if data.get(k) is not None else None) for k in _PAYLOAD_FIELDS}
-    return NotificationPayload(**texts, new_version=data.get("new_version") is True)
+    return NotificationPayload(
+        **texts, new_version=data.get("new_version") is True, freed_bytes=_number(data.get("freed_bytes"))
+    )
 
 
 def _to_entity(row: NotificationRow) -> Notification:

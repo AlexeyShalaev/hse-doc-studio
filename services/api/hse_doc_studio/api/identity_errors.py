@@ -127,6 +127,10 @@ IDENTITY_ERROR_STATUS: Mapping[IdentityErrorCode, int] = {
     IdentityErrorCode.reauth_required: _FORBIDDEN,
     IdentityErrorCode.lifecycle_sweep_busy: _STATE,
     IdentityErrorCode.command_finished: _STATE,
+    IdentityErrorCode.runner_disk_unsupported: _STATE,
+    IdentityErrorCode.runner_offline: _STATE,
+    IdentityErrorCode.runner_disk_busy: _STATE,
+    IdentityErrorCode.disk_target_unavailable: _STATE,
 }
 
 
