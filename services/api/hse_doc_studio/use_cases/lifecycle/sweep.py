@@ -8,7 +8,6 @@
 from __future__ import annotations
 
 import asyncio
-import contextlib
 from collections import Counter
 from collections.abc import Callable, Coroutine
 from dataclasses import replace
@@ -177,34 +176,38 @@ class LifecycleSweepService:
 
     async def _run(self, sweep: LifecycleSweep) -> None:
         steps = list(sweep.steps)
-        status = SweepStatus.done
         try:
-            for index, step in enumerate(steps):
-                steps[index] = replace(step, status=StepStatus.running)
-                current = await self._sweeps.save_steps(sweep.id, steps, at=self._clock())
-                if current is None or not current.active:
-                    # Прогон уже закрыт другой репликой как прерванный: продолжать нечего.
-                    logger.warning("lifecycle_sweep_closed_elsewhere", sweep_id=sweep.id, status=current)
-                    return
-                if current is SweepStatus.cancelling:
-                    steps[index:] = [replace(s, status=StepStatus.skipped) for s in steps[index:]]
-                    status = SweepStatus.cancelled
-                    break
-                steps[index] = await self._step(step.key)
-            if status is SweepStatus.done and any(s.status is StepStatus.error for s in steps):
-                status = SweepStatus.error
+            status = await self._walk(sweep.id, steps)
         except asyncio.CancelledError:
-            status = SweepStatus.interrupted
-            with contextlib.suppress(Exception):
-                await asyncio.shield(self._close(sweep.id, status, steps))
+            await asyncio.shield(self._close(sweep.id, SweepStatus.interrupted, steps))
             raise
         except Exception:
             logger.exception("lifecycle_sweep_failed", sweep_id=sweep.id)
             status = SweepStatus.error
-        await self._close(sweep.id, status, steps)
+        if status is not None:
+            await self._close(sweep.id, status, steps)
+
+    async def _walk(self, sweep_id: str, steps: list[SweepStep]) -> SweepStatus | None:
+        """Шаги по порядку; `steps` обновляется на месте. None: прогон уже закрыт другой репликой."""
+        for index, step in enumerate(steps):
+            steps[index] = replace(step, status=StepStatus.running)
+            current = await self._sweeps.save_steps(sweep_id, steps, at=self._clock())
+            if current is None or not current.active:
+                logger.warning("lifecycle_sweep_closed_elsewhere", sweep_id=sweep_id, status=current)
+                return None
+            if current is SweepStatus.cancelling:
+                steps[index:] = [replace(s, status=StepStatus.skipped) for s in steps[index:]]
+                return SweepStatus.cancelled
+            steps[index] = await self._step(step.key)
+        return SweepStatus.error if any(s.status is StepStatus.error for s in steps) else SweepStatus.done
 
     async def _close(self, sweep_id: str, status: SweepStatus, steps: list[SweepStep]) -> None:
-        finished = await self._sweeps.finish(sweep_id, status, closed_steps(steps), at=self._clock())
+        try:
+            finished = await self._sweeps.finish(sweep_id, status, closed_steps(steps), at=self._clock())
+        except Exception:
+            # База недоступна: строка останется идущей и закроется как прерванная через `STALE_AFTER`.
+            logger.exception("lifecycle_sweep_not_closed", sweep_id=sweep_id)
+            return
         if finished is not None:
             await self._finished(finished)
 
