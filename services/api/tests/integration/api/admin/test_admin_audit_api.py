@@ -294,6 +294,9 @@ _AUDITED_ELSEWHERE: dict[tuple[str, str], str] = {
     ("PATCH", "/api/admin/runners/{id}"): "runner.pause",
     ("DELETE", "/api/admin/runners/{id}"): "runner.revoke",
     ("POST", "/api/admin/runners/{id}/rotate-token"): "runner.token_rotate",
+    # «Диск» раннера: проверяют tests/integration/api/personal/test_runner_disk_api и unit-тесты runner_disk
+    ("POST", "/api/admin/runners/{id}/disk/cleanup"): "runner.disk_cleanup",
+    ("POST", "/api/admin/runners/{id}/disk/commands/{id}/cancel"): "runner.disk_cleanup_cancel",
     ("POST", "/api/admin/ai-providers"): "settings.ai_provider_create",
     ("PATCH", "/api/admin/ai-providers/{id}"): "settings.ai_provider_update",
     ("DELETE", "/api/admin/ai-providers/{id}"): "settings.ai_provider_delete",
@@ -317,7 +320,12 @@ _AUDITED_ELSEWHERE: dict[tuple[str, str], str] = {
 }
 
 # Изменяющие ручки без записи в журнале осознанно: только проверка соединения, состояние не меняется.
-_NOT_AUDITED = {("POST", "/api/admin/ai-providers/{id}/check"), ("POST", "/api/admin/model-servers/estimate")}
+_NOT_AUDITED = {
+    ("POST", "/api/admin/ai-providers/{id}/check"),
+    ("POST", "/api/admin/model-servers/estimate"),
+    # «Обновить» диск раннера ставит `disk.measure`: это чтение, в журнал не пишется (storage-cleanup.md, 8.1).
+    ("POST", "/api/admin/runners/{id}/disk/refresh"),
+}
 
 
 def _matrix_covers(route: tuple[str, str], literal: set[tuple[str, str]]) -> bool:

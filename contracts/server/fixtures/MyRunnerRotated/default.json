@@ -19,7 +19,12 @@
     "revoked": false,
     "running_jobs": 0,
     "ai_endpoints": [],
-    "features": []
+    "features": [],
+    "disk": {
+      "supported": false,
+      "cleanable_bytes": null,
+      "measured_at": null
+    }
   },
   "runner_token": "hsrn_Um90YXRlZFJ1bm5lclRva2VuRXhhbXBsZTI",
   "command": "HSE_RUNNER__API_URL=https://studio.example.org HSE_RUNNER__RUNNER_TOKEN=hsrn_Um90YXRlZFJ1bm5lclRva2VuRXhhbXBsZTI hse-doc-studio runner"

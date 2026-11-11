@@ -631,6 +631,7 @@ const generateRunners = (r: Rand, now: number): AdminRunner[] =>
       host_kind: "cli",
       ai_endpoints: [],
       last_seen_ip: null,
+      disk: null,
     };
   });
 

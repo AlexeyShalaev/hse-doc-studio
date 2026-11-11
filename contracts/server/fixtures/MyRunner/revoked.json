@@ -18,5 +18,6 @@
   "revoked": true,
   "running_jobs": 0,
   "ai_endpoints": [],
-  "features": []
+  "features": [],
+  "disk": null
 }

@@ -30,8 +30,15 @@
       "ai_relay",
       "ai_slots",
       "announce",
+      "control",
+      "disk",
       "offline"
-    ]
+    ],
+    "disk": {
+      "supported": true,
+      "cleanable_bytes": 524288000,
+      "measured_at": "2026-04-20T09:10:00Z"
+    }
   },
   {
     "id": "9e8d7c6b5a4f43e2a1b0c9d8e7f6a5b4",
@@ -53,6 +60,11 @@
     "revoked": false,
     "running_jobs": 0,
     "ai_endpoints": [],
-    "features": []
+    "features": [],
+    "disk": {
+      "supported": false,
+      "cleanable_bytes": null,
+      "measured_at": null
+    }
   }
 ]

@@ -1,0 +1,26 @@
+{
+  "reporting": 3,
+  "outdated": 1,
+  "min_version": "0.22.0",
+  "cleanable_bytes": 33930241638,
+  "top": [
+    {
+      "runner_id": "rn_01hxb1",
+      "name": "runner-1",
+      "cleanable_bytes": 25232932864,
+      "measured_at": "2026-11-11T09:20:00Z"
+    },
+    {
+      "runner_id": "rn_01hxb4",
+      "name": "runner-4",
+      "cleanable_bytes": 5690831667,
+      "measured_at": "2026-11-11T08:00:00Z"
+    },
+    {
+      "runner_id": "rn_01hxb2",
+      "name": "runner-2",
+      "cleanable_bytes": 3006477107,
+      "measured_at": "2026-11-11T05:00:00Z"
+    }
+  ]
+}
