@@ -8,8 +8,10 @@ import pytest
 from hse_doc_studio.core.docker_disk.usage import CleanupResult
 from hse_doc_studio.infra.docker.cleanup_jobs import (
     CleanupBusyError,
+    CleanupJob,
     CleanupStep,
     DockerCleanupJobManager,
+    StepOutcome,
 )
 
 
@@ -152,3 +154,122 @@ async def test__start__refuses_a_second_job_while_one_is_active() -> None:
     await _wait_finished(jobs)
     assert jobs.current() is not None
     assert jobs.current().id == second.id  # type: ignore[union-attr]
+
+
+# -- подключаемые виды шагов и наблюдатель хода (раннер: шаги своего кэша) ---------
+
+
+async def test__extra_steps__run_alongside_docker_steps() -> None:
+    fake = _FakeSystemManager()
+    seen: list[str | None] = []
+
+    async def clear_blobs(step: CleanupStep) -> StepOutcome:
+        seen.append(step.ref)
+        return StepOutcome(freed_bytes=300)
+
+    jobs = DockerCleanupJobManager(fake, extra_steps={"runner_blobs": clear_blobs})  # type: ignore[arg-type]
+    assert jobs.step_kinds >= {"build_cache", "runner_blobs"}
+
+    await jobs.start([CleanupStep(kind="build_cache"), CleanupStep(kind="runner_blobs")])
+    await _wait_finished(jobs)
+
+    job = jobs.current()
+    assert job is not None
+    assert job.status == "done"
+    assert job.freed_bytes == 1_300
+    assert seen == [None]
+
+
+async def test__extra_steps__exception_and_unknown_kind_are_step_errors_rest_goes_on() -> None:
+    fake = _FakeSystemManager()
+
+    async def broken(step: CleanupStep) -> StepOutcome:
+        raise OSError("disk on fire")
+
+    jobs = DockerCleanupJobManager(fake, extra_steps={"runner_workspaces": broken})  # type: ignore[arg-type]
+
+    await jobs.start(
+        [
+            CleanupStep(kind="runner_workspaces"),
+            CleanupStep(kind="mystery"),
+            CleanupStep(kind="dangling_images"),
+        ]
+    )
+    await _wait_finished(jobs)
+
+    job = jobs.current()
+    assert job is not None
+    assert job.status == "error"
+    assert [s.status for s in job.steps] == ["error", "error", "done"]
+    # В ошибку шага идёт только тип исключения: пути и прочие подробности наружу не уходят.
+    assert job.steps[0].error == "OSError"
+    assert job.steps[1].error == "unknown step kind: mystery"
+    assert job.freed_bytes == 200
+
+
+def test__extra_steps__cannot_replace_a_docker_step() -> None:
+    async def fake_prune(step: CleanupStep) -> StepOutcome:
+        return StepOutcome(freed_bytes=0)
+
+    with pytest.raises(ValueError, match="built in"):
+        DockerCleanupJobManager(_FakeSystemManager(), extra_steps={"image": fake_prune})  # type: ignore[arg-type]
+
+
+async def test__observer__sees_each_status_change_and_the_result() -> None:
+    fake = _FakeSystemManager()
+    jobs = DockerCleanupJobManager(fake)  # type: ignore[arg-type]
+    snapshots: list[tuple[str, tuple[str, ...]]] = []
+
+    async def observe(job: CleanupJob) -> None:
+        snapshots.append((job.status, tuple(s.status for s in job.steps)))
+
+    await jobs.start([CleanupStep(kind="build_cache"), CleanupStep(kind="dangling_images")], observer=observe)
+    await _wait_finished(jobs)
+
+    assert snapshots == [
+        ("running", ("running", "pending")),
+        ("running", ("done", "pending")),
+        ("running", ("done", "running")),
+        ("running", ("done", "done")),
+        ("done", ("done", "done")),
+    ]
+
+
+async def test__observer__failure_does_not_stop_the_cleanup() -> None:
+    fake = _FakeSystemManager()
+    jobs = DockerCleanupJobManager(fake)  # type: ignore[arg-type]
+    calls = 0
+
+    async def flaky(job: CleanupJob) -> None:
+        nonlocal calls
+        calls += 1
+        raise RuntimeError("server is down")
+
+    await jobs.start([CleanupStep(kind="build_cache"), CleanupStep(kind="dangling_images")], observer=flaky)
+    await _wait_finished(jobs)
+
+    job = jobs.current()
+    assert job is not None
+    assert job.status == "done"
+    assert calls == 5
+
+
+async def test__observer__reports_cancellation_result() -> None:
+    fake = _FakeSystemManager()
+    fake.gate = asyncio.Event()
+    jobs = DockerCleanupJobManager(fake)  # type: ignore[arg-type]
+    final: list[str] = []
+
+    async def observe(job: CleanupJob) -> None:
+        final.append(job.status)
+
+    await jobs.start([CleanupStep(kind="build_cache"), CleanupStep(kind="dangling_images")], observer=observe)
+    await asyncio.sleep(0.02)
+    jobs.cancel()
+    fake.gate.set()
+    await _wait_finished(jobs)
+
+    assert final[-1] == "cancelled"
+    job = jobs.current()
+    assert job is not None
+    assert [s.status for s in job.steps] == ["done", "skipped"]
