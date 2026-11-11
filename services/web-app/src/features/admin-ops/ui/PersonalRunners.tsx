@@ -2,10 +2,12 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { failureCode } from "@shared/api";
 import { ConfirmByName } from "@shared/ui";
+import { RunnerDiskDialog } from "@entities/runner";
 import { useBootstrap, type AdminRunner } from "@entities/session";
 import {
   usePersonalRunners,
   usePersonalRunnersEnabled,
+  useRefreshRunners,
   useRevokeRunner,
   useSetPaused,
 } from "../api/opsQueries";
@@ -28,6 +30,8 @@ export const PersonalRunners = () => {
   const [notice, setNotice] = useState<Failure | null>(null);
   const [revoking, setRevoking] = useState<AdminRunner | null>(null);
   const [failure, setFailure] = useState<Failure | null>(null);
+  const [diskOf, setDiskOf] = useState<AdminRunner | null>(null);
+  const refreshRunners = useRefreshRunners();
 
   return (
     <>
@@ -58,6 +62,21 @@ export const PersonalRunners = () => {
         onRevoke={(runner) => {
           setFailure(null);
           setRevoking(runner);
+        }}
+        onDisk={setDiskOf}
+      />
+      {/* Личный раннер ставит владелец, не админка: «Обновить раннер» здесь нет. */}
+      <RunnerDiskDialog
+        scope="admin"
+        runner={
+          diskOf
+            ? { id: diskOf.id, name: diskOf.name, version: diskOf.version }
+            : null
+        }
+        onCommandSettled={refreshRunners}
+        onClose={() => {
+          setDiskOf(null);
+          refreshRunners();
         }}
       />
       <ConfirmByName

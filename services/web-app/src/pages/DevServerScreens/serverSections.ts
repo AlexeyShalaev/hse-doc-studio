@@ -1,6 +1,9 @@
 import { getBuildStatesGallery } from "@features/build-states";
 import { getAdminInstallGallery } from "@features/admin-install";
-import { getAdminOpsGallery } from "@features/admin-ops";
+import {
+  getAdminOpsGallery,
+  getAdminRunnerDiskGallery,
+} from "@features/admin-ops";
 import { getAdminOrgsGallery } from "@features/admin-orgs";
 import { getAdminAuthSettingsGallery } from "@features/admin-auth-settings";
 import { getAccountSettingsGallery } from "@features/account-settings";
@@ -20,7 +23,6 @@ import { getRecoveryGallery } from "@features/account-recovery";
 import { getServerSetupGallery } from "@features/server-setup";
 import { getSignInGallery } from "@features/sign-in";
 import { getSignUpGallery } from "@features/sign-up";
-import { getRunnerDiskGallery } from "@entities/runner";
 import { getSessionGallery } from "@entities/session";
 import type { GallerySection } from "@shared/lib/stateGallery";
 import { getAdminKitGallery } from "@shared/ui/AdminKitGallery";
@@ -108,7 +110,7 @@ export const buildServerSections = (): GallerySection[] => [
   {
     id: "runner-disk",
     title: "Раннеры: диск",
-    groups: getRunnerDiskGallery(),
+    groups: getAdminRunnerDiskGallery(),
   },
   {
     id: "admin-ops",
