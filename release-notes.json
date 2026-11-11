@@ -1,6 +1,44 @@
 {
   "releases": [
     {
+      "version": "0.22.0",
+      "date": "2026-11-11",
+      "notes": [
+        {
+          "ru": "«Диск раннера» в админке: в меню раннера видно, сколько места занимают образы Студии, кэш сборки и кэш раннера, и что можно освободить. Очистка по блокам или «Очистить всё»; текущая и предыдущая версии и тома не трогаются. Ход и итог видны прямо в окне.",
+          "en": "Runner disk in the admin: the runner menu shows how much space Studio images, the build cache and the runner cache take and what can be freed. Clean block by block or with “Clean all”; the current and previous versions and volumes are never touched. Progress and the result show right in the window."
+        },
+        {
+          "ru": "Очистку выполняет сам раннер по своему свежему замеру, сервер передаёт только цель, а не имена образов. Для «Диска» нужен раннер версии 0.22.0 или новее; старые раннеры показывают подсказку обновиться.",
+          "en": "The runner performs the cleanup itself from its own fresh measurement; the server sends only the target, never image names. The disk view needs runner 0.22.0 or newer; older runners show a hint to update."
+        },
+        {
+          "ru": "Раннеры в Kubernetes показывают и чистят только свой кэш: образы на узле убирает сам Kubernetes. Локальная Студия как раннер отсылает к разделу «Диск» в настройках.",
+          "en": "Kubernetes runners show and clean only their own cache: node images are removed by Kubernetes itself. The local Studio as a runner points to the Disk section in its settings."
+        },
+        {
+          "ru": "«Мои раннеры»: владелец видит «Диск» своего раннера и может удалить и предыдущую версию. Если диск личного раннера почистил администратор, владельцу приходит уведомление во «Входящие»; предыдущую версию у чужого раннера администратор удалить не может.",
+          "en": "My runners: owners see the disk of their runner and may also remove the previous version. If an admin cleaned a personal runner, the owner gets an inbox notice; an admin cannot remove the previous version on someone else's runner."
+        },
+        {
+          "ru": "«Хранилище»: кнопка «Освободить место» запускает сразу все очистки по срокам хранения. Перед запуском видно, сколько записей уйдёт по каждому источнику, после: сколько удалено записей и сколько освобождено на диске. Прогон идёт на сервере и не прерывается закрытой вкладкой. Рядом блок «Где ещё освободить место» с раннерами.",
+          "en": "Storage: the “Free up space” button runs all retention cleanups at once. Before the run you see how many records each source will lose, after it how many were removed and how much disk was freed. The run happens on the server and survives a closed tab. Next to it, “Where else to free space” lists runners."
+        },
+        {
+          "ru": "Каждая очистка записывается в журнал аудита. Справка администратора дополнена разделом «Диск раннера» и статьёй «Хранилище и место», справка пользователя: «Мои раннеры: диск».",
+          "en": "Every cleanup is recorded in the audit log. Admin help gains a “Runner disk” section and a “Storage and space” article, user help gains “My runners: disk”."
+        },
+        {
+          "ru": "Меню «⋯» на телефоне больше не выбирает пункт тем же касанием, которым открылось.",
+          "en": "The “⋯” menu on phones no longer picks an item with the same tap that opened it."
+        },
+        {
+          "ru": "Мастер создания проекта на широком окне снова показывает шаги колонкой слева.",
+          "en": "The project creation wizard shows its steps as a left column on wide windows again."
+        }
+      ]
+    },
+    {
       "version": "0.21.1",
       "date": "2026-11-11",
       "notes": [
