@@ -13,6 +13,7 @@
 #   stack.sh outside-up TOKEN   поднять личный раннер вне сети compose (видит api и шлюз files, но не MinIO)
 #   stack.sh outside-mode MODE  пересоздать api с режимом S3 для внешних раннеров: none, public или proxy
 #   stack.sh outside-stop       остановить и стереть раннер вне сети вместе с его личностью
+#   stack.sh mail-up            поднять поддельный SMTP (fake-smtp:2525 для api, пойманные письма на E2E_MAIL_URL)
 # Второй стенд рядом с первым: STACK_PROJECT=имя STACK_PORT=порт (свои .env, каталоги раннеров и тома).
 set -euo pipefail
 
@@ -24,7 +25,9 @@ suffix=""
 [ "$project" = "hse-doc-studio-stack" ] || suffix=".$project"
 env_file="$here/.env$suffix"
 port="${STACK_PORT:-17251}"
-compose=(docker compose -p "$project" --env-file "$env_file" -f "$root/deploy/server/docker-compose.yml" -f "$root/deploy/server/compose.smoke.yml" -f "$root/deploy/server/compose.personal.yml" -f "$root/deploy/server/compose.outside.yml")
+# HTTP поддельного SMTP (compose.mail.yml) на loopback хоста: письма, которые поймала заглушка.
+export MAIL_HTTP_PORT="${MAIL_HTTP_PORT:-$((port + 2000))}"
+compose=(docker compose -p "$project" --env-file "$env_file" -f "$root/deploy/server/docker-compose.yml" -f "$root/deploy/server/compose.smoke.yml" -f "$root/deploy/server/compose.personal.yml" -f "$root/deploy/server/compose.outside.yml" -f "$root/deploy/server/compose.mail.yml")
 
 ensure_env() {
   [ -f "$env_file" ] && return
@@ -77,6 +80,7 @@ case "${1:-}" in
     echo "export E2E_BASE_URL=http://localhost:$port"
     echo "export E2E_COMPOSE='${compose[*]}'"
     echo "export E2E_PASSWORD=$(grep '^E2E_PASSWORD=' "$env_file" | cut -d= -f2)"
+    echo "export E2E_MAIL_URL=http://127.0.0.1:$MAIL_HTTP_PORT"
     ;;
   logs)
     "${compose[@]}" logs --no-color "${2:-api}"
@@ -130,9 +134,13 @@ case "${1:-}" in
     "${compose[@]}" --profile outside rm -f -s -v runner-outside
     rm -rf "${STACK_OUTSIDE_RUNNER_DIR:-$here/runner-outside-data$suffix}" 2>/dev/null || sudo -n rm -rf "${STACK_OUTSIDE_RUNNER_DIR:-$here/runner-outside-data$suffix}"
     ;;
+  mail-up)
+    ensure_env
+    "${compose[@]}" --profile mail up -d --wait fake-smtp
+    ;;
   down)
     [ -f "$env_file" ] || exit 0
-    "${compose[@]}" --profile personal --profile outside down --volumes --remove-orphans
+    "${compose[@]}" --profile personal --profile outside --profile mail down --volumes --remove-orphans
     rm -rf "$env_file"
     # Каталоги раннера на Linux принадлежат его uid (10001): обычный rm не справляется, нужен sudo (в CI он без пароля).
     for dir in "$here/runner-data$suffix" "$here/runner-personal-data$suffix" "$here/runner-outside-data$suffix"; do
@@ -140,7 +148,7 @@ case "${1:-}" in
     done
     ;;
   *)
-    echo "usage: $0 build|up|env|logs [service]|down|personal-up TOKEN|personal-stop|personal-kill|personal-reset|outside-up TOKEN|outside-mode none|public|proxy|outside-stop" >&2
+    echo "usage: $0 build|up|env|logs [service]|down|personal-up TOKEN|personal-stop|personal-kill|personal-reset|outside-up TOKEN|outside-mode none|public|proxy|outside-stop|mail-up" >&2
     exit 2
     ;;
 esac

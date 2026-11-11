@@ -1,0 +1,27 @@
+# Оверлей поддельного SMTP для стенда (e2e/tests/mail-log.spec.ts, docs/design/mail-log.md, срез E1): заглушка
+# e2e/fake_smtp/server.py принимает письма api на fake-smtp:2525 (без TLS), отвечает 550 на reject-*@ и 451 на busy-*@,
+# по флагу отказывает во входе (535) и отдаёт пойманные письма по HTTP на loopback хоста.
+# SMTP в окружение api не задан: адрес заглушки админ вводит в блоке «Почта (SMTP)», как на настоящей установке.
+# Для боевого развёртывания не нужен. Запуск: scripts/dev/server-stack/stack.sh mail-up.
+services:
+  fake-smtp:
+    profiles: [mail]
+    image: python:3.13-alpine
+    command: ["python", "/app/server.py"]
+    environment:
+      FAKE_SMTP_PORT: "2525"
+      FAKE_SMTP_HTTP_PORT: "8025"
+    ports:
+      - "127.0.0.1:${MAIL_HTTP_PORT:-19251}:8025"
+    volumes:
+      - ../../e2e/fake_smtp:/app:ro
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8025/health')"]
+      interval: 5s
+      retries: 12
+    restart: "no"
+    logging:
+      driver: json-file
+      options:
+        max-size: ${LOG_MAX_SIZE:-10m}
+        max-file: "${LOG_MAX_FILE:-5}"

@@ -255,6 +255,18 @@ export default defineConfig({
       },
     },
     {
+      // Журнал писем (mail-log.md, E1): поддельный SMTP из compose.mail.yml (stack.sh mail-up), сборки на общем
+      // раннере для маршрута подписания; идёт после полного смоука или сам на свежем стенде.
+      name: "mail-log",
+      testMatch: /mail-log\.spec\.ts/,
+      timeout: 5 * 60_000,
+      use: {
+        ...devices["Desktop Chrome"],
+        actionTimeout: 20_000,
+        channel: process.env.E2E_CHANNEL || undefined,
+      },
+    },
+    {
       // Страница «Обновления» и закрытый протокол апдейтера; идёт после полного смоука на том же стенде.
       name: "updates",
       testMatch: /updates\.spec\.ts/,
