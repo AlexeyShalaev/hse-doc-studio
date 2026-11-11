@@ -6,36 +6,15 @@ Generated from `release-notes.json` via `make changelog` — do not edit by hand
 Release notes are hand-written and bilingual (RU/EN); the app shows them in the
 selected interface language.
 
-## [0.23.0](https://github.com/AlexeyShalaev/hse-doc-studio/compare/v0.22.0...v0.23.0) (2026-11-11)
+## [0.23.0](https://github.com/AlexeyShalaev/hse-doc-studio/compare/v0.22.0...v0.23.0) - 2026-11-11
 
-
-### Features
-
-* **mail:** admin mail log read API with redacted mail preview ([ce3954c](https://github.com/AlexeyShalaev/hse-doc-studio/commit/ce3954c62b14b6c583463aeab250f77c32f26ce2))
-* **mail:** admin mail log read API with redacted preview (B6) ([f4c60d4](https://github.com/AlexeyShalaev/hse-doc-studio/commit/f4c60d4d5b29f415ffbd07e6df4d7676e4df6587))
-* **mail:** mail dispatcher with journal, SMTP failure classes and metrics ([fac0922](https://github.com/AlexeyShalaev/hse-doc-studio/commit/fac09222ddfe8ead73271ffca00dabd670bfdebe))
-* **mail:** mail dispatcher: single send point with journal, SMTP failure classes and metrics ([61021a6](https://github.com/AlexeyShalaev/hse-doc-studio/commit/61021a6b0344d67f2171d32210b2b3db569f9670))
-* **mail:** mail log contract (B1) ([83fde9f](https://github.com/AlexeyShalaev/hse-doc-studio/commit/83fde9fe997150016f91ec893747e94f4b7d0911))
-* **mail:** mail log contract: journal types, safe params and API schemas ([d702689](https://github.com/AlexeyShalaev/hse-doc-studio/commit/d7026896b208318e1db6fa9cdfcf014eb675dd3b))
-* **mail:** mail log storage: table, repository, retention and personal data ([f48d827](https://github.com/AlexeyShalaev/hse-doc-studio/commit/f48d8278834b24150ca44376d0d311492964f65b))
-* **mail:** mail log storage: table, repository, retention and personal data ([995f513](https://github.com/AlexeyShalaev/hse-doc-studio/commit/995f513478e94ef4be7c23ab621fd5d2212ae14a))
-* **mail:** notifications, invitations and signing route mail through the dispatcher (B5) ([83425c2](https://github.com/AlexeyShalaev/hse-doc-studio/commit/83425c263b57563dbc11febdc84aa4b848b25ebe))
-* **mail:** notifications, project invitations and signing route mail go through the mail dispatcher (B5) ([42a1678](https://github.com/AlexeyShalaev/hse-doc-studio/commit/42a16780c5bfc54001afc3bbc73cfb9ca924a5cc))
-* **mail:** sign-in and account mail through the dispatcher, retire mail_outbox (B4) ([7c87112](https://github.com/AlexeyShalaev/hse-doc-studio/commit/7c8711220b8161ddb64c639fc093b76d0457d8f8))
-* **mail:** sign-in and account mail through the dispatcher, retire mail_outbox (B4) ([3a65d50](https://github.com/AlexeyShalaev/hse-doc-studio/commit/3a65d5056bdd5753d14b58aefe39fee95e33c788))
-* **mcp:** admin_list_mail_log tool for the mail log ([728e12a](https://github.com/AlexeyShalaev/hse-doc-studio/commit/728e12a4808da5426f752853d7ae07f1ca6f166d))
-* **mcp:** admin_list_mail_log tool for the mail log ([ab548a2](https://github.com/AlexeyShalaev/hse-doc-studio/commit/ab548a2efffa89874442443d680afe34339466d7))
-* **web:** admin mail log card (W3) ([823e15a](https://github.com/AlexeyShalaev/hse-doc-studio/commit/823e15a01d306454ed1c44a2a1021c64ee85eb6f))
-* **web:** admin mail log card with sandboxed preview, outcome and next steps (W3) ([4f2939e](https://github.com/AlexeyShalaev/hse-doc-studio/commit/4f2939eeeb26ac84a0469e0b1e692a873d160fe9))
-* **web:** admin mail log list with day summary, filters and gallery (W2) ([7c76b94](https://github.com/AlexeyShalaev/hse-doc-studio/commit/7c76b9489bacf15a7e2a4e0cc0695908743daca6))
-* **web:** admin mail log list with day summary, filters and gallery (W2) ([41f94e1](https://github.com/AlexeyShalaev/hse-doc-studio/commit/41f94e1760ed1c6c65616c363ed3028613ee2fc4))
-* **web:** admin mail log schemas, queries, demo world and gallery states (W1) ([7e55f48](https://github.com/AlexeyShalaev/hse-doc-studio/commit/7e55f488ffbae88eb9176f6771553a4380614606))
-* **web:** admin mail log schemas, queries, demo world and gallery states (W1) ([4fcea17](https://github.com/AlexeyShalaev/hse-doc-studio/commit/4fcea175d0c5840df38f856272e19baecb10333f))
-
-
-### Bug Fixes
-
-* **web:** align mail log schemas with B1 models, check B1 fixtures from pending ([a02a7d4](https://github.com/AlexeyShalaev/hse-doc-studio/commit/a02a7d4f169a8d298b5270294c9ff45ae30d8cd5))
+- New admin section “Mail”: every email the Studio sent or tried to send, with its outcome (sent, failed, not sent), recipient, subject and who triggered it. Filters by kind, outcome, recipient, project and period, plus search.
+- The “Last 24 hours” band and the menu counter show how many emails failed; on a sign-in, connection or TLS failure a hint links to the mail settings. If mail is not configured, the section says so plainly.
+- The email card shows the message as the recipient saw it. Token links (password reset, confirmation, invitation) and people's messages are not stored in the log and are hidden in the preview. Failures show the class, the SMTP code and “What you can do”.
+- Emails no longer disappear silently: if the recipient's address is unverified, sign-in is closed or SMTP is not configured, the log keeps a row with the reason. The SMTP login and password are hidden in error texts.
+- The log is kept for 90 days; the period is set in Data retention and is part of “Free up space”. Deleting a person erases emails to them, and their data export lists them.
+- MCP: a new read-only admin_list_mail_log tool for administrators.
+- Admin help gains a “Mail” article. The docs no longer promise a mail queue: each email is attempted once and its outcome is in the log.
 
 ## [0.22.0](https://github.com/AlexeyShalaev/hse-doc-studio/compare/v0.21.1...v0.22.0) - 2026-11-11
 
