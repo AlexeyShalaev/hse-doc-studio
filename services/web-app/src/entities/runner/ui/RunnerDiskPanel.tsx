@@ -34,10 +34,9 @@ import { diskSize, diskWhen } from "./format";
 // блоки с очисткой, подтверждение, ход и итог. Данные и действия приходят снаружи, поэтому
 // панель рисуют и диалог (RunnerDiskDialog), и галереи, и тесты.
 
-/** Цвета кэша раннера на полосе: категорий Docker пять, кэш раннера берёт цвет info. */
-const RUNNER_BLOBS_COLOR = "var(--c-info)";
-const RUNNER_WORKSPACES_COLOR =
-  "color-mix(in oklch, var(--c-info) 55%, var(--bg-1))";
+/** Кэш раннера на полосе: свой тон (--chart-6), рабочие копии светлее (--chart-7). */
+const RUNNER_BLOBS_COLOR = "var(--chart-6)";
+const RUNNER_WORKSPACES_COLOR = "var(--chart-7)";
 
 export type RunnerDiskPanelProps = {
   view: RunnerDiskView;
