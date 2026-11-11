@@ -10,12 +10,13 @@ import {
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { formatBytes } from "@shared/lib";
-import type {
-  DockerContainerUsage,
-  DockerImageUsage,
-  DockerUsage,
+import {
+  diskCategoryColor,
+  type DockerContainerUsage,
+  type DockerImageUsage,
+  type DockerUsage,
 } from "@entities/docker-system";
-import { categoryColor, categoryLabelKey } from "./lib";
+import { categoryLabelKey } from "./lib";
 
 const Badge = ({
   text,
@@ -304,7 +305,7 @@ export const DiskEntityLists = ({
                   width: "0.5rem",
                   height: "0.5rem",
                   borderRadius: "0.125rem",
-                  background: categoryColor(image.category),
+                  background: diskCategoryColor(image.category),
                 }}
               />
             }
