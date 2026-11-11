@@ -1,0 +1,29 @@
+{
+  "id": 1202,
+  "at": "2026-11-10T16:05:30Z",
+  "template": "invite",
+  "template_known": true,
+  "lang": "ru",
+  "to_email": "new.student@example.org",
+  "to_user": null,
+  "subject": "Приглашение в Студию",
+  "status": "not_sent",
+  "reason": "smtp_off",
+  "failure": null,
+  "message_id": null,
+  "attempts": 1,
+  "duration_ms": 0,
+  "cause": "user",
+  "actor": {
+    "id": "9b1e7c40a2d34f66b0c85d1e3a7f2c90",
+    "name": "Иван Сидоров",
+    "email": "ivan.sidorov@example.org"
+  },
+  "task": null,
+  "origin": "admin_invite",
+  "project": null,
+  "ref": {
+    "kind": "registration_invite",
+    "id": "inv_01hx9q7m2k"
+  }
+}

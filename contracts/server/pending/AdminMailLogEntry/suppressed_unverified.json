@@ -1,0 +1,36 @@
+{
+  "id": 1203,
+  "at": "2026-11-11T08:41:56Z",
+  "template": "project_invitation",
+  "template_known": true,
+  "lang": "ru",
+  "to_email": "boris.kovalev@example.org",
+  "to_user": {
+    "id": "4e7a2d9c1b3f4a5e8d6c0b2a9f8e7d61",
+    "name": "Борис Ковалёв",
+    "email": "boris.kovalev@example.org"
+  },
+  "subject": "Анна Петрова приглашает вас в «Курсовая работа по ГОСТ»",
+  "status": "suppressed",
+  "reason": "email_unverified",
+  "failure": null,
+  "message_id": null,
+  "attempts": 1,
+  "duration_ms": 0,
+  "cause": "user",
+  "actor": {
+    "id": "c3d4a1f0e6b24d89a5f7120b9e8c6a31",
+    "name": "Анна Петрова",
+    "email": "anna.petrova@example.org"
+  },
+  "task": null,
+  "origin": "notification",
+  "project": {
+    "id": "5b0c1d2e-3f40-4152-8364-758697a8b9c0",
+    "name": "Курсовая работа по ГОСТ"
+  },
+  "ref": {
+    "kind": "project_invitation",
+    "id": "b82e4d3f0a9c4d6b"
+  }
+}

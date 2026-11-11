@@ -57,6 +57,11 @@ _FIXED_PATH: dict[MailTemplate, str] = {
 }
 
 
+def fixed_path(template: MailTemplate) -> str | None:
+    """Путь страницы, куда ведёт кнопка письма без своей ссылки (уведомления), иначе None."""
+    return _FIXED_PATH.get(template)
+
+
 @dataclass(frozen=True)
 class RenderedMail:
     subject: str

@@ -112,7 +112,7 @@
 | L2 | Строка на каждую попытку с итогом `sent`, `failed`, `not_sent` (SMTP не настроен) или `suppressed` (письмо не положено: почта не подтверждена, вход закрыт). Пишется одна строка после исхода, без промежуточного `sending`. | Ответ на вопрос поддержки «уходило ли» нужен и для неудач, и для пропусков. `suppressed` реально бывает (`Notifier`). Одна вставка проще и не оставляет висящих `sending` после падения процесса. |
 | L3 | Тело письма не храним. Храним вид, язык, тему как ушла, получателя и **белый список** значений шаблона (`actor`, `inviter`, `project`, `role`, `profile`, `deadline`, `changed`, `name`, `count`), срок ссылки, путь страницы для писем без токена и признаки «была ссылка с токеном», «было сообщение». Карточка перерисовывает письмо тем же `build_content` в режиме `links="redacted"`. | Ссылки сброса, подтверждения и приглашений это учётные данные: в базе и бэкапах их быть не должно (то же правило, что у `mail_outbox` и хешей токенов). При перерисовке токен в журнал не попадает по построению: его просто нет на входе. Альтернатива ниже. |
 | L4 | Сообщения людей (`note`: сообщение к приглашению, комментарий возврата, «что изменилось» автора) не храним, только длину. В карточке на их месте «[сообщение не хранится в журнале]». | Это переписка людей, а не служебные данные; админу для поддержки достаточно знать, что сообщение было. Так журнал содержит только то, что админ и так видит в админке (люди, названия проектов), и его просмотр не нужно аудировать (L10). |
-| L5 | Если с момента отправки поменялись тексты или вёрстка шаблона, карточка помечает «Письмо перерисовано по текущему шаблону». Признак: `template_digest`, первые 16 hex SHA-256 от темы, текста и HTML образца этого вида на этом языке (`sample_mail`, кэш на процесс); при отправке пишется, при показе сравнивается. Удалённый из `MailTemplate` вид: превью нет, только сведения. | Отпечаток образца ловит любую правку словаря, `render.py` и `compose.py` без ручного номера версии, который забудут поднять. |
+| L5 | Если с момента отправки поменялись тексты или вёрстка шаблона, карточка помечает «Письмо перерисовано по текущему шаблону». Признак: `template_digest`, первые 16 hex SHA-256 от темы, текста и HTML образца этого вида на этом языке (`sample_mail`, кэш на процесс); при отправке пишется, при показе сравнивается. Правка образцов `samples.py` тоже меняет отпечаток: лишняя пометка безопаснее пропущенной. Удалённый из `MailTemplate` вид: превью нет, только сведения. | Отпечаток образца ловит любую правку словаря, `render.py` и `compose.py` без ручного номера версии, который забудут поднять. |
 | L6 | **Развилка.** Повторной отправки в первой версии нет. Карточка подсказывает действие владельца по виду: новая ссылка сброса, повтор приглашения, «уведомление есть во «Входящих»», тестовое письмо. | У писем с токеном повтор невозможен (токена нет) и неправилен (нужна новая ссылка, старая гасится). У уведомлений повтор по старым параметрам шлёт устаревшее (маршрут уже подписан, приглашение принято), без сообщений людей (L4) письмо выйдет другим, а дубль и так лежит во «Входящих». Главный сценарий «SMTP лежал час» лучше решать отдельно (раздел 13). |
 | L7 | `mail_outbox` сливается с журналом и удаляется: `LinkDelivery` пишет строку `not_sent` или `failed`, таблица, `IMailOutboxRepository`, `MailOutboxEntry` и шаг `auth_cleanup` уходят. Строки не переносятся. | Журнал строго шире outbox (тот же вид, адрес и время плюс итог и причина), а outbox никто не читает (2.3). Перенос строк без языка, темы и итога ничего не даст: им не больше 7 дней. |
 | L8 | Кто вызвал: `user` (актор запроса из `current_actor`, наследуется фоновыми задачами), `anonymous` (запрос без входа: регистрация, «Забыли пароль»), `system` (фоновая задача, имя из нового `contextvar`, который ставит `BackgroundTaskRunner`). Плюс `origin`: короткий код сценария от вызывающего (`register`, `forgot_password`, `admin_reset_link`, `signing_auto_reminder` и т. д.) и `request_id`. | Контекст уже есть в процессе, передавать его через все слои не нужно. `origin` отличает «первое письмо» от «повторного запроса», `request_id` связывает строку с логами api. |
@@ -400,27 +400,38 @@ the log]».
   "ttl_s": 3600,
   "expires_at": null,
   "note_len": 0,
-  "server": "studio.example.org"
+  "server": "https://studio.example.org"
 }
 ```
 
 - `values`: только ключи белого списка L3, каждое значение уже `one_line` (до 200 символов). Белый список живёт в
-  `core/mail/journal.py` рядом с `compose`; тест сверяет, что в нём все подстановки словарей, кроме `email` и
-  `server`, и ни одна из них не секрет.
+  `core/mail/journal.py` рядом с `compose` и задан по видам (`SAFE_VALUES[template]`, объединение `SAFE_VALUE_KEYS`
+  равно списку L3): у каждого вида ровно подстановки его текстов в словарях ru и en, кроме `email` и `server`, это
+  сверяет тест, и ни одна из них не секрет. Значение, которого нет в текстах вида, не хранится (например, `role` у
+  `access_request` и `transfer_request`: `Notifier` её передаёт, письмо не показывает).
 - `link`: `token` (ссылка с токеном, P1..P4, P14), `page` (адрес страницы без токена: маршрут, «Входящие»,
   настройки аккаунта), `none`. Решает отправитель, а не догадка по виду: `MailRequest.link_kind`.
 - `link_path`: только у `page`, путь без адреса сервера (`/sign/<проект>/<маршрут>`); у `token` всегда `null`.
 - `ttl_s` и `expires_at`: чтобы строка «Ссылка действует 1 час» в перерисованном письме совпала с ушедшей.
 - `note_len`: длина сообщения человека; текст не хранится (L4).
-- `server`: отображаемый адрес установки на момент отправки (`_display_server`).
+- `server`: публичный адрес установки на момент отправки (`server_origin`, например `https://studio.example.org`),
+  `null`, если он не задан. Уточнено в B1: хранится адрес, а не отображаемая строка, чтобы перерисовка дала ту же
+  ссылку в подвале; отображаемый адрес из него выводится.
 
 Ничего из `params` не секрет; тест на каждом `MailTemplate` отправляет письмо со ссылкой, где токен это известная
 строка, и проверяет, что её нет ни в одной колонке строки журнала.
 
 ### 5.3 Код
 
-- `core/mail/journal.py`: `MailStatus`, `MailFailure`, `MailCause`, `MailLogEntry`, `MailRequest`, `SAFE_VALUES`,
-  `safe_params(request)`, `template_digest(template, lang)`, `rerender(entry) -> RenderedMail | None`.
+- `core/mail/journal.py` (B1): `MailStatus`, `MailSkipReason` (`smtp_off`, `email_unverified`, `account_blocked`),
+  `MailFailureClass` (классы L16), `REASONS_BY_STATUS` (какие причины при каком итоге), `MailCause`, `MailLinkKind`,
+  `MailOrigin` (коды сценариев 4.3), `MailRefKind` (L9), `MailFailure` (класс, код SMTP, текст: это вернёт
+  `classify`), `MailRequest` (с проверкой: у `token` ссылка обязательна, у `none` её нет, у видов с постоянной
+  страницей `fixed_path` вид ссылки `page`; `render()` даёт письмо как уйдёт), `MailParams` (`to_json`,
+  `from_json` отбрасывает незнакомое и не из белого списка), `SAFE_VALUES`, `safe_params(request)`,
+  `template_digest(template, lang)`, `known_template(value)`, `MailLogEntry` (`template` и `lang` строками, `id`
+  выдаёт хранилище), `MailLogQuery`, `MailLogPage`, `MailLogCounts` (итоги окна и последний сбой в нём) для B2.
+  `rerender(entry) -> RenderedMail | None` добавляет B6. В `compose.py` B1 добавил `fixed_path(template)`.
 - `core/mail/compose.py`: `build_content(..., links: Literal["live", "redacted"] = "live")`. В режиме `redacted`
   кнопка остаётся с подписью, но `href=None`, `plain_link` это «[ссылка скрыта]» для `token` и `link_path` для
   `page`, блок сообщения это `note_hidden`. `render.py` рисует кнопку без `href` как `<span>` того же вида.
@@ -481,6 +492,23 @@ the log]».
 `contracts/server/fixtures/AdminMailLogPage`, `AdminMailLogEntry`, `AdminMailLogDetail`, `AdminMailLogSummary`; их
 разбирают оба теста контракта (`CONTRACT_SCHEMAS` и `_SCHEMAS` в `test_server_contract.py`).
 
+Как сделал B1: модели и эталоны готовы, а zod-схем ещё нет, поэтому эталоны лежат в
+`contracts/server/pending/AdminMailLog*` (README контракта). Backend-тест разбирает `pending` наравне с `fixtures`,
+фронтовый их не видит. W1 переносит четыре каталога в `fixtures` (`git mv`) в том же PR, где регистрирует схемы в
+`CONTRACT_SCHEMAS`; backend-тест при этом не меняется. Смысл эталонов (итог и причина, сбой только у `failed`,
+Message-ID только у `sent`, вид удалён без превью, сбой в сводке только при `failed > 0`, ни одной ссылки с токеном)
+сверяет `tests/unit/contract/test_mail_log_fixtures.py`, где бы каталоги ни лежали. Варианты:
+
+- `AdminMailLogEntry`: `sent_token_anonymous`, `sent_page_user`, `failed_recipient` (`550`), `failed_auth_system`
+  (автонапоминание, EN), `suppressed_unverified`, `not_sent_smtp_off`, `template_gone`, `project_gone` (проекта и
+  вызвавшего уже нет);
+- `AdminMailLogPage`: `day` (все итоги, есть `next_cursor`), `next_page`, `filtered_failed` (`total_estimate: null`),
+  `empty`;
+- `AdminMailLogDetail`: `token_link`, `page_link`, `failed_with_note`, `failed_auth_system`, `suppressed`,
+  `not_sent`, `rerendered`, `template_gone` (`preview: null`). HTML превью в эталонах короткий: форма та же, полное
+  письмо даст B6;
+- `AdminMailLogSummary`: `normal`, `auth_failure`, `smtp_off`, `quiet`.
+
 ```text
 AdminMailLogEntry {
   id: int
@@ -489,7 +517,7 @@ AdminMailLogEntry {
   template_known: bool          # вид есть в этой версии
   lang: "ru" | "en"
   to_email: str
-  to_user: AdminPersonRef | null          # {id, name, email}; null, если адрес не человека установки или он удалён
+  to_user: AdminPersonRef | null          # {id, name, email: str | null}; null, если адрес не человека установки или он удалён
   subject: str
   status: "sent" | "failed" | "not_sent" | "suppressed"
   reason: str | null
@@ -519,7 +547,7 @@ AdminMailLogSummary {
   smtp_configured: bool
   window_hours: 24
   sent: int, failed: int, not_sent: int, suppressed: int
-  last_failure: {at: datetime, reason: str} | null
+  last_failure: {at: datetime, reason: str} | null           # последний failed в окне, null без сбоев в окне
   retention_days: int
 }
 ```

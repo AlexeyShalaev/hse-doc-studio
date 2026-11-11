@@ -1,0 +1,32 @@
+{
+  "entry": {
+    "id": 1042,
+    "at": "2026-10-14T12:00:00Z",
+    "template": "weekly_digest",
+    "template_known": false,
+    "lang": "ru",
+    "to_email": "anna.petrova@example.org",
+    "to_user": {
+      "id": "c3d4a1f0e6b24d89a5f7120b9e8c6a31",
+      "name": "Анна Петрова",
+      "email": "anna.petrova@example.org"
+    },
+    "subject": "Что нового за неделю",
+    "status": "sent",
+    "reason": null,
+    "failure": null,
+    "message_id": "<1772861042.4182.1@studio.example.org>",
+    "attempts": 1,
+    "duration_ms": 377,
+    "cause": "system",
+    "actor": null,
+    "task": "weekly_digest",
+    "origin": "notification",
+    "project": null,
+    "ref": null
+  },
+  "preview": null,
+  "link_hidden": false,
+  "note_hidden": false,
+  "rerendered": false
+}
