@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+from dataclasses import replace
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from uuid import uuid4
@@ -23,6 +24,7 @@ from hse_doc_studio.core.jobs.disk import (
     RunnerCommandKind,
     RunnerCommandState,
     RunnerDiskReport,
+    disk_cleanable_bytes,
 )
 from hse_doc_studio.core.jobs.runners import Runner
 from hse_doc_studio.core.jobs.wire import FEATURE_CONTROL, FEATURE_DISK, ControlPollRequest
@@ -91,8 +93,8 @@ def _command(
     )
 
 
-def _report() -> RunnerDiskReport:
-    raw = json.loads((_FIXTURES / "RunnerDiskReportBody" / "docker.json").read_text(encoding="utf-8"))
+def _report(name: str = "docker") -> RunnerDiskReport:
+    raw = json.loads((_FIXTURES / "RunnerDiskReportBody" / f"{name}.json").read_text(encoding="utf-8"))
     return decode(RunnerDiskReport, raw)
 
 
@@ -235,6 +237,37 @@ async def test__disk__roundtrip_list_revoked_and_garbage(pg_migrated_engine: Asy
         await conn.execute(update(RunnerRow).where(RunnerRow.id == runner.id).values(disk={"docker": "podman"}))
     assert await repos.disks.get_disk(runner.id) is None
     assert await repos.disks.list_disks() == {}
+
+
+async def test__disk_briefs__projection_matches_the_cleanable_rule(pg_migrated_engine: AsyncEngine) -> None:
+    repos = _Repos(pg_migrated_engine)
+    names = ("docker", "docker_unavailable", "kubernetes", "desktop")
+    runners = {name: await repos.runner() for name in names}
+    for name, runner in runners.items():
+        await repos.disks.set_disk(runner.id, _report(name), NOW)
+    silent = await repos.runner()
+
+    briefs = await repos.disks.list_disk_briefs()
+
+    assert set(briefs) == {r.id for r in runners.values()}
+    for name, runner in runners.items():
+        brief = briefs[runner.id]
+        report = _report(name)
+        assert (brief.cleanable_bytes, brief.measured_at, brief.received_at) == (
+            disk_cleanable_bytes(report),
+            report.measured_at,
+            NOW,
+        ), name
+    picked = await repos.disks.list_disk_briefs([runners["docker"].id, silent.id])
+    assert set(picked) == {runners["docker"].id}
+    assert await repos.disks.list_disk_briefs([]) == {}
+    # Гигабайты не упираются в int4: размеры в отчёте и сумма считаются в bigint.
+    big = await repos.runner()
+    report = _report()
+    assert report.docker is not None
+    huge = replace(report, docker=replace(report.docker, cleanable_bytes=5 * 2**40))
+    await repos.disks.set_disk(big.id, huge, NOW)
+    assert (await repos.disks.list_disk_briefs([big.id]))[big.id].cleanable_bytes == disk_cleanable_bytes(huge)
 
 
 async def test__long_poll__two_service_instances_share_the_database(pg_migrated_engine: AsyncEngine) -> None:
