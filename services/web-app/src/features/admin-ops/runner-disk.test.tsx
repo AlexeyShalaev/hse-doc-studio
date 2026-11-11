@@ -69,6 +69,7 @@ const runner = (extra: Partial<AdminRunner> = {}): AdminRunner => ({
   host_kind: "cli",
   ai_endpoints: [],
   last_seen_ip: null,
+  disk: { supported: true, cleanable_bytes: null, measured_at: null },
   ...extra,
 });
 
@@ -122,7 +123,7 @@ describe("«Диск» общих раннеров", () => {
     vi.restoreAllMocks();
   });
 
-  it("строка: «можно освободить» от 1 ГБ открывает «Диск», мелочь и старый сервер без подписи", async () => {
+  it("строка: «можно освободить» от 1 ГБ открывает «Диск», мелочь и раннер без замера без подписи", async () => {
     const get = vi
       .spyOn(adminRunnerDiskApi, "get")
       .mockResolvedValue({ ...RUNNER_DISK_STATES.docker, runner_id: "r1" });
@@ -144,8 +145,8 @@ describe("«Диск» общих раннеров", () => {
           measured_at: "2026-11-10T09:00:00Z",
         },
       }),
-      // Сервер до B6: поля disk нет вовсе.
-      runner({ id: "r3", name: "runner-old-server" }),
+      // Замера ещё нет: освобождать нечего показывать.
+      runner({ id: "r3", name: "runner-no-report" }),
     ]);
 
     const hint = await screen.findByTestId("runner-disk-hint-r1");

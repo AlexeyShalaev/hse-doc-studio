@@ -209,7 +209,7 @@ export const RunnersView = ({
         header: t("runners.columns.name"),
         cell: ({ row }) => {
           const { runner, status: st, pickClass, disk } = row.original;
-          // Поле disk приходит не от всякого сервера (B6): без него строка как раньше.
+          // disk: null только у отозванного; cleanable_bytes: null, пока замера нет.
           const cleanable =
             st !== "revoked" && runner.disk?.supported
               ? (runner.disk.cleanable_bytes ?? 0)
