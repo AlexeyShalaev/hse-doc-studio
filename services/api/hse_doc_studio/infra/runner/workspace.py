@@ -15,12 +15,14 @@ import hashlib
 import os
 import shutil
 import stat
+import time
 import uuid
 from collections import defaultdict
 from collections.abc import AsyncIterator, Awaitable, Callable
 from dataclasses import dataclass
 from pathlib import Path
 
+from hse_doc_studio.core.jobs.disk import BLOB_MIN_IDLE_S
 from hse_doc_studio.core.jobs.files import ManifestFile, validate_relative_posix
 from hse_doc_studio.infra.runner.executor import OutputFile
 
@@ -31,6 +33,25 @@ PRESERVED_PREFIXES: tuple[str, ...] = (".build/",)
 
 _CHUNK = 1024 * 1024
 _SHA_LEN = 64
+# Очистка кэша уступает циклу событий через столько файлов: сборки рядом не должны ждать её целиком.
+_YIELD_EVERY = 256
+
+
+@dataclass(frozen=True)
+class CacheUsage:
+    """Занятое кэшем блобов: байты и число файлов."""
+
+    bytes: int
+    count: int
+
+
+@dataclass(frozen=True)
+class WorkspacesUsage:
+    """Занятое рабочими копиями; `busy` сколько папок сейчас под замком задачи."""
+
+    bytes: int
+    count: int
+    busy: int
 
 
 class BlobIntegrityError(Exception):
@@ -136,6 +157,48 @@ class BlobCache:
             with contextlib.suppress(OSError):
                 tmp.unlink(missing_ok=True)
             raise
+
+    def _entries(self) -> list[tuple[Path, int]]:
+        entries: list[tuple[Path, int]] = []
+        for path in self._root.glob("*/*"):
+            if path.name.startswith("."):
+                continue  # недописанный `.tmp-*`: его уберёт тот, кто пишет
+            with contextlib.suppress(OSError):
+                entries.append((path, path.lstat().st_size))
+        return entries
+
+    async def usage(self) -> CacheUsage:
+        entries = await asyncio.to_thread(self._entries)
+        return CacheUsage(bytes=sum(size for _, size in entries), count=len(entries))
+
+    async def clear(self, min_idle_s: float = BLOB_MIN_IDLE_S) -> int:
+        """Удаляет блобы, не тронутые за `min_idle_s`; возвращает освобождённые байты (S9 `storage-cleanup.md`).
+
+        Обход идёт в потоке, а решение и удаление каждого блоба в цикле событий без `await` между ними: блоб под
+        замком `ensure` пропускается, а его время перечитывается прямо перед удалением, потому что `ensure` трогает
+        блоб под замком перед выдачей. Выданный сборке блоб свежий, и очистка его не заденет, пока сборка его копирует.
+        """
+        entries = await asyncio.to_thread(self._entries)
+        freed = 0
+        for index, (path, _) in enumerate(entries):
+            if index and index % _YIELD_EVERY == 0:
+                await asyncio.sleep(0)
+            freed += self._drop_idle(path, time.time() - min_idle_s)
+        return freed
+
+    def _drop_idle(self, path: Path, cutoff: float) -> int:
+        lock = self._locks.get(path.name)
+        if lock is not None and lock.locked():
+            return 0
+        try:
+            info = path.lstat()
+            if info.st_mtime > cutoff:
+                return 0
+            path.chmod(0o600)  # блоб 0444: на Windows read-only файл не удаляется
+            path.unlink()
+        except OSError:
+            return 0
+        return info.st_size
 
     def evict(self, max_bytes: int, keep: frozenset[str] = frozenset()) -> int:
         """Удаляет давно не использованные блобы, пока кэш не уложится в предел; возвращает число удалённых."""
@@ -250,6 +313,45 @@ class RunnerWorkspaces:
             total += size
             entries.append((mtime, size, path))
         return entries, total
+
+    def _busy(self, name: str) -> bool:
+        lock = self._locks.get(name)
+        return lock is not None and lock.locked()
+
+    async def usage(self) -> WorkspacesUsage:
+        entries, total = await asyncio.to_thread(self._inventory)
+        busy = sum(1 for _, _, path in entries if self._busy(path.name))
+        return WorkspacesUsage(bytes=total, count=len(entries), busy=busy)
+
+    async def clear(self) -> int:
+        """Удаляет все рабочие копии, кроме занятых задачей; возвращает освобождённые байты (S9 `storage-cleanup.md`).
+
+        Папку удаляем, держа замок её проекта: задача того же проекта, пришедшая во время удаления, дождётся его и
+        соберёт папку заново из кэша. Папка выгрузки выходов (`outputs`) лежит вне рабочих копий и не трогается.
+        """
+        paths = await asyncio.to_thread(lambda: list(self._root.iterdir()))
+        freed = 0
+        for path in paths:
+            if self._busy(path.name):
+                continue
+            # Свободный замок берётся без ожидания: между проверкой и захватом цикл событий не переключается.
+            async with self._locks[path.name]:
+                freed += await asyncio.to_thread(self._drop, path)
+        return freed
+
+    @staticmethod
+    def _drop(path: Path) -> int:
+        try:
+            if path.is_symlink() or not path.is_dir():
+                size = path.lstat().st_size
+                path.unlink()
+                return size
+        except OSError:
+            return 0
+        before = _tree_size(path)
+        _rmtree(path)
+        left = _tree_size(path) if path.exists() else 0
+        return max(before - left, 0)
 
     def evict(self, keep: frozenset[str] = frozenset()) -> int:
         """Удаляет давно не использованные папки проектов, пока все вместе не уложатся в предел.
