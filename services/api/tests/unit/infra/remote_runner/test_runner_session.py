@@ -256,3 +256,31 @@ async def test__session__office_job__converts_with_studio_service_and_uploads_pd
     # Образ из задачи сервера не используется: служба запускается с образом самой Студии.
     assert office.calls == [("slides.pptx", "gotenberg/gotenberg:8-studio")]
     assert b"%PDF-1.7 converted" in job.artifacts.values()
+
+
+async def test__session__studio_reports_only_its_runner_cache_disk(tmp_path: Path) -> None:
+    """Локальная Студия как раннер: канал команд тот же, Docker-части нет (`managed_locally`, S7)."""
+    state = FakeRunnerState()
+    factory = runner_session_factory(cache_volume="tex-cache", transport=SwitchTransport(create_fake_app(state)))
+
+    async with factory(_spec(tmp_path), Listener()) as session:
+        await _run_until(session, lambda: bool(state.disks) and state.control_polls > 0)
+
+    assert {"control", "disk"} <= set(state.announces[0]["features"])
+    report = state.disks[0]
+    assert report["docker"] is None
+    assert report["docker_reason"] == "managed_locally"
+    assert report["targets"] == ["runner_cache"]
+
+
+async def test__session__command_poll_is_not_the_connection_signal(tmp_path: Path) -> None:
+    """Опрос команд идёт сам по себе: «в сети» по-прежнему говорит только опрос задач."""
+    state = FakeRunnerState()
+    listener = Listener()
+    factory = runner_session_factory(cache_volume="tex-cache", transport=SwitchTransport(create_fake_app(state)))
+
+    async with factory(_spec(tmp_path, gate=False), listener) as session:
+        await _run_until(session, lambda: state.control_polls > 1)
+
+    assert state.polls == 0
+    assert SessionState.online not in listener.states

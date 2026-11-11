@@ -1,18 +1,37 @@
 from __future__ import annotations
 
+import json
+from pathlib import Path
+from uuid import UUID
+
 import pytest
-from hse_doc_studio.core.jobs.codec import encode_result
+from hse_doc_studio.core.jobs.codec import decode, encode_result
+from hse_doc_studio.core.jobs.disk import (
+    CommandProgress,
+    DiskCleanupPayload,
+    DiskTarget,
+    RunnerCommandState,
+    RunnerDiskReport,
+)
 from hse_doc_studio.core.jobs.entities import JobResult
 from hse_doc_studio.core.jobs.enums import JobStatus
 from hse_doc_studio.core.jobs.files import ArtifactRef
 from hse_doc_studio.core.jobs.wire import (
     ArtifactUploadRequest,
+    CommandProgressRequest,
     CompleteRequest,
+    ControlPollRequest,
     PollRequest,
     RunnerRegisterRequest,
 )
 from hse_doc_studio.infra.runner.backoff import Backoff
-from hse_doc_studio.infra.runner.client import RunnerApiError, RunnerClient, RunnerUnreachable, StorageUnreachable
+from hse_doc_studio.infra.runner.client import (
+    RunnerApiError,
+    RunnerClient,
+    RunnerCommandRejected,
+    RunnerUnreachable,
+    StorageUnreachable,
+)
 
 from tests.unit.infra.runner.fake_runner_api import (
     RUNNER_TOKEN,
@@ -186,3 +205,80 @@ async def test_put_to_url_server_error_is_not_a_storage_reachability_problem(tra
     with pytest.raises(RunnerApiError):
         await client.put_to_url("http://testserver/nope", b"pdf")
     await client.aclose()
+
+
+_FIXTURES = Path(__file__).resolve().parents[6] / "contracts" / "runner" / "fixtures"
+_COMMAND = "7d3f1a2b-4c5d-4e6f-8a9b-0c1d2e3f4a5b"
+
+
+def _fixture(schema: str, name: str) -> dict[str, object]:
+    return json.loads((_FIXTURES / schema / f"{name}.json").read_text(encoding="utf-8"))
+
+
+async def test_control_poll_decodes_the_command_and_is_not_retried(
+    state: FakeRunnerState, transport: SwitchTransport
+) -> None:
+    client = _client(transport, registered=True)
+    state.commands.append(_fixture("ControlPollResponseBody", "cleanup")["command"])  # type: ignore[arg-type]
+
+    polled = await client.control_poll(ControlPollRequest(wait_s=0))
+    empty = await client.control_poll(ControlPollRequest(wait_s=0))
+    transport.down = True
+    with pytest.raises(RunnerUnreachable):
+        await client.control_poll(ControlPollRequest(wait_s=0))
+    await client.aclose()
+
+    assert polled.command is not None
+    assert polled.command.id == UUID(_COMMAND)
+    assert isinstance(polled.command.payload, DiskCleanupPayload)
+    assert DiskTarget.runner_cache in polled.command.payload.targets
+    assert empty.command is None
+    assert transport.failures == 1
+
+
+async def test_control_poll_unknown_command_is_rejected_with_its_id(
+    state: FakeRunnerState, transport: SwitchTransport
+) -> None:
+    client = _client(transport, registered=True)
+    state.commands.append({"id": _COMMAND, "kind": "node.reboot", "payload": {}, "issued_at": "2026-11-11T09:31:00Z"})
+
+    with pytest.raises(RunnerCommandRejected) as caught:
+        await client.control_poll(ControlPollRequest(wait_s=0))
+    await client.aclose()
+
+    assert caught.value.command_id == UUID(_COMMAND)
+
+
+async def test_command_progress_returns_cancel_and_the_result_is_retried(
+    state: FakeRunnerState, transport: SwitchTransport
+) -> None:
+    client = _client(transport, registered=True)
+    state.cancel_commands.add(_COMMAND)
+    running = CommandProgressRequest(RunnerCommandState.running, CommandProgress(steps=(), freed_bytes=0, error=None))
+    done = CommandProgressRequest(RunnerCommandState.done, CommandProgress(steps=(), freed_bytes=0, error=None))
+
+    reply = await client.command_progress(UUID(_COMMAND), running)
+    state.progress_unavailable = 1
+    with pytest.raises(RunnerUnreachable):
+        await client.command_progress(UUID(_COMMAND), running)
+    state.progress_unavailable = 5
+    await client.command_progress(UUID(_COMMAND), done, final=True)
+    state.progress_errors[_COMMAND] = (409, "command_finished")
+    with pytest.raises(RunnerApiError) as caught:
+        await client.command_progress(UUID(_COMMAND), done, final=True)
+    await client.aclose()
+
+    assert reply.cancel is True
+    assert [entry["state"] for entry in state.progress[_COMMAND]] == ["running", "done"]
+    assert caught.value.code == "command_finished"
+
+
+async def test_report_disk_posts_the_contract_body(state: FakeRunnerState, transport: SwitchTransport) -> None:
+    client = _client(transport, registered=True)
+    report = decode(RunnerDiskReport, _fixture("RunnerDiskReportBody", "docker"))
+
+    await client.report_disk(report)
+    await client.aclose()
+
+    (posted,) = state.disks
+    assert decode(RunnerDiskReport, posted) == report

@@ -58,7 +58,7 @@ class ObservingTransport(httpx.AsyncBaseTransport):
 
     async def handle_async_request(self, request: httpx.Request) -> httpx.Response:
         path = request.url.path
-        is_poll = path.endswith("/poll")
+        is_poll = _is_job_poll(path)
         if is_poll and not self._confirmed:
             request = _short_poll(request)
         try:
@@ -71,9 +71,9 @@ class ObservingTransport(httpx.AsyncBaseTransport):
         return response
 
     def _observe(self, path: str, status: int) -> None:
-        if path.endswith("/poll") and status < 400:
+        if _is_job_poll(path) and status < 400:
             self._set_reachable(reachable=True)
-        elif path.endswith("/poll") and status in _UNAVAILABLE:
+        elif _is_job_poll(path) and status in _UNAVAILABLE:
             self._set_reachable(reachable=False)
         elif path.endswith("/register") and status < 400:
             self._listener.on_registered()
@@ -84,6 +84,11 @@ class ObservingTransport(httpx.AsyncBaseTransport):
 
     async def aclose(self) -> None:
         await self._inner.aclose()
+
+
+def _is_job_poll(path: str) -> bool:
+    """Опрос задач; опрос канала команд (`/control/poll`) идёт своей задачей и о связи здесь не говорит."""
+    return path.endswith("/poll") and not path.endswith("/control/poll")
 
 
 def _short_poll(request: httpx.Request) -> httpx.Request:
