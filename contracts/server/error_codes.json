@@ -93,5 +93,7 @@
   "passkeys_disabled",
   "passkey_invalid",
   "passkey_limit",
-  "reauth_required"
+  "reauth_required",
+  "lifecycle_sweep_busy",
+  "command_finished"
 ]

@@ -428,6 +428,14 @@ LifecycleSweep
 число файлов старше срока с тем же потолком. Метод добавляется в порт источника движка (`core/lifecycle/ports.py`)
 с реализацией по умолчанию `null`.
 
+Уточнение при внедрении (B7): сигнатура `count_expired(now, cutoff, cap) -> ExpiredCount(count, cutoff)`, источник
+сам возвращает границу, по которой считал (у гостевых сессий она своя, 7 суток после истечения). Порт это
+`Protocol`, поэтому «реализация по умолчанию» означает, что каждый источник реализует метод, а `TableMeasure` (без
+своей очистки) отвечает `count=null`. У `jobs` считаются только строки задач: выходы без владельца в хранилище идут по
+своему порогу. Счёт идёт через `LifecycleEngine.count_expired(key, cap)`, граница та же, что у `run_one`.
+`removed_total` и `freed_bytes` не хранятся отдельными колонками, а считаются из шагов. Закрытый прогон
+(`interrupted`, остановка api) переводит шаг `running` в `error` с причиной `interrupted`, а `pending` в `skipped`.
+
 ### 5.5 Где хранится
 
 Миграция `dk_01_runner_disk`:
@@ -440,6 +448,12 @@ LifecycleSweep
 
 Миграция `dk_02_lifecycle_sweeps`: таблица `lifecycle_sweeps` по 5.4, шаги JSONB, частичный уникальный индекс на
 незавершённый, предел 20 последних при вставке.
+
+Порядок миграций (B7 и B5 идут параллельно): цепочка alembic обязана иметь один head
+(`test__migrations__chain__has_single_head`, `head_revision()` при старте). `dk_02_lifecycle_sweeps` ведётся от
+`sr_10_new_version_kind`. Срез, который сливается вторым, переставляет свой `down_revision` на ревизию первого:
+если B7 уже в `master`, `dk_01_runner_disk` ставит `down_revision = "dk_02_lifecycle_sweeps"`. Номера в именах не
+задают порядок, порядок задаёт только `down_revision`.
 
 `notifications.kind` ограничен перечнем в базе, поэтому `dk_01` добавляет в него `runner_disk_cleaned` тем же
 приёмом, что `sr_08_notification_kinds`.
@@ -587,8 +601,14 @@ Docker недоступен даёт `DockerUnavailableError`. Полоса ка
 | `runner.disk_cleanup` | команда очистки поставлена | кто запустил | id раннера | `targets`, `include_rollback`, `owner_kind`, `owner_id`, `command_id` |
 | `runner.disk_cleanup_cancel` | остановка | кто остановил | id раннера | `command_id` |
 | `runner.disk_cleaned` | итог очистки (`done`, `cancelled`, `error`, `lost`, `expired`) | кто запустил | id раннера | `command_id`, `state`, `freed_bytes`, `errors` (число), `steps` (число) |
-| `lifecycle.sweep` | прогон запущен | админ | `all` | `sweep_id`, `keys` |
-| `lifecycle.swept` | итог прогона | админ | `all` | `sweep_id`, `status`, `removed`, `freed_bytes`, `errors` |
+| `lifecycle.sweep` | прогон запущен | админ | `all` | `sweep_id`, `sources` |
+| `lifecycle.sweep_cancel` | остановка прогона | кто остановил | `all` | `sweep_id` |
+| `lifecycle.swept` | итог прогона (`done`, `cancelled`, `error`, `interrupted`) | кто запустил | `all` | `sweep_id`, `status`, `removed`, `freed_bytes`, `errors` |
+
+Уточнение при внедрении (B7): поле `keys` в `details` переименовано в `sources`: журнал вычёркивает значения под
+ключами, в имени которых есть `key`, `token`, `secret` и подобное (`core/identity/redaction.py`), поэтому `keys`
+приходил бы как `[redacted]`. То же правило касается полей B6. Событие остановки прогона добавлено по образцу
+`runner.disk_cleanup_cancel`: тест покрытия аудита требует события у каждой изменяющей ручки админки.
 
 `disk.measure` в аудит не пишется: это чтение. Подписи всех новых действий в `admin/audit.json` ru и en в том же
 срезе, что пишет событие: тест `auditActions.test.ts` сверяет коды домена `runner` в коде бэкенда с подписями.
@@ -680,8 +700,11 @@ LifecycleSweepPreview
   nothing (true, если у всех count = 0)
 ```
 
-Коды: `lifecycle_sweep_busy` (409), `command_finished` (409) для остановки закрытого, `forbidden` (403) не админу.
-Ответы с `Cache-Control: no-store`, как остальной `/data-lifecycle`.
+Коды: `lifecycle_sweep_busy` (409), `command_finished` (409) для остановки закрытого, `not_found` (404) для
+неизвестного прогона и не админу (как вся админка, `require_admin`; в первой редакции здесь стоял 403). Ответы с
+`Cache-Control: no-store`, как остальной `/data-lifecycle`. `started_by` в `LifecycleSweep` это id пользователя или
+`null` (пользователь удалён), без имени. Коды `lifecycle_sweep_busy` и `command_finished` уже есть в
+`IdentityErrorCode`, `contracts/server/error_codes.json` и `errors.json`; B6 берёт `command_finished` оттуда.
 
 ### 9.3 Общие правила
 

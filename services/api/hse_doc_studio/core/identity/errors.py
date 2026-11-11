@@ -117,6 +117,9 @@ class IdentityErrorCode(StrEnum):
     passkey_invalid = "passkey_invalid"
     passkey_limit = "passkey_limit"
     reauth_required = "reauth_required"
+    # Очистка места из админки (storage-cleanup.md): «Освободить место» и команды раннерам.
+    lifecycle_sweep_busy = "lifecycle_sweep_busy"
+    command_finished = "command_finished"
 
 
 MESSAGES: dict[IdentityErrorCode, tuple[str, str]] = {
@@ -455,6 +458,14 @@ MESSAGES: dict[IdentityErrorCode, tuple[str, str]] = {
     IdentityErrorCode.reauth_required: (
         "Подтвердите, что это вы: введите пароль или используйте passkey.",
         "Confirm it's you: enter your password or use a passkey.",
+    ),
+    IdentityErrorCode.lifecycle_sweep_busy: (
+        "Очистка уже идёт. Дождитесь её итога.",
+        "A cleanup is already running. Wait for it to finish.",
+    ),
+    IdentityErrorCode.command_finished: (
+        "Это уже завершилось, останавливать нечего.",
+        "This has already finished, there is nothing to stop.",
     ),
 }
 

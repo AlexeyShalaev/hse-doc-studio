@@ -63,7 +63,8 @@
       "guest_sessions": "7 суток после истечения",
       "compile_records": "50 на документ",
       "container_logs": "5 × 10 МБ",
-      "auth_records": "по истечении"
+      "auth_records": "по истечении",
+      "lifecycle_sweeps": "20 прогонов"
     },
     "source": {
       "audit_log": {
@@ -129,6 +130,10 @@
       "chat_history": {
         "title": "История чатов ИИ",
         "body": "Ограничена числом запусков и размером трассы."
+      },
+      "lifecycle_sweeps": {
+        "title": "Прогоны «Освободить место»",
+        "body": "Ход и итог очистки всех источников одной кнопкой в «Хранилище»."
       },
       "container_logs": {
         "title": "Логи контейнеров",
