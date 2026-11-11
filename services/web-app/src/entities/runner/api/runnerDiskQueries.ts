@@ -33,12 +33,12 @@ const startedHere = new Set<string>();
 
 export type UseRunnerDiskOptions = {
   /** Опрос только при открытом диалоге: закрытый диалог не держит запрос. */
-  enabled?: boolean;
+  enabled?: boolean | undefined;
   /**
    * Команда очистки закрылась у этого экрана на глазах (итог, остановка, потеря). Фича
    * перечитывает по нему свои списки: у строк раннеров меняется поле `disk`.
    */
-  onCommandSettled?: (command: RunnerDiskCommand) => void;
+  onCommandSettled?: ((command: RunnerDiskCommand) => void) | undefined;
 };
 
 /**

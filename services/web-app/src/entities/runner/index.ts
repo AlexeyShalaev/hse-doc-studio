@@ -74,3 +74,21 @@ export {
   type RunnerDiskCommandPhase,
   type RunnerDiskMode,
 } from "./lib/runnerDiskLib";
+export {
+  RunnerDiskDialog,
+  RunnerDiskPanel,
+  getRunnerDiskGallery,
+  runnerDiskGalleryEntries,
+  runnerDiskGalleryEntry,
+  type RunnerDiskDialogProps,
+  type RunnerDiskDialogRunner,
+  type RunnerDiskPanelProps,
+} from "./ui";
+export {
+  diskCleanupRequest,
+  diskConfirmPlan,
+  type DiskConfirmPlan,
+  type DiskPlanGroup,
+  type DiskPlanItem,
+  type RunnerDiskConfirmKind,
+} from "./lib/runnerDiskConfirm";
