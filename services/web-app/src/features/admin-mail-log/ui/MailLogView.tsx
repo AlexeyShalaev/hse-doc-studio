@@ -33,18 +33,15 @@ import type {
   MailLogListState,
 } from "../api/mailLogQueries";
 import {
-  MAIL_FAILURES,
-  MAIL_SKIP_REASONS,
   MAIL_STATUSES,
   MAIL_TEMPLATE_GROUPS,
-  isKnownMailTemplate,
   type MailLogEntry,
   type MailLogSummary,
-  type MailStatus,
   type MailTemplateGroup,
 } from "../api/schemas";
 import { mailFailureOf, mailHintOf, skippedCount } from "../lib/mailLog";
 import { mailWhen } from "../lib/when";
+import { STATUS_BADGE, useReasonText, useTemplateLabel } from "./labels";
 import "./mailLog.css";
 
 /** Блок «Почта (SMTP)» в «Вход и регистрация»: туда ведут плашка и подсказка. */
@@ -58,16 +55,6 @@ const COLUMN_WIDTHS = {
   to: 240,
   status: 200,
   cause: 200,
-};
-
-const STATUS_BADGE: Record<
-  MailStatus,
-  "success" | "error" | "default" | "subtle"
-> = {
-  sent: "success",
-  failed: "error",
-  not_sent: "default",
-  suppressed: "default",
 };
 
 // Пикеры ищут на сервере среди всех людей и проектов установки.
@@ -101,36 +88,6 @@ export type MailLogViewProps = {
   onRefresh: () => void;
   onRetry: () => void;
   onRetryMore?: (() => void) | undefined;
-};
-
-/** Подпись вида письма из подписей образцов в «Вход и регистрация». */
-const useTemplateLabel = () => {
-  const { t } = useTranslation("adminMail");
-  const { t: ts } = useTranslation("adminSettings");
-  return useCallback(
-    (template: string): string =>
-      isKnownMailTemplate(template)
-        ? ts(`mailPreview.names.${template}`)
-        : t("templateGone", { template }),
-    [t, ts],
-  );
-};
-
-/**
- * Причина словами: пропуск («почта не настроена») или класс сбоя («SMTP-сервер отклонил логин
- * или пароль»); незнакомое значение как есть.
- */
-const useReasonText = () => {
-  const { t } = useTranslation("adminMail");
-  return useCallback(
-    (reason: string): string =>
-      (MAIL_SKIP_REASONS as readonly string[]).includes(reason)
-        ? t(`reason.${reason}`)
-        : (MAIL_FAILURES as readonly string[]).includes(reason)
-          ? t(`failure.${reason}`)
-          : reason,
-    [t],
-  );
 };
 
 /** Второе слово итога: причина пропуска или класс сбоя (неизвестный класс как `other`). */

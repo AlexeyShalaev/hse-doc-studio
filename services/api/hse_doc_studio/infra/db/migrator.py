@@ -78,11 +78,25 @@ _OPTIONAL_INDEX_PREFIX = "ix_trgm_"
 # Партиции журналов (миграция lc_02) в моделях не описываются: ORM знает родителя, а месячные таблицы заводит очистка.
 _PARTITION_TABLE = re.compile(r"^(audit_log|ai_usage)_(legacy|default|p\d{6})$")
 
+# Таблицы, которые код этого выпуска уже не использует, а удалит contract-миграция следующего выпуска
+# (expand/contract, `docs/ru/deploy/operations.md`): прежняя версия api во время обновления ещё пишет в них.
+# Моделей у них нет; строка уходит из списка вместе с миграцией, которая удаляет таблицу.
+RETIRED_TABLES: frozenset[str] = frozenset(
+    {
+        # mail-log.md, L7: неушедшие письма видны в журнале писем mail_log (срез B4).
+        "mail_outbox",
+    }
+)
+
+
+def _ignored_table(name: str) -> bool:
+    return bool(_PARTITION_TABLE.match(name)) or name in RETIRED_TABLES
+
 
 def _tracked(obj: object, name: str | None, type_: str, reflected: bool, compare_to: object) -> bool:
-    if type_ == "table" and _PARTITION_TABLE.match(name or ""):
+    if type_ == "table" and _ignored_table(name or ""):
         return False
-    if type_ == "index" and _PARTITION_TABLE.match(getattr(getattr(obj, "table", None), "name", "") or ""):
+    if type_ == "index" and _ignored_table(getattr(getattr(obj, "table", None), "name", "") or ""):
         return False
     return not (
         type_ == "index" and reflected and compare_to is None and (name or "").startswith(_OPTIONAL_INDEX_PREFIX)

@@ -41,18 +41,19 @@ from hse_doc_studio.use_cases.identity.invites import CreateInviteUC, ListInvite
 from hse_doc_studio.use_cases.identity.mail import LinkDelivery
 from hse_doc_studio.use_cases.identity.recovery import IssueResetLinkUC
 from hse_doc_studio.use_cases.identity.sessions import SessionService
+from hse_doc_studio.use_cases.mail.dispatch import MailCounters, MailDispatcher
 from httpx import ASGITransport, AsyncClient
 
 from tests.fakes.auth import (
     InMemoryAuditLog,
     InMemoryAuthTokenRepository,
-    InMemoryMailOutboxRepository,
     InMemoryRegistrationInviteRepository,
     InMemorySessionRepository,
     empty_bearer_resolver,
 )
 from tests.fakes.identity import InMemoryIdentityStore, InMemoryUserDirectory, InMemoryUserRepository
 from tests.fakes.lifecycle import InMemoryUserLifecycle
+from tests.fakes.mail_log import InMemoryMailLogRepository
 from tests.unit.use_cases.identity.conftest import FakeSender, FakeUow
 
 NOW = datetime.now(UTC)
@@ -67,7 +68,7 @@ class _Env:
         self.audit = InMemoryAuditLog(self.store)
         self.invites = InMemoryRegistrationInviteRepository()
         self.auth_tokens = InMemoryAuthTokenRepository()
-        self.outbox = InMemoryMailOutboxRepository()
+        self.mail_log = InMemoryMailLogRepository()
         self.sender = FakeSender()
         self.uow = FakeUow()
         self.lifecycle = InMemoryUserLifecycle(self.store)
@@ -109,7 +110,7 @@ class _Provider(Provider):
     def __init__(self, env: _Env) -> None:
         super().__init__()
         self.e = env
-        self._delivery = LinkDelivery(env.sender, env.outbox)
+        self._delivery = LinkDelivery(MailDispatcher(env.sender, env.mail_log, counters=MailCounters()))
         self._create = CreateInviteUC(env.invites, self._delivery, env.audit, env.uow, public_url="https://studio.test")
 
     @provide
@@ -335,6 +336,17 @@ async def test__reset_link__needs_confirmation_audits_and_is_not_cached(env: _En
     assert missing.status_code == 404
     entry = (await env.audit.list(action="admin.reset_link_issued"))[0]
     assert (entry.actor_id, entry.target, entry.details) == ("boss", "anna", {"break_glass": True})
+    # Без SMTP уведомление человеку не уходит, но видно в журнале писем: кто вызвал и из какого сценария.
+    (mail,) = env.mail_log.entries
+    assert (mail.template, mail.status, mail.origin, mail.cause, mail.actor_user_id, mail.to_user_id) == (
+        "reset_notice",
+        "not_sent",
+        "admin_reset_link",
+        "user",
+        "boss",
+        "anna",
+    )
+    assert issued.json()["link"].rpartition("/")[2] not in repr(mail)
 
 
 async def test__invitations__create_list_resend_revoke_without_smtp_returns_link(env: _Env) -> None:
@@ -359,6 +371,10 @@ async def test__invitations__create_list_resend_revoke_without_smtp_returns_link
     assert deleted.status_code == 204
     assert gone.status_code == 404
     assert (await client.get("/api/admin/invitations", headers=boss)).json()["total"] == 0
+    assert [(m.template, m.status, m.origin, m.actor_user_id, m.ref_id) for m in env.mail_log.entries] == [
+        ("invite", "not_sent", "admin_invite", "boss", body["invitation"]["id"]),
+        ("invite", "not_sent", "admin_invite_resend", "boss", resent.json()["invitation"]["id"]),
+    ]
 
 
 async def test__invitations__bad_input_is_422(env: _Env) -> None:

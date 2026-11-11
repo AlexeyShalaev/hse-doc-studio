@@ -12,6 +12,7 @@ from hse_doc_studio.core.identity.entities import AuditEntry, RegistrationInvite
 from hse_doc_studio.core.identity.errors import IdentityError, IdentityErrorCode
 from hse_doc_studio.core.identity.normalize import hash_token
 from hse_doc_studio.core.identity.passkeys import PASSKEY_LIMIT, RelyingParty
+from hse_doc_studio.core.mail.journal import MailStatus
 from hse_doc_studio.use_cases.identity.oidc_identities import UnlinkOidcIdentityUC
 
 from tests.fakes.authenticator import SoftAuthenticator, b64url
@@ -601,10 +602,19 @@ async def test__register_key__mail_to_owner_when_smtp(kit: PasskeyKit, world: Wo
     world.sender = FakeSender(enabled=True)
     user = await world.add_user()
 
-    await kit.register(user, name="Телефон")
+    passkey = await kit.register(user, name="Телефон")
 
     assert [(to, subject) for to, subject, _ in world.sender.sent] == [(user.email, "Добавлен passkey")]
     assert "«Телефон»" in world.sender.sent[0][2]
+    (entry,) = world.mail_log.entries
+    assert (entry.template, entry.status, entry.origin, entry.to_user_id) == (
+        "passkey_added",
+        MailStatus.sent,
+        "passkey_added",
+        user.id,
+    )
+    assert (entry.ref_kind, entry.ref_id, entry.params.link_path) == ("passkey", passkey.id, "/settings/account")
+    assert entry.params.values == {"name": "Телефон"}
 
 
 async def test__register_key__no_smtp__no_mail_but_audit(kit: PasskeyKit, world: World) -> None:
@@ -614,6 +624,7 @@ async def test__register_key__no_smtp__no_mail_but_audit(kit: PasskeyKit, world:
 
     assert world.sender.sent == []
     assert "auth.passkey_added" in [e.action for e in await _entries(world)]
+    assert [(e.status, e.reason) for e in world.mail_log.entries] == [(MailStatus.not_sent, "smtp_off")]
 
 
 async def test__admin_reset__mail_with_count_only_when_keys_removed(kit: PasskeyKit, world: World) -> None:
@@ -630,3 +641,7 @@ async def test__admin_reset__mail_with_count_only_when_keys_removed(kit: Passkey
     to, subject, body = world.sender.sent[0]
     assert (to, subject) == (user.email, "Администратор сбросил ваши passkey")
     assert "ключей: 2" in body
+    reset = [e for e in world.mail_log.entries if e.template == "passkey_reset"]
+    assert [(e.status, e.origin, e.params.values) for e in reset] == [
+        (MailStatus.sent, "admin_passkeys_reset", {"count": "2"})
+    ]

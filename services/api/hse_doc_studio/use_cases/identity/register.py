@@ -21,6 +21,7 @@ from hse_doc_studio.core.identity.protocols import (
 from hse_doc_studio.core.identity.registration import RegistrationOutcome, RegistrationPolicy, invite_usable
 from hse_doc_studio.core.identity.session_policy import Clock, utc_now
 from hse_doc_studio.core.invitations.protocols import IEmailVerifiedHook
+from hse_doc_studio.core.mail.journal import MailOrigin
 from hse_doc_studio.core.uow import IUnitOfWork
 from hse_doc_studio.use_cases.identity.auth_settings import AuthSettingsService
 from hse_doc_studio.use_cases.identity.mail import LinkDelivery, auth_link
@@ -121,9 +122,10 @@ class RegisterUC:
                 MailKind.verify_email,
                 user.email,
                 auth_link(self._public_url, VERIFY_PATH, secret),
-                now,
+                origin=MailOrigin.register,
                 locale=user.locale,
                 ttl=VERIFY_TTL,
+                to_user_id=user.id,
             )
         return RegisterResult(decision.outcome, link)
 

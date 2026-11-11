@@ -7,6 +7,7 @@ from hse_doc_studio.core.identity.entities import MailKind
 from hse_doc_studio.core.identity.errors import IdentityError, IdentityErrorCode
 from hse_doc_studio.core.identity.passkeys import IPasskeyRepository, Passkey
 from hse_doc_studio.core.identity.protocols import IAuditLog, IUserRepository
+from hse_doc_studio.core.mail.journal import MailOrigin
 from hse_doc_studio.core.uow import IUnitOfWork
 from hse_doc_studio.use_cases.admin.users import require_admin
 from hse_doc_studio.use_cases.identity.mail import LinkDelivery
@@ -59,6 +60,11 @@ class ResetUserPasskeysUC:
             )
         if removed and self._delivery is not None:
             await self._delivery.notify(
-                MailKind.passkey_reset, user.email, locale=user.locale, params={"count": removed}
+                MailKind.passkey_reset,
+                user.email,
+                origin=MailOrigin.admin_passkeys_reset,
+                locale=user.locale,
+                params={"count": removed},
+                to_user_id=user.id,
             )
         return removed

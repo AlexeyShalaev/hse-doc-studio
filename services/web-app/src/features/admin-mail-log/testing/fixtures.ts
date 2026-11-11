@@ -1418,9 +1418,17 @@ export type MailLogRecordState = keyof typeof MAIL_LOG_RECORDS;
 export const MAIL_LOG_DETAILS = {
   ...MAIL_LOG_SERVER_DETAILS,
   suppressed_blocked: makeMailLogDetail(MAIL_LOG_RECORDS.suppressed_blocked),
+  // Строка демо-журнала с удалённым проектом пришла от фоновой задачи; здесь её вызвал человек,
+  // которого уже стёрли: в «Вызвал» стоит «Пользователь удалён».
   project_gone: makeMailLogDetail({
     ...MAIL_LOG_RECORDS.project_gone,
-    entry: { ...MAIL_LOG_RECORDS.project_gone.entry, actor: null },
+    entry: {
+      ...MAIL_LOG_RECORDS.project_gone.entry,
+      cause: "user",
+      actor: null,
+      task: null,
+      origin: "notification",
+    },
   }),
   long: makeMailLogDetail(MAIL_LOG_RECORDS.long),
 } satisfies Record<string, MailLogDetail>;

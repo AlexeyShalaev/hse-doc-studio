@@ -131,7 +131,7 @@ class HttpServerConfig(BaseModel):
     auth_cleanup_interval_s: float = Field(
         default=3600.0,
         gt=0,
-        description="Как часто сервер стирает просроченные сессии, токены, письма outbox и счётчики входов.",
+        description="Как часто сервер стирает просроченные сессии, токены и счётчики входов.",
     )
 
 

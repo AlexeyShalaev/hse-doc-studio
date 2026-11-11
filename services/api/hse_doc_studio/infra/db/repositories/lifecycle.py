@@ -20,7 +20,6 @@ from hse_doc_studio.infra.db.orm import (
     GroupMemberRow,
     GroupRow,
     MailLogRow,
-    MailOutboxRow,
     OrgMemberRow,
     OrgRow,
     ProjectMemberRow,
@@ -91,7 +90,6 @@ class SqlUserLifecycle:
                     ProjectMemberRow.principal_kind == "user", ProjectMemberRow.principal_id == user_id
                 )
             )
-            await db.execute(delete(MailOutboxRow).where(MailOutboxRow.to_email.in_({email[0], email[1]})))
             # Журнал писем (mail-log.md, L11): письма человеку стираются, в письмах другим он остаётся без id.
             await db.execute(delete(MailLogRow).where(_mail_to(user_id, email[0], email[1])))
             await db.execute(update(MailLogRow).where(MailLogRow.actor_user_id == user_id).values(actor_user_id=None))

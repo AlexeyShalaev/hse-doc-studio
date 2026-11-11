@@ -49,7 +49,7 @@ tags:
 | `HSE_STUDIO__SERVER__JOB_RETENTION_DAYS` | int | `30` | оба | Через сколько суток после применения результата терминальная задача и её лог стираются; 0 выключает стирание. |
 | `HSE_STUDIO__SERVER__JOB_RETENTION_INTERVAL_S` | float | `21600.0` | оба | Как часто сервер убирает выходы задач без владельца и устаревшие записи задач. |
 | `HSE_STUDIO__SERVER__JOB_OUTPUT_MIN_AGE_HOURS` | float | `24.0` | оба | Сколько часов выходы терминальной или неизвестной задачи в S3 должны пролежать, прежде чем их удалят. |
-| `HSE_STUDIO__SERVER__AUTH_CLEANUP_INTERVAL_S` | float | `3600.0` | оба | Как часто сервер стирает просроченные сессии, токены, письма outbox и счётчики входов. |
+| `HSE_STUDIO__SERVER__AUTH_CLEANUP_INTERVAL_S` | float | `3600.0` | оба | Как часто сервер стирает просроченные сессии, токены и счётчики входов. |
 | `HSE_STUDIO__CORS__ALLOW_ORIGINS` | `list[str]` | `http://localhost:3000`, `http://localhost:5173`, `http://localhost:17240` | оба | Allowed origins |
 | `HSE_STUDIO__CORS__ALLOW_CREDENTIALS` | bool | `true` | оба | Отдавать Access-Control-Allow-Credentials (cookie и заголовки авторизации). |
 | `HSE_STUDIO__CORS__ALLOW_METHODS` | `list[str]` | `*` | оба | Разрешённые методы CORS. |

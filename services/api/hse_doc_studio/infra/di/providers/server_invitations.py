@@ -19,7 +19,6 @@ from hse_doc_studio.core.identity.protocols import (
     ICredentialRepository,
     IInstanceSettingsRepository,
     ILoginAttemptRepository,
-    IMailOutboxRepository,
     IPasswordHasher,
     IRegistrationInviteRepository,
     ISessionRepository,
@@ -590,8 +589,7 @@ class ServerInvitationsProvider(Provider):
         self,
         sessions: ISessionRepository,
         auth_tokens: IAuthTokenRepository,
-        outbox: IMailOutboxRepository,
         attempts: ILoginAttemptRepository,
     ) -> AuthCleanupService:
         # Уведомления чистит движок жизненного цикла данных: срок правится в админке, а не зашит в 90 суток.
-        return AuthCleanupService(sessions, auth_tokens, outbox, attempts)
+        return AuthCleanupService(sessions, auth_tokens, attempts)
