@@ -507,6 +507,27 @@ RunnerCommandEnvelope: {id, kind, payload, issued_at}
 | `feature_not_negotiated` | 409 | `/control/*` или `/disk` без согласованной возможности |
 | `disk_report_too_large` | 413 | отчёт больше 64 КБ |
 
+Уточнено в B5 (`use_cases/jobs/runner_control.py`, `RunnerControlService`):
+
+- Ход по команде, которую раннер ещё не забрал (`queued`), даёт `404 command_not_found`, как чужая. Повтор того же
+  итога отвечает `{cancel: false}`; другой итог и любой ход после `expired` или `lost` дают `409 command_finished`.
+  Пока команда `cancelling`, ход `running` её не сдвигает, ответ `{cancel: true}`.
+- `lost` ставится не только по тишине 3 минуты, но и раннеру, который отозван или прислал `/offline` позже последнего
+  хода команды (`runners.offline_at >= runner_commands.updated_at`). Проверка при чтении идёт по одному раннеру
+  (`get`, `recent`, `enqueue`), `runner_commands_reaper` раз в минуту по всем.
+- Опрос выдаёт команду вида, возможность которого раннер согласовал сейчас: раннер, откатившийся на версию без
+  `disk`, команду не получает, и она истекает. Пауза раннера команды не держит.
+- `enqueue` прав не проверяет (это B6), но держит правила постановки: без `control` и `disk` это
+  `RunnerCommandUnsupportedError` (`409 runner_disk_unsupported` в B6), вторая очистка и `disk.measure` поверх идущей
+  очистки `RunnerCommandBusyError` (`409 runner_disk_busy`), повторный `disk.measure` возвращает стоящий.
+- Закрытие команды любым путём (итог раннера, остановка до доставки, просрочка, потеря) сообщается наблюдателям
+  `IRunnerCommandObserver.command_finished` ровно один раз: переход условный, его делает одна реплика. Сюда B6
+  подключает аудит `runner.disk_cleaned` и уведомление.
+- `/disk` хранится и у личного раннера (в отличие от `/deployment`): его диск видит владелец. `runners.disk`
+  читается отложенно, строку раннера протокол читает на каждом запросе. `runner_commands.created_by` без внешнего
+  ключа, как `runners.created_by`. Вид уведомления `runner_disk_cleaned` в `dk_01` заведён на бэкенде целиком
+  (перечисление, форма API, проверка в базе); отправка в B6, «Входящие» в W5.
+
 ### 6.3 Исполнение на раннере
 
 `RunnerControlLoop` (`infra/runner/control.py`) запускается `RunnerLoop` после удачного `/announce`, если
