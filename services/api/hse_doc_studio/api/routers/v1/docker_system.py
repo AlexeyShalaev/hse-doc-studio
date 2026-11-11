@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import cast
+
 from dishka.integrations.fastapi import FromDishka
 from fastapi import APIRouter, HTTPException
 
@@ -16,6 +18,8 @@ from hse_doc_studio.api.schemas.docker_system import (
     OldVersionItemResponse,
     OldVersionsResponse,
 )
+from hse_doc_studio.core.docker_disk.old_versions import OldVersionItem
+from hse_doc_studio.core.docker_disk.steps import DockerStepKind
 from hse_doc_studio.infra.docker.cleanup_jobs import CleanupJob
 from hse_doc_studio.use_cases.system.cleanup_docker import (
     CancelDockerCleanupUC,
@@ -24,7 +28,6 @@ from hse_doc_studio.use_cases.system.cleanup_docker import (
     StartDockerCleanupUC,
 )
 from hse_doc_studio.use_cases.system.get_docker_disk_usage import GetDockerDiskUsageUC
-from hse_doc_studio.use_cases.system.old_versions import OldVersionItem
 
 router = APIRouter(route_class=SafeDishkaRoute)
 
@@ -43,7 +46,8 @@ def _map_job(job: CleanupJob | None) -> CleanupJobResponse | None:
         status=job.status,
         steps=[
             CleanupStepResponse(
-                kind=step.kind,
+                # Локальная Студия ставит только шаги Docker (подключённых видов у неё нет).
+                kind=cast(DockerStepKind, step.kind),
                 ref=step.ref,
                 status=step.status,
                 freed_bytes=step.freed_bytes,

@@ -5,12 +5,12 @@ from __future__ import annotations
 import asyncio
 
 import pytest
+from hse_doc_studio.core.docker_disk.usage import CleanupResult
 from hse_doc_studio.infra.docker.cleanup_jobs import (
     CleanupBusyError,
     CleanupStep,
     DockerCleanupJobManager,
 )
-from hse_doc_studio.infra.docker.system_manager import CleanupResult
 
 
 class _FakeSystemManager:
