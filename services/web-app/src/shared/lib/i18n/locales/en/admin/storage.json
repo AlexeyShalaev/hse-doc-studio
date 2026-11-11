@@ -83,6 +83,7 @@
         "capped": "Counting stops at {{n}}. Where there are more records, the run deletes as many as it can, scheduled cleanup removes the rest.",
         "excluded": "Not part of this cleanup",
         "excludedRow": "{{sources}}: {{reason}}",
+        "sourceQuoted": "“{{name}}”",
         "reason": {
           "protected": "never cleaned manually",
           "own_task": "own scheduled background task",

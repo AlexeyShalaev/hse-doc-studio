@@ -148,7 +148,11 @@ const ExcludedList = ({ preview }: { preview: LifecycleSweepPreview }) => {
         {groups.map(([reason, keys]) => (
           <li key={reason} data-reason={reason}>
             {t("storage.free.confirm.excludedRow", {
-              sources: keys.map(title).join(", "),
+              sources: keys
+                .map((key) =>
+                  t("storage.free.confirm.sourceQuoted", { name: title(key) }),
+                )
+                .join(", "),
               reason: t(`storage.free.confirm.reason.${reason}`),
             })}
           </li>
