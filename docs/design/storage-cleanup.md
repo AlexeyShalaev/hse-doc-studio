@@ -730,8 +730,8 @@ Payload: `runner_id`, `runner_name`, `freed_bytes`, `state`. Переход ве
 `freed_bytes` (число, у остальных видов `null`; в API `NotificationPayloadModel.freed_bytes`, в эталонах
 `Notification*` явным `null`). Уведомление уходит только по итогу команды, которую раннер успел забрать
 (`delivered_at` есть): просроченная или остановленная до доставки очистка ничего не удалила. Ключ повтора
-`runner_disk_cleaned:<id команды>`. Вид и `outcome` во фронтенде заводит W5; `freed_bytes` в zod-схеме пока
-необязательное, чтобы демо и тесты «Входящих» не правились до W5.
+`runner_disk_cleaned:<id команды>`. Вид во фронтенде завёл W5; там же `freed_bytes` в zod-схеме стало обязательным
+(у прочих видов `null`, как в эталонах) и появился эталон `Notification/runner_disk_cleaned.json`.
 
 ### 8.3 Метрики
 

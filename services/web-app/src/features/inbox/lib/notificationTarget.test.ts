@@ -33,6 +33,7 @@ const note = (
     profile_id: null,
     deadline: null,
     new_version: false,
+    freed_bytes: null,
     ...payload,
   },
 });

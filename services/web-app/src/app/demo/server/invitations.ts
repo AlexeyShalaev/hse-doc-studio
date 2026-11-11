@@ -181,6 +181,7 @@ const seed = (): DemoInvites => ({
         profile_id: null,
         deadline: null,
         new_version: false,
+        freed_bytes: null,
       },
     },
     {
@@ -200,6 +201,7 @@ const seed = (): DemoInvites => ({
         profile_id: null,
         deadline: null,
         new_version: false,
+        freed_bytes: null,
       },
     },
     // Администратор очистил диск личного раннера Анны (storage-cleanup.md, 8.2): ведёт в
@@ -241,6 +243,7 @@ const seed = (): DemoInvites => ({
         profile_id: null,
         deadline: null,
         new_version: false,
+        freed_bytes: null,
       },
     },
     {
@@ -260,6 +263,7 @@ const seed = (): DemoInvites => ({
         profile_id: null,
         deadline: null,
         new_version: false,
+        freed_bytes: null,
       },
     },
   ],

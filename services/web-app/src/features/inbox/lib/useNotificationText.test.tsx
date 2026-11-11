@@ -29,6 +29,7 @@ const note = (
     profile_id: "topic",
     deadline: null,
     new_version: false,
+    freed_bytes: null,
     ...payload,
   },
 });
@@ -67,6 +68,7 @@ describe("тексты уведомлений о версии на подпис�
       textOf(
         note("signing_request", {
           new_version: true,
+          freed_bytes: null,
           outcome: "approve_sign",
         }),
       ),
