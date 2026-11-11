@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
   cleanup,
@@ -12,6 +14,7 @@ import { I18nextProvider } from "react-i18next";
 import { MemoryRouter } from "react-router";
 import { afterEach, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { i18n } from "@shared/lib";
+import { RunnerDiskSummarySchema } from "@entities/runner";
 import {
   NO_REPORTS_DISK_SUMMARY,
   makeRunnerDiskSummary,
@@ -304,6 +307,32 @@ describe("«Освободить место»: окно", () => {
 });
 
 describe("«Где ещё освободить место»", () => {
+  it("состояния галереи совпадают с эталонами сводки contracts/server (B6)", () => {
+    const fixture = (name: string): unknown =>
+      RunnerDiskSummarySchema.parse(
+        JSON.parse(
+          readFileSync(
+            join(
+              import.meta.dirname,
+              "..",
+              "..",
+              "..",
+              "..",
+              "..",
+              "contracts",
+              "server",
+              "fixtures",
+              "RunnerDiskSummary",
+              `${name}.json`,
+            ),
+            "utf8",
+          ),
+        ),
+      );
+    expect(makeRunnerDiskSummary()).toEqual(fixture("default"));
+    expect(NO_REPORTS_DISK_SUMMARY).toEqual(fixture("none"));
+  });
+
   it("сводка раннеров: сколько можно освободить и до трёх раннеров", async () => {
     const opened: string[] = [];
     render(
