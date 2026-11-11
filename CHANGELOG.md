@@ -6,6 +6,17 @@ Generated from `release-notes.json` via `make changelog` — do not edit by hand
 Release notes are hand-written and bilingual (RU/EN); the app shows them in the
 selected interface language.
 
+## [0.22.0](https://github.com/AlexeyShalaev/hse-doc-studio/compare/v0.21.1...v0.22.0) - 2026-11-11
+
+- Runner disk in the admin: the runner menu shows how much space Studio images, the build cache and the runner cache take and what can be freed. Clean block by block or with “Clean all”; the current and previous versions and volumes are never touched. Progress and the result show right in the window.
+- The runner performs the cleanup itself from its own fresh measurement; the server sends only the target, never image names. The disk view needs runner 0.22.0 or newer; older runners show a hint to update.
+- Kubernetes runners show and clean only their own cache: node images are removed by Kubernetes itself. The local Studio as a runner points to the Disk section in its settings.
+- My runners: owners see the disk of their runner and may also remove the previous version. If an admin cleaned a personal runner, the owner gets an inbox notice; an admin cannot remove the previous version on someone else's runner.
+- Storage: the “Free up space” button runs all retention cleanups at once. Before the run you see how many records each source will lose, after it how many were removed and how much disk was freed. The run happens on the server and survives a closed tab. Next to it, “Where else to free space” lists runners.
+- Every cleanup is recorded in the audit log. Admin help gains a “Runner disk” section and a “Storage and space” article, user help gains “My runners: disk”.
+- The “⋯” menu on phones no longer picks an item with the same tap that opened it.
+- The project creation wizard shows its steps as a left column on wide windows again.
+
 ## [0.21.1](https://github.com/AlexeyShalaev/hse-doc-studio/compare/v0.21.0...v0.21.1) - 2026-11-11
 
 - Admin, Runners: the update button of an outdated runner no longer overlaps the Status column. A compact “v0.21.1” button sits under the version, with the full “Update to v0.21.1” label in the tooltip.
