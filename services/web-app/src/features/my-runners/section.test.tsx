@@ -1,16 +1,31 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { MemoryRouter } from "react-router";
+import { MemoryRouter, useLocation } from "react-router";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { i18n } from "@shared/lib";
 import type { MyRunner, MyRunnerToken } from "@entities/runner";
+import { RUNNER_DISK_STATES } from "@entities/runner/testing";
 import { MyRunnersSection } from "./ui/MyRunnersSection";
 
 const api = vi.hoisted(() => ({
   list: vi.fn(),
   tokens: vi.fn(),
+  disk: vi.fn(),
 }));
+
+vi.mock("@entities/runner/api/runnerDiskApi", async () => {
+  const actual = await vi.importActual<Record<string, unknown>>(
+    "@entities/runner/api/runnerDiskApi",
+  );
+  const mine = { ...(actual.myRunnerDiskApi as object), get: api.disk };
+  return {
+    ...actual,
+    myRunnerDiskApi: mine,
+    runnerDiskApi: (scope: string) =>
+      scope === "account" ? mine : actual.adminRunnerDiskApi,
+  };
+});
 
 vi.mock("@entities/runner/api/runnerApi", async () => {
   const actual = await vi.importActual<Record<string, unknown>>(
@@ -62,15 +77,21 @@ const TOKEN: MyRunnerToken = {
   revoked: false,
 };
 
-const renderSection = () =>
+/** Адрес страницы: открытый «Диск» живёт в `?disk=`. */
+const Search = () => (
+  <output data-testid="search">{useLocation().search}</output>
+);
+
+const renderSection = (url = "/settings/runners") =>
   render(
     <QueryClientProvider
       client={
         new QueryClient({ defaultOptions: { queries: { retry: false } } })
       }
     >
-      <MemoryRouter>
+      <MemoryRouter initialEntries={[url]}>
         <MyRunnersSection />
+        <Search />
       </MemoryRouter>
     </QueryClientProvider>,
   );
@@ -80,6 +101,8 @@ describe("«Мои раннеры»: раздел", () => {
     await i18n.changeLanguage("ru");
     api.list.mockReset();
     api.tokens.mockReset();
+    api.disk.mockReset();
+    api.disk.mockResolvedValue(RUNNER_DISK_STATES.personal_owner);
   });
   afterEach(cleanup);
 
@@ -107,5 +130,45 @@ describe("«Мои раннеры»: раздел", () => {
     await waitFor(() => {
       expect(screen.queryByTestId("my-runner-token-t1")).toBeNull();
     });
+  });
+
+  it("ссылка из уведомления (?disk=) сразу открывает «Диск» своего раннера, закрытие убирает параметр", async () => {
+    api.list.mockResolvedValue([RUNNER]);
+    api.tokens.mockResolvedValue([]);
+    renderSection("/settings/runners?disk=r1");
+    expect(
+      await screen.findByText("Диск раннера «personal-e2e»"),
+    ).toBeInTheDocument();
+    await waitFor(() => {
+      expect(api.disk).toHaveBeenCalledWith("r1");
+    });
+    await userEvent.keyboard("{Escape}");
+    await waitFor(() => {
+      expect(screen.queryByText("Диск раннера «personal-e2e»")).toBeNull();
+    });
+    expect(screen.getByTestId("search")).toHaveTextContent("");
+  });
+
+  it("пункт «Диск» в меню открывает окно и пишет раннер в адрес", async () => {
+    api.list.mockResolvedValue([RUNNER]);
+    api.tokens.mockResolvedValue([]);
+    renderSection();
+    await userEvent.click(await screen.findByTestId("my-runner-actions-r1"));
+    await userEvent.click(await screen.findByTestId("my-runner-disk-r1"));
+    expect(
+      await screen.findByText("Диск раннера «personal-e2e»"),
+    ).toBeInTheDocument();
+    expect(screen.getByTestId("search")).toHaveTextContent("?disk=r1");
+  });
+
+  it("отозванный или чужой раннер по ссылке окна не открывает", async () => {
+    api.list.mockResolvedValue([
+      { ...RUNNER, state: "revoked", revoked: true },
+    ]);
+    api.tokens.mockResolvedValue([]);
+    renderSection("/settings/runners?disk=r1");
+    expect(await screen.findByTestId("my-runners-empty")).toBeInTheDocument();
+    expect(screen.queryByText("Диск раннера «personal-e2e»")).toBeNull();
+    expect(api.disk).not.toHaveBeenCalled();
   });
 });

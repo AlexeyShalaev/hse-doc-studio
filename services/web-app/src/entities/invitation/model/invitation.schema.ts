@@ -287,6 +287,9 @@ export const NOTIFICATION_KINDS = [
   // Новая версия на подпись тем, кто уже согласовал или подписал изменившийся документ, но чья
   // очередь ещё не настала: только «Входящие», без письма (раздел 12.6).
   "signing_new_version",
+  // Администратор очистил диск личного раннера владельца (docs/design/storage-cleanup.md, 8.2):
+  // только «Входящие», без письма.
+  "runner_disk_cleaned",
 ] as const;
 export const NotificationKindSchema = z.enum(NOTIFICATION_KINDS);
 export type NotificationKind = z.infer<typeof NotificationKindSchema>;
@@ -324,6 +327,11 @@ export const NotificationSchema = z.strictObject({
         "marks_changed",
         "frozen_changed",
         "participant_left",
+        // Очистка диска личного раннера (runner_disk_cleaned): итог команды.
+        "done",
+        "cancelled",
+        "error",
+        "lost",
       ])
       .nullable(),
     path: z.string().nullable(),
@@ -333,6 +341,9 @@ export const NotificationSchema = z.strictObject({
     deadline: iso.nullable(),
     // Запрос раунда новой версии (12.6): «{автор} просит подписать новую версию»; у остальных false.
     new_version: z.boolean(),
+    // Очистка диска личного раннера (runner_disk_cleaned): освобождено байт; у остальных null.
+    // Необязательно для демо и тестов «Входящих»; сервер шлёт поле всегда.
+    freed_bytes: z.number().int().nonnegative().nullable().optional(),
   }),
 });
 export type Notification = z.infer<typeof NotificationSchema>;

@@ -79,6 +79,9 @@
     "error": "Could not load documents to sign",
     "retry": "Retry"
   },
+  "runnerDisk": {
+    "actor": "Started by administrator {{name}}"
+  },
   "kind": {
     "project_invitation": "{{actor}} invites you to “{{project}}”",
     "invitation_accepted": "{{actor}} accepted the invitation to “{{project}}”",
@@ -128,7 +131,12 @@
     "signing_paused_participant_left": "A route participant left the project, assign another signer: {{excerpt}}",
     "signing_completed": "Everyone has signed: {{excerpt}}",
     "signing_new_version": "A new version is out for signing: {{excerpt}}. The changed documents need your approval again, the request will come when it is your turn",
-    "signing_cancelled": "The signing route was cancelled: {{excerpt}}"
+    "signing_cancelled": "The signing route was cancelled: {{excerpt}}",
+    "runner_disk_cleaned": "An administrator cleaned up the disk of your runner “{{name}}”: {{size}} freed",
+    "runner_disk_cleaned_nothing": "An administrator cleaned up the disk of your runner “{{name}}”: there was nothing to free",
+    "runner_disk_cleaned_error": "An administrator cleaned up the disk of your runner “{{name}}”, the cleanup finished with errors: {{size}} freed",
+    "runner_disk_cleaned_cancelled": "The disk cleanup an administrator started on your runner “{{name}}” was stopped: {{size}} freed",
+    "runner_disk_cleaned_lost": "Your runner “{{name}}” went away during a disk cleanup an administrator started. What was removed will show in the next measurement"
   },
   "diagCheck": {
     "database": "Database",

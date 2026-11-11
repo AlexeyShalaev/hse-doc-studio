@@ -64,6 +64,7 @@
     "resume": "Resume",
     "rotate": "Rotate token",
     "reconnect": "Reconnect",
+    "disk": "Disk",
     "revoke": "Revoke",
     "showRevoked": "Show revoked ({{count}})",
     "hideRevoked": "Hide revoked",

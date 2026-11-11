@@ -1,11 +1,13 @@
-import { useEffect, useRef, useState } from "react";
-import { useNavigate } from "react-router";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { useNavigate, useSearchParams } from "react-router";
 import { useTranslation } from "react-i18next";
 import { failureCode } from "@shared/api";
 import { toast } from "@shared/lib";
 import { ConfirmByName } from "@shared/ui";
 import { useBootstrap } from "@entities/session";
 import {
+  MY_RUNNER_DISK_PARAM,
+  RunnerDiskDialog,
   useCreateMyRunnerToken,
   useMyRunnerTokens,
   useMyRunners,
@@ -57,6 +59,30 @@ export const MyRunnersSection = () => {
   );
   const [error, setError] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
+
+  // Открытый «Диск» живёт в адресе (?disk=…): туда ведёт уведомление об очистке диска
+  // администратором (docs/design/storage-cleanup.md, 8.2).
+  const [params, setParams] = useSearchParams();
+  const diskId = params.get(MY_RUNNER_DISK_PARAM);
+  const setDiskId = useCallback(
+    (id: string | null) => {
+      setParams(
+        (current) => {
+          const next = new URLSearchParams(current);
+          if (id) next.set(MY_RUNNER_DISK_PARAM, id);
+          else next.delete(MY_RUNNER_DISK_PARAM);
+          return next;
+        },
+        { replace: true },
+      );
+    },
+    [setParams],
+  );
+  // Отозванный раннер диска не показывает (раздел 7): ссылка на него ничего не открывает.
+  const diskRunner =
+    diskId === null
+      ? null
+      : (runners.data?.find((r) => r.id === diskId && !r.revoked) ?? null);
 
   const fail = (e: unknown) => {
     setError(failureText(failureCode(e)));
@@ -151,6 +177,25 @@ export const MyRunnersSection = () => {
           setError(null);
           setRevokingToken(token);
         }}
+        onDisk={(runner) => {
+          setDiskId(runner.id);
+        }}
+      />
+
+      <RunnerDiskDialog
+        scope="account"
+        runner={
+          diskRunner && {
+            id: diskRunner.id,
+            name: diskRunner.name,
+            version: diskRunner.version,
+          }
+        }
+        onClose={() => {
+          setDiskId(null);
+        }}
+        // Итог очистки меняет «можно освободить» в строке списка.
+        onCommandSettled={() => void runners.refetch()}
       />
 
       <ConnectRunnerDialog

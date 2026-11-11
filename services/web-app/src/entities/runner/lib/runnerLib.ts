@@ -94,3 +94,18 @@ export const endpointSlug = (name: string): string => {
 
 export const isValidEndpointName = (name: string): boolean =>
   ENDPOINT_NAME_RE.test(name);
+
+/** Раздел «Мои раннеры» в настройках. */
+export const MY_RUNNERS_PATH = "/settings/runners";
+
+/** Параметр адреса «Моих раннеров»: открыт «Диск» раннера с этим id. */
+export const MY_RUNNER_DISK_PARAM = "disk";
+
+/**
+ * «Мои раннеры» с открытым «Диском» раннера: туда ведёт уведомление об очистке диска
+ * (docs/design/storage-cleanup.md, 8.2). Без id просто раздел.
+ */
+export const myRunnerDiskPath = (runnerId: string | null): string =>
+  runnerId
+    ? `${MY_RUNNERS_PATH}?${new URLSearchParams({ [MY_RUNNER_DISK_PARAM]: runnerId }).toString()}`
+    : MY_RUNNERS_PATH;

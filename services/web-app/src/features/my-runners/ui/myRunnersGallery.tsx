@@ -1,8 +1,14 @@
-import type { MyRunner, MyRunnerToken } from "@entities/runner";
+import {
+  runnerDiskGalleryEntry,
+  type MyRunner,
+  type MyRunnerToken,
+} from "@entities/runner";
+import { RUNNER_DISK_STATES } from "@entities/runner/testing";
 import type { GalleryEntry, GalleryGroup } from "@shared/lib/stateGallery";
 import { DialogLauncher } from "@shared/ui/StateGallery";
 import { ConnectRunnerDialog } from "./ConnectRunnerDialog";
 import { MyRunnersSection } from "./MyRunnersSection";
+import { OpenedFromNotice } from "./OpenedFromNotice";
 import { MyRunnersView } from "./MyRunnersView";
 import { ReconnectDialog, RenameDialog, RotatedDialog } from "./RunnerDialogs";
 
@@ -115,6 +121,7 @@ const view = (extra: Partial<Parameters<typeof MyRunnersView>[0]> = {}) => (
     onReconnect={noop}
     onRevoke={noop}
     onRevokeToken={noop}
+    onDisk={noop}
     {...extra}
   />
 );
@@ -134,6 +141,11 @@ const dialog = (
     {({ isOpen, close }) => node(isOpen, close)}
   </DialogLauncher>
 );
+
+const PHONE = 390;
+/** Свой раннер в демо-мире runners_ready: у него Docker-диск и флажок отката. */
+const HOME_ID = RUNNER_DISK_STATES.personal_owner.runner_id;
+const HOME = "Домашний сервер";
 
 /** «Мои раннеры»: все состояния списка и диалогов. */
 export const getMyRunnersGallery = (): GalleryGroup[] => [
@@ -206,6 +218,64 @@ export const getMyRunnersGallery = (): GalleryGroup[] => [
         "Живой раздел: выключены админом",
         () => <MyRunnersSection />,
         { scenario: "runners_disabled" },
+      ),
+    ],
+  },
+  {
+    id: "my-runners-disk",
+    title: "Мои раннеры: диск",
+    description:
+      "Пункт «Диск» в меню своего раннера открывает то же окно, что в админке, но без плашки владельца и с флажком отката. Сюда же ведёт уведомление «Администратор очистил диск вашего раннера».",
+    entries: [
+      runnerDiskGalleryEntry(
+        "disk_owner",
+        "Свой Docker-раннер",
+        "personal_owner",
+        { runnerName: HOME },
+        { note: "Плашки владельца нет: это ваш раннер." },
+      ),
+      runnerDiskGalleryEntry(
+        "disk_owner_rollback",
+        "Старые версии с флажком отката",
+        "personal_owner",
+        {
+          runnerName: HOME,
+          initialConfirm: "old_versions",
+          initialIncludeRollback: true,
+        },
+        { note: "Предыдущую версию своего раннера удаляет только владелец." },
+      ),
+      runnerDiskGalleryEntry(
+        "disk_owner_done",
+        "После очистки администратором",
+        "personal_owner_done",
+        { runnerName: HOME },
+        {
+          note: "Сюда ведёт уведомление во «Входящих»: итог очистки и новый замер.",
+        },
+      ),
+      runnerDiskGalleryEntry(
+        "disk_owner_desktop",
+        "Свой раннер в локальной Студии",
+        "desktop",
+        { runnerName: base.name },
+        { note: "Только кэш раннера: Docker чистится в самой Студии." },
+      ),
+      runnerDiskGalleryEntry(
+        "disk_owner_phone",
+        "Телефон: свой раннер",
+        "personal_owner",
+        { runnerName: HOME },
+        { width: PHONE },
+      ),
+      entry(
+        "live_disk_notice",
+        "Живой раздел: «Диск» по ссылке из уведомления",
+        () => <OpenedFromNotice runnerId={HOME_ID} />,
+        {
+          scenario: "runners_ready",
+          note: "Адрес /settings/runners?disk=…: окно «Диск» открыто сразу.",
+        },
       ),
     ],
   },

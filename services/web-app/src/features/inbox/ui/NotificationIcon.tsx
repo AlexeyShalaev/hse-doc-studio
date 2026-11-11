@@ -8,6 +8,7 @@ import {
   DatabaseBackup,
   FileCheck,
   FilePen,
+  HardDrive,
   KeyRound,
   MessageSquare,
   Reply,
@@ -43,6 +44,7 @@ const ICONS: Record<NotificationKind, LucideIcon> = {
   signing_completed: FileCheck,
   signing_cancelled: CircleX,
   signing_new_version: FilePen,
+  runner_disk_cleaned: HardDrive,
 };
 
 /** Значок типа уведомления; чисто декоративный, смысл несёт текст. */
