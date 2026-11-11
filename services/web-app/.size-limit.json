@@ -54,6 +54,12 @@
     "limit": "10.5 kB"
   },
   {
+    "name": "Словарь админки: mail",
+    "path": "dist/assets/locale-admin-mail-*.js",
+    "gzip": true,
+    "limit": "3.6 kB"
+  },
+  {
     "name": "Словарь админки: ops",
     "path": "dist/assets/locale-admin-ops-*.js",
     "gzip": true,

@@ -27,6 +27,7 @@ from hse_doc_studio.core.identity.errors import IdentityError, IdentityErrorCode
 from hse_doc_studio.core.identity.protocols import IUserRepository
 from hse_doc_studio.core.identity.session_policy import Clock, utc_now
 from hse_doc_studio.core.invitations.protocols import INotificationMailer
+from hse_doc_studio.core.mail.journal import MailOrigin
 from hse_doc_studio.core.signing_route.effects import Notify
 from hse_doc_studio.core.signing_route.engine import evaluate, request_outcome
 from hse_doc_studio.core.signing_route.entities import (
@@ -160,7 +161,9 @@ class SigningRouteReminding(RouteScenario):
                 await self.notify(saved, [Notify(Notice.reminder, (p.id,), outcome=outcome)], actor_id=actor_id)
         if renewed is None:
             return Reminder(p.id, delivery)
-        sent = await self._invitations.deliver(actor, renewed, next_path=signing_page_path(project_id, route_id))
+        sent = await self._invitations.deliver(
+            actor, renewed, next_path=signing_page_path(project_id, route_id), origin=MailOrigin.signing_reinvite
+        )
         return Reminder(p.id, sent.delivery, sent.link)
 
     async def link(self, actor: Actor, project_id: UUID, route_id: UUID, participant_id: UUID) -> SignerLink:

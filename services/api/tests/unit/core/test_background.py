@@ -3,7 +3,7 @@ from __future__ import annotations
 import asyncio
 
 import pytest
-from hse_doc_studio.core.background import AlwaysLeader, BackgroundTaskRunner, PeriodicTask
+from hse_doc_studio.core.background import AlwaysLeader, BackgroundTaskRunner, PeriodicTask, current_background_task
 
 
 class SharedLock:
@@ -98,6 +98,29 @@ async def test__leader_lost__tasks_stop_and_other_instance_takes_over() -> None:
     assert ran["first"] - frozen <= 1 or first.is_leader
     await first.stop()
     await second.stop()
+
+
+async def test__current_background_task__is_the_task_name_inside_a_run_only() -> None:
+    seen: list[str | None] = []
+    spawned: list[str | None] = []
+
+    async def tick() -> None:
+        seen.append(current_background_task())
+
+        async def child() -> None:
+            spawned.append(current_background_task())
+
+        await asyncio.create_task(child())
+
+    runner = BackgroundTaskRunner(AlwaysLeader(), leader_retry_s=0.01)
+    runner.register(PeriodicTask("signing_reminders", 10, tick, run_on_start=True))
+    runner.start()
+    await _until(lambda: bool(seen))
+    await runner.stop()
+
+    assert seen[:1] == ["signing_reminders"]
+    assert spawned[:1] == ["signing_reminders"]
+    assert current_background_task() is None
 
 
 async def test__stop__waits_for_running_task() -> None:

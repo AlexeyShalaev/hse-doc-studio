@@ -90,11 +90,12 @@ class FakeSender:
     def enabled(self) -> bool:
         return self._enabled
 
-    async def send(self, to: str, subject: str, body: str, *, html: str | None = None) -> None:
+    async def send(self, to: str, subject: str, body: str, *, html: str | None = None) -> str:
         if self.fail:
             raise OSError("smtp down")
         self.sent.append((to, subject, body))
         self.html.append(html)
+        return f"<{len(self.sent)}@fake.test>"
 
 
 def token_from_mail(body: str) -> str:

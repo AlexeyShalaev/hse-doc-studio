@@ -9,6 +9,9 @@ from typing import Literal
 
 import aiosmtplib
 
+from hse_doc_studio.core.mail.journal import MailSendError
+from hse_doc_studio.infra.identity.smtp_errors import classify
+
 
 @dataclass(frozen=True)
 class SmtpSettings:
@@ -24,7 +27,8 @@ class SmtpSettings:
 
 
 class SmtpMailSender:
-    """Любой сбой (сеть, таймаут, отказ сервера) всплывает исключением: вызывающий кладёт ссылку в outbox."""
+    """Любой сбой (сеть, таймаут, TLS, отказ сервера) всплывает `MailSendError` с разобранной причиной (`classify`):
+    логин и пароль SMTP в её тексте уже скрыты."""
 
     def __init__(self, cfg: SmtpSettings) -> None:
         self._cfg = cfg
@@ -33,18 +37,28 @@ class SmtpMailSender:
     def enabled(self) -> bool:
         return True
 
-    async def send(self, to: str, subject: str, body: str, *, html: str | None = None) -> None:
+    async def send(self, to: str, subject: str, body: str, *, html: str | None = None) -> str:
+        """Message-ID ушедшего письма (с угловыми скобками, как в заголовке)."""
         cfg = self._cfg
         message = EmailMessage()
         message["From"] = formataddr((cfg.from_name, cfg.from_address))
         message["To"] = to
         # Перевод строки в теме дал бы подмену заголовков: письма Студии его не содержат, но не полагаемся на это.
         message["Subject"] = " ".join(subject.split())
-        message["Message-ID"] = make_msgid(domain=cfg.from_address.rpartition("@")[2] or None)
+        message_id = make_msgid(domain=cfg.from_address.rpartition("@")[2] or None)
+        message["Message-ID"] = message_id
         message["Auto-Submitted"] = "auto-generated"
         message.set_content(body)
         if html is not None:
             message.add_alternative(html, subtype="html")
+        try:
+            await self._deliver(message)
+        except Exception as exc:
+            raise MailSendError(classify(exc, secrets=(cfg.username, cfg.password))) from exc
+        return message_id
+
+    async def _deliver(self, message: EmailMessage) -> None:
+        cfg = self._cfg
         await aiosmtplib.send(
             message,
             hostname=cfg.host,

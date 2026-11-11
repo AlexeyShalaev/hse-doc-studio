@@ -8,7 +8,8 @@
 from __future__ import annotations
 
 import hashlib
-from collections.abc import Mapping
+import re
+from collections.abc import Iterable, Mapping
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from enum import StrEnum
@@ -36,6 +37,11 @@ SUBJECT_MAX = 200
 ERROR_TEXT_MAX = 300
 ORIGIN_MAX = 48
 DIGEST_LEN = 16
+MESSAGE_ID_MAX = 255
+# `task`, `request_id`, `ref_id`, `to_user_id`: varchar(64).
+SHORT_FIELD_MAX = 64
+# Чем заменяются логин и пароль SMTP в тексте сбоя (L16).
+SECRET_MASK = "[скрыто]"  # noqa: S105 — замена секрета, не секрет
 
 
 class MailStatus(StrEnum):
@@ -311,6 +317,34 @@ class MailFailure:
     reason: MailFailureClass
     smtp_code: int | None = None
     text: str | None = None
+
+    def describe(self) -> str:
+        """Одна строка для человека и логов: `auth 535: текст`; так отвечает и тестовое письмо."""
+        head = f"{self.reason.value} {self.smtp_code}" if self.smtp_code is not None else self.reason.value
+        return f"{head}: {self.text}" if self.text else head
+
+
+class MailSendError(Exception):
+    """Сбой `IMailSender.send`, уже разобранный отправителем: только он знает логин и пароль, которые надо скрыть.
+
+    Отправитель SMTP разбирает исключения `aiosmtplib` (`infra/identity/smtp_errors.classify`); без настроенного
+    SMTP причина `smtp_off`. Любое другое исключение из `send` диспетчер записывает как `other`.
+    """
+
+    def __init__(self, failure: MailFailure) -> None:
+        super().__init__(failure.describe())
+        self.failure = failure
+
+
+def clean_error_text(text: object, *, secrets: Iterable[str | None] = ()) -> str | None:
+    """Текст сбоя для журнала (L16): секреты заменены на `SECRET_MASK` без учёта регистра, переводы строк и
+    управляющие символы убраны, не длиннее `ERROR_TEXT_MAX`. None, если текста нет."""
+    raw = str(text) if text is not None else ""
+    hidden = sorted({secret for secret in secrets if secret}, key=len, reverse=True)
+    if hidden:
+        raw = re.compile("|".join(re.escape(secret) for secret in hidden), re.IGNORECASE).sub(SECRET_MASK, raw)
+    cleaned = one_line(raw, ERROR_TEXT_MAX)
+    return cleaned or None
 
 
 @dataclass(frozen=True, kw_only=True)

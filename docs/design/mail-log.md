@@ -162,17 +162,27 @@
   «Не ушло» и «за сутки»), «Не отправлялось {{skipped}}» (`not_sent` и `suppressed`). Если последний сбой класса
   `auth`, под полосой подсказка «SMTP-сервер отклоняет вход. Проверьте логин и пароль в блоке «Почта (SMTP)».»;
   `connect` и `timeout`: «SMTP-сервер не отвечает. Проверьте адрес, порт и защиту соединения.»; `tls`: «Не удалось
-  установить защищённое соединение. Проверьте режим защиты (STARTTLS, TLS).»
+  установить защищённое соединение. Проверьте режим защиты (STARTTLS, TLS).» Подсказка это плашка `warn` с
+  кнопкой «Открыть настройки почты» (`/admin/settings#admin-smtp`).
+- Уточнено в W2: период в адресе задаётся днями (`DateRangeFilter`, как у «Аудита»), поэтому «за сутки» в фильтре
+  это «с начала дня, который был 24 часа назад» (`from` = вчерашняя дата, `to` пусто). Список при этом может
+  показать на несколько неушедших писем больше, чем полоса: полоса считает ровно 24 часа.
 
 Панель фильтров как у «Аудита» (`FilterBar`): поиск по адресу и теме, «Вид письма» (несколько, группами: «Вход и
 аккаунт», «Проекты», «Маршрут подписания», «Служебные»), «Итог» (несколько), «Получатель» (пикер людей установки,
 по `to_user_id`), «Проект», «Период» (`DateRangeFilter`). Состояние в адресе. Сортировки нет: новые сверху.
 
+Уточнено в W2. Группы видов это подписи внутри `FilterMenu`: у `FilterOption` появилось необязательное поле
+`group`, варианты одной группы идут подряд под её подписью. У «Итога» `not_sent` и `suppressed` в таблице читаются
+одинаково («Не отправлялось»), поэтому в меню фильтра они различаются: «Не отправлялось: почта не настроена» и «Не
+отправлялось: письмо не положено». Фильтры `reason` и `recipient` (точный адрес) кнопок в панели не имеют: их ставят
+ссылки (карточка W3, MCP), в панели они видны чипами выбранных условий.
+
 Таблица:
 
 | Колонка | Содержимое |
 |---|---|
-| Когда | «14:32», при наведении полная дата; строки сгруппированы по дням, как в «Аудите» |
+| Когда | «14:32» у сегодняшних, «вчера, 14:32», раньше «9 нояб., 14:32» (год, если не текущий); при наведении полная дата |
 | Кому | адрес; под ним имя, если адрес принадлежит человеку установки (`PersonCell`) |
 | Письмо | подпись вида («Сброс пароля») и тема серым в одну строку |
 | Итог | метка: «Отправлено» (зелёная), «Не ушло» (красная), «Не отправлялось» (серая) с причиной вторым словом: «почта не настроена», «почта не подтверждена», «вход закрыт» |
@@ -180,6 +190,12 @@
 
 Строка открывает карточку справа (как `PersonDrawer`), адрес получает `?mail=<id>`, поэтому карточку можно
 переслать другому админу ссылкой. На телефоне таблица становится списком карточек: тема, адрес, метка итога, время.
+
+Уточнено в W2: таблица это общий `DataTable` админки (как «Очередь» и «Пользователи»): курсор, «Показать ещё»,
+размер страницы, карточки на телефоне по `meta.card` колонок. Группировки по дням, как в «Аудите», у `DataTable` нет,
+поэтому день пишется в колонке «Когда». «Вызвал» на телефоне не показывается. У строки `cause: "user"` с `actor:
+null` (человек удалён) в «Вызвал» стоит «Пользователь удалён». Вид, которого в этой версии нет: «Вид удалён:
+<код>».
 
 Пустые состояния: «Писем пока не было» (журнал пуст), «Ничего не нашлось» с кнопкой «Сбросить фильтры»
 (`NoResults`), ошибка загрузки с повтором (`ErrorState`).
@@ -242,18 +258,25 @@
 | `retentionLink` | Срок хранения |
 | `smtpOff.text` | Почта не настроена. Письма не уходят: ссылки подтверждения и приглашений люди получают на экране или от вас, уведомления только во «Входящих». |
 | `smtpOff.action` | Настроить почту |
-| `day.sent` | Отправлено {{count}} |
-| `day.failed` | Не ушло {{count}} |
-| `day.skipped` | Не отправлялось {{count}} |
+| `day.sent` | Отправлено {{n}} |
+| `day.failed` | Не ушло {{n}} |
+| `day.skipped` | Не отправлялось {{n}} |
 | `day.caption` | За сутки |
+| `day.failedShow` | Показать письма, которые не ушли за сутки (подсказка кнопки «Не ушло») |
 | `hint.auth` | SMTP-сервер отклоняет вход. Проверьте логин и пароль в блоке «Почта (SMTP)». |
 | `hint.connect` | SMTP-сервер не отвечает. Проверьте адрес, порт и защиту соединения. |
 | `hint.tls` | Не удалось установить защищённое соединение. Проверьте режим защиты (STARTTLS, TLS). |
+| `hint.open` | Открыть настройки почты |
 | `filter.search` | Адрес или тема |
 | `filter.kind` | Вид письма |
 | `filter.status` | Итог |
 | `filter.recipient` | Получатель |
 | `filter.project` | Проект |
+| `filter.reason` | Причина |
+| `filter.address` | Адрес |
+| `filter.period` | Период |
+| `statusFilter.not_sent` | Не отправлялось: почта не настроена |
+| `statusFilter.suppressed` | Не отправлялось: письмо не положено |
 | `group.account` | Вход и аккаунт |
 | `group.projects` | Проекты |
 | `group.signing` | Маршрут подписания |
@@ -282,6 +305,9 @@
 | `cause.anonymous` | Запрос без входа |
 | `cause.system` | Фоновая задача |
 | `cause.task.signing_reminders` | автонапоминания маршрута |
+| `cause.userGone` | Пользователь удалён |
+| `templateGone` | Вид удалён: {{template}} |
+| `time.yesterday` | вчера, {{time}} |
 | `origin.register` | Регистрация |
 | `origin.resend_verification` | Повторная отправка подтверждения |
 | `origin.forgot_password` | Забыли пароль |
@@ -326,6 +352,11 @@
 | `empty.body` | Здесь появится каждое письмо, которое Студия отправит или попробует отправить. |
 | `loadFailed` | Не удалось загрузить журнал писем. |
 
+Числа в полосе за сутки подставляются как `{{n}}`, а не `{{count}}`: строка одна на все числа («Отправлено 5»),
+а `count` включил бы поиск форм множественного числа. Служебные ключи W2 без отдельной строки в таблице: `leadShort`
+(шапка, пока сводка не пришла), `refresh`, `caption` (название таблицы для скринридера), `filter.searchLabel`,
+`filter.recipientSearch`, `filter.projectSearch`, `loadFailedBody`, `failure.smtp_off`.
+
 Строки в самом письме из журнала (словари `core/mail/locales/{ru,en}.json`, раздел `layout`): `link_hidden`
 «[ссылка скрыта]», `note_hidden` «[сообщение не хранится в журнале]». EN: «[link hidden]», «[message not kept in
 the log]».
@@ -342,7 +373,14 @@ the log]».
   приглашение с сообщением (пометка «Сообщение не хранится»); перерисовано по текущему шаблону; вид удалён; `failed`
   с ответом `550`; `failed` класса `auth` со ссылкой на настройки; `suppressed` «почта не подтверждена»;
   `not_sent`; анонимный запрос; фоновая задача; запись удалена по сроку (404); телефон;
-- меню: пункт «Письма» со счётчиком и без.
+- меню: пункт «Письма» со счётчиком и без. Уточнено в W2: меню живёт в `pages/AdminPage` и в галерею фичи не
+  попадает; счётчик со значением и без проверяет тест оболочки (`AdminShell.test.tsx`), глазами он виден в живых
+  записях раздела.
+
+Сделано в W2 (группы `admin-mail-list` и `admin-mail-live`): обычный день, есть следующая страница, фильтр «Не
+ушло», почта не настроена, сбой входа на SMTP, длинные адреса и темы, пусто, ничего не нашлось, загрузка, ошибка,
+следующая страница не загрузилась, телефон (обычный день и без SMTP); живые записи на сценариях `admin_ready`,
+`admin_sso`, `ops_services_degraded`, `ops_fresh`, `admin_scale`.
 
 Каждое состояние в ru и en, светлой и тёмной теме. Данные состояний (срез W1) лежат в
 `features/admin-mail-log/testing`. Основа это эталоны сервера из 6.2: их копия `serverFixtures.ts` один в один, тест
@@ -467,7 +505,13 @@ the log]».
   страницу. `to_user` ищется только по `to_user_id`, не по адресу: так же работает фильтр «Получатель»; проект в
   корзине отдаётся с названием, удалённый насовсем даёт `name: null`. Провайдеры use cases и порта в
   `ServerAdminOpsProvider`.
-- `core/mail/cause.py`: `contextvar` текущей фоновой задачи; `BackgroundTaskRunner` ставит его вокруг каждого тика.
+- `core/mail/cause.py`: `current_caller() -> MailCaller` (`cause`, `actor_user_id`, `task`, `request_id`) из
+  контекста процесса. Уточнено в B3: сами `contextvar` лежат не здесь, а там, где их ставят: имя фоновой задачи в
+  `core/background.py` (`current_background_task()`, `BackgroundTaskRunner` ставит его вокруг каждого прогона, задачи
+  прогона его наследуют), `request_id` в `core/request_id.py` (`RequestIdMiddleware` api ставит его там же; из
+  `api` его не прочитал бы слой `use_cases`). Порядок: прогон фоновой задачи даёт `system`, даже если внутри стоит
+  актор; иначе актор-человек (`ActorKind.user` с id) даёт `user`; всё остальное, включая гостя по ссылке,
+  `anonymous`.
 - `core/identity/protocols.py`: `IMailSender.send(...) -> str` (Message-ID); `IMailLogRepository` (`add`, `page`,
   `get`, `summary`). Как сделал B2: удаления в порту нет. Срок хранения держит источник `mail_log` движка
   (`DeleteBatchesSource` с `_MAIL_LOG_WHERE`, 8.1), стирание и выгрузку человека `SqlUserLifecycle` в той же
@@ -476,10 +520,26 @@ the log]».
   `total_estimate` по `query.filtered` (оценка по `pg_class.reltuples`, None до первого `ANALYZE`);
   `summary(since)` даёт `MailLogCounts` за окно от `since`.
 - `use_cases/mail/dispatch.py`: `MailDispatcher.send(request) -> MailOutcome` и `MailDispatcher.skip(request,
-  status, reason)`; `use_cases/mail/log.py`: `ListMailLogUC`, `GetMailLogEntryUC`, `MailLogSummaryUC`.
+  reason) -> MailOutcome`; `use_cases/mail/log.py`: `ListMailLogUC`, `GetMailLogEntryUC`, `MailLogSummaryUC`.
+  Уточнено в B3: у `skip` нет параметра `status`, он следует из причины (`smtp_off` даёт `not_sent`, остальные
+  `suppressed`), так что неверную пару не передать. `send` без SMTP (`enabled=False`) сам пишет `not_sent/smtp_off`
+  и отправителя не зовёт, поэтому пути, которым не нужно ветвиться, просто зовут `send`. `MailOutcome`: `status`,
+  `reason` (причина пропуска или класс сбоя), `message_id`, `failure` (`MailFailure`), `entry_id` (None, если
+  запись журнала не удалась) и `sent`. Диспетчер не бросает из-за почты и журнала; исключение возможно только из
+  `MailRequest.render()` у `send` (ошибка в коде письма, до отправки). Он же режет поля под колонки: `subject` до
+  200, `error_text` до 300, `message_id` до 255, `to_user_id`, `task`, `request_id`, `ref_id` до 64; `project_id`
+  приводится к виду UUID, не-UUID отбрасывается. Если отправитель не вернул Message-ID, в строке `<unknown>`.
 - `infra/identity/smtp_errors.py`: `classify(exc, *, secrets) -> MailFailure` по классам `aiosmtplib`
   (`SMTPAuthenticationError`, `SMTPConnectError`, `SMTPConnectTimeoutError`, `SMTPTimeoutError`,
   `SMTPRecipientsRefused`, `SMTPSenderRefused`, `SMTPDataError`, `SMTPServerDisconnected`, `ssl.SSLError`).
+  Уточнено в B3: `classify` зовёт сам `SmtpMailSender`, потому что только он знает логин и пароль, и бросает
+  `MailSendError(failure)` (`core/mail/journal.py`); без SMTP `ConfiguredMailSender` и `LinkOnlyMailSender` бросают
+  её же с `smtp_off`. Диспетчер в `use_cases` не импортирует `infra`: он берёт `exc.failure`, а любое другое
+  исключение пишет как `other` с текстом `Тип: сообщение`. Секреты скрываются и в base64 (`AUTH PLAIN`, `AUTH
+  LOGIN`), без учёта регистра; общая очистка текста `clean_error_text` лежит в `core/mail/journal.py`.
+  `SMTPNotSupported` про STARTTLS это `tls`, про AUTH это `auth`; `SMTPConnectResponseError` (ответ при соединении)
+  это `connect` с кодом; ошибка TLS внутри `SMTPConnectError` (причина в цепочке) это `tls`; `OSError` (отказ в
+  соединении, неизвестный хост) это `connect`; `SMTPHeloError` и прочие ответы это `other` с кодом.
 - `infra/db/repositories/mail_log.py` (`SqlMailLogRepository`), ORM `infra/db/orm/mail_log.py`, in-memory
   `tests/fakes/mail_log.py` (как остальные фейки; `fail_with` роняет следующую `add` для тестов L15);
   `SessionProvider.own()`: короткая своя транзакция на отдельном соединении даже при живой ambient (L15).
@@ -492,7 +552,28 @@ the log]».
 | P5..P7 (`LinkDelivery.notify`) | без SMTP молча `False` | `skip(not_sent, smtp_off)`, иначе `send`; возвращаемое значение то же |
 | P8..P13 (`Notifier._mail`) | без SMTP выход до загрузки человека; неподтверждённая почта и закрытый вход молча | человек загружается всегда (одна выборка в фоновой задаче); без SMTP `not_sent`, почта не подтверждена `suppressed/email_unverified`, вход закрыт `suppressed/account_blocked`; удалённый человек без строки (адреса нет) |
 | P14 (`send_invitation`) | без SMTP `False`, сбой `False` | `skip` или `send`; ответ (`email` или `manual`) тот же |
-| P15 (`SendTestMailUC`) | свой `try/except` | `send`; без SMTP по-прежнему `422` без строки, текст ошибки из L16 |
+| P15 (`SendTestMailUC`) | свой `try/except` | `send`; без SMTP по-прежнему `422` без строки, текст ошибки из L16 (`MailFailure.describe()`: `auth 535: текст`); получатель в журнале это человек установки с этим адресом, если он есть |
+
+Уточнено в B5 (P8..P14):
+
+- `SmtpNotificationMailer` берёт `MailDispatcher` вместо `IMailSender` и собирает `MailRequest`
+  (`notification_request`); `INotificationMailer` получил `skip_notification(..., reason)` для пропуска и
+  необязательные `to_user_id`, `origin` и id объекта у `send_notification` и `send_invitation`. Ответ вызывающим
+  (`True`, если письмо ушло; `email`, `manual` или `inbox` у приглашений и напоминаний) не изменился.
+- Причина пропуска у `Notifier`: «письмо не положено» важнее «почта не настроена», потому что с почтой письмо всё
+  равно не ушло бы. Вход закрыт (`can_sign_in` ложно: отключён, ждёт одобрения) даёт `account_blocked`, кроме
+  регистрации, которая ждёт подтверждения почты: у неё, как и у любой неподтверждённой почты, `email_unverified`.
+  Без SMTP `not_sent/smtp_off` пишет сам диспетчер (`send`). Вид без письма (`MAILED_KINDS`, `mail=False`) строки
+  не даёт.
+- `origin`: у уведомлений `notification`, в том числе у «Напомнить» автора; напоминание из фоновой задачи
+  (`current_background_task()` задан, это `SigningReminderSweeper`) `signing_auto_reminder`, так что передавать
+  сценарий через порт маршрута не нужно. У P14: `project_invite` (`CreateInvitationUC`), `project_invite_resend`
+  (`ResendInvitationUC.deliver` по умолчанию), `signing_reinvite` («Напомнить» приглашённому в маршруте).
+- Объект письма: `project_id` из уведомления; `ref_kind` по виду (`project_invitation`, `access_request`,
+  `transfer`, `signing_route`), `ref_id` это `ref_id` уведомления (id приглашения, запроса, передачи или
+  маршрута). У P14 `ref` это приглашение, `to_user_id` привязанный аккаунт, если он есть.
+- Ссылка: у приглашения, запроса доступа и передачи `page` с путём `/inbox`; у маршрута `page` с путём страницы
+  подписи или точки сдачи, а без публичного адреса установки `none` (кнопки в письме нет); у P14 `token`.
 
 ## 6. API
 
@@ -674,7 +755,11 @@ LifecyclePolicy(
 ### 8.2 Метрики
 
 `/metrics`: `hse_mail_sent_total{kind,status}` (L19) и `hse_mail_log_write_failures_total` (L15). Счётчики в
-процессе, считает `MailDispatcher`, по одному разу на попытку. Меток по получателю и проекту нет.
+процессе, считает `MailDispatcher`, по одному разу на попытку. Меток по получателю и проекту нет. Как сделал B3:
+счётчики `MAIL_COUNTERS` в `use_cases/mail/dispatch.py` (один набор на процесс, сколько бы диспетчеров ни было),
+экспозиция `api/observability/mail_metrics.py`, подключается в `install_server_observability`. Строка
+`hse_mail_sent_total` появляется с первой попыткой этого вида и итога, `hse_mail_log_write_failures_total` есть
+всегда, даже с нулём.
 
 ## 9. Миграции
 
@@ -702,8 +787,12 @@ LifecyclePolicy(
 - Пути 2.2 таблицей: для P1..P15 при SMTP, без SMTP и при сбое ровно одна строка с ожидаемыми `template`, `status`,
   `reason`, `origin`, `cause`; у `Notifier` `suppressed` для неподтверждённой почты и закрытого входа; ответы
   вызывающим (`manual`, ссылка на экране) не изменились.
-- Тест архитектуры: `IMailSender.send` вызывается только в `use_cases/mail/dispatch.py` (обход AST, как
-  `test_runner_isolation`).
+- Тест архитектуры: `IMailSender.send` вызывается только в `use_cases/mail/dispatch.py` (обход AST,
+  `tests/unit/architecture/test_mail_dispatch_only.py`). Как сделал B3: вызовом почты считается `.send(...)` в
+  файле, который упоминает `IMailSender` или его реализации, и любой `.send(..., html=...)`; кроме диспетчера
+  разрешён сам транспорт (`infra/identity/smtp_mailer.py`, `configured_mailer.py`, `mail.py`). Временные
+  исключения `_PENDING` (`use_cases/identity/mail.py` до B4, `infra/notifications/mailer.py` до B5) проверяются на
+  устаревание: срез, переведший путь, обязан удалить свою строку. B5 свою строку удалил.
 - Репозиторий (контракт на памяти и Postgres, `tests/contract/test_mail_log_contract.py`): курсор, фильтры по И,
   поиск, период, `total_estimate`, сводка за сутки; на Postgres (`test_mail_log_pg.py`) `SessionProvider.own()`
   пишет при откате внешней транзакции, CHECK таблицы, источник `mail_log` движка (счёт и удаление пачками).
@@ -761,7 +850,7 @@ E2E (срез E1): раздел 12.
 |---|---|---|---|
 | W1 | `features/admin-mail-log/api`: zod-схемы, запросы (`useCursorList`, сводка с опросом раз в 60 с), ключи; эталоны раздела 6 из `pending` в `fixtures` и их копия для галерей (6.2); моки `testing/demo.ts`, демо-маршруты и сценарии `app/demo/server/mailLog.ts`; состояния галереи `testing/fixtures.ts` (4.4) | контракт раздела 6 | M |
 | W2 | список: пункт «Письма» в группе «Журнал» со счётчиком (`nav.mail`, `nav.count.mail_*`), маршрут `/admin/mail`, шапка, плашка без SMTP, полоса за сутки с подсказками, фильтры и поиск в адресе, таблица по дням, телефон, словарь `admin/mail.json` ru и en, раздел галереи «Админка: письма» (список) | W1 | M |
-| W3 | карточка: панель справа по `?mail=`, сведения, вкладки HTML и текст в песочнице, пометки, «Что можно сделать» по виду и итогу, переходы к человеку, проекту и настройкам почты, 404; записи галереи (карточка) | W2 | M |
+| W3 | карточка: панель справа по `?mail=` (тело `ui/MailLogCard.tsx`: W2 оставил там заглушку с готовыми `id`, `row` и `onClose`), сведения, вкладки HTML и текст в песочнице, пометки, «Что можно сделать» по виду и итогу, переходы к человеку, проекту и настройкам почты, 404; записи галереи (карточка) | W2 | M |
 
 ### Документация и сквозной тест
 

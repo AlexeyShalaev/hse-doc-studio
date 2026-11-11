@@ -165,6 +165,7 @@ from hse_doc_studio.use_cases.identity.smtp_settings import (
     UpdateSmtpSettingsUC,
 )
 from hse_doc_studio.use_cases.jobs.runners import RunnerRegistry
+from hse_doc_studio.use_cases.mail.dispatch import MailDispatcher
 from hse_doc_studio.use_cases.orgs.groups import (
     AddGroupMemberUC,
     CreateGroupUC,
@@ -532,8 +533,12 @@ class ServerIdentityProvider(Provider):
         return GetSmtpSettingsUC(service)
 
     @provide
-    def get_send_test_mail_uc(self, sender: IMailSender, users: IUserRepository, audit: IAuditLog) -> SendTestMailUC:
-        return SendTestMailUC(sender, users, audit, settings.auth.public_url)
+    def get_mail_dispatcher(self, sender: IMailSender, log: IMailLogRepository) -> MailDispatcher:
+        return MailDispatcher(sender, log)
+
+    @provide
+    def get_send_test_mail_uc(self, mail: MailDispatcher, users: IUserRepository, audit: IAuditLog) -> SendTestMailUC:
+        return SendTestMailUC(mail, users, audit, settings.auth.public_url)
 
     @provide
     def get_mail_preview_uc(self) -> PreviewMailUC:

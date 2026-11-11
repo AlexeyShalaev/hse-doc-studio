@@ -10,12 +10,22 @@ from __future__ import annotations
 import asyncio
 import time
 from collections.abc import Awaitable, Callable
+from contextvars import ContextVar
 from dataclasses import dataclass, field
 from typing import Protocol
 
 import structlog
 
 logger = structlog.get_logger(__name__)
+
+# Имя периодической задачи, внутри прогона которой идёт код (журнал писем, L8: «Фоновая задача»). Задачи, которые
+# прогон создаёт, наследуют его, как и любой contextvar; запросы и их фоновые отправки видят None.
+_current_task: ContextVar[str | None] = ContextVar("hse_background_task", default=None)
+
+
+def current_background_task() -> str | None:
+    """Имя периодической задачи `BackgroundTaskRunner`, внутри прогона которой идёт код; None вне прогона."""
+    return _current_task.get()
 
 
 class ILeaderLock(Protocol):
@@ -213,6 +223,7 @@ class BackgroundTaskRunner:
     async def _run_once(self, task: PeriodicTask) -> None:
         stats = self._state.stats[task.name]
         started = time.monotonic()
+        token = _current_task.set(task.name)
         try:
             await task.run()
         except asyncio.CancelledError:
@@ -221,6 +232,7 @@ class BackgroundTaskRunner:
             stats.failures += 1
             logger.exception("background_task_failed", task=task.name)
         finally:
+            _current_task.reset(token)
             elapsed = time.monotonic() - started
             stats.runs += 1
             stats.last_duration_s = elapsed

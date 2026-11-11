@@ -18,6 +18,7 @@ export const ADMIN_NAMESPACES = [
   "orgs",
   "users",
   "audit",
+  "mail",
   "ops",
   "runners",
   "runnerInstall",

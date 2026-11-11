@@ -109,7 +109,7 @@ for (const lang of LANGS) {
 
         await trigger.tap();
         await expect(page.getByRole("dialog")).toHaveAttribute("data-form", "sheet");
-        await expect(page.getByTestId("admin-menu").getByRole("link")).toHaveCount(19);
+        await expect(page.getByTestId("admin-menu").getByRole("link")).toHaveCount(20);
         await shot(page, L, name("33-admin-menu"));
         await page.getByTestId("admin-nav-runners").tap();
         await expect(page).toHaveURL(/\/admin\/runners/);

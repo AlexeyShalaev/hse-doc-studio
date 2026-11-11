@@ -12,7 +12,16 @@ import { ActiveFilters, type ActiveFilter } from "./ActiveFilters";
 // (FilterMenu, DateRangeFilter, PickerFilter) встают в extra, а строка active
 // под панелью показывает выбранные условия с «Сбросить».
 
-export type FilterOption = { value: string; label: string; count?: number };
+export type FilterOption = {
+  value: string;
+  label: string;
+  count?: number;
+  /**
+   * Подпись группы в FilterMenu: варианты одной группы идут подряд, над первым
+   * подпись. Чипы и Select её не показывают.
+   */
+  group?: string;
+};
 
 export type FilterGroup = {
   id: string;
