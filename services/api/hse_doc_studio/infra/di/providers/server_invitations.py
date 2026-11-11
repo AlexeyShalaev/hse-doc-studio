@@ -19,7 +19,6 @@ from hse_doc_studio.core.identity.protocols import (
     ICredentialRepository,
     IInstanceSettingsRepository,
     ILoginAttemptRepository,
-    IMailSender,
     IPasswordHasher,
     IRegistrationInviteRepository,
     ISessionRepository,
@@ -63,6 +62,7 @@ from hse_doc_studio.use_cases.identity.housekeeping import AuthCleanupService
 from hse_doc_studio.use_cases.identity.mail import LinkDelivery
 from hse_doc_studio.use_cases.identity.recovery import VerifyEmailUC
 from hse_doc_studio.use_cases.identity.register import RegisterUC
+from hse_doc_studio.use_cases.mail.dispatch import MailDispatcher
 from hse_doc_studio.use_cases.notifications.inbox import (
     InboxSummaryUC,
     ListNotificationsUC,
@@ -149,8 +149,8 @@ class ServerInvitationsProvider(Provider):
         return ProjectInviteSignupSetting(instance, env)
 
     @provide
-    def get_notification_mailer(self, sender: IMailSender) -> INotificationMailer:
-        return SmtpNotificationMailer(sender, settings.auth.public_url)
+    def get_notification_mailer(self, dispatcher: MailDispatcher) -> INotificationMailer:
+        return SmtpNotificationMailer(dispatcher, settings.auth.public_url)
 
     @provide
     def get_notifier(

@@ -23,9 +23,7 @@ _TRANSPORT = frozenset(
 )
 # Временно, до перевода путей на диспетчер (раздел 12). Срез, который переводит путь, удаляет свою строку:
 # тест ниже падает, если в файле из списка вызова уже нет.
-_PENDING = {
-    "infra/notifications/mailer.py": "B5: SmtpNotificationMailer, P8..P14",
-}
+_PENDING: dict[str, str] = {}
 
 
 def _identifiers(tree: ast.AST) -> set[str]:
