@@ -450,9 +450,23 @@ the log]».
   `template_digest(template, lang)`, `known_template(value)`, `MailLogEntry` (`template` и `lang` строками, `id`
   выдаёт хранилище), `MailLogQuery`, `MailLogPage`, `MailLogCounts` (итоги окна и последний сбой в нём) для B2.
   `rerender(entry) -> RenderedMail | None` добавляет B6. В `compose.py` B1 добавил `fixed_path(template)`.
-- `core/mail/compose.py`: `build_content(..., links: Literal["live", "redacted"] = "live")`. В режиме `redacted`
-  кнопка остаётся с подписью, но `href=None`, `plain_link` это «[ссылка скрыта]» для `token` и `link_path` для
-  `page`, блок сообщения это `note_hidden`. `render.py` рисует кнопку без `href` как `<span>` того же вида.
+- `core/mail/compose.py`: `build_content(..., redaction: Redaction | None = None)` и так же `compose`. Уточнено в B6:
+  вместо режима `links="redacted"` явный `Redaction(token_link, page_path, note)`, потому что ссылки и сообщения на
+  входе нет и вид ссылки надо передать отдельно; с `redaction` аргументы `link` и `note` запрещены (`ValueError`).
+  Кнопка остаётся с подписью, но `href=None`; `plain_link` это `layout.link_hidden` для `token` и путь страницы для
+  `page` (у видов с `fixed_path` свой путь); блок сообщения это `layout.note_hidden`. Места те же, что у ушедшего
+  письма: без адреса установки кнопки нет и ссылка стоит текстом, у вида без кнопки (`smtp_test`, `reset_notice`)
+  ссылки нет вовсе. `render.py` рисует кнопку без `href` как `<span>` того же вида.
+- `core/mail/journal.py` (B6): `rerender(entry)` собирает письмо тем же `compose` из `params` (`server` как адрес
+  установки, `ttl_s`, `expires_at`, `values`); подстановку, которой у строки нет, а текст вида требует (шаблон
+  обновился после отправки), заполняет `MISSING_VALUE` «…», чтобы карточка старой строки не падала; строки сведений
+  без значения пропускаются, как в письме. None, если вида или языка в этой версии нет. `rerendered(entry)`
+  сравнивает `template_digest` строки с текущим, у удалённого вида False.
+- `core/mail/ports.py` (B6): `IMailLogNames` (`people(ids)`, `projects(ids)`) и `MailPerson`; Postgres
+  `infra/db/repositories/mail_log_names.py`, память `tests/fakes/mail_log_names.py`. Use cases зовут его один раз на
+  страницу. `to_user` ищется только по `to_user_id`, не по адресу: так же работает фильтр «Получатель»; проект в
+  корзине отдаётся с названием, удалённый насовсем даёт `name: null`. Провайдеры use cases и порта в
+  `ServerAdminOpsProvider`.
 - `core/mail/cause.py`: `contextvar` текущей фоновой задачи; `BackgroundTaskRunner` ставит его вокруг каждого тика.
 - `core/identity/protocols.py`: `IMailSender.send(...) -> str` (Message-ID); `IMailLogRepository` (`add`, `page`,
   `get`, `summary`). Как сделал B2: удаления в порту нет. Срок хранения держит источник `mail_log` движка
@@ -508,6 +522,11 @@ the log]».
 | `limit` | 1..`MAX_PAGE_SIZE`, по умолчанию `DEFAULT_PAGE_SIZE` | размер страницы |
 
 Адрес получателя называется `recipient`, а не `to`: `to` уже занят концом периода, как в журнале аудита.
+
+Уточнено в B6: курсор кодируется как у «Аудита» и очереди (`encode_cursor`, base64url от `k:<id>`, старый курсор
+цифрами тоже принимается); `limit` больше `MAX_PAGE_SIZE` даёт 422, а вызов use case в обход HTTP он ограничивает
+сам. Повтор одного `template` или `status` схлопывается. Пустой после обрезки пробелов `recipient` и `q` значат «без
+фильтра». `GET /mail-log/{id}` с id вне `bigint` отвечает 404, как отсутствующая строка.
 
 ### 6.2 Схемы
 
@@ -577,6 +596,12 @@ AdminMailLogSummary {
 
 `preview.subject` это тема из перерисовки; в шапке карточки показывается `entry.subject` (как ушла).
 
+Как сверяет B6 (`tests/integration/api/admin/test_admin_mail_log_api.py`): ответы на строки эталонов равны файлам
+целиком, кроме `preview.html` (в эталонах короткий, проверяется отдельно: одна ссылка на адрес установки в подвале,
+пометки по `link_hidden` и `note_hidden`). Поэтому в B6 эталоны поправлены под настоящий ответ: `next_cursor` у
+`AdminMailLogPage/day` теперь `encode_cursor(1202)`, `preview.text` заканчивается переводом строки, как текстовая
+часть письма; копия `serverFixtures.ts` поправлена так же.
+
 На фронтенде (W1) модели называются без приставки `Admin`: `MailLogEntry`, `MailLogPage`, `MailLogDetail`,
 `MailLogSummary`, человек `MailLogPerson`; каталоги эталонов остаются `AdminMailLog*`. Пары «каталог и схема zod»
 лежат в `MAIL_LOG_CONTRACT_SCHEMAS` (`features/admin-mail-log/api/schemas.ts`) и разложены в `CONTRACT_SCHEMAS`.
@@ -592,6 +617,8 @@ AdminMailLogSummary {
 | `input_invalid` | 422 | неизвестный `status`, неверный `cursor`, `from` позже `to`, лишний параметр |
 
 Новых кодов не нужно: все есть в `IdentityErrorCode`, `contracts/server/error_codes.json` и `errors.json`.
+Уточнено в B6: 422 приходит общим ответом проверки запроса (`{"detail": [{type, loc, msg}]}`, без поля `code`), как у
+«Аудита» и остальных списков админки; `401` и `404` несут `code`.
 
 ### 6.4 MCP
 

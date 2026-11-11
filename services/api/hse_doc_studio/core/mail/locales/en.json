@@ -27,7 +27,9 @@
       }
     },
     "unknown_person": "A Studio user",
-    "unnamed_project": "an untitled project"
+    "unnamed_project": "an untitled project",
+    "link_hidden": "[link hidden]",
+    "note_hidden": "[message not kept in the log]"
   },
   "roles": {
     "reader": "Reader",

@@ -32,7 +32,8 @@ class Row:
 @dataclass(frozen=True)
 class Action:
     label: str
-    href: str
+    # None у письма из журнала: кнопка видна, но никуда не ведёт (ссылка не хранится).
+    href: str | None
 
 
 @dataclass(frozen=True)
@@ -52,7 +53,8 @@ class MailContent:
     lead: Text
     rows: tuple[Row, ...] = ()
     action: Action | None = None
-    # Ссылка без кнопки: адрес установки не задан, и ссылка относительная.
+    # Ссылка текстом: адрес установки не задан, и ссылка относительная; у письма из журнала пометка
+    # `layout.link_hidden` или путь страницы, тогда и при кнопке без адреса.
     plain_link: str | None = None
     code: str | None = None
     expiry: str | None = None

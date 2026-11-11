@@ -17,8 +17,10 @@ from types import MappingProxyType
 from urllib.parse import urlsplit
 
 from hse_doc_studio.core.enums import Lang
+from hse_doc_studio.core.mail.catalog import catalog, placeholders
 from hse_doc_studio.core.mail.compose import (
     MailTemplate,
+    Redaction,
     RenderedMail,
     clean_note,
     compose,
@@ -404,3 +406,67 @@ class MailLogCounts:
     suppressed: int = 0
     last_failure_at: datetime | None = None
     last_failure_reason: str | None = None
+
+
+# Значение, которого у строки нет, а текст вида его требует: например, в новой версии шаблона появилась подстановка.
+MISSING_VALUE = "…"
+# Подстановки, которые письмо заполняет само: адрес получателя и установки, «Пользователь Студии», срок ссылки.
+_SELF_FILLED = frozenset({"email", "server", "actor", "project", "duration", "date"})
+
+
+@lru_cache(maxsize=len(MailTemplate) * len(Lang))
+def _required_values(template: MailTemplate, lang: Lang) -> frozenset[str]:
+    """Подстановки текстов вида, без которых письмо не собрать. Строки сведений (`details`) сюда не входят: без
+    значения строка просто пропускается, как в ушедшем письме."""
+    texts = catalog(lang)["mails"][template.value]
+    found: set[str] = set()
+    for key, value in texts.items():
+        if key == "details":
+            continue
+        for text in value if isinstance(value, list) else [value]:
+            if isinstance(text, str):
+                found |= placeholders(text)
+    return frozenset(found - _SELF_FILLED)
+
+
+def _lang(value: str) -> Lang | None:
+    return next((lang for lang in Lang if lang.value == value), None)
+
+
+def rerender(entry: MailLogEntry) -> RenderedMail | None:
+    """Письмо строки журнала глазами получателя, перерисованное текущим шаблоном (L3, L5).
+
+    Собирается тем же `compose`, что шлёт, из безопасных параметров строки: на месте ссылки с токеном
+    `layout.link_hidden`, у ссылки на страницу её путь текстом, на месте сообщения человека `layout.note_hidden`.
+    Токена и сообщения на входе нет, поэтому в превью их быть не может. None, если вида или языка в этой версии нет.
+    """
+    template = known_template(entry.template)
+    lang = _lang(entry.lang)
+    if template is None or lang is None:
+        return None
+    params = entry.params
+    values = dict.fromkeys(_required_values(template, lang), MISSING_VALUE) | dict(params.values)
+    return compose(
+        template,
+        lang,
+        to=entry.to_email,
+        server_url=params.server,
+        ttl=timedelta(seconds=params.ttl_s) if params.ttl_s is not None else None,
+        expires_at=params.expires_at,
+        values=values,
+        redaction=Redaction(
+            token_link=params.link is MailLinkKind.token,
+            page_path=params.link_path if params.link is MailLinkKind.page else None,
+            note=params.note_len > 0,
+        ),
+    )
+
+
+def rerendered(entry: MailLogEntry) -> bool:
+    """Шаблон вида менялся после отправки (L5): отпечаток строки не совпадает с текущим. У удалённого вида False:
+    превью нет, сравнивать не с чем."""
+    template = known_template(entry.template)
+    lang = _lang(entry.lang)
+    if template is None or lang is None:
+        return False
+    return entry.template_digest != template_digest(template, lang)

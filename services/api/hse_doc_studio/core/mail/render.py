@@ -65,7 +65,7 @@ def _text_block(c: MailContent) -> list[str]:
         out += [f"> {line}" if line else ">" for line in c.note.body.split("\n")]
     if c.code is not None:
         out += ["", f"    {c.code}"]
-    href = c.action.href if c.action else c.plain_link
+    href = c.action.href if c.action and c.action.href else c.plain_link
     if href:
         out += ["", f"{c.action.label}:"] if c.action else [""]
         out.append(href)
@@ -144,17 +144,24 @@ def _code(c: MailContent) -> str:
 def _button(c: MailContent) -> str:
     if c.action is None:
         return ""
-    link = (
-        f'<a class="e-btn-a" href="{escape(c.action.href, quote=True)}" target="_blank" rel="noopener" '
-        f'style="display:inline-block;padding:14px 28px;font:600 16px/20px {_SANS};color:#ffffff;'
-        f'text-decoration:none;border-radius:8px">{escape(c.action.label)}</a>'
+    style = (
+        f"display:inline-block;padding:14px 28px;font:600 16px/20px {_SANS};color:#ffffff;"
+        "text-decoration:none;border-radius:8px"
     )
+    if c.action.href is None:
+        # Письмо из журнала: кнопка того же вида, но без адреса.
+        link = f'<span class="e-btn-a" style="{style}">{escape(c.action.label)}</span>'
+    else:
+        link = (
+            f'<a class="e-btn-a" href="{escape(c.action.href, quote=True)}" target="_blank" rel="noopener" '
+            f'style="{style}">{escape(c.action.label)}</a>'
+        )
     cell = f'<td class="e-btn" bgcolor="#0069b2" style="background-color:#0069b2;border-radius:8px">{link}</td>'
     return _table(f"<tr>{cell}</tr>", cls="e-btn-wrap", style="margin:0 0 12px", width="auto")
 
 
 def _link_fallback(c: MailContent) -> str:
-    if c.action is not None:
+    if c.action is not None and c.action.href is not None:
         href = escape(c.action.href, quote=True)
         link = f'<a class="e-link" href="{href}" style="color:#0069b2">{escape(c.action.href)}</a>'
     elif c.plain_link is not None:
