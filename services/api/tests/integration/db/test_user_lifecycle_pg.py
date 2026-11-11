@@ -79,10 +79,10 @@ class _World:
         await _exec(e, "INSERT INTO user_settings (user_id, key, value) VALUES (:u, 'k', '1')", u=user_id)
         await _exec(
             e,
-            "INSERT INTO mail_outbox (id, kind, to_email, link, created_at, expires_at) "
-            "VALUES (:i, 'verify', :m, 'x', now(), now() + interval '1 day')",
-            i=f"m-{user_id}",
-            m=make_user(user_id).email,
+            "INSERT INTO mail_log (at, duration_ms, template, lang, to_email, subject, status, reason, cause, "
+            "origin, params, template_digest) VALUES (now(), 0, 'verify_email', 'ru', :m, 'Подтвердите e-mail', "
+            "'not_sent', 'smtp_off', 'anonymous', 'register', '{}'::jsonb, '0123456789abcdef')",
+            m=make_user(user_id).email.upper(),
         )
 
 
@@ -99,7 +99,7 @@ async def test__delete__personal_data_and_secrets_erased(pg_migrated_engine: Asy
     assert await _count(e, "SELECT count(*) FROM users WHERE id = 'u1'") == 0
     for table in ("api_tokens", "sessions", "user_settings"):
         assert await _count(e, f"SELECT count(*) FROM {table} WHERE user_id = 'u1'") == 0
-    assert await _count(e, "SELECT count(*) FROM mail_outbox") == 0
+    assert await _count(e, "SELECT count(*) FROM mail_log") == 0
     assert await _count(e, "SELECT count(*) FROM users WHERE id = 'boss'") == 1
 
 

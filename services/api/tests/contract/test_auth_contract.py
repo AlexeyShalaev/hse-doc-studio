@@ -17,8 +17,6 @@ from hse_doc_studio.core.identity.entities import (
     AuthTokenKind,
     InviteQuery,
     InviteState,
-    MailKind,
-    MailOutboxEntry,
     OidcProvider,
     RegistrationInvite,
     Session,
@@ -31,7 +29,6 @@ from hse_doc_studio.core.identity.protocols import (
     IAuditRetention,
     IAuthTokenRepository,
     ILoginAttemptRepository,
-    IMailOutboxRepository,
     IOidcProviderRepository,
     IRegistrationInviteRepository,
     ISessionRepository,
@@ -46,7 +43,6 @@ from tests.fakes.auth import (
     InMemoryAuditLog,
     InMemoryAuthTokenRepository,
     InMemoryLoginAttemptRepository,
-    InMemoryMailOutboxRepository,
     InMemoryOidcProviderRepository,
     InMemoryRegistrationInviteRepository,
     InMemorySessionRepository,
@@ -72,7 +68,6 @@ class Repos:
     auth_tokens: IAuthTokenRepository
     invites: IRegistrationInviteRepository
     attempts: ILoginAttemptRepository
-    outbox: IMailOutboxRepository
     oidc: IOidcProviderRepository
     audit: _Audit
 
@@ -88,7 +83,6 @@ async def memory_repos() -> Repos:
         InMemoryAuthTokenRepository(),
         InMemoryRegistrationInviteRepository(),
         InMemoryLoginAttemptRepository(),
-        InMemoryMailOutboxRepository(),
         InMemoryOidcProviderRepository(),
         InMemoryAuditLog(people),  # type: ignore[arg-type]
     )
@@ -102,7 +96,6 @@ async def pg_repos(pg_migrated_engine: AsyncEngine) -> Repos:
         SqlAuditLog,
         SqlAuthTokenRepository,
         SqlLoginAttemptRepository,
-        SqlMailOutboxRepository,
         SqlOidcProviderRepository,
         SqlRegistrationInviteRepository,
         SqlSessionRepository,
@@ -118,7 +111,6 @@ async def pg_repos(pg_migrated_engine: AsyncEngine) -> Repos:
         SqlAuthTokenRepository(sessions),
         SqlRegistrationInviteRepository(sessions),
         SqlLoginAttemptRepository(sessions),
-        SqlMailOutboxRepository(sessions),
         SqlOidcProviderRepository(sessions),
         SqlAuditLog(sessions),  # type: ignore[arg-type]
     )
@@ -387,29 +379,6 @@ async def test__login_attempts__delete_stale(repos: Repos) -> None:
     assert await repos.attempts.delete_stale(NOW + timedelta(minutes=30)) == 1
     assert await repos.attempts.get("old") is None
     assert await repos.attempts.get("new") is not None
-
-
-def make_mail(entry_id: str, created: datetime, ttl: timedelta = HOUR) -> MailOutboxEntry:
-    return MailOutboxEntry(
-        id=entry_id,
-        kind=MailKind.invite,
-        to_email="to@example.test",
-        link=f"https://studio.test/invite/{entry_id}",
-        created_at=created,
-        expires_at=created + ttl,
-    )
-
-
-async def test__mail_outbox__lists_active_newest_first_and_cleans_expired(repos: Repos) -> None:
-    await repos.outbox.add(make_mail("m1", NOW))
-    await repos.outbox.add(make_mail("m2", NOW + timedelta(minutes=1)))
-    await repos.outbox.add(make_mail("gone", NOW - HOUR, ttl=timedelta(minutes=10)))
-    active = await repos.outbox.list_active(NOW + timedelta(minutes=2))
-    assert [e.id for e in active] == ["m2", "m1"]
-    assert [e.id for e in await repos.outbox.list_active(NOW + timedelta(minutes=2), limit=1)] == ["m2"]
-    assert await repos.outbox.delete_expired(NOW) == 1
-    assert await repos.outbox.delete("m1")
-    assert not await repos.outbox.delete("m1")
 
 
 def make_provider(provider_id: str, label: str = "Corp", *, enabled: bool = True) -> OidcProvider:

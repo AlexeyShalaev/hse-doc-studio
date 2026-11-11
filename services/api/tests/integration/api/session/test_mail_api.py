@@ -33,16 +33,17 @@ from hse_doc_studio.use_cases.identity.recovery import (
     VerifyEmailUC,
 )
 from hse_doc_studio.use_cases.identity.sessions import SessionService
+from hse_doc_studio.use_cases.mail.dispatch import MailCounters, MailDispatcher
 from httpx import ASGITransport, AsyncClient
 
 from tests.fakes.auth import (
     InMemoryAuditLog,
     InMemoryAuthTokenRepository,
-    InMemoryMailOutboxRepository,
     InMemorySessionRepository,
     empty_bearer_resolver,
 )
 from tests.fakes.identity import InMemoryCredentialRepository, InMemoryIdentityStore, InMemoryUserRepository
+from tests.fakes.mail_log import InMemoryMailLogRepository
 
 _FIXTURES = Path(__file__).resolve().parents[6] / "contracts" / "server" / "fixtures"
 PASSWORD = "correct horse battery"
@@ -86,7 +87,7 @@ class _World:
         self.creds = InMemoryCredentialRepository(store)
         self.sessions = InMemorySessionRepository()
         self.tokens = InMemoryAuthTokenRepository()
-        self.outbox = InMemoryMailOutboxRepository()
+        self.mail_log = InMemoryMailLogRepository()
         self.audit = InMemoryAuditLog()
         self.links: list[tuple[MailKind, str]] = []
 
@@ -110,21 +111,21 @@ class _World:
             Session(hash_token(secret), "u1", f"csrf-{secret}", NOW, NOW, NOW + timedelta(days=7), None, "UA")
         )
 
-    async def outbox_token(self, kind: MailKind) -> str:
+    async def mailed_token(self, kind: MailKind) -> str:
         (link,) = [link for k, link in self.links if k is kind]
         return link.rpartition("/")[2]
 
 
 class _RecordingDelivery(LinkDelivery):
-    """В outbox ссылок нет, а тесту нужен токен из письма."""
+    """В журнале писем ссылок нет, а тесту нужен токен из письма."""
 
     def __init__(self, world: _World) -> None:
-        super().__init__(_Sender(), world.outbox)
+        super().__init__(MailDispatcher(_Sender(), world.mail_log, counters=MailCounters()))
         self._world = world
 
-    async def deliver(self, kind: MailKind, to_email: str, link: str, now: datetime, **kwargs: Any) -> str | None:
+    async def deliver(self, kind: MailKind, to_email: str, link: str, **kwargs: Any) -> str | None:
         self._world.links.append((kind, link))
-        return await super().deliver(kind, to_email, link, now, **kwargs)
+        return await super().deliver(kind, to_email, link, **kwargs)
 
 
 class _Provider(Provider):
@@ -201,7 +202,10 @@ async def test_forgot_answers_the_same_for_known_and_unknown_addresses(env: tupl
     assert known.status_code == unknown.status_code == 200
     assert known.json() == unknown.json() == _fixture("ForgotResponse", FORGOT)
     assert known.headers["cache-control"] == unknown.headers["cache-control"] == "no-store"
-    assert [e.to_email for e in await world.outbox.list_active(NOW)] == ["anna.petrova@example.org"]
+    # Без SMTP письмо не уходит, в журнале писем строка без ссылки; запрос без входа.
+    assert [(e.to_email, e.status, e.origin, e.cause) for e in world.mail_log.entries] == [
+        ("anna.petrova@example.org", "not_sent", "forgot_password", "anonymous")
+    ]
 
 
 async def test_reset_changes_the_password_and_the_link_dies(env: tuple[AsyncClient, _World]) -> None:
@@ -209,7 +213,7 @@ async def test_reset_changes_the_password_and_the_link_dies(env: tuple[AsyncClie
     await world.add_user()
     await world.add_session()
     await client.post("/api/v1/auth/forgot", json={"email": "anna.petrova@example.org"})
-    token = await world.outbox_token(MailKind.reset_password)
+    token = await world.mailed_token(MailKind.reset_password)
 
     done = await client.post("/api/v1/auth/reset", json={"token": token, "password": NEW_PASSWORD})
     again = await client.post("/api/v1/auth/reset", json={"token": token, "password": NEW_PASSWORD})
@@ -225,7 +229,7 @@ async def test_reset_with_a_weak_password_keeps_the_error_shape(env: tuple[Async
     client, world = env
     await world.add_user()
     await client.post("/api/v1/auth/forgot", json={"email": "anna.petrova@example.org"})
-    token = await world.outbox_token(MailKind.reset_password)
+    token = await world.mailed_token(MailKind.reset_password)
 
     response = await client.post("/api/v1/auth/reset", json={"token": token, "password": "short"})
 
@@ -242,7 +246,7 @@ async def test_verify_flow_and_neutral_resend(env: tuple[AsyncClient, _World]) -
     ghost = await client.post("/api/v1/auth/verify/resend", json={"email": "ghost@example.org"})
     assert resend.json() == ghost.json() == _fixture("ForgotResponse", FORGOT)
 
-    token = await world.outbox_token(MailKind.verify_email)
+    token = await world.mailed_token(MailKind.verify_email)
     assert (await client.post("/api/v1/auth/verify", json={"token": token})).status_code == 204
     user = await world.users.get("u1")
     assert user is not None
@@ -282,7 +286,7 @@ async def test_email_change_round_trip(env: tuple[AsyncClient, _World]) -> None:
     assert payload["status"] == "check_email"
     # Ссылка не возвращается запросившему даже без SMTP: иначе он «подтвердил» бы чужой адрес.
     assert payload["link"] is None
-    token = await world.outbox_token(MailKind.email_change)
+    token = await world.mailed_token(MailKind.email_change)
     confirm = await client.post("/api/v1/account/email/confirm", json={"token": token})
     assert confirm.status_code == 204
     user = await world.users.get("u1")

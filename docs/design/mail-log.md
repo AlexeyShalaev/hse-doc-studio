@@ -114,7 +114,7 @@
 | L4 | Сообщения людей (`note`: сообщение к приглашению, комментарий возврата, «что изменилось» автора) не храним, только длину. В карточке на их месте «[сообщение не хранится в журнале]». | Это переписка людей, а не служебные данные; админу для поддержки достаточно знать, что сообщение было. Так журнал содержит только то, что админ и так видит в админке (люди, названия проектов), и его просмотр не нужно аудировать (L10). |
 | L5 | Если с момента отправки поменялись тексты или вёрстка шаблона, карточка помечает «Письмо перерисовано по текущему шаблону». Признак: `template_digest`, первые 16 hex SHA-256 от темы, текста и HTML образца этого вида на этом языке (`sample_mail`, кэш на процесс); при отправке пишется, при показе сравнивается. Правка образцов `samples.py` тоже меняет отпечаток: лишняя пометка безопаснее пропущенной. Удалённый из `MailTemplate` вид: превью нет, только сведения. | Отпечаток образца ловит любую правку словаря, `render.py` и `compose.py` без ручного номера версии, который забудут поднять. |
 | L6 | **Развилка.** Повторной отправки в первой версии нет. Карточка подсказывает действие владельца по виду: новая ссылка сброса, повтор приглашения, «уведомление есть во «Входящих»», тестовое письмо. | У писем с токеном повтор невозможен (токена нет) и неправилен (нужна новая ссылка, старая гасится). У уведомлений повтор по старым параметрам шлёт устаревшее (маршрут уже подписан, приглашение принято), без сообщений людей (L4) письмо выйдет другим, а дубль и так лежит во «Входящих». Главный сценарий «SMTP лежал час» лучше решать отдельно (раздел 13). |
-| L7 | `mail_outbox` сливается с журналом и удаляется: `LinkDelivery` пишет строку `not_sent` или `failed`, таблица, `IMailOutboxRepository`, `MailOutboxEntry` и шаг `auth_cleanup` уходят. Строки не переносятся. | Журнал строго шире outbox (тот же вид, адрес и время плюс итог и причина), а outbox никто не читает (2.3). Перенос строк без языка, темы и итога ничего не даст: им не больше 7 дней. |
+| L7 | `mail_outbox` сливается с журналом и удаляется: `LinkDelivery` пишет строку `not_sent` или `failed`, таблица, `IMailOutboxRepository`, `MailOutboxEntry` и шаг `auth_cleanup` уходят. Строки не переносятся. Саму таблицу по правилу expand/contract удаляет следующий выпуск (раздел 9). | Журнал строго шире outbox (тот же вид, адрес и время плюс итог и причина), а outbox никто не читает (2.3). Перенос строк без языка, темы и итога ничего не даст: им не больше 7 дней. |
 | L8 | Кто вызвал: `user` (актор запроса из `current_actor`, наследуется фоновыми задачами), `anonymous` (запрос без входа: регистрация, «Забыли пароль»), `system` (фоновая задача, имя из нового `contextvar`, который ставит `BackgroundTaskRunner`). Плюс `origin`: короткий код сценария от вызывающего (`register`, `forgot_password`, `admin_reset_link`, `signing_auto_reminder` и т. д.) и `request_id`. | Контекст уже есть в процессе, передавать его через все слои не нужно. `origin` отличает «первое письмо» от «повторного запроса», `request_id` связывает строку с логами api. |
 | L9 | Объект письма: `project_id` (без внешнего ключа, строка переживает удаление проекта), `ref_kind` и `ref_id` (`signing_route`, `project_invitation`, `registration_invite`, `access_request`, `transfer`, `passkey`). | Фильтр «все письма проекта» и переход к объекту из карточки; внешний ключ стирал бы историю вместе с проектом. |
 | L10 | Только админ установки (`admin_guard`: сессия, без PAT). Чтение журнала в аудит не пишется, как и остальные чтения админки. Удаления строк руками нет, только по сроку и вместе с человеком. | После L3 и L4 в журнале нет ни секретов, ни переписки, только сведения, которые админ видит в «Пользователях» и «Хранилище». Аудит чтений был бы первым в админке и шумел бы на каждом открытии карточки. |
@@ -540,6 +540,32 @@ the log]».
 | P14 (`send_invitation`) | без SMTP `False`, сбой `False` | `skip` или `send`; ответ (`email` или `manual`) тот же |
 | P15 (`SendTestMailUC`) | свой `try/except` | `send`; без SMTP по-прежнему `422` без строки, текст ошибки из L16 (`MailFailure.describe()`: `auth 535: текст`); получатель в журнале это человек установки с этим адресом, если он есть |
 
+Уточнено в B4 (P1..P7):
+
+- `LinkDelivery(mail: MailDispatcher, *, background, public_url)`: отправителя и outbox больше не берёт. У `deliver`
+  ушёл параметр `now` (он был нужен только outbox), у `deliver` и `notify` появились обязательный `origin` и
+  необязательные `to_user_id`, `ref_kind`, `ref_id`. `MailKind` остаётся подмножеством `MailTemplate` для писем входа.
+  `_pending` и `drain` на месте: фоновая задача зовёт `dispatcher.send` и копирует контекст запроса, поэтому в
+  строке тот же вызвавший и `request_id`, что у запроса. Ошибка в коде письма в фоне теперь только в логе
+  (`link_mail_failed`), раньше письмо собиралось до задачи и роняло запрос.
+- Без SMTP `deliver` зовёт `skip(smtp_off)` и возвращает ссылку, как раньше; `notify` просто зовёт `send` (тот сам
+  пишет `not_sent`) и возвращает `outcome.sent`. Без фона (`background=False`, тесты) неушедшее письмо тоже
+  возвращает ссылку. Кому показывать ссылку, решают вызывающие, их правила не менялись.
+- `link_kind`: у `deliver` всегда `token`; у `notify` `page` для видов с постоянной страницей (`passkey_added`,
+  `passkey_reset`, путь `/settings/account`), иначе `none` (`reset_notice`).
+- `origin` и объект: `RegisterUC` `register`, `ResendVerificationUC` `resend_verification`, `ForgotPasswordUC`
+  `forgot_password`, `CreateInviteUC` `admin_invite` (параметр `origin` у `execute`, через него `ResendInviteUC`
+  передаёт `admin_invite_resend`), `RequestEmailChangeUC` `email_change`, `IssueResetLinkUC` `admin_reset_link`,
+  добавление passkey `passkey_added`, `ResetUserPasskeysUC` `admin_passkeys_reset`. `to_user_id` у всех, кроме
+  приглашения в Студию (аккаунта ещё нет); у смены адреса это тот, кто меняет, хотя письмо идёт на новый адрес, так
+  что стирание человека (L11) уберёт и его. Объект: приглашение `registration_invite` с id приглашения, добавленный
+  passkey `passkey` с id ключа; у сброса всех ключей объекта нет.
+- Таблица `mail_outbox` в этом выпуске остаётся пустой и без модели, удаляет её следующий выпуск (раздел 9).
+- Документы, которые план относил к D1, но которые без outbox стали неверны сразу, поправлены в B4:
+  `data-lifecycle.md`, `persistence-server.md`, `env-reference.md` (генерируется из описания
+  `AUTH_CLEANUP_INTERVAL_S`), `docs/ru/deploy/autonomy.md` и подпись источника `auth_records` в «Хранении данных»
+  («Сессии и токены»). Обещание очереди в `accounts.md` остаётся D1.
+
 Уточнено в B5 (P8..P14):
 
 - `SmtpNotificationMailer` берёт `MailDispatcher` вместо `IMailSender` и собирает `MailRequest`
@@ -737,10 +763,19 @@ LifecyclePolicy(
 ## 9. Миграции
 
 1. `ml_01_mail_log` (срез B2): таблица, индексы, ограничения, права. Downgrade удаляет таблицу.
-2. `ml_02_drop_mail_outbox` (срез B4): `DROP TABLE mail_outbox`. Downgrade создаёт пустую таблицу с прежней схемой
-   и индексом `ix_mail_outbox_expires_at`, чтобы откат версии приложения нашёл её. Строки не переносятся (L7).
+2. `ml_02_clear_mail_outbox` (срез B4, `down_revision = "ml_01_mail_log"`): `DELETE FROM mail_outbox`, строки не
+   переносятся (L7). Уточнено в B4: удалить таблицу в том же выпуске нельзя. Правило expand/contract
+   (`docs/ru/deploy/operations.md`, тест `test_migration_expand_contract`) запрещает `drop_table` в `upgrade()`, и не
+   зря: прежняя версия api во время обновления без SMTP пишет в outbox прямо в запросе, и регистрация или
+   приглашение у неё упали бы. Поэтому B4 выводит таблицу из употребления (модели, репозитория, порта и записи в
+   реестре больше нет, проверка дрейфа пропускает её по списку `RETIRED_TABLES` в `infra/db/migrator.py`) и стирает
+   строки: ни `auth_cleanup`, ни стирание человека их больше не трогают, а адрес это персональные данные. Downgrade
+   ничего не делает. Если B5 добавит свою миграцию, она идёт после `ml_02`.
+3. `ml_NN_drop_mail_outbox` (следующий выпуск после B4 и B5, contract): индекс `ix_mail_outbox_expires_at` и `DROP
+   TABLE mail_outbox`, строка `mail_outbox` уходит из `RETIRED_TABLES`. Downgrade создаёт пустую таблицу с прежней
+   схемой и индексом, чтобы откат версии приложения нашёл её.
 
-Обе без блокировок существующих таблиц и без перебора строк.
+Все без долгих блокировок существующих таблиц; `ml_02` удаляет не больше недели неушедших писем.
 
 ## 10. Тесты
 
@@ -798,7 +833,7 @@ E2E (срез E1): раздел 12.
 | Поиск по `ILIKE` медленный на большой установке | период по умолчанию в интерфейсе не задан, но строк не больше срока хранения; `statement_timeout` 3 с; при жалобах индекс `pg_trgm` отдельным решением |
 | `Notifier` теперь грузит человека и без SMTP | одна выборка по первичному ключу в фоновой задаче на уведомление, которое и так пишется в базу |
 | Справка обещала очередь писем, её нет | D1 исправляет `accounts.md` ru и en: неушедшее письмо видно в журнале, само не повторяется |
-| Тесты, которые читают `mail_outbox` | переписываются на журнал в B4 (`test_recovery`, `test_register`, `test_account_email`, `test_housekeeping`) |
+| Тесты, которые читают `mail_outbox` | переписаны на журнал в B4 (`test_recovery`, `test_register`, `test_account_email`, `test_housekeeping`, `test_mail_background`, `test_mail_html`, `test_passkeys`, `test_mail_api`, `test_admin_users_api`, `test_smtp_mailer`, `test_user_lifecycle_pg`, `test_auth_contract`) |
 
 ## 12. План внедрения
 
@@ -812,7 +847,7 @@ E2E (срез E1): раздел 12.
 | B1 | контракт: `core/mail/journal.py` (типы, `SAFE_VALUES`, `safe_params`, `template_digest`), модели `api/schemas/mail_log.py`, эталоны `contracts/server/fixtures/AdminMailLog*`, регистрация в тесте контракта, тест белого списка против словарей | нет | S |
 | B2 | хранение: миграция `ml_01_mail_log`, ORM, `IMailLogRepository` на Postgres и in-memory, `SessionProvider.own()`, источник `mail_log` в реестре и движке со счётом, стирание и выгрузка человека (L11) | B1 | M |
 | B3 | диспетчер: `MailDispatcher` (`send`, `skip`), `IMailSender.send -> str` во всех реализациях и фейках, `infra/identity/smtp_errors.py`, `core/mail/cause.py` и `BackgroundTaskRunner`, метрики 8.2, перевод `SendTestMailUC`; тест архитектуры с временным списком исключений (`use_cases/identity/mail.py`, `infra/notifications/mailer.py`) | B2 | M |
-| B4 | вход и аккаунт: `LinkDelivery` на диспетчере (P1..P7, `origin` во всех вызывающих), удаление `mail_outbox` (миграция `ml_02_drop_mail_outbox`, `IMailOutboxRepository`, `MailOutboxEntry`, шаг `auth_cleanup`, строка в `erase`, `tables` у `auth_records`), тесты identity на журнал; убирает своё исключение из теста архитектуры | B3 | M |
+| B4 | вход и аккаунт: `LinkDelivery` на диспетчере (P1..P7, `origin` во всех вызывающих), вывод `mail_outbox` из употребления (миграция `ml_02_clear_mail_outbox`, `IMailOutboxRepository`, `MailOutboxEntry`, шаг `auth_cleanup`, строка в `erase`, `tables` у `auth_records`, `RETIRED_TABLES`), тесты identity на журнал; убирает своё исключение из теста архитектуры. Саму таблицу удаляет следующий выпуск (раздел 9) | B3 | M |
 | B5 | проекты и маршрут: `SmtpNotificationMailer` на диспетчере (P8..P14), `Notifier` пишет `not_sent` и `suppressed`, `link_kind`, `link_path` и ссылки на объект (`project_id`, `ref_*`) у уведомлений и приглашений, `origin` у напоминаний и повторов; убирает своё исключение из теста архитектуры | B3 | M |
 | B6 | чтение: режим `links="redacted"` в `build_content` и `render.py` с ключами `layout.link_hidden` и `layout.note_hidden` в словарях писем, `rerender`, `ListMailLogUC`, `GetMailLogEntryUC`, `MailLogSummaryUC`, роутер `admin_mail_log.py` в `make_admin_router` (подсказки «Что можно сделать» целиком на фронтенде) | B2 | M |
 | B7 | MCP: `admin_list_mail_log` в группе `admin`, строка в `mcp.md` | B6 | S |
@@ -829,7 +864,7 @@ E2E (срез E1): раздел 12.
 
 | Срез | Что | Зависит от | Размер |
 |---|---|---|---|
-| D1 | справка администратора `services/user-docs`, новая статья `admin/mail.mdx` ru и en (что видно, почему ссылок нет, что делать по итогам); `docs/{ru,en}/deploy/mail.md` раздел «Журнал писем»; исправить обещание очереди в `docs/{ru,en}/deploy/accounts.md`; `env-reference.md` (`AUTH_CLEANUP_INTERVAL_S`); `data-lifecycle.md` и `persistence-server.md` без `mail_outbox`; кадры из галереи | W3, B6 | S |
+| D1 | справка администратора `services/user-docs`, новая статья `admin/mail.mdx` ru и en (что видно, почему ссылок нет, что делать по итогам); `docs/{ru,en}/deploy/mail.md` раздел «Журнал писем»; исправить обещание очереди в `docs/{ru,en}/deploy/accounts.md` (`env-reference.md`, `data-lifecycle.md` и `persistence-server.md` поправил B4); кадры из галереи | W3, B6 | S |
 | E1 | поддельный SMTP `e2e/fake_smtp/server.py` (стандартная библиотека: `EHLO`, `MAIL`, `RCPT`, `DATA`, `RSET`, `NOOP`, `QUIT`; `550` для `reject-*@`, `451` для `busy-*@`; `GET /messages`, `DELETE /messages`), оверлей `deploy/server/compose.mail.yml`, команда `stack.sh mail-up`; сценарий `e2e/tests/mail-log.spec.ts` ниже | B4, B5, B6, W3 | M |
 
 Сценарий E1:

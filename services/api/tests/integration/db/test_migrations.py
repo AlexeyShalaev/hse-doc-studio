@@ -40,6 +40,17 @@ async def test__check_drift__after_upgrade__is_empty(pg_engine: AsyncEngine) -> 
     assert await migrator.check_drift(pg_engine) == []
 
 
+async def test__retired_tables__still_exist_and_have_no_models(pg_engine: AsyncEngine) -> None:
+    """Таблица в списке на удаление ещё есть в базе (её удалит следующий выпуск), а модели у неё уже нет."""
+    from hse_doc_studio.infra.db.base import Base
+
+    await migrator.upgrade(pg_engine)
+
+    tables = await _tables(pg_engine)
+    assert migrator.RETIRED_TABLES.issubset(tables)
+    assert not migrator.RETIRED_TABLES & set(Base.metadata.tables)
+
+
 async def test__check_drift__manual_change__is_reported(pg_engine: AsyncEngine) -> None:
     await migrator.upgrade(pg_engine)
     async with pg_engine.begin() as conn:

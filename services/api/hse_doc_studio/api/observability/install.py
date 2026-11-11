@@ -144,7 +144,7 @@ def install_job_retention(app: FastAPI, container: AsyncContainer, cfg: Settings
 
 
 def install_auth_cleanup(app: FastAPI, container: AsyncContainer, cfg: Settings) -> None:
-    """Периодическая чистка просроченных сессий, токенов, писем outbox и счётчиков входов."""
+    """Периодическая чистка просроченных сессий, токенов и счётчиков входов."""
     from hse_doc_studio.use_cases.identity.housekeeping import AuthCleanupService  # noqa: PLC0415
 
     async def _cleanup() -> None:

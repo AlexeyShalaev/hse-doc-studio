@@ -13,6 +13,7 @@ from hse_doc_studio.core.identity.protocols import IAuditLog, IRegistrationInvit
 from hse_doc_studio.core.identity.registration import invite_usable
 from hse_doc_studio.core.identity.session_policy import Clock, utc_now
 from hse_doc_studio.core.listing import Found
+from hse_doc_studio.core.mail.journal import MailOrigin, MailRefKind
 from hse_doc_studio.core.uow import IUnitOfWork
 from hse_doc_studio.use_cases.identity.mail import LinkDelivery, auth_link
 
@@ -70,6 +71,7 @@ class CreateInviteUC:
         org_id: str | None = None,
         org_role: str | None = None,
         ttl: timedelta = DEFAULT_INVITE_TTL,
+        origin: MailOrigin = MailOrigin.admin_invite,
     ) -> CreatedInvite:
         creator = _require_admin(actor)
         if email is not None and not is_valid_email(email):
@@ -97,7 +99,14 @@ class CreateInviteUC:
         # пересылает сам админ.
         shown = (
             await self._delivery.deliver(
-                MailKind.invite, invite.email, link, now, ttl=ttl, params={"inviter": actor.name}
+                MailKind.invite,
+                invite.email,
+                link,
+                origin=origin,
+                ttl=ttl,
+                params={"inviter": actor.name},
+                ref_kind=MailRefKind.registration_invite,
+                ref_id=invite.id,
             )
             if invite.email
             else link

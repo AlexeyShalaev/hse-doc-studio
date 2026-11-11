@@ -7,6 +7,7 @@ from hse_doc_studio.core.access.entities import Actor
 from hse_doc_studio.core.identity.entities import MailKind, Session, UserStatus
 from hse_doc_studio.core.identity.errors import IdentityError, IdentityErrorCode
 from hse_doc_studio.core.identity.normalize import hash_token
+from hse_doc_studio.core.mail.journal import MailLinkKind, MailStatus
 from hse_doc_studio.use_cases.identity.recovery import ADMIN_RESET_TTL, RESET_TTL, VERIFY_TTL
 
 from .conftest import T0, FakeSender, World, token_from_mail
@@ -113,16 +114,17 @@ async def test_resend_sends_only_to_unverified_accounts(world: World) -> None:
     assert world.sender.sent == []
 
 
-async def test_resend_without_smtp_goes_to_outbox_not_to_the_caller(world: World) -> None:
+async def test_resend_without_smtp_is_logged_not_shown_to_the_caller(world: World) -> None:
     await _unverified(world)
 
     result = await world.resend_uc().execute("ANN@example.org")
 
     assert result is None
-    (entry,) = await world.outbox.list_active(T0)
-    assert entry.kind is MailKind.verify_email
-    assert entry.link == ""
+    (entry,) = world.mail_log.entries
+    assert (entry.template, entry.status, entry.reason) == (MailKind.verify_email, MailStatus.not_sent, "smtp_off")
+    assert (entry.origin, entry.to_user_id, entry.params.link) == ("resend_verification", "u1", MailLinkKind.token)
     assert world.links[-1].startswith("https://studio.test/verify/")
+    assert world.links[-1].rpartition("/")[2] not in repr(entry)
 
 
 # --- забыл пароль и сброс ---
@@ -198,24 +200,30 @@ async def test_forgot_is_indistinguishable_for_known_unknown_and_disabled(world:
     ]
 
     assert results == [None, None, None]
-    # Без SMTP письмо остаётся в outbox для администратора: на экран ссылка не попадает ни для кого.
-    assert [e.to_email for e in await world.outbox.list_active(T0)] == ["ann@example.org"]
+    # Без SMTP письмо видно администратору в журнале писем (без ссылки): на экран она не попадает ни для кого.
+    assert [(e.to_email, e.status) for e in world.mail_log.entries] == [("ann@example.org", MailStatus.not_sent)]
 
 
-async def test_forgot_smtp_failure_falls_back_to_outbox(world: World) -> None:
+async def test_forgot_smtp_failure_is_logged(world: World) -> None:
     world.sender = FakeSender(enabled=True, fail=True)
     await world.add_user()
 
     assert await world.forgot_uc().execute("ann@example.org") is None
 
-    (entry,) = await world.outbox.list_active(T0)
-    assert entry.kind is MailKind.reset_password
+    (entry,) = world.mail_log.entries
+    assert (entry.template, entry.status, entry.origin) == (
+        MailKind.reset_password,
+        MailStatus.failed,
+        "forgot_password",
+    )
+    assert entry.error_text == "OSError: smtp down"
+    assert world.links[-1].rpartition("/")[2] not in repr(entry)
 
 
 async def test_reset_token_expires(world: World) -> None:
     await world.add_user()
     await world.forgot_uc().execute("ann@example.org")
-    (entry,) = await world.outbox.list_active(T0)
+    (entry,) = world.mail_log.entries
     token = world.links[-1].rpartition("/")[2]
 
     world.clock.advance(seconds=RESET_TTL.total_seconds() + 1)
@@ -226,7 +234,7 @@ async def test_reset_token_expires(world: World) -> None:
 async def test_reset_rejects_a_weak_password_before_spending_the_token(world: World) -> None:
     await world.add_user()
     await world.forgot_uc().execute("ann@example.org")
-    (entry,) = await world.outbox.list_active(T0)
+    (entry,) = world.mail_log.entries
     token = world.links[-1].rpartition("/")[2]
 
     await _expect(world.reset_uc().execute(token, "short"), IdentityErrorCode.password_policy)
@@ -238,7 +246,7 @@ async def test_reset_rejects_a_weak_password_before_spending_the_token(world: Wo
 async def test_reset_password_equal_to_the_email_is_refused(world: World) -> None:
     await world.add_user("long.address@example.org")
     await world.forgot_uc().execute("long.address@example.org")
-    (entry,) = await world.outbox.list_active(T0)
+    (entry,) = world.mail_log.entries
 
     await _expect(
         world.reset_uc().execute(world.links[-1].rpartition("/")[2], "long.address@example.org"),
@@ -251,7 +259,7 @@ async def test_reset_refuses_when_the_account_was_disabled_meanwhile(world: Worl
 
     user = await world.add_user()
     await world.forgot_uc().execute("ann@example.org")
-    (entry,) = await world.outbox.list_active(T0)
+    (entry,) = world.mail_log.entries
     await world.users.update(replace(user, status=UserStatus.disabled))
 
     await _expect(
@@ -276,6 +284,11 @@ async def test_admin_reset_link_is_audited_and_resets_the_password(world: World)
     (event,) = [e for e in await world.audit.list() if e.action == "admin.reset_link_issued"]
     assert (event.actor_id, event.target) == ("admin", user.id)
     assert event.details == {"break_glass": True}
+    (entry,) = world.mail_log.entries
+    assert (entry.template, entry.status, entry.origin) == (MailKind.reset_notice, MailStatus.sent, "admin_reset_link")
+    assert (entry.to_user_id, entry.params.link) == (user.id, MailLinkKind.none)
+    # Ссылку админ видит на экране, в письмо человеку и в журнал она не попадает.
+    assert result.link.rpartition("/")[2] not in repr(entry)
 
     await world.reset_uc().execute(result.link.rpartition("/")[2], NEW_PASSWORD)
 
@@ -287,6 +300,8 @@ async def test_admin_reset_link_without_smtp_is_not_mailed(world: World) -> None
 
     assert not result.user_notified
     assert result.link
+    (entry,) = world.mail_log.entries
+    assert (entry.template, entry.status, entry.reason) == (MailKind.reset_notice, MailStatus.not_sent, "smtp_off")
 
 
 async def test_admin_reset_link_needs_admin_and_confirmation(world: World) -> None:

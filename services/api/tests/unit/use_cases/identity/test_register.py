@@ -16,8 +16,9 @@ from hse_doc_studio.core.identity.entities import InviteQuery, RegistrationMode,
 from hse_doc_studio.core.identity.errors import IdentityError, IdentityErrorCode
 from hse_doc_studio.core.identity.normalize import hash_token
 from hse_doc_studio.core.identity.registration import RegistrationOutcome
+from hse_doc_studio.core.mail.journal import MailStatus
 
-from .conftest import FakeSender, World
+from .conftest import FakeSender, World, token_from_mail
 
 PASSWORD = "correct horse battery"
 ADMIN = Actor.user("admin", is_instance_admin=True)
@@ -57,15 +58,24 @@ async def test_open_with_smtp_sends_mail_and_waits_for_verification(world: World
     [(to, _subject, body)] = world.sender.sent
     assert to == "new@example.org"
     assert "https://studio.test/verify/" in body
-    assert await world.outbox.list_active(world.clock.now) == []
+    (entry,) = world.mail_log.entries
+    assert (entry.template, entry.status, entry.origin, entry.cause) == (
+        "verify_email",
+        MailStatus.sent,
+        "register",
+        "anonymous",
+    )
+    assert entry.to_user_id == user.id
+    assert token_from_mail(body) not in repr(entry)
 
 
-async def test_smtp_failure_falls_back_to_outbox_link(world: World) -> None:
+async def test_smtp_failure_falls_back_to_the_link_on_screen(world: World) -> None:
     await _set(world, "open")
     world.sender = FakeSender(enabled=True, fail=True)
     result = await _register(world)
     assert result.link is not None
-    assert len(await world.outbox.list_active(world.clock.now)) == 1
+    (entry,) = world.mail_log.entries
+    assert (entry.status, entry.reason) == (MailStatus.failed, "other")
 
 
 async def test_approval_flag_gives_pending_approval(world: World) -> None:
@@ -183,7 +193,7 @@ async def test_parallel_registration_of_one_email_creates_one_account(world: Wor
     assert await world.users.count() == 1
     assert {r.outcome for r in results} == {RegistrationOutcome.check_email}
     assert len([r for r in results if r.link]) == 1
-    assert len(await world.outbox.list_active(world.clock.now)) == 1
+    assert [e.status for e in world.mail_log.entries] == [MailStatus.failed]
 
 
 async def test_env_wins_over_database(world: World) -> None:
@@ -224,10 +234,18 @@ async def test_invite_lifecycle_create_list_revoke(world: World) -> None:
     plain = await world.create_invite_uc().execute(ADMIN)
     assert plain.link is not None
     assert plain.link.startswith("https://studio.test/invite/")
-    assert await world.outbox.list_active(world.clock.now) == []
+    assert world.mail_log.entries == []
     mailed = await world.create_invite_uc().execute(ADMIN, email="Bob@Example.org", ttl=timedelta(days=1))
     assert mailed.link is not None  # без SMTP ссылку пересылает админ
-    assert [e.to_email for e in await world.outbox.list_active(world.clock.now)] == ["bob@example.org"]
+    (entry,) = world.mail_log.entries
+    assert (entry.to_email, entry.template, entry.status, entry.origin) == (
+        "bob@example.org",
+        "invite",
+        MailStatus.not_sent,
+        "admin_invite",
+    )
+    assert (entry.ref_kind, entry.ref_id) == ("registration_invite", mailed.invite.id)
+    assert mailed.token not in repr(entry)
     assert {i.id for i in (await world.list_invites_uc().execute(ADMIN, InviteQuery(now=world.clock.now))).items} == {
         plain.invite.id,
         mailed.invite.id,

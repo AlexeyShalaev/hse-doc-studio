@@ -3,9 +3,10 @@ from __future__ import annotations
 import pytest
 from hse_doc_studio.core.identity.entities import MailKind
 from hse_doc_studio.core.identity.errors import IdentityError, IdentityErrorCode
+from hse_doc_studio.core.mail.journal import MailStatus
 from hse_doc_studio.use_cases.identity.account_email import CHANGE_TTL
 
-from .conftest import T0, FakeSender, World, token_from_mail
+from .conftest import FakeSender, World, token_from_mail
 
 PASSWORD = "correct horse battery"
 
@@ -41,15 +42,21 @@ async def test_link_goes_to_the_new_address_and_confirms_the_change(world: World
     assert {"auth.email_change_requested", "auth.email_changed"} <= {e.action for e in await world.audit.list()}
 
 
-async def test_without_smtp_the_link_is_returned_and_kept_in_outbox(world: World) -> None:
+async def test_without_smtp_the_link_is_returned_and_logged_without_it(world: World) -> None:
     await world.add_user()
 
     result = await _request(world)
 
     assert result.link is not None
     assert result.link.startswith("https://studio.test/confirm-email/")
-    (entry,) = await world.outbox.list_active(T0)
-    assert (entry.kind, entry.to_email) == (MailKind.email_change, "Anna@New.example.org")
+    (entry,) = world.mail_log.entries
+    assert (entry.template, entry.to_email, entry.status) == (
+        MailKind.email_change,
+        "Anna@New.example.org",
+        MailStatus.not_sent,
+    )
+    assert (entry.origin, entry.to_user_id) == ("email_change", "u1")
+    assert result.link.rpartition("/")[2] not in repr(entry)
 
 
 async def test_wrong_password_is_refused_and_nothing_is_issued(world: World) -> None:
@@ -59,7 +66,7 @@ async def test_wrong_password_is_refused_and_nothing_is_issued(world: World) -> 
         await world.request_email_change_uc().execute("u1", "wrong password!!", "new@example.org")
 
     assert caught.value.code is IdentityErrorCode.invalid_credentials
-    assert await world.outbox.list_active(T0) == []
+    assert world.mail_log.entries == []
 
 
 async def test_taken_address_answers_like_a_free_one_but_sends_nothing(world: World) -> None:
@@ -79,7 +86,7 @@ async def test_same_address_is_a_quiet_noop(world: World) -> None:
     result = await _request(world, "ANN@example.org")
 
     assert result.link is None
-    assert await world.outbox.list_active(T0) == []
+    assert world.mail_log.entries == []
 
 
 async def test_token_is_single_use_and_expires(world: World) -> None:
@@ -119,7 +126,6 @@ async def test_address_taken_between_request_and_confirmation(world: World) -> N
 async def test_a_verification_token_cannot_confirm_an_email_change(world: World) -> None:
     await world.add_user()
     await world.forgot_uc().execute("ann@example.org")
-    (entry,) = await world.outbox.list_active(T0)
 
     with pytest.raises(IdentityError):
         await world.confirm_email_change_uc().execute(world.links[-1].rpartition("/")[2])

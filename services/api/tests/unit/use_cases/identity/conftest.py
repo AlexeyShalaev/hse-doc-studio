@@ -30,12 +30,12 @@ from hse_doc_studio.use_cases.identity.recovery import (
 )
 from hse_doc_studio.use_cases.identity.register import RegisterUC
 from hse_doc_studio.use_cases.identity.sessions import SessionService
+from hse_doc_studio.use_cases.mail.dispatch import MailCounters, MailDispatcher
 
 from tests.fakes.auth import (
     InMemoryAuditLog,
     InMemoryAuthTokenRepository,
     InMemoryLoginAttemptRepository,
-    InMemoryMailOutboxRepository,
     InMemoryRegistrationInviteRepository,
     InMemorySessionRepository,
 )
@@ -45,6 +45,7 @@ from tests.fakes.identity import (
     InMemoryInstanceSettingsRepository,
     InMemoryUserRepository,
 )
+from tests.fakes.mail_log import InMemoryMailLogRepository
 
 T0 = datetime(2026, 10, 28, 12, 0, tzinfo=UTC)
 
@@ -116,15 +117,15 @@ class Clock:
 
 
 class RecordingDelivery(LinkDelivery):
-    """Запоминает ссылки: в outbox их больше нет, а тестам нужны токены."""
+    """Запоминает ссылки: в журнале писем их нет, а тестам нужны токены."""
 
     def __init__(self, *args: Any, links: list[str], **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
         self._links = links
 
-    async def deliver(self, kind: MailKind, to_email: str, link: str, now: datetime, **kwargs: Any) -> str | None:
+    async def deliver(self, kind: MailKind, to_email: str, link: str, **kwargs: Any) -> str | None:
         self._links.append(link)
-        return await super().deliver(kind, to_email, link, now, **kwargs)
+        return await super().deliver(kind, to_email, link, **kwargs)
 
 
 @dataclass
@@ -141,7 +142,7 @@ class World:
     policy: SessionPolicy
     auth_tokens: InMemoryAuthTokenRepository
     invites: InMemoryRegistrationInviteRepository
-    outbox: InMemoryMailOutboxRepository
+    mail_log: InMemoryMailLogRepository
     settings: InMemoryInstanceSettingsRepository
     sender: FakeSender
     env: AuthEnvOverrides
@@ -159,8 +160,12 @@ class World:
     def settings_service(self) -> AuthSettingsService:
         return AuthSettingsService(self.settings, self.env)
 
+    def dispatcher(self, sender: FakeSender | None = None) -> MailDispatcher:
+        """Диспетчер писем на журнале этого мира; свои счётчики, чтобы не трогать метрики процесса."""
+        return MailDispatcher(sender or self.sender, self.mail_log, counters=MailCounters(), clock=self.clock)
+
     def delivery(self) -> LinkDelivery:
-        return RecordingDelivery(self.sender, self.outbox, links=self.links, public_url="https://studio.test")
+        return RecordingDelivery(self.dispatcher(), links=self.links, public_url="https://studio.test")
 
     def register_uc(self) -> RegisterUC:
         return RegisterUC(
@@ -254,7 +259,7 @@ def world() -> World:
         policy=SessionPolicy(),
         auth_tokens=InMemoryAuthTokenRepository(),
         invites=InMemoryRegistrationInviteRepository(),
-        outbox=InMemoryMailOutboxRepository(),
+        mail_log=InMemoryMailLogRepository(),
         settings=InMemoryInstanceSettingsRepository(),
         sender=FakeSender(),
         env=AuthEnvOverrides(),
