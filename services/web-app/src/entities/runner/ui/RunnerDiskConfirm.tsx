@@ -92,7 +92,13 @@ const Group = ({
           key={`${item.kind ?? "image"}-${item.ref}`}
           refName={item.ref}
           bytes={item.bytes}
-          note={item.kind ? t(`old.kind.${item.kind}`) : undefined}
+          note={
+            item.kind
+              ? item.rollback
+                ? `${t(`old.kind.${item.kind}`)}, ${t("confirm.rollbackItem")}`
+                : t(`old.kind.${item.kind}`)
+              : undefined
+          }
         />
       ))}
       {(!showHeader || group.target === "runner_cache") &&

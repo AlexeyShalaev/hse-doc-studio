@@ -425,7 +425,11 @@ const ReportBody = ({
             className="dim"
             style={{ fontSize: "0.71875rem", flex: "1 1 14rem" }}
           >
-            {totals.cleanable > 0 ? t("cleanAllHint") : t("nothingToClean")}
+            {totals.cleanable === 0
+              ? t("nothingToClean")
+              : docker
+                ? t("cleanAllHint")
+                : t("cleanAllHintCache")}
           </span>
           <Button
             type="button"

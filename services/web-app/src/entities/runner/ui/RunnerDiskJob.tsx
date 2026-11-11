@@ -22,10 +22,21 @@ import { diskSize, diskWhen } from "./format";
 // Ход и итог очистки (4.1): «Ждём раннер», шаги с отметками, «Остановить после текущего шага»,
 // итог «Освобождено N» или причина, почему не вышло.
 
-const StepIcon = ({ status }: { status: DiskStep["status"] }) => {
+const StepIcon = ({
+  status,
+  active,
+}: {
+  status: DiskStep["status"];
+  active: boolean;
+}) => {
   switch (status) {
     case "running":
-      return <Spinner size="sm" />;
+      // Команда закрылась, а шаг так и остался «идёт»: раннер пропал посреди шага.
+      return active ? (
+        <Spinner size="sm" />
+      ) : (
+        <TriangleAlert size="0.8125rem" style={{ color: "var(--c-warn)" }} />
+      );
     case "done":
       return <CheckCircle2 size="0.8125rem" style={{ color: "var(--c-ok)" }} />;
     case "error":
@@ -77,7 +88,7 @@ const FINISHED: ReadonlySet<DiskStep["status"]> = new Set([
   "skipped",
 ]);
 
-const StepRow = ({ step }: { step: DiskStep }) => {
+const StepRow = ({ step, active }: { step: DiskStep; active: boolean }) => {
   const { t } = useTranslation("runnerDisk");
   const named = step.kind === "image" || step.kind === "container";
   const label = named ? (step.ref ?? "") : t(`job.step.${step.kind}`);
@@ -89,7 +100,7 @@ const StepRow = ({ step }: { step: DiskStep }) => {
     >
       <span className="flex items-center" style={{ gap: "0.5rem" }}>
         <span style={{ flexShrink: 0, display: "flex" }}>
-          <StepIcon status={step.status} />
+          <StepIcon status={step.status} active={active} />
         </span>
         <span
           className={named ? "mono" : undefined}
@@ -231,6 +242,7 @@ export const RunnerDiskJob = ({
             <StepRow
               key={`${step.kind}-${step.ref ?? String(index)}`}
               step={step}
+              active={active}
             />
           ))}
         </ol>
