@@ -226,11 +226,8 @@ export type MailLogDetail = z.infer<typeof MailLogDetailSchema>;
 export type MailLogSummary = z.infer<typeof MailLogSummarySchema>;
 
 /**
- * Каталоги эталонов журнала писем -> схема (6.2). Пока W1 не слит с B1, эталоны сервера лежат в
- * contracts/server/pending/AdminMailLog* (README контракта): их видит только backend-тест, а
- * фронтовый тест фичи (schemas.test.ts) разбирает их этими схемами там, где они есть. Когда каталоги
- * переезжают в contracts/server/fixtures, эти пары добавляются в CONTRACT_SCHEMAS. Локальные
- * эталоны для тестов и галерей: testing/fixtures, MAIL_LOG_CONTRACT_EXAMPLES.
+ * Каталоги contracts/server/fixtures журнала писем -> схема (6.2); те же пары разложены в
+ * CONTRACT_SCHEMAS. Копия эталонов для галерей и тестов: testing/serverFixtures.
  */
 export const MAIL_LOG_CONTRACT_SCHEMAS: Record<string, ZodType> = {
   AdminMailLogEntry: MailLogEntrySchema,

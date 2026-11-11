@@ -19,6 +19,7 @@ import {
   ReviewThreadSchema,
 } from "@entities/review/model/review.schema";
 import * as upd from "@features/admin-updates/api/schemas";
+import { MAIL_LOG_CONTRACT_SCHEMAS } from "@features/admin-mail-log/api/schemas";
 import * as ops from "./opsSchemas";
 import * as pk from "./passkeySchemas";
 import * as s from "./schemas";
@@ -187,6 +188,8 @@ export const CONTRACT_SCHEMAS: Record<string, ZodType> = {
   AdminSmtpTestRequest: s.AdminSmtpTestRequestSchema,
   AdminSmtpTestResult: s.AdminSmtpTestResultSchema,
   AdminMailPreview: s.AdminMailPreviewSchema,
+  // Журнал писем (mail-log.md, 6.2): AdminMailLogEntry, Page, Detail, Summary.
+  ...MAIL_LOG_CONTRACT_SCHEMAS,
   AdminOidcProvider: s.AdminOidcProviderSchema,
   AdminOidcProviderList: s.AdminOidcProviderPageSchema,
   CreateAdminOidcProviderRequest: s.CreateAdminOidcProviderRequestSchema,

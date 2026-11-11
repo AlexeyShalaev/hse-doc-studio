@@ -15,12 +15,17 @@ import {
 } from "./schemas";
 import {
   MAIL_JOURNALS,
-  MAIL_LOG_CONTRACT_EXAMPLES,
   MAIL_LOG_DETAILS,
   MAIL_LOG_PAGES,
+  MAIL_LOG_RECORDS,
+  MAIL_LOG_SERVER_DETAILS,
+  MAIL_LOG_SERVER_ENTRIES,
+  MAIL_LOG_SERVER_PAGES,
+  MAIL_LOG_SERVER_SUMMARIES,
   MAIL_LOG_SUMMARIES,
   makeMailLogDetail,
-} from "../testing/fixtures";
+  makeMailLogSummary,
+} from "../testing";
 import {
   mailHintOf,
   mailFailureOf,
@@ -43,40 +48,65 @@ const LOCALES = join(
   "locales",
 );
 
-const examples = Object.entries(MAIL_LOG_CONTRACT_EXAMPLES).flatMap(
-  ([schema, variants]) =>
-    Object.entries(variants).map(
-      ([name, body]) => [`${schema}/${name}`, schema, body] as const,
-    ),
+// Эталоны сервера (срез B1) лежат в contracts/server/fixtures/AdminMailLog* и разбираются общим тестом
+// контракта (CONTRACT_SCHEMAS). Здесь сверяется, что их копия для галерей не ушла от файлов.
+const FIXTURES = join(REPO, "contracts", "server", "fixtures");
+const SERVER_COPIES: Record<string, Record<string, unknown>> = {
+  AdminMailLogEntry: MAIL_LOG_SERVER_ENTRIES,
+  AdminMailLogPage: MAIL_LOG_SERVER_PAGES,
+  AdminMailLogDetail: MAIL_LOG_SERVER_DETAILS,
+  AdminMailLogSummary: MAIL_LOG_SERVER_SUMMARIES,
+};
+const serverFiles = Object.keys(MAIL_LOG_CONTRACT_SCHEMAS).flatMap((schema) =>
+  readdirSync(join(FIXTURES, schema))
+    .filter((file) => file.endsWith(".json"))
+    .sort()
+    .map((file) => {
+      const name = file.replace(/\.json$/, "");
+      const body = JSON.parse(
+        readFileSync(join(FIXTURES, schema, file), "utf8"),
+      ) as unknown;
+      return [`${schema}/${name}`, schema, name, body] as const;
+    }),
 );
 
-describe("журнал писем: эталоны контракта", () => {
-  it("у каждой схемы есть эталон, у каждого эталона схема", () => {
-    expect(Object.keys(MAIL_LOG_CONTRACT_EXAMPLES).sort()).toEqual(
+describe("журнал писем: эталоны сервера", () => {
+  it("каталоги эталонов перенесены из pending и есть у каждой схемы", () => {
+    for (const schema of Object.keys(MAIL_LOG_CONTRACT_SCHEMAS)) {
+      expect(
+        existsSync(join(REPO, "contracts", "server", "pending", schema)),
+      ).toBe(false);
+      expect(existsSync(join(FIXTURES, schema))).toBe(true);
+    }
+    expect(Object.keys(SERVER_COPIES).sort()).toEqual(
       Object.keys(MAIL_LOG_CONTRACT_SCHEMAS).sort(),
     );
   });
 
-  it.each(examples)("%s разбирается zod без потерь", (_l, schema, body) => {
-    const parsed = MAIL_LOG_CONTRACT_SCHEMAS[schema]?.safeParse(body);
-    expect(parsed?.success).toBe(true);
-    expect(parsed?.data).toEqual(body);
+  it("у копии те же варианты, что у файлов", () => {
+    for (const [schema, copy] of Object.entries(SERVER_COPIES)) {
+      const names = serverFiles
+        .filter(([, s]) => s === schema)
+        .map(([, , name]) => name);
+      expect(Object.keys(copy).sort()).toEqual(names);
+    }
   });
 
-  it.each(examples)("%s: лишнее поле отвергается", (_l, schema, body) => {
-    const extra = { ...(body as Record<string, unknown>), surprise: 1 };
-    expect(MAIL_LOG_CONTRACT_SCHEMAS[schema]?.safeParse(extra).success).toBe(
-      false,
-    );
-  });
+  it.each(serverFiles)(
+    "%s: копия для галереи совпадает с файлом",
+    (_l, schema, name, body) => {
+      expect(SERVER_COPIES[schema]?.[name]).toEqual(body);
+    },
+  );
 
   it("поле нельзя опустить: пустое значение приходит null", () => {
-    const { project: _project, ...rest } = MAIL_LOG_DETAILS.token_link.entry;
+    const { project: _project, ...rest } =
+      MAIL_LOG_SERVER_ENTRIES.sent_token_anonymous;
     expect(MailLogEntrySchema.safeParse(rest).success).toBe(false);
   });
 
   it("неизвестный итог и вызвавший отвергаются, неизвестный вид письма нет", () => {
-    const entry = MAIL_LOG_DETAILS.token_link.entry;
+    const entry = MAIL_LOG_SERVER_ENTRIES.sent_token_anonymous;
     expect(
       MailLogEntrySchema.safeParse({ ...entry, status: "sending" }).success,
     ).toBe(false);
@@ -90,49 +120,13 @@ describe("журнал писем: эталоны контракта", () => {
         template_known: false,
       }).success,
     ).toBe(true);
+    expect(
+      MailLogSummarySchema.safeParse({
+        ...MAIL_LOG_SERVER_SUMMARIES.normal,
+        window_hours: 12,
+      }).success,
+    ).toBe(false);
   });
-});
-
-// Эталоны сервера (срез B1): до переезда в contracts/server/fixtures лежат в contracts/server/pending
-// (README контракта). Общий тест контракта видит только fixtures, поэтому здесь они разбираются схемами
-// фичи из обоих мест, как только появятся.
-const CONTRACT = join(REPO, "contracts", "server");
-const serverFixtures = ["pending", "fixtures"].flatMap((root) =>
-  Object.keys(MAIL_LOG_CONTRACT_SCHEMAS).flatMap((schema) => {
-    const dir = join(CONTRACT, root, schema);
-    if (!existsSync(dir)) return [];
-    return readdirSync(dir)
-      .filter((file) => file.endsWith(".json"))
-      .sort()
-      .map(
-        (file) =>
-          [
-            `${root}/${schema}/${file.replace(/\.json$/, "")}`,
-            schema,
-            JSON.parse(readFileSync(join(dir, file), "utf8")) as unknown,
-          ] as const,
-      );
-  }),
-);
-
-describe("журнал писем: эталоны сервера", () => {
-  it("каталог журнала лежит либо в pending, либо в fixtures", () => {
-    for (const schema of Object.keys(MAIL_LOG_CONTRACT_SCHEMAS)) {
-      const places = ["pending", "fixtures"].filter((root) =>
-        existsSync(join(CONTRACT, root, schema)),
-      );
-      expect(places.length).toBeLessThan(2);
-    }
-  });
-
-  it.runIf(serverFixtures.length > 0).each(serverFixtures)(
-    "%s разбирается zod без потерь",
-    (_l, schema, body) => {
-      const parsed = MAIL_LOG_CONTRACT_SCHEMAS[schema]?.safeParse(body);
-      expect(parsed?.error).toBeUndefined();
-      expect(parsed?.data).toEqual(body);
-    },
-  );
 });
 
 describe("журнал писем: состояния галереи", () => {
@@ -189,27 +183,33 @@ describe("журнал писем: состояния галереи", () => {
     }
   });
 
-  it("сводка считает итоги только за сутки", () => {
-    const day = MAIL_LOG_SUMMARIES.day;
+  it("сводка демо-мира считает итоги только за сутки", () => {
+    const day = makeMailLogSummary(MAIL_JOURNALS.default, {
+      smtpConfigured: true,
+    });
     expect(day.window_hours).toBe(24);
     expect(day.sent + day.failed + day.not_sent + day.suppressed).toBe(13);
     expect(day.failed).toBe(2);
     expect(day.not_sent).toBe(0);
     expect(day.last_failure?.reason).toBe("recipient_refused");
-    expect(MAIL_LOG_SUMMARIES.smtp_off).toMatchObject({
-      smtp_configured: false,
-      sent: 0,
-      failed: 0,
+    const off = makeMailLogSummary(MAIL_JOURNALS.smtp_off, {
+      smtpConfigured: false,
     });
-    expect(MAIL_LOG_SUMMARIES.smtp_off.not_sent).toBeGreaterThan(0);
-    expect(MAIL_LOG_SUMMARIES.auth_failure.last_failure?.reason).toBe("auth");
-    expect(MAIL_LOG_SUMMARIES.quiet.last_failure).toBeNull();
+    expect(off).toMatchObject({ smtp_configured: false, sent: 0, failed: 0 });
+    expect(off.not_sent).toBeGreaterThan(0);
+    expect(
+      makeMailLogSummary(MAIL_JOURNALS.auth_failure, { smtpConfigured: true })
+        .last_failure?.reason,
+    ).toBe("auth");
+    expect(
+      makeMailLogSummary([], { smtpConfigured: true }).last_failure,
+    ).toBeNull();
   });
 });
 
 describe("журнал писем: превью без ссылок и сообщений", () => {
   it("ссылка с токеном скрыта: кнопка без href, в тексте «[ссылка скрыта]»", () => {
-    const detail = MAIL_LOG_DETAILS.token_link;
+    const detail = makeMailLogDetail(MAIL_LOG_RECORDS.token_link);
     expect(detail.link_hidden).toBe(true);
     expect(detail.preview?.html).not.toMatch(/href=/);
     expect(detail.preview?.html).toContain("[ссылка скрыта]");
@@ -217,7 +217,7 @@ describe("журнал писем: превью без ссылок и сооб�
   });
 
   it("у письма без токена путь страницы текстом", () => {
-    const detail = MAIL_LOG_DETAILS.signing_page;
+    const detail = makeMailLogDetail(MAIL_LOG_RECORDS.signing_page);
     expect(detail.link_hidden).toBe(false);
     expect(detail.preview?.text).toContain(
       "https://studio.example.org/sign/p_01hxa1c4de/sr_01hy2b7k9q",
@@ -226,7 +226,7 @@ describe("журнал писем: превью без ссылок и сооб�
   });
 
   it("сообщение человека заменено пометкой", () => {
-    const detail = MAIL_LOG_DETAILS.invitation_note;
+    const detail = makeMailLogDetail(MAIL_LOG_RECORDS.invitation_note);
     expect(detail.note_hidden).toBe(true);
     expect(detail.preview?.text).toContain("[сообщение не хранится в журнале]");
   });
@@ -242,13 +242,13 @@ describe("журнал писем: превью без ссылок и сооб�
   });
 
   it("перерисовка по новому шаблону: тема превью своя, тема строки как ушла", () => {
-    const detail = MAIL_LOG_DETAILS.rerendered;
+    const detail = makeMailLogDetail(MAIL_LOG_RECORDS.rerendered);
     expect(detail.rerendered).toBe(true);
     expect(detail.preview?.subject).not.toBe(detail.entry.subject);
   });
 
   it("вида письма нет: превью нет", () => {
-    const detail = MAIL_LOG_DETAILS.template_gone;
+    const detail = makeMailLogDetail(MAIL_LOG_RECORDS.template_gone);
     expect(detail.entry.template_known).toBe(false);
     expect(detail.preview).toBeNull();
     expect(detail.rerendered).toBe(false);
@@ -311,9 +311,9 @@ describe("журнал писем: виды писем совпадают с с�
 describe("журнал писем: правила экрана", () => {
   it("подсказка под полосой по последнему сбою", () => {
     expect(mailHintOf(MAIL_LOG_SUMMARIES.auth_failure)).toBe("auth");
-    expect(mailHintOf(MAIL_LOG_SUMMARIES.day)).toBeNull();
+    expect(mailHintOf(MAIL_LOG_SUMMARIES.normal)).toBeNull();
     const at = "2026-11-11T09:00:00Z";
-    const base = MAIL_LOG_SUMMARIES.day;
+    const base = MAIL_LOG_SUMMARIES.normal;
     expect(
       mailHintOf({ ...base, last_failure: { at, reason: "timeout" } }),
     ).toBe("connect");

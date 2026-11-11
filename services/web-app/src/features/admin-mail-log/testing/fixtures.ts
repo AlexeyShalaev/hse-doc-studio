@@ -13,6 +13,11 @@ import {
   type MailStatus,
   type MailTemplate,
 } from "../api/schemas";
+import {
+  MAIL_LOG_SERVER_DETAILS,
+  MAIL_LOG_SERVER_PAGES,
+  MAIL_LOG_SERVER_SUMMARIES,
+} from "./serverFixtures";
 
 // Журнал писем для галерей, демо-мира и тестов экранов (docs/design/mail-log.md, 4.4 и 6.2).
 // Журнал описан черновиками «сколько секунд назад»: галереи строят его от постоянного MAIL_NOW,
@@ -1315,39 +1320,32 @@ const findRecord = (
   return found;
 };
 
-/** Первая страница журнала по 10 строк: «Показать ещё» и подгрузка следующей. */
-const SHORT_PAGE = 10;
-
-/** Страницы списка: день, пусто, ничего не нашлось, подгрузка, без SMTP, сбой входа, длинные. */
+/**
+ * Страницы списка. Эталоны сервера (contracts/server/fixtures/AdminMailLogPage): `day` (есть
+ * `next_cursor`, подгрузка следующей), `next_page`, `filtered_failed` (с фильтром, без оценки числа),
+ * `empty` (писем не было). Свои: `mixed` (все виды и итоги демо-мира), `nothing_found`, `smtp_off`,
+ * `auth_failure`, `long` (длинные адреса и темы).
+ */
 export const MAIL_LOG_PAGES = {
-  day: makeMailLogPage(DEFAULT_JOURNAL),
-  empty: makeMailLogPage([], { totalEstimate: 0 }),
+  ...MAIL_LOG_SERVER_PAGES,
+  mixed: makeMailLogPage(DEFAULT_JOURNAL),
   nothing_found: makeMailLogPage([], { totalEstimate: null }),
-  more: makeMailLogPage(DEFAULT_JOURNAL.slice(0, SHORT_PAGE), {
-    nextCursor: "azoxOQ",
-    totalEstimate: DEFAULT_JOURNAL.length,
-  }),
   smtp_off: makeMailLogPage(MAIL_JOURNALS.smtp_off),
   auth_failure: makeMailLogPage(MAIL_JOURNALS.auth_failure),
   long: makeMailLogPage([...LONG_JOURNAL, ...DEFAULT_JOURNAL.slice(0, 3)]),
 } satisfies Record<string, MailLogPage>;
 export type MailLogPageState = keyof typeof MAIL_LOG_PAGES;
 
-/** Полоса за сутки и плашка: обычный день, тишина, без SMTP, сбой входа, пустой журнал. */
+/**
+ * Полоса за сутки и плашка: эталоны сервера (AdminMailLogSummary) `normal`, `auth_failure`,
+ * `smtp_off`, `quiet`.
+ */
 export const MAIL_LOG_SUMMARIES = {
-  day: makeMailLogSummary(DEFAULT_JOURNAL, { smtpConfigured: true }),
-  quiet: makeMailLogSummary([], { smtpConfigured: true }),
-  smtp_off: makeMailLogSummary(MAIL_JOURNALS.smtp_off, {
-    smtpConfigured: false,
-  }),
-  auth_failure: makeMailLogSummary(MAIL_JOURNALS.auth_failure, {
-    smtpConfigured: true,
-  }),
-  empty: makeMailLogSummary([], { smtpConfigured: true }),
+  ...MAIL_LOG_SERVER_SUMMARIES,
 } satisfies Record<string, MailLogSummary>;
 export type MailLogSummaryState = keyof typeof MAIL_LOG_SUMMARIES;
 
-/** Строки журнала, на которых стоят карточки галереи. */
+/** Строки демо-журнала с особыми случаями: на них проверяется превью и стоят свои карточки галереи. */
 export const MAIL_LOG_RECORDS = {
   /** Сброс пароля ушёл: ссылка с токеном скрыта, вызвал запрос без входа. */
   token_link: findRecord(
@@ -1408,53 +1406,25 @@ export const MAIL_LOG_RECORDS = {
   /** Длинные адрес, тема, имя и проект. */
   long: findRecord(LONG_JOURNAL, (e) => e.status === "failed"),
 } satisfies Record<string, MailLogRecord>;
-export type MailLogDetailState = keyof typeof MAIL_LOG_RECORDS;
+export type MailLogRecordState = keyof typeof MAIL_LOG_RECORDS;
 
-/** Карточки галереи (4.2, 4.4). Запись, удалённую по сроку, показывает 404, а не карточка. */
-export const MAIL_LOG_DETAILS = Object.fromEntries(
-  Object.entries(MAIL_LOG_RECORDS).map(([state, record]) => [
-    state,
-    makeMailLogDetail(record),
-  ]),
-) as Record<MailLogDetailState, MailLogDetail>;
+/**
+ * Карточки галереи (4.2, 4.4). Эталоны сервера (AdminMailLogDetail): `token_link`, `page_link`,
+ * `failed_with_note` (550 и сообщение), `failed_auth_system` (фоновая задача, EN), `suppressed`
+ * (почта не подтверждена), `not_sent`, `rerendered`, `template_gone`. Свои, которых в эталонах нет:
+ * `suppressed_blocked`, `project_gone` (проекта и вызвавшего уже нет), `long`. Запись, удалённую по
+ * сроку, показывает 404 (MAIL_LOG_MISSING_ID), а не карточка.
+ */
+export const MAIL_LOG_DETAILS = {
+  ...MAIL_LOG_SERVER_DETAILS,
+  suppressed_blocked: makeMailLogDetail(MAIL_LOG_RECORDS.suppressed_blocked),
+  project_gone: makeMailLogDetail({
+    ...MAIL_LOG_RECORDS.project_gone,
+    entry: { ...MAIL_LOG_RECORDS.project_gone.entry, actor: null },
+  }),
+  long: makeMailLogDetail(MAIL_LOG_RECORDS.long),
+} satisfies Record<string, MailLogDetail>;
+export type MailLogDetailState = keyof typeof MAIL_LOG_DETAILS;
 
 /** Id строки, которой нет (удалена по сроку): карточка показывает «Письмо не найдено». */
 export const MAIL_LOG_MISSING_ID = 404404;
-
-// ── Эталоны контракта (6.2) ────────────────────────────────────────────────
-
-/**
- * Эталоны тел по каталогам contracts/server/fixtures/<Схема>/<вариант>.json. Ключи совпадают с
- * MAIL_LOG_CONTRACT_SCHEMAS. Бэкенд (B1) кладёт в contracts/server эти же тела.
- */
-export const MAIL_LOG_CONTRACT_EXAMPLES: Record<
-  string,
-  Record<string, unknown>
-> = {
-  AdminMailLogEntry: {
-    sent_token: MAIL_LOG_RECORDS.token_link.entry,
-    failed: MAIL_LOG_RECORDS.failed_550.entry,
-    suppressed: MAIL_LOG_RECORDS.suppressed_unverified.entry,
-    not_sent: MAIL_LOG_RECORDS.not_sent.entry,
-    system: MAIL_LOG_RECORDS.system_task.entry,
-    template_gone: MAIL_LOG_RECORDS.template_gone.entry,
-  },
-  AdminMailLogPage: {
-    day: MAIL_LOG_PAGES.day,
-    more: MAIL_LOG_PAGES.more,
-    empty: MAIL_LOG_PAGES.empty,
-  },
-  AdminMailLogDetail: {
-    token_link: MAIL_LOG_DETAILS.token_link,
-    signing_page: MAIL_LOG_DETAILS.signing_page,
-    failed_550: MAIL_LOG_DETAILS.failed_550,
-    rerendered: MAIL_LOG_DETAILS.rerendered,
-    template_gone: MAIL_LOG_DETAILS.template_gone,
-  },
-  AdminMailLogSummary: {
-    day: MAIL_LOG_SUMMARIES.day,
-    smtp_off: MAIL_LOG_SUMMARIES.smtp_off,
-    auth_failure: MAIL_LOG_SUMMARIES.auth_failure,
-    quiet: MAIL_LOG_SUMMARIES.quiet,
-  },
-};
