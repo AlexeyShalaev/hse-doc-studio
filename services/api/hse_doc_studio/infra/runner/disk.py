@@ -249,7 +249,9 @@ class RunnerDiskService:
         finally:
             if not run.finished:
                 # Задачу сняли (остановка процесса): ждущий итога не должен висеть.
-                run.finish(RunnerCommandState.cancelled, run.job.steps if run.job is not None else [])
+                if run.state is RunnerCommandState.running:
+                    run.settle(RunnerCommandState.cancelled, run.job.steps if run.job is not None else [])
+                run.close()
 
     async def _execute_plan(self, run: DiskCleanupRun, payload: DiskCleanupPayload) -> None:
         try:
@@ -258,8 +260,9 @@ class RunnerDiskService:
             if run.cancel_requested:
                 for step in steps:
                     step.status = "skipped"
-                run.finish(RunnerCommandState.cancelled, steps)
+                run.settle(RunnerCommandState.cancelled, steps)
                 await run.notify()
+                run.close()
                 return
             job = await self._jobs.start(steps, observer=run.observe)
             run.attach(job, self._jobs.cancel)
@@ -268,8 +271,9 @@ class RunnerDiskService:
         except Exception as exc:  # noqa: BLE001 — фоновая очистка не роняет раннер, причина уходит в итог
             logger.warning("runner disk cleanup failed", exc_info=True)
             run.plan_error = run.plan_error or type(exc).__name__
-            run.finish(RunnerCommandState.error, run.job.steps if run.job is not None else [])
+            run.settle(RunnerCommandState.error, run.job.steps if run.job is not None else [])
             await run.notify()
+            run.close()
 
     async def _plan(self, payload: DiskCleanupPayload) -> tuple[list[CleanupStep], str | None]:
         steps: list[CleanupStep] = []
@@ -341,23 +345,28 @@ class DiskCleanupRun:
             cancel_job()
 
     async def wait(self) -> DiskCleanupOutcome:
+        """Итог; возвращается после того, как наблюдатель получил итог (ровно один раз)."""
         await self._done.wait()
         return DiskCleanupOutcome(self._state, self._progress)
 
     async def observe(self, job: CleanupJob) -> None:
         """Наблюдатель `DockerCleanupJobManager`: снимок берётся до первого `await`, задача менеджера изменяемая."""
         self._progress = _progress(job.steps, self.plan_error)
-        if job.status in ("running", "cancelling"):
-            self._state = RunnerCommandState.running
-        else:
-            self.finish(_final_state(job.status, self._progress), job.steps)
+        final = job.status not in ("running", "cancelling")
+        if final:
+            self.settle(_final_state(job.status, self._progress), job.steps)
         await self.notify()
+        if final:
+            self.close()
 
-    def finish(self, state: RunnerCommandState, steps: list[CleanupStep]) -> None:
+    def settle(self, state: RunnerCommandState, steps: list[CleanupStep]) -> None:
+        """Итоговые состояние и ход; ждущие `wait` узнают о них после `close`."""
         self._progress = _progress(steps, self.plan_error)
         if state is RunnerCommandState.done and self._progress.error is not None:
             state = RunnerCommandState.error
         self._state = state
+
+    def close(self) -> None:
         self._done.set()
 
     async def notify(self) -> None:

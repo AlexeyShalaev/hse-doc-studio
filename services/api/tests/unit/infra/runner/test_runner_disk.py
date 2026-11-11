@@ -502,3 +502,26 @@ async def test__cleanup__failing_observer_does_not_stop_cleanup(tmp_path: Path) 
 
     assert outcome.state is RunnerCommandState.done
     assert outcome.progress.freed_bytes == 40
+
+
+async def test__cleanup__wait_returns_after_observer_got_the_final_state(tmp_path: Path) -> None:
+    service = _service(tmp_path, _docker(_Probe(_usage()), _System()))
+    delivered = asyncio.Event()
+    finals: list[RunnerCommandState] = []
+
+    async def slow(state: RunnerCommandState, _progress: CommandProgress) -> None:
+        if state is not RunnerCommandState.running:
+            await delivered.wait()  # итог доставляется с повторами
+            finals.append(state)
+
+    run = service.cleanup(DiskCleanupPayload(targets=(DiskTarget.build_cache,)), slow)
+    waiter = asyncio.create_task(run.wait())
+    await asyncio.sleep(0.01)
+    assert not waiter.done()
+    assert run.state is RunnerCommandState.done
+
+    delivered.set()
+    outcome = await waiter
+
+    assert outcome.state is RunnerCommandState.done
+    assert finals == [RunnerCommandState.done]
