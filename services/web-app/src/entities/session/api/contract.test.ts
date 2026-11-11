@@ -4,7 +4,7 @@ import { describe, expect, it } from "vitest";
 import type { ZodError } from "zod";
 
 import { SchemaParseError } from "@shared/api/parse";
-import { CONTRACT_SCHEMAS } from "./contractSchemas";
+import { CONTRACT_SCHEMAS, PENDING_CONTRACT_SCHEMAS } from "./contractSchemas";
 import { BootstrapSchema, ServerSetupSettingsRequestSchema } from "./schemas";
 
 // Контракт серверного режима: те же эталонные JSON из contracts/server разбирает и backend-тест
@@ -31,6 +31,9 @@ const asRecord = (value: unknown): Record<string, unknown> =>
   value as Record<string, unknown>;
 
 type Fixture = { schema: string; name: string; body: unknown };
+
+const schemaOf = (name: string) =>
+  CONTRACT_SCHEMAS[name] ?? PENDING_CONTRACT_SCHEMAS[name];
 
 const directories = readdirSync(FIXTURES, { withFileTypes: true })
   .filter((entry) => entry.isDirectory())
@@ -75,13 +78,28 @@ describe("контракт server: коды ошибок", () => {
 
 describe("контракт server: эталоны", () => {
   it("у каждого каталога эталонов есть схема", () => {
-    expect(directories).toEqual(Object.keys(CONTRACT_SCHEMAS).sort());
+    // Каталоги срезов, чей бэкенд ещё не слит, могут отсутствовать (PENDING_CONTRACT_SCHEMAS).
+    const expected = [
+      ...Object.keys(CONTRACT_SCHEMAS),
+      ...Object.keys(PENDING_CONTRACT_SCHEMAS).filter((name) =>
+        directories.includes(name),
+      ),
+    ];
+    expect(directories).toEqual(expected.sort());
+  });
+
+  it("ожидаемые схемы не дублируют каталог", () => {
+    expect(
+      Object.keys(PENDING_CONTRACT_SCHEMAS).filter(
+        (name) => name in CONTRACT_SCHEMAS,
+      ),
+    ).toEqual([]);
   });
 
   it.each(fixtures.map((f) => [`${f.schema}/${f.name}`, f] as const))(
     "%s разбирается zod без потерь",
     (_label, fixture) => {
-      const schema = CONTRACT_SCHEMAS[fixture.schema];
+      const schema = schemaOf(fixture.schema);
       if (!schema) throw new Error(`нет схемы для ${fixture.schema}`);
       const parsed = schema.safeParse(fixture.body);
       expect(parsed.success).toBe(true);
@@ -94,7 +112,7 @@ describe("контракт server: эталоны", () => {
       .filter((f) => !Array.isArray(f.body))
       .map((f) => [`${f.schema}/${f.name}`, f] as const),
   )("%s: лишнее поле отвергается", (_label, fixture) => {
-    const schema = CONTRACT_SCHEMAS[fixture.schema];
+    const schema = schemaOf(fixture.schema);
     const body = { ...asRecord(fixture.body), surprise: 1 };
     expect(schema?.safeParse(body).success).toBe(false);
   });

@@ -134,7 +134,7 @@ export const diskBriefOf = (
  * Маршруты собираются один раз, а моки живут в мире: обработчик находит тот же адрес у
  * моков текущего мира. Образец адресов берётся у заготовки, которая ни к чему не обращается.
  */
-const delegate = (
+export const delegate = (
   template: DemoRoute[],
   current: () => DemoRoute[],
 ): DemoRoute[] =>
@@ -144,7 +144,7 @@ const delegate = (
       const live = current().find(
         (r) => r.method === route.method && r.pattern === route.pattern,
       );
-      if (!live) throw new Error(`storage cleanup demo: ${route.pattern}`);
+      if (!live) throw new Error(`server demo: no live route ${route.pattern}`);
       return live.handler(req);
     },
   }));

@@ -14,6 +14,7 @@ import { catalogRoutes } from "./catalogRoutes";
 import { createCheckpointDemo } from "./checkpointRoutes";
 import { createSharedProviderUserRoutes } from "./installRoutes";
 import { createInvitationRoutes } from "./invitationRoutes";
+import { createMailLogAdminRoutes } from "./mailLog";
 import { createMemberOrgRoutes } from "./memberOrgRoutes";
 import { createGitRemoteRoutes } from "./gitRemoteRoutes";
 import { createPersonalRoutes } from "./personalRoutes";
@@ -259,6 +260,7 @@ const withGuard = (route: DemoRoute): DemoRoute => ({
 export const serverAdminDemoRoutes: DemoRoute[] = [
   // Диски раннеров раньше маршрутов раннеров: «disk-summary» не должен уйти в /runners/:id.
   ...createStorageCleanupAdminRoutes(() => world),
+  ...createMailLogAdminRoutes(() => world),
   ...createAdminRoutes(() => world),
   ...createSharingAdminRoutes(() => world),
 ].map(withGuard);

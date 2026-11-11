@@ -1,6 +1,7 @@
 import type { Bootstrap, SessionUser } from "@entities/session";
 import type { RunnerDiskDemo } from "@entities/runner/testing";
 import type { LifecycleSweepDemo } from "@features/admin-ops/testing";
+import type { MailLogDemo } from "@features/admin-mail-log/testing";
 import { createDemoAccount, type DemoAccount } from "./accounts";
 import {
   createDemoAdminSettings,
@@ -73,6 +74,8 @@ export type ServerDemoWorld = {
   runnerDisk: RunnerDiskDemo | null;
   /** «Освободить место» в «Хранилище»; строится при первом обращении. */
   lifecycleSweep: LifecycleSweepDemo | null;
+  /** Журнал писем (mail-log.md); строится при первом обращении (mailLog.ts). */
+  mailLog: MailLogDemo | null;
 };
 
 /** Большой мир; строится один раз при первом обращении. */
@@ -131,6 +134,7 @@ export const createServerWorld = (scenarioId: string): ServerDemoWorld => {
     personal: null,
     runnerDisk: null,
     lifecycleSweep: null,
+    mailLog: null,
   };
 };
 
