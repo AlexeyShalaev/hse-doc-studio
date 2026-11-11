@@ -8,11 +8,10 @@ from hse_doc_studio.api.config import Settings
 from hse_doc_studio.api.observability.install import install_auth_cleanup
 from hse_doc_studio.use_cases.identity.housekeeping import AuthCleanupService
 
-from tests.contract.test_auth_contract import NOW, make_mail, make_session
+from tests.contract.test_auth_contract import NOW, make_session
 from tests.fakes.auth import (
     InMemoryAuthTokenRepository,
     InMemoryLoginAttemptRepository,
-    InMemoryMailOutboxRepository,
     InMemorySessionRepository,
 )
 
@@ -27,13 +26,11 @@ def _service() -> tuple[AuthCleanupService, dict[str, object]]:
     repos: dict[str, object] = {
         "sessions": InMemorySessionRepository(),
         "tokens": InMemoryAuthTokenRepository(),
-        "outbox": InMemoryMailOutboxRepository(),
         "attempts": InMemoryLoginAttemptRepository(),
     }
     service = AuthCleanupService(
         repos["sessions"],  # type: ignore[arg-type]
         repos["tokens"],  # type: ignore[arg-type]
-        repos["outbox"],  # type: ignore[arg-type]
         repos["attempts"],  # type: ignore[arg-type]
         attempt_ttl=HOUR,
         clock=lambda: NOW,
@@ -44,18 +41,15 @@ def _service() -> tuple[AuthCleanupService, dict[str, object]]:
 async def test__run__removes_expired_and_keeps_live() -> None:
     service, repos = _service()
     sessions: InMemorySessionRepository = repos["sessions"]  # type: ignore[assignment]
-    outbox: InMemoryMailOutboxRepository = repos["outbox"]  # type: ignore[assignment]
     attempts: InMemoryLoginAttemptRepository = repos["attempts"]  # type: ignore[assignment]
     await sessions.add(make_session("old", created=NOW - 2 * HOUR, ttl=HOUR))
     await sessions.add(make_session("live", created=NOW, ttl=HOUR))
-    await outbox.add(make_mail("gone", NOW - 2 * HOUR))
-    await outbox.add(make_mail("kept", NOW))
     await attempts.record_failure("stale", NOW - 2 * HOUR, _delay)
     await attempts.record_failure("fresh", NOW, _delay)
 
     report = await service.run()
 
-    assert (report.sessions, report.mail_outbox, report.login_attempts) == (1, 1, 1)
+    assert (report.sessions, report.login_attempts) == (1, 1)
     assert await sessions.get("old") is None
     assert await sessions.get("live") is not None
     assert await attempts.get("stale") is None
@@ -64,8 +58,8 @@ async def test__run__removes_expired_and_keeps_live() -> None:
 
 async def test__run__one_step_fails__others_still_run_and_error_is_raised() -> None:
     service, repos = _service()
-    outbox: InMemoryMailOutboxRepository = repos["outbox"]  # type: ignore[assignment]
-    await outbox.add(make_mail("gone", NOW - 2 * HOUR))
+    attempts: InMemoryLoginAttemptRepository = repos["attempts"]  # type: ignore[assignment]
+    await attempts.record_failure("stale", NOW - 2 * HOUR, _delay)
 
     async def boom(now: datetime) -> int:
         raise ConnectionError("db down")
@@ -74,7 +68,7 @@ async def test__run__one_step_fails__others_still_run_and_error_is_raised() -> N
 
     with pytest.raises(RuntimeError):
         await service.run()
-    assert await outbox.list_active(NOW - 2 * HOUR) == []
+    assert await attempts.get("stale") is None
 
 
 def test__install_auth_cleanup__registers_periodic_task() -> None:

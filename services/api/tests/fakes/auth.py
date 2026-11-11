@@ -18,7 +18,6 @@ from hse_doc_studio.core.identity.entities import (
     AuthTokenKind,
     InviteQuery,
     LoginAttempt,
-    MailOutboxEntry,
     OidcProvider,
     OidcProviderQuery,
     RegistrationInvite,
@@ -194,27 +193,6 @@ class InMemoryLoginAttemptRepository:
 
     async def delete_stale(self, before: datetime) -> int:
         doomed = [key for key, a in self._items.items() if a.updated_at < before]
-        for key in doomed:
-            del self._items[key]
-        return len(doomed)
-
-
-class InMemoryMailOutboxRepository:
-    def __init__(self) -> None:
-        self._items: dict[str, MailOutboxEntry] = {}
-
-    async def add(self, entry: MailOutboxEntry) -> None:
-        self._items[entry.id] = entry
-
-    async def list_active(self, now: datetime, *, limit: int = 100) -> list[MailOutboxEntry]:
-        alive = [e for e in self._items.values() if e.expires_at > now]
-        return sorted(alive, key=lambda e: (-e.created_at.timestamp(), e.id))[:limit]
-
-    async def delete(self, entry_id: str) -> bool:
-        return self._items.pop(entry_id, None) is not None
-
-    async def delete_expired(self, now: datetime) -> int:
-        doomed = [key for key, e in self._items.items() if e.expires_at <= now]
         for key in doomed:
             del self._items[key]
         return len(doomed)

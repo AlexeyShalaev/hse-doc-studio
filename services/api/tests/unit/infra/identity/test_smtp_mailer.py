@@ -3,7 +3,7 @@ from __future__ import annotations
 import asyncio
 import socket
 from collections.abc import Iterator
-from datetime import UTC, datetime, timedelta
+from datetime import timedelta
 from email import policy
 from email.message import EmailMessage
 from email.parser import BytesParser
@@ -13,11 +13,12 @@ import pytest
 from aiosmtpd.controller import Controller
 from aiosmtpd.smtp import AuthResult, LoginPassword
 from hse_doc_studio.core.identity.entities import MailKind
-from hse_doc_studio.core.mail.journal import MailFailureClass, MailSendError
+from hse_doc_studio.core.mail.journal import MailFailureClass, MailOrigin, MailSendError
 from hse_doc_studio.infra.identity.smtp_mailer import SmtpMailSender, SmtpSettings
 from hse_doc_studio.use_cases.identity.mail import LinkDelivery
+from hse_doc_studio.use_cases.mail.dispatch import MailCounters, MailDispatcher
 
-from tests.fakes.auth import InMemoryMailOutboxRepository
+from tests.fakes.mail_log import InMemoryMailLogRepository
 
 # aiosmtpd по умолчанию зовёт socket.getfqdn() (обратный DNS, на раннерах macOS висит), поэтому
 # имя сервера задано явно; запас на старт потока нужен медленным раннерам.
@@ -205,17 +206,17 @@ async def test_delivery_over_smtp_sends_a_localized_multipart_letter(
     inbox: tuple[_Inbox, int], locale: str, subject: str, needle: str
 ) -> None:
     handler, port = inbox
+    log = InMemoryMailLogRepository()
+    sender = SmtpMailSender(_settings(port, from_address="studio@example.org"))
     delivery = LinkDelivery(
-        SmtpMailSender(_settings(port, from_address="studio@example.org")),
-        InMemoryMailOutboxRepository(),
-        public_url="https://studio.example.org",
+        MailDispatcher(sender, log, counters=MailCounters()), public_url="https://studio.example.org"
     )
 
     shown = await delivery.deliver(
         MailKind.reset_password,
         "anna@example.org",
         "https://studio.example.org/reset/tok123",
-        datetime(2026, 11, 3, tzinfo=UTC),
+        origin=MailOrigin.forgot_password,
         locale=locale,
         ttl=timedelta(hours=1),
     )
@@ -228,3 +229,7 @@ async def test_delivery_over_smtp_sends_a_localized_multipart_letter(
     assert "https://studio.example.org/reset/tok123" in text.get_content()
     assert needle in html.get_content()
     assert 'href="https://studio.example.org/reset/tok123"' in html.get_content()
+    (entry,) = log.entries
+    # Message-ID в журнале тот, что ушёл в письме; токена в строке нет.
+    assert entry.message_id == message["Message-ID"]
+    assert "tok123" not in repr(entry)

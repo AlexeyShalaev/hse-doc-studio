@@ -101,18 +101,6 @@ class LoginAttemptRow(Base):
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
 
 
-class MailOutboxRow(Base):
-    __tablename__ = "mail_outbox"
-    __table_args__ = (Index("ix_mail_outbox_expires_at", "expires_at"),)
-
-    id: Mapped[str] = mapped_column(String(64), primary_key=True)
-    kind: Mapped[str] = mapped_column(String(32), nullable=False)
-    to_email: Mapped[str] = mapped_column(String(320), nullable=False)
-    link: Mapped[str] = mapped_column(Text, nullable=False)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
-    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
-
-
 class OidcProviderRow(Base):
     __tablename__ = "oidc_providers"
 

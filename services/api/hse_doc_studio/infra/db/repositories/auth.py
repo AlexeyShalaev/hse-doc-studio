@@ -22,8 +22,6 @@ from hse_doc_studio.core.identity.entities import (
     InviteQuery,
     InviteState,
     LoginAttempt,
-    MailKind,
-    MailOutboxEntry,
     OidcProvider,
     OidcProviderQuery,
     RegistrationInvite,
@@ -40,7 +38,6 @@ from hse_doc_studio.infra.db.orm.auth import (
     AuditLogRow,
     AuthTokenRow,
     LoginAttemptRow,
-    MailOutboxRow,
     OidcProviderRow,
     RegistrationInviteRow,
     SessionRow,
@@ -397,59 +394,6 @@ class SqlLoginAttemptRepository:
     async def delete_stale(self, before: datetime) -> int:
         async with self._sessions.use() as db:
             return (await db.execute(delete(LoginAttemptRow).where(LoginAttemptRow.updated_at < before))).rowcount  # type: ignore[attr-defined]
-
-
-def _mail(row: MailOutboxRow) -> MailOutboxEntry:
-    return MailOutboxEntry(
-        id=row.id,
-        kind=MailKind(row.kind),
-        to_email=row.to_email,
-        link=row.link,
-        created_at=row.created_at,
-        expires_at=row.expires_at,
-    )
-
-
-class SqlMailOutboxRepository:
-    def __init__(self, sessions: SessionProvider) -> None:
-        self._sessions = sessions
-
-    async def add(self, entry: MailOutboxEntry) -> None:
-        async with self._sessions.use() as db:
-            db.add(
-                MailOutboxRow(
-                    id=entry.id,
-                    kind=entry.kind.value,
-                    to_email=entry.to_email,
-                    link=entry.link,
-                    created_at=entry.created_at,
-                    expires_at=entry.expires_at,
-                )
-            )
-            await db.flush()
-
-    async def list_active(self, now: datetime, *, limit: int = 100) -> list[MailOutboxEntry]:
-        async with self._sessions.use() as db:
-            rows = (
-                await db.execute(
-                    select(MailOutboxRow)
-                    .where(MailOutboxRow.expires_at > now)
-                    .order_by(MailOutboxRow.created_at.desc(), MailOutboxRow.id)
-                    .limit(limit)
-                )
-            ).scalars()
-            return [_mail(row) for row in rows]
-
-    async def delete(self, entry_id: str) -> bool:
-        async with self._sessions.use() as db:
-            result = await db.execute(
-                delete(MailOutboxRow).where(MailOutboxRow.id == entry_id).returning(MailOutboxRow.id)
-            )
-            return result.first() is not None
-
-    async def delete_expired(self, now: datetime) -> int:
-        async with self._sessions.use() as db:
-            return (await db.execute(delete(MailOutboxRow).where(MailOutboxRow.expires_at <= now))).rowcount  # type: ignore[attr-defined]
 
 
 def _oidc(row: OidcProviderRow) -> OidcProvider:

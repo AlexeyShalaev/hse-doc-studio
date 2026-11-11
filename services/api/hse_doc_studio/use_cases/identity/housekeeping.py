@@ -1,7 +1,7 @@
 """Периодическая чистка устаревших записей аутентификации.
 
-Просроченные сессии, одноразовые токены, письма outbox (в них лежат ссылки сброса и подтверждения) и
-счётчики неудачных входов сами не исчезают: без чистки таблицы растут, а старые ссылки остаются в дампе БД.
+Просроченные сессии, одноразовые токены и счётчики неудачных входов сами не исчезают: без чистки таблицы
+растут, а хеши старых ссылок остаются в дампе БД.
 """
 
 from __future__ import annotations
@@ -14,7 +14,6 @@ import structlog
 from hse_doc_studio.core.identity.protocols import (
     IAuthTokenRepository,
     ILoginAttemptRepository,
-    IMailOutboxRepository,
     ISessionRepository,
 )
 from hse_doc_studio.core.identity.session_policy import MAX_LOGIN_DELAY, Clock, utc_now
@@ -31,7 +30,6 @@ LOGIN_ATTEMPT_TTL = MAX_LOGIN_DELAY * 4
 class AuthCleanupReport:
     sessions: int = 0
     auth_tokens: int = 0
-    mail_outbox: int = 0
     login_attempts: int = 0
     notifications: int = 0
 
@@ -41,7 +39,6 @@ class AuthCleanupService:
         self,
         sessions: ISessionRepository,
         auth_tokens: IAuthTokenRepository,
-        outbox: IMailOutboxRepository,
         attempts: ILoginAttemptRepository,
         *,
         attempt_ttl: timedelta = LOGIN_ATTEMPT_TTL,
@@ -50,7 +47,6 @@ class AuthCleanupService:
     ) -> None:
         self._sessions = sessions
         self._auth_tokens = auth_tokens
-        self._outbox = outbox
         self._attempts = attempts
         self._attempt_ttl = attempt_ttl
         self._clock = clock
@@ -65,7 +61,6 @@ class AuthCleanupService:
         for name, delete in (
             ("sessions", lambda: self._sessions.delete_expired(now)),
             ("auth_tokens", lambda: self._auth_tokens.delete_expired(now)),
-            ("mail_outbox", lambda: self._outbox.delete_expired(now)),
             ("login_attempts", lambda: self._attempts.delete_stale(now - self._attempt_ttl)),
             *(
                 (("notifications", lambda: notifications.purge(now - NOTIFICATION_RETENTION)),)

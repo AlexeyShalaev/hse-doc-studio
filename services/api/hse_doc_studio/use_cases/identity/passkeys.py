@@ -27,6 +27,7 @@ from hse_doc_studio.core.identity.protocols import (
     IUserRepository,
 )
 from hse_doc_studio.core.identity.session_policy import Clock, utc_now
+from hse_doc_studio.core.mail.journal import MailOrigin, MailRefKind
 from hse_doc_studio.core.uow import IUnitOfWork
 from hse_doc_studio.use_cases.identity.auth_settings import AuthSettingsService
 from hse_doc_studio.use_cases.identity.mail import LinkDelivery
@@ -216,7 +217,14 @@ class FinishPasskeyRegistrationUC:
         # Письмо после записи: если ключ добавил не владелец (украденная сессия), он узнает об этом сразу.
         if self._delivery is not None:
             await self._delivery.notify(
-                MailKind.passkey_added, owner.email, locale=owner.locale, params={"name": passkey.name}
+                MailKind.passkey_added,
+                owner.email,
+                origin=MailOrigin.passkey_added,
+                locale=owner.locale,
+                params={"name": passkey.name},
+                to_user_id=owner.id,
+                ref_kind=MailRefKind.passkey,
+                ref_id=passkey.id,
             )
         return passkey
 

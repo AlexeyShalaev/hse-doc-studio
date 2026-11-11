@@ -37,7 +37,6 @@ from hse_doc_studio.core.identity.protocols import (
     IInstanceSettingsRepository,
     ILoginAttemptRepository,
     IMailLogRepository,
-    IMailOutboxRepository,
     IMailSender,
     IOidcProviderRepository,
     IPasswordHasher,
@@ -59,7 +58,6 @@ from hse_doc_studio.infra.db.repositories.auth import (
     SqlAuditLog,
     SqlAuthTokenRepository,
     SqlLoginAttemptRepository,
-    SqlMailOutboxRepository,
     SqlOidcProviderRepository,
     SqlRegistrationInviteRepository,
     SqlSessionRepository,
@@ -466,10 +464,6 @@ class ServerIdentityProvider(Provider):
         return SqlRegistrationInviteRepository(sessions)
 
     @provide
-    def get_mail_outbox(self, sessions: SessionProvider) -> IMailOutboxRepository:
-        return SqlMailOutboxRepository(sessions)
-
-    @provide
     def get_mail_log(self, sessions: SessionProvider) -> IMailLogRepository:
         return SqlMailLogRepository(sessions)
 
@@ -478,10 +472,9 @@ class ServerIdentityProvider(Provider):
         self,
         sessions: ISessionRepository,
         auth_tokens: IAuthTokenRepository,
-        outbox: IMailOutboxRepository,
         attempts: ILoginAttemptRepository,
     ) -> AuthCleanupService:
-        return AuthCleanupService(sessions, auth_tokens, outbox, attempts)
+        return AuthCleanupService(sessions, auth_tokens, attempts)
 
     @provide
     def get_smtp_env(self) -> SmtpEnv:
@@ -596,8 +589,8 @@ class ServerIdentityProvider(Provider):
         return DeleteOidcProviderUC(oidc, service, audit, uow)
 
     @provide
-    def get_link_delivery(self, sender: IMailSender, outbox: IMailOutboxRepository) -> LinkDelivery:
-        return LinkDelivery(sender, outbox, background=True, public_url=settings.auth.public_url)
+    def get_link_delivery(self, mail: MailDispatcher) -> LinkDelivery:
+        return LinkDelivery(mail, background=True, public_url=settings.auth.public_url)
 
     @provide
     def get_auth_env_overrides(self) -> AuthEnvOverrides:

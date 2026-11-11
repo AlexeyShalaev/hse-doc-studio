@@ -7,15 +7,16 @@ from datetime import timedelta
 import pytest
 from hse_doc_studio.core.i18n import set_interface_language
 from hse_doc_studio.core.identity.entities import MailKind
+from hse_doc_studio.core.mail.journal import MailOrigin
 from hse_doc_studio.use_cases.identity.mail import LinkDelivery
 
-from .conftest import T0, FakeSender, World
+from .conftest import FakeSender, World
 
 SERVER = "https://studio.test"
 
 
 def _delivery(world: World, sender: FakeSender) -> LinkDelivery:
-    return LinkDelivery(sender, world.outbox, public_url=SERVER)
+    return LinkDelivery(world.dispatcher(sender), public_url=SERVER)
 
 
 @pytest.fixture(autouse=True)
@@ -33,7 +34,12 @@ async def test__verify_mail__language_of_the_account_with_html_and_ttl(
     sender = FakeSender(enabled=True)
 
     shown = await _delivery(world, sender).deliver(
-        MailKind.verify_email, "ann@example.org", f"{SERVER}/verify/tok", T0, locale=locale, ttl=timedelta(hours=48)
+        MailKind.verify_email,
+        "ann@example.org",
+        f"{SERVER}/verify/tok",
+        origin=MailOrigin.register,
+        locale=locale,
+        ttl=timedelta(hours=48),
     )
 
     assert shown is None
@@ -47,15 +53,18 @@ async def test__verify_mail__language_of_the_account_with_html_and_ttl(
     assert f"\n{SERVER}/verify/tok\n" in body
 
 
-async def test__language__without_account_locale_follows_the_interface_language_of_the_request() -> None:
+async def test__language__without_account_locale_follows_the_interface_language_of_the_request(
+    world: World,
+) -> None:
     world_sender = FakeSender(enabled=True)
     set_interface_language("en")
 
-    class _Outbox:
-        async def add(self, entry: object) -> None: ...
-
-    await LinkDelivery(world_sender, _Outbox(), public_url=SERVER).deliver(  # type: ignore[arg-type]
-        MailKind.invite, "new@example.org", f"{SERVER}/invite/t", T0, params={"inviter": "Anna"}
+    await _delivery(world, world_sender).deliver(
+        MailKind.invite,
+        "new@example.org",
+        f"{SERVER}/invite/t",
+        origin=MailOrigin.admin_invite,
+        params={"inviter": "Anna"},
     )
 
     assert world_sender.sent[0][1] == "Invitation to the Studio"
@@ -67,7 +76,7 @@ async def test__language__account_locale_wins_over_the_request_language(world: W
     set_interface_language("en")
 
     await _delivery(world, sender).deliver(
-        MailKind.reset_password, "ann@example.org", f"{SERVER}/reset/t", T0, locale="ru"
+        MailKind.reset_password, "ann@example.org", f"{SERVER}/reset/t", origin=MailOrigin.forgot_password, locale="ru"
     )
 
     assert sender.sent[0][1] == "Сброс пароля"
@@ -76,7 +85,9 @@ async def test__language__account_locale_wins_over_the_request_language(world: W
 async def test__language__default_is_russian(world: World) -> None:
     sender = FakeSender(enabled=True)
 
-    await _delivery(world, sender).deliver(MailKind.reset_password, "ann@example.org", f"{SERVER}/reset/t", T0)
+    await _delivery(world, sender).deliver(
+        MailKind.reset_password, "ann@example.org", f"{SERVER}/reset/t", origin=MailOrigin.forgot_password
+    )
 
     assert sender.sent[0][1] == "Сброс пароля"
 
@@ -85,7 +96,11 @@ async def test__notice__escapes_the_passkey_name_in_html_and_keeps_it_in_text(wo
     sender = FakeSender(enabled=True)
 
     sent = await _delivery(world, sender).notify(
-        MailKind.passkey_added, "ann@example.org", locale="en", params={"name": '<img src=x onerror="a()">'}
+        MailKind.passkey_added,
+        "ann@example.org",
+        origin=MailOrigin.passkey_added,
+        locale="en",
+        params={"name": '<img src=x onerror="a()">'},
     )
 
     assert sent is True
@@ -99,7 +114,9 @@ async def test__notice__escapes_the_passkey_name_in_html_and_keeps_it_in_text(wo
 async def test__notice__reset_notice_has_no_link_and_points_to_the_administrator(world: World) -> None:
     sender = FakeSender(enabled=True)
 
-    await _delivery(world, sender).notify(MailKind.reset_notice, "ann@example.org", locale="en")
+    await _delivery(world, sender).notify(
+        MailKind.reset_notice, "ann@example.org", origin=MailOrigin.admin_reset_link, locale="en"
+    )
 
     [(_, subject, body)] = sender.sent
     assert subject == "An administrator issued a password reset link"
@@ -111,7 +128,11 @@ async def test__no_smtp__nothing_is_rendered_or_sent_and_the_link_is_returned(wo
     sender = FakeSender(enabled=False)
 
     shown = await _delivery(world, sender).deliver(
-        MailKind.reset_password, "ann@example.org", f"{SERVER}/reset/t", T0, ttl=timedelta(hours=1)
+        MailKind.reset_password,
+        "ann@example.org",
+        f"{SERVER}/reset/t",
+        origin=MailOrigin.forgot_password,
+        ttl=timedelta(hours=1),
     )
 
     assert shown == f"{SERVER}/reset/t"

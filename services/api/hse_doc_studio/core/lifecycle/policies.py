@@ -154,7 +154,7 @@ POLICIES: tuple[LifecyclePolicy, ...] = (
         "auth_records",
         Group.database,
         Strategy.own_task,
-        tables=("sessions", "auth_tokens", "mail_outbox", "login_attempts", "device_authorizations", "runner_pairings"),
+        tables=("sessions", "auth_tokens", "login_attempts", "device_authorizations", "runner_pairings"),
         task="auth_cleanup",
         growth="medium",
     ),

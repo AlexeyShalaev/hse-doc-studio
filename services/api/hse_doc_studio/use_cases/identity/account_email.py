@@ -17,6 +17,7 @@ from hse_doc_studio.core.identity.protocols import (
 )
 from hse_doc_studio.core.identity.session_policy import Clock, utc_now
 from hse_doc_studio.core.invitations.protocols import IEmailVerifiedHook
+from hse_doc_studio.core.mail.journal import MailOrigin
 from hse_doc_studio.core.uow import IUnitOfWork
 from hse_doc_studio.use_cases.identity.mail import LinkDelivery, auth_link
 
@@ -79,9 +80,10 @@ class RequestEmailChangeUC:
             MailKind.email_change,
             new_email.strip(),
             auth_link(self._public_url, CONFIRM_EMAIL_PATH, secret),
-            now,
+            origin=MailOrigin.email_change,
             locale=user.locale,
             ttl=CHANGE_TTL,
+            to_user_id=user.id,
         )
         return EmailChangeResult(link)
 

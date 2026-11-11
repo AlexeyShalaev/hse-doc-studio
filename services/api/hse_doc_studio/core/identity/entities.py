@@ -274,18 +274,6 @@ class MailKind(StrEnum):
 
 
 @dataclass(frozen=True)
-class MailOutboxEntry:
-    """Запись о неушедшем письме (SMTP не настроен или сбой). Ссылка с токеном не хранится: поле пусто."""
-
-    id: str
-    kind: MailKind
-    to_email: str
-    link: str
-    created_at: datetime
-    expires_at: datetime
-
-
-@dataclass(frozen=True)
 class OidcProvider:
     id: str
     label: str

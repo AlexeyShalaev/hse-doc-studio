@@ -18,7 +18,6 @@ from hse_doc_studio.core.identity.entities import (
     AuthTokenKind,
     InviteQuery,
     LoginAttempt,
-    MailOutboxEntry,
     OidcProvider,
     OidcProviderQuery,
     RegistrationInvite,
@@ -160,16 +159,6 @@ class ILoginAttemptRepository(Protocol):
     async def delete_stale(self, before: datetime) -> int:
         """Удаляет счётчики без обновлений с момента `before`."""
         ...
-
-
-class IMailOutboxRepository(Protocol):
-    async def add(self, entry: MailOutboxEntry) -> None: ...
-    async def list_active(self, now: datetime, *, limit: int = 100) -> list[MailOutboxEntry]:
-        """Непросроченные письма, новые первыми."""
-        ...
-
-    async def delete(self, entry_id: str) -> bool: ...
-    async def delete_expired(self, now: datetime) -> int: ...
 
 
 class IOidcProviderRepository(Protocol):

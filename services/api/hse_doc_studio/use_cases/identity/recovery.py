@@ -20,6 +20,7 @@ from hse_doc_studio.core.identity.protocols import (
 )
 from hse_doc_studio.core.identity.session_policy import Clock, utc_now
 from hse_doc_studio.core.invitations.protocols import IEmailVerifiedHook
+from hse_doc_studio.core.mail.journal import MailOrigin
 from hse_doc_studio.core.uow import IUnitOfWork
 from hse_doc_studio.use_cases.identity.mail import LinkDelivery, auth_link
 
@@ -85,9 +86,11 @@ class _TokenIssuer:
         self._public_url = public_url
         self._clock = clock
 
-    async def issue(self, user: User, kind: AuthTokenKind, mail: MailKind, path: str, ttl: timedelta) -> str | None:
+    async def issue(
+        self, user: User, kind: AuthTokenKind, mail: MailKind, path: str, ttl: timedelta, *, origin: MailOrigin
+    ) -> str | None:
         """Ссылка для показа, если письмо не ушло по почте; ошибки доставки не всплывают."""
-        now: datetime = self._clock()
+        now = self._clock()
         secret = new_token()
         async with self._uow.begin():
             # Действует только последняя ссылка: ушедшая раньше (и, возможно, утёкшая) больше не сработает.
@@ -96,7 +99,13 @@ class _TokenIssuer:
             await self._auth_tokens.invalidate_for_user(user.id, kind, now)
             await self._auth_tokens.add(AuthToken(hash_token(secret), kind, user.id, now + ttl))
         return await self._delivery.deliver(
-            mail, user.email, auth_link(self._public_url, path, secret), now, locale=user.locale, ttl=ttl
+            mail,
+            user.email,
+            auth_link(self._public_url, path, secret),
+            origin=origin,
+            locale=user.locale,
+            ttl=ttl,
+            to_user_id=user.id,
         )
 
 
@@ -122,15 +131,22 @@ class ResendVerificationUC:
         user = await self._users.get_by_email(normalize_email(email))
         if user is None or user.email_verified or user.status not in _VERIFIABLE:
             return
-        await self._issuer.issue(user, AuthTokenKind.verify_email, MailKind.verify_email, VERIFY_PATH, VERIFY_TTL)
+        await self._issuer.issue(
+            user,
+            AuthTokenKind.verify_email,
+            MailKind.verify_email,
+            VERIFY_PATH,
+            VERIFY_TTL,
+            origin=MailOrigin.resend_verification,
+        )
         await self._audit.record("auth.verification_resent", actor_id=user.id)
 
 
 class ForgotPasswordUC:
     """Ссылка сброса уходит только на почту аккаунта.
 
-    Без SMTP письмо остаётся в outbox, а не показывается на экране: иначе любой, кто знает адрес,
-    сбросил бы чужой пароль. Сброс в такой установке выдаёт администратор.
+    Без SMTP ссылка не показывается на экране (в журнале писем строка «не отправлялось» без ссылки): иначе
+    любой, кто знает адрес, сбросил бы чужой пароль. Сброс в такой установке выдаёт администратор.
     """
 
     def __init__(
@@ -152,7 +168,14 @@ class ForgotPasswordUC:
         user = await self._users.get_by_email(normalize_email(email))
         if user is None or not user.can_sign_in:
             return
-        await self._issuer.issue(user, AuthTokenKind.reset_password, MailKind.reset_password, RESET_PATH, RESET_TTL)
+        await self._issuer.issue(
+            user,
+            AuthTokenKind.reset_password,
+            MailKind.reset_password,
+            RESET_PATH,
+            RESET_TTL,
+            origin=MailOrigin.forgot_password,
+        )
         await self._audit.record("auth.password_reset_requested", actor_id=user.id)
 
 
@@ -246,5 +269,11 @@ class IssueResetLinkUC:
             await self._audit.record(
                 "admin.reset_link_issued", actor_id=actor.id, target=user.id, details={"break_glass": True}
             )
-        notified = await self._delivery.notify(MailKind.reset_notice, user.email, locale=user.locale)
+        notified = await self._delivery.notify(
+            MailKind.reset_notice,
+            user.email,
+            origin=MailOrigin.admin_reset_link,
+            locale=user.locale,
+            to_user_id=user.id,
+        )
         return ResetLink(auth_link(self._public_url, RESET_PATH, secret), expires_at, notified)

@@ -105,8 +105,8 @@
         "body": ".ystate files on disk; secondary, rebuilt from the file."
       },
       "auth_records": {
-        "title": "Sessions, tokens, mail",
-        "body": "Expired sessions, one-time tokens, mail and device codes."
+        "title": "Sessions and tokens",
+        "body": "Expired sessions, one-time tokens, sign-in counters and device codes."
       },
       "deleted_projects": {
         "title": "Deleted projects",
