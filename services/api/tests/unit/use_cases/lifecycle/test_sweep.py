@@ -28,7 +28,16 @@ from tests.fakes.identity import InMemoryInstanceSettingsRepository
 NOW = datetime(2026, 11, 16, 12, tzinfo=UTC)
 ADMIN = Actor(kind=ActorKind.user, id="boss", is_instance_admin=True)
 STUDENT = Actor(kind=ActorKind.user, id="anna")
-MANUAL = ["ai_usage", "jobs", "notifications", "collab_requests", "share_links", "guest_sessions", "collab_state"]
+MANUAL = [
+    "ai_usage",
+    "jobs",
+    "notifications",
+    "mail_log",
+    "collab_requests",
+    "share_links",
+    "guest_sessions",
+    "collab_state",
+]
 
 
 class Clock:
@@ -182,7 +191,9 @@ async def test__cancel__stops_after_current_source_rest_skipped() -> None:
     assert cancelling.status is SweepStatus.cancelling
     assert sweep is not None
     assert sweep.status is SweepStatus.cancelled
-    assert [s.status for s in sweep.steps] == [StepStatus.done, StepStatus.done] + [StepStatus.skipped] * 5
+    assert [s.status for s in sweep.steps] == [StepStatus.done, StepStatus.done] + [StepStatus.skipped] * (
+        len(MANUAL) - 2
+    )
     assert env.sources["notifications"].seen == []
     assert await env.actions() == ["lifecycle.sweep", "lifecycle.sweep_cancel", "lifecycle.swept"]
     assert (await env.entries())[-1].details["status"] == "cancelled"

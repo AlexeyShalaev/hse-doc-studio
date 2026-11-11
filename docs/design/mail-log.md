@@ -118,7 +118,7 @@
 | L8 | Кто вызвал: `user` (актор запроса из `current_actor`, наследуется фоновыми задачами), `anonymous` (запрос без входа: регистрация, «Забыли пароль»), `system` (фоновая задача, имя из нового `contextvar`, который ставит `BackgroundTaskRunner`). Плюс `origin`: короткий код сценария от вызывающего (`register`, `forgot_password`, `admin_reset_link`, `signing_auto_reminder` и т. д.) и `request_id`. | Контекст уже есть в процессе, передавать его через все слои не нужно. `origin` отличает «первое письмо» от «повторного запроса», `request_id` связывает строку с логами api. |
 | L9 | Объект письма: `project_id` (без внешнего ключа, строка переживает удаление проекта), `ref_kind` и `ref_id` (`signing_route`, `project_invitation`, `registration_invite`, `access_request`, `transfer`, `passkey`). | Фильтр «все письма проекта» и переход к объекту из карточки; внешний ключ стирал бы историю вместе с проектом. |
 | L10 | Только админ установки (`admin_guard`: сессия, без PAT). Чтение журнала в аудит не пишется, как и остальные чтения админки. Удаления строк руками нет, только по сроку и вместе с человеком. | После L3 и L4 в журнале нет ни секретов, ни переписки, только сведения, которые админ видит в «Пользователях» и «Хранилище». Аудит чтений был бы первым в админке и шумел бы на каждом открытии карточки. |
-| L11 | Стирание человека (`SqlUserLifecycle.erase`) удаляет строки, адресованные ему (`to_user_id` или `to_email` в его адресах), и обнуляет `actor_user_id` там, где он вызвал письмо. Выгрузка данных человека (`export`) добавляет письма ему: вид, время, итог. | Адрес получателя это персональные данные; `mail_outbox` стирался так же. |
+| L11 | Стирание человека (`SqlUserLifecycle.erase`) удаляет строки, адресованные ему (`to_user_id` или `to_email` в его адресах), и обнуляет `actor_user_id` там, где он вызвал письмо. Выгрузка данных человека (`export`) добавляет письма ему, раздел `mail`: время, вид, язык, адрес, тема, итог и причина, без параметров шаблона и служебных полей. Письма человеку это строки с его `to_user_id` или с любым его адресом без учёта регистра. | Адрес получателя это персональные данные; `mail_outbox` стирался так же. |
 | L12 | Срок хранения: источник `mail_log` в `core/lifecycle/policies.py`, `delete_batches`, по умолчанию 90 дней, 14..730, «Очистить сейчас» разрешено (значит, входит и в «Освободить место»). Без партиций. | Объём порядка уведомлений (строка на письмо, около 1 КБ), а `notifications` живут так же. Партиции окупаются на десятках миллионов строк, здесь их нет. |
 | L13 | Список на курсоре по `id` (новые сверху), как журнал аудита: `next_cursor`, `total_estimate`, тот же `useCursorList`. | Журнал растёт сверху, offset на нём сдвигается между страницами; экран выглядит и ведёт себя как соседний «Аудит». |
 | L14 | Счётчик и плашка: `GET /api/admin/mail-log/summary` (за 24 часа по итогам, последний сбой, настроен ли SMTP). Счётчик `failed` за сутки в меню у пункта «Письма». | Тот же приём, что у «Раннеры» и «Сервисы» (`nav.count.*`). `not_sent` в счётчик не входит: при выключенной почте это норма, о ней говорит плашка. |
@@ -378,17 +378,21 @@ the log]».
 | `ref_kind` | `varchar(32)` null | L9 |
 | `ref_id` | `varchar(64)` null | L9 |
 | `params` | `jsonb` not null | безопасные значения и признаки, 5.2 |
-| `template_digest` | `char(16)` not null | L5 |
+| `template_digest` | `varchar(16)` not null | L5 |
 
 Индексы: `(at)` для срока и периода; `(lower(to_email), id desc)` для фильтра по адресу; `(to_user_id, id desc)`
 частичный `where to_user_id is not null`; `(project_id, id desc)` частичный; `(at) where status = 'failed'`
 частичный для счётчика за сутки. Поиск `q` это `ILIKE` по `to_email` и `subject` в пределах срока хранения
-(строк порядка сотни тысяч), с `statement_timeout` 3 с, как у поиска аудита; триграммы не нужны.
+(строк порядка сотни тысяч) под общим `statement_timeout` сервера (`HSE_STUDIO__DB__STATEMENT_TIMEOUT_S`, 30 с), как
+поиск аудита; триграммы не нужны. Уточнено в B2: своего таймаута 3 с у поиска аудита нет, такой стоит только у
+счёта предпросмотра «Освободить место».
 
 Ограничения: `CHECK` на значения `status` и `cause`; `CHECK (status <> 'sent' OR message_id IS NOT NULL)`.
 
-Права роли приложения: SELECT, INSERT, DELETE (срок и стирание человека). UPDATE не нужен: строка не меняется,
-кроме обнуления `actor_user_id` при стирании: для него `GRANT UPDATE (actor_user_id)`.
+Права: миграция их не выдаёт и `REVOKE` не делает. Приложение и миграции работают ролью владельца схемы, как со
+всеми таблицами, кроме `audit_log` (у того права и триггеры в самой базе, `persistence-server.md`). Если оператор
+выделяет приложению отдельную роль, ей нужны SELECT, INSERT, DELETE (срок и стирание человека), `UPDATE
+(actor_user_id)` (обнуление при стирании) и USAGE на `mail_log_id_seq`. Строка в остальном не меняется.
 
 ### 5.2 `params`
 
@@ -437,14 +441,20 @@ the log]».
   `page`, блок сообщения это `note_hidden`. `render.py` рисует кнопку без `href` как `<span>` того же вида.
 - `core/mail/cause.py`: `contextvar` текущей фоновой задачи; `BackgroundTaskRunner` ставит его вокруг каждого тика.
 - `core/identity/protocols.py`: `IMailSender.send(...) -> str` (Message-ID); `IMailLogRepository` (`add`, `page`,
-  `get`, `summary`, `delete_before`, `count_before`, `erase_for`).
+  `get`, `summary`). Как сделал B2: удаления в порту нет. Срок хранения держит источник `mail_log` движка
+  (`DeleteBatchesSource` с `_MAIL_LOG_WHERE`, 8.1), стирание и выгрузку человека `SqlUserLifecycle` в той же
+  транзакции, что остальное стирание (L11), поэтому `delete_before`, `count_before` и `erase_for` не нужны.
+  `add(entry) -> int` пишет через `SessionProvider.own()` и возвращает id; `page(query)` сама решает про
+  `total_estimate` по `query.filtered` (оценка по `pg_class.reltuples`, None до первого `ANALYZE`);
+  `summary(since)` даёт `MailLogCounts` за окно от `since`.
 - `use_cases/mail/dispatch.py`: `MailDispatcher.send(request) -> MailOutcome` и `MailDispatcher.skip(request,
   status, reason)`; `use_cases/mail/log.py`: `ListMailLogUC`, `GetMailLogEntryUC`, `MailLogSummaryUC`.
 - `infra/identity/smtp_errors.py`: `classify(exc, *, secrets) -> MailFailure` по классам `aiosmtplib`
   (`SMTPAuthenticationError`, `SMTPConnectError`, `SMTPConnectTimeoutError`, `SMTPTimeoutError`,
   `SMTPRecipientsRefused`, `SMTPSenderRefused`, `SMTPDataError`, `SMTPServerDisconnected`, `ssl.SSLError`).
-- `infra/db/repositories/mail_log.py`: Postgres и in-memory; `SessionProvider.own()`: короткая своя транзакция
-  даже при живой ambient (L15).
+- `infra/db/repositories/mail_log.py` (`SqlMailLogRepository`), ORM `infra/db/orm/mail_log.py`, in-memory
+  `tests/fakes/mail_log.py` (как остальные фейки; `fail_with` роняет следующую `add` для тестов L15);
+  `SessionProvider.own()`: короткая своя транзакция на отдельном соединении даже при живой ambient (L15).
 
 Как пути 2.2 переходят на диспетчер:
 
@@ -649,8 +659,9 @@ LifecyclePolicy(
   вызывающим (`manual`, ссылка на экране) не изменились.
 - Тест архитектуры: `IMailSender.send` вызывается только в `use_cases/mail/dispatch.py` (обход AST, как
   `test_runner_isolation`).
-- Репозиторий на Postgres: курсор, фильтры по И, поиск, период, `total_estimate`, сводка за сутки, `delete_before`
-  пачками, `erase_for`, `SessionProvider.own()` пишет при откате внешней транзакции.
+- Репозиторий (контракт на памяти и Postgres, `tests/contract/test_mail_log_contract.py`): курсор, фильтры по И,
+  поиск, период, `total_estimate`, сводка за сутки; на Postgres (`test_mail_log_pg.py`) `SessionProvider.own()`
+  пишет при откате внешней транзакции, CHECK таблицы, источник `mail_log` движка (счёт и удаление пачками).
 - Реестр жизненного цикла: `mail_log` в «Хранении данных», «Очистить сейчас», предпросмотр «Освободить место»;
   `auth_records` без `mail_outbox`.
 - Стирание человека и выгрузка его данных (L11).

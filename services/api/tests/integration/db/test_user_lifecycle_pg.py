@@ -11,10 +11,12 @@ from hse_doc_studio.core.access.entities import Actor
 from hse_doc_studio.core.entities import AgentPersona
 from hse_doc_studio.core.identity.errors import IdentityError, IdentityErrorCode
 from hse_doc_studio.core.identity.lifecycle import pseudonym_for
+from hse_doc_studio.core.mail.journal import MailCause, MailStatus
 from hse_doc_studio.infra.db.engine import create_sessionmaker
 from hse_doc_studio.infra.db.repositories.auth import SqlAuditLog
 from hse_doc_studio.infra.db.repositories.identity import SqlUserRepository
 from hse_doc_studio.infra.db.repositories.lifecycle import SqlUserLifecycle
+from hse_doc_studio.infra.db.repositories.mail_log import SqlMailLogRepository
 from hse_doc_studio.infra.db.session import SessionProvider
 from hse_doc_studio.infra.db.uow import SqlUnitOfWork
 from hse_doc_studio.infra.persistence.agent_persona import JsonAgentPersonaRepository, user_data_folder
@@ -23,6 +25,7 @@ from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncEngine
 
 from tests.contract.test_identity_contract import make_user
+from tests.contract.test_mail_log_contract import make_entry
 
 pytestmark = pytest.mark.pg
 
@@ -46,6 +49,7 @@ class _World:
         self.users = SqlUserRepository(self.sessions)
         self.audit = SqlAuditLog(self.sessions)
         self.lifecycle = SqlUserLifecycle(self.sessions)
+        self.mail_log = SqlMailLogRepository(self.sessions)
         self.delete = DeleteUserUC(self.users, self.lifecycle, self.audit, SqlUnitOfWork(self.sessions))
         self.admin = Actor.user("boss", is_instance_admin=True)
 
@@ -223,6 +227,52 @@ async def test__delete__direct_project_grant_removed(pg_migrated_engine: AsyncEn
     await w.delete.execute(w.admin, "u1")
 
     assert await _count(pg_migrated_engine, "SELECT count(*) FROM project_members") == 0
+
+
+async def test__delete__mail_to_the_person_erased_and_his_calls_lose_the_actor(pg_migrated_engine: AsyncEngine) -> None:
+    w = _World(pg_migrated_engine)
+    await w.user("boss", disabled=False)
+    await w.user("u1")
+    by_id = await w.mail_log.add(make_entry("old-address@example.org", to_user_id="u1"))
+    by_address = await w.mail_log.add(make_entry("U1@Example.Test"))
+    invited_by_u1 = await w.mail_log.add(make_entry("guest@example.org", cause=MailCause.user, actor_user_id="u1"))
+    other = await w.mail_log.add(make_entry("boss@example.test", to_user_id="boss", actor_user_id="boss"))
+
+    await w.delete.execute(w.admin, "u1")
+
+    assert await w.mail_log.get(by_id) is None
+    assert await w.mail_log.get(by_address) is None
+    kept = await w.mail_log.get(invited_by_u1)
+    assert kept is not None
+    assert (kept.to_email, kept.actor_user_id) == ("guest@example.org", None)
+    untouched = await w.mail_log.get(other)
+    assert untouched is not None
+    assert untouched.actor_user_id == "boss"
+
+
+async def test__export__lists_mail_to_the_person_without_parameters(pg_migrated_engine: AsyncEngine) -> None:
+    w = _World(pg_migrated_engine)
+    await w.user("u1", disabled=False)
+    await w.mail_log.add(make_entry("u1@example.test", template="reset_password", subject="Сброс пароля"))
+    await w.mail_log.add(make_entry("someone@example.org", minutes=1, to_user_id="u1", status=MailStatus.failed))
+    await w.mail_log.add(make_entry("guest@example.org", minutes=2, actor_user_id="u1"))
+
+    data = await w.lifecycle.export("u1")
+
+    mail = data["mail"]
+    assert [(m["to_email"], m["status"]) for m in mail] == [  # type: ignore[union-attr, index]
+        ("someone@example.org", "failed"),
+        ("u1@example.test", "sent"),
+    ]
+    assert mail[1] == {  # type: ignore[index]
+        "at": "2026-11-11T12:00:00+00:00",
+        "template": "reset_password",
+        "lang": "ru",
+        "to_email": "u1@example.test",
+        "subject": "Сброс пароля",
+        "status": "sent",
+        "reason": None,
+    }
 
 
 async def test__export__contains_own_data_without_secrets(pg_migrated_engine: AsyncEngine) -> None:

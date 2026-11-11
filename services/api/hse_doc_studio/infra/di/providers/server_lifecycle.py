@@ -51,6 +51,7 @@ def _batch(table: str, condition: str, order: str = "") -> str:
 
 # Условия удаления по таблицам: из одних и тех же строятся пачки DELETE и счёт предпросмотра «Освободить место».
 _NOTIFICATIONS_WHERE = (("notifications", "created_at < :cutoff"),)
+_MAIL_LOG_WHERE = (("mail_log", "at < :cutoff"),)
 _COLLAB_REQUESTS_WHERE = (
     ("project_invitations", "expires_at < :cutoff"),
     ("access_requests", "status <> 'pending' AND created_at < :cutoff"),
@@ -146,6 +147,14 @@ class ServerLifecycleProvider(Provider):
                 _batches(_NOTIFICATIONS_WHERE),
                 pause_s=pause,
                 counts=_counts(_NOTIFICATIONS_WHERE),
+            ),
+            "mail_log": DeleteBatchesSource(
+                sessions,
+                "mail_log",
+                ("mail_log",),
+                _batches(_MAIL_LOG_WHERE),
+                pause_s=pause,
+                counts=_counts(_MAIL_LOG_WHERE),
             ),
             "collab_requests": DeleteBatchesSource(
                 sessions,

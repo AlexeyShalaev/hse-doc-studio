@@ -31,6 +31,7 @@ from hse_doc_studio.core.identity.entities import (
     UserQuery,
 )
 from hse_doc_studio.core.listing import Found, Picked
+from hse_doc_studio.core.mail.journal import MailLogCounts, MailLogEntry, MailLogPage, MailLogQuery
 
 
 class IUserRepository(Protocol):
@@ -255,6 +256,30 @@ class IMailSender(Protocol):
     def enabled(self) -> bool: ...
     async def send(self, to: str, subject: str, body: str, *, html: str | None = None) -> None:
         """Письмо уходит текстом, а с `html` как multipart/alternative: текстовая часть и HTML."""
+        ...
+
+
+class IMailLogRepository(Protocol):
+    """Журнал писем (docs/design/mail-log.md, 5.1). Строка не меняется после записи; удаляют её только срок
+    хранения (источник `mail_log` движка жизненного цикла) и стирание человека (`IUserLifecycle.erase`)."""
+
+    async def add(self, entry: MailLogEntry) -> int:
+        """Записывает строку в своей короткой транзакции, мимо ambient (L15): откат запроса вызывающего не стирает
+        факт отправки. `entry.id` игнорируется; возвращает выданный id."""
+        ...
+
+    async def page(self, query: MailLogQuery) -> MailLogPage:
+        """Не больше `query.limit` строк, новые первыми, старше `query.before_id`; фильтры сочетаются по И.
+
+        `next_before_id` есть, если дальше есть ещё строки. `total_estimate` по статистике таблицы и только без
+        фильтров (`query.filtered`); с фильтрами None.
+        """
+        ...
+
+    async def get(self, entry_id: int) -> MailLogEntry | None: ...
+
+    async def summary(self, since: datetime) -> MailLogCounts:
+        """Итоги строк с `at >= since` и последний `failed` среди них."""
         ...
 
 

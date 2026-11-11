@@ -8,7 +8,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
-from sqlalchemy import delete, exists, func, or_, select, update
+from sqlalchemy import ColumnElement, delete, exists, func, or_, select, update
 from sqlalchemy.orm import aliased
 
 from hse_doc_studio.core.identity.errors import IdentityError, IdentityErrorCode
@@ -19,6 +19,7 @@ from hse_doc_studio.infra.db.orm import (
     CompileRecordRow,
     GroupMemberRow,
     GroupRow,
+    MailLogRow,
     MailOutboxRow,
     OrgMemberRow,
     OrgRow,
@@ -37,6 +38,7 @@ from hse_doc_studio.infra.db.session import SessionProvider
 from hse_doc_studio.infra.persistence.agent_persona import JsonAgentPersonaRepository, user_data_folder
 
 _AUDIT_EXPORT_LIMIT = 5000
+_MAIL_EXPORT_LIMIT = 5000
 
 
 def _iso(value: datetime | None) -> str | None:
@@ -90,6 +92,9 @@ class SqlUserLifecycle:
                 )
             )
             await db.execute(delete(MailOutboxRow).where(MailOutboxRow.to_email.in_({email[0], email[1]})))
+            # Журнал писем (mail-log.md, L11): письма человеку стираются, в письмах другим он остаётся без id.
+            await db.execute(delete(MailLogRow).where(_mail_to(user_id, email[0], email[1])))
+            await db.execute(update(MailLogRow).where(MailLogRow.actor_user_id == user_id).values(actor_user_id=None))
             await db.execute(update(RunnerRow).where(RunnerRow.created_by == user_id).values(created_by=None))
             await db.execute(
                 update(RunnerRegistrationTokenRow)
@@ -183,6 +188,14 @@ class SqlUserLifecycle:
                     .limit(_AUDIT_EXPORT_LIMIT)
                 )
             ).scalars()
+            mails = (
+                await db.execute(
+                    select(MailLogRow)
+                    .where(_mail_to(user_id, user.email_normalized, user.email))
+                    .order_by(MailLogRow.id.desc())
+                    .limit(_MAIL_EXPORT_LIMIT)
+                )
+            ).scalars()
             return {
                 "exported_at": _iso(datetime.now(UTC)),
                 "profile": {
@@ -236,6 +249,7 @@ class SqlUserLifecycle:
                 ],
                 "projects_shared_with_me": [{"id": str(pid), "name": name, "role": role} for pid, name, role in shared],
                 "audit": [_audit_item(a, user_id) for a in audit],
+                "mail": [_mail_item(m) for m in mails],
             }
 
 
@@ -246,4 +260,22 @@ def _audit_item(row: AuditLogRow, user_id: str) -> dict[str, Any]:
         "as_actor": row.actor_id == user_id,
         "target": row.target,
         "details": dict(row.details),
+    }
+
+
+def _mail_to(user_id: str, *emails: str) -> ColumnElement[bool]:
+    """Письма человеку: по id получателя или по любому из его адресов без учёта регистра (индекс `lower(to_email)`)."""
+    return or_(MailLogRow.to_user_id == user_id, func.lower(MailLogRow.to_email).in_({e.lower() for e in emails}))
+
+
+def _mail_item(row: MailLogRow) -> dict[str, Any]:
+    """Письмо человеку из журнала: вид, время, адрес, тема и итог; служебные поля и параметры шаблона не нужны."""
+    return {
+        "at": _iso(row.at),
+        "template": row.template,
+        "lang": row.lang,
+        "to_email": row.to_email,
+        "subject": row.subject,
+        "status": row.status,
+        "reason": row.reason,
     }

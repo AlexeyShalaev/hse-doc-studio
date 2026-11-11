@@ -231,7 +231,16 @@ async def test__run_now__audit_refused_others_run_and_are_audited(stack: _Stack)
     assert [e.action for e in await stack.users.audit.list()] == ["lifecycle.run_now"]
 
 
-_MANUAL = ["ai_usage", "jobs", "notifications", "collab_requests", "share_links", "guest_sessions", "collab_state"]
+_MANUAL = [
+    "ai_usage",
+    "jobs",
+    "notifications",
+    "mail_log",
+    "collab_requests",
+    "share_links",
+    "guest_sessions",
+    "collab_state",
+]
 
 
 async def test__sweep_preview__shape_and_no_store(stack: _Stack) -> None:
@@ -255,7 +264,7 @@ async def test__sweep_preview__shape_and_no_store(stack: _Stack) -> None:
         "bytes": 1024,
     }
     assert (body["sources"][1]["count"], body["sources"][1]["capped"]) == (None, False)
-    assert body["sources"][5]["days"] is None
+    assert body["sources"][_MANUAL.index("guest_sessions")]["days"] is None
     assert {"key": "audit_log", "reason": "protected"} in body["excluded"]
     assert {"key": "lifecycle_sweeps", "reason": "on_write"} in body["excluded"]
     assert body["nothing"] is False

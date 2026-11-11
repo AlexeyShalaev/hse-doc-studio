@@ -36,6 +36,7 @@ from hse_doc_studio.core.identity.protocols import (
     IFirstAdminRepository,
     IInstanceSettingsRepository,
     ILoginAttemptRepository,
+    IMailLogRepository,
     IMailOutboxRepository,
     IMailSender,
     IOidcProviderRepository,
@@ -71,6 +72,7 @@ from hse_doc_studio.infra.db.repositories.identity import (
     SqlUserRepository,
 )
 from hse_doc_studio.infra.db.repositories.lifecycle import SqlUserLifecycle
+from hse_doc_studio.infra.db.repositories.mail_log import SqlMailLogRepository
 from hse_doc_studio.infra.db.repositories.onboarding import MigratedExistingUserProbe, SqlOnboardingRepository
 from hse_doc_studio.infra.db.repositories.orgs import SqlGroupRepository, SqlOrgRepository
 from hse_doc_studio.infra.db.repositories.settings import PostgresSettingsRepository
@@ -465,6 +467,10 @@ class ServerIdentityProvider(Provider):
     @provide
     def get_mail_outbox(self, sessions: SessionProvider) -> IMailOutboxRepository:
         return SqlMailOutboxRepository(sessions)
+
+    @provide
+    def get_mail_log(self, sessions: SessionProvider) -> IMailLogRepository:
+        return SqlMailLogRepository(sessions)
 
     @provide
     def get_auth_cleanup_service(

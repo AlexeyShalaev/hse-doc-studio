@@ -111,6 +111,15 @@ POLICIES: tuple[LifecyclePolicy, ...] = (
         tables=("notifications",),
         growth="medium",
     ),
+    # Журнал писем (mail-log.md, L12): строка на попытку отправки, около 1 КБ, растёт как уведомления.
+    LifecyclePolicy(
+        "mail_log",
+        Group.database,
+        Strategy.delete_batches,
+        RetentionBounds(90, 14, 2 * YEAR),
+        tables=("mail_log",),
+        growth="medium",
+    ),
     LifecyclePolicy(
         "collab_requests",
         Group.database,

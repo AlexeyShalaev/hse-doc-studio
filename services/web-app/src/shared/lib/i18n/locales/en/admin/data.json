@@ -84,6 +84,10 @@
         "title": "Inbox",
         "body": "People's notifications."
       },
+      "mail_log": {
+        "title": "Mail log",
+        "body": "Which mail went to whom and how sending ended. Mail bodies and links are not kept."
+      },
       "collab_requests": {
         "title": "Invitations and access requests",
         "body": "Closed invitations, access requests and transfers."
