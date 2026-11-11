@@ -181,6 +181,7 @@ const seed = (): DemoInvites => ({
         profile_id: null,
         deadline: null,
         new_version: false,
+        freed_bytes: null,
       },
     },
     {
@@ -200,6 +201,29 @@ const seed = (): DemoInvites => ({
         profile_id: null,
         deadline: null,
         new_version: false,
+        freed_bytes: null,
+      },
+    },
+    // Администратор очистил диск личного раннера Анны (storage-cleanup.md, 8.2): ведёт в
+    // «Мои раннеры» с открытым «Диском» «Домашнего сервера» (сценарий runners_ready).
+    {
+      id: "ntf_demo_runner_disk",
+      kind: "runner_disk_cleaned",
+      created_at: iso(-2),
+      read_at: null,
+      payload: {
+        project_id: null,
+        project_name: null,
+        actor_name: "Алексей Шалаев",
+        role: null,
+        ref_id: "5e6f7a8b9c0d41e2f3a4b5c6d7e8f9a0",
+        outcome: "done",
+        path: null,
+        excerpt: "Домашний сервер",
+        profile_id: null,
+        deadline: null,
+        new_version: false,
+        freed_bytes: 7_784_628_224,
       },
     },
     {
@@ -219,6 +243,7 @@ const seed = (): DemoInvites => ({
         profile_id: null,
         deadline: null,
         new_version: false,
+        freed_bytes: null,
       },
     },
     {
@@ -238,6 +263,7 @@ const seed = (): DemoInvites => ({
         profile_id: null,
         deadline: null,
         new_version: false,
+        freed_bytes: null,
       },
     },
   ],

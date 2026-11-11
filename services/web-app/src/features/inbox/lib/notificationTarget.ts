@@ -1,5 +1,6 @@
 import { signingCardPath, signingPagePath } from "@entities/signing-route";
 import type { Notification } from "@entities/invitation";
+import { myRunnerDiskPath } from "@entities/runner";
 
 /** Куда ведёт уведомление: ревью открывает файл и тред в панели комментариев, остальное проект. */
 export const notificationTarget = (n: Notification): string => {
@@ -49,6 +50,11 @@ const signingTarget = (n: Notification): string | null => {
 /** Маршрут по клику на уведомление; null, если идти некуда (например, «вас убрали из проекта»). */
 export const notificationRoute = (n: Notification): string | null => {
   if (n.kind === "backup_failed") return "/admin/backups";
+  // Очистка диска личного раннера администратором (storage-cleanup.md, 8.2): `ref_id` это id
+  // раннера, переход открывает его «Диск» в «Моих раннерах».
+  if (n.kind === "runner_disk_cleaned") {
+    return myRunnerDiskPath(n.payload.ref_id);
+  }
   if (n.kind === "system_alert") {
     return n.payload.outcome?.startsWith("update_")
       ? "/admin/updates"

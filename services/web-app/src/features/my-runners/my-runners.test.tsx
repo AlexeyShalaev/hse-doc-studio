@@ -49,6 +49,7 @@ const renderView = (extra: Partial<MyRunnersViewProps> = {}) =>
         onReconnect={noop}
         onRevoke={noop}
         onRevokeToken={noop}
+        onDisk={noop}
         {...extra}
       />
     </MemoryRouter>,
@@ -173,6 +174,30 @@ describe("«Мои раннеры»: вид", () => {
     expect(screen.queryByTestId("my-runner-rotate-r1")).toBeNull();
     await userEvent.click(await screen.findByTestId("my-runner-reconnect-r1"));
     expect(onReconnect).toHaveBeenCalledWith(RUNNER);
+  });
+
+  it("«Диск» есть и у раннера на паузе, у отозванного меню нет", async () => {
+    const onDisk = vi.fn();
+    const paused: MyRunner = {
+      ...RUNNER,
+      state: "paused",
+      paused: true,
+      paused_by: "owner",
+    };
+    renderView({
+      onDisk,
+      runners: [
+        paused,
+        { ...RUNNER, id: "r2", state: "revoked", revoked: true },
+      ],
+      startShowRevoked: true,
+    });
+    expect(screen.queryByTestId("my-runner-actions-r2")).toBeNull();
+    await userEvent.click(screen.getByTestId("my-runner-actions-r1"));
+    const disk = await screen.findByTestId("my-runner-disk-r1");
+    expect(disk).toHaveTextContent("Диск");
+    await userEvent.click(disk);
+    expect(onDisk).toHaveBeenCalledWith(paused);
   });
 });
 

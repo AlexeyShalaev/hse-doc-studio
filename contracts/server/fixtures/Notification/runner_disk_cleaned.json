@@ -1,0 +1,20 @@
+{
+  "id": "ntf_7a8b9c0d1e2f43a4b5c6d7e8f9a0b1c2",
+  "kind": "runner_disk_cleaned",
+  "created_at": "2026-11-16T12:30:00Z",
+  "read_at": null,
+  "payload": {
+    "project_id": null,
+    "project_name": null,
+    "actor_name": "Алексей Шалаев",
+    "role": null,
+    "ref_id": "5e6f7a8b9c0d41e2f3a4b5c6d7e8f9a0",
+    "outcome": "done",
+    "path": null,
+    "excerpt": "Домашний сервер",
+    "profile_id": null,
+    "deadline": null,
+    "new_version": false,
+    "freed_bytes": 7784628224
+  }
+}
