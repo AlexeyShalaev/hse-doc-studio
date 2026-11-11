@@ -146,7 +146,8 @@ describe("обновление раннера из админки", () => {
     page([install()]);
 
     const accent = await screen.findByTestId("runner-upgrade-now-r1");
-    expect(accent).toHaveTextContent("Обновить до v0.15.0");
+    expect(accent).toHaveAccessibleName("Обновить до v0.15.0");
+    expect(accent).toHaveTextContent("v0.15.0");
     await user.click(accent);
 
     expect(screen.getByTestId("upgrade-versions")).toHaveTextContent(
