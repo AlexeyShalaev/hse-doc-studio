@@ -61,6 +61,7 @@
     "runNow": "Clean now",
     "fixed": {
       "guest_sessions": "7 days after expiry",
+      "runner_commands": "20 per runner",
       "compile_records": "50 per document",
       "container_logs": "5 × 10 MB",
       "auth_records": "on expiry",
@@ -118,6 +119,10 @@
       "usage_counters": {
         "title": "Quota counters",
         "body": "Old usage periods."
+      },
+      "runner_commands": {
+        "title": "Runner commands",
+        "body": "Disk measurements and cleanups sent to runners from the admin: the last 20 per runner, older ones are removed on write."
       },
       "compile_records": {
         "title": "Build records",

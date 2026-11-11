@@ -4,7 +4,9 @@
     "ai_relay",
     "ai_slots",
     "announce",
+    "control",
     "deployment_info",
+    "disk",
     "offline"
   ],
   "owner_kind": "user",

@@ -2,7 +2,11 @@ from __future__ import annotations
 
 from fastapi import FastAPI
 from hse_doc_studio.api.config import Settings
-from hse_doc_studio.api.observability.install import install_job_reaper, install_runner_pairings_purge
+from hse_doc_studio.api.observability.install import (
+    install_job_reaper,
+    install_runner_commands_reaper,
+    install_runner_pairings_purge,
+)
 
 
 class _Runner:
@@ -34,3 +38,14 @@ def test__install_runner_pairings_purge__registers_periodic_task() -> None:
     (task,) = app.state.background.tasks
     assert task.name == "runner_pairings_purge"  # type: ignore[attr-defined]
     assert task.interval_s == 600.0  # type: ignore[attr-defined]
+
+
+def test__install_runner_commands_reaper__registers_periodic_task() -> None:
+    app = FastAPI()
+    app.state.background = _Runner()
+
+    install_runner_commands_reaper(app, None)  # type: ignore[arg-type]
+
+    (task,) = app.state.background.tasks
+    assert task.name == "runner_commands_reaper"  # type: ignore[attr-defined]
+    assert task.interval_s == 60.0  # type: ignore[attr-defined]
