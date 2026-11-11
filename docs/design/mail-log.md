@@ -126,7 +126,7 @@
 | L16 | `IMailSender.send` возвращает `Message-ID` ушедшего письма. Текст ошибки: класс сбоя (`auth`, `connect`, `timeout`, `tls`, `recipient_refused`, `sender_refused`, `data_refused`, `disconnected`, `smtp_off`, `other`), код ответа SMTP и до 300 символов текста без переводов строк, где логин и пароль SMTP заменены на «[скрыто]». | Message-ID ищется в логах почтового сервера; класс даёт понятную подсказку на экране, сырой текст нужен для письма провайдеру. Так же теперь отвечает тестовое письмо: одна функция вместо `f"{type(exc).__name__}: ..."`. |
 | L17 | `attempts` в строке есть и в первой версии всегда 1: повторов нет. | Поле дешёвое, а повтор временных сбоев (раздел 13) ляжет в ту же строку без миграции. |
 | L18 | MCP: тул `admin_list_mail_log`, только чтение, только сведения строки (без превью), в группе `admin` с тремя согласиями M7. | Самый частый вопрос «дошло ли письмо Анне» агент админа решает одним вызовом, как уже решает вопросы по аудиту (`admin_list_audit`, где адреса тоже есть). Превью не отдаём: модели не нужно HTML, а переписки там и так нет. |
-| L19 | Метрика `hse_mail_sent_total{kind,status}`: `kind` это значение `MailTemplate`, `status` из L2. | Похожей нет (2.4). Оба набора меток конечны: 19 видов на 4 итога. |
+| L19 | Метрика `hse_mail_sent_total{kind,status}`: `kind` это значение `MailTemplate`, `status` из L2. | Похожей нет (2.4). Оба набора меток конечны: 18 видов на 4 итога. |
 | L20 | E2E на стенде с поддельным SMTP: `e2e/fake_smtp/server.py` на стандартной библиотеке (как `e2e/fake_openai`) в оверлее `deploy/server/compose.mail.yml`. Mailpit не берём. | В `deploy/server` и `e2e` SMTP нет вовсе. Своя заглушка детерминированно отвечает `550` и `451` на заданные адреса и отдаёт пойманные письма по HTTP без лишнего образа; у Mailpit режим отказов зависит от версии. |
 
 Альтернатива L3, «хранить отрисованное тело с вырезанными ссылками», отвергнута:
@@ -344,8 +344,22 @@ the log]».
   `not_sent`; анонимный запрос; фоновая задача; запись удалена по сроку (404); телефон;
 - меню: пункт «Письма» со счётчиком и без.
 
-Каждое состояние в ru и en, светлой и тёмной теме. Демо-мир сервера (`app/demo/server/mailLog.ts`) отвечает на адреса
-раздела 6 по сценариям галереи; эталоны раздела 6 совпадают с состояниями галереи (тест).
+Каждое состояние в ru и en, светлой и тёмной теме. Данные состояний (срез W1) лежат в
+`features/admin-mail-log/testing`. Основа это эталоны сервера из 6.2: их копия `serverFixtures.ts` один в один, тест
+сверяет её с файлами. К ним добавлены свои состояния, которых в эталонах нет (`fixtures.ts`, постоянное время
+`MAIL_NOW`):
+
+- страницы `MAIL_LOG_PAGES`: эталоны `day` (с `next_cursor`, подгрузка), `next_page`, `filtered_failed`, `empty`;
+  свои `mixed` (все виды и итоги), `nothing_found`, `smtp_off`, `auth_failure`, `long`;
+- сводки `MAIL_LOG_SUMMARIES`: эталоны `normal`, `auth_failure`, `smtp_off`, `quiet`;
+- карточки `MAIL_LOG_DETAILS`: эталоны `token_link`, `page_link`, `failed_with_note`, `failed_auth_system`,
+  `suppressed`, `not_sent`, `rerendered`, `template_gone`; свои `suppressed_blocked`, `project_gone`, `long`;
+  `MAIL_LOG_MISSING_ID` для 404.
+
+Демо-мир сервера (`app/demo/server/mailLog.ts`) отвечает на адреса раздела 6 моками `createMailLogDemo` по
+сценариям: `admin_scale` большой журнал (1200 строк), `admin_sso` почта не настроена, `ops_services_degraded` сбой
+входа на SMTP, `ops_fresh` и `install_fresh` пусто, остальные админские обычный день; тестовое письмо из «Почта
+(SMTP)» дописывает строку.
 
 ## 5. Модель данных
 
@@ -492,12 +506,11 @@ the log]».
 `contracts/server/fixtures/AdminMailLogPage`, `AdminMailLogEntry`, `AdminMailLogDetail`, `AdminMailLogSummary`; их
 разбирают оба теста контракта (`CONTRACT_SCHEMAS` и `_SCHEMAS` в `test_server_contract.py`).
 
-Как сделал B1: модели и эталоны готовы, а zod-схем ещё нет, поэтому эталоны лежат в
-`contracts/server/pending/AdminMailLog*` (README контракта). Backend-тест разбирает `pending` наравне с `fixtures`,
-фронтовый их не видит. W1 переносит четыре каталога в `fixtures` (`git mv`) в том же PR, где регистрирует схемы в
-`CONTRACT_SCHEMAS`; backend-тест при этом не меняется. Смысл эталонов (итог и причина, сбой только у `failed`,
-Message-ID только у `sent`, вид удалён без превью, сбой в сводке только при `failed > 0`, ни одной ссылки с токеном)
-сверяет `tests/unit/contract/test_mail_log_fixtures.py`, где бы каталоги ни лежали. Варианты:
+Как сделали B1 и W1: B1 слился раньше фронтенда и положил эталоны в `contracts/server/pending/AdminMailLog*`
+(README контракта), W1 перенёс их в `fixtures` (`git mv`) и зарегистрировал схемы в `CONTRACT_SCHEMAS`;
+backend-тест не менялся. Смысл эталонов (итог и причина, сбой только у `failed`, Message-ID только у `sent`, вид
+удалён без превью, сбой в сводке только при `failed > 0`, ни одной ссылки с токеном) сверяет
+`tests/unit/contract/test_mail_log_fixtures.py`, где бы каталоги ни лежали. Варианты:
 
 - `AdminMailLogEntry`: `sent_token_anonymous`, `sent_page_user`, `failed_recipient` (`550`), `failed_auth_system`
   (автонапоминание, EN), `suppressed_unverified`, `not_sent_smtp_off`, `template_gone`, `project_gone` (проекта и
@@ -553,6 +566,11 @@ AdminMailLogSummary {
 ```
 
 `preview.subject` это тема из перерисовки; в шапке карточки показывается `entry.subject` (как ушла).
+
+На фронтенде (W1) модели называются без приставки `Admin`: `MailLogEntry`, `MailLogPage`, `MailLogDetail`,
+`MailLogSummary`, человек `MailLogPerson`; каталоги эталонов остаются `AdminMailLog*`. Пары «каталог и схема zod»
+лежат в `MAIL_LOG_CONTRACT_SCHEMAS` (`features/admin-mail-log/api/schemas.ts`) и разложены в `CONTRACT_SCHEMAS`.
+Копия эталонов для галерей и тестов: `testing/serverFixtures.ts`; правят сначала файлы, затем копию.
 
 ### 6.3 Коды ошибок
 
@@ -703,7 +721,7 @@ E2E (срез E1): раздел 12.
 
 | Срез | Что | Зависит от | Размер |
 |---|---|---|---|
-| W1 | `features/admin-mail-log/api`: zod-схемы, запросы (`useCursorList`, сводка с опросом раз в 60 с), ключи; эталоны раздела 6; демо-маршруты и сценарии `app/demo/server/mailLog.ts`; состояния галереи `testing/fixtures.ts` | контракт раздела 6 | M |
+| W1 | `features/admin-mail-log/api`: zod-схемы, запросы (`useCursorList`, сводка с опросом раз в 60 с), ключи; эталоны раздела 6 из `pending` в `fixtures` и их копия для галерей (6.2); моки `testing/demo.ts`, демо-маршруты и сценарии `app/demo/server/mailLog.ts`; состояния галереи `testing/fixtures.ts` (4.4) | контракт раздела 6 | M |
 | W2 | список: пункт «Письма» в группе «Журнал» со счётчиком (`nav.mail`, `nav.count.mail_*`), маршрут `/admin/mail`, шапка, плашка без SMTP, полоса за сутки с подсказками, фильтры и поиск в адресе, таблица по дням, телефон, словарь `admin/mail.json` ru и en, раздел галереи «Админка: письма» (список) | W1 | M |
 | W3 | карточка: панель справа по `?mail=`, сведения, вкладки HTML и текст в песочнице, пометки, «Что можно сделать» по виду и итогу, переходы к человеку, проекту и настройкам почты, 404; записи галереи (карточка) | W2 | M |
 

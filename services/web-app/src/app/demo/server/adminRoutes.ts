@@ -8,6 +8,7 @@ import type {
 } from "@entities/session";
 import { boolParam, invalidQuery, offsetList, queryOne } from "./demoList";
 import { createInstallRoutes } from "./installRoutes";
+import { recordSmtpTest } from "./mailLog";
 import { createPickerRoutes } from "./pickerRoutes";
 import { createOpsRoutes } from "./opsRoutes";
 import { createQuotaAdminRoutes } from "./quotaRoutes";
@@ -326,11 +327,11 @@ export const createAdminRoutes = (
           return demoJson({ ok: false, error: "SMTP is not configured" });
         }
         if ((smtp.host ?? "").includes("fail") || to.startsWith("fail@")) {
-          return demoJson({
-            ok: false,
-            error: "SMTPConnectError: connection refused",
-          });
+          const error = "SMTPConnectError: connection refused";
+          recordSmtpTest(getWorld(), to, error);
+          return demoJson({ ok: false, error });
         }
+        recordSmtpTest(getWorld(), to, null);
         return demoJson({ ok: true, error: null });
       }),
     },
