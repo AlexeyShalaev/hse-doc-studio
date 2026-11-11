@@ -102,7 +102,8 @@ jobs:
                          -f deploy/server/compose.smoke.yml config -q
           docker compose --env-file /tmp/server.env -f deploy/server/docker-compose.yml \
                          -f deploy/server/compose.smoke.yml -f deploy/server/compose.personal.yml \
-                         -f deploy/server/compose.outside.yml --profile personal --profile outside config -q
+                         -f deploy/server/compose.outside.yml -f deploy/server/compose.mail.yml \
+                         --profile personal --profile outside --profile mail config -q
           # Без обязательных значений набор обязан падать с понятной ошибкой.
           if docker compose --env-file /dev/null -f deploy/server/docker-compose.yml config -q 2>/dev/null; then
             echo "::error::deploy/server не требует обязательных секретов"; exit 1
@@ -316,6 +317,16 @@ jobs:
           pnpm exec playwright test --project=presence
         working-directory: e2e
 
+      # Журнал писем (mail-log.md, E1): поддельный SMTP из compose.mail.yml, админ настраивает на него почту, сценарии
+      # проверяют строки журнала и пойманные письма; в конце почта снова выключена. Маршрут подписания собирает документы
+      # на общем раннере, поэтому до очистки места.
+      - name: Run mail log e2e
+        run: |
+          ../scripts/dev/server-stack/stack.sh mail-up
+          eval "$(../scripts/dev/server-stack/stack.sh env)"
+          pnpm exec playwright test --project=mail-log
+        working-directory: e2e
+
       # Очистка места (storage-cleanup.md, E1): «Диск» общего и личного раннера, «Освободить место». Идёт последней:
       # чистит висячие образы и кэш раннера, удаляет состаренную задачу сборки и оставляет личный раннер остановленным.
       - name: Run storage cleanup e2e
@@ -330,6 +341,9 @@ jobs:
           for service in api runner postgres minio; do
             echo "::group::$service"; scripts/dev/server-stack/stack.sh logs "$service" | tail -300; echo "::endgroup::"
           done
+          echo "::group::fake-smtp"
+          scripts/dev/server-stack/stack.sh logs fake-smtp 2>&1 | tail -100 || true
+          echo "::endgroup::"
           echo "::group::runner-personal"
           scripts/dev/server-stack/stack.sh logs runner-personal 2>&1 | tail -200 || true
           echo "::endgroup::"
