@@ -103,7 +103,9 @@ case "${1:-}" in
   personal-reset)
     # Стирает контейнер и личность личного раннера: следующий personal-up регистрирует новый раннер.
     "${compose[@]}" --profile personal rm -f -s runner-personal
-    rm -rf "${STACK_PERSONAL_RUNNER_DIR:-$here/runner-personal-data$suffix}"
+    # На Linux каталог принадлежит uid раннера (10001): без sudo повторный прогон в CI не сотрёт рабочие копии.
+    rm -rf "${STACK_PERSONAL_RUNNER_DIR:-$here/runner-personal-data$suffix}" 2>/dev/null \
+      || sudo -n rm -rf "${STACK_PERSONAL_RUNNER_DIR:-$here/runner-personal-data$suffix}"
     ;;
   outside-up)
     ensure_env

@@ -243,6 +243,18 @@ export default defineConfig({
       },
     },
     {
+      // Очистка места (storage-cleanup.md, E1): «Диск» общего и личного раннера, «Освободить место» в «Хранилище»;
+      // стенд deploy/server с compose.personal.yml, идёт после полного смоука или сам на свежем стенде.
+      name: "storage-cleanup",
+      testMatch: /storage-cleanup\.spec\.ts/,
+      timeout: 20 * 60_000,
+      use: {
+        ...devices["Desktop Chrome"],
+        actionTimeout: 20_000,
+        channel: process.env.E2E_CHANNEL || undefined,
+      },
+    },
+    {
       // Страница «Обновления» и закрытый протокол апдейтера; идёт после полного смоука на том же стенде.
       name: "updates",
       testMatch: /updates\.spec\.ts/,
