@@ -2,8 +2,8 @@
 (storage-cleanup.md, 5.5)
 
 Revision ID: dk_01_runner_disk
-Revises: sr_10_new_version_kind
-Create Date: 2026-11-16 10:00:00
+Revises: dk_02_lifecycle_sweeps
+Create Date: 2026-11-16 12:00:00
 """
 
 from collections.abc import Sequence
@@ -13,9 +13,8 @@ from alembic import op
 from sqlalchemy.dialects import postgresql
 
 revision: str = "dk_01_runner_disk"
-# Цепочка одна (`test__migrations__chain__has_single_head`): срез, который сливается вторым из B5 и B7, ставит
-# сюда ревизию первого (`dk_02_lifecycle_sweeps`, если он уже в master).
-down_revision: str | None = "sr_10_new_version_kind"
+# Цепочка одна (`test__migrations__chain__has_single_head`): B7 слит раньше, поэтому `dk_01` идёт после `dk_02`.
+down_revision: str | None = "dk_02_lifecycle_sweeps"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
