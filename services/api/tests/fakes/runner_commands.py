@@ -111,7 +111,9 @@ class InMemoryRunnerCommandRepository:
             and c.created_at < before
         ]
 
-    async def lose(self, *, silent_before: datetime, now: datetime, runner_id: str | None = None) -> list[RunnerCommand]:
+    async def lose(
+        self, *, silent_before: datetime, now: datetime, runner_id: str | None = None
+    ) -> list[RunnerCommand]:
         closed: list[RunnerCommand] = []
         for command in list(self._items.values()):
             if (runner_id is not None and command.runner_id != runner_id) or command.state not in _IN_FLIGHT:

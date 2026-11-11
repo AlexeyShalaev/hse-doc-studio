@@ -62,8 +62,8 @@ from hse_doc_studio.infra.db.repositories.jobs import PostgresJobQueue
 from hse_doc_studio.infra.db.repositories.jobs_applied import SqlJobApplyLedger
 from hse_doc_studio.infra.db.repositories.project_acl import PostgresProjectAclRepository
 from hse_doc_studio.infra.db.repositories.project_route_policy import SqlProjectRoutePolicyRepository
-from hse_doc_studio.infra.db.repositories.runner_pairings import SqlRunnerPairingRepository
 from hse_doc_studio.infra.db.repositories.runner_commands import SqlRunnerCommandRepository, SqlRunnerDiskStore
+from hse_doc_studio.infra.db.repositories.runner_pairings import SqlRunnerPairingRepository
 from hse_doc_studio.infra.db.repositories.runners import SqlRegistrationTokenRepository, SqlRunnerRepository
 from hse_doc_studio.infra.db.session import SessionProvider
 from hse_doc_studio.infra.jobs.availability import RunnerBuildAvailability
@@ -83,8 +83,8 @@ from hse_doc_studio.use_cases.jobs.personal_settings import InstancePersonalRunn
 from hse_doc_studio.use_cases.jobs.project_build_runners import ProjectBuildRunnersService
 from hse_doc_studio.use_cases.jobs.queue_service import JobQueueService
 from hse_doc_studio.use_cases.jobs.routing import JobRouter
-from hse_doc_studio.use_cases.jobs.runner_io import RunnerJobIoService
 from hse_doc_studio.use_cases.jobs.runner_control import RunnerCommandWakeup, RunnerControlService
+from hse_doc_studio.use_cases.jobs.runner_io import RunnerJobIoService
 from hse_doc_studio.use_cases.jobs.runner_jobs import RunnerJobService
 from hse_doc_studio.use_cases.jobs.runners import RunnerRegistry
 from hse_doc_studio.use_cases.jobs.stranded import QueuedJobFit, StrandedJobSweeper
