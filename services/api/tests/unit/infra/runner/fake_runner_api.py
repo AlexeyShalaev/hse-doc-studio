@@ -72,8 +72,20 @@ class FakeRunnerState:
         self.supports_announce = True
         self.announce_paused = False
         self.announces: list[dict[str, Any]] = []
-        # Возможности сервера; без `deployment_info` это сервер до отчётов о развёртывании.
-        self.server_features = {"announce", "offline", "ai_slots", "ai_relay", "deployment_info"}
+        # Возможности сервера; без `deployment_info` это сервер до отчётов о развёртывании, без `control` и `disk`
+        # сервер до канала команд (адресов `/control/*` и `/disk` у него нет).
+        self.server_features = {"announce", "offline", "ai_slots", "ai_relay", "deployment_info", "control", "disk"}
+        # Канал команд: очередь конвертов команд, ход по id, остановка и ошибки хода, отчёты о диске.
+        self.commands: list[dict[str, Any]] = []
+        self.control_polls = 0
+        self.hold_control_s = 0.0
+        self.progress: dict[str, list[dict[str, Any]]] = {}
+        self.cancel_commands: set[str] = set()
+        self.progress_errors: dict[str, tuple[int, str]] = {}
+        self.disks: list[dict[str, Any]] = []
+        self.disk_status: int | None = None
+        # Порядок вызовов канала и `/offline`: итог очистки должен уйти раньше `/offline`.
+        self.events: list[str] = []
         self.deployments: list[dict[str, Any]] = []
         self.poll_bodies: list[dict[str, Any]] = []
         self.offline_calls = 0
@@ -141,6 +153,38 @@ def create_fake_app(state: FakeRunnerState) -> FastAPI:  # noqa: C901
         if not state.supports_announce:
             return Response(status_code=404)
         state.offline_calls += 1
+        state.events.append("offline")
+        return Response(status_code=204)
+
+    @app.post("/api/runner/v1/control/poll")
+    async def control_poll(body: schemas.ControlPollRequestBody) -> Any:
+        if "control" not in state.server_features:
+            return Response(status_code=404)
+        state.control_polls += 1
+        if state.commands:
+            return {"command": state.commands.pop(0)}
+        await asyncio.sleep(max(state.hold_control_s, 0.02))
+        return {"command": None}
+
+    @app.post("/api/runner/v1/control/{command_id}/progress")
+    async def command_progress(command_id: str, body: schemas.CommandProgressRequestBody) -> Any:
+        if "control" not in state.server_features:
+            return Response(status_code=404)
+        state.events.append(f"progress:{body.state}")
+        if command_id in state.progress_errors:
+            status, code = state.progress_errors[command_id]
+            return _error(status, code)
+        state.progress.setdefault(command_id, []).append(body.model_dump(mode="json"))
+        return {"cancel": command_id in state.cancel_commands}
+
+    @app.post("/api/runner/v1/disk")
+    async def disk(body: schemas.RunnerDiskReportBody) -> Any:
+        if "disk" not in state.server_features:
+            return Response(status_code=404)
+        if state.disk_status is not None:
+            return _error(state.disk_status, "feature_not_negotiated")
+        state.events.append("disk")
+        state.disks.append(body.model_dump(mode="json"))
         return Response(status_code=204)
 
     @app.post("/api/runner/v1/deregister")

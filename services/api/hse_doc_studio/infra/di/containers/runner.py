@@ -39,6 +39,7 @@ from hse_doc_studio.infra.runner.capabilities import detect_tags
 from hse_doc_studio.infra.runner.client import RunnerClient
 from hse_doc_studio.infra.runner.compile_executor import CompileJobExecutor, RoutingJobExecutor
 from hse_doc_studio.infra.runner.config import BuildExecutorKind, RunnerConfig
+from hse_doc_studio.infra.runner.control import ControlLoopConfig, RunnerControlLoop
 from hse_doc_studio.infra.runner.deployment import collect_deployment
 from hse_doc_studio.infra.runner.disk import RunnerDiskService, build_runner_disk_service
 from hse_doc_studio.infra.runner.handler_executor import HandlerJobExecutor, JobBlobFetcher
@@ -275,7 +276,13 @@ class RunnerProvider(Provider):
         )
 
     @provide
-    def get_loop(
+    def get_control(self, config: RunnerConfig, client: RunnerClient, disk: RunnerDiskService) -> RunnerControlLoop:
+        # Канал команд и отчёт о диске (docs/design/storage-cleanup.md, 6.3); цикл раннера открывает его сам,
+        # только если сервер согласовал `control` и `disk`.
+        return RunnerControlLoop(client, disk, ControlLoopConfig(wait_s=config.poll_wait_s))
+
+    @provide
+    def get_loop(  # noqa: PLR0913
         self,
         config: RunnerConfig,
         client: RunnerClient,
@@ -283,6 +290,7 @@ class RunnerProvider(Provider):
         compile_executor: CompileJobExecutor,
         relay: AiRelayExecutor,
         backend: BuildBackend,
+        control: RunnerControlLoop,
     ) -> RunnerLoop:
         endpoints = self._ai_endpoints if self._ai_endpoints is not None else endpoints_of(config)
         declared = tuple(DeclaredAiEndpoint(endpoint.name, endpoint.flavor) for endpoint in endpoints)
@@ -314,6 +322,7 @@ class RunnerProvider(Provider):
                 deployment=partial(collect_deployment, config) if config.host_kind is RunnerHostKind.cli else None,
             ),
             observer=self._observer,
+            control=control,
         )
 
 

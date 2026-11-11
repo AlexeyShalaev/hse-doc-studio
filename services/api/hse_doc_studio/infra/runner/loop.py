@@ -24,7 +24,9 @@ from hse_doc_studio.core.jobs.wire import (
     FEATURE_AI_RELAY,
     FEATURE_AI_SLOTS,
     FEATURE_ANNOUNCE,
+    FEATURE_CONTROL,
     FEATURE_DEPLOYMENT,
+    FEATURE_DISK,
     FEATURE_OFFLINE,
     MAX_POLL_WAIT_S,
     RUNNER_PROTOCOL_VERSION,
@@ -41,6 +43,7 @@ from hse_doc_studio.core.jobs.wire import (
 )
 from hse_doc_studio.infra.runner.backoff import Backoff
 from hse_doc_studio.infra.runner.client import RunnerApiError, RunnerClient, RunnerUnreachable, StorageUnreachable
+from hse_doc_studio.infra.runner.control import RunnerControlLoop
 from hse_doc_studio.infra.runner.executor import JobContext, JobExecutor, JobOutcome, OutputFile
 from hse_doc_studio.infra.runner.log_batcher import DEFAULT_FLUSH_S, LogBatcher
 
@@ -58,6 +61,8 @@ _LEASE_LOST_CODES = frozenset(
 # Запас на остановку исполнителя после принудительной отмены при выключении.
 _FORCE_GRACE_S = 5.0
 DEPLOYMENT_REPORT_EVERY_S = 3600.0
+# Канал команд открывается, только если сервер согласовал обе возможности (storage-cleanup.md, 6.1).
+_CONTROL_FEATURES = frozenset({FEATURE_CONTROL, FEATURE_DISK})
 
 
 class RunnerFatalError(Exception):
@@ -126,6 +131,7 @@ class RunnerLoop:
         config: RunnerLoopConfig,
         *,
         observer: IRunnerLoopObserver | None = None,
+        control: RunnerControlLoop | None = None,
     ) -> None:
         if config.concurrency < 1:
             raise ValueError("concurrency must be at least 1")
@@ -133,6 +139,8 @@ class RunnerLoop:
         self._executor = executor
         self._config = config
         self._observer = observer
+        # Канал команд и диск раннера: отдельные задачи рядом с опросом задач, после согласования `control`, `disk`.
+        self._control = control
         self._stop = asyncio.Event()
         self._force = asyncio.Event()
         self._slot_freed = asyncio.Event()
@@ -182,6 +190,8 @@ class RunnerLoop:
         features = {FEATURE_ANNOUNCE, FEATURE_OFFLINE} | ({FEATURE_AI_SLOTS, FEATURE_AI_RELAY} if relay else set())
         if cfg.deployment is not None:
             features.add(FEATURE_DEPLOYMENT)
+        if self._control is not None:
+            features |= _CONTROL_FEATURES
         tags = set(cfg.tags) | ({RELAY_TAG} if relay else set())
         return RunnerAnnounceRequest(
             name=cfg.name,
@@ -202,12 +212,31 @@ class RunnerLoop:
             self._raise_if_fatal(exc)
             logger.warning("announce rejected, staying on protocol 1.0: %s", exc)
             self._announced = None
+            await self._sync_control()
             return
         if self._announced is None:
             logger.info("server does not know /announce: protocol 1.0 without ai relay")
         else:
             self._set_state(RunnerLoopState.paused if self._announced.paused else RunnerLoopState.online)
             await self._report_deployment()
+        await self._sync_control()
+
+    async def _sync_control(self) -> None:
+        """Канал команд по итогам `/announce`: открыть после согласования, закрыть, если сервер его больше не знает.
+
+        Повторный `/announce` при открытом канале просит новый замер диска. Старый сервер (нет `control` или `disk`)
+        канала не получает, и в журнале о нём ничего нет.
+        """
+        control = self._control
+        if control is None or self._stop.is_set():
+            return
+        if _CONTROL_FEATURES <= self._client.features:
+            if control.running:
+                control.request_report()
+            else:
+                control.start()
+        elif control.running:
+            await control.stop()
 
     async def _report_deployment(self) -> None:
         """Отчёт о развёртывании; сбой не мешает работе: сервер просто покажет прежний отчёт или «нет данных»."""
@@ -249,10 +278,17 @@ class RunnerLoop:
                 await self._register_until_ready()
             await self._announce_until_ready()
             await self._poll_loop()
-            await self._drain()
+            # Итог прерванной очистки уходит раньше `/offline`: после него сервер считает идущую команду потерянной.
+            await asyncio.gather(self._drain(), self._stop_control())
             await self._say_offline()
         finally:
+            if self._control is not None:
+                await self._control.abort()
             self._set_state(RunnerLoopState.stopped)
+
+    async def _stop_control(self) -> None:
+        if self._control is not None:
+            await self._control.stop()
 
     def _free_slots(self) -> tuple[int, int]:
         """Свободные слоты сборок (с учётом шлюза) и ретрансляции (только после согласования `ai_slots`)."""

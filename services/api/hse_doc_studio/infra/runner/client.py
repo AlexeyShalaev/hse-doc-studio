@@ -5,11 +5,13 @@ import logging
 from collections.abc import Callable, Mapping
 from typing import Any, cast
 from urllib.parse import urlsplit
+from uuid import UUID
 
 import httpx
 
 from hse_doc_studio.core.jobs.codec import decode, decode_poll_response, encode
 from hse_doc_studio.core.jobs.deployment import RunnerDeployment
+from hse_doc_studio.core.jobs.disk import RunnerDiskReport
 from hse_doc_studio.core.jobs.wire import (
     FEATURE_AI_SLOTS,
     RUNNER_API_PREFIX,
@@ -17,8 +19,12 @@ from hse_doc_studio.core.jobs.wire import (
     ArtifactUploadResponse,
     BlobNeedRequest,
     BlobNeedResponse,
+    CommandProgressRequest,
+    CommandProgressResponse,
     CompleteRequest,
     CompleteResponse,
+    ControlPollRequest,
+    ControlPollResponse,
     HeartbeatRequest,
     HeartbeatResponse,
     LogBatch,
@@ -52,6 +58,8 @@ _RETRY_STATUSES = frozenset({429, 502, 503, 504})
 # ошибкой `artifact_upload_failed`, хотя сервер вернулся через несколько секунд. Длиннее нельзя: пульс к этому
 # моменту остановлен, а аренда (45 с по умолчанию) отсчитывается от последнего удачного пульса.
 FINISH_RETRIES = 10
+# Ход команды и отчёт о диске: короткие запросы, долгий опрос команд ждёт сам по `wait_s`.
+_CONTROL_TIMEOUT_S = 15.0
 
 
 class RunnerApiError(Exception):
@@ -62,6 +70,15 @@ class RunnerApiError(Exception):
         self.status = status
         self.code = code
         self.detail = detail
+
+
+class RunnerCommandRejected(Exception):  # noqa: N818
+    """Команда из `/control/poll` не разобралась (неизвестный вид, неверная нагрузка): её закрывают ошибкой по id."""
+
+    def __init__(self, command_id: UUID | None, reason: str) -> None:
+        super().__init__(reason)
+        self.command_id = command_id
+        self.reason = reason
 
 
 class RunnerUnreachable(Exception):  # noqa: N818
@@ -224,6 +241,37 @@ class RunnerClient:
         """Как раннер развёрнут; шлётся только после согласования `deployment_info`, без повторов."""
         await self._send("POST", "/deployment", json=encode(report), retries=0, timeout_s=10.0)
 
+    async def control_poll(self, request: ControlPollRequest) -> ControlPollResponse:
+        """Долгий опрос команд (`control`): свой таймаут, без повторов, паузой управляет цикл команд.
+
+        Команда, которую раннер не может разобрать, даёт `RunnerCommandRejected` с её id, если он читается.
+        """
+        response = await self._send(
+            "POST", "/control/poll", json=encode(request), retries=0, timeout_s=request.wait_s + self._timeout_s
+        )
+        body = _json_object(response)
+        try:
+            return decode(ControlPollResponse, body)
+        except (TypeError, ValueError, KeyError) as exc:
+            raise RunnerCommandRejected(_command_id_of(body), f"unsupported command: {exc}") from exc
+
+    async def command_progress(
+        self, command_id: UUID, request: CommandProgressRequest, *, final: bool = False
+    ) -> CommandProgressResponse:
+        """Ход команды без повторов (следующий ход его заменит); итог с повторами, как `complete` задачи."""
+        response = await self._send(
+            "POST",
+            f"/control/{command_id}/progress",
+            json=encode(request),
+            retries=FINISH_RETRIES if final else 0,
+            timeout_s=_CONTROL_TIMEOUT_S,
+        )
+        return decode(CommandProgressResponse, _json_object(response))
+
+    async def report_disk(self, report: RunnerDiskReport) -> None:
+        """Замер диска (`disk`); отчёт уже ужат до 64 КБ (`RunnerDiskService.measure`)."""
+        await self._send("POST", "/disk", json=encode(report), retries=1, timeout_s=_CONTROL_TIMEOUT_S)
+
     async def deregister(self) -> None:
         """Раннер отзывает сам себя; дальше его токен не годится."""
         await self._send("POST", "/deregister", retries=1)
@@ -292,6 +340,15 @@ class RunnerClient:
             "POST", f"/jobs/{job_id}/complete", job_token=job_token, json=encode(request), retries=FINISH_RETRIES
         )
         return decode(CompleteResponse, _json_object(response))
+
+
+def _command_id_of(body: Mapping[str, object]) -> UUID | None:
+    command = body.get("command")
+    raw = command.get("id") if isinstance(command, dict) else None
+    try:
+        return UUID(raw) if isinstance(raw, str) else None
+    except ValueError:
+        return None
 
 
 def _json_object(response: httpx.Response) -> dict[str, object]:
