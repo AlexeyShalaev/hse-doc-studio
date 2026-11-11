@@ -305,13 +305,16 @@ RunnerDiskReport
   volume: {total_bytes, free_bytes} | null       том data_dir (shutil.disk_usage); null, если не прочитать
 
 DockerDisk
-  available                         false: docker не ответил; остальные поля пустые
+  available                         false: docker не ответил; числа 0, списки пусты, old_versions без пунктов
+                                    и с версией раннера (структура та же, не null)
   categories: [{key, bytes}]        key: compile | languagetool | office | ai | app | cache | runtime
-  total_bytes, cleanable_bytes      как `cleanable_bytes()` локального «Диска»
+  total_bytes, cleanable_bytes      cleanable_bytes: ровно то, что освободит «Очистить всё», без отката (9.3)
   build_cache: {bytes, reclaimable_bytes, count}
   dangling: {bytes, count}
   stopped_containers: {bytes, count}
-  unused_images: [{ref, category, size_bytes}]   до 100, `unused_truncated` при обрезке
+  unused_images: [{ref, category, size_bytes}]   до 100, `unused_truncated` при обрезке; без пунктов
+                                    old_versions и отката (5.2); category из compile | languagetool |
+                                    office | ai | app
   unused_truncated
   old_versions: {current_version, rollback: OldItem | null, items: [OldItem], reclaimable_bytes, rollback_bytes}
                                     items до 100, как `OldVersions` локального «Диска»
@@ -335,7 +338,7 @@ DiskTarget: old_versions | unused_images | build_cache | dangling_images | stopp
 | Цель | Что делает раннер | Правило безопасности |
 |---|---|---|
 | `old_versions` | `image rm` каждого образа и `rm` контейнера из `old_versions.items`; с `include_rollback` и образ отката | как в локальном «Диске»: версия ниже текущей, не занята, не защищена; откат только по флагу |
-| `unused_images` | `image rm` каждого неиспользуемого образа категорий Студии | не `other`, не `dangling`, не защищён (активный образ категории у раннера, его собственный образ, `latest`), не занят |
+| `unused_images` | `image rm` каждого неиспользуемого образа категорий Студии | не `other`, не `dangling`, не защищён (активный образ категории у раннера, его собственный образ, `latest`), не занят, не входит в `old_versions` (ни пунктом, ни откатом): иначе эта цель снимала бы откат в обход `include_rollback` и S8 |
 | `build_cache` | `builder prune -f` | как локально |
 | `dangling_images` | `image prune -f` | как локально |
 | `stopped_containers` | `rm` остановленных контейнеров с меткой `com.hse-studio.managed` | метка проверяется в момент удаления |
@@ -391,7 +394,7 @@ CommandProgress
 ```text
 LifecycleSweep
   id, status: running | cancelling | done | cancelled | error | interrupted,
-  started_by, started_at, updated_at, finished_at,
+  started_by: {id, name} | null, started_at, updated_at, finished_at,
   steps: [{key, status: pending | running | done | error | skipped, removed, partitions_dropped, more,
            bytes_before, bytes_after, error}],
   removed_total, freed_bytes
@@ -602,18 +605,20 @@ null`: по нему меню решает, показывать ли пункт
 
 ```text
 RunnerDiskView
-  runner_id, supported, reason: outdated | revoked | null,
+  runner_id, supported, reason: outdated | null    (отозванный раннер: 404, раздел 7),
   min_version (с какой версии раннер сообщает диск),
   online (раннер на связи сейчас), last_seen_at,
   report: RunnerDiskReport | null, received_at, stale (замер старше суток),
   command: RunnerDiskCommand | null    (незавершённая очистка или последняя завершённая за 24 часа),
   measuring: bool                      (стоит или идёт disk.measure),
-  can_clean, can_include_rollback,
+  can_clean (поддержан, на связи, замер есть, очистка не идёт),
+  can_include_rollback (права раздела 7 и `old_versions` в targets отчёта),
   personal_owner: {id, name} | null    (только в админке и только у личного раннера)
 
 RunnerDiskCommand
   id, kind, state, targets, include_rollback, created_at, finished_at,
-  created_by: {id, name}, progress: CommandProgress | null
+  created_by: {id, name} | null (человека уже нет), progress: CommandProgress | null
+  у disk.measure: targets [], include_rollback false
 
 RunnerDiskCleanupRequest
   targets: [DiskTarget] (1..6, без повторов), include_rollback: bool
@@ -648,7 +653,8 @@ RunnerDiskSummary
 
 ```text
 LifecycleSweepPreview
-  sources: [{key, days (null: фиксированный срок), cutoff, count (null: не посчитать), capped, bytes}],
+  sources: [{key, days (null: фиксированный срок), cutoff (у фиксированного срока: сейчас), count (null: не
+             посчитать), capped, bytes (null: не измерен)}],
   excluded: [{key, reason: protected | own_task | on_write | infra}],
   nothing (true, если у всех count = 0)
 ```
@@ -661,6 +667,29 @@ LifecycleSweepPreview
 Схемы строгие (`extra=forbid`, `z.strictObject`), все поля приходят явно, пустое значение `null`, время ISO 8601 UTC,
 размеры в байтах целыми. Фронтенд опрашивает `GET .../disk` раз в 2 с, пока команда не закрыта, иначе раз в 30 с
 при открытом диалоге; `GET .../sweep` раз в 2 с, пока прогон идёт.
+
+`cleanable_bytes` сводки, поля `disk` в списках и строки «можно освободить» считаются одним правилом:
+`docker.cleanable_bytes` (если Docker ответил) плюс кэш файлов и рабочие копии раннера целиком. `disk.measure`
+во время идущей очистки даёт `409 runner_disk_busy`: раннер сам пришлёт замер после итога.
+
+### 9.4 Схемы, эталоны и моки на фронтенде
+
+Срез W1 держит контракт в коде, пока бэкенда нет (как W1 маршрута подписания):
+
+- zod-схемы 9.1 в `entities/runner/model/runnerDisk.schema.ts` с картой `RUNNER_DISK_CONTRACT_SCHEMAS`, схемы 9.2
+  рядом со схемами «Хранения данных» в `entities/session/api/opsSchemas.ts` с картой
+  `LIFECYCLE_SWEEP_CONTRACT_SCHEMAS`;
+- эталоны `RUNNER_DISK_CONTRACT_EXAMPLES` (`entities/runner/testing/fixtures.ts`) и
+  `LIFECYCLE_SWEEP_CONTRACT_EXAMPLES` (`features/admin-ops/testing/sweepFixtures.ts`), там же состояния галерей
+  4.5 (`RUNNER_DISK_STATES`, `SWEEP_STATES`, `SWEEP_PREVIEWS`);
+- моки `createRunnerDiskDemo` и `createLifecycleSweepDemo` поверх демо-транспорта, в серверном демо их собирает
+  `app/demo/server/storageCleanup.ts` (какой диск у какого раннера, описано там же).
+
+Поле `disk` в `AdminRunner` и `MyRunner` пока необязательное: старый сервер его не шлёт. Срезы B6 и B7 переносят
+эталоны в `contracts/server/fixtures/<Схема>/<вариант>.json`, модели в `test_server_contract.py`, а карты в
+`CONTRACT_SCHEMAS` (`entities/session/api/contractSchemas.ts`); B6 делает `disk` обязательным. До переноса
+общий контрактный тест о новых схемах не знает и не падает. Сообщения новых кодов ошибок уже лежат в
+`errors.json` (`code.<код>`, ru и en).
 
 ## 10. Тесты
 
