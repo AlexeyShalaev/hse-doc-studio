@@ -1,5 +1,6 @@
-// Журнал писем в админке (docs/design/mail-log.md). Срез W1: схемы, API и запросы; экраны
-// списка и карточки добавляют W2 и W3. Состояния галереи и моки: ./testing.
+// Журнал писем в админке (docs/design/mail-log.md). Срез W1: схемы, API и запросы; W2: раздел
+// «Письма» со списком; карточку письма (ui/MailLogCard) делает W3. Состояния галереи и моки:
+// ./testing.
 export {
   MAIL_CAUSES,
   MAIL_FAILURES,
@@ -55,3 +56,12 @@ export {
   skippedCount,
 } from "./lib/mailLog";
 export type { MailHint } from "./lib/mailLog";
+export { mailWhen } from "./lib/when";
+export type { MailWhen } from "./lib/when";
+export { ensureAdminMailLocales } from "./lib/locales";
+export { MAIL_PARAM, MailLog } from "./ui/MailLog";
+export { MailLogCard } from "./ui/MailLogCard";
+export type { MailLogCardProps } from "./ui/MailLogCard";
+export { MailDayBand, MailLogView, SMTP_SETTINGS_PATH } from "./ui/MailLogView";
+export type { MailLogViewProps } from "./ui/MailLogView";
+export { getAdminMailLogGallery } from "./ui/mailLogGallery";

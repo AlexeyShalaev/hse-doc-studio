@@ -4,6 +4,7 @@ import {
   getAdminOpsGallery,
   getAdminRunnerDiskGallery,
 } from "@features/admin-ops";
+import { getAdminMailLogGallery } from "@features/admin-mail-log";
 import { getAdminOrgsGallery } from "@features/admin-orgs";
 import { getAdminAuthSettingsGallery } from "@features/admin-auth-settings";
 import { getAccountSettingsGallery } from "@features/account-settings";
@@ -116,6 +117,11 @@ export const buildServerSections = (): GallerySection[] => [
     id: "admin-ops",
     title: "Админка: раннеры, очередь, квоты, сервисы",
     groups: getAdminOpsGallery(),
+  },
+  {
+    id: "admin-mail",
+    title: "Админка: письма",
+    groups: getAdminMailLogGallery(),
   },
   {
     id: "admin-install",

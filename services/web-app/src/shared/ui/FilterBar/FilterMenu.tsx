@@ -1,4 +1,4 @@
-import { useId, useState, type ReactNode } from "react";
+import { Fragment, useId, useState, type ReactNode } from "react";
 import { Check, ChevronDown, X } from "lucide-react";
 import { clsx } from "clsx";
 import { useTranslation } from "react-i18next";
@@ -141,33 +141,44 @@ export const FilterMenu = ({
           aria-label={label}
           className="fmenu-list"
         >
-          {shown.map((option) => {
+          {shown.map((option, index) => {
             const on = values.includes(option.value);
+            const caption =
+              option.group !== undefined &&
+              option.group !== shown[index - 1]?.group
+                ? option.group
+                : null;
             return (
-              <button
-                key={option.value}
-                type="button"
-                role={single ? "radio" : "checkbox"}
-                aria-checked={on}
-                className="fmenu-item"
-                onClick={() => {
-                  toggle(option.value);
-                }}
-              >
-                <span
-                  className={clsx("fmenu-box", single && "is-radio")}
-                  data-on={on ? "true" : undefined}
-                  aria-hidden="true"
-                >
-                  {on && <Check size="0.6875rem" />}
-                </span>
-                <span className="fmenu-text">{option.label}</span>
-                {option.count != null && (
-                  <span className="fmenu-count">
-                    {option.count.toLocaleString(localeTag())}
-                  </span>
+              <Fragment key={option.value}>
+                {caption && (
+                  <div className="fmenu-caption" role="presentation">
+                    {caption}
+                  </div>
                 )}
-              </button>
+                <button
+                  type="button"
+                  role={single ? "radio" : "checkbox"}
+                  aria-checked={on}
+                  className="fmenu-item"
+                  onClick={() => {
+                    toggle(option.value);
+                  }}
+                >
+                  <span
+                    className={clsx("fmenu-box", single && "is-radio")}
+                    data-on={on ? "true" : undefined}
+                    aria-hidden="true"
+                  >
+                    {on && <Check size="0.6875rem" />}
+                  </span>
+                  <span className="fmenu-text">{option.label}</span>
+                  {option.count != null && (
+                    <span className="fmenu-count">
+                      {option.count.toLocaleString(localeTag())}
+                    </span>
+                  )}
+                </button>
+              </Fragment>
             );
           })}
           {shown.length === 0 && (

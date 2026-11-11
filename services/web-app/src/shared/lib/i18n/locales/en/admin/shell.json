@@ -12,6 +12,7 @@
     "storage": "Storage",
     "settings": "Sign-in and registration",
     "audit": "Audit",
+    "mail": "Mail",
     "instance": "Installation",
     "signing": "Signing keys",
     "aiProviders": "AI providers",
@@ -33,7 +34,9 @@
       "storage": "Running out of space",
       "data": "Low disk space",
       "diagnostics_one": "{{count}} self-diagnostics warning",
-      "diagnostics_other": "{{count}} self-diagnostics warnings"
+      "diagnostics_other": "{{count}} self-diagnostics warnings",
+      "mail_one": "{{count}} email failed in the last 24 hours",
+      "mail_other": "{{count}} emails failed in the last 24 hours"
     },
     "back": "Back to Studio",
     "version": "Version {{version}}",

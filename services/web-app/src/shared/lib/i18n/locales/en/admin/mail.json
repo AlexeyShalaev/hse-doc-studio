@@ -1,0 +1,98 @@
+{
+  "title": "Mail",
+  "lead": "Every email the Studio sent or tried to send in the last {{days}} days. Links from emails are not kept here.",
+  "leadShort": "Every email the Studio sent or tried to send. Links from emails are not kept here.",
+  "retentionLink": "Retention",
+  "refresh": "Refresh",
+  "caption": "Mail log",
+  "smtpOff": {
+    "text": "Mail is not set up. Emails are not sent: people get confirmation and invitation links on screen or from you, notifications only in the Inbox.",
+    "action": "Set up mail"
+  },
+  "day": {
+    "caption": "Last 24 hours",
+    "sent": "Sent {{n}}",
+    "failed": "Failed {{n}}",
+    "failedShow": "Show emails that failed in the last 24 hours",
+    "skipped": "Not sent {{n}}"
+  },
+  "hint": {
+    "auth": "The SMTP server rejects the sign-in. Check the username and password in Mail (SMTP).",
+    "connect": "The SMTP server does not respond. Check the host, port and connection security.",
+    "tls": "Could not establish a secure connection. Check the security mode (STARTTLS, TLS).",
+    "open": "Open mail settings"
+  },
+  "filter": {
+    "search": "Address or subject",
+    "searchLabel": "Search by address and subject",
+    "kind": "Email type",
+    "status": "Result",
+    "reason": "Reason",
+    "recipient": "Recipient",
+    "recipientSearch": "Name or email",
+    "address": "Address",
+    "project": "Project",
+    "projectSearch": "Project name",
+    "period": "Period"
+  },
+  "group": {
+    "account": "Sign-in and account",
+    "projects": "Projects",
+    "signing": "Signing route",
+    "service": "Service"
+  },
+  "statusFilter": {
+    "sent": "Sent",
+    "failed": "Failed",
+    "not_sent": "Not sent: mail not set up",
+    "suppressed": "Not sent: not due"
+  },
+  "col": {
+    "at": "When",
+    "to": "To",
+    "mail": "Email",
+    "status": "Result",
+    "cause": "Triggered by"
+  },
+  "status": {
+    "sent": "Sent",
+    "failed": "Failed",
+    "not_sent": "Not sent",
+    "suppressed": "Not sent"
+  },
+  "reason": {
+    "smtp_off": "mail not set up",
+    "email_unverified": "email not confirmed",
+    "account_blocked": "sign-in blocked"
+  },
+  "failure": {
+    "auth": "The SMTP server rejected the username or password",
+    "connect": "Could not connect to the SMTP server",
+    "timeout": "The SMTP server did not answer in time",
+    "tls": "Could not establish a secure connection",
+    "recipient_refused": "The SMTP server refused the email for this address",
+    "sender_refused": "The SMTP server does not accept email from the sender address",
+    "data_refused": "The SMTP server rejected the whole email",
+    "disconnected": "The SMTP server dropped the connection",
+    "smtp_off": "Mail is not set up",
+    "other": "Unknown sending error"
+  },
+  "cause": {
+    "anonymous": "Request without sign-in",
+    "system": "Background task",
+    "userGone": "Deleted user",
+    "task": {
+      "signing_reminders": "signing route auto-reminders"
+    }
+  },
+  "templateGone": "Removed type: {{template}}",
+  "time": {
+    "yesterday": "yesterday, {{time}}"
+  },
+  "empty": {
+    "title": "No emails yet",
+    "body": "Every email the Studio sends or tries to send will appear here."
+  },
+  "loadFailed": "Could not load the mail log.",
+  "loadFailedBody": "Check the connection and try again."
+}

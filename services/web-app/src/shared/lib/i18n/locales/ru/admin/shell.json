@@ -12,6 +12,7 @@
     "storage": "Хранилище",
     "settings": "Вход и регистрация",
     "audit": "Аудит",
+    "mail": "Письма",
     "instance": "Установка",
     "signing": "Ключи подписи",
     "aiProviders": "ИИ-провайдеры",
@@ -41,7 +42,11 @@
       "diagnostics_one": "{{count}} предупреждение самодиагностики",
       "diagnostics_few": "{{count}} предупреждения самодиагностики",
       "diagnostics_many": "{{count}} предупреждений самодиагностики",
-      "diagnostics_other": "{{count}} предупреждения самодиагностики"
+      "diagnostics_other": "{{count}} предупреждения самодиагностики",
+      "mail_one": "{{count}} письмо не ушло за сутки",
+      "mail_few": "{{count}} письма не ушли за сутки",
+      "mail_many": "{{count}} писем не ушло за сутки",
+      "mail_other": "{{count}} письма не ушли за сутки"
     },
     "back": "Вернуться в Студию",
     "version": "Версия {{version}}",
