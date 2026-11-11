@@ -237,7 +237,8 @@ export const RunnersView = ({
                 </span>
               )}
               {disk && cleanable >= DISK_HINT_MIN_BYTES && (
-                <span className="ops-cell-sub">
+                // Столбец имени узкий: подпись переносится по словам, размер не рвётся.
+                <span className="ops-cell-sub" style={{ whiteSpace: "normal" }}>
                   <button
                     type="button"
                     className="ops-link"
@@ -253,7 +254,7 @@ export const RunnersView = ({
                       style={{ verticalAlign: -1, marginRight: "0.25rem" }}
                     />
                     {t("runners.diskCleanable", {
-                      size: formatBytes(cleanable),
+                      size: formatBytes(cleanable).replace(" ", "\u00a0"),
                     })}
                   </button>
                 </span>
