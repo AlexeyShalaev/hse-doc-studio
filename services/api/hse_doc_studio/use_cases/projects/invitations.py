@@ -61,6 +61,7 @@ from hse_doc_studio.core.invitations.protocols import (
     IProjectPersonas,
 )
 from hse_doc_studio.core.listing import Found, Window, clamp_limit
+from hse_doc_studio.core.mail.journal import MailOrigin
 from hse_doc_studio.core.orgs.protocols import IOrgRepository
 from hse_doc_studio.core.uow import IUnitOfWork
 from hse_doc_studio.use_cases.identity.auth_settings import AuthSettingsService
@@ -361,6 +362,10 @@ class CreateInvitationUC(_Base):
             message=new.message,
             locale=bound.locale if bound else None,
             expires_at=invitation.expires_at,
+            origin=MailOrigin.project_invite,
+            to_user_id=bound.id if bound else None,
+            project_id=str(card.id),
+            invitation_id=invitation.id,
         )
         # Ответ одинаков с аккаунтом и без (T11): решает только то, ушло ли письмо.
         return InvitationCreated(await self._view(invitation), "email" if sent else "manual", None if sent else link)
@@ -554,11 +559,17 @@ class ResendInvitationUC(_Base):
         return invitation_link(self._public_url, renewed.token, safe_next_path(next_path))
 
     async def deliver(
-        self, actor: Actor, renewed: RenewedInvitation, *, next_path: str | None = None
+        self,
+        actor: Actor,
+        renewed: RenewedInvitation,
+        *,
+        next_path: str | None = None,
+        origin: MailOrigin = MailOrigin.project_invite_resend,
     ) -> InvitationCreated:
         """Письмо со ссылкой продлённого приглашения; без SMTP ссылка в ответе (`manual`).
 
-        `next_path` куда вести после принятия (относительный путь сайта, `?next=`), как при создании.
+        `next_path` куда вести после принятия (относительный путь сайта, `?next=`), как при создании; `origin`
+        сценарий для журнала писем (повтор из маршрута подписания свой).
         """
         updated = renewed.invitation
         if renewed.token is None:
@@ -574,6 +585,10 @@ class ResendInvitationUC(_Base):
             message=updated.message,
             locale=await self._locale(updated.invitee_user_id),
             expires_at=updated.expires_at,
+            origin=origin,
+            to_user_id=updated.invitee_user_id,
+            project_id=str(updated.project_id),
+            invitation_id=updated.id,
         )
         return InvitationCreated(await self._view(updated), "email" if sent else "manual", None if sent else link)
 
