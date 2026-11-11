@@ -12,6 +12,7 @@ import * as inst from "./installSchemas";
 import * as gs from "@entities/git-server/model/gitServer.schema";
 import * as pa from "@entities/project-artifact/model/artifact.schema";
 import * as rn from "@entities/runner/model/runner.schema";
+import * as rd from "@entities/runner/model/runnerDisk.schema";
 import {
   MentionCandidateListSchema,
   ReviewThreadListSchema,
@@ -196,6 +197,11 @@ export const CONTRACT_SCHEMAS: Record<string, ZodType> = {
   UpdateAdminBuildRequest: inst.UpdateAdminBuildRequestSchema,
   CompileWait: s.CompileWaitSchema,
   OfficeEditorBusy: s.OfficeEditorBusySchema,
+  // «Диск» раннера (storage-cleanup.md, 9.1, срез B6): одни формы у админки и «Моих раннеров».
+  RunnerDiskView: rd.RunnerDiskViewSchema,
+  RunnerDiskCommand: rd.RunnerDiskCommandSchema,
+  RunnerDiskCleanupRequest: rd.RunnerDiskCleanupRequestSchema,
+  RunnerDiskSummary: rd.RunnerDiskSummarySchema,
   MyRunner: rn.MyRunnerSchema,
   MyRunnerList: rn.MyRunnerListSchema,
   UpdateMyRunnerRequest: rn.UpdateMyRunnerRequestSchema,

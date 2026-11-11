@@ -79,6 +79,7 @@ const PERSONAL: AdminRunner = {
   host_kind: "desktop",
   ai_endpoints: ["ollama"],
   last_seen_ip: "203.0.113.7",
+  disk: null,
 };
 const noop = () => undefined;
 

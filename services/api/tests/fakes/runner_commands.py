@@ -7,7 +7,8 @@ from dataclasses import replace
 from datetime import datetime
 from uuid import UUID
 
-from hse_doc_studio.core.jobs.control import COMMANDS_KEPT_PER_RUNNER, StoredDiskReport
+from hse_doc_studio.core.identity.protocols import IAuditLog
+from hse_doc_studio.core.jobs.control import COMMANDS_KEPT_PER_RUNNER, StoredDiskBrief, StoredDiskReport
 from hse_doc_studio.core.jobs.disk import (
     COMMAND_OPEN_STATES,
     CommandProgress,
@@ -15,8 +16,15 @@ from hse_doc_studio.core.jobs.disk import (
     RunnerCommandKind,
     RunnerCommandState,
     RunnerDiskReport,
+    disk_cleanable_bytes,
 )
+from hse_doc_studio.core.jobs.runners import IRunnerRepository
+from hse_doc_studio.use_cases.jobs.runner_control import RunnerCommandWakeup, RunnerControlService
+from hse_doc_studio.use_cases.jobs.runner_disk import RunnerDiskUC
+from hse_doc_studio.use_cases.jobs.runners import RunnerRegistry
 
+from tests.fakes.auth import InMemoryAuditLog
+from tests.fakes.identity import InMemoryUserRepository
 from tests.fakes.runners import InMemoryRunnerRepository
 
 _IN_FLIGHT = frozenset({RunnerCommandState.delivered, RunnerCommandState.running, RunnerCommandState.cancelling})
@@ -145,3 +153,29 @@ class InMemoryRunnerDiskStore:
 
     async def list_disks(self) -> dict[str, StoredDiskReport]:
         return dict(self._items)
+
+    async def list_disk_briefs(self, runner_ids: Collection[str] | None = None) -> dict[str, StoredDiskBrief]:
+        return {
+            runner_id: StoredDiskBrief(
+                cleanable_bytes=disk_cleanable_bytes(stored.report),
+                measured_at=stored.report.measured_at,
+                received_at=stored.received_at,
+            )
+            for runner_id, stored in self._items.items()
+            if runner_ids is None or runner_id in runner_ids
+        }
+
+
+def in_memory_runner_disk_uc(
+    registry: RunnerRegistry, runners: IRunnerRepository, audit: IAuditLog | None = None
+) -> RunnerDiskUC:
+    """`RunnerDiskUC` для тестовых контейнеров, которым нужен только список раннеров с полем `disk`.
+
+    Замеров и команд нет, поэтому `disk` у неотозванного раннера с `control` и `disk` без числа, у остальных
+    `supported=false`; у отозванного `null`.
+    """
+    memory = runners if isinstance(runners, InMemoryRunnerRepository) else InMemoryRunnerRepository()
+    control = RunnerControlService(
+        InMemoryRunnerCommandRepository(memory), InMemoryRunnerDiskStore(memory), runners, RunnerCommandWakeup()
+    )
+    return RunnerDiskUC(registry, control, runners, InMemoryUserRepository(), audit or InMemoryAuditLog())

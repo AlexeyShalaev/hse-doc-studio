@@ -164,6 +164,7 @@ def notification(item: Notification) -> s.NotificationModel:
             profile_id=p.profile_id,
             deadline=_moment(p.deadline),
             new_version=p.new_version,
+            freed_bytes=p.freed_bytes,
         ),
     )
 

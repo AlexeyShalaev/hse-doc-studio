@@ -11,7 +11,7 @@ from __future__ import annotations
 import builtins
 import logging
 import time
-from collections.abc import Awaitable, Callable, Sequence
+from collections.abc import Awaitable, Callable, Collection, Sequence
 from datetime import datetime, timedelta
 from uuid import UUID, uuid4
 
@@ -25,6 +25,7 @@ from hse_doc_studio.core.jobs.control import (
     RunnerCommandBusyError,
     RunnerCommandUnsupportedError,
     RunnerControlError,
+    StoredDiskBrief,
     StoredDiskReport,
 )
 from hse_doc_studio.core.jobs.disk import (
@@ -170,6 +171,10 @@ class RunnerControlService:
 
     async def disks(self) -> dict[str, StoredDiskReport]:
         return await self._disks.list_disks()
+
+    async def disk_briefs(self, runner_ids: Collection[str] | None = None) -> dict[str, StoredDiskBrief]:
+        """Проекция замеров для списков, сводки и метрики: отчёты целиком не читаются."""
+        return await self._disks.list_disk_briefs(runner_ids)
 
     async def settle(self, runner_id: str | None = None) -> int:
         """Просрочка доставки и потеря раннера: у одного раннера при чтении, у всех в `runner_commands_reaper`."""

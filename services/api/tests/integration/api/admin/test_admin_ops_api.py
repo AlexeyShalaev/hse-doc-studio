@@ -58,6 +58,7 @@ from hse_doc_studio.use_cases.admin.runner_isolation import (
 )
 from hse_doc_studio.use_cases.identity.smtp_settings import SmtpSettingsService
 from hse_doc_studio.use_cases.jobs.queue_service import JobQueueService
+from hse_doc_studio.use_cases.jobs.runner_disk import RunnerDiskUC
 from hse_doc_studio.use_cases.jobs.runners import RunnerRegistry
 from hse_doc_studio.use_cases.runner_install import (
     InstallJobStore,
@@ -80,6 +81,7 @@ from tests.fakes.ops import (
     NoopUow,
     ReversingCipher,
 )
+from tests.fakes.runner_commands import in_memory_runner_disk_uc
 from tests.fakes.runner_install import FakeLocalHost
 from tests.fakes.runner_isolation import FakeClusterReader
 from tests.fakes.runners import (
@@ -181,6 +183,10 @@ class _Provider(Provider):
     @provide
     def registry(self) -> RunnerRegistry:
         return self.s.registry
+
+    @provide
+    def runner_disk(self) -> RunnerDiskUC:
+        return in_memory_runner_disk_uc(self.s.registry, self.s.runners)
 
     @provide
     def runner_install(self) -> RunnerInstallService:

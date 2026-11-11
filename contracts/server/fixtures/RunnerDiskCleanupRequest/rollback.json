@@ -1,0 +1,6 @@
+{
+  "targets": [
+    "old_versions"
+  ],
+  "include_rollback": true
+}

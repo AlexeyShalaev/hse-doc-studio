@@ -1,8 +1,7 @@
-import type { ZodType } from "zod";
 import { z } from "zod";
 
-// Диск раннера: замер, очистка по целям и ход команды (docs/design/storage-cleanup.md, разделы 5 и 9.1).
-// Бэкенда ещё нет (срезы B5 и B6): форма держится здесь, эталоны в ../testing/fixtures.ts.
+// Диск раннера: замер, очистка по целям и ход команды (docs/design/storage-cleanup.md, разделы 5 и 9.1),
+// api/schemas/runner_disk.py. Эталоны в contracts/server/fixtures/RunnerDisk*, карта в CONTRACT_SCHEMAS.
 // strictObject повторяет extra=forbid сервера: все поля приходят явно, пустое значение null,
 // время ISO 8601 UTC, размеры в байтах целыми.
 
@@ -288,16 +287,3 @@ export const RunnerDiskBriefSchema = z.strictObject({
   measured_at: iso.nullable(),
 });
 export type RunnerDiskBrief = z.infer<typeof RunnerDiskBriefSchema>;
-
-/**
- * Схемы раздела 9.1 по именам будущих каталогов contracts/server/fixtures. Срез B6 перенесёт
- * эталоны в contracts/server/fixtures, модели в test_server_contract.py, а эту карту в
- * CONTRACT_SCHEMAS (entities/session/api/contractSchemas.ts); до тех пор каталогов нет, и
- * общий контрактный тест о диске не знает.
- */
-export const RUNNER_DISK_CONTRACT_SCHEMAS: Record<string, ZodType> = {
-  RunnerDiskView: RunnerDiskViewSchema,
-  RunnerDiskCommand: RunnerDiskCommandSchema,
-  RunnerDiskCleanupRequest: RunnerDiskCleanupRequestSchema,
-  RunnerDiskSummary: RunnerDiskSummarySchema,
-};

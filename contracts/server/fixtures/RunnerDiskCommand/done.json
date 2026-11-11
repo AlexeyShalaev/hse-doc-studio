@@ -1,0 +1,89 @@
+{
+  "id": "rdc_01hz4m2k7q",
+  "kind": "disk.cleanup",
+  "state": "done",
+  "targets": [
+    "old_versions",
+    "unused_images",
+    "build_cache",
+    "dangling_images",
+    "stopped_containers",
+    "runner_cache"
+  ],
+  "include_rollback": false,
+  "created_at": "2026-11-11T09:50:00Z",
+  "finished_at": "2026-11-11T09:53:00Z",
+  "created_by": {
+    "id": "u_01hx7k0adm",
+    "name": "Алексей Шалаев"
+  },
+  "progress": {
+    "steps": [
+      {
+        "kind": "container",
+        "ref": "hse-runner-0.19.0",
+        "status": "done",
+        "freed_bytes": 50331648,
+        "error": null
+      },
+      {
+        "kind": "image",
+        "ref": "ghcr.io/alexeyshalaev/hse-doc-studio:0.20.3",
+        "status": "done",
+        "freed_bytes": 1159641170,
+        "error": null
+      },
+      {
+        "kind": "image",
+        "ref": "ghcr.io/alexeyshalaev/hse-doc-studio:0.19.0",
+        "status": "done",
+        "freed_bytes": 1127428915,
+        "error": null
+      },
+      {
+        "kind": "image",
+        "ref": "texlive/texlive:TL2024-historic",
+        "status": "done",
+        "freed_bytes": 4617089843,
+        "error": null
+      },
+      {
+        "kind": "image",
+        "ref": "erikvl87/languagetool:6.4",
+        "status": "done",
+        "freed_bytes": 590558003,
+        "error": null
+      },
+      {
+        "kind": "dangling_images",
+        "ref": null,
+        "status": "done",
+        "freed_bytes": 641728512,
+        "error": null
+      },
+      {
+        "kind": "build_cache",
+        "ref": null,
+        "status": "done",
+        "freed_bytes": 2254857830,
+        "error": null
+      },
+      {
+        "kind": "runner_blobs",
+        "ref": null,
+        "status": "done",
+        "freed_bytes": 1503238554,
+        "error": null
+      },
+      {
+        "kind": "runner_workspaces",
+        "ref": null,
+        "status": "done",
+        "freed_bytes": 6335076762,
+        "error": null
+      }
+    ],
+    "freed_bytes": 18279951237,
+    "error": null
+  }
+}

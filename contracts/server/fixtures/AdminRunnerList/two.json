@@ -23,7 +23,12 @@
       "reinstall": [
         "before_limits"
       ],
-      "deployment_reported": false
+      "deployment_reported": false,
+      "disk": {
+        "supported": true,
+        "cleanable_bytes": 7516192768,
+        "measured_at": "2026-04-20T09:20:00Z"
+      }
     },
     {
       "id": "0f9e8d7c6b5a49382716f5e4d3c2b1a0",
@@ -45,7 +50,12 @@
       "ai_endpoints": [],
       "last_seen_ip": null,
       "reinstall": [],
-      "deployment_reported": true
+      "deployment_reported": true,
+      "disk": {
+        "supported": false,
+        "cleanable_bytes": null,
+        "measured_at": null
+      }
     },
     {
       "id": "11112222333344445555666677778888",
@@ -67,7 +77,12 @@
       "ai_endpoints": [],
       "last_seen_ip": null,
       "reinstall": [],
-      "deployment_reported": false
+      "deployment_reported": false,
+      "disk": {
+        "supported": false,
+        "cleanable_bytes": null,
+        "measured_at": null
+      }
     }
   ],
   "total": 43,

@@ -433,7 +433,10 @@ export const createPersonalRoutes = (
           r.paused = b.paused;
           r.paused_by = b.paused ? "owner" : null;
         }
-        return demoJson(toMyRunner(r, state().enabled));
+        return demoJson({
+          ...toMyRunner(r, state().enabled),
+          disk: diskBriefOf(getWorld(), r.id),
+        });
       }),
     },
     {
@@ -447,7 +450,10 @@ export const createPersonalRoutes = (
         }
         const value = secret("hsrn");
         return demoJson({
-          runner: toMyRunner(r, state().enabled),
+          runner: {
+            ...toMyRunner(r, state().enabled),
+            disk: diskBriefOf(getWorld(), r.id),
+          },
           runner_token: value,
           command: runnerCommand(value),
         });

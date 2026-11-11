@@ -17,6 +17,7 @@ from hse_doc_studio.core.events import IJobLogStream
 from hse_doc_studio.core.git_sync.protocols import ISecretCipher
 from hse_doc_studio.core.identity.instance_settings import InstanceEnvOverrides, effective_build_settings
 from hse_doc_studio.core.identity.protocols import IAuditLog, IInstanceSettingsRepository, IUserRepository
+from hse_doc_studio.core.invitations.protocols import INotifier
 from hse_doc_studio.core.jobs.applier import IJobApplyLedger, IJobHooksFactory, IJobResultApplier
 from hse_doc_studio.core.jobs.artifacts import IArtifactStore
 from hse_doc_studio.core.jobs.availability import IBuildAvailability
@@ -84,6 +85,7 @@ from hse_doc_studio.use_cases.jobs.project_build_runners import ProjectBuildRunn
 from hse_doc_studio.use_cases.jobs.queue_service import JobQueueService
 from hse_doc_studio.use_cases.jobs.routing import JobRouter
 from hse_doc_studio.use_cases.jobs.runner_control import RunnerCommandWakeup, RunnerControlService
+from hse_doc_studio.use_cases.jobs.runner_disk import RunnerDiskMetrics, RunnerDiskObserver, RunnerDiskUC
 from hse_doc_studio.use_cases.jobs.runner_io import RunnerJobIoService
 from hse_doc_studio.use_cases.jobs.runner_jobs import RunnerJobService
 from hse_doc_studio.use_cases.jobs.runners import RunnerRegistry
@@ -276,15 +278,36 @@ class ServerJobsProvider(Provider):
         return RunnerCommandWakeup()
 
     @provide
-    def get_runner_control_service(
+    def get_runner_disk_metrics(self) -> RunnerDiskMetrics:
+        return RunnerDiskMetrics()
+
+    @provide
+    def get_runner_control_service(  # noqa: PLR0913
         self,
         commands: IRunnerCommandRepository,
         disks: IRunnerDiskStore,
         runners: IRunnerRepository,
         wakeup: RunnerCommandWakeup,
+        users: IUserRepository,
+        audit: IAuditLog,
+        notifier: INotifier,
+        metrics: RunnerDiskMetrics,
     ) -> RunnerControlService:
-        """Канал команд раннеру (`/control/*`, `/disk`); наблюдателей итога (аудит, уведомление) подключает B6."""
-        return RunnerControlService(commands, disks, runners, wakeup)
+        """Канал команд раннеру (`/control/*`, `/disk`); итог очистки пишет в аудит, метрику и владельцу наблюдатель."""
+        observer = RunnerDiskObserver(runners, users, audit, notifier, metrics)
+        return RunnerControlService(commands, disks, runners, wakeup, observers=(observer,))
+
+    @provide
+    def get_runner_disk_uc(  # noqa: PLR0913
+        self,
+        registry: RunnerRegistry,
+        control: RunnerControlService,
+        runners: IRunnerRepository,
+        users: IUserRepository,
+        audit: IAuditLog,
+        metrics: RunnerDiskMetrics,
+    ) -> RunnerDiskUC:
+        return RunnerDiskUC(registry, control, runners, users, audit, metrics=metrics)
 
     @provide
     def get_job_storage_root(self) -> JobStorageRoot:

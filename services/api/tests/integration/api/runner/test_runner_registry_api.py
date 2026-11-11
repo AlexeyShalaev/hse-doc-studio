@@ -20,11 +20,13 @@ from hse_doc_studio.core.identity.protocols import IActorResolver
 from hse_doc_studio.core.jobs.wire import RUNNER_PROTOCOL_VERSION
 from hse_doc_studio.core.mode import StudioMode
 from hse_doc_studio.use_cases.admin.ops_runners import ListRegistrationTokensUC, ListRunnersUC
+from hse_doc_studio.use_cases.jobs.runner_disk import RunnerDiskUC
 from hse_doc_studio.use_cases.jobs.runners import RunnerRegistry
 from httpx import ASGITransport, AsyncClient
 
 from tests.factories.runner_isolation import report_body
 from tests.fakes.auth import InMemoryAuditLog
+from tests.fakes.runner_commands import in_memory_runner_disk_uc
 from tests.fakes.runners import (
     InMemoryRegistrationTokenRepository,
     InMemoryRunnerAdminReader,
@@ -66,6 +68,10 @@ class _Provider(Provider):
     @provide
     def registry_(self) -> RunnerRegistry:
         return self.registry
+
+    @provide
+    def runner_disk(self) -> RunnerDiskUC:
+        return in_memory_runner_disk_uc(self.registry, self.runners)
 
     @provide
     def list_runners(self) -> ListRunnersUC:

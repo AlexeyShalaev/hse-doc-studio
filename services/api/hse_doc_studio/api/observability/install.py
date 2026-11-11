@@ -414,17 +414,30 @@ def install_job_reaper(app: FastAPI, container: AsyncContainer, cfg: Settings) -
     app.state.background.register(PeriodicTask(name="job_reaper", interval_s=cfg.jobs.reaper_interval_s, run=_sweep))
 
 
-def install_runner_commands_reaper(app: FastAPI, container: AsyncContainer) -> None:
+def install_runner_commands_reaper(app: FastAPI, container: AsyncContainer, metrics: MetricsRegistry) -> None:
     """Команды раннерам: не забранные за 10 минут становятся `expired`, без хода 3 минуты или у отозванного и
-    ушедшего раннера `lost` (storage-cleanup.md, 5.3); идёт только у лидера. Чтение команды проверяет то же."""
+    ушедшего раннера `lost` (storage-cleanup.md, 5.3); идёт только у лидера. Чтение команды проверяет то же.
+
+    Тот же тик обновляет метрику `hse_runner_disk_cleanable_bytes` по проекции последних замеров.
+    """
+    from hse_doc_studio.api.observability.runner_disk_metrics import runner_disk_collector  # noqa: PLC0415
     from hse_doc_studio.use_cases.jobs.runner_control import RunnerControlService  # noqa: PLC0415
+    from hse_doc_studio.use_cases.jobs.runner_disk import RunnerDiskMetrics, RunnerDiskUC  # noqa: PLC0415
 
     async def _reap() -> None:
         await (await container.get(RunnerControlService)).settle()
+        try:
+            await (await container.get(RunnerDiskUC)).refresh_metrics()
+        except Exception:
+            logger.warning("runner disk metrics refresh failed", exc_info=True)
 
     app.state.background.register(
         PeriodicTask(name="runner_commands_reaper", interval_s=COMMANDS_REAPER_INTERVAL_S, run=_reap)
     )
+
+    @app.on_event("startup")
+    async def _runner_disk_metrics() -> None:
+        metrics.add_collector(runner_disk_collector(await container.get(RunnerDiskMetrics)))
 
 
 def install_runner_pairings_purge(app: FastAPI, container: AsyncContainer) -> None:

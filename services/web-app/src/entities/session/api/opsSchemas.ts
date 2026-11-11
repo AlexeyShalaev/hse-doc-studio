@@ -40,8 +40,8 @@ export const AdminRunnerSchema = z.strictObject({
   /** Почему раннер стоит переустановить, чтобы применились лимиты (по версии и отчёту). */
   reinstall: z.array(z.enum(["before_limits", "no_pod_limits"])).optional(),
   deployment_reported: z.boolean().optional(),
-  /** Диск раннера кратко (storage-cleanup.md, 9.1); необязательно, пока сервер (B6) поля не шлёт. */
-  disk: RunnerDiskBriefSchema.nullable().optional(),
+  /** Диск раннера кратко (storage-cleanup.md, 9.1); null у отозванного. */
+  disk: RunnerDiskBriefSchema.nullable(),
 });
 
 // Как раннер развёрнут и как изолированы раннеры в кластере (api/schemas/runner_isolation.py).
