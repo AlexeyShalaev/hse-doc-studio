@@ -40,6 +40,7 @@ from hse_doc_studio.infra.runner.client import RunnerClient
 from hse_doc_studio.infra.runner.compile_executor import CompileJobExecutor, RoutingJobExecutor
 from hse_doc_studio.infra.runner.config import BuildExecutorKind, RunnerConfig
 from hse_doc_studio.infra.runner.deployment import collect_deployment
+from hse_doc_studio.infra.runner.disk import RunnerDiskService, build_runner_disk_service
 from hse_doc_studio.infra.runner.handler_executor import HandlerJobExecutor, JobBlobFetcher
 from hse_doc_studio.infra.runner.identity import RunnerIdentityStore
 from hse_doc_studio.infra.runner.language_check import NoLanguageCheck
@@ -124,6 +125,13 @@ class RunnerProvider(Provider):
     @provide
     def get_workspaces(self, config: RunnerConfig, cache: BlobCache) -> RunnerWorkspaces:
         return RunnerWorkspaces(config.data_dir, cache, config.workspaces_max_bytes)
+
+    @provide
+    def get_disk_service(
+        self, config: RunnerConfig, cache: BlobCache, workspaces: RunnerWorkspaces
+    ) -> RunnerDiskService:
+        # Диск раннера (docs/design/storage-cleanup.md, 6.3): Docker-часть только у консольного раннера с docker.
+        return build_runner_disk_service(config, cache, workspaces)
 
     @provide
     def get_outputs(self) -> IJobOutputs:

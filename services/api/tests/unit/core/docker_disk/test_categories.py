@@ -10,12 +10,17 @@ from hse_doc_studio.api.config.services import (
     OfficeEditorConfig,
     OllamaConfig,
 )
+from hse_doc_studio.api.config.settings import Settings
 from hse_doc_studio.core.docker_disk.categories import (
+    DEFAULT_IMAGE_BASE,
+    DEFAULT_SERVICE_VOLUMES,
     default_docker_categories,
     docker_categories,
     image_repository,
     studio_protected_refs,
 )
+from hse_doc_studio.core.git_remote.local_studio import IMAGE
+from hse_doc_studio.infra.runner.config import RunnerConfig
 
 
 @pytest.mark.parametrize(
@@ -63,3 +68,11 @@ def test__studio_protected_refs__own_version_and_latest() -> None:
     assert studio_protected_refs("ghcr.io/x/studio", "1.2.3") == frozenset(
         {"ghcr.io/x/studio:1.2.3", "ghcr.io/x/studio:latest"}
     )
+
+
+def test__runner_defaults__image_base_and_service_volumes_match_api_config() -> None:
+    # Раннер не импортирует api/config: его умолчания сверяются с настройками сервера здесь.
+    assert Settings.model_fields["image_base"].default == DEFAULT_IMAGE_BASE
+    assert IMAGE == DEFAULT_IMAGE_BASE
+    assert RunnerConfig.model_fields["image_base"].default == DEFAULT_IMAGE_BASE
+    assert (LanguageToolConfig().model_volume_name, OllamaConfig().model_volume_name) == DEFAULT_SERVICE_VOLUMES
