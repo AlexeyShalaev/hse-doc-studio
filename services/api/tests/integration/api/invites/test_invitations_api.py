@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import asyncio
+
 import pytest
 
 from tests.integration.api.invites.conftest import (
@@ -300,3 +302,59 @@ async def test__email_invite__too_long_message_is_rejected(stand: Stand) -> None
     created = _invite(stand, project, anna.headers, email="hadi@example.org", message="я" * 1001)
 
     assert created.status_code == 422
+
+
+async def _mail_rows(stand: Stand, project: str, *, expect: int) -> list[dict[str, object]]:
+    """Строки журнала писем проекта; письмо уведомления уходит фоновой задачей, поэтому ждём до `expect` строк."""
+    from sqlalchemy import text  # noqa: PLC0415
+
+    query = text(
+        "SELECT template, status, reason, origin, cause, actor_user_id, to_email, to_user_id, ref_kind, ref_id, "
+        "params::text AS params FROM mail_log WHERE project_id = CAST(:p AS uuid) ORDER BY id"
+    )
+    rows: list[dict[str, object]] = []
+    for _ in range(100):
+        async with stand.engine.connect() as conn:
+            rows = [dict(r._mapping) for r in (await conn.execute(query, {"p": project})).all()]
+        if len(rows) >= expect:
+            break
+        await asyncio.sleep(0.05)
+    return rows
+
+
+async def test__mail_log__invites_without_smtp_leave_not_sent_rows_without_the_token(stand: Stand) -> None:
+    """docs/design/mail-log.md, P8 и P14: без SMTP письмо не уходит, но строка журнала есть; токена в ней нет."""
+    anna, petr = await stand.person("anna"), await stand.person("petr")
+    await make_org(stand, "kafedra", (anna, "member"), (petr, "member"))
+    project = await seed_shared_project(stand, anna)
+
+    by_email = _invite(stand, project, anna.headers, email="new-person@example.org", message="Секретное слово")
+    assert by_email.status_code == 201, by_email.text
+    token = by_email.json()["link"].rsplit("/", 1)[1]
+    link_row = (await _mail_rows(stand, project, expect=1))[0]
+    by_user = _invite(stand, project, anna.headers, user_id=petr.id)
+    assert by_user.status_code == 201, by_user.text
+    rows = await _mail_rows(stand, project, expect=2)
+
+    assert len(rows) == 2
+    assert {k: link_row[k] for k in ("template", "status", "reason", "origin", "cause", "actor_user_id")} == {
+        "template": "project_invitation_link",
+        "status": "not_sent",
+        "reason": "smtp_off",
+        "origin": "project_invite",
+        "cause": "user",
+        "actor_user_id": anna.id,
+    }
+    assert (link_row["ref_kind"], link_row["ref_id"]) == ("project_invitation", by_email.json()["invitation"]["id"])
+    assert token not in str(link_row)
+    assert "Секретное слово" not in str(link_row)
+    inbox_row = rows[1]
+    assert {k: inbox_row[k] for k in ("template", "status", "reason", "origin", "to_email", "to_user_id")} == {
+        "template": "project_invitation",
+        "status": "not_sent",
+        "reason": "smtp_off",
+        "origin": "notification",
+        "to_email": petr.email,
+        "to_user_id": petr.id,
+    }
+    assert (inbox_row["ref_kind"], inbox_row["ref_id"]) == ("project_invitation", by_user.json()["invitation"]["id"])
