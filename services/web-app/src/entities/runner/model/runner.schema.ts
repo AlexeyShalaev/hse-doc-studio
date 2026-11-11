@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import { RunnerDiskBriefSchema } from "./runnerDisk.schema";
+
 // Личные раннеры, сопряжение по коду, политика сборок проекта, место сборки и
 // облачные сборки локальной Студии. Зеркало api/schemas/personal_runners.py и
 // api/schemas/remote_runner.py; эталоны лежат в contracts/server/fixtures
@@ -52,6 +54,11 @@ export const MyRunnerSchema = z.strictObject({
   running_jobs: z.number().int(),
   ai_endpoints: z.array(DeclaredAiEndpointSchema),
   features: z.array(z.string()),
+  /**
+   * Диск раннера кратко (storage-cleanup.md, 9.1); null у отозванного. Необязательно, пока
+   * сервер (срез B6) поля не шлёт: старый сервер его не знает.
+   */
+  disk: RunnerDiskBriefSchema.nullable().optional(),
 });
 export type MyRunner = z.infer<typeof MyRunnerSchema>;
 export const MyRunnerListSchema = z.array(MyRunnerSchema);
