@@ -17,12 +17,13 @@ from pathlib import Path
 from uuid import UUID
 
 import structlog
-from sqlalchemy import delete, select
+from sqlalchemy import delete, func, select
 
 from hse_doc_studio.core.jobs.enums import JobState
 from hse_doc_studio.core.storage import IObjectStore
 from hse_doc_studio.infra.db.orm.jobs import JobRow
 from hse_doc_studio.infra.db.session import SessionProvider
+from hse_doc_studio.infra.lifecycle.sql_sources import count_capped
 
 logger = structlog.get_logger()
 
@@ -85,6 +86,13 @@ class JobRetention:
         if report.output_prefixes or report.rows:
             logger.info("job retention", output_prefixes=len(report.output_prefixes), rows=report.rows)
         return report
+
+    async def count_rows_before(self, cutoff: datetime, cap: int) -> int | None:
+        """Сколько строк задач сотрёт `_sweep_rows` с этой границей, с потолком `cap + 1` (предпросмотр очистки)."""
+        expired = (
+            select(JobRow.id).where(JobRow.state.in_(_TERMINAL), JobRow.applied_at < cutoff).limit(cap + 1).subquery()
+        )
+        return await count_capped(self._sessions, [select(func.count()).select_from(expired)], {}, cap)
 
     async def _sweep_outputs(self, cutoff: datetime, report: JobRetentionReport) -> None:
         keys: dict[UUID, list[str]] = {}

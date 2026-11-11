@@ -29,10 +29,18 @@ from hse_doc_studio.use_cases.lifecycle.admin import (
 )
 from hse_doc_studio.use_cases.lifecycle.engine import LifecycleEngine
 from hse_doc_studio.use_cases.lifecycle.guard import StorageGuard
+from hse_doc_studio.use_cases.lifecycle.sweep import LifecycleSweepService
 from httpx import ASGITransport, AsyncClient
 
 from tests.fakes.auth import empty_bearer_resolver
-from tests.fakes.data_lifecycle import FakeAdmins, FakeNotifier, FakeProbe, FakeRuns, FakeSource
+from tests.fakes.data_lifecycle import (
+    FakeAdmins,
+    FakeNotifier,
+    FakeProbe,
+    FakeRuns,
+    FakeSource,
+    InMemoryLifecycleSweeps,
+)
 from tests.fakes.identity import InMemoryInstanceSettingsRepository
 from tests.fakes.ops import NoopUow
 from tests.integration.api.admin.test_admin_users_api import _Env as _UsersEnv
@@ -55,6 +63,10 @@ class _Stack:
             batch_size=10,
             budget_s=5,
             clock=lambda: NOW,
+        )
+        self.sweeps = InMemoryLifecycleSweeps()
+        self.sweep_service = LifecycleSweepService(
+            self.engine, self.sweeps, self.settings, users.audit, clock=lambda: NOW
         )
         self.mode = SafeMode()
         self.guard = StorageGuard(
@@ -93,6 +105,10 @@ class _Provider(Provider):
     def run_uc(self) -> RunLifecycleUC:
         return RunLifecycleUC(self.s.engine, self.s.users.audit)
 
+    @provide
+    def sweep_service(self) -> LifecycleSweepService:
+        return self.s.sweep_service
+
 
 @pytest_asyncio.fixture
 async def stack(monkeypatch: pytest.MonkeyPatch) -> AsyncIterator[_Stack]:
@@ -114,6 +130,10 @@ _ROUTES = [
     ("PUT", "/api/admin/data-lifecycle/retention/notifications", {"days": 60}),
     ("PUT", "/api/admin/data-lifecycle/thresholds", {"warn_percent": 70, "critical_percent": 85}),
     ("POST", "/api/admin/data-lifecycle/notifications/run", None),
+    ("GET", "/api/admin/data-lifecycle/sweep/preview", None),
+    ("GET", "/api/admin/data-lifecycle/sweep", None),
+    ("POST", "/api/admin/data-lifecycle/sweep", {}),
+    ("POST", "/api/admin/data-lifecycle/sweep/x/cancel", {}),
 ]
 
 
@@ -209,3 +229,78 @@ async def test__run_now__audit_refused_others_run_and_are_audited(stack: _Stack)
     assert done.status_code == 200
     assert done.json() == {"key": "notifications", "removed": 3, "partitions_dropped": 1, "more": False, "error": None}
     assert [e.action for e in await stack.users.audit.list()] == ["lifecycle.run_now"]
+
+
+_MANUAL = ["ai_usage", "jobs", "notifications", "collab_requests", "share_links", "guest_sessions", "collab_state"]
+
+
+async def test__sweep_preview__shape_and_no_store(stack: _Stack) -> None:
+    boss = await stack.users.add(str(uuid4()), admin=True)
+    stack.sources["ai_usage"].expired = 100_001
+    stack.sources["jobs"].expired = None
+
+    response = await stack.client.get("/api/admin/data-lifecycle/sweep/preview", headers=boss)
+
+    body = response.json()
+    assert response.status_code == 200
+    assert response.headers["cache-control"] == "no-store"
+    assert [s["key"] for s in body["sources"]] == _MANUAL
+    ai = body["sources"][0]
+    assert ai == {
+        "key": "ai_usage",
+        "days": 90,
+        "cutoff": "2026-08-12T12:00:00Z",
+        "count": 100_000,
+        "capped": True,
+        "bytes": 1024,
+    }
+    assert (body["sources"][1]["count"], body["sources"][1]["capped"]) == (None, False)
+    assert body["sources"][5]["days"] is None
+    assert {"key": "audit_log", "reason": "protected"} in body["excluded"]
+    assert {"key": "lifecycle_sweeps", "reason": "on_write"} in body["excluded"]
+    assert body["nothing"] is False
+    assert await stack.users.audit.list() == []
+
+
+async def test__sweep__start_poll_result_and_busy(stack: _Stack) -> None:
+    boss = await stack.users.add(str(uuid4()), admin=True)
+    c = stack.client
+
+    empty = await c.get("/api/admin/data-lifecycle/sweep", headers=boss)
+    started = await c.post("/api/admin/data-lifecycle/sweep", json={}, headers=boss)
+    busy = await c.post("/api/admin/data-lifecycle/sweep", json={}, headers=boss)
+    await stack.sweep_service.drain()
+    state = await c.get("/api/admin/data-lifecycle/sweep", headers=boss)
+    stop_done = await c.post(f"/api/admin/data-lifecycle/sweep/{started.json()['id']}/cancel", json={}, headers=boss)
+    stop_unknown = await c.post("/api/admin/data-lifecycle/sweep/nope/cancel", json={}, headers=boss)
+
+    assert empty.json() == {"sweep": None}
+    assert started.status_code == 202
+    first = started.json()
+    assert (first["status"], first["finished_at"], first["removed_total"], first["freed_bytes"]) == (
+        "running",
+        None,
+        0,
+        0,
+    )
+    assert first["steps"][0] == {
+        "key": "ai_usage",
+        "status": "pending",
+        "removed": 0,
+        "partitions_dropped": 0,
+        "more": False,
+        "bytes_before": None,
+        "bytes_after": None,
+        "error": None,
+    }
+    assert (busy.status_code, busy.json()["code"]) == (409, "lifecycle_sweep_busy")
+    sweep = state.json()["sweep"]
+    assert sweep["status"] == "done"
+    assert sweep["removed_total"] == 3 * len(_MANUAL)
+    assert {s["status"] for s in sweep["steps"]} == {"done"}
+    assert sweep["steps"][0]["bytes_before"] == 1024
+    assert state.headers["cache-control"] == "no-store"
+    assert (stop_done.status_code, stop_done.json()["code"]) == (409, "command_finished")
+    assert stop_unknown.status_code == 404
+    actions = [e.action for e in await stack.users.audit.list()]
+    assert sorted(actions) == ["lifecycle.sweep", "lifecycle.swept"]

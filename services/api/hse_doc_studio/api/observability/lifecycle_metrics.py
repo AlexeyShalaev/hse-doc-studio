@@ -76,14 +76,25 @@ def _volume_families(found: list[VolumeUsage]) -> list[str]:
     return out
 
 
+def _sweep_families(finished: Mapping[str, int]) -> list[str]:
+    return _family(
+        "hse_lifecycle_sweeps_total",
+        "counter",
+        "Прогонов «Освободить место» по итогу.",
+        [("status", status, count) for status, count in sorted(finished.items())],
+    )
+
+
 def lifecycle_collector(
     counters: Callable[[], Mapping[str, ProcessCounters]],
     volumes: Callable[[], list[VolumeUsage]],
     safe_mode: SafeMode,
+    sweeps: Callable[[], Mapping[str, int]] = dict,
 ) -> Callable[[], Iterable[str]]:
     def collect() -> Iterable[str]:
         yield from _source_families(counters())
         yield from _volume_families(volumes())
+        yield from _sweep_families(sweeps())
         yield "# HELP hse_storage_safe_mode 1, если места критически мало и крупные загрузки отклоняются."
         yield "# TYPE hse_storage_safe_mode gauge"
         yield f"hse_storage_safe_mode {int(safe_mode.active)}"

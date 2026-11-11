@@ -50,6 +50,7 @@ def install_data_lifecycle(app: FastAPI, container: AsyncContainer, cfg: Setting
         from hse_doc_studio.infra.lifecycle.sql_sources import PartitionedTableSource  # noqa: PLC0415
         from hse_doc_studio.use_cases.lifecycle.engine import LifecycleEngine  # noqa: PLC0415
         from hse_doc_studio.use_cases.lifecycle.guard import StorageGuard  # noqa: PLC0415
+        from hse_doc_studio.use_cases.lifecycle.sweep import LifecycleSweepService  # noqa: PLC0415
 
         engine = await container.get(LifecycleEngine)
         for key in ("audit_log", "ai_usage"):
@@ -58,7 +59,20 @@ def install_data_lifecycle(app: FastAPI, container: AsyncContainer, cfg: Setting
                 await source.ensure_partitions()
         (await container.get(TaskStatsHolder)).reader = _task_runs_reader(background)
         guard = await container.get(StorageGuard)
-        metrics.add_collector(lifecycle_collector(lambda: engine.counters, lambda: guard.last, PROCESS_SAFE_MODE))
+        sweeps = await container.get(LifecycleSweepService)
+        metrics.add_collector(
+            lifecycle_collector(lambda: engine.counters, lambda: guard.last, PROCESS_SAFE_MODE, lambda: sweeps.finished)
+        )
+
+    @app.on_event("shutdown")
+    async def _lifecycle_shutdown() -> None:
+        """Идущий здесь прогон «Освободить место» закрывается как прерванный сразу, а не через 5 минут."""
+        from hse_doc_studio.use_cases.lifecycle.sweep import LifecycleSweepService  # noqa: PLC0415
+
+        try:
+            await (await container.get(LifecycleSweepService)).aclose()
+        except Exception:
+            logger.warning("lifecycle_sweep_close_failed", exc_info=True)
 
     _register(background, container, cfg)
 
@@ -66,10 +80,13 @@ def install_data_lifecycle(app: FastAPI, container: AsyncContainer, cfg: Setting
 def _register(background: BackgroundTaskRunner, container: AsyncContainer, cfg: Settings) -> None:
     from hse_doc_studio.use_cases.lifecycle.engine import LifecycleEngine  # noqa: PLC0415
     from hse_doc_studio.use_cases.lifecycle.guard import StorageGuard  # noqa: PLC0415
+    from hse_doc_studio.use_cases.lifecycle.sweep import LifecycleSweepService  # noqa: PLC0415
 
     life = cfg.lifecycle
 
     async def _run() -> None:
+        # Прогон «Освободить место», чья реплика пропала, закрывается здесь, даже если экран никто не открывает.
+        await (await container.get(LifecycleSweepService)).reap()
         await (await container.get(LifecycleEngine)).run_all()
 
     async def _probe() -> None:

@@ -1,14 +1,24 @@
-"""`/api/admin/data-lifecycle`: сроки хранения, размеры источников роста, запуск очистки, пороги места."""
+"""`/api/admin/data-lifecycle`: сроки хранения, размеры источников роста, запуск очистки, пороги места.
+
+`/sweep*`: «Освободить место», прогон всех ручных источников на сервере (storage-cleanup.md, 9.2). Маршруты
+`/sweep` объявлены раньше `/{key}/run`, хотя пересечься они не могут: у них разное число сегментов.
+"""
 
 from __future__ import annotations
 
-from fastapi import APIRouter, Request, Response
+from fastapi import APIRouter, Request, Response, status
 
 from hse_doc_studio.api.schemas.lifecycle import (
     LifecycleLastRun,
     LifecycleOverviewBody,
     LifecycleRunBody,
     LifecycleSource,
+    LifecycleSweepBody,
+    LifecycleSweepExcluded,
+    LifecycleSweepPreviewBody,
+    LifecycleSweepPreviewSource,
+    LifecycleSweepStateBody,
+    LifecycleSweepStep,
     LifecycleVolume,
     StorageThresholdsBody,
     UpdateRetentionRequest,
@@ -17,6 +27,7 @@ from hse_doc_studio.core.access.context import current_actor
 from hse_doc_studio.core.access.entities import Actor
 from hse_doc_studio.core.identity.errors import IdentityError, IdentityErrorCode
 from hse_doc_studio.core.lifecycle.disk import StorageLevel
+from hse_doc_studio.core.lifecycle.sweeps import LifecycleSweep, SweepPreview
 from hse_doc_studio.use_cases.lifecycle.admin import (
     GetLifecycleUC,
     LifecycleOverview,
@@ -25,6 +36,7 @@ from hse_doc_studio.use_cases.lifecycle.admin import (
     UpdateRetentionUC,
     UpdateThresholdsUC,
 )
+from hse_doc_studio.use_cases.lifecycle.sweep import LifecycleSweepService
 
 router = APIRouter(prefix="/data-lifecycle")
 
@@ -102,6 +114,74 @@ def _overview(view: LifecycleOverview) -> LifecycleOverviewBody:
         level=StorageLevel(view.level).name,
         safe_mode=view.safe_mode,
     )
+
+
+def _sweep(sweep: LifecycleSweep) -> LifecycleSweepBody:
+    return LifecycleSweepBody(
+        id=sweep.id,
+        status=sweep.status.value,
+        started_by=sweep.started_by,
+        started_at=sweep.started_at,
+        updated_at=sweep.updated_at,
+        finished_at=sweep.finished_at,
+        steps=[
+            LifecycleSweepStep(
+                key=s.key,
+                status=s.status.value,
+                removed=s.removed,
+                partitions_dropped=s.partitions_dropped,
+                more=s.more,
+                bytes_before=s.bytes_before,
+                bytes_after=s.bytes_after,
+                error=s.error,
+            )
+            for s in sweep.steps
+        ],
+        removed_total=sweep.removed_total,
+        freed_bytes=sweep.freed_bytes,
+    )
+
+
+def _preview(preview: SweepPreview) -> LifecycleSweepPreviewBody:
+    return LifecycleSweepPreviewBody(
+        sources=[
+            LifecycleSweepPreviewSource(
+                key=s.key, days=s.days, cutoff=s.cutoff, count=s.count, capped=s.capped, bytes=s.bytes
+            )
+            for s in preview.sources
+        ],
+        excluded=[LifecycleSweepExcluded(key=key, reason=reason.value) for key, reason in preview.excluded],
+        nothing=preview.nothing,
+    )
+
+
+async def _sweeps(request: Request) -> LifecycleSweepService:
+    return await request.state.dishka_container.get(LifecycleSweepService)
+
+
+@router.get("/sweep/preview", response_model=LifecycleSweepPreviewBody)
+async def sweep_preview(request: Request, response: Response) -> LifecycleSweepPreviewBody:
+    response.headers.update(_NO_STORE)
+    return _preview(await (await _sweeps(request)).preview(_actor()))
+
+
+@router.get("/sweep", response_model=LifecycleSweepStateBody)
+async def sweep_state(request: Request, response: Response) -> LifecycleSweepStateBody:
+    response.headers.update(_NO_STORE)
+    sweep = await (await _sweeps(request)).current(_actor())
+    return LifecycleSweepStateBody(sweep=_sweep(sweep) if sweep is not None else None)
+
+
+@router.post("/sweep", response_model=LifecycleSweepBody, status_code=status.HTTP_202_ACCEPTED)
+async def sweep_start(request: Request, response: Response) -> LifecycleSweepBody:
+    response.headers.update(_NO_STORE)
+    return _sweep(await (await _sweeps(request)).start(_actor()))
+
+
+@router.post("/sweep/{sweep_id}/cancel", response_model=LifecycleSweepBody)
+async def sweep_cancel(sweep_id: str, request: Request, response: Response) -> LifecycleSweepBody:
+    response.headers.update(_NO_STORE)
+    return _sweep(await (await _sweeps(request)).cancel(_actor(), sweep_id))
 
 
 @router.get("", response_model=LifecycleOverviewBody)

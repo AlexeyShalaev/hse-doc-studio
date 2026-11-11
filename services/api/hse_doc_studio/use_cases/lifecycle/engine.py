@@ -12,8 +12,9 @@ import structlog
 
 from hse_doc_studio.core.identity.protocols import IAuditLog, IInstanceSettingsRepository
 from hse_doc_studio.core.identity.session_policy import Clock, utc_now
-from hse_doc_studio.core.lifecycle.policies import POLICY_BY_KEY, LifecyclePolicy, Strategy, effective_days
+from hse_doc_studio.core.lifecycle.policies import POLICIES, POLICY_BY_KEY, LifecyclePolicy, Strategy, effective_days
 from hse_doc_studio.core.lifecycle.ports import (
+    ExpiredCount,
     ILifecycleRuns,
     ILifecycleSource,
     PurgeContext,
@@ -88,6 +89,23 @@ class LifecycleEngine:
     async def days_for(self, policy: LifecyclePolicy, stored: Mapping[str, object] | None = None) -> int | None:
         values = stored if stored is not None else await self._settings.get_all()
         return effective_days(policy, values, self._env_days.get(policy.key))
+
+    def manual_keys(self) -> list[str]:
+        """Источники, которые можно чистить вручную («Очистить сейчас», «Освободить место»), в порядке реестра."""
+        return [p.key for p in POLICIES if p.key in self._sources and p.strategy in ENGINE_STRATEGIES and p.run_now]
+
+    async def count_expired(self, key: str, cap: int, stored: Mapping[str, object] | None = None) -> ExpiredCount:
+        """Сколько удалит прогон источника сейчас, по той же границе, что `run_one`; сбой счёта даёт `count=None`."""
+        policy = POLICY_BY_KEY[key]
+        values = stored if stored is not None else await self._settings.get_all()
+        now = self._clock()
+        days = effective_days(policy, values, self._env_days.get(key))
+        cutoff = None if days is None else now - timedelta(days=days)
+        try:
+            return await self._sources[key].count_expired(now, cutoff, cap)
+        except Exception:
+            logger.warning("lifecycle_count_failed", key=key, exc_info=True)
+            return ExpiredCount(None, cutoff)
 
     async def run_all(self) -> list[LifecycleRunOutcome]:
         stored = await self._settings.get_all()

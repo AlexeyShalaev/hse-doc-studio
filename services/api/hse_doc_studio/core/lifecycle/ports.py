@@ -38,12 +38,29 @@ class PurgeResult:
     more: bool = False
 
 
+@dataclass(frozen=True)
+class ExpiredCount:
+    """Сколько записей старше срока удалит прогон сейчас (предпросмотр «Освободить место»).
+
+    `count` с потолком: не больше `cap + 1`, чтобы счёт был дешёвым на миллионах строк; None: посчитать не
+    удалось (таймаут запроса, источник не умеет считать). `cutoff`: граница, по которой считали; у источника с
+    фиксированным сроком своя, None: срок выключен окружением и удалять нечего.
+    """
+
+    count: int | None
+    cutoff: datetime | None = None
+
+
 class ILifecycleSource(Protocol):
     key: str
 
     async def measure(self) -> SourceSize: ...
 
     async def purge(self, ctx: PurgeContext) -> PurgeResult: ...
+
+    async def count_expired(self, now: datetime, cutoff: datetime | None, cap: int) -> ExpiredCount:
+        """Число записей к удалению с потолком `cap + 1`; источник без счёта отвечает `ExpiredCount(None)`."""
+        ...
 
 
 @dataclass(frozen=True)
