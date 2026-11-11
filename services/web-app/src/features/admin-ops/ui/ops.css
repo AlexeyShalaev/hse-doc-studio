@@ -634,10 +634,12 @@
   border: 1px solid var(--border);
   border-radius: var(--r-3);
   background: var(--bg-1);
+  container-type: inline-size;
 }
+/* Строка: название слева, сведения справа ровными столбцами; в узком окне сведения под названием. */
 .ops-sweep-row {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
   align-items: baseline;
   gap: 0.25rem 0.75rem;
   padding: 0.5rem 0.75rem;
@@ -649,7 +651,6 @@
   border-top: 1px solid var(--border);
 }
 .ops-sweep-name {
-  flex: 1 1 11rem;
   min-width: 0;
   display: flex;
   align-items: center;
@@ -660,18 +661,21 @@
   display: inline-flex;
 }
 .ops-sweep-meta {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-auto-flow: column;
   align-items: baseline;
-  gap: 0.25rem 0.75rem;
+  gap: 0.75rem;
   font-size: 0.75rem;
   color: var(--fg-2);
+  text-align: right;
 }
 .ops-sweep-term {
-  min-width: 7rem;
+  width: 8.5rem;
+  text-align: left;
 }
 .ops-sweep-count {
-  min-width: 10rem;
+  width: 10.5rem;
+  text-align: left;
   color: var(--fg-0);
   font-variant-numeric: tabular-nums;
 }
@@ -680,22 +684,37 @@
   color: var(--fg-3);
 }
 .ops-sweep-size {
-  min-width: 4.5rem;
-  text-align: right;
+  width: 4.5rem;
   font-variant-numeric: tabular-nums;
+}
+@container (max-width: 34rem) {
+  .ops-sweep-row {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .ops-sweep-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.125rem 0.75rem;
+    text-align: left;
+  }
+  .ops-sweep-term,
+  .ops-sweep-count,
+  .ops-sweep-size {
+    width: auto;
+  }
+  .ops-sweep-row[data-status] .ops-sweep-meta {
+    padding-left: 1.3125rem;
+  }
 }
 .ops-sweep-result {
   font-variant-numeric: tabular-nums;
 }
 .ops-sweep-error {
-  flex-basis: 100%;
+  grid-column: 1 / -1;
   padding-left: 1.3125rem;
   font-size: 0.75rem;
   color: var(--c-err);
   overflow-wrap: anywhere;
-}
-.ops-sweep-row[data-status="error"] .ops-sweep-error {
-  color: var(--c-err);
 }
 .ops-sweep-note,
 .ops-sweep-nothing,
@@ -766,6 +785,13 @@
   flex-wrap: wrap;
   gap: 0.5rem;
   padding-top: 0.25rem;
+}
+/* Плашка прогона: на узком экране кнопки уходят под текст, а не сжимают его. */
+.ops-sweep-banner .ops-banner {
+  flex-wrap: wrap;
+}
+.ops-sweep-banner .ops-banner-text {
+  flex: 1 1 15rem;
 }
 .ops-sweep-banner-actions {
   display: inline-flex;

@@ -89,7 +89,7 @@
           "on_write": "capped on write, nothing piles up",
           "infra": "managed by the infrastructure"
         },
-        "audit": "The audit log is never cleaned manually. Retention periods are changed in Data retention.",
+        "terms": "Retention periods are changed in Data retention.",
         "nothing": "Nothing to delete right now: everything past its retention period is already gone.",
         "loadFailed": "Could not count what would be deleted.",
         "cancel": "Cancel"

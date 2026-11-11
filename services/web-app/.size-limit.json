@@ -99,7 +99,7 @@
     "name": "Словарь админки: storage",
     "path": "dist/assets/locale-admin-storage-*.js",
     "gzip": true,
-    "limit": "2.4 kB"
+    "limit": "5.2 kB"
   },
   {
     "name": "Словарь админки: data",

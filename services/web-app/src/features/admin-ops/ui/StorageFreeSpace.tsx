@@ -486,7 +486,7 @@ export const FreeSpacePanel = ({
           <ExcludedList preview={ready} />
         </>
       )}
-      <p className="ops-sweep-note">{t("storage.free.confirm.audit")}</p>
+      <p className="ops-sweep-note">{t("storage.free.confirm.terms")}</p>
       {failure}
       <Actions>
         <Button type="button" variant="ghost" onClick={onClose}>
@@ -533,7 +533,11 @@ export const SweepBanner = ({
   const sweepTitle = useSweepTitle();
   const active = isSweepActive(sweep);
   return (
-    <div data-testid="sweep-banner" data-status={sweep.status}>
+    <div
+      className="ops-sweep-banner"
+      data-testid="sweep-banner"
+      data-status={sweep.status}
+    >
       <Banner
         tone={BANNER_TONE[sweep.status]}
         title={sweepTitle(sweep)}
