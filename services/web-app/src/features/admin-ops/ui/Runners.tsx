@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import { failureCode } from "@shared/api";
 import { useServerList } from "@shared/lib";
 import { ConfirmByName } from "@shared/ui";
+import { RunnerDiskDialog } from "@entities/runner";
 import type {
   AdminRunner,
   AdminRunnerRotated,
@@ -16,6 +17,7 @@ import {
   POLL_MS,
   useCreateToken,
   useLocalInstances,
+  useRefreshRunners,
   useQueueSummary,
   useRevokeRunner,
   useRevokeToken,
@@ -123,6 +125,9 @@ export const Runners = ({
   const [rotated, setRotated] = useState<AdminRunnerRotated | null>(null);
   const [revoking, setRevoking] = useState<AdminRunner | null>(null);
   const [inspecting, setInspecting] = useState<AdminRunner | null>(null);
+  const [diskOf, setDiskOf] = useState<AdminRunner | null>(null);
+  const refreshRunners = useRefreshRunners();
+  const diskInstall = diskOf ? (installs.get(diskOf.id) ?? null) : null;
   const [created, setCreated] = useState<AdminRunnerTokenCreated | null>(null);
   const [revokingToken, setRevokingToken] = useState<AdminRunnerToken | null>(
     null,
@@ -187,6 +192,7 @@ export const Runners = ({
         }}
         onOpenQueue={onOpenQueue}
         onDetails={setInspecting}
+        onDisk={setDiskOf}
         installs={installs}
         onUpgrade={setUpgrading}
         onRemoveInstall={setRemovingInstall}
@@ -215,6 +221,29 @@ export const Runners = ({
         }}
         onClose={() => {
           setInspecting(null);
+        }}
+      />
+      <RunnerDiskDialog
+        scope="admin"
+        runner={
+          diskOf
+            ? { id: diskOf.id, name: diskOf.name, version: diskOf.version }
+            : null
+        }
+        // «Обновить раннер» у заглушки старой версии: только у поставленного из админки.
+        onUpgrade={
+          diskInstall
+            ? () => {
+                setDiskOf(null);
+                setUpgrading(diskInstall);
+              }
+            : undefined
+        }
+        // Итог очистки меняет поле disk у строк: «можно освободить» в таблице.
+        onCommandSettled={refreshRunners}
+        onClose={() => {
+          setDiskOf(null);
+          refreshRunners();
         }}
       />
       <RunnerUpgradeDialog

@@ -14,6 +14,7 @@ import type {
   LocalInstance,
 } from "@entities/session";
 import type { ListQueryState } from "@shared/lib";
+import { getRunnerDiskGallery } from "@entities/runner";
 import type { GalleryEntry, GalleryGroup } from "@shared/lib/stateGallery";
 import {
   useOwnerListState,
@@ -111,17 +112,33 @@ const runner = (
   return { ...base, status: runnerStatus(base, NOW) };
 };
 
-const RUNNER_1 = runner("rn1", "runner-1", 6);
+/** Поле disk строки (9.1): поддержан ли «Диск» и сколько можно освободить по замеру. */
+const disk = (
+  cleanable: number | null,
+  supported = true,
+): AdminRunner["disk"] => ({
+  supported,
+  cleanable_bytes: supported ? cleanable : null,
+  measured_at: supported && cleanable !== null ? ago(3 * 3600) : null,
+});
+
+const RUNNER_1 = runner("rn1", "runner-1", 6, {
+  disk: disk(Math.round(14.2 * GIB)),
+});
 const RUNNERS: AdminRunner[] = [
   RUNNER_1,
   runner("rn2", "runner-2", 22, {
     concurrency: 4,
     tags: ["compile", "verify"],
+    disk: disk(Math.round(0.3 * GIB)),
   }),
-  runner("rn3", "runner-3", 140, { version: "0.2.4" }),
-  runner("rn4", "runner-4", 30, { paused: true }),
-  runner("rn5", "runner-5", 7200),
-  runner("rn6", "runner-6", null, { revoked: true }),
+  runner("rn3", "runner-3", 140, {
+    version: "0.2.4",
+    disk: disk(null, false),
+  }),
+  runner("rn4", "runner-4", 30, { paused: true, disk: disk(0) }),
+  runner("rn5", "runner-5", 7200, { disk: disk(null) }),
+  runner("rn6", "runner-6", null, { revoked: true, disk: null }),
 ];
 
 const token = (
@@ -246,6 +263,7 @@ const RunnersDemo = ({
       onRevoke={noop}
       onCreateToken={noop}
       onRevokeToken={noop}
+      onDisk={noop}
       {...extra}
     />
   );
@@ -525,11 +543,15 @@ const ANNA_P: [string, string, string] = [
   "anna.petrova@example.org",
 ];
 const PERSONAL_RUNNERS: AdminRunner[] = [
-  personalRunner("pr1", "MacBook Анны", ANNA_P, { ai_endpoints: ["ollama"] }),
+  personalRunner("pr1", "MacBook Анны", ANNA_P, {
+    ai_endpoints: ["ollama"],
+    disk: disk(Math.round(1.6 * GIB)),
+  }),
   personalRunner("pr2", "Домашний сервер", ANNA_P, {
     host_kind: "cli",
     paused: true,
     ai_endpoints: ["vllm"],
+    disk: disk(Math.round(6.8 * GIB)),
   }),
   personalRunner(
     "pr3",
@@ -541,6 +563,7 @@ const PERSONAL_RUNNERS: AdminRunner[] = [
       ai_endpoints: ["vllm", "ollama"],
       last_seen_at: new Date(NOW - 3 * 3600_000).toISOString(),
       last_seen_ip: null,
+      disk: disk(null, false),
     },
   ),
 ];
@@ -556,6 +579,7 @@ const personalView = (
     serverVersion="0.3.0"
     onTogglePause={noop}
     onRevoke={noop}
+    onDisk={noop}
     {...extra}
   />
 );
@@ -959,6 +983,63 @@ export const getAdminOpsGallery = (): GalleryGroup[] => [
         "Хранилище: места мало",
         () => <Storage />,
         live("ops_services_degraded"),
+      ),
+    ],
+  },
+];
+
+/**
+ * Раздел «Раннеры: диск» (docs/design/storage-cleanup.md, 4.5): общая панель из
+ * entities/runner и то, как админка до неё доходит, пункт «Диск» в меню строк и
+ * «можно освободить» под именем раннера.
+ */
+export const getAdminRunnerDiskGallery = (): GalleryGroup[] => [
+  ...getRunnerDiskGallery(),
+  {
+    id: "admin-runner-disk",
+    title: "Админка: «Диск» в раннерах",
+    description:
+      "Пункт «Диск» в меню строки общих и личных раннеров. У раннера старой версии пункт с пометкой «нужно обновить», у отозванного меню нет. Под именем общего раннера ссылка «можно освободить», если по замеру освобождается от 1 ГБ.",
+    entries: [
+      entry(
+        "admin_disk_runners",
+        "Общие раннеры: «можно освободить» и пункт «Диск»",
+        () => runnersView(),
+        {
+          note: "runner-1: можно освободить 14,2 ГБ; у runner-2 мелочь, подписи нет; меню runner-3: «Диск: нужно обновить раннер».",
+        },
+      ),
+      entry(
+        "admin_disk_runners_phone",
+        "Телефон: общие раннеры",
+        () => runnersView(),
+        { width: 390 },
+      ),
+      entry(
+        "admin_disk_personal",
+        "Личные раннеры: пункт «Диск»",
+        () => personalView(),
+        {
+          note: "Подписи «можно освободить» у личных нет: это машины людей, админ открывает их диск из меню.",
+        },
+      ),
+      entry(
+        "admin_disk_live",
+        "Живой раздел: «Диск» общих раннеров",
+        () => <Runners creating={false} onCreatingChange={noop} />,
+        {
+          ...live("admin_ready"),
+          note: "runner-1: Docker с замером; runner-2: Kubernetes; runner-3: старая версия; runner-4: нечего освобождать; runner-5: замер устарел.",
+        },
+      ),
+      entry(
+        "admin_disk_live_personal",
+        "Живой раздел: «Диск» личных раннеров",
+        () => <RunnersPage />,
+        {
+          ...live("admin_personal_runners"),
+          note: "Плашка владельца, флажка отката нет; владелец получит уведомление об очистке.",
+        },
       ),
     ],
   },

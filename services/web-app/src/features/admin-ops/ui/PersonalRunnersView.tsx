@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import type { ColumnDef } from "@tanstack/react-table";
 import {
   ArrowRight,
+  HardDrive,
   Laptop,
   Pause,
   Play,
@@ -72,6 +73,8 @@ export type PersonalRunnersViewProps = {
   onRetry?: () => void;
   onTogglePause: (runner: AdminRunner) => void;
   onRevoke: (runner: AdminRunner) => void;
+  /** Открыть «Диск» раннера; без него пункта в меню нет. */
+  onDisk?: ((runner: AdminRunner) => void) | undefined;
 };
 
 type Row = {
@@ -82,6 +85,7 @@ type Row = {
   owner: string;
   pause: () => void;
   revoke: () => void;
+  disk: (() => void) | null;
 };
 
 /**
@@ -99,6 +103,7 @@ export const PersonalRunnersView = ({
   onRetry,
   onTogglePause,
   onRevoke,
+  onDisk,
 }: PersonalRunnersViewProps) => {
   const { t } = useTranslation("adminRunners");
   const [q, setQ] = useState("");
@@ -225,7 +230,7 @@ export const PersonalRunnersView = ({
         ),
         enableSorting: false,
         cell: ({ row }) => {
-          const { runner: r, busy, pause, revoke, owner } = row.original;
+          const { runner: r, busy, pause, revoke, disk, owner } = row.original;
           if (r.revoked) return null;
           return (
             <span className="ops-row-actions">
@@ -233,6 +238,22 @@ export const PersonalRunnersView = ({
                 label={t("personal.actionsLabel", { name: r.name, owner })}
                 testId={`admin-personal-runner-actions-${r.id}`}
                 items={[
+                  ...(disk
+                    ? [
+                        {
+                          id: "disk",
+                          label:
+                            r.disk?.supported === false
+                              ? t("personal.diskOutdated")
+                              : t("personal.disk"),
+                          icon: (
+                            <HardDrive size="0.875rem" aria-hidden="true" />
+                          ),
+                          onSelect: disk,
+                          testId: `admin-personal-runner-disk-${r.id}`,
+                        },
+                      ]
+                    : []),
                   {
                     id: "pause",
                     label: r.paused
@@ -291,6 +312,11 @@ export const PersonalRunnersView = ({
             revoke: () => {
               onRevoke(runner);
             },
+            disk: onDisk
+              ? () => {
+                  onDisk(runner);
+                }
+              : null,
           };
         })
         .filter((row) => state === "" || row.status === state)
@@ -303,7 +329,7 @@ export const PersonalRunnersView = ({
               .includes(needle),
         )
         .sort((a, b) => ORDER[a.status] - ORDER[b.status]),
-    [runners, now, t, busyId, onTogglePause, onRevoke, state, needle],
+    [runners, now, t, busyId, onTogglePause, onRevoke, onDisk, state, needle],
   );
 
   return (
