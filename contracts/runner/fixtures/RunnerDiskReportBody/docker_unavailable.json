@@ -1,0 +1,53 @@
+{
+  "measured_at": "2026-11-11T09:00:00+00:00",
+  "targets": [
+    "runner_cache"
+  ],
+  "docker": {
+    "available": false,
+    "categories": [],
+    "total_bytes": 0,
+    "cleanable_bytes": 0,
+    "build_cache": {
+      "bytes": 0,
+      "reclaimable_bytes": 0,
+      "count": 0
+    },
+    "dangling": {
+      "bytes": 0,
+      "count": 0
+    },
+    "stopped_containers": {
+      "bytes": 0,
+      "count": 0
+    },
+    "unused_images": [],
+    "unused_truncated": false,
+    "old_versions": {
+      "current_version": "0.21.0",
+      "rollback": null,
+      "items": [],
+      "reclaimable_bytes": 0,
+      "rollback_bytes": 0
+    },
+    "volumes": []
+  },
+  "docker_reason": null,
+  "cache": {
+    "blobs": {
+      "bytes": 1503238553,
+      "count": 4210,
+      "limit_bytes": 2147483648
+    },
+    "workspaces": {
+      "bytes": 3221225472,
+      "count": 37,
+      "limit_bytes": 21474836480,
+      "busy": 1
+    }
+  },
+  "volume": {
+    "total_bytes": 107374182400,
+    "free_bytes": 12884901888
+  }
+}

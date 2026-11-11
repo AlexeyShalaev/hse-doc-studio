@@ -18,5 +18,9 @@
   "relay_request_gone",
   "relay_out_of_order",
   "relay_too_large",
-  "slow_down"
+  "slow_down",
+  "command_not_found",
+  "command_finished",
+  "feature_not_negotiated",
+  "disk_report_too_large"
 ]

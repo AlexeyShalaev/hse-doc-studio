@@ -1,0 +1,11 @@
+{
+  "id": "0f9e8d7c-6b5a-4493-8271-605f4e3d2c1b",
+  "kind": "disk.cleanup",
+  "payload": {
+    "targets": [
+      "old_versions"
+    ],
+    "include_rollback": true
+  },
+  "issued_at": "2026-11-11T09:32:00+00:00"
+}

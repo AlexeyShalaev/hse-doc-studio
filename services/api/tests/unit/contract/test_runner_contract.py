@@ -25,6 +25,7 @@ from hse_doc_studio.core.jobs.codec import (
     encode_poll_response,
 )
 from hse_doc_studio.core.jobs.deployment import RunnerDeployment
+from hse_doc_studio.core.jobs.disk import MAX_DISK_REPORT_BYTES, MAX_LISTED_ITEMS, RunnerCommandKind, RunnerDiskReport
 from hse_doc_studio.core.jobs.enums import JobKind, RunnerErrorCode
 from hse_doc_studio.core.jobs.files import ArtifactRef, ManifestFile
 from pydantic import BaseModel
@@ -44,6 +45,22 @@ _NESTED = {
     "RunnerResourcesBody",
     "RunnerSecurityBody",
     "RunnerBuildIsolationBody",
+    "DiskMeasurePayloadBody",
+    "DiskCleanupPayloadBody",
+    "CommandStepBody",
+    "CommandProgressBody",
+    "DiskCategoryBody",
+    "DiskBuildCacheBody",
+    "DiskCountBody",
+    "UnusedImageBody",
+    "OldItemBody",
+    "OldVersionsBody",
+    "DockerVolumeBody",
+    "DockerDiskBody",
+    "BlobCacheDiskBody",
+    "WorkspacesDiskBody",
+    "RunnerCacheDiskBody",
+    "DataVolumeBody",
 }
 
 
@@ -83,6 +100,12 @@ _WIRE: dict[str, tuple[Callable[[Any], Any], Callable[[Any], Any]] | None] = {
     "RelayEventBatchBody": (lambda d: decode(wire.RelayEventBatch, d), encode),
     "RelayEventAckBody": (lambda d: decode(wire.RelayEventAck, d), encode),
     "RunnerDeploymentBody": (lambda d: decode(RunnerDeployment, d), encode),
+    "ControlPollRequestBody": (lambda d: decode(wire.ControlPollRequest, d), encode),
+    "ControlPollResponseBody": (lambda d: decode(wire.ControlPollResponse, d), encode),
+    "RunnerCommandEnvelopeBody": (lambda d: decode(wire.RunnerCommandEnvelope, d), encode),
+    "CommandProgressRequestBody": (lambda d: decode(wire.CommandProgressRequest, d), encode),
+    "CommandProgressResponseBody": (lambda d: decode(wire.CommandProgressResponse, d), encode),
+    "RunnerDiskReportBody": (lambda d: decode(RunnerDiskReport, d), encode),
 }
 
 
@@ -260,3 +283,117 @@ def test__models__deployment_rejects_unknown_fields_and_long_names() -> None:
         schemas.RunnerDeploymentBody.model_validate({**body, "namespace": "n" * 300})
     with pytest.raises(ValueError, match="namespace"):
         decode(RunnerDeployment, {**body, "namespace": "n" * 300})
+
+
+def _fixture(schema: str, name: str) -> dict[str, Any]:
+    return json.loads((_FIXTURES / schema / f"{name}.json").read_text(encoding="utf-8"))
+
+
+def test__fixtures__command_envelope_covers_every_command_kind() -> None:
+    kinds = {json.loads(path.read_text(encoding="utf-8"))["kind"] for path in _fixtures("RunnerCommandEnvelopeBody")}
+    assert kinds == {kind.value for kind in RunnerCommandKind}
+
+
+def test__fixtures__disk_report_covers_every_docker_state() -> None:
+    reports = [json.loads(path.read_text(encoding="utf-8")) for path in _fixtures("RunnerDiskReportBody")]
+    reasons = {report["docker_reason"] for report in reports}
+    assert reasons == {None, "kubernetes", "managed_locally"}
+    assert {report["docker"]["available"] for report in reports if report["docker"] is not None} == {True, False}
+
+
+def test__wire__control_and_disk_are_features_the_runner_can_announce() -> None:
+    assert (wire.FEATURE_CONTROL, wire.FEATURE_DISK) == ("control", "disk")
+    body = _fixture("RunnerAnnounceRequestBody", "cli_named")
+    body["features"] = sorted({*body["features"], wire.FEATURE_CONTROL, wire.FEATURE_DISK})
+    schemas.RunnerAnnounceRequestBody.model_validate(body)
+    assert {wire.FEATURE_CONTROL, wire.FEATURE_DISK} <= decode(wire.RunnerAnnounceRequest, body).features
+
+
+def test__models__disk_report_rejects_unknown_fields_and_paths() -> None:
+    body = _fixture("RunnerDiskReportBody", "docker")
+    with pytest.raises(ValueError, match="extra"):
+        schemas.RunnerDiskReportBody.model_validate({**body, "data_dir": "/var/lib/hse-runner"})
+    with pytest.raises(ValueError, match="extra"):
+        schemas.RunnerDiskReportBody.model_validate({**body, "cache": {**body["cache"], "projects": ["p1"]}})
+    with pytest.raises(ValueError, match="no fields"):
+        decode(RunnerDiskReport, {**body, "data_dir": "/var/lib/hse-runner"})
+
+
+@pytest.mark.parametrize(
+    ("patch", "message"),
+    [
+        ({"docker_reason": "kubernetes"}, "docker_reason"),
+        ({"docker": None}, "docker_reason"),
+        ({"targets": ["runner_cache", "runner_cache"]}, "unique"),
+    ],
+)
+def test__models__disk_report_checks_docker_and_targets(patch: dict[str, Any], message: str) -> None:
+    body = {**_fixture("RunnerDiskReportBody", "docker"), **patch}
+    with pytest.raises(ValueError, match=message):
+        schemas.RunnerDiskReportBody.model_validate(body)
+    with pytest.raises((TypeError, ValueError), match=message):
+        decode(RunnerDiskReport, body)
+
+
+@pytest.mark.parametrize("name", ["kubernetes", "docker_unavailable"])
+def test__models__docker_targets_need_a_reachable_docker(name: str) -> None:
+    body = {**_fixture("RunnerDiskReportBody", name), "targets": ["build_cache", "runner_cache"]}
+    with pytest.raises(ValueError, match="reachable docker"):
+        schemas.RunnerDiskReportBody.model_validate(body)
+    with pytest.raises(ValueError, match="reachable docker"):
+        decode(RunnerDiskReport, body)
+
+
+def test__disk_report__full_lists_of_realistic_refs_fit_the_size_limit() -> None:
+    body = _fixture("RunnerDiskReportBody", "docker")
+    docker = body["docker"]
+    studio = "ghcr.io/alexeyshalaev/hse-doc-studio"
+    old = {"kind": "studio_image", "version": "0.10.10", "size_bytes": 1288490188}
+    docker["unused_images"] = [
+        {"ref": f"texlive/texlive:TL20{n:02d}-historic-x", "category": "compile", "size_bytes": 5100273664}
+        for n in range(MAX_LISTED_ITEMS)
+    ]
+    docker["old_versions"]["items"] = [{**old, "ref": f"{studio}:0.10.{n}"} for n in range(MAX_LISTED_ITEMS)]
+    report = decode(RunnerDiskReport, body)
+    assert len(json.dumps(encode(report), separators=(",", ":")).encode()) < MAX_DISK_REPORT_BYTES
+    too_many = {**docker, "unused_images": [*docker["unused_images"], *docker["unused_images"][:1]]}
+    with pytest.raises(ValueError, match="100"):
+        schemas.RunnerDiskReportBody.model_validate({**body, "docker": too_many})
+    with pytest.raises(TypeError, match="no variant"):
+        decode(RunnerDiskReport, {**body, "docker": too_many})
+
+
+@pytest.mark.parametrize(
+    ("kind", "payload", "message"),
+    [
+        ("disk.cleanup", {}, "variant|take"),
+        ("disk.measure", {"targets": ["build_cache"], "include_rollback": False}, "variant|payload|take"),
+        ("disk.cleanup", {"targets": [], "include_rollback": False}, "variant|payload|1"),
+        ("disk.cleanup", {"targets": ["build_cache", "build_cache"], "include_rollback": False}, "variant|unique"),
+        ("disk.cleanup", {"targets": ["build_cache"], "include_rollback": True}, "variant|old_versions"),
+    ],
+)
+def test__models__command_envelope_payload_must_fit_the_kind(kind: str, payload: dict[str, Any], message: str) -> None:
+    body = {**_fixture("RunnerCommandEnvelopeBody", "cleanup"), "kind": kind, "payload": payload}
+    with pytest.raises(ValueError, match=message):
+        schemas.RunnerCommandEnvelopeBody.model_validate(body)
+    with pytest.raises((TypeError, ValueError), match=message):
+        decode(wire.RunnerCommandEnvelope, body)
+
+
+@pytest.mark.parametrize("state", ["queued", "delivered", "cancelling", "expired", "lost"])
+def test__models__runner_reports_only_its_own_states(state: str) -> None:
+    body = {**_fixture("CommandProgressRequestBody", "measured"), "state": state}
+    with pytest.raises(ValueError, match="state|report"):
+        schemas.CommandProgressRequestBody.model_validate(body)
+    with pytest.raises(ValueError, match="report"):
+        decode(wire.CommandProgressRequest, body)
+
+
+def test__models__step_ref_only_for_images_and_containers() -> None:
+    body = _fixture("CommandProgressRequestBody", "running")
+    body["progress"]["steps"][0]["ref"] = None
+    with pytest.raises(ValueError, match="ref"):
+        schemas.CommandProgressRequestBody.model_validate(body)
+    with pytest.raises((TypeError, ValueError), match="ref"):
+        decode(wire.CommandProgressRequest, body)

@@ -1,0 +1,51 @@
+{
+  "state": "running",
+  "progress": {
+    "steps": [
+      {
+        "kind": "image",
+        "ref": "ghcr.io/alexeyshalaev/hse-doc-studio:0.19.0",
+        "status": "done",
+        "freed_bytes": 1288490188,
+        "error": null
+      },
+      {
+        "kind": "container",
+        "ref": "hse-studio-old-updater",
+        "status": "running",
+        "freed_bytes": 0,
+        "error": null
+      },
+      {
+        "kind": "build_cache",
+        "ref": null,
+        "status": "pending",
+        "freed_bytes": 0,
+        "error": null
+      },
+      {
+        "kind": "dangling_images",
+        "ref": null,
+        "status": "pending",
+        "freed_bytes": 0,
+        "error": null
+      },
+      {
+        "kind": "runner_blobs",
+        "ref": null,
+        "status": "pending",
+        "freed_bytes": 0,
+        "error": null
+      },
+      {
+        "kind": "runner_workspaces",
+        "ref": null,
+        "status": "pending",
+        "freed_bytes": 0,
+        "error": null
+      }
+    ],
+    "freed_bytes": 1288490188,
+    "error": null
+  }
+}

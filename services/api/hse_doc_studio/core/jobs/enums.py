@@ -82,3 +82,8 @@ class RunnerErrorCode(StrEnum):
     relay_out_of_order = "relay_out_of_order"
     relay_too_large = "relay_too_large"
     slow_down = "slow_down"
+    # Канал команд и диск раннера: чужая команда, ход по закрытой, вызов без согласованной возможности, большой отчёт.
+    command_not_found = "command_not_found"
+    command_finished = "command_finished"
+    feature_not_negotiated = "feature_not_negotiated"
+    disk_report_too_large = "disk_report_too_large"
