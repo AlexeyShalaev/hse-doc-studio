@@ -720,11 +720,24 @@ Docker недоступен даёт `DockerUnavailableError`. Полоса ка
 `runner_disk_cleaned` владельцу личного раннера, только если очистку запустил не он; только «Входящие», без письма.
 Payload: `runner_id`, `runner_name`, `freed_bytes`, `state`. Переход ведёт в «Мои раннеры» с открытым «Диском».
 
+Уточнено в B6: форма уведомления общая (`NotificationPayload`), поэтому поля легли так: `ref_id` id раннера,
+`excerpt` имя раннера, `actor_name` кто чистил, `outcome` итог (`done`, `cancelled`, `error`, `lost`), новое поле
+`freed_bytes` (число, у остальных видов `null`; в API `NotificationPayloadModel.freed_bytes`, в эталонах
+`Notification*` явным `null`). Уведомление уходит только по итогу команды, которую раннер успел забрать
+(`delivered_at` есть): просроченная или остановленная до доставки очистка ничего не удалила. Ключ повтора
+`runner_disk_cleaned:<id команды>`. Вид и `outcome` во фронтенде заводит W5; `freed_bytes` в zod-схеме пока
+необязательное, чтобы демо и тесты «Входящих» не правились до W5.
+
 ### 8.3 Метрики
 
 `/metrics`: `hse_runner_disk_cleanable_bytes{scope="shared"|"personal"}` (сумма по последним отчётам),
 `hse_runner_disk_cleanups_total{state}`, `hse_lifecycle_sweeps_total{status}`. Метки по раннеру не вводим: число
 раннеров не ограничено.
+
+Уточнено в B6: `hse_runner_disk_cleanable_bytes` пересчитывает `runner_commands_reaper` (раз в минуту, у лидера) по
+проекции замеров неотозванных раннеров с `disk`; до первого пересчёта семейства нет. `hse_runner_disk_cleanups_total`
+считает наблюдатель итога в процессе, где команда закрылась (ровно один раз на команду), только `disk.cleanup`.
+В аудите `runner.disk_cleaned` поле `errors` это число шагов с ошибкой плюс один, если у хода есть общая причина.
 
 ### 8.4 MCP
 
@@ -785,13 +798,35 @@ RunnerDiskSummary
 | Код | HTTP | Когда |
 |---|---|---|
 | `not_found` | 404 | нет раннера, отозван, чужой личный для владельца |
-| `forbidden` | 403 | откат личного раннера админом; не админ и не владелец |
+| `forbidden` | 403 | откат чужого личного раннера админом (не админ и не владелец получают 404, раздел 7) |
 | `runner_disk_unsupported` | 409 | раннер не согласовал `control` и `disk` |
 | `runner_offline` | 409 | раннер не на связи (тот же критерий, что статус `offline` в списке) |
 | `runner_disk_busy` | 409 | у раннера уже идёт очистка |
 | `disk_target_unavailable` | 409 | цели нет в `targets` последнего отчёта (Kubernetes, Docker недоступен) |
 | `input_invalid` | 422 | пустой или повторяющийся список целей; `include_rollback` без цели `old_versions` |
 | `command_finished` | 409 | остановка уже закрытой команды |
+
+Уточнено в B6 (`use_cases/jobs/runner_disk.py`, `RunnerDiskUC`, `RunnerDiskObserver`):
+
+- Права. `RunnerRegistry.require_disk_access(actor, runner, *, rollback)`: владелец личного раннера может всё (админ
+  на своём личном раннере тоже владелец, откат ему доступен); админ установки может всё, кроме отката чужого личного
+  (`403 forbidden`); остальным и отозванному раннеру 404. Админские адреса не админу отвечают 404 ещё в
+  `admin_guard`, «Мои раннеры» находят раннер через `RunnerRegistry.my_runner` (чужой это 404).
+- Порядок проверок очистки: 404, `input_invalid` (пустой список, повторы, неизвестная цель, откат без
+  `old_versions`; проверяется в сценарии до сборки `DiskCleanupPayload`, поэтому тело с кодом, а pydantic проверяет
+  только виды целей и не больше шести), 403 отката, `runner_disk_unsupported`, `runner_offline`, `runner_disk_busy`,
+  `disk_target_unavailable`. «Обновить» проверяет поддержку и связь, при идущей очистке `runner_disk_busy`.
+- `online`: статус раннера без учёта паузы (пауза про задачи) равен `online` или `stale`; `offline`, отозванный и
+  личный при выключенных личных раннерах не на связи.
+- `report` у неподдержанного раннера (откатился на версию без `disk`) `null`, даже если старый замер в базе есть.
+  `command` это незавершённая очистка или последняя завершённая с `finished_at` не старше суток; `disk.measure` в
+  `command` не попадает, его видно по `measuring`.
+- Остановка принимает только `disk.cleanup`: id замера, чужой и неизвестный id дают `404 not_found`. Коды протокола
+  раннера наружу не уходят: `command_not_found` становится `not_found`, `command_finished` остаётся собой.
+- Списки и сводка читают не отчёты целиком, а проекцию `IRunnerDiskStore.list_disk_briefs` (правило 9.3 считается в
+  SQL в `bigint`), через `RunnerControlService.disk_briefs`. В сводке `reporting` это неотозванные общие раннеры с
+  `disk` и замером, `outdated` неотозванные общие без `disk`, в `top` только раннеры с `cleanable_bytes > 0`.
+- `min_version` это `DISK_MIN_RUNNER_VERSION` в `core/jobs/disk.py` (0.22.0, первая версия со срезом B4).
 
 ### 9.2 «Освободить место»
 
@@ -836,16 +871,17 @@ LifecycleSweepPreview
   `lc.LifecycleSweepBody`, `lc.LifecycleSweepStateBody`, `lc.LifecycleSweepPreviewBody`). Состояния галерей
   (`SWEEP_STATES`, `SWEEP_PREVIEWS` в `features/admin-ops/testing/sweepFixtures.ts`) совпадают с эталонами, это
   проверяет тест.
-- Диск раннера (9.1): пока в коде, zod-схемы в `entities/runner/model/runnerDisk.schema.ts` с картой
-  `RUNNER_DISK_CONTRACT_SCHEMAS`, эталоны `RUNNER_DISK_CONTRACT_EXAMPLES` и состояния галерей `RUNNER_DISK_STATES`
-  в `entities/runner/testing/fixtures.ts`. B6 переносит эталоны в `contracts/server/fixtures/<Схема>/<вариант>.json`,
-  модели в `test_server_contract.py`, карту в `CONTRACT_SCHEMAS` и делает поле `disk` в `AdminRunner` и `MyRunner`
-  обязательным (пока оно необязательное: старый сервер его не шлёт).
+- Диск раннера (9.1): zod-схемы в `entities/runner/model/runnerDisk.schema.ts`, модели в
+  `api/schemas/runner_disk.py`, эталоны в `contracts/server/fixtures/RunnerDiskView`, `RunnerDiskCommand`,
+  `RunnerDiskCleanupRequest`, `RunnerDiskSummary` (одни формы у админки и «Моих раннеров»); их разбирают оба теста
+  контракта (`CONTRACT_SCHEMAS` и `_SCHEMAS` с моделями `rd.*`). Состояния галерей `RUNNER_DISK_STATES`,
+  `DISK_COMMANDS` и сводки в `entities/runner/testing/fixtures.ts` совпадают с эталонами (`runnerDisk.schema.test.ts`).
+  Поле `disk` в `AdminRunner` (`RunnerInfo`) и `MyRunner` обязательное, `null` у отозванного (срез B6).
 - Моки `createRunnerDiskDemo` и `createLifecycleSweepDemo` поверх демо-транспорта; в серверном демо их собирает
   `app/demo/server/storageCleanup.ts` (какой диск у какого раннера, описано там же).
 - Сообщения кодов ошибок в `errors.json` (`code.<код>`, ru и en): `lifecycle_sweep_busy` и `command_finished` от
-  B7, `runner_disk_unsupported`, `runner_offline`, `runner_disk_busy`, `disk_target_unavailable` от W1 (в
-  `contracts/server/error_codes.json` их добавит B6).
+  B7, `runner_disk_unsupported`, `runner_offline`, `runner_disk_busy`, `disk_target_unavailable` от W1; в
+  `IdentityErrorCode` и `contracts/server/error_codes.json` они с B6.
 
 ## 10. Тесты
 

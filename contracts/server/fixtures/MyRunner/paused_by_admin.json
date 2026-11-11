@@ -18,5 +18,10 @@
   "revoked": false,
   "running_jobs": 0,
   "ai_endpoints": [],
-  "features": []
+  "features": [],
+  "disk": {
+    "supported": false,
+    "cleanable_bytes": null,
+    "measured_at": null
+  }
 }

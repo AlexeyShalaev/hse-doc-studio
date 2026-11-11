@@ -1,0 +1,68 @@
+{
+  "runner_id": "rn_01hxb1",
+  "supported": true,
+  "reason": null,
+  "min_version": "0.22.0",
+  "online": true,
+  "last_seen_at": "2026-11-11T09:59:54Z",
+  "report": {
+    "measured_at": "2026-11-11T09:20:00Z",
+    "targets": [
+      "runner_cache"
+    ],
+    "docker": {
+      "available": false,
+      "categories": [],
+      "total_bytes": 0,
+      "cleanable_bytes": 0,
+      "build_cache": {
+        "bytes": 0,
+        "reclaimable_bytes": 0,
+        "count": 0
+      },
+      "dangling": {
+        "bytes": 0,
+        "count": 0
+      },
+      "stopped_containers": {
+        "bytes": 0,
+        "count": 0
+      },
+      "unused_images": [],
+      "unused_truncated": false,
+      "old_versions": {
+        "current_version": "0.22.1",
+        "rollback": null,
+        "items": [],
+        "reclaimable_bytes": 0,
+        "rollback_bytes": 0
+      },
+      "volumes": []
+    },
+    "docker_reason": null,
+    "cache": {
+      "blobs": {
+        "bytes": 1503238554,
+        "count": 2318,
+        "limit_bytes": 2147483648
+      },
+      "workspaces": {
+        "bytes": 6657199309,
+        "count": 41,
+        "limit_bytes": 21474836480,
+        "busy": 1
+      }
+    },
+    "volume": {
+      "total_bytes": 214748364800,
+      "free_bytes": 25232932864
+    }
+  },
+  "received_at": "2026-11-11T09:20:02Z",
+  "stale": false,
+  "command": null,
+  "measuring": false,
+  "can_clean": true,
+  "can_include_rollback": true,
+  "personal_owner": null
+}

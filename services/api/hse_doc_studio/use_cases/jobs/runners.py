@@ -447,6 +447,22 @@ class RunnerRegistry:
             raise RunnerNotFoundError("runner not found")
         return runner
 
+    def require_disk_access(self, actor: Actor, runner: Runner, *, rollback: bool) -> None:
+        """Права на «Диск» раннера (storage-cleanup.md, раздел 7): владелец личного раннера и админ установки.
+
+        Отозванный раннер, чужой личный раннер и общий раннер для не админа неотличимы от несуществующих (404).
+        Удалить предыдущую версию (откат) чужого личного раннера админ не может (403 `forbidden`): это необратимо
+        для владельца, поэтому только у него.
+        """
+        if runner.revoked_at is not None or actor.id is None:
+            raise RunnerNotFoundError("runner not found")
+        if runner.owner_kind is RunnerOwnerKind.user and runner.owner_id == actor.id:
+            return
+        if not actor.is_instance_admin:
+            raise RunnerNotFoundError("runner not found")
+        if rollback and runner.scope is RunnerScope.personal:
+            raise IdentityError(IdentityErrorCode.forbidden)
+
     async def update_my_runner(
         self, actor: Actor, runner_id: str, *, name: str | None = None, paused: bool | None = None
     ) -> Runner:

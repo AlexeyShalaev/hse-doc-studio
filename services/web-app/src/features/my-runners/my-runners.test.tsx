@@ -28,6 +28,7 @@ const RUNNER: MyRunner = {
   running_jobs: 1,
   ai_endpoints: [{ name: "ollama", flavor: "ollama" }],
   features: [],
+  disk: null,
 };
 
 const noop = () => undefined;

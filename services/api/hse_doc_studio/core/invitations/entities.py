@@ -129,6 +129,8 @@ class NotificationPayload:
     # изменившихся документов на языке получателя. В API уведомления не отдаются.
     message: str | None = None
     changed_names: str | None = None
+    # Очистка диска личного раннера (`runner_disk_cleaned`): сколько освобождено; у остальных видов пусто.
+    freed_bytes: int | None = None
 
 
 @dataclass(frozen=True)

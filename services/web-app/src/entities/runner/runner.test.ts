@@ -51,7 +51,12 @@ const MY_RUNNER = {
   revoked: false,
   running_jobs: 1,
   ai_endpoints: [{ name: "ollama", flavor: "ollama" }],
-  features: ["ai_relay", "ai_slots", "announce", "offline"],
+  features: ["ai_relay", "ai_slots", "announce", "control", "disk", "offline"],
+  disk: {
+    supported: true,
+    cleanable_bytes: 524288000,
+    measured_at: "2026-04-20T09:10:00Z",
+  },
 };
 const OFFLINE_CLI = {
   ...MY_RUNNER,
@@ -61,6 +66,7 @@ const OFFLINE_CLI = {
   features: [],
   last_seen_ip: null,
   running_jobs: 0,
+  disk: { supported: false, cleanable_bytes: null, measured_at: null },
 };
 const TOKEN = {
   id: "8a7b6c5d4e3f40112233445566778899",
@@ -111,7 +117,7 @@ const SAMPLES: [string, ZodType, unknown][] = [
   [
     "MyRunner/revoked",
     MyRunnerSchema,
-    { ...MY_RUNNER, state: "revoked", revoked: true },
+    { ...MY_RUNNER, state: "revoked", revoked: true, disk: null },
   ],
   ["MyRunnerTokenList/one", MyRunnerTokenListSchema, [TOKEN]],
   [

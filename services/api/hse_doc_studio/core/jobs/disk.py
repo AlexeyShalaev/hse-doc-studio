@@ -38,6 +38,10 @@ DISK_REPORT_EVERY_S = 6 * 3600
 DISK_REPORT_STALE_S = 24 * 3600
 # Кэш раннера чистится без остановки сборок: блобы, тронутые за это время, остаются (S9).
 BLOB_MIN_IDLE_S = 600
+# Первая версия раннера, которая сообщает о диске (срез B4): экран берёт её из ответа сервера, а не из своего кода.
+DISK_MIN_RUNNER_VERSION = "0.22.0"
+# Диалог «Диск» показывает незавершённую очистку или последнюю завершённую за это время.
+RECENT_COMMAND_S = 24 * 3600
 
 
 class DiskTarget(StrEnum):
@@ -291,6 +295,16 @@ class RunnerDiskReport:
         docker_usable = self.docker is not None and self.docker.available
         if not docker_usable and any(target.needs_docker for target in self.targets):
             raise ValueError("docker targets need a reachable docker")
+
+
+def disk_cleanable_bytes(report: RunnerDiskReport) -> int:
+    """«Можно освободить» по правилу 9.3: Docker `cleanable_bytes` (если Docker ответил) плюс весь кэш раннера.
+
+    Откат сюда не входит: его `cleanable_bytes` раннера не считает. Тем же правилом считают сводка «Хранилища»,
+    поле `disk` в списках раннеров, метрика и фронтенд (`runnerDiskTotals`).
+    """
+    docker = report.docker.cleanable_bytes if report.docker is not None and report.docker.available else 0
+    return docker + report.cache.blobs.bytes + report.cache.workspaces.bytes
 
 
 class RunnerCommandKind(StrEnum):

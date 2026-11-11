@@ -14,6 +14,14 @@ from hse_doc_studio.api.runner_commands import (
     runner_token_command,
     studio_base_url,
 )
+from hse_doc_studio.api.runner_disk_views import (
+    NO_STORE,
+    disk_brief,
+    disk_command,
+    disk_summary,
+    disk_view,
+    runner_disk_uc,
+)
 from hse_doc_studio.api.schemas.admin import (
     Page,
     PageParams,
@@ -37,6 +45,12 @@ from hse_doc_studio.api.schemas.runner_admin import (
     RunnerSummaryInfo,
     UpdateRunnerRequest,
 )
+from hse_doc_studio.api.schemas.runner_disk import (
+    RunnerDiskCleanupRequest,
+    RunnerDiskCommand,
+    RunnerDiskSummary,
+    RunnerDiskView,
+)
 from hse_doc_studio.core.access.context import require_actor
 from hse_doc_studio.core.jobs.admin import (
     REGISTRATION_TOKEN_SORT_FIELDS,
@@ -57,6 +71,7 @@ from hse_doc_studio.use_cases.admin.ops_runners import (
     PickRunnersUC,
     RunnerSummaryUC,
 )
+from hse_doc_studio.use_cases.jobs.runner_disk import RunnerDiskBrief
 from hse_doc_studio.use_cases.jobs.runners import RunnerRegistry
 
 router = APIRouter()
@@ -84,6 +99,7 @@ def _runner_info(
     *,
     personal_enabled: bool = True,
     owners: dict[str, tuple[str, str]] | None = None,
+    disk: RunnerDiskBrief | None = None,
 ) -> RunnerInfo:
     owner = (owners or {}).get(runner.owner_id) if runner.owner_id is not None else None
     return RunnerInfo(
@@ -108,6 +124,7 @@ def _runner_info(
         # Без живого Deployment: в списке только версия и отчёт раннера, точнее в его карточке.
         reinstall=[reason.value for reason in reinstall_reasons(runner, None)] if runner.revoked_at is None else [],
         deployment_reported=runner.deployment is not None,
+        disk=disk_brief(disk),
     )
 
 
@@ -222,8 +239,12 @@ async def list_runners(
     )
     owners = await registry.owners_of(found.page.items)
     personal_enabled = (await registry.personal_settings()).enabled
+    disks = await (await runner_disk_uc(request)).briefs(found.page.items)
     return params.page(
-        [_runner_info(r, found.as_of, personal_enabled=personal_enabled, owners=owners) for r in found.page.items],
+        [
+            _runner_info(r, found.as_of, personal_enabled=personal_enabled, owners=owners, disk=disks[r.id])
+            for r in found.page.items
+        ],
         found.page.total,
     )
 
@@ -272,8 +293,9 @@ async def rotate_runner_token(runner_id: str, request: Request, response: Respon
         rotated = await (await _registry(request)).rotate_token(require_actor(), runner_id)
     except RunnerNotFoundError as exc:
         raise _not_found(exc) from exc
+    disks = await (await runner_disk_uc(request)).briefs([rotated.runner])
     return RotatedRunnerTokenResponse(
-        runner=_runner_info(rotated.runner),
+        runner=_runner_info(rotated.runner, disk=disks[rotated.runner.id]),
         runner_token=rotated.secret,
         **_commands(request, rotated.secret, rotated=True),
     )
@@ -286,3 +308,50 @@ async def revoke_runner(runner_id: str, request: Request) -> Response:
     except RunnerNotFoundError as exc:
         raise _not_found(exc) from exc
     return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+# «Диск» раннера (storage-cleanup.md, 9.1). Сводка объявлена раньше адресов с `{runner_id}`, хотя пересечься
+# они не могут: у `GET /runners/{runner_id}` маршрута нет, а у диска другое число сегментов.
+
+
+@router.get("/runners/disk-summary", response_model=RunnerDiskSummary)
+async def runners_disk_summary(request: Request, response: Response) -> RunnerDiskSummary:
+    response.headers.update(NO_STORE)
+    return disk_summary(await (await runner_disk_uc(request)).summary(require_actor()))
+
+
+@router.get("/runners/{runner_id}/disk", response_model=RunnerDiskView)
+async def runner_disk(runner_id: str, request: Request, response: Response) -> RunnerDiskView:
+    response.headers.update(NO_STORE)
+    return disk_view(await (await runner_disk_uc(request)).view(require_actor(), runner_id, scope="admin"))
+
+
+@router.post(
+    "/runners/{runner_id}/disk/refresh", response_model=RunnerDiskCommand, status_code=status.HTTP_202_ACCEPTED
+)
+async def refresh_runner_disk(runner_id: str, request: Request, response: Response) -> RunnerDiskCommand:
+    response.headers.update(NO_STORE)
+    return disk_command(await (await runner_disk_uc(request)).refresh(require_actor(), runner_id, scope="admin"))
+
+
+@router.post(
+    "/runners/{runner_id}/disk/cleanup", response_model=RunnerDiskCommand, status_code=status.HTTP_202_ACCEPTED
+)
+async def clean_runner_disk(
+    runner_id: str, body: RunnerDiskCleanupRequest, request: Request, response: Response
+) -> RunnerDiskCommand:
+    response.headers.update(NO_STORE)
+    uc = await runner_disk_uc(request)
+    command = await uc.cleanup(
+        require_actor(), runner_id, body.targets, include_rollback=body.include_rollback, scope="admin"
+    )
+    return disk_command(command)
+
+
+@router.post("/runners/{runner_id}/disk/commands/{command_id}/cancel", response_model=RunnerDiskCommand)
+async def cancel_runner_disk_command(
+    runner_id: str, command_id: str, request: Request, response: Response
+) -> RunnerDiskCommand:
+    response.headers.update(NO_STORE)
+    uc = await runner_disk_uc(request)
+    return disk_command(await uc.cancel(require_actor(), runner_id, command_id, scope="admin"))

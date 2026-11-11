@@ -166,6 +166,7 @@ async def test__sent_route__signer_sees_task_count_and_request_notification(stan
         "profile_id": "topic-approval",
         "deadline": "2026-11-15T09:00:00Z",
         "new_version": False,
+        "freed_bytes": None,
     }
     stored = await _stored(stand, route)
     assert stored.participant(supervisor.id).notified is not None

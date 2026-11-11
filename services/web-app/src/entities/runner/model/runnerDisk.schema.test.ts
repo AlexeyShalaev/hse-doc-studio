@@ -1,6 +1,7 @@
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
-  RUNNER_DISK_CONTRACT_SCHEMAS,
   RunnerDiskCleanupRequestSchema,
   RunnerDiskReportSchema,
   RunnerDiskViewSchema,
@@ -9,9 +10,10 @@ import { MyRunnerSchema } from "./runner.schema";
 import {
   ALL_TARGETS_STEPS,
   DISK_COMMANDS,
-  RUNNER_DISK_CONTRACT_EXAMPLES,
+  NO_REPORTS_DISK_SUMMARY,
   RUNNER_DISK_STATES,
   makeRunnerDiskReport,
+  makeRunnerDiskSummary,
 } from "../testing";
 import {
   cleanAllTargets,
@@ -24,33 +26,49 @@ import {
   runnerDiskTotals,
 } from "../lib/runnerDiskLib";
 
-// Те же проверки, что у contracts/server (entities/session/api/contract.test.ts): срез B6
-// перенесёт эталоны в contracts/server/fixtures, и проверка станет общей с бэкендом.
+// Эталоны контракта лежат в contracts/server/fixtures/RunnerDisk* (их разбирают оба теста контракта:
+// entities/session/api/contract.test.ts и test_server_contract.py); здесь проверяется, что состояния
+// галерей и моки от них не ушли.
 
-const examples = Object.entries(RUNNER_DISK_CONTRACT_EXAMPLES).flatMap(
-  ([schema, variants]) =>
-    Object.entries(variants).map(
-      ([name, body]) => [`${schema}/${name}`, schema, body] as const,
-    ),
+const FIXTURES = join(
+  import.meta.dirname,
+  ...Array<string>(6).fill(".."),
+  "contracts",
+  "server",
+  "fixtures",
 );
+const fixture = (dir: string, name: string): unknown =>
+  JSON.parse(readFileSync(join(FIXTURES, dir, `${name}.json`), "utf8"));
 
-describe("контракт диска раннера: эталоны", () => {
-  it("у каждой схемы есть эталон, у каждого эталона схема", () => {
-    expect(Object.keys(RUNNER_DISK_CONTRACT_EXAMPLES).sort()).toEqual(
-      Object.keys(RUNNER_DISK_CONTRACT_SCHEMAS).sort(),
+describe("диск раннера: состояния галерей и эталоны contracts/server", () => {
+  it.each([
+    "docker",
+    "running",
+    "done_error",
+    "offline",
+    "no_report",
+    "docker_unavailable",
+    "outdated",
+    "kubernetes",
+    "desktop",
+    "personal_admin",
+  ] as const)("вид %s совпадает с эталоном", (name) => {
+    expect(RUNNER_DISK_STATES[name]).toEqual(fixture("RunnerDiskView", name));
+  });
+
+  it.each(["queued", "running", "done", "lost", "measure"] as const)(
+    "команда %s совпадает с эталоном",
+    (name) => {
+      expect(DISK_COMMANDS[name]).toEqual(fixture("RunnerDiskCommand", name));
+    },
+  );
+
+  it("сводка совпадает с эталонами", () => {
+    expect(makeRunnerDiskSummary()).toEqual(
+      fixture("RunnerDiskSummary", "default"),
     );
-  });
-
-  it.each(examples)("%s разбирается zod без потерь", (_label, schema, body) => {
-    const parsed = RUNNER_DISK_CONTRACT_SCHEMAS[schema]?.safeParse(body);
-    expect(parsed?.success).toBe(true);
-    expect(parsed?.data).toEqual(body);
-  });
-
-  it.each(examples)("%s: лишнее поле отвергается", (_label, schema, body) => {
-    const extra = { ...(body as Record<string, unknown>), surprise: 1 };
-    expect(RUNNER_DISK_CONTRACT_SCHEMAS[schema]?.safeParse(extra).success).toBe(
-      false,
+    expect(NO_REPORTS_DISK_SUMMARY).toEqual(
+      fixture("RunnerDiskSummary", "none"),
     );
   });
 
@@ -89,7 +107,7 @@ describe("схемы диска раннера", () => {
     expect(parse(["build_cache", "runner_cache"])).toBe(true);
   });
 
-  it("поле disk в «Моих раннерах» необязательно, пока сервер его не шлёт", () => {
+  it("поле disk в «Моих раннерах» обязательно: у отозванного null", () => {
     const runner = {
       id: "r1",
       name: "MacBook",
@@ -109,7 +127,7 @@ describe("схемы диска раннера", () => {
       ai_endpoints: [],
       features: [],
     };
-    expect(MyRunnerSchema.safeParse(runner).success).toBe(true);
+    expect(MyRunnerSchema.safeParse(runner).success).toBe(false);
     const disk = {
       supported: true,
       cleanable_bytes: 10,
