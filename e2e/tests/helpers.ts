@@ -53,6 +53,11 @@ export const logout = async (page: Page): Promise<void> => {
 export const visibleProjectNames = async (page: Page): Promise<string[]> => {
   await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
   await page.waitForLoadState("networkidle");
+  // После входа список открывается переходом внутри приложения: networkidle уже был достигнут на странице входа и
+  // не ждёт запроса проектов. Ждём, пока уйдёт крутилка загрузки списка, иначе карточек ещё нет.
+  await expect(page.locator(".spin[role=status]")).toHaveCount(0, {
+    timeout: 15_000,
+  });
   return page
     .locator("[data-project-card]")
     .evaluateAll((cards) =>
