@@ -5,7 +5,7 @@ export { Services as ServicesPage } from "./ui/Services";
 export { Storage as StoragePage } from "./ui/Storage";
 export { DataLifecycle as DataLifecyclePage } from "./ui/DataLifecycle";
 export { useLifecycle } from "./api/lifecycleQueries";
-export { getAdminOpsGallery } from "./ui/opsGallery";
+export { getAdminOpsGallery, getAdminRunnerDiskGallery } from "./ui/opsGallery";
 export { opsKeys } from "./api/opsQueries";
 // Для сводки и счётчиков оболочки админки: те же запросы, что у разделов.
 // Раннеры там только счётчиками сервера: список целиком не читается нигде.

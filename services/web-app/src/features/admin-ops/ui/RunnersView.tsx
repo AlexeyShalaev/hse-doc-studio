@@ -3,6 +3,7 @@ import type { ColumnDef } from "@tanstack/react-table";
 import {
   ArrowRight,
   CircleArrowUp,
+  HardDrive,
   Info,
   KeyRound,
   ListOrdered,
@@ -18,7 +19,12 @@ import {
   Unplug,
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import { formatPastTime, formatRelativeTime, localeTag } from "@shared/lib";
+import {
+  formatBytes,
+  formatPastTime,
+  formatRelativeTime,
+  localeTag,
+} from "@shared/lib";
 import {
   ActionMenu,
   Badge,
@@ -99,7 +105,12 @@ export type RunnersViewProps = {
   installs?: ReadonlyMap<string, LocalInstance> | null;
   onUpgrade?: ((install: LocalInstance) => void) | undefined;
   onRemoveInstall?: ((install: LocalInstance) => void) | undefined;
+  /** Открыть «Диск»: замер и очистка места на машине раннера. */
+  onDisk?: ((runner: AdminRunner) => void) | undefined;
 };
+
+/** С какого объёма в строке раннера видно «можно освободить»: мелочь не шумит. */
+export const DISK_HINT_MIN_BYTES = 1024 ** 3;
 
 /** Строка таблицы: всё меняющееся лежит в данных, а не в замыканиях колонок (иначе ячейки пересоздаются). */
 type Row = {
@@ -112,6 +123,8 @@ type Row = {
   rotate: () => void;
   revoke: () => void;
   details: (() => void) | null;
+  /** «Диск» раннера; null, если окна нет (галерея без него). */
+  disk: (() => void) | null;
   /** Раннер поставлен из админки: обновить на месте или убрать установку. */
   install: LocalInstance | null;
   upgrade: (() => void) | null;
@@ -178,6 +191,7 @@ export const RunnersView = ({
   installs = null,
   onUpgrade,
   onRemoveInstall,
+  onDisk,
 }: RunnersViewProps) => {
   const { t } = useTranslation("adminRunners");
   const units = useDurationUnits();
@@ -194,7 +208,12 @@ export const RunnersView = ({
         id: "name",
         header: t("runners.columns.name"),
         cell: ({ row }) => {
-          const { runner, status: st, pickClass } = row.original;
+          const { runner, status: st, pickClass, disk } = row.original;
+          // Поле disk приходит не от всякого сервера (B6): без него строка как раньше.
+          const cleanable =
+            st !== "revoked" && runner.disk?.supported
+              ? (runner.disk.cleanable_bytes ?? 0)
+              : 0;
           return (
             <span
               className={st === "revoked" ? "ops-cell ops-dim-row" : "ops-cell"}
@@ -213,6 +232,28 @@ export const RunnersView = ({
                   >
                     {t(`runners.class.${runner.resource_class}`, {
                       defaultValue: runner.resource_class,
+                    })}
+                  </button>
+                </span>
+              )}
+              {disk && cleanable >= DISK_HINT_MIN_BYTES && (
+                <span className="ops-cell-sub">
+                  <button
+                    type="button"
+                    className="ops-link"
+                    title={t("runners.diskCleanableHint", {
+                      name: runner.name,
+                    })}
+                    onClick={disk}
+                    data-testid={`runner-disk-hint-${runner.id}`}
+                  >
+                    <HardDrive
+                      size="0.6875rem"
+                      aria-hidden="true"
+                      style={{ verticalAlign: -1, marginRight: "0.25rem" }}
+                    />
+                    {t("runners.diskCleanable", {
+                      size: formatBytes(cleanable),
                     })}
                   </button>
                 </span>
@@ -386,6 +427,7 @@ export const RunnersView = ({
             rotate,
             revoke,
             details,
+            disk,
             install,
             upgrade,
             removeInstall,
@@ -405,6 +447,22 @@ export const RunnersView = ({
                           icon: <Info size="0.875rem" aria-hidden="true" />,
                           onSelect: details,
                           testId: `runner-details-${r.id}`,
+                        },
+                      ]
+                    : []),
+                  ...(disk
+                    ? [
+                        {
+                          id: "disk",
+                          label:
+                            r.disk?.supported === false
+                              ? t("runners.diskOutdated")
+                              : t("runners.disk"),
+                          icon: (
+                            <HardDrive size="0.875rem" aria-hidden="true" />
+                          ),
+                          onSelect: disk,
+                          testId: `runner-disk-open-${r.id}`,
                         },
                       ]
                     : []),
@@ -509,6 +567,11 @@ export const RunnersView = ({
                 onDetails(runner);
               }
             : null,
+          disk: onDisk
+            ? () => {
+                onDisk(runner);
+              }
+            : null,
           install,
           upgrade:
             install && onUpgrade
@@ -550,6 +613,7 @@ export const RunnersView = ({
       onRotate,
       onRevoke,
       onDetails,
+      onDisk,
       setFilter,
     ],
   );
