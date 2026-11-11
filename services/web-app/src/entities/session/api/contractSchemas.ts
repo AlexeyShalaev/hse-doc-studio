@@ -152,6 +152,10 @@ export const CONTRACT_SCHEMAS: Record<string, ZodType> = {
   UpdateAdminRetentionRequest: ops.UpdateLifecycleRetentionRequestSchema,
   AdminStorageThresholds: ops.StorageThresholdsSchema,
   AdminLifecycleRun: ops.LifecycleRunSchema,
+  // «Освободить место» (storage-cleanup.md, 9.2, срез B7).
+  AdminLifecycleSweep: ops.LifecycleSweepSchema,
+  AdminLifecycleSweepState: ops.LifecycleSweepStateSchema,
+  AdminLifecycleSweepPreview: ops.LifecycleSweepPreviewSchema,
   AdminRunnerSummary: ops.AdminRunnerSummarySchema,
   AdminRunnerDeployment: ops.AdminRunnerDeploymentSchema,
   AdminRunnerIsolation: ops.AdminRunnerIsolationSchema,

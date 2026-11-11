@@ -1,0 +1,82 @@
+{
+  "id": "lsw_01hz5a9c3k",
+  "status": "error",
+  "started_by": "u_01hx7k0adm",
+  "started_at": "2026-11-11T09:55:00Z",
+  "updated_at": "2026-11-11T09:56:00Z",
+  "finished_at": "2026-11-11T09:56:00Z",
+  "steps": [
+    {
+      "key": "ai_usage",
+      "status": "done",
+      "removed": 77564,
+      "partitions_dropped": 2,
+      "more": false,
+      "bytes_before": 432013312,
+      "bytes_after": 247463936,
+      "error": null
+    },
+    {
+      "key": "jobs",
+      "status": "error",
+      "removed": 0,
+      "partitions_dropped": 0,
+      "more": false,
+      "bytes_before": 100663296,
+      "bytes_after": null,
+      "error": "canceling statement due to statement timeout"
+    },
+    {
+      "key": "notifications",
+      "status": "done",
+      "removed": 0,
+      "partitions_dropped": 0,
+      "more": false,
+      "bytes_before": 18874368,
+      "bytes_after": 18874368,
+      "error": null
+    },
+    {
+      "key": "collab_requests",
+      "status": "done",
+      "removed": 3,
+      "partitions_dropped": 0,
+      "more": false,
+      "bytes_before": 1048576,
+      "bytes_after": 1048576,
+      "error": null
+    },
+    {
+      "key": "share_links",
+      "status": "done",
+      "removed": 0,
+      "partitions_dropped": 0,
+      "more": false,
+      "bytes_before": 2097152,
+      "bytes_after": 2097152,
+      "error": null
+    },
+    {
+      "key": "guest_sessions",
+      "status": "done",
+      "removed": 44,
+      "partitions_dropped": 0,
+      "more": false,
+      "bytes_before": 3145728,
+      "bytes_after": 3145728,
+      "error": null
+    },
+    {
+      "key": "collab_state",
+      "status": "done",
+      "removed": 12,
+      "partitions_dropped": 0,
+      "more": false,
+      "bytes_before": 146800640,
+      "bytes_after": 134217728,
+      "error": null
+    }
+  ],
+  "removed_total": 77623,
+  "freed_bytes": 197132288
+}

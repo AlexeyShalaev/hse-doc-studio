@@ -1,0 +1,82 @@
+{
+  "id": "lsw_01hz5a9c3k",
+  "status": "running",
+  "started_by": "u_01hx7k0adm",
+  "started_at": "2026-11-11T09:55:00Z",
+  "updated_at": "2026-11-11T09:59:58Z",
+  "finished_at": null,
+  "steps": [
+    {
+      "key": "ai_usage",
+      "status": "done",
+      "removed": 77564,
+      "partitions_dropped": 2,
+      "more": false,
+      "bytes_before": 432013312,
+      "bytes_after": 247463936,
+      "error": null
+    },
+    {
+      "key": "jobs",
+      "status": "done",
+      "removed": 1200,
+      "partitions_dropped": 0,
+      "more": false,
+      "bytes_before": 100663296,
+      "bytes_after": 100663296,
+      "error": null
+    },
+    {
+      "key": "notifications",
+      "status": "running",
+      "removed": 0,
+      "partitions_dropped": 0,
+      "more": false,
+      "bytes_before": 18874368,
+      "bytes_after": null,
+      "error": null
+    },
+    {
+      "key": "collab_requests",
+      "status": "pending",
+      "removed": 0,
+      "partitions_dropped": 0,
+      "more": false,
+      "bytes_before": null,
+      "bytes_after": null,
+      "error": null
+    },
+    {
+      "key": "share_links",
+      "status": "pending",
+      "removed": 0,
+      "partitions_dropped": 0,
+      "more": false,
+      "bytes_before": null,
+      "bytes_after": null,
+      "error": null
+    },
+    {
+      "key": "guest_sessions",
+      "status": "pending",
+      "removed": 0,
+      "partitions_dropped": 0,
+      "more": false,
+      "bytes_before": null,
+      "bytes_after": null,
+      "error": null
+    },
+    {
+      "key": "collab_state",
+      "status": "pending",
+      "removed": 0,
+      "partitions_dropped": 0,
+      "more": false,
+      "bytes_before": null,
+      "bytes_after": null,
+      "error": null
+    }
+  ],
+  "removed_total": 78764,
+  "freed_bytes": 184549376
+}

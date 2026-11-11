@@ -1,0 +1,111 @@
+{
+  "sources": [
+    {
+      "key": "ai_usage",
+      "days": 90,
+      "cutoff": "2026-08-13T10:00:00Z",
+      "count": 0,
+      "capped": false,
+      "bytes": 4194304
+    },
+    {
+      "key": "jobs",
+      "days": 30,
+      "cutoff": "2026-10-12T10:00:00Z",
+      "count": 0,
+      "capped": false,
+      "bytes": 4194304
+    },
+    {
+      "key": "notifications",
+      "days": 90,
+      "cutoff": "2026-08-13T10:00:00Z",
+      "count": 0,
+      "capped": false,
+      "bytes": 4194304
+    },
+    {
+      "key": "collab_requests",
+      "days": 90,
+      "cutoff": "2026-08-13T10:00:00Z",
+      "count": 0,
+      "capped": false,
+      "bytes": 4194304
+    },
+    {
+      "key": "share_links",
+      "days": 180,
+      "cutoff": "2026-05-15T10:00:00Z",
+      "count": 0,
+      "capped": false,
+      "bytes": 4194304
+    },
+    {
+      "key": "guest_sessions",
+      "days": null,
+      "cutoff": "2026-11-04T10:00:00Z",
+      "count": 0,
+      "capped": false,
+      "bytes": 4194304
+    },
+    {
+      "key": "collab_state",
+      "days": 90,
+      "cutoff": "2026-08-13T10:00:00Z",
+      "count": 0,
+      "capped": false,
+      "bytes": 4194304
+    }
+  ],
+  "excluded": [
+    {
+      "key": "audit_log",
+      "reason": "protected"
+    },
+    {
+      "key": "auth_records",
+      "reason": "own_task"
+    },
+    {
+      "key": "deleted_projects",
+      "reason": "own_task"
+    },
+    {
+      "key": "blobs",
+      "reason": "own_task"
+    },
+    {
+      "key": "orphans",
+      "reason": "own_task"
+    },
+    {
+      "key": "usage_counters",
+      "reason": "own_task"
+    },
+    {
+      "key": "compile_records",
+      "reason": "on_write"
+    },
+    {
+      "key": "project_artifacts",
+      "reason": "on_write"
+    },
+    {
+      "key": "chat_history",
+      "reason": "on_write"
+    },
+    {
+      "key": "container_logs",
+      "reason": "infra"
+    },
+    {
+      "key": "process_logs",
+      "reason": "infra"
+    },
+    {
+      "key": "postgres_wal",
+      "reason": "infra"
+    }
+  ],
+  "nothing": true
+}

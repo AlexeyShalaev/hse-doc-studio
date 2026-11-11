@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import { RunnerDiskBriefSchema } from "@entities/runner/model/runnerDisk.schema";
+
 import { pageOf } from "./schemas";
 
 // Операционные экраны админки. Раннеры и токены разбираются схемами ниже (api/schemas/runner_admin.py).
@@ -38,6 +40,8 @@ export const AdminRunnerSchema = z.strictObject({
   /** Почему раннер стоит переустановить, чтобы применились лимиты (по версии и отчёту). */
   reinstall: z.array(z.enum(["before_limits", "no_pod_limits"])).optional(),
   deployment_reported: z.boolean().optional(),
+  /** Диск раннера кратко (storage-cleanup.md, 9.1); необязательно, пока сервер (B6) поля не шлёт. */
+  disk: RunnerDiskBriefSchema.nullable().optional(),
 });
 
 // Как раннер развёрнут и как изолированы раннеры в кластере (api/schemas/runner_isolation.py).
@@ -602,6 +606,77 @@ export type LifecycleVolume = z.infer<typeof LifecycleVolumeSchema>;
 export type StorageThresholds = z.infer<typeof StorageThresholdsSchema>;
 export type AdminDataLifecycle = z.infer<typeof AdminDataLifecycleSchema>;
 export type LifecycleRun = z.infer<typeof LifecycleRunSchema>;
+
+// «Освободить место» (storage-cleanup.md, 5.4 и 9.2): все ручные очистки движка одним прогоном на
+// сервере (api/schemas/lifecycle.py). Эталоны в contracts/server/fixtures/AdminLifecycleSweep*.
+export const LIFECYCLE_SWEEP_STATUSES = [
+  "running",
+  "cancelling",
+  "done",
+  "cancelled",
+  "error",
+  "interrupted",
+] as const;
+export const LifecycleSweepStatusSchema = z.enum(LIFECYCLE_SWEEP_STATUSES);
+export const LifecycleSweepStepSchema = z.strictObject({
+  key: z.string(),
+  status: z.enum(["pending", "running", "done", "error", "skipped"]),
+  removed: z.number().int().nonnegative(),
+  partitions_dropped: z.number().int().nonnegative(),
+  /** Бюджет кончился раньше: остальное уйдёт на плановом тике. */
+  more: z.boolean(),
+  /** Замер источника до и после шага; null, пока шаг не дошёл или замер не удался. Шаг, прерванный
+   * остановкой api или прогоном `interrupted`, приходит `error` с `error: "interrupted"`, не начатые `skipped`. */
+  bytes_before: z.number().int().nonnegative().nullable(),
+  bytes_after: z.number().int().nonnegative().nullable(),
+  error: z.string().nullable(),
+});
+export const LifecycleSweepSchema = z.strictObject({
+  id: z.string(),
+  status: LifecycleSweepStatusSchema,
+  /** Id того, кто запустил (без имени); null, если человека уже нет в установке. */
+  started_by: z.string().nullable(),
+  started_at: iso,
+  updated_at: iso,
+  finished_at: iso.nullable(),
+  steps: z.array(LifecycleSweepStepSchema),
+  removed_total: z.number().int().nonnegative(),
+  /** Сумма положительных разностей bytes_before и bytes_after (S11). */
+  freed_bytes: z.number().int().nonnegative(),
+});
+/** `GET /data-lifecycle/sweep`: идущий или последний прогон. */
+export const LifecycleSweepStateSchema = z.strictObject({
+  sweep: LifecycleSweepSchema.nullable(),
+});
+export const LifecycleSweepPreviewSchema = z.strictObject({
+  sources: z.array(
+    z.strictObject({
+      key: z.string(),
+      /** null: срок фиксирован в коде (гостевые сессии), граница всё равно в `cutoff`. */
+      days: z.number().int().nullable(),
+      /** Граница, по которой источник считал: удаляется всё старше неё; null, если границы нет. */
+      cutoff: iso.nullable(),
+      /** null: не удалось посчитать за 3 с. */
+      count: z.number().int().nonnegative().nullable(),
+      /** Счёт упёрся в потолок 100 000: «больше 100 000 записей». */
+      capped: z.boolean(),
+      bytes: z.number().int().nonnegative().nullable(),
+    }),
+  ),
+  excluded: z.array(
+    z.strictObject({
+      key: z.string(),
+      reason: z.enum(["protected", "own_task", "on_write", "infra"]),
+    }),
+  ),
+  /** У всех источников count = 0: кнопка подтверждения выключена. */
+  nothing: z.boolean(),
+});
+export type LifecycleSweepStatus = z.infer<typeof LifecycleSweepStatusSchema>;
+export type LifecycleSweepStep = z.infer<typeof LifecycleSweepStepSchema>;
+export type LifecycleSweep = z.infer<typeof LifecycleSweepSchema>;
+export type LifecycleSweepState = z.infer<typeof LifecycleSweepStateSchema>;
+export type LifecycleSweepPreview = z.infer<typeof LifecycleSweepPreviewSchema>;
 
 // Самодиагностика (api/schemas/diagnostics.py): проверки со статусом, причиной и подсказкой, итог, пороги.
 export const DiagStatusSchema = z.enum(["ok", "warn", "fail"]);
