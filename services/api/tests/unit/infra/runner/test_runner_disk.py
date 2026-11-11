@@ -525,3 +525,30 @@ async def test__cleanup__wait_returns_after_observer_got_the_final_state(tmp_pat
 
     assert outcome.state is RunnerCommandState.done
     assert finals == [RunnerCommandState.done]
+
+
+@pytest.mark.parametrize(
+    ("targets", "include_rollback", "rollback_removed"),
+    [
+        ((DiskTarget.unused_images,), False, False),
+        ((DiskTarget.unused_images, DiskTarget.old_versions), False, False),
+        ((DiskTarget.old_versions,), True, True),
+        ((DiskTarget.unused_images, DiskTarget.old_versions), True, True),
+    ],
+)
+async def test__cleanup__unused_images_never_take_the_rollback_image(
+    tmp_path: Path, targets: tuple[DiskTarget, ...], include_rollback: bool, rollback_removed: bool
+) -> None:
+    # S8: откат удаляется только по `include_rollback`; цель `unused_images` его не обходит.
+    system = _System()
+    service = _service(tmp_path, _docker(_Probe(_usage()), system))
+
+    report = await service.measure()
+    outcome = await service.cleanup(DiskCleanupPayload(targets=targets, include_rollback=include_rollback)).wait()
+
+    assert report.docker is not None
+    assert f"{BASE}:2.4.0" not in {image.ref for image in report.docker.unused_images}
+    assert outcome.state is RunnerCommandState.done
+    assert (f"image:{BASE}:2.4.0" in system.calls) is rollback_removed
+    assert system.calls.count(f"image:{BASE}:2.4.0") <= 1
+    assert f"image:{BASE}:{VERSION}" not in system.calls
