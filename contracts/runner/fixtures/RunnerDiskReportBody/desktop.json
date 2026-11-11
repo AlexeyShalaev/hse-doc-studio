@@ -1,0 +1,22 @@
+{
+  "measured_at": "2026-11-11T09:00:00+00:00",
+  "targets": [
+    "runner_cache"
+  ],
+  "docker": null,
+  "docker_reason": "managed_locally",
+  "cache": {
+    "blobs": {
+      "bytes": 0,
+      "count": 0,
+      "limit_bytes": 2147483648
+    },
+    "workspaces": {
+      "bytes": 0,
+      "count": 0,
+      "limit_bytes": 21474836480,
+      "busy": 0
+    }
+  },
+  "volume": null
+}

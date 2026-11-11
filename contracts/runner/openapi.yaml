@@ -17,6 +17,13 @@ info:
     (без `/announce`, 404 от старого сервера) работает как раньше, в том числе как личный, но без
     ретрансляции. `free_ai_slots` в опросе шлёт только раннер с `ai_slots`. Сопряжение по коду
     устройства (`/pair/start`, `/pair/poll`) публичное и выдаёт токен регистрации один раз.
+
+    Канал команд (возможность `control`): отдельный долгий опрос `/control/poll`, открытый и у раннера,
+    занятого сборками; ход и итог команды идут в `/control/{command_id}/progress`, ответ доставляет
+    остановку. Токен задачи не нужен: команда принадлежит раннеру. Диск раннера (возможность `disk`):
+    команды `disk.measure` и `disk.cleanup` и отчёт `/disk`. Сервер передаёт только цели очистки, не
+    ссылки на образы: что удалить, раннер решает по свежему замеру своими правилами. Команду `disk.*`
+    сервер ставит только раннеру, согласовавшему и `control`, и `disk`.
 servers:
   - url: /api/runner/v1
 x-error-codes:
@@ -40,6 +47,10 @@ x-error-codes:
   - relay_out_of_order
   - relay_too_large
   - slow_down
+  - command_not_found
+  - command_finished
+  - feature_not_negotiated
+  - disk_report_too_large
 x-defaults:
   lease_s: 45
   heartbeat_s: 10
@@ -211,6 +222,41 @@ paths:
         "200": {description: Принято, content: {application/json: {schema: {$ref: '#/components/schemas/RelayEventAckBody'}}}}
         "409": {$ref: '#/components/responses/Error'}
         "413": {$ref: '#/components/responses/Error'}
+  /control/poll:
+    post:
+      operationId: pollRunnerCommand
+      summary: Долгий опрос команд до 25 с, отдельно от опроса задач; забранная команда становится `delivered`. Только после согласования `control`.
+      security: [{runnerToken: []}]
+      requestBody: {content: {application/json: {schema: {$ref: '#/components/schemas/ControlPollRequestBody'}}}, required: true}
+      responses:
+        "200": {description: Команда или пусто, content: {application/json: {schema: {$ref: '#/components/schemas/ControlPollResponseBody'}}}}
+        "401": {$ref: '#/components/responses/Error'}
+        "409": {$ref: '#/components/responses/Error'}
+  /control/{command_id}/progress:
+    post:
+      operationId: reportRunnerCommandProgress
+      summary: Ход и итог команды; ответ доставляет остановку, итог закрывает команду, повтор итога безвреден.
+      security: [{runnerToken: []}]
+      parameters: [{$ref: '#/components/parameters/CommandId'}]
+      requestBody: {content: {application/json: {schema: {$ref: '#/components/schemas/CommandProgressRequestBody'}}}, required: true}
+      responses:
+        "200": {description: Принято, content: {application/json: {schema: {$ref: '#/components/schemas/CommandProgressResponseBody'}}}}
+        "401": {$ref: '#/components/responses/Error'}
+        "404": {$ref: '#/components/responses/Error'}
+        "409": {$ref: '#/components/responses/Error'}
+        "422": {$ref: '#/components/responses/Error'}
+  /disk:
+    post:
+      operationId: reportRunnerDisk
+      summary: Последний замер диска раннера (до 64 КБ); только после согласования `disk`.
+      security: [{runnerToken: []}]
+      requestBody: {content: {application/json: {schema: {$ref: '#/components/schemas/RunnerDiskReportBody'}}}, required: true}
+      responses:
+        "204": {description: Принято}
+        "401": {$ref: '#/components/responses/Error'}
+        "409": {$ref: '#/components/responses/Error'}
+        "413": {$ref: '#/components/responses/Error'}
+        "422": {$ref: '#/components/responses/Error'}
 components:
   schemas:
     ActorWire:
@@ -302,6 +348,23 @@ components:
       required:
       - url
       type: object
+    BlobCacheDiskBody:
+      additionalProperties: false
+      properties:
+        bytes:
+          minimum: 0
+          type: integer
+        count:
+          minimum: 0
+          type: integer
+        limit_bytes:
+          minimum: 0
+          type: integer
+      required:
+      - bytes
+      - count
+      - limit_bytes
+      type: object
     BlobLocationBody:
       additionalProperties: false
       properties:
@@ -340,6 +403,94 @@ components:
       required:
       - blobs
       type: object
+    CommandProgressBody:
+      additionalProperties: false
+      properties:
+        steps:
+          items:
+            $ref: '#/components/schemas/CommandStepBody'
+          maxItems: 512
+          type: array
+        freed_bytes:
+          minimum: 0
+          type: integer
+        error:
+          anyOf:
+          - maxLength: 300
+            minLength: 1
+            type: string
+          - type: 'null'
+      required:
+      - steps
+      - freed_bytes
+      - error
+      type: object
+    CommandProgressRequestBody:
+      additionalProperties: false
+      properties:
+        state:
+          enum:
+          - running
+          - done
+          - cancelled
+          - error
+          type: string
+        progress:
+          $ref: '#/components/schemas/CommandProgressBody'
+      required:
+      - state
+      - progress
+      type: object
+    CommandProgressResponseBody:
+      additionalProperties: false
+      properties:
+        cancel:
+          type: boolean
+      required:
+      - cancel
+      type: object
+    CommandStepBody:
+      additionalProperties: false
+      properties:
+        kind:
+          enum:
+          - build_cache
+          - dangling_images
+          - image
+          - container
+          - runner_blobs
+          - runner_workspaces
+          type: string
+        ref:
+          anyOf:
+          - maxLength: 384
+            minLength: 1
+            type: string
+          - type: 'null'
+        status:
+          enum:
+          - pending
+          - running
+          - done
+          - error
+          - skipped
+          type: string
+        freed_bytes:
+          minimum: 0
+          type: integer
+        error:
+          anyOf:
+          - maxLength: 300
+            minLength: 1
+            type: string
+          - type: 'null'
+      required:
+      - kind
+      - ref
+      - status
+      - freed_bytes
+      - error
+      type: object
     CompleteRequestBody:
       additionalProperties: false
       properties:
@@ -365,6 +516,39 @@ components:
       required:
       - accepted
       type: object
+    ControlPollRequestBody:
+      additionalProperties: false
+      properties:
+        wait_s:
+          maximum: 25
+          minimum: 0
+          type: integer
+      required:
+      - wait_s
+      type: object
+    ControlPollResponseBody:
+      additionalProperties: false
+      properties:
+        command:
+          anyOf:
+          - $ref: '#/components/schemas/RunnerCommandEnvelopeBody'
+          - type: 'null'
+      required:
+      - command
+      type: object
+    DataVolumeBody:
+      additionalProperties: false
+      properties:
+        total_bytes:
+          minimum: 0
+          type: integer
+        free_bytes:
+          minimum: 0
+          type: integer
+      required:
+      - total_bytes
+      - free_bytes
+      type: object
     DeclaredAiEndpointBody:
       additionalProperties: false
       properties:
@@ -379,6 +563,145 @@ components:
       required:
       - name
       - flavor
+      type: object
+    DiskBuildCacheBody:
+      additionalProperties: false
+      properties:
+        bytes:
+          minimum: 0
+          type: integer
+        reclaimable_bytes:
+          minimum: 0
+          type: integer
+        count:
+          minimum: 0
+          type: integer
+      required:
+      - bytes
+      - reclaimable_bytes
+      - count
+      type: object
+    DiskCategoryBody:
+      additionalProperties: false
+      properties:
+        key:
+          enum:
+          - compile
+          - languagetool
+          - office
+          - ai
+          - app
+          - cache
+          - runtime
+          type: string
+        bytes:
+          minimum: 0
+          type: integer
+      required:
+      - key
+      - bytes
+      type: object
+    DiskCleanupPayloadBody:
+      additionalProperties: false
+      properties:
+        targets:
+          items:
+            enum:
+            - old_versions
+            - unused_images
+            - build_cache
+            - dangling_images
+            - stopped_containers
+            - runner_cache
+            type: string
+          maxItems: 6
+          minItems: 1
+          type: array
+        include_rollback:
+          type: boolean
+      required:
+      - targets
+      - include_rollback
+      type: object
+    DiskCountBody:
+      additionalProperties: false
+      properties:
+        bytes:
+          minimum: 0
+          type: integer
+        count:
+          minimum: 0
+          type: integer
+      required:
+      - bytes
+      - count
+      type: object
+    DiskMeasurePayloadBody:
+      additionalProperties: false
+      properties: {}
+      type: object
+    DockerDiskBody:
+      additionalProperties: false
+      properties:
+        available:
+          type: boolean
+        categories:
+          items:
+            $ref: '#/components/schemas/DiskCategoryBody'
+          maxItems: 7
+          type: array
+        total_bytes:
+          minimum: 0
+          type: integer
+        cleanable_bytes:
+          minimum: 0
+          type: integer
+        build_cache:
+          $ref: '#/components/schemas/DiskBuildCacheBody'
+        dangling:
+          $ref: '#/components/schemas/DiskCountBody'
+        stopped_containers:
+          $ref: '#/components/schemas/DiskCountBody'
+        unused_images:
+          items:
+            $ref: '#/components/schemas/UnusedImageBody'
+          maxItems: 100
+          type: array
+        unused_truncated:
+          type: boolean
+        old_versions:
+          $ref: '#/components/schemas/OldVersionsBody'
+        volumes:
+          items:
+            $ref: '#/components/schemas/DockerVolumeBody'
+          maxItems: 32
+          type: array
+      required:
+      - available
+      - categories
+      - total_bytes
+      - cleanable_bytes
+      - build_cache
+      - dangling
+      - stopped_containers
+      - unused_images
+      - unused_truncated
+      - old_versions
+      - volumes
+      type: object
+    DockerVolumeBody:
+      additionalProperties: false
+      properties:
+        name:
+          maxLength: 255
+          minLength: 1
+          type: string
+        size_bytes:
+          minimum: 0
+          type: integer
+      required:
+      - name
+      - size_bytes
       type: object
     HeartbeatRequestBody:
       additionalProperties: false
@@ -533,6 +856,59 @@ components:
       - path
       - sha256
       - size
+      type: object
+    OldItemBody:
+      additionalProperties: false
+      properties:
+        kind:
+          enum:
+          - studio_image
+          - service_image
+          - container
+          type: string
+        ref:
+          maxLength: 384
+          minLength: 1
+          type: string
+        version:
+          maxLength: 64
+          type: string
+        size_bytes:
+          minimum: 0
+          type: integer
+      required:
+      - kind
+      - ref
+      - version
+      - size_bytes
+      type: object
+    OldVersionsBody:
+      additionalProperties: false
+      properties:
+        current_version:
+          maxLength: 64
+          type: string
+        rollback:
+          anyOf:
+          - $ref: '#/components/schemas/OldItemBody'
+          - type: 'null'
+        items:
+          items:
+            $ref: '#/components/schemas/OldItemBody'
+          maxItems: 100
+          type: array
+        reclaimable_bytes:
+          minimum: 0
+          type: integer
+        rollback_bytes:
+          minimum: 0
+          type: integer
+      required:
+      - current_version
+      - rollback
+      - items
+      - reclaimable_bytes
+      - rollback_bytes
       type: object
     PollRequestBody:
       additionalProperties: false
@@ -775,6 +1151,41 @@ components:
       - runtime_class
       - security
       type: object
+    RunnerCacheDiskBody:
+      additionalProperties: false
+      properties:
+        blobs:
+          $ref: '#/components/schemas/BlobCacheDiskBody'
+        workspaces:
+          $ref: '#/components/schemas/WorkspacesDiskBody'
+      required:
+      - blobs
+      - workspaces
+      type: object
+    RunnerCommandEnvelopeBody:
+      additionalProperties: false
+      properties:
+        id:
+          pattern: ^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$
+          type: string
+        kind:
+          enum:
+          - disk.measure
+          - disk.cleanup
+          type: string
+        payload:
+          anyOf:
+          - $ref: '#/components/schemas/DiskCleanupPayloadBody'
+          - $ref: '#/components/schemas/DiskMeasurePayloadBody'
+        issued_at:
+          format: date-time
+          type: string
+      required:
+      - id
+      - kind
+      - payload
+      - issued_at
+      type: object
     RunnerDeploymentBody:
       additionalProperties: false
       properties:
@@ -828,6 +1239,49 @@ components:
       - resources
       - security
       - build
+      type: object
+    RunnerDiskReportBody:
+      additionalProperties: false
+      properties:
+        measured_at:
+          format: date-time
+          type: string
+        targets:
+          items:
+            enum:
+            - old_versions
+            - unused_images
+            - build_cache
+            - dangling_images
+            - stopped_containers
+            - runner_cache
+            type: string
+          maxItems: 6
+          type: array
+        docker:
+          anyOf:
+          - $ref: '#/components/schemas/DockerDiskBody'
+          - type: 'null'
+        docker_reason:
+          anyOf:
+          - enum:
+            - kubernetes
+            - managed_locally
+            type: string
+          - type: 'null'
+        cache:
+          $ref: '#/components/schemas/RunnerCacheDiskBody'
+        volume:
+          anyOf:
+          - $ref: '#/components/schemas/DataVolumeBody'
+          - type: 'null'
+      required:
+      - measured_at
+      - targets
+      - docker
+      - docker_reason
+      - cache
+      - volume
       type: object
     RunnerErrorBody:
       additionalProperties: false
@@ -959,7 +1413,6 @@ components:
       - heartbeat_s
       - max_poll_wait_s
       type: object
-
     RunnerResourcesBody:
       additionalProperties: false
       properties:
@@ -1057,12 +1510,57 @@ components:
       - capabilities_dropped
       - automount_token
       type: object
+    UnusedImageBody:
+      additionalProperties: false
+      properties:
+        ref:
+          maxLength: 384
+          minLength: 1
+          type: string
+        category:
+          enum:
+          - compile
+          - languagetool
+          - office
+          - ai
+          - app
+          type: string
+        size_bytes:
+          minimum: 0
+          type: integer
+      required:
+      - ref
+      - category
+      - size_bytes
+      type: object
+    WorkspacesDiskBody:
+      additionalProperties: false
+      properties:
+        bytes:
+          minimum: 0
+          type: integer
+        count:
+          minimum: 0
+          type: integer
+        limit_bytes:
+          minimum: 0
+          type: integer
+        busy:
+          minimum: 0
+          type: integer
+      required:
+      - bytes
+      - count
+      - limit_bytes
+      - busy
+      type: object
   securitySchemes:
     registrationToken: {type: http, scheme: bearer}
     runnerToken: {type: http, scheme: bearer}
     jobToken: {type: apiKey, in: header, name: X-Job-Token}
   parameters:
     JobId: {name: job_id, in: path, required: true, schema: {type: string, format: uuid}}
+    CommandId: {name: command_id, in: path, required: true, schema: {type: string, format: uuid}}
     Sha256: {name: sha256, in: path, required: true, schema: {type: string, pattern: "^[0-9a-f]{64}$"}}
   requestBodies:
     RunnerRegister:

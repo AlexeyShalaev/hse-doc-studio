@@ -1,0 +1,14 @@
+{
+  "id": "7d3f1a2b-4c5d-4e6f-8a9b-0c1d2e3f4a5b",
+  "kind": "disk.cleanup",
+  "payload": {
+    "targets": [
+      "old_versions",
+      "build_cache",
+      "dangling_images",
+      "runner_cache"
+    ],
+    "include_rollback": false
+  },
+  "issued_at": "2026-11-11T09:31:00+00:00"
+}

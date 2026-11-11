@@ -14,8 +14,16 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import datetime
 from typing import Any, Literal
+from uuid import UUID
 
 from hse_doc_studio.core.access.entities import Role
+from hse_doc_studio.core.jobs.disk import (
+    CommandProgress,
+    RunnerCommandKind,
+    RunnerCommandPayload,
+    RunnerCommandState,
+    check_payload,
+)
 from hse_doc_studio.core.jobs.entities import JobSpec
 from hse_doc_studio.core.jobs.files import ArtifactRef, ManifestFile
 from hse_doc_studio.core.jobs.relay import (
@@ -44,6 +52,11 @@ FEATURE_AI_SLOTS = "ai_slots"
 FEATURE_AI_RELAY = "ai_relay"
 # Раннер сообщает, как он развёрнут (`POST /deployment`): исполнитель, лимиты, контекст безопасности.
 FEATURE_DEPLOYMENT = "deployment_info"
+# Канал команд раннеру (`POST /control/poll`, `/control/{id}/progress`) и диск раннера (команды `disk.*`, отчёт
+# `POST /disk`). Команду вида `disk.*` сервер ставит только раннеру, согласовавшему обе. В `SERVER_FEATURES` они
+# попадают вместе с адресами канала на сервере: до того сервер их не согласует, и новый раннер канал не открывает.
+FEATURE_CONTROL = "control"
+FEATURE_DISK = "disk"
 SERVER_FEATURES = frozenset({FEATURE_ANNOUNCE, FEATURE_OFFLINE, FEATURE_AI_SLOTS, FEATURE_AI_RELAY, FEATURE_DEPLOYMENT})
 
 
@@ -312,5 +325,53 @@ class RelayEventBatch:
 @dataclass(frozen=True)
 class RelayEventAck:
     """`cancel` доставляет раннеру отмену ретрансляции (потребитель закрыл поток)."""
+
+    cancel: bool
+
+
+@dataclass(frozen=True)
+class ControlPollRequest:
+    """Долгий опрос команд: отдельно от опроса задач, поэтому слоты сборок его не касаются."""
+
+    wait_s: int
+
+    def __post_init__(self) -> None:
+        if not 0 <= self.wait_s <= MAX_POLL_WAIT_S:
+            raise ValueError(f"wait_s must be within 0..{MAX_POLL_WAIT_S}")
+
+
+@dataclass(frozen=True)
+class RunnerCommandEnvelope:
+    """Команда, как её получает раннер: без автора и состояния, только что сделать."""
+
+    id: UUID
+    kind: RunnerCommandKind
+    payload: RunnerCommandPayload
+    issued_at: datetime
+
+    def __post_init__(self) -> None:
+        check_payload(self.kind, self.payload)
+
+
+@dataclass(frozen=True)
+class ControlPollResponse:
+    command: RunnerCommandEnvelope | None = None
+
+
+@dataclass(frozen=True)
+class CommandProgressRequest:
+    """Ход или итог команды; итоговое состояние закрывает её, повтор итога безвреден."""
+
+    state: RunnerCommandState
+    progress: CommandProgress
+
+    def __post_init__(self) -> None:
+        if not self.state.reportable:
+            raise ValueError(f"a runner cannot report {self.state.value}")
+
+
+@dataclass(frozen=True)
+class CommandProgressResponse:
+    """`cancel` доставляет остановку: раннер доводит текущий шаг и присылает итог `cancelled`."""
 
     cancel: bool
