@@ -1,0 +1,152 @@
+{
+  "title": "Disk of runner “{{name}}”",
+  "lead": "How much space Studio images, the build cache and project working copies take on the runner's machine, and what of it can be freed.",
+  "close": "Close",
+  "loadFailed": "Could not load the runner's disk.",
+  "notFound": "Runner not found: it may have been revoked.",
+  "retry": "Retry",
+  "measuredAt": "Measured {{when}}",
+  "stale": "Measurement is outdated",
+  "measuring": "The runner is measuring its disk…",
+  "refresh": "Refresh",
+  "noReport": "The runner has not sent a measurement yet.",
+  "noReportHint": "Press “Refresh”: the runner measures its disk and reports back, usually within a minute.",
+  "total": "{{used}} used, {{cleanable}} can be freed",
+  "volume": "Runner data volume: {{free}} free of {{total}}",
+  "category": {
+    "compile": "LaTeX / TeX Live",
+    "languagetool": "LanguageTool",
+    "office": "Presentations (Gotenberg, ONLYOFFICE)",
+    "ai": "Local models (Ollama)",
+    "app": "The app itself",
+    "cache": "Build cache",
+    "runtime": "Containers and volumes",
+    "runnerBlobs": "Runner file cache",
+    "runnerWorkspaces": "Project working copies"
+  },
+  "old": {
+    "title": "Old versions",
+    "hint": "Images of earlier Studio versions and outdated service tags. The current version and the previous one (for rollback) are kept; anything removed is downloaded again when needed.",
+    "current": "Current version: {{version}}",
+    "rollback": "Kept for rollback: {{ref}} ({{size}})",
+    "rollbackAdminHint": "Only the owner can remove the previous version of a personal runner.",
+    "none": "No old versions.",
+    "action": "Remove old versions",
+    "kind": {
+      "studio_image": "Studio",
+      "service_image": "service",
+      "container": "container"
+    }
+  },
+  "unused": {
+    "title": "Unused images",
+    "hint": "Studio images the runner does not need and no container uses. They are downloaded again when needed.",
+    "none": "No unused images.",
+    "truncated": "Only the largest are listed; the total covers all of them.",
+    "action": "Remove unused"
+  },
+  "cache": {
+    "title": "Docker build cache",
+    "detail": "{{size}}, {{reclaimable}} can be freed",
+    "action": "Clear build cache"
+  },
+  "dangling": {
+    "title": "Dangling images",
+    "detail_one": "{{count}} image, {{size}}",
+    "detail_other": "{{count}} images, {{size}}",
+    "action": "Remove dangling images"
+  },
+  "stopped": {
+    "title": "Stopped Studio containers",
+    "detail_one": "{{count}} container, {{size}}",
+    "detail_other": "{{count}} containers, {{size}}",
+    "hint": "Removed only together with everything else, with “Clean up everything”."
+  },
+  "runnerCache": {
+    "title": "Runner cache",
+    "hint": "Project files the runner downloaded for builds. Builds running now are not affected; the next ones download what they need again.",
+    "blobs_one": "File cache: {{size}}, {{count}} file, limit {{limit}}",
+    "blobs_other": "File cache: {{size}}, {{count}} files, limit {{limit}}",
+    "workspaces_one": "Working copies: {{size}}, {{count}} project, limit {{limit}}",
+    "workspaces_other": "Working copies: {{size}}, {{count}} projects, limit {{limit}}",
+    "busy": "in use by builds: {{count}}",
+    "action": "Clear runner cache"
+  },
+  "volumes": {
+    "title": "Volumes",
+    "hint": "Volumes are never removed: they hold the TeX Live cache and downloaded models, and without them the next builds take noticeably longer."
+  },
+  "showAll": "Show all ({{count}})",
+  "showLess": "Show less",
+  "cleanAll": "Clean up everything",
+  "cleanAllHint": "Everything listed above except the previous version and volumes.",
+  "cleanAllHintCache": "Only the runner cache: images are not cleaned up here.",
+  "nothingToClean": "Nothing to free: the runner keeps only what it needs.",
+  "confirm": {
+    "title": "Clean up runner “{{name}}”?",
+    "body": "Only what is listed below is removed. Active images, running containers, volumes and the previous version are not touched.",
+    "targetBody": "Only what is listed below is removed. Anything removed is downloaded again when needed.",
+    "titles": {
+      "old_versions": "Remove old versions?",
+      "unused_images": "Remove unused images?",
+      "build_cache": "Clear the Docker build cache?",
+      "dangling_images": "Remove dangling images?",
+      "stopped_containers": "Remove stopped containers?",
+      "runner_cache": "Clear the runner cache?"
+    },
+    "rollback": "Also remove the previous version ({{ref}}, {{size}})",
+    "rollbackHint": "You will not be able to roll back to it without downloading it again.",
+    "runnerCacheNote": "Files touched in the last 10 minutes and working copies used by builds stay.",
+    "personal": "The runner's owner will be notified about the cleanup.",
+    "total": "About {{size}} will be freed",
+    "action": "Clean up",
+    "remove": "Remove",
+    "cancel": "Cancel",
+    "rollbackItem": "rollback"
+  },
+  "job": {
+    "waiting": "Waiting for the runner: it starts the cleanup as soon as it picks up the command.",
+    "running": "Cleaning up: step {{n}} of {{total}}, {{size}} freed",
+    "cancelling": "Stopping after the current step. {{size}} freed",
+    "cancel": "Stop after the current step",
+    "cancelWaiting": "Cancel",
+    "done": "{{size}} freed",
+    "nothing": "There was nothing to free",
+    "error": "Cleanup finished with errors. {{size}} freed.",
+    "cancelled": "Cleanup stopped. {{size}} freed.",
+    "expired": "The runner did not pick up the command within 10 minutes. Check that it is online and try again.",
+    "lost": "The runner went away during the cleanup. The next measurement will show what was removed.",
+    "startedBy": "Started by {{name}}, {{when}}",
+    "startedAt": "Started {{when}}",
+    "hide": "Hide result",
+    "progress": "Cleanup progress",
+    "step": {
+      "build_cache": "Docker build cache",
+      "dangling_images": "Dangling images",
+      "runner_blobs": "Runner file cache",
+      "runner_workspaces": "Project working copies"
+    }
+  },
+  "outdated": {
+    "title": "Update the runner to see its disk",
+    "body": "Runner version {{version}} cannot report disk usage. The disk appears after an update.",
+    "bodyUnknown": "This runner version cannot report disk usage. The disk appears after an update.",
+    "min": "Version {{version}} or newer is required.",
+    "upgrade": "Update runner"
+  },
+  "kubernetes": {
+    "title": "Kubernetes cleans the images on its nodes",
+    "body": "The runner works in Kubernetes, so only its cache and working copies are shown here. TeX Live images live on the cluster nodes, and Kubernetes removes them itself when a node runs low on space. Studio does not need access to the nodes for that and does not ask for it."
+  },
+  "desktop": {
+    "body": "This is a local Studio. Images on this computer are cleaned up in Studio itself: Settings, “Disk”."
+  },
+  "dockerUnavailable": "The runner could not reach Docker: images cannot be counted.",
+  "offline": "The runner has been offline since {{when}}. The last measurement is shown; you can clean up when the runner is back.",
+  "offlineNever": "The runner is offline. You can clean up when it is back.",
+  "personal": "This is a personal runner owned by {{owner}}. The owner will be notified about the cleanup; only they can remove the previous version.",
+  "failure": {
+    "unknown": "That did not work. Please try again.",
+    "network": "The server did not respond. Check the connection and try again."
+  }
+}

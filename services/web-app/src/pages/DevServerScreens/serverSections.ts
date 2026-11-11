@@ -20,6 +20,7 @@ import { getRecoveryGallery } from "@features/account-recovery";
 import { getServerSetupGallery } from "@features/server-setup";
 import { getSignInGallery } from "@features/sign-in";
 import { getSignUpGallery } from "@features/sign-up";
+import { getRunnerDiskGallery } from "@entities/runner";
 import { getSessionGallery } from "@entities/session";
 import type { GallerySection } from "@shared/lib/stateGallery";
 import { getAdminKitGallery } from "@shared/ui/AdminKitGallery";
@@ -103,6 +104,11 @@ export const buildServerSections = (): GallerySection[] => [
     id: "build-states",
     title: "Сборка и редактор: очередь, раннер, занято",
     groups: getBuildStatesGallery(),
+  },
+  {
+    id: "runner-disk",
+    title: "Раннеры: диск",
+    groups: getRunnerDiskGallery(),
   },
   {
     id: "admin-ops",
