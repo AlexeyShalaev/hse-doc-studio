@@ -17,10 +17,11 @@ class _Sender:
         self.fail = fail
         self.sent: list[tuple[str, str, str, str | None]] = []
 
-    async def send(self, to: str, subject: str, body: str, *, html: str | None = None) -> None:
+    async def send(self, to: str, subject: str, body: str, *, html: str | None = None) -> str:
         if self.fail:
             raise OSError("smtp down")
         self.sent.append((to, subject, body, html))
+        return f"<{len(self.sent)}@fake.test>"
 
 
 def _payload(**kw: str) -> NotificationPayload:

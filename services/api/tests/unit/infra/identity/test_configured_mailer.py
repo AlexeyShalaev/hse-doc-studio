@@ -6,6 +6,7 @@ from pathlib import Path
 
 import pytest
 from hse_doc_studio.core.identity.smtp_settings import SmtpEnv, SmtpParams
+from hse_doc_studio.core.mail.journal import MailFailureClass, MailSendError
 from hse_doc_studio.infra.identity.configured_mailer import ConfiguredMailSender
 from hse_doc_studio.infra.secrets.fernet_cipher import FernetSecretCipher
 from hse_doc_studio.infra.secrets.key_store import KeyFileStore
@@ -28,8 +29,9 @@ async def test__refresh__without_host_mail_is_off_and_send_fails(tmp_path: Path)
     await sender.refresh()
 
     assert sender.enabled is False
-    with pytest.raises(RuntimeError):
+    with pytest.raises(MailSendError) as exc:
         await sender.send("a@example.org", "s", "b")
+    assert exc.value.failure.reason is MailFailureClass.smtp_off
 
 
 async def test__refresh__picks_up_the_admin_host_and_decrypts_the_password(tmp_path: Path) -> None:

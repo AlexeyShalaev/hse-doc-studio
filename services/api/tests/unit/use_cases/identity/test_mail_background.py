@@ -15,9 +15,9 @@ class _SlowSender(FakeSender):
         super().__init__(enabled=True, fail=fail)
         self._release = release
 
-    async def send(self, to: str, subject: str, body: str, *, html: str | None = None) -> None:
+    async def send(self, to: str, subject: str, body: str, *, html: str | None = None) -> str:
         await self._release.wait()
-        await super().send(to, subject, body, html=html)
+        return await super().send(to, subject, body, html=html)
 
 
 async def test_background_delivery_does_not_wait_for_smtp(world: World) -> None:

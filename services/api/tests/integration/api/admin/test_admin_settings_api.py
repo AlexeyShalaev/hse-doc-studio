@@ -25,6 +25,7 @@ from hse_doc_studio.core.identity.normalize import hash_token, normalize_email
 from hse_doc_studio.core.identity.protocols import IActorResolver
 from hse_doc_studio.core.identity.smtp_settings import SmtpEnv, SmtpParams
 from hse_doc_studio.core.mail import MailTemplate
+from hse_doc_studio.core.mail.journal import MailCause, MailStatus
 from hse_doc_studio.core.mode import StudioMode
 from hse_doc_studio.infra.identity.resolvers import ChainActorResolver, SessionCookieResolver
 from hse_doc_studio.infra.secrets.fernet_cipher import FernetSecretCipher
@@ -46,6 +47,7 @@ from hse_doc_studio.use_cases.identity.smtp_settings import (
     SmtpSettingsService,
     UpdateSmtpSettingsUC,
 )
+from hse_doc_studio.use_cases.mail.dispatch import MailDispatcher
 from httpx import ASGITransport, AsyncClient
 
 from tests.fakes.auth import (
@@ -55,6 +57,7 @@ from tests.fakes.auth import (
     empty_bearer_resolver,
 )
 from tests.fakes.identity import InMemoryIdentityStore, InMemoryInstanceSettingsRepository, InMemoryUserRepository
+from tests.fakes.mail_log import InMemoryMailLogRepository
 from tests.fakes.ops import NoopUow
 from tests.unit.use_cases.identity.conftest import FakeSender
 
@@ -74,6 +77,7 @@ class _Env:
         self.oidc = InMemoryOidcProviderRepository()
         self.cipher = FernetSecretCipher(KeyFileStore(tmp_path / "secret.key"))
         self.sender = FakeSender(enabled=True)
+        self.mail_log = InMemoryMailLogRepository()
         self.auth_env = AuthEnvOverrides()
         self.smtp_env = SmtpEnv()
         self.make: Callable[[], AsyncClient]
@@ -115,7 +119,9 @@ class _Provider(Provider):
             UpdateAuthMethodsUC: UpdateAuthMethodsUC(update, self.auth, env.oidc, group),
             GetSmtpSettingsUC: GetSmtpSettingsUC(smtp),
             UpdateSmtpSettingsUC: UpdateSmtpSettingsUC(smtp, env.settings, env.audit, uow),
-            SendTestMailUC: SendTestMailUC(env.sender, env.users, env.audit, "https://studio.example.org"),
+            SendTestMailUC: SendTestMailUC(
+                MailDispatcher(env.sender, env.mail_log), env.users, env.audit, "https://studio.example.org"
+            ),
             PreviewMailUC: PreviewMailUC("https://studio.example.org/"),
             ListOidcProvidersUC: ListOidcProvidersUC(env.oidc),
             GetOidcProviderUC: GetOidcProviderUC(env.oidc),
@@ -342,6 +348,13 @@ async def test__smtp_test__sends_to_the_admin_or_to_the_given_address(env: _Env)
     assert other.json()["ok"] is True
     assert [to for to, _, _ in env.sender.sent] == ["boss@example.org", "dean@example.org"]
     assert [e.action for e in await env.audit.list()] == ["settings.smtp_test", "settings.smtp_test"]
+    rows = env.mail_log.entries
+    assert [(r.to_email, r.to_user_id, r.status, r.origin) for r in rows] == [
+        ("boss@example.org", "boss", MailStatus.sent, "smtp_test"),
+        ("dean@example.org", None, MailStatus.sent, "smtp_test"),
+    ]
+    assert [r.message_id for r in rows] == ["<1@fake.test>", "<2@fake.test>"]
+    assert {(r.cause, r.actor_user_id, r.template) for r in rows} == {(MailCause.user, "boss", "smtp_test")}
 
 
 async def test__smtp_test__is_a_multipart_letter_in_the_language_of_the_admin_account(env: _Env) -> None:
@@ -400,8 +413,10 @@ async def test__smtp_test__failure_is_a_result_not_a_server_error(env: _Env) -> 
 
     assert failed.status_code == 200
     assert failed.json()["ok"] is False
-    assert "smtp down" in failed.json()["error"]
+    assert failed.json()["error"] == "other: OSError: smtp down"
     assert bad.status_code == 403
+    [row] = env.mail_log.entries
+    assert (row.status, row.reason, row.error_text) == (MailStatus.failed, "other", "OSError: smtp down")
 
 
 async def test__smtp_test__without_smtp_is_refused(env: _Env) -> None:
@@ -409,6 +424,7 @@ async def test__smtp_test__without_smtp_is_refused(env: _Env) -> None:
     client, boss = await _boss(env)
 
     assert (await client.post("/api/admin/settings/smtp/test", json={}, headers=boss)).status_code == 403
+    assert env.mail_log.entries == []
 
 
 async def test__oidc__create_list_get_never_return_the_secret(env: _Env) -> None:

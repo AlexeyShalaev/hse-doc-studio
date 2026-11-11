@@ -111,7 +111,8 @@ async def test__check_persona() -> None:
 class _NoSender:
     enabled = True
 
-    async def send(self, to: str, subject: str, body: str, *, html: str | None = None) -> None: ...
+    async def send(self, to: str, subject: str, body: str, *, html: str | None = None) -> str:
+        return "<none@fake.test>"
 
 
 def test__mail_texts__ru_and_en_name_the_project_and_link_to_inbox() -> None:

@@ -5,6 +5,7 @@ from __future__ import annotations
 import time
 
 from hse_doc_studio.core.identity.smtp_settings import SmtpParams
+from hse_doc_studio.core.mail.journal import MailFailure, MailFailureClass, MailSendError
 from hse_doc_studio.infra.identity.smtp_mailer import SmtpMailSender, SmtpSettings
 from hse_doc_studio.use_cases.identity.smtp_settings import SmtpSettingsService
 
@@ -42,9 +43,10 @@ class ConfiguredMailSender:
         self._sender = SmtpMailSender(_as_settings(params)) if params is not None else None
         self._loaded_at = time.monotonic()
 
-    async def send(self, to: str, subject: str, body: str, *, html: str | None = None) -> None:
+    async def send(self, to: str, subject: str, body: str, *, html: str | None = None) -> str:
         if time.monotonic() - self._loaded_at > _REFRESH_AFTER_S:
             await self.refresh()
         if self._sender is None:
-            raise RuntimeError("SMTP is not configured")
-        await self._sender.send(to, subject, body, html=html)
+            # Настройки сняли между проверкой `enabled` и отправкой.
+            raise MailSendError(MailFailure(reason=MailFailureClass.smtp_off, text="SMTP is not configured"))
+        return await self._sender.send(to, subject, body, html=html)

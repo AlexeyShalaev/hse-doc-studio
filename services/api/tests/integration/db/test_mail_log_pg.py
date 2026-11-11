@@ -5,20 +5,33 @@ from __future__ import annotations
 import contextlib
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
+from uuid import uuid4
 
 import pytest
 import pytest_asyncio
 from cryptography.fernet import Fernet
 from dishka import AsyncContainer
 from hse_doc_studio.api.config import settings
+from hse_doc_studio.core.enums import Lang
 from hse_doc_studio.core.identity.protocols import IMailLogRepository
-from hse_doc_studio.core.mail.journal import MailLogQuery, MailStatus
+from hse_doc_studio.core.mail import MailTemplate
+from hse_doc_studio.core.mail.journal import (
+    MailLinkKind,
+    MailLogQuery,
+    MailOrigin,
+    MailRefKind,
+    MailRequest,
+    MailSkipReason,
+    MailStatus,
+)
 from hse_doc_studio.core.mode import StudioMode
 from hse_doc_studio.infra.db.engine import create_sessionmaker
 from hse_doc_studio.infra.db.repositories.mail_log import SqlMailLogRepository
 from hse_doc_studio.infra.db.session import SessionProvider
 from hse_doc_studio.infra.di.containers.api import create_container
+from hse_doc_studio.use_cases.identity.smtp_settings import SendTestMailUC
 from hse_doc_studio.use_cases.lifecycle.engine import LifecycleEngine
+from hse_doc_studio.use_cases.mail.dispatch import MailCounters, MailDispatcher
 from pydantic import SecretStr
 from sqlalchemy import text
 from sqlalchemy.exc import IntegrityError
@@ -164,3 +177,58 @@ async def test__container__provides_the_repository(container: AsyncContainer) ->
     assert await repo.get(entry_id) is not None
     assert (counts.sent, counts.failed) == (1, 0)
     assert [e.status for e in (await repo.page(MailLogQuery())).items] == [MailStatus.sent]
+
+
+class _Sender:
+    enabled = True
+
+    def __init__(self) -> None:
+        self.error: Exception | None = None
+
+    async def send(self, to: str, subject: str, body: str, *, html: str | None = None) -> str:  # noqa: ARG002
+        if self.error is not None:
+            raise self.error
+        return "<" + "m" * 400 + "@studio.example.org>"
+
+
+async def test__dispatcher__long_fields_fit_the_columns_and_rows_pass_the_checks(
+    pg_migrated_engine: AsyncEngine,
+) -> None:
+    _, repo = _repo(pg_migrated_engine)
+    sender = _Sender()
+    mail = MailDispatcher(sender, repo, counters=MailCounters())
+    long_id = "x" * 100
+    request = MailRequest(
+        template=MailTemplate.project_invitation_link,
+        lang=Lang.ru,
+        to="boris@example.org",
+        server_url="https://studio.example.org",
+        origin=MailOrigin.project_invite,
+        link_kind=MailLinkKind.token,
+        link="https://studio.example.org/invite/tok",
+        values={"actor": "А" * 300, "project": "П" * 300, "role": "editor"},
+        to_user_id=long_id,
+        project_id=str(uuid4()).upper(),
+        ref_kind=MailRefKind.project_invitation,
+        ref_id=long_id,
+    )
+
+    sent = await mail.send(request)
+    sender.error = OSError("z" * 1000)
+    failed = await mail.send(request)
+    skipped = await mail.skip(request, MailSkipReason.account_blocked)
+
+    assert [o.status for o in (sent, failed, skipped)] == [MailStatus.sent, MailStatus.failed, MailStatus.suppressed]
+    assert all(o.entry_id is not None for o in (sent, failed, skipped))
+    rows = (await repo.page(MailLogQuery())).items
+    assert [r.status for r in rows] == [MailStatus.suppressed, MailStatus.failed, MailStatus.sent]
+    assert {r.project_id for r in rows} == {(request.project_id or "").lower()}
+    assert {len(r.ref_id or "") for r in rows} == {64}
+
+
+async def test__container__provides_the_dispatcher_and_the_test_mail(container: AsyncContainer) -> None:
+    mail = await container.get(MailDispatcher)
+    uc = await container.get(SendTestMailUC)
+
+    assert mail.enabled is False
+    assert uc is not None

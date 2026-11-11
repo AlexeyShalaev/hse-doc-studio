@@ -254,8 +254,12 @@ class IRateLimiter(Protocol):
 class IMailSender(Protocol):
     @property
     def enabled(self) -> bool: ...
-    async def send(self, to: str, subject: str, body: str, *, html: str | None = None) -> None:
-        """Письмо уходит текстом, а с `html` как multipart/alternative: текстовая часть и HTML."""
+    async def send(self, to: str, subject: str, body: str, *, html: str | None = None) -> str:
+        """Письмо уходит текстом, а с `html` как multipart/alternative: текстовая часть и HTML.
+
+        Возвращает Message-ID ушедшего письма. Сбой всплывает `MailSendError` с разобранной причиной (L16).
+        Вызывает только `MailDispatcher` (docs/design/mail-log.md, L1): он пишет журнал и метрики.
+        """
         ...
 
 
