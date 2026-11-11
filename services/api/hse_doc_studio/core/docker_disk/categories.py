@@ -23,6 +23,11 @@ DEFAULT_LANGUAGETOOL_REPOS: Final[tuple[str, ...]] = ("erikvl87/languagetool",)
 # Gotenberg (конвертация) и ONLYOFFICE (редактор): обе подсистемы Office.
 DEFAULT_OFFICE_REPOS: Final[tuple[str, ...]] = ("gotenberg/gotenberg", "onlyoffice/documentserver")
 DEFAULT_AI_IMAGE: Final = "ollama/ollama:latest"
+# Образ самой Студии (`image_base` настроек api, `IMAGE` локальной Студии из облака). Раннер берёт его отсюда,
+# если `HSE_RUNNER__IMAGE_BASE` не задан: своего образа раннер не знает, а ставят его из того же реестра.
+DEFAULT_IMAGE_BASE: Final = "ghcr.io/alexeyshalaev/hse-doc-studio"
+# Тома служб Студии по умолчанию (модели LanguageTool и Ollama): раннер на общем хосте показывает их в «Томах».
+DEFAULT_SERVICE_VOLUMES: Final[tuple[str, ...]] = ("hse-languagetool-cache", "hse-ollama-models")
 
 
 def image_repository(ref: str) -> str:

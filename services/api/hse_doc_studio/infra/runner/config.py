@@ -11,6 +11,7 @@ from urllib.parse import urlsplit
 from pydantic import BaseModel, Field, SecretStr, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+from hse_doc_studio.core.docker_disk.categories import DEFAULT_IMAGE_BASE
 from hse_doc_studio.core.jobs.relay import MAX_AI_ENDPOINTS, AiEndpointFlavor
 from hse_doc_studio.core.jobs.runners import RunnerHostKind
 from hse_doc_studio.infra.compile.docker_compile_executor import (
@@ -136,6 +137,13 @@ class RunnerConfig(BaseSettings):
     )
     tex_image: str = Field(default=DEFAULT_IMAGE, description="Образ TeX Live для сборки; ставится на хосте заранее.")
     tex_cache_volume: str = Field(default=DEFAULT_CACHE_VOLUME, description="Том docker с кэшем TeX.")
+    image_base: str = Field(
+        default=DEFAULT_IMAGE_BASE,
+        description=(
+            "Репозиторий образов Студии (без тега), как HSE_STUDIO__IMAGE_BASE у сервера: по нему «Диск» раннера "
+            "узнаёт образы Студии и её старые версии. Образы другого репозитория раннер не видит и не удаляет."
+        ),
+    )
     tex_idle_timeout_s: float = Field(default=DEFAULT_IDLE_TIMEOUT_S, gt=0, description="Тишина сборки до убийства.")
     fonts_dir: Path | None = Field(
         default=None,
