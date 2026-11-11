@@ -6,13 +6,9 @@ Generated from `release-notes.json` via `make changelog` — do not edit by hand
 Release notes are hand-written and bilingual (RU/EN); the app shows them in the
 selected interface language.
 
-## [0.21.1](https://github.com/AlexeyShalaev/hse-doc-studio/compare/v0.21.0...v0.21.1) (2026-11-11)
+## [0.21.1](https://github.com/AlexeyShalaev/hse-doc-studio/compare/v0.21.0...v0.21.1) - 2026-11-11
 
-
-### Bug Fixes
-
-* **web:** runner upgrade button no longer overlaps the status column ([3764fc9](https://github.com/AlexeyShalaev/hse-doc-studio/commit/3764fc990f7b27b9e0a597f54e5e36cb7dadfb63))
-* **web:** runner upgrade button no longer spills into the status column ([3ce134b](https://github.com/AlexeyShalaev/hse-doc-studio/commit/3ce134bb19841fcfc9e03e86801f019af80dbd70))
+- Admin, Runners: the update button of an outdated runner no longer overlaps the Status column. A compact “v0.21.1” button sits under the version, with the full “Update to v0.21.1” label in the tooltip.
 
 ## [0.21.0](https://github.com/AlexeyShalaev/hse-doc-studio/compare/v0.20.1...v0.21.0) - 2026-11-11
 
