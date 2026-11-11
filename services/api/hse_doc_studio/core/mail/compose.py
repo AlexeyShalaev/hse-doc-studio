@@ -63,6 +63,19 @@ def fixed_path(template: MailTemplate) -> str | None:
 
 
 @dataclass(frozen=True)
+class Redaction:
+    """Перерисовка письма для журнала (docs/design/mail-log.md, L3): ссылок и сообщений людей на входе нет.
+
+    Кнопка остаётся с подписью, но без адреса. На месте ссылки с токеном стоит `layout.link_hidden`, на месте
+    ссылки на страницу без токена её путь текстом, на месте сообщения человека `layout.note_hidden`.
+    """
+
+    token_link: bool = False
+    page_path: str | None = None
+    note: bool = False
+
+
+@dataclass(frozen=True)
 class RenderedMail:
     subject: str
     text: str
@@ -159,6 +172,32 @@ def _expiry(lang: Lang, ttl: timedelta | None, expires_at: datetime | None, *, c
     return None
 
 
+def _redacted_link(
+    template: MailTemplate,
+    texts: Mapping[str, object],
+    layout: Mapping[str, object],
+    origin: str | None,
+    redaction: Redaction,
+) -> tuple[Action | None, str | None]:
+    """Кнопка без адреса и текст на месте ссылки, в тех же местах, что у ушедшего письма: при заданном адресе
+    установки кнопка (если она есть у вида) и строка «Если кнопка не открывается», без адреса ссылка текстом."""
+    fixed = _FIXED_PATH.get(template)
+    if redaction.token_link:
+        shown = str(layout["link_hidden"])
+    elif fixed is not None:
+        # Кнопку на постоянную страницу письмо строит само и только при заданном адресе установки.
+        shown = fixed if origin else None
+    else:
+        shown = one_line(redaction.page_path, 500) if redaction.page_path else None
+    if shown is None:
+        return None, None
+    if origin is None:
+        return None, shown
+    label = texts.get("action")
+    # У вида без кнопки ссылка с адресом установки в письмо не попадала.
+    return (Action(label, None), shown) if isinstance(label, str) else (None, None)
+
+
 def build_content(
     template: MailTemplate,
     lang: Lang,
@@ -171,26 +210,35 @@ def build_content(
     values: Mapping[str, object] | None = None,
     note: str | None = None,
     code: str | None = None,
+    redaction: Redaction | None = None,
 ) -> MailContent:
+    """Содержимое письма. С `redaction` письмо собирается для журнала: `link` и `note` не принимаются, ссылки и
+    сообщение заменяются пометками (`Redaction`), остальное совпадает с ушедшим письмом."""
     cat = catalog(lang)
     layout = cat["layout"]
     texts = cat["mails"][template.value]
     vals = _values(lang, to, server_url, values)
     origin = server_origin(server_url)
 
-    fixed = _FIXED_PATH.get(template)
-    if fixed is not None:
-        link = f"{origin}{fixed}" if origin else None
-    href = safe_link(link, server_url)
-    action = Action(texts["action"], href) if "action" in texts and href else None
-    plain_link = None if href or not link else one_line(link, 500)
+    if redaction is not None:
+        if link is not None or note is not None:
+            raise ValueError("a redacted mail takes no link and no note")
+        action, plain_link = _redacted_link(template, texts, layout, origin, redaction)
+        message = layout["note_hidden"] if redaction.note else ""
+    else:
+        fixed = _FIXED_PATH.get(template)
+        if fixed is not None:
+            link = f"{origin}{fixed}" if origin else None
+        href = safe_link(link, server_url)
+        action = Action(texts["action"], href) if "action" in texts and href else None
+        plain_link = None if href or not link else one_line(link, 500)
+        message = clean_note(note) if note else ""
 
     def text(template_: str) -> Text:
         return Text(template_, vals)
 
     lead_key = "lead_by" if "lead_by" in texts and vals.get("inviter") else "lead"
     has_secret = action is not None or plain_link is not None or code is not None
-    message = clean_note(note) if note else ""
     return MailContent(
         lang=lang,
         brand=BRAND,
@@ -230,8 +278,11 @@ def compose(
     values: Mapping[str, object] | None = None,
     note: str | None = None,
     code: str | None = None,
+    redaction: Redaction | None = None,
 ) -> RenderedMail:
-    """Тема, текст и HTML письма. `link` для видов с кнопкой; у уведомлений ссылка на сервер строится сама."""
+    """Тема, текст и HTML письма. `link` для видов с кнопкой; у уведомлений ссылка на сервер строится сама.
+
+    С `redaction` письмо перерисовывается для журнала без ссылок и сообщений людей (`Redaction`)."""
     content = build_content(
         template,
         lang,
@@ -243,5 +294,6 @@ def compose(
         values=values,
         note=note,
         code=code,
+        redaction=redaction,
     )
     return RenderedMail(subject=content.subject, text=render_text(content), html=render_html(content))

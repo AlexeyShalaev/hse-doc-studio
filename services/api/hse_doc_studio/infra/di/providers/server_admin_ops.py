@@ -1,4 +1,4 @@
-"""Провайдеры админки эксплуатации: очередь, квоты, место, политика подписи, общие ИИ-провайдеры."""
+"""Провайдеры админки эксплуатации: очередь, квоты, место, подпись, общие ИИ-провайдеры, журнал писем."""
 
 from __future__ import annotations
 
@@ -12,11 +12,17 @@ from hse_doc_studio.core.ai_runtime import IHardwareProbe
 from hse_doc_studio.core.egress import IEgressPolicy
 from hse_doc_studio.core.git_sync.protocols import ISecretCipher
 from hse_doc_studio.core.identity.instance_settings import InstanceEnvOverrides
-from hse_doc_studio.core.identity.protocols import IAuditLog, IInstanceSettingsRepository
+from hse_doc_studio.core.identity.protocols import (
+    IAuditLog,
+    IInstanceSettingsRepository,
+    IMailLogRepository,
+    IMailSender,
+)
 from hse_doc_studio.core.jobs.admin import IAdminProjectPicker, IJobAdminReader, IRunnerAdminReader
 from hse_doc_studio.core.jobs.queue import IJobQueue
 from hse_doc_studio.core.jobs.quotas import IQuotaOverrideRepository
 from hse_doc_studio.core.jobs.runners import IRunnerRepository
+from hse_doc_studio.core.mail.ports import IMailLogNames
 from hse_doc_studio.core.model_servers import (
     Engine,
     IContainerRuntime,
@@ -40,6 +46,7 @@ from hse_doc_studio.core.storage.usage import IStorageUsageReader
 from hse_doc_studio.core.uow import IUnitOfWork
 from hse_doc_studio.infra.db.repositories.ai_providers import PostgresAIProviderRepository
 from hse_doc_studio.infra.db.repositories.jobs_admin import SqlAdminProjectPicker, SqlJobAdminReader
+from hse_doc_studio.infra.db.repositories.mail_log_names import SqlMailLogNames
 from hse_doc_studio.infra.db.repositories.model_servers import PostgresModelServerStore
 from hse_doc_studio.infra.db.repositories.runner_ssh_credentials import PostgresSshCredentialRepository
 from hse_doc_studio.infra.db.repositories.runners import SqlRunnerAdminReader
@@ -104,6 +111,7 @@ from hse_doc_studio.use_cases.identity.smtp_settings import SmtpSettingsService
 from hse_doc_studio.use_cases.jobs.personal_settings import InstancePersonalRunnerSettings
 from hse_doc_studio.use_cases.jobs.queue_service import JobQueueService
 from hse_doc_studio.use_cases.jobs.runners import RunnerRegistry
+from hse_doc_studio.use_cases.mail.log import GetMailLogEntryUC, ListMailLogUC, MailLogSummaryUC
 from hse_doc_studio.use_cases.runner_install import (
     InstallJobStore,
     RunnerInstallService,
@@ -178,6 +186,24 @@ class ServerAdminOpsProvider(Provider):
         queue: JobQueueService,
     ) -> UpdateBuildSettingsUC:
         return UpdateBuildSettingsUC(repo, env, audit, uow, read, personal=personal, queue=queue)
+
+    @provide
+    def get_mail_log_names(self, sessions: SessionProvider) -> IMailLogNames:
+        return SqlMailLogNames(sessions)
+
+    @provide
+    def get_list_mail_log_uc(self, log: IMailLogRepository, names: IMailLogNames) -> ListMailLogUC:
+        return ListMailLogUC(log, names)
+
+    @provide
+    def get_mail_log_entry_uc(self, log: IMailLogRepository, names: IMailLogNames) -> GetMailLogEntryUC:
+        return GetMailLogEntryUC(log, names)
+
+    @provide
+    def get_mail_log_summary_uc(
+        self, log: IMailLogRepository, sender: IMailSender, repo: IInstanceSettingsRepository
+    ) -> MailLogSummaryUC:
+        return MailLogSummaryUC(log, sender, repo)
 
     @provide
     def get_job_admin_reader(self, sessions: SessionProvider) -> IJobAdminReader:
