@@ -408,7 +408,7 @@ CommandProgress
 ```text
 LifecycleSweep
   id, status: running | cancelling | done | cancelled | error | interrupted,
-  started_by: {id, name} | null, started_at, updated_at, finished_at,
+  started_by (id пользователя или null), started_at, updated_at, finished_at,
   steps: [{key, status: pending | running | done | error | skipped, removed, partitions_dropped, more,
            bytes_before, bytes_after, error}],
   removed_total, freed_bytes
@@ -664,7 +664,7 @@ RunnerDiskView
 
 RunnerDiskCommand
   id, kind, state, targets, include_rollback, created_at, finished_at,
-  created_by: {id, name} | null (человека уже нет), progress: CommandProgress | null
+  created_by: {id, name} | null, progress: CommandProgress | null
   у disk.measure: targets [], include_rollback false
 
 RunnerDiskCleanupRequest
@@ -675,6 +675,11 @@ RunnerDiskSummary
   min_version, cleanable_bytes (сумма по общим),
   top: [{runner_id, name, cleanable_bytes, measured_at}] (до 3 общих по убыванию)
 ```
+
+`created_by` в `RunnerDiskCommand` B6 отдаёт именно объектом `{id, name}` (имя берётся соединением с
+пользователями), а `null`, если человека уже нет. Это отличается от
+`started_by` прогона «Освободить место» (9.2, только id): диалог «Диск» показывает, кто запустил очистку, а
+плашка прогона имени не показывает.
 
 Коды ошибок (тело `{code, detail}`, как `IdentityError`):
 
@@ -700,8 +705,8 @@ RunnerDiskSummary
 
 ```text
 LifecycleSweepPreview
-  sources: [{key, days (null: фиксированный срок), cutoff (у фиксированного срока: сейчас), count (null: не
-             посчитать), capped, bytes (null: не измерен)}],
+  sources: [{key, days (null: фиксированный срок), cutoff (граница, по которой источник считал; null, если её
+             нет), count (null: не посчитать), capped, bytes (null: не измерен)}],
   excluded: [{key, reason: protected | own_task | on_write | infra}],
   nothing (true, если у всех count = 0)
 ```
@@ -724,22 +729,24 @@ LifecycleSweepPreview
 
 ### 9.4 Схемы, эталоны и моки на фронтенде
 
-Срез W1 держит контракт в коде, пока бэкенда нет (как W1 маршрута подписания):
+Срез W1 держал контракт в коде, пока бэкенда не было (как W1 маршрута подписания). После B7 состояние такое:
 
-- zod-схемы 9.1 в `entities/runner/model/runnerDisk.schema.ts` с картой `RUNNER_DISK_CONTRACT_SCHEMAS`, схемы 9.2
-  рядом со схемами «Хранения данных» в `entities/session/api/opsSchemas.ts` с картой
-  `LIFECYCLE_SWEEP_CONTRACT_SCHEMAS`;
-- эталоны `RUNNER_DISK_CONTRACT_EXAMPLES` (`entities/runner/testing/fixtures.ts`) и
-  `LIFECYCLE_SWEEP_CONTRACT_EXAMPLES` (`features/admin-ops/testing/sweepFixtures.ts`), там же состояния галерей
-  4.5 (`RUNNER_DISK_STATES`, `SWEEP_STATES`, `SWEEP_PREVIEWS`);
-- моки `createRunnerDiskDemo` и `createLifecycleSweepDemo` поверх демо-транспорта, в серверном демо их собирает
+- «Освободить место» (9.2): zod-схемы в `entities/session/api/opsSchemas.ts`, эталоны в
+  `contracts/server/fixtures/AdminLifecycleSweep`, `AdminLifecycleSweepState`, `AdminLifecycleSweepPreview`;
+  их разбирают оба теста контракта (`CONTRACT_SCHEMAS` фронта и `_SCHEMAS` в `test_server_contract.py` с моделями
+  `lc.LifecycleSweepBody`, `lc.LifecycleSweepStateBody`, `lc.LifecycleSweepPreviewBody`). Состояния галерей
+  (`SWEEP_STATES`, `SWEEP_PREVIEWS` в `features/admin-ops/testing/sweepFixtures.ts`) совпадают с эталонами, это
+  проверяет тест.
+- Диск раннера (9.1): пока в коде, zod-схемы в `entities/runner/model/runnerDisk.schema.ts` с картой
+  `RUNNER_DISK_CONTRACT_SCHEMAS`, эталоны `RUNNER_DISK_CONTRACT_EXAMPLES` и состояния галерей `RUNNER_DISK_STATES`
+  в `entities/runner/testing/fixtures.ts`. B6 переносит эталоны в `contracts/server/fixtures/<Схема>/<вариант>.json`,
+  модели в `test_server_contract.py`, карту в `CONTRACT_SCHEMAS` и делает поле `disk` в `AdminRunner` и `MyRunner`
+  обязательным (пока оно необязательное: старый сервер его не шлёт).
+- Моки `createRunnerDiskDemo` и `createLifecycleSweepDemo` поверх демо-транспорта; в серверном демо их собирает
   `app/demo/server/storageCleanup.ts` (какой диск у какого раннера, описано там же).
-
-Поле `disk` в `AdminRunner` и `MyRunner` пока необязательное: старый сервер его не шлёт. Срезы B6 и B7 переносят
-эталоны в `contracts/server/fixtures/<Схема>/<вариант>.json`, модели в `test_server_contract.py`, а карты в
-`CONTRACT_SCHEMAS` (`entities/session/api/contractSchemas.ts`); B6 делает `disk` обязательным. До переноса
-общий контрактный тест о новых схемах не знает и не падает. Сообщения новых кодов ошибок уже лежат в
-`errors.json` (`code.<код>`, ru и en).
+- Сообщения кодов ошибок в `errors.json` (`code.<код>`, ru и en): `lifecycle_sweep_busy` и `command_finished` от
+  B7, `runner_disk_unsupported`, `runner_offline`, `runner_disk_busy`, `disk_target_unavailable` от W1 (в
+  `contracts/server/error_codes.json` их добавит B6).
 
 ## 10. Тесты
 

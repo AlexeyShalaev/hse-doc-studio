@@ -209,8 +209,6 @@
     "runner_disk_unsupported": "This runner cannot report its disk. Update it.",
     "runner_offline": "The runner is offline. You can clean its disk when it is back.",
     "runner_disk_busy": "A cleanup is already running on this runner. Wait for it to finish.",
-    "disk_target_unavailable": "The runner cannot clean this right now. Refresh the measurement and try again.",
-    "command_finished": "The cleanup has already finished.",
-    "lifecycle_sweep_busy": "A cleanup is already running. Wait for it to finish."
+    "disk_target_unavailable": "The runner cannot clean this right now. Refresh the measurement and try again."
   }
 }

@@ -4,9 +4,9 @@ import type {
   LifecycleSweepStep,
 } from "@entities/session";
 
-// Эталоны и состояния «Освободить место» (docs/design/storage-cleanup.md, 4.3, 4.5, 5.4 и 9.2).
-// Время постоянное, чтобы галереи не плыли. Срез B7 перенесёт LIFECYCLE_SWEEP_CONTRACT_EXAMPLES
-// в contracts/server/fixtures/<Схема>/<вариант>.json.
+// Состояния «Освободить место» для галерей и тестов экранов (docs/design/storage-cleanup.md, 4.3, 4.5,
+// 5.4 и 9.2). Время постоянное, чтобы галереи не плыли. Эталоны контракта лежат в
+// contracts/server/fixtures/AdminLifecycleSweep* и совпадают с этими состояниями (тест в lifecycleSweep.test.tsx).
 
 export const SWEEP_NOW = "2026-11-11T10:00:00Z";
 const NOW_MS = Date.parse(SWEEP_NOW);
@@ -264,24 +264,3 @@ export const SWEEP_STATES = {
   }),
 } satisfies Record<string, LifecycleSweep>;
 export type SweepStateId = keyof typeof SWEEP_STATES;
-
-/**
- * Эталоны раздела 9.2 по имени схемы и варианту: будущие
- * contracts/server/fixtures/<Схема>/<вариант>.json. Ключи совпадают с LIFECYCLE_SWEEP_CONTRACT_SCHEMAS.
- */
-export const LIFECYCLE_SWEEP_CONTRACT_EXAMPLES: Record<
-  string,
-  Record<string, unknown>
-> = {
-  LifecycleSweepPreview: SWEEP_PREVIEWS,
-  LifecycleSweep: {
-    running: SWEEP_STATES.running,
-    done: SWEEP_STATES.done,
-    error: SWEEP_STATES.error,
-    interrupted: SWEEP_STATES.interrupted,
-  },
-  LifecycleSweepState: {
-    none: { sweep: null },
-    running: { sweep: SWEEP_STATES.running },
-  },
-};

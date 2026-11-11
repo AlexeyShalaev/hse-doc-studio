@@ -1,13 +1,12 @@
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import type { ReactNode } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { act, renderHook, waitFor } from "@testing-library/react";
 import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { ApiError, adminClient } from "@shared/api";
 import { createDemoRouter, installDemoAdapter } from "@shared/api/demo";
-import {
-  LIFECYCLE_SWEEP_CONTRACT_SCHEMAS,
-  type LifecycleSweep,
-} from "@entities/session";
+import { LifecycleSweepSchema, type LifecycleSweep } from "@entities/session";
 import { lifecycleApi } from "./lifecycleApi";
 import {
   lifecycleKeys,
@@ -18,49 +17,53 @@ import {
 } from "./lifecycleQueries";
 import { opsKeys } from "./opsQueries";
 import {
-  LIFECYCLE_SWEEP_CONTRACT_EXAMPLES,
+  SWEEP_PREVIEWS,
   SWEEP_SOURCE_KEYS,
   SWEEP_STATES,
   createLifecycleSweepDemo,
   type SweepDemoProfile,
 } from "../testing";
 
-// «Освободить место» (storage-cleanup.md, 9.2): эталоны, моки и хуки. Срез B7 перенесёт эталоны в
-// contracts/server/fixtures, и проверка станет общей с бэкендом.
+// «Освободить место» (storage-cleanup.md, 9.2): эталоны, моки и хуки. Сами эталоны контракта лежат в
+// contracts/server/fixtures/AdminLifecycleSweep* (их разбирают оба теста контракта); здесь проверяется,
+// что состояния галерей и моки от них не ушли.
 
-const examples = Object.entries(LIFECYCLE_SWEEP_CONTRACT_EXAMPLES).flatMap(
-  ([schema, variants]) =>
-    Object.entries(variants).map(
-      ([name, body]) => [`${schema}/${name}`, schema, body] as const,
-    ),
+const FIXTURES = join(
+  import.meta.dirname,
+  "..",
+  "..",
+  "..",
+  "..",
+  "..",
+  "..",
+  "contracts",
+  "server",
+  "fixtures",
 );
+const fixture = (dir: string, name: string): unknown =>
+  JSON.parse(readFileSync(join(FIXTURES, dir, `${name}.json`), "utf8"));
 
-describe("контракт «Освободить место»: эталоны", () => {
-  it("у каждой схемы есть эталон, у каждого эталона схема", () => {
-    expect(Object.keys(LIFECYCLE_SWEEP_CONTRACT_EXAMPLES).sort()).toEqual(
-      Object.keys(LIFECYCLE_SWEEP_CONTRACT_SCHEMAS).sort(),
-    );
-  });
+describe("«Освободить место»: состояния галерей и эталоны contracts/server", () => {
+  it.each(["running", "done", "error", "interrupted"] as const)(
+    "прогон %s совпадает с эталоном",
+    (name) => {
+      expect(SWEEP_STATES[name]).toEqual(fixture("AdminLifecycleSweep", name));
+    },
+  );
 
-  it.each(examples)("%s разбирается zod без потерь", (_label, schema, body) => {
-    const parsed = LIFECYCLE_SWEEP_CONTRACT_SCHEMAS[schema]?.safeParse(body);
-    expect(parsed?.success).toBe(true);
-    expect(parsed?.data).toEqual(body);
-  });
-
-  it.each(examples)("%s: лишнее поле отвергается", (_label, schema, body) => {
-    const extra = { ...(body as Record<string, unknown>), surprise: 1 };
-    expect(
-      LIFECYCLE_SWEEP_CONTRACT_SCHEMAS[schema]?.safeParse(extra).success,
-    ).toBe(false);
-  });
+  it.each(["default", "nothing", "capped"] as const)(
+    "предпросмотр %s совпадает с эталоном",
+    (name) => {
+      expect(SWEEP_PREVIEWS[name]).toEqual(
+        fixture("AdminLifecycleSweepPreview", name),
+      );
+    },
+  );
 
   it.each(Object.entries(SWEEP_STATES))(
     "состояние галереи %s проходит схему",
     (_id, sweep) => {
-      expect(
-        LIFECYCLE_SWEEP_CONTRACT_SCHEMAS.LifecycleSweep?.parse(sweep),
-      ).toEqual(sweep);
+      expect(LifecycleSweepSchema.parse(sweep)).toEqual(sweep);
     },
   );
 });

@@ -608,7 +608,7 @@ export type AdminDataLifecycle = z.infer<typeof AdminDataLifecycleSchema>;
 export type LifecycleRun = z.infer<typeof LifecycleRunSchema>;
 
 // «Освободить место» (storage-cleanup.md, 5.4 и 9.2): все ручные очистки движка одним прогоном на
-// сервере. Бэкенда ещё нет (срез B7): эталоны в features/admin-ops/testing/sweepFixtures.ts.
+// сервере (api/schemas/lifecycle.py). Эталоны в contracts/server/fixtures/AdminLifecycleSweep*.
 export const LIFECYCLE_SWEEP_STATUSES = [
   "running",
   "cancelling",
@@ -677,16 +677,6 @@ export type LifecycleSweepStep = z.infer<typeof LifecycleSweepStepSchema>;
 export type LifecycleSweep = z.infer<typeof LifecycleSweepSchema>;
 export type LifecycleSweepState = z.infer<typeof LifecycleSweepStateSchema>;
 export type LifecycleSweepPreview = z.infer<typeof LifecycleSweepPreviewSchema>;
-
-/**
- * Схемы раздела 9.2 по именам будущих каталогов contracts/server/fixtures. Срез B7 перенесёт
- * эталоны в contracts/server/fixtures и эту карту в CONTRACT_SCHEMAS (contractSchemas.ts).
- */
-export const LIFECYCLE_SWEEP_CONTRACT_SCHEMAS: Record<string, z.ZodType> = {
-  LifecycleSweep: LifecycleSweepSchema,
-  LifecycleSweepState: LifecycleSweepStateSchema,
-  LifecycleSweepPreview: LifecycleSweepPreviewSchema,
-};
 
 // Самодиагностика (api/schemas/diagnostics.py): проверки со статусом, причиной и подсказкой, итог, пороги.
 export const DiagStatusSchema = z.enum(["ok", "warn", "fail"]);
