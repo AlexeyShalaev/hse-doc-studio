@@ -8,6 +8,7 @@ from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 
 from hse_doc_studio.core.identity.errors import IdentityErrorCode, message_for
+from hse_doc_studio.core.jobs.control import RunnerControlError
 from hse_doc_studio.core.jobs.enums import RunnerErrorCode
 from hse_doc_studio.core.jobs.errors import (
     ArtifactInvalidError,
@@ -31,6 +32,11 @@ RUNNER_ERROR_STATUS: Mapping[RunnerErrorCode, int] = {
     RunnerErrorCode.relay_request_gone: 404,
     RunnerErrorCode.relay_out_of_order: 409,
     RunnerErrorCode.relay_too_large: 413,
+    # Канал команд и диск раннера (`/control/*`, `/disk`).
+    RunnerErrorCode.command_not_found: 404,
+    RunnerErrorCode.command_finished: 409,
+    RunnerErrorCode.feature_not_negotiated: 409,
+    RunnerErrorCode.disk_report_too_large: 413,
 }
 
 
@@ -40,6 +46,13 @@ async def _runner_auth_handler(_request: Request, exc: Exception) -> JSONRespons
         status_code=RUNNER_ERROR_STATUS.get(exc.code, 401),
         content={"detail": exc.detail, "code": exc.code.value},
         headers={"WWW-Authenticate": "Bearer"} if exc.code is RunnerErrorCode.runner_unauthorized else None,
+    )
+
+
+async def _runner_control_handler(_request: Request, exc: Exception) -> JSONResponse:
+    assert isinstance(exc, RunnerControlError)  # noqa: S101 — обработчик зарегистрирован только на этот тип
+    return JSONResponse(
+        status_code=RUNNER_ERROR_STATUS.get(exc.code, 409), content={"detail": exc.detail, "code": exc.code.value}
     )
 
 
@@ -81,6 +94,7 @@ def _coded_handler(status: int, code: RunnerErrorCode) -> Callable[[Request, Exc
 
 def install_runner_error_handlers(app: FastAPI) -> None:
     app.add_exception_handler(RunnerAuthError, _runner_auth_handler)
+    app.add_exception_handler(RunnerControlError, _runner_control_handler)
     app.add_exception_handler(StaleAttemptError, _stale_attempt_handler)
     app.add_exception_handler(QueuedJobNotFoundError, _job_not_found_handler)
     app.add_exception_handler(JobNotRunningError, _coded_handler(409, RunnerErrorCode.job_not_running))

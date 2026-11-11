@@ -53,11 +53,20 @@ FEATURE_AI_RELAY = "ai_relay"
 # Раннер сообщает, как он развёрнут (`POST /deployment`): исполнитель, лимиты, контекст безопасности.
 FEATURE_DEPLOYMENT = "deployment_info"
 # Канал команд раннеру (`POST /control/poll`, `/control/{id}/progress`) и диск раннера (команды `disk.*`, отчёт
-# `POST /disk`). Команду вида `disk.*` сервер ставит только раннеру, согласовавшему обе. В `SERVER_FEATURES` они
-# попадают вместе с адресами канала на сервере: до того сервер их не согласует, и новый раннер канал не открывает.
+# `POST /disk`). Команду вида `disk.*` сервер ставит только раннеру, согласовавшему обе.
 FEATURE_CONTROL = "control"
 FEATURE_DISK = "disk"
-SERVER_FEATURES = frozenset({FEATURE_ANNOUNCE, FEATURE_OFFLINE, FEATURE_AI_SLOTS, FEATURE_AI_RELAY, FEATURE_DEPLOYMENT})
+SERVER_FEATURES = frozenset(
+    {
+        FEATURE_ANNOUNCE,
+        FEATURE_OFFLINE,
+        FEATURE_AI_SLOTS,
+        FEATURE_AI_RELAY,
+        FEATURE_DEPLOYMENT,
+        FEATURE_CONTROL,
+        FEATURE_DISK,
+    }
+)
 
 
 @dataclass(frozen=True)

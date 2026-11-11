@@ -264,6 +264,8 @@ def test__wire__server_features_are_the_documented_capabilities() -> None:
         wire.FEATURE_AI_SLOTS,
         wire.FEATURE_AI_RELAY,
         wire.FEATURE_DEPLOYMENT,
+        wire.FEATURE_CONTROL,
+        wire.FEATURE_DISK,
     } == wire.SERVER_FEATURES
 
 

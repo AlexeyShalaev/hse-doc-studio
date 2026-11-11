@@ -165,6 +165,8 @@ POLICIES: tuple[LifecyclePolicy, ...] = (
     LifecyclePolicy(
         "usage_counters", Group.database, Strategy.own_task, tables=("usage_counters",), task="quota_housekeeping"
     ),
+    # Команды раннерам (storage-cleanup.md, S13): 20 последних на раннер, старые стираются при вставке.
+    LifecyclePolicy("runner_commands", Group.database, Strategy.on_write, tables=("runner_commands",)),
     LifecyclePolicy("compile_records", Group.database, Strategy.on_write, tables=("compile_records",), growth="high"),
     LifecyclePolicy("project_artifacts", Group.objects, Strategy.on_write, tables=("project_artifacts",)),
     LifecyclePolicy("chat_history", Group.database, Strategy.on_write, tables=("chat_messages", "chat_agent_runs")),

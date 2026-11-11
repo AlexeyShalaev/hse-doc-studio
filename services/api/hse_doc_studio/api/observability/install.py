@@ -15,6 +15,7 @@ from hse_doc_studio.api.observability.health import HealthRegistry, build_health
 from hse_doc_studio.api.observability.metrics import MetricsMiddleware, MetricsRegistry, background_collector
 from hse_doc_studio.api.observability.request_id import RequestIdMiddleware
 from hse_doc_studio.core.background import BackgroundTaskRunner, PeriodicTask
+from hse_doc_studio.core.jobs.control import COMMANDS_REAPER_INTERVAL_S
 
 if TYPE_CHECKING:
     from collections.abc import Awaitable, Callable
@@ -411,6 +412,19 @@ def install_job_reaper(app: FastAPI, container: AsyncContainer, cfg: Settings) -
         await (await container.get(StrandedJobSweeper)).sweep()
 
     app.state.background.register(PeriodicTask(name="job_reaper", interval_s=cfg.jobs.reaper_interval_s, run=_sweep))
+
+
+def install_runner_commands_reaper(app: FastAPI, container: AsyncContainer) -> None:
+    """Команды раннерам: не забранные за 10 минут становятся `expired`, без хода 3 минуты или у отозванного и
+    ушедшего раннера `lost` (storage-cleanup.md, 5.3); идёт только у лидера. Чтение команды проверяет то же."""
+    from hse_doc_studio.use_cases.jobs.runner_control import RunnerControlService  # noqa: PLC0415
+
+    async def _reap() -> None:
+        await (await container.get(RunnerControlService)).settle()
+
+    app.state.background.register(
+        PeriodicTask(name="runner_commands_reaper", interval_s=COMMANDS_REAPER_INTERVAL_S, run=_reap)
+    )
 
 
 def install_runner_pairings_purge(app: FastAPI, container: AsyncContainer) -> None:

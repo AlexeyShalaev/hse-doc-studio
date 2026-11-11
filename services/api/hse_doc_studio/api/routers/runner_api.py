@@ -5,7 +5,9 @@ from __future__ import annotations
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, Header, Path, Request, Response
+from fastapi.exceptions import RequestValidationError
 from fastapi.responses import PlainTextResponse, StreamingResponse
+from pydantic import ValidationError
 
 from hse_doc_studio.api.actor import require_server_mode
 from hse_doc_studio.api.observability.client_ip import client_ip
@@ -20,8 +22,12 @@ from hse_doc_studio.api.schemas.runner import (
     BlobLocationBody,
     BlobNeedRequestBody,
     BlobNeedResponseBody,
+    CommandProgressRequestBody,
+    CommandProgressResponseBody,
     CompleteRequestBody,
     CompleteResponseBody,
+    ControlPollRequestBody,
+    ControlPollResponseBody,
     HeartbeatRequestBody,
     HeartbeatResponseBody,
     LogBatchBody,
@@ -30,6 +36,7 @@ from hse_doc_studio.api.schemas.runner import (
     RunnerAnnounceRequestBody,
     RunnerAnnounceResponseBody,
     RunnerDeploymentBody,
+    RunnerDiskReportBody,
     RunnerPairPollRequestBody,
     RunnerPairPollResponseBody,
     RunnerPairStartRequestBody,
@@ -37,8 +44,11 @@ from hse_doc_studio.api.schemas.runner import (
     RunnerRegisterRequestBody,
     RunnerRegisterResponseBody,
 )
-from hse_doc_studio.core.jobs.codec import decode, encode_poll_response
+from hse_doc_studio.core.jobs.codec import decode, encode, encode_poll_response
+from hse_doc_studio.core.jobs.control import RunnerControlError
 from hse_doc_studio.core.jobs.deployment import RunnerDeployment
+from hse_doc_studio.core.jobs.disk import MAX_DISK_REPORT_BYTES, RunnerDiskReport
+from hse_doc_studio.core.jobs.enums import RunnerErrorCode
 from hse_doc_studio.core.jobs.errors import ArtifactInvalidError
 from hse_doc_studio.core.jobs.files import ArtifactRef
 from hse_doc_studio.core.jobs.relay import AiEndpointFlavor
@@ -46,11 +56,14 @@ from hse_doc_studio.core.jobs.runners import DeclaredAiEndpoint, Runner, RunnerH
 from hse_doc_studio.core.jobs.wire import (
     DEFAULT_HEARTBEAT_S,
     DEFAULT_LEASE_S,
+    FEATURE_DISK,
     MAX_POLL_WAIT_S,
     RUNNER_API_PREFIX,
     ArtifactUploadRequest,
     BlobNeedRequest,
+    CommandProgressRequest,
     CompleteRequest,
+    ControlPollRequest,
     LogBatch,
     PollRequest,
     RunnerAnnounceRequest,
@@ -59,6 +72,7 @@ from hse_doc_studio.core.jobs.wire import (
 from hse_doc_studio.core.rate_limit import AUTH_IP
 from hse_doc_studio.core.shutdown import process_shutdown
 from hse_doc_studio.use_cases.jobs.pairing import RunnerPairingService
+from hse_doc_studio.use_cases.jobs.runner_control import RunnerControlService
 from hse_doc_studio.use_cases.jobs.runner_io import RunnerJobIoService
 from hse_doc_studio.use_cases.jobs.runner_jobs import RunnerJobService
 from hse_doc_studio.use_cases.jobs.runners import RunnerRegistry
@@ -212,6 +226,75 @@ async def poll_job(
         gone=lambda: _poll_gone(request),
     )
     return encode_poll_response(response)
+
+
+async def _control(request: Request) -> RunnerControlService:
+    return await request.state.dishka_container.get(RunnerControlService)
+
+
+@router.post("/control/poll", response_model=ControlPollResponseBody)
+async def poll_runner_command(
+    body: ControlPollRequestBody, request: Request, runner: Runner = Depends(authenticated_runner)
+) -> dict[str, object]:
+    """Долгий опрос команд (возможность `control`), отдельно от опроса задач: занятый сборками раннер его держит."""
+    response = await (await _control(request)).poll(
+        runner, ControlPollRequest(wait_s=body.wait_s), gone=lambda: _poll_gone(request)
+    )
+    encoded = encode(response)
+    assert isinstance(encoded, dict)  # noqa: S101 — датакласс кодируется словарём
+    return encoded
+
+
+@router.post("/control/{command_id}/progress", response_model=CommandProgressResponseBody)
+async def report_runner_command_progress(
+    command_id: UUID, body: CommandProgressRequestBody, request: Request, runner: Runner = Depends(authenticated_runner)
+) -> CommandProgressResponseBody:
+    """Ход и итог команды; `cancel: true` доставляет остановку, повтор итога безвреден."""
+    progress = decode(CommandProgressRequest, body.model_dump(mode="json"))
+    response = await (await _control(request)).progress(runner, command_id, progress)
+    return CommandProgressResponseBody(cancel=response.cancel)
+
+
+def _disk_report_too_large() -> RunnerControlError:
+    return RunnerControlError(
+        RunnerErrorCode.disk_report_too_large, f"disk report is larger than {MAX_DISK_REPORT_BYTES} bytes"
+    )
+
+
+@router.post(
+    "/disk",
+    status_code=204,
+    openapi_extra={
+        "requestBody": {
+            "required": True,
+            "content": {"application/json": {"schema": {"$ref": "#/components/schemas/RunnerDiskReportBody"}}},
+        }
+    },
+)
+async def report_runner_disk(request: Request, runner: Runner = Depends(authenticated_runner)) -> Response:
+    """Последний замер диска (возможность `disk`). Размер проверяется до разбора тела: больше 64 КБ это 413."""
+    service = await _control(request)
+    if FEATURE_DISK not in runner.features:
+        raise RunnerControlError(RunnerErrorCode.feature_not_negotiated, "the disk feature is not negotiated")
+    length = request.headers.get("content-length")
+    if length is not None and length.isdigit() and int(length) > MAX_DISK_REPORT_BYTES:
+        raise _disk_report_too_large()
+    raw = bytearray()
+    async for chunk in request.stream():
+        raw.extend(chunk)
+        if len(raw) > MAX_DISK_REPORT_BYTES:
+            raise _disk_report_too_large()
+    try:
+        body = RunnerDiskReportBody.model_validate_json(bytes(raw))
+        report = decode(RunnerDiskReport, body.model_dump(mode="json"))
+    except ValidationError as exc:
+        raise RequestValidationError(exc.errors(include_url=False, include_input=False)) from None
+    except (TypeError, ValueError) as exc:
+        raise RequestValidationError(
+            [{"type": "value_error", "loc": ("body",), "msg": str(exc), "input": None}]
+        ) from None
+    await service.report_disk(runner, report)
+    return Response(status_code=204)
 
 
 @router.post("/jobs/{job_id}/heartbeat", response_model=HeartbeatResponseBody)

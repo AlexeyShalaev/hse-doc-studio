@@ -35,6 +35,7 @@ from hse_doc_studio.api.observability.install import (
     install_project_purge,
     install_project_usage,
     install_quota_housekeeping,
+    install_runner_commands_reaper,
     install_runner_health,
     install_runner_pairings_purge,
     install_server_observability,
@@ -240,6 +241,7 @@ def create_app() -> FastAPI:  # noqa: C901, PLR0915 — app-wiring factory: rout
         install_server_updates(app, container, settings, server_metrics)
         install_job_reaper(app, container, settings)
         install_runner_pairings_purge(app, container)
+        install_runner_commands_reaper(app, container)
         install_device_authorizations_purge(app, container)
         # Аудит, задачи, ИИ-журнал, уведомления и прочие растущие таблицы чистит один движок по реестру политик.
         install_data_lifecycle(app, container, settings, server_metrics)
