@@ -55,6 +55,87 @@
       "body": "Data appears when people start creating projects."
     },
     "note": "Counted from database records, without scanning the storage. Updated {{when}}.",
-    "noteNever": "Counted from database records, without scanning the storage. Not counted yet."
+    "noteNever": "Counted from database records, without scanning the storage. Not counted yet.",
+    "free": {
+      "action": "Free up space",
+      "title": "Free up space",
+      "close": "Close",
+      "startedAt": "Started {{when}}",
+      "confirm": {
+        "title": "Free up space now?",
+        "lead": "Cleanup by the current retention periods, the same one that runs every hour. It will delete:",
+        "col": {
+          "source": "Source",
+          "term": "Period",
+          "count": "To delete",
+          "size": "Size"
+        },
+        "older": "older than {{days}} d",
+        "fixed": "by its own rule",
+        "rows_one": "about {{n}} record",
+        "rows_other": "about {{n}} records",
+        "rowsMore": "more than {{n}} records",
+        "files_one": "about {{n}} file",
+        "files_other": "about {{n}} files",
+        "filesMore": "more than {{n}} files",
+        "nothingRow": "nothing",
+        "unknown": "could not count",
+        "capped": "Counting stops at {{n}}. Where there are more records, the run deletes as many as it can, scheduled cleanup removes the rest.",
+        "excluded": "Not part of this cleanup",
+        "excludedRow": "{{sources}}: {{reason}}",
+        "reason": {
+          "protected": "never cleaned manually",
+          "own_task": "own scheduled background task",
+          "on_write": "capped on write, nothing piles up",
+          "infra": "managed by the infrastructure"
+        },
+        "audit": "The audit log is never cleaned manually. Retention periods are changed in Data retention.",
+        "nothing": "Nothing to delete right now: everything past its retention period is already gone.",
+        "loadFailed": "Could not count what would be deleted.",
+        "cancel": "Cancel"
+      },
+      "progress": "Cleaning: {{source}} ({{n}} of {{total}})",
+      "starting": "Starting the cleanup",
+      "stop": "Stop after the current source",
+      "stopping": "Stopping after the current source: {{source}}",
+      "done_one": "Done: {{rows}} record deleted, {{size}} freed on disk.",
+      "done_other": "Done: {{rows}} records deleted, {{size}} freed on disk.",
+      "cancelled_one": "Stopped: {{rows}} record deleted, {{size}} freed on disk.",
+      "cancelled_other": "Stopped: {{rows}} records deleted, {{size}} freed on disk.",
+      "error_one": "Cleanup finished with errors: {{rows}} record deleted, {{size}} freed on disk.",
+      "error_other": "Cleanup finished with errors: {{rows}} records deleted, {{size}} freed on disk.",
+      "doneMore": "Some records will be deleted by the next scheduled cleanup.",
+      "doneNote": "Records deleted from tables free space inside the database for new records. Database files only shrink when a whole partition is dropped.",
+      "interrupted": "The run was interrupted: the server restarted. What was deleted before that is gone, scheduled cleanup will remove the rest.",
+      "step": {
+        "removed": "{{n}} deleted",
+        "freed": "{{size}} on disk",
+        "nothing": "nothing",
+        "more": "rest later",
+        "skipped": "not reached",
+        "interrupted": "interrupted by a server restart"
+      },
+      "banner": {
+        "details": "Details",
+        "hide": "Hide result"
+      },
+      "more": {
+        "title": "Where else to free up space",
+        "lead": "What is cleaned in other sections and what this cleanup leaves out.",
+        "data": "Data retention: periods and cleanup per source",
+        "runners": "Runner disks: {{size}} can be freed on shared runners",
+        "runnersClean": "Runner disks: nothing to free on shared runners",
+        "runnersNone": "Runners do not report their disks yet: update them to {{version}}.",
+        "runnersNoReport": "Runners have not sent a disk measurement yet.",
+        "outdated_one": "{{n}} more runner does not report its disk: update it to {{version}}.",
+        "outdated_other": "{{n}} more runners do not report their disks: update them to {{version}}.",
+        "runnerMeasured": "measured {{when}}",
+        "runnerOpen": "Disk of runner “{{name}}”",
+        "allRunners": "All runners",
+        "runnersFailed": "Could not load the runner disk summary.",
+        "retry": "Retry",
+        "notIncluded": "Background cleanups are not included: unreferenced files, orphans, the project bin and expired sessions are cleaned on their own schedule. Images on Kubernetes nodes are removed by Kubernetes itself when a node runs low on space."
+      }
+    }
   }
 }

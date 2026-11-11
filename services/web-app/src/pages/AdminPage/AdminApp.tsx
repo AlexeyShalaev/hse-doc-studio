@@ -278,7 +278,10 @@ export const AdminApp = () => {
                 ns={
                   part === "runners"
                     ? ["ops", part, "runnerInstall", "runnerIsolation"]
-                    : ["ops", part]
+                    : part === "storage"
+                      ? // «Освободить место» называет источники как «Хранение данных».
+                        ["ops", part, "data"]
+                      : ["ops", part]
                 }
               >
                 <OpsRoute part={part} />
