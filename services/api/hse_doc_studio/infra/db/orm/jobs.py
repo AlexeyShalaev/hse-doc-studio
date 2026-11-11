@@ -12,6 +12,7 @@ from sqlalchemy import (
     CheckConstraint,
     DateTime,
     Double,
+    ForeignKey,
     Identity,
     Index,
     Integer,
@@ -22,7 +23,7 @@ from sqlalchemy import (
     text,
 )
 from sqlalchemy.dialects.postgresql import ARRAY, JSONB
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, deferred, mapped_column
 
 from hse_doc_studio.core.secrets import EncryptedColumn, encrypted_columns
 from hse_doc_studio.infra.db.base import Base
@@ -208,6 +209,49 @@ class RunnerRow(Base):
     # Отчёт раннера о развёртывании (`/deployment`): исполнитель, лимиты, securityContext; без секретов.
     deployment: Mapped[dict[str, Any] | None] = mapped_column(JSONB)
     deployment_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    # Последний замер диска (`/disk`, до 64 КБ) и время приёма. Отложенная загрузка: строку раннера читает каждый
+    # запрос протокола, а замер нужен только экрану «Диск».
+    disk: Mapped[dict[str, Any] | None] = deferred(mapped_column(JSONB))
+    disk_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
+_COMMAND_OPEN = "('queued', 'delivered', 'running', 'cancelling')"
+
+
+class RunnerCommandRow(Base):
+    """Команда раннеру по каналу `/control/*` (storage-cleanup.md, 5.3). Строк не больше 20 завершённых на раннер:
+    лишние стираются при вставке новой (`on_write`)."""
+
+    __tablename__ = "runner_commands"
+    __table_args__ = (
+        Index("ix_runner_commands_runner_created", "runner_id", text("created_at DESC")),
+        # Не больше одной незавершённой очистки на раннер: второй запуск получает 409 `runner_disk_busy`.
+        Index(
+            "uq_runner_commands_cleanup_open",
+            "runner_id",
+            unique=True,
+            postgresql_where=text(f"kind = 'disk.cleanup' AND state IN {_COMMAND_OPEN}"),
+        ),
+        CheckConstraint("kind IN ('disk.measure', 'disk.cleanup')", name="kind"),
+        CheckConstraint(
+            "state IN ('queued', 'delivered', 'running', 'cancelling', "
+            "'done', 'cancelled', 'error', 'expired', 'lost')",
+            name="state",
+        ),
+    )
+
+    id: Mapped[UUID] = mapped_column(Uuid, primary_key=True)
+    runner_id: Mapped[str] = mapped_column(String(64), ForeignKey("runners.id", ondelete="CASCADE"), nullable=False)
+    kind: Mapped[str] = mapped_column(String(32), nullable=False)
+    payload: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False, server_default=text("'{}'::jsonb"))
+    state: Mapped[str] = mapped_column(String(16), nullable=False)
+    progress: Mapped[dict[str, Any] | None] = mapped_column(JSONB)
+    # Кто поставил: id пользователя без внешнего ключа, как у раннеров (запись переживает удаление человека).
+    created_by: Mapped[str] = mapped_column(String(64), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    delivered_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    finished_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
 
 class RunnerRegistrationTokenRow(Base):

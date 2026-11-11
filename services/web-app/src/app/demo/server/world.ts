@@ -1,4 +1,6 @@
 import type { Bootstrap, SessionUser } from "@entities/session";
+import type { RunnerDiskDemo } from "@entities/runner/testing";
+import type { LifecycleSweepDemo } from "@features/admin-ops/testing";
 import { createDemoAccount, type DemoAccount } from "./accounts";
 import {
   createDemoAdminSettings,
@@ -67,6 +69,10 @@ export type ServerDemoWorld = {
   scale: DemoScaleWorld | null;
   /** Личные раннеры, сопряжение, политика сборок и личные провайдеры; строятся при первом обращении. */
   personal: DemoPersonal | null;
+  /** Диски раннеров (storage-cleanup.md); строятся при первом обращении (storageCleanup.ts). */
+  runnerDisk: RunnerDiskDemo | null;
+  /** «Освободить место» в «Хранилище»; строится при первом обращении. */
+  lifecycleSweep: LifecycleSweepDemo | null;
 };
 
 /** Большой мир; строится один раз при первом обращении. */
@@ -123,6 +129,8 @@ export const createServerWorld = (scenarioId: string): ServerDemoWorld => {
     adminPeople: null,
     scale: null,
     personal: null,
+    runnerDisk: null,
+    lifecycleSweep: null,
   };
 };
 

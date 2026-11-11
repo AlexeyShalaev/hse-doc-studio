@@ -1,4 +1,5 @@
 export * from "./model/runner.schema";
+export * from "./model/runnerDisk.schema";
 export {
   buildAvailabilityApi,
   myRunnersApi,
@@ -41,3 +42,35 @@ export {
   maskUserCode,
   normalizeUserCode,
 } from "./lib/runnerLib";
+export {
+  adminRunnerDiskApi,
+  myRunnerDiskApi,
+  runnerDiskApi,
+  type RunnerDiskApi,
+  type RunnerDiskScope,
+} from "./api/runnerDiskApi";
+export {
+  runnerDiskKeys,
+  useCancelRunnerDiskCleanup,
+  useRefreshRunnerDisk,
+  useRunnerDisk,
+  useRunnerDiskSummary,
+  useStartRunnerDiskCleanup,
+  type UseRunnerDiskOptions,
+} from "./api/runnerDiskQueries";
+export {
+  RUNNER_DISK_ACTIVE_POLL_MS,
+  RUNNER_DISK_IDLE_POLL_MS,
+  cleanAllTargets,
+  diskCommandPhase,
+  diskCommandProgress,
+  diskTargetBytes,
+  hasDiskTarget,
+  isDiskCommandActive,
+  isRunnerDiskBusy,
+  runnerCacheBytes,
+  runnerDiskMode,
+  runnerDiskTotals,
+  type RunnerDiskCommandPhase,
+  type RunnerDiskMode,
+} from "./lib/runnerDiskLib";

@@ -205,6 +205,10 @@
     "key_not_found": "The signing key was not found. Pick another one.",
     "server_keys_forbidden": "This server does not store private keys: you cannot sign with a Studio key here.",
     "sign_failed": "Signing failed. Check the key and the passphrase.",
-    "link_by_mail": "The invitation link is sent by email. Press “Remind” to send it again."
+    "link_by_mail": "The invitation link is sent by email. Press “Remind” to send it again.",
+    "runner_disk_unsupported": "This runner cannot report its disk. Update it.",
+    "runner_offline": "The runner is offline. You can clean its disk when it is back.",
+    "runner_disk_busy": "A cleanup is already running on this runner. Wait for it to finish.",
+    "disk_target_unavailable": "The runner cannot clean this right now. Refresh the measurement and try again."
   }
 }

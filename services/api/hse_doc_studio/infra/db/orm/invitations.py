@@ -37,6 +37,8 @@ NOTIFICATION_KINDS = (
     "signing_cancelled",
     # Новая версия на подписи (signing-route.md, 12.6), миграция sr_10_new_version_kind.
     "signing_new_version",
+    # Админ очистил диск личного раннера (storage-cleanup.md, 8.2), миграция dk_01_runner_disk.
+    "runner_disk_cleaned",
 )
 
 
