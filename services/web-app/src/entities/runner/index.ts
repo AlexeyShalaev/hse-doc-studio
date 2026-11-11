@@ -32,6 +32,8 @@ export {
   useUpdateRemoteRunner,
 } from "./api/runnerQueries";
 export {
+  MY_RUNNERS_PATH,
+  MY_RUNNER_DISK_PARAM,
   REMOTE_STATE_DOT,
   RUNNER_STATE_DOT,
   compareVersions,
@@ -40,6 +42,7 @@ export {
   isValidEndpointName,
   isValidServerUrl,
   maskUserCode,
+  myRunnerDiskPath,
   normalizeUserCode,
 } from "./lib/runnerLib";
 export {

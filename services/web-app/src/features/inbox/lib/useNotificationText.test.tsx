@@ -4,7 +4,10 @@ import { I18nextProvider } from "react-i18next";
 import { beforeEach, describe, expect, it } from "vitest";
 import type { Notification } from "@entities/invitation";
 import { i18n } from "@shared/lib";
-import { useNotificationText } from "./useNotificationText";
+import {
+  useNotificationDetails,
+  useNotificationText,
+} from "./useNotificationText";
 
 const note = (
   kind: Notification["kind"],
@@ -26,9 +29,17 @@ const note = (
     profile_id: "topic",
     deadline: null,
     new_version: false,
+    freed_bytes: null,
     ...payload,
   },
 });
+
+const wrapper = ({ children }: { children: ReactNode }) => (
+  <I18nextProvider i18n={i18n}>{children}</I18nextProvider>
+);
+
+const detailsOf = (n: Notification): string | null =>
+  renderHook(() => useNotificationDetails(), { wrapper }).result.current(n);
 
 const textOf = (n: Notification): string => {
   const { result } = renderHook(() => useNotificationText(), {
@@ -57,6 +68,7 @@ describe("тексты уведомлений о версии на подпис�
       textOf(
         note("signing_request", {
           new_version: true,
+          freed_bytes: null,
           outcome: "approve_sign",
         }),
       ),
@@ -90,6 +102,58 @@ describe("тексты уведомлений о версии на подпис�
     ).toBe("Иванов И. И. asks you to approve a new version: Утверждение темы");
     expect(textOf(note("signing_new_version"))).toMatch(
       /^A new version is out for signing: Утверждение темы\./,
+    );
+  });
+});
+
+const GIB = 1024 ** 3;
+const disk = (payload: Partial<Notification["payload"]>): Notification =>
+  note("runner_disk_cleaned", {
+    project_id: null,
+    project_name: null,
+    actor_name: "Алексей Шалаев",
+    ref_id: "rn_1",
+    excerpt: "Домашний сервер",
+    profile_id: null,
+    outcome: "done",
+    freed_bytes: 12.5 * GIB,
+    ...payload,
+  });
+
+describe("очистка диска раннера администратором (storage-cleanup.md, 8.2)", () => {
+  beforeEach(async () => {
+    await i18n.changeLanguage("ru");
+  });
+
+  it("итог по состоянию команды и освобождённый размер", () => {
+    expect(textOf(disk({}))).toBe(
+      "Администратор очистил диск вашего раннера «Домашний сервер»: освобождено 12.50 GB",
+    );
+    expect(textOf(disk({ freed_bytes: 0 }))).toBe(
+      "Администратор очистил диск вашего раннера «Домашний сервер»: освобождать было нечего",
+    );
+    expect(
+      textOf(disk({ outcome: "error", freed_bytes: 300 * 1024 ** 2 })),
+    ).toBe(
+      "Администратор очистил диск вашего раннера «Домашний сервер», очистка завершилась с ошибками: освобождено 300 MB",
+    );
+    expect(textOf(disk({ outcome: "cancelled", freed_bytes: 0 }))).toBe(
+      "Очистку диска вашего раннера «Домашний сервер», которую запустил администратор, остановили: освобождено 0 MB",
+    );
+    expect(textOf(disk({ outcome: "lost" }))).toMatch(
+      /^Раннер «Домашний сервер» пропал во время очистки диска/,
+    );
+  });
+
+  it("под текстом администратор, который запустил очистку; без имени ничего", () => {
+    expect(detailsOf(disk({}))).toBe("Запустил администратор Алексей Шалаев");
+    expect(detailsOf(disk({ actor_name: null }))).toBeNull();
+  });
+
+  it("по-английски тоже", async () => {
+    await i18n.changeLanguage("en");
+    expect(textOf(disk({}))).toBe(
+      "An administrator cleaned up the disk of your runner “Домашний сервер”: 12.50 GB freed",
     );
   });
 });

@@ -2,6 +2,7 @@ import { useCallback, useMemo, useState } from "react";
 import type { ColumnDef } from "@tanstack/react-table";
 import {
   ChevronRight,
+  HardDrive,
   Info,
   KeyRound,
   Laptop,
@@ -64,6 +65,8 @@ export type MyRunnersViewProps = {
   onReconnect: (runner: MyRunner) => void;
   onRevoke: (runner: MyRunner) => void;
   onRevokeToken: (token: MyRunnerToken) => void;
+  /** «Диск» раннера: замер и очистка (docs/design/storage-cleanup.md, 4.2). */
+  onDisk: (runner: MyRunner) => void;
 };
 
 /** Отозванные внизу: они только для истории. */
@@ -113,6 +116,7 @@ export const MyRunnersView = ({
   onReconnect,
   onRevoke,
   onRevokeToken,
+  onDisk,
 }: MyRunnersViewProps) => {
   const { t } = useTranslation("runners");
   const [showRevoked, setShowRevoked] = useState(startShowRevoked);
@@ -356,6 +360,17 @@ export const MyRunnersView = ({
                 onTogglePause(runner);
               },
             },
+            // Диск смотрят и чистят и на паузе, и у раннера не на связи (последний
+            // замер); старую версию окно встретит заглушкой «Обновите раннер».
+            {
+              id: "disk",
+              label: t("mine.disk"),
+              icon: <HardDrive size="0.875rem" aria-hidden="true" />,
+              testId: `my-runner-disk-${runner.id}`,
+              onSelect: () => {
+                onDisk(runner);
+              },
+            },
             runner.host_kind === "desktop"
               ? {
                   id: "reconnect",
@@ -410,6 +425,7 @@ export const MyRunnersView = ({
       onReconnect,
       onRotate,
       onRevoke,
+      onDisk,
       seenText,
       hintText,
       loadText,

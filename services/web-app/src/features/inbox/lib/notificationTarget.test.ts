@@ -33,6 +33,7 @@ const note = (
     profile_id: null,
     deadline: null,
     new_version: false,
+    freed_bytes: null,
     ...payload,
   },
 });
@@ -167,5 +168,31 @@ describe("маршрут подписания", () => {
       route: "/sign/p%201/sr_1",
       markRead: true,
     });
+  });
+});
+
+describe("очистка диска раннера администратором (storage-cleanup.md, 8.2)", () => {
+  it("ведёт в «Мои раннеры» с открытым «Диском» раннера и отмечается прочитанным", () => {
+    const n = note("runner_disk_cleaned", {
+      project_id: null,
+      project_name: null,
+      ref_id: "rn 1",
+      excerpt: "Домашний сервер",
+      outcome: "done",
+      freed_bytes: 1024,
+    });
+    expect(notificationRoute(n)).toBe("/settings/runners?disk=rn+1");
+    expect(popoverAction(n)).toEqual({
+      route: "/settings/runners?disk=rn+1",
+      markRead: true,
+    });
+  });
+
+  it("без id раннера просто «Мои раннеры»", () => {
+    expect(
+      notificationRoute(
+        note("runner_disk_cleaned", { project_id: null, ref_id: null }),
+      ),
+    ).toBe("/settings/runners");
   });
 });

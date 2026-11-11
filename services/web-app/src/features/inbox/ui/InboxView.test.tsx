@@ -55,6 +55,7 @@ const note = (
     profile_id: "topic-approval",
     deadline: null,
     new_version: false,
+    freed_bytes: null,
     ...payload,
   },
 });
