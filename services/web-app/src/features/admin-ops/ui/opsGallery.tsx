@@ -44,6 +44,7 @@ import { Services } from "./Services";
 import { ServicesView } from "./ServicesView";
 import { Storage } from "./Storage";
 import { StorageView } from "./StorageView";
+import { getStorageFreeGallery } from "./storageFreeGallery";
 
 const W = 900;
 const noop = () => undefined;
@@ -483,6 +484,7 @@ const StorageDemo = ({
       owners={staticList(state, owners)}
       now={NOW}
       {...(onRetry ? { onRetry } : {})}
+      freeSpace={{ sweep: null, onFreeSpace: noop, onDetails: noop }}
     />
   );
 };
@@ -893,6 +895,8 @@ export const getAdminOpsGallery = (): GalleryGroup[] => [
       )),
     ],
   },
+  // «Освободить место» и «Где ещё» (storage-cleanup.md, 4.5): свой файл, чтобы не мешать соседям.
+  ...getStorageFreeGallery(),
   {
     id: "admin-ops-live",
     title: "Админка: операционные разделы, живые",

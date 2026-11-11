@@ -33,6 +33,7 @@ import {
   type FreeSpacePanelProps,
 } from "./ui/StorageFreeSpace";
 import { StorageMoreSpace } from "./ui/StorageMoreSpace";
+import { getStorageFreeGallery } from "./ui/storageFreeGallery";
 import { StoragePage } from "./index";
 
 // «Освободить место» и «Где ещё освободить место» в «Хранилище» (docs/design/storage-cleanup.md,
@@ -435,4 +436,42 @@ describe("«Хранилище» на демо-мире", () => {
     const dialog = await screen.findByRole("dialog");
     expect(dialog).toHaveTextContent("Диск раннера «runner-1»");
   }, 20_000);
+});
+
+describe("галерея «Хранилище: освободить место»", () => {
+  const entries = getStorageFreeGallery().flatMap((g) => g.entries);
+
+  it("есть состояния раздела 4.5", () => {
+    const ids = entries.map((e) => e.id);
+    for (const id of [
+      "free_preview",
+      "free_preview_nothing",
+      "free_preview_capped",
+      "free_running",
+      "free_done",
+      "free_interrupted",
+      "free_more_runners",
+      "free_more_none",
+    ]) {
+      expect(ids).toContain(id);
+    }
+  });
+
+  it.each(["ru", "en"])(
+    "язык %s: записи без демо-мира рисуются без сырых ключей",
+    async (lng) => {
+      await i18n.changeLanguage(lng);
+      for (const entry of entries.filter((e) => e.scenario === undefined)) {
+        const { container, unmount } = render(wrap(entry.render()));
+        await waitFor(() => {
+          expect(container.textContent).not.toBe("");
+        });
+        expect(container.textContent).not.toMatch(
+          /(?<!\s)\b(storage|free|confirm|more|step|banner|lifecycle)\.[a-z]+[A-Za-z.]*/,
+        );
+        unmount();
+      }
+    },
+    20_000,
+  );
 });
