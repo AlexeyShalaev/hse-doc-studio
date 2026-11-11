@@ -125,6 +125,8 @@ IDENTITY_ERROR_STATUS: Mapping[IdentityErrorCode, int] = {
     IdentityErrorCode.passkey_invalid: _UNAUTHORIZED,
     IdentityErrorCode.passkey_limit: _STATE,
     IdentityErrorCode.reauth_required: _FORBIDDEN,
+    IdentityErrorCode.lifecycle_sweep_busy: _STATE,
+    IdentityErrorCode.command_finished: _STATE,
 }
 
 

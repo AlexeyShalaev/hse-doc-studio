@@ -298,3 +298,191 @@ class RunnerDeploymentBody(StrictModel):
     resources: RunnerResourcesBody | None
     security: RunnerSecurityBody | None
     build: RunnerBuildIsolationBody | None
+
+
+# Канал команд (`/control/*`, возможность `control`) и диск раннера (`POST /disk`, возможность `disk`).
+# Пределы те же, что в `core/jobs/disk.py`; отчёт больше 64 КБ сервер отвергает до разбора (413).
+DiskTargetName = Literal[
+    "old_versions", "unused_images", "build_cache", "dangling_images", "stopped_containers", "runner_cache"
+]
+DockerDiskReasonName = Literal["kubernetes", "managed_locally"]
+DiskCategoryKeyName = Literal["compile", "languagetool", "office", "ai", "app", "cache", "runtime"]
+StudioImageCategoryName = Literal["compile", "languagetool", "office", "ai", "app"]
+OldItemKindName = Literal["studio_image", "service_image", "container"]
+RunnerCommandKindName = Literal["disk.measure", "disk.cleanup"]
+ReportedCommandStateName = Literal["running", "done", "cancelled", "error"]
+CommandStepKindName = Literal[
+    "build_cache", "dangling_images", "image", "container", "runner_blobs", "runner_workspaces"
+]
+CommandStepStatusName = Literal["pending", "running", "done", "error", "skipped"]
+_BYTES = Field(ge=0)
+_REF = Field(min_length=1, max_length=384)
+_STEP_ERROR = Field(min_length=1, max_length=300)
+_LISTED = 100
+
+
+class ControlPollRequestBody(StrictModel):
+    wait_s: int = Field(ge=0, le=25)
+
+
+class DiskMeasurePayloadBody(StrictModel):
+    pass
+
+
+class DiskCleanupPayloadBody(StrictModel):
+    targets: list[DiskTargetName] = Field(min_length=1, max_length=6)
+    include_rollback: bool
+
+    @model_validator(mode="after")
+    def _unique_targets(self) -> DiskCleanupPayloadBody:
+        if len(set(self.targets)) != len(self.targets):
+            raise ValueError("targets must be unique")
+        if self.include_rollback and "old_versions" not in self.targets:
+            raise ValueError("include_rollback needs the old_versions target")
+        return self
+
+
+class RunnerCommandEnvelopeBody(StrictModel):
+    id: str = Field(pattern=r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$")
+    kind: RunnerCommandKindName
+    payload: DiskCleanupPayloadBody | DiskMeasurePayloadBody
+    issued_at: datetime
+
+    @model_validator(mode="after")
+    def _payload_matches_kind(self) -> RunnerCommandEnvelopeBody:
+        cleanup = isinstance(self.payload, DiskCleanupPayloadBody)
+        if cleanup != (self.kind == "disk.cleanup"):
+            raise ValueError(f"{self.kind} does not take this payload")
+        return self
+
+
+class ControlPollResponseBody(StrictModel):
+    command: RunnerCommandEnvelopeBody | None
+
+
+class CommandStepBody(StrictModel):
+    kind: CommandStepKindName
+    ref: str | None = _REF
+    status: CommandStepStatusName
+    freed_bytes: int = _BYTES
+    error: str | None = _STEP_ERROR
+
+    @model_validator(mode="after")
+    def _ref_matches_kind(self) -> CommandStepBody:
+        if (self.ref is not None) != (self.kind in ("image", "container")):
+            raise ValueError(f"{self.kind} step ref mismatch")
+        return self
+
+
+class CommandProgressBody(StrictModel):
+    steps: list[CommandStepBody] = Field(max_length=512)
+    freed_bytes: int = _BYTES
+    error: str | None = _STEP_ERROR
+
+
+class CommandProgressRequestBody(StrictModel):
+    state: ReportedCommandStateName
+    progress: CommandProgressBody
+
+
+class CommandProgressResponseBody(StrictModel):
+    cancel: bool
+
+
+class DiskCategoryBody(StrictModel):
+    key: DiskCategoryKeyName
+    bytes: int = _BYTES
+
+
+class DiskBuildCacheBody(StrictModel):
+    bytes: int = _BYTES
+    reclaimable_bytes: int = _BYTES
+    count: int = _BYTES
+
+
+class DiskCountBody(StrictModel):
+    bytes: int = _BYTES
+    count: int = _BYTES
+
+
+class UnusedImageBody(StrictModel):
+    ref: str = _REF
+    category: StudioImageCategoryName
+    size_bytes: int = _BYTES
+
+
+class OldItemBody(StrictModel):
+    kind: OldItemKindName
+    ref: str = _REF
+    version: str = Field(max_length=64)
+    size_bytes: int = _BYTES
+
+
+class OldVersionsBody(StrictModel):
+    current_version: str = Field(max_length=64)
+    rollback: OldItemBody | None
+    items: list[OldItemBody] = Field(max_length=_LISTED)
+    reclaimable_bytes: int = _BYTES
+    rollback_bytes: int = _BYTES
+
+
+class DockerVolumeBody(StrictModel):
+    name: str = Field(min_length=1, max_length=255)
+    size_bytes: int = _BYTES
+
+
+class DockerDiskBody(StrictModel):
+    available: bool
+    categories: list[DiskCategoryBody] = Field(max_length=7)
+    total_bytes: int = _BYTES
+    cleanable_bytes: int = _BYTES
+    build_cache: DiskBuildCacheBody
+    dangling: DiskCountBody
+    stopped_containers: DiskCountBody
+    unused_images: list[UnusedImageBody] = Field(max_length=_LISTED)
+    unused_truncated: bool
+    old_versions: OldVersionsBody
+    volumes: list[DockerVolumeBody] = Field(max_length=32)
+
+
+class BlobCacheDiskBody(StrictModel):
+    bytes: int = _BYTES
+    count: int = _BYTES
+    limit_bytes: int = _BYTES
+
+
+class WorkspacesDiskBody(StrictModel):
+    bytes: int = _BYTES
+    count: int = _BYTES
+    limit_bytes: int = _BYTES
+    busy: int = _BYTES
+
+
+class RunnerCacheDiskBody(StrictModel):
+    blobs: BlobCacheDiskBody
+    workspaces: WorkspacesDiskBody
+
+
+class DataVolumeBody(StrictModel):
+    total_bytes: int = _BYTES
+    free_bytes: int = _BYTES
+
+
+class RunnerDiskReportBody(StrictModel):
+    measured_at: datetime
+    targets: list[DiskTargetName] = Field(max_length=6)
+    docker: DockerDiskBody | None
+    docker_reason: DockerDiskReasonName | None
+    cache: RunnerCacheDiskBody
+    volume: DataVolumeBody | None
+
+    @model_validator(mode="after")
+    def _consistent(self) -> RunnerDiskReportBody:
+        if len(set(self.targets)) != len(self.targets):
+            raise ValueError("targets must be unique")
+        if (self.docker is None) == (self.docker_reason is None):
+            raise ValueError("docker is null exactly when docker_reason is set")
+        docker_usable = self.docker is not None and self.docker.available
+        if not docker_usable and set(self.targets) - {"runner_cache"}:
+            raise ValueError("docker targets need a reachable docker")
+        return self

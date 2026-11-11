@@ -14,15 +14,22 @@ from hse_doc_studio.core.invitations.protocols import INotifier
 from hse_doc_studio.core.lifecycle.disk import PROCESS_SAFE_MODE, SafeMode
 from hse_doc_studio.core.lifecycle.policies import POLICIES
 from hse_doc_studio.core.lifecycle.ports import IAdminDirectory, ILifecycleRuns, ILifecycleSource, IStorageProbe
+from hse_doc_studio.core.lifecycle.sweeps import ILifecycleSweeps
 from hse_doc_studio.core.uow import IUnitOfWork
 from hse_doc_studio.infra.db.repositories.lifecycle_admins import SqlAdminDirectory
 from hse_doc_studio.infra.db.repositories.lifecycle_runs import SqlLifecycleRuns
+from hse_doc_studio.infra.db.repositories.lifecycle_sweeps import SqlLifecycleSweeps
 from hse_doc_studio.infra.db.session import SessionProvider
 from hse_doc_studio.infra.jobs.retention import JobRetention
 from hse_doc_studio.infra.lifecycle.files import CollabStateSource
 from hse_doc_studio.infra.lifecycle.job_source import JobsSource
 from hse_doc_studio.infra.lifecycle.probe import StorageProbe
-from hse_doc_studio.infra.lifecycle.sql_sources import DeleteBatchesSource, PartitionedTableSource, TableMeasure
+from hse_doc_studio.infra.lifecycle.sql_sources import (
+    DeleteBatchesSource,
+    PartitionedTableSource,
+    TableMeasure,
+    count_sql,
+)
 from hse_doc_studio.use_cases.lifecycle.admin import (
     GetLifecycleUC,
     RunLifecycleUC,
@@ -32,6 +39,7 @@ from hse_doc_studio.use_cases.lifecycle.admin import (
 )
 from hse_doc_studio.use_cases.lifecycle.engine import LifecycleEngine
 from hse_doc_studio.use_cases.lifecycle.guard import StorageGuard
+from hse_doc_studio.use_cases.lifecycle.sweep import LifecycleSweepService
 
 _AUDIT_BATCH = "SELECT audit_log_purge_batch(:cutoff, :n)"
 
@@ -41,15 +49,26 @@ def _batch(table: str, condition: str, order: str = "") -> str:
     return f"DELETE FROM {table} WHERE id IN (SELECT id FROM {table} WHERE {condition}{order} LIMIT :n)"  # noqa: S608
 
 
-_AI_USAGE_BATCH = _batch("ai_usage", "at < :cutoff", " ORDER BY at")
-_NOTIFICATIONS = (_batch("notifications", "created_at < :cutoff"),)
-_COLLAB_REQUESTS = (
-    _batch("project_invitations", "expires_at < :cutoff"),
-    _batch("access_requests", "status <> 'pending' AND created_at < :cutoff"),
-    _batch("project_transfers", "expires_at < :cutoff"),
+# Условия удаления по таблицам: из одних и тех же строятся пачки DELETE и счёт предпросмотра «Освободить место».
+_NOTIFICATIONS_WHERE = (("notifications", "created_at < :cutoff"),)
+_COLLAB_REQUESTS_WHERE = (
+    ("project_invitations", "expires_at < :cutoff"),
+    ("access_requests", "status <> 'pending' AND created_at < :cutoff"),
+    ("project_transfers", "expires_at < :cutoff"),
 )
-_SHARE_LINKS = (_batch("share_links", "revoked_at < :cutoff OR expires_at < :cutoff"),)
-_GUEST_SESSIONS = (_batch("guest_sessions", "expires_at < :cutoff"),)
+_SHARE_LINKS_WHERE = (("share_links", "revoked_at < :cutoff OR expires_at < :cutoff"),)
+_GUEST_SESSIONS_WHERE = (("guest_sessions", "expires_at < :cutoff"),)
+
+
+def _batches(where: tuple[tuple[str, str], ...]) -> tuple[str, ...]:
+    return tuple(_batch(table, condition) for table, condition in where)
+
+
+def _counts(where: tuple[tuple[str, str], ...]) -> tuple[str, ...]:
+    return tuple(count_sql(table, condition) for table, condition in where)
+
+
+_AI_USAGE_BATCH = _batch("ai_usage", "at < :cutoff", " ORDER BY at")
 # Гостевая сессия после истечения нужна ещё неделю разве что для разбора спорного входа: дальше она мусор.
 _GUEST_GRACE = timedelta(days=7)
 
@@ -121,28 +140,36 @@ class ServerLifecycleProvider(Provider):
             ),
             "jobs": JobsSource(retention, TableMeasure(sessions, "jobs", ("jobs",))),
             "notifications": DeleteBatchesSource(
-                sessions, "notifications", ("notifications",), _NOTIFICATIONS, pause_s=pause
+                sessions,
+                "notifications",
+                ("notifications",),
+                _batches(_NOTIFICATIONS_WHERE),
+                pause_s=pause,
+                counts=_counts(_NOTIFICATIONS_WHERE),
             ),
             "collab_requests": DeleteBatchesSource(
                 sessions,
                 "collab_requests",
                 ("project_invitations", "access_requests", "project_transfers"),
-                _COLLAB_REQUESTS,
+                _batches(_COLLAB_REQUESTS_WHERE),
                 pause_s=pause,
+                counts=_counts(_COLLAB_REQUESTS_WHERE),
             ),
             "share_links": DeleteBatchesSource(
                 sessions,
                 "share_links",
                 ("share_links", "share_link_visits", "share_link_grants"),
-                _SHARE_LINKS,
+                _batches(_SHARE_LINKS_WHERE),
                 pause_s=pause,
+                counts=_counts(_SHARE_LINKS_WHERE),
             ),
             "guest_sessions": DeleteBatchesSource(
                 sessions,
                 "guest_sessions",
                 ("guest_sessions", "guest_session_links"),
-                _GUEST_SESSIONS,
+                _batches(_GUEST_SESSIONS_WHERE),
                 pause_s=pause,
+                counts=_counts(_GUEST_SESSIONS_WHERE),
                 fixed_age=_GUEST_GRACE,
             ),
             "collab_state": CollabStateSource(settings.data_dir.expanduser() / "collab"),
@@ -210,3 +237,17 @@ class ServerLifecycleProvider(Provider):
     @provide
     def get_run_uc(self, engine: LifecycleEngine, audit: IAuditLog) -> RunLifecycleUC:
         return RunLifecycleUC(engine, audit)
+
+    @provide
+    def get_sweeps(self, sessions: SessionProvider) -> ILifecycleSweeps:
+        return SqlLifecycleSweeps(sessions)
+
+    @provide
+    def get_sweep_service(
+        self,
+        engine: LifecycleEngine,
+        sweeps: ILifecycleSweeps,
+        instance_settings: IInstanceSettingsRepository,
+        audit: IAuditLog,
+    ) -> LifecycleSweepService:
+        return LifecycleSweepService(engine, sweeps, instance_settings, audit)

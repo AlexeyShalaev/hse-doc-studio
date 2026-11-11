@@ -1,0 +1,124 @@
+{
+  "measured_at": "2026-11-11T09:00:00+00:00",
+  "targets": [
+    "old_versions",
+    "unused_images",
+    "build_cache",
+    "dangling_images",
+    "stopped_containers",
+    "runner_cache"
+  ],
+  "docker": {
+    "available": true,
+    "categories": [
+      {
+        "key": "compile",
+        "bytes": 5368709120
+      },
+      {
+        "key": "languagetool",
+        "bytes": 644245094
+      },
+      {
+        "key": "office",
+        "bytes": 1181116006
+      },
+      {
+        "key": "app",
+        "bytes": 3865470566
+      },
+      {
+        "key": "cache",
+        "bytes": 2147483648
+      },
+      {
+        "key": "runtime",
+        "bytes": 268435456
+      }
+    ],
+    "total_bytes": 13475459890,
+    "cleanable_bytes": 4724464025,
+    "build_cache": {
+      "bytes": 2147483648,
+      "reclaimable_bytes": 1610612736,
+      "count": 42
+    },
+    "dangling": {
+      "bytes": 209715200,
+      "count": 3
+    },
+    "stopped_containers": {
+      "bytes": 4194304,
+      "count": 1
+    },
+    "unused_images": [
+      {
+        "ref": "gotenberg/gotenberg:8",
+        "category": "office",
+        "size_bytes": 1181116006
+      }
+    ],
+    "unused_truncated": false,
+    "old_versions": {
+      "current_version": "0.21.0",
+      "rollback": {
+        "kind": "studio_image",
+        "ref": "ghcr.io/alexeyshalaev/hse-doc-studio:0.20.1",
+        "version": "0.20.1",
+        "size_bytes": 1288490188
+      },
+      "items": [
+        {
+          "kind": "studio_image",
+          "ref": "ghcr.io/alexeyshalaev/hse-doc-studio:0.19.0",
+          "version": "0.19.0",
+          "size_bytes": 1288490188
+        },
+        {
+          "kind": "studio_image",
+          "ref": "ghcr.io/alexeyshalaev/hse-doc-studio:0.18.2",
+          "version": "0.18.2",
+          "size_bytes": 1277752770
+        },
+        {
+          "kind": "service_image",
+          "ref": "texlive/texlive:TL2023-historic",
+          "version": "",
+          "size_bytes": 5100273664
+        },
+        {
+          "kind": "container",
+          "ref": "hse-studio-old-updater",
+          "version": "0.19.0",
+          "size_bytes": 4194304
+        }
+      ],
+      "reclaimable_bytes": 7670710926,
+      "rollback_bytes": 1288490188
+    },
+    "volumes": [
+      {
+        "name": "hse-studio-texmf-cache",
+        "size_bytes": 268435456
+      }
+    ]
+  },
+  "docker_reason": null,
+  "cache": {
+    "blobs": {
+      "bytes": 1503238553,
+      "count": 4210,
+      "limit_bytes": 2147483648
+    },
+    "workspaces": {
+      "bytes": 3221225472,
+      "count": 37,
+      "limit_bytes": 21474836480,
+      "busy": 1
+    }
+  },
+  "volume": {
+    "total_bytes": 107374182400,
+    "free_bytes": 12884901888
+  }
+}

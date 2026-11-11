@@ -96,7 +96,7 @@
 | № | Решение | Почему |
 |---|---|---|
 | S1 | Раннер сам меряет и сам чистит; сервер передаёт только **цели** очистки (`old_versions`, `build_cache` и т. д.), никогда ссылки на образы. План раннер строит по свежему замеру своими правилами. | Сервер (или тот, кто его взломал) не может назвать произвольный образ: худшее, что он может, это удалить неиспользуемые образы Студии и кэш, которые и так скачаются заново. Устаревший экран не расширит удаление, как и в локальной Студии (`_plan_refs`). |
-| S2 | Код правил один: из `use_cases/system` выносится `DockerDiskPlanner`, не зависящий от настроек api; локальная Студия и раннер собирают его каждый из своей конфигурации. `DockerCleanupJobManager` получает подключаемые виды шагов, раннер добавляет шаги своего кэша. | Требование «тем же кодом»; две копии правил разъедутся на первом же новом исключении. |
+| S2 | Код правил один: из `use_cases/system` выносится `DockerDiskPlanner`, не зависящий от настроек api; локальная Студия и раннер собирают его каждый из своей конфигурации. Живёт он в `core/docker_disk`, а не в `use_cases`: процесс раннера `use_cases` не импортирует (`test_runner_isolation`). `DockerCleanupJobManager` получает подключаемые виды шагов, раннер добавляет шаги своего кэша. | Требование «тем же кодом»; две копии правил разъедутся на первом же новом исключении. |
 | S3 | Новый канал команд: отдельный долгий опрос `POST /control/poll`, возможности `control` и `disk`. | Канала нет, а `/poll` не годится: занятый раннер его не открывает (2.4). Отвергнутые варианты в 6.6. |
 | S4 | Команды и последний отчёт о диске живут в Postgres (`runner_commands`, `runners.disk`), а не в памяти api. | Опрос раннера и запрос админа могут прийти на разные реплики api. |
 | S5 | Отчёт о диске раннер шлёт сам: после `/announce`, раз в 6 часов, после каждой очистки и по команде «Обновить» (`disk.measure`). | `docker system df -v` идёт до 90 с, обход рабочих копий тоже не бесплатен: мерить на каждый показ экрана нельзя. |
@@ -333,6 +333,13 @@ DiskTarget: old_versions | unused_images | build_cache | dangling_images | stopp
 контейнеров, переменных окружения. Отчёт ограничен 64 КБ, сервер отвергает больший (`413`) и лишние поля
 (`extra=forbid`). Это данные, присланные раннером: сервер их проверяет схемой и показывает как текст.
 
+Уточнено в B1 (`core/jobs/disk.py`, `RunnerDiskReportBody`): `docker` пуст ровно тогда, когда задан
+`docker_reason`; цели, кроме `runner_cache`, допустимы только при `docker.available=true`; цели без повторов.
+Ссылка образа до 384 символов, версия до 64, томов до 32, размеры и счётчики неотрицательные. Сто строк с
+предельно длинными ссылками в 64 КБ не помещаются, поэтому раннер (B3) после обрезки до 100 проверяет размер
+закодированного отчёта и при необходимости укорачивает списки дальше (`unused_truncated`, итоги по-прежнему по всем);
+сто строк обычной длины помещаются с запасом (контрактный тест).
+
 ### 5.2 Цели и правила
 
 | Цель | Что делает раннер | Правило безопасности |
@@ -344,9 +351,11 @@ DiskTarget: old_versions | unused_images | build_cache | dangling_images | stopp
 | `stopped_containers` | `rm` остановленных контейнеров с меткой `com.hse-studio.managed` | метка проверяется в момент удаления |
 | `runner_cache` | два шага: блобы и рабочие копии | блобы с `mtime` моложе 10 минут и рабочие папки под замком проекта пропускаются; папка выгрузки выходов не трогается |
 
-Защищённые образы раннера: его `tex_image`, образ Студии его версии (`image_base:__version__`) и `image_base:latest`.
-Текущая версия для «старых версий» это версия раннера. Категории строит общая функция из умолчаний allowlist
-конфигурации (`compile`, `languagetool`, `office`, `ai`) и репозитория `tex_image` раннера.
+Защищённые образы раннера: его `tex_image`, образ Студии его версии (`image_base:__version__`) и `image_base:latest`
+(`studio_protected_refs`). Текущая версия для «старых версий» это версия раннера. Категории строит общая функция из
+умолчаний allowlist конфигурации (`compile`, `languagetool`, `office`, `ai`) и репозитория `tex_image` раннера
+(`default_docker_categories(tex_image=...)` в `core/docker_disk/categories.py`; умолчания сверены с настройками api
+тестом, потому что раннер `api/config` не импортирует).
 
 План строится на раннере по свежему замеру в момент начала (S1). Цель, которой нет в `targets` отчёта, сервер
 отвергает до отправки команды (`disk_target_unavailable`), раннер тоже пропускает её с ошибкой шага.
@@ -379,10 +388,15 @@ CommandProgress
 | `queued` | `delivered` | раннер забрал команду в `/control/poll` |
 | `queued` | `expired` | не забрана за 10 минут |
 | `delivered`, `running` | `running` | первый отчёт о ходе |
-| `running` | `cancelling` | «Остановить после текущего шага»; раннер узнаёт в ответе на следующий отчёт о ходе |
+| `delivered`, `running` | `cancelling` | «Остановить после текущего шага»; раннер узнаёт в ответе на следующий отчёт о ходе |
 | `queued` | `cancelled` | остановка до того, как раннер её забрал |
-| `running`, `cancelling` | `done`, `cancelled`, `error` | итоговый отчёт раннера |
+| `delivered`, `running`, `cancelling` | `done`, `cancelled`, `error` | итоговый отчёт раннера |
 | `delivered`, `running`, `cancelling` | `lost` | нет отчёта о ходе 3 минуты, раннер отозван или прислал `/offline` |
+
+Из `delivered` сразу в итог (уточнено в B1): `disk.measure` хода не шлёт, раннер присылает свежий `/disk` и
+закрывает команду итогом `done` с пустым списком шагов; так же закрывается очистка, которой нечего делать. Таблица
+переходов это `COMMAND_TRANSITIONS` в `core/jobs/disk.py`. В ходе раннер может прислать только `running`, `done`,
+`cancelled`, `error`.
 
 Одновременно у раннера не больше одной незавершённой `disk.cleanup` (частичный уникальный индекс), повторный запуск
 даёт `409 runner_disk_busy`. `disk.measure` при идущей очистке не нужна: раннер присылает замер сам после итога.
@@ -417,6 +431,14 @@ LifecycleSweep
 число файлов старше срока с тем же потолком. Метод добавляется в порт источника движка (`core/lifecycle/ports.py`)
 с реализацией по умолчанию `null`.
 
+Уточнение при внедрении (B7): сигнатура `count_expired(now, cutoff, cap) -> ExpiredCount(count, cutoff)`, источник
+сам возвращает границу, по которой считал (у гостевых сессий она своя, 7 суток после истечения). Порт это
+`Protocol`, поэтому «реализация по умолчанию» означает, что каждый источник реализует метод, а `TableMeasure` (без
+своей очистки) отвечает `count=null`. У `jobs` считаются только строки задач: выходы без владельца в хранилище идут по
+своему порогу. Счёт идёт через `LifecycleEngine.count_expired(key, cap)`, граница та же, что у `run_one`.
+`removed_total` и `freed_bytes` не хранятся отдельными колонками, а считаются из шагов. Закрытый прогон
+(`interrupted`, остановка api) переводит шаг `running` в `error` с причиной `interrupted`, а `pending` в `skipped`.
+
 ### 5.5 Где хранится
 
 Миграция `dk_01_runner_disk`:
@@ -429,6 +451,12 @@ LifecycleSweep
 
 Миграция `dk_02_lifecycle_sweeps`: таблица `lifecycle_sweeps` по 5.4, шаги JSONB, частичный уникальный индекс на
 незавершённый, предел 20 последних при вставке.
+
+Порядок миграций (B7 и B5 идут параллельно): цепочка alembic обязана иметь один head
+(`test__migrations__chain__has_single_head`, `head_revision()` при старте). `dk_02_lifecycle_sweeps` ведётся от
+`sr_10_new_version_kind`. Срез, который сливается вторым, переставляет свой `down_revision` на ревизию первого:
+если B7 уже в `master`, `dk_01_runner_disk` ставит `down_revision = "dk_02_lifecycle_sweeps"`. Номера в именах не
+задают порядок, порядок задаёт только `down_revision`.
 
 `notifications.kind` ограничен перечнем в базе, поэтому `dk_01` добавляет в него `runner_disk_cleaned` тем же
 приёмом, что `sr_08_notification_kinds`.
@@ -448,6 +476,10 @@ LifecycleSweep
 
 Команду вида `disk.*` сервер ставит только раннеру, у которого в согласованных `features` есть и `control`, и
 `disk`. Список команд расширяемый: будущий вид объявляет свою возможность, а канал остаётся тем же.
+
+Константы `FEATURE_CONTROL` и `FEATURE_DISK` появляются в `wire.py` в B1, а в `SERVER_FEATURES` попадают в B5
+вместе с адресами `/control/*` и `/disk`: сервер без этих адресов возможности не согласует, и новый раннер не
+откроет канал, которому некому ответить.
 
 ### 6.2 Канал команд
 
@@ -494,6 +526,15 @@ RunnerCommandEnvelope: {id, kind, payload, issued_at}
   `DockerCleanupJobManager` с наблюдателем хода.
 - `BlobCache.clear(min_idle_s=600)` и `RunnerWorkspaces.clear()`: те же обходы, что `evict`, с пределом 0 и
   правилами S9; возвращают освобождённые байты.
+
+Общий код (срез B2): `DockerDiskPlanner(probe, protected_refs=..., current_version=..., image_base=...)` с
+`measure()` (замер `DockerDiskSnapshot`: только своё, откат защищён, `cleanable_bytes`, `old_versions`) и
+`plan(CleanupPlanRequest(targets, include_rollback=...))`; цели не из Docker (`runner_cache`) планировщик пропускает,
+Docker недоступен даёт `DockerUnavailableError`. Полоса категорий отчёта считается `category_breakdown(usage)` так же,
+как во фронтенде. Шаги кэша подключаются в `DockerCleanupJobManager(manager, extra_steps={"runner_blobs": ...})`
+(подменить шаги Docker нельзя), ход принимает `start(steps, observer=...)`: наблюдатель вызывается на каждой смене
+статуса шага и после итога, его сбой очистку не останавливает. Исключение подключённого шага становится ошибкой шага
+с именем типа исключения (без путей).
 
 Ход шлётся не чаще раза в секунду и всегда на смене статуса шага; сбой доставки хода не останавливает очистку
 (повтор на следующем), итог повторяется до 10 раз с паузой, как `complete` задачи. После итога раннер сразу шлёт
@@ -563,8 +604,14 @@ RunnerCommandEnvelope: {id, kind, payload, issued_at}
 | `runner.disk_cleanup` | команда очистки поставлена | кто запустил | id раннера | `targets`, `include_rollback`, `owner_kind`, `owner_id`, `command_id` |
 | `runner.disk_cleanup_cancel` | остановка | кто остановил | id раннера | `command_id` |
 | `runner.disk_cleaned` | итог очистки (`done`, `cancelled`, `error`, `lost`, `expired`) | кто запустил | id раннера | `command_id`, `state`, `freed_bytes`, `errors` (число), `steps` (число) |
-| `lifecycle.sweep` | прогон запущен | админ | `all` | `sweep_id`, `keys` |
-| `lifecycle.swept` | итог прогона | админ | `all` | `sweep_id`, `status`, `removed`, `freed_bytes`, `errors` |
+| `lifecycle.sweep` | прогон запущен | админ | `all` | `sweep_id`, `sources` |
+| `lifecycle.sweep_cancel` | остановка прогона | кто остановил | `all` | `sweep_id` |
+| `lifecycle.swept` | итог прогона (`done`, `cancelled`, `error`, `interrupted`) | кто запустил | `all` | `sweep_id`, `status`, `removed`, `freed_bytes`, `errors` |
+
+Уточнение при внедрении (B7): поле `keys` в `details` переименовано в `sources`: журнал вычёркивает значения под
+ключами, в имени которых есть `key`, `token`, `secret` и подобное (`core/identity/redaction.py`), поэтому `keys`
+приходил бы как `[redacted]`. То же правило касается полей B6. Событие остановки прогона добавлено по образцу
+`runner.disk_cleanup_cancel`: тест покрытия аудита требует события у каждой изменяющей ручки админки.
 
 `disk.measure` в аудит не пишется: это чтение. Подписи всех новых действий в `admin/audit.json` ru и en в том же
 срезе, что пишет событие: тест `auditActions.test.ts` сверяет коды домена `runner` в коде бэкенда с подписями.
@@ -639,7 +686,7 @@ RunnerDiskSummary
 | `runner_offline` | 409 | раннер не на связи (тот же критерий, что статус `offline` в списке) |
 | `runner_disk_busy` | 409 | у раннера уже идёт очистка |
 | `disk_target_unavailable` | 409 | цели нет в `targets` последнего отчёта (Kubernetes, Docker недоступен) |
-| `input_invalid` | 422 | пустой или повторяющийся список целей |
+| `input_invalid` | 422 | пустой или повторяющийся список целей; `include_rollback` без цели `old_versions` |
 | `command_finished` | 409 | остановка уже закрытой команды |
 
 ### 9.2 «Освободить место»
@@ -659,8 +706,11 @@ LifecycleSweepPreview
   nothing (true, если у всех count = 0)
 ```
 
-Коды: `lifecycle_sweep_busy` (409), `command_finished` (409) для остановки закрытого, `forbidden` (403) не админу.
-Ответы с `Cache-Control: no-store`, как остальной `/data-lifecycle`.
+Коды: `lifecycle_sweep_busy` (409), `command_finished` (409) для остановки закрытого, `not_found` (404) для
+неизвестного прогона и не админу (как вся админка, `require_admin`; в первой редакции здесь стоял 403). Ответы с
+`Cache-Control: no-store`, как остальной `/data-lifecycle`. `started_by` в `LifecycleSweep` это id пользователя или
+`null` (пользователь удалён), без имени. Коды `lifecycle_sweep_busy` и `command_finished` уже есть в
+`IdentityErrorCode`, `contracts/server/error_codes.json` и `errors.json`; B6 берёт `command_finished` оттуда.
 
 ### 9.3 Общие правила
 
@@ -748,7 +798,7 @@ E2E (срез E1): раздел 12.
 | Срез | Что | Зависит от | Размер |
 |---|---|---|---|
 | B1 | контракт протокола: `core/jobs/disk.py` (отчёт, цели, команда, ход), возможности `control` и `disk` в `wire.py`, сообщения канала, `contracts/runner/openapi.yaml`, `error_codes.json`, фикстуры, контрактный тест | нет | S |
-| B2 | общий код очистки: `DockerDiskPlanner` из `use_cases/system` без зависимости от настроек api и `ISettingsRepository`, функция категорий, подключаемые виды шагов и наблюдатель хода в `DockerCleanupJobManager`; локальная Студия переведена на них без изменения поведения и API | нет | M |
+| B2 | общий код очистки: `DockerDiskPlanner` из `use_cases/system` в `core/docker_disk` без зависимости от настроек api и `ISettingsRepository`, функция категорий, подключаемые виды шагов и наблюдатель хода в `DockerCleanupJobManager`; локальная Студия переведена на них без изменения поведения и API | нет | M |
 | B3 | раннер, замер и очистка: `RunnerDiskService`, `BlobCache.usage/clear`, `RunnerWorkspaces.usage/clear` (S9), причины `kubernetes` и `managed_locally`, обрезка отчёта | B1, B2 | M |
 | B4 | раннер, канал: `RunnerClient.control_poll/progress/report_disk`, `RunnerControlLoop` в `RunnerLoop`, объявление возможностей, отчёт после `/announce`, раз в 6 часов и после очистки, повторы итога; подключение в контейнере раннера и в `infra/remote_runner` | B1, B3 | M |
 | B5 | сервер, канал и хранение: миграция `dk_01_runner_disk`, `runners.disk`, `runner_commands`, репозитории Postgres и in-memory, `RunnerControlService` (опрос, ход, просрочка, потеря, `runner_commands_reaper`), `/control/*` и `/disk`, `SERVER_FEATURES`, запись в реестре жизненного цикла | B1 | M |

@@ -8,21 +8,53 @@ from __future__ import annotations
 
 import asyncio
 import time
-from collections.abc import Sequence
-from datetime import timedelta
+from collections.abc import Mapping, Sequence
+from datetime import datetime, timedelta
 from typing import Any, cast
 
 import structlog
-from sqlalchemy import CursorResult, Result, text
+from sqlalchemy import CursorResult, Executable, Result, text
+from sqlalchemy.exc import SQLAlchemyError
 
-from hse_doc_studio.core.lifecycle.ports import PurgeContext, PurgeResult, SourceSize
+from hse_doc_studio.core.lifecycle.ports import ExpiredCount, PurgeContext, PurgeResult, SourceSize
 from hse_doc_studio.infra.db.session import SessionProvider
 
 logger = structlog.get_logger(__name__)
 
+# Предпросмотр «Освободить место» не должен тормозить базу: запрос счёта дольше этого обрывается, а на экране
+# «не удалось посчитать» (storage-cleanup.md, 5.4).
+COUNT_TIMEOUT_MS = 3000
+
 
 def _affected(result: Result[Any]) -> int:
     return int(cast("CursorResult[Any]", result).rowcount)
+
+
+def count_sql(table: str, condition: str) -> str:
+    """Счёт с потолком `:limit`: дальше потолка строки не перебираются. Имена и условия только из констант."""
+    return f"SELECT count(*) FROM (SELECT 1 FROM {table} WHERE {condition} LIMIT :limit) AS expired"  # noqa: S608
+
+
+async def count_capped(
+    sessions: SessionProvider, statements: Sequence[Executable], params: Mapping[str, object], cap: int
+) -> int | None:
+    """Сумма счётов запросов с потолком `cap + 1`, каждый под `statement_timeout`; None, если запрос не прошёл.
+
+    Своя короткая транзакция на запрос: `SET LOCAL` не переживает её, а оборванный таймаутом запрос не портит
+    чужую транзакцию.
+    """
+    total = 0
+    for statement in statements:
+        try:
+            async with sessions.use() as db:
+                await db.execute(text(f"SET LOCAL statement_timeout = {COUNT_TIMEOUT_MS}"))
+                total += int((await db.execute(statement, {**params, "limit": cap + 1})).scalar_one())
+        except SQLAlchemyError:
+            logger.warning("lifecycle_count_failed", exc_info=True)
+            return None
+        if total > cap:
+            return cap + 1
+    return total
 
 
 _PARTITION_STATS = text(
@@ -55,6 +87,9 @@ class TableMeasure:
     async def purge(self, ctx: PurgeContext) -> PurgeResult:
         return PurgeResult()
 
+    async def count_expired(self, now: datetime, cutoff: datetime | None, cap: int) -> ExpiredCount:
+        return ExpiredCount(None)
+
 
 class PartitionedTableSource:
     """Журнал, разрезанный на месячные партиции: старые партиции отбрасываются целиком, без DELETE.
@@ -73,6 +108,7 @@ class PartitionedTableSource:
         pause_s: float,
         batch_delete: str,
         batch_returns_count: bool = False,
+        time_column: str = "at",
     ) -> None:
         self.key = key
         self._sessions = sessions
@@ -83,6 +119,7 @@ class PartitionedTableSource:
         # возвращает число стёртых строк скаляром, у обычного DELETE оно в rowcount.
         self._batch_sql = text(batch_delete)
         self._scalar = batch_returns_count
+        self._count = text(count_sql(table, f"{time_column} < :cutoff"))
 
     async def measure(self) -> SourceSize:
         async with self._sessions.use() as db:
@@ -127,10 +164,16 @@ class PartitionedTableSource:
             await asyncio.sleep(self._pause_s)
         return PurgeResult(removed=removed, partitions_dropped=len(dropped), more=more)
 
+    async def count_expired(self, now: datetime, cutoff: datetime | None, cap: int) -> ExpiredCount:
+        if cutoff is None:
+            return ExpiredCount(0)
+        return ExpiredCount(await count_capped(self._sessions, [self._count], {"cutoff": cutoff}, cap), cutoff)
+
 
 class DeleteBatchesSource:
     """Таблицы без партиций: DELETE пачками по готовым запросам `:cutoff`, `:n`.
 
+    `counts`: запросы счёта тех же условий (`:cutoff`, `:limit`) для предпросмотра, по одному на запрос удаления.
     `fixed_age`: срок зашит в код (источник без настройки): граница считается от текущего момента, а не от политики.
     """
 
@@ -142,20 +185,33 @@ class DeleteBatchesSource:
         statements: Sequence[str],
         *,
         pause_s: float,
+        counts: Sequence[str] = (),
         fixed_age: timedelta | None = None,
     ) -> None:
         self.key = key
         self._sessions = sessions
         self._measure = TableMeasure(sessions, key, tables)
         self._statements = [text(s) for s in statements]
+        self._counts = [text(s) for s in counts]
         self._pause_s = pause_s
         self._fixed_age = fixed_age
+
+    def _cutoff(self, now: datetime, cutoff: datetime | None) -> datetime | None:
+        return now - self._fixed_age if self._fixed_age is not None else cutoff
 
     async def measure(self) -> SourceSize:
         return await self._measure.measure()
 
+    async def count_expired(self, now: datetime, cutoff: datetime | None, cap: int) -> ExpiredCount:
+        border = self._cutoff(now, cutoff)
+        if border is None:
+            return ExpiredCount(0)
+        if not self._counts:
+            return ExpiredCount(None, border)
+        return ExpiredCount(await count_capped(self._sessions, self._counts, {"cutoff": border}, cap), border)
+
     async def purge(self, ctx: PurgeContext) -> PurgeResult:
-        cutoff = ctx.now - self._fixed_age if self._fixed_age is not None else ctx.cutoff
+        cutoff = self._cutoff(ctx.now, ctx.cutoff)
         if cutoff is None:
             return PurgeResult()
         removed = 0

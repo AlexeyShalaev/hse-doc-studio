@@ -182,6 +182,8 @@
     "passkey_invalid": "The passkey didn't work. Try again or use another way to sign in.",
     "passkey_limit": "An account can have at most 20 passkeys. Remove one you no longer use.",
     "reauth_required": "Confirm it's you: enter your password or use a passkey.",
+    "lifecycle_sweep_busy": "A cleanup is already running. Wait for it to finish.",
+    "command_finished": "This has already finished, there is nothing to stop.",
     "invalid_transition": "The signing route cannot be changed this way in its current state. Reload the page.",
     "doc_changed": "The document has changed since you viewed it. Open it again.",
     "route_blocked": "The route cannot be sent: fix what blocks it.",

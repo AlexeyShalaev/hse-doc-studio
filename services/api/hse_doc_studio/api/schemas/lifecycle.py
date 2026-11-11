@@ -78,3 +78,60 @@ class LifecycleRunBody(StrictModel):
     partitions_dropped: int
     more: bool
     error: str | None
+
+
+# «Освободить место» (storage-cleanup.md, 5.4 и 9.2).
+SweepStatusName = Literal["running", "cancelling", "done", "cancelled", "error", "interrupted"]
+SweepStepStatusName = Literal["pending", "running", "done", "error", "skipped"]
+ExcludedReasonName = Literal["protected", "own_task", "on_write", "infra"]
+
+
+class LifecycleSweepStep(StrictModel):
+    key: str
+    status: SweepStepStatusName
+    removed: int
+    partitions_dropped: int
+    # Бюджет источника кончился: остальное удалится при следующей плановой очистке.
+    more: bool
+    bytes_before: int | None
+    bytes_after: int | None
+    error: str | None
+
+
+class LifecycleSweepBody(StrictModel):
+    id: str
+    status: SweepStatusName
+    started_by: str | None
+    started_at: datetime
+    updated_at: datetime
+    finished_at: datetime | None
+    steps: list[LifecycleSweepStep]
+    removed_total: int
+    # Уменьшение размера источников по замеру до и после: DELETE места на диске не освобождает.
+    freed_bytes: int
+
+
+class LifecycleSweepStateBody(StrictModel):
+    sweep: LifecycleSweepBody | None
+
+
+class LifecycleSweepPreviewSource(StrictModel):
+    key: str
+    # null: срок фиксирован в коде (гостевые сессии), граница всё равно в `cutoff`.
+    days: int | None
+    cutoff: datetime | None
+    # null: посчитать не удалось (таймаут запроса); с `capped` это «больше count».
+    count: int | None
+    capped: bool
+    bytes: int | None
+
+
+class LifecycleSweepExcluded(StrictModel):
+    key: str
+    reason: ExcludedReasonName
+
+
+class LifecycleSweepPreviewBody(StrictModel):
+    sources: list[LifecycleSweepPreviewSource]
+    excluded: list[LifecycleSweepExcluded]
+    nothing: bool

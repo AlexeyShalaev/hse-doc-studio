@@ -1,0 +1,37 @@
+{
+  "state": "error",
+  "progress": {
+    "steps": [
+      {
+        "kind": "image",
+        "ref": "texlive/texlive:TL2023-historic",
+        "status": "error",
+        "freed_bytes": 0,
+        "error": "Error response from daemon: conflict: unable to remove repository reference (must force)"
+      },
+      {
+        "kind": "build_cache",
+        "ref": null,
+        "status": "done",
+        "freed_bytes": 734003200,
+        "error": null
+      },
+      {
+        "kind": "runner_blobs",
+        "ref": null,
+        "status": "done",
+        "freed_bytes": 52428800,
+        "error": null
+      },
+      {
+        "kind": "runner_workspaces",
+        "ref": null,
+        "status": "skipped",
+        "freed_bytes": 0,
+        "error": null
+      }
+    ],
+    "freed_bytes": 786432000,
+    "error": null
+  }
+}

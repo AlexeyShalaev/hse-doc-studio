@@ -4,16 +4,16 @@ decide what the UI sees and what "Очистить всё" is allowed to touch.
 
 from __future__ import annotations
 
-from hse_doc_studio.infra.docker.system_manager import (
+from hse_doc_studio.core.docker_disk.rules import (
+    cleanable_bytes,
+    ours_only,
+    unused_app_image_refs,
+)
+from hse_doc_studio.core.docker_disk.usage import (
     ContainerUsage,
     DockerDiskUsage,
     ImageUsage,
     VolumeUsage,
-)
-from hse_doc_studio.use_cases.system.get_docker_disk_usage import (
-    cleanable_bytes,
-    ours_only,
-    unused_app_image_refs,
 )
 
 

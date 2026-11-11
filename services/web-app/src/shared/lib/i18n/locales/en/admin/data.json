@@ -63,7 +63,8 @@
       "guest_sessions": "7 days after expiry",
       "compile_records": "50 per document",
       "container_logs": "5 × 10 MB",
-      "auth_records": "on expiry"
+      "auth_records": "on expiry",
+      "lifecycle_sweeps": "20 runs"
     },
     "source": {
       "audit_log": {
@@ -129,6 +130,10 @@
       "chat_history": {
         "title": "AI chat history",
         "body": "Bounded by run count and trace size."
+      },
+      "lifecycle_sweeps": {
+        "title": "“Free up space” runs",
+        "body": "Progress and outcome of cleaning every source with one button in Storage."
       },
       "container_logs": {
         "title": "Container logs",

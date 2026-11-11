@@ -168,6 +168,8 @@ POLICIES: tuple[LifecyclePolicy, ...] = (
     LifecyclePolicy("compile_records", Group.database, Strategy.on_write, tables=("compile_records",), growth="high"),
     LifecyclePolicy("project_artifacts", Group.objects, Strategy.on_write, tables=("project_artifacts",)),
     LifecyclePolicy("chat_history", Group.database, Strategy.on_write, tables=("chat_messages", "chat_agent_runs")),
+    # Прогоны «Освободить место» (storage-cleanup.md, S13): 20 последних, старые стираются при вставке.
+    LifecyclePolicy("lifecycle_sweeps", Group.database, Strategy.on_write, tables=("lifecycle_sweeps",)),
     LifecyclePolicy("container_logs", Group.logs, Strategy.infra, growth="high"),
     LifecyclePolicy("process_logs", Group.logs, Strategy.infra),
     LifecyclePolicy("postgres_wal", Group.logs, Strategy.infra),

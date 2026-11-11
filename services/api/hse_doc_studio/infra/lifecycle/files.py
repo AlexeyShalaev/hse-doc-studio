@@ -6,9 +6,10 @@ import asyncio
 import contextlib
 import os
 import time
+from datetime import datetime
 from pathlib import Path
 
-from hse_doc_studio.core.lifecycle.ports import PurgeContext, PurgeResult, SourceSize
+from hse_doc_studio.core.lifecycle.ports import ExpiredCount, PurgeContext, PurgeResult, SourceSize
 
 _SUFFIX = ".ystate"
 
@@ -25,6 +26,23 @@ def _scan(root: Path) -> tuple[int, int]:
                         total += item.stat(follow_symlinks=False).st_size
                         files += 1
     return total, files
+
+
+def _count_stale(root: Path, cutoff_ts: float, limit: int) -> int:
+    """Файлы состояния, не тронутые с `cutoff_ts`, с потолком `limit`: то же правило, что у `_sweep`."""
+    found = 0
+    with contextlib.suppress(OSError):
+        for folder in os.scandir(root):
+            if not folder.is_dir(follow_symlinks=False):
+                continue
+            with contextlib.suppress(OSError):
+                for item in os.scandir(folder.path):
+                    stale = item.name.endswith(_SUFFIX) and item.is_file(follow_symlinks=False)
+                    if stale and item.stat(follow_symlinks=False).st_mtime < cutoff_ts:
+                        found += 1
+                        if found >= limit:
+                            return found
+    return found
 
 
 def _sweep(root: Path, cutoff_ts: float, deadline: float) -> tuple[int, bool]:
@@ -58,6 +76,11 @@ class CollabStateSource:
     async def measure(self) -> SourceSize:
         size, _files = await asyncio.to_thread(_scan, self._root)
         return SourceSize(bytes=size)
+
+    async def count_expired(self, now: datetime, cutoff: datetime | None, cap: int) -> ExpiredCount:
+        if cutoff is None:
+            return ExpiredCount(0)
+        return ExpiredCount(await asyncio.to_thread(_count_stale, self._root, cutoff.timestamp(), cap + 1), cutoff)
 
     async def purge(self, ctx: PurgeContext) -> PurgeResult:
         if ctx.cutoff is None:

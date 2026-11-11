@@ -48,6 +48,3 @@ signing_identities/delete_signing_identity.py hse_doc_studio.infra.signatures.op
 signing_identities/openpgp_keys.py hse_doc_studio.infra.signatures.openpgp
 synctex/query_synctex.py hse_doc_studio.infra.synctex.parser
 system/cleanup_docker.py hse_doc_studio.infra.docker.cleanup_jobs
-system/cleanup_docker.py hse_doc_studio.infra.docker.system_manager
-system/get_docker_disk_usage.py hse_doc_studio.infra.docker.system_manager
-system/old_versions.py hse_doc_studio.infra.docker.system_manager

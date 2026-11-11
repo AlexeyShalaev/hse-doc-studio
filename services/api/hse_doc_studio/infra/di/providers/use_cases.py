@@ -18,6 +18,7 @@ from hse_doc_studio.core.ai_runtime import (
 )
 from hse_doc_studio.core.checks.protocols import ICheckRunner
 from hse_doc_studio.core.compile.wait import ICompileWaitReader, NoCompileWait
+from hse_doc_studio.core.docker_disk.categories import studio_protected_refs
 from hse_doc_studio.core.events import IJobLogStream
 from hse_doc_studio.core.fonts.entities import FontCatalog
 from hse_doc_studio.core.fonts.repositories import (
@@ -529,14 +530,7 @@ def _ci_image() -> str:
 
 
 def _docker_always_protected() -> frozenset[str]:
-    version = settings.get_app_version()
-    return frozenset(
-        {
-            settings.ollama.image,
-            f"{settings.image_base}:{version}",
-            f"{settings.image_base}:latest",
-        }
-    )
+    return frozenset({settings.ollama.image}) | studio_protected_refs(settings.image_base, settings.get_app_version())
 
 
 class UseCaseProvider(Provider):

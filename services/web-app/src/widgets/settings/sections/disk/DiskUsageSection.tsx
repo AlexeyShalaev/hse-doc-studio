@@ -7,6 +7,10 @@ import { Modal } from "@shared/ui/Modal";
 import { formatBytes } from "@shared/lib";
 import { useAppSettings, useUpdateAppSettings } from "@entities/app-settings";
 import {
+  DiskUsageOverview,
+  buildDiskSegments,
+  diskSegmentsTotal,
+  dockerUsageCategories,
   isJobActive,
   useCleanupJob,
   useDockerUsage,
@@ -18,68 +22,10 @@ import { Setting, SettingHead } from "../Setting";
 import { DiskCleanupPanel } from "./DiskCleanupPanel";
 import { DiskOldVersions } from "./DiskOldVersions";
 import { DiskEntityLists } from "./DiskEntityLists";
-import { buildSegments, type Segment } from "./lib";
+import { categoryLabelKey } from "./lib";
 
 const WARN_THRESHOLDS = [0, 5, 10, 20, 50] as const;
 type WarnThreshold = (typeof WARN_THRESHOLDS)[number];
-
-const StackedBar = ({ segments }: { segments: Segment[] }) => (
-  <div
-    className="flex items-center"
-    style={{
-      height: "1.375rem",
-      borderRadius: "var(--r-2)",
-      overflow: "hidden",
-      background: "var(--bg-2)",
-      gap: "0.125rem",
-      padding: "0.125rem",
-    }}
-  >
-    {segments.map((s) => (
-      <div
-        key={s.key}
-        title={formatBytes(s.bytes)}
-        style={{
-          flex: `${s.bytes.toFixed(0)} 0 0`,
-          height: "100%",
-          borderRadius: "0.125rem",
-          background: s.color,
-          minWidth: "0.1875rem",
-        }}
-      />
-    ))}
-  </div>
-);
-
-const Legend = ({ segments }: { segments: Segment[] }) => {
-  const { t } = useTranslation("settings");
-  return (
-    <div
-      className="flex flex-wrap items-center"
-      style={{ gap: "0.375rem 1rem", fontSize: "0.71875rem" }}
-    >
-      {segments.map((s) => (
-        <div
-          key={s.key}
-          className="flex items-center"
-          style={{ gap: "0.375rem" }}
-        >
-          <span
-            style={{
-              width: "0.5rem",
-              height: "0.5rem",
-              borderRadius: "0.125rem",
-              background: s.color,
-              flexShrink: 0,
-            }}
-          />
-          <span className="dim">{t(s.labelKey)}</span>
-          <span className="mono">{formatBytes(s.bytes)}</span>
-        </div>
-      ))}
-    </div>
-  );
-};
 
 // What «Очистить всё» would actually remove — shown in the confirm modal so
 // the user approves a concrete list, not an abstract "everything".
@@ -111,10 +57,15 @@ export const DiskUsageSection = () => {
   const busy = isJobActive(jobQuery.data?.job) || startCleanup.isPending;
 
   const segments = useMemo(
-    () => (usage?.available ? buildSegments(usage) : []),
-    [usage],
+    () =>
+      usage?.available
+        ? buildDiskSegments(dockerUsageCategories(usage), (key) =>
+            t(categoryLabelKey(key)),
+          )
+        : [],
+    [usage, t],
   );
-  const total = segments.reduce((sum, s) => sum + s.bytes, 0);
+  const total = diskSegmentsTotal(segments);
 
   const start = (input: {
     targets?: CleanupTarget[];
@@ -133,15 +84,15 @@ export const DiskUsageSection = () => {
   const plan = usage?.available ? buildCleanAllPlan(usage) : null;
 
   const renderOverview = (data: DockerUsage) => (
-    <div className="flex flex-col" style={{ gap: "0.625rem" }}>
-      <div
-        className="flex items-center justify-between"
-        style={{ gap: "0.5rem" }}
-      >
-        <span style={{ fontSize: "0.8125rem", fontWeight: 600 }}>
+    <DiskUsageOverview
+      segments={segments}
+      title={
+        <>
           {t("disk.total")}: {formatBytes(total)}
-        </span>
-        <span className="flex items-center" style={{ gap: "0.5rem" }}>
+        </>
+      }
+      aside={
+        <>
           {data.cleanable_bytes > 0 && (
             <span className="dim" style={{ fontSize: "0.71875rem" }}>
               {t("disk.cleanable", { size: formatBytes(data.cleanable_bytes) })}
@@ -161,11 +112,9 @@ export const DiskUsageSection = () => {
               className={usageQuery.isFetching ? "animate-spin" : undefined}
             />
           </button>
-        </span>
-      </div>
-      <StackedBar segments={segments} />
-      <Legend segments={segments} />
-    </div>
+        </>
+      }
+    />
   );
 
   const renderActions = (data: DockerUsage) => (

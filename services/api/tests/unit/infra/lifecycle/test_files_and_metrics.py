@@ -88,3 +88,34 @@ def test__collector__exposes_sources_volumes_and_safe_mode() -> None:
     assert 'hse_storage_used_ratio{volume="data"} 0.9' in text
     assert 'hse_storage_total_bytes{volume="database"}' not in text
     assert "hse_storage_safe_mode 1" in text
+
+
+async def test__collab_state__count_expired__same_rule_as_sweep_with_cap(tmp_path: Path) -> None:
+    for n in range(4):
+        _state(tmp_path, f"p{n}", "a", 200)
+    _state(tmp_path, "p9", "fresh", 1)
+    (tmp_path / "p0" / "keep.txt").write_text("не состояние", encoding="utf-8", newline="\n")
+    source = CollabStateSource(tmp_path)
+    cutoff = datetime.now(UTC) - timedelta(days=90)
+
+    full = await source.count_expired(NOW, cutoff, cap=10)
+    capped = await source.count_expired(NOW, cutoff, cap=2)
+    off = await source.count_expired(NOW, None, cap=10)
+    missing = await CollabStateSource(tmp_path / "nope").count_expired(NOW, cutoff, cap=10)
+
+    assert (full.count, full.cutoff) == (4, cutoff)
+    assert capped.count == 3
+    assert off.count == 0
+    assert missing.count == 0
+
+
+def test__collector__sweeps_by_status() -> None:
+    finished = {"done": 2, "interrupted": 1}
+
+    text = "\n".join(lifecycle_collector(dict, list, SafeMode(), lambda: finished)())
+    idle = "\n".join(lifecycle_collector(dict, list, SafeMode())())
+
+    assert "# TYPE hse_lifecycle_sweeps_total counter" in text
+    assert 'hse_lifecycle_sweeps_total{status="done"} 2' in text
+    assert 'hse_lifecycle_sweeps_total{status="interrupted"} 1' in text
+    assert "hse_lifecycle_sweeps_total" not in idle
