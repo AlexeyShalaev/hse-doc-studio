@@ -1,0 +1,35 @@
+{
+  "id": 1205,
+  "at": "2026-11-11T10:58:13Z",
+  "template": "project_invitation_link",
+  "template_known": true,
+  "lang": "ru",
+  "to_email": "reject-x@example.org",
+  "to_user": null,
+  "subject": "Анна Петрова приглашает вас в «Курсовая работа по ГОСТ»",
+  "status": "failed",
+  "reason": "recipient_refused",
+  "failure": {
+    "smtp_code": 550,
+    "text": "5.1.1 <reject-x@example.org>: Recipient address rejected: User unknown"
+  },
+  "message_id": null,
+  "attempts": 1,
+  "duration_ms": 231,
+  "cause": "user",
+  "actor": {
+    "id": "c3d4a1f0e6b24d89a5f7120b9e8c6a31",
+    "name": "Анна Петрова",
+    "email": "anna.petrova@example.org"
+  },
+  "task": null,
+  "origin": "project_invite",
+  "project": {
+    "id": "5b0c1d2e-3f40-4152-8364-758697a8b9c0",
+    "name": "Курсовая работа по ГОСТ"
+  },
+  "ref": {
+    "kind": "project_invitation",
+    "id": "a71f3c2e9d8b4c5a"
+  }
+}

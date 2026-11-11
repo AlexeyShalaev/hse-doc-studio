@@ -1,0 +1,10 @@
+{
+  "smtp_configured": true,
+  "window_hours": 24,
+  "sent": 0,
+  "failed": 0,
+  "not_sent": 0,
+  "suppressed": 0,
+  "last_failure": null,
+  "retention_days": 30
+}

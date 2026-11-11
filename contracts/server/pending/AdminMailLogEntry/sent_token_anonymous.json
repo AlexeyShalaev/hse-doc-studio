@@ -1,0 +1,26 @@
+{
+  "id": 1207,
+  "at": "2026-11-11T11:32:05Z",
+  "template": "reset_password",
+  "template_known": true,
+  "lang": "ru",
+  "to_email": "boris.kovalev@example.org",
+  "to_user": {
+    "id": "4e7a2d9c1b3f4a5e8d6c0b2a9f8e7d61",
+    "name": "Борис Ковалёв",
+    "email": "boris.kovalev@example.org"
+  },
+  "subject": "Сброс пароля",
+  "status": "sent",
+  "reason": null,
+  "failure": null,
+  "message_id": "<1772861207.4182.1@studio.example.org>",
+  "attempts": 1,
+  "duration_ms": 388,
+  "cause": "anonymous",
+  "actor": null,
+  "task": null,
+  "origin": "forgot_password",
+  "project": null,
+  "ref": null
+}

@@ -1,0 +1,36 @@
+{
+  "entry": {
+    "id": 1207,
+    "at": "2026-11-11T11:32:05Z",
+    "template": "reset_password",
+    "template_known": true,
+    "lang": "ru",
+    "to_email": "boris.kovalev@example.org",
+    "to_user": {
+      "id": "4e7a2d9c1b3f4a5e8d6c0b2a9f8e7d61",
+      "name": "Борис Ковалёв",
+      "email": "boris.kovalev@example.org"
+    },
+    "subject": "Сброс пароля",
+    "status": "sent",
+    "reason": null,
+    "failure": null,
+    "message_id": "<1772861207.4182.1@studio.example.org>",
+    "attempts": 1,
+    "duration_ms": 388,
+    "cause": "anonymous",
+    "actor": null,
+    "task": null,
+    "origin": "forgot_password",
+    "project": null,
+    "ref": null
+  },
+  "preview": {
+    "subject": "Сброс пароля",
+    "html": "<!doctype html><html lang=\"ru\"><head><meta charset=\"utf-8\"><title>Сброс пароля</title></head><body style=\"margin:0;background:#f4f5f7;font-family:Arial,sans-serif\"><table role=\"presentation\" width=\"100%\"><tr><td align=\"center\"><h1 style=\"font-size:22px;color:#111827\">Сброс пароля</h1><span style=\"display:inline-block;padding:12px 24px;border-radius:8px;background:#1f4fd8;color:#ffffff\">Задать новый пароль</span><p style=\"font-size:13px;color:#6b7280\">[ссылка скрыта]</p></td></tr></table></body></html>",
+    "text": "HSE Doc Studio\n\nСброс пароля\n\nМы получили запрос на смену пароля. Нажмите кнопку, чтобы задать новый.\n\nУчётная запись: boris.kovalev@example.org\n\nЗадать новый пароль:\n[ссылка скрыта]\n\nСсылка действует 1 час.\n\nПочему вы получили это письмо\nЗапрос на сброс пароля для адреса boris.kovalev@example.org создан на сервере studio.example.org.\n\nБезопасность\nЕсли вы не просили сброс, проигнорируйте письмо: пароль останется прежним.\nНе пересылайте это письмо: по ссылке из него можно сменить пароль.\n\n--\nСервер: https://studio.example.org\nПисьмо отправлено на адрес boris.kovalev@example.org.\nЭто автоматическое сообщение, отвечать на него не нужно."
+  },
+  "link_hidden": true,
+  "note_hidden": false,
+  "rerendered": false
+}

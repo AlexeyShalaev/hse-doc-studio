@@ -21,6 +21,7 @@ from hse_doc_studio.api.schemas import diagnostics as dg
 from hse_doc_studio.api.schemas import git_remote as gr
 from hse_doc_studio.api.schemas import invitations as inv
 from hse_doc_studio.api.schemas import lifecycle as lc
+from hse_doc_studio.api.schemas import mail_log as ml
 from hse_doc_studio.api.schemas import passkeys as pk
 from hse_doc_studio.api.schemas import personal_runners as pr
 from hse_doc_studio.api.schemas import quotas as qt
@@ -39,6 +40,9 @@ from pydantic import TypeAdapter, ValidationError
 _REPO = Path(__file__).resolve().parents[5]
 _CONTRACT = _REPO / "contracts" / "server"
 _FIXTURES = _CONTRACT / "fixtures"
+# Эталоны, у которых ещё нет zod-схемы фронтенда (README контракта): этот тест разбирает их как обычные, фронтовый
+# тест их не видит, пока каталог не переедет в fixtures.
+_PENDING = _CONTRACT / "pending"
 _LOCALES = _REPO / "services" / "web-app" / "src" / "shared" / "lib" / "i18n" / "locales"
 
 # Каталог эталонов -> модель, которой он обязан соответствовать.
@@ -211,6 +215,11 @@ _SCHEMAS: dict[str, Any] = {
     "AdminSmtpTestRequest": s.AdminSmtpTestRequest,
     "AdminSmtpTestResult": s.AdminSmtpTestResult,
     "AdminMailPreview": s.AdminMailPreview,
+    # Журнал писем (docs/design/mail-log.md, 6.2).
+    "AdminMailLogEntry": ml.AdminMailLogEntry,
+    "AdminMailLogPage": ml.AdminMailLogPage,
+    "AdminMailLogDetail": ml.AdminMailLogDetail,
+    "AdminMailLogSummary": ml.AdminMailLogSummary,
     "AdminOidcProvider": s.AdminOidcProvider,
     "AdminOidcProviderList": s.AdminOidcProviderPage,
     "CreateAdminOidcProviderRequest": s.CreateAdminOidcProviderRequest,
@@ -319,8 +328,13 @@ def _read(path: Path) -> Any:
     return json.loads(path.read_text(encoding="utf-8"))
 
 
+def _dirs(root: Path) -> list[Path]:
+    return sorted(d for d in root.iterdir() if d.is_dir()) if root.is_dir() else []
+
+
 def _fixtures() -> list[tuple[str, str, Path]]:
-    return [(d.name, f.stem, f) for d in sorted(_FIXTURES.iterdir()) if d.is_dir() for f in sorted(d.glob("*.json"))]
+    dirs = sorted([*_dirs(_FIXTURES), *_dirs(_PENDING)], key=lambda d: d.name)
+    return [(d.name, f.stem, f) for d in dirs for f in sorted(d.glob("*.json"))]
 
 
 _CASES = _fixtures()
@@ -328,8 +342,13 @@ _CODES: list[str] = _read(_CONTRACT / "error_codes.json")
 
 
 def test_every_fixture_directory_has_a_schema() -> None:
-    dirs = sorted(d.name for d in _FIXTURES.iterdir() if d.is_dir())
+    dirs = sorted(d.name for d in [*_dirs(_FIXTURES), *_dirs(_PENDING)])
     assert dirs == sorted(_SCHEMAS)
+
+
+def test_pending_fixtures_are_not_duplicated() -> None:
+    # Каталог переезжает из pending в fixtures целиком: копия в обоих местах разошлась бы.
+    assert {d.name for d in _dirs(_PENDING)} & {d.name for d in _dirs(_FIXTURES)} == set()
 
 
 @pytest.mark.parametrize(("schema", "name", "path"), _CASES, ids=[f"{a}/{b}" for a, b, _ in _CASES])
