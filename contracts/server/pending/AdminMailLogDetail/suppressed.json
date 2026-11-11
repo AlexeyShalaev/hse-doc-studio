@@ -1,0 +1,46 @@
+{
+  "entry": {
+    "id": 1203,
+    "at": "2026-11-11T08:41:56Z",
+    "template": "project_invitation",
+    "template_known": true,
+    "lang": "ru",
+    "to_email": "boris.kovalev@example.org",
+    "to_user": {
+      "id": "4e7a2d9c1b3f4a5e8d6c0b2a9f8e7d61",
+      "name": "Борис Ковалёв",
+      "email": "boris.kovalev@example.org"
+    },
+    "subject": "Анна Петрова приглашает вас в «Курсовая работа по ГОСТ»",
+    "status": "suppressed",
+    "reason": "email_unverified",
+    "failure": null,
+    "message_id": null,
+    "attempts": 1,
+    "duration_ms": 0,
+    "cause": "user",
+    "actor": {
+      "id": "c3d4a1f0e6b24d89a5f7120b9e8c6a31",
+      "name": "Анна Петрова",
+      "email": "anna.petrova@example.org"
+    },
+    "task": null,
+    "origin": "notification",
+    "project": {
+      "id": "5b0c1d2e-3f40-4152-8364-758697a8b9c0",
+      "name": "Курсовая работа по ГОСТ"
+    },
+    "ref": {
+      "kind": "project_invitation",
+      "id": "b82e4d3f0a9c4d6b"
+    }
+  },
+  "preview": {
+    "subject": "Анна Петрова приглашает вас в «Курсовая работа по ГОСТ»",
+    "html": "<!doctype html><html lang=\"ru\"><head><meta charset=\"utf-8\"><title>Приглашение в проект</title></head><body style=\"margin:0;background:#f4f5f7;font-family:Arial,sans-serif\"><table role=\"presentation\" width=\"100%\"><tr><td align=\"center\"><h1 style=\"font-size:22px;color:#111827\">Приглашение в проект</h1><span style=\"display:inline-block;padding:12px 24px;border-radius:8px;background:#1f4fd8;color:#ffffff\">Открыть «Входящие»</span><p style=\"font-size:13px;color:#6b7280\">/inbox</p></td></tr></table></body></html>",
+    "text": "HSE Doc Studio\n\nПриглашение в проект\n\nАнна Петрова приглашает вас в проект «Курсовая работа по ГОСТ» с ролью «Редактор».\n\nПроект: Курсовая работа по ГОСТ\nРоль: Редактор\nКто пригласил: Анна Петрова\n\nОткрыть «Входящие»:\n/inbox\n\nПочему вы получили это письмо\nПриглашение пришло на адрес boris.kovalev@example.org, который привязан к вашей учётной записи на сервере studio.example.org.\n\nБезопасность\nЕсли вы не ждали приглашения, просто проигнорируйте письмо или отклоните его во «Входящих».\n\n--\nСервер: https://studio.example.org\nПисьмо отправлено на адрес boris.kovalev@example.org.\nЭто автоматическое сообщение, отвечать на него не нужно."
+  },
+  "link_hidden": false,
+  "note_hidden": false,
+  "rerendered": false
+}

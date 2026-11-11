@@ -1,0 +1,86 @@
+{
+  "items": [
+    {
+      "id": 1188,
+      "at": "2026-11-02T07:15:09Z",
+      "template": "verify_email",
+      "template_known": true,
+      "lang": "ru",
+      "to_email": "maria.orlova@example.org",
+      "to_user": null,
+      "subject": "Подтвердите e-mail",
+      "status": "sent",
+      "reason": null,
+      "failure": null,
+      "message_id": "<1772861188.4182.1@studio.example.org>",
+      "attempts": 1,
+      "duration_ms": 502,
+      "cause": "anonymous",
+      "actor": null,
+      "task": null,
+      "origin": "register",
+      "project": null,
+      "ref": null
+    },
+    {
+      "id": 1101,
+      "at": "2026-10-20T13:44:21Z",
+      "template": "access_request",
+      "template_known": true,
+      "lang": "ru",
+      "to_email": "anna.petrova@example.org",
+      "to_user": {
+        "id": "c3d4a1f0e6b24d89a5f7120b9e8c6a31",
+        "name": "Анна Петрова",
+        "email": "anna.petrova@example.org"
+      },
+      "subject": "Иван Сидоров просит доступ к «Черновик ВКР»",
+      "status": "sent",
+      "reason": null,
+      "failure": null,
+      "message_id": "<1772861101.4182.1@studio.example.org>",
+      "attempts": 1,
+      "duration_ms": 420,
+      "cause": "user",
+      "actor": null,
+      "task": null,
+      "origin": "notification",
+      "project": {
+        "id": "8f1e2d3c-4b5a-4697-a8b9-c0d1e2f3a4b5",
+        "name": null
+      },
+      "ref": {
+        "kind": "access_request",
+        "id": "c93f5e4a1b0d4e7c"
+      }
+    },
+    {
+      "id": 1042,
+      "at": "2026-10-14T12:00:00Z",
+      "template": "weekly_digest",
+      "template_known": false,
+      "lang": "ru",
+      "to_email": "anna.petrova@example.org",
+      "to_user": {
+        "id": "c3d4a1f0e6b24d89a5f7120b9e8c6a31",
+        "name": "Анна Петрова",
+        "email": "anna.petrova@example.org"
+      },
+      "subject": "Что нового за неделю",
+      "status": "sent",
+      "reason": null,
+      "failure": null,
+      "message_id": "<1772861042.4182.1@studio.example.org>",
+      "attempts": 1,
+      "duration_ms": 377,
+      "cause": "system",
+      "actor": null,
+      "task": "weekly_digest",
+      "origin": "notification",
+      "project": null,
+      "ref": null
+    }
+  ],
+  "next_cursor": null,
+  "total_estimate": 1207
+}

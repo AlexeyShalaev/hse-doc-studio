@@ -1,0 +1,13 @@
+{
+  "smtp_configured": true,
+  "window_hours": 24,
+  "sent": 12,
+  "failed": 37,
+  "not_sent": 0,
+  "suppressed": 1,
+  "last_failure": {
+    "at": "2026-11-11T09:00:02Z",
+    "reason": "auth"
+  },
+  "retention_days": 90
+}

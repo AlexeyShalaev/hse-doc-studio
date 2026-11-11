@@ -1,0 +1,76 @@
+{
+  "items": [
+    {
+      "id": 1205,
+      "at": "2026-11-11T10:58:13Z",
+      "template": "project_invitation_link",
+      "template_known": true,
+      "lang": "ru",
+      "to_email": "reject-x@example.org",
+      "to_user": null,
+      "subject": "Анна Петрова приглашает вас в «Курсовая работа по ГОСТ»",
+      "status": "failed",
+      "reason": "recipient_refused",
+      "failure": {
+        "smtp_code": 550,
+        "text": "5.1.1 <reject-x@example.org>: Recipient address rejected: User unknown"
+      },
+      "message_id": null,
+      "attempts": 1,
+      "duration_ms": 231,
+      "cause": "user",
+      "actor": {
+        "id": "c3d4a1f0e6b24d89a5f7120b9e8c6a31",
+        "name": "Анна Петрова",
+        "email": "anna.petrova@example.org"
+      },
+      "task": null,
+      "origin": "project_invite",
+      "project": {
+        "id": "5b0c1d2e-3f40-4152-8364-758697a8b9c0",
+        "name": "Курсовая работа по ГОСТ"
+      },
+      "ref": {
+        "kind": "project_invitation",
+        "id": "a71f3c2e9d8b4c5a"
+      }
+    },
+    {
+      "id": 1204,
+      "at": "2026-11-11T09:00:02Z",
+      "template": "signing_reminder",
+      "template_known": true,
+      "lang": "en",
+      "to_email": "john.smith@example.org",
+      "to_user": {
+        "id": "7d2c9a1e3b4f4e6a8c0d2b1a9e8f7c65",
+        "name": "John Smith",
+        "email": "john.smith@example.org"
+      },
+      "subject": "Reminder: Course project topic application (SmartLMS)",
+      "status": "failed",
+      "reason": "auth",
+      "failure": {
+        "smtp_code": 535,
+        "text": "5.7.8 Authentication credentials invalid for [скрыто]"
+      },
+      "message_id": null,
+      "attempts": 1,
+      "duration_ms": 1840,
+      "cause": "system",
+      "actor": null,
+      "task": "signing_reminders",
+      "origin": "signing_auto_reminder",
+      "project": {
+        "id": "5b0c1d2e-3f40-4152-8364-758697a8b9c0",
+        "name": "Курсовая работа по ГОСТ"
+      },
+      "ref": {
+        "kind": "signing_route",
+        "id": "0d1e2f30-4152-4637-8899-aabbccddeeff"
+      }
+    }
+  ],
+  "next_cursor": null,
+  "total_estimate": null
+}
