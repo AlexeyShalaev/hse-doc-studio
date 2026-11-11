@@ -70,6 +70,11 @@ const AdminModelServersPage = lazy(() =>
   })),
 );
 
+// Журнал писем: каждая попытка отправить письмо, сводка за сутки, карточка письма.
+const AdminMailLogPage = lazy(() =>
+  import("@features/admin-mail-log").then((m) => ({ default: m.MailLog })),
+);
+
 // MCP-сервер установки: включение, инструменты, журнал вызовов.
 const AdminMcpPage = lazy(() =>
   import("@features/mcp-server").then((m) => ({ default: m.AdminMcpPage })),
@@ -343,6 +348,15 @@ export const AdminApp = () => {
           element={
             <Page width="wide" ns={["modelServers"]}>
               <AdminModelServersPage />
+            </Page>
+          }
+        />
+        <Route
+          path="mail"
+          element={
+            // Подписи видов писем общие с блоком «Как выглядят письма» в настройках входа.
+            <Page width="wide" ns={["mail", "settings"]}>
+              <AdminMailLogPage />
             </Page>
           }
         />

@@ -195,6 +195,30 @@ describe("оболочка и сводка админки", () => {
       );
   };
 
+  it("письма: пункт в «Журнале» со счётчиком неушедших за сутки", async () => {
+    activateServerScenario("ops_services_degraded");
+    mount();
+    expect(screen.getByTestId("admin-nav-mail")).toHaveAttribute(
+      "href",
+      "/admin/mail",
+    );
+    const count = await screen.findByTestId("admin-nav-count-mail");
+    // SMTP-сервер отклоняет вход: за сутки пять писем не ушли.
+    expect(count).toHaveTextContent("5");
+    expect(count).toHaveAttribute("data-tone", "danger");
+    expect(count).toHaveTextContent("5 писем не ушло за сутки");
+  });
+
+  it("письма: без сбоев за сутки счётчика нет", async () => {
+    activateServerScenario("ops_fresh");
+    mount();
+    await screen.findByTestId("admin-instance-name");
+    await waitFor(() => {
+      expect(screen.getByTestId("admin-nav-mail")).toBeInTheDocument();
+    });
+    expect(screen.queryByTestId("admin-nav-count-mail")).toBeNull();
+  });
+
   it("самодиагностика: открытое предупреждение даёт точку у раздела", async () => {
     activateServerScenario("admin_ready");
     withDiagnostics(false);
@@ -260,7 +284,7 @@ describe("оболочка админки на телефоне", () => {
       expect(within(menu).getByText(group)).toBeInTheDocument();
     }
     // Все разделы и возврат в Студию.
-    expect(within(menu).getAllByRole("link")).toHaveLength(19);
+    expect(within(menu).getAllByRole("link")).toHaveLength(20);
     expect(
       await screen.findByTestId("admin-nav-count-services"),
     ).toHaveTextContent("4");

@@ -5504,6 +5504,15 @@
   background: var(--bg-hover);
   color: var(--fg-0);
 }
+.fmenu-caption {
+  padding: 0.5rem 0.5rem 0.25rem;
+  font-size: 0.6875rem;
+  font-weight: 500;
+  color: var(--fg-2);
+}
+.fmenu-caption:first-child {
+  padding-top: 0.25rem;
+}
 .fmenu-box {
   width: 0.875rem;
   height: 0.875rem;

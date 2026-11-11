@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { openProblems, useDiagnosticsQuiet } from "@features/admin-diagnostics";
 import { useInstanceSettings } from "@features/admin-install";
+import { useMailLogSummary } from "@features/admin-mail-log";
 import {
   diskTone,
   quietRunners,
@@ -19,7 +20,13 @@ import { useApprovalCount } from "@features/admin-users";
 export type NavCounterTone = "accent" | "warning" | "danger";
 export type NavCounters = Partial<
   Record<
-    "users" | "runners" | "services" | "storage" | "data" | "diagnostics",
+    | "users"
+    | "runners"
+    | "services"
+    | "storage"
+    | "data"
+    | "diagnostics"
+    | "mail",
     /** count 0: только точка, без числа (место на диске). */
     { count: number; tone: NavCounterTone }
   >
@@ -63,6 +70,8 @@ export const NavStatusProbe = ({
   const problems = diag ? openProblems(diag) : [];
   const diagCount = problems.length;
   const diagFail = problems.some((c) => c.status === "fail");
+  // Письма, которые не ушли за сутки (L14): «не отправлялось» без SMTP сюда не входит.
+  const mailFailed = useMailLogSummary().data?.failed ?? 0;
   const name = instance?.name.trim() ?? "";
   const host = instance ? hostOf(instance.public_url) : null;
 
@@ -89,6 +98,9 @@ export const NavStatusProbe = ({
         tone: diagFail ? "danger" : "warning",
       };
     }
+    if (mailFailed > 0) {
+      counters.mail = { count: mailFailed, tone: "danger" };
+    }
     onChange({
       counters,
       instanceName: name !== "" ? name : null,
@@ -103,6 +115,7 @@ export const NavStatusProbe = ({
     dataLevel,
     diagCount,
     diagFail,
+    mailFailed,
     name,
     host,
     onChange,

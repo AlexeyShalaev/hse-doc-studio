@@ -23,6 +23,7 @@ import {
   HeartPulse,
   KeyRound,
   LayoutDashboard,
+  Mail,
   Plug,
   Server,
   ShieldCheck,
@@ -63,7 +64,8 @@ export type AdminSection =
   | "aiProviders"
   | "modelServers"
   | "mcp"
-  | "audit";
+  | "audit"
+  | "mail";
 
 type NavItem = { id: AdminSection; to: string; icon: LucideIcon };
 type NavGroup = {
@@ -114,7 +116,10 @@ const ADMIN_NAV: readonly NavGroup[] = [
   },
   {
     id: "log",
-    items: [{ id: "audit", to: "/admin/audit", icon: ClipboardList }],
+    items: [
+      { id: "audit", to: "/admin/audit", icon: ClipboardList },
+      { id: "mail", to: "/admin/mail", icon: Mail },
+    ],
   },
 ];
 
@@ -145,6 +150,7 @@ const COUNTER_KEY: Record<string, string> = {
   storage: "nav.count.storage",
   data: "nav.count.data",
   diagnostics: "nav.count.diagnostics",
+  mail: "nav.count.mail",
 };
 
 const WithTip = ({

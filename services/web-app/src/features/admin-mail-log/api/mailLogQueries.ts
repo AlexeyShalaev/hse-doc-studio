@@ -41,7 +41,7 @@ export const MAIL_LOG_LIST = {
 } as const satisfies ListStateOptions<string, never>;
 
 export type MailLogFilterName = keyof typeof MAIL_LOG_LIST.filters;
-export type MailLogListState = ListQueryState<MailLogFilterName>;
+export type MailLogListState = ListQueryState<MailLogFilterName, never>;
 
 const idOf = (row: MailLogEntry): string => String(row.id);
 
