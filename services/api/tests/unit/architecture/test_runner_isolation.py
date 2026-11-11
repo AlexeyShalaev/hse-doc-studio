@@ -29,6 +29,10 @@ _FORBIDDEN_PREFIXES = (
 _PROBE = """
 import json, sys
 import hse_doc_studio.infra.di.containers.runner
+# Правила «Диска» раннер собирает сам (docs/design/storage-cleanup.md, S2): они не тянут api и use_cases.
+import hse_doc_studio.core.docker_disk.planner
+import hse_doc_studio.core.docker_disk.categories
+import hse_doc_studio.infra.docker.cleanup_jobs
 print(json.dumps(sorted(sys.modules)))
 """
 

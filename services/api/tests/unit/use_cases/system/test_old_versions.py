@@ -3,11 +3,11 @@
 from __future__ import annotations
 
 import pytest
+from hse_doc_studio.core.docker_disk.old_versions import find_old_versions
+from hse_doc_studio.core.docker_disk.usage import ContainerUsage, DockerDiskUsage, ImageUsage
 from hse_doc_studio.infra.docker.cleanup_jobs import CleanupBusyError, CleanupJob, CleanupStep
-from hse_doc_studio.infra.docker.system_manager import ContainerUsage, DockerDiskUsage, ImageUsage
 from hse_doc_studio.use_cases.system.cleanup_docker import StartDockerCleanupInput, StartDockerCleanupUC
 from hse_doc_studio.use_cases.system.get_docker_disk_usage import GetDockerDiskUsageUC
-from hse_doc_studio.use_cases.system.old_versions import find_old_versions
 
 BASE = "registry.example/studio"
 CURRENT = "2.5.0"

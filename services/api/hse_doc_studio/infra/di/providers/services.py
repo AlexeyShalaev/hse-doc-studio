@@ -17,6 +17,7 @@ from hse_doc_studio.core.ai_runtime import (
     IPullModelJobs,
 )
 from hse_doc_studio.core.checks.protocols import ICheckRunner
+from hse_doc_studio.core.docker_disk.categories import docker_categories, image_repository
 from hse_doc_studio.core.egress import IEgressPolicy
 from hse_doc_studio.core.entities import CatalogModel
 from hse_doc_studio.core.events import IJobLogStream
@@ -674,16 +675,13 @@ class DomainServiceProvider(Provider):
         # Классификация docker-обитателей по «нашим» категориям для страницы
         # «Диск»: allowlist-репозитории каждой подсистемы + собственный образ
         # приложения (GHCR). Всё вне карты — «other» и очистке не подлежит.
-        category_by_repo: dict[str, str] = {}
-        for repo in settings.compile.allowed_repos:
-            category_by_repo[repo] = "compile"
-        for repo in settings.languagetool.allowed_repos:
-            category_by_repo[repo] = "languagetool"
-        for repo in settings.office_convert.allowed_repos:
-            category_by_repo[repo] = "office"
-        for repo in settings.office_editor.allowed_repos:
-            category_by_repo[repo] = "office"
-        category_by_repo[settings.ollama.image.rsplit(":", 1)[0]] = "ai"
+        # Карту строит та же функция, что у раннера (core/docker_disk/categories.py).
+        category_by_repo = docker_categories(
+            compile_repos=settings.compile.allowed_repos,
+            languagetool_repos=settings.languagetool.allowed_repos,
+            office_repos=[*settings.office_convert.allowed_repos, *settings.office_editor.allowed_repos],
+            ai_repos=[image_repository(settings.ollama.image)],
+        )
         return DockerSystemManager(
             category_by_repo=category_by_repo,
             app_repo_prefix=settings.image_base,

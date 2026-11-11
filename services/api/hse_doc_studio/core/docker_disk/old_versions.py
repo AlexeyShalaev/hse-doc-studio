@@ -26,13 +26,13 @@ import re
 from dataclasses import dataclass, field
 from typing import Literal
 
-from hse_doc_studio.core.update.services import parse_version
-from hse_doc_studio.infra.docker.system_manager import (
+from hse_doc_studio.core.docker_disk.usage import (
     DANGLING_CATEGORY,
     OTHER_CATEGORY,
     DockerDiskUsage,
     ImageUsage,
 )
+from hse_doc_studio.core.update.services import parse_version
 
 OldVersionKind = Literal["studio_image", "service_image", "container"]
 
