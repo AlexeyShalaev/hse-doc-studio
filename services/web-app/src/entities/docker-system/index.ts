@@ -28,3 +28,22 @@ export {
   useStartCleanup,
   useCancelCleanup,
 } from "./api/dockerSystemQueries";
+export {
+  DISK_CATEGORIES,
+  DISK_SERVICE_CATEGORIES,
+  buildDiskSegments,
+  diskCategoryColor,
+  diskSegmentsTotal,
+  dockerUsageCategories,
+} from "./lib/diskSegments";
+export type {
+  DiskCategoryBytes,
+  DiskCategoryKey,
+  DiskSegment,
+} from "./lib/diskSegments";
+export {
+  DiskCategorySwatch,
+  DiskUsageBar,
+  DiskUsageLegend,
+  DiskUsageOverview,
+} from "./ui";
