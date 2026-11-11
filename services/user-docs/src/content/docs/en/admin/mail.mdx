@@ -1,0 +1,165 @@
+---
+title: 'Mail'
+description: 'The mail log: what the Studio sent, what failed and why, how an email looked and what to do next.'
+sidebar:
+  order: 7
+access: admin
+help:
+  routes: ['/admin/mail']
+  summary: 'The **Mail** section lists every attempt of the Studio to send an email: to whom, which one and how it ended. The email card shows the failure reason, the SMTP reply and the email as the recipient saw it, but without token links.'
+  steps:
+    - text: 'In the admin menu, in the **Log** group, open **Mail**.'
+      hint: 'The number next to the item is how many emails failed in the last 24 hours.'
+      shot: admin/mail/step-01
+    - text: 'Look at the **Last 24 hours** strip: how many emails were sent, how many failed and how many were not sent. Click **Failed** to keep only the failed emails in the list.'
+      hint: 'To find an email to a particular person, type the address or subject into the search or pick a **Recipient**.'
+      shot: admin/mail/step-02
+    - text: 'Click an email row. The card opens on the right: the **Outcome** block has the reason and the **SMTP reply**, below it **Details**: to whom, what triggered the email, the project.'
+      hint: 'You can send the page address with the open card to another administrator.'
+      shot: admin/mail/step-03
+    - text: 'Scroll to **How it looked**: this is the email as the recipient saw it.'
+      hint: 'The log keeps neither token links nor people’s messages, so the button in the email does nothing and the link is replaced with “[link hidden]”.'
+      shot: admin/mail/step-04
+    - text: 'At the end of the card, **What you can do** gives the next step for this email type and outcome.'
+      hint: 'There is no resending from the log. A failed email will not go out by itself: repeat the action that caused it.'
+      shot: admin/mail/step-05
+    - text: 'If the section shows the **Mail is not set up** banner at the top, no emails go out at all. Click **Set up mail** and fill in the **Mail (SMTP)** block.'
+      hint: 'Until mail is set up, people get confirmation and invitation links on screen or from you, and notifications stay only in the Inbox.'
+      shot: admin/mail/step-06
+    - text: 'If there is a failure hint under the strip, for example “The SMTP server rejects the sign-in”, click **Open mail settings**, fix the settings and send a test email.'
+      hint: 'The test email lands in the log too: its outcome shows that mail works again.'
+      shot: admin/mail/step-07
+verified:
+  at: 2026-11-12
+  app_version: '0.22.0'
+  sources:
+    - services/web-app/src/features/admin-mail-log/ui/MailLogView.tsx
+    - services/web-app/src/features/admin-mail-log/ui/MailLogCardView.tsx
+    - services/web-app/src/shared/lib/i18n/locales/en/admin/mail.json
+    - services/api/hse_doc_studio/api/routers/admin_mail_log.py
+    - services/api/hse_doc_studio/use_cases/mail/dispatch.py
+    - docs/design/mail-log.md
+---
+
+import Steps from '~/components/Steps.astro'
+
+The Studio sends emails on sign-up, password reset, invitations, along a signing route and in
+other cases. The **Mail** section answers “why didn’t this person get the email”: whether it was
+sent at all, to which address, and what the SMTP server replied. Every attempt is logged,
+including emails that were not sent.
+
+<Steps />
+
+## What the list shows
+
+- **When**: the time of the attempt. Hover to see the full date.
+- **To**: the address, with the name below it when the address belongs to a person on the server.
+- **Email**: the email type and the subject it was sent with.
+- **Result**: what happened to the email, with the reason below.
+- **Triggered by**: a person, **Request without sign-in** (sign-up, “Forgot password”) or
+  **Background task** (for example, signing route auto-reminders).
+
+Newest emails are on top; **Show more** loads the next page. The **Last 24 hours** strip counts
+exactly the last 24 hours: **Sent**, **Failed** (red when there are any) and **Not sent**.
+
+## Results
+
+| Result | What it means |
+|---|---|
+| **Sent** | The SMTP server accepted the email. The log does not know what happened next: if the person cannot find it, ask them to check spam. The **Message-ID** from the card helps find the email in the mail server logs. |
+| **Failed** | The SMTP server refused, dropped the connection or did not answer. The reason and the server reply are in the card. There are no retries: the email will not go out by itself. |
+| **Not sent**, mail not set up | Mail (SMTP) was not set up. The email will not go out after setup either. |
+| **Not sent**, email not confirmed | Notifications go only to a confirmed address. This is not a failure. |
+| **Not sent**, sign-in blocked | The account is disabled or waits for approval. This is not a failure. |
+
+## Filters
+
+- **Search** by address and subject.
+- **Email type**: several types at once, in groups: sign-in and account, projects, signing route,
+  service.
+- **Result**: here “Not sent” is split by reason: mail not set up, or the email was not due.
+- **Recipient**: a person on the server. **Project**: the emails of one project. **Period**: dates.
+
+Filters are kept in the page address. The **Failed** button in the strip sets the “Failed” filter
+from the start of yesterday, so the list may show a few more emails than the strip. In the card,
+**Show all emails to this recipient** and the project name set a filter too.
+
+## The email card
+
+At the top: the email type, subject, result and time. Below are the blocks:
+
+- **Outcome**: only for emails that failed or were not sent. A plain reason and the **SMTP reply**
+  with a **Copy** button: you will need this text when you write to your mail provider.
+- **Details**: to whom, email type and language, what triggered it and in which scenario, the
+  project and object (signing route, invitation), Message-ID, attempts and duration.
+- **How it looked**: the email in a frame, as the recipient sees it, and **Show the plain text
+  part**.
+- **What you can do**: the next step for this email type and result.
+
+### Why links are hidden
+
+Password reset, address confirmation and invitation links work like a password. The log keeps them
+neither in the database nor in backups. The email in the card is rebuilt from the stored details,
+so:
+
+- the button in the email does nothing, and the link is replaced with “[link hidden]”;
+- emails without a token (notifications, signing route) show the page address in place of the
+  link, also not as a link;
+- people’s messages (with an invitation, a comment on return) are not kept: “[message not kept in
+  the log]” stands in their place.
+
+The note **The email is redrawn with the current template** means that email texts or layout
+changed after sending, for example with a Studio update. The subject in the card header is the one
+that was sent.
+
+### What you can do
+
+| Email | What to do |
+|---|---|
+| Password reset | Issue a new link in **Users**: the person’s card, **Issue password reset link**. Or ask the person to click “Forgot password” again. |
+| Email confirmation | The person requests the email again on the sign-in page. |
+| Invitation to the Studio | Send the invitation again in **Users**, the **Invitations** tab. |
+| Project invitation by link | A project member who can invite may resend it: **Access**, **Resend**. |
+| Notifications and signing route | The notification is in the recipient’s Inbox, the email only duplicates it. |
+| Test email | Send it again in the **Mail (SMTP)** block. |
+
+## Retention
+
+The log keeps emails for 90 days. Change the period in **Data retention**, source **Mail log**:
+14 to 730 days. Old records are removed by the scheduled cleanup and also by **Clean now** and
+**Free up space** ([Storage and space](/help/en/admin/storage/)). A single email cannot be deleted
+from the log. When an account is deleted permanently, the emails to that person go with it.
+
+## If mail is not set up
+
+The **Mail is not set up** banner at the top of the section means that no emails go out at all,
+and the log fills with “Not sent, mail not set up” rows. Without mail:
+
+- people see confirmation and invitation links on screen or get them from you;
+- notifications (project invitations, signing route) stay only in the Inbox;
+- self sign-up is limited ([Invitations](/help/en/admin/invitations/)).
+
+Click **Set up mail**: **Sign-in and registration** opens at the **Mail (SMTP)** block. Fill it in
+and check it with **Send** in the **Test email** row. Emails that were not sent earlier will not go
+out after setup.
+
+## If the SMTP server refuses
+
+A hint about the last failure appears under the **Last 24 hours** strip:
+
+- **The SMTP server rejects the sign-in**: check the username and password.
+- **The SMTP server does not respond**: check the host, port and connection security.
+- **Could not establish a secure connection**: check the security mode (STARTTLS or TLS).
+
+Click **Open mail settings**, fix the **Mail (SMTP)** block and send a test email: it appears in
+the log with its result. Self-diagnostics also checks the sign-in to the SMTP server
+([Self-diagnostics](/help/en/admin/diagnostics/)).
+
+If one email failed while others go out, look at the reason in the card:
+
+- **The SMTP server refused the email for this address** (usually code 550): the address has a typo
+  or the mailbox does not exist. Check the address with the person.
+- **The SMTP server does not accept email from the sender address**: the provider does not allow
+  sending from this address. Check the **Sender address** in the **Mail (SMTP)** block.
+- **The SMTP server did not answer in time** or **dropped the connection**: a temporary failure.
+  Repeat the action that caused the email.

@@ -939,6 +939,15 @@ E2E (срез E1): раздел 12.
 | D1 | справка администратора `services/user-docs`, новая статья `admin/mail.mdx` ru и en (что видно, почему ссылок нет, что делать по итогам); `docs/{ru,en}/deploy/mail.md` раздел «Журнал писем»; исправить обещание очереди в `docs/{ru,en}/deploy/accounts.md` (`env-reference.md`, `data-lifecycle.md` и `persistence-server.md` поправил B4); кадры из галереи | W3, B6 | S |
 | E1 | поддельный SMTP `e2e/fake_smtp/server.py` (стандартная библиотека: `EHLO`, `MAIL`, `RCPT`, `DATA`, `RSET`, `NOOP`, `QUIT`; `550` для `reject-*@`, `451` для `busy-*@`; `GET /messages`, `DELETE /messages`), оверлей `deploy/server/compose.mail.yml`, команда `stack.sh mail-up`; сценарий `e2e/tests/mail-log.spec.ts` ниже | B4, B5, B6, W3 | M |
 
+Сделано в D1: справка администратора `admin/mail.mdx` ru и en (7 шагов с кадрами, итоги, фильтры, карточка, срок,
+почта не настроена, отказ SMTP), строка «Письмо с приглашением не пришло» в `admin/invitations.mdx`, журнал писем в
+списке «Освободить место» (`admin/storage.mdx`). Сайт: раздел «Журнал писем» в `deploy/mail.md` (таблица, срок,
+метрики, права отдельной роли Postgres, удаление и выгрузка человека), обещание очереди в `deploy/accounts.md`
+заменено правдой (одна попытка, итог в «Письмах»), строки журнала в таблицах `autonomy.md` и `security.md`. Кадры:
+сценарий рекордера `admin/mail` на мирах `admin_ready`, `admin_sso` и `ops_services_degraded` (смена мира посреди
+дубля: `switchServerDemo` в `stand/server-demo.mjs`), кадры сайта `mail-log`, `mail-log-card`, `mail-log-smtp-auth` в
+`site-shots.mjs`.
+
 Сценарий E1:
 
 1. SMTP не настроен: админ создаёт приглашение в Студию; в «Письмах» плашка «Почта не настроена» и строка

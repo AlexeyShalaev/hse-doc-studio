@@ -57,6 +57,7 @@ What is stored:
 |---|---|
 | name, mail address, password hash, organization info | Postgres |
 | sessions (client address, device), audit log | Postgres, audit retention is configurable |
+| mail log: recipient address, subject, sending result ([Server emails](mail.md#mail-log)) | Postgres, 90 days, retention is configurable |
 | thesis texts, attachments, builds | projects volume and S3 |
 | AI agent chats, settings, keys | Postgres, keys are encrypted |
 
