@@ -65,7 +65,8 @@ const source = (
   return {
     key,
     days,
-    cutoff: days === null ? SWEEP_NOW : daysAgo(days),
+    // У гостевых сессий граница своя: 7 суток после истечения.
+    cutoff: daysAgo(days ?? 7),
     count,
     capped: false,
     bytes,
@@ -181,7 +182,7 @@ export const makeSweep = (
   return {
     id: "lsw_01hz5a9c3k",
     status: "done",
-    started_by: { id: "u_01hx7k0adm", name: "Алексей Шалаев" },
+    started_by: "u_01hx7k0adm",
     started_at: at(300),
     updated_at: at(240),
     finished_at: at(240),
@@ -245,10 +246,19 @@ export const SWEEP_STATES = {
       index < 3 ? s : step(s.key, "skipped"),
     ),
   }),
-  /** Сервер перезапустился посреди прогона. */
+  /** Сервер перезапустился посреди прогона: шаг в работе стал `error: interrupted`, остальные `skipped`. */
   interrupted: makeSweep({
     status: "interrupted",
-    steps: runningSteps(4),
+    steps: DONE_STEPS.map((s, index) =>
+      index < 4
+        ? s
+        : index === 4
+          ? step(s.key, "error", {
+              bytes_before: s.bytes_before,
+              error: "interrupted",
+            })
+          : step(s.key, "skipped"),
+    ),
     updated_at: at(900),
     finished_at: at(600),
   }),

@@ -625,7 +625,8 @@ export const LifecycleSweepStepSchema = z.strictObject({
   partitions_dropped: z.number().int().nonnegative(),
   /** Бюджет кончился раньше: остальное уйдёт на плановом тике. */
   more: z.boolean(),
-  /** Замер источника до и после шага; null, пока шаг не дошёл или замер не удался. */
+  /** Замер источника до и после шага; null, пока шаг не дошёл или замер не удался. Шаг, прерванный
+   * остановкой api или прогоном `interrupted`, приходит `error` с `error: "interrupted"`, не начатые `skipped`. */
   bytes_before: z.number().int().nonnegative().nullable(),
   bytes_after: z.number().int().nonnegative().nullable(),
   error: z.string().nullable(),
@@ -633,8 +634,8 @@ export const LifecycleSweepStepSchema = z.strictObject({
 export const LifecycleSweepSchema = z.strictObject({
   id: z.string(),
   status: LifecycleSweepStatusSchema,
-  /** Кто запустил; null, если человека уже нет в установке. */
-  started_by: z.strictObject({ id: z.string(), name: z.string() }).nullable(),
+  /** Id того, кто запустил (без имени); null, если человека уже нет в установке. */
+  started_by: z.string().nullable(),
   started_at: iso,
   updated_at: iso,
   finished_at: iso.nullable(),
@@ -651,10 +652,10 @@ export const LifecycleSweepPreviewSchema = z.strictObject({
   sources: z.array(
     z.strictObject({
       key: z.string(),
-      /** null: фиксированный срок (гостевые сессии, ссылки: истекшие). */
+      /** null: срок фиксирован в коде (гостевые сессии), граница всё равно в `cutoff`. */
       days: z.number().int().nullable(),
-      /** Граница: удаляется всё старше неё. */
-      cutoff: iso,
+      /** Граница, по которой источник считал: удаляется всё старше неё; null, если границы нет. */
+      cutoff: iso.nullable(),
       /** null: не удалось посчитать за 3 с. */
       count: z.number().int().nonnegative().nullable(),
       /** Счёт упёрся в потолок 100 000: «больше 100 000 записей». */

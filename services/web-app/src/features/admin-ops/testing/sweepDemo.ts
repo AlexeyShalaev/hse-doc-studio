@@ -167,7 +167,7 @@ export const createLifecycleSweepDemo = (
         last = {
           id: `lsw_demo_${String(counter).padStart(4, "0")}`,
           status: "running",
-          started_by: actor ? { id: actor.id, name: actor.name } : null,
+          started_by: actor?.id ?? null,
           started_at: t,
           updated_at: t,
           finished_at: null,
