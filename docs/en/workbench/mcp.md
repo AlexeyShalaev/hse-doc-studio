@@ -144,5 +144,7 @@ On **Admin → MCP server**:
 
 - the MCP server master switch;
 - tool groups and single tools with switches; dangerous ones are enabled by name;
-- the **Administration** group (users, queue, runners, audit) is off by default; even when on it is only available to an instance administrator whose token has the **MCP: administration** permission;
+- the **Administration** group (users, queue, runners, audit, mail log) is off by default; even when on it is only available to an instance administrator whose token has the **MCP: administration** permission;
 - the call log.
+
+**`admin_list_mail_log`** answers “did the email arrive” without opening **Admin → Mail**: mail log rows, newest first. Filters are `recipient` (exact address, case-insensitive), `template` (mail kind, such as `invite`), `status` (`sent`, `failed`, `not_sent`, `suppressed`) and `since` (an ISO 8601 date or moment, UTC when no time zone is given), at most 50 rows (`limit`, 20 by default). A row has the time, mail kind, address and subject, outcome, reason, SMTP reply code and who caused the email (`cause`: a person, a request without sign-in or a background task, and `actor_id`); the recipient and the project appear only as ids. The response has no mail preview, names, links or failure text. The tool only reads, and reading is not audited.

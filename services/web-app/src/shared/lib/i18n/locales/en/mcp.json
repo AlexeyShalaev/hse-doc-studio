@@ -47,7 +47,7 @@
     },
     "admin": {
       "title": "Administration",
-      "hint": "Users, queue, runners, audit. Only for an instance administrator with an MCP: administration token."
+      "hint": "Users, queue, runners, audit, mail log. Only for an instance administrator with an MCP: administration token."
     }
   },
   "tools": {

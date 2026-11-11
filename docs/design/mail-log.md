@@ -778,6 +778,11 @@ AdminMailLogSummary {
 `template`, `status`, `since` (ISO), `limit` до 50; ответ это список `AdminMailLogEntry` без `to_user`, `actor` и
 `project` (только id), без превью. Опрос для меню и экран через MCP не нужны.
 
+Уточнено в B7: строка короче `AdminMailLogEntry`: `id`, `at`, `template`, `to`, `to_user_id`, `subject`, `status`,
+`reason`, `smtp_code`, `cause`, `actor_id`, `project_id`. Текста сбоя, `message_id`, попыток и `origin` нет: для
+вопроса «дошло ли» хватает итога, причины и кода, остальное в карточке. `template` и `status` по одному значению,
+`since` в ISO 8601 (без пояса UTC), `limit` по умолчанию 20; курсора нет. Неверный фильтр даёт `invalid_arguments`.
+
 ## 7. Права, аудит, приватность
 
 | Действие | Админ установки | Остальные |
