@@ -1,0 +1,11 @@
+{
+  "targets": [
+    "old_versions",
+    "unused_images",
+    "build_cache",
+    "dangling_images",
+    "stopped_containers",
+    "runner_cache"
+  ],
+  "include_rollback": false
+}

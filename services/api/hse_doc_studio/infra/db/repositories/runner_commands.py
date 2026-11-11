@@ -8,11 +8,11 @@ from datetime import datetime
 from typing import Any
 from uuid import UUID
 
-from sqlalchemy import ColumnElement, delete, or_, select, true, update
+from sqlalchemy import BigInteger, ColumnElement, case, cast, delete, func, or_, select, true, update
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 
 from hse_doc_studio.core.jobs.codec import decode, encode
-from hse_doc_studio.core.jobs.control import COMMANDS_KEPT_PER_RUNNER, StoredDiskReport
+from hse_doc_studio.core.jobs.control import COMMANDS_KEPT_PER_RUNNER, StoredDiskBrief, StoredDiskReport
 from hse_doc_studio.core.jobs.disk import (
     COMMAND_OPEN_STATES,
     CommandProgress,
@@ -295,3 +295,46 @@ class SqlRunnerDiskStore:
                 if stored is not None:
                     found[row.id] = stored
         return found
+
+    async def list_disk_briefs(self, runner_ids: Collection[str] | None = None) -> dict[str, StoredDiskBrief]:
+        # Тот же расчёт, что `disk_cleanable_bytes`, но в базе: отчёт целиком (до 64 КБ) не читается и не разбирается.
+        disk = RunnerRow.disk
+        docker = case(
+            (
+                disk[("docker", "available")].astext == "true",
+                cast(disk[("docker", "cleanable_bytes")].astext, BigInteger),
+            ),
+            else_=0,
+        )
+        cache = func.coalesce(cast(disk[("cache", "blobs", "bytes")].astext, BigInteger), 0) + func.coalesce(
+            cast(disk[("cache", "workspaces", "bytes")].astext, BigInteger), 0
+        )
+        stmt = select(
+            RunnerRow.id,
+            disk["measured_at"].astext.label("measured_at"),
+            RunnerRow.disk_at,
+            (func.coalesce(docker, 0) + cache).label("cleanable"),
+        ).where(RunnerRow.disk.is_not(None), RunnerRow.disk_at.is_not(None))
+        if runner_ids is not None:
+            if not runner_ids:
+                return {}
+            stmt = stmt.where(RunnerRow.id.in_(list(runner_ids)))
+        found: dict[str, StoredDiskBrief] = {}
+        async with self._sessions.use() as db:
+            for row in (await db.execute(stmt)).all():
+                measured = _moment(row.measured_at)
+                if measured is None or row.disk_at is None:
+                    continue
+                found[row.id] = StoredDiskBrief(
+                    cleanable_bytes=max(int(row.cleanable or 0), 0), measured_at=measured, received_at=row.disk_at
+                )
+        return found
+
+
+def _moment(value: str | None) -> datetime | None:
+    if not value:
+        return None
+    try:
+        return datetime.fromisoformat(value)
+    except ValueError:
+        return None

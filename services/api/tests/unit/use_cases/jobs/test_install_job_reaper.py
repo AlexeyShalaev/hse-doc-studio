@@ -7,6 +7,7 @@ from hse_doc_studio.api.observability.install import (
     install_runner_commands_reaper,
     install_runner_pairings_purge,
 )
+from hse_doc_studio.api.observability.metrics import MetricsRegistry
 
 
 class _Runner:
@@ -44,7 +45,7 @@ def test__install_runner_commands_reaper__registers_periodic_task() -> None:
     app = FastAPI()
     app.state.background = _Runner()
 
-    install_runner_commands_reaper(app, None)  # type: ignore[arg-type]
+    install_runner_commands_reaper(app, None, MetricsRegistry())  # type: ignore[arg-type]
 
     (task,) = app.state.background.tasks
     assert task.name == "runner_commands_reaper"  # type: ignore[attr-defined]

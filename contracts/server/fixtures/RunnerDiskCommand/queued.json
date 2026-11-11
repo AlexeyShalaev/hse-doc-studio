@@ -1,0 +1,21 @@
+{
+  "id": "rdc_01hz4m2k7q",
+  "kind": "disk.cleanup",
+  "state": "queued",
+  "targets": [
+    "old_versions",
+    "unused_images",
+    "build_cache",
+    "dangling_images",
+    "stopped_containers",
+    "runner_cache"
+  ],
+  "include_rollback": false,
+  "created_at": "2026-11-11T09:59:40Z",
+  "finished_at": null,
+  "created_by": {
+    "id": "u_01hx7k0adm",
+    "name": "Алексей Шалаев"
+  },
+  "progress": null
+}

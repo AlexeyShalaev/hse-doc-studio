@@ -69,6 +69,7 @@ const runner = (extra: Partial<AdminRunner> = {}): AdminRunner => ({
   host_kind: "cli",
   ai_endpoints: [],
   last_seen_ip: null,
+  disk: null,
   ...extra,
 });
 

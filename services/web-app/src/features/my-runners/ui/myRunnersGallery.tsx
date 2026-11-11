@@ -37,6 +37,7 @@ const base: MyRunner = {
   running_jobs: 1,
   ai_endpoints: [{ name: "ollama", flavor: "ollama" }],
   features: ["ai_relay", "ai_slots", "announce", "offline"],
+  disk: null,
 };
 
 const RUNNERS: MyRunner[] = [

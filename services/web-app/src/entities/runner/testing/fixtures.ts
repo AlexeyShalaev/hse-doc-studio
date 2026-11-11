@@ -7,16 +7,15 @@ import type {
   DiskUnusedImage,
   DockerDisk,
   RunnerCacheDisk,
-  RunnerDiskCleanupRequest,
   RunnerDiskCommand,
   RunnerDiskReport,
   RunnerDiskSummary,
   RunnerDiskView,
 } from "../model/runnerDisk.schema";
 
-// Эталоны и состояния диска раннера (docs/design/storage-cleanup.md, разделы 4.1, 4.5, 5 и 9.1).
-// Время постоянное: экраны галерей и снимки не плывут. Срез B6 перенесёт
-// RUNNER_DISK_CONTRACT_EXAMPLES в contracts/server/fixtures/<Схема>/<вариант>.json.
+// Состояния диска раннера для галерей, моков и тестов экранов (docs/design/storage-cleanup.md, разделы
+// 4.1, 4.5, 5 и 9.1). Время постоянное: экраны галерей и снимки не плывут. Эталоны контракта лежат в
+// contracts/server/fixtures/RunnerDisk* и совпадают с этими состояниями (тест в runnerDisk.schema.test.ts).
 
 export const DISK_NOW = "2026-11-11T10:00:00Z";
 const NOW_MS = Date.parse(DISK_NOW);
@@ -661,46 +660,3 @@ export const NO_REPORTS_DISK_SUMMARY = makeRunnerDiskSummary({
   cleanable_bytes: 0,
   top: [],
 });
-
-const cleanupRequest = (
-  targets: DiskTarget[],
-  includeRollback = false,
-): RunnerDiskCleanupRequest => ({ targets, include_rollback: includeRollback });
-
-/**
- * Эталоны раздела 9.1 по имени схемы и варианту: будущие
- * contracts/server/fixtures/<Схема>/<вариант>.json. Ключи совпадают с RUNNER_DISK_CONTRACT_SCHEMAS.
- */
-export const RUNNER_DISK_CONTRACT_EXAMPLES: Record<
-  string,
-  Record<string, unknown>
-> = {
-  RunnerDiskView: {
-    docker: RUNNER_DISK_STATES.docker,
-    running: RUNNER_DISK_STATES.running,
-    done_error: RUNNER_DISK_STATES.done_error,
-    offline: RUNNER_DISK_STATES.offline,
-    no_report: RUNNER_DISK_STATES.no_report,
-    docker_unavailable: RUNNER_DISK_STATES.docker_unavailable,
-    outdated: RUNNER_DISK_STATES.outdated,
-    kubernetes: RUNNER_DISK_STATES.kubernetes,
-    desktop: RUNNER_DISK_STATES.desktop,
-    personal_admin: RUNNER_DISK_STATES.personal_admin,
-  },
-  RunnerDiskCommand: {
-    queued: DISK_COMMANDS.queued,
-    running: DISK_COMMANDS.running,
-    done: DISK_COMMANDS.done,
-    lost: DISK_COMMANDS.lost,
-    measure: DISK_COMMANDS.measure,
-  },
-  RunnerDiskCleanupRequest: {
-    one: cleanupRequest(["build_cache"]),
-    all: cleanupRequest([...DOCKER_TARGETS]),
-    rollback: cleanupRequest(["old_versions"], true),
-  },
-  RunnerDiskSummary: {
-    default: makeRunnerDiskSummary(),
-    none: NO_REPORTS_DISK_SUMMARY,
-  },
-};

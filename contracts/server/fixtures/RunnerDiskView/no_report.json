@@ -1,0 +1,16 @@
+{
+  "runner_id": "rn_01hxb1",
+  "supported": true,
+  "reason": null,
+  "min_version": "0.22.0",
+  "online": true,
+  "last_seen_at": "2026-11-11T09:59:54Z",
+  "report": null,
+  "received_at": null,
+  "stale": false,
+  "command": null,
+  "measuring": false,
+  "can_clean": true,
+  "can_include_rollback": true,
+  "personal_owner": null
+}

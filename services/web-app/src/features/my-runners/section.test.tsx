@@ -66,6 +66,7 @@ const RUNNER: MyRunner = {
   running_jobs: 0,
   ai_endpoints: [],
   features: [],
+  disk: null,
 };
 
 const TOKEN: MyRunnerToken = {

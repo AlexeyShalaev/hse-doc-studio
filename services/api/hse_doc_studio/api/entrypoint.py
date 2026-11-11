@@ -241,7 +241,7 @@ def create_app() -> FastAPI:  # noqa: C901, PLR0915 — app-wiring factory: rout
         install_server_updates(app, container, settings, server_metrics)
         install_job_reaper(app, container, settings)
         install_runner_pairings_purge(app, container)
-        install_runner_commands_reaper(app, container)
+        install_runner_commands_reaper(app, container, server_metrics)
         install_device_authorizations_purge(app, container)
         # Аудит, задачи, ИИ-журнал, уведомления и прочие растущие таблицы чистит один движок по реестру политик.
         install_data_lifecycle(app, container, settings, server_metrics)

@@ -54,11 +54,8 @@ export const MyRunnerSchema = z.strictObject({
   running_jobs: z.number().int(),
   ai_endpoints: z.array(DeclaredAiEndpointSchema),
   features: z.array(z.string()),
-  /**
-   * Диск раннера кратко (storage-cleanup.md, 9.1); null у отозванного. Необязательно, пока
-   * сервер (срез B6) поля не шлёт: старый сервер его не знает.
-   */
-  disk: RunnerDiskBriefSchema.nullable().optional(),
+  /** Диск раннера кратко (storage-cleanup.md, 9.1); null у отозванного. */
+  disk: RunnerDiskBriefSchema.nullable(),
 });
 export type MyRunner = z.infer<typeof MyRunnerSchema>;
 export const MyRunnerListSchema = z.array(MyRunnerSchema);

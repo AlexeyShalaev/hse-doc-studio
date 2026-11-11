@@ -1,0 +1,145 @@
+{
+  "runner_id": "7b8c9d0e1f2a43b4c5d6e7f8a9b0c1d2",
+  "supported": true,
+  "reason": null,
+  "min_version": "0.22.0",
+  "online": true,
+  "last_seen_at": "2026-11-11T09:59:54Z",
+  "report": {
+    "measured_at": "2026-11-11T09:20:00Z",
+    "targets": [
+      "old_versions",
+      "unused_images",
+      "build_cache",
+      "dangling_images",
+      "stopped_containers",
+      "runner_cache"
+    ],
+    "docker": {
+      "available": true,
+      "categories": [
+        {
+          "key": "compile",
+          "bytes": 9556302233
+        },
+        {
+          "key": "languagetool",
+          "bytes": 1213328261
+        },
+        {
+          "key": "office",
+          "bytes": 450971566
+        },
+        {
+          "key": "app",
+          "bytes": 4670776934
+        },
+        {
+          "key": "cache",
+          "bytes": 2576980378
+        },
+        {
+          "key": "runtime",
+          "bytes": 7235174400
+        }
+      ],
+      "total_bytes": 25703533772,
+      "cleanable_bytes": 10542299217,
+      "build_cache": {
+        "bytes": 2576980378,
+        "reclaimable_bytes": 2254857830,
+        "count": 37
+      },
+      "dangling": {
+        "bytes": 641728512,
+        "count": 5
+      },
+      "stopped_containers": {
+        "bytes": 100663296,
+        "count": 2
+      },
+      "unused_images": [
+        {
+          "ref": "texlive/texlive:TL2024-historic",
+          "category": "compile",
+          "size_bytes": 4617089843
+        },
+        {
+          "ref": "erikvl87/languagetool:6.4",
+          "category": "languagetool",
+          "size_bytes": 590558003
+        }
+      ],
+      "unused_truncated": false,
+      "old_versions": {
+        "current_version": "0.22.1",
+        "rollback": {
+          "kind": "studio_image",
+          "ref": "ghcr.io/alexeyshalaev/hse-doc-studio:0.21.4",
+          "version": "0.21.4",
+          "size_bytes": 1181116006
+        },
+        "items": [
+          {
+            "kind": "studio_image",
+            "ref": "ghcr.io/alexeyshalaev/hse-doc-studio:0.20.3",
+            "version": "0.20.3",
+            "size_bytes": 1159641170
+          },
+          {
+            "kind": "studio_image",
+            "ref": "ghcr.io/alexeyshalaev/hse-doc-studio:0.19.0",
+            "version": "0.19.0",
+            "size_bytes": 1127428915
+          },
+          {
+            "kind": "container",
+            "ref": "hse-runner-0.19.0",
+            "version": "0.19.0",
+            "size_bytes": 50331648
+          }
+        ],
+        "reclaimable_bytes": 2337401733,
+        "rollback_bytes": 1181116006
+      },
+      "volumes": [
+        {
+          "name": "hse-texlive-cache",
+          "size_bytes": 1395864371
+        },
+        {
+          "name": "hse-ollama-models",
+          "size_bytes": 5046586573
+        }
+      ]
+    },
+    "docker_reason": null,
+    "cache": {
+      "blobs": {
+        "bytes": 1503238554,
+        "count": 2318,
+        "limit_bytes": 2147483648
+      },
+      "workspaces": {
+        "bytes": 6657199309,
+        "count": 41,
+        "limit_bytes": 21474836480,
+        "busy": 1
+      }
+    },
+    "volume": {
+      "total_bytes": 214748364800,
+      "free_bytes": 25232932864
+    }
+  },
+  "received_at": "2026-11-11T09:20:02Z",
+  "stale": false,
+  "command": null,
+  "measuring": false,
+  "can_clean": true,
+  "can_include_rollback": false,
+  "personal_owner": {
+    "id": "u_01hx7k8maria",
+    "name": "Мария Келлер"
+  }
+}

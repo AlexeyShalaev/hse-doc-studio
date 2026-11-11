@@ -518,6 +518,8 @@ export const toMyRunner = (
   running_jobs: r.revoked_at === null ? r.running_jobs : 0,
   ai_endpoints: r.ai_endpoints,
   features: r.features,
+  // Диск подставляют маршруты демо (storageCleanup.ts): он живёт в мире, а не в раннере.
+  disk: null,
 });
 
 /** Новый раннер, «зарегистрированный» по токену или подтверждённому коду. */
