@@ -26,6 +26,7 @@ from hse_doc_studio.core.invitations.entities import (
 )
 from hse_doc_studio.core.invitations.message import InvitationFacts
 from hse_doc_studio.core.listing import Found, Window
+from hse_doc_studio.core.mail.journal import MailOrigin, MailSkipReason
 
 
 class INotificationRepository(Protocol):
@@ -167,16 +168,41 @@ class IInvitationFacts(Protocol):
 
 
 class INotificationMailer(Protocol):
-    """Письма трека: уведомление по виду (S15) и приглашение со ссылкой. True, если письмо ушло по SMTP."""
+    """Письма трека: уведомление по виду (S15) и приглашение со ссылкой. True, если письмо ушло по SMTP.
+
+    Каждая попытка, отправленная или пропущенная, пишется строкой журнала писем (docs/design/mail-log.md, P8..P14):
+    `to_user_id`, `origin` и id объекта нужны только журналу.
+    """
 
     @property
     def enabled(self) -> bool: ...
 
-    async def send_notification(
-        self, to_email: str, kind: NotificationKind, payload: NotificationPayload, *, locale: str | None
+    async def send_notification(  # noqa: PLR0913 — поля одного письма
+        self,
+        to_email: str,
+        kind: NotificationKind,
+        payload: NotificationPayload,
+        *,
+        locale: str | None,
+        to_user_id: str | None = None,
+        origin: MailOrigin = MailOrigin.notification,
     ) -> bool: ...
 
-    async def send_invitation(
+    async def skip_notification(  # noqa: PLR0913 — поля одного письма
+        self,
+        to_email: str,
+        kind: NotificationKind,
+        payload: NotificationPayload,
+        *,
+        locale: str | None,
+        reason: MailSkipReason,
+        to_user_id: str | None = None,
+        origin: MailOrigin = MailOrigin.notification,
+    ) -> None:
+        """Записать в журнал письмо уведомления, которое не отправлялось (`reason`); для видов без письма ничего."""
+        ...
+
+    async def send_invitation(  # noqa: PLR0913 — поля одного письма
         self,
         to_email: str,
         *,
@@ -187,6 +213,10 @@ class INotificationMailer(Protocol):
         message: str | None,
         locale: str | None,
         expires_at: datetime | None = None,
+        origin: MailOrigin = MailOrigin.project_invite,
+        to_user_id: str | None = None,
+        project_id: str | None = None,
+        invitation_id: str | None = None,
     ) -> bool: ...
 
 

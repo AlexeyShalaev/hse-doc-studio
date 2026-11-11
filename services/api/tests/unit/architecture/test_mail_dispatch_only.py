@@ -25,7 +25,6 @@ _TRANSPORT = frozenset(
 # тест ниже падает, если в файле из списка вызова уже нет.
 _PENDING = {
     "use_cases/identity/mail.py": "B4: LinkDelivery, P1..P7",
-    "infra/notifications/mailer.py": "B5: SmtpNotificationMailer, P8..P14",
 }
 
 

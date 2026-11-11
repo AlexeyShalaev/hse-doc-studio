@@ -540,6 +540,27 @@ the log]».
 | P14 (`send_invitation`) | без SMTP `False`, сбой `False` | `skip` или `send`; ответ (`email` или `manual`) тот же |
 | P15 (`SendTestMailUC`) | свой `try/except` | `send`; без SMTP по-прежнему `422` без строки, текст ошибки из L16 (`MailFailure.describe()`: `auth 535: текст`); получатель в журнале это человек установки с этим адресом, если он есть |
 
+Уточнено в B5 (P8..P14):
+
+- `SmtpNotificationMailer` берёт `MailDispatcher` вместо `IMailSender` и собирает `MailRequest`
+  (`notification_request`); `INotificationMailer` получил `skip_notification(..., reason)` для пропуска и
+  необязательные `to_user_id`, `origin` и id объекта у `send_notification` и `send_invitation`. Ответ вызывающим
+  (`True`, если письмо ушло; `email`, `manual` или `inbox` у приглашений и напоминаний) не изменился.
+- Причина пропуска у `Notifier`: «письмо не положено» важнее «почта не настроена», потому что с почтой письмо всё
+  равно не ушло бы. Вход закрыт (`can_sign_in` ложно: отключён, ждёт одобрения) даёт `account_blocked`, кроме
+  регистрации, которая ждёт подтверждения почты: у неё, как и у любой неподтверждённой почты, `email_unverified`.
+  Без SMTP `not_sent/smtp_off` пишет сам диспетчер (`send`). Вид без письма (`MAILED_KINDS`, `mail=False`) строки
+  не даёт.
+- `origin`: у уведомлений `notification`, в том числе у «Напомнить» автора; напоминание из фоновой задачи
+  (`current_background_task()` задан, это `SigningReminderSweeper`) `signing_auto_reminder`, так что передавать
+  сценарий через порт маршрута не нужно. У P14: `project_invite` (`CreateInvitationUC`), `project_invite_resend`
+  (`ResendInvitationUC.deliver` по умолчанию), `signing_reinvite` («Напомнить» приглашённому в маршруте).
+- Объект письма: `project_id` из уведомления; `ref_kind` по виду (`project_invitation`, `access_request`,
+  `transfer`, `signing_route`), `ref_id` это `ref_id` уведомления (id приглашения, запроса, передачи или
+  маршрута). У P14 `ref` это приглашение, `to_user_id` привязанный аккаунт, если он есть.
+- Ссылка: у приглашения, запроса доступа и передачи `page` с путём `/inbox`; у маршрута `page` с путём страницы
+  подписи или точки сдачи, а без публичного адреса установки `none` (кнопки в письме нет); у P14 `token`.
+
 ## 6. API
 
 ### 6.1 Адреса
@@ -744,7 +765,7 @@ LifecyclePolicy(
   файле, который упоминает `IMailSender` или его реализации, и любой `.send(..., html=...)`; кроме диспетчера
   разрешён сам транспорт (`infra/identity/smtp_mailer.py`, `configured_mailer.py`, `mail.py`). Временные
   исключения `_PENDING` (`use_cases/identity/mail.py` до B4, `infra/notifications/mailer.py` до B5) проверяются на
-  устаревание: срез, переведший путь, обязан удалить свою строку.
+  устаревание: срез, переведший путь, обязан удалить свою строку. B5 свою строку удалил.
 - Репозиторий (контракт на памяти и Postgres, `tests/contract/test_mail_log_contract.py`): курсор, фильтры по И,
   поиск, период, `total_estimate`, сводка за сутки; на Postgres (`test_mail_log_pg.py`) `SessionProvider.own()`
   пишет при откате внешней транзакции, CHECK таблицы, источник `mail_log` движка (счёт и удаление пачками).
