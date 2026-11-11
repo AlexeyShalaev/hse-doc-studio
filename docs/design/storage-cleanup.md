@@ -173,6 +173,8 @@
 у любого неотозванного раннера, в том числе на паузе и не на связи; старую версию окно встречает заглушкой
 «Обновите раннер». Открытое окно живёт в адресе: `/settings/runners?disk={id}` (как `?user=` у карточки
 пользователя в админке), закрытие убирает параметр. Ссылка на отозванный или чужой раннер окна не открывает.
+Уведомление `runner_disk_cleaned` ведёт на `/settings/runners?disk={ref_id}` (`myRunnerDiskPath` в
+`entities/runner`; поля payload в 8.2).
 
 ### 4.3 Хранилище: «Освободить место»
 
@@ -722,10 +724,6 @@ Docker недоступен даёт `DockerUnavailableError`. Полоса ка
 
 `runner_disk_cleaned` владельцу личного раннера, только если очистку запустил не он; только «Входящие», без письма.
 Payload: `runner_id`, `runner_name`, `freed_bytes`, `state`. Переход ведёт в «Мои раннеры» с открытым «Диском».
-
-В общем payload уведомлений (`NotificationPayloadModel`, B6) это поля `ref_id` (id раннера), `excerpt` (имя
-раннера), `actor_name` (кто запустил), `outcome` (`done`, `cancelled`, `error`, `lost`) и новое `freed_bytes`.
-Переход W5: `/settings/runners?disk={ref_id}` (`myRunnerDiskPath` в `entities/runner`).
 
 ### 8.3 Метрики
 
