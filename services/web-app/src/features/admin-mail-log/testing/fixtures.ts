@@ -28,7 +28,7 @@ const DAY = 86400;
 
 /** Срок хранения по умолчанию (L12). */
 export const MAIL_RETENTION_DAYS = 90;
-export const MAIL_WINDOW_HOURS = 24;
+export const MAIL_WINDOW_HOURS = 24 as const;
 export const MAIL_SERVER = "studio.example.org";
 
 // Люди и проекты те же, что в демо-мире сервера (app/demo/server: adminPeople, projects).
@@ -174,7 +174,7 @@ export const makeMailLogRecord = (
     lang: draft.lang ?? "ru",
     to_email:
       draft.to_email ??
-      (typeof draft.to === "string" ? draft.to : draft.to.email),
+      (typeof draft.to === "string" ? draft.to : (draft.to.email ?? "")),
     to_user: person ? { ...person } : null,
     subject: draft.subject,
     status: draft.status,

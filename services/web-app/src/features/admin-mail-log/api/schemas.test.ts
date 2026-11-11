@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
@@ -91,6 +91,48 @@ describe("журнал писем: эталоны контракта", () => {
       }).success,
     ).toBe(true);
   });
+});
+
+// Эталоны сервера (срез B1): до переезда в contracts/server/fixtures лежат в contracts/server/pending
+// (README контракта). Общий тест контракта видит только fixtures, поэтому здесь они разбираются схемами
+// фичи из обоих мест, как только появятся.
+const CONTRACT = join(REPO, "contracts", "server");
+const serverFixtures = ["pending", "fixtures"].flatMap((root) =>
+  Object.keys(MAIL_LOG_CONTRACT_SCHEMAS).flatMap((schema) => {
+    const dir = join(CONTRACT, root, schema);
+    if (!existsSync(dir)) return [];
+    return readdirSync(dir)
+      .filter((file) => file.endsWith(".json"))
+      .sort()
+      .map(
+        (file) =>
+          [
+            `${root}/${schema}/${file.replace(/\.json$/, "")}`,
+            schema,
+            JSON.parse(readFileSync(join(dir, file), "utf8")) as unknown,
+          ] as const,
+      );
+  }),
+);
+
+describe("журнал писем: эталоны сервера", () => {
+  it("каталог журнала лежит либо в pending, либо в fixtures", () => {
+    for (const schema of Object.keys(MAIL_LOG_CONTRACT_SCHEMAS)) {
+      const places = ["pending", "fixtures"].filter((root) =>
+        existsSync(join(CONTRACT, root, schema)),
+      );
+      expect(places.length).toBeLessThan(2);
+    }
+  });
+
+  it.runIf(serverFixtures.length > 0).each(serverFixtures)(
+    "%s разбирается zod без потерь",
+    (_l, schema, body) => {
+      const parsed = MAIL_LOG_CONTRACT_SCHEMAS[schema]?.safeParse(body);
+      expect(parsed?.error).toBeUndefined();
+      expect(parsed?.data).toEqual(body);
+    },
+  );
 });
 
 describe("журнал писем: состояния галереи", () => {

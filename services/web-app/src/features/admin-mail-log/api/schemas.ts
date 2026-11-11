@@ -125,11 +125,14 @@ export const MAIL_ORIGINS = [
 ] as const;
 export type MailOrigin = (typeof MAIL_ORIGINS)[number];
 
-/** Человек установки: получатель или вызвавший. null, если адрес не человека или он удалён. */
+/**
+ * Человек установки (`AdminPersonRef`): получатель или вызвавший. Само поле null, если адрес не
+ * человека установки или он удалён; почты может не быть.
+ */
 export const MailLogPersonSchema = z.strictObject({
   id: z.string(),
   name: z.string(),
-  email: z.string(),
+  email: z.string().nullable(),
 });
 
 /** Ответ SMTP у `failed`: код и очищенный текст до 300 символов. */
@@ -138,7 +141,7 @@ export const MailLogFailureSchema = z.strictObject({
   text: z.string().nullable(),
 });
 
-/** Проект письма; name null, если проекта уже нет. */
+/** Проект письма (на сервере UUID строкой); name null, если проекта уже нет. */
 export const MailLogProjectSchema = z.strictObject({
   id: z.string(),
   name: z.string().nullable(),
@@ -203,7 +206,7 @@ export const MailLogLastFailureSchema = z.strictObject({
 /** Полоса за сутки, счётчик меню и плашка «Почта не настроена» (L14). */
 export const MailLogSummarySchema = z.strictObject({
   smtp_configured: z.boolean(),
-  window_hours: z.number().int(),
+  window_hours: z.literal(24),
   sent: z.number().int(),
   failed: z.number().int(),
   not_sent: z.number().int(),
@@ -223,10 +226,11 @@ export type MailLogDetail = z.infer<typeof MailLogDetailSchema>;
 export type MailLogSummary = z.infer<typeof MailLogSummarySchema>;
 
 /**
- * Каталоги contracts/server/fixtures журнала писем -> схема (6.2). Эталоны появляются вместе с
- * моделями бэкенда (срез B1); до тех пор контрактный тест принимает эти каталоги как ожидаемые
- * (PENDING_CONTRACT_SCHEMAS), а локальная копия эталонов для тестов и галерей лежит в
- * testing/fixtures, MAIL_LOG_CONTRACT_EXAMPLES.
+ * Каталоги эталонов журнала писем -> схема (6.2). Пока W1 не слит с B1, эталоны сервера лежат в
+ * contracts/server/pending/AdminMailLog* (README контракта): их видит только backend-тест, а
+ * фронтовый тест фичи (schemas.test.ts) разбирает их этими схемами там, где они есть. Когда каталоги
+ * переезжают в contracts/server/fixtures, эти пары добавляются в CONTRACT_SCHEMAS. Локальные
+ * эталоны для тестов и галерей: testing/fixtures, MAIL_LOG_CONTRACT_EXAMPLES.
  */
 export const MAIL_LOG_CONTRACT_SCHEMAS: Record<string, ZodType> = {
   AdminMailLogEntry: MailLogEntrySchema,

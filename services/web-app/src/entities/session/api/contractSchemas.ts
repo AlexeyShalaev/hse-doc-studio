@@ -19,7 +19,6 @@ import {
   ReviewThreadSchema,
 } from "@entities/review/model/review.schema";
 import * as upd from "@features/admin-updates/api/schemas";
-import { MAIL_LOG_CONTRACT_SCHEMAS } from "@features/admin-mail-log/api/schemas";
 import * as ops from "./opsSchemas";
 import * as pk from "./passkeySchemas";
 import * as s from "./schemas";
@@ -298,14 +297,4 @@ export const CONTRACT_SCHEMAS: Record<string, ZodType> = {
   SignSigningTaskRequest: srt.SignSigningTaskRequestSchema,
   ReturnSigningTaskRequest: srt.ReturnSigningTaskRequestSchema,
   SetSigningTaskPlateRequest: srt.SetSigningTaskPlateRequestSchema,
-};
-
-/**
- * Схемы срезов, у которых фронтенд слит раньше бэкенда: каталогов эталонов в contracts/server
- * может ещё не быть. Тест контракта не требует их каталогов, но если каталог уже есть, его эталоны
- * разбираются этими схемами. Когда бэкенд слит, пары переезжают в CONTRACT_SCHEMAS.
- *  - журнал писем (mail-log.md, 6.2): эталоны AdminMailLog* кладёт срез B1.
- */
-export const PENDING_CONTRACT_SCHEMAS: Record<string, ZodType> = {
-  ...MAIL_LOG_CONTRACT_SCHEMAS,
 };

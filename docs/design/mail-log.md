@@ -497,7 +497,7 @@ AdminMailLogEntry {
   template_known: bool          # вид есть в этой версии
   lang: "ru" | "en"
   to_email: str
-  to_user: AdminPersonRef | null          # {id: str, name: str, email: str}; null, если адрес не человека установки или он удалён
+  to_user: AdminPersonRef | null          # {id, name, email}; null, если адрес не человека установки или он удалён
   subject: str
   status: "sent" | "failed" | "not_sent" | "suppressed"
   reason: str | null
@@ -509,7 +509,7 @@ AdminMailLogEntry {
   actor: AdminPersonRef | null
   task: str | null
   origin: str
-  project: {id: str, name: str | null} | null                 # id строкой, как везде в API; name null, если проекта уже нет
+  project: {id: uuid, name: str | null} | null                # name null, если проекта уже нет
   ref: {kind: str, id: str} | null
 }
 
@@ -527,22 +527,21 @@ AdminMailLogSummary {
   smtp_configured: bool
   window_hours: 24
   sent: int, failed: int, not_sent: int, suppressed: int
-  last_failure: {at: datetime, reason: str} | null           # последний failed в том же окне, иначе null
+  last_failure: {at: datetime, reason: str} | null
   retention_days: int
 }
 ```
 
 `preview.subject` это тема из перерисовки; в шапке карточки показывается `entry.subject` (как ушла).
 
-`last_failure` берётся из того же окна, что и счётчики: сбой недельной давности не держит подсказку под полосой.
-`AdminPersonRef` на фронтенде называется `MailLogPerson`, остальные модели `MailLog*` без приставки `Admin`; имена
-каталогов эталонов остаются `AdminMailLog*`.
-
-Пока эталонов в `contracts/server` нет (W1 слит раньше B1), пары «каталог и схема zod» журнала лежат в
-`PENDING_CONTRACT_SCHEMAS` (`entities/session/api/contractSchemas.ts`): тест контракта фронтенда не требует их
-каталогов, а появившиеся каталоги разбирает этими схемами. B1 кладёт эталоны (тела из `MAIL_LOG_CONTRACT_EXAMPLES`,
-`features/admin-mail-log/testing/fixtures.ts`), регистрирует их в `_SCHEMAS` и переносит пары из
-`PENDING_CONTRACT_SCHEMAS` в `CONTRACT_SCHEMAS`.
+На фронтенде (W1) модели называются без приставки `Admin`: `MailLogEntry`, `MailLogPage`, `MailLogDetail`,
+`MailLogSummary`, человек `MailLogPerson`; каталоги эталонов остаются `AdminMailLog*`. Пары «каталог и схема zod»
+лежат в `MAIL_LOG_CONTRACT_SCHEMAS` (`features/admin-mail-log/api/schemas.ts`). Пока эталоны сервера не переехали в
+`contracts/server/fixtures`, тест фичи (`schemas.test.ts`) сам разбирает этими схемами каталоги `AdminMailLog*` там,
+где они лежат (`pending` или `fixtures`): расхождение с моделями B1 видно до переезда, а общий тест контракта не
+падает ни до слияния B1, ни после. Переезд (`git mv` из `pending` и пары в `CONTRACT_SCHEMAS`) делает тот, кто
+сливается вторым. Собственные эталоны фронтенда для тестов и галерей: `MAIL_LOG_CONTRACT_EXAMPLES`
+(`testing/fixtures.ts`).
 
 ### 6.3 Коды ошибок
 
@@ -693,7 +692,7 @@ E2E (срез E1): раздел 12.
 
 | Срез | Что | Зависит от | Размер |
 |---|---|---|---|
-| W1 | `features/admin-mail-log/api`: zod-схемы, запросы (`useCursorList`, сводка с опросом раз в 60 с), ключи; эталоны раздела 6 (локально, до B1 в `PENDING_CONTRACT_SCHEMAS`, 6.2); моки `testing/demo.ts`, демо-маршруты и сценарии `app/demo/server/mailLog.ts`; состояния галереи `testing/fixtures.ts` (4.4) | контракт раздела 6 | M |
+| W1 | `features/admin-mail-log/api`: zod-схемы, запросы (`useCursorList`, сводка с опросом раз в 60 с), ключи; эталоны раздела 6 (локально и сверка с эталонами B1 до их переезда, 6.2); моки `testing/demo.ts`, демо-маршруты и сценарии `app/demo/server/mailLog.ts`; состояния галереи `testing/fixtures.ts` (4.4) | контракт раздела 6 | M |
 | W2 | список: пункт «Письма» в группе «Журнал» со счётчиком (`nav.mail`, `nav.count.mail_*`), маршрут `/admin/mail`, шапка, плашка без SMTP, полоса за сутки с подсказками, фильтры и поиск в адресе, таблица по дням, телефон, словарь `admin/mail.json` ru и en, раздел галереи «Админка: письма» (список) | W1 | M |
 | W3 | карточка: панель справа по `?mail=`, сведения, вкладки HTML и текст в песочнице, пометки, «Что можно сделать» по виду и итогу, переходы к человеку, проекту и настройкам почты, 404; записи галереи (карточка) | W2 | M |
 
