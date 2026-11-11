@@ -180,7 +180,81 @@ The list shows version, tags, capacity and last poll time.
 - **Token rotation** issues a new runner token; the old one stops working. Pass the new token as `HSE_RUNNER__RUNNER_TOKEN`: it overrides `identity.json`.
 - **Revoke** closes the runner's access for good. A registration token can also be revoked before use.
 - The api and runner versions are checked at registration; an incompatible runner is rejected.
-- After registering, a new runner negotiates capabilities with the api (`/announce`): AI relay, separate slots for it and a stop notice. With an older api that does not know this call the runner keeps working as before, without the relay; an older runner works with a newer api too.
+- After registering, a new runner negotiates capabilities with the api (`/announce`): AI relay, separate slots for it, a stop notice, the command channel and the disk ([Runner disk](#runner-disk)). With an older api that does not know this call the runner keeps working as before, without the relay; an older runner works with a newer api too.
+
+## Runner disk { #runner-disk }
+
+Images of earlier Studio versions, old TeX Live and service tags and the Docker build cache pile up on a runner machine: every update pulls a new image of 1..2 GB. The "Disk" item in the runner row menu (the Runners page, shared and personal runners) shows how much space is used and what can be freed, and starts a cleanup. The runner measures and cleans by itself, with the same code as the "Disk" section of the desktop Studio. Under a shared runner's name a link "N can be freed" appears when the last measurement can free 1 GB or more.
+
+<figure class="hds-fig hds-wide">
+  <div class="hds-shot">
+    <div class="hds-shot__bar"><span class="hds-shot__brand">HSE DOC STUDIO</span><span class="hds-shot__route">/admin/runners</span></div>
+    <img src="../assets/shots/runner-disk.en.light.webp#only-light" alt="Runner disk window">
+    <img src="../assets/shots/runner-disk.en.dark.webp#only-dark" alt="Runner disk window">
+  </div>
+  <figcaption>the runner disk window: the bar by category, the data volume, old versions and unused images</figcaption>
+</figure>
+
+| Block | What it removes | Target |
+|---|---|---|
+| Old versions | images of earlier Studio versions, outdated service tags and containers on them | `old_versions` |
+| Unused images | Studio images the runner does not need and no container uses | `unused_images` |
+| Docker build cache | `docker builder prune` | `build_cache` |
+| Dangling images | `docker image prune` | `dangling_images` |
+| Stopped Studio containers | containers labelled `com.hse-studio.managed`; only in "Clean up everything" | `stopped_containers` |
+| Runner cache | the file cache (`data_dir/blobs`) and project working copies (`data_dir/workspaces`) | `runner_cache` |
+
+"Clean up everything" runs every target except rollback. Every button asks for confirmation with a list of what goes and the sizes from the last measurement. Progress is shown step by step, and the cleanup can be stopped after the current step. After the result the runner sends a new measurement by itself.
+
+What is never touched:
+
+- the current version: the Studio image of the runner's version, `image_base:latest`, the runner's TeX image (`HSE_RUNNER__TEX_IMAGE`) and any image a container is based on, even a stopped one;
+- the previous version kept for rollback. Only the "Also remove the previous version" box in the "Remove old versions" confirmation removes it;
+- Docker volumes: the TeX Live cache and Ollama models. Without them the next builds take noticeably longer;
+- everything outside the Studio categories: Postgres, MinIO, images and containers of other projects on the same host. "Disk" does not show them;
+- in the runner cache, files touched in the last 10 minutes and working copies used by running builds: running builds do not fail.
+
+The server sends the runner only cleanup targets, never image names. The runner builds the plan itself from a fresh measurement, so even a compromised server can remove only unused Studio images, its stopped containers and caches on a runner. The disk report contains no paths and no project ids.
+
+| Runner | What "Disk" shows |
+|---|---|
+| Docker (`HSE_RUNNER__EXECUTOR=docker`) | every block |
+| Kubernetes (`executor=kubernetes`) | only the runner cache and the data volume. TeX Live images on the nodes are removed by the kubelet image garbage collector (`imageGCHighThresholdPercent`); the Studio has no access to the nodes and does not need it |
+| a desktop Studio connected as a runner | only the runner cache. Docker on that computer is cleaned in the Studio itself: Settings, "Disk" |
+| Docker did not answer | only the runner cache, with "The runner could not reach Docker" instead of images |
+| runner below 0.22.0 | "Update the runner to see its disk"; a runner installed from the admin area gets an "Update runner" button |
+| offline | the last measurement, cleanup disabled until the runner is back |
+
+A personal runner can be viewed and cleaned by its owner (Settings, "My runners", item "Disk") and by an instance administrator. Only the owner can remove the previous version of a personal runner. The owner gets an inbox notice about a cleanup an administrator started. The audit log gets `runner.disk_cleanup`, `runner.disk_cleanup_cancel` and `runner.disk_cleaned`; measurements are not logged.
+
+Keep the server and a shared runner on the same host (`deploy/server`) on the same version. A server image with no container that is older than the runner version counts as an old version for the runner. The confirmation lists such images by name.
+
+### Command channel { #control-channel }
+
+The runner protocol is pull-only, and the job poll `/poll` is open only while the runner has a free slot. So disk commands go through a separate long poll that does not depend on build slots. The runner still needs no incoming connections.
+
+| Call | What it does |
+|---|---|
+| `POST /api/runner/v1/control/poll` | long poll for commands (`disk.measure`, `disk.cleanup`), up to 25 seconds |
+| `POST /api/runner/v1/control/{id}/progress` | command progress and result; the answer tells the runner to stop |
+| `POST /api/runner/v1/disk` | the latest disk measurement, up to 64 KB |
+
+- The channel opens after `/announce` when the server has negotiated both capabilities, `control` and `disk`. An older runner with a newer server works as before, without "Disk"; a newer runner with an older server does not open the channel.
+- The runner sends a measurement by itself: after `/announce`, every 6 hours, after every cleanup and on "Refresh".
+- A command the runner has not picked up within 10 minutes expires. A cleanup with no progress for 3 minutes, or whose runner went away (`/offline`, revoked), is considered lost.
+- A runner runs at most one cleanup; starting another answers 409 `runner_disk_busy`.
+- Commands and the latest measurement live in Postgres, so the channel works with several api replicas. Commands are capped at the latest 20 per runner.
+
+The minimum runner version for "Disk" is 0.22.0. Update older runners: one installed from the admin area with "Update" (see "Updating a runner installed from the admin area" above), others with a new image.
+
+| Variable | Value |
+|---|---|
+| `HSE_RUNNER__IMAGE_BASE` | Studio image repository without a tag, `ghcr.io/alexeyshalaev/hse-doc-studio` by default; the same as `HSE_STUDIO__IMAGE_BASE` on the server. "Disk" recognises Studio images and their old versions by it. Set it if the images come from your own registry: otherwise the runner does not see them and removes nothing from them |
+| `HSE_RUNNER__CACHE_MAX_BYTES` | file cache limit (2 GiB); the runner evicts the excess by itself |
+| `HSE_RUNNER__WORKSPACES_MAX_BYTES` | working copies limit (20 GiB); the runner removes long-unused ones by itself |
+| `HSE_RUNNER__DATA_DIR` | the data volume; "Disk" shows its free space |
+
+Metrics in `/metrics`: `hse_runner_disk_cleanable_bytes{scope="shared"|"personal"}` (what can be freed by the latest measurements) and `hse_runner_disk_cleanups_total{state}`. Design and decisions: `docs/design/storage-cleanup.md`.
 
 ## When there are no runners
 
