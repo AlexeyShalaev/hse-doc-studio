@@ -1,6 +1,6 @@
 // Кадры сайта документации со стенда серверного демо: маршрут подписания
-// (docs/{ru,en}/workbench/send-for-signing.md и how-to-sign.md) и очистка места
-// (docs/{ru,en}/deploy/runners.md и autonomy.md). Тот же стенд серверного демо, что у справки (stand/server-demo.mjs), та же
+// (docs/{ru,en}/workbench/send-for-signing.md и how-to-sign.md), очистка места
+// (docs/{ru,en}/deploy/runners.md и autonomy.md) и журнал писем (docs/{ru,en}/deploy/mail.md). Тот же стенд серверного демо, что у справки (stand/server-demo.mjs), та же
 // матрица, что у `make shots`: ru/en × light/dark, окно 1440×900 @2x.
 //
 //   node site-shots.mjs                          # все кадры
@@ -186,6 +186,23 @@ const SCREENS = [
     DESKTOP,
     'admin_ready',
   ],
+  // Журнал писем (docs/{ru,en}/deploy/mail.md): те же экраны, что живые записи галереи «Админка: письма».
+  // Обычный день: полоса за сутки, все итоги вперемешку.
+  ['mail-log', '/admin/mail', null, DESKTOP, 'admin_ready'],
+  // Карточка письма: приглашение в проект на reject-x@example.org, ответ 550, ссылка с токеном скрыта.
+  [
+    'mail-log-card',
+    '/admin/mail',
+    async (page) => {
+      await page.getByRole('row', {name: /reject-x@example\.org/}).click()
+      await page.getByRole('dialog').getByTestId('mail-card-reason').waitFor()
+      await page.waitForTimeout(900)
+    },
+    DESKTOP,
+    'admin_ready',
+  ],
+  // SMTP-сервер отклоняет вход: подсказка под полосой и строки «Не ушло» с кодом 535.
+  ['mail-log-smtp-auth', '/admin/mail', null, DESKTOP, 'ops_services_degraded'],
 ]
 
 /** Прокрутить PDF в окне просмотра: рамки подписей ниже текста заявления. */
