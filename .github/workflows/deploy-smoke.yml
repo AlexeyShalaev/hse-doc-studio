@@ -316,12 +316,23 @@ jobs:
           pnpm exec playwright test --project=presence
         working-directory: e2e
 
+      # Очистка места (storage-cleanup.md, E1): «Диск» общего и личного раннера, «Освободить место». Идёт последней:
+      # чистит висячие образы и кэш раннера, удаляет состаренную задачу сборки и оставляет личный раннер остановленным.
+      - name: Run storage cleanup e2e
+        run: |
+          eval "$(../scripts/dev/server-stack/stack.sh env)"
+          pnpm exec playwright test --project=storage-cleanup
+        working-directory: e2e
+
       - name: Stand logs on failure
         if: failure()
         run: |
           for service in api runner postgres minio; do
             echo "::group::$service"; scripts/dev/server-stack/stack.sh logs "$service" | tail -300; echo "::endgroup::"
           done
+          echo "::group::runner-personal"
+          scripts/dev/server-stack/stack.sh logs runner-personal 2>&1 | tail -200 || true
+          echo "::endgroup::"
           echo "::group::docker events"
           docker events --since 30m --until 0s --filter type=container --filter event=die --filter event=create --format '{{.Time}} {{.Action}} {{.Actor.Attributes.image}} exit={{.Actor.Attributes.exitCode}} {{.Actor.Attributes.name}}' | tail -40 || true
           echo "::endgroup::"
