@@ -6,6 +6,56 @@ Generated from `release-notes.json` via `make changelog` — do not edit by hand
 Release notes are hand-written and bilingual (RU/EN); the app shows them in the
 selected interface language.
 
+## [0.22.0](https://github.com/AlexeyShalaev/hse-doc-studio/compare/v0.21.1...v0.22.0) (2026-11-11)
+
+
+### Features
+
+* **lifecycle:** free up space sweep across manual sources ([54b8b4b](https://github.com/AlexeyShalaev/hse-doc-studio/commit/54b8b4bf6d44c2360ba099b71fc7e1884675d171))
+* **lifecycle:** free up space sweep for admin storage ([093d63a](https://github.com/AlexeyShalaev/hse-doc-studio/commit/093d63a4cdd2925f00ca90b40c17eeb2a3ca2274))
+* **runner:** command channel loop, disk reports and runner client calls ([48ee535](https://github.com/AlexeyShalaev/hse-doc-studio/commit/48ee5357ed6ad9ab9de26f36f36b49c2c7d92d1e))
+* **runner:** disk report and command channel contract ([089f8f3](https://github.com/AlexeyShalaev/hse-doc-studio/commit/089f8f35c0183e8ac409a28b8fa16b0023d04179))
+* **runner:** disk report and command channel contract ([b69232c](https://github.com/AlexeyShalaev/hse-doc-studio/commit/b69232cdf274f4b155441ac3197e63831e4d38b6))
+* **runner:** measure and clear the blob cache and workspaces without breaking builds ([be66e51](https://github.com/AlexeyShalaev/hse-doc-studio/commit/be66e51bd8f07f03c82ad8fd2ca94a6a23e1d1bd))
+* **runner:** runner command channel and disk reports (B4) ([7aeaad3](https://github.com/AlexeyShalaev/hse-doc-studio/commit/7aeaad37f64a65683e3ac5a3650e2759f6626919))
+* **runner:** runner disk in admin and my runners (B6) ([133f495](https://github.com/AlexeyShalaev/hse-doc-studio/commit/133f495558e2f1f1768122b4832b58449eab2c9f))
+* **runner:** runner disk in admin and my runners, rights, audit, owner notice and metrics ([dfdbd6f](https://github.com/AlexeyShalaev/hse-doc-studio/commit/dfdbd6f4f0559c9769a3ab3716e465f04cc3017c))
+* **runner:** runner disk service measures and cleans the runner disk ([21aca8c](https://github.com/AlexeyShalaev/hse-doc-studio/commit/21aca8c7ffe922cfa398bff8a737f7fce3245cc4))
+* **runner:** RunnerDiskService measures the runner disk and cleans it by targets ([f26af5d](https://github.com/AlexeyShalaev/hse-doc-studio/commit/f26af5d339341fc4512d9fa8f56c7145f3aa76bd))
+* **runner:** server command channel and runner disk storage ([e14d583](https://github.com/AlexeyShalaev/hse-doc-studio/commit/e14d583a1d149086761dcd01276cbad76a62f589))
+* **runner:** server command channel, disk report storage and runner_commands reaper ([92e4676](https://github.com/AlexeyShalaev/hse-doc-studio/commit/92e4676357dbe6f825114a8808e0ecc55367b037))
+* **web:** «Диск» в меню общих и личных раннеров админки ([7a142ed](https://github.com/AlexeyShalaev/hse-doc-studio/commit/7a142edd8170935a5c3f90a8c9fa044c4b216d3a))
+* **web:** «Освободить место» и «Где ещё освободить место» в «Хранилище» ([de361bf](https://github.com/AlexeyShalaev/hse-doc-studio/commit/de361bf8b1a1adff6931257b7fdfae3d25c9b8ed))
+* **web:** free up space and runner disk summary on the Storage admin page (W6) ([7e268ee](https://github.com/AlexeyShalaev/hse-doc-studio/commit/7e268ee6150fbc9b33c3eb9d9b92c33777f1af41))
+* **web:** labels for lifecycle sweep audit, errors and registry entry ([79f39bb](https://github.com/AlexeyShalaev/hse-doc-studio/commit/79f39bb9848460f0c2de9e1ef16dfb4f75f2401d))
+* **web:** required freed_bytes in notifications and runner_disk_cleaned contract fixture ([d3a754f](https://github.com/AlexeyShalaev/hse-doc-studio/commit/d3a754f10e60f43636d49b362cb772f3dd4c95bf))
+* **web:** runner disk and storage sweep entities, API and demo mocks (W1) ([e1a1943](https://github.com/AlexeyShalaev/hse-doc-studio/commit/e1a194360194eca8782b720bef118d7de5ce7410))
+* **web:** runner disk in my runners and runner_disk_cleaned in the inbox (W5) ([e4535f1](https://github.com/AlexeyShalaev/hse-doc-studio/commit/e4535f1632a6b570879be676477e6be999063cd8))
+* **web:** runner disk in my runners and runner_disk_cleaned notice (W5) ([a6fc9f4](https://github.com/AlexeyShalaev/hse-doc-studio/commit/a6fc9f4556d34fc74f0403cf91cdb6ea3f99a16f))
+* **web:** runner disk menu item in admin runners ([be09255](https://github.com/AlexeyShalaev/hse-doc-studio/commit/be0925553ac58dfefdf895c08d4657de9c33673b))
+* **web:** runner disk panel and dialog (storage cleanup W3) ([8ad95fc](https://github.com/AlexeyShalaev/hse-doc-studio/commit/8ad95fc2de2dcbe8fc1127cda370fd569fe9f944))
+* **web:** RunnerDiskPanel и RunnerDiskDialog, словарь runnerDisk ([3639038](https://github.com/AlexeyShalaev/hse-doc-studio/commit/363903826eddba0d47c39754d8de66e7d7260087))
+* **web:** диск раннера и «Освободить место»: схемы, API, запросы и моки (W1) ([60ea6e7](https://github.com/AlexeyShalaev/hse-doc-studio/commit/60ea6e73d40158918f39320da3dd40404be8b152))
+* **web:** диски раннеров и «Освободить место» в серверном демо, тесты (W1) ([d58c64e](https://github.com/AlexeyShalaev/hse-doc-studio/commit/d58c64e0a697ab62f87950e02fe04458f5c959b3))
+* **web:** кэш раннера на полосе «Диска» своим тоном --chart-6 и --chart-7 ([c5d509d](https://github.com/AlexeyShalaev/hse-doc-studio/commit/c5d509d5da726a5562748b69fc95992031af74c0))
+
+
+### Bug Fixes
+
+* **db:** chain dk_01_runner_disk after dk_02_lifecycle_sweeps ([50ae28d](https://github.com/AlexeyShalaev/hse-doc-studio/commit/50ae28deaf973af444e7194a671b5c2b9c46bb4d))
+* **runner:** disk cleanup wait returns after the observer got the final state ([c20859c](https://github.com/AlexeyShalaev/hse-doc-studio/commit/c20859cc75dbc8f5f97c8c86bdee75d7da6c33d4))
+* **web:** «можно освободить» переносится в столбце имени раннера; уточнения W4 в дизайне ([0ae22b7](https://github.com/AlexeyShalaev/hse-doc-studio/commit/0ae22b7962ba2ca3db8acea43635f408137dd140))
+* **web:** «Освободить место»: столбцы предпросмотра, плашка на телефоне, бюджет словаря; уточнения W6 в дизайне ([b35aee8](https://github.com/AlexeyShalaev/hse-doc-studio/commit/b35aee8104014c7fd37af4b761d1cc253989c610))
+* **web:** action menu sheet ignores the gesture that opened it ([830b6c4](https://github.com/AlexeyShalaev/hse-doc-studio/commit/830b6c42b11d938262b3b1c61a35049b0030ceb6))
+* **web:** project wizard layout without Tailwind breakpoint classes ([75c21c5](https://github.com/AlexeyShalaev/hse-doc-studio/commit/75c21c5006f5ecba054b33b55840f890a519e852))
+* **web:** quote source names in the free space excluded list ([80b8f54](https://github.com/AlexeyShalaev/hse-doc-studio/commit/80b8f5484f7af51c56a33c1792d9208d4ba71e76))
+* **web:** quote source names in the free space excluded list ([eca413d](https://github.com/AlexeyShalaev/hse-doc-studio/commit/eca413df925cb785d512708f17f82ee824666d2f))
+* **web:** runner disk shows sizes under a megabyte in KB ([e6c1655](https://github.com/AlexeyShalaev/hse-doc-studio/commit/e6c16554554aaf134a2ca1d9761f5b5c064eeefc))
+* **web:** runner disk shows sizes under a megabyte in KB ([0b6a6d9](https://github.com/AlexeyShalaev/hse-doc-studio/commit/0b6a6d9a679e6680b6e050adf82729e67e5cbe82))
+* **web:** мастер создания проекта снова в две колонки на широком окне ([d10a705](https://github.com/AlexeyShalaev/hse-doc-studio/commit/d10a70510c975dfefadd85a4c6081facc89c1525))
+* **web:** схемы и эталоны «Освободить место» по фактическим ответам B7 ([b895118](https://github.com/AlexeyShalaev/hse-doc-studio/commit/b8951184a283b003bd9d1d8948e17223a38db26e))
+* **web:** шторка «⋯» не выбирает пункт жестом, который её открыл ([18cf329](https://github.com/AlexeyShalaev/hse-doc-studio/commit/18cf329f4c3699323122f03a0738221a097ce427))
+
 ## [0.21.1](https://github.com/AlexeyShalaev/hse-doc-studio/compare/v0.21.0...v0.21.1) - 2026-11-11
 
 - Admin, Runners: the update button of an outdated runner no longer overlaps the Status column. A compact “v0.21.1” button sits under the version, with the full “Update to v0.21.1” label in the tooltip.
