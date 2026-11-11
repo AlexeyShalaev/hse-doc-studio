@@ -24,6 +24,10 @@ import { cloudDeviceDemoRoutes } from "../deviceRoutes";
 import { createSetupRoutes } from "./setupRoutes";
 import { createShareLinkRoutes, createSharingAdminRoutes } from "./shareLinks";
 import { createSystemRoutes } from "./systemRoutes";
+import {
+  createStorageCleanupAccountRoutes,
+  createStorageCleanupAdminRoutes,
+} from "./storageCleanup";
 import { DEMO_ADMIN, DEMO_STUDENT } from "./scenarios";
 import { createServerWorld, signIn, signOut } from "./world";
 
@@ -253,6 +257,8 @@ const withGuard = (route: DemoRoute): DemoRoute => ({
 
 /** Маршруты клиента /api/admin: ставятся на adminClient отдельно от /api/v1. */
 export const serverAdminDemoRoutes: DemoRoute[] = [
+  // Диски раннеров раньше маршрутов раннеров: «disk-summary» не должен уйти в /runners/:id.
+  ...createStorageCleanupAdminRoutes(() => world),
   ...createAdminRoutes(() => world),
   ...createSharingAdminRoutes(() => world),
 ].map(withGuard);
@@ -278,6 +284,7 @@ export const serverDemoRoutes: DemoRoute[] = [
   ...signingIdentityDemo.routes,
   ...signerProfileDemo.routes,
   ...createMemberOrgRoutes(() => world),
+  ...createStorageCleanupAccountRoutes(() => world),
   ...createPersonalRoutes(() => world),
   ...createUsageRoutes(() => world),
   ...createGitRemoteRoutes(() => world),

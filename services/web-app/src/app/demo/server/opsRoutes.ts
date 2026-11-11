@@ -18,6 +18,7 @@ import {
   timeParam,
 } from "./demoList";
 import { runnerState, type DemoPersonalRunner } from "./personalRunners";
+import { diskBriefOf } from "./storageCleanup";
 import {
   adminOpsOf,
   adminOrgsOf,
@@ -371,6 +372,7 @@ export const createOpsRoutes = (
     last_seen_ip: null,
     reinstall: !r.revoked && beforeLimits(r.version) ? ["before_limits"] : [],
     deployment_reported: !beforeLimits(r.version),
+    disk: diskBriefOf(getWorld(), r.id),
   });
 
   // Личные раннеры людей: админ видит владельца и состояние, может приостановить
@@ -400,6 +402,7 @@ export const createOpsRoutes = (
     host_kind: r.host_kind,
     ai_endpoints: r.ai_endpoints.map((e) => e.name),
     last_seen_ip: r.last_seen_ip,
+    disk: diskBriefOf(getWorld(), r.id),
   });
 
   /** Новейшая версия среди неотозванных раннеров: от неё считаются устаревшие. */

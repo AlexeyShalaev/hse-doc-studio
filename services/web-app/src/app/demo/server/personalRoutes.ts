@@ -20,6 +20,7 @@ import {
   type DemoRunnerOwner,
 } from "./personalRunners";
 import { effectiveRole } from "./projectAccess";
+import { diskBriefOf } from "./storageCleanup";
 import { personalOf, type ServerDemoWorld } from "./world";
 
 // Демо личных раннеров (/api/v1): мои раннеры и токены, сопряжение по коду,
@@ -399,7 +400,10 @@ export const createPersonalRoutes = (
                 r.revoked_at === null ||
                 now - Date.parse(r.revoked_at) < REVOKED_VISIBLE_MS,
             )
-            .map((r) => toMyRunner(r, s.enabled)),
+            .map((r) => ({
+              ...toMyRunner(r, s.enabled),
+              disk: diskBriefOf(getWorld(), r.id),
+            })),
         );
       }),
     },

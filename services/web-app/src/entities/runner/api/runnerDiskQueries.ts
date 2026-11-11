@@ -25,6 +25,12 @@ export const runnerDiskKeys = {
   summary: () => [...runnerDiskKeys.all, "summary"] as const,
 };
 
+/**
+ * Очистки, запущенные из этой вкладки: их итог считается «на глазах», даже если опрос не застал
+ * команду незакрытой (раннер управился между двумя опросами).
+ */
+const startedHere = new Set<string>();
+
 export type UseRunnerDiskOptions = {
   /** Опрос только при открытом диалоге: закрытый диалог не держит запрос. */
   enabled?: boolean;
@@ -70,7 +76,12 @@ export const useRunnerDisk = (
     const active = isDiskCommandActive(command);
     const before = seen.current;
     seen.current = { id: command.id, active };
-    if (before?.id !== command.id || !before.active || active) return;
+    if (active) return;
+    const watched =
+      (before?.id === command.id && before.active) ||
+      startedHere.has(command.id);
+    if (!watched) return;
+    startedHere.delete(command.id);
     void client.invalidateQueries({ queryKey: runnerDiskKeys.summary() });
     if (scope === "account") {
       void client.invalidateQueries({ queryKey: runnerKeys.mine() });
@@ -97,6 +108,7 @@ const useOnCommand = (scope: RunnerDiskScope, runnerId: string) => {
   const client = useQueryClient();
   const key = runnerDiskKeys.view(scope, runnerId);
   return (command: RunnerDiskCommand) => {
+    if (command.kind === "disk.cleanup") startedHere.add(command.id);
     client.setQueryData<RunnerDiskView>(key, (view) =>
       putCommand(view, command),
     );
