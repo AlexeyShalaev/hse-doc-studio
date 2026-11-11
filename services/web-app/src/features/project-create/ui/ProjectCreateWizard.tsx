@@ -52,6 +52,7 @@ import {
   type SupervisorEntry,
 } from "../model/useCreateWizard";
 import { Spinner } from "@shared/ui/Spinner";
+import { useIsPhoneWidth } from "@shared/lib/viewport";
 import { isMetaValueBlank, pickLocalized, seedMetaDefaults } from "@shared/lib";
 import { clsx } from "clsx";
 import type { PackResponse, VersionListItemResponse } from "@shared/api/types";
@@ -2306,6 +2307,9 @@ export const ProjectCreateWizard = () => {
   const { t } = useTranslation("projectCreate");
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
+  // Телефон: поля уже по краям. Брейкпоинт из viewport: адаптивных классов Tailwind (sm:,
+  // max-sm:) в сборке нет, с ними мастер на любом окне был в телефонной раскладке.
+  const isPhone = useIsPhoneWidth();
   const {
     step,
     maxReached,
@@ -2552,22 +2556,22 @@ export const ProjectCreateWizard = () => {
   const isLastStep = step === totalSteps - 1;
 
   return (
-    <div
-      className="flex h-full flex-col sm:flex-row"
-      style={{ background: "var(--bg-0)" }}
-    >
-      {/* Список шагов: колонка слева, а на узком экране полоса сверху с прокруткой */}
+    <div className="flex h-full" style={{ background: "var(--bg-0)" }}>
+      {/* Список шагов колонкой слева. На телефоне его прячет index.css: номер шага стоит
+          в заголовке, назад ведёт кнопка. */}
       <div
-        className="flex shrink-0 flex-row overflow-x-auto border-b border-border max-sm:!p-2 sm:w-[13.75rem] sm:flex-col sm:overflow-y-auto sm:border-r sm:border-b-0"
+        className="flex shrink-0 flex-col"
         data-testid="wizard-steps"
-        data-hscroll
         style={{
+          width: "13.75rem",
+          overflowY: "auto",
           padding: "1.25rem 0.5rem 1.5rem",
+          borderRight: "1px solid var(--border)",
           background: "var(--bg-1)",
         }}
       >
         <div
-          className="flex items-center gap-2 max-sm:hidden"
+          className="flex items-center gap-2"
           style={{ padding: "0 0.75rem 1rem" }}
         >
           <Logomark />
@@ -2612,7 +2616,7 @@ export const ProjectCreateWizard = () => {
               disabled={!reachable}
               aria-current={active ? "step" : undefined}
               title={reachable ? undefined : t("wizard.lockedStepTitle")}
-              className="flex items-center gap-2 max-sm:!w-auto max-sm:shrink-0 max-sm:whitespace-nowrap"
+              className="flex items-center gap-2"
               style={{
                 width: "100%",
                 padding: "0.375rem 0.875rem",
@@ -2688,8 +2692,9 @@ export const ProjectCreateWizard = () => {
       {/* Right pane */}
       <div className="flex-1 flex flex-col" style={{ minWidth: 0 }}>
         <div
-          className="max-sm:!px-4"
-          style={{ padding: "1.25rem 1.75rem 0.5rem" }}
+          style={{
+            padding: isPhone ? "1.25rem 1rem 0.5rem" : "1.25rem 1.75rem 0.5rem",
+          }}
         >
           <div
             className="flex items-center gap-2"
@@ -2731,9 +2736,9 @@ export const ProjectCreateWizard = () => {
         </div>
 
         <div
-          className="flex-1 max-sm:!px-4"
+          className="flex-1"
           style={{
-            padding: "1.25rem 1.75rem 1.5rem",
+            padding: isPhone ? "1.25rem 1rem 1.5rem" : "1.25rem 1.75rem 1.5rem",
             overflowY: "auto",
             overflowX: "hidden",
             minWidth: 0,
@@ -2743,9 +2748,9 @@ export const ProjectCreateWizard = () => {
         </div>
 
         <div
-          className="flex flex-wrap items-center justify-between gap-2 max-sm:!px-3"
+          className="flex flex-wrap items-center justify-between gap-2"
           style={{
-            padding: "0.75rem 1.25rem",
+            padding: isPhone ? "0.75rem" : "0.75rem 1.25rem",
             borderTop: "1px solid var(--border)",
             background: "var(--bg-1)",
           }}

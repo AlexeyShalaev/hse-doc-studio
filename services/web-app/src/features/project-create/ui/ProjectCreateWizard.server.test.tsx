@@ -4,6 +4,7 @@ import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { i18n } from "@shared/lib/i18n";
+import { installViewport } from "@shared/lib/viewport/testing";
 import {
   LOCAL_BOOTSTRAP,
   sessionKeys,
@@ -106,13 +107,31 @@ describe("мастер создания проекта на сервере", () 
     expect(screen.getByPlaceholderText(/Diff-аналитика/)).toBeInTheDocument();
   });
 
-  it("список шагов на узком экране ложится полосой сверху, а не колонкой 220 px", () => {
-    mount(SERVER);
-    const steps = screen.getByTestId("wizard-steps");
-    expect(steps.className).toContain("flex-row");
-    expect(steps.className).toContain("sm:flex-col");
-    expect(steps.className).toContain("sm:w-[13.75rem]");
-    expect(steps.getAttribute("style") ?? "").not.toContain("width");
+  it("на широком окне список шагов стоит колонкой 220 px слева", () => {
+    const viewport = installViewport(1440);
+    try {
+      mount(SERVER);
+      const steps = screen.getByTestId("wizard-steps");
+      expect(steps.className).toContain("flex-col");
+      expect(steps.style.width).toBe("13.75rem");
+      expect(
+        screen.getByRole("heading", { level: 2 }).parentElement?.style.padding,
+      ).toBe("1.25rem 1.75rem 0.5rem");
+    } finally {
+      viewport.restore();
+    }
+  });
+
+  it("на телефоне поля мастера уже по краям", () => {
+    const viewport = installViewport(390);
+    try {
+      mount(SERVER);
+      expect(
+        screen.getByRole("heading", { level: 2 }).parentElement?.style.padding,
+      ).toBe("1.25rem 1rem 0.5rem");
+    } finally {
+      viewport.restore();
+    }
   });
 
   it("владельцем можно выбрать только организацию, где ты администратор", () => {

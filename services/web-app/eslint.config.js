@@ -8,6 +8,11 @@ import prettierConfig from "eslint-config-prettier";
 import tanstackQuery from "@tanstack/eslint-plugin-query";
 import i18next from "eslint-plugin-i18next";
 
+// Адаптивный вариант Tailwind в строке классов: sm:flex, max-md:hidden, !lg:p-2, 2xl:w-8.
+const TW_BREAKPOINT = String.raw`/(^|\s)!?(max-)?(sm|md|lg|xl|2xl):/`;
+const TW_BREAKPOINT_MESSAGE =
+  "Адаптивные классы Tailwind (sm:, md:, max-sm: …) не работают: брейкпоинтов в сборке нет. Используйте useIsPhoneWidth/useIsCompactWidth из @shared/lib/viewport или медиазапрос в index.css (docs/design/mobile-layout.md).";
+
 export default tseslint.config(
   {
     ignores: [
@@ -94,6 +99,17 @@ export default tseslint.config(
           selector: "Property[key.name='fontSize'] > Literal[value=/px$/]",
           message:
             "fontSize в px не масштабируется настройкой «Размер текста»: пишите rem или токен, см. docs/design/mobile-layout.md.",
+        },
+        // Tailwind 4 подключён без темы (@tailwind в index.css): брейкпоинтов нет, и классы
+        // sm:, max-md: и подобные молча не генерируются. Раскладку по ширине задают хуки
+        // useIsPhoneWidth/useIsCompactWidth или медиазапросы в index.css.
+        {
+          selector: `JSXAttribute[name.name='className'] Literal[value=${TW_BREAKPOINT}]`,
+          message: TW_BREAKPOINT_MESSAGE,
+        },
+        {
+          selector: `JSXAttribute[name.name='className'] TemplateElement[value.raw=${TW_BREAKPOINT}]`,
+          message: TW_BREAKPOINT_MESSAGE,
         },
       ],
 
