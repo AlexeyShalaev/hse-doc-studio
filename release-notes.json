@@ -1,6 +1,48 @@
 {
   "releases": [
     {
+      "version": "0.21.0",
+      "date": "2026-11-11",
+      "notes": [
+        {
+          "ru": "Маршрут подписания подписывает версию, взятую при отправке: «версия на подписи». Правки и пересборки документа маршрут больше не останавливают, подписанты видят и подписывают именно отправленный PDF.",
+          "en": "The signing route signs the version taken at send, the “version on signature”. Edits and rebuilds no longer stop the route: signers see and sign exactly the PDF that was sent."
+        },
+        {
+          "ru": "Первая правка, загрузка файла, сборка или открытие офисного редактора у документа на маршруте задаёт мягкий вопрос вместо блокировки: можно продолжить, маршрут при этом идёт дальше.",
+          "en": "The first edit, file upload, build or office editor launch on a document out for signing asks a soft question instead of blocking: you can go ahead and the route keeps going."
+        },
+        {
+          "ru": "Кнопка «Отправить новую версию» отправляет свежую сборку: согласования по документам без изменений сохраняются, заново согласуют только изменённые, и уведомления получают только те, чьё согласование снято.",
+          "en": "“Send new version” sends the fresh build: approvals on unchanged documents are kept, only changed documents are approved again, and only people whose approval was dropped are notified."
+        },
+        {
+          "ru": "Вкладка «Подписи», карточка маршрута, плашка в редакторе, «Входящие» и страница подписанта показывают дату версии на подписи и предупреждают, если текущая сборка от неё отличается.",
+          "en": "The Signatures tab, the route card, the editor banner, the inbox and the signer page show the date of the version on signature and warn when the current build differs from it."
+        },
+        {
+          "ru": "Пакет для сдачи собирается из подписанной версии; если документ менялся после отправки, в пакете и в КАК_ПРОВЕРИТЬ.txt есть предупреждение. Даты в нём указаны по московскому времени.",
+          "en": "The submission pack is built from the signed version; if a document changed after sending, the pack and HOW_TO_VERIFY.txt carry a warning. Dates in it use Moscow time."
+        },
+        {
+          "ru": "Пока документ на маршруте, «Подписывать текущую сборку» в обход маршрута закрыто; отмена маршрута снимает версию на подписи.",
+          "en": "While a document is on a route, signing the current build outside the route is closed; cancelling the route releases the version on signature."
+        },
+        {
+          "ru": "Маршруты, начатые до обновления, переносятся автоматически: версией на подписи становится сборка, на которую уже есть согласования. Если её не найти, маршрут предложит «Отправить новую версию».",
+          "en": "Routes started before the update are migrated automatically: the build that already has approvals becomes the version on signature. If it cannot be found, the route offers “Send new version”."
+        },
+        {
+          "ru": "MCP: get_signing_route показывает версии на подписи и изменённые документы, правки через MCP возвращают пояснение о маршруте, а новую версию отправляют только в интерфейсе.",
+          "en": "MCP: get_signing_route shows the versions on signature and changed documents, edits via MCP return a note about the route, and a new version is sent only from the UI."
+        },
+        {
+          "ru": "Документация и встроенная справка по маршруту подписания обновлены под версию на подписи, со свежими скриншотами.",
+          "en": "The signing route docs and in-app help are updated for the version on signature, with fresh screenshots."
+        }
+      ]
+    },
+    {
       "version": "0.20.1",
       "date": "2026-11-10",
       "notes": [

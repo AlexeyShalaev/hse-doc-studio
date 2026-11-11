@@ -6,6 +6,18 @@ Generated from `release-notes.json` via `make changelog` — do not edit by hand
 Release notes are hand-written and bilingual (RU/EN); the app shows them in the
 selected interface language.
 
+## [0.21.0](https://github.com/AlexeyShalaev/hse-doc-studio/compare/v0.20.1...v0.21.0) - 2026-11-11
+
+- The signing route signs the version taken at send, the “version on signature”. Edits and rebuilds no longer stop the route: signers see and sign exactly the PDF that was sent.
+- The first edit, file upload, build or office editor launch on a document out for signing asks a soft question instead of blocking: you can go ahead and the route keeps going.
+- “Send new version” sends the fresh build: approvals on unchanged documents are kept, only changed documents are approved again, and only people whose approval was dropped are notified.
+- The Signatures tab, the route card, the editor banner, the inbox and the signer page show the date of the version on signature and warn when the current build differs from it.
+- The submission pack is built from the signed version; if a document changed after sending, the pack and HOW_TO_VERIFY.txt carry a warning. Dates in it use Moscow time.
+- While a document is on a route, signing the current build outside the route is closed; cancelling the route releases the version on signature.
+- Routes started before the update are migrated automatically: the build that already has approvals becomes the version on signature. If it cannot be found, the route offers “Send new version”.
+- MCP: get_signing_route shows the versions on signature and changed documents, edits via MCP return a note about the route, and a new version is sent only from the UI.
+- The signing route docs and in-app help are updated for the version on signature, with fresh screenshots.
+
 ## [0.20.1](https://github.com/AlexeyShalaev/hse-doc-studio/compare/v0.20.0...v0.20.1) - 2026-11-10
 
 - The signing route shows both stages: “1 of 3 approved · 0 of 3 signed” on the card and “1/3 approved” in the checkpoint header. An e-signature waiting for the freeze is marked “approved, signature after freeze”.
