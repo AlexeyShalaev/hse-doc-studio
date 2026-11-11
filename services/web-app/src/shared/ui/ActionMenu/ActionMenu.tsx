@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { useRef, type ReactNode, type SyntheticEvent } from "react";
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 import { Check, MoreHorizontal } from "lucide-react";
 import { useIsPhoneWidth } from "../../lib/viewport";
@@ -42,6 +42,32 @@ export const ActionMenu = ({
 }: ActionMenuProps) => {
   // Телефон: длинное меню - шторка снизу с крупными строками (index.css, .adm-menu).
   const isSheet = useIsPhoneWidth();
+  // Шторка открывается по pointerdown (так устроен Radix) и выезжает под палец. Отпускание
+  // того же жеста долетает до пункта под ним, а Radix считает «нажал на кнопке, отпустил на
+  // пункте» выбором. На касании click к тому же отдаётся тому, что теперь под пальцем. Пока
+  // жест, открывший шторку, не закончился, её пункты его не принимают. Новый жест внутри
+  // шторки и клавиатура снимают запрет сразу; клавиатурный выбор идёт как прежде.
+  const openingGesture = useRef(false);
+  const armOpeningGesture = () => {
+    openingGesture.current = true;
+    const release = () => {
+      // После click этого жеста: сам click до пункта уже не дойдёт.
+      window.setTimeout(() => {
+        openingGesture.current = false;
+      }, 0);
+      window.removeEventListener("click", release, true);
+      window.removeEventListener("pointercancel", release, true);
+    };
+    window.addEventListener("click", release, true);
+    window.addEventListener("pointercancel", release, true);
+  };
+  const releaseOpeningGesture = () => {
+    openingGesture.current = false;
+  };
+  const swallowOpeningGesture = (event: SyntheticEvent) => {
+    // preventDefault: Radix пропускает свой обработчик (выбор пункта) у такого события.
+    if (isSheet && openingGesture.current) event.preventDefault();
+  };
   const safe = items.filter((i) => !i.danger);
   const danger = items.filter((i) => i.danger);
   const render = (item: ActionMenuItem) =>
@@ -53,6 +79,8 @@ export const ActionMenu = ({
         disabled={item.disabled}
         data-testid={item.testId}
         onSelect={item.onSelect}
+        onPointerUp={swallowOpeningGesture}
+        onClick={swallowOpeningGesture}
       >
         {item.icon}
         {item.label}
@@ -68,19 +96,32 @@ export const ActionMenu = ({
         disabled={item.disabled}
         data-testid={item.testId}
         onSelect={item.onSelect}
+        onPointerUp={swallowOpeningGesture}
+        onClick={swallowOpeningGesture}
       >
         {item.icon}
         {item.label}
       </DropdownMenu.Item>
     );
   return (
-    <DropdownMenu.Root modal={false}>
+    <DropdownMenu.Root
+      modal={false}
+      onOpenChange={(open) => {
+        if (!open) releaseOpeningGesture();
+      }}
+    >
       <DropdownMenu.Trigger asChild>
         <button
           type="button"
           className="icon-btn"
           aria-label={label}
           data-testid={testId}
+          onPointerDown={(event) => {
+            // Те же условия, при которых Radix открывает меню по нажатию.
+            if (isSheet && event.button === 0 && !event.ctrlKey) {
+              armOpeningGesture();
+            }
+          }}
         >
           <MoreHorizontal size="1rem" aria-hidden="true" />
         </button>
@@ -98,6 +139,8 @@ export const ActionMenu = ({
           sideOffset={4}
           collisionPadding={8}
           onCloseAutoFocus={onCloseAutoFocus}
+          onPointerDownCapture={releaseOpeningGesture}
+          onKeyDownCapture={releaseOpeningGesture}
           style={{ zIndex: ACTION_MENU_LAYER }}
         >
           {safe.map(render)}

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Link, useSearchParams } from "react-router";
 import { useThemeStore, type Theme } from "@shared/lib";
+import { useIsPhoneWidth } from "@shared/lib/viewport";
 import type { GalleryEntry, GallerySection } from "@shared/lib/stateGallery";
 import { GalleryEntryCard, type GalleryDemo } from "./GalleryEntryCard";
 
@@ -89,6 +90,9 @@ export const StateGalleryPage = ({
     null,
   );
   const runs = useRef(0);
+  // Раскладка по брейкпоинту телефона из viewport: адаптивных вариантов Tailwind (sm:,
+  // max-sm:) в сборке нет, с ними навигация на любом окне ложилась над содержимым.
+  const isPhone = useIsPhoneWidth();
   // ?section=conflicts оставляет один раздел: удобно показать его целиком.
   const [searchParams] = useSearchParams();
   const only = searchParams.get("section");
@@ -178,13 +182,17 @@ export const StateGalleryPage = ({
       </header>
 
       <div
-        className="flex flex-col sm:flex-row"
-        style={{ flex: 1, minHeight: 0 }}
+        className="flex"
+        style={{
+          flex: 1,
+          minHeight: 0,
+          flexDirection: isPhone ? "column" : "row",
+        }}
       >
-        {/* На узком экране навигация ложится над содержимым и не отнимает ширину */}
+        {/* На телефоне навигация ложится над содержимым и не отнимает ширину */}
         <nav
           aria-label="Разделы галереи"
-          className="flex flex-col max-sm:max-h-40 max-sm:w-full max-sm:border-b max-sm:border-border sm:w-[15.625rem] sm:border-r sm:border-border"
+          className="flex flex-col"
           data-testid="gallery-nav"
           style={{
             flexShrink: 0,
@@ -192,6 +200,13 @@ export const StateGalleryPage = ({
             padding: "0.875rem 0.625rem",
             gap: "0.875rem",
             background: "var(--bg-1)",
+            ...(isPhone
+              ? {
+                  width: "100%",
+                  maxHeight: "10rem",
+                  borderBottom: "1px solid var(--border)",
+                }
+              : { width: "15.625rem", borderRight: "1px solid var(--border)" }),
           }}
         >
           <Link
@@ -245,12 +260,12 @@ export const StateGalleryPage = ({
 
         <main
           data-gallery-scroll
-          className="max-sm:!px-3"
           style={{
             flex: 1,
             minWidth: 0,
+            minHeight: 0,
             overflowY: "auto",
-            padding: "1.25rem 1.75rem 5rem",
+            padding: isPhone ? "1.25rem 0.75rem 5rem" : "1.25rem 1.75rem 5rem",
           }}
         >
           {visible.map((section) => (
