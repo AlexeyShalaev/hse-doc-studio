@@ -1,6 +1,16 @@
 {
   "releases": [
     {
+      "version": "0.21.1",
+      "date": "2026-11-11",
+      "notes": [
+        {
+          "ru": "Админка, «Раннеры»: кнопка обновления устаревшего раннера больше не наезжает на столбец «Состояние». Под версией короткая кнопка «v0.21.1», полный текст «Обновить до v0.21.1» в подсказке.",
+          "en": "Admin, Runners: the update button of an outdated runner no longer overlaps the Status column. A compact “v0.21.1” button sits under the version, with the full “Update to v0.21.1” label in the tooltip."
+        }
+      ]
+    },
+    {
       "version": "0.21.0",
       "date": "2026-11-11",
       "notes": [

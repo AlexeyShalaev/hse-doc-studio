@@ -6,6 +6,10 @@ Generated from `release-notes.json` via `make changelog` — do not edit by hand
 Release notes are hand-written and bilingual (RU/EN); the app shows them in the
 selected interface language.
 
+## [0.21.1](https://github.com/AlexeyShalaev/hse-doc-studio/compare/v0.21.0...v0.21.1) - 2026-11-11
+
+- Admin, Runners: the update button of an outdated runner no longer overlaps the Status column. A compact “v0.21.1” button sits under the version, with the full “Update to v0.21.1” label in the tooltip.
+
 ## [0.21.0](https://github.com/AlexeyShalaev/hse-doc-studio/compare/v0.20.1...v0.21.0) - 2026-11-11
 
 - The signing route signs the version taken at send, the “version on signature”. Edits and rebuilds no longer stop the route: signers see and sign exactly the PDF that was sent.
