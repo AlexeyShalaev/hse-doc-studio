@@ -36,6 +36,28 @@ class Release:
 
 
 @dataclass(frozen=True)
+class Skip:
+    """Записать пропуск пары в состояние подписей (`SignaturesState.skipped`, раздел 13.3).
+
+    Раунд, время и точку берёт исполнитель у участника, чей пропуск это (`Participant.skipped`). `keep_mark` метка уже
+    стоит в зафиксированном PDF, над которым есть ЭП: она остаётся в нём. Без `keep_mark` пропущенная метка нигде не
+    рисуется, и документ с меткой, уже попавшей в B, маршрут фиксирует заново.
+    """
+
+    doc_id: str
+    slot_id: str
+    keep_mark: bool = False
+
+
+@dataclass(frozen=True)
+class Unskip:
+    """Убрать запись о пропуске пары: участник вернулся в маршрут новым раундом или пропуска больше нет (13.3)."""
+
+    doc_id: str
+    slot_id: str
+
+
+@dataclass(frozen=True)
 class FillPlate:
     """Записать в плашку слота без подписанта данные известного ключа участника; только перед фиксацией (6.2)."""
 
@@ -68,4 +90,4 @@ class Notify:
     outcome: RequestOutcome | None = None
 
 
-type Effect = Withhold | Release | FillPlate | Freeze | Notify
+type Effect = Withhold | Release | Skip | Unskip | FillPlate | Freeze | Notify

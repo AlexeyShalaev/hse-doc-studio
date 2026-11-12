@@ -119,6 +119,8 @@ class SigningRouteParticipantRow(Base):
     notified: Mapped[Any | None] = mapped_column(JSONB)
     reminded_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     reminders: Mapped[int] = mapped_column(Integer, nullable=False, server_default="0")
+    # Пропуск автором (signing-route.md, 13.3): раунд, время, кто, пары, метки; NULL: не пропущен. sr_11_skip.
+    skipped: Mapped[Any | None] = mapped_column(JSONB(none_as_null=True))
 
 
 class SigningRouteEventRow(Base):

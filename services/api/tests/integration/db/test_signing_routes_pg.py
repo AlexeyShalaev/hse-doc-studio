@@ -25,6 +25,7 @@ from hse_doc_studio.infra.db.repositories.signing_routes import SqlSigningRouteR
 from hse_doc_studio.infra.db.session import SessionProvider
 from hse_doc_studio.infra.db.uow import SqlUnitOfWork
 from sqlalchemy import inspect, text
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncEngine
 
 from tests.factories.pg_projects import seed_project, seed_user
@@ -33,6 +34,15 @@ from tests.factories.signing_routes import DOC, make_event, make_full_route, mak
 pytestmark = pytest.mark.pg
 
 _REVISION = "sr_01_signing_routes"
+_SKIP_REVISION = "sr_11_skip"
+_INSERT_USER = text(
+    "INSERT INTO users (id, email, email_normalized, name, status, is_instance_admin, created_at) "
+    "VALUES ('u1', 'u1@x.org', 'u1@x.org', 'u1', 'active', false, now())"
+)
+_INSERT_SKIPPED_NOTICE = text(
+    "INSERT INTO notifications (id, user_id, kind, payload, created_at) "
+    "VALUES ('n1', 'u1', 'signing_skipped', '{}', now())"
+)
 _TABLES = {"signing_routes", "signing_route_docs", "signing_route_participants", "signing_route_events"}
 
 
@@ -73,6 +83,8 @@ async def test__migration__upgrade_and_downgrade__creates_and_drops_tables(pg_en
 
     await migrator.upgrade(pg_engine, _REVISION)
     assert await _tables(pg_engine) >= _TABLES
+    # Модель пишет все нынешние колонки (`skipped` у участников из sr_11_skip), поэтому маршрут кладём на полной схеме.
+    await migrator.upgrade(pg_engine)
     sessions = SessionProvider(create_sessionmaker(pg_engine))
     project_id = await seed_project(sessions, owner_user_id=None)
     route = make_full_route(project_id)
@@ -84,6 +96,40 @@ async def test__migration__upgrade_and_downgrade__creates_and_drops_tables(pg_en
 
     await migrator.upgrade(pg_engine)
     assert await migrator.check_drift(pg_engine) == []
+
+
+async def test__skipped__stored_as_sql_null_when_absent_and_round_trips_when_set(world: World) -> None:
+    """sr_11_skip: у непропущенных участников в колонке настоящий NULL, пропуск читается так же, как записан."""
+    route = await world.repo.add(make_full_route(world.project_id))
+
+    stored = await world.repo.get(world.project_id, route.id)
+
+    assert stored == route
+    assert sum(p.skipped is not None for p in stored.participants) == 1
+    assert await _count(world.engine, "signing_route_participants WHERE skipped IS NULL") == len(route.participants) - 1
+
+
+async def test__migration__sr_11_skip__widens_notification_kinds_and_keeps_existing_rows(
+    pg_engine: AsyncEngine,
+) -> None:
+    """Новая колонка nullable, вид `signing_skipped` проходит проверку только после миграции, схема без дрейфа."""
+    previous = ScriptDirectory.from_config(migrator._config()).get_revision(_SKIP_REVISION).down_revision
+    assert isinstance(previous, str)
+    await migrator.upgrade(pg_engine, previous)
+    async with pg_engine.begin() as conn:
+        await conn.execute(_INSERT_USER)
+    with pytest.raises(IntegrityError, match="ck_notifications_kind"):
+        async with pg_engine.begin() as conn:
+            await conn.execute(_INSERT_SKIPPED_NOTICE)
+
+    await migrator.upgrade(pg_engine, _SKIP_REVISION)
+
+    async with pg_engine.begin() as conn:
+        await conn.execute(_INSERT_SKIPPED_NOTICE)
+    assert await migrator.check_drift(pg_engine) == []
+    await migrator.downgrade(pg_engine, previous)
+    assert await _count(pg_engine, "users") == 1
+    assert await _count(pg_engine, "notifications") == 0  # вид, которого прежняя проверка не знает, откат удаляет
 
 
 # --- гонки ---

@@ -23,7 +23,10 @@ SigningRoutePhaseName = Literal["approval", "signing", "done"]
 SigningStopReasonName = Literal[
     "rebuilt", "sent_changed", "marks_changed", "frozen_changed", "participant_left", "returned"
 ]
-ParticipantStateName = Literal["invited", "waiting", "to_approve", "to_approve_sign", "to_sign", "done", "returned"]
+# `skipped`: автор пропустил участника (signing-route.md, 13.3); значение появляется после пропуска (R21).
+ParticipantStateName = Literal[
+    "invited", "waiting", "to_approve", "to_approve_sign", "to_sign", "done", "returned", "skipped"
+]
 SigningNextActionName = Literal["wait", "approve", "approve_and_sign", "sign", "done"]
 ParticipantMembershipName = Literal["member", "invited", "missing"]
 RouteSignMethodName = Literal["image", "detached", "pades"]
@@ -43,6 +46,7 @@ RouteEventKindName = Literal[
     "reminded",
     "invited",
     "frozen",
+    "skipped",
 ]
 
 

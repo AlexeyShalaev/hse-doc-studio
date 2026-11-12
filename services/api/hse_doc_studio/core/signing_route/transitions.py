@@ -22,17 +22,20 @@ from hse_doc_studio.core.signing_route.entities import (
     NextAction,
     Notified,
     Participant,
+    ParticipantNotSkippableError,
+    ParticipantSkip,
     RequestOutcome,
     RouteConflictError,
     RouteInputError,
     RoutePhase,
     RouteStatus,
     SigningRoute,
+    SkipBlocker,
     StopReason,
     not_your_turn,
     nothing_changed,
 )
-from hse_doc_studio.core.signing_route.versions import DocChange, version_changes
+from hse_doc_studio.core.signing_route.versions import DocChange, has_news, still_optional, version_changes
 
 _S = RouteStatus
 
@@ -95,6 +98,9 @@ def send(route: SigningRoute, candidate: RouteFacts, *, by: UUID, at: datetime) 
 
     Из `active` и `completed` только новая версия: без изменений 409 `nothing_changed`. Люди и порядок те же.
 
+    Пропуск участника (13.3) переносится в новый раунд, пока все пропущенные пары остаются необязательными; без
+    изменений документов отправка из `active` и `completed` допустима, если кого-то это вернёт в маршрут.
+
     Согласие каждого участника переносится в новый раунд всегда, с прежними отпечатками (12.6): оно действует по
     документам, поэтому на документах без изменений картинки, B и ЭП остаются, а изменившиеся документы участник
     согласует заново в свою очередь. Отправка это согласие отправителя, если он участник первого шага. Готовность
@@ -105,12 +111,19 @@ def send(route: SigningRoute, candidate: RouteFacts, *, by: UUID, at: datetime) 
         raise _invalid_transition(route.status, RouteStatus.active)
     check_route(route)
     changes = version_changes(route, candidate)
-    if route.status in NEW_VERSION_STATUSES and not changes.any:
+    if route.status in NEW_VERSION_STATUSES and not has_news(route, candidate):
         raise nothing_changed()
     round_ = route.round + 1
     first = route.steps[0]
     participants = tuple(
-        _resend(p, candidate.tokens(p.doc_ids(route.docs)), round_, sender=p.user_id == by and p.step == first, at=at)
+        _resend(
+            p,
+            candidate.tokens(p.doc_ids(route.docs)),
+            round_,
+            sender=p.user_id == by and p.step == first,
+            at=at,
+            keep_skip=still_optional(p, candidate),
+        )
         for p in route.participants
     )
     now = candidate.snapshot(route.docs)
@@ -139,14 +152,19 @@ def _sent_snapshot(route: SigningRoute, doc_id: str, now: DocSnapshot, change: D
     return replace(now, sent_at=at, replaced=change is DocChange.changed)
 
 
-def _resend(p: Participant, tokens: dict[str, str], round_: int, *, sender: bool, at: datetime) -> Participant:
+def _resend(  # noqa: PLR0913 — что меняет раунд у одного участника
+    p: Participant, tokens: dict[str, str], round_: int, *, sender: bool, at: datetime, keep_skip: bool
+) -> Participant:
+    # Пропуск переносится, пока все пропущенные пары необязательны (13.3); иначе участник вернётся: расчёт уберёт
+    # запись `skipped` (`Unskip`), и он получит запрос в свою очередь.
+    skipped = replace(p.skipped, round=round_) if p.skipped is not None and keep_skip else None
     approval = p.approval
     if sender:
         approval = Approval(round=round_, tokens=tokens, at=at)
     elif approval is not None:
         # Переносится всегда: что из него ещё действует, решают отпечатки по документам (`engine.approved_docs`).
         approval = replace(approval, round=round_, phase=RoutePhase.approval)
-    return replace(p, approval=approval, notified=None, reminded_at=None, reminders=0)
+    return replace(p, approval=approval, notified=None, reminded_at=None, reminders=0, skipped=skipped)
 
 
 def approve(route: SigningRoute, facts: RouteFacts, participant_id: UUID, *, at: datetime) -> SigningRoute:
@@ -181,6 +199,32 @@ def approve(route: SigningRoute, facts: RouteFacts, participant_id: UUID, *, at:
         phase=evaluation.phase or RoutePhase.approval,
     )
     return route.with_participant(replace(p, approval=approval))
+
+
+def skip(route: SigningRoute, facts: RouteFacts, participant_id: UUID, *, by: UUID, at: datetime) -> SigningRoute:
+    """«Пропустить» участника (раздел 13.3): очередь дошла до него, а все оставшиеся подписи необязательны.
+
+    Пропущенными становятся оставшиеся неподписанные пары; подписанные остаются подписанными. Что станет с метками
+    пропущенных (`kept_marks`, `refrozen`), считает расчёт по тем же фактам: сценарий выполняет затем эффекты
+    `Skip` и фиксацию. Отказ: 409 `invalid_transition` у маршрута не в `active`, `participant_not_skippable` с
+    причиной (`SkipBlocker`) иначе.
+    """
+    if route.status is not RouteStatus.active:
+        raise RouteConflictError(
+            "invalid_transition",
+            localized_error(
+                f"Пропустить участника можно только у идущего маршрута, а он в состоянии «{route.status}»",
+                f"A participant can only be skipped in a running route, but it is “{route.status}”",
+            ),
+        )
+    p = route.participant(participant_id)
+    option = evaluate(route, facts).participant(participant_id).skip
+    if not option.available:
+        raise ParticipantNotSkippableError(option.blocker or SkipBlocker.not_turn, option.required)
+    skipped = ParticipantSkip(
+        round=route.round, at=at, by=by, pairs=option.pairs, kept_marks=option.keeps_marks, refrozen=option.refreezes
+    )
+    return route.with_participant(replace(p, skipped=skipped))
 
 
 def return_route(route: SigningRoute, facts: RouteFacts, participant_id: UUID) -> SigningRoute:

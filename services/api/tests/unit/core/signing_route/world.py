@@ -27,7 +27,7 @@ from hse_doc_studio.core.signatures.plan import (
     mark_of,
     method_of,
 )
-from hse_doc_studio.core.signing_route.effects import Effect, FillPlate, Freeze, Notify, Release, Withhold
+from hse_doc_studio.core.signing_route.effects import Effect, FillPlate, Freeze, Notify, Release, Skip, Unskip, Withhold
 from hse_doc_studio.core.signing_route.engine import Evaluation, RouteFacts, approved_docs, evaluate
 from hse_doc_studio.core.signing_route.entities import (
     DocSlot,
@@ -43,6 +43,7 @@ from hse_doc_studio.core.signing_route.transitions import (
     mark_notified,
     refresh_snapshot,
     send,
+    skip,
 )
 from hse_doc_studio.core.signing_route.versions import version_changes
 from hse_doc_studio.core.value_objects import (
@@ -53,6 +54,7 @@ from hse_doc_studio.core.value_objects import (
     SignatureSlot,
     SignaturesState,
     SignerInfo,
+    SkippedSlot,
 )
 
 DOC = "topic_application"
@@ -86,6 +88,8 @@ class World:
     personas: dict[UUID, frozenset[str]] | None = None
     notices: list[Notify] = field(default_factory=list)
     resets: int = 0
+    optional: dict[str, set[str]] = field(default_factory=dict)  # необязательные слоты по документам на точке
+    skipped: dict[str, dict[str, SkippedSlot]] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
         for slot_id, mode in self.modes.items():
@@ -101,6 +105,9 @@ class World:
         items: list[str] = []
         for slot_id, slot in sorted(self.slots.items()):
             mark = mark_of(slot)
+            skip = self.skipped.get(doc_id, {}).get(slot_id)
+            if skip is not None and not skip.keep_mark:
+                continue  # пропущенная метка не рисуется (13.3)
             if mark is VisibleMark.png and slot.png_path and slot_id not in self.withheld[doc_id]:
                 items.append(f"png:{slot_id}:{slot.png_path}")
             elif mark is VisibleMark.plate:
@@ -115,6 +122,9 @@ class World:
             frozen=dict(self.frozen),
             detached={doc_id: dict(sigs) for doc_id, sigs in self.detached.items()},
             embedded={doc_id: dict(sigs) for doc_id, sigs in self.embedded.items()},
+            withheld={doc_id: frozenset(slots) for doc_id, slots in self.withheld.items() if slots},
+            optional={doc_id: {"topic-approval": frozenset(slots)} for doc_id, slots in self.optional.items() if slots},
+            skipped={doc_id: dict(slots) for doc_id, slots in self.skipped.items() if slots},
         )
 
     def source(self, doc_id: str) -> str | None:
@@ -137,13 +147,17 @@ class World:
             withheld={doc_id: frozenset(slots) for doc_id, slots in self.withheld.items()},
             plates=dict(self.plates),
             personas=self.personas,
+            optional={doc_id: frozenset(slots) for doc_id, slots in self.optional.items()},
+            skipped={doc_id: dict(slots) for doc_id, slots in self.skipped.items()},
         )
 
     # --- эффекты и действия ---
 
-    def apply(self, effects: Iterable[Effect]) -> None:
+    def apply(self, effects: Iterable[Effect], route: SigningRoute | None = None) -> None:
         for effect in effects:
-            if isinstance(effect, Withhold):
+            if isinstance(effect, Skip | Unskip):
+                self._skip(effect, route)
+            elif isinstance(effect, Withhold):
                 self.withheld[effect.doc_id].add(effect.slot_id)
             elif isinstance(effect, Release):
                 self.withheld[effect.doc_id].discard(effect.slot_id)
@@ -153,6 +167,17 @@ class World:
                 self.freeze(effect.doc_id)
             else:
                 self.notices.append(effect)
+
+    def _skip(self, effect: Skip | Unskip, route: SigningRoute | None) -> None:
+        if isinstance(effect, Unskip):
+            self.skipped.get(effect.doc_id, {}).pop(effect.slot_id, None)
+            return
+        assert route is not None
+        pair = DocSlot(effect.doc_id, effect.slot_id)
+        skip = next(p.skipped for p in route.participants if p.skipped and pair in p.skipped.pairs)
+        self.skipped.setdefault(effect.doc_id, {})[effect.slot_id] = SkippedSlot(
+            "topic-approval", str(route.id), skip.round, skip.at.isoformat(), effect.keep_mark
+        )
 
     def freeze(self, doc_id: str) -> None:
         if self.detached.pop(doc_id, None) or self.embedded.pop(doc_id, None):
@@ -244,7 +269,7 @@ class Driver:
         """Выполнить расчёт и убедиться, что повторный расчёт ничего не делает."""
         evaluation = self.evaluate()
         effects = evaluation.effects if notify else tuple(e for e in evaluation.effects if not isinstance(e, Notify))
-        self.world.apply(effects)
+        self.world.apply(effects, self.route)
         at = self.tick()
         self.route = refresh_snapshot(apply_evaluation(self.route, evaluation, at=at), self.world.facts())
         for effect in effects:
@@ -261,6 +286,13 @@ class Driver:
         changes = version_changes(self.route, candidate)
         self.route = send(self.route, candidate, by=by, at=self.tick())
         self.world.pin(changes.to_pin)
+        return self.settle()
+
+    def skip(self, participant_id: UUID, by: UUID | None = None) -> Evaluation:
+        """«Пропустить», как сценарий R21: переход по фактам с диска, затем эффекты и расчёт."""
+        self.route = skip(
+            self.route, self.world.facts(), participant_id, by=by or self.route.created_by, at=self.tick()
+        )
         return self.settle()
 
     def act(self, participant_id: UUID) -> NextAction:

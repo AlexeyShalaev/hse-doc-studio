@@ -15,6 +15,7 @@ from hse_doc_studio.core.signing_route.entities import (
     EventKind,
     Notified,
     Participant,
+    ParticipantSkip,
     RequestOutcome,
     RouteEvent,
     RoutePhase,
@@ -99,6 +100,15 @@ def make_full_route(project_id: UUID, *, profile_id: str = PROFILE) -> SigningRo
         docs=(DOC2,),
         user_id=None,
         invitation_id=f"inv_{uuid4().hex}",
+        # Автор пропустил приглашённого (13.3): раунд, время, пары, метка осталась в одном документе.
+        skipped=ParticipantSkip(
+            round=3,
+            at=T0 + timedelta(hours=3, microseconds=7),
+            by=uuid4(),
+            pairs=(DocSlot(DOC2, "academic_supervisor"),),
+            kept_marks=(DOC2,),
+            refrozen=(DOC,),
+        ),
     )
     return make_route(
         project_id,

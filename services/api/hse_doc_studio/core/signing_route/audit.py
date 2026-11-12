@@ -60,7 +60,8 @@ EVENT_ACTIONS: Mapping[EventKind, RouteAuditAction] = {
     EventKind.reminded: RouteAuditAction.remind,
     EventKind.invited: RouteAuditAction.invite,
 }
-UNAUDITED_EVENTS = frozenset({EventKind.frozen, EventKind.resumed})
+# `skipped` пока не в журнале: действие `signing_route.skip` и подписи словаря добавляет срез R21 (13.8).
+UNAUDITED_EVENTS = frozenset({EventKind.frozen, EventKind.resumed, EventKind.skipped})
 
 # Что из подробностей события переходит в журнал. Комментария возврата (`comment`) здесь нет намеренно.
 _EVENT_DETAILS = ("doc_id", "slot_id", "reason", "trigger", "delivery", "invitation_id")

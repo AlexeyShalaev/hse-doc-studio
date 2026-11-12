@@ -84,6 +84,8 @@ class NotificationKind(StrEnum):
     # Новая версия на подписи (12.6): тем, кто согласовал или подписал изменившийся документ, но чья очередь ещё не
     # настала. Только «Входящие», без письма; ведёт на страницу подписи.
     signing_new_version = "signing_new_version"
+    # Пропущенному автором участнику (signing-route.md, 13.7): его подпись не требуется. «Входящие» и письмо.
+    signing_skipped = "signing_skipped"
     # Админ установки очистил диск личного раннера (storage-cleanup.md, 8.2): владельцу, только «Входящие».
     runner_disk_cleaned = "runner_disk_cleaned"
 

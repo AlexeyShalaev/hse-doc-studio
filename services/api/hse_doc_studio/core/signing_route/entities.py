@@ -80,6 +80,7 @@ class ParticipantState(StrEnum):
     to_sign = "to_sign"  # согласовал, документы зафиксированы, ждём его ЭП
     done = "done"  # согласовал, все его слоты `signed`
     returned = "returned"  # вернул на доработку (до следующей отправки)
+    skipped = "skipped"  # пропущен автором: оставшиеся подписи необязательны (раздел 13)
 
 
 # В этих состояниях участник может вернуть документ на доработку (раздел 5.6).
@@ -131,6 +132,16 @@ class EventKind(StrEnum):
     reminded = "reminded"
     invited = "invited"
     frozen = "frozen"
+    skipped = "skipped"  # автор пропустил участника (раздел 13)
+
+
+class SkipBlocker(StrEnum):
+    """Почему участника нельзя пропустить (`skip.blocker`, `reason` ошибки `participant_not_skippable`, 13.6)."""
+
+    not_turn = "not_turn"  # не его очередь
+    required_slots = "required_slots"  # среди оставшихся подписей есть обязательные
+    no_slots = "no_slots"  # согласующий без подписей: нечего отмечать необязательным
+    done = "done"  # уже закончил или пропущен
 
 
 class RouteInputError(ValueError):
@@ -145,12 +156,25 @@ class RouteConflictError(Exception):
     """Действие несовместимо с состоянием маршрута (ответ 409, `not_participant` это 404).
 
     Коды: `invalid_transition`, `not_participant`, `not_your_turn`, `image_required`, `plate_required`,
-    `route_locked`, `nothing_changed`.
+    `route_locked`, `nothing_changed`, `participant_not_skippable`.
     """
 
     def __init__(self, code: str, message: str) -> None:
         super().__init__(message)
         self.code = code
+
+
+class ParticipantNotSkippableError(RouteConflictError):
+    """Пропуск участника нельзя (409 `participant_not_skippable`, раздел 13.6): `reason`, а при `required_slots`
+    ещё `slots`, обязательные пары, которые мешают."""
+
+    def __init__(self, reason: SkipBlocker, slots: tuple[DocSlot, ...] = ()) -> None:
+        super().__init__(
+            "participant_not_skippable",
+            localized_error("Этого участника нельзя пропустить", "This participant cannot be skipped"),
+        )
+        self.reason = reason
+        self.slots = slots
 
 
 def not_your_turn() -> RouteConflictError:
@@ -253,6 +277,24 @@ class Notified:
 
 
 @dataclass(frozen=True)
+class ParticipantSkip:
+    """Пропуск участника автором (13.3): источник истины расчёта, а `SignaturesState.skipped` его эффект.
+
+    `pairs` пары «документ, слот», которые остались неподписанными и пропущены (подписанные остаются подписанными).
+    `kept_marks` документы, где метка осталась в зафиксированном PDF с ЭП (`keep_mark`, 13.5); `refrozen` документы,
+    которые маршрут зафиксирует заново без метки. `by` кто пропустил. Раунд переносится отправкой, пока все
+    `pairs` остаются необязательными (`transitions.send`).
+    """
+
+    round: int
+    at: datetime
+    by: UUID
+    pairs: tuple[DocSlot, ...]
+    kept_marks: tuple[str, ...] = ()
+    refrozen: tuple[str, ...] = ()
+
+
+@dataclass(frozen=True)
 class Participant:
     """Участник маршрута: человек с персоной на своём шаге.
 
@@ -271,6 +313,7 @@ class Participant:
     notified: Notified | None = None
     reminded_at: datetime | None = None
     reminders: int = 0
+    skipped: ParticipantSkip | None = None
 
     def doc_ids(self, route_docs: tuple[str, ...]) -> tuple[str, ...]:
         """Документы участника: где его слоты, а у согласующего без слотов все документы маршрута."""
