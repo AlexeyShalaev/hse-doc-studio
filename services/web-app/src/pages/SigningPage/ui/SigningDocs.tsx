@@ -182,6 +182,9 @@ export const SigningDocs = ({ task, pdfUrlOf }: SigningDocsProps) => {
                   <span className="sgn-slot-meta">
                     {t("docs.page", { page: slot.page })} ·{" "}
                     {t(`docs.slot.${slotStatusKey(slot)}`)}
+                    {slot.optional && slot.status !== "skipped"
+                      ? ` · ${t("docs.optional")}`
+                      : ""}
                   </span>
                   <Button
                     type="button"

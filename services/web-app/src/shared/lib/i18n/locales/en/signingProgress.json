@@ -172,5 +172,29 @@
     "returned": "The documents were returned for rework. Fix them and send them again from the «Signing» card.",
     "unsigned": "Not all signatures are ready: {{done}} of {{total}}. The checkpoint document list shows what is missing.",
     "openCard": "Open the «Signing» card"
+  },
+  "skip": {
+    "action": "Skip",
+    "keep": "Don't skip",
+    "title": "Skip {{who}}?",
+    "hint": "All of this person's signatures at this checkpoint are optional. They can be skipped",
+    "unsigned": "Will not be signed: {{slot}} in “{{doc}}”",
+    "empty": "The signature place stays empty",
+    "next": "The route moves to step {{step}}: {{who}}",
+    "freeze": "The documents will be frozen, e-signers will get the request “Sign the final PDF”",
+    "wait": "The route keeps waiting for: {{who}}",
+    "complete": "All signatures will be collected, the route completes",
+    "refreezes": "The PDF “{{doc}}” will be frozen again without this mark. Anyone who has not signed yet will reopen it",
+    "keepsMark": "This signature's mark is already in the frozen PDF “{{doc}}” and stays there: it already carries e-signatures. The package instructions will mark it as not required",
+    "notice": "{{who}} will be notified that the signature is not required. The only way back is sending the route again",
+    "done": "{{who}} skipped",
+    "skippedOn": "signature not required, skipped {{date}}",
+    "returns": "Returns to the route on the next send",
+    "blocked": {
+      "not_turn": "Can be skipped when it is their turn",
+      "required_slots": "There are required signatures: cannot skip",
+      "no_slots": "They have no signatures, nothing to skip",
+      "done": "Already finished: nothing to skip"
+    }
   }
 }

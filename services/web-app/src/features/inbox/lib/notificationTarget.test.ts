@@ -8,6 +8,7 @@ vi.mock("pdfjs-dist", () => ({
 }));
 
 import {
+  showsDeadline,
   notificationRoute,
   notificationTarget,
   popoverAction,
@@ -163,6 +164,13 @@ describe("маршрут подписания", () => {
         "/projects/p%201/submit/cp/topic-approval#signing-route",
       );
     }
+  });
+
+  it("«подпись не требуется» ведёт на страницу подписи и срока не показывает", () => {
+    expect(notificationRoute(signing("signing_skipped"))).toBe(
+      "/sign/p%201/sr_1",
+    );
+    expect(showsDeadline("signing_skipped")).toBe(false);
   });
 
   it("без маршрута или точки ведёт в проект, без проекта никуда", () => {

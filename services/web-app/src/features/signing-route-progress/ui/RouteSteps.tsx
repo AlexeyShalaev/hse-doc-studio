@@ -5,16 +5,19 @@ import type { RouteParticipant, SigningRoute } from "@entities/signing-route";
 import { CopyField } from "@shared/ui";
 import { formatDay, formatMoment } from "../lib/format";
 import {
+  hasOptionalPair,
   isLinkable,
   isRemindable,
   personMoment,
   personStateKey,
   personTone,
   remindLockedUntil,
+  returnsNextRound,
   type PersonTone,
 } from "../lib/routeView";
 import { usePersonaLabel } from "../lib/usePersonaLabel";
 import { displayName } from "../lib/useWaitText";
+import { SkipAction } from "./SkipAction";
 
 const DOT: Record<PersonTone, string> = {
   ok: "ok",
@@ -128,6 +131,18 @@ export const RouteSteps = ({
                 // и доступно не только тому, чья очередь: ссылку можно разослать заранее.
                 const remindLocked =
                   lockedUntil !== null && (!invited || mailEnabled);
+                // «Пропустить» только у идущего маршрута и тому, кого сервер разрешил пропустить;
+                // причина отказа видна, если у человека есть необязательные подписи (13.9).
+                const skipInfo = route.status === "active" ? person.skip : null;
+                const canSkip = canManage && skipInfo?.available === true;
+                const skipBlocker =
+                  canManage &&
+                  skipInfo !== null &&
+                  (skipInfo.blocker === "not_turn" ||
+                    skipInfo.blocker === "required_slots") &&
+                  hasOptionalPair(route, person)
+                    ? skipInfo.blocker
+                    : null;
                 const isMe = person.user_id !== null && person.user_id === meId;
                 // Себе ссылку не копируют: страница подписи и так открывается кнопкой карточки.
                 const canCopy =
@@ -190,8 +205,13 @@ export const RouteSteps = ({
                       {role !== null && <span className="dim">{role}</span>}
                       {showState && (
                         <span style={{ color: COLOR[tone] }}>
-                          {t(`person.state.${personStateKey(person)}`)}
+                          {moment?.kind === "skipped"
+                            ? t("skip.skippedOn", {
+                                date: formatDay(moment.iso),
+                              })
+                            : t(`person.state.${personStateKey(person)}`)}
                           {moment &&
+                            moment.kind !== "skipped" &&
                             ` ${
                               moment.kind === "at"
                                 ? formatDay(moment.iso)
@@ -199,7 +219,7 @@ export const RouteSteps = ({
                             }`}
                         </span>
                       )}
-                      {(remindable || canCopy) && (
+                      {(remindable || canCopy || canSkip) && (
                         // На узком экране кнопки уходят на свою строку и не ломаются внутри.
                         <span
                           className="flex items-center"
@@ -228,6 +248,9 @@ export const RouteSteps = ({
                               </button>
                             </span>
                           )}
+                          {canSkip && (
+                            <SkipAction route={route} person={person} />
+                          )}
                           {canCopy && (
                             <button
                               type="button"
@@ -246,6 +269,33 @@ export const RouteSteps = ({
                         </span>
                       )}
                     </div>
+                    {canSkip && (
+                      <span
+                        className="dim"
+                        style={{ fontSize: "0.71875rem", lineHeight: 1.45 }}
+                        data-testid={`signing-skip-hint-${person.id}`}
+                      >
+                        {t("skip.hint")}
+                      </span>
+                    )}
+                    {skipBlocker !== null && (
+                      <span
+                        className="dim"
+                        style={{ fontSize: "0.71875rem", lineHeight: 1.45 }}
+                        data-testid={`signing-skip-blocker-${person.id}`}
+                      >
+                        {t(`skip.blocked.${skipBlocker}`)}
+                      </span>
+                    )}
+                    {returnsNextRound(route, person) && (
+                      <span
+                        className="dim"
+                        style={{ fontSize: "0.71875rem", lineHeight: 1.45 }}
+                        data-testid={`signing-skip-returns-${person.id}`}
+                      >
+                        {t("skip.returns")}
+                      </span>
+                    )}
                     {shown?.participantId === person.id && (
                       <CopyField
                         value={shown.url}
