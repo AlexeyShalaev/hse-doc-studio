@@ -123,7 +123,8 @@ class PackageProjectTool:
 
 def _notices_text(notices: Sequence[PackNotice], lang: Lang) -> str:
     """Предупреждения пакета без пропуска (signing-route.md, 12.8): `changed_after_sent` значит, что в пакет попала
-    версия на подписи, а рабочая сборка новее. Новую версию на подпись отправляет человек в интерфейсе."""
+    версия на подписи, а рабочая сборка новее. Новую версию на подпись отправляет человек в интерфейсе.
+    `optional_unsigned` (13.11): необязательная на точке подпись не поставлена, пакет собран без неё."""
     if not notices:
         return ""
     head = "\nWarnings:" if lang == Lang.en else "\nПредупреждения:"

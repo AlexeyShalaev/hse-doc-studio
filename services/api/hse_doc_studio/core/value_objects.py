@@ -177,6 +177,22 @@ class PinnedPdf:
 
 
 @dataclass(frozen=True)
+class SkippedSlot:
+    """Пропуск подписи маршрутом (signing-route.md, 13.3): на точке `profile_id` место не подписывают.
+
+    Источник истины пропуска это участник маршрута в Postgres, а запись в файлах его эффект, как `withheld`:
+    её читают план подписей, проверка пакета, `КАК_ПРОВЕРИТЬ.txt` и фиксация. `keep_mark` метка уже стоит в
+    зафиксированном PDF, над которым есть ЭП, и остаётся в нём (13.5); без него метка не рисуется нигде.
+    """
+
+    profile_id: str
+    route_id: str
+    round: int
+    at: str  # ISO 8601, UTC
+    keep_mark: bool = False
+
+
+@dataclass(frozen=True)
 class DetachedSignature:
     """A detached e-signature attached to a (doc, slot): the file plus what we learned from it."""
 
@@ -246,6 +262,11 @@ class SignaturesState:
     withheld: dict[str, frozenset[str]] = field(default_factory=dict)
     # Версия на подписи по документам (signing-route.md, 12.3): источник подписи вместо текущей сборки.
     pinned: dict[str, PinnedPdf] = field(default_factory=dict)
+    # Необязательные подписи (signing-route.md, 13.3): {doc_id: {profile_id: {slot_id}}}. На точке profile_id место
+    # slot_id документа doc_id можно не подписывать. Ставит автор маршрута; видимый слой не меняет.
+    optional: dict[str, dict[str, frozenset[str]]] = field(default_factory=dict)
+    # Пропущенные маршрутом подписи (13.3): {doc_id: {slot_id: SkippedSlot}}.
+    skipped: dict[str, dict[str, SkippedSlot]] = field(default_factory=dict)
 
     @classmethod
     def empty(cls) -> SignaturesState:
@@ -253,6 +274,27 @@ class SignaturesState:
 
     def is_withheld(self, doc_id: str, slot_id: str) -> bool:
         return slot_id in self.withheld.get(doc_id, ())
+
+    def is_optional(self, doc_id: str, profile_id: str, slot_id: str) -> bool:
+        """Подпись `slot_id` документа необязательна на точке `profile_id`."""
+        return slot_id in self.optional.get(doc_id, {}).get(profile_id, ())
+
+    def skip_of(self, doc_id: str, slot_id: str, profile_id: str | None = None) -> SkippedSlot | None:
+        """Пропуск пары; с `profile_id` только пропуск на этой точке (на другой точке пара не пропущена)."""
+        skip = self.skipped.get(doc_id, {}).get(slot_id)
+        if skip is None or (profile_id is not None and skip.profile_id != profile_id):
+            return None
+        return skip
+
+    def mark_hidden(self, doc_id: str, slot_id: str) -> bool:
+        """Метка слота не рисуется: придержана маршрутом до согласия (6.1) или пропущена без `keep_mark` (13.3).
+
+        Пропущенная метка не рисуется ни на какой точке: в выпущенных паках документ с подписями входит в одну.
+        """
+        if self.is_withheld(doc_id, slot_id):
+            return True
+        skip = self.skip_of(doc_id, slot_id)
+        return skip is not None and not skip.keep_mark
 
 
 @dataclass(frozen=True)

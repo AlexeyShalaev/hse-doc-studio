@@ -63,6 +63,7 @@ from hse_doc_studio.core.value_objects import (
     SignatureSlot,
     SignaturesState,
     SignerInfo,
+    SkippedSlot,
 )
 
 
@@ -590,6 +591,18 @@ def serialize_signatures_state(state: SignaturesState) -> dict[str, Any]:
         "withheld": {doc_id: sorted(slot_ids) for doc_id, slot_ids in sorted(state.withheld.items()) if slot_ids},
         # Тоже всегда, даже пустым: снятая версия на подписи не должна вернуться из старого файла.
         "pinned": {doc_id: dataclasses.asdict(p) for doc_id, p in sorted(state.pinned.items())},
+        # Необязательные и пропущенные подписи (signing-route.md, 13.3) тоже всегда: снятая отметка и снятый пропуск
+        # не должны вернуться из старого файла через `preserve_unknown`.
+        "optional": {
+            doc_id: {profile_id: sorted(slots) for profile_id, slots in sorted(by_profile.items()) if slots}
+            for doc_id, by_profile in sorted(state.optional.items())
+            if any(by_profile.values())
+        },
+        "skipped": {
+            doc_id: {slot_id: dataclasses.asdict(skip) for slot_id, skip in sorted(by_slot.items())}
+            for doc_id, by_slot in sorted(state.skipped.items())
+            if by_slot
+        },
     }
 
 
@@ -776,7 +789,58 @@ def deserialize_signatures_state(data: dict[str, Any]) -> SignaturesState:  # no
         embedded=_deserialize_embedded(data.get("embedded")),
         withheld=_deserialize_withheld(data.get("withheld")),
         pinned=_deserialize_pinned(data.get("pinned")),
+        optional=_deserialize_optional(data.get("optional")),
+        skipped=_deserialize_skipped(data.get("skipped")),
     )
+
+
+def _slot_ids(raw: Any) -> frozenset[str]:
+    """Список id слотов; не список и пустые или нестроковые id пропускаются."""
+    if not isinstance(raw, list):
+        return frozenset()
+    return frozenset(slot_id for slot_id in raw if isinstance(slot_id, str) and slot_id)
+
+
+def _deserialize_optional(raw: Any) -> dict[str, dict[str, frozenset[str]]]:
+    """`{doc_id: {profile_id: [slot_id]}}`: битая запись пропускается, а не ломает чтение всего состояния."""
+    result: dict[str, dict[str, frozenset[str]]] = {}
+    if not isinstance(raw, dict):
+        return result
+    for doc_id, by_profile in raw.items():
+        items = by_profile.items() if isinstance(by_profile, dict) else ()
+        doc = {str(profile_id): slots for profile_id, slot_ids in items if (slots := _slot_ids(slot_ids))}
+        if doc:
+            result[doc_id] = doc
+    return result
+
+
+def _skipped_slot(item: Any) -> SkippedSlot | None:
+    if not isinstance(item, dict):
+        return None
+    try:
+        skip = SkippedSlot(
+            profile_id=str(item["profile_id"]),
+            route_id=str(item.get("route_id") or ""),
+            round=int(item.get("round") or 0),
+            at=str(item["at"]),
+            keep_mark=bool(item.get("keep_mark", False)),
+        )
+    except (KeyError, TypeError, ValueError):
+        return None
+    return skip if skip.profile_id else None
+
+
+def _deserialize_skipped(raw: Any) -> dict[str, dict[str, SkippedSlot]]:
+    """`{doc_id: {slot_id: SkippedSlot}}`: битая запись пропускается, а не ломает чтение всего состояния."""
+    result: dict[str, dict[str, SkippedSlot]] = {}
+    if not isinstance(raw, dict):
+        return result
+    for doc_id, by_slot in raw.items():
+        items = by_slot.items() if isinstance(by_slot, dict) else ()
+        doc = {slot_id: skip for slot_id, item in items if (skip := _skipped_slot(item)) is not None}
+        if doc:
+            result[doc_id] = doc
+    return result
 
 
 def _deserialize_withheld(raw: Any) -> dict[str, frozenset[str]]:

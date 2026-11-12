@@ -41,7 +41,7 @@ from hse_doc_studio.use_cases.submission.list_submissions import (
     ListSubmissionsInput,
     ListSubmissionsUC,
 )
-from hse_doc_studio.use_cases.submission.pack_planner import PackNotice
+from hse_doc_studio.use_cases.submission.pack_planner import NOTICE_OPTIONAL_UNSIGNED, PackNotice
 from hse_doc_studio.use_cases.submission.preview_custom_docs import (
     CustomDocPreviewItem,
     PreviewSubmissionCustomDocsInput,
@@ -108,6 +108,14 @@ def _map_record(
 
 
 def _map_notice(notice: PackNotice) -> SubmissionWarningResponse:
+    if notice.code == NOTICE_OPTIONAL_UNSIGNED:
+        return SubmissionWarningResponse(
+            code=notice.code,
+            doc_id=notice.doc_id,
+            file=notice.arcname,
+            message=notice.message,
+            slot_id=notice.slot_id,
+        )
     return SubmissionWarningResponse(
         code=notice.code,
         doc_id=notice.doc_id,

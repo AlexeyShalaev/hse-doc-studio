@@ -580,6 +580,7 @@ def _parse_signature_slot(data: dict[str, Any]) -> SignatureSlotDef:
         applies_to=tuple(applies_to_raw) if isinstance(applies_to_raw, list) else (applies_to_raw,),
         default_placement=placement,
         per_author=bool(data.get("per_author", False)),
+        required=bool(data.get("required", False)),
     )
 
 

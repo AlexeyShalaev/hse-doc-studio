@@ -51,23 +51,27 @@ class CustomDocPreviewItemResponse(BaseModel):
 
 
 class SubmissionWarningResponse(BaseModel):
-    """Предупреждение пакета без пропуска: файл в пакете есть (signing-route.md, 12.8).
+    """Предупреждение пакета без пропуска: файл в пакете есть.
 
-    `changed_after_sent`: рабочая сборка документа разошлась с версией на подписи, в пакет попала версия на
-    подписи. `pinned` та же версия, что у документа в плане подписей (`sha256` хэш файла версии, по которому
-    собран пакет), `working_sha256` хэш рабочей сборки. Рядом интерфейс предлагает «Отправить новую версию».
+    `changed_after_sent` (signing-route.md, 12.8): рабочая сборка документа разошлась с версией на подписи, в пакет
+    попала версия на подписи. `pinned` та же версия, что у документа в плане подписей (`sha256` хэш файла версии,
+    по которому собран пакет), `working_sha256` хэш рабочей сборки. Рядом интерфейс предлагает «Отправить новую
+    версию».
+    `optional_unsigned` (13.11): необязательная на точке подпись `slot_id` не поставлена; полей версии нет (null).
     """
 
-    code: Literal["changed_after_sent"]
+    code: Literal["changed_after_sent", "optional_unsigned"]
     doc_id: str
     # Дата версии на подписи (ISO 8601, UTC), поле контракта W7 (12.9); то же, что `pinned.pinned_at`.
-    sent_at: str
+    sent_at: str | None = None
     # Имя файла документа в пакете.
     file: str
     # Готовый текст на языке интерфейса.
     message: str
-    pinned: PlanPinnedResponse
-    working_sha256: str
+    pinned: PlanPinnedResponse | None = None
+    working_sha256: str | None = None
+    # Слот подписи у `optional_unsigned`, иначе null.
+    slot_id: str | None = None
 
 
 class SubmissionRecordResponse(BaseModel):

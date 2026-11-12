@@ -79,6 +79,8 @@ def _plan_json(plan: SignaturePlan) -> dict[str, object]:
         "signed": plan.signed,
         "total": plan.total,
         "waiting_for_me": plan.waiting_for_me,
+        # Необязательные неподписанные (signing-route.md, 13.10): в `total` их нет, как и пропущенных.
+        "optional_pending": plan.optional_pending,
         "docs": [
             {
                 "doc_id": doc.doc_id,
@@ -97,6 +99,8 @@ def _plan_json(plan: SignaturePlan) -> dict[str, object]:
                         "reason": s.state.reason.value if s.state.reason else None,
                         "hint": s.hint,
                         "is_mine": s.is_mine,
+                        "optional": s.optional,
+                        "skipped": {"at": s.skipped.at, "route_id": s.skipped.route_id} if s.skipped else None,
                         "check": {
                             "format": s.state.check.format,
                             "verdict": s.state.check.verdict.value,

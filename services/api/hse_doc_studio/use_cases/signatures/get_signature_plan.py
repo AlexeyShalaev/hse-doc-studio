@@ -195,6 +195,19 @@ async def doc_facts(
     )
 
 
+def pair_optional(
+    state: SignaturesState, doc_id: str, slot_id: str, profile_id: str | None, required_by: Iterable[str]
+) -> bool:
+    """Подпись необязательна (signing-route.md, 13.3): на точке `profile_id`, а в плане проекта на каждой точке, которая
+    её требует; слот, который не требует ни одна точка, необязателен, если его отметили хоть на одной."""
+    if profile_id is not None:
+        return state.is_optional(doc_id, profile_id, slot_id)
+    points = list(required_by)
+    if points:
+        return all(state.is_optional(doc_id, point, slot_id) for point in points)
+    return any(slot_id in slots for slots in state.optional.get(doc_id, {}).values())
+
+
 async def build_plan(  # noqa: PLR0913 — входы расчёта
     project: Project,
     version: TemplateVersion,
@@ -209,9 +222,11 @@ async def build_plan(  # noqa: PLR0913 — входы расчёта
     for doc_id, pairs in grouped.items():
         doc = pairs[0].doc
         facts = await doc_facts(project, version, doc, state, ts)
+        # Пропущенная пара не криптослот документа (signing-route.md, 13.3, инвариант 6).
         uses_frozen = any(
             method_of(slot.sign_mode if (slot := state.slots.get(p.slot_id)) else SignMode.image).value != "image"
             for p in pairs
+            if state.skip_of(doc_id, p.slot_id, profile_id) is None
         )
         frozen = state.frozen.get(doc_id)
         pinned = state.pinned.get(doc_id)
@@ -222,11 +237,15 @@ async def build_plan(  # noqa: PLR0913 — входы расчёта
                 label=dict(runtime[p.slot_id].label) if p.slot_id in runtime else {"ru": p.slot_id},
                 signer=(signer := signer_for(project, p.slot_id)),
                 mode=slot.sign_mode if (slot := state.slots.get(p.slot_id)) else SignMode.image,
-                state=slot_state(state, doc_id, p.slot_id, facts, allowed=p.allowed, uses_frozen=uses_frozen),
+                state=slot_state(
+                    state, doc_id, p.slot_id, facts, allowed=p.allowed, uses_frozen=uses_frozen, profile_id=profile_id
+                ),
                 allowed_methods=p.allowed,
                 required_by=tuple(p.required_by),
                 is_mine=personas is not None and signer.persona in personas,
                 pinned=pinned is not None,
+                optional=pair_optional(state, doc_id, p.slot_id, profile_id, p.required_by),
+                skipped=state.skip_of(doc_id, p.slot_id, profile_id),
             )
             for p in pairs
         )

@@ -39,7 +39,7 @@ from hse_doc_studio.core.signing_route.entities import (
     route_holds_doc,
     route_locked,
 )
-from hse_doc_studio.core.signing_route.ports import PlanRoute, PlanRoutes, RouteHold, SigningDoc
+from hse_doc_studio.core.signing_route.ports import HeldRoute, PlanRoute, PlanRoutes, RouteHold, SigningDoc
 from hse_doc_studio.core.signing_route.signer import unsigned_crypto
 from hse_doc_studio.use_cases.signing_route.facts import LoadedFacts
 from hse_doc_studio.use_cases.signing_route.reconcile import RouteRecalculation
@@ -176,6 +176,14 @@ class SigningRouteGate(RouteRecalculation):
             if shown is None and wanted:
                 shown = _plan_route(route, evaluation, loaded)
         return PlanRoutes(route=shown, slot_states=states, held_docs=frozenset(held))
+
+    async def held_routes(self, project_id: UUID) -> tuple[HeldRoute, ...]:
+        if not _reads_routes():
+            return ()
+        routes = await self._s.routes.list_for_project(project_id, statuses=HOLDING_STATUSES)
+        return tuple(
+            HeldRoute(route.id, route.profile_id, frozenset(route.docs), frozenset(route.pairs)) for route in routes
+        )
 
     async def _evaluated(self, route: SigningRoute) -> tuple[LoadedFacts, Evaluation] | None:
         """Расчёт маршрута на текущих фактах; None, если точку сдачи уже не прочитать (проект или пак сняты)."""

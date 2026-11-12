@@ -72,6 +72,7 @@ async def test__pinned_pack__working_build_moved_ahead__version_packed_and_warni
             "round": 1,
         },
         "working_sha256": hashlib.sha256(working.read_bytes()).hexdigest(),
+        "slot_id": None,
     }
 
 

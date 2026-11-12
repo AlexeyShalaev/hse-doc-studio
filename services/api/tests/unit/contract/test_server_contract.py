@@ -33,6 +33,7 @@ from hse_doc_studio.api.schemas import runner_isolation as ri
 from hse_doc_studio.api.schemas import server_update as upd
 from hse_doc_studio.api.schemas import session as s
 from hse_doc_studio.api.schemas import sharing as sh
+from hse_doc_studio.api.schemas import signature as sig
 from hse_doc_studio.api.schemas import signing_route as sr
 from hse_doc_studio.api.schemas import signing_tasks as st
 from pydantic import TypeAdapter, ValidationError
@@ -321,6 +322,9 @@ _SCHEMAS: dict[str, Any] = {
     "SignSigningTaskRequest": sr.SignSigningTaskRequest,
     "ReturnSigningTaskRequest": sr.ReturnSigningTaskRequest,
     "SetSigningTaskPlateRequest": sr.SetSigningTaskPlateRequest,
+    # «Подпись необязательна» на точке (signing-route.md, 13.6): эталоны в pending до среза W12.
+    "SetSlotOptionalRequest": sig.SetSlotOptionalRequest,
+    "SlotOptional": sig.SlotOptional,
 }
 
 

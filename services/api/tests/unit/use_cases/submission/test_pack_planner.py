@@ -51,10 +51,12 @@ from hse_doc_studio.core.value_objects import (
     SignatureSlot,
     SignaturesState,
     SignerInfo,
+    SkippedSlot,
 )
 from hse_doc_studio.infra.signatures.openpgp import GpgKeyring
 from hse_doc_studio.use_cases.submission.pack_planner import (
     NOTICE_CHANGED_AFTER_SENT,
+    NOTICE_OPTIONAL_UNSIGNED,
     REASON_ARCNAME_ESCAPES,
     REASON_EXTRA_SOURCE_ESCAPES,
     REASON_SOURCE_MISSING,
@@ -988,3 +990,106 @@ def test__pack_planner__custom_docx_with_pinned_version__pdf_name_and_version_by
     assert (entry.arcname, entry.source) == ("ТЗ.pdf", ManifestFile(_PINNED_REL))
     # Рабочий файл не PDF: сравнивать его с версией на подписи нечем.
     assert plan.notices == ()
+
+
+# --- Необязательные и пропущенные подписи (signing-route.md, 13.11) ---------------------------------------------------
+
+_ACADEMIC = SignatureSlotDef(
+    id="academic",
+    label={"ru": "Академический руководитель ОП", "en": "Academic supervisor"},
+    applies_to=("tz",),
+    default_placement=SignatureDefaultPlacement(page=1, x_mm=10, y_mm=60, width_mm=30),
+)
+_CO = SignatureSlotDef(
+    id="co",
+    label={"ru": "Соруководитель", "en": "Co-supervisor"},
+    applies_to=("tz",),
+    default_placement=SignatureDefaultPlacement(page=1, x_mm=10, y_mm=90, width_mm=30),
+)
+
+
+def _skip(profile_id: str = "final", *, keep_mark: bool = False) -> SkippedSlot:
+    return SkippedSlot(profile_id=profile_id, route_id="r1", round=1, at="2026-11-13T10:00:00Z", keep_mark=keep_mark)
+
+
+def _with_skip_and_optional(state: SignaturesState, skip: SkippedSlot) -> SignaturesState:
+    plate = SignatureSlot(
+        png_path=None, natural_width_px=None, natural_height_px=None, sign_mode=SignMode.detached_text
+    )
+    placement = SignaturePlacement(enabled=True, page=1, x_mm=10, y_mm=60, width_mm=30)
+    return replace(
+        state,
+        slots={**state.slots, "academic": plate, "co": plate},
+        placements={"tz": {**state.placements["tz"], "academic": placement, "co": placement}},
+        skipped={"tz": {"academic": skip}},
+        optional={"tz": {"final": frozenset({"co"})}},
+    )
+
+
+def test__pack_planner__detached_with_skipped_kept_mark_and_optional__guide_names_them_and_notice() -> None:
+    project, version, state, probe = _detached_setup()
+    version = replace(
+        version, signatures_config=SignaturesConfig(slots=(*version.signatures_config.slots, _ACADEMIC, _CO))
+    )
+    state = _with_skip_and_optional(state, _skip(keep_mark=True))
+    item = SubmissionDocItem(doc_id="tz", signatures=("advisor",), optional_unsigned=("co",))
+
+    plan = _plan(project, version, probe, docs=[item], state=state)
+
+    guide = next(e for e in plan.payload.entries if e.arcname == "КАК_ПРОВЕРИТЬ.txt")
+    assert guide.text is not None
+    assert (
+        "  - Академический руководитель ОП: не требуется (пропущено автором), плашка на странице без файла подписи"
+        in guide.text
+    )
+    assert "  - Соруководитель: не поставлена (необязательна)" in guide.text
+    [notice] = plan.notices
+    assert (notice.code, notice.doc_id, notice.arcname, notice.slot_id) == (
+        NOTICE_OPTIONAL_UNSIGNED,
+        "tz",
+        "ТЗ.pdf",
+        "co",
+    )
+    assert notice.message == "Необязательная подпись «Соруководитель» в «ТЗ» не поставлена"
+    assert plan.warnings == ()
+
+
+def test__pack_planner__skipped_on_another_point__not_named_in_the_guide() -> None:
+    project, version, state, probe = _detached_setup()
+    version = replace(version, signatures_config=SignaturesConfig(slots=(*version.signatures_config.slots, _ACADEMIC)))
+    state = _with_skip_and_optional(state, _skip("defence"))
+
+    plan = _plan(project, version, probe, docs=_items("tz", signatures=("advisor",)), state=state)
+
+    guide = next(e for e in plan.payload.entries if e.arcname == "КАК_ПРОВЕРИТЬ.txt")
+    assert guide.text is not None
+    assert "Академический руководитель ОП" not in guide.text
+
+
+def test__pack_planner__skipped_english_guide_line() -> None:
+    project, version, state, probe = _detached_setup()
+    version = replace(version, signatures_config=SignaturesConfig(slots=(*version.signatures_config.slots, _ACADEMIC)))
+    state = replace(_with_skip_and_optional(state, _skip()), optional={})
+
+    plan = _plan(project, version, probe, docs=_items("tz", signatures=("advisor",)), state=state, lang=Lang.en)
+
+    guide = next(e for e in plan.payload.entries if e.arcname == "HOW_TO_VERIFY.txt")
+    assert guide.text is not None
+    assert "  - Academic supervisor: not required (skipped by the author)\n" in guide.text
+
+
+def test__pack_planner__images_only_with_skipped_and_optional__no_guide_skipped_mark_not_stamped() -> None:
+    state, slot_def = _stamped_state()
+    version = _version((_def("tz", "ТЗ.pdf"),), slots=(slot_def, _ACADEMIC, _CO))
+    project = make_project(documents=[make_document("tz")])
+    probe = MemoryProbe({"tz/tz.pdf": _PDF, ".hse-studio/signatures/author.png": b"png"})
+    state = _with_skip_and_optional(state, _skip())
+    item = SubmissionDocItem(doc_id="tz", signatures=("author",), optional_unsigned=("co",))
+
+    plan = _plan(project, version, probe, docs=[item], state=state)
+
+    # Инструкция только в комплекте с ЭП; пропущенная метка на странице не рисуется.
+    [entry] = plan.payload.entries
+    assert entry.kind is PackEntryKind.stamp_pdf
+    assert [s.png for s in entry.stamps] == [ManifestFile(".hse-studio/signatures/author.png")]
+    assert [n.code for n in plan.notices] == [NOTICE_OPTIONAL_UNSIGNED]
