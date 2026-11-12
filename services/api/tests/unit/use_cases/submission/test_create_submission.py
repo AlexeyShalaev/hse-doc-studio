@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock
+from uuid import UUID
 
 import pytest
 from hse_doc_studio.core.access.actions import Action
@@ -10,7 +11,7 @@ from hse_doc_studio.core.access.context import set_current_actor
 from hse_doc_studio.core.access.entities import Actor
 from hse_doc_studio.core.catalog import ExtraSubmissionItem, SubmissionDocItem
 from hse_doc_studio.core.entities import Project
-from hse_doc_studio.core.enums import Lang
+from hse_doc_studio.core.enums import Lang, PersonRole
 from hse_doc_studio.core.i18n import set_interface_language
 from hse_doc_studio.core.jobs.entities import JobResult, JobSpec
 from hse_doc_studio.core.jobs.enums import JobErrorCategory, JobKind, JobStatus
@@ -23,7 +24,10 @@ from hse_doc_studio.core.jobs.office import (
     OfficeConvertStatus,
 )
 from hse_doc_studio.core.jobs.pack import PackResult, PackSubmissionPayload
-from hse_doc_studio.core.value_objects import Author, SignaturesState
+from hse_doc_studio.core.signing_route.entities import DocSlot, ParticipantState, RouteStatus
+from hse_doc_studio.core.signing_route.ports import ISigningRouteGate, NoSigningRoutes, PlanRoute, PlanRoutes
+from hse_doc_studio.core.submission_errors import PackError, PackErrorCode, slot_not_signed, version_not_frozen
+from hse_doc_studio.core.value_objects import Author, Person, PinnedPdf, SignaturesState
 from hse_doc_studio.infra.identity.project_access import LocalProjectAccessChecker
 from hse_doc_studio.infra.persistence.project_locator import LocalProjectLocator
 from hse_doc_studio.infra.template.yaml_template_repository import YamlTemplateRepository
@@ -104,7 +108,16 @@ def _doc(doc_id: str, ext: str, *, remembered: bool | None = None):  # noqa: ANN
 
 
 class Harness:
-    def __init__(self, folder: Path, docs: list, files: set[str], planner: PackPlanner | None = None) -> None:
+    def __init__(  # noqa: PLR0913
+        self,
+        folder: Path,
+        docs: list,
+        files: set[str],
+        planner: PackPlanner | None = None,
+        *,
+        routes: ISigningRouteGate | None = None,
+        state: SignaturesState | None = None,
+    ) -> None:
         self.events: list[str] = []
         self.dispatcher = FakeDispatcher(self.events)
         self.probes = FakeProbeFactory(files)
@@ -121,7 +134,8 @@ class Harness:
         profiles.get_profile.return_value = MagicMock(extra_items=[])
         profiles.build_item_list.return_value = self.items
         signatures = MagicMock()
-        signatures.get_state.return_value = SignaturesState(slots={}, placements={})
+        signatures.get_state.return_value = state or SignaturesState(slots={}, placements={})
+        self.profiles = profiles
         self.submission_repo = MagicMock(save=AsyncMock())
         self.submission_repo.save.side_effect = lambda *_: self.events.append("save")
         self.changelog_repo = MagicMock()
@@ -141,6 +155,7 @@ class Harness:
             dispatcher=self.dispatcher,
             file_probes=self.probes,
             access=LocalProjectAccessChecker(),
+            routes=routes,
         )
 
     @property
@@ -395,3 +410,160 @@ def test__form_id_for_extra__maps_form_answers_source_to_form_id() -> None:
     # Wrong format → ignored.
     not_md = ExtraSubmissionItem(source=_AI_SOURCE, output_name="x.txt", format="raw")
     assert _form_id_for_extra(not_md, version) is None
+
+
+# Пакет точки, документы которой на маршруте подписания (docs/design/signing-route.md, 12.8.1).
+
+_ROUTE_ID = UUID("00000000-0000-4000-8000-0000000000aa")
+
+
+class FakeRoutes(NoSigningRoutes):
+    def __init__(self, routes: PlanRoutes) -> None:
+        self.routes = routes
+        self.calls: list[str | None] = []
+
+    async def plan_routes(
+        self, project_id: UUID, *, profile_id: str | None = None, doc_id: str | None = None
+    ) -> PlanRoutes:
+        self.calls.append(profile_id)
+        return self.routes
+
+
+def _plan_route(status: RouteStatus, *, step: int | None = 3) -> PlanRoute:
+    return PlanRoute(
+        id=_ROUTE_ID,
+        profile_id="final",
+        status=status,
+        phase=None,
+        round=1,
+        current_step=step if status is RouteStatus.active else None,
+        steps_total=3,
+    )
+
+
+def _pinned_state(route_id: UUID = _ROUTE_ID) -> SignaturesState:
+    pinned = PinnedPdf(
+        path=".hse-studio/frozen/tz.source.pdf",
+        sha256="a" * 64,
+        size=1,
+        pinned_at="2026-11-10T14:32:00+00:00",
+        route_id=str(route_id),
+        round=1,
+    )
+    return SignaturesState(slots={}, placements={}, pinned={"tz": pinned})
+
+
+def _route_harness(
+    tmp_path: Path, routes: PlanRoutes, *, state: SignaturesState | None = None
+) -> tuple[Harness, FakeRoutes]:
+    gate = FakeRoutes(routes)
+    h = Harness(tmp_path, [_doc("tz", ".pdf")], {"tz/_custom/tz.pdf"}, routes=gate, state=state)
+    h.project.academic_supervisor = Person(name="Сидоров С. С.", role=PersonRole.university)
+    h.profiles.build_item_list.side_effect = slot_not_signed("tz", "ТЗ", "Академический руководитель", "")
+    return h, gate
+
+
+async def test__create_submission__active_route__refusal_names_who_the_route_waits_for(tmp_path) -> None:
+    routes = PlanRoutes(
+        route=_plan_route(RouteStatus.active),
+        slot_states={
+            DocSlot("tz", "author"): ParticipantState.done,
+            DocSlot("tz", "academic_supervisor"): ParticipantState.to_approve,
+        },
+        held_docs=frozenset({"tz"}),
+    )
+    h, gate = _route_harness(tmp_path, routes)
+
+    with pytest.raises(PackError) as caught:
+        await h.create(None)
+
+    error = caught.value
+    assert (error.code, error.doc_id) == (PackErrorCode.route_in_progress, "tz")
+    assert error.params == {"who": "Сидоров С. С.", "step": 3, "total": 3}
+    assert str(error) == (
+        "Маршрут подписания не завершён (шаг 3 из 3, ждём: Сидоров С. С.): пакет можно собрать, когда все подпишут"
+    )
+    assert gate.calls == ["final"]
+    assert h.events == []
+
+
+async def test__create_submission__active_route_waiting_for_approver_without_slot__names_the_step(tmp_path) -> None:
+    routes = PlanRoutes(
+        route=_plan_route(RouteStatus.active, step=2),
+        slot_states={DocSlot("tz", "author"): ParticipantState.done},
+        held_docs=frozenset({"tz"}),
+    )
+    h, _ = _route_harness(tmp_path, routes)
+
+    with pytest.raises(PackError) as caught:
+        await h.create(None)
+
+    assert caught.value.params == {"who": "участников шага 2", "step": 2, "total": 3}
+
+
+@pytest.mark.parametrize(
+    ("status", "code"),
+    [(RouteStatus.paused, PackErrorCode.route_paused), (RouteStatus.returned, PackErrorCode.route_returned)],
+)
+async def test__create_submission__stopped_route__refusal_points_to_the_signing_card(
+    tmp_path, status: RouteStatus, code: PackErrorCode
+) -> None:
+    # Остановленный и возвращённый маршрут документов не держит: документ его по версии на подписи.
+    h, _ = _route_harness(tmp_path, PlanRoutes(route=_plan_route(status)), state=_pinned_state())
+
+    with pytest.raises(PackError) as caught:
+        await h.create(None)
+
+    assert (caught.value.code, caught.value.doc_id) == (code, "tz")
+    assert "«Подписание»" in str(caught.value)
+
+
+async def test__create_submission__completed_route__refusal_as_is(tmp_path) -> None:
+    h, _ = _route_harness(tmp_path, PlanRoutes(route=_plan_route(RouteStatus.completed)), state=_pinned_state())
+
+    with pytest.raises(PackError) as caught:
+        await h.create(None)
+
+    assert caught.value.code is PackErrorCode.slot_not_signed
+
+
+async def test__create_submission__document_of_another_route__refusal_as_is(tmp_path) -> None:
+    other = UUID("00000000-0000-4000-8000-0000000000bb")
+    h, _ = _route_harness(
+        tmp_path, PlanRoutes(route=_plan_route(RouteStatus.paused)), state=_pinned_state(route_id=other)
+    )
+
+    with pytest.raises(PackError) as caught:
+        await h.create(None)
+
+    assert caught.value.code is PackErrorCode.slot_not_signed
+
+
+async def test__create_submission__no_routes__refusal_as_is(tmp_path) -> None:
+    h = Harness(tmp_path, [_doc("tz", ".pdf")], {"tz/_custom/tz.pdf"})
+    h.profiles.build_item_list.side_effect = slot_not_signed("tz", "ТЗ", "Автор", "")
+
+    with pytest.raises(PackError) as caught:
+        await h.create(None)
+
+    assert caught.value.code is PackErrorCode.slot_not_signed
+
+
+async def test__create_submission__planner_version_not_frozen_on_active_route__route_refusal(tmp_path) -> None:
+    planner = MagicMock()
+    planner.build.side_effect = version_not_frozen("tz", "ТЗ")
+    gate = FakeRoutes(
+        PlanRoutes(
+            route=_plan_route(RouteStatus.active),
+            slot_states={DocSlot("tz", "author"): ParticipantState.to_sign},
+            held_docs=frozenset({"tz"}),
+        )
+    )
+    h = Harness(tmp_path, [_doc("tz", ".pdf")], {"tz/_custom/tz.pdf"}, planner=planner, routes=gate)
+
+    with pytest.raises(PackError) as caught:
+        await h.create(None)
+
+    assert caught.value.code is PackErrorCode.route_in_progress
+    assert caught.value.params["who"] == "Test Author"
+    assert h.events == []

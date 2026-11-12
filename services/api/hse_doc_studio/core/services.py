@@ -5,6 +5,7 @@ from collections.abc import Iterator
 from dataclasses import dataclass
 from typing import Any
 
+from hse_doc_studio.core import submission_errors as pack_errors
 from hse_doc_studio.core.catalog import (
     CheckRule,
     ChecksVersionConfig,
@@ -566,6 +567,30 @@ class RuntimeSlot:
     label: dict[str, str]
 
 
+def _pick_label(labels: dict[str, str], fallback: str) -> str:
+    """Подпись на языке интерфейса, иначе русская, иначе запасная."""
+    lang = str(current_interface_language())
+    return labels.get(lang) or labels.get("ru") or fallback
+
+
+def _doc_display_name(doc: Document, version: TemplateVersion | None) -> str:
+    """Имя документа для текста отказа: из определения пака, иначе id экземпляра."""
+    doc_def = next((d for d in version.documents if d.id == doc.def_id), None) if version is not None else None
+    return _pick_label(doc_def.name, doc.id) if doc_def is not None else doc.id
+
+
+def _slot_display_label(slot_id: str, version: TemplateVersion | None) -> str:
+    """Название подписи для текста отказа: по слоту каталога (без суффикса автора), иначе id."""
+    base_id, owner = split_instance_id(slot_id)
+    slot_def = (
+        next((s for s in version.signatures_config.slots if s.id == base_id), None) if version is not None else None
+    )
+    if slot_def is None:
+        return slot_id
+    label = _pick_label(slot_def.label, base_id)
+    return f"{label} ({owner})" if owner else label
+
+
 def expand_slot_ids_for_doc(
     slot_ids: tuple[str, ...],
     slot_defs: dict[str, SignatureSlotDef],
@@ -756,7 +781,7 @@ class SubmissionProfileService:
             instances = self._resolve_profile_instances(item.doc_id, project, version, author_slug=author_slug)
             for doc in instances:
                 runtime_ids = self._expand_item_slots(item.signatures, slot_defs, project, doc, team=team)
-                validated = self._validated_signatures(doc, runtime_ids, sig_state, item)
+                validated = self._validated_signatures(doc, runtime_ids, sig_state, item, version=version)
                 result.append(SubmissionDocItem(doc_id=doc.id, signatures=tuple(validated)))
 
         return result
@@ -825,17 +850,27 @@ class SubmissionProfileService:
 
     @staticmethod
     def _validated_signatures(
-        doc: Document, runtime_ids: list[str], sig_state: SignaturesState, item: SubmissionDocItem | None = None
+        doc: Document,
+        runtime_ids: list[str],
+        sig_state: SignaturesState,
+        item: SubmissionDocItem | None = None,
+        *,
+        version: TemplateVersion | None = None,
     ) -> list[str]:
         """Каждый слот пункта подписан по плану подписей (docs/design/signature-plan.md, раздел 3.4).
 
-        Здесь нет файлов проекта, поэтому сборка и видимый слой считаются текущими: их сверяет планировщик
-        пакета по байтам. Проверяется остальное: способ разрешён точкой, размещение и картинка на месте,
-        криптоподпись есть, относится к зафиксированному PDF, сходится и проверяема.
+        Здесь нет файлов проекта, поэтому видимый слой считается текущим: его и байты источника сверяет
+        планировщик пакета. Источник подписи берётся из записи: версия на подписи, если ее сняли (12.4), иначе
+        сборка, с которой сделана фиксация. Поэтому фиксация другой версии (ручная до отправки на подпись) не
+        выдает подписи над ней за готовые. Проверяется остальное: способ разрешён точкой, размещение и картинка
+        на месте, криптоподпись есть, относится к зафиксированному PDF, сходится и проверяема. Отказ
+        `PackError` с кодом `pack_slot_not_signed` и именами документа и подписи.
         """
         frozen = sig_state.frozen.get(doc.id)
+        pinned = sig_state.pinned.get(doc.id)
+        source = pinned.sha256 if pinned is not None else frozen.source_sha256 if frozen is not None else ""
         facts = DocFacts(
-            compiled_sha256=frozen.source_sha256 if frozen is not None else "",
+            compiled_sha256=source,
             marks_digest=frozen.stamps_digest if frozen is not None else "",
         )
         validated: list[str] = []
@@ -843,11 +878,11 @@ class SubmissionProfileService:
             allowed = item.allowed_methods(slot_id) if item is not None else ()
             state = slot_state(sig_state, doc.id, slot_id, facts, allowed=allowed)
             if state.status is not SlotStatus.signed:
-                raise ValueError(
-                    localized_error(
-                        f"Документ {doc.id!r}: слот подписи {slot_id!r} не подписан. {reason_hint(state.reason)}",
-                        f"Document {doc.id!r}: signature slot {slot_id!r} is not signed. {reason_hint(state.reason)}",
-                    )
+                raise pack_errors.slot_not_signed(
+                    doc.id,
+                    _doc_display_name(doc, version),
+                    _slot_display_label(slot_id, version),
+                    reason_hint(state.reason, pinned=pinned is not None),
                 )
             validated.append(slot_id)
         return validated

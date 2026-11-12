@@ -161,5 +161,15 @@
     "noteHint": "Optional. Signers get it together with the request.",
     "keep": "Don't send",
     "sent": "New version sent"
+  },
+  "pack": {
+    "active": "The signing route is not finished (step {{step}} of {{total}}). Waiting for: {{who}}",
+    "activeStep": "The signing route is not finished: step {{step}} of {{total}} is under way.",
+    "optional": "The signing route is still going (step {{step}} of {{total}}, waiting for: {{who}}), but the required signatures are ready: you can build the package.",
+    "optionalStep": "The signing route is still going (step {{step}} of {{total}}), but the required signatures are ready: you can build the package.",
+    "paused": "The signing route is paused. The «Signing» card shows why and what to do next.",
+    "returned": "The documents were returned for rework. Fix them and send them again from the «Signing» card.",
+    "unsigned": "Not all signatures are ready: {{done}} of {{total}}. The checkpoint document list shows what is missing.",
+    "openCard": "Open the «Signing» card"
   }
 }

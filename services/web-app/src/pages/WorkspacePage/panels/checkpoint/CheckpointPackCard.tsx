@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
+import { Link } from "react-router";
 import {
   AlertTriangle,
   CheckCircle,
@@ -17,6 +18,10 @@ import {
 import { useArchiveFormats, type ArchiveFormatId } from "@entities/system";
 import { useVersionDetail } from "@entities/template-catalog";
 import { CustomFileDecisionsModal } from "@features/custom-document";
+import {
+  usePackGate,
+  type PackGateRow,
+} from "@features/signing-route-progress";
 import {
   PackVersionPreflight,
   PackVersionWarnings,
@@ -52,6 +57,30 @@ type PreflightProps = {
   ok: boolean;
   warn?: boolean;
   label: string;
+};
+
+/** Строка готовности, которая может запретить сборку: маршрут подписания или неготовые подписи. */
+const GateRow = ({ row }: { row: PackGateRow }) => {
+  const { t } = useTranslation("workspace");
+  return (
+    <div
+      className="flex flex-col"
+      style={{ gap: "0.25rem" }}
+      data-testid={`pack-gate-${row.key}`}
+      data-tone={row.tone}
+    >
+      <Preflight ok={false} warn={row.tone === "warn"} label={row.text} />
+      {row.link !== null && (
+        <Link
+          to={row.link}
+          className="btn xs"
+          style={{ alignSelf: "flex-start", marginLeft: "1.25rem" }}
+        >
+          {t("signingProgress:pack.openCard")}
+        </Link>
+      )}
+    </div>
+  );
 };
 
 const Preflight = ({ ok, warn, label }: PreflightProps) => {
@@ -136,7 +165,14 @@ export const CheckpointPackCard = ({
     .map(([key, def]) => pickLocalized(def.label, lang, key));
   const metaOk = missingMetaLabels.length === 0;
 
-  const canPack = !isTeam || selectedAuthorSlug != null;
+  // Пакет требует готовых обязательных подписей (signing-route.md, 12.8.1): пока маршрут не
+  // завершён или подписи не готовы, сервер откажет. Кнопку выключаем заранее и пишем почему.
+  const gate = usePackGate({
+    project,
+    profileId,
+    author: isTeam ? selectedAuthorSlug : null,
+  });
+  const canPack = (!isTeam || selectedAuthorSlug != null) && !gate.blocked;
 
   const submitPack = (customDocDecisions?: Record<string, boolean>) => {
     // author_slug обязателен для командной сдачи — без него не отправляем.
@@ -321,6 +357,9 @@ export const CheckpointPackCard = ({
                 : t("pack.preflightNdaNotRequired")
             }
           />
+          {gate.rows.map((row) => (
+            <GateRow key={row.key} row={row} />
+          ))}
           {/* Документ изменён после отправки на подпись: в пакет поедет версия на подписи. */}
           <PackVersionPreflight
             project={project}
@@ -336,6 +375,8 @@ export const CheckpointPackCard = ({
           style={{ width: "100%", marginTop: "1rem" }}
           onClick={handlePack}
           disabled={creating || preflighting || !canPack}
+          title={gate.reason ?? undefined}
+          data-testid="pack-submit"
         >
           {creating || preflighting ? (
             <Spinner size="sm" />

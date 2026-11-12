@@ -98,4 +98,8 @@ async def test__bundle__pades_slot_not_signed__refused_with_hint(test_app: Async
 
     # Раньше слот PAdES проходил по одной картинке: картинка выдавала себя за ЭП.
     assert resp.status_code == 400, resp.text
-    assert "supervisor" in resp.json()["detail"]
+    body = resp.json()
+    assert (body["code"], body["doc_id"]) == ("pack_slot_not_signed", "annotation")
+    assert body["slot"] in body["detail"]
+    assert body["hint"]
+    assert body["hint"] in body["detail"]
