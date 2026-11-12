@@ -33,6 +33,8 @@ let clock = Date.parse("2026-11-10T09:00:00Z");
 // Почта на сервере и места слотов на странице: по умолчанию почты нет, места есть у всех.
 let mail = false;
 let unplaced = new Set<string>();
+// «Подпись необязательна» (раздел 13): пары `doc:slot` точки, отмеченные автором.
+let optional = new Set<string>();
 
 // Данные плашки научрука неизвестны: он задаёт их сам на своём шаге (раздел 4.2, правило 2).
 const demo = createSigningRouteDemo({
@@ -55,6 +57,7 @@ const demo = createSigningRouteDemo({
   ],
   mailEnabled: () => mail,
   isPlaced: (_project, doc, slot) => !unplaced.has(`${doc}:${slot}`),
+  isOptional: (_project, _profile, doc, slot) => optional.has(`${doc}:${slot}`),
   now: () => clock,
 });
 
@@ -131,6 +134,7 @@ beforeEach(() => {
   clock = Date.parse("2026-11-10T09:00:00Z");
   mail = false;
   unplaced = new Set();
+  optional = new Set();
 });
 
 describe("автор: черновик и отправка", () => {
@@ -306,7 +310,7 @@ describe("автор: что мешает отправке и что после 
                 label: { ru: persona, en: persona },
                 persona,
                 method: "detached" as const,
-                optional: false,
+                extra: false,
                 page: 1,
                 x_mm: 100,
                 y_mm: 100 + i * 30,
@@ -725,5 +729,129 @@ describe("возврат, остановка и повторная отправ�
     expect(
       (await apiError(signingRouteApi.create(PROJECT, "unknown"))).status,
     ).toBe(404);
+  });
+});
+
+describe("необязательные подписи и пропуск (раздел 13)", () => {
+  /** Научрук согласовал до фиксации, академрук принял приглашение: его очередь. */
+  const academicTurn = async (): Promise<SigningRoute> => {
+    const route = await sendDraft((r) => withAcademic(r));
+    as(SUPERVISOR);
+    const task = await signingTaskApi.setPlateKey(PROJECT, route.id, "key-1");
+    await signingTaskApi.approve(PROJECT, route.id, {
+      expected: tokens(task),
+      method: null,
+      sign: null,
+    });
+    demo.acceptInvitation("inv_academic", ACADEMIC);
+    as(AUTHOR);
+    return signingRouteApi.get(PROJECT, route.id);
+  };
+
+  it("пропустить можно только того, чья очередь и все подписи необязательны", async () => {
+    let route = await academicTurn();
+    const academic = participant(route, "academic_supervisor");
+    expect(academic.skip).toMatchObject({
+      available: false,
+      blocker: "required_slots",
+    });
+    expect(
+      route.docs[0]?.slots.find((s) => s.slot_id === "academic_supervisor"),
+    ).toMatchObject({ extra: true, optional: false });
+    const required = await apiError(
+      signingRouteApi.skip(PROJECT, route.id, academic.id),
+    );
+    expect(required.code).toBe("participant_not_skippable");
+    expect(required.data?.reason).toBe("required_slots");
+
+    optional.add(`${DOC}:academic_supervisor`);
+    route = await signingRouteApi.get(PROJECT, route.id);
+    expect(participant(route, "academic_supervisor").skip).toEqual({
+      available: true,
+      blocker: null,
+      keeps_marks: [],
+      refreezes: [],
+    });
+    // Научрук согласовал и ждёт фиксации: не его очередь, автор закончил.
+    expect(participant(route, "supervisor").skip?.blocker).toBe("not_turn");
+    expect(participant(route, "author").skip?.blocker).toBe("done");
+
+    // Подписант пропуска не видит и пропускать не может.
+    as(ACADEMIC);
+    const academicTask = await signingTaskApi.get(PROJECT, route.id);
+    expect(academicTask.me.optional).toBe(true);
+    expect(academicTask.docs[0]?.mine[0]?.optional).toBe(true);
+    const forbidden = await apiError(
+      signingRouteApi.skip(PROJECT, route.id, academic.id),
+    );
+    expect(forbidden.status).toBe(403);
+  });
+
+  it("пропуск двигает маршрут: фиксация, ЭП научрука, завершение", async () => {
+    optional.add(`${DOC}:academic_supervisor`);
+    const route = await academicTurn();
+    const academic = participant(route, "academic_supervisor");
+    const skipped = await signingRouteApi.skip(PROJECT, route.id, academic.id);
+    expect(participant(skipped, "academic_supervisor")).toMatchObject({
+      state: "skipped",
+      next_action: "done",
+      skipped_at: "2026-11-10T09:00:00.000Z",
+    });
+    expect(
+      skipped.docs[0]?.slots.find((s) => s.slot_id === "academic_supervisor")
+        ?.status,
+    ).toBe("skipped");
+    expect(skipped.phase).toBe("signing");
+    expect(skipped.events.at(-2)).toMatchObject({
+      kind: "skipped",
+      participant_id: academic.id,
+    });
+    const again = await apiError(
+      signingRouteApi.skip(PROJECT, route.id, academic.id),
+    );
+    expect(again.data?.reason).toBe("done");
+
+    as(ACADEMIC);
+    expect((await signingTaskApi.get(PROJECT, route.id)).me.state).toBe(
+      "skipped",
+    );
+    expect((await accountSigningApi.tasks()).items).toEqual([]);
+
+    as(SUPERVISOR);
+    const toSign = await signingTaskApi.get(PROJECT, route.id);
+    const done = await signingTaskApi.sign(PROJECT, route.id, {
+      expected: tokens(toSign),
+      identity_id: null,
+      passphrase: null,
+    });
+    expect(done.route.status).toBe("completed");
+  });
+
+  it("снятая после пропуска отметка возвращает участника новым раундом", async () => {
+    optional.add(`${DOC}:academic_supervisor`);
+    const route = await academicTurn();
+    await signingRouteApi.skip(
+      PROJECT,
+      route.id,
+      participant(route, "academic_supervisor").id,
+    );
+    // Без изменений документов отправлять нечего, пока отметка стоит.
+    let preview = await signingRouteApi.preview(PROJECT, route.id);
+    expect(preview.blockers.map((b) => b.code)).toContain("nothing_changed");
+
+    optional.delete(`${DOC}:academic_supervisor`);
+    preview = await signingRouteApi.preview(PROJECT, route.id);
+    expect(preview.blockers.map((b) => b.code)).not.toContain(
+      "nothing_changed",
+    );
+    const resent = await signingRouteApi.send(PROJECT, route.id, {
+      expected: Object.fromEntries(
+        preview.docs.map((d) => [d.doc_id, d.token ?? ""]),
+      ),
+      sign: null,
+    });
+    const back = participant(resent, "academic_supervisor");
+    expect(back.state).toBe("to_approve");
+    expect(back.skipped_at).toBeNull();
   });
 });

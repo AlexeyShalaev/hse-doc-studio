@@ -6,6 +6,7 @@ import {
   type ReactNode,
 } from "react";
 import { useTranslation } from "react-i18next";
+import { clsx } from "clsx";
 import {
   ChevronLeft,
   ChevronRight,
@@ -14,6 +15,7 @@ import {
   Frame,
   Images,
   List,
+  MessageSquarePlus,
   Minus,
   Moon,
   Plus,
@@ -35,7 +37,15 @@ import {
   type PageDim,
   type PageMargins,
   type PdfStamp,
+  type PlacedPdfMark,
 } from "./PdfPage";
+import { selectionGeometry, type PdfSelection } from "./pdfSelection";
+import {
+  locateText,
+  pageTextItems,
+  type PageTextItem,
+  type PdfRectPt,
+} from "./pdfText";
 import { PdfThumbnails } from "./PdfThumbnails";
 import { PdfOutline, type OutlineEntry } from "./PdfOutline";
 import { countOccurrences, getOutlineFor, loadPageDims } from "./pdfDoc";
@@ -58,6 +68,38 @@ const PAGE_GAP = 12;
 const FIT_PADDING = 24;
 
 type Persisted = { scale: number; fit: boolean; page: number };
+
+/**
+ * Метка комментария для превью. `exact`: прямоугольники точные. Иначе место
+ * уточняется поиском `text` на странице и соседних; не нашлось, и `fallback`
+ * (прямоугольники это строка SyncTeX текущей сборки): метка встаёт по ним, без
+ * него метки нет и `onMarksPlaced` сообщает, что место не найдено.
+ */
+export type PdfMark = {
+  id: string;
+  page: number;
+  rects: PdfRectPt[];
+  text: string;
+  exact: boolean;
+  fallback: boolean;
+  active: boolean;
+  resolved: boolean;
+  title: string;
+};
+
+// Соседние страницы, где ищется фрагмент пересобранного PDF: сначала своя, потом ближние.
+const SEARCH_PAGES = [0, -1, 1, -2, 2];
+// Отступ сверху до метки, к которой прокручивает выбор треда.
+const FOCUS_MARGIN = 20;
+// Панель выделения: сколько места нужно над выделением и половина её ширины (не уходить за край).
+const SEL_BAR_ROOM = 48;
+const SEL_BAR_HALF = 120;
+// На таче нет отпускания мыши после выделения: панель следит за selectionchange с паузой.
+const SELECTION_SETTLE_MS = 250;
+
+const coarsePointer = (): boolean =>
+  typeof window.matchMedia === "function" &&
+  window.matchMedia("(pointer: coarse)").matches;
 
 const readPersist = (key: string | undefined): Persisted | null => {
   if (!key) return null;
@@ -99,6 +141,15 @@ export type PdfViewerProps = {
   onAskAgent?: (text: string) => void;
   /** Selected PDF text → locate it in the source editor. */
   onFindInSource?: (text: string) => void;
+  /** Выделение → новый комментарий: текст, страница и прямоугольники в пунктах PDF. */
+  onComment?: (selection: PdfSelection) => void;
+  /** Метки комментариев на полях страниц. */
+  marks?: PdfMark[];
+  onMarkClick?: (id: string) => void;
+  /** Какие метки встали на страницы (id → да/нет), после каждой расстановки. */
+  onMarksPlaced?: (placed: Record<string, boolean>) => void;
+  /** Прокрутить к метке; `token` повторяет переход к той же. */
+  focusMark?: { id: string; token: number } | null;
   /** SyncTeX forward target: scroll there + flash. `token` re-fires on repeat. */
   jump?: {
     page: number;
@@ -125,6 +176,11 @@ export const PdfViewer = ({
   jump,
   onAskAgent,
   onFindInSource,
+  onComment,
+  marks,
+  onMarkClick,
+  onMarksPlaced,
+  focusMark,
   initialFit = false,
 }: PdfViewerProps) => {
   const { t } = useTranslation("pdfViewer");
@@ -193,7 +249,14 @@ export const PdfViewer = ({
     text: string;
     left: number;
     top: number;
+    below: boolean;
+    docked: boolean;
+    geometry: { page: number; rects: PdfRectPt[] } | null;
   } | null>(null);
+  const itemsCacheRef = useRef<Map<number, PageTextItem[]>>(new Map());
+  const [placed, setPlaced] = useState<
+    Map<string, { page: number; rects: PdfRectPt[] }>
+  >(() => new Map());
 
   // blob: адрес не принимает запрос (?v= даёт «файл не найден»), а его содержимое и так не меняется.
   const fetchUrl =
@@ -207,6 +270,7 @@ export const PdfViewer = ({
     void (async () => {
       setStatus("loading");
       textCacheRef.current = new Map();
+      itemsCacheRef.current = new Map();
       try {
         const doc = await task.promise;
         if (ctl.cancelled) return;
@@ -297,7 +361,7 @@ export const PdfViewer = ({
 
   // After a drag-select in the PDF, float an action bar above the selection.
   const refreshSelectionBar = useCallback(() => {
-    if (!onAskAgent && !onFindInSource) return;
+    if (!onAskAgent && !onFindInSource && !onComment) return;
     const sel = window.getSelection();
     const root = rootRef.current;
     const scroll = scrollRef.current;
@@ -311,14 +375,47 @@ export const PdfViewer = ({
       setSelAction(null);
       return;
     }
-    const rect = sel.getRangeAt(0).getBoundingClientRect();
+    const range = sel.getRangeAt(0);
+    const rect = range.getBoundingClientRect();
     const rootRect = root.getBoundingClientRect();
+    // У верхнего края просмотра над выделением нет места: панель встаёт под ним.
+    const below = rect.top - scroll.getBoundingClientRect().top < SEL_BAR_ROOM;
     setSelAction({
       text,
-      left: rect.left - rootRect.left + rect.width / 2,
-      top: rect.top - rootRect.top,
+      left: Math.min(
+        Math.max(rect.left - rootRect.left + rect.width / 2, SEL_BAR_HALF),
+        rootRect.width - SEL_BAR_HALF,
+      ),
+      top: below ? rect.bottom - rootRect.top : rect.top - rootRect.top,
+      below,
+      docked: coarsePointer(),
+      geometry: onComment
+        ? selectionGeometry(range, scroll, scaleRef.current)
+        : null,
     });
-  }, [onAskAgent, onFindInSource]);
+  }, [onAskAgent, onFindInSource, onComment]);
+
+  // Телефон и планшет: выделение долгим нажатием и ручками не даёт mouseup,
+  // поэтому панель появляется по selectionchange, когда выделение успокоилось.
+  useEffect(() => {
+    if (!onAskAgent && !onFindInSource && !onComment) return;
+    let timer: number | undefined;
+    const onChange = (): void => {
+      window.clearTimeout(timer);
+      timer = window.setTimeout(() => {
+        const sel = window.getSelection();
+        const scroll = scrollRef.current;
+        if (!sel || sel.isCollapsed || !scroll || !sel.anchorNode) return;
+        if (!scroll.contains(sel.anchorNode)) return;
+        refreshSelectionBar();
+      }, SELECTION_SETTLE_MS);
+    };
+    document.addEventListener("selectionchange", onChange);
+    return () => {
+      window.clearTimeout(timer);
+      document.removeEventListener("selectionchange", onChange);
+    };
+  }, [onAskAgent, onFindInSource, onComment, refreshSelectionBar]);
 
   const askAgentSelection = (): void => {
     if (selAction) onAskAgent?.(selAction.text);
@@ -327,6 +424,12 @@ export const PdfViewer = ({
   const findSelectionInSource = (): void => {
     if (selAction) onFindInSource?.(selAction.text);
     setSelAction(null);
+  };
+  const commentSelection = (): void => {
+    if (selAction?.geometry)
+      onComment?.({ text: selAction.text, ...selAction.geometry });
+    setSelAction(null);
+    window.getSelection()?.removeAllRanges();
   };
   const copySelection = (): void => {
     if (selAction)
@@ -348,7 +451,7 @@ export const PdfViewer = ({
     scaleRef.current = scale;
   }, [scale]);
 
-  const goToPosition = useCallback((page: number, yPt: number) => {
+  const goToPosition = useCallback((page: number, yPt: number, margin = 80) => {
     const el = scrollRef.current;
     if (!el) return;
     const target = el.querySelector<HTMLElement>(
@@ -359,7 +462,7 @@ export const PdfViewer = ({
       el.scrollTop +
       (target.getBoundingClientRect().top - el.getBoundingClientRect().top) +
       yPt * scaleRef.current -
-      80;
+      margin;
     el.scrollTo({ top: Math.max(0, top), behavior: "smooth" });
   }, []);
 
@@ -382,6 +485,105 @@ export const PdfViewer = ({
       window.clearTimeout(id);
     };
   }, [jump, status, pages, goToPosition]);
+
+  // Метки комментариев: точные встают сразу, остальные ищутся по тексту на своей
+  // странице и соседних. Пересчёт при новом PDF и при смене состава меток.
+  const marksKey = (marks ?? [])
+    .map(
+      (m) =>
+        `${m.id}:${String(m.page)}:${String(m.exact)}:${m.text}:${m.rects.map((r) => `${String(r.x)},${String(r.y)}`).join(";")}`,
+    )
+    .join("|");
+  const marksRef = useRef(marks);
+  useEffect(() => {
+    marksRef.current = marks;
+  });
+  const onPlacedRef = useRef(onMarksPlaced);
+  useEffect(() => {
+    onPlacedRef.current = onMarksPlaced;
+  });
+  useEffect(() => {
+    const list = marksRef.current ?? [];
+    if (!pdf || status !== "ready" || list.length === 0) {
+      setPlaced(new Map());
+      return;
+    }
+    const ctl = { cancelled: false };
+    const itemsOf = async (n: number): Promise<PageTextItem[]> => {
+      const cached = itemsCacheRef.current.get(n);
+      if (cached) return cached;
+      const items = await pageTextItems(await pdf.getPage(n));
+      itemsCacheRef.current.set(n, items);
+      return items;
+    };
+    void (async () => {
+      const next = new Map<string, { page: number; rects: PdfRectPt[] }>();
+      for (const mark of list) {
+        if (mark.exact && mark.rects.length > 0) {
+          next.set(mark.id, { page: mark.page, rects: mark.rects });
+          continue;
+        }
+        let found: { page: number; rects: PdfRectPt[] } | null = null;
+        for (const delta of SEARCH_PAGES) {
+          const n = mark.page + delta;
+          if (n < 1 || n > pdf.numPages) continue;
+          const rects = locateText(
+            await itemsOf(n),
+            mark.text,
+            delta === 0 ? mark.rects[0]?.y : undefined,
+          );
+          if (rects) {
+            found = { page: n, rects };
+            break;
+          }
+        }
+        if (!found && mark.fallback && mark.rects.length > 0)
+          found = { page: mark.page, rects: mark.rects };
+        if (found) next.set(mark.id, found);
+      }
+      if (ctl.cancelled) return;
+      setPlaced(next);
+      onPlacedRef.current?.(
+        Object.fromEntries(list.map((m) => [m.id, next.has(m.id)])),
+      );
+    })().catch(() => undefined);
+    return () => {
+      ctl.cancelled = true;
+    };
+  }, [pdf, status, marksKey]);
+
+  const appliedFocusRef = useRef<number | undefined>(undefined);
+  useEffect(() => {
+    if (!focusMark || appliedFocusRef.current === focusMark.token) return;
+    const spot = placed.get(focusMark.id);
+    if (!spot) return;
+    appliedFocusRef.current = focusMark.token;
+    didRestorePageRef.current = true;
+    const id = window.setTimeout(() => {
+      // Метка у самого верха: на телефоне ниже её закрывает шторка комментариев.
+      goToPosition(spot.page, spot.rects[0]?.y ?? 0, FOCUS_MARGIN);
+    }, 60);
+    return () => {
+      window.clearTimeout(id);
+    };
+  }, [focusMark, placed, goToPosition]);
+
+  const pageMarks = (num: number): PlacedPdfMark[] | undefined => {
+    if (!marks || placed.size === 0) return undefined;
+    const out: PlacedPdfMark[] = [];
+    for (const m of marks) {
+      const spot = placed.get(m.id);
+      if (spot?.page !== num) continue;
+      out.push({
+        id: m.id,
+        rects: spot.rects,
+        active: m.active,
+        resolved: m.resolved,
+        title: m.title,
+      });
+    }
+    return out.length > 0 ? out : undefined;
+  };
 
   const zoomBy = (factor: number): void => {
     setFit(false);
@@ -1115,6 +1317,8 @@ export const PdfViewer = ({
                 measureMode={measureMode}
                 onLinkClick={goToPage}
                 onInverseClick={onInverseSync}
+                marks={pageMarks(dim.num)}
+                onMarkClick={onMarkClick}
                 flash={
                   jump?.page === dim.num
                     ? {
@@ -1133,8 +1337,17 @@ export const PdfViewer = ({
 
       {selAction && (
         <div
-          className="pdf-sel-bar"
-          style={{ left: selAction.left, top: selAction.top }}
+          className={clsx(
+            "pdf-sel-bar",
+            selAction.docked && "pdf-sel-bar-docked",
+            !selAction.docked && selAction.below && "pdf-sel-bar-below",
+          )}
+          data-testid="pdf-selection-bar"
+          style={
+            selAction.docked
+              ? undefined
+              : { left: selAction.left, top: selAction.top }
+          }
           onMouseDown={(e) => {
             // Don't let the bar's own mousedown clear the selection/bar.
             e.preventDefault();
@@ -1156,6 +1369,16 @@ export const PdfViewer = ({
             <Copy size="0.75rem" />
             {t("selection.copy")}
           </button>
+          {onComment && selAction.geometry && (
+            <button
+              type="button"
+              data-testid="pdf-selection-comment"
+              onClick={commentSelection}
+            >
+              <MessageSquarePlus size="0.75rem" />
+              {t("selection.comment")}
+            </button>
+          )}
         </div>
       )}
     </div>

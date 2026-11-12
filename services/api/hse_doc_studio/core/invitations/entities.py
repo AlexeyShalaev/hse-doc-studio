@@ -118,9 +118,10 @@ class NotificationPayload:
     role: str | None = None
     ref_id: str | None = None
     outcome: str | None = None
-    # Ревью: файл и выдержка из комментария.
+    # Ревью: файл и выдержка из комментария; у треда к месту в PDF ещё документ (ссылка ведёт в его превью).
     path: str | None = None
     excerpt: str | None = None
+    doc_id: str | None = None
     # Маршрут подписания: точка сдачи (`ref_id` id маршрута, `excerpt` название точки или комментарий возврата)
     # и срок маршрута в ISO 8601, если автор его поставил.
     profile_id: str | None = None

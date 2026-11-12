@@ -12,6 +12,7 @@
     "outcome": "diag_fail",
     "path": null,
     "excerpt": "backups_stale",
+    "doc_id": null,
     "profile_id": null,
     "deadline": null,
     "new_version": false,

@@ -1,4 +1,4 @@
-import type { Anchor } from "../model/review.schema";
+import type { Anchor, ThreadAnchor } from "../model/review.schema";
 
 // Привязка комментария к фрагменту по цитате с контекстом (как TextQuoteSelector
 // из W3C Web Annotation). Смещения в Anchor только подсказка: правки, в том числе
@@ -23,6 +23,7 @@ export type ResolvedAnchor =
 const LOST: ResolvedAnchor = { state: "lost", from: null, to: null };
 
 export const makeAnchor = (text: string, from: number, to: number): Anchor => ({
+  kind: "text",
   quote: text.slice(from, to),
   prefix: text.slice(Math.max(0, from - CONTEXT_CHARS), from),
   suffix: text.slice(to, to + CONTEXT_CHARS),
@@ -124,3 +125,7 @@ export const resolveAnchor = (text: string, anchor: Anchor): ResolvedAnchor => {
   }
   return byQuote(text, anchor) ?? byContext(text, anchor) ?? LOST;
 };
+
+/** Цитата треда для списка: у PDF-якоря это выделенный в PDF текст. */
+export const quoteOf = (anchor: ThreadAnchor): string =>
+  anchor.kind === "pdf" ? anchor.text : anchor.quote;

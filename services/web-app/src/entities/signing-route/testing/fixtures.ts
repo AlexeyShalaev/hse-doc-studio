@@ -4,7 +4,10 @@ import type {
   ReturnSigningTaskRequest,
   RouteDocVersion,
   RouteEvent,
+  RouteDocSlot,
   RouteParticipant,
+  RouteSkip,
+  RouteSkipBlocker,
   SendSigningRouteRequest,
   SetSigningTaskPlateRequest,
   SignSigningTaskRequest,
@@ -92,7 +95,20 @@ export const makeRouteParticipant = (
   notified_at: null,
   reminded_at: null,
   reminders: 0,
+  skipped_at: null,
+  skip: null,
   ...overrides,
+});
+
+/** Пропуск глазами автора маршрута (13.6): blocker null значит «можно пропустить». */
+export const makeRouteSkip = (
+  blocker: RouteSkipBlocker | null,
+  docs: { keeps_marks?: string[]; refreezes?: string[] } = {},
+): RouteSkip => ({
+  available: blocker === null,
+  blocker,
+  keeps_marks: docs.keeps_marks ?? [],
+  refreezes: docs.refreezes ?? [],
 });
 
 const supervisor = (overrides: Partial<RouteParticipant> = {}) =>
@@ -138,6 +154,7 @@ export const makeSigningRoute = (
           slot_id: "author",
           label: { ru: "Студент", en: "Student" },
           participant_id: "srp_author",
+          extra: false,
           optional: false,
           status: "signed",
         },
@@ -145,6 +162,7 @@ export const makeSigningRoute = (
           slot_id: "supervisor",
           label: { ru: "Научный руководитель", en: "Supervisor" },
           participant_id: "srp_supervisor",
+          extra: false,
           optional: false,
           status: "pending",
         },
@@ -153,7 +171,11 @@ export const makeSigningRoute = (
       changed: false,
     },
   ],
-  steps: [[makeRouteParticipant()], [supervisor()]],
+  // Автор видит пропуск у каждого: сам закончил, у научрука подпись обязательна.
+  steps: [
+    [makeRouteParticipant({ skip: makeRouteSkip("done") })],
+    [supervisor({ skip: makeRouteSkip("required_slots") })],
+  ],
   events: [
     makeRouteEvent(),
     makeRouteEvent({ id: "sre_02", kind: "frozen", who: null }),
@@ -303,6 +325,7 @@ export const makeSigningTask = (
       cert_id: "1A2B 3C4D 5E6F 7A8B",
     },
     keys: { server_keys_allowed: false, default_key: null },
+    optional: false,
   },
   docs: [
     {
@@ -322,6 +345,7 @@ export const makeSigningTask = (
           mark: "plate",
           status: "pending",
           reason: "no_signature_file",
+          optional: false,
         },
       ],
       others: [
@@ -411,6 +435,7 @@ const newVersionRoute = makeSigningRoute({
           slot_id: "author",
           label: { ru: "Студент", en: "Student" },
           participant_id: "srp_author",
+          extra: false,
           optional: false,
           status: "signed",
         },
@@ -418,6 +443,7 @@ const newVersionRoute = makeSigningRoute({
           slot_id: "supervisor",
           label: SUPERVISOR_LABEL,
           participant_id: "srp_supervisor",
+          extra: false,
           optional: false,
           status: "pending",
         },
@@ -437,6 +463,7 @@ const newVersionRoute = makeSigningRoute({
           slot_id: "supervisor",
           label: SUPERVISOR_LABEL,
           participant_id: "srp_supervisor",
+          extra: false,
           optional: false,
           status: "signed",
         },
@@ -444,6 +471,7 @@ const newVersionRoute = makeSigningRoute({
           slot_id: "academic_supervisor",
           label: ACADEMIC_LABEL,
           participant_id: "srp_academic",
+          extra: false,
           optional: false,
           status: "signed",
         },
@@ -453,7 +481,12 @@ const newVersionRoute = makeSigningRoute({
     },
   ],
   steps: [
-    [makeRouteParticipant({ approved_at: NEW_VERSION_AT })],
+    [
+      makeRouteParticipant({
+        approved_at: NEW_VERSION_AT,
+        skip: makeRouteSkip("done"),
+      }),
+    ],
     [
       supervisor({
         assignments: [
@@ -464,9 +497,15 @@ const newVersionRoute = makeSigningRoute({
         next_action: "approve",
         changes_visible: true,
         notified_at: NEW_VERSION_AT,
+        skip: makeRouteSkip("required_slots"),
       }),
     ],
-    [academic({ approved_at: "2026-11-11T15:00:00Z" })],
+    [
+      academic({
+        approved_at: "2026-11-11T15:00:00Z",
+        skip: makeRouteSkip("done"),
+      }),
+    ],
   ],
   events: [
     makeRouteEvent(),
@@ -513,6 +552,8 @@ const SNAPSHOT_ROUTE_EXAMPLES = {
     phase: null,
     current_step: null,
     stop_reason: "sent_changed",
+    // Пропуск отдаётся только у идущего маршрута.
+    steps: [[makeRouteParticipant()], [supervisor()]],
     docs: divergedRoute.docs.map((doc) => ({
       ...doc,
       frozen: false,
@@ -634,6 +675,7 @@ const SNAPSHOT_TASK_EXAMPLES = {
             mark: "plate",
             status: "pending",
             reason: "awaiting_approval",
+            optional: false,
           },
         ],
         others: makeSigningTask().docs[0]?.others ?? [],
@@ -658,6 +700,7 @@ const SNAPSHOT_TASK_EXAMPLES = {
             mark: "plate",
             status: "signed",
             reason: null,
+            optional: false,
           },
         ],
         others: [
@@ -680,6 +723,349 @@ const SNAPSHOT_TASK_EXAMPLES = {
     ],
     events: newVersionRoute.events,
   }),
+} satisfies Record<string, SigningTask>;
+
+// Необязательные подписи и пропуск (раздел 13): живой маршрут «Заявка на тему КП». Автор
+// картинкой, научрук открепленной ЭП с известными данными плашки, академрук сверх точки
+// (`extra`) с отметкой «Подпись необязательна» (`optional`).
+
+const SKIPPED_AT = "2026-11-13T10:00:00Z";
+const ACADEMIC_NAME = "Сидоров С. С.";
+
+const academicSlot = (status: RouteDocSlot["status"]): RouteDocSlot => ({
+  slot_id: "academic_supervisor",
+  label: ACADEMIC_LABEL,
+  participant_id: "srp_academic",
+  extra: true,
+  optional: true,
+  status,
+});
+
+const optionalDoc = (
+  frozen: boolean,
+  supervisorSlot: RouteDocSlot["status"],
+  academicStatus: RouteDocSlot["status"],
+): SigningRoute["docs"][number] => ({
+  ...SR_DOC,
+  frozen,
+  slots: [
+    {
+      slot_id: "author",
+      label: { ru: "Студент", en: "Student" },
+      participant_id: "srp_author",
+      extra: false,
+      optional: false,
+      status: "signed",
+    },
+    {
+      slot_id: "supervisor",
+      label: SUPERVISOR_LABEL,
+      participant_id: "srp_supervisor",
+      extra: false,
+      optional: false,
+      status: supervisorSlot,
+    },
+    academicSlot(academicStatus),
+  ],
+  sent: makeRouteDocVersion(),
+  changed: false,
+});
+
+const optionalAcademic = (overrides: Partial<RouteParticipant> = {}) =>
+  academic({
+    name: ACADEMIC_NAME,
+    card_name: ACADEMIC_NAME,
+    assignments: [{ doc_id: SR_DOC.doc_id, slot_id: "academic_supervisor" }],
+    approved_at: null,
+    ...overrides,
+  });
+
+/** Научрук согласовал до фиксации и ждёт её: его ЭП после фиксации. */
+const approvedSupervisor = (overrides: Partial<RouteParticipant> = {}) =>
+  supervisor({
+    state: "waiting",
+    next_action: "wait",
+    approved_at: "2026-11-11T12:00:00Z",
+    skip: makeRouteSkip("not_turn"),
+    ...overrides,
+  });
+
+const optionalEvents = [
+  makeRouteEvent(),
+  makeRouteEvent({
+    id: "sre_06",
+    kind: "approved",
+    at: "2026-11-11T12:00:00Z",
+    who: SR_SUPERVISOR.name,
+    participant_id: "srp_supervisor",
+  }),
+];
+
+const skippedEvents = [
+  ...optionalEvents,
+  makeRouteEvent({
+    id: "sre_07",
+    kind: "skipped",
+    at: SKIPPED_AT,
+    who: SR_AUTHOR.name,
+    participant_id: "srp_academic",
+  }),
+  makeRouteEvent({ id: "sre_08", kind: "frozen", at: SKIPPED_AT, who: null }),
+];
+
+/** Очередь академрука, все его подписи необязательны: автор видит «Пропустить». */
+const skippableRoute = makeSigningRoute({
+  phase: "approval",
+  current_step: 3,
+  docs: [optionalDoc(false, "pending", "pending")],
+  steps: [
+    [makeRouteParticipant({ skip: makeRouteSkip("done") })],
+    [approvedSupervisor()],
+    [
+      optionalAcademic({
+        state: "to_approve",
+        next_action: "approve",
+        changes_visible: true,
+        notified_at: "2026-11-11T12:00:00Z",
+        skip: makeRouteSkip(null),
+      }),
+    ],
+  ],
+  events: optionalEvents,
+});
+
+const OPTIONAL_ROUTE_EXAMPLES = {
+  skippable: skippableRoute,
+  // Фаза подписи: плашка академрука уже в B, ЭП над ним нет; пропуск зафиксирует его заново.
+  skippable_refreezes: makeSigningRoute({
+    phase: "signing",
+    current_step: 3,
+    docs: [optionalDoc(true, "pending", "pending")],
+    steps: [
+      [makeRouteParticipant({ skip: makeRouteSkip("done") })],
+      [
+        supervisor({
+          state: "to_sign",
+          next_action: "sign",
+          approved_at: "2026-11-11T12:00:00Z",
+          skip: makeRouteSkip("required_slots"),
+        }),
+      ],
+      [
+        optionalAcademic({
+          method: "detached",
+          state: "to_approve_sign",
+          next_action: "approve_and_sign",
+          notified_at: "2026-11-11T12:00:00Z",
+          skip: makeRouteSkip(null, { refreezes: [SR_DOC.doc_id] }),
+        }),
+      ],
+    ],
+    events: [
+      ...optionalEvents,
+      makeRouteEvent({ id: "sre_08", kind: "frozen", who: null }),
+    ],
+  }),
+  // Над B уже ЭП научрука: плашка академрука останется в нём.
+  skippable_keeps_marks: makeSigningRoute({
+    phase: "signing",
+    current_step: 3,
+    docs: [optionalDoc(true, "signed", "pending")],
+    steps: [
+      [makeRouteParticipant({ skip: makeRouteSkip("done") })],
+      [
+        supervisor({
+          state: "done",
+          next_action: "done",
+          approved_at: "2026-11-11T12:00:00Z",
+          skip: makeRouteSkip("done"),
+        }),
+      ],
+      [
+        optionalAcademic({
+          method: "detached",
+          state: "to_approve_sign",
+          next_action: "approve_and_sign",
+          notified_at: "2026-11-11T12:00:00Z",
+          skip: makeRouteSkip(null, { keeps_marks: [SR_DOC.doc_id] }),
+        }),
+      ],
+    ],
+    events: [
+      ...optionalEvents,
+      makeRouteEvent({ id: "sre_08", kind: "frozen", who: null }),
+    ],
+  }),
+  // Академрук пропущен: маршрут зафиксировал заявление и ждёт ЭП научрука.
+  skipped: makeSigningRoute({
+    phase: "signing",
+    current_step: 2,
+    updated_at: SKIPPED_AT,
+    docs: [optionalDoc(true, "pending", "skipped")],
+    steps: [
+      [makeRouteParticipant({ skip: makeRouteSkip("done") })],
+      [
+        supervisor({
+          state: "to_sign",
+          next_action: "sign",
+          approved_at: "2026-11-11T12:00:00Z",
+          notified_at: SKIPPED_AT,
+          skip: makeRouteSkip("required_slots"),
+        }),
+      ],
+      [
+        optionalAcademic({
+          state: "skipped",
+          next_action: "done",
+          notified_at: "2026-11-11T12:00:00Z",
+          skipped_at: SKIPPED_AT,
+          skip: makeRouteSkip("done"),
+        }),
+      ],
+    ],
+    events: skippedEvents,
+  }),
+  // Пропущен после ЭП научрука над B: плашка осталась, маршрут завершён.
+  skipped_kept_mark: makeSigningRoute({
+    status: "completed",
+    phase: "done",
+    current_step: null,
+    updated_at: SKIPPED_AT,
+    completed_at: SKIPPED_AT,
+    docs: [optionalDoc(true, "signed", "skipped")],
+    steps: [
+      [makeRouteParticipant()],
+      [
+        supervisor({
+          state: "done",
+          next_action: "done",
+          approved_at: "2026-11-11T12:00:00Z",
+        }),
+      ],
+      [
+        optionalAcademic({
+          method: "detached",
+          state: "skipped",
+          next_action: "done",
+          notified_at: "2026-11-11T12:00:00Z",
+          skipped_at: SKIPPED_AT,
+        }),
+      ],
+    ],
+    events: [
+      ...optionalEvents,
+      makeRouteEvent({ id: "sre_08", kind: "frozen", who: null }),
+      makeRouteEvent({
+        id: "sre_09",
+        kind: "signed",
+        at: "2026-11-12T09:00:00Z",
+        who: SR_SUPERVISOR.name,
+        participant_id: "srp_supervisor",
+      }),
+      makeRouteEvent({
+        id: "sre_10",
+        kind: "skipped",
+        at: SKIPPED_AT,
+        who: SR_AUTHOR.name,
+        participant_id: "srp_academic",
+      }),
+      makeRouteEvent({
+        id: "sre_11",
+        kind: "completed",
+        at: SKIPPED_AT,
+        who: null,
+      }),
+    ],
+  }),
+} satisfies Record<string, SigningRoute>;
+
+/** Задача академрука: его место на заявлении необязательно. */
+const optionalTask = (
+  me: Partial<SigningTask["me"]>,
+  status: RouteDocSlot["status"],
+): SigningTask =>
+  makeSigningTask({
+    route: { ...makeSigningTask().route, phase: "approval", current_step: 3 },
+    steps: [
+      makeSigningTask().steps[0] ?? [],
+      [
+        {
+          name: SR_SUPERVISOR.name,
+          persona: "supervisor",
+          state: "waiting",
+          at: "2026-11-11T12:00:00Z",
+          me: false,
+          card_name: null,
+          changes_visible: false,
+        },
+      ],
+      [
+        {
+          name: ACADEMIC_NAME,
+          persona: "academic_supervisor",
+          state: me.state ?? "to_approve",
+          at: null,
+          me: true,
+          card_name: null,
+          changes_visible: status === "pending",
+        },
+      ],
+    ],
+    me: {
+      participant_id: "srp_academic",
+      state: "to_approve",
+      next_action: "approve",
+      methods: ["image", "detached"],
+      method: "image",
+      image_ready: true,
+      image_url: `/api/v1/projects/${SR_PROJECT_ID}/signing-routes/${SR_ROUTE_ID}/task/image`,
+      plate: null,
+      keys: { server_keys_allowed: false, default_key: null },
+      optional: true,
+      ...me,
+    },
+    docs: [
+      {
+        ...SR_DOC,
+        pdf_url: `/api/v1/projects/${SR_PROJECT_ID}/docs/${SR_DOC.doc_id}/pdf/signed`,
+        frozen: false,
+        token: status === "pending" ? `build:${BUILD_SHA}` : null,
+        mine: [
+          {
+            slot_id: "academic_supervisor",
+            label: ACADEMIC_LABEL,
+            page: 1,
+            x_mm: 110,
+            y_mm: 160,
+            width_mm: 40,
+            height_mm: 16,
+            mark: "png",
+            status,
+            reason: status === "pending" ? "awaiting_approval" : null,
+            optional: true,
+          },
+        ],
+        others: makeSigningTask().docs[0]?.others ?? [],
+        sent_at: SENT_AT,
+        changed_since_mine: false,
+        changed: null,
+      },
+    ],
+    events: status === "skipped" ? skippedEvents : optionalEvents,
+  });
+
+const OPTIONAL_TASK_EXAMPLES = {
+  optional: optionalTask({}, "pending"),
+  // Пропущен: «Ваша подпись не требуется», действий нет.
+  skipped: optionalTask(
+    {
+      state: "skipped",
+      next_action: "done",
+      methods: [],
+      optional: false,
+    },
+    "skipped",
+  ),
 } satisfies Record<string, SigningTask>;
 
 /**
@@ -710,6 +1096,7 @@ export const SIGNING_ROUTE_CONTRACT_EXAMPLES: Record<
               slot_id: "author",
               label: { ru: "Студент", en: "Student" },
               participant_id: "srp_author",
+              extra: false,
               optional: false,
               status: "pending",
             },
@@ -720,7 +1107,8 @@ export const SIGNING_ROUTE_CONTRACT_EXAMPLES: Record<
                 en: "Academic supervisor",
               },
               participant_id: "srp_academic",
-              optional: true,
+              extra: true,
+              optional: false,
               status: "pending",
             },
           ],
@@ -795,6 +1183,7 @@ export const SIGNING_ROUTE_CONTRACT_EXAMPLES: Record<
       ],
     }),
     ...SNAPSHOT_ROUTE_EXAMPLES,
+    ...OPTIONAL_ROUTE_EXAMPLES,
   },
   SigningRouteList: {
     active: { items: [makeSigningRouteSummary()] } satisfies SigningRouteList,
@@ -954,6 +1343,7 @@ export const SIGNING_ROUTE_CONTRACT_EXAMPLES: Record<
             signer: SR_SUPERVISOR.name,
           },
         },
+        optional: false,
       },
       docs: [
         {
@@ -973,6 +1363,7 @@ export const SIGNING_ROUTE_CONTRACT_EXAMPLES: Record<
               mark: "png",
               status: "pending",
               reason: "awaiting_approval",
+              optional: false,
             },
           ],
           others: makeSigningTask().docs[0]?.others ?? [],
@@ -1002,6 +1393,7 @@ export const SIGNING_ROUTE_CONTRACT_EXAMPLES: Record<
         image_url: null,
         plate: null,
         keys: { server_keys_allowed: false, default_key: null },
+        optional: false,
       },
       docs: [
         {
@@ -1031,6 +1423,7 @@ export const SIGNING_ROUTE_CONTRACT_EXAMPLES: Record<
       ],
     }),
     ...SNAPSHOT_TASK_EXAMPLES,
+    ...OPTIONAL_TASK_EXAMPLES,
   },
   ApproveSigningTaskRequest: {
     approve: {

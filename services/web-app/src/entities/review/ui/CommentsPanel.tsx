@@ -1,33 +1,41 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Check, MessageSquare, RotateCcw, X } from "lucide-react";
+import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { ApiError } from "@shared/api";
 import { formatRelativeTime } from "@shared/lib";
 import {
-  useCreateThread,
+  invalidateReview,
   useDeleteComment,
   useEditComment,
   useReplyToThread,
   useSetThreadStatus,
-  type Anchor,
-  type ResolvedAnchor,
-  type ReviewComment,
-  type ReviewThread,
-} from "@entities/review";
+} from "../api/reviewQueries";
+import { quoteOf } from "../lib/anchor";
 import { splitMentions } from "../lib/mentions";
+import type { ReviewComment, ReviewThread } from "../model/review.schema";
 import { CommentComposer } from "./CommentComposer";
 
-export type PendingThread = { anchor: Anchor };
+/** Новый тред к выделению: цитата для показа и запрос, которым он создаётся (из редактора или из превью). */
+export type PendingThread = {
+  quote: string;
+  create: (body: string, mentions: string[]) => Promise<ReviewThread>;
+};
 
 export type CommentsPanelProps = {
   projectId: string;
-  path: string;
   threads: ReviewThread[];
-  resolved: Map<string, ResolvedAnchor>;
+  /** Пометка под цитатой («Фрагмент сдвинут правками», «Место изменилось»); null без пометки. */
+  stateOf?: (thread: ReviewThread) => string | null;
+  /** Что показать в карточке под цитатой: файл исходника, «Открыть в исходнике». */
+  details?: (thread: ReviewThread) => ReactNode;
   activeId: string | null;
   onActivate: (id: string | null) => void;
   pending: PendingThread | null;
   onPendingDone: () => void;
+  /** Тред создан: превью сообщает, к чему он привязался. */
+  onCreated?: (thread: ReviewThread) => void;
   showResolved: boolean;
   onToggleResolved: () => void;
   canComment: boolean;
@@ -37,7 +45,15 @@ export type CommentsPanelProps = {
   isOwner: boolean;
   currentUserId: string | null;
   onClose: () => void;
+  /**
+   * Телефон: шторка снизу во всю ширину вместо колонки справа (превью PDF: над шторкой видна страница с
+   * подсветкой). В редакторе на телефоне панель накрывает текст целиком (класс `review-panel` в index.css).
+   */
+  sheet?: boolean;
 };
+
+// Над нижней панелью навигации телефона, но под окнами и тостами.
+const SHEET_Z = 60;
 
 const useFailure = () => {
   const { t } = useTranslation("review");
@@ -176,7 +192,8 @@ type ThreadCardProps = Pick<
   "projectId" | "canComment" | "canModerate" | "isOwner" | "currentUserId"
 > & {
   thread: ReviewThread;
-  state: ResolvedAnchor["state"] | undefined;
+  state: string | null;
+  details: ReactNode;
   active: boolean;
   onActivate: () => void;
 };
@@ -185,6 +202,7 @@ const ThreadCard = ({
   projectId,
   thread,
   state,
+  details,
   active,
   canComment,
   canModerate,
@@ -240,17 +258,18 @@ const ThreadCard = ({
           whiteSpace: "nowrap",
         }}
       >
-        {thread.anchor.quote.replace(/\s+/g, " ")}
+        {quoteOf(thread.anchor).replace(/\s+/g, " ")}
       </button>
-      {state && state !== "ok" && (
+      {state && (
         <span
           className="dim"
           style={{ fontSize: "0.6875rem" }}
           data-testid="review-anchor-state"
         >
-          {t(`state.${state}`)}
+          {state}
         </span>
       )}
+      {details}
       {thread.comments.map((comment, index) => (
         <CommentRow
           key={comment.id}
@@ -322,25 +341,53 @@ const ThreadCard = ({
 export const CommentsPanel = (props: CommentsPanelProps) => {
   const { t } = useTranslation("review");
   const failure = useFailure();
-  const create = useCreateThread(props.projectId);
+  const client = useQueryClient();
+  const create = useMutation({
+    mutationFn: (v: { body: string; mentions: string[] }) => {
+      if (!props.pending) return Promise.reject(new Error("no selection"));
+      return props.pending.create(v.body, v.mentions);
+    },
+    onSettled: () => invalidateReview(client, props.projectId),
+  });
   const visible = props.showResolved
     ? props.threads
     : props.threads.filter(
         (x) => x.status === "open" || x.id === props.activeId,
       );
 
-  return (
+  const panel = (
     <aside
       aria-label={t("title")}
       data-testid="review-panel"
-      className="review-panel flex flex-col"
-      style={{
-        width: "20rem",
-        flexShrink: 0,
-        minHeight: 0,
-        borderLeft: "1px solid var(--border)",
-        background: "var(--bg-0)",
-      }}
+      data-layout={props.sheet ? "sheet" : "side"}
+      className={
+        props.sheet
+          ? "review-panel-sheet flex flex-col"
+          : "review-panel flex flex-col"
+      }
+      style={
+        props.sheet
+          ? {
+              position: "fixed",
+              left: 0,
+              right: 0,
+              bottom: 0,
+              zIndex: SHEET_Z,
+              maxHeight: "45dvh",
+              minHeight: "12rem",
+              borderTop: "1px solid var(--border-strong, var(--border))",
+              borderRadius: "0.75rem 0.75rem 0 0",
+              boxShadow: "0 -8px 28px rgba(0, 0, 0, 0.35)",
+              background: "var(--bg-0)",
+            }
+          : {
+              width: "20rem",
+              flexShrink: 0,
+              minHeight: 0,
+              borderLeft: "1px solid var(--border)",
+              background: "var(--bg-0)",
+            }
+      }
     >
       <header
         className="flex items-center"
@@ -402,7 +449,7 @@ export const CommentsPanel = (props: CommentsPanelProps) => {
                 paddingLeft: "0.375rem",
               }}
             >
-              {props.pending.anchor.quote.replace(/\s+/g, " ").slice(0, 160)}
+              {props.pending.quote.replace(/\s+/g, " ").slice(0, 160)}
             </span>
             <CommentComposer
               projectId={props.projectId}
@@ -412,14 +459,13 @@ export const CommentsPanel = (props: CommentsPanelProps) => {
               error={create.isError ? failure(create.error) : null}
               autoFocus
               onSubmit={(body, mentions) => {
-                const anchor = props.pending?.anchor;
-                if (!anchor) return;
                 create.mutate(
-                  { path: props.path, anchor, body, mentions },
+                  { body, mentions },
                   {
                     onSuccess: (thread) => {
                       props.onPendingDone();
                       props.onActivate(thread.id);
+                      props.onCreated?.(thread);
                     },
                   },
                 );
@@ -447,7 +493,8 @@ export const CommentsPanel = (props: CommentsPanelProps) => {
             key={thread.id}
             projectId={props.projectId}
             thread={thread}
-            state={props.resolved.get(thread.id)?.state}
+            state={props.stateOf?.(thread) ?? null}
+            details={props.details?.(thread)}
             active={props.activeId === thread.id}
             canComment={props.canComment}
             canModerate={props.canModerate}
@@ -461,4 +508,6 @@ export const CommentsPanel = (props: CommentsPanelProps) => {
       </div>
     </aside>
   );
+  // Шторка уходит в body: у предков бывают transform и overflow, а с ними `position: fixed` встаёт не к окну.
+  return props.sheet ? createPortal(panel, document.body) : panel;
 };

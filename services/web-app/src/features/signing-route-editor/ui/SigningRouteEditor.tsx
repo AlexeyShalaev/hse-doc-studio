@@ -8,7 +8,7 @@ import { useIsProjectBuilding } from "@entities/compile";
 import { useDocuments } from "@entities/document";
 import type { ProjectResponseSchema } from "@entities/project";
 import { useBootstrap } from "@entities/session";
-import { useSignaturesState } from "@entities/signature";
+import { useSetSlotOptional, useSignaturesState } from "@entities/signature";
 import {
   isActionable,
   isResend,
@@ -152,6 +152,7 @@ export const SigningRouteEditor = ({
   const update = useUpdateSigningRoute(project.id, routeId);
   const send = useSendSigningRoute(project.id, routeId);
   const signatures = useSignaturesState(project.id);
+  const setOptional = useSetSlotOptional();
   const documents = useDocuments(project.id);
   const personaLabel = usePersonaLabel(project.authors);
   const [sendError, setSendError] = useState<string | null>(null);
@@ -174,6 +175,8 @@ export const SigningRouteEditor = ({
       route_blocked: t("error.route_blocked"),
       invalid_transition: t("error.invalid_transition"),
       passphrase_required: t("error.passphrase_required"),
+      optional_forbidden: t("placements.optionalRequired"),
+      slot_signed: t("placements.optionalSigned"),
       network: t("error.network"),
     };
     if (code === "rate_limited" && error instanceof ApiError) {
@@ -258,6 +261,23 @@ export const SigningRouteEditor = ({
   };
   const onRemoveExtra = (slot: RouteSlotRef) => {
     save(withoutExtraSlot(body(), route, slot));
+  };
+  // «Подпись необязательна» (13.9): флаг живёт в состоянии подписей, маршрут перечитывается.
+  const onSetOptional = (slot: RouteSlotRef, optional: boolean) => {
+    setOptional.mutate(
+      {
+        projectId: project.id,
+        docId: slot.doc_id,
+        slotId: slot.slot_id,
+        profileId: route.profile.id,
+        optional,
+      },
+      {
+        onError: (error) => {
+          toast.error(`${t("placements.optionalFailed")}: ${errorText(error)}`);
+        },
+      },
+    );
   };
 
   const onSend = async (input: {
@@ -452,6 +472,15 @@ export const SigningRouteEditor = ({
                 personaLabel={personaLabel}
                 onAddExtra={onAddExtra}
                 onRemoveExtra={onRemoveExtra}
+                onSetOptional={onSetOptional}
+                optionalPending={
+                  setOptional.isPending
+                    ? {
+                        doc_id: setOptional.variables.docId,
+                        slot_id: setOptional.variables.slotId,
+                      }
+                    : null
+                }
                 focus={placeFocus}
               />
             </Card>

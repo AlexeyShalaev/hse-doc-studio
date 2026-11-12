@@ -11,7 +11,7 @@ import { I18nextProvider } from "react-i18next";
 import { MemoryRouter } from "react-router";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { i18n } from "@shared/lib";
-import type { ReviewThread } from "@entities/review";
+import type { Anchor, ReviewThread } from "../model/review.schema";
 
 // Панель тянет за собой barrel @shared/ui с pdfjs-dist, которому в jsdom нужен DOMMatrix.
 vi.mock("pdfjs-dist", () => ({
@@ -29,11 +29,16 @@ const api = vi.hoisted(() => ({
   mentions: vi.fn(),
   threads: vi.fn(),
 }));
-vi.mock("@entities/review/api/reviewApi", () => ({ reviewApi: api }));
+vi.mock("../api/reviewApi", () => ({ reviewApi: api }));
 
-import { CommentsPanel, type CommentsPanelProps } from "./CommentsPanel";
+import {
+  CommentsPanel,
+  type CommentsPanelProps,
+  type PendingThread,
+} from "./CommentsPanel";
 
-const anchor = {
+const anchor: Anchor = {
+  kind: "text",
   quote: "совместную правку",
   prefix: "изучаем ",
   suffix: " текста",
@@ -73,9 +78,7 @@ const baseProps = (
   over: Partial<CommentsPanelProps> = {},
 ): CommentsPanelProps => ({
   projectId: "p1",
-  path: "main.tex",
   threads: [thread()],
-  resolved: new Map(),
   activeId: null,
   onActivate: vi.fn(),
   pending: null,
@@ -88,6 +91,17 @@ const baseProps = (
   currentUserId: "u_rita",
   onClose: vi.fn(),
   ...over,
+});
+
+const pendingFor = (): PendingThread => ({
+  quote: anchor.quote,
+  create: (body, mentions) =>
+    api.createThread("p1", {
+      path: "main.tex",
+      anchor,
+      body,
+      mentions,
+    }) as Promise<ReviewThread>,
 });
 
 const mount = (props: CommentsPanelProps) =>
@@ -136,14 +150,10 @@ describe("CommentsPanel", () => {
   });
 
   it("explains a thread whose fragment was moved or lost", () => {
-    mount(
-      baseProps({
-        resolved: new Map([["rvt_1", { state: "lost", from: null, to: null }]]),
-      }),
-    );
+    mount(baseProps({ stateOf: () => "Место изменилось: PDF пересобран" }));
 
     expect(screen.getByTestId("review-anchor-state").textContent).toContain(
-      "удалён или переписан",
+      "Место изменилось",
     );
   });
 
@@ -192,7 +202,8 @@ describe("CommentsPanel", () => {
   it("creates a thread for the pending selection and activates it", async () => {
     const user = userEvent.setup();
     api.createThread.mockResolvedValue(thread({ id: "rvt_new" }));
-    const props = baseProps({ pending: { anchor }, threads: [] });
+    const onCreated = vi.fn();
+    const props = baseProps({ pending: pendingFor(), threads: [], onCreated });
     mount(props);
 
     await user.type(
@@ -219,6 +230,9 @@ describe("CommentsPanel", () => {
       expect(props.onActivate).toHaveBeenCalledWith("rvt_new");
     });
     expect(props.onPendingDone).toHaveBeenCalled();
+    expect(onCreated).toHaveBeenCalledWith(
+      expect.objectContaining({ id: "rvt_new" }),
+    );
   });
 
   it("shows the server's reason when the fragment is stale", async () => {
@@ -227,7 +241,7 @@ describe("CommentsPanel", () => {
     api.createThread.mockRejectedValue(
       new ApiError("stale", "anchor_stale", 409),
     );
-    mount(baseProps({ pending: { anchor }, threads: [] }));
+    mount(baseProps({ pending: pendingFor(), threads: [] }));
 
     await user.type(screen.getByTestId("review-composer"), "x");
     await user.click(screen.getByTestId("review-composer-submit"));
@@ -235,5 +249,21 @@ describe("CommentsPanel", () => {
     expect((await screen.findByRole("alert")).textContent).toContain(
       "Фрагмент уже изменили",
     );
+  });
+});
+
+describe("CommentsPanel на телефоне", () => {
+  it("opens as a bottom sheet across the screen", () => {
+    mount(baseProps({ sheet: true }));
+
+    const panel = screen.getByTestId("review-panel");
+    expect(panel.dataset.layout).toBe("sheet");
+    expect(panel.style.position).toBe("fixed");
+  });
+
+  it("shows extra details under the quote of each thread", () => {
+    mount(baseProps({ details: (x) => <span>Файл {x.path}</span> }));
+
+    expect(screen.getByText("Файл main.tex")).toBeTruthy();
   });
 });

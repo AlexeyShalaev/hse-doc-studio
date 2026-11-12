@@ -336,6 +336,8 @@ export const NotificationSchema = z.strictObject({
       .nullable(),
     path: z.string().nullable(),
     excerpt: z.string().nullable(),
+    // Ревью: тред к месту в PDF документа, ссылка ведёт в превью этого документа.
+    doc_id: z.string().nullable(),
     // Маршрут подписания: точка сдачи (ref_id это id маршрута) и срок.
     profile_id: z.string().nullable(),
     deadline: iso.nullable(),

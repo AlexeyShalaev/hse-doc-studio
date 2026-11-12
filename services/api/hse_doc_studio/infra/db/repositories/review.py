@@ -9,13 +9,40 @@ from uuid import UUID
 
 from sqlalchemy import delete, func, select, update
 
-from hse_doc_studio.core.review.entities import Anchor, ReviewComment, ReviewThread, ThreadStatus
+from hse_doc_studio.core.review.entities import (
+    Anchor,
+    PdfAnchor,
+    PdfRect,
+    ReviewComment,
+    ReviewThread,
+    ThreadAnchor,
+    ThreadStatus,
+)
 from hse_doc_studio.infra.db.orm.review import ReviewCommentRow, ReviewThreadRow
 from hse_doc_studio.infra.db.session import SessionProvider
 
 
-def _anchor(raw: Any) -> Anchor:
+def _num(value: Any) -> float:
+    return float(value) if isinstance(value, int | float) and not isinstance(value, bool) else 0.0
+
+
+def _anchor(raw: Any) -> ThreadAnchor:
     data = raw if isinstance(raw, dict) else {}
+    if data.get("kind") == "pdf":
+        rects = data.get("rects")
+        return PdfAnchor(
+            doc_id=str(data.get("doc_id", "")),
+            page=int(data.get("page", 1)),
+            rects=tuple(
+                PdfRect(
+                    x=_num(r.get("x")), y=_num(r.get("y")), width=_num(r.get("width")), height=_num(r.get("height"))
+                )
+                for r in (rects if isinstance(rects, list) else [])
+                if isinstance(r, dict)
+            ),
+            text=str(data.get("text", "")),
+            build_sha=str(data.get("build_sha", "")),
+        )
     return Anchor(
         quote=str(data.get("quote", "")),
         prefix=str(data.get("prefix", "")),
@@ -23,6 +50,26 @@ def _anchor(raw: Any) -> Anchor:
         start=int(data.get("start", 0)),
         end=int(data.get("end", 0)),
     )
+
+
+def _anchor_json(anchor: ThreadAnchor) -> dict[str, Any]:
+    if isinstance(anchor, PdfAnchor):
+        return {
+            "kind": "pdf",
+            "doc_id": anchor.doc_id,
+            "page": anchor.page,
+            "rects": [{"x": r.x, "y": r.y, "width": r.width, "height": r.height} for r in anchor.rects],
+            "text": anchor.text,
+            "build_sha": anchor.build_sha,
+        }
+    # Прежние строки без `kind` читаются как текстовый якорь, поэтому новые пишутся в том же виде.
+    return {
+        "quote": anchor.quote,
+        "prefix": anchor.prefix,
+        "suffix": anchor.suffix,
+        "start": anchor.start,
+        "end": anchor.end,
+    }
 
 
 def _comment(row: ReviewCommentRow) -> ReviewComment:
@@ -141,13 +188,7 @@ class PostgresReviewRepository:
                     id=thread.id,
                     project_id=UUID(thread.project_id),
                     path=thread.path,
-                    anchor={
-                        "quote": thread.anchor.quote,
-                        "prefix": thread.anchor.prefix,
-                        "suffix": thread.anchor.suffix,
-                        "start": thread.anchor.start,
-                        "end": thread.anchor.end,
-                    },
+                    anchor=_anchor_json(thread.anchor),
                     status=thread.status.value,
                     created_by=thread.created_by,
                     created_by_name=thread.created_by_name,

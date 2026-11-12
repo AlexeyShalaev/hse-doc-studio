@@ -60,6 +60,14 @@ class SyncTexInverseOutput:
     column: int
 
 
+@dataclass(frozen=True)
+class LoadedSyncTex:
+    document: SyncTexDocument
+    folder: Path
+    # Главный .tex документа от корня проекта: относительно его каталога шла сборка.
+    source_file: str
+
+
 class SyncTexUC:
     """Resolves a document's ``.synctex.gz`` and answers forward/inverse queries.
 
@@ -102,6 +110,16 @@ class SyncTexUC:
         file, line, column = hit
         return SyncTexInverseOutput(file=normalize_input_path(file), line=line, column=column)
 
+    async def load(self, project_id: UUID, doc_id: str) -> LoadedSyncTex | None:
+        """Разобранный SyncTeX последней сборки с папкой проекта и главным файлом; None, если его нет.
+
+        Нет проекта или документа: NotFoundError, как у прямого и обратного запроса."""
+        folder, source_file, path = await self._locate(project_id, doc_id)
+        doc = load_synctex(path)
+        if doc is None:
+            return None
+        return LoadedSyncTex(document=doc, folder=folder, source_file=source_file)
+
     # ── internals ────────────────────────────────────────────────────────────
     async def _load(self, project_id: UUID, doc_id: str) -> SyncTexDocument:
         path = await self._synctex_path(project_id, doc_id)
@@ -116,6 +134,10 @@ class SyncTexUC:
         return doc
 
     async def _synctex_path(self, project_id: UUID, doc_id: str) -> Path:
+        return (await self._locate(project_id, doc_id))[2]
+
+    async def _locate(self, project_id: UUID, doc_id: str) -> tuple[Path, str, Path]:
+        """(папка проекта, главный файл документа от корня проекта, путь к .synctex.gz)."""
         located = await self._locator.locate(project_id)
         if located is None:
             raise NotFoundError(localized_error(f"Проект {project_id} не найден", f"Project not found: {project_id}"))
@@ -145,4 +167,4 @@ class SyncTexUC:
                     "Resolved SyncTeX path escapes the project folder",
                 )
             )
-        return target
+        return project_folder, src.as_posix(), target

@@ -100,6 +100,9 @@ export type {
 export { PdfViewer, PdfDiffView } from "./PdfViewer";
 export type {
   PdfViewerProps,
+  PdfMark,
+  PdfSelection,
+  PdfRectPt,
   PdfStamp,
   PageMargins,
   PdfDiffViewProps,

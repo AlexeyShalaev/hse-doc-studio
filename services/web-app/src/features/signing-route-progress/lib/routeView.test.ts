@@ -69,6 +69,7 @@ const esignRoute = (o: EsignOptions = {}): SigningRoute => {
     slot_id: id,
     label: { ru: id },
     participant_id: `p_${id}`,
+    extra: false,
     optional: false,
     status,
   });
@@ -254,7 +255,8 @@ describe("сводки маршрута", () => {
               slot_id: "academic_supervisor",
               label: { ru: "Академический руководитель" },
               participant_id: null,
-              optional: true,
+              extra: true,
+              optional: false,
               status: "pending",
             },
           ],

@@ -163,6 +163,7 @@ async def test__sent_route__signer_sees_task_count_and_request_notification(stan
         "outcome": "approve",
         "path": None,
         "excerpt": "Заявка на тему КП (SmartLMS)",
+        "doc_id": None,
         "profile_id": "topic-approval",
         "deadline": "2026-11-15T09:00:00Z",
         "new_version": False,

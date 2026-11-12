@@ -34,6 +34,7 @@ const planOf = (
   crypto_total: 0,
   crypto_signed: 0,
   waiting_for_me: 0,
+  optional_pending: 0,
   docs: [
     {
       doc_id: DOC,

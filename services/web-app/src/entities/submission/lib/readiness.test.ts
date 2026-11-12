@@ -409,7 +409,7 @@ describe("computeCheckpointReadiness", () => {
 describe("computeCheckpointReadiness with a signature plan", () => {
   const planSlot = (
     slotId: string,
-    status: "pending" | "signed" | "invalid" | "stale",
+    status: "pending" | "signed" | "invalid" | "stale" | "skipped",
     method: "image" | "detached" | "pades",
   ) => ({
     slot_id: slotId,
@@ -474,6 +474,37 @@ describe("computeCheckpointReadiness with a signature plan", () => {
     );
 
     expect(readiness.breakdown.signatures).toEqual({ done: 0, total: 1 });
+  });
+
+  it("does not count a skipped or an optional unsigned slot, as the plan counter", () => {
+    const plan: SignaturePlanLike = {
+      docs: [
+        {
+          doc_id: "application",
+          slots: [
+            planSlot("author", "signed", "image"),
+            planSlot("supervisor", "skipped", "detached"),
+            { ...planSlot("academic", "pending", "image"), optional: true },
+            { ...planSlot("consultant", "signed", "image"), optional: true },
+          ],
+        },
+      ],
+    };
+
+    const readiness = computeCheckpointReadiness(
+      profile([
+        item("application", ["author", "supervisor", "academic", "consultant"]),
+      ]),
+      [doc("application", "ok")],
+      withUploadedSlots({ placements: {} }),
+      [],
+      null,
+      [],
+      {},
+      plan,
+    );
+
+    expect(readiness.breakdown.signatures).toEqual({ done: 2, total: 2 });
   });
 });
 

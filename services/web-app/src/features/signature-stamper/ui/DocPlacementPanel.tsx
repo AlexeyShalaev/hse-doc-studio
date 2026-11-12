@@ -14,6 +14,7 @@ import {
   SignerPlateEditor,
   SlotDetachedSignature,
 } from "./DetachedSignatureBlocks";
+import { SlotOptionalRows, type SlotOptionalControl } from "./SlotOptionalRows";
 import type {
   SignMode,
   SignatureProfileRef,
@@ -28,6 +29,10 @@ import type {
 // необязательное, и его отсутствие читается как «сведений нет», а не «не нужна».
 export type PlacementSlot = Omit<SignatureSlotDefResponse, "required_by"> & {
   required_by?: Record<string, SignatureProfileRef[]>;
+  // Только у рантайм-слотов (signing-route.md, 13.3): пак запрещает необязательность и точки,
+  // чей маршрут включил слот сверх точки.
+  required?: boolean;
+  extra_by?: Record<string, SignatureProfileRef[]>;
 };
 
 export type DocPlacementPanelProps = {
@@ -56,7 +61,16 @@ export type DocPlacementPanelProps = {
   onReleaseWithheld?: (slotId: string) => void;
   /** Документ держит идущий маршрут подписания: фиксирует его только маршрут. */
   routeHeld?: boolean;
+  /**
+   * Документ на подписании (signing-route.md, 5.5): правки слотов закрыты (`inert`), открыта только
+   * отметка «Подпись необязательна» (13.9).
+   */
+  locked?: boolean;
+  /** «Подпись необязательна» у слотов документа; без него строк с галочкой нет. */
+  optionalControl?: SlotOptionalControl;
 };
+
+const lockedStyle = { opacity: 0.6 } as const;
 
 const MIN_CAPTION_WIDTH_MM = 70;
 
@@ -76,6 +90,8 @@ export const DocPlacementPanel = ({
   onSlotModeChange,
   onReleaseWithheld,
   routeHeld = false,
+  locked = false,
+  optionalControl,
 }: DocPlacementPanelProps) => {
   const { t } = useTranslation("signatureStamper");
   const docSlots = slotDefs.filter((slot) => slot.applies_to.includes(docId));
@@ -104,36 +120,38 @@ export const DocPlacementPanel = ({
 
   return (
     <div className="flex flex-col" style={{ minHeight: 0 }}>
-      <div
-        style={{
-          padding: "0.75rem 0.875rem",
-          borderBottom: "1px solid var(--border)",
-          fontSize: "0.6875rem",
-          color: "var(--fg-2)",
-          lineHeight: 1.5,
-        }}
-      >
-        {t("docPlacement.intro")}
-        <button
-          type="button"
-          className="btn xs ghost"
-          style={{ marginTop: "0.5rem" }}
-          onClick={onOpenProjectSignatures}
+      <div inert={locked} style={locked ? lockedStyle : undefined}>
+        <div
+          style={{
+            padding: "0.75rem 0.875rem",
+            borderBottom: "1px solid var(--border)",
+            fontSize: "0.6875rem",
+            color: "var(--fg-2)",
+            lineHeight: 1.5,
+          }}
         >
-          <ExternalLink size="0.625rem" />
-          {t("docPlacement.managePng")}
-        </button>
+          {t("docPlacement.intro")}
+          <button
+            type="button"
+            className="btn xs ghost"
+            style={{ marginTop: "0.5rem" }}
+            onClick={onOpenProjectSignatures}
+          >
+            <ExternalLink size="0.625rem" />
+            {t("docPlacement.managePng")}
+          </button>
+        </div>
+        {hasDetachedSlot && (
+          <FreezeCard
+            projectId={projectId}
+            docId={docId}
+            frozen={frozen}
+            signatureCount={Object.keys(docSignatures).length}
+            pdfAvailable={pdfAvailable}
+            routeHeld={routeHeld}
+          />
+        )}
       </div>
-      {hasDetachedSlot && (
-        <FreezeCard
-          projectId={projectId}
-          docId={docId}
-          frozen={frozen}
-          signatureCount={Object.keys(docSignatures).length}
-          pdfAvailable={pdfAvailable}
-          routeHeld={routeHeld}
-        />
-      )}
       {docSlots.map((slot, i) => {
         const slotInfo = state.slots[slot.id];
         const placement = state.placements[docId]?.[slot.id];
@@ -167,7 +185,13 @@ export const DocPlacementPanel = ({
               opacity: hasPng ? 1 : 0.7,
             }}
           >
-            <div className="flex items-center" style={{ gap: "0.625rem" }}>
+            {/* На подписании правки слота закрыты, открыта только отметка «необязательна». */}
+            <div
+              className="flex items-center"
+              style={{ gap: "0.625rem", ...(locked ? lockedStyle : {}) }}
+              inert={locked}
+              data-testid={`doc-slot-edit-${slot.id}`}
+            >
               <div
                 className="flex items-center justify-center shrink-0"
                 style={{
@@ -266,208 +290,224 @@ export const DocPlacementPanel = ({
               )}
             </div>
 
-            {withheld.has(slot.id) && (
-              // Маршрут подписания придержал картинку до согласия подписанта. После отмены маршрута
-              // она так и остаётся скрытой: отмена не согласие. Показать можно только явно.
-              <div
-                className="flex items-center"
-                style={{
-                  gap: "0.375rem",
-                  paddingLeft: "2.625rem",
-                  fontSize: "0.65625rem",
-                  flexWrap: "wrap",
-                }}
-                data-testid={`doc-withheld-${slot.id}`}
-              >
-                <span
-                  className="flex items-center gap-1"
-                  style={{ color: "var(--c-warn)" }}
-                  title={t("docPlacement.withheldTitle")}
-                >
-                  <EyeOff size="0.6875rem" aria-hidden="true" />
-                  {t("docPlacement.withheld")}
-                </span>
-                {onReleaseWithheld && (
-                  <button
-                    type="button"
-                    className="btn xs"
-                    title={t("docPlacement.withheldShowTitle")}
-                    data-testid={`doc-withheld-show-${slot.id}`}
-                    onClick={() => {
-                      onReleaseWithheld(slot.id);
-                    }}
-                  >
-                    <Eye size="0.625rem" aria-hidden="true" />
-                    {t("docPlacement.withheldShow")}
-                  </button>
-                )}
-              </div>
+            {optionalControl && (
+              <SlotOptionalRows
+                docId={docId}
+                slot={slot}
+                state={state}
+                lang={lang}
+                control={optionalControl}
+              />
             )}
 
             <div
-              className="flex items-center"
-              style={{
-                gap: "0.375rem",
-                paddingLeft: "2.625rem",
-                fontSize: "0.65625rem",
-              }}
-              title={t("detached.mode.hint")}
+              className="flex flex-col"
+              style={{ gap: "0.5rem", ...(locked ? lockedStyle : {}) }}
+              inert={locked}
             >
-              <span className="dim">{t("detached.mode.title")}</span>
-              {(["image", "detached_text"] as const).map((mode) => {
-                const active =
-                  (isDetached ? "detached_text" : "image") === mode;
-                return (
-                  <button
-                    key={mode}
-                    type="button"
-                    className={active ? "btn xs" : "btn xs ghost"}
-                    aria-pressed={active}
-                    style={
-                      active
-                        ? {
-                            background: "var(--accent-soft)",
-                            color: "var(--accent)",
-                          }
-                        : undefined
-                    }
-                    onClick={() => {
-                      if (!active) onSlotModeChange(slot.id, mode);
-                    }}
+              {withheld.has(slot.id) && (
+                // Маршрут подписания придержал картинку до согласия подписанта. После отмены маршрута
+                // она так и остаётся скрытой: отмена не согласие. Показать можно только явно.
+                <div
+                  className="flex items-center"
+                  style={{
+                    gap: "0.375rem",
+                    paddingLeft: "2.625rem",
+                    fontSize: "0.65625rem",
+                    flexWrap: "wrap",
+                  }}
+                  data-testid={`doc-withheld-${slot.id}`}
+                >
+                  <span
+                    className="flex items-center gap-1"
+                    style={{ color: "var(--c-warn)" }}
+                    title={t("docPlacement.withheldTitle")}
                   >
-                    {mode === "image"
-                      ? t("detached.mode.image")
-                      : t("detached.mode.detached")}
-                  </button>
-                );
-              })}
-            </div>
+                    <EyeOff size="0.6875rem" aria-hidden="true" />
+                    {t("docPlacement.withheld")}
+                  </span>
+                  {onReleaseWithheld && (
+                    <button
+                      type="button"
+                      className="btn xs"
+                      title={t("docPlacement.withheldShowTitle")}
+                      data-testid={`doc-withheld-show-${slot.id}`}
+                      onClick={() => {
+                        onReleaseWithheld(slot.id);
+                      }}
+                    >
+                      <Eye size="0.625rem" aria-hidden="true" />
+                      {t("docPlacement.withheldShow")}
+                    </button>
+                  )}
+                </div>
+              )}
 
-            {hasPng && isEnabled && (
               <div
                 className="flex items-center"
                 style={{
                   gap: "0.375rem",
-                  fontSize: "0.65625rem",
                   paddingLeft: "2.625rem",
-                  flexWrap: "wrap",
+                  fontSize: "0.65625rem",
                 }}
+                title={t("detached.mode.hint")}
               >
-                <label
+                <span className="dim">{t("detached.mode.title")}</span>
+                {(["image", "detached_text"] as const).map((mode) => {
+                  const active =
+                    (isDetached ? "detached_text" : "image") === mode;
+                  return (
+                    <button
+                      key={mode}
+                      type="button"
+                      className={active ? "btn xs" : "btn xs ghost"}
+                      aria-pressed={active}
+                      style={
+                        active
+                          ? {
+                              background: "var(--accent-soft)",
+                              color: "var(--accent)",
+                            }
+                          : undefined
+                      }
+                      onClick={() => {
+                        if (!active) onSlotModeChange(slot.id, mode);
+                      }}
+                    >
+                      {mode === "image"
+                        ? t("detached.mode.image")
+                        : t("detached.mode.detached")}
+                    </button>
+                  );
+                })}
+              </div>
+
+              {hasPng && isEnabled && (
+                <div
                   className="flex items-center"
-                  style={{ gap: "0.3125rem" }}
-                  title={t("docPlacement.signDateTitle")}
+                  style={{
+                    gap: "0.375rem",
+                    fontSize: "0.65625rem",
+                    paddingLeft: "2.625rem",
+                    flexWrap: "wrap",
+                  }}
                 >
-                  <span className="dim">{t("docPlacement.signDate")}</span>
-                  <input
-                    type="date"
-                    className="input"
+                  <label
+                    className="flex items-center"
+                    style={{ gap: "0.3125rem" }}
+                    title={t("docPlacement.signDateTitle")}
+                  >
+                    <span className="dim">{t("docPlacement.signDate")}</span>
+                    <input
+                      type="date"
+                      className="input"
+                      style={{
+                        height: "1.375rem",
+                        fontSize: "0.65625rem",
+                        padding: "0 0.375rem",
+                      }}
+                      value={placement?.sign_date ?? ""}
+                      onChange={(e) => {
+                        // "" очищает дату — подпись штампуется без неё.
+                        onPlacementChange(slot.id, {
+                          sign_date: e.target.value,
+                        });
+                      }}
+                    />
+                  </label>
+                  <span
+                    className="flex items-center gap-1 mono"
                     style={{
-                      height: "1.375rem",
-                      fontSize: "0.65625rem",
+                      padding: "1px 0.375rem",
+                      borderRadius: "0.1875rem",
+                      background: isOnThisPage
+                        ? "var(--c-ok-soft)"
+                        : "var(--bg-2)",
+                      color: isOnThisPage ? "var(--c-ok)" : "var(--fg-2)",
+                    }}
+                  >
+                    <MapPin size="0.5625rem" />{" "}
+                    {t("docPlacement.page", { page: placedPage })}
+                  </span>
+                  {!isOnThisPage && (
+                    <>
+                      <button
+                        type="button"
+                        className="btn xs ghost"
+                        onClick={() => {
+                          onJumpToPage(placedPage);
+                        }}
+                        title={t("docPlacement.openPageTitle", {
+                          page: placedPage,
+                        })}
+                      >
+                        <ArrowRight size="0.625rem" />
+                        {t("docPlacement.jump")}
+                      </button>
+                      <button
+                        type="button"
+                        className="btn xs"
+                        disabled={pageCount === 0}
+                        onClick={() => {
+                          onPlacementChange(slot.id, { page: currentPage });
+                        }}
+                        title={t("docPlacement.moveToCurrentTitle", {
+                          page: currentPage,
+                        })}
+                      >
+                        {t("docPlacement.moveHere")}
+                      </button>
+                    </>
+                  )}
+                </div>
+              )}
+
+              {isDetached && (
+                <SignerPlateEditor
+                  projectId={projectId}
+                  slotId={slot.id}
+                  signer={slotInfo?.signer}
+                  personName={personName}
+                />
+              )}
+
+              {isDetached && (
+                <SlotDetachedSignature
+                  projectId={projectId}
+                  docId={docId}
+                  slotId={slot.id}
+                  label={label}
+                  personName={personName}
+                  frozen={frozen}
+                  signature={docSignatures[slot.id]}
+                  routeHeld={routeHeld}
+                />
+              )}
+
+              {!hasPng && (
+                <div
+                  style={{
+                    paddingLeft: "2.625rem",
+                    fontSize: "0.65625rem",
+                    color: "var(--fg-2)",
+                  }}
+                >
+                  {t("docPlacement.uploadPromptPrefix")}{" "}
+                  <button
+                    type="button"
+                    className="btn xs ghost"
+                    onClick={onOpenProjectSignatures}
+                    style={{
+                      height: "1rem",
                       padding: "0 0.375rem",
+                      fontSize: "0.625rem",
                     }}
-                    value={placement?.sign_date ?? ""}
-                    onChange={(e) => {
-                      // "" очищает дату — подпись штампуется без неё.
-                      onPlacementChange(slot.id, {
-                        sign_date: e.target.value,
-                      });
-                    }}
-                  />
-                </label>
-                <span
-                  className="flex items-center gap-1 mono"
-                  style={{
-                    padding: "1px 0.375rem",
-                    borderRadius: "0.1875rem",
-                    background: isOnThisPage
-                      ? "var(--c-ok-soft)"
-                      : "var(--bg-2)",
-                    color: isOnThisPage ? "var(--c-ok)" : "var(--fg-2)",
-                  }}
-                >
-                  <MapPin size="0.5625rem" />{" "}
-                  {t("docPlacement.page", { page: placedPage })}
-                </span>
-                {!isOnThisPage && (
-                  <>
-                    <button
-                      type="button"
-                      className="btn xs ghost"
-                      onClick={() => {
-                        onJumpToPage(placedPage);
-                      }}
-                      title={t("docPlacement.openPageTitle", {
-                        page: placedPage,
-                      })}
-                    >
-                      <ArrowRight size="0.625rem" />
-                      {t("docPlacement.jump")}
-                    </button>
-                    <button
-                      type="button"
-                      className="btn xs"
-                      disabled={pageCount === 0}
-                      onClick={() => {
-                        onPlacementChange(slot.id, { page: currentPage });
-                      }}
-                      title={t("docPlacement.moveToCurrentTitle", {
-                        page: currentPage,
-                      })}
-                    >
-                      {t("docPlacement.moveHere")}
-                    </button>
-                  </>
-                )}
-              </div>
-            )}
-
-            {isDetached && (
-              <SignerPlateEditor
-                projectId={projectId}
-                slotId={slot.id}
-                signer={slotInfo?.signer}
-                personName={personName}
-              />
-            )}
-
-            {isDetached && (
-              <SlotDetachedSignature
-                projectId={projectId}
-                docId={docId}
-                slotId={slot.id}
-                label={label}
-                personName={personName}
-                frozen={frozen}
-                signature={docSignatures[slot.id]}
-                routeHeld={routeHeld}
-              />
-            )}
-
-            {!hasPng && (
-              <div
-                style={{
-                  paddingLeft: "2.625rem",
-                  fontSize: "0.65625rem",
-                  color: "var(--fg-2)",
-                }}
-              >
-                {t("docPlacement.uploadPromptPrefix")}{" "}
-                <button
-                  type="button"
-                  className="btn xs ghost"
-                  onClick={onOpenProjectSignatures}
-                  style={{
-                    height: "1rem",
-                    padding: "0 0.375rem",
-                    fontSize: "0.625rem",
-                  }}
-                >
-                  {t("docPlacement.toolsSignatures")}
-                </button>
-              </div>
-            )}
+                  >
+                    {t("docPlacement.toolsSignatures")}
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
         );
       })}

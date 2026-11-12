@@ -1,4 +1,10 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+  type ReactNode,
+} from "react";
 import { Link, useSearchParams } from "react-router";
 import { useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
@@ -24,8 +30,10 @@ import {
 } from "@entities/document";
 import type { DocumentResponseSchema } from "@entities/document";
 import type { ProjectResponseSchema } from "@entities/project";
+import { useBootstrap } from "@entities/session";
 import { useSignaturesState } from "@entities/signature";
 import { synctexApi } from "@entities/synctex";
+import { usePdfReview } from "@features/pdf-review";
 import { env } from "@shared/config";
 import {
   toast,
@@ -78,6 +86,18 @@ export const PreviewPane = ({ project, doc }: PreviewPaneProps) => {
   const requestSourceJump = useSyncTexStore((s) => s.requestSourceJump);
   const requestSourceFind = useSyncTexStore((s) => s.requestSourceFind);
   const askAgent = useWorkspaceStore((s) => s.askAgent);
+  // Комментарии из превью: только на сервере, у участника проекта (в том числе гостя по ссылке).
+  const { data: boot } = useBootstrap();
+  const role = boot?.mode === "server" ? (project.my_role ?? null) : null;
+  const review = usePdfReview({
+    projectId: project.id,
+    docId: doc.id,
+    enabled: role !== null,
+    canComment: role !== null && role !== "reader",
+    canModerate: role === "editor" || role === "owner",
+    isOwner: role === "owner",
+    currentUserId: boot?.user?.id ?? null,
+  });
 
   // Office-editable artifact (pptx variant, or any custom word/cell/slide
   // upload): saving from the office editor reconverts the PDF preview
@@ -239,6 +259,20 @@ export const PreviewPane = ({ project, doc }: PreviewPaneProps) => {
     }
     return out;
   }, [signaturesState, doc.id, project.id]);
+
+  // Просмотрщик и панель «Комментарии» справа (на телефоне шторка поверх). Обёртка
+  // есть всегда: иначе открытие панели пересоздало бы просмотрщик и PDF грузился заново.
+  const withReview = (viewer: ReactNode) => (
+    <div className="flex" style={{ flex: 1, minHeight: 0, minWidth: 0 }}>
+      <div
+        className="flex flex-col"
+        style={{ flex: 1, minHeight: 0, minWidth: 0 }}
+      >
+        {viewer}
+      </div>
+      {review.panel}
+    </div>
+  );
 
   if (!hasBuild) {
     return (
@@ -404,7 +438,7 @@ export const PreviewPane = ({ project, doc }: PreviewPaneProps) => {
     // into the URL) reloads the PDF after saves, which never touch
     // last_compile_id.
     if (doc.preview_file) {
-      return (
+      return withReview(
         <PdfViewer
           url={fileUrl(project.id, doc.preview_file)}
           refreshKey={
@@ -412,8 +446,10 @@ export const PreviewPane = ({ project, doc }: PreviewPaneProps) => {
           }
           ariaLabel={`${meta.code} preview`}
           storageKey={`${project.id}:${doc.id}`}
+          {...review.viewer}
           toolbarExtras={
             <>
+              {review.toolbar}
               {doc.custom_file != null && (
                 <span
                   className="chip"
@@ -443,7 +479,7 @@ export const PreviewPane = ({ project, doc }: PreviewPaneProps) => {
               </a>
             </>
           }
-        />
+        />,
       );
     }
     const isOfficeEditableExt = isOfficeEditablePath(artifactRelPath);
@@ -567,7 +603,7 @@ export const PreviewPane = ({ project, doc }: PreviewPaneProps) => {
     );
   }
 
-  return (
+  return withReview(
     <PdfViewer
       url={artifactHref}
       refreshKey={doc.last_compile_id ?? artifactRelPath}
@@ -579,8 +615,10 @@ export const PreviewPane = ({ project, doc }: PreviewPaneProps) => {
       jump={pdfJump}
       onAskAgent={onAskAgent}
       onFindInSource={onFindInSource}
+      {...review.viewer}
       toolbarExtras={
         <>
+          {review.toolbar}
           <span className="mono dim truncate" style={{ maxWidth: "12.5rem" }}>
             {meta.out}
           </span>
@@ -638,6 +676,6 @@ export const PreviewPane = ({ project, doc }: PreviewPaneProps) => {
           )}
         </>
       }
-    />
+    />,
   );
 };

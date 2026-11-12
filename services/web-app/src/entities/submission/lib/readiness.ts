@@ -58,12 +58,14 @@ export type FormLike = {
  */
 export type PlanSlotLike = {
   slot_id: string;
-  status: "pending" | "signed" | "invalid" | "stale";
+  status: "pending" | "signed" | "invalid" | "stale" | "skipped";
   method: "image" | "detached" | "pades";
   crypto: boolean;
   hint: string;
   signer: { persona: string; name: string };
   is_mine?: boolean | undefined;
+  // Подпись необязательна на точке (signing-route.md, 13.6).
+  optional?: boolean | undefined;
 };
 
 export type SignaturePlanLike = {
@@ -401,6 +403,14 @@ export const computeCheckpointReadiness = (
       docs.done += 1;
     }
     for (const signature of item.signatures) {
+      // Как счётчик плана (signing-route.md, 13.6): пропущенная маршрутом и необязательная
+      // неподписанная подпись точку не держат и в знаменатель не входят.
+      const plan = signature.plan;
+      if (
+        plan?.status === "skipped" ||
+        (plan?.optional === true && !signature.isSigned)
+      )
+        continue;
       total += 1;
       sigs.total += 1;
       if (signature.isSigned) {

@@ -17,6 +17,8 @@ PATH_MAX = 512
 # Предел открытых и закрытых тредов на файл: страница не должна превращаться в свалку.
 THREADS_PER_FILE_MAX = 500
 EXCERPT_MAX = 140
+# PDF-якорь (раздел 2.4): прямоугольников выделения на странице не больше этого.
+PDF_RECTS_MAX = 64
 
 
 class ThreadStatus(StrEnum):
@@ -59,6 +61,60 @@ class Anchor:
     start: int = 0
     end: int = 0
 
+    @property
+    def kind(self) -> str:
+        return "text"
+
+
+@dataclass(frozen=True)
+class PdfRect:
+    """Прямоугольник на странице PDF в пунктах от левого верхнего угла."""
+
+    x: float
+    y: float
+    width: float
+    height: float
+
+
+@dataclass(frozen=True)
+class PdfAnchor:
+    """Привязка к месту в PDF документа, когда выделение из превью не нашлось в исходнике (раздел 2.4).
+
+    `build_sha` это sha256 PDF на момент создания: на том же PDF прямоугольники точные, после пересборки клиент ищет
+    `text` на странице и соседних.
+    """
+
+    doc_id: str
+    page: int
+    rects: tuple[PdfRect, ...]
+    text: str
+    build_sha: str
+
+    @property
+    def kind(self) -> str:
+        return "pdf"
+
+    @property
+    def quote(self) -> str:
+        return self.text
+
+
+ThreadAnchor = Anchor | PdfAnchor
+
+
+@dataclass(frozen=True)
+class PdfPlace:
+    """Где тред на текущем PDF документа: страница, прямоугольники и текст для уточнения поиском на странице.
+
+    `exact` значит, что прямоугольники точные (PDF-тред на том же PDF); иначе это строка SyncTeX или прежнее место,
+    и клиент уточняет его поиском `text`.
+    """
+
+    page: int
+    rects: tuple[PdfRect, ...]
+    text: str
+    exact: bool
+
 
 @dataclass(frozen=True)
 class ReviewComment:
@@ -77,7 +133,7 @@ class ReviewThread:
     id: str
     project_id: str
     path: str
-    anchor: Anchor
+    anchor: ThreadAnchor
     status: ThreadStatus
     created_by: str | None
     created_by_name: str

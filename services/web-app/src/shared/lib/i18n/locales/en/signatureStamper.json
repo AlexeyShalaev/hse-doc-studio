@@ -25,7 +25,20 @@
     "withheldShowTitle": "Show the image in the document without the signer's approval",
     "withheldConfirm": "Show the signature image in the document without the signer's approval on the route?",
     "withheldShown": "Signature image shown",
-    "withheldFailed": "Could not show the image: {{reason}}"
+    "withheldFailed": "Could not show the image: {{reason}}",
+    "optional": {
+      "here": "Signature optional at this checkpoint",
+      "at": "Signature optional at “{{checkpoint}}”",
+      "hint": "The route author will be able to skip this signer. The signature place will stay empty",
+      "required": "The template requires this signature: it cannot be made optional",
+      "signed": "Already signed",
+      "noRights": "No access: only those who send for signing can mark this",
+      "unknownSlot": "This signature does not go on this document at this checkpoint",
+      "skipped": "Not required: skipped by the author on {{date}}",
+      "keptMark": "The plate stays in the frozen PDF",
+      "returns": "Will rejoin the route when it is sent again",
+      "failed": "Could not change the mark: {{reason}}"
+    }
   },
   "overlay": {
     "invisibleTitle": "{{label}} — invisible crypto signature",

@@ -30,6 +30,7 @@ const note = (
     outcome: null,
     path: null,
     excerpt: null,
+    doc_id: null,
     profile_id: null,
     deadline: null,
     new_version: false,
@@ -45,6 +46,18 @@ describe("notificationTarget", () => {
         note("review_mention", { path: "chapters/a b.tex", ref_id: "rvt_1" }),
       ),
     ).toBe("/projects/p1/files?file=chapters%2Fa+b.tex&thread=rvt_1");
+  });
+
+  it("opens the document preview for a thread on a spot in the PDF", () => {
+    expect(
+      notificationTarget(
+        note("review_reply", {
+          path: "report/report.pdf",
+          doc_id: "report",
+          ref_id: "rvt_2",
+        }),
+      ),
+    ).toBe("/projects/p1/documents/report?thread=rvt_2");
   });
 
   it("opens the project for everything else", () => {

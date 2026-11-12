@@ -1,6 +1,9 @@
 import { demoError, demoJson } from "@shared/api/demo";
 import type { DemoRoute } from "@shared/api/demo";
-import { DEMO_SIGNING_PROFILE } from "@entities/signing-route/testing";
+import {
+  DEMO_SIGNING_PROFILE,
+  type SigningRouteDemo,
+} from "@entities/signing-route/testing";
 import { effectiveRole } from "./projectAccess";
 import type { ServerDemoWorld } from "./world";
 
@@ -9,6 +12,9 @@ import type { ServerDemoWorld } from "./world";
 // подписи» редактора маршрута (W2) в браузере не открыть. Профиль тот же, что у демо маршрута
 // (`DEMO_SIGNING_PROFILE`). Место подписи научрука сначала выключено: так в демо видна помеха
 // отправки «подпись не размещена» и переход от неё к размещению.
+// Необязательные подписи (signing-route.md, 13): «Подпись необязательна» хранится здесь, в
+// состоянии подписей проекта (`optional`), пропуски и слоты сверх точки берутся у демо маршрута.
+// Подпись автора пак требует (`required`): отметить её нельзя.
 
 type Placement = {
   enabled: boolean;
@@ -68,7 +74,8 @@ const RUNTIME_SLOTS = (DOC?.slots ?? []).map((slot) => ({
   id: slot.slot_id,
   label: slot.label,
   applies_to: DEMO_SIGNING_PROFILE.docs.map((doc) => doc.doc_id),
-  required_by: slot.optional
+  required: slot.required ?? false,
+  required_by: slot.extra
     ? {}
     : Object.fromEntries(
         DEMO_SIGNING_PROFILE.docs.map((doc) => [
@@ -96,7 +103,7 @@ const PROFILES = [
     items: DEMO_SIGNING_PROFILE.docs.map((doc) => ({
       doc_id: doc.doc_id,
       signatures: doc.slots
-        .filter((slot) => !slot.optional)
+        .filter((slot) => !slot.extra)
         .map((slot) => slot.slot_id),
       skip_if_nda: false,
       supported_kinds: ["research", "project"],
@@ -107,6 +114,21 @@ const PROFILES = [
 
 export type CheckpointDemo = {
   routes: DemoRoute[];
+  /** «Подпись необязательна» у слота документа на точке. */
+  isOptional: (
+    projectId: string,
+    profileId: string,
+    docId: string,
+    slotId: string,
+  ) => boolean;
+  /** Отметить слот необязательным заранее, как будто автор уже поставил галочку. */
+  setOptional: (
+    projectId: string,
+    profileId: string,
+    docId: string,
+    slotId: string,
+    optional: boolean,
+  ) => void;
   /** Включено ли место слота на странице документа (помеха отправки `placement_off`). */
   isPlaced: (projectId: string, docId: string, slotId: string) => boolean;
   /** Включить место слота заранее, как будто автор уже разместил подпись. */
@@ -114,10 +136,40 @@ export type CheckpointDemo = {
   reset: () => void;
 };
 
+type OptionalMap = Record<string, Record<string, string[]>>;
+
 export const createCheckpointDemo = (
   getWorld: () => ServerDemoWorld,
+  getRoutes: () => SigningRouteDemo,
 ): CheckpointDemo => {
   let placements = new Map<string, Record<string, Record<string, Placement>>>();
+  // Проект → документ → точка → необязательные слоты.
+  let optional = new Map<string, OptionalMap>();
+  const optionalOf = (projectId: string): OptionalMap => {
+    const found = optional.get(projectId);
+    if (found) return found;
+    const fresh: OptionalMap = {};
+    optional.set(projectId, fresh);
+    return fresh;
+  };
+  const isOptional = (
+    projectId: string,
+    profileId: string,
+    docId: string,
+    slotId: string,
+  ): boolean =>
+    optionalOf(projectId)[docId]?.[profileId]?.includes(slotId) ?? false;
+  const setOptional = (
+    projectId: string,
+    profileId: string,
+    docId: string,
+    slotId: string,
+    value: boolean,
+  ): void => {
+    const byDoc = (optionalOf(projectId)[docId] ??= {});
+    const rest = (byDoc[profileId] ?? []).filter((id) => id !== slotId);
+    byDoc[profileId] = value ? [...rest, slotId] : rest;
+  };
   const placementsOf = (projectId: string) => {
     const found = placements.get(projectId);
     if (found) return found;
@@ -126,15 +178,15 @@ export const createCheckpointDemo = (
     return fresh;
   };
 
-  /** Проект виден вошедшему: иначе 404, как у остальных адресов проекта. */
-  const visible = (projectId: string): boolean => {
+  const roleIn = (projectId: string) => {
     const world = getWorld();
     const project = world.projects.find((p) => p.summary.id === projectId);
-    return (
-      project !== undefined &&
-      effectiveRole(world, project, world.bootstrap.user?.id) !== null
-    );
+    return project === undefined
+      ? null
+      : effectiveRole(world, project, world.bootstrap.user?.id);
   };
+  /** Проект виден вошедшему: иначе 404, как у остальных адресов проекта. */
+  const visible = (projectId: string): boolean => roleIn(projectId) !== null;
 
   const guarded =
     (
@@ -173,9 +225,14 @@ export const createCheckpointDemo = (
           placements: placementsOf(projectId),
           frozen: {},
           detached: {},
-          runtime_slots: RUNTIME_SLOTS,
+          runtime_slots: RUNTIME_SLOTS.map((slot) => ({
+            ...slot,
+            extra_by: getRoutes().extraBy(projectId)[slot.id] ?? {},
+          })),
           // Демо картинок не придерживает: маршрут демо их не прячет.
           withheld: {},
+          optional: optionalOf(projectId),
+          skipped: getRoutes().skippedOf(projectId),
         }),
       ),
     },
@@ -199,10 +256,69 @@ export const createCheckpointDemo = (
         return demoJson(next);
       }),
     },
+    {
+      // «Подпись необязательна» (13.6): права как у отправки маршрута, коды как у сервера.
+      method: "PUT",
+      pattern: "/projects/:projectId/signatures/optional/:docId/:slotId",
+      handler: guarded((projectId, req) => {
+        const role = roleIn(projectId);
+        if (role !== "owner" && role !== "editor")
+          return demoError(
+            403,
+            "forbidden",
+            "Not allowed to change signatures",
+          );
+        const body = (req.body ?? {}) as Body;
+        const profileId = body.profile_id;
+        const value = body.optional;
+        if (typeof profileId !== "string" || typeof value !== "boolean")
+          return demoError(422, "validation_error", "Invalid request");
+        const docId = req.params.docId ?? "";
+        const slotId = req.params.slotId ?? "";
+        const slot = RUNTIME_SLOTS.find((s) => s.id === slotId);
+        const routes = getRoutes();
+        const onPoint =
+          slot !== undefined &&
+          slot.applies_to.includes(docId) &&
+          ((slot.required_by[docId] ?? []).some((p) => p.id === profileId) ||
+            (routes.extraBy(projectId)[slotId]?.[docId] ?? []).some(
+              (p) => p.id === profileId,
+            ));
+        if (!onPoint)
+          return demoError(
+            400,
+            "unknown_slot",
+            "The slot is not on this checkpoint",
+          );
+        if (value && slot.required)
+          return demoError(
+            409,
+            "optional_forbidden",
+            "The template requires this signature",
+          );
+        if (value && routes.isSlotSigned(projectId, profileId, docId, slotId))
+          return demoError(409, "slot_signed", "The slot is already signed");
+        setOptional(projectId, profileId, docId, slotId, value);
+        const skipped =
+          routes.skippedOf(projectId)[docId]?.[slotId]?.profile_id ===
+          profileId;
+        return demoJson({
+          doc_id: docId,
+          slot_id: slotId,
+          profile_id: profileId,
+          optional: value,
+          skipped,
+          returns_next_round:
+            !value && skipped && routes.holdsDoc(projectId, profileId, docId),
+        });
+      }),
+    },
   ];
 
   return {
     routes,
+    isOptional,
+    setOptional,
     isPlaced: (projectId, docId, slotId) =>
       placementsOf(projectId)[docId]?.[slotId]?.enabled === true,
     place: (projectId, docId, slotId) => {
@@ -211,6 +327,7 @@ export const createCheckpointDemo = (
     },
     reset: () => {
       placements = new Map();
+      optional = new Map();
     },
   };
 };

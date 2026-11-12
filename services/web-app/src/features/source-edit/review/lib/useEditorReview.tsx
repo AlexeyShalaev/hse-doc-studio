@@ -1,13 +1,26 @@
-import { useEffect, useState, type ReactNode, type RefObject } from "react";
+import {
+  useEffect,
+  useMemo,
+  useState,
+  type ReactNode,
+  type RefObject,
+} from "react";
 import { MessageSquare, MessageSquarePlus } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useSearchParams } from "react-router";
 import { EditorView } from "@codemirror/view";
 import type { Extension } from "@codemirror/state";
-import { makeAnchor, QUOTE_MAX, useReviewThreads } from "@entities/review";
+import {
+  CommentsPanel,
+  isTextThread,
+  makeAnchor,
+  QUOTE_MAX,
+  reviewApi,
+  useReviewThreads,
+  type PendingThread,
+} from "@entities/review";
 import { toast } from "@shared/lib";
 import type { CodeEditorController } from "@shared/ui";
-import { CommentsPanel, type PendingThread } from "../ui/CommentsPanel";
 import { createReviewBridge } from "./reviewMarks";
 import { useReviewMarks } from "./useReviewMarks";
 
@@ -53,13 +66,15 @@ export const useEditorReview = ({
   const [localActive, setLocalActive] = useState<string | null>(null);
   const [pending, setPending] = useState<PendingThread | null>(null);
   const [showResolved, setShowResolved] = useState(false);
-  const { data: threads = [] } = useReviewThreads(projectId, path, {
-    enabled,
-    live,
-  });
+  const { data } = useReviewThreads(projectId, path, { enabled, live });
+  // Треды к месту в PDF живут на пути самого PDF: в редакторе исходника их нет.
+  const threads = useMemo(() => (data ?? []).filter(isTextThread), [data]);
 
   // Ссылка из «Входящих»: ?thread=<id> открывает панель на этом треде, пока человек не выберет другое.
-  const requested = enabled ? params.get("thread") : null;
+  // Тред не этого файла (например, к месту в PDF, открытому рядом) редактор не трогает.
+  const param = enabled ? params.get("thread") : null;
+  const requested =
+    param !== null && threads.some((x) => x.id === param) ? param : null;
   const activeId = requested ?? localActive;
   const panelOpen = open || requested !== null;
   const resolved = useReviewMarks(
@@ -95,7 +110,12 @@ export const useEditorReview = ({
       toast.info(t("quoteTooLong", { max: QUOTE_MAX }));
       return;
     }
-    setPending({ anchor: makeAnchor(view.state.doc.toString(), from, to) });
+    const anchor = makeAnchor(view.state.doc.toString(), from, to);
+    setPending({
+      quote: anchor.quote,
+      create: (body, mentions) =>
+        reviewApi.createThread(projectId, { path, anchor, body, mentions }),
+    });
     setOpen(true);
   };
 
@@ -155,9 +175,11 @@ export const useEditorReview = ({
     enabled && panelOpen ? (
       <CommentsPanel
         projectId={projectId}
-        path={path}
         threads={threads}
-        resolved={resolved}
+        stateOf={(thread) => {
+          const state = resolved.get(thread.id)?.state;
+          return state && state !== "ok" ? t(`state.${state}`) : null;
+        }}
         activeId={activeId}
         onActivate={select}
         pending={pending}
