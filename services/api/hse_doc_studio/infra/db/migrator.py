@@ -80,13 +80,9 @@ _PARTITION_TABLE = re.compile(r"^(audit_log|ai_usage)_(legacy|default|p\d{6})$")
 
 # Таблицы, которые код этого выпуска уже не использует, а удалит contract-миграция следующего выпуска
 # (expand/contract, `docs/ru/deploy/operations.md`): прежняя версия api во время обновления ещё пишет в них.
-# Моделей у них нет; строка уходит из списка вместе с миграцией, которая удаляет таблицу.
-RETIRED_TABLES: frozenset[str] = frozenset(
-    {
-        # mail-log.md, L7: неушедшие письма видны в журнале писем mail_log (срез B4).
-        "mail_outbox",
-    }
-)
+# Моделей у них нет; строка уходит из списка вместе с миграцией, которая удаляет таблицу (пример: `mail_outbox`,
+# выведена в 0.23.0, удалена `ml_03_drop_mail_outbox`). Сейчас таких таблиц нет.
+RETIRED_TABLES: frozenset[str] = frozenset()
 
 
 def _ignored_table(name: str) -> bool:

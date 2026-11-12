@@ -6,7 +6,7 @@ from uuid import uuid4
 import pytest
 from hse_doc_studio.infra.db import migrator
 from hse_doc_studio.infra.db.errors import DbAheadError, DbOutdatedError, MigrationLockTimeoutError
-from sqlalchemy import inspect, text
+from sqlalchemy import Connection, inspect, text
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncEngine, create_async_engine
 
@@ -49,6 +49,35 @@ async def test__retired_tables__still_exist_and_have_no_models(pg_engine: AsyncE
     tables = await _tables(pg_engine)
     assert migrator.RETIRED_TABLES.issubset(tables)
     assert not migrator.RETIRED_TABLES & set(Base.metadata.tables)
+
+
+async def _mail_outbox_schema(engine: AsyncEngine) -> tuple[list[tuple[str, str, bool]], list[dict[str, object]]]:
+    def read(conn: Connection) -> tuple[list[tuple[str, str, bool]], list[dict[str, object]]]:
+        insp = inspect(conn)
+        columns = [(c["name"], str(c["type"]), c["nullable"]) for c in insp.get_columns("mail_outbox")]
+        return columns, [*insp.get_indexes("mail_outbox"), insp.get_pk_constraint("mail_outbox")]
+
+    async with engine.connect() as conn:
+        return await conn.run_sync(read)
+
+
+async def test__mail_outbox__dropped_at_head_and_restored_empty_on_downgrade(pg_engine: AsyncEngine) -> None:
+    """Contract `ml_03`: таблицы нет ни в базе, ни в моделях; откат на 0.23.0 возвращает её пустой, той же схемы."""
+    from hse_doc_studio.infra.db.base import Base
+
+    await migrator.upgrade(pg_engine, "ml_02_clear_mail_outbox")
+    released = await _mail_outbox_schema(pg_engine)
+
+    await migrator.upgrade(pg_engine)
+
+    assert "mail_outbox" not in await _tables(pg_engine)
+    assert "mail_outbox" not in Base.metadata.tables
+
+    await migrator.downgrade(pg_engine, "ml_02_clear_mail_outbox")
+
+    assert await _mail_outbox_schema(pg_engine) == released
+    async with pg_engine.connect() as conn:
+        assert (await conn.execute(text("SELECT count(*) FROM mail_outbox"))).scalar_one() == 0
 
 
 async def test__check_drift__manual_change__is_reported(pg_engine: AsyncEngine) -> None:

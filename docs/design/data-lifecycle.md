@@ -18,7 +18,7 @@
 | `project_invitations`, `access_requests`, `project_transfers` | низкий | **не чистились никогда** | движок, срок 30..730 (по умолчанию 90) |
 | `share_links`, `share_link_visits`, `share_link_grants` | низкий | **отозванные и просроченные ссылки не удалялись** | движок, срок 30..1095 (по умолчанию 180); посещения уходят каскадом |
 | `guest_sessions` | средний: гость на открытие ссылки | метод `purge_expired` есть, **вызова нет** | движок, 7 суток после истечения (фиксировано) |
-| `sessions`, `auth_tokens`, `login_attempts` | средний | `auth_cleanup` по истечении | без изменений, итоги видны на странице; `mail_outbox` выведена из употребления в `mail-log.md` (B4, L7, раздел 9) |
+| `sessions`, `auth_tokens`, `login_attempts` | средний | `auth_cleanup` по истечении | без изменений, итоги видны на странице; `mail_outbox` выведена из употребления в `mail-log.md` (B4, L7, раздел 9) и удалена миграцией `ml_03_drop_mail_outbox` |
 | `device_authorizations`, `runner_pairings` | низкий | задачи раз в 10 минут | без изменений |
 | `usage_counters` | низкий: строка на период и владельца | `quota_housekeeping` | без изменений |
 | `compile_records` | высокий: лог до 1 МБ на запись | 50 записей на документ при записи | без изменений |
