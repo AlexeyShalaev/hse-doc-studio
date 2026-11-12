@@ -164,13 +164,13 @@ async def test__new_server__disk_report_after_announce_and_commands_polled(tmp_p
 
 async def test__long_command_poll__does_not_hold_jobs(tmp_path: Path) -> None:
     rig = Rig(tmp_path)
-    rig.state.hold_control_s = 5.0
-    job = rig.state.enqueue(envelope_body("compile", job_id=JOB_A))
-    started = asyncio.get_running_loop().time()
+    rig.state.hold_control_s = 30.0
     rig.start()
+    await until(lambda: rig.state.control_polls == 1)
+    job = rig.state.enqueue(envelope_body("compile", job_id=JOB_A))
     await until(lambda: job.completed)
-    assert asyncio.get_running_loop().time() - started < 2.0
-    await until(lambda: rig.state.control_polls > 0)
+    # Задача прошла, пока первый опрос команд всё ещё держится на сервере: без замеров времени.
+    assert rig.state.control_polls == 1
     await rig.stop()
 
 
@@ -229,10 +229,10 @@ async def test__cleanup__command_closed_on_the_server__stops_and_reports_nothing
     rig.state.progress_errors[CMD_A] = (409, "command_finished")
     rig.start()
     rig.state.commands.append(_command(CMD_A))
-    await until(lambda: "progress:running" in rig.state.events)
+    # Не по записи `progress:running` на сервере: ответ 409 ещё в пути, и шаги успели бы пройти до отмены.
+    await until(lambda: rig.disk.current() is not None and rig.disk.current().cancel_requested)  # type: ignore[union-attr]
     rig.system.gate.set()
-    await until(lambda: rig.disk.current() is not None and rig.disk.current().finished)  # type: ignore[union-attr]
-    await asyncio.sleep(0.05)
+    await until(lambda: rig.disk.current().finished)  # type: ignore[union-attr]
     await rig.stop()
 
     run = rig.disk.current()
@@ -266,6 +266,9 @@ async def test__same_command_delivered_twice__runs_once_and_repeats_the_result(t
     rig.state.commands.extend([_command(CMD_A), _command(CMD_A)])
     await rig.system.started.wait()
     await until(lambda: not rig.state.commands)
+    # Следующий опрос начинается только после разбора повтора: он попал на идущую очистку, а не на итог.
+    polls = rig.state.control_polls
+    await until(lambda: rig.state.control_polls > polls)
     rig.system.gate.set()
     await until(lambda: rig.finished(CMD_A))
     rig.state.commands.append(_command(CMD_A))
@@ -282,7 +285,7 @@ async def test__stop__running_cleanup_is_cancelled_and_reported_before_offline(t
     rig.state.commands.append(_command(CMD_A))
     await rig.system.started.wait()
     stopping = asyncio.create_task(rig.stop())
-    await asyncio.sleep(0.05)
+    await until(lambda: rig.disk.current().cancel_requested)  # type: ignore[union-attr]
     rig.system.gate.set()
     await stopping
 
