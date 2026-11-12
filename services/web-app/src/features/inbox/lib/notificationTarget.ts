@@ -35,6 +35,15 @@ const SIGNER_KINDS: ReadonlySet<Notification["kind"]> = new Set([
   "signing_new_version",
 ]);
 
+/**
+ * «Подпись не требуется» (13.7) тоже ведёт подписанта на его страницу, где сказано, что делать
+ * ничего не нужно, но срока у него нет.
+ */
+const PAGE_KINDS: ReadonlySet<Notification["kind"]> = new Set([
+  ...SIGNER_KINDS,
+  "signing_skipped",
+]);
+
 export const isSigningKind = (kind: Notification["kind"]): boolean =>
   kind.startsWith("signing_");
 
@@ -51,7 +60,7 @@ export const showsDeadline = (kind: Notification["kind"]): boolean =>
 const signingTarget = (n: Notification): string | null => {
   const { project_id: project, ref_id: route, profile_id: profile } = n.payload;
   if (!project) return null;
-  if (SIGNER_KINDS.has(n.kind) && route) return signingPagePath(project, route);
+  if (PAGE_KINDS.has(n.kind) && route) return signingPagePath(project, route);
   if (profile) return signingCardPath(project, profile);
   return `/projects/${encodeURIComponent(project)}`;
 };

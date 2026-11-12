@@ -196,6 +196,19 @@ export const useCancelSigningRoute = (projectId: string, routeId: string) => {
   });
 };
 
+/** «Пропустить» (13.6): подписи участника на точке необязательны; ответ несёт маршрут. */
+export const useSkipSigningParticipant = (
+  projectId: string,
+  routeId: string,
+) => {
+  const after = useAfterRouteChange(projectId);
+  return useMutation({
+    mutationFn: (participantId: string) =>
+      signingRouteApi.skip(projectId, routeId, participantId),
+    onSettled: (route) => after(route, routeId),
+  });
+};
+
 export const useArchiveSigningRoute = (projectId: string, routeId: string) => {
   const after = useAfterRouteChange(projectId);
   return useMutation({

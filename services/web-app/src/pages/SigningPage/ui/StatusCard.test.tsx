@@ -60,6 +60,16 @@ describe("StatusCard: имя с инициалами в конце фразы", 
     ]);
   });
 
+  it("пропущен: «Ваша подпись не требуется», делать ничего не нужно", () => {
+    mount({ kind: "skipped" });
+    expect(screen.getByRole("heading")).toHaveTextContent(
+      "Ваша подпись не требуется",
+    );
+    expect(lines()).toEqual([
+      "Ваш шаг пропущен по решению автора маршрута. Делать ничего не нужно.",
+    ]);
+  });
+
   it("на английском так же", async () => {
     await i18n.changeLanguage("en");
     mount({ kind: "done", next: [IVANOV, PETROV] });

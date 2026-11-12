@@ -290,6 +290,41 @@ describe("SigningView: вернуть на доработку", () => {
   });
 });
 
+describe("SigningView: необязательные подписи (13.9)", () => {
+  const example = (name: "optional" | "skipped") =>
+    SIGNING_ROUTE_CONTRACT_EXAMPLES.SigningTask?.[name] as SigningTask;
+
+  it("необязательное место: пометка «необязательна», подписать можно", () => {
+    mount({ task: example("optional") });
+    expect(screen.getByTestId("signing-page")).toHaveAttribute(
+      "data-state",
+      "turn",
+    );
+    expect(
+      screen.getByTestId("signing-slot-academic_supervisor"),
+    ).toHaveTextContent("необязательна");
+  });
+
+  it("пропущенный: «Ваша подпись не требуется», действий нет, в ходе «не требуется»", () => {
+    mount({ task: example("skipped") });
+    expect(screen.getByTestId("signing-page")).toHaveAttribute(
+      "data-state",
+      "skipped",
+    );
+    expect(screen.getByTestId("signing-status")).toHaveTextContent(
+      "Ваша подпись не требуется",
+    );
+    expect(screen.queryByTestId("signing-approve")).toBeNull();
+    expect(screen.queryByText(/Вы подписываете версию/)).toBeNull();
+    expect(screen.getByTestId("signing-progress")).toHaveTextContent(
+      "Выне требуется",
+    );
+    expect(screen.getByTestId("signing-history")).toHaveTextContent(
+      "пропустил подпись участника",
+    );
+  });
+});
+
 describe("SigningView: другие состояния", () => {
   it("не участник: страница не найдена со ссылками на «Входящие» и главную", () => {
     render(

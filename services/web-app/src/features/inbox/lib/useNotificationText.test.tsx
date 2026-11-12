@@ -94,6 +94,17 @@ describe("тексты уведомлений о версии на подпис�
     );
   });
 
+  it("«подпись не требуется» называет точку и говорит, что делать ничего не нужно", async () => {
+    expect(textOf(note("signing_skipped"))).toBe(
+      "Подпись не требуется: Утверждение темы. Шаг пропущен по решению автора маршрута, делать ничего не нужно",
+    );
+    await i18n.changeLanguage("en");
+    expect(textOf(note("signing_skipped"))).toBe(
+      "Signature not required: Утверждение темы. The route author skipped your step, nothing to do",
+    );
+    await i18n.changeLanguage("ru");
+  });
+
   it("по-английски тоже", async () => {
     await i18n.changeLanguage("en");
     expect(
