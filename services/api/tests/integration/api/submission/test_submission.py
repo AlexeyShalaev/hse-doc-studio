@@ -141,7 +141,10 @@ async def test__api__create_submission__checkpoint_1__unsigned_annotation__retur
     resp = await test_app.post(f"/api/v1/projects/{project['id']}/submissions", json=_CREATE_BODY)
 
     assert resp.status_code == 400, resp.text
-    assert "annotation" in resp.json()["detail"]
+    body = resp.json()
+    assert (body["code"], body["doc_id"]) == ("pack_slot_not_signed", "annotation")
+    # Документ и подпись названы словами, а не id.
+    assert body["detail"].startswith("Документ «Аннотация»: подпись «")
 
 
 async def test__api__create_submission__checkpoint_1__returns_201_with_expected_shape(

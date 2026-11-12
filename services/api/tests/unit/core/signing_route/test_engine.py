@@ -8,6 +8,7 @@ from hse_doc_studio.core.enums import SignMode
 from hse_doc_studio.core.signing_route.effects import Notify, Withhold
 from hse_doc_studio.core.signing_route.engine import notice_for
 from hse_doc_studio.core.signing_route.entities import (
+    DocSlot,
     NextAction,
     Notice,
     ParticipantState,
@@ -25,6 +26,7 @@ from tests.unit.core.signing_route.world import (
     by_persona,
     make_route,
     participant,
+    signer,
 )
 
 _PERSONAS = ("author", "supervisor", "academic_supervisor")
@@ -288,3 +290,36 @@ def test__mark_notified__same_turn_other_outcome__not_requested_again() -> None:
     evaluation = driver.evaluate()
 
     assert evaluation.effects == ()
+
+
+def test__engine__manual_freeze_before_route__route_freezes_the_version_sent_and_drops_old_signatures() -> None:
+    # Автор зафиксировал и подписал документ вручную, потом пересобрал и отправил на подпись: фиксация старой сборки
+    # к версии на подписи не относится (signing-route.md, 12.8.1). Пока маршрут в согласовании, она лежит как есть,
+    # а фиксация маршрута после согласий заменяет её фиксацией версии на подписи и снимает подписи над старой.
+    world = World(modes={"author": SignMode.detached_text, "supervisor": SignMode.image})
+    world.freeze(DOC)
+    world.sign(DocSlot(DOC, "author"))
+    manual = world.frozen[DOC]
+    world.compiled[DOC] = "c" * 64
+    people = [participant(1, "author", ["author"]), participant(2, "supervisor", ["supervisor"])]
+    for p in people:
+        assert p.user_id is not None
+        world.plates[p.user_id] = signer(p.persona)
+    driver = Driver(world, make_route(people))
+
+    author = by_persona(driver.route)["author"].user_id
+    assert author is not None
+    driver.send(by=author)
+
+    assert driver.route.phase is RoutePhase.approval
+    assert world.frozen[DOC] == manual
+    assert world.pinned[DOC] == "c" * 64
+
+    driver.run()
+
+    assert driver.route.status is RouteStatus.completed
+    frozen = world.frozen[DOC]
+    assert frozen.source_sha256 == world.pinned[DOC]
+    assert frozen.sha256 != manual.sha256
+    assert world.resets == 1
+    assert world.detached[DOC]["author"].pdf_sha256 == frozen.sha256

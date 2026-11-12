@@ -40,6 +40,7 @@ from hse_doc_studio.api.runner_errors import install_runner_error_handlers
 from hse_doc_studio.api.server_update_errors import install_update_error_handlers
 from hse_doc_studio.api.signing_route_errors import install_signing_route_error_handlers
 from hse_doc_studio.api.stamping_errors import install_stamping_error_handlers
+from hse_doc_studio.api.submission_errors import install_submission_error_handlers
 from hse_doc_studio.api.validation_errors import install_validation_error_handler
 from hse_doc_studio.core.access.actions import RouteExemption
 from hse_doc_studio.core.access.checker import ProjectForbiddenError
@@ -323,6 +324,7 @@ def install_exception_handlers(app: FastAPI) -> None:
     install_review_error_handlers(app)
     install_signing_route_error_handlers(app)
     install_stamping_error_handlers(app)
+    install_submission_error_handlers(app)
     install_project_import_error_handlers(app)
     install_runner_error_handlers(app)
     install_ai_relay_error_handlers(app)
