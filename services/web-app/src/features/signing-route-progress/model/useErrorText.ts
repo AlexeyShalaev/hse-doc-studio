@@ -22,6 +22,14 @@ export const useErrorText = (): ((error: unknown) => string) => {
           minutes: Math.max(1, Math.ceil(seconds / 60)),
         });
       }
+      if (code === "participant_not_skippable") {
+        // Причина отказа пропуска (13.6) приходит рядом: не его очередь, обязательные подписи...
+        const reason = error instanceof ApiError ? error.data?.reason : null;
+        return typeof reason === "string" &&
+          ["not_turn", "required_slots", "no_slots", "done"].includes(reason)
+          ? t(`skip.blocked.${reason}`)
+          : t("error.generic");
+      }
       if (KNOWN.has(code)) return t(`error.${code}`);
       return error instanceof ApiError && error.detail !== ""
         ? error.detail

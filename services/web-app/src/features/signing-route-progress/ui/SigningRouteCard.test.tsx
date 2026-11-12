@@ -1020,3 +1020,155 @@ describe("Подписание: версия на подписи (12.2)", () => 
     );
   });
 });
+
+describe("пропустить подписанта (13.9)", () => {
+  const example = (name: string) =>
+    SIGNING_ROUTE_CONTRACT_EXAMPLES.SigningRoute?.[name] as SigningRoute;
+  const academic = (route: SigningRoute) =>
+    route.steps.flat().find((p) => p.id === "srp_academic")!;
+
+  it("у очереди с необязательными подписями подсказка и кнопка, подтверждение называет перефиксацию", async () => {
+    const route = example("skippable_refreezes");
+    serve(route);
+    const skip = vi
+      .spyOn(signingRouteApi, "skip")
+      .mockResolvedValue(example("skipped"));
+    const success = vi.spyOn(toast, "success");
+    const u = userEvent.setup();
+    mount({ projectId: SR_PROJECT_ID });
+    await person("srp_academic");
+    expect(
+      screen.getByTestId("signing-skip-hint-srp_academic"),
+    ).toHaveTextContent(
+      "Все подписи этого человека на точке необязательны. Его можно пропустить",
+    );
+    // У научрука обязательная подпись: кнопки нет.
+    expect(screen.queryByTestId("signing-skip-srp_supervisor")).toBeNull();
+    await u.click(screen.getByTestId("signing-skip-srp_academic"));
+    const lines = await screen.findByTestId("signing-skip-lines");
+    expect(lines).toHaveTextContent("Место подписи останется пустым");
+    expect(lines).toHaveTextContent("будет зафиксирован заново без этой метки");
+    expect(lines).toHaveTextContent(
+      "получит уведомление, что подпись не требуется",
+    );
+    expect(lines).not.toHaveTextContent("останется в нём");
+    await u.click(screen.getByTestId("signing-skip-confirm"));
+    await waitFor(() => {
+      expect(skip).toHaveBeenCalledWith(
+        route.project_id,
+        route.id,
+        "srp_academic",
+      );
+    });
+    expect(success).toHaveBeenCalled();
+  });
+
+  it("если над документом уже есть ЭП, подтверждение говорит, что метка останется", async () => {
+    serve(example("skippable_keeps_marks"));
+    const u = userEvent.setup();
+    mount({ projectId: SR_PROJECT_ID });
+    await person("srp_academic");
+    await u.click(screen.getByTestId("signing-skip-srp_academic"));
+    const lines = await screen.findByTestId("signing-skip-lines");
+    expect(lines).toHaveTextContent("уже стоит в зафиксированном PDF");
+    expect(lines).toHaveTextContent("останется в нём");
+    expect(lines).not.toHaveTextContent("будет зафиксирован заново");
+  });
+
+  it("«Не пропускать» ничего не отправляет", async () => {
+    serve(example("skippable"));
+    const skip = vi.spyOn(signingRouteApi, "skip");
+    const u = userEvent.setup();
+    mount({ projectId: SR_PROJECT_ID });
+    await person("srp_academic");
+    await u.click(screen.getByTestId("signing-skip-srp_academic"));
+    await u.click(await screen.findByRole("button", { name: "Не пропускать" }));
+    expect(skip).not.toHaveBeenCalled();
+  });
+
+  it("пропущенный в шагах: «подпись не требуется, пропущено» с датой", async () => {
+    const route = example("skipped");
+    serve(route);
+    mount({ projectId: SR_PROJECT_ID });
+    const row = await person("srp_academic");
+    expect(row).toHaveAttribute("data-state", "skipped");
+    expect(row).toHaveTextContent(
+      `подпись не требуется, пропущено ${formatDay(academic(route).skipped_at!)}`,
+    );
+    expect(screen.queryByTestId("signing-skip-srp_academic")).toBeNull();
+  });
+
+  it("если отметку сняли после пропуска, пишет, что человек вернётся в маршрут", async () => {
+    const route = example("skipped");
+    const back = {
+      ...route,
+      docs: route.docs.map((doc) => ({
+        ...doc,
+        slots: doc.slots.map((slot) =>
+          slot.status === "skipped" ? { ...slot, optional: false } : slot,
+        ),
+      })),
+    };
+    serve(back);
+    mount({ projectId: SR_PROJECT_ID });
+    await person("srp_academic");
+    expect(
+      screen.getByTestId("signing-skip-returns-srp_academic"),
+    ).toHaveTextContent("Вернётся в маршрут при следующей отправке");
+  });
+
+  it("если у человека есть необязательная подпись, но очередь не его, пишет причину", async () => {
+    const route = example("skippable");
+    const waiting = {
+      ...route,
+      steps: route.steps.map((step) =>
+        step.map((p) =>
+          p.id === "srp_academic"
+            ? {
+                ...p,
+                skip: {
+                  ...p.skip!,
+                  available: false,
+                  blocker: "not_turn" as const,
+                },
+              }
+            : p,
+        ),
+      ),
+    };
+    serve(waiting);
+    mount({ projectId: SR_PROJECT_ID });
+    await person("srp_academic");
+    expect(screen.queryByTestId("signing-skip-srp_academic")).toBeNull();
+    expect(
+      screen.getByTestId("signing-skip-blocker-srp_academic"),
+    ).toHaveTextContent("Пропустить можно, когда дойдёт его очередь");
+  });
+
+  it("отказ 409 показывает причину из ответа", async () => {
+    serve(example("skippable"));
+    vi.spyOn(signingRouteApi, "skip").mockRejectedValue(
+      new ApiError("no", "participant_not_skippable", 409, {
+        reason: "required_slots",
+      }),
+    );
+    const error = vi.spyOn(toast, "error");
+    const u = userEvent.setup();
+    mount({ projectId: SR_PROJECT_ID });
+    await person("srp_academic");
+    await u.click(screen.getByTestId("signing-skip-srp_academic"));
+    await u.click(await screen.findByTestId("signing-skip-confirm"));
+    await waitFor(() => {
+      expect(error).toHaveBeenCalledWith(
+        "Есть обязательные подписи: пропустить нельзя",
+      );
+    });
+  });
+
+  it("читателю кнопки нет", async () => {
+    serve(example("skippable"));
+    mount({ role: "reader", projectId: SR_PROJECT_ID });
+    await person("srp_academic");
+    expect(screen.queryByTestId("signing-skip-srp_academic")).toBeNull();
+  });
+});

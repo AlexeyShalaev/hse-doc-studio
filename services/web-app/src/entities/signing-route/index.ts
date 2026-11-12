@@ -16,6 +16,7 @@ export {
   useRemindSigningParticipant,
   useReturnSigningTask,
   useSendSigningRoute,
+  useSkipSigningParticipant,
   useSetSigningTaskPlate,
   useSignSigningTask,
   useSigningRoute,

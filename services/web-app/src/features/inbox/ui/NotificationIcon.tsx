@@ -12,6 +12,7 @@ import {
   KeyRound,
   MessageSquare,
   Reply,
+  SkipForward,
   Undo2,
   TriangleAlert,
   UserCheck,
@@ -44,6 +45,7 @@ const ICONS: Record<NotificationKind, LucideIcon> = {
   signing_completed: FileCheck,
   signing_cancelled: CircleX,
   signing_new_version: FilePen,
+  signing_skipped: SkipForward,
   runner_disk_cleaned: HardDrive,
 };
 
