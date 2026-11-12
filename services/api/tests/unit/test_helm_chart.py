@@ -32,11 +32,25 @@ _PUBLIC_S3_GOLDEN = _CHART / "ci" / "rendered-public-s3.golden.yaml"
 _OFFICE_VALUES = _CHART / "ci" / "values-office.yaml"
 _OFFICE_GOLDEN = _CHART / "ci" / "rendered-office.golden.yaml"
 
-pytestmark = pytest.mark.skipif(shutil.which("helm") is None, reason="helm не установлен")
+# Первый запуск helm на раннере Windows идёт 3-5 с (антивирус проверяет свежий helm.exe) и однажды не уложился в
+# общие 30 с pytest-timeout. Там таймаут потоком роняет весь прогон, поэтому у helm свой запас, а зависший
+# процесс обрывает `subprocess` раньше и падает только этот тест.
+_HELM_TIMEOUT_S = 90
+pytestmark = [
+    pytest.mark.skipif(shutil.which("helm") is None, reason="helm не установлен"),
+    pytest.mark.timeout(_HELM_TIMEOUT_S + 30),
+]
 
 
 def _helm(*args: str) -> subprocess.CompletedProcess[str]:
-    return subprocess.run(["helm", *args], capture_output=True, text=True, encoding="utf-8", check=False)  # noqa: S603, S607
+    return subprocess.run(  # noqa: S603
+        ["helm", *args],  # noqa: S607
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        check=False,
+        timeout=_HELM_TIMEOUT_S,
+    )
 
 
 def _render(*extra: str) -> list[dict[str, Any]]:
