@@ -10,10 +10,12 @@ import type {
   UpdateAdminRegistrationRequest,
   UpdateAdminSmtpRequest,
 } from "@entities/session";
+import { parseExemptions, MAX_EXEMPTIONS } from "../lib/approvalExemptions";
 import { failureKey } from "../lib/failure";
 import { isLocked } from "../lib/locked";
 import { settleSaves } from "../lib/saveAll";
 import {
+  approvalApplies,
   invalidDomains,
   parseDomains,
   validateSmtp,
@@ -33,6 +35,7 @@ const REGISTRATION_FIELD: Record<keyof RegistrationDraft, string> = {
   mode: "auth.registration_mode",
   domains: "auth.registration_domains",
   approval: "auth.require_approval",
+  exemptions: "auth.approval_exemptions",
 };
 
 export type AuthSettingsFormProps = {
@@ -93,10 +96,18 @@ export const AuthSettingsForm = ({
   const domainsChanged =
     reg.isChanged("domains") &&
     domains.join(",") !== registration.registration_domains.join(",");
+  // Исключения видны и сохраняются, только пока одобрение включено.
+  const exemptionsShown = reg.value.approval && approvalApplies(reg.value.mode);
+  const exemptions = parseExemptions(reg.value.exemptions);
+  const exemptionsChanged =
+    exemptionsShown &&
+    reg.isChanged("exemptions") &&
+    exemptions.rules.join("\n") !== registration.approval_exemptions.join("\n");
   const regChanged = [
     reg.isChanged("mode"),
     domainsChanged,
     reg.isChanged("approval"),
+    exemptionsChanged,
   ].filter(Boolean).length;
 
   const domainsEditable = !isLocked(
@@ -115,6 +126,22 @@ export const AuthSettingsForm = ({
           : undefined
       : undefined;
 
+  const exemptionsErrors =
+    exemptionsShown && reg.isChanged("exemptions")
+      ? [
+          ...exemptions.problems.map((p) =>
+            t("registration.exemptionsInvalid", {
+              line: p.line,
+              value: p.value,
+              reason: t(`registration.exemptionIssue.${p.issue}`),
+            }),
+          ),
+          ...(exemptions.tooMany
+            ? [t("registration.exemptionsTooMany", { max: MAX_EXEMPTIONS })]
+            : []),
+        ]
+      : [];
+
   const smtpIssues = validateSmtp(mail.value);
   const shownSmtp: SmtpIssues = Object.fromEntries(
     Object.entries(smtpIssues).filter(
@@ -126,7 +153,10 @@ export const AuthSettingsForm = ({
   const smtpBlocked = mail.changed.some(
     (key) => smtpIssues[key as keyof SmtpIssues] !== undefined,
   );
-  const invalid = (regChanged > 0 && domainsError !== undefined) || smtpBlocked;
+  const invalid =
+    (regChanged > 0 && domainsError !== undefined) ||
+    exemptionsErrors.length > 0 ||
+    smtpBlocked;
   const dirtyCount = regChanged + sign.changed.length + mail.changed.length;
 
   const discard = () => {
@@ -153,7 +183,7 @@ export const AuthSettingsForm = ({
             require_approval: reg.isChanged("approval")
               ? reg.value.approval
               : null,
-            approval_exemptions: null,
+            approval_exemptions: exemptionsChanged ? exemptions.rules : null,
           }),
         done: reg.reset,
       },
@@ -198,6 +228,7 @@ export const AuthSettingsForm = ({
         settings={registration}
         draft={reg}
         domainsError={domainsError}
+        exemptionsErrors={exemptionsErrors}
         smtpEnabled={smtp.enabled}
       />
       <SignInSection settings={auth} draft={sign} />

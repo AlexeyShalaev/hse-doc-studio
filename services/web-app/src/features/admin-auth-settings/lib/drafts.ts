@@ -11,6 +11,8 @@ export type RegistrationDraft = {
   mode: RegistrationMode;
   domains: string;
   approval: boolean;
+  /** Исключения из одобрения: по правилу в строке. */
+  exemptions: string;
 };
 
 export const registrationDraftOf = (
@@ -19,6 +21,7 @@ export const registrationDraftOf = (
   mode: settings.registration_mode,
   domains: settings.registration_domains.join(", "),
   approval: settings.require_approval,
+  exemptions: settings.approval_exemptions.join("\n"),
 });
 
 export const SMTP_KEYS = [

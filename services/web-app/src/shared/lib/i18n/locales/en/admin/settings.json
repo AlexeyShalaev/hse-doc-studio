@@ -46,6 +46,28 @@
     "domainsInvalid": "This does not look like a domain: {{list}}.",
     "approval": "Administrator approval",
     "approvalHint": "A new account waits in the approval queue until an administrator allows sign-in.",
+    "exemptions": "No approval for addresses",
+    "exemptionsHint": "One rule per line: hse.ru (exactly this domain), *.hse.ru (any subdomain, not hse.ru itself), name@example.com (one address). A rule works only for a confirmed address: after the confirmation email or with single sign-on.",
+    "exemptionsInvalid": "Line {{line}} \"{{value}}\": {{reason}}.",
+    "exemptionIssue": {
+      "too_long": "the line is too long",
+      "wildcard": "an asterisk is allowed only at the start, as in *.hse.ru",
+      "domain": "not a domain, expected something like hse.ru",
+      "address": "not an address, expected something like name@example.com"
+    },
+    "exemptionsTooMany": "No more than {{max}} rules: group addresses by domain.",
+    "noSmtpExemptions": "Mail is not configured, so an address cannot be confirmed by email. Exemptions do not apply to password sign-up, those accounts wait for approval too. With single sign-on the exemptions work.",
+    "check": "Check an address",
+    "checkHint": "What happens when someone signs up with this address under the settings above, before you save them.",
+    "checkResult": {
+      "invalid": "Enter a full email address.",
+      "inviteOnly": "Signing up is not possible without an invitation.",
+      "domain": "The domain is not allowed, sign-up is not available.",
+      "noApproval": "No approval needed: the account is active once the email is confirmed.",
+      "approval": "Administrator approval is needed.",
+      "exempt": "No approval needed by the rule {{rule}}: the account becomes active once the email is confirmed.",
+      "exemptNoSmtp": "The address matches the rule {{rule}}, but mail is not configured, so approval is needed. With single sign-on no approval will be needed."
+    },
     "noSmtpDomains": "Mail is not configured, so an address cannot be confirmed by email. New accounts by domain will wait for administrator approval.",
     "openWarning": "Anyone will be able to create an account and use build resources. Turn on approval if the installation is reachable from the internet.",
     "closedNote": "New people can only appear through an administrator invitation or single sign-on."

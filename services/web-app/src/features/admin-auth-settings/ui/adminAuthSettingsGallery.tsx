@@ -65,14 +65,30 @@ const REG_ENV: AdminRegistrationSettings = {
     "auth.registration_mode": env,
     "auth.registration_domains": { source: "admin", locked: false },
     "auth.require_approval": env,
+    "auth.approval_exemptions": free,
   },
 };
 const REG_ALL_ENV: AdminRegistrationSettings = {
   ...DOMAINS,
+  approval_exemptions: ["*.hse.ru"],
   fields: {
     "auth.registration_mode": env,
     "auth.registration_domains": env,
     "auth.require_approval": env,
+    "auth.approval_exemptions": env,
+  },
+};
+// Открытая регистрация с одобрением, адреса ВШЭ проходят без очереди.
+const OPEN_EXEMPT: AdminRegistrationSettings = {
+  ...REGISTRATION,
+  registration_mode: "open",
+  require_approval: true,
+  approval_exemptions: ["hse.ru", "*.hse.ru", "rector@example.org"],
+  fields: {
+    ...REGISTRATION.fields,
+    "auth.registration_mode": { source: "admin", locked: false },
+    "auth.require_approval": { source: "admin", locked: false },
+    "auth.approval_exemptions": { source: "admin", locked: false },
   },
 };
 
@@ -219,6 +235,22 @@ export const getAdminAuthSettingsGallery = (): GalleryGroup[] => [
             registration: { ...REGISTRATION, registration_mode: "open" },
           }),
         { note: "Предупреждение об открытой регистрации." },
+      ),
+      entry(
+        "admin_reg_open_exempt",
+        "Открытая с одобрением и исключениями",
+        () => form({ registration: OPEN_EXEMPT }),
+        {
+          note: "Введите адрес в «Проверить адрес»: ann@edu.hse.ru пройдёт без одобрения, ann@gmail.com будет ждать. Строка hse без точки покажет ошибку.",
+        },
+      ),
+      entry(
+        "admin_reg_exempt_nosmtp",
+        "Исключения без почты",
+        () => form({ registration: OPEN_EXEMPT, smtp: SMTP_OFF }),
+        {
+          note: "Предупреждение: без письма адрес не подтвердить, исключения работают только для единого входа.",
+        },
       ),
       entry("admin_reg_closed", "Закрытая", () =>
         form({

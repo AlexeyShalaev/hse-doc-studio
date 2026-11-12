@@ -21,6 +21,8 @@ help:
       hint: 'Without mail, self-registration in the **Open** mode is closed: the person sees “Registration by invitation” and asks you for an invitation. In the **For email domains** mode without mail, new accounts wait for approval.'
     - text: 'Requests that need your decision are on the **Approvals** tab: click **Approve** or **Reject**.'
       hint: 'Until a request is approved, the person cannot sign in. A rejected account is disabled. **Approve all** approves several requests at once.'
+    - text: 'To let addresses of your organization skip the queue, list them in the **No approval for addresses** field under the **Administrator approval** switch, one rule per line: `hse.ru` (exactly this domain), `*.hse.ru` (any subdomain, not hse.ru itself) or `name@example.com` (one address).'
+      hint: 'An exemption works only for a confirmed address: the person opens the link from the email and can sign in right away. Without mail an address cannot be confirmed, so such requests wait for approval too; with single sign-on the exemption works. The **Check an address** row shows whether a given address needs approval, before you save.'
 verified:
   at: 2026-11-03
   app_version: '0.3.0'
@@ -53,3 +55,7 @@ works with and without mail, and a person who comes by the link does not wait fo
   can also pass the link without email: **Issue a new link**.
 - **The person registered but cannot sign in**: their request waits on the **Approvals** tab.
   Approve it and sign-in opens.
+- **An address from “No approval for addresses” still landed in the queue**: mail is not
+  configured on the server, or the rule was removed before the person opened the link from the
+  email. The decision is made when the email is confirmed, by the current list. Check the address
+  with **Check an address** and approve the request by hand.
