@@ -2,9 +2,18 @@ import { signingCardPath, signingPagePath } from "@entities/signing-route";
 import type { Notification } from "@entities/invitation";
 import { myRunnerDiskPath } from "@entities/runner";
 
-/** Куда ведёт уведомление: ревью открывает файл и тред в панели комментариев, остальное проект. */
+/**
+ * Куда ведёт уведомление: ревью открывает файл и тред в панели комментариев (тред к месту
+ * в PDF открывается в превью документа), остальное проект.
+ */
 export const notificationTarget = (n: Notification): string => {
   const project = `/projects/${n.payload.project_id ?? ""}`;
+  if (n.kind.startsWith("review_") && n.payload.doc_id) {
+    const params = new URLSearchParams();
+    if (n.payload.ref_id) params.set("thread", n.payload.ref_id);
+    const query = params.toString();
+    return `${project}/documents/${encodeURIComponent(n.payload.doc_id)}${query ? `?${query}` : ""}`;
+  }
   if (n.kind.startsWith("review_") && n.payload.path) {
     const params = new URLSearchParams({ file: n.payload.path });
     if (n.payload.ref_id) params.set("thread", n.payload.ref_id);

@@ -20,6 +20,7 @@ import { createGitRemoteRoutes } from "./gitRemoteRoutes";
 import { createPersonalRoutes } from "./personalRoutes";
 import { createProjectAccessRoutes } from "./projectAccessRoutes";
 import { createProjectRoutes } from "./projectRoutes";
+import { createReviewRoutes } from "./reviewRoutes";
 import { createUsageRoutes } from "./quotaRoutes";
 import { cloudDeviceDemoRoutes } from "../deviceRoutes";
 import { createSetupRoutes } from "./setupRoutes";
@@ -279,6 +280,8 @@ export const serverDemoRoutes: DemoRoute[] = [
   ...createShareLinkRoutes(() => world),
   ...createProjectRoutes(() => world),
   ...createProjectAccessRoutes(() => world),
+  // Ревью-комментарии и комментарии из превью PDF.
+  ...createReviewRoutes(() => world),
   // invites: приглашения, запросы доступа, передача владения, «Входящие».
   ...createInvitationRoutes(() => world, signingRouteDemo.taskCount),
   ...signingRouteDemo.routes,

@@ -6,6 +6,7 @@ export {
   reviewKeys,
   useCreateThread,
   useDeleteComment,
+  useDocumentReview,
   useEditComment,
   useMentionCandidates,
   useReplyToThread,
@@ -21,3 +22,10 @@ export {
   type AnchorState,
   type ResolvedAnchor,
 } from "./lib/anchor";
+export {
+  CommentsPanel,
+  type CommentsPanelProps,
+  type PendingThread,
+} from "./ui/CommentsPanel";
+export { CommentComposer } from "./ui/CommentComposer";
+export { splitMentions } from "./lib/mentions";

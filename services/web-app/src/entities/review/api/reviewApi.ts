@@ -1,9 +1,12 @@
 import { apiClient, parseResp } from "@shared/api";
 import {
+  DocumentReviewSchema,
   MentionCandidateListSchema,
   ReviewThreadListSchema,
   ReviewThreadSchema,
+  type DocumentReview,
   type MentionCandidate,
+  type NewPdfThread,
   type NewThread,
   type ReviewThread,
   type ThreadStatus,
@@ -32,6 +35,26 @@ export const reviewApi = {
     apiClient
       .post(`${base(projectId)}/threads`, body, quiet)
       .then(parseResp(ReviewThreadSchema)),
+  /** Тред из превью PDF: сервер привяжет его к исходнику, если найдёт выделенный текст. */
+  createPdfThread: (
+    projectId: string,
+    body: NewPdfThread,
+  ): Promise<ReviewThread> =>
+    apiClient
+      .post(`${base(projectId)}/pdf-threads`, body, quiet)
+      .then(parseResp(ReviewThreadSchema)),
+  /** Треды документа и их места на текущем PDF. */
+  documentReview: (
+    projectId: string,
+    docId: string,
+    signal?: AbortSignal,
+  ): Promise<DocumentReview> =>
+    apiClient
+      .get(`${base(projectId)}/documents/${encodeURIComponent(docId)}`, {
+        ...quiet,
+        ...(signal ? { signal } : {}),
+      })
+      .then(parseResp(DocumentReviewSchema)),
   reply: (
     projectId: string,
     threadId: string,
