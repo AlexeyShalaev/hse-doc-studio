@@ -1769,6 +1769,71 @@
     color: var(--fg-0);
     border-bottom-color: var(--accent);
   }
+  /* Прокручиваемая часть строки вкладок документа: группы вкладок едут, «…» справа
+     остаётся на месте. Поля и равные им отрицательные отступы дают место обводке
+     фокуса (прокрутка обрезает всё за краем), раскладка десктопа от них не меняется. */
+  .tabs-scroll {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    min-width: 0;
+    overflow-x: auto;
+    overflow-y: hidden;
+    scrollbar-width: none;
+    padding: 0.3125rem 0.25rem;
+    margin: -0.3125rem -0.25rem;
+  }
+  .tabs-scroll::-webkit-scrollbar {
+    display: none;
+  }
+  .tabs-scroll > * {
+    flex-shrink: 0;
+  }
+  /* Подсказка, что строка прокручивается: край, за которым есть вкладки, затухает.
+     Края отмечает useScrollHint (data-scroll-start / data-scroll-end). */
+  .scroll-hint {
+    --scroll-fade: 2rem;
+  }
+  .scroll-hint[data-scroll-end="true"] {
+    -webkit-mask-image: linear-gradient(
+      to right,
+      #000 calc(100% - var(--scroll-fade)),
+      transparent
+    );
+    mask-image: linear-gradient(
+      to right,
+      #000 calc(100% - var(--scroll-fade)),
+      transparent
+    );
+  }
+  .scroll-hint[data-scroll-start="true"] {
+    -webkit-mask-image: linear-gradient(
+      to left,
+      #000 calc(100% - var(--scroll-fade)),
+      transparent
+    );
+    mask-image: linear-gradient(
+      to left,
+      #000 calc(100% - var(--scroll-fade)),
+      transparent
+    );
+  }
+  .scroll-hint[data-scroll-start="true"][data-scroll-end="true"] {
+    -webkit-mask-image: linear-gradient(
+      to right,
+      transparent,
+      #000 var(--scroll-fade),
+      #000 calc(100% - var(--scroll-fade)),
+      transparent
+    );
+    mask-image: linear-gradient(
+      to right,
+      transparent,
+      #000 var(--scroll-fade),
+      #000 calc(100% - var(--scroll-fade)),
+      transparent
+    );
+  }
   .tabs .tab .count {
     display: inline-flex;
     align-items: center;
@@ -8000,17 +8065,14 @@ a.adm-row:hover .adm-row-chevron {
     width: 1rem;
     height: 1rem;
   }
+  /* Строка вкладок документа: прокручиваются только группы вкладок (.tabs-scroll,
+     с затуханием у края), кнопка «…» прижата справа и всегда на экране. */
   .document-workspace-header + .tabs,
   .workbench-canvas .tabs {
-    overflow-x: auto;
-    overflow-y: hidden;
-    scrollbar-width: none;
     padding-left: max(0.625rem, var(--safe-left)) !important;
+    padding-right: max(0.625rem, var(--safe-right)) !important;
   }
-  .workbench-canvas .tabs::-webkit-scrollbar {
-    display: none;
-  }
-  .workbench-canvas .tabs > * {
+  .workbench-canvas .tabs > :not(.tabs-scroll) {
     flex-shrink: 0;
   }
   .build-blocked-text {

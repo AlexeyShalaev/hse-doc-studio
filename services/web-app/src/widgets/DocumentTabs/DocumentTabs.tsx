@@ -44,7 +44,12 @@ import { useCapabilities } from "@entities/session";
 import { EditorIcon, openInEditor, useEditors } from "@entities/system";
 import { env } from "@shared/config";
 import { Modal, Spinner } from "@shared/ui";
-import { toast, useIsPhoneWidth, useSyncTexStore } from "@shared/lib";
+import {
+  toast,
+  useIsPhoneWidth,
+  useScrollHint,
+  useSyncTexStore,
+} from "@shared/lib";
 import {
   ChecksPane,
   CompilePane,
@@ -189,6 +194,11 @@ export const DocumentTabs = ({ projectId, docId }: DocumentTabsProps) => {
       : isEditorView
         ? "editor"
         : "preview";
+
+  // На узком экране вкладки не помещаются в строку и прокручиваются: край с
+  // вкладками за ним затухает, выбранная вкладка (в том числе из ?tab=) докручивается
+  // в видимую часть.
+  const tabsScrollRef = useScrollHint(activeView, ".active");
 
   // Что вкладка делает с документом, сообщаем плашке людей в шапке (features/connected-devices): режим решает
   // вид центра и право правки, а не страница.
@@ -566,79 +576,81 @@ export const DocumentTabs = ({ projectId, docId }: DocumentTabsProps) => {
           flexShrink: 0,
         }}
       >
-        <div className="seg" role="tablist" aria-label={t("tabs.ariaLabel")}>
-          {segments.map((segment, index) => {
-            const Icon = segment.icon;
-            const isActive = activeView === segment.id;
-            return (
-              <button
-                key={segment.id}
-                id={`document-tab-${segment.id}`}
-                type="button"
-                role="tab"
-                aria-selected={isActive}
-                aria-controls="document-tab-panel"
-                tabIndex={isActive ? 0 : -1}
-                title={segment.title}
-                disabled={segment.isDisabled}
-                className={clsx(isActive && "active")}
-                style={
-                  segment.isDisabled
-                    ? { opacity: 0.45, cursor: "default" }
-                    : undefined
-                }
-                onClick={() => {
-                  handleSelectView(segment.id);
-                }}
-                onKeyDown={(event) => {
-                  if (handleSegmentNav(event.key, index)) {
-                    event.preventDefault();
+        <div ref={tabsScrollRef} className="tabs-scroll scroll-hint">
+          <div className="seg" role="tablist" aria-label={t("tabs.ariaLabel")}>
+            {segments.map((segment, index) => {
+              const Icon = segment.icon;
+              const isActive = activeView === segment.id;
+              return (
+                <button
+                  key={segment.id}
+                  id={`document-tab-${segment.id}`}
+                  type="button"
+                  role="tab"
+                  aria-selected={isActive}
+                  aria-controls="document-tab-panel"
+                  tabIndex={isActive ? 0 : -1}
+                  title={segment.title}
+                  disabled={segment.isDisabled}
+                  className={clsx(isActive && "active")}
+                  style={
+                    segment.isDisabled
+                      ? { opacity: 0.45, cursor: "default" }
+                      : undefined
                   }
-                }}
-              >
-                <Icon size="0.75rem" />
-                {segment.label}
-              </button>
-            );
-          })}
-        </div>
+                  onClick={() => {
+                    handleSelectView(segment.id);
+                  }}
+                  onKeyDown={(event) => {
+                    if (handleSegmentNav(event.key, index)) {
+                      event.preventDefault();
+                    }
+                  }}
+                >
+                  <Icon size="0.75rem" />
+                  {segment.label}
+                </button>
+              );
+            })}
+          </div>
 
-        {/* Проверки / Сборка / Журнал — отдельные страницы центра, а не вкладки
+          {/* Проверки / Сборка / Журнал — отдельные страницы центра, а не вкладки
             нижней панели: в этом приложении центр показывает что угодно про
             документ, а не только сам документ. */}
-        <div className="seg" role="group" aria-label={t("tabs.ariaLabel")}>
-          {PAGE_SEGMENTS.map((entry) => {
-            const Icon = entry.icon;
-            const isActive = activeView === entry.id;
-            return (
-              <button
-                key={entry.id}
-                type="button"
-                title={entry.title}
-                aria-pressed={isActive}
-                className={clsx(isActive && "active")}
-                onClick={() => {
-                  // Повторный клик возвращает к превью — страница не должна
-                  // становиться ловушкой без очевидного выхода.
-                  setTabParam(isActive ? null : entry.param);
-                }}
-              >
-                <Icon size="0.75rem" />
-                {entry.label}
-                {entry.id === "checks" && docIssues > 0 && (
-                  <span
-                    className="mono"
-                    style={{
-                      fontSize: "0.59375rem",
-                      color: hasDocErrors ? "var(--c-err)" : "var(--c-warn)",
-                    }}
-                  >
-                    {docIssues}
-                  </span>
-                )}
-              </button>
-            );
-          })}
+          <div className="seg" role="group" aria-label={t("tabs.ariaLabel")}>
+            {PAGE_SEGMENTS.map((entry) => {
+              const Icon = entry.icon;
+              const isActive = activeView === entry.id;
+              return (
+                <button
+                  key={entry.id}
+                  type="button"
+                  title={entry.title}
+                  aria-pressed={isActive}
+                  className={clsx(isActive && "active")}
+                  onClick={() => {
+                    // Повторный клик возвращает к превью — страница не должна
+                    // становиться ловушкой без очевидного выхода.
+                    setTabParam(isActive ? null : entry.param);
+                  }}
+                >
+                  <Icon size="0.75rem" />
+                  {entry.label}
+                  {entry.id === "checks" && docIssues > 0 && (
+                    <span
+                      className="mono"
+                      style={{
+                        fontSize: "0.59375rem",
+                        color: hasDocErrors ? "var(--c-err)" : "var(--c-warn)",
+                      }}
+                    >
+                      {docIssues}
+                    </span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
         </div>
 
         <div className="flex items-center gap-1" style={{ marginLeft: "auto" }}>
