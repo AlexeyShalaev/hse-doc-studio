@@ -674,12 +674,15 @@ export const AdminRegistrationSettingsSchema = z.strictObject({
   registration_mode: RegistrationModeSchema,
   registration_domains: z.array(z.string()),
   require_approval: z.boolean(),
+  // Исключения из одобрения: hse.ru, *.hse.ru, name@example.com (только для подтверждённой почты).
+  approval_exemptions: z.array(z.string()),
   fields: settingFields,
 });
 export const UpdateAdminRegistrationRequestSchema = z.strictObject({
   registration_mode: RegistrationModeSchema.nullable(),
   registration_domains: z.array(z.string()).nullable(),
   require_approval: z.boolean().nullable(),
+  approval_exemptions: z.array(z.string()).nullable(),
 });
 export const PASSKEY_ISSUES = [
   "no_address",

@@ -7,7 +7,9 @@ from dataclasses import dataclass
 
 from hse_doc_studio.core.access.entities import Actor
 from hse_doc_studio.core.i18n import localized_error
+from hse_doc_studio.core.identity.approval_exemptions import ExemptionRulesError, describe_problems, parse_rules
 from hse_doc_studio.core.identity.auth_settings import (
+    KEY_APPROVAL_EXEMPTIONS,
     KEY_PASSKEYS_ENABLED,
     KEY_PASSWORD_ENABLED,
     KEY_REGISTRATION_DOMAINS,
@@ -23,7 +25,7 @@ from hse_doc_studio.core.identity.setting_source import SettingDescription
 from hse_doc_studio.use_cases.admin.users import require_admin
 from hse_doc_studio.use_cases.identity.auth_settings import AuthSettingsPatch, AuthSettingsService, UpdateAuthSettingsUC
 
-REGISTRATION_KEYS = (KEY_REGISTRATION_MODE, KEY_REGISTRATION_DOMAINS, KEY_REQUIRE_APPROVAL)
+REGISTRATION_KEYS = (KEY_REGISTRATION_MODE, KEY_REGISTRATION_DOMAINS, KEY_REQUIRE_APPROVAL, KEY_APPROVAL_EXEMPTIONS)
 AUTH_KEYS = (KEY_PASSWORD_ENABLED, KEY_PASSKEYS_ENABLED)
 
 
@@ -91,8 +93,10 @@ class UpdateRegistrationUC:
         mode: RegistrationMode | None,
         domains: Sequence[str] | None,
         require_approval: bool | None,
+        approval_exemptions: Sequence[str] | None = None,
     ) -> SettingsGroupView:
         admin_id = require_admin(actor)
+        exemptions = _strict_exemptions(approval_exemptions)
         current = (await self._group.registration(actor)).settings
         if (mode or current.registration_mode) is RegistrationMode.domains and not (
             current.registration_domains if domains is None else normalize_domains(list(domains))
@@ -106,9 +110,30 @@ class UpdateRegistrationUC:
             )
         await self._update.execute(
             admin_id,
-            AuthSettingsPatch(registration_mode=mode, registration_domains=domains, require_approval=require_approval),
+            AuthSettingsPatch(
+                registration_mode=mode,
+                registration_domains=domains,
+                require_approval=require_approval,
+                approval_exemptions=exemptions,
+            ),
         )
         return await self._group.registration(actor)
+
+
+def _strict_exemptions(lines: Sequence[str] | None) -> tuple[str, ...] | None:
+    """Плохие строки отклоняются все сразу, с номером и причиной: молча выбросить правило админа нельзя."""
+    if lines is None:
+        return None
+    try:
+        return parse_rules(lines)
+    except ExemptionRulesError as error:
+        raise IdentityError(
+            IdentityErrorCode.input_invalid,
+            localized_error(
+                describe_problems(error.problems, too_many=error.too_many, lang="ru"),
+                describe_problems(error.problems, too_many=error.too_many, lang="en"),
+            ),
+        ) from error
 
 
 class UpdateAuthMethodsUC:

@@ -60,6 +60,8 @@
       "auth_registration_domains": "Изменены домены регистрации",
       "auth_registration_mode": "Изменён режим регистрации",
       "auth_require_approval": "Изменено требование одобрения",
+      "auth_approval_exempt": "Аккаунт активирован без одобрения по правилу",
+      "auth_approval_exemptions": "Изменены исключения из одобрения",
       "auth_verification_resent": "Письмо подтверждения отправлено заново",
       "group_create": "Группа создана",
       "group_delete": "Группа удалена",

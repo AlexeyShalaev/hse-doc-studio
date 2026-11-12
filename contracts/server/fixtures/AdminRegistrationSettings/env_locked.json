@@ -2,6 +2,7 @@
   "registration_mode": "closed",
   "registration_domains": [],
   "require_approval": false,
+  "approval_exemptions": [],
   "fields": {
     "auth.registration_mode": {
       "source": "env",
@@ -12,6 +13,10 @@
       "locked": false
     },
     "auth.require_approval": {
+      "source": "default",
+      "locked": false
+    },
+    "auth.approval_exemptions": {
       "source": "default",
       "locked": false
     }

@@ -2,8 +2,9 @@
 
 from pathlib import Path
 
-from pydantic import BaseModel, Field, SecretStr
+from pydantic import BaseModel, Field, SecretStr, field_validator
 
+from hse_doc_studio.core.identity.approval_exemptions import parse_rules
 from hse_doc_studio.core.identity.entities import RegistrationMode
 
 
@@ -96,6 +97,13 @@ class AuthConfig(BaseModel):
     require_approval: bool | None = Field(
         default=None, description="Новые аккаунты ждут одобрения админа; заданное значение блокирует правку в админке."
     )
+    approval_exemptions: list[str] | None = Field(
+        default=None,
+        description=(
+            "Исключения из одобрения: hse.ru (ровно домен), *.hse.ru (поддомены), name@example.com (адрес). "
+            "Действуют только для подтверждённой почты; заданный список блокирует правку в админке."
+        ),
+    )
     password_enabled: bool | None = Field(
         default=None, description="Вход по паролю; заданное значение блокирует правку в админке."
     )
@@ -118,6 +126,12 @@ class AuthConfig(BaseModel):
     )
 
     oidc: OidcEnvConfig = Field(default_factory=OidcEnvConfig, description="Провайдер OIDC из окружения.")
+
+    @field_validator("approval_exemptions")
+    @classmethod
+    def _valid_exemptions(cls, value: list[str] | None) -> list[str] | None:
+        """Ошибка в правиле из окружения видна при старте, а не молча теряется."""
+        return None if value is None else list(parse_rules(value))
 
     admin_email: str | None = Field(
         default=None,

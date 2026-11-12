@@ -6,6 +6,7 @@ from dataclasses import replace
 
 import pytest
 from hse_doc_studio.core.identity.auth_settings import (
+    KEY_APPROVAL_EXEMPTIONS,
     KEY_PASSWORD_ENABLED,
     KEY_REGISTRATION_DOMAINS,
     KEY_REGISTRATION_MODE,
@@ -160,6 +161,21 @@ async def test_jit_with_approval_creates_pending_account_without_session(world: 
     assert user is not None
     assert user.status is UserStatus.pending_approval
     assert not world.sessions._items  # noqa: SLF001
+
+
+async def test_jit_with_approval_lets_an_exempt_address_in_at_once(world: World) -> None:
+    """Почту подтвердил провайдер: исключение из одобрения действует сразу, без очереди."""
+    await _set_mode(world, RegistrationMode.open, **{KEY_REQUIRE_APPROVAL: True, KEY_APPROVAL_EXEMPTIONS: ["*.hse.ru"]})
+    flow = _flow(world, auto_provision=True)
+
+    result = await _login(flow, sub="s", email="ann@edu.hse.ru", email_verified=True)
+
+    assert result.provisioned
+    assert result.secret
+    assert result.user.status is UserStatus.active
+    exempt = [e for e in world.audit._entries if e.action == "auth.approval_exempt"]  # noqa: SLF001
+    assert [e.details for e in exempt] == [{"rule": "*.hse.ru", "via": "oidc", "provider": "sso"}]
+    assert exempt[0].actor_id == result.user.id
 
 
 async def test_profile_link_requires_the_same_session(world: World) -> None:

@@ -91,6 +91,7 @@ class RegisterUC:
             created_at=now,
             email_verified=decision.email_verified,
             locale=locale if locale in ("ru", "en") else None,
+            approval_exempt_rule=decision.exemption,
         )
         secret = new_token() if decision.verification_token else None
         try:
@@ -106,7 +107,12 @@ class RegisterUC:
                 await self._audit.record(
                     "auth.register",
                     actor_id=user.id,
-                    details={"status": user.status.value, "invite": invite.id if invite else None},
+                    details={
+                        "status": user.status.value,
+                        "invite": invite.id if invite else None,
+                        # Исключение из одобрения: сработает после подтверждения почты, если правило ещё будет в силе.
+                        **({"approval_exempt": decision.exemption} if decision.exemption else {}),
+                    },
                 )
         except IdentityError as error:
             if error.code is not IdentityErrorCode.email_taken:

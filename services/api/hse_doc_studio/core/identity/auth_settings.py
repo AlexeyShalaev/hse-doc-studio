@@ -5,12 +5,14 @@ from __future__ import annotations
 from collections.abc import Mapping
 from dataclasses import dataclass, replace
 
+from hse_doc_studio.core.identity.approval_exemptions import normalize_rules
 from hse_doc_studio.core.identity.entities import AuthSettings, RegistrationMode
 from hse_doc_studio.core.identity.normalize import normalize_domain
 
 KEY_REGISTRATION_MODE = "auth.registration_mode"
 KEY_REGISTRATION_DOMAINS = "auth.registration_domains"
 KEY_REQUIRE_APPROVAL = "auth.require_approval"
+KEY_APPROVAL_EXEMPTIONS = "auth.approval_exemptions"
 KEY_PASSWORD_ENABLED = "auth.password_enabled"  # noqa: S105 — имя ключа настройки, не пароль
 KEY_PASSKEYS_ENABLED = "auth.passkeys_enabled"
 
@@ -26,10 +28,12 @@ def auth_settings_from(values: Mapping[str, object]) -> AuthSettings:
     password_enabled = values.get(KEY_PASSWORD_ENABLED)
     approval = values.get(KEY_REQUIRE_APPROVAL)
     passkeys = values.get(KEY_PASSKEYS_ENABLED)
+    exemptions = values.get(KEY_APPROVAL_EXEMPTIONS)
     return AuthSettings(
         registration_mode=mode,
         registration_domains=normalize_domains([str(d) for d in domains]) if isinstance(domains, list) else (),
         require_approval=approval if isinstance(approval, bool) else False,
+        approval_exemptions=normalize_rules([str(r) for r in exemptions]) if isinstance(exemptions, list) else (),
         password_enabled=password_enabled if isinstance(password_enabled, bool) else True,
         passkeys_enabled=passkeys if isinstance(passkeys, bool) else True,
     )
@@ -42,6 +46,7 @@ class AuthEnvOverrides:
     registration_mode: RegistrationMode | None = None
     registration_domains: tuple[str, ...] | None = None
     require_approval: bool | None = None
+    approval_exemptions: tuple[str, ...] | None = None
     password_enabled: bool | None = None
     passkeys_enabled: bool | None = None
 
@@ -50,6 +55,7 @@ class AuthEnvOverrides:
             (KEY_REGISTRATION_MODE, self.registration_mode),
             (KEY_REGISTRATION_DOMAINS, self.registration_domains),
             (KEY_REQUIRE_APPROVAL, self.require_approval),
+            (KEY_APPROVAL_EXEMPTIONS, self.approval_exemptions),
             (KEY_PASSWORD_ENABLED, self.password_enabled),
             (KEY_PASSKEYS_ENABLED, self.passkeys_enabled),
         )
@@ -69,6 +75,11 @@ def effective_auth_settings(values: Mapping[str, object], env: AuthEnvOverrides)
             else stored.registration_domains
         ),
         require_approval=env.require_approval if env.require_approval is not None else stored.require_approval,
+        approval_exemptions=(
+            normalize_rules(env.approval_exemptions)
+            if env.approval_exemptions is not None
+            else stored.approval_exemptions
+        ),
         password_enabled=env.password_enabled if env.password_enabled is not None else stored.password_enabled,
         passkeys_enabled=env.passkeys_enabled if env.passkeys_enabled is not None else stored.passkeys_enabled,
     )

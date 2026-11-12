@@ -541,3 +541,53 @@ async def test__audit__every_settings_mutation_writes_exactly_its_event_and_refu
         "oidc.delete",
     ]
     assert all(e.actor_id == "boss" for e in await env.audit.list())
+
+
+async def test__registration__approval_exemptions_are_normalized_and_audited(env: _Env) -> None:
+    client, boss = await _boss(env)
+
+    saved = await client.put(
+        "/api/admin/settings/registration",
+        json={
+            "require_approval": True,
+            "approval_exemptions": [" HSE.ru", "", "*.Hse.RU", "Name@Example.com", "hse.ru"],
+        },
+        headers=boss,
+    )
+    shown = (await client.get("/api/admin/settings/registration", headers=boss)).json()
+
+    assert saved.status_code == 200
+    assert shown["approval_exemptions"] == ["hse.ru", "*.hse.ru", "name@example.com"]
+    assert shown["fields"]["auth.approval_exemptions"] == {"source": "admin", "locked": False}
+    (entry,) = await env.audit.list()
+    assert entry.action == "settings.auth_update"
+    assert entry.details["auth.approval_exemptions"] == ["hse.ru", "*.hse.ru", "name@example.com"]
+
+
+async def test__registration__bad_exemption_lines_are_refused_with_their_numbers(env: _Env) -> None:
+    client, boss = await _boss(env)
+
+    refused = await client.put(
+        "/api/admin/settings/registration",
+        json={"approval_exemptions": ["hse.ru", "hse", "^.*@hse\\.ru$"]},
+        headers=boss,
+    )
+
+    assert (refused.status_code, refused.json()["code"]) == (422, "input_invalid")
+    assert "Строка 2 «hse»" in refused.json()["detail"]
+    assert "Строка 3" in refused.json()["detail"]
+    assert (await env.audit.list()) == []
+    shown = (await client.get("/api/admin/settings/registration", headers=boss)).json()
+    assert shown["approval_exemptions"] == []
+
+
+async def test__registration__exemptions_from_env_lock_the_field(env: _Env) -> None:
+    env.auth_env = AuthEnvOverrides(approval_exemptions=("hse.ru",))
+    client, boss = await _boss(env)
+
+    shown = (await client.get("/api/admin/settings/registration", headers=boss)).json()
+    refused = await client.put("/api/admin/settings/registration", json={"approval_exemptions": []}, headers=boss)
+
+    assert shown["approval_exemptions"] == ["hse.ru"]
+    assert shown["fields"]["auth.approval_exemptions"] == {"source": "env", "locked": True}
+    assert (refused.status_code, refused.json()["code"]) == (409, "setting_locked")

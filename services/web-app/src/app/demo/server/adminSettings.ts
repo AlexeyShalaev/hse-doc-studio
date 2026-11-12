@@ -76,10 +76,12 @@ export const createDemoAdminSettings = (
         registration_mode: "domains",
         registration_domains: ["edu.hse.ru", "hse.ru"],
         require_approval: true,
+        approval_exemptions: ["*.hse.ru"],
         fields: {
           "auth.registration_mode": field("env"),
           "auth.registration_domains": field("admin"),
           "auth.require_approval": field("env"),
+          "auth.approval_exemptions": field("env"),
         },
       },
       auth: {
@@ -110,10 +112,12 @@ export const createDemoAdminSettings = (
         registration_mode: "closed",
         registration_domains: [],
         require_approval: false,
+        approval_exemptions: [],
         fields: {
           "auth.registration_mode": field("admin"),
           "auth.registration_domains": field(),
           "auth.require_approval": field(),
+          "auth.approval_exemptions": field(),
         },
       },
       auth: {
@@ -143,10 +147,12 @@ export const createDemoAdminSettings = (
       registration_mode: "invite",
       registration_domains: [],
       require_approval: false,
+      approval_exemptions: [],
       fields: {
         "auth.registration_mode": field(),
         "auth.registration_domains": field(),
         "auth.require_approval": field(),
+        "auth.approval_exemptions": field(),
       },
     },
     auth: {

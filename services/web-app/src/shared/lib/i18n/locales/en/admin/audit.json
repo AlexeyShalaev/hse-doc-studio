@@ -60,6 +60,8 @@
       "auth_registration_domains": "Registration domains changed",
       "auth_registration_mode": "Registration mode changed",
       "auth_require_approval": "Approval requirement changed",
+      "auth_approval_exempt": "Account activated without approval by a rule",
+      "auth_approval_exemptions": "Approval exemptions changed",
       "auth_verification_resent": "Confirmation email re-sent",
       "group_create": "Group created",
       "group_delete": "Group deleted",

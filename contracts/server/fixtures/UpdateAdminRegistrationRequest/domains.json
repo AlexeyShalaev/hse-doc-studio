@@ -3,5 +3,6 @@
   "registration_domains": [
     "hse.ru"
   ],
-  "require_approval": null
+  "require_approval": null,
+  "approval_exemptions": null
 }

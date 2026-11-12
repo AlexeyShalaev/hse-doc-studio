@@ -93,6 +93,7 @@ def _registration(view: SettingsGroupView) -> AdminRegistrationSettings:
         registration_mode=view.settings.registration_mode.value,
         registration_domains=list(view.settings.registration_domains),
         require_approval=view.settings.require_approval,
+        approval_exemptions=list(view.settings.approval_exemptions),
         fields=_fields(view.descriptions),
     )
 
@@ -167,6 +168,7 @@ async def put_registration(
         mode=RegistrationMode(body.registration_mode) if body.registration_mode else None,
         domains=body.registration_domains,
         require_approval=body.require_approval,
+        approval_exemptions=body.approval_exemptions,
     )
     return _registration(view)
 

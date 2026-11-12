@@ -153,6 +153,7 @@ export const AuthSettingsForm = ({
             require_approval: reg.isChanged("approval")
               ? reg.value.approval
               : null,
+            approval_exemptions: null,
           }),
         done: reg.reset,
       },

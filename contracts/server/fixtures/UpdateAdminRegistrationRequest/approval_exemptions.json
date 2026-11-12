@@ -1,0 +1,10 @@
+{
+  "registration_mode": null,
+  "registration_domains": null,
+  "require_approval": true,
+  "approval_exemptions": [
+    "hse.ru",
+    "*.hse.ru",
+    "name@example.com"
+  ]
+}

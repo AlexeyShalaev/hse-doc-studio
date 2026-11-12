@@ -7,6 +7,7 @@ from datetime import timedelta
 import pytest
 from hse_doc_studio.core.access.entities import Actor
 from hse_doc_studio.core.identity.auth_settings import (
+    KEY_APPROVAL_EXEMPTIONS,
     KEY_REGISTRATION_DOMAINS,
     KEY_REGISTRATION_MODE,
     KEY_REQUIRE_APPROVAL,
@@ -296,3 +297,69 @@ async def test_invalid_invite_parameters(world: World, kwargs: dict[str, object]
     with pytest.raises(IdentityError) as exc:
         await world.create_invite_uc().execute(ADMIN, **kwargs)  # type: ignore[arg-type]
     assert exc.value.code is IdentityErrorCode.invitation_invalid
+
+
+# ---- Исключения из одобрения ----
+
+
+async def _exempting(world: World, rules: list[str], *, smtp: bool = True) -> None:
+    await _set(world, "open", approval=True)
+    await world.settings.set(KEY_APPROVAL_EXEMPTIONS, rules, source="test")
+    world.sender = FakeSender(enabled=smtp)
+
+
+async def test_exempt_address_waits_for_the_letter_then_is_active_without_approval(world: World) -> None:
+    await _exempting(world, ["*.hse.ru"])
+
+    result = await _register(world, "ann@edu.hse.ru")
+    waiting = await world.users.get_by_email("ann@edu.hse.ru")
+    [(_to, _subject, body)] = world.sender.sent
+    await world.verify_uc().execute(token_from_mail(body))
+    user = await world.users.get_by_email("ann@edu.hse.ru")
+
+    assert result.outcome is RegistrationOutcome.check_email
+    assert waiting is not None
+    assert (waiting.status, waiting.approval_exempt_rule) == (UserStatus.pending_verification, "*.hse.ru")
+    assert user is not None
+    assert (user.status, user.email_verified) == (UserStatus.active, True)
+    entries = {e.action: e.details for e in await world.audit.list()}
+    assert entries["auth.register"]["approval_exempt"] == "*.hse.ru"
+    assert entries["auth.approval_exempt"] == {"rule": "*.hse.ru", "via": "email"}
+
+
+async def test_rule_removed_before_the_letter_is_opened_sends_the_account_to_the_queue(world: World) -> None:
+    await _exempting(world, ["hse.ru"])
+    await _register(world, "ann@hse.ru")
+    await world.settings.set(KEY_APPROVAL_EXEMPTIONS, [], source="test")
+
+    [(_to, _subject, body)] = world.sender.sent
+    await world.verify_uc().execute(token_from_mail(body))
+    user = await world.users.get_by_email("ann@hse.ru")
+
+    assert user is not None
+    assert (user.status, user.email_verified) == (UserStatus.pending_approval, True)
+    assert "auth.approval_exempt" not in [e.action for e in await world.audit.list()]
+
+
+async def test_other_addresses_still_wait_for_approval_after_the_letter(world: World) -> None:
+    await _exempting(world, ["hse.ru"])
+
+    result = await _register(world, "ann@gmail.com")
+    [(_to, _subject, body)] = world.sender.sent
+    await world.verify_uc().execute(token_from_mail(body))
+    user = await world.users.get_by_email("ann@gmail.com")
+
+    assert result.outcome is RegistrationOutcome.pending_approval
+    assert user is not None
+    assert (user.status, user.approval_exempt_rule) == (UserStatus.pending_approval, None)
+
+
+async def test_without_smtp_the_exempt_address_waits_for_approval(world: World) -> None:
+    await _exempting(world, ["hse.ru"], smtp=False)
+
+    result = await _register(world, "ann@hse.ru")
+    user = await world.users.get_by_email("ann@hse.ru")
+
+    assert result.outcome is RegistrationOutcome.pending_approval
+    assert user is not None
+    assert (user.status, user.approval_exempt_rule) == (UserStatus.pending_approval, None)

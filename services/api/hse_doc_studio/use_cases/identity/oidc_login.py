@@ -267,6 +267,13 @@ class CompleteOidcLoginUC:
                 await self._audit.record(
                     "auth.oidc_provision", actor_id=user.id, details={**details, "status": user.status.value}
                 )
+                if decision.exemption is not None:
+                    # Почту подтвердил провайдер: исключение из одобрения действует сразу.
+                    await self._audit.record(
+                        "auth.approval_exempt",
+                        actor_id=user.id,
+                        details={"rule": decision.exemption, "via": "oidc", "provider": provider.id},
+                    )
         except IdentityError as error:
             # Параллельный вход тем же адресом успел раньше: новый аккаунт не заводим и не связываем вслепую.
             raise OidcLoginError(OidcErrorCode.link_required) from error

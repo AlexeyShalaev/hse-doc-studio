@@ -326,6 +326,7 @@ tags:
 | `HSE_STUDIO__AUTH__REGISTRATION_MODE` | open / domains / invite / closed | не задано | server | Режим регистрации из окружения: open, domains, invite или closed. Заданное побеждает БД и не правится в админке. |
 | `HSE_STUDIO__AUTH__REGISTRATION_DOMAINS` | `list[str]` | не задано | server | Разрешённые домены почты для режима domains; заданный список блокирует правку в админке. |
 | `HSE_STUDIO__AUTH__REQUIRE_APPROVAL` | bool | не задано | server | Новые аккаунты ждут одобрения админа; заданное значение блокирует правку в админке. |
+| `HSE_STUDIO__AUTH__APPROVAL_EXEMPTIONS` | `list[str]` | не задано | server | Исключения из одобрения: hse.ru (ровно домен), *.hse.ru (поддомены), name@example.com (адрес). Действуют только для подтверждённой почты; заданный список блокирует правку в админке. |
 | `HSE_STUDIO__AUTH__PASSWORD_ENABLED` | bool | не задано | server | Вход по паролю; заданное значение блокирует правку в админке. |
 | `HSE_STUDIO__AUTH__PASSKEYS_ENABLED` | bool | не задано | server | Вход по passkey (WebAuthn); заданное значение блокирует правку в админке. |
 | `HSE_STUDIO__AUTH__PASSKEY_RP_ID` | str | не задано | server | Домен ключей passkey (RP ID). По умолчанию хост public_url; можно указать родительский домен (example.org для studio.example.org), чтобы ключи пережили переезд между поддоменами. |
