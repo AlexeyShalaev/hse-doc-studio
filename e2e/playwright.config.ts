@@ -86,6 +86,18 @@ export default defineConfig({
       },
     },
     {
+      // Комментарии из превью PDF на server-lite с общим раннером поддельного TeX (make e2e-pdf-comments): сборка
+      // печатает строки исходника и кладёт SyncTeX, тред из выделения привязывается к исходнику; телефон 390 px.
+      name: "pdf-comments",
+      testMatch: /pdf-comments\.spec\.ts/,
+      timeout: 3 * 60_000,
+      use: {
+        ...devices["Desktop Chrome"],
+        actionTimeout: 20_000,
+        channel: process.env.E2E_CHANNEL || undefined,
+      },
+    },
+    {
       // Команды установки раннера у токена (docker, скрипт-служба): копирование и скрипт без секретов.
       name: "runner-install",
       testMatch: /runner-install\.spec\.ts/,

@@ -109,7 +109,10 @@
    `POST review/pdf-threads`, `GET review/documents/{doc_id}`, `doc_id` в уведомлении, MCP `list`, эталоны контракта.
 2. Фронт: схема якоря, кнопка в панели выделения (и на таче), создание, метки на полях, подсветка, панель
    «Комментарии» в превью (общий компонент с редактором), ссылка из «Входящих», демо.
-3. e2e на стенде server-lite с раннером поддельного TeX и справка.
+3. SyncTeX со сборки на раннере: раннер выгружает `<stem>.synctex.gz` рядом с PDF, api кладёт его в
+   `.build/<doc_id>/`, где его ищет `SyncTexUC` (раньше на сервере с раннерами SyncTeX не было, и «В исходнике»
+   тоже не работал). e2e на стенде server-lite с раннером поддельного TeX: сборка печатает строки исходника на
+   латинице и кладёт SyncTeX к ним (`e2e/tests/pdf-comments.spec.ts`, `make e2e-pdf-comments`). Справка.
 
 ## 3. Совместная правка
 
@@ -195,3 +198,6 @@
 - Фронт: `NODE_ENV=test pnpm vitest run src/entities/review src/features/source-edit` (привязка, провайдер,
   панель, подсветка).
 - Вживую: два браузера на стенде `scripts/dev/server-stack/stack.sh`, один файл, правка рецензентом и редактором.
+- Комментарии из превью (2.4): `uv run pytest tests/unit/core/review` (поиск выделения в исходнике: ручные случаи и
+  случайные выделения), с Postgres `tests/integration/api/review/test_review_pdf.py`; фронт
+  `src/features/pdf-review src/shared/ui/PdfViewer`; e2e `make e2e-pdf-comments`.

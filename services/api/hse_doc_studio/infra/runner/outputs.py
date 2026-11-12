@@ -53,6 +53,27 @@ def collect_outputs(
     return tuple(found)
 
 
+def collect_file_as(root: Path, rel: str, upload_as: str, *, max_file_bytes: int | None = None) -> OutputFile | None:
+    """Один файл из рабочей папки под другим путём выгрузки; None, если его нет или он не обычный файл.
+
+    SyncTeX лежит в `.build/<doc_id>/`, а ключ объекта не может начинаться с точки: он уходит рядом с PDF, место
+    в `.build` определяет api. Каталоги по пути проверяются как в `collect_outputs`: по ссылкам не ходим.
+    """
+    validate_relative_posix(rel)
+    validate_relative_posix(upload_as)
+    current = root
+    for part in Path(rel).parts[:-1]:
+        current = current / part
+        try:
+            if not stat.S_ISDIR(current.lstat().st_mode):
+                return None
+        except OSError:
+            return None
+    path = root / rel
+    described = _describe(path, upload_as, max_file_bytes)
+    return OutputFile(ref=described, path=path) if described is not None else None
+
+
 def _describe(path: Path, rel: str, max_file_bytes: int | None) -> ArtifactRef | None:
     try:
         if not stat.S_ISREG(path.lstat().st_mode):

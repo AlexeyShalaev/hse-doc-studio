@@ -9,7 +9,7 @@ import logging
 import os
 from collections.abc import Callable
 from functools import partial
-from pathlib import PurePosixPath
+from pathlib import Path, PurePosixPath
 
 from hse_doc_studio.core.compile.errors import (
     BuildBackendUnavailableError,
@@ -27,17 +27,34 @@ from hse_doc_studio.core.jobs.relay import RelayErrorCode
 from hse_doc_studio.core.jobs.wire import JobEnvelope
 from hse_doc_studio.infra.jobs.embedded_runner import EmbeddedCompileRunner
 from hse_doc_studio.infra.runner.client import RunnerApiError, RunnerUnreachable
-from hse_doc_studio.infra.runner.executor import JobContext, JobExecutor, JobOutcome
+from hse_doc_studio.infra.runner.executor import JobContext, JobExecutor, JobOutcome, OutputFile
 from hse_doc_studio.infra.runner.handler_executor import CODE_BLOB_UNAVAILABLE, CODE_OUTPUT_CHANGED, JobBlobFetcher
-from hse_doc_studio.infra.runner.outputs import collect_outputs
+from hse_doc_studio.infra.runner.outputs import collect_file_as, collect_outputs
 from hse_doc_studio.infra.runner.workspace import BlobCache, BlobIntegrityError, OutputChangedError, RunnerWorkspaces
 
 _LOG = logging.getLogger(__name__)
+
 _FAIL_TAIL_CHARS = 6000
 
 CODE_IMAGE_MISSING = "image_missing"
 CODE_DOCKER_UNAVAILABLE = "docker_unavailable"
 CODE_BUILD_BACKEND_UNAVAILABLE = BuildBackendUnavailableError.code
+
+
+def _build_outputs(root: Path, source: PurePosixPath, doc_id: str) -> tuple[OutputFile, ...]:
+    """PDF сборки и, если есть, её SyncTeX.
+
+    SyncTeX лежит в `.build/<doc_id>/` и уходит рядом с PDF (`<stem>.synctex.gz`): по нему превью на сервере
+    переходит к исходнику и привязывает комментарии из PDF к тексту. Без PDF не уходит ничего.
+    """
+    pdf = collect_outputs(root, [glob.escape((source.parent / f"{source.stem}.pdf").as_posix())])
+    name = f"{source.stem}.synctex.gz"
+    synctex = (
+        collect_file_as(root, (source.parent / ".build" / doc_id / name).as_posix(), (source.parent / name).as_posix())
+        if pdf
+        else None
+    )
+    return (*pdf, synctex) if synctex is not None else pdf
 
 
 class RunnerLogSink:
@@ -114,7 +131,7 @@ class CompileJobExecutor:
                     final_pdf = (source.parent / f"{source.stem}.pdf").as_posix()
                     # Без baseline: PDF уходит всегда, api перекладывает его в .build и публикует.
                     outputs = (
-                        await asyncio.to_thread(collect_outputs, workspace.root, [glob.escape(final_pdf)])
+                        await asyncio.to_thread(_build_outputs, workspace.root, source, payload.doc_id)
                         if build.success
                         else ()
                     )
