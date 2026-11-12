@@ -320,6 +320,59 @@ for (const lang of LANGS) {
         }
       });
 
+      test("строка вкладок документа не шире экрана, выбранная вкладка видна", async ({ page }) => {
+        await loginOnPhone(page, USERS.anna.email);
+        const { projectId } = await openProjectApi(page);
+        // Между шапкой документа и строкой вкладок могут стоять плашки (сборка недоступна без раннера).
+        const row = page.locator(".workbench-canvas .tabs").filter({ has: page.locator(".tabs-scroll") });
+        const scroller = row.locator(".tabs-scroll");
+        const more = row.getByRole("button", { name: /Ещё действия|More actions/ });
+        const within = async (
+          locator: ReturnType<Page["locator"]>,
+          box: { x: number; width: number },
+          what: string,
+        ): Promise<void> => {
+          const rect = await locator.boundingBox();
+          expect(rect, what).not.toBeNull();
+          expect(rect?.x ?? -1, `${what}: левый край`).toBeGreaterThanOrEqual(box.x - 1);
+          expect((rect?.x ?? 0) + (rect?.width ?? 0), `${what}: правый край`).toBeLessThanOrEqual(
+            box.x + box.width + 1,
+          );
+        };
+        for (const tab of [null, "checks", "compile", "history", "signatures"]) {
+          const what = tab ?? "preview";
+          await page.goto(`/projects/${projectId}/documents/${DOC}${tab ? `?tab=${tab}` : ""}`);
+          await expect(row).toBeVisible();
+          await within(row, { x: 0, width: size.width }, `${what}: строка вкладок`);
+          // «Ещё действия» прижата справа и не уезжает вместе с вкладками.
+          await within(more, { x: 0, width: size.width }, `${what}: «Ещё действия»`);
+          // Выбранная вкладка (в том числе пришедшая из адреса) докручена в видимую часть строки.
+          const box = await scroller.boundingBox();
+          expect(box, `${what}: прокручиваемая часть`).not.toBeNull();
+          await expect
+            .poll(async () => {
+              const rect = await scroller.locator("button.active").boundingBox();
+              if (!rect || !box) return false;
+              return rect.x >= box.x - 1 && rect.x + rect.width <= box.x + box.width + 1;
+            })
+            .toBe(true);
+          // Вкладки за краем есть: край, за которым они, затухает (подсказка, что строка прокручивается).
+          const hint = await scroller.evaluate((el) => ({
+            overflow: el.scrollWidth > el.clientWidth + 1,
+            edge:
+              el.getAttribute("data-scroll-start") === "true" ||
+              el.getAttribute("data-scroll-end") === "true",
+            mask: getComputedStyle(el).maskImage,
+          }));
+          if (hint.overflow) {
+            expect(hint.edge, `${what}: отмечен край прокрутки`).toBe(true);
+            expect(hint.mask, `${what}: затухание края`).toContain("gradient");
+          }
+          await expectNoHorizontalScroll(page);
+        }
+        await shot(page, L, name("18a-document-tabs"));
+      });
+
       test("редактор: шрифт 16 px, при вводе панели уходят, оглавление поверх текста", async ({ page }) => {
         await loginOnPhone(page, USERS.anna.email);
         const { projectId } = await openProjectApi(page);

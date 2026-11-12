@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { clsx } from "clsx";
 import { localeTag } from "../../lib/i18n/localeTag";
+import { useScrollHint } from "../../lib/scrollHint";
 
 // Каркас страницы админки: одинаковые поля, ширина и заголовок на всех
 // разделах. Ширина «wide» для таблиц и сводок, «narrow» для форм настроек.
@@ -60,49 +61,63 @@ export const PageTabs = <T extends string>({
   label,
   panelId,
   idPrefix,
-}: PageTabsProps<T>) => (
-  <div role="tablist" aria-label={label} className="adm-tabs">
-    {tabs.map((tab) => {
-      const selected = tab.id === value;
-      return (
-        <button
-          key={tab.id}
-          type="button"
-          role="tab"
-          id={idPrefix ? `${idPrefix}-${tab.id}` : undefined}
-          aria-selected={selected}
-          aria-controls={panelId}
-          tabIndex={selected ? 0 : -1}
-          data-testid={tab.testId}
-          className="adm-tab"
-          onClick={() => {
-            onChange(tab.id);
-          }}
-          onKeyDown={(event) => {
-            if (event.key !== "ArrowRight" && event.key !== "ArrowLeft") return;
-            event.preventDefault();
-            const index = tabs.findIndex((t) => t.id === value);
-            const step = event.key === "ArrowRight" ? 1 : -1;
-            const next = tabs[(index + step + tabs.length) % tabs.length];
-            if (!next) return;
-            onChange(next.id);
-            const list = event.currentTarget.parentElement;
-            const buttons =
-              list?.querySelectorAll<HTMLButtonElement>("[role=tab]");
-            buttons?.[tabs.indexOf(next)]?.focus();
-          }}
-        >
-          {tab.label}
-          {tab.count !== undefined && (
-            <span className="adm-count" data-tone={tab.countTone ?? "neutral"}>
-              {tab.count.toLocaleString(localeTag())}
-            </span>
-          )}
-        </button>
-      );
-    })}
-  </div>
-);
+}: PageTabsProps<T>) => {
+  // Вкладки, которые не поместились (телефон, длинные названия документов на странице
+  // подписанта), прокручиваются: край затухает, выбранная вкладка докручивается.
+  const scrollRef = useScrollHint(value);
+  return (
+    <div
+      ref={scrollRef}
+      role="tablist"
+      aria-label={label}
+      className="adm-tabs scroll-hint"
+    >
+      {tabs.map((tab) => {
+        const selected = tab.id === value;
+        return (
+          <button
+            key={tab.id}
+            type="button"
+            role="tab"
+            id={idPrefix ? `${idPrefix}-${tab.id}` : undefined}
+            aria-selected={selected}
+            aria-controls={panelId}
+            tabIndex={selected ? 0 : -1}
+            data-testid={tab.testId}
+            className="adm-tab"
+            onClick={() => {
+              onChange(tab.id);
+            }}
+            onKeyDown={(event) => {
+              if (event.key !== "ArrowRight" && event.key !== "ArrowLeft")
+                return;
+              event.preventDefault();
+              const index = tabs.findIndex((t) => t.id === value);
+              const step = event.key === "ArrowRight" ? 1 : -1;
+              const next = tabs[(index + step + tabs.length) % tabs.length];
+              if (!next) return;
+              onChange(next.id);
+              const list = event.currentTarget.parentElement;
+              const buttons =
+                list?.querySelectorAll<HTMLButtonElement>("[role=tab]");
+              buttons?.[tabs.indexOf(next)]?.focus();
+            }}
+          >
+            {tab.label}
+            {tab.count !== undefined && (
+              <span
+                className="adm-count"
+                data-tone={tab.countTone ?? "neutral"}
+              >
+                {tab.count.toLocaleString(localeTag())}
+              </span>
+            )}
+          </button>
+        );
+      })}
+    </div>
+  );
+};
 
 export type PageHeaderProps = {
   title: ReactNode;
