@@ -10,7 +10,7 @@ import pytest
 from hse_doc_studio.core.enums import Lang
 from hse_doc_studio.core.i18n import set_interface_language
 from hse_doc_studio.core.mail import MailTemplate, compose, resolve_lang
-from hse_doc_studio.core.mail.catalog import format_duration
+from hse_doc_studio.core.mail.catalog import fill_html, fill_text, format_duration
 from hse_doc_studio.core.mail.samples import SAMPLE_RECIPIENT, SAMPLE_SERVER, sample_mail
 
 ALL = [(t, lang) for t in MailTemplate for lang in Lang]
@@ -335,3 +335,30 @@ def test__resolve_lang__account_locale_first_then_interface_language_then_russia
 def test__duration__uses_the_right_plural_form(seconds: int, ru: str, en: str) -> None:
     assert format_duration(Lang.ru, seconds) == ru
     assert format_duration(Lang.en, seconds) == en
+
+
+def test__fill__does_not_double_the_dot_after_initials() -> None:
+    values = {"actor": "Петров П. П.", "other": "Иванов Иван"}
+
+    assert fill_text("Следующим подписывает {actor}.", values) == "Следующим подписывает Петров П. П."
+    assert fill_text("Сейчас: {actor}. Ждём.", values) == "Сейчас: Петров П. П. Ждём."
+    assert fill_text("Следующим подписывает {other}.", values) == "Следующим подписывает Иванов Иван."
+    html = fill_html("Вернул {actor}.", values, strong="font-weight:600")
+    assert html == 'Вернул <strong style="font-weight:600">Петров П. П.</strong>'
+
+
+@pytest.mark.parametrize("template", [t for t in MailTemplate if t.value.startswith("signing_")])
+@pytest.mark.parametrize("lang", list(Lang))
+def test__signing_mails__name_with_initials_has_a_single_dot(template: MailTemplate, lang: Lang) -> None:
+    mail = compose(
+        template,
+        lang,
+        to="petrov@example.org",
+        server_url="https://studio.example.org",
+        link="https://studio.example.org/sign/p/r",
+        values={"actor": "Петров П. П.", "project": "Bertie", "profile": "Заявка на тему КП", "deadline": "16.11.2026"},
+    )
+
+    for part in (mail.subject, mail.text, mail.html):
+        assert "П. П.." not in part
+        assert "П. П.</strong>." not in part

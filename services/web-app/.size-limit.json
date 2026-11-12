@@ -196,5 +196,23 @@
     "path": "dist/assets/locale-signing-*.js",
     "gzip": true,
     "limit": "8.8 kB"
+  },
+  {
+    "name": "Редкие части подписи на странице (lazy: КриптоПро, пароль ключа, формы ключа, «Нарисовать»)",
+    "path": "dist/assets/SigningInlineRare-*.js",
+    "gzip": true,
+    "limit": "4 kB"
+  },
+  {
+    "name": "Окно «Вернуть на доработку» страницы подписанта (lazy)",
+    "path": "dist/assets/ReturnDialog-*.js",
+    "gzip": true,
+    "limit": "1.2 kB"
+  },
+  {
+    "name": "Тексты редких окон страницы подписанта (lazy, ru и en)",
+    "path": "dist/assets/locale-signingRare-*.js",
+    "gzip": true,
+    "limit": "2.2 kB"
   }
 ]

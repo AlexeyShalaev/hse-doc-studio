@@ -255,7 +255,8 @@ describe("подпись картинкой на странице", () => {
     expect(pageState()).toBe("turn");
 
     await user.click(screen.getByTestId("signing-image-draw"));
-    expect(screen.getByTestId("signing-draw-done")).toBeDisabled();
+    // Поле «Нарисовать» в ленивом чанке редких частей: появляется после загрузки.
+    expect(await screen.findByTestId("signing-draw-done")).toBeDisabled();
     const canvas = screen.getByTestId("signing-draw-canvas");
     fireEvent.pointerDown(canvas, { clientX: 10, clientY: 10 });
     fireEvent.pointerMove(canvas, { clientX: 60, clientY: 30 });
@@ -367,7 +368,9 @@ describe("ЭП ключом Студии", () => {
     });
     expect(primary()).toHaveAttribute("data-blocked", "key");
     await user.click(await screen.findByTestId("signing-key-new"));
-    expect(screen.getByLabelText("Имя на плашке")).toHaveValue(SUPERVISOR.name);
+    expect(await screen.findByLabelText("Имя на плашке")).toHaveValue(
+      SUPERVISOR.name,
+    );
     await user.type(screen.getByTestId("signing-key-passphrase"), "secret");
     await user.click(screen.getByTestId("signing-key-submit"));
     await waitFor(() => {
@@ -411,7 +414,7 @@ describe("ЭП ключом Студии", () => {
     open(routeId, SUPERVISOR);
     await user.click(await screen.findByTestId("signing-key-import-open"));
     await user.upload(
-      screen.getByTestId("signing-key-file-input"),
+      await screen.findByTestId("signing-key-file-input"),
       new File(["key"], "petrov-public.asc"),
     );
     await user.click(screen.getByTestId("signing-key-submit"));

@@ -4,7 +4,7 @@ import { Button } from "@shared/ui";
 import { Notice } from "@shared/ui/ConflictKit";
 import type { InlineModel } from "../model/useInline";
 import type { InlineUi, SigningInlineContext } from "../model/types";
-import { DrawPad } from "./DrawPad";
+import { DrawPad } from "./rareLazy";
 
 export type BlockProps = {
   ctx: SigningInlineContext;

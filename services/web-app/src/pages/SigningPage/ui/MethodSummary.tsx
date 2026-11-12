@@ -20,9 +20,7 @@ export const MethodSummary = ({ task }: { task: SigningTask }) => {
             {t("method.current", { method: t(`method.name.${me.method}`) })}
           </p>
           {me.method === "image" ? (
-            <p>
-              {t(me.image_ready ? "method.imageReady" : "method.imageMissing")}
-            </p>
+            <p>{t(me.image_ready ? "image.ready" : "image.missing")}</p>
           ) : me.plate ? (
             <p>
               {t("method.plateReady", {
@@ -32,7 +30,7 @@ export const MethodSummary = ({ task }: { task: SigningTask }) => {
               })}
             </p>
           ) : (
-            <p>{t("method.plateMissing")}</p>
+            <p>{t("esign.plateMissing")}</p>
           )}
         </>
       )}

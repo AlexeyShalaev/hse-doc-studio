@@ -61,7 +61,7 @@ const PREVIEW = {
         {
           slot_id: "supervisor",
           label: { ru: "Руководитель" },
-          signer: "Петров",
+          signer: "Петров П. П.",
           method: "detached",
         },
       ],
@@ -259,6 +259,10 @@ describe("SignSubmissionDialog", () => {
     renderDialog();
 
     const confirm = await screen.findByRole("checkbox");
+    // Имя с инициалами в конце фразы: точка одна, не «П. П..».
+    expect(confirm.closest("label")).toHaveTextContent(
+      /их придётся поставить заново: Петров П\. П\.$/,
+    );
     const sign = screen.getByRole("button", { name: /Подписать$/ });
     // Повторная фиксация сбросит подпись руководителя: без подтверждения подписать нельзя.
     expect(sign).toBeDisabled();

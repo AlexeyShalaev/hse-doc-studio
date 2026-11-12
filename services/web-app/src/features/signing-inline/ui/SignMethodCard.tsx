@@ -5,11 +5,13 @@ import { failureText } from "../lib/failureText";
 import { PRIMARY_LABEL_KEY } from "../model/inlinePlan";
 import { useInline } from "../model/useInline";
 import type { InlineUi, SigningInlineContext } from "../model/types";
-import { CryptoProDialog } from "./CryptoProDialog";
+import { CryptoProDialog, PassphraseDialog } from "./rareLazy";
 import { EsignBlock } from "./EsignBlock";
 import { ImageBlock } from "./ImageBlock";
-import { PassphraseDialog } from "./PassphraseDialog";
 import "./signingInline.css";
+
+const capitalize = (text: string, lang: string): string =>
+  text.charAt(0).toLocaleUpperCase(lang) + text.slice(1);
 
 /**
  * «Как подписать» на странице подписанта (docs/design/signing-route.md, 3.2): способ из
@@ -22,7 +24,7 @@ export const SignMethodCard = ({
   ctx: SigningInlineContext;
   ui: InlineUi;
 }) => {
-  const { t } = useTranslation("signing");
+  const { t, i18n } = useTranslation("signing");
   const model = useInline(ctx, ui);
   const { plan } = model;
   if (!plan) return null;
@@ -69,7 +71,8 @@ export const SignMethodCard = ({
               }}
               data-testid={`signing-method-${method}`}
             >
-              {t(`method.pick.${method}`)}
+              {/* Кнопка выбора: название способа с заглавной («Картинка»). */}
+              {capitalize(t(`method.name.${method}`), i18n.language)}
             </button>
           ))}
         </div>

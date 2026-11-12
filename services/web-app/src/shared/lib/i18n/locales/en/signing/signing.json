@@ -3,15 +3,11 @@
     "loading": "Loading the signing page",
     "notFoundTitle": "Signing page not found",
     "notFoundBody": "The link is out of date, the route is closed, or you are not on this route.",
-    "errorTitle": "Could not load the signing page",
-    "home": "Home",
-    "inbox": "Inbox"
+    "errorTitle": "Could not load the signing page"
   },
   "head": {
     "from": "{{name}} asks you to sign",
     "sentAt": "sent {{date}}",
-    "deadline": "due {{date}}",
-    "overdue": "was due {{date}}",
     "message": "Message from the author",
     "openProject": "Open project"
   },
@@ -31,21 +27,11 @@
       "returned": "returned for revision"
     },
     "mine": {
-      "invited": "invitation sent",
       "waiting": "waiting",
-      "approved": "approved",
       "to_approve": "your turn",
       "to_approve_sign": "your turn",
-      "to_sign": "your turn",
-      "done": "done",
-      "returned": "returned for revision"
+      "to_sign": "your turn"
     }
-  },
-  "persona": {
-    "author": "Author",
-    "supervisor": "Supervisor",
-    "co_supervisor": "Co-supervisor",
-    "academic_supervisor": "Academic supervisor"
   },
   "status": {
     "turn": {
@@ -55,13 +41,12 @@
     },
     "resent": "The document changed after you approved it: please approve again.",
     "notYetTitle": "Not your turn yet",
-    "notYetNow": "Now: {{names}}. You will be notified when it is your turn.",
     "notYetLater": "You will be notified when it is your turn.",
     "approvedTitle": "Approved",
     "approvedBody": "Once everyone has placed their visible signatures, you will be asked to sign the final PDF.",
     "doneTitle": "Done",
     "doneNext_one": "{{names}} signs next.",
-    "doneNext_other": "Next to sign: {{names}}.",
+    "doneNext_other": "Next to sign: {{names}}",
     "doneWait": "Waiting for the other participants.",
     "completedTitle": "Everyone has signed",
     "completedBody": "The documents are signed. Nothing else is needed from you.",
@@ -109,21 +94,13 @@
       "pades": "e-signature in the PDF"
     },
     "approveOnly": "No signature in the document, approval only.",
-    "imageReady": "Your signature image is uploaded. It appears in the document once you approve.",
-    "imageMissing": "A signature image is needed.",
     "plateReady": "Key: {{owner}}, {{kind}} {{id}}",
-    "plateMissing": "A key or certificate for the signature plate is needed.",
     "plateKind": {
       "x509": "certificate",
       "openpgp": "OpenPGP",
       "manual": "manual"
     },
-    "choose": "Signing method",
-    "pick": {
-      "image": "Image",
-      "detached": "Detached e-signature",
-      "pades": "E-signature in the PDF"
-    }
+    "choose": "Signing method"
   },
   "image": {
     "ready": "Your signature image is ready. It appears in the document once you approve.",
@@ -134,10 +111,6 @@
     "upload": "Upload",
     "replace": "Replace:",
     "remember": "Remember for other projects",
-    "drawHint": "Sign with your finger or mouse.",
-    "clear": "Clear",
-    "done": "Done",
-    "cancel": "Cancel",
     "editorTitle": "Your signature"
   },
   "esign": {
@@ -176,41 +149,10 @@
       "files": "Upload a signature file for every document."
     }
   },
-  "key": {
-    "name": "Name on the plate",
-    "email": "Email (optional)",
-    "passphrase": "Key password (optional)",
-    "passphraseHint": "Studio does not store the password: it is asked when you sign.",
-    "file": "OpenPGP (.asc, .gpg) or .p12, .pfx",
-    "filePass": "File password, if any",
-    "choose": "Choose file",
-    "create": "Create",
-    "import": "Import",
-    "cancel": "Cancel"
-  },
-  "passphrase": {
-    "title": "Key password",
-    "lead": "The key “{{label}}” is password-protected. Studio does not store the password.",
-    "label": "Password",
-    "cancel": "Cancel"
-  },
-  "cryptopro": {
-    "title": "CryptoPro",
-    "loading": "Connecting to the CryptoPro Browser plug-in…",
-    "pick": "Pick a certificate. The private key stays on the token, CryptoPro asks for the PIN.",
-    "usePlate": "Use certificate",
-    "signing": "Sign on the token: CryptoPro may ask for the PIN.",
-    "retry": "Retry",
-    "cancel": "Cancel"
-  },
   "actions": {
     "approve": "Approve",
     "approving": "Approving…",
     "return": "Return for revision",
-    "blocked": {
-      "image": "Add your signature image first.",
-      "plate": "Set a key or certificate for the signature plate first."
-    },
     "approveAndSign": "Approve and sign",
     "sign": "Sign",
     "working": "Sending…"
@@ -225,10 +167,10 @@
     "method_not_allowed": "This signing method cannot be chosen right now: the checkpoint does not accept it or there is no place for the signature on the page. Pick another one.",
     "visible_layer_final": "The documents are already frozen: the image, the method and the plate cannot be changed.",
     "stale_route": "The route changed while you were acting. The page has been refreshed, try again.",
-    "passphrase_required": "Enter the key password.",
-    "passphrase_invalid": "The key password is wrong.",
-    "sign_failed": "Signing failed. Check the key and the password.",
-    "key_not_found": "The key was not found. Pick another one.",
+    "passphrase_required": "$t(errors:code.passphrase_required)",
+    "passphrase_invalid": "$t(errors:code.passphrase_invalid)",
+    "sign_failed": "$t(errors:code.sign_failed)",
+    "key_not_found": "$t(errors:code.key_not_found)",
     "server_keys_forbidden": "This server does not store private keys. Sign with CryptoPro or upload a ready signature.",
     "route_locked": "The document is on a signing route: signatures change only in turn.",
     "not_found": "The route is closed or you are no longer part of it. Refresh the page.",
@@ -237,18 +179,6 @@
     "cryptopro": "CryptoPro returned an error: {{detail}}",
     "unknownDetail": "Something went wrong: {{detail}}",
     "dismiss": "Dismiss"
-  },
-  "return": {
-    "title": "Return for revision",
-    "lead": "The author gets your comment and sends the documents again.",
-    "label": "What to fix",
-    "placeholder": "For example: clarify the project goal",
-    "counter": "{{n}} of {{max}}",
-    "notes": "Detailed comments on the text can be left in the project.",
-    "openProject": "Open project",
-    "cancel": "Cancel",
-    "submit": "Return",
-    "sending": "Sending…"
   },
   "docs": {
     "title": "Documents",
@@ -273,8 +203,8 @@
       "signing": "You are signing the version of {{date}}",
       "signedMine": "You signed the version of {{date}}",
       "approvedMine": "You approved the version of {{date}}",
-      "kept": "Version out for signing: {{date}}",
-      "signed": "Signed version of {{date}}"
+      "kept": "$t(signingVersion:tab.pinned)",
+      "signed": "$t(signingVersion:tab.signed)"
     },
     "kept": {
       "approved": "No changes: you already approved",
@@ -322,12 +252,7 @@
   },
   "divergence": {
     "label": "Changes",
-    "active": "There are changes after sending for signing. The version of {{date}} is being signed.",
-    "activeNoDate": "There are changes after sending for signing.",
-    "completed": "Everyone signed the version of {{date}}. There are changes after signing.",
-    "completedNoDate": "There are changes after signing.",
     "docs_one": "Changed document: {{names}}.",
-    "docs_other": "Changed documents: {{names}}.",
-    "send": "Send new version"
+    "docs_other": "Changed documents: {{names}}."
   }
 }

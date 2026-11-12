@@ -606,7 +606,7 @@ test.describe("Очистка места: диски раннеров и «Ос�
     await adm.getByTestId(`admin-personal-runner-actions-${runnerId}`).click();
     await adm.getByTestId(`admin-personal-runner-disk-${runnerId}`).click();
     const adminDialog = adm.getByTestId("runner-disk");
-    await expect(adminDialog).toContainText(`Это личный раннер, владелец: ${ANNA.name}`);
+    await expect(adminDialog).toContainText(`Владелец (${ANNA.name}) получит уведомление`);
     await expect(adm.getByTestId("runner-disk-old")).toContainText(
       "Предыдущую версию личного раннера может удалить только владелец.",
     );

@@ -1,0 +1,41 @@
+{
+  "cancel": "Cancel",
+  "image": {
+    "drawHint": "Sign with your finger or mouse.",
+    "clear": "Clear",
+    "done": "Done"
+  },
+  "key": {
+    "name": "Name on the plate",
+    "email": "Email (optional)",
+    "passphrase": "Key password (optional)",
+    "passphraseHint": "Studio does not store the password: it is asked when you sign.",
+    "file": "OpenPGP (.asc, .gpg) or .p12, .pfx",
+    "filePass": "File password, if any",
+    "choose": "Choose file",
+    "create": "Create",
+    "import": "Import"
+  },
+  "passphrase": {
+    "title": "Key password",
+    "lead": "The key “{{label}}” is password-protected. Studio does not store the password.",
+    "label": "Password"
+  },
+  "cryptopro": {
+    "title": "CryptoPro",
+    "loading": "Connecting to the CryptoPro Browser plug-in…",
+    "pick": "Pick a certificate. The private key stays on the token, CryptoPro asks for the PIN.",
+    "usePlate": "Use certificate",
+    "signing": "Sign on the token: CryptoPro may ask for the PIN.",
+    "retry": "Retry"
+  },
+  "return": {
+    "title": "Return for revision",
+    "lead": "The author gets your comment and sends the documents again.",
+    "label": "What to fix",
+    "placeholder": "For example: clarify the project goal",
+    "counter": "{{n}} of {{max}}",
+    "notes": "Detailed comments on the text can be left in the project.",
+    "submit": "Return"
+  }
+}

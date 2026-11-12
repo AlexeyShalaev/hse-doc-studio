@@ -152,8 +152,8 @@
   "newVersion": {
     "action": "Send new version",
     "title": "Send a new version?",
-    "changed": "Changed: {{docs}}.",
-    "reapprove": "Approve again: {{people}}.",
+    "changed": "Changed: {{docs}}",
+    "reapprove": "Approve again: {{people}}",
     "kept_one": "Unchanged: {{docs}}, its signatures stay.",
     "kept_other": "Unchanged: {{docs}}, their signatures stay.",
     "note": "What changed",

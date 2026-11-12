@@ -103,7 +103,7 @@
     },
     "resetLink": {
       "title": "Issue a password reset link?",
-      "body": "The link lets someone set a new password for {{name}}. The action is logged and the person is notified.",
+      "body": "A new password for the account {{name}} is set via the link. The action is logged and the person is notified.",
       "action": "Issue link"
     },
     "revokeSessions": {
@@ -126,7 +126,7 @@
   },
   "resetLink": {
     "title": "Password reset link",
-    "lead": "Account: {{name}}. The link is valid until {{time}}.",
+    "lead": "The link for the account {{name}} is valid until {{time}}.",
     "label": "New password link",
     "notified": "The person also received this link by email.",
     "manual": "No email was sent: pass the link to the person yourself."

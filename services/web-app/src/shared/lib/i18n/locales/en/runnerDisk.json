@@ -144,7 +144,7 @@
   "dockerUnavailable": "The runner could not reach Docker: images cannot be counted.",
   "offline": "The runner has been offline since {{when}}. The last measurement is shown; you can clean up when the runner is back.",
   "offlineNever": "The runner is offline. You can clean up when it is back.",
-  "personal": "This is a personal runner owned by {{owner}}. The owner will be notified about the cleanup; only they can remove the previous version.",
+  "personal": "This is a personal runner. The owner ({{owner}}) will be notified about the cleanup; only they can remove the previous version.",
   "failure": {
     "unknown": "That did not work. Please try again.",
     "network": "The server did not respond. Check the connection and try again."

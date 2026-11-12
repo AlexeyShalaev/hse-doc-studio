@@ -115,7 +115,7 @@ export const DrawPad = ({ busy, onCancel, onDone }: DrawPadProps) => {
           disabled={busy}
           onClick={onCancel}
         >
-          {t("image.cancel")}
+          {t("cancel")}
         </Button>
         <Button
           type="button"

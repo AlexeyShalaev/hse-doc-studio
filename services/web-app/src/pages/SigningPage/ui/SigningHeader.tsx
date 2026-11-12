@@ -37,7 +37,7 @@ export const SigningHeader = ({
         )}
         {route.deadline && (
           <span data-overdue={overdue} data-testid="signing-deadline">
-            {t(overdue ? "head.overdue" : "head.deadline", {
+            {t(overdue ? "inbox:signing.overdue" : "inbox:signing.deadline", {
               date: formatDay(route.deadline),
             })}
           </span>

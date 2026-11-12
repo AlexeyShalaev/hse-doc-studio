@@ -95,7 +95,7 @@ export const CryptoProDialog = ({
             disabled={busy}
             onClick={onClose}
           >
-            {t("cryptopro.cancel")}
+            {t("cancel")}
           </Button>
           {phase.kind === "error" && (
             <Button

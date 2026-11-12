@@ -6,6 +6,7 @@ export { toPosixPath } from "./path";
 export { formatBytes } from "./formatBytes";
 export { formatFileSize } from "./formatFileSize";
 export { initialsOf } from "./initialsOf";
+export { endSentence } from "./endSentence";
 export { downloadBlob } from "./downloadBlob";
 
 export { useDebouncedValue } from "./useDebouncedValue";

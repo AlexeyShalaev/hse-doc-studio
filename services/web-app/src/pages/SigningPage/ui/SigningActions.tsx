@@ -63,7 +63,7 @@ export const SigningActions = ({
       )}
       {blocker && primary == null && (
         <p className="sgn-hint" data-testid="signing-approve-blocked">
-          {t(`actions.blocked.${blocker}`)}
+          {t(`failure.${blocker}_required`)}
         </p>
       )}
     </div>

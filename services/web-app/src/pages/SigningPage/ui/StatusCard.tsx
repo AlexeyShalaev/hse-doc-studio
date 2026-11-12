@@ -14,6 +14,7 @@ import {
   type SigningTask,
 } from "@entities/signing-route";
 import { useWaitText } from "@features/signing-route-progress";
+import { endSentence } from "@shared/lib";
 import {
   actionDocs,
   type SigningPerson,
@@ -108,13 +109,15 @@ export const StatusCard = ({
               t("status.notYetLater"),
             ],
           };
+        // Имя с инициалами («Петров П. П.») само кончается точкой: вторую не ставим.
         const now = names(status.now);
         return {
           title: t("status.notYetTitle"),
           lines: [
-            now
-              ? t("status.notYetNow", { names: now })
-              : t("status.notYetLater"),
+            ...(now
+              ? [endSentence(t("signingProgress:wait.now", { who: now }))]
+              : []),
+            t("status.notYetLater"),
           ],
         };
       }
@@ -132,10 +135,12 @@ export const StatusCard = ({
           title: t("status.doneTitle"),
           lines: [
             next
-              ? t("status.doneNext", {
-                  names: next,
-                  count: status.next.length,
-                })
+              ? endSentence(
+                  t("status.doneNext", {
+                    names: next,
+                    count: status.next.length,
+                  }),
+                )
               : t("status.doneWait"),
           ],
         };
