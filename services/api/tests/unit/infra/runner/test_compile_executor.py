@@ -9,7 +9,7 @@ import os
 import sys
 from collections.abc import AsyncIterator, Iterator
 from dataclasses import replace
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 from typing import Any
 
 import pytest
@@ -21,6 +21,7 @@ from hse_doc_studio.core.jobs.wire import JobEnvelope
 from hse_doc_studio.infra.di.containers.runner import create_runner_container
 from hse_doc_studio.infra.docker.cli import configure_docker_binary
 from hse_doc_studio.infra.jobs.embedded_runner import EmbeddedCompileRunner
+from hse_doc_studio.infra.runner import compile_executor
 from hse_doc_studio.infra.runner.capabilities import detect_tags
 from hse_doc_studio.infra.runner.compile_executor import CompileJobExecutor, RoutingJobExecutor
 from hse_doc_studio.infra.runner.config import RunnerConfig
@@ -100,8 +101,10 @@ async def test__execute__builds_in_isolated_container_and_returns_the_pdf(tmp_pa
     assert outcome.result.data.build_ok is True  # type: ignore[union-attr]
     assert outcome.result.data.pages == 3  # type: ignore[union-attr]
     assert outcome.result.data.words == 6  # type: ignore[union-attr]
-    assert [o.ref.path for o in outcome.outputs] == ["tz/main.pdf"]
+    # SyncTeX из .build уходит рядом с PDF: api кладёт его обратно в .build, превью по нему ищет исходник.
+    assert [o.ref.path for o in outcome.outputs] == ["tz/main.pdf", "tz/main.synctex.gz"]
     assert outcome.outputs[0].path.read_bytes() == b"%PDF-1.5 built"
+    assert outcome.outputs[1].path.read_bytes() == b"synctex built"
     latexmk = next(call for call in recorded_calls(docker_log) if "latexmk" in call)
     assert "$max_repeat=7;" in latexmk
     assert latexmk[latexmk.index("--network") + 1] == "none"
@@ -260,7 +263,6 @@ async def test__execute__disk_full_while_opening_workspace__typed_failure(
 async def test__execute__build_ok_but_no_pdf__pdf_missing_failure(
     tmp_path: Path, docker_log: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    from hse_doc_studio.infra.runner import compile_executor
 
     executor, _ = await _executor(_config(tmp_path))
     monkeypatch.setattr(compile_executor, "collect_outputs", lambda *a, **k: ())
@@ -340,3 +342,18 @@ async def test__execute__outputs_are_staged__next_job_of_the_project_cannot_remo
     assert outcome.cleanup is not None
     outcome.cleanup()
     assert not outcome.outputs[0].path.exists()
+
+
+def test__build_outputs__no_synctex_or_build_dir_is_a_link__only_the_pdf(tmp_path: Path) -> None:
+    (tmp_path / "tz").mkdir()
+    (tmp_path / "tz" / "main.pdf").write_bytes(b"%PDF")
+    outside = tmp_path / "outside"
+    (outside / "tz").mkdir(parents=True)
+    (outside / "tz" / "main.synctex.gz").write_bytes(b"secret")
+
+    without = compile_executor._build_outputs(tmp_path, PurePosixPath("tz/main.tex"), "tz")
+    (tmp_path / "tz" / ".build").symlink_to(outside, target_is_directory=True)
+    linked = compile_executor._build_outputs(tmp_path, PurePosixPath("tz/main.tex"), "tz")
+
+    assert [o.ref.path for o in without] == ["tz/main.pdf"]
+    assert [o.ref.path for o in linked] == ["tz/main.pdf"]

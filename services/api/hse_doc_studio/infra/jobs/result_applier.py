@@ -42,6 +42,7 @@ logger = structlog.get_logger()
 
 SUBMISSIONS_DIR = "submissions"
 BUILD_DIR = ".build"
+SYNCTEX_SUFFIX = ".synctex.gz"
 
 
 class VolumeJobResultApplier:
@@ -71,7 +72,7 @@ class VolumeJobResultApplier:
         built = _built_target(spec)
         for ref in artifacts:
             await self._place(folder, prefix + ref.path, ref, built.get(ref.path, ref.path))
-        if any(ref.path in built for ref in artifacts):
+        if spec.kind is JobKind.compile and any(ref.path == _final_pdf(spec) for ref in artifacts):
             await self._publish_pdf(spec, folder)
 
     async def discard(self, spec: JobSpec) -> None:
@@ -162,7 +163,7 @@ class _Allowed:
 def _allowed(spec: JobSpec) -> _Allowed:
     match spec.kind:
         case JobKind.compile:
-            return _Allowed(frozenset({_final_pdf(spec)}))
+            return _Allowed(frozenset({_final_pdf(spec), _final_synctex(spec)}))
         case JobKind.office_convert:
             assert isinstance(spec.payload, OfficeConvertPayload)  # noqa: S101
             return _Allowed(frozenset({spec.payload.output_path}))
@@ -189,6 +190,12 @@ def _final_pdf(spec: JobSpec) -> str:
     return (source.parent / f"{source.stem}.pdf").as_posix()
 
 
+def _final_synctex(spec: JobSpec) -> str:
+    """SyncTeX сборки раннер выгружает рядом с PDF: по нему превью переходит к исходнику и привязывает комментарии."""
+    source = PurePosixPath(compile_payload_of(spec).source_file)
+    return (source.parent / f"{source.stem}{SYNCTEX_SUFFIX}").as_posix()
+
+
 def _built_target(spec: JobSpec) -> dict[str, str]:
     """Куда класть выход вместо его пути: PDF сборки идёт в `.build/<doc_id>/`, откуда его переносит `publish_pdf`.
 
@@ -199,5 +206,9 @@ def _built_target(spec: JobSpec) -> dict[str, str]:
         return {}
     payload = compile_payload_of(spec)
     source = PurePosixPath(payload.source_file)
-    built = (source.parent / BUILD_DIR / payload.doc_id / f"{source.stem}.pdf").as_posix()
-    return {_final_pdf(spec): built}
+    build_dir = source.parent / BUILD_DIR / payload.doc_id
+    return {
+        _final_pdf(spec): (build_dir / f"{source.stem}.pdf").as_posix(),
+        # Туда же, где его оставляет локальная сборка: `SyncTexUC` ищет его в `.build/<doc_id>/`.
+        _final_synctex(spec): (build_dir / f"{source.stem}{SYNCTEX_SUFFIX}").as_posix(),
+    }

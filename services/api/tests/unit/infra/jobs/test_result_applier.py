@@ -86,6 +86,28 @@ async def test__apply__compile_pdf__lands_in_build_dir_and_is_published(rig: Rig
     assert [p.name for p in (rig.folder / "tz/.build/tz").iterdir() if p.name.startswith(".tmp")] == []
 
 
+async def test__apply__compile_synctex__lands_next_to_the_built_pdf_and_publishes_once(rig: Rig) -> None:
+    spec = rig.spec()
+    pdf = await rig.upload(spec, FINAL, b"%PDF-1")
+    synctex = await rig.upload(spec, "tz/main.synctex.gz", b"synctex")
+
+    await rig.applier.apply(spec, [pdf, synctex])
+
+    assert (rig.folder / "tz/.build/tz/main.synctex.gz").read_bytes() == b"synctex"
+    assert not (rig.folder / "tz/main.synctex.gz").exists()
+    assert len(rig.artifacts.published) == 1
+
+
+async def test__apply__synctex_without_pdf__placed_but_nothing_published(rig: Rig) -> None:
+    spec = rig.spec()
+    synctex = await rig.upload(spec, "tz/main.synctex.gz", b"synctex")
+
+    await rig.applier.apply(spec, [synctex])
+
+    assert (rig.folder / "tz/.build/tz/main.synctex.gz").read_bytes() == b"synctex"
+    assert rig.artifacts.published == []
+
+
 async def test__apply__same_outputs_twice__second_run_leaves_files_untouched(rig: Rig) -> None:
     spec = rig.spec()
     pdf = await rig.upload(spec, FINAL, b"%PDF-1")

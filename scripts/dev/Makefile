@@ -23,7 +23,7 @@ else
 	DEV_NULL = /dev/null
 endif
 
-.PHONY: dev-help ensure-network run-services stop-all-services clean-volumes dev server-lite-up server-lite-seed server-lite-down server-lite-reset server-lite-credentials e2e-install e2e-m1 e2e-landing e2e-mobile e2e-passkeys e2e-runner-install e2e-model-servers server-lite-runner-up server-lite-runner-down e2e-signing-route server-stack-build server-stack-up server-stack-down e2e-full
+.PHONY: dev-help ensure-network run-services stop-all-services clean-volumes dev server-lite-up server-lite-seed server-lite-down server-lite-reset server-lite-credentials e2e-install e2e-m1 e2e-landing e2e-mobile e2e-passkeys e2e-runner-install e2e-model-servers server-lite-runner-up server-lite-runner-down e2e-signing-route e2e-pdf-comments server-stack-build server-stack-up server-stack-down e2e-full
 
 dev-help:
 	@echo.
@@ -44,6 +44,7 @@ dev-help:
 	@echo   make e2e-mobile        - Run the phone layout e2e (360/390 px, sheets, touch targets, no horizontal scroll) against the same stand
 	@echo   make e2e-passkeys      - Run the passkey e2e (virtual WebAuthn authenticator) against the same stand
 	@echo   make e2e-signing-route - Run the signing route e2e (starts a shared fake-TeX runner, stops it afterwards)
+	@echo   make e2e-pdf-comments  - Run the PDF preview comments e2e (same fake-TeX runner, stops it afterwards)
 	@echo   make server-stack-build - Build the image with the server extra for the full stack
 	@echo   make server-stack-up   - Full server stack (deploy/server: api, runner, Postgres, MinIO) on 127.0.0.1:17251
 	@echo   make e2e-full          - Run the full smoke e2e against that stack (wizard, builds, queue, runner loss)
@@ -215,6 +216,15 @@ e2e-signing-route: $(SERVER_LITE_ENV)
 	  E2E_BASE_URL=http://localhost:$${SERVER_LITE_PORT:-8100} \
 	  E2E_ADMIN_PASSWORD=$$SERVER_LITE_ADMIN_PASSWORD E2E_ADMIN_EMAIL=$${SERVER_LITE_ADMIN_EMAIL:-admin@example.org} \
 	  pnpm exec playwright test --project=signing-route; \
+	  status=$$?; cd .. && $(MAKE) --no-print-directory server-lite-runner-down; exit $$status
+
+# Комментарии из превью PDF: тот же раннер с поддельным TeX (печатает строки исходника и кладёт SyncTeX).
+e2e-pdf-comments: $(SERVER_LITE_ENV)
+	@$(MAKE) --no-print-directory server-lite-runner-up
+	@. $(SERVER_LITE_ENV); cd e2e && \
+	  E2E_BASE_URL=http://localhost:$${SERVER_LITE_PORT:-8100} \
+	  E2E_ADMIN_PASSWORD=$$SERVER_LITE_ADMIN_PASSWORD E2E_ADMIN_EMAIL=$${SERVER_LITE_ADMIN_EMAIL:-admin@example.org} \
+	  pnpm exec playwright test --project=pdf-comments; \
 	  status=$$?; cd .. && $(MAKE) --no-print-directory server-lite-runner-down; exit $$status
 
 # ---- Полный смоук на стенде deploy/server (api, раннер, Postgres, MinIO) ----

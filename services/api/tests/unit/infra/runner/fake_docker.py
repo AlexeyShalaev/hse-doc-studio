@@ -42,6 +42,7 @@ elif argv[:1] == ["run"] and "latexmk" in argv:
         sys.exit(12)
     base.mkdir(parents=True, exist_ok=True)
     (base / (stem + ".pdf")).write_bytes(b"%PDF-1.5 built")
+    (base / (stem + ".synctex.gz")).write_bytes(b"synctex built")
     log_text = "Output written on x.pdf (3 pages, 100 bytes).\\n"
     (base / (stem + ".log")).write_text(log_text, encoding="utf-8", newline="\\n")
     print("latexmk ok")

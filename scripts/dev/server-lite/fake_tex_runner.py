@@ -4,7 +4,8 @@
 собранного PDF (`compiled_sha256`) и без проверки открепленной подписи (задача `signature.verify_detached` идёт
 только на общий раннер). Этот процесс и есть настоящий раннер (клиент протокола, цикл, рабочие папки, проверка
 подписей gpg, выгрузка выходов), у которого заменён только исполнитель TeX: вместо контейнера TeX Live он кладёт
-рядом с исходником одностраничный PDF A4. PDF зависит только от исходников документа (каталог главного файла),
+рядом с исходником одностраничный PDF A4 (строки исходника на латинице печатаются на нём, а SyncTeX ведёт с них к
+исходнику). PDF зависит только от исходников документа (каталог главного файла),
 поэтому сборка без правок даёт тот же sha, как настоящая воспроизводимая сборка (R12), а правка исходника даёт
 другой PDF. Многогигабайтный образ TeX стенду не нужен.
 
@@ -18,9 +19,11 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
+import gzip
 import hashlib
 import logging
 import os
+import re
 import secrets
 import signal
 import uuid
@@ -41,6 +44,7 @@ from hse_doc_studio.use_cases.jobs.runners import RunnerRegistry
 from pydantic import SecretStr
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.units import mm
+from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfgen import canvas
 
 logger = logging.getLogger("fake-tex-runner")
@@ -60,7 +64,31 @@ def sources_digest(source: Path) -> str:
     return digest.hexdigest()
 
 
-def render_pdf(target: Path, doc_id: str, digest: str) -> None:
+# Строки исходника, похожие на обычный текст на латинице: поддельная сборка печатает их на странице и кладёт
+# SyncTeX, который ведёт с них к строкам исходника (e2e комментариев из превью PDF, pdf-comments.spec.ts).
+_PROSE = re.compile(r"^[A-Za-z][A-Za-z0-9 ,.;:'()-]{23,110}$")
+_PROSE_MAX = 6
+_PROSE_SIZE = 11
+_PROSE_TOP_MM = 240
+_PROSE_STEP_MM = 9
+_SP_PER_BP = 65536 * 72.27 / 72
+
+
+def prose_lines(source: Path) -> list[tuple[int, str]]:
+    """(номер строки, текст) строк исходника, которые поддельная сборка печатает как абзац."""
+    found = []
+    for number, line in enumerate(source.read_text(encoding="utf-8", errors="replace").splitlines(), start=1):
+        text = line.strip()
+        if _PROSE.match(text):
+            found.append((number, text))
+    return found[:_PROSE_MAX]
+
+
+def _prose_baseline_mm(index: int) -> float:
+    return _PROSE_TOP_MM - index * _PROSE_STEP_MM
+
+
+def render_pdf(target: Path, doc_id: str, digest: str, prose: list[tuple[int, str]] | None = None) -> None:
     """Одна страница A4 без даты и случайного /ID (`invariant`): одинаковый вход даёт одинаковые байты."""
     pdf = canvas.Canvas(str(target), pagesize=A4, invariant=1)
     pdf.setTitle(doc_id)
@@ -72,8 +100,45 @@ def render_pdf(target: Path, doc_id: str, digest: str) -> None:
     for row in range(12):
         y = (250 - row * 9) * mm
         pdf.line(25 * mm, y, 185 * mm, y)
+    pdf.setFont("Helvetica", _PROSE_SIZE)
+    for index, (_number, text) in enumerate(prose or []):
+        pdf.drawString(25 * mm, _prose_baseline_mm(index) * mm + 2.5 * mm, text)
     pdf.showPage()
     pdf.save()
+
+
+def write_synctex(target: Path, source_file: str, prose: list[tuple[int, str]]) -> None:
+    """SyncTeX как у latexmk в контейнере (`/work/<путь>`): по строке набора на запись с номером строки исходника."""
+    height_bp = float(A4[1])
+
+    def sp(bp: float) -> int:
+        return round(bp * _SP_PER_BP)
+
+    records = []
+    for index, (number, text) in enumerate(prose):
+        baseline = height_bp - (_prose_baseline_mm(index) * mm + 2.5 * mm)
+        width = pdfmetrics.stringWidth(text, "Helvetica", _PROSE_SIZE)
+        box = f"{sp(25 * mm)},{sp(baseline)}:{sp(width)},{sp(_PROSE_SIZE * 0.75)},{sp(_PROSE_SIZE * 0.25)}"
+        records += [f"(1,{number}:{box}", f"h1,{number}:{box}", ")"]
+    body = "\n".join(
+        [
+            "SyncTeX Version:1",
+            f"Input:1:/work/{source_file}",
+            "Output:pdf",
+            "Magnification:1000",
+            "Unit:1",
+            "X Offset:0",
+            "Y Offset:0",
+            "Content:",
+            "{1",
+            *records,
+            "}1",
+            "Postamble:",
+            "",
+        ]
+    )
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.write_bytes(gzip.compress(body.encode(), mtime=0))
 
 
 class FakeTexExecutor:
@@ -95,7 +160,10 @@ class FakeTexExecutor:
 
         async def lines() -> AsyncGenerator[str, None]:
             digest = await asyncio.to_thread(sources_digest, source)
-            await asyncio.to_thread(render_pdf, source.with_suffix(".pdf"), doc_id, digest)
+            prose = await asyncio.to_thread(prose_lines, source)
+            await asyncio.to_thread(render_pdf, source.with_suffix(".pdf"), doc_id, digest, prose)
+            synctex = source.parent / ".build" / doc_id / f"{source.stem}.synctex.gz"
+            await asyncio.to_thread(write_synctex, synctex, source_file, prose)
             yield f"fake-tex: {source_file} ({engine}) -> {source.with_suffix('.pdf').name}, sources {digest[:12]}"
             yield f"{SENTINEL_PAGES}1"
             yield SENTINEL_DONE

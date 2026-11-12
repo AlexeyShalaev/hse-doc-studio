@@ -1,6 +1,6 @@
 ---
 title: 'Collaboration and review'
-description: 'How to open a project on a Studio server to co-authors and your supervisor: roles, invitations, links, comments on the text and the Inbox.'
+description: 'How to open a project on a Studio server to co-authors and your supervisor: roles, invitations, links, comments on the text and on the PDF, the Inbox.'
 sidebar:
   order: 6
 access: user
@@ -9,7 +9,8 @@ help:
     - '/projects/:projectId/project-settings/people'
     - '/inbox'
     - '/projects/:projectId/documents/:docId?tab=source'
-  summary: 'The owner adds people to the project as Reader, Reviewer or Editor, or creates a link. A reviewer leaves comments on pieces of text; replies and invitations arrive in the Inbox.'
+    - '/projects/:projectId/documents/:docId'
+  summary: 'The owner adds people to the project as Reader, Reviewer or Editor, or creates a link. A reviewer leaves comments on pieces of text in the editor or right in the PDF preview; replies and invitations arrive in the Inbox.'
   steps:
     - text: 'In the project open **Settings** on the left rail and pick the **People** group: the **Access** card is there.'
       hint: 'The card exists only for projects on a Studio server. Only the project owner can change access.'
@@ -24,6 +25,10 @@ help:
     - text: 'To comment on the text, open the document on the **Editor** tab, select a piece of text and click **Comment** on the editor toolbar. Write your note and click **Send**.'
       hint: 'Type @ to mention a member: they get a notification in the Inbox.'
       shot: runbooks/review-collaboration/step-05
+    - text: 'If you read the PDF rather than the source, comment right in the **Preview**: select some text and click **Comment** on the bar above the selection. Write your note and click **Send**.'
+      hint: 'The Studio finds that place in the source itself, so the comment shows up in the editor too. If it is not found (title page, frame, an uploaded PDF), the comment is attached to the spot in the PDF. On a phone select text with a long press: the bar appears at the bottom of the screen.'
+    - text: 'Comments on the document are marked with icons in the page margin. Click an icon or the **Comments** button on the preview toolbar to open the list.'
+      hint: 'A comment on the source has an **Open in source** button. If the PDF was rebuilt and the spot is gone, the comment says “The spot changed: the PDF was rebuilt”.'
     - text: 'Open the **Comments** panel to **Reply** or close a thread with **Resolve**.'
       hint: 'The **Open** / **All** switch also shows resolved threads. A resolved thread can be reopened.'
 verified:
@@ -34,6 +39,8 @@ verified:
     - services/web-app/src/features/project-invitations
     - services/web-app/src/features/share-links
     - services/web-app/src/features/source-edit/review
+    - services/web-app/src/features/pdf-review
+    - services/web-app/src/entities/review
     - services/web-app/src/features/inbox
     - services/web-app/src/pages/InboxPage
 ---
@@ -42,7 +49,7 @@ import Steps from '~/components/Steps.astro'
 
 On a Studio server a project is visible only to the people it was opened to. The owner decides who
 works with the documents and in which role: a co-author edits, a supervisor reads and leaves notes
-right on pieces of the text. Invitations, access requests and replies to comments are collected
+right on pieces of the text, in the editor or in the PDF preview. Invitations, access requests and replies to comments are collected
 in the **Inbox**.
 
 <Steps />
@@ -56,3 +63,9 @@ in the **Inbox**.
   **Resend** button.
 - **“The fragment was already changed: select it again”**: the text changed while you were writing.
   Select the place once more.
+- **“Build the document first”**: you can comment on the preview once the document has a built PDF.
+- **“Comment attached to the spot in the PDF”**: the selected text is not in the source (title page, frame,
+  an uploaded PDF) or the document was built without SyncTeX. The comment is visible in the preview and in the
+  list, but not in the editor.
+- **“The spot changed: the PDF was rebuilt”**: after edits the fragment of a PDF comment is no longer found. The
+  comment stays in the list, you can reply and resolve it as usual.
