@@ -14,8 +14,13 @@ from hse_doc_studio.core.enums import (
 from hse_doc_studio.core.signatures.plan import (
     AUTHOR_PERSONA,
     DocFacts,
+    DocPlan,
     PlanReason,
+    PlanSlot,
+    SignaturePlan,
+    SignerRef,
     SignMethod,
+    SlotState,
     SlotStatus,
     VisibleMark,
     author_personas,
@@ -34,6 +39,7 @@ from hse_doc_studio.core.value_objects import (
     SignaturePlacement,
     SignatureSlot,
     SignaturesState,
+    SkippedSlot,
 )
 
 from tests.factories import make_project
@@ -371,3 +377,59 @@ def test__slot_mode_conflict__one_checkpoint_accepts__allowed() -> None:
 
     assert slot_mode_conflict(SignMode.image_crypto, "pkcs12", restrictions) is None
     assert slot_mode_conflict(SignMode.detached_text, "openpgp", [("Заявка", ("image", "detached"))]) is None
+
+
+_SKIP = SkippedSlot(profile_id="topic-approval", route_id="r1", round=1, at="2026-11-13T10:00:00+00:00")
+
+
+def test__slot_state__skipped_on_the_point__skipped_before_any_other_check() -> None:
+    # Пропущенный слот ничего не ждёт: ни размещения, ни файла подписи (signing-route.md, 13.3).
+    state = _state(SignMode.detached, frozen={_DOC: _frozen()}, skipped={_DOC: {"supervisor": _SKIP}})
+
+    on_point = slot_state(state, _DOC, "supervisor", _FACTS, profile_id="topic-approval")
+    anywhere = slot_state(state, _DOC, "supervisor", _FACTS)
+    other_point = slot_state(state, _DOC, "supervisor", _FACTS, profile_id="defence")
+
+    assert (on_point.status, on_point.reason, on_point.method) == (SlotStatus.skipped, None, SignMethod.detached)
+    assert anywhere.status is SlotStatus.skipped
+    assert (other_point.status, other_point.reason) == (SlotStatus.pending, PlanReason.no_signature_file)
+
+
+def _plan_slot(slot_id: str, status: SlotStatus, *, optional: bool = False, crypto: bool = False) -> PlanSlot:
+    method = SignMethod.detached if crypto else SignMethod.image
+    return PlanSlot(
+        doc_id=_DOC,
+        slot_id=slot_id,
+        label={"ru": slot_id},
+        signer=SignerRef(slot_id),
+        mode=SignMode.detached if crypto else SignMode.image,
+        state=SlotState(method, VisibleMark.png, status),
+        optional=optional,
+        skipped=_SKIP if status is SlotStatus.skipped else None,
+        is_mine=True,
+    )
+
+
+def test__signature_plan__counter_leaves_out_skipped_and_optional_unsigned() -> None:
+    plan = SignaturePlan(
+        docs=(
+            DocPlan(
+                doc_id=_DOC,
+                built=True,
+                frozen=None,
+                frozen_outdated=None,
+                slots=(
+                    _plan_slot("author", SlotStatus.signed),
+                    _plan_slot("supervisor", SlotStatus.pending),
+                    _plan_slot("co_supervisor", SlotStatus.signed, optional=True),
+                    _plan_slot("academic_supervisor", SlotStatus.pending, optional=True),
+                    _plan_slot("reviewer", SlotStatus.skipped, optional=True, crypto=True),
+                ),
+            ),
+        )
+    )
+
+    assert (plan.signed, plan.total, plan.optional_pending) == (2, 3, 1)
+    assert plan.waiting_for_me == 2
+    # Пропущенная ЭП не делает документ документом с ЭП (13.3, инвариант 6).
+    assert not plan.docs[0].has_crypto

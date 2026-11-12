@@ -320,7 +320,7 @@ class SignSubmissionUC:
         identity: SigningIdentity | None,
         signer: SignerInfo | None,
     ) -> DocPreview | None:
-        mine = [s for s in doc.slots if s.is_mine and s.status is not SlotStatus.signed]
+        mine = [s for s in doc.slots if s.is_mine and s.status not in (SlotStatus.signed, SlotStatus.skipped)]
         if not mine:
             return None
         hold = await self._routes.hold(project.id, doc.doc_id)

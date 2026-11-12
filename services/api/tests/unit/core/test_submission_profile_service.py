@@ -31,6 +31,7 @@ from hse_doc_studio.core.value_objects import (
     SignaturePlacement,
     SignatureSlot,
     SignaturesState,
+    SkippedSlot,
 )
 from pytest_lazy_fixtures import lf
 
@@ -246,3 +247,52 @@ def test__build_item_list__manual_freeze_before_route__not_signed_with_route_hin
     assert (error.code, error.doc_id) == (PackErrorCode.slot_not_signed, "tz")
     # Подсказка говорит про фиксацию маршрутом, а не «зафиксируйте заново».
     assert error.params["hint"] == "Ждёт фиксации новой версии"
+
+
+def test__build_item_list__skipped_and_optional_unsigned__do_not_block(svc: SubmissionProfileService) -> None:
+    """Пропущенная на точке и необязательная неподписанная подписи готовности не блокируют (signing-route.md, 13.11)."""
+    profile = SubmissionProfile(
+        id="topic-approval",
+        name={"ru": "Заявка"},
+        description={"ru": ""},
+        items=(SubmissionDocItem(doc_id="tz", signatures=("supervisor", "academic_supervisor", "co_supervisor")),),
+        extra_items=(),
+    )
+    project = make_project(documents=[make_document("tz")])
+    sig_state = SignaturesState(
+        slots={"supervisor": SignatureSlot(png_path="sig.png", natural_width_px=None, natural_height_px=None)},
+        placements={
+            "tz": {"supervisor": SignaturePlacement(enabled=True, page=1, x_mm=10.0, y_mm=20.0, width_mm=50.0)}
+        },
+        skipped={
+            "tz": {"academic_supervisor": SkippedSlot(profile_id="topic-approval", route_id="r", round=1, at="t")}
+        },
+        optional={"tz": {"topic-approval": frozenset({"co_supervisor"})}},
+    )
+
+    [item] = svc.build_item_list(profile, project, _make_version((profile,)), sig_state)
+
+    assert (item.signatures, item.optional_unsigned) == (("supervisor",), ("co_supervisor",))
+
+
+def test__build_item_list__skipped_or_optional_on_another_point__still_blocks(svc: SubmissionProfileService) -> None:
+    profile = SubmissionProfile(
+        id="topic-approval",
+        name={"ru": "Заявка"},
+        description={"ru": ""},
+        items=(SubmissionDocItem(doc_id="tz", signatures=("academic_supervisor",)),),
+        extra_items=(),
+    )
+    project = make_project(documents=[make_document("tz")])
+    skipped = SignaturesState(
+        slots={},
+        placements={},
+        skipped={"tz": {"academic_supervisor": SkippedSlot(profile_id="defence", route_id="r", round=1, at="t")}},
+    )
+    optional = SignaturesState(
+        slots={}, placements={}, optional={"tz": {"defence": frozenset({"academic_supervisor"})}}
+    )
+
+    for state in (skipped, optional):
+        with pytest.raises(ValueError, match="academic_supervisor"):
+            svc.build_item_list(profile, project, _make_version((profile,)), state)

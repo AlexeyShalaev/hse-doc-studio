@@ -176,6 +176,20 @@ class SigningDoc:
 
 
 @dataclass(frozen=True)
+class HeldRoute:
+    """Маршрут, который держит документы проекта (`HOLDING_STATUSES`), по хранимому состоянию (signing-route.md, 13.3).
+
+    Для отметки «Подпись необязательна»: какой точки маршрут, какие документы держит и какие пары включил, в том
+    числе слоты сверх точки (`extra_slots`).
+    """
+
+    route_id: UUID
+    profile_id: str
+    docs: frozenset[str]
+    pairs: frozenset[DocSlot]
+
+
+@dataclass(frozen=True)
 class PlanRoute:
     """Маршрут в ответе плана подписей (раздел 6.1): состояние по расчёту на текущих фактах, а не из хранилища.
 
@@ -285,6 +299,12 @@ class ISigningRouteGate(Protocol):
         проект по ссылке, маршрут не раскрывается (раздел 7): ответ пустой."""
         ...
 
+    async def held_routes(self, project_id: UUID) -> tuple[HeldRoute, ...]:
+        """Маршруты проекта, которые держат документы (`HOLDING_STATUSES`), по хранимому состоянию, без расчёта
+        (раздел 13.3). Только читает: под `project_lock` вызывать можно. Гостю и тому, кто открыл проект по ссылке,
+        маршрут не раскрывается: ответ пустой."""
+        ...
+
 
 class NoSigningRoutes:
     """`ISigningRouteGate` там, где маршрутов нет (локальная Студия): подписи правятся и ставятся как обычно."""
@@ -316,6 +336,9 @@ class NoSigningRoutes:
         self, project_id: UUID, *, profile_id: str | None = None, doc_id: str | None = None
     ) -> PlanRoutes:
         return PlanRoutes()
+
+    async def held_routes(self, project_id: UUID) -> tuple[HeldRoute, ...]:
+        return ()
 
 
 class IRouteWatch(Protocol):

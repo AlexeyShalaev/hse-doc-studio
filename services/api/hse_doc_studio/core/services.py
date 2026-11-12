@@ -566,6 +566,11 @@ class RuntimeSlot:
     owner: str | None
     label: dict[str, str]
 
+    @property
+    def required(self) -> bool:
+        """Пак запрещает отмечать подпись необязательной (signing-route.md, 13.3); командный слот берёт базовый."""
+        return self.slot_def.required
+
 
 def _pick_label(labels: dict[str, str], fallback: str) -> str:
     """Подпись на языке интерфейса, иначе русская, иначе запасная."""
@@ -781,8 +786,16 @@ class SubmissionProfileService:
             instances = self._resolve_profile_instances(item.doc_id, project, version, author_slug=author_slug)
             for doc in instances:
                 runtime_ids = self._expand_item_slots(item.signatures, slot_defs, project, doc, team=team)
-                validated = self._validated_signatures(doc, runtime_ids, sig_state, item, version=version)
-                result.append(SubmissionDocItem(doc_id=doc.id, signatures=tuple(validated)))
+                validated, optional = self._validated_signatures(
+                    doc, runtime_ids, sig_state, item, profile_id=profile.id, version=version
+                )
+                result.append(
+                    SubmissionDocItem(
+                        doc_id=doc.id,
+                        signatures=tuple(validated),
+                        optional_unsigned=tuple(optional),
+                    )
+                )
 
         return result
 
@@ -855,8 +868,9 @@ class SubmissionProfileService:
         sig_state: SignaturesState,
         item: SubmissionDocItem | None = None,
         *,
+        profile_id: str | None = None,
         version: TemplateVersion | None = None,
-    ) -> list[str]:
+    ) -> tuple[list[str], list[str]]:
         """Каждый слот пункта подписан по плану подписей (docs/design/signature-plan.md, раздел 3.4).
 
         Здесь нет файлов проекта, поэтому видимый слой считается текущим: его и байты источника сверяет
@@ -865,6 +879,10 @@ class SubmissionProfileService:
         выдает подписи над ней за готовые. Проверяется остальное: способ разрешён точкой, размещение и картинка
         на месте, криптоподпись есть, относится к зафиксированному PDF, сходится и проверяема. Отказ
         `PackError` с кодом `pack_slot_not_signed` и именами документа и подписи.
+
+        Ответ: подписанные слоты и необязательные на точке `profile_id` неподписанные (signing-route.md, 13.11).
+        Необязательные и пропущенные маршрутом на этой точке готовности не блокируют; пропущенные пакет берёт из
+        `SignaturesState.skipped` сам: там и слоты, которые маршрут включил сверх точки.
         """
         frozen = sig_state.frozen.get(doc.id)
         pinned = sig_state.pinned.get(doc.id)
@@ -874,9 +892,16 @@ class SubmissionProfileService:
             marks_digest=frozen.stamps_digest if frozen is not None else "",
         )
         validated: list[str] = []
+        optional: list[str] = []
         for slot_id in runtime_ids:
             allowed = item.allowed_methods(slot_id) if item is not None else ()
-            state = slot_state(sig_state, doc.id, slot_id, facts, allowed=allowed)
+            state = slot_state(sig_state, doc.id, slot_id, facts, allowed=allowed, profile_id=profile_id)
+            if state.status is SlotStatus.skipped:
+                continue
+            optional_here = profile_id is not None and sig_state.is_optional(doc.id, profile_id, slot_id)
+            if state.status is not SlotStatus.signed and optional_here:
+                optional.append(slot_id)
+                continue
             if state.status is not SlotStatus.signed:
                 raise pack_errors.slot_not_signed(
                     doc.id,
@@ -885,7 +910,7 @@ class SubmissionProfileService:
                     reason_hint(state.reason, pinned=pinned is not None),
                 )
             validated.append(slot_id)
-        return validated
+        return validated, optional
 
     # Развёртка per-author слотов вынесена в модульную expand_slot_ids_for_doc:
     # ею пользуется и вывод обязательности подписи (SignatureSlotService).

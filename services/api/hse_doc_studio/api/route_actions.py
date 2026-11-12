@@ -118,6 +118,8 @@ ROUTE_ACTIONS: Mapping[RouteKey, RouteRule] = {
     ("PATCH", "/projects/{project_id}/signatures/placements/{doc_id}/{slot_id}"): RouteRule(
         Action.FILES_WRITE, path_param="slot_id"
     ),
+    # «Подпись необязательна» ставит тот, кто отправляет маршрут (signing-route.md, 13.4).
+    ("PUT", "/projects/{project_id}/signatures/optional/{doc_id}/{slot_id}"): RouteRule(Action.SUBMISSION_CREATE),
     # «Показать» картинку, придержанную маршрутом подписания: правка размещения, как и включение места.
     ("DELETE", "/projects/{project_id}/signatures/withheld/{doc_id}/{slot_id}"): RouteRule(
         Action.FILES_WRITE, path_param="slot_id"

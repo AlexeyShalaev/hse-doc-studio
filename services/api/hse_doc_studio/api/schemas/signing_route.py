@@ -27,7 +27,8 @@ ParticipantStateName = Literal["invited", "waiting", "to_approve", "to_approve_s
 SigningNextActionName = Literal["wait", "approve", "approve_and_sign", "sign", "done"]
 ParticipantMembershipName = Literal["member", "invited", "missing"]
 RouteSignMethodName = Literal["image", "detached", "pades"]
-RouteSlotStatusName = Literal["pending", "signed", "invalid", "stale"]
+# `skipped`: подпись пропущена маршрутом (signing-route.md, 13.3); статус слота плана подписей.
+RouteSlotStatusName = Literal["pending", "signed", "invalid", "stale", "skipped"]
 RouteVisibleMarkName = Literal["png", "plate", "none"]
 SigningPlateKindName = Literal["x509", "openpgp", "manual"]
 RouteEventKindName = Literal[

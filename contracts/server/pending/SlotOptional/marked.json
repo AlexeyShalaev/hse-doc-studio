@@ -1,0 +1,8 @@
+{
+  "doc_id": "topic_application",
+  "slot_id": "academic_supervisor",
+  "profile_id": "topic-approval",
+  "optional": true,
+  "skipped": false,
+  "returns_next_round": false
+}

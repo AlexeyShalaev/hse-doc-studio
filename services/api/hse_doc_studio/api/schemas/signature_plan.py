@@ -35,6 +35,13 @@ class PlanSignerResponse(BaseModel):
     name: str
 
 
+class PlanSkippedResponse(BaseModel):
+    """Пропуск подписи маршрутом (signing-route.md, 13.3): когда и каким маршрутом."""
+
+    at: str
+    route_id: str
+
+
 class PlanSlotResponse(BaseModel):
     slot_id: str
     label: dict[str, str]
@@ -53,6 +60,9 @@ class PlanSlotResponse(BaseModel):
     check: SlotCheckResponse | None = None
     # Состояние участника маршрута подписания, которому принадлежит слот (signing-route.md, 6.1); без маршрута null.
     route_state: ParticipantState | None = None
+    # Подпись необязательна на точке (13.3); пропуск маршрутом, иначе null (тогда и статус `skipped`).
+    optional: bool = False
+    skipped: PlanSkippedResponse | None = None
 
 
 class PlanFrozenResponse(BaseModel):
@@ -111,6 +121,8 @@ class SignaturePlanResponse(BaseModel):
     crypto_total: int
     crypto_signed: int
     waiting_for_me: int
+    # Необязательные подписи, которые не поставлены и не пропущены (signing-route.md, 13.3): в `total` их нет.
+    optional_pending: int = 0
     docs: list[DocPlanResponse]
     # Маршрут, который держит документы точки (`profile_id`) или документ (`doc_id`); иначе и без маршрутов null.
     route: PlanRouteResponse | None = None
@@ -157,6 +169,8 @@ def _map_slot(slot: PlanSlot, routes: PlanRoutes) -> PlanSlotResponse:
         if check is not None
         else None,
         route_state=routes.slot_states.get(DocSlot(slot.doc_id, slot.slot_id)),
+        optional=slot.optional,
+        skipped=PlanSkippedResponse(at=skip.at, route_id=skip.route_id) if (skip := slot.skipped) is not None else None,
     )
 
 
@@ -187,19 +201,23 @@ def _map_doc(doc: DocPlan, routes: PlanRoutes) -> DocPlanResponse:
 
 def map_plan(plan: SignaturePlan, routes: PlanRoutes | None = None) -> SignaturePlanResponse:
     routes = routes or PlanRoutes()
-    crypto = [s for s in plan.slots if s.state.crypto]
+    # Счётчик ЭП по тем же правилам, что общий (13.3): без пропущенных и необязательных неподписанных.
+    crypto = [s for s in plan.slots if s.state.crypto and s.counted]
     return SignaturePlanResponse(
         profile_id=plan.profile_id,
         total=plan.total,
         signed=plan.signed,
         crypto_total=len(crypto),
         crypto_signed=sum(1 for s in crypto if s.status is SlotStatus.signed),
+        optional_pending=plan.optional_pending,
         # Слот документа идущего маршрута ждёт человека, только когда маршрут ждёт его самого: иначе счётчик
         # звал бы подписать то, что сейчас подписать нельзя.
         waiting_for_me=sum(
             1
             for s in plan.slots
-            if s.is_mine and s.status is not SlotStatus.signed and routes.is_turn(s.doc_id, s.slot_id)
+            if s.is_mine
+            and s.status not in (SlotStatus.signed, SlotStatus.skipped)
+            and routes.is_turn(s.doc_id, s.slot_id)
         ),
         docs=[_map_doc(d, routes) for d in plan.docs],
         route=_map_route(routes.route) if routes.route is not None else None,

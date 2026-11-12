@@ -224,7 +224,9 @@ def stamps_for_doc(
     prints the picture. Slots with neither are skipped, and so are slots withheld by
     a signing route (`state.withheld`): the mark waits for the signer's approval and
     is left out of the preview, the signed copy, the signer pack, the freeze and the
-    visible-layer fingerprint. `png_exists` replaces the disk check (the planner
+    visible-layer fingerprint. A slot the route skipped (`state.skipped`, signing-route.md,
+    13.3) is left out the same way, unless its mark stays in a frozen PDF that already
+    carries e-signatures (`keep_mark`). `png_exists` replaces the disk check (the planner
     looks at the project through its own probe).
     """
     exists = png_exists or Path.exists
@@ -232,7 +234,7 @@ def stamps_for_doc(
     result: list[Stamp] = []
     for slot_id, placement in state.placements.get(doc_id, {}).items():
         skipped = not placement.enabled or (wanted is not None and slot_id not in wanted)
-        if skipped or state.is_withheld(doc_id, slot_id):
+        if skipped or state.mark_hidden(doc_id, slot_id):
             continue
         slot = state.slots.get(slot_id)
         if slot is not None and slot.sign_mode is SignMode.detached_text:
@@ -288,7 +290,7 @@ def slots_with_missing_png(state: SignaturesState, doc_id: str, folder: Path) ->
         slot = state.slots.get(slot_id)
         if not placement.enabled or slot is None or slot.sign_mode is SignMode.detached_text:
             continue
-        if state.is_withheld(doc_id, slot_id):
+        if state.mark_hidden(doc_id, slot_id):
             continue
         if slot.png_path is not None and not (folder / slot.png_path).exists():
             missing.append(slot_id)

@@ -1,10 +1,11 @@
 from __future__ import annotations
 
 import io
+from dataclasses import replace
 from pathlib import Path
 
 from hse_doc_studio.core.enums import SignMode
-from hse_doc_studio.core.value_objects import SignaturePlacement, SignatureSlot, SignaturesState
+from hse_doc_studio.core.value_objects import SignaturePlacement, SignatureSlot, SignaturesState, SkippedSlot
 from hse_doc_studio.infra.signatures.pdf_stamper import PdfStamper, text_mark_height_mm
 from hse_doc_studio.infra.signatures.stamp_builder import detached_caption, stamps_for_doc
 from pypdf import PdfReader
@@ -158,3 +159,17 @@ def test_visible_layer_fingerprint_is_counted_without_withheld_marks(tmp_path: P
 
     assert digest(held) == digest(plate_only)
     assert digest(held) != digest(released)
+
+
+def test_skipped_slot_is_left_out_unless_its_mark_stays_in_the_frozen_pdf(tmp_path: Path) -> None:
+    """Пропущенная метка не рисуется нигде, кроме `keep_mark` (signing-route.md, 13.3)."""
+    state = _picture_and_plate(tmp_path, {})
+    skip = SkippedSlot(profile_id="p", route_id="r", round=1, at="t")
+
+    [picture] = stamps_for_doc(replace(state, skipped={"doc": {"sup": skip}}), "doc", tmp_path, "ru")
+    kept = stamps_for_doc(
+        replace(state, skipped={"doc": {"sup": replace(skip, keep_mark=True)}}), "doc", tmp_path, "ru"
+    )
+
+    assert picture.png_path == tmp_path / "author.png"
+    assert [s.slot_id for s in kept] == ["author", "sup"]
