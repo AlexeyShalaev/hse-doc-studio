@@ -323,7 +323,8 @@ for (const lang of LANGS) {
       test("строка вкладок документа не шире экрана, выбранная вкладка видна", async ({ page }) => {
         await loginOnPhone(page, USERS.anna.email);
         const { projectId } = await openProjectApi(page);
-        const row = page.locator(".document-workspace-header + .tabs");
+        // Между шапкой документа и строкой вкладок могут стоять плашки (сборка недоступна без раннера).
+        const row = page.locator(".workbench-canvas .tabs").filter({ has: page.locator(".tabs-scroll") });
         const scroller = row.locator(".tabs-scroll");
         const more = row.getByRole("button", { name: /Ещё действия|More actions/ });
         const within = async (
