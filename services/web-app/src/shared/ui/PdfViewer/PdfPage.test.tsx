@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import type * as pdfjsLib from "pdfjs-dist";
 import { describe, expect, it, vi } from "vitest";
 
@@ -53,5 +53,48 @@ describe("PdfPage: метки", () => {
     expect(frame.querySelector("img")).toBeNull();
     // Обычная метка рисуется картинкой, как раньше.
     expect(screen.getByAltText("Студент")).toHaveAttribute("src", "sig.png");
+  });
+});
+
+describe("PdfPage: метки комментариев", () => {
+  it("значок на поле страницы открывает тред, у выбранного подсвечен фрагмент", () => {
+    const onMarkClick = vi.fn();
+    render(
+      <PdfPage
+        pdf={fakePdf}
+        dim={{ num: 1, widthPt: 595, heightPt: 842 }}
+        scale={2}
+        searchQuery=""
+        marks={[
+          {
+            id: "rvt_1",
+            rects: [{ x: 72, y: 120, width: 200, height: 12 }],
+            active: true,
+            resolved: false,
+            title: "Комментарий: Рита",
+          },
+          {
+            id: "rvt_2",
+            rects: [{ x: 72, y: 124, width: 50, height: 12 }],
+            active: false,
+            resolved: false,
+            title: "Комментарий: Борис",
+          },
+        ]}
+        onMarkClick={onMarkClick}
+      />,
+    );
+
+    const first = screen.getByTestId("pdf-review-mark-rvt_1");
+    const second = screen.getByTestId("pdf-review-mark-rvt_2");
+    // Значки рядом по высоте не накладываются: второй сдвинут влево.
+    expect(parseFloat(second.style.left)).toBeLessThan(
+      parseFloat(first.style.left),
+    );
+    const hl = screen.getByTestId("pdf-review-hl-active");
+    expect(parseFloat(hl.style.top)).toBe(240);
+    expect(parseFloat(hl.style.width)).toBe(400);
+    fireEvent.click(second);
+    expect(onMarkClick).toHaveBeenCalledWith("rvt_2");
   });
 });

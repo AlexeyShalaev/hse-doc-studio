@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useDebouncedValue } from "@shared/lib";
-import { useMentionCandidates, type MentionCandidate } from "@entities/review";
+import { useMentionCandidates } from "../api/reviewQueries";
+import type { MentionCandidate } from "../model/review.schema";
 import {
   insertMention,
   mentionQueryAt,

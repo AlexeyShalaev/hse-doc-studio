@@ -291,6 +291,9 @@
   box-shadow: 0 6px 20px rgba(0, 0, 0, 0.35);
   white-space: nowrap;
 }
+.pdf-sel-bar.pdf-sel-bar-below {
+  transform: translate(-50%, 0.5rem);
+}
 .pdf-sel-bar button {
   display: inline-flex;
   align-items: center;
@@ -373,4 +376,63 @@
 
 .pdf-scroll > * {
   margin-inline: auto;
+}
+
+/* Метки комментариев превью: подсветка фрагмента над картинкой страницы, но под
+   текстовым слоем (выделение работает), и значок на правом поле страницы. */
+.pdf-review-hl {
+  position: absolute;
+  z-index: 1;
+  pointer-events: none;
+  border-radius: 0.125rem;
+  background: color-mix(in oklch, var(--c-warn) 22%, transparent);
+  mix-blend-mode: multiply;
+}
+.pdf-review-hl-active {
+  background: color-mix(in oklch, var(--c-warn) 48%, transparent);
+  box-shadow: 0 0 0 1px var(--c-warn);
+}
+.pdf-review-badge {
+  position: absolute;
+  z-index: 8;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border-radius: 0.375rem 0.375rem 0.375rem 0.125rem;
+  border: 1px solid color-mix(in oklch, var(--c-warn) 70%, #000);
+  background: var(--c-warn);
+  color: #1b1b1b;
+  cursor: pointer;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
+}
+.pdf-review-badge[data-resolved="true"] {
+  opacity: 0.55;
+}
+.pdf-review-badge[data-active="true"] {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+@media (pointer: coarse) {
+  .pdf-review-badge {
+    width: 28px;
+    height: 28px;
+  }
+}
+/* На таче панель выделения прижата к низу просмотра: системное меню выделения
+   встаёт над текстом, а длинная панель не уходит за край узкого экрана. */
+.pdf-sel-bar.pdf-sel-bar-docked {
+  top: auto;
+  bottom: 0.75rem;
+  left: 0.5rem;
+  right: 0.5rem;
+  transform: none;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+.pdf-sel-bar.pdf-sel-bar-docked button {
+  padding: 0.5rem 0.625rem;
+  font-size: 0.78125rem;
 }

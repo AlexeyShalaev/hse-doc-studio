@@ -13,6 +13,9 @@ export const reviewKeys = {
     [...reviewKeys.all, "threads", projectId, path] as const,
   project: (projectId: string) =>
     [...reviewKeys.all, "threads", projectId] as const,
+  // Под ключом проекта: любая правка тредов обновляет и превью.
+  document: (projectId: string, docId: string) =>
+    [...reviewKeys.all, "threads", projectId, "document", docId] as const,
   mentions: (projectId: string, q: string) =>
     [...reviewKeys.all, "mentions", projectId, q] as const,
 };
@@ -34,6 +37,19 @@ export const useReviewThreads = (
     enabled: options.enabled ?? true,
     // В сессии совместной правки обновление приходит событием сервера.
     refetchInterval: options.live ? false : REVIEW_POLL_MS,
+    retry: false,
+  });
+
+export const useDocumentReview = (
+  projectId: string,
+  docId: string,
+  options: { enabled?: boolean } = {},
+) =>
+  useQuery({
+    queryKey: reviewKeys.document(projectId, docId),
+    queryFn: ({ signal }) => reviewApi.documentReview(projectId, docId, signal),
+    enabled: options.enabled ?? true,
+    refetchInterval: REVIEW_POLL_MS,
     retry: false,
   });
 

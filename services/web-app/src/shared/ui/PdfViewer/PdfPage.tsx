@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import * as pdfjsLib from "pdfjs-dist";
+import { MessageSquare } from "lucide-react";
+import type { PdfRectPt } from "./pdfText";
 
 export type PageDim = { num: number; widthPt: number; heightPt: number };
 
@@ -29,6 +31,18 @@ export type PdfStamp = {
    */
   highlight?: boolean;
 };
+
+/** Метка комментария, уже поставленная на страницу: прямоугольники в пунктах PDF. */
+export type PlacedPdfMark = {
+  id: string;
+  rects: PdfRectPt[];
+  active: boolean;
+  resolved: boolean;
+  title: string;
+};
+
+// Значки меток на поле страницы: шаг, с которым соседние по высоте значки расходятся влево.
+const BADGE_SIZE = 22;
 
 /** Page margins (mm) for the GOST text-area guide box. */
 export type PageMargins = {
@@ -140,6 +154,9 @@ type PdfPageProps = {
   /** Ctrl/Cmd+click on the page → (page, x, y in PDF points from top-left). */
   onInverseClick?:
     ((page: number, xPt: number, yPt: number) => void) | undefined;
+  /** Метки комментариев этой страницы: значок на поле и подсветка фрагмента. */
+  marks?: PlacedPdfMark[] | undefined;
+  onMarkClick?: ((id: string) => void) | undefined;
   /** Transient highlight (SyncTeX forward jump), in PDF points from top-left. */
   flash?:
     | {
@@ -180,6 +197,8 @@ export const PdfPage = ({
   measureMode,
   onLinkClick,
   onInverseClick,
+  marks,
+  onMarkClick,
   flash,
 }: PdfPageProps) => {
   const { t } = useTranslation("pdfViewer");
@@ -354,6 +373,15 @@ export const PdfPage = ({
         />
       )}
 
+      {marks && marks.length > 0 && (
+        <MarksLayer
+          marks={marks}
+          scale={scale}
+          pageWidth={dim.widthPt * scale}
+          onMarkClick={onMarkClick}
+        />
+      )}
+
       {marginGuideMm && (
         <div
           className="pdf-margin-guide"
@@ -458,6 +486,80 @@ export const PdfPage = ({
 
       {measureMode && <MeasureOverlay pxPerMm={pxPerMm} />}
     </div>
+  );
+};
+
+/**
+ * Метки комментариев: подсветка фрагментов под текстовым слоем (выделять текст она
+ * не мешает) и значки на правом поле. Значки с близкой высотой расходятся влево.
+ */
+const MarksLayer = ({
+  marks,
+  scale,
+  pageWidth,
+  onMarkClick,
+}: {
+  marks: PlacedPdfMark[];
+  scale: number;
+  pageWidth: number;
+  onMarkClick?: ((id: string) => void) | undefined;
+}) => {
+  const badges = marks
+    .map((m) => ({ mark: m, top: (m.rects[0]?.y ?? 0) * scale }))
+    .sort((a, b) => a.top - b.top);
+  let stack = 0;
+  let lastTop = Number.NEGATIVE_INFINITY;
+  const placed = badges.map((b) => {
+    stack = b.top - lastTop < BADGE_SIZE ? stack + 1 : 0;
+    if (stack === 0) lastTop = b.top;
+    return { ...b, shift: stack * (BADGE_SIZE + 2) };
+  });
+  return (
+    <>
+      {marks
+        .filter((m) => m.active || !m.resolved)
+        .flatMap((m) =>
+          m.rects.map((r, i) => (
+            <div
+              key={`${m.id}#${String(i)}`}
+              className={
+                m.active
+                  ? "pdf-review-hl pdf-review-hl-active"
+                  : "pdf-review-hl"
+              }
+              data-testid={m.active ? "pdf-review-hl-active" : undefined}
+              style={{
+                left: r.x * scale,
+                top: r.y * scale,
+                width: Math.max(r.width * scale, 4),
+                height: Math.max(r.height * scale, 8),
+              }}
+            />
+          )),
+        )}
+      {placed.map(({ mark, top, shift }) => (
+        <button
+          key={mark.id}
+          type="button"
+          className="pdf-review-badge"
+          data-active={mark.active}
+          data-resolved={mark.resolved}
+          data-testid={`pdf-review-mark-${mark.id}`}
+          aria-label={mark.title}
+          title={mark.title}
+          style={{
+            left: Math.max(2, pageWidth - BADGE_SIZE - 6 - shift),
+            top: Math.max(2, top - 3),
+          }}
+          onClick={(e) => {
+            e.stopPropagation();
+            onMarkClick?.(mark.id);
+          }}
+        >
+          <MessageSquare size="0.75rem" aria-hidden="true" />
+        </button>
+      ))}
+    </>
   );
 };
 

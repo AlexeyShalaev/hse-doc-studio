@@ -41,6 +41,19 @@
     "anchor_stale": "The fragment was already changed: select it again",
     "too_many_threads": "Too many comments in this file",
     "thread_has_replies": "The thread has replies from other people",
+    "pdf_missing": "Build the document first",
+    "bad_rects": "Select the text again",
     "generic": "Could not complete the action"
+  },
+  "pdf": {
+    "placeChanged": "The spot changed: the PDF was rebuilt",
+    "placeMissing": "Spot not found in the PDF",
+    "inPdf": "On the PDF, page {{page}}",
+    "inSource": "Source: {{file}}",
+    "openSource": "Open in source",
+    "attachedSource": "Comment attached to the source: {{file}}",
+    "attachedPdf": "Comment attached to the spot in the PDF: it was not found in the source",
+    "markTitle": "Comment: {{name}}",
+    "markTitleResolved": "Resolved comment: {{name}}"
   }
 }
