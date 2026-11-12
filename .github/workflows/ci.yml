@@ -124,16 +124,18 @@ jobs:
         working-directory: services/api
     strategy:
       fail-fast: false
-      # На PR — только ubuntu с нижней границей Python. На push в master
+      # На PR — только ubuntu с нижней границей Python. На push в master (и на PR с меткой ci:all-os)
       # добавляются windows и macos: единственное место, где исполняются
       #   infra/fonts/system_fonts.py        win32-каталоги шрифтов
       #   infra/ai/ollama/hardware_probe.py  win32 + darwin/arm64 (Apple Silicon)
       #   infra/vcs/git_vcs_service.py       ветка os.name == "posix"
       #   uvloop; sys_platform != 'win32'    на Windows иной граф зависимостей
       #   tests/.../test_font_names.py       skipif снимается только на Windows
+      # Метка читается из события: поставленная после push, она подействует со следующего push в PR.
       matrix:
         include: >-
           ${{ github.event_name == 'pull_request'
+              && !contains(github.event.pull_request.labels.*.name, 'ci:all-os')
               && fromJSON('[
                    {"os":"ubuntu-latest","python":"3.12"}]')
               || fromJSON('[

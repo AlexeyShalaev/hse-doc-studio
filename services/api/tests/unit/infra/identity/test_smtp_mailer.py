@@ -147,8 +147,11 @@ async def test_silent_server_times_out() -> None:
 
 
 async def test_refused_connection_raises() -> None:
+    # Linux и macOS отвечают на закрытый порт отказом сразу, Windows повторяет SYN после RST и сообщает
+    # отказ (WSAECONNREFUSED) только через ~2 с. Таймаут короче этого обрывает попытку раньше отказа, и сбой
+    # честно становится `timeout`: поэтому здесь умолчание настроек, на Linux и macOS тест не медленнее.
     with pytest.raises(MailSendError) as exc:
-        await SmtpMailSender(_settings(_free_port(), timeout_s=1)).send("anna@example.org", "Тема", "Текст")
+        await SmtpMailSender(_settings(_free_port(), timeout_s=10)).send("anna@example.org", "Тема", "Текст")
     assert exc.value.failure.reason is MailFailureClass.connect
 
 
