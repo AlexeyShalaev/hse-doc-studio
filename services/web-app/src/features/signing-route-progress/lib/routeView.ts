@@ -98,6 +98,8 @@ export const personTone = (person: RouteParticipant): PersonTone => {
       return "warn";
     case "waiting":
       return person.approved_at ? "ok" : "idle";
+    case "skipped":
+      return "idle";
   }
 };
 
@@ -120,7 +122,10 @@ export type RouteTally = {
   approved: number;
   done: number;
   total: number;
-  /** Необязательные слоты, которые автор добавил в маршрут сам. */
+  /**
+   * Необязательные слоты: добавленные автором сверх точки и необязательные на точке, пока не
+   * подписаны. Пропущенные не считаются нигде.
+   */
   optionalApproved: number;
   optionalDone: number;
   optionalTotal: number;
@@ -135,8 +140,9 @@ const approvedNow = (person: RouteParticipant): boolean =>
 /**
  * Слоты маршрута: сколько согласовано и сколько подписано из скольких. Слот согласован, когда его
  * подписант согласовал в этом раунде или слот уже подписан. Подписан картинкой, когда она попала в
- * PDF, ЭП, когда подпись проверена: это статус слота плана. Обязательные отдельно от необязательных,
- * которые автор добавил сам: шапка точки считает только обязательные, и числа должны сходиться.
+ * PDF, ЭП, когда подпись проверена: это статус слота плана. Обязательные отдельно от необязательных
+ * (добавленных сверх точки и необязательных на ней): шапка точки считает только обязательные, и
+ * числа должны сходиться.
  */
 export const routeTally = (route: SigningRoute): RouteTally => {
   const approvedIds = new Set(
@@ -152,8 +158,12 @@ export const routeTally = (route: SigningRoute): RouteTally => {
     (slot.participant_id !== null && approvedIds.has(slot.participant_id));
   const count = (list: RouteDocSlot[], test: (slot: RouteDocSlot) => boolean) =>
     list.filter(test).length;
-  const required = slots.filter((slot) => !slot.optional);
-  const optional = slots.filter((slot) => slot.optional);
+  // Как счётчик плана (13.6): без пропущенных и без необязательных неподписанных.
+  const live = slots.filter((slot) => slot.status !== "skipped");
+  const isRequired = (slot: RouteDocSlot) =>
+    !slot.extra && (!slot.optional || signed(slot));
+  const required = live.filter(isRequired);
+  const optional = live.filter((slot) => !isRequired(slot));
   return {
     approved: count(required, approved),
     done: count(required, signed),

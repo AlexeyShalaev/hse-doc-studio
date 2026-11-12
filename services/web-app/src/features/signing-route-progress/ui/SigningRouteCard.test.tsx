@@ -138,7 +138,8 @@ const approvedAuthorRoute = ({ optional = true } = {}): SigningRoute => {
     slot_id: id,
     label: { ru: id },
     participant_id: participant,
-    optional: opt,
+    extra: opt,
+    optional: false,
     status: "pending" as const,
   });
   const esign = (id: string, slotId: string) =>

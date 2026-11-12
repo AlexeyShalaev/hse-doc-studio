@@ -37,7 +37,7 @@ export const draftOf = (route: SigningRoute): UpdateSigningRouteRequest => ({
   ),
   extra_slots: route.docs.flatMap((doc) =>
     doc.slots
-      .filter((slot) => slot.optional)
+      .filter((slot) => slot.extra)
       .map((slot) => ({ doc_id: doc.doc_id, slot_id: slot.slot_id })),
   ),
   deadline: route.deadline,

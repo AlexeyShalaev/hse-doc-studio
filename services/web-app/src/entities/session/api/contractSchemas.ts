@@ -27,6 +27,7 @@ import * as pk from "./passkeySchemas";
 import * as s from "./schemas";
 import * as sh from "@entities/share-link/model/shareLink.schema";
 import * as srt from "@entities/signing-route/model/signingRoute.schema";
+import * as sig from "@entities/signature/api/signatureSchemas";
 
 // Каталог эталонов contracts/server/fixtures -> схема zod. Каталог без схемы считается ошибкой.
 export const CONTRACT_SCHEMAS: Record<string, ZodType> = {
@@ -304,4 +305,7 @@ export const CONTRACT_SCHEMAS: Record<string, ZodType> = {
   SignSigningTaskRequest: srt.SignSigningTaskRequestSchema,
   ReturnSigningTaskRequest: srt.ReturnSigningTaskRequestSchema,
   SetSigningTaskPlateRequest: srt.SetSigningTaskPlateRequestSchema,
+  // Необязательные подписи (signing-route.md, 13.6): эталоны в contracts/server/next до R19 и R21.
+  SetSlotOptionalRequest: sig.SetSlotOptionalRequestSchema,
+  SlotOptional: sig.SlotOptionalSchema,
 };

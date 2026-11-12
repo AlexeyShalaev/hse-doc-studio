@@ -92,6 +92,7 @@ const slot = (
     height_mm: base.mark === "plate" ? 22 : 16,
     status: "pending",
     reason: "awaiting_approval",
+    optional: false,
     ...base,
     ...overrides,
   };
@@ -102,7 +103,7 @@ const other = (
   slotId: "author" | "supervisor" | "academic_supervisor",
   status: SigningTaskOtherSlot["status"],
 ): SigningTaskOtherSlot => {
-  const { reason: _reason, ...place } = slot(slotId);
+  const { reason: _reason, optional: _optional, ...place } = slot(slotId);
   return { ...place, status };
 };
 
@@ -135,6 +136,7 @@ const supervisorMe = (
     cert_id: "1A2B 3C4D 5E6F 7A8B",
   },
   keys: { server_keys_allowed: false, default_key: null },
+  optional: false,
   ...overrides,
 });
 

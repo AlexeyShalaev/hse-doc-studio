@@ -21,6 +21,7 @@ const toneOf = (person: SigningTaskPerson): Tone => {
     case "waiting":
       return person.at ? "ok" : "idle";
     case "invited":
+    case "skipped":
       return "idle";
   }
 };

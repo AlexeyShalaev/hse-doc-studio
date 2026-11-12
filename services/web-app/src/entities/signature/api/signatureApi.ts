@@ -10,6 +10,7 @@ import {
   SignSubmissionResultSchema,
   PlacementSchema,
   SlotInfoSchema,
+  SlotOptionalSchema,
   UploadSignatureResponseSchema,
 } from "./signatureSchemas";
 
@@ -248,6 +249,20 @@ export const signatureApi = {
     apiClient
       .delete(`/projects/${projectId}/signatures/withheld/${docId}/${slotId}`)
       .then(() => undefined),
+
+  /** «Подпись необязательна» на точке `profile_id` (signing-route.md, 13.6). */
+  setSlotOptional: (
+    projectId: string,
+    docId: string,
+    slotId: string,
+    body: { profile_id: string; optional: boolean },
+  ) =>
+    apiClient
+      .put(
+        `/projects/${projectId}/signatures/optional/${encodeURIComponent(docId)}/${encodeURIComponent(slotId)}`,
+        body,
+      )
+      .then(parseResp(SlotOptionalSchema)),
 };
 
 // Прямые ссылки для скачивания (браузер сам ставит имя файла из заголовка).

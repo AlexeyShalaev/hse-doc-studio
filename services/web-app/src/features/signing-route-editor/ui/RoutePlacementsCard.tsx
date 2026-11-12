@@ -25,6 +25,13 @@ export type RoutePlacementsCardProps = {
   onAddExtra: (slot: RouteSlotRef) => void;
   onRemoveExtra: (slot: RouteSlotRef) => void;
   /**
+   * «Подпись необязательна» на точке маршрута (docs/design/signing-route.md, 13.9); без него
+   * галочек нет.
+   */
+  onSetOptional?: (slot: RouteSlotRef, optional: boolean) => void;
+  /** Пара, отметка которой сейчас сохраняется. */
+  optionalPending?: RouteSlotRef | null;
+  /**
    * Слот, к которому привела помеха «подпись не размещена»: открыть его документ, прокрутить
    * к нему и подсветить. `n` растёт с каждым переходом, чтобы повторный переход тоже сработал.
    */
@@ -36,7 +43,8 @@ const MIN_CAPTION_WIDTH_MM = 70;
 
 /**
  * «Где подписи»: вкладки документов маршрута и тот же редактор размещения, что на вкладке
- * «Подписи», но только со слотами маршрута. Необязательные для точки слоты включаются здесь.
+ * «Подписи», но только со слотами маршрута. Слоты, которые точка не требует, добавляются здесь
+ * («добавлена вами»), и здесь же подпись отмечается необязательной на точке маршрута.
  */
 export const RoutePlacementsCard = ({
   projectId,
@@ -49,6 +57,8 @@ export const RoutePlacementsCard = ({
   personaLabel,
   onAddExtra,
   onRemoveExtra,
+  onSetOptional,
+  optionalPending = null,
   focus = null,
 }: RoutePlacementsCardProps) => {
   const { t, i18n } = useTranslation("signingRouteEditor");
@@ -89,7 +99,7 @@ export const RoutePlacementsCard = ({
   const slotDefs = runtime.filter(
     (s) => inRoute.has(s.id) && s.applies_to.includes(doc.doc_id),
   );
-  // Необязательные для точки: применимы к документу, но маршрут их не требует.
+  // Слоты сверх точки: применимы к документу, но точка их не требует.
   const candidates = editable
     ? runtime.filter(
         (s) => s.applies_to.includes(doc.doc_id) && !inRoute.has(s.id),
@@ -188,13 +198,13 @@ export const RoutePlacementsCard = ({
                     >
                       {pickLocalized(slot.label, lang, slot.slot_id)}
                     </strong>
-                    {slot.optional && editable && (
+                    {slot.extra && editable && (
                       <button
                         type="button"
                         className="icon-btn"
                         disabled={busy}
-                        aria-label={t("placements.removeOptional")}
-                        title={t("placements.removeOptional")}
+                        aria-label={t("placements.removeExtra")}
+                        title={t("placements.removeExtra")}
                         onClick={() => {
                           onRemoveExtra({
                             doc_id: doc.doc_id,
@@ -210,8 +220,35 @@ export const RoutePlacementsCard = ({
                     {owner
                       ? (owner.name ?? personaLabel(owner.persona))
                       : t("placements.nobody")}
-                    {slot.optional && ` · ${t("placements.optional")}`}
+                    {slot.extra && ` · ${t("placements.extra")}`}
                   </span>
+                  {onSetOptional && (
+                    <OptionalToggle
+                      checked={slot.optional}
+                      // Снять отметку можно всегда; отметить нельзя подпись, которую требует
+                      // шаблон или которая уже стоит.
+                      blocker={
+                        slot.optional
+                          ? null
+                          : def?.required === true
+                            ? t("placements.optionalRequired")
+                            : slot.status === "signed"
+                              ? t("placements.optionalSigned")
+                              : null
+                      }
+                      pending={
+                        optionalPending?.doc_id === doc.doc_id &&
+                        optionalPending.slot_id === slot.slot_id
+                      }
+                      testId={`route-optional-${slot.slot_id}`}
+                      onChange={(next) => {
+                        onSetOptional(
+                          { doc_id: doc.doc_id, slot_id: slot.slot_id },
+                          next,
+                        );
+                      }}
+                    />
+                  )}
                   {editable && (
                     <div
                       className="flex items-center"
@@ -359,6 +396,53 @@ export const RoutePlacementsCard = ({
             />
           </div>
         </div>
+      )}
+    </div>
+  );
+};
+
+/** Галочка «Подпись необязательна» у слота маршрута; причина, почему нельзя, видна под ней. */
+const OptionalToggle = ({
+  checked,
+  blocker,
+  pending,
+  testId,
+  onChange,
+}: {
+  checked: boolean;
+  blocker: string | null;
+  pending: boolean;
+  testId: string;
+  onChange: (next: boolean) => void;
+}) => {
+  const { t } = useTranslation("signingRouteEditor");
+  const note = blocker ?? (checked ? t("placements.optionalHint") : null);
+  return (
+    <div className="flex flex-col" style={{ gap: "0.125rem" }}>
+      <label
+        className="flex items-center"
+        style={{
+          gap: "0.375rem",
+          cursor: blocker === null ? "pointer" : "default",
+          color: blocker === null ? undefined : "var(--fg-3)",
+        }}
+        title={t("placements.optionalHint")}
+      >
+        <input
+          type="checkbox"
+          checked={checked}
+          disabled={blocker !== null || pending}
+          data-testid={testId}
+          onChange={(e) => {
+            onChange(e.target.checked);
+          }}
+        />
+        {t("placements.optional")}
+      </label>
+      {note !== null && (
+        <span className="dim" style={{ paddingLeft: "1.25rem" }}>
+          {note}
+        </span>
       )}
     </div>
   );

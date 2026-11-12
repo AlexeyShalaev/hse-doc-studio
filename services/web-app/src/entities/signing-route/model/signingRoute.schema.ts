@@ -6,6 +6,12 @@ import { z } from "zod";
 // эталоны тел лежат в contracts/server/fixtures. strictObject повторяет extra=forbid моделей
 // api/schemas/signing_route.py: лишнее поле значит расхождение сторон.
 // Все поля приходят явно, пустое значение это null.
+//
+// Необязательные подписи и пропуск (раздел 13.6) фронтенд знает раньше сервера (срез W12 до R21):
+// эталоны новой формы лежат в contracts/server/next. Пока сервер отдаёт прежнюю форму, новые поля
+// получают значения по умолчанию, а слот маршрута без `extra` читается по-старому (`optional`
+// значил «добавлен сверх точки»). Совместимость помечена `LEGACY_R21`; R21 её убирает вместе с
+// переносом эталонов из next в fixtures.
 
 const iso = z.string().min(1);
 const LocalizedSchema = z.record(z.string(), z.string());
@@ -53,6 +59,8 @@ export const ParticipantStateSchema = z.enum([
   "to_sign",
   "done",
   "returned",
+  /** Автор маршрута пропустил участника: все его оставшиеся подписи на точке необязательны (13.3). */
+  "skipped",
 ]);
 export type ParticipantState = z.infer<typeof ParticipantStateSchema>;
 
@@ -92,6 +100,8 @@ export const RouteSlotStatusSchema = z.enum([
   "signed",
   "invalid",
   "stale",
+  /** Пара пропущена вместе с участником: подпись не требуется (13.3). */
+  "skipped",
 ]);
 export type RouteSlotStatus = z.infer<typeof RouteSlotStatusSchema>;
 
@@ -111,6 +121,7 @@ export const RouteEventKindSchema = z.enum([
   "reminded",
   "invited",
   "frozen",
+  "skipped",
 ]);
 export type RouteEventKind = z.infer<typeof RouteEventKindSchema>;
 
@@ -160,6 +171,31 @@ export type RouteEvent = z.infer<typeof RouteEventSchema>;
 
 // Ход маршрута глазами автора: GET/POST/PUT .../signing-routes[/{route_id}], send, cancel, archive.
 
+/**
+ * Почему участника нельзя пропустить (13.6): `not_turn` не его очередь, `required_slots` есть
+ * обязательные пары, `no_slots` согласующий без подписей, `done` уже закончил или пропущен.
+ */
+export const RouteSkipBlockerSchema = z.enum([
+  "not_turn",
+  "required_slots",
+  "no_slots",
+  "done",
+]);
+export type RouteSkipBlocker = z.infer<typeof RouteSkipBlockerSchema>;
+
+/**
+ * Можно ли пропустить участника сейчас (`POST .../participants/{pid}/skip`). `keeps_marks`
+ * документы, где его метка уже в зафиксированном PDF с ЭП над ним и останется; `refreezes`
+ * документы, которые маршрут зафиксирует заново без его метки.
+ */
+export const RouteSkipSchema = z.strictObject({
+  available: z.boolean(),
+  blocker: RouteSkipBlockerSchema.nullable(),
+  keeps_marks: z.array(z.string()),
+  refreezes: z.array(z.string()),
+});
+export type RouteSkip = z.infer<typeof RouteSkipSchema>;
+
 export const RouteParticipantSchema = z.strictObject({
   id: z.string(),
   persona: z.string(),
@@ -183,18 +219,43 @@ export const RouteParticipantSchema = z.strictObject({
   notified_at: iso.nullable(),
   reminded_at: iso.nullable(),
   reminders: z.number().int().min(0),
+  /** Когда пропущен в этом раунде; null, если не пропущен. LEGACY_R21: по умолчанию null. */
+  skipped_at: iso.nullable().default(null),
+  /**
+   * Пропуск (13.6): только тому, кто управляет маршрутом, и только у идущего маршрута; иначе
+   * null. LEGACY_R21: по умолчанию null.
+   */
+  skip: RouteSkipSchema.nullable().default(null),
 });
 export type RouteParticipant = z.infer<typeof RouteParticipantSchema>;
 
-export const RouteDocSlotSchema = z.strictObject({
+const RouteDocSlotShape = z.strictObject({
   slot_id: z.string(),
   label: LocalizedSchema,
   participant_id: z.string().nullable(),
-  /** Необязательный для точки слот, который автор добавил в маршрут. */
+  /** Слот добавлен к маршруту сверх точки: точка его не требует, автор включил сам (6.5). */
+  extra: z.boolean(),
+  /** Подпись необязательна на точке маршрута: автор может пропустить подписанта (13.3). */
   optional: z.boolean(),
   status: RouteSlotStatusSchema,
 });
-export type RouteDocSlot = z.infer<typeof RouteDocSlotSchema>;
+
+/**
+ * LEGACY_R21: сервер до R21 отдаёт слот без `extra`, а `optional` у него значит «добавлен сверх
+ * точки». Такой слот читается как `extra = optional`, подпись обязательна.
+ */
+const legacyDocSlot = (value: unknown): unknown => {
+  if (typeof value !== "object" || value === null || "extra" in value)
+    return value;
+  const slot = value as Record<string, unknown>;
+  return { ...slot, extra: slot.optional, optional: false };
+};
+
+export const RouteDocSlotSchema = z.preprocess(
+  legacyDocSlot,
+  RouteDocSlotShape,
+);
+export type RouteDocSlot = z.infer<typeof RouteDocSlotShape>;
 
 /**
  * Версия на подписи документа (раздел 12.3): копия собранного PDF, снятая при отправке. Её видят
@@ -537,6 +598,11 @@ export const SigningTaskMeSchema = z.strictObject({
     server_keys_allowed: z.boolean(),
     default_key: SigningKeyInfoSchema.nullable(),
   }),
+  /**
+   * Все оставшиеся пары участника необязательны на точке: автор может его пропустить (13.6).
+   * LEGACY_R21: по умолчанию false.
+   */
+  optional: z.boolean().default(false),
 });
 export type SigningTaskMe = z.infer<typeof SigningTaskMeSchema>;
 
@@ -560,6 +626,8 @@ export const SigningTaskSlotSchema = z.strictObject({
   ...SigningTaskOtherSlotSchema.shape,
   /** Причина плана (`PlanReason`, в том числе `awaiting_approval`); null у подписанного. */
   reason: z.string().nullable(),
+  /** Подпись необязательна на точке: пометка «необязательна» (13.9). LEGACY_R21: по умолчанию false. */
+  optional: z.boolean().default(false),
 });
 export type SigningTaskSlot = z.infer<typeof SigningTaskSlotSchema>;
 
@@ -659,6 +727,8 @@ export type SigningTaskList = z.infer<typeof SigningTaskListSchema>;
  * (`no_participants`, `bad_step`, `duplicate_participant`, `duplicate_slot`, `unknown_doc`);
  * 403 `server_keys_forbidden` за подпись ключом Студии при запрете ключей на сервере.
  * 409 `nothing_changed`: отправка идущего или завершённого маршрута без изменений (12.6).
+ * Необязательные подписи и пропуск (13.6): 409 `participant_not_skippable` (с `reason`),
+ * `optional_forbidden`, `slot_signed`; 400 `unknown_slot`.
  */
 export const SIGNING_ROUTE_ERROR_CODES = [
   "doc_changed",
@@ -680,6 +750,10 @@ export const SIGNING_ROUTE_ERROR_CODES = [
   "participant_not_waiting",
   "rate_limited",
   "nothing_changed",
+  "participant_not_skippable",
+  "optional_forbidden",
+  "slot_signed",
+  "unknown_slot",
 ] as const;
 export type SigningRouteErrorCode = (typeof SIGNING_ROUTE_ERROR_CODES)[number];
 

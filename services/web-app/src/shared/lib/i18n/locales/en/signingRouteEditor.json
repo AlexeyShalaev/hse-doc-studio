@@ -94,14 +94,19 @@
     "title": "Where the signatures go",
     "noState": "Placements are unavailable: could not load the project signatures.",
     "nobody": "no signer assigned",
-    "optional": "optional",
+    "extra": "added by you",
     "notPlaced": "not placed",
     "place": "To page {{page}}",
     "page": "p. {{page}}",
     "jump": "Go",
     "moveHere": "Here",
     "add": "Add signature: {{label}}",
-    "removeOptional": "Remove signature from route"
+    "removeExtra": "Remove signature from route",
+    "optional": "Signature optional",
+    "optionalHint": "The route author will be able to skip this signer. The signature place will stay empty",
+    "optionalRequired": "The template requires this signature: it cannot be made optional",
+    "optionalSigned": "Already signed",
+    "optionalFailed": "Could not change the mark"
   },
   "mine": {
     "title": "Your signature",
