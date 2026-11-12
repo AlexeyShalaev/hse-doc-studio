@@ -283,6 +283,8 @@ _SCHEMAS: dict[str, Any] = {
     "ReviewThread": review.ThreadModel,
     "ReviewThreadList": review.ThreadList,
     "MentionCandidateList": review.MentionCandidateList,
+    "CreatePdfThreadRequest": review.CreatePdfThreadRequest,
+    "DocumentReview": review.DocumentReviewModel,
     "NotificationPage": inv.NotificationPage,
     "MarkNotificationsReadRequest": inv.MarkNotificationsReadRequest,
     "InboxSummary": inv.InboxSummary,

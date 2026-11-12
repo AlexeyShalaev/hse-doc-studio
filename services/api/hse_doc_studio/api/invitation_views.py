@@ -160,6 +160,7 @@ def notification(item: Notification) -> s.NotificationModel:
             ref_id=p.ref_id,
             path=p.path,
             excerpt=p.excerpt,
+            doc_id=p.doc_id,
             outcome=cast(s.NotificationOutcome | None, outcome),
             profile_id=p.profile_id,
             deadline=_moment(p.deadline),

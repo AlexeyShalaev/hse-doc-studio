@@ -1,10 +1,21 @@
-import { useEffect, useState, type ReactNode, type RefObject } from "react";
+import {
+  useEffect,
+  useMemo,
+  useState,
+  type ReactNode,
+  type RefObject,
+} from "react";
 import { MessageSquare, MessageSquarePlus } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useSearchParams } from "react-router";
 import { EditorView } from "@codemirror/view";
 import type { Extension } from "@codemirror/state";
-import { makeAnchor, QUOTE_MAX, useReviewThreads } from "@entities/review";
+import {
+  isTextThread,
+  makeAnchor,
+  QUOTE_MAX,
+  useReviewThreads,
+} from "@entities/review";
 import { toast } from "@shared/lib";
 import type { CodeEditorController } from "@shared/ui";
 import { CommentsPanel, type PendingThread } from "../ui/CommentsPanel";
@@ -53,10 +64,9 @@ export const useEditorReview = ({
   const [localActive, setLocalActive] = useState<string | null>(null);
   const [pending, setPending] = useState<PendingThread | null>(null);
   const [showResolved, setShowResolved] = useState(false);
-  const { data: threads = [] } = useReviewThreads(projectId, path, {
-    enabled,
-    live,
-  });
+  const { data } = useReviewThreads(projectId, path, { enabled, live });
+  // Треды к месту в PDF живут на пути самого PDF: в редакторе исходника их нет.
+  const threads = useMemo(() => (data ?? []).filter(isTextThread), [data]);
 
   // Ссылка из «Входящих»: ?thread=<id> открывает панель на этом треде, пока человек не выберет другое.
   const requested = enabled ? params.get("thread") : null;

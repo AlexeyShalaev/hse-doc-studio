@@ -52,6 +52,7 @@ const note = (
     outcome: null,
     path: null,
     excerpt: "Заявка на тему КП",
+    doc_id: null,
     profile_id: "topic-approval",
     deadline: null,
     new_version: false,

@@ -139,6 +139,9 @@ ROUTE_ACTIONS: Mapping[RouteKey, RouteRule] = {
     ("PATCH", "/projects/{project_id}/review/comments/{comment_id}"): RouteRule(Action.COMMENT),
     ("DELETE", "/projects/{project_id}/review/comments/{comment_id}"): RouteRule(Action.COMMENT),
     ("GET", "/projects/{project_id}/review/mentions"): RouteRule(Action.COMMENT),
+    # Комментарии из превью PDF: документ, PDF и файл исходника проверяет сценарий.
+    ("POST", "/projects/{project_id}/review/pdf-threads"): RouteRule(Action.COMMENT),
+    ("GET", "/projects/{project_id}/review/documents/{doc_id}"): RouteRule(Action.SOURCES_READ),
     # Сборка и проверки
     ("POST", "/projects/{project_id}/documents/{doc_id}/compile"): RouteRule(Action.BUILD_RUN),
     ("POST", "/projects/{project_id}/compiles/{compile_id}/cancel"): RouteRule(Action.BUILD_RUN),

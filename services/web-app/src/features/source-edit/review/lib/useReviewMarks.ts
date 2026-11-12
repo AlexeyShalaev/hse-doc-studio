@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState, type RefObject } from "react";
 import {
   resolveAnchor,
   type ResolvedAnchor,
-  type ReviewThread,
+  type TextReviewThread,
 } from "@entities/review";
 import type { CodeEditorController } from "@shared/ui";
 import { setReviewMarks } from "./reviewMarks";
@@ -15,7 +15,7 @@ const RESOLVE_DEBOUNCE_MS = 400;
  */
 export const useReviewMarks = (
   controller: RefObject<CodeEditorController | null>,
-  threads: ReviewThread[],
+  threads: TextReviewThread[],
   activeId: string | null,
   docRevision: number,
   showResolved: boolean,

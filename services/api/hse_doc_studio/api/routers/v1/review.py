@@ -9,7 +9,8 @@ from fastapi import APIRouter, Depends, Query, Request, Response, status
 
 from hse_doc_studio.api.actor import require_server_mode
 from hse_doc_studio.api.schemas import review as s
-from hse_doc_studio.core.review.entities import Anchor, ReviewThread, ThreadStatus
+from hse_doc_studio.core.review.entities import Anchor, PdfAnchor, PdfPlace, PdfRect, ReviewThread, ThreadStatus
+from hse_doc_studio.use_cases.review.pdf_threads import CreatePdfReviewThreadUC, ListDocumentReviewUC, NewPdfThread
 from hse_doc_studio.use_cases.review.threads import (
     CreateReviewThreadUC,
     DeleteReviewCommentUC,
@@ -28,14 +29,37 @@ async def _get[T](request: Request, kind: type[T]) -> T:
     return await request.state.dishka_container.get(kind)
 
 
-def thread_model(thread: ReviewThread) -> s.ThreadModel:
+def _rects(rects: tuple[PdfRect, ...]) -> list[s.PdfRectModel]:
+    return [s.PdfRectModel(x=r.x, y=r.y, width=r.width, height=r.height) for r in rects]
+
+
+def _anchor_model(thread: ReviewThread) -> s.AnchorModel | s.PdfAnchorModel:
     anchor = thread.anchor
+    if isinstance(anchor, PdfAnchor):
+        return s.PdfAnchorModel(
+            kind="pdf",
+            doc_id=anchor.doc_id,
+            page=anchor.page,
+            rects=_rects(anchor.rects),
+            text=anchor.text,
+            build_sha=anchor.build_sha,
+        )
+    return s.AnchorModel(
+        quote=anchor.quote, prefix=anchor.prefix, suffix=anchor.suffix, start=anchor.start, end=anchor.end
+    )
+
+
+def _place_model(place: PdfPlace | None) -> s.PdfPlaceModel | None:
+    if place is None:
+        return None
+    return s.PdfPlaceModel(page=place.page, rects=_rects(place.rects), text=place.text, exact=place.exact)
+
+
+def thread_model(thread: ReviewThread) -> s.ThreadModel:
     return s.ThreadModel(
         id=thread.id,
         path=thread.path,
-        anchor=s.AnchorModel(
-            quote=anchor.quote, prefix=anchor.prefix, suffix=anchor.suffix, start=anchor.start, end=anchor.end
-        ),
+        anchor=_anchor_model(thread),
         status=thread.status.value,
         created_by=thread.created_by,
         created_by_name=thread.created_by_name,
@@ -131,4 +155,36 @@ async def mention_candidates(
     found = await uc.execute(project_id, q)
     return s.MentionCandidateList(
         items=[s.MentionCandidateModel(user_id=c.user_id, name=c.name, detail=c.detail) for c in found]
+    )
+
+
+@router.post(
+    "/projects/{project_id}/review/pdf-threads", response_model=s.ThreadModel, status_code=status.HTTP_201_CREATED
+)
+async def create_pdf_thread(project_id: UUID, body: s.CreatePdfThreadRequest, request: Request) -> s.ThreadModel:
+    """Тред из превью PDF: по возможности к исходнику (SyncTeX и поиск текста), иначе к месту в PDF."""
+    uc = await _get(request, CreatePdfReviewThreadUC)
+    thread = await uc.execute(
+        project_id,
+        NewPdfThread(
+            doc_id=body.doc_id,
+            page=body.page,
+            rects=tuple(PdfRect(x=r.x, y=r.y, width=r.width, height=r.height) for r in body.rects),
+            text=body.text,
+            body=body.body,
+            mentions=tuple(body.mentions),
+        ),
+    )
+    return thread_model(thread)
+
+
+@router.get("/projects/{project_id}/review/documents/{doc_id}", response_model=s.DocumentReviewModel)
+async def document_review(project_id: UUID, doc_id: str, request: Request, response: Response) -> s.DocumentReviewModel:
+    """Треды документа для превью и их места на текущем PDF."""
+    response.headers["Cache-Control"] = "no-store"
+    uc = await _get(request, ListDocumentReviewUC)
+    found = await uc.execute(project_id, doc_id)
+    return s.DocumentReviewModel(
+        build_sha=found.build_sha,
+        items=[s.PlacedThreadModel(thread=thread_model(i.thread), place=_place_model(i.place)) for i in found.items],
     )

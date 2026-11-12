@@ -35,11 +35,13 @@ from hse_doc_studio.core.review.entities import (
     THREADS_PER_FILE_MAX,
     Anchor,
     MentionCandidate,
+    PdfAnchor,
     ReviewComment,
     ReviewConflictError,
     ReviewInputError,
     ReviewNotFoundError,
     ReviewThread,
+    ThreadAnchor,
     ThreadStatus,
     excerpt_of,
 )
@@ -174,6 +176,7 @@ class _ReviewBase:
             ref_id=thread.id,
             path=thread.path,
             excerpt=excerpt_of(body),
+            doc_id=thread.anchor.doc_id if isinstance(thread.anchor, PdfAnchor) else None,
             outcome=outcome,
         )
 
@@ -187,6 +190,56 @@ class _ReviewBase:
         if found is not None:
             ids |= {row.subject_id for row in found.items if row.role.value in ("editor", "owner")}
         return ids
+
+    async def _open_thread(
+        self,
+        project_id: UUID,
+        path: str,
+        anchor: ThreadAnchor,
+        body: str,
+        mentions: tuple[str, ...],
+        actor: Actor,
+    ) -> ReviewThread:
+        """Новый тред с корневым комментарием: лимит на файл, уведомления упомянутым и редакторам, событие."""
+        if await self._reviews.count_threads(project_id, path) >= THREADS_PER_FILE_MAX:
+            raise ReviewConflictError("too_many_threads", "Too many comment threads in this file")
+        valid = await self._valid_mentions(project_id, mentions, actor)
+        now = self._clock()
+        thread_id = _thread_id()
+        comment = ReviewComment(
+            id=_comment_id(),
+            thread_id=thread_id,
+            author_id=actor.id,
+            author_name=_author_name(actor),
+            body=body,
+            mentions=valid,
+            created_at=now,
+        )
+        thread = ReviewThread(
+            id=thread_id,
+            project_id=str(project_id),
+            path=path,
+            anchor=anchor,
+            status=ThreadStatus.open,
+            created_by=actor.id,
+            created_by_name=_author_name(actor),
+            created_at=now,
+            updated_at=now,
+            comments=(comment,),
+        )
+        async with self._uow.begin():
+            await self._reviews.add_thread(thread)
+            payload = await self._payload(project_id, thread, actor, body)
+            await self._notify(set(valid), actor, NotificationKind.review_mention, payload, f"rvm:{comment.id}")
+            await self._notify(
+                await self._editors(project_id) - set(valid),
+                actor,
+                NotificationKind.review_thread,
+                payload,
+                f"rvt:{thread.id}",
+            )
+        await self._events.review_changed(project_id, path)
+        return thread
 
 
 class ListReviewThreadsUC(_ReviewBase):
@@ -216,45 +269,7 @@ class CreateReviewThreadUC(_ReviewBase):
         if anchor.quote not in snapshot.text:
             # Фрагмент успели изменить, пока писали комментарий: привязать его уже не к чему.
             raise ReviewConflictError("anchor_stale", "The fragment changed, select it again")
-        if await self._reviews.count_threads(project_id, path) >= THREADS_PER_FILE_MAX:
-            raise ReviewConflictError("too_many_threads", "Too many comment threads in this file")
-        mentions = await self._valid_mentions(project_id, new.mentions, actor)
-        now = self._clock()
-        thread_id = _thread_id()
-        comment = ReviewComment(
-            id=_comment_id(),
-            thread_id=thread_id,
-            author_id=actor.id,
-            author_name=_author_name(actor),
-            body=body,
-            mentions=mentions,
-            created_at=now,
-        )
-        thread = ReviewThread(
-            id=thread_id,
-            project_id=str(project_id),
-            path=path,
-            anchor=anchor,
-            status=ThreadStatus.open,
-            created_by=actor.id,
-            created_by_name=_author_name(actor),
-            created_at=now,
-            updated_at=now,
-            comments=(comment,),
-        )
-        async with self._uow.begin():
-            await self._reviews.add_thread(thread)
-            payload = await self._payload(project_id, thread, actor, body)
-            await self._notify(set(mentions), actor, NotificationKind.review_mention, payload, f"rvm:{comment.id}")
-            await self._notify(
-                await self._editors(project_id) - set(mentions),
-                actor,
-                NotificationKind.review_thread,
-                payload,
-                f"rvt:{thread.id}",
-            )
-        await self._events.review_changed(project_id, path)
-        return thread
+        return await self._open_thread(project_id, path, anchor, body, new.mentions, actor)
 
 
 class ReplyReviewThreadUC(_ReviewBase):

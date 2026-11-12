@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from hse_doc_studio.core.agent.entities import AgentToolContext, ToolResult, ToolSpec
 from hse_doc_studio.core.enums import ToolKind
-from hse_doc_studio.core.review.entities import Anchor, ReviewThread, ThreadStatus
+from hse_doc_studio.core.review.entities import Anchor, PdfAnchor, ReviewThread, ThreadStatus
 from hse_doc_studio.use_cases.mcp.tools._base import (
     ArgumentError,
     McpTool,
@@ -34,11 +34,19 @@ def _status(raw: str | None) -> ThreadStatus | None:
         raise ArgumentError(f"status: {raw!r}") from None
 
 
+def _anchor_view(thread: ReviewThread) -> dict[str, object]:
+    """Тред из превью PDF без находки в исходнике привязан к месту в PDF: документ, страница и выделенный текст."""
+    anchor = thread.anchor
+    if isinstance(anchor, PdfAnchor):
+        return {"kind": "pdf", "quote": anchor.text, "doc_id": anchor.doc_id, "page": anchor.page}
+    return {"kind": "text", "quote": anchor.quote}
+
+
 def _view(thread: ReviewThread) -> dict[str, object]:
     return {
         "id": thread.id,
         "path": thread.path,
-        "quote": thread.anchor.quote,
+        **_anchor_view(thread),
         "status": thread.status,
         "created_by": thread.created_by_name,
         "created_at": thread.created_at,
@@ -52,7 +60,11 @@ def _view(thread: ReviewThread) -> dict[str, object]:
 class ListReviewThreadsTool(McpTool):
     spec = ToolSpec(
         name="list_review_threads",
-        description="Обсуждения ревью в проекте: цитата, файл, статус и комментарии. Фильтры path и status.",
+        description=(
+            "Обсуждения ревью в проекте: цитата, файл, статус и комментарии. Фильтры path и status. "
+            "kind=text: цитата из исходника path; kind=pdf: комментарий к месту в PDF документа doc_id "
+            "(страница page, quote это выделенный текст PDF, path это сам PDF)."
+        ),
         parameters=project_schema({"path": {"type": "string"}, "status": _STATUS}),
     )
     kind = ToolKind.read
@@ -69,7 +81,9 @@ class CreateReviewThreadTool(McpTool):
         name="create_review_thread",
         description=(
             "Оставить комментарий ревью к фрагменту файла. quote: точная цитата из файла (по ней комментарий "
-            "привязывается к тексту), prefix и suffix: немного текста до и после для однозначности."
+            "привязывается к тексту), prefix и suffix: немного текста до и после для однозначности. "
+            "Комментарий к тексту из PDF оставляйте по исходнику: найдите фрагмент через grep_project или read_tex, "
+            "он появится и в редакторе, и в превью."
         ),
         parameters=project_schema(
             {
