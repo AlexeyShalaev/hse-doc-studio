@@ -124,6 +124,9 @@ async def test__optional_flag__removed_after_skip__skip_kept_while_held_and_drop
 
     held = _mark(trio, trio.author, APPLICATION, ACADEMIC, optional=False)
     after_held = trio.state()
+    # Ошибочное снятие отменяется: пропущенной паре отметку можно поставить снова, пропуск остаётся.
+    remarked = _mark(trio, trio.author, APPLICATION, ACADEMIC)
+    assert _mark(trio, trio.author, APPLICATION, ACADEMIC, optional=False).status_code == 200
     assert trio.call(trio.author, "POST", f"{trio.url}/cancel", json={}).status_code == 200
     marked = _mark(trio, trio.author, APPLICATION, ACADEMIC)
     _skip_in_files(trio, APPLICATION, ACADEMIC)
@@ -133,6 +136,12 @@ async def test__optional_flag__removed_after_skip__skip_kept_while_held_and_drop
     assert held.status_code == 200, held.text
     assert (held.json()["skipped"], held.json()["returns_next_round"]) == (True, True)
     assert (after_held["optional"], list(after_held["skipped"])) == ({}, [APPLICATION])
+    assert remarked.status_code == 200, remarked.text
+    assert (remarked.json()["optional"], remarked.json()["skipped"], remarked.json()["returns_next_round"]) == (
+        True,
+        True,
+        False,
+    )
     # Отменённый маршрут документ не держит: слот сверх точки отметить уже нельзя, а снятие отметки снимает пропуск.
     assert _code(marked) == (400, "unknown_slot")
     assert freed.status_code == 200, freed.text
