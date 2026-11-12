@@ -25,6 +25,7 @@ from hse_doc_studio.core.value_objects import (
     PinnedPdf,
     SignatureSlot,
     SignaturesState,
+    SkippedSlot,
 )
 
 # Персона одиночного автора: в solo у автора нет слага, слот `author` принадлежит владельцу проекта.
@@ -55,6 +56,7 @@ class SlotStatus(StrEnum):
     signed = "signed"  # подписано
     invalid = "invalid"  # недействительно
     stale = "stale"  # устарело: подпись относится к прежней версии документа
+    skipped = "skipped"  # не требуется: маршрут пропустил подписанта (signing-route.md, 13.3)
 
 
 class PlanReason(StrEnum):
@@ -215,17 +217,21 @@ def slot_state(  # noqa: C901, PLR0911, PLR0912 — таблица статус�
     *,
     allowed: Sequence[str] = (),
     uses_frozen: bool = False,
+    profile_id: str | None = None,
 ) -> SlotState:
     """Статус одного слота на одном документе.
 
     `allowed` способы, которые разрешает профиль сдачи (пусто: любой). `uses_frozen` документ сдаётся из
     зафиксированного файла (на нём есть криптоподпись): тогда картинка, поставленная после фиксации, в
-    сдаваемом файле не видна и считается устаревшей.
+    сдаваемом файле не видна и считается устаревшей. `profile_id` точка, на которой смотрят слот: пропуск
+    другой точки слот не пропускает (signing-route.md, 13.3); без точки считается любой пропуск.
     """
     slot = state.slots.get(slot_id)
     placement = state.placements.get(doc_id, {}).get(slot_id)
     method = method_of(slot.sign_mode if slot is not None else SignMode.image)
     mark = mark_of(slot)
+    if state.skip_of(doc_id, slot_id, profile_id) is not None:
+        return SlotState(method, mark, SlotStatus.skipped)
     if allowed and method.value not in allowed:
         return SlotState(method, mark, SlotStatus.pending, PlanReason.method_not_allowed)
     if mark is not VisibleMark.none and (placement is None or not placement.enabled):
@@ -371,10 +377,20 @@ class PlanSlot:
     is_mine: bool = False
     # У документа есть версия на подписи: подсказка `rebuilt` другая (12.9).
     pinned: bool = False
+    # Подпись необязательна на точке (signing-route.md, 13.3) и пропуск, если маршрут её пропустил.
+    optional: bool = False
+    skipped: SkippedSlot | None = None
 
     @property
     def status(self) -> SlotStatus:
         return self.state.status
+
+    @property
+    def counted(self) -> bool:
+        """Слот входит в счётчик «подписано k из n»: не пропущен и не необязательный неподписанный (13.3)."""
+        if self.status is SlotStatus.skipped:
+            return False
+        return not (self.optional and self.status is not SlotStatus.signed)
 
     @property
     def hint(self) -> str:
@@ -396,7 +412,8 @@ class DocPlan:
 
     @property
     def has_crypto(self) -> bool:
-        return any(s.state.crypto for s in self.slots)
+        """Есть слот ЭП; пропущенный не считается: документ, где ЭП больше никто не ставит, сдаётся без ЭП (13.3)."""
+        return any(s.state.crypto and s.status is not SlotStatus.skipped for s in self.slots)
 
 
 @dataclass(frozen=True)
@@ -411,15 +428,25 @@ class SignaturePlan:
 
     @property
     def total(self) -> int:
-        return len(self.slots)
+        """Сколько подписей нужно: без пропущенных и без необязательных неподписанных (signing-route.md, 13.3)."""
+        return sum(1 for s in self.slots if s.counted)
 
     @property
     def signed(self) -> int:
-        return sum(1 for s in self.slots if s.status is SlotStatus.signed)
+        return sum(1 for s in self.slots if s.counted and s.status is SlotStatus.signed)
+
+    @property
+    def optional_pending(self) -> int:
+        """Необязательные подписи, которые ещё можно поставить: не подписаны и не пропущены (13.3)."""
+        return sum(1 for s in self.slots if s.optional and s.status not in _SETTLED)
 
     @property
     def waiting_for_me(self) -> int:
-        return sum(1 for s in self.slots if s.is_mine and s.status is not SlotStatus.signed)
+        return sum(1 for s in self.slots if s.is_mine and s.status not in _SETTLED)
+
+
+# Слот больше ничего не ждёт: подписан или пропущен маршрутом.
+_SETTLED = frozenset({SlotStatus.signed, SlotStatus.skipped})
 
 
 _METHOD_NAMES = {

@@ -21,10 +21,13 @@ from hse_doc_studio.api.schemas.signature import (
     PlacementResponse,
     ProfileRefResponse,
     RuntimeSlotResponse,
+    SetSlotOptionalRequest,
     SignaturesStateResponse,
     SignerInfoResponse,
     SignInStudioRequest,
+    SkippedSlotResponse,
     SlotInfoResponse,
+    SlotOptional,
     UpdatePlacementRequest,
     UpdateSlotConfigRequest,
     UploadSignatureResponse,
@@ -82,6 +85,7 @@ from hse_doc_studio.use_cases.signatures.get_signed_doc_pdf import (
     GetSignedDocPdfUC,
 )
 from hse_doc_studio.use_cases.signatures.release_withheld import ReleaseWithheldInput, ReleaseWithheldUC
+from hse_doc_studio.use_cases.signatures.set_slot_optional import SetSlotOptionalInput, SetSlotOptionalUC
 from hse_doc_studio.use_cases.signatures.sign_in_studio import SignInStudioInput, SignInStudioUC
 from hse_doc_studio.use_cases.signatures.unpin_pdf import UnpinPdfInput, UnpinPdfUC
 from hse_doc_studio.use_cases.signatures.update_signature_placement import (
@@ -141,6 +145,11 @@ def _map_runtime_slot(item: RuntimeSlotItem) -> RuntimeSlotResponse:
             "width_mm": placement.width_mm,
         },
         owner=item.slot.owner,
+        required=item.slot.required,
+        extra_by={
+            doc_id: [ProfileRefResponse(id=ref.id, name=ref.name) for ref in refs]
+            for doc_id, refs in item.extra_by.items()
+        },
     )
 
 
@@ -203,6 +212,23 @@ def _map_state(
         },
         runtime_slots=[_map_runtime_slot(item) for item in runtime_slots],
         withheld={doc_id: sorted(slots) for doc_id, slots in sorted(state.withheld.items()) if slots},
+        optional={
+            doc_id: {profile_id: sorted(slots) for profile_id, slots in sorted(by_profile.items()) if slots}
+            for doc_id, by_profile in sorted(state.optional.items())
+        },
+        skipped={
+            doc_id: {
+                slot_id: SkippedSlotResponse(
+                    profile_id=skip.profile_id,
+                    route_id=skip.route_id,
+                    round=skip.round,
+                    at=skip.at,
+                    keep_mark=skip.keep_mark,
+                )
+                for slot_id, skip in sorted(by_slot.items())
+            }
+            for doc_id, by_slot in sorted(state.skipped.items())
+        },
     )
 
 
@@ -276,6 +302,43 @@ async def release_withheld(
         await uc.execute(ReleaseWithheldInput(project_id=project_id, doc_id=doc_id, slot_id=slot_id))
     except NotFoundError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+
+@router.put(
+    "/projects/{project_id}/signatures/optional/{doc_id}/{slot_id}",
+    response_model=SlotOptional,
+)
+async def set_slot_optional(
+    project_id: UUID,
+    doc_id: str,
+    slot_id: str,
+    body: SetSlotOptionalRequest,
+    uc: FromDishka[SetSlotOptionalUC],
+) -> SlotOptional:
+    """«Подпись необязательна на этой точке» (signing-route.md, 13.6): отметить или снять. Видимого слоя не меняет,
+    поэтому работает и на идущем маршруте. 400 `unknown_slot`, если слот не ставится на документ точки и не включён
+    её маршрутом; 409 `optional_forbidden`, если пак запрещает; 409 `slot_signed`, если подпись уже стоит на
+    документе маршрута."""
+    try:
+        out = await uc.execute(
+            SetSlotOptionalInput(
+                project_id=project_id,
+                doc_id=doc_id,
+                slot_id=slot_id,
+                profile_id=body.profile_id,
+                optional=body.optional,
+            )
+        )
+    except NotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    return SlotOptional(
+        doc_id=out.doc_id,
+        slot_id=out.slot_id,
+        profile_id=out.profile_id,
+        optional=out.optional,
+        skipped=out.skipped,
+        returns_next_round=out.returns_next_round,
+    )
 
 
 @router.post(

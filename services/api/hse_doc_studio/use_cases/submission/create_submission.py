@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import uuid
+from collections.abc import Callable
 from dataclasses import dataclass, replace
 from datetime import datetime, timezone
 from pathlib import Path, PurePosixPath
@@ -37,10 +38,14 @@ from hse_doc_studio.core.repositories import (
     ISignatureRepository,
     ITemplateRepository,
 )
-from hse_doc_studio.core.services import SubmissionProfileService
+from hse_doc_studio.core.services import SignatureSlotService, SubmissionProfileService
 from hse_doc_studio.core.signatures.errors import stamping_error_of
+from hse_doc_studio.core.signatures.plan import signer_for
 from hse_doc_studio.core.signatures.ports import IPublicKeyExporter
+from hse_doc_studio.core.signing_route.entities import TURN_STATES, ParticipantState, RouteStatus
+from hse_doc_studio.core.signing_route.ports import ISigningRouteGate, NoSigningRoutes, PlanRoute, PlanRoutes
 from hse_doc_studio.core.submission_archive import DisabledSubmissionArchive, ISubmissionArchive, archive_media_type
+from hse_doc_studio.core.submission_errors import PackError, route_in_progress, route_paused, route_returned
 from hse_doc_studio.core.team import (
     author_by_slug,
     base_dir_for_owner,
@@ -49,6 +54,7 @@ from hse_doc_studio.core.team import (
     split_instance_id,
 )
 from hse_doc_studio.core.template_materializer import ITemplateMaterializer
+from hse_doc_studio.core.value_objects import SignaturesState
 from hse_doc_studio.use_cases.forms.render_form import RenderFormInput, RenderFormUC
 from hse_doc_studio.use_cases.submission.pack_planner import PackNotice, PackPlanner
 
@@ -116,8 +122,10 @@ class CreateSubmissionUC:
         file_probes: IProjectFileProbeFactory,
         access: IProjectAccessChecker,
         archive: ISubmissionArchive | None = None,
+        routes: ISigningRouteGate | None = None,
     ) -> None:
         self._archive = archive or DisabledSubmissionArchive()
+        self._routes = routes or NoSigningRoutes()
         self._project_repo = project_repo
         self._locator = locator
         self._template_repo = template_repo
@@ -163,7 +171,7 @@ class CreateSubmissionUC:
         if team:
             await self._access.require(inp.project_id, Action.SUBMISSION_CREATE, inp.author_slug)
 
-    async def execute(self, inp: CreateSubmissionInput) -> CreateSubmissionOutput:  # noqa: C901, PLR0915
+    async def execute(self, inp: CreateSubmissionInput) -> CreateSubmissionOutput:  # noqa: C901, PLR0912, PLR0915
         located = await self._locator.locate(inp.project_id)
         if located is None:
             raise NotFoundError(
@@ -206,13 +214,16 @@ class CreateSubmissionUC:
 
         await self._require_package_access(inp, team=team)
 
-        validated_items = self._submission_profile_service.build_item_list(
-            profile=profile,
-            project=project,
-            version=version,
-            sig_state=sig_state,
-            author_slug=inp.author_slug if team else None,
-        )
+        try:
+            validated_items = self._submission_profile_service.build_item_list(
+                profile=profile,
+                project=project,
+                version=version,
+                sig_state=sig_state,
+                author_slug=inp.author_slug if team else None,
+            )
+        except PackError as exc:
+            raise await self._explain(exc, inp, project, version, sig_state) from None
 
         doc_items = validated_items if validated_items else inp.items
         extra_items = list(profile.extra_items) if profile.extra_items else list(inp.extra_items)
@@ -275,22 +286,25 @@ class CreateSubmissionUC:
         await self._convert_custom_docs(project, project_folder, doc_items, inp.custom_doc_decisions)
         # Все решения о составе пакета принимаются здесь, до записи на диск: ошибки
         # замороженных источников поднимаются раньше, чем появится папка пакета.
-        plan = self._planner.build(
-            project=project,
-            version=version,
-            sig_state=sig_state,
-            doc_items=doc_items,
-            extra_items=extra_items,
-            lang=str(project.lang),
-            rendered_extras=rendered_extras,
-            decisions=inp.custom_doc_decisions,
-            probe=self._file_probes.for_root(project_folder),
-            key_exporter=self._key_exporter,
-            base_name=base_name,
-            profile_id=inp.profile_id,
-            archive_format=inp.archive_format,
-            keep_folder=not self._archive.enabled,
-        )
+        try:
+            plan = self._planner.build(
+                project=project,
+                version=version,
+                sig_state=sig_state,
+                doc_items=doc_items,
+                extra_items=extra_items,
+                lang=str(project.lang),
+                rendered_extras=rendered_extras,
+                decisions=inp.custom_doc_decisions,
+                probe=self._file_probes.for_root(project_folder),
+                key_exporter=self._key_exporter,
+                base_name=base_name,
+                profile_id=inp.profile_id,
+                archive_format=inp.archive_format,
+                keep_folder=not self._archive.enabled,
+            )
+        except PackError as exc:
+            raise await self._explain(exc, inp, project, version, sig_state) from None
         spec = JobSpec(
             id=submission_id,
             kind=JobKind.pack_submission,
@@ -342,6 +356,40 @@ class CreateSubmissionUC:
         )
 
         return CreateSubmissionOutput(submission=record, notices=plan.notices)
+
+    async def _explain(
+        self,
+        exc: PackError,
+        inp: CreateSubmissionInput,
+        project: Project,
+        version: TemplateVersion,
+        sig_state: SignaturesState,
+    ) -> PackError:
+        """Отказ по документу маршрута подписания, который не дошёл до конца, словами маршрута (12.8.1).
+
+        Подпись не готова или фиксация не та, потому что маршрут ещё идёт, остановлен или возвращён: автору
+        нужно не «зафиксировать заново», а дождаться маршрута или отправить документы заново. Документ
+        считается документом маршрута точки, если маршрут его держит или снял его версию на подписи. Иначе и у
+        завершённого маршрута отказ остаётся как есть.
+        """
+        doc_id = exc.doc_id
+        if doc_id is None:
+            return exc
+        routes = await self._routes.plan_routes(inp.project_id, profile_id=inp.profile_id)
+        route = routes.route
+        if route is None:
+            return exc
+        pinned = sig_state.pinned.get(doc_id)
+        on_route = (pinned is not None and pinned.route_id == str(route.id)) or (
+            route.status is RouteStatus.active and doc_id in routes.held_docs
+        )
+        if not on_route:
+            return exc
+        if route.status is RouteStatus.active:
+            who = _awaited(project, version, routes, route)
+            return route_in_progress(doc_id, who, route.current_step or route.steps_total, route.steps_total)
+        stopped = _STOPPED.get(route.status)
+        return stopped(doc_id) if stopped is not None else exc
 
     async def _place_archive(
         self, project_id: UUID, submission_id: UUID, project_folder: Path, packed: PackResult
@@ -447,3 +495,33 @@ def _raise_for_pack_error(job: JobResult) -> None:
         if stamping is not None:
             raise stamping
     job.raise_for_error()
+
+
+# Отказ по документу остановленного или возвращённого маршрута: чинят в карточке «Подписание».
+_STOPPED: dict[RouteStatus, Callable[[str], PackError]] = {
+    RouteStatus.paused: route_paused,
+    RouteStatus.returned: route_returned,
+}
+
+
+def _awaited(project: Project, version: TemplateVersion, routes: PlanRoutes, route: PlanRoute) -> str:
+    """Кого ждёт идущий маршрут: подписанты слотов его документов, чья сейчас очередь или чьё приглашение не
+    принято, по имени из карточки проекта (без имени по названию подписи). Участник без слотов (только согласует)
+    в слотах не виден: тогда «участников шага k»."""
+    waiting = (*TURN_STATES, ParticipantState.invited)
+    slots = SignatureSlotService()
+    lang = str(current_interface_language())
+    names: list[str] = []
+    for pair, state in routes.slot_states.items():
+        if state not in waiting or pair.doc_id not in routes.held_docs:
+            continue
+        name = signer_for(project, pair.slot_id).name
+        if not name:
+            runtime = slots.find_runtime_slot(project, version, pair.slot_id)
+            name = (runtime.label.get(lang) or runtime.label.get("ru") or pair.slot_id) if runtime else pair.slot_id
+        if name not in names:
+            names.append(name)
+    if names:
+        return ", ".join(names)
+    step = route.current_step or route.steps_total
+    return localized_error(f"участников шага {step}", f"the participants of step {step}")

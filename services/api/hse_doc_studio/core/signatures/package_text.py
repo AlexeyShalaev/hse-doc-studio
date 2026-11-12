@@ -190,12 +190,20 @@ FORMAT_TOKEN = {DetachedFormat.openpgp: "openpgp", DetachedFormat.cms: "cades"}
 
 @dataclass(frozen=True)
 class GuideSignature:
-    kind: str  # "image" | "detached" | "pades"
+    # "image" | "detached" | "pades"; без подписи (signing-route.md, 13.11): "skipped" пропущена маршрутом,
+    # "optional_unsigned" необязательна и не поставлена.
+    kind: str
     label: str  # слот («Научный руководитель»)
     signer: str
     file: str = ""  # файл открепленной подписи; пусто у картинки и PAdES
     format: DetachedFormat | None = None
     covers: str = ""  # PDF, к которому относится открепленная подпись
+    # Пропущенная подпись, чья метка осталась в зафиксированном PDF с ЭП (`SkippedSlot.keep_mark`).
+    kept_mark: bool = False
+
+
+# Виды строк инструкции, у которых есть электронная подпись: ради них инструкция и кладётся в комплект.
+CRYPTO_GUIDE_KINDS = frozenset({"detached", "pades"})
 
 
 @dataclass(frozen=True)
@@ -267,6 +275,9 @@ _GUIDE_RU = {
     "image": "графическая подпись (картинка, не ЭП)",
     "detached": "открепленная ЭП",
     "pades": "встроенная ЭП (PAdES) внутри PDF",
+    "skipped": "не требуется (пропущено автором)",
+    "optional_unsigned": "не поставлена (необязательна)",
+    "kept_mark": "плашка на странице без файла подписи",
     "signer": "подписант",
     "file": "файл подписи",
     "covers": "относится к",
@@ -290,6 +301,9 @@ _GUIDE_EN = {
     "image": "graphic signature (image, not an e-signature)",
     "detached": "detached e-signature",
     "pades": "embedded e-signature (PAdES) inside the PDF",
+    "skipped": "not required (skipped by the author)",
+    "optional_unsigned": "not signed (optional)",
+    "kept_mark": "a plate on the page without a signature file",
     "signer": "signer",
     "file": "signature file",
     "covers": "covers",
@@ -315,7 +329,8 @@ def _doc_lines(t: dict[str, str], doc: GuideDocument) -> list[str]:
         lines.append(f"  {t['sha']}: {doc.base_sha256}")
     for sig in doc.signatures:
         who = f", {t['signer']}: {sig.signer}" if sig.signer else ""
-        lines.append(f"  - {sig.label}: {t[sig.kind]}{who}")
+        mark = f", {t['kept_mark']}" if sig.kept_mark else ""
+        lines.append(f"  - {sig.label}: {t[sig.kind]}{who}{mark}")
         if sig.file:
             lines.append(f"    {t['file']}: {sig.file}, {t['covers']}: {sig.covers}")
     if doc.base:

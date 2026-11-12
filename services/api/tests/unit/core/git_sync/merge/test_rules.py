@@ -1004,3 +1004,38 @@ def test__planner__broken_state_json__falls_back_to_text_merge(engine: GitMergeF
     (op,) = plan.ops
     assert op.kind is ContentKind.text
     assert op.conflict_type is ConflictType.content
+
+
+def _optional(doc_id: str, profile_id: str, *slots: str) -> Callable[[Json], None]:
+    def change(data: Json) -> None:
+        data["optional"].setdefault(doc_id, {})[profile_id] = sorted(slots)
+
+    return change
+
+
+def test__signatures__optional_and_skipped_are_written_by_the_repository(signatures_json: Json) -> None:
+    assert (signatures_json["optional"], signatures_json["skipped"]) == ({}, {})
+
+
+def test__signatures__optional_and_frozen_pdf_of_one_document__are_one_signature_group(
+    signatures_json: Json,
+) -> None:
+    """Необязательные и пропущенные подписи в группе документа (signing-route.md, 13.3)."""
+    ours = _edited(signatures_json, _optional("a", "p", "author--anna"))
+    theirs = _edited(signatures_json, _refrozen("f3", signed=True))
+
+    decision = _merge(_SIGNATURES, signatures_json, ours, theirs)
+
+    assert decision.conflict_type == ConflictType.signature_group.value
+    (group,) = decision.fields
+    assert group.pointer == "/signature_groups/a"
+    assert (group.ours["optional"], group.theirs["optional"]) == ({"p": ["author--anna"]}, None)
+
+
+def test__signatures__optional_changed_by_one_side__is_taken(signatures_json: Json) -> None:
+    marked = _edited(signatures_json, _optional("a", "p", "author--anna"))
+
+    taken = _merge(_SIGNATURES, signatures_json, signatures_json, marked)
+
+    assert not taken.conflict
+    assert _load(taken.content)["optional"] == {"a": {"p": ["author--anna"]}}

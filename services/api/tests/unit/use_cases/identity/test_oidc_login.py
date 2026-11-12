@@ -131,8 +131,13 @@ async def test_missing_cookie_is_rejected_even_with_provider_error(flow: _Flow) 
 async def test_tampered_cookie_is_rejected(flow: _Flow) -> None:
     sealed, state, code = await flow.begin()
     body, _, signature = sealed.partition(".")
+    # Меняем символ в середине подписи на заведомо другой: замена хвоста на «AA» совпадала с подписью,
+    # если та уже так кончалась, а последний символ base64 несёт неиспользуемые биты.
+    mid = len(signature) // 2
+    other = "A" if signature[mid] != "A" else "B"
+    tampered = f"{signature[:mid]}{other}{signature[mid + 1 :]}"
 
-    for broken in (f"{body}x.{signature}", f"{body}.{signature[:-2]}AA", "garbage", body):
+    for broken in (f"{body}x.{signature}", f"{body}.{tampered}", "garbage", body):
         with pytest.raises(OidcLoginError) as caught:
             await flow.finish(broken, state, code)
         assert caught.value.code is OidcErrorCode.state_invalid

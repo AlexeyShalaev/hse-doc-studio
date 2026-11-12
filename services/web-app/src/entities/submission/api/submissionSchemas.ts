@@ -43,6 +43,8 @@ export const SubmissionProfileSchema = z.object({
 export const PackWarningSchema = z.object({
   code: z.string(),
   doc_id: z.string().nullable().default(null),
+  /** Слот у `optional_unsigned` (13.11), у остальных null. */
+  slot_id: z.string().nullable().default(null),
   /** Дата версии на подписи у `changed_after_sent`, у остальных null. */
   sent_at: z.string().nullable().default(null),
   // Сверх контракта W7 (срез R14): имя файла в пакете, готовый текст на языке интерфейса,

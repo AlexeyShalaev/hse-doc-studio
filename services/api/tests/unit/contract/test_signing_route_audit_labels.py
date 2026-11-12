@@ -23,6 +23,8 @@ _SIGNATURE_ACTIONS = (
     "signature.attach",
     "signature.profile_image",
     "signature.release",
+    # «Подпись необязательна» на точке (13.8): с `route_id`, если документ держит маршрут.
+    "signature.optional",
 )
 
 
@@ -46,4 +48,8 @@ def test__audit_dictionary__stop_reasons_and_route_fields_are_readable(lng: str)
     audit = _audit(lng)
 
     assert not [reason.value for reason in StopReason if reason.value not in audit["values"]]
-    assert not [key for key in ("route_id", "profile_id", "round", "step", "persona") if key not in audit["detailKeys"]]
+    assert not [
+        key
+        for key in ("route_id", "profile_id", "round", "step", "persona", "optional")
+        if key not in audit["detailKeys"]
+    ]

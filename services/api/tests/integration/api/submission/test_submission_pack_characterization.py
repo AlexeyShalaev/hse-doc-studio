@@ -21,14 +21,18 @@ import re
 import shutil
 import zipfile
 from collections.abc import AsyncIterator
+from dataclasses import replace
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
 import pytest
 import pytest_asyncio
+from hse_doc_studio.core.value_objects import PinnedPdf
+from hse_doc_studio.infra.persistence.signature import JsonSignatureRepository
 from hse_doc_studio.infra.signatures.openpgp import GpgKeyring, GpgVerification
 from hse_doc_studio.use_cases.forms.render_form import RenderFormUC
+from hse_doc_studio.use_cases.signatures.signing_source import pinned_rel
 from httpx import ASGITransport, AsyncClient, Response
 from pypdf import PdfReader
 from pytest_mock import MockerFixture
@@ -438,7 +442,12 @@ async def test__api__create_submission__archive_tool_missing__400_before_any_wor
     resp = await _submit(test_app, project, _CHECKPOINT_1, archive_format="7z")
 
     assert resp.status_code == 400, resp.text
-    assert resp.json()["detail"] == "Archive format '7z' is not available on this host (external tool missing)"
+    assert resp.json() == {
+        "detail": "Формат архива «7z» недоступен: на этом компьютере нет нужной утилиты. Выберите ZIP",
+        "code": "pack_archive_format_unavailable",
+        "doc_id": None,
+        "format": "7z",
+    }
     assert not (Path(project["folder"]) / "submissions").exists()
 
 
@@ -687,21 +696,27 @@ def _hse_files_with_bytes(folder: Path, data: bytes) -> list[Path]:
 
 
 @pytest.mark.parametrize(
-    ("breakage", "detail"),
+    ("breakage", "code", "detail"),
     [
         (
             "rebuilt",
-            (
-                "Аннотация.pdf: the document was rebuilt after the PDF was frozen for signing. "
-                "Freeze it again and re-attach the signatures"
-            ),
+            "pack_rebuilt_after_freeze",
+            "Документ «Аннотация» пересобран после фиксации PDF. Зафиксируйте его заново и подпишите новую версию",
         ),
-        ("signature_file_missing", "Signature file is missing for Аннотация.pdf, slot supervisor"),
-        ("frozen_pdf_missing", "Frozen PDF is missing for Аннотация.pdf: freeze the document again"),
+        (
+            "signature_file_missing",
+            "pack_signature_missing",
+            "Нет файла подписи «Научный руководитель» документа «Аннотация». Приложите подпись заново",
+        ),
+        (
+            "frozen_pdf_missing",
+            "pack_frozen_missing",
+            "Нет зафиксированного PDF документа «Аннотация». Зафиксируйте документ заново и подпишите его",
+        ),
     ],
 )
 async def test__api__create_submission__frozen_source_errors_400_and_no_litter(
-    test_app: AsyncClient, tmp_path: Path, mocker: MockerFixture, breakage: str, detail: str
+    test_app: AsyncClient, tmp_path: Path, mocker: MockerFixture, breakage: str, code: str, detail: str
 ) -> None:
     project, _, frozen = await _frozen_signed_project(test_app, tmp_path, mocker, lang="ru", signature_format="cms")
     folder = Path(project["folder"])
@@ -717,7 +732,8 @@ async def test__api__create_submission__frozen_source_errors_400_and_no_litter(
     resp = await _submit(test_app, project, _CHECKPOINT_1)
 
     assert resp.status_code == 400, resp.text
-    assert resp.json()["detail"] == detail
+    body = resp.json()
+    assert (body["code"], body["doc_id"], body["doc"], body["detail"]) == (code, "annotation", "Аннотация", detail)
     # Ни архива, ни записи, ни строки в журнале.
     assert not list((folder / "submissions").glob("*.zip"))
     assert not list((folder / ".hse-studio" / "submissions").glob("*.json"))
@@ -726,4 +742,39 @@ async def test__api__create_submission__frozen_source_errors_400_and_no_litter(
     # Единственное намеренное отличие от сборки до планировщика: все три ошибки замороженного источника
     # поднимает планировщик, до любой записи на диск. Раньше папка пакета оставалась с документами,
     # успевшими скопироваться до сбоя; теперь папки submissions/<base_name>/ нет вовсе.
+    assert not list((folder / "submissions").glob("*"))
+
+
+async def test__api__create_submission__manual_freeze_before_route__refused_by_route_not_by_freeze(
+    test_app: AsyncClient, tmp_path: Path, mocker: MockerFixture
+) -> None:
+    """Ручная фиксация и подпись до отправки на подпись, затем пересборка и маршрут снял новую версию (12.8.1).
+
+    Раньше пакет отвечал английским «the version sent for signing is not the one that was frozen. Freeze the new
+    version and sign it». Старая фиксация к версии на подписи не относится: подпись над ней не готова, а
+    подсказка говорит, что версию зафиксирует маршрут.
+    """
+    project, _, _ = await _frozen_signed_project(test_app, tmp_path, mocker, lang="ru", signature_format="cms")
+    folder = Path(project["folder"])
+    sent = _make_pdf(folder / "annotation" / "annotation.pdf", "annotation, sent for signing")
+    source = folder / pinned_rel("annotation")
+    source.write_bytes(sent)
+    repo = JsonSignatureRepository()
+    pinned = PinnedPdf(
+        path=pinned_rel("annotation"),
+        sha256=_sha256(sent),
+        size=len(sent),
+        pinned_at="2026-11-10T14:32:00+00:00",
+        route_id="00000000-0000-4000-8000-000000000001",
+        round=1,
+    )
+    repo.save_state(folder, replace(repo.get_state(folder), pinned={"annotation": pinned}))
+
+    resp = await _submit(test_app, project, _CHECKPOINT_1)
+
+    assert resp.status_code == 400, resp.text
+    body = resp.json()
+    assert (body["code"], body["doc_id"], body["doc"]) == ("pack_slot_not_signed", "annotation", "Аннотация")
+    assert body["hint"] == "Ждёт фиксации новой версии"
+    assert "Freeze" not in body["detail"]
     assert not list((folder / "submissions").glob("*"))

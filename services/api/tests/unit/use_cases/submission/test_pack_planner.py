@@ -40,6 +40,7 @@ from hse_doc_studio.core.jobs.codec import decode, encode
 from hse_doc_studio.core.jobs.files import ManifestFile
 from hse_doc_studio.core.jobs.pack import ArchiveFormat, PackEntryKind, PackSubmissionPayload
 from hse_doc_studio.core.signatures.ports import IPublicKeyExporter
+from hse_doc_studio.core.submission_errors import PackError, PackErrorCode
 from hse_doc_studio.core.value_objects import (
     Author,
     ChecksOverride,
@@ -51,10 +52,12 @@ from hse_doc_studio.core.value_objects import (
     SignatureSlot,
     SignaturesState,
     SignerInfo,
+    SkippedSlot,
 )
 from hse_doc_studio.infra.signatures.openpgp import GpgKeyring
 from hse_doc_studio.use_cases.submission.pack_planner import (
     NOTICE_CHANGED_AFTER_SENT,
+    NOTICE_OPTIONAL_UNSIGNED,
     REASON_ARCNAME_ESCAPES,
     REASON_EXTRA_SOURCE_ESCAPES,
     REASON_SOURCE_MISSING,
@@ -290,11 +293,13 @@ def test__pack_planner__payload_header__lang_names_and_format() -> None:
     assert _arcnames(plan) == ["tz-en.pdf"]
 
 
-def test__pack_planner__unknown_archive_format__same_value_error() -> None:
+def test__pack_planner__unknown_archive_format__coded_error() -> None:
     version = _version(())
 
-    with pytest.raises(ValueError, match="Unknown archive format: 'bogus'"):
+    with pytest.raises(PackError, match="^Формат архива «bogus» не поддерживается$") as caught:
         _plan(make_project(), version, MemoryProbe(), archive_format="bogus")
+
+    assert (caught.value.code, caught.value.params) == (PackErrorCode.archive_format_unknown, {"format": "bogus"})
 
 
 def test__pack_planner__team_personal_doc__owner_suffix_and_base_path() -> None:
@@ -619,29 +624,51 @@ def test__pack_planner__detached_english__guide_and_names_in_project_language() 
     assert guide.startswith("How to verify the signatures")
 
 
-def test__pack_planner__frozen_rehash_mismatch__value_error_text_unchanged_before_any_write() -> None:
+def test__pack_planner__frozen_rehash_mismatch__coded_error_before_any_write() -> None:
     project, version, state, probe = _detached_setup(frozen_source=b"%PDF-1.4 older build")
 
-    expected = (
-        "ТЗ.pdf: the document was rebuilt after the PDF was frozen for signing. "
-        "Freeze it again and re-attach the signatures"
-    )
-    with pytest.raises(ValueError, match=f"^{re.escape(expected)}$"):
+    expected = "Документ «ТЗ» пересобран после фиксации PDF. Зафиксируйте его заново и подпишите новую версию"
+    with pytest.raises(PackError, match=f"^{re.escape(expected)}$") as caught:
         _plan(project, version, probe, docs=_items("tz", signatures=("advisor",)), state=state)
 
+    error = caught.value
+    assert (error.code, error.doc_id, error.params) == (PackErrorCode.rebuilt_after_freeze, "tz", {"doc": "ТЗ"})
+    # ValueError, как раньше: тулы агента и MCP ловят его и показывают текст.
+    assert isinstance(error, ValueError)
 
-def test__pack_planner__frozen_pdf_missing__value_error_text_unchanged() -> None:
+
+def test__pack_planner__frozen_pdf_missing__coded_error() -> None:
     project, version, state, probe = _detached_setup(with_frozen_file=False)
 
-    with pytest.raises(ValueError, match="^Frozen PDF is missing for ТЗ.pdf: freeze the document again$"):
+    expected = "Нет зафиксированного PDF документа «ТЗ». Зафиксируйте документ заново и подпишите его"
+    with pytest.raises(PackError, match=f"^{re.escape(expected)}$") as caught:
         _plan(project, version, probe, docs=_items("tz", signatures=("advisor",)), state=state)
 
+    assert (caught.value.code, caught.value.doc_id) == (PackErrorCode.frozen_missing, "tz")
 
-def test__pack_planner__signature_file_missing__value_error_text_unchanged() -> None:
+
+def test__pack_planner__signature_file_missing__coded_error_names_the_slot() -> None:
     project, version, state, probe = _detached_setup(with_sig_file=False)
 
-    with pytest.raises(ValueError, match="^Signature file is missing for ТЗ.pdf, slot advisor$"):
+    expected = "Нет файла подписи «Научный руководитель» документа «ТЗ». Приложите подпись заново"
+    with pytest.raises(PackError, match=f"^{re.escape(expected)}$") as caught:
         _plan(project, version, probe, docs=_items("tz", signatures=("advisor",)), state=state)
+
+    assert caught.value.code is PackErrorCode.signature_missing
+    assert caught.value.params == {"doc": "ТЗ", "slot": "Научный руководитель"}
+
+
+def test__pack_planner__frozen_error__text_in_interface_language() -> None:
+    project, version, state, probe = _detached_setup(with_frozen_file=False)
+
+    set_interface_language(Lang.en)
+    try:
+        with pytest.raises(PackError) as caught:
+            _plan(project, version, probe, docs=_items("tz", signatures=("advisor",)), state=state)
+    finally:
+        set_interface_language(None)
+
+    assert str(caught.value) == "The frozen PDF of «ТЗ» is missing. Freeze the document again and sign it"
 
 
 def test__pack_planner__frozen_without_detached_signature_requested__plain_copy() -> None:
@@ -956,13 +983,34 @@ def test__pack_planner__detached_on_pinned_english__version_line_in_project_lang
     assert f"  Version of 10.11.2026, SHA-256 of the source PDF {_sha(_SENT)}" in guide.splitlines()
 
 
-def test__pack_planner__new_version_sent_after_freeze__error_names_the_version_not_a_rebuild() -> None:
+@pytest.mark.parametrize("with_frozen_file", [True, False])
+def test__pack_planner__freeze_of_another_version__route_freezes_it_no_advice_to_freeze_by_hand(
+    with_frozen_file: bool,
+) -> None:
+    # Ручная фиксация до отправки на подпись (или прошлой версии) к версии на подписи не относится: ее заменит
+    # фиксация маршрута. Отказ не советует фиксировать вручную и не жалуется на сам файл фиксации.
+    project, version, state, probe = _detached_setup(frozen_source=_PDF, with_frozen_file=with_frozen_file)
+    probe.files[_PINNED_REL] = _SENT
+
+    expected = (
+        "Версия на подписи документа «ТЗ» ещё не зафиксирована: маршрут подписания зафиксирует её сам, "
+        "когда все согласуют"
+    )
+    with pytest.raises(PackError, match=f"^{re.escape(expected)}$") as caught:
+        _plan(project, version, probe, docs=_items("tz", signatures=("advisor",)), state=_with_pinned(state))
+
+    assert (caught.value.code, caught.value.doc_id) == (PackErrorCode.version_not_frozen, "tz")
+
+
+def test__pack_planner__stale_manual_freeze_without_requested_crypto_slot__version_goes_in_stamped() -> None:
+    # Пункт без криптоподписей: старая фиксация с подписями над ней в пакет не попадает, едет версия на подписи.
     project, version, state, probe = _detached_setup(frozen_source=_PDF)
     probe.files[_PINNED_REL] = _SENT
 
-    expected = "ТЗ.pdf: the version sent for signing is not the one that was frozen. Freeze the new version and sign it"
-    with pytest.raises(ValueError, match=f"^{re.escape(expected)}$"):
-        _plan(project, version, probe, docs=_items("tz", signatures=("advisor",)), state=_with_pinned(state))
+    plan = _plan(project, version, probe, docs=_items("tz"), state=_with_pinned(state))
+
+    [entry] = plan.payload.entries
+    assert entry.source == ManifestFile(_PINNED_REL)
 
 
 def test__pack_planner__without_pinned_version__guide_has_no_version_line() -> None:
@@ -988,3 +1036,106 @@ def test__pack_planner__custom_docx_with_pinned_version__pdf_name_and_version_by
     assert (entry.arcname, entry.source) == ("ТЗ.pdf", ManifestFile(_PINNED_REL))
     # Рабочий файл не PDF: сравнивать его с версией на подписи нечем.
     assert plan.notices == ()
+
+
+# --- Необязательные и пропущенные подписи (signing-route.md, 13.11) ---------------------------------------------------
+
+_ACADEMIC = SignatureSlotDef(
+    id="academic",
+    label={"ru": "Академический руководитель ОП", "en": "Academic supervisor"},
+    applies_to=("tz",),
+    default_placement=SignatureDefaultPlacement(page=1, x_mm=10, y_mm=60, width_mm=30),
+)
+_CO = SignatureSlotDef(
+    id="co",
+    label={"ru": "Соруководитель", "en": "Co-supervisor"},
+    applies_to=("tz",),
+    default_placement=SignatureDefaultPlacement(page=1, x_mm=10, y_mm=90, width_mm=30),
+)
+
+
+def _skip(profile_id: str = "final", *, keep_mark: bool = False) -> SkippedSlot:
+    return SkippedSlot(profile_id=profile_id, route_id="r1", round=1, at="2026-11-13T10:00:00Z", keep_mark=keep_mark)
+
+
+def _with_skip_and_optional(state: SignaturesState, skip: SkippedSlot) -> SignaturesState:
+    plate = SignatureSlot(
+        png_path=None, natural_width_px=None, natural_height_px=None, sign_mode=SignMode.detached_text
+    )
+    placement = SignaturePlacement(enabled=True, page=1, x_mm=10, y_mm=60, width_mm=30)
+    return replace(
+        state,
+        slots={**state.slots, "academic": plate, "co": plate},
+        placements={"tz": {**state.placements["tz"], "academic": placement, "co": placement}},
+        skipped={"tz": {"academic": skip}},
+        optional={"tz": {"final": frozenset({"co"})}},
+    )
+
+
+def test__pack_planner__detached_with_skipped_kept_mark_and_optional__guide_names_them_and_notice() -> None:
+    project, version, state, probe = _detached_setup()
+    version = replace(
+        version, signatures_config=SignaturesConfig(slots=(*version.signatures_config.slots, _ACADEMIC, _CO))
+    )
+    state = _with_skip_and_optional(state, _skip(keep_mark=True))
+    item = SubmissionDocItem(doc_id="tz", signatures=("advisor",), optional_unsigned=("co",))
+
+    plan = _plan(project, version, probe, docs=[item], state=state)
+
+    guide = next(e for e in plan.payload.entries if e.arcname == "КАК_ПРОВЕРИТЬ.txt")
+    assert guide.text is not None
+    assert (
+        "  - Академический руководитель ОП: не требуется (пропущено автором), плашка на странице без файла подписи"
+        in guide.text
+    )
+    assert "  - Соруководитель: не поставлена (необязательна)" in guide.text
+    [notice] = plan.notices
+    assert (notice.code, notice.doc_id, notice.arcname, notice.slot_id) == (
+        NOTICE_OPTIONAL_UNSIGNED,
+        "tz",
+        "ТЗ.pdf",
+        "co",
+    )
+    assert notice.message == "Необязательная подпись «Соруководитель» в «ТЗ» не поставлена"
+    assert plan.warnings == ()
+
+
+def test__pack_planner__skipped_on_another_point__not_named_in_the_guide() -> None:
+    project, version, state, probe = _detached_setup()
+    version = replace(version, signatures_config=SignaturesConfig(slots=(*version.signatures_config.slots, _ACADEMIC)))
+    state = _with_skip_and_optional(state, _skip("defence"))
+
+    plan = _plan(project, version, probe, docs=_items("tz", signatures=("advisor",)), state=state)
+
+    guide = next(e for e in plan.payload.entries if e.arcname == "КАК_ПРОВЕРИТЬ.txt")
+    assert guide.text is not None
+    assert "Академический руководитель ОП" not in guide.text
+
+
+def test__pack_planner__skipped_english_guide_line() -> None:
+    project, version, state, probe = _detached_setup()
+    version = replace(version, signatures_config=SignaturesConfig(slots=(*version.signatures_config.slots, _ACADEMIC)))
+    state = replace(_with_skip_and_optional(state, _skip()), optional={})
+
+    plan = _plan(project, version, probe, docs=_items("tz", signatures=("advisor",)), state=state, lang=Lang.en)
+
+    guide = next(e for e in plan.payload.entries if e.arcname == "HOW_TO_VERIFY.txt")
+    assert guide.text is not None
+    assert "  - Academic supervisor: not required (skipped by the author)\n" in guide.text
+
+
+def test__pack_planner__images_only_with_skipped_and_optional__no_guide_skipped_mark_not_stamped() -> None:
+    state, slot_def = _stamped_state()
+    version = _version((_def("tz", "ТЗ.pdf"),), slots=(slot_def, _ACADEMIC, _CO))
+    project = make_project(documents=[make_document("tz")])
+    probe = MemoryProbe({"tz/tz.pdf": _PDF, ".hse-studio/signatures/author.png": b"png"})
+    state = _with_skip_and_optional(state, _skip())
+    item = SubmissionDocItem(doc_id="tz", signatures=("author",), optional_unsigned=("co",))
+
+    plan = _plan(project, version, probe, docs=[item], state=state)
+
+    # Инструкция только в комплекте с ЭП; пропущенная метка на странице не рисуется.
+    [entry] = plan.payload.entries
+    assert entry.kind is PackEntryKind.stamp_pdf
+    assert [s.png for s in entry.stamps] == [ManifestFile(".hse-studio/signatures/author.png")]
+    assert [n.code for n in plan.notices] == [NOTICE_OPTIONAL_UNSIGNED]

@@ -4,6 +4,7 @@ from uuid import UUID
 
 from pydantic import BaseModel
 
+from hse_doc_studio.api.schemas.common import StrictModel
 from hse_doc_studio.core.enums import DetachedFormat, DetachedOrigin, DetachedVerdict, SignMode
 
 
@@ -84,6 +85,10 @@ class RuntimeSlotResponse(BaseModel):
     default_placement: dict[str, float]
     # Слаг автора-владельца per-author слота; None — обычный слот пака.
     owner: str | None = None
+    # Пак запрещает отмечать подпись необязательной (`required: true`, signing-route.md, 13.3).
+    required: bool = False
+    # Точки, чей маршрут включил слот в документ сверх точки: id документа → точки (13.6).
+    extra_by: dict[str, list[ProfileRefResponse]] = {}
 
 
 class FrozenPdfResponse(BaseModel):
@@ -119,6 +124,17 @@ class DetachedSignatureResponse(BaseModel):
     current: bool
 
 
+class SkippedSlotResponse(BaseModel):
+    """Пропуск подписи маршрутом (signing-route.md, 13.3)."""
+
+    profile_id: str
+    route_id: str
+    round: int
+    at: str
+    # Метка осталась в зафиксированном PDF, над которым уже есть ЭП (13.5).
+    keep_mark: bool
+
+
 class SignaturesStateResponse(BaseModel):
     slots: dict[str, SlotInfoResponse]
     placements: dict[str, dict[str, PlacementResponse]]
@@ -130,6 +146,10 @@ class SignaturesStateResponse(BaseModel):
     # Слоты документов, чью картинку придержал маршрут подписания до согласия подписанта (signing-route.md, 6.1):
     # на вкладке «Подписи» у них пометка «Придержано маршрутом» и «Показать» (5.6).
     withheld: dict[str, list[str]] = {}
+    # Необязательные подписи (signing-route.md, 13.3): документ → точка → слоты, которые на ней можно не подписывать.
+    optional: dict[str, dict[str, list[str]]] = {}
+    # Пропущенные маршрутом подписи: документ → слот → пропуск.
+    skipped: dict[str, dict[str, SkippedSlotResponse]] = {}
 
 
 class UpdatePlacementRequest(BaseModel):
@@ -174,3 +194,23 @@ class EmbeddedSignatureResponse(BaseModel):
     signed_at: str | None = None
     revision_size: int
     notes: list[str] = []
+
+
+class SetSlotOptionalRequest(StrictModel):
+    """PUT /signatures/optional/{doc_id}/{slot_id}: отметить или снять «Подпись необязательна» на точке (13.6)."""
+
+    profile_id: str
+    optional: bool
+
+
+class SlotOptional(StrictModel):
+    """Ответ на отметку: что стало с парой на точке (signing-route.md, 13.6)."""
+
+    doc_id: str
+    slot_id: str
+    profile_id: str
+    optional: bool
+    # Подписанта уже пропустили на этой точке.
+    skipped: bool
+    # Отметку сняли у пропущенной пары, а маршрут держит документ: подписант вернётся при следующей отправке.
+    returns_next_round: bool

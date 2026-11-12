@@ -10,6 +10,10 @@
 версии на подписи, если маршрут ее снял, иначе текущей сборки. Рабочая сборка,
 ушедшая вперед версии на подписи, это предупреждение `changed_after_sent` без
 пропуска: в пакет все равно едет версия на подписи.
+
+Подпись, пропущенная маршрутом на этой точке, и необязательная неподписанная
+готовности не блокируют (signing-route.md, 13.11): КАК_ПРОВЕРИТЬ.txt называет их,
+а вторая еще и дает предупреждение `optional_unsigned`.
 """
 
 from __future__ import annotations
@@ -49,6 +53,7 @@ from hse_doc_studio.core.office import CONVERTIBLE_OFFICE_EXTS, resolve_custom_d
 from hse_doc_studio.core.services import ProjectTemplateService, SignatureSlotService
 from hse_doc_studio.core.signatures.package_text import (
     BASE_SUFFIX,
+    CRYPTO_GUIDE_KINDS,
     VERIFY_GUIDE_NAME,
     GuideDocument,
     GuideSignature,
@@ -62,6 +67,15 @@ from hse_doc_studio.core.signatures.package_text import (
 from hse_doc_studio.core.signatures.plan import SignMethod, method_of, signer_for
 from hse_doc_studio.core.signatures.ports import IPublicKeyExporter
 from hse_doc_studio.core.signatures.stamps import Stamp, stamps_digest_matches, stamps_for_doc
+from hse_doc_studio.core.submission_errors import (
+    archive_format_unknown,
+    frozen_missing,
+    marks_changed,
+    rebuilt_after_freeze,
+    signature_missing,
+    signed_pdf_changed,
+    version_not_frozen,
+)
 from hse_doc_studio.core.team import author_by_slug
 from hse_doc_studio.core.value_objects import (
     DetachedSignature,
@@ -84,28 +98,31 @@ REASON_EXTRA_SOURCE_MISSING = "extra_source_missing"
 REASON_EXTRA_UNREADABLE = "extra_unreadable"
 
 # Коды PackNotice: файл в пакете есть, но автору стоит о нем знать.
-NoticeCode = Literal["changed_after_sent"]
+NoticeCode = Literal["changed_after_sent", "optional_unsigned"]
 NOTICE_CHANGED_AFTER_SENT: NoticeCode = "changed_after_sent"
+NOTICE_OPTIONAL_UNSIGNED: NoticeCode = "optional_unsigned"
 
 
 @dataclass(frozen=True)
 class PackNotice:
-    """Предупреждение без пропуска (signing-route.md, 12.8): документ в пакете, но не тот, что в рабочей сборке.
+    """Предупреждение без пропуска: документ в пакете, но автору стоит о нем знать.
 
-    `changed_after_sent`: рабочая сборка разошлась с версией на подписи, в пакет попала версия на подписи.
-    Поля версии те же, что у `pinned` в плане подписей; `source_sha256` хэш файла версии, по которому
-    собран пакет, `working_sha256` хэш рабочей сборки.
+    `changed_after_sent` (signing-route.md, 12.8): рабочая сборка разошлась с версией на подписи, в пакет попала
+    версия на подписи. Поля версии те же, что у `pinned` в плане подписей; `source_sha256` хэш файла версии, по
+    которому собран пакет, `working_sha256` хэш рабочей сборки.
+    `optional_unsigned` (13.11): необязательная на точке подпись `slot_id` не поставлена; полей версии у него нет.
     """
 
     code: NoticeCode
     doc_id: str
     arcname: str
     message: str
-    pinned_at: str
-    route_id: str
-    round: int
-    source_sha256: str
-    working_sha256: str
+    pinned_at: str = ""
+    route_id: str = ""
+    round: int = 0
+    source_sha256: str = ""
+    working_sha256: str = ""
+    slot_id: str = ""
 
 
 @dataclass(frozen=True)
@@ -238,6 +255,7 @@ class _Run:
     key_exporter: IPublicKeyExporter | None
     template_service: ProjectTemplateService
     slot_service: SignatureSlotService
+    profile_id: str = ""
     entries: list[PackEntry] = field(default_factory=list)
     warnings: list[PackSkip] = field(default_factory=list)
     notices: list[PackNotice] = field(default_factory=list)
@@ -283,6 +301,7 @@ class _Run:
             )
             return
         version = self._pinned_version(item.doc_id, target, source_rel, working_rel, pinned) if pinned else None
+        self._optional_notices(item, target)
         # Документ с криптоподписями едет зафиксированными байтами, которые подписи и покрывают:
         # итоговый файл со встроенными PAdES и отдельный файл на каждую открепленную подпись.
         detached = _detached_for_item(item.signatures, item.doc_id, self.sig_state) if is_pdf else []
@@ -299,9 +318,9 @@ class _Run:
             self.entries.append(
                 PackEntry(PackEntryKind.stamp_pdf, target, source=ManifestFile(source_rel), stamps=specs)
             )
-            images = self._image_signatures(item)
-            if images:
-                self.guide.append(_with_version(GuideDocument(pdf=target, sha256="", signatures=images), version))
+            sigs = (*self._image_signatures(item), *self._unsigned_signatures(item))
+            if sigs:
+                self.guide.append(_with_version(GuideDocument(pdf=target, sha256="", signatures=sigs), version))
         else:
             self.entries.append(PackEntry(PackEntryKind.copy, target, source=ManifestFile(source_rel)))
 
@@ -422,26 +441,57 @@ class _Run:
             if _method(self.sig_state, slot_id) is SignMethod.image
         )
 
+    def _unsigned_signatures(self, item: SubmissionDocItem) -> tuple[GuideSignature, ...]:
+        """Строки инструкции без подписи (13.11): пропущенные маршрутом на этой точке, в том числе слоты сверх точки
+        (в пункте профиля их нет, а метка с `keep_mark` стоит на странице), и необязательные неподписанные."""
+        skipped = sorted(
+            (slot_id, skip)
+            for slot_id, skip in self.sig_state.skipped.get(item.doc_id, {}).items()
+            if skip.profile_id == self.profile_id
+        )
+        return (
+            *(
+                GuideSignature("skipped", self._slot_label(slot_id), "", kept_mark=skip.keep_mark)
+                for slot_id, skip in skipped
+            ),
+            *(GuideSignature("optional_unsigned", self._slot_label(slot_id), "") for slot_id in item.optional_unsigned),
+        )
+
+    def _optional_notices(self, item: SubmissionDocItem, arcname: str) -> None:
+        """Предупреждение `optional_unsigned` на каждую необязательную неподписанную подпись документа (13.11)."""
+        name = PurePosixPath(arcname).stem
+        for slot_id in item.optional_unsigned:
+            label = self._slot_label(slot_id)
+            self.notices.append(
+                PackNotice(
+                    code=NOTICE_OPTIONAL_UNSIGNED,
+                    doc_id=item.doc_id,
+                    arcname=arcname,
+                    message=localized_error(
+                        f"Необязательная подпись «{label}» в «{name}» не поставлена",
+                        f"The optional signature «{label}» on «{name}» is not signed",
+                    ),
+                    slot_id=slot_id,
+                )
+            )
+
     def _check_frozen_current(
         self, doc_id: str, source_rel: str, arcname: str, frozen: FrozenPdf, *, pinned: bool
     ) -> str:
-        """Путь зафиксированного PDF; ошибка, если источник подписи или видимый слой изменились после фиксации.
+        """Путь зафиксированного PDF; `PackError`, если источник подписи или видимый слой изменились после фиксации.
 
         Источник это версия на подписи, если она есть: пересборка рабочей сборки фиксацию не старит (12.8).
+        Фиксация другой версии (например, ручная до отправки на подпись) к версии на подписи не относится: ее
+        заменит фиксация маршрута, поэтому отказ говорит про маршрут, а не про ручную фиксацию (12.8.1).
         """
-        frozen_rel = _contained(frozen.path)
-        if frozen_rel is None or not self.probe.is_file(frozen_rel):
-            raise ValueError(f"Frozen PDF is missing for {arcname}: freeze the document again")
+        name = PurePosixPath(arcname).stem
         if self.probe.sha256(source_rel) != frozen.source_sha256:
             if pinned:
-                raise ValueError(
-                    f"{arcname}: the version sent for signing is not the one that was frozen. "
-                    "Freeze the new version and sign it"
-                )
-            raise ValueError(
-                f"{arcname}: the document was rebuilt after the PDF was frozen for signing. "
-                "Freeze it again and re-attach the signatures"
-            )
+                raise version_not_frozen(doc_id, name)
+            raise rebuilt_after_freeze(doc_id, name)
+        frozen_rel = _contained(frozen.path)
+        if frozen_rel is None or not self.probe.is_file(frozen_rel):
+            raise frozen_missing(doc_id, name)
         folder = self.project.folder
 
         def png_exists(path: Path) -> bool:
@@ -449,10 +499,7 @@ class _Run:
 
         marks = stamps_for_doc(self.sig_state, doc_id, folder, self.lang, png_exists=png_exists)
         if not stamps_digest_matches(frozen.stamps_digest, marks, folder):
-            raise ValueError(
-                f"{arcname}: images or signature plates changed after the PDF was frozen for signing. "
-                "Freeze it again and sign the new version"
-            )
+            raise marks_changed(doc_id, name)
         return frozen_rel
 
     def _add_frozen_doc(  # noqa: C901, PLR0913 — пункт, источник, имя, три части состояния и версия
@@ -473,7 +520,7 @@ class _Run:
         if embedded:
             signed_rel = _contained(frozen.signed_path)
             if signed_rel is None or self.probe.sha256(signed_rel) != frozen.signed_sha256:
-                raise ValueError(f"{arcname}: the signed PDF changed outside the Studio: freeze the document again")
+                raise signed_pdf_changed(item.doc_id, PurePosixPath(arcname).stem)
             final_rel, final_sha, final_size = signed_rel, frozen.signed_sha256, frozen.signed_size
         entries = [
             PackEntry(
@@ -502,7 +549,7 @@ class _Run:
         for slot_id, sig in detached:
             sig_rel = _contained(sig.file)
             if sig_rel is None or not self.probe.is_file(sig_rel):
-                raise ValueError(f"Signature file is missing for {arcname}, slot {slot_id}")
+                raise signature_missing(item.doc_id, PurePosixPath(arcname).stem, self._slot_label(slot_id))
             label = self._slot_label(slot_id)
             # Имя из самой подписи: кто подписал на деле, а не кого ждали на плашке.
             signer = signer_display_name(sig.signer) or signer_for(self.project, slot_id).name or label
@@ -527,6 +574,7 @@ class _Run:
             )
             for slot_id, emb in embedded
         ]
+        guide_sigs += self._unsigned_signatures(item)
         keys = public_key_files(self.key_exporter.export_public, sigs) if self.key_exporter is not None else {}
         for name, blob in keys.items():
             entries.append(
@@ -553,7 +601,7 @@ class _Run:
 
         Комплект из одних картинок инструкции не получает: проверять в нём нечего, а лишний файл в LMS мешает.
         """
-        if not any(sig.kind != "image" for doc in self.guide for sig in doc.signatures):
+        if not any(sig.kind in CRYPTO_GUIDE_KINDS for doc in self.guide for sig in doc.signatures):
             return
         name = VERIFY_GUIDE_NAME.get(self.lang, VERIFY_GUIDE_NAME["ru"])
         self.entries.append(
@@ -671,13 +719,13 @@ class PackPlanner:
     ) -> PackPlan:
         """План пакета: записи в порядке документов, затем дополнений.
 
-        Ошибки замороженных источников (`ValueError` с теми же текстами, что и
-        раньше) поднимаются здесь, до любой записи на диск.
+        Ошибки замороженных источников (`PackError` с кодом и текстом на языке
+        интерфейса) поднимаются здесь, до любой записи на диск.
         """
         try:
             fmt = ArchiveFormat(archive_format)
         except ValueError:
-            raise ValueError(f"Unknown archive format: {archive_format!r}") from None
+            raise archive_format_unknown(archive_format) from None
         run = _Run(
             project=project,
             version=version,
@@ -689,6 +737,7 @@ class PackPlanner:
             key_exporter=key_exporter,
             template_service=self._template_service,
             slot_service=self._slot_service,
+            profile_id=profile_id,
         )
         for item in doc_items:
             run.add_doc(item)

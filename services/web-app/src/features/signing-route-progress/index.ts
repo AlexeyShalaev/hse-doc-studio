@@ -18,3 +18,9 @@ export { usePersonaLabel } from "./lib/usePersonaLabel";
 export { useRouteSlotHints } from "./model/useRouteSlotHints";
 export { routeTally } from "./lib/routeView";
 export type { RouteTally } from "./lib/routeView";
+export { usePackGate } from "./model/usePackGate";
+export type {
+  PackGate,
+  PackGateRow,
+  UsePackGateArgs,
+} from "./model/usePackGate";

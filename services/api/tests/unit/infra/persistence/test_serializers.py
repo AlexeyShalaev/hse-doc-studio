@@ -37,6 +37,7 @@ from hse_doc_studio.core.value_objects import (
     SignaturePlacement,
     SignatureSlot,
     SignaturesState,
+    SkippedSlot,
 )
 from hse_doc_studio.infra.persistence.serializers import (
     _parse_dt,
@@ -557,3 +558,81 @@ def test__serializers__parse_dt_aware_datetime_preserved() -> None:
     assert dt.tzinfo is not None
     assert dt.year == 2026
     assert dt.month == 6
+
+
+def test__serializers__signatures_state__optional_and_skipped_roundtrip_and_always_written() -> None:
+    skip = SkippedSlot(
+        profile_id="topic-approval", route_id="r1", round=2, at="2026-11-13T10:00:00+00:00", keep_mark=True
+    )
+    state = SignaturesState(
+        slots={},
+        placements={},
+        optional={"b": {"p": frozenset({"supervisor", "author"}), "q": frozenset()}, "c": {}},
+        skipped={"b": {"academic_supervisor": skip}, "c": {}},
+    )
+
+    data = serialize_signatures_state(state)
+    restored = deserialize_signatures_state(data)
+
+    assert data["optional"] == {"b": {"p": ["author", "supervisor"]}}
+    assert data["skipped"] == {
+        "b": {
+            "academic_supervisor": {
+                "profile_id": "topic-approval",
+                "route_id": "r1",
+                "round": 2,
+                "at": "2026-11-13T10:00:00+00:00",
+                "keep_mark": True,
+            }
+        }
+    }
+    assert restored.optional == {"b": {"p": frozenset({"author", "supervisor"})}}
+    assert restored.skipped == {"b": {"academic_supervisor": skip}}
+    assert restored.is_optional("b", "p", "author")
+    assert not restored.is_optional("b", "q", "author")
+    assert restored.skip_of("b", "academic_supervisor") == skip
+    assert restored.skip_of("b", "academic_supervisor", "other-point") is None
+    empty = serialize_signatures_state(SignaturesState.empty())
+    assert (empty["optional"], empty["skipped"]) == ({}, {})
+
+
+def test__serializers__signatures_state__optional_and_skipped_legacy_and_broken_entries() -> None:
+    assert deserialize_signatures_state({"slots": {}, "placements": {}}).optional == {}
+    assert deserialize_signatures_state({"slots": {}, "placements": {}}).skipped == {}
+    broken = {
+        "slots": {},
+        "placements": {},
+        "optional": {"a": ["author"], "b": {"p": [1, "", "supervisor"], "q": "author"}, "c": {"p": []}},
+        "skipped": {
+            "a": ["x"],
+            "b": {
+                "ok": {"profile_id": "p", "at": "2026-11-13T10:00:00+00:00"},
+                "no_at": {"profile_id": "p"},
+                "no_profile": {"profile_id": "", "at": "2026-11-13T10:00:00+00:00"},
+                "bad_round": {"profile_id": "p", "at": "x", "round": "two"},
+                "not_dict": "p",
+            },
+        },
+    }
+
+    restored = deserialize_signatures_state(broken)
+
+    assert restored.optional == {"b": {"p": frozenset({"supervisor"})}}
+    assert restored.skipped == {
+        "b": {"ok": SkippedSlot(profile_id="p", route_id="", round=0, at="2026-11-13T10:00:00+00:00")}
+    }
+
+
+def test__signatures_state__mark_hidden__withheld_and_skipped_without_kept_mark() -> None:
+    skip = SkippedSlot(profile_id="p", route_id="r", round=1, at="t")
+    state = SignaturesState(
+        slots={},
+        placements={},
+        withheld={"a": frozenset({"author"})},
+        skipped={"a": {"supervisor": skip, "academic_supervisor": SkippedSlot("p", "r", 1, "t", keep_mark=True)}},
+    )
+
+    assert state.mark_hidden("a", "author")
+    assert state.mark_hidden("a", "supervisor")
+    assert not state.mark_hidden("a", "academic_supervisor")
+    assert not state.mark_hidden("b", "supervisor")
