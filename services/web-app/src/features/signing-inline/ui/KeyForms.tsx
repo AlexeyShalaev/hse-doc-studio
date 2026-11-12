@@ -31,7 +31,7 @@ const Footer = ({
         disabled={busy}
         onClick={onCancel}
       >
-        {t("key.cancel")}
+        {t("cancel")}
       </Button>
       <Button
         type="submit"

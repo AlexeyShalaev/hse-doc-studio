@@ -170,6 +170,12 @@ export default defineConfig(({ mode }) => {
             if (signing) {
               return `assets/locale-signing-${signing[1] ?? ""}-[hash].js`;
             }
+            // Тексты редких окон страницы подписанта: грузятся, когда окно открывают.
+            const signingRare =
+              /\/locales\/([a-z]{2})\/signing\/rare\.json$/.exec(id);
+            if (signingRare) {
+              return `assets/locale-signingRare-${signingRare[1] ?? ""}-[hash].js`;
+            }
             // Общие куски разделов админки (features/admin-ops и т.п.) сборщик
             // называет по папке; без префикса они совпали бы с маской admin-*.js
             // единственного чанка оболочки.

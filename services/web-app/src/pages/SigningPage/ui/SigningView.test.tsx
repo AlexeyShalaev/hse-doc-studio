@@ -242,6 +242,16 @@ describe("SigningView: его очередь", () => {
   });
 });
 
+describe("SigningView: общие отказы", () => {
+  it.each([
+    ["passphrase_invalid", "Пароль ключа не подошёл."],
+    ["sign_failed", "Не удалось подписать. Проверьте ключ и пароль."],
+  ] as const)("текст %s берётся из словаря ошибок Студии", (code, text) => {
+    mount({ failure: code });
+    expect(screen.getByTestId("signing-failure")).toHaveTextContent(text);
+  });
+});
+
 describe("SigningView: вернуть на доработку", () => {
   it("комментарий обязателен, окно закрывается после ответа сервера", async () => {
     const user = userEvent.setup();

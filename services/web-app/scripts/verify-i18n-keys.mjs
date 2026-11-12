@@ -23,10 +23,31 @@ const load = (ns) => {
         )
       : path.join(LOC, ns + ".json");
   try {
-    return (cache[ns] = JSON.parse(fs.readFileSync(file, "utf8")));
+    const dict = JSON.parse(fs.readFileSync(file, "utf8"));
+    // Тексты редких окон страницы подписанта дописываются в то же пространство (signing/rare.json).
+    if (ns === "signing") {
+      const rare = JSON.parse(
+        fs.readFileSync(path.join(LOC, "signing", "rare.json"), "utf8"),
+      );
+      return (cache[ns] = merge(dict, rare));
+    }
+    return (cache[ns] = dict);
   } catch {
     return (cache[ns] = null);
   }
+};
+const merge = (base, extra) => {
+  const out = { ...base };
+  for (const [key, value] of Object.entries(extra)) {
+    out[key] =
+      value &&
+      typeof value === "object" &&
+      out[key] &&
+      typeof out[key] === "object"
+        ? merge(out[key], value)
+        : value;
+  }
+  return out;
 };
 const PLURALS = ["_one", "_few", "_many", "_two", "_other", "_zero"];
 const has = (obj, key) => {

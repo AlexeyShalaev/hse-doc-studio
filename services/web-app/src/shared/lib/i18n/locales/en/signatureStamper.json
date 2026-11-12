@@ -319,7 +319,7 @@
       "stamp": "image goes on when frozen",
       "none": "ready"
     },
-    "confirmReset": "Freezing again resets signatures already made: {{names}}. They will have to sign again.",
+    "confirmReset": "Freezing again resets signatures already made, they will have to be made again: {{names}}",
     "done": "{{signed}} of {{total}} signed",
     "waiting": "Awaiting your signature: {{count}}"
   }

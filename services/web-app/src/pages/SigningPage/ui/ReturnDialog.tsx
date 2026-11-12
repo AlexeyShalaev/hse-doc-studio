@@ -48,7 +48,7 @@ export const ReturnDialog = ({
             onClick={onClose}
             disabled={busy}
           >
-            {t("return.cancel")}
+            {t("cancel")}
           </Button>
           <Button
             type="submit"
@@ -56,7 +56,7 @@ export const ReturnDialog = ({
             disabled={!ready || busy}
             data-testid="signing-return-submit"
           >
-            {busy ? t("return.sending") : t("return.submit")}
+            {busy ? t("actions.working") : t("return.submit")}
           </Button>
         </>
       }
@@ -94,7 +94,7 @@ export const ReturnDialog = ({
         <p className="sgn-hint">
           {t("return.notes")}{" "}
           <Link to={`/projects/${encodeURIComponent(projectId)}`}>
-            {t("return.openProject")}
+            {t("head.openProject")}
           </Link>
         </p>
       </form>

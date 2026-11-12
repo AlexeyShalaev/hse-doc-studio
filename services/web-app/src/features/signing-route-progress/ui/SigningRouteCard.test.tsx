@@ -890,7 +890,7 @@ describe("Подписание: версия на подписи (12.2)", () => 
     const dialog = await screen.findByRole("dialog", {}, LOAD);
     expect(
       within(dialog).getByTestId("signing-new-version-reapprove"),
-    ).toHaveTextContent(/^Согласуют заново: .*Петров П\. П\.\.$/);
+    ).toHaveTextContent(/^Согласуют заново: .*Петров П\. П\.$/);
   });
 
   it("без изменений документы и подписи на них останутся", async () => {

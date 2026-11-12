@@ -186,7 +186,7 @@ describe("RunnerDiskDialog", () => {
     const user = userEvent.setup();
     open("gpu");
     expect(
-      await screen.findByText(/Это личный раннер, владелец: Мария/),
+      await screen.findByText(/Владелец \(Мария\) получит уведомление/),
     ).toBeVisible();
     await user.click(screen.getByTestId("runner-disk-old-action"));
     expect(screen.queryByTestId("runner-disk-rollback")).toBeNull();

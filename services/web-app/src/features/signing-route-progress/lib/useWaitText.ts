@@ -5,6 +5,7 @@ import type {
   RouteWait,
   WaitPerson,
 } from "@entities/signing-route";
+import { endSentence } from "@shared/lib";
 import { usePersonaLabel } from "./usePersonaLabel";
 
 type Named = {
@@ -30,10 +31,6 @@ export const displayName = (
   }
   return { name: person.name ?? person.cardName, hint: null };
 };
-
-/** Точка в конце фразы, если имя в конце уже не кончается ею («Петров П. П.»). */
-const finish = (text: string): string =>
-  text.endsWith(".") ? text : `${text}.`;
 
 const capitalize = (text: string, lang: string): string =>
   text.charAt(0).toLocaleUpperCase(lang) + text.slice(1);
@@ -110,7 +107,9 @@ export const useWaitText = () => {
       const names = wait.now.map((p) =>
         p.state === "invited" ? t("wait.nowInvited", { who: who(p) }) : who(p),
       );
-      return finish(t("wait.now", { who: names.join(invited ? "; " : ", ") }));
+      return endSentence(
+        t("wait.now", { who: names.join(invited ? "; " : ", ") }),
+      );
     },
     [t, who],
   );
@@ -120,7 +119,7 @@ export const useWaitText = () => {
     (wait: RouteWait): string | null =>
       wait.invited.length === 0
         ? null
-        : finish(
+        : endSentence(
             t("wait.invitedTitle", {
               who: wait.invited.map((p) => who(p)).join(", "),
             }),

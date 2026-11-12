@@ -87,10 +87,16 @@ export const DivergenceBanner = ({ task }: { task: SigningTask }) => {
   const names = useDocNames();
   const divergence = divergenceOf(task);
   if (!divergence) return null;
-  const base = divergence.completed ? "completed" : "active";
-  const text = divergence.sentAt
-    ? t(`divergence.${base}`, { date: formatMoment(divergence.sentAt) })
-    : t(`divergence.${base}NoDate`);
+  // Те же слова, что в карточке «Подписание» (словарь signingProgress).
+  const date = divergence.sentAt ? formatMoment(divergence.sentAt) : null;
+  const after = t("signingProgress:version.changedAfterSigned");
+  const text = divergence.completed
+    ? date
+      ? `${t("signingProgress:version.completed", { date })} ${after}`
+      : after
+    : date
+      ? t("signingProgress:version.changed", { date })
+      : t("signingProgress:version.changedNoDate");
   return (
     <section
       className="sgn-notice"
@@ -119,7 +125,7 @@ export const DivergenceBanner = ({ task }: { task: SigningTask }) => {
             to={checkpointPath(task.route.project.id, task.route.profile.id)}
             data-testid="signing-send-new-version"
           >
-            {t("divergence.send")}
+            {t("signingProgress:newVersion.action")}
           </Link>
         </Button>
       </div>

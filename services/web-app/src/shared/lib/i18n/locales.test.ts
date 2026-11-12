@@ -66,6 +66,14 @@ describe("locale parity", () => {
     expect(keysOf("ru", "signing/signing.json").length).toBeGreaterThan(40);
   });
 
+  it("rare signing texts have the same keys in ru and en and do not repeat the page dictionary", () => {
+    const rare = keysOf("ru", "signing/rare.json");
+    expect(keysOf("en", "signing/rare.json")).toEqual(rare);
+    expect(rare.length).toBeGreaterThan(10);
+    const page = new Set(keysOf("ru", "signing/signing.json"));
+    expect(rare.filter((key) => page.has(key))).toEqual([]);
+  });
+
   it.each(NEW_NAMESPACES)("%s exists and is not empty", (ns) => {
     expect(namespaces).toContain(`${ns}.json`);
     expect(keysOf("ru", `${ns}.json`).length).toBeGreaterThan(5);

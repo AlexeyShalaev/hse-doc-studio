@@ -8,7 +8,7 @@ import {
 } from "@entities/signature";
 import { useSigningIdentities } from "@entities/signing-identity";
 import { RouteWaitNote } from "@features/signing-route-progress";
-import { pickLocalized } from "@shared/lib";
+import { endSentence, pickLocalized } from "@shared/lib";
 import { Modal } from "@shared/ui";
 import { Spinner } from "@shared/ui/Spinner";
 
@@ -272,14 +272,16 @@ export const SignSubmissionDialog = ({
                 }}
               />
               <span>
-                {t("signSubmission.confirmReset", {
-                  names: resets
-                    .map(
-                      (r) =>
-                        r.signer || pickLocalized(r.label, lang, r.slot_id),
-                    )
-                    .join(", "),
-                })}
+                {endSentence(
+                  t("signSubmission.confirmReset", {
+                    names: resets
+                      .map(
+                        (r) =>
+                          r.signer || pickLocalized(r.label, lang, r.slot_id),
+                      )
+                      .join(", "),
+                  }),
+                )}
               </span>
             </label>
           )}

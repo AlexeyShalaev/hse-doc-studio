@@ -10,7 +10,7 @@ import {
   useSendSigningRoute,
   type RouteParticipant,
 } from "@entities/signing-route";
-import { pickLocalized, toast } from "@shared/lib";
+import { endSentence, pickLocalized, toast } from "@shared/lib";
 import { Modal, Spinner, Textarea } from "@shared/ui";
 import { newVersionSummary, type NewVersionSummary } from "../lib/routeVersion";
 import { useWaitText } from "../lib/useWaitText";
@@ -197,16 +197,20 @@ export const NewVersionAction = ({
             >
               {summary.changed.length > 0 && (
                 <li data-testid="signing-new-version-changed">
-                  {t("newVersion.changed", {
-                    docs: summary.changed.join(", "),
-                  })}
+                  {endSentence(
+                    t("newVersion.changed", {
+                      docs: summary.changed.join(", "),
+                    }),
+                  )}
                 </li>
               )}
               {summary.reapprove.length > 0 && (
                 <li data-testid="signing-new-version-reapprove">
-                  {t("newVersion.reapprove", {
-                    people: names(summary.reapprove),
-                  })}
+                  {endSentence(
+                    t("newVersion.reapprove", {
+                      people: names(summary.reapprove),
+                    }),
+                  )}
                 </li>
               )}
               {summary.kept.length > 0 && (

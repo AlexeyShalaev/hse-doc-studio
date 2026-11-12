@@ -127,7 +127,7 @@ describe("RunnerDiskPanel", () => {
     const user = userEvent.setup();
     const on = renderPanel("personal_admin");
     expect(
-      screen.getByText(/Это личный раннер, владелец: Мария Келлер/),
+      screen.getByText(/Владелец \(Мария Келлер\) получит уведомление/),
     ).toBeVisible();
     expect(screen.getByTestId("runner-disk-old")).toHaveTextContent(
       "Предыдущую версию личного раннера может удалить только владелец.",

@@ -1,9 +1,10 @@
-import { useState } from "react";
+import { Suspense, lazy, useState } from "react";
 import { Link } from "react-router";
 import { useTranslation } from "react-i18next";
 import { FileQuestion } from "lucide-react";
 import { useIsCompactWidth } from "@shared/lib";
 import { Button, EmptyState, ErrorState, Spinner } from "@shared/ui";
+import { loadSigningRareTexts } from "@shared/lib/i18n/signingNamespace";
 import { Notice } from "@shared/ui/ConflictKit";
 import {
   signingPdfUrl,
@@ -15,7 +16,6 @@ import { newVersionDocs, signingStatus } from "../lib/signingState";
 import type { SigningExtension, SigningSlotContext } from "../model/extension";
 import type { SigningPageState } from "../model/useSigningPage";
 import { MethodSummary } from "./MethodSummary";
-import { ReturnDialog } from "./ReturnDialog";
 import { RouteHistory } from "./RouteHistory";
 import { RouteProgress } from "./RouteProgress";
 import { SigningActions } from "./SigningActions";
@@ -24,6 +24,13 @@ import { SigningHeader } from "./SigningHeader";
 import { StatusCard } from "./StatusCard";
 import { DivergenceBanner, NewVersionNotice } from "./VersionNotices";
 import "./signing.css";
+
+// «Вернуть на доработку» открывают редко: окно и его тексты в своих чанках, грузятся по кнопке.
+const ReturnDialog = lazy(() =>
+  Promise.all([import("./ReturnDialog"), loadSigningRareTexts()]).then(
+    ([m]) => ({ default: m.ReturnDialog }),
+  ),
+);
 
 export type SigningViewProps = {
   state: SigningPageState;
@@ -125,10 +132,10 @@ export const SigningView = ({
                   style={{ gap: "0.5rem", flexWrap: "wrap" }}
                 >
                   <Button asChild size="sm">
-                    <Link to={SIGNING_INBOX_PATH}>{t("page.inbox")}</Link>
+                    <Link to={SIGNING_INBOX_PATH}>{t("inbox:title")}</Link>
                   </Button>
                   <Button asChild size="sm" variant="secondary">
-                    <Link to="/">{t("page.home")}</Link>
+                    <Link to="/">{t("appChrome:errorPage.home")}</Link>
                   </Button>
                 </div>
               }
@@ -221,21 +228,24 @@ export const SigningView = ({
         </div>
         {compact && actions && <div className="sgn-actionbar">{actions}</div>}
       </div>
-      <ReturnDialog
-        key={String(returning)}
-        open={returning}
-        busy={busy}
-        error={returning ? failure : null}
-        projectId={task.route.project.id}
-        onClose={() => {
-          setReturning(false);
-        }}
-        onSubmit={(comment) => {
-          void onReturn(comment).then((ok) => {
-            if (ok) setReturning(false);
-          });
-        }}
-      />
+      {returning && (
+        <Suspense fallback={null}>
+          <ReturnDialog
+            open
+            busy={busy}
+            error={failure}
+            projectId={task.route.project.id}
+            onClose={() => {
+              setReturning(false);
+            }}
+            onSubmit={(comment) => {
+              void onReturn(comment).then((ok) => {
+                if (ok) setReturning(false);
+              });
+            }}
+          />
+        </Suspense>
+      )}
     </div>
   );
 };

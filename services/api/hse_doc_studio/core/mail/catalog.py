@@ -35,18 +35,30 @@ def placeholders(template: str) -> frozenset[str]:
     return frozenset(_PLACEHOLDER.findall(template))
 
 
+def _literal(parts: list[str], index: int, values: Mapping[str, str]) -> str:
+    """Литерал шаблона без точки в начале, если значение перед ним уже кончается точкой: имя с инициалами
+    «Петров П. П.» в конце фразы не дает «П. П..»."""
+    part = parts[index]
+    if index > 0 and part.startswith(".") and values[parts[index - 1]].endswith("."):
+        return part[1:]
+    return part
+
+
 def fill_text(template: str, values: Mapping[str, str]) -> str:
-    """Простой текст: значения подставляются как есть."""
-    return _PLACEHOLDER.sub(lambda m: values[m.group(1)], template)
+    """Простой текст: значения подставляются как есть, точка после значения с точкой на конце не удваивается."""
+    parts = _PLACEHOLDER.split(template)
+    return "".join(_literal(parts, i, values) if i % 2 == 0 else values[part] for i, part in enumerate(parts))
 
 
 def fill_html(template: str, values: Mapping[str, str], *, strong: str) -> str:
-    """HTML-фрагмент: литерал и значения экранируются, значения оборачиваются в `<strong style=...>`."""
+    """HTML-фрагмент: литерал и значения экранируются, значения оборачиваются в `<strong style=...>`.
+
+    Точка после значения с точкой на конце не удваивается, как в `fill_text`."""
     parts = _PLACEHOLDER.split(template)
     out: list[str] = []
     for index, part in enumerate(parts):
         if index % 2 == 0:
-            out.append(escape(part))
+            out.append(escape(_literal(parts, index, values)))
         else:
             out.append(f'<strong style="{strong}">{escape(values[part])}</strong>')
     return "".join(out)

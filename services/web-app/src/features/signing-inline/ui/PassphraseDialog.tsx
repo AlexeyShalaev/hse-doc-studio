@@ -44,7 +44,7 @@ export const PassphraseDialog = ({
             disabled={busy}
             onClick={onClose}
           >
-            {t("passphrase.cancel")}
+            {t("cancel")}
           </Button>
           <Button
             type="submit"

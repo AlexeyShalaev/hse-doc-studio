@@ -8,7 +8,7 @@ import type { InlinePlan } from "../model/inlinePlan";
 import type { SignWay } from "../model/types";
 import { FilePick } from "./FilePick";
 import type { BlockProps } from "./ImageBlock";
-import { KeyCreateForm, KeyImportForm } from "./KeyForms";
+import { KeyCreateForm, KeyImportForm } from "./rareLazy";
 
 type EsignProps = BlockProps & { plan: InlinePlan };
 
