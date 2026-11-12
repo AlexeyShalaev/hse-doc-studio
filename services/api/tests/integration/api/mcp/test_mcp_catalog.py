@@ -195,4 +195,5 @@ def test__rules__signing_route__read_and_send_only() -> None:
     names = {r.name for r in MCP_TOOL_RULES if "signing" in r.name}
 
     assert names == {"get_signing_route", "list_signing_tasks", "send_for_signing"}
-    assert not [r.name for r in MCP_TOOL_RULES if "approve" in r.name or "return" in r.name]
+    # Пропустить подписанта через MCP тоже нельзя (13.10): это решение автора в интерфейсе.
+    assert not [r.name for r in MCP_TOOL_RULES if "approve" in r.name or "return" in r.name or "skip" in r.name]

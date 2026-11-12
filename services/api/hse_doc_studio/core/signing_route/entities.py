@@ -116,6 +116,8 @@ class Notice(StrEnum):
     cancelled = "signing_cancelled"
     # Новая версия (12.6): тем, кто согласовал или подписал изменившийся документ, но чья очередь ещё не настала.
     new_version = "signing_new_version"
+    # Пропущенному участнику (13.7): его подпись не требуется. «Входящие» и письмо.
+    skipped = "signing_skipped"
 
 
 class EventKind(StrEnum):

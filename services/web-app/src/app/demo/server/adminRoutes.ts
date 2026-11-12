@@ -49,6 +49,7 @@ const DEMO_MAIL_TEMPLATES = [
   "signing_request_sign",
   "signing_request_new_version",
   "signing_reminder",
+  "signing_skipped",
   "signing_returned",
   "signing_completed",
   "smtp_test",

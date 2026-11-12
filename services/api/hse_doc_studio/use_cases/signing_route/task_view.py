@@ -77,6 +77,8 @@ class TaskSlot:
     mark: VisibleMark
     status: SlotStatus
     reason: PlanReason | None
+    # Подпись необязательна на точке маршрута (13.3).
+    optional: bool = False
 
 
 @dataclass(frozen=True)
@@ -139,6 +141,15 @@ class TaskDetails:
     events: tuple[EventView, ...]
     # Раунд новой версии, в котором изменился хотя бы один документ участника (12.6).
     new_version: bool = False
+
+    @property
+    def optional(self) -> bool:
+        """Все оставшиеся пары участника необязательны на точке (13.6): остались неподписанные и непропущенные, и
+        среди них нет обязательных."""
+        remaining = [
+            slot for doc in self.docs for slot in doc.mine if slot.status not in (SlotStatus.signed, SlotStatus.skipped)
+        ]
+        return bool(remaining) and all(slot.optional for slot in remaining)
 
 
 def build_task(  # noqa: PLR0913 — входы одного ответа
@@ -235,7 +246,9 @@ def _docs(  # noqa: PLR0913 — входы одного списка
             for pair in doc_pairs
             if (slot := facts.state.slots.get(pair.slot_id)) is not None
         )
-        slots = {pair: _slot(point, facts, pair, measure, uses_frozen=uses_frozen) for pair in doc_pairs}
+        slots = {
+            pair: _slot(point, route.profile_id, facts, pair, measure, uses_frozen=uses_frozen) for pair in doc_pairs
+        }
         sent = sent_version(route, facts.state, doc_id)
         result.append(
             TaskDoc(
@@ -261,7 +274,9 @@ def _changed_since(me: Participant, facts: RouteFacts, doc_id: str) -> bool:
     return approval.tokens[doc_id] != approval_token(facts.doc(doc_id))
 
 
-def _slot(point: RoutePoint, facts: RouteFacts, pair: DocSlot, measure: IMarkMeasure, *, uses_frozen: bool) -> TaskSlot:
+def _slot(  # noqa: PLR0913 — входы одного слота
+    point: RoutePoint, profile_id: str, facts: RouteFacts, pair: DocSlot, measure: IMarkMeasure, *, uses_frozen: bool
+) -> TaskSlot:
     state = facts.state
     plan = slot_state(
         state,
@@ -270,6 +285,7 @@ def _slot(point: RoutePoint, facts: RouteFacts, pair: DocSlot, measure: IMarkMea
         facts.doc(pair.doc_id),
         allowed=point.allowed.get(pair, ()),
         uses_frozen=uses_frozen,
+        profile_id=profile_id,
     )
     placement = _placement(point, state.placements, pair)
     mark = mark_of(state.slots.get(pair.slot_id))
@@ -284,6 +300,7 @@ def _slot(point: RoutePoint, facts: RouteFacts, pair: DocSlot, measure: IMarkMea
         mark=mark,
         status=plan.status,
         reason=plan.reason,
+        optional=facts.is_optional(pair),
     )
 
 

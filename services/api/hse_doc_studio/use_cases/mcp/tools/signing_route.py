@@ -34,6 +34,7 @@ from hse_doc_studio.core.mcp.errors import McpError, McpErrorCode
 from hse_doc_studio.core.signing_route.entities import (
     EDITABLE_STATUSES,
     NEW_VERSION_STATUSES,
+    ParticipantState,
     RouteConflictError,
     RouteStatus,
     StopReason,
@@ -83,7 +84,24 @@ def _person(person: PersonView) -> dict[str, object]:
         "approved_at": approval.at if approval is not None else None,
         "reminded_at": p.reminded_at,
         "slots": [{"doc_id": pair.doc_id, "slot_id": pair.slot_id} for pair in p.assignments],
+        # Пропуск (13.10): когда пропущен и можно ли пропустить сейчас; пропустить может только автор в интерфейсе.
+        "skipped_at": p.skipped.at if person.view.state is ParticipantState.skipped and p.skipped is not None else None,
+        "skippable": person.view.skip.available,
     }
+
+
+def _skip_hint(details: RouteDetails) -> str | None:
+    """Подсказка, когда очередь у человека, которого можно пропустить (13.10); пропуск через MCP невозможен."""
+    if details.status is not RouteStatus.active:
+        return None
+    names = [person.name or person.participant.persona for person in details.people if person.view.skip.available]
+    if not names:
+        return None
+    who = ", ".join(names)
+    return localized_error(
+        f"Все подписи ({who}) на точке необязательны. Пропустить может автор маршрута в интерфейсе",
+        f"All signatures of {who} at this checkpoint are optional. The route author can skip them in the interface",
+    )
 
 
 def _waiting(person: PersonView) -> dict[str, object]:
@@ -226,6 +244,7 @@ def route_view(details: RouteDetails) -> dict[str, object]:
                     {
                         "slot_id": slot.slot_id,
                         "label": slot.label,
+                        "extra": slot.extra,
                         "optional": slot.optional,
                         "status": slot.status.value,
                         "reason": slot.reason.value if slot.reason is not None else None,
@@ -237,6 +256,7 @@ def route_view(details: RouteDetails) -> dict[str, object]:
         ],
         "changed_docs": list(details.changed_docs),
         "changed_hint": _changed_hint(details.docs),
+        "skip_hint": _skip_hint(details),
         "events": [_event(e) for e in details.events[-_EVENTS:]],
         "signing_page": _page(route.project_id, route.id),
     }
@@ -270,8 +290,10 @@ class GetSigningRouteTool(McpTool):
             "состояниями, чья очередь сейчас, срок, причина остановки (документ изменился, вернули на доработку, "
             "участник ушёл) и последние события. У документов версия на подписи (sent) и есть ли изменения после "
             "отправки (changed): правка и пересборка маршрут не останавливают, подписывают версию на подписи. Без "
-            "profile_id сводка по всем маршрутам проекта. Только чтение: согласовать, подписать или вернуть на "
-            "доработку можно только на странице подписи в интерфейсе."
+            "profile_id сводка по всем маршрутам проекта. Слоты: extra (добавлен сверх точки), optional (подпись "
+            "необязательна на точке), статус skipped (пропущена); у участника state skipped, skipped_at и skippable. "
+            "Только чтение: согласовать, подписать, вернуть на доработку или пропустить подписанта можно только в "
+            "интерфейсе."
         ),
         parameters=project_schema({"profile_id": _PROFILE_ARG}),
     )

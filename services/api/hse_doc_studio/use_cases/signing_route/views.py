@@ -110,6 +110,9 @@ class SlotView:
     slot_id: str
     label: dict[str, str]
     participant_id: UUID | None
+    # Слот добавлен к маршруту сверх точки: точка его не требует (6.5). Подпись на нём всё равно обязательна.
+    extra: bool
+    # Подпись необязательна на точке маршрута: автора можно пропустить (13.3).
     optional: bool
     status: SlotStatus
     reason: PlanReason | None
@@ -194,6 +197,8 @@ class RouteDetails:
     events: tuple[EventView, ...]
     # Из кого выбирать на персоны маршрута и его слотов; только тому, кто управляет маршрутом.
     candidates: tuple[PersonaCandidates, ...] = ()
+    # Читатель управляет маршрутом (`SUBMISSION_CREATE`): только ему показывается `skip` участников (13.6).
+    manages: bool = False
 
     @property
     def people(self) -> tuple[PersonView, ...]:
@@ -328,7 +333,7 @@ def doc_views(point: RoutePoint, route: SigningRoute, facts: RouteFacts) -> tupl
                 built=built,
                 frozen=doc_id in facts.state.frozen,
                 token=approval_token(doc_facts) if built else None,
-                slots=_slots(point, facts, doc_pairs, owners),
+                slots=_slots(point, route.profile_id, facts, doc_pairs, owners),
                 sent=sent,
                 changed=doc_changed(route, facts, doc_id, sent),
             )
@@ -337,7 +342,7 @@ def doc_views(point: RoutePoint, route: SigningRoute, facts: RouteFacts) -> tupl
 
 
 def _slots(
-    point: RoutePoint, facts: RouteFacts, pairs: Collection[DocSlot], owners: Mapping[DocSlot, UUID]
+    point: RoutePoint, profile_id: str, facts: RouteFacts, pairs: Collection[DocSlot], owners: Mapping[DocSlot, UUID]
 ) -> tuple[SlotView, ...]:
     uses_frozen = any(
         method_of(slot.sign_mode) in CRYPTO_METHODS
@@ -353,13 +358,15 @@ def _slots(
             facts.doc(pair.doc_id),
             allowed=point.allowed.get(pair, ()),
             uses_frozen=uses_frozen,
+            profile_id=profile_id,
         )
         views.append(
             SlotView(
                 slot_id=pair.slot_id,
                 label=point.slot_label(pair.slot_id),
                 participant_id=owners.get(pair),
-                optional=pair not in point.allowed,
+                extra=pair not in point.allowed,
+                optional=pair.slot_id in facts.optional.get(pair.doc_id, ()),
                 status=state.status,
                 reason=state.reason,
             )

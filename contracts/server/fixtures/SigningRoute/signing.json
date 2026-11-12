@@ -39,6 +39,7 @@
             "en": "Student"
           },
           "participant_id": "srp_author",
+          "extra": false,
           "optional": false,
           "status": "signed"
         },
@@ -49,6 +50,7 @@
             "en": "Supervisor"
           },
           "participant_id": "srp_supervisor",
+          "extra": false,
           "optional": false,
           "status": "pending"
         }
@@ -84,7 +86,14 @@
         "approved_at": "2026-11-10T09:00:00Z",
         "notified_at": null,
         "reminded_at": null,
-        "reminders": 0
+        "reminders": 0,
+        "skipped_at": null,
+        "skip": {
+          "available": false,
+          "blocker": "done",
+          "keeps_marks": [],
+          "refreezes": []
+        }
       }
     ],
     [
@@ -109,7 +118,14 @@
         "approved_at": null,
         "notified_at": "2026-11-10T09:00:00Z",
         "reminded_at": null,
-        "reminders": 0
+        "reminders": 0,
+        "skipped_at": null,
+        "skip": {
+          "available": false,
+          "blocker": "required_slots",
+          "keeps_marks": [],
+          "refreezes": []
+        }
       }
     ]
   ],

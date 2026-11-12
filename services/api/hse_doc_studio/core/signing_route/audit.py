@@ -43,6 +43,7 @@ class RouteAuditAction(StrEnum):
     signer_method = "signing_route.signer_method"
     signer_plate = "signing_route.signer_plate"
     signer_image = "signing_route.signer_image"
+    skip = "signing_route.skip"
     # Перенос маршрута 0.20.0 (12.11): версия на подписи из сборки или архива сборок; актора нет.
     migrate = "signing_route.migrate"
 
@@ -59,9 +60,9 @@ EVENT_ACTIONS: Mapping[EventKind, RouteAuditAction] = {
     EventKind.completed: RouteAuditAction.complete,
     EventKind.reminded: RouteAuditAction.remind,
     EventKind.invited: RouteAuditAction.invite,
+    EventKind.skipped: RouteAuditAction.skip,
 }
-# `skipped` пока не в журнале: действие `signing_route.skip` и подписи словаря добавляет срез R21 (13.8).
-UNAUDITED_EVENTS = frozenset({EventKind.frozen, EventKind.resumed, EventKind.skipped})
+UNAUDITED_EVENTS = frozenset({EventKind.frozen, EventKind.resumed})
 
 # Что из подробностей события переходит в журнал. Комментария возврата (`comment`) здесь нет намеренно.
 _EVENT_DETAILS = ("doc_id", "slot_id", "reason", "trigger", "delivery", "invitation_id")
@@ -135,7 +136,9 @@ def audit_of_event(route: SigningRoute, event: RouteEvent) -> RouteAuditRecord |
     return RouteAuditRecord(action, event.actor_id, details)
 
 
-def _kind_details(route: SigningRoute, event: RouteEvent, participant: Participant | None) -> dict[str, object]:
+def _kind_details(  # noqa: PLR0911 — по ветке на вид события
+    route: SigningRoute, event: RouteEvent, participant: Participant | None
+) -> dict[str, object]:
     """Что запись добавляет по виду события: состав отправленного, слоты согласия, ушедший участник."""
     if event.kind is EventKind.sent:
         return {
@@ -154,6 +157,13 @@ def _kind_details(route: SigningRoute, event: RouteEvent, participant: Participa
         return {"unpinned": list(_strings(event.details.get("unpinned")))}
     if event.kind is EventKind.approved and participant is not None:
         return {"slots": slots_details(participant)}
+    if event.kind is EventKind.skipped:
+        # Пропущенные пары, документы с оставленной меткой и перефиксированные без неё (13.8).
+        return {
+            "slots": _pairs(event.details.get("slots")),
+            "kept_marks": list(_strings(event.details.get("kept_marks"))),
+            "refrozen": list(_strings(event.details.get("refrozen"))),
+        }
     if event.kind is EventKind.completed:
         return {"docs": list(route.docs)}
     if event.kind is EventKind.paused and event.details.get("reason") == StopReason.participant_left.value:
@@ -164,6 +174,17 @@ def _kind_details(route: SigningRoute, event: RouteEvent, participant: Participa
 
 def _strings(raw: object) -> tuple[str, ...]:
     return tuple(item for item in raw if isinstance(item, str)) if isinstance(raw, list | tuple) else ()
+
+
+def _pairs(raw: object) -> list[dict[str, str]]:
+    """Пары «документ, слот» из подробностей события."""
+    if not isinstance(raw, list | tuple):
+        return []
+    return [
+        {"doc_id": item["doc_id"], "slot_id": item["slot_id"]}
+        for item in raw
+        if isinstance(item, Mapping) and isinstance(item.get("doc_id"), str) and isinstance(item.get("slot_id"), str)
+    ]
 
 
 def _versions(raw: object) -> list[dict[str, object]]:

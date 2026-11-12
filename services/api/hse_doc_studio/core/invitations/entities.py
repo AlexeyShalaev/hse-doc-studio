@@ -101,6 +101,7 @@ MAILED_KINDS = frozenset(
         NotificationKind.signing_reminder,
         NotificationKind.signing_returned,
         NotificationKind.signing_completed,
+        NotificationKind.signing_skipped,
     }
 )
 

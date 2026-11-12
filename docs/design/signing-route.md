@@ -970,6 +970,7 @@ stateDiagram-v2
 | `POST /projects/{id}/signing-routes/{route_id}/send` | `SUBMISSION_CREATE` | отправить или отправить заново; `sign` для «Отправить и подписать» | `SendSigningRouteRequest`, `SigningRoute` |
 | `POST /projects/{id}/signing-routes/{route_id}/cancel` | `SUBMISSION_CREATE` | отменить | `{}`, `SigningRoute` |
 | `POST /projects/{id}/signing-routes/{route_id}/archive` | `SUBMISSION_CREATE` | снять завершённый с контроля | `{}`, `SigningRoute` |
+| `POST /projects/{id}/signing-routes/{route_id}/participants/{pid}/skip` | `SUBMISSION_CREATE` | пропустить участника, все оставшиеся подписи которого необязательны (13.6) | `{}`, `SigningRoute` |
 | `POST /projects/{id}/signing-routes/{route_id}/participants/{pid}/remind` | `SUBMISSION_CREATE` | напомнить; у приглашённого повторить приглашение (ссылка при `manual`) | `{}`, `SigningReminder` |
 | `POST /projects/{id}/signing-routes/{route_id}/participants/{pid}/link` | `SUBMISSION_CREATE` | ссылка, которую автор сам перешлёт подписанту: страница подписи или новая ссылка приглашения (5.7) | `{}`, `SigningLink` |
 | `GET /projects/{id}/signing-routes/{route_id}/task` | `OUTPUT_READ` + участник | моя задача | `SigningTask` |
@@ -2121,7 +2122,7 @@ e2e-signing-route, шард rest), общие с E1 помощники в `e2e/t
 
 ## 13. Необязательные подписи и пропуск подписанта
 
-Статус: предложено 13.11.2026; срезы R19, R20, W12 и W13 внедрены (13.16), остальные впереди. Решения владельца: флаг `optional`
+Статус: предложено 13.11.2026; срезы R19, R20, R21, W12 и W13 внедрены (13.16), остальные впереди. Решения владельца: флаг `optional`
 у слота документа точки в состоянии подписей, ставит автор, меняется на идущем маршруте; пропуск только действием
 автора, автоматического нет; пропущенная метка не рисуется; через MCP только чтение. Остальное в этом разделе
 принято по умолчанию (13.15). Срезы в 13.16, они не зависят от раздела 14 и выходят раньше.
@@ -2399,7 +2400,7 @@ Notification.kind: + signing_skipped
   повтора `signing:<route>:<round>:<participant>:signing_skipped`. Подписи уведомления: `actor_name` кто пропустил,
   `excerpt` название точки на языке получателя, `profile_id`, `ref_id` маршрут.
 - Письмо `signing_skipped` (ru, en) через `MailDispatcher`: новый `MailTemplate`, белый список подстановок
-  `SAFE_VALUES` (`actor`, `project`, `point`), `link_kind` `page` с путём `/sign/<проект>/<маршрут>` (без публичного
+  `SAFE_VALUES` (`actor`, `project`, `profile`, как у остальных писем маршрута), `link_kind` `page` с путём `/sign/<проект>/<маршрут>` (без публичного
   адреса установки `none`), `origin` `notification`, объект `signing_route`. Журнал писем (`docs/design/mail-log.md`)
   получает строку как у остальных писем маршрута, тест белого списка сверяет подстановки с текстами.
 - Приглашённому без аккаунта уведомлять некуда: приглашение остаётся, отозвать его можно в блоке «Доступ».
@@ -2668,13 +2669,12 @@ Notification.kind: + signing_skipped
 - Словари: коды `optional_forbidden` и `slot_signed` в `errors.json`, действие `signature.optional` и поле
   `optional` в словаре аудита; подпись поля `extra_slots` в аудите теперь «Слоты сверх точки».
 
-**Уточнения среза R20** (внедрено: ядро и хранилище маршрута; API пропуска, уведомление, MCP и фронт впереди):
+**Уточнения среза R20** (внедрено: ядро и хранилище маршрута):
 
 - Участник: `Participant.skipped: ParticipantSkip | None` (`round`, `at`, `by`, `pairs`, `kept_marks`, `refrozen`),
   `ParticipantState.skipped`, `EventKind.skipped`. Пропуск действует, пока `skipped.round` равен раунду маршрута:
   `send` переносит его в новый раунд, если все `pairs` по-прежнему необязательны на точке (`versions.still_optional`),
-  иначе обнуляет, и расчёт убирает запись из файлов (`Unskip`). Событие `skipped` пока в `UNAUDITED_EVENTS`: действие
-  `signing_route.skip` и подписи словаря добавляет R21, он же переносит событие в `EVENT_ACTIONS`.
+  иначе обнуляет, и расчёт убирает запись из файлов (`Unskip`). Событие `skipped` попало в журнал аудита в R21 (`EVENT_ACTIONS`).
 - Факты: `RouteFacts.optional: {doc_id: {slot_id}}` это необязательные слоты точки маршрута (из
   `SignaturesState.optional[doc][route.profile_id]`), `RouteFacts.skipped` это `SignaturesState.skipped` как есть.
   Заполняет `route_facts()`; кандидат (`candidate()`) их не меняет.
@@ -2716,6 +2716,36 @@ Notification.kind: + signing_skipped
   над прежним B сбрасывает прежнее правило, пропуск тут ни при чём); если ЭП-пар не остаётся, документ не
   фиксируется, ручная фиксация лежит как есть. Над B есть ЭП и метка академрука в нём: пропуск оставит метку
   (`keep_mark`); нет ЭП: перефиксация без метки. Всё это покрыто `tests/unit/core/signing_route/test_skip.py`.
+
+**Уточнения среза R21** (внедрено: сценарий, API, уведомление, письмо, аудит, MCP, эталоны):
+
+- Сценарий `SigningRouteSkipping.skip(actor, project_id, route_id, participant_id)` (`use_cases/signing_route/skipping.py`):
+  блокировка строки, `route_files`, перенос 0.20.0, факты, `_stop_if_changed`, `transitions.skip`, `_settle` с теми же
+  фактами (он выполняет `Skip` и перефиксацию), одна транзакция с событием `skipped`, фиксацией и завершением,
+  уведомлениями расчёта и `Notify(Notice.skipped, (pid,))`. Если расчёт на текущих фактах останавливает маршрут
+  (документ пересобран), остановка записывается, а пропуск отклоняется 409 `invalid_transition` уже после записи.
+  Чужой или неверный `pid` это 404 `not_found`. Тело `{}` необязательно.
+- Ответ: `RouteParticipant.skipped_at` и `skip` (`available`, `blocker`, `keeps_marks`, `refreezes`; `slots` у
+  участника нет, обязательные пары приходят только в теле 409), `RouteDocSlot.extra` и новый смысл `optional`,
+  `SigningTaskMe.optional` (остались неподписанные и непропущенные пары и все необязательны; считается по слотам
+  задачи, а не по очереди, поэтому верно и до очереди человека), `SigningTaskSlot.optional`. Статус слота
+  `skipped` берётся на точке маршрута (`slot_state(..., profile_id)`). `skip` null, если читатель не управляет
+  маршрутом, и у маршрута не в `active` (в том числе у завершённого после пропуска).
+- 409 `participant_not_skippable` несёт `reason` и `slots` (пары `doc_id`, `slot_id`; пусто, если причина не
+  `required_slots`), обработчик в `api/signing_route_errors.py`.
+- Уведомление `signing_skipped`: `Notice.skipped`, письмо пропущенному (`MAILED_KINDS`, `mails`), ключ повтора
+  `signing:<route>:<round>:<participant>:signing_skipped`. Пропустивший себя (автор, он же участник) уведомления
+  не получает (`_SKIP_ACTOR`). Письмо: `MailTemplate.signing_skipped`, значения `actor`, `project`, `profile`
+  (название точки, как у остальных писем маршрута), ссылка `page` на `/sign/<проект>/<маршрут>`, объект
+  `signing_route`; тексты ru и en, образец в `samples.py`, подпись в фильтре «Вид письма» админки.
+- Аудит: `signing_route.skip` из события `skipped` (`slots`, `kept_marks`, `refrozen`), подписи действия и полей
+  `kept_marks`, `refrozen` в словаре аудита (бюджет `locale-admin-audit` не вышел за 10.5 kB).
+- MCP: `get_signing_route` отдаёт у слота `extra` и `optional`, у участника `skipped_at` и `skippable`, у маршрута
+  `skip_hint`; тула пропуска нет, тесты каталога это держат. `get_signature_plan` отдавал `optional` и `skipped`
+  уже с R19.
+- Контракт: `SigningRoute`, `SigningTask` и `Notification/signing_skipped` перенесены из `next` в `fixtures`,
+  `LEGACY_R21` снят из zod (поля обязательны), прежняя форма теперь отвергается тестом. Каталог `next` пуст.
+  Выпуск R21 после W12 и W13: фронтенд в master принимает новую форму.
 
 **Уточнения среза W13** (внедрено):
 

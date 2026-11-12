@@ -42,6 +42,8 @@ class MailTemplate(StrEnum):
     # Запрос раунда новой версии (12.6): какие документы изменились и сообщение автора.
     signing_request_new_version = "signing_request_new_version"
     signing_reminder = "signing_reminder"
+    # Автор пропустил участника (13.7): подпись не требуется.
+    signing_skipped = "signing_skipped"
     signing_returned = "signing_returned"
     signing_completed = "signing_completed"
     smtp_test = "smtp_test"

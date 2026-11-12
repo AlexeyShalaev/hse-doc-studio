@@ -27,11 +27,14 @@ _TEMPLATES: dict[NotificationKind, MailTemplate] = {
     NotificationKind.transfer_request: MailTemplate.transfer_request,
     NotificationKind.signing_request: MailTemplate.signing_request,
     NotificationKind.signing_reminder: MailTemplate.signing_reminder,
+    NotificationKind.signing_skipped: MailTemplate.signing_skipped,
     NotificationKind.signing_returned: MailTemplate.signing_returned,
     NotificationKind.signing_completed: MailTemplate.signing_completed,
 }
 # Подписанту письмо ведёт на страницу подписи, автору на точку сдачи.
-_TO_SIGNING_PAGE = frozenset({NotificationKind.signing_request, NotificationKind.signing_reminder})
+_TO_SIGNING_PAGE = frozenset(
+    {NotificationKind.signing_request, NotificationKind.signing_reminder, NotificationKind.signing_skipped}
+)
 _TO_CHECKPOINT = frozenset({NotificationKind.signing_returned, NotificationKind.signing_completed})
 # Объект письма в журнале (L9): `ref_id` уведомления это id приглашения, запроса, передачи или маршрута.
 _REF_KINDS: dict[NotificationKind, MailRefKind] = {

@@ -176,3 +176,28 @@ async def test__request__new_version_round__flag_message_and_changed_names_for_t
         False,
     )
     assert new_version.payload.actor_name == "Иван"
+
+
+async def test__skipped__to_the_skipped_signer_with_letter_the_author_as_actor_and_the_point_as_excerpt() -> None:
+    driver = three_steps()
+    author, _, academic = driver.route.participants
+    driver.send(author.user_id)  # type: ignore[arg-type]
+    inbox = Inbox()
+
+    await SigningNotifier(inbox, people(driver.route), context(driver)).notify(
+        driver.route, [Notify(Notice.skipped, (academic.id,))], actor_id=author.user_id
+    )
+
+    [sent] = inbox.sent
+    assert (sent.kind, sent.user_id, sent.mail) == (
+        NotificationKind.signing_skipped,
+        academic.user_id.hex,  # type: ignore[union-attr]
+        True,
+    )
+    assert (sent.payload.actor_name, sent.payload.outcome, sent.payload.ref_id) == (
+        "Иван",
+        None,
+        str(driver.route.id),
+    )
+    assert sent.payload.excerpt
+    assert sent.dedupe_key == f"signing:{driver.route.id.hex}:1:{academic.id.hex}:signing_skipped"

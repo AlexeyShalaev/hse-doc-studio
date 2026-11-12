@@ -291,3 +291,25 @@ def test__signing_route_scope__restored_after_an_error() -> None:
         fail()
 
     assert current_signing_route() is None
+
+
+def test__audit_of_event__skipped__participant_pairs_kept_marks_and_refrozen() -> None:
+    route = _route()
+    author, _, academic = route.participants
+    pairs = [{"doc_id": DOC, "slot_id": "acad"}]
+
+    record = audit_of_event(
+        route,
+        _event(
+            route,
+            EventKind.skipped,
+            actor_id=author.user_id,
+            participant_id=academic.id,
+            details={"slots": pairs, "kept_marks": [DOC], "refrozen": []},
+        ),
+    )
+
+    assert record is not None
+    assert (record.action, record.actor_id) == (RouteAuditAction.skip, author.user_id)
+    assert record.details["participant_id"] == str(academic.id)
+    assert (record.details["slots"], record.details["kept_marks"], record.details["refrozen"]) == (pairs, [DOC], [])
