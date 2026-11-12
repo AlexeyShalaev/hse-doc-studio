@@ -1,12 +1,13 @@
-"""Порты ревью: хранилище тредов и канал событий для открытых сессий редактирования."""
+"""Порты ревью: хранилище тредов, канал событий для открытых сессий редактирования и PDF документа."""
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 from datetime import datetime
 from typing import Protocol
 from uuid import UUID
 
-from hse_doc_studio.core.review.entities import ReviewComment, ReviewThread, ThreadStatus
+from hse_doc_studio.core.review.entities import PdfRect, ReviewComment, ReviewThread, ThreadStatus
 
 
 class IReviewRepository(Protocol):
@@ -52,3 +53,48 @@ class IReviewEvents(Protocol):
     """Сообщение открытым сессиям файла, что ревью изменилось (панель обновляется без опроса)."""
 
     async def review_changed(self, project_id: UUID, path: str) -> None: ...
+
+
+@dataclass(frozen=True)
+class DocumentPdf:
+    """PDF, который показывает превью документа: путь от корня проекта и sha256 содержимого."""
+
+    doc_id: str
+    path: str
+    sha: str
+
+
+@dataclass(frozen=True)
+class SourcePoint:
+    """Файл проекта и строка (с единицы), откуда пришёл текст на странице PDF."""
+
+    path: str
+    line: int
+
+
+@dataclass(frozen=True)
+class LinePlace:
+    """Где на PDF строка исходника: страница и прямоугольники строк набора."""
+
+    page: int
+    rects: tuple[PdfRect, ...]
+
+
+class IDocumentPdfs(Protocol):
+    """PDF документа и SyncTeX его последней сборки (раздел 2.4). Документа нет: NotFoundError."""
+
+    async def pdf(self, project_id: UUID, doc_id: str) -> DocumentPdf | None:
+        """None, если PDF ещё не собран (или у документа нет PDF-предпросмотра)."""
+        ...
+
+    async def source_at(self, project_id: UUID, doc_id: str, page: int, x: float, y: float) -> SourcePoint | None:
+        """Обратный SyncTeX: файл проекта и строка под точкой; None без SyncTeX или вне текста."""
+        ...
+
+    async def place_line(self, project_id: UUID, doc_id: str, path: str, line: int) -> LinePlace | None:
+        """Прямой SyncTeX: где на PDF строка файла проекта (или ближайшая к ней строка, давшая вывод)."""
+        ...
+
+    async def source_files(self, project_id: UUID, doc_id: str) -> frozenset[str]:
+        """Файлы проекта, из которых собран документ (входные файлы SyncTeX)."""
+        ...

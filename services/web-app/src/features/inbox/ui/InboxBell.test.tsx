@@ -33,6 +33,7 @@ const note = (
     outcome: null,
     path: null,
     excerpt: null,
+    doc_id: null,
     profile_id: null,
     deadline: null,
     new_version: false,

@@ -11,7 +11,7 @@ import { I18nextProvider } from "react-i18next";
 import { MemoryRouter } from "react-router";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { i18n } from "@shared/lib";
-import type { ReviewThread } from "@entities/review";
+import type { Anchor, ReviewThread } from "@entities/review";
 
 // Панель тянет за собой barrel @shared/ui с pdfjs-dist, которому в jsdom нужен DOMMatrix.
 vi.mock("pdfjs-dist", () => ({
@@ -33,7 +33,8 @@ vi.mock("@entities/review/api/reviewApi", () => ({ reviewApi: api }));
 
 import { CommentsPanel, type CommentsPanelProps } from "./CommentsPanel";
 
-const anchor = {
+const anchor: Anchor = {
+  kind: "text",
   quote: "совместную правку",
   prefix: "изучаем ",
   suffix: " текста",

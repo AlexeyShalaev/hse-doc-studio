@@ -13,6 +13,7 @@ from hse_doc_studio.core.access.checker import IProjectAccessChecker
 from hse_doc_studio.core.access.repositories import IProjectAccessDirectory
 from hse_doc_studio.core.collab.ports import ITextStore
 from hse_doc_studio.core.invitations.protocols import INotifier, IProjectCards
+from hse_doc_studio.core.projects.locator import IProjectLocator
 from hse_doc_studio.core.projects.usage import IProjectQuota
 from hse_doc_studio.core.repositories import (
     IFileRepository,
@@ -20,7 +21,7 @@ from hse_doc_studio.core.repositories import (
     IProjectRepository,
     ITemplateRepository,
 )
-from hse_doc_studio.core.review.protocols import IReviewEvents, IReviewRepository
+from hse_doc_studio.core.review.protocols import IDocumentPdfs, IReviewEvents, IReviewRepository
 from hse_doc_studio.core.template_packs import ITemplatePacksSource
 from hse_doc_studio.core.template_update.protocols import IUpdateJournalRepository
 from hse_doc_studio.core.uow import IUnitOfWork
@@ -31,11 +32,14 @@ from hse_doc_studio.infra.collab.state_store import YStateStore
 from hse_doc_studio.infra.db.repositories.project_acl import PostgresProjectAclRepository
 from hse_doc_studio.infra.db.repositories.review import PostgresReviewRepository
 from hse_doc_studio.infra.db.session import SessionProvider
+from hse_doc_studio.infra.review.document_pdfs import DocumentPdfs
 from hse_doc_studio.infra.vcs.folder_locks import VcsFolderLocks
 from hse_doc_studio.use_cases.collab.access import AuthorizeCollabUC
 from hse_doc_studio.use_cases.collab.store import ProjectTextStore
+from hse_doc_studio.use_cases.documents.get_document import GetDocumentUC
 from hse_doc_studio.use_cases.files.put_file import PutFileUC
 from hse_doc_studio.use_cases.projects.get_project_access import GetProjectAccessUC, ProjectAccessService
+from hse_doc_studio.use_cases.review.pdf_threads import CreatePdfReviewThreadUC, ListDocumentReviewUC
 from hse_doc_studio.use_cases.review.threads import (
     CreateReviewThreadUC,
     DeleteReviewCommentUC,
@@ -45,6 +49,7 @@ from hse_doc_studio.use_cases.review.threads import (
     ReplyReviewThreadUC,
     SetReviewThreadStatusUC,
 )
+from hse_doc_studio.use_cases.synctex.query_synctex import SyncTexUC
 
 
 class ServerCollabProvider(Provider):
@@ -209,3 +214,43 @@ class ServerCollabProvider(Provider):
         uow: IUnitOfWork,
     ) -> ListMentionCandidatesUC:
         return ListMentionCandidatesUC(reviews, access, acls, cards, directory, notifier, events, store, uow)
+
+    # Комментарии из превью PDF: документ и SyncTeX читаются в запросе (сценарии документа живут в нём).
+
+    @provide(scope=Scope.REQUEST)
+    def get_document_pdfs(
+        self, documents: GetDocumentUC, synctex: SyncTexUC, locator: IProjectLocator
+    ) -> IDocumentPdfs:
+        return DocumentPdfs(documents, synctex, locator)
+
+    @provide(scope=Scope.REQUEST)
+    def get_create_pdf_review_thread_u_c(
+        self,
+        reviews: IReviewRepository,
+        access: IProjectAccessChecker,
+        acls: PostgresProjectAclRepository,
+        cards: IProjectCards,
+        directory: IProjectAccessDirectory,
+        notifier: INotifier,
+        events: IReviewEvents,
+        store: ITextStore,
+        uow: IUnitOfWork,
+        pdfs: IDocumentPdfs,
+    ) -> CreatePdfReviewThreadUC:
+        return CreatePdfReviewThreadUC(reviews, access, acls, cards, directory, notifier, events, store, uow, pdfs)
+
+    @provide(scope=Scope.REQUEST)
+    def get_list_document_review_u_c(
+        self,
+        reviews: IReviewRepository,
+        access: IProjectAccessChecker,
+        acls: PostgresProjectAclRepository,
+        cards: IProjectCards,
+        directory: IProjectAccessDirectory,
+        notifier: INotifier,
+        events: IReviewEvents,
+        store: ITextStore,
+        uow: IUnitOfWork,
+        pdfs: IDocumentPdfs,
+    ) -> ListDocumentReviewUC:
+        return ListDocumentReviewUC(reviews, access, acls, cards, directory, notifier, events, store, uow, pdfs)

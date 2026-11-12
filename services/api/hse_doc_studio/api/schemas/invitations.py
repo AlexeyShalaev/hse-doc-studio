@@ -318,6 +318,8 @@ class NotificationPayloadModel(StrictModel):
     outcome: NotificationOutcome | None
     path: str | None = None
     excerpt: str | None = None
+    # Ревью: тред к месту в PDF документа, ссылка ведёт в превью этого документа.
+    doc_id: str | None = None
     # Маршрут подписания: точка сдачи и срок маршрута.
     profile_id: str | None = None
     deadline: datetime | None = None

@@ -14,6 +14,8 @@ import * as pa from "@entities/project-artifact/model/artifact.schema";
 import * as rn from "@entities/runner/model/runner.schema";
 import * as rd from "@entities/runner/model/runnerDisk.schema";
 import {
+  CreatePdfThreadRequestSchema,
+  DocumentReviewSchema,
   MentionCandidateListSchema,
   ReviewThreadListSchema,
   ReviewThreadSchema,
@@ -262,6 +264,8 @@ export const CONTRACT_SCHEMAS: Record<string, ZodType> = {
   ReviewThread: ReviewThreadSchema,
   ReviewThreadList: ReviewThreadListSchema,
   MentionCandidateList: MentionCandidateListSchema,
+  CreatePdfThreadRequest: CreatePdfThreadRequestSchema,
+  DocumentReview: DocumentReviewSchema,
   NotificationPage: inv.NotificationPageSchema,
   MarkNotificationsReadRequest: inv.MarkNotificationsReadRequestSchema,
   InboxSummary: inv.InboxSummarySchema,

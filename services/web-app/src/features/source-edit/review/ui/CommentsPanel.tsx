@@ -9,6 +9,7 @@ import {
   useEditComment,
   useReplyToThread,
   useSetThreadStatus,
+  quoteOf,
   type Anchor,
   type ResolvedAnchor,
   type ReviewComment,
@@ -240,7 +241,7 @@ const ThreadCard = ({
           whiteSpace: "nowrap",
         }}
       >
-        {thread.anchor.quote.replace(/\s+/g, " ")}
+        {quoteOf(thread.anchor).replace(/\s+/g, " ")}
       </button>
       {state && state !== "ok" && (
         <span

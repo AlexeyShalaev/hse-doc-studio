@@ -16,6 +16,7 @@ export {
   CONTEXT_CHARS,
   QUOTE_MAX,
   makeAnchor,
+  quoteOf,
   resolveAnchor,
   type AnchorState,
   type ResolvedAnchor,
