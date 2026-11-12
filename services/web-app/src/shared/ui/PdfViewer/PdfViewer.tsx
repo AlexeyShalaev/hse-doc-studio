@@ -89,6 +89,8 @@ export type PdfMark = {
 
 // Соседние страницы, где ищется фрагмент пересобранного PDF: сначала своя, потом ближние.
 const SEARCH_PAGES = [0, -1, 1, -2, 2];
+// Отступ сверху до метки, к которой прокручивает выбор треда.
+const FOCUS_MARGIN = 20;
 // Панель выделения: сколько места нужно над выделением и половина её ширины (не уходить за край).
 const SEL_BAR_ROOM = 48;
 const SEL_BAR_HALF = 120;
@@ -449,7 +451,7 @@ export const PdfViewer = ({
     scaleRef.current = scale;
   }, [scale]);
 
-  const goToPosition = useCallback((page: number, yPt: number) => {
+  const goToPosition = useCallback((page: number, yPt: number, margin = 80) => {
     const el = scrollRef.current;
     if (!el) return;
     const target = el.querySelector<HTMLElement>(
@@ -460,7 +462,7 @@ export const PdfViewer = ({
       el.scrollTop +
       (target.getBoundingClientRect().top - el.getBoundingClientRect().top) +
       yPt * scaleRef.current -
-      80;
+      margin;
     el.scrollTo({ top: Math.max(0, top), behavior: "smooth" });
   }, []);
 
@@ -558,7 +560,8 @@ export const PdfViewer = ({
     appliedFocusRef.current = focusMark.token;
     didRestorePageRef.current = true;
     const id = window.setTimeout(() => {
-      goToPosition(spot.page, spot.rects[0]?.y ?? 0);
+      // Метка у самого верха: на телефоне ниже её закрывает шторка комментариев.
+      goToPosition(spot.page, spot.rects[0]?.y ?? 0, FOCUS_MARGIN);
     }, 60);
     return () => {
       window.clearTimeout(id);

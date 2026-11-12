@@ -19,7 +19,7 @@ import {
   useReviewThreads,
   type PendingThread,
 } from "@entities/review";
-import { toast, useIsPhoneWidth } from "@shared/lib";
+import { toast } from "@shared/lib";
 import type { CodeEditorController } from "@shared/ui";
 import { createReviewBridge } from "./reviewMarks";
 import { useReviewMarks } from "./useReviewMarks";
@@ -66,7 +66,6 @@ export const useEditorReview = ({
   const [localActive, setLocalActive] = useState<string | null>(null);
   const [pending, setPending] = useState<PendingThread | null>(null);
   const [showResolved, setShowResolved] = useState(false);
-  const phone = useIsPhoneWidth();
   const { data } = useReviewThreads(projectId, path, { enabled, live });
   // Треды к месту в PDF живут на пути самого PDF: в редакторе исходника их нет.
   const threads = useMemo(() => (data ?? []).filter(isTextThread), [data]);
@@ -195,7 +194,6 @@ export const useEditorReview = ({
         canModerate={canModerate}
         isOwner={isOwner}
         currentUserId={currentUserId}
-        sheet={phone}
         onClose={() => {
           dropRequested();
           setOpen(false);

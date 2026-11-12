@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Check, MessageSquare, RotateCcw, X } from "lucide-react";
+import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { ApiError } from "@shared/api";
@@ -44,9 +45,15 @@ export type CommentsPanelProps = {
   isOwner: boolean;
   currentUserId: string | null;
   onClose: () => void;
-  /** Телефон: шторка снизу во всю ширину вместо колонки справа. */
+  /**
+   * Телефон: шторка снизу во всю ширину вместо колонки справа (превью PDF: над шторкой видна страница с
+   * подсветкой). В редакторе на телефоне панель накрывает текст целиком (класс `review-panel` в index.css).
+   */
   sheet?: boolean;
 };
+
+// Над нижней панелью навигации телефона, но под окнами и тостами.
+const SHEET_Z = 60;
 
 const useFailure = () => {
   const { t } = useTranslation("review");
@@ -348,12 +355,16 @@ export const CommentsPanel = (props: CommentsPanelProps) => {
         (x) => x.status === "open" || x.id === props.activeId,
       );
 
-  return (
+  const panel = (
     <aside
       aria-label={t("title")}
       data-testid="review-panel"
       data-layout={props.sheet ? "sheet" : "side"}
-      className="review-panel flex flex-col"
+      className={
+        props.sheet
+          ? "review-panel-sheet flex flex-col"
+          : "review-panel flex flex-col"
+      }
       style={
         props.sheet
           ? {
@@ -361,9 +372,9 @@ export const CommentsPanel = (props: CommentsPanelProps) => {
               left: 0,
               right: 0,
               bottom: 0,
-              zIndex: 40,
-              maxHeight: "55dvh",
-              minHeight: "14rem",
+              zIndex: SHEET_Z,
+              maxHeight: "45dvh",
+              minHeight: "12rem",
               borderTop: "1px solid var(--border-strong, var(--border))",
               borderRadius: "0.75rem 0.75rem 0 0",
               boxShadow: "0 -8px 28px rgba(0, 0, 0, 0.35)",
@@ -497,4 +508,6 @@ export const CommentsPanel = (props: CommentsPanelProps) => {
       </div>
     </aside>
   );
+  // Шторка уходит в body: у предков бывают transform и overflow, а с ними `position: fixed` встаёт не к окну.
+  return props.sheet ? createPortal(panel, document.body) : panel;
 };
