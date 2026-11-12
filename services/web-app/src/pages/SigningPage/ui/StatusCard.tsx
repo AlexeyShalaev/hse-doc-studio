@@ -6,6 +6,7 @@ import {
   Clock,
   OctagonX,
   PenLine,
+  SkipForward,
   Undo2,
 } from "lucide-react";
 import {
@@ -33,6 +34,8 @@ const look = (status: SigningStatus): { tone: Tone; icon: ReactNode } => {
     case "approved":
     case "completed":
       return { tone: "ok", icon: <CircleCheck size={size} aria-hidden /> };
+    case "skipped":
+      return { tone: "idle", icon: <SkipForward size={size} aria-hidden /> };
     case "returned":
       return { tone: "warn", icon: <Undo2 size={size} aria-hidden /> };
     case "paused":
@@ -149,6 +152,11 @@ export const StatusCard = ({
         return {
           title: t("status.completedTitle"),
           lines: [t("status.completedBody")],
+        };
+      case "skipped":
+        return {
+          title: t("status.skippedTitle"),
+          lines: [t("status.skippedBody")],
         };
       case "returned":
         return {

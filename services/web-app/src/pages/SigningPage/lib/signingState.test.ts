@@ -138,6 +138,30 @@ describe("signingStatus", () => {
     ).toEqual({ kind: "paused", reason: "rebuilt" });
   });
 
+  it("пропущен автором: «не требуется», кроме отмены и закрытия маршрута", () => {
+    const skipped = SIGNING_ROUTE_CONTRACT_EXAMPLES.SigningTask
+      ?.skipped as SigningTask;
+    expect(signingStatus(skipped)).toEqual({ kind: "skipped" });
+    expect(
+      signingStatus({
+        ...skipped,
+        route: { ...skipped.route, status: "completed" },
+      }).kind,
+    ).toBe("skipped");
+    expect(
+      signingStatus({
+        ...skipped,
+        route: { ...skipped.route, status: "cancelled" },
+      }).kind,
+    ).toBe("cancelled");
+  });
+
+  it("необязательное место в очереди остаётся обычной очередью", () => {
+    const optional = SIGNING_ROUTE_CONTRACT_EXAMPLES.SigningTask
+      ?.optional as SigningTask;
+    expect(signingStatus(optional).kind).toBe("turn");
+  });
+
   it("возврат: кто и комментарий последнего возврата текущего раунда", () => {
     const task = withRoute(
       { status: "returned", stop_reason: "returned", round: 2 },

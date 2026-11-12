@@ -53,7 +53,8 @@ export const isLinkable = (
 ): boolean =>
   isRouteLive(route.status) &&
   person.membership !== "missing" &&
-  person.state !== "done";
+  person.state !== "done" &&
+  person.state !== "skipped";
 
 /** До какого момента «Напомнить» закрыто (раз в 12 часов); null: можно сейчас. */
 export const remindLockedUntil = (
@@ -106,7 +107,9 @@ export const personTone = (person: RouteParticipant): PersonTone => {
 /** Время рядом с состоянием: когда согласовал или с какого момента ждём его. */
 export const personMoment = (
   person: RouteParticipant,
-): { kind: "at" | "since"; iso: string } | null => {
+): { kind: "at" | "since" | "skipped"; iso: string } | null => {
+  if (person.state === "skipped" && person.skipped_at)
+    return { kind: "skipped", iso: person.skipped_at };
   if (
     (person.state === "done" || person.state === "waiting") &&
     person.approved_at
@@ -214,3 +217,83 @@ export const meIn = (
   userId === null
     ? null
     : (route.steps.flat().find((p) => p.user_id === userId) ?? null);
+
+/** Пара участника, которую пропуск оставит неподписанной. */
+export type SkipPair = {
+  docId: string;
+  docName: Record<string, string>;
+  slot: RouteDocSlot;
+};
+
+/** Неподписанные пары участника по документам маршрута: их он не подпишет, если его пропустить. */
+export const skipPairs = (
+  route: SigningRoute,
+  person: RouteParticipant,
+): SkipPair[] =>
+  route.docs.flatMap((doc) =>
+    doc.slots
+      .filter(
+        (slot) =>
+          slot.participant_id === person.id &&
+          slot.status !== "signed" &&
+          slot.status !== "skipped",
+      )
+      .map((slot) => ({ docId: doc.doc_id, docName: doc.name, slot })),
+  );
+
+/** Есть ли у участника необязательная неподписанная пара: тогда причину отказа пропуска стоит показать. */
+export const hasOptionalPair = (
+  route: SigningRoute,
+  person: RouteParticipant,
+): boolean => skipPairs(route, person).some((pair) => pair.slot.optional);
+
+/**
+ * После пропуска участника отметку «необязательна» снимали: его пара пропущена, но уже не
+ * необязательна, и при следующей отправке он вернётся в маршрут (13.9).
+ */
+export const returnsNextRound = (
+  route: SigningRoute,
+  person: RouteParticipant,
+): boolean =>
+  person.state === "skipped" &&
+  route.docs.some((doc) =>
+    doc.slots.some(
+      (slot) =>
+        slot.participant_id === person.id &&
+        slot.status === "skipped" &&
+        !slot.optional,
+    ),
+  );
+
+/** Что будет с маршрутом после пропуска (13.9): куда он пойдёт дальше. */
+export type SkipOutlook =
+  | { kind: "next"; step: number; people: RouteParticipant[] }
+  | { kind: "freeze" }
+  | { kind: "wait"; people: RouteParticipant[] }
+  | { kind: "complete" };
+
+const unfinished = (p: RouteParticipant): boolean =>
+  p.state !== "done" && p.state !== "skipped";
+
+export const skipOutlook = (
+  route: SigningRoute,
+  person: RouteParticipant,
+): SkipOutlook => {
+  const own = route.steps.findIndex((step) =>
+    step.some((p) => p.id === person.id),
+  );
+  const others = route.steps.map((step) =>
+    step.filter((p) => p.id !== person.id && unfinished(p)),
+  );
+  const sameStep = own >= 0 && (others[own]?.length ?? 0) > 0;
+  const later = others.findIndex(
+    (step, index) => index > own && step.length > 0,
+  );
+  const nextPeople = later >= 0 ? others[later] : undefined;
+  if (!sameStep && nextPeople !== undefined)
+    return { kind: "next", step: later + 1, people: nextPeople };
+  const rest = others.flat();
+  if (rest.length === 0) return { kind: "complete" };
+  if (route.phase === "approval") return { kind: "freeze" };
+  return { kind: "wait", people: rest };
+};

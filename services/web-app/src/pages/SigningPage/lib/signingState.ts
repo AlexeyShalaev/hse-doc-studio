@@ -27,6 +27,8 @@ export type SigningStatus =
   /** Своё сделал, маршрут идёт дальше; `next`: кто действует сейчас. */
   | { kind: "done"; next: SigningPerson[] }
   | { kind: "completed" }
+  /** Автор пропустил его: подпись не требуется, делать ничего не нужно (13.9). */
+  | { kind: "skipped" }
   | {
       kind: "returned";
       byMe: boolean;
@@ -85,6 +87,14 @@ const isResent = (task: SigningTask): boolean => {
 
 export const signingStatus = (task: SigningTask): SigningStatus => {
   const { route, me } = task;
+  // Пропущенному подписывать нечего, как бы ни шёл маршрут дальше; отмена и закрытие важнее.
+  if (
+    me.state === "skipped" &&
+    route.status !== "cancelled" &&
+    route.status !== "archived" &&
+    route.status !== "draft"
+  )
+    return { kind: "skipped" };
   switch (route.status) {
     case "completed":
       return { kind: "completed" };
@@ -202,6 +212,8 @@ export const versionLine = (
   const kind = ((): VersionLineKind => {
     if (task.route.status === "completed" || task.route.status === "archived")
       return "signed";
+    // Пропущенный ничего не подписывает: версия просто названа, без «Вы подписываете».
+    if (task.me.state === "skipped") return "kept";
     // Документ без изменений в новой версии: рядом пометка «Без изменений: вы уже …».
     if (keptMark(task, doc)) return "kept";
     if (task.me.state !== "done") return "signing";

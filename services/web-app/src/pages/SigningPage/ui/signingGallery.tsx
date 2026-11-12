@@ -216,6 +216,10 @@ const academicTask = (
 const newVersionTask = (): SigningTask =>
   SIGNING_ROUTE_CONTRACT_EXAMPLES.SigningTask?.new_version as SigningTask;
 
+/** Эталоны раздела 13: `optional` (место необязательно) и `skipped` (пропущен автором). */
+const optionalTask = (name: "optional" | "skipped"): SigningTask =>
+  SIGNING_ROUTE_CONTRACT_EXAMPLES.SigningTask?.[name] as SigningTask;
+
 /** Автор на своей странице: своё сделал, рабочая сборка ушла от версии на подписи. */
 const divergedTask = (status: "active" | "completed"): SigningTask =>
   supervisorTurn({
@@ -884,6 +888,51 @@ export const getSigningPageGallery = (): GalleryGroup[] => [
         "signing_diverged_completed",
         "Автор: все подписали, потом правка",
         () => view(ready(divergedTask("completed"))),
+      ),
+    ],
+  },
+  {
+    id: "signing-optional",
+    title: "Подписант: необязательные подписи",
+    description:
+      "Раздел 13: необязательное место в очереди (пометка «необязательна»), «Ваша подпись не требуется» после пропуска, ход маршрута с пропущенным.",
+    entries: [
+      entry(
+        "signing_optional_turn",
+        "Необязательное место в очереди",
+        () => view(ready(optionalTask("optional"))),
+        "Подписать можно, пока автор не пропустил: у места пометка «необязательна».",
+      ),
+      entry(
+        "signing_optional_skipped",
+        "Ваша подпись не требуется",
+        () => view(ready(optionalTask("skipped"))),
+        "Документы видны как есть, кнопок действия нет; в истории строка про пропуск.",
+      ),
+      entry("signing_optional_progress", "Ход маршрута с пропущенным", () =>
+        view(
+          ready(
+            supervisorTurn({
+              steps: [
+                [person(SR_AUTHOR.name, "author", "done", { at: SENT })],
+                [
+                  person(SR_SUPERVISOR.name, "supervisor", "to_approve", {
+                    me: true,
+                  }),
+                ],
+                [person(ACADEMIC, "academic_supervisor", "skipped")],
+              ],
+              docs: [
+                doc({
+                  others: [
+                    other("author", "signed"),
+                    other("academic_supervisor", "skipped"),
+                  ],
+                }),
+              ],
+            }),
+          ),
+        ),
       ),
     ],
   },

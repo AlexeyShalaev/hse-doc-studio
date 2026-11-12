@@ -132,6 +132,7 @@
     "signing_completed": "Everyone has signed: {{excerpt}}",
     "signing_new_version": "A new version is out for signing: {{excerpt}}. The changed documents need your approval again, the request will come when it is your turn",
     "signing_cancelled": "The signing route was cancelled: {{excerpt}}",
+    "signing_skipped": "Signature not required: {{excerpt}}. The route author skipped your step, nothing to do",
     "runner_disk_cleaned": "An administrator cleaned up the disk of your runner “{{name}}”: {{size}} freed",
     "runner_disk_cleaned_nothing": "An administrator cleaned up the disk of your runner “{{name}}”: there was nothing to free",
     "runner_disk_cleaned_error": "An administrator cleaned up the disk of your runner “{{name}}”, the cleanup finished with errors: {{size}} freed",
