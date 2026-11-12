@@ -21,7 +21,32 @@ tags:
 
 On top of any mode you can require **approval**: a new account waits for an administrator decision in the Approvals section and cannot sign in before that.
 
-Environment: `HSE_STUDIO__AUTH__REGISTRATION_MODE`, `..._REGISTRATION_DOMAINS`, `..._REQUIRE_APPROVAL`, `..._PASSWORD_ENABLED`.
+Environment: `HSE_STUDIO__AUTH__REGISTRATION_MODE`, `..._REGISTRATION_DOMAINS`, `..._REQUIRE_APPROVAL`, `..._APPROVAL_EXEMPTIONS`, `..._PASSWORD_ENABLED`.
+
+### Approval exemptions {#approval-exemptions}
+
+With approval on, a "No approval for addresses" field appears under the switch. Addresses from it skip the queue. Example: registration is open to everyone, approval is on, and `@hse.ru` and `@edu.hse.ru` addresses are active right after the email is confirmed.
+
+One rule per line:
+
+| Rule | What it lets through |
+|---|---|
+| `hse.ru` | exactly this domain: `ann@hse.ru`, but not `ann@edu.hse.ru` or `ann@nothse.ru` |
+| `*.hse.ru` | any subdomain: `ann@edu.hse.ru`, `ann@a.b.hse.ru`, but not `ann@hse.ru` itself |
+| `name@example.com` | one address |
+
+Case does not matter, internationalized domains are written as is. Regular expressions are not supported: `hse.ru` as an expression would let `hseXru` in, and a forgotten `$` would let `hse.ru.evil.com` in. Up to a hundred rules; an error is shown with its line number.
+
+An exemption applies only to a confirmed address, otherwise anyone could register someone else's `@hse.ru` address and skip approval:
+
+- password sign-up with mail configured: the person gets the email, after following the link the account is active. The decision is made at confirmation time by the current list: if the rule was removed before that, the account goes to the queue;
+- without mail an address cannot be confirmed, exemptions do not apply, every new account waits for approval;
+- single sign-on (OIDC with auto-provisioning): the provider has confirmed the address, the exemption applies at once;
+- invitations work as before and need no approval.
+
+In the `domains` mode the domain is checked first, then the exemption. An activation by rule is written to the audit log as "Account activated without approval by a rule" with the matching rule; list changes show up under "Sign-in settings changed". The "Check an address" row in the admin panel shows whether a given address needs approval under the unsaved settings.
+
+Environment: `HSE_STUDIO__AUTH__APPROVAL_EXEMPTIONS='["hse.ru", "*.hse.ru"]'`. A bad rule in the environment stops the server from starting.
 
 ## Invitations
 

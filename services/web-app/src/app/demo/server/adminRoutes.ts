@@ -1,5 +1,6 @@
 import { demoError, demoJson, demoNoContent } from "@shared/api/demo";
 import type { DemoResponse, DemoRoute } from "@shared/api/demo";
+import { parseExemptions } from "@features/admin-auth-settings/testing";
 import type {
   AdminAuthSettings,
   AdminOidcProvider,
@@ -175,11 +176,13 @@ export const createAdminRoutes = (
         const mode = body.registration_mode;
         const domains = body.registration_domains;
         const approval = body.require_approval;
+        const exemptions = body.approval_exemptions;
         const f = s.registration.fields;
         if (
           (mode != null && f["auth.registration_mode"]?.locked) ||
           (domains != null && f["auth.registration_domains"]?.locked) ||
-          (approval != null && f["auth.require_approval"]?.locked)
+          (approval != null && f["auth.require_approval"]?.locked) ||
+          (exemptions != null && f["auth.approval_exemptions"]?.locked)
         ) {
           return locked();
         }
@@ -199,6 +202,13 @@ export const createAdminRoutes = (
         if (typeof approval === "boolean") {
           next.require_approval = approval;
           fields["auth.require_approval"] = admin("admin");
+        }
+        if (Array.isArray(exemptions)) {
+          // Как сервер: строгий разбор, любая плохая строка отклоняет всё.
+          const parsed = parseExemptions(exemptions.map(str).join("\n"));
+          if (parsed.problems.length > 0 || parsed.tooMany) return invalid();
+          next.approval_exemptions = parsed.rules;
+          fields["auth.approval_exemptions"] = admin("admin");
         }
         if (
           next.registration_mode === "domains" &&
