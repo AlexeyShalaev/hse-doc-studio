@@ -33,7 +33,6 @@ def _mark(trio: Trio, who: Person, doc_id: str, slot_id: str, *, optional: bool 
 
 async def _skip(trio: Trio, doc_id: str, slot_id: str) -> None:
     """Пропуск, как его записывает маршрут (R20): участник в базе и запись в `signatures.json`."""
-    _skip_in_files(trio, doc_id, slot_id)
     skipped = {
         "round": 1,
         "at": "2026-11-13T10:00:00+00:00",
@@ -47,6 +46,8 @@ async def _skip(trio: Trio, doc_id: str, slot_id: str) -> None:
             text("UPDATE signing_route_participants SET skipped = CAST(:skipped AS jsonb) WHERE persona = :persona"),
             {"skipped": json.dumps(skipped), "persona": slot_id},
         )
+    # Файлы после базы: сверка маршрута между ними убрала бы запись, у которой нет пропуска участника (`Unskip`).
+    _skip_in_files(trio, doc_id, slot_id)
 
 
 def _skip_in_files(trio: Trio, doc_id: str, slot_id: str) -> None:
