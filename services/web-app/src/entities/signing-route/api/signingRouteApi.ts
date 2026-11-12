@@ -135,6 +135,22 @@ export const signingRouteApi = {
         quiet,
       )
       .then(parseResp(SigningLinkSchema)),
+  /**
+   * Пропустить участника (раздел 13.6): все его оставшиеся подписи на точке необязательны. Без
+   * тела; 409 `participant_not_skippable` с `reason`, если нельзя.
+   */
+  skip: (
+    projectId: string,
+    routeId: string,
+    participantId: string,
+  ): Promise<SigningRoute> =>
+    apiClient
+      .post(
+        `${route(projectId, routeId)}/participants/${enc(participantId)}/skip`,
+        {},
+        quiet,
+      )
+      .then(parseResp(SigningRouteSchema)),
 };
 
 /** Задача подписанта на странице `/sign/:projectId/:routeId`: только участнику маршрута. */

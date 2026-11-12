@@ -10,8 +10,11 @@ import {
   useDocument,
 } from "@entities/document";
 import { useProject } from "@entities/project";
+import { useBootstrap } from "@entities/session";
 import {
+  useDocSignaturePlan,
   useReleaseWithheld,
+  useSetSlotOptional,
   useSignaturesState,
   useUpdateSignaturePlacement,
 } from "@entities/signature";
@@ -20,6 +23,7 @@ import { useVersionDetail } from "@entities/template-catalog";
 import { DocPlacementPanel, PdfStampEditor } from "@features/signature-stamper";
 import { SignedVersionPanel } from "@features/signing-version";
 import type { SignMode, UpdatePlacementRequest } from "@shared/api/types";
+import { ApiError, failureCode } from "@shared/api";
 import { toast } from "@shared/lib";
 import { Notice } from "@shared/ui";
 import { Spinner } from "@shared/ui/Spinner";
@@ -71,6 +75,14 @@ export const DocSignaturesPane = ({
   const { mutate: updatePlacement } = useUpdateSignaturePlacement();
   const { mutate: updateSlotConfig } = useUpdateSlotConfig();
   const { mutate: releaseWithheld } = useReleaseWithheld();
+  const setOptional = useSetSlotOptional();
+  // «Подпись уже стоит» (signing-route.md, 13.9): статус слота в плане документа, пока его держит
+  // маршрут. Маршруты есть только на сервере.
+  const boot = useBootstrap().data;
+  const isServer = boot?.mode === "server";
+  const { data: docPlan } = useDocSignaturePlan(projectId, docId, {
+    enabled: isServer && boot.user !== null,
+  });
   const { start, isRunning, slot, block } = useStartCompile(projectId, docId);
 
   // The signature preview needs a PDF, which exists iff the most recent build
@@ -220,6 +232,56 @@ export const DocSignaturesPane = ({
     );
   };
 
+  // «Подпись необязательна» (signing-route.md, 13.9): отмечают те, кто отправляет на подписание;
+  // локально владелец.
+  const canEditOptional =
+    !isServer || project.my_role === "owner" || project.my_role === "editor";
+  const heldByRoute = docPlan?.route != null;
+  const optionalErrorText = (error: unknown): string => {
+    const code = failureCode(error);
+    const known: Record<string, string> = {
+      optional_forbidden: t("signatureStamper:docPlacement.optional.required"),
+      slot_signed: t("signatureStamper:docPlacement.optional.signed"),
+      forbidden: t("signatureStamper:docPlacement.optional.noRights"),
+      unknown_slot: t("signatureStamper:docPlacement.optional.unknownSlot"),
+    };
+    return (
+      known[code] ??
+      (error instanceof ApiError && error.detail !== ""
+        ? error.detail
+        : error instanceof Error
+          ? error.message
+          : String(error))
+    );
+  };
+  const optionalControl = {
+    canEdit: canEditOptional,
+    isSigned: (slotId: string) =>
+      heldByRoute &&
+      (docPlan.docs
+        .find((d) => d.doc_id === docId)
+        ?.slots.some((s) => s.slot_id === slotId && s.status === "signed") ??
+        false),
+    isPending: (slotId: string, profileId: string) =>
+      setOptional.isPending &&
+      setOptional.variables.slotId === slotId &&
+      setOptional.variables.profileId === profileId,
+    onChange: (slotId: string, profileId: string, optional: boolean) => {
+      setOptional.mutate(
+        { projectId, docId, slotId, profileId, optional },
+        {
+          onError: (err) => {
+            toast.error(
+              t("signatureStamper:docPlacement.optional.failed", {
+                reason: optionalErrorText(err),
+              }),
+            );
+          },
+        },
+      );
+    },
+  };
+
   const goToProjectSignatures = () => {
     void navigate(`/projects/${projectId}/submit/signatures`);
   };
@@ -257,12 +319,9 @@ export const DocSignaturesPane = ({
             />
           </div>
         )}
-        {/* inert: на подписании панель видна, но ни одна правка слота недоступна. */}
-        <div
-          inert={locked}
-          data-testid="doc-signatures-panel"
-          style={locked ? { opacity: 0.6 } : undefined}
-        >
+        {/* На подписании панель видна, правки слотов закрыты (inert внутри панели), открыта
+            только отметка «Подпись необязательна». */}
+        <div data-testid="doc-signatures-panel">
           <DocPlacementPanel
             projectId={projectId}
             docId={docId}
@@ -285,6 +344,8 @@ export const DocSignaturesPane = ({
             onSlotModeChange={handleSlotModeChange}
             onReleaseWithheld={handleReleaseWithheld}
             routeHeld={locked}
+            locked={locked}
+            optionalControl={optionalControl}
           />
         </div>
       </div>

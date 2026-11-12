@@ -5,6 +5,7 @@ export { SignatureEditorModal } from "./ui/SignatureEditorModal";
 export { SignerPlateEditor } from "./ui/DetachedSignatureBlocks";
 export { SlotPanel } from "./ui/SlotPanel";
 export type { DocPlacementPanelProps } from "./ui/DocPlacementPanel";
+export type { SlotOptionalControl } from "./ui/SlotOptionalRows";
 export type { PdfStampEditorProps } from "./ui/PdfStampEditor";
 export type { SlotPanelProps } from "./ui/SlotPanel";
 export { SignSubmissionDialog } from "./ui/SignSubmissionDialog";

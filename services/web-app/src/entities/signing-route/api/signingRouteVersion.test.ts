@@ -38,7 +38,7 @@ const slot = (persona: string, method: "image" | "detached", y: number) => ({
   label: { ru: persona, en: persona },
   persona,
   method,
-  optional: false,
+  extra: false,
   page: 1,
   x_mm: 110,
   y_mm: y,

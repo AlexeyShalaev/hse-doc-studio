@@ -479,6 +479,10 @@ export type RuntimeSignatureSlotResponse = {
   // `required_for: string[]`: обязательность — свойство пары «документ +
   // точка», а не документа.
   required_by: Record<string, SignatureProfileRef[]>;
+  // Пак запрещает отмечать подпись необязательной (signing-route.md, 13.3).
+  required?: boolean;
+  // Точки, чей маршрут включил слот сверх точки: id документа → точки.
+  extra_by?: Record<string, SignatureProfileRef[]>;
   default_placement: {
     page: number;
     x_mm: number;
@@ -531,6 +535,19 @@ export type SignaturesStateResponse = {
   runtime_slots?: RuntimeSignatureSlotResponse[];
   // Слоты документов, чью картинку придержал маршрут подписания до согласия подписанта (`doc_id -> [slot_id]`).
   withheld?: Record<string, string[]>;
+  // Необязательные подписи (signing-route.md, 13.3): id документа → точка → слоты.
+  optional?: Record<string, Record<string, string[]>>;
+  // Пропущенные маршрутом пары: id документа → слот → пропуск.
+  skipped?: Record<string, Record<string, SkippedSlotResponse>>;
+};
+
+export type SkippedSlotResponse = {
+  profile_id: string;
+  route_id: string;
+  round: number;
+  at: string;
+  // Метка уже в зафиксированном PDF с ЭП над ним и остаётся в нём.
+  keep_mark: boolean;
 };
 
 export type UpdatePlacementRequest = {

@@ -42,6 +42,7 @@ export type ServerDemoScenarioId =
   | "student_linked"
   | "student_signing_versions"
   | "student_signing_migration"
+  | "student_signing_optional"
   | "runners_ready"
   | "runners_none"
   | "runners_offline"
@@ -652,6 +653,24 @@ export const SERVER_SCENARIOS: readonly ServerDemoScenario[] = [
   },
   {
     id: "student_signing_versions",
+    tokenRequired: false,
+    bootstrap: () =>
+      base({
+        auth: {
+          registration_mode: "domains",
+          password_enabled: true,
+          oidc_providers: [],
+          smtp_enabled: true,
+          password_min_length: 10,
+          passkeys_enabled: true,
+        },
+        user: DEMO_STUDENT,
+        csrf_token: STUDENT_CSRF,
+        inbox: { unread: 3 },
+      }),
+  },
+  {
+    id: "student_signing_optional",
     tokenRequired: false,
     bootstrap: () =>
       base({

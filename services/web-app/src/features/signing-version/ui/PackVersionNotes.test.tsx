@@ -110,6 +110,7 @@ describe("пакет: документ изменён после отправк�
       crypto_total: 0,
       crypto_signed: 0,
       waiting_for_me: 0,
+      optional_pending: 0,
       docs: [
         docPlan("annotation", { pinned, working_differs: true }),
         // Версия на подписи без изменений и обычный документ молчат.

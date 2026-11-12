@@ -346,7 +346,8 @@ test.describe("маршрут подписания: отправка, подпи
     await expect(
       page.getByText("Документ на подписании: подписи менять нельзя", { exact: false }),
     ).toBeVisible();
-    await expect(page.getByTestId("doc-signatures-panel")).toHaveAttribute("inert", "");
+    // Правки слота закрыты, отметка «Подпись необязательна» остаётся доступной (13.9).
+    await expect(page.getByTestId("doc-slot-edit-author")).toHaveAttribute("inert", "");
     await shot(page, "ru", "sr-07-locked");
     // Мимо интерфейса правка размещения тоже отклоняется.
     const refused = await student.client.patch(

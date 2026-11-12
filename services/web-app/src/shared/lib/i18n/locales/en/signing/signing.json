@@ -24,7 +24,8 @@
       "to_approve_sign": "signing",
       "to_sign": "signing",
       "done": "done",
-      "returned": "returned for revision"
+      "returned": "returned for revision",
+      "skipped": "not required"
     },
     "mine": {
       "waiting": "waiting",

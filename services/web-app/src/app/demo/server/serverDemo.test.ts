@@ -13,6 +13,7 @@ import {
   SigningRouteSchema,
   SigningTaskSchema,
 } from "@entities/signing-route";
+import { SignaturesStateSchema, SlotOptionalSchema } from "@entities/signature";
 import { activateServerScenario } from "./index";
 import { serverDemoRoutes, setServerDemoActive } from "./routes";
 import { SERVER_SCENARIOS } from "./scenarios";
@@ -223,6 +224,80 @@ describe("серверное демо: версия на подписи", () => 
     expect(own.status).toBe("paused");
     expect(own.stop_reason).toBe("sent_changed");
     expect(own.docs[0]?.sent).toBeNull();
+  });
+
+  it("необязательные подписи: очередь академрука, его можно пропустить", async () => {
+    activateServerScenario("student_signing_optional");
+    const own = await routeOf("p_01hxa1c4de");
+    expect(own.status).toBe("active");
+    expect(own.current_step).toBe(3);
+    const academic = own.steps
+      .flat()
+      .find((p) => p.persona === "academic_supervisor");
+    expect(academic?.state).toBe("to_approve");
+    expect(academic?.skip?.available).toBe(true);
+    expect(
+      own.docs[0]?.slots.find((s) => s.slot_id === "academic_supervisor"),
+    ).toMatchObject({ extra: true, optional: true });
+
+    const state = SignaturesStateSchema.parse(
+      (await call("GET", "/projects/p_01hxa1c4de/signatures")).data,
+    );
+    expect(state.optional.topic_application?.["topic-approval"]).toEqual([
+      "academic_supervisor",
+    ]);
+    const academicSlot = state.runtime_slots.find(
+      (s) => s.id === "academic_supervisor",
+    );
+    expect(academicSlot?.extra_by.topic_application?.[0]?.id).toBe(
+      "topic-approval",
+    );
+    expect(state.runtime_slots.find((s) => s.id === "author")?.required).toBe(
+      true,
+    );
+
+    // Подпись автора пак требует, слот не с этой точки сервер не знает.
+    const forbidden = await call(
+      "PUT",
+      "/projects/p_01hxa1c4de/signatures/optional/topic_application/author",
+      { profile_id: "topic-approval", optional: true },
+    );
+    expect(forbidden.status).toBe(409);
+    const unknown = await call(
+      "PUT",
+      "/projects/p_01hxa1c4de/signatures/optional/topic_application/academic_supervisor",
+      { profile_id: "other-point", optional: true },
+    );
+    expect(unknown.status).toBe(400);
+
+    // Пропуск: академрук не требуется, слот отмечен пропущенным в состоянии подписей.
+    const skipped = await call(
+      "POST",
+      `/projects/p_01hxa1c4de/signing-routes/${own.id}/participants/${academic?.id ?? ""}/skip`,
+      {},
+    );
+    expect(SigningRouteSchema.parse(skipped.data).phase).toBe("signing");
+    const after = SignaturesStateSchema.parse(
+      (await call("GET", "/projects/p_01hxa1c4de/signatures")).data,
+    );
+    expect(after.skipped.topic_application?.academic_supervisor?.route_id).toBe(
+      own.id,
+    );
+
+    // Снятая после пропуска отметка: пропуск остаётся до нового раунда.
+    const unmark = await call(
+      "PUT",
+      "/projects/p_01hxa1c4de/signatures/optional/topic_application/academic_supervisor",
+      { profile_id: "topic-approval", optional: false },
+    );
+    expect(SlotOptionalSchema.parse(unmark.data)).toEqual({
+      doc_id: "topic_application",
+      slot_id: "academic_supervisor",
+      profile_id: "topic-approval",
+      optional: false,
+      skipped: true,
+      returns_next_round: true,
+    });
   });
 
   it("у обычного студента своего маршрута нет", async () => {

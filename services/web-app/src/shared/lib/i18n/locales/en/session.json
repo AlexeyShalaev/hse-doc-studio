@@ -114,6 +114,10 @@
         "title": "Signing: versions",
         "hint": "The student sent the application for signing and rebuilt it afterwards: there are changes after sending. In another project they are asked to sign a new version."
       },
+      "student_signing_optional": {
+        "title": "Signing: optional signatures",
+        "hint": "The student added the academic supervisor's signature to the application and marked it optional. The supervisor approved, it is the academic supervisor's turn: they can be skipped."
+      },
       "student_signing_migration": {
         "title": "Signing: 0.20.0 migration",
         "hint": "The student's route was sent before versions on signature and its version cannot be restored: the route is stopped and needs a new version."

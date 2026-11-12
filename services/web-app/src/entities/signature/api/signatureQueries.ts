@@ -142,6 +142,42 @@ export const useReleaseWithheld = () => {
   });
 };
 
+/**
+ * «Подпись необязательна» (signing-route.md, 13.6). Флаг меняет план, пропуск в маршруте и его
+ * задачи, поэтому сбрасываются и состояние подписей, и запросы маршрутов проекта (ключ
+ * `signingRouteKeys.project` сущности маршрута: сущности друг друга не импортируют).
+ */
+export const useSetSlotOptional = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      projectId,
+      docId,
+      slotId,
+      profileId,
+      optional,
+    }: {
+      projectId: string;
+      docId: string;
+      slotId: string;
+      profileId: string;
+      optional: boolean;
+    }) =>
+      signatureApi.setSlotOptional(projectId, docId, slotId, {
+        profile_id: profileId,
+        optional,
+      }),
+    onSettled: (_data, _error, { projectId }) => {
+      void queryClient.invalidateQueries({
+        queryKey: signatureKeys.state(projectId),
+      });
+      void queryClient.invalidateQueries({
+        queryKey: ["signing-routes", "project", projectId],
+      });
+    },
+  });
+};
+
 const useInvalidateSignatures = () => {
   const queryClient = useQueryClient();
   return (projectId: string) =>

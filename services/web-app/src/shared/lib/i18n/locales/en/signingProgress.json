@@ -38,7 +38,8 @@
       "to_approve_sign": "to approve and sign",
       "to_sign": "to sign the final PDF",
       "done": "signed",
-      "returned": "returned for revision"
+      "returned": "returned for revision",
+      "skipped": "signature not required"
     },
     "invitee": "Invitee"
   },
@@ -90,7 +91,7 @@
     "bannerStep": "This document is out for signing (step {{step}} of {{total}}).",
     "signatures": "Signatures cannot be changed while the route is running.",
     "open": "Signing progress",
-    "locked": "This document is out for signing: signatures cannot be changed. To change them, cancel the route on the checkpoint page."
+    "locked": "This document is out for signing: signatures cannot be changed. To change them, cancel the route on the checkpoint page. You can still mark a signature as optional."
   },
   "unsigned": "The route is sent, your signature is not in place yet.",
   "progress": "{{approved}} of {{total}} approved · {{done}} of {{total}} signed",

@@ -61,7 +61,12 @@ import {
 //   останавливает, а только даёт «есть изменения»; новая версия из `active` и `completed`
 //   (без изменений 409 `nothing_changed`) меняет версию только у изменившихся документов, согласия
 //   и ЭП по остальным остаются; отмена снимает версии; «Подписывать текущую сборку»
-//   (`DELETE .../docs/{doc}/pinned`) только у документа, который маршрут не держит.
+//   (`DELETE .../docs/{doc}/pinned`) только у документа, который маршрут не держит;
+// - необязательные подписи и пропуск (раздел 13): флаг «Подпись необязательна» живёт в состоянии
+//   подписей (`isOptional`), пропустить можно участника в очереди, у которого все оставшиеся пары
+//   необязательны (`POST .../participants/{pid}/skip`, коды 13.6); пропущенный проходит шаг, его
+//   метка уходит из видимого слоя, а B без ЭП над ним фиксируется заново; новый раунд переносит
+//   пропуск, пока пары необязательны, иначе участник возвращается в маршрут.
 
 type Localized = Record<string, string>;
 
@@ -86,8 +91,10 @@ export type SigningDemoSlot = {
   label: Localized;
   persona: string;
   method: RouteSignMethod;
-  /** Необязательный для точки слот: в маршрут попадает только через `extra_slots`. */
-  optional: boolean;
+  /** Слот не требует точка: в маршрут попадает только через `extra_slots` (сверх точки). */
+  extra: boolean;
+  /** Пак запрещает отмечать подпись необязательной (`required: true` слота каталога, 13.3). */
+  required?: boolean;
   page: number;
   x_mm: number;
   y_mm: number;
@@ -131,6 +138,16 @@ export type SigningRouteDemoOptions = {
   isPlaced?: (projectId: string, docId: string, slotId: string) => boolean;
   /** На сервере настроена почта: приглашения и напоминания уходят письмом. По умолчанию нет. */
   mailEnabled?: () => boolean;
+  /**
+   * «Подпись необязательна» на точке (состояние подписей проекта, 13.3); без функции все подписи
+   * обязательны.
+   */
+  isOptional?: (
+    projectId: string,
+    profileId: string,
+    docId: string,
+    slotId: string,
+  ) => boolean;
   now?: () => number;
 };
 
@@ -178,6 +195,40 @@ export type SigningRouteDemo = {
   taskCount: (userId: string) => number;
   /** Отправленный маршрут чужого проекта с подписантом `signer`; возвращает id маршрута. */
   seed: (input: SigningDemoSeed) => string | null;
+  /**
+   * Свой маршрут автора с академруком сверх точки (13.2): научрук `signer` согласовал, очередь
+   * академрука `academic`. Возвращает id маршрута.
+   */
+  seedOptional: (input: {
+    projectId: string;
+    sender: SigningDemoUser;
+    signer: SigningDemoUser;
+    academic: SigningDemoUser;
+  }) => string | null;
+  /** Пропущенные пары проекта для `SignaturesState.skipped`: маршруты, которые держат документы. */
+  skippedOf: (projectId: string) => Record<string, Record<string, SkippedPair>>;
+  /** Точки, чей маршрут включил слот сверх точки, для `RuntimeSlot.extra_by`. */
+  extraBy: (projectId: string) => Record<string, Record<string, ProfileRef[]>>;
+  /** Слот документа на точке подписан в маршруте, который держит документ (`slot_signed`). */
+  isSlotSigned: (
+    projectId: string,
+    profileId: string,
+    docId: string,
+    slotId: string,
+  ) => boolean;
+  /** Маршрут точки держит документ (снятая отметка пропущенной пары вернётся следующим раундом). */
+  holdsDoc: (projectId: string, profileId: string, docId: string) => boolean;
+};
+
+type ProfileRef = { id: string; name: Localized };
+
+/** Пропуск пары в состоянии подписей (`SkippedSlot`, 13.3). */
+export type SkippedPair = {
+  profile_id: string;
+  route_id: string;
+  round: number;
+  at: string;
+  keep_mark: boolean;
 };
 
 const SLOT_LABEL = {
@@ -186,7 +237,10 @@ const SLOT_LABEL = {
   academic: { ru: "Академический руководитель", en: "Academic supervisor" },
 };
 
-/** «Заявка на тему КП»: автор картинкой, научрук открепленной ЭП, академрук по желанию. */
+/**
+ * «Заявка на тему КП»: автор картинкой, научрук открепленной ЭП, академрук сверх точки. Подпись
+ * автора пак требует (`required`): отметить её необязательной нельзя.
+ */
 export const DEMO_SIGNING_PROFILE: SigningDemoProfile = {
   id: "topic-approval",
   name: { ru: "Заявка на тему КП", en: "Course project topic application" },
@@ -203,7 +257,8 @@ export const DEMO_SIGNING_PROFILE: SigningDemoProfile = {
           label: SLOT_LABEL.author,
           persona: "author",
           method: "image",
-          optional: false,
+          extra: false,
+          required: true,
           page: 1,
           x_mm: 120,
           y_mm: 230,
@@ -214,7 +269,7 @@ export const DEMO_SIGNING_PROFILE: SigningDemoProfile = {
           label: SLOT_LABEL.supervisor,
           persona: "supervisor",
           method: "detached",
-          optional: false,
+          extra: false,
           page: 1,
           x_mm: 110,
           y_mm: 130,
@@ -225,7 +280,7 @@ export const DEMO_SIGNING_PROFILE: SigningDemoProfile = {
           label: SLOT_LABEL.academic,
           persona: "academic_supervisor",
           method: "image",
-          optional: true,
+          extra: true,
           page: 1,
           x_mm: 110,
           y_mm: 160,
@@ -274,6 +329,16 @@ type Participant = {
   notified_at: string | null;
   reminded_at: string | null;
   reminders: number;
+  /**
+   * Пропуск автором (13.3): раунд, время, пропущенные пары (оставшиеся неподписанными) и
+   * документы, где метка осталась в B с ЭП над ним. Новый раунд переносит его или снимает.
+   */
+  skipped: {
+    round: number;
+    at: string;
+    pairs: RouteSlotRef[];
+    kept: string[];
+  } | null;
 };
 
 type Route = {
@@ -340,6 +405,7 @@ export const createSigningRouteDemo = (
   const now = () => new Date(clock()).toISOString();
   const isPlaced = options.isPlaced ?? (() => true);
   const mailEnabled = options.mailEnabled ?? (() => false);
+  const isOptionalOption = options.isOptional ?? (() => false);
 
   let routes: Route[] = [];
   let seq = 0;
@@ -357,7 +423,7 @@ export const createSigningRouteDemo = (
       doc.slots
         .filter(
           (slot) =>
-            !slot.optional ||
+            !slot.extra ||
             r.extra.some(
               (e) => e.doc_id === doc.doc_id && e.slot_id === slot.slot_id,
             ),
@@ -416,13 +482,23 @@ export const createSigningRouteDemo = (
     p.approval !== null &&
     p.approval.round === r.round &&
     p.approval.tokens[docId] === sentToken(r, docId);
-  /** Согласовал для хода шагов: совпали отпечатки всех его документов. */
+  /** Пропущен автором в этом раунде (13.3): шаг пройден, подписывать ему нечего. */
+  const isSkipped = (r: Route, p: Participant): boolean =>
+    p.skipped !== null && p.skipped.round === r.round;
+  /** Согласовал для хода шагов: совпали отпечатки всех его документов; пропущенный тоже прошёл. */
   const approved = (r: Route, p: Participant) =>
+    isSkipped(r, p) ||
     approvalDocs(r, p).every((doc) => approvedDoc(r, p, doc));
   const signedDoc = (r: Route, p: Participant, docId: string) =>
     isDocFrozen(r, docId) && p.signed[docId] === r.frozen[docId];
   const signed = (r: Route, p: Participant) =>
-    !isCrypto(p.method) || docsOf(r, p).every((doc) => signedDoc(r, p, doc));
+    isSkipped(r, p) ||
+    !isCrypto(p.method) ||
+    docsOf(r, p).every((doc) => signedDoc(r, p, doc));
+
+  /** «Подпись необязательна» у пары на точке маршрута. */
+  const pairOptional = (r: Route, pair: RouteSlotRef): boolean =>
+    isOptionalOption(r.project_id, r.profile.id, pair.doc_id, pair.slot_id);
   /** ЭП участника над текущими B всех его документов. */
   const signAll = (r: Route, p: Participant) => {
     for (const doc of docsOf(r, p)) {
@@ -454,10 +530,11 @@ export const createSigningRouteDemo = (
   };
 
   const stateOf = (r: Route, p: Participant): ParticipantState => {
+    const live = r.status === "active" || r.status === "completed";
+    if (live && isSkipped(r, p)) return "skipped";
     if (p.user_id === null && p.invitation_id !== null) return "invited";
     if (r.status === "returned" && p.returnedRound === r.round)
       return "returned";
-    const live = r.status === "active" || r.status === "completed";
     if (live && approved(r, p)) {
       if (signed(r, p)) return "done";
       // Согласовал до фиксации и ждёт её: `waiting` с `approved_at`, как в ядре.
@@ -471,7 +548,7 @@ export const createSigningRouteDemo = (
 
   const nextActionOf = (r: Route, p: Participant): SigningNextAction => {
     const state = stateOf(r, p);
-    if (state === "done") return "done";
+    if (state === "done" || state === "skipped") return "done";
     if (state === "to_sign") return "sign";
     if (state === "to_approve_sign") return "approve_and_sign";
     if (state !== "to_approve") return "wait";
@@ -544,8 +621,9 @@ export const createSigningRouteDemo = (
     if (!isFrozen(r) && visualChangers(r).length === 0) {
       for (const doc of routeDocs(r)) {
         if (isDocFrozen(r, doc)) continue;
+        // Слой в отпечатке: перефиксация после пропуска даёт другой B (13.5).
         r.frozen[doc] = sha(
-          `${r.pinned[doc]?.sha256 ?? ""}:frozen:${String(r.round)}`,
+          `${r.pinned[doc]?.sha256 ?? ""}:frozen:${String(r.round)}:${visibleLayer(r)}`,
         );
       }
       event(r, "frozen", null);
@@ -571,8 +649,19 @@ export const createSigningRouteDemo = (
   };
 
   /** Слот по своему документу: картинка открыта после согласия, ЭП над текущим B (12.6). */
-  const slotStatus = (r: Route, pair: { persona: string; doc_id: string }) => {
+  const slotStatus = (
+    r: Route,
+    pair: { persona: string; doc_id: string; slot_id: string },
+  ) => {
     const owner = participants(r).find((p) => p.persona === pair.persona);
+    if (
+      owner &&
+      isSkipped(r, owner) &&
+      owner.skipped?.pairs.some(
+        (s) => s.doc_id === pair.doc_id && s.slot_id === pair.slot_id,
+      )
+    )
+      return "skipped" as const;
     if (!owner || !approvedDoc(r, owner, pair.doc_id))
       return "pending" as const;
     if (!isCrypto(owner.method)) return "signed" as const;
@@ -588,7 +677,84 @@ export const createSigningRouteDemo = (
     assignmentsOf(r, p).length > 0 &&
     p.method !== "pades";
 
-  const toParticipant = (r: Route, p: Participant): RouteParticipant => ({
+  /** Метка участника стоит в B документа: картинка открыта согласием, плашка с данными (13.5). */
+  const markInFrozen = (r: Route, p: Participant, docId: string): boolean =>
+    isDocFrozen(r, docId) &&
+    p.method !== "pades" &&
+    (approvedDoc(r, p, docId) || (p.method === "detached" && p.plate !== null));
+
+  /** Над B документа уже есть чужая ЭП: перефиксация её сбросила бы, метка остаётся (13.5). */
+  const othersSignedOver = (r: Route, p: Participant, docId: string): boolean =>
+    participants(r).some(
+      (q) => q !== p && isCrypto(q.method) && signedDoc(r, q, docId),
+    );
+
+  /** Оставшиеся (неподписанные) пары участника. */
+  const remainingPairs = (r: Route, p: Participant): RouteSlotRef[] =>
+    assignmentsOf(r, p).filter(
+      (pair) => slotStatus(r, { ...pair, persona: p.persona }) !== "signed",
+    );
+
+  /** Его очередь: действие ждут сейчас или приглашение не принято, а шаг ждёт его (13.3). */
+  const isTurn = (r: Route, p: Participant): boolean => {
+    const state = stateOf(r, p);
+    if (
+      state === "to_approve" ||
+      state === "to_approve_sign" ||
+      state === "to_sign"
+    )
+      return true;
+    return (
+      state === "invited" &&
+      r.steps.findIndex((s) => s.includes(p)) + 1 === currentStep(r)
+    );
+  };
+
+  /** Можно ли пропустить участника сейчас и что будет с метками (`ParticipantView.skip`). */
+  const skipOf = (r: Route, p: Participant) => {
+    const view = (
+      blocker: "not_turn" | "required_slots" | "no_slots" | "done" | null,
+      docs: { keeps: string[]; refreezes: string[] } = {
+        keeps: [],
+        refreezes: [],
+      },
+    ) => ({
+      available: blocker === null,
+      blocker,
+      keeps_marks: docs.keeps,
+      refreezes: docs.refreezes,
+    });
+    const state = stateOf(r, p);
+    if (state === "done" || state === "skipped") return view("done");
+    if (assignmentsOf(r, p).length === 0) return view("no_slots");
+    if (!isTurn(r, p)) return view("not_turn");
+    const left = remainingPairs(r, p);
+    if (left.length === 0) return view("done");
+    if (!left.every((pair) => pairOptional(r, pair)))
+      return view("required_slots");
+    const marked = [
+      ...new Set(
+        left
+          .map((pair) => pair.doc_id)
+          .filter((doc) => markInFrozen(r, p, doc)),
+      ),
+    ];
+    return view(null, {
+      keeps: marked.filter((doc) => othersSignedOver(r, p, doc)),
+      refreezes: marked.filter((doc) => !othersSignedOver(r, p, doc)),
+    });
+  };
+
+  /** Тот, кто управляет маршрутом: автор черновика или отправитель. */
+  const manages = (r: Route, user: SigningDemoUser | null): boolean =>
+    user !== null &&
+    (authors.get(r.id)?.id === user.id || r.sent_by?.id === user.id);
+
+  const toParticipant = (
+    r: Route,
+    p: Participant,
+    viewer: SigningDemoUser | null,
+  ): RouteParticipant => ({
     id: p.id,
     persona: p.persona,
     user_id: p.user_id,
@@ -605,6 +771,8 @@ export const createSigningRouteDemo = (
     notified_at: p.notified_at,
     reminded_at: p.reminded_at,
     reminders: p.reminders,
+    skipped_at: isSkipped(r, p) ? (p.skipped?.at ?? null) : null,
+    skip: r.status === "active" && manages(r, viewer) ? skipOf(r, p) : null,
   });
 
   /** Как R5: из кого выбирать на персоны маршрута и всех его слотов (участники проекта, затем приглашения). */
@@ -642,7 +810,10 @@ export const createSigningRouteDemo = (
     }));
   };
 
-  const toRoute = (r: Route): SigningRoute => ({
+  const toRoute = (
+    r: Route,
+    viewer: SigningDemoUser | null = null,
+  ): SigningRoute => ({
     id: r.id,
     project_id: r.project_id,
     profile: { id: r.profile.id, name: r.profile.name },
@@ -671,11 +842,12 @@ export const createSigningRouteDemo = (
           label: pair.label,
           participant_id:
             participants(r).find((p) => p.persona === pair.persona)?.id ?? null,
-          optional: pair.optional,
+          extra: pair.extra,
+          optional: pairOptional(r, pair),
           status: slotStatus(r, pair),
         })),
     })),
-    steps: r.steps.map((step) => step.map((p) => toParticipant(r, p))),
+    steps: r.steps.map((step) => step.map((p) => toParticipant(r, p, viewer))),
     events: [...r.events],
     candidates: candidatesOf(r),
     changed_docs: changedDocs(r),
@@ -812,8 +984,7 @@ export const createSigningRouteDemo = (
   ): SigningTask => {
     const mine = assignmentsOf(r, p);
     // Изменившиеся документы видят автор и тот, кто отправил маршрут; остальным null.
-    const manages =
-      authors.get(r.id)?.id === user.id || r.sent_by?.id === user.id;
+    const managing = manages(r, user);
     const pdfBase = (docId: string) =>
       `/api/v1/projects/${encodeURIComponent(r.project_id)}/docs/${encodeURIComponent(docId)}`;
     return {
@@ -863,6 +1034,9 @@ export const createSigningRouteDemo = (
           server_keys_allowed: serverKeysAllowed(),
           default_key: defaultKey(user),
         },
+        optional:
+          remainingPairs(r, p).length > 0 &&
+          remainingPairs(r, p).every((pair) => pairOptional(r, pair)),
       },
       docs: docsOf(r, p).map((docId) => {
         const doc = r.profile.docs.find((d) => d.doc_id === docId);
@@ -882,8 +1056,9 @@ export const createSigningRouteDemo = (
               return {
                 ...slotPlace(pair, p.method),
                 status,
+                optional: pairOptional(r, pair),
                 reason:
-                  status === "signed"
+                  status === "signed" || status === "skipped"
                     ? null
                     : approvedDoc(r, p, docId)
                       ? "no_signature_file"
@@ -904,7 +1079,7 @@ export const createSigningRouteDemo = (
           changed_since_mine:
             p.approval?.tokens[docId] !== undefined &&
             p.approval.tokens[docId] !== sentToken(r, docId),
-          changed: manages ? isChanged(r, docId) : null,
+          changed: managing ? isChanged(r, docId) : null,
         };
       }),
       events: [...r.events],
@@ -999,10 +1174,25 @@ export const createSigningRouteDemo = (
     return sent.sha256 === r.build[docId] ? "same" : "changed";
   };
 
-  /** Идущий и завершённый маршрут отправляют только новую версию: без изменений нечего. */
+  /**
+   * Пропущенные, чьи пары уже не все необязательны (отметку сняли после пропуска): новый раунд
+   * вернёт их в маршрут (13.3).
+   */
+  const returning = (r: Route): Participant[] =>
+    participants(r).filter(
+      (p) =>
+        p.skipped !== null &&
+        !assignmentsOf(r, p).every((pair) => pairOptional(r, pair)),
+    );
+
+  /**
+   * Идущий и завершённый маршрут отправляют только новую версию: без изменений нечего, если
+   * некого вернуть из пропуска.
+   */
   const nothingToSend = (r: Route): boolean =>
     (r.status === "active" || r.status === "completed") &&
-    changedDocs(r).length === 0;
+    changedDocs(r).length === 0 &&
+    returning(r).length === 0;
 
   const toPreview = (r: Route, user: SigningDemoUser): SigningRoutePreview => {
     const candidate = candidateOf(r);
@@ -1080,6 +1270,7 @@ export const createSigningRouteDemo = (
     notified_at: null,
     reminded_at: null,
     reminders: 0,
+    skipped: null,
   });
 
   const resolvePerson = (
@@ -1261,6 +1452,17 @@ export const createSigningRouteDemo = (
     r.sent_at = now();
     r.completed_at = null;
     if (note !== null) r.message = note;
+    // Пропуск переносится, пока все пары участника необязательны; иначе он возвращается в маршрут,
+    // и документы с его видимой меткой фиксируются заново, уже с ней.
+    const back = new Set(returning(r));
+    for (const p of participants(r)) {
+      if (p.skipped === null) continue;
+      if (back.has(p)) {
+        p.skipped = null;
+        if (canChangeVisual(p))
+          for (const doc of docsOf(r, p)) unfreeze(r, doc);
+      } else p.skipped = { ...p.skipped, round: r.round };
+    }
     for (const p of participants(r)) {
       p.returnedRound = null;
       p.notified_at = null;
@@ -1557,7 +1759,7 @@ export const createSigningRouteDemo = (
             r.profile.id === profile.id &&
             ["draft", "active", "paused", "returned"].includes(r.status),
         );
-        if (open) return demoJson(toRoute(open));
+        if (open) return demoJson(toRoute(open, user));
         // Новый маршрут точки снимает с контроля завершённый и отменённый (5.3).
         for (const r of routes) {
           if (
@@ -1571,18 +1773,18 @@ export const createSigningRouteDemo = (
         }
         const r = draftFromPack(projectId, profile, user);
         routes.push(r);
-        return demoJson(toRoute(r), 201);
+        return demoJson(toRoute(r, user), 201);
       }),
     },
     {
       method: "GET",
       pattern: "/projects/:projectId/signing-routes/:routeId",
-      handler: withRoute((_req, r) => demoJson(toRoute(r))),
+      handler: withRoute((_req, r, { user }) => demoJson(toRoute(r, user))),
     },
     {
       method: "PUT",
       pattern: "/projects/:projectId/signing-routes/:routeId",
-      handler: withRoute((req, r) => {
+      handler: withRoute((req, r, { user }) => {
         if (!["draft", "paused", "returned", "cancelled"].includes(r.status))
           return conflict(
             "invalid_transition",
@@ -1619,7 +1821,7 @@ export const createSigningRouteDemo = (
         const lacking = [
           ...new Set(
             pairsOf(r)
-              .filter((pair) => pair.optional)
+              .filter((pair) => pair.extra)
               .map((pair) => pair.persona),
           ),
         ].filter(
@@ -1633,7 +1835,7 @@ export const createSigningRouteDemo = (
           if (assignmentsOf(r, p).length > 0 && p.method === null)
             p.method = defaultMethod(r, p.persona);
         }
-        return demoJson(toRoute(r));
+        return demoJson(toRoute(r, user));
       }),
     },
     {
@@ -1672,7 +1874,7 @@ export const createSigningRouteDemo = (
           return demoError(400, "sign_failed", "The key refused to sign", {
             sent: true,
           });
-        return demoJson(toRoute(r));
+        return demoJson(toRoute(r, user));
       }),
     },
     {
@@ -1688,13 +1890,13 @@ export const createSigningRouteDemo = (
         r.legacy = {};
         r.frozen = {};
         event(r, "cancelled", user.name);
-        return demoJson(toRoute(r));
+        return demoJson(toRoute(r, user));
       }),
     },
     {
       method: "POST",
       pattern: "/projects/:projectId/signing-routes/:routeId/archive",
-      handler: withRoute((_req, r) => {
+      handler: withRoute((_req, r, { user }) => {
         if (r.status !== "completed")
           return conflict(
             "invalid_transition",
@@ -1702,7 +1904,46 @@ export const createSigningRouteDemo = (
           );
         r.status = "archived";
         r.updated_at = now();
-        return demoJson(toRoute(r));
+        return demoJson(toRoute(r, user));
+      }),
+    },
+    {
+      // Пропуск участника автором (13.6): без тела, коды `participant_not_skippable` с `reason`.
+      method: "POST",
+      pattern:
+        "/projects/:projectId/signing-routes/:routeId/participants/:participantId/skip",
+      handler: withRoute((req, r, { user }) => {
+        const p = participants(r).find(
+          (q) => q.id === req.params.participantId,
+        );
+        if (!p) return notFound();
+        if (!manages(r, user))
+          return demoError(403, "forbidden", "Only the route author can skip");
+        if (r.status !== "active")
+          return conflict("invalid_transition", "The route is not running");
+        const view = skipOf(r, p);
+        if (view.blocker !== null) {
+          const slots =
+            view.blocker === "required_slots"
+              ? remainingPairs(r, p).filter((pair) => !pairOptional(r, pair))
+              : [];
+          return conflict(
+            "participant_not_skippable",
+            "This participant cannot be skipped",
+            { reason: view.blocker, slots },
+          );
+        }
+        // Метка уходит из B без ЭП над ним: документ фиксируется заново тем же расчётом.
+        for (const doc of view.refreezes) unfreeze(r, doc);
+        p.skipped = {
+          round: r.round,
+          at: now(),
+          pairs: remainingPairs(r, p),
+          kept: view.keeps_marks,
+        };
+        event(r, "skipped", user.name, { participant_id: p.id });
+        settle(r);
+        return demoJson(toRoute(r, user));
       }),
     },
     {
@@ -2064,6 +2305,104 @@ export const createSigningRouteDemo = (
       }
     },
     taskCount: (userId) => tasksOf(userId).length,
+    skippedOf: (projectId) => {
+      const out: Record<string, Record<string, SkippedPair>> = {};
+      for (const r of routes) {
+        if (r.project_id !== projectId || !HOLDING.includes(r.status)) continue;
+        for (const p of participants(r)) {
+          if (!isSkipped(r, p) || p.skipped === null) continue;
+          for (const pair of p.skipped.pairs) {
+            out[pair.doc_id] = {
+              ...out[pair.doc_id],
+              [pair.slot_id]: {
+                profile_id: r.profile.id,
+                route_id: r.id,
+                round: p.skipped.round,
+                at: p.skipped.at,
+                keep_mark: p.skipped.kept.includes(pair.doc_id),
+              },
+            };
+          }
+        }
+      }
+      return out;
+    },
+    extraBy: (projectId) => {
+      const out: Record<string, Record<string, ProfileRef[]>> = {};
+      for (const r of routes) {
+        if (r.project_id !== projectId || r.status === "archived") continue;
+        for (const pair of r.extra) {
+          const byDoc = (out[pair.slot_id] ??= {});
+          const refs = (byDoc[pair.doc_id] ??= []);
+          if (!refs.some((ref) => ref.id === r.profile.id))
+            refs.push({ id: r.profile.id, name: r.profile.name });
+        }
+      }
+      return out;
+    },
+    isSlotSigned: (projectId, profileId, docId, slotId) =>
+      routes.some(
+        (r) =>
+          r.project_id === projectId &&
+          r.profile.id === profileId &&
+          HOLDING.includes(r.status) &&
+          pairsOf(r).some(
+            (pair) =>
+              pair.doc_id === docId &&
+              pair.slot_id === slotId &&
+              slotStatus(r, pair) === "signed",
+          ),
+      ),
+    holdsDoc: (projectId, profileId, docId) =>
+      routes.some(
+        (r) =>
+          r.project_id === projectId &&
+          r.profile.id === profileId &&
+          HOLDING.includes(r.status) &&
+          routeDocs(r).includes(docId),
+      ),
+    seedOptional: ({ projectId, sender, signer, academic }) => {
+      const profile = profiles[0];
+      if (!profile) return null;
+      const r = draftFromPack(projectId, profile, sender);
+      for (const p of participants(r)) {
+        if (p.persona !== "supervisor") continue;
+        p.user_id = signer.id;
+        p.invitation_id = null;
+        p.name = signer.name;
+      }
+      // Академрук сверх точки: автор добавил его подпись сам, он идёт отдельным последним шагом.
+      r.extra = profile.docs.flatMap((doc) =>
+        doc.slots
+          .filter((slot) => slot.extra)
+          .map((slot) => ({ doc_id: doc.doc_id, slot_id: slot.slot_id })),
+      );
+      const persona = "academic_supervisor";
+      r.steps.push([
+        makeParticipant(r, persona, {
+          user_id: academic.id,
+          invitation_id: null,
+          name: academic.name,
+        }),
+      ]);
+      r.deadline = new Date(clock() + 2 * 24 * 60 * 60 * 1000).toISOString();
+      r.message = "Прошу подписать заявление до пятницы.";
+      routes.push(r);
+      sendRoute(r, sender, false);
+      const sup = participants(r).find((q) => q.persona === "supervisor");
+      if (sup) {
+        sup.approval = {
+          round: r.round,
+          at: now(),
+          tokens: Object.fromEntries(
+            routeDocs(r).map((doc) => [doc, sentToken(r, doc)]),
+          ),
+        };
+        event(r, "approved", sup.name, { participant_id: sup.id });
+        settle(r);
+      }
+      return r.id;
+    },
     seed: ({
       projectId,
       profileId,

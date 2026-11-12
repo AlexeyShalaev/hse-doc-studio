@@ -4,6 +4,7 @@ import { createSignerProfileDemo } from "@entities/signer-profile/testing";
 import { createSigningIdentityDemo } from "@entities/signing-identity/testing";
 import {
   DEMO_SIGNING_MEMBERS,
+  DEMO_SIGNING_PROFILE,
   createSigningRouteDemo,
 } from "@entities/signing-route/testing";
 import { useServerDemoScenarioStore } from "./scenarioStore";
@@ -56,7 +57,10 @@ export const signerProfileDemo = createSignerProfileDemo({
   getUser: () => world.bootstrap.user,
 });
 // Точка сдачи с подписями и местами слотов: без неё не открыть карточку «Подписание».
-export const checkpointDemo = createCheckpointDemo(() => world);
+export const checkpointDemo = createCheckpointDemo(
+  () => world,
+  () => signingRouteDemo,
+);
 export const signingRouteDemo = createSigningRouteDemo({
   getUser: () => world.bootstrap.user,
   projectName: (id) =>
@@ -71,8 +75,16 @@ export const signingRouteDemo = createSigningRouteDemo({
       persona: "supervisor",
       plate: null,
     },
+    // Академрук: его подпись автор добавляет к заявлению сам (сверх точки).
+    {
+      user_id: "u_demo_sidorov",
+      name: "Сидоров С. С.",
+      persona: "academic_supervisor",
+      plate: null,
+    },
   ],
   isPlaced: checkpointDemo.isPlaced,
+  isOptional: checkpointDemo.isOptional,
   mailEnabled: () => world.bootstrap.auth.smtp_enabled,
   keysOf: (user) =>
     signingIdentityDemo.keysOf(user.id).map((key) => ({
@@ -100,6 +112,10 @@ const DAY_MS = 24 * 60 * 60 * 1000;
  *   с 0.20.0 молча;
  * - `student_signing_migration`: свой маршрут студента с 0.20.0, версию не восстановить: стоит
  *   с `sent_changed`.
+ *
+ * Необязательные подписи (раздел 13), `student_signing_optional`: свой маршрут студента с
+ * академруком сверх точки, его подпись отмечена необязательной; научрук согласовал, очередь
+ * академрука, автор может его пропустить.
  */
 const seedSigningTasks = (scenarioId: string): void => {
   if (world.bootstrap.user?.id !== DEMO_STUDENT.id) return;
@@ -125,6 +141,25 @@ const seedSigningTasks = (scenarioId: string): void => {
     deadline: new Date(Date.now() - DAY_MS).toISOString(),
     state: versions ? "migrated" : "sent",
   });
+  if (scenarioId === "student_signing_optional") {
+    const own = "p_01hxa1c4de";
+    const petrov = DEMO_SIGNING_MEMBERS[0];
+    for (const slot of ["supervisor", "academic_supervisor"])
+      checkpointDemo.place(own, "topic_application", slot);
+    signingRouteDemo.seedOptional({
+      projectId: own,
+      sender: signer,
+      signer: { id: petrov?.user_id ?? "", name: petrov?.name ?? "" },
+      academic: { id: "u_demo_sidorov", name: "Сидоров С. С." },
+    });
+    checkpointDemo.setOptional(
+      own,
+      DEMO_SIGNING_PROFILE.id,
+      "topic_application",
+      "academic_supervisor",
+      true,
+    );
+  }
   if (versions || scenarioId === "student_signing_migration") {
     // Свой маршрут: место подписи научрука уже стоит, иначе новую версию не отправить.
     checkpointDemo.place("p_01hxa1c4de", "topic_application", "supervisor");

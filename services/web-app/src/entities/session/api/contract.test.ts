@@ -1,4 +1,4 @@
-import { readFileSync, readdirSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import type { ZodError } from "zod";
@@ -10,10 +10,17 @@ import { BootstrapSchema, ServerSetupSettingsRequestSchema } from "./schemas";
 // Контракт серверного режима: те же эталонные JSON из contracts/server разбирает и backend-тест
 // (tests/unit/contract/test_server_contract.py). Форму меняют так: сначала эталоны, затем обе
 // стороны и оба набора тестов в одном коммите.
+//
+// contracts/server/next: эталоны, у которых zod-схема фронтенда уже есть, а модели бэкенда ещё
+// нет (фронтовый срез раньше бэкендового, README контракта). Их разбирает только этот тест:
+// файл next/<Схема>/<вариант>.json заменяет одноимённый из fixtures или добавляет вариант.
+// Эталоны fixtures, которые next заменил, остаются формой нынешнего сервера: фронтенд обязан
+// их разбирать, пока бэкенд не перешёл (совместимость LEGACY_R21 в схемах маршрута).
 
 const REPO = join(import.meta.dirname, "..", "..", "..", "..", "..", "..");
 const CONTRACT = join(REPO, "contracts", "server");
 const FIXTURES = join(CONTRACT, "fixtures");
+const NEXT = join(CONTRACT, "next");
 const LOCALES = join(
   REPO,
   "services",
@@ -32,14 +39,40 @@ const asRecord = (value: unknown): Record<string, unknown> =>
 
 type Fixture = { schema: string; name: string; body: unknown };
 
-const directories = readdirSync(FIXTURES, { withFileTypes: true })
-  .filter((entry) => entry.isDirectory())
-  .map((entry) => entry.name)
-  .sort();
+const dirsOf = (root: string): string[] =>
+  existsSync(root)
+    ? readdirSync(root, { withFileTypes: true })
+        .filter((entry) => entry.isDirectory())
+        .map((entry) => entry.name)
+    : [];
+
+const filesOf = (root: string, schema: string): string[] =>
+  existsSync(join(root, schema))
+    ? readdirSync(join(root, schema)).filter((file) => file.endsWith(".json"))
+    : [];
+
+const directories = [...new Set([...dirsOf(FIXTURES), ...dirsOf(NEXT)])].sort();
 
 const fixtures: Fixture[] = directories.flatMap((schema) =>
-  readdirSync(join(FIXTURES, schema))
-    .filter((file) => file.endsWith(".json"))
+  [...new Set([...filesOf(FIXTURES, schema), ...filesOf(NEXT, schema)])]
+    .sort()
+    .map((file) => ({
+      schema,
+      name: file.replace(/\.json$/, ""),
+      body: readJson(
+        join(
+          filesOf(NEXT, schema).includes(file) ? NEXT : FIXTURES,
+          schema,
+          file,
+        ),
+      ),
+    })),
+);
+
+/** Эталоны нынешнего сервера, которые next заменил новой формой. */
+const replaced: Fixture[] = dirsOf(NEXT).flatMap((schema) =>
+  filesOf(NEXT, schema)
+    .filter((file) => filesOf(FIXTURES, schema).includes(file))
     .sort()
     .map((file) => ({
       schema,
@@ -86,6 +119,14 @@ describe("контракт server: эталоны", () => {
       const parsed = schema.safeParse(fixture.body);
       expect(parsed.success).toBe(true);
       expect(parsed.data).toEqual(fixture.body);
+    },
+  );
+
+  it.each(replaced.map((f) => [`${f.schema}/${f.name}`, f] as const))(
+    "%s в форме нынешнего сервера разбирается (до слияния бэкенда)",
+    (_label, fixture) => {
+      const schema = CONTRACT_SCHEMAS[fixture.schema];
+      expect(schema?.safeParse(fixture.body).success).toBe(true);
     },
   );
 

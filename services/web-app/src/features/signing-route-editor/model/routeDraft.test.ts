@@ -133,6 +133,8 @@ const participant = (
   notified_at: null,
   reminded_at: null,
   reminders: 0,
+  skipped_at: null,
+  skip: null,
 });
 
 const ROUTE: SigningRoute = {
@@ -161,6 +163,7 @@ const ROUTE: SigningRoute = {
           slot_id: "supervisor",
           label: { ru: "Научрук" },
           participant_id: "s",
+          extra: false,
           optional: false,
           status: "pending",
         },
@@ -168,7 +171,8 @@ const ROUTE: SigningRoute = {
           slot_id: "academic_supervisor",
           label: { ru: "Академрук" },
           participant_id: "k",
-          optional: true,
+          extra: true,
+          optional: false,
           status: "pending",
         },
       ],

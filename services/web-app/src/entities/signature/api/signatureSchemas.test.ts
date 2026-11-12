@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
   AttachDetachedResponseSchema,
+  RuntimeSignatureSlotSchema,
+  SignaturePlanSchema,
   SignaturesStateSchema,
 } from "./signatureSchemas";
 
@@ -80,5 +82,86 @@ describe("SignaturesStateSchema", () => {
       AttachDetachedResponseSchema.parse({ signature: detached })
         .missing_key_id,
     ).toBeNull();
+  });
+});
+
+// Необязательные подписи и пропуск (docs/design/signing-route.md, 13.6): поля по умолчанию пусты,
+// как у состояния, записанного до них.
+describe("необязательные подписи", () => {
+  it("состояние без `optional` и `skipped` читается пустым", () => {
+    const parsed = SignaturesStateSchema.parse({ slots: {}, placements: {} });
+    expect(parsed.optional).toEqual({});
+    expect(parsed.skipped).toEqual({});
+  });
+
+  it("отметка и пропуск по документу", () => {
+    const parsed = SignaturesStateSchema.parse({
+      slots: {},
+      placements: {},
+      optional: {
+        topic_application: { "topic-approval": ["academic_supervisor"] },
+      },
+      skipped: {
+        topic_application: {
+          academic_supervisor: {
+            profile_id: "topic-approval",
+            route_id: "sr_1",
+            round: 1,
+            at: "2026-11-13T10:00:00Z",
+            keep_mark: false,
+          },
+        },
+      },
+    });
+    expect(parsed.optional.topic_application?.["topic-approval"]).toEqual([
+      "academic_supervisor",
+    ]);
+    expect(
+      parsed.skipped.topic_application?.academic_supervisor?.route_id,
+    ).toBe("sr_1");
+  });
+
+  it("рантайм-слот без `required` и `extra_by`: отметить можно, сверх точки нигде", () => {
+    const parsed = RuntimeSignatureSlotSchema.parse({
+      id: "author",
+      label: { ru: "Студент" },
+      applies_to: ["topic_application"],
+      default_placement: { page: 1, x_mm: 0, y_mm: 0, width_mm: 40 },
+    });
+    expect(parsed.required).toBe(false);
+    expect(parsed.extra_by).toEqual({});
+  });
+
+  it("план: пропущенный слот и счётчик необязательных", () => {
+    const parsed = SignaturePlanSchema.parse({
+      total: 1,
+      signed: 1,
+      crypto_total: 0,
+      crypto_signed: 0,
+      optional_pending: 1,
+      docs: [
+        {
+          doc_id: "topic_application",
+          built: true,
+          slots: [
+            {
+              slot_id: "academic_supervisor",
+              label: { ru: "Академрук" },
+              signer: { persona: "academic_supervisor", name: "" },
+              mode: "image",
+              method: "image",
+              crypto: false,
+              mark: "png",
+              status: "skipped",
+              optional: true,
+              skipped: { at: "2026-11-13T10:00:00Z", route_id: "sr_1" },
+            },
+          ],
+        },
+      ],
+    });
+    expect(parsed.optional_pending).toBe(1);
+    expect(parsed.docs[0]?.slots[0]?.status).toBe("skipped");
+    expect(parsed.docs[0]?.slots[0]?.optional).toBe(true);
   });
 });

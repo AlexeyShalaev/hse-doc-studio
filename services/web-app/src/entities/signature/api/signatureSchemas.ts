@@ -59,6 +59,13 @@ export const RuntimeSignatureSlotSchema = z.object({
   required_by: z
     .record(z.string(), z.array(SignatureProfileRefSchema))
     .default({}),
+  // Пак запрещает отмечать подпись необязательной (`required: true` у слота каталога, 13.3).
+  required: z.boolean().default(false),
+  // Точки, чей маршрут включил слот сверх точки: id документа → точки (13.6). На них слот тоже
+  // можно отметить необязательным.
+  extra_by: z
+    .record(z.string(), z.array(SignatureProfileRefSchema))
+    .default({}),
   default_placement: z.object({
     page: z.number(),
     x_mm: z.number(),
@@ -113,6 +120,16 @@ export const AttachDetachedResponseSchema = z.object({
   missing_key_id: z.string().nullish().default(null),
 });
 
+// Пропуск подписанта маршрутом (signing-route.md, 13.3): пара документа и слота не требуется на
+// точке `profile_id`. `keep_mark`: метка уже в зафиксированном PDF с ЭП над ним и остаётся.
+export const SkippedSlotSchema = z.object({
+  profile_id: z.string(),
+  route_id: z.string(),
+  round: z.number(),
+  at: z.string(),
+  keep_mark: z.boolean(),
+});
+
 export const SignaturesStateSchema = z.object({
   slots: z.record(z.string(), SlotInfoSchema),
   placements: z.record(z.string(), z.record(z.string(), PlacementSchema)),
@@ -123,6 +140,31 @@ export const SignaturesStateSchema = z.object({
   runtime_slots: z.array(RuntimeSignatureSlotSchema).default([]),
   /** Слоты документов, чью картинку придержал маршрут подписания до согласия подписанта. */
   withheld: z.record(z.string(), z.array(z.string())).default({}),
+  /** Необязательные подписи: id документа → точка → слоты, которые на ней можно не подписывать. */
+  optional: z
+    .record(z.string(), z.record(z.string(), z.array(z.string())))
+    .default({}),
+  /** Пропущенные маршрутом пары: id документа → слот → пропуск. */
+  skipped: z
+    .record(z.string(), z.record(z.string(), SkippedSlotSchema))
+    .default({}),
+});
+
+// «Подпись необязательна» (PUT /projects/{id}/signatures/optional/{doc_id}/{slot_id}, 13.6). Строгие
+// схемы: эталоны в contracts/server.
+export const SetSlotOptionalRequestSchema = z.strictObject({
+  profile_id: z.string().min(1),
+  optional: z.boolean(),
+});
+
+export const SlotOptionalSchema = z.strictObject({
+  doc_id: z.string(),
+  slot_id: z.string(),
+  profile_id: z.string(),
+  optional: z.boolean(),
+  skipped: z.boolean(),
+  /** Отметку сняли у пропущенной пары, а маршрут держит документ: вернётся следующим раундом. */
+  returns_next_round: z.boolean(),
 });
 
 export const UploadSignatureResponseSchema = z.object({
@@ -150,6 +192,7 @@ export const SlotStatusSchema = z.enum([
   "signed",
   "invalid",
   "stale",
+  "skipped",
 ]);
 
 export const PlanSlotSchema = z.object({
@@ -179,6 +222,12 @@ export const PlanSlotSchema = z.object({
     .default(null),
   // Состояние участника маршрута подписания, чей это слот (signing-route.md, 6.1).
   route_state: z.string().nullable().default(null),
+  // Подпись необязательна на точке плана и пропуск маршрутом (signing-route.md, 13.6).
+  optional: z.boolean().default(false),
+  skipped: z
+    .object({ at: z.string(), route_id: z.string() })
+    .nullable()
+    .default(null),
 });
 
 // Маршрут подписания, который держит документы точки сдачи или документ: состояние
@@ -235,6 +284,8 @@ export const SignaturePlanSchema = z.object({
   crypto_total: z.number(),
   crypto_signed: z.number(),
   waiting_for_me: z.number().default(0),
+  // Необязательные неподписанные: в `total` не входят (13.6).
+  optional_pending: z.number().default(0),
   docs: z.array(DocPlanSchema),
   route: PlanRouteSchema.nullable().default(null),
 });

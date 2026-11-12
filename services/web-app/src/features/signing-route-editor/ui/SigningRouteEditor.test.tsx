@@ -116,7 +116,7 @@ const cryptoDemo = createSigningRouteDemo({
             label: { ru: persona, en: persona },
             persona,
             method: "detached" as const,
-            optional: false,
+            extra: false,
             page: 1,
             x_mm: 100,
             y_mm: 100 + i * 30,
@@ -164,6 +164,8 @@ const slotDef = (id: string, ru: string) => ({
   label: { ru, en: ru },
   applies_to: [DOC],
   required_by: {},
+  required: false,
+  extra_by: {},
   default_placement: { page: 1, x_mm: 100, y_mm: 200, width_mm: 40 },
   owner: null,
 });
@@ -257,6 +259,8 @@ const signatures = () => ({
   frozen: {},
   detached: {},
   withheld: {},
+  optional: {},
+  skipped: {},
   runtime_slots: [
     slotDef("author", "Студент"),
     slotDef("supervisor", "Научный руководитель"),
@@ -487,6 +491,40 @@ describe("Отправка на подписание: черновик точк�
     expect(
       await screen.findByText("Всё готово к отправке."),
     ).toBeInTheDocument();
+  });
+
+  it("слот сверх точки «добавлена вами»; «Подпись необязательна» уходит в состояние подписей", async () => {
+    const setOptional = vi
+      .spyOn(signatureApi, "setSlotOptional")
+      .mockResolvedValue({
+        doc_id: DOC,
+        slot_id: "academic_supervisor",
+        profile_id: PROFILE,
+        optional: true,
+        skipped: false,
+        returns_next_round: false,
+      });
+    const user = userEvent.setup();
+    mount();
+    await user.click(
+      await screen.findByTestId("route-add-slot-academic_supervisor"),
+    );
+    const row = await screen.findByTestId("route-slot-academic_supervisor");
+    expect(row).toHaveTextContent("добавлена вами");
+    expect(row).not.toHaveTextContent("по желанию");
+    expect(screen.getByTestId("route-slot-supervisor")).not.toHaveTextContent(
+      "добавлена вами",
+    );
+
+    const box = within(row).getByTestId("route-optional-academic_supervisor");
+    expect(box).not.toBeChecked();
+    await user.click(box);
+    expect(setOptional).toHaveBeenCalledWith(
+      PROJECT,
+      DOC,
+      "academic_supervisor",
+      { profile_id: PROFILE, optional: true },
+    );
   });
 
   it("согласующий подбирается по персоне из ожидающих приглашений", async () => {

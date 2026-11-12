@@ -116,3 +116,74 @@ describe("схемы маршрута подписания", () => {
     ).toBe("Уточните цель");
   });
 });
+
+// Совместимость с сервером до R21 (LEGACY_R21, раздел 13.6): прежняя форма разбирается в новую.
+describe("схемы маршрута подписания: форма сервера до R21", () => {
+  const legacyRoute = () => {
+    const route = makeSigningRoute();
+    return {
+      ...route,
+      docs: route.docs.map((doc) => ({
+        ...doc,
+        slots: doc.slots.map(({ extra, optional: _optional, ...slot }) => ({
+          ...slot,
+          optional: extra,
+        })),
+      })),
+      steps: route.steps.map((step) =>
+        step.map(({ skipped_at: _at, skip: _skip, ...p }) => p),
+      ),
+    };
+  };
+
+  it("слот без `extra`: прежний `optional` значит «добавлен сверх точки»", () => {
+    const body = legacyRoute();
+    const first = body.docs[0];
+    if (first?.slots[0]) first.slots[0].optional = true;
+    const parsed = SigningRouteSchema.parse(body);
+    expect(parsed.docs[0]?.slots[0]).toMatchObject({
+      extra: true,
+      optional: false,
+    });
+    expect(parsed.docs[0]?.slots[1]).toMatchObject({
+      extra: false,
+      optional: false,
+    });
+  });
+
+  it("участник без `skipped_at` и `skip`: не пропущен, пропуска не видно", () => {
+    const parsed = SigningRouteSchema.parse(legacyRoute());
+    for (const p of parsed.steps.flat()) {
+      expect(p.skipped_at).toBeNull();
+      expect(p.skip).toBeNull();
+    }
+  });
+
+  it("задача без `optional`: подписи обязательны", () => {
+    const task = makeSigningTask();
+    const { optional: _optional, ...me } = task.me;
+    const body = {
+      ...task,
+      me,
+      docs: task.docs.map((doc) => ({
+        ...doc,
+        mine: doc.mine.map(({ optional: _o, ...slot }) => slot),
+      })),
+    };
+    const parsed = SigningTaskSchema.parse(body);
+    expect(parsed.me.optional).toBe(false);
+    expect(parsed.docs[0]?.mine[0]?.optional).toBe(false);
+  });
+
+  it("слот новой формы с лишним полем отвергается", () => {
+    const route = makeSigningRoute();
+    const body = {
+      ...route,
+      docs: route.docs.map((doc) => ({
+        ...doc,
+        slots: doc.slots.map((slot) => ({ ...slot, surprise: 1 })),
+      })),
+    };
+    expect(SigningRouteSchema.safeParse(body).success).toBe(false);
+  });
+});
