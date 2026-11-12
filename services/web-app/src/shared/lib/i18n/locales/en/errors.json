@@ -211,6 +211,18 @@
     "runner_disk_unsupported": "This runner cannot report its disk. Update it.",
     "runner_offline": "The runner is offline. You can clean its disk when it is back.",
     "runner_disk_busy": "A cleanup is already running on this runner. Wait for it to finish.",
-    "disk_target_unavailable": "The runner cannot clean this right now. Refresh the measurement and try again."
+    "disk_target_unavailable": "The runner cannot clean this right now. Refresh the measurement and try again.",
+    "pack_archive_format_unknown": "Archive format «{{format}}» is not supported.",
+    "pack_archive_format_unavailable": "Archive format «{{format}}» is unavailable: the tool it needs is not installed here. Choose ZIP.",
+    "pack_slot_not_signed": "Document «{{doc}}»: the signature «{{slot}}» is not ready yet. {{hint}}",
+    "pack_route_in_progress": "The signing route is not finished (step {{step}} of {{total}}, waiting for: {{who}}): the package can be built once everyone has signed.",
+    "pack_route_paused": "The signing route is paused. The «Signing» card shows why and what to do next.",
+    "pack_route_returned": "The documents were returned for rework. Fix them and send them again from the «Signing» card.",
+    "pack_frozen_missing": "The frozen PDF of «{{doc}}» is missing. Freeze the document again and sign it.",
+    "pack_rebuilt_after_freeze": "«{{doc}}» was rebuilt after its PDF was frozen. Freeze it again and sign the new version.",
+    "pack_version_not_frozen": "The version of «{{doc}}» sent for signing is not frozen yet: the signing route freezes it once everyone has approved.",
+    "pack_marks_changed": "Signature images or plates of «{{doc}}» changed after its PDF was frozen. Freeze it again and sign the new version.",
+    "pack_signed_pdf_changed": "The PDF of «{{doc}}» with embedded signatures was changed outside the Studio. Freeze the document again.",
+    "pack_signature_missing": "The signature file «{{slot}}» of «{{doc}}» is missing. Attach the signature again."
   }
 }

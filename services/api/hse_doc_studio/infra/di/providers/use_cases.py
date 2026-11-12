@@ -3363,6 +3363,7 @@ class UseCaseProvider(Provider):
         file_probes: IProjectFileProbeFactory,
         archive: ISubmissionArchive,
         access: IProjectAccessChecker,
+        routes: ISigningRouteGate,
     ) -> CreateSubmissionUC:
         return CreateSubmissionUC(
             project_repo=project_repo,
@@ -3380,6 +3381,7 @@ class UseCaseProvider(Provider):
             file_probes=file_probes,
             access=access,
             archive=archive,
+            routes=routes,
         )
 
     @provide

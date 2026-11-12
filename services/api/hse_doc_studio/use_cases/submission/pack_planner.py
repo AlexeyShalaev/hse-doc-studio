@@ -67,6 +67,15 @@ from hse_doc_studio.core.signatures.package_text import (
 from hse_doc_studio.core.signatures.plan import SignMethod, method_of, signer_for
 from hse_doc_studio.core.signatures.ports import IPublicKeyExporter
 from hse_doc_studio.core.signatures.stamps import Stamp, stamps_digest_matches, stamps_for_doc
+from hse_doc_studio.core.submission_errors import (
+    archive_format_unknown,
+    frozen_missing,
+    marks_changed,
+    rebuilt_after_freeze,
+    signature_missing,
+    signed_pdf_changed,
+    version_not_frozen,
+)
 from hse_doc_studio.core.team import author_by_slug
 from hse_doc_studio.core.value_objects import (
     DetachedSignature,
@@ -469,23 +478,20 @@ class _Run:
     def _check_frozen_current(
         self, doc_id: str, source_rel: str, arcname: str, frozen: FrozenPdf, *, pinned: bool
     ) -> str:
-        """Путь зафиксированного PDF; ошибка, если источник подписи или видимый слой изменились после фиксации.
+        """Путь зафиксированного PDF; `PackError`, если источник подписи или видимый слой изменились после фиксации.
 
         Источник это версия на подписи, если она есть: пересборка рабочей сборки фиксацию не старит (12.8).
+        Фиксация другой версии (например, ручная до отправки на подпись) к версии на подписи не относится: ее
+        заменит фиксация маршрута, поэтому отказ говорит про маршрут, а не про ручную фиксацию (12.8.1).
         """
-        frozen_rel = _contained(frozen.path)
-        if frozen_rel is None or not self.probe.is_file(frozen_rel):
-            raise ValueError(f"Frozen PDF is missing for {arcname}: freeze the document again")
+        name = PurePosixPath(arcname).stem
         if self.probe.sha256(source_rel) != frozen.source_sha256:
             if pinned:
-                raise ValueError(
-                    f"{arcname}: the version sent for signing is not the one that was frozen. "
-                    "Freeze the new version and sign it"
-                )
-            raise ValueError(
-                f"{arcname}: the document was rebuilt after the PDF was frozen for signing. "
-                "Freeze it again and re-attach the signatures"
-            )
+                raise version_not_frozen(doc_id, name)
+            raise rebuilt_after_freeze(doc_id, name)
+        frozen_rel = _contained(frozen.path)
+        if frozen_rel is None or not self.probe.is_file(frozen_rel):
+            raise frozen_missing(doc_id, name)
         folder = self.project.folder
 
         def png_exists(path: Path) -> bool:
@@ -493,10 +499,7 @@ class _Run:
 
         marks = stamps_for_doc(self.sig_state, doc_id, folder, self.lang, png_exists=png_exists)
         if not stamps_digest_matches(frozen.stamps_digest, marks, folder):
-            raise ValueError(
-                f"{arcname}: images or signature plates changed after the PDF was frozen for signing. "
-                "Freeze it again and sign the new version"
-            )
+            raise marks_changed(doc_id, name)
         return frozen_rel
 
     def _add_frozen_doc(  # noqa: C901, PLR0913 — пункт, источник, имя, три части состояния и версия
@@ -517,7 +520,7 @@ class _Run:
         if embedded:
             signed_rel = _contained(frozen.signed_path)
             if signed_rel is None or self.probe.sha256(signed_rel) != frozen.signed_sha256:
-                raise ValueError(f"{arcname}: the signed PDF changed outside the Studio: freeze the document again")
+                raise signed_pdf_changed(item.doc_id, PurePosixPath(arcname).stem)
             final_rel, final_sha, final_size = signed_rel, frozen.signed_sha256, frozen.signed_size
         entries = [
             PackEntry(
@@ -546,7 +549,7 @@ class _Run:
         for slot_id, sig in detached:
             sig_rel = _contained(sig.file)
             if sig_rel is None or not self.probe.is_file(sig_rel):
-                raise ValueError(f"Signature file is missing for {arcname}, slot {slot_id}")
+                raise signature_missing(item.doc_id, PurePosixPath(arcname).stem, self._slot_label(slot_id))
             label = self._slot_label(slot_id)
             # Имя из самой подписи: кто подписал на деле, а не кого ждали на плашке.
             signer = signer_display_name(sig.signer) or signer_for(self.project, slot_id).name or label
@@ -716,13 +719,13 @@ class PackPlanner:
     ) -> PackPlan:
         """План пакета: записи в порядке документов, затем дополнений.
 
-        Ошибки замороженных источников (`ValueError` с теми же текстами, что и
-        раньше) поднимаются здесь, до любой записи на диск.
+        Ошибки замороженных источников (`PackError` с кодом и текстом на языке
+        интерфейса) поднимаются здесь, до любой записи на диск.
         """
         try:
             fmt = ArchiveFormat(archive_format)
         except ValueError:
-            raise ValueError(f"Unknown archive format: {archive_format!r}") from None
+            raise archive_format_unknown(archive_format) from None
         run = _Run(
             project=project,
             version=version,

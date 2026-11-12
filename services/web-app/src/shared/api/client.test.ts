@@ -224,3 +224,49 @@ describe("отказ по роли (forbidden_role)", () => {
     );
   });
 });
+
+describe("отказ сборки пакета с кодом", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  const run = async (body: unknown) => {
+    const spy = vi.spyOn(toast, "error").mockImplementation(() => "");
+    const client = createApiClient({ baseURL: "/api/v1" });
+    client.defaults.adapter = stub(400, body);
+    await expect(
+      client.post("/projects/p1/submissions", {}),
+    ).rejects.toBeInstanceOf(ApiError);
+    return spy;
+  };
+
+  it("показывает текст каталога на языке интерфейса, а не английский detail", async () => {
+    await i18n.changeLanguage("ru");
+    const spy = await run({
+      detail: "The signing route is not finished",
+      code: "pack_route_in_progress",
+      doc_id: "topic_application",
+      who: "Сидоров С. С.",
+      step: 3,
+      total: 3,
+    });
+    expect(spy.mock.calls[0]?.[0]).toBe(
+      "Маршрут подписания не завершён (шаг 3 из 3, ждём: Сидоров С. С.): пакет можно собрать, когда все подпишут.",
+    );
+  });
+
+  it("подставляет документ и подпись", async () => {
+    await i18n.changeLanguage("en");
+    const spy = await run({
+      detail: "x",
+      code: "pack_signature_missing",
+      doc_id: "annotation",
+      doc: "Annotation",
+      slot: "Supervisor",
+    });
+    expect(spy.mock.calls[0]?.[0]).toBe(
+      "The signature file «Supervisor» of «Annotation» is missing. Attach the signature again.",
+    );
+    await i18n.changeLanguage("ru");
+  });
+});

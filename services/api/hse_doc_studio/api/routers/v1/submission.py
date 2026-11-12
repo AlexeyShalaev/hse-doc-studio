@@ -23,7 +23,9 @@ from hse_doc_studio.api.schemas.submission import (
 from hse_doc_studio.core.catalog import ExtraSubmissionItem, SubmissionDocItem, SubmissionProfile
 from hse_doc_studio.core.entities import PackSubmissionRecord
 from hse_doc_studio.core.errors import NotFoundError
+from hse_doc_studio.core.signatures.errors import StampingError
 from hse_doc_studio.core.submission_archive import archive_media_type
+from hse_doc_studio.core.submission_errors import PackError, archive_format_unavailable
 from hse_doc_studio.infra.submission.pack_executor import is_archive_format_available
 from hse_doc_studio.use_cases.submission.create_submission import (
     CreateSubmissionInput,
@@ -183,10 +185,7 @@ async def create_submission(
         for item in body.extra_items
     ]
     if not is_archive_format_available(body.archive_format):
-        raise HTTPException(
-            status_code=400,
-            detail=f"Archive format {body.archive_format!r} is not available on this host (external tool missing)",
-        )
+        raise archive_format_unavailable(body.archive_format)
     inp = CreateSubmissionInput(
         project_id=project_id,
         profile_id=body.profile_id,
@@ -200,6 +199,9 @@ async def create_submission(
         result = await uc.execute(inp)
     except NotFoundError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except (PackError, StampingError):
+        # Отказ с кодом: тело `{detail, code, ...}` строят их обработчики (api/submission_errors.py).
+        raise
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
