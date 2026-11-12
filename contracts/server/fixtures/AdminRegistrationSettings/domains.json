@@ -5,6 +5,10 @@
     "hse.ru"
   ],
   "require_approval": true,
+  "approval_exemptions": [
+    "edu.hse.ru",
+    "rector@hse.ru"
+  ],
   "fields": {
     "auth.registration_mode": {
       "source": "admin",
@@ -16,6 +20,10 @@
     },
     "auth.require_approval": {
       "source": "default",
+      "locked": false
+    },
+    "auth.approval_exemptions": {
+      "source": "admin",
       "locked": false
     }
   }

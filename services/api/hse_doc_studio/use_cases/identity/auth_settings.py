@@ -5,7 +5,9 @@ from __future__ import annotations
 from collections.abc import Sequence
 from dataclasses import dataclass
 
+from hse_doc_studio.core.identity.approval_exemptions import normalize_rules
 from hse_doc_studio.core.identity.auth_settings import (
+    KEY_APPROVAL_EXEMPTIONS,
     KEY_PASSKEYS_ENABLED,
     KEY_PASSWORD_ENABLED,
     KEY_REGISTRATION_DOMAINS,
@@ -56,6 +58,8 @@ class AuthSettingsPatch:
     registration_mode: RegistrationMode | None = None
     registration_domains: Sequence[str] | None = None
     require_approval: bool | None = None
+    # Строгую проверку правил делает вызывающий (`parse_rules`); здесь только нормализация.
+    approval_exemptions: Sequence[str] | None = None
     password_enabled: bool | None = None
     passkeys_enabled: bool | None = None
 
@@ -68,6 +72,9 @@ class AuthSettingsPatch:
                 else None
             ),
             KEY_REQUIRE_APPROVAL: self.require_approval,
+            KEY_APPROVAL_EXEMPTIONS: (
+                list(normalize_rules(self.approval_exemptions)) if self.approval_exemptions is not None else None
+            ),
             KEY_PASSWORD_ENABLED: self.password_enabled,
             KEY_PASSKEYS_ENABLED: self.passkeys_enabled,
         }

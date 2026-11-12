@@ -806,6 +806,8 @@ class AdminRegistrationSettings(StrictModel):
     registration_mode: RegistrationMode
     registration_domains: list[str]
     require_approval: bool
+    # Исключения из одобрения: `hse.ru`, `*.hse.ru`, `name@example.com`; действуют только для подтверждённой почты.
+    approval_exemptions: list[str]
     fields: dict[str, SettingState]
 
 
@@ -815,6 +817,8 @@ class UpdateAdminRegistrationRequest(StrictModel):
     registration_mode: RegistrationMode | None = None
     registration_domains: list[str] | None = Field(default=None, max_length=200)
     require_approval: bool | None = None
+    # Строки как ввёл админ (пустые пропускаются); разбор и ошибки по строкам на сервере.
+    approval_exemptions: list[str] | None = Field(default=None, max_length=1000)
 
 
 PasskeyIssue = Literal["no_address", "insecure_origin", "ip_address", "rp_id_mismatch"]

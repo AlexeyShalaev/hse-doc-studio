@@ -1,14 +1,19 @@
 from __future__ import annotations
 
 import pytest
+from hse_doc_studio.api.config.auth import AuthConfig
 from hse_doc_studio.core.identity.auth_settings import (
+    KEY_APPROVAL_EXEMPTIONS,
     KEY_PASSWORD_ENABLED,
     KEY_REGISTRATION_DOMAINS,
     KEY_REGISTRATION_MODE,
+    AuthEnvOverrides,
     auth_settings_from,
+    effective_auth_settings,
 )
 from hse_doc_studio.core.identity.entities import RegistrationMode
 from hse_doc_studio.core.identity.normalize import avatar_initials
+from pydantic import ValidationError
 
 
 def test_defaults_are_invite_only_with_password() -> None:
@@ -17,6 +22,7 @@ def test_defaults_are_invite_only_with_password() -> None:
     assert result.registration_mode is RegistrationMode.invite
     assert result.password_enabled is True
     assert result.registration_domains == ()
+    assert result.approval_exemptions == ()
 
 
 def test_stored_values_are_read() -> None:
@@ -73,3 +79,19 @@ def test_empty_env_domain_list_is_still_a_lock() -> None:
     env = AuthEnvOverrides(registration_domains=())
     assert effective_auth_settings({KEY_REGISTRATION_DOMAINS: ["a.org"]}, env).registration_domains == ()
     assert KEY_REGISTRATION_DOMAINS in env.locked_keys()
+
+
+def test_approval_exemptions__stored_garbage_is_dropped_and_env_wins() -> None:
+    stored = {KEY_APPROVAL_EXEMPTIONS: ["HSE.ru", "not a rule", "*.hse.ru"]}
+
+    assert auth_settings_from(stored).approval_exemptions == ("hse.ru", "*.hse.ru")
+    assert auth_settings_from({KEY_APPROVAL_EXEMPTIONS: "hse.ru"}).approval_exemptions == ()
+    env = AuthEnvOverrides(approval_exemptions=("A@B.org",))
+    assert effective_auth_settings(stored, env).approval_exemptions == ("a@b.org",)
+    assert KEY_APPROVAL_EXEMPTIONS in env.locked_keys()
+
+
+def test_approval_exemptions__bad_env_value_fails_at_start() -> None:
+    assert AuthConfig(approval_exemptions=[" *.HSE.ru "]).approval_exemptions == ["*.hse.ru"]
+    with pytest.raises(ValidationError, match="Line 1 'hse'"):
+        AuthConfig(approval_exemptions=["hse"])

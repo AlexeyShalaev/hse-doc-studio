@@ -18,10 +18,12 @@ from hse_doc_studio.core.identity.protocols import (
     ISessionRepository,
     IUserRepository,
 )
+from hse_doc_studio.core.identity.registration import status_after_verification
 from hse_doc_studio.core.identity.session_policy import Clock, utc_now
 from hse_doc_studio.core.invitations.protocols import IEmailVerifiedHook
 from hse_doc_studio.core.mail.journal import MailOrigin
 from hse_doc_studio.core.uow import IUnitOfWork
+from hse_doc_studio.use_cases.identity.auth_settings import AuthSettingsService
 from hse_doc_studio.use_cases.identity.mail import LinkDelivery, auth_link
 
 VERIFY_PATH = "/verify"
@@ -44,9 +46,12 @@ class VerifyEmailUC:
         uow: IUnitOfWork,
         clock: Clock = utc_now,
         email_hook: IEmailVerifiedHook | None = None,
+        settings: AuthSettingsService | None = None,
     ) -> None:
         # invites: подтверждённая почта привязывает ожидающие приглашения в проекты.
         self._email_hook = email_hook
+        # Настройки входа: исключения из одобрения решаются в момент подтверждения по текущим правилам.
+        self._settings = settings
         self._users = users
         self._auth_tokens = auth_tokens
         self._audit = audit
@@ -60,13 +65,23 @@ class VerifyEmailUC:
             user = await self._users.get_for_update(consumed.user_id) if consumed and consumed.user_id else None
             if user is None:
                 raise IdentityError(IdentityErrorCode.token_invalid)
-            status = UserStatus.active if user.status is UserStatus.pending_verification else user.status
+            status, rule = await self._status_after(user)
             if not user.email_verified or status is not user.status:
                 await self._users.update(replace(user, email_verified=True, status=status))
             await self._auth_tokens.invalidate_for_user(user.id, AuthTokenKind.verify_email, self._clock())
             await self._audit.record("auth.email_verified", actor_id=user.id)
+            if rule is not None:
+                await self._audit.record(
+                    "auth.approval_exempt", actor_id=user.id, details={"rule": rule, "via": "email"}
+                )
         if self._email_hook is not None:
             await self._email_hook.on_email_verified(user.id, user.email_normalized)
+
+    async def _status_after(self, user: User) -> tuple[UserStatus, str | None]:
+        # Исключения решаются один раз, когда почта становится подтверждённой; повторная ссылка ничего не меняет.
+        if user.email_verified or self._settings is None:
+            return (UserStatus.active if user.status is UserStatus.pending_verification else user.status), None
+        return status_after_verification(await self._settings.effective(), user)
 
 
 class _TokenIssuer:

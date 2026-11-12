@@ -6,7 +6,8 @@ from dataclasses import dataclass
 from datetime import datetime
 from enum import StrEnum
 
-from hse_doc_studio.core.identity.entities import AuthSettings, RegistrationInvite, RegistrationMode, UserStatus
+from hse_doc_studio.core.identity.approval_exemptions import matching_rule
+from hse_doc_studio.core.identity.entities import AuthSettings, RegistrationInvite, RegistrationMode, User, UserStatus
 from hse_doc_studio.core.identity.errors import IdentityError, IdentityErrorCode
 from hse_doc_studio.core.identity.normalize import email_domain, is_valid_email, normalize_email
 
@@ -26,6 +27,8 @@ class RegistrationDecision:
     # Нужен ли токен подтверждения почты (письмо или ссылка без SMTP).
     verification_token: bool
     outcome: RegistrationOutcome
+    # Правило исключения из одобрения, по которому человек обходит очередь (после подтверждения почты).
+    exemption: str | None = None
 
 
 def invite_usable(invite: RegistrationInvite, email: str, now: datetime) -> bool:
@@ -42,6 +45,11 @@ class RegistrationPolicy:
     подтвердить владение адресом и анониму ссылку показать нельзя, поэтому она отказывает: нужно приглашение.
     Режим domains без SMTP по той же причине не может проверить адрес, но там это не тупик: такие аккаунты
     ждут одобрения админа.
+
+    Исключения из одобрения действуют только для подтверждённой почты: при регистрации с SMTP человек из списка
+    получает обычное письмо (pending_verification), а не очередь; окончательно статус решает подтверждение по
+    текущим правилам (`status_after_verification`). Без SMTP адрес не подтвердить, исключение не действует.
+    Внешний провайдер почту уже подтвердил, там исключение действует сразу.
     """
 
     def __init__(self, settings: AuthSettings, *, smtp_enabled: bool) -> None:
@@ -54,6 +62,10 @@ class RegistrationPolicy:
         if invite is not None:
             return self._invited(invite)
         self._ensure_open(email)
+        if self._smtp and (rule := self.approval_exemption(email)) is not None:
+            return RegistrationDecision(
+                UserStatus.pending_verification, False, True, RegistrationOutcome.check_email, exemption=rule
+            )
         needs_approval = self._settings.require_approval or (
             self._settings.registration_mode is RegistrationMode.domains and not self._smtp
         )
@@ -74,9 +86,16 @@ class RegistrationPolicy:
         if not is_valid_email(email):
             raise IdentityError(IdentityErrorCode.domain_not_allowed)
         self._ensure_open(email)
-        if self._settings.require_approval:
+        rule = self.approval_exemption(email)
+        if self._settings.require_approval and rule is None:
             return RegistrationDecision(UserStatus.pending_approval, True, False, RegistrationOutcome.pending_approval)
-        return RegistrationDecision(UserStatus.active, True, False, RegistrationOutcome.active)
+        return RegistrationDecision(UserStatus.active, True, False, RegistrationOutcome.active, exemption=rule)
+
+    def approval_exemption(self, email: str) -> str | None:
+        """Правило, по которому адрес обходит одобрение; без требования одобрения исключений нет."""
+        if not self._settings.require_approval:
+            return None
+        return matching_rule(email, self._settings.approval_exemptions)
 
     def _invited(self, invite: RegistrationInvite) -> RegistrationDecision:
         # Приглашение на конкретный адрес само подтверждает почту: письмо с токеном дошло именно туда.
@@ -94,3 +113,21 @@ class RegistrationPolicy:
             raise IdentityError(IdentityErrorCode.invitation_required)
         if mode is RegistrationMode.domains and email_domain(email) not in self._settings.registration_domains:
             raise IdentityError(IdentityErrorCode.domain_not_allowed)
+
+
+def status_after_verification(settings: AuthSettings, user: User) -> tuple[UserStatus, str | None]:
+    """Статус после подтверждения почты и правило исключения, если оно сработало.
+
+    Исключение решается в момент подтверждения по текущим правилам: убранное после регистрации правило отправит
+    аккаунт в очередь, добавленное выпустит из неё. Без правила всё как раньше: ждавший письма становится активным
+    (так приходят и приглашённые без адреса), ждавший одобрения ждёт дальше.
+    """
+    policy = RegistrationPolicy(settings, smtp_enabled=True)
+    rule = policy.approval_exemption(user.email_normalized)
+    if user.status is UserStatus.pending_verification:
+        if user.approval_exempt_rule is None or not settings.require_approval:
+            return UserStatus.active, None
+        return (UserStatus.active, rule) if rule is not None else (UserStatus.pending_approval, None)
+    if user.status is UserStatus.pending_approval and rule is not None:
+        return UserStatus.active, rule
+    return user.status, None

@@ -570,8 +570,9 @@ class ServerInvitationsProvider(Provider):
         audit: IAuditLog,
         uow: IUnitOfWork,
         hook: IEmailVerifiedHook,
+        auth_settings: AuthSettingsService,
     ) -> VerifyEmailUC:
-        return VerifyEmailUC(users, auth_tokens, audit, uow, email_hook=hook)
+        return VerifyEmailUC(users, auth_tokens, audit, uow, email_hook=hook, settings=auth_settings)
 
     @provide(override=True)
     def get_confirm_email_change_uc(

@@ -80,6 +80,9 @@ class User:
     commit_name: str | None = None
     commit_email: str | None = None
     commit_use_account_email: bool = False
+    # Правило исключения из одобрения, по которому аккаунт заведён ждать только подтверждения почты. При
+    # подтверждении правила проверяются заново: убранное правило отправит аккаунт в очередь одобрений.
+    approval_exempt_rule: str | None = None
 
     @property
     def can_sign_in(self) -> bool:
@@ -394,5 +397,7 @@ class AuthSettings:
     registration_mode: RegistrationMode = RegistrationMode.invite
     registration_domains: tuple[str, ...] = field(default_factory=tuple)
     require_approval: bool = False
+    # Исключения из одобрения (`approval_exemptions.py`): нормализованные правила, действуют при require_approval.
+    approval_exemptions: tuple[str, ...] = field(default_factory=tuple)
     password_enabled: bool = True
     passkeys_enabled: bool = True

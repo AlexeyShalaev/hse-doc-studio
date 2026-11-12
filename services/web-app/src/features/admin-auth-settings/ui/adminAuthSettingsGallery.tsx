@@ -45,10 +45,12 @@ const REGISTRATION: AdminRegistrationSettings = {
   registration_mode: "invite",
   registration_domains: [],
   require_approval: false,
+  approval_exemptions: [],
   fields: {
     "auth.registration_mode": free,
     "auth.registration_domains": free,
     "auth.require_approval": free,
+    "auth.approval_exemptions": free,
   },
 };
 const DOMAINS: AdminRegistrationSettings = {

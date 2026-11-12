@@ -53,6 +53,7 @@ def _user(row: UserRow) -> User:
         commit_name=row.commit_name,
         commit_email=row.commit_email,
         commit_use_account_email=row.commit_use_account_email,
+        approval_exempt_rule=row.approval_exempt_rule,
     )
 
 
@@ -71,6 +72,7 @@ def _user_values(user: User) -> dict[str, Any]:
         "commit_name": user.commit_name,
         "commit_email": user.commit_email,
         "commit_use_account_email": user.commit_use_account_email,
+        "approval_exempt_rule": user.approval_exempt_rule,
     }
 
 

@@ -599,6 +599,7 @@ class ServerIdentityProvider(Provider):
             registration_mode=cfg.registration_mode,
             registration_domains=tuple(cfg.registration_domains) if cfg.registration_domains is not None else None,
             require_approval=cfg.require_approval,
+            approval_exemptions=tuple(cfg.approval_exemptions) if cfg.approval_exemptions is not None else None,
             password_enabled=cfg.password_enabled,
             passkeys_enabled=cfg.passkeys_enabled,
         )
@@ -639,9 +640,14 @@ class ServerIdentityProvider(Provider):
 
     @provide
     def get_verify_email_uc(
-        self, users: IUserRepository, auth_tokens: IAuthTokenRepository, audit: IAuditLog, uow: IUnitOfWork
+        self,
+        users: IUserRepository,
+        auth_tokens: IAuthTokenRepository,
+        audit: IAuditLog,
+        uow: IUnitOfWork,
+        auth_settings: AuthSettingsService,
     ) -> VerifyEmailUC:
-        return VerifyEmailUC(users, auth_tokens, audit, uow)
+        return VerifyEmailUC(users, auth_tokens, audit, uow, settings=auth_settings)
 
     @provide
     def get_resend_verification_uc(

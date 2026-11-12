@@ -174,7 +174,9 @@ class World:
         )  # fmt: skip
 
     def verify_uc(self) -> VerifyEmailUC:
-        return VerifyEmailUC(self.users, self.auth_tokens, self.audit, self.uow, self.clock)
+        return VerifyEmailUC(
+            self.users, self.auth_tokens, self.audit, self.uow, self.clock, settings=self.settings_service()
+        )
 
     def resend_uc(self) -> ResendVerificationUC:
         return ResendVerificationUC(

@@ -34,6 +34,8 @@ class UserRow(Base):
     commit_name: Mapped[str | None] = mapped_column(String(256))
     commit_email: Mapped[str | None] = mapped_column(String(320))
     commit_use_account_email: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="false")
+    # Правило исключения из одобрения, по которому аккаунт ждёт только подтверждения почты.
+    approval_exempt_rule: Mapped[str | None] = mapped_column(String(320))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     last_login_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
