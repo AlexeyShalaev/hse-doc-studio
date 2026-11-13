@@ -210,7 +210,7 @@ describe("схемы маршрута подписания: маршрут из 
     expect(
       SigningRouteSchema.safeParse(
         makeSigningRoute({
-          preset: { ...preset, extra_slots: extra } as never,
+          preset: { ...preset, extra_slots: extra },
         }),
       ).success,
     ).toBe(false);
