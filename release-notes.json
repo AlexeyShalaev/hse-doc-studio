@@ -1,6 +1,16 @@
 {
   "releases": [
     {
+      "version": "0.25.1",
+      "date": "2026-11-13",
+      "notes": [
+        {
+          "ru": "Документ со своим загруженным PDF на странице отправки на подписание показывался несобранным, а подписи и фиксация брали не тот файл. Теперь план подписей, маршрут, фиксация и пакет берут загруженный PDF. Подпись, нарисованная внутри загруженного PDF, Студии не видна: загрузите подпись картинкой в слот.",
+          "en": "A document replaced with your own PDF showed as not built on the send for signing page, and signatures and freezing used the wrong file. The signature plan, the route, freezing and the pack now use the uploaded PDF. Studio doesn't see a signature drawn inside the uploaded PDF: upload the signature as an image into the slot."
+        }
+      ]
+    },
+    {
       "version": "0.25.0",
       "date": "2026-11-13",
       "notes": [

@@ -6,6 +6,10 @@ Generated from `release-notes.json` via `make changelog` — do not edit by hand
 Release notes are hand-written and bilingual (RU/EN); the app shows them in the
 selected interface language.
 
+## [0.25.1](https://github.com/AlexeyShalaev/hse-doc-studio/compare/v0.25.0...v0.25.1) - 2026-11-13
+
+- A document replaced with your own PDF showed as not built on the send for signing page, and signatures and freezing used the wrong file. The signature plan, the route, freezing and the pack now use the uploaded PDF. Studio doesn't see a signature drawn inside the uploaded PDF: upload the signature as an image into the slot.
+
 ## [0.25.0](https://github.com/AlexeyShalaev/hse-doc-studio/compare/v0.24.0...v0.25.0) - 2026-11-13
 
 - Signing date. A signature slot can now have date marks: “Add date” on the Signatures tab or in the “Where signatures go” block of the route editor. A mark can sit on any page, apart from the signature. Formats: day, month as a word, month as a number, year, two-digit year, and the full date in numbers or words.
