@@ -61,13 +61,36 @@
   "connect": {
     "title": "Подключение",
     "hintLocal": "Токен не нужен: сервер отвечает только программам на этом компьютере.",
-    "hintServer": "Подставьте свой токен с правом MCP вместо hsd_pat_...",
+    "hintServer": "Нужен токен с правом MCP. Подставьте его вместо hsd_pat_... или задайте переменную окружения HSE_STUDIO_TOKEN, если конфиг ссылается на неё.",
     "url": "Адрес MCP-сервера",
+    "client": "Клиент",
+    "tokenEnv": "Токен берётся из переменной окружения {{env}}: задайте её до запуска клиента.",
+    "docs": "Документация клиента",
     "clients": {
       "claudeCode": "Claude Code",
+      "codex": "OpenAI Codex (CLI, IDE, приложение)",
+      "opencode": "OpenCode (opencode.json)",
+      "gemini": "Gemini CLI (settings.json)",
       "cursor": "Cursor (mcp.json)",
-      "vscode": "VS Code (mcp.json)",
-      "stdio": "Claude Desktop и другие клиенты с запуском процесса (stdio)"
+      "vscode": "VS Code с Copilot (mcp-config.json)",
+      "windsurf": "Windsurf, Devin Desktop (mcp_config.json)",
+      "zed": "Zed (settings.json)",
+      "cline": "Cline (cline_mcp_settings.json)",
+      "junie": "JetBrains Junie (mcp.json)",
+      "stdio": "Claude Desktop, JetBrains AI Assistant и другие (stdio)"
+    },
+    "where": {
+      "claudeCode": "Выполните в терминале. Проверка: claude mcp list.",
+      "codex": "Выполните в терминале. Запись попадёт в ~/.codex/config.toml, его читают CLI, расширение для IDE и приложение. Проверка: codex mcp list.",
+      "opencode": "Добавьте в opencode.json проекта или в ~/.config/opencode/opencode.json.",
+      "gemini": "Добавьте в ~/.gemini/settings.json или в .gemini/settings.json проекта.",
+      "cursor": "Добавьте в ~/.cursor/mcp.json или в .cursor/mcp.json проекта.",
+      "vscode": "Добавьте в ~/.copilot/mcp-config.json или в .mcp.json в корне проекта.",
+      "windsurf": "Добавьте в ~/.config/devin/mcp_config.json (Windows: %APPDATA%\\devin\\mcp_config.json). Прежний Windsurf: ~/.codeium/windsurf/mcp_config.json.",
+      "zed": "Добавьте в ~/.config/zed/settings.json (Windows: %APPDATA%\\Zed\\settings.json).",
+      "cline": "Cline: вкладка Configure, кнопка Configure MCP Servers.",
+      "junie": "Добавьте в ~/.junie/mcp/mcp.json или в .junie/mcp/mcp.json проекта.",
+      "stdio": "Мост hse-doc-studio mcp пересылает запросы Студии. В JetBrains AI Assistant: Settings | Tools | AI Assistant | Model Context Protocol (MCP)."
     }
   },
   "journal": {
