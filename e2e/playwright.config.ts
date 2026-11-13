@@ -76,9 +76,10 @@ export default defineConfig({
       // научрук картинкой, академрук готовой подписью gpg; возврат и повторная отправка; правка во время маршрута;
       // сторож (signing-route.spec.ts). Версия на подписи: правка с предупреждением, страница подписанта, новая
       // версия по документам, пакет из подписанной версии (signing-snapshot.spec.ts). Дата подписания: метки даты
-      // в редакторе маршрута, дата согласия в PDF, сброс ЭП с подтверждением (signing-dates.spec.ts).
+      // в редакторе маршрута, дата согласия в PDF, сброс ЭП с подтверждением (signing-dates.spec.ts). Сроки точек:
+      // срок на точке, пометка в списке проектов, срок маршрута на день раньше (signing-deadlines.spec.ts).
       name: "signing-route",
-      testMatch: /signing-(route|snapshot|dates)\.spec\.ts/,
+      testMatch: /signing-(route|snapshot|dates|deadlines)\.spec\.ts/,
       timeout: 4 * 60_000,
       use: {
         ...devices["Desktop Chrome"],

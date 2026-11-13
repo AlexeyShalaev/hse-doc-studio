@@ -15,7 +15,7 @@ help:
   summary: 'The Submission mode shows what each checkpoint needs: documents, forms, signatures. When everything is ready, Studio packs an archive where the PDFs are named the way the committee expects.'
   steps:
     - text: 'Open **Submission** on the left rail. In the **Checkpoints** list pick the one you need and click **Open checkpoint**.'
-      hint: '**Pin checkpoint**: the readiness ring across the project will then track this one.'
+      hint: '**Pin checkpoint**: the readiness ring across the project will then track this one. Under the checkpoint title set the submission deadline from the LMS (**Set deadline**): the Studio shows how much time is left and marks the project in the list.'
       shot: runbooks/submit-sign/step-01
     - text: 'Go through the checkpoint items: for a document that is not built click **Open document** and build it, for a form click **Fill in**.'
       hint: 'The **N of M ready** counter shows what is left. For the specification open **Requirements traceability**: it shows requirements that are mentioned nowhere.'
@@ -73,5 +73,10 @@ into the PDFs and gives you an archive with the right file names.
   settings; a passphrase-protected key asks for it once.
 - **“Out of date”** on a signature: the document was rebuilt or images changed after freezing. The
   signature belongs to the previous version, sign again.
+- **“Overdue: package not built”** on the deadline: the deadline has passed and this checkpoint's
+  package was not built in time. The Studio does not see the LMS upload. If the work is submitted,
+  just remove the deadline with **Remove deadline**.
+- **“No submission deadline”**: only you know the deadline, the template does not set it. Enter
+  the date and the time (Moscow) or click **Not now**.
 - An archive with electronic signatures contains **HOW_TO_VERIFY.txt**: which signatures are
   electronic, which are graphic, and the commands to verify them (gpg, openssl, pyHanko).
