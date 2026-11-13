@@ -6,6 +6,20 @@ Generated from `release-notes.json` via `make changelog` — do not edit by hand
 Release notes are hand-written and bilingual (RU/EN); the app shows them in the
 selected interface language.
 
+## [0.26.0](https://github.com/AlexeyShalaev/hse-doc-studio/compare/v0.25.1...v0.26.0) - 2026-11-13
+
+- Checkpoint deadlines. Each submission checkpoint in a project can have a deadline, date and time in Moscow time. The template does not set it, it only hints when it is usually announced. The checkpoint shows “in N days”, “today”, “package built” or “overdue”, and the project list marks the nearest deadline. MCP reads it and sets it with set_checkpoint_deadline.
+- The signing route deadline is now set automatically, one day before the checkpoint deadline, to leave time to build the package. Three days before the checkpoint deadline the owner and authors get a reminder in the Inbox and by email, unless the package is already built.
+- Route from the template. A template can define the route steps for a checkpoint, extra signatures with a condition (for example, the academic supervisor only when the supervisor is not from HSE), optional signatures, and signature places and date marks for each document. A new route draft is built from this preset. The editor shows “from the template” and “Changed by you” marks and offers “Reset to template” and “Reset place to template”. The template never touches places you set by hand or routes already sent. Ready routes for the course project come with the next template version.
+- A template update moves “from the template” signature places to the new version. Places set by hand, documents out for signing and signed documents stay as they were, and the preview shows what will and will not change. Undoing the update restores the places.
+- MSc course project template 2026.1.4. City and year in the documents come from the project: the year in the application and signing dates is the build year in Moscow and can be overridden, and the city is translated on the English page. The topic application is printed as one page in the project language. The consultant line appears only when a consultant is set, and the academic supervisor's consent line only when the supervisor is not from HSE. The supervisor switch is now called “HSE / Not from HSE”. In the bachelor templates 2026.1.1 the city on English title pages also comes from the project.
+- MCP connection guides for Codex, OpenCode, Gemini CLI, Windsurf, Zed, Cline and JetBrains Junie. The “AI clients (MCP)” page lets you pick a client and shows its ready config, taking the token from the HSE_STUDIO_TOKEN environment variable where the client supports it.
+- For template authors: the Signatures tab “⋯” menu has “Copy as template preset”. It produces a ready YAML fragment with signature places and date marks for the template.
+
+## [0.25.1](https://github.com/AlexeyShalaev/hse-doc-studio/compare/v0.25.0...v0.25.1) - 2026-11-13
+
+- A document replaced with your own PDF showed as not built on the send for signing page, and signatures and freezing used the wrong file. The signature plan, the route, freezing and the pack now use the uploaded PDF. Studio doesn't see a signature drawn inside the uploaded PDF: upload the signature as an image into the slot.
+
 ## [0.25.0](https://github.com/AlexeyShalaev/hse-doc-studio/compare/v0.24.0...v0.25.0) - 2026-11-13
 
 - Signing date. A signature slot can now have date marks: “Add date” on the Signatures tab or in the “Where signatures go” block of the route editor. A mark can sit on any page, apart from the signature. Formats: day, month as a word, month as a number, year, two-digit year, and the full date in numbers or words.
