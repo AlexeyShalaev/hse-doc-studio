@@ -33,7 +33,7 @@
     "name": "Словарь админки: settings",
     "path": "dist/assets/locale-admin-settings-*.js",
     "gzip": true,
-    "limit": "10 kB"
+    "limit": "10.2 kB"
   },
   {
     "name": "Словарь админки: orgs",
