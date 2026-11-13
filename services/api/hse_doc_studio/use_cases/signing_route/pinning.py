@@ -137,7 +137,7 @@ class RoutePinning:
         if doc is None:
             return None
         try:
-            _, output_file = self._template_service.resolve_instance_source(point.project, doc, point.version)
+            output_file = self._template_service.resolve_signing_output(point.project, doc, point.version)
         except (NotFoundError, ValueError):
             return None
         return point.project.folder / output_file if output_file else None

@@ -26,7 +26,7 @@ class DocContext:
     version: TemplateVersion
     doc: Document
     lang: str
-    # Path of the compiled PDF; may not exist yet.
+    # Путь PDF, который подписывают: сборка или загруженный свой файл (`resolve_signing_output`); может не существовать.
     compiled_path: Path
     # Human file name of the document without extension («Заявка — Шалаев»).
     base_name: str
@@ -62,6 +62,7 @@ async def load_doc_context(
             )
         )
     _, output_file = template_service.resolve_instance_source(project, doc, version)
+    signed_file = template_service.resolve_signing_output(project, doc, version)
     lang = str(project.lang)
     name = doc_def.output_name.get(lang) or doc_def.output_name.get("ru") or output_file
     stem = name.rsplit(".", 1)[0] if "." in name else name
@@ -73,7 +74,7 @@ async def load_doc_context(
         version=version,
         doc=doc,
         lang=lang,
-        compiled_path=project.folder / output_file if output_file else project.folder,
+        compiled_path=project.folder / signed_file if signed_file else project.folder,
         base_name=stem,
     )
 
