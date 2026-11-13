@@ -30,6 +30,7 @@ const PROJECT = "gallery";
 
 const PRESET: RoutePreset = {
   version: "2026.1.4",
+  base_version: "2026.1.4",
   steps: [["author"], ["supervisor"]],
   extra_slots: [],
   optional: [],

@@ -3,11 +3,16 @@
 
 from __future__ import annotations
 
+from collections.abc import Mapping
+
 from hse_doc_studio.core.agent.entities import AgentToolContext, ToolResult, ToolSpec
+from hse_doc_studio.core.catalog import SlotCondition
 from hse_doc_studio.core.checkpoint_deadlines import BadDeadlineError, DeadlineState
 from hse_doc_studio.core.enums import ToolKind
 from hse_doc_studio.core.i18n import localized_error
+from hse_doc_studio.core.mcp.protocols import IDependencyResolver
 from hse_doc_studio.core.signatures.plan import SignaturePlan
+from hse_doc_studio.core.signing_route.preset import RoutePreset
 from hse_doc_studio.use_cases.mcp.tools._base import (
     ArgumentError,
     McpTool,
@@ -20,6 +25,7 @@ from hse_doc_studio.use_cases.mcp.tools._base import (
 )
 from hse_doc_studio.use_cases.signatures.get_signature_plan import GetSignaturePlanInput, GetSignaturePlanUC
 from hse_doc_studio.use_cases.signatures.get_signatures import GetSignaturesInput, GetSignaturesUC
+from hse_doc_studio.use_cases.signatures.pack_places import PlaceInfo
 from hse_doc_studio.use_cases.signatures.sign_submission import (
     SigningConflictError,
     SignSubmissionInput,
@@ -44,7 +50,9 @@ class ListSubmissionProfilesTool(McpTool):
             "package_project. У точки срок сдачи в проекте (deadline), его состояние (deadline_state: none, "
             "upcoming, soon, today, packaged, overdue; overdue значит, что пакет точки не собран к сроку), "
             "подсказка шаблона о сроке (deadline_hint) и последняя сборка пакета к сроку (packaged_at). "
-            "Поставить срок: set_checkpoint_deadline."
+            "Поставить срок: set_checkpoint_deadline. route_preset: маршрут подписания точки из шаблона на людях "
+            "проекта сейчас (шаги персонами, signing_slots с условием when и тем, выполнено ли оно: met); null, "
+            "если шаблон его не задаёт."
         ),
         parameters=project_schema({}),
     )
@@ -62,8 +70,49 @@ class ListSubmissionProfilesTool(McpTool):
             view["deadline"] = deadline.deadline if deadline else None
             view["deadline_state"] = deadline.state if deadline else DeadlineState.none
             view["packaged_at"] = deadline.packaged_at if deadline else None
+            preset = out.presets.get(profile.id)
+            view["route_preset"] = _route_preset(preset) if preset is not None else None
             profiles.append(view)
         return json_result(profiles)
+
+
+def _route_preset(preset: RoutePreset) -> dict[str, object]:
+    """Пресет маршрута точки (signing-route.md, 15.12): шаги и пары пресета с условием и тем, выполнено ли оно."""
+
+    def when(condition: SlotCondition | None) -> dict[str, object] | None:
+        if condition is None:
+            return None
+        return {"person": condition.person, "role": condition.role.value if condition.role is not None else None}
+
+    optional = set(preset.optional)
+    slots = [
+        *(
+            {
+                "doc_id": item.pair.doc_id,
+                "slot_id": item.pair.slot_id,
+                "when": when(item.when),
+                "met": True,
+                "optional": item.pair in optional,
+            }
+            for item in preset.extra_slots
+        ),
+        *(
+            {
+                "doc_id": item.pair.doc_id,
+                "slot_id": item.pair.slot_id,
+                "when": when(item.when),
+                "met": False,
+                "optional": False,
+            }
+            for item in preset.skipped_by_condition
+        ),
+        *(
+            {"doc_id": pair.doc_id, "slot_id": pair.slot_id, "when": None, "met": True, "optional": True}
+            for pair in preset.optional
+            if not preset.adds(pair)
+        ),
+    ]
+    return {"version": preset.version, "steps": [list(step) for step in preset.steps], "signing_slots": slots}
 
 
 class SetCheckpointDeadlineTool(McpTool):
@@ -141,8 +190,12 @@ class ListSignaturesTool(McpTool):
         return json_result({"state": out.state, "stale_frozen": out.stale_frozen, "plate_outdated": out.plate_outdated})
 
 
-def _plan_json(plan: SignaturePlan) -> dict[str, object]:
-    """План для модели: счётчик, по слоту кто, каким способом, в каком статусе и чего не хватает."""
+def _plan_json(plan: SignaturePlan, places: Mapping[str, Mapping[str, PlaceInfo]] | None = None) -> dict[str, object]:
+    """План для модели: счётчик, по слоту кто, каким способом, в каком статусе и чего не хватает.
+
+    `places` происхождение размещений (signing-route.md, 15.12): у слота `place` `pack` (как в шаблоне), `seed`
+    (затравка из пака), `manual` (изменено автором) или `none` (размещения нет)."""
+    known = places or {}
     return {
         "profile_id": plan.profile_id,
         "signed": plan.signed,
@@ -168,6 +221,7 @@ def _plan_json(plan: SignaturePlan) -> dict[str, object]:
                         "reason": s.state.reason.value if s.state.reason else None,
                         "hint": s.hint,
                         "is_mine": s.is_mine,
+                        "place": _place(known, doc.doc_id, s.slot_id),
                         "optional": s.optional,
                         "skipped": {"at": s.skipped.at, "route_id": s.skipped.route_id} if s.skipped else None,
                         # Метки даты подписания (signing-route.md, 14.9): что напечатано сейчас, null у пустой.
@@ -191,12 +245,24 @@ def _plan_json(plan: SignaturePlan) -> dict[str, object]:
     }
 
 
+def _place(places: Mapping[str, Mapping[str, PlaceInfo]], doc_id: str, slot_id: str) -> str:
+    info = places.get(doc_id, {}).get(slot_id)
+    return info.origin.value if info is not None else "none"
+
+
+async def _places(deps: IDependencyResolver, ctx: AgentToolContext) -> dict[str, dict[str, PlaceInfo]]:
+    """Происхождение размещений проекта (место из шаблона, затравка, ручное) для `place` слотов плана."""
+    out = await (await deps.get(GetSignaturesUC)).execute(GetSignaturesInput(project_id=ctx.project_id))
+    return out.places
+
+
 class GetSignaturePlanTool(McpTool):
     spec = ToolSpec(
         name="get_signature_plan",
         description=(
             "План подписей по профилю сдачи или документу: «подписано k из n», по каждому слоту подписант, способ "
-            "(картинка, открепленная ЭП, PAdES), статус и чего не хватает."
+            "(картинка, открепленная ЭП, PAdES), статус и чего не хватает. place: место подписи на странице как в "
+            "шаблоне (pack), затравка из шаблона (seed), изменено автором (manual) или его нет (none)."
         ),
         parameters=project_schema(
             {
@@ -217,7 +283,7 @@ class GetSignaturePlanTool(McpTool):
                 doc_id=optional_text(args, "doc_id"),
             )
         )
-        return json_result(_plan_json(plan))
+        return json_result(_plan_json(plan, await _places(self._deps, ctx)))
 
 
 class SignSubmissionTool(McpTool):
@@ -284,6 +350,6 @@ class SignSubmissionTool(McpTool):
                 "results": [
                     {"doc_id": r.doc_id, "slot_id": r.slot_id, "ok": r.ok, "message": r.message} for r in out.results
                 ],
-                "plan": _plan_json(plan),
+                "plan": _plan_json(plan, await _places(self._deps, ctx)),
             }
         )

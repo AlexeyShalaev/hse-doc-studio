@@ -968,6 +968,7 @@ export const createSigningRouteDemo = (
     const preset = presetOf(r);
     return {
       version: preset.version,
+      base_version: preset.version,
       steps: presetSteps(r),
       extra_slots: preset.extra.filter((slot) =>
         conditionMet(r.project_id, slot.when),

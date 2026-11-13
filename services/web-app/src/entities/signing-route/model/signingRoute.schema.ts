@@ -13,10 +13,8 @@ import { z } from "zod";
 // Дата подписания (раздел 14.7): у слотов задачи метки даты `dates` (место рамки и текст), поле
 // обязательно (срез R23).
 //
-// Маршрут из шаблона (раздел 15.11) фронтенд знает раньше сервера (срез W15 до R25): эталоны новой
-// формы лежат в contracts/server/next. Пока сервер отдаёт прежнюю форму, `preset` маршрута
-// читается как null, `added_by` слота как null, `preset_optional` как false. Совместимость
-// помечена `LEGACY_R25`; R25 её убирает вместе с переносом эталонов из next в fixtures.
+// Маршрут из шаблона (раздел 15.11): `preset` маршрута, `added_by` и `preset_optional` слотов
+// обязательны (срез R25 снял совместимость `LEGACY_R25` W15).
 
 const iso = z.string().min(1);
 const LocalizedSchema = z.record(z.string(), z.string());
@@ -251,11 +249,11 @@ export const RouteDocSlotSchema = z.strictObject({
   status: RouteSlotStatusSchema,
   /**
    * У слота сверх точки (`extra`): добавил шаблон (`signing_slots` пака) или автор; null у пары
-   * точки. LEGACY_R25: по умолчанию null.
+   * точки.
    */
-  added_by: RouteSlotAddedBySchema.nullable().default(null),
-  /** Шаблон отмечает подпись необязательной на точке (15.3). LEGACY_R25: по умолчанию false. */
-  preset_optional: z.boolean().default(false),
+  added_by: RouteSlotAddedBySchema.nullable(),
+  /** Шаблон отмечает подпись необязательной на точке (15.3). */
+  preset_optional: z.boolean(),
 });
 
 export type RouteDocSlot = z.infer<typeof RouteDocSlotSchema>;
@@ -346,6 +344,11 @@ export type PresetDiff = z.infer<typeof PresetDiffSchema>;
 export const RoutePresetSchema = z.strictObject({
   /** Версия шаблона проекта. */
   version: z.string(),
+  /**
+   * Версия шаблона, по пресету которой собран состав маршрута; null: не по пресету. Отличается от
+   * `version` после обновления шаблона: «В новой версии шаблона другой маршрут этой точки» (15.7).
+   */
+  base_version: z.string().nullable(),
   steps: z.array(z.array(z.string())),
   extra_slots: z.array(PresetExtraSlotSchema),
   optional: z.array(RouteSlotRefSchema),
@@ -384,9 +387,9 @@ export const SigningRouteSchema = z.strictObject({
   changed_docs: z.array(z.string()),
   /**
    * Маршрут точки по шаблону (15.11): только тому, кто управляет маршрутом, и только у маршрута,
-   * который можно править; иначе null. LEGACY_R25: по умолчанию null.
+   * который можно править; иначе null.
    */
-  preset: RoutePresetSchema.nullable().default(null),
+  preset: RoutePresetSchema.nullable(),
   /**
    * Срок точки, из которого сервер посчитал срок черновика (16.5, R29); только управляющему.
    * Редактор по нему пишет «Срок точки изменился». Сервер до R29 поля не присылает.

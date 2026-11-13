@@ -41,7 +41,9 @@
           "participant_id": "srp_author",
           "extra": false,
           "optional": false,
-          "status": "signed"
+          "status": "signed",
+          "added_by": null,
+          "preset_optional": false
         },
         {
           "slot_id": "supervisor",
@@ -52,7 +54,9 @@
           "participant_id": "srp_supervisor",
           "extra": false,
           "optional": false,
-          "status": "pending"
+          "status": "pending",
+          "added_by": null,
+          "preset_optional": false
         }
       ],
       "sent": {
@@ -79,7 +83,9 @@
           "participant_id": "srp_supervisor",
           "extra": false,
           "optional": false,
-          "status": "signed"
+          "status": "signed",
+          "added_by": null,
+          "preset_optional": false
         },
         {
           "slot_id": "academic_supervisor",
@@ -90,7 +96,9 @@
           "participant_id": "srp_academic",
           "extra": false,
           "optional": false,
-          "status": "signed"
+          "status": "signed",
+          "added_by": null,
+          "preset_optional": false
         }
       ],
       "sent": {
@@ -267,5 +275,6 @@
       ]
     }
   ],
-  "changed_docs": []
+  "changed_docs": [],
+  "preset": null
 }

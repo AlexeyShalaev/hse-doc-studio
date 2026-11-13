@@ -316,6 +316,8 @@ export const CONTRACT_SCHEMAS: Record<string, ZodType> = {
   // перенёс в fixtures срез R23.
   SetDateMarksRequest: sig.SetDateMarksRequestSchema,
   Placement: z.strictObject(sig.PlacementSchema.shape),
+  // «Вернуть место из шаблона» (signing-route.md, 15.11): тело `{confirm_reset}`, перенёс R25.
+  RestorePlacementRequest: sig.RestorePlacementRequestSchema,
   // План обновления шаблона с местами подписей из шаблона (signing-route.md, 15.9, R26).
   TemplateUpdatePlanResponse: TemplateUpdatePlanContractSchema,
   SignaturePlan: z.strictObject(sig.SignaturePlanSchema.shape),

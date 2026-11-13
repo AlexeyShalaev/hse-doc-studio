@@ -31,6 +31,7 @@ const COMPANY = { person: "supervisor", role: "company" as const };
 
 const PRESET: RoutePreset = {
   version: "2026.1.4",
+  base_version: "2026.1.4",
   steps: [["author"], ["supervisor"], ["academic_supervisor"]],
   extra_slots: [{ doc_id: DOC, slot_id: "academic_supervisor", when: COMPANY }],
   optional: [{ doc_id: DOC, slot_id: "academic_supervisor" }],

@@ -305,3 +305,21 @@ async def test__get__unknown_route_with_lock__none(world: World) -> None:
     async with world.uow.begin():
         assert await world.repo.get(world.project_id, uuid4(), lock=True) is None
         assert await world.repo.get_open(world.project_id, "topic-approval", lock=True) is None
+
+
+async def test__migration__sr_12_preset_version__existing_routes_null_and_round_trip(pg_engine: AsyncEngine) -> None:
+    """sr_12_preset_version: колонка nullable, у прежних маршрутов NULL (состав не по пресету), схема без дрейфа,
+    версия пресета читается так же, как записана; откат маршруты не теряет."""
+    await migrator.upgrade(pg_engine)
+    sessions = SessionProvider(create_sessionmaker(pg_engine))
+    project_id = await seed_project(sessions, owner_user_id=None)
+    repo = SqlSigningRouteRepository(sessions)
+    old = await repo.add(make_route(project_id))
+    preset = await repo.add(replace(make_route(project_id, profile_id="final"), preset_version="2026.1.4"))
+
+    assert (await repo.get(project_id, old.id)).preset_version is None  # type: ignore[union-attr]
+    assert (await repo.get(project_id, preset.id)).preset_version == "2026.1.4"  # type: ignore[union-attr]
+    assert await _count(pg_engine, "signing_routes WHERE preset_version IS NULL") == 1
+    assert await migrator.check_drift(pg_engine) == []
+    await migrator.downgrade(pg_engine, "dl_01_project_deadlines")
+    assert await _count(pg_engine, "signing_routes") == 2

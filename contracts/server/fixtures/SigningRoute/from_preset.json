@@ -18,8 +18,8 @@
   "sent_by": null,
   "sent_at": null,
   "completed_at": null,
-  "created_at": "2026-11-10T08:40:00Z",
-  "updated_at": "2026-11-10T09:00:00Z",
+  "created_at": "2026-11-13T09:00:00Z",
+  "updated_at": "2026-11-13T09:00:00Z",
   "docs": [
     {
       "doc_id": "topic_application",
@@ -43,16 +43,16 @@
           "preset_optional": false
         },
         {
-          "slot_id": "academic_supervisor",
+          "slot_id": "supervisor",
           "label": {
-            "ru": "Академический руководитель",
-            "en": "Academic supervisor"
+            "ru": "Научный руководитель",
+            "en": "Supervisor"
           },
-          "participant_id": "srp_academic",
-          "extra": true,
+          "participant_id": "srp_supervisor",
+          "extra": false,
           "optional": false,
           "status": "pending",
-          "added_by": "author",
+          "added_by": null,
           "preset_optional": false
         }
       ],
@@ -90,20 +90,20 @@
     ],
     [
       {
-        "id": "srp_academic",
-        "persona": "academic_supervisor",
-        "user_id": null,
+        "id": "srp_supervisor",
+        "persona": "supervisor",
+        "user_id": "u_01hx7k5petr",
         "invitation_id": null,
-        "name": null,
-        "membership": "missing",
-        "card_name": null,
+        "name": "Петров П. П.",
+        "membership": "member",
+        "card_name": "Петров П. П.",
         "assignments": [
           {
             "doc_id": "topic_application",
-            "slot_id": "academic_supervisor"
+            "slot_id": "supervisor"
           }
         ],
-        "method": "image",
+        "method": "detached",
         "state": "waiting",
         "next_action": "wait",
         "changes_visible": false,
@@ -129,10 +129,6 @@
       ]
     },
     {
-      "persona": "academic_supervisor",
-      "people": []
-    },
-    {
       "persona": "supervisor",
       "people": [
         {
@@ -146,9 +142,13 @@
   "changed_docs": [],
   "preset": {
     "version": "2026.1.4",
+    "base_version": "2026.1.4",
     "steps": [
       [
         "author"
+      ],
+      [
+        "supervisor"
       ]
     ],
     "extra_slots": [],
@@ -163,9 +163,6 @@
         }
       }
     ],
-    "differs": [
-      "order",
-      "slots"
-    ]
+    "differs": []
   }
 }

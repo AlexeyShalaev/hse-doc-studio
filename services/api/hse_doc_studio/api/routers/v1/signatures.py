@@ -23,6 +23,7 @@ from hse_doc_studio.api.schemas.signature import (
     PackPlaceResponse,
     PlacementResponse,
     ProfileRefResponse,
+    RestorePlacementRequest,
     RuntimeSlotResponse,
     SetDateMarksRequest,
     SetSlotOptionalRequest,
@@ -93,6 +94,7 @@ from hse_doc_studio.use_cases.signatures.get_signed_doc_pdf import (
 )
 from hse_doc_studio.use_cases.signatures.pack_places import MANUAL, PlaceInfo
 from hse_doc_studio.use_cases.signatures.release_withheld import ReleaseWithheldInput, ReleaseWithheldUC
+from hse_doc_studio.use_cases.signatures.restore_placement import RestorePlacementInput, RestorePlacementUC
 from hse_doc_studio.use_cases.signatures.set_date_marks import DateMarkInput, SetDateMarksInput, SetDateMarksUC
 from hse_doc_studio.use_cases.signatures.set_slot_optional import SetSlotOptionalInput, SetSlotOptionalUC
 from hse_doc_studio.use_cases.signatures.sign_in_studio import SignInStudioInput, SignInStudioUC
@@ -396,6 +398,37 @@ async def set_date_marks(
         raise
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
+    return _map_placement(result.placement, result.texts, result.place)
+
+
+@router.post(
+    "/projects/{project_id}/signatures/placements/{doc_id}/{slot_id}/restore",
+    response_model=PlacementResponse,
+)
+async def restore_placement(
+    project_id: UUID,
+    doc_id: str,
+    slot_id: str,
+    uc: FromDishka[RestorePlacementUC],
+    body: RestorePlacementRequest | None = None,
+) -> PlacementResponse:
+    """«Вернуть место из шаблона» (signing-route.md, 15.6): место и метки даты слота документа как в шаблоне проекта,
+    `enabled` не меняется, пометка `from_pack`.
+
+    Отказы: 400 `unknown_slot` (слот не ставится на документ); 409 `route_locked` (документ держит идущий или
+    завершённый маршрут, а права отправки маршрута нет) и `resets_signatures` с `resets` (без `confirm_reset`).
+    """
+    try:
+        result = await uc.execute(
+            RestorePlacementInput(
+                project_id=project_id,
+                doc_id=doc_id,
+                slot_id=slot_id,
+                confirm_reset=body.confirm_reset if body is not None else False,
+            )
+        )
+    except NotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
     return _map_placement(result.placement, result.texts, result.place)
 
 

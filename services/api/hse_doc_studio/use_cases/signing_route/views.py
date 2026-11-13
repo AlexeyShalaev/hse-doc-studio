@@ -37,6 +37,7 @@ from hse_doc_studio.core.signing_route.entities import (
     StopReason,
 )
 from hse_doc_studio.core.signing_route.ports import RouteCandidate, RouteInvitee
+from hse_doc_studio.core.signing_route.preset import PresetDiff, RoutePreset, preset_differs
 from hse_doc_studio.core.value_objects import SignaturesState
 from hse_doc_studio.use_cases.signing_route.point import RoutePoint
 
@@ -105,6 +106,21 @@ class PersonView:
     view: ParticipantView
 
 
+class SlotAddedBy(StrEnum):
+    """Кто добавил слот к маршруту сверх точки (`RouteDocSlot.added_by`, 15.11)."""
+
+    pack = "pack"
+    author = "author"
+
+
+@dataclass(frozen=True)
+class PresetView:
+    """Пресет точки у маршрута (`SigningRoute.preset`, 15.11): что задаёт шаблон и чем маршрут отличается."""
+
+    preset: RoutePreset
+    differs: tuple[PresetDiff, ...]
+
+
 @dataclass(frozen=True)
 class SlotView:
     slot_id: str
@@ -116,6 +132,11 @@ class SlotView:
     optional: bool
     status: SlotStatus
     reason: PlanReason | None
+    # Кто добавил слот сверх точки (15.11): `pack` шаблон (пресет точки добавляет его сейчас), `author` автор;
+    # None у пары точки.
+    added_by: SlotAddedBy | None = None
+    # Пресет точки отмечает подпись необязательной: галочка «по шаблону», если отметка совпадает (15.7).
+    preset_optional: bool = False
 
 
 @dataclass(frozen=True)
@@ -199,6 +220,9 @@ class RouteDetails:
     candidates: tuple[PersonaCandidates, ...] = ()
     # Читатель управляет маршрутом (`SUBMISSION_CREATE`): только ему показывается `skip` участников (13.6).
     manages: bool = False
+    # Пресет точки и отличия маршрута от него (15.11); None, если версия шаблона пресета не задаёт. Ответ API
+    # показывает его только управляющему и только у маршрута, который можно править; MCP всегда.
+    preset: PresetView | None = None
 
     @property
     def people(self) -> tuple[PersonView, ...]:
@@ -286,7 +310,9 @@ def build_details(
     events: Sequence[RouteEvent] = (),
     *,
     show_comments: bool = False,
+    preset: RoutePreset | None = None,
 ) -> RouteDetails:
+    """Ход маршрута; с `preset` у слотов `added_by` и `preset_optional`, у маршрута отличия от пресета."""
     status, phase, stop = displayed(route, evaluation)
     positions = {step: i for i, step in enumerate(route.steps, start=1)}
     persons = [
@@ -310,13 +336,21 @@ def build_details(
         stop_reason=stop,
         current_step=evaluation.step_position if status is RouteStatus.active else None,
         sent_by_name=people.names.get(route.sent_by) if route.sent_by is not None else None,
-        docs=doc_views(point, route, facts),
+        docs=doc_views(point, route, facts, preset),
         steps=steps,
         events=tuple(event_view(e, people, show_comments=show_comments) for e in events),
+        preset=preset_view(preset, point, route, facts) if preset is not None else None,
     )
 
 
-def doc_views(point: RoutePoint, route: SigningRoute, facts: RouteFacts) -> tuple[DocView, ...]:
+def preset_view(preset: RoutePreset, point: RoutePoint, route: SigningRoute, facts: RouteFacts) -> PresetView:
+    marked = [DocSlot(doc_id, slot_id) for doc_id, slots in facts.optional.items() for slot_id in slots]
+    return PresetView(preset=preset, differs=preset_differs(preset, route, point.required, marked))
+
+
+def doc_views(
+    point: RoutePoint, route: SigningRoute, facts: RouteFacts, preset: RoutePreset | None = None
+) -> tuple[DocView, ...]:
     """Документы маршрута: пары точки и включённые автором необязательные, с участником и статусом."""
     owners = {pair: p.id for p in route.participants for pair in p.assignments}
     pairs = list(dict.fromkeys([*point.required, *owners]))
@@ -333,7 +367,7 @@ def doc_views(point: RoutePoint, route: SigningRoute, facts: RouteFacts) -> tupl
                 built=built,
                 frozen=doc_id in facts.state.frozen,
                 token=approval_token(doc_facts) if built else None,
-                slots=_slots(point, route.profile_id, facts, doc_pairs, owners),
+                slots=_slots(point, route.profile_id, facts, doc_pairs, owners, preset),
                 sent=sent,
                 changed=doc_changed(route, facts, doc_id, sent),
             )
@@ -341,8 +375,13 @@ def doc_views(point: RoutePoint, route: SigningRoute, facts: RouteFacts) -> tupl
     return tuple(result)
 
 
-def _slots(
-    point: RoutePoint, profile_id: str, facts: RouteFacts, pairs: Collection[DocSlot], owners: Mapping[DocSlot, UUID]
+def _slots(  # noqa: PLR0913 — входы одного вида
+    point: RoutePoint,
+    profile_id: str,
+    facts: RouteFacts,
+    pairs: Collection[DocSlot],
+    owners: Mapping[DocSlot, UUID],
+    preset: RoutePreset | None = None,
 ) -> tuple[SlotView, ...]:
     uses_frozen = any(
         method_of(slot.sign_mode) in CRYPTO_METHODS
@@ -369,9 +408,18 @@ def _slots(
                 optional=pair.slot_id in facts.optional.get(pair.doc_id, ()),
                 status=state.status,
                 reason=state.reason,
+                added_by=_added_by(point, pair, preset),
+                preset_optional=preset is not None and preset.marks_optional(pair),
             )
         )
     return tuple(views)
+
+
+def _added_by(point: RoutePoint, pair: DocSlot, preset: RoutePreset | None) -> SlotAddedBy | None:
+    """Пара сверх точки: шаблон добавляет её сейчас (условие выполнено) или её добавил автор; у пары точки None."""
+    if pair in point.allowed:
+        return None
+    return SlotAddedBy.pack if preset is not None and preset.adds(pair) else SlotAddedBy.author
 
 
 def event_view(event: RouteEvent, people: People, *, show_comments: bool) -> EventView:

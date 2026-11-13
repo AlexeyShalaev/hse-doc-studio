@@ -21,12 +21,14 @@ from hse_doc_studio.api.schemas import signing_route as s
 from hse_doc_studio.api.signing_route_errors import SigningKeyError, blocker_body
 from hse_doc_studio.core.access.checker import ProjectForbiddenError
 from hse_doc_studio.core.access.entities import Actor
+from hse_doc_studio.core.catalog import SlotCondition
 from hse_doc_studio.core.errors import NotFoundError
 from hse_doc_studio.core.i18n import localized_error
 from hse_doc_studio.core.signatures.errors import StampingError
 from hse_doc_studio.core.signatures.key_policy import SigningKeyStorageDeniedError
 from hse_doc_studio.core.signing_route.drafting import PersonDraft
 from hse_doc_studio.core.signing_route.entities import (
+    EDITABLE_STATUSES,
     DocSlot,
     ParticipantState,
     RouteConflictError,
@@ -52,7 +54,7 @@ from hse_doc_studio.use_cases.signing_route.key_signer import (
 )
 from hse_doc_studio.use_cases.signing_route.reminders import SigningRouteReminding
 from hse_doc_studio.use_cases.signing_route.skipping import SigningRouteSkipping
-from hse_doc_studio.use_cases.signing_route.views import EventView, PersonView, RouteDetails, SentVersion
+from hse_doc_studio.use_cases.signing_route.views import EventView, PersonView, PresetView, RouteDetails, SentVersion
 
 router = APIRouter(route_class=SafeDishkaRoute, dependencies=[Depends(require_server_mode)])
 
@@ -133,6 +135,8 @@ def route_response(details: RouteDetails) -> s.SigningRouteResponse:
                         extra=slot.extra,
                         optional=slot.optional,
                         status=slot.status.value,
+                        added_by=slot.added_by.value if slot.added_by is not None else None,
+                        preset_optional=slot.preset_optional,
                     )
                     for slot in doc.slots
                 ],
@@ -154,7 +158,44 @@ def route_response(details: RouteDetails) -> s.SigningRouteResponse:
             for group in details.candidates
         ],
         changed_docs=list(details.changed_docs),
+        preset=_preset(details),
     )
+
+
+def preset_response(view: PresetView, base_version: str | None) -> s.RoutePreset:
+    preset = view.preset
+    return s.RoutePreset(
+        version=preset.version,
+        base_version=base_version,
+        steps=[list(step) for step in preset.steps],
+        extra_slots=[
+            s.RoutePresetSlot(doc_id=item.pair.doc_id, slot_id=item.pair.slot_id, when=_condition(item.when))
+            for item in preset.extra_slots
+        ],
+        optional=[s.RouteSlotRef(doc_id=pair.doc_id, slot_id=pair.slot_id) for pair in preset.optional],
+        skipped_by_condition=[
+            s.RoutePresetSkipped(doc_id=item.pair.doc_id, slot_id=item.pair.slot_id, when=condition)
+            for item in preset.skipped_by_condition
+            if (condition := _condition(item.when)) is not None
+        ],
+        differs=[diff.value for diff in view.differs],
+    )
+
+
+def _condition(when: SlotCondition | None) -> s.RoutePresetCondition | None:
+    if when is None:
+        return None
+    return s.RoutePresetCondition(
+        person=cast(s.PresetPersonName, when.person),
+        role=when.role.value if when.role is not None else None,
+    )
+
+
+def _preset(details: RouteDetails) -> s.RoutePreset | None:
+    """Пресет только тому, кто управляет маршрутом, и только у маршрута, который можно править (15.11)."""
+    if details.preset is None or not details.manages or details.route.status not in EDITABLE_STATUSES:
+        return None
+    return preset_response(details.preset, details.route.preset_version)
 
 
 def sent_response(sent: SentVersion | None) -> s.RouteDocVersion | None:
@@ -383,6 +424,16 @@ async def update_signing_route(
     project_id: UUID, route_id: UUID, body: s.UpdateSigningRouteRequest, uc: FromDishka[SigningRouteDrafts]
 ) -> s.SigningRouteResponse:
     return route_response(await uc.update(people_views.require_user(), project_id, route_id, _update(body)))
+
+
+@router.post(_BASE + "/{route_id}/restore-preset", response_model=s.SigningRouteResponse)
+async def restore_signing_route_preset(
+    project_id: UUID, route_id: UUID, uc: FromDishka[SigningRouteDrafts], body: s.EmptyRequest | None = None
+) -> s.SigningRouteResponse:
+    """«Вернуть как в шаблоне» (signing-route.md, 15.6): шаги, слоты сверх точки и отметки «необязательна» по
+    пресету точки, люди по персоне, места только у новых пар. 409 `invalid_transition` вне `draft`, `paused`,
+    `returned`, `cancelled`; 409 `no_preset`, если шаблон пресета не задаёт."""
+    return route_response(await uc.restore_preset(people_views.require_user(), project_id, route_id))
 
 
 @router.post(_BASE + "/{route_id}/preview", response_model=s.SigningRoutePreview)

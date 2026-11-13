@@ -95,7 +95,8 @@ def slot_signed() -> RouteConflictError:
     )
 
 
-def _with_optional(state: SignaturesState, doc_id: str, profile_id: str, slot_id: str, on: bool) -> SignaturesState:
+def with_optional(state: SignaturesState, doc_id: str, profile_id: str, slot_id: str, on: bool) -> SignaturesState:
+    """Отметка «Подпись необязательна» пары на точке поставлена (`on`) или снята; пустые записи убираются."""
     by_profile = dict(state.optional.get(doc_id, {}))
     slots = set(by_profile.get(profile_id, ()))
     if on:
@@ -112,7 +113,8 @@ def _with_optional(state: SignaturesState, doc_id: str, profile_id: str, slot_id
     return replace(state, optional=optional)
 
 
-def _without_skip(state: SignaturesState, doc_id: str, slot_id: str) -> SignaturesState:
+def without_skip(state: SignaturesState, doc_id: str, slot_id: str) -> SignaturesState:
+    """Пропуск пары снят: подпись снова ждут."""
     by_slot = {k: v for k, v in state.skipped.get(doc_id, {}).items() if k != slot_id}
     skipped = {k: v for k, v in state.skipped.items() if k != doc_id}
     if by_slot:
@@ -154,11 +156,11 @@ class SetSlotOptionalUC:
                     SlotStatus.signed
                 ):
                     raise slot_signed()
-            updated = _with_optional(state, inp.doc_id, inp.profile_id, inp.slot_id, inp.optional)
+            updated = with_optional(state, inp.doc_id, inp.profile_id, inp.slot_id, inp.optional)
             # Пропуск при идущем маршруте снимет только новый раунд: маршрут уже прошёл этот шаг (13.3).
             returns_next_round = not inp.optional and skip is not None and held is not None
             if not inp.optional and skip is not None and held is None:
-                updated = _without_skip(updated, inp.doc_id, inp.slot_id)
+                updated = without_skip(updated, inp.doc_id, inp.slot_id)
             changed = updated != state
             if changed:
                 self._signature_repo.save_state(project.folder, updated)

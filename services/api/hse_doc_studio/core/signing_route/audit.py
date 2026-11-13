@@ -46,6 +46,8 @@ class RouteAuditAction(StrEnum):
     skip = "signing_route.skip"
     # Метки даты на документе под маршрутом (14.6): из события `marks_edited`.
     marks_edit = "signing_route.marks_edit"
+    # «Вернуть как в шаблоне» (15.6, 15.12): состав после и чем маршрут отличался от пресета до.
+    restore_preset = "signing_route.restore_preset"
     # Перенос маршрута 0.20.0 (12.11): версия на подписи из сборки или архива сборок; актора нет.
     migrate = "signing_route.migrate"
 

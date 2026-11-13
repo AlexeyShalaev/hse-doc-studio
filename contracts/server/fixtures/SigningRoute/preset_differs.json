@@ -8,21 +8,18 @@
       "en": "Course project topic application"
     }
   },
-  "status": "paused",
+  "status": "draft",
   "phase": null,
-  "round": 1,
+  "round": 0,
   "current_step": null,
-  "deadline": "2026-11-15T20:59:00Z",
-  "message": "Прошу подписать заявление до пятницы.",
-  "stop_reason": "sent_changed",
-  "sent_by": {
-    "id": "u_01hx7k5ivan",
-    "name": "Иванов И. И."
-  },
-  "sent_at": "2026-11-10T09:00:00Z",
+  "deadline": null,
+  "message": null,
+  "stop_reason": null,
+  "sent_by": null,
+  "sent_at": null,
   "completed_at": null,
-  "created_at": "2026-11-10T08:40:00Z",
-  "updated_at": "2026-11-10T09:00:00Z",
+  "created_at": "2026-11-13T09:00:00Z",
+  "updated_at": "2026-11-13T09:20:00Z",
   "docs": [
     {
       "doc_id": "topic_application",
@@ -41,7 +38,7 @@
           "participant_id": "srp_author",
           "extra": false,
           "optional": false,
-          "status": "signed",
+          "status": "pending",
           "added_by": null,
           "preset_optional": false
         },
@@ -57,10 +54,23 @@
           "status": "pending",
           "added_by": null,
           "preset_optional": false
+        },
+        {
+          "slot_id": "academic_supervisor",
+          "label": {
+            "ru": "Академический руководитель",
+            "en": "Academic supervisor"
+          },
+          "participant_id": "srp_academic",
+          "extra": true,
+          "optional": true,
+          "status": "pending",
+          "added_by": "pack",
+          "preset_optional": false
         }
       ],
       "sent": null,
-      "changed": true
+      "changed": false
     }
   ],
   "steps": [
@@ -80,10 +90,37 @@
           }
         ],
         "method": "image",
-        "state": "done",
-        "next_action": "done",
+        "state": "waiting",
+        "next_action": "wait",
         "changes_visible": false,
-        "approved_at": "2026-11-10T09:00:00Z",
+        "approved_at": null,
+        "notified_at": null,
+        "reminded_at": null,
+        "reminders": 0,
+        "skipped_at": null,
+        "skip": null
+      }
+    ],
+    [
+      {
+        "id": "srp_academic",
+        "persona": "academic_supervisor",
+        "user_id": "u_01hx7k5sidr",
+        "invitation_id": null,
+        "name": "Сидоров С. С.",
+        "membership": "member",
+        "card_name": "Сидоров С. С.",
+        "assignments": [
+          {
+            "doc_id": "topic_application",
+            "slot_id": "academic_supervisor"
+          }
+        ],
+        "method": "image",
+        "state": "waiting",
+        "next_action": "wait",
+        "changes_visible": false,
+        "approved_at": null,
         "notified_at": null,
         "reminded_at": null,
         "reminders": 0,
@@ -107,11 +144,11 @@
           }
         ],
         "method": "detached",
-        "state": "to_approve_sign",
-        "next_action": "approve_and_sign",
+        "state": "waiting",
+        "next_action": "wait",
         "changes_visible": false,
         "approved_at": null,
-        "notified_at": "2026-11-10T09:00:00Z",
+        "notified_at": null,
         "reminded_at": null,
         "reminders": 0,
         "skipped_at": null,
@@ -119,30 +156,7 @@
       }
     ]
   ],
-  "events": [
-    {
-      "id": "sre_01",
-      "kind": "sent",
-      "round": 1,
-      "at": "2026-11-10T09:00:00Z",
-      "who": "Иванов И. И.",
-      "participant_id": null,
-      "comment": null,
-      "reason": null,
-      "changed_docs": null
-    },
-    {
-      "id": "sre_04",
-      "kind": "paused",
-      "round": 1,
-      "at": "2026-11-12T03:00:00Z",
-      "who": null,
-      "participant_id": null,
-      "comment": null,
-      "reason": "sent_changed",
-      "changed_docs": null
-    }
-  ],
+  "events": [],
   "candidates": [
     {
       "persona": "author",
@@ -161,31 +175,36 @@
           "kind": "member",
           "id": "u_01hx7k5petr",
           "name": "Петров П. П."
-        },
+        }
+      ]
+    },
+    {
+      "persona": "academic_supervisor",
+      "people": [
         {
-          "kind": "invitation",
-          "id": "inv_01hx9",
-          "name": "s***@hse.ru"
+          "kind": "member",
+          "id": "u_01hx7k5sidr",
+          "name": "Сидоров С. С."
         }
       ]
     }
   ],
-  "changed_docs": [
-    "topic_application"
-  ],
+  "changed_docs": [],
   "preset": {
     "version": "2026.1.4",
+    "base_version": "2026.1.4",
     "steps": [
       [
         "author"
       ],
       [
         "supervisor"
+      ],
+      [
+        "academic_supervisor"
       ]
     ],
-    "extra_slots": [],
-    "optional": [],
-    "skipped_by_condition": [
+    "extra_slots": [
       {
         "doc_id": "topic_application",
         "slot_id": "academic_supervisor",
@@ -195,6 +214,11 @@
         }
       }
     ],
-    "differs": []
+    "optional": [],
+    "skipped_by_condition": [],
+    "differs": [
+      "order",
+      "optional"
+    ]
   }
 }

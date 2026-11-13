@@ -122,6 +122,11 @@ ROUTE_ACTIONS: Mapping[RouteKey, RouteRule] = {
     ("PUT", "/projects/{project_id}/signatures/placements/{doc_id}/{slot_id}/dates"): RouteRule(
         Action.FILES_WRITE, path_param="slot_id"
     ),
+    # «Вернуть место из шаблона» (signing-route.md, 15.6): правка размещения, право по слоту; на документе под
+    # маршрутом сценарий маршрута требует ещё `SUBMISSION_CREATE`, как у меток даты.
+    ("POST", "/projects/{project_id}/signatures/placements/{doc_id}/{slot_id}/restore"): RouteRule(
+        Action.FILES_WRITE, path_param="slot_id"
+    ),
     # «Подпись необязательна» ставит тот, кто отправляет маршрут (signing-route.md, 13.4).
     ("PUT", "/projects/{project_id}/signatures/optional/{doc_id}/{slot_id}"): RouteRule(Action.SUBMISSION_CREATE),
     # «Показать» картинку, придержанную маршрутом подписания: правка размещения, как и включение места.
@@ -231,6 +236,8 @@ ROUTE_ACTIONS: Mapping[RouteKey, RouteRule] = {
     ("POST", "/projects/{project_id}/signing-routes"): RouteRule(Action.SUBMISSION_CREATE),
     ("GET", "/projects/{project_id}/signing-routes/{route_id}"): RouteRule(Action.OUTPUT_READ),
     ("PUT", "/projects/{project_id}/signing-routes/{route_id}"): RouteRule(Action.SUBMISSION_CREATE),
+    # «Вернуть как в шаблоне» (signing-route.md, 15.6): правка маршрута, как PUT.
+    ("POST", "/projects/{project_id}/signing-routes/{route_id}/restore-preset"): RouteRule(Action.SUBMISSION_CREATE),
     ("POST", "/projects/{project_id}/signing-routes/{route_id}/preview"): RouteRule(Action.SUBMISSION_CREATE),
     ("POST", "/projects/{project_id}/signing-routes/{route_id}/send"): RouteRule(Action.SUBMISSION_CREATE),
     ("POST", "/projects/{project_id}/signing-routes/{route_id}/cancel"): RouteRule(Action.SUBMISSION_CREATE),

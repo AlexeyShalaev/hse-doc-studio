@@ -8,7 +8,7 @@
 from __future__ import annotations
 
 import math
-from collections.abc import Iterable, Mapping, Sequence
+from collections.abc import Callable, Collection, Iterable, Mapping, Sequence
 from dataclasses import dataclass, replace
 from datetime import UTC, datetime, timedelta
 from uuid import UUID, uuid4
@@ -16,15 +16,18 @@ from uuid import UUID, uuid4
 from hse_doc_studio.core.access.checker import ProjectForbiddenError
 from hse_doc_studio.core.access.entities import Actor
 from hse_doc_studio.core.entities import SigningIdentity
+from hse_doc_studio.core.enums import PlacementOrigin
 from hse_doc_studio.core.errors import NotFoundError
 from hse_doc_studio.core.i18n import localized_error
 from hse_doc_studio.core.identity.errors import IdentityError, IdentityErrorCode
 from hse_doc_studio.core.signatures.plan import (
     SignMethod,
+    SlotStatus,
     VisibleMark,
     mark_of,
     method_of,
     slot_persona,
+    slot_state,
 )
 from hse_doc_studio.core.signatures.route_order import default_route
 from hse_doc_studio.core.signing_route.audit import RouteAuditAction, signing_route_scope
@@ -59,6 +62,7 @@ from hse_doc_studio.core.signing_route.entities import (
     StopReason,
     nothing_changed,
 )
+from hse_doc_studio.core.signing_route.preset import RoutePreset, preset_differs, preset_people
 from hse_doc_studio.core.signing_route.readiness import (
     Blocker,
     BlockerCode,
@@ -78,9 +82,19 @@ from hse_doc_studio.core.signing_route.versions import (
     version_changes,
 )
 from hse_doc_studio.core.value_objects import SignaturesState
+from hse_doc_studio.use_cases.signatures.pack_places import PackPlaces
 from hse_doc_studio.use_cases.signing_route.key_signer import KeyInfo, KeyRequest, RouteKeySigner
 from hse_doc_studio.use_cases.signing_route.pinning import PinnedVersion, RoutePinning
 from hse_doc_studio.use_cases.signing_route.point import RoutePoint
+from hse_doc_studio.use_cases.signing_route.preset import (
+    FRESH_ORIGINS,
+    INHERITED_ORIGINS,
+    PresetApplied,
+    apply_optional,
+    apply_places,
+    mark_may_show,
+    route_preset,
+)
 from hse_doc_studio.use_cases.signing_route.scenario import (
     RouteScenario,
     RouteServices,
@@ -270,14 +284,35 @@ class SigningRouteDrafts(RouteScenario):
         return await self._details(actor, point, route), created
 
     async def _add(self, point: RoutePoint, actor_id: UUID) -> SigningRoute:
+        """Новый черновик точки (15.5): состав из прежнего маршрута точки, а без него из пресета пака; файлы
+        (отметки `optional`, места и метки даты) пишутся до записи маршрута (5.8: сначала файлы), чтобы редактор сразу
+        показал рамки.
+
+        Если запись маршрута не удастся, записанные места остаются обычными местами из шаблона: они ничего не
+        подписывают, а следующая попытка их переиспользует. Прежний завершённый маршрут точки снимается с контроля
+        раньше: его документы пресет трогает только как документы без маршрута, а места над ЭП не трогает никогда.
+        """
         previous = await self._s.routes.list_for_project(point.project_id, profile_id=point.profile.id)
-        route = await self._new_route(point, actor_id, previous[0] if previous else None)
+        inherited = previous[0] if previous and previous[0].participants else None
+        preset = route_preset(point)
+        route = await self._new_route(point, actor_id, inherited, preset)
         for old in previous:
             if old.status in _SUPERSEDED:
                 archived = await self._s.routes.save(archive(old))
                 await self._audit(
                     RouteAuditAction.archive, archived, actor_id=actor_id, details={"superseded_by": str(route.id)}
                 )
+        applied: PresetApplied | None = None
+        if preset is not None:
+            pairs = [*point.required, *(pair for pair in route.pairs if pair not in point.allowed)]
+            applied = await self._write_preset(
+                point,
+                route,
+                preset,
+                pairs=pairs if inherited is None else (),
+                place_pairs=pairs,
+                origins=FRESH_ORIGINS if inherited is None else INHERITED_ORIGINS,
+            )
         try:
             added = await self._s.routes.add(route)
         except OpenRouteExistsError:
@@ -286,18 +321,32 @@ class SigningRouteDrafts(RouteScenario):
             if found is None:
                 raise
             return found
-        await self._audit(RouteAuditAction.create, added, actor_id=actor_id, details=_composition(added))
+        details = _composition(added)
+        if preset is not None and applied is not None:
+            details["preset"] = _preset_audit(preset, applied, inherited=inherited is not None)
+        await self._audit(RouteAuditAction.create, added, actor_id=actor_id, details=details)
         return added
 
-    async def _new_route(self, point: RoutePoint, actor_id: UUID, previous: SigningRoute | None) -> SigningRoute:
+    async def _new_route(
+        self, point: RoutePoint, actor_id: UUID, previous: SigningRoute | None, preset: RoutePreset | None
+    ) -> SigningRoute:
+        """Состав черновика: прежний маршрут точки (6.5), иначе пресет точки, а без него порядок 5.2."""
         extras: list[DocSlot] = []
-        if previous is not None and previous.participants:
+        # По какой версии шаблона собран состав (15.7): у черновика после прежнего маршрута та же, что у прежнего.
+        preset_version: str | None = None
+        if previous is not None:
             participants = inherit_participants(previous)
             extras = [pair for pair in previous.pairs if point.is_optional(pair)]
+            preset_version = previous.preset_version
         else:
-            steps = default_route(
-                point.version, point.profile, point.project, slot_ids=[pair.slot_id for pair in point.required]
-            )
+            if preset is not None:
+                extras = list(preset.extra_pairs)
+                steps = preset.steps
+                preset_version = preset.version
+            else:
+                steps = default_route(
+                    point.version, point.profile, point.project, slot_ids=[pair.slot_id for pair in point.required]
+                )
             candidates = await self._s.people.candidates(point.project_id)
             invitees = await self._s.people.invitees(point.project_id)
             participants = draft_participants(steps, candidates, invitees, prefer=actor_id)
@@ -310,7 +359,117 @@ class SigningRouteDrafts(RouteScenario):
             created_by=actor_id,
             docs=point.docs_of(pairs),
             participants=participants,
+            preset_version=preset_version,
         )
+
+    async def _write_preset(  # noqa: PLR0913 — что применить и к чему
+        self,
+        point: RoutePoint,
+        route: SigningRoute,
+        preset: RoutePreset,
+        *,
+        pairs: Sequence[DocSlot],
+        place_pairs: Sequence[DocSlot],
+        origins: Collection[PlacementOrigin | None],
+        unset: bool = False,
+        held: Sequence[str] = (),
+        signed: Callable[[DocSlot], bool] | None = None,
+    ) -> PresetApplied:
+        """Отметки `optional` пар `pairs` и места пар `place_pairs` по пресету под `route_files` (15.5, 15.6).
+
+        Документы, которые держит другой маршрут, не трогаются. Пишет состояние подписей, только если оно изменилось.
+        """
+        async with route_files(point.project):
+            repo = self._s.effects.signatures
+            state = repo.get_state(point.project.folder)
+            elsewhere = await self._held_elsewhere(point, route)
+            updated, marked, unmarked = apply_optional(
+                point,
+                state,
+                pairs,
+                preset,
+                unset=unset,
+                held=held,
+                signed=signed or (lambda _pair: False),
+                skip_docs=elsewhere,
+            )
+            places = PackPlaces.load(self._s.points.templates, point.project, point.version)
+            updated, placed = apply_places(point, updated, place_pairs, places, origins=origins, skip_docs=elsewhere)
+            if updated != state:
+                repo.save_state(point.project.folder, updated)
+        return PresetApplied(updated, placed, marked, unmarked)
+
+    async def _held_elsewhere(self, point: RoutePoint, route: SigningRoute) -> frozenset[str]:
+        """Документы маршрута, которые держит другой маршрут (`HOLDING_STATUSES`): пресет их не трогает."""
+        held: set[str] = set()
+        for doc_id in dict.fromkeys((*route.docs, *point.docs_of(point.required))):
+            holder = await self._s.routes.holding(point.project_id, doc_id)
+            if holder is not None and holder.id != route.id:
+                held.add(doc_id)
+        return frozenset(held)
+
+    async def restore_preset(self, actor: Actor, project_id: UUID, route_id: UUID) -> RouteDetails:
+        """«Вернуть как в шаблоне» (15.6): шаги, слоты сверх точки и отметки `optional` пар маршрута по пресету.
+
+        Люди остаются по персоне (участник с той же персоной на её новом шаге со своим согласием), лишние
+        убираются, недостающие подбираются, как в заготовке. Места ставятся только новым парам, как при создании;
+        ручные места не трогаются. Повтор без изменений ничего не пишет и в аудит не попадает.
+        """
+        actor_id = actor_uuid(actor)
+        async with self._s.uow.begin():
+            route = await self._get(project_id, route_id, lock=True)
+            if route.status not in EDITABLE_STATUSES:
+                raise _invalid(route.status, "вернуть как в шаблоне")
+            point = await self._s.points.load(project_id, route.profile_id)
+            preset = route_preset(point)
+            if preset is None:
+                raise no_preset()
+            loaded = await self._s.facts.load(point, route)
+            before = preset_differs(preset, route, point.required, marked_pairs(loaded.facts.optional))
+            participants = apply_people(route.participants, preset_people(route.participants, preset.steps))
+            participants = await self._people_for(point, participants, (), actor_id)
+            pairs = [*point.required, *preset.extra_pairs]
+            participants, _ = assign_pairs(participants, pairs)
+            restored = replace(
+                route, participants=participants, docs=point.docs_of(pairs), preset_version=preset.version
+            )
+            held = route.docs if route.status in HOLDING_STATUSES else ()
+            had = set(route.pairs)
+
+            def signed(pair: DocSlot) -> bool:
+                doc = loaded.facts.doc(pair.doc_id)
+                state = slot_state(loaded.state, pair.doc_id, pair.slot_id, doc, profile_id=route.profile_id)
+                return state.status is SlotStatus.signed
+
+            applied = await self._write_preset(
+                point,
+                restored,
+                preset,
+                pairs=pairs,
+                place_pairs=[pair for pair in pairs if pair not in had],
+                origins=FRESH_ORIGINS,
+                unset=True,
+                held=held,
+                signed=signed,
+            )
+            if restored == route and not (applied.placed or applied.marked or applied.unmarked):
+                saved = route
+            else:
+                saved = await self._s.routes.save(restored) if restored != route else route
+                await self._audit(
+                    RouteAuditAction.restore_preset,
+                    saved,
+                    actor_id=actor_id,
+                    details={
+                        **_composition(saved),
+                        "version": preset.version,
+                        "differs": [diff.value for diff in before],
+                        "extra_slots": [{"doc_id": p.doc_id, "slot_id": p.slot_id} for p in preset.extra_pairs],
+                        "optional": [{"doc_id": p.doc_id, "slot_id": p.slot_id} for p in preset.optional],
+                        "placements": len(applied.placed),
+                    },
+                )
+        return await self._details(actor, point, saved)
 
     async def get(self, actor: Actor, project_id: UUID, route_id: UUID) -> RouteDetails:
         route = await self._get(project_id, route_id)
@@ -428,6 +587,34 @@ class SigningRouteDrafts(RouteScenario):
 def _composition(route: SigningRoute) -> dict[str, object]:
     """Состав маршрута для журнала аудита: документы, число шагов и участников."""
     return {"docs": list(route.docs), "steps": len(route.steps), "participants": len(route.participants)}
+
+
+def _preset_audit(preset: RoutePreset, applied: PresetApplied, *, inherited: bool) -> dict[str, object]:
+    """`preset` записи `signing_route.create` (15.12): версия, что шаблон добавил и отметил, сколько мест поставил.
+
+    У черновика после прежнего маршрута точки состав прежний: слоты сверх точки и отметки пресета не применялись.
+    """
+    return {
+        "version": preset.version,
+        "extra_slots": [] if inherited else [{"doc_id": p.doc_id, "slot_id": p.slot_id} for p in preset.extra_pairs],
+        "optional": [{"doc_id": p.doc_id, "slot_id": p.slot_id} for p in applied.marked],
+        "placements": len(applied.placed),
+    }
+
+
+def marked_pairs(optional: Mapping[str, Iterable[str]]) -> frozenset[DocSlot]:
+    """Пары с отметкой «Подпись необязательна» на точке маршрута (`RouteFacts.optional`)."""
+    return frozenset(DocSlot(doc_id, slot_id) for doc_id, slots in optional.items() for slot_id in slots)
+
+
+def no_preset() -> RouteConflictError:
+    return RouteConflictError(
+        "no_preset",
+        localized_error(
+            "Шаблон проекта не задаёт маршрут этой точки: возвращать нечего",
+            "The project template has no route for this checkpoint: there is nothing to reset to",
+        ),
+    )
 
 
 def _extras(point: RoutePoint, pairs: Iterable[DocSlot]) -> list[DocSlot]:
@@ -730,20 +917,9 @@ def _placement_blockers(point: RoutePoint, route: SigningRoute, state: Signature
     for p in route.participants:
         for pair in p.assignments:
             placement = state.placements.get(pair.doc_id, {}).get(pair.slot_id)
-            if (placement is None or not placement.enabled) and _mark_may_show(point, pair, state):
+            if (placement is None or not placement.enabled) and mark_may_show(point, pair, state):
                 blockers.append(Blocker(BlockerCode.placement_off, pair.doc_id, pair.slot_id, p.id))
     return blockers
-
-
-def _mark_may_show(point: RoutePoint, pair: DocSlot, state: SignaturesState) -> bool:
-    """Будет ли у слота видимая метка. Если способ слота точка не принимает, его выберет подписант (6.3): место
-    нужно, когда хотя бы один разрешённый способ ставит картинку или плашку (все, кроме PAdES без метки)."""
-    slot = state.slots.get(pair.slot_id)
-    allowed = point.allowed.get(pair, ())
-    method = method_of(slot.sign_mode) if slot is not None else SignMethod.image
-    if allowed and method.value not in allowed:
-        return any(name != SignMethod.pades.value for name in allowed)
-    return mark_of(slot) is not VisibleMark.none
 
 
 def _check_interval(route: SigningRoute, at: datetime) -> None:

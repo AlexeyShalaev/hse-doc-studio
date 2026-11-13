@@ -146,6 +146,7 @@
   "changed_docs": [],
   "preset": {
     "version": "2026.1.4",
+    "base_version": "2026.1.4",
     "steps": [
       [
         "author"

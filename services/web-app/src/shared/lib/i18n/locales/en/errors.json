@@ -228,6 +228,7 @@
     "bad_date": "Invalid signing date.",
     "date_from_route": "This signature goes through the signing route: the date comes from the approval and cannot be set by hand.",
     "resets_signatures": "Saving resets the e-signatures over the frozen PDF: confirm it.",
+    "no_preset": "The project template has no route for this checkpoint: there is nothing to reset to.",
     "bad_deadline": "Invalid deadline: a date and time with a time zone, not earlier than 2000, is required."
   }
 }

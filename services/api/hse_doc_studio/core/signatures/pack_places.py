@@ -24,7 +24,7 @@ from typing import Protocol
 
 from hse_doc_studio.core.catalog import SignatureDefaultPlacement, SignatureSlotDef
 from hse_doc_studio.core.enums import DateMarkAlign, DateMarkFormat, PlacementOrigin
-from hse_doc_studio.core.value_objects import FromPack, SignaturePlacement
+from hse_doc_studio.core.value_objects import DateMark, FromPack, SignaturePlacement
 
 # Точность сравнения мест и отпечатка: 0,1 мм. Сравнение с допуском половины шага, чтобы 80.04 и 80.0 совпадали.
 _DECIMALS = 1
@@ -159,3 +159,43 @@ def keep_from_pack(before: SignaturePlacement, after: SignaturePlacement) -> Sig
 def clear_from_pack(placement: SignaturePlacement) -> SignaturePlacement:
     """Правка человеком снимает пометку «место из шаблона» (15.4)."""
     return placement if placement.from_pack is None else replace(placement, from_pack=None)
+
+
+def pack_marks(slot_def: SignatureSlotDef, doc_def_id: str) -> tuple[DateMark, ...]:
+    """Метки даты пака для документа как метки размещения: у пака их id нет, сервер назначает `d1`, `d2`, ..."""
+    return tuple(
+        DateMark(
+            id=f"d{number}",
+            page=mark.page,
+            x_mm=mark.x_mm,
+            y_mm=mark.y_mm,
+            width_mm=mark.width_mm,
+            height_mm=mark.height_mm,
+            format=mark.format,
+            align=mark.align,
+        )
+        for number, mark in enumerate(slot_def.dates_for(doc_def_id), start=1)
+    )
+
+
+def pack_placement(
+    slot_def: SignatureSlotDef, doc_def_id: str, base: SignaturePlacement | None, version: str
+) -> SignaturePlacement:
+    """Место и метки даты слота на документе как в шаблоне версии `version`, с пометкой `from_pack` (15.5, 15.6).
+
+    Включённость, дата в рамке и момент подписи берутся у `base` (без него место выключено): их не задаёт пак и не
+    учитывает отпечаток. Включает место тот, кто применяет пресет, а «Вернуть место из шаблона» её не меняет.
+    """
+    place = slot_def.place_for(doc_def_id)
+    start = base or SignaturePlacement(
+        enabled=False, page=place.page, x_mm=place.x_mm, y_mm=place.y_mm, width_mm=place.width_mm
+    )
+    placement = replace(
+        start,
+        page=place.page,
+        x_mm=place.x_mm,
+        y_mm=place.y_mm,
+        width_mm=place.width_mm,
+        dates=pack_marks(slot_def, doc_def_id),
+    )
+    return stamp_from_pack(placement, version)

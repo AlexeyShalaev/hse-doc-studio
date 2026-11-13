@@ -433,6 +433,7 @@ from hse_doc_studio.use_cases.signatures.get_signature_plan import GetSignatureP
 from hse_doc_studio.use_cases.signatures.get_signatures import GetSignaturesUC
 from hse_doc_studio.use_cases.signatures.get_signed_doc_pdf import GetSignedDocPdfUC
 from hse_doc_studio.use_cases.signatures.release_withheld import ReleaseWithheldUC
+from hse_doc_studio.use_cases.signatures.restore_placement import RestorePlacementUC
 from hse_doc_studio.use_cases.signatures.set_date_marks import SetDateMarksUC
 from hse_doc_studio.use_cases.signatures.set_slot_optional import SetSlotOptionalUC
 from hse_doc_studio.use_cases.signatures.sign_in_studio import SignInStudioUC
@@ -3113,6 +3114,25 @@ class UseCaseProvider(Provider):
         )
 
     @provide
+    def get_restore_placement_uc(  # noqa: PLR0913 — порты сценария
+        self,
+        project_repo: IProjectRepository,
+        project_index_repo: IProjectIndexRepository,
+        signature_repo: ISignatureRepository,
+        template_repo: ITemplateRepository,
+        routes: ISigningRouteGate,
+        audit: ISignatureAudit,
+    ) -> RestorePlacementUC:
+        return RestorePlacementUC(
+            project_repo=project_repo,
+            project_index_repo=project_index_repo,
+            signature_repo=signature_repo,
+            template_repo=template_repo,
+            routes=routes,
+            audit=audit,
+        )
+
+    @provide
     def get_set_slot_optional_uc(  # noqa: PLR0913 — порты сценария
         self,
         project_repo: IProjectRepository,
@@ -3353,12 +3373,14 @@ class UseCaseProvider(Provider):
         project_index_repo: IProjectIndexRepository,
         template_repo: ITemplateRepository,
         submission_repo: IPackSubmissionRepository,
+        template_service: ProjectTemplateService,
     ) -> GetSubmissionProfilesUC:
         return GetSubmissionProfilesUC(
             project_repo=project_repo,
             project_index_repo=project_index_repo,
             template_repo=template_repo,
             submission_repo=submission_repo,
+            template_service=template_service,
         )
 
     @provide

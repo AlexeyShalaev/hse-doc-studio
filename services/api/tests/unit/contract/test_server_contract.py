@@ -341,6 +341,8 @@ _SCHEMAS: dict[str, Any] = {
     "SubmissionProfile": cat.SubmissionProfileResponse,
     # План обновления шаблона с местами подписей из шаблона (signing-route.md, 15.11): эталон из pending перенёс W15.
     "TemplateUpdatePlanResponse": tu.TemplateUpdatePlanResponse,
+    # «Вернуть место из шаблона» (signing-route.md, 15.11): тело в pending до среза W15.
+    "RestorePlacementRequest": sig.RestorePlacementRequest,
 }
 
 

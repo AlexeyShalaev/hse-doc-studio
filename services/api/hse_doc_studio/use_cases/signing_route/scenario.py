@@ -50,6 +50,7 @@ from hse_doc_studio.use_cases.signing_route.effects import RouteFileEffects
 from hse_doc_studio.use_cases.signing_route.facts import LoadedFacts, RouteFactsLoader
 from hse_doc_studio.use_cases.signing_route.migration import RouteMigration
 from hse_doc_studio.use_cases.signing_route.point import RoutePoint, RoutePointLoader
+from hse_doc_studio.use_cases.signing_route.preset import route_preset
 from hse_doc_studio.use_cases.signing_route.views import (
     People,
     PersonaCandidates,
@@ -233,7 +234,9 @@ class RouteScenario:
         actor_id = actor_uuid(actor) if actor.kind is ActorKind.user else None
         manages = await self._manages(point.project_id)
         show = manages or any(p.user_id == actor_id for p in route.participants)
-        details = build_details(point, route, loaded.facts, evaluation, people, events, show_comments=show)
+        details = build_details(
+            point, route, loaded.facts, evaluation, people, events, show_comments=show, preset=route_preset(point)
+        )
         if not manages:
             return details
         return replace(details, candidates=await self._candidates(point, route), manages=True)

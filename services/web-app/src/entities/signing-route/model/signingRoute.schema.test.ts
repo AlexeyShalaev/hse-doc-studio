@@ -159,28 +159,26 @@ describe("схемы маршрута подписания: прежняя фо�
 });
 
 describe("схемы маршрута подписания: маршрут из шаблона (раздел 15.11)", () => {
-  it("LEGACY_R25: маршрут нынешнего сервера без `preset`, `added_by`, `preset_optional`", () => {
+  it("поля маршрута из шаблона обязательны: без `preset`, `added_by`, `preset_optional` отвергается", () => {
     const { preset: _preset, ...route } = makeSigningRoute();
-    const body = {
-      ...route,
-      docs: route.docs.map((doc) => ({
+    expect(SigningRouteSchema.safeParse(route).success).toBe(false);
+    const full = makeSigningRoute();
+    const withoutSlotFields = {
+      ...full,
+      docs: full.docs.map((doc) => ({
         ...doc,
         slots: doc.slots.map(
           ({ added_by: _added, preset_optional: _optional, ...slot }) => slot,
         ),
       })),
     };
-    const parsed = SigningRouteSchema.parse(body);
-    expect(parsed.preset).toBeNull();
-    expect(parsed.docs[0]?.slots[0]).toMatchObject({
-      added_by: null,
-      preset_optional: false,
-    });
+    expect(SigningRouteSchema.safeParse(withoutSlotFields).success).toBe(false);
   });
 
   it("пресет: незнакомое отличие и лишнее поле условия отвергаются", () => {
     const preset = {
       version: "2026.1.4",
+      base_version: "2026.1.4",
       steps: [["author"]],
       extra_slots: [
         {

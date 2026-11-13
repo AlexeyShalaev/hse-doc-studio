@@ -128,6 +128,52 @@ class RouteDocSlot(StrictModel):
     # Подпись необязательна на точке маршрута: автора можно пропустить (13.3).
     optional: bool
     status: RouteSlotStatusName
+    # Кто добавил слот сверх точки (15.11): `pack` шаблон, `author` автор; null у пары точки.
+    added_by: Literal["pack", "author"] | None
+    # Пресет точки отмечает подпись необязательной (15.11): галочка «по шаблону», если `optional` совпадает.
+    preset_optional: bool
+
+
+PresetPersonName = Literal["supervisor", "co_supervisor", "academic_supervisor"]
+PresetRoleName = Literal["university", "company"]
+PresetDiffName = Literal["order", "slots", "optional"]
+
+
+class RoutePresetCondition(StrictModel):
+    """Условие слота сверх точки (`when`, 15.3): человек проекта указан, а с `role` указан и с такой ролью."""
+
+    person: PresetPersonName
+    role: PresetRoleName | None
+
+
+class RoutePresetSlot(StrictModel):
+    doc_id: str
+    slot_id: str
+    when: RoutePresetCondition | None
+
+
+class RoutePresetSkipped(StrictModel):
+    """Слот сверх точки, который шаблон не добавил: условие на людях проекта не выполнено."""
+
+    doc_id: str
+    slot_id: str
+    when: RoutePresetCondition
+
+
+class RoutePreset(StrictModel):
+    """Пресет точки для проекта сейчас (15.11): шаги, слоты сверх точки, отметки и чем маршрут отличается."""
+
+    version: str
+    # Версия шаблона, по пресету которой собран состав маршрута (черновик, «Вернуть как в шаблоне»); null: не по
+    # пресету. Отличается от `version` после обновления шаблона: «В новой версии шаблона другой маршрут» (15.7).
+    base_version: str | None
+    # Шаги пресета персонами, внутри шага параллельно.
+    steps: list[list[str]]
+    extra_slots: list[RoutePresetSlot]
+    optional: list[RouteSlotRef]
+    skipped_by_condition: list[RoutePresetSkipped]
+    # Пусто: маршрут как в шаблоне.
+    differs: list[PresetDiffName]
 
 
 class RouteDocVersion(StrictModel):
@@ -190,6 +236,9 @@ class SigningRouteResponse(StrictModel):
     candidates: list[RoutePersonaCandidates]
     # Документы с `changed`, в порядке `docs`: есть что отправить новой версией (12.6).
     changed_docs: list[str]
+    # Пресет точки (15.11): только тому, кто управляет маршрутом, у маршрута, который можно править
+    # (`draft`, `paused`, `returned`, `cancelled`), и если шаблон пресет задаёт; иначе null.
+    preset: RoutePreset | None
 
 
 class SigningWaitingFor(StrictModel):

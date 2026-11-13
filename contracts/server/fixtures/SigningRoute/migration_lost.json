@@ -41,7 +41,9 @@
           "participant_id": "srp_author",
           "extra": false,
           "optional": false,
-          "status": "signed"
+          "status": "signed",
+          "added_by": null,
+          "preset_optional": false
         },
         {
           "slot_id": "supervisor",
@@ -52,7 +54,9 @@
           "participant_id": "srp_supervisor",
           "extra": false,
           "optional": false,
-          "status": "pending"
+          "status": "pending",
+          "added_by": null,
+          "preset_optional": false
         }
       ],
       "sent": null,
@@ -168,5 +172,30 @@
   ],
   "changed_docs": [
     "topic_application"
-  ]
+  ],
+  "preset": {
+    "version": "2026.1.4",
+    "base_version": null,
+    "steps": [
+      [
+        "author"
+      ],
+      [
+        "supervisor"
+      ]
+    ],
+    "extra_slots": [],
+    "optional": [],
+    "skipped_by_condition": [
+      {
+        "doc_id": "topic_application",
+        "slot_id": "academic_supervisor",
+        "when": {
+          "person": "supervisor",
+          "role": "company"
+        }
+      }
+    ],
+    "differs": []
+  }
 }
