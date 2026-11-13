@@ -37,9 +37,11 @@ A template version number is `YEAR.MINOR.PATCH`. The year is the intake whose re
 
 | Class | What changes | How it is offered |
 |---|---|---|
-| Fixes (patch) | Template bugs without new requirements: colours, typos, false check alarms | A card on the project overview |
+| Fixes (patch) | Template bugs without new requirements: colours, typos, false check alarms; signing presets and deadline hints (below) | A card on the project overview |
 | New features (minor) | New sections, documents, fields and submission profiles, renames that carry your data over | Only in project settings, "Template version" |
 | New edition (major) | Next academic year's regulations | Only in project settings, only when you decide |
+
+Besides fixes, the patch class covers signing presets and deadline hints: the order of signers, signature places and dates on the pages, signatures needed only under certain conditions (for example, when the supervisor is not from HSE), optional signatures, and a hint on when a checkpoint deadline usually falls. Template files and requirements do not change. Presets apply to new signing routes; signature places you set yourself and routes already sent are left as they are.
 
 A released version never changes: a project created on it is built and checked against the same requirements until you update it yourself.
 
