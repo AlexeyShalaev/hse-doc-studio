@@ -74,7 +74,7 @@ _PARAMS: dict[int, MailParams] = {
             "actor": "Анна Петрова",
             "project": "Курсовая работа по ГОСТ",
             "profile": "Заявка на тему КП (SmartLMS)",
-            "deadline": "15.11.2026 20:59 UTC",
+            "deadline": "15.11.2026, 23:59 (МСК)",
         },
     ),
     1205: MailParams(
@@ -92,7 +92,7 @@ _PARAMS: dict[int, MailParams] = {
             "actor": "Anna Petrova",
             "project": "Coursework draft",
             "profile": "Course project topic application (SmartLMS)",
-            "deadline": "2026-11-15 20:59 UTC",
+            "deadline": "15 Nov 2026, 23:59 (Moscow time)",
         },
     ),
     1203: MailParams(
@@ -485,10 +485,11 @@ def _leaky_requests() -> list[MailRequest]:
         "project": "Курсовая работа по ГОСТ",
         "role": "editor",
         "profile": "Заявка",
-        "deadline": "15.11.2026 20:59 UTC",
+        "deadline": "15.11.2026, 23:59 (МСК)",
         "changed": "«Заявление»",
         "name": "MacBook",
         "count": "2",
+        "signing": "ждём научного руководителя (Пётр Петров)",
     }
     requests: list[MailRequest] = []
     for template in MailTemplate:
