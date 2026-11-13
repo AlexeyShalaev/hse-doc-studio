@@ -541,6 +541,75 @@ describe("серверное демо: версия на подписи", () => 
     expect(unknown.status).toBe(400);
   });
 
+  it("места на строках шаблона: по якорям сборки, нет строки, якоря неизвестны", async () => {
+    activateServerScenario("student_signing_anchors");
+    // «Bertie» собран с якорями: черновик по пресету ставит места по строкам.
+    const created = await call(
+      "POST",
+      "/projects/p_01hxa1c4de/signing-routes",
+      {
+        profile_id: "topic-approval",
+      },
+    );
+    expect(created.status).toBe(201);
+    const state = SignaturesStateSchema.parse(
+      (await call("GET", "/projects/p_01hxa1c4de/signatures")).data,
+    );
+    expect(state.anchors.topic_application?.items.map((a) => a.id)).toEqual([
+      "supervisor",
+      "author",
+    ]);
+    const placed = state.placements.topic_application;
+    expect(placed?.supervisor).toMatchObject({
+      enabled: true,
+      origin: "pack",
+      source: "anchor",
+      anchor: { id: "supervisor", state: "found" },
+      x_mm: 112,
+      y_mm: 133.6,
+    });
+    expect(placed?.academic_supervisor).toMatchObject({
+      enabled: false,
+      anchor: { id: "academic_supervisor", state: "missing" },
+    });
+    expect(
+      state.runtime_slots.find((s) => s.id === "supervisor")?.default_placements
+        .topic_application,
+    ).toMatchObject({ source: "anchor", anchor: "supervisor", fallback: null });
+    const base =
+      "/projects/p_01hxa1c4de/signatures/placements/topic_application";
+    const missing = await call(
+      "POST",
+      `${base}/academic_supervisor/restore`,
+      {},
+    );
+    expect(missing.status).toBe(409);
+    expect(missing.data).toMatchObject({ code: "anchor_missing" });
+    // Сдвинутое место возвращается на строку.
+    await call("PATCH", `${base}/supervisor`, { x_mm: 130 });
+    const restored = PlacementSchema.parse(
+      (await call("POST", `${base}/supervisor/restore`, {})).data,
+    );
+    expect(restored).toMatchObject({ x_mm: 112, source: "anchor" });
+
+    // Якоря неизвестны: места пака на якоре нет, вернуть его нечем.
+    const other = SignaturesStateSchema.parse(
+      (await call("GET", "/projects/p_01hxa4n7pq/signatures")).data,
+    );
+    expect(other.anchors.topic_application).toBeNull();
+    expect(other.placements.topic_application?.supervisor).toMatchObject({
+      enabled: false,
+      anchor: { id: "supervisor", state: "unknown" },
+    });
+    const unknown = await call(
+      "POST",
+      "/projects/p_01hxa4n7pq/signatures/placements/topic_application/supervisor/restore",
+      {},
+    );
+    expect(unknown.status).toBe(409);
+    expect(unknown.data).toMatchObject({ code: "anchors_unknown" });
+  });
+
   it("«Вернуть как в шаблоне» у идущего маршрута: 409 invalid_transition", async () => {
     activateServerScenario("student_signing_optional");
     const own = await routeOf("p_01hxa1c4de");

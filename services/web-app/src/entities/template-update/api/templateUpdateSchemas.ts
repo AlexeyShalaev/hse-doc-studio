@@ -62,8 +62,15 @@ export const UpdateWarningSchema = z.object({
 
 // Места подписей из шаблона на новой версии (signing-route.md, 15.9). reason ∈ manual | route | signed.
 // Необязательно: сервер до R26 пункта не отдаёт.
+// `after_build`: место на строке шаблона встанет после сборки, якоря текущей сборки неизвестны (15.17.10).
 export const SignaturePresetsSchema = z.object({
-  updated: z.array(z.object({ doc_id: z.string(), slot_id: z.string() })),
+  updated: z.array(
+    z.object({
+      doc_id: z.string(),
+      slot_id: z.string(),
+      after_build: z.boolean().default(false),
+    }),
+  ),
   kept: z.array(
     z.object({ doc_id: z.string(), slot_id: z.string(), reason: z.string() }),
   ),
@@ -151,8 +158,8 @@ export const TemplateUpdatePlanContractSchema = z.strictObject({
         z.strictObject({
           doc_id: z.string(),
           slot_id: z.string(),
-          // Место на якоре встанет по строке шаблона после сборки (15.17.10, R32); строку плана рисует W17.
-          after_build: z.boolean().optional(),
+          // Место на якоре встанет по строке шаблона после сборки (15.17.10).
+          after_build: z.boolean(),
         }),
       ),
       kept: z.array(

@@ -469,9 +469,25 @@ export type PlacementResponse = {
   origin?: PlacementOrigin;
   // В шаблоне есть место этого слота для документа: можно «Вернуть место из шаблона».
   preset_available?: boolean;
+  // Форма места пака, по которому стоит место (signing-route.md, 15.17.14): на строке шаблона
+  // или в мм; null у ручного.
+  source?: PlaceSource | null;
+  // Якорь места пака у пары и есть ли его строка в собранном документе; null у места пака в мм.
+  anchor?: PlaceAnchorResponse | null;
 };
 
 export type PlacementOrigin = "pack" | "seed" | "manual";
+
+export type PlaceSource = "anchor" | "mm";
+
+// `found` строка есть в собранном документе, `missing` якоря известны, а строки нет, `unknown`
+// якоря неизвестны (документ не собран, раннер прежней версии, свой загруженный PDF).
+export type PlaceAnchorState = "found" | "missing" | "unknown";
+
+export type PlaceAnchorResponse = {
+  id: string;
+  state: PlaceAnchorState;
+};
 
 // Место слота на документе из пака (signing-route.md, 15.3).
 export type PackPlaceResponse = {
@@ -490,6 +506,60 @@ export type PackDateMarkResponse = {
   height_mm: number;
   format: DateMarkFormat;
   align: DateMarkAlign;
+};
+
+// Записи пака по документам в рантайм-слоте (15.17.14): в мм (`source: mm`) или на строке шаблона.
+export type PackMmPlaceResponse = PackPlaceResponse & { source: "mm" };
+
+export type PackAnchorPlaceResponse = {
+  source: "anchor";
+  anchor: string;
+  align: DateMarkAlign;
+  dx_mm: number;
+  dy_mm: number;
+  // null: ширина линии, не меньше 10 мм.
+  width_mm: number | null;
+  // Запасное место в мм, пока якоря сборки неизвестны.
+  fallback: PackPlaceResponse | null;
+};
+
+export type PackPlaceEntryResponse =
+  PackMmPlaceResponse | PackAnchorPlaceResponse;
+
+export type PackMmDateMarkResponse = PackDateMarkResponse & { source: "mm" };
+
+export type PackAnchorDateMarkResponse = {
+  source: "anchor";
+  // «имя.часть»: `supervisor.day`.
+  anchor: string;
+  format: DateMarkFormat;
+  align: DateMarkAlign;
+  height_mm: number;
+  width_mm: number | null;
+  dx_mm: number;
+  // null: минус высота, рамка стоит на линии.
+  dy_mm: number | null;
+  fallback: Omit<PackDateMarkResponse, "format" | "align"> | null;
+};
+
+export type PackDateEntryResponse =
+  PackMmDateMarkResponse | PackAnchorDateMarkResponse;
+
+// Якоря источника подписи документа (15.17.4): мм от левого верхнего угла, `y_mm` базовая линия.
+export type BuildAnchorResponse = {
+  id: string;
+  kind: "sign" | "date";
+  page: number;
+  x_mm: number;
+  y_mm: number;
+  width_mm: number;
+};
+
+export type BuildAnchorsResponse = {
+  // Первые 16 знаков sha256 PDF, по которому сняты якоря.
+  build: string;
+  items: BuildAnchorResponse[];
+  problems: string[];
 };
 
 export type DateMarkFormat =
@@ -546,11 +616,11 @@ export type RuntimeSignatureSlotResponse = {
   // Точки, чей маршрут включил слот сверх точки: id документа → точки.
   extra_by?: Record<string, SignatureProfileRef[]>;
   default_placement: PackPlaceResponse;
-  // Место из пака по экземплярам документов (signing-route.md, 15.11); без записи общее
-  // `default_placement`. Брать через `packPlaceOf`.
-  default_placements?: Record<string, PackPlaceResponse>;
+  // Место из пака по экземплярам документов (signing-route.md, 15.11): запись в мм или на строке
+  // шаблона (15.17.14); без записи общее `default_placement`. Место в мм брать через `packPlaceOf`.
+  default_placements?: Record<string, PackPlaceEntryResponse>;
   // Метки даты из пака по экземплярам документов.
-  default_dates?: Record<string, PackDateMarkResponse[]>;
+  default_dates?: Record<string, PackDateEntryResponse[]>;
   owner?: string | null;
 };
 
@@ -601,6 +671,8 @@ export type SignaturesStateResponse = {
   optional?: Record<string, Record<string, string[]>>;
   // Пропущенные маршрутом пары: id документа → слот → пропуск.
   skipped?: Record<string, Record<string, SkippedSlotResponse>>;
+  // Якоря источника подписи по документам (15.17.14); null: неизвестны.
+  anchors?: Record<string, BuildAnchorsResponse | null>;
 };
 
 export type SkippedSlotResponse = {

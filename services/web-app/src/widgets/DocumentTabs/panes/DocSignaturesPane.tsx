@@ -310,8 +310,10 @@ export const DocSignaturesPane = ({
   const dateMarksEditable = dateControl.canEdit && hasBuild;
   // «Вернуть место из шаблона» (15.6): те же права, что у меток даты; на документе под маршрутом
   // место возвращает его сценарий (сброс ЭП над B только с подтверждением).
+  // Свой загруженный файл (15.17.11): строк шаблона у него нет, место на якоре ставит человек.
   const placeControl: PlaceRestoreControl = {
     canRestore: dateControl.canEdit,
+    ownPdf: signability !== "template",
     isRestoring: (slotId) => restorePlace.isRestoring(docId, slotId),
     onRestore: (slotId) => {
       restorePlace.restore(docId, slotId);

@@ -97,6 +97,7 @@ export const CompilePane = ({ projectId, doc }: CompilePaneProps) => {
   const [recordPlacement, setRecordPlacement] =
     useState<CompilePlacement | null>(null);
   const [recordError, setRecordError] = useState<CompileError | null>(null);
+  const [recordMoved, setRecordMoved] = useState(0);
   const logRef = useRef<HTMLDivElement>(null);
 
   const liveOwnsPane = slot !== undefined;
@@ -109,6 +110,10 @@ export const CompilePane = ({ projectId, doc }: CompilePaneProps) => {
   const wait = liveOwnsPane ? slot.wait : recordWait;
   // Серверный режим: на чьём раннере идёт сборка. Соавтор видит «раннер владельца».
   const placement = liveOwnsPane ? slot.placement : recordPlacement;
+  // Места подписей из шаблона, которые сборка поставила по строкам новой вёрстки (15.17.9).
+  const placesMoved = liveOwnsPane
+    ? (doneInfo?.signature_places_moved ?? 0)
+    : recordMoved;
   const myRole = useProject(projectId).data?.my_role;
   const perspective =
     myRole === undefined || myRole === "owner" ? "me" : "owner";
@@ -159,6 +164,7 @@ export const CompilePane = ({ projectId, doc }: CompilePaneProps) => {
           setRecordWait(detail.wait ?? null);
           setRecordPlacement(detail.placement ?? null);
           setRecordError(detail.error ?? null);
+          setRecordMoved(detail.signature_places_moved);
           setDiskLines((prev) => {
             if (prev.length > 0) return prev; // disk log won
             const log = detail.log ?? "";
@@ -296,6 +302,11 @@ export const CompilePane = ({ projectId, doc }: CompilePaneProps) => {
                   {t("compile.donePages", { count: doneInfo.pages })}
                 </span>
               )}
+            </span>
+          )}
+          {isDone && placesMoved > 0 && (
+            <span className="chip subtle" data-testid="compile-places-moved">
+              {t("compile.placesMoved", { n: placesMoved })}
             </span>
           )}
           {isFailed && (

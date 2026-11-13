@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
 import {
+  packDatesOf,
+  packEntryOf,
+  packHasMmPlace,
+  packPlaceOf,
+} from "../lib/packPlaces";
+import {
   AttachDetachedResponseSchema,
   RuntimeSignatureSlotSchema,
   SignaturePlanSchema,
@@ -166,88 +172,186 @@ describe("необязательные подписи", () => {
   });
 });
 
-describe("места пака на якорях (R32)", () => {
+describe("места пака на якорях (15.17.14)", () => {
   const slot = {
     id: "supervisor",
     label: { ru: "Научный руководитель" },
     applies_to: ["topic_application", "project_proposal", "report"],
     default_placement: { page: 1, x_mm: 110, y_mm: 130, width_mm: 40 },
   };
-
-  it("запись на якоре читается её запасным местом, без него у документа общее место", () => {
-    const parsed = RuntimeSignatureSlotSchema.parse({
-      ...slot,
-      default_placements: {
-        topic_application: {
-          source: "anchor",
-          anchor: "supervisor",
-          align: "right",
-          dx_mm: 0,
-          dy_mm: -10,
-          width_mm: 28,
-          fallback: null,
-        },
-        project_proposal: {
-          source: "anchor",
-          anchor: "supervisor",
-          align: "left",
-          dx_mm: 0,
-          dy_mm: -14,
-          width_mm: 40,
-          fallback: { page: 1, x_mm: 80, y_mm: 139, width_mm: 40 },
-        },
-        report: { source: "mm", page: 1, x_mm: 110, y_mm: 130, width_mm: 40 },
+  const parsed = RuntimeSignatureSlotSchema.parse({
+    ...slot,
+    default_placements: {
+      topic_application: {
+        source: "anchor",
+        anchor: "supervisor",
+        align: "right",
+        dx_mm: 0,
+        dy_mm: -10,
+        width_mm: 28,
+        fallback: null,
       },
-      default_dates: {
-        project_proposal: [
-          {
-            source: "anchor",
-            anchor: "supervisor.day",
-            format: "day",
-            align: "center",
-            height_mm: 5,
-            width_mm: null,
-            dx_mm: 0,
-            dy_mm: null,
-            fallback: null,
-          },
-          {
-            source: "anchor",
-            anchor: "supervisor.month_word",
-            format: "month_word",
-            align: "center",
-            height_mm: 5,
-            width_mm: 24,
-            dx_mm: 0,
-            dy_mm: null,
-            fallback: {
-              page: 1,
-              x_mm: 90,
-              y_mm: 148,
-              width_mm: 24,
-              height_mm: 5,
-            },
-          },
-        ],
+      project_proposal: {
+        source: "anchor",
+        anchor: "supervisor",
+        align: "left",
+        dx_mm: 0,
+        dy_mm: -14,
+        width_mm: 40,
+        fallback: { page: 1, x_mm: 80, y_mm: 139, width_mm: 40 },
       },
-    });
-
-    expect(parsed.default_placements).toEqual({
-      project_proposal: { page: 1, x_mm: 80, y_mm: 139, width_mm: 40 },
-      report: { page: 1, x_mm: 110, y_mm: 130, width_mm: 40 },
-    });
-    expect(parsed.default_dates).toEqual({
+      report: { source: "mm", page: 1, x_mm: 110, y_mm: 130, width_mm: 40 },
+    },
+    default_dates: {
       project_proposal: [
         {
-          page: 1,
-          x_mm: 90,
-          y_mm: 148,
-          width_mm: 24,
+          source: "anchor",
+          anchor: "supervisor.day",
+          format: "day",
+          align: "center",
           height_mm: 5,
+          width_mm: null,
+          dx_mm: 0,
+          dy_mm: null,
+          fallback: null,
+        },
+        {
+          source: "anchor",
+          anchor: "supervisor.month_word",
           format: "month_word",
           align: "center",
+          height_mm: 5,
+          width_mm: 24,
+          dx_mm: 0,
+          dy_mm: null,
+          fallback: {
+            page: 1,
+            x_mm: 90,
+            y_mm: 148,
+            width_mm: 24,
+            height_mm: 5,
+          },
+        },
+        {
+          source: "mm",
+          page: 1,
+          x_mm: 150,
+          y_mm: 148,
+          width_mm: 6,
+          height_mm: 5,
+          format: "year_short",
+          align: "left",
         },
       ],
+    },
+  });
+
+  it("записи по документам остаются как есть, по дискриминатору source", () => {
+    expect(parsed.default_placements.topic_application).toMatchObject({
+      source: "anchor",
+      anchor: "supervisor",
+      fallback: null,
     });
+    expect(parsed.default_placements.report).toEqual({
+      source: "mm",
+      page: 1,
+      x_mm: 110,
+      y_mm: 130,
+      width_mm: 40,
+    });
+    expect(parsed.default_dates.project_proposal).toHaveLength(3);
+  });
+
+  it("запись без source и с чужим source отвергается", () => {
+    expect(
+      RuntimeSignatureSlotSchema.safeParse({
+        ...slot,
+        default_placements: {
+          report: { page: 1, x_mm: 110, y_mm: 130, width_mm: 40 },
+        },
+      }).success,
+    ).toBe(false);
+    expect(
+      RuntimeSignatureSlotSchema.safeParse({
+        ...slot,
+        default_placements: {
+          report: { source: "px", page: 1, x_mm: 1, y_mm: 1, width_mm: 40 },
+        },
+      }).success,
+    ).toBe(false);
+  });
+
+  it("место в мм: запись в мм, запасное место записи на якоре, иначе общее место слота", () => {
+    expect(packPlaceOf(parsed, "report")).toEqual({
+      page: 1,
+      x_mm: 110,
+      y_mm: 130,
+      width_mm: 40,
+    });
+    expect(packPlaceOf(parsed, "project_proposal")).toEqual({
+      page: 1,
+      x_mm: 80,
+      y_mm: 139,
+      width_mm: 40,
+    });
+    expect(packPlaceOf(parsed, "topic_application")).toEqual(
+      slot.default_placement,
+    );
+    expect(packHasMmPlace(parsed, "topic_application")).toBe(false);
+    expect(packHasMmPlace(parsed, "project_proposal")).toBe(true);
+    expect(packHasMmPlace(parsed, "report")).toBe(true);
+    expect(packEntryOf(parsed, "other")).toBeUndefined();
+  });
+
+  it("метки даты в мм: метка на якоре берёт запасное место, без него пропускается", () => {
+    expect(packDatesOf(parsed, "project_proposal")).toEqual([
+      {
+        page: 1,
+        x_mm: 90,
+        y_mm: 148,
+        width_mm: 24,
+        height_mm: 5,
+        format: "month_word",
+        align: "center",
+      },
+      {
+        page: 1,
+        x_mm: 150,
+        y_mm: 148,
+        width_mm: 6,
+        height_mm: 5,
+        format: "year_short",
+        align: "left",
+      },
+    ]);
+  });
+
+  it("состояние подписей несёт якоря сборки; без поля якорей нет", () => {
+    const state = SignaturesStateSchema.parse({
+      slots: {},
+      placements: {},
+      anchors: {
+        topic_application: {
+          build: "5f0c2b8e1d7a4c3b",
+          items: [
+            {
+              id: "supervisor",
+              kind: "sign",
+              page: 1,
+              x_mm: 169.5,
+              y_mm: 186.8,
+              width_mm: 25.5,
+            },
+          ],
+          problems: [],
+        },
+        report: null,
+      },
+    });
+    expect(state.anchors.topic_application?.items[0]?.id).toBe("supervisor");
+    expect(state.anchors.report).toBeNull();
+    expect(
+      SignaturesStateSchema.parse({ slots: {}, placements: {} }).anchors,
+    ).toEqual({});
   });
 });
