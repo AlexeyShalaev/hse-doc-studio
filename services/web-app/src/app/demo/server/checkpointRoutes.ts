@@ -280,6 +280,15 @@ export const createCheckpointDemo = (
       return { ...mark, id };
     });
   };
+  /** Размещение без учёта порядка ключей: правка без изменений не пишется (14.6). */
+  const canonical = (value: Placement): string =>
+    JSON.stringify(value, (_key, item: unknown) =>
+      item !== null && typeof item === "object" && !Array.isArray(item)
+        ? Object.fromEntries(
+            Object.entries(item).sort(([a], [b]) => (a < b ? -1 : 1)),
+          )
+        : item,
+    );
   const badMark = (mark: DateMarkInput): boolean =>
     mark.page > DOC_PAGES ||
     mark.x_mm < 0 ||
@@ -403,14 +412,6 @@ export const createCheckpointDemo = (
             "date_from_route",
             "The date of a route slot comes from its approval",
           );
-        const resets = routes.signedOver(projectId, docId);
-        if (resets.length > 0 && !body.confirm_reset)
-          return demoError(
-            409,
-            "resets_signatures",
-            "Saving resets signatures over the frozen PDF",
-            { resets },
-          );
         const next: Placement = {
           ...current,
           dates: nextIds(body.dates),
@@ -419,10 +420,28 @@ export const createCheckpointDemo = (
               ? current.manual
               : (body.signed_at?.date ?? null),
         };
+        // Без изменений сервер ничего не пишет: ни сброса подписей, ни события.
+        if (canonical(next) === canonical(current))
+          return demoJson(placementOut(projectId, docId, slotId, current));
+        const resets = routes.signedOver(projectId, docId);
+        if (resets.length > 0 && !body.confirm_reset)
+          return demoError(
+            409,
+            "resets_signatures",
+            "Saving resets signatures over the frozen PDF",
+            { resets },
+          );
         placementsOf(projectId)[docId] = {
           ...placementsOf(projectId)[docId],
           [slotId]: next,
         };
+        // Документ под маршрутом: правка идёт сценарием маршрута, в истории «изменил метки даты»
+        // перед перефиксацией и завершением.
+        routes.marksEdited(
+          projectId,
+          docId,
+          getWorld().bootstrap.user?.name ?? null,
+        );
         if (resets.length > 0) routes.refreeze(projectId, docId);
         return demoJson(placementOut(projectId, docId, slotId, next));
       }),

@@ -58,7 +58,10 @@ export const ResetSignaturesDialog = ({
         style={{ margin: 0, fontSize: "0.8125rem", lineHeight: 1.5 }}
         data-testid="dates-reset-text"
       >
-        {t("dates.confirm.text", { names: names.join(", ") })}
+        {t("dates.confirm.text", {
+          // Имя с инициалами кончается точкой («Петров П. П.»): за ним в тексте своя точка.
+          names: names.join(", ").replace(/\.$/, ""),
+        })}
       </p>
     </Modal>
   );

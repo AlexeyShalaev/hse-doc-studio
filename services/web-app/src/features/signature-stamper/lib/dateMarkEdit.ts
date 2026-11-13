@@ -62,8 +62,9 @@ export const newDateMark = (
   return {
     id: null,
     page,
-    x_mm: Math.round(below.x_mm * 10) / 10,
-    // Лист A4 по высоте 297 мм: рамка не уходит за нижний край.
+    // Лист A4 210 × 297 мм: рамка не уходит за правый и нижний край. Подпись у правого края
+    // иначе дала бы метку за краем листа, и сервер отказал бы `bad_date_mark`.
+    x_mm: Math.round(Math.min(below.x_mm, 210 - NEW_WIDTH_MM - 5) * 10) / 10,
     y_mm: Math.round(Math.min(below.y_mm, 297 - NEW_HEIGHT_MM - 5) * 10) / 10,
     width_mm: NEW_WIDTH_MM,
     height_mm: NEW_HEIGHT_MM,

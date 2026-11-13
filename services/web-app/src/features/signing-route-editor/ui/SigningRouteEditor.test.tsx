@@ -1,5 +1,6 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
+  cleanup,
   fireEvent,
   render,
   screen,
@@ -527,6 +528,73 @@ describe("Отправка на подписание: черновик точк�
       "academic_supervisor",
       { profile_id: PROFILE, optional: true },
     );
+  });
+
+  it("метка даты у подписанта ЭП: подсказка о лишнем действии только при двух действиях", async () => {
+    const dated = () => {
+      const base = signatures();
+      return {
+        ...base,
+        placements: {
+          [DOC]: {
+            ...base.placements[DOC],
+            supervisor: {
+              ...placement(true),
+              dates: [
+                {
+                  id: "d1",
+                  page: 1,
+                  x_mm: 100,
+                  y_mm: 230,
+                  width_mm: 28,
+                  height_mm: 6,
+                  format: "date_numeric" as const,
+                  align: "center" as const,
+                  text: null,
+                },
+              ],
+            },
+          },
+        },
+      };
+    };
+    vi.spyOn(signatureApi, "getState").mockImplementation(() =>
+      Promise.resolve(dated()),
+    );
+    // Число действий даёт расчёт маршрута (`remaining_actions`): 2, пока после научрука видимый
+    // слой меняет кто-то ещё, 1, если он последний и совмещает «Согласовать и подписать».
+    let actions = 2;
+    const original = signingRouteApi.preview.bind(signingRouteApi);
+    vi.spyOn(signingRouteApi, "preview").mockImplementation(async (...args) => {
+      const shown = await original(...args);
+      return {
+        ...shown,
+        participants: shown.participants.map((p) =>
+          p.persona === "supervisor"
+            ? { ...p, method: "detached" as const, actions }
+            : p,
+        ),
+      };
+    });
+    mount();
+    // Предпросмотр пришёл: его число действий решает, есть ли подсказка.
+    expect(
+      await screen.findByText("Всё готово к отправке."),
+    ).toBeInTheDocument();
+    expect(screen.getByTestId("slot-date-esign-supervisor")).toHaveTextContent(
+      "Дата подписи добавляет действие подписанту ЭП: согласование до фиксации",
+    );
+    cleanup();
+
+    actions = 1;
+    mount();
+    expect(
+      await screen.findByText("Всё готово к отправке."),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText("Дата появится, когда Петров П. П. подпишет"),
+    ).toBeInTheDocument();
+    expect(screen.queryByTestId("slot-date-esign-supervisor")).toBeNull();
   });
 
   it("согласующий подбирается по персоне из ожидающих приглашений", async () => {

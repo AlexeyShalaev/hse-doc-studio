@@ -13,7 +13,15 @@ from datetime import UTC, datetime
 from hse_doc_studio.core.enums import SignedAtSource, SignMode
 from hse_doc_studio.core.signing_route.effects import Freeze, RecordSignedAt
 from hse_doc_studio.core.signing_route.engine import approval_token
-from hse_doc_studio.core.signing_route.entities import DocSlot, NextAction, ParticipantState, RoutePhase, RouteStatus
+from hse_doc_studio.core.signing_route.entities import (
+    DocSlot,
+    NextAction,
+    ParticipantState,
+    ResetSignature,
+    ResetsSignaturesError,
+    RoutePhase,
+    RouteStatus,
+)
 from hse_doc_studio.core.signing_route.transitions import approve, refresh_snapshot, send
 from hse_doc_studio.core.value_objects import SignedAt
 
@@ -240,3 +248,12 @@ def test__approve_transition__unchanged_by_dates() -> None:
 
     assert approved.participant(supervisor.id).approval is not None
     assert DocSlot(DOC, "supervisor") not in driver.world.signed_at
+
+
+def test_resets_signatures_message_has_one_dot_after_initials() -> None:
+    """Имя с инициалами кончается точкой: в тексте отказа нет «П. П.. Подтвердите»."""
+    error = ResetsSignaturesError(
+        (ResetSignature(DOC, "supervisor", "Петров П. П."), ResetSignature(DOC2, "supervisor", "Петров П. П."))
+    )
+    assert "Петров П. П. Подтвердите" in str(error)
+    assert ".." not in str(error)

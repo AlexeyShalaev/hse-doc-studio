@@ -113,7 +113,7 @@ describe("сохранение меток даты", () => {
     mount();
     await userEvent.click(screen.getByText("save"));
     expect(await screen.findByTestId("dates-reset-text")).toHaveTextContent(
-      "Подписи будут сброшены: Петров П. П., Сидоров С. С.. Документ зафиксируют заново, и они подпишут итоговый PDF ещё раз. Сохранить?",
+      "Подписи будут сброшены: Петров П. П., Сидоров С. С. Документ зафиксируют заново, и они подпишут итоговый PDF ещё раз. Сохранить?",
     );
     expect(put).toHaveBeenLastCalledWith("p1", DOC, "supervisor", {
       dates: [MARK],

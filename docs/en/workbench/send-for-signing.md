@@ -76,6 +76,7 @@ Document tabs and a PDF page with signature frames, just like on a document's �
 
 - A signature marked “not placed” goes on the open page with “To page N”. A signature on another page can be shown with “Go” or moved to the open page with “Here”.
 - A signature the checkpoint does not require (for example, the academic supervisor on an application) is added with “Add signature: …” and removed with the cross “Remove signature from route”.
+- “Add date” on a signature adds a date mark: the day the person approves is printed in the right spot of the page ([Signing date](#dates)).
 - A signer may change the method on their step, but an image and an electronic signature with a plate are offered only if their signature is placed on the page. Without a place they are left with “E-signature in PDF” without a mark. If they switch from an image to an e-signature and the place is narrow, the Studio widens it to 70 mm leftwards from its right edge so the e-signature plate fits.
 
 <figure class="hds-fig hds-wide">
@@ -134,6 +135,8 @@ Under the sending form the Studio says when the final PDF is frozen: “The docu
 
 !!! tip "Fewer actions"
     Image signatures before e-signatures mean fewer actions. If the people who sign with an electronic signature come after everyone who signs with an image, each of them approves and signs with one click.
+
+A date mark on an e-signature counts as a visible signature: such a signer approves before the final PDF is frozen, and if someone after them still adds a visible signature, they have 2 actions ([Signing date](#dates)).
 
 ## Follow the progress { #progress }
 
@@ -308,6 +311,55 @@ Studio asks you to confirm: "Skip ...?" The window lists the signatures that wil
 - There is no automatic skipping: not by deadline, not by any other condition. Only the author's action.
 - You cannot skip when the route is not running (stopped, returned, completed, cancelled) or when the person has no remaining signatures.
 - You cannot skip a step that is not in the route yet: to add the person to the route later, send again.
+
+## Signing date { #dates }
+
+Templates often have a date line next to a signature, for example “« ___ » ________ 20__”. The Studio can fill in the day the person signed. A signature has date marks for that: frames on the page where the date is printed.
+
+**Where to add them.** Date marks go where the signature is set up: on a document's “Signatures” tab for each signature, and in the route editor under “Where the signatures go”. Click “Add date”: a dashed “Date: …” frame appears under the signature frame on the open page. Drag it into place and pull its corner to size it. The frame can sit on any page of the document, not only next to the signature: “Here” moves it to the open page, “Go to” scrolls to it. “Remove date” deletes the mark. A signature can have up to 8 marks in a document.
+
+**Format.** Each mark has its own “Format”; the list shows today as an example next to each name:
+
+| Format | What it prints |
+|---|---|
+| Day | the day without a leading zero: 3, 13 |
+| Month in words | November |
+| Month as a number | two digits: 03, 11 |
+| Year | 2026 |
+| Two-digit year | 26 |
+| Date | DD.MM.YYYY |
+| Date in words | the day, the month in words and the year |
+
+The month follows the document's language: a Russian document gets «ноября». “Alignment” puts the text at the left, center or right of the frame. The font size follows the frame height. If the text does not fit even in a small font, the panel warns “The text does not fit the frame”. If the mark's page is not in the document (say, after a template update), the panel says “The document has no page N: the date will not reach the PDF”.
+
+**Example: «« 13 » ноября 2026 г.».** A Russian template already has the quotes, the line and “20” printed. Put three marks:
+
+1. “Day” between the quotes;
+2. “Month in words” on the line;
+3. “Two-digit year” right after “20”.
+
+The marks print with no frame and no background, over the template's line. You get «« 13 » ноября 2026 г.» with the day the person signed.
+
+**Where the date comes from.**
+
+- For a signature in the route it is the day the person approved the document. Until they approve, the marks are empty and the panel says “The date appears when … signs”, after the approval “The date comes from the approval in the signing route”. If the person approved before you added the marks, the date still appears: the Studio takes it from their approval. You cannot set the date by hand for such a signature.
+- For a signature outside a route (you uploaded the image yourself), set the day in the “Signing date” field under the marks. While it is empty the marks stay empty (“Without a date the marks stay empty”), and the document is submitted without a date.
+- A skipped signature gets no date.
+
+The day is counted in Moscow time: an approval at 00:30 Moscow time gives that day, not the day before.
+
+**Electronic signatures and the date.** The date mark is printed in the final PDF, and an electronic signature goes over the finished PDF. So the page shows the approval date, not the time of the electronic signature itself. The package guide (`HOW_TO_VERIFY.txt`, `КАК_ПРОВЕРИТЬ.txt` in a Russian project) has two lines for such a signature: “date on the page: …” and “signing time: …”.
+
+Because of that, a date mark can add a step for an e-signature signer. The final PDF is frozen once every visible signature and date is on it, and the date appears only after the approval. If someone after that signer still adds a visible signature, the signer approves first and signs the final PDF as a second action. In the route editor their signature shows the hint “A signing date adds a step for an e-signature signer: approval before freezing”, and the steps show “2 actions” for them ([How many actions each person has](#actions)). If they are the last to add a visible signature, they still approve and sign with one click.
+
+**Marks on a running or completed route.** You can add marks after sending too, for example if the supervisor has already signed the project proposal and the date line was forgotten. On a document held by a route (running or completed) the other signature settings are locked, but whoever manages the route (owner and editor) can edit the date marks. The route does not stop, and its history shows “changed the date marks”.
+
+- If there are no electronic signatures over the final PDF yet, nothing is reset: the date simply appears in the document, and the final PDF is frozen again if needed.
+- If electronic signatures are already over the final PDF, a new mark changes that PDF and those signatures have to be made again. The “Save the dates?” dialog names whose signatures are reset, for example “These signatures will be reset: Petrov P. P. The document will be frozen again and they will sign the final PDF once more. Save?”. “Cancel” changes nothing. After “Save” the document is frozen again, the owners of the reset signatures get the “Sign the final PDF” request, and a completed route runs again until they sign.
+
+A stopped, returned or cancelled route does not hold the marks: they are saved as usual, and the next sending takes them into account.
+
+Over MCP date marks are read-only ([MCP](mcp.md)).
 
 ## Routes sent earlier { #migration }
 

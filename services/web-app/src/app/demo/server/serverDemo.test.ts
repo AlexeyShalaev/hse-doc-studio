@@ -310,6 +310,8 @@ describe("серверное демо: версия на подписи", () => 
     activateServerScenario("student_signing_dates");
     const own = await routeOf("p_01hxa1c4de");
     expect(own.status).toBe("completed");
+    // Метки научрука автор поставил на идущем маршруте: «изменил метки даты» в истории.
+    expect(own.events.map((e) => e.kind)).toContain("marks_edited");
     const state = SignaturesStateSchema.parse(
       (await call("GET", "/projects/p_01hxa1c4de/signatures")).data,
     );
@@ -363,10 +365,22 @@ describe("серверное демо: версия на подписи", () => 
       confirm_reset: true,
     });
     expect(PlacementSchema.parse(confirmed.data).dates[0]?.x_mm).toBe(112);
-    // Подпись сброшена: маршрут снова идёт, научрук подписывает новый B.
+    // Подпись сброшена: маршрут снова идёт, научрук подписывает новый B. Событие правки идёт
+    // перед перефиксацией.
     const after = await routeOf("p_01hxa1c4de");
     expect(after.status).toBe("active");
     expect(after.phase).toBe("signing");
+    const kinds = after.events.map((e) => e.kind);
+    const edited = kinds.lastIndexOf("marks_edited");
+    expect(edited).toBeGreaterThan(kinds.lastIndexOf("completed"));
+    expect(kinds.lastIndexOf("frozen")).toBeGreaterThan(edited);
+    expect(after.events[edited]?.who).toBe("Анна Петрова");
+    // Те же метки ещё раз: без изменений ни сброса, ни события.
+    const same = await call("PUT", path, { dates: moved });
+    expect(same.status).toBe(200);
+    expect((await routeOf("p_01hxa1c4de")).events).toHaveLength(
+      after.events.length,
+    );
 
     // Проект без маршрута: ручная дата и пустая метка.
     const free = SignaturesStateSchema.parse(
