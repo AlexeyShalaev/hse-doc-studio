@@ -6,6 +6,14 @@ Generated from `release-notes.json` via `make changelog` — do not edit by hand
 Release notes are hand-written and bilingual (RU/EN); the app shows them in the
 selected interface language.
 
+## [0.25.0](https://github.com/AlexeyShalaev/hse-doc-studio/compare/v0.24.0...v0.25.0) - 2026-11-13
+
+- Signing date. A signature slot can now have date marks: “Add date” on the Signatures tab or in the “Where signatures go” block of the route editor. A mark can sit on any page, apart from the signature. Formats: day, month as a word, month as a number, year, two-digit year, and the full date in numbers or words.
+- The date in a mark is the moment the signer approved on the route, in Moscow time, for both an image and an e-signature. If the person approved before the marks were added, the date is taken from that approval automatically. Outside a route the author sets the day in the “Signing date” field. A skipped signer gets no date. On the signing page the signer's own frames are labelled “Approval date”.
+- Date marks can be added on a running or finished route without stopping it. If an e-signature already stands over the document, the Studio first warns whose signatures will be reset. After you confirm, the document is frozen again and those people get a new request to sign the final PDF. HOW_TO_VERIFY.txt gains the lines “date on the page” and “signing time”.
+- Fixed: the date inside a signature frame used UTC, so a night-time approval in Moscow printed the previous day. A double full stop after initials in the signature reset warning. A new mark near the right edge of the sheet no longer goes past the page edge.
+- Building a document with date marks needs runner 0.25.0 or newer. Update runners in the admin panel, Runners section.
+
 ## [0.24.0](https://github.com/AlexeyShalaev/hse-doc-studio/compare/v0.23.0...v0.24.0) - 2026-11-13
 
 - Optional signatures and skipping a signer. For each signature slot on a checkpoint the author can tick “Signature is optional”, even on a route that is already running. When it is the turn of a signer whose signatures are all optional, the author presses “Skip” and the route goes on without a restart and without losing approvals.
