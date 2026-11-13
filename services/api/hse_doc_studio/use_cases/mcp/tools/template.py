@@ -18,6 +18,7 @@ from hse_doc_studio.core.i18n import current_interface_language, localized_error
 from hse_doc_studio.core.mcp.protocols import IMcpChangeAudit
 from hse_doc_studio.core.template_update.entities import FileOp, TemplateUpdateRecord
 from hse_doc_studio.core.template_update.errors import TemplateUpdateError
+from hse_doc_studio.core.template_update.signature_presets import PresetPlace, SignaturePresetsPlan
 from hse_doc_studio.core.vcs.errors import VcsError
 from hse_doc_studio.use_cases.mcp.tools._base import ArgumentError, McpTool, json_result, project_schema, text_arg
 from hse_doc_studio.use_cases.template_update.apply_template_update import (
@@ -90,6 +91,18 @@ def _op_view(op: FileOp) -> dict[str, object]:
     return view
 
 
+def _place_view(place: PresetPlace) -> dict[str, str]:
+    return {"doc_id": place.doc_id, "slot_id": place.slot_id}
+
+
+def _presets_view(presets: SignaturePresetsPlan) -> dict[str, object]:
+    """Пункт плана `signature_presets` (signing-route.md, 15.9), как в API."""
+    return {
+        "updated": [_place_view(p) for p in presets.updated],
+        "kept": [{"doc_id": k.doc_id, "slot_id": k.slot_id, "reason": k.reason.value} for k in presets.kept],
+    }
+
+
 def _refusal(exc: Exception) -> ToolResult:
     """Отказ сценария обновления: текст уже локализован (план устарел, версия недоступна, идёт другое)."""
     return ToolResult.error(str(exc) or localized_error("Обновление шаблона не выполнено.", "Template update failed."))
@@ -151,7 +164,8 @@ class PlanTemplateUpdateTool(McpTool):
         name="plan_template_update",
         description=(
             "Предпросмотр обновления шаблона до версии to_version: что станет с каждым файлом (update, add, delete, "
-            "merge, conflict) и отпечаток плана для apply_template_update. Файлы проекта не меняются. Например "
+            "merge, conflict), какие места подписей из шаблона перейдут на новую версию (signature_presets) и "
+            "отпечаток плана для apply_template_update. Файлы проекта не меняются. Например "
             'to_version: "2026.1.2".'
         ),
         parameters=project_schema(
@@ -180,11 +194,18 @@ class PlanTemplateUpdateTool(McpTool):
                 "counts": {action.value: count for action, count in plan.counts.items()},
                 "files": [_op_view(op) for op in plan.ops],
                 "warnings": [{"code": w.code, "doc_ids": list(w.doc_ids)} for w in plan.warnings],
+                "signature_presets": _presets_view(plan.signature_presets),
                 "hint": localized_error(
                     "Конфликт без решения в resolutions остаётся как есть (mine). theirs берёт файл шаблона, "
-                    "markers пишет слияние с маркерами конфликта.",
+                    "markers пишет слияние с маркерами конфликта. signature_presets.updated: места подписей, "
+                    "которые встанут как в новой версии шаблона; kept не обновятся: manual изменены автором, "
+                    "route документ на подписании, signed над зафиксированным PDF есть ЭП. Пустой files при "
+                    "непустом updated значит, что файлы не меняются, а места обновятся.",
                     "A conflict without a decision in resolutions stays as is (mine). theirs takes the template "
-                    "file, markers writes the merge with conflict markers.",
+                    "file, markers writes the merge with conflict markers. signature_presets.updated: signature "
+                    "places that will move to the new template version; kept will not: manual changed by the "
+                    "author, route the document is on a signing route, signed the frozen PDF has an e-signature. "
+                    "Empty files with a non-empty updated means no files change but the places will.",
                 ),
             }
         )
@@ -239,6 +260,7 @@ class ApplyTemplateUpdateTool(McpTool):
                 "written": len(result.written),
                 "deleted": len(result.deleted),
                 "markers": len(result.markers),
+                "signature_places": len(result.signature_places),
             },
         )
         return json_result(
@@ -247,6 +269,7 @@ class ApplyTemplateUpdateTool(McpTool):
                 "written": result.written,
                 "deleted": result.deleted,
                 "markers": result.markers,
+                "signature_places": [_place_view(p) for p in result.signature_places],
                 "hint": localized_error(
                     "Готово. В файлах из markers остались маркеры конфликта, их нужно разрешить вручную. Отменить "
                     "обновление можно в настройках проекта или откатом к снимку истории.",

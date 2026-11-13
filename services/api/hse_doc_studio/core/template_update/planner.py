@@ -109,12 +109,20 @@ def _plan_both_changed(
     return FileOp(path, action, binary, conflicts=conflicts, base=base, ours=ours, theirs=theirs, merged=merged)
 
 
-def plan_fingerprint(ops: Iterable[FileOp], *, to_version: str, base_digest: str, ignored: Iterable[str] = ()) -> str:
+def plan_fingerprint(
+    ops: Iterable[FileOp],
+    *,
+    to_version: str,
+    base_digest: str,
+    ignored: Iterable[str] = (),
+    extra: Iterable[str] = (),
+) -> str:
     """Отпечаток того, что видел пользователь: применение сверяет его с диском.
 
     Входят только пути операций (правка файла, который шаблон не меняет, план
-    не портит), содержимое «моего» по ним, целевая версия, содержимое базы и
-    снятые с отслеживания пути.
+    не портит), содержимое «моего» по ним, целевая версия, содержимое базы,
+    снятые с отслеживания пути и строки прочих пунктов плана (`extra`: места
+    подписей из шаблона).
     """
     digest = hashlib.sha256()
     digest.update(f"to={to_version}\nbase={base_digest}\n".encode())
@@ -123,4 +131,6 @@ def plan_fingerprint(ops: Iterable[FileOp], *, to_version: str, base_digest: str
     for op in sorted(ops, key=lambda o: o.path):
         ours = hashlib.sha256(op.ours).hexdigest() if op.ours is not None else "-"
         digest.update(f"{op.path}\0{op.action.value}\0{ours}\n".encode())
+    for line in extra:
+        digest.update(f"{line}\n".encode())
     return digest.hexdigest()

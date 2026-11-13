@@ -10,7 +10,13 @@ import structlog
 from hse_doc_studio.core.entities import Project
 from hse_doc_studio.core.enums import ConflictResolution, TemplateBaseProvenance
 from hse_doc_studio.core.i18n import localized_error
-from hse_doc_studio.core.repositories import IProjectIndexRepository, IProjectRepository, ITemplateRepository
+from hse_doc_studio.core.repositories import (
+    IProjectIndexRepository,
+    IProjectRepository,
+    ISignatureRepository,
+    ITemplateRepository,
+)
+from hse_doc_studio.core.signing_route.ports import ISigningRouteGate
 from hse_doc_studio.core.template_update.entities import (
     FileWriteKind,
     TemplateBase,
@@ -26,10 +32,13 @@ from hse_doc_studio.core.template_update.protocols import (
     ITemplateTrackingRepository,
     IUpdateJournalRepository,
 )
+from hse_doc_studio.core.template_update.signature_presets import SIGNATURES_PATH, PresetPlace
 from hse_doc_studio.core.vcs.protocols import IVcsFolderLocks, IVcsService
 from hse_doc_studio.use_cases.projects.get_project import GetProjectInput, GetProjectUC
+from hse_doc_studio.use_cases.signatures._studio_signer import project_lock
 from hse_doc_studio.use_cases.template_update.base_service import TemplateBaseService
 from hse_doc_studio.use_cases.template_update.planning import TemplateUpdatePlanner
+from hse_doc_studio.use_cases.template_update.signature_presets import held_docs
 from hse_doc_studio.use_cases.template_update.support import (
     ensure_history,
     ensure_no_active_journal,
@@ -55,6 +64,8 @@ class ApplyTemplateUpdateOutput:
     written: list[str]
     deleted: list[str]
     markers: list[str]
+    # Места подписей, переведённые на новую версию шаблона (signing-route.md, 15.9).
+    signature_places: list[PresetPlace] = field(default_factory=list)
 
 
 class ApplyTemplateUpdateUC:
@@ -77,6 +88,8 @@ class ApplyTemplateUpdateUC:
         journal_repo: IUpdateJournalRepository,
         vcs_service: IVcsService,
         vcs_locks: IVcsFolderLocks,
+        signature_repo: ISignatureRepository,
+        routes: ISigningRouteGate,
     ) -> None:
         self._project_repo = project_repo
         self._get_uc = GetProjectUC(project_repo, project_index_repo)
@@ -88,16 +101,21 @@ class ApplyTemplateUpdateUC:
         self._journals = journal_repo
         self._vcs = vcs_service
         self._locks = vcs_locks
+        self._signatures = signature_repo
+        self._routes = routes
         self._transaction = TemplateUpdateTransaction(journal_repo, base_store, vcs_service)
 
     async def execute(self, inp: ApplyTemplateUpdateInput) -> ApplyTemplateUpdateOutput:
         project = (await self._get_uc.execute(GetProjectInput(project_id=inp.project_id))).project
-        async with self._locks.for_folder(project.folder):
-            return await asyncio.to_thread(self._apply, project, inp)
+        async with self._locks.for_folder(project.folder), project_lock(project):
+            held = await held_docs(self._routes, project)
+            return await asyncio.to_thread(self._apply, project, inp, held)
 
-    def _apply(self, project: Project, inp: ApplyTemplateUpdateInput) -> ApplyTemplateUpdateOutput:
+    def _apply(
+        self, project: Project, inp: ApplyTemplateUpdateInput, held: frozenset[str]
+    ) -> ApplyTemplateUpdateOutput:
         ensure_no_active_journal(self._journals, project)
-        planned = self._planner.plan(project, inp.to_version)
+        planned = self._planner.plan(project, inp.to_version, held_docs=held)
         if planned.plan.fingerprint != inp.fingerprint:
             raise TemplateUpdatePlanOutdatedError(
                 localized_error(
@@ -106,6 +124,7 @@ class ApplyTemplateUpdateUC:
                 )
             )
         plan = planned.plan
+        presets = plan.signature_presets
         writes = [w for w in (resolve_op(op, inp.resolutions.get(op.path)) for op in plan.ops) if w is not None]
 
         ensure_history(self._vcs, project, planned.target)
@@ -140,8 +159,17 @@ class ApplyTemplateUpdateUC:
             project.updated_at = datetime.now(tz=timezone.utc)
             self._project_repo.save(project)
             self._tracking.save(project.folder, _with_record(planned.tracking, record))
+            if presets.updated:
+                self._signatures.save_state(project.folder, presets.apply(self._signatures.get_state(project.folder)))
 
-        commit = self._transaction.run(project, journal, writes, save_state=save_state, message=label.capitalize())
+        commit = self._transaction.run(
+            project,
+            journal,
+            writes,
+            save_state=save_state,
+            message=label.capitalize(),
+            state_paths=(SIGNATURES_PATH,) if presets.updated else (),
+        )
         logger.info(
             "template update applied",
             project_id=str(project.id),
@@ -149,12 +177,14 @@ class ApplyTemplateUpdateUC:
             to_version=plan.to_version,
             files=len(writes),
             markers=len(markers),
+            signature_places=len(presets.updated),
         )
         return ApplyTemplateUpdateOutput(
             record=replace(record, commit=commit),
             written=sorted(w.path for w in writes if w.kind == FileWriteKind.write),
             deleted=sorted(w.path for w in writes if w.kind == FileWriteKind.delete),
             markers=markers,
+            signature_places=list(presets.updated),
         )
 
 

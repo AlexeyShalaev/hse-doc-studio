@@ -139,6 +139,35 @@ describe("TemplateUpdateDialog (list rendering)", () => {
     ).toBeInTheDocument();
   });
 
+  it("an empty file plan with template signature places is not «nothing to update»", () => {
+    plan = {
+      ...makePlan(),
+      counts: {},
+      files: [],
+      warnings: [],
+      signature_presets: {
+        updated: [
+          { doc_id: "report", slot_id: "supervisor" },
+          { doc_id: "report", slot_id: "author" },
+        ],
+        kept: [{ doc_id: "proposal", slot_id: "supervisor", reason: "route" }],
+      },
+    };
+    renderDialog();
+    expect(
+      screen.getByText(
+        "Файлы не меняются. Обновятся места подписей из шаблона: 2",
+      ),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/не меняет ни одного файла/)).toBeNull();
+  });
+
+  it("an empty file plan without signature places says the version still applies", () => {
+    plan = { ...makePlan(), counts: {}, files: [], warnings: [] };
+    renderDialog();
+    expect(screen.getByText(/не меняет ни одного файла/)).toBeInTheDocument();
+  });
+
   it("lists files with decisions first and a tag per action", () => {
     renderDialog();
     const rows = screen
