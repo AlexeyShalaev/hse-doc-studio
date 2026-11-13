@@ -6,9 +6,8 @@
 # проекта, строки консультанта и согласия академрука по условию) и два
 # необязательных поля, которые при пустом значении не меняют вывод
 # (form_year, city_en): исключение класса patch, docs/ru/reference/pack.md.
-# Пресеты маршрутов (signing_slots, placements) кладёт в эту же версию срез
-# R27 (docs/design/signing-route.md, 15.10 и 15.15), он же вносит её в
-# releases.yaml.
+# Пресетов маршрутов (signing_slots, placements) в этой версии нет: они
+# приходят в 2026.1.5 на якорях шаблона (docs/design/signing-route.md, 15.17).
 #
 # Источники требований (2026/27):
 #   * «Методические рекомендации по подготовке курсового проекта» ОП СПИ
@@ -286,7 +285,7 @@ meta_fields:
     type: person
     label:       { ru: Научный руководитель, en: Supervisor }
     required_at: create
-    help:        { ru: "Должность и степень печатаются в сводке заявки, заявлении и на титуле, например «доцент департамента программной инженерии, к.т.н.». Научный руководитель не из ВШЭ (из компании или другого вуза): отметьте у него «Не из ВШЭ». Тогда в заявлении появится строка согласия академического руководителя, и маршрут подписания позовёт его.", en: "Position and degree go to the proposal summary, the application and the title page, e.g. «Associate Professor, School of Software Engineering, PhD». A supervisor not from HSE (from a company or another university): mark them “Not HSE”. The application then prints the academic supervisor's consent line, and the signing route asks them to sign." }
+    help:        { ru: "Должность и степень печатаются в сводке заявки, заявлении и на титуле, например «доцент департамента программной инженерии, к.т.н.». Научный руководитель не из ВШЭ (из компании или другого вуза): отметьте у него «Не из ВШЭ». Тогда в заявлении появится строка согласия академического руководителя; его подпись добавьте в маршрут подписания.", en: "Position and degree go to the proposal summary, the application and the title page, e.g. «Associate Professor, School of Software Engineering, PhD». A supervisor not from HSE (from a company or another university): mark them “Not HSE”. The application then prints the academic supervisor's consent line; add their signature to the signing route." }
 
   co_supervisor:
     type: person
