@@ -119,6 +119,8 @@ export type SignatureSlotDefResponse = {
     y_mm: number;
     width_mm: number;
   };
+  // Team mode: слот размножается по авторам (рантайм-слоты "id--slug").
+  per_author?: boolean;
 };
 
 export type SubmissionProfileResponse = {

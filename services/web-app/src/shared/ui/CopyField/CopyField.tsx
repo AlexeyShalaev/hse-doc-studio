@@ -18,6 +18,8 @@ export type CopyFieldProps = {
    * spaces переносит команды только по пробелам, длинное слово прокручивается.
    */
   wrap?: "anywhere" | "spaces";
+  /** Строк в многострочном поле (по умолчанию 3). */
+  rows?: number;
   /** Called after the value reached the clipboard. */
   onCopied?: () => void;
   className?: string;
@@ -32,6 +34,7 @@ export const CopyField = ({
   label,
   multiline = false,
   wrap = "anywhere",
+  rows = 3,
   onCopied,
   className,
 }: CopyFieldProps) => {
@@ -106,7 +109,7 @@ export const CopyField = ({
               }
             : { textOverflow: "ellipsis" }),
         }}
-        {...(multiline ? { rows: 3 } : {})}
+        {...(multiline ? { rows } : {})}
       />
       <button
         type="button"
