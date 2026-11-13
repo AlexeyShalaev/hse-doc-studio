@@ -542,7 +542,7 @@ async def test__call_tool__list_templates__shows_whether_team_is_supported(studi
         result = await client.call_tool("list_templates", {})
 
     text = result.content[0].text  # type: ignore[union-attr]
-    assert "template_id=vkr version=2026.1 staffing=solo,team" in text
+    assert "template_id=vkr version=2026.1.1 staffing=solo,team" in text
 
 
 async def test__call_tool__set_project_people__team__new_author_comes_without_a_set(

@@ -1,0 +1,29 @@
+{% if project.lang == 'en' -%}
+Graduation thesis — working software solution (CP4 / pre-defence)
+
+Student: {{ author.name | default(project.authors[0].name) }}, group {{ author.group | default(project.authors[0].group) }}
+Topic: {{ author.topic | default(project.name, true) }}
+Year: {{ project.meta.year }}
+
+Repository / service: {{ answers.repo_url | default('(not provided — fill in the "Source code link" form)', true) }}
+{% if answers.branch -%}
+Branch / tag: {{ answers.branch }}
+{% endif -%}
+{% if answers.access -%}
+Access notes: {{ answers.access }}
+{% endif -%}
+{%- else -%}
+ВКР — работоспособное программное решение (КТ4 / предзащита)
+
+Студент: {{ author.name | default(project.authors[0].name) }}, группа {{ author.group | default(project.authors[0].group) }}
+Тема: {{ author.topic | default(project.name, true) }}
+Год: {{ project.meta.year }}
+
+Репозиторий / сервис: {{ answers.repo_url | default('(не указана — заполните форму «Ссылка на код»)', true) }}
+{% if answers.branch -%}
+Ветка / тег: {{ answers.branch }}
+{% endif -%}
+{% if answers.access -%}
+Доступ: {{ answers.access }}
+{% endif -%}
+{%- endif %}

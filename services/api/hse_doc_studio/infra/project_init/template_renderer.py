@@ -4,6 +4,7 @@ import html
 import re
 import shutil
 import zipfile
+from datetime import datetime
 from pathlib import Path
 from typing import Any
 
@@ -19,6 +20,7 @@ from hse_doc_studio.core.catalog import (
 from hse_doc_studio.core.doc_dirs import def_dirs, def_source_dirs
 from hse_doc_studio.core.entities import Document, Project
 from hse_doc_studio.core.repositories import ITemplateRepository
+from hse_doc_studio.core.signatures.dates import DISPLAY_ZONE
 from hse_doc_studio.core.team import (
     author_by_slug,
     doc_base_dir,
@@ -124,12 +126,25 @@ def _author_dict(author: Author | None) -> dict[str, Any]:
     }
 
 
-def build_context(
+def _build_info(now: datetime | None = None) -> dict[str, Any]:
+    """Дата сборки для шаблонов (`build.*`): по Москве, как даты подписей и версий.
+
+    Год сборки печатают формы, которые подписывают сейчас (заявление о теме, строка даты под подписью).
+    Не `\\the\\year` в TeX: раннер считает его в своём поясе (обычно UTC), и в первые часы 1 января по Москве
+    в форме оказался бы прошлый год. Пак, которому нужен год сборки, берёт `build.year`, а без него (старая
+    Студия) откатывается на `\\the\\year`.
+    """
+    moment = (now or datetime.now(DISPLAY_ZONE)).astimezone(DISPLAY_ZONE)
+    return {"year": moment.year, "date": moment.date().isoformat()}
+
+
+def build_context(  # noqa: PLR0913 — `now` только для тестов
     project: Project,
     pack_info: PackInfo,
     template_info: TemplateInfo,
     version: TemplateVersion,
     author: Author | None = None,
+    now: datetime | None = None,
 ) -> dict[str, Any]:
     """Build Jinja2 rendering context from domain objects.
 
@@ -190,6 +205,7 @@ def build_context(
             "id": template_info.id,
             "version": version.version,
         },
+        "build": _build_info(now),
     }
 
 

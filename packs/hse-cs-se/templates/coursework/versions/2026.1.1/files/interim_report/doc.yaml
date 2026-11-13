@@ -1,0 +1,27 @@
+# Манифест документа (bundle-раскладка v2): всё про документ — в этой папке.
+# id = имя папки; языковые редакции — файлы-соседи <stem>.<код>.<ext>,
+# файл без кода — единственная форма для всех языков. Пути source_file —
+# в проектном пространстве (без суффиксов). Файл doc.yaml в проект не копируется.
+#
+# «Промежуточный отчёт» — деливерабл КТ1 исследовательского курсового
+# (§2.3.2.4 Программы практики); НЕ финальный Отчёт (тот — id: report).
+name:
+  ru: Промежуточный отчёт
+  en: Interim report
+code:
+  ru: ПОТЧ
+  en: IREP
+source_file: interim_report/interim_report.tex
+output_file: interim_report/interim_report.pdf
+output_name:
+  ru: Промежуточный отчёт.pdf
+  en: Interim report.pdf
+required: true
+supported_langs:
+- ru
+- en
+scope: personal
+supported_kinds:
+- research
+# Визуальный блок навигации — дивайдер рисуется на смене группы.
+group: report

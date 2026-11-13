@@ -1,0 +1,306 @@
+# packs/hse-cs-se/templates/vkr/versions/2026.1/checks/hse-pi-content-2026.yaml
+# Содержательные проверки ОП «Программная инженерия» НИУ ВШЭ.
+# Используют python и reference_check engines — то, что не выражается
+# простым регулярным выражением: cross-file ссылки, подсчёты, эвристики.
+
+# label — короткая подпись группы в UI; ref — полная ссылка на документ.
+label:
+  ru: Содержательные требования ОП ПИ
+  en: SE content requirements
+ref:
+  ru: Методические рекомендации ОП «Программная инженерия» НИУ ВШЭ 2026/2027 — содержательные проверки
+  en: HSE FCS Software Engineering VKR content checks 2026/2027
+source:
+  ru: Методический офис ФКН НИУ ВШЭ, ОП «Программная инженерия»
+  url: https://cs.hse.ru/se/
+
+rules:
+  # ──────────────────────────────────────────────────────────────────────
+  # Ссылочный контроль: \ref ↔ \label
+  # ──────────────────────────────────────────────────────────────────────
+  - id: hse-pi-content-2026/dangling-refs
+    title:       { ru: Висячие \ref на несуществующие \label, en: Dangling \ref to missing \label }
+    description: { ru: "Каждая команда \\ref / \\eqref / \\autoref / \\pageref / \\cref должна указывать на существующую метку \\label. Битые ссылки в PDF превращаются в `??`.", en: "Every \\ref / \\eqref / \\autoref / \\pageref / \\cref command must point to an existing \\label. Broken references turn into `??` in the PDF." }
+    category:    references
+    applies_to:  [explanatory_note, interim_report, report, technical_specification, shared_technical_specification, test_program_and_methodology, shared_test_program_and_methodology, source_listing, programmer_manual, operator_manual]
+    default_severity: warn
+    engine:      reference_check
+    params:
+      mode: refs
+      file_glob: "**/*.tex"
+      message:   { ru: "Ссылка \\ref{{{key}}} не имеет соответствующего \\label{{{key}}} ни в одном .tex-файле проекта.", en: "Reference \\ref{{{key}}} has no matching \\label{{{key}}} in any .tex file of the project." }
+
+  # ──────────────────────────────────────────────────────────────────────
+  # Ссылочный контроль: \cite ↔ .bib
+  # ──────────────────────────────────────────────────────────────────────
+  - id: hse-pi-content-2026/dangling-cites
+    title:       { ru: Цитирования без записи в .bib, en: Citations without .bib entry }
+    description: { ru: "Каждое \\cite{key} должно соответствовать записи @kind{key, ...} в одном из .bib-файлов проекта.", en: "Every \\cite{key} must correspond to an @kind{key, ...} entry in one of the project's .bib files." }
+    category:    bibliography
+    applies_to:  [explanatory_note]
+    default_severity: warn
+    engine:      reference_check
+    params:
+      mode: cites
+      file_glob: "**/*.tex"
+      bib_glob:  "**/*.bib"
+      message:   { ru: "Цитирование \\cite{{{key}}} не определено ни в одном .bib-файле проекта.", en: "Citation \\cite{{{key}}} is not defined in any .bib file of the project." }
+
+  # ──────────────────────────────────────────────────────────────────────
+  # Заполненность аннотации: вычитываем \section*{Аннотация} … \clearpage
+  # ──────────────────────────────────────────────────────────────────────
+  - id: hse-pi-content-2026/annotation-not-empty
+    title:       { ru: Реферат заполнен, en: Abstract (Реферат) is non-empty }
+    description: { ru: "В разделе «Реферат» должно быть не менее 150 слов реального текста (без комментариев и заглушек). Шаблонная заглушка не засчитывается.", en: "The «Реферат» (Russian abstract) section must contain at least 150 words of actual text (excluding comments and stubs). A template stub does not count." }
+    category:    content
+    applies_to:  [thesis]
+    default_severity: warn
+    engine:      python
+    params:
+      min_words: 150
+      code: |
+        # Прочитать thesis/thesis.tex и вырезать содержимое блока "Реферат".
+        text = ctx.read('thesis/thesis.tex')
+        if not text:
+            ctx.ok()
+        else:
+            m = re.search(r'\\(?:section|chapter)\*?\{[^}]*(?:Реферат|Аннотаци|Abstract|Annotation)[^}]*\}(.*?)(?:\\section|\\chapter|\\clearpage|\\input\{[^}]*[Aa]bstract)', text, re.DOTALL)
+            if not m:
+                ctx.violation('Раздел «Реферат» не найден в thesis/thesis.tex.')
+            else:
+                body = m.group(1)
+                # Убрать комментарии (% …) и команды (\…{…}).
+                cleaned = re.sub(r'%.*', '', body)
+                cleaned = re.sub(r'\\[a-zA-Z]+\*?(\[[^\]]*\])?(\{[^}]*\})?', ' ', cleaned)
+                words = [w for w in re.findall(r'[А-Яа-яA-Za-z]+', cleaned) if len(w) >= 2]
+                threshold = int(ctx.params.get('min_words', 150))
+                if len(words) < threshold:
+                    ctx.violation(
+                        f'Реферат содержит {len(words)} слов (рекомендуется не менее {threshold}).',
+                        file='thesis/thesis.tex',
+                    )
+
+  # ──────────────────────────────────────────────────────────────────────
+  # TODO/FIXME маркеры в финальном тексте
+  # ──────────────────────────────────────────────────────────────────────
+  - id: hse-pi-content-2026/no-todo-markers
+    title:       { ru: Маркеры TODO/FIXME в тексте, en: TODO/FIXME markers in body text }
+    description: { ru: "Перед финальной сдачей в исходниках не должно остаться комментариев `% TODO`, `% FIXME` или `\\todo{...}`. Это признак незавершённого черновика.", en: "Before final submission, no `% TODO`, `% FIXME` or `\\todo{...}` comments should remain in the sources. They indicate an unfinished draft." }
+    category:    content
+    applies_to:  [explanatory_note, interim_report, report, technical_specification, shared_technical_specification, test_program_and_methodology, shared_test_program_and_methodology]
+    default_severity: info
+    engine:      python
+    params:
+      code: |
+        # Ищем три варианта: % TODO, % FIXME, \todo{...} (от пакета todonotes).
+        # Область — ТОЛЬКО файлы проверяемого документа (главный .tex и вся его
+        # \input-цепочка, включая common/): черновик остаётся черновиком в своём
+        # документе, а незаполненные слайды-заготовки — забота презентации, а не
+        # ТЗ. Прежний глоб по всему проекту и приписывал каждому документу чужие
+        # маркеры, и не укладывался в таймаут — обход дерева на каждый из трёх
+        # паттернов, и так на каждый из ~26 документов командного проекта.
+        patterns = [
+            (r'^\s*%\s*TODO\b',       'TODO-комментарий'),
+            (r'^\s*%\s*FIXME\b',      'FIXME-комментарий'),
+            (r'\\todo\s*(\[[^\]]*\])?\s*\{', '\\todo{} макрос'),
+        ]
+        for pattern, label in patterns:
+            for file, line, text in ctx.doc_find(pattern):
+                snippet = text.strip()[:80]
+                ctx.violation(
+                    f'{label}: {snippet}',
+                    file=file,
+                    line=line,
+                )
+
+  # ──────────────────────────────────────────────────────────────────────
+  # Длина введения: не должно быть слишком коротким (эвристика)
+  # ──────────────────────────────────────────────────────────────────────
+  - id: hse-pi-content-2026/introduction-min-length
+    title:       { ru: Объём раздела «Введение», en: Introduction length }
+    description: { ru: "Введение ВКР по методичке ОП ПИ должно содержать актуальность, цель, задачи, объект, предмет — то есть не быть короче ~500 слов.", en: "According to the SE programme guidelines, the thesis introduction must cover relevance, aim, objectives, object and subject of research — i.e. be no shorter than ~500 words." }
+    category:    content
+    applies_to:  [thesis]
+    default_severity: info
+    engine:      python
+    params:
+      min_words: 500
+      code: |
+        text = ctx.read('thesis/thesis.tex')
+        if not text:
+            ctx.ok()
+        else:
+            # Захватываем содержимое от \section{Введение} до следующего \section{}.
+            m = re.search(
+                r'\\(?:section|chapter)\*?\{[^}]*(?:[Вв]ведени|[Ii]ntroduction)[^}]*\}(.*?)\\(?:chapter|section)\{',
+                text,
+                re.DOTALL,
+            )
+            if not m:
+                ctx.ok()  # отсутствие введения ловится другим правилом
+            else:
+                body = m.group(1)
+                cleaned = re.sub(r'%.*', '', body)
+                cleaned = re.sub(r'\\[a-zA-Z]+\*?(\[[^\]]*\])?(\{[^}]*\})?', ' ', cleaned)
+                words = re.findall(r'[А-Яа-яA-Za-z]{2,}', cleaned)
+                threshold = int(ctx.params.get('min_words', 500))
+                if len(words) < threshold:
+                    ctx.violation(
+                        f'Раздел «Введение» содержит {len(words)} слов (рекомендуется не менее {threshold}).',
+                        file='thesis/thesis.tex',
+                    )
+
+  # ──────────────────────────────────────────────────────────────────────
+  # Балансировка fig/caption (более строгая, кроссфайловая)
+  # ──────────────────────────────────────────────────────────────────────
+  - id: hse-pi-content-2026/figures-have-captions
+    title:       { ru: Все figure-окружения подписаны, en: Every figure has a caption }
+    description: { ru: "Каждое \\begin{figure} в документе должно содержать \\caption{}. Эвристика — простой подсчёт по файлам документа.", en: "Every \\begin{figure} in the document must contain a \\caption{}. Heuristic — a simple count across the document's files." }
+    category:    references
+    applies_to:  [explanatory_note,test_program_and_methodology, shared_test_program_and_methodology]
+    default_severity: info
+    engine:      python
+    params:
+      code: |
+        # Считаем в пределах документа: рисунок из соседнего документа к
+        # балансу подписей этого отношения не имеет, а два обхода всего
+        # проекта на каждый документ упирались в таймаут правила.
+        figures = ctx.doc_count(r'\\begin\s*\{\s*figure\b')
+        captions = ctx.doc_count(r'\\caption\s*\{')
+        if figures > captions:
+            ctx.violation(
+                f'Найдено {figures} figure-окружений, но только {captions} \\caption — '
+                f'возможно, у {figures - captions} рисунков нет подписи.'
+            )
+
+  # ──────────────────────────────────────────────────────────────────────
+  # Двойные пробелы в тексте
+  # ──────────────────────────────────────────────────────────────────────
+  - id: hse-pi-content-2026/double-spaces
+    title:       { ru: Двойные пробелы в тексте, en: Double spaces in body text }
+    description: { ru: "Двойные и более пробелы внутри строки часто проскакивают при копи-пасте и создают рваную типографику. LaTeX схлопывает их, но это запутывает редактуру.", en: "Two or more spaces within a line often slip in during copy-paste and create ragged typography. LaTeX collapses them, but they confuse editing." }
+    category:    content
+    applies_to:  [explanatory_note, interim_report, report, technical_specification, shared_technical_specification, test_program_and_methodology, shared_test_program_and_methodology]
+    default_severity: info
+    engine:      python
+    params:
+      code: |
+        # (?!%) — выравнивание пробелами перед хвостовым %-комментарием
+        # («\usepackage{x}   % пояснение») типографикой не является.
+        for file, line, text in ctx.find(r'\S  +(?!%)\S', '**/*.tex'):
+            # Каталог pres/ пропускаем: слайды — не сдаваемый ЕСПД-текст,
+            # а их разметка часто выравнивается пробелами намеренно. В team-
+            # проектах путь идёт с префиксом автора («ivanov/presentation/…»).
+            if '/presentation/' in '/' + file.replace('\\', '/'):
+                continue
+            # Пропускаем строки с табуляцией / выравниванием таблиц (& и \\).
+            if '&' in text or text.lstrip().startswith('%'):
+                continue
+            ctx.violation(
+                'Двойные пробелы в строке.',
+                file=file,
+                line=line,
+            )
+
+  # ──────────────────────────────────────────────────────────────────────
+  # Латинские «o» / «a» в кириллическом тексте (омоглифы)
+  # ──────────────────────────────────────────────────────────────────────
+  - id: hse-pi-content-2026/cyrillic-homoglyphs
+    title:       { ru: Латиница в кириллических словах, en: Latin letters inside Cyrillic words }
+    description: { ru: "Поиск слов, где смешана латиница и кириллица — частый артефакт автодополнения и OCR (например, 'кoд' с латинской 'o').", en: "Finds words that mix Latin and Cyrillic letters — a common artifact of autocompletion and OCR (e.g. 'кoд' with a Latin 'o')." }
+    category:    content
+    applies_to:  [explanatory_note, interim_report, report, technical_specification, shared_technical_specification, test_program_and_methodology, shared_test_program_and_methodology]
+    default_severity: info
+    engine:      python
+    params:
+      code: |
+        # Слово, в котором есть и кириллица, и латиница — почти всегда омоглиф.
+        # Список технических брендов, легально смешивающих языки.
+        allowed = {'XeLaTeX', 'pdfLaTeX', 'LuaLaTeX', 'BibTeX', 'BibLaTeX'}
+        # Жадно вырезаем все LaTeX-команды и их аргументы целиком, чтобы не
+        # ругаться на \section, \cite и т.п. — там латиница попадает рядом с
+        # кириллическим текстом, но «омоглифом» это не является.
+        latex_strip_re = re.compile(r'\\[a-zA-Z@]+\*?(?:\[[^\]]*\])?(?:\{[^}]*\})?')
+        word_re = re.compile(r'[А-Яа-яA-Za-zЁё]{3,}')
+        cyrillic_re = re.compile(r'[А-Яа-яЁё]')
+        latin_re = re.compile(r'[A-Za-z]')
+        seen = set()
+        for file in ctx.files('**/*.tex'):
+            for lineno, line in enumerate(ctx.lines(file), start=1):
+                stripped = line.strip()
+                if not stripped or stripped.startswith('%'):
+                    continue
+                cleaned = latex_strip_re.sub(' ', line)
+                for word in word_re.findall(cleaned):
+                    if word in allowed:
+                        continue
+                    if cyrillic_re.search(word) and latin_re.search(word) and word not in seen:
+                        seen.add(word)
+                        ctx.violation(
+                            f'Слово «{word}» смешивает кириллицу и латиницу — вероятно, омоглиф.',
+                            file=file,
+                            line=lineno,
+                        )
+
+  # ──────────────────────────────────────────────────────────────────────
+  # Целостность метаданных: project.json должен содержать ключевые поля
+  # ──────────────────────────────────────────────────────────────────────
+  - id: hse-pi-content-2026/project-metadata-completeness
+    title:       { ru: Полнота метаданных проекта, en: Project metadata completeness }
+    description: { ru: "Перед финальной сдачей в .hse-studio/project.json должны быть заполнены: authors, supervisor, meta.group, meta.year.", en: "Before final submission, .hse-studio/project.json must have the following filled in: authors, supervisor, meta.group, meta.year." }
+    category:    metadata
+    applies_to:  [explanatory_note]
+    default_severity: warn
+    engine:      python
+    params:
+      code: |
+        text = ctx.read('.hse-studio/project.json')
+        if not text:
+            ctx.violation('Не найден файл .hse-studio/project.json.', file='.hse-studio/project.json')
+        else:
+            required_substrings = {
+                '"authors"':    'список авторов',
+                '"supervisor"': 'научный руководитель',
+                '"group"':      'учебная группа (meta.group)',
+                '"year"':       'учебный год (meta.year)',
+            }
+            for marker, human in required_substrings.items():
+                if marker not in text:
+                    ctx.violation(
+                        f'В project.json отсутствует поле {human}.',
+                        file='.hse-studio/project.json',
+                    )
+                elif re.search(marker + r'\s*:\s*(null|""|\[\s*\])', text):
+                    ctx.violation(
+                        f'Поле «{human}» в project.json не заполнено.',
+                        file='.hse-studio/project.json',
+                    )
+
+  # ──────────────────────────────────────────────────────────────────────
+  # Английский Abstract присутствует, если ВКР на русском
+  # ──────────────────────────────────────────────────────────────────────
+  - id: hse-pi-content-2026/english-abstract
+    title:       { ru: Английский Abstract, en: English Abstract present }
+    description: { ru: "Требование ФКН НИУ ВШЭ: ВКР должна содержать английский Abstract объёмом 150–250 слов в дополнение к русской аннотации.", en: "HSE FCS requirement: the thesis must contain an English Abstract of 150–250 words in addition to the Russian annotation." }
+    category:    content
+    applies_to:  [thesis]
+    default_severity: info
+    engine:      regex
+    params:
+      file_glob: "thesis/*.tex"
+      pattern:   '\\(?:section|chapter)\*?\{[^}]*[Aa]bstract'
+      negate:    false
+      message:   { ru: "В ВКР не найден раздел Abstract (английская аннотация).", en: "No Abstract section (English annotation) found in the thesis." }
+
+  # ──────────────────────────────────────────────────────────────────────
+  # Кастомное правило — slot для авторских проверок в .hse-studio
+  # ──────────────────────────────────────────────────────────────────────
+  - id: hse-pi-content-2026/custom-script
+    title:       { ru: Пользовательский Python-скрипт проверки, en: User-defined Python check }
+    description: { ru: "Если в проекте есть файл .hse-studio/custom-check.py — он будет выполнен с тем же ctx-API. Удобный slot для добавления проверки руководителем без правки пака.", en: "If the project contains a .hse-studio/custom-check.py file, it will be executed with the same ctx API. A convenient slot for a supervisor to add a check without editing the pack." }
+    category:    custom
+    applies_to:  "*"
+    default_severity: info
+    engine:      python
+    params:
+      script: .hse-studio/custom-check.py
