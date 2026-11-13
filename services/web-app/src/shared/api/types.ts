@@ -462,6 +462,32 @@ export type PlacementResponse = {
   dates?: DateMarkResponse[];
   // Момент подписи слота в документе: согласие по маршруту или день, указанный автором.
   signed_at?: SignedAtResponse | null;
+  // Откуда место (signing-route.md, 15.4): как в шаблоне, затравка из пака, изменено автором.
+  // Сервер отдаёт его всегда (zod требует), без поля пометки «из шаблона» нет.
+  origin?: PlacementOrigin;
+  // В шаблоне есть место этого слота для документа: можно «Вернуть место из шаблона».
+  preset_available?: boolean;
+};
+
+export type PlacementOrigin = "pack" | "seed" | "manual";
+
+// Место слота на документе из пака (signing-route.md, 15.3).
+export type PackPlaceResponse = {
+  page: number;
+  x_mm: number;
+  y_mm: number;
+  width_mm: number;
+};
+
+// Метка даты слота на документе из пака (`default_dates`, 14.10): рамка и формат.
+export type PackDateMarkResponse = {
+  page: number;
+  x_mm: number;
+  y_mm: number;
+  width_mm: number;
+  height_mm: number;
+  format: DateMarkFormat;
+  align: DateMarkAlign;
 };
 
 export type DateMarkFormat =
@@ -517,12 +543,12 @@ export type RuntimeSignatureSlotResponse = {
   required?: boolean;
   // Точки, чей маршрут включил слот сверх точки: id документа → точки.
   extra_by?: Record<string, SignatureProfileRef[]>;
-  default_placement: {
-    page: number;
-    x_mm: number;
-    y_mm: number;
-    width_mm: number;
-  };
+  default_placement: PackPlaceResponse;
+  // Место из пака по экземплярам документов (signing-route.md, 15.11); без записи общее
+  // `default_placement`. Брать через `packPlaceOf`.
+  default_placements?: Record<string, PackPlaceResponse>;
+  // Метки даты из пака по экземплярам документов.
+  default_dates?: Record<string, PackDateMarkResponse[]>;
   owner?: string | null;
 };
 

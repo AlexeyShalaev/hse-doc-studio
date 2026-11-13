@@ -29,6 +29,7 @@ import type {
 } from "@entities/signing-route";
 import type { SigningPageState } from "../model/useSigningPage";
 import { signatureDatesEditorEntries } from "./datesGallery";
+import { routePresetEntries } from "./presetsGallery";
 import { galleryPdfUrl } from "./galleryPdf";
 import { GalleryInlineView } from "./GalleryInlineView";
 import type { SigningViewProps } from "./SigningView";
@@ -956,6 +957,13 @@ export const getSigningPageGallery = (): GalleryGroup[] => [
         "Свои метки даты обведены пунктиром с подписью у первой рамки строки; чужие (дата автора) уже в PDF.",
       ),
     ],
+  },
+  {
+    id: "signing-route-presets",
+    title: "Маршрут из шаблона",
+    description:
+      "Раздел 15: шапка редактора маршрута («Маршрут из шаблона», «Изменён вами», «Вернуть как в шаблоне» с подтверждением) и пометки мест на вкладке «Подписи» («Место из шаблона», «Место изменено», «Вернуть место из шаблона»). Язык и тема переключаются сверху. Живьём то же в сценарии серверного демо «Подписание: маршрут из шаблона».",
+    entries: routePresetEntries(),
   },
   {
     id: "signing-page-states",

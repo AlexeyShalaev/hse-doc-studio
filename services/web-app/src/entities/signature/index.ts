@@ -10,6 +10,7 @@ export {
   useFreezePdf,
   useRecheckDetachedSignature,
   useReleaseWithheld,
+  useRestorePlacement,
   useSetSignerLevel,
   useSetDateMarks,
   useSetSlotOptional,
@@ -40,8 +41,12 @@ export {
   DetachedVerdictSchema,
   FreezePdfResponseSchema,
   FrozenPdfSchema,
+  PackDateMarkSchema,
+  PackPlaceSchema,
   PinnedPdfSchema,
+  PlacementOriginSchema,
   PlacementSchema,
+  RestorePlacementRequestSchema,
   RuntimeSignatureSlotSchema,
   SetSlotOptionalRequestSchema,
   SignaturePlanSchema,
@@ -58,6 +63,8 @@ export type {
   DateMarkAlign,
   DateMarkFormat,
   DateMarkInput,
+  PlacementOrigin,
+  RestorePlacementRequest,
   SetDateMarksRequest,
   SignedAt,
 } from "./api/signatureSchemas";
@@ -69,3 +76,5 @@ export {
   longestDateText,
   todayInDisplayZone,
 } from "./lib/dateMarks";
+export { packDatesOf, packPlaceOf, placeMarkOf } from "./lib/packPlaces";
+export type { PlaceMark } from "./lib/packPlaces";

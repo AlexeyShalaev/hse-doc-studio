@@ -57,10 +57,15 @@ export const signingIdentityDemo = createSigningIdentityDemo({
 export const signerProfileDemo = createSignerProfileDemo({
   getUser: () => world.bootstrap.user,
 });
+// Маршрут из шаблона (signing-route.md, 15): в сценарии `student_signing_presets` проекты на
+// версии шаблона 2026.1.4 с пресетом точки, в остальных на 2026.1.3 (только порядок шагов).
+const hasPreset = (): boolean =>
+  world.scenario.id === "student_signing_presets";
 // Точка сдачи с подписями и местами слотов: без неё не открыть карточку «Подписание».
 export const checkpointDemo = createCheckpointDemo(
   () => world,
   () => signingRouteDemo,
+  hasPreset,
 );
 export const signingRouteDemo = createSigningRouteDemo({
   getUser: () => world.bootstrap.user,
@@ -87,6 +92,22 @@ export const signingRouteDemo = createSigningRouteDemo({
   isPlaced: checkpointDemo.isPlaced,
   isOptional: checkpointDemo.isOptional,
   datesOf: checkpointDemo.datesOf,
+  presetFor: (_projectId, profile) =>
+    hasPreset() ? (profile.preset ?? null) : null,
+  // Научрук Петров из ВШЭ: согласие академрука шаблон не добавляет.
+  peopleOf: () => ({ supervisor: "university" }),
+  onPresetOptional: (projectId, profileId, pair, optional) => {
+    checkpointDemo.setOptional(
+      projectId,
+      profileId,
+      pair.doc_id,
+      pair.slot_id,
+      optional,
+    );
+  },
+  onPresetPlaces: (projectId, pairs) => {
+    checkpointDemo.placeFromPack(projectId, pairs);
+  },
   mailEnabled: () => world.bootstrap.auth.smtp_enabled,
   keysOf: (user) =>
     signingIdentityDemo.keysOf(user.id).map((key) => ({
@@ -124,7 +145,22 @@ const DAY_MS = 24 * 60 * 60 * 1000;
  * тремя метками, у академрука дата на второй странице; правка меток сбросит ЭП научрука (окно
  * подтверждения). В проекте без маршрута у подписей ручная дата и пустая метка. В чужом проекте
  * у места научрука метки даты: страница подписи рисует их рамки «Дата согласования».
+ *
+ * Маршрут из шаблона (раздел 15), `student_signing_presets`: проекты на версии шаблона с пресетом.
+ * В «Bertie» черновика точки нет: первый заход создаст его по пресету (места из шаблона включены,
+ * у научрука метки даты, академрук не добавлен по условию). В «Практике 2025» черновик уже изменён
+ * автором: академрук добавлен вами, место научрука сдвинуто.
  */
+const seedSigningPresets = (signer: { id: string; name: string }): void => {
+  const changed = "p_01hxa4n7pq";
+  const doc = "topic_application";
+  signingRouteDemo.seedDraft({
+    projectId: changed,
+    author: signer,
+    extra: [{ doc_id: doc, slot_id: "academic_supervisor" }],
+  });
+  checkpointDemo.move(changed, doc, "supervisor", { x_mm: 118, y_mm: 126 });
+};
 /** Метки даты сценария `student_signing_dates` (раздел 14.11). */
 const seedSigningDates = (signer: { id: string; name: string }): void => {
   const own = "p_01hxa1c4de";
@@ -286,6 +322,7 @@ const seedSigningTasks = (scenarioId: string): void => {
     );
   }
   if (scenarioId === "student_signing_dates") seedSigningDates(signer);
+  if (scenarioId === "student_signing_presets") seedSigningPresets(signer);
   if (versions || scenarioId === "student_signing_migration") {
     // Свой маршрут: место подписи научрука уже стоит, иначе новую версию не отправить.
     checkpointDemo.place("p_01hxa1c4de", "topic_application", "supervisor");

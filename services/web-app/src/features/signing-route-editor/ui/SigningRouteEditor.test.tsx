@@ -168,6 +168,8 @@ const slotDef = (id: string, ru: string) => ({
   required: false,
   extra_by: {},
   default_placement: { page: 1, x_mm: 100, y_mm: 200, width_mm: 40 },
+  default_placements: {},
+  default_dates: {},
   owner: null,
 });
 
@@ -180,6 +182,8 @@ const placement = (enabled: boolean) => ({
   sign_date: null,
   dates: [],
   signed_at: null,
+  origin: "manual" as const,
+  preset_available: true,
 });
 
 const slotInfo = (mode: "image" | "detached_text") => ({
@@ -614,6 +618,85 @@ describe("Отправка на подписание: черновик точк�
       expect(await step(3)).toHaveTextContent("c***@hse.ru");
     });
     expect(await step(3)).toHaveTextContent("приглашение отправлено");
+  });
+});
+
+// Маршрут из шаблона (docs/design/signing-route.md, 15.7): пометка в шапке, «Вернуть как в
+// шаблоне» с подтверждением, подсказка условия у слота, который шаблон не добавил, и пометка места.
+describe("Отправка на подписание: маршрут из шаблона", () => {
+  it("черновик как в шаблоне: пометка без кнопки, подсказка условия у академрука", async () => {
+    mount();
+    const bar = await screen.findByTestId("route-preset");
+    expect(bar).toHaveTextContent("Маршрут из шаблона");
+    expect(within(bar).queryByTestId("route-preset-reset")).toBeNull();
+    expect(
+      await screen.findByTestId("route-add-hint-academic_supervisor"),
+    ).toHaveTextContent(
+      "Шаблон добавляет эту подпись, только если научный руководитель не из ВШЭ",
+    );
+  });
+
+  it("автор добавил подпись: «Изменён вами», «Вернуть как в шаблоне» после подтверждения", async () => {
+    const restore = vi.spyOn(signingRouteApi, "restorePreset");
+    const user = userEvent.setup();
+    mount();
+    await user.click(
+      await screen.findByTestId("route-add-slot-academic_supervisor"),
+    );
+    await waitFor(() => {
+      expect(screen.getByTestId("route-preset")).toHaveTextContent(
+        "Изменён вами",
+      );
+    });
+    expect(screen.getByTestId("route-preset")).toHaveTextContent(
+      "отличается: порядок, подписи сверх точки",
+    );
+    await user.click(screen.getByTestId("route-preset-reset"));
+    expect(
+      await screen.findByTestId("route-preset-confirm-text"),
+    ).toHaveTextContent(
+      "Порядок, подписи сверх точки и отметки «необязательна» станут как в шаблоне. Люди останутся, если их роль есть в шаблоне. Места подписей на страницах не изменятся",
+    );
+    await user.click(screen.getByTestId("route-preset-confirm"));
+    expect(restore).toHaveBeenCalledTimes(1);
+    await waitFor(() => {
+      expect(screen.getByTestId("route-preset")).toHaveTextContent(
+        "Маршрут из шаблона",
+      );
+    });
+    expect(screen.queryByTestId("route-slot-academic_supervisor")).toBeNull();
+    expect(screen.queryByTestId("route-preset-confirm-text")).toBeNull();
+  });
+
+  it("«Отмена» в подтверждении ничего не меняет", async () => {
+    const restore = vi.spyOn(signingRouteApi, "restorePreset");
+    const user = userEvent.setup();
+    mount();
+    await user.click(
+      await screen.findByTestId("route-add-slot-academic_supervisor"),
+    );
+    await user.click(await screen.findByTestId("route-preset-reset"));
+    await user.click(await screen.findByText("Отмена"));
+    expect(restore).not.toHaveBeenCalled();
+    expect(screen.getByTestId("route-preset")).toHaveTextContent(
+      "Изменён вами",
+    );
+  });
+
+  it("место изменено: «Вернуть место из шаблона» у слота", async () => {
+    const restorePlace = vi
+      .spyOn(signatureApi, "restorePlacement")
+      .mockResolvedValue({ ...placement(true), origin: "pack" });
+    const user = userEvent.setup();
+    mount();
+    const row = await screen.findByTestId("route-slot-supervisor");
+    expect(
+      await within(row).findByTestId("place-origin-supervisor"),
+    ).toHaveTextContent("Место изменено");
+    await user.click(within(row).getByTestId("place-restore-supervisor"));
+    expect(restorePlace).toHaveBeenCalledWith(PROJECT, DOC, "supervisor", {
+      confirm_reset: false,
+    });
   });
 });
 

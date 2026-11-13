@@ -157,6 +157,8 @@ export const makeSigningRoute = (
           extra: false,
           optional: false,
           status: "signed",
+          added_by: null,
+          preset_optional: false,
         },
         {
           slot_id: "supervisor",
@@ -165,6 +167,8 @@ export const makeSigningRoute = (
           extra: false,
           optional: false,
           status: "pending",
+          added_by: null,
+          preset_optional: false,
         },
       ],
       sent: makeRouteDocVersion(),
@@ -194,6 +198,7 @@ export const makeSigningRoute = (
     },
   ],
   changed_docs: [],
+  preset: null,
   ...overrides,
 });
 
@@ -440,6 +445,8 @@ const newVersionRoute = makeSigningRoute({
           extra: false,
           optional: false,
           status: "signed",
+          added_by: null,
+          preset_optional: false,
         },
         {
           slot_id: "supervisor",
@@ -448,6 +455,8 @@ const newVersionRoute = makeSigningRoute({
           extra: false,
           optional: false,
           status: "pending",
+          added_by: null,
+          preset_optional: false,
         },
       ],
       sent: makeRouteDocVersion({
@@ -468,6 +477,8 @@ const newVersionRoute = makeSigningRoute({
           extra: false,
           optional: false,
           status: "signed",
+          added_by: null,
+          preset_optional: false,
         },
         {
           slot_id: "academic_supervisor",
@@ -476,6 +487,8 @@ const newVersionRoute = makeSigningRoute({
           extra: false,
           optional: false,
           status: "signed",
+          added_by: null,
+          preset_optional: false,
         },
       ],
       sent: makeRouteDocVersion({ sha256: REVIEW_SHA }),
@@ -744,6 +757,8 @@ const academicSlot = (status: RouteDocSlot["status"]): RouteDocSlot => ({
   extra: true,
   optional: true,
   status,
+  added_by: "author",
+  preset_optional: false,
 });
 
 const optionalDoc = (
@@ -761,6 +776,8 @@ const optionalDoc = (
       extra: false,
       optional: false,
       status: "signed",
+      added_by: null,
+      preset_optional: false,
     },
     {
       slot_id: "supervisor",
@@ -769,6 +786,8 @@ const optionalDoc = (
       extra: false,
       optional: false,
       status: supervisorSlot,
+      added_by: null,
+      preset_optional: false,
     },
     academicSlot(academicStatus),
   ],
@@ -1148,6 +1167,8 @@ export const SIGNING_ROUTE_CONTRACT_EXAMPLES: Record<
               extra: false,
               optional: false,
               status: "pending",
+              added_by: null,
+              preset_optional: false,
             },
             {
               slot_id: "academic_supervisor",
@@ -1159,6 +1180,8 @@ export const SIGNING_ROUTE_CONTRACT_EXAMPLES: Record<
               extra: true,
               optional: false,
               status: "pending",
+              added_by: "author",
+              preset_optional: false,
             },
           ],
           sent: null,

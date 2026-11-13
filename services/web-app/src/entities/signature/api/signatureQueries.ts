@@ -1,7 +1,10 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { UpdatePlacementRequest } from "@shared/api/types";
 import { signatureApi, type SignSubmissionBody } from "./signatureApi";
-import type { SetDateMarksRequest } from "./signatureSchemas";
+import type {
+  RestorePlacementRequest,
+  SetDateMarksRequest,
+} from "./signatureSchemas";
 
 type SignaturesState = Awaited<ReturnType<typeof signatureApi.getState>>;
 type Placement = Awaited<ReturnType<typeof signatureApi.updatePlacement>>;
@@ -229,6 +232,48 @@ export const useSetDateMarks = () => {
         },
       );
     },
+    onSuccess: (placement, { projectId, docId, slotId }) => {
+      queryClient.setQueryData<SignaturesState>(
+        signatureKeys.state(projectId),
+        (state) =>
+          state && {
+            ...state,
+            placements: {
+              ...state.placements,
+              [docId]: { ...state.placements[docId], [slotId]: placement },
+            },
+          },
+      );
+    },
+    onSettled: (_data, _error, { projectId }) => {
+      void queryClient.invalidateQueries({
+        queryKey: signatureKeys.state(projectId),
+      });
+      void queryClient.invalidateQueries({
+        queryKey: ["signing-routes", "project", projectId],
+      });
+    },
+  });
+};
+
+/**
+ * «Вернуть место из шаблона» (signing-route.md, 15.6). Ответ сразу встаёт в состояние подписей;
+ * место и метки меняют видимый слой, план и задачи маршрута, поэтому сбрасываются и они.
+ */
+export const useRestorePlacement = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      projectId,
+      docId,
+      slotId,
+      body,
+    }: {
+      projectId: string;
+      docId: string;
+      slotId: string;
+      body: RestorePlacementRequest;
+    }) => signatureApi.restorePlacement(projectId, docId, slotId, body),
     onSuccess: (placement, { projectId, docId, slotId }) => {
       queryClient.setQueryData<SignaturesState>(
         signatureKeys.state(projectId),

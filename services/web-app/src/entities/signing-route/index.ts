@@ -14,6 +14,7 @@ export {
   useCreateSigningRoute,
   useMySigningTasks,
   useRemindSigningParticipant,
+  useRestoreSigningRoutePreset,
   useReturnSigningTask,
   useSendSigningRoute,
   useSkipSigningParticipant,

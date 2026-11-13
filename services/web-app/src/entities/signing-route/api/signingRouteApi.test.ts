@@ -6,7 +6,11 @@ import {
   signingRouteApi,
   signingTaskApi,
 } from "./signingRouteApi";
-import { createSigningRouteDemo, type SigningDemoUser } from "../testing";
+import {
+  createSigningRouteDemo,
+  type SigningDemoPeople,
+  type SigningDemoUser,
+} from "../testing";
 import type {
   RouteParticipant,
   SigningRoute,
@@ -35,6 +39,9 @@ let mail = false;
 let unplaced = new Set<string>();
 // «Подпись необязательна» (раздел 13): пары `doc:slot` точки, отмеченные автором.
 let optional = new Set<string>();
+// Маршрут из шаблона (раздел 15): люди проекта для условий и пары, которым пресет поставил место.
+let people: SigningDemoPeople = { supervisor: "university" };
+let packPlaced: string[] = [];
 
 // Данные плашки научрука неизвестны: он задаёт их сам на своём шаге (раздел 4.2, правило 2).
 const demo = createSigningRouteDemo({
@@ -58,6 +65,15 @@ const demo = createSigningRouteDemo({
   mailEnabled: () => mail,
   isPlaced: (_project, doc, slot) => !unplaced.has(`${doc}:${slot}`),
   isOptional: (_project, _profile, doc, slot) => optional.has(`${doc}:${slot}`),
+  peopleOf: () => people,
+  onPresetOptional: (_project, _profile, pair, value) => {
+    const key = `${pair.doc_id}:${pair.slot_id}`;
+    if (value) optional.add(key);
+    else optional.delete(key);
+  },
+  onPresetPlaces: (_project, pairs) => {
+    packPlaced.push(...pairs.map((pair) => `${pair.doc_id}:${pair.slot_id}`));
+  },
   now: () => clock,
 });
 
@@ -135,6 +151,89 @@ beforeEach(() => {
   mail = false;
   unplaced = new Set();
   optional = new Set();
+  people = { supervisor: "university" };
+  packPlaced = [];
+});
+
+describe("автор: маршрут из шаблона (раздел 15)", () => {
+  it("первый черновик по пресету: научрук не из ВШЭ, шаблон добавил академрука", async () => {
+    people = { supervisor: "company" };
+    const route = await signingRouteApi.create(PROJECT, PROFILE);
+    expect(route.steps.map((step) => step.map((p) => p.persona))).toEqual([
+      ["author"],
+      ["supervisor"],
+      ["academic_supervisor"],
+    ]);
+    expect(
+      route.docs[0]?.slots.find((s) => s.slot_id === "academic_supervisor"),
+    ).toMatchObject({ extra: true, added_by: "pack", preset_optional: false });
+    expect(route.preset).toMatchObject({
+      extra_slots: [
+        {
+          doc_id: DOC,
+          slot_id: "academic_supervisor",
+          when: { person: "supervisor", role: "company" },
+        },
+      ],
+      skipped_by_condition: [],
+      differs: [],
+    });
+    // Места пар маршрута ставит пресет.
+    expect(packPlaced).toEqual([
+      `${DOC}:author`,
+      `${DOC}:supervisor`,
+      `${DOC}:academic_supervisor`,
+    ]);
+    // Подписант маршрута `preset` не видит.
+    as(SUPERVISOR);
+    expect((await signingRouteApi.get(PROJECT, route.id)).preset).toBeNull();
+  });
+
+  it("убрал подпись шаблона и отметил другую: «Вернуть как в шаблоне» возвращает состав", async () => {
+    people = { supervisor: "company" };
+    let route = await signingRouteApi.create(PROJECT, PROFILE);
+    route = await signingRouteApi.update(PROJECT, route.id, {
+      steps: route.steps
+        .filter((step) => step[0]?.persona !== "academic_supervisor")
+        .map((step) => step.map(draftOf)),
+      extra_slots: [],
+      deadline: null,
+      message: null,
+    });
+    optional.add(`${DOC}:supervisor`);
+    route = await signingRouteApi.get(PROJECT, route.id);
+    expect(route.preset?.differs).toEqual(["order", "slots", "optional"]);
+    const author = participant(route, "author").id;
+    packPlaced = [];
+
+    const back = await signingRouteApi.restorePreset(PROJECT, route.id);
+    expect(back.preset?.differs).toEqual([]);
+    expect(participant(back, "author").id).toBe(author);
+    expect(participant(back, "academic_supervisor").membership).toBe("invited");
+    expect(optional.has(`${DOC}:supervisor`)).toBe(false);
+    // Место ставится только новой паре.
+    expect(packPlaced).toEqual([`${DOC}:academic_supervisor`]);
+  });
+
+  it("слот по условию не добавлен: он в `skipped_by_condition`; у отправленного 409", async () => {
+    const route = await sendDraft();
+    as(AUTHOR);
+    expect(route.preset).toBeNull();
+    const refused = await apiError(
+      signingRouteApi.restorePreset(PROJECT, route.id),
+    );
+    expect(refused.status).toBe(409);
+    expect(refused.code).toBe("invalid_transition");
+    await signingRouteApi.cancel(PROJECT, route.id);
+    const cancelled = await signingRouteApi.get(PROJECT, route.id);
+    expect(cancelled.preset?.skipped_by_condition).toEqual([
+      {
+        doc_id: DOC,
+        slot_id: "academic_supervisor",
+        when: { person: "supervisor", role: "company" },
+      },
+    ]);
+  });
 });
 
 describe("автор: черновик и отправка", () => {

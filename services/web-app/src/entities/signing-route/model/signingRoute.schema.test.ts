@@ -157,3 +157,62 @@ describe("схемы маршрута подписания: прежняя фо�
     expect(SigningTaskSchema.safeParse({ ...task, me }).success).toBe(false);
   });
 });
+
+describe("схемы маршрута подписания: маршрут из шаблона (раздел 15.11)", () => {
+  it("LEGACY_R25: маршрут нынешнего сервера без `preset`, `added_by`, `preset_optional`", () => {
+    const { preset: _preset, ...route } = makeSigningRoute();
+    const body = {
+      ...route,
+      docs: route.docs.map((doc) => ({
+        ...doc,
+        slots: doc.slots.map(
+          ({ added_by: _added, preset_optional: _optional, ...slot }) => slot,
+        ),
+      })),
+    };
+    const parsed = SigningRouteSchema.parse(body);
+    expect(parsed.preset).toBeNull();
+    expect(parsed.docs[0]?.slots[0]).toMatchObject({
+      added_by: null,
+      preset_optional: false,
+    });
+  });
+
+  it("пресет: незнакомое отличие и лишнее поле условия отвергаются", () => {
+    const preset = {
+      version: "2026.1.4",
+      steps: [["author"]],
+      extra_slots: [
+        {
+          doc_id: "topic_application",
+          slot_id: "academic_supervisor",
+          when: { person: "supervisor", role: "company" as const },
+        },
+      ],
+      optional: [],
+      skipped_by_condition: [],
+      differs: [],
+    };
+    expect(
+      SigningRouteSchema.safeParse(makeSigningRoute({ preset })).success,
+    ).toBe(true);
+    expect(
+      SigningRouteSchema.safeParse(
+        makeSigningRoute({
+          preset: { ...preset, differs: ["people"] } as never,
+        }),
+      ).success,
+    ).toBe(false);
+    const extra = preset.extra_slots.map((slot) => ({
+      ...slot,
+      when: { ...slot.when, kind: "research" },
+    }));
+    expect(
+      SigningRouteSchema.safeParse(
+        makeSigningRoute({
+          preset: { ...preset, extra_slots: extra } as never,
+        }),
+      ).success,
+    ).toBe(false);
+  });
+});

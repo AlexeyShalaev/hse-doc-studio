@@ -1,0 +1,35 @@
+{
+  "enabled": true,
+  "page": 1,
+  "x_mm": 80.0,
+  "y_mm": 139.0,
+  "width_mm": 40.0,
+  "sign_date": null,
+  "dates": [
+    {
+      "id": "d1",
+      "page": 1,
+      "x_mm": 81.0,
+      "y_mm": 156.0,
+      "width_mm": 7.0,
+      "height_mm": 5.0,
+      "format": "day",
+      "align": "center",
+      "text": null
+    },
+    {
+      "id": "d2",
+      "page": 1,
+      "x_mm": 90.0,
+      "y_mm": 156.0,
+      "width_mm": 24.0,
+      "height_mm": 5.0,
+      "format": "month_word",
+      "align": "left",
+      "text": null
+    }
+  ],
+  "signed_at": null,
+  "origin": "pack",
+  "preset_available": true
+}

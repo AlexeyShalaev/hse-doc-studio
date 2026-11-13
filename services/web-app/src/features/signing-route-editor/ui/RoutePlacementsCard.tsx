@@ -2,26 +2,39 @@ import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { MapPin, Plus, X } from "lucide-react";
 import { getDocMeta, type DocDefLike } from "@entities/document";
-import { useUpdateSignaturePlacement } from "@entities/signature";
+import { packPlaceOf, useUpdateSignaturePlacement } from "@entities/signature";
 import type {
+  RoutePreset,
   RouteSlotRef,
   SigningRoute,
   SigningRoutePreview,
 } from "@entities/signing-route";
 import {
   PdfStampEditor,
+  PlaceOriginMark,
   SlotDateMarks,
   signatureHeightMm,
   type SlotDateRoute,
   useDateMarksSave,
+  useRestorePlace,
 } from "@features/signature-stamper";
 import type { SignaturesStateResponse } from "@shared/api/types";
 import { pickLocalized } from "@shared/lib";
 import { ViewTabs } from "@shared/ui";
+import {
+  presetConditionOf,
+  skippedConditionOf,
+  useConditionText,
+} from "../lib/preset";
 
 export type RoutePlacementsCardProps = {
   projectId: string;
   route: SigningRoute;
+  /**
+   * Маршрут точки по шаблону (15.7): причина слота, добавленного шаблоном, и подсказка у слота,
+   * который шаблон не добавил по условию. null: сведений нет.
+   */
+  preset?: RoutePreset | null;
   preview: SigningRoutePreview | undefined;
   editable: boolean;
   busy: boolean;
@@ -57,6 +70,7 @@ const MIN_CAPTION_WIDTH_MM = 70;
 export const RoutePlacementsCard = ({
   projectId,
   route,
+  preset = null,
   preview,
   editable,
   busy,
@@ -74,6 +88,9 @@ export const RoutePlacementsCard = ({
   const lang = i18n.language;
   // Метки даты слотов маршрута (signing-route.md, 14.11): тот же блок, что на вкладке «Подписи».
   const dateMarks = useDateMarksSave(projectId);
+  // «Вернуть место из шаблона» у слота документа (15.6, 15.7).
+  const restorePlace = useRestorePlace(projectId);
+  const conditionText = useConditionText();
   const [docId, setDocId] = useState(route.docs[0]?.doc_id ?? "");
   const [page, setPage] = useState(1);
   const [pageCount, setPageCount] = useState(0);
@@ -187,8 +204,10 @@ export const RoutePlacementsCard = ({
                   : people.get(slot.participant_id);
               const placement = placementOf(slot.slot_id);
               const def = runtime.find((s) => s.id === slot.slot_id);
-              const placedPage =
-                placement?.page ?? def?.default_placement.page ?? 1;
+              const packPlace = def ? packPlaceOf(def, doc.doc_id) : undefined;
+              const placedPage = placement?.page ?? packPlace?.page ?? 1;
+              const pair = { doc_id: doc.doc_id, slot_id: slot.slot_id };
+              const condition = presetConditionOf(preset, pair);
               const isDetached =
                 state.slots[slot.slot_id]?.sign_mode === "detached_text";
 
@@ -245,11 +264,22 @@ export const RoutePlacementsCard = ({
                     {owner
                       ? (owner.name ?? personaLabel(owner.persona))
                       : t("placements.nobody")}
-                    {slot.extra && ` · ${t("placements.extra")}`}
+                    {slot.extra &&
+                      ` · ${
+                        slot.added_by === "pack"
+                          ? condition === null
+                            ? t("placements.addedByPack")
+                            : t("placements.addedByPackWhy", {
+                                condition: conditionText(condition),
+                              })
+                          : t("placements.extra")
+                      }`}
                   </span>
                   {onSetOptional && (
                     <OptionalToggle
                       checked={slot.optional}
+                      // «по шаблону» (15.7): отметку поставил шаблон, и автор её не снимал.
+                      fromTemplate={slot.optional && slot.preset_optional}
                       // Снять отметку можно всегда; отметить нельзя подпись, которую требует
                       // шаблон или которая уже стоит.
                       blocker={
@@ -281,6 +311,18 @@ export const RoutePlacementsCard = ({
                     >
                       {placement?.enabled ? (
                         <>
+                          <PlaceOriginMark
+                            placement={placement}
+                            canRestore
+                            pending={restorePlace.isRestoring(
+                              doc.doc_id,
+                              slot.slot_id,
+                            )}
+                            onRestore={() => {
+                              restorePlace.restore(doc.doc_id, slot.slot_id);
+                            }}
+                            slotId={slot.slot_id}
+                          />
                           <span
                             className="chip subtle"
                             style={{
@@ -341,7 +383,7 @@ export const RoutePlacementsCard = ({
                                     ? {
                                         width_mm: Math.max(
                                           placement?.width_mm ??
-                                            def?.default_placement.width_mm ??
+                                            packPlace?.width_mm ??
                                             0,
                                           MIN_CAPTION_WIDTH_MM,
                                         ),
@@ -366,9 +408,7 @@ export const RoutePlacementsCard = ({
                       currentPage={page}
                       pageCount={pageCount}
                       signatureHeightMm={signatureHeightMm(
-                        placement?.width_mm ??
-                          def?.default_placement.width_mm ??
-                          40,
+                        placement?.width_mm ?? packPlace?.width_mm ?? 40,
                         state.slots[slot.slot_id],
                       )}
                       signerName={
@@ -393,36 +433,62 @@ export const RoutePlacementsCard = ({
                 className="flex flex-col"
                 style={{ gap: "0.375rem", padding: "0.625rem 0.75rem" }}
               >
-                {candidates.map((slot) => (
-                  <button
-                    key={slot.id}
-                    type="button"
-                    className="btn xs ghost"
-                    // Длинное название слота переносится, а не обрезается краем колонки.
-                    style={{
-                      justifyContent: "flex-start",
-                      height: "auto",
-                      minHeight: "1.5rem",
-                      padding: "0.25rem 0.5rem",
-                      whiteSpace: "normal",
-                      textAlign: "left",
-                    }}
-                    disabled={busy}
-                    onClick={() => {
-                      onAddExtra({ doc_id: doc.doc_id, slot_id: slot.id });
-                    }}
-                    data-testid={`route-add-slot-${slot.id}`}
-                  >
-                    <Plus
-                      size="0.6875rem"
-                      aria-hidden="true"
-                      style={{ flexShrink: 0 }}
-                    />
-                    {t("placements.add", {
-                      label: pickLocalized(slot.label, lang, slot.id),
-                    })}
-                  </button>
-                ))}
+                {candidates.map((slot) => {
+                  const skipped = skippedConditionOf(preset, {
+                    doc_id: doc.doc_id,
+                    slot_id: slot.id,
+                  });
+                  return (
+                    <div
+                      key={slot.id}
+                      className="flex flex-col"
+                      style={{ gap: "0.125rem" }}
+                    >
+                      <button
+                        type="button"
+                        className="btn xs ghost"
+                        // Длинное название слота переносится, а не обрезается краем колонки.
+                        style={{
+                          justifyContent: "flex-start",
+                          height: "auto",
+                          minHeight: "1.5rem",
+                          padding: "0.25rem 0.5rem",
+                          whiteSpace: "normal",
+                          textAlign: "left",
+                        }}
+                        disabled={busy}
+                        onClick={() => {
+                          onAddExtra({ doc_id: doc.doc_id, slot_id: slot.id });
+                        }}
+                        data-testid={`route-add-slot-${slot.id}`}
+                      >
+                        <Plus
+                          size="0.6875rem"
+                          aria-hidden="true"
+                          style={{ flexShrink: 0 }}
+                        />
+                        {t("placements.add", {
+                          label: pickLocalized(slot.label, lang, slot.id),
+                        })}
+                      </button>
+                      {skipped !== null && (
+                        // Шаблон добавил бы эту подпись по условию, но оно не выполнено (15.7).
+                        <span
+                          className="dim"
+                          style={{
+                            fontSize: "0.6875rem",
+                            paddingLeft: "0.5rem",
+                          }}
+                          data-testid={`route-add-hint-${slot.id}`}
+                        >
+                          {t("placements.conditionHint", {
+                            condition: conditionText(skipped),
+                          })}
+                        </span>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
             )}
           </div>
@@ -469,6 +535,7 @@ export const RoutePlacementsCard = ({
         </div>
       )}
       {dateMarks.dialog}
+      {restorePlace.dialog}
     </div>
   );
 };
@@ -476,12 +543,15 @@ export const RoutePlacementsCard = ({
 /** Галочка «Подпись необязательна» у слота маршрута; причина, почему нельзя, видна под ней. */
 const OptionalToggle = ({
   checked,
+  fromTemplate,
   blocker,
   pending,
   testId,
   onChange,
 }: {
   checked: boolean;
+  /** Отметка совпадает с шаблоном: подпись «по шаблону» (15.7). */
+  fromTemplate: boolean;
   blocker: string | null;
   pending: boolean;
   testId: string;
@@ -510,6 +580,11 @@ const OptionalToggle = ({
           }}
         />
         {t("placements.optional")}
+        {fromTemplate && (
+          <span className="dim" data-testid={`${testId}-preset`}>
+            · {t("placements.presetOptional")}
+          </span>
+        )}
       </label>
       {note !== null && (
         <span className="dim" style={{ paddingLeft: "1.25rem" }}>

@@ -6,8 +6,13 @@ export { SignerPlateEditor } from "./ui/DetachedSignatureBlocks";
 export { SlotPanel } from "./ui/SlotPanel";
 export type {
   DocPlacementPanelProps,
+  PlaceRestoreControl,
   SlotDateControl,
 } from "./ui/DocPlacementPanel";
+export { PlaceOriginMark } from "./ui/PlaceOriginMark";
+export type { PlaceOriginMarkProps } from "./ui/PlaceOriginMark";
+export { useRestorePlace } from "./model/useRestorePlace";
+export type { RestorePlace } from "./model/useRestorePlace";
 export { SlotDateMarks } from "./ui/SlotDateMarks";
 export { signatureHeightMm } from "./lib/coords";
 export type { SlotDateMarksProps, SlotDateRoute } from "./ui/SlotDateMarks";
