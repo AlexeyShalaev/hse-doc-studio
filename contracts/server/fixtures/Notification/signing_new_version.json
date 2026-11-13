@@ -16,6 +16,8 @@
     "profile_id": "topic-approval",
     "deadline": "2026-11-15T20:59:00Z",
     "new_version": false,
-    "freed_bytes": null
+    "freed_bytes": null,
+    "signing": null,
+    "signing_waiting": null
   }
 }

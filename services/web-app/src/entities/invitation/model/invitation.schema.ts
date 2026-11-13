@@ -351,6 +351,10 @@ export const NotificationSchema = z.strictObject({
     new_version: z.boolean(),
     // Очистка диска личного раннера (runner_disk_cleaned): освобождено байт; у остальных null.
     freed_bytes: z.number().int().nonnegative().nullable(),
+    // Напоминание о сроке точки (checkpoint_due, 16.7), если у точки есть маршрут: состояние
+    // подписания и у идущего кого ждём (на языке получателя). Без маршрута и у остальных null.
+    signing: z.enum(["waiting", "completed", "not_sent"]).nullable(),
+    signing_waiting: z.string().nullable(),
   }),
 });
 export type Notification = z.infer<typeof NotificationSchema>;

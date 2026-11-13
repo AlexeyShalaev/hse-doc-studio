@@ -139,6 +139,10 @@ class NotificationPayload:
     changed_names: str | None = None
     # Очистка диска личного раннера (`runner_disk_cleaned`): сколько освобождено; у остальных видов пусто.
     freed_bytes: int | None = None
+    # Напоминание о сроке точки (`checkpoint_due`, 16.7), если у точки есть маршрут: состояние подписания
+    # (`waiting`, `completed`, `not_sent`) и у идущего кого ждём на языке получателя. Без маршрута пусто.
+    signing: str | None = None
+    signing_waiting: str | None = None
 
 
 @dataclass(frozen=True)

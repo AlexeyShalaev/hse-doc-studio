@@ -18,7 +18,9 @@
         "profile_id": null,
         "deadline": null,
         "new_version": false,
-        "freed_bytes": null
+        "freed_bytes": null,
+        "signing": null,
+        "signing_waiting": null
       }
     },
     {
@@ -39,7 +41,9 @@
         "profile_id": null,
         "deadline": null,
         "new_version": false,
-        "freed_bytes": null
+        "freed_bytes": null,
+        "signing": null,
+        "signing_waiting": null
       }
     },
     {
@@ -60,7 +64,9 @@
         "profile_id": null,
         "deadline": null,
         "new_version": false,
-        "freed_bytes": null
+        "freed_bytes": null,
+        "signing": null,
+        "signing_waiting": null
       }
     }
   ],

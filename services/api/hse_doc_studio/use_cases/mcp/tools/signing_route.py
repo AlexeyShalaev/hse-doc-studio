@@ -20,7 +20,7 @@
 from __future__ import annotations
 
 from collections.abc import Sequence
-from datetime import UTC, datetime
+from datetime import datetime
 from uuid import UUID
 
 from hse_doc_studio.core.access.context import require_actor
@@ -32,6 +32,7 @@ from hse_doc_studio.core.errors import NotFoundError
 from hse_doc_studio.core.i18n import localized_error
 from hse_doc_studio.core.identity.errors import IdentityError, IdentityErrorCode
 from hse_doc_studio.core.mcp.errors import McpError, McpErrorCode
+from hse_doc_studio.core.signatures.dates import format_numeric, to_display
 from hse_doc_studio.core.signing_route.entities import (
     EDITABLE_STATUSES,
     NEW_VERSION_STATUSES,
@@ -183,9 +184,8 @@ def _event(view: EventView) -> dict[str, object]:
 
 
 def _day(at: datetime) -> str:
-    """Дата версии на подписи для текста: «10.11.2026» (UTC)."""
-    moment = at if at.tzinfo is not None else at.replace(tzinfo=UTC)
-    return moment.astimezone(UTC).strftime("%d.%m.%Y")
+    """Дата версии на подписи для текста: «10.11.2026» по Москве, как в письмах и интерфейсе."""
+    return format_numeric(to_display(at).date())
 
 
 def _sent(doc: DocView) -> dict[str, object] | None:

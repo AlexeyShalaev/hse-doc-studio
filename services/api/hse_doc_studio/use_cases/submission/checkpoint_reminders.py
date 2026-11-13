@@ -10,6 +10,10 @@ docs/design/signing-route.md, 16.7. За `reminder_days` суток до сро�
 нет, поэтому повторный проход, перезапуск и смена лидера второй раз ничего не отправляют, а новый срок даёт новое
 напоминание.
 Сбой одной точки (битая запись, недоступный проект) остальным не мешает.
+
+Если у точки есть маршрут подписания, в напоминании его состояние (`ICheckpointSigning`): «ждём ...», «завершено»
+или «не отправлено». Оно считается один раз на точку перед рассылкой; сбой расчёта напоминанию не мешает, оно
+уходит без этой строки.
 """
 
 from __future__ import annotations
@@ -24,7 +28,13 @@ from hse_doc_studio.core.checkpoint_deadlines import (
     reminder_due,
     reminder_key,
 )
-from hse_doc_studio.core.checkpoint_reminders import DueCheckpoint, ICheckpointReminderStore, ReminderRecipient
+from hse_doc_studio.core.checkpoint_reminders import (
+    CheckpointSigning,
+    DueCheckpoint,
+    ICheckpointReminderStore,
+    ICheckpointSigning,
+    ReminderRecipient,
+)
 from hse_doc_studio.core.identity.session_policy import Clock, utc_now
 from hse_doc_studio.core.invitations.entities import NotificationKind, NotificationPayload
 from hse_doc_studio.core.invitations.protocols import INotifier
@@ -43,8 +53,10 @@ class CheckpointReminderSweeper:
         *,
         days: int = REMINDER_DAYS,
         clock: Clock = utc_now,
+        signing: ICheckpointSigning | None = None,
     ) -> None:
         self._store = store
+        self._signing = signing
         self._notifier = notifier
         self._uow = uow
         self._days = days
@@ -74,13 +86,35 @@ class CheckpointReminderSweeper:
             if not reminder_due(point.deadline, now=now, packaged=packaged_at(point.deadline, built), days=self._days):
                 return 0
             people = await self._store.recipients(point.project_id)
-        key = reminder_key(point.project_id, point.profile_id, point.deadline)
+            key = reminder_key(point.project_id, point.profile_id, point.deadline)
+            # Состояние подписания считается, только если кому-то ещё не напомнили (окончательно решает `_notify`).
+            pending = bool(people) and bool(
+                {p.user_id for p in people} - await self._store.reminded([p.user_id for p in people], key)
+            )
+        signing = await self._signing_of(point) if pending else None
         sent = 0
         for person in people:
-            sent += await self._notify(point, person, key)
+            sent += await self._notify(point, person, key, signing)
         return sent
 
-    async def _notify(self, point: DueCheckpoint, person: ReminderRecipient, key: str) -> int:
+    async def _signing_of(self, point: DueCheckpoint) -> CheckpointSigning | None:
+        """Состояние подписания точки; сбой расчёта (битый проект, снятый пак) строку просто убирает."""
+        if self._signing is None:
+            return None
+        try:
+            async with self._uow.begin():
+                return await self._signing.signing(point.project_id, point.profile_id)
+        except Exception:
+            _log.warning(
+                "checkpoint reminder without signing state",
+                extra={"project_id": str(point.project_id), "profile_id": point.profile_id},
+                exc_info=True,
+            )
+            return None
+
+    async def _notify(
+        self, point: DueCheckpoint, person: ReminderRecipient, key: str, signing: CheckpointSigning | None
+    ) -> int:
         """Одному человеку своей транзакцией под блокировкой ключа: уведомление последнее в ней, поэтому письмо
         (оно уходит задачей) идёт уже после записи и не делит с ней соединение."""
         async with self._uow.begin():
@@ -93,6 +127,8 @@ class CheckpointReminderSweeper:
                 excerpt=point.label(person.locale),
                 profile_id=point.profile_id,
                 deadline=point.deadline.astimezone(DISPLAY_ZONE).isoformat(),
+                signing=signing.state.value if signing is not None else None,
+                signing_waiting=signing.whom(person.locale) if signing is not None else None,
             )
             await self._notifier.notify(person.user_id, NotificationKind.checkpoint_due, payload, dedupe_key=key)
         return 1

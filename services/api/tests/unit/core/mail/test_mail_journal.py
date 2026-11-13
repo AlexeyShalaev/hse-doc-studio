@@ -43,7 +43,7 @@ _NOTE = "Личное сообщение: позвоните мне по ном�
 # Подстановки, которые сами не значения шаблона: адрес получателя и адрес установки хранятся отдельно.
 _NOT_VALUES = {"email", "server"}
 # L3: список значений, согласованный в дизайне.
-_L3 = {"actor", "inviter", "project", "role", "profile", "deadline", "changed", "name", "count"}
+_L3 = {"actor", "inviter", "project", "role", "profile", "deadline", "changed", "name", "count", "signing"}
 
 
 def _strings(node: object) -> Iterator[str]:

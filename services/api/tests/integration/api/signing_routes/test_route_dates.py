@@ -176,6 +176,33 @@ async def test__live_form__completed_route__dates_backfilled_route_stays_complet
     assert trio.route()["status"] == "completed"
 
 
+async def test__dragging_marks__one_history_event_per_burst__audit_per_request(stand: Stand) -> None:
+    """Перетаскивание метки шлёт запрос на каждое отпускание: подряд идущие правки той же пары склеиваются в одно
+    событие `marks_edited` (14.6), запись аудита остаётся на каждый запрос. Другая пара даёт своё событие."""
+    trio = await make_trio(stand, images=("author", "supervisor"), academic="none")
+    trio.sent()
+    assert trio.approved(trio.supervisor)["route"]["status"] == "completed"
+
+    for shift, marks in ((0.0, 1), (4.0, 2), (8.0, 3)):
+        moved = [{**mark, "x_mm": mark["x_mm"] + shift} for mark in THREE[:marks]]
+        assert _put_dates(trio, PROPOSAL, "supervisor", {"dates": moved}).status_code == 200
+    beside = _put_dates(trio, APPLICATION, "co_supervisor", {"dates": [THREE[0]]})
+    drain(stand)
+
+    assert beside.status_code == 200, beside.text
+    route = trio.route()
+    edits = [e for e in route["events"] if e["kind"] == "marks_edited"]
+    assert len(edits) == 2
+    assert trio.events()[-3:] == ["completed", "marks_edited", "marks_edited"]
+    assert len(_audit(trio, "signing_route.marks_edit")) == 4
+    records = _audit(trio, "signing_route.marks_edit")
+    assert sorted(r["details"]["marks"] for r in records if r["details"]["slot_id"] == "supervisor") == [1, 2, 3]
+    query = "SELECT details FROM signing_route_events WHERE route_id = :id AND kind = 'marks_edited' ORDER BY id"
+    async with trio.stand.sessions.use() as db:
+        stored = (await db.execute(text(query), {"id": route["id"]})).scalars()
+        assert [(d["slot_id"], d["marks"]) for d in stored] == [("supervisor", 3), ("co_supervisor", 1)]
+
+
 async def test__marks_on_a_held_document__no_submission_right__route_locked(
     stand: Stand, monkeypatch: pytest.MonkeyPatch
 ) -> None:

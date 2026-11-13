@@ -235,6 +235,38 @@ async def test__events__get_increasing_ids_in_write_order(repo: ISigningRouteRep
     assert len(set(ids)) == 3
 
 
+async def test__events__stored_event_with_id__revised_in_place(repo: ISigningRouteRepository) -> None:
+    """Склейка `marks_edited` (14.6): событие с `id` обновляет `at` и `details`, место в истории то же."""
+    route = make_route(P1)
+    details = {"doc_id": DOC, "slot_id": "supervisor", "marks": 1, "reset": []}
+    stored = await repo.add(
+        route, events=[make_event(route), make_event(route, EventKind.marks_edited, details=details)]
+    )
+    sent, edited = await repo.list_events(route.id)
+    revised = replace(edited, at=T0 + timedelta(seconds=40), details={**details, "marks": 3})
+
+    await repo.save(stored, events=[revised, make_event(route, EventKind.frozen, at=T0 + timedelta(minutes=1))])
+    events = await repo.list_events(route.id)
+
+    assert [e.kind for e in events] == [EventKind.sent, EventKind.marks_edited, EventKind.frozen]
+    assert (events[1].id, events[1].at, events[1].details["marks"]) == (edited.id, T0 + timedelta(seconds=40), 3)
+    assert events[0] == sent
+
+
+async def test__events__revising_unknown_event__rejected_and_untouched(repo: ISigningRouteRepository) -> None:
+    route = make_route(P1)
+    stored = await repo.add(route, events=[make_event(route)])
+    [sent] = await repo.list_events(route.id)
+
+    with pytest.raises(ValueError, match="is not stored"):
+        await repo.save(replace(stored, message="x"), events=[replace(sent, kind=EventKind.marks_edited)])
+
+    assert await repo.list_events(route.id) == [sent]
+    after = await repo.get(P1, route.id)
+    assert after is not None
+    assert after.message == stored.message
+
+
 async def test__write_times__set_by_store_and_kept_on_read(repo: ISigningRouteRepository) -> None:
     added = await repo.add(make_route(P1))
     saved = await repo.save(replace(added, message="Срок пятница"))

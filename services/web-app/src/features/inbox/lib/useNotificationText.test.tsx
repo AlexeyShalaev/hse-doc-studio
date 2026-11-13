@@ -31,6 +31,8 @@ const note = (
     deadline: null,
     new_version: false,
     freed_bytes: null,
+    signing: null,
+    signing_waiting: null,
     ...payload,
   },
 });
@@ -70,6 +72,8 @@ describe("тексты уведомлений о версии на подпис�
         note("signing_request", {
           new_version: true,
           freed_bytes: null,
+          signing: null,
+          signing_waiting: null,
           outcome: "approve_sign",
         }),
       ),
@@ -205,6 +209,32 @@ describe("напоминание о сроке точки (signing-route.md, 16.
 
   it("подробности: проект и срок", () => {
     expect(detailsOf(due(3))).toMatch(/^ВКР · срок \d+ \S+$/);
+  });
+
+  it("подробности: состояние подписания, если у точки есть маршрут", async () => {
+    const withSigning = (
+      signing: "waiting" | "completed" | "not_sent",
+      who: string | null = null,
+    ) => ({
+      ...due(3),
+      payload: { ...due(3).payload, signing, signing_waiting: who },
+    });
+    expect(
+      detailsOf(withSigning("waiting", "научного руководителя (Пётр Петров)")),
+    ).toMatch(
+      /^ВКР · срок \d+ \S+ · Подписание: ждём научного руководителя \(Пётр Петров\)$/,
+    );
+    expect(detailsOf(withSigning("waiting"))).toMatch(/· Подписание: идёт$/);
+    expect(detailsOf(withSigning("completed"))).toMatch(
+      /· Подписание: завершено$/,
+    );
+    expect(detailsOf(withSigning("not_sent"))).toMatch(
+      /· Подписание: не отправлено$/,
+    );
+    await i18n.changeLanguage("en");
+    expect(detailsOf(withSigning("waiting", "the supervisor"))).toMatch(
+      /· Signing: waiting for the supervisor$/,
+    );
   });
 
   it("английский", async () => {

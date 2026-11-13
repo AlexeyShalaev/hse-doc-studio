@@ -416,7 +416,8 @@ def _check_events(route: SigningRoute, events: Sequence[RouteEvent]) -> None:
 
 
 async def _write_parts(session: AsyncSession, route: SigningRoute, events: Sequence[RouteEvent]) -> None:
-    """Документы и участники маршрута заново, события добавить. Только внутри точки сохранения."""
+    """Документы и участники маршрута заново, новые события добавить, записанные (с `id`) обновить. Только внутри
+    точки сохранения."""
     holding = route.status in HOLDING_STATUSES
     await session.execute(delete(_D).where(_D.route_id == route.id).execution_options(synchronize_session=False))
     if route.docs:
@@ -429,8 +430,24 @@ async def _write_parts(session: AsyncSession, route: SigningRoute, events: Seque
     if route.participants:
         people = [_participant_values(route.id, i, p) for i, p in enumerate(route.participants)]
         await session.execute(insert(_P), people)
-    if events:
-        await session.execute(insert(_E), [_event_values(event) for event in events])
+    added = [event for event in events if event.id is None]
+    if added:
+        await session.execute(insert(_E), [_event_values(event) for event in added])
+    for event in events:
+        if event.id is not None:
+            await _revise_event(session, event)
+
+
+async def _revise_event(session: AsyncSession, event: RouteEvent) -> None:
+    """Уже записанное событие (`id` есть): новые `at` и `details`, вид и маршрут те же (склейка, 14.6)."""
+    stmt = (
+        update(_E)
+        .where(_E.id == event.id, _E.route_id == event.route_id, _E.kind == event.kind.value)
+        .values(at=event.at, details=dict(event.details))
+        .execution_options(synchronize_session=False)
+    )
+    if (await session.execute(stmt)).rowcount != 1:  # type: ignore[attr-defined]
+        raise ValueError(f"event {event.id} of kind {event.kind.value} is not stored with route {event.route_id}")
 
 
 async def _conflict(session: AsyncSession, route: SigningRoute, exc: IntegrityError) -> Exception | None:

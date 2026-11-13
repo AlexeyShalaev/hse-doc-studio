@@ -302,9 +302,17 @@ export type SigningRouteDemo = {
   refreeze: (projectId: string, docId: string) => void;
   /**
    * Правка меток даты на документе под маршрутом (14.6) записана: событие `marks_edited` от автора
-   * перед перефиксацией и завершением. Документ маршрут не держит: ничего.
+   * перед перефиксацией и завершением. Документ маршрут не держит: ничего. Подряд идущие правки
+   * той же пары тем же автором моложе 5 минут без сброса подписей (`reset`) склеиваются, как на
+   * сервере: обновляется время последнего события.
    */
-  marksEdited: (projectId: string, docId: string, who: string | null) => void;
+  marksEdited: (
+    projectId: string,
+    docId: string,
+    slotId: string,
+    who: string | null,
+    reset: boolean,
+  ) => void;
   /**
    * Свой завершённый маршрут автора для дат (14.11): научрук `signer` согласовал и подписал ЭП над
    * B, академрук `academic` (сверх точки) согласовал картинкой. Возвращает id маршрута.
@@ -500,6 +508,9 @@ type Route = {
 type Body = Record<string, unknown>;
 
 /** Маршрут можно править (`EDITABLE_STATUSES`): правка, «Вернуть как в шаблоне», `preset`. */
+// Окно склейки подряд идущих правок меток даты одной пары (14.6), как на сервере.
+const MARKS_COALESCE_MS = 5 * 60 * 1000;
+
 const EDITABLE: SigningRouteStatus[] = [
   "draft",
   "paused",
@@ -736,6 +747,12 @@ export const createSigningRouteDemo = (
       ? `${build}:${visibleLayer(r)}`
       : build;
   };
+
+  // Склейка `marks_edited` (14.6): какой паре принадлежит последнее событие правки меток маршрута.
+  const lastMarks = new Map<
+    string,
+    { eventId: string; pair: string; reset: boolean }
+  >();
 
   const event = (
     r: Route,
@@ -2773,9 +2790,29 @@ export const createSigningRouteDemo = (
           : [],
       );
     },
-    marksEdited: (projectId, docId, who) => {
+    marksEdited: (projectId, docId, slotId, who, reset) => {
       const r = dateHolder(projectId, docId);
-      if (r) event(r, "marks_edited", who);
+      if (!r) return;
+      const pair = `${docId}/${slotId}`;
+      const last = r.events.at(-1);
+      const burst = lastMarks.get(r.id);
+      if (
+        !reset &&
+        last?.kind === "marks_edited" &&
+        burst?.eventId === last.id &&
+        burst.pair === pair &&
+        !burst.reset &&
+        last.who === who &&
+        last.round === r.round &&
+        clock() - Date.parse(last.at) < MARKS_COALESCE_MS
+      ) {
+        last.at = now();
+        r.updated_at = now();
+        return;
+      }
+      event(r, "marks_edited", who);
+      const added = r.events.at(-1);
+      if (added) lastMarks.set(r.id, { eventId: added.id, pair, reset });
     },
     refreeze: (projectId, docId) => {
       const r = dateHolder(projectId, docId);

@@ -16,6 +16,8 @@
     "profile_id": "topic-approval",
     "deadline": "2026-11-15T23:59:00+03:00",
     "new_version": false,
-    "freed_bytes": null
+    "freed_bytes": null,
+    "signing": "waiting",
+    "signing_waiting": "научного руководителя (Анна Петрова)"
   }
 }

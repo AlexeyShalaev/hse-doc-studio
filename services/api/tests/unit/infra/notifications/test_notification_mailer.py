@@ -122,7 +122,7 @@ async def test__invitation_link__carries_message_role_expiry_and_the_link() -> N
     assert subject == "Анна приглашает вас в «ВКР»"
     assert f"\n{SERVER}/project-invite/tok\n" in body
     assert "> Привет" in body
-    assert "до 10.11.2026 14:30 UTC" in body
+    assert "до 10.11.2026, 17:30 (МСК)" in body
     assert html is not None
     assert "<script>" not in html
     assert "&lt;script&gt;x&lt;/script&gt;" in html
@@ -210,7 +210,7 @@ async def test__signing_request__links_to_the_signing_page_with_point_and_deadli
     assert mail is not None
     assert mail.subject == "Иван Иванов просит подписать: Заявка на тему КП"
     assert f'href="{SERVER}/sign/{PROJECT}/{ROUTE}"' in mail.html
-    assert "Срок: 15.11.2026 20:59 UTC" in mail.text
+    assert "Срок: 15.11.2026, 23:59 (МСК)" in mail.text
     assert "Контрольная точка: Заявка на тему КП" in mail.text
 
 
@@ -503,8 +503,8 @@ async def test__checkpoint_due__letter_to_the_checkpoint_with_deadline_and_journ
     assert en is not None
     assert ru.subject == "Скоро срок сдачи: Заявка на тему КП (SmartLMS)"
     assert en.subject == "Deadline soon: Заявка на тему КП (SmartLMS)"
-    assert "15.11.2026 20:59 UTC" in ru.text
-    assert "2026-11-15 20:59 UTC" in en.text
+    assert "15.11.2026, 23:59 (МСК)" in ru.text
+    assert "15 Nov 2026, 23:59 (Moscow time)" in en.text
     assert f"{SERVER}/projects/{PROJECT}/submit/cp/topic-approval" in ru.text
     entry = _row(log)
     assert ok is True
@@ -515,5 +515,49 @@ async def test__checkpoint_due__letter_to_the_checkpoint_with_deadline_and_journ
     assert entry.params.values == {
         "project": "Bertie",
         "profile": "Заявка на тему КП (SmartLMS)",
-        "deadline": "15.11.2026 20:59 UTC",
+        "deadline": "15.11.2026, 23:59 (МСК)",
     }
+    # Без маршрута у точки строки «Подписание» нет.
+    assert "Подписание" not in ru.text
+    assert "Signing" not in en.text
+
+
+@pytest.mark.parametrize(
+    ("signing", "waiting", "ru_line", "en_line"),
+    [
+        (
+            "waiting",
+            "научного руководителя (Иван Сидоров)",
+            "Подписание: ждём научного руководителя (Иван Сидоров)",
+            "Signing: waiting for научного руководителя (Иван Сидоров)",
+        ),
+        ("waiting", None, "Подписание: идёт", "Signing: in progress"),
+        ("completed", None, "Подписание: завершено", "Signing: completed"),
+        ("not_sent", None, "Подписание: не отправлено", "Signing: not sent"),
+    ],
+)
+async def test__checkpoint_due__signing_line_when_the_point_has_a_route(
+    signing: str, waiting: str | None, ru_line: str, en_line: str
+) -> None:
+    log = InMemoryMailLogRepository()
+    mailer = _mailer(_Sender(), SERVER, log=log)
+    payload = NotificationPayload(
+        project_id=PROJECT,
+        project_name="Bertie",
+        excerpt="Заявка на тему КП (SmartLMS)",
+        profile_id="topic-approval",
+        deadline="2026-11-15T23:59:00+03:00",
+        signing=signing,
+        signing_waiting=waiting,
+    )
+
+    ru = mailer.render_notification("a@x.org", NotificationKind.checkpoint_due, payload, locale="ru")
+    en = mailer.render_notification("a@x.org", NotificationKind.checkpoint_due, payload, locale="en")
+    await mailer.send_notification("a@x.org", NotificationKind.checkpoint_due, payload, locale="ru")
+
+    assert ru is not None
+    assert en is not None
+    assert ru_line in ru.text
+    assert en_line in en.text
+    # Журнал хранит строку значением шаблона: карточка перерисует письмо с ней.
+    assert _row(log).params.values["signing"] == ru_line.removeprefix("Подписание: ")

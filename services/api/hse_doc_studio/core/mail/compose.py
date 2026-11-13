@@ -6,7 +6,7 @@ import re
 import unicodedata
 from collections.abc import Mapping
 from dataclasses import dataclass
-from datetime import UTC, datetime, timedelta
+from datetime import datetime, timedelta
 from enum import StrEnum
 from urllib.parse import urlsplit
 
@@ -15,6 +15,7 @@ from hse_doc_studio.core.i18n import current_interface_language
 from hse_doc_studio.core.mail.catalog import catalog, fill_text, format_duration, placeholders
 from hse_doc_studio.core.mail.content import Action, Block, MailContent, Row, Text
 from hse_doc_studio.core.mail.render import render_html, render_text
+from hse_doc_studio.core.signatures.dates import MONTHS_EN, format_numeric, to_display
 
 BRAND = "HSE Doc Studio"
 _MAX_VALUE = 200
@@ -162,8 +163,17 @@ def _row(label: str, template: str, values: Mapping[str, str]) -> Row | None:
 
 
 def format_moment(lang: Lang, moment: datetime) -> str:
-    """Дата и время в письме: в UTC, формат словаря (`layout.date_format`)."""
-    return moment.astimezone(UTC).strftime(catalog(lang)["layout"]["date_format"])
+    """Дата и время в письме по Москве (`DISPLAY_ZONE`), одно правило для всех писем: «15.11.2026, 23:59 (МСК)»,
+    «15 Nov 2026, 23:59 (Moscow time)». Время без пояса считается UTC. Обёртка из словаря (`layout.date_format`)."""
+    shown = to_display(moment)
+    day = (
+        f"{shown.day} {MONTHS_EN[shown.month - 1][:3]} {shown.year}"
+        if lang is Lang.en
+        else format_numeric(shown.date())
+    )
+    return fill_text(
+        catalog(lang)["layout"]["date_format"], {"date": day, "time": f"{shown.hour:02d}:{shown.minute:02d}"}
+    )
 
 
 def _expiry(lang: Lang, ttl: timedelta | None, expires_at: datetime | None, *, code: bool) -> str | None:

@@ -38,6 +38,8 @@ const note = (
     deadline: null,
     new_version: false,
     freed_bytes: null,
+    signing: null,
+    signing_waiting: null,
     ...payload,
   },
   ...over,

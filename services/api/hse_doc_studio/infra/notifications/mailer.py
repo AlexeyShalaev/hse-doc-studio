@@ -18,6 +18,7 @@ from urllib.parse import quote
 from hse_doc_studio.core.enums import Lang
 from hse_doc_studio.core.invitations.entities import NotificationKind, NotificationPayload
 from hse_doc_studio.core.mail import MailTemplate, RenderedMail, resolve_lang
+from hse_doc_studio.core.mail.catalog import catalog, fill_text
 from hse_doc_studio.core.mail.compose import fixed_path, format_moment, server_origin
 from hse_doc_studio.core.mail.journal import MailLinkKind, MailOrigin, MailRefKind, MailRequest, MailSkipReason
 from hse_doc_studio.use_cases.mail.dispatch import MailDispatcher
@@ -87,6 +88,18 @@ def _deadline(payload: NotificationPayload, lang: Lang) -> str | None:
         return None
 
 
+def _signing(payload: NotificationPayload, lang: Lang) -> str | None:
+    """Строка «Подписание» напоминания о сроке точки (16.7): «ждём ...», «завершено», «не отправлено»; без
+    маршрута None, и строки в письме нет."""
+    texts = catalog(lang)["signing"]
+    if payload.signing == "waiting":
+        who = payload.signing_waiting
+        return fill_text(texts["waiting"], {"who": who}) if who else texts["in_progress"]
+    if payload.signing in ("completed", "not_sent"):
+        return str(texts[payload.signing])
+    return None
+
+
 def _ref(kind: NotificationKind, payload: NotificationPayload) -> tuple[MailRefKind | None, str | None]:
     ref_kind = _REF_KINDS.get(kind)
     if ref_kind is None or not payload.ref_id:
@@ -154,6 +167,8 @@ class SmtpNotificationMailer:
                 # Новая версия (12.6): изменившиеся документы получателя.
                 "changed": payload.changed_names if new_version else None,
             }
+            if kind is NotificationKind.checkpoint_due:
+                values["signing"] = _signing(payload, lang)
             # У возврата комментарий, у новой версии сообщение автора («Что изменилось» его заменяет).
             note = payload.excerpt if returned else payload.message if new_version else None
             return _signing_link(kind, payload, self._public_url), values, note

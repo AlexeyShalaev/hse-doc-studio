@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import re
-from datetime import timedelta
+from datetime import UTC, datetime, timedelta
 from html.parser import HTMLParser
 
 import pytest
@@ -11,6 +11,7 @@ from hse_doc_studio.core.enums import Lang
 from hse_doc_studio.core.i18n import set_interface_language
 from hse_doc_studio.core.mail import MailTemplate, compose, resolve_lang
 from hse_doc_studio.core.mail.catalog import fill_html, fill_text, format_duration
+from hse_doc_studio.core.mail.compose import format_moment
 from hse_doc_studio.core.mail.samples import SAMPLE_RECIPIENT, SAMPLE_SERVER, sample_mail
 
 ALL = [(t, lang) for t in MailTemplate for lang in Lang]
@@ -161,10 +162,10 @@ def test__project_invitation_link__shows_message_role_and_expiry_date() -> None:
 
     assert "Редактор" in mail.text
     assert "> Добавляю вас в проект" in mail.text
-    assert "до 10.11.2026 14:30 UTC" in mail.text
-    assert "10.11.2026 14:30 UTC" in mail.html
+    assert "до 10.11.2026, 17:30 (МСК)" in mail.text
+    assert "10.11.2026, 17:30 (МСК)" in mail.html
     en = sample_mail(MailTemplate.project_invitation_link, Lang.en)
-    assert "until 2026-11-10 14:30 UTC" in en.text
+    assert "until 10 Nov 2026, 17:30 (Moscow time)" in en.text
     assert "as Editor" in en.text
 
 
@@ -362,3 +363,17 @@ def test__signing_mails__name_with_initials_has_a_single_dot(template: MailTempl
     for part in (mail.subject, mail.text, mail.html):
         assert "П. П.." not in part
         assert "П. П.</strong>." not in part
+
+
+@pytest.mark.parametrize(
+    ("lang", "moment", "expected"),
+    [
+        (Lang.ru, datetime(2026, 11, 15, 20, 59, tzinfo=UTC), "15.11.2026, 23:59 (МСК)"),
+        (Lang.en, datetime(2026, 11, 15, 20, 59, tzinfo=UTC), "15 Nov 2026, 23:59 (Moscow time)"),
+        # Время без пояса это UTC; 22:30 UTC уже следующий день по Москве.
+        (Lang.ru, datetime(2026, 12, 31, 22, 30), "01.01.2027, 01:30 (МСК)"),  # noqa: DTZ001
+        (Lang.en, datetime(2026, 9, 3, 6, 5, tzinfo=UTC), "3 Sep 2026, 09:05 (Moscow time)"),
+    ],
+)
+def test__format_moment__moscow_time_for_every_mail(lang: Lang, moment: datetime, expected: str) -> None:
+    assert format_moment(lang, moment) == expected

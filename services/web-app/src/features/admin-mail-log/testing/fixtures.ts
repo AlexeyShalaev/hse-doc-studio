@@ -831,7 +831,8 @@ export const MAIL_DEFAULT_DRAFTS: readonly MailDraft[] = [
     values: {
       project: PR.bertie.name,
       profile: TOPIC,
-      deadline: "15.11.2026 20:59 UTC",
+      deadline: "15.11.2026, 23:59 (МСК)",
+      signing: "ждём научного руководителя (Иван Сидоров)",
     },
   },
   {

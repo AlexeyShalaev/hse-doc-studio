@@ -8,7 +8,7 @@
     "link_valid_for": "The link is valid for {duration}.",
     "link_valid_until": "The link is valid until {date}.",
     "code_valid_for": "The code is valid for {duration}.",
-    "date_format": "%Y-%m-%d %H:%M UTC",
+    "date_format": "{date}, {time} (Moscow time)",
     "footer_server": "Server",
     "footer_recipient": "This email was sent to {email}.",
     "footer_auto": "This is an automated message, please do not reply.",
@@ -36,6 +36,12 @@
     "reviewer": "Reviewer",
     "editor": "Editor",
     "owner": "Owner"
+  },
+  "signing": {
+    "waiting": "waiting for {who}",
+    "in_progress": "in progress",
+    "completed": "completed",
+    "not_sent": "not sent"
   },
   "mails": {
     "verify_email": {
@@ -476,6 +482,10 @@
         [
           "Deadline",
           "{deadline}"
+        ],
+        [
+          "Signing",
+          "{signing}"
         ]
       ],
       "context": [
