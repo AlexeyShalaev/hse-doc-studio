@@ -91,7 +91,10 @@ async def test__plan__only_signature_places_change(presets_app: AsyncClient, pro
     assert plan["update_class"] == "patch"
     assert plan["files"] == []
     assert plan["counts"] == {}
-    assert plan["signature_presets"] == {"updated": [{"doc_id": "report", "slot_id": "supervisor"}], "kept": []}
+    assert plan["signature_presets"] == {
+        "updated": [{"doc_id": "report", "slot_id": "supervisor", "after_build": False}],
+        "kept": [],
+    }
 
 
 async def test__apply__moves_the_seed_to_the_new_preset_and_revert_returns_it(

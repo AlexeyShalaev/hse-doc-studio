@@ -30,6 +30,7 @@ from hse_doc_studio.core.repositories import (
     ITemplateRepository,
 )
 from hse_doc_studio.core.services import CheckResolutionService, ProjectTemplateService
+from hse_doc_studio.core.signatures.ports import IBuildPlaces
 from hse_doc_studio.core.team import doc_base_dir
 from hse_doc_studio.core.template_materializer import ITemplateMaterializer
 from hse_doc_studio.core.value_objects import ChecksOverride
@@ -68,6 +69,7 @@ class TriggerCompileUC:
         vcs_service: IVcsService,
         vcs_locks: IVcsFolderLocks,
         pdf_observer: IBuiltPdfObserver | None = None,
+        build_places: IBuildPlaces | None = None,
     ) -> None:
         self._project_repo = project_repo
         self._locator = locator
@@ -82,6 +84,8 @@ class TriggerCompileUC:
         self._vcs_service = vcs_service
         self._vcs_locks = vcs_locks
         self._pdf_observer = pdf_observer or NoopBuiltPdfObserver()
+        # Пересчёт мест подписей на якорях после сборки (signing-route.md, 15.17.9).
+        self._build_places = build_places
 
     async def execute(self, inp: TriggerCompileInput) -> TriggerCompileOutput:  # noqa: C901
         located = await self._locator.locate(inp.project_id)
@@ -231,6 +235,7 @@ class TriggerCompileUC:
                 artifacts=self._artifacts,
                 project_folder=project_folder,
                 pdf_observer=self._pdf_observer,
+                build_places=self._build_places,
             ),
         )
 

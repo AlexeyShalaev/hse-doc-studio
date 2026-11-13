@@ -11,6 +11,7 @@ from hse_doc_studio.core.repositories import (
     IProjectRepository,
     ITemplateRepository,
 )
+from hse_doc_studio.core.signatures.ports import IBuildPlaces
 from hse_doc_studio.core.vcs.protocols import IVcsFolderLocks, IVcsService
 from hse_doc_studio.use_cases.compile.compile_job_hooks import CompileJobHooks
 
@@ -51,7 +52,9 @@ class CompileJobHooksFactory:
         vcs_service: IVcsService,
         vcs_locks: IVcsFolderLocks,
         artifacts: IArtifactStore,
+        build_places: IBuildPlaces | None = None,
     ) -> None:
+        self._build_places = build_places
         self._compile_repo = compile_repo
         self._project_repo = project_repo
         self._changelog_repo = changelog_repo
@@ -72,5 +75,6 @@ class CompileJobHooksFactory:
             vcs_locks=self._vcs_locks,
             artifacts=self._artifacts,
             project_folder=spec.local_root,
+            build_places=self._build_places,
         )
         return _RecoveredCompileHooks(hooks, self._compile_repo)

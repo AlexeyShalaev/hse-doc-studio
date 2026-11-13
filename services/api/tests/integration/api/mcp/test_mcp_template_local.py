@@ -177,8 +177,11 @@ async def test__plan_and_apply__signature_places_only(presets_studio: Studio) ->
         )
 
     assert plan["files"] == []
-    assert plan["signature_presets"] == {"updated": [{"doc_id": "report", "slot_id": "supervisor"}], "kept": []}
-    assert applied["signature_places"] == [{"doc_id": "report", "slot_id": "supervisor"}]
+    assert plan["signature_presets"] == {
+        "updated": [{"doc_id": "report", "slot_id": "supervisor", "after_build": False}],
+        "kept": [],
+    }
+    assert applied["signature_places"] == [{"doc_id": "report", "slot_id": "supervisor", "after_build": False}]
     data = json.loads((presets_studio.folder / ".hse-studio" / "signatures.json").read_text(encoding="utf-8"))
     supervisor = data["placements"]["report"]["supervisor"]
     assert {k: supervisor[k] for k in SUPERVISOR_V2} == SUPERVISOR_V2

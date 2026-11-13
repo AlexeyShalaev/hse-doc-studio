@@ -600,3 +600,68 @@ async def test__on_finished__success__no_error_fields(tmp_path: Path) -> None:
 
     final = env.saved[-1]
     assert (final.error_code, final.error_detail, final.log) == (None, None, "ok")
+
+
+# --- места подписей на якорях (signing-route.md, 15.17.9) ---
+
+
+class _Places:
+    def __init__(self, env: Env, moved: int = 0, fail: bool = False) -> None:
+        self.env = env
+        self.moved = moved
+        self.fail = fail
+        self.calls: list[tuple[Path, str]] = []
+
+    async def after_build(self, project_id: Any, folder: Path, doc_id: str) -> int:
+        self.env.events.append("places")
+        self.calls.append((folder, doc_id))
+        if self.fail:
+            raise RuntimeError("boom")
+        return self.moved
+
+
+def _with_places(env: Env, places: _Places) -> None:
+    env.hooks = CompileJobHooks(
+        compile_repo=env.compile_repo,
+        project_repo=env.project_repo,
+        changelog_repo=env.changelog_repo,
+        template_repo=MagicMock(),
+        vcs_service=env.vcs_service,
+        vcs_locks=env.vcs_locks,
+        artifacts=env.artifacts,
+        project_folder=env.folder,
+        build_places=places,
+    )
+
+
+async def test__on_finished__success__places_follow_the_lines_before_the_snapshot_and_counted(tmp_path: Path) -> None:
+    env = Env(tmp_path)
+    places = _Places(env, moved=2)
+    _with_places(env, places)
+
+    await env.hooks.on_finished(env.spec, _result(JobStatus.succeeded), "log")
+
+    assert places.calls == [(tmp_path, "tz")]
+    assert env.events[:2] == ["places", "vcs"]
+    assert env.saved[-1].signature_places_moved == 2
+
+
+@pytest.mark.parametrize("status", [JobStatus.failed, JobStatus.cancelled])
+async def test__on_finished__not_success__no_places(tmp_path: Path, status: JobStatus) -> None:
+    env = Env(tmp_path)
+    places = _Places(env, moved=2)
+    _with_places(env, places)
+
+    await env.hooks.on_finished(env.spec, _result(status), "log")
+
+    assert places.calls == []
+
+
+async def test__on_finished__places_fail__swallowed_and_build_goes_on(tmp_path: Path) -> None:
+    env = Env(tmp_path)
+    _with_places(env, _Places(env, fail=True))
+
+    await env.hooks.on_finished(env.spec, _result(JobStatus.succeeded), "log")
+
+    assert "archive" in env.events
+    assert all(record.signature_places_moved is None for record in env.saved)

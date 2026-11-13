@@ -9,6 +9,7 @@ from typing import TYPE_CHECKING, Protocol
 from uuid import UUID
 
 from hse_doc_studio.core.jobs.verify import TrustBundle
+from hse_doc_studio.core.signatures.pack_places import SourceAnchors
 from hse_doc_studio.core.signatures.stamps import Stamp
 from hse_doc_studio.core.value_objects import SignaturesState, SignerInfo
 
@@ -132,3 +133,41 @@ class IPadesSigner(Protocol):
     async def validate(self, pdf: Path) -> list[PadesCheck]:
         """Все встроенные подписи файла в порядке ревизий."""
         ...
+
+
+class IBuildPlaces(Protocol):
+    """Пересчёт мест подписей на якорях шаблона после публикации сборки (signing-route.md, 15.17.9)."""
+
+    async def after_build(self, project_id: UUID, folder: Path, doc_id: str) -> int:
+        """Места документа «из шаблона» на якоре по якорям новой сборки; на сервере ещё пары черновиков маршрута без
+        места. Возвращает число размещений, которые изменились; 0, если пересчёта нет (версия на подписи, маршрут
+        держит документ, ЭП над B, свой PDF, якоря неизвестны). Сбой пересчёта сборку не роняет: вызывающий ловит."""
+        ...
+
+
+class NoBuildPlaces:
+    """`IBuildPlaces` там, где пересчёта нет (тесты сборки без состояния подписей)."""
+
+    async def after_build(self, project_id: UUID, folder: Path, doc_id: str) -> int:
+        return 0
+
+
+class IRouteDraftPlaces(Protocol):
+    """Маршруты в пересчёте мест после сборки (15.17.9): держит ли маршрут документ и места пар его черновиков."""
+
+    async def apply(
+        self, project_id: UUID, doc_id: str, state: SignaturesState, src: SourceAnchors
+    ) -> SignaturesState | None:
+        """None: документ держит маршрут (`HOLDING_STATUSES`), места не трогать. Иначе состояние, где пары черновиков
+        маршрута на этом документе без места или с затравкой получили место пресета, как при создании черновика.
+        Вызывается под `project_lock`: только читает маршруты."""
+        ...
+
+
+class NoRouteDraftPlaces:
+    """`IRouteDraftPlaces` там, где маршрутов нет (локальная Студия): документ свободен, черновиков нет."""
+
+    async def apply(
+        self, project_id: UUID, doc_id: str, state: SignaturesState, src: SourceAnchors
+    ) -> SignaturesState | None:
+        return state

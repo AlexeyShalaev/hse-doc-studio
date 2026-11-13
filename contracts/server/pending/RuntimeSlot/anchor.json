@@ -1,0 +1,96 @@
+{
+  "id": "supervisor",
+  "label": {
+    "ru": "Научный руководитель",
+    "en": "Supervisor"
+  },
+  "applies_to": [
+    "project_proposal",
+    "topic_application",
+    "report"
+  ],
+  "required_by": {
+    "topic_application": [
+      {
+        "id": "topic-approval",
+        "name": {
+          "ru": "Заявка на тему КП",
+          "en": "Topic application"
+        }
+      }
+    ]
+  },
+  "default_placement": {
+    "page": 1.0,
+    "x_mm": 110.0,
+    "y_mm": 130.0,
+    "width_mm": 40.0
+  },
+  "owner": null,
+  "required": false,
+  "extra_by": {},
+  "default_placements": {
+    "topic_application": {
+      "source": "anchor",
+      "anchor": "supervisor",
+      "align": "right",
+      "dx_mm": 0.0,
+      "dy_mm": -10.0,
+      "width_mm": 28.0,
+      "fallback": null
+    },
+    "project_proposal": {
+      "source": "anchor",
+      "anchor": "supervisor",
+      "align": "left",
+      "dx_mm": 0.0,
+      "dy_mm": -14.0,
+      "width_mm": 40.0,
+      "fallback": {
+        "page": 1,
+        "x_mm": 80.0,
+        "y_mm": 139.0,
+        "width_mm": 40.0
+      }
+    },
+    "report": {
+      "source": "mm",
+      "page": 1,
+      "x_mm": 110.0,
+      "y_mm": 130.0,
+      "width_mm": 40.0
+    }
+  },
+  "default_dates": {
+    "project_proposal": [
+      {
+        "source": "anchor",
+        "anchor": "supervisor.day",
+        "format": "day",
+        "align": "center",
+        "height_mm": 5.0,
+        "width_mm": null,
+        "dx_mm": 0.0,
+        "dy_mm": null,
+        "fallback": null
+      },
+      {
+        "source": "anchor",
+        "anchor": "supervisor.month_word",
+        "format": "month_word",
+        "align": "center",
+        "height_mm": 5.0,
+        "width_mm": null,
+        "dx_mm": 0.0,
+        "dy_mm": null,
+        "fallback": {
+          "page": 1,
+          "x_mm": 90.0,
+          "y_mm": 148.0,
+          "width_mm": 24.0,
+          "height_mm": 5.0
+        }
+      }
+    ]
+  }
+}

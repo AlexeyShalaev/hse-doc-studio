@@ -393,6 +393,9 @@ class PlanSlot:
     # Метки даты подписания слота и момент подписи (14.3).
     dates: tuple[PlanDate, ...] = ()
     signed_at: SignedAt | None = None
+    # Место пака на якоре шаблона, якоря сборки известны, а строки для подписи нет, и место человек не ставил
+    # (signing-route.md, 15.17.8): подсказка `anchor_missing`, не блокирует.
+    anchor_missing: bool = False
 
     @property
     def status(self) -> SlotStatus:

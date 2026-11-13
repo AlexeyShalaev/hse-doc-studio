@@ -4,6 +4,10 @@
 проекта (`placements` документа, иначе `default_placement`; `default_dates` документа) и пометку `from_pack`.
 Включённость, дата в рамке и момент подписи не меняются. Размещения может ещё не быть: оно создаётся выключенным.
 
+Место на якоре шаблона (15.17.8, 15.17.9) считается по якорям источника подписи: версии на подписи, если она есть,
+иначе текущей сборки. Якоря неизвестны и запасного места нет (или источник это свой загруженный PDF): 409
+`anchors_unknown`; якоря известны, а строки для подписи в документе нет: 409 `anchor_missing`.
+
 Правила те же, что у правки меток даты (14.6): документ, который держит идущий или завершённый маршрут, правит его
 сценарий (`ISigningRouteGate.edit_dates`): без права отправки маршрута 409 `route_locked`, при ЭП над зафиксированным
 PDF без `confirm_reset` 409 `resets_signatures`. Повтор без изменений ничего не пишет и в аудит не попадает.
@@ -26,16 +30,18 @@ from hse_doc_studio.core.repositories import (
     ISignatureRepository,
     ITemplateRepository,
 )
-from hse_doc_studio.core.services import RuntimeSlot, SignatureSlotService
-from hse_doc_studio.core.signatures.pack_places import pack_placement
+from hse_doc_studio.core.services import ProjectTemplateService, RuntimeSlot, SignatureSlotService
+from hse_doc_studio.core.signatures.pack_places import NO_ANCHORS, SourceAnchors, pack_placement
 from hse_doc_studio.core.signatures.ports import ISignatureAudit
 from hse_doc_studio.core.signatures.stamps import date_mark_text
+from hse_doc_studio.core.signing_route.entities import RouteConflictError
 from hse_doc_studio.core.signing_route.ports import ISigningRouteGate
 from hse_doc_studio.core.value_objects import SignaturePlacement, SignaturesState
 from hse_doc_studio.use_cases.projects.get_project import GetProjectInput, GetProjectUC
 from hse_doc_studio.use_cases.signatures._studio_signer import project_lock
 from hse_doc_studio.use_cases.signatures.pack_places import MANUAL, PackPlaces, PlaceInfo
 from hse_doc_studio.use_cases.signatures.set_slot_optional import unknown_slot
+from hse_doc_studio.use_cases.signatures.source_anchors import doc_anchors
 
 logger = structlog.get_logger()
 
@@ -57,6 +63,30 @@ class RestorePlacementOutput:
     place: PlaceInfo = MANUAL
 
 
+def anchors_unknown() -> RouteConflictError:
+    return RouteConflictError(
+        "anchors_unknown",
+        localized_error(
+            "Место из шаблона появится после сборки документа: строки шаблона пока неизвестны",
+            "The template place appears after the document is built: the template lines are not known yet",
+        ),
+    )
+
+
+def anchor_missing() -> RouteConflictError:
+    return RouteConflictError(
+        "anchor_missing",
+        localized_error(
+            "В собранном документе нет строки для этой подписи. Проверьте данные проекта или поставьте место вручную",
+            "The built document has no line for this signature. Check the project data or place it manually",
+        ),
+    )
+
+
+def _no_place(src: SourceAnchors) -> RouteConflictError:
+    return anchor_missing() if src.known else anchors_unknown()
+
+
 def _signatures_of(state: SignaturesState, doc_id: str) -> set[str]:
     return {*state.detached.get(doc_id, {}), *state.embedded.get(doc_id, {})}
 
@@ -70,11 +100,13 @@ class RestorePlacementUC:
         template_repo: ITemplateRepository,
         routes: ISigningRouteGate,
         audit: ISignatureAudit | None = None,
+        template_service: ProjectTemplateService | None = None,
     ) -> None:
         self._signature_repo = signature_repo
         self._template_repo = template_repo
         self._routes = routes
         self._audit = audit
+        self._template_service = template_service
         self._slots = SignatureSlotService()
         self._get_uc = GetProjectUC(project_repo, project_index_repo)
 
@@ -83,7 +115,10 @@ class RestorePlacementUC:
 
         async def write(state: SignaturesState) -> SignaturesState:
             existing = state.placements.get(inp.doc_id, {}).get(inp.slot_id)
-            placement = pack_placement(rslot.slot_def, doc.def_id, existing, version.version)
+            src = await self._anchors(project, version, state, doc)
+            placement = pack_placement(rslot.slot_def, doc.def_id, existing, version.version, src)
+            if placement is None:
+                raise _no_place(src)
             if placement == existing:
                 return state
             doc_placements = {**state.placements.get(inp.doc_id, {}), inp.slot_id: placement}
@@ -105,8 +140,17 @@ class RestorePlacementUC:
             await self._record(inp, version, before, updated)
         lang = str(project.lang)
         texts = tuple(date_mark_text(updated, inp.doc_id, inp.slot_id, mark, lang) for mark in placement.dates)
-        place = PackPlaces.load(self._template_repo, project, version).info(inp.doc_id, inp.slot_id, placement)
+        anchors = {inp.doc_id: await self._anchors(project, version, updated, doc)}
+        place = PackPlaces.load(self._template_repo, project, version, anchors).info(inp.doc_id, inp.slot_id, placement)
         return RestorePlacementOutput(placement=placement, texts=texts, place=place)
+
+    async def _anchors(
+        self, project: Project, version: TemplateVersion, state: SignaturesState, doc: Document
+    ) -> SourceAnchors:
+        """Якоря источника подписи документа (15.17.9); без сервиса шаблонов (тесты без сборки) неизвестны."""
+        if self._template_service is None:
+            return SourceAnchors(own_pdf=doc.custom_file is not None) if doc.custom_file is not None else NO_ANCHORS
+        return await doc_anchors(self._template_service, project, version, state, doc)
 
     async def _load(self, inp: RestorePlacementInput) -> tuple[Project, TemplateVersion, Document, RuntimeSlot]:
         project = (await self._get_uc.execute(GetProjectInput(project_id=inp.project_id))).project

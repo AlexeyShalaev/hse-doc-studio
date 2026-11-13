@@ -29,7 +29,12 @@ r"""Линтер пака (bundle-раскладка v2): превращает �
     каталога, без повторов, `when` только у слота сверх точки, `optional: true`
     не у слота с `required: true`; предупреждения: слот сверх точки не стоит в
     порядке маршрута, место `per_author` слота на общем документе командного
-    шаблона, узкое место под плашку открепленной ЭП.
+    шаблона, узкое место под плашку открепленной ЭП;
+  * места и метки даты на якорях шаблона (signing-route.md, 15.17.13, модуль
+    `anchor_lint`): вызов якоря или обёртки из `anchor_macros` в исходнике
+    документа или в `common/`, файл макросов `common/anchors.tex` подключён,
+    `default_placement` на якоре с запасным местом в мм; предупреждения: имя
+    якоря в исходнике не id слота каталога, одно имя дважды в файле.
 
 Запуск: `python -m hse_doc_studio.infra.template.pack_lint <version_dir>…`
 (exit code 1 при ошибках). Roster ↔ doc.yaml проверяется fail-fast самим
@@ -48,6 +53,7 @@ from typing import Any
 import yaml
 from jinja2 import Environment, TemplateSyntaxError
 
+from hse_doc_studio.core.catalog import AnchorPlace
 from hse_doc_studio.core.checkpoint_deadlines import parse_deadline_hint
 from hse_doc_studio.core.signatures.route_order import BUILTIN_ROUTE
 from hse_doc_studio.core.signatures.stamps import PLATE_MIN_WIDTH_MM
@@ -56,6 +62,7 @@ from hse_doc_studio.infra.project_init.template_renderer import (
     _split_lang_qualifier,
     collect_sources_suffixed,
 )
+from hse_doc_studio.infra.template.anchor_lint import lint_anchors
 from hse_doc_studio.infra.template.yaml_template_repository import (
     parse_default_dates,
     parse_signing_route,
@@ -434,6 +441,8 @@ def _lint_plate_room(manifest: dict[str, Any]) -> tuple[list[str], list[str]]:
             parsed = parse_slot_placement(place, f"placements.{doc_id}") if isinstance(place, dict) else None
         except (TypeError, ValueError, KeyError):
             parsed = None  # битое место уже назвал `_lint_slot_placements`
+        if isinstance(parsed, AnchorPlace):
+            parsed = parsed.fallback  # место на якоре по сборке линтер не считает; запасное место в мм проверяет
         if parsed is None or parsed.width_mm >= PLATE_MIN_WIDTH_MM:
             continue
         where = f"signatures.slots[{slot_id}]: placements.{doc_id}"
@@ -539,6 +548,7 @@ def lint_version_dir(version_dir: Path) -> LintReport:  # noqa: C901, PLR0912, P
         _lint_slot_placements(version_dir, manifest),
         _lint_signing_slots(manifest),
         _lint_plate_room(manifest),
+        lint_anchors(version_dir, manifest),
     ):
         report.errors.extend(errors)
         report.warnings.extend(warnings)

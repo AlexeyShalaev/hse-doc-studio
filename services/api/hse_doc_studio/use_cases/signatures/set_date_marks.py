@@ -41,7 +41,7 @@ from hse_doc_studio.core.signing_route.ports import ISigningRouteGate
 from hse_doc_studio.core.value_objects import DateMark, SignaturePlacement, SignaturesState, SignedAt
 from hse_doc_studio.use_cases.projects.get_project import GetProjectInput, GetProjectUC
 from hse_doc_studio.use_cases.signatures._studio_signer import project_lock
-from hse_doc_studio.use_cases.signatures.pack_places import MANUAL, PackPlaces, PlaceInfo
+from hse_doc_studio.use_cases.signatures.pack_places import MANUAL, PlaceInfo, load_places
 from hse_doc_studio.use_cases.signatures.signing_source import source_of
 
 logger = structlog.get_logger()
@@ -262,7 +262,8 @@ class SetDateMarksUC:
         placement = updated.placements[inp.doc_id][inp.slot_id]
         lang = str(project.lang)
         texts = tuple(date_mark_text(updated, inp.doc_id, inp.slot_id, mark, lang) for mark in placement.dates)
-        place = PackPlaces.load(self._template_repo, project, version).info(inp.doc_id, inp.slot_id, placement)
+        places = await load_places(self._template_repo, self._template_service, project, version, updated, [inp.doc_id])
+        place = places.info(inp.doc_id, inp.slot_id, placement)
         return SetDateMarksOutput(placement=placement, texts=texts, place=place)
 
     async def _load(self, inp: SetDateMarksInput) -> tuple[Project, TemplateVersion, Document, RuntimeSlot]:

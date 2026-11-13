@@ -73,6 +73,9 @@ class TemplateUpdatePlanRequest(BaseModel):
 class SignaturePresetPlaceResponse(StrictModel):
     doc_id: str
     slot_id: str
+    # Место новой версии на якоре шаблона, а якоря текущей сборки неизвестны (signing-route.md, 15.17.10): место
+    # встанет по строке шаблона после сборки.
+    after_build: bool = False
 
 
 class SignaturePresetKeptResponse(StrictModel):

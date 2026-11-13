@@ -220,7 +220,10 @@ async def compare_with_template(project_id: UUID, uc: FromDishka[CompareWithTemp
 
 def _map_presets(presets: SignaturePresetsPlan) -> SignaturePresetsResponse:
     return SignaturePresetsResponse(
-        updated=[SignaturePresetPlaceResponse(doc_id=p.doc_id, slot_id=p.slot_id) for p in presets.updated],
+        updated=[
+            SignaturePresetPlaceResponse(doc_id=p.doc_id, slot_id=p.slot_id, after_build=p.after_build)
+            for p in presets.updated
+        ],
         kept=[
             SignaturePresetKeptResponse(doc_id=k.doc_id, slot_id=k.slot_id, reason=k.reason.value) for k in presets.kept
         ],

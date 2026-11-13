@@ -53,3 +53,34 @@ def test__cleared_mark__not_brought_back_and_unknown_fields_inside_survive(tmp_p
 
     repository.save_state(tmp_path, _state())
     assert repository.get_state(tmp_path).placements["project_proposal"]["supervisor"].from_pack is None
+
+
+def test__from_pack__anchor_and_build_roundtrip_only_on_anchored_places() -> None:
+    anchored = replace(MARK, anchor="supervisor", build="0123456789abcdef")
+    unknown = replace(MARK, anchor="supervisor")  # запасное место: якоря были неизвестны
+
+    data = serialize_signatures_state(_state(anchored))
+
+    assert data["placements"]["project_proposal"]["supervisor"]["from_pack"] == {
+        "version": "2026.1.4",
+        "digest": "0123456789abcdef",
+        "anchor": "supervisor",
+        "build": "0123456789abcdef",
+    }
+    assert deserialize_signatures_state(data) == _state(anchored)
+    assert deserialize_signatures_state(serialize_signatures_state(_state(unknown))) == _state(unknown)
+
+
+@pytest.mark.parametrize(
+    ("anchor", "build", "expected"),
+    [
+        ("Supervisor", "0123456789abcdef", MARK),  # битый якорь: место в мм
+        ("supervisor", "xyz", replace(MARK, anchor="supervisor")),  # битая сборка: неизвестна
+        (7, None, MARK),
+    ],
+)
+def test__from_pack__broken_anchor_or_build__read_tolerantly(anchor: object, build: object, expected: FromPack) -> None:
+    data = serialize_signatures_state(_state(MARK))
+    data["placements"]["project_proposal"]["supervisor"]["from_pack"].update(anchor=anchor, build=build)
+
+    assert deserialize_signatures_state(data).placements["project_proposal"]["supervisor"].from_pack == expected

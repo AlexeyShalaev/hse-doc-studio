@@ -91,8 +91,9 @@ def _op_view(op: FileOp) -> dict[str, object]:
     return view
 
 
-def _place_view(place: PresetPlace) -> dict[str, str]:
-    return {"doc_id": place.doc_id, "slot_id": place.slot_id}
+def _place_view(place: PresetPlace) -> dict[str, object]:
+    # `after_build`: место новой версии на якоре шаблона встанет по строке после сборки (signing-route.md, 15.17.10).
+    return {"doc_id": place.doc_id, "slot_id": place.slot_id, "after_build": place.after_build}
 
 
 def _presets_view(presets: SignaturePresetsPlan) -> dict[str, object]:
@@ -200,12 +201,14 @@ class PlanTemplateUpdateTool(McpTool):
                     "markers пишет слияние с маркерами конфликта. signature_presets.updated: места подписей, "
                     "которые встанут как в новой версии шаблона; kept не обновятся: manual изменены автором, "
                     "route документ на подписании, signed над зафиксированным PDF есть ЭП. Пустой files при "
-                    "непустом updated значит, что файлы не меняются, а места обновятся.",
+                    "непустом updated значит, что файлы не меняются, а места обновятся. after_build: место встанет "
+                    "по строке шаблона после следующей сборки документа.",
                     "A conflict without a decision in resolutions stays as is (mine). theirs takes the template "
                     "file, markers writes the merge with conflict markers. signature_presets.updated: signature "
                     "places that will move to the new template version; kept will not: manual changed by the "
                     "author, route the document is on a signing route, signed the frozen PDF has an e-signature. "
-                    "Empty files with a non-empty updated means no files change but the places will.",
+                    "Empty files with a non-empty updated means no files change but the places will. after_build: "
+                    "the place follows the template line after the next build of the document.",
                 ),
             }
         )

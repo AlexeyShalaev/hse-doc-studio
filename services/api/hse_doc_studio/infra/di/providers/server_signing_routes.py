@@ -7,6 +7,8 @@
 
 from __future__ import annotations
 
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
 from datetime import timedelta
 from uuid import UUID
 
@@ -31,6 +33,7 @@ from hse_doc_studio.core.repositories import (
 from hse_doc_studio.core.services import ProjectTemplateService
 from hse_doc_studio.core.signatures.key_policy import ISigningKeyPolicy
 from hse_doc_studio.core.signatures.ports import (
+    IBuildPlaces,
     IMarkMeasure,
     IOpenPgpKeyImporter,
     IPadesSigner,
@@ -62,10 +65,12 @@ from hse_doc_studio.infra.signatures.pdf_stamper import PdfStamper
 from hse_doc_studio.use_cases.projects.get_project import GetProjectUC
 from hse_doc_studio.use_cases.projects.invitations import ResendInvitationUC
 from hse_doc_studio.use_cases.signatures._studio_signer import StudioSigner
+from hse_doc_studio.use_cases.signatures.anchor_places import BuildPlaces
 from hse_doc_studio.use_cases.signatures.default_key import DefaultSigningKey
 from hse_doc_studio.use_cases.signatures.freeze_pdf import FreezePdfUC
 from hse_doc_studio.use_cases.signatures.upload_signature_png import UploadSignaturePngUC
 from hse_doc_studio.use_cases.signer_profile.profile import SaveProfileImageUC
+from hse_doc_studio.use_cases.signing_route.anchor_places import RouteDraftPlaces, ScopedRouteDraftPlaces
 from hse_doc_studio.use_cases.signing_route.audit import AuditedSigningRoutes, SigningRouteAudit
 from hse_doc_studio.use_cases.signing_route.author import (
     SigningRouteControl,
@@ -336,6 +341,31 @@ class ServerSigningRoutesProvider(Provider):
     @provide(scope=Scope.REQUEST)
     def get_route_reconciler(self, services: RouteServices) -> RouteReconciler:
         return RouteReconciler(services)
+
+    @provide(scope=Scope.REQUEST)
+    def get_route_draft_places(self, services: RouteServices) -> RouteDraftPlaces:
+        return RouteDraftPlaces(services)
+
+    @provide(override=True)
+    def get_build_places(
+        self,
+        project_repo: IProjectRepository,
+        template_repo: ITemplateRepository,
+        signature_repo: ISignatureRepository,
+        template_service: ProjectTemplateService,
+        container: AsyncContainer,
+    ) -> IBuildPlaces:
+        """Пересчёт мест на якорях после сборки с маршрутами (signing-route.md, 15.17.9): документ под маршрутом не
+        трогается, пары черновиков получают место пресета. Маршруты читаются в своём запросном окружении."""
+
+        @asynccontextmanager
+        async def drafts() -> AsyncIterator[RouteDraftPlaces]:
+            async with container() as scope:
+                yield await scope.get(RouteDraftPlaces)
+
+        return BuildPlaces(
+            project_repo, template_repo, signature_repo, template_service, ScopedRouteDraftPlaces(drafts)
+        )
 
     @provide
     def get_route_watch_scheduler(self, container: AsyncContainer) -> RouteWatch:

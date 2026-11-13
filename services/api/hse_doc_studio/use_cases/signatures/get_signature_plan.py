@@ -2,14 +2,14 @@
 
 from __future__ import annotations
 
-from collections.abc import Iterable
+from collections.abc import Iterable, Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
 from uuid import UUID
 
-from hse_doc_studio.core.catalog import SubmissionProfile, TemplateVersion
+from hse_doc_studio.core.catalog import AnchorPlace, SubmissionProfile, TemplateVersion
 from hse_doc_studio.core.entities import Document, Project
-from hse_doc_studio.core.enums import ProjectStaffing, SignMode
+from hse_doc_studio.core.enums import AnchorState, ProjectStaffing, SignMode
 from hse_doc_studio.core.errors import NotFoundError
 from hse_doc_studio.core.i18n import localized_error
 from hse_doc_studio.core.repositories import (
@@ -25,6 +25,7 @@ from hse_doc_studio.core.services import (
     SubmissionProfileService,
     expand_slot_ids_for_doc,
 )
+from hse_doc_studio.core.signatures.pack_places import anchor_ref, is_from_pack
 from hse_doc_studio.core.signatures.plan import (
     DocFacts,
     DocPlan,
@@ -47,6 +48,7 @@ from hse_doc_studio.core.team import is_doc_active
 from hse_doc_studio.core.value_objects import SignaturesState
 from hse_doc_studio.use_cases.projects.get_project import GetProjectInput, GetProjectUC
 from hse_doc_studio.use_cases.signatures.signing_source import source_and_working
+from hse_doc_studio.use_cases.signatures.source_anchors import doc_anchors
 
 
 @dataclass
@@ -247,6 +249,7 @@ async def build_plan(  # noqa: PLR0913 — входы расчёта
         )
         frozen = state.frozen.get(doc_id)
         pinned = state.pinned.get(doc_id)
+        missing = await _anchor_missing(project, version, state, doc, [runtime.get(p.slot_id) for p in pairs], ts)
         slots = tuple(
             PlanSlot(
                 doc_id=doc_id,
@@ -267,6 +270,7 @@ async def build_plan(  # noqa: PLR0913 — входы расчёта
                 signed_at=placement.signed_at
                 if (placement := state.placements.get(doc_id, {}).get(p.slot_id)) is not None
                 else None,
+                anchor_missing=p.slot_id in missing,
             )
             for p in pairs
         )
@@ -282,3 +286,28 @@ async def build_plan(  # noqa: PLR0913 — входы расчёта
             )
         )
     return SignaturePlan(docs=tuple(docs), profile_id=profile_id, personas=personas)
+
+
+async def _anchor_missing(  # noqa: PLR0913 — входы одного документа
+    project: Project,
+    version: TemplateVersion,
+    state: SignaturesState,
+    doc: Document,
+    slots: Sequence[RuntimeSlot | None],
+    ts: ProjectTemplateService,
+) -> frozenset[str]:
+    """Слоты документа с подсказкой `anchor_missing` (signing-route.md, 15.17.8): место пака на якоре, якоря источника
+    подписи известны, нужного нет, а место не стоит руками (его нет, оно выключено или стоит как в шаблоне).
+    Якоря читаются, только если у документа есть место на якоре."""
+    anchored = [s for s in slots if s is not None and isinstance(s.slot_def.entry_for(doc.def_id), AnchorPlace)]
+    if not anchored:
+        return frozenset()
+    src = await doc_anchors(ts, project, version, state, doc)
+    missing: set[str] = set()
+    for slot in anchored:
+        ref = anchor_ref(slot.slot_def, doc.def_id, src)
+        placement = state.placements.get(doc.id, {}).get(slot.id)
+        manual = placement is not None and placement.enabled and not is_from_pack(placement)
+        if ref is not None and ref.state is AnchorState.missing and not manual:
+            missing.add(slot.id)
+    return frozenset(missing)

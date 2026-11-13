@@ -148,7 +148,12 @@ export const TemplateUpdatePlanContractSchema = z.strictObject({
   signature_presets: z
     .strictObject({
       updated: z.array(
-        z.strictObject({ doc_id: z.string(), slot_id: z.string() }),
+        z.strictObject({
+          doc_id: z.string(),
+          slot_id: z.string(),
+          // Место на якоре встанет по строке шаблона после сборки (15.17.10, R32); строку плана рисует W17.
+          after_build: z.boolean().optional(),
+        }),
       ),
       kept: z.array(
         z.strictObject({

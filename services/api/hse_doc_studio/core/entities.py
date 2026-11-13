@@ -124,6 +124,9 @@ class CompileRecord:
     # Почему сборка не удалась: стабильный код (`core/compile/failure.py`) и сырая деталь; у удачной пусто.
     error_code: str | None = None
     error_detail: str | None = None
+    # Сколько мест подписей из шаблона на якорях сдвинул пересчёт после этой сборки (signing-route.md, 15.17.9);
+    # None: пересчёта не было (сборка не удалась или до R32).
+    signature_places_moved: int | None = None
 
 
 @dataclass

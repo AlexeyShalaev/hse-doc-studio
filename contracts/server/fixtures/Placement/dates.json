@@ -45,5 +45,7 @@
     "source": "approval"
   },
   "origin": "manual",
-  "preset_available": true
+  "preset_available": true,
+  "source": null,
+  "anchor": null
 }

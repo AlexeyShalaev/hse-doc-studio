@@ -20,6 +20,7 @@ from hse_doc_studio.core.entities import Project
 from hse_doc_studio.core.enums import TemplateBaseProvenance, TemplateUpdateClass
 from hse_doc_studio.core.i18n import localized_error
 from hse_doc_studio.core.repositories import ISignatureRepository, ITemplateRepository
+from hse_doc_studio.core.services import ProjectTemplateService
 from hse_doc_studio.core.team import is_team
 from hse_doc_studio.core.template_update.entities import (
     FileOp,
@@ -35,6 +36,7 @@ from hse_doc_studio.core.template_update.planner import PlanInput, plan_files, p
 from hse_doc_studio.core.template_update.protocols import IMergeEngine, ITemplateTrackingRepository
 from hse_doc_studio.core.template_versions import classify_update, parse_version_key, stricter
 from hse_doc_studio.core.value_objects import SignaturesState
+from hse_doc_studio.use_cases.signatures.source_anchors import doc_anchors_sync
 from hse_doc_studio.use_cases.template_update.base_service import TemplateBaseService
 from hse_doc_studio.use_cases.template_update.signature_presets import plan_signature_presets
 
@@ -166,7 +168,15 @@ class TemplateUpdatePlanner:
             doc_of=doc_resolver(project, target),
         )
         signatures = self._signatures.get_state(project.folder)
-        presets = plan_signature_presets(self._template_repo, project, current, target, signatures, held_docs)
+        # Якоря текущих сборок для мест на якоре новой версии (15.17.10); документы под маршрутом план не трогает.
+        held = frozenset(held_docs)
+        templates = ProjectTemplateService()
+        anchors = {
+            doc.id: doc_anchors_sync(templates, project, current, signatures, doc)
+            for doc in project.documents
+            if doc.id not in held and doc.id in signatures.placements
+        }
+        presets = plan_signature_presets(self._template_repo, project, current, target, signatures, held, anchors)
         plan = UpdatePlan(
             from_version=current.version,
             to_version=target.version,

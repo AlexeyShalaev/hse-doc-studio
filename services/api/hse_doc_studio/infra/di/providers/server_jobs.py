@@ -53,6 +53,7 @@ from hse_doc_studio.core.repositories import (
     ISettingsRepository,
     ITemplateRepository,
 )
+from hse_doc_studio.core.signatures.ports import IBuildPlaces
 from hse_doc_studio.core.storage import IBlobStore, IObjectStore
 from hse_doc_studio.core.storage.ingest import OutputLimits
 from hse_doc_studio.core.storage.manifest import IBlobRegistry, IBlobUploader, ILiveBlobSource, ManifestLimits
@@ -386,9 +387,10 @@ class ServerJobsProvider(Provider):
         vcs_service: IVcsService,
         vcs_locks: IVcsFolderLocks,
         artifacts: IArtifactStore,
+        build_places: IBuildPlaces,
     ) -> IJobHooksFactory:
         return CompileJobHooksFactory(
-            compile_repo, project_repo, changelog_repo, template_repo, vcs_service, vcs_locks, artifacts
+            compile_repo, project_repo, changelog_repo, template_repo, vcs_service, vcs_locks, artifacts, build_places
         )
 
     @provide(override=True)

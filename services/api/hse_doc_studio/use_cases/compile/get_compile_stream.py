@@ -43,6 +43,8 @@ def result_line(record: CompileRecord) -> str:
         "warnings": sum(1 for r in record.check_results if r.severity == CheckSeverity.warn),
         "errors": sum(1 for r in record.check_results if r.severity == CheckSeverity.err),
         "error": error,
+        # Места подписей из шаблона, которые встали по строкам этой сборки (signing-route.md, 15.17.9).
+        "signature_places_moved": record.signature_places_moved or 0,
     }
     return RESULT_PREFIX + json.dumps(payload, ensure_ascii=False)
 

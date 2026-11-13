@@ -66,8 +66,9 @@ A checkpoint's route preset is set in the template version's `version.yaml`. All
 | `signatures.route` | version | the route steps: `[[author], [supervisor, co_supervisor], [academic_supervisor]]`, signers within a step sign in parallel. Without it: the authors, then the supervisor and the consultant, then the academic supervisor |
 | `signing_route` | submission profile | this checkpoint's steps instead of `signatures.route` |
 | `default_placement` | slot | the signature place `{page, x_mm, y_mm, width_mm}` on documents without their own entry in `placements` |
-| `placements` | slot | the signature place per document: `{document_id: {page, x_mm, y_mm, width_mm}}` |
-| `default_dates` | slot | date marks per document: `{document_id: [{page, x_mm, y_mm, width_mm, height_mm, format, align}]}` |
+| `placements` | slot | the signature place per document: `{document_id: {page, x_mm, y_mm, width_mm}}` or on a template line `{anchor, ...}` (below, "Places on the template lines") |
+| `default_dates` | slot | date marks per document: `{document_id: [{page, x_mm, y_mm, width_mm, height_mm, format, align}]}`; a mark can sit on an anchor too |
+| `signatures.anchor_macros` | version | template wrappers that pass the anchor name as their first `[...]`: the linter counts their calls as anchors |
 | `signing_slots` | submission profile | signatures beyond the checkpoint's items, when they appear, and whether they are optional on the checkpoint |
 | `required: true` | slot | this slot's signature cannot be marked optional on any checkpoint |
 | `deadline_hint` | submission profile | a hint on when the checkpoint deadline usually falls: `{ru, en}` text, without concrete dates |
@@ -115,3 +116,46 @@ The Studio applies the preset when the author first prepares the checkpoint's ro
 Check before releasing: `python -m hse_doc_studio.infra.template.pack_lint <version directory>`. The linter reports as errors a box past the edge of the sheet, a place or marks on a document outside the slot's `applies_to` or outside the version's documents, a `signing_slots` entry whose document is not in the checkpoint or whose slot is unknown or does not apply, a repeated pair, `when` on a signature the checkpoint already requires, and `optional: true` on a slot with `required: true`. It warns when a signature beyond the checkpoint is missing from the route order (it will go as the last step), when a `per_author` slot has a place on a shared document of a team template, and when a place is narrower than the detached e-signature plate where the checkpoint allows one (the box will widen leftwards to 70 mm). Whether a box lands on the right line the linter cannot know: build the documents and look at the boxes on the Signatures tab.
 
 You do not have to retype coordinates. Place the boxes and date marks on a built document of a live project, then open the "⋯" menu on the Signatures tab and choose "Copy as template preset". The Studio copies a `signatures.slots` fragment with `placements` and `default_dates` of this document or of every project document: document and slot ids as in the pack (a team member's document `report--ivanov` becomes `report`), coordinates rounded to 1 mm. Custom project signatures, disabled places and boxes the pack loader would reject stay out of the fragment, and the dialog lists them as warnings. The fragment carries no names of people and no project name.
+
+### Places on the template lines (anchors)
+
+The layout of a document depends on the project data: the English application has a shorter header, the consultant row is printed only when a consultant is set, a long title moves the date row down. A place in millimetres fits one layout only. So a place can be tied to a line of the template itself: a macro next to the signature line records where that line is when the document is built, and the Studio puts the box there.
+
+1. Put `common/anchors.tex` into the version: a byte-for-byte copy of the Studio reference (`services/api/hse_doc_studio/infra/compile/tex/anchors.tex`). Load it in the document after the shared files: `\input{../common/anchors}`.
+2. Put the anchor right before the line: `\hseSignAnchor[\linewidth]{supervisor}\rule{\linewidth}{0.4pt}` for a signature and `\hseDateAnchor[8mm]{supervisor}{day}\rule{8mm}{0.4pt}` for a part of the date row. The optional argument is the line width; without it the anchor is a point. A signature anchor is named by the catalog slot id, a date anchor by a "name, part" pair where the part is the mark format by convention (`day`, `month_word`, `month_number`, `year`, ...). The macro prints nothing in the PDF.
+3. Template wrappers pass the name as their first optional argument (`\hseSignField[supervisor]{0.15\textwidth}{Signature}`) and are listed in `signatures.anchor_macros`, so that the linter sees their calls.
+4. In `version.yaml` write the anchor instead of coordinates:
+
+```yaml
+signatures:
+  anchor_macros: [hseSignField, signdateblank]
+  slots:
+    - id: supervisor
+      placements:
+        topic_application: { anchor: supervisor, align: right, width_mm: 28 }
+        project_proposal:  { anchor: supervisor, align: left, dy_mm: -14, width_mm: 40 }
+      default_dates:
+        project_proposal:
+          - { anchor: supervisor.day }
+          - { anchor: supervisor.month_word }
+          - { anchor: supervisor.month_number }   # the English row "__.__.2026"
+    - id: author
+      placements:
+        topic_application: { anchor: author, align: right, dy_mm: -11, width_mm: 30, page: 1, x_mm: 165, y_mm: 201 }
+```
+
+| Field | Meaning | Default |
+|---|---|---|
+| `anchor` | anchor id in the document: `supervisor` for a signature, `supervisor.day` for a date mark | required |
+| `align` | how the box sits on the line: `left` (left edges together), `center`, `right` (right edges together) | `center` |
+| `dx_mm` | horizontal shift after alignment, -200 to 200 | 0 |
+| `dy_mm` | top of the box relative to the line, negative is higher, -287 to 287 | -10 for a signature; minus the height for a date mark (the mark stands on the line) |
+| `width_mm` | box width: 10 to 200 for a signature | the line width, at least 10 for a signature |
+| `height_mm`, `format` | for a date mark: height 2 to 20 and the format | 5; the anchor part if it is a format |
+| `page`, `x_mm`, `y_mm` | fallback place in mm (with `width_mm`) while the build anchors are unknown | none: no place without anchors |
+
+How the Studio places it: the build anchors are known and the anchor is there, the box follows the line; known but the anchor is missing, so the document has no such row, and there is no place; unknown (the document is not built, it was built by an older runner, the PDF came from the local Studio), so the fallback place in mm if it is set, otherwise no place. An uploaded PDF of your own gets no anchored place at all: a person places it. A date mark whose anchor is not in the build is not placed, so one entry covers both the Russian and the English date row. An anchored `default_placement` needs the full fallback place in mm: every Studio version reads it.
+
+After every build the template places nobody moved follow the lines of the new build; if the line is gone, the place is switched off. Manual places, documents on a signing route (their place changes only with "Send a new version"), documents with an e-signature over the frozen PDF and uploaded PDFs are left alone.
+
+The linter checks that every anchored entry has an anchor call or a call of a wrapper from `anchor_macros` with that name in the document files or in `common/`, that `common/anchors.tex` exists and the document loads it, and that an anchored `default_placement` has its fallback place. It warns when an anchor name in the sources is not a catalog slot id (a typo) and when one name appears twice in a file (the place follows the first one). The linter does not see an `\if` around an anchor: build the document with every combination of the data and check the boxes on the Signatures tab.

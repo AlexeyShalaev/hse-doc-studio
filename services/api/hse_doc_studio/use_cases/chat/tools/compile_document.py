@@ -170,6 +170,14 @@ class CompileDocumentTool:
             if en
             else f"замечаний: ошибок {len(errors)}, предупреждений {len(warns)}"
         )
+        if record.signature_places_moved:
+            # Места подписей из шаблона встали по строкам этой сборки (signing-route.md, 15.17.9).
+            moved = record.signature_places_moved
+            lines.append(
+                f"signature places moved to the template lines: {moved}"
+                if en
+                else f"места подписей встали по строкам шаблона: {moved}"
+            )
         interrupted = record.status == CompileStatus.cancelled and record.error_code == INTERRUPTED
         if interrupted:
             lines[0] = f"Build {doc_id}: interrupted" if en else f"Сборка {doc_id}: прервана"

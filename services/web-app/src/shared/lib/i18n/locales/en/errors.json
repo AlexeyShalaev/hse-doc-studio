@@ -229,6 +229,8 @@
     "date_from_route": "This signature goes through the signing route: the date comes from the approval and cannot be set by hand.",
     "resets_signatures": "Saving resets the e-signatures over the frozen PDF: confirm it.",
     "no_preset": "The project template has no route for this checkpoint: there is nothing to reset to.",
+    "anchors_unknown": "The template place appears after the document is built.",
+    "anchor_missing": "The built document has no line for this signature. Check the project data or place it manually.",
     "bad_deadline": "Invalid deadline: a date and time with a time zone, not earlier than 2000, is required."
   }
 }

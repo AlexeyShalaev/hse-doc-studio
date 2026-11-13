@@ -48,3 +48,5 @@ class CompileRecordRow(Base):
     # Причина неудачной сборки: код из `core/compile/failure.py` и сырая деталь.
     error_code: Mapped[str | None] = mapped_column(String(64))
     error_detail: Mapped[str | None] = mapped_column(Text)
+    # Сколько мест подписей из шаблона сдвинул пересчёт по якорям этой сборки (signing-route.md, 15.17.9).
+    signature_places_moved: Mapped[int | None] = mapped_column(Integer)

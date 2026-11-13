@@ -11,7 +11,8 @@
     "updated": [
       {
         "doc_id": "report",
-        "slot_id": "supervisor"
+        "slot_id": "supervisor",
+        "after_build": false
       }
     ],
     "kept": [

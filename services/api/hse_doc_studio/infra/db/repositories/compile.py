@@ -100,6 +100,7 @@ class PostgresCompileRepository:
             "output_size": record.output_size,
             "error_code": record.error_code,
             "error_detail": clip_detail(record.error_detail),
+            "signature_places_moved": record.signature_places_moved,
         }
         actor = current_actor()
         author: dict[str, Any] = {}
@@ -161,6 +162,7 @@ def _to_record(row: CompileRecordRow, project_folder: Path) -> CompileRecord:
             "output_size": row.output_size,
             "error_code": row.error_code,
             "error_detail": row.error_detail,
+            "signature_places_moved": row.signature_places_moved,
         },
         project_folder=project_folder,
     )

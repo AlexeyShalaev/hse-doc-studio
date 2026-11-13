@@ -106,6 +106,7 @@ from hse_doc_studio.core.setup import (
 from hse_doc_studio.core.shutdown import process_shutdown
 from hse_doc_studio.core.signatures.key_policy import ISigningKeyPolicy
 from hse_doc_studio.core.signatures.ports import (
+    IBuildPlaces,
     IChainFetcher,
     IOpenPgpKeyImporter,
     IPadesSigner,
@@ -2411,6 +2412,7 @@ class UseCaseProvider(Provider):
         vcs_locks: IVcsFolderLocks,
         compile_repo: ICompileRepository,
         pdf_observer: IBuiltPdfObserver,
+        build_places: IBuildPlaces,
     ) -> TriggerCompileUC:
         return TriggerCompileUC(
             project_repo=project_repo,
@@ -2426,6 +2428,7 @@ class UseCaseProvider(Provider):
             vcs_service=vcs_service,
             vcs_locks=vcs_locks,
             pdf_observer=pdf_observer,
+            build_places=build_places,
         )
 
     @provide
@@ -2971,12 +2974,14 @@ class UseCaseProvider(Provider):
         project_index_repo: IProjectIndexRepository,
         signature_repo: ISignatureRepository,
         template_repo: ITemplateRepository,
+        template_service: ProjectTemplateService,
     ) -> UpdateSignaturePlacementUC:
         return UpdateSignaturePlacementUC(
             project_repo=project_repo,
             project_index_repo=project_index_repo,
             signature_repo=signature_repo,
             template_repo=template_repo,
+            template_service=template_service,
         )
 
     @provide
@@ -3007,12 +3012,14 @@ class UseCaseProvider(Provider):
         project_index_repo: IProjectIndexRepository,
         signature_repo: ISignatureRepository,
         template_repo: ITemplateRepository,
+        template_service: ProjectTemplateService,
     ) -> UploadSignaturePngUC:
         return UploadSignaturePngUC(
             project_repo=project_repo,
             project_index_repo=project_index_repo,
             signature_repo=signature_repo,
             template_repo=template_repo,
+            template_service=template_service,
         )
 
     @provide
@@ -3120,6 +3127,7 @@ class UseCaseProvider(Provider):
         project_index_repo: IProjectIndexRepository,
         signature_repo: ISignatureRepository,
         template_repo: ITemplateRepository,
+        template_service: ProjectTemplateService,
         routes: ISigningRouteGate,
         audit: ISignatureAudit,
     ) -> RestorePlacementUC:
@@ -3130,6 +3138,7 @@ class UseCaseProvider(Provider):
             template_repo=template_repo,
             routes=routes,
             audit=audit,
+            template_service=template_service,
         )
 
     @provide
