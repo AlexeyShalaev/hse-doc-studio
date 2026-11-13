@@ -1,0 +1,186 @@
+% !TeX program = xelatex
+% ============================================================
+% research/report/report.tex — Отчёт исследовательского курсового
+% проекта ОП «Программная инженерия» ФКН НИУ ВШЭ.
+%
+% Оформление: ГОСТ 7.32-2017 «Отчёт о НИР». Чистый документ БЕЗ штампа
+% (в отличие от ЕСПД-документов прикладного курсового). Структура и язык
+% ветвятся по project.lang:
+%   RU — форма ОП ПИ (ru pi): Список исполнителей → Реферат → Содержание →
+%        Термины → Введение → главы (обзор→метод→результаты, «Выводы по
+%        главе») → Заключение → Список источников (ГОСТ Р 7.0.5-2008) →
+%        Приложения;
+%   EN — англ. академическая форма ФКН: Annotation → Keywords → Contents →
+%        Introduction → Literature review → Methodology → Experiments &
+%        results → Conclusion → References → Appendices.
+%
+% Как пользоваться: пишите свой текст вместо жёлтых \hseFill{…}; данные о
+% себе, руководителе, группе и годе задайте в настройках проекта.
+% ============================================================
+\documentclass[12pt,a4paper]{extreport}
+\input{preamble}
+\begin{document}
+\input{title}
+
+
+% ============================================================
+%  ENGLISH RESEARCH REPORT (project.lang == en)
+% ============================================================
+\chapter*{Annotation}
+\addcontentsline{toc}{chapter}{Annotation}
+% A concise summary of the study: object, aim, methods, main results and
+% their applicability (a short paragraph).
+This report presents \hseFill{a concise summary: the problem, the aim, what was done and the main result}. The object of the study is \hseFill{object}; the aim is \hseFill{aim}. \hseFill{Briefly: methods used and the main result obtained, and where it can be applied.}
+
+\clearpage
+\chapter*{Keywords}
+\addcontentsline{toc}{chapter}{Keywords}
+% 5–15 keywords/phrases, comma-separated.
+\hseFill{Keyword one, keyword two, keyword three, keyword four, keyword five}
+
+\clearpage
+% ── Обязательный русскоязычный реферат ──
+% Требование §2.3.4.2 Программы практики ОП ПИ: исследовательская работа,
+% выполненная на английском языке, обязана содержать И англо-, И
+% русскоязычный реферат (не опционально). Печатается на русском независимо
+% от языка проекта.
+\begin{otherlanguage}{russian}
+\chapter*{Реферат}
+\addcontentsline{toc}{chapter}{Реферат}
+Отчёт содержит \hseFill{краткое изложение: проблема, цель, что сделано и главный результат}. Объект исследования~--- \hseFill{объект}; цель работы~--- \hseFill{цель}. \hseFill{Кратко: использованные методы, основной полученный результат и область его применения.}
+
+\vspace{1em}
+\noindent\textbf{Ключевые слова:} \hseFill{ключевое слово один, ключевое слово два, ключевое слово три, ключевое слово четыре, ключевое слово пять}
+\end{otherlanguage}
+
+\clearpage
+\tableofcontents
+\clearpage
+
+% ============================================================
+\chapter{Introduction}
+% ============================================================
+% Relevance, aim, objectives, object and subject of the study, and the
+% structure of the report.
+Motivate the topic: what problem is addressed, why it matters, and what is
+already known~\cite{example-en}.
+
+\textbf{Aim of the study} — \hseFill{one sentence: the scientific result to be achieved}.
+
+\textbf{Objectives:}
+\begin{enumerate}[label=\arabic*), leftmargin=1.25cm]
+  \item \hseFill{review existing approaches};
+  \item \hseFill{propose / formalise a method (model, algorithm)};
+  \item \hseFill{implement it and run a computational experiment};
+  \item \hseFill{analyse the results and draw conclusions}.
+\end{enumerate}
+
+\textbf{Object of study} — \hseFill{what is studied in general}.
+\textbf{Subject of study} — \hseFill{the specific aspect in focus}.
+
+\clearpage
+% ============================================================
+\chapter{Literature review}
+% ============================================================
+\section{State of the art}
+Give an analytical overview of existing results and approaches, with
+citations~\cite{example-en}.
+
+\section{Comparison of existing approaches}
+Compare known methods by criteria relevant to the study; the comparison is
+given in Table~\ref{tab:approaches-en}.
+
+\begin{table}[H]
+\caption{Comparison of existing approaches}
+\label{tab:approaches-en}
+\centering
+\begin{tabular}{|>{\raggedright\arraybackslash}p{5cm}|c|c|c|}
+\hline
+\textbf{Criterion} & \textbf{Approach~A} & \textbf{Approach~B} & \textbf{Proposed} \\
+\hline
+Criterion~1 & \cmpplus  & \cmpminus  & \cmpplus \\
+\hline
+Criterion~2 & \cmpminus & \cmpplanned & \cmpplus \\
+\hline
+\end{tabular}
+\end{table}
+
+\section{Summary}
+State the gap in existing approaches and the resulting problem statement.
+
+\clearpage
+% ============================================================
+\chapter{Methodology}
+% ============================================================
+\section{Problem statement}
+State the studied problem formally: input, expected output, constraints and
+the quality criterion (e.g. an objective $f(x)\to\min$ or a hypothesis).
+
+\section{Proposed method}
+Describe the proposed method (model, algorithm): its main steps, assumptions
+and parameters.
+
+\section{Summary}
+State the key methodological results.
+
+\clearpage
+% ============================================================
+\chapter{Experimental setup and results}
+% ============================================================
+\section{Experiment design, data and metrics}
+Describe the research questions, datasets (size, source, preparation) and the
+quality metrics used.
+
+\section{Results and discussion}
+Report the results (Table~\ref{tab:results-en}), compare with baselines and
+discuss significance and limitations.
+
+\begin{table}[H]
+\caption{Experimental results}
+\label{tab:results-en}
+\centering
+\begin{tabular}{|>{\raggedright\arraybackslash}p{5cm}|c|c|}
+\hline
+\textbf{Method} & \textbf{Metric~1} & \textbf{Metric~2} \\
+\hline
+Baseline         & \ldots & \ldots \\
+\hline
+Proposed method  & \ldots & \ldots \\
+\hline
+\end{tabular}
+\end{table}
+
+\section{Summary}
+State the outcomes of the experimental study.
+
+\clearpage
+% ============================================================
+\chapter{Conclusion}
+% ============================================================
+Summarise the results against each objective, the main outcome, and directions
+for further work.
+
+\clearpage
+% ── References (GOST R 7.0.5-2008 or an IEEE-style numbered list) ──
+\phantomsection
+\addcontentsline{toc}{chapter}{References}
+\renewcommand{\bibname}{References}
+\begin{thebibliography}{99}
+  \bibitem{example-en}
+  Author A.~B., Coauthor C.~D. Title of the paper // Proceedings of the Conference. --- 2024. --- P.~10--20.
+  \bibitem{example-web}
+  Resource name [Electronic resource]. --- URL: \url{https://example.org} (accessed: 01.01.2026).
+\end{thebibliography}
+
+\clearpage
+% ── Appendices (GOST 7.32-2017 §6.14) — optional ──
+\appendix
+\renewcommand{\thechapter}{\Alph{chapter}}
+\titleformat{\chapter}[hang]
+  {\normalfont\large\bfseries\centering}{Appendix~\thechapter}{1ex}{}
+\chapter{Illustrations}
+Place bulky figures, listings and data tables here.
+
+
+
+\end{document}

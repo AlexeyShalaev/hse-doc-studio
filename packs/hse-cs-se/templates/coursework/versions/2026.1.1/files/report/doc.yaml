@@ -1,0 +1,25 @@
+# Манифест документа (bundle-раскладка v2): всё про документ — в этой папке.
+# id = имя папки; языковые редакции — файлы-соседи <stem>.<код>.<ext>,
+# файл без кода — единственная форма для всех языков. Пути source_file —
+# в проектном пространстве (без суффиксов). Файл doc.yaml в проект не копируется.
+name:
+  ru: Отчёт (НИР)
+  en: Research report
+code:
+  ru: ОТЧ
+  en: REP
+source_file: report/report.tex
+output_file: report/report.pdf
+output_name:
+  ru: Отчёт.pdf
+  en: Research report.pdf
+gost_ref: gost-7.32-2017
+required: true
+supported_langs:
+- ru
+- en
+scope: personal
+supported_kinds:
+- research
+# Визуальный блок навигации — дивайдер рисуется на смене группы.
+group: work

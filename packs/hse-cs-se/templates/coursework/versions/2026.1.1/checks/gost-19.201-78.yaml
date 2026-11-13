@@ -1,0 +1,164 @@
+# packs/hse-cs-se/templates/vkr/versions/2026.1/checks/gost-19.201-78.yaml
+# ГОСТ 19.201-78 — Техническое задание. Требования к содержанию и оформлению.
+
+# label — короткая подпись группы в UI; ref — полная ссылка на документ.
+label:
+  ru: ГОСТ 19.201-78
+  en: GOST 19.201-78
+ref:
+  ru: ГОСТ 19.201-78 §2
+  en: GOST 19.201-78 §2
+source:
+  ru: Техническое задание. Требования к содержанию и оформлению.
+  url: https://docs.cntd.ru/document/1200007648
+
+rules:
+  # ── Обязательные разделы ТЗ ──
+  - id: gost-19.201-78/section-introduction
+    title:       { ru: Раздел «Введение», en: "\"Introduction\" section" }
+    description: { ru: "ГОСТ 19.201-78 §2.1: ТЗ должно содержать раздел «Введение» с наименованием и краткой характеристикой области применения программы.", en: "GOST 19.201-78 §2.1: the Technical Specification must contain an \"Introduction\" section with the name and a brief description of the program's field of application." }
+    category:    structure
+    applies_to:  [technical_specification, shared_technical_specification]
+    default_severity: err
+    engine: regex
+    params:
+      file_glob: "*technical_specification/*.tex"
+      pattern: '(?i)\\section\*?\{[^}]*(?:[Вв]ведени|introduction)'
+      negate: false
+      message: { ru: "В ТЗ отсутствует раздел «Введение».", en: "The Technical Specification is missing an \"Introduction\" section." }
+
+  - id: gost-19.201-78/section-grounds
+    title:       { ru: Раздел «Основания для разработки», en: "\"Grounds for development\" section" }
+    description: { ru: "ГОСТ 19.201-78 §2.2: ТЗ должно содержать раздел «Основания для разработки».", en: "GOST 19.201-78 §2.2: the Technical Specification must contain a \"Grounds for development\" section." }
+    category:    structure
+    applies_to:  [technical_specification, shared_technical_specification]
+    default_severity: err
+    engine: regex
+    params:
+      file_glob: "*technical_specification/*.tex"
+      pattern: '(?i)\\section\*?\{[^}]*(?:[Оо]сновани|grounds)'
+      negate: false
+      message: { ru: "В ТЗ отсутствует раздел «Основания для разработки».", en: "The Technical Specification is missing a \"Grounds for development\" section." }
+
+  - id: gost-19.201-78/section-purpose
+    title:       { ru: Раздел «Назначение разработки», en: "\"Development purpose\" section" }
+    description: { ru: "ГОСТ 19.201-78 §2.3: ТЗ должно содержать раздел «Назначение разработки» с функциональным и эксплуатационным назначением.", en: "GOST 19.201-78 §2.3: the Technical Specification must contain a \"Development purpose\" section covering the functional and operational purpose." }
+    category:    structure
+    applies_to:  [technical_specification, shared_technical_specification]
+    default_severity: err
+    engine: regex
+    params:
+      file_glob: "*technical_specification/*.tex"
+      pattern: '(?i)\\section\*?\{[^}]*(?:[Нн]азначени|purpose)'
+      negate: false
+      message: { ru: "В ТЗ отсутствует раздел «Назначение разработки».", en: "The Technical Specification is missing a \"Development purpose\" section." }
+
+  - id: gost-19.201-78/section-requirements
+    title:       { ru: Раздел «Требования к программе», en: "\"Software requirements\" section" }
+    description: { ru: "ГОСТ 19.201-78 §2.4: ТЗ должно содержать раздел «Требования к программе» с требованиями к функциональным характеристикам, надёжности, составу ТС и т.д.", en: "GOST 19.201-78 §2.4: the Technical Specification must contain a \"Software requirements\" section with requirements for functional characteristics, reliability, hardware composition, etc." }
+    category:    structure
+    applies_to:  [technical_specification, shared_technical_specification]
+    default_severity: err
+    engine: regex
+    params:
+      file_glob: "*technical_specification/*.tex"
+      pattern: '(?i)\\section\*?\{[^}]*(?:[Тт]ребовани|requirements)'
+      negate: false
+      message: { ru: "В ТЗ отсутствует раздел «Требования к программе».", en: "The Technical Specification is missing a \"Software requirements\" section." }
+
+  - id: gost-19.201-78/section-doc-requirements
+    title:       { ru: Раздел «Требования к программным документам», en: "\"Requirements for program documents\" section" }
+    description: { ru: "ГОСТ 19.201-78 §2.5: ТЗ должно содержать раздел «Требования к программным документам».", en: "GOST 19.201-78 §2.5: the Technical Specification must contain a \"Requirements for program documents\" section." }
+    category:    structure
+    applies_to:  [technical_specification, shared_technical_specification]
+    default_severity: warn
+    engine: regex
+    params:
+      file_glob: "*technical_specification/*.tex"
+      pattern: '(?i)\\section\*?\{[^}]*(?:[Тт]ребовани|requirements)[^}]*(?:документ|documentation)'
+      negate: false
+      message: { ru: "В ТЗ отсутствует раздел «Требования к программным документам».", en: "The Technical Specification is missing a \"Requirements for program documents\" section." }
+
+  - id: gost-19.201-78/section-tech-economic
+    title:       { ru: Раздел «Технико-экономические показатели», en: "\"Technical and economic indicators\" section" }
+    description: { ru: "ГОСТ 19.201-78 §2.6: ТЗ должно содержать раздел «Технико-экономические показатели».", en: "GOST 19.201-78 §2.6: the Technical Specification must contain a \"Technical and economic indicators\" section." }
+    category:    structure
+    applies_to:  [technical_specification, shared_technical_specification]
+    default_severity: warn
+    engine: regex
+    params:
+      file_glob: "*technical_specification/*.tex"
+      pattern: '(?i)\\section\*?\{[^}]*(?:[Тт]ехнико|technical and economic)'
+      negate: false
+      message: { ru: "В ТЗ отсутствует раздел «Технико-экономические показатели».", en: "The Technical Specification is missing a \"Technical and economic indicators\" section." }
+
+  - id: gost-19.201-78/section-stages
+    title:       { ru: Раздел «Стадии и этапы разработки», en: "\"Development stages and phases\" section" }
+    description: { ru: "ГОСТ 19.201-78 §2.7: ТЗ должно содержать раздел «Стадии и этапы разработки».", en: "GOST 19.201-78 §2.7: the Technical Specification must contain a \"Development stages and phases\" section." }
+    category:    structure
+    applies_to:  [technical_specification, shared_technical_specification]
+    default_severity: warn
+    engine: regex
+    params:
+      file_glob: "*technical_specification/*.tex"
+      pattern: '(?i)\\section\*?\{[^}]*(?:[Сс]тади|stages)'
+      negate: false
+      message: { ru: "В ТЗ отсутствует раздел «Стадии и этапы разработки».", en: "The Technical Specification is missing a \"Development stages and phases\" section." }
+
+  - id: gost-19.201-78/section-acceptance
+    title:       { ru: Раздел «Порядок контроля и приёмки», en: "\"Verification and acceptance procedure\" section" }
+    description: { ru: "ГОСТ 19.201-78 §2.8: ТЗ должно содержать раздел «Порядок контроля и приёмки».", en: "GOST 19.201-78 §2.8: the Technical Specification must contain a \"Verification and acceptance procedure\" section." }
+    category:    structure
+    applies_to:  [technical_specification, shared_technical_specification]
+    default_severity: warn
+    engine: regex
+    params:
+      file_glob: "*technical_specification/*.tex"
+      # Английские ТЗ называют этот раздел по-разному (ORDER OF CONTROL AND
+      # ACCEPTANCE у личного, CONTROL AND ACCEPTANCE PROCEDURE у общего), но во
+      # всех вариантах есть accept и control. Без английских альтернатив правило
+      # считало раздел отсутствующим во ВСЕХ английских ТЗ, хотя он там есть.
+      # `Control of input information` — это \subsection, под `\section` не
+      # подпадает, поэтому ложного прохода альтернативы не дают.
+      pattern: '(?i)\\section\*?\{[^}]*([Пп]ор[яа]до[к]|[Кк]онтрол|accept|control)'
+      negate: false
+      message: { ru: "В ТЗ отсутствует раздел «Порядок контроля и приёмки».", en: "The Technical Specification is missing a \"Verification and acceptance procedure\" section." }
+
+  # ── Геометрия страницы для ТЗ (ГОСТ ЕСПД — особые поля) ──
+  - id: gost-19.201-78/page-margins
+    title:       { ru: Поля страницы (ЕСПД, рамка/штамп), en: "Page margins (ESPD frame/stamp)" }
+    description: { ru: "Геометрия ЕСПД-документа с рамкой и основной надписью (ГОСТ 19.106/2.104): левое 20 мм, правое 10 мм, верхнее 25 мм, нижнее 40 мм.", en: "ESPD document geometry with frame and title block (GOST 19.106/2.104): left 20 mm, right 10 mm, top 25 mm, bottom 40 mm." }
+    category:    formatting
+    applies_to:  [technical_specification, shared_technical_specification]
+    default_severity: info
+    engine: structural
+    params:
+      check: page_geometry
+      expected: { left_mm: 20, right_mm: 10, top_mm: 25, bottom_mm: 40 }
+      tolerance_mm: 2
+
+  # ── Неразрешённые цитаты ──
+  - id: gost-19.201-78/dangling-cite
+    title:       { ru: Неразрешённая библиографическая ссылка, en: "Unresolved bibliographic citation" }
+    description: { ru: "После компиляции: ссылка на источник не найдена в .bib-файле.", en: "After compilation: the cited source was not found in the .bib file." }
+    category:    bibliography
+    applies_to:  [technical_specification, shared_technical_specification]
+    default_severity: warn
+    engine: log_parse
+    params:
+      pattern: "Citation `([^'`]+)' on page (\\d+) undefined"
+      message_template: { ru: "Ссылка `{0}` на странице {1} не определена.", en: "Citation `{0}` on page {1} is undefined." }
+
+  # ── Аннотация ──
+  - id: gost-19.201-78/annotation
+    title:       { ru: Аннотация документа, en: "Document abstract" }
+    description: { ru: "ГОСТ 19.105-78 §2.5: каждый программный документ должен иметь аннотацию.", en: "GOST 19.105-78 §2.5: every program document must have an abstract." }
+    category:    structure
+    applies_to:  [technical_specification, shared_technical_specification]
+    default_severity: warn
+    engine: regex
+    params:
+      file_glob: "*technical_specification/*.tex"
+      pattern: '(?i)\\section\*?\{[^}]*(?:[Аа]ннотаци|annotation|abstract)'
+      negate: false
+      message: { ru: "В ТЗ отсутствует раздел «Аннотация».", en: "The Technical Specification is missing an \"Abstract\" section." }
