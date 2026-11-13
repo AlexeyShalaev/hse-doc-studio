@@ -26,6 +26,7 @@ from uuid import UUID
 from hse_doc_studio.core.access.context import require_actor
 from hse_doc_studio.core.access.entities import Actor
 from hse_doc_studio.core.agent.entities import AgentToolContext, ToolResult, ToolSpec
+from hse_doc_studio.core.catalog import SlotCondition
 from hse_doc_studio.core.enums import ToolKind
 from hse_doc_studio.core.errors import NotFoundError
 from hse_doc_studio.core.i18n import localized_error
@@ -39,6 +40,7 @@ from hse_doc_studio.core.signing_route.entities import (
     RouteStatus,
     StopReason,
 )
+from hse_doc_studio.core.signing_route.preset import PresetDiff
 from hse_doc_studio.core.signing_route.readiness import Blocker, BlockerCode, OtherRoute, RouteBlockedError
 from hse_doc_studio.use_cases.mcp.tools._base import McpTool, json_result, optional_text, project_schema, text_arg
 from hse_doc_studio.use_cases.signing_route.author import (
@@ -101,6 +103,56 @@ def _skip_hint(details: RouteDetails) -> str | None:
     return localized_error(
         f"Все подписи ({who}) на точке необязательны. Пропустить может автор маршрута в интерфейсе",
         f"All signatures of {who} at this checkpoint are optional. The route author can skip them in the interface",
+    )
+
+
+def _condition(when: SlotCondition | None) -> dict[str, object] | None:
+    if when is None:
+        return None
+    return {"person": when.person, "role": when.role.value if when.role is not None else None}
+
+
+def _preset(details: RouteDetails) -> dict[str, object] | None:
+    """Пресет точки (15.12): как в API, но всегда, а не только управляющему; агенту нужно знать, отличается ли
+    маршрут от шаблона. None, если версия шаблона пресета не задаёт."""
+    view = details.preset
+    if view is None:
+        return None
+    preset = view.preset
+    return {
+        "version": preset.version,
+        "steps": [list(step) for step in preset.steps],
+        "extra_slots": [
+            {"doc_id": item.pair.doc_id, "slot_id": item.pair.slot_id, "when": _condition(item.when)}
+            for item in preset.extra_slots
+        ],
+        "optional": [{"doc_id": pair.doc_id, "slot_id": pair.slot_id} for pair in preset.optional],
+        "skipped_by_condition": [
+            {"doc_id": item.pair.doc_id, "slot_id": item.pair.slot_id, "when": _condition(item.when)}
+            for item in preset.skipped_by_condition
+        ],
+        "differs": [diff.value for diff in view.differs],
+    }
+
+
+_DIFF_TEXT = {
+    PresetDiff.order: ("порядок и люди", "the order and people"),
+    PresetDiff.slots: ("подписи сверх точки", "the extra signatures"),
+    PresetDiff.optional: ("отметки «необязательна»", "the “optional” marks"),
+}
+
+
+def _preset_hint(details: RouteDetails) -> str | None:
+    """Подсказка, если маршрут, который можно править, отличается от шаблона (15.12): вернуть может только автор в
+    интерфейсе, у MCP правки маршрута нет."""
+    view = details.preset
+    if view is None or not view.differs or details.route.status not in EDITABLE_STATUSES:
+        return None
+    ru = ", ".join(_DIFF_TEXT[diff][0] for diff in view.differs)
+    en = ", ".join(_DIFF_TEXT[diff][1] for diff in view.differs)
+    return localized_error(
+        f"Маршрут отличается от шаблона ({ru}). Вернуть как в шаблоне может автор в интерфейсе",
+        f"The route differs from the template ({en}). The author can reset it to the template in the interface",
     )
 
 
@@ -248,6 +300,9 @@ def route_view(details: RouteDetails) -> dict[str, object]:
                         "optional": slot.optional,
                         "status": slot.status.value,
                         "reason": slot.reason.value if slot.reason is not None else None,
+                        # Кто добавил слот сверх точки (15.12): `pack` шаблон, `author` автор; null у пары точки.
+                        "added_by": slot.added_by.value if slot.added_by is not None else None,
+                        "preset_optional": slot.preset_optional,
                     }
                     for slot in doc.slots
                 ],
@@ -257,6 +312,8 @@ def route_view(details: RouteDetails) -> dict[str, object]:
         "changed_docs": list(details.changed_docs),
         "changed_hint": _changed_hint(details.docs),
         "skip_hint": _skip_hint(details),
+        "preset": _preset(details),
+        "preset_hint": _preset_hint(details),
         "events": [_event(e) for e in details.events[-_EVENTS:]],
         "signing_page": _page(route.project_id, route.id),
     }
@@ -292,8 +349,10 @@ class GetSigningRouteTool(McpTool):
             "отправки (changed): правка и пересборка маршрут не останавливают, подписывают версию на подписи. Без "
             "profile_id сводка по всем маршрутам проекта. Слоты: extra (добавлен сверх точки), optional (подпись "
             "необязательна на точке), статус skipped (пропущена); у участника state skipped, skipped_at и skippable. "
-            "Только чтение: согласовать, подписать, вернуть на доработку или пропустить подписанта можно только в "
-            "интерфейсе."
+            "Маршрут из шаблона: preset (шаги, подписи сверх точки с условием when, отметки optional, что шаблон не "
+            "добавил по условию, differs: чем маршрут отличается) и preset_hint; у слотов added_by (pack: добавил "
+            "шаблон, author: автор) и preset_optional. Только чтение: согласовать, подписать, вернуть на доработку, "
+            "пропустить подписанта и вернуть маршрут или место как в шаблоне можно только в интерфейсе."
         ),
         parameters=project_schema({"profile_id": _PROFILE_ARG}),
     )
@@ -475,7 +534,8 @@ class SendForSigningTool(McpTool):
             "Отправить документы контрольной точки на подписание по маршруту, как кнопка «Отправить на подписание»: "
             "подписанты получат уведомления и письма по порядку шагов. Берёт сохранённый маршрут точки (черновик, "
             "остановленный или возвращённый на доработку: тогда это «Отправить заново»), а если его нет, создаёт "
-            "из прежнего маршрута или порядка пака. Отправляет, только если ничего не мешает: документы собраны, "
+            "из прежнего маршрута или пресета пака (порядок, подписи сверх точки по условию, отметки «необязательна», "
+            "места подписей на страницах). Отправляет, только если ничего не мешает: документы собраны, "
             "все участники уже в проекте, подпись отправителя готова; иначе отвечает списком помех и ничего не "
             "отправляет. Если отправитель участник первого шага, отправка считается его согласованием. Ключом "
             "не подписывает и за других не согласует: это делается на странице подписи в интерфейсе. Новую версию "

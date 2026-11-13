@@ -117,6 +117,11 @@ class RoutePointLoader:
     def template_service(self) -> ProjectTemplateService:
         return self._template_service
 
+    @property
+    def templates(self) -> ITemplateRepository:
+        """Каталог шаблонов: места из пака более ранних версий (затравки, 15.10)."""
+        return self._templates
+
     async def project(self, project_id: UUID) -> Project:
         return (await self._get.execute(GetProjectInput(project_id=project_id))).project
 
@@ -133,20 +138,25 @@ class RoutePointLoader:
             raise NotFoundError(
                 localized_error(f"Контрольная точка {profile_id!r} не найдена", f"Checkpoint {profile_id!r} not found")
             )
-        pairs = profile_pairs(project, version, profile, None)
-        documents = {doc.id: doc for doc in project.documents if is_doc_active(project, doc)}
-        return RoutePoint(
-            project=project,
-            version=version,
-            profile=profile,
-            required=tuple(DocSlot(p.doc.id, p.slot_id) for p in pairs),
-            allowed={DocSlot(p.doc.id, p.slot_id): tuple(p.allowed) for p in pairs},
-            runtime={slot.id: slot for slot in SignatureSlotService().runtime_slots(project, version)},
-            documents=documents,
-            doc_names={
-                doc_id: doc_display_name(self._template_service, version, doc) for doc_id, doc in documents.items()
-            },
-        )
+        return build_point(project, version, profile, self._template_service)
+
+
+def build_point(
+    project: Project, version: TemplateVersion, profile: SubmissionProfile, template_service: ProjectTemplateService
+) -> RoutePoint:
+    """Точка сдачи проекта на его версии шаблона: пары точки, способы, рантайм-слоты и названия документов."""
+    pairs = profile_pairs(project, version, profile, None)
+    documents = {doc.id: doc for doc in project.documents if is_doc_active(project, doc)}
+    return RoutePoint(
+        project=project,
+        version=version,
+        profile=profile,
+        required=tuple(DocSlot(p.doc.id, p.slot_id) for p in pairs),
+        allowed={DocSlot(p.doc.id, p.slot_id): tuple(p.allowed) for p in pairs},
+        runtime={slot.id: slot for slot in SignatureSlotService().runtime_slots(project, version)},
+        documents=documents,
+        doc_names={doc_id: doc_display_name(template_service, version, doc) for doc_id, doc in documents.items()},
+    )
 
 
 def doc_display_name(

@@ -225,6 +225,7 @@
       "signing_route_skip": "Подписант пропущен: подпись не требуется",
       "signing_route_marks_edit": "Метки даты изменены на документе маршрута",
       "signing_route_migrate": "Маршрут перенесён на версию на подписи",
+      "signing_route_restore_preset": "Маршрут подписания возвращён как в шаблоне",
       "signature_freeze": "PDF зафиксирован для подписи",
       "signature_unfreeze": "Фиксация PDF снята",
       "signature_unpin": "Снята версия на подписи: подписывается текущая сборка",
@@ -233,6 +234,7 @@
       "signature_delete": "Подпись удалена",
       "signature_release": "Показана картинка, придержанная маршрутом",
       "signature_optional": "Изменена отметка «Подпись необязательна»",
+      "signature_placement_restore": "Место подписи возвращено из шаблона",
       "signature_submission_sign": "Подписан комплект",
       "signature_default_key": "Выбран ключ подписи по умолчанию",
       "signature_profile_image": "Картинка подписи сохранена в профиле",
@@ -336,7 +338,11 @@
       "source": "Источник",
       "plate_kind": "Вид плашки",
       "cert_id": "Номер сертификата или ключа",
-      "remember": "Сохранить в профиле"
+      "remember": "Сохранить в профиле",
+      "preset": "Пресет шаблона",
+      "differs": "Отличалось от шаблона",
+      "version": "Версия шаблона",
+      "placements": "Мест подписи из шаблона"
     },
     "values": {
       "password": "пароль",

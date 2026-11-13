@@ -336,6 +336,8 @@ _SCHEMAS: dict[str, Any] = {
     # Сроки контрольных точек (signing-route.md, 16.8): эталоны в pending до среза W16.
     "SetCheckpointDeadlineRequest": dl.SetCheckpointDeadlineRequest,
     "CheckpointDeadline": dl.CheckpointDeadline,
+    # «Вернуть место из шаблона» (signing-route.md, 15.11): тело в pending до среза W15.
+    "RestorePlacementRequest": sig.RestorePlacementRequest,
 }
 
 

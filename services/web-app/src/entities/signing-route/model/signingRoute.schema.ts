@@ -240,6 +240,13 @@ export const RouteDocSlotSchema = z.strictObject({
   /** Подпись необязательна на точке маршрута: автор может пропустить подписанта (13.3). */
   optional: z.boolean(),
   status: RouteSlotStatusSchema,
+  /**
+   * Кто добавил слот сверх точки (15.11): `pack` шаблон, `author` автор; null у пары точки.
+   * Пока необязательно: пометки по нему делает W15.
+   */
+  added_by: z.enum(["pack", "author"]).nullable().optional(),
+  /** Пресет точки отмечает подпись необязательной: галочка «по шаблону» (15.7). */
+  preset_optional: z.boolean().optional(),
 });
 
 export type RouteDocSlot = z.infer<typeof RouteDocSlotSchema>;
@@ -292,6 +299,38 @@ export type RoutePersonaCandidates = z.infer<
   typeof RoutePersonaCandidatesSchema
 >;
 
+/** Условие слота сверх точки из шаблона (`when`, 15.3): человек указан и, если задана роль, с ней. */
+export const RoutePresetConditionSchema = z.strictObject({
+  person: z.enum(["supervisor", "co_supervisor", "academic_supervisor"]),
+  role: z.enum(["university", "company"]).nullable(),
+});
+
+export const RoutePresetSlotSchema = z.strictObject({
+  doc_id: z.string(),
+  slot_id: z.string(),
+  when: RoutePresetConditionSchema.nullable(),
+});
+
+/**
+ * Пресет точки для проекта сейчас (15.11): шаги персонами, слоты сверх точки, отметки «необязательна»,
+ * слоты, которые шаблон не добавил по условию, и чем маршрут отличается (`differs`, пусто: как в шаблоне).
+ */
+export const RoutePresetSchema = z.strictObject({
+  version: z.string(),
+  steps: z.array(z.array(z.string())),
+  extra_slots: z.array(RoutePresetSlotSchema),
+  optional: z.array(RouteSlotRefSchema),
+  skipped_by_condition: z.array(
+    z.strictObject({
+      doc_id: z.string(),
+      slot_id: z.string(),
+      when: RoutePresetConditionSchema,
+    }),
+  ),
+  differs: z.array(z.enum(["order", "slots", "optional"])),
+});
+export type RoutePreset = z.infer<typeof RoutePresetSchema>;
+
 export const SigningRouteSchema = z.strictObject({
   id: z.string(),
   project_id: z.string(),
@@ -320,6 +359,11 @@ export const SigningRouteSchema = z.strictObject({
   candidates: z.array(RoutePersonaCandidatesSchema),
   /** Документы с `changed`, по порядку `docs`: есть что отправить новой версией (12.6). */
   changed_docs: z.array(z.string()),
+  /**
+   * Пресет точки (15.11): только тому, кто управляет маршрутом, у маршрута, который можно править,
+   * если шаблон его задаёт; иначе null. Пока необязательно: интерфейс делает W15.
+   */
+  preset: RoutePresetSchema.nullable().optional(),
 });
 export type SigningRoute = z.infer<typeof SigningRouteSchema>;
 

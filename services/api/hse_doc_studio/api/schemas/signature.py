@@ -317,3 +317,13 @@ class SetDateMarksRequest(StrictModel):
     dates: list[DateMarkRequest] = Field(max_length=64)
     signed_at: ManualSignedAtRequest | None = None
     confirm_reset: bool = False
+
+
+class RestorePlacementRequest(StrictModel):
+    """POST /signatures/placements/{doc_id}/{slot_id}/restore: «Вернуть место из шаблона» (signing-route.md, 15.6).
+
+    Место и метки даты слота документа как в шаблоне, `enabled` не меняется. `confirm_reset` подтверждение сброса
+    ЭП над зафиксированным PDF документа, который держит идущий или завершённый маршрут (как у меток даты, 14.6).
+    """
+
+    confirm_reset: bool = False

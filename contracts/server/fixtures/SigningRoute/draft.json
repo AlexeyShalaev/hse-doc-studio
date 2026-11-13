@@ -38,7 +38,9 @@
           "participant_id": "srp_author",
           "extra": false,
           "optional": false,
-          "status": "pending"
+          "status": "pending",
+          "added_by": null,
+          "preset_optional": false
         },
         {
           "slot_id": "academic_supervisor",
@@ -49,7 +51,9 @@
           "participant_id": "srp_academic",
           "extra": true,
           "optional": false,
-          "status": "pending"
+          "status": "pending",
+          "added_by": "author",
+          "preset_optional": false
         }
       ],
       "sent": null,
@@ -139,5 +143,6 @@
       ]
     }
   ],
-  "changed_docs": []
+  "changed_docs": [],
+  "preset": null
 }

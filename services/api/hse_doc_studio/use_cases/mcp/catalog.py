@@ -198,6 +198,8 @@ MCP_TOOL_RULES: tuple[McpToolRule, ...] = (
     # вернуть на доработку через MCP нельзя (docs/design/signing-route.md, 6.8).
     _rule("get_signing_route", _G.submission, _R, Action.OUTPUT_READ, server_only=True),
     _rule("list_signing_tasks", _G.submission, _R, server_only=True),
+    # Отправка создаёт черновик тем же сценарием, что кнопка, и применяет пресет точки (места из шаблона, M25). Без
+    # `touches`: места пишутся до отправки и входят в версию на подписи, пометка `signing_note` была бы неправдой.
     _rule("send_for_signing", _G.submission, _X, Action.SUBMISSION_CREATE, dangerous=True, server_only=True),
     # Админка (сценарии сами требуют админа установки)
     _rule("admin_list_users", _G.admin, _R),

@@ -225,6 +225,7 @@
       "signing_route_skip": "Signer skipped: signature not required",
       "signing_route_marks_edit": "Date marks changed on a route document",
       "signing_route_migrate": "Route moved to the version sent for signing",
+      "signing_route_restore_preset": "Signing route reset to the template",
       "signature_freeze": "PDF frozen for signing",
       "signature_unfreeze": "PDF freeze removed",
       "signature_unpin": "Version sent for signing removed: the current build is signed",
@@ -233,6 +234,7 @@
       "signature_delete": "Signature deleted",
       "signature_release": "Signature image held back by a route was shown",
       "signature_optional": "“Signature optional” mark changed",
+      "signature_placement_restore": "Signature place reset to the template",
       "signature_submission_sign": "Bundle signed",
       "signature_default_key": "Default signing key chosen",
       "signature_profile_image": "Signature image saved to the profile",
@@ -334,7 +336,11 @@
       "source": "Source",
       "plate_kind": "Plate kind",
       "cert_id": "Certificate or key number",
-      "remember": "Save to the profile"
+      "remember": "Save to the profile",
+      "preset": "Template preset",
+      "differs": "Differed from the template",
+      "version": "Template version",
+      "placements": "Places from the template"
     },
     "values": {
       "password": "password",

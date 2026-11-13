@@ -227,6 +227,7 @@
     "bad_date_mark": "The date mark does not fit: the page is not in the document, the frame is off the sheet, the format is unknown or the signature has more than 8 dates.",
     "bad_date": "Invalid signing date.",
     "date_from_route": "This signature goes through the signing route: the date comes from the approval and cannot be set by hand.",
-    "resets_signatures": "Saving resets the e-signatures over the frozen PDF: confirm it."
+    "resets_signatures": "Saving resets the e-signatures over the frozen PDF: confirm it.",
+    "no_preset": "The project template has no route for this checkpoint: there is nothing to reset to."
   }
 }
