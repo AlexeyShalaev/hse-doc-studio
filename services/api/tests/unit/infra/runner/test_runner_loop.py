@@ -41,9 +41,11 @@ class FakeExecutor:
         self.saw_cancel = False
         self.running = 0
         self.peak = 0
+        self.features: list[frozenset[str]] = []
 
     async def execute(self, envelope: JobEnvelope, ctx: JobContext) -> JobOutcome:
         self.started.append(str(envelope.spec.id))
+        self.features.append(ctx.features)
         self.running += 1
         self.peak = max(self.peak, self.running)
         try:

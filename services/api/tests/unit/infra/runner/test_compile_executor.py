@@ -17,7 +17,7 @@ from hse_doc_studio.core.jobs.entities import compile_payload_of
 from hse_doc_studio.core.jobs.enums import JobStatus
 from hse_doc_studio.core.jobs.errors import JobFailure
 from hse_doc_studio.core.jobs.files import ManifestFile
-from hse_doc_studio.core.jobs.wire import JobEnvelope
+from hse_doc_studio.core.jobs.wire import FEATURE_BUILD_ANCHORS, JobEnvelope
 from hse_doc_studio.infra.di.containers.runner import create_runner_container
 from hse_doc_studio.infra.docker.cli import configure_docker_binary
 from hse_doc_studio.infra.jobs.embedded_runner import EmbeddedCompileRunner
@@ -86,9 +86,9 @@ def _envelope(*, passes: int = 7) -> JobEnvelope:
     return JobEnvelope(replace(spec, payload=payload), manifest, 600.0, 1, "token")
 
 
-def _ctx(lines: list[str] | None = None) -> JobContext:
+def _ctx(lines: list[str] | None = None, features: frozenset[str] = frozenset()) -> JobContext:
     sink = lines if lines is not None else []
-    return JobContext(log=sink.append, cancelled=asyncio.Event())
+    return JobContext(log=sink.append, cancelled=asyncio.Event(), features=features)
 
 
 async def test__execute__builds_in_isolated_container_and_returns_the_pdf(tmp_path: Path, docker_log: Path) -> None:
@@ -357,3 +357,43 @@ def test__build_outputs__no_synctex_or_build_dir_is_a_link__only_the_pdf(tmp_pat
 
     assert [o.ref.path for o in without] == ["tz/main.pdf"]
     assert [o.ref.path for o in linked] == ["tz/main.pdf"]
+
+
+async def test__execute__build_anchors_negotiated__positions_go_next_to_the_pdf(
+    tmp_path: Path, docker_log: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("FAKE_DOCKER_MODE", "anchors")
+    executor, _ = await _executor(_config(tmp_path))
+
+    outcome = await executor.execute(_envelope(), _ctx(features=frozenset({FEATURE_BUILD_ANCHORS})))
+
+    assert [o.ref.path for o in outcome.outputs] == ["tz/main.pdf", "tz/main.synctex.gz", "tz/main.hsepos"]
+    assert outcome.outputs[2].path.read_bytes() == b"hsepos 1 1 1\n"
+
+
+async def test__execute__build_anchors_not_negotiated__positions_stay_on_the_runner(
+    tmp_path: Path, docker_log: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # Сервер 0.26.0 и раньше: белый список отверг бы незнакомый выход всей задачей.
+    monkeypatch.setenv("FAKE_DOCKER_MODE", "anchors")
+    executor, _ = await _executor(_config(tmp_path))
+
+    outcome = await executor.execute(_envelope(), _ctx())
+
+    assert outcome.result.status is JobStatus.succeeded
+    assert [o.ref.path for o in outcome.outputs] == ["tz/main.pdf", "tz/main.synctex.gz"]
+
+
+def test__build_outputs__positions_not_written_by_last_tex_pass__not_uploaded(tmp_path: Path) -> None:
+    build = tmp_path / "tz" / ".build" / "tz"
+    build.mkdir(parents=True)
+    (tmp_path / "tz" / "main.pdf").write_bytes(b"%PDF")
+    (build / "main.hsepos").write_text("hsepos 1 1 1\n", encoding="ascii")
+    (build / "main.fls").write_text("OUTPUT .build/tz/main.log\n", encoding="utf-8")
+
+    stale = compile_executor._build_outputs(tmp_path, PurePosixPath("tz/main.tex"), "tz", anchors=True)
+    (build / "main.fls").write_text("OUTPUT .build/tz/main.hsepos\n", encoding="utf-8")
+    fresh = compile_executor._build_outputs(tmp_path, PurePosixPath("tz/main.tex"), "tz", anchors=True)
+
+    assert [o.ref.path for o in stale] == ["tz/main.pdf"]
+    assert [o.ref.path for o in fresh] == ["tz/main.pdf", "tz/main.hsepos"]

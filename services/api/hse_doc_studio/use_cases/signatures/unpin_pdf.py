@@ -21,7 +21,8 @@ from hse_doc_studio.core.signatures.ports import ISignatureAudit
 from hse_doc_studio.core.signing_route.ports import ISigningRouteGate
 from hse_doc_studio.use_cases.projects.get_project import GetProjectInput, GetProjectUC
 from hse_doc_studio.use_cases.signatures._studio_signer import project_lock
-from hse_doc_studio.use_cases.signatures.signing_source import pinned_file
+from hse_doc_studio.use_cases.signatures.signing_source import pinned_anchors_file, pinned_file
+from hse_doc_studio.use_cases.signatures.source_anchors import drop_anchors_file
 
 logger = structlog.get_logger()
 
@@ -69,6 +70,7 @@ class UnpinPdfUC:
             if path is not None:
                 with contextlib.suppress(OSError):
                     path.unlink()
+            drop_anchors_file(pinned_anchors_file(folder, pinned))
         logger.info("signing version unpinned", project_id=str(inp.project_id), doc_id=inp.doc_id)
         if self._audit is not None:
             await self._audit.record(

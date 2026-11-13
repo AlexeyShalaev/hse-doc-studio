@@ -12,6 +12,8 @@ from starlette.background import BackgroundTask
 from hse_doc_studio.api.dishka_route import SafeDishkaRoute
 from hse_doc_studio.api.schemas.signature import (
     AttachDetachedSignatureResponse,
+    BuildAnchorResponse,
+    BuildAnchorsResponse,
     DateMarkResponse,
     DetachedSignatureResponse,
     EmbeddedSignatureResponse,
@@ -39,6 +41,7 @@ from hse_doc_studio.api.schemas.signature import (
     UploadSignatureResponse,
 )
 from hse_doc_studio.core.errors import NotFoundError
+from hse_doc_studio.core.signatures.anchors import BuildAnchors
 from hse_doc_studio.core.signatures.stamps import date_mark_text
 from hse_doc_studio.core.signing_route.audit import signing_route_scope
 from hse_doc_studio.core.signing_route.entities import RouteInputError
@@ -247,6 +250,19 @@ def _map_detached(sig: DetachedSignature, frozen: FrozenPdf | None, stale: bool)
     )
 
 
+def _map_anchors(anchors: BuildAnchors | None) -> BuildAnchorsResponse | None:
+    if anchors is None:
+        return None
+    return BuildAnchorsResponse(
+        build=anchors.build,
+        items=[
+            BuildAnchorResponse(id=a.id, kind=a.kind.value, page=a.page, x_mm=a.x_mm, y_mm=a.y_mm, width_mm=a.width_mm)
+            for a in anchors.anchors
+        ],
+        problems=list(anchors.problem_codes()),
+    )
+
+
 def _map_state(
     state: SignaturesState,
     runtime_slots: list[RuntimeSlotItem],
@@ -254,6 +270,7 @@ def _map_state(
     plate_outdated: set[str] | None = None,
     lang: str = "ru",
     places: dict[str, dict[str, PlaceInfo]] | None = None,
+    anchors: dict[str, BuildAnchors | None] | None = None,
 ) -> SignaturesStateResponse:
     stale_frozen = stale_frozen or set()
     plate_outdated = plate_outdated or set()
@@ -296,6 +313,7 @@ def _map_state(
             }
             for doc_id, by_slot in sorted(state.skipped.items())
         },
+        anchors={doc_id: _map_anchors(item) for doc_id, item in sorted((anchors or {}).items())},
     )
 
 
@@ -314,7 +332,13 @@ async def get_signatures(
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     return _map_state(
-        result.state, result.runtime_slots, result.stale_frozen, result.plate_outdated, result.lang, result.places
+        result.state,
+        result.runtime_slots,
+        result.stale_frozen,
+        result.plate_outdated,
+        result.lang,
+        result.places,
+        result.anchors,
     )
 
 

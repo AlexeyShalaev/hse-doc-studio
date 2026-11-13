@@ -16,12 +16,14 @@ from hse_doc_studio.core.repositories import (
     ITemplateRepository,
 )
 from hse_doc_studio.core.services import ProjectTemplateService, RuntimeSlot, SignatureSlotService
+from hse_doc_studio.core.signatures.anchors import BuildAnchors
 from hse_doc_studio.core.signatures.stamps import stamps_digest_matches, stamps_for_doc
 from hse_doc_studio.core.signing_route.ports import HeldRoute, ISigningRouteGate
 from hse_doc_studio.core.value_objects import SignaturesState
 from hse_doc_studio.use_cases.projects.get_project import GetProjectInput, GetProjectUC
 from hse_doc_studio.use_cases.signatures.pack_places import PackPlaces, PlaceInfo
 from hse_doc_studio.use_cases.signatures.signing_source import source_of
+from hse_doc_studio.use_cases.signatures.source_anchors import source_anchors
 
 logger = structlog.get_logger()
 
@@ -70,6 +72,8 @@ class GetSignaturesOutput:
     lang: str = "ru"
     # Происхождение каждого размещения и есть ли место в шаблоне (15.11): документ → слот → сведения.
     places: dict[str, dict[str, PlaceInfo]] = field(default_factory=dict)
+    # Якоря источника подписи каждого документа проекта (signing-route.md, 15.17.14); None: неизвестны.
+    anchors: dict[str, BuildAnchors | None] = field(default_factory=dict)
 
 
 class GetSignaturesUC:
@@ -131,6 +135,7 @@ class GetSignaturesUC:
             places = PackPlaces.load(self._template_repo, project, version).infos(state.placements)
 
         stale, outdated = await self._frozen_flags(project, version, state)
+        anchors = await self._anchors(project, version, state)
 
         return GetSignaturesOutput(
             state=state,
@@ -139,7 +144,31 @@ class GetSignaturesUC:
             plate_outdated=outdated,
             lang=str(project.lang),
             places=places,
+            anchors=anchors,
         )
+
+    async def _anchors(
+        self, project: Project, version: TemplateVersion | None, state: SignaturesState
+    ) -> dict[str, BuildAnchors | None]:
+        """Якоря источника подписи по документам: версии на подписи, иначе текущей сборки (свой PDF их не имеет)."""
+        result: dict[str, BuildAnchors | None] = {}
+        for doc in project.documents:
+            compiled: str | None = None
+            source_file: str | None = None
+            if version is not None and self._template_service is not None:
+                try:
+                    source_file = self._template_service.resolve_instance_source(project, doc, version)[0]
+                    compiled = self._template_service.resolve_signing_output(project, doc, version)
+                except (NotFoundError, ValueError):
+                    source_file = compiled = None
+            result[doc.id] = await source_anchors(
+                project.folder,
+                state,
+                doc.id,
+                compiled=project.folder / compiled if compiled else None,
+                source_file=source_file,
+            )
+        return result
 
     async def _frozen_flags(  # noqa: C901
         self, project: Project, version: TemplateVersion | None, state: SignaturesState

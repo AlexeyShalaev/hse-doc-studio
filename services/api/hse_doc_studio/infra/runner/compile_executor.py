@@ -24,7 +24,9 @@ from hse_doc_studio.core.jobs.enums import JobErrorCategory, JobKind
 from hse_doc_studio.core.jobs.errors import JobFailure
 from hse_doc_studio.core.jobs.protocols import JobRunContext
 from hse_doc_studio.core.jobs.relay import RelayErrorCode
-from hse_doc_studio.core.jobs.wire import JobEnvelope
+from hse_doc_studio.core.jobs.wire import FEATURE_BUILD_ANCHORS, JobEnvelope
+from hse_doc_studio.core.signatures.anchors import POSITIONS_SUFFIX
+from hse_doc_studio.infra.compile.build_anchors import fresh_positions
 from hse_doc_studio.infra.jobs.embedded_runner import EmbeddedCompileRunner
 from hse_doc_studio.infra.runner.client import RunnerApiError, RunnerUnreachable
 from hse_doc_studio.infra.runner.executor import JobContext, JobExecutor, JobOutcome, OutputFile
@@ -41,20 +43,23 @@ CODE_DOCKER_UNAVAILABLE = "docker_unavailable"
 CODE_BUILD_BACKEND_UNAVAILABLE = BuildBackendUnavailableError.code
 
 
-def _build_outputs(root: Path, source: PurePosixPath, doc_id: str) -> tuple[OutputFile, ...]:
-    """PDF сборки и, если есть, её SyncTeX.
+def _build_outputs(root: Path, source: PurePosixPath, doc_id: str, *, anchors: bool = False) -> tuple[OutputFile, ...]:
+    """PDF сборки и, если есть, её SyncTeX и файл позиций якорей.
 
     SyncTeX лежит в `.build/<doc_id>/` и уходит рядом с PDF (`<stem>.synctex.gz`): по нему превью на сервере
-    переходит к исходнику и привязывает комментарии из PDF к тексту. Без PDF не уходит ничего.
+    переходит к исходнику и привязывает комментарии из PDF к тексту. Файл позиций (`<stem>.hsepos`, signing-route.md,
+    15.17.6) уходит так же, только при согласованной `build_anchors` и только записанный последним проходом TeX:
+    оставшийся от прошлых сборок сервер принял бы за якоря нового PDF. Без PDF не уходит ничего.
     """
     pdf = collect_outputs(root, [glob.escape((source.parent / f"{source.stem}.pdf").as_posix())])
-    name = f"{source.stem}.synctex.gz"
-    synctex = (
-        collect_file_as(root, (source.parent / ".build" / doc_id / name).as_posix(), (source.parent / name).as_posix())
-        if pdf
-        else None
-    )
-    return (*pdf, synctex) if synctex is not None else pdf
+    if not pdf:
+        return pdf
+    build = source.parent / ".build" / doc_id
+    names = [f"{source.stem}.synctex.gz"]
+    if anchors and fresh_positions(root / build, source.stem) is not None:
+        names.append(f"{source.stem}{POSITIONS_SUFFIX}")
+    extra = (collect_file_as(root, (build / name).as_posix(), (source.parent / name).as_posix()) for name in names)
+    return (*pdf, *(item for item in extra if item is not None))
 
 
 class RunnerLogSink:
@@ -131,7 +136,15 @@ class CompileJobExecutor:
                     final_pdf = (source.parent / f"{source.stem}.pdf").as_posix()
                     # Без baseline: PDF уходит всегда, api перекладывает его в .build и публикует.
                     outputs = (
-                        await asyncio.to_thread(_build_outputs, workspace.root, source, payload.doc_id)
+                        await asyncio.to_thread(
+                            partial(
+                                _build_outputs,
+                                workspace.root,
+                                source,
+                                payload.doc_id,
+                                anchors=FEATURE_BUILD_ANCHORS in ctx.features,
+                            )
+                        )
                         if build.success
                         else ()
                     )

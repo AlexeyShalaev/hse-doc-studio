@@ -6,7 +6,7 @@
 
 Версию на подписи пишут сценарии маршрута (снятие при отправке и новой версии, R16) и снимает «Подписывать
 текущую сборку» (`UnpinPdfUC`). Файл лежит рядом с зафиксированным PDF: `.hse-studio/frozen/<doc>.source.pdf`
-(`pinned_rel`).
+(`pinned_rel`), якоря его сборки рядом: `<doc>.source.anchors.json` (`pinned_anchors_file`, 15.17.6).
 """
 
 from __future__ import annotations
@@ -20,6 +20,7 @@ from hse_doc_studio.core.value_objects import PinnedPdf, SignaturesState
 from hse_doc_studio.use_cases.signatures._doc_context import FROZEN_DIR, DocContext, safe_name, sha256_file
 
 PINNED_SUFFIX = ".source.pdf"
+PINNED_ANCHORS_SUFFIX = ".source.anchors.json"
 
 
 def pinned_rel(doc_id: str) -> str:
@@ -42,6 +43,23 @@ def pinned_file(folder: Path, pinned: PinnedPdf) -> Path | None:
     """Файл версии на подписи; None, если путь из состояния ведёт за пределы `.hse-studio/frozen`."""
     rel = pinned_file_rel(pinned)
     return folder / rel if rel is not None else None
+
+
+def pinned_anchors_rel(pdf_rel: str) -> str | None:
+    """Копия якорей версии на подписи по пути её PDF (`<doc>.source.pdf` -> `<doc>.source.anchors.json`).
+
+    None у пути другой формы: так пишет только `pinned_rel`, а чужой путь из git якорей не получает.
+    """
+    if not pdf_rel.endswith(PINNED_SUFFIX):
+        return None
+    return pdf_rel.removesuffix(PINNED_SUFFIX) + PINNED_ANCHORS_SUFFIX
+
+
+def pinned_anchors_file(folder: Path, pinned: PinnedPdf) -> Path | None:
+    """Файл копии якорей версии на подписи (signing-route.md, 15.17.6); None, если у версии его быть не может."""
+    rel = pinned_file_rel(pinned)
+    anchors = pinned_anchors_rel(rel) if rel is not None else None
+    return folder / anchors if anchors is not None else None
 
 
 @dataclass(frozen=True)

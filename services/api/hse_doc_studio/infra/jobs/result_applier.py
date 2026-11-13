@@ -25,7 +25,7 @@ from hse_doc_studio.core.jobs.applier import (
     CODE_OUTPUT_UNSAFE_PATH,
     ApplyError,
 )
-from hse_doc_studio.core.jobs.artifacts import IArtifactStore, PublishPdfRequest
+from hse_doc_studio.core.jobs.artifacts import IArtifactStore, PositionsSource, PublishPdfRequest
 from hse_doc_studio.core.jobs.entities import JobSpec, compile_payload_of
 from hse_doc_studio.core.jobs.enums import JobKind
 from hse_doc_studio.core.jobs.files import ArtifactRef, validate_relative_posix
@@ -33,6 +33,7 @@ from hse_doc_studio.core.jobs.office import OfficeConvertPayload
 from hse_doc_studio.core.jobs.pack import PackSubmissionPayload
 from hse_doc_studio.core.jobs.storage import IJobOutputIngest
 from hse_doc_studio.core.projects.volume import IProjectVolume, UnsafePathError
+from hse_doc_studio.core.signatures.anchors import POSITIONS_SUFFIX
 from hse_doc_studio.core.storage.errors import ObjectNotFoundError, ObjectStoreError
 from hse_doc_studio.core.storage.ingest import output_prefix
 from hse_doc_studio.core.storage.ports import IObjectStore
@@ -72,8 +73,12 @@ class VolumeJobResultApplier:
         built = _built_target(spec)
         for ref in artifacts:
             await self._place(folder, prefix + ref.path, ref, built.get(ref.path, ref.path))
-        if spec.kind is JobKind.compile and any(ref.path == _final_pdf(spec) for ref in artifacts):
-            await self._publish_pdf(spec, folder)
+        paths = {ref.path for ref in artifacts}
+        if spec.kind is JobKind.compile and _final_pdf(spec) in paths:
+            # Файл позиций выгружает только раннер с `build_anchors` (signing-route.md, 15.17.6); без него всё, что
+            # лежит в `.build`, от прошлых сборок.
+            positions = PositionsSource.runner if _final_positions(spec) in paths else PositionsSource.absent
+            await self._publish_pdf(spec, folder, positions)
 
     async def discard(self, spec: JobSpec) -> None:
         try:
@@ -136,7 +141,7 @@ class VolumeJobResultApplier:
                 (folder / tmp_rel).unlink(missing_ok=True)
             raise
 
-    async def _publish_pdf(self, spec: JobSpec, folder: Path) -> None:
+    async def _publish_pdf(self, spec: JobSpec, folder: Path, positions: PositionsSource) -> None:
         payload = compile_payload_of(spec)
         await self._artifacts.publish_pdf(
             PublishPdfRequest(
@@ -145,6 +150,7 @@ class VolumeJobResultApplier:
                 job_id=spec.id,
                 source_file=payload.source_file,
                 project_id=spec.project_id,
+                positions=positions,
             )
         )
 
@@ -163,7 +169,7 @@ class _Allowed:
 def _allowed(spec: JobSpec) -> _Allowed:
     match spec.kind:
         case JobKind.compile:
-            return _Allowed(frozenset({_final_pdf(spec), _final_synctex(spec)}))
+            return _Allowed(frozenset({_final_pdf(spec), _final_synctex(spec), _final_positions(spec)}))
         case JobKind.office_convert:
             assert isinstance(spec.payload, OfficeConvertPayload)  # noqa: S101
             return _Allowed(frozenset({spec.payload.output_path}))
@@ -196,6 +202,12 @@ def _final_synctex(spec: JobSpec) -> str:
     return (source.parent / f"{source.stem}{SYNCTEX_SUFFIX}").as_posix()
 
 
+def _final_positions(spec: JobSpec) -> str:
+    """Файл позиций якорей (`build_anchors`) раннер тоже выгружает рядом с PDF, место ему в `.build/<doc_id>/`."""
+    source = PurePosixPath(compile_payload_of(spec).source_file)
+    return (source.parent / f"{source.stem}{POSITIONS_SUFFIX}").as_posix()
+
+
 def _built_target(spec: JobSpec) -> dict[str, str]:
     """Куда класть выход вместо его пути: PDF сборки идёт в `.build/<doc_id>/`, откуда его переносит `publish_pdf`.
 
@@ -211,4 +223,6 @@ def _built_target(spec: JobSpec) -> dict[str, str]:
         _final_pdf(spec): (build_dir / f"{source.stem}.pdf").as_posix(),
         # Туда же, где его оставляет локальная сборка: `SyncTexUC` ищет его в `.build/<doc_id>/`.
         _final_synctex(spec): (build_dir / f"{source.stem}{SYNCTEX_SUFFIX}").as_posix(),
+        # Туда же, где его оставляет локальная сборка: `publish_pdf` переводит его в `anchors.json`.
+        _final_positions(spec): (build_dir / f"{source.stem}{POSITIONS_SUFFIX}").as_posix(),
     }

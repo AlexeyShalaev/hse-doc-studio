@@ -503,3 +503,59 @@ async def test__complete__malformed_result__422_and_job_keeps_running(env: _Env,
     job = await env.queue.get(leased.job_id)
     assert job is not None
     assert job.state is JobState.running
+
+
+_POSITIONS = b"hsepos 1 39158276 55380990\nsign supervisor - 1 1 1 1\n"
+
+
+async def _announce_features(env: _Env, headers: dict[str, str], features: list[str]) -> None:
+    response = await env.client.post(
+        "/api/runner/v1/announce",
+        json={
+            "name": "r",
+            "version": "0.27.0",
+            "tags": ["compile"],
+            "concurrency": 1,
+            "ai_concurrency": 0,
+            "host_kind": "cli",
+            "features": features,
+            "ai_endpoints": [],
+        },
+        headers=headers,
+    )
+    assert response.status_code == 200
+    assert ("build_anchors" in response.json()["server_features"]) is ("build_anchors" in features)
+
+
+async def _complete_with_positions(env: _Env, leased: _Leased) -> list[str]:
+    for data, path in ((_PDF, "main.pdf"), (_POSITIONS, "main.hsepos")):
+        assert await env.announce(leased, data, path) == 200
+        assert await env.put(leased, _sha(data), data) == 204
+    response = await env.complete(
+        leased,
+        [
+            {"path": "main.pdf", "sha256": _sha(_PDF), "size": len(_PDF)},
+            {"path": "main.hsepos", "sha256": _sha(_POSITIONS), "size": len(_POSITIONS)},
+        ],
+    )
+    assert response.status_code == 200
+    job = await env.queue.get(leased.job_id)
+    assert job is not None
+    assert job.state is JobState.succeeded
+    assert job.result is not None
+    return [item["path"] for item in job.result["artifacts"]]
+
+
+async def test__complete__positions_from_runner_with_build_anchors__kept(env: _Env) -> None:
+    headers = await env.register()
+    await _announce_features(env, headers, ["announce", "offline", "build_anchors"])
+    leased = await env.lease(headers)
+
+    assert await _complete_with_positions(env, leased) == ["main.pdf", "main.hsepos"]
+
+
+async def test__complete__positions_from_runner_without_build_anchors__dropped_job_succeeds(env: _Env) -> None:
+    # Раннер, не объявивший возможность (прежняя версия без /announce): файл не принимается, сборка не падает.
+    leased = await env.lease()
+
+    assert await _complete_with_positions(env, leased) == ["main.pdf"]

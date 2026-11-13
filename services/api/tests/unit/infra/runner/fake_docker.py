@@ -43,6 +43,11 @@ elif argv[:1] == ["run"] and "latexmk" in argv:
     base.mkdir(parents=True, exist_ok=True)
     (base / (stem + ".pdf")).write_bytes(b"%PDF-1.5 built")
     (base / (stem + ".synctex.gz")).write_bytes(b"synctex built")
+    if mode == "anchors":
+        # Шаблон с якорями: файл позиций и запись о нём в `.fls`, как от `latexmk -recorder`.
+        (base / (stem + ".hsepos")).write_text("hsepos 1 1 1\\n", encoding="ascii", newline="\\n")
+        recorder = "OUTPUT " + outdir + "/" + stem + ".hsepos\\n"
+        (base / (stem + ".fls")).write_text(recorder, encoding="utf-8", newline="\\n")
     log_text = "Output written on x.pdf (3 pages, 100 bytes).\\n"
     (base / (stem + ".log")).write_text(log_text, encoding="utf-8", newline="\\n")
     print("latexmk ok")

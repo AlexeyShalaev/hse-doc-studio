@@ -4,6 +4,7 @@
     "ai_relay",
     "ai_slots",
     "announce",
+    "build_anchors",
     "control",
     "deployment_info",
     "disk",

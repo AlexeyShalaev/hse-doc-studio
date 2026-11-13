@@ -56,6 +56,10 @@ FEATURE_DEPLOYMENT = "deployment_info"
 # `POST /disk`). Команду вида `disk.*` сервер ставит только раннеру, согласовавшему обе.
 FEATURE_CONTROL = "control"
 FEATURE_DISK = "disk"
+# Якоря сборки (signing-route.md, 15.17.6): раннер выгружает файл позиций `<stem>.hsepos` рядом с PDF compile-задачи.
+# Белый список выходов прежнего сервера отверг бы незнакомый файл всей задачей (`output_not_allowed`), поэтому раннер
+# выгружает его только после согласования, а сервер принимает только от раннера, который её объявил.
+FEATURE_BUILD_ANCHORS = "build_anchors"
 SERVER_FEATURES = frozenset(
     {
         FEATURE_ANNOUNCE,
@@ -65,6 +69,7 @@ SERVER_FEATURES = frozenset(
         FEATURE_DEPLOYMENT,
         FEATURE_CONTROL,
         FEATURE_DISK,
+        FEATURE_BUILD_ANCHORS,
     }
 )
 

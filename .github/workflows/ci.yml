@@ -60,6 +60,8 @@ jobs:
               - "services/api/hse_doc_studio/core/compile/**"
               - "services/api/hse_doc_studio/infra/docker/**"
               - "services/api/hse_doc_studio/infra/jobs/artifact_store.py"
+              # Разбор файла позиций якорей: его проверяет TeX-тест якорей.
+              - "services/api/hse_doc_studio/core/signatures/anchors.py"
               - "services/api/tests/integration/tex/**"
               - "services/api/pyproject.toml"
               - "services/api/uv.lock"
