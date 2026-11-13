@@ -297,7 +297,7 @@ What you can do instead:
 - **`set_project_meta`** sets fields (`entries`) and removes keys (`unset`): a removed field falls back to the template value. Example: `{"entries": {"year": "2027"}, "unset": ["udc"]}`. The rights are those of the project settings.
 - **Template update** works like the “Update template” dialog in the project settings.
     - `template_update_status` shows the project template version and the available updates: class (`patch`, `minor`, `major`), what is new and what breaks, for example `2026.1.1` and the recommended `2026.1.2`.
-    - `plan_template_update` with `to_version` shows what happens to each file (`update`, `add`, `delete`, `merge`, `conflict`) and returns a `fingerprint`. Project files are not changed.
+    - `plan_template_update` with `to_version` shows what happens to each file (`update`, `add`, `delete`, `merge`, `conflict`), which template signature places move to the new version (`signature_presets`: `updated`, and `kept` with the reason `manual`, `route` or `signed`), and returns a `fingerprint`. Project files are not changed.
     - `apply_template_update` with `to_version` and `fingerprint` applies exactly that plan; if the project changed meanwhile, make a new plan. `resolutions` decides conflicts (`{"path": "mine" | "theirs" | "markers"}`); by default your file is kept. The Studio takes a history snapshot first; the update can be undone in the project settings.
     - Planning and applying need the right to manage the project template (the owner) and a writable project. In the cloud, applying is audited (`project.template_update`).
 

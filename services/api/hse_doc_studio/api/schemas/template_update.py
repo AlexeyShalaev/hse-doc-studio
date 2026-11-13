@@ -1,8 +1,11 @@
 from __future__ import annotations
 
 from datetime import date
+from typing import Literal
 
 from pydantic import BaseModel
+
+from hse_doc_studio.api.schemas.common import StrictModel
 
 
 class TemplateVersionInfoResponse(BaseModel):
@@ -67,7 +70,26 @@ class TemplateUpdatePlanRequest(BaseModel):
     to_version: str
 
 
-class TemplateUpdatePlanResponse(BaseModel):
+class SignaturePresetPlaceResponse(StrictModel):
+    doc_id: str
+    slot_id: str
+
+
+class SignaturePresetKeptResponse(StrictModel):
+    doc_id: str
+    slot_id: str
+    # manual: место изменено автором; route: документ на подписании; signed: над зафиксированным PDF есть ЭП.
+    reason: Literal["manual", "route", "signed"]
+
+
+class SignaturePresetsResponse(StrictModel):
+    """Места подписей из шаблона на новой версии (signing-route.md, 15.9 и 15.11)."""
+
+    updated: list[SignaturePresetPlaceResponse]
+    kept: list[SignaturePresetKeptResponse]
+
+
+class TemplateUpdatePlanResponse(StrictModel):
     from_version: str
     to_version: str
     update_class: str | None
@@ -77,6 +99,8 @@ class TemplateUpdatePlanResponse(BaseModel):
     counts: dict[str, int]
     files: list[TemplateFileOpResponse]
     warnings: list[UpdateWarningResponse]
+    # Пустые `files` при непустом `updated` это не «нечего обновлять»: файлы не меняются, места подписей обновятся.
+    signature_presets: SignaturePresetsResponse
 
 
 class ApplyTemplateUpdateRequest(BaseModel):

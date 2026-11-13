@@ -55,7 +55,7 @@ meta_fields: {{}}
 dynamic_includes:
   - template: common/meta.tex.j2
     output: common/meta.tex
-signatures: {{slots: []}}
+signatures: {signatures}
 pack_submission: {{profiles: []}}
 """
 
@@ -104,11 +104,17 @@ def _write(path: Path, content: str | bytes) -> None:
         path.write_text(content, encoding="utf-8", newline="\n")
 
 
-def _version(template_dir: Path, version: str, files: dict[str, Any], change: tuple[str, str]) -> None:
+def _version(
+    template_dir: Path,
+    version: str,
+    files: dict[str, Any],
+    change: tuple[str, str],
+    signatures: str = "{slots: []}",
+) -> None:
     version_dir = template_dir / "versions" / version
     _write(
         version_dir / "version.yaml",
-        _VERSION_YAML.format(version=version, change_ru=change[0], change_en=change[1]),
+        _VERSION_YAML.format(version=version, change_ru=change[0], change_en=change[1], signatures=signatures),
     )
     (version_dir / "checks").mkdir(parents=True, exist_ok=True)
     _write(version_dir / "files" / "report" / "doc.yaml", _DOC_YAML)
@@ -144,6 +150,51 @@ def build_update_pack(packs_dir: Path) -> Path:
             "report/logo.png": LOGO_V2,
         },
         ("Чёрный акцент и раздел «Заключение»", "Black accent and a Conclusion section"),
+    )
+    freeze(template_dir, V1, TemplateUpdateClass.major)
+    freeze(template_dir, V2, TemplateUpdateClass.patch)
+    return template_dir
+
+
+# Пресеты подписания (docs/design/signing-route.md, 15.10): 2026.1 знает только общее место слота, patch 2026.1.1 с
+# теми же файлами задаёт место научрука на отчёте и метки даты. Обновление меняет только места подписей.
+SUPERVISOR_V1 = {"page": 1, "x_mm": 110.0, "y_mm": 130.0, "width_mm": 40.0}
+SUPERVISOR_V2 = {"page": 1, "x_mm": 80.0, "y_mm": 139.0, "width_mm": 40.0}
+AUTHOR_PLACE = {"page": 1, "x_mm": 160.0, "y_mm": 208.0, "width_mm": 30.0}
+
+_SIGNATURES_V1 = """
+  slots:
+    - id: author
+      label: {ru: Автор, en: Author}
+      applies_to: [report]
+      default_placement: {page: 1, x_mm: 160, y_mm: 208, width_mm: 30}
+    - id: supervisor
+      label: {ru: Научный руководитель, en: Supervisor}
+      applies_to: [report]
+      default_placement: {page: 1, x_mm: 110, y_mm: 130, width_mm: 40}"""
+
+_SIGNATURES_V2 = (
+    _SIGNATURES_V1
+    + """
+      placements:
+        report: {page: 1, x_mm: 80, y_mm: 139, width_mm: 40}
+      default_dates:
+        report:
+          - {page: 1, x_mm: 81, y_mm: 156, width_mm: 7, height_mm: 5, format: day}
+          - {page: 1, x_mm: 90, y_mm: 156, width_mm: 24, height_mm: 5, format: month_word}"""
+)
+
+
+def build_presets_pack(packs_dir: Path) -> Path:
+    """Пак `upd-pack`: 2026.1 и patch 2026.1.1 с теми же файлами и местами подписей из шаблона."""
+    pack_dir = packs_dir / PACK_ID
+    _write(pack_dir / "pack.yaml", _PACK_YAML)
+    template_dir = pack_dir / "templates" / TEMPLATE_ID
+    _write(template_dir / "template.yaml", _TEMPLATE_YAML)
+    files = {"report/report.tex": REPORT_V1, "report/preamble.tex": PREAMBLE_V1}
+    _version(template_dir, V1, files, ("Первая версия", "First version"), _SIGNATURES_V1)
+    _version(
+        template_dir, V2, files, ("Места подписей из шаблона", "Signature places from the template"), _SIGNATURES_V2
     )
     freeze(template_dir, V1, TemplateUpdateClass.major)
     freeze(template_dir, V2, TemplateUpdateClass.patch)

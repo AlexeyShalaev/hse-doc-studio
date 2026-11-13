@@ -23,6 +23,9 @@ from hse_doc_studio.api.schemas.template_update import (
     RevertTemplateUpdateRequest,
     RevertTemplateUpdateResponse,
     SetTemplateTrackingRequest,
+    SignaturePresetKeptResponse,
+    SignaturePresetPlaceResponse,
+    SignaturePresetsResponse,
     TemplateDiffResponse,
     TemplateFileOpResponse,
     TemplateFileStateResponse,
@@ -45,6 +48,7 @@ from hse_doc_studio.core.template_update.errors import (
     TemplateUpdatePlanOutdatedError,
     TemplateVersionUnavailableError,
 )
+from hse_doc_studio.core.template_update.signature_presets import SignaturePresetsPlan
 from hse_doc_studio.core.vcs.errors import VcsError
 from hse_doc_studio.use_cases.template_update.apply_template_update import (
     ApplyTemplateUpdateInput,
@@ -214,6 +218,15 @@ async def compare_with_template(project_id: UUID, uc: FromDishka[CompareWithTemp
     )
 
 
+def _map_presets(presets: SignaturePresetsPlan) -> SignaturePresetsResponse:
+    return SignaturePresetsResponse(
+        updated=[SignaturePresetPlaceResponse(doc_id=p.doc_id, slot_id=p.slot_id) for p in presets.updated],
+        kept=[
+            SignaturePresetKeptResponse(doc_id=k.doc_id, slot_id=k.slot_id, reason=k.reason.value) for k in presets.kept
+        ],
+    )
+
+
 # ── writes ───────────────────────────────────────────────────────────────────
 @router.post("/projects/{project_id}/template-update/plan", response_model=TemplateUpdatePlanResponse)
 async def plan_template_update(
@@ -230,6 +243,7 @@ async def plan_template_update(
         counts={action.value: count for action, count in plan.counts.items()},
         files=[_map_op(op) for op in plan.ops],
         warnings=[UpdateWarningResponse(code=w.code.value, doc_ids=list(w.doc_ids)) for w in plan.warnings],
+        signature_presets=_map_presets(plan.signature_presets),
     )
 
 
