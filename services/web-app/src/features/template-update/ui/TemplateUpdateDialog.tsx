@@ -83,6 +83,11 @@ export const TemplateUpdateDialog = ({
   const selectedOp = ops.find((op) => op.path === selected) ?? null;
   const notes = update ? notesOf(update, i18n.language) : [];
   const placesUpdated = plan.data?.signature_presets?.updated.length ?? 0;
+  // Места на строках шаблона без якорей текущей сборки встанут после сборки (15.17.10).
+  const placesAfterBuild =
+    plan.data?.signature_presets?.updated.filter((u) => u.after_build).length ??
+    0;
+  const placesNow = placesUpdated - placesAfterBuild;
   // Места подписей, которые обновление не переведёт на новую версию, по причинам (15.9).
   const placesKept = (["manual", "route", "signed"] as const)
     .map((reason) => ({
@@ -264,8 +269,13 @@ export const TemplateUpdateDialog = ({
               style={{ gap: "0.125rem", fontSize: "0.75rem" }}
               data-testid="update-signature-presets"
             >
-              {ops.length > 0 && placesUpdated > 0 && (
-                <span>{t("dialog.presets.updated", { n: placesUpdated })}</span>
+              {ops.length > 0 && placesNow > 0 && (
+                <span>{t("dialog.presets.updated", { n: placesNow })}</span>
+              )}
+              {ops.length > 0 && placesAfterBuild > 0 && (
+                <span data-testid="update-signature-presets-after-build">
+                  {t("dialog.presets.afterBuild", { n: placesAfterBuild })}
+                </span>
               )}
               {placesKeptLine !== null && <span>{placesKeptLine}</span>}
             </div>
@@ -276,6 +286,14 @@ export const TemplateUpdateDialog = ({
               {placesUpdated > 0
                 ? t("dialog.placesOnly", { n: placesUpdated })
                 : t("dialog.nothing")}
+              {placesAfterBuild > 0 && (
+                <span
+                  style={{ display: "block" }}
+                  data-testid="update-signature-presets-after-build"
+                >
+                  {t("dialog.presets.afterBuild", { n: placesAfterBuild })}
+                </span>
+              )}
             </p>
           ) : (
             <>

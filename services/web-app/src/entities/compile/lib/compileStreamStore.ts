@@ -17,6 +17,11 @@ export type CompileDoneInfo = {
   wait?: CompileWait | null;
   /** Причина неудачной или отменённой сборки: код, деталь и текст «что делать». */
   error?: CompileError | null;
+  /**
+   * Сколько мест подписей из шаблона встали по строкам шаблона этой сборки (signing-route.md,
+   * 15.17.9); 0 или нет поля у сервера без якорей.
+   */
+  signature_places_moved?: number;
 };
 
 export type CompileStreamSlot = {
@@ -103,7 +108,15 @@ const omitKey = <T>(
 const parseDone = (raw: unknown): CompileDoneInfo => {
   const data = raw as CompileDoneInfo;
   const parsed = CompileErrorSchema.nullish().safeParse(data.error);
-  return { ...data, error: parsed.success ? (parsed.data ?? null) : null };
+  const moved = data.signature_places_moved;
+  return {
+    ...data,
+    error: parsed.success ? (parsed.data ?? null) : null,
+    signature_places_moved:
+      typeof moved === "number" && Number.isInteger(moved) && moved > 0
+        ? moved
+        : 0,
+  };
 };
 
 const streamUrl = (projectId: string, compileId: string): string =>

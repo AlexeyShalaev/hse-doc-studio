@@ -1,8 +1,18 @@
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { MapPin, Plus, X } from "lucide-react";
-import { getDocMeta, type DocDefLike } from "@entities/document";
-import { packPlaceOf, useUpdateSignaturePlacement } from "@entities/signature";
+import {
+  getCustomFileSignability,
+  getDocMeta,
+  type CustomFileLike,
+  type DocDefLike,
+} from "@entities/document";
+import {
+  anchorNoteOf,
+  packHasMmPlace,
+  packPlaceOf,
+  useUpdateSignaturePlacement,
+} from "@entities/signature";
 import type {
   RoutePreset,
   RouteSlotRef,
@@ -11,6 +21,7 @@ import type {
 } from "@entities/signing-route";
 import {
   PdfStampEditor,
+  PlaceAnchorNote,
   PlaceOriginMark,
   SlotDateMarks,
   signatureHeightMm,
@@ -39,7 +50,9 @@ export type RoutePlacementsCardProps = {
   editable: boolean;
   busy: boolean;
   state: SignaturesStateResponse | undefined;
-  documents: readonly (DocDefLike & { id: string })[] | undefined;
+  /** Документы проекта: путь PDF и свой загруженный файл (у него нет строк шаблона, 15.17.11). */
+  documents:
+    readonly (DocDefLike & CustomFileLike & { id: string })[] | undefined;
   personaLabel: (persona: string) => string;
   /** Язык документов проекта: месяц в примере метки даты. По умолчанию язык интерфейса. */
   docLang?: string;
@@ -135,10 +148,10 @@ export const RoutePlacementsCard = ({
     : [];
   const built =
     preview?.docs.find((d) => d.doc_id === doc.doc_id)?.built ?? false;
-  const pdfRelPath = getDocMeta(
-    doc.doc_id,
-    documents?.find((d) => d.id === doc.doc_id),
-  ).out;
+  const docItem = documents?.find((d) => d.id === doc.doc_id);
+  const pdfRelPath = getDocMeta(doc.doc_id, docItem).out;
+  const ownPdf =
+    docItem !== undefined && getCustomFileSignability(docItem) !== "template";
 
   const placementOf = (slotId: string) =>
     state?.placements[doc.doc_id]?.[slotId];
@@ -205,6 +218,12 @@ export const RoutePlacementsCard = ({
               const placement = placementOf(slot.slot_id);
               const def = runtime.find((s) => s.id === slot.slot_id);
               const packPlace = def ? packPlaceOf(def, doc.doc_id) : undefined;
+              // Место пака на строке шаблона (15.17.14): строки нет или место появится после
+              // сборки. У слотов сверх точки «нет строки» видно только так: в плане точки их нет.
+              const anchorNote = anchorNoteOf(placement, {
+                ownPdf,
+                hasMmPlace: def ? packHasMmPlace(def, doc.doc_id) : true,
+              });
               const placedPage = placement?.page ?? packPlace?.page ?? 1;
               const pair = { doc_id: doc.doc_id, slot_id: slot.slot_id };
               const condition = presetConditionOf(preset, pair);
@@ -313,7 +332,7 @@ export const RoutePlacementsCard = ({
                         <>
                           <PlaceOriginMark
                             placement={placement}
-                            canRestore
+                            canRestore={anchorNote === null}
                             pending={restorePlace.isRestoring(
                               doc.doc_id,
                               slot.slot_id,
@@ -399,6 +418,7 @@ export const RoutePlacementsCard = ({
                       )}
                     </div>
                   )}
+                  <PlaceAnchorNote note={anchorNote} slotId={slot.slot_id} />
                   {(editable || (placement?.dates ?? []).length > 0) && (
                     <SlotDateMarks
                       indent={false}

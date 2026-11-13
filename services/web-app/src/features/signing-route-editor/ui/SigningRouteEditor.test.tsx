@@ -184,6 +184,8 @@ const placement = (enabled: boolean) => ({
   signed_at: null,
   origin: "manual" as const,
   preset_available: true,
+  source: null,
+  anchor: null,
 });
 
 const slotInfo = (mode: "image" | "detached_text") => ({
@@ -268,6 +270,7 @@ const signatures = () => ({
   withheld: {},
   optional: {},
   skipped: {},
+  anchors: {},
   runtime_slots: [
     slotDef("author", "Студент"),
     slotDef("supervisor", "Научный руководитель"),

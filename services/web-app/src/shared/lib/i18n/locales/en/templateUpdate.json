@@ -67,6 +67,7 @@
     },
     "presets": {
       "updated": "Template signature places will be updated: {{n}}",
+      "afterBuild": "Signature places will follow the template lines after the build: {{n}}",
       "kept": "Not updated: {{list}}",
       "reason": {
         "manual": "changed by you {{n}}",

@@ -61,7 +61,7 @@ const PackPresetBody = ({
   projectId: string;
   docId: string;
 }) => {
-  const { t } = useTranslation("signatureStamper");
+  const { t, i18n } = useTranslation("signatureStamper");
   const projectQuery = useProject(projectId);
   const stateQuery = useSignaturesState(projectId);
   const documentsQuery = useDocuments(projectId);
@@ -85,8 +85,28 @@ const PackPresetBody = ({
   const preset = useMemo((): PackPreset | null => {
     if (!project || !state || !documents || !version) return null;
     const { pack_id, template_id } = project.lock;
+    // Сборка, по якорям которой выведены места (15.17.12): последняя из документов фрагмента; без
+    // времени сборки её отпечаток.
+    const built = documents.filter(
+      (d) => (scope === "all" || d.id === docId) && state.anchors[d.id] != null,
+    );
+    const builtAt = built
+      .flatMap((d) => (d.last_compile_at ? [d.last_compile_at] : []))
+      .sort()
+      .at(-1);
+    const buildDate =
+      builtAt === undefined
+        ? (built
+            .map((d) => state.anchors[d.id]?.build ?? "")
+            .find((b) => b !== "") ?? "")
+        : new Intl.DateTimeFormat(i18n.language, {
+            dateStyle: "medium",
+            timeStyle: "short",
+          }).format(new Date(builtAt));
     return buildPackPresetYaml({
       placements: state.placements,
+      runtimeSlots: state.runtime_slots,
+      anchors: state.anchors,
       documents,
       pack: {
         packId: pack_id,
@@ -106,9 +126,22 @@ const PackPresetBody = ({
         }),
         hint: t("packPreset.yaml.hint"),
         asInPack: t("packPreset.yaml.asInPack"),
+        anchorsHeader: t("packPreset.yaml.anchorsHeader", { date: buildDate }),
+        byBuild: t("packPreset.yaml.byBuild"),
+        noAnchor: t("packPreset.yaml.noAnchor"),
       },
     });
-  }, [project, state, documents, version, scope, includeDisabled, docId, t]);
+  }, [
+    project,
+    state,
+    documents,
+    version,
+    scope,
+    includeDisabled,
+    docId,
+    t,
+    i18n.language,
+  ]);
 
   // Первый готовый фрагмент копируется сам: это и есть действие пункта меню. Смена документов
   // или галочки в окне уже не копирует: для этого кнопка «Копировать».

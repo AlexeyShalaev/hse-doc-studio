@@ -8,7 +8,7 @@ import {
   MapPin,
   User,
 } from "lucide-react";
-import { packPlaceOf } from "@entities/signature";
+import { anchorNoteOf, packHasMmPlace, packPlaceOf } from "@entities/signature";
 import { pickLocalized } from "@shared/lib";
 import {
   FreezeCard,
@@ -17,12 +17,12 @@ import {
 } from "./DetachedSignatureBlocks";
 import { SlotOptionalRows, type SlotOptionalControl } from "./SlotOptionalRows";
 import { SlotDateMarks, type SlotDateRoute } from "./SlotDateMarks";
-import { PlaceOriginMark } from "./PlaceOriginMark";
+import { PlaceAnchorNote, PlaceOriginMark } from "./PlaceOriginMark";
 import { signatureHeightMm } from "../lib/coords";
 import type { DateMarksSave } from "../lib/dateMarkEdit";
 import type {
-  PackDateMarkResponse,
-  PackPlaceResponse,
+  PackDateEntryResponse,
+  PackPlaceEntryResponse,
   SignMode,
   SignatureProfileRef,
   SignaturesStateResponse,
@@ -40,18 +40,25 @@ export type PlacementSlot = Omit<SignatureSlotDefResponse, "required_by"> & {
   // чей маршрут включил слот сверх точки.
   required?: boolean;
   extra_by?: Record<string, SignatureProfileRef[]>;
-  // Только у рантайм-слотов (15.11): место и метки даты из пака по документам.
-  default_placements?: Record<string, PackPlaceResponse>;
-  default_dates?: Record<string, PackDateMarkResponse[]>;
+  // Только у рантайм-слотов (15.11): место и метки даты из пака по документам, в мм или на
+  // строке шаблона (15.17.14).
+  default_placements?: Record<string, PackPlaceEntryResponse>;
+  default_dates?: Record<string, PackDateEntryResponse[]>;
 };
 
 /**
  * «Вернуть место из шаблона» у слотов документа (docs/design/signing-route.md, 15.6). Пометка
  * места видна всегда, кнопка только при `canRestore`. На документе под маршрутом строка вне
- * `inert`: место возвращают сценарием маршрута, как метки даты (14.6).
+ * `inert`: место возвращают сценарием маршрута, как метки даты (14.6). Подсказки места на строке
+ * шаблона (15.17.14) видны вместе с пометкой и заменяют кнопку.
  */
 export type PlaceRestoreControl = {
   canRestore: boolean;
+  /**
+   * Документ заменён своим PDF (15.17.11): у него нет строк шаблона, место на якоре ставит человек,
+   * и кнопки «Вернуть место из шаблона» у такого места нет.
+   */
+  ownPdf?: boolean;
   isRestoring: (slotId: string) => boolean;
   onRestore: (slotId: string) => void;
 };
@@ -201,6 +208,12 @@ export const DocPlacementPanel = ({
         const hasPng = slotInfo?.png_path != null || isDetached;
         const isEnabled = Boolean(placement?.enabled);
         const packPlace = packPlaceOf(slot, docId);
+        const anchorNote = placeControl
+          ? anchorNoteOf(placement, {
+              ownPdf: placeControl.ownPdf === true,
+              hasMmPlace: packHasMmPlace(slot, docId),
+            })
+          : null;
         const placedPage = placement?.page ?? packPlace.page;
         const isOnThisPage = placedPage === currentPage;
         // Обязательность зависит от контрольной точки, поэтому показываем не
@@ -333,7 +346,7 @@ export const DocPlacementPanel = ({
             {placeControl && isEnabled && (
               <PlaceOriginMark
                 placement={placement}
-                canRestore={placeControl.canRestore}
+                canRestore={placeControl.canRestore && anchorNote === null}
                 pending={placeControl.isRestoring(slot.id)}
                 onRestore={() => {
                   placeControl.onRestore(slot.id);
@@ -342,6 +355,8 @@ export const DocPlacementPanel = ({
                 indent
               />
             )}
+            {/* Строки нет, место появится после сборки, свой PDF: и у выключенного места. */}
+            <PlaceAnchorNote note={anchorNote} slotId={slot.id} indent />
 
             {optionalControl && (
               <SlotOptionalRows

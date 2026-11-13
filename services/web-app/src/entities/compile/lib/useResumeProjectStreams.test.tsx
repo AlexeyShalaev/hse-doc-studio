@@ -5,6 +5,7 @@ import { documentKeys } from "@entities/document";
 import type * as DocumentModule from "@entities/document";
 import { signatureKeys } from "@entities/signature";
 import { signingRouteKeys } from "@entities/signing-route";
+import { toast } from "@shared/lib";
 import {
   useCompileStreamStore,
   type CompileStreamSlot,
@@ -68,5 +69,72 @@ describe("сборка закончилась", () => {
         signingRouteKeys.project(PROJECT),
       ],
     );
+  });
+
+  it("места подписей из шаблона подвинуты по новой вёрстке: тост с числом", () => {
+    const info = vi.spyOn(toast, "info").mockReturnValue("t");
+    const client = new QueryClient();
+    renderHook(
+      () => {
+        useResumeProjectStreams(PROJECT);
+      },
+      {
+        wrapper: ({ children }) => (
+          <QueryClientProvider client={client}>{children}</QueryClientProvider>
+        ),
+      },
+    );
+    act(() => {
+      useCompileStreamStore.setState({
+        streams: { [`${PROJECT}::doc`]: slot("running") },
+      });
+    });
+    act(() => {
+      useCompileStreamStore.setState({
+        streams: {
+          [`${PROJECT}::doc`]: {
+            ...slot("success"),
+            doneInfo: {
+              status: "success",
+              pages: 1,
+              warnings: 0,
+              errors: 0,
+              signature_places_moved: 2,
+            },
+          },
+        },
+      });
+    });
+    expect(info).toHaveBeenCalledWith(
+      "Места подписей из шаблона подвинуты по новой вёрстке: 2",
+    );
+    info.mockRestore();
+  });
+
+  it("без сдвинутых мест тоста нет", () => {
+    const info = vi.spyOn(toast, "info").mockReturnValue("t");
+    const client = new QueryClient();
+    renderHook(
+      () => {
+        useResumeProjectStreams(PROJECT);
+      },
+      {
+        wrapper: ({ children }) => (
+          <QueryClientProvider client={client}>{children}</QueryClientProvider>
+        ),
+      },
+    );
+    act(() => {
+      useCompileStreamStore.setState({
+        streams: { [`${PROJECT}::doc`]: slot("running") },
+      });
+    });
+    act(() => {
+      useCompileStreamStore.setState({
+        streams: { [`${PROJECT}::doc`]: slot("success") },
+      });
+    });
+    expect(info).not.toHaveBeenCalled();
+    info.mockRestore();
   });
 });

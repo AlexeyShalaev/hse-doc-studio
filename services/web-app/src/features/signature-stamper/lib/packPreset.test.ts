@@ -340,3 +340,161 @@ describe("buildPackPresetYaml", () => {
     expect(preset).toEqual({ yaml: "", entries: [], warnings: [] });
   });
 });
+
+describe("buildPackPresetYaml с якорями (15.17.12)", () => {
+  const ANCHOR_TEXTS = {
+    ...TEXTS,
+    anchorsHeader: "Taken from the build of 13 Nov.",
+    byBuild: "by the build",
+    noAnchor: "no anchor",
+  };
+  const BUILD = {
+    items: [
+      {
+        id: "supervisor",
+        kind: "sign" as const,
+        page: 1,
+        x_mm: 169.5,
+        y_mm: 186.8,
+        width_mm: 25.5,
+      },
+      {
+        id: "supervisor.day",
+        kind: "date" as const,
+        page: 1,
+        x_mm: 120,
+        y_mm: 200,
+        width_mm: 8,
+      },
+    ],
+  };
+
+  it("место из шаблона на якоре выводится записью пака как есть, с метками пака", () => {
+    const preset = build({
+      texts: ANCHOR_TEXTS,
+      documents: [{ id: "topic_application" }],
+      anchors: { topic_application: BUILD },
+      runtimeSlots: [
+        {
+          id: "supervisor",
+          default_placements: {
+            topic_application: {
+              source: "anchor",
+              anchor: "supervisor",
+              align: "right",
+              dx_mm: 0,
+              dy_mm: -10,
+              width_mm: 28,
+              fallback: null,
+            },
+          },
+          default_dates: {
+            topic_application: [
+              {
+                source: "anchor",
+                anchor: "supervisor.day",
+                format: "day",
+                align: "center",
+                height_mm: 5,
+                width_mm: null,
+                dx_mm: 0,
+                dy_mm: null,
+                fallback: null,
+              },
+            ],
+          },
+        },
+      ],
+      placements: {
+        topic_application: {
+          supervisor: place(167, 176.8, 28, {
+            origin: "pack",
+            source: "anchor",
+          }),
+        },
+      },
+    });
+    expect(preset.yaml).toBe(
+      [
+        "# Preset for hse-cs-sse, template coursework, version 2026.1.3.",
+        "# Move into signatures.slots.",
+        "# Taken from the build of 13 Nov.",
+        "signatures:",
+        "  slots:",
+        "    - id: supervisor",
+        "      placements:",
+        "        topic_application: { anchor: supervisor, align: right, width_mm: 28 }  # as in the template",
+        "      default_dates:",
+        "        topic_application:",
+        "          - { anchor: supervisor.day }",
+        "",
+      ].join("\n"),
+    );
+  });
+
+  it("ручное место и метка даты относительно якоря сборки, мм этой сборки в комментарии", () => {
+    const preset = build({
+      texts: ANCHOR_TEXTS,
+      documents: [{ id: "topic_application" }],
+      anchors: { topic_application: BUILD },
+      placements: {
+        topic_application: {
+          supervisor: place(168, 177, 28, {
+            origin: "manual",
+            dates: [
+              {
+                page: 1,
+                x_mm: 121,
+                y_mm: 195,
+                width_mm: 6,
+                height_mm: 5,
+                format: "day",
+                align: "center",
+              },
+              {
+                page: 1,
+                x_mm: 130,
+                y_mm: 195,
+                width_mm: 20,
+                height_mm: 5,
+                format: "month_word",
+                align: "center",
+              },
+            ],
+          }),
+        },
+      },
+    });
+    expect(preset.yaml).toContain(
+      "        topic_application: { anchor: supervisor, align: left, dx_mm: -1.5, dy_mm: -9.8, width_mm: 28 }  # by the build: 1, 168, 177, 28",
+    );
+    // Метка на линии (верх на высоту выше), по центру линии: только сдвиг и ширина.
+    expect(preset.yaml).toContain(
+      "          - { anchor: supervisor.day, width_mm: 6 }  # by the build: 1, 121, 195, 6, 5",
+    );
+    // Якоря месяца в сборке нет: метка в мм с пометкой.
+    expect(preset.yaml).toContain(
+      "          - { page: 1, x_mm: 130, y_mm: 195, width_mm: 20, height_mm: 5, format: month_word }  # no anchor",
+    );
+    expect(preset.yaml).toContain("# Taken from the build of 13 Nov.");
+  });
+
+  it("якоря неизвестны или якоря нет на странице: мм с комментарием, без строки о сборке", () => {
+    const preset = build({
+      texts: ANCHOR_TEXTS,
+      documents: [{ id: "topic_application" }, { id: "report" }],
+      anchors: { topic_application: null, report: BUILD },
+      placements: {
+        topic_application: { supervisor: place(163, 168, 40) },
+        report: { author: place(150, 250, 30, { page: 2 }) },
+      },
+    });
+    expect(preset.yaml).toContain(
+      "topic_application: { page: 1, x_mm: 163, y_mm: 168, width_mm: 40 }  # no anchor",
+    );
+    expect(preset.yaml).toContain(
+      "report: { page: 2, x_mm: 150, y_mm: 250, width_mm: 30 }  # no anchor",
+    );
+    expect(preset.yaml).not.toContain("Taken from the build");
+  });
+});

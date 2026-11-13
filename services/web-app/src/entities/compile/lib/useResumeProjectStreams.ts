@@ -1,8 +1,10 @@
 import { useEffect, useRef } from "react";
 import { useQueryClient } from "@tanstack/react-query";
+import { useTranslation } from "react-i18next";
 import { documentKeys, useDocuments } from "@entities/document";
 import { signatureKeys } from "@entities/signature";
 import { signingRouteKeys } from "@entities/signing-route";
+import { toast } from "@shared/lib";
 import { useCompileStreamStore } from "./compileStreamStore";
 
 /**
@@ -19,7 +21,9 @@ import { useCompileStreamStore } from "./compileStreamStore";
  *      the documents query so the dot/status refreshes from "building" to
  *      "ok"/"warn"/"err". Сборка меняет и то, что считается по рабочей сборке: план
  *      подписей и маршруты подписания («Есть изменения после отправки на подпись»,
- *      docs/design/signing-route.md, 12.9), поэтому их перечитываем тоже.
+ *      docs/design/signing-route.md, 12.9), поэтому их перечитываем тоже. Если сборка подвинула
+ *      места подписей из шаблона по строкам новой вёрстки (`signature_places_moved` события `done`,
+ *      15.17.9), об этом говорит тост: рамки на вкладке «Подписи» стоят уже не там, где раньше.
  *
  * Called once per workspace mount.
  */
@@ -28,6 +32,7 @@ export const useResumeProjectStreams = (projectId: string): void => {
   const start = useCompileStreamStore((s) => s.start);
   const settleFromServer = useCompileStreamStore((s) => s.settleFromServer);
   const queryClient = useQueryClient();
+  const { t } = useTranslation("documents");
 
   // Re-attach SSE for any doc the backend says is currently building.
   useEffect(() => {
@@ -66,10 +71,11 @@ export const useResumeProjectStreams = (projectId: string): void => {
       }
       // Find slots that were running last tick but are no longer.
       let anyFinished = false;
+      let moved = 0;
       for (const k of prevRunningRef.current) {
         if (!currentlyRunning.has(k)) {
           anyFinished = true;
-          break;
+          moved += state.streams[k]?.doneInfo?.signature_places_moved ?? 0;
         }
       }
       prevRunningRef.current = currentlyRunning;
@@ -84,7 +90,8 @@ export const useResumeProjectStreams = (projectId: string): void => {
           queryKey: signingRouteKeys.project(projectId),
         });
       }
+      if (moved > 0) toast.info(t("compile.placesMoved", { n: moved }));
     });
     return unsubscribe;
-  }, [projectId, queryClient]);
+  }, [projectId, queryClient, t]);
 };

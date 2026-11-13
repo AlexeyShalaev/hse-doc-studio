@@ -290,6 +290,8 @@ describe("Подписи документа: место из шаблона", ()
     signed_at: null,
     origin,
     preset_available: presetAvailable,
+    source: origin === "manual" ? null : ("mm" as const),
+    anchor: null,
   });
 
   const mountPlaces = (
@@ -297,6 +299,7 @@ describe("Подписи документа: место из шаблона", ()
     control: {
       canRestore: boolean;
       onRestore: (slotId: string) => void;
+      ownPdf?: boolean;
     },
   ) =>
     render(
@@ -307,7 +310,21 @@ describe("Подписи документа: место из шаблона", ()
           pdfAvailable
           slotDefs={[
             slot("author", "Студент"),
-            slot("supervisor", "Научный руководитель"),
+            {
+              ...slot("supervisor", "Научный руководитель"),
+              // Место пака научрука на строке шаблона, без запасного места в мм.
+              default_placements: {
+                [DOC]: {
+                  source: "anchor",
+                  anchor: "supervisor",
+                  align: "center",
+                  dx_mm: 0,
+                  dy_mm: -10,
+                  width_mm: null,
+                  fallback: null,
+                },
+              },
+            },
           ]}
           state={{ ...state({}), placements }}
           lang="ru"
@@ -321,6 +338,7 @@ describe("Подписи документа: место из шаблона", ()
           locked
           placeControl={{
             canRestore: control.canRestore,
+            ownPdf: control.ownPdf ?? false,
             isRestoring: () => false,
             onRestore: control.onRestore,
           }}
@@ -370,5 +388,75 @@ describe("Подписи документа: место из шаблона", ()
       "Место изменено",
     );
     expect(screen.queryByTestId("place-restore-supervisor")).toBeNull();
+  });
+
+  // Места на строках шаблона (15.17.14): уточнение пометки и подсказки вместо кнопки.
+  const onAnchor = (
+    origin: "pack" | "seed" | "manual",
+    state: "found" | "missing" | "unknown",
+    enabled = true,
+  ) => ({
+    ...placed(origin),
+    enabled,
+    source: origin === "pack" ? ("anchor" as const) : null,
+    anchor: { id: "supervisor", state },
+  });
+
+  it("место на якоре: «Место по строке шаблона»; нет строки: подсказка вместо кнопки и у выключенного", () => {
+    mountPlaces(
+      {
+        [DOC]: {
+          author: placed("pack"),
+          supervisor: onAnchor("manual", "missing"),
+        },
+      },
+      { canRestore: true, onRestore: vi.fn() },
+    );
+    expect(screen.getByTestId("place-origin-author")).toHaveTextContent(
+      "Место из шаблона",
+    );
+    expect(screen.queryByTestId("place-anchor-author")).toBeNull();
+    expect(screen.getByTestId("place-origin-supervisor")).toHaveTextContent(
+      "Место изменено",
+    );
+    expect(screen.queryByTestId("place-restore-supervisor")).toBeNull();
+    expect(screen.getByTestId("place-anchor-supervisor")).toHaveTextContent(
+      "В собранном документе нет строки для этой подписи. Проверьте данные проекта или поставьте место вручную",
+    );
+  });
+
+  it("строка есть: «по строке шаблона»; якоря неизвестны без запасного места: «появится после сборки»", () => {
+    const { unmount } = mountPlaces(
+      { [DOC]: { supervisor: onAnchor("pack", "found") } },
+      { canRestore: true, onRestore: vi.fn() },
+    );
+    expect(screen.getByTestId("place-origin-supervisor")).toHaveTextContent(
+      "Место по строке шаблона",
+    );
+    expect(screen.queryByTestId("place-anchor-supervisor")).toBeNull();
+    unmount();
+    mountPlaces(
+      { [DOC]: { supervisor: onAnchor("seed", "unknown", false) } },
+      { canRestore: true, onRestore: vi.fn() },
+    );
+    expect(screen.queryByTestId("place-origin-supervisor")).toBeNull();
+    expect(screen.getByTestId("place-anchor-supervisor")).toHaveTextContent(
+      "Место из шаблона появится после сборки документа",
+    );
+  });
+
+  it("свой PDF: у места на якоре подсказка вместо «Вернуть место из шаблона»", () => {
+    mountPlaces(
+      { [DOC]: { supervisor: onAnchor("manual", "unknown") } },
+      { canRestore: true, onRestore: vi.fn(), ownPdf: true },
+    );
+    expect(screen.queryByTestId("place-restore-supervisor")).toBeNull();
+    expect(screen.getByTestId("place-anchor-supervisor")).toHaveAttribute(
+      "data-note",
+      "own_pdf",
+    );
+    expect(screen.getByTestId("place-anchor-supervisor")).toHaveTextContent(
+      "У загруженного PDF нет строк шаблона: поставьте место вручную",
+    );
   });
 });

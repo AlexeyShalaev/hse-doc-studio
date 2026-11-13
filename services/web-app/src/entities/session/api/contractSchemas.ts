@@ -321,6 +321,10 @@ export const CONTRACT_SCHEMAS: Record<string, ZodType> = {
   // План обновления шаблона с местами подписей из шаблона (signing-route.md, 15.9, R26).
   TemplateUpdatePlanResponse: TemplateUpdatePlanContractSchema,
   SignaturePlan: z.strictObject(sig.SignaturePlanSchema.shape),
+  // Места на строках шаблона (signing-route.md, 15.17.14, R32): рантайм-слот с записями пака в мм и
+  // на якоре по `source`, состояние подписей с якорями сборки и пометками мест (`source`, `anchor`).
+  RuntimeSlot: z.strictObject(sig.RuntimeSignatureSlotSchema.shape),
+  SignaturesState: z.strictObject(sig.SignaturesStateSchema.shape),
   // Сроки контрольных точек (signing-route.md, 16.8, срез W16): ответ и тело `PUT .../deadline`,
   // профиль сдачи со сроком, состоянием и подсказкой пака.
   CheckpointDeadline: sub.CheckpointDeadlineSchema,

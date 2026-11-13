@@ -7,7 +7,8 @@ import { PackPresetDialog } from "./PackPresetDialog";
 
 const data = vi.hoisted(() => {
   const placements: Record<string, Record<string, unknown>> = {};
-  return { placements };
+  const anchors: Record<string, unknown> = {};
+  return { placements, anchors };
 });
 
 vi.mock("@entities/project", () => ({
@@ -25,11 +26,20 @@ vi.mock("@entities/project", () => ({
   }),
 }));
 vi.mock("@entities/signature", () => ({
-  useSignaturesState: () => ({ data: { placements: data.placements } }),
+  useSignaturesState: () => ({
+    data: {
+      placements: data.placements,
+      runtime_slots: [],
+      anchors: data.anchors,
+    },
+  }),
 }));
 vi.mock("@entities/document", () => ({
   useDocuments: () => ({
-    data: [{ id: "project_proposal" }, { id: "topic_application" }],
+    data: [
+      { id: "project_proposal", last_compile_at: "2026-11-13T09:30:00Z" },
+      { id: "topic_application" },
+    ],
   }),
 }));
 vi.mock("@entities/template-catalog", () => ({
@@ -73,6 +83,7 @@ describe("PackPresetDialog", () => {
       },
       topic_application: { supervisor: place(163, 168) },
     };
+    data.anchors = {};
   });
   afterEach(() => {
     vi.restoreAllMocks();
@@ -167,6 +178,42 @@ describe("PackPresetDialog", () => {
     const field = await screen.findByLabelText("Preset YAML");
     expect((field as HTMLTextAreaElement).value).toContain(
       "# Signature place preset for pack hse-cs-sse",
+    );
+  });
+
+  it("ручное место выводит относительно якоря сборки, без якорей в мм с пометкой", async () => {
+    userEvent.setup();
+    vi.spyOn(toast, "success").mockReturnValue("t");
+    data.anchors = {
+      project_proposal: {
+        build: "5f0c2b8e1d7a4c3b",
+        items: [
+          {
+            id: "supervisor",
+            kind: "sign",
+            page: 1,
+            x_mm: 80,
+            y_mm: 150,
+            width_mm: 40,
+          },
+        ],
+        problems: [],
+      },
+      topic_application: null,
+    };
+    render(
+      <PackPresetDialog
+        isOpen
+        onClose={vi.fn()}
+        projectId="p1"
+        docId="project_proposal"
+      />,
+    );
+    const field =
+      await screen.findByLabelText<HTMLTextAreaElement>("YAML пресета");
+    expect(field.value).toContain("# Собрано по сборке 13 нояб. 2026 г.");
+    expect(field.value).toContain(
+      "project_proposal: { anchor: supervisor, align: left, dx_mm: 0.4, dy_mm: -10.8, width_mm: 40 }  # по сборке: 1, 80, 139, 40",
     );
   });
 });

@@ -19,8 +19,14 @@ export type RestorePlace = {
   dialog: ReactNode;
 };
 
-// Отказы, которые объясняем сами: 409 общий тост клиента не показывает.
-const OWN_CONFLICTS = new Set(["route_locked", "invalid_transition"]);
+// Отказы, которые объясняем сами: 409 общий тост клиента не показывает. Места на строке шаблона
+// (15.17.14): якоря сборки неизвестны и запасного места нет, или строки в документе нет.
+const OWN_CONFLICTS = new Set([
+  "route_locked",
+  "invalid_transition",
+  "anchors_unknown",
+  "anchor_missing",
+]);
 
 const RESTORE_TEXTS = {
   title: "place.confirm.title",
