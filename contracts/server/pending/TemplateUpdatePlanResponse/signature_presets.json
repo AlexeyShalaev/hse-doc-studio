@@ -1,0 +1,35 @@
+{
+  "from_version": "2026.1.3",
+  "to_version": "2026.1.4",
+  "update_class": "patch",
+  "provenance": "recorded",
+  "fingerprint": "5f0c2b8e1d7a4c3b9e6f1a2d8c7b4e3f5a6d9c8b7e1f2a3d4c5b6e7f8a9b0c1d",
+  "counts": {},
+  "files": [],
+  "warnings": [],
+  "signature_presets": {
+    "updated": [
+      {
+        "doc_id": "report",
+        "slot_id": "supervisor"
+      }
+    ],
+    "kept": [
+      {
+        "doc_id": "project_proposal",
+        "slot_id": "supervisor",
+        "reason": "route"
+      },
+      {
+        "doc_id": "topic_application",
+        "slot_id": "author",
+        "reason": "route"
+      },
+      {
+        "doc_id": "topic_application",
+        "slot_id": "supervisor",
+        "reason": "route"
+      }
+    ]
+  }
+}

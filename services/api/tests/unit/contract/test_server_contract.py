@@ -38,6 +38,7 @@ from hse_doc_studio.api.schemas import signature as sig
 from hse_doc_studio.api.schemas import signature_plan as sp
 from hse_doc_studio.api.schemas import signing_route as sr
 from hse_doc_studio.api.schemas import signing_tasks as st
+from hse_doc_studio.api.schemas import template_update as tu
 from pydantic import TypeAdapter, ValidationError
 
 _REPO = Path(__file__).resolve().parents[5]
@@ -336,6 +337,8 @@ _SCHEMAS: dict[str, Any] = {
     # Сроки контрольных точек (signing-route.md, 16.8): эталоны в pending до среза W16.
     "SetCheckpointDeadlineRequest": dl.SetCheckpointDeadlineRequest,
     "CheckpointDeadline": dl.CheckpointDeadline,
+    # План обновления шаблона с местами подписей из шаблона (signing-route.md, 15.11): эталон в pending до среза W15.
+    "TemplateUpdatePlanResponse": tu.TemplateUpdatePlanResponse,
 }
 
 

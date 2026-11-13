@@ -24,6 +24,7 @@ from hse_doc_studio.core.enums import (
     TemplateFileAction,
     TemplateUpdateClass,
 )
+from hse_doc_studio.core.template_update.signature_presets import SignaturePresetsPlan
 from hse_doc_studio.core.template_update.text import restore_text_style
 
 
@@ -144,6 +145,8 @@ class UpdatePlan:
     ops: tuple[FileOp, ...]
     fingerprint: str
     warnings: tuple[UpdateWarning, ...] = ()
+    # Места подписей из шаблона на новой версии (signing-route.md, 15.9): файлов не меняют, но план не пуст.
+    signature_presets: SignaturePresetsPlan = SignaturePresetsPlan()
 
     @property
     def counts(self) -> dict[TemplateFileAction, int]:
