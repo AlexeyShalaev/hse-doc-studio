@@ -248,3 +248,168 @@ def test__lint_version_dir__default_dates_wrong__reports_error(tmp_path: Path, d
     errors = lint_version_dir(tmp_path).errors
 
     assert any(e.startswith("signatures.slots[supervisor]") and fragment in e for e in errors), errors
+
+
+# ── пресет маршрута из пака (`placements`, `signing_slots`, signing-route.md, 15.8) ──
+
+
+def _manifest_with_preset(*, placements: object = None, signing_slots: object = None, **overrides: object) -> dict:
+    """КП с документами точки «Заявка на тему» и каталогом из четырёх слотов, как `hse-cs-sse`."""
+    manifest = _manifest(required_for_pack=True)
+    manifest["documents"] = [
+        {"id": "project_proposal", "source_file": "p.tex"},
+        {"id": "topic_application", "source_file": "t.tex"},
+    ]
+    supervisor: dict = {"id": "supervisor", "applies_to": ["project_proposal", "topic_application"]}
+    if placements is not None:
+        supervisor["placements"] = placements
+    manifest["signatures"] = {
+        "slots": [
+            {"id": "author", "applies_to": ["topic_application"], "required": True},
+            supervisor,
+            {"id": "co_supervisor", "applies_to": ["topic_application"]},
+            {"id": "academic_supervisor", "applies_to": ["topic_application"]},
+        ]
+    }
+    profile: dict = {
+        "id": "topic-approval",
+        "items": [
+            {"doc_id": "project_proposal", "signatures": ["supervisor"], "methods": {"supervisor": ["image"]}},
+            {"doc_id": "topic_application", "signatures": ["author", "supervisor"]},
+        ],
+    }
+    if signing_slots is not None:
+        profile["signing_slots"] = signing_slots
+    manifest["pack_submission"]["profiles"] = [profile]
+    manifest.update(overrides)
+    return manifest
+
+
+def _write_preset(version_dir: Path, manifest: dict) -> None:
+    _write_version(version_dir, manifest)
+    for name in ("p.tex", "t.tex"):
+        (version_dir / "files" / name).write_text("\\documentclass{article}\n", encoding="utf-8")
+
+
+def test__lint_version_dir__preset_of_the_design__no_errors_no_warnings(tmp_path: Path) -> None:
+    _write_preset(
+        tmp_path,
+        _manifest_with_preset(
+            placements={
+                "project_proposal": {"page": 1, "x_mm": 80, "y_mm": 139, "width_mm": 40},
+                "topic_application": {"page": 1, "x_mm": 100, "y_mm": 168, "width_mm": 70},
+            },
+            signing_slots=[
+                {"doc_id": "topic_application", "slot_id": "co_supervisor", "when": {"person": "co_supervisor"}},
+                {"doc_id": "topic_application", "slot_id": "academic_supervisor",
+                 "when": {"person": "supervisor", "role": "company"}},
+                {"doc_id": "topic_application", "slot_id": "supervisor", "optional": False},
+            ],
+        ),
+    )  # fmt: skip
+
+    report = lint_version_dir(tmp_path)
+
+    assert report.errors == []
+    assert [w for w in report.warnings if "signatures" in w or "signing_slots" in w] == []
+
+
+@pytest.mark.parametrize(
+    ("placements", "fragment"),
+    [
+        ({"project_proposal": {"page": 1, "x_mm": 190, "y_mm": 139, "width_mm": 40}}, "left or right edge"),
+        ({"project_proposal": {"page": 1, "x_mm": 80, "y_mm": 139, "width_mm": 4}}, "width_mm 4"),
+        ({"report": {"page": 1, "x_mm": 80, "y_mm": 139, "width_mm": 40}}, "applies_to"),
+        (["project_proposal"], "mapping"),
+    ],
+)
+def test__lint_version_dir__placements_wrong__reports_error(tmp_path: Path, placements: object, fragment: str) -> None:
+    _write_preset(tmp_path, _manifest_with_preset(placements=placements))
+
+    errors = lint_version_dir(tmp_path).errors
+
+    assert any(e.startswith("signatures.slots[supervisor]") and fragment in e for e in errors), errors
+
+
+def test__lint_version_dir__placement_of_a_document_not_in_the_version__reports_error(tmp_path: Path) -> None:
+    manifest = _manifest_with_preset(placements={"report": {"page": 1, "x_mm": 80, "y_mm": 139, "width_mm": 40}})
+    manifest["signatures"]["slots"][1]["applies_to"].append("report")
+    _write_preset(tmp_path, manifest)
+
+    errors = lint_version_dir(tmp_path).errors
+
+    assert any("placements.report" in e and "documents" in e for e in errors), errors
+
+
+@pytest.mark.parametrize(
+    ("entry", "fragment"),
+    [
+        ({"doc_id": "report", "slot_id": "supervisor"}, "документа нет в items"),
+        ({"doc_id": "topic_application", "slot_id": "dean"}, "не объявлен"),
+        ({"doc_id": "project_proposal", "slot_id": "author"}, "не применим"),
+        ({"doc_id": "topic_application", "slot_id": "supervisor", "when": {"person": "supervisor"}}, "when только"),
+        ({"doc_id": "topic_application", "slot_id": "author", "optional": True}, "required: true"),
+        ({"doc_id": "topic_application", "slot_id": "co_supervisor", "when": {"person": "dean"}}, "when.person"),
+        ({"doc_id": "topic_application", "slot_id": "co_supervisor", "when": {"meta": "nda"}}, "unknown condition"),
+    ],
+)
+def test__lint_version_dir__signing_slots_wrong__reports_error(tmp_path: Path, entry: dict, fragment: str) -> None:
+    _write_preset(tmp_path, _manifest_with_preset(signing_slots=[entry]))
+
+    errors = lint_version_dir(tmp_path).errors
+
+    assert any(e.startswith("профиль topic-approval") and fragment in e for e in errors), errors
+
+
+def test__lint_version_dir__signing_slots_repeated_pair__reports_error(tmp_path: Path) -> None:
+    entry = {"doc_id": "topic_application", "slot_id": "co_supervisor"}
+    _write_preset(tmp_path, _manifest_with_preset(signing_slots=[entry, entry]))
+
+    assert any("дважды" in e for e in lint_version_dir(tmp_path).errors)
+
+
+def test__lint_version_dir__extra_slot_missing_from_the_route__warns(tmp_path: Path) -> None:
+    manifest = _manifest_with_preset(signing_slots=[{"doc_id": "topic_application", "slot_id": "academic_supervisor"}])
+    manifest["pack_submission"]["profiles"][0]["signing_route"] = [["author"], ["supervisor"]]
+    _write_preset(tmp_path, manifest)
+
+    report = lint_version_dir(tmp_path)
+
+    assert report.errors == []
+    assert any("'academic_supervisor'" in w and "последним шагом" in w for w in report.warnings), report.warnings
+
+
+def test__lint_version_dir__per_author_place_on_a_shared_document_of_a_team_template__warns(tmp_path: Path) -> None:
+    manifest = _manifest_with_preset(supported_staffing=["solo", "team"])
+    author = manifest["signatures"]["slots"][0]
+    author.update(per_author=True, placements={"topic_application": {"x_mm": 135, "y_mm": 200, "width_mm": 70}})
+    _write_preset(tmp_path, manifest)
+
+    report = lint_version_dir(tmp_path)
+
+    assert report.errors == []
+    assert any("per_author" in w and "topic_application" in w for w in report.warnings), report.warnings
+
+
+def test__lint_version_dir__narrow_place_where_detached_is_allowed__warns_and_errors_past_the_left_edge(
+    tmp_path: Path,
+) -> None:
+    placements = {
+        # Пункт заявления не ограничивает способы: ЭП разрешена, рамка 40 мм расширится до 70 влево.
+        "topic_application": {"page": 1, "x_mm": 163, "y_mm": 168, "width_mm": 40},
+        # Описание проекта разрешает только картинку: узкое место не предупреждение.
+        "project_proposal": {"page": 1, "x_mm": 0, "y_mm": 139, "width_mm": 40},
+    }
+    _write_preset(tmp_path, _manifest_with_preset(placements=placements))
+    report = lint_version_dir(tmp_path)
+    assert report.errors == []
+    expected = (
+        "signatures.slots[supervisor]: placements.topic_application: место уже плашки открепленной ЭП, при подписи ЭП "
+        "рамка расширится до 70 мм влево"
+    )
+    assert [w for w in report.warnings if "плашки" in w] == [expected]
+
+    placements["topic_application"]["x_mm"] = 10
+    _write_preset(tmp_path, _manifest_with_preset(placements=placements))
+
+    assert any("левый край" in e for e in lint_version_dir(tmp_path).errors)

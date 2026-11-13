@@ -13,6 +13,7 @@ from hse_doc_studio.core.enums import (
     FormFieldType,
     MetaFieldAuto,
     MetaFieldType,
+    PersonRole,
     RequiredAt,
     TemplateUpdateClass,
     TemplateVersionStatus,
@@ -40,7 +41,7 @@ class SignatureDefaultPlacement:
 class SignatureDefaultDate:
     """Метка даты по умолчанию из пака (signing-route.md, 14.10): рамка на странице документа и формат.
 
-    Первая версия только разбирает и проверяет `default_dates` слота, но размещению их не применяет.
+    Применяется вместе с местом слота документа, когда пресет маршрута ставит место из пака (раздел 15).
     """
 
     page: int
@@ -66,8 +67,19 @@ class SignatureSlotDef:
     # Пак запрещает отмечать подпись необязательной на любой точке (`required: true`, signing-route.md, 13.3).
     # Это не обязательность на точке (её задают профили сдачи, см. ниже), а запрет её снимать.
     required: bool = False
-    # Метки даты по умолчанию (14.10): пары «id определения документа, метки». Пока не применяются.
+    # Метки даты по умолчанию (14.10): пары «id определения документа, метки». Применяются вместе с местом (15.5).
     default_dates: tuple[tuple[str, tuple[SignatureDefaultDate, ...]], ...] = ()
+    # Место подписи по документу (`placements`, signing-route.md, 15.3): пары «id определения документа, место».
+    # Документ без записи получает `default_placement`; читать через `place_for`, а не напрямую.
+    placements: tuple[tuple[str, SignatureDefaultPlacement], ...] = ()
+
+    def place_for(self, doc_def_id: str) -> SignatureDefaultPlacement:
+        """Место слота на документе из пака: запись `placements` документа, иначе `default_placement`."""
+        return next((place for doc_id, place in self.placements if doc_id == doc_def_id), self.default_placement)
+
+    def dates_for(self, doc_def_id: str) -> tuple[SignatureDefaultDate, ...]:
+        """Метки даты слота на документе из пака (`default_dates` документа), пусто без записи."""
+        return next((marks for doc_id, marks in self.default_dates if doc_id == doc_def_id), ())
 
     # Поля `required_for` здесь СОЗНАТЕЛЬНО НЕТ. Обязательность подписи — это
     # свойство пары «документ + контрольная точка», а не документа: одно и то же
@@ -343,6 +355,32 @@ class ExtraSubmissionItem:
 
 
 @dataclass(frozen=True)
+class SlotCondition:
+    """Условие слота пресета по людям проекта (`when`, signing-route.md, 15.3).
+
+    `person` персона проекта (`PERSON_KEYS`): человек указан. С `role` указан и с такой ролью (`PersonRole`).
+    """
+
+    person: str
+    role: PersonRole | None = None
+
+
+@dataclass(frozen=True)
+class SigningSlotPreset:
+    """Запись `signing_slots` профиля сдачи (signing-route.md, 15.3): пара «документ, слот» пресета точки.
+
+    `doc_id` id определения документа из `items` профиля, `slot_id` слот каталога. Пара, которой нет в `signatures`
+    пункта, это слот сверх точки: маршрут включает его сам, если выполнено условие `when` (без условия всегда).
+    `optional` подпись необязательна на этой точке (раздел 13), у пары точки и у слота сверх точки.
+    """
+
+    doc_id: str
+    slot_id: str
+    when: SlotCondition | None = None
+    optional: bool = False
+
+
+@dataclass(frozen=True)
 class SubmissionProfile:
     id: str
     name: dict[str, str]
@@ -353,6 +391,9 @@ class SubmissionProfile:
     # внутри шага параллельно. Пусто: порядок версии `signatures.route`, а без него встроенный
     # (core/signatures/route_order.py, docs/design/signing-route.md, раздел 5.2).
     signing_route: tuple[tuple[str, ...], ...] = ()
+    # Пресет маршрута точки (`signing_slots`, signing-route.md, 15.3): слоты сверх точки с условием и отметки
+    # `optional`. Пусто: пресета нет, маршрут как раньше.
+    signing_slots: tuple[SigningSlotPreset, ...] = ()
 
 
 @dataclass(frozen=True)

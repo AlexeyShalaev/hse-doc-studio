@@ -19,6 +19,8 @@ from hse_doc_studio.api.schemas.signature import (
     FrozenPdfResponse,
     LevelRequest,
     ManualSignerRequest,
+    PackDateMarkResponse,
+    PackPlaceResponse,
     PlacementResponse,
     ProfileRefResponse,
     RuntimeSlotResponse,
@@ -89,6 +91,7 @@ from hse_doc_studio.use_cases.signatures.get_signed_doc_pdf import (
     GetSignedDocPdfInput,
     GetSignedDocPdfUC,
 )
+from hse_doc_studio.use_cases.signatures.pack_places import MANUAL, PlaceInfo
 from hse_doc_studio.use_cases.signatures.release_withheld import ReleaseWithheldInput, ReleaseWithheldUC
 from hse_doc_studio.use_cases.signatures.set_date_marks import DateMarkInput, SetDateMarksInput, SetDateMarksUC
 from hse_doc_studio.use_cases.signatures.set_slot_optional import SetSlotOptionalInput, SetSlotOptionalUC
@@ -123,8 +126,11 @@ def _map_slot(slot: SignatureSlot) -> SlotInfoResponse:
     )
 
 
-def _map_placement(placement: SignaturePlacement, texts: tuple[str | None, ...] = ()) -> PlacementResponse:
-    """Размещение для ответа; `texts` что напечатает каждая метка даты сейчас (signing-route.md, 14.7)."""
+def _map_placement(
+    placement: SignaturePlacement, texts: tuple[str | None, ...] = (), place: PlaceInfo = MANUAL
+) -> PlacementResponse:
+    """Размещение для ответа; `texts` что напечатает каждая метка даты сейчас (signing-route.md, 14.7), `place`
+    откуда место и есть ли место в шаблоне (15.11)."""
     return PlacementResponse(
         enabled=placement.enabled,
         page=placement.page,
@@ -149,13 +155,17 @@ def _map_placement(placement: SignaturePlacement, texts: tuple[str | None, ...] 
         signed_at=SignedAtResponse(at=placement.signed_at.at, source=placement.signed_at.source)
         if placement.signed_at is not None
         else None,
+        origin=place.origin,
+        preset_available=place.preset_available,
     )
 
 
-def _state_placement(state: SignaturesState, doc_id: str, slot_id: str, lang: str) -> PlacementResponse:
+def _state_placement(
+    state: SignaturesState, doc_id: str, slot_id: str, lang: str, place: PlaceInfo = MANUAL
+) -> PlacementResponse:
     placement = state.placements[doc_id][slot_id]
     return _map_placement(
-        placement, tuple(date_mark_text(state, doc_id, slot_id, mark, lang) for mark in placement.dates)
+        placement, tuple(date_mark_text(state, doc_id, slot_id, mark, lang) for mark in placement.dates), place
     )
 
 
@@ -180,6 +190,25 @@ def _map_runtime_slot(item: RuntimeSlotItem) -> RuntimeSlotResponse:
         extra_by={
             doc_id: [ProfileRefResponse(id=ref.id, name=ref.name) for ref in refs]
             for doc_id, refs in item.extra_by.items()
+        },
+        default_placements={
+            doc_id: PackPlaceResponse(page=p.page, x_mm=p.x_mm, y_mm=p.y_mm, width_mm=p.width_mm)
+            for doc_id, p in item.default_placements.items()
+        },
+        default_dates={
+            doc_id: [
+                PackDateMarkResponse(
+                    page=m.page,
+                    x_mm=m.x_mm,
+                    y_mm=m.y_mm,
+                    width_mm=m.width_mm,
+                    height_mm=m.height_mm,
+                    format=m.format,
+                    align=m.align,
+                )
+                for m in marks
+            ]
+            for doc_id, marks in item.default_dates.items()
         },
     )
 
@@ -222,6 +251,7 @@ def _map_state(
     stale_frozen: set[str] | None = None,
     plate_outdated: set[str] | None = None,
     lang: str = "ru",
+    places: dict[str, dict[str, PlaceInfo]] | None = None,
 ) -> SignaturesStateResponse:
     stale_frozen = stale_frozen or set()
     plate_outdated = plate_outdated or set()
@@ -239,7 +269,10 @@ def _map_state(
         },
         slots={sid: _map_slot(slot) for sid, slot in state.slots.items()},
         placements={
-            doc_id: {sid: _state_placement(state, doc_id, sid, lang) for sid in slot_map}
+            doc_id: {
+                sid: _state_placement(state, doc_id, sid, lang, (places or {}).get(doc_id, {}).get(sid, MANUAL))
+                for sid in slot_map
+            }
             for doc_id, slot_map in state.placements.items()
         },
         runtime_slots=[_map_runtime_slot(item) for item in runtime_slots],
@@ -278,7 +311,9 @@ async def get_signatures(
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
-    return _map_state(result.state, result.runtime_slots, result.stale_frozen, result.plate_outdated, result.lang)
+    return _map_state(
+        result.state, result.runtime_slots, result.stale_frozen, result.plate_outdated, result.lang, result.places
+    )
 
 
 @router.patch(
@@ -312,7 +347,7 @@ async def update_placement(
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
-    return _map_placement(result.placement, result.texts)
+    return _map_placement(result.placement, result.texts, result.place)
 
 
 @router.put(
@@ -361,7 +396,7 @@ async def set_date_marks(
         raise
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
-    return _map_placement(result.placement, result.texts)
+    return _map_placement(result.placement, result.texts, result.place)
 
 
 @router.delete(

@@ -332,14 +332,15 @@ def _slot(  # noqa: PLR0913 — входы одного слота
 def _placement(
     point: RoutePoint, placements: Mapping[str, Mapping[str, SignaturePlacement]], pair: DocSlot
 ) -> SignaturePlacement:
-    """Размещение слота на документе; пока автор его не задал, место из пака."""
+    """Размещение слота на документе; пока автор его не задал, место из пака для документа (signing-route.md, 15.3)."""
     found = placements.get(pair.doc_id, {}).get(pair.slot_id)
     if found is not None:
         return found
     slot = point.runtime.get(pair.slot_id)
     if slot is None:
         return SignaturePlacement(enabled=False, page=1, x_mm=0.0, y_mm=0.0, width_mm=0.0)
-    default = slot.slot_def.default_placement
+    doc = point.documents.get(pair.doc_id)
+    default = slot.slot_def.place_for(doc.def_id) if doc is not None else slot.slot_def.default_placement
     return SignaturePlacement(
         enabled=False, page=default.page, x_mm=default.x_mm, y_mm=default.y_mm, width_mm=default.width_mm
     )

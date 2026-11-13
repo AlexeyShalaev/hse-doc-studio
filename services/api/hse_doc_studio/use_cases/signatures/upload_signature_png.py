@@ -6,7 +6,6 @@ from uuid import UUID
 
 import structlog
 
-from hse_doc_studio.core.catalog import SignatureDefaultPlacement
 from hse_doc_studio.core.entities import Project
 from hse_doc_studio.core.errors import NotFoundError
 from hse_doc_studio.core.i18n import localized_error
@@ -49,8 +48,10 @@ class UploadSignaturePngUC:
 
     The PNG is stored once per slot — the same file is reused across every
     document the slot applies to. On first upload for a slot we also seed
-    a default placement (enabled=False) for each applicable document so the
-    UI has something to render right away; existing placements are preserved.
+    a placement (enabled=False) for each applicable document at the pack's place
+    for that document (`placements`, else `default_placement`, signing-route.md, 15.3)
+    so the UI has something to render right away; existing placements are preserved.
+    Seeds carry no `from_pack` mark: they are recognised by geometry (15.4).
     """
 
     def __init__(
@@ -71,13 +72,13 @@ class UploadSignaturePngUC:
         project: Project,
         rslot: RuntimeSlot,
         slot_id: str,
-        default: SignatureDefaultPlacement,
     ) -> None:
         for doc in project.documents:
             if not self._slot_service.slot_applies_to_doc(rslot, doc):
                 continue
             doc_placements = placements.setdefault(doc.id, {})
             if slot_id not in doc_placements:
+                default = rslot.slot_def.place_for(doc.def_id)
                 doc_placements[slot_id] = SignaturePlacement(
                     enabled=False,
                     page=default.page,
@@ -117,7 +118,6 @@ class UploadSignaturePngUC:
                     f"{project.lock.pack_id}/{project.lock.template_id}",
                 )
             )
-        slot_def = rslot.slot_def
 
         target_dir = project.folder / _PNG_DIR
         target_dir.mkdir(parents=True, exist_ok=True)
@@ -142,7 +142,7 @@ class UploadSignaturePngUC:
         # применим (`applies_to` пака — id определений; в team инстансов
         # больше: личные доки владельца + общие).
         new_placements = {doc_id: dict(slots) for doc_id, slots in state.placements.items()}
-        self._seed_default_placements(new_placements, project, rslot, inp.slot_id, slot_def.default_placement)
+        self._seed_default_placements(new_placements, project, rslot, inp.slot_id)
 
         new_state = replace(state, slots=new_slots, placements=new_placements)
         self._signature_repo.save_state(project.folder, new_state)
