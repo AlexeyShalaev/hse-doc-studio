@@ -10,9 +10,8 @@ import { z } from "zod";
 // Необязательные подписи и пропуск (раздел 13.6): слот маршрута различает `extra` (добавлен сверх
 // точки) и `optional` (подпись необязательна); поля участника и задачи обязательны.
 //
-// Дата подписания (раздел 14.7) фронтенд знает раньше сервера (срез W14 до R23): эталоны задачи с
-// `dates` лежат в contracts/server/next, у слотов задачи нынешнего сервера меток нет, поле по
-// умолчанию пусто (LEGACY_R23). R23 убирает значение по умолчанию вместе с переносом эталонов.
+// Дата подписания (раздел 14.7): у слотов задачи метки даты `dates` (место рамки и текст), поле
+// обязательно (срез R23).
 
 const iso = z.string().min(1);
 const LocalizedSchema = z.record(z.string(), z.string());
@@ -123,6 +122,8 @@ export const RouteEventKindSchema = z.enum([
   "invited",
   "frozen",
   "skipped",
+  /** Автор изменил метки даты на документе под маршрутом (14.6): `who` автор. */
+  "marks_edited",
 ]);
 export type RouteEventKind = z.infer<typeof RouteEventKindSchema>;
 
@@ -617,11 +618,8 @@ export const SigningTaskOtherSlotSchema = z.strictObject({
   height_mm: z.number().nullable(),
   mark: RouteVisibleMarkSchema,
   status: RouteSlotStatusSchema,
-  /**
-   * Метки даты слота (14.7). Дата подписания появилась на фронте (W14) раньше, чем в задаче
-   * сервера (R23): LEGACY_R23, по умолчанию пусто.
-   */
-  dates: z.array(SigningTaskDateMarkSchema).default([]),
+  /** Метки даты слота на этом документе (14.7). */
+  dates: z.array(SigningTaskDateMarkSchema),
 });
 export type SigningTaskOtherSlot = z.infer<typeof SigningTaskOtherSlotSchema>;
 

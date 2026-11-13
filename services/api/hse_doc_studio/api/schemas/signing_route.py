@@ -47,6 +47,7 @@ RouteEventKindName = Literal[
     "invited",
     "frozen",
     "skipped",
+    "marks_edited",
 ]
 
 
@@ -419,6 +420,18 @@ class SigningTaskMe(StrictModel):
     optional: bool
 
 
+class SigningTaskDateMark(StrictModel):
+    """Метка даты слота на документе задачи (14.7): место рамки и что напечатано сейчас; null у пустой метки
+    (слот ещё не согласован, придержан или пропущен)."""
+
+    page: int = Field(ge=1)
+    x_mm: float
+    y_mm: float
+    width_mm: float
+    height_mm: float
+    text: str | None
+
+
 class SigningTaskOtherSlot(StrictModel):
     """Чужой слот на документе: место и статус, без причины плана."""
 
@@ -432,6 +445,8 @@ class SigningTaskOtherSlot(StrictModel):
     height_mm: float | None
     mark: RouteVisibleMarkName
     status: RouteSlotStatusName
+    # Метки даты слота на этом документе: страница подписи рисует рамки своих («Дата согласования»).
+    dates: list[SigningTaskDateMark]
 
 
 class SigningTaskSlot(SigningTaskOtherSlot):

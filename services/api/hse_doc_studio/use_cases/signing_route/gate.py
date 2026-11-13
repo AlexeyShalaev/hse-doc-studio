@@ -9,7 +9,8 @@
 - после записи пересчитывает маршрут: событие `signed`, запрос следующему шагу, завершение.
 
 Правки подписей документа идущего маршрута (размещения, настройка и картинка слота, подписант плашки, фиксация и
-её снятие, удаление открепленной подписи) закрыты: 409 `route_locked`. Маршрут, который по расчёту уже остановлен
+её снятие, удаление открепленной подписи) закрыты: 409 `route_locked`. Метки даты на документе под маршрутом правит
+его сценарий (`dates.py`, 14.6). Маршрут, который по расчёту уже остановлен
 или завершён, ни очередь, ни правки не держит: остановку запишет сверка (`reconcile.py`).
 
 План подписей получает отсюда маршрут и состояния участников (`plan_routes`); чтение ничего не пишет.
@@ -35,16 +36,16 @@ from hse_doc_studio.core.signing_route.entities import (
     RouteConflictError,
     RouteStatus,
     SigningRoute,
-    date_from_route,
     not_your_turn,
     route_holds_doc,
     route_locked,
 )
 from hse_doc_studio.core.signing_route.ports import HeldRoute, PlanRoute, PlanRoutes, RouteHold, SigningDoc
 from hse_doc_studio.core.signing_route.signer import unsigned_crypto
+from hse_doc_studio.use_cases.signing_route.dates import RouteDatesEditing
 from hse_doc_studio.use_cases.signing_route.facts import LoadedFacts
 from hse_doc_studio.use_cases.signing_route.reconcile import RouteRecalculation
-from hse_doc_studio.use_cases.signing_route.scenario import actor_uuid
+from hse_doc_studio.use_cases.signing_route.scenario import current_actor_uuid
 from hse_doc_studio.use_cases.signing_route.views import doc_changed, sent_version
 from hse_doc_studio.use_cases.signing_route.watch import expect_recalculation, recalculation_done
 
@@ -52,13 +53,7 @@ logger = structlog.get_logger()
 
 
 def _actor_id() -> UUID | None:
-    actor = current_actor()
-    if actor is None or actor.kind is not ActorKind.user or not actor.id:
-        return None
-    try:
-        return actor_uuid(actor)
-    except ValueError:
-        return None
+    return current_actor_uuid()
 
 
 def _reads_routes() -> bool:
@@ -67,8 +62,8 @@ def _reads_routes() -> bool:
     return actor is not None and actor.kind is ActorKind.user and actor.link_id is None
 
 
-class SigningRouteGate(RouteRecalculation):
-    """`ISigningRouteGate` сервера."""
+class SigningRouteGate(RouteRecalculation, RouteDatesEditing):
+    """`ISigningRouteGate` сервера; метки даты на документе под маршрутом правит `RouteDatesEditing` (14.6)."""
 
     async def require_turn(self, project_id: UUID, doc_id: str, slot_id: str) -> UUID | None:
         route = await self._s.routes.holding(project_id, doc_id)
@@ -121,19 +116,6 @@ class SigningRouteGate(RouteRecalculation):
             calc = await self._going(route)
             if calc is not None and _slot_on_route(route, calc[0], slot_id):
                 raise route_locked()
-
-    async def require_dates_editable(self, project_id: UUID, doc_id: str, slot_id: str, *, manual: bool) -> None:
-        route = await self._s.routes.holding(project_id, doc_id)
-        if route is None:
-            return
-        if route.status in WATCHING_STATUSES:
-            calc = await self._evaluated(route)
-            # Идущий или завершённый по расчёту маршрут держит правку меток: её проведёт его сценарий (R23).
-            status = calc[1].status if calc is not None else route.status
-            if status in WATCHING_STATUSES:
-                raise route_locked()
-        if manual and DocSlot(doc_id, slot_id) in route.pairs:
-            raise date_from_route()
 
     async def require_not_held(self, project_id: UUID, doc_id: str) -> None:
         if await self._s.routes.holding(project_id, doc_id) is not None:

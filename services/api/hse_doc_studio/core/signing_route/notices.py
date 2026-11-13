@@ -82,12 +82,15 @@ def dedupe_key(route: SigningRoute, notify: Notify, recipient: Recipient) -> str
     """`signing:<маршрут>:<раунд>:<участник>:<вид>`, у запроса ещё ход: `...:signing_request:approve|sign`.
 
     Повтор с тем же ключом не создаёт второе уведомление, а поднимает прежнее (напоминание поднимает своё).
-    Автор, который не участник, вместо id участника получает `sender`.
+    Автор, который не участник, вместо id участника получает `sender`. Повторный запрос подписи после перефиксации
+    (`Notify.again`, 14.6) получает ещё отпечаток нового B: `...:signing_request:sign:<sha12>`.
     """
     who = recipient.participant_id.hex if recipient.participant_id is not None else "sender"
     key = f"signing:{route.id.hex}:{route.round}:{who}:{notify.notice.value}"
     if notify.notice is Notice.request:
         key = f"{key}:{request_turn(notify.outcome)}"
+        if notify.again:
+            key = f"{key}:{notify.again}"
     return key
 
 

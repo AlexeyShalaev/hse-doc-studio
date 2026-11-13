@@ -22,7 +22,7 @@ from hse_doc_studio.core.signatures.plan import (
     slot_state,
 )
 from hse_doc_studio.core.signatures.ports import IMarkMeasure
-from hse_doc_studio.core.signatures.stamps import stamps_for_doc
+from hse_doc_studio.core.signatures.stamps import date_mark_text, stamps_for_doc
 from hse_doc_studio.core.signing_route.engine import Evaluation, ParticipantView, RouteFacts, approval_token
 from hse_doc_studio.core.signing_route.entities import (
     DocSlot,
@@ -61,6 +61,18 @@ _ACTED = frozenset({EventKind.approved, EventKind.signed, EventKind.returned})
 
 
 @dataclass(frozen=True)
+class TaskDate:
+    """Метка даты слота на документе (14.7): место рамки и что напечатано сейчас (None: метка пустая)."""
+
+    page: int
+    x_mm: float
+    y_mm: float
+    width_mm: float
+    height_mm: float
+    text: str | None
+
+
+@dataclass(frozen=True)
 class TaskSlot:
     """Слот на документе: место метки на странице, что на ней будет и статус слота по плану подписей.
 
@@ -79,6 +91,8 @@ class TaskSlot:
     reason: PlanReason | None
     # Подпись необязательна на точке маршрута (13.3).
     optional: bool = False
+    # Метки даты слота на этом документе (14.7).
+    dates: tuple[TaskDate, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -301,6 +315,17 @@ def _slot(  # noqa: PLR0913 — входы одного слота
         status=plan.status,
         reason=plan.reason,
         optional=facts.is_optional(pair),
+        dates=tuple(
+            TaskDate(
+                page=mark.page,
+                x_mm=mark.x_mm,
+                y_mm=mark.y_mm,
+                width_mm=mark.width_mm,
+                height_mm=mark.height_mm,
+                text=date_mark_text(state, pair.doc_id, pair.slot_id, mark, str(point.project.lang)),
+            )
+            for mark in placement.dates
+        ),
     )
 
 

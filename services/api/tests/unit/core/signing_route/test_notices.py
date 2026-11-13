@@ -91,6 +91,21 @@ def test__dedupe_key__per_route_round_participant_kind_and_request_turn() -> Non
     assert len(approve) <= 128
 
 
+def test__dedupe_key__sign_request_again_after_refreeze__new_key_with_the_new_b() -> None:
+    """Повторный запрос подписи после перефиксации (14.6): ключ с отпечатком нового B, первый запрос не поднимается."""
+    route = _route()
+    supervisor = route.participants[1]
+    who = Recipient(supervisor.user_id, supervisor.id)  # type: ignore[arg-type]
+    first = Notify(Notice.request, (supervisor.id,), outcome=RequestOutcome.sign)
+    again = Notify(Notice.request, (supervisor.id,), outcome=RequestOutcome.sign, again="0123456789ab")
+
+    key = dedupe_key(route, again, who)
+
+    assert key == f"{dedupe_key(route, first, who)}:0123456789ab"
+    assert len(key) <= 128
+    assert mails(again, who) is True
+
+
 def test__mails__request_and_reminder_to_all_returned_and_completed_to_the_author_only() -> None:
     signer, author = Recipient(uuid4(), uuid4()), Recipient(uuid4(), None, sender=True)
 

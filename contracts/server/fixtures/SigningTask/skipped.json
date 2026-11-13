@@ -98,7 +98,8 @@
           "mark": "png",
           "status": "skipped",
           "reason": null,
-          "optional": true
+          "optional": true,
+          "dates": []
         }
       ],
       "others": [
@@ -114,7 +115,8 @@
           "width_mm": 30,
           "height_mm": 12,
           "mark": "png",
-          "status": "signed"
+          "status": "signed",
+          "dates": []
         }
       ],
       "sent_at": "2026-11-10T09:00:00Z",

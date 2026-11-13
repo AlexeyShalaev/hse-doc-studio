@@ -540,6 +540,8 @@ class SigningTaskScenario(RouteScenario):
         except _KEY_ERRORS as exc:
             error = exc
         after = await self._settle(turn.point, route, turn.at)
+        # ЭП, сброшенные фиксацией перед подписью, остаются в итоге: их владельцам запрос заново (14.6).
+        after = replace(after, reset=(*settled.reset, *after.reset))
         left = set(unsigned_crypto(after.route.participant(me.id), after.loaded.facts))
         events = [
             self._event(turn, EventKind.signed, {"doc_id": pair.doc_id, "slot_id": pair.slot_id})

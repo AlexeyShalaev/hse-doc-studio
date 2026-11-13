@@ -311,7 +311,7 @@ export const CONTRACT_SCHEMAS: Record<string, ZodType> = {
   // Дата подписания (signing-route.md, 14.7, срез R22). Размещение и план разбираются нестрогими
   // схемами состояния подписей: здесь лишнее поле отвергается на верхнем уровне, а на вложенных
   // z.object отбрасывает его, и разбор «без потерь» тоже не сходится. `dates` в задаче подписанта
-  // (R23) пока в contracts/server/next.
+  // перенёс в fixtures срез R23.
   SetDateMarksRequest: sig.SetDateMarksRequestSchema,
   Placement: z.strictObject(sig.PlacementSchema.shape),
   SignaturePlan: z.strictObject(sig.SignaturePlanSchema.shape),

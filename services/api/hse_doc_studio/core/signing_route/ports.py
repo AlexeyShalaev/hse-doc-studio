@@ -7,7 +7,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Collection, Mapping, Sequence
+from collections.abc import Awaitable, Callable, Collection, Mapping, Sequence
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
@@ -25,6 +25,11 @@ from hse_doc_studio.core.signing_route.entities import (
     SigningRoute,
     StopReason,
 )
+from hse_doc_studio.core.value_objects import SignaturesState
+
+# Правка меток даты слота документа: по состоянию подписей под `project_lock` отдаёт новое (то же, если менять нечего).
+# Проверки рамок делает она же: отказ ничего не записывает.
+type DatesWrite = Callable[[SignaturesState], Awaitable[SignaturesState]]
 
 
 class IBuildArchive(Protocol):
@@ -275,14 +280,22 @@ class ISigningRouteGate(Protocol):
         """
         ...
 
-    async def require_dates_editable(self, project_id: UUID, doc_id: str, slot_id: str, *, manual: bool) -> None:
-        """Метки даты слота мимо маршрута (signing-route.md, 14.6 и 14.7, срез R22).
+    async def edit_dates(
+        self, project_id: UUID, doc_id: str, slot_id: str, write: DatesWrite, *, manual: bool, confirm_reset: bool
+    ) -> SignaturesState | None:
+        """Метки даты слота документа (signing-route.md, 14.6 и 14.7).
 
-        Документ, который держит маршрут `active` или `completed` (по расчёту), правится только сценарием маршрута
-        (срез R23): до него `RouteConflictError` с кодом `route_locked` (409). Остановленный, возвращённый и
-        отменённый маршрут правку не держит. `manual` запрос меняет ручную дату подписи: на паре участника маршрута,
-        который держит документ, это `date_from_route` (409), дату даёт его согласие. Только читает: под
-        `project_lock` вызывать можно.
+        Документ, который держит маршрут `active` или `completed` (по расчёту), правит сценарий маршрута: блокировка
+        маршрута и `project_lock`, `write`, дата согласия у уже согласовавших (`RecordSignedAt`), перефиксация в фазе
+        `signing`, снимок, событие `marks_edited`. Возвращает состояние подписей после правки. Без права
+        `SUBMISSION_CREATE` это `RouteConflictError` с кодом `route_locked` (409). Если правка сбросит ЭП над
+        зафиксированным PDF, а `confirm_reset` не передан, это `ResetsSignaturesError` (409 `resets_signatures`),
+        ничего не записано.
+
+        None: документ такой маршрут не держит, вызывающий пишет сам под `project_lock`. Остановленный,
+        возвращённый и отменённый маршрут правку не держит. `manual` запрос меняет ручную дату подписи: на паре
+        участника маршрута, который держит документ (любой из `HOLDING_STATUSES`), это `date_from_route` (409).
+        Вызывать вне `project_lock`: сценарий берёт строку маршрута, затем `project_lock`.
         """
         ...
 
@@ -334,7 +347,9 @@ class NoSigningRoutes:
     ) -> None:
         return None
 
-    async def require_dates_editable(self, project_id: UUID, doc_id: str, slot_id: str, *, manual: bool) -> None:
+    async def edit_dates(
+        self, project_id: UUID, doc_id: str, slot_id: str, write: DatesWrite, *, manual: bool, confirm_reset: bool
+    ) -> SignaturesState | None:
         return None
 
     async def require_not_held(self, project_id: UUID, doc_id: str) -> None:

@@ -1,6 +1,7 @@
 """Файловые эффекты расчёта маршрута (docs/design/signing-route.md, разделы 4.2, 6.1 и 6.2).
 
-Придержать и открыть картинку слота, заполнить плашку данными ключа участника, зафиксировать документ. Вызывающий
+Придержать и открыть картинку слота, записать момент подписи у меток даты, заполнить плашку данными ключа участника,
+зафиксировать документ. Вызывающий
 держит `project_lock` проекта и после эффектов перечитывает факты и обновляет снимок (`refresh_snapshot`).
 Уведомления (`Notify`) здесь не выполняются: их рассылает сценарий в своей транзакции.
 
@@ -19,6 +20,7 @@ from pathlib import Path
 
 import structlog
 
+from hse_doc_studio.core.enums import SignedAtSource
 from hse_doc_studio.core.repositories import ISignatureRepository
 from hse_doc_studio.core.signatures.dates import to_display
 from hse_doc_studio.core.signatures.errors import GpgError, GpgUnavailableError
@@ -26,9 +28,18 @@ from hse_doc_studio.core.signatures.plan import VisibleMark, mark_of
 from hse_doc_studio.core.signatures.ports import IOpenPgpKeyImporter
 from hse_doc_studio.core.signatures.signer_profile import ISignerProfileRepository, PublicKeyKind
 from hse_doc_studio.core.signing_route.audit import signing_route_scope
-from hse_doc_studio.core.signing_route.effects import Effect, FillPlate, Freeze, Release, Skip, Unskip, Withhold
+from hse_doc_studio.core.signing_route.effects import (
+    Effect,
+    FillPlate,
+    Freeze,
+    RecordSignedAt,
+    Release,
+    Skip,
+    Unskip,
+    Withhold,
+)
 from hse_doc_studio.core.signing_route.entities import DocSlot, SigningRoute
-from hse_doc_studio.core.value_objects import SignaturesState, SkippedSlot
+from hse_doc_studio.core.value_objects import SignaturesState, SignedAt, SkippedSlot
 from hse_doc_studio.use_cases.signatures.freeze_pdf import FreezePdfInput, FreezePdfUC
 from hse_doc_studio.use_cases.signing_route.point import RoutePoint
 
@@ -108,7 +119,23 @@ def _apply(state: SignaturesState, route: SigningRoute, effect: Effect) -> Signa
         return _skipped(state, route, effect)
     if isinstance(effect, Unskip):
         return _unskipped(state, effect.doc_id, effect.slot_id)
+    if isinstance(effect, RecordSignedAt):
+        return record_signed_at(state, effect)
     return _apply_marks(state, route, effect)
+
+
+def record_signed_at(state: SignaturesState, effect: RecordSignedAt) -> SignaturesState:
+    """Момент согласия у размещения с метками даты (14.4): ISO с поясом UTC и отпечаток согласия документа."""
+    placement = state.placements.get(effect.doc_id, {}).get(effect.slot_id)
+    if placement is None:
+        return state
+    signed_at = SignedAt(
+        at=effect.at.astimezone(UTC).isoformat(timespec="seconds"), source=SignedAtSource.approval, token=effect.token
+    )
+    if placement.signed_at == signed_at:
+        return state
+    doc_placements = {**state.placements[effect.doc_id], effect.slot_id: replace(placement, signed_at=signed_at)}
+    return replace(state, placements={**state.placements, effect.doc_id: doc_placements})
 
 
 def _apply_marks(state: SignaturesState, route: SigningRoute, effect: Effect) -> SignaturesState:
