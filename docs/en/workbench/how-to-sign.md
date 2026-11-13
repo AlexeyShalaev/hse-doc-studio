@@ -166,6 +166,18 @@ If you are the route's author or manage it, the signing page also shows you what
 - “Route stopped”: the author is changing the signers, the documents were returned for revision, or signatures changed outside the route. There is nothing to do; you will be notified when the author sends it again.
 - “Signing page not found”: the route is closed, the link is out of date, or you are signed in to another account. Open the Inbox and check the “To sign” tab.
 
+## If your signature is not required { #skipped }
+
+Until the author skips you, you sign as usual. A signature place the author marked optional has the note "optional" on the page: you can sign it, but the route will not wait for it.
+
+If the author decides your signature is not needed at this checkpoint, they press "Skip". Then:
+
+- you get an inbox notification and an email: "Signature not required: ...". The task disappears from the "To sign" tab;
+- the signing page says "Your signature is not required. The route author skipped your step. There is nothing to do.";
+- your earlier approvals and signatures on other places stay.
+
+If the author sends the route again and clears the "optional" mark, you get a request again in your turn.
+
 ## From a phone { #phone }
 
 The signing page works in a phone browser, and the buttons stick to the bottom of the screen.

@@ -1,0 +1,55 @@
+---
+title: 'Optional signatures and skipping'
+description: 'How to mark a signature optional, skip a signer who is not needed, what the signer gets and how to bring them back into the route.'
+sidebar:
+  order: 12
+access: user
+help:
+  routes:
+    - '/projects/:projectId/documents/:docId'
+    - '/projects/:projectId/submit/cp/:profileId'
+  summary: 'If a signature is not needed at a checkpoint, the route does not have to wait for that person. Mark the signature place optional, and when their turn comes, press “Skip”.'
+  steps:
+    - text: 'Open the document, the **Signatures** tab, the signature place and tick **Signature optional at this checkpoint**.'
+      hint: 'The mark belongs to the checkpoint: the same document at another checkpoint may require this signature. You can change it on a running route. A signature the template requires and one that is already in place cannot be marked. The same checkbox is in the route editor, in the **Where the signatures go** block.'
+      shot: runbooks/signing-optional/step-01
+    - text: 'Open **Submit**, the checkpoint and the **Signing** card. When it is the turn of a person whose remaining signatures are all optional, a hint and a **Skip** button appear under their row.'
+      hint: 'Before their turn or with a required signature they cannot be skipped, the hint says why. The owner and editors see the button.'
+      shot: runbooks/signing-optional/step-02
+    - text: 'Press **Skip** and read the confirmation: which signatures will not be placed and what happens next. Then press **Skip** again.'
+      hint: 'The confirmation says whether the route moves to the next step, freezes the documents or completes, and whether the mark stays in an already frozen PDF. You cannot skip over MCP.'
+      shot: runbooks/signing-optional/step-03
+    - text: 'Check the steps: the skipped person shows **signature not required, skipped …**, and the route moves on or is complete.'
+      hint: 'The skipped person gets an inbox notification and an email, and their “To sign” task disappears. The only way back is a new send: clear **Signature optional** and press **Send again**.'
+      shot: runbooks/signing-optional/step-04
+verified:
+  at: 2026-11-13
+  app_version: '0.23.0'
+  sources:
+    - services/web-app/src/features/signing-route-progress
+    - services/web-app/src/features/signature-stamper
+---
+
+import Steps from '~/components/Steps.astro'
+
+Sometimes a signature is not needed at a checkpoint: for example, the supervisor approved the
+application, and the academic supervisor's signature was added by yourself or turned out to be
+redundant. To avoid cancelling the route, mark it optional and skip the person when their turn
+comes.
+
+<Steps />
+
+## If something goes wrong
+
+- **No “Skip” button**: only the person who manages the route can skip, and only when the
+  person's turn has come and all their remaining signatures at this checkpoint are optional.
+- **“There are required signatures: cannot skip”**: the person still has a required signature. If
+  it is not needed, remove it from the route or mark it optional.
+- **You cannot tick “Signature optional”**: the template requires this signature, or it is
+  already in place.
+- **Skipped by mistake**: clear **Signature optional** on the signature (the skipped person shows
+  “Returns to the route on the next send”) and press **Send again**.
+- **Skip automatically or over MCP**: not possible, this is the route author's decision in the
+  interface.
+- **The package has the line “not required (skipped by the author)”**: that is expected, it is a
+  line of the `КАК_ПРОВЕРИТЬ.txt` guide. A skipped signature does not block the package.
