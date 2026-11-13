@@ -762,7 +762,9 @@ export const createCheckpointDemo = (
         routes.marksEdited(
           projectId,
           docId,
+          slotId,
           getWorld().bootstrap.user?.name ?? null,
+          resets.length > 0,
         );
         if (resets.length > 0) routes.refreeze(projectId, docId);
         return demoJson(placementOut(projectId, docId, slotId, next));

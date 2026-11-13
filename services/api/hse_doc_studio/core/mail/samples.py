@@ -30,6 +30,11 @@ _CHANGES = {
     Lang.en: "Rephrased the topic after the supervisor's comment.",
 }
 _CHANGED = {Lang.ru: "«Заявление о выборе темы»", Lang.en: "«Topic application»"}
+# Строка «Подписание» напоминания о сроке точки (16.7): маршрут идёт и ждёт научного руководителя.
+_SIGNING_STATE = {
+    Lang.ru: "ждём научного руководителя (Иван Сидоров)",
+    Lang.en: "waiting for the supervisor (John Smith)",
+}
 _EXPIRES = datetime(2026, 11, 10, 14, 30, tzinfo=UTC)
 _DEADLINE = datetime(2026, 11, 15, 20, 59, tzinfo=UTC)
 _TOKEN = "sampletoken0000"  # noqa: S105 — образец, не секрет
@@ -73,7 +78,9 @@ _SAMPLES: dict[MailTemplate, _Sample] = {
     MailTemplate.signing_skipped: _Sample(_SIGN_PATH, values=("actor", "project", "profile"), token=False),
     MailTemplate.signing_returned: _Sample(_CHECKPOINT_PATH, values=("actor", "project"), note=_COMMENTS, token=False),
     MailTemplate.signing_completed: _Sample(_CHECKPOINT_PATH, values=("project", "profile"), token=False),
-    MailTemplate.checkpoint_due: _Sample(_CHECKPOINT_PATH, values=("project", "profile", "deadline"), token=False),
+    MailTemplate.checkpoint_due: _Sample(
+        _CHECKPOINT_PATH, values=("project", "profile", "deadline", "signing"), token=False
+    ),
     MailTemplate.smtp_test: _Sample(),
 }
 
@@ -92,6 +99,7 @@ def sample_mail(template: MailTemplate, lang: Lang, *, server_url: str | None = 
         "profile": _PROFILES[lang],
         "deadline": format_moment(lang, _DEADLINE),
         "changed": _CHANGED[lang],
+        "signing": _SIGNING_STATE[lang],
     }
     suffix = f"/{_TOKEN}" if sample.token else ""
     link = f"{(server_url or '').rstrip('/')}{sample.path}{suffix}" if sample.path else None

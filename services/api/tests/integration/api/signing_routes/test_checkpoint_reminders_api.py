@@ -1,7 +1,8 @@
 """Срок маршрута из срока точки и напоминание автору на настоящем сервере (docs/design/signing-route.md, 16.5 и 16.7).
 
 Новый черновик получает срок на сутки раньше срока точки и `point_deadline`; задача `checkpoint_reminders` за 3 дня
-до срока пишет владельцу и авторам `checkpoint_due` во «Входящие» и строку журнала писем, один раз на срок.
+до срока пишет владельцу и авторам `checkpoint_due` во «Входящие» и строку журнала писем, один раз на срок. Если у
+точки есть маршрут, в напоминании состояние подписания: «ждём ...», «завершено» или «не отправлено».
 """
 
 from __future__ import annotations
@@ -11,15 +12,20 @@ from typing import Any
 from uuid import UUID, uuid4
 
 import pytest
+from hse_doc_studio.core.identity.protocols import IUserRepository
 from hse_doc_studio.core.invitations.protocols import INotifier
+from hse_doc_studio.core.signing_route.ports import IRouteFacts
+from hse_doc_studio.core.signing_route.repositories import ISigningRouteRepository
 from hse_doc_studio.core.uow import IUnitOfWork
 from hse_doc_studio.infra.db.orm.submission import SubmissionRow
 from hse_doc_studio.infra.db.repositories.checkpoint_reminders import PostgresCheckpointReminderStore
 from hse_doc_studio.infra.db.session import SessionProvider
 from hse_doc_studio.infra.projects.catalog_sync import MirroringProjectRepository
+from hse_doc_studio.use_cases.signing_route.checkpoint_signing import CheckpointSigningReader
 from hse_doc_studio.use_cases.submission.checkpoint_reminders import CheckpointReminderSweeper
 from sqlalchemy import text
 
+from tests.integration.api.signing_routes.signer_stand import NAMES, make_trio
 from tests.integration.api.signing_routes.stand import TOPIC, Person, Project, Stand, make_project, person
 from tests.integration.api.signing_routes.watch_stand import container, in_app
 
@@ -63,6 +69,9 @@ def _sweep(stand: Stand, now: datetime) -> int:
             notifier,
             await app.get(IUnitOfWork),
             clock=lambda: now,
+            signing=CheckpointSigningReader(
+                await app.get(ISigningRouteRepository), await app.get(IRouteFacts), await app.get(IUserRepository)
+            ),
         )
         sent = await sweeper.run()
         await notifier.drain()
@@ -155,6 +164,9 @@ async def test__reminder__owner_and_authors_once_per_deadline_with_mail_log(stan
         "deadline": moved.isoformat(),
         "new_version": False,
         "freed_bytes": None,
+        # Маршрута у точки нет: строки «Подписание» нет.
+        "signing": None,
+        "signing_waiting": None,
     }
     assert len(_due(stand, coauthor)) == 2
     # Руководителю не напоминает: его срок это срок маршрута.
@@ -162,6 +174,49 @@ async def test__reminder__owner_and_authors_once_per_deadline_with_mail_log(stan
     rows = await _mail_rows(stand, project)
     assert sorted(user for user, _, _ in rows) == sorted([owner.id, owner.id, coauthor.id, coauthor.id])
     assert {(ref_kind, status) for _, ref_kind, status in rows} == {(None, "not_sent")}
+
+
+async def _mail_values(stand: Stand, project: Project) -> list[dict[str, Any]]:
+    async with stand.sessions.use() as db:
+        rows = await db.execute(
+            text("SELECT params FROM mail_log WHERE template = 'checkpoint_due' AND project_id = :id ORDER BY id"),
+            {"id": UUID(project.id)},
+        )
+        return [dict(row[0].get("values", {})) for row in rows.all()]
+
+
+async def test__reminder__point_with_a_route__signing_state_in_inbox_and_mail(stand: Stand) -> None:
+    trio = await make_trio(stand, images=("author", "supervisor"), academic="none")
+    point = _in_days(3)
+    _set_deadline(trio.project, trio.author, point)
+
+    trio.sent()
+    waiting = _sweep(stand, point - timedelta(days=2))
+    trio.approved(trio.supervisor)
+    _set_deadline(trio.project, trio.author, point + timedelta(days=1))
+    completed = _sweep(stand, point - timedelta(days=1))
+
+    assert (waiting, completed) == (1, 1)
+    first, second = sorted(_due(stand, trio.author), key=lambda n: n["payload"]["deadline"])
+    assert (first["payload"]["signing"], first["payload"]["signing_waiting"]) == (
+        "waiting",
+        f"научного руководителя ({NAMES['supervisor']})",
+    )
+    assert (second["payload"]["signing"], second["payload"]["signing_waiting"]) == ("completed", None)
+    values = await _mail_values(stand, trio.project)
+    assert [v.get("signing") for v in values] == [f"ждём научного руководителя ({NAMES['supervisor']})", "завершено"]
+
+
+async def test__reminder__draft_route__not_sent(stand: Stand) -> None:
+    owner = await person(stand, "Автор")
+    project = make_project(stand, owner)
+    point = _in_days(3)
+    _set_deadline(project, owner, point)
+    _draft(project, owner)
+
+    assert _sweep(stand, point - timedelta(days=2)) == 1
+    [due] = _due(stand, owner)
+    assert (due["payload"]["signing"], due["payload"]["signing_waiting"]) == ("not_sent", None)
 
 
 async def test__reminder__package_built_or_deadline_passed__nothing(stand: Stand) -> None:

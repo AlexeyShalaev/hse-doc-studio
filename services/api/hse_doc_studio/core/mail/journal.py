@@ -159,7 +159,7 @@ SAFE_VALUES: Mapping[MailTemplate, frozenset[str]] = MappingProxyType(
         MailTemplate.signing_skipped: frozenset({"actor", "project", "profile"}),
         MailTemplate.signing_returned: frozenset({"actor", "project"}),
         MailTemplate.signing_completed: frozenset({"project", "profile"}),
-        MailTemplate.checkpoint_due: frozenset({"project", "profile", "deadline"}),
+        MailTemplate.checkpoint_due: frozenset({"project", "profile", "deadline", "signing"}),
         MailTemplate.smtp_test: frozenset(),
     }
 )

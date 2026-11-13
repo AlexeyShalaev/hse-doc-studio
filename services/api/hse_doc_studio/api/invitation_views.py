@@ -133,6 +133,7 @@ def my_transfer(view: TransferView, now: datetime) -> s.MyTransfer:
 
 
 _OUTCOMES = frozenset(get_args(s.NotificationOutcome))
+_SIGNING = frozenset(get_args(s.NotificationSigning))
 
 
 def _moment(value: str | None) -> datetime | None:
@@ -147,6 +148,7 @@ def _moment(value: str | None) -> datetime | None:
 def notification(item: Notification) -> s.NotificationModel:
     p = item.payload
     outcome = p.outcome if p.outcome in _OUTCOMES else None
+    signing = p.signing if p.signing in _SIGNING else None
     return s.NotificationModel(
         id=item.id,
         kind=item.kind.value,
@@ -166,6 +168,8 @@ def notification(item: Notification) -> s.NotificationModel:
             deadline=_moment(p.deadline),
             new_version=p.new_version,
             freed_bytes=p.freed_bytes,
+            signing=cast(s.NotificationSigning | None, signing),
+            signing_waiting=p.signing_waiting if signing == "waiting" else None,
         ),
     )
 

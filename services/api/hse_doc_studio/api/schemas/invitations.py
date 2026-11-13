@@ -41,6 +41,8 @@ NotificationKindName = Literal[
     "runner_disk_cleaned",
     "checkpoint_due",
 ]
+# Строка «Подписание» напоминания о сроке точки (`checkpoint_due`, 16.7).
+NotificationSigning = Literal["waiting", "completed", "not_sent"]
 NotificationOutcome = Literal[
     "accepted",
     "declined",
@@ -329,6 +331,10 @@ class NotificationPayloadModel(StrictModel):
     new_version: bool = False
     # Очистка диска личного раннера (`runner_disk_cleaned`): освобождено байт; у остальных видов null.
     freed_bytes: int | None = None
+    # Напоминание о сроке точки (`checkpoint_due`, 16.7), если у точки есть маршрут: состояние подписания и у
+    # идущего кого ждём (на языке получателя). Без маршрута и у остальных видов null.
+    signing: NotificationSigning | None = None
+    signing_waiting: str | None = None
 
 
 class NotificationModel(StrictModel):

@@ -42,10 +42,11 @@ _VALUES = {
     "project": "Курсовая работа по ГОСТ",
     "role": "editor",
     "profile": "Заявка на тему КП",
-    "deadline": "15.11.2026 20:59 UTC",
+    "deadline": "15.11.2026, 23:59 (МСК)",
     "changed": "«Заявление»",
     "name": "MacBook, Touch ID",
     "count": "2",
+    "signing": "ждём научного руководителя (Иван Сидоров)",
 }
 _CASES = [(template, lang) for template in MailTemplate for lang in Lang]
 # Виды с кнопкой: только в них ссылка попадает в письмо (у остальных, например `smtp_test`, ссылки нет).
@@ -197,7 +198,7 @@ def test__rerender__expiry_comes_from_the_stored_term() -> None:
     mail = rerender(_entry(request))
 
     assert mail is not None
-    assert "Ссылка действует до 10.11.2026 14:30 UTC." in mail.text
+    assert "Ссылка действует до 10.11.2026, 17:30 (МСК)." in mail.text
 
 
 def test__rerender__a_mail_without_a_link_has_no_link_line() -> None:

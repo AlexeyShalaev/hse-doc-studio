@@ -14,11 +14,12 @@ from __future__ import annotations
 import json
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, replace
-from datetime import UTC, datetime
+from datetime import datetime
 from uuid import UUID
 
 from hse_doc_studio.core.agent.entities import ToolResult
 from hse_doc_studio.core.i18n import localized_error
+from hse_doc_studio.core.signatures.dates import format_numeric, to_display
 from hse_doc_studio.core.signing_route.ports import ISigningRouteGate, SigningDoc
 from hse_doc_studio.use_cases.documents.list_documents import ListDocumentsInput, ListDocumentsUC
 
@@ -79,8 +80,7 @@ def affected(target: EditTarget, held: Sequence[SigningDoc], folders: Mapping[st
 def _date(at: datetime | None) -> str | None:
     if at is None:
         return None
-    moment = at if at.tzinfo is not None else at.replace(tzinfo=UTC)
-    return moment.astimezone(UTC).strftime("%d.%m.%Y")
+    return format_numeric(to_display(at).date())
 
 
 _NEXT = (

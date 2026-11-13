@@ -129,9 +129,23 @@ class InMemorySigningRouteRepository:
             held = {doc_id for r in others if r.status in HOLDING_STATUSES for doc_id in r.docs}
             if busy := [doc_id for doc_id in route.docs if doc_id in held]:
                 raise DocumentOnRouteError(busy)
+        revised = {event.id: event for event in events if event.id is not None}
+        known = {
+            e.id for e in self._events if e.route_id == route.id and e.id in revised and e.kind is revised[e.id].kind
+        }
+        if missing := [event_id for event_id in revised if event_id not in known]:
+            raise ValueError(f"event {missing[0]} is not stored with route {route.id}")
         self._routes[route.id] = copy.deepcopy(route)
         self._created[route.id] = created
-        self._events.extend(replace(copy.deepcopy(event), id=next(self._event_ids)) for event in events)
+        self._events = [
+            replace(e, at=revised[e.id].at, details=copy.deepcopy(dict(revised[e.id].details)))
+            if e.id in revised and e.route_id == route.id
+            else e
+            for e in self._events
+        ]
+        self._events.extend(
+            replace(copy.deepcopy(event), id=next(self._event_ids)) for event in events if event.id is None
+        )
         return route
 
 

@@ -10,7 +10,12 @@
    фазе `signing`, снимок принимает правку;
 4. владельцы сброшенных ЭП снова в `to_sign`, завершённый маршрут снова `active`, запрос «Подпишите итоговый PDF»
    приходит им заново (`resign_requests`, ключ повтора с отпечатком нового B);
-5. событие `marks_edited` и его запись в журнале аудита (`signing_route.marks_edit`).
+5. событие `marks_edited` и его запись в журнале аудита (`signing_route.marks_edit`). Перетаскивание метки это
+   запрос на каждое отпускание, поэтому подряд идущие правки склеиваются (`_coalesced`): если последнее событие
+   маршрута это `marks_edited` того же автора и той же пары «документ, слот» моложе `COALESCE_WINDOW` и ни оно, ни
+   новая правка подписи не сбросили, обновляются его `at` и `details.marks`. Запись аудита остаётся по одной на
+   запрос: журнал аудита только дозаписывается и хранит каждое действие человека (время, адрес), а склейка
+   касается только истории маршрута, которую читают люди.
 
 Права: правку размещения проверяет ручка (`FILES_WRITE`); на документе под маршрутом нужно ещё право отправки
 маршрута (`SUBMISSION_CREATE`), без него 409 `route_locked`.
@@ -18,7 +23,8 @@
 
 from __future__ import annotations
 
-from datetime import datetime
+from dataclasses import replace
+from datetime import datetime, timedelta
 from uuid import UUID
 
 from hse_doc_studio.core.errors import NotFoundError
@@ -49,6 +55,9 @@ from hse_doc_studio.use_cases.signing_route.scenario import (
     frozen_events,
     route_files,
 )
+
+# Окно склейки подряд идущих `marks_edited` одного автора и одной пары (14.6).
+COALESCE_WINDOW = timedelta(minutes=5)
 
 
 class RouteDatesEditing(RouteScenario):
@@ -110,10 +119,11 @@ class RouteDatesEditing(RouteScenario):
                 settled = await self._settle(point, route, at)
                 result = settled.loaded.state
             assert settled is not None  # noqa: S101 — до записи без расчёта сценарий вышел выше
+            event = _event(route, pair, edited, settled, at, actor_id)
             await self._commit(
                 settled,
                 [
-                    _event(route, pair, edited, settled, at, actor_id),
+                    _coalesced(event, await self._s.routes.list_events(route.id, round=route.round)),
                     *frozen_events(settled, at),
                     *closing_events(settled, at),
                 ],
@@ -193,3 +203,25 @@ def _event(
             "reset": [{"doc_id": p.doc_id, "slot_id": p.slot_id} for p in settled.reset],
         },
     )
+
+
+def _coalesced(event: RouteEvent, history: list[RouteEvent]) -> RouteEvent:
+    """Событие правки меток с учётом склейки (14.6): последнее событие маршрута, если это `marks_edited` того же
+    автора и той же пары моложе `COALESCE_WINDOW` и ни оно, ни новая правка подписи не сбросили, обновляется
+    (`at`, `details.marks`); иначе новое событие."""
+    last = history[-1] if history else None
+    if (
+        last is None
+        or last.id is None
+        or last.kind is not EventKind.marks_edited
+        or event.actor_id is None
+        or last.actor_id != event.actor_id
+        or last.round != event.round
+        or (last.details.get("doc_id"), last.details.get("slot_id"))
+        != (event.details.get("doc_id"), event.details.get("slot_id"))
+        or last.details.get("reset")
+        or event.details.get("reset")
+        or not timedelta(0) <= event.at - last.at < COALESCE_WINDOW
+    ):
+        return event
+    return replace(last, at=event.at, details={**last.details, "marks": event.details.get("marks")})

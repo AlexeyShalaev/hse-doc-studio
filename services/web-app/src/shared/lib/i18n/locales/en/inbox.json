@@ -79,6 +79,12 @@
     "error": "Could not load documents to sign",
     "retry": "Retry"
   },
+  "checkpointSigning": {
+    "waiting": "Signing: waiting for {{who}}",
+    "in_progress": "Signing: in progress",
+    "completed": "Signing: completed",
+    "not_sent": "Signing: not sent"
+  },
   "runnerDisk": {
     "actor": "Started by administrator {{name}}"
   },

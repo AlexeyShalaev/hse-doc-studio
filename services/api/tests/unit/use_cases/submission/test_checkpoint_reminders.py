@@ -13,7 +13,13 @@ from uuid import UUID
 
 import pytest
 from hse_doc_studio.core.checkpoint_deadlines import reminder_key
-from hse_doc_studio.core.checkpoint_reminders import DueCheckpoint, ReminderRecipient
+from hse_doc_studio.core.checkpoint_reminders import (
+    AwaitedSigner,
+    CheckpointSigning,
+    DueCheckpoint,
+    ReminderRecipient,
+    SigningState,
+)
 from hse_doc_studio.core.invitations.entities import NotificationKind, NotificationPayload
 from hse_doc_studio.use_cases.submission.checkpoint_reminders import CheckpointReminderSweeper
 
@@ -96,9 +102,26 @@ class _Uow:
         yield
 
 
-async def _run(world: _World, now: datetime, *, days: int = 3) -> int:
+class _Signing:
+    """Состояние подписания точки: из словаря; `broken` ломает расчёт."""
+
+    def __init__(self, states: dict[tuple[UUID, str], CheckpointSigning | None], *, broken: bool = False) -> None:
+        self._states = states
+        self._broken = broken
+        self.calls: list[tuple[UUID, str]] = []
+
+    async def signing(self, project_id: UUID, profile_id: str) -> CheckpointSigning | None:
+        self.calls.append((project_id, profile_id))
+        if self._broken:
+            raise RuntimeError("pack is gone")
+        return self._states.get((project_id, profile_id))
+
+
+async def _run(world: _World, now: datetime, *, days: int = 3, signing: _Signing | None = None) -> int:
     """Новый объект на каждый проход: как после перезапуска сервера или смены лидера."""
-    sweeper = CheckpointReminderSweeper(_Store(world), _Notifier(world), _Uow(), days=days, clock=lambda: now)
+    sweeper = CheckpointReminderSweeper(
+        _Store(world), _Notifier(world), _Uow(), days=days, clock=lambda: now, signing=signing
+    )
     return await sweeper.run()
 
 
@@ -207,3 +230,54 @@ async def test__days_setting__zero_disables_wider_window_reminds_earlier() -> No
     early = await _run(world, DEADLINE - timedelta(days=6), days=7)
 
     assert (disabled, early) == (0, 2)
+
+
+async def test__route_waits__signing_state_and_whom_in_each_recipients_language() -> None:
+    world = _World()
+    waiting = CheckpointSigning(
+        SigningState.waiting, (AwaitedSigner("supervisor", "Иван Сидоров"), AwaitedSigner("academic_supervisor"))
+    )
+    signing = _Signing({(PROJECT, TOPIC): waiting})
+
+    await _run(world, DEADLINE - timedelta(days=2), signing=signing)
+
+    owner, coauthor = world.sent[0].payload, world.sent[1].payload
+    assert (owner.signing, owner.signing_waiting) == (
+        "waiting",
+        "научного руководителя (Иван Сидоров), академического руководителя",
+    )
+    assert (coauthor.signing, coauthor.signing_waiting) == (
+        "waiting",
+        "the supervisor (Иван Сидоров), the academic supervisor",
+    )
+    # Состояние считается один раз на точку, а не на каждого получателя.
+    assert signing.calls == [(PROJECT, TOPIC)]
+
+
+@pytest.mark.parametrize("state", [SigningState.completed, SigningState.not_sent])
+async def test__route_done_or_not_sent__state_without_whom(state: SigningState) -> None:
+    world = _World()
+
+    await _run(world, DEADLINE - timedelta(days=2), signing=_Signing({(PROJECT, TOPIC): CheckpointSigning(state)}))
+
+    assert {(s.payload.signing, s.payload.signing_waiting) for s in world.sent} == {(state.value, None)}
+
+
+async def test__no_route_or_broken_signing__reminder_without_the_line() -> None:
+    no_route, broken = _World(), _World()
+
+    await _run(no_route, DEADLINE - timedelta(days=2), signing=_Signing({}))
+    sent = await _run(broken, DEADLINE - timedelta(days=2), signing=_Signing({}, broken=True))
+
+    assert sent == 2
+    assert {(s.payload.signing, s.payload.signing_waiting) for s in [*no_route.sent, *broken.sent]} == {(None, None)}
+
+
+async def test__already_reminded__signing_not_computed() -> None:
+    world = _World()
+    await _run(world, DEADLINE - timedelta(days=2))
+    signing = _Signing({})
+
+    await _run(world, DEADLINE - timedelta(days=1), signing=signing)
+
+    assert signing.calls == []

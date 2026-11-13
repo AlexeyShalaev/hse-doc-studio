@@ -72,6 +72,7 @@ from hse_doc_studio.use_cases.signing_route.author import (
     SigningRouteDrafts,
     SigningRouteSending,
 )
+from hse_doc_studio.use_cases.signing_route.checkpoint_signing import CheckpointSigningReader
 from hse_doc_studio.use_cases.signing_route.delivery import SigningNotifier
 from hse_doc_studio.use_cases.signing_route.effects import RouteFileEffects
 from hse_doc_studio.use_cases.signing_route.facts import ProjectRouteFacts, RouteFactsLoader
@@ -161,13 +162,23 @@ class ServerSigningRoutesProvider(Provider):
         return SigningReminderSweeper(routes, facts, notifier, uow, policy)
 
     @provide
-    def get_checkpoint_reminder_sweeper(
-        self, sessions: SessionProvider, notifier: INotifier, uow: IUnitOfWork
+    def get_checkpoint_reminder_sweeper(  # noqa: PLR0913 — порты перечислены явно
+        self,
+        sessions: SessionProvider,
+        notifier: INotifier,
+        uow: IUnitOfWork,
+        routes: ISigningRouteRepository,
+        facts: IRouteFacts,
+        users: IUserRepository,
     ) -> CheckpointReminderSweeper:
         """Напоминание автору о сроке контрольной точки (16.7, срез R29): задача лидера, как автонапоминания
-        маршрута; срок за сколько суток из настроек `checkpoint`."""
+        маршрута; срок за сколько суток из настроек `checkpoint`; в тексте состояние подписания точки."""
         return CheckpointReminderSweeper(
-            PostgresCheckpointReminderStore(sessions), notifier, uow, days=settings.checkpoint.reminder_days
+            PostgresCheckpointReminderStore(sessions),
+            notifier,
+            uow,
+            days=settings.checkpoint.reminder_days,
+            signing=CheckpointSigningReader(routes, facts, users),
         )
 
     # --- сценарии автора (срез R5) ---

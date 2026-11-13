@@ -16,6 +16,8 @@
     "profile_id": null,
     "deadline": null,
     "new_version": false,
-    "freed_bytes": 7784628224
+    "freed_bytes": 7784628224,
+    "signing": null,
+    "signing_waiting": null
   }
 }

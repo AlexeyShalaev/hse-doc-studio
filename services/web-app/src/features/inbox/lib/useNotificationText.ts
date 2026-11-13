@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
+import type { TFunction } from "i18next";
 import { formatBytes } from "@shared/lib";
 import { daysUntilDeadline } from "@entities/submission";
 import { useProjectRoleLabel } from "@entities/project";
@@ -37,6 +38,23 @@ const checkpointDays = (n: Notification, now: number): number | null =>
   n.kind === "checkpoint_due" && n.payload.deadline
     ? daysUntilDeadline(n.payload.deadline, now)
     : null;
+
+/**
+ * Строка «Подписание» напоминания о сроке точки (16.7): «ждём ...», «завершено», «не отправлено».
+ * Кого ждём сервер записал на языке получателя. Без маршрута у точки null.
+ */
+const checkpointSigning = (
+  n: Notification,
+  t: TFunction<"inbox">,
+): string | null => {
+  const { signing, signing_waiting: who } = n.payload;
+  if (signing === null) return null;
+  if (signing === "waiting")
+    return who
+      ? t("checkpointSigning.waiting", { who })
+      : t("checkpointSigning.in_progress");
+  return t(`checkpointSigning.${signing}`);
+};
 
 /** Освобождено очисткой диска раннера, как в окне «Диск»: ноль пишется числом. */
 const freedSize = (n: Notification): string => {
@@ -90,7 +108,8 @@ export const useNotificationDetails = () => {
         ? t("runnerDisk.actor", { name: n.payload.actor_name })
         : null;
     }
-    // Срок точки (16.7): проект и дата срока; название точки уже в тексте.
+    // Срок точки (16.7): проект, дата срока и, если у точки есть маршрут, состояние подписания;
+    // название точки уже в тексте.
     if (n.kind === "checkpoint_due") {
       const parts = [
         n.payload.project_name,
@@ -99,6 +118,7 @@ export const useNotificationDetails = () => {
               date: formatDeadline(n.payload.deadline, now),
             })
           : null,
+        checkpointSigning(n, t),
       ].filter((part): part is string => part !== null && part !== "");
       return parts.length > 0 ? parts.join(" · ") : null;
     }

@@ -8,7 +8,7 @@
     "link_valid_for": "Ссылка действует {duration}.",
     "link_valid_until": "Ссылка действует до {date}.",
     "code_valid_for": "Код действует {duration}.",
-    "date_format": "%d.%m.%Y %H:%M UTC",
+    "date_format": "{date}, {time} (МСК)",
     "footer_server": "Сервер",
     "footer_recipient": "Письмо отправлено на адрес {email}.",
     "footer_auto": "Это автоматическое сообщение, отвечать на него не нужно.",
@@ -39,6 +39,12 @@
     "reviewer": "Рецензент",
     "editor": "Редактор",
     "owner": "Владелец"
+  },
+  "signing": {
+    "waiting": "ждём {who}",
+    "in_progress": "идёт",
+    "completed": "завершено",
+    "not_sent": "не отправлено"
   },
   "mails": {
     "verify_email": {
@@ -479,6 +485,10 @@
         [
           "Срок",
           "{deadline}"
+        ],
+        [
+          "Подписание",
+          "{signing}"
         ]
       ],
       "context": [
