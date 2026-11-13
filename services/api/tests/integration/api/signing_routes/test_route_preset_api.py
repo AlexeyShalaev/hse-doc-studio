@@ -1,6 +1,6 @@
 """Маршрут из шаблона на настоящем сервере (docs/design/signing-route.md, 15.5, 15.6, 15.11 и 15.12).
 
-Пак `hse-cs-sse/coursework` 2026.1.4 с пресетом (`preset_stand`), точка «Заявка на тему КП». Черновик точки
+Тестовый пак `hse-cs-sse/coursework` с пресетом (`preset_stand`), точка «Заявка на тему КП». Черновик точки
 применяет пресет и сразу пишет места; «Вернуть как в шаблоне» и «Вернуть место из шаблона»; ручные места, идущие
 маршруты и проекты на версии без пресета не меняются.
 """
@@ -178,10 +178,12 @@ async def test__create__manual_place_kept__ready_to_send_without_touching_places
     assert places[PROPOSAL]["supervisor"]["origin"] == "pack"
 
 
+@pytest.mark.parametrize("version", ["2026.1.3", "2026.1.4"])
 async def test__create__released_version_without_preset__nothing_written_no_preset(
-    preset_packs: Path, stand: Stand
+    preset_packs: Path, stand: Stand, version: str
 ) -> None:
-    project, author, _ = await _project(stand, version="2026.1.3")
+    """Выпущенные версии, и замороженная без пресетов мест 2026.1.4 (15.17.18), собирают черновик как раньше."""
+    project, author, _ = await _project(stand, version=version)
 
     route = _create(project, author).json()
 

@@ -40,6 +40,8 @@ const fromSummary = (summary: ProjectSummary): ProjectItem => ({
   my_role: summary.my_role,
   // links: роль по ссылке, а не по членству (значок «По ссылке» в списке).
   via_link: summary.via_link ?? false,
+  // Ближайший срок контрольной точки (signing-route.md, 16.6): пометка на карточке.
+  next_deadline: summary.next_deadline ?? null,
 });
 
 const ProjectItemsSchema = z

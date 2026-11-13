@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import { useSearchParams } from "react-router";
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 import {
+  ClipboardCopy,
   Clock,
   Code,
   Columns2,
@@ -32,6 +33,7 @@ import {
 import { useStartCompile } from "@entities/compile";
 import { useRouteEditGuard } from "@entities/signing-route";
 import { UploadCustomFileModal } from "@features/custom-document";
+import { PackPresetDialog } from "@features/signature-stamper";
 import { BuildBlockedNotice } from "@features/build-states";
 import {
   SigningHoldBanner,
@@ -144,6 +146,8 @@ export const DocumentTabs = ({ projectId, docId }: DocumentTabsProps) => {
   const [uploadOpen, setUploadOpen] = useState(false);
   const routeGuard = useRouteEditGuard(projectId);
   const [revertConfirmOpen, setRevertConfirmOpen] = useState(false);
+  // «Скопировать как пресет шаблона» (template-studio.md, 13): инструмент автора пака, только читает.
+  const [packPresetOpen, setPackPresetOpen] = useState(false);
 
   // Единственный сегмент «Редактор» показывает либо исходник, либо офисный
   // редактор — что именно, решает формат артефакта: pptx-вариант презентации и
@@ -721,6 +725,22 @@ export const DocumentTabs = ({ projectId, docId }: DocumentTabsProps) => {
                     </a>
                   </DropdownMenu.Item>
                 )}
+                {activeView === "signatures" && (
+                  <DropdownMenu.Item
+                    className={menuItemClass}
+                    style={{
+                      padding: "0.5rem 0.75rem",
+                      fontSize: "0.78125rem",
+                    }}
+                    data-testid="copy-pack-preset"
+                    onSelect={() => {
+                      setPackPresetOpen(true);
+                    }}
+                  >
+                    <ClipboardCopy size="0.75rem" />
+                    <span>{t("signatureStamper:packPreset.menuItem")}</span>
+                  </DropdownMenu.Item>
+                )}
                 {hasLocalFiles && (
                   <>
                     <DropdownMenu.Item
@@ -889,6 +909,14 @@ export const DocumentTabs = ({ projectId, docId }: DocumentTabsProps) => {
         projectId={projectId}
         docId={docId}
         docName={meta.name}
+      />
+      <PackPresetDialog
+        isOpen={packPresetOpen}
+        onClose={() => {
+          setPackPresetOpen(false);
+        }}
+        projectId={projectId}
+        docId={docId}
       />
       <Modal
         isOpen={revertConfirmOpen}

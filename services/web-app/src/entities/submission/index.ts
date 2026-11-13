@@ -6,8 +6,14 @@ export {
   useSubmissions,
   useCreateSubmission,
   useSubmissionCustomFilePreflight,
+  useSetCheckpointDeadline,
 } from "./api/submissionQueries";
 export {
+  CheckpointDeadlineSchema,
+  DEADLINE_STATES,
+  DeadlineStateSchema,
+  SetCheckpointDeadlineRequestSchema,
+  SubmissionProfileContractSchema,
   SubmissionProfileSchema,
   SubmissionRecordSchema,
   CreateSubmissionRequestSchema,
@@ -15,11 +21,27 @@ export {
   CustomFilePreflightResponseSchema,
   PackWarningSchema,
 } from "./api/submissionSchemas";
-export type { PackWarning } from "./api/submissionSchemas";
+export type {
+  CheckpointDeadline,
+  DeadlineState,
+  PackWarning,
+  SetCheckpointDeadlineRequest,
+} from "./api/submissionSchemas";
 export {
   computeCheckpointReadiness,
   pickActiveProfile,
   resolveSignatureSlotIds,
+  DEFAULT_DEADLINE_TIME,
+  DISPLAY_OFFSET,
+  daysUntilDeadline,
+  deadlineFromInput,
+  deadlineToInput,
+  formatDeadlineDay,
+  formatDeadlineTime,
+  moscowParts,
+  routeDeadlineFromPoint,
+  sameMoment,
+  toMoscowIso,
 } from "./lib";
 export type {
   CheckpointItemState,
@@ -34,4 +56,5 @@ export type {
   PlanSlotLike,
   SignaturePlanLike,
   SubmissionProfile,
+  MoscowParts,
 } from "./lib";

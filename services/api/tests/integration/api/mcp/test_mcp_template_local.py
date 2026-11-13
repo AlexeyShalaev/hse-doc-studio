@@ -4,7 +4,8 @@ from __future__ import annotations
 
 import json
 import shutil
-from collections.abc import AsyncIterator
+from collections.abc import AsyncIterator, Callable
+from contextlib import asynccontextmanager
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -15,12 +16,22 @@ import pytest_asyncio
 from fastapi import FastAPI
 from hse_doc_studio.api.mcp_server import install_mcp
 from hse_doc_studio.core.mode import StudioMode
+from hse_doc_studio.core.value_objects import SignaturePlacement, SignaturesState
+from hse_doc_studio.infra.persistence.signature import JsonSignatureRepository
 from httpx import ASGITransport, AsyncClient
 from mcp.client.client import Client
 from mcp.client.streamable_http import streamable_http_client
 
 from tests.fixtures.app import create_test_app, create_test_container
-from tests.fixtures.template_pack import V1, V2, build_update_pack, project_payload
+from tests.fixtures.template_pack import (
+    SUPERVISOR_V1,
+    SUPERVISOR_V2,
+    V1,
+    V2,
+    build_presets_pack,
+    build_update_pack,
+    project_payload,
+)
 
 pytestmark = pytest.mark.skipif(shutil.which("git") is None, reason="git binary not available")
 
@@ -36,12 +47,12 @@ class Studio:
     folder: Path
 
 
-@pytest_asyncio.fixture
-async def studio(tmp_path: Path) -> AsyncIterator[Studio]:
+@asynccontextmanager
+async def _studio(tmp_path: Path, build_pack: Callable[[Path], Path]) -> AsyncIterator[Studio]:
     data_dir = tmp_path / "data"
     data_dir.mkdir()
     packs_dir = tmp_path / "packs"
-    build_update_pack(packs_dir)
+    build_pack(packs_dir)
     container = create_test_container(data_dir, packs_dir=packs_dir)
     app = create_test_app(container)
     install_mcp(app, mode=StudioMode.local)
@@ -54,6 +65,19 @@ async def studio(tmp_path: Path) -> AsyncIterator[Studio]:
         assert resp.status_code == 200, resp.text
         yield Studio(app=app, rest=rest, project_id=created.json()["id"], folder=folder)
     await container.close()
+
+
+@pytest_asyncio.fixture
+async def studio(tmp_path: Path) -> AsyncIterator[Studio]:
+    async with _studio(tmp_path, build_update_pack) as studio:
+        yield studio
+
+
+@pytest_asyncio.fixture
+async def presets_studio(tmp_path: Path) -> AsyncIterator[Studio]:
+    """Пак, где patch меняет только места подписей из шаблона (signing-route.md, 15.10)."""
+    async with _studio(tmp_path, build_presets_pack) as studio:
+        yield studio
 
 
 def _client(studio: Studio) -> Client:
@@ -134,3 +158,27 @@ async def test__plan__read_only_project__refused_like_http_423(studio: Studio) -
         assert result.meta is not None
         assert result.meta["code"] == "read_only"
     assert not (studio.folder / "report" / "appendix.tex").exists()
+
+
+async def test__plan_and_apply__signature_places_only(presets_studio: Studio) -> None:
+    seed = SignaturePlacement(enabled=False, **SUPERVISOR_V1)
+    JsonSignatureRepository().save_state(
+        presets_studio.folder, SignaturesState(slots={}, placements={"report": {"supervisor": seed}})
+    )
+    project_id = presets_studio.project_id
+
+    async with _client(presets_studio) as client:
+        plan = _json(await client.call_tool("plan_template_update", {"project_id": project_id, "to_version": V2}))
+        applied = _json(
+            await client.call_tool(
+                "apply_template_update",
+                {"project_id": project_id, "to_version": V2, "fingerprint": plan["fingerprint"]},
+            )
+        )
+
+    assert plan["files"] == []
+    assert plan["signature_presets"] == {"updated": [{"doc_id": "report", "slot_id": "supervisor"}], "kept": []}
+    assert applied["signature_places"] == [{"doc_id": "report", "slot_id": "supervisor"}]
+    data = json.loads((presets_studio.folder / ".hse-studio" / "signatures.json").read_text(encoding="utf-8"))
+    supervisor = data["placements"]["report"]["supervisor"]
+    assert {k: supervisor[k] for k in SUPERVISOR_V2} == SUPERVISOR_V2

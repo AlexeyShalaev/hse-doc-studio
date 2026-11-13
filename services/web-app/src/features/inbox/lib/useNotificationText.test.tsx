@@ -170,3 +170,45 @@ describe("очистка диска раннера администраторо�
     );
   });
 });
+
+describe("напоминание о сроке точки (signing-route.md, 16.7)", () => {
+  const MSK_DAY = 24 * 60 * 60 * 1000;
+  // Срок через N календарных дней по Москве в 23:59.
+  const deadlineIn = (days: number): string => {
+    const day =
+      Math.floor((Date.now() + 3 * 60 * 60 * 1000) / MSK_DAY) + days + 1;
+    return new Date(day * MSK_DAY - 3 * 60 * 60 * 1000 - 60_000).toISOString();
+  };
+  const due = (days: number) =>
+    note("checkpoint_due", {
+      actor_name: null,
+      ref_id: null,
+      excerpt: "Заявка на тему КП (SmartLMS)",
+      profile_id: "topic-approval",
+      deadline: deadlineIn(days),
+    });
+
+  beforeEach(async () => {
+    await i18n.changeLanguage("ru");
+  });
+
+  it("«через N дней» считается при показе по календарю Москвы", () => {
+    expect(textOf(due(3))).toBe(
+      "Через 3 дня срок: Заявка на тему КП (SmartLMS)",
+    );
+    expect(textOf(due(1))).toBe(
+      "Через 1 день срок: Заявка на тему КП (SmartLMS)",
+    );
+    expect(textOf(due(0))).toBe("Сегодня срок: Заявка на тему КП (SmartLMS)");
+    expect(textOf(due(-1))).toBe("Срок прошёл: Заявка на тему КП (SmartLMS)");
+  });
+
+  it("подробности: проект и срок", () => {
+    expect(detailsOf(due(3))).toMatch(/^ВКР · срок \d+ \S+$/);
+  });
+
+  it("английский", async () => {
+    await i18n.changeLanguage("en");
+    expect(textOf(due(3))).toBe("Due in 3 days: Заявка на тему КП (SmartLMS)");
+  });
+});

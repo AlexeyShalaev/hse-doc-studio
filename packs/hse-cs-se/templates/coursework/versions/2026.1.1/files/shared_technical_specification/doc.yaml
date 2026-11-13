@@ -1,0 +1,27 @@
+# Манифест документа (bundle-раскладка v2): всё про документ — в этой папке.
+# id = имя папки; языковые редакции — файлы-соседи <stem>.<код>.<ext>,
+# файл без кода — единственная форма для всех языков. Пути source_file —
+# в проектном пространстве (без суффиксов). Файл doc.yaml в проект не копируется.
+name:
+  ru: Общее техническое задание
+  en: Shared Statement of Work
+code:
+  ru: ОТЗ
+  en: SOW
+source_file: shared_technical_specification/shared_technical_specification.tex
+supported_kinds:
+- project
+output_file: shared_technical_specification/shared_technical_specification.pdf
+output_name:
+  ru: Общее техническое задание.pdf
+  en: Shared Statement of Work.pdf
+gost_ref: gost-19.201-78
+required: true
+supported_langs:
+- ru
+- en
+scope: shared
+supported_staffing:
+- team
+# Визуальный блок навигации — дивайдер рисуется на смене группы.
+group: espd

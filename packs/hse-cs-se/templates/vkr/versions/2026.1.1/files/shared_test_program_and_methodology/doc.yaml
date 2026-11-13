@@ -1,0 +1,27 @@
+# Манифест документа (bundle-раскладка v2): всё про документ — в этой папке.
+# id = имя папки; языковые редакции — файлы-соседи <stem>.<код>.<ext>,
+# файл без кода — единственная форма для всех языков. Пути source_file —
+# в проектном пространстве (без суффиксов). Файл doc.yaml в проект не копируется.
+name:
+  ru: Общая программа и методика испытаний
+  en: Shared Test Program & Methodology
+code:
+  ru: ОПМИ
+  en: STPM
+source_file: shared_test_program_and_methodology/shared_test_program_and_methodology.tex
+output_file: shared_test_program_and_methodology/shared_test_program_and_methodology.pdf
+output_name:
+  ru: Общая программа и методика испытаний.pdf
+  en: Shared Test Program and Methodology.pdf
+gost_ref: gost-19.301-79
+required: true
+supported_langs:
+- ru
+- en
+scope: shared
+supported_staffing:
+- team
+supported_kinds:
+- project
+# Визуальный блок навигации — дивайдер рисуется на смене группы.
+group: espd

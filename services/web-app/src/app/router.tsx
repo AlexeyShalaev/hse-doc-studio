@@ -60,6 +60,7 @@ const devRoutes: RouteObject[] = import.meta.env.DEV
             { getDeviceGallery },
             { getGitServerGallery },
             { getSigningPageGallery },
+            { getCheckpointDeadlineGallery },
             demo,
           ] = await Promise.all([
             import("@pages/DevServerScreens"),
@@ -70,6 +71,7 @@ const devRoutes: RouteObject[] = import.meta.env.DEV
             import("@pages/DevicePage"),
             import("@features/git-server"),
             import("@pages/SigningPage/gallery"),
+            import("@features/checkpoint-deadline/gallery"),
             import("./demo"),
             loadSigningNamespace(),
           ]);
@@ -103,6 +105,11 @@ const devRoutes: RouteObject[] = import.meta.env.DEV
               id: "signing-page",
               title: "Страница подписанта",
               groups: getSigningPageGallery(),
+            },
+            {
+              id: "checkpoint-deadlines",
+              title: "Сроки контрольных точек",
+              groups: getCheckpointDeadlineGallery(),
             },
           ];
           // Серверные записи ходят в демо-мир, даже если приложение запущено без него.

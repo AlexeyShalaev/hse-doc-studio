@@ -1,0 +1,164 @@
+% ============================================================
+% vkr/title.tex — титульный лист ВКР НИУ ВШЭ ОП «Программная
+% инженерия» по форме ФКН (1:1 с реальной ВКР).
+%
+% Все изменяемые данные берутся из макросов \hse… (определены в
+% common/meta.tex, который перегенерируется из project.json перед
+% каждой сборкой). Не вписывайте ФИО/группу/год руками — задайте
+% их в настройках проекта, и они подставятся сюда автоматически.
+%
+% Линии подписей — это \rule. Готовые PNG-подписи накладываются на
+% PDF при упаковке комплекта (слоты author/supervisor/co_supervisor).
+% \strut перед каждым значением гарантирует корректный \\, даже если
+% поле не заполнено (иначе xelatex падает: «There's no line here»).
+% ============================================================
+
+
+% ── Русский титул (project.lang == ru) ──────────────────────
+\begin{titlepage}
+\thispagestyle{empty}
+\singlespacing
+\footnotesize
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{0pt}
+
+\begin{center}
+\vspace*{-1.0cm}
+\textbf{ПРАВИТЕЛЬСТВО РОССИЙСКОЙ ФЕДЕРАЦИИ}\\
+\textbf{ФЕДЕРАЛЬНОЕ ГОСУДАРСТВЕННОЕ АВТОНОМНОЕ}\\
+\textbf{ОБРАЗОВАТЕЛЬНОЕ УЧРЕЖДЕНИЕ ВЫСШЕГО ОБРАЗОВАНИЯ}\\
+\textbf{НАЦИОНАЛЬНЫЙ ИССЛЕДОВАТЕЛЬСКИЙ УНИВЕРСИТЕТ}\\
+\textbf{«ВЫСШАЯ ШКОЛА ЭКОНОМИКИ»}
+
+\vspace{0.35cm}
+\hseFaculty\\
+Образовательная программа «\hseSpecialization»
+\end{center}
+
+\vspace{0.15cm}
+
+\noindent
+\begin{minipage}[t]{0.42\textwidth}
+\raggedright
+((* if project.kind == 'research' *))УДК~\hseUDC((* endif *))
+\end{minipage}
+\hfill
+\begin{minipage}[t]{0.34\textwidth}
+\centering
+УТВЕРЖДАЮ\\
+\hseAcademicSupervisorTitle
+
+\vspace{0.22cm}
+\mbox{\rule{2.5cm}{0.4pt} \hseAcademicSupervisorName}\\
+«\rule{0.8cm}{0.4pt}» \rule{2.5cm}{0.4pt} \hseYear~г.
+\end{minipage}
+
+\vspace{0.85cm}
+
+\begin{center}
+\textbf{\normalsize Выпускная квалификационная работа}
+
+\vspace{0.12cm}
+% Трек работы (по форме титула ОП ПИ): исследовательская ВКР — «(академическая)»,
+% прикладная — «(проектно-исследовательская)».
+((* if project.kind == 'research' *))\textbf{\normalsize (академическая)}((* else *))\textbf{\normalsize (проектно-исследовательская)}((* endif *))
+
+\vspace{0.4cm}
+на тему
+\underline{\makebox[0.74\textwidth][c]{\hseProjectName}}
+
+\vspace{0.35cm}
+по направлению подготовки \hseProgramCode\ «\hseSpecialization»
+\end{center}
+
+\vspace{0.75cm}
+
+% ── Научный руководитель / Исполнитель ──────────────────────
+\noindent
+\begin{minipage}[t]{0.42\textwidth}
+\raggedright
+Научный руководитель
+
+\vspace{0.18cm}
+\strut\hseSupervisorTitle\\[-0.05cm]
+\rule{6.1cm}{0.4pt}\\[-0.05cm]
+{\scriptsize Должность, место работы}
+
+\vspace{0.08cm}
+\strut\hseSupervisorDegree\\[-0.05cm]
+\rule{6.1cm}{0.4pt}\\[-0.05cm]
+{\scriptsize ученая степень, ученое звание}
+
+\vspace{0.08cm}
+\strut\hseSupervisorName\\[-0.05cm]
+\rule{6.1cm}{0.4pt}\\[-0.05cm]
+{\scriptsize И.О. Фамилия}
+
+\vspace{0.08cm}
+\rule{3.6cm}{0.4pt}\quad\rule{2.2cm}{0.4pt}\\[-0.05cm]
+{\scriptsize Подпись, Дата}
+\end{minipage}
+\hfill
+\begin{minipage}[t]{0.42\textwidth}
+\raggedright
+Выполнил\\
+студент группы \hseGroup\\
+\hseCourse{} курса \hseDegreeLevel\\
+образовательной программы\\
+«\hseSpecialization»
+
+\vspace{0.25cm}
+\strut\hseAuthorName\\[-0.05cm]
+\rule{6.1cm}{0.4pt}\\[-0.05cm]
+{\scriptsize И.О. Фамилия}
+
+\vspace{0.18cm}
+\rule{3.6cm}{0.4pt}\quad\rule{2.2cm}{0.4pt}\\[-0.05cm]
+{\scriptsize Подпись, Дата}
+\end{minipage}
+
+% ── Соруководитель (если задан) ─────────────────────────────
+\ifhseHasCoSupervisor
+\vspace{0.35cm}
+
+\noindent
+\begin{minipage}[t]{0.42\textwidth}
+\raggedright
+Соруководитель
+
+\vspace{0.18cm}
+\strut\hseCoSupervisorTitle\\[-0.05cm]
+\rule{6.1cm}{0.4pt}\\[-0.05cm]
+{\scriptsize Должность, место работы}
+
+\vspace{0.08cm}
+\strut\hseCoSupervisorDegree\\[-0.05cm]
+\rule{6.1cm}{0.4pt}\\[-0.05cm]
+{\scriptsize ученая степень, ученое звание}
+
+\vspace{0.08cm}
+\strut\hseCoSupervisorName\\[-0.05cm]
+\rule{6.1cm}{0.4pt}\\[-0.05cm]
+{\scriptsize И.О. Фамилия}
+
+\vspace{0.08cm}
+\rule{3.6cm}{0.4pt}\quad\rule{2.2cm}{0.4pt}\\[-0.05cm]
+{\scriptsize Подпись, Дата}
+\end{minipage}
+\hfill
+\begin{minipage}[t]{0.42\textwidth}
+\strut
+\end{minipage}
+\fi
+
+\vfill
+
+\begin{center}
+\textbf{\hseCity{} \hseYear}
+\end{center}
+\end{titlepage}
+
+
+% Титульный лист — страница 1 (без номера); нумерация видна со 2-й.
+\setcounter{page}{2}
+\clearpage

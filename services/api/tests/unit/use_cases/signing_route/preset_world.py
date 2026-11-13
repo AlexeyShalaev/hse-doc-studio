@@ -1,5 +1,5 @@
 """Пак с пресетом маршрута для юнит-тестов (docs/design/signing-route.md, 15.10): `hse-cs-sse` 2026.1.3 с ключами
-2026.1.4 поверх, точка «Заявка на тему КП» и проект с людьми."""
+2026.1.5 по таблице 15.10 поверх, точка «Заявка на тему КП» и проект с людьми."""
 
 from __future__ import annotations
 
@@ -42,16 +42,16 @@ ACADEMIC_WHEN = SlotCondition(person="supervisor", role=PersonRole.company)
 _templates = YamlTemplateRepository(PACKS)
 
 
-def released() -> TemplateVersion:
-    """`hse-cs-sse/coursework` 2026.1.3 как выпущен: без пресетов."""
-    found = _templates.get_version("hse-cs-sse", "coursework", "2026.1.3")
+def released(version_id: str = "2026.1.3") -> TemplateVersion:
+    """`hse-cs-sse/coursework` как выпущен: 2026.1.3 и 2026.1.4 без пресетов."""
+    found = _templates.get_version("hse-cs-sse", "coursework", version_id)
     assert found is not None
     return found
 
 
 def preset_version(*, signing_slots: tuple[SigningSlotPreset, ...] | None = None) -> TemplateVersion:
-    """2026.1.3 с пресетом 2026.1.4: места по документам, метки даты научрука на «Описании проекта», консультант и
-    академрук на «Заявлении» по условию."""
+    """2026.1.3 с пресетом по таблице 15.10: места по документам, метки даты научрука на «Описании проекта»,
+    консультант и академрук на «Заявлении» по условию."""
     base = released()
     slots = []
     for slot in base.signatures_config.slots:
@@ -75,7 +75,7 @@ def preset_version(*, signing_slots: tuple[SigningSlotPreset, ...] | None = None
     profiles = tuple(replace(p, signing_slots=entries) if p.id == TOPIC else p for p in base.pack_submission.profiles)
     return replace(
         base,
-        version="2026.1.4",
+        version="2026.1.90",
         signatures_config=replace(base.signatures_config, slots=tuple(slots)),
         pack_submission=replace(base.pack_submission, profiles=profiles),
     )

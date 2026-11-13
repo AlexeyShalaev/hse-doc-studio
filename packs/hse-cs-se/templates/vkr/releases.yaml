@@ -7,3 +7,6 @@ releases:
   '2026.1':
     digest: sha256:4e1f537192085ffecb7fb453808633fd48bac33aebab63f45d881895bab57680
     kind: major
+  2026.1.1:
+    digest: sha256:7945fc1efb3a46cff73446104d1a9b334ba81a47026d2ccf63ae4bceabb88bd7
+    kind: patch

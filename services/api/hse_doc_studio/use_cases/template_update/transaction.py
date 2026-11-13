@@ -151,19 +151,23 @@ class TemplateUpdateTransaction:
         save_state: Callable[[], None],
         message: str = "",
         commit: Callable[[], str | None] | None = None,
+        state_paths: Sequence[str] = (),
     ) -> str | None:
         """Применить записи и состояние, закоммитить; вернуть id коммита.
 
         `commit` делает сам коммит (слияние синхронизации ставит свой трейлер и
         двигает ветку); без него это коммит обновления шаблона с `message`.
+        `state_paths` прочие файлы, которые пишет `save_state` (состояние подписей
+        при переводе мест из шаблона): их копии тоже в журнале, откат их вернёт.
         """
         if commit is None and journal.kind == UpdateJournalKind.sync:
             raise ValueError("sync journal needs its own commit")
         folder = project.folder
+        states = [*STATE_PATHS, *(rel for rel in state_paths if rel not in STATE_PATHS)]
         touched = [w.path for w in writes if (folder / w.path).exists()]
-        touched += [rel for rel in STATE_PATHS if (folder / rel).exists()]
+        touched += [rel for rel in states if (folder / rel).exists()]
         added = [w.path for w in writes if w.kind == FileWriteKind.write and not (folder / w.path).exists()]
-        added += [rel for rel in STATE_PATHS if not (folder / rel).exists()]
+        added += [rel for rel in states if not (folder / rel).exists()]
         journal = replace(journal, touched_paths=tuple(touched), added_paths=tuple(added))
         self._journals.backup(folder, touched)
         self._journals.save(folder, journal)

@@ -1,9 +1,9 @@
 """Каталог шаблонов с пресетом маршрута для серверных тестов (docs/design/signing-route.md, 15.10).
 
-Копия настоящих паков и в ней `hse-cs-sse/coursework` 2026.1.4: те же файлы, что 2026.1.3, и ключи пресета в
-`version.yaml` (места по документам, метки даты научрука на «Описании проекта», консультант и академрук на
-«Заявлении» по условию), выпущена patch-версией. Настоящая 2026.1.4 выходит срезом R27, координаты здесь те же, что в
-таблице 15.10.
+Копия настоящих паков и в ней тестовая `hse-cs-sse/coursework` 2026.1.90: те же файлы, что выпущенная 2026.1.4 (она
+заморожена без пресетов, 15.17.18), и ключи пресета в `version.yaml` (места по документам, метки даты научрука на
+«Описании проекта», консультант и академрук на «Заявлении» по условию), выпущена patch-версией. Настоящие пресеты на
+якорях выходят в 2026.1.5 срезом R27, координаты здесь из таблицы 15.10.
 
 Фикстуру `preset_packs` тест берёт раньше `stand`: приложение стенда читает каталог шаблонов при создании.
 """
@@ -21,8 +21,8 @@ from hse_doc_studio.core.enums import TemplateUpdateClass
 from hse_doc_studio.infra.template.releases import freeze
 
 REPO_PACKS = Path(__file__).resolve().parents[6] / "packs"
-PRESET_VERSION = "2026.1.4"
-RELEASED_VERSION = "2026.1.3"
+PRESET_VERSION = "2026.1.90"
+RELEASED_VERSION = "2026.1.4"
 
 _PRESET_SLOTS: dict[str, dict[str, Any]] = {
     "supervisor": {
@@ -52,7 +52,7 @@ _SIGNING_SLOTS = [
 
 
 def build_preset_packs(target: Path) -> Path:
-    """Копия паков репозитория с выпущенной patch-версией 2026.1.4 `hse-cs-sse/coursework` с пресетом."""
+    """Копия паков репозитория с выпущенной patch-версией `PRESET_VERSION` `hse-cs-sse/coursework` с пресетом."""
     shutil.copytree(REPO_PACKS, target)
     template_dir = target / "hse-cs-sse" / "templates" / "coursework"
     version_dir = template_dir / "versions" / PRESET_VERSION

@@ -1150,8 +1150,9 @@ class UseCaseProvider(Provider):
         project_index_repo: IProjectIndexRepository,
         planner: TemplateUpdatePlanner,
         vcs_locks: IVcsFolderLocks,
+        routes: ISigningRouteGate,
     ) -> PlanTemplateUpdateUC:
-        return PlanTemplateUpdateUC(project_repo, project_index_repo, planner, vcs_locks)
+        return PlanTemplateUpdateUC(project_repo, project_index_repo, planner, vcs_locks, routes)
 
     @provide
     def get_apply_template_update_uc(
@@ -1166,6 +1167,8 @@ class UseCaseProvider(Provider):
         journal_repo: IUpdateJournalRepository,
         vcs_service: IVcsService,
         vcs_locks: IVcsFolderLocks,
+        signature_repo: ISignatureRepository,
+        routes: ISigningRouteGate,
     ) -> ApplyTemplateUpdateUC:
         return ApplyTemplateUpdateUC(
             project_repo=project_repo,
@@ -1178,6 +1181,8 @@ class UseCaseProvider(Provider):
             journal_repo=journal_repo,
             vcs_service=vcs_service,
             vcs_locks=vcs_locks,
+            signature_repo=signature_repo,
+            routes=routes,
         )
 
     @provide
@@ -1192,6 +1197,7 @@ class UseCaseProvider(Provider):
         journal_repo: IUpdateJournalRepository,
         vcs_service: IVcsService,
         vcs_locks: IVcsFolderLocks,
+        routes: ISigningRouteGate,
     ) -> RevertTemplateUpdateUC:
         return RevertTemplateUpdateUC(
             project_repo=project_repo,
@@ -1203,6 +1209,7 @@ class UseCaseProvider(Provider):
             journal_repo=journal_repo,
             vcs_service=vcs_service,
             vcs_locks=vcs_locks,
+            routes=routes,
         )
 
     @provide

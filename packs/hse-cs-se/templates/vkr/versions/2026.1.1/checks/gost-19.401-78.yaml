@@ -1,0 +1,88 @@
+# packs/hse-cs-se/templates/vkr/versions/2026.1/checks/gost-19.401-78.yaml
+# ГОСТ 19.401-78 — Текст программы. Требования к содержанию и оформлению.
+
+# label — короткая подпись группы в UI; ref — полная ссылка на документ.
+label:
+  ru: ГОСТ 19.401-78
+  en: GOST 19.401-78
+ref:
+  ru: ГОСТ 19.401-78 §2
+  en: GOST 19.401-78 §2
+source:
+  ru: Текст программы. Требования к содержанию и оформлению.
+  url: https://docs.cntd.ru/document/1200007654
+
+rules:
+  # ── Обязательные разделы ТП ──
+  # Реальные ТП ОП ПИ (см. shalaev_docs/tp) вместо «Общих сведений» из ГОСТ
+  # 19.402-78 открываются разделом «Введение» — требуем именно его.
+  - id: gost-19.401-78/section-introduction
+    title:       { ru: Раздел «Введение», en: "\"Introduction\" section" }
+    description: { ru: "По форме ОП ПИ Текст программы открывается разделом «Введение» с наименованием программы и краткой характеристикой области применения.", en: "Per the SE programme form, the Program Text opens with an \"Introduction\" section giving the program name and a brief description of its application area." }
+    category:    structure
+    applies_to:  [source_listing]
+    default_severity: warn
+    engine: regex
+    params:
+      file_glob: "source_listing/*.tex"
+      pattern: '(?i)\\section\*?\{[^}]*(?:[Вв]ведени|introduction)'
+      negate: false
+      message: { ru: "В Тексте программы отсутствует раздел «Введение».", en: "The Program Text is missing an \"Introduction\" section." }
+
+  # ГОСТ 19.401-78 требует «текст программы». В практике ОП ПИ полные листинги
+  # в PDF не вставляются: раздел «Текст программы» описывает состав и структуру
+  # репозитория и даёт ссылку на исходный код — поэтому проверяем наличие
+  # раздела, а не окружений lstlisting.
+  - id: gost-19.401-78/section-listing
+    title:       { ru: Раздел «Текст программы», en: "\"Program text\" section" }
+    description: { ru: "ГОСТ 19.401-78 §2.2: документ должен содержать раздел «Текст программы» (в практике ОП ПИ — состав и структура репозитория, назначение модулей, ссылка на исходный код).", en: "GOST 19.401-78 §2.2: the document must contain a \"Program text\" section (in SE programme practice — repository structure, module descriptions and a link to the source code)." }
+    category:    structure
+    applies_to:  [source_listing]
+    default_severity: err
+    engine: regex
+    params:
+      file_glob: "source_listing/*.tex"
+      pattern: '(?i)\\section\*?\{[^}]*(?:[Тт]екст[^}]*программы|program text|source listing)'
+      negate: false
+      message: { ru: "В документе отсутствует раздел «Текст программы».", en: "The document is missing a \"Program text\" section." }
+
+  # ── Аннотация ──
+  - id: gost-19.401-78/annotation
+    title:       { ru: Аннотация документа, en: "Document abstract" }
+    description: { ru: "ГОСТ 19.105-78 §2.5: каждый программный документ должен иметь аннотацию.", en: "GOST 19.105-78 §2.5: every program document must have an abstract." }
+    category:    structure
+    applies_to:  [source_listing]
+    default_severity: warn
+    engine: regex
+    params:
+      file_glob: "source_listing/*.tex"
+      pattern: '(?i)\\section\*?\{[^}]*(?:[Аа]ннотаци|annotation|abstract)'
+      negate: false
+      message: { ru: "В Тексте программы отсутствует раздел «Аннотация».", en: "The Program Text is missing an \"Abstract\" section." }
+
+  # ── Поля страницы ЕСПД ──
+  - id: gost-19.401-78/page-margins
+    title:       { ru: Поля страницы (ЕСПД, рамка/штамп), en: "Page margins (ESPD frame/stamp)" }
+    description: { ru: "Геометрия ЕСПД-документа с рамкой и основной надписью (ГОСТ 19.106/2.104): левое 20 мм, правое 10 мм, верхнее 25 мм, нижнее 40 мм.", en: "ESPD document geometry with frame and title block (GOST 19.106/2.104): left 20 mm, right 10 mm, top 25 mm, bottom 40 mm." }
+    category:    formatting
+    applies_to:  [source_listing]
+    default_severity: info
+    engine: structural
+    params:
+      check: page_geometry
+      expected: { left_mm: 20, right_mm: 10, top_mm: 25, bottom_mm: 40 }
+      tolerance_mm: 2
+
+  # ── Ссылка на репозиторий ──
+  - id: gost-19.401-78/repo-reference
+    title:       { ru: Ссылка на репозиторий исходного кода, en: "Source code repository link" }
+    description: { ru: "Рекомендуется указать URL репозитория (GitHub/GitLab) с тегом или хешем конкретного коммита.", en: "It is recommended to provide the repository URL (GitHub/GitLab) with a specific tag or commit hash." }
+    category:    metadata
+    applies_to:  [source_listing]
+    default_severity: info
+    engine: regex
+    params:
+      file_glob: "source_listing/*.tex"
+      pattern: '(github\.com|gitlab\.com|bitbucket\.org)'
+      negate: false
+      message: { ru: "Рекомендуется добавить ссылку на репозиторий исходного кода с конкретным тегом/коммитом.", en: "It is recommended to add a link to the source code repository with a specific tag/commit." }

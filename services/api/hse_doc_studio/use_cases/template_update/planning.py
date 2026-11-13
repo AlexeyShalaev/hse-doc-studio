@@ -34,7 +34,9 @@ from hse_doc_studio.core.template_update.layout import doc_resolver
 from hse_doc_studio.core.template_update.planner import PlanInput, plan_files, plan_fingerprint
 from hse_doc_studio.core.template_update.protocols import IMergeEngine, ITemplateTrackingRepository
 from hse_doc_studio.core.template_versions import classify_update, parse_version_key, stricter
+from hse_doc_studio.core.value_objects import SignaturesState
 from hse_doc_studio.use_cases.template_update.base_service import TemplateBaseService
+from hse_doc_studio.use_cases.template_update.signature_presets import plan_signature_presets
 
 
 @dataclass(frozen=True)
@@ -136,7 +138,16 @@ class TemplateUpdatePlanner:
         self._tracking = tracking_repo
         self._signatures = signature_repo
 
-    def plan(self, project: Project, to_version: str, *, persist_base: bool = True) -> PlannedUpdate:
+    def plan(
+        self,
+        project: Project,
+        to_version: str,
+        *,
+        persist_base: bool = True,
+        held_docs: Iterable[str] = (),
+    ) -> PlannedUpdate:
+        """План обновления на `to_version`. `held_docs` документы, которые держат маршруты подписания: их места
+        подписей обновление не трогает (signing-route.md, 15.9). Локально маршрутов нет, и список пуст."""
         current = current_version(self._template_repo, project)
         target = target_version(self._template_repo, project, to_version)
         base = self._bases.load_or_reconstruct(project, current, persist=persist_base)
@@ -154,6 +165,8 @@ class TemplateUpdatePlanner:
             self._merge.merge,
             doc_of=doc_resolver(project, target),
         )
+        signatures = self._signatures.get_state(project.folder)
+        presets = plan_signature_presets(self._template_repo, project, current, target, signatures, held_docs)
         plan = UpdatePlan(
             from_version=current.version,
             to_version=target.version,
@@ -162,18 +175,24 @@ class TemplateUpdatePlanner:
             base_commit=base.commit,
             ops=tuple(ops),
             fingerprint=plan_fingerprint(
-                ops, to_version=target.version, base_digest=base_digest(base), ignored=tracking.ignored
+                ops,
+                to_version=target.version,
+                base_digest=base_digest(base),
+                ignored=tracking.ignored,
+                extra=presets.fingerprint_lines(),
             ),
-            warnings=self._warnings(project, base, ops),
+            warnings=self._warnings(project, base, ops, signatures),
+            signature_presets=presets,
         )
         return PlannedUpdate(project, current, target, base, theirs, tracking, plan)
 
-    def _warnings(self, project: Project, base: TemplateBase, ops: list[FileOp]) -> tuple[UpdateWarning, ...]:
+    def _warnings(
+        self, project: Project, base: TemplateBase, ops: list[FileOp], signatures: SignaturesState
+    ) -> tuple[UpdateWarning, ...]:
         warnings: list[UpdateWarning] = []
         if base.provenance == TemplateBaseProvenance.approximate or any(op.approximate_base for op in ops):
             warnings.append(UpdateWarning(UpdateWarningCode.approximate_base))
         touched = {op.doc_id for op in ops if op.doc_id}
-        signatures = self._signatures.get_state(project.folder)
         frozen = sorted(touched & (set(signatures.frozen) | set(signatures.detached)))
         if frozen:
             warnings.append(UpdateWarning(UpdateWarningCode.frozen_documents, tuple(frozen)))

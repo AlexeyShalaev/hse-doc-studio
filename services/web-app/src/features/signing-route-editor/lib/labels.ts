@@ -1,6 +1,11 @@
 import { useCallback } from "react";
 import { useTranslation } from "react-i18next";
 import type { ParticipantMembership } from "@entities/signing-route";
+import {
+  DEFAULT_DEADLINE_TIME,
+  deadlineFromInput,
+  deadlineToInput,
+} from "@entities/submission";
 
 type Author = {
   slug?: string | null | undefined;
@@ -38,17 +43,13 @@ export const MEMBERSHIP_TONE: Record<ParticipantMembership, string> = {
   missing: "var(--c-warn)",
 };
 
-/** Срок маршрута: дата в поле, конец этого дня по местному времени в контракте (ISO UTC). */
-export const deadlineToIso = (day: string): string | null => {
-  if (day === "") return null;
-  const at = new Date(`${day}T23:59:00`);
-  return Number.isNaN(at.getTime()) ? null : at.toISOString();
-};
+/**
+ * Срок маршрута: дата в поле, конец этого дня по Москве в контракте (пояс отображения, 14.4; так
+ * же вводится срок точки, 16.3). Пустое поле или неразборчивая дата значат «без срока».
+ */
+export const deadlineToIso = (day: string): string | null =>
+  day === "" ? null : deadlineFromInput(day, DEFAULT_DEADLINE_TIME);
 
-export const isoToDeadline = (iso: string | null): string => {
-  if (iso === null) return "";
-  const at = new Date(iso);
-  if (Number.isNaN(at.getTime())) return "";
-  const pad = (n: number) => String(n).padStart(2, "0");
-  return `${String(at.getFullYear())}-${pad(at.getMonth() + 1)}-${pad(at.getDate())}`;
-};
+/** День срока маршрута по Москве для поля даты; без срока пусто. */
+export const isoToDeadline = (iso: string | null): string =>
+  deadlineToInput(iso).date;

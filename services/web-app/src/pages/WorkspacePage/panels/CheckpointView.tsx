@@ -14,6 +14,7 @@ import {
   useSubmissionProfiles,
   useSubmissions,
 } from "@entities/submission";
+import { CheckpointDeadlineLine } from "@features/checkpoint-deadline";
 import { getFormIcon } from "@features/form-fill";
 import { SignSubmissionDialog } from "@features/signature-stamper";
 import {
@@ -145,6 +146,11 @@ export const CheckpointView = ({
   const name = pickLocalized(profile.name, lang, profile.id);
   const description = pickLocalized(profile.description, lang, "");
   const isPacked = (submissions ?? []).some((s) => s.profile_id === profile.id);
+  // Срок точки меняет тот, кто собирает пакет (`SUBMISSION_CREATE`): владелец и редактор на
+  // сервере, локально роли нет и правит владелец папки (signing-route.md, 16.8).
+  const role = project.my_role ?? null;
+  const canEditDeadline =
+    role === null || role === "owner" || role === "editor";
 
   const documentsById = new Map((documents ?? []).map((doc) => [doc.id, doc]));
   const runtimeSlots = signaturesState?.runtime_slots ?? [];
@@ -185,6 +191,13 @@ export const CheckpointView = ({
         readiness={readiness}
         isPacked={isPacked}
         routeTally={routeTally}
+        deadline={
+          <CheckpointDeadlineLine
+            projectId={project.id}
+            profile={profile}
+            canEdit={canEditDeadline}
+          />
+        }
       />
 
       {waitingForMe === 0 && heldMine && (

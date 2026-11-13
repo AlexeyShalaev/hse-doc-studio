@@ -12,6 +12,8 @@ export { SlotDateMarks } from "./ui/SlotDateMarks";
 export { signatureHeightMm } from "./lib/coords";
 export type { SlotDateMarksProps, SlotDateRoute } from "./ui/SlotDateMarks";
 export { ResetSignaturesDialog } from "./ui/ResetSignaturesDialog";
+export { PackPresetDialog } from "./ui/PackPresetDialog";
+export type { PackPresetDialogProps } from "./ui/PackPresetDialog";
 export { useDateMarksSave } from "./model/useDateMarksSave";
 export type { DateMarksSaver } from "./model/useDateMarksSave";
 export type { DateMarkPlace, DateMarksSave } from "./lib/dateMarkEdit";

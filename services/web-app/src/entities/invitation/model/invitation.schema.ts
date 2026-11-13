@@ -293,6 +293,9 @@ export const NOTIFICATION_KINDS = [
   // Администратор очистил диск личного раннера владельца (docs/design/storage-cleanup.md, 8.2):
   // только «Входящие», без письма.
   "runner_disk_cleaned",
+  // Напоминание автору за 3 дня до срока контрольной точки (docs/design/signing-route.md, 16.7):
+  // `profile_id` точка, `excerpt` её название, `deadline` срок. «Входящие» и письмо.
+  "checkpoint_due",
 ] as const;
 export const NotificationKindSchema = z.enum(NOTIFICATION_KINDS);
 export type NotificationKind = z.infer<typeof NotificationKindSchema>;

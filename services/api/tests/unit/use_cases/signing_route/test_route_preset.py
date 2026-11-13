@@ -1,6 +1,6 @@
 """Пресет маршрута точки: состав с условиями, отличия, применение к состоянию подписей (signing-route.md, 15.5, 15.6).
 
-Пак: `hse-cs-sse` 2026.1.3 с ключами 2026.1.4 (`preset_world`), точка «Заявка на тему КП».
+Пак: `hse-cs-sse` 2026.1.3 с ключами таблицы 15.10 как версия 2026.1.90 (`preset_world`), точка «Заявка на тему КП».
 """
 
 from __future__ import annotations
@@ -24,6 +24,7 @@ from hse_doc_studio.core.signing_route.preset import (
 from hse_doc_studio.core.value_objects import (
     DetachedSignature,
     FrozenPdf,
+    Person,
     SignaturePlacement,
     SignatureSlot,
     SignaturesState,
@@ -92,7 +93,7 @@ def test__preset__supervisor_from_hse__academic_skipped_by_condition() -> None:
     preset = route_preset(point(version, project(version)))
 
     assert preset is not None
-    assert preset.version == "2026.1.4"
+    assert preset.version == "2026.1.90"
     assert preset.steps == (("author",), ("supervisor",))
     assert preset.extra_slots == ()
     assert [(item.pair, item.when) for item in preset.skipped_by_condition] == [
@@ -140,10 +141,28 @@ def test__preset__optional_on_point_pair_and_extra__required_slot_and_unknown_en
     assert preset.steps == (("author",), ("supervisor",), ("academic_supervisor",))
 
 
-def test__preset__released_pack__none() -> None:
-    version = released()
+@pytest.mark.parametrize("version_id", ["2026.1.3", "2026.1.4"])
+def test__preset__released_pack__none(version_id: str) -> None:
+    """Выпущенные версии без пресета, и 2026.1.4, замороженная без мест (15.17.18): пресета нет, черновик как раньше."""
+    version = released(version_id)
 
     assert route_preset(point(version, project(version))) is None
+
+
+def test__condition__person_with_blank_name__not_set() -> None:
+    """«Человек указан» значит непустое ФИО, как в шаблоне: пустое или из пробелов не выполняет условие."""
+    version = preset_version()
+    blank = replace(
+        project(version, supervisor=PersonRole.company),
+        supervisor=Person(name="  ", role=PersonRole.company),
+        co_supervisor=Person(name="", role=PersonRole.company),
+    )
+
+    assert not condition_met(ACADEMIC_WHEN, blank)
+    assert not condition_met(CONSULTANT_WHEN, blank)
+    preset = route_preset(point(version, blank))
+    assert preset is not None
+    assert preset.extra_slots == ()
 
 
 def test__preset__places_only__preset_without_extra_slots() -> None:
@@ -230,7 +249,7 @@ def test__places__new_pairs__pack_place_dates_enabled_and_stamped() -> None:
     assert proposal.enabled
     assert is_from_pack(proposal)
     assert proposal.from_pack is not None
-    assert proposal.from_pack.version == "2026.1.4"
+    assert proposal.from_pack.version == "2026.1.90"
     assert proposal.from_pack.digest == pack_digest(pt.runtime["supervisor"].slot_def, PROPOSAL)
     application = state.placements[APPLICATION]["supervisor"]
     assert (application.x_mm, application.y_mm, application.dates) == (163, 168, ())

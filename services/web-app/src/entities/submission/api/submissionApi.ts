@@ -2,6 +2,7 @@ import { z } from "zod";
 import { apiClient, parseResp } from "@shared/api";
 import type { CreateSubmissionRequest } from "@shared/api/types";
 import {
+  CheckpointDeadlineSchema,
   CustomFilePreflightResponseSchema,
   SubmissionProfileSchema,
   SubmissionRecordSchema,
@@ -18,6 +19,19 @@ export const submissionApi = {
     apiClient
       .get(`/projects/${projectId}/submissions/profiles`)
       .then(parseResp(z.array(SubmissionProfileSchema))),
+
+  /** Поставить или снять (null) срок контрольной точки (signing-route.md, 16.8). */
+  setDeadline: (
+    projectId: string,
+    profileId: string,
+    deadline: string | null,
+  ) =>
+    apiClient
+      .put(
+        `/projects/${projectId}/submissions/profiles/${encodeURIComponent(profileId)}/deadline`,
+        { deadline },
+      )
+      .then(parseResp(CheckpointDeadlineSchema)),
 
   create: (projectId: string, data: CreateSubmissionRequest) =>
     apiClient

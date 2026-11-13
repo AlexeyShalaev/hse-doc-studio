@@ -1,0 +1,55 @@
+{
+  "state": {
+    "none": "No submission deadline",
+    "upcoming": "Due: {{date}}, {{time}}",
+    "soon_one": "Due: {{date}}, {{time}} (in {{count}} day)",
+    "soon_other": "Due: {{date}}, {{time}} (in {{count}} days)",
+    "today": "Due today by {{time}}",
+    "packaged": "Deadline passed {{date}}: package built {{packed}}",
+    "overdue": "Overdue: package not built"
+  },
+  "title": "Submission deadline, Moscow time. “Overdue” means the checkpoint package was not built by the deadline: the Studio cannot see the LMS upload.",
+  "action": {
+    "set": "Set deadline",
+    "edit": "Change deadline",
+    "clear": "Remove deadline",
+    "later": "Not now"
+  },
+  "form": {
+    "label": "Checkpoint deadline",
+    "date": "Date",
+    "time": "Time, Moscow",
+    "save": "Save",
+    "cancel": "Cancel",
+    "invalid": "Enter the deadline date and time"
+  },
+  "toast": {
+    "set": "Deadline saved",
+    "cleared": "Deadline removed",
+    "failed": "Could not save the deadline"
+  },
+  "list": {
+    "upcoming_one": "{{name}}: in {{count}} day",
+    "upcoming_other": "{{name}}: in {{count}} days",
+    "today": "{{name}}: today",
+    "overdue": "{{name}}: overdue",
+    "title": "Due: {{date}}, {{time}} Moscow time",
+    "overdueTitle": "The deadline {{date}}, {{time}} has passed and the checkpoint package was not built"
+  },
+  "row": {
+    "upcoming_one": "in {{count}} day",
+    "upcoming_other": "in {{count}} days",
+    "today": "today by {{time}}",
+    "overdue": "overdue"
+  },
+  "route": {
+    "point": "Checkpoint deadline: {{point}}",
+    "derived": "Route deadline: {{route}}. One day before the checkpoint deadline ({{point}}), so there is time to build the package",
+    "same": "The route deadline equals the checkpoint deadline ({{point}}): less than two days are left",
+    "suggest": "Checkpoint deadline: {{point}}. Set the route deadline to {{route}}?",
+    "changed": "The checkpoint deadline changed: {{point}}. Set the route deadline to {{route}}?",
+    "apply": "Set",
+    "later": "The route deadline is later than the submission deadline",
+    "passed": "The checkpoint deadline has passed: {{point}}"
+  }
+}

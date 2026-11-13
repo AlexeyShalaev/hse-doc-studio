@@ -376,22 +376,12 @@ export const DocSignaturesPane = ({
       </div>
       <div className="flex flex-col" style={{ minHeight: 0, minWidth: 0 }}>
         {isCustomConvertible && !hasBuild && (
-          <div
-            className="flex items-center gap-2"
-            style={{
-              padding: "0.625rem 0.875rem",
-              borderBottom: "1px solid var(--border)",
-              background: "var(--c-info-soft)",
-              fontSize: "0.71875rem",
-              color: "var(--fg-1)",
-            }}
-          >
-            <Info
-              size="0.8125rem"
-              style={{ color: "var(--c-info)", flexShrink: 0 }}
-            />
-            <span>{t("signatures.customConvertiblePendingPreview")}</span>
-          </div>
+          <InfoBanner text={t("signatures.customConvertiblePendingPreview")} />
+        )}
+        {/* Подпись, нарисованная в самом загруженном файле, для Студии просто часть страницы:
+            слот она не закрывает, поэтому подсказываем загрузить подпись картинкой. */}
+        {signability !== "template" && (
+          <InfoBanner text={t("signatures.customDrawnSignatureHint")} />
         )}
         <PdfStampEditor
           projectId={projectId}
@@ -432,3 +422,19 @@ export const DocSignaturesPane = ({
     </div>
   );
 };
+
+const InfoBanner = ({ text }: { text: string }) => (
+  <div
+    className="flex items-center gap-2"
+    style={{
+      padding: "0.625rem 0.875rem",
+      borderBottom: "1px solid var(--border)",
+      background: "var(--c-info-soft)",
+      fontSize: "0.71875rem",
+      color: "var(--fg-1)",
+    }}
+  >
+    <Info size="0.8125rem" style={{ color: "var(--c-info)", flexShrink: 0 }} />
+    <span>{text}</span>
+  </div>
+);

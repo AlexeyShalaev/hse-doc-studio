@@ -139,6 +139,35 @@ describe("TemplateUpdateDialog (list rendering)", () => {
     ).toBeInTheDocument();
   });
 
+  it("an empty file plan with template signature places is not «nothing to update»", () => {
+    plan = {
+      ...makePlan(),
+      counts: {},
+      files: [],
+      warnings: [],
+      signature_presets: {
+        updated: [
+          { doc_id: "report", slot_id: "supervisor" },
+          { doc_id: "report", slot_id: "author" },
+        ],
+        kept: [{ doc_id: "proposal", slot_id: "supervisor", reason: "route" }],
+      },
+    };
+    renderDialog();
+    expect(
+      screen.getByText(
+        "Файлы не меняются. Обновятся места подписей из шаблона: 2",
+      ),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/не меняет ни одного файла/)).toBeNull();
+  });
+
+  it("an empty file plan without signature places says the version still applies", () => {
+    plan = { ...makePlan(), counts: {}, files: [], warnings: [] };
+    renderDialog();
+    expect(screen.getByText(/не меняет ни одного файла/)).toBeInTheDocument();
+  });
+
   it("lists files with decisions first and a tag per action", () => {
     renderDialog();
     const rows = screen
@@ -255,7 +284,7 @@ describe("TemplateUpdateDialog (documents out for signing)", () => {
     ]);
     expect(
       screen.getByText(
-        "Документ на подписании: Заявление о выборе темы. Изменения не попадут в подписываемую версию.",
+        "Документ на подписании: Заявление о выборе темы. Обновление не попадёт в подписываемую версию: после обновления маршрут попросит отправить новую версию (кнопка «Отправить новую версию» в карточке «Подписание»).",
       ),
     ).toBeInTheDocument();
 
@@ -278,7 +307,7 @@ describe("TemplateUpdateDialog (documents out for signing)", () => {
     renderHeld([op("common/preamble.tex", "update")]);
     expect(
       screen.getByText(
-        "Документы на подписании: Заявление о выборе темы, Отзыв руководителя. Изменения не попадут в подписываемые версии.",
+        "Документы на подписании: Заявление о выборе темы, Отзыв руководителя. Обновление не попадёт в подписываемые версии: после обновления маршрут попросит отправить новую версию (кнопка «Отправить новую версию» в карточке «Подписание»).",
       ),
     ).toBeInTheDocument();
   });

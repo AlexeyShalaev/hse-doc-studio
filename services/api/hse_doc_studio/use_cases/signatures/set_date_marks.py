@@ -302,7 +302,7 @@ class SetDateMarksUC:
     ) -> tuple[tuple[float, float], ...]:
         """Размеры страниц источника подписи (версия на подписи или сборка); пусто, если PDF ещё нет."""
         try:
-            _, output_file = self._template_service.resolve_instance_source(project, doc, version)
+            output_file = self._template_service.resolve_signing_output(project, doc, version)
         except (NotFoundError, ValueError):
             return ()
         compiled = project.folder / output_file if output_file else None

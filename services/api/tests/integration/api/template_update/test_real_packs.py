@@ -74,7 +74,7 @@ async def test__real_coursework__existing_project_is_offered_the_patch_2026_1_1(
 
     status = (await test_app.get(base)).json()
     assert status["current_version"] == "2026.1"
-    assert status["recommended"]["version"]["version"] == "2026.1.3"
+    assert status["recommended"]["version"]["version"] == "2026.1.4"
     assert status["recommended"]["update_class"] == "patch"
 
     plan = (await test_app.post(f"{base}/plan", json={"to_version": "2026.1.1"})).json()
@@ -102,7 +102,7 @@ async def test__real_coursework__2026_1_1_project_is_offered_the_patch_2026_1_2(
 
     status = (await test_app.get(base)).json()
     assert status["current_version"] == "2026.1.1"
-    assert status["recommended"]["version"]["version"] == "2026.1.3"
+    assert status["recommended"]["version"]["version"] == "2026.1.4"
     assert status["recommended"]["update_class"] == "patch"
 
     plan = (await test_app.post(f"{base}/plan", json={"to_version": "2026.1.2"})).json()
@@ -136,7 +136,7 @@ async def test__real_coursework__2026_1_2_project_gets_sign_methods_in_patch_202
 
     status = (await test_app.get(base)).json()
     assert status["current_version"] == "2026.1.2"
-    assert status["recommended"]["version"]["version"] == "2026.1.3"
+    assert status["recommended"]["version"]["version"] == "2026.1.4"
     assert status["recommended"]["update_class"] == "patch"
 
     plan = (await test_app.post(f"{base}/plan", json={"to_version": "2026.1.3"})).json()
@@ -160,3 +160,42 @@ async def test__real_coursework__2026_1_2_project_gets_sign_methods_in_patch_202
     assert "не принимает ни одна контрольная точка" in resp.text
     resp = await test_app.patch(config, json={"sign_mode": "detached_text"})
     assert resp.status_code == 200, resp.text
+
+
+async def test__real_coursework__2026_1_3_project_gets_form_fixes_in_patch_2026_1_4(
+    test_app: AsyncClient, tmp_path: Path
+) -> None:
+    """2026.1.4 исправляет формы: город и год из проекта, заявление на языке проекта, строки по условию."""
+    folder = tmp_path / "sse"
+    folder.mkdir()
+    payload = {
+        **project_api_payload(str(folder)),
+        "pack_id": "hse-cs-sse",
+        "template_id": "coursework",
+        "version": "2026.1.3",
+        "lang": "ru",
+    }
+    created = await test_app.post("/api/v1/projects", json=payload)
+    assert created.status_code == 201, created.text
+    project = created.json()
+    base = f"/api/v1/projects/{project['id']}/template-update"
+
+    status = (await test_app.get(base)).json()
+    assert status["current_version"] == "2026.1.3"
+    assert status["recommended"]["version"]["version"] == "2026.1.4"
+    assert status["recommended"]["update_class"] == "patch"
+
+    plan = (await test_app.post(f"{base}/plan", json={"to_version": "2026.1.4"})).json()
+    changed = {f["path"] for f in plan["files"] if f["action"] != "unchanged"}
+    assert changed == {
+        "topic_application/topic_application.tex",
+        "report/title.tex",
+        "presentation/beamer/presentation.tex",
+    }
+    applied = await test_app.post(
+        f"{base}/apply", json={"to_version": "2026.1.4", "fingerprint": plan["fingerprint"], "resolutions": {}}
+    )
+    assert applied.status_code == 200, applied.text
+    application = (folder / "topic_application" / "topic_application.tex").read_text(encoding="utf-8")
+    assert "\\ifhseLangEn" in application
+    assert "\\clearpage" not in application

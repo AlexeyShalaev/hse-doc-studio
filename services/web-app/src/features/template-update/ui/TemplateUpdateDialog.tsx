@@ -82,6 +82,7 @@ export const TemplateUpdateDialog = ({
   const ops = useMemo(() => sortOps(plan.data?.files ?? []), [plan.data]);
   const selectedOp = ops.find((op) => op.path === selected) ?? null;
   const notes = update ? notesOf(update, i18n.language) : [];
+  const placesUpdated = plan.data?.signature_presets?.updated.length ?? 0;
   // Мягкое предупреждение (signing-route.md, 12.7): строка в плане вместо отдельного окна.
   const guardTarget = { paths: ops.map((op) => op.path) };
   const heldNames = ops.length > 0 ? routeGuard.heldNames(guardTarget) : [];
@@ -238,7 +239,10 @@ export const TemplateUpdateDialog = ({
 
           {ops.length === 0 ? (
             <p className="dim" style={{ margin: 0, fontSize: "0.75rem" }}>
-              {t("dialog.nothing")}
+              {/* Пустой файловый план с местами подписей из шаблона это не «нечего обновлять» (15.10). */}
+              {placesUpdated > 0
+                ? t("dialog.placesOnly", { n: placesUpdated })
+                : t("dialog.nothing")}
             </p>
           ) : (
             <>

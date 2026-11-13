@@ -23,6 +23,7 @@ import {
   useTemplateMeta,
 } from "@entities/project";
 import type { ProjectRole } from "@entities/session";
+import { NextDeadlineChip } from "@features/checkpoint-deadline";
 import { localeTag } from "@shared/lib";
 
 type Project = z.infer<typeof ProjectResponseSchema>;
@@ -270,6 +271,13 @@ export const ProjectCard = ({
           {project.folder}
         </div>
       )}
+
+      {/* Ближайший срок контрольной точки (signing-route.md, 16.6): «Заявка на тему: через 3 дня». */}
+      <NextDeadlineChip
+        next={project.next_deadline}
+        projectId={project.id}
+        containerStyle={{ marginTop: "-0.375rem", marginBottom: "0.75rem" }}
+      />
 
       <div
         className="flex items-center justify-between"

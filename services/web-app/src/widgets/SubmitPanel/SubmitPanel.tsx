@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { ChevronLeft, ListCheck, PenTool } from "lucide-react";
 import { clsx } from "clsx";
 import { useTranslation } from "react-i18next";
@@ -6,6 +7,11 @@ import { useProject } from "@entities/project";
 import { useSignaturePlan, useSignaturesState } from "@entities/signature";
 import { useSubmissionProfiles, useSubmissions } from "@entities/submission";
 import type { CheckpointReadiness } from "@entities/submission";
+import {
+  DEADLINE_TONE,
+  TONE_COLOR,
+  useDeadlineText,
+} from "@features/checkpoint-deadline";
 import { getFormIcon } from "@features/form-fill";
 import {
   pickLocalized,
@@ -78,6 +84,9 @@ export const SubmitPanel = ({
   onPinProfile,
 }: SubmitPanelProps) => {
   const { t } = useTranslation("workbench");
+  const deadlineText = useDeadlineText();
+  // «Через 3 дня» у точки считается от времени открытия панели (signing-route.md, 16.6).
+  const [openedAt] = useState(() => Date.now());
   const setSidebarCollapsed = useWorkspaceStore(
     (state) => state.setSidebarCollapsed,
   );
@@ -221,6 +230,16 @@ export const SubmitPanel = ({
                 isPacked={packedProfileIds.has(profile.id)}
                 isActive={selectedDocId === checkpointDocId(profile.id)}
                 readiness={ring}
+                deadline={(() => {
+                  const text = deadlineText.rowText(profile, openedAt);
+                  return text === null
+                    ? undefined
+                    : {
+                        text,
+                        color:
+                          TONE_COLOR[DEADLINE_TONE[profile.deadline_state]],
+                      };
+                })()}
                 isPinned={pinnedProfileId === profile.id}
                 onTogglePin={
                   onPinProfile

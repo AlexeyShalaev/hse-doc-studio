@@ -31,6 +31,7 @@ from hse_doc_studio.core.enums import (
 )
 from hse_doc_studio.core.errors import NotFoundError
 from hse_doc_studio.core.i18n import current_interface_language, localized_error
+from hse_doc_studio.core.office import sibling_pdf_path
 from hse_doc_studio.core.repositories import ITemplateRepository
 from hse_doc_studio.core.signatures.plan import DocFacts, SlotStatus, reason_hint, slot_state
 from hse_doc_studio.core.team import (
@@ -425,6 +426,19 @@ class ProjectTemplateService:
         source, output = self.resolve_document_source(doc_def, doc.chosen_variant)
         base = doc_base_dir(project, doc)
         return (prefix_path(base, source), prefix_path(base, output))
+
+    def resolve_signing_output(self, project: Project, doc: Document, version: TemplateVersion) -> str:
+        """Результат документа, который подписывают и фиксируют, относительно корня проекта.
+
+        Шаблонный документ: файл сборки (`output_file` из `resolve_instance_source`). Загруженный свой файл
+        (`doc.custom_file`) замещает сборку целиком, как в списке документов, карточке и пакете: PDF берётся как
+        есть, у office-файла это его PDF-предпросмотр рядом (`sibling_pdf_path`, может ещё не существовать).
+        Шаблонный PDF, оставшийся на диске от сборки до замены, источником подписи не бывает.
+        """
+        custom = doc.custom_file
+        if custom is not None:
+            return custom.stored_path if custom.ext == ".pdf" else sibling_pdf_path(custom.stored_path)
+        return self.resolve_instance_source(project, doc, version)[1]
 
     def custom_upload_dir(self, project: Project, doc: Document, version: TemplateVersion) -> str:
         """Storage path (relative to project root) for `doc`'s custom upload.

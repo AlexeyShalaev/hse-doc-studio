@@ -1,0 +1,582 @@
+% !TeX program = xelatex
+\documentclass[12pt,a4paper]{extarticle}
+\input{../common/preamble}
+\newcommand{\docname}{Statement of Work}
+\newcommand{\doccode}{\hseDocCodeBase\ ТЗ 01-1}
+\newcommand{\doccodelu}{\hseDocCodeBase\ ТЗ 01-1-ЛУ}
+\input{../common/commands}
+\input{../common/styles}
+\begin{document}
+\sloppy
+\input{../common/title_template}
+
+
+% ============================================
+%  ENGLISH BODY (project.lang == en)
+%  §2.3.4.2 / §2.5.3.1: an English applied project may keep the GOST 19
+%  ESPD structure translated into English. References follow IEEE style.
+% ============================================
+
+% ============================================
+% ANNOTATION
+% ============================================
+\section*{ANNOTATION}
+\addcontentsline{toc}{section}{ANNOTATION}
+
+A Statement of Work is the principal document that stipulates the set of requirements and the procedure for creating a software product, in accordance with which the program is developed, tested and accepted.
+
+This Statement of Work for the development of the program \enquote{\hseProjectName} contains the following sections: \enquote{Introduction}, \enquote{Grounds for Development}, \enquote{Purpose of Development}, \enquote{Requirements for the Program}, \enquote{Requirements for Program Documents}, \enquote{Technical and Economic Indicators}, \enquote{Development Stages and Phases}, \enquote{Acceptance and Control Procedure} and the appendices\cite{gost19101}.
+
+The \enquote{Introduction} section states the name and a brief description of the program's field of application.
+
+The \enquote{Grounds for Development} section states the document on the basis of which the development is carried out and the name of the development topic.
+
+The \enquote{Purpose of Development} section states the functional and operational purpose of the software product.
+
+The \enquote{Requirements for the Program} section contains the principal requirements for functional characteristics, the interface, reliability, operating conditions, the composition and parameters of hardware, information and software compatibility, marking and packaging, transportation and storage.
+
+The \enquote{Requirements for Program Documents} section contains the preliminary composition of the program documentation and special requirements for it.
+
+The \enquote{Technical and Economic Indicators} section contains the approximate economic effectiveness, the projected annual demand and the economic advantages of developing the program.
+
+The \enquote{Development Stages and Phases} section contains the development stages, phases and the content of the work.
+
+The \enquote{Acceptance and Control Procedure} section states the general requirements for accepting the work.
+
+\clearpage
+
+% ============================================
+% LIST OF APPLICABLE STANDARDS
+% ============================================
+\noindent
+This document has been developed in accordance with the requirements of:
+
+\begin{enumerate}[label=\arabic*), leftmargin=1.25cm]
+\item GOST 19.101-77 Types of programs and program documents\cite{gost19101}.
+\item GOST 19.102-77 Development stages\cite{gost19102}.
+\item GOST 19.103-77 Designations of programs and program documents\cite{gost19103}.
+\item GOST 19.104-78 Basic inscriptions\cite{gost19104}.
+\item GOST 19.105-78 General requirements for program documents\cite{gost19105}.
+\item GOST 19.106-78 Requirements for program documents produced by printed means\cite{gost19106}.
+\item GOST 19.201-78 Statement of Work. Requirements for content and design\cite{gost19201}.
+\end{enumerate}
+
+Amendments to this Statement of Work are made in accordance with GOST\,19.603-78\cite{gost19603}, GOST\,19.604-78\cite{gost19604}.
+
+\clearpage
+
+% ============================================
+% CONTENTS
+% ============================================
+\hypersetup{linkcolor=black}
+\tableofcontents
+\hypersetup{linkcolor=blue}
+\thispagestyle{fancy}
+\clearpage
+
+% ============================================
+% 1. INTRODUCTION
+% ============================================
+\section{INTRODUCTION}
+
+\subsection{Program name}
+
+Program name~--- \enquote{\projectname}.
+
+In English the program is named \enquote{\hseProjectNameEn}.
+
+Short program name~--- \enquote{\hseProjectNameShort}.
+
+\subsection{Brief description of the field of application}
+
+The program \enquote{\projectname} is a software system intended for \hseFill{main purpose of the system}. The system's field of application covers \hseFill{field of application of the system}. The system provides \hseFill{interfaces for interacting with the system} within the scope of the functions provided.
+
+\clearpage
+
+% ============================================
+% 2. GROUNDS FOR DEVELOPMENT
+% ============================================
+\section{GROUNDS FOR DEVELOPMENT}
+
+\subsection{Document(s) on the basis of which the development is carried out}
+
+The grounds for development are the bachelor's degree curriculum for the field of study \hseFill{code and name of the field of study}, as well as the order dated \hseFill{date and number of the order} \enquote{On the approval of topics, supervisors and co-supervisors of graduation qualification works of students of the educational programme \enquote{\hseSpecialization} of the Faculty of Computer Science}, by which the topic of the graduation qualification work has been approved and the supervisor/co-supervisor appointed.
+
+\subsection{Name of the development topic}
+
+Name of the development topic~--- \enquote{\projectname}.
+
+Conventional designation of the development topic~--- \enquote{\hseFill{conventional designation of the topic}}.
+
+\clearpage
+
+% ============================================
+% 3. PURPOSE OF DEVELOPMENT
+% ============================================
+\section{PURPOSE OF DEVELOPMENT}
+
+\subsection{Functional purpose}
+
+The program is intended to perform the following functions:
+\begin{itemize}[nosep, leftmargin=1.25cm]
+    \item \hseFill{function 1, e.g. user registration};
+    \item \hseFill{function 2, e.g. maintaining a registry of objects};
+    \item \hseFill{complete the list of principal functions}.
+\end{itemize}
+
+\subsection{Operational purpose}
+
+The operational purpose of the system consists in using \hseFill{interfaces and operation scenarios} for \hseFill{target user tasks} within the scope of the functions provided.
+
+\clearpage
+
+% ============================================
+% 4. REQUIREMENTS FOR THE PROGRAM
+% ============================================
+\section{REQUIREMENTS FOR THE PROGRAM}
+
+\subsection{Requirements for functional characteristics}
+\label{sec:functional_reqs}
+
+\subsubsection{Composition of the functions performed}
+
+\input{requirements_table}
+
+\clearpage
+
+The functional requirements for the system are formed on the basis of an analysis of the subject area and the target scenarios of users' work with the system.
+
+\subsubsection{Organization of input data}
+\label{sec:input_data}
+
+\begin{hseExample}
+External client requests to the public API must be performed over the HTTP(S) protocol with data transmitted in JSON format (UTF-8 encoding).
+
+The following requirements must be met for all input interfaces:
+\begin{itemize}[nosep, leftmargin=1.25cm]
+    \item \textbf{Versioning}: access to the API must be provided through a version prefix in the URL (for example, \texttt{/v1/...}) to ensure backward compatibility when the program is updated;
+    \item \textbf{Validation}: all incoming data must be validated for conformance with schemas (\hseFill{specify validation tools}) and the data types specified in the interface specification;
+    \item \textbf{Limits}: the maximum size of the HTTP request body must not exceed \hseFill{specify the limit, e.g. 1 MB} (unless otherwise stipulated for a specific method);
+    \item \textbf{Pagination and filtering}: requests to retrieve lists of objects must support pagination parameters (\texttt{limit}, \texttt{offset}), sorting and filtering by the main attributes;
+    \item \textbf{Idempotency}: state-changing operations on resources (POST, PUT, DELETE) must support mechanisms for ensuring idempotency on repeated requests via the \texttt{Idempotency-Key} header.
+\end{itemize}
+
+Inter-service interaction must be performed over \hseFill{specify inter-service interaction protocols}.
+
+To trace and correlate requests, the system must support an end-to-end identifier (\texttt{X-Request-ID}) in the HTTP request headers. The body of every error response must carry the value of the identifier, which simplifies diagnostics.
+\end{hseExample}
+
+\subsubsection{Organization of output data}
+\label{sec:output_data}
+
+\begin{hseExample}
+The system must ensure the formation of responses to client requests in accordance with the interface specifications.
+
+Requirements for output data:
+\begin{itemize}[nosep, leftmargin=1.25cm]
+    \item \textbf{Response status}: for HTTP requests a standard set of status codes (2xx, 4xx, 5xx) must be used. When errors occur, the server must return an HTTP error status and a response body in JSON format;
+    \item \textbf{Response guarantee}: the server must ensure that the request is processed within the established time limits (see section~\ref{sec:temporal_reqs}). If the operation cannot be completed (timeout, dependency failure), the system must return a correct error code (for example, 503 Service Unavailable or 504 Gateway Timeout) without allowing the connection to \enquote{hang} indefinitely;
+    \item \textbf{Data format}: the main format of output data is JSON (UTF-8).
+\end{itemize}
+
+For the HTTP API, when an error occurs the response body must be transmitted as a JSON object with the following structure:
+\begin{itemize}[nosep, leftmargin=1.25cm]
+    \item \texttt{error}: an object with the fields \texttt{code} (a string error code), \texttt{messages} (a list of messages), optionally \texttt{params} (error parameters) and \texttt{http\_status\_code};
+    \item for validation errors (HTTP 422) a detailed description of the violated data schema constraints is additionally returned.
+\end{itemize}
+\end{hseExample}
+
+\subsubsection{Requirements for timing characteristics}
+\label{sec:temporal_reqs}
+
+\begin{hseExample}
+Timing characteristics are specified separately for two operating modes: the target mode (production configuration) and the prototype mode (a single developer workbench). Confirming the target characteristics in full requires dedicated infrastructure and is beyond the scope of prototype development; within the present testing, the prototype profile declared below is confirmed.
+
+\textbf{Target profile} (production configuration on the recommended computing resources, see section~\ref{sec:server_hardware}):
+\begin{itemize}[leftmargin=1.25cm]
+    \item The processing time of synchronous requests must not exceed \hseFill{specify time, e.g. 500 ms} for 95\% of requests (p95);
+    \item When performing long-running asynchronous operations, the initial server response time must not exceed \hseFill{specify response time};
+    \item The stated indicators must be maintained under a normal load of up to~\hseFill{number of active sessions} concurrent active user sessions;
+    \item The target request rate (RPS) is \hseFill{specify RPS and justification of the calculation}.
+\end{itemize}
+
+\textbf{Prototype profile} (developer workbench):
+\begin{itemize}[leftmargin=1.25cm]
+    \item The sustained request rate is at least \hseFill{specify prototype RPS} with a share of successful responses of no less than \hseFill{specify share, e.g. 98\%} after a warm-up period;
+    \item The response time on the prototype workbench is not normalized and is determined by the resources of a single machine; the actual p50/p95/p99 values are recorded from the run as a metric for comparing releases;
+    \item The prototype profile is an acceptance condition within the present testing and is confirmed by a load testing procedure (see the corresponding section of the Test Program and Methodology).
+\end{itemize}
+\end{hseExample}
+
+\subsection{Requirements for the interface}
+\label{sec:interface_reqs}
+
+\begin{hseExample}
+The system must provide an application programming interface (API) for automation and integrations.
+\end{hseExample}
+
+\subsubsection{Requirements for the application programming interface (API)}
+
+\begin{hseExample}
+The application programming interface must provide full access to the system's functions for external consumers.
+\begin{itemize}[nosep, leftmargin=1.25cm]
+    \item \textbf{RESTful API}: external control methods must be implemented in accordance with the principles of the REST architectural style (use of the HTTP methods GET, POST, PUT, DELETE);
+    \item \textbf{Documentation}: the API specification must be available in an automated manner in OpenAPI format to simplify integration and testing;
+    \item \textbf{Authorization}: access to protected API methods must be provided on the basis of the \texttt{Authorization} header using \hseFill{authorization mechanism, e.g. a JWT Bearer token};
+    \item \textbf{Uniformity}: the structure of responses, date formats (ISO 8601) and field naming conventions must be unified across all components of the program.
+\end{itemize}
+\end{hseExample}
+
+\subsection{Requirements for reliability}
+
+\subsubsection{Requirements for ensuring reliable (stable) operation of the program}
+
+\begin{hseExample}
+The system must remain operational and ensure correct data processing under normal operating conditions. The following requirements are established to ensure stable operation:
+\begin{itemize}[nosep, leftmargin=1.25cm]
+    \item \textbf{Availability}: the target availability (Uptime) of the system must be no less than \hseFill{specify indicator, e.g. 99.5\%} (excluding scheduled infrastructure maintenance);
+    \item \textbf{Self-healing}: software components must support mechanisms for automatic restart on critical errors (\hseFill{specify self-healing mechanisms});
+    \item \textbf{Fault isolation}: the failure of one of the components must not render the entire system inoperable (Graceful Degradation); adjacent components must return correct error codes (for example, 503) when dependencies are unavailable;
+    \item \textbf{Data integrity}: in the event of an abnormal termination of components, the preservation of data in persistent storage must be ensured.
+\end{itemize}
+\end{hseExample}
+
+\subsubsection{Control of input information}
+
+\begin{hseExample}
+Input information must conform to the constraints set out in section~\ref{sec:input_data}. In the case of incorrect input, the system must return the corresponding response code (for example, 400 Bad Request) and a structured description of validation errors.
+\end{hseExample}
+
+\subsubsection{Control of output information}
+
+\begin{hseExample}
+Output information must conform to the specifications set out in section~\ref{sec:output_data}. If a correct response cannot be formed, the system must return an error with the corresponding HTTP status (5xx).
+\end{hseExample}
+
+\subsubsection{Recovery time after a failure}
+
+\begin{hseExample}
+The following target recovery time (RTO) indicators are established for various classes of incident:
+\begin{itemize}[nosep, leftmargin=1.25cm]
+    \item \textbf{Software component failure}: no more than \hseFill{specify time, e.g. 1 minute} (automatic restart);
+    \item \textbf{Infrastructure service failure} (database, message broker failure): no more than \hseFill{specify time, e.g. 15 minutes};
+    \item \textbf{Critical failure} (complete loss of operability): no more than \hseFill{specify time, e.g. 1 hour} (recovery from a backup copy or a full reinstallation via automated scripts).
+\end{itemize}
+
+The target recovery point (RPO) indicator for persistent data must be no more than \hseFill{specify time, e.g. 15 minutes}. Confirmation of compliance with the RTO/RPO metrics must be carried out by conducting regular tests on a workbench that simulates the load profile described in section~\ref{sec:temporal_reqs}.
+\end{hseExample}
+
+\subsubsection{Failures due to incorrect operator actions}
+
+\begin{hseExample}
+The risk of program failure due to incorrect operator actions must be minimized through multi-level validation of input data. Critical configuration change operations must be logged and require explicit confirmation (for example, through idempotency mechanisms and cautionary API statuses).
+\end{hseExample}
+
+\clearpage
+
+\subsection{Operating conditions}
+
+\subsubsection{Climatic operating conditions}
+
+No direct requirements are imposed on the climatic operating conditions of the software product. The program must operate within the climatic norms provided for the hardware on which it is deployed.
+
+\subsubsection{Requirements for the number and qualifications of personnel}
+
+At least one qualified specialist with skills in \hseFill{list the specialist's key skills} is required to deploy and operate the system.
+
+Interaction with the system assumes the following roles and qualification levels:
+\begin{itemize}[nosep, leftmargin=1.25cm]
+    \item \textbf{End user}: \hseFill{describe the requirements for the user};
+    \item \textbf{\hseFill{system maintenance role}}: \hseFill{describe the qualification requirements}.
+\end{itemize}
+
+\subsection{Requirements for the composition and parameters of hardware}
+
+\subsubsection{Requirements for server hardware}
+\label{sec:server_hardware}
+
+Recommended requirements for the computing power of the server hardware, sufficient to run all components of the system:
+
+\begin{itemize}[leftmargin=1.25cm]
+\item Processor: \hseFill{number of cores}
+\item Memory: \hseFill{amount of RAM}
+\item Disk: \hseFill{disk capacity}
+\item Network: \hseFill{network throughput}
+\end{itemize}
+
+Minimum requirements for local development:
+
+\begin{itemize}[leftmargin=1.25cm]
+\item Processor: \hseFill{number of cores, e.g. 4 cores}
+\item Memory: \hseFill{amount, e.g. 8 GB}
+\item Disk: \hseFill{capacity, e.g. 50 GB}
+\item Channel: \hseFill{speed, e.g. 50 Mbit/s}
+\end{itemize}
+
+\subsubsection{Requirements for client hardware}
+
+General requirements for client hardware to run the application:
+
+\begin{itemize}[leftmargin=1.25cm]
+\item Internet access over the HTTP/HTTPS protocol;
+\item Channel throughput of no less than \hseFill{specify speed, e.g. 10 Mbit/s};
+\item Latency (RTT) to the server of no more than \hseFill{specify latency, e.g. 500 ms}.
+\end{itemize}
+
+\subsubsection{Requirements for the deployment infrastructure}
+\label{sec:deployment_infra}
+
+The system must be deployed in \hseFill{specify the deployment environment}. To ensure reliability and resource isolation, operation must be carried out within dedicated functional loops (for example, testing and production loops). Deployment must be carried out using a single standard of deployment and configuration.
+
+\textbf{Requirements for data storage and message brokers:}
+
+\begin{itemize}[leftmargin=1.25cm]
+\item \hseFill{specify the DBMS and its operating mode};
+\item \hseFill{specify other storage and brokers}.
+\end{itemize}
+
+\textbf{Observability requirements:}
+
+\begin{itemize}[leftmargin=1.25cm]
+\item The collection and storage of metrics must be carried out in a specialized store with visualization through graphical dashboards (\hseFill{specify monitoring tools});
+\item Logging must be centralized and support search (\hseFill{specify logging tools}).
+\end{itemize}
+
+\textbf{CI/CD and build process requirements:}
+
+\begin{itemize}[leftmargin=1.25cm]
+\item The build and delivery of the application must be automated within CI/CD pipelines (\hseFill{specify the CI/CD platform});
+\item Automatic code quality checks (static analysis) must be provided.
+\end{itemize}
+
+\subsection{Requirements for information and software compatibility}
+
+\begin{itemize}[leftmargin=1.25cm]
+\item Architecture of the server side: \hseFill{specify the architectural style}.
+\item Permitted programming languages: \hseFill{specify languages and versions}.
+\item Preferred frameworks and libraries: \hseFill{specify frameworks and libraries}.
+\item Permitted storage and message brokers: \hseFill{specify the DBMS and brokers}.
+\item Runtime environment and deployment: \hseFill{specify the runtime environment and deployment}; configuration through environment variables; secrets must not be stored in the source code.
+\end{itemize}
+
+\subsection{Requirements for marking and packaging}
+
+\subsubsection{Requirements for packaging and delivery composition}
+
+\begin{hseExample}
+The software product must be delivered as a digital distribution that includes the following components:
+\begin{itemize}[nosep, leftmargin=1.25cm]
+    \item \textbf{Program distribution}: \hseFill{specify the delivery form, e.g. Docker images};
+    \item \textbf{Deployment configurations}: \hseFill{specify deployment artifacts};
+    \item \textbf{Release manifest}: a file (for example, \texttt{release.json} or \texttt{RELEASENOTES.md}) containing a list of the versions of all components included in the delivery;
+    \item \textbf{Program documentation}: a set of documents in electronic form in accordance with section~\ref{sec:doc_composition}.
+\end{itemize}
+\end{hseExample}
+
+\subsubsection{Requirements for marking and versioning}
+
+\begin{hseExample}
+The following marking rules are established for all components of the system:
+\begin{itemize}[nosep, leftmargin=1.25cm]
+    \item \textbf{Versioning of program code}: must conform to the Semantic Versioning 2.0.0 specification (the \texttt{MAJOR.MINOR.PATCH} format);
+    \item \textbf{Marking of delivery artifacts}: each artifact must be labelled with a tag corresponding to the release version;
+    \item \textbf{Build metadata}: artifacts must contain information about the build date, the commit identifier (Git SHA) and the person responsible for the build;
+    \item \textbf{Checksums}: a checksum (SHA-256) must be generated for each delivery artifact to verify integrity upon receipt of the distribution.
+\end{itemize}
+\end{hseExample}
+
+\subsection{Requirements for transportation and storage}
+
+\subsubsection{Requirements for storage}
+
+\begin{hseExample}
+All constituents of the software product must be stored in digital form in secure storage:
+\begin{itemize}[nosep, leftmargin=1.25cm]
+    \item \textbf{Source code and configurations}: must be stored in a version control system (Git) with configured access rights differentiation;
+    \item \textbf{Build artifacts}: must be stored in an artifact registry (\hseFill{specify the artifact registry}) that supports versioning;
+    \item \textbf{Secrets}: passwords, keys and certificates must be stored separately from the program code in a specialized store.
+\end{itemize}
+\end{hseExample}
+
+\subsubsection{Requirements for transportation}
+
+\begin{hseExample}
+Transportation (delivery) of the software product must be carried out over secure communication channels:
+\begin{itemize}[nosep, leftmargin=1.25cm]
+    \item \textbf{Delivery mechanism}: the transfer of artifacts between environments must be carried out by automated CI/CD pipelines;
+    \item \textbf{Channel protection}: all operations for transporting artifacts and configurations must be performed over the HTTPS or SSH protocols;
+    \item \textbf{Integrity verification}: during automated deployment, the system must verify the checksums and signatures of artifacts (where applicable) before launching in the target environment;
+    \item \textbf{Environment isolation}: direct data transfer between the development and production environments must be excluded; delivery is carried out through an intermediate artifact registry.
+\end{itemize}
+\end{hseExample}
+
+\clearpage
+
+% ============================================
+% 5. REQUIREMENTS FOR PROGRAM DOCUMENTATION
+% ============================================
+\section{REQUIREMENTS FOR PROGRAM DOCUMENTATION}
+
+\subsection{Composition of the program documentation}
+\label{sec:doc_composition}
+
+\begin{enumerate}[label=\arabic*), leftmargin=1.25cm]
+\item \enquote{\projectname}. Statement of Work (GOST~19.201-78).
+\item \enquote{\projectname}. Test Program and Methodology (GOST~19.301-79).
+\item \enquote{\projectname}. Source Listing (GOST~19.401-78).
+\hseManualDocItems
+\end{enumerate}
+
+\subsection{Special requirements for the program documentation}
+\label{sec:doc_reqs}
+
+The documents for the program must be produced in accordance with GOST~19.106-78 and the GOST standards for each type of document (see section~\ref{sec:doc_composition}).
+
+\clearpage
+
+% ============================================
+% 6. TECHNICAL AND ECONOMIC INDICATORS
+% ============================================
+\section{TECHNICAL AND ECONOMIC INDICATORS}
+
+\subsection{Approximate economic effectiveness}
+
+Within the scope of this work, economic effectiveness is not envisaged.
+
+\subsection{Projected demand}
+
+The system being developed may be of interest to \hseFill{target audience of the development}. The potential users are \hseFill{list the potential users}.
+
+\subsection{Economic advantages of the development compared to domestic and foreign analogues}
+
+A comparative assessment of domestic and foreign analogues is not included in the Statement of Work, since this document fixes the purpose, requirements, delivery composition and acceptance procedure of the program being developed. The analysis of analogues, the comparison criteria and the conclusion on the relevance of the development are given in the text of the graduation qualification work.
+
+\clearpage
+
+% ============================================
+% 7. DEVELOPMENT STAGES AND PHASES
+% ============================================
+\section{DEVELOPMENT STAGES AND PHASES}
+
+\subsection{Development stages, phases and content of the work}
+
+The development stages and phases were identified taking into account GOST~19.102-77\cite{gost19102}.
+
+\begin{table}[H]
+\caption{Development stages and phases}
+\label{tab:stages}
+\small
+\begin{tabularx}{\textwidth}{|>{\raggedright\arraybackslash}p{3.5cm}|>{\raggedright\arraybackslash}p{3.5cm}|>{\raggedright\arraybackslash}X|}
+\hline
+\textbf{Development stages} & \textbf{Work phases} & \textbf{Content of the work} \\
+\hline
+1. Statement of Work & Preparatory work & --- Problem statement.\newline
+--- Collection of source materials.\newline
+--- Preliminary selection of methods for solving the problems. \\
+\hline
+& Development and approval of the Statement of Work & --- Definition of requirements for the program.\newline
+--- Definition of requirements for hardware.\newline
+--- Definition of the stages, phases and timeline for developing the program and its documentation.\newline
+--- Coordination and approval of the Statement of Work. \\
+\hline
+2. Detailed design & Program development & --- Development and debugging of the program. \\
+\hline
+& Development of program documentation & --- Development of program documents in accordance with the requirements of GOST 19.101-77\cite{gost19101}. \\
+\hline
+& Testing of the program & --- Development, coordination and approval of the testing procedure and methodology.\newline
+--- Correction of the program and program documentation based on the testing results. \\
+\hline
+3. Implementation & Preparation and handover of the program & --- Preparation and handover of the program and program documentation for maintenance. \\
+\hline
+\end{tabularx}
+\end{table}
+
+\subsection{Development timeline and performers}
+
+The software product (the program and documentation) must be completed no later than the deadline for the defence of the graduation qualification work approved by the order of the dean of the Faculty of Computer Science of HSE University.
+
+The performer is~--- \hseAuthorName.
+
+\clearpage
+
+% ============================================
+% 8. ACCEPTANCE AND CONTROL PROCEDURE
+% ============================================
+\section{ACCEPTANCE AND CONTROL PROCEDURE}
+
+\subsection{Types of testing}
+
+A check is made that the program correctly performs the functions built into it, that is, functional testing of the program is carried out. Functional testing is carried out in accordance with the document \enquote{\projectname}. Test Program and Methodology (GOST~19.301-79).
+
+\subsection{General requirements for accepting the work}
+
+The program will be accepted when the program operates correctly in accordance with section~\ref{sec:functional_reqs} of this document and when the complete documentation for the product specified in section~\ref{sec:doc_composition}, produced in accordance with the requirements in section~\ref{sec:doc_reqs} of this Statement of Work, is provided.
+
+\clearpage
+% Source pages are printed without the bottom stamp (as in real
+% document sets) --- only the sheet number and document code at the top.
+\pagestyle{appendix}
+
+% ============================================
+% LIST OF REFERENCES
+% ============================================
+\section*{LIST OF REFERENCES}
+\addcontentsline{toc}{section}{LIST OF REFERENCES}
+
+\renewcommand{\refname}{}
+\begin{thebibliography}{99}
+\bibitem{gost19101}
+GOST 19.101-77, \enquote{Types of programs and program documents,} Unified System for Program Documentation. Moscow, Russia: Standards Publishing House, 2001.
+
+\bibitem{gost19102}
+GOST 19.102-77, \enquote{Development stages,} Unified System for Program Documentation. Moscow, Russia: Standards Publishing House, 2001.
+
+\bibitem{gost19103}
+GOST 19.103-77, \enquote{Designations of programs and program documents,} Unified System for Program Documentation. Moscow, Russia: Standards Publishing House, 2001.
+
+\bibitem{gost19104}
+GOST 19.104-78, \enquote{Basic inscriptions,} Unified System for Program Documentation. Moscow, Russia: Standards Publishing House, 2001.
+
+\bibitem{gost19105}
+GOST 19.105-78, \enquote{General requirements for program documents,} Unified System for Program Documentation. Moscow, Russia: Standards Publishing House, 2001.
+
+\bibitem{gost19106}
+GOST 19.106-78, \enquote{Requirements for program documents produced by printed means,} Unified System for Program Documentation. Moscow, Russia: Standards Publishing House, 2001.
+
+\bibitem{gost19201}
+GOST 19.201-78, \enquote{Statement of Work. Requirements for content and design,} Unified System for Program Documentation. Moscow, Russia: Standards Publishing House, 2001.
+
+\bibitem{gost19603}
+GOST 19.603-78, \enquote{General rules for making amendments,} Unified System for Program Documentation. Moscow, Russia: Standards Publishing House, 2001.
+
+\bibitem{gost19604}
+GOST 19.604-78, \enquote{Rules for making amendments to program documents produced by printed means,} Unified System for Program Documentation. Moscow, Russia: Standards Publishing House, 2001.
+\end{thebibliography}
+
+\clearpage
+
+% ============================================
+% APPENDIX 1 - GLOSSARY
+% ============================================
+\section*{APPENDIX 1}
+\addcontentsline{toc}{section}{APPENDIX 1}
+
+\begin{center}
+\textbf{GLOSSARY}
+\end{center}
+
+\begin{enumerate}[label=\arabic*., leftmargin=1.25cm]
+\item \textbf{\hseFill{term}}~--- \hseFill{definition of the term}.
+\item \textbf{\hseFill{another term}}~--- \hseFill{definition of the term}.
+\end{enumerate}
+
+\clearpage
+
+
+
+% ============================================
+% ЛИСТ РЕГИСТРАЦИИ ИЗМЕНЕНИЙ
+% ============================================
+\input{../common/change_log}
+
+\end{document}
