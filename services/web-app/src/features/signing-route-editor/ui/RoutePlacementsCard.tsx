@@ -8,7 +8,12 @@ import type {
   SigningRoute,
   SigningRoutePreview,
 } from "@entities/signing-route";
-import { PdfStampEditor } from "@features/signature-stamper";
+import {
+  PdfStampEditor,
+  SlotDateMarks,
+  signatureHeightMm,
+  useDateMarksSave,
+} from "@features/signature-stamper";
 import type { SignaturesStateResponse } from "@shared/api/types";
 import { pickLocalized } from "@shared/lib";
 import { ViewTabs } from "@shared/ui";
@@ -22,6 +27,8 @@ export type RoutePlacementsCardProps = {
   state: SignaturesStateResponse | undefined;
   documents: readonly (DocDefLike & { id: string })[] | undefined;
   personaLabel: (persona: string) => string;
+  /** Язык документов проекта: месяц в примере метки даты. По умолчанию язык интерфейса. */
+  docLang?: string;
   onAddExtra: (slot: RouteSlotRef) => void;
   onRemoveExtra: (slot: RouteSlotRef) => void;
   /**
@@ -55,6 +62,7 @@ export const RoutePlacementsCard = ({
   state,
   documents,
   personaLabel,
+  docLang,
   onAddExtra,
   onRemoveExtra,
   onSetOptional,
@@ -63,6 +71,8 @@ export const RoutePlacementsCard = ({
 }: RoutePlacementsCardProps) => {
   const { t, i18n } = useTranslation("signingRouteEditor");
   const lang = i18n.language;
+  // Метки даты слотов маршрута (signing-route.md, 14.11): тот же блок, что на вкладке «Подписи».
+  const dateMarks = useDateMarksSave(projectId);
   const [docId, setDocId] = useState(route.docs[0]?.doc_id ?? "");
   const [page, setPage] = useState(1);
   const [pageCount, setPageCount] = useState(0);
@@ -167,6 +177,7 @@ export const RoutePlacementsCard = ({
                 placement?.page ?? def?.default_placement.page ?? 1;
               const isDetached =
                 state.slots[slot.slot_id]?.sign_mode === "detached_text";
+
               return (
                 <div
                   key={slot.slot_id}
@@ -332,6 +343,34 @@ export const RoutePlacementsCard = ({
                       )}
                     </div>
                   )}
+                  {(editable || (placement?.dates ?? []).length > 0) && (
+                    <SlotDateMarks
+                      indent={false}
+                      slotId={slot.slot_id}
+                      placement={placement}
+                      lang={docLang ?? lang}
+                      currentPage={page}
+                      pageCount={pageCount}
+                      signatureHeightMm={signatureHeightMm(
+                        placement?.width_mm ??
+                          def?.default_placement.width_mm ??
+                          40,
+                        state.slots[slot.slot_id],
+                      )}
+                      signerName={
+                        owner
+                          ? (owner.name ?? personaLabel(owner.persona))
+                          : pickLocalized(slot.label, lang, slot.slot_id)
+                      }
+                      route={{ method: owner?.method ?? null }}
+                      editable={editable}
+                      pending={dateMarks.isSaving(doc.doc_id, slot.slot_id)}
+                      onSave={(body) => {
+                        dateMarks.save(doc.doc_id, slot.slot_id, body);
+                      }}
+                      onJumpToPage={setPage}
+                    />
+                  )}
                 </div>
               );
             })}
@@ -393,10 +432,29 @@ export const RoutePlacementsCard = ({
                   data: patch,
                 });
               }}
+              docLang={docLang ?? lang}
+              {...(editable
+                ? {
+                    onDateMarkChange: (
+                      slotId: string,
+                      index: number,
+                      place: Parameters<typeof dateMarks.movePlace>[4],
+                    ) => {
+                      dateMarks.movePlace(
+                        doc.doc_id,
+                        slotId,
+                        placementOf(slotId),
+                        index,
+                        place,
+                      );
+                    },
+                  }
+                : {})}
             />
           </div>
         </div>
       )}
+      {dateMarks.dialog}
     </div>
   );
 };

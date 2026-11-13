@@ -223,6 +223,10 @@
     "pack_version_not_frozen": "The version of «{{doc}}» sent for signing is not frozen yet: the signing route freezes it once everyone has approved.",
     "pack_marks_changed": "Signature images or plates of «{{doc}}» changed after its PDF was frozen. Freeze it again and sign the new version.",
     "pack_signed_pdf_changed": "The PDF of «{{doc}}» with embedded signatures was changed outside the Studio. Freeze the document again.",
-    "pack_signature_missing": "The signature file «{{slot}}» of «{{doc}}» is missing. Attach the signature again."
+    "pack_signature_missing": "The signature file «{{slot}}» of «{{doc}}» is missing. Attach the signature again.",
+    "bad_date_mark": "The date mark does not fit: the page is not in the document, the frame is off the sheet, the format is unknown or the signature has more than 8 dates.",
+    "bad_date": "Invalid signing date.",
+    "date_from_route": "This signature goes through the signing route: the date comes from the approval and cannot be set by hand.",
+    "resets_signatures": "Saving resets the e-signatures over the frozen PDF: confirm it."
   }
 }

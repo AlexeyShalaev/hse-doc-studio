@@ -15,6 +15,9 @@ import {
   SlotDetachedSignature,
 } from "./DetachedSignatureBlocks";
 import { SlotOptionalRows, type SlotOptionalControl } from "./SlotOptionalRows";
+import { SlotDateMarks, type SlotDateRoute } from "./SlotDateMarks";
+import { signatureHeightMm } from "../lib/coords";
+import type { DateMarksSave } from "../lib/dateMarkEdit";
 import type {
   SignMode,
   SignatureProfileRef,
@@ -33,6 +36,19 @@ export type PlacementSlot = Omit<SignatureSlotDefResponse, "required_by"> & {
   // чей маршрут включил слот сверх точки.
   required?: boolean;
   extra_by?: Record<string, SignatureProfileRef[]>;
+};
+
+/**
+ * Метки даты у слотов документа (docs/design/signing-route.md, 14.2): правка и ручная дата. На
+ * документе под маршрутом метки правят и на подписании (14.6), поэтому они вне `inert`.
+ */
+export type SlotDateControl = {
+  /** Можно править метки (те же, кто размещает подписи). */
+  canEdit: boolean;
+  /** Слот это пара маршрута, который держит документ; null вне маршрута. */
+  route: (slotId: string) => SlotDateRoute | null;
+  isSaving: (slotId: string) => boolean;
+  onSave: (slotId: string, body: DateMarksSave) => void;
 };
 
 export type DocPlacementPanelProps = {
@@ -68,6 +84,8 @@ export type DocPlacementPanelProps = {
   locked?: boolean;
   /** «Подпись необязательна» у слотов документа; без него строк с галочкой нет. */
   optionalControl?: SlotOptionalControl;
+  /** Метки даты у слотов; без него блока дат нет. */
+  dateControl?: SlotDateControl;
 };
 
 const lockedStyle = { opacity: 0.6 } as const;
@@ -92,6 +110,7 @@ export const DocPlacementPanel = ({
   routeHeld = false,
   locked = false,
   optionalControl,
+  dateControl,
 }: DocPlacementPanelProps) => {
   const { t } = useTranslation("signatureStamper");
   const docSlots = slotDefs.filter((slot) => slot.applies_to.includes(docId));
@@ -508,6 +527,28 @@ export const DocPlacementPanel = ({
                 </div>
               )}
             </div>
+
+            {dateControl && (
+              <SlotDateMarks
+                slotId={slot.id}
+                placement={placement}
+                lang={lang}
+                currentPage={currentPage}
+                pageCount={pageCount}
+                signatureHeightMm={signatureHeightMm(
+                  placement?.width_mm ?? slot.default_placement.width_mm,
+                  slotInfo,
+                )}
+                signerName={personName ?? label}
+                route={dateControl.route(slot.id)}
+                editable={dateControl.canEdit}
+                pending={dateControl.isSaving(slot.id)}
+                onSave={(body) => {
+                  dateControl.onSave(slot.id, body);
+                }}
+                onJumpToPage={onJumpToPage}
+              />
+            )}
           </div>
         );
       })}

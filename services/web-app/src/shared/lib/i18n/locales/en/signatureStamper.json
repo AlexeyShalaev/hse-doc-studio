@@ -335,5 +335,48 @@
     "confirmReset": "Freezing again resets signatures already made, they will have to be made again: {{names}}",
     "done": "{{signed}} of {{total}} signed",
     "waiting": "Awaiting your signature: {{count}}"
+  },
+  "dates": {
+    "add": "Add date",
+    "addTitle": "A date frame appears on page {{page}}: drag it into place and pull its corner",
+    "remove": "Remove date",
+    "format": "Format",
+    "formatOption": "{{name}} ({{example}})",
+    "formats": {
+      "day": "Day",
+      "month_word": "Month in words",
+      "month_number": "Month as a number",
+      "year": "Year",
+      "year_short": "Two-digit year",
+      "date_numeric": "Date",
+      "date_long": "Date in words"
+    },
+    "align": "Alignment",
+    "aligns": {
+      "left": "Left",
+      "center": "Center",
+      "right": "Right"
+    },
+    "frame": "Date: {{sample}}",
+    "page": "p. {{page}}",
+    "jump": "Go to",
+    "moveHere": "Here",
+    "moveHereTitle": "Move the date to the current page ({{page}})",
+    "signedAt": "Signing date",
+    "signedAtTitle": "The day the date marks of this signature print",
+    "noDate": "Without a date the marks stay empty",
+    "waits": "The date appears when {{persona}} signs",
+    "fromRoute": "The date comes from the approval in the signing route",
+    "esign": "A signing date adds a step for an e-signature signer: approval before freezing",
+    "tooSmall": "The text does not fit the frame",
+    "pageMissing": "The document has no page {{page}}: the date will not reach the PDF",
+    "limit": "A signature has at most {{max}} dates",
+    "failed": "Could not save the dates: {{reason}}",
+    "confirm": {
+      "title": "Save the dates?",
+      "text": "These signatures will be reset: {{names}}. The document will be frozen again and they will sign the final PDF once more. Save?",
+      "save": "Save",
+      "cancel": "Cancel"
+    }
   }
 }

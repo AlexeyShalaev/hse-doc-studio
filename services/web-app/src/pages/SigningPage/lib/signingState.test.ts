@@ -16,6 +16,7 @@ import {
   isOverdue,
   jumpToSlot,
   keptMark,
+  myDateFrames,
   myFrames,
   newVersionDocs,
   signingStatus,
@@ -389,5 +390,44 @@ describe("версия на подписи (раздел 12)", () => {
       docs: base.docs.map((d) => ({ ...d, changed: false })),
     });
     expect(divergenceOf(notChanged)).toBeNull();
+  });
+});
+
+describe("рамки меток даты (14.11)", () => {
+  const task = SIGNING_ROUTE_CONTRACT_EXAMPLES.SigningTask
+    ?.dates as SigningTask;
+  const [doc] = task.docs;
+  if (!doc) throw new Error("fixture without docs");
+
+  it("свои метки: пунктир «Дата согласования», подпись у первой рамки строки", () => {
+    const frames = myDateFrames(doc, "Дата согласования");
+    expect(frames).toHaveLength(3);
+    expect(frames.every((f) => f.highlight && f.date)).toBe(true);
+    expect(frames.map((f) => f.label)).toEqual([
+      "Дата согласования",
+      undefined,
+      undefined,
+    ]);
+    expect(frames[1]).toMatchObject({
+      page: 1,
+      xMm: 126,
+      yMm: 150,
+      widthMm: 24,
+      heightMm: 5,
+    });
+  });
+
+  it("чужие метки страница не рисует: они уже в PDF", () => {
+    const others = doc.others.flatMap((slot) => slot.dates);
+    expect(others).not.toHaveLength(0);
+    expect(myDateFrames({ ...doc, mine: [] }, "Дата согласования")).toEqual([]);
+  });
+
+  it("пропущенное место без рамок даты", () => {
+    const skipped = doc.mine.map((slot) => ({
+      ...slot,
+      status: "skipped" as const,
+    }));
+    expect(myDateFrames({ ...doc, mine: skipped }, "x")).toEqual([]);
   });
 });

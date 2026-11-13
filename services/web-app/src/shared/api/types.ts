@@ -458,6 +458,40 @@ export type PlacementResponse = {
   width_mm: number;
   // ISO «2026-05-12»; штампуется как «12.05.2026» рядом с подписью.
   sign_date?: string | null;
+  // Метки даты слота документа (signing-route.md, 14.3); у сервера до R22 их нет.
+  dates?: DateMarkResponse[];
+  // Момент подписи слота в документе: согласие по маршруту или день, указанный автором.
+  signed_at?: SignedAtResponse | null;
+};
+
+export type DateMarkFormat =
+  | "day"
+  | "month_word"
+  | "month_number"
+  | "year"
+  | "year_short"
+  | "date_numeric"
+  | "date_long";
+
+export type DateMarkAlign = "left" | "center" | "right";
+
+// Метка даты: рамка на странице, формат и что будет напечатано сейчас (null, пока даты нет).
+export type DateMarkResponse = {
+  id: string;
+  page: number;
+  x_mm: number;
+  y_mm: number;
+  width_mm: number;
+  height_mm: number;
+  format: DateMarkFormat;
+  align: DateMarkAlign;
+  text: string | null;
+};
+
+export type SignedAtResponse = {
+  // ISO 8601; у ручной даты только день «2026-11-13».
+  at: string;
+  source: "approval" | "manual";
 };
 
 // Контрольная точка, требующая подпись этого слота на документе.

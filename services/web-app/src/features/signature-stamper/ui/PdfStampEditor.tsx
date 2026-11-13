@@ -7,11 +7,14 @@ import type {
   SignatureSlotDefResponse,
   SlotInfoResponse,
 } from "@shared/api/types";
+import { formatDateMark, todayInDisplayZone } from "@entities/signature";
 import { env } from "@shared/config";
 import { pickLocalized } from "@shared/lib";
 import { Spinner } from "@shared/ui/Spinner";
 import { aspectRatioFromPx, MM_PER_PT, PT_PER_MM } from "../lib/coords";
+import type { DateMarkPlace } from "../lib/dateMarkEdit";
 import { usePdfPage } from "../lib/usePdfPage";
+import { DateMarkOverlay } from "./DateMarkOverlay";
 import { SignatureOverlay } from "./SignatureOverlay";
 
 export type PdfStampEditorProps = {
@@ -39,6 +42,19 @@ export type PdfStampEditorProps = {
   ) => void;
   /** Только просмотр: рамки подписей не двигаются (документ на подписании по маршруту). */
   readOnly?: boolean;
+  /**
+   * Рамки меток даты (docs/design/signing-route.md, 14.2): видны всегда, двигаются, если есть
+   * обработчик. На документе под маршрутом метки правят и при `readOnly` (14.6).
+   */
+  onDateMarkChange?: (
+    slotId: string,
+    index: number,
+    place: DateMarkPlace,
+  ) => void;
+  /** Язык документа: месяц в примере метки даты. По умолчанию язык интерфейса. */
+  docLang?: string;
+  /** Адрес PDF вместо файла проекта (галерея разработчика). */
+  pdfUrl?: string;
   onCompileRequest?: () => void;
   isCompileRunning?: boolean;
   /** Сборка сейчас невозможна (на сервере нет раннера): кнопка гаснет. */
@@ -74,12 +90,17 @@ export const PdfStampEditor = ({
   onPageCountChange,
   onPlacementChange,
   readOnly = false,
+  onDateMarkChange,
+  docLang,
+  pdfUrl: pdfUrlOverride,
   onCompileRequest,
   isCompileRunning,
   isCompileBlocked = false,
 }: PdfStampEditorProps) => {
   const { t, i18n } = useTranslation("signatureStamper");
-  const pdfUrl = pdfAvailable ? buildPdfUrl(projectId, pdfRelPath) : null;
+  const pdfUrl = pdfAvailable
+    ? (pdfUrlOverride ?? buildPdfUrl(projectId, pdfRelPath))
+    : null;
   const {
     isLoading,
     isError,
@@ -193,6 +214,20 @@ export const PdfStampEditor = ({
         (entry) => entry.placement?.enabled && entry.placement?.page === page,
       );
   }, [slotDefs, docId, state, page]);
+
+  // Метки даты слотов документа на этой странице: у слота они бывают и без включённой подписи.
+  const dateLang = docLang ?? i18n.language;
+  const today = todayInDisplayZone();
+  const dateOverlays = slotDefs
+    .filter((slot) => slot.applies_to.includes(docId))
+    .flatMap((slot) =>
+      (state.placements[docId]?.[slot.id]?.dates ?? []).map((mark, index) => ({
+        slotId: slot.id,
+        index,
+        mark,
+      })),
+    )
+    .filter((entry) => entry.mark.page === page);
 
   if (!pdfAvailable) {
     return (
@@ -408,6 +443,28 @@ export const PdfStampEditor = ({
                         y_mm: next.yMm,
                         width_mm: next.widthMm,
                       });
+                    }}
+                  />
+                );
+              })}
+            {!isLoading &&
+              dateOverlays.map(({ slotId, index, mark }) => {
+                const sample =
+                  mark.text ?? formatDateMark(today, mark.format, dateLang);
+                return (
+                  <DateMarkOverlay
+                    key={`${slotId}:${mark.id}:${String(index)}`}
+                    testId={`date-mark-${slotId}-${String(index)}`}
+                    place={mark}
+                    text={sample}
+                    align={mark.align}
+                    label={t("dates.frame", { sample })}
+                    pageWidthMm={pageWidthMm}
+                    pageHeightMm={pageHeightMm}
+                    pxPerMm={pxPerMm}
+                    editable={onDateMarkChange !== undefined}
+                    onCommit={(next) => {
+                      onDateMarkChange?.(slotId, index, next);
                     }}
                   />
                 );

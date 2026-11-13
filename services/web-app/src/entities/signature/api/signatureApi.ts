@@ -12,6 +12,7 @@ import {
   SlotInfoSchema,
   SlotOptionalSchema,
   UploadSignatureResponseSchema,
+  type SetDateMarksRequest,
 } from "./signatureSchemas";
 
 export type SignSubmissionBody = {
@@ -69,6 +70,23 @@ export const signatureApi = {
       .patch(
         `/projects/${projectId}/signatures/placements/${docId}/${slotId}`,
         data,
+      )
+      .then(parseResp(PlacementSchema)),
+
+  /**
+   * Метки даты слота документа целиком и ручная дата (signing-route.md, 14.7). 409
+   * `resets_signatures` (с `resets`) окно подтверждения разбирает само: ответ без тоста.
+   */
+  setDateMarks: (
+    projectId: string,
+    docId: string,
+    slotId: string,
+    body: SetDateMarksRequest,
+  ) =>
+    apiClient
+      .put(
+        `/projects/${projectId}/signatures/placements/${encodeURIComponent(docId)}/${encodeURIComponent(slotId)}/dates`,
+        body,
       )
       .then(parseResp(PlacementSchema)),
 
