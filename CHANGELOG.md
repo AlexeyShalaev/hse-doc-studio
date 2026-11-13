@@ -6,6 +6,19 @@ Generated from `release-notes.json` via `make changelog` — do not edit by hand
 Release notes are hand-written and bilingual (RU/EN); the app shows them in the
 selected interface language.
 
+## [0.25.0](https://github.com/AlexeyShalaev/hse-doc-studio/compare/v0.24.0...v0.25.0) (2026-11-13)
+
+
+### Features
+
+* **signing-route:** E4 date mark hint by remaining actions, marks_edited in the demo, date mark fixes ([6cedd09](https://github.com/AlexeyShalaev/hse-doc-studio/commit/6cedd0956fa23518e99c51a15506f35281b3d89f))
+* **signing-route:** R22 signing date marks in files and on the page ([6afbeb3](https://github.com/AlexeyShalaev/hse-doc-studio/commit/6afbeb3ef14bf9d51bca22fcdef7dec9de8322c2))
+* **signing-route:** R22 signing date marks: DateMark and signed_at in files, dates.py, drawing, PUT .../dates outside a route, plan and MCP fields, verify guide lines, Moscow day for sign_date, pack default_dates ([c8f5080](https://github.com/AlexeyShalaev/hse-doc-studio/commit/c8f508043793ac5fcf9a4557de066efe442199d9))
+* **signing-route:** R23 signing dates on the route — RecordSignedAt, marks edit scenario, resets_signatures, re-request to sign ([7b85b6d](https://github.com/AlexeyShalaev/hse-doc-studio/commit/7b85b6d0b8e7e7b5454598c3a413803b69450ba2))
+* **signing-route:** R23 signing dates on the route: RecordSignedAt and backfill, dates make a changer, marks edit scenario with resets_signatures, re-request to sign after refreeze, marks_edited event and audit, dates in the signer task ([4ae951c](https://github.com/AlexeyShalaev/hse-doc-studio/commit/4ae951cc927c0b31fc798603995f557987e4c43a))
+* **web:** signing dates W14 — date marks in the placement and route editors ([489b81a](https://github.com/AlexeyShalaev/hse-doc-studio/commit/489b81ab55d39857d4af9887aae9b461543b3190))
+* **web:** signing dates W14: date marks in the placement and route editors, contract 14.7, demo and gallery ([504bcd8](https://github.com/AlexeyShalaev/hse-doc-studio/commit/504bcd80c15c017881273468290c825bde9c92d4))
+
 ## [0.24.0](https://github.com/AlexeyShalaev/hse-doc-studio/compare/v0.23.0...v0.24.0) - 2026-11-13
 
 - Optional signatures and skipping a signer. For each signature slot on a checkpoint the author can tick “Signature is optional”, even on a route that is already running. When it is the turn of a signer whose signatures are all optional, the author presses “Skip” and the route goes on without a restart and without losing approvals.
